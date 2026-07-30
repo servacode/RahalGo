@@ -22,6 +22,7 @@ import {
   IconClose,
   IconLink,
   IconWallet,
+  IconBalance,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
@@ -47,6 +48,7 @@ const NAV = [
   { href: "/dashboard/merchants", label: m.admin.nav.merchants, icon: IconStore },
   { href: "/dashboard/zones", label: m.admin.nav.zones, icon: IconZones },
   { href: "/dashboard/promos", label: m.admin.nav.promos, icon: IconPromos },
+  { href: "/dashboard/commissions", label: m.admin.nav.commissions, icon: IconBalance },
   { href: "/dashboard/reports", label: m.admin.nav.reports, icon: IconStatus },
   { href: "/dashboard/whatsapp", label: m.admin.nav.whatsapp, icon: IconWhatsApp },
   { href: "/dashboard/settings", label: m.admin.nav.settings, icon: IconSettings },
