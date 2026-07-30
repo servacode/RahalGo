@@ -159,6 +159,11 @@ func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, actio
 	if err != nil {
 		return nil, err
 	}
+	// جلسة واحدة فقط لكل حساب: أحدث دخول يُبطل كل الجلسات السابقة. عند التدجيل
+	// يكون القديم أُبطل قبلاً فلا يبقى نشط سوى الجديد. (يمهّد للتحقق بخطوتين لاحقاً.)
+	if _, err := s.repo.RevokeAllTokens(ctx, user.ID); err != nil {
+		return nil, err
+	}
 	if err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, refreshTTL, userAgent, ip); err != nil {
 		return nil, err
 	}
