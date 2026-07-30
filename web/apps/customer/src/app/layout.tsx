@@ -10,10 +10,19 @@ import "@fontsource/ibm-plex-sans-arabic/700.css";
 import "./globals.css";
 
 const m = getMessages(defaultLocale);
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
 
 export const metadata: Metadata = {
-  title: m.site.appTitle,
+  metadataBase: new URL(SITE),
+  title: { default: m.site.appTitle, template: `%s | ${m.common.appName}` },
   description: m.site.appDescription,
+  openGraph: {
+    title: m.site.appTitle,
+    description: m.site.appDescription,
+    siteName: m.common.appName,
+    locale: "ar_SY",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
