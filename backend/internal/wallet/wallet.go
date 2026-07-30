@@ -21,13 +21,16 @@ var (
 )
 
 type Transaction struct {
-	ID        int64     `json:"id"`
-	Amount    int64     `json:"amount"`
-	Kind      string    `json:"kind"`
-	Ref       string    `json:"ref"`
-	Note      string    `json:"note"`
-	CreatedBy *string   `json:"created_by"`
-	CreatedAt time.Time `json:"created_at"`
+	ID           int64     `json:"id"`
+	Amount       int64     `json:"amount"`
+	Kind         string    `json:"kind"`
+	Ref          string    `json:"ref"`
+	Note         string    `json:"note"`
+	CreatedBy    *string   `json:"created_by"`
+	ByName       *string   `json:"by_name"`       // منفّذ الحركة (اسم أو هاتف)
+	OrderNumber  *int64    `json:"order_number"`  // إن كان المرجع طلباً
+	TicketNumber *int64    `json:"ticket_number"` // إن كان المرجع تذكرة
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type Statement struct {
@@ -61,16 +64,23 @@ func (s *Service) StatementFor(ctx context.Context, userID string, limit int) (*
 		return nil, err
 	}
 	rows, err := s.db.Query(ctx, `
-		SELECT id, amount, kind, ref, note, created_by, created_at
-		FROM wallet_transactions WHERE user_id = $1
-		ORDER BY id DESC LIMIT $2`, userID, limit)
+		SELECT t.id, t.amount, t.kind, t.ref, t.note, t.created_by,
+		       NULLIF(COALESCE(cb.full_name, cb.phone::text), ''),
+		       o.number, tk.number, t.created_at
+		FROM wallet_transactions t
+		LEFT JOIN users cb ON cb.id = t.created_by
+		LEFT JOIN orders o ON t.ref <> '' AND o.id::text = t.ref
+		LEFT JOIN tickets tk ON t.ref <> '' AND tk.id::text = t.ref
+		WHERE t.user_id = $1
+		ORDER BY t.id DESC LIMIT $2`, userID, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var t Transaction
-		if err := rows.Scan(&t.ID, &t.Amount, &t.Kind, &t.Ref, &t.Note, &t.CreatedBy, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.Amount, &t.Kind, &t.Ref, &t.Note, &t.CreatedBy,
+			&t.ByName, &t.OrderNumber, &t.TicketNumber, &t.CreatedAt); err != nil {
 			return nil, err
 		}
 		st.Transactions = append(st.Transactions, t)

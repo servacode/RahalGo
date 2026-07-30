@@ -30,14 +30,14 @@ type UserPage struct {
 	PerPage int    `json:"per_page"`
 }
 
-func (s *Service) AdminListUsers(ctx context.Context, query, role string, page, perPage int) (*UserPage, error) {
+func (s *Service) AdminListUsers(ctx context.Context, query, role string, onlineOnly bool, page, perPage int) (*UserPage, error) {
 	if page < 1 {
 		page = 1
 	}
 	if perPage < 1 || perPage > 100 {
 		perPage = 20
 	}
-	users, total, err := s.repo.ListUsers(ctx, query, role, perPage, (page-1)*perPage)
+	users, total, err := s.repo.ListUsers(ctx, query, role, onlineOnly, perPage, (page-1)*perPage)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 			return nil, ErrInvalidRole
 		}
 	}
-	if in.Password != "" && len(in.Password) < minPasswordLn {
+	if len(in.Password) < minPasswordLn { // إلزامية — لا حساب موظف بلا كلمة مرور
 		return nil, ErrWeakPassword
 	}
 

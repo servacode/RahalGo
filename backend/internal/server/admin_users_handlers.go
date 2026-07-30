@@ -16,7 +16,7 @@ func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
 	perPage, _ := strconv.Atoi(q.Get("per_page"))
-	res, err := s.identity.AdminListUsers(r.Context(), q.Get("query"), q.Get("role"), page, perPage)
+	res, err := s.identity.AdminListUsers(r.Context(), q.Get("query"), q.Get("role"), q.Get("online") == "true", page, perPage)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -96,11 +96,20 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 		}
 		counts[role] = n
 	}
-	var total int
-	if err := s.pg.QueryRow(r.Context(), `SELECT count(*) FROM users u WHERE NOT EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role_code = 'admin')`).Scan(&total); err != nil {
+	var total, staff, online int
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*),
+		       count(*) FILTER (WHERE EXISTS (SELECT 1 FROM user_roles sr
+		           WHERE sr.user_id = u.id AND sr.role_code IN ('ops','finance'))),
+		       count(*) FILTER (WHERE u.last_seen_at > now() - interval '2 minutes')
+		FROM users u
+		WHERE NOT EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role_code = 'admin')`).
+		Scan(&total, &staff, &online); err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	counts["staff"] = staff
+	counts["online"] = online
 	httpx.JSON(w, http.StatusOK, map[string]any{"total": total, "roles": counts})
 }
 

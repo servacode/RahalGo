@@ -89,12 +89,16 @@ func (r *Repo) CreateUserWithRole(ctx context.Context, phone, fullName, role str
 }
 
 // ListUsers بحث وترشيح وترقيم صفحات لإدارة المستخدمين.
-func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset int) ([]User, int, error) {
+func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly bool, limit, offset int) ([]User, int, error) {
+	// role الخاص "staff" = موظفو المنصة (عمليات + مالية)
 	where := `WHERE ($1 = '' OR u.phone ILIKE '%'||$1||'%' OR u.full_name ILIKE '%'||$1||'%')
-	          AND ($2 = '' OR EXISTS (SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id AND fr.role_code = $2))`
+	          AND ($2 = '' OR EXISTS (
+	              SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id
+	              AND (fr.role_code = $2 OR ($2 = 'staff' AND fr.role_code IN ('ops','finance')))))
+	          AND (NOT $3 OR u.last_seen_at > now() - interval '2 minutes')`
 
 	var total int
-	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where+` AND NOT EXISTS (SELECT 1 FROM user_roles ar WHERE ar.user_id = u.id AND ar.role_code = 'admin')`, query, role).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where+` AND NOT EXISTS (SELECT 1 FROM user_roles ar WHERE ar.user_id = u.id AND ar.role_code = 'admin')`, query, role, onlineOnly).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -108,7 +112,7 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset 
 		GROUP BY u.id, am.thumb_path
 		HAVING NOT bool_or(ur.role_code = 'admin')
 		ORDER BY u.created_at DESC
-		LIMIT $3 OFFSET $4`, query, role, limit, offset)
+		LIMIT $4 OFFSET $5`, query, role, onlineOnly, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}

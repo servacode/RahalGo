@@ -63,6 +63,7 @@ export default function UsersPage() {
   const [data, setData] = useState<UserPage | null>(null);
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("");
+  const [onlineOnly, setOnlineOnly] = useState(false);
   const [roleCounts, setRoleCounts] = useState<{ total: number; roles: Record<string, number> } | null>(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
@@ -73,7 +74,7 @@ export default function UsersPage() {
 
   const load = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ query, role, page: String(page), per_page: "10" });
+      const params = new URLSearchParams({ query, role, online: onlineOnly ? "true" : "", page: String(page), per_page: "10" });
       api<{ total: number; roles: Record<string, number> }>("/api/v1/admin/users/stats")
         .then(setRoleCounts)
         .catch(() => undefined);
@@ -82,7 +83,7 @@ export default function UsersPage() {
     } catch (err) {
       setError(errText(err));
     }
-  }, [query, role, page]);
+  }, [query, role, onlineOnly, page]);
 
   useEffect(() => {
     const t = setTimeout(load, 250); // تهدئة البحث
@@ -184,22 +185,35 @@ export default function UsersPage() {
             <p className="text-lg font-bold">{roleCounts.total}</p>
             <p className="text-xs text-ink-muted">{m.admin.users.allRoles}</p>
           </button>
-          {(["ops", "finance", "sales", "driver", "merchant", "customer"] as const).map((rk) => {
-            const st = ROLE_STYLES[rk];
-            return (
-              <button
-                key={rk}
-                onClick={() => { setRole(role === rk ? "" : rk); setPage(1); }}
-                className={`rounded-card border p-2.5 text-center transition-colors ${role === rk ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary/40"}`}
-              >
-                <p className={`inline-flex items-center gap-1 text-lg font-bold ${st ? st.cls.split(" ").filter((c) => c.startsWith("text-")).join(" ") : ""}`}>
-                  {st && <st.Icon size={15} />}
-                  {roleCounts.roles[rk] ?? 0}
-                </p>
-                <p className="text-xs text-ink-muted">{ROLE_LABELS[rk]}</p>
-              </button>
-            );
-          })}
+          {([
+            { key: "staff", label: m.admin.users.staffCard, style: ROLE_STYLES.ops },
+            { key: "sales", label: ROLE_LABELS.sales, style: ROLE_STYLES.sales },
+            { key: "driver", label: ROLE_LABELS.driver, style: ROLE_STYLES.driver },
+            { key: "merchant", label: ROLE_LABELS.merchant, style: ROLE_STYLES.merchant },
+            { key: "customer", label: ROLE_LABELS.customer, style: ROLE_STYLES.customer },
+          ] as const).map(({ key, label, style }) => (
+            <button
+              key={key}
+              onClick={() => { setRole(role === key ? "" : key); setPage(1); }}
+              className={`rounded-card border p-2.5 text-center transition-colors ${role === key ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary/40"}`}
+            >
+              <p className={`inline-flex items-center gap-1 text-lg font-bold ${style ? style.cls.split(" ").filter((c) => c.startsWith("text-")).join(" ") : ""}`}>
+                {style && <style.Icon size={15} />}
+                {roleCounts.roles[key] ?? 0}
+              </p>
+              <p className="text-xs text-ink-muted">{label}</p>
+            </button>
+          ))}
+          <button
+            onClick={() => { setOnlineOnly(!onlineOnly); setPage(1); }}
+            className={`rounded-card border p-2.5 text-center transition-colors ${onlineOnly ? "border-success bg-success/10" : "border-line bg-surface hover:border-success/40"}`}
+          >
+            <p className="inline-flex items-center gap-1.5 text-lg font-bold text-success">
+              <span className="h-2 w-2 animate-pulse rounded-badge bg-success" />
+              {roleCounts.roles.online ?? 0}
+            </p>
+            <p className="text-xs text-ink-muted">{m.admin.users.onlineCard}</p>
+          </button>
         </div>
       )}
 
@@ -257,7 +271,7 @@ export default function UsersPage() {
             ? (u) => (
                 <>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     onClick={() => setWalletUser(u)}
                     className="flex items-center gap-1.5"
                   >
@@ -265,7 +279,7 @@ export default function UsersPage() {
                     {m.admin.users.wallet}
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     onClick={() => setRolesUser(u)}
                     className="flex items-center gap-1.5"
                   >
@@ -356,6 +370,7 @@ function CreateUserModal({
   const [fullName, setFullName] = useState("");
   const [roles, setRoles] = useState<string[]>(["driver"]);
   const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -365,6 +380,10 @@ function CreateUserModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (password !== password2) {
+      setError(m.errors.password_mismatch);
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -424,14 +443,28 @@ function CreateUserModal({
             ))}
           </div>
         </div>
-        <Input
-          id="new-password"
-          label={m.admin.users.passwordOptional}
-          icon={<IconLock />}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            id="new-password"
+            label={m.admin.users.passwordRequired}
+            icon={<IconLock />}
+            type="password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Input
+            id="new-password2"
+            label={m.admin.users.confirmPassword}
+            icon={<IconLock />}
+            type="password"
+            required
+            minLength={8}
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
+          />
+        </div>
         {error && (
           <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
         )}

@@ -57,6 +57,9 @@ interface Tx {
   kind: string;
   amount: number;
   note: string;
+  by_name: string | null;
+  order_number: number | null;
+  ticket_number: number | null;
   created_at: string;
 }
 
@@ -254,19 +257,38 @@ export default function UserProfilePage() {
                 key={t.id}
                 className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2 text-sm"
               >
-                <span className="flex min-w-0 items-center gap-2">
-                  <Badge variant={t.amount > 0 ? "success" : "danger"}>
-                    {KINDS[t.kind] ?? t.kind}
-                  </Badge>
-                  {t.note && <span className="truncate text-xs text-ink-muted">{t.note}</span>}
-                </span>
+                <div className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <Badge variant={t.amount > 0 ? "success" : "danger"}>
+                      {KINDS[t.kind] ?? t.kind}
+                    </Badge>
+                    {t.order_number != null && (
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dashboard/orders?q=${t.order_number}`)}
+                        className="text-xs font-medium text-primary hover:underline"
+                      >
+                        {P.orderRef} #{fmt.format(t.order_number)}
+                      </button>
+                    )}
+                    {t.ticket_number != null && (
+                      <span className="text-xs font-medium text-primary">
+                        {P.ticketRef} #{fmt.format(t.ticket_number)}
+                      </span>
+                    )}
+                    {t.note && <span className="truncate text-xs text-ink-muted">{t.note}</span>}
+                  </span>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    {P.by}: {t.by_name ?? P.system}
+                  </p>
+                </div>
                 <span className="flex shrink-0 items-center gap-3">
                   <span className={`font-bold ${t.amount > 0 ? "text-success" : "text-danger"}`} dir="ltr">
                     {t.amount > 0 ? "+" : ""}
                     {fmt.format(t.amount)}
                   </span>
                   <span className="text-xs text-ink-muted" dir="ltr">
-                    {new Date(t.created_at).toLocaleDateString("ar-SY")}
+                    {new Date(t.created_at).toLocaleString("ar-SY", { dateStyle: "short", timeStyle: "short" })}
                   </span>
                 </span>
               </li>
