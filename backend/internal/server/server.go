@@ -13,19 +13,24 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 )
 
 type Server struct {
-	cfg    *config.Config
-	logger *slog.Logger
-	pg     *pgxpool.Pool
-	rdb    *redis.Client
+	cfg      *config.Config
+	logger   *slog.Logger
+	pg       *pgxpool.Pool
+	rdb      *redis.Client
+	tokens   *auth.TokenIssuer
+	identity *identity.Service
 }
 
-func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client) *Server {
-	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb}
+func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
+	tokens *auth.TokenIssuer, identitySvc *identity.Service) *Server {
+	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens, identity: identitySvc}
 }
 
 func (s *Server) Router() http.Handler {
@@ -46,7 +51,19 @@ func (s *Server) Router() http.Handler {
 	r.Get("/healthz", s.handleHealth)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		// نقاط الـAPI تُسجَّل هنا مع تقدم المراحل.
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/otp/request", s.handleOTPRequest)
+			r.Post("/otp/verify", s.handleOTPVerify)
+			r.Post("/login", s.handlePasswordLogin)
+			r.Post("/refresh", s.handleRefresh)
+			r.Post("/logout", s.handleLogout)
+
+			r.Group(func(r chi.Router) {
+				r.Use(s.RequireAuth)
+				r.Get("/me", s.handleMe)
+				r.Post("/password", s.handleSetPassword)
+			})
+		})
 	})
 
 	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {

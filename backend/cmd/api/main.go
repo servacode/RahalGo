@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -10,9 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/database"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/migrate"
+	"github.com/servacode/rahalgo/backend/internal/notify"
 	"github.com/servacode/rahalgo/backend/internal/server"
 )
 
@@ -55,9 +59,24 @@ func run(logger *slog.Logger) error {
 		logger.Info("migrations applied", "count", applied)
 	}
 
+	tokens := auth.NewTokenIssuer(cfg.JWTSecret, 15*time.Minute)
+
+	var otpSender notify.OTPSender
+	switch cfg.OTPProvider {
+	case "dev":
+		otpSender = &notify.DevSender{Logger: logger}
+	default:
+		return fmt.Errorf("unknown OTP_PROVIDER %q (whatsapp provider lands with the bot integration)", cfg.OTPProvider)
+	}
+
+	identitySvc := identity.NewService(identity.NewRepo(pg), rdb, tokens, otpSender, cfg.JWTSecret, logger)
+	if err := identitySvc.BootstrapAdmin(ctx, cfg.AdminPhone); err != nil {
+		return err
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           server.New(cfg, logger, pg, rdb).Router(),
+		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc).Router(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
