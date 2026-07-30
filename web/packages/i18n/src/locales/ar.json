@@ -22,7 +22,12 @@
     "password": "كلمة المرور",
     "otpTitle": "رمز التحقق",
     "otpSentWhatsapp": "أرسلنا رمز التحقق إلى واتساب الخاص بك",
-    "otpInvalid": "رمز التحقق غير صحيح"
+    "otpSentDev": "وضع التطوير: الرمز مطبوع في سجل الخادم (طرفية backend)",
+    "otpInvalid": "رمز التحقق غير صحيح",
+    "loginWithPassword": "بكلمة المرور",
+    "loginWithOtp": "برمز التحقق",
+    "sendOtp": "إرسال الرمز",
+    "changePhone": "تغيير الرقم"
   },
   "orders": {
     "title": "الطلبات",
