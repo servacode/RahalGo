@@ -111,7 +111,11 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 		}
 	}
 
-	return s.GetByID(ctx, orderID)
+	updated, err := s.GetByID(ctx, orderID)
+	if err == nil {
+		s.publishOrder(updated)
+	}
+	return updated, err
 }
 
 // settleCommissions يحسب عمولة المنصة من المتجر (لقطة على الطلب)،

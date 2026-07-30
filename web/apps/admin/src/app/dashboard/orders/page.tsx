@@ -27,6 +27,7 @@ import {
   IconDelete,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
+import { useLiveEvents } from "@/lib/ws";
 
 const PickMap = dynamic(() => import("@/components/map/PickMap"), { ssr: false });
 
@@ -153,9 +154,12 @@ export default function OrdersPage() {
     return () => clearTimeout(t);
   }, [load]);
 
-  // تحديث دوري كل 10 ثوانٍ (حتى يصل WebSocket)
+  // البث الحي: أي تحديث طلب يعيد تحميل القائمة فوراً — والدوري احتياط كل 60 ثانية
+  const liveConnected = useLiveEvents((event) => {
+    if (event.type === "order") void load();
+  });
   useEffect(() => {
-    const t = setInterval(load, 10000);
+    const t = setInterval(load, 60000);
     return () => clearInterval(t);
   }, [load]);
 
@@ -233,6 +237,16 @@ export default function OrdersPage() {
         <h1 className="flex items-center gap-2 text-2xl font-bold">
           <IconOrder className="text-primary" />
           {m.admin.ordersPage.title}
+          <span
+            className={`flex items-center gap-1.5 rounded-badge px-2.5 py-1 text-xs font-medium ${
+              liveConnected ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`}
+            />
+            {liveConnected ? m.admin.ordersPage.live : m.admin.ordersPage.liveOff}
+          </span>
         </h1>
 
       </div>

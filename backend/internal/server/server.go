@@ -20,6 +20,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
@@ -36,16 +37,17 @@ type Server struct {
 	wallet    *wallet.Service
 	orders    *orders.Service
 	cashbox   *cashbox.Service
+	hub       *realtime.Hub
 	otpStatus func() map[string]any
 }
 
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
 	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
-	cashboxSvc *cashbox.Service, otpStatus func() map[string]any) *Server {
+	cashboxSvc *cashbox.Service, hub *realtime.Hub, otpStatus func() map[string]any) *Server {
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
-		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, otpStatus: otpStatus}
+		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, hub: hub, otpStatus: otpStatus}
 }
 
 func (s *Server) Router() http.Handler {
@@ -66,6 +68,8 @@ func (s *Server) Router() http.Handler {
 	r.Get("/healthz", s.handleHealth)
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/ws", s.handleWS)
+
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/otp/request", s.handleOTPRequest)
 			r.Post("/otp/verify", s.handleOTPVerify)

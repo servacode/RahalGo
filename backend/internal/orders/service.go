@@ -18,17 +18,38 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
+// Publisher واجهة البث الحي — ينشر المحرك تحديثات الطلبات عبرها.
+type Publisher interface {
+	Publish(topic string, event any)
+}
+
+type noopPublisher struct{}
+
+func (noopPublisher) Publish(string, any) {}
+
 type Service struct {
 	db       *pgxpool.Pool
 	identity *identity.Service
 	wallet   *wallet.Service
 	cashbox  *cashbox.Service
+	pub      Publisher
 	logger   *slog.Logger
 }
 
 func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wallet.Service,
-	cashboxSvc *cashbox.Service, logger *slog.Logger) *Service {
-	return &Service{db: db, identity: identitySvc, wallet: walletSvc, cashbox: cashboxSvc, logger: logger}
+	cashboxSvc *cashbox.Service, pub Publisher, logger *slog.Logger) *Service {
+	if pub == nil {
+		pub = noopPublisher{}
+	}
+	return &Service{db: db, identity: identitySvc, wallet: walletSvc, cashbox: cashboxSvc, pub: pub, logger: logger}
+}
+
+// publishOrder يبث ملخص الطلب لغرفة العمليات.
+func (s *Service) publishOrder(o *Order) {
+	if o == nil {
+		return
+	}
+	s.pub.Publish("ops", map[string]any{"type": "order", "order": o})
 }
 
 // Create ينشئ طلباً كاملاً: تحقق المتجر، تسعير خادمي للأصناف والخيارات،
@@ -194,7 +215,11 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		}
 	}
 
-	return s.GetByID(ctx, orderID)
+	created, err := s.GetByID(ctx, orderID)
+	if err == nil {
+		s.publishOrder(created)
+	}
+	return created, err
 }
 
 // priceItems يجلب الأسعار الحقيقية من القائمة ويتحقق من الخيارات وقيود المجموعات.
