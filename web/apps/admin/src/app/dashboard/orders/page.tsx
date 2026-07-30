@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Button,
@@ -16,7 +15,6 @@ import {
   useViewMode,
   type DataColumn,
   IconOrder,
-  IconAdd,
   IconSearch,
   IconUser,
   IconStore,
@@ -24,13 +22,10 @@ import {
   IconDriver,
   IconStatus,
   IconLocation,
-  IconPhone,
-  IconDelete,
+  IconStar,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useLiveEvents } from "@/lib/ws";
-
-const PickMap = dynamic(() => import("@/components/map/PickMap"), { ssr: false });
 
 const m = getMessages(defaultLocale);
 const fmt = new Intl.NumberFormat("ar-SY");
@@ -66,6 +61,12 @@ interface OrderRow {
     options: { group: string; name: string; price_delta: number }[];
   }[];
   events?: { from_status: string; to_status: string; note: string; created_at: string }[];
+  rating?: {
+    merchant_stars: number;
+    driver_stars: number | null;
+    comment: string;
+    created_at: string;
+  };
 }
 
 interface OrderPage {
@@ -630,8 +631,50 @@ function OrderDetailModal({
               ))}
             </ol>
           </FormSection>
+
+          {order.rating && (
+            <FormSection title={m.admin.ordersPage.rating.title} icon={<IconStar />}>
+              <div className="space-y-2 text-sm">
+                <StarsRow
+                  label={m.admin.ordersPage.rating.merchant}
+                  stars={order.rating.merchant_stars}
+                />
+                {order.rating.driver_stars != null && (
+                  <StarsRow
+                    label={m.admin.ordersPage.rating.driver}
+                    stars={order.rating.driver_stars}
+                  />
+                )}
+                {order.rating.comment && (
+                  <p className="rounded-control bg-page px-3 py-2">
+                    <span className="text-xs text-ink-muted">
+                      {m.admin.ordersPage.rating.comment}:
+                    </span>{" "}
+                    {order.rating.comment}
+                  </p>
+                )}
+              </div>
+            </FormSection>
+          )}
         </div>
       </div>
     </Modal>
+  );
+}
+
+function StarsRow({ label, stars }: { label: string; stars: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-24 text-ink-muted">{label}</span>
+      <span className="flex gap-0.5" aria-label={`${stars}/5`}>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <IconStar
+            key={i}
+            size={16}
+            className={i <= stars ? "fill-accent text-accent" : "text-line"}
+          />
+        ))}
+      </span>
+    </div>
   );
 }

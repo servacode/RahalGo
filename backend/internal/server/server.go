@@ -22,6 +22,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/settings"
+	"github.com/servacode/rahalgo/backend/internal/support"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -37,6 +38,7 @@ type Server struct {
 	wallet    *wallet.Service
 	orders    *orders.Service
 	cashbox   *cashbox.Service
+	support   *support.Service
 	hub       *realtime.Hub
 	otpStatus func() map[string]any
 }
@@ -44,10 +46,12 @@ type Server struct {
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
 	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
-	cashboxSvc *cashbox.Service, hub *realtime.Hub, otpStatus func() map[string]any) *Server {
+	cashboxSvc *cashbox.Service, supportSvc *support.Service,
+	hub *realtime.Hub, otpStatus func() map[string]any) *Server {
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
-		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, hub: hub, otpStatus: otpStatus}
+		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
+		hub: hub, otpStatus: otpStatus}
 }
 
 func (s *Server) Router() http.Handler {
@@ -84,6 +88,9 @@ func (s *Server) Router() http.Handler {
 			})
 		})
 
+		// تقييم الطلب — زبون الطلب نفسه (تُستخدم من التطبيق/الموقع)
+		r.With(s.RequireAuth).Post("/orders/{id}/rating", s.handleRateOrder)
+
 		// نقاط الإدارة — أدمن/عمليات فقط، والتعديلات الحساسة للأدمن حصراً
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(s.RequireAuth)
@@ -118,6 +125,14 @@ func (s *Server) Router() http.Handler {
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			r.Get("/customers", s.handleListCustomers)
 			r.Get("/salesreps", s.handleListSalesReps)
+
+			// التذاكر والتعويضات — الحل المالي للأدمن/المالية حصراً
+			r.Get("/tickets", s.handleListTickets)
+			r.Post("/tickets", s.handleCreateTicket)
+			r.Get("/tickets/{id}", s.handleGetTicket)
+			r.Post("/tickets/{id}/replies", s.handleTicketReply)
+			r.With(s.RequireRoles("admin", "finance")).
+				Post("/tickets/{id}/resolve", s.handleTicketResolve)
 
 			// السائقون والصندوق النقدي
 			r.Get("/drivers", s.handleListDrivers)

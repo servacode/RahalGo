@@ -24,6 +24,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/server"
 	"github.com/servacode/rahalgo/backend/internal/settings"
+	"github.com/servacode/rahalgo/backend/internal/support"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -100,10 +101,11 @@ func run(logger *slog.Logger) error {
 	hub := realtime.NewHub(logger)
 	ordersSvc := orders.NewService(pg, identitySvc, walletSvc, cashboxSvc, hub, logger)
 	go ordersSvc.RunWatchdog(ctx, 30*time.Second)
+	supportSvc := support.NewService(pg, identitySvc, walletSvc)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc, settingsStore, walletSvc, ordersSvc, cashboxSvc, hub, otpStatus).Router(),
+		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc, settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, hub, otpStatus).Router(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

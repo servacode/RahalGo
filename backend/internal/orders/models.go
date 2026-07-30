@@ -71,6 +71,7 @@ type Order struct {
 	CancelReason  string      `json:"cancel_reason"`
 	Items         []OrderItem `json:"items,omitempty"`
 	Events        []Event     `json:"events,omitempty"`
+	Rating        *Rating     `json:"rating,omitempty"`
 	CreatedAt     time.Time   `json:"created_at"`
 }
 

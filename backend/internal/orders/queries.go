@@ -84,7 +84,11 @@ func (s *Service) GetByID(ctx context.Context, id string) (*Order, error) {
 		}
 		o.Events = append(o.Events, e)
 	}
-	return o, eRows.Err()
+	if err := eRows.Err(); err != nil {
+		return nil, err
+	}
+	o.Rating = s.ratingFor(ctx, id)
+	return o, nil
 }
 
 type ListFilter struct {

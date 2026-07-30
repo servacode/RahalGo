@@ -24,6 +24,9 @@ export {
   Wallet as IconWallet,
   Truck as IconDriver,
   ShoppingBasket as IconOrder,
+  LifeBuoy as IconSupport,
+  Star as IconStar,
+  MessageSquare as IconReply,
   // الإجراءات
   Menu as IconHamburger,
   Plus as IconAdd,

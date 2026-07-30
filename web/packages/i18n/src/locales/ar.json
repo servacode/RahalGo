@@ -80,6 +80,9 @@
     "over_settle": "المبلغ يتجاوز ما بحوزة السائق",
     "cash_limit_exceeded": "السائق تجاوز سقفه النقدي — يجب تسليم الصندوق أولاً",
     "phone_taken": "هذا الرقم مسجّل مسبقاً",
+    "not_delivered": "لا يمكن تقييم طلب لم يُسلَّم بعد",
+    "already_rated": "هذا الطلب مُقيَّم مسبقاً",
+    "ticket_resolved": "التذكرة محلولة ومغلقة — لا يمكن التعديل عليها",
     "invalid_role": "الدور المحدد غير صالح",
     "self_action": "لا يمكنك تنفيذ هذا الإجراء على حسابك"
   },
@@ -95,6 +98,7 @@
       "dashboard": "الرئيسية",
       "orders": "الطلبات",
       "customers": "الزبائن",
+      "tickets": "التذاكر والدعم",
       "drivers": "السائقون",
       "sales": "المندوبون",
       "users": "الحسابات والصلاحيات",
@@ -107,7 +111,6 @@
     },
     "ordersPage": {
       "title": "الطلبات",
-      "newOrder": "طلب هاتفي جديد",
       "searchPlaceholder": "رقم الطلب أو هاتف الزبون…",
       "allStatuses": "كل الحالات",
       "openOnly": "الجارية فقط",
@@ -157,24 +160,11 @@
       "assignDriver": "إسناد سائق",
       "chooseDriver": "اختر السائق",
       "cancelReasonPrompt": "سبب الإلغاء:",
-      "create": {
-        "title": "طلب هاتفي بالنيابة",
-        "customerPhone": "هاتف الزبون",
-        "customerHint": "يُنشأ حساب تلقائياً إن لم يكن مسجلاً",
-        "merchant": "المتجر",
-        "chooseMerchant": "اختر المتجر…",
-        "cart": "السلة",
-        "cartEmpty": "أضف أصنافاً من قائمة المتجر",
-        "add": "أضف",
-        "qty": "الكمية",
-        "itemNote": "ملاحظة الصنف",
-        "address": "عنوان التسليم (وصفي)",
-        "pinHint": "حدد موقع التسليم على الخريطة",
-        "payment": "طريقة الدفع",
-        "promo": "كود خصم (اختياري)",
-        "orderNotes": "ملاحظات عامة",
-        "submit": "إنشاء الطلب",
-        "created": "أُنشئ الطلب #{number} بنجاح"
+      "rating": {
+        "title": "تقييم الزبون",
+        "merchant": "تقييم المتجر",
+        "driver": "تقييم السائق",
+        "comment": "التعليق"
       }
     },
     "customers": {
@@ -188,6 +178,46 @@
       "never": "لم يطلب بعد",
       "viewOrders": "طلباته",
       "empty": "لا زبائن مطابقون"
+    },
+    "tickets": {
+      "title": "التذاكر والدعم",
+      "newTicket": "تذكرة جديدة",
+      "allStatuses": "كل الحالات",
+      "status": {
+        "open": "مفتوحة",
+        "in_progress": "قيد المعالجة",
+        "resolved": "محلولة"
+      },
+      "table": {
+        "number": "رقم التذكرة",
+        "customer": "الزبون",
+        "subject": "الموضوع",
+        "order": "الطلب",
+        "compensation": "التعويض",
+        "created": "تاريخ الفتح"
+      },
+      "form": {
+        "title": "فتح تذكرة جديدة",
+        "customerPhone": "هاتف الزبون",
+        "orderNumber": "رقم الطلب (اختياري)",
+        "subject": "موضوع الشكوى",
+        "body": "تفاصيل الشكوى",
+        "create": "فتح التذكرة"
+      },
+      "detail": "تفاصيل التذكرة",
+      "thread": "سجل المتابعة",
+      "noReplies": "لا ردود بعد",
+      "replyPlaceholder": "اكتب رداً أو ملاحظة متابعة…",
+      "sendReply": "إرسال الرد",
+      "resolveTitle": "حل التذكرة",
+      "resolution": "ملخص الحل",
+      "compensationAmount": "تعويض لمحفظة الزبون (اختياري)",
+      "compensationHint": "يُقيَّد فوراً لمحفظة الزبون عند الحل",
+      "resolveButton": "حل التذكرة وإغلاقها",
+      "resolvedAt": "حُلَّت في",
+      "noCompensation": "بدون تعويض",
+      "empty": "لا تذاكر مطابقة",
+      "viewOrder": "عرض الطلب"
     },
     "sales": {
       "title": "المندوبون",
