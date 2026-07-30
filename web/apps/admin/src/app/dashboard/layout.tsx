@@ -165,7 +165,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-4 shadow-sm lg:p-6">
+        <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-4 shadow-sm">
           {children}
         </main>
       </div>

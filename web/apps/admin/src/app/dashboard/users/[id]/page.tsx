@@ -165,17 +165,17 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div>
       <button
         onClick={() => router.push("/dashboard/users")}
-        className="mb-4 flex items-center gap-1 text-sm text-ink-muted hover:text-primary"
+        className="mb-3 flex items-center gap-1 text-sm text-ink-muted hover:text-primary"
       >
         <IconPrev size={15} />
         {m.admin.users.title}
       </button>
 
       {/* الترويسة: البيانات في الصدارة والأزرار سطر واحد (ملاحظة مراجعة) */}
-      <div className="mb-4 rounded-card border border-line bg-surface p-4">
+      <div className="mb-3 rounded-card border border-line bg-surface p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <MediaThumb url={p.avatar_thumb_url} alt="" fallback={p.full_name || "؟"} size={56} />
@@ -267,7 +267,7 @@ export default function UserProfilePage() {
       )}
 
       {/* التبويبات — كل قسم في تبويبه (ملاحظة مراجعة) */}
-      <div className="mb-5 flex gap-1 border-b border-line">
+      <div className="mb-3 flex gap-1 border-b border-line">
         {(
           [
             { key: "overview", label: P.tabs.overview, icon: <IconUser size={15} /> },
@@ -293,7 +293,7 @@ export default function UserProfilePage() {
       {tab === "overview" && (
       <>
       {/* المؤشرات حسب الأدوار */}
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map((s) => (
           <div key={s.label} className="rounded-card border border-line bg-surface p-3">
             <div className="mb-1">{s.icon}</div>
@@ -304,7 +304,7 @@ export default function UserProfilePage() {
       </div>
 
       {p.merchants.length > 0 && (
-        <div className="mb-5 rounded-card border border-line bg-surface p-4">
+        <div className="mb-3 rounded-card border border-line bg-surface p-3">
           <p className="mb-2 flex items-center gap-1.5 text-sm font-bold">
             <IconStore size={15} className="text-primary" />
             {P.merchantsOwned}
