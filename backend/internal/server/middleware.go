@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
@@ -36,6 +37,7 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		}
 		ctx := context.WithValue(r.Context(), ctxUserID, claims.Subject)
 		ctx = context.WithValue(ctx, ctxRoles, claims.Roles)
+		s.touchPresence(claims.Subject)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -59,4 +61,17 @@ func (s *Server) RequireRoles(roles ...string) func(http.Handler) http.Handler {
 func userIDFrom(r *http.Request) string {
 	id, _ := r.Context().Value(ctxUserID).(string)
 	return id
+}
+
+// touchPresence يحدّث "آخر ظهور" مع النشاط الموثق — بتهدئة 60 ثانية
+// كي لا يثقل كل طلب بقاعدة البيانات.
+func (s *Server) touchPresence(userID string) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_, _ = s.pg.Exec(ctx, `
+			UPDATE users SET last_seen_at = now()
+			WHERE id = $1 AND (last_seen_at IS NULL OR last_seen_at < now() - interval '60 seconds')`,
+			userID)
+	}()
 }

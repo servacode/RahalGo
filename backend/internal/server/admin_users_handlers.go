@@ -79,7 +79,7 @@ func (s *Server) handleAdminRevokeRole(w http.ResponseWriter, r *http.Request) {
 // الفلترة أعلى شاشة الحسابات.
 func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(),
-		`SELECT role_code, count(*) FROM user_roles GROUP BY role_code`)
+		`SELECT role_code, count(*) FROM user_roles WHERE role_code <> 'admin' GROUP BY role_code`)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -96,7 +96,7 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 		counts[role] = n
 	}
 	var total int
-	if err := s.pg.QueryRow(r.Context(), `SELECT count(*) FROM users`).Scan(&total); err != nil {
+	if err := s.pg.QueryRow(r.Context(), `SELECT count(*) FROM users u WHERE NOT EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = u.id AND r.role_code = 'admin')`).Scan(&total); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -132,7 +132,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT array_agg(m.name ORDER BY m.created_at) FROM merchants m WHERE m.owner_user_id = u.id), '{}'),
 		       (SELECT count(*) FROM merchants m WHERE m.sales_rep_user_id = u.id),
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t WHERE t.user_id = u.id AND t.kind = 'commission'), 0),
-		       COALESCE((SELECT balance FROM driver_cash_boxes WHERE driver_id = u.id), 0),
+		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered')
 		FROM users u WHERE u.id = $1`, id).
 		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.CreatedAt,

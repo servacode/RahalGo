@@ -22,12 +22,12 @@ func (r *Repo) getUserBy(ctx context.Context, where, arg string) (*User, string,
 	var u User
 	var passwordHash *string
 	err := r.db.QueryRow(ctx, `
-		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash, u.invite_code, u.created_at,
+		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash, u.invite_code, u.last_seen_at, u.created_at,
 		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}')
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		WHERE `+where+` GROUP BY u.id`, arg).
-		Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &passwordHash, &u.InviteCode, &u.CreatedAt, &u.Roles)
+		Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &passwordHash, &u.InviteCode, &u.LastSeenAt, &u.CreatedAt, &u.Roles)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, "", ErrNotFound
 	}
@@ -95,12 +95,13 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset 
 	}
 
 	rows, err := r.db.Query(ctx, `
-		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash IS NOT NULL, u.invite_code, u.created_at,
+		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash IS NOT NULL, u.invite_code, u.last_seen_at, u.created_at,
 		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}')
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		`+where+`
 		GROUP BY u.id
+		HAVING NOT bool_or(ur.role_code = 'admin')
 		ORDER BY u.created_at DESC
 		LIMIT $3 OFFSET $4`, query, role, limit, offset)
 	if err != nil {
@@ -111,7 +112,7 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset 
 	users := []User{}
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.CreatedAt, &u.Roles); err != nil {
+		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.LastSeenAt, &u.CreatedAt, &u.Roles); err != nil {
 			return nil, 0, err
 		}
 		users = append(users, u)

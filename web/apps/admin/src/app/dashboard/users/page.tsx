@@ -88,11 +88,11 @@ export default function UsersPage() {
     return () => clearTimeout(t);
   }, [load]);
 
-  async function toggleBlock(u: AuthUser) {
+  async function setStatus(u: AuthUser, status: string) {
     try {
       await api(`/api/v1/admin/users/${u.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ status: u.status === "active" ? "blocked" : "active" }),
+        body: JSON.stringify({ status }),
       });
       await load();
     } catch (err) {
@@ -130,11 +130,6 @@ export default function UsersPage() {
           {u.roles.map((r) => (
             <RoleBadge key={r} role={r} />
           ))}
-          {u.invite_code && (
-            <Badge variant="warning">
-              <span dir="ltr" className="font-mono">{u.invite_code}</span>
-            </Badge>
-          )}
         </div>
       ),
     },
@@ -143,10 +138,22 @@ export default function UsersPage() {
       header: m.admin.users.table.status,
       icon: <IconStatus />,
       cell: (u) => (
-        <Badge variant={u.status === "active" ? "success" : "danger"}>
-          {u.status === "active" ? m.admin.users.active : m.admin.users.blocked}
+        <Badge
+          variant={u.status === "active" ? "success" : u.status === "suspended" ? "warning" : "danger"}
+        >
+          {u.status === "active"
+            ? m.admin.users.active
+            : u.status === "suspended"
+              ? m.admin.users.suspended
+              : m.admin.users.blocked}
         </Badge>
       ),
+    },
+    {
+      id: "seen",
+      header: m.admin.users.lastSeen,
+      icon: <IconStatus />,
+      cell: (u) => <PresenceCell lastSeen={u.last_seen_at} />,
     },
   ];
 
@@ -163,7 +170,7 @@ export default function UsersPage() {
       </div>
 
       {roleCounts && (
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           <button
             onClick={() => setRole("")}
             className={`rounded-card border p-2.5 text-center transition-colors ${role === "" ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary/40"}`}
@@ -171,7 +178,7 @@ export default function UsersPage() {
             <p className="text-lg font-bold">{roleCounts.total}</p>
             <p className="text-xs text-ink-muted">{m.admin.users.allRoles}</p>
           </button>
-          {(["admin", "ops", "finance", "sales", "driver", "merchant", "customer"] as const).map((rk) => {
+          {(["ops", "finance", "sales", "driver", "merchant", "customer"] as const).map((rk) => {
             const st = ROLE_STYLES[rk];
             return (
               <button
@@ -238,6 +245,7 @@ export default function UsersPage() {
         columns={columns}
         view={view}
         empty={m.admin.users.noResults}
+        onRowClick={(u) => router.push(`/dashboard/users/${u.id}`)}
         actions={
           isAdmin
             ? (u) => (
@@ -258,16 +266,36 @@ export default function UsersPage() {
                     <IconRoles size={15} />
                     {m.admin.users.manageRoles}
                   </Button>
-                  {u.id !== me?.id && (
-                    <Button
-                      variant={u.status === "active" ? "danger" : "secondary"}
-                      onClick={() => toggleBlock(u)}
-                      className="flex items-center gap-1.5"
-                    >
-                      {u.status === "active" ? <IconBlock size={15} /> : <IconUnblock size={15} />}
-                      {u.status === "active" ? m.admin.users.block : m.admin.users.unblock}
-                    </Button>
-                  )}
+                  {u.id !== me?.id &&
+                    (u.status === "active" ? (
+                      <>
+                        <Button
+                          variant="secondary"
+                          onClick={() => setStatus(u, "suspended")}
+                          className="flex items-center gap-1.5 !text-warning"
+                        >
+                          <IconBlock size={15} />
+                          {m.admin.users.suspend}
+                        </Button>
+                        <Button
+                          variant="danger"
+                          onClick={() => setStatus(u, "blocked")}
+                          className="flex items-center gap-1.5"
+                        >
+                          <IconBlock size={15} />
+                          {m.admin.users.block}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={() => setStatus(u, "active")}
+                        className="flex items-center gap-1.5"
+                      >
+                        <IconUnblock size={15} />
+                        {m.admin.users.activate}
+                      </Button>
+                    ))}
                 </>
               )
             : undefined
@@ -481,4 +509,26 @@ function ManageRolesModal({
       </div>
     </Modal>
   );
+}
+
+// خلية الحضور: نقطة خضراء نابضة إن كان نشطاً خلال دقيقتين، وإلا آخر ظهور نسبي.
+function PresenceCell({ lastSeen }: { lastSeen: string | null }) {
+  if (!lastSeen) return <span className="text-xs text-ink-muted">{m.admin.users.neverSeen}</span>;
+  const diffMin = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 60000);
+  if (diffMin < 2) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
+        <span className="h-2 w-2 animate-pulse rounded-badge bg-success" />
+        {m.admin.users.online}
+      </span>
+    );
+  }
+  const rtf = new Intl.RelativeTimeFormat("ar", { numeric: "auto" });
+  const label =
+    diffMin < 60
+      ? rtf.format(-diffMin, "minute")
+      : diffMin < 1440
+        ? rtf.format(-Math.floor(diffMin / 60), "hour")
+        : rtf.format(-Math.floor(diffMin / 1440), "day");
+  return <span className="text-xs text-ink-muted">{label}</span>;
 }

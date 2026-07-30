@@ -112,7 +112,7 @@ export function DataView<T>({
     const primaries = columns.filter((c) => c.primary);
     const rest = columns.filter((c) => !c.primary);
     return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((item) => (
           <div
             key={getKey(item)}

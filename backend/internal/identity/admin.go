@@ -103,10 +103,10 @@ type UpdateUserInput struct {
 
 func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, in UpdateUserInput, ip string) (*User, error) {
 	if in.Status != nil {
-		if *in.Status != "active" && *in.Status != "blocked" {
+		if *in.Status != "active" && *in.Status != "suspended" && *in.Status != "blocked" {
 			return nil, errValidationErr
 		}
-		if userID == actorID && *in.Status == "blocked" {
+		if userID == actorID && *in.Status != "active" {
 			return nil, ErrSelfAction // لا يمكنك حظر نفسك
 		}
 	}

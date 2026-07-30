@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, Select, Badge, Modal, IconWallet } from "@rahalgo/ui";
+import { Button, Input, Select, Modal, IconWallet } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -22,15 +22,6 @@ function errText(err: unknown): string {
   return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
 }
 
-interface WalletTx {
-  id: number;
-  amount: number;
-  kind: string;
-  ref: string;
-  note: string;
-  created_at: string;
-}
-
 export default function WalletModal({
   user,
   onClose,
@@ -42,7 +33,6 @@ export default function WalletModal({
 }) {
   const KINDS: Record<string, string> = m.admin.users.txKinds;
   const [balance, setBalance] = useState<number | null>(null);
-  const [txs, setTxs] = useState<WalletTx[]>([]);
   const [amount, setAmount] = useState("");
   const [kind, setKind] = useState("topup");
   const [debit, setDebit] = useState(false);
@@ -52,11 +42,10 @@ export default function WalletModal({
 
   const loadWallet = useCallback(async () => {
     try {
-      const st = await api<{ balance: number; transactions: WalletTx[] }>(
+      const st = await api<{ balance: number }>(
         `/api/v1/admin/users/${user.id}/wallet`,
       );
       setBalance(st.balance);
-      setTxs(st.transactions);
       setError("");
     } catch (err) {
       setError(errText(err));
@@ -154,32 +143,6 @@ export default function WalletModal({
         </form>
       )}
 
-      <h3 className="mb-2 text-sm font-bold">{m.admin.users.txHistory}</h3>
-      {txs.length === 0 ? (
-        <p className="rounded-control bg-page p-4 text-center text-sm text-ink-muted">
-          {m.admin.users.noTx}
-        </p>
-      ) : (
-        <ul className="max-h-60 space-y-1.5 overflow-y-auto">
-          {txs.map((t) => (
-            <li
-              key={t.id}
-              className="flex items-center justify-between rounded-control border border-line px-3 py-2 text-sm"
-            >
-              <span className="flex items-center gap-2">
-                <Badge variant={t.amount > 0 ? "success" : "danger"}>
-                  {KINDS[t.kind] ?? t.kind}
-                </Badge>
-                {t.note && <span className="text-xs text-ink-muted">{t.note}</span>}
-              </span>
-              <span className={`font-bold ${t.amount > 0 ? "text-success" : "text-danger"}`}>
-                {t.amount > 0 ? "+" : ""}
-                {fmtNum.format(t.amount)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
     </Modal>
   );
 }

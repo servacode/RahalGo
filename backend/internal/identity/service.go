@@ -27,6 +27,7 @@ var (
 	ErrOTPInvalid         = httpx.NewError(http.StatusUnauthorized, "invalid_otp", "auth.otpInvalid")
 	ErrInvalidCredentials = httpx.NewError(http.StatusUnauthorized, "invalid_credentials", "errors.invalid_credentials")
 	ErrUserBlocked        = httpx.NewError(http.StatusForbidden, "user_blocked", "errors.user_blocked")
+	ErrUserSuspended      = httpx.NewError(http.StatusForbidden, "user_suspended", "errors.user_suspended")
 	ErrInvalidRefresh     = httpx.NewError(http.StatusUnauthorized, "invalid_refresh", "errors.unauthorized")
 	ErrWeakPassword       = httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password")
 	ErrOTPSendFailed      = httpx.NewError(http.StatusServiceUnavailable, "otp_send_failed", "errors.otp_send_failed")
@@ -144,6 +145,9 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 }
 
 func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, action string) (*AuthResult, error) {
+	if user.Status == "suspended" {
+		return nil, ErrUserSuspended
+	}
 	if user.Status != "active" {
 		return nil, ErrUserBlocked
 	}
