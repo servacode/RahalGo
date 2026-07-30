@@ -57,6 +57,7 @@ interface Merchant {
   lat: number | null;
   lng: number | null;
   status: string;
+  commission_percent: number;
   emergency_closed: boolean;
   created_at: string;
 }
@@ -522,6 +523,7 @@ function MerchantModal({
   const [repCode, setRepCode] = useState(merchant?.sales_rep_code ?? "");
   const [lat, setLat] = useState<number | null>(merchant?.lat ?? null);
   const [lng, setLng] = useState<number | null>(merchant?.lng ?? null);
+  const [commission, setCommission] = useState(String(merchant?.commission_percent ?? 10));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -539,6 +541,7 @@ function MerchantModal({
       sales_rep_code: repCode,
       lat,
       lng,
+      commission_percent: Number(commission) || 0,
     };
     try {
       if (merchant) {
@@ -601,6 +604,15 @@ function MerchantModal({
               label={m.admin.merchants.descriptionField}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+            />
+            <Input
+              id="m-commission"
+              label={m.admin.merchants.commission}
+              type="number"
+              min="0"
+              max="100"
+              value={commission}
+              onChange={(e) => setCommission(e.target.value)}
             />
           </div>
         </FormSection>

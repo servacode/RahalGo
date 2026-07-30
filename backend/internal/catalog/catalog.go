@@ -44,6 +44,7 @@ type Merchant struct {
 	Lat             *float64  `json:"lat"`
 	Lng             *float64  `json:"lng"`
 	Status          string    `json:"status"`
+	CommissionPct   int       `json:"commission_percent"`
 	EmergencyClosed bool      `json:"emergency_closed"`
 	CreatedAt       time.Time `json:"created_at"`
 }
@@ -139,7 +140,7 @@ const merchantSelect = `
 	SELECT m.id, m.name, m.description, m.category_id, c.name, c.icon,
 	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone, sr.invite_code,
 	       ST_Y(m.location::geometry), ST_X(m.location::geometry),
-	       m.status, m.emergency_closed, m.created_at
+	       m.status, m.commission_percent, m.emergency_closed, m.created_at
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
@@ -149,7 +150,7 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 	var m Merchant
 	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
-		&m.Lat, &m.Lng, &m.Status, &m.EmergencyClosed, &m.CreatedAt)
+		&m.Lat, &m.Lng, &m.Status, &m.CommissionPct, &m.EmergencyClosed, &m.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +203,7 @@ type MerchantInput struct {
 	Phone           *string  `json:"phone"`
 	AddressText     *string  `json:"address_text"`
 	Status          *string  `json:"status"`
+	CommissionPct   *int     `json:"commission_percent"`
 	EmergencyClosed *bool    `json:"emergency_closed"`
 	OwnerPhone      *string  `json:"owner_phone"`    // يربط/ينشئ حساب صاحب المتجر بدور merchant
 	SalesRepCode    *string  `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
@@ -261,6 +263,7 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 			phone         = COALESCE($5, phone),
 			address_text  = COALESCE($6, address_text),
 			status        = COALESCE($7, status),
+			commission_percent = COALESCE($13, commission_percent),
 			emergency_closed = COALESCE($8, emergency_closed),
 			owner_user_id = COALESCE($9, owner_user_id),
 			sales_rep_user_id = COALESCE($10, sales_rep_user_id),
@@ -270,7 +273,7 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 				location),
 			updated_at    = now()
 		WHERE id = $1`,
-		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng)
+		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}

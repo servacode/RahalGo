@@ -99,14 +99,59 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 		}
 	}
 
-	// عند التسليم: نقد الطلب يُقيَّد على صندوق السائق
-	if to == StDelivered && cashDue > 0 && driverID != nil {
-		if err := s.cashbox.Collect(ctx, *driverID, cashDue, orderID, &actorID); err != nil {
-			s.logger.Error("cash collect failed", "order", orderID, "error", err)
+	// عند التسليم: نقد الطلب يُقيَّد على صندوق السائق + تسوية العمولات
+	if to == StDelivered {
+		if cashDue > 0 && driverID != nil {
+			if err := s.cashbox.Collect(ctx, *driverID, cashDue, orderID, &actorID); err != nil {
+				s.logger.Error("cash collect failed", "order", orderID, "error", err)
+			}
+		}
+		if err := s.settleCommissions(ctx, orderID, actorID); err != nil {
+			s.logger.Error("commission settle failed", "order", orderID, "error", err)
 		}
 	}
 
 	return s.GetByID(ctx, orderID)
+}
+
+// settleCommissions يحسب عمولة المنصة من المتجر (لقطة على الطلب)،
+// ويقيّد نسبة المندوب منها لمحفظته تلقائياً (PLAN §6.3 + قرار 13).
+func (s *Service) settleCommissions(ctx context.Context, orderID, actorID string) error {
+	var subtotal int64
+	var merchantPct int
+	var repID *string
+	err := s.db.QueryRow(ctx, `
+		SELECT o.subtotal, m.commission_percent, m.sales_rep_user_id
+		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1`, orderID).Scan(&subtotal, &merchantPct, &repID)
+	if err != nil {
+		return err
+	}
+
+	platformCommission := subtotal * int64(merchantPct) / 100
+	if _, err := s.db.Exec(ctx,
+		`UPDATE orders SET platform_commission = $2 WHERE id = $1`,
+		orderID, platformCommission); err != nil {
+		return err
+	}
+	if platformCommission == 0 || repID == nil {
+		return nil
+	}
+
+	// نسبة المندوب من عمولة المنصة — إعداد ديناميكي
+	var repPct float64
+	if err := s.db.QueryRow(ctx, `
+		SELECT COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings
+		                 WHERE key = 'sales.commission_percent'), 10)`).Scan(&repPct); err != nil {
+		return err
+	}
+	repCommission := int64(float64(platformCommission) * repPct / 100)
+	if repCommission <= 0 {
+		return nil
+	}
+	_, err = s.wallet.Apply(ctx, *repID, repCommission, "commission",
+		orderID, "عمولة مندوب عن طلب مسلَّم", &actorID)
+	return err
 }
 
 // AssignDriver إسناد يدوي من العمليات: يتحقق أن الحساب سائق نشط ثم يسند وينقل الحالة.
