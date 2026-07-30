@@ -367,7 +367,8 @@
         "admin.password_reset": "إعادة تعيين كلمة مرور",
         "admin.logout_all": "إنهاء كل الجلسات",
         "wallet.apply": "حركة محفظة"
-      }
+      },
+      "viewProfile": "عرض الملف"
     },
     "merchants": {
       "title": "المتاجر",

@@ -23,6 +23,7 @@ import {
   IconUnblock,
   IconLock,
   IconWallet,
+  IconView,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -113,9 +114,22 @@ export default function UsersPage() {
       icon: <IconUser />,
       primary: true,
       cell: (u) => (
-        <span className="inline-flex items-center gap-2">
-          <MediaThumb url={u.avatar_thumb_url} alt="" fallback={u.full_name || "؟"} size={32} />
-          {u.full_name || "—"}
+        <span className="flex w-full items-center justify-between gap-2">
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <MediaThumb url={u.avatar_thumb_url} alt="" fallback={u.full_name || "؟"} size={32} />
+            <span className="truncate">{u.full_name || "—"}</span>
+          </span>
+          <button
+            type="button"
+            title={m.admin.users.viewProfile}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/dashboard/users/${u.id}`);
+            }}
+            className="shrink-0 rounded-control p-1 text-ink-muted transition-colors hover:bg-primary-light hover:text-primary"
+          >
+            <IconView size={17} />
+          </button>
         </span>
       ),
     },

@@ -25,6 +25,7 @@ export {
   Truck as IconDriver,
   ShoppingBasket as IconOrder,
   LifeBuoy as IconSupport,
+  Eye as IconView,
   Star as IconStar,
   MessageSquare as IconReply,
   // الإجراءات
