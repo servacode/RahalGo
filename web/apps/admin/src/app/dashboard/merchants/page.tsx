@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Button,
@@ -21,6 +22,7 @@ import {
   IconEdit,
   IconLocation,
   IconSettings,
+  IconOrder as IconMenu,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -71,6 +73,7 @@ function errText(err: unknown): string {
 
 export default function MerchantsPage() {
   const { user: me } = useAuth();
+  const router = useRouter();
   const isAdmin = !!me?.roles.includes("admin");
 
   const [data, setData] = useState<MerchantPage | null>(null);
@@ -278,6 +281,14 @@ export default function MerchantsPage() {
           isAdmin
             ? (mr) => (
                 <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => router.push(`/dashboard/merchants/${mr.id}/menu`)}
+                    className="flex items-center gap-1.5"
+                  >
+                    <IconMenu size={15} />
+                    {m.admin.menu.manageMenu}
+                  </Button>
                   <Button
                     variant="ghost"
                     onClick={() => setEditing(mr)}
