@@ -880,9 +880,31 @@
       "leads": "طلبات الانضمام",
       "merchants": "متاجري",
       "wallet": "عمولاتي",
+      "reviews": "التقييمات والتعليقات",
+      "complaints": "الشكاوى والبلاغات",
       "account": "حسابي"
     },
     "shopAsCustomer": "تسوّق كزبون",
+    "reputation": {
+      "myRating": "تقييمي",
+      "reviewsTitle": "التقييمات والتعليقات",
+      "reviewsHint": "ما قيّمه الزبائن وكتبوه عن متاجرك",
+      "reviewsEmpty": "لا تقييمات بعد",
+      "complaintsTitle": "الشكاوى والبلاغات",
+      "complaintsHint": "البلاغات المقدّمة على طلبات متاجرك",
+      "complaintsEmpty": "لا شكاوى بحقّك — عملك ممتاز",
+      "avg": "متوسط تقييمك",
+      "count": "عدد التقييمات",
+      "trendUp": "تقييمك في تحسّن ▲",
+      "trendDown": "تقييمك في انخفاض ▼",
+      "trendFlat": "تقييمك مستقر",
+      "order": "طلب",
+      "ticketStatus": {
+        "open": "مفتوح",
+        "in_progress": "قيد المعالجة",
+        "resolved": "محلول"
+      }
+    },
     "account": {
       "title": "إعدادات الحساب",
       "photo": "الصورة الشخصية",

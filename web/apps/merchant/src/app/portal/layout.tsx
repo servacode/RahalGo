@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
@@ -10,6 +10,8 @@ import {
   IconOrder,
   IconStore,
   IconStatus,
+  IconStar,
+  IconSupport,
   IconLogout,
   IconWarning,
 } from "@rahalgo/ui";
@@ -23,6 +25,8 @@ const NAV = [
   { href: "/portal", label: m.merchant.nav.orders, icon: IconOrder },
   { href: "/portal/menu", label: m.merchant.nav.menu, icon: IconStore },
   { href: "/portal/reports", label: m.merchant.nav.reports, icon: IconStatus },
+  { href: "/portal/reviews", label: m.rep.reputation.reviewsTitle, icon: IconStar },
+  { href: "/portal/complaints", label: m.rep.reputation.complaintsTitle, icon: IconSupport },
 ];
 
 function PortalChrome({ children }: { children: React.ReactNode }) {
@@ -31,9 +35,20 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const [rep, setRep] = useState<{ rating: { avg: number; count: number; trend: string } } | null>(
+    null,
+  );
+
   useEffect(() => {
     if (!loading && !canAccessPortal(user)) router.replace("/login");
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (canAccessPortal(user))
+      api<{ rating: { avg: number; count: number; trend: string } }>("/api/v1/me/reputation")
+        .then(setRep)
+        .catch(() => undefined);
+  }, [user]);
 
   // تسوّق كزبون: تسليم SSO لتطبيق الزبون بلا كلمة مرور.
   async function shopAsCustomer() {
@@ -109,6 +124,18 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ms-auto flex items-center gap-2">
+            {rep && rep.rating.count > 0 && (
+              <Link
+                href="/portal/reviews"
+                className="flex items-center gap-1 rounded-control bg-amber-50 px-2.5 py-1.5 text-sm font-bold text-amber-600 hover:bg-amber-100"
+                title={m.rep.reputation.myRating}
+              >
+                <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
+                <span className="text-amber-400">★</span>
+                {rep.rating.trend === "up" && <span className="text-success">▲</span>}
+                {rep.rating.trend === "down" && <span className="text-danger">▼</span>}
+              </Link>
+            )}
             <Button
               variant={store.emergency_closed ? "primary" : "danger"}
               onClick={toggleEmergency}

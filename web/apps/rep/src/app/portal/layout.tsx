@@ -13,6 +13,8 @@ import {
   IconWallet,
   IconOrder,
   IconUser,
+  IconStar,
+  IconSupport,
   IconLogout,
   IconHamburger,
   IconClose,
@@ -29,6 +31,8 @@ const NAV = [
   { href: "/portal/leads", label: m.rep.nav.leads, icon: IconOrder },
   { href: "/portal/merchants", label: m.rep.nav.merchants, icon: IconStore },
   { href: "/portal/wallet", label: m.rep.nav.wallet, icon: IconWallet },
+  { href: "/portal/reviews", label: m.rep.nav.reviews, icon: IconStar },
+  { href: "/portal/complaints", label: m.rep.nav.complaints, icon: IconSupport },
   { href: "/portal/account", label: m.rep.nav.account, icon: IconUser },
 ];
 
@@ -37,6 +41,9 @@ interface MeSummary {
   avatar_thumb_url: string | null;
   balance: number;
 }
+interface Reputation {
+  rating: { avg: number; count: number; trend: "up" | "down" | "flat" };
+}
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
@@ -44,13 +51,17 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [summary, setSummary] = useState<MeSummary | null>(null);
+  const [rep, setRep] = useState<Reputation | null>(null);
 
   useEffect(() => {
     if (!loading && !isRep(user)) router.replace("/login");
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (isRep(user)) api<MeSummary>("/api/v1/me/summary").then(setSummary).catch(() => undefined);
+    if (isRep(user)) {
+      api<MeSummary>("/api/v1/me/summary").then(setSummary).catch(() => undefined);
+      api<Reputation>("/api/v1/me/reputation").then(setRep).catch(() => undefined);
+    }
   }, [user, pathname]);
 
   useEffect(() => {
@@ -158,6 +169,19 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </button>
           <h2 className="text-sm font-bold text-ink">{activeLabel}</h2>
           <div className="ms-auto flex items-center gap-2.5">
+            {/* تقييمي — المتوسط واتجاهه */}
+            {rep && rep.rating.count > 0 && (
+              <Link
+                href="/portal/reviews"
+                className="flex items-center gap-1 rounded-control bg-amber-50 px-2.5 py-1.5 text-sm font-bold text-amber-600 hover:bg-amber-100"
+                title={m.rep.reputation.myRating}
+              >
+                <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
+                <span className="text-amber-400">★</span>
+                {rep.rating.trend === "up" && <span className="text-success">▲</span>}
+                {rep.rating.trend === "down" && <span className="text-danger">▼</span>}
+              </Link>
+            )}
             {/* رصيد المحفظة */}
             <Link
               href="/portal/wallet"
