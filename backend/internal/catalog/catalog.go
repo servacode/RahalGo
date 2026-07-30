@@ -29,18 +29,19 @@ type Category struct {
 }
 
 type Merchant struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Description  string    `json:"description"`
-	CategoryID   string    `json:"category_id"`
-	CategoryName string    `json:"category_name"`
-	CategoryIcon string    `json:"category_icon"`
-	Phone        string    `json:"phone"`
-	AddressText  string    `json:"address_text"`
-	OwnerUserID  *string   `json:"owner_user_id"`
-	OwnerPhone   *string   `json:"owner_phone"`
-	Status       string    `json:"status"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	Description     string    `json:"description"`
+	CategoryID      string    `json:"category_id"`
+	CategoryName    string    `json:"category_name"`
+	CategoryIcon    string    `json:"category_icon"`
+	Phone           string    `json:"phone"`
+	AddressText     string    `json:"address_text"`
+	OwnerUserID     *string   `json:"owner_user_id"`
+	OwnerPhone      *string   `json:"owner_phone"`
+	Status          string    `json:"status"`
+	EmergencyClosed bool      `json:"emergency_closed"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type MerchantPage struct {
@@ -132,7 +133,7 @@ func (s *Service) UpdateCategory(ctx context.Context, actorID, id string, in Cat
 
 const merchantSelect = `
 	SELECT m.id, m.name, m.description, m.category_id, c.name, c.icon,
-	       m.phone, m.address_text, m.owner_user_id, u.phone, m.status, m.created_at
+	       m.phone, m.address_text, m.owner_user_id, u.phone, m.status, m.emergency_closed, m.created_at
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id`
@@ -140,7 +141,7 @@ const merchantSelect = `
 func scanMerchant(row pgx.Row) (*Merchant, error) {
 	var m Merchant
 	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
-		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.Status, &m.CreatedAt)
+		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.Status, &m.EmergencyClosed, &m.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -187,13 +188,14 @@ func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status s
 }
 
 type MerchantInput struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	CategoryID  *string `json:"category_id"`
-	Phone       *string `json:"phone"`
-	AddressText *string `json:"address_text"`
-	Status      *string `json:"status"`
-	OwnerPhone  *string `json:"owner_phone"` // يربط/ينشئ حساب صاحب المتجر بدور merchant
+	Name            *string `json:"name"`
+	Description     *string `json:"description"`
+	CategoryID      *string `json:"category_id"`
+	Phone           *string `json:"phone"`
+	AddressText     *string `json:"address_text"`
+	Status          *string `json:"status"`
+	EmergencyClosed *bool   `json:"emergency_closed"`
+	OwnerPhone      *string `json:"owner_phone"` // يربط/ينشئ حساب صاحب المتجر بدور merchant
 }
 
 func (s *Service) CreateMerchant(ctx context.Context, actorID string, in MerchantInput, ip string) (*Merchant, error) {
@@ -238,10 +240,11 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 			phone         = COALESCE($5, phone),
 			address_text  = COALESCE($6, address_text),
 			status        = COALESCE($7, status),
-			owner_user_id = COALESCE($8, owner_user_id),
+			emergency_closed = COALESCE($8, emergency_closed),
+			owner_user_id = COALESCE($9, owner_user_id),
 			updated_at    = now()
 		WHERE id = $1`,
-		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, ownerID)
+		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}

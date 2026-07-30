@@ -23,6 +23,7 @@ import {
   IconLocation,
   IconSettings,
   IconOrder as IconMenu,
+  IconDate,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -48,7 +49,15 @@ interface Merchant {
   address_text: string;
   owner_phone: string | null;
   status: string;
+  emergency_closed: boolean;
   created_at: string;
+}
+
+interface DayHours {
+  day_of_week: number;
+  closed: boolean;
+  open_time: string;
+  close_time: string;
 }
 
 interface MerchantPage {
@@ -85,6 +94,7 @@ export default function MerchantsPage() {
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<Merchant | null | "new">(null);
   const [catsOpen, setCatsOpen] = useState(false);
+  const [hoursFor, setHoursFor] = useState<Merchant | null>(null);
   const [view, setView] = useViewMode("merchants", "cards");
 
   const loadCategories = useCallback(async () => {
@@ -291,6 +301,14 @@ export default function MerchantsPage() {
                   </Button>
                   <Button
                     variant="ghost"
+                    onClick={() => setHoursFor(mr)}
+                    className="flex items-center gap-1.5"
+                  >
+                    <IconDate size={15} />
+                    {m.admin.hours.manageHours}
+                  </Button>
+                  <Button
+                    variant="ghost"
                     onClick={() => setEditing(mr)}
                     className="flex items-center gap-1.5"
                   >
@@ -349,7 +367,130 @@ export default function MerchantsPage() {
         onClose={() => setCatsOpen(false)}
         onChanged={loadCategories}
       />
+      {hoursFor && (
+        <HoursModal
+          merchant={hoursFor}
+          onClose={() => setHoursFor(null)}
+          onChanged={load}
+        />
+      )}
     </div>
+  );
+}
+
+function HoursModal({
+  merchant,
+  onClose,
+  onChanged,
+}: {
+  merchant: Merchant;
+  onClose: () => void;
+  onChanged: () => Promise<void> | void;
+}) {
+  const [days, setDays] = useState<DayHours[] | null>(null);
+  const [emergency, setEmergency] = useState(merchant.emergency_closed);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api<DayHours[]>(`/api/v1/admin/merchants/${merchant.id}/hours`)
+      .then(setDays)
+      .catch((err) => setError(errText(err)));
+  }, [merchant.id]);
+
+  function updateDay(i: number, patch: Partial<DayHours>) {
+    setDays((ds) => ds && ds.map((d, di) => (di === i ? { ...d, ...patch } : d)));
+  }
+
+  async function save() {
+    if (!days) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/merchants/${merchant.id}/hours`, {
+        method: "PUT",
+        body: JSON.stringify({ days }),
+      });
+      if (emergency !== merchant.emergency_closed) {
+        await api(`/api/v1/admin/merchants/${merchant.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ emergency_closed: emergency }),
+        });
+      }
+      await onChanged();
+      onClose();
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`${m.admin.hours.title}: ${merchant.name}`}>
+      <label className="mb-4 flex cursor-pointer items-center justify-between rounded-control border border-danger/40 bg-danger/5 px-3 py-2.5">
+        <span>
+          <span className="block text-sm font-medium text-danger">
+            {m.admin.hours.emergencyClose}
+          </span>
+          <span className="text-xs text-ink-muted">{m.admin.hours.emergencyHint}</span>
+        </span>
+        <input
+          type="checkbox"
+          checked={emergency}
+          onChange={(e) => setEmergency(e.target.checked)}
+          className="h-5 w-5 accent-danger"
+        />
+      </label>
+
+      {!days ? (
+        <p className="p-4 text-center text-ink-muted">{m.common.loading}</p>
+      ) : (
+        <div className="space-y-2">
+          {days.map((d, i) => (
+            <div key={d.day_of_week} className="flex items-center gap-3 text-sm">
+              <span className="w-16 shrink-0 font-medium">{m.admin.hours.days[i]}</span>
+              <label className="flex cursor-pointer items-center gap-1.5 text-ink-muted">
+                <input
+                  type="checkbox"
+                  checked={d.closed}
+                  onChange={(e) => updateDay(i, { closed: e.target.checked })}
+                  className="h-4 w-4 accent-danger"
+                />
+                {m.admin.hours.closedDay}
+              </label>
+              <input
+                type="time"
+                disabled={d.closed}
+                value={d.open_time}
+                onChange={(e) => updateDay(i, { open_time: e.target.value })}
+                className="rounded-control border border-line px-2 py-1 disabled:opacity-40"
+              />
+              <span className="text-ink-muted">←</span>
+              <input
+                type="time"
+                disabled={d.closed}
+                value={d.close_time}
+                onChange={(e) => updateDay(i, { close_time: e.target.value })}
+                className="rounded-control border border-line px-2 py-1 disabled:opacity-40"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {error && (
+        <p className="mt-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+      )}
+      <div className="mt-5 flex justify-end gap-2">
+        <Button variant="secondary" onClick={onClose}>
+          {m.common.cancel}
+        </Button>
+        <Button onClick={save} disabled={busy || !days}>
+          {m.common.save}
+        </Button>
+      </div>
+    </Modal>
   );
 }
 
