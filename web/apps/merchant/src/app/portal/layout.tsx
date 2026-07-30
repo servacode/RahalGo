@@ -35,6 +35,17 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
     if (!loading && !canAccessPortal(user)) router.replace("/login");
   }, [user, loading, router]);
 
+  // تسوّق كزبون: تسليم SSO لتطبيق الزبون بلا كلمة مرور.
+  async function shopAsCustomer() {
+    try {
+      const { code } = await api<{ code: string }>("/api/v1/auth/handoff", { method: "POST" });
+      const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
+      window.location.href = `${site}/sso?code=${encodeURIComponent(code)}`;
+    } catch {
+      /* يبقى المستخدم في لوحته */
+    }
+  }
+
   if (loading || storesLoading || !canAccessPortal(user)) {
     return (
       <main className="flex min-h-screen items-center justify-center text-ink-muted">
@@ -138,6 +149,13 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          <button
+            onClick={shopAsCustomer}
+            className="ms-1 flex items-center gap-1.5 rounded-control bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent-dark transition-colors hover:bg-accent/20"
+          >
+            <IconStore size={16} />
+            {m.rep.shopAsCustomer}
+          </button>
         </nav>
       </header>
 

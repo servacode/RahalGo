@@ -127,6 +127,11 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ phone, code }),
     }),
+  sso: (code: string) =>
+    rawRequest<AuthResult>("/api/v1/auth/sso", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
   me: () => api<AuthUser>("/api/v1/auth/me"),
   logout: () => {
     const refresh = tokenStore.refresh;

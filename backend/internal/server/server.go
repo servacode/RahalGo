@@ -85,12 +85,14 @@ func (s *Server) Router() http.Handler {
 			r.Post("/login", s.handlePasswordLogin)
 			r.Post("/refresh", s.handleRefresh)
 			r.Post("/logout", s.handleLogout)
+			r.Post("/sso", s.handleSSO) // استبدال رمز التسليم بجلسة (عام)
 
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireAuth)
 				r.Get("/me", s.handleMe)
 				r.Post("/password", s.handleSetPassword)
 				r.Get("/my-logins", s.handleMyLogins)
+				r.Post("/handoff", s.handleHandoff) // إنشاء رمز تسليم SSO
 			})
 		})
 

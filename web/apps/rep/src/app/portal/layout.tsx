@@ -57,6 +57,17 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     setMenuOpen(false);
   }, [pathname]);
 
+  // تسوّق كزبون: نطلب رمز تسليم ثم نفتح تطبيق الزبون مسجّلاً بنفس الحساب.
+  async function shopAsCustomer() {
+    try {
+      const { code } = await api<{ code: string }>("/api/v1/auth/handoff", { method: "POST" });
+      const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
+      window.location.href = `${site}/sso?code=${encodeURIComponent(code)}`;
+    } catch {
+      /* تجاهل — يبقى المستخدم في لوحته */
+    }
+  }
+
   if (loading || !isRep(user)) {
     return (
       <main className="flex min-h-screen items-center justify-center text-ink-muted">
@@ -106,6 +117,16 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           );
         })}
       </nav>
+      {/* تسوّق كزبون — تسليم SSO لتطبيق الزبون بلا كلمة مرور */}
+      <div className="border-t border-line p-3">
+        <button
+          onClick={shopAsCustomer}
+          className="flex w-full items-center gap-2.5 rounded-control bg-accent/10 px-3 py-2 text-sm font-medium text-accent-dark transition-colors hover:bg-accent/20"
+        >
+          <IconStore size={17} />
+          {m.rep.shopAsCustomer}
+        </button>
+      </div>
     </>
   );
 

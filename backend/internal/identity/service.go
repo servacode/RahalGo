@@ -144,6 +144,15 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 	return s.issueFor(ctx, user, userAgent, ip, "auth.password_login")
 }
 
+// IssueForUserID يصدر جلسة لمستخدم بمعرّفه (لتسليم SSO عبر رمز موثوق لمرّة واحدة).
+func (s *Service) IssueForUserID(ctx context.Context, userID, userAgent, ip string) (*AuthResult, error) {
+	user, _, err := s.repo.UserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return s.issueFor(ctx, user, userAgent, ip, "auth.sso")
+}
+
 func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, action string) (*AuthResult, error) {
 	if user.Status == "suspended" {
 		return nil, ErrUserSuspended

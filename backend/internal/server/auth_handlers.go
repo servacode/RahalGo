@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
@@ -167,4 +168,41 @@ func (s *Server) handleMyLogins(w http.ResponseWriter, r *http.Request) {
 		out = append(out, l)
 	}
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// handleHandoff ينشئ رمز تسليم لمرّة واحدة (SSO): يفتح المستخدم تطبيقاً آخر مسجّلاً
+// بلا كلمة مرور. الرمز قصير العمر (60ث) ويُستهلك مرّة واحدة.
+func (s *Server) handleHandoff(w http.ResponseWriter, r *http.Request) {
+	code, _, err := auth.NewOpaqueToken()
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.rdb.Set(r.Context(), "sso:"+code, userIDFrom(r), 60*time.Second).Err(); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"code": code})
+}
+
+// handleSSO يستبدل رمز التسليم بجلسة (تسجيل دخول بلا كلمة مرور عبر رمز موثوق).
+func (s *Server) handleSSO(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Code string `json:"code"`
+	}](r)
+	if err != nil || req.Code == "" {
+		s.respondErr(w, errValidation)
+		return
+	}
+	uid, err := s.rdb.GetDel(r.Context(), "sso:"+req.Code).Result() // استهلاك لمرّة واحدة
+	if err != nil || uid == "" {
+		s.respondErr(w, errUnauthorized)
+		return
+	}
+	res, err := s.identity.IssueForUserID(r.Context(), uid, r.UserAgent(), clientIP(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, res)
 }
