@@ -17,6 +17,7 @@ import {
   IconPromos,
   IconStatus,
   IconLink,
+  IconLocation,
   IconSuccess,
   IconBlock,
   IconUnblock,
@@ -31,7 +32,10 @@ interface Lead {
   owner_name: string;
   phone: string;
   area: string;
-  note: string;
+  category_name: string | null;
+  category_icon: string | null;
+  lat: number | null;
+  lng: number | null;
   rep_name: string | null;
   rep_code: string | null;
   status: "new" | "converted" | "rejected";
@@ -99,9 +103,39 @@ export default function LeadsPage() {
       ),
     },
     {
+      id: "category",
+      header: m.admin.leads.category,
+      icon: <IconStore />,
+      cell: (l) =>
+        l.category_name ? (
+          <span className="inline-flex items-center gap-1">
+            <span>{l.category_icon}</span>
+            {l.category_name}
+          </span>
+        ) : (
+          "—"
+        ),
+    },
+    {
       id: "area",
       header: m.admin.leads.area,
-      cell: (l) => l.area || "—",
+      cell: (l) => (
+        <span className="inline-flex items-center gap-1.5">
+          {l.area || "—"}
+          {l.lat != null && l.lng != null && (
+            <a
+              href={`https://www.google.com/maps?q=${l.lat},${l.lng}`}
+              target="_blank"
+              rel="noreferrer"
+              title={m.admin.leads.onMap}
+              onClick={(e) => e.stopPropagation()}
+              className="text-primary hover:text-primary-dark"
+            >
+              <IconLocation size={15} />
+            </a>
+          )}
+        </span>
+      ),
     },
     {
       id: "rep",
@@ -178,11 +212,6 @@ export default function LeadsPage() {
         empty={m.admin.leads.empty}
         actions={(l) => (
           <>
-            {l.note && (
-              <span className="text-xs text-ink-muted" title={l.note}>
-                {l.note.length > 40 ? l.note.slice(0, 40) + "…" : l.note}
-              </span>
-            )}
             {l.status !== "converted" && (
               <Button
                 variant="secondary"

@@ -15,7 +15,8 @@ interface Lead {
   owner_name: string;
   phone: string;
   area: string;
-  note: string;
+  category_name: string | null;
+  category_icon: string | null;
   status: "new" | "converted" | "rejected";
   created_at: string;
 }
@@ -57,6 +58,7 @@ export default function LeadsPage() {
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
+                    {l.category_icon && <span>{l.category_icon}</span>}
                     <p className="truncate font-medium">{l.store_name}</p>
                     <Badge variant={STATUS_VARIANT[l.status]}>{m.rep.leadStatus[l.status]}</Badge>
                   </div>
@@ -65,7 +67,6 @@ export default function LeadsPage() {
                     <span dir="ltr">{l.phone}</span>
                     {l.area && <span> — {l.area}</span>}
                   </p>
-                  {l.note && <p className="mt-1 text-xs text-ink-muted">{l.note}</p>}
                 </div>
                 <span className="shrink-0 text-xs text-ink-muted" dir="ltr">
                   {new Date(l.created_at).toLocaleDateString("ar-SY")}

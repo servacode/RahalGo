@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"strings"
@@ -8,7 +9,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 )
 
 // طلبات انضمام المتاجر عبر رابط المندوب.
@@ -49,12 +53,15 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req, err := decode[struct {
-		Ref       string `json:"ref"` // كود دعوة المندوب
-		StoreName string `json:"store_name"`
-		OwnerName string `json:"owner_name"`
-		Phone     string `json:"phone"`
-		Area      string `json:"area"`
-		Note      string `json:"note"`
+		Ref        string   `json:"ref"` // كود دعوة المندوب
+		StoreName  string   `json:"store_name"`
+		OwnerName  string   `json:"owner_name"`
+		Phone      string   `json:"phone"`
+		Area       string   `json:"area"`
+		CategoryID string   `json:"category_id"` // تصنيف المتجر
+		Password   string   `json:"password"`    // كلمة مرور صاحب المتجر
+		Lat        *float64 `json:"lat"`         // موقع المتجر (اختياري)
+		Lng        *float64 `json:"lng"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -62,41 +69,88 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	req.StoreName = clip(req.StoreName, leadMaxShort)
 	req.OwnerName = clip(req.OwnerName, leadMaxShort)
-	req.Phone = clip(req.Phone, leadMaxShort)
 	req.Area = clip(req.Area, leadMaxShort)
-	req.Note = clip(req.Note, leadMaxNote)
-	if req.StoreName == "" || req.Phone == "" {
+	if req.StoreName == "" {
 		s.respondErr(w, errValidation)
 		return
 	}
-	// المندوب صاحب الكود (اختياري — الرابط قد يُفتح بلا كود)
-	var repID *string
-	if req.Ref != "" {
-		if u, err := s.identity.SalesRepByInviteCode(r.Context(), req.Ref); err == nil {
-			repID = &u.ID
+	// الرقم يجب أن يكون رقم موبايل صالح (سيصله رمز الدخول والإشعارات عبر واتساب).
+	phone, ok := identity.NormalizePhone(req.Phone)
+	if !ok {
+		s.respondErr(w, identity.ErrInvalidPhone)
+		return
+	}
+	// كلمة المرور إلزامية (يدخل بها صاحب المتجر بعد الموافقة) — 8 محارف فأكثر.
+	if len(req.Password) < 8 {
+		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password"))
+		return
+	}
+	pwHash, err := auth.HashPassword(req.Password)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// معرّف التصنيف — اختياري لكنه إن وُجد يجب أن يكون UUID صالحاً.
+	var categoryID *string
+	if req.CategoryID != "" {
+		if !isUUID(req.CategoryID) {
+			s.respondErr(w, errValidation)
+			return
 		}
+		categoryID = &req.CategoryID
+	}
+	// سياسة المنصة: لا تسجيل متجر عشوائي — يجب أن يكون عبر مندوب صالح وفعّال.
+	// لا كود، أو كود لمندوب موقوف/محظور/غير موجود → يُرفض (لا طلبات يتيمة).
+	rep, err := s.identity.SalesRepByInviteCode(r.Context(), req.Ref)
+	if err != nil {
+		s.respondErr(w, err) // ErrInvalidInviteCode
+		return
+	}
+	if rep.Status != "active" {
+		s.respondErr(w, identity.ErrInvalidInviteCode)
+		return
 	}
 	if _, err := s.pg.Exec(r.Context(), `
-		INSERT INTO merchant_leads (store_name, owner_name, phone, area, note, sales_rep_user_id)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		req.StoreName, req.OwnerName, req.Phone, req.Area, req.Note, repID); err != nil {
+		INSERT INTO merchant_leads
+			(store_name, owner_name, phone, area, category_id, lat, lng, owner_password_hash, sales_rep_user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		req.StoreName, req.OwnerName, phone, req.Area,
+		categoryID, req.Lat, req.Lng, pwHash, rep.ID); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusCreated, map[string]any{"received": true})
 }
 
+// handlePublicRep يتحقق من كود مندوب ويعيد اسمه لواجهة التسجيل — عام، بلا بيانات حساسة.
+// تفشل إن لم يكن الكود لمندوب فعّال، فتمنع الواجهة عرض النموذج أصلاً.
+func (s *Server) handlePublicRep(w http.ResponseWriter, r *http.Request) {
+	rep, err := s.identity.SalesRepByInviteCode(r.Context(), chi.URLParam(r, "code"))
+	if err != nil || rep.Status != "active" {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	name := rep.FullName
+	if name == "" {
+		name = "مندوب رحال غو"
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"name": name})
+}
+
 type lead struct {
-	ID        string    `json:"id"`
-	StoreName string    `json:"store_name"`
-	OwnerName string    `json:"owner_name"`
-	Phone     string    `json:"phone"`
-	Area      string    `json:"area"`
-	Note      string    `json:"note"`
-	RepName   *string   `json:"rep_name"`
-	RepCode   *string   `json:"rep_code"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
+	ID           string    `json:"id"`
+	StoreName    string    `json:"store_name"`
+	OwnerName    string    `json:"owner_name"`
+	Phone        string    `json:"phone"`
+	Area         string    `json:"area"`
+	CategoryName *string   `json:"category_name"`
+	CategoryIcon *string   `json:"category_icon"`
+	Lat          *float64  `json:"lat"`
+	Lng          *float64  `json:"lng"`
+	RepName      *string   `json:"rep_name"`
+	RepCode      *string   `json:"rep_code"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 func scanLeads(rows interface {
@@ -106,7 +160,8 @@ func scanLeads(rows interface {
 	out := []lead{}
 	for rows.Next() {
 		var l lead
-		if err := rows.Scan(&l.ID, &l.StoreName, &l.OwnerName, &l.Phone, &l.Area, &l.Note,
+		if err := rows.Scan(&l.ID, &l.StoreName, &l.OwnerName, &l.Phone, &l.Area,
+			&l.CategoryName, &l.CategoryIcon, &l.Lat, &l.Lng,
 			&l.RepName, &l.RepCode, &l.Status, &l.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -116,10 +171,12 @@ func scanLeads(rows interface {
 }
 
 const leadSelect = `
-	SELECT l.id, l.store_name, l.owner_name, l.phone, l.area, l.note,
+	SELECT l.id, l.store_name, l.owner_name, l.phone, l.area,
+	       c.name, c.icon, l.lat, l.lng,
 	       NULLIF(COALESCE(u.full_name, u.phone::text), ''), u.invite_code, l.status, l.created_at
 	FROM merchant_leads l
-	LEFT JOIN users u ON u.id = l.sales_rep_user_id`
+	LEFT JOIN users u ON u.id = l.sales_rep_user_id
+	LEFT JOIN categories c ON c.id = l.category_id`
 
 // handleAdminLeads كل طلبات الانضمام (ترشيح بالحالة اختياري).
 func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
@@ -157,7 +214,8 @@ func (s *Server) handleRepLeads(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-// handleAdminLeadStatus تحديث حالة طلب (رفض، أو وسمه محوَّلاً يدوياً).
+// handleAdminLeadStatus تحديث حالة طلب. "converted" ينشئ المتجر فعلياً (موافقة
+// الإدارة هي لحظة الإنشاء — لا متجر قبلها). "rejected"/"new" مجرد وسم.
 func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Status string `json:"status"`
@@ -166,13 +224,22 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	if !isUUID(chi.URLParam(r, "id")) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
 		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	if req.Status == "converted" {
+		if err := s.convertLead(r.Context(), userIDFrom(r), id, clientIP(r)); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 		return
 	}
 	tag, err := s.pg.Exec(r.Context(),
 		`UPDATE merchant_leads SET status = $2, updated_at = now() WHERE id = $1`,
-		chi.URLParam(r, "id"), req.Status)
+		id, req.Status)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -182,4 +249,62 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+}
+
+// convertLead يحوّل طلب انضمام إلى متجر فعلي: ينشئ/يربط حساب صاحب المتجر (بكلمة
+// مروره المحفوظة إن كان جديداً) والمتجر بتصنيفه وموقعه منسوباً للمندوب.
+func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) error {
+	var (
+		storeName, ownerName, phone, area string
+		categoryID                        *string
+		lat, lng                          *float64
+		pwHash                            string
+		repCode                           *string
+		merchantID                        *string
+	)
+	err := s.pg.QueryRow(ctx, `
+		SELECT l.store_name, l.owner_name, l.phone, l.area, l.category_id, l.lat, l.lng,
+		       l.owner_password_hash, u.invite_code, l.merchant_id
+		FROM merchant_leads l
+		LEFT JOIN users u ON u.id = l.sales_rep_user_id
+		WHERE l.id = $1`, leadID).
+		Scan(&storeName, &ownerName, &phone, &area, &categoryID, &lat, &lng, &pwHash, &repCode, &merchantID)
+	if err != nil {
+		return httpx.ErrNotFound
+	}
+	if merchantID != nil {
+		return nil // محوّل مسبقاً — لا تكرار
+	}
+	if categoryID == nil {
+		return errValidation // لا متجر بلا تصنيف
+	}
+	in := catalog.MerchantInput{
+		Name:        &storeName,
+		CategoryID:  categoryID,
+		Phone:       &phone,
+		AddressText: &area,
+		OwnerPhone:  &phone,
+		Lat:         lat,
+		Lng:         lng,
+	}
+	if repCode != nil {
+		in.SalesRepCode = repCode
+	}
+	mrch, err := s.catalog.CreateMerchant(ctx, actorID, in, ip)
+	if err != nil {
+		return err
+	}
+	// كلمة المرور والاسم — تُطبّق على حساب صاحب المتجر فقط إن كانت الحقول فارغة
+	// (حساب جديد)، فلا نطمس بيانات حساب قائم بنفس الرقم.
+	_, _ = s.pg.Exec(ctx, `
+		UPDATE users SET
+			password_hash = CASE WHEN COALESCE(password_hash,'') = '' THEN $2 ELSE password_hash END,
+			full_name     = CASE WHEN full_name = '' THEN $3 ELSE full_name END,
+			updated_at    = now()
+		WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)`,
+		mrch.ID, pwHash, ownerName)
+	_, err = s.pg.Exec(ctx, `
+		UPDATE merchant_leads SET status = 'converted', merchant_id = $2, updated_at = now()
+		WHERE id = $1`, leadID, mrch.ID)
+	return err
 }
