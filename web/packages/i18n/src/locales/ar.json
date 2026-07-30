@@ -63,6 +63,8 @@
     "otp_send_failed": "تعذر إرسال رمز التحقق حالياً، حاول بعد قليل",
     "invalid_invite_code": "كود الدعوة غير صحيح أو ليس لمندوب",
     "invalid_zone": "بيانات المنطقة غير صالحة",
+    "insufficient_balance": "الرصيد غير كافٍ لهذه الحركة",
+    "invalid_amount": "المبلغ غير صالح",
     "phone_taken": "هذا الرقم مسجّل مسبقاً",
     "invalid_role": "الدور المحدد غير صالح",
     "self_action": "لا يمكنك تنفيذ هذا الإجراء على حسابك"
@@ -113,7 +115,26 @@
       "prev": "السابق",
       "next": "التالي",
       "created": "تم إنشاء المستخدم بنجاح",
-      "inviteCode": "كود الدعوة"
+      "inviteCode": "كود الدعوة",
+      "wallet": "المحفظة",
+      "walletTitle": "محفظة",
+      "balance": "الرصيد",
+      "txHistory": "آخر الحركات",
+      "noTx": "لا حركات بعد",
+      "amount": "المبلغ",
+      "movementKind": "نوع الحركة",
+      "isDebit": "خصم من الرصيد",
+      "applyMovement": "تنفيذ الحركة",
+      "noteField": "ملاحظة",
+      "txKinds": {
+        "topup": "شحن رصيد",
+        "order_payment": "دفع طلب",
+        "refund": "استرجاع",
+        "compensation": "تعويض",
+        "commission": "عمولة",
+        "payout": "سحب رصيد",
+        "adjustment": "تسوية إدارية"
+      }
     },
     "merchants": {
       "title": "المتاجر",

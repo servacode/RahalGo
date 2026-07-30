@@ -21,6 +21,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/notify"
 	"github.com/servacode/rahalgo/backend/internal/server"
 	"github.com/servacode/rahalgo/backend/internal/settings"
+	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
 func main() {
@@ -91,10 +92,11 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 	catalogSvc := catalog.NewService(pg, identitySvc)
+	walletSvc := wallet.NewService(pg)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc, settingsStore, otpStatus).Router(),
+		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc, settingsStore, walletSvc, otpStatus).Router(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
