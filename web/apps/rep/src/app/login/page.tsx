@@ -1,15 +1,16 @@
 "use client";
 
-/** دخول لوحة المندوب — رمز تحقق واتساب حصراً. */
+/** دخول لوحة المندوب — كلمة المرور افتراضياً، ورمز واتساب كبديل. */
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Input, Button, IconPhone } from "@rahalgo/ui";
+import { Input, Button, IconPhone, IconLock } from "@rahalgo/ui";
 import { authApi, tokenStore, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
+type Mode = "password" | "otp";
 
 function errText(err: unknown): string {
   if (err instanceof ApiError) {
@@ -22,13 +23,46 @@ function errText(err: unknown): string {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const { setUser } = useAuth();
+  const [mode, setMode] = useState<Mode>("password");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  function enter(result: { user: { roles: string[] }; tokens: unknown }) {
+    if (!result.user.roles.includes("sales")) {
+      setError(m.rep.notAllowed);
+      setBusy(false);
+      return;
+    }
+    tokenStore.set(result.tokens as never);
+    setUser(result.user as never);
+    router.replace("/");
+  }
+
+  async function onPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      enter(await authApi.loginPassword(phone, password));
+    } catch (err) {
+      setError(errText(err));
+      setBusy(false);
+    }
+  }
 
   async function onSendOtp(e: React.FormEvent) {
     e.preventDefault();
@@ -44,20 +78,12 @@ export default function LoginPage() {
     }
   }
 
-  async function onVerify(e: React.FormEvent) {
+  async function onVerifyOtp(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
     try {
-      const result = await authApi.verifyOtp(phone, code);
-      if (!result.user.roles.includes("sales")) {
-        setError(m.rep.notAllowed);
-        setBusy(false);
-        return;
-      }
-      tokenStore.set(result.tokens);
-      setUser(result.user);
-      router.replace("/");
+      enter(await authApi.verifyOtp(phone, code));
     } catch (err) {
       setError(errText(err));
       setBusy(false);
@@ -75,7 +101,57 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-ink-muted">{m.rep.loginSubtitle}</p>
         </div>
 
-        {!otpSent ? (
+        {/* مبدّل طريقة الدخول */}
+        <div role="group" className="mb-6 flex rounded-control border border-line bg-page p-1">
+          {(["password", "otp"] as const).map((mo) => (
+            <button
+              key={mo}
+              type="button"
+              onClick={() => {
+                setMode(mo);
+                setError("");
+                setOtpSent(false);
+              }}
+              className={`flex-1 rounded-control px-3 py-1.5 text-sm transition-colors ${
+                mode === mo ? "bg-surface font-medium text-primary-dark shadow-sm" : "text-ink-muted"
+              }`}
+            >
+              {mo === "password" ? m.auth.loginWithPassword : m.auth.loginWithOtp}
+            </button>
+          ))}
+        </div>
+
+        {mode === "password" ? (
+          <form onSubmit={onPassword} className="space-y-4">
+            <Input
+              id="phone"
+              label={m.auth.phone}
+              icon={<IconPhone />}
+              dir="ltr"
+              inputMode="tel"
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="text-end"
+              placeholder="09xxxxxxxx"
+            />
+            <Input
+              id="password"
+              label={m.auth.password}
+              icon={<IconLock />}
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {error && (
+              <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+            )}
+            <Button type="submit" disabled={busy} className="w-full py-2.5">
+              {busy ? m.common.loading : m.auth.login}
+            </Button>
+          </form>
+        ) : !otpSent ? (
           <form onSubmit={onSendOtp} className="space-y-4">
             <Input
               id="phone"
@@ -97,7 +173,7 @@ export default function LoginPage() {
             </Button>
           </form>
         ) : (
-          <form onSubmit={onVerify} className="space-y-4">
+          <form onSubmit={onVerifyOtp} className="space-y-4">
             <p className="rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">
               {m.auth.otpSentWhatsapp}
               <br />
@@ -120,7 +196,7 @@ export default function LoginPage() {
               <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
             )}
             <Button type="submit" disabled={busy} className="w-full py-2.5">
-              {busy ? m.admin.loggingIn : m.auth.login}
+              {busy ? m.common.loading : m.auth.login}
             </Button>
             <button
               type="button"

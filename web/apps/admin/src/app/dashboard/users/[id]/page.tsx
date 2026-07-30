@@ -26,6 +26,8 @@ import {
   IconStar,
   IconSupport,
   IconEdit,
+  IconBlock,
+  IconUnblock,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -111,11 +113,21 @@ export default function UserProfilePage() {
   const [activity, setActivity] = useState<Activity[]>([]);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [phoneOpen, setPhoneOpen] = useState(false);
+  const [statusModal, setStatusModal] = useState<string | null>(null);
   const [tab, setTab] = useState<"overview" | "wallet" | "feedback" | "activity">("overview");
   const [notice, setNotice] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [error, setError] = useState("");
+
+  async function setStatus(status: string, reason: string) {
+    await api(`/api/v1/admin/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, status_reason: reason }),
+    });
+    setStatusModal(null);
+    await load();
+  }
 
   const load = useCallback(async () => {
     try {
@@ -287,6 +299,36 @@ export default function UserProfilePage() {
                   <IconLogout size={15} />
                   {P.logoutAllShort} ({fmt.format(p.active_sessions)})
                 </Button>
+                {me?.id !== p.id &&
+                  (p.status === "active" ? (
+                    <>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setStatusModal("suspended")}
+                        className="flex items-center gap-1.5 !px-2.5 !text-warning"
+                      >
+                        <IconBlock size={15} />
+                        {m.admin.users.suspend}
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => setStatusModal("blocked")}
+                        className="flex items-center gap-1.5 !px-2.5"
+                      >
+                        <IconBlock size={15} />
+                        {m.admin.users.block}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onClick={() => void setStatus("active", "")}
+                      className="flex items-center gap-1.5 !px-2.5"
+                    >
+                      <IconUnblock size={15} />
+                      {m.admin.users.activate}
+                    </Button>
+                  ))}
               </>
             )}
           </div>
@@ -567,6 +609,13 @@ export default function UserProfilePage() {
       </div>
       )}
 
+      {statusModal && (
+        <StatusReasonModal
+          status={statusModal}
+          onSubmit={(reason) => setStatus(statusModal, reason)}
+          onClose={() => setStatusModal(null)}
+        />
+      )}
       {phoneOpen && (
         <ChangePhoneModal
           userID={p.id}
@@ -768,5 +817,46 @@ function NotesEditor({
         </Button>
       </div>
     </div>
+  );
+}
+
+function StatusReasonModal({
+  status,
+  onSubmit,
+  onClose,
+}: {
+  status: string;
+  onSubmit: (reason: string) => void;
+  onClose: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const label = status === "suspended" ? m.admin.users.suspend : m.admin.users.block;
+  return (
+    <Modal open onClose={onClose} title={m.admin.users.statusReasonTitle.replace("{action}", label)}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit(reason);
+        }}
+        className="space-y-4"
+      >
+        <Input
+          id="status-reason"
+          label={m.admin.users.statusReasonLabel}
+          required
+          autoFocus
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+          <Button type="submit" variant={status === "blocked" ? "danger" : "primary"}>
+            {label}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

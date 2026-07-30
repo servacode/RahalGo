@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Button,
@@ -15,6 +16,7 @@ import {
   IconWallet,
   IconStatus,
   IconPromos,
+  IconView,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -61,6 +63,7 @@ function CopyCode({ code }: { code: string }) {
 
 export default function SalesPage() {
   const { user: me } = useAuth();
+  const router = useRouter();
   const canWallet = !!me?.roles.some((r) => r === "admin" || r === "finance");
 
   const [reps, setReps] = useState<Rep[]>([]);
@@ -87,7 +90,22 @@ export default function SalesPage() {
       header: m.admin.users.table.name,
       icon: <IconUser />,
       primary: true,
-      cell: (p) => p.full_name || "—",
+      cell: (p) => (
+        <span className="flex w-full items-center justify-between gap-2">
+          <span className="truncate">{p.full_name || "—"}</span>
+          <button
+            type="button"
+            title={m.admin.users.viewProfile}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/dashboard/users/${p.id}`);
+            }}
+            className="shrink-0 rounded-control p-1 text-ink-muted transition-colors hover:bg-primary-light hover:text-primary"
+          >
+            <IconView size={17} />
+          </button>
+        </span>
+      ),
     },
     {
       id: "phone",
@@ -132,8 +150,14 @@ export default function SalesPage() {
       header: m.admin.users.table.status,
       icon: <IconStatus />,
       cell: (p) => (
-        <Badge variant={p.status === "active" ? "success" : "danger"}>
-          {p.status === "active" ? m.admin.users.active : m.admin.users.blocked}
+        <Badge
+          variant={p.status === "active" ? "success" : p.status === "suspended" ? "warning" : "danger"}
+        >
+          {p.status === "active"
+            ? m.admin.users.active
+            : p.status === "suspended"
+              ? m.admin.users.suspended
+              : m.admin.users.blocked}
         </Badge>
       ),
     },
@@ -164,6 +188,7 @@ export default function SalesPage() {
         columns={columns}
         view={view}
         empty={m.admin.sales.empty}
+        onRowClick={(p) => router.push(`/dashboard/users/${p.id}`)}
         actions={(p) => (
           <Button
             variant="secondary"
