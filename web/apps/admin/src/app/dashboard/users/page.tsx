@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, Select, Badge, Modal } from "@rahalgo/ui";
+import {
+  Button,
+  Input,
+  Select,
+  Badge,
+  Modal,
+  DataView,
+  ViewToggle,
+  useViewMode,
+  type DataColumn,
+} from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -42,6 +52,7 @@ export default function UsersPage() {
   const [error, setError] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [rolesUser, setRolesUser] = useState<AuthUser | null>(null);
+  const [view, setView] = useViewMode("users");
 
   const load = useCallback(async () => {
     try {
@@ -72,6 +83,47 @@ export default function UsersPage() {
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.per_page)) : 1;
 
+  const columns: DataColumn<AuthUser>[] = [
+    {
+      id: "name",
+      header: m.admin.users.table.name,
+      primary: true,
+      cell: (u) => u.full_name || "—",
+    },
+    {
+      id: "phone",
+      header: m.admin.users.table.phone,
+      primary: true,
+      cell: (u) => (
+        <span dir="ltr" className="font-medium">
+          {u.phone}
+        </span>
+      ),
+    },
+    {
+      id: "roles",
+      header: m.admin.users.table.roles,
+      cell: (u) => (
+        <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
+          {u.roles.map((r) => (
+            <Badge key={r} variant={r === "admin" ? "primary" : "neutral"}>
+              {ROLE_LABELS[r] ?? r}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: "status",
+      header: m.admin.users.table.status,
+      cell: (u) => (
+        <Badge variant={u.status === "active" ? "success" : "danger"}>
+          {u.status === "active" ? m.admin.users.active : m.admin.users.blocked}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -81,7 +133,7 @@ export default function UsersPage() {
         )}
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-64">
           <Input
             placeholder={m.admin.users.searchPlaceholder}
@@ -108,73 +160,46 @@ export default function UsersPage() {
             ))}
           </Select>
         </div>
+        <div className="ms-auto">
+          <ViewToggle
+            view={view}
+            onChange={setView}
+            tableLabel={m.common.viewTable}
+            cardsLabel={m.common.viewCards}
+          />
+        </div>
       </div>
 
       {error && (
         <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-line text-start text-ink-muted">
-              <th className="p-3 text-start font-medium">{m.admin.users.table.phone}</th>
-              <th className="p-3 text-start font-medium">{m.admin.users.table.name}</th>
-              <th className="p-3 text-start font-medium">{m.admin.users.table.roles}</th>
-              <th className="p-3 text-start font-medium">{m.admin.users.table.status}</th>
-              <th className="p-3 text-start font-medium">{m.admin.users.table.actions}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.users.length === 0 && (
-              <tr>
-                <td colSpan={5} className="p-8 text-center text-ink-muted">
-                  {m.admin.users.noResults}
-                </td>
-              </tr>
-            )}
-            {data?.users.map((u) => (
-              <tr key={u.id} className="border-b border-line last:border-0 hover:bg-page/60">
-                <td dir="ltr" className="p-3 text-end font-medium">
-                  {u.phone}
-                </td>
-                <td className="p-3">{u.full_name || "—"}</td>
-                <td className="p-3">
-                  <div className="flex flex-wrap gap-1">
-                    {u.roles.map((r) => (
-                      <Badge key={r} variant={r === "admin" ? "primary" : "neutral"}>
-                        {ROLE_LABELS[r] ?? r}
-                      </Badge>
-                    ))}
-                  </div>
-                </td>
-                <td className="p-3">
-                  <Badge variant={u.status === "active" ? "success" : "danger"}>
-                    {u.status === "active" ? m.admin.users.active : m.admin.users.blocked}
-                  </Badge>
-                </td>
-                <td className="p-3">
-                  {isAdmin && (
-                    <div className="flex gap-2">
-                      <Button variant="ghost" onClick={() => setRolesUser(u)}>
-                        {m.admin.users.manageRoles}
-                      </Button>
-                      {u.id !== me?.id && (
-                        <Button
-                          variant={u.status === "active" ? "danger" : "secondary"}
-                          onClick={() => toggleBlock(u)}
-                        >
-                          {u.status === "active" ? m.admin.users.block : m.admin.users.unblock}
-                        </Button>
-                      )}
-                    </div>
+      <DataView
+        items={data?.users ?? []}
+        getKey={(u) => u.id}
+        columns={columns}
+        view={view}
+        empty={m.admin.users.noResults}
+        actions={
+          isAdmin
+            ? (u) => (
+                <>
+                  <Button variant="ghost" onClick={() => setRolesUser(u)}>
+                    {m.admin.users.manageRoles}
+                  </Button>
+                  {u.id !== me?.id && (
+                    <Button
+                      variant={u.status === "active" ? "danger" : "secondary"}
+                      onClick={() => toggleBlock(u)}
+                    >
+                      {u.status === "active" ? m.admin.users.block : m.admin.users.unblock}
+                    </Button>
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </>
+              )
+            : undefined
+        }
+      />
 
       {data && (
         <div className="mt-4 flex items-center justify-between text-sm text-ink-muted">

@@ -11,7 +11,9 @@
     "back": "رجوع",
     "next": "التالي",
     "retry": "إعادة المحاولة",
-    "currency": "ل.س"
+    "currency": "ل.س",
+    "viewTable": "جدول",
+    "viewCards": "بطاقات"
   },
   "auth": {
     "login": "تسجيل الدخول",
