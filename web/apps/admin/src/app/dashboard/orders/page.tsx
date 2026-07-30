@@ -74,6 +74,16 @@ interface OrderPage {
   per_page: number;
 }
 
+interface Alert {
+  order_id: string;
+  number: number;
+  status: string;
+  merchant_name: string;
+  customer_phone: string;
+  reason: "no_accept" | "no_driver" | "too_long";
+  minutes: number;
+}
+
 const STATUS_LABELS: Record<string, string> = m.orders.status;
 const ACTION_LABELS: Record<string, string> = m.admin.ordersPage.actions;
 const PAYMENT_LABELS: Record<string, string> = m.orders.payment;
@@ -131,6 +141,7 @@ export default function OrdersPage() {
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [detailID, setDetailID] = useState<string | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [view, setView] = useViewMode("orders");
 
   const load = useCallback(async () => {
@@ -154,10 +165,14 @@ export default function OrdersPage() {
     return () => clearTimeout(t);
   }, [load]);
 
-  // البث الحي: أي تحديث طلب يعيد تحميل القائمة فوراً — والدوري احتياط كل 60 ثانية
+  // البث الحي: تحديثات الطلبات تعيد التحميل فوراً، والتنبيهات تُستبدل مباشرة
   const liveConnected = useLiveEvents((event) => {
     if (event.type === "order") void load();
+    if (event.type === "alerts") setAlerts((event.alerts as Alert[]) ?? []);
   });
+  useEffect(() => {
+    api<Alert[]>("/api/v1/admin/orders/alerts").then(setAlerts).catch(() => undefined);
+  }, []);
   useEffect(() => {
     const t = setInterval(load, 60000);
     return () => clearInterval(t);
@@ -250,6 +265,35 @@ export default function OrdersPage() {
         </h1>
 
       </div>
+
+      {/* تنبيهات التصعيد */}
+      {alerts.length > 0 && (
+        <div className="mb-4 rounded-card border-2 border-danger/50 bg-danger/5 p-4">
+          <p className="mb-2 flex items-center gap-2 font-bold text-danger">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-danger" />
+            {m.admin.ordersPage.alertsTitle} ({alerts.length})
+          </p>
+          <ul className="space-y-1.5">
+            {alerts.map((a) => (
+              <li key={a.order_id + a.reason} className="flex flex-wrap items-center gap-2 text-sm">
+                <button
+                  onClick={() => setDetailID(a.order_id)}
+                  className="font-bold text-danger underline-offset-2 hover:underline"
+                >
+                  #{a.number}
+                </button>
+                <Badge variant="danger">{m.admin.ordersPage.alertReasons[a.reason]}</Badge>
+                <span>{a.merchant_name}</span>
+                <span dir="ltr" className="text-xs text-ink-muted">{a.customer_phone}</span>
+                <span className="text-xs text-ink-muted">
+                  {m.admin.ordersPage.sinceMinutes.replace("{m}", String(a.minutes))}
+                </span>
+                <Badge variant="warning">{STATUS_LABELS[a.status]}</Badge>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-64">

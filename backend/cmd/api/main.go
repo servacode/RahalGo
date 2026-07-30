@@ -99,6 +99,7 @@ func run(logger *slog.Logger) error {
 	cashboxSvc := cashbox.NewService(pg, settingsStore)
 	hub := realtime.NewHub(logger)
 	ordersSvc := orders.NewService(pg, identitySvc, walletSvc, cashboxSvc, hub, logger)
+	go ordersSvc.RunWatchdog(ctx, 30*time.Second)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

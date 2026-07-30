@@ -36,6 +36,15 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, res)
 }
 
+func (s *Server) handleOrderAlerts(w http.ResponseWriter, r *http.Request) {
+	alerts, err := s.orders.Alerts(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, alerts)
+}
+
 func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	o, err := s.orders.GetByID(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {

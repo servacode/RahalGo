@@ -110,6 +110,13 @@
       "openOnly": "الجارية فقط",
       "live": "مباشر",
       "liveOff": "غير متصل",
+      "alertsTitle": "تنبيهات تصعيد — طلبات عالقة",
+      "alertReasons": {
+        "no_accept": "المتجر لم يقبل الطلب",
+        "no_driver": "بلا سائق منذ مدة",
+        "too_long": "متأخر جداً"
+      },
+      "sinceMinutes": "منذ {m} دقيقة",
       "number": "الطلب",
       "customer": "الزبون",
       "merchant": "المتجر",

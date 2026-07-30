@@ -109,6 +109,7 @@ func (s *Server) Router() http.Handler {
 			// الطلبات — غرفة العمليات تدير ولا تُنشئ (قرار 18):
 			// الإنشاء حصراً عبر واجهات الزبون (الموقع/التطبيق)
 			r.Get("/orders", s.handleListOrders)
+			r.Get("/orders/alerts", s.handleOrderAlerts)
 			r.Get("/orders/{id}", s.handleGetOrder)
 			r.Post("/orders/{id}/transition", s.handleOrderTransition)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
