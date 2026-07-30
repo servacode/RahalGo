@@ -26,6 +26,7 @@ export interface AuthUser {
   full_name: string;
   status: string;
   has_password: boolean;
+  invite_code: string | null;
   roles: string[];
   created_at: string;
 }

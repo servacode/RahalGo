@@ -219,6 +219,25 @@ func (s *Service) SetPassword(ctx context.Context, userID, password, ip string) 
 	return nil
 }
 
+// SalesRepByInviteCode يعيد المندوب صاحب كود الدعوة — أو خطأ واضحاً إن لم يوجد.
+var ErrInvalidInviteCode = httpx.NewError(http.StatusBadRequest, "invalid_invite_code", "errors.invalid_invite_code")
+
+func (s *Service) SalesRepByInviteCode(ctx context.Context, code string) (*User, error) {
+	user, _, err := s.repo.UserByInviteCode(ctx, code)
+	if errors.Is(err, ErrNotFound) {
+		return nil, ErrInvalidInviteCode
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range user.Roles {
+		if r == "sales" {
+			return user, nil
+		}
+	}
+	return nil, ErrInvalidInviteCode
+}
+
 // EnsureUserWithRole يجد المستخدم برقم هاتفه (أو ينشئه) ويضمن حمله الدور المطلوب.
 // تستخدمه الوحدات الأخرى لربط الحسابات (صاحب متجر، سائق...) — مع تدقيق كامل.
 func (s *Service) EnsureUserWithRole(ctx context.Context, actorID, rawPhone, role, ip string) (*User, error) {

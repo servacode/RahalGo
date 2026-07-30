@@ -2,7 +2,6 @@ package catalog
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -11,120 +10,111 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
-// مناطق التغطية — مضلعات GeoJSON تُخزَّن في PostGIS، برسوم وحد أدنى لكل منطقة.
+// مناطق التغطية — نموذج الدوائر (قرار مثبّت): اسم + مركز + نصف قطر قابل
+// للتمديد والتقليص، برسم توصيل وحد أدنى لكل منطقة. أبسط إدارياً من رسم
+// المضلعات ويناسب نموذج "مركز المدينة الآن، فروع لاحقاً".
 
-var ErrBadPolygon = httpx.NewError(http.StatusBadRequest, "invalid_polygon", "errors.invalid_polygon")
-
-// Ring حلقة إحداثيات [lng, lat] — تُغلق تلقائياً إن لم تكن مغلقة.
-type Ring [][2]float64
+var ErrBadZone = httpx.NewError(http.StatusBadRequest, "invalid_zone", "errors.invalid_zone")
 
 type Zone struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Polygon     Ring   `json:"polygon"`
-	DeliveryFee int64  `json:"delivery_fee"`
-	MinOrder    int64  `json:"min_order"`
-	Active      bool   `json:"active"`
-	SortOrder   int    `json:"sort_order"`
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Lat         float64 `json:"lat"`
+	Lng         float64 `json:"lng"`
+	RadiusM     int     `json:"radius_m"`
+	DeliveryFee int64   `json:"delivery_fee"`
+	MinOrder    int64   `json:"min_order"`
+	Active      bool    `json:"active"`
+	SortOrder   int     `json:"sort_order"`
 }
 
-func ringToGeoJSON(r Ring) (string, error) {
-	if len(r) < 3 {
-		return "", ErrBadPolygon
-	}
-	if r[0] != r[len(r)-1] {
-		r = append(r, r[0]) // إغلاق الحلقة
-	}
-	g := map[string]any{"type": "Polygon", "coordinates": []Ring{r}}
-	b, err := json.Marshal(g)
-	return string(b), err
-}
+const zoneCols = `id, name, ST_Y(center::geometry), ST_X(center::geometry),
+	radius_m, delivery_fee, min_order, active, sort_order`
 
-func parsePolygon(raw []byte) Ring {
-	var g struct {
-		Coordinates []Ring `json:"coordinates"`
+func scanZone(row pgx.Row) (*Zone, error) {
+	var z Zone
+	err := row.Scan(&z.ID, &z.Name, &z.Lat, &z.Lng, &z.RadiusM,
+		&z.DeliveryFee, &z.MinOrder, &z.Active, &z.SortOrder)
+	if err != nil {
+		return nil, err
 	}
-	if err := json.Unmarshal(raw, &g); err != nil || len(g.Coordinates) == 0 {
-		return Ring{}
-	}
-	return g.Coordinates[0]
+	return &z, nil
 }
 
 func (s *Service) ListZones(ctx context.Context) ([]Zone, error) {
-	rows, err := s.db.Query(ctx, `
-		SELECT id, name, ST_AsGeoJSON(polygon::geometry), delivery_fee, min_order, active, sort_order
-		FROM delivery_zones ORDER BY sort_order, created_at`)
+	rows, err := s.db.Query(ctx,
+		`SELECT `+zoneCols+` FROM delivery_zones ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	out := []Zone{}
 	for rows.Next() {
-		var z Zone
-		var raw []byte
-		if err := rows.Scan(&z.ID, &z.Name, &raw, &z.DeliveryFee, &z.MinOrder, &z.Active, &z.SortOrder); err != nil {
+		z, err := scanZone(rows)
+		if err != nil {
 			return nil, err
 		}
-		z.Polygon = parsePolygon(raw)
-		out = append(out, z)
+		out = append(out, *z)
 	}
 	return out, rows.Err()
 }
 
 type ZoneInput struct {
-	Name        *string `json:"name"`
-	Polygon     *Ring   `json:"polygon"`
-	DeliveryFee *int64  `json:"delivery_fee"`
-	MinOrder    *int64  `json:"min_order"`
-	Active      *bool   `json:"active"`
+	Name        *string  `json:"name"`
+	Lat         *float64 `json:"lat"`
+	Lng         *float64 `json:"lng"`
+	RadiusM     *int     `json:"radius_m"`
+	DeliveryFee *int64   `json:"delivery_fee"`
+	MinOrder    *int64   `json:"min_order"`
+	Active      *bool    `json:"active"`
 }
 
+func validRadius(r *int) bool { return r == nil || (*r >= 100 && *r <= 50000) }
+
 func (s *Service) CreateZone(ctx context.Context, actorID string, in ZoneInput, ip string) (*Zone, error) {
-	if in.Name == nil || *in.Name == "" || in.Polygon == nil {
-		return nil, ErrNameRequired
+	if in.Name == nil || *in.Name == "" || in.Lat == nil || in.Lng == nil || !validRadius(in.RadiusM) {
+		return nil, ErrBadZone
 	}
-	geo, err := ringToGeoJSON(*in.Polygon)
-	if err != nil {
-		return nil, err
-	}
-	var id string
-	err = s.db.QueryRow(ctx, `
-		INSERT INTO delivery_zones (name, polygon, delivery_fee, min_order, sort_order)
-		VALUES ($1, ST_GeomFromGeoJSON($2)::geography, COALESCE($3,0), COALESCE($4,0),
+	z, err := scanZone(s.db.QueryRow(ctx, `
+		INSERT INTO delivery_zones (name, center, radius_m, delivery_fee, min_order, sort_order)
+		VALUES ($1, ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
+		        COALESCE($4, 2000), COALESCE($5, 0), COALESCE($6, 0),
 		        COALESCE((SELECT max(sort_order)+1 FROM delivery_zones), 1))
-		RETURNING id`, *in.Name, geo, in.DeliveryFee, in.MinOrder).Scan(&id)
+		RETURNING `+zoneCols,
+		*in.Name, *in.Lat, *in.Lng, in.RadiusM, in.DeliveryFee, in.MinOrder))
 	if err != nil {
-		return nil, ErrBadPolygon
+		return nil, ErrBadZone
 	}
-	s.audit(ctx, actorID, "admin.zone_create", "zone", id, ip)
-	return s.zoneByID(ctx, id)
+	s.audit(ctx, actorID, "admin.zone_create", "zone", z.ID, ip)
+	return z, nil
 }
 
 func (s *Service) UpdateZone(ctx context.Context, actorID, id string, in ZoneInput, ip string) (*Zone, error) {
-	var geo *string
-	if in.Polygon != nil {
-		g, err := ringToGeoJSON(*in.Polygon)
-		if err != nil {
-			return nil, err
-		}
-		geo = &g
+	if !validRadius(in.RadiusM) {
+		return nil, ErrBadZone
 	}
-	tag, err := s.db.Exec(ctx, `
+	z, err := scanZone(s.db.QueryRow(ctx, `
 		UPDATE delivery_zones SET
 			name         = COALESCE($2, name),
-			polygon      = COALESCE(ST_GeomFromGeoJSON($3)::geography, polygon),
-			delivery_fee = COALESCE($4, delivery_fee),
-			min_order    = COALESCE($5, min_order),
-			active       = COALESCE($6, active)
-		WHERE id = $1`, id, in.Name, geo, in.DeliveryFee, in.MinOrder, in.Active)
-	if err != nil {
-		return nil, ErrBadPolygon
-	}
-	if tag.RowsAffected() == 0 {
+			center       = COALESCE(
+				CASE WHEN $3::float8 IS NOT NULL AND $4::float8 IS NOT NULL
+				     THEN ST_SetSRID(ST_MakePoint($4::float8, $3::float8), 4326)::geography END,
+				center),
+			radius_m     = COALESCE($5, radius_m),
+			delivery_fee = COALESCE($6, delivery_fee),
+			min_order    = COALESCE($7, min_order),
+			active       = COALESCE($8, active)
+		WHERE id = $1
+		RETURNING `+zoneCols,
+		id, in.Name, in.Lat, in.Lng, in.RadiusM, in.DeliveryFee, in.MinOrder, in.Active))
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
+	if err != nil {
+		return nil, ErrBadZone
+	}
 	s.audit(ctx, actorID, "admin.zone_update", "zone", id, ip)
-	return s.zoneByID(ctx, id)
+	return z, nil
 }
 
 func (s *Service) DeleteZone(ctx context.Context, actorID, id, ip string) error {
@@ -139,35 +129,17 @@ func (s *Service) DeleteZone(ctx context.Context, actorID, id, ip string) error 
 	return nil
 }
 
-func (s *Service) zoneByID(ctx context.Context, id string) (*Zone, error) {
-	var z Zone
-	var raw []byte
-	err := s.db.QueryRow(ctx, `
-		SELECT id, name, ST_AsGeoJSON(polygon::geometry), delivery_fee, min_order, active, sort_order
-		FROM delivery_zones WHERE id = $1`, id).
-		Scan(&z.ID, &z.Name, &raw, &z.DeliveryFee, &z.MinOrder, &z.Active, &z.SortOrder)
+// ZoneForPoint يعيد المنطقة الفعالة التي تغطي النقطة (الأقرب مركزاً عند التداخل)
+// — تُستخدم لحساب رسوم التوصيل من دبوس الزبون.
+func (s *Service) ZoneForPoint(ctx context.Context, lat, lng float64) (*Zone, error) {
+	z, err := scanZone(s.db.QueryRow(ctx, `
+		SELECT `+zoneCols+` FROM delivery_zones
+		WHERE active
+		  AND ST_DWithin(center, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, radius_m)
+		ORDER BY ST_Distance(center, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography)
+		LIMIT 1`, lat, lng))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
-	if err != nil {
-		return nil, err
-	}
-	z.Polygon = parsePolygon(raw)
-	return &z, nil
-}
-
-// ZoneForPoint يعيد المنطقة الفعالة التي تحوي النقطة (لحساب رسوم التوصيل لاحقاً).
-func (s *Service) ZoneForPoint(ctx context.Context, lng, lat float64) (*Zone, error) {
-	var id string
-	err := s.db.QueryRow(ctx, `
-		SELECT id FROM delivery_zones
-		WHERE active AND ST_Covers(polygon, ST_SetSRID(ST_MakePoint($1,$2),4326)::geography)
-		ORDER BY sort_order LIMIT 1`, lng, lat).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, httpx.ErrNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	return s.zoneByID(ctx, id)
+	return z, err
 }

@@ -7,19 +7,16 @@ import {
   Button,
   Input,
   Badge,
-  Modal,
   IconAdd,
   IconDelete,
   IconZones,
   IconWallet,
-  IconCheck,
   IconClose,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { ZoneShape } from "./ZonesMap";
 
-// Leaflet لا يعمل إلا في المتصفح
 const ZonesMap = dynamic(() => import("./ZonesMap"), { ssr: false });
 
 const m = getMessages(defaultLocale);
@@ -42,16 +39,25 @@ function errText(err: unknown): string {
   return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
 }
 
+interface Draft {
+  id: string | null; // null = إنشاء جديد
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  radiusM: number;
+  fee: string;
+  minOrder: string;
+}
+
 export default function ZonesPage() {
   const { user: me } = useAuth();
   const isAdmin = !!me?.roles.includes("admin");
 
   const [zones, setZones] = useState<Zone[]>([]);
   const [error, setError] = useState("");
-  const [drawing, setDrawing] = useState(false);
-  const [draft, setDraft] = useState<[number, number][]>([]);
-  const [saveOpen, setSaveOpen] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [selectedID, setSelectedID] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -66,7 +72,51 @@ export default function ZonesPage() {
     void load();
   }, [load]);
 
-  const selected = zones.find((z) => z.id === selectedID) ?? null;
+  function startCreate() {
+    setSelectedID(null);
+    setDraft({ id: null, name: "", lat: null, lng: null, radiusM: 2000, fee: "", minOrder: "0" });
+  }
+
+  function startEdit(z: Zone) {
+    setSelectedID(z.id);
+    setDraft({
+      id: z.id,
+      name: z.name,
+      lat: z.lat,
+      lng: z.lng,
+      radiusM: z.radius_m,
+      fee: String(z.delivery_fee),
+      minOrder: String(z.min_order),
+    });
+  }
+
+  async function save() {
+    if (!draft || draft.lat == null) return;
+    setBusy(true);
+    setError("");
+    const body = {
+      name: draft.name,
+      lat: draft.lat,
+      lng: draft.lng,
+      radius_m: draft.radiusM,
+      delivery_fee: Number(draft.fee) || 0,
+      min_order: Number(draft.minOrder) || 0,
+    };
+    try {
+      if (draft.id) {
+        await api(`/api/v1/admin/zones/${draft.id}`, { method: "PATCH", body: JSON.stringify(body) });
+      } else {
+        await api("/api/v1/admin/zones", { method: "POST", body: JSON.stringify(body) });
+      }
+      setDraft(null);
+      setSelectedID(null);
+      await load();
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function toggleActive(z: Zone) {
     try {
@@ -85,6 +135,7 @@ export default function ZonesPage() {
     try {
       await api(`/api/v1/admin/zones/${z.id}`, { method: "DELETE" });
       setSelectedID(null);
+      setDraft(null);
       await load();
     } catch (err) {
       setError(errText(err));
@@ -92,76 +143,118 @@ export default function ZonesPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] flex-col">
+    <div className="flex h-[calc(100vh-6rem)] flex-col lg:h-[calc(100vh-3rem)]">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-2 text-2xl font-bold">
           <IconZones className="text-primary" />
           {m.admin.zones.title}
         </h1>
-        {isAdmin && !drawing && (
-          <Button
-            onClick={() => {
-              setDrawing(true);
-              setDraft([]);
-              setSelectedID(null);
-            }}
-            className="flex items-center gap-1.5"
-          >
+        {isAdmin && !draft && (
+          <Button onClick={startCreate} className="flex items-center gap-1.5">
             <IconAdd size={16} />
             {m.admin.zones.newZone}
           </Button>
         )}
-        {drawing && (
-          <div className="flex items-center gap-2">
-            <Badge variant="warning">
-              {m.admin.zones.pointsCount.replace("{count}", String(draft.length))}
-            </Badge>
-            <Button
-              disabled={draft.length < 3}
-              onClick={() => setSaveOpen(true)}
-              className="flex items-center gap-1.5"
-            >
-              <IconCheck size={15} />
-              {m.admin.zones.finishDrawing}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setDrawing(false);
-                setDraft([]);
-              }}
-              className="flex items-center gap-1.5"
-            >
-              <IconClose size={15} />
-              {m.admin.zones.cancelDrawing}
-            </Button>
-          </div>
-        )}
       </div>
 
-      {drawing && (
+      {draft && (
         <p className="mb-3 rounded-control bg-accent/10 px-3 py-2 text-sm text-accent-dark">
-          {m.admin.zones.drawing}
+          {m.admin.zones.centerHint}
         </p>
       )}
       {error && (
         <p className="mb-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
-      <div className="flex min-h-0 flex-1 gap-4">
-        <div className="flex-1 overflow-hidden rounded-card border border-line">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
+        <div className="min-h-64 flex-1 overflow-hidden rounded-card border border-line">
           <ZonesMap
             zones={zones}
-            drawing={drawing}
-            draft={draft}
+            editing={!!draft}
+            draft={draft && draft.lat != null ? { lat: draft.lat, lng: draft.lng!, radiusM: draft.radiusM } : null}
             selectedID={selectedID}
-            onMapClick={(lng, lat) => setDraft((d) => [...d, [lng, lat]])}
-            onZoneClick={(id) => !drawing && setSelectedID(id)}
+            onMapClick={(lat, lng) => setDraft((d) => (d ? { ...d, lat, lng } : d))}
+            onZoneClick={(id) => {
+              const z = zones.find((x) => x.id === id);
+              if (z && isAdmin && !draft) startEdit(z);
+              else setSelectedID(id);
+            }}
           />
         </div>
 
-        <aside className="w-72 shrink-0 space-y-2 overflow-y-auto">
-          {zones.length === 0 && (
+        <aside className="w-full shrink-0 space-y-3 overflow-y-auto md:w-80">
+          {/* نموذج الإنشاء/التعديل */}
+          {draft && (
+            <div className="space-y-3 rounded-card border border-accent bg-surface p-4">
+              <div className="flex items-center justify-between">
+                <h2 className="font-bold">
+                  {draft.id ? m.admin.zones.editZone : m.admin.zones.newZone}
+                </h2>
+                <button onClick={() => setDraft(null)} className="text-ink-muted hover:text-ink">
+                  <IconClose size={18} />
+                </button>
+              </div>
+              <Input
+                id="z-name"
+                label={m.admin.zones.zoneName}
+                required
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                placeholder={m.admin.zones.zoneNamePlaceholder}
+              />
+              <div>
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className="font-medium">{m.admin.zones.radius}</span>
+                  <Badge variant="primary">
+                    {(draft.radiusM / 1000).toFixed(1)} {m.admin.zones.km}
+                  </Badge>
+                </div>
+                <input
+                  type="range"
+                  min={500}
+                  max={15000}
+                  step={100}
+                  value={draft.radiusM}
+                  onChange={(e) => setDraft({ ...draft, radiusM: Number(e.target.value) })}
+                  className="w-full accent-primary"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  id="z-fee"
+                  label={`${m.admin.zones.deliveryFee} (${m.common.currency})`}
+                  type="number"
+                  min="0"
+                  required
+                  value={draft.fee}
+                  onChange={(e) => setDraft({ ...draft, fee: e.target.value })}
+                />
+                <Input
+                  id="z-min"
+                  label={m.admin.zones.minOrder}
+                  type="number"
+                  min="0"
+                  value={draft.minOrder}
+                  onChange={(e) => setDraft({ ...draft, minOrder: e.target.value })}
+                />
+              </div>
+              {draft.lat == null && (
+                <p className="rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">
+                  {m.admin.zones.centerUnset}
+                </p>
+              )}
+              <Button
+                onClick={save}
+                disabled={busy || draft.lat == null || !draft.name}
+                className="w-full"
+              >
+                {m.common.save}
+              </Button>
+            </div>
+          )}
+
+          {/* قائمة المناطق */}
+          {zones.length === 0 && !draft && (
             <p className="rounded-card border border-line bg-surface p-6 text-center text-sm text-ink-muted">
               {m.admin.zones.empty}
             </p>
@@ -169,9 +262,11 @@ export default function ZonesPage() {
           {zones.map((z) => (
             <button
               key={z.id}
-              onClick={() => setSelectedID(z.id === selectedID ? null : z.id)}
+              onClick={() => (isAdmin ? startEdit(z) : setSelectedID(z.id))}
               className={`w-full rounded-card border p-3 text-start transition-colors ${
-                z.id === selectedID ? "border-accent bg-accent/5" : "border-line bg-surface hover:border-primary/40"
+                z.id === selectedID
+                  ? "border-accent bg-accent/5"
+                  : "border-line bg-surface hover:border-primary/40"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -182,7 +277,10 @@ export default function ZonesPage() {
               </div>
               <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-muted">
                 <IconWallet size={14} />
-                {m.admin.zones.deliveryFee}: {fmt.format(z.delivery_fee)} {m.common.currency}
+                {fmt.format(z.delivery_fee)} {m.common.currency}
+                <span className="text-xs">
+                  · {(z.radius_m / 1000).toFixed(1)} {m.admin.zones.km}
+                </span>
               </p>
               {z.id === selectedID && isAdmin && (
                 <div className="mt-2 flex gap-2 border-t border-line pt-2">
@@ -210,101 +308,6 @@ export default function ZonesPage() {
           ))}
         </aside>
       </div>
-
-      {saveOpen && (
-        <SaveZoneModal
-          draft={draft}
-          onClose={() => setSaveOpen(false)}
-          onSaved={() => {
-            setSaveOpen(false);
-            setDrawing(false);
-            setDraft([]);
-            void load();
-          }}
-        />
-      )}
     </div>
-  );
-}
-
-function SaveZoneModal({
-  draft,
-  onClose,
-  onSaved,
-}: {
-  draft: [number, number][];
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [fee, setFee] = useState("");
-  const [minOrder, setMinOrder] = useState("0");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await api("/api/v1/admin/zones", {
-        method: "POST",
-        body: JSON.stringify({
-          name,
-          polygon: draft,
-          delivery_fee: Number(fee) || 0,
-          min_order: Number(minOrder) || 0,
-        }),
-      });
-      onSaved();
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title={m.admin.zones.newZone}>
-      <form onSubmit={submit} className="space-y-4">
-        <Input
-          id="z-name"
-          label={m.admin.zones.zoneName}
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            id="z-fee"
-            label={`${m.admin.zones.deliveryFee} (${m.common.currency})`}
-            type="number"
-            min="0"
-            required
-            value={fee}
-            onChange={(e) => setFee(e.target.value)}
-          />
-          <Input
-            id="z-min"
-            label={`${m.admin.zones.minOrder} (${m.common.currency})`}
-            type="number"
-            min="0"
-            value={minOrder}
-            onChange={(e) => setMinOrder(e.target.value)}
-          />
-        </div>
-        {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
-        )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {m.common.save}
-          </Button>
-        </div>
-      </form>
-    </Modal>
   );
 }

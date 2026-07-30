@@ -53,6 +53,7 @@ interface Merchant {
   address_text: string;
   owner_phone: string | null;
   sales_rep_phone: string | null;
+  sales_rep_code: string | null;
   lat: number | null;
   lng: number | null;
   status: string;
@@ -518,7 +519,7 @@ function MerchantModal({
   const [phone, setPhone] = useState(merchant?.phone ?? "");
   const [address, setAddress] = useState(merchant?.address_text ?? "");
   const [ownerPhone, setOwnerPhone] = useState(merchant?.owner_phone ?? "");
-  const [repPhone, setRepPhone] = useState(merchant?.sales_rep_phone ?? "");
+  const [repCode, setRepCode] = useState(merchant?.sales_rep_code ?? "");
   const [lat, setLat] = useState<number | null>(merchant?.lat ?? null);
   const [lng, setLng] = useState<number | null>(merchant?.lng ?? null);
   const [error, setError] = useState("");
@@ -535,7 +536,7 @@ function MerchantModal({
       phone,
       address_text: address,
       owner_phone: ownerPhone,
-      sales_rep_phone: repPhone,
+      sales_rep_code: repCode,
       lat,
       lng,
     };
@@ -653,14 +654,14 @@ function MerchantModal({
             <div>
               <Input
                 id="m-rep"
-                label={m.roles.sales}
+                label={m.admin.merchants.repCode}
                 dir="ltr"
-                value={repPhone}
-                onChange={(e) => setRepPhone(e.target.value)}
-                className="text-end"
-                placeholder="09xxxxxxxx"
+                value={repCode}
+                onChange={(e) => setRepCode(e.target.value.toUpperCase())}
+                className="text-center font-mono uppercase tracking-widest"
+                placeholder="RH-XXXXX"
               />
-              <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.ownerHint}</p>
+              <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.repCodeHint}</p>
             </div>
           </div>
         </FormSection>

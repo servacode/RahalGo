@@ -8,6 +8,7 @@ type User struct {
 	FullName    string    `json:"full_name"`
 	Status      string    `json:"status"`
 	HasPassword bool      `json:"has_password"`
+	InviteCode  *string   `json:"invite_code"`
 	Roles       []string  `json:"roles"`
 	CreatedAt   time.Time `json:"created_at"`
 }

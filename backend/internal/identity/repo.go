@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"time"
 
@@ -21,12 +22,12 @@ func (r *Repo) getUserBy(ctx context.Context, where, arg string) (*User, string,
 	var u User
 	var passwordHash *string
 	err := r.db.QueryRow(ctx, `
-		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash, u.created_at,
+		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash, u.invite_code, u.created_at,
 		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}')
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		WHERE `+where+` GROUP BY u.id`, arg).
-		Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &passwordHash, &u.CreatedAt, &u.Roles)
+		Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &passwordHash, &u.InviteCode, &u.CreatedAt, &u.Roles)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, "", ErrNotFound
 	}
@@ -47,6 +48,10 @@ func (r *Repo) UserByPhone(ctx context.Context, phone string) (*User, string, er
 
 func (r *Repo) UserByID(ctx context.Context, id string) (*User, string, error) {
 	return r.getUserBy(ctx, "u.id = $1", id)
+}
+
+func (r *Repo) UserByInviteCode(ctx context.Context, code string) (*User, string, error) {
+	return r.getUserBy(ctx, "u.invite_code = $1", code)
 }
 
 // CreateUserWithRole ينشئ مستخدماً جديداً بدور واحد (ضمن معاملة).
@@ -70,6 +75,11 @@ func (r *Repo) CreateUserWithRole(ctx context.Context, phone, fullName, role str
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	if role == "sales" {
+		if err := r.EnsureInviteCode(ctx, id); err != nil {
+			return nil, err
+		}
+	}
 	u, _, err := r.UserByID(ctx, id)
 	return u, err
 }
@@ -85,7 +95,7 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset 
 	}
 
 	rows, err := r.db.Query(ctx, `
-		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash IS NOT NULL, u.created_at,
+		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash IS NOT NULL, u.invite_code, u.created_at,
 		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}')
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
@@ -101,7 +111,7 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset 
 	users := []User{}
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.CreatedAt, &u.Roles); err != nil {
+		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.CreatedAt, &u.Roles); err != nil {
 			return nil, 0, err
 		}
 		users = append(users, u)
@@ -136,7 +146,32 @@ func (r *Repo) GrantRole(ctx context.Context, userID, role string, grantedBy *st
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO user_roles (user_id, role_code, granted_by) VALUES ($1, $2, $3)
 		ON CONFLICT DO NOTHING`, userID, role, grantedBy)
+	if err == nil && role == "sales" {
+		err = r.EnsureInviteCode(ctx, userID)
+	}
 	return err
+}
+
+// EnsureInviteCode يولّد كود دعوة فريداً للمستخدم إن لم يكن لديه (لدور المندوب).
+func (r *Repo) EnsureInviteCode(ctx context.Context, userID string) error {
+	const charset = "ABCDEFGHJKMNPQRSTUVWXYZ23456789" // بلا أحرف ملتبسة
+	for attempt := 0; attempt < 5; attempt++ {
+		b := make([]byte, 5)
+		if _, err := rand.Read(b); err != nil {
+			return err
+		}
+		for i := range b {
+			b[i] = charset[int(b[i])%len(charset)]
+		}
+		code := "RH-" + string(b)
+		_, err := r.db.Exec(ctx, `
+			UPDATE users SET invite_code = $2 WHERE id = $1 AND invite_code IS NULL`,
+			userID, code)
+		if err == nil {
+			return nil
+		}
+	}
+	return errors.New("identity: failed to generate invite code")
 }
 
 func (r *Repo) SetPassword(ctx context.Context, userID, hash string) error {

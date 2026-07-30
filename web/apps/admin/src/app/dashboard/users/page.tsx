@@ -122,6 +122,11 @@ export default function UsersPage() {
               {ROLE_LABELS[r] ?? r}
             </Badge>
           ))}
+          {u.invite_code && (
+            <Badge variant="warning">
+              <span dir="ltr" className="font-mono">{u.invite_code}</span>
+            </Badge>
+          )}
         </div>
       ),
     },

@@ -40,6 +40,7 @@ type Merchant struct {
 	OwnerUserID     *string   `json:"owner_user_id"`
 	OwnerPhone      *string   `json:"owner_phone"`
 	SalesRepPhone   *string   `json:"sales_rep_phone"`
+	SalesRepCode    *string   `json:"sales_rep_code"`
 	Lat             *float64  `json:"lat"`
 	Lng             *float64  `json:"lng"`
 	Status          string    `json:"status"`
@@ -136,7 +137,7 @@ func (s *Service) UpdateCategory(ctx context.Context, actorID, id string, in Cat
 
 const merchantSelect = `
 	SELECT m.id, m.name, m.description, m.category_id, c.name, c.icon,
-	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone,
+	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone, sr.invite_code,
 	       ST_Y(m.location::geometry), ST_X(m.location::geometry),
 	       m.status, m.emergency_closed, m.created_at
 	FROM merchants m
@@ -147,7 +148,7 @@ const merchantSelect = `
 func scanMerchant(row pgx.Row) (*Merchant, error) {
 	var m Merchant
 	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
-		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone,
+		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
 		&m.Lat, &m.Lng, &m.Status, &m.EmergencyClosed, &m.CreatedAt)
 	if err != nil {
 		return nil, err
@@ -202,9 +203,9 @@ type MerchantInput struct {
 	AddressText     *string  `json:"address_text"`
 	Status          *string  `json:"status"`
 	EmergencyClosed *bool    `json:"emergency_closed"`
-	OwnerPhone      *string  `json:"owner_phone"`     // يربط/ينشئ حساب صاحب المتجر بدور merchant
-	SalesRepPhone   *string  `json:"sales_rep_phone"` // يربط/ينشئ حساب المندوب بدور sales
-	Lat             *float64 `json:"lat"`             // دبوس الموقع على الخريطة
+	OwnerPhone      *string  `json:"owner_phone"`    // يربط/ينشئ حساب صاحب المتجر بدور merchant
+	SalesRepCode    *string  `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
+	Lat             *float64 `json:"lat"`            // دبوس الموقع على الخريطة
 	Lng             *float64 `json:"lng"`
 }
 
@@ -216,7 +217,7 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 	if err != nil {
 		return nil, err
 	}
-	repID, err := s.resolveRep(ctx, actorID, in.SalesRepPhone, ip)
+	repID, err := s.resolveRep(ctx, in.SalesRepCode)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +248,7 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 	if err != nil {
 		return nil, err
 	}
-	repID, err := s.resolveRep(ctx, actorID, in.SalesRepPhone, ip)
+	repID, err := s.resolveRep(ctx, in.SalesRepCode)
 	if err != nil {
 		return nil, err
 	}
@@ -291,12 +292,12 @@ func (s *Service) merchantByID(ctx context.Context, id string) (*Merchant, error
 	return m, err
 }
 
-// resolveRep يجد/ينشئ حساب مندوب المبيعات بدور sales من رقم هاتفه.
-func (s *Service) resolveRep(ctx context.Context, actorID string, repPhone *string, ip string) (*string, error) {
-	if repPhone == nil || *repPhone == "" {
+// resolveRep ينسب المتجر للمندوب صاحب كود الدعوة.
+func (s *Service) resolveRep(ctx context.Context, repCode *string) (*string, error) {
+	if repCode == nil || *repCode == "" {
 		return nil, nil
 	}
-	user, err := s.identity.EnsureUserWithRole(ctx, actorID, *repPhone, "sales", ip)
+	user, err := s.identity.SalesRepByInviteCode(ctx, *repCode)
 	if err != nil {
 		return nil, err
 	}
