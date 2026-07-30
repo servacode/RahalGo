@@ -149,9 +149,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <h2 className="hidden text-sm font-bold text-ink lg:block">{activeLabel}</h2>
           <div className="ms-auto flex items-center gap-3">
-            <span dir="ltr" className="hidden text-xs text-ink-muted sm:block">
+            <Link
+              href="/dashboard/account"
+              dir="ltr"
+              className="hidden rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-primary-light hover:text-primary-dark sm:block"
+            >
               {user?.phone}
-            </span>
+            </Link>
             <button
               onClick={() => {
                 logout();

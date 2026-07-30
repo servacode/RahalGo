@@ -65,6 +65,7 @@ export default function UsersPage() {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("");
   const [onlineOnly, setOnlineOnly] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("");
   const [roleCounts, setRoleCounts] = useState<{ total: number; roles: Record<string, number> } | null>(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
@@ -76,7 +77,7 @@ export default function UsersPage() {
 
   const load = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ query, role, online: onlineOnly ? "true" : "", page: String(page), per_page: "10" });
+      const params = new URLSearchParams({ query, role, status: statusFilter, online: onlineOnly ? "true" : "", page: String(page), per_page: "10" });
       api<{ total: number; roles: Record<string, number> }>("/api/v1/admin/users/stats")
         .then(setRoleCounts)
         .catch(() => undefined);
@@ -85,7 +86,7 @@ export default function UsersPage() {
     } catch (err) {
       setError(errText(err));
     }
-  }, [query, role, onlineOnly, page]);
+  }, [query, role, statusFilter, onlineOnly, page]);
 
   useEffect(() => {
     const t = setTimeout(load, 250); // تهدئة البحث
@@ -259,6 +260,20 @@ export default function UsersPage() {
                 {ROLE_LABELS[r]}
               </option>
             ))}
+          </Select>
+        </div>
+        <div className="w-36">
+          <Select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">{m.admin.users.statusFilter.all}</option>
+            <option value="active">{m.admin.users.statusFilter.active}</option>
+            <option value="suspended">{m.admin.users.statusFilter.suspended}</option>
+            <option value="blocked">{m.admin.users.statusFilter.blocked}</option>
           </Select>
         </div>
         <div className="ms-auto">

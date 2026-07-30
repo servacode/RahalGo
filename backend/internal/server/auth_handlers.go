@@ -120,13 +120,14 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
-		Password string `json:"password"`
+		Password        string `json:"password"`
+		CurrentPassword string `json:"current_password"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.SetPassword(r.Context(), userIDFrom(r), req.Password, clientIP(r)); err != nil {
+	if err := s.identity.SetPassword(r.Context(), userIDFrom(r), req.Password, req.CurrentPassword, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}

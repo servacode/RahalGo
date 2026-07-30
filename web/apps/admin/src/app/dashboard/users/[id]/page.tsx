@@ -25,6 +25,7 @@ import {
   IconStatus,
   IconStar,
   IconSupport,
+  IconEdit,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -46,6 +47,7 @@ interface Profile {
   invite_code: string | null;
   avatar_thumb_url?: string | null;
   status_reason: string;
+  admin_notes: string;
   active_sessions: number;
   roles: string[];
   created_at: string;
@@ -137,7 +139,7 @@ export default function UserProfilePage() {
 
   const has = (r: string) => p.roles.includes(r);
 
-  const stats: { label: string; value: string; icon: React.ReactNode }[] = [
+  const stats: { label: string; value: string; icon: React.ReactNode; onClick?: () => void }[] = [
     {
       label: `${m.admin.customers.balance} (${m.common.currency})`,
       value: fmt.format(p.balance),
@@ -146,7 +148,12 @@ export default function UserProfilePage() {
   ];
   if (has("customer") || p.orders_count > 0) {
     stats.push(
-      { label: P.ordersCount, value: fmt.format(p.orders_count), icon: <IconOrder /> },
+      {
+        label: P.ordersCount,
+        value: fmt.format(p.orders_count),
+        icon: <IconOrder />,
+        onClick: () => router.push(`/dashboard/orders?q=${encodeURIComponent(p.phone)}`),
+      },
       {
         label: `${P.spent} (${m.common.currency})`,
         value: fmt.format(p.orders_spent),
@@ -173,11 +180,17 @@ export default function UserProfilePage() {
   }
   if (has("driver")) {
     stats.push(
-      { label: P.deliveries, value: fmt.format(p.deliveries), icon: <IconDriver /> },
+      {
+        label: P.deliveries,
+        value: fmt.format(p.deliveries),
+        icon: <IconDriver />,
+        onClick: () => router.push("/dashboard/drivers"),
+      },
       {
         label: `${P.driverCash} (${m.common.currency})`,
         value: fmt.format(p.driver_cash),
         icon: <IconWallet className="text-accent-dark" />,
+        onClick: () => router.push("/dashboard/drivers"),
       }
     );
   }
@@ -314,7 +327,13 @@ export default function UserProfilePage() {
       {/* المؤشرات حسب الأدوار */}
       <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-card border border-line bg-surface p-3">
+          <div
+            key={s.label}
+            onClick={s.onClick}
+            className={`rounded-card border border-line bg-surface p-3 ${
+              s.onClick ? "cursor-pointer transition-shadow hover:border-primary/40 hover:shadow-sm" : ""
+            }`}
+          >
             <div className="mb-1">{s.icon}</div>
             <p className="text-lg font-bold">{s.value}</p>
             <p className="text-xs text-ink-muted">{s.label}</p>
@@ -338,6 +357,13 @@ export default function UserProfilePage() {
         </div>
       )}
 
+      <FormSection title={P.notes} icon={<IconEdit />}>
+        <NotesEditor
+          userID={p.id}
+          initial={p.admin_notes}
+          onSaved={load}
+        />
+      </FormSection>
       </>
       )}
 
@@ -692,5 +718,55 @@ function ChangePhoneModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+function NotesEditor({
+  userID,
+  initial,
+  onSaved,
+}: {
+  userID: string;
+  initial: string;
+  onSaved: () => void;
+}) {
+  const [notes, setNotes] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-ink-muted">{P.notesHint}</p>
+      <textarea
+        value={notes}
+        onChange={(e) => {
+          setNotes(e.target.value);
+          setSaved(false);
+        }}
+        rows={3}
+        className="w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+      />
+      <div className="flex items-center justify-end gap-2">
+        {saved && <span className="text-xs text-success">{P.notesSaved}</span>}
+        <Button
+          disabled={busy || notes === initial}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await api(`/api/v1/admin/users/${userID}`, {
+                method: "PATCH",
+                body: JSON.stringify({ admin_notes: notes }),
+              });
+              setSaved(true);
+              onSaved();
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {m.common.save}
+        </Button>
+      </div>
+    </div>
   );
 }

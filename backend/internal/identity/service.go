@@ -208,15 +208,26 @@ func (s *Service) Me(ctx context.Context, userID string) (*User, error) {
 	return user, err
 }
 
-func (s *Service) SetPassword(ctx context.Context, userID, password, ip string) error {
+func (s *Service) SetPassword(ctx context.Context, userID, password, currentPassword, ip string) error {
 	if len(password) < minPasswordLn {
 		return ErrWeakPassword
 	}
-	hash, err := auth.HashPassword(password)
+	// من يملك كلمة مرور يجب أن يثبتها قبل تغييرها (صفحة "حسابي")
+	_, hash, err := s.repo.UserByID(ctx, userID)
 	if err != nil {
 		return err
 	}
-	if err := s.repo.SetPassword(ctx, userID, hash); err != nil {
+	if hash != "" {
+		ok, err := auth.VerifyPassword(currentPassword, hash)
+		if err != nil || !ok {
+			return ErrInvalidCredentials
+		}
+	}
+	newHash, err := auth.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.SetPassword(ctx, userID, newHash); err != nil {
 		return err
 	}
 	s.repo.Audit(ctx, &userID, "auth.set_password", "user", userID, ip, nil)

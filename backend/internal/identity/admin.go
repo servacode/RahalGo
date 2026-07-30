@@ -30,14 +30,14 @@ type UserPage struct {
 	PerPage int    `json:"per_page"`
 }
 
-func (s *Service) AdminListUsers(ctx context.Context, query, role string, onlineOnly bool, page, perPage int) (*UserPage, error) {
+func (s *Service) AdminListUsers(ctx context.Context, query, role string, onlineOnly bool, status string, page, perPage int) (*UserPage, error) {
 	if page < 1 {
 		page = 1
 	}
 	if perPage < 1 || perPage > 100 {
 		perPage = 20
 	}
-	users, total, err := s.repo.ListUsers(ctx, query, role, onlineOnly, perPage, (page-1)*perPage)
+	users, total, err := s.repo.ListUsers(ctx, query, role, onlineOnly, status, perPage, (page-1)*perPage)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +105,8 @@ type UpdateUserInput struct {
 	Phone *string `json:"phone"`
 	// معرف وسائط الصورة: غير مُرسل = بلا تغيير، "" = إزالة
 	AvatarMediaID *string `json:"avatar_media_id"`
+	// ملاحظات داخلية تراكمية (للموظفين فقط)
+	AdminNotes *string `json:"admin_notes"`
 }
 
 func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, in UpdateUserInput, ip string) (*User, error) {
@@ -130,7 +132,7 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 		}
 		in.Phone = &normalized
 	}
-	if err := s.repo.UpdateUser(ctx, userID, in.FullName, in.Status, in.AvatarMediaID, in.StatusReason, in.Phone); err != nil {
+	if err := s.repo.UpdateUser(ctx, userID, in.FullName, in.Status, in.AvatarMediaID, in.StatusReason, in.Phone, in.AdminNotes); err != nil {
 		if isUniqueViolation(err) {
 			return nil, ErrPhoneTaken
 		}

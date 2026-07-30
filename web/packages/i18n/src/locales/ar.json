@@ -355,7 +355,12 @@
         "ratingsRecvEmpty": "لا تقييمات واردة",
         "avgRating": "متوسط تقييمه",
         "asDriver": "كسائق",
-        "asMerchant": "عن متجره"
+        "asMerchant": "عن متجره",
+        "notes": "ملاحظات داخلية",
+        "notesHint": "يراها موظفو المنصة فقط — لا تظهر لصاحب الحساب أبداً",
+        "notesSaved": "حُفظت الملاحظات ✓",
+        "viewOrders": "عرض طلباته",
+        "viewCashbox": "كشف صندوقه"
       },
       "suspended": "موقوف مؤقتاً",
       "suspend": "إيقاف",
@@ -385,7 +390,13 @@
         "admin.logout_all": "إنهاء كل الجلسات",
         "wallet.apply": "حركة محفظة"
       },
-      "viewProfile": "عرض الملف"
+      "viewProfile": "عرض الملف",
+      "statusFilter": {
+        "all": "كل الحالات",
+        "active": "نشط",
+        "suspended": "موقوف",
+        "blocked": "محظور"
+      }
     },
     "merchants": {
       "title": "المتاجر",
@@ -590,6 +601,16 @@
       "waPaired": "مقترن بالرقم",
       "waNotPaired": "غير مقترن — امسح رمز QR من هاتف البوت",
       "waDevProvider": "وضع التطوير (الرمز يُطبع في سجل الخادم)"
+    },
+    "myAccount": {
+      "title": "حسابي",
+      "subtitle": "إدارة حسابك الشخصي",
+      "changePassword": "تغيير كلمة المرور",
+      "currentPassword": "كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة (8+ أحرف)",
+      "confirmNew": "تأكيد الكلمة الجديدة",
+      "changed": "غُيّرت كلمة المرور بنجاح ✓",
+      "wrongCurrent": "كلمة المرور الحالية غير صحيحة"
     }
   },
   "roles": {

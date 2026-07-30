@@ -17,7 +17,7 @@ func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
 	perPage, _ := strconv.Atoi(q.Get("per_page"))
-	res, err := s.identity.AdminListUsers(r.Context(), q.Get("query"), q.Get("role"), q.Get("online") == "true", page, perPage)
+	res, err := s.identity.AdminListUsers(r.Context(), q.Get("query"), q.Get("role"), q.Get("online") == "true", q.Get("status"), page, perPage)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -125,6 +125,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		InviteCode   *string  `json:"invite_code"`
 		AvatarThumb  *string  `json:"avatar_thumb_url"`
 		StatusReason string   `json:"status_reason"`
+		AdminNotes   string   `json:"admin_notes"`
 		Sessions     int      `json:"active_sessions"`
 		Roles        []string `json:"roles"`
 		CreatedAt    string   `json:"created_at"`
@@ -138,7 +139,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		Deliveries   int      `json:"deliveries"`   // توصيلاته المُسلَّمة
 	}
 	err := s.pg.QueryRow(r.Context(), `
-		SELECT u.id, u.phone, u.full_name, u.status, u.invite_code, u.status_reason,
+		SELECT u.id, u.phone, u.full_name, u.status, u.invite_code, u.status_reason, u.admin_notes,
 		       (SELECT count(*) FROM refresh_tokens rt WHERE rt.user_id = u.id AND rt.revoked_at IS NULL AND rt.expires_at > now()),
 		       (SELECT m.thumb_path FROM media m WHERE m.id = u.avatar_media_id), u.created_at::text,
 		       COALESCE((SELECT array_agg(role_code ORDER BY role_code) FROM user_roles WHERE user_id = u.id), '{}'),
@@ -151,7 +152,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered')
 		FROM users u WHERE u.id = $1`, id).
-		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.StatusReason, &out.Sessions, &out.AvatarThumb, &out.CreatedAt,
+		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.StatusReason, &out.AdminNotes, &out.Sessions, &out.AvatarThumb, &out.CreatedAt,
 			&out.Roles, &out.Balance, &out.OrdersCount, &out.OrdersSpent, &out.Merchants,
 			&out.RepStores, &out.Commissions, &out.DriverCash, &out.Deliveries)
 	if err != nil {
