@@ -23,6 +23,8 @@ import {
   IconPrev,
   IconLogout,
   IconStatus,
+  IconStar,
+  IconSupport,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -68,6 +70,13 @@ interface Activity {
   created_at: string;
 }
 
+interface Feedback {
+  tickets: { number: number; subject: string; status: string; compensation: number; created_at: string }[];
+  ratings_given: { order_number: number; merchant_name: string; merchant_stars: number; driver_stars: number | null; comment: string; created_at: string }[];
+  ratings_received: { order_number: number; merchant_name: string; stars: number; comment: string; created_at: string; as: string }[];
+  avg_received: number | null;
+}
+
 interface Tx {
   id: string;
   kind: string;
@@ -98,8 +107,9 @@ export default function UserProfilePage() {
   const [p, setP] = useState<Profile | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [phoneOpen, setPhoneOpen] = useState(false);
-  const [tab, setTab] = useState<"overview" | "wallet" | "activity">("overview");
+  const [tab, setTab] = useState<"overview" | "wallet" | "feedback" | "activity">("overview");
   const [notice, setNotice] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -111,6 +121,7 @@ export default function UserProfilePage() {
       const st = await api<{ transactions: Tx[] }>(`/api/v1/admin/users/${id}/wallet`);
       setTxs(st.transactions);
       setActivity(await api<Activity[]>(`/api/v1/admin/users/${id}/activity`));
+      setFeedback(await api<Feedback>(`/api/v1/admin/users/${id}/feedback`));
       setError("");
     } catch (err) {
       setError(errText(err));
@@ -152,6 +163,13 @@ export default function UserProfilePage() {
         icon: <IconWallet className="text-success" />,
       }
     );
+  }
+  if (feedback?.avg_received != null) {
+    stats.push({
+      label: P.avgRating,
+      value: `${feedback.avg_received.toFixed(1)} ★`,
+      icon: <IconStar className="text-accent" />,
+    });
   }
   if (has("driver")) {
     stats.push(
@@ -272,6 +290,7 @@ export default function UserProfilePage() {
           [
             { key: "overview", label: P.tabs.overview, icon: <IconUser size={15} /> },
             { key: "wallet", label: P.tabs.wallet, icon: <IconWallet size={15} /> },
+            { key: "feedback", label: P.tabs.feedback, icon: <IconStar size={15} /> },
             { key: "activity", label: P.tabs.activity, icon: <IconStatus size={15} /> },
           ] as const
         ).map((t) => (
@@ -372,6 +391,120 @@ export default function UserProfilePage() {
           </ul>
         )}
       </FormSection>
+      )}
+
+      {tab === "feedback" && feedback && (
+        <div className="space-y-4">
+          <FormSection title={P.ticketsSection} icon={<IconSupport />}>
+            {feedback.tickets.length === 0 ? (
+              <p className="py-4 text-center text-sm text-ink-muted">{P.ticketsEmpty}</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {feedback.tickets.map((t) => (
+                  <li
+                    key={t.number}
+                    onClick={() => router.push("/dashboard/tickets")}
+                    className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm hover:bg-page"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="font-bold">#{fmt.format(t.number)}</span>
+                      <span className="truncate">{t.subject}</span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {t.compensation > 0 && (
+                        <span className="text-xs text-success">
+                          +{fmt.format(t.compensation)} {m.common.currency}
+                        </span>
+                      )}
+                      <Badge
+                        variant={t.status === "resolved" ? "success" : t.status === "open" ? "warning" : "primary"}
+                      >
+                        {(m.admin.tickets.status as Record<string, string>)[t.status] ?? t.status}
+                      </Badge>
+                      <span className="text-xs text-ink-muted" dir="ltr">
+                        {new Date(t.created_at).toLocaleDateString("ar-SY")}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormSection>
+
+          <FormSection title={P.ratingsGiven} icon={<IconStar />}>
+            {feedback.ratings_given.length === 0 ? (
+              <p className="py-4 text-center text-sm text-ink-muted">{P.ratingsGivenEmpty}</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {feedback.ratings_given.map((rt, i) => (
+                  <li
+                    key={i}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+                  >
+                    <span className="flex min-w-0 flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dashboard/orders?q=${rt.order_number}`)}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        #{fmt.format(rt.order_number)}
+                      </button>
+                      <span className="text-ink-muted">{rt.merchant_name}</span>
+                      <span className="text-accent-dark">★ {rt.merchant_stars}</span>
+                      {rt.driver_stars != null && (
+                        <span className="text-xs text-ink-muted">
+                          ({m.admin.ordersPage.rating.driver}: ★ {rt.driver_stars})
+                        </span>
+                      )}
+                      {rt.comment && (
+                        <span className="truncate text-xs text-ink-muted">"{rt.comment}"</span>
+                      )}
+                    </span>
+                    <span className="text-xs text-ink-muted" dir="ltr">
+                      {new Date(rt.created_at).toLocaleDateString("ar-SY")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormSection>
+
+          <FormSection title={P.ratingsRecv} icon={<IconStar />}>
+            {feedback.ratings_received.length === 0 ? (
+              <p className="py-4 text-center text-sm text-ink-muted">{P.ratingsRecvEmpty}</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {feedback.ratings_received.map((rt, i) => (
+                  <li
+                    key={i}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+                  >
+                    <span className="flex min-w-0 flex-wrap items-center gap-2">
+                      <Badge variant={rt.as === "driver" ? "primary" : "warning"}>
+                        {rt.as === "driver" ? P.asDriver : P.asMerchant}
+                      </Badge>
+                      <span className="text-accent-dark">★ {rt.stars}</span>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dashboard/orders?q=${rt.order_number}`)}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        #{fmt.format(rt.order_number)}
+                      </button>
+                      <span className="text-xs text-ink-muted">{rt.merchant_name}</span>
+                      {rt.comment && (
+                        <span className="truncate text-xs text-ink-muted">"{rt.comment}"</span>
+                      )}
+                    </span>
+                    <span className="text-xs text-ink-muted" dir="ltr">
+                      {new Date(rt.created_at).toLocaleDateString("ar-SY")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormSection>
+        </div>
       )}
 
       {tab === "activity" && (

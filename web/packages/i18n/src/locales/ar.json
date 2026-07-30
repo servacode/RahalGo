@@ -342,10 +342,20 @@
         "tabs": {
           "overview": "نظرة عامة",
           "wallet": "سجل المحفظة",
-          "activity": "سجل النشاط"
+          "activity": "سجل النشاط",
+          "feedback": "الشكاوى والتقييمات"
         },
         "passwordBtn": "كلمة المرور",
-        "logoutAllShort": "إنهاء الجلسات"
+        "logoutAllShort": "إنهاء الجلسات",
+        "ticketsSection": "شكاواه وبلاغاته",
+        "ticketsEmpty": "لا شكاوى مسجلة",
+        "ratingsGiven": "تقييمات منحها",
+        "ratingsGivenEmpty": "لم يقيّم أي طلب بعد",
+        "ratingsRecv": "تقييمات واردة عليه",
+        "ratingsRecvEmpty": "لا تقييمات واردة",
+        "avgRating": "متوسط تقييمه",
+        "asDriver": "كسائق",
+        "asMerchant": "عن متجره"
       },
       "suspended": "موقوف مؤقتاً",
       "suspend": "إيقاف",

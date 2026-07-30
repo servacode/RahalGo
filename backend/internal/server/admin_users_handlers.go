@@ -244,3 +244,97 @@ func (s *Server) handleAdminLogoutAll(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"revoked_sessions": n})
 }
+
+// handleAdminUserFeedback الشكاوى والتقييمات المرتبطة بالحساب:
+// تذاكره كزبون، تقييماته الممنوحة، والواردة عليه (كسائق أو صاحب متاجر).
+func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	out := struct {
+		Tickets []map[string]any `json:"tickets"`
+		Given   []map[string]any `json:"ratings_given"`
+		Recv    []map[string]any `json:"ratings_received"`
+		AvgRecv *float64         `json:"avg_received"`
+	}{Tickets: []map[string]any{}, Given: []map[string]any{}, Recv: []map[string]any{}}
+
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT t.number, t.subject, t.status, t.compensation, t.created_at
+		FROM tickets t WHERE t.customer_id = $1 ORDER BY t.number DESC LIMIT 20`, id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	for rows.Next() {
+		var num, comp int64
+		var subject, status string
+		var at time.Time
+		if err := rows.Scan(&num, &subject, &status, &comp, &at); err == nil {
+			out.Tickets = append(out.Tickets, map[string]any{
+				"number": num, "subject": subject, "status": status,
+				"compensation": comp, "created_at": at})
+		}
+	}
+	rows.Close()
+
+	rows, err = s.pg.Query(r.Context(), `
+		SELECT o.number, m.name, rt.merchant_stars, rt.driver_stars, rt.comment, rt.created_at
+		FROM order_ratings rt
+		JOIN orders o ON o.id = rt.order_id
+		JOIN merchants m ON m.id = o.merchant_id
+		WHERE rt.customer_id = $1 ORDER BY rt.created_at DESC LIMIT 20`, id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	for rows.Next() {
+		var num int64
+		var mName, comment string
+		var ms int
+		var ds *int
+		var at time.Time
+		if err := rows.Scan(&num, &mName, &ms, &ds, &comment, &at); err == nil {
+			out.Given = append(out.Given, map[string]any{
+				"order_number": num, "merchant_name": mName,
+				"merchant_stars": ms, "driver_stars": ds, "comment": comment, "created_at": at})
+		}
+	}
+	rows.Close()
+
+	// الواردة: كسائق (نجوم السائق على طلباته) + كصاحب متاجر (نجوم متاجره)
+	rows, err = s.pg.Query(r.Context(), `
+		SELECT o.number, m.name, rt.driver_stars, rt.comment, rt.created_at, 'driver'
+		FROM order_ratings rt
+		JOIN orders o ON o.id = rt.order_id
+		JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.driver_id = $1 AND rt.driver_stars IS NOT NULL
+		UNION ALL
+		SELECT o.number, m.name, rt.merchant_stars, rt.comment, rt.created_at, 'merchant'
+		FROM order_ratings rt
+		JOIN orders o ON o.id = rt.order_id
+		JOIN merchants m ON m.id = o.merchant_id
+		WHERE m.owner_user_id = $1
+		ORDER BY 5 DESC LIMIT 20`, id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	sum, n := 0, 0
+	for rows.Next() {
+		var num int64
+		var mName, comment, as string
+		var stars int
+		var at time.Time
+		if err := rows.Scan(&num, &mName, &stars, &comment, &at, &as); err == nil {
+			out.Recv = append(out.Recv, map[string]any{
+				"order_number": num, "merchant_name": mName, "stars": stars,
+				"comment": comment, "created_at": at, "as": as})
+			sum += stars
+			n++
+		}
+	}
+	rows.Close()
+	if n > 0 {
+		avg := float64(sum) / float64(n)
+		out.AvgRecv = &avg
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}

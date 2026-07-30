@@ -144,6 +144,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/users/stats", s.handleAdminUserRoleCounts)
 			r.Get("/users/{id}", s.handleAdminGetUser)
 			r.Get("/users/{id}/activity", s.handleAdminUserActivity)
+			r.Get("/users/{id}/feedback", s.handleAdminUserFeedback)
 			r.Get("/categories", s.handleListCategories)
 			r.Get("/merchants", s.handleListMerchants)
 			r.Get("/merchants/{id}/menu", s.handleGetMenu)
