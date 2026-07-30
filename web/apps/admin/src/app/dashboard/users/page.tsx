@@ -12,6 +12,15 @@ import {
   ViewToggle,
   useViewMode,
   type DataColumn,
+  IconUser,
+  IconPhone,
+  IconRoles,
+  IconStatus,
+  IconSearch,
+  IconAdd,
+  IconBlock,
+  IconUnblock,
+  IconLock,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -87,12 +96,14 @@ export default function UsersPage() {
     {
       id: "name",
       header: m.admin.users.table.name,
+      icon: <IconUser />,
       primary: true,
       cell: (u) => u.full_name || "—",
     },
     {
       id: "phone",
       header: m.admin.users.table.phone,
+      icon: <IconPhone />,
       primary: true,
       cell: (u) => (
         <span dir="ltr" className="font-medium">
@@ -103,6 +114,7 @@ export default function UsersPage() {
     {
       id: "roles",
       header: m.admin.users.table.roles,
+      icon: <IconRoles />,
       cell: (u) => (
         <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
           {u.roles.map((r) => (
@@ -116,6 +128,7 @@ export default function UsersPage() {
     {
       id: "status",
       header: m.admin.users.table.status,
+      icon: <IconStatus />,
       cell: (u) => (
         <Badge variant={u.status === "active" ? "success" : "danger"}>
           {u.status === "active" ? m.admin.users.active : m.admin.users.blocked}
@@ -129,13 +142,17 @@ export default function UsersPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{m.admin.users.title}</h1>
         {isAdmin && (
-          <Button onClick={() => setCreateOpen(true)}>+ {m.admin.users.create}</Button>
+          <Button onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5">
+            <IconAdd size={16} />
+            {m.admin.users.create}
+          </Button>
         )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-64">
           <Input
+            icon={<IconSearch />}
             placeholder={m.admin.users.searchPlaceholder}
             value={query}
             onChange={(e) => {
@@ -184,14 +201,21 @@ export default function UsersPage() {
           isAdmin
             ? (u) => (
                 <>
-                  <Button variant="ghost" onClick={() => setRolesUser(u)}>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setRolesUser(u)}
+                    className="flex items-center gap-1.5"
+                  >
+                    <IconRoles size={15} />
                     {m.admin.users.manageRoles}
                   </Button>
                   {u.id !== me?.id && (
                     <Button
                       variant={u.status === "active" ? "danger" : "secondary"}
                       onClick={() => toggleBlock(u)}
+                      className="flex items-center gap-1.5"
                     >
+                      {u.status === "active" ? <IconBlock size={15} /> : <IconUnblock size={15} />}
                       {u.status === "active" ? m.admin.users.block : m.admin.users.unblock}
                     </Button>
                   )}
@@ -282,6 +306,7 @@ function CreateUserModal({
         <Input
           id="new-phone"
           label={m.auth.phone}
+          icon={<IconPhone />}
           dir="ltr"
           required
           value={phone}
@@ -292,6 +317,7 @@ function CreateUserModal({
         <Input
           id="new-name"
           label={m.admin.users.fullName}
+          icon={<IconUser />}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
@@ -317,6 +343,7 @@ function CreateUserModal({
         <Input
           id="new-password"
           label={m.admin.users.passwordOptional}
+          icon={<IconLock />}
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

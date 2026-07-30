@@ -4,18 +4,28 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import {
+  IconDashboard,
+  IconUsers,
+  IconStore,
+  IconZones,
+  IconPromos,
+  IconWhatsApp,
+  IconSettings,
+  IconLogout,
+} from "@rahalgo/ui";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
 const NAV = [
-  { href: "/dashboard", label: m.admin.nav.dashboard },
-  { href: "/dashboard/users", label: m.admin.nav.users },
-  { href: "/dashboard/merchants", label: m.admin.nav.merchants },
-  { href: "/dashboard/zones", label: m.admin.nav.zones },
-  { href: "/dashboard/promos", label: m.admin.nav.promos },
-  { href: "/dashboard/whatsapp", label: m.admin.nav.whatsapp },
-  { href: "/dashboard/settings", label: m.admin.nav.settings },
+  { href: "/dashboard", label: m.admin.nav.dashboard, icon: IconDashboard },
+  { href: "/dashboard/users", label: m.admin.nav.users, icon: IconUsers },
+  { href: "/dashboard/merchants", label: m.admin.nav.merchants, icon: IconStore },
+  { href: "/dashboard/zones", label: m.admin.nav.zones, icon: IconZones },
+  { href: "/dashboard/promos", label: m.admin.nav.promos, icon: IconPromos },
+  { href: "/dashboard/whatsapp", label: m.admin.nav.whatsapp, icon: IconWhatsApp },
+  { href: "/dashboard/settings", label: m.admin.nav.settings, icon: IconSettings },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -52,12 +62,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block rounded-control px-3 py-2 text-sm transition-colors ${
+                className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors ${
                   active
                     ? "bg-primary-light font-medium text-primary-dark"
                     : "text-ink-muted hover:bg-page hover:text-ink"
                 }`}
               >
+                <item.icon size={17} strokeWidth={active ? 2.2 : 1.8} />
                 {item.label}
               </Link>
             );
@@ -72,8 +83,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               logout();
               router.replace("/login");
             }}
-            className="w-full rounded-control px-3 py-2 text-start text-sm text-danger hover:bg-danger/10"
+            className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-start text-sm text-danger hover:bg-danger/10"
           >
+            <IconLogout size={17} strokeWidth={1.8} />
             {m.auth.logout}
           </button>
         </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { Input, IconPhone, IconLock } from "@rahalgo/ui";
 import { ApiError } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 
@@ -57,34 +58,27 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="phone" className="mb-1 block text-sm font-medium">
-              {m.auth.phone}
-            </label>
-            <input
-              id="phone"
-              dir="ltr"
-              inputMode="tel"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full rounded-control border border-line bg-surface px-3 py-2 text-end outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="09xxxxxxxx"
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium">
-              {m.auth.password}
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-control border border-line bg-surface px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
+          <Input
+            id="phone"
+            label={m.auth.phone}
+            icon={<IconPhone />}
+            dir="ltr"
+            inputMode="tel"
+            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="text-end"
+            placeholder="09xxxxxxxx"
+          />
+          <Input
+            id="password"
+            label={m.auth.password}
+            icon={<IconLock />}
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
           {error && (
             <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>

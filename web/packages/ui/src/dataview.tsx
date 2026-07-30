@@ -70,6 +70,17 @@ export interface DataColumn<T> {
   cell: (item: T) => ReactNode;
   /** primary: يظهر كعنوان البطاقة في وضع البطاقات */
   primary?: boolean;
+  /** أيقونة معبرة للحقل — تظهر برأس العمود وفي تسمية حقل البطاقة */
+  icon?: ReactNode;
+}
+
+function FieldLabel({ icon, text }: { icon?: ReactNode; text: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {icon && <span className="text-ink-muted/70 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
+      {text}
+    </span>
+  );
 }
 
 export function DataView<T>({
@@ -115,7 +126,9 @@ export function DataView<T>({
             <dl className="flex-1 space-y-2 text-sm">
               {rest.map((c) => (
                 <div key={c.id} className="flex items-start justify-between gap-3">
-                  <dt className="shrink-0 text-ink-muted">{c.header}</dt>
+                  <dt className="shrink-0 text-ink-muted">
+                    <FieldLabel icon={c.icon} text={c.header} />
+                  </dt>
                   <dd className="text-end">{c.cell(item)}</dd>
                 </div>
               ))}
@@ -138,7 +151,7 @@ export function DataView<T>({
           <tr className="border-b border-line text-ink-muted">
             {columns.map((c) => (
               <th key={c.id} className="p-3 text-start font-medium">
-                {c.header}
+                <FieldLabel icon={c.icon} text={c.header} />
               </th>
             ))}
             {actions && <th className="p-3" />}

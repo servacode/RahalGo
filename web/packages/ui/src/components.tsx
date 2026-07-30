@@ -36,24 +36,38 @@ export function Button({
 export function Input({
   label,
   error,
+  icon,
   id,
   className = "",
   ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string }) {
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  label?: string;
+  error?: string;
+  /** أيقونة معبرة تظهر داخل الحقل (جهة البداية) */
+  icon?: ReactNode;
+}) {
   return (
     <div>
       {label && (
-        <label htmlFor={id} className="mb-1 block text-sm font-medium">
+        <label htmlFor={id} className="mb-1 flex items-center gap-1.5 text-sm font-medium">
+          {icon && <span className="text-ink-muted [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
           {label}
         </label>
       )}
-      <input
-        id={id}
-        {...props}
-        className={`w-full rounded-control border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 ${
-          error ? "border-danger" : "border-line"
-        } ${className}`}
-      />
+      <div className="relative">
+        {!label && icon && (
+          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-muted [&>svg]:h-4 [&>svg]:w-4">
+            {icon}
+          </span>
+        )}
+        <input
+          id={id}
+          {...props}
+          className={`w-full rounded-control border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+            error ? "border-danger" : "border-line"
+          } ${!label && icon ? "ps-9" : ""} ${className}`}
+        />
+      </div>
       {error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
   );
