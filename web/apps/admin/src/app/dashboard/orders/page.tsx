@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
@@ -134,10 +135,12 @@ function errText(err: unknown): string {
 // ---------- الشاشة الرئيسية ----------
 
 export default function OrdersPage() {
+  const params = useSearchParams();
+  const initialQ = params.get("q") ?? "";
   const [data, setData] = useState<OrderPage | null>(null);
   const [status, setStatus] = useState("");
-  const [query, setQuery] = useState("");
-  const [openOnly, setOpenOnly] = useState(true);
+  const [query, setQuery] = useState(initialQ);
+  const [openOnly, setOpenOnly] = useState(initialQ === "");
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [detailID, setDetailID] = useState<string | null>(null);

@@ -114,6 +114,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/transition", s.handleOrderTransition)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
 
+			// الأقسام التشغيلية لكل دور (قرار 16)
+			r.Get("/customers", s.handleListCustomers)
+			r.Get("/salesreps", s.handleListSalesReps)
+
 			// السائقون والصندوق النقدي
 			r.Get("/drivers", s.handleListDrivers)
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)

@@ -94,8 +94,10 @@
     "nav": {
       "dashboard": "الرئيسية",
       "orders": "الطلبات",
+      "customers": "الزبائن",
       "drivers": "السائقون",
-      "users": "المستخدمون",
+      "sales": "المندوبون",
+      "users": "الحسابات والصلاحيات",
       "merchants": "المتاجر",
       "zones": "مناطق التغطية",
       "promos": "العروض والأكواد",
@@ -173,6 +175,28 @@
         "submit": "إنشاء الطلب",
         "created": "أُنشئ الطلب #{number} بنجاح"
       }
+    },
+    "customers": {
+      "title": "الزبائن",
+      "searchPlaceholder": "بحث بالهاتف أو الاسم…",
+      "ordersCount": "الطلبات",
+      "deliveredCount": "مُسلَّمة",
+      "totalSpent": "إجمالي الإنفاق",
+      "balance": "رصيد المحفظة",
+      "lastOrder": "آخر طلب",
+      "never": "لم يطلب بعد",
+      "viewOrders": "طلباته",
+      "empty": "لا زبائن مطابقون"
+    },
+    "sales": {
+      "title": "المندوبون",
+      "inviteCode": "كود الدعوة",
+      "merchantsCount": "متاجر جلبها",
+      "totalCommissions": "إجمالي العمولات",
+      "balance": "رصيد المحفظة",
+      "copyCode": "نسخ",
+      "copied": "نُسخ ✓",
+      "empty": "لا مندوبون بعد — أنشئهم من الحسابات بدور مندوب"
     },
     "drivers": {
       "title": "السائقون",
