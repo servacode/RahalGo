@@ -60,11 +60,10 @@ export default function WalletModal({
     e.preventDefault();
     setBusy(true);
     setError("");
-    const sign = kind === "payout" || (kind === "adjustment" && debit) ? -1 : 1;
     try {
       await api(`/api/v1/admin/users/${user.id}/wallet`, {
         method: "POST",
-        body: JSON.stringify({ amount: sign * (Number(amount) || 0), kind, note }),
+        body: JSON.stringify({ amount: Number(amount) || 0, kind, debit, note }),
       });
       setAmount("");
       setNote("");

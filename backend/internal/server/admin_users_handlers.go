@@ -117,6 +117,10 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 // handleAdminGetUser صفحة تفاصيل الحساب: الملف + المحفظة + مؤشرات حسب أدواره.
 func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
 	var out struct {
 		ID           string   `json:"id"`
 		Phone        string   `json:"phone"`

@@ -20,6 +20,8 @@ type Repo struct {
 
 func NewRepo(db *pgxpool.Pool) *Repo { return &Repo{db: db} }
 
+func (r *Repo) pool() *pgxpool.Pool { return r.db }
+
 func (r *Repo) getUserBy(ctx context.Context, where, arg string) (*User, string, error) {
 	var u User
 	var passwordHash *string

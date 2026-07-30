@@ -141,6 +141,13 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 		}
 		return nil, err
 	}
+	// إيقاف/حظر: أبطل كل الجلسات فوراً وامسح كاش الحالة — قطع وصول كامل
+	if in.Status != nil && *in.Status != "active" {
+		_, _ = s.repo.RevokeAllTokens(ctx, userID)
+	}
+	if in.Status != nil {
+		s.invalidateStatusCache(ctx, userID)
+	}
 	s.repo.Audit(ctx, &actorID, "admin.user_update", "user", userID, ip,
 		map[string]any{"full_name": in.FullName, "status": in.Status,
 			"status_reason": in.StatusReason, "phone": in.Phone})

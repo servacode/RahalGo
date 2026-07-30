@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
 // كشف محفظة مستخدم — أدمن/مالية/عمليات (قراءة).
@@ -26,6 +27,7 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 	req, err := decode[struct {
 		Amount int64  `json:"amount"`
 		Kind   string `json:"kind"`
+		Debit  bool   `json:"debit"` // للتسوية فقط: سحب بدل إيداع
 		Note   string `json:"note"`
 	}](r)
 	if err != nil {
@@ -37,9 +39,23 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, errValidation)
 		return
 	}
+	// المبلغ يُرسل موجباً دائماً، والإشارة تُشتق في الخادم من النوع —
+	// لا نثق بإشارة العميل (دفتر قيود سلامته حرجة).
+	if req.Amount <= 0 {
+		s.respondErr(w, wallet.ErrInvalidAmount)
+		return
+	}
+	amount := req.Amount
+	if req.Kind == "payout" || (req.Kind == "adjustment" && req.Debit) {
+		amount = -amount
+	}
+	if !isUUID(chi.URLParam(r, "id")) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
 	actor := userIDFrom(r)
 	balance, err := s.wallet.Apply(r.Context(), chi.URLParam(r, "id"),
-		req.Amount, req.Kind, "", req.Note, &actor)
+		amount, req.Kind, "", req.Note, &actor)
 	if err != nil {
 		s.respondErr(w, err)
 		return

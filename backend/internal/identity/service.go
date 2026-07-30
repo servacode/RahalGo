@@ -312,3 +312,24 @@ func randomDigits(n int) (string, error) {
 	}
 	return string(out), nil
 }
+
+// ActiveStatus يعيد حالة الحساب مع كاش Redis قصير (30ث) — للإنفاذ في الوسيط
+// دون إثقال كل طلب بقاعدة البيانات. يعيد "active" افتراضياً عند أي تعذّر
+// (لا نقفل النظام بسبب عطل كاش)، والإيقاف يمسح الكاش فيسري خلال 30ث كحد أقصى.
+func (s *Service) ActiveStatus(ctx context.Context, userID string) string {
+	key := "ustatus:" + userID
+	if v, err := s.rdb.Get(ctx, key).Result(); err == nil {
+		return v
+	}
+	var status string
+	if err := s.repo.pool().QueryRow(ctx,
+		`SELECT status FROM users WHERE id = $1`, userID).Scan(&status); err != nil {
+		return "active"
+	}
+	s.rdb.Set(ctx, key, status, 30*time.Second)
+	return status
+}
+
+func (s *Service) invalidateStatusCache(ctx context.Context, userID string) {
+	s.rdb.Del(ctx, "ustatus:"+userID)
+}

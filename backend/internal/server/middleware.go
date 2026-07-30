@@ -35,6 +35,12 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 			httpx.Error(w, errUnauthorized)
 			return
 		}
+		// إنفاذ حالة الحساب: توقيع التوكن سليم لا يكفي — الموقوف/المحظور
+		// يُرفض فوراً (بكاش Redis قصير) حتى لو بقيت صلاحية توكنه.
+		if s.identity.ActiveStatus(r.Context(), claims.Subject) != "active" {
+			httpx.Error(w, errForbidden)
+			return
+		}
 		ctx := context.WithValue(r.Context(), ctxUserID, claims.Subject)
 		ctx = context.WithValue(ctx, ctxRoles, claims.Roles)
 		s.touchPresence(claims.Subject)
@@ -74,4 +80,23 @@ func (s *Server) touchPresence(userID string) {
 			WHERE id = $1 AND (last_seen_at IS NULL OR last_seen_at < now() - interval '60 seconds')`,
 			userID)
 	}()
+}
+
+// isUUID تحقق خفيف من صيغة UUID لتفادي أخطاء 500 عند تمرير معرف مسار غير صالح.
+func isUUID(v string) bool {
+	if len(v) != 36 {
+		return false
+	}
+	for i, c := range v {
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			if c != '-' {
+				return false
+			}
+			continue
+		}
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
