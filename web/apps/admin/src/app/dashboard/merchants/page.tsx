@@ -12,6 +12,7 @@ import {
   Select,
   Badge,
   Modal,
+  FormSection,
   DataView,
   ViewToggle,
   useViewMode,
@@ -559,101 +560,115 @@ function MerchantModal({
     <Modal
       open
       onClose={onClose}
+      size="xl"
       title={merchant ? m.admin.merchants.editTitle : m.admin.merchants.createTitle}
     >
-      <form onSubmit={submit} className="space-y-4">
-        <Input
-          id="m-name"
-          label={m.admin.merchants.name}
-          icon={<IconStore />}
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <Select
-          id="m-cat"
-          label={m.admin.merchants.category}
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-        >
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.icon} {c.name}
-            </option>
-          ))}
-        </Select>
-        <Input
-          id="m-phone"
-          label={m.admin.merchants.merchantPhone}
-          icon={<IconPhone />}
-          dir="ltr"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="text-end"
-        />
-        <Input
-          id="m-address"
-          label={m.admin.merchants.address}
-          icon={<IconLocation />}
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder={m.admin.merchants.addressPlaceholder}
-        />
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-sm font-medium">
-              <IconLocation className="h-4 w-4 text-ink-muted" />
-              {m.admin.merchants.location}
-            </span>
-            <Badge variant={lat != null ? "success" : "warning"}>
-              {lat != null ? m.admin.merchants.locationSet : m.admin.merchants.locationUnset}
-            </Badge>
-          </div>
-          <div className="overflow-hidden rounded-control border border-line">
-            <PickMap
-              lat={lat}
-              lng={lng}
-              onPick={(la, ln) => {
-                setLat(la);
-                setLng(ln);
-              }}
+      <form onSubmit={submit} className="space-y-6">
+        {/* القسم 1: بيانات المتجر */}
+        <FormSection title={m.admin.merchants.sectionInfo} icon={<IconStore />}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              id="m-name"
+              label={m.admin.merchants.name}
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <Select
+              id="m-cat"
+              label={m.admin.merchants.category}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.icon} {c.name}
+                </option>
+              ))}
+            </Select>
+            <Input
+              id="m-phone"
+              label={m.admin.merchants.merchantPhone}
+              icon={<IconPhone />}
+              dir="ltr"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="text-end"
+            />
+            <Input
+              id="m-desc"
+              label={m.admin.merchants.descriptionField}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-          <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.locationHint}</p>
-        </div>
-        <Input
-          id="m-desc"
-          label={m.admin.merchants.descriptionField}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-        <div>
-          <Input
-            id="m-owner"
-            label={m.admin.merchants.ownerPhone}
-            icon={<IconUser />}
-            dir="ltr"
-            value={ownerPhone}
-            onChange={(e) => setOwnerPhone(e.target.value)}
-            className="text-end"
-            placeholder="09xxxxxxxx"
-          />
-          <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.ownerHint}</p>
-        </div>
-        <Input
-          id="m-rep"
-          label={m.roles.sales}
-          icon={<IconUser />}
-          dir="ltr"
-          value={repPhone}
-          onChange={(e) => setRepPhone(e.target.value)}
-          className="text-end"
-          placeholder="09xxxxxxxx"
-        />
+        </FormSection>
+
+        {/* القسم 2: الموقع — العنوان والخريطة جنباً إلى جنب */}
+        <FormSection title={m.admin.merchants.sectionLocation} icon={<IconLocation />}>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3">
+              <Input
+                id="m-address"
+                label={m.admin.merchants.address}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder={m.admin.merchants.addressPlaceholder}
+              />
+              <div className="rounded-control bg-page p-3 text-xs leading-relaxed text-ink-muted">
+                {m.admin.merchants.locationHint}
+              </div>
+              <Badge variant={lat != null ? "success" : "warning"}>
+                {lat != null ? m.admin.merchants.locationSet : m.admin.merchants.locationUnset}
+              </Badge>
+            </div>
+            <div className="overflow-hidden rounded-control border border-line">
+              <PickMap
+                lat={lat}
+                lng={lng}
+                onPick={(la, ln) => {
+                  setLat(la);
+                  setLng(ln);
+                }}
+              />
+            </div>
+          </div>
+        </FormSection>
+
+        {/* القسم 3: الحسابات المرتبطة */}
+        <FormSection title={m.admin.merchants.sectionAccounts} icon={<IconUser />}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Input
+                id="m-owner"
+                label={m.admin.merchants.ownerPhone}
+                dir="ltr"
+                value={ownerPhone}
+                onChange={(e) => setOwnerPhone(e.target.value)}
+                className="text-end"
+                placeholder="09xxxxxxxx"
+              />
+              <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.ownerHint}</p>
+            </div>
+            <div>
+              <Input
+                id="m-rep"
+                label={m.roles.sales}
+                dir="ltr"
+                value={repPhone}
+                onChange={(e) => setRepPhone(e.target.value)}
+                className="text-end"
+                placeholder="09xxxxxxxx"
+              />
+              <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.ownerHint}</p>
+            </div>
+          </div>
+        </FormSection>
+
         {error && (
           <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
         )}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             {m.common.cancel}
           </Button>

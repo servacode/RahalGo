@@ -130,15 +130,23 @@ export function Badge({
 
 // ---------- Modal ----------
 
+const modalSizes = {
+  md: "max-w-md",
+  lg: "max-w-2xl",
+  xl: "max-w-4xl",
+} as const;
+
 export function Modal({
   open,
   onClose,
   title,
+  size = "md",
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  size?: keyof typeof modalSizes;
   children: ReactNode;
 }) {
   useEffect(() => {
@@ -157,12 +165,33 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-md rounded-card border border-line bg-surface p-6 shadow-lg"
+        className={`max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface p-6 shadow-lg ${modalSizes[size]}`}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-lg font-bold">{title}</h2>
         {children}
       </div>
     </div>
+  );
+}
+
+/** قسم مسمّى داخل النماذج الطويلة — لتنظيم الحقول في مجموعات واضحة */
+export function FormSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section>
+      <h3 className="mb-3 flex items-center gap-1.5 border-b border-line pb-2 text-sm font-bold text-primary-dark">
+        {icon && <span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
+        {title}
+      </h3>
+      {children}
+    </section>
   );
 }
