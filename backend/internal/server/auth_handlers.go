@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
@@ -136,4 +137,34 @@ func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 
 func clientIP(r *http.Request) string {
 	return r.RemoteAddr
+}
+
+// handleMyLogins آخر دخولات الحساب — للمستخدم نفسه (شفافية أمان "هل كان هذا أنت؟").
+func (s *Server) handleMyLogins(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT action, COALESCE(ip, ''), created_at
+		FROM audit_log
+		WHERE actor_user_id = $1
+		  AND action IN ('auth.otp_login', 'auth.password_login', 'auth.password_failed')
+		ORDER BY id DESC LIMIT 20`, userIDFrom(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+	type login struct {
+		Action    string    `json:"action"`
+		IP        string    `json:"ip"`
+		CreatedAt time.Time `json:"created_at"`
+	}
+	out := []login{}
+	for rows.Next() {
+		var l login
+		if err := rows.Scan(&l.Action, &l.IP, &l.CreatedAt); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out = append(out, l)
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }

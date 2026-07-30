@@ -90,6 +90,7 @@ func (s *Server) Router() http.Handler {
 				r.Use(s.RequireAuth)
 				r.Get("/me", s.handleMe)
 				r.Post("/password", s.handleSetPassword)
+				r.Get("/my-logins", s.handleMyLogins)
 			})
 		})
 
@@ -142,6 +143,7 @@ func (s *Server) Router() http.Handler {
 			r.Post("/media", s.handleUploadMedia)
 			r.Get("/users", s.handleAdminListUsers)
 			r.Get("/users/stats", s.handleAdminUserRoleCounts)
+			r.Get("/users/export", s.handleAdminUsersExport)
 			r.Get("/users/{id}", s.handleAdminGetUser)
 			r.Get("/users/{id}/activity", s.handleAdminUserActivity)
 			r.Get("/users/{id}/feedback", s.handleAdminUserFeedback)

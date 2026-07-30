@@ -2,15 +2,26 @@
 
 /** حسابي: تغيير كلمة المرور الذاتي (بإثبات الحالية) — لكل موظفي اللوحة والأدمن. */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, FormSection, IconLock, IconUser } from "@rahalgo/ui";
+import { Button, Input, FormSection, IconLock, IconUser, IconStatus } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import RoleBadge from "@/components/RoleBadge";
 
 const m = getMessages(defaultLocale);
 const A = m.admin.myAccount;
+
+interface Login {
+  action: string;
+  ip: string;
+  created_at: string;
+}
+const LOGIN_LABELS: Record<string, string> = {
+  "auth.otp_login": "دخول برمز تحقق",
+  "auth.password_login": "دخول بكلمة المرور",
+  "auth.password_failed": "محاولة فاشلة",
+};
 
 export default function MyAccountPage() {
   const { user } = useAuth();
@@ -20,6 +31,13 @@ export default function MyAccountPage() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [logins, setLogins] = useState<Login[]>([]);
+
+  useEffect(() => {
+    api<Login[]>("/api/v1/auth/my-logins")
+      .then(setLogins)
+      .catch(() => undefined);
+  }, [done]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -123,6 +141,39 @@ export default function MyAccountPage() {
           </Button>
         </form>
       </FormSection>
+
+      <div className="mt-5">
+        <FormSection title={A.recentLogins} icon={<IconStatus />}>
+          <p className="mb-2 text-xs text-ink-muted">{A.loginsHint}</p>
+          {logins.length === 0 ? (
+            <p className="py-4 text-center text-sm text-ink-muted">{A.loginsEmpty}</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {logins.map((l, i) => (
+                <li
+                  key={i}
+                  className="flex items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+                >
+                  <span
+                    className={`font-medium ${l.action === "auth.password_failed" ? "text-danger" : ""}`}
+                  >
+                    {LOGIN_LABELS[l.action] ?? l.action}
+                  </span>
+                  <span className="flex items-center gap-3 text-xs text-ink-muted" dir="ltr">
+                    <span>{l.ip}</span>
+                    <span>
+                      {new Date(l.created_at).toLocaleString("ar-SY", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </FormSection>
+      </div>
     </div>
   );
 }

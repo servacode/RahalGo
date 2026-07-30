@@ -155,25 +155,27 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 	return user, err
 }
 
-func (s *Service) AdminGrantRole(ctx context.Context, actorID, userID, role, ip string) error {
+func (s *Service) AdminGrantRole(ctx context.Context, actorID, userID, role, reason, ip string) error {
 	if !slices.Contains(AllRoles, role) {
 		return ErrInvalidRole
 	}
 	if err := s.repo.GrantRole(ctx, userID, role, &actorID); err != nil {
 		return err
 	}
-	s.repo.Audit(ctx, &actorID, "admin.role_grant", "user", userID, ip, map[string]any{"role": role})
+	s.repo.Audit(ctx, &actorID, "admin.role_grant", "user", userID, ip,
+		map[string]any{"role": role, "reason": reason})
 	return nil
 }
 
-func (s *Service) AdminRevokeRole(ctx context.Context, actorID, userID, role, ip string) error {
+func (s *Service) AdminRevokeRole(ctx context.Context, actorID, userID, role, reason, ip string) error {
 	if userID == actorID && role == "admin" {
 		return ErrSelfAction // لا يمكنك سحب دور الأدمن من نفسك
 	}
 	if err := s.repo.RevokeRole(ctx, userID, role); err != nil {
 		return err
 	}
-	s.repo.Audit(ctx, &actorID, "admin.role_revoke", "user", userID, ip, map[string]any{"role": role})
+	s.repo.Audit(ctx, &actorID, "admin.role_revoke", "user", userID, ip,
+		map[string]any{"role": role, "reason": reason})
 	return nil
 }
 

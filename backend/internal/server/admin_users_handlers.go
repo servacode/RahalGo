@@ -1,8 +1,10 @@
 package server
 
 import (
+	"encoding/csv"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -55,13 +57,14 @@ func (s *Server) handleAdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminGrantRole(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
-		Role string `json:"role"`
+		Role   string `json:"role"`
+		Reason string `json:"reason"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.AdminGrantRole(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), req.Role, clientIP(r)); err != nil {
+	if err := s.identity.AdminGrantRole(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), req.Role, req.Reason, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -70,7 +73,7 @@ func (s *Server) handleAdminGrantRole(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleAdminRevokeRole(w http.ResponseWriter, r *http.Request) {
 	if err := s.identity.AdminRevokeRole(r.Context(), userIDFrom(r),
-		chi.URLParam(r, "id"), chi.URLParam(r, "role"), clientIP(r)); err != nil {
+		chi.URLParam(r, "id"), chi.URLParam(r, "role"), r.URL.Query().Get("reason"), clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -342,4 +345,35 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 		out.AvgRecv = &avg
 	}
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// handleAdminUsersExport تصدير الحسابات المفلترة إلى CSV (بلا ترقيم — كلها).
+func (s *Server) handleAdminUsersExport(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	res, err := s.identity.AdminListUsers(r.Context(), q.Get("query"), q.Get("role"),
+		q.Get("online") == "true", q.Get("status"), 1, 10000)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="accounts.csv"`)
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF}) // BOM لعرض العربية في Excel
+	cw := csv.NewWriter(w)
+	_ = cw.Write([]string{"الاسم", "الهاتف", "الأدوار", "الحالة", "كود الدعوة", "آخر ظهور", "تاريخ التسجيل"})
+	for _, u := range res.Users {
+		lastSeen := ""
+		if u.LastSeenAt != nil {
+			lastSeen = u.LastSeenAt.Format("2006-01-02 15:04")
+		}
+		invite := ""
+		if u.InviteCode != nil {
+			invite = *u.InviteCode
+		}
+		_ = cw.Write([]string{
+			u.FullName, u.Phone, strings.Join(u.Roles, "+"), u.Status, invite,
+			lastSeen, u.CreatedAt.Format("2006-01-02"),
+		})
+	}
+	cw.Flush()
 }

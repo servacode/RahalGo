@@ -25,7 +25,7 @@ import {
   IconWallet,
   IconView,
 } from "@rahalgo/ui";
-import { api, ApiError, type AuthUser } from "@/lib/api";
+import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/RoleBadge";
@@ -92,6 +92,21 @@ export default function UsersPage() {
     const t = setTimeout(load, 250); // تهدئة البحث
     return () => clearTimeout(t);
   }, [load]);
+
+  async function exportCsv() {
+    const params = new URLSearchParams({ query, role, status: statusFilter, online: onlineOnly ? "true" : "" });
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+    const res = await fetch(`${base}/api/v1/admin/users/export?${params}`, {
+      headers: { Authorization: `Bearer ${tokenStore.access ?? ""}` },
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "accounts.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function setStatus(u: AuthUser, status: string, reason = "") {
     try {
@@ -185,12 +200,22 @@ export default function UsersPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{m.admin.users.title}</h1>
-        {isAdmin && (
-          <Button onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5">
-            <IconAdd size={16} />
-            {m.admin.users.create}
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            onClick={exportCsv}
+            className="flex items-center gap-1.5"
+          >
+            <IconView size={16} />
+            {m.admin.users.export}
           </Button>
-        )}
+          {isAdmin && (
+            <Button onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5">
+              <IconAdd size={16} />
+              {m.admin.users.create}
+            </Button>
+          )}
+        </div>
       </div>
 
       {roleCounts && (
@@ -523,32 +548,45 @@ function ManageRolesModal({
 }) {
   const [error, setError] = useState("");
   const [current, setCurrent] = useState<string[]>([]);
+  const [pending, setPending] = useState<{ role: string; adding: boolean } | null>(null);
+  const [reason, setReason] = useState("");
 
   useEffect(() => {
     setCurrent(user?.roles ?? []);
     setError("");
+    setPending(null);
+    setReason("");
   }, [user]);
 
   if (!user) return null;
 
-  async function toggle(role: string) {
-    if (!user) return;
+  async function apply() {
+    if (!user || !pending) return;
     setError("");
     try {
-      if (current.includes(role)) {
-        await api(`/api/v1/admin/users/${user.id}/roles/${role}`, { method: "DELETE" });
-        setCurrent((p) => p.filter((r) => r !== role));
+      if (!pending.adding) {
+        await api(
+          `/api/v1/admin/users/${user.id}/roles/${pending.role}?reason=${encodeURIComponent(reason)}`,
+          { method: "DELETE" }
+        );
+        setCurrent((p) => p.filter((r) => r !== pending.role));
       } else {
         await api(`/api/v1/admin/users/${user.id}/roles`, {
           method: "POST",
-          body: JSON.stringify({ role }),
+          body: JSON.stringify({ role: pending.role, reason }),
         });
-        setCurrent((p) => [...p, role]);
+        setCurrent((p) => [...p, pending.role]);
       }
+      setPending(null);
+      setReason("");
       await onChanged();
     } catch (err) {
       setError(errText(err));
     }
+  }
+  function toggle(role: string) {
+    setPending({ role, adding: !current.includes(role) });
+    setReason("");
   }
 
   return (
@@ -569,6 +607,29 @@ function ManageRolesModal({
           </button>
         ))}
       </div>
+      {pending && (
+        <div className="mt-4 rounded-control border border-primary/30 bg-primary-light/40 p-3">
+          <p className="mb-2 text-sm font-medium">
+            {m.admin.users.roleReasonTitle}: {ROLE_LABELS[pending.role]}
+          </p>
+          <Input
+            id="role-reason"
+            label={m.admin.users.roleReasonLabel}
+            required
+            autoFocus
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+          <div className="mt-3 flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setPending(null)}>
+              {m.common.cancel}
+            </Button>
+            <Button disabled={!reason.trim()} onClick={apply}>
+              {m.common.confirm}
+            </Button>
+          </div>
+        </div>
+      )}
       {error && (
         <p className="mt-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       )}
