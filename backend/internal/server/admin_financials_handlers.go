@@ -88,14 +88,39 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 
 	// ---- مستحق له: عمولات المندوب المقيّدة في محفظته ----
 	if has("sales") {
+		var sum int64
 		_ = s.pg.QueryRow(ctx,
 			`SELECT COALESCE(sum(amount), 0) FROM wallet_transactions WHERE user_id = $1 AND kind = 'commission'`,
-			id).Scan(&out.OwedTo.Total)
+			id).Scan(&sum)
+		out.OwedTo.Total += sum
 		rows, err := s.pg.Query(ctx, `
 			SELECT t.ref, COALESCE(NULLIF(t.note, ''), 'عمولة'), t.amount, t.created_at
 			FROM wallet_transactions t
 			WHERE t.user_id = $1 AND t.kind = 'commission'
 			ORDER BY t.created_at DESC LIMIT 50`, id)
+		if err == nil {
+			for rows.Next() {
+				var e finEntry
+				if rows.Scan(&e.Ref, &e.Label, &e.Amount, &e.Date) == nil {
+					out.OwedTo.Items = append(out.OwedTo.Items, e)
+				}
+			}
+			rows.Close()
+		}
+	}
+
+	// ---- مستحق له: أجور توصيل السائق على الطلبات التي سلّمها ----
+	if has("driver") {
+		var fees int64
+		_ = s.pg.QueryRow(ctx, `
+			SELECT COALESCE(sum(delivery_fee), 0) FROM orders
+			WHERE driver_id = $1 AND status = 'delivered'`, id).Scan(&fees)
+		out.OwedTo.Total += fees
+		rows, err := s.pg.Query(ctx, `
+			SELECT o.id::text, m.name, o.delivery_fee, o.created_at
+			FROM orders o JOIN merchants m ON m.id = o.merchant_id
+			WHERE o.driver_id = $1 AND o.status = 'delivered' AND o.delivery_fee > 0
+			ORDER BY o.created_at DESC LIMIT 50`, id)
 		if err == nil {
 			for rows.Next() {
 				var e finEntry

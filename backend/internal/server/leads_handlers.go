@@ -284,19 +284,30 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	if repCode != nil {
 		in.SalesRepCode = repCode
 	}
+	// هل يملك الرقم حساباً مسبقاً؟ حرج أمنياً: كلمة المرور من نموذج التسجيل يجب ألّا
+	// تُطبَّق على حساب قائم (وإلا يمكن لمهاجم "التسجيل" برقم ضحية بلا كلمة مرور ثم
+	// يستولي على حسابها عند الموافقة). نطبّق كلمة المرور على الحسابات الجديدة فقط.
+	var ownerExisted bool
+	_ = s.pg.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE phone = $1)`, phone).Scan(&ownerExisted)
+
 	mrch, err := s.catalog.CreateMerchant(ctx, actorID, in, ip)
 	if err != nil {
 		return err
 	}
-	// كلمة المرور والاسم — تُطبّق على حساب صاحب المتجر فقط إن كانت الحقول فارغة
-	// (حساب جديد)، فلا نطمس بيانات حساب قائم بنفس الرقم.
+	// الاسم يُملأ إن كان فارغاً (غير حسّاس). كلمة المرور للحساب الجديد حصراً.
 	_, _ = s.pg.Exec(ctx, `
 		UPDATE users SET
-			password_hash = CASE WHEN COALESCE(password_hash,'') = '' THEN $2 ELSE password_hash END,
-			full_name     = CASE WHEN full_name = '' THEN $3 ELSE full_name END,
-			updated_at    = now()
+			full_name  = CASE WHEN full_name = '' THEN $2 ELSE full_name END,
+			updated_at = now()
 		WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)`,
-		mrch.ID, pwHash, ownerName)
+		mrch.ID, ownerName)
+	if !ownerExisted && pwHash != "" {
+		_, _ = s.pg.Exec(ctx, `
+			UPDATE users SET password_hash = $2, updated_at = now()
+			WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)
+			  AND COALESCE(password_hash,'') = ''`,
+			mrch.ID, pwHash)
+	}
 	_, err = s.pg.Exec(ctx, `
 		UPDATE merchant_leads SET status = 'converted', merchant_id = $2, updated_at = now()
 		WHERE id = $1`, leadID, mrch.ID)
