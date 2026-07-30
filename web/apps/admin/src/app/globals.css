@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@rahalgo/ui/theme.css";
+
+body {
+  background-color: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}

@@ -55,6 +55,34 @@
     "weak_password": "كلمة المرور قصيرة — 8 أحرف على الأقل",
     "otp_send_failed": "تعذر إرسال رمز التحقق حالياً، حاول بعد قليل"
   },
+  "admin": {
+    "appTitle": "رحال غو — لوحة التحكم",
+    "appDescription": "لوحة إدارة منصة رحال غو للتوصيل",
+    "loginTitle": "تسجيل الدخول إلى اللوحة",
+    "loginSubtitle": "للموظفين المخوّلين فقط",
+    "loginButton": "دخول",
+    "loggingIn": "جارٍ الدخول…",
+    "notAllowed": "هذا الحساب غير مخوّل بدخول اللوحة",
+    "nav": {
+      "dashboard": "الرئيسية",
+      "users": "المستخدمون",
+      "merchants": "المتاجر",
+      "zones": "مناطق التغطية",
+      "promos": "العروض والأكواد",
+      "whatsapp": "بوت واتساب",
+      "settings": "الإعدادات"
+    },
+    "dashboard": {
+      "welcome": "أهلاً بك",
+      "comingSoon": "قيد البناء — حسب خارطة الطريق",
+      "whatsappStatus": "حالة بوت واتساب",
+      "waConnected": "متصل",
+      "waDisconnected": "غير متصل",
+      "waPaired": "مقترن بالرقم",
+      "waNotPaired": "غير مقترن — امسح رمز QR من هاتف البوت",
+      "waDevProvider": "وضع التطوير (الرمز يُطبع في سجل الخادم)"
+    }
+  },
   "roles": {
     "customer": "زبون",
     "driver": "سائق",
