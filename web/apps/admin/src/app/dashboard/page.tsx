@@ -2,28 +2,74 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import {
+  IconUsers,
+  IconDriver,
+  IconUser,
+  IconStore,
+  IconOrder,
+  IconZones,
+  IconPromos,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
+const fmt = new Intl.NumberFormat("ar-SY");
+
+interface Stats {
+  customers: number;
+  drivers: number;
+  sales_reps: number;
+  merchants_active: number;
+  merchants_total: number;
+  menu_items: number;
+  zones_active: number;
+  promos_active: number;
+}
 
 interface WhatsAppStatus {
   provider: string;
   connected?: boolean;
   logged_in?: boolean;
   paired_as?: string;
-  qr?: string;
-  last_error?: string;
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: number;
+  sub?: string;
+}) {
+  return (
+    <div className="flex items-center gap-4 rounded-card border border-line bg-surface p-5">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-card bg-primary-light">
+        <Icon size={22} className="text-primary-dark" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-2xl font-bold">{fmt.format(value)}</p>
+        <p className="truncate text-sm text-ink-muted">
+          {label}
+          {sub && <span className="text-xs"> · {sub}</span>}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [stats, setStats] = useState<Stats | null>(null);
   const [wa, setWa] = useState<WhatsAppStatus | null>(null);
 
   useEffect(() => {
-    api<WhatsAppStatus>("/api/v1/admin/whatsapp")
-      .then(setWa)
-      .catch(() => setWa(null));
+    api<Stats>("/api/v1/admin/stats").then(setStats).catch(() => setStats(null));
+    api<WhatsAppStatus>("/api/v1/admin/whatsapp").then(setWa).catch(() => setWa(null));
   }, []);
 
   return (
@@ -33,32 +79,49 @@ export default function DashboardPage() {
         {user?.full_name ? `، ${user.full_name}` : ""} 👋
       </h1>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <section className="rounded-card border border-line bg-surface p-5">
-          <h2 className="mb-3 font-bold">{m.admin.dashboard.whatsappStatus}</h2>
-          {wa === null ? (
-            <p className="text-sm text-ink-muted">{m.common.loading}</p>
-          ) : wa.provider === "dev" ? (
-            <p className="text-sm text-ink-muted">{m.admin.dashboard.waDevProvider}</p>
-          ) : (
-            <div className="space-y-2 text-sm">
-              <p className="flex items-center gap-2">
-                <span
-                  className={`inline-block h-2.5 w-2.5 rounded-badge ${wa.connected ? "bg-success" : "bg-danger"}`}
-                />
-                {wa.connected ? m.admin.dashboard.waConnected : m.admin.dashboard.waDisconnected}
+      {stats && (
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <StatCard icon={IconUsers} label={m.admin.dashboard.stats.customers} value={stats.customers} />
+          <StatCard icon={IconDriver} label={m.admin.dashboard.stats.drivers} value={stats.drivers} />
+          <StatCard
+            icon={IconStore}
+            label={m.admin.dashboard.stats.merchantsActive}
+            value={stats.merchants_active}
+            sub={`${fmt.format(stats.merchants_total)} إجمالاً`}
+          />
+          <StatCard icon={IconUser} label={m.admin.dashboard.stats.salesReps} value={stats.sales_reps} />
+          <StatCard icon={IconOrder} label={m.admin.dashboard.stats.menuItems} value={stats.menu_items} />
+          <StatCard icon={IconZones} label={m.admin.dashboard.stats.zonesActive} value={stats.zones_active} />
+          <StatCard icon={IconPromos} label={m.admin.dashboard.stats.promosActive} value={stats.promos_active} />
+
+          {/* بطاقة حالة واتساب المختصرة */}
+          <div className="flex items-center gap-4 rounded-card border border-line bg-surface p-5">
+            <span
+              className={`h-3 w-3 shrink-0 rounded-badge ${
+                wa?.provider === "dev" || wa?.logged_in
+                  ? "bg-success"
+                  : wa?.connected
+                    ? "bg-warning"
+                    : "bg-danger"
+              }`}
+            />
+            <div className="min-w-0 text-sm">
+              <p className="font-bold">{m.admin.dashboard.whatsappStatus}</p>
+              <p className="truncate text-ink-muted">
+                {wa === null
+                  ? m.common.loading
+                  : wa.provider === "dev"
+                    ? m.admin.dashboard.waDevProvider
+                    : wa.logged_in
+                      ? `${m.admin.dashboard.waPaired} +${wa.paired_as}`
+                      : wa.connected
+                        ? m.admin.dashboard.waNotPaired
+                        : m.admin.dashboard.waDisconnected}
               </p>
-              {wa.logged_in ? (
-                <p className="text-ink-muted">
-                  {m.admin.dashboard.waPaired}: <span dir="ltr">+{wa.paired_as}</span>
-                </p>
-              ) : (
-                <p className="text-warning">{m.admin.dashboard.waNotPaired}</p>
-              )}
             </div>
-          )}
-        </section>
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

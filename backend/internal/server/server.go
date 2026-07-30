@@ -89,6 +89,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/promos", s.handleListPromos)
 			r.Get("/banners", s.handleListBanners)
 			r.Get("/settings", s.handleListSettings)
+			r.Get("/stats", s.handleAdminStats)
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRoles("admin"))
 				r.Post("/users", s.handleAdminCreateUser)

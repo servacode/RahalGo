@@ -123,6 +123,10 @@
       "addressPlaceholder": "مثال: شارع تل أبيض، مقابل الجامع الكبير",
       "ownerPhone": "هاتف صاحب المتجر (حساب merchant)",
       "ownerHint": "سيُنشأ حساب تلقائياً إن لم يكن موجوداً",
+      "location": "الموقع على الخريطة",
+      "locationHint": "انقر على الخريطة لتحديد موقع المتجر (يلزم لحساب مسافات التوصيل)",
+      "locationSet": "الموقع محدد ✓",
+      "locationUnset": "الموقع غير محدد بعد",
       "status": "الحالة",
       "active": "فعّال",
       "inactive": "موقوف",
@@ -249,6 +253,15 @@
     "dashboard": {
       "welcome": "أهلاً بك",
       "comingSoon": "قيد البناء — حسب خارطة الطريق",
+      "stats": {
+        "customers": "الزبائن",
+        "drivers": "السائقون",
+        "salesReps": "المندوبون",
+        "merchantsActive": "متاجر فعّالة",
+        "menuItems": "أصناف القوائم",
+        "zonesActive": "مناطق تغطية",
+        "promosActive": "أكواد فعّالة"
+      },
       "whatsappStatus": "حالة بوت واتساب",
       "waConnected": "متصل",
       "waDisconnected": "غير متصل",

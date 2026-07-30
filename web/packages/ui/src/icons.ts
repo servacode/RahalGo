@@ -25,6 +25,7 @@ export {
   Truck as IconDriver,
   ShoppingBasket as IconOrder,
   // الإجراءات
+  Menu as IconHamburger,
   Plus as IconAdd,
   Pencil as IconEdit,
   Trash2 as IconDelete,

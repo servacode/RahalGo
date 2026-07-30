@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+
+const PickMap = dynamic(() => import("@/components/map/PickMap"), { ssr: false });
 import {
   Button,
   Input,
@@ -49,6 +52,8 @@ interface Merchant {
   address_text: string;
   owner_phone: string | null;
   sales_rep_phone: string | null;
+  lat: number | null;
+  lng: number | null;
   status: string;
   emergency_closed: boolean;
   created_at: string;
@@ -513,6 +518,8 @@ function MerchantModal({
   const [address, setAddress] = useState(merchant?.address_text ?? "");
   const [ownerPhone, setOwnerPhone] = useState(merchant?.owner_phone ?? "");
   const [repPhone, setRepPhone] = useState(merchant?.sales_rep_phone ?? "");
+  const [lat, setLat] = useState<number | null>(merchant?.lat ?? null);
+  const [lng, setLng] = useState<number | null>(merchant?.lng ?? null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -528,6 +535,8 @@ function MerchantModal({
       address_text: address,
       owner_phone: ownerPhone,
       sales_rep_phone: repPhone,
+      lat,
+      lng,
     };
     try {
       if (merchant) {
@@ -590,6 +599,28 @@ function MerchantModal({
           onChange={(e) => setAddress(e.target.value)}
           placeholder={m.admin.merchants.addressPlaceholder}
         />
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-sm font-medium">
+              <IconLocation className="h-4 w-4 text-ink-muted" />
+              {m.admin.merchants.location}
+            </span>
+            <Badge variant={lat != null ? "success" : "warning"}>
+              {lat != null ? m.admin.merchants.locationSet : m.admin.merchants.locationUnset}
+            </Badge>
+          </div>
+          <div className="overflow-hidden rounded-control border border-line">
+            <PickMap
+              lat={lat}
+              lng={lng}
+              onPick={(la, ln) => {
+                setLat(la);
+                setLng(ln);
+              }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.locationHint}</p>
+        </div>
         <Input
           id="m-desc"
           label={m.admin.merchants.descriptionField}

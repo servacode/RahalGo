@@ -40,6 +40,8 @@ type Merchant struct {
 	OwnerUserID     *string   `json:"owner_user_id"`
 	OwnerPhone      *string   `json:"owner_phone"`
 	SalesRepPhone   *string   `json:"sales_rep_phone"`
+	Lat             *float64  `json:"lat"`
+	Lng             *float64  `json:"lng"`
 	Status          string    `json:"status"`
 	EmergencyClosed bool      `json:"emergency_closed"`
 	CreatedAt       time.Time `json:"created_at"`
@@ -134,7 +136,9 @@ func (s *Service) UpdateCategory(ctx context.Context, actorID, id string, in Cat
 
 const merchantSelect = `
 	SELECT m.id, m.name, m.description, m.category_id, c.name, c.icon,
-	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone, m.status, m.emergency_closed, m.created_at
+	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone,
+	       ST_Y(m.location::geometry), ST_X(m.location::geometry),
+	       m.status, m.emergency_closed, m.created_at
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
@@ -143,7 +147,8 @@ const merchantSelect = `
 func scanMerchant(row pgx.Row) (*Merchant, error) {
 	var m Merchant
 	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
-		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.Status, &m.EmergencyClosed, &m.CreatedAt)
+		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone,
+		&m.Lat, &m.Lng, &m.Status, &m.EmergencyClosed, &m.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -190,15 +195,17 @@ func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status s
 }
 
 type MerchantInput struct {
-	Name            *string `json:"name"`
-	Description     *string `json:"description"`
-	CategoryID      *string `json:"category_id"`
-	Phone           *string `json:"phone"`
-	AddressText     *string `json:"address_text"`
-	Status          *string `json:"status"`
-	EmergencyClosed *bool   `json:"emergency_closed"`
-	OwnerPhone      *string `json:"owner_phone"`     // يربط/ينشئ حساب صاحب المتجر بدور merchant
-	SalesRepPhone   *string `json:"sales_rep_phone"` // يربط/ينشئ حساب المندوب بدور sales
+	Name            *string  `json:"name"`
+	Description     *string  `json:"description"`
+	CategoryID      *string  `json:"category_id"`
+	Phone           *string  `json:"phone"`
+	AddressText     *string  `json:"address_text"`
+	Status          *string  `json:"status"`
+	EmergencyClosed *bool    `json:"emergency_closed"`
+	OwnerPhone      *string  `json:"owner_phone"`     // يربط/ينشئ حساب صاحب المتجر بدور merchant
+	SalesRepPhone   *string  `json:"sales_rep_phone"` // يربط/ينشئ حساب المندوب بدور sales
+	Lat             *float64 `json:"lat"`             // دبوس الموقع على الخريطة
+	Lng             *float64 `json:"lng"`
 }
 
 func (s *Service) CreateMerchant(ctx context.Context, actorID string, in MerchantInput, ip string) (*Merchant, error) {
@@ -216,10 +223,12 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 
 	var id string
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id)
-		VALUES ($1, COALESCE($2,''), $3, COALESCE($4,''), COALESCE($5,''), $6, $7)
+		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location)
+		VALUES ($1, COALESCE($2,''), $3, COALESCE($4,''), COALESCE($5,''), $6, $7,
+		        CASE WHEN $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
+		             THEN ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography END)
 		RETURNING id`,
-		*in.Name, in.Description, *in.CategoryID, in.Phone, in.AddressText, ownerID, repID).Scan(&id)
+		*in.Name, in.Description, *in.CategoryID, in.Phone, in.AddressText, ownerID, repID, in.Lat, in.Lng).Scan(&id)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}
@@ -254,9 +263,13 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 			emergency_closed = COALESCE($8, emergency_closed),
 			owner_user_id = COALESCE($9, owner_user_id),
 			sales_rep_user_id = COALESCE($10, sales_rep_user_id),
+			location      = COALESCE(
+				CASE WHEN $11::float8 IS NOT NULL AND $12::float8 IS NOT NULL
+				     THEN ST_SetSRID(ST_MakePoint($12::float8, $11::float8), 4326)::geography END,
+				location),
 			updated_at    = now()
 		WHERE id = $1`,
-		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID)
+		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}

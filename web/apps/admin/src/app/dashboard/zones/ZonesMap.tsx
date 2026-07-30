@@ -5,13 +5,12 @@
  * الرسم: كل نقرة تضيف نقطة، و"إنهاء الرسم" يغلق المضلع.
  */
 
-import { MapContainer, TileLayer, Polygon, Polyline, CircleMarker, useMapEvents } from "react-leaflet";
+import { MapContainer, Polygon, Polyline, CircleMarker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import FallbackTileLayer from "@/components/map/FallbackTileLayer";
 
 // مركز مدينة الرقة
 const RAQQA_CENTER: [number, number] = [35.9528, 39.0079];
-const TILE_URL =
-  process.env.NEXT_PUBLIC_TILE_URL ?? "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 export interface ZoneShape {
   id: string;
@@ -56,7 +55,7 @@ export default function ZonesMap({
       className="h-full w-full"
       style={{ cursor: drawing ? "crosshair" : undefined }}
     >
-      <TileLayer url={TILE_URL} attribution="&copy; OpenStreetMap" />
+      <FallbackTileLayer />
       {drawing && <ClickCapture onClick={onMapClick} />}
 
       {zones.map((z) => (
