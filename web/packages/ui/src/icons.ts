@@ -29,6 +29,7 @@ export {
   EyeOff as IconViewOff,
   LocateFixed as IconLocateMe,
   Scale as IconBalance,
+  ChevronDown as IconChevronDown,
   Link2 as IconLink,
   QrCode as IconQr,
   LayoutDashboard as IconOverview,

@@ -253,14 +253,17 @@ export default function CartPage() {
               </p>
             )}
 
-            <Input
-              id="promo"
-              label={m.site.cart.promo}
-              dir="ltr"
-              value={promo}
-              onChange={(e) => setPromo(e.target.value.toUpperCase())}
-              className="text-center font-mono uppercase"
-            />
+            <div>
+              <Input
+                id="promo"
+                label={m.site.cart.promo}
+                dir="ltr"
+                value={promo}
+                onChange={(e) => setPromo(e.target.value.toUpperCase())}
+                className="text-center font-mono uppercase"
+              />
+              <p className="mt-1 text-xs text-ink-muted">{m.site.cart.promoHint}</p>
+            </div>
             <Input
               id="notes"
               label={m.site.cart.notes}

@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <CartProvider>
             <Header />
-            <main className="mx-auto w-full max-w-5xl flex-1 p-4">{children}</main>
+            <main className="w-full flex-1 px-4 py-5">{children}</main>
           </CartProvider>
         </AuthProvider>
       </body>
