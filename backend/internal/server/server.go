@@ -115,6 +115,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/me/summary", s.handleMeSummary)
 			r.Post("/me/avatar", s.handleMyAvatar)
 			r.Delete("/me/avatar", s.handleDeleteMyAvatar)
+			r.Get("/my/ratings", s.handleMyRatings)
 		})
 
 		// لوحة المندوب — دور المبيعات حصراً (قراءة: كوده ومتاجره وعمولاته)

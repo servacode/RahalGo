@@ -11,6 +11,7 @@ import {
   IconLogout,
   IconOverview,
   IconChevronDown,
+  IconStar,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
@@ -129,15 +130,18 @@ export default function Header() {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setOpen((o) => !o)}
-                className="flex items-center gap-1 rounded-control border border-line py-1 pe-2 ps-1 hover:bg-page"
+                className="flex items-center gap-1.5 rounded-control border border-line py-1 pe-2 ps-1 hover:bg-page"
               >
-                <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-primary-light text-sm font-bold text-primary-dark">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-sm font-bold text-primary-dark">
                   {avatar ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={avatar} alt="" className="h-full w-full object-cover" />
                   ) : (
                     (summary?.full_name || user?.phone || "؟").slice(0, 1)
                   )}
+                </span>
+                <span className="hidden max-w-[8rem] truncate text-sm font-medium text-ink sm:inline">
+                  {summary?.full_name || user?.phone}
                 </span>
                 <IconChevronDown size={15} className="text-ink-muted" />
               </button>
@@ -147,6 +151,7 @@ export default function Header() {
                   <MenuLink href="/account" icon={<IconUser size={16} />} label={N.account} />
                   <MenuLink href="/wallet" icon={<IconWallet size={16} />} label={N.wallet} />
                   <MenuLink href="/orders" icon={<IconOrder size={16} />} label={N.orders} />
+                  <MenuLink href="/ratings" icon={<IconStar size={16} />} label={m.site.rating.myTitle} />
                   <MenuLink href="/cart" icon={<span className="text-base">🛒</span>} label={N.cart} />
                   {portal && (
                     <button

@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
@@ -64,4 +65,43 @@ func (s *Server) handleDeleteMyAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"removed": true})
+}
+
+// handleMyRatings طلبات الزبون المُسلَّمة مع حالة تقييم كل منها (لصفحة "تقييماتي").
+func (s *Server) handleMyRatings(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT o.id::text, o.number, m.name, (o.driver_id IS NOT NULL),
+		       COALESCE(rt.merchant_stars, 0), rt.driver_stars, COALESCE(rt.comment, ''),
+		       (rt.order_id IS NOT NULL), o.created_at
+		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		LEFT JOIN order_ratings rt ON rt.order_id = o.id
+		WHERE o.customer_id = $1 AND o.status = 'delivered'
+		ORDER BY o.created_at DESC LIMIT 100`, userIDFrom(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+	type ratedOrder struct {
+		OrderID       string    `json:"order_id"`
+		Number        int64     `json:"number"`
+		MerchantName  string    `json:"merchant_name"`
+		HasDriver     bool      `json:"has_driver"`
+		MerchantStars int       `json:"merchant_stars"`
+		DriverStars   *int      `json:"driver_stars"`
+		Comment       string    `json:"comment"`
+		Rated         bool      `json:"rated"`
+		CreatedAt     time.Time `json:"created_at"`
+	}
+	out := []ratedOrder{}
+	for rows.Next() {
+		var o ratedOrder
+		if err := rows.Scan(&o.OrderID, &o.Number, &o.MerchantName, &o.HasDriver,
+			&o.MerchantStars, &o.DriverStars, &o.Comment, &o.Rated, &o.CreatedAt); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out = append(out, o)
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }

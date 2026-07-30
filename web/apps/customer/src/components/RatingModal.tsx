@@ -1,0 +1,123 @@
+"use client";
+
+/** نافذة تقييم طلب مُسلَّم: نجوم المتجر (إلزامي) + السائق (إن وُجد) + تعليق قصير اختياري. */
+
+import { useState } from "react";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { Button } from "@rahalgo/ui";
+import { api, ApiError } from "@/lib/api";
+
+const m = getMessages(defaultLocale);
+const R = m.site.rating;
+const COMMENT_MAX = 200;
+
+function Stars({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <div className="flex gap-1" dir="ltr">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          className={`text-2xl transition-transform hover:scale-110 ${
+            n <= value ? "text-amber-400" : "text-line"
+          }`}
+          aria-label={`${n}`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function RatingModal({
+  order,
+  onClose,
+  onRated,
+}: {
+  order: { order_id: string; number: number; merchant_name: string; has_driver: boolean };
+  onClose: () => void;
+  onRated: () => void;
+}) {
+  const [merchantStars, setMerchantStars] = useState(0);
+  const [driverStars, setDriverStars] = useState(0);
+  const [comment, setComment] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (merchantStars < 1) return setError(R.pickStars);
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/orders/${order.order_id}/rating`, {
+        method: "POST",
+        body: JSON.stringify({
+          merchant_stars: merchantStars,
+          driver_stars: order.has_driver && driverStars > 0 ? driverStars : null,
+          comment: comment.trim(),
+        }),
+      });
+      onRated();
+    } catch (err) {
+      const key = err instanceof ApiError ? err.body.message_key.split(".").pop() ?? "" : "";
+      setError((m.errors as Record<string, string>)[key] ?? m.errors.internal);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-sm rounded-card border border-line bg-surface p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="mb-1 text-lg font-bold">{R.title}</h2>
+        <p className="mb-4 text-sm text-ink-muted">
+          #{order.number} — {order.merchant_name}
+        </p>
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <p className="mb-1.5 text-sm font-medium">{R.merchant}</p>
+            <Stars value={merchantStars} onChange={setMerchantStars} />
+          </div>
+          {order.has_driver && (
+            <div>
+              <p className="mb-1.5 text-sm font-medium">{R.driver}</p>
+              <Stars value={driverStars} onChange={setDriverStars} />
+            </div>
+          )}
+          <div>
+            <label htmlFor="rc" className="mb-1.5 block text-sm font-medium">
+              {R.comment}
+            </label>
+            <textarea
+              id="rc"
+              value={comment}
+              onChange={(e) => setComment(e.target.value.slice(0, COMMENT_MAX))}
+              rows={2}
+              placeholder={R.commentHint}
+              className="w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <p className="mt-0.5 text-end text-xs text-ink-muted">
+              {comment.length}/{COMMENT_MAX}
+            </p>
+          </div>
+          {error && (
+            <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              {m.common.cancel}
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {busy ? m.common.loading : R.submit}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
