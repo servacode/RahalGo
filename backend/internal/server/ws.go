@@ -27,6 +27,20 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	}) {
 		topics = append(topics, realtime.TopicOps)
 	}
+	// صاحب متجر: يشترك بمواضيع متاجره (بوابة المتجر)
+	if slices.Contains(claims.Roles, "merchant") {
+		rows, err := s.pg.Query(r.Context(),
+			`SELECT id FROM merchants WHERE owner_user_id = $1`, claims.Subject)
+		if err == nil {
+			for rows.Next() {
+				var id string
+				if rows.Scan(&id) == nil {
+					topics = append(topics, "merchant:"+id)
+				}
+			}
+			rows.Close()
+		}
+	}
 	// مواضيع السائق/الزبون تُضاف مع تطبيقيهما
 	if len(topics) == 0 {
 		httpx.Error(w, errForbidden)

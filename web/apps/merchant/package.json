@@ -1,0 +1,28 @@
+{
+  "name": "@rahalgo/merchant",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
+    "@rahalgo/i18n": "workspace:*",
+    "@rahalgo/ui": "workspace:*",
+    "next": "^15.5.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@rahalgo/tsconfig": "workspace:*",
+    "@tailwindcss/postcss": "^4.1.16",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.6",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.1.16",
+    "typescript": "^5.9.2"
+  }
+}

@@ -96,6 +96,20 @@ func (s *Server) Router() http.Handler {
 		// تقييم الطلب — زبون الطلب نفسه (تُستخدم من التطبيق/الموقع)
 		r.With(s.RequireAuth).Post("/orders/{id}/rating", s.handleRateOrder)
 
+		// بوابة المتجر — صاحب المتجر حصراً، وكل نقطة تتحقق من الملكية
+		r.Route("/merchant", func(r chi.Router) {
+			r.Use(s.RequireAuth)
+			r.Use(s.RequireRoles("merchant"))
+			r.Get("/stores", s.handleMerchantStores)
+			r.Get("/stores/{id}/orders", s.handleMerchantOrders)
+			r.Get("/stores/{id}/menu", s.handleMerchantMenu)
+			r.Get("/stores/{id}/reports", s.handleMerchantReports)
+			r.Post("/stores/{id}/emergency", s.handleMerchantEmergency)
+			r.Get("/orders/{id}", s.handleMerchantGetOrder)
+			r.Post("/orders/{id}/transition", s.handleMerchantTransition)
+			r.Patch("/menu/items/{itemID}/availability", s.handleMerchantItemAvailability)
+		})
+
 		// نقاط الإدارة — أدمن/عمليات فقط، والتعديلات الحساسة للأدمن حصراً
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(s.RequireAuth)

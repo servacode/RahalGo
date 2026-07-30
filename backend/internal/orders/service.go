@@ -44,12 +44,14 @@ func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wall
 	return &Service{db: db, identity: identitySvc, wallet: walletSvc, cashbox: cashboxSvc, pub: pub, logger: logger}
 }
 
-// publishOrder يبث ملخص الطلب لغرفة العمليات.
+// publishOrder يبث ملخص الطلب لغرفة العمليات ولموضوع المتجر المعني.
 func (s *Service) publishOrder(o *Order) {
 	if o == nil {
 		return
 	}
-	s.pub.Publish("ops", map[string]any{"type": "order", "order": o})
+	event := map[string]any{"type": "order", "order": o}
+	s.pub.Publish("ops", event)
+	s.pub.Publish("merchant:"+o.MerchantID, event)
 }
 
 // Create ينشئ طلباً كاملاً: تحقق المتجر، تسعير خادمي للأصناف والخيارات،
