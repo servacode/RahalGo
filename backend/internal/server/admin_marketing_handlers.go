@@ -137,7 +137,16 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	if err := s.settings.Set(r.Context(), chi.URLParam(r, "key"), v, &actor); err != nil {
+	key := chi.URLParam(r, "key")
+	// إعدادات نسب العمولة تُقيَّد بمدى صحيح [0..100] حماية لحسابات المال.
+	if key == "sales.commission_percent" || key == "merchants.default_commission_percent" {
+		n, ok := v.(float64)
+		if !ok || n < 0 || n > 100 {
+			s.respondErr(w, errValidation)
+			return
+		}
+	}
+	if err := s.settings.Set(r.Context(), key, v, &actor); err != nil {
 		s.respondErr(w, err)
 		return
 	}

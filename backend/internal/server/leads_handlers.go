@@ -120,6 +120,22 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 // handlePublicInvite يعيد كود الدعوة الذي يُعرض في نموذج التسجيل (للقراءة فقط):
 // كود المندوب إن كان صالحاً وفعّالاً، وإلا كود المنصة الافتراضي (تسجيل مباشر).
 func (s *Server) handlePublicInvite(w http.ResponseWriter, r *http.Request) {
+	// تحديد معدل حسب العنوان — نقطة عامة قد تُستغل لتعداد أكواد المندوبين.
+	ip := clientIP(r)
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		ip = host
+	}
+	key := "invite:req:" + ip
+	if n, err := s.rdb.Incr(r.Context(), key).Result(); err == nil {
+		if n == 1 {
+			s.rdb.Expire(r.Context(), key, time.Hour)
+		}
+		if n > 60 {
+			s.respondErr(w, httpx.NewError(http.StatusTooManyRequests, "rate_limited", "errors.rate_limited"))
+			return
+		}
+	}
+
 	ref := r.URL.Query().Get("ref")
 	if ref != "" {
 		if rep, err := s.identity.SalesRepByInviteCode(r.Context(), ref); err == nil && rep.Status == "active" {
