@@ -260,7 +260,7 @@
     "users": {
       "title": "المستخدمون",
       "searchPlaceholder": "بحث برقم الهاتف أو الاسم…",
-      "allRoles": "كل الأدوار",
+      "allRoles": "كل الحسابات",
       "create": "مستخدم جديد",
       "createTitle": "إنشاء مستخدم جديد",
       "fullName": "الاسم الكامل",
@@ -305,6 +305,23 @@
         "commission": "عمولة",
         "payout": "سحب رصيد",
         "adjustment": "تسوية إدارية"
+      },
+      "profile": {
+        "title": "ملف الحساب",
+        "joined": "تاريخ التسجيل",
+        "ordersCount": "طلباته",
+        "spent": "إنفاقه المُسلَّم",
+        "merchantsOwned": "متاجر يملكها",
+        "repStores": "متاجر جلبها",
+        "commissions": "عمولاته",
+        "driverCash": "نقد بحوزته",
+        "deliveries": "توصيلاته المُسلَّمة",
+        "statement": "سجل حركات المحفظة",
+        "statementEmpty": "لا حركات بعد",
+        "resetPassword": "إعادة تعيين كلمة المرور",
+        "newPassword": "كلمة المرور الجديدة (8+ أحرف)",
+        "resetDone": "عُيّنت كلمة المرور الجديدة ✓",
+        "walletOps": "عمليات المحفظة"
       }
     },
     "merchants": {

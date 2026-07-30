@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Button,
@@ -26,6 +27,7 @@ import {
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
+import RoleBadge, { ROLE_STYLES } from "@/components/RoleBadge";
 
 const m = getMessages(defaultLocale);
 
@@ -54,11 +56,13 @@ function errText(err: unknown): string {
 
 export default function UsersPage() {
   const { user: me } = useAuth();
+  const router = useRouter();
   const isAdmin = !!me?.roles.includes("admin");
 
   const [data, setData] = useState<UserPage | null>(null);
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("");
+  const [roleCounts, setRoleCounts] = useState<{ total: number; roles: Record<string, number> } | null>(null);
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -69,6 +73,9 @@ export default function UsersPage() {
   const load = useCallback(async () => {
     try {
       const params = new URLSearchParams({ query, role, page: String(page), per_page: "10" });
+      api<{ total: number; roles: Record<string, number> }>("/api/v1/admin/users/stats")
+        .then(setRoleCounts)
+        .catch(() => undefined);
       setData(await api<UserPage>(`/api/v1/admin/users?${params}`));
       setError("");
     } catch (err) {
@@ -121,9 +128,7 @@ export default function UsersPage() {
       cell: (u) => (
         <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
           {u.roles.map((r) => (
-            <Badge key={r} variant={r === "admin" ? "primary" : "neutral"}>
-              {ROLE_LABELS[r] ?? r}
-            </Badge>
+            <RoleBadge key={r} role={r} />
           ))}
           {u.invite_code && (
             <Badge variant="warning">
@@ -156,6 +161,34 @@ export default function UsersPage() {
           </Button>
         )}
       </div>
+
+      {roleCounts && (
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+          <button
+            onClick={() => setRole("")}
+            className={`rounded-card border p-2.5 text-center transition-colors ${role === "" ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary/40"}`}
+          >
+            <p className="text-lg font-bold">{roleCounts.total}</p>
+            <p className="text-xs text-ink-muted">{m.admin.users.allRoles}</p>
+          </button>
+          {(["admin", "ops", "finance", "sales", "driver", "merchant", "customer"] as const).map((rk) => {
+            const st = ROLE_STYLES[rk];
+            return (
+              <button
+                key={rk}
+                onClick={() => { setRole(role === rk ? "" : rk); setPage(1); }}
+                className={`rounded-card border p-2.5 text-center transition-colors ${role === rk ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary/40"}`}
+              >
+                <p className={`inline-flex items-center gap-1 text-lg font-bold ${st ? st.cls.split(" ").filter((c) => c.startsWith("text-")).join(" ") : ""}`}>
+                  {st && <st.Icon size={15} />}
+                  {roleCounts.roles[rk] ?? 0}
+                </p>
+                <p className="text-xs text-ink-muted">{ROLE_LABELS[rk]}</p>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-64">

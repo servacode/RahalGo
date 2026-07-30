@@ -90,6 +90,7 @@ export function DataView<T>({
   actions,
   empty,
   view,
+  onRowClick,
 }: {
   items: T[];
   getKey: (item: T) => string;
@@ -97,6 +98,7 @@ export function DataView<T>({
   actions?: (item: T) => ReactNode;
   empty: string;
   view: ViewMode;
+  onRowClick?: (item: T) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -114,7 +116,8 @@ export function DataView<T>({
         {items.map((item) => (
           <div
             key={getKey(item)}
-            className="flex flex-col rounded-card border border-line bg-surface p-4 transition-shadow hover:shadow-md"
+            onClick={onRowClick ? () => onRowClick(item) : undefined}
+            className={`flex flex-col rounded-card border border-line bg-surface p-4 transition-shadow hover:shadow-md ${onRowClick ? "cursor-pointer" : ""}`}
           >
             <div className="mb-3 border-b border-line pb-3">
               {primaries.map((c, i) => (
@@ -134,7 +137,10 @@ export function DataView<T>({
               ))}
             </dl>
             {actions && (
-              <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-line pt-3">
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="mt-3 flex flex-wrap justify-end gap-2 border-t border-line pt-3"
+              >
                 {actions(item)}
               </div>
             )}
@@ -159,14 +165,18 @@ export function DataView<T>({
         </thead>
         <tbody>
           {items.map((item) => (
-            <tr key={getKey(item)} className="border-b border-line last:border-0 hover:bg-page/60">
+            <tr
+              key={getKey(item)}
+              onClick={onRowClick ? () => onRowClick(item) : undefined}
+              className={`border-b border-line last:border-0 hover:bg-page/60 ${onRowClick ? "cursor-pointer" : ""}`}
+            >
               {columns.map((c) => (
                 <td key={c.id} className="p-3">
                   {c.cell(item)}
                 </td>
               ))}
               {actions && (
-                <td className="p-3">
+                <td className="p-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex flex-wrap justify-end gap-2">{actions(item)}</div>
                 </td>
               )}

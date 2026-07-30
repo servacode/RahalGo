@@ -16,6 +16,7 @@ export const colors = {
     warning: "#EAB308",
     danger: "#DC2626",
     info: "#0284C7",
+    violet: "#7C3AED",
   },
   neutral: {
     textPrimary: "#1E293B",

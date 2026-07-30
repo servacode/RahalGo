@@ -141,6 +141,8 @@ func (s *Server) Router() http.Handler {
 
 			r.Post("/media", s.handleUploadMedia)
 			r.Get("/users", s.handleAdminListUsers)
+			r.Get("/users/stats", s.handleAdminUserRoleCounts)
+			r.Get("/users/{id}", s.handleAdminGetUser)
 			r.Get("/categories", s.handleListCategories)
 			r.Get("/merchants", s.handleListMerchants)
 			r.Get("/merchants/{id}/menu", s.handleGetMenu)
@@ -185,6 +187,7 @@ func (s *Server) Router() http.Handler {
 				r.Post("/users", s.handleAdminCreateUser)
 				r.Patch("/users/{id}", s.handleAdminUpdateUser)
 				r.Post("/users/{id}/roles", s.handleAdminGrantRole)
+				r.Post("/users/{id}/password", s.handleAdminResetPassword)
 				r.Delete("/users/{id}/roles/{role}", s.handleAdminRevokeRole)
 				r.Post("/categories", s.handleCreateCategory)
 				r.Patch("/categories/{id}", s.handleUpdateCategory)
