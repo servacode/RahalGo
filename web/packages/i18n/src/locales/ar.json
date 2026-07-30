@@ -343,7 +343,9 @@
           "overview": "نظرة عامة",
           "wallet": "سجل المحفظة",
           "activity": "سجل النشاط"
-        }
+        },
+        "passwordBtn": "كلمة المرور",
+        "logoutAllShort": "إنهاء الجلسات"
       },
       "suspended": "موقوف مؤقتاً",
       "suspend": "إيقاف",
