@@ -1,70 +1,58 @@
 "use client";
 
+/** هيكل بوابة المندوب العائم — سايدبار + توب بار (موحّد مع لوحة الإدارة). */
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
-  IconDashboard,
-  IconOrder,
-  IconUser,
-  IconDriver,
-  IconUsers,
+  IconOverview,
+  IconLink,
   IconStore,
-  IconZones,
-  IconPromos,
-  IconWhatsApp,
-  IconStatus,
-  IconSupport,
-  IconSettings,
+  IconWallet,
+  IconOrder,
   IconLogout,
   IconHamburger,
   IconClose,
-  IconLink,
 } from "@rahalgo/ui";
-import { useAuth, canAccessPanel } from "@/lib/auth";
+import { useAuth, isRep } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
 const NAV = [
-  { href: "/dashboard", label: m.admin.nav.dashboard, icon: IconDashboard },
-  { href: "/dashboard/orders", label: m.admin.nav.orders, icon: IconOrder },
-  { href: "/dashboard/customers", label: m.admin.nav.customers, icon: IconUser },
-  { href: "/dashboard/tickets", label: m.admin.nav.tickets, icon: IconSupport },
-  { href: "/dashboard/drivers", label: m.admin.nav.drivers, icon: IconDriver },
-  { href: "/dashboard/sales", label: m.admin.nav.sales, icon: IconUsers },
-  { href: "/dashboard/leads", label: m.admin.nav.leads, icon: IconLink },
-  { href: "/dashboard/users", label: m.admin.nav.users, icon: IconUsers },
-  { href: "/dashboard/merchants", label: m.admin.nav.merchants, icon: IconStore },
-  { href: "/dashboard/zones", label: m.admin.nav.zones, icon: IconZones },
-  { href: "/dashboard/promos", label: m.admin.nav.promos, icon: IconPromos },
-  { href: "/dashboard/reports", label: m.admin.nav.reports, icon: IconStatus },
-  { href: "/dashboard/whatsapp", label: m.admin.nav.whatsapp, icon: IconWhatsApp },
-  { href: "/dashboard/settings", label: m.admin.nav.settings, icon: IconSettings },
+  { href: "/portal", label: m.rep.nav.overview, icon: IconOverview },
+  { href: "/portal/link", label: m.rep.nav.link, icon: IconLink },
+  { href: "/portal/leads", label: m.rep.nav.leads, icon: IconOrder },
+  { href: "/portal/merchants", label: m.rep.nav.merchants, icon: IconStore },
+  { href: "/portal/wallet", label: m.rep.nav.wallet, icon: IconWallet },
 ];
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (!loading && !canAccessPanel(user)) router.replace("/login");
+    if (!loading && !isRep(user)) router.replace("/login");
   }, [user, loading, router]);
 
-  // إغلاق القائمة المنزلقة عند تغيير الصفحة
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
-  if (loading || !canAccessPanel(user)) {
+  if (loading || !isRep(user)) {
     return (
       <main className="flex min-h-screen items-center justify-center text-ink-muted">
         {m.common.loading}
       </main>
     );
   }
+
+  const activeLabel =
+    NAV.find((i) => (i.href === "/portal" ? pathname === i.href : pathname.startsWith(i.href)))
+      ?.label ?? m.rep.loginTitle;
 
   const sidebar = (
     <>
@@ -73,7 +61,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-white">
             ر
           </div>
-          <span className="font-bold">{m.common.appName}</span>
+          <span className="font-bold">{m.rep.loginTitle}</span>
         </div>
         <button
           onClick={() => setMenuOpen(false)}
@@ -86,7 +74,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {NAV.map((item) => {
           const active =
-            item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href);
+            item.href === "/portal" ? pathname === item.href : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
@@ -106,24 +94,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     </>
   );
 
-  const activeLabel =
-    NAV.find((item) =>
-      item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href)
-    )?.label ?? m.admin.nav.dashboard;
-
   return (
     <div className="flex min-h-screen bg-page">
-      {/* الشريط الجانبي العائم — شاشات كبيرة */}
       <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col overflow-hidden rounded-card border border-line bg-surface shadow-sm lg:flex">
         {sidebar}
       </aside>
 
-      {/* القائمة المنزلقة — الجوال */}
       {menuOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-ink/40 lg:hidden"
-          onClick={() => setMenuOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-ink/40 lg:hidden" onClick={() => setMenuOpen(false)} />
       )}
       <aside
         className={`fixed inset-y-0 start-0 z-50 flex w-64 flex-col bg-surface shadow-xl transition-transform duration-200 lg:hidden ${
@@ -134,30 +112,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col p-3">
-        {/* التوب بار العائم */}
         <header className="mb-3 flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-2.5 shadow-sm">
           <button
             onClick={() => setMenuOpen(true)}
             className="text-ink-muted hover:text-ink lg:hidden"
-            aria-label={m.admin.nav.dashboard}
+            aria-label={m.rep.loginTitle}
           >
             <IconHamburger size={22} />
           </button>
-          <div className="flex items-center gap-2 lg:hidden">
-            <div className="flex h-7 w-7 items-center justify-center rounded-control bg-primary text-sm font-bold text-white">
-              ر
-            </div>
-            <span className="font-bold">{m.common.appName}</span>
-          </div>
-          <h2 className="hidden text-sm font-bold text-ink lg:block">{activeLabel}</h2>
+          <h2 className="text-sm font-bold text-ink">{activeLabel}</h2>
           <div className="ms-auto flex items-center gap-3">
-            <Link
-              href="/dashboard/account"
-              dir="ltr"
-              className="hidden rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-primary-light hover:text-primary-dark sm:block"
-            >
+            <span dir="ltr" className="hidden text-xs text-ink-muted sm:block">
               {user?.phone}
-            </Link>
+            </span>
             <button
               onClick={() => {
                 logout();

@@ -98,6 +98,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/home", s.handlePublicHome)
 		r.Get("/public/merchants/{id}", s.handlePublicMerchant)
 		r.Get("/public/zone", s.handlePublicZone)
+		r.Post("/public/join", s.handlePublicJoin)
 
 		// نقاط الزبون — الطلب حصراً من هنا (قرار 18)
 		r.Group(func(r chi.Router) {
@@ -116,6 +117,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/me", s.handleRepMe)
 			r.Get("/merchants", s.handleRepMerchants)
 			r.Get("/wallet", s.handleRepWallet)
+			r.Get("/leads", s.handleRepLeads)
 		})
 
 		// بوابة المتجر — صاحب المتجر حصراً، وكل نقطة تتحقق من الملكية
@@ -172,6 +174,8 @@ func (s *Server) Router() http.Handler {
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			r.Get("/customers", s.handleListCustomers)
 			r.Get("/salesreps", s.handleListSalesReps)
+			r.Get("/leads", s.handleAdminLeads)
+			r.Post("/leads/{id}/status", s.handleAdminLeadStatus)
 
 			// التذاكر والتعويضات — الحل المالي للأدمن/المالية حصراً
 			r.Get("/tickets", s.handleListTickets)

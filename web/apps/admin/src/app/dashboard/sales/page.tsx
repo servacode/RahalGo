@@ -17,6 +17,10 @@ import {
   IconStatus,
   IconPromos,
   IconView,
+  IconBlock,
+  IconUnblock,
+  Modal,
+  Input,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -69,6 +73,17 @@ export default function SalesPage() {
   const [reps, setReps] = useState<Rep[]>([]);
   const [error, setError] = useState("");
   const [walletFor, setWalletFor] = useState<Rep | null>(null);
+  const [statusFor, setStatusFor] = useState<{ rep: Rep; status: string } | null>(null);
+  const isAdmin = !!me?.roles.includes("admin");
+
+  async function setStatus(rep: Rep, status: string, reason = "") {
+    await api(`/api/v1/admin/users/${rep.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, status_reason: reason }),
+    });
+    setStatusFor(null);
+    await load();
+  }
   const [view, setView] = useViewMode("sales", "cards");
 
   const load = useCallback(async () => {
@@ -190,20 +205,107 @@ export default function SalesPage() {
         empty={m.admin.sales.empty}
         onRowClick={(p) => router.push(`/dashboard/users/${p.id}`)}
         actions={(p) => (
-          <Button
-            variant="secondary"
-            onClick={() => setWalletFor(p)}
-            className="flex items-center gap-1.5"
-          >
-            <IconWallet size={15} />
-            {m.admin.users.wallet}
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setWalletFor(p)}
+              className="flex items-center gap-1.5"
+            >
+              <IconWallet size={15} />
+              {m.admin.users.wallet}
+            </Button>
+            {isAdmin &&
+              (p.status === "active" ? (
+                <>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setStatusFor({ rep: p, status: "suspended" })}
+                    className="flex items-center gap-1.5 !text-warning"
+                  >
+                    <IconBlock size={15} />
+                    {m.admin.users.suspend}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => setStatusFor({ rep: p, status: "blocked" })}
+                    className="flex items-center gap-1.5"
+                  >
+                    <IconBlock size={15} />
+                    {m.admin.users.block}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="secondary"
+                  onClick={() => void setStatus(p, "active")}
+                  className="flex items-center gap-1.5"
+                >
+                  <IconUnblock size={15} />
+                  {m.admin.users.activate}
+                </Button>
+              ))}
+          </>
         )}
       />
 
       {walletFor && (
         <WalletModal user={walletFor} onClose={() => setWalletFor(null)} isAdmin={canWallet} />
       )}
+      {statusFor && (
+        <Modal
+          open
+          onClose={() => setStatusFor(null)}
+          title={m.admin.users.statusReasonTitle.replace(
+            "{action}",
+            statusFor.status === "suspended" ? m.admin.users.suspend : m.admin.users.block
+          )}
+        >
+          <StatusReasonForm
+            status={statusFor.status}
+            onSubmit={(reason) => setStatus(statusFor.rep, statusFor.status, reason)}
+            onClose={() => setStatusFor(null)}
+          />
+        </Modal>
+      )}
     </div>
+  );
+}
+
+function StatusReasonForm({
+  status,
+  onSubmit,
+  onClose,
+}: {
+  status: string;
+  onSubmit: (reason: string) => void;
+  onClose: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const label = status === "suspended" ? m.admin.users.suspend : m.admin.users.block;
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(reason);
+      }}
+      className="space-y-4"
+    >
+      <Input
+        id="rep-status-reason"
+        label={m.admin.users.statusReasonLabel}
+        required
+        autoFocus
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+      />
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={onClose}>
+          {m.common.cancel}
+        </Button>
+        <Button type="submit" variant={status === "blocked" ? "danger" : "primary"}>
+          {label}
+        </Button>
+      </div>
+    </form>
   );
 }

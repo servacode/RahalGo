@@ -26,6 +26,9 @@ export {
   ShoppingBasket as IconOrder,
   LifeBuoy as IconSupport,
   Eye as IconView,
+  Link2 as IconLink,
+  QrCode as IconQr,
+  LayoutDashboard as IconOverview,
   Star as IconStar,
   MessageSquare as IconReply,
   // الإجراءات
