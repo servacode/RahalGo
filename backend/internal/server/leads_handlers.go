@@ -99,42 +99,36 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 		}
 		categoryID = &req.CategoryID
 	}
-	// سياسة المنصة: لا تسجيل متجر عشوائي — يجب أن يكون عبر مندوب صالح وفعّال.
-	// لا كود، أو كود لمندوب موقوف/محظور/غير موجود → يُرفض (لا طلبات يتيمة).
-	rep, err := s.identity.SalesRepByInviteCode(r.Context(), req.Ref)
-	if err != nil {
-		s.respondErr(w, err) // ErrInvalidInviteCode
-		return
-	}
-	if rep.Status != "active" {
-		s.respondErr(w, identity.ErrInvalidInviteCode)
-		return
+	// الإسناد: كود مندوب صالح وفعّال → يُنسب له. غير ذلك (لا كود/كود المنصة/كود
+	// خاطئ) → تسجيل مباشر منسوب للمنصة (لا رفض) — الإنشاء الفعلي عند موافقة الإدارة.
+	var repID *string
+	if rep, err := s.identity.SalesRepByInviteCode(r.Context(), req.Ref); err == nil && rep.Status == "active" {
+		repID = &rep.ID
 	}
 	if _, err := s.pg.Exec(r.Context(), `
 		INSERT INTO merchant_leads
 			(store_name, owner_name, phone, area, category_id, lat, lng, owner_password_hash, sales_rep_user_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		req.StoreName, req.OwnerName, phone, req.Area,
-		categoryID, req.Lat, req.Lng, pwHash, rep.ID); err != nil {
+		categoryID, req.Lat, req.Lng, pwHash, repID); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusCreated, map[string]any{"received": true})
 }
 
-// handlePublicRep يتحقق من كود مندوب ويعيد اسمه لواجهة التسجيل — عام، بلا بيانات حساسة.
-// تفشل إن لم يكن الكود لمندوب فعّال، فتمنع الواجهة عرض النموذج أصلاً.
-func (s *Server) handlePublicRep(w http.ResponseWriter, r *http.Request) {
-	rep, err := s.identity.SalesRepByInviteCode(r.Context(), chi.URLParam(r, "code"))
-	if err != nil || rep.Status != "active" {
-		s.respondErr(w, httpx.ErrNotFound)
-		return
+// handlePublicInvite يعيد كود الدعوة الذي يُعرض في نموذج التسجيل (للقراءة فقط):
+// كود المندوب إن كان صالحاً وفعّالاً، وإلا كود المنصة الافتراضي (تسجيل مباشر).
+func (s *Server) handlePublicInvite(w http.ResponseWriter, r *http.Request) {
+	ref := r.URL.Query().Get("ref")
+	if ref != "" {
+		if rep, err := s.identity.SalesRepByInviteCode(r.Context(), ref); err == nil && rep.Status == "active" {
+			httpx.JSON(w, http.StatusOK, map[string]any{"code": ref, "by": "rep"})
+			return
+		}
 	}
-	name := rep.FullName
-	if name == "" {
-		name = "مندوب رحال غو"
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"name": name})
+	code := s.settings.GetString(r.Context(), "platform.invite_code", "RAHALGO")
+	httpx.JSON(w, http.StatusOK, map[string]any{"code": code, "by": "platform"})
 }
 
 type lead struct {

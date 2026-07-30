@@ -98,7 +98,7 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/home", s.handlePublicHome)
 		r.Get("/public/merchants/{id}", s.handlePublicMerchant)
 		r.Get("/public/zone", s.handlePublicZone)
-		r.Get("/public/rep/{code}", s.handlePublicRep)
+		r.Get("/public/invite", s.handlePublicInvite)
 		r.Post("/public/join", s.handlePublicJoin)
 
 		// نقاط الزبون — الطلب حصراً من هنا (قرار 18)

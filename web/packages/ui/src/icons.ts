@@ -26,6 +26,8 @@ export {
   ShoppingBasket as IconOrder,
   LifeBuoy as IconSupport,
   Eye as IconView,
+  EyeOff as IconViewOff,
+  LocateFixed as IconLocateMe,
   Link2 as IconLink,
   QrCode as IconQr,
   LayoutDashboard as IconOverview,

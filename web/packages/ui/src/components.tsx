@@ -5,7 +5,8 @@
  * كل الأنماط من توكنز الثيم المركزي، وكلها RTL-جاهزة (خصائص منطقية فقط).
  */
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { IconView, IconViewOff } from "./icons";
 
 // ---------- Button ----------
 
@@ -39,6 +40,7 @@ export function Input({
   icon,
   id,
   className = "",
+  type,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & {
   label?: string;
@@ -46,6 +48,10 @@ export function Input({
   /** أيقونة معبرة تظهر داخل الحقل (جهة البداية) */
   icon?: ReactNode;
 }) {
+  // حقول كلمات المرور تحصل تلقائياً على زر إظهار/إخفاء (جهة النهاية).
+  const [reveal, setReveal] = useState(false);
+  const isPassword = type === "password";
+  const effectiveType = isPassword && reveal ? "text" : type;
   return (
     <div>
       {label && (
@@ -62,11 +68,23 @@ export function Input({
         )}
         <input
           id={id}
+          type={effectiveType}
           {...props}
           className={`w-full rounded-control border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 ${
             error ? "border-danger" : "border-line"
-          } ${!label && icon ? "ps-9" : ""} ${className}`}
+          } ${!label && icon ? "ps-9" : ""} ${isPassword ? "pe-10" : ""} ${className}`}
         />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setReveal((r) => !r)}
+            tabIndex={-1}
+            aria-label={reveal ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+            className="absolute inset-y-0 end-3 flex items-center text-ink-muted transition-colors hover:text-ink [&>svg]:h-4 [&>svg]:w-4"
+          >
+            {reveal ? <IconViewOff /> : <IconView />}
+          </button>
+        )}
       </div>
       {error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
