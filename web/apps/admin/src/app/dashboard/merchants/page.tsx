@@ -31,6 +31,7 @@ import {
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import ImageUpload, { MediaThumb } from "@/components/ImageUpload";
 
 const m = getMessages(defaultLocale);
 
@@ -56,6 +57,8 @@ interface Merchant {
   sales_rep_code: string | null;
   lat: number | null;
   lng: number | null;
+  logo_url: string | null;
+  logo_thumb_url: string | null;
   status: string;
   commission_percent: number;
   emergency_closed: boolean;
@@ -160,9 +163,12 @@ export default function MerchantsPage() {
       icon: <IconStore />,
       primary: true,
       cell: (mr) => (
-        <span className="inline-flex items-center gap-1.5">
-          <span>{mr.category_icon}</span>
-          {mr.name}
+        <span className="inline-flex items-center gap-2">
+          <MediaThumb url={mr.logo_thumb_url} alt={mr.name} fallback={mr.name} size={34} />
+          <span className="inline-flex items-center gap-1.5">
+            <span>{mr.category_icon}</span>
+            {mr.name}
+          </span>
         </span>
       ),
     },
@@ -524,6 +530,8 @@ function MerchantModal({
   const [lat, setLat] = useState<number | null>(merchant?.lat ?? null);
   const [lng, setLng] = useState<number | null>(merchant?.lng ?? null);
   const [commission, setCommission] = useState(String(merchant?.commission_percent ?? 10));
+  // null = لم يُلمس (لا يُرسل)، "" = إزالة، معرف = شعار جديد
+  const [logoID, setLogoID] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -542,6 +550,7 @@ function MerchantModal({
       lat,
       lng,
       commission_percent: Number(commission) || 0,
+      ...(logoID !== null ? { logo_media_id: logoID } : {}),
     };
     try {
       if (merchant) {
@@ -613,6 +622,12 @@ function MerchantModal({
               max="100"
               value={commission}
               onChange={(e) => setCommission(e.target.value)}
+            />
+            <ImageUpload
+              kind="merchant_logo"
+              label={m.admin.merchants.logo}
+              initialUrl={merchant?.logo_thumb_url}
+              onChange={setLogoID}
             />
           </div>
         </FormSection>

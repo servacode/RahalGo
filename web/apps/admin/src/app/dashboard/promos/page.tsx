@@ -20,7 +20,8 @@ import {
   IconDelete,
   IconEdit,
 } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, mediaUrl } from "@/lib/api";
+import ImageUpload from "@/components/ImageUpload";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
@@ -43,7 +44,8 @@ interface Promo {
 interface Banner {
   id: string;
   title: string;
-  image_url: string;
+  image_url: string | null;
+  image_thumb_url: string | null;
   target: string;
   sort_order: number;
   active: boolean;
@@ -434,7 +436,11 @@ function BannersTab({ isAdmin }: { isAdmin: boolean }) {
             <div className="flex h-32 items-center justify-center bg-primary-light">
               {b.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={b.image_url} alt={b.title} className="h-full w-full object-cover" />
+                <img
+                  src={mediaUrl(b.image_url) ?? ""}
+                  alt={b.title}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <IconPromos size={40} className="text-primary/40" />
               )}
@@ -487,7 +493,8 @@ function BannerModal({
   onSaved: () => void;
 }) {
   const [title, setTitle] = useState(banner?.title ?? "");
-  const [imageURL, setImageURL] = useState(banner?.image_url ?? "");
+  // null = لم تُلمس (لا تُرسل)، "" = إزالة، معرف = صورة جديدة
+  const [imageID, setImageID] = useState<string | null>(null);
   const [target, setTarget] = useState(banner?.target ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -496,7 +503,11 @@ function BannerModal({
     e.preventDefault();
     setBusy(true);
     setError("");
-    const body = { title, image_url: imageURL, target };
+    const body = {
+      title,
+      target,
+      ...(imageID !== null ? { image_media_id: imageID } : {}),
+    };
     try {
       if (banner) {
         await api(`/api/v1/admin/banners/${banner.id}`, {
@@ -524,13 +535,11 @@ function BannerModal({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <Input
-          id="b-image"
+        <ImageUpload
+          kind="banner"
           label={m.admin.promos.bannerImage}
-          dir="ltr"
-          value={imageURL}
-          onChange={(e) => setImageURL(e.target.value)}
-          placeholder="https://…"
+          initialUrl={banner?.image_thumb_url}
+          onChange={setImageID}
         />
         <Input
           id="b-target"

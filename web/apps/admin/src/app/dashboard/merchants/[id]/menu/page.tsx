@@ -15,6 +15,7 @@ import {
   IconStore,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
+import ImageUpload, { MediaThumb } from "@/components/ImageUpload";
 
 const m = getMessages(defaultLocale);
 const fmt = new Intl.NumberFormat("ar-SY");
@@ -35,6 +36,8 @@ interface MenuItem {
   name: string;
   description: string;
   price: number;
+  image_url: string | null;
+  image_thumb_url: string | null;
   available: boolean;
   modifiers: ModifierGroup[];
 }
@@ -206,6 +209,12 @@ export default function MenuPage() {
               <ul className="divide-y divide-line">
                 {sec.items.map((item) => (
                   <li key={item.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <MediaThumb
+                      url={item.image_thumb_url}
+                      alt={item.name}
+                      fallback={item.name}
+                      size={48}
+                    />
                     <div className="min-w-48 flex-1">
                       <p className={`font-medium ${item.available ? "" : "text-ink-muted line-through"}`}>
                         {item.name}
@@ -289,6 +298,8 @@ function ItemModal({
   const [groups, setGroups] = useState<ModifierGroup[]>(
     item?.modifiers.map((g) => ({ ...g, options: [...g.options] })) ?? [],
   );
+  // null = لم تُلمس (لا تُرسل)، "" = إزالة، معرف = صورة جديدة
+  const [imageID, setImageID] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -315,6 +326,7 @@ function ItemModal({
       description,
       price: Number(price) || 0,
       modifiers: groups,
+      ...(imageID !== null ? { image_media_id: imageID } : {}),
     };
     try {
       if (item) {
@@ -374,6 +386,12 @@ function ItemModal({
           label={m.admin.menu.itemDescription}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+        />
+        <ImageUpload
+          kind="menu_item"
+          label={m.admin.menu.itemImage}
+          initialUrl={item?.image_thumb_url}
+          onChange={setImageID}
         />
 
         <div>

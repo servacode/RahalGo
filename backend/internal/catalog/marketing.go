@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
 // أكواد الخصم والبانرات — تُدار من اللوحة بالكامل.
@@ -123,81 +124,102 @@ func (s *Service) UpdatePromo(ctx context.Context, actorID, id string, in PromoI
 // ---------- البانرات ----------
 
 type Banner struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	ImageURL  string `json:"image_url"`
-	Target    string `json:"target"`
-	SortOrder int    `json:"sort_order"`
-	Active    bool   `json:"active"`
+	ID            string  `json:"id"`
+	Title         string  `json:"title"`
+	ImageURL      *string `json:"image_url"`
+	ImageThumbURL *string `json:"image_thumb_url"`
+	Target        string  `json:"target"`
+	SortOrder     int     `json:"sort_order"`
+	Active        bool    `json:"active"`
+}
+
+const bannerSelect = `
+	SELECT b.id, b.title, bm.path, bm.thumb_path, b.target, b.sort_order, b.active
+	FROM banners b
+	LEFT JOIN media bm ON bm.id = b.image_media_id`
+
+func scanBanner(row pgx.Row) (*Banner, error) {
+	var b Banner
+	if err := row.Scan(&b.ID, &b.Title, &b.ImageURL, &b.ImageThumbURL,
+		&b.Target, &b.SortOrder, &b.Active); err != nil {
+		return nil, err
+	}
+	b.ImageURL = media.URLForPtr(b.ImageURL)
+	b.ImageThumbURL = media.URLForPtr(b.ImageThumbURL)
+	return &b, nil
 }
 
 func (s *Service) ListBanners(ctx context.Context) ([]Banner, error) {
-	rows, err := s.db.Query(ctx, `
-		SELECT id, title, image_url, target, sort_order, active
-		FROM banners ORDER BY sort_order, created_at`)
+	rows, err := s.db.Query(ctx, bannerSelect+` ORDER BY b.sort_order, b.created_at`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	out := []Banner{}
 	for rows.Next() {
-		var b Banner
-		if err := rows.Scan(&b.ID, &b.Title, &b.ImageURL, &b.Target, &b.SortOrder, &b.Active); err != nil {
+		b, err := scanBanner(rows)
+		if err != nil {
 			return nil, err
 		}
-		out = append(out, b)
+		out = append(out, *b)
 	}
 	return out, rows.Err()
 }
 
 type BannerInput struct {
-	Title     *string `json:"title"`
-	ImageURL  *string `json:"image_url"`
-	Target    *string `json:"target"`
-	SortOrder *int    `json:"sort_order"`
-	Active    *bool   `json:"active"`
+	Title *string `json:"title"`
+	// معرف وسائط الصورة: غير مُرسل = بلا تغيير، "" = إزالة الصورة
+	ImageMediaID *string `json:"image_media_id"`
+	Target       *string `json:"target"`
+	SortOrder    *int    `json:"sort_order"`
+	Active       *bool   `json:"active"`
 }
 
 func (s *Service) CreateBanner(ctx context.Context, actorID string, in BannerInput, ip string) (*Banner, error) {
 	if in.Title == nil || *in.Title == "" {
 		return nil, ErrNameRequired
 	}
-	var b Banner
+	var id string
 	err := s.db.QueryRow(ctx, `
-		INSERT INTO banners (title, image_url, target, sort_order)
-		VALUES ($1, COALESCE($2,''), COALESCE($3,''),
+		INSERT INTO banners (title, image_media_id, target, sort_order)
+		VALUES ($1, NULLIF(COALESCE($2,''), '')::uuid, COALESCE($3,''),
 		        COALESCE($4, (SELECT COALESCE(max(sort_order)+1,1) FROM banners)))
-		RETURNING id, title, image_url, target, sort_order, active`,
-		*in.Title, in.ImageURL, in.Target, in.SortOrder).
-		Scan(&b.ID, &b.Title, &b.ImageURL, &b.Target, &b.SortOrder, &b.Active)
+		RETURNING id`,
+		*in.Title, in.ImageMediaID, in.Target, in.SortOrder).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
-	s.audit(ctx, actorID, "admin.banner_create", "banner", b.ID, ip)
-	return &b, nil
+	s.audit(ctx, actorID, "admin.banner_create", "banner", id, ip)
+	return s.bannerByID(ctx, id)
 }
 
 func (s *Service) UpdateBanner(ctx context.Context, actorID, id string, in BannerInput, ip string) (*Banner, error) {
-	var b Banner
-	err := s.db.QueryRow(ctx, `
+	tag, err := s.db.Exec(ctx, `
 		UPDATE banners SET
 			title      = COALESCE($2, title),
-			image_url  = COALESCE($3, image_url),
+			image_media_id = CASE WHEN $3::text IS NULL THEN image_media_id
+			                      ELSE NULLIF($3, '')::uuid END,
 			target     = COALESCE($4, target),
 			sort_order = COALESCE($5, sort_order),
 			active     = COALESCE($6, active)
-		WHERE id = $1
-		RETURNING id, title, image_url, target, sort_order, active`,
-		id, in.Title, in.ImageURL, in.Target, in.SortOrder, in.Active).
-		Scan(&b.ID, &b.Title, &b.ImageURL, &b.Target, &b.SortOrder, &b.Active)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, httpx.ErrNotFound
-	}
+		WHERE id = $1`,
+		id, in.Title, in.ImageMediaID, in.Target, in.SortOrder, in.Active)
 	if err != nil {
 		return nil, err
 	}
+	if tag.RowsAffected() == 0 {
+		return nil, httpx.ErrNotFound
+	}
 	s.audit(ctx, actorID, "admin.banner_update", "banner", id, ip)
-	return &b, nil
+	return s.bannerByID(ctx, id)
+}
+
+func (s *Service) bannerByID(ctx context.Context, id string) (*Banner, error) {
+	b, err := scanBanner(s.db.QueryRow(ctx, bannerSelect+` WHERE b.id = $1`, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound
+	}
+	return b, err
 }
 
 func (s *Service) DeleteBanner(ctx context.Context, actorID, id, ip string) error {

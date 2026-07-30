@@ -19,6 +19,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -39,6 +40,7 @@ type Server struct {
 	orders    *orders.Service
 	cashbox   *cashbox.Service
 	support   *support.Service
+	media     *media.Service
 	hub       *realtime.Hub
 	otpStatus func() map[string]any
 }
@@ -46,12 +48,12 @@ type Server struct {
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
 	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
-	cashboxSvc *cashbox.Service, supportSvc *support.Service,
+	cashboxSvc *cashbox.Service, supportSvc *support.Service, mediaSvc *media.Service,
 	hub *realtime.Hub, otpStatus func() map[string]any) *Server {
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
-		hub: hub, otpStatus: otpStatus}
+		media: mediaSvc, hub: hub, otpStatus: otpStatus}
 }
 
 func (s *Server) Router() http.Handler {
@@ -70,6 +72,9 @@ func (s *Server) Router() http.Handler {
 	}))
 
 	r.Get("/healthz", s.handleHealth)
+
+	// الوسائط المرفوعة (صور عامة بأسماء uuid) — تخزين مؤقت طويل
+	r.Handle("/media/*", http.StripPrefix("/media/", s.media.FileServer()))
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/ws", s.handleWS)
@@ -99,6 +104,7 @@ func (s *Server) Router() http.Handler {
 				httpx.JSON(w, http.StatusOK, s.otpStatus())
 			})
 
+			r.Post("/media", s.handleUploadMedia)
 			r.Get("/users", s.handleAdminListUsers)
 			r.Get("/categories", s.handleListCategories)
 			r.Get("/merchants", s.handleListMerchants)

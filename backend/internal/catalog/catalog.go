@@ -13,6 +13,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
 var (
@@ -43,6 +44,8 @@ type Merchant struct {
 	SalesRepCode    *string   `json:"sales_rep_code"`
 	Lat             *float64  `json:"lat"`
 	Lng             *float64  `json:"lng"`
+	LogoURL         *string   `json:"logo_url"`
+	LogoThumbURL    *string   `json:"logo_thumb_url"`
 	Status          string    `json:"status"`
 	CommissionPct   int       `json:"commission_percent"`
 	EmergencyClosed bool      `json:"emergency_closed"`
@@ -140,20 +143,25 @@ const merchantSelect = `
 	SELECT m.id, m.name, m.description, m.category_id, c.name, c.icon,
 	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone, sr.invite_code,
 	       ST_Y(m.location::geometry), ST_X(m.location::geometry),
+	       lm.path, lm.thumb_path,
 	       m.status, m.commission_percent, m.emergency_closed, m.created_at
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
-	LEFT JOIN users sr ON sr.id = m.sales_rep_user_id`
+	LEFT JOIN users sr ON sr.id = m.sales_rep_user_id
+	LEFT JOIN media lm ON lm.id = m.logo_media_id`
 
 func scanMerchant(row pgx.Row) (*Merchant, error) {
 	var m Merchant
 	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
-		&m.Lat, &m.Lng, &m.Status, &m.CommissionPct, &m.EmergencyClosed, &m.CreatedAt)
+		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
+		&m.Status, &m.CommissionPct, &m.EmergencyClosed, &m.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
+	m.LogoURL = media.URLForPtr(m.LogoURL)
+	m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
 	return &m, nil
 }
 
@@ -209,6 +217,8 @@ type MerchantInput struct {
 	SalesRepCode    *string  `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
 	Lat             *float64 `json:"lat"`            // دبوس الموقع على الخريطة
 	Lng             *float64 `json:"lng"`
+	// معرف وسائط الشعار: غير مُرسل = بلا تغيير، "" = إزالة الشعار
+	LogoMediaID *string `json:"logo_media_id"`
 }
 
 func (s *Service) CreateMerchant(ctx context.Context, actorID string, in MerchantInput, ip string) (*Merchant, error) {
@@ -226,12 +236,13 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 
 	var id string
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location)
+		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location, logo_media_id)
 		VALUES ($1, COALESCE($2,''), $3, COALESCE($4,''), COALESCE($5,''), $6, $7,
 		        CASE WHEN $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
-		             THEN ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography END)
+		             THEN ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography END,
+		        NULLIF(COALESCE($10, ''), '')::uuid)
 		RETURNING id`,
-		*in.Name, in.Description, *in.CategoryID, in.Phone, in.AddressText, ownerID, repID, in.Lat, in.Lng).Scan(&id)
+		*in.Name, in.Description, *in.CategoryID, in.Phone, in.AddressText, ownerID, repID, in.Lat, in.Lng, in.LogoMediaID).Scan(&id)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}
@@ -271,9 +282,11 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 				CASE WHEN $11::float8 IS NOT NULL AND $12::float8 IS NOT NULL
 				     THEN ST_SetSRID(ST_MakePoint($12::float8, $11::float8), 4326)::geography END,
 				location),
+			logo_media_id = CASE WHEN $14::text IS NULL THEN logo_media_id
+			                     ELSE NULLIF($14, '')::uuid END,
 			updated_at    = now()
 		WHERE id = $1`,
-		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct)
+		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct, in.LogoMediaID)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}

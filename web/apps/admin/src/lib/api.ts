@@ -5,6 +5,12 @@
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+/** يحوّل مسار وسائط نسبياً من الخادم (/media/...) إلى رابط كامل */
+export function mediaUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return path.startsWith("http") ? path : `${API_URL}${path}`;
+}
+
 export interface ApiErrorBody {
   code: string;
   message_key: string;
@@ -64,7 +70,8 @@ export const tokenStore = {
 
 async function rawRequest<T>(path: string, init: RequestInit = {}, token?: string | null): Promise<T> {
   const headers = new Headers(init.headers);
-  headers.set("Content-Type", "application/json");
+  // FormData يضبط ترويسته بنفسه (حد الأجزاء multipart)
+  if (!(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });

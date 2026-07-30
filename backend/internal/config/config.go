@@ -17,6 +17,7 @@ type Config struct {
 	JWTSecret   string
 	OTPProvider string // dev | whatsapp
 	AdminPhone  string // هاتف أول أدمن — يُمنح الدور تلقائياً عند الإقلاع
+	UploadsDir  string // مجلد تخزين الوسائط المرفوعة (خارج الحاوية في الإنتاج)
 }
 
 func Load() (*Config, error) {
@@ -28,6 +29,7 @@ func Load() (*Config, error) {
 		JWTSecret:   getEnv("JWT_SECRET", "dev-secret-change-me"),
 		OTPProvider: getEnv("OTP_PROVIDER", "dev"),
 		AdminPhone:  getEnv("ADMIN_PHONE", ""),
+		UploadsDir:  getEnv("UPLOADS_DIR", "./uploads"),
 	}
 
 	if cfg.Env == "production" {

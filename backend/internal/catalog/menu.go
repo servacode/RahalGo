@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
 // نموذج القائمة الكامل: أقسام ← أصناف ← مجموعات مُعدِّلات ← خيارات.
@@ -32,15 +33,16 @@ type ModifierGroup struct {
 }
 
 type MenuItem struct {
-	ID          string          `json:"id"`
-	SectionID   string          `json:"section_id"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Price       int64           `json:"price"`
-	ImageURL    string          `json:"image_url"`
-	Available   bool            `json:"available"`
-	SortOrder   int             `json:"sort_order"`
-	Modifiers   []ModifierGroup `json:"modifiers"`
+	ID            string          `json:"id"`
+	SectionID     string          `json:"section_id"`
+	Name          string          `json:"name"`
+	Description   string          `json:"description"`
+	Price         int64           `json:"price"`
+	ImageURL      *string         `json:"image_url"`
+	ImageThumbURL *string         `json:"image_thumb_url"`
+	Available     bool            `json:"available"`
+	SortOrder     int             `json:"sort_order"`
+	Modifiers     []ModifierGroup `json:"modifiers"`
 }
 
 type MenuSection struct {
@@ -81,18 +83,23 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 
 	itemIdx := map[string][2]int{} // itemID → (sectionIdx, itemIdx)
 	rows, err = s.db.Query(ctx, `
-		SELECT id, section_id, name, description, price, image_url, available, sort_order
-		FROM menu_items WHERE merchant_id = $1 ORDER BY sort_order, created_at`, merchantID)
+		SELECT i.id, i.section_id, i.name, i.description, i.price,
+		       im.path, im.thumb_path, i.available, i.sort_order
+		FROM menu_items i
+		LEFT JOIN media im ON im.id = i.image_media_id
+		WHERE i.merchant_id = $1 ORDER BY i.sort_order, i.created_at`, merchantID)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var it MenuItem
 		if err := rows.Scan(&it.ID, &it.SectionID, &it.Name, &it.Description,
-			&it.Price, &it.ImageURL, &it.Available, &it.SortOrder); err != nil {
+			&it.Price, &it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder); err != nil {
 			rows.Close()
 			return nil, err
 		}
+		it.ImageURL = media.URLForPtr(it.ImageURL)
+		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.Modifiers = []ModifierGroup{}
 		si, ok := secIdx[it.SectionID]
 		if !ok {
@@ -225,6 +232,8 @@ type MenuItemInput struct {
 	Description *string `json:"description"`
 	Price       *int64  `json:"price"`
 	Available   *bool   `json:"available"`
+	// معرف وسائط الصورة: غير مُرسل = بلا تغيير، "" = إزالة الصورة
+	ImageMediaID *string `json:"image_media_id"`
 	// إن أُرسلت (حتى فارغة) تُستبدل شجرة المُعدِّلات بالكامل
 	Modifiers *[]ModifierGroupInput `json:"modifiers"`
 }
@@ -241,12 +250,12 @@ func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in
 
 	var id string
 	err = tx.QueryRow(ctx, `
-		INSERT INTO menu_items (merchant_id, section_id, name, description, price, sort_order)
-		SELECT $1, $2, $3, COALESCE($4,''), $5,
+		INSERT INTO menu_items (merchant_id, section_id, name, description, price, image_media_id, sort_order)
+		SELECT $1, $2, $3, COALESCE($4,''), $5, NULLIF(COALESCE($6, ''), '')::uuid,
 		       COALESCE((SELECT max(sort_order)+1 FROM menu_items WHERE section_id=$2), 1)
 		WHERE EXISTS (SELECT 1 FROM menu_sections WHERE id = $2 AND merchant_id = $1)
 		RETURNING id`,
-		merchantID, *in.SectionID, *in.Name, in.Description, *in.Price).Scan(&id)
+		merchantID, *in.SectionID, *in.Name, in.Description, *in.Price, in.ImageMediaID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", httpx.ErrNotFound
 	}
@@ -279,9 +288,11 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 			description = COALESCE($4, description),
 			price       = COALESCE($5, price),
 			available   = COALESCE($6, available),
+			image_media_id = CASE WHEN $7::text IS NULL THEN image_media_id
+			                      ELSE NULLIF($7, '')::uuid END,
 			updated_at  = now()
 		WHERE id = $1`,
-		itemID, in.SectionID, in.Name, in.Description, in.Price, in.Available)
+		itemID, in.SectionID, in.Name, in.Description, in.Price, in.Available, in.ImageMediaID)
 	if err != nil {
 		return err
 	}
