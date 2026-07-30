@@ -18,6 +18,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
@@ -32,15 +33,17 @@ type Server struct {
 	catalog   *catalog.Service
 	settings  *settings.Store
 	wallet    *wallet.Service
+	orders    *orders.Service
 	otpStatus func() map[string]any
 }
 
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
-	settingsStore *settings.Store, walletSvc *wallet.Service, otpStatus func() map[string]any) *Server {
+	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
+	otpStatus func() map[string]any) *Server {
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
-		wallet: walletSvc, otpStatus: otpStatus}
+		wallet: walletSvc, orders: ordersSvc, otpStatus: otpStatus}
 }
 
 func (s *Server) Router() http.Handler {
@@ -96,6 +99,13 @@ func (s *Server) Router() http.Handler {
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/users/{id}/wallet", s.handleAdminWalletApply)
+
+			// الطلبات — غرفة العمليات
+			r.Get("/orders", s.handleListOrders)
+			r.Get("/orders/{id}", s.handleGetOrder)
+			r.Post("/orders", s.handleCreateOrder)
+			r.Post("/orders/{id}/transition", s.handleOrderTransition)
+			r.Post("/orders/{id}/assign", s.handleOrderAssign)
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRoles("admin"))
 				r.Post("/users", s.handleAdminCreateUser)

@@ -1,0 +1,108 @@
+package orders
+
+import (
+	"encoding/json"
+	"net/http"
+	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/httpx"
+)
+
+var (
+	ErrMerchantClosed  = httpx.NewError(http.StatusConflict, "merchant_closed", "errors.merchant_closed")
+	ErrItemUnavailable = httpx.NewError(http.StatusConflict, "item_unavailable", "errors.item_unavailable")
+	ErrBadItems        = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
+	ErrOutOfZone       = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
+	ErrBelowMinOrder   = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
+	ErrInvalidPromo    = httpx.NewError(http.StatusBadRequest, "invalid_promo", "errors.invalid_promo")
+	ErrBadTransition   = httpx.NewError(http.StatusConflict, "invalid_transition", "errors.invalid_transition")
+	ErrNeedsDriver     = httpx.NewError(http.StatusConflict, "driver_required", "errors.driver_required")
+)
+
+type OptionSnapshot struct {
+	Group      string `json:"group"`
+	Name       string `json:"name"`
+	PriceDelta int64  `json:"price_delta"`
+}
+
+type OrderItem struct {
+	ID         string           `json:"id"`
+	MenuItemID *string          `json:"menu_item_id"`
+	Name       string           `json:"name"`
+	UnitPrice  int64            `json:"unit_price"`
+	Qty        int              `json:"qty"`
+	Note       string           `json:"note"`
+	Options    []OptionSnapshot `json:"options"`
+}
+
+type Event struct {
+	FromStatus string    `json:"from_status"`
+	ToStatus   string    `json:"to_status"`
+	ActorID    *string   `json:"actor_id"`
+	Note       string    `json:"note"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+type Order struct {
+	ID            string      `json:"id"`
+	Number        int64       `json:"number"`
+	CustomerID    string      `json:"customer_id"`
+	CustomerPhone string      `json:"customer_phone"`
+	CustomerName  string      `json:"customer_name"`
+	MerchantID    string      `json:"merchant_id"`
+	MerchantName  string      `json:"merchant_name"`
+	DriverID      *string     `json:"driver_id"`
+	DriverPhone   *string     `json:"driver_phone"`
+	Status        string      `json:"status"`
+	AddressText   string      `json:"address_text"`
+	Lat           float64     `json:"lat"`
+	Lng           float64     `json:"lng"`
+	ZoneID        *string     `json:"zone_id"`
+	ZoneName      *string     `json:"zone_name"`
+	PaymentMethod string      `json:"payment_method"`
+	Subtotal      int64       `json:"subtotal"`
+	DeliveryFee   int64       `json:"delivery_fee"`
+	Discount      int64       `json:"discount"`
+	Total         int64       `json:"total"`
+	WalletPaid    int64       `json:"wallet_paid"`
+	CashDue       int64       `json:"cash_due"`
+	PromoCode     *string     `json:"promo_code"`
+	Notes         string      `json:"notes"`
+	CancelReason  string      `json:"cancel_reason"`
+	Items         []OrderItem `json:"items,omitempty"`
+	Events        []Event     `json:"events,omitempty"`
+	CreatedAt     time.Time   `json:"created_at"`
+}
+
+type OrderPage struct {
+	Orders  []Order `json:"orders"`
+	Total   int     `json:"total"`
+	Page    int     `json:"page"`
+	PerPage int     `json:"per_page"`
+}
+
+// CreateInput مدخلات إنشاء الطلب — الأسعار تُحسب في الخادم حصراً، لا تُقبل من العميل.
+type CreateInput struct {
+	CustomerPhone string      `json:"customer_phone"` // للطلب الهاتفي بالنيابة
+	CustomerID    string      `json:"customer_id"`    // أو معرف مباشر
+	MerchantID    string      `json:"merchant_id"`
+	Items         []ItemInput `json:"items"`
+	AddressText   string      `json:"address_text"`
+	Lat           float64     `json:"lat"`
+	Lng           float64     `json:"lng"`
+	PaymentMethod string      `json:"payment_method"` // cash | wallet | mixed
+	PromoCode     string      `json:"promo_code"`
+	Notes         string      `json:"notes"`
+}
+
+type ItemInput struct {
+	MenuItemID string   `json:"menu_item_id"`
+	Qty        int      `json:"qty"`
+	Note       string   `json:"note"`
+	OptionIDs  []string `json:"option_ids"`
+}
+
+func marshalOptions(opts []OptionSnapshot) []byte {
+	b, _ := json.Marshal(opts)
+	return b
+}
