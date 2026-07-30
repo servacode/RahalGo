@@ -1,0 +1,42 @@
+/*
+ * ثيم Tailwind CSS v4 المركزي — يُستورد في كل تطبيق ويب:
+ *   @import "tailwindcss";
+ *   @import "@rahalgo/ui/theme.css";
+ *
+ * القيم مرآة لـ tokens.ts (المصدر: docs/BRAND.md).
+ * فتصبح متاحة كفئات: bg-primary, text-accent, rounded-card, ...
+ */
+@theme {
+  /* ألوان العلامة */
+  --color-primary: #0e7490;
+  --color-primary-dark: #155e75;
+  --color-primary-light: #ecfeff;
+  --color-accent: #f59e0b;
+  --color-accent-dark: #d97706;
+
+  /* الألوان الوظيفية (الحالات) */
+  --color-success: #16a34a;
+  --color-warning: #eab308;
+  --color-danger: #dc2626;
+  --color-info: #0284c7;
+
+  /* المحايدة */
+  --color-ink: #1e293b;
+  --color-ink-muted: #64748b;
+  --color-line: #e2e8f0;
+  --color-surface: #ffffff;
+  --color-page: #f8fafc;
+
+  /* الخط المعتمد */
+  --font-sans: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif;
+
+  /* الزوايا */
+  --radius-control: 8px;
+  --radius-card: 16px;
+
+  /* نقاط القياس الموحدة */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+}

@@ -1,0 +1,35 @@
+# Secrets & env
+.env
+.env.*
+!.env.example
+
+# Go
+backend/bin/
+*.exe
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# Android
+android/**/build/
+android/**/.gradle/
+android/**/local.properties
+*.apk
+*.aab
+
+# Databases & data
+*.db
+pgdata/
+redisdata/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

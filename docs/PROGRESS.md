@@ -17,6 +17,20 @@
 
 ## السجل التفصيلي
 
+### 2026-07-30 — المرحلة 0: الأساسات (شبه مكتملة) 🔄
+- هيكل Monorepo كامل: `backend/` `web/` `android/` `docs/` + `.gitignore` + `.editorconfig`.
+- **الخادم (Go)**: بنية طبقية، إعدادات بيئة، اتصالات PostgreSQL/Redis بمجمعات،
+  مشغّل هجرات مضمّن (schema_migrations)، صيغة استجابة/خطأ موحدة بمفاتيح ترجمة،
+  خادم HTTP بوسطاء (RequestID, CORS, Recoverer, Timeout) وإيقاف رشيق، نقطة `/healthz`.
+- **تم اختباره فعلياً**: إقلاع كامل مع قواعد بيانات حية، تطبيق هجرة postgis+citext،
+  فحص الصحة يرد `ok`، وصيغة الخطأ الموحدة تعمل.
+- **الويب**: مساحة عمل pnpm + Turborepo، حزمة `@rahalgo/tsconfig` (strict)،
+  حزمة `@rahalgo/ui` (توكنز TS + ثيم Tailwind v4 من BRAND.md)،
+  حزمة `@rahalgo/i18n` (العربية أساس، RTL، بنية مشتقة النوع لأي لغة جديدة) — Typecheck أخضر.
+- **Docker Compose** للتطوير (PostgreSQL+PostGIS، Redis بفحوصات صحة).
+- **CI** على GitHub Actions: مساران (Go: lint+build+test، Web: typecheck+build).
+- المتبقي من المرحلة 0: اعتماد اللوغو النهائي، وOpenAPI مع أول نقطة API (المرحلة 1).
+
 ### 2026-07-30 — مرحلة التأسيس ✅
 - بحث سوقي شامل: 45+ تطبيقاً (عالمي، عربي، تركي، سوري، الرقة).
 - تشريح كامل لآلية عمل منصات التوصيل (4 واجهات، دورة حياة الطلب، الأنظمة الخفية).

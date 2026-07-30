@@ -1,0 +1,4 @@
+{
+  "extends": "@rahalgo/tsconfig/base.json",
+  "include": ["src"]
+}

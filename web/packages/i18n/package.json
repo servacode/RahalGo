@@ -1,0 +1,17 @@
+{
+  "name": "@rahalgo/i18n",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./locales/*": "./src/locales/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@rahalgo/tsconfig": "workspace:*",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,37 @@
+# بيئة التطوير المحلية — RahalGo
+# التشغيل: docker compose up -d
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: rahalgo-postgres
+    environment:
+      POSTGRES_USER: rahalgo
+      POSTGRES_PASSWORD: rahalgo_dev
+      POSTGRES_DB: rahalgo
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rahalgo -d rahalgo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: rahalgo-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  redisdata:
