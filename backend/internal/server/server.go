@@ -108,6 +108,15 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/wallet", s.handleMyWallet)
 		})
 
+		// لوحة المندوب — دور المبيعات حصراً (قراءة: كوده ومتاجره وعمولاته)
+		r.Route("/rep", func(r chi.Router) {
+			r.Use(s.RequireAuth)
+			r.Use(s.RequireRoles("sales"))
+			r.Get("/me", s.handleRepMe)
+			r.Get("/merchants", s.handleRepMerchants)
+			r.Get("/wallet", s.handleRepWallet)
+		})
+
 		// بوابة المتجر — صاحب المتجر حصراً، وكل نقطة تتحقق من الملكية
 		r.Route("/merchant", func(r chi.Router) {
 			r.Use(s.RequireAuth)
