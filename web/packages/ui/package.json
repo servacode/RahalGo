@@ -10,8 +10,13 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
   "devDependencies": {
     "@rahalgo/tsconfig": "workspace:*",
+    "@types/react": "^19.2.6",
+    "react": "^19.2.0",
     "typescript": "^5.9.2"
   }
 }

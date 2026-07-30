@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "@rahalgo/ui/theme.css";
+/* مسح مصادر الحزمة المشتركة لتوليد فئات مكوناتها */
+@source "../../../../packages/ui/src";
 
 body {
   background-color: var(--color-page);

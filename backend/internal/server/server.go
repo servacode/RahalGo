@@ -67,12 +67,21 @@ func (s *Server) Router() http.Handler {
 			})
 		})
 
-		// نقاط الإدارة — أدمن/عمليات فقط
+		// نقاط الإدارة — أدمن/عمليات فقط، والتعديلات الحساسة للأدمن حصراً
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(s.RequireAuth)
 			r.Use(s.RequireRoles("admin", "ops"))
 			r.Get("/whatsapp", func(w http.ResponseWriter, _ *http.Request) {
 				httpx.JSON(w, http.StatusOK, s.otpStatus())
+			})
+
+			r.Get("/users", s.handleAdminListUsers)
+			r.Group(func(r chi.Router) {
+				r.Use(s.RequireRoles("admin"))
+				r.Post("/users", s.handleAdminCreateUser)
+				r.Patch("/users/{id}", s.handleAdminUpdateUser)
+				r.Post("/users/{id}/roles", s.handleAdminGrantRole)
+				r.Delete("/users/{id}/roles/{role}", s.handleAdminRevokeRole)
 			})
 		})
 	})

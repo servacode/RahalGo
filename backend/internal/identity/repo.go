@@ -74,6 +74,64 @@ func (r *Repo) CreateUserWithRole(ctx context.Context, phone, fullName, role str
 	return u, err
 }
 
+// ListUsers بحث وترشيح وترقيم صفحات لإدارة المستخدمين.
+func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset int) ([]User, int, error) {
+	where := `WHERE ($1 = '' OR u.phone ILIKE '%'||$1||'%' OR u.full_name ILIKE '%'||$1||'%')
+	          AND ($2 = '' OR EXISTS (SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id AND fr.role_code = $2))`
+
+	var total int
+	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where, query, role).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash IS NOT NULL, u.created_at,
+		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}')
+		FROM users u
+		LEFT JOIN user_roles ur ON ur.user_id = u.id
+		`+where+`
+		GROUP BY u.id
+		ORDER BY u.created_at DESC
+		LIMIT $3 OFFSET $4`, query, role, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	users := []User{}
+	for rows.Next() {
+		var u User
+		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.CreatedAt, &u.Roles); err != nil {
+			return nil, 0, err
+		}
+		users = append(users, u)
+	}
+	return users, total, rows.Err()
+}
+
+// UpdateUser يعدّل الاسم و/أو الحالة — يعيد ErrNotFound لمعرف غير موجود.
+func (r *Repo) UpdateUser(ctx context.Context, userID string, fullName, status *string) error {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE users SET
+			full_name = COALESCE($2, full_name),
+			status    = COALESCE($3, status),
+			updated_at = now()
+		WHERE id = $1`, userID, fullName, status)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *Repo) RevokeRole(ctx context.Context, userID, role string) error {
+	_, err := r.db.Exec(ctx,
+		`DELETE FROM user_roles WHERE user_id = $1 AND role_code = $2`, userID, role)
+	return err
+}
+
 func (r *Repo) GrantRole(ctx context.Context, userID, role string, grantedBy *string) error {
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO user_roles (user_id, role_code, granted_by) VALUES ($1, $2, $3)

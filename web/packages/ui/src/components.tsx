@@ -1,0 +1,154 @@
+"use client";
+
+/**
+ * مكونات الواجهة المشتركة — تُستخدم في كل تطبيقات الويب حصراً (GROUND-RULES §1.2).
+ * كل الأنماط من توكنز الثيم المركزي، وكلها RTL-جاهزة (خصائص منطقية فقط).
+ */
+
+import { useEffect, type ReactNode } from "react";
+
+// ---------- Button ----------
+
+const buttonVariants = {
+  primary: "bg-primary text-white hover:bg-primary-dark",
+  secondary: "border border-line bg-surface text-ink hover:bg-page",
+  danger: "bg-danger text-white hover:bg-danger/90",
+  ghost: "text-ink-muted hover:bg-page hover:text-ink",
+} as const;
+
+export function Button({
+  variant = "primary",
+  className = "",
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: keyof typeof buttonVariants;
+}) {
+  return (
+    <button
+      {...props}
+      className={`rounded-control px-4 py-2 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-60 ${buttonVariants[variant]} ${className}`}
+    />
+  );
+}
+
+// ---------- Input ----------
+
+export function Input({
+  label,
+  error,
+  id,
+  className = "",
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { label?: string; error?: string }) {
+  return (
+    <div>
+      {label && (
+        <label htmlFor={id} className="mb-1 block text-sm font-medium">
+          {label}
+        </label>
+      )}
+      <input
+        id={id}
+        {...props}
+        className={`w-full rounded-control border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+          error ? "border-danger" : "border-line"
+        } ${className}`}
+      />
+      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+// ---------- Select ----------
+
+export function Select({
+  label,
+  id,
+  className = "",
+  children,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
+  return (
+    <div>
+      {label && (
+        <label htmlFor={id} className="mb-1 block text-sm font-medium">
+          {label}
+        </label>
+      )}
+      <select
+        id={id}
+        {...props}
+        className={`w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${className}`}
+      >
+        {children}
+      </select>
+    </div>
+  );
+}
+
+// ---------- Badge ----------
+
+const badgeVariants = {
+  neutral: "bg-page text-ink-muted",
+  primary: "bg-primary-light text-primary-dark",
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/10 text-warning",
+  danger: "bg-danger/10 text-danger",
+} as const;
+
+export function Badge({
+  variant = "neutral",
+  children,
+  className = "",
+}: {
+  variant?: keyof typeof badgeVariants;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-badge px-2.5 py-0.5 text-xs font-medium ${badgeVariants[variant]} ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+// ---------- Modal ----------
+
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="w-full max-w-md rounded-card border border-line bg-surface p-6 shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="mb-4 text-lg font-bold">{title}</h2>
+        {children}
+      </div>
+    </div>
+  );
+}
