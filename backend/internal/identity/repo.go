@@ -78,6 +78,14 @@ func (r *Repo) CreateUserWithRole(ctx context.Context, phone, fullName, role str
 		`INSERT INTO user_roles (user_id, role_code) VALUES ($1, $2)`, id, role); err != nil {
 		return nil, err
 	}
+	// المندوب/المتجر/السائق هم أيضاً زبائن (انظر GrantRole).
+	if grantsCustomer(role) {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'customer')
+			 ON CONFLICT DO NOTHING`, id); err != nil {
+			return nil, err
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
@@ -164,10 +172,23 @@ func (r *Repo) RevokeRole(ctx context.Context, userID, role string) error {
 	return err
 }
 
+// grantsCustomer يحدد الأدوار الميدانية التي يُمنح صاحبها دور الزبون تلقائياً
+// (المندوب/المتجر/السائق) — لا الأدوار الداخلية (أدمن/عمليات/مالية).
+func grantsCustomer(role string) bool {
+	return role == "merchant" || role == "driver" || role == "sales"
+}
+
 func (r *Repo) GrantRole(ctx context.Context, userID, role string, grantedBy *string) error {
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO user_roles (user_id, role_code, granted_by) VALUES ($1, $2, $3)
 		ON CONFLICT DO NOTHING`, userID, role, grantedBy)
+	// المندوب وصاحب المتجر والسائق هم أيضاً زبائن — يحصلون تلقائياً على دور
+	// الزبون كي تظهر لهم كل خيارات الزبون (تصفّح، طلب، محفظة) إضافة لخياراتهم.
+	if err == nil && grantsCustomer(role) {
+		_, err = r.db.Exec(ctx, `
+			INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'customer')
+			ON CONFLICT DO NOTHING`, userID)
+	}
 	if err == nil && role == "sales" {
 		err = r.EnsureInviteCode(ctx, userID)
 	}

@@ -91,6 +91,14 @@ func main() {
 			ON CONFLICT DO NOTHING`, id, a.Role); err != nil {
 			log.Fatalf("role %s: %v", a.Phone, err)
 		}
+		// المندوب/المتجر/السائق هم أيضاً زبائن (نفس منطق GrantRole في الخدمة).
+		if a.Role == "merchant" || a.Role == "driver" || a.Role == "sales" {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'customer')
+				ON CONFLICT DO NOTHING`, id); err != nil {
+				log.Fatalf("customer role %s: %v", a.Phone, err)
+			}
+		}
 		if a.WalletBalance > 0 {
 			var exists bool
 			_ = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM wallets WHERE user_id = $1)`, id).Scan(&exists)
