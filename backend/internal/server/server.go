@@ -18,6 +18,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
 type Server struct {
@@ -28,14 +29,15 @@ type Server struct {
 	tokens    *auth.TokenIssuer
 	identity  *identity.Service
 	catalog   *catalog.Service
+	settings  *settings.Store
 	otpStatus func() map[string]any
 }
 
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
-	otpStatus func() map[string]any) *Server {
+	settingsStore *settings.Store, otpStatus func() map[string]any) *Server {
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
-		identity: identitySvc, catalog: catalogSvc, otpStatus: otpStatus}
+		identity: identitySvc, catalog: catalogSvc, settings: settingsStore, otpStatus: otpStatus}
 }
 
 func (s *Server) Router() http.Handler {
@@ -84,6 +86,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/merchants/{id}/menu", s.handleGetMenu)
 			r.Get("/merchants/{id}/hours", s.handleGetHours)
 			r.Get("/zones", s.handleListZones)
+			r.Get("/promos", s.handleListPromos)
+			r.Get("/banners", s.handleListBanners)
+			r.Get("/settings", s.handleListSettings)
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRoles("admin"))
 				r.Post("/users", s.handleAdminCreateUser)
@@ -103,6 +108,12 @@ func (s *Server) Router() http.Handler {
 				r.Post("/zones", s.handleCreateZone)
 				r.Patch("/zones/{id}", s.handleUpdateZone)
 				r.Delete("/zones/{id}", s.handleDeleteZone)
+				r.Post("/promos", s.handleCreatePromo)
+				r.Patch("/promos/{id}", s.handleUpdatePromo)
+				r.Post("/banners", s.handleCreateBanner)
+				r.Patch("/banners/{id}", s.handleUpdateBanner)
+				r.Delete("/banners/{id}", s.handleDeleteBanner)
+				r.Put("/settings/{key}", s.handleSetSetting)
 			})
 		})
 	})

@@ -48,6 +48,7 @@ interface Merchant {
   phone: string;
   address_text: string;
   owner_phone: string | null;
+  sales_rep_phone: string | null;
   status: string;
   emergency_closed: boolean;
   created_at: string;
@@ -511,6 +512,7 @@ function MerchantModal({
   const [phone, setPhone] = useState(merchant?.phone ?? "");
   const [address, setAddress] = useState(merchant?.address_text ?? "");
   const [ownerPhone, setOwnerPhone] = useState(merchant?.owner_phone ?? "");
+  const [repPhone, setRepPhone] = useState(merchant?.sales_rep_phone ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -525,6 +527,7 @@ function MerchantModal({
       phone,
       address_text: address,
       owner_phone: ownerPhone,
+      sales_rep_phone: repPhone,
     };
     try {
       if (merchant) {
@@ -606,6 +609,16 @@ function MerchantModal({
           />
           <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.ownerHint}</p>
         </div>
+        <Input
+          id="m-rep"
+          label={m.roles.sales}
+          icon={<IconUser />}
+          dir="ltr"
+          value={repPhone}
+          onChange={(e) => setRepPhone(e.target.value)}
+          className="text-end"
+          placeholder="09xxxxxxxx"
+        />
         {error && (
           <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
         )}
