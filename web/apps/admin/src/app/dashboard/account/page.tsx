@@ -2,10 +2,10 @@
 
 /** حسابي: تغيير كلمة المرور الذاتي (بإثبات الحالية) — لكل موظفي اللوحة والأدمن. */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input, FormSection, IconLock, IconUser, IconStatus } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, mediaUrl, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import RoleBadge from "@/components/RoleBadge";
 
@@ -32,12 +32,43 @@ export default function MyAccountPage() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
   const [logins, setLogins] = useState<Login[]>([]);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api<Login[]>("/api/v1/auth/my-logins")
       .then(setLogins)
       .catch(() => undefined);
+    api<{ avatar_thumb_url: string | null }>("/api/v1/me/summary")
+      .then((s) => setAvatar(s.avatar_thumb_url))
+      .catch(() => undefined);
   }, [done]);
+
+  async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await api<{ avatar_thumb_url: string }>("/api/v1/me/avatar", {
+        method: "POST",
+        body: fd,
+      });
+      setAvatar(res.avatar_thumb_url);
+    } catch {
+      setError(m.errors.internal);
+    }
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function onRemovePhoto() {
+    try {
+      await api("/api/v1/me/avatar", { method: "DELETE" });
+      setAvatar(null);
+    } catch {
+      setError(m.errors.internal);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -79,10 +110,15 @@ export default function MyAccountPage() {
       <p className="mb-5 text-sm text-ink-muted">{A.subtitle}</p>
 
       <div className="mb-5 flex items-center gap-3 rounded-card border border-line bg-surface p-4">
-        <span className="flex h-12 w-12 items-center justify-center rounded-card bg-primary-light text-lg font-bold text-primary-dark">
-          {(user?.full_name || "؟").charAt(0)}
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-card bg-primary-light text-lg font-bold text-primary-dark">
+          {mediaUrl(avatar) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={mediaUrl(avatar) ?? ""} alt="" className="h-full w-full object-cover" />
+          ) : (
+            (user?.full_name || "؟").charAt(0)
+          )}
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="font-bold">{user?.full_name || "—"}</p>
           <p className="text-xs text-ink-muted" dir="ltr">
             {user?.phone}
@@ -92,6 +128,17 @@ export default function MyAccountPage() {
               <RoleBadge key={r} role={r} />
             ))}
           </div>
+        </div>
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <input ref={fileRef} type="file" accept="image/*" onChange={onUpload} className="hidden" />
+          <Button variant="secondary" onClick={() => fileRef.current?.click()} className="text-xs">
+            {A.uploadPhoto}
+          </Button>
+          {avatar && (
+            <Button variant="secondary" onClick={onRemovePhoto} className="text-xs !text-danger">
+              {A.removePhoto}
+            </Button>
+          )}
         </div>
       </div>
 

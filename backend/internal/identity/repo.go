@@ -145,6 +145,14 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 }
 
 // UpdateUser يعدّل الاسم و/أو الحالة — يعيد ErrNotFound لمعرف غير موجود.
+// SetAvatar يضبط صورة المستخدم لنفسه (mediaID فارغ = إزالة الصورة).
+func (r *Repo) SetAvatar(ctx context.Context, userID, mediaID string) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE users SET avatar_media_id = NULLIF($2, '')::uuid, updated_at = now()
+		WHERE id = $1`, userID, mediaID)
+	return err
+}
+
 func (r *Repo) UpdateUser(ctx context.Context, userID string, fullName, status, avatarMediaID, statusReason, phone, adminNotes *string) error {
 	tag, err := r.db.Exec(ctx, `
 		UPDATE users SET

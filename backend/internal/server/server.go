@@ -109,6 +109,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/wallet", s.handleMyWallet)
+			// بيانات التوب بار الموحّدة لأي مستخدم (اسم، صورة، رصيد) وإدارة صورته
+			r.Get("/me/summary", s.handleMeSummary)
+			r.Post("/me/avatar", s.handleMyAvatar)
+			r.Delete("/me/avatar", s.handleDeleteMyAvatar)
 		})
 
 		// لوحة المندوب — دور المبيعات حصراً (قراءة: كوده ومتاجره وعمولاته)

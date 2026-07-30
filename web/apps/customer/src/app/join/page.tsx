@@ -179,21 +179,18 @@ function JoinForm() {
             value={ownerName}
             onChange={(e) => setOwnerName(e.target.value)}
           />
-          <div>
-            <Input
-              id="phone"
-              label={J.phone}
-              icon={<IconPhone />}
-              dir="ltr"
-              inputMode="tel"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="text-end"
-              placeholder="09xxxxxxxx"
-            />
-            <p className="mt-1 text-xs text-ink-muted">{J.phoneHint}</p>
-          </div>
+          <Input
+            id="phone"
+            label={J.phone}
+            icon={<IconPhone />}
+            dir="ltr"
+            inputMode="tel"
+            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="text-end"
+            placeholder="09xxxxxxxx"
+          />
 
           <Input
             id="password"
@@ -220,6 +217,7 @@ function JoinForm() {
             icon={<IconLocation />}
             value={area}
             onChange={(e) => setArea(e.target.value)}
+            placeholder={J.areaPlaceholder}
             className="sm:col-span-2"
           />
 

@@ -12,13 +12,16 @@ import {
   IconStore,
   IconWallet,
   IconOrder,
+  IconUser,
   IconLogout,
   IconHamburger,
   IconClose,
 } from "@rahalgo/ui";
+import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isRep } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
+const fmt = new Intl.NumberFormat("ar-SY");
 
 const NAV = [
   { href: "/portal", label: m.rep.nav.overview, icon: IconOverview },
@@ -26,17 +29,29 @@ const NAV = [
   { href: "/portal/leads", label: m.rep.nav.leads, icon: IconOrder },
   { href: "/portal/merchants", label: m.rep.nav.merchants, icon: IconStore },
   { href: "/portal/wallet", label: m.rep.nav.wallet, icon: IconWallet },
+  { href: "/portal/account", label: m.rep.nav.account, icon: IconUser },
 ];
+
+interface MeSummary {
+  full_name: string;
+  avatar_thumb_url: string | null;
+  balance: number;
+}
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [summary, setSummary] = useState<MeSummary | null>(null);
 
   useEffect(() => {
     if (!loading && !isRep(user)) router.replace("/login");
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (isRep(user)) api<MeSummary>("/api/v1/me/summary").then(setSummary).catch(() => undefined);
+  }, [user, pathname]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -121,10 +136,30 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             <IconHamburger size={22} />
           </button>
           <h2 className="text-sm font-bold text-ink">{activeLabel}</h2>
-          <div className="ms-auto flex items-center gap-3">
-            <span dir="ltr" className="hidden text-xs text-ink-muted sm:block">
-              {user?.phone}
-            </span>
+          <div className="ms-auto flex items-center gap-2.5">
+            {/* رصيد المحفظة */}
+            <Link
+              href="/portal/wallet"
+              className="flex items-center gap-1.5 rounded-control bg-primary-light px-2.5 py-1.5 text-sm font-bold text-primary-dark hover:bg-primary-light/70"
+              title={m.rep.stats.balance}
+            >
+              <IconWallet size={15} />
+              <span dir="ltr">{fmt.format(summary?.balance ?? 0)}</span>
+              <span className="hidden text-xs font-normal sm:inline">{m.common.currency}</span>
+            </Link>
+            {/* الصورة الشخصية → إعدادات الحساب */}
+            <Link
+              href="/portal/account"
+              title={m.rep.nav.account}
+              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-line bg-primary-light text-sm font-bold text-primary-dark"
+            >
+              {summary?.avatar_thumb_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={mediaUrl(summary.avatar_thumb_url) ?? ""} alt="" className="h-full w-full object-cover" />
+              ) : (
+                (summary?.full_name || user?.phone || "؟").slice(0, 1)
+              )}
+            </Link>
             <button
               onClick={() => {
                 logout();

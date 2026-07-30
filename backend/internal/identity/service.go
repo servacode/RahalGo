@@ -208,6 +208,11 @@ func (s *Service) Me(ctx context.Context, userID string) (*User, error) {
 	return user, err
 }
 
+// SetOwnAvatar يضبط صورة المستخدم لنفسه (mediaID فارغ = إزالة).
+func (s *Service) SetOwnAvatar(ctx context.Context, userID, mediaID string) error {
+	return s.repo.SetAvatar(ctx, userID, mediaID)
+}
+
 func (s *Service) SetPassword(ctx context.Context, userID, password, currentPassword, ip string) error {
 	if len(password) < minPasswordLn {
 		return ErrWeakPassword

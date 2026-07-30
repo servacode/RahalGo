@@ -21,10 +21,19 @@ import {
   IconHamburger,
   IconClose,
   IconLink,
+  IconWallet,
 } from "@rahalgo/ui";
+import { api, mediaUrl } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
+const fmt = new Intl.NumberFormat("ar-SY");
+
+interface MeSummary {
+  full_name: string;
+  avatar_thumb_url: string | null;
+  balance: number;
+}
 
 const NAV = [
   { href: "/dashboard", label: m.admin.nav.dashboard, icon: IconDashboard },
@@ -48,10 +57,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [summary, setSummary] = useState<MeSummary | null>(null);
 
   useEffect(() => {
     if (!loading && !canAccessPanel(user)) router.replace("/login");
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (canAccessPanel(user))
+      api<MeSummary>("/api/v1/me/summary").then(setSummary).catch(() => undefined);
+  }, [user, pathname]);
 
   // إغلاق القائمة المنزلقة عند تغيير الصفحة
   useEffect(() => {
@@ -150,13 +165,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="font-bold">{m.common.appName}</span>
           </div>
           <h2 className="hidden text-sm font-bold text-ink lg:block">{activeLabel}</h2>
-          <div className="ms-auto flex items-center gap-3">
+          <div className="ms-auto flex items-center gap-2.5">
+            {/* رصيد محفظة المنصة */}
             <Link
               href="/dashboard/account"
-              dir="ltr"
-              className="hidden rounded-control px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-primary-light hover:text-primary-dark sm:block"
+              className="flex items-center gap-1.5 rounded-control bg-primary-light px-2.5 py-1.5 text-sm font-bold text-primary-dark hover:bg-primary-light/70"
+              title={m.admin.myAccount.title}
             >
-              {user?.phone}
+              <IconWallet size={15} />
+              <span dir="ltr">{fmt.format(summary?.balance ?? 0)}</span>
+              <span className="hidden text-xs font-normal sm:inline">{m.common.currency}</span>
+            </Link>
+            {/* الصورة الشخصية → حسابي */}
+            <Link
+              href="/dashboard/account"
+              title={user?.phone ?? ""}
+              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-line bg-primary-light text-sm font-bold text-primary-dark"
+            >
+              {summary?.avatar_thumb_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={mediaUrl(summary.avatar_thumb_url) ?? ""} alt="" className="h-full w-full object-cover" />
+              ) : (
+                (summary?.full_name || user?.phone || "؟").slice(0, 1)
+              )}
             </Link>
             <button
               onClick={() => {
