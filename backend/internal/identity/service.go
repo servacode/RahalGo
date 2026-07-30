@@ -219,6 +219,31 @@ func (s *Service) SetPassword(ctx context.Context, userID, password, ip string) 
 	return nil
 }
 
+// EnsureUserWithRole يجد المستخدم برقم هاتفه (أو ينشئه) ويضمن حمله الدور المطلوب.
+// تستخدمه الوحدات الأخرى لربط الحسابات (صاحب متجر، سائق...) — مع تدقيق كامل.
+func (s *Service) EnsureUserWithRole(ctx context.Context, actorID, rawPhone, role, ip string) (*User, error) {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return nil, ErrInvalidPhone
+	}
+	user, _, err := s.repo.UserByPhone(ctx, phone)
+	if errors.Is(err, ErrNotFound) {
+		user, err = s.repo.CreateUserWithRole(ctx, phone, "", role)
+		if err == nil {
+			s.repo.Audit(ctx, &actorID, "admin.user_create", "user", user.ID, ip,
+				map[string]any{"phone": phone, "roles": []string{role}})
+		}
+		return user, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.GrantRole(ctx, user.ID, role, &actorID); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 // BootstrapAdmin يضمن وجود حساب أدمن أول (يُستدعى عند الإقلاع بهاتف من الإعدادات).
 func (s *Service) BootstrapAdmin(ctx context.Context, rawPhone string) error {
 	if rawPhone == "" {

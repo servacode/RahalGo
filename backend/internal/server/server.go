@@ -14,6 +14,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
@@ -26,13 +27,15 @@ type Server struct {
 	rdb       *redis.Client
 	tokens    *auth.TokenIssuer
 	identity  *identity.Service
+	catalog   *catalog.Service
 	otpStatus func() map[string]any
 }
 
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
-	tokens *auth.TokenIssuer, identitySvc *identity.Service, otpStatus func() map[string]any) *Server {
+	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
+	otpStatus func() map[string]any) *Server {
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
-		identity: identitySvc, otpStatus: otpStatus}
+		identity: identitySvc, catalog: catalogSvc, otpStatus: otpStatus}
 }
 
 func (s *Server) Router() http.Handler {
@@ -76,12 +79,18 @@ func (s *Server) Router() http.Handler {
 			})
 
 			r.Get("/users", s.handleAdminListUsers)
+			r.Get("/categories", s.handleListCategories)
+			r.Get("/merchants", s.handleListMerchants)
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRoles("admin"))
 				r.Post("/users", s.handleAdminCreateUser)
 				r.Patch("/users/{id}", s.handleAdminUpdateUser)
 				r.Post("/users/{id}/roles", s.handleAdminGrantRole)
 				r.Delete("/users/{id}/roles/{role}", s.handleAdminRevokeRole)
+				r.Post("/categories", s.handleCreateCategory)
+				r.Patch("/categories/{id}", s.handleUpdateCategory)
+				r.Post("/merchants", s.handleCreateMerchant)
+				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
 			})
 		})
 	})

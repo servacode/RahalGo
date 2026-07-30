@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/database"
 	"github.com/servacode/rahalgo/backend/internal/identity"
@@ -89,10 +90,11 @@ func run(logger *slog.Logger) error {
 	if err := identitySvc.BootstrapAdmin(ctx, cfg.AdminPhone); err != nil {
 		return err
 	}
+	catalogSvc := catalog.NewService(pg, identitySvc)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, otpStatus).Router(),
+		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc, otpStatus).Router(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
