@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/migrate"
 	"github.com/servacode/rahalgo/backend/internal/notify"
 	"github.com/servacode/rahalgo/backend/internal/server"
+	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
 func main() {
@@ -60,13 +62,27 @@ func run(logger *slog.Logger) error {
 	}
 
 	tokens := auth.NewTokenIssuer(cfg.JWTSecret, 15*time.Minute)
+	settingsStore := settings.NewStore(pg)
 
 	var otpSender notify.OTPSender
+	otpStatus := func() map[string]any { return map[string]any{"provider": "dev"} }
 	switch cfg.OTPProvider {
 	case "dev":
 		otpSender = &notify.DevSender{Logger: logger}
+	case "whatsapp":
+		const defaultTemplate = "رمز التحقق الخاص بك في رحال غو هو: {code}\n\nلا تشارك هذا الرمز مع أي شخص."
+		wa, err := notify.NewWhatsAppSender(ctx, cfg.DatabaseURL, logger,
+			func(ctx context.Context, code string) string {
+				tpl := settingsStore.GetString(ctx, "whatsapp.otp_template", defaultTemplate)
+				return strings.ReplaceAll(tpl, "{code}", code)
+			})
+		if err != nil {
+			return err
+		}
+		otpSender = wa
+		otpStatus = wa.Status
 	default:
-		return fmt.Errorf("unknown OTP_PROVIDER %q (whatsapp provider lands with the bot integration)", cfg.OTPProvider)
+		return fmt.Errorf("unknown OTP_PROVIDER %q (expected dev or whatsapp)", cfg.OTPProvider)
 	}
 
 	identitySvc := identity.NewService(identity.NewRepo(pg), rdb, tokens, otpSender, cfg.JWTSecret, logger)
@@ -76,7 +92,7 @@ func run(logger *slog.Logger) error {
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc).Router(),
+		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, otpStatus).Router(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

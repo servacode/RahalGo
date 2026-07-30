@@ -20,17 +20,19 @@ import (
 )
 
 type Server struct {
-	cfg      *config.Config
-	logger   *slog.Logger
-	pg       *pgxpool.Pool
-	rdb      *redis.Client
-	tokens   *auth.TokenIssuer
-	identity *identity.Service
+	cfg       *config.Config
+	logger    *slog.Logger
+	pg        *pgxpool.Pool
+	rdb       *redis.Client
+	tokens    *auth.TokenIssuer
+	identity  *identity.Service
+	otpStatus func() map[string]any
 }
 
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
-	tokens *auth.TokenIssuer, identitySvc *identity.Service) *Server {
-	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens, identity: identitySvc}
+	tokens *auth.TokenIssuer, identitySvc *identity.Service, otpStatus func() map[string]any) *Server {
+	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
+		identity: identitySvc, otpStatus: otpStatus}
 }
 
 func (s *Server) Router() http.Handler {
@@ -62,6 +64,15 @@ func (s *Server) Router() http.Handler {
 				r.Use(s.RequireAuth)
 				r.Get("/me", s.handleMe)
 				r.Post("/password", s.handleSetPassword)
+			})
+		})
+
+		// نقاط الإدارة — أدمن/عمليات فقط
+		r.Route("/admin", func(r chi.Router) {
+			r.Use(s.RequireAuth)
+			r.Use(s.RequireRoles("admin", "ops"))
+			r.Get("/whatsapp", func(w http.ResponseWriter, _ *http.Request) {
+				httpx.JSON(w, http.StatusOK, s.otpStatus())
 			})
 		})
 	})

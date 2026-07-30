@@ -29,6 +29,7 @@ var (
 	ErrUserBlocked        = httpx.NewError(http.StatusForbidden, "user_blocked", "errors.user_blocked")
 	ErrInvalidRefresh     = httpx.NewError(http.StatusUnauthorized, "invalid_refresh", "errors.unauthorized")
 	ErrWeakPassword       = httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password")
+	ErrOTPSendFailed      = httpx.NewError(http.StatusServiceUnavailable, "otp_send_failed", "errors.otp_send_failed")
 )
 
 const (
@@ -83,7 +84,11 @@ func (s *Service) RequestOTP(ctx context.Context, rawPhone string) error {
 	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "login", otpTTL); err != nil {
 		return err
 	}
-	return s.sender.SendOTP(ctx, phone, code)
+	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
+		s.logger.Error("otp send failed", "error", err)
+		return ErrOTPSendFailed
+	}
+	return nil
 }
 
 // VerifyOTP يتحقق من الرمز؛ ينشئ حساب زبون تلقائياً للرقم الجديد، ويصدر التوكنات.
