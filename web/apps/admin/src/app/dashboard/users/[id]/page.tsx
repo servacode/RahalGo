@@ -21,6 +21,8 @@ import {
   IconDriver,
   IconLock,
   IconPrev,
+  IconLogout,
+  IconStatus,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -32,6 +34,7 @@ const m = getMessages(defaultLocale);
 const fmt = new Intl.NumberFormat("ar-SY");
 const P = m.admin.users.profile;
 const KINDS: Record<string, string> = m.admin.users.txKinds;
+const ACTIONS: Record<string, string> = m.admin.users.auditActions;
 
 interface Profile {
   id: string;
@@ -40,6 +43,8 @@ interface Profile {
   status: string;
   invite_code: string | null;
   avatar_thumb_url?: string | null;
+  status_reason: string;
+  active_sessions: number;
   roles: string[];
   created_at: string;
   balance: number;
@@ -50,6 +55,17 @@ interface Profile {
   commissions: number;
   driver_cash: number;
   deliveries: number;
+}
+
+interface Activity {
+  action: string;
+  entity: string;
+  entity_id: string;
+  ip: string;
+  details: string;
+  by_name: string | null;
+  by_self: boolean;
+  created_at: string;
 }
 
 interface Tx {
@@ -81,6 +97,9 @@ export default function UserProfilePage() {
 
   const [p, setP] = useState<Profile | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
+  const [activity, setActivity] = useState<Activity[]>([]);
+  const [phoneOpen, setPhoneOpen] = useState(false);
+  const [notice, setNotice] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [error, setError] = useState("");
@@ -90,6 +109,7 @@ export default function UserProfilePage() {
       setP(await api<Profile>(`/api/v1/admin/users/${id}`));
       const st = await api<{ transactions: Tx[] }>(`/api/v1/admin/users/${id}/wallet`);
       setTxs(st.transactions);
+      setActivity(await api<Activity[]>(`/api/v1/admin/users/${id}/activity`));
       setError("");
     } catch (err) {
       setError(errText(err));
@@ -177,9 +197,20 @@ export default function UserProfilePage() {
             {p.roles.map((r) => (
               <RoleBadge key={r} role={r} />
             ))}
-            <Badge variant={p.status === "active" ? "success" : "danger"}>
-              {p.status === "active" ? m.admin.users.active : m.admin.users.blocked}
+            <Badge
+              variant={p.status === "active" ? "success" : p.status === "suspended" ? "warning" : "danger"}
+            >
+              {p.status === "active"
+                ? m.admin.users.active
+                : p.status === "suspended"
+                  ? m.admin.users.suspended
+                  : m.admin.users.blocked}
             </Badge>
+            {p.status !== "active" && p.status_reason && (
+              <span className="text-xs text-danger">
+                {P.statusReason}: {p.status_reason}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex flex-col gap-2">
@@ -190,14 +221,39 @@ export default function UserProfilePage() {
             </Button>
           )}
           {isAdmin && (
-            <Button
-              variant="secondary"
-              onClick={() => setResetOpen(true)}
-              className="flex items-center gap-1.5"
-            >
-              <IconLock size={15} />
-              {P.resetPassword}
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setResetOpen(true)}
+                className="flex items-center gap-1.5"
+              >
+                <IconLock size={15} />
+                {P.resetPassword}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setPhoneOpen(true)}
+                className="flex items-center gap-1.5"
+              >
+                <IconPhone size={15} />
+                {P.changePhone}
+              </Button>
+              <Button
+                variant="danger"
+                onClick={async () => {
+                  const res = await api<{ revoked_sessions: number }>(
+                    `/api/v1/admin/users/${p.id}/logout-all`,
+                    { method: "POST" }
+                  );
+                  setNotice(P.logoutAllDone.replace("{n}", String(res.revoked_sessions)));
+                  await load();
+                }}
+                className="flex items-center gap-1.5"
+              >
+                <IconLogout size={15} />
+                {P.logoutAll} ({fmt.format(p.active_sessions)})
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -217,6 +273,10 @@ export default function UserProfilePage() {
             }}
           />
         </div>
+      )}
+
+      {notice && (
+        <p className="mb-4 rounded-control bg-success/10 px-3 py-2 text-sm text-success">{notice}</p>
       )}
 
       {/* المؤشرات حسب الأدوار */}
@@ -297,6 +357,49 @@ export default function UserProfilePage() {
         )}
       </FormSection>
 
+      <div className="mt-5">
+        <FormSection title={P.activity} icon={<IconStatus />}>
+          {activity.length === 0 ? (
+            <p className="py-6 text-center text-sm text-ink-muted">{P.activityEmpty}</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {activity.map((a, i) => (
+                <li
+                  key={i}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+                >
+                  <span className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="font-medium">{ACTIONS[a.action] ?? a.action}</span>
+                    <span className="text-xs text-ink-muted">
+                      {P.by}: {a.by_self ? P.bySelf : (a.by_name ?? P.system)}
+                    </span>
+                    {a.ip && (
+                      <span className="text-xs text-ink-muted" dir="ltr">
+                        {a.ip}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 text-xs text-ink-muted" dir="ltr">
+                    {new Date(a.created_at).toLocaleString("ar-SY", { dateStyle: "short", timeStyle: "short" })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </FormSection>
+      </div>
+
+      {phoneOpen && (
+        <ChangePhoneModal
+          userID={p.id}
+          current={p.phone}
+          onClose={() => setPhoneOpen(false)}
+          onDone={() => {
+            setPhoneOpen(false);
+            void load();
+          }}
+        />
+      )}
       {walletOpen && (
         <WalletModal
           user={{ id: p.id, phone: p.phone, full_name: p.full_name }}
@@ -370,6 +473,72 @@ function ResetPasswordModal({ userID, onClose }: { userID: string; onClose: () =
           </div>
         </form>
       )}
+    </Modal>
+  );
+}
+
+function ChangePhoneModal({
+  userID,
+  current,
+  onClose,
+  onDone,
+}: {
+  userID: string;
+  current: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [phone, setPhone] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/users/${userID}`, {
+        method: "PATCH",
+        body: JSON.stringify({ phone }),
+      });
+      onDone();
+    } catch (err) {
+      setError(errText(err));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={P.changePhone}>
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-sm text-ink-muted" dir="ltr">{current}</p>
+        <Input
+          id="new-phone"
+          label={P.newPhone}
+          icon={<IconPhone />}
+          dir="ltr"
+          required
+          autoFocus
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="text-end"
+          placeholder="09xxxxxxxx"
+        />
+        <p className="rounded-control bg-page px-3 py-2 text-xs leading-relaxed text-ink-muted">
+          {P.phoneHint}
+        </p>
+        {error && (
+          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+          <Button type="submit" disabled={busy}>
+            {m.common.save}
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }

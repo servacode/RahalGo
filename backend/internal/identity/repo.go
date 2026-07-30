@@ -134,15 +134,17 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 }
 
 // UpdateUser يعدّل الاسم و/أو الحالة — يعيد ErrNotFound لمعرف غير موجود.
-func (r *Repo) UpdateUser(ctx context.Context, userID string, fullName, status, avatarMediaID *string) error {
+func (r *Repo) UpdateUser(ctx context.Context, userID string, fullName, status, avatarMediaID, statusReason, phone *string) error {
 	tag, err := r.db.Exec(ctx, `
 		UPDATE users SET
 			full_name = COALESCE($2, full_name),
 			status    = COALESCE($3, status),
 			avatar_media_id = CASE WHEN $4::text IS NULL THEN avatar_media_id
 			                       ELSE NULLIF($4, '')::uuid END,
+			status_reason = COALESCE($5, status_reason),
+			phone     = COALESCE($6, phone),
 			updated_at = now()
-		WHERE id = $1`, userID, fullName, status, avatarMediaID)
+		WHERE id = $1`, userID, fullName, status, avatarMediaID, statusReason, phone)
 	if err != nil {
 		return err
 	}
@@ -266,4 +268,12 @@ func (r *Repo) Audit(ctx context.Context, actorID *string, action, entity, entit
 	_, _ = r.db.Exec(ctx, `
 		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip, details)
 		VALUES ($1, $2, $3, $4, $5, $6)`, actorID, action, entity, entityID, ip, d)
+}
+
+// RevokeAllTokens يُبطل كل توكنات التجديد الفعالة لحساب — يعيد عددها.
+func (r *Repo) RevokeAllTokens(ctx context.Context, userID string) (int, error) {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE refresh_tokens SET revoked_at = now()
+		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()`, userID)
+	return int(tag.RowsAffected()), err
 }

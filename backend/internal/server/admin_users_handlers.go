@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -117,25 +118,28 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var out struct {
-		ID          string   `json:"id"`
-		Phone       string   `json:"phone"`
-		FullName    string   `json:"full_name"`
-		Status      string   `json:"status"`
-		InviteCode  *string  `json:"invite_code"`
-		AvatarThumb *string  `json:"avatar_thumb_url"`
-		Roles       []string `json:"roles"`
-		CreatedAt   string   `json:"created_at"`
-		Balance     int64    `json:"balance"`
-		OrdersCount int      `json:"orders_count"` // كزبون
-		OrdersSpent int64    `json:"orders_spent"` // إنفاقه المُسلَّم
-		Merchants   []string `json:"merchants"`    // متاجر يملكها
-		RepStores   int      `json:"rep_stores"`   // متاجر جلبها كمندوب
-		Commissions int64    `json:"commissions"`  // عمولاته كمندوب
-		DriverCash  int64    `json:"driver_cash"`  // نقد بحوزته كسائق
-		Deliveries  int      `json:"deliveries"`   // توصيلاته المُسلَّمة
+		ID           string   `json:"id"`
+		Phone        string   `json:"phone"`
+		FullName     string   `json:"full_name"`
+		Status       string   `json:"status"`
+		InviteCode   *string  `json:"invite_code"`
+		AvatarThumb  *string  `json:"avatar_thumb_url"`
+		StatusReason string   `json:"status_reason"`
+		Sessions     int      `json:"active_sessions"`
+		Roles        []string `json:"roles"`
+		CreatedAt    string   `json:"created_at"`
+		Balance      int64    `json:"balance"`
+		OrdersCount  int      `json:"orders_count"` // كزبون
+		OrdersSpent  int64    `json:"orders_spent"` // إنفاقه المُسلَّم
+		Merchants    []string `json:"merchants"`    // متاجر يملكها
+		RepStores    int      `json:"rep_stores"`   // متاجر جلبها كمندوب
+		Commissions  int64    `json:"commissions"`  // عمولاته كمندوب
+		DriverCash   int64    `json:"driver_cash"`  // نقد بحوزته كسائق
+		Deliveries   int      `json:"deliveries"`   // توصيلاته المُسلَّمة
 	}
 	err := s.pg.QueryRow(r.Context(), `
-		SELECT u.id, u.phone, u.full_name, u.status, u.invite_code,
+		SELECT u.id, u.phone, u.full_name, u.status, u.invite_code, u.status_reason,
+		       (SELECT count(*) FROM refresh_tokens rt WHERE rt.user_id = u.id AND rt.revoked_at IS NULL AND rt.expires_at > now()),
 		       (SELECT m.thumb_path FROM media m WHERE m.id = u.avatar_media_id), u.created_at::text,
 		       COALESCE((SELECT array_agg(role_code ORDER BY role_code) FROM user_roles WHERE user_id = u.id), '{}'),
 		       COALESCE((SELECT balance FROM wallets WHERE user_id = u.id), 0),
@@ -147,7 +151,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered')
 		FROM users u WHERE u.id = $1`, id).
-		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.AvatarThumb, &out.CreatedAt,
+		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.StatusReason, &out.Sessions, &out.AvatarThumb, &out.CreatedAt,
 			&out.Roles, &out.Balance, &out.OrdersCount, &out.OrdersSpent, &out.Merchants,
 			&out.RepStores, &out.Commissions, &out.DriverCash, &out.Deliveries)
 	if err != nil {
@@ -188,4 +192,55 @@ func (s *Server) handleAdminResetPassword(w http.ResponseWriter, r *http.Request
 		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip)
 		VALUES ($1, 'admin.password_reset', 'user', $2, $3)`, actor, id, clientIP(r))
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+}
+
+// handleAdminUserActivity سجل نشاط الحساب: ما فعله وما فُعل به (من سجل التدقيق).
+func (s *Server) handleAdminUserActivity(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT a.action, a.entity, COALESCE(a.entity_id, ''), COALESCE(a.ip, ''),
+		       COALESCE(a.details::text, ''), a.created_at,
+		       NULLIF(COALESCE(au.full_name, au.phone::text), ''),
+		       (a.actor_user_id IS NOT DISTINCT FROM u.id) AS by_self
+		FROM audit_log a
+		CROSS JOIN (SELECT id FROM users WHERE id = $1) u
+		LEFT JOIN users au ON au.id = a.actor_user_id
+		WHERE a.actor_user_id = u.id OR (a.entity = 'user' AND a.entity_id = u.id::text)
+		ORDER BY a.id DESC LIMIT 100`, id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+	type entry struct {
+		Action    string    `json:"action"`
+		Entity    string    `json:"entity"`
+		EntityID  string    `json:"entity_id"`
+		IP        string    `json:"ip"`
+		Details   string    `json:"details"`
+		ByName    *string   `json:"by_name"`
+		BySelf    bool      `json:"by_self"`
+		CreatedAt time.Time `json:"created_at"`
+	}
+	out := []entry{}
+	for rows.Next() {
+		var e entry
+		if err := rows.Scan(&e.Action, &e.Entity, &e.EntityID, &e.IP, &e.Details,
+			&e.CreatedAt, &e.ByName, &e.BySelf); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out = append(out, e)
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}
+
+// handleAdminLogoutAll إنهاء كل جلسات الحساب فوراً.
+func (s *Server) handleAdminLogoutAll(w http.ResponseWriter, r *http.Request) {
+	n, err := s.identity.AdminLogoutAll(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), clientIP(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"revoked_sessions": n})
 }

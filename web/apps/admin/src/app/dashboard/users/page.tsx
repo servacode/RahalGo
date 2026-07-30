@@ -70,6 +70,7 @@ export default function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [rolesUser, setRolesUser] = useState<AuthUser | null>(null);
   const [walletUser, setWalletUser] = useState<AuthUser | null>(null);
+  const [statusModal, setStatusModal] = useState<{ user: AuthUser; status: string } | null>(null);
   const [view, setView] = useViewMode("users");
 
   const load = useCallback(async () => {
@@ -90,12 +91,13 @@ export default function UsersPage() {
     return () => clearTimeout(t);
   }, [load]);
 
-  async function setStatus(u: AuthUser, status: string) {
+  async function setStatus(u: AuthUser, status: string, reason = "") {
     try {
       await api(`/api/v1/admin/users/${u.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, status_reason: reason }),
       });
+      setStatusModal(null);
       await load();
     } catch (err) {
       setError(errText(err));
@@ -291,7 +293,7 @@ export default function UsersPage() {
                       <>
                         <Button
                           variant="secondary"
-                          onClick={() => setStatus(u, "suspended")}
+                          onClick={() => setStatusModal({ user: u, status: "suspended" })}
                           className="flex items-center gap-1.5 !text-warning"
                         >
                           <IconBlock size={15} />
@@ -299,7 +301,7 @@ export default function UsersPage() {
                         </Button>
                         <Button
                           variant="danger"
-                          onClick={() => setStatus(u, "blocked")}
+                          onClick={() => setStatusModal({ user: u, status: "blocked" })}
                           className="flex items-center gap-1.5"
                         >
                           <IconBlock size={15} />
@@ -570,4 +572,46 @@ function PresenceCell({ lastSeen }: { lastSeen: string | null }) {
         ? rtf.format(-Math.floor(diffMin / 60), "hour")
         : rtf.format(-Math.floor(diffMin / 1440), "day");
   return <span className="text-xs text-ink-muted">{label}</span>;
+}
+
+function StatusReasonModal({
+  target,
+  onSubmit,
+  onClose,
+}: {
+  target: { user: AuthUser; status: string };
+  onSubmit: (reason: string) => void;
+  onClose: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const actionLabel =
+    target.status === "suspended" ? m.admin.users.suspend : m.admin.users.block;
+  return (
+    <Modal open onClose={onClose} title={m.admin.users.statusReasonTitle.replace("{action}", actionLabel)}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit(reason);
+        }}
+        className="space-y-4"
+      >
+        <Input
+          id="status-reason"
+          label={m.admin.users.statusReasonLabel}
+          required
+          autoFocus
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+          <Button type="submit" variant={target.status === "blocked" ? "danger" : "primary"}>
+            {actionLabel}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
 }

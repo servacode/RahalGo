@@ -99,6 +99,10 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 type UpdateUserInput struct {
 	FullName *string `json:"full_name"`
 	Status   *string `json:"status"`
+	// سبب الإيقاف/الحظر — إلزامي لغير active
+	StatusReason *string `json:"status_reason"`
+	// تغيير رقم الحساب (أدمن) — تنتقل الهوية بمحفظتها وسجلها
+	Phone *string `json:"phone"`
 	// معرف وسائط الصورة: غير مُرسل = بلا تغيير، "" = إزالة
 	AvatarMediaID *string `json:"avatar_media_id"`
 }
@@ -111,15 +115,33 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 		if userID == actorID && *in.Status != "active" {
 			return nil, ErrSelfAction // لا يمكنك حظر نفسك
 		}
+		if *in.Status != "active" && (in.StatusReason == nil || *in.StatusReason == "") {
+			return nil, errValidationErr // السبب إلزامي للإيقاف والحظر
+		}
+		if *in.Status == "active" && in.StatusReason == nil {
+			empty := ""
+			in.StatusReason = &empty // التفعيل يمسح السبب
+		}
 	}
-	if err := s.repo.UpdateUser(ctx, userID, in.FullName, in.Status, in.AvatarMediaID); err != nil {
+	if in.Phone != nil {
+		normalized, ok := NormalizePhone(*in.Phone)
+		if !ok {
+			return nil, ErrInvalidPhone
+		}
+		in.Phone = &normalized
+	}
+	if err := s.repo.UpdateUser(ctx, userID, in.FullName, in.Status, in.AvatarMediaID, in.StatusReason, in.Phone); err != nil {
+		if isUniqueViolation(err) {
+			return nil, ErrPhoneTaken
+		}
 		if errors.Is(err, ErrNotFound) {
 			return nil, httpx.ErrNotFound
 		}
 		return nil, err
 	}
 	s.repo.Audit(ctx, &actorID, "admin.user_update", "user", userID, ip,
-		map[string]any{"full_name": in.FullName, "status": in.Status})
+		map[string]any{"full_name": in.FullName, "status": in.Status,
+			"status_reason": in.StatusReason, "phone": in.Phone})
 	user, _, err := s.repo.UserByID(ctx, userID)
 	return user, err
 }
@@ -151,4 +173,14 @@ var errValidationErr = httpx.NewError(http.StatusBadRequest, "validation", "erro
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+// AdminLogoutAll يُبطل كل جلسات الحساب فوراً (توكنات التجديد) — لقطع وصول موقوف.
+func (s *Service) AdminLogoutAll(ctx context.Context, actorID, userID, ip string) (int, error) {
+	n, err := s.repo.RevokeAllTokens(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	s.repo.Audit(ctx, &actorID, "admin.logout_all", "user", userID, ip, map[string]any{"sessions": n})
+	return n, nil
 }
