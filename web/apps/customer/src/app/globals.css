@@ -7,4 +7,5 @@ body {
   background-color: var(--color-page);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-weight: 500; /* تجوال ميديم أساساً — العناوين 700 */
 }

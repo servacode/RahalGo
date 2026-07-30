@@ -99,6 +99,8 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 type UpdateUserInput struct {
 	FullName *string `json:"full_name"`
 	Status   *string `json:"status"`
+	// معرف وسائط الصورة: غير مُرسل = بلا تغيير، "" = إزالة
+	AvatarMediaID *string `json:"avatar_media_id"`
 }
 
 func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, in UpdateUserInput, ip string) (*User, error) {
@@ -110,7 +112,7 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 			return nil, ErrSelfAction // لا يمكنك حظر نفسك
 		}
 	}
-	if err := s.repo.UpdateUser(ctx, userID, in.FullName, in.Status); err != nil {
+	if err := s.repo.UpdateUser(ctx, userID, in.FullName, in.Status, in.AvatarMediaID); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, httpx.ErrNotFound
 		}

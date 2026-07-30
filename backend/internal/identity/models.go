@@ -10,6 +10,7 @@ type User struct {
 	HasPassword bool       `json:"has_password"`
 	InviteCode  *string    `json:"invite_code"`
 	Roles       []string   `json:"roles"`
+	AvatarURL   *string    `json:"avatar_thumb_url"`
 	LastSeenAt  *time.Time `json:"last_seen_at"`
 	CreatedAt   time.Time  `json:"created_at"`
 }

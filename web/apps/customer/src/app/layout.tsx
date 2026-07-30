@@ -4,9 +4,9 @@ import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
 // الخط المعتمد (BRAND.md) مستضاف ذاتياً
-import "@fontsource/ibm-plex-sans-arabic/400.css";
-import "@fontsource/ibm-plex-sans-arabic/500.css";
-import "@fontsource/ibm-plex-sans-arabic/700.css";
+import "@fontsource/tajawal/400.css";
+import "@fontsource/tajawal/500.css";
+import "@fontsource/tajawal/700.css";
 import "./globals.css";
 
 const m = getMessages(defaultLocale);

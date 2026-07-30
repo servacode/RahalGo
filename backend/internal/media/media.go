@@ -41,7 +41,7 @@ var (
 	ErrTooLarge = httpx.NewError(http.StatusBadRequest, "image_too_large", "errors.image_too_large")
 )
 
-var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true, "banner": true}
+var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true, "banner": true, "avatar": true}
 
 type Media struct {
 	ID       string `json:"id"`

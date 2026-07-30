@@ -28,6 +28,7 @@ import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/RoleBadge";
+import { MediaThumb } from "@/components/ImageUpload";
 
 const m = getMessages(defaultLocale);
 
@@ -108,7 +109,12 @@ export default function UsersPage() {
       header: m.admin.users.table.name,
       icon: <IconUser />,
       primary: true,
-      cell: (u) => u.full_name || "—",
+      cell: (u) => (
+        <span className="inline-flex items-center gap-2">
+          <MediaThumb url={u.avatar_thumb_url} alt="" fallback={u.full_name || "؟"} size={32} />
+          {u.full_name || "—"}
+        </span>
+      ),
     },
     {
       id: "phone",

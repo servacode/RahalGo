@@ -177,7 +177,9 @@ export function DataView<T>({
               ))}
               {actions && (
                 <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex flex-wrap justify-end gap-2">{actions(item)}</div>
+                  <div className="flex flex-nowrap justify-end gap-1.5 whitespace-nowrap">
+                    {actions(item)}
+                  </div>
                 </td>
               )}
             </tr>

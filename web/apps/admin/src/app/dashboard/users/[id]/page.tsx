@@ -25,6 +25,7 @@ import {
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
+import ImageUpload, { MediaThumb } from "@/components/ImageUpload";
 import RoleBadge from "@/components/RoleBadge";
 
 const m = getMessages(defaultLocale);
@@ -38,6 +39,7 @@ interface Profile {
   full_name: string;
   status: string;
   invite_code: string | null;
+  avatar_thumb_url?: string | null;
   roles: string[];
   created_at: string;
   balance: number;
@@ -150,9 +152,7 @@ export default function UserProfilePage() {
 
       {/* الترويسة */}
       <div className="mb-5 flex flex-wrap items-center gap-4 rounded-card border border-line bg-surface p-5">
-        <span className="flex h-16 w-16 items-center justify-center rounded-card bg-primary-light text-2xl font-bold text-primary-dark">
-          {(p.full_name || "؟").charAt(0)}
-        </span>
+        <MediaThumb url={p.avatar_thumb_url} alt="" fallback={p.full_name || "؟"} size={64} />
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold">{p.full_name || "—"}</h1>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted">
@@ -198,6 +198,23 @@ export default function UserProfilePage() {
           )}
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="mb-5 rounded-card border border-line bg-surface p-4">
+          <ImageUpload
+            kind="avatar"
+            label={P.avatar}
+            initialUrl={p.avatar_thumb_url}
+            onChange={async (mediaID) => {
+              await api(`/api/v1/admin/users/${p.id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ avatar_media_id: mediaID }),
+              });
+              await load();
+            }}
+          />
+        </div>
+      )}
 
       {/* المؤشرات حسب الأدوار */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

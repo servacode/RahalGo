@@ -27,7 +27,7 @@ export default function ImageUpload({
   initialUrl,
   onChange,
 }: {
-  kind: "merchant_logo" | "menu_item" | "banner";
+  kind: "merchant_logo" | "menu_item" | "banner" | "avatar";
   label: string;
   /** الصورة الحالية للكيان (عند التعديل) */
   initialUrl?: string | null;

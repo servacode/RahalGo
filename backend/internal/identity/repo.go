@@ -8,6 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
 var ErrNotFound = errors.New("identity: not found")
@@ -22,12 +24,14 @@ func (r *Repo) getUserBy(ctx context.Context, where, arg string) (*User, string,
 	var u User
 	var passwordHash *string
 	err := r.db.QueryRow(ctx, `
-		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash, u.invite_code, u.last_seen_at, u.created_at,
+		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash, u.invite_code, am.thumb_path, u.last_seen_at, u.created_at,
 		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}')
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
-		WHERE `+where+` GROUP BY u.id`, arg).
-		Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &passwordHash, &u.InviteCode, &u.LastSeenAt, &u.CreatedAt, &u.Roles)
+		LEFT JOIN media am ON am.id = u.avatar_media_id
+		WHERE `+where+` GROUP BY u.id, am.thumb_path`, arg).
+		Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &passwordHash, &u.InviteCode, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles)
+	u.AvatarURL = media.URLForPtr(u.AvatarURL)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, "", ErrNotFound
 	}
@@ -90,17 +94,18 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset 
 	          AND ($2 = '' OR EXISTS (SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id AND fr.role_code = $2))`
 
 	var total int
-	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where, query, role).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM users u `+where+` AND NOT EXISTS (SELECT 1 FROM user_roles ar WHERE ar.user_id = u.id AND ar.role_code = 'admin')`, query, role).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
 	rows, err := r.db.Query(ctx, `
-		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash IS NOT NULL, u.invite_code, u.last_seen_at, u.created_at,
+		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash IS NOT NULL, u.invite_code, am.thumb_path, u.last_seen_at, u.created_at,
 		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}')
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
+		LEFT JOIN media am ON am.id = u.avatar_media_id
 		`+where+`
-		GROUP BY u.id
+		GROUP BY u.id, am.thumb_path
 		HAVING NOT bool_or(ur.role_code = 'admin')
 		ORDER BY u.created_at DESC
 		LIMIT $3 OFFSET $4`, query, role, limit, offset)
@@ -112,7 +117,11 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset 
 	users := []User{}
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.LastSeenAt, &u.CreatedAt, &u.Roles); err != nil {
+		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles); err != nil {
+			return nil, 0, err
+		}
+		u.AvatarURL = media.URLForPtr(u.AvatarURL)
+		if false {
 			return nil, 0, err
 		}
 		users = append(users, u)
@@ -121,13 +130,15 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, limit, offset 
 }
 
 // UpdateUser يعدّل الاسم و/أو الحالة — يعيد ErrNotFound لمعرف غير موجود.
-func (r *Repo) UpdateUser(ctx context.Context, userID string, fullName, status *string) error {
+func (r *Repo) UpdateUser(ctx context.Context, userID string, fullName, status, avatarMediaID *string) error {
 	tag, err := r.db.Exec(ctx, `
 		UPDATE users SET
 			full_name = COALESCE($2, full_name),
 			status    = COALESCE($3, status),
+			avatar_media_id = CASE WHEN $4::text IS NULL THEN avatar_media_id
+			                       ELSE NULLIF($4, '')::uuid END,
 			updated_at = now()
-		WHERE id = $1`, userID, fullName, status)
+		WHERE id = $1`, userID, fullName, status, avatarMediaID)
 	if err != nil {
 		return err
 	}

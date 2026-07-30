@@ -29,7 +29,8 @@
   --color-page: #f8fafc;
 
   /* الخط المعتمد */
-  --font-sans: "IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif;
+  --font-sans: "Tajawal", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  --font-weight-normal: 500;
 
   /* الزوايا */
   --radius-control: 8px;

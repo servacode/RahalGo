@@ -17,6 +17,9 @@ importers:
       '@fontsource/ibm-plex-sans-arabic':
         specifier: ^5.3.0
         version: 5.3.0
+      '@fontsource/tajawal':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@rahalgo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -75,6 +78,9 @@ importers:
       '@fontsource/ibm-plex-sans-arabic':
         specifier: ^5.3.0
         version: 5.3.0
+      '@fontsource/tajawal':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@rahalgo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -127,6 +133,9 @@ importers:
       '@fontsource/ibm-plex-sans-arabic':
         specifier: ^5.3.0
         version: 5.3.0
+      '@fontsource/tajawal':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@rahalgo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -168,6 +177,9 @@ importers:
   apps/rep:
     dependencies:
       '@fontsource/ibm-plex-sans-arabic':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/tajawal':
         specifier: ^5.3.0
         version: 5.3.0
       '@rahalgo/i18n':
@@ -249,6 +261,9 @@ packages:
 
   '@fontsource/ibm-plex-sans-arabic@5.3.0':
     resolution: {integrity: sha512-ZZ4g+JDgQY0NqSh4o0MNWU1sHQmtcee1g++aKAwyJvZxnT5y51JXsN1cIXnaQaMd40dcbK6QFYa+Z1LbaiNuqA==}
+
+  '@fontsource/tajawal@5.3.0':
+    resolution: {integrity: sha512-R2GUdHHAebeZ+CyYvulaSECfZe3BWbNjEWX3TXG0Csnx4RADO/zyqk6Y//NYdSx5n74zRJh9HTvd61mpX/UzZQ==}
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -958,6 +973,8 @@ snapshots:
     optional: true
 
   '@fontsource/ibm-plex-sans-arabic@5.3.0': {}
+
+  '@fontsource/tajawal@5.3.0': {}
 
   '@img/colour@1.1.0':
     optional: true
