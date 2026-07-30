@@ -102,6 +102,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/banners", s.handleListBanners)
 			r.Get("/settings", s.handleListSettings)
 			r.Get("/stats", s.handleAdminStats)
+			r.Get("/reports", s.handleReports)
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/users/{id}/wallet", s.handleAdminWalletApply)

@@ -102,6 +102,7 @@
       "zones": "مناطق التغطية",
       "promos": "العروض والأكواد",
       "whatsapp": "بوت واتساب",
+      "reports": "التقارير",
       "settings": "الإعدادات"
     },
     "ordersPage": {
@@ -398,6 +399,30 @@
       "bannerImage": "رابط الصورة",
       "bannerTarget": "الوجهة عند النقر (اختياري)",
       "bannersEmpty": "لا بانرات بعد"
+    },
+    "reports": {
+      "title": "التقارير",
+      "from": "من",
+      "to": "إلى",
+      "summary": {
+        "ordersTotal": "إجمالي الطلبات",
+        "delivered": "مُسلَّمة",
+        "cancelled": "ملغاة/مرفوضة/فاشلة",
+        "grossSales": "المبيعات (المُسلَّم)",
+        "deliveryFees": "رسوم التوصيل",
+        "commissions": "عمولات المنصة",
+        "walletPaid": "دُفع من المحافظ",
+        "cashCollected": "نقد محصَّل",
+        "avgDelivery": "متوسط زمن التوصيل",
+        "minutes": "دقيقة",
+        "activeCustomers": "زبائن طلبوا"
+      },
+      "dailyOrders": "الطلبات يومياً",
+      "dailySales": "مبيعات الأيام (المُسلَّم)",
+      "topMerchants": "أفضل المتاجر",
+      "topDrivers": "أفضل السائقين",
+      "deliveries": "توصيلة",
+      "noData": "لا بيانات في هذا المدى"
     },
     "settingsPage": {
       "title": "الإعدادات الديناميكية",
