@@ -52,6 +52,7 @@ func (s *Service) publishOrder(o *Order) {
 	event := map[string]any{"type": "order", "order": o}
 	s.pub.Publish("ops", event)
 	s.pub.Publish("merchant:"+o.MerchantID, event)
+	s.pub.Publish("customer:"+o.CustomerID, event)
 }
 
 // Create ينشئ طلباً كاملاً: تحقق المتجر، تسعير خادمي للأصناف والخيارات،

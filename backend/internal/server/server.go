@@ -93,8 +93,20 @@ func (s *Server) Router() http.Handler {
 			})
 		})
 
-		// تقييم الطلب — زبون الطلب نفسه (تُستخدم من التطبيق/الموقع)
-		r.With(s.RequireAuth).Post("/orders/{id}/rating", s.handleRateOrder)
+		// واجهة التصفح العامة — بلا حساب
+		r.Get("/public/home", s.handlePublicHome)
+		r.Get("/public/merchants/{id}", s.handlePublicMerchant)
+		r.Get("/public/zone", s.handlePublicZone)
+
+		// نقاط الزبون — الطلب حصراً من هنا (قرار 18)
+		r.Group(func(r chi.Router) {
+			r.Use(s.RequireAuth)
+			r.Post("/orders", s.handleCustomerCreateOrder)
+			r.Post("/orders/{id}/rating", s.handleRateOrder)
+			r.Get("/my/orders", s.handleMyOrders)
+			r.Get("/my/orders/{id}", s.handleMyOrder)
+			r.Get("/my/wallet", s.handleMyWallet)
+		})
 
 		// بوابة المتجر — صاحب المتجر حصراً، وكل نقطة تتحقق من الملكية
 		r.Route("/merchant", func(r chi.Router) {

@@ -41,7 +41,11 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 			rows.Close()
 		}
 	}
-	// مواضيع السائق/الزبون تُضاف مع تطبيقيهما
+	// الزبون: موضوعه الشخصي (تتبع طلباته حياً من الموقع/التطبيق)
+	if slices.Contains(claims.Roles, "customer") {
+		topics = append(topics, "customer:"+claims.Subject)
+	}
+	// موضوع السائق يُضاف مع تطبيقه
 	if len(topics) == 0 {
 		httpx.Error(w, errForbidden)
 		return

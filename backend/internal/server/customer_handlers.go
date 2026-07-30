@@ -1,0 +1,190 @@
+package server
+
+import (
+	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/orders"
+)
+
+// واجهة الزبون: نقاط عامة للتصفح (بلا حساب) ونقاط الطلب/التتبع/المحفظة
+// بحساب الزبون — الطلب حصراً من هنا (قرار 18).
+
+// openNowSQL: المتجر يستقبل الآن؟ فعال + غير مغلق طارئاً + ضمن دوام اليوم
+// (بتوقيت سوريا) — ولا صفوف دوام تعني مفتوحاً دائماً.
+const openNowSQL = `(m.status = 'active' AND NOT m.emergency_closed AND (
+	NOT EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id
+	            AND h.day_of_week = EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Damascus'))::int)
+	OR EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id
+	           AND h.day_of_week = EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Damascus'))::int
+	           AND NOT h.closed
+	           AND (now() AT TIME ZONE 'Asia/Damascus')::time BETWEEN h.open_time AND h.close_time)))`
+
+type publicMerchant struct {
+	ID           string  `json:"id"`
+	Name         string  `json:"name"`
+	Description  string  `json:"description"`
+	CategoryID   string  `json:"category_id"`
+	CategoryIcon string  `json:"category_icon"`
+	LogoURL      *string `json:"logo_url"`
+	LogoThumbURL *string `json:"logo_thumb_url"`
+	OpenNow      bool    `json:"open_now"`
+}
+
+// handlePublicHome بيانات الصفحة الرئيسية: بانرات وفئات ومتاجر فعالة بحالة فتحها.
+func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
+	banners, err := s.catalog.ListBanners(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	active := banners[:0]
+	for _, b := range banners {
+		if b.Active && b.ImageURL != nil {
+			active = append(active, b)
+		}
+	}
+
+	categories, err := s.catalog.ListCategories(r.Context(), true)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT m.id, m.name, m.description, m.category_id, c.icon,
+		       lm.path, lm.thumb_path, `+openNowSQL+`
+		FROM merchants m
+		JOIN categories c ON c.id = m.category_id
+		LEFT JOIN media lm ON lm.id = m.logo_media_id
+		WHERE m.status = 'active'
+		ORDER BY `+openNowSQL+` DESC, m.created_at`)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+	merchants := []publicMerchant{}
+	for rows.Next() {
+		var m publicMerchant
+		if err := rows.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryIcon,
+			&m.LogoURL, &m.LogoThumbURL, &m.OpenNow); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		m.LogoURL = media.URLForPtr(m.LogoURL)
+		m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
+		merchants = append(merchants, m)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"banners": active, "categories": categories, "merchants": merchants,
+	})
+}
+
+// handlePublicMerchant متجر واحد بقائمته الكاملة (النافد يظهر معطلاً).
+func (s *Server) handlePublicMerchant(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var m publicMerchant
+	err := s.pg.QueryRow(r.Context(), `
+		SELECT m.id, m.name, m.description, m.category_id, c.icon,
+		       lm.path, lm.thumb_path, `+openNowSQL+`
+		FROM merchants m
+		JOIN categories c ON c.id = m.category_id
+		LEFT JOIN media lm ON lm.id = m.logo_media_id
+		WHERE m.id = $1 AND m.status = 'active'`, id).
+		Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryIcon,
+			&m.LogoURL, &m.LogoThumbURL, &m.OpenNow)
+	if err != nil {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	m.LogoURL = media.URLForPtr(m.LogoURL)
+	m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
+
+	menu, err := s.catalog.GetMenu(r.Context(), id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"merchant": m, "menu": menu})
+}
+
+// handlePublicZone معاينة رسوم التوصيل والحد الأدنى لنقطة على الخريطة.
+func (s *Server) handlePublicZone(w http.ResponseWriter, r *http.Request) {
+	lat, err1 := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
+	lng, err2 := strconv.ParseFloat(r.URL.Query().Get("lng"), 64)
+	if err1 != nil || err2 != nil {
+		s.respondErr(w, errValidation)
+		return
+	}
+	z, err := s.catalog.ZoneForPoint(r.Context(), lat, lng)
+	if err != nil {
+		s.respondErr(w, orders.ErrOutOfZone)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"name": z.Name, "delivery_fee": z.DeliveryFee, "min_order": z.MinOrder,
+	})
+}
+
+// handleCustomerCreateOrder إنشاء طلب بحساب الزبون نفسه — التسعير خادمي بالكامل.
+func (s *Server) handleCustomerCreateOrder(w http.ResponseWriter, r *http.Request) {
+	in, err := decode[orders.CreateInput](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	in.CustomerID = userIDFrom(r) // الطلب باسم صاحب الحساب حصراً
+	in.CustomerPhone = ""
+	o, err := s.orders.Create(r.Context(), userIDFrom(r), rolesFrom(r), *in, clientIP(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, o)
+}
+
+// handleMyOrders طلبات الزبون نفسه.
+func (s *Server) handleMyOrders(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	page, _ := strconv.Atoi(q.Get("page"))
+	perPage, _ := strconv.Atoi(q.Get("per_page"))
+	res, err := s.orders.List(r.Context(), orders.ListFilter{
+		CustomerID: userIDFrom(r),
+		OpenOnly:   q.Get("open_only") == "true",
+		Page:       page,
+		PerPage:    perPage,
+	})
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, res)
+}
+
+func (s *Server) handleMyOrder(w http.ResponseWriter, r *http.Request) {
+	o, err := s.orders.GetByID(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if o.CustomerID != userIDFrom(r) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, o)
+}
+
+// handleMyWallet رصيد الزبون وكشف حركاته.
+func (s *Server) handleMyWallet(w http.ResponseWriter, r *http.Request) {
+	st, err := s.wallet.StatementFor(r.Context(), userIDFrom(r), 50)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, st)
+}
