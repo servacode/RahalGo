@@ -28,6 +28,7 @@ import {
   IconEdit,
   IconBlock,
   IconUnblock,
+  IconBalance,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -40,6 +41,22 @@ const fmt = new Intl.NumberFormat("ar-SY");
 const P = m.admin.users.profile;
 const KINDS: Record<string, string> = m.admin.users.txKinds;
 const ACTIONS: Record<string, string> = m.admin.users.auditActions;
+
+interface FinEntry {
+  ref: string;
+  label: string;
+  amount: number;
+  status?: string;
+  reason?: string;
+  date: string;
+}
+interface FinData {
+  roles: string[];
+  rates: { label: string; percent: number }[];
+  owed_to: { total: number; items: FinEntry[] };
+  owed_by: { total: number; items: FinEntry[] };
+  returns: FinEntry[];
+}
 
 interface Profile {
   id: string;
@@ -114,7 +131,10 @@ export default function UserProfilePage() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<string | null>(null);
-  const [tab, setTab] = useState<"overview" | "wallet" | "feedback" | "activity">("overview");
+  const [fin, setFin] = useState<FinData | null>(null);
+  const [tab, setTab] = useState<"overview" | "wallet" | "financials" | "feedback" | "activity">(
+    "overview",
+  );
   const [notice, setNotice] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -136,6 +156,7 @@ export default function UserProfilePage() {
       setTxs(st.transactions);
       setActivity(await api<Activity[]>(`/api/v1/admin/users/${id}/activity`));
       setFeedback(await api<Feedback>(`/api/v1/admin/users/${id}/feedback`));
+      setFin(await api<FinData>(`/api/v1/admin/users/${id}/financials`));
       setError("");
     } catch (err) {
       setError(errText(err));
@@ -345,6 +366,7 @@ export default function UserProfilePage() {
           [
             { key: "overview", label: P.tabs.overview, icon: <IconUser size={15} /> },
             { key: "wallet", label: P.tabs.wallet, icon: <IconWallet size={15} /> },
+            { key: "financials", label: P.tabs.financials, icon: <IconBalance size={15} /> },
             { key: "feedback", label: P.tabs.feedback, icon: <IconStar size={15} /> },
             { key: "activity", label: P.tabs.activity, icon: <IconStatus size={15} /> },
           ] as const
@@ -459,6 +481,78 @@ export default function UserProfilePage() {
           </ul>
         )}
       </FormSection>
+      )}
+
+      {tab === "financials" && fin && (
+        <div className="space-y-4">
+          {/* النِسَب المطبّقة */}
+          {fin.rates.length > 0 && (
+            <FormSection title={P.fin.rates} icon={<IconBalance />}>
+              <ul className="space-y-1.5">
+                {fin.rates.map((rt, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center justify-between rounded-control border border-line px-3 py-2 text-sm"
+                  >
+                    <span>{rt.label}</span>
+                    <span className="font-bold text-primary-dark" dir="ltr">
+                      {rt.percent}%
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </FormSection>
+          )}
+
+          {/* مستحق له / مستحق عليه */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <FinBucket
+              title={P.fin.owedTo}
+              total={fin.owed_to.total}
+              items={fin.owed_to.items}
+              positive
+              onOrder={(n) => router.push(`/dashboard/orders?q=${n}`)}
+            />
+            <FinBucket
+              title={P.fin.owedBy}
+              total={fin.owed_by.total}
+              items={fin.owed_by.items}
+              positive={false}
+              onOrder={(n) => router.push(`/dashboard/orders?q=${n}`)}
+            />
+          </div>
+
+          {/* الطلبات المرتجعة وأسبابها */}
+          <FormSection title={P.fin.returns} icon={<IconBlock />}>
+            {fin.returns.length === 0 ? (
+              <p className="py-4 text-center text-sm text-ink-muted">{P.fin.returnsEmpty}</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {fin.returns.map((e) => (
+                  <li
+                    key={e.ref}
+                    className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2 text-sm"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Badge variant="danger">
+                          {(P.fin.st as Record<string, string>)[e.status ?? ""] ?? e.status}
+                        </Badge>
+                        <span className="font-medium">{e.label}</span>
+                        {e.reason && (
+                          <span className="truncate text-xs text-ink-muted">— {e.reason}</span>
+                        )}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-xs text-ink-muted" dir="ltr">
+                      {new Date(e.date).toLocaleDateString("ar-SY")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </FormSection>
+        </div>
       )}
 
       {tab === "feedback" && feedback && (
@@ -858,5 +952,59 @@ function StatusReasonModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+function FinBucket({
+  title,
+  total,
+  items,
+  positive,
+  onOrder,
+}: {
+  title: string;
+  total: number;
+  items: FinEntry[];
+  positive: boolean;
+  onOrder: (ref: string) => void;
+}) {
+  const tone = positive ? "text-success" : "text-danger";
+  return (
+    <FormSection title={title} icon={<IconWallet />}>
+      <p className={`mb-3 text-2xl font-bold ${tone}`} dir="ltr">
+        {positive ? "+" : ""}
+        {fmt.format(total)}{" "}
+        <span className="text-sm font-normal text-ink-muted">{m.common.currency}</span>
+      </p>
+      {items.length === 0 ? (
+        <p className="py-2 text-center text-sm text-ink-muted">{P.fin.empty}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {items.map((e, i) => (
+            <li
+              key={e.ref || i}
+              className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2 text-sm"
+            >
+              <div className="min-w-0 flex-1">
+                {e.ref ? (
+                  <button
+                    type="button"
+                    onClick={() => onOrder(e.ref)}
+                    className="truncate text-start font-medium text-primary hover:underline"
+                  >
+                    {e.label}
+                  </button>
+                ) : (
+                  <span className="font-medium">{e.label}</span>
+                )}
+              </div>
+              <span className={`shrink-0 font-bold ${tone}`} dir="ltr">
+                {fmt.format(e.amount)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </FormSection>
   );
 }

@@ -368,8 +368,23 @@
         "tabs": {
           "overview": "نظرة عامة",
           "wallet": "سجل المحفظة",
+          "financials": "المالية",
           "activity": "سجل النشاط",
           "feedback": "الشكاوى والتقييمات"
+        },
+        "fin": {
+          "rates": "نسب العمولة المطبّقة",
+          "owedTo": "مستحق له",
+          "owedBy": "مستحق عليه",
+          "returns": "طلبات مرتجعة/ملغاة وأسبابها",
+          "returnsEmpty": "لا طلبات مرتجعة",
+          "empty": "لا حركات",
+          "st": {
+            "cancelled": "ملغى",
+            "rejected": "مرفوض",
+            "failed": "فاشل",
+            "refunded": "مسترجع"
+          }
         },
         "passwordBtn": "كلمة المرور",
         "logoutAllShort": "إنهاء الجلسات",
