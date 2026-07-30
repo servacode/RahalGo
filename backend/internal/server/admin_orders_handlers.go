@@ -15,20 +15,6 @@ func rolesFrom(r *http.Request) []string {
 	return roles
 }
 
-func (s *Server) handleCreateOrder(w http.ResponseWriter, r *http.Request) {
-	req, err := decode[orders.CreateInput](r)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	o, err := s.orders.Create(r.Context(), userIDFrom(r), rolesFrom(r), *req, clientIP(r))
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	httpx.JSON(w, http.StatusCreated, o)
-}
-
 func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))

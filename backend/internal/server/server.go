@@ -100,10 +100,10 @@ func (s *Server) Router() http.Handler {
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/users/{id}/wallet", s.handleAdminWalletApply)
 
-			// الطلبات — غرفة العمليات
+			// الطلبات — غرفة العمليات تدير ولا تُنشئ (قرار 18):
+			// الإنشاء حصراً عبر واجهات الزبون (الموقع/التطبيق)
 			r.Get("/orders", s.handleListOrders)
 			r.Get("/orders/{id}", s.handleGetOrder)
-			r.Post("/orders", s.handleCreateOrder)
 			r.Post("/orders/{id}/transition", s.handleOrderTransition)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
 			r.Group(func(r chi.Router) {
