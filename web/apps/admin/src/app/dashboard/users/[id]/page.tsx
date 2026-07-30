@@ -27,7 +27,7 @@ import {
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
-import ImageUpload, { MediaThumb } from "@/components/ImageUpload";
+import { MediaThumb } from "@/components/ImageUpload";
 import RoleBadge from "@/components/RoleBadge";
 
 const m = getMessages(defaultLocale);
@@ -99,6 +99,7 @@ export default function UserProfilePage() {
   const [txs, setTxs] = useState<Tx[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [phoneOpen, setPhoneOpen] = useState(false);
+  const [tab, setTab] = useState<"overview" | "wallet" | "activity">("overview");
   const [notice, setNotice] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -258,27 +259,37 @@ export default function UserProfilePage() {
         </div>
       </div>
 
-      {isAdmin && (
-        <div className="mb-5 rounded-card border border-line bg-surface p-4">
-          <ImageUpload
-            kind="avatar"
-            label={P.avatar}
-            initialUrl={p.avatar_thumb_url}
-            onChange={async (mediaID) => {
-              await api(`/api/v1/admin/users/${p.id}`, {
-                method: "PATCH",
-                body: JSON.stringify({ avatar_media_id: mediaID }),
-              });
-              await load();
-            }}
-          />
-        </div>
-      )}
 
       {notice && (
         <p className="mb-4 rounded-control bg-success/10 px-3 py-2 text-sm text-success">{notice}</p>
       )}
 
+      {/* التبويبات — كل قسم في تبويبه (ملاحظة مراجعة) */}
+      <div className="mb-5 flex gap-1 border-b border-line">
+        {(
+          [
+            { key: "overview", label: P.tabs.overview, icon: <IconUser size={15} /> },
+            { key: "wallet", label: P.tabs.wallet, icon: <IconWallet size={15} /> },
+            { key: "activity", label: P.tabs.activity, icon: <IconStatus size={15} /> },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm transition-colors ${
+              tab === t.key
+                ? "border-primary font-bold text-primary-dark"
+                : "border-transparent text-ink-muted hover:text-ink"
+            }`}
+          >
+            {t.icon}
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+      <>
       {/* المؤشرات حسب الأدوار */}
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map((s) => (
@@ -306,7 +317,10 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* سجل المحفظة الكامل — هنا لا في النافذة (ملاحظة المراجعة) */}
+      </>
+      )}
+
+      {tab === "wallet" && (
       <FormSection title={P.statement} icon={<IconWallet />}>
         {txs.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-muted">{P.statementEmpty}</p>
@@ -356,8 +370,10 @@ export default function UserProfilePage() {
           </ul>
         )}
       </FormSection>
+      )}
 
-      <div className="mt-5">
+      {tab === "activity" && (
+      <div>
         <FormSection title={P.activity} icon={<IconStatus />}>
           {activity.length === 0 ? (
             <p className="py-6 text-center text-sm text-ink-muted">{P.activityEmpty}</p>
@@ -388,6 +404,7 @@ export default function UserProfilePage() {
           )}
         </FormSection>
       </div>
+      )}
 
       {phoneOpen && (
         <ChangePhoneModal

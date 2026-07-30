@@ -101,28 +101,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           );
         })}
       </nav>
-      <div className="border-t border-line p-3">
-        <p dir="ltr" className="truncate px-3 pb-2 text-end text-xs text-ink-muted">
-          {user?.phone}
-        </p>
-        <button
-          onClick={() => {
-            logout();
-            router.replace("/login");
-          }}
-          className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-start text-sm text-danger hover:bg-danger/10"
-        >
-          <IconLogout size={17} strokeWidth={1.8} />
-          {m.auth.logout}
-        </button>
-      </div>
     </>
   );
 
+  const activeLabel =
+    NAV.find((item) =>
+      item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href)
+    )?.label ?? m.admin.nav.dashboard;
+
   return (
-    <div className="flex min-h-screen">
-      {/* الشريط الجانبي الثابت — شاشات كبيرة */}
-      <aside className="hidden w-60 shrink-0 flex-col border-e border-line bg-surface lg:flex">
+    <div className="flex min-h-screen bg-page">
+      {/* الشريط الجانبي العائم — شاشات كبيرة */}
+      <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col overflow-hidden rounded-card border border-line bg-surface shadow-sm lg:flex">
         {sidebar}
       </aside>
 
@@ -141,25 +131,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {sidebar}
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* الشريط العلوي — الجوال فقط */}
-        <header className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 lg:hidden">
+      <div className="flex min-w-0 flex-1 flex-col p-3">
+        {/* التوب بار العائم */}
+        <header className="mb-3 flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-2.5 shadow-sm">
           <button
             onClick={() => setMenuOpen(true)}
-            className="text-ink-muted hover:text-ink"
+            className="text-ink-muted hover:text-ink lg:hidden"
             aria-label={m.admin.nav.dashboard}
           >
             <IconHamburger size={22} />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 lg:hidden">
             <div className="flex h-7 w-7 items-center justify-center rounded-control bg-primary text-sm font-bold text-white">
               ر
             </div>
             <span className="font-bold">{m.common.appName}</span>
           </div>
+          <h2 className="hidden text-sm font-bold text-ink lg:block">{activeLabel}</h2>
+          <div className="ms-auto flex items-center gap-3">
+            <span dir="ltr" className="hidden text-xs text-ink-muted sm:block">
+              {user?.phone}
+            </span>
+            <button
+              onClick={() => {
+                logout();
+                router.replace("/login");
+              }}
+              className="flex items-center gap-1.5 rounded-control px-2 py-1.5 text-sm text-danger hover:bg-danger/10"
+            >
+              <IconLogout size={16} />
+              <span className="hidden sm:inline">{m.auth.logout}</span>
+            </button>
+          </div>
         </header>
 
-        <main className="min-w-0 flex-1 p-4 lg:p-6">{children}</main>
+        <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-4 shadow-sm lg:p-6">
+          {children}
+        </main>
       </div>
     </div>
   );
