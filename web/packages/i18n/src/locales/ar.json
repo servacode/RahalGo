@@ -77,6 +77,8 @@
     "invalid_promo": "كود الخصم غير صالح أو مستخدم سابقاً",
     "invalid_transition": "لا يمكن نقل الطلب لهذه الحالة",
     "driver_required": "يجب إسناد سائق أولاً",
+    "over_settle": "المبلغ يتجاوز ما بحوزة السائق",
+    "cash_limit_exceeded": "السائق تجاوز سقفه النقدي — يجب تسليم الصندوق أولاً",
     "phone_taken": "هذا الرقم مسجّل مسبقاً",
     "invalid_role": "الدور المحدد غير صالح",
     "self_action": "لا يمكنك تنفيذ هذا الإجراء على حسابك"
@@ -92,6 +94,7 @@
     "nav": {
       "dashboard": "الرئيسية",
       "orders": "الطلبات",
+      "drivers": "السائقون",
       "users": "المستخدمون",
       "merchants": "المتاجر",
       "zones": "مناطق التغطية",
@@ -160,6 +163,28 @@
         "orderNotes": "ملاحظات عامة",
         "submit": "إنشاء الطلب",
         "created": "أُنشئ الطلب #{number} بنجاح"
+      }
+    },
+    "drivers": {
+      "title": "السائقون",
+      "cashHeld": "نقد بحوزته",
+      "cashLimit": "السقف النقدي",
+      "openOrders": "طلبات جارية",
+      "deliveredToday": "سلّم اليوم",
+      "cashBox": "كشف الصندوق",
+      "boxTitle": "صندوق",
+      "settle": "تسليم الصندوق",
+      "settleAmount": "المبلغ المُسلَّم",
+      "settleAll": "الكل",
+      "entriesHistory": "آخر الحركات",
+      "noEntries": "لا حركات بعد",
+      "overLimit": "تجاوز السقف — لا طلبات نقدية جديدة",
+      "nearLimit": "يقترب من السقف",
+      "empty": "لا سائقون بعد — أنشئهم من شاشة المستخدمين بدور سائق",
+      "entryKinds": {
+        "order_collection": "تحصيل طلب",
+        "settlement": "تسليم صندوق",
+        "adjustment": "تسوية"
       }
     },
     "users": {

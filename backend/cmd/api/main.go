@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/database"
@@ -94,11 +95,12 @@ func run(logger *slog.Logger) error {
 	}
 	catalogSvc := catalog.NewService(pg, identitySvc)
 	walletSvc := wallet.NewService(pg)
-	ordersSvc := orders.NewService(pg, identitySvc, walletSvc, logger)
+	cashboxSvc := cashbox.NewService(pg, settingsStore)
+	ordersSvc := orders.NewService(pg, identitySvc, walletSvc, cashboxSvc, logger)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc, settingsStore, walletSvc, ordersSvc, otpStatus).Router(),
+		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc, settingsStore, walletSvc, ordersSvc, cashboxSvc, otpStatus).Router(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

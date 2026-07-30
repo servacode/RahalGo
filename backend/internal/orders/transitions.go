@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
@@ -21,12 +22,12 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 
 	var from string
 	var driverID *string
-	var walletPaid int64
+	var walletPaid, cashDue int64
 	var customerID, promoCode string
 	err = tx.QueryRow(ctx, `
-		SELECT status, driver_id, wallet_paid, customer_id, COALESCE(promo_code,'')
+		SELECT status, driver_id, wallet_paid, cash_due, customer_id, COALESCE(promo_code,'')
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
-		Scan(&from, &driverID, &walletPaid, &customerID, &promoCode)
+		Scan(&from, &driverID, &walletPaid, &cashDue, &customerID, &promoCode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -98,6 +99,13 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 		}
 	}
 
+	// عند التسليم: نقد الطلب يُقيَّد على صندوق السائق
+	if to == StDelivered && cashDue > 0 && driverID != nil {
+		if err := s.cashbox.Collect(ctx, *driverID, cashDue, orderID, &actorID); err != nil {
+			s.logger.Error("cash collect failed", "order", orderID, "error", err)
+		}
+	}
+
 	return s.GetByID(ctx, orderID)
 }
 
@@ -117,7 +125,9 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	}
 
 	var from string
-	err = s.db.QueryRow(ctx, `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&from)
+	var cashDue int64
+	err = s.db.QueryRow(ctx, `SELECT status, cash_due FROM orders WHERE id = $1`, orderID).
+		Scan(&from, &cashDue)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -127,6 +137,16 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	// الإسناد اليدوي مسموح من التحضير أو البحث عن سائق
 	if from != StPreparing && from != StDispatching {
 		return nil, ErrBadTransition
+	}
+	// السقف النقدي: لا طلبات نقدية لسائق تجاوز سقفه (PLAN §6.3)
+	if cashDue > 0 {
+		over, err := s.cashbox.OverLimit(ctx, driverID)
+		if err != nil {
+			return nil, err
+		}
+		if over {
+			return nil, cashbox.ErrLimitExceed
+		}
 	}
 
 	if _, err := s.db.Exec(ctx,

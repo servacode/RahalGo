@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -21,11 +22,13 @@ type Service struct {
 	db       *pgxpool.Pool
 	identity *identity.Service
 	wallet   *wallet.Service
+	cashbox  *cashbox.Service
 	logger   *slog.Logger
 }
 
-func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wallet.Service, logger *slog.Logger) *Service {
-	return &Service{db: db, identity: identitySvc, wallet: walletSvc, logger: logger}
+func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wallet.Service,
+	cashboxSvc *cashbox.Service, logger *slog.Logger) *Service {
+	return &Service{db: db, identity: identitySvc, wallet: walletSvc, cashbox: cashboxSvc, logger: logger}
 }
 
 // Create ينشئ طلباً كاملاً: تحقق المتجر، تسعير خادمي للأصناف والخيارات،

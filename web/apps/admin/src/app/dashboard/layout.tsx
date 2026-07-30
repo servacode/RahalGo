@@ -7,6 +7,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   IconDashboard,
   IconOrder,
+  IconDriver,
   IconUsers,
   IconStore,
   IconZones,
@@ -24,6 +25,7 @@ const m = getMessages(defaultLocale);
 const NAV = [
   { href: "/dashboard", label: m.admin.nav.dashboard, icon: IconDashboard },
   { href: "/dashboard/orders", label: m.admin.nav.orders, icon: IconOrder },
+  { href: "/dashboard/drivers", label: m.admin.nav.drivers, icon: IconDriver },
   { href: "/dashboard/users", label: m.admin.nav.users, icon: IconUsers },
   { href: "/dashboard/merchants", label: m.admin.nav.merchants, icon: IconStore },
   { href: "/dashboard/zones", label: m.admin.nav.zones, icon: IconZones },

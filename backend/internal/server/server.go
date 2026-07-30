@@ -14,6 +14,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -34,16 +35,17 @@ type Server struct {
 	settings  *settings.Store
 	wallet    *wallet.Service
 	orders    *orders.Service
+	cashbox   *cashbox.Service
 	otpStatus func() map[string]any
 }
 
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
 	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
-	otpStatus func() map[string]any) *Server {
+	cashboxSvc *cashbox.Service, otpStatus func() map[string]any) *Server {
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
-		wallet: walletSvc, orders: ordersSvc, otpStatus: otpStatus}
+		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, otpStatus: otpStatus}
 }
 
 func (s *Server) Router() http.Handler {
@@ -106,6 +108,12 @@ func (s *Server) Router() http.Handler {
 			r.Get("/orders/{id}", s.handleGetOrder)
 			r.Post("/orders/{id}/transition", s.handleOrderTransition)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
+
+			// السائقون والصندوق النقدي
+			r.Get("/drivers", s.handleListDrivers)
+			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
+			r.With(s.RequireRoles("admin", "finance")).
+				Post("/drivers/{id}/settle", s.handleDriverSettle)
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRoles("admin"))
 				r.Post("/users", s.handleAdminCreateUser)
