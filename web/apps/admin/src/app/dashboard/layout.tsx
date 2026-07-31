@@ -23,7 +23,9 @@ import {
   IconSettings,
   IconLink,
   IconBalance,
+  IconWallet,
 } from "@rahalgo/ui";
+import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 
@@ -38,6 +40,7 @@ const NAV: ChromeNavItem[] = [
   { href: "/dashboard/sales", label: m.terms.reps, icon: IconUsers },
   { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink },
   { href: "/dashboard/commissions", label: m.terms.commissions, icon: IconBalance },
+  { href: "/dashboard/payouts", label: m.shared.payout.title, icon: IconWallet },
   { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers },
   { href: "/dashboard/merchants", label: m.terms.merchants, icon: IconStore },
   { href: "/dashboard/zones", label: m.terms.zones, icon: IconZones },
@@ -65,6 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <PasswordGate>
     <DashboardChrome
       brand={m.common.appName}
       nav={NAV}
@@ -77,6 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       Link={Link}
       wsUrl={`${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws")}/api/v1/ws`}
       token={tokenStore.access}
+      notificationsHref="/dashboard/notifications"
       phone={user?.phone}
       onLogout={() => {
         logout();
@@ -85,5 +90,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     >
       {children}
     </DashboardChrome>
+    </PasswordGate>
   );
 }
