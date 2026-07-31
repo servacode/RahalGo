@@ -17,7 +17,7 @@ import {
 } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
-const ROLE_LABELS: Record<string, string> = m.roles;
+const ROLE_LABELS: Record<string, string> = m.terms.roleNames;
 
 interface RoleStyle {
   cls: string;

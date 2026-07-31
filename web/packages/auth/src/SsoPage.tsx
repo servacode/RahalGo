@@ -45,11 +45,11 @@ function Sso({ loginPath }: { loginPath: string }) {
     <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-page text-center">
       {failed ? (
         <>
-          <p className="text-lg font-bold text-danger">{m.site.sso.failed}</p>
+          <p className="text-lg font-bold text-danger">{m.shared.sso.failed}</p>
           <Button onClick={() => window.location.replace(loginPath)}>{m.auth.login}</Button>
         </>
       ) : (
-        <p className="text-ink-muted">{m.site.sso.loading}</p>
+        <p className="text-ink-muted">{m.shared.sso.loading}</p>
       )}
     </main>
   );

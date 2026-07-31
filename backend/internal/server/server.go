@@ -52,11 +52,13 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
 	cashboxSvc *cashbox.Service, supportSvc *support.Service, mediaSvc *media.Service,
 	hub *realtime.Hub, otpStatus func() map[string]any) *Server {
+	notify := notifications.New(pg, hub, logger)
+	// محرك الطلبات يحتاج الإشعارات (عمولة المندوب) وقد بُني قبلها — نحقنها الآن.
+	ordersSvc.SetNotifier(notify)
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
-		media: mediaSvc, hub: hub, otpStatus: otpStatus,
-		notify: notifications.New(pg, hub, logger)}
+		media: mediaSvc, hub: hub, otpStatus: otpStatus, notify: notify}
 }
 
 func (s *Server) Router() http.Handler {

@@ -277,24 +277,43 @@ func (r *Repo) ConsumeOTP(ctx context.Context, phone, codeHash, purpose string) 
 
 // --- Refresh Tokens ---
 
-func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl time.Duration, userAgent, ip string) error {
+// StoreRefresh يخزّن توكن تجديد داخل عائلة جلسة. sessionID فارغ = عائلة جديدة.
+func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl time.Duration, userAgent, ip, sessionID string) error {
+	var sid any
+	if sessionID != "" {
+		sid = sessionID
+	}
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip)
-		VALUES ($1, $2, now() + $3, $4, $5)`, userID, tokenHash, ttl, userAgent, ip)
+		INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip, session_id)
+		VALUES ($1, $2, now() + $3, $4, $5, COALESCE($6::uuid, gen_random_uuid()))`,
+		userID, tokenHash, ttl, userAgent, ip, sid)
 	return err
 }
 
-// RevokeRefresh يُبطل التوكن ويعيد صاحبه — يعيد ErrNotFound إذا كان غير صالح.
-func (r *Repo) RevokeRefresh(ctx context.Context, tokenHash string) (string, error) {
-	var userID string
-	err := r.db.QueryRow(ctx, `
+// RevokeRefresh يُبطل التوكن ويعيد صاحبه وعائلة جلسته — ErrNotFound إن كان غير صالح.
+func (r *Repo) RevokeRefresh(ctx context.Context, tokenHash string) (userID, sessionID string, err error) {
+	err = r.db.QueryRow(ctx, `
 		UPDATE refresh_tokens SET revoked_at = now()
 		WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
-		RETURNING user_id`, tokenHash).Scan(&userID)
+		RETURNING user_id, session_id::text`, tokenHash).Scan(&userID, &sessionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", ErrNotFound
+	}
+	return userID, sessionID, err
+}
+
+// ActiveSessionID عائلة الجلسة الفعّالة للحساب (أحدث توكن سارٍ). تُستعمل عند
+// التسليم بين تطبيقات المنصة كي يبقى الانتقال داخل نفس الجلسة لا جلسة جديدة.
+func (r *Repo) ActiveSessionID(ctx context.Context, userID string) (string, error) {
+	var sid string
+	err := r.db.QueryRow(ctx, `
+		SELECT session_id::text FROM refresh_tokens
+		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
+		ORDER BY created_at DESC LIMIT 1`, userID).Scan(&sid)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}
-	return userID, err
+	return sid, err
 }
 
 // --- Audit ---

@@ -27,14 +27,24 @@ type noopPublisher struct{}
 
 func (noopPublisher) Publish(string, any) {}
 
+// Notifier واجهة الإشعارات المركزية — يستعملها المحرك ليُعلم من يخصّه المال
+// (عمولة المندوب مثلاً). تُحقن بعد الإنشاء لأن خدمة الإشعارات تُبنى في الخادم.
+type Notifier interface {
+	NotifyWallet(ctx context.Context, userID, title, body, href string)
+}
+
 type Service struct {
 	db       *pgxpool.Pool
 	identity *identity.Service
 	wallet   *wallet.Service
 	cashbox  *cashbox.Service
 	pub      Publisher
+	notify   Notifier
 	logger   *slog.Logger
 }
+
+// SetNotifier يحقن خدمة الإشعارات بعد بناء الخادم (لا إشعارات قبلها).
+func (s *Service) SetNotifier(n Notifier) { s.notify = n }
 
 func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wallet.Service,
 	cashboxSvc *cashbox.Service, pub Publisher, logger *slog.Logger) *Service {

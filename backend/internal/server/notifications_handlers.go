@@ -7,10 +7,27 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
+// touch يبثّ إشارة تحديث صامتة: الشاشات المفتوحة تعيد جلب بياناتها فوراً بلا
+// صفّ إشعار في صندوق أحد. القاعدة الفاصلة:
+//   - إشعار (s.notify) = شخص يحتاج أن *يعلم*.
+//   - touch            = شاشة تحتاج أن *تتحدّث*.
+// entity هو نوع الحدث الذي تشترك به الواجهة: useLiveRefresh(["zone"], load).
+func (s *Server) touch(entity string, topics ...string) {
+	if len(topics) == 0 {
+		topics = []string{"ops"}
+	}
+	event := map[string]any{"type": entity}
+	for _, t := range topics {
+		s.hub.Publish(t, event)
+	}
+}
+
 // نصوص الإشعارات المركزية — مصدر واحد لكل نصوص الإشعارات في الخادم.
 var notifTitles = struct {
 	walletCredit, walletDebit, ratingNew, accountSuspended, accountActivated string
 	ticketOpened, ticketNewOps, ticketReply, ticketResolved, driverAssigned  string
+	storeClosed, storeReopened, cashSettled, roleGranted, roleRevoked        string
+	leadRejected, commissionEarned, passwordReset, sessionsRevoked           string
 }{
 	walletCredit:     "إيداع في محفظتك",
 	walletDebit:      "خصم من محفظتك",
@@ -22,6 +39,15 @@ var notifTitles = struct {
 	ticketReply:      "رد جديد على شكواك",
 	ticketResolved:   "تم حل شكواك",
 	driverAssigned:   "أُسند إليك طلب جديد",
+	storeClosed:      "إغلاق طارئ لمتجر",
+	storeReopened:    "عاد متجر للعمل",
+	cashSettled:      "سُلّم صندوقك النقدي",
+	roleGranted:      "أُضيفت صلاحية إلى حسابك",
+	roleRevoked:      "سُحبت صلاحية من حسابك",
+	leadRejected:     "رُفض طلب انضمام عبر رابطك",
+	commissionEarned: "عمولة جديدة في محفظتك",
+	passwordReset:    "غُيّرت كلمة مرور حسابك",
+	sessionsRevoked:  "أُنهيت جلساتك — سجّل الدخول من جديد",
 }
 
 // صندوق إشعارات المستخدم — لأي دور، فلا أحد يحتاج تحديث الصفحة ليعرف ما استجدّ.

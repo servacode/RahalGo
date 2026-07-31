@@ -100,6 +100,14 @@ func (s *Service) NotifyMany(ctx context.Context, userIDs []string, in Input) {
 // مصدر واحد: لا يقرر كل معالِج بنفسه من يُبلَّغ.
 var OpsDesk = []string{"admin", "ops"}
 
+// NotifyWallet إشعار حركة مالية — يُرضي واجهة orders.Notifier.
+func (s *Service) NotifyWallet(ctx context.Context, userID, title, body, href string) {
+	s.Notify(ctx, Input{
+		UserID: userID, Kind: KindWallet, Title: title, Body: body,
+		Entity: "wallet", Href: href,
+	})
+}
+
 // NotifyRole يرسل الإشعار لكل حاملي دور معيّن.
 func (s *Service) NotifyRole(ctx context.Context, role string, in Input) {
 	s.NotifyRoles(ctx, []string{role}, in)

@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  EmptyState,
   useLiveEvent,
   useLiveStatus,
   Badge,
@@ -189,7 +190,7 @@ export default function OrdersBoard() {
               </Button>
             </OrderCard>
           ))}
-          {accepted.length === 0 && <Empty />}
+          {accepted.length === 0 && <EmptyState title={m.merchant.orders.empty} />}
         </Column>
 
         <Column title={m.merchant.orders.preparing} icon={<IconOrder size={16} />}>
@@ -198,7 +199,7 @@ export default function OrdersBoard() {
               <span className="text-xs text-ink-muted">{m.merchant.orders.waitingDriver}</span>
             </OrderCard>
           ))}
-          {preparing.length === 0 && <Empty />}
+          {preparing.length === 0 && <EmptyState title={m.merchant.orders.empty} />}
         </Column>
 
         <Column title={m.merchant.orders.withDriver} icon={<IconDriver size={16} />}>
@@ -207,7 +208,7 @@ export default function OrdersBoard() {
               <Badge variant="primary">{STATUS_LABELS[o.status] ?? o.status}</Badge>
             </OrderCard>
           ))}
-          {withDriver.length === 0 && <Empty />}
+          {withDriver.length === 0 && <EmptyState title={m.merchant.orders.empty} />}
         </Column>
       </div>
 
@@ -253,10 +254,6 @@ function Column({
       <div className="space-y-3">{children}</div>
     </section>
   );
-}
-
-function Empty() {
-  return <p className="py-4 text-center text-xs text-ink-muted">{m.merchant.orders.empty}</p>;
 }
 
 function OrderCard({
@@ -321,7 +318,7 @@ function OrderCard({
                   {it.options.length > 0 && (
                     <span className="text-xs text-ink-muted">
                       {" "}
-                      — {it.options.map((op) => op.name).join("، ")}
+                      — {it.options.map((op) => op.name).join(m.common.listSeparator)}
                     </span>
                   )}
                   {it.note && <p className="text-xs text-accent-dark">✎ {it.note}</p>}

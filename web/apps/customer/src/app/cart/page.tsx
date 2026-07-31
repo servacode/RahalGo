@@ -141,7 +141,7 @@ export default function CartPage() {
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{l.name}</p>
                 {l.option_names.length > 0 && (
-                  <p className="text-xs text-ink-muted">{l.option_names.join("، ")}</p>
+                  <p className="text-xs text-ink-muted">{l.option_names.join(m.common.listSeparator)}</p>
                 )}
                 {l.note && <p className="text-xs text-accent-dark">✎ {l.note}</p>}
               </div>

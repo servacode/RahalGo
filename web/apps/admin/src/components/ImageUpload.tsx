@@ -136,7 +136,7 @@ export function MediaThumb({
         className="flex shrink-0 items-center justify-center rounded-control bg-primary-light font-bold text-primary-dark"
         style={{ width: size, height: size, fontSize: size * 0.42 }}
       >
-        {fallback.trim().charAt(0) || "؟"}
+        {fallback.trim().charAt(0) || m.terms.avatarFallback}
       </span>
     );
   }

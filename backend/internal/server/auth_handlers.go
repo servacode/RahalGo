@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
@@ -178,7 +179,11 @@ func (s *Server) handleHandoff(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.rdb.Set(r.Context(), "sso:"+code, userIDFrom(r), 60*time.Second).Err(); err != nil {
+	// نمرّر عائلة جلسة المصدر مع الرمز: الانتقال بين لوحاتنا امتداد لنفس الجلسة،
+	// فلا تُبطل اللوحة الجديدة جلسة اللوحة التي جاء منها.
+	uid := userIDFrom(r)
+	payload := uid + "|" + s.identity.ActiveSessionID(r.Context(), uid)
+	if err := s.rdb.Set(r.Context(), "sso:"+code, payload, 60*time.Second).Err(); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -194,12 +199,17 @@ func (s *Server) handleSSO(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	uid, err := s.rdb.GetDel(r.Context(), "sso:"+req.Code).Result() // استهلاك لمرّة واحدة
-	if err != nil || uid == "" {
+	payload, err := s.rdb.GetDel(r.Context(), "sso:"+req.Code).Result() // استهلاك لمرّة واحدة
+	if err != nil || payload == "" {
 		s.respondErr(w, errUnauthorized)
 		return
 	}
-	res, err := s.identity.IssueForUserID(r.Context(), uid, r.UserAgent(), clientIP(r))
+	uid, sessionID, _ := strings.Cut(payload, "|")
+	if uid == "" {
+		s.respondErr(w, errUnauthorized)
+		return
+	}
+	res, err := s.identity.IssueForUserID(r.Context(), uid, sessionID, r.UserAgent(), clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return

@@ -242,7 +242,7 @@ export default function UserProfilePage() {
       <div className="mb-3 rounded-card border border-line bg-surface p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <MediaThumb url={p.avatar_thumb_url} alt="" fallback={p.full_name || "؟"} size={56} />
+            <MediaThumb url={p.avatar_thumb_url} alt="" fallback={p.full_name || m.terms.avatarFallback} size={56} />
             <div className="min-w-0">
               <h1 className="truncate text-lg font-bold">{p.full_name || "—"}</h1>
               <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-muted">

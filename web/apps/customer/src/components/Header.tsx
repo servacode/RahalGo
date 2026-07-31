@@ -80,7 +80,7 @@ export default function Header() {
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-white">
-            ر
+            {m.terms.brandInitial}
           </span>
           <span className="hidden font-bold sm:inline">{m.common.appName}</span>
         </Link>

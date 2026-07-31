@@ -34,7 +34,7 @@ import { MediaThumb } from "@/components/ImageUpload";
 
 const m = getMessages(defaultLocale);
 
-const ROLE_LABELS: Record<string, string> = m.roles;
+const ROLE_LABELS: Record<string, string> = m.terms.roleNames;
 const ALL_ROLES = Object.keys(ROLE_LABELS);
 
 interface UserPage {
@@ -135,7 +135,7 @@ export default function UsersPage() {
       cell: (u) => (
         <span className="flex w-full items-center justify-between gap-2">
           <span className="inline-flex min-w-0 items-center gap-2">
-            <MediaThumb url={u.avatar_thumb_url} alt="" fallback={u.full_name || "؟"} size={32} />
+            <MediaThumb url={u.avatar_thumb_url} alt="" fallback={u.full_name || m.terms.avatarFallback} size={32} />
             <span className="truncate">{u.full_name || "—"}</span>
           </span>
           <button

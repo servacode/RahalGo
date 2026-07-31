@@ -33,7 +33,9 @@ export interface AppNotification {
 // أي صفحة تصبح حيّة بسطر واحد: useLiveRefresh(["lead"], reload)
 // المصدر واحد (قناة البث في الهيكل الموحّد) فلا يفتح كل صفحة اتصالاً خاصاً بها.
 
-type Listener = (n: AppNotification) => void;
+// المشتركون يهمّهم *نوع* ما وقع لا شكله: الإشعار المحفوظ والحدث الخام كلاهما
+// يصل هنا بنفس النوع (order/ticket/wallet/…) فتتحدّث الصفحة في الحالتين.
+type Listener = (kind: string) => void;
 const listeners = new Set<Listener>();
 
 /** أي رسالة تصل من قناة البث — الإشعارات وغيرها (تحديث حالة طلب مثلاً). */
@@ -54,7 +56,7 @@ function fan<T>(set: Set<(v: T) => void>, v: T) {
   });
 }
 
-const emit = (n: AppNotification) => fan(listeners, n);
+const emitKind = (kind: string) => fan(listeners, kind);
 const emitEvent = (e: LiveEvent) => fan(eventListeners, e);
 
 /** يستقبل رسائل البث الخام — لمن يحتاج أدق من الإشعارات (تتبّع طلب مثلاً). */
@@ -95,8 +97,8 @@ export function useLiveStatus() {
 /** يعيد تحميل بيانات الصفحة عند وصول حدث من الأنواع المذكورة (أو أي حدث). */
 export function useLiveRefresh(kinds: string[], onEvent: () => void) {
   useEffect(() => {
-    const fn: Listener = (n) => {
-      if (kinds.length === 0 || kinds.includes(n.kind)) onEvent();
+    const fn: Listener = (kind) => {
+      if (kinds.length === 0 || kinds.includes(kind)) onEvent();
     };
     listeners.add(fn);
     return () => {
@@ -186,13 +188,18 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
       ws.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data as string);
-          if (msg?.type) emitEvent(msg as LiveEvent); // كل رسالة تُبثّ للمشتركين
-          if (msg?.type === "notification" && msg.notification) {
+          if (!msg?.type) return;
+          emitEvent(msg as LiveEvent); // كل رسالة تُبثّ للمشتركين بالرسائل الخام
+          if (msg.type === "notification" && msg.notification) {
             const n = msg.notification as AppNotification;
             setItems((prev) => [n, ...prev].slice(0, 30));
             setUnread((u) => u + 1);
             setToast(n);
-            emit(n); // إعلام الصفحات المشتركة لتحدّث بياناتها
+            emitKind(n.kind); // إشعار محفوظ: صندوق + تنبيه + تحديث الصفحات
+          } else {
+            // حدث خام (تغيّر حالة طلب، تعديل منطقة…): تحديث صامت للصفحات فقط،
+            // بلا صفّ في الصندوق — ليس كل تغيّر يستحق إشعاراً في وجه المستخدم.
+            emitKind(msg.type);
           }
         } catch {
           /* تجاهل */

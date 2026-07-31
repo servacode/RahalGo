@@ -203,15 +203,34 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 }
 
 // IssueForUserID يصدر جلسة لمستخدم بمعرّفه (لتسليم SSO عبر رمز موثوق لمرّة واحدة).
-func (s *Service) IssueForUserID(ctx context.Context, userID, userAgent, ip string) (*AuthResult, error) {
+// sessionID عائلة جلسة المصدر: الانتقال بين لوحاتنا امتداد للجلسة نفسها لا جلسة
+// جديدة، فلا يُطرد المستخدم من اللوحة التي جاء منها.
+func (s *Service) IssueForUserID(ctx context.Context, userID, sessionID, userAgent, ip string) (*AuthResult, error) {
 	user, _, err := s.repo.UserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return s.issueFor(ctx, user, userAgent, ip, "auth.sso")
+	return s.issueSession(ctx, user, userAgent, ip, "auth.sso", sessionID)
 }
 
+// ActiveSessionID عائلة الجلسة الفعّالة للحساب — يستعملها تسليم SSO.
+func (s *Service) ActiveSessionID(ctx context.Context, userID string) string {
+	sid, err := s.repo.ActiveSessionID(ctx, userID)
+	if err != nil {
+		return ""
+	}
+	return sid
+}
+
+// issueFor يبدأ جلسة جديدة: يبطل كل ما سبق (قاعدة الجلسة الواحدة).
 func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, action string) (*AuthResult, error) {
+	return s.issueSession(ctx, user, userAgent, ip, action, "")
+}
+
+// issueSession يصدر زوج توكنات. sessionID فارغ = دخول جديد يُبطل كل الجلسات
+// السابقة. sessionID موجود = امتداد لنفس الجلسة (تسليم بين لوحات المنصة أو تدوير
+// توكن)، فلا يُبطل إخوته — الحساب يبقى بجلسة واحدة موزّعة على تطبيقاتنا الأربعة.
+func (s *Service) issueSession(ctx context.Context, user *User, userAgent, ip, action, sessionID string) (*AuthResult, error) {
 	if user.Status == "suspended" {
 		return nil, ErrUserSuspended
 	}
@@ -226,12 +245,12 @@ func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, actio
 	if err != nil {
 		return nil, err
 	}
-	// جلسة واحدة فقط لكل حساب: أحدث دخول يُبطل كل الجلسات السابقة. عند التدجيل
-	// يكون القديم أُبطل قبلاً فلا يبقى نشط سوى الجديد. (يمهّد للتحقق بخطوتين لاحقاً.)
-	if _, err := s.repo.RevokeAllTokens(ctx, user.ID); err != nil {
-		return nil, err
+	if sessionID == "" {
+		if _, err := s.repo.RevokeAllTokens(ctx, user.ID); err != nil {
+			return nil, err
+		}
 	}
-	if err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, refreshTTL, userAgent, ip); err != nil {
+	if err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, refreshTTL, userAgent, ip, sessionID); err != nil {
 		return nil, err
 	}
 	s.repo.Audit(ctx, &user.ID, action, "user", user.ID, ip, nil)
@@ -245,9 +264,10 @@ func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, actio
 	}, nil
 }
 
-// Refresh يدوّر توكن التحديث: يبطل القديم ويصدر زوجاً جديداً.
+// Refresh يدوّر توكن التحديث: يبطل القديم ويصدر زوجاً جديداً داخل نفس الجلسة —
+// فتدوير لوحة لا يقطع اللوحة الأخرى المفتوحة لنفس الشخص.
 func (s *Service) Refresh(ctx context.Context, rawRefresh, userAgent, ip string) (*AuthResult, error) {
-	userID, err := s.repo.RevokeRefresh(ctx, auth.HashToken(rawRefresh))
+	userID, sessionID, err := s.repo.RevokeRefresh(ctx, auth.HashToken(rawRefresh))
 	if errors.Is(err, ErrNotFound) {
 		return nil, ErrInvalidRefresh
 	}
@@ -258,11 +278,11 @@ func (s *Service) Refresh(ctx context.Context, rawRefresh, userAgent, ip string)
 	if err != nil {
 		return nil, err
 	}
-	return s.issueFor(ctx, user, userAgent, ip, "auth.refresh")
+	return s.issueSession(ctx, user, userAgent, ip, "auth.refresh", sessionID)
 }
 
 func (s *Service) Logout(ctx context.Context, rawRefresh, ip string) error {
-	userID, err := s.repo.RevokeRefresh(ctx, auth.HashToken(rawRefresh))
+	userID, _, err := s.repo.RevokeRefresh(ctx, auth.HashToken(rawRefresh))
 	if errors.Is(err, ErrNotFound) {
 		return nil // خروج توكن ميت = نجاح صامت
 	}

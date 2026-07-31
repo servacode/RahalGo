@@ -131,7 +131,7 @@ export default function CustomersPage() {
         c.balance > 0 ? (
           <Badge variant="primary">{fmt.format(c.balance)}</Badge>
         ) : (
-          <span className="text-ink-muted">٠</span>
+          <span className="text-ink-muted">{m.common.zero}</span>
         ),
     },
     {

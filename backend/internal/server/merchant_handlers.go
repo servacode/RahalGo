@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
@@ -170,6 +172,7 @@ func (s *Server) handleMerchantItemAvailability(w http.ResponseWriter, r *http.R
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
+	s.touch("menu", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"available": *req.Available})
 }
 
@@ -195,6 +198,18 @@ func (s *Server) handleMerchantEmergency(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, errForbidden)
 		return
 	}
+	// إغلاق متجر وسط الذروة حدث تشغيلي حرج: مكتب المنصة يعرف فوراً، وواجهة
+	// الزبون تسقط المتجر من القائمة بلا إعادة تحميل.
+	title := notifTitles.storeReopened
+	if *req.Closed {
+		title = notifTitles.storeClosed
+	}
+	s.notify.NotifyOps(r.Context(), notifications.Input{
+		Kind: notifications.KindAccount, Title: title,
+		Body: s.merchantName(r.Context(), merchantID),
+		Entity: "merchant", EntityID: merchantID, Href: "/dashboard/merchants",
+	})
+	s.touch("merchant", "ops", "merchant:"+merchantID)
 	httpx.JSON(w, http.StatusOK, map[string]any{"emergency_closed": *req.Closed})
 }
 
@@ -275,4 +290,11 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		days = append(days, d)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"summary": summary, "days": days})
+}
+
+// merchantName اسم المتجر لنص الإشعار (فارغ عند التعذّر — لا يُفشل العملية).
+func (s *Server) merchantName(ctx context.Context, id string) string {
+	var name string
+	_ = s.pg.QueryRow(ctx, `SELECT name FROM merchants WHERE id = $1`, id).Scan(&name)
+	return name
 }

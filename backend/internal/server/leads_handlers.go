@@ -267,17 +267,24 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 		return
 	}
-	tag, err := s.pg.Exec(r.Context(),
-		`UPDATE merchant_leads SET status = $2, updated_at = now() WHERE id = $1`,
-		id, req.Status)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if tag.RowsAffected() == 0 {
+	var repID *string
+	var storeName string
+	if err := s.pg.QueryRow(r.Context(),
+		`UPDATE merchant_leads SET status = $2, updated_at = now() WHERE id = $1
+		 RETURNING sales_rep_user_id, store_name`,
+		id, req.Status).Scan(&repID, &storeName); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
+	// الرفض يخصّ المندوب بقدر ما تخصّه الموافقة — وإلا بقي يلاحق عميلاً ميتاً.
+	if req.Status == "rejected" && repID != nil {
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: *repID, Kind: notifications.KindLead,
+			Title: notifTitles.leadRejected, Body: storeName,
+			Entity: "lead", EntityID: id, Href: "/portal/leads",
+		})
+	}
+	s.touch("lead", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 

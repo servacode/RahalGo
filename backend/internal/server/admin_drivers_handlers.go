@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
 // قائمة السائقين مع صندوق كل منهم وطلباته الجارية.
@@ -72,10 +73,18 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	held, err := s.cashbox.Settle(r.Context(), chi.URLParam(r, "id"), req.Amount, req.Note, userIDFrom(r))
+	driverID := chi.URLParam(r, "id")
+	held, err := s.cashbox.Settle(r.Context(), driverID, req.Amount, req.Note, userIDFrom(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	// نقود تنتقل من يد إلى يد: صاحبها يعرف، وشاشة الصناديق تتحدّث لحظياً.
+	s.notify.Notify(r.Context(), notifications.Input{
+		UserID: driverID, Kind: notifications.KindWallet,
+		Title: notifTitles.cashSettled, Body: req.Note,
+		Entity: "cashbox", Href: "/",
+	})
+	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"held": held})
 }

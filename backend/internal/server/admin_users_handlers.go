@@ -77,19 +77,35 @@ func (s *Server) handleAdminGrantRole(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.AdminGrantRole(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), req.Role, req.Reason, clientIP(r)); err != nil {
+	target := chi.URLParam(r, "id")
+	if err := s.identity.AdminGrantRole(r.Context(), userIDFrom(r), target, req.Role, req.Reason, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	// الصلاحية تغيّر ما يراه صاحب الحساب وما يشترك به من قنوات — يجب أن يعلم.
+	s.notify.Notify(r.Context(), notifications.Input{
+		UserID: target, Kind: notifications.KindAccount,
+		Title: notifTitles.roleGranted, Body: req.Reason,
+		Entity: "user", EntityID: target, Href: "/",
+	})
+	s.touch("account", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"granted": true})
 }
 
 func (s *Server) handleAdminRevokeRole(w http.ResponseWriter, r *http.Request) {
+	target := chi.URLParam(r, "id")
+	reason := r.URL.Query().Get("reason")
 	if err := s.identity.AdminRevokeRole(r.Context(), userIDFrom(r),
-		chi.URLParam(r, "id"), chi.URLParam(r, "role"), r.URL.Query().Get("reason"), clientIP(r)); err != nil {
+		target, chi.URLParam(r, "role"), reason, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	s.notify.Notify(r.Context(), notifications.Input{
+		UserID: target, Kind: notifications.KindAccount,
+		Title: notifTitles.roleRevoked, Body: reason,
+		Entity: "user", EntityID: target, Href: "/",
+	})
+	s.touch("account", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"revoked": true})
 }
 
