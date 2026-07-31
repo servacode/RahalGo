@@ -107,6 +107,9 @@ func (s *Server) Router() http.Handler {
 				r.Post("/handoff", s.handleHandoff) // إنشاء رمز تسليم SSO
 				r.Post("/phone/request", s.handlePhoneChangeRequest)
 				r.Post("/phone/confirm", s.handlePhoneChangeConfirm)
+				// حذف الحساب — بتأكيد رمز على هاتف صاحبه
+				r.Post("/account/delete/request", s.handleDeleteAccountRequest)
+				r.Post("/account/delete/confirm", s.handleDeleteAccountConfirm)
 			})
 		})
 

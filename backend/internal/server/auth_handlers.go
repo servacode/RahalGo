@@ -321,3 +321,28 @@ func (s *Server) handlePhoneChangeConfirm(w http.ResponseWriter, r *http.Request
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
+
+// --- حذف الحساب نهائياً: رمز تأكيد على هاتف صاحبه ثم تجريد وإقفال ---
+
+func (s *Server) handleDeleteAccountRequest(w http.ResponseWriter, r *http.Request) {
+	if err := s.identity.RequestAccountDeletion(r.Context(), userIDFrom(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"sent": true})
+}
+
+func (s *Server) handleDeleteAccountConfirm(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Code string `json:"code"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.ConfirmAccountDeletion(r.Context(), userIDFrom(r), req.Code, clientIP(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": true})
+}

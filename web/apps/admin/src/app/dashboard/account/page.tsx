@@ -3,6 +3,7 @@
 /** حسابي: بطاقة الأدوار + إعدادات الحساب المشتركة + آخر الدخولات. */
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
 import { AccountSettings, FormSection, IconUser, IconStatus } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
@@ -24,7 +25,8 @@ const LOGIN_LABELS: Record<string, string> = {
 };
 
 export default function MyAccountPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const router = useRouter();
   const [logins, setLogins] = useState<Login[]>([]);
 
   useEffect(() => {
@@ -55,7 +57,15 @@ export default function MyAccountPage() {
         </div>
       </div>
 
-      <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} />
+      <AccountSettings
+        api={api}
+        mediaUrl={mediaUrl}
+        phone={user?.phone}
+        onDeleted={() => {
+          logout();
+          router.replace("/login");
+        }}
+      />
 
       <div className="mt-6">
         <FormSection title={A.recentLogins} icon={<IconStatus />}>

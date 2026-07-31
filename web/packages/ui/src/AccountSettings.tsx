@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { emitLocal } from "./Notifications";
-import { IconUser, IconLock, IconPhone } from "./icons";
+import { IconUser, IconLock, IconPhone, IconWarning, IconCheck } from "./icons";
 
 const m = getMessages(defaultLocale);
 const A = m.shared.account;
@@ -41,10 +41,13 @@ export function AccountSettings({
   api,
   mediaUrl,
   phone,
+  onDeleted,
 }: {
   api: ApiFn;
   mediaUrl: (p: string | null | undefined) => string | null;
   phone?: string;
+  /** يُستدعى بعد حذف الحساب — كل تطبيق يقرر وجهته (الخروج ثم صفحة الدخول) */
+  onDeleted?: () => void;
 }) {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -59,6 +62,11 @@ export function AccountSettings({
   const [otpSent, setOtpSent] = useState(false);
   const [phoneCode, setPhoneCode] = useState("");
   const [phoneBusy, setPhoneBusy] = useState(false);
+
+  const [delSent, setDelSent] = useState(false);
+  const [delCode, setDelCode] = useState("");
+  const [delBusy, setDelBusy] = useState(false);
+  const [deleted, setDeleted] = useState(false);
 
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -162,10 +170,45 @@ export function AccountSettings({
     }
   }
 
+  async function reqDelete() {
+    setError("");
+    setMsg("");
+    setDelBusy(true);
+    try {
+      await api("/api/v1/auth/account/delete/request", { method: "POST" });
+      setDelSent(true);
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setDelBusy(false);
+    }
+  }
+
+  async function confirmDelete(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setDelBusy(true);
+    try {
+      await api("/api/v1/auth/account/delete/confirm", {
+        method: "POST",
+        body: JSON.stringify({ code: delCode }),
+      });
+      setDeleted(true);
+      // الجلسة أُبطلت في الخادم — نُخرج المستخدم بدل تركه في شاشة ميتة
+      setTimeout(() => onDeleted?.(), 2500);
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setDelBusy(false);
+    }
+  }
+
   const avatarUrl = mediaUrl(avatar);
 
   return (
-    <div className="space-y-6">
+    // مربعان في السطر على الشاشات المتوسطة فأكبر — كانت الأقسام مرصوفة طولياً
+    // فيتمدّد النموذج بلا داعٍ ونصف العرض فارغ.
+    <div className="grid gap-5 md:grid-cols-2">
       <Section title={A.photo} icon={<IconUser />}>
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-primary-light text-2xl font-bold text-primary-dark">
@@ -223,8 +266,71 @@ export function AccountSettings({
         )}
       </Section>
 
-      {msg && <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success">{msg}</p>}
-      {error && <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
+      {/* منطقة الخطر — تمتدّ عبر العمودين وتُفصل بصرياً عمّا فوقها */}
+      <section className="rounded-card border border-danger/30 bg-danger/5 p-5 md:col-span-2">
+        <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-danger">
+          <span className="[&>svg]:h-4 [&>svg]:w-4">
+            <IconWarning />
+          </span>
+          {A.dangerTitle}
+        </h2>
+        <p className="mb-3 text-xs leading-relaxed text-ink-muted">{A.dangerHint}</p>
+
+        {deleted ? (
+          <p className="flex items-center gap-2 rounded-control bg-surface px-3 py-2 text-sm text-ink">
+            <IconCheck size={16} strokeWidth={3} className="text-success" />
+            {A.deleteDone}
+          </p>
+        ) : !delSent ? (
+          <Button variant="danger" onClick={reqDelete} disabled={delBusy}>
+            {delBusy ? m.common.loading : A.deleteSendCode}
+          </Button>
+        ) : (
+          <form onSubmit={confirmDelete} className="max-w-sm space-y-3">
+            <p className="text-sm text-ink">{A.deleteCodeSent}</p>
+            <Input
+              id="del-code"
+              label={A.code}
+              dir="ltr"
+              inputMode="numeric"
+              required
+              autoFocus
+              value={delCode}
+              onChange={(e) => setDelCode(e.target.value)}
+              className="text-center font-mono text-lg tracking-[0.4em]"
+              placeholder="••••••"
+              maxLength={6}
+            />
+            <p className="text-xs font-medium text-danger">{A.dangerIrreversible}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" variant="danger" disabled={delBusy}>
+                {delBusy ? m.common.loading : A.deleteConfirm}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setDelSent(false);
+                  setDelCode("");
+                }}
+              >
+                {A.deleteCancel}
+              </Button>
+            </div>
+          </form>
+        )}
+      </section>
+
+      {msg && (
+        <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success md:col-span-2">
+          {msg}
+        </p>
+      )}
+      {error && (
+        <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger md:col-span-2">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

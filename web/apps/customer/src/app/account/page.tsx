@@ -12,7 +12,7 @@ import { useAuth, isLoggedIn } from "@/lib/auth";
 const m = getMessages(defaultLocale);
 
 export default function AccountPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -26,7 +26,15 @@ export default function AccountPage() {
   return (
     <PageContainer width="narrow">
       <PageHeader icon={IconUser} title={m.terms.account} />
-      <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} />
+      <AccountSettings
+        api={api}
+        mediaUrl={mediaUrl}
+        phone={user?.phone}
+        onDeleted={() => {
+          logout();
+          router.replace("/");
+        }}
+      />
     </PageContainer>
   );
 }
