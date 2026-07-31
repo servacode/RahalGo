@@ -135,6 +135,16 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	if err != nil {
 		return nil, err
 	}
+	// الأعلى بين حدّ المنطقة وحدّ المتجر هو المُلزِم — لا يُلغي أحدهما الآخر.
+	// المنطقة تحمي جدوى التوصيل، والمتجر يحمي جدوى التحضير.
+	var merchantMin int64
+	if err := s.db.QueryRow(ctx,
+		`SELECT min_order FROM merchants WHERE id = $1`, in.MerchantID).Scan(&merchantMin); err != nil {
+		return nil, err
+	}
+	if merchantMin > minOrder {
+		minOrder = merchantMin
+	}
 	if subtotal < minOrder {
 		return nil, ErrBelowMinOrder
 	}

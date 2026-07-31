@@ -5,7 +5,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { IconCheck, IconLocation, Badge, Button, useLiveEvent, IconStar, IconSuccess } from "@rahalgo/ui";
+import {
+  IconCheck,
+  IconLocation,
+  Badge,
+  Button,
+  useLiveEvent,
+  IconStar,
+  IconSuccess,
+  IconPrint,
+  Invoice,
+} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -37,14 +47,29 @@ interface Order {
   cash_due: number;
   address_text: string;
   cancel_reason: string;
+  // بيانات الفاتورة — يرسلها الخادم أصلاً وكان النوع يتجاهلها
+  payment_method: string;
+  subtotal: number;
+  delivery_fee: number;
+  discount: number;
+  created_at: string;
+  delivered_at?: string | null;
   rating?: Rating;
-  items?: { name: string; qty: number; unit_price: number }[];
+  items?: {
+    id: string;
+    name: string;
+    qty: number;
+    unit_price: number;
+    note?: string;
+    options?: { group: string; name: string; price_delta: number }[];
+  }[];
 }
 
 export default function OrderTrackingPage() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState("");
+  const [showInvoice, setShowInvoice] = useState(false);
 
   const load = useCallback(() => {
     api<Order>(`/api/v1/my/orders/${id}`)
@@ -75,10 +100,27 @@ export default function OrderTrackingPage() {
         <h1 className="text-xl font-bold">
           {m.site.orders.orderTitle.replace("{n}", fmtNum(order.number))}
         </h1>
-        <Badge variant={failed ? "danger" : order.status === "delivered" ? "success" : "primary"}>
-          {STATUS_LABELS[order.status] ?? order.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={failed ? "danger" : order.status === "delivered" ? "success" : "primary"}>
+            {STATUS_LABELS[order.status] ?? order.status}
+          </Badge>
+          <Button
+            variant="secondary"
+            onClick={() => setShowInvoice((v) => !v)}
+            className="flex items-center gap-1.5"
+          >
+            <IconPrint size={15} />
+            {m.shared.invoice.open}
+          </Button>
+        </div>
       </div>
+
+      {/* الفاتورة: سجلُّ الواقعة — يفتحها الزبون ويطبعها متى شاء */}
+      {showInvoice && (
+        <div className="mb-6">
+          <Invoice order={order} />
+        </div>
+      )}
 
       {/* خط التقدم الحي */}
       {!failed && (
@@ -187,6 +229,7 @@ function RatingForm({
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showInvoice, setShowInvoice] = useState(false);
 
   async function submit() {
     setBusy(true);

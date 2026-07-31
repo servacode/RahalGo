@@ -51,6 +51,11 @@ type Order struct {
 	CustomerName  string `json:"customer_name"`
 	MerchantID    string `json:"merchant_id"`
 	MerchantName  string `json:"merchant_name"`
+	// حلقة المطبخ: كم دقيقة قال المتجر، ومتى أعلن الجاهزية فعلاً
+	PrepMinutes *int       `json:"prep_minutes"`
+	ReadyAt     *time.Time `json:"ready_at"`
+	AcceptedAt  *time.Time `json:"accepted_at"`
+	DeliveredAt *time.Time `json:"delivered_at"`
 	// شعار المتجر وملخّص الأصناف — لبطاقة الطلب في القوائم
 	MerchantLogoThumb *string     `json:"merchant_logo_thumb_url"`
 	ItemsCount        int         `json:"items_count"`

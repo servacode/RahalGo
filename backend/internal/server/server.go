@@ -173,6 +173,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/stores/{id}/emergency", s.handleMerchantEmergency)
 			r.Get("/orders/{id}", s.handleMerchantGetOrder)
 			r.Post("/orders/{id}/transition", s.handleMerchantTransition)
+			// حلقة المطبخ: الجاهزية علامةٌ يرفعها من يعرف، وساعاته وإعداداته بيده
+			r.Post("/orders/{id}/ready", s.handleMerchantReady)
+			r.Put("/stores/{id}/hours", s.handleMerchantSetHours)
+			r.Patch("/stores/{id}/settings", s.handleMerchantSettings)
 			r.Patch("/menu/items/{itemID}/availability", s.handleMerchantItemAvailability)
 			// القائمة بضاعته: يضيف ويعدّل ويحذف بنفسه — الحارس مختلف والعملية واحدة
 			r.Post("/stores/{id}/menu/sections", s.handleMerchantCreateSection)

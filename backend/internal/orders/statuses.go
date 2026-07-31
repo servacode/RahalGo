@@ -39,11 +39,14 @@ var allowedTransitions = map[string][]transition{
 	},
 	StAccepted: {
 		{StPreparing, merchantOps},
-		{StCancelled, opsRoles},
+		// المتجر يلغي بعد قبوله — نفد صنف أو تعطّل مطبخه. والواقع اليومي يفرضه:
+		// بلا هذا يتّصل بالمنصة ليُلغى بالنيابة عنه، فيضيع الوقت ويضيع السبب.
+		// والسبب **إلزامي** في هذه الحالة (يُفرض في المعالِج لا في الخارطة).
+		{StCancelled, merchantOps},
 	},
 	StPreparing: {
 		{StDispatching, opsRoles}, // طلب سائق
-		{StCancelled, opsRoles},
+		{StCancelled, merchantOps},
 	},
 	StDispatching: {
 		{StAssigned, driverOps}, // قبول سائق أو إسناد يدوي

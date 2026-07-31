@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -121,10 +122,29 @@ func (s *Server) handleMerchantTransition(w http.ResponseWriter, r *http.Request
 	req, err := decode[struct {
 		To   string `json:"to"`
 		Note string `json:"note"`
+		// وقت تحضير خاص بهذا الطلب — يُترك فارغاً فيؤخذ افتراض المتجر
+		PrepMinutes *int `json:"prep_minutes"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// إلغاءُ المتجر يلزمه سبب: «ضاع طلب» بلا جوابه يترك الزبون والإدارة يخمّنان،
+	// ويمنع قياس أي متجرٍ يُكثر الإلغاء.
+	if req.To == "cancelled" && strings.TrimSpace(req.Note) == "" {
+		s.respondErr(w, errReasonRequired)
+		return
+	}
+	// وقت التحضير يُثبَّت لحظة القبول: قبلها لا معنى له، وبعدها يصير تخميناً
+	// لأن العدّ يبدأ من القبول لا من الإنشاء.
+	if req.To == "accepted" {
+		if _, err := s.pg.Exec(r.Context(), `
+			UPDATE orders o SET prep_minutes = COALESCE($2,
+				(SELECT m.default_prep_minutes FROM merchants m WHERE m.id = o.merchant_id))
+			WHERE o.id = $1`, id, req.PrepMinutes); err != nil {
+			s.respondErr(w, err)
+			return
+		}
 	}
 	o, err := s.orders.Transition(r.Context(), userIDFrom(r), []string{"merchant"}, id, req.To, req.Note)
 	if err != nil {
