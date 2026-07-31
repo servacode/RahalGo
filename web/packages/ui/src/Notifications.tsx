@@ -28,6 +28,123 @@ export interface AppNotification {
   created_at: string;
 }
 
+
+// ---------- ناقل الأحداث المركزي ----------
+// أي صفحة تصبح حيّة بسطر واحد: useLiveRefresh(["lead"], reload)
+// المصدر واحد (قناة البث في الهيكل الموحّد) فلا يفتح كل صفحة اتصالاً خاصاً بها.
+
+type Listener = (n: AppNotification) => void;
+const listeners = new Set<Listener>();
+
+/** أي رسالة تصل من قناة البث — الإشعارات وغيرها (تحديث حالة طلب مثلاً). */
+export interface LiveEvent {
+  type: string;
+  [k: string]: unknown;
+}
+type EventListener_ = (e: LiveEvent) => void;
+const eventListeners = new Set<EventListener_>();
+
+function fan<T>(set: Set<(v: T) => void>, v: T) {
+  set.forEach((fn) => {
+    try {
+      fn(v);
+    } catch {
+      /* تجاهل */
+    }
+  });
+}
+
+const emit = (n: AppNotification) => fan(listeners, n);
+const emitEvent = (e: LiveEvent) => fan(eventListeners, e);
+
+/** يستقبل رسائل البث الخام — لمن يحتاج أدق من الإشعارات (تتبّع طلب مثلاً). */
+export function useLiveEvent(onEvent: (e: LiveEvent) => void) {
+  const fn = useRef(onEvent);
+  fn.current = onEvent;
+  useEffect(() => {
+    const listener: EventListener_ = (e) => fn.current(e);
+    eventListeners.add(listener);
+    return () => {
+      eventListeners.delete(listener);
+    };
+  }, []);
+}
+
+// حالة الاتصال — مصدر واحد تقرأه أي صفحة تريد إظهار مؤشر «حي»
+let live = false;
+const statusListeners = new Set<(b: boolean) => void>();
+function setLive(b: boolean) {
+  if (live === b) return;
+  live = b;
+  fan(statusListeners, b);
+}
+
+/** هل قناة البث متصلة الآن؟ */
+export function useLiveStatus() {
+  const [state, setState] = useState(live);
+  useEffect(() => {
+    setState(live);
+    statusListeners.add(setState);
+    return () => {
+      statusListeners.delete(setState);
+    };
+  }, []);
+  return state;
+}
+
+/** يعيد تحميل بيانات الصفحة عند وصول حدث من الأنواع المذكورة (أو أي حدث). */
+export function useLiveRefresh(kinds: string[], onEvent: () => void) {
+  useEffect(() => {
+    const fn: Listener = (n) => {
+      if (kinds.length === 0 || kinds.includes(n.kind)) onEvent();
+    };
+    listeners.add(fn);
+    return () => {
+      listeners.delete(fn);
+    };
+  }, [kinds.join(","), onEvent]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/**
+ * useLiveData هو الطريقة المركزية لجلب بيانات أي صفحة: يجلب مرة عند الفتح،
+ * ثم يعيد الجلب تلقائياً كلما وقع حدث من الأنواع المذكورة — فلا يحتاج أحد
+ * تحديث الصفحة. سطر واحد يغني عن useEffect يدوي في كل صفحة.
+ */
+export function useLiveData<T>(load: () => Promise<T>, kinds: string[] = []) {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // نحفظ الدالة في مرجع كي لا يُعاد الاشتراك مع كل إعادة رسم
+  const fn = useRef(load);
+  fn.current = load;
+
+  const reload = useCallback(() => {
+    let alive = true;
+    fn.current()
+      .then((d) => {
+        if (alive) {
+          setData(d);
+          setError(false);
+        }
+      })
+      .catch(() => {
+        if (alive) setError(true);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => reload(), [reload]);
+  useLiveRefresh(kinds, reload);
+
+  return { data, loading, error, reload, setData };
+}
+
 /**
  * useLiveNotifications يفتح قناة البث ويُبقي الصندوق محدّثاً لحظياً.
  * يعيد الجلب عند إعادة الاتصال كي لا تضيع الأحداث أثناء الانقطاع.
@@ -63,22 +180,26 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
       ws = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
       ws.onopen = () => {
         retry = 1000;
+        setLive(true);
         void refresh(); // تعويض ما فات أثناء الانقطاع
       };
       ws.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data as string);
+          if (msg?.type) emitEvent(msg as LiveEvent); // كل رسالة تُبثّ للمشتركين
           if (msg?.type === "notification" && msg.notification) {
             const n = msg.notification as AppNotification;
             setItems((prev) => [n, ...prev].slice(0, 30));
             setUnread((u) => u + 1);
             setToast(n);
+            emit(n); // إعلام الصفحات المشتركة لتحدّث بياناتها
           }
         } catch {
           /* تجاهل */
         }
       };
       ws.onclose = () => {
+        setLive(false);
         if (closed) return;
         timer = setTimeout(connect, retry);
         retry = Math.min(retry * 2, 15000);
@@ -87,6 +208,7 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
     connect();
     return () => {
       closed = true;
+      setLive(false);
       clearTimeout(timer);
       ws?.close();
     };
@@ -109,6 +231,35 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
   );
 
   return { items, unread, toast, dismissToast: () => setToast(null), markRead, refresh };
+}
+
+/**
+ * LiveNotifications هي نقطة التركيب الوحيدة: قناة بث واحدة + جرس + تنبيه عابر.
+ * تُركَّب مرة في هيكل كل تطبيق (لوحة أو موقع الزبون) فتصير كل صفحاته حيّة.
+ */
+export function LiveNotifications({
+  api,
+  wsUrl,
+  token,
+  Link,
+}: {
+  api: ApiFn;
+  wsUrl: string;
+  token: string | null;
+  Link: LinkType;
+}) {
+  const notif = useLiveNotifications(api, wsUrl, token);
+  return (
+    <>
+      <NotificationBell
+        items={notif.items}
+        unread={notif.unread}
+        markRead={notif.markRead}
+        Link={Link}
+      />
+      <NotificationToast notification={notif.toast} onDismiss={notif.dismissToast} />
+    </>
+  );
 }
 
 /** تنبيه عابر يظهر فور وصول حدث جديد. */

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  useLiveRefresh,
   PageHeader,
   Button,
   Input,
@@ -79,9 +80,11 @@ export default function DriversPage() {
 
   useEffect(() => {
     void load();
-    const t = setInterval(load, 15000);
-    return () => clearInterval(t);
   }, [load]);
+
+  useLiveRefresh(["wallet", "order"], load);
+
+  useLiveRefresh(["order", "account", "wallet"], load);
 
   function cashBadge(d: Driver) {
     const ratio = cashLimit > 0 ? d.cash_held / cashLimit : 0;

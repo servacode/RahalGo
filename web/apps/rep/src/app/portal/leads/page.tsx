@@ -2,9 +2,16 @@
 
 /** طلبات الانضمام عبر رابط المندوب — سجل المتاجر التي سجّلت عبره. */
 
-import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Badge, PageContainer, PageHeader, EmptyState, LoadingState, IconOrder } from "@rahalgo/ui";
+import {
+  Badge,
+  PageContainer,
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  useLiveData,
+  IconOrder,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -28,17 +35,10 @@ const STATUS_VARIANT: Record<Lead["status"], "warning" | "success" | "danger"> =
 };
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<Lead[] | null>(null);
+  const { data, loading } = useLiveData<Lead[]>(() => api("/api/v1/rep/leads"), ["lead"]);
 
-  useEffect(() => {
-    api<Lead[]>("/api/v1/rep/leads")
-      .then(setLeads)
-      .catch(() => setLeads([]));
-  }, []);
-
-  if (!leads) {
-    return <LoadingState />;
-  }
+  if (loading) return <LoadingState />;
+  const leads = data ?? [];
 
   return (
     <PageContainer>

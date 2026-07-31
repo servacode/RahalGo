@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  useLiveRefresh,
   PageHeader,
   Button,
   Badge,
@@ -69,6 +70,8 @@ export default function LeadsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useLiveRefresh(["lead"], load);
 
   async function setStatus(id: string, status: string) {
     await api(`/api/v1/admin/leads/${id}/status`, {

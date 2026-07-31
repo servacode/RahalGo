@@ -77,7 +77,7 @@ func (s *Server) handleCreateTicket(w http.ResponseWriter, r *http.Request) {
 		Title: notifTitles.ticketOpened, Body: t.Subject,
 		Entity: "ticket", EntityID: t.ID, Href: "/orders",
 	})
-	s.notify.NotifyRole(r.Context(), "ops", notifications.Input{
+	s.notify.NotifyOps(r.Context(), notifications.Input{
 		Kind: notifications.KindTicket, Title: notifTitles.ticketNewOps, Body: t.Subject,
 		Entity: "ticket", EntityID: t.ID, Href: "/dashboard/tickets",
 	})

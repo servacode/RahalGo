@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  useLiveEvent,
+  useLiveStatus,
   Button,
   Input,
   Select,
@@ -25,7 +27,6 @@ import {
   IconStar,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
-import { useLiveEvents } from "@/lib/ws";
 
 const m = getMessages(defaultLocale);
 const fmt = new Intl.NumberFormat("ar-SY");
@@ -170,17 +171,14 @@ export default function OrdersPage() {
   }, [load]);
 
   // البث الحي: تحديثات الطلبات تعيد التحميل فوراً، والتنبيهات تُستبدل مباشرة
-  const liveConnected = useLiveEvents((event) => {
+  useLiveEvent((event) => {
     if (event.type === "order") void load();
     if (event.type === "alerts") setAlerts((event.alerts as Alert[]) ?? []);
   });
+  const liveConnected = useLiveStatus();
   useEffect(() => {
     api<Alert[]>("/api/v1/admin/orders/alerts").then(setAlerts).catch(() => undefined);
   }, []);
-  useEffect(() => {
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
-  }, [load]);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.per_page)) : 1;
 

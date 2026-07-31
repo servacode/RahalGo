@@ -5,9 +5,10 @@
  * التقييمات والتعليقات المتلقّاة، والشكاوى والبلاغات. يُحقن لها api الخاص بالتطبيق.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Badge } from "./components";
+import { useLiveData } from "./Notifications";
 import { PageHeader, PageContainer, EmptyState, LoadingState, ListRow, StatGrid, StatCard, Stars } from "./layout";
 import { IconStar, IconSupport } from "./icons";
 
@@ -39,10 +40,11 @@ interface Reputation {
 }
 
 function useReputation(api: ApiFn) {
-  const [data, setData] = useState<Reputation | null>(null);
-  useEffect(() => {
-    api<Reputation>("/api/v1/me/reputation").then(setData).catch(() => undefined);
-  }, [api]);
+  // حيّة: أي تقييم جديد أو شكوى يظهر فوراً بلا إعادة تحميل
+  const { data } = useLiveData<Reputation>(
+    useCallback(() => api<Reputation>("/api/v1/me/reputation"), [api]),
+    ["rating", "ticket"],
+  );
   return data;
 }
 

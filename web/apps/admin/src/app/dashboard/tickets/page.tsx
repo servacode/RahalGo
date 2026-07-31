@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  useLiveRefresh,
   PageHeader,
   Button,
   Input,
@@ -106,6 +107,8 @@ export default function TicketsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useLiveRefresh(["ticket"], load);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.per_page)) : 1;
 
@@ -398,6 +401,8 @@ function TicketDetailModal({
   useEffect(() => {
     load();
   }, [load]);
+
+  useLiveRefresh(["ticket"], load);
 
   async function sendReply(e: React.FormEvent) {
     e.preventDefault();

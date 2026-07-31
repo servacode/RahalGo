@@ -2,7 +2,6 @@
 
 /** عملائي — المتاجر التي جلبها المندوب وأداؤها. */
 
-import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Badge,
@@ -11,6 +10,7 @@ import {
   EmptyState,
   LoadingState,
   ListRow,
+  useLiveData,
   IconStore,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
@@ -29,15 +29,13 @@ interface RepMerchant {
 }
 
 export default function ClientsPage() {
-  const [merchants, setMerchants] = useState<RepMerchant[] | null>(null);
+  const { data, loading } = useLiveData<RepMerchant[]>(
+    () => api("/api/v1/rep/merchants"),
+    ["lead", "order", "account"],
+  );
 
-  useEffect(() => {
-    api<RepMerchant[]>("/api/v1/rep/merchants")
-      .then(setMerchants)
-      .catch(() => setMerchants([]));
-  }, []);
-
-  if (!merchants) return <LoadingState />;
+  if (loading) return <LoadingState />;
+  const merchants = data ?? [];
 
   return (
     <PageContainer>

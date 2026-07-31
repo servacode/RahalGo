@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  useLiveRefresh,
   Button,
   Input,
   Select,
@@ -92,6 +93,8 @@ export default function UsersPage() {
     const t = setTimeout(load, 250); // تهدئة البحث
     return () => clearTimeout(t);
   }, [load]);
+
+  useLiveRefresh(["account"], load);
 
   async function exportCsv() {
     const params = new URLSearchParams({ query, role, status: statusFilter, online: onlineOnly ? "true" : "" });

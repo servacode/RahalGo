@@ -8,6 +8,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  useLiveEvent,
+  useLiveStatus,
   Badge,
   Button,
   Modal,
@@ -19,7 +21,6 @@ import {
   IconDriver,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
-import { useLiveEvents } from "@/lib/ws";
 import { useStore } from "@/lib/store";
 import { useRinger } from "@/lib/ringer";
 
@@ -91,18 +92,13 @@ export default function OrdersBoard() {
 
   useEffect(() => {
     void load();
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
   }, [load]);
 
-  const connected = useLiveEvents(
-    useCallback(
-      (event) => {
-        if (event.type === "order") void load();
-      },
-      [load]
-    )
-  );
+  // البث الحي المركزي — قناة واحدة للتطبيق كله، بلا استطلاع دوري
+  useLiveEvent((event) => {
+    if (event.type === "order") void load();
+  });
+  const connected = useLiveStatus();
 
   const pending = orders.filter((o) => o.status === "pending");
   const accepted = orders.filter((o) => o.status === "accepted");

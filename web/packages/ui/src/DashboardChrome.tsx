@@ -6,9 +6,9 @@
  * فتبقى @rahalgo/ui غير مقيّدة بإطار معيّن.
  */
 
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { NotificationBell, NotificationToast, useLiveNotifications } from "./Notifications";
+import { LiveNotifications, useLiveRefresh } from "./Notifications";
 import {
   IconWallet,
   IconStar,
@@ -87,15 +87,19 @@ export function DashboardChrome({
   const [summary, setSummary] = useState<Summary | null>(null);
   const [rep, setRep] = useState<Rep | null>(null);
 
-  useEffect(() => {
+  const loadSummary = useCallback(() => {
     api<Summary>("/api/v1/me/summary").then(setSummary).catch(() => undefined);
     if (showRating) api<Rep>("/api/v1/me/reputation").then(setRep).catch(() => undefined);
-  }, [api, pathname, showRating]);
+  }, [api, showRating]);
+
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary, pathname]);
+
+  // الرصيد والتقييم في الشريط العلوي يتحدّثان لحظياً بلا إعادة تحميل
+  useLiveRefresh(["wallet", "rating"], loadSummary);
 
   useEffect(() => setMenuOpen(false), [pathname]);
-
-  // الإشعارات: صندوق دائم + بث حي — مركزية فيرثها كل من يستعمل هذا الهيكل.
-  const notif = useLiveNotifications(api, wsUrl ?? "", token ?? null);
 
   const isActive = (href: string) => (href === homeHref ? pathname === href : pathname.startsWith(href));
   const activeLabel = nav.find((i) => isActive(i.href))?.label ?? brand;
@@ -195,12 +199,7 @@ export function DashboardChrome({
           {topbarStart}
 
           <div className="ms-auto flex items-center gap-2.5">
-            <NotificationBell
-              items={notif.items}
-              unread={notif.unread}
-              markRead={notif.markRead}
-              Link={Link}
-            />
+            <LiveNotifications api={api} wsUrl={wsUrl ?? ""} token={token ?? null} Link={Link} />
             {showRating && rep && rep.rating.count > 0 && (
               <Link
                 href={ratingHref ?? accountHref}
@@ -254,7 +253,6 @@ export function DashboardChrome({
         <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-4 shadow-sm">
           {children}
         </main>
-        <NotificationToast notification={notif.toast} onDismiss={notif.dismissToast} />
       </div>
     </div>
   );

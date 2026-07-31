@@ -5,7 +5,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, PageContainer, PageHeader, EmptyState, LoadingState, Stars, IconStar } from "@rahalgo/ui";
+import {
+  Button,
+  PageContainer,
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  Stars,
+  useLiveRefresh,
+  IconStar,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import RatingModal from "@/components/RatingModal";
@@ -46,6 +55,8 @@ export default function RatingsPage() {
     }
     load();
   }, [user, loading, router, load]);
+
+  useLiveRefresh(["order", "rating"], load);
 
   if (!orders) return <LoadingState />;
 

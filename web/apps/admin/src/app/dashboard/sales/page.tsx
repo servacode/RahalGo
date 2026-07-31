@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  useLiveRefresh,
   PageHeader,
   Button,
   Badge,
@@ -99,6 +100,8 @@ export default function SalesPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useLiveRefresh(["lead", "wallet", "account"], load);
 
   const columns: DataColumn<Rep>[] = [
     {

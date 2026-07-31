@@ -3,10 +3,19 @@
 /** محفظتي: الرصيد والسجل — يعرف الزبون أين صُرفت نقوده (دفع من المحفظة، تعويض،
  *  كوبون/خصم، أو تصحيح خطأ مالي). الزبون لا لوحة له فالسجل هنا ضروري. */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { PageContainer, PageHeader, EmptyState, LoadingState, ListRow, Card, IconWallet } from "@rahalgo/ui";
+import {
+  PageContainer,
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  ListRow,
+  Card,
+  useLiveRefresh,
+  IconWallet,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 
@@ -31,16 +40,22 @@ export default function WalletPage() {
   const router = useRouter();
   const [st, setSt] = useState<Statement | null>(null);
 
+  const load = useCallback(() => {
+    api<Statement>("/api/v1/my/wallet")
+      .then(setSt)
+      .catch(() => setSt({ balance: 0, transactions: [] }));
+  }, []);
+
   useEffect(() => {
     if (loading) return;
     if (!isLoggedIn(user)) {
       router.replace("/login?next=/wallet");
       return;
     }
-    api<Statement>("/api/v1/my/wallet")
-      .then(setSt)
-      .catch(() => setSt({ balance: 0, transactions: [] }));
-  }, [user, loading, router]);
+    load();
+  }, [user, loading, router, load]);
+
+  useLiveRefresh(["wallet"], load);
 
   if (!st) return <LoadingState />;
 

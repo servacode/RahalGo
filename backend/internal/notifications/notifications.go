@@ -96,14 +96,29 @@ func (s *Service) NotifyMany(ctx context.Context, userIDs []string, in Input) {
 	}
 }
 
-// NotifyRole يرسل الإشعار لكل حاملي دور معيّن (العمليات/المالية/الأدمن).
+// OpsDesk أدوار مكتب المنصة — من يجب أن يعرف بأي حركة تشغيلية جديدة.
+// مصدر واحد: لا يقرر كل معالِج بنفسه من يُبلَّغ.
+var OpsDesk = []string{"admin", "ops"}
+
+// NotifyRole يرسل الإشعار لكل حاملي دور معيّن.
 func (s *Service) NotifyRole(ctx context.Context, role string, in Input) {
+	s.NotifyRoles(ctx, []string{role}, in)
+}
+
+// NotifyOps يبلّغ مكتب المنصة كاملاً (مالك المنصة + العمليات) بلا تكرار.
+func (s *Service) NotifyOps(ctx context.Context, in Input) {
+	s.NotifyRoles(ctx, OpsDesk, in)
+}
+
+// NotifyRoles يرسل الإشعار لحاملي أي من الأدوار المذكورة — مرة واحدة لكل شخص
+// مهما تعددت أدواره.
+func (s *Service) NotifyRoles(ctx context.Context, roles []string, in Input) {
 	rows, err := s.db.Query(ctx, `
-		SELECT u.id FROM users u
+		SELECT DISTINCT u.id FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id
-		WHERE ur.role_code = $1 AND u.status = 'active'`, role)
+		WHERE ur.role_code = ANY($1) AND u.status = 'active'`, roles)
 	if err != nil {
-		s.logger.Error("notify: role query", "error", err, "role", role)
+		s.logger.Error("notify: role query", "error", err, "roles", roles)
 		return
 	}
 	defer rows.Close()

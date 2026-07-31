@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  useLiveRefresh,
   IconUsers,
   IconDriver,
   IconUser,
@@ -67,10 +68,17 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [wa, setWa] = useState<WhatsAppStatus | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api<Stats>("/api/v1/admin/stats").then(setStats).catch(() => setStats(null));
     api<WhatsAppStatus>("/api/v1/admin/whatsapp").then(setWa).catch(() => setWa(null));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // النظرة العامة حيّة — أي طلب أو حساب أو طلب انضمام جديد يحدّث الأرقام فوراً
+  useLiveRefresh(["order", "account", "lead"], load);
 
   return (
     <div>

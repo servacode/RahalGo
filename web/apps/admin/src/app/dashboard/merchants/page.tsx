@@ -7,6 +7,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 
 const PickMap = dynamic(() => import("@/components/map/PickMap"), { ssr: false });
 import {
+  useLiveRefresh,
   Button,
   Input,
   Select,
@@ -141,6 +142,8 @@ export default function MerchantsPage() {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
   }, [load]);
+
+  useLiveRefresh(["lead", "account"], load);
 
   async function toggleStatus(mr: Merchant) {
     try {

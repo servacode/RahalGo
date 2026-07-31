@@ -6,7 +6,17 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Badge, Button, PageContainer, PageHeader, EmptyState, LoadingState, IconOrder, IconStar } from "@rahalgo/ui";
+import {
+  Badge,
+  Button,
+  PageContainer,
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  useLiveRefresh,
+  IconOrder,
+  IconStar,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import RatingModal from "@/components/RatingModal";
@@ -54,17 +64,23 @@ export default function MyOrdersPage() {
       .catch(() => undefined);
   }, []);
 
+  const load = useCallback(() => {
+    api<{ orders: Order[] }>("/api/v1/my/orders?per_page=50")
+      .then((d) => setOrders(d.orders))
+      .catch(() => setOrders([]));
+    loadRatings();
+  }, [loadRatings]);
+
   useEffect(() => {
     if (loading) return;
     if (!isLoggedIn(user)) {
       router.replace("/login?next=/orders");
       return;
     }
-    api<{ orders: Order[] }>("/api/v1/my/orders?per_page=50")
-      .then((d) => setOrders(d.orders))
-      .catch(() => setOrders([]));
-    loadRatings();
-  }, [user, loading, router, loadRatings]);
+    load();
+  }, [user, loading, router, load]);
+
+  useLiveRefresh(["order", "rating"], load);
 
   if (!orders) return <LoadingState />;
 

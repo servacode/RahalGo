@@ -5,9 +5,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Badge, Button, IconStar, IconSuccess } from "@rahalgo/ui";
+import { Badge, Button, useLiveEvent, IconStar, IconSuccess } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
-import { useLiveEvents } from "@/lib/ws";
 
 const m = getMessages(defaultLocale);
 const fmt = new Intl.NumberFormat("ar-SY");
@@ -56,19 +55,13 @@ export default function OrderTrackingPage() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 30000);
-    return () => clearInterval(t);
   }, [load]);
 
-  useLiveEvents(
-    useCallback(
-      (event) => {
-        const o = event.order as { id?: string } | undefined;
-        if (event.type === "order" && o?.id === id) load();
-      },
-      [id, load]
-    )
-  );
+  // البث الحي المركزي — قناة واحدة للتطبيق كله، بلا استطلاع دوري
+  useLiveEvent((event) => {
+    const o = event.order as { id?: string } | undefined;
+    if (event.type === "order" && o?.id === id) load();
+  });
 
   if (error) return <p className="py-10 text-center text-ink-muted">{error}</p>;
   if (!order) return <p className="py-10 text-center text-ink-muted">{m.common.loading}</p>;

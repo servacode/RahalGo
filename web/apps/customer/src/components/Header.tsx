@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  LiveNotifications,
+  useLiveRefresh,
   IconOrder,
   IconWallet,
   IconUser,
@@ -13,21 +15,15 @@ import {
   IconChevronDown,
   IconStar,
 } from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
+import { homeFor, portalFor, goTo } from "@rahalgo/auth";
+import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
 const m = getMessages(defaultLocale);
 const N = m.site.nav;
 const fmt = new Intl.NumberFormat("ar-SY");
-
-function portalFor(roles: string[]): string | null {
-  if (roles.some((r) => r === "admin" || r === "ops" || r === "finance"))
-    return process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001";
-  if (roles.includes("merchant")) return process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3002";
-  if (roles.includes("sales")) return process.env.NEXT_PUBLIC_REP_URL ?? "http://localhost:3004";
-  return null;
-}
+const WS_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws") + "/api/v1/ws";
 
 interface Summary {
   full_name: string;
@@ -45,9 +41,16 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const loadSummary = useCallback(() => {
     if (logged) api<Summary>("/api/v1/me/summary").then(setSummary).catch(() => undefined);
-  }, [logged, pathname]);
+  }, [logged]);
+
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary, pathname]);
+
+  // الرصيد يتحدّث لحظياً عند أي حركة على المحفظة — بلا إعادة تحميل
+  useLiveRefresh(["wallet"], loadSummary);
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -62,10 +65,9 @@ export default function Header() {
   const portal = user ? portalFor(user.roles) : null;
 
   async function backToDashboard() {
-    if (!portal) return;
+    if (!user || !portal) return;
     try {
-      const { code } = await api<{ code: string }>("/api/v1/auth/handoff", { method: "POST" });
-      window.location.href = `${portal}/sso?code=${encodeURIComponent(code)}`;
+      await goTo(homeFor(user.roles));
     } catch {
       /* يبقى في الموقع */
     }
@@ -86,6 +88,13 @@ export default function Header() {
         <div className="ms-auto flex items-center gap-2">
           {logged && (
             <>
+              {/* الإشعارات والبث الحي — نفس المكوّن المركزي المستعمل في اللوحات */}
+              <LiveNotifications
+                api={api}
+                wsUrl={WS_URL}
+                token={tokenStore.access}
+                Link={Link}
+              />
               {/* رصيد المحفظة */}
               <Link
                 href="/wallet"

@@ -2,7 +2,7 @@
 
 /** نظرة عامة — كود المندوب وإحصاءاته السريعة. */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
@@ -17,6 +17,7 @@ import {
   StatGrid,
   StatCard,
   LoadingState,
+  useLiveData,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -32,12 +33,12 @@ interface Me {
 }
 
 export default function OverviewPage() {
-  const [me, setMe] = useState<Me | null>(null);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    api<Me>("/api/v1/rep/me").then(setMe).catch(() => undefined);
-  }, []);
+  const { data: me } = useLiveData<Me>(() => api("/api/v1/rep/me"), [
+    "lead",
+    "order",
+    "wallet",
+  ]);
 
   if (!me) {
     return <LoadingState />;

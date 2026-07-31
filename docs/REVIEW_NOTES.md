@@ -52,17 +52,34 @@
 | المصادقة والهوية | `@rahalgo/auth` (client/provider/routing/LoginCard/SsoPage) |
 | تسجيل الدخول | شاشة واحدة في تطبيق المنصة تُوجّه حسب الدور (`homeFor`) — الإدارة معزولة عمداً |
 | الأدوار | `auth → ROLES / PANEL_ROLES / hasRole` |
-| الإشعارات | `ui → NotificationBell/Toast/useLiveNotifications` + `backend/internal/notifications` |
+| الإشعارات والبث الحي | `ui → LiveNotifications` (نقطة التركيب الوحيدة) + `backend/internal/notifications` |
+| تحديث الصفحات لحظياً | `ui → useLiveData` (جلب + تحديث) و`useLiveRefresh` (تحديث فقط) و`useLiveEvent` (رسائل خام) و`useLiveStatus` |
+| من يُبلَّغ بأي حركة | `notifications.NotifyOps` (مالك المنصة + العمليات) / `NotifyRoles` |
 | نقاط الخادم الموحّدة | `/me/summary`، `/me/reputation`، `/me/avatar`، `/me/notifications`، `/auth/phone/*`، `/auth/handoff`+`/auth/sso` |
+
+### التحديث اللحظي — قاعدة مُلزِمة
+
+**لا أحد يحدّث المتصفح أبداً.** قناة بث **واحدة** لكل تطبيق تُركَّب في هيكله
+(`DashboardChrome` في اللوحات، `Header` عند الزبون) عبر `<LiveNotifications>`،
+ثم كل صفحة تصبح حيّة بسطر واحد:
+
+```tsx
+const { data, loading } = useLiveData<Lead[]>(() => api("/api/v1/rep/leads"), ["lead"]);
+// أو مع حارس دخول: useLiveRefresh(["wallet"], load)
+```
+
+ممنوع: فتح `WebSocket` خاص بصفحة أو لوحة، و`setInterval` للاستطلاع الدوري. أُزيلت
+نسخ `lib/ws.ts` الثلاث المكرّرة واستطلاعات الـ15/30/60 ثانية لصالح البث المركزي.
+
+أنواع الأحداث (`kind`) الموحّدة بين الخادم والواجهة:
+`order` · `ticket` · `wallet` · `rating` · `lead` · `account`.
 
 ### متبقٍّ للمركزية (الجولات القادمة)
 
-- **بقية أحداث الإشعارات**: التذاكر وردودها، التقييمات، إسناد السائق، تغيير حالة
-  الحساب، الإغلاق الطارئ للمتجر. البنية جاهزة — كل حدث سطر واحد.
 - **الجداول**: `DataView` مستعمل في الإدارة فقط؛ ~18 قائمة يدوية في بقية اللوحات.
-- **الصفحات الساكنة**: بقيت صفحات تجلب مرة واحدة (تذاكر/حسابات/تقارير الإدارة) —
-  تُربط بالبث لتصبح حيّة.
 - **تعميم `Card`/`ListRow`/`StatCard`** على ما تبقّى من الكروت اليدوية.
+- **استثناء تسليم الجلسة (SSO) من إبطال الجلسات** كي لا يقطع الانتقال بين اللوحات
+  جلسة المصدر (قاعدة "جلسة واحدة" تبقى سارية على تسجيل الدخول العادي).
 
 
 ---

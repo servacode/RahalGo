@@ -130,7 +130,7 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 			Entity: "lead", Href: "/portal/leads",
 		})
 	}
-	s.notify.NotifyRole(r.Context(), "ops", notifications.Input{
+	s.notify.NotifyOps(r.Context(), notifications.Input{
 		Kind: notifications.KindLead, Title: m.leadNewOps,
 		Body: req.StoreName, Entity: "lead", Href: "/dashboard/leads",
 	})

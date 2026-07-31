@@ -139,7 +139,9 @@ export function DataView<T>({
             {actions && (
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="mt-3 grid grid-flow-col auto-cols-fr gap-1.5 border-t border-line pt-3 [&_button]:justify-center [&_button]:!px-2 [&_button]:whitespace-nowrap"
+                /* الأزرار تتقاسم السطر ما دامت تتسع، وتنزل سطراً جديداً بدل أن
+                   تفيض خارج البطاقة — النصوص العربية تطول ولا تُقصّ. */
+                className="mt-3 flex flex-wrap gap-1.5 border-t border-line pt-3 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:!px-2 [&_button]:text-center"
               >
                 {actions(item)}
               </div>

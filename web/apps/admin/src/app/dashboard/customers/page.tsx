@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  useLiveRefresh,
   PageHeader,
   Button,
   Input,
@@ -76,6 +77,8 @@ export default function CustomersPage() {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
   }, [load]);
+
+  useLiveRefresh(["account", "order"], load);
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.per_page)) : 1;
 

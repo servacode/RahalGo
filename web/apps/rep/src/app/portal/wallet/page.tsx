@@ -2,7 +2,6 @@
 
 /** المحفظة — حركات عمولات المندوب. */
 
-import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   PageContainer,
@@ -10,6 +9,7 @@ import {
   EmptyState,
   LoadingState,
   ListRow,
+  useLiveData,
   IconWallet,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
@@ -27,15 +27,13 @@ interface Tx {
 }
 
 export default function WalletPage() {
-  const [txs, setTxs] = useState<Tx[] | null>(null);
+  const { data, loading } = useLiveData<{ transactions: Tx[] }>(
+    () => api("/api/v1/rep/wallet"),
+    ["wallet"],
+  );
 
-  useEffect(() => {
-    api<{ transactions: Tx[] }>("/api/v1/rep/wallet")
-      .then((s) => setTxs(s.transactions))
-      .catch(() => setTxs([]));
-  }, []);
-
-  if (!txs) return <LoadingState />;
+  if (loading) return <LoadingState />;
+  const txs = data?.transactions ?? [];
 
   return (
     <PageContainer>
