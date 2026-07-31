@@ -18,7 +18,7 @@ import {
   IconStar,
   IconSupport,
 } from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
+import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, isRep } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
@@ -64,6 +64,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       api={api}
       mediaUrl={mediaUrl}
       Link={Link}
+      wsUrl={`${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws")}/api/v1/ws`}
+      token={tokenStore.access}
       phone={user?.phone}
       shopUrl={process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003"}
       shopLabel={m.shared.shopAsCustomer}

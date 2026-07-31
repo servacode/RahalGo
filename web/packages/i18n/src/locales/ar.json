@@ -103,7 +103,12 @@
     },
     "live": "مباشر",
     "liveOff": "غير متصل",
-    "loggingIn": "جارٍ الدخول…"
+    "loggingIn": "جارٍ الدخول…",
+    "notifications": {
+      "title": "الإشعارات",
+      "empty": "لا إشعارات",
+      "markAllRead": "تعليم الكل كمقروء"
+    }
   },
   "common": {
     "appName": "رحال غو",

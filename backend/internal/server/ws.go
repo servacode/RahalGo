@@ -45,11 +45,16 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if slices.Contains(claims.Roles, "customer") {
 		topics = append(topics, "customer:"+claims.Subject)
 	}
-	// موضوع السائق يُضاف مع تطبيقه
-	if len(topics) == 0 {
-		httpx.Error(w, errForbidden)
-		return
+	// السائق: موضوعه الشخصي (إسناد الطلبات والنقد — يستعمله التطبيق)
+	if slices.Contains(claims.Roles, "driver") {
+		topics = append(topics, "driver:"+claims.Subject)
 	}
+	// المندوب: موضوعه الشخصي (طلبات الانضمام والعمولات)
+	if slices.Contains(claims.Roles, "sales") {
+		topics = append(topics, "sales:"+claims.Subject)
+	}
+	// موضوع الإشعارات الشخصي — لكل مستخدم مهما كان دوره، فلا أحد يبقى بلا بث.
+	topics = append(topics, "user:"+claims.Subject)
 
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		OriginPatterns: []string{"localhost:*", "127.0.0.1:*", "*.rahalgo.com"},

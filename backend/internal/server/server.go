@@ -20,6 +20,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -42,6 +43,7 @@ type Server struct {
 	support   *support.Service
 	media     *media.Service
 	hub       *realtime.Hub
+	notify    *notifications.Service
 	otpStatus func() map[string]any
 }
 
@@ -53,7 +55,8 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
-		media: mediaSvc, hub: hub, otpStatus: otpStatus}
+		media: mediaSvc, hub: hub, otpStatus: otpStatus,
+		notify: notifications.New(pg, hub, logger)}
 }
 
 func (s *Server) Router() http.Handler {
@@ -119,6 +122,8 @@ func (s *Server) Router() http.Handler {
 			r.Delete("/me/avatar", s.handleDeleteMyAvatar)
 			r.Get("/my/ratings", s.handleMyRatings)
 			r.Get("/me/reputation", s.handleMeReputation)
+			r.Get("/me/notifications", s.handleMyNotifications)
+			r.Post("/me/notifications/read", s.handleMarkNotificationRead)
 		})
 
 		// لوحة المندوب — دور المبيعات حصراً (قراءة: كوده ومتاجره وعمولاته)

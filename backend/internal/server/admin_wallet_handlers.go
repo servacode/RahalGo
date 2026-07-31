@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -60,5 +61,15 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	// صاحب المحفظة يعرف فوراً بأي إيداع/خصم — شفافية مالية بلا تحديث صفحة.
+	title := notifTitles.walletCredit
+	if amount < 0 {
+		title = notifTitles.walletDebit
+	}
+	s.notify.Notify(r.Context(), notifications.Input{
+		UserID: chi.URLParam(r, "id"), Kind: notifications.KindWallet,
+		Title: title, Body: req.Note,
+		Entity: "wallet", Href: "/wallet",
+	})
 	httpx.JSON(w, http.StatusOK, map[string]any{"balance": balance})
 }

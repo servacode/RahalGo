@@ -15,4 +15,10 @@ export {
   StatCard,
   Stars,
 } from "./layout";
+export {
+  NotificationBell,
+  NotificationToast,
+  useLiveNotifications,
+  type AppNotification,
+} from "./Notifications";
 export * from "./icons";

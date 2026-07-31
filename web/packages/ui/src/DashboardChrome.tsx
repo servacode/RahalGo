@@ -8,6 +8,7 @@
 
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { NotificationBell, NotificationToast, useLiveNotifications } from "./Notifications";
 import {
   IconWallet,
   IconStar,
@@ -56,6 +57,8 @@ export function DashboardChrome({
   shopLabel,
   showRating = false,
   topbarStart,
+  wsUrl,
+  token,
   children,
 }: {
   brand: string;
@@ -74,6 +77,10 @@ export function DashboardChrome({
   shopLabel?: string;
   showRating?: boolean;
   topbarStart?: ReactNode;
+  /** عنوان قناة البث الحي (ws://…/api/v1/ws) */
+  wsUrl?: string;
+  /** توكن الوصول للبث — بلا ترويسات في WebSocket */
+  token?: string | null;
   children: ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -86,6 +93,9 @@ export function DashboardChrome({
   }, [api, pathname, showRating]);
 
   useEffect(() => setMenuOpen(false), [pathname]);
+
+  // الإشعارات: صندوق دائم + بث حي — مركزية فيرثها كل من يستعمل هذا الهيكل.
+  const notif = useLiveNotifications(api, wsUrl ?? "", token ?? null);
 
   const isActive = (href: string) => (href === homeHref ? pathname === href : pathname.startsWith(href));
   const activeLabel = nav.find((i) => isActive(i.href))?.label ?? brand;
@@ -185,6 +195,12 @@ export function DashboardChrome({
           {topbarStart}
 
           <div className="ms-auto flex items-center gap-2.5">
+            <NotificationBell
+              items={notif.items}
+              unread={notif.unread}
+              markRead={notif.markRead}
+              Link={Link}
+            />
             {showRating && rep && rep.rating.count > 0 && (
               <Link
                 href={ratingHref ?? accountHref}
@@ -238,6 +254,7 @@ export function DashboardChrome({
         <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-4 shadow-sm">
           {children}
         </main>
+        <NotificationToast notification={notif.toast} onDismiss={notif.dismissToast} />
       </div>
     </div>
   );

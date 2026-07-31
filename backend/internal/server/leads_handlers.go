@@ -13,9 +13,17 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
 // طلبات انضمام المتاجر عبر رابط المندوب.
+
+// نصوص إشعارات هذا القسم — مجمّعة كي لا تتناثر في الكود.
+var m = struct{ leadNew, leadNewOps, leadApproved string }{
+	leadNew:      "طلب انضمام جديد عبر رابطك",
+	leadNewOps:   "طلب انضمام متجر جديد",
+	leadApproved: "تمت الموافقة على عميلك",
+}
 
 // حدود طول الحقول — نقطة عامة بلا حساب، نمنع تخزين حمولات ضخمة لكل صف.
 const (
@@ -114,6 +122,18 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// إشعار فوري: المندوب صاحب الكود والإدارة يعرفان بالطلب بلا تحديث صفحة.
+	if repID != nil {
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: *repID, Kind: notifications.KindLead,
+			Title: m.leadNew, Body: req.StoreName,
+			Entity: "lead", Href: "/portal/leads",
+		})
+	}
+	s.notify.NotifyRole(r.Context(), "ops", notifications.Input{
+		Kind: notifications.KindLead, Title: m.leadNewOps,
+		Body: req.StoreName, Entity: "lead", Href: "/dashboard/leads",
+	})
 	httpx.JSON(w, http.StatusCreated, map[string]any{"received": true})
 }
 
@@ -327,5 +347,15 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	_, err = s.pg.Exec(ctx, `
 		UPDATE merchant_leads SET status = 'converted', merchant_id = $2, updated_at = now()
 		WHERE id = $1`, leadID, mrch.ID)
+	// المندوب يعرف فوراً أن عميله اعتُمد (مصدر عمولته)
+	var repID *string
+	_ = s.pg.QueryRow(ctx, `SELECT sales_rep_user_id FROM merchant_leads WHERE id = $1`, leadID).Scan(&repID)
+	if repID != nil {
+		s.notify.Notify(ctx, notifications.Input{
+			UserID: *repID, Kind: notifications.KindLead,
+			Title: m.leadApproved, Body: storeName,
+			Entity: "merchant", EntityID: mrch.ID, Href: "/portal/merchants",
+		})
+	}
 	return err
 }

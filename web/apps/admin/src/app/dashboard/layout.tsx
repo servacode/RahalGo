@@ -24,7 +24,7 @@ import {
   IconLink,
   IconBalance,
 } from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
+import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
@@ -75,6 +75,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       api={api}
       mediaUrl={mediaUrl}
       Link={Link}
+      wsUrl={`${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws")}/api/v1/ws`}
+      token={tokenStore.access}
       phone={user?.phone}
       onLogout={() => {
         logout();

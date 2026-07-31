@@ -21,7 +21,7 @@ import {
 } from "@rahalgo/ui";
 import { useAuth, canAccessPortal } from "@/lib/auth";
 import { StoreProvider, useStore } from "@/lib/store";
-import { api, mediaUrl } from "@/lib/api";
+import { api, mediaUrl, tokenStore } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 
@@ -117,6 +117,8 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
       api={api}
       mediaUrl={mediaUrl}
       Link={Link}
+      wsUrl={`${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws")}/api/v1/ws`}
+      token={tokenStore.access}
       phone={user?.phone}
       shopUrl={process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003"}
       shopLabel={m.shared.shopAsCustomer}
