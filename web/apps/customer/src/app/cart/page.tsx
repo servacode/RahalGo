@@ -7,7 +7,14 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { IconEdit, Button, Input, Select } from "@rahalgo/ui";
+import {
+  IconEdit,
+  Button,
+  Input,
+  Select,
+  AddressBook,
+  type SavedAddress,
+} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
@@ -43,8 +50,26 @@ export default function CartPage() {
   const router = useRouter();
 
   const [address, setAddress] = useState("");
+  const [saved, setSaved] = useState<SavedAddress[]>([]);
+  const [pickedID, setPickedID] = useState("");
   const [lat, setLat] = useState(RAQQA.lat);
   const [lng, setLng] = useState(RAQQA.lng);
+
+  // العنوان الافتراضي يُملأ تلقائياً — من له عنوانٌ واحد لا يُسأل عنه
+  useEffect(() => {
+    api<SavedAddress[]>("/api/v1/my/addresses")
+      .then((a) => {
+        setSaved(a);
+        const def = a.find((x) => x.is_default) ?? a[0];
+        if (def) {
+          setPickedID(def.id);
+          setAddress(def.address_text);
+          setLat(def.lat);
+          setLng(def.lng);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
   const [zone, setZone] = useState<Zone | null>(null);
   const [zoneErr, setZoneErr] = useState("");
   const [payment, setPayment] = useState("cash");
@@ -201,6 +226,23 @@ export default function CartPage() {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* العناوين المحفوظة أولاً: من حفظ عنوانه لا يُطلب منه رسم دبّوسه ثانيةً.
+                والاختيار يملأ الحقلين والدبّوس معاً. */}
+            {saved.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-medium">{m.site.addresses.title}</p>
+                <AddressBook
+                  api={api}
+                  selectedID={pickedID}
+                  onPick={(a) => {
+                    setPickedID(a.id);
+                    setAddress(a.address_text);
+                    setLat(a.lat);
+                    setLng(a.lng);
+                  }}
+                />
+              </div>
+            )}
             <Input
               id="address"
               label={m.site.cart.address}

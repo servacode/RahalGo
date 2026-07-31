@@ -49,6 +49,10 @@ interface Order {
   cancel_reason: string;
   // بيانات الفاتورة — يرسلها الخادم أصلاً وكان النوع يتجاهلها
   payment_method: string;
+  merchant_id: string;
+  prep_minutes?: number | null;
+  accepted_at?: string | null;
+  ready_at?: string | null;
   subtotal: number;
   delivery_fee: number;
   discount: number;
@@ -65,11 +69,36 @@ interface Order {
   }[];
 }
 
+/**
+ * الوقت المتوقّع = لحظة القبول + وقت تحضير المتجر + تقدير التوصيل.
+ *
+ * ويُعرض **بالمتبقّي لا بالساعة**: «خلال ١٢ دقيقة» أقرب إلى ذهن المنتظِر من
+ * «يصل ٨:٤٧». وإن أعلن المتجر الجاهزية سقط وقت التحضير من الحساب — صار الطلب
+ * ينتظر السائق لا المطبخ.
+ */
+const DELIVERY_ESTIMATE_MIN = 15;
+
+/** رسالة الخطأ من مفتاح الخادم — لا نصّ إنجليزي يصل المستخدم. */
+function errText(err: unknown): string {
+  if (!(err instanceof ApiError)) return m.errors.internal;
+  const key = err.body.message_key.split(".").pop() ?? "";
+  return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
+}
+
+function etaText(o: Order): string {
+  const accepted = new Date(o.accepted_at!).getTime();
+  const prepDone = o.ready_at ? new Date(o.ready_at).getTime() : accepted + (o.prep_minutes ?? 0) * 60_000;
+  const left = Math.round((prepDone + DELIVERY_ESTIMATE_MIN * 60_000 - Date.now()) / 60_000);
+  return m.site.orders.etaValue.replace("{n}", fmtNum(Math.max(1, left)));
+}
+
 export default function OrderTrackingPage() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState("");
 
   const load = useCallback(() => {
     api<Order>(`/api/v1/my/orders/${id}`)
@@ -114,6 +143,46 @@ export default function OrderTrackingPage() {
           </Button>
         </div>
       </div>
+
+      {/* الوقت المتوقّع: «قيد التحضير» وحدها لا تقول عشر دقائق أم ساعة */}
+      {!failed && order.status !== "delivered" && order.accepted_at && order.prep_minutes && (
+        <p className="mb-4 flex items-center gap-2 rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">
+          <IconCheck size={16} strokeWidth={3} />
+          <span className="font-medium">{m.site.orders.eta}:</span>
+          {etaText(order)}
+        </p>
+      )}
+
+      {/* الإلغاء: نافذة تدارُك قصيرة بعد قبول المتجر */}
+      {(order.status === "pending" || order.status === "accepted") && (
+        <div className="mb-4">
+          <Button
+            variant="danger"
+            disabled={cancelBusy}
+            onClick={async () => {
+              setCancelBusy(true);
+              setCancelError("");
+              try {
+                await api(`/api/v1/orders/${order.id}/cancel`, {
+                  method: "POST",
+                  body: JSON.stringify({ note: "" }),
+                });
+                load();
+              } catch (err) {
+                setCancelError(errText(err));
+              } finally {
+                setCancelBusy(false);
+              }
+            }}
+          >
+            {m.site.orders.cancel}
+          </Button>
+          {order.status === "accepted" && (
+            <p className="mt-1 text-xs text-ink-muted">{m.site.orders.cancelWindow}</p>
+          )}
+          {cancelError && <p className="mt-1 text-sm text-danger">{cancelError}</p>}
+        </div>
+      )}
 
       {/* الفاتورة: سجلُّ الواقعة — يفتحها الزبون ويطبعها متى شاء */}
       {showInvoice && (
@@ -229,7 +298,6 @@ function RatingForm({
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [showInvoice, setShowInvoice] = useState(false);
 
   async function submit() {
     setBusy(true);

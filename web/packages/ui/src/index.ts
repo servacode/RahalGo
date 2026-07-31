@@ -14,6 +14,7 @@ export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } fro
 export { AccountSettings } from "./AccountSettings";
 export { NotificationsPage } from "./NotificationsPage";
 export { WalletPage } from "./WalletPage";
+export { AddressBook, type SavedAddress } from "./AddressBook";
 export { Invoice, type InvoiceOrder, type InvoiceItem } from "./Invoice";
 export {
   MenuManager,
