@@ -17,6 +17,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/config"
+	"github.com/servacode/rahalgo/backend/internal/geo"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
@@ -43,6 +44,7 @@ type Server struct {
 	support   *support.Service
 	media     *media.Service
 	hub       *realtime.Hub
+	geo       *geo.Service
 	notify    *notifications.Service
 	otpStatus func() map[string]any
 }
@@ -53,12 +55,13 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	cashboxSvc *cashbox.Service, supportSvc *support.Service, mediaSvc *media.Service,
 	hub *realtime.Hub, otpStatus func() map[string]any) *Server {
 	notify := notifications.New(pg, hub, logger)
+	geoSvc := geo.New(cfg.GeocoderURL, rdb, logger)
 	// محرك الطلبات يحتاج الإشعارات (عمولة المندوب) وقد بُني قبلها — نحقنها الآن.
 	ordersSvc.SetNotifier(notify)
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
-		media: mediaSvc, hub: hub, otpStatus: otpStatus, notify: notify}
+		media: mediaSvc, hub: hub, otpStatus: otpStatus, notify: notify, geo: geoSvc}
 }
 
 func (s *Server) Router() http.Handler {
@@ -129,7 +132,13 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/ratings", s.handleMyRatings)
 			r.Get("/me/reputation", s.handleMeReputation)
 			r.Get("/me/notifications", s.handleMyNotifications)
+			// العنونة: مساعدة لتحديد المواقع — لأي مستخدم مسجّل
+			r.Get("/geo/reverse", s.handleGeoReverse)
+			r.Get("/geo/search", s.handleGeoSearch)
 			r.Post("/me/notifications/read", s.handleMarkNotificationRead)
+			// طلبات سحب الرصيد — لأي صاحب رصيد (مندوب اليوم، سائق مع تطبيقه)
+			r.Get("/me/payouts", s.handleMyPayouts)
+			r.Post("/me/payouts", s.handleCreatePayout)
 		})
 
 		// لوحة المندوب — دور المبيعات حصراً (قراءة: كوده ومتاجره وعمولاته)
@@ -140,6 +149,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/merchants", s.handleRepMerchants)
 			r.Get("/wallet", s.handleRepWallet)
 			r.Get("/leads", s.handleRepLeads)
+			// يسجّل عميلاً باسمه من الميدان — يبقى معلّقاً حتى موافقة الإدارة
+			r.Post("/leads", s.handleRepCreateLead)
+			r.Get("/categories", s.handleListCategories) // تصنيفات المتاجر للنموذج
 		})
 
 		// بوابة المتجر — صاحب المتجر حصراً، وكل نقطة تتحقق من الملكية
@@ -159,7 +171,11 @@ func (s *Server) Router() http.Handler {
 		// نقاط الإدارة — أدمن/عمليات فقط، والتعديلات الحساسة للأدمن حصراً
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(s.RequireAuth)
-			r.Use(s.RequireRoles("admin", "ops"))
+			// المالية عضو في مكتب المنصة: كانت المجموعة تسمح للأدمن والعمليات فقط،
+			// فتُحجب المالية عند الباب — وتصير المسارات المعلَّمة "أدمن/مالية"
+			// (المحفظة، تسوية الصندوق، حلّ التذاكر، صرف السحوبات) غير قابلة للوصول
+			// لمن أُنشئت له. الحراسة الدقيقة تبقى على كل مسار حسّاس بذاته.
+			r.Use(s.RequireRoles("admin", "ops", "finance"))
 			r.Get("/whatsapp", func(w http.ResponseWriter, _ *http.Request) {
 				httpx.JSON(w, http.StatusOK, s.otpStatus())
 			})
@@ -199,6 +215,11 @@ func (s *Server) Router() http.Handler {
 			r.Get("/salesreps", s.handleListSalesReps)
 			r.Get("/leads", s.handleAdminLeads)
 			r.Post("/leads/{id}/status", s.handleAdminLeadStatus)
+
+			// طلبات سحب الرصيد: القراءة لمكتب المنصة، والصرف للأدمن والمالية
+			r.Get("/payouts", s.handleAdminPayouts)
+			r.With(s.RequireRoles("admin", "finance")).
+				Post("/payouts/{id}/decide", s.handleDecidePayout)
 
 			// التذاكر والتعويضات — الحل المالي للأدمن/المالية حصراً
 			r.Get("/tickets", s.handleListTickets)
