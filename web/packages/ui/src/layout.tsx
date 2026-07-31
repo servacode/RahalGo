@@ -360,6 +360,8 @@ export function TabCards({
 export interface EntityStat {
   label: string;
   value: ReactNode;
+  /** أيقونة الحقل — تُميّزه عن جاره بلا قراءة، وتُقرأ من بعيد */
+  icon?: ReactNode;
   /** لون القيمة — للأرقام التي تعني ربحاً أو خسارة */
   tone?: "default" | "success" | "danger" | "muted";
 }
@@ -427,14 +429,21 @@ export function EntityCard({
           style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
         >
           {stats.map((st, i) => (
-            <div key={i} className="min-w-0">
+            // حقلٌ مؤطَّر لكل رقم: بلا إطار تلتصق الأرقام فيُقرأ أحدها مكان
+            // الآخر — وهي بطاقة تُمسح بالعين لا تُدرَس.
+            <div key={i} className="min-w-0 rounded-control bg-page px-2 py-1.5 text-center">
               <p
                 className={`truncate text-base font-bold ${statTone[st.tone ?? "default"]}`}
                 dir="ltr"
               >
                 {st.value}
               </p>
-              <p className="truncate text-[11px] text-ink-muted">{st.label}</p>
+              <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-ink-muted">
+                {st.icon && (
+                  <span className="shrink-0 [&>svg]:h-3.5 [&>svg]:w-3.5">{st.icon}</span>
+                )}
+                <span className="truncate">{st.label}</span>
+              </p>
             </div>
           ))}
         </div>

@@ -35,6 +35,8 @@ import {
   IconLocation,
   IconLock,
   IconSuccess,
+  IconError,
+  IconWallet,
   IconWarning,
   IconWhatsApp,
 } from "@rahalgo/ui";
@@ -65,6 +67,7 @@ interface RepMerchant {
   joined_at: string;
   owner_phone: string | null;
   delivered_orders: number;
+  cancelled_orders: number;
   my_commission: number;
   last_order_at: string | null;
 }
@@ -196,10 +199,23 @@ export default function ClientsPage() {
                   </Badge>
                 }
                 stats={[
-                  { label: C.statDelivered, value: fmtNum(mr.delivered_orders) },
+                  {
+                    label: C.statDelivered,
+                    value: fmtNum(mr.delivered_orders),
+                    icon: <IconSuccess />,
+                    tone: mr.delivered_orders > 0 ? "success" : "muted",
+                  },
+                  {
+                    label: C.statCancelled,
+                    value: fmtNum(mr.cancelled_orders),
+                    icon: <IconError />,
+                    // الأحمر للملغي **فقط إن وُجد**: صفر ملغي خبر سارّ لا تحذير
+                    tone: mr.cancelled_orders > 0 ? "danger" : "muted",
+                  },
                   {
                     label: C.statCommission,
                     value: fmtNum(mr.my_commission),
+                    icon: <IconWallet />,
                     // صفرٌ ليس ربحاً ولا خسارة: تلوينه أخضر يَعِد بما ليس
                     tone: mr.my_commission > 0 ? "success" : "muted",
                   },

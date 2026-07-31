@@ -91,6 +91,11 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		       m.created_at::date::text,
 		       NULLIF(COALESCE(ou.whatsapp_phone::text, ou.phone::text), ''),
 		       (SELECT count(*) FROM orders o WHERE o.merchant_id = m.id AND o.status = 'delivered'),
+		       -- «الملغية» تجمع كل نهاية غير التسليم: رفضٌ من المتجر، وإلغاءٌ من
+		       -- الزبون، وفشلُ توصيل، واسترجاعٌ بعد التسليم. تفريقها في بطاقة
+		       -- ملخّص يشتّت، والمندوب يقرأها سؤالاً واحداً: كم طلباً ضاع؟
+		       (SELECT count(*) FROM orders o WHERE o.merchant_id = m.id
+		        AND o.status IN ('rejected', 'cancelled', 'failed', 'refunded')),
 		       -- العمولة **الصافية**: العمولات ناقصَ ما عُكس منها عن طلبات مُسترجَعة.
 		       -- عرض الإجمالي وحده يَعِد المندوب بمالٍ سُحب منه فعلاً.
 		       -- تسويات الإدارة اليدوية لا تدخل هنا: مرجعها فارغ فلا يطابق طلباً.
@@ -122,6 +127,7 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		JoinedAt     string     `json:"joined_at"`
 		OwnerPhone   *string    `json:"owner_phone"`
 		Delivered    int        `json:"delivered_orders"`
+		Cancelled    int        `json:"cancelled_orders"`
 		MyCommission int64      `json:"my_commission"`
 		LastOrderAt  *time.Time `json:"last_order_at"`
 	}
@@ -129,7 +135,7 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m repMerchant
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.CategoryName, &m.LogoThumbURL,
-			&m.Status, &m.JoinedAt, &m.OwnerPhone, &m.Delivered,
+			&m.Status, &m.JoinedAt, &m.OwnerPhone, &m.Delivered, &m.Cancelled,
 			&m.MyCommission, &m.LastOrderAt); err != nil {
 			s.respondErr(w, err)
 			return

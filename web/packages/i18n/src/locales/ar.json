@@ -1224,14 +1224,15 @@
       "waitingSince": "بانتظار الموافقة منذ {n} يوم",
       "waitingToday": "أُرسل اليوم",
       "passwordHint": "سلّمها لصاحب المتجر — سيُطلب منه تبديلها عند أول دخول",
-      "statDelivered": "طلب مُسلَّم",
-      "statCommission": "عمولتي منه",
+      "statDelivered": "مُسلَّم",
+      "statCommission": "صافي عمولتي",
       "lastOrder": "آخر طلب",
       "noOrders": "لم يطلب أحدٌ منه بعد",
       "contact": "مراسلة",
       "activeToday": "اليوم",
       "activeDays": "منذ {n} يوم",
-      "sortHint": "الأحدث انضماماً أولاً"
+      "sortHint": "الأحدث انضماماً أولاً",
+      "statCancelled": "ملغي"
     },
     "target": {
       "title": "هدف الشهر",
