@@ -69,13 +69,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <PasswordGate>
+    {/* لا walletHref: موظّفو المنصة (أدمن/عمليات/مالية) لا محافظ لهم — وشارةٌ
+        برصيد صفر تشير إلى صفحة الحساب تَعِد بما لا يملكه صاحبها. الشريط خريطة ما
+        يملكه المستخدم لا قائمة ثابتة (R-34). */}
     <DashboardChrome
       brand={m.common.appName}
       nav={NAV}
       pathname={pathname}
       homeHref="/dashboard"
       accountHref="/dashboard/account"
-      walletHref="/dashboard/account"
       api={api}
       mediaUrl={mediaUrl}
       Link={Link}

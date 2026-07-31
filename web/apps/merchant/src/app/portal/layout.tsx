@@ -115,6 +115,7 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
       pathname={pathname}
       homeHref="/portal"
       accountHref="/portal/account"
+      walletHref="/portal/wallet"
       ratingHref="/portal/reviews"
       showRating
       api={api}
