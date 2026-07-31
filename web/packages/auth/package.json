@@ -1,0 +1,26 @@
+{
+  "name": "@rahalgo/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "next": ">=15"
+  },
+  "devDependencies": {
+    "@rahalgo/tsconfig": "workspace:*",
+    "@types/react": "^19.2.6",
+    "react": "^19.2.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@rahalgo/i18n": "workspace:*",
+    "@rahalgo/ui": "workspace:*"
+  }
+}

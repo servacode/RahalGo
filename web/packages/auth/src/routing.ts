@@ -1,0 +1,71 @@
+/**
+ * توجيه المستخدم حسب دوره — مصدر واحد يستعمله تسجيل الدخول وزر "العودة إلى لوحتي".
+ * كل اللوحات متطابقة، والفرق الوحيد بينها الصلاحيات والأقسام؛ فالتوجيه مركزي.
+ */
+
+import { api, type AuthUser } from "./client";
+
+export const APP_URLS = {
+  admin: () => process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001",
+  merchant: () => process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3002",
+  customer: () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003",
+  rep: () => process.env.NEXT_PUBLIC_REP_URL ?? "http://localhost:3004",
+};
+
+export interface Destination {
+  /** أصل التطبيق الهدف (فارغ = التطبيق الحالي) */
+  origin: string;
+  /** المسار داخل التطبيق الهدف */
+  path: string;
+}
+
+/**
+ * homeFor يحدد وجهة المستخدم بعد الدخول حسب دوره.
+ * الأولوية: موظفو المنصة ← المتجر ← المندوب ← السائق ← الزبون.
+ */
+export function homeFor(roles: string[]): Destination {
+  const has = (r: string) => roles.includes(r);
+  if (has("admin") || has("ops") || has("finance"))
+    return { origin: APP_URLS.admin(), path: "/dashboard" };
+  if (has("merchant")) return { origin: APP_URLS.merchant(), path: "/portal" };
+  if (has("sales")) return { origin: APP_URLS.rep(), path: "/portal" };
+  // السائق تطبيق أندرويد (قرار 19) — على الويب يبقى بواجهة الزبون
+  return { origin: APP_URLS.customer(), path: "/" };
+}
+
+/** هل للمستخدم لوحة تحكم خاصة (غير واجهة الزبون)؟ */
+export function portalFor(roles: string[]): string | null {
+  const dest = homeFor(roles);
+  return dest.origin === APP_URLS.customer() ? null : dest.origin;
+}
+
+/**
+ * goTo ينقل المستخدم إلى وجهته. عبر أصل مختلف يستعمل تسليم الجلسة لمرّة واحدة
+ * (SSO) لأن التخزين المحلي لا يُشارَك بين الأصول — فيصل مسجّلاً بلا كلمة مرور.
+ */
+export async function goTo(dest: Destination, currentOrigin?: string): Promise<void> {
+  const here = currentOrigin ?? (typeof window !== "undefined" ? window.location.origin : "");
+  if (!dest.origin || dest.origin === here) {
+    window.location.href = dest.path;
+    return;
+  }
+  const { code } = await api<{ code: string }>("/api/v1/auth/handoff", { method: "POST" });
+  window.location.href = `${dest.origin}/sso?code=${encodeURIComponent(code)}&next=${encodeURIComponent(dest.path)}`;
+}
+
+/** يوجّه المستخدم لوجهته حسب دوره بعد تسجيل دخول ناجح. */
+export async function routeByRole(user: AuthUser, next?: string): Promise<void> {
+  const dest = homeFor(user.roles);
+  // `next` يُحترم فقط كمسار نسبي داخل الموقع الحالي (منعاً لإعادة توجيه مفتوحة)
+  if (next && next.startsWith("/") && !next.startsWith("//")) {
+    window.location.href = next;
+    return;
+  }
+  await goTo(dest);
+}
+
+/** مسار نسبي آمن فقط — يُستعمل مع معامل next القادم من العنوان. */
+export function safeNext(raw: string | null): string | null {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}

@@ -20,6 +20,9 @@ importers:
       '@fontsource/tajawal':
         specifier: ^5.3.0
         version: 5.3.0
+      '@rahalgo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@rahalgo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -81,6 +84,9 @@ importers:
       '@fontsource/tajawal':
         specifier: ^5.3.0
         version: 5.3.0
+      '@rahalgo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@rahalgo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -136,6 +142,9 @@ importers:
       '@fontsource/tajawal':
         specifier: ^5.3.0
         version: 5.3.0
+      '@rahalgo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@rahalgo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -182,6 +191,9 @@ importers:
       '@fontsource/tajawal':
         specifier: ^5.3.0
         version: 5.3.0
+      '@rahalgo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@rahalgo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -222,6 +234,31 @@ importers:
       tailwindcss:
         specifier: ^4.1.16
         version: 4.3.3
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+
+  packages/auth:
+    dependencies:
+      '@rahalgo/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      '@rahalgo/ui':
+        specifier: workspace:*
+        version: link:../ui
+      next:
+        specifier: '>=15'
+        version: 15.5.22(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    devDependencies:
+      '@rahalgo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/react':
+        specifier: ^19.2.6
+        version: 19.2.17
+      react:
+        specifier: ^19.2.0
+        version: 19.2.8
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
