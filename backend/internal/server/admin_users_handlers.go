@@ -13,6 +13,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
 func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +52,18 @@ func (s *Server) handleAdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// صاحب الحساب يعرف بتغيّر حالته فوراً بدل أن يكتشفه عند أول رفض
+	if req.Status != nil {
+		title := notifTitles.accountActivated
+		if *req.Status != "active" {
+			title = notifTitles.accountSuspended
+		}
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: user.ID, Kind: notifications.KindAccount,
+			Title: title, Body: derefOr(req.StatusReason, ""),
+			Entity: "user", EntityID: user.ID,
+		})
 	}
 	httpx.JSON(w, http.StatusOK, user)
 }
@@ -376,4 +389,12 @@ func (s *Server) handleAdminUsersExport(w http.ResponseWriter, r *http.Request) 
 		})
 	}
 	cw.Flush()
+}
+
+// derefOr يقرأ مؤشراً نصياً بأمان.
+func derefOr(p *string, fallback string) string {
+	if p == nil {
+		return fallback
+	}
+	return *p
 }

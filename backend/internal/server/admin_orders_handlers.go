@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
@@ -87,5 +88,11 @@ func (s *Server) handleOrderAssign(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// السائق يعرف بإسناد الطلب فوراً (يستعمله تطبيقه)
+	s.notify.Notify(r.Context(), notifications.Input{
+		UserID: req.DriverID, Kind: notifications.KindOrder,
+		Title: notifTitles.driverAssigned, Entity: "order",
+		EntityID: chi.URLParam(r, "id"), Href: "/orders",
+	})
 	httpx.JSON(w, http.StatusOK, o)
 }

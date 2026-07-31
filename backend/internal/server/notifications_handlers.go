@@ -10,12 +10,18 @@ import (
 // نصوص الإشعارات المركزية — مصدر واحد لكل نصوص الإشعارات في الخادم.
 var notifTitles = struct {
 	walletCredit, walletDebit, ratingNew, accountSuspended, accountActivated string
+	ticketOpened, ticketNewOps, ticketReply, ticketResolved, driverAssigned  string
 }{
 	walletCredit:     "إيداع في محفظتك",
 	walletDebit:      "خصم من محفظتك",
 	ratingNew:        "تقييم جديد على خدمتك",
 	accountSuspended: "تم إيقاف حسابك مؤقتاً",
 	accountActivated: "تم تفعيل حسابك",
+	ticketOpened:     "فُتحت شكواك",
+	ticketNewOps:     "شكوى جديدة",
+	ticketReply:      "رد جديد على شكواك",
+	ticketResolved:   "تم حل شكواك",
+	driverAssigned:   "أُسند إليك طلب جديد",
 }
 
 // صندوق إشعارات المستخدم — لأي دور، فلا أحد يحتاج تحديث الصفحة ليعرف ما استجدّ.

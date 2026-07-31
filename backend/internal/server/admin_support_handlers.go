@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/support"
 )
 
@@ -27,6 +28,21 @@ func (s *Server) handleRateOrder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// المتجر والسائق يعرفان بالتقييم فوراً (السمعة تتغيّر لحظياً)
+	var ownerID, driverID *string
+	_ = s.pg.QueryRow(r.Context(), `
+		SELECT mm.owner_user_id, o.driver_id
+		FROM orders o JOIN merchants mm ON mm.id = o.merchant_id
+		WHERE o.id = $1`, chi.URLParam(r, "id")).Scan(&ownerID, &driverID)
+	for _, uid := range []*string{ownerID, driverID} {
+		if uid != nil {
+			s.notify.Notify(r.Context(), notifications.Input{
+				UserID: *uid, Kind: notifications.KindRating,
+				Title: notifTitles.ratingNew, Entity: "rating",
+				EntityID: chi.URLParam(r, "id"), Href: "/portal/reviews",
+			})
+		}
 	}
 	httpx.JSON(w, http.StatusCreated, map[string]any{"rated": true})
 }
@@ -56,6 +72,15 @@ func (s *Server) handleCreateTicket(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	s.notify.Notify(r.Context(), notifications.Input{
+		UserID: t.CustomerID, Kind: notifications.KindTicket,
+		Title: notifTitles.ticketOpened, Body: t.Subject,
+		Entity: "ticket", EntityID: t.ID, Href: "/orders",
+	})
+	s.notify.NotifyRole(r.Context(), "ops", notifications.Input{
+		Kind: notifications.KindTicket, Title: notifTitles.ticketNewOps, Body: t.Subject,
+		Entity: "ticket", EntityID: t.ID, Href: "/dashboard/tickets",
+	})
 	httpx.JSON(w, http.StatusCreated, t)
 }
 
@@ -81,6 +106,14 @@ func (s *Server) handleTicketReply(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// الطرف الآخر يعرف بالرد فوراً (لا يردّ الموظف على نفسه)
+	if t.CustomerID != userIDFrom(r) {
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: t.CustomerID, Kind: notifications.KindTicket,
+			Title: notifTitles.ticketReply, Body: t.Subject,
+			Entity: "ticket", EntityID: t.ID, Href: "/orders",
+		})
+	}
 	httpx.JSON(w, http.StatusOK, t)
 }
 
@@ -99,5 +132,10 @@ func (s *Server) handleTicketResolve(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	s.notify.Notify(r.Context(), notifications.Input{
+		UserID: t.CustomerID, Kind: notifications.KindTicket,
+		Title: notifTitles.ticketResolved, Body: t.Resolution,
+		Entity: "ticket", EntityID: t.ID, Href: "/orders",
+	})
 	httpx.JSON(w, http.StatusOK, t)
 }
