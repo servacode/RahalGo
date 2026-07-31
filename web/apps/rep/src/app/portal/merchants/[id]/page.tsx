@@ -76,6 +76,8 @@ interface RepOrder {
   subtotal: number;
   delivery_fee: number;
   platform_commission: number;
+  forfeited_commission: number;
+  forfeited_share: number;
   my_share: number;
   created_at: string;
   delivered_at: string | null;
@@ -102,6 +104,47 @@ interface Detail {
   total: number;
   page: number;
   per_page: number;
+}
+
+/**
+ * رقمٌ يُعرض حيّاً أو مشطوباً حسب مصير الطلب.
+ *
+ * الدفتر يُصفّر عمولة الطلب الملغى — وهو الصواب المحاسبي. لكن عرض صفرٍ للمندوب
+ * يخفي عنه **حجم ما ضاع**، وهو رقم يعنيه: يعرف به أي عميلٍ يُهدر جهده. فيُعرض
+ * مشطوباً بجانبه وسمٌ صريح، فلا يُحسب ولا يُخفى.
+ */
+function Forfeitable({
+  order,
+  live,
+  lost,
+  highlight = false,
+}: {
+  order: RepOrder;
+  live: number;
+  lost: number;
+  highlight?: boolean;
+}) {
+  if (bucketOf(order.status).key === "cancelled") {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span dir="ltr" className="text-ink-muted line-through decoration-danger/70">
+          {fmtNum(lost)}
+        </span>
+        <span className="rounded-badge bg-danger/10 px-1.5 py-0.5 text-[10px] font-medium text-danger">
+          {D.forfeited}
+        </span>
+      </span>
+    );
+  }
+  // الصفر رمادي لا أخضر: تلوينه يَعِد بما ليس
+  return (
+    <span
+      dir="ltr"
+      className={highlight && live > 0 ? "font-bold text-success" : "text-ink-muted"}
+    >
+      {fmtNum(live)}
+    </span>
+  );
 }
 
 export default function MerchantDetailPage() {
@@ -188,21 +231,14 @@ export default function MerchantDetailPage() {
       id: "commission",
       header: D.colCommission,
       icon: <IconBalance />,
-      cell: (o) => (
-        <span dir="ltr" className="text-ink-muted">
-          {fmtNum(o.platform_commission)}
-        </span>
-      ),
+      cell: (o) => <Forfeitable order={o} live={o.platform_commission} lost={o.forfeited_commission} />,
     },
     {
       id: "share",
       header: D.colMyShare,
       icon: <IconWallet />,
       cell: (o) => (
-        // الصفر رمادي لا أخضر: طلبٌ مُسترجَع لا نصيب فيه، وتلوينه يَعِد بما ليس
-        <span dir="ltr" className={o.my_share > 0 ? "font-bold text-success" : "text-ink-muted"}>
-          {fmtNum(o.my_share)}
-        </span>
+        <Forfeitable order={o} live={o.my_share} lost={o.forfeited_share} highlight />
       ),
     },
   ];

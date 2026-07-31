@@ -61,6 +61,15 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	}
 	head.LogoThumbURL = media.URLForPtr(head.LogoThumbURL)
 
+	// نسبة المندوب من عمولة المنصة — تُقرأ مرّة لحساب المشطوب المعروض
+	var repPct float64
+	if err := s.pg.QueryRow(ctx, `
+		SELECT COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings
+		                 WHERE key = 'sales.commission_percent'), 10)`).Scan(&repPct); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
 	perPage, _ := strconv.Atoi(q.Get("per_page"))
@@ -99,10 +108,15 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	rows, err := s.pg.Query(ctx, `
 		SELECT o.number, o.status, o.cancel_reason, o.total, o.subtotal, o.delivery_fee,
 		       o.platform_commission, o.created_at, o.delivered_at,
+		       -- **العمولة المشطوبة**: ما كان سيُحتسب لولا الإلغاء.
+		       -- الدفتر يُصفّر عمولة الطلب الملغى — وهو الصواب المحاسبي، لكن عرض
+		       -- صفرٍ للمندوب يخفي عنه حجم ما ضاع. فنحسبها هنا للعرض وحده،
+		       -- ويقولها الشطب صراحةً: رقمٌ كان ولم يصر.
+		       (o.subtotal * mm.commission_percent / 100),
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 WHERE t.user_id = $3 AND t.ref = o.id::text
 		                   AND t.kind IN ('commission', 'adjustment')), 0)
-		FROM orders o `+where+`
+		FROM orders o JOIN merchants mm ON mm.id = o.merchant_id `+where+`
 		ORDER BY o.number DESC LIMIT $4 OFFSET $5`,
 		merchantID, bucket, uid, perPage, (page-1)*perPage)
 	if err != nil {
@@ -115,23 +129,28 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 		Number int64  `json:"number"`
 		Status string `json:"status"`
 		// سبب الإلغاء يُرسل مع الطلب الملغى: «ضاع طلبٌ» سؤال ناقص بلا جوابه
-		CancelReason string     `json:"cancel_reason"`
-		Total        int64      `json:"total"`
-		Subtotal     int64      `json:"subtotal"`
-		DeliveryFee  int64      `json:"delivery_fee"`
-		Commission   int64      `json:"platform_commission"`
-		MyShare      int64      `json:"my_share"`
-		CreatedAt    time.Time  `json:"created_at"`
-		DeliveredAt  *time.Time `json:"delivered_at"`
+		CancelReason string `json:"cancel_reason"`
+		Total        int64  `json:"total"`
+		Subtotal     int64  `json:"subtotal"`
+		DeliveryFee  int64  `json:"delivery_fee"`
+		Commission   int64  `json:"platform_commission"`
+		// ما كان سيُحتسب لولا الإلغاء — للعرض مشطوباً لا للحساب
+		Forfeited      int64      `json:"forfeited_commission"`
+		ForfeitedShare int64      `json:"forfeited_share"`
+		MyShare        int64      `json:"my_share"`
+		CreatedAt      time.Time  `json:"created_at"`
+		DeliveredAt    *time.Time `json:"delivered_at"`
 	}
 	list := []repOrder{}
 	for rows.Next() {
 		var o repOrder
 		if err := rows.Scan(&o.Number, &o.Status, &o.CancelReason, &o.Total, &o.Subtotal, &o.DeliveryFee,
-			&o.Commission, &o.CreatedAt, &o.DeliveredAt, &o.MyShare); err != nil {
+			&o.Commission, &o.CreatedAt, &o.DeliveredAt, &o.Forfeited, &o.MyShare); err != nil {
 			s.respondErr(w, err)
 			return
 		}
+		// نصيب المندوب من المشطوبة — بالنسبة نفسها المعتمدة وقت العرض
+		o.ForfeitedShare = o.Forfeited * int64(repPct) / 100
 		list = append(list, o)
 	}
 	if err := rows.Err(); err != nil {
