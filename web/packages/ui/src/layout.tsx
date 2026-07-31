@@ -275,16 +275,21 @@ export interface TabItem {
   label: string;
   /** عدّاد اختياري بجانب العنوان — يُخفى إن كان صفراً */
   count?: number;
+  /** رقم التبويب الحقيقي (مجموع، رصيد…) — يُعرض في نمط البطاقات ويُلوَّن بإشارته */
+  value?: number;
 }
 
 /**
- * شريط تبويبات موحّد — بديلٌ عن قائمة طويلة يختلط فيها كل شيء.
+ * بطاقات تبويب — حين يحمل كل تبويب **رقماً** يهمّ القارئ.
  *
- * قابل للتمرير أفقياً على الهاتف بدل أن ينكسر إلى سطور: التبويبات صفٌّ واحد
- * ذهنياً، وكسرها إلى ثلاثة سطور يُفقدها معناها. والمؤشّر خطٌّ سفليّ لا خلفية
- * ممتلئة، كي لا ينافس التبويبُ المحتوى تحته على الانتباه.
+ * الشريط العادي يخفي الرقم حتى تضغط، فتضطرّ للمرور على التبويبات واحداً واحداً
+ * لتعرف أين ذهب مالك. البطاقة تعرضه فوراً، فيصير شريط التنقّل نفسه لوحةَ ملخّص.
+ * ولذلك لا تُستعمل إلا حيث توجد أرقام: بطاقاتٌ بلا أرقام مساحةٌ مهدورة —
+ * لمثلها يُبنى شريط تبويب بسيط حين تدعو الحاجة، لا تُحشر في بطاقات فارغة.
+ *
+ * وتبقى مضغوطة عمداً — سطران لا ثلاثة — كي لا تدفع المحتوى الحقيقي خارج الشاشة.
  */
-export function Tabs({
+export function TabCards({
   items,
   active,
   onChange,
@@ -298,10 +303,11 @@ export function Tabs({
   return (
     <div
       role="tablist"
-      className={`-mb-px flex gap-1 overflow-x-auto border-b border-line ${className}`}
+      className={`grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 ${className}`}
     >
       {items.map((t) => {
         const on = t.key === active;
+        const v = t.value;
         return (
           <button
             key={t.key}
@@ -309,20 +315,37 @@ export function Tabs({
             role="tab"
             aria-selected={on}
             onClick={() => onChange(t.key)}
-            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`rounded-card border p-3 text-start transition-colors ${
               on
-                ? "border-primary text-primary-dark"
-                : "border-transparent text-ink-muted hover:border-line hover:text-ink"
+                ? "border-primary bg-primary-light"
+                : "border-line bg-surface hover:border-primary/40"
             }`}
           >
-            {t.label}
-            {!!t.count && (
+            <span className="flex items-center justify-between gap-2">
               <span
-                className={`rounded-badge px-1.5 py-0.5 text-[11px] font-bold ${
-                  on ? "bg-primary-light text-primary-dark" : "bg-page text-ink-muted"
-                }`}
+                className={`truncate text-sm font-medium ${on ? "text-primary-dark" : "text-ink"}`}
               >
-                {fmtNum(t.count)}
+                {t.label}
+              </span>
+              {!!t.count && (
+                <span
+                  className={`shrink-0 rounded-badge px-1.5 py-0.5 text-[11px] font-bold ${
+                    on ? "bg-primary/15 text-primary-dark" : "bg-page text-ink-muted"
+                  }`}
+                >
+                  {fmtNum(t.count)}
+                </span>
+              )}
+            </span>
+            {v !== undefined && (
+              <span
+                className={`mt-1 block text-lg font-bold ${
+                  v > 0 ? "text-success" : v < 0 ? "text-danger" : "text-ink-muted"
+                }`}
+                dir="ltr"
+              >
+                {v > 0 ? "+" : ""}
+                {fmtNum(v)}
               </span>
             )}
           </button>

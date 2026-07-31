@@ -25,11 +25,12 @@ import {
   LoadingState,
   ListRow,
   Card,
-  Tabs,
+  TabCards,
   type TabItem,
   useLiveData,
   IconWallet,
   IconWarning,
+  IconPrint,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -126,15 +127,30 @@ export default function WalletPage() {
 
   // تبويبات الأنواع الموجودة فعلاً فقط: تبويبٌ فارغ يَعِد بشيء ثم يخذل.
   const tabs = useMemo<TabItem[]>(() => {
-    const counts = new Map<string, number>();
-    for (const t of txs) counts.set(t.kind, (counts.get(t.kind) ?? 0) + 1);
-    const present = KIND_ORDER.filter((k) => counts.has(k));
-    for (const k of counts.keys()) if (!present.includes(k)) present.push(k);
+    // العدّ والمجموع معاً: البطاقة تعرض «كم مرة» و«كم مبلغاً» في نظرة واحدة
+    const agg = new Map<string, { n: number; sum: number }>();
+    for (const t of txs) {
+      const a = agg.get(t.kind) ?? { n: 0, sum: 0 };
+      agg.set(t.kind, { n: a.n + 1, sum: a.sum + t.amount });
+    }
+    const present = KIND_ORDER.filter((k) => agg.has(k));
+    for (const k of agg.keys()) if (!present.includes(k)) present.push(k);
     return [
-      { key: ALL, label: W.all, count: txs.length },
+      {
+        key: ALL,
+        label: W.all,
+        count: txs.length,
+        value: txs.reduce((s, t) => s + t.amount, 0),
+      },
+      // طلبات السحب بلا مجموع عمداً: خلط المعلّق بالمدفوع بالمرفوض في رقم
+      // واحد يعطي مبلغاً لا يعني شيئاً — العدد وحده هو الصادق هنا.
       ...(requests.length ? [{ key: REQUESTS, label: W.requests, count: requests.length }] : []),
-      ...present.map((k) => ({ key: k, label: KIND_LABELS[k] ?? k, count: counts.get(k) })),
-      { key: STATEMENT, label: m.shared.statement.open },
+      ...present.map((k) => ({
+        key: k,
+        label: KIND_LABELS[k] ?? k,
+        count: agg.get(k)?.n,
+        value: agg.get(k)?.sum,
+      })),
     ];
   }, [txs, requests]);
 
@@ -144,9 +160,8 @@ export default function WalletPage() {
   const hasPending = requests.some((p) => p.status === "pending");
 
   // التبويب المختار قد يختفي بعد تحديث حيّ (آخر حركة من نوعه أُلغيت) — نرتدّ للكل
-  const current = tabs.some((t) => t.key === tab) ? tab : ALL;
+  const current = tab === STATEMENT || tabs.some((t) => t.key === tab) ? tab : ALL;
   const shown = current === ALL ? txs : txs.filter((t) => t.kind === current);
-  const total = shown.reduce((s, t) => s + t.amount, 0);
 
   return (
     <PageContainer>
@@ -154,9 +169,20 @@ export default function WalletPage() {
         icon={IconWallet}
         title={m.terms.wallet}
         actions={
-          <Button onClick={() => setAsking(true)} disabled={balance <= 0 || hasPending}>
-            {P.request}
-          </Button>
+          <>
+            {/* كشف الحساب إجراء لا تصنيف: لا رقم له فلا مكان له بين البطاقات */}
+            <Button
+              variant="secondary"
+              onClick={() => setTab(tab === STATEMENT ? ALL : STATEMENT)}
+              className="flex items-center gap-2"
+            >
+              <IconPrint size={16} />
+              {m.shared.statement.open}
+            </Button>
+            <Button onClick={() => setAsking(true)} disabled={balance <= 0 || hasPending}>
+              {P.request}
+            </Button>
+          </>
         }
       />
 
@@ -170,7 +196,9 @@ export default function WalletPage() {
       </div>
 
       <Card title={m.terms.transactions} icon={IconWallet}>
-        <Tabs items={tabs} active={current} onChange={setTab} className="mb-3" />
+        {current !== STATEMENT && (
+          <TabCards items={tabs} active={current} onChange={setTab} className="mb-4" />
+        )}
 
         {/* شرح النوع: أسماء القيود المحاسبية ليست بديهية لمن لم يكتبها */}
         {current !== STATEMENT && KIND_HINTS[current] && (
@@ -215,20 +243,7 @@ export default function WalletPage() {
           <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
         ) : (
           <>
-            {/* مجموع التبويب — سؤال المندوب الحقيقي: «كم قبضت؟» لا «كم حركة؟» */}
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-control bg-page px-3 py-2 text-sm">
-              <span className="text-ink-muted">
-                {current === ALL ? W.netAll : W.netOf.replace("{kind}", KIND_LABELS[current] ?? current)}
-              </span>
-              <span
-                className={`font-bold ${total >= 0 ? "text-success" : "text-danger"}`}
-                dir="ltr"
-              >
-                {total >= 0 ? "+" : ""}
-                {fmtNum(total)} {m.common.currency}
-              </span>
-            </div>
-
+            {/* لا شريط مجموع هنا: البطاقة النشطة تعرضه فوق — تكراره ضجيج */}
             <ul className="space-y-2">
               {shown.map((tx) => (
                 <ListRow

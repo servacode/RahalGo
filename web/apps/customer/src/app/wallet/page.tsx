@@ -13,7 +13,9 @@ import {
   LoadingState,
   ListRow,
   Card,
-  Tabs,
+  Button,
+  IconPrint,
+  TabCards,
   type TabItem,
   StatementSheet,
   currentMonthRange,
@@ -87,26 +89,46 @@ export default function WalletPage() {
 
   // تبويبات الأنواع الموجودة فعلاً فقط: تبويبٌ فارغ يَعِد بشيء ثم يخذل.
   const tabs = useMemo<TabItem[]>(() => {
-    const counts = new Map<string, number>();
-    for (const t of txs) counts.set(t.kind, (counts.get(t.kind) ?? 0) + 1);
-    const present = KIND_ORDER.filter((k) => counts.has(k));
-    for (const k of counts.keys()) if (!present.includes(k)) present.push(k);
+    // العدّ والمجموع معاً: البطاقة تعرض «كم مرة» و«كم مبلغاً» في نظرة واحدة
+    const agg = new Map<string, { n: number; sum: number }>();
+    for (const t of txs) {
+      const a = agg.get(t.kind) ?? { n: 0, sum: 0 };
+      agg.set(t.kind, { n: a.n + 1, sum: a.sum + t.amount });
+    }
+    const present = KIND_ORDER.filter((k) => agg.has(k));
+    for (const k of agg.keys()) if (!present.includes(k)) present.push(k);
     return [
-      { key: ALL, label: W.all, count: txs.length },
-      ...present.map((k) => ({ key: k, label: KIND_LABELS[k] ?? k, count: counts.get(k) })),
-      { key: STATEMENT, label: m.shared.statement.open },
+      { key: ALL, label: W.all, count: txs.length, value: txs.reduce((s, t) => s + t.amount, 0) },
+      ...present.map((k) => ({
+        key: k,
+        label: KIND_LABELS[k] ?? k,
+        count: agg.get(k)?.n,
+        value: agg.get(k)?.sum,
+      })),
     ];
   }, [txs]);
 
   if (!st) return <LoadingState />;
 
-  const current = tabs.some((t) => t.key === tab) ? tab : ALL;
+  const current = tab === STATEMENT || tabs.some((t) => t.key === tab) ? tab : ALL;
   const shown = current === ALL ? txs : txs.filter((t) => t.kind === current);
-  const total = shown.reduce((s, t) => s + t.amount, 0);
 
   return (
     <PageContainer width="medium">
-      <PageHeader icon={IconWallet} title={m.terms.wallet} />
+      <PageHeader
+        icon={IconWallet}
+        title={m.terms.wallet}
+        actions={
+          <Button
+            variant="secondary"
+            onClick={() => setTab(tab === STATEMENT ? ALL : STATEMENT)}
+            className="flex items-center gap-2"
+          >
+            <IconPrint size={16} />
+            {m.shared.statement.open}
+          </Button>
+        }
+      />
 
       <div className="mb-3 rounded-card bg-primary p-6 text-center text-white">
         <p className="text-sm opacity-80">{m.site.wallet.balance}</p>
@@ -119,7 +141,9 @@ export default function WalletPage() {
       </p>
 
       <Card title={m.terms.transactions} icon={IconWallet}>
-        <Tabs items={tabs} active={current} onChange={setTab} className="mb-3" />
+        {current !== STATEMENT && (
+          <TabCards items={tabs} active={current} onChange={setTab} className="mb-4" />
+        )}
 
         {/* شرح النوع: أسماء القيود المحاسبية ليست بديهية لمن لم يكتبها */}
         {current !== STATEMENT && KIND_HINTS[current] && (
@@ -142,21 +166,7 @@ export default function WalletPage() {
           <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
         ) : (
           <>
-            <div className="mb-3 flex items-center justify-between gap-3 rounded-control bg-page px-3 py-2 text-sm">
-              <span className="text-ink-muted">
-                {current === ALL
-                  ? W.netAll
-                  : W.netOf.replace("{kind}", KIND_LABELS[current] ?? current)}
-              </span>
-              <span
-                className={`font-bold ${total >= 0 ? "text-success" : "text-danger"}`}
-                dir="ltr"
-              >
-                {total >= 0 ? "+" : ""}
-                {fmtNum(total)} {m.common.currency}
-              </span>
-            </div>
-
+            {/* لا شريط مجموع: البطاقة النشطة تعرضه فوق */}
             <ul className="space-y-2">
               {shown.map((tx) => (
                 <ListRow

@@ -35,7 +35,7 @@ export {
   StatGrid,
   StatCard,
   Stars,
-  Tabs,
+  TabCards,
   type TabItem,
 } from "./layout";
 export { Checkbox } from "./components";
