@@ -2,6 +2,7 @@ package orders_test
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5"
 	"log/slog"
 	"os"
 	"testing"
@@ -238,6 +239,78 @@ func (f *fixture) commissionEntries(t *testing.T) int {
 		WHERE user_id = $1 AND ref = $2::text AND kind IN ('commission', 'adjustment')`,
 		f.rep, f.orderID).Scan(&n); err != nil {
 		t.Fatalf("تعذّرت قراءة قيود العمولة: %v", err)
+	}
+	return n
+}
+
+// طلبٌ فشل دفعه من المحفظة يجب ألّا يترك أثراً.
+//
+// كان الخصم يقع بعد الـCommit، فيُلغى الطلب بقيد تعويضي عند فشله — فيبقى في
+// سجل الزبون وعدّاد المتجر ومقياس «الملغي» عند المندوب طلبٌ **لم يوجد تجارياً
+// قط**. وهو نفس خلل R-02 من باب آخر: مالٌ خارج المعاملة يحتاج تعويضاً بدل أن
+// يتراجع معها.
+func TestCreate_WalletChargeFailure_LeavesNoOrder(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	f := setup(t, "pending", 1, 0, 0) // نستعمل التهيئة للمتجر والصنف فقط
+
+	var itemID string
+	var sectionID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO menu_sections (merchant_id, name, sort_order) VALUES ($1, 'قسم', 1)
+		RETURNING id`, f.merchantID).Scan(&sectionID); err != nil {
+		t.Fatalf("تعذّر إنشاء قسم: %v", err)
+	}
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO menu_items (merchant_id, section_id, name, price, available)
+		VALUES ($1, $2, 'صنف', 20000, true) RETURNING id`,
+		f.merchantID, sectionID).Scan(&itemID); err != nil {
+		t.Fatalf("تعذّر إنشاء صنف: %v", err)
+	}
+
+	// منطقة تسليم تغطّي نقطة الاختبار — بدونها يفشل الطلب بـout_of_zone قبل أن
+	// يبلغ الدفع أصلاً، فيمرّ الاختبار لسببٍ خاطئ ولا يحرس شيئاً.
+	var zoneID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO delivery_zones (name, delivery_fee, min_order, active, center, radius_m)
+		VALUES ('منطقة اختبار', 5000, 0, true,
+		        ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography, 50000)
+		RETURNING id`).Scan(&zoneID); err != nil {
+		t.Fatalf("تعذّر إنشاء منطقة: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM delivery_zones WHERE id = $1`, zoneID)
+	})
+
+	before := countOrders(t, pool, f.customer)
+
+	// رصيده صفر — الدفع من المحفظة يجب أن يفشل
+	_, err := f.svc.Create(ctx, f.customer, []string{"customer"}, orders.CreateInput{
+		CustomerID:    f.customer,
+		MerchantID:    f.merchantID,
+		Items:         []orders.ItemInput{{MenuItemID: itemID, Qty: 1}},
+		AddressText:   "عنوان اختبار",
+		Lat:           35.9528,
+		Lng:           39.0079,
+		PaymentMethod: "wallet",
+	}, "127.0.0.1")
+	if err == nil {
+		t.Fatal("نجح الطلب رغم أن الرصيد صفر")
+	}
+
+	if after := countOrders(t, pool, f.customer); after != before {
+		t.Fatalf("بقي أثر لطلب لم يُدفع: عدد الطلبات %d والمتوقع %d", after, before)
+	}
+}
+
+func countOrders(t *testing.T, pool interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, customerID string) int {
+	t.Helper()
+	var n int
+	if err := pool.QueryRow(context.Background(),
+		`SELECT count(*) FROM orders WHERE customer_id = $1`, customerID).Scan(&n); err != nil {
+		t.Fatalf("تعذّر عدّ الطلبات: %v", err)
 	}
 	return n
 }

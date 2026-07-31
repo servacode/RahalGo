@@ -214,20 +214,25 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		return nil, err
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return nil, err
-	}
-
-	// خصم المحفظة بعد نجاح الإنشاء (حركة مدققة بمرجع الطلب)
+	// خصم المحفظة **داخل معاملة الإنشاء** لا بعدها.
+	//
+	// كان الخصم يقع بعد `Commit`: فإن فشل (رصيد تغيّر لحظياً) يُلغى الطلب بقيد
+	// تعويضي. والنتيجة طلبٌ ملغى يبقى في سجل الزبون وفي عدّاد المتجر وفي مقياس
+	// «الملغي» عند المندوب — عن طلبٍ **لم يوجد تجارياً قط**. وإن فشل التعويض
+	// نفسه بقي الطلب معلّقاً بلا دفع.
+	//
+	// وهو نفس خلل R-02 من بابٍ آخر: مالٌ خارج المعاملة يحتاج تعويضاً بدل أن
+	// يتراجع معها. والعلاج نفسه: `ApplyTx` على معاملة الإنشاء — يفشل الخصم
+	// فيتراجع الطلب كلّه، ولا يبقى أثر لطلبٍ لم يُدفع.
 	if walletPaid > 0 {
-		if _, err := s.wallet.Apply(ctx, customerID, -walletPaid, "order_payment",
+		if _, err := s.wallet.ApplyTx(ctx, tx, customerID, -walletPaid, "order_payment",
 			orderID, fmt.Sprintf("دفع طلب #%s", orderID[:8]), &actorID); err != nil {
-			// فشل الخصم (رصيد تغير لحظياً) — نلغي الطلب فوراً بدل تركه معلقاً
-			_, _ = s.db.Exec(ctx, `
-				UPDATE orders SET status='cancelled', cancel_reason='wallet_charge_failed',
-					closed_at=now(), updated_at=now() WHERE id=$1`, orderID)
 			return nil, err
 		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
 
 	created, err := s.GetByID(ctx, orderID)
