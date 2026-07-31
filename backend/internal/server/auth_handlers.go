@@ -206,3 +206,36 @@ func (s *Server) handleSSO(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, res)
 }
+
+// handlePhoneChangeRequest يرسل رمزاً للرقم الجديد لتأكيد تغيير رقم الحساب.
+func (s *Server) handlePhoneChangeRequest(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.RequestPhoneChange(r.Context(), userIDFrom(r), req.Phone); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"sent": true})
+}
+
+// handlePhoneChangeConfirm يتحقق من الرمز ويحدّث رقم الحساب.
+func (s *Server) handlePhoneChangeConfirm(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.ConfirmPhoneChange(r.Context(), userIDFrom(r), req.Phone, req.Code, clientIP(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+}

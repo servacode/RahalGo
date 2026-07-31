@@ -93,6 +93,8 @@ func (s *Server) Router() http.Handler {
 				r.Post("/password", s.handleSetPassword)
 				r.Get("/my-logins", s.handleMyLogins)
 				r.Post("/handoff", s.handleHandoff) // إنشاء رمز تسليم SSO
+				r.Post("/phone/request", s.handlePhoneChangeRequest)
+				r.Post("/phone/confirm", s.handlePhoneChangeConfirm)
 			})
 		})
 

@@ -4,13 +4,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, FormSection, IconLock, IconUser, IconStatus } from "@rahalgo/ui";
+import { Button, Input, FormSection, IconLock, IconUser, IconStatus, IconPhone } from "@rahalgo/ui";
 import { api, mediaUrl, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import RoleBadge from "@/components/RoleBadge";
 
 const m = getMessages(defaultLocale);
 const A = m.admin.myAccount;
+const P = m.site.account; // مفاتيح تغيير رقم الهاتف المشتركة
 
 interface Login {
   action: string;
@@ -33,6 +34,48 @@ export default function MyAccountPage() {
   const [error, setError] = useState("");
   const [logins, setLogins] = useState<Login[]>([]);
   const [avatar, setAvatar] = useState<string | null>(null);
+
+  const [newPhone, setNewPhone] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [phoneCode, setPhoneCode] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState(false);
+  const [phoneMsg, setPhoneMsg] = useState("");
+
+  async function reqPhone(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setPhoneMsg("");
+    setPhoneBusy(true);
+    try {
+      await api("/api/v1/auth/phone/request", { method: "POST", body: JSON.stringify({ phone: newPhone }) });
+      setOtpSent(true);
+    } catch {
+      setError(m.errors.internal);
+    } finally {
+      setPhoneBusy(false);
+    }
+  }
+
+  async function confirmPhone(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setPhoneMsg("");
+    setPhoneBusy(true);
+    try {
+      await api("/api/v1/auth/phone/confirm", {
+        method: "POST",
+        body: JSON.stringify({ phone: newPhone, code: phoneCode }),
+      });
+      setPhoneMsg(P.phoneSaved);
+      setOtpSent(false);
+      setNewPhone("");
+      setPhoneCode("");
+    } catch {
+      setError(m.errors.internal);
+    } finally {
+      setPhoneBusy(false);
+    }
+  }
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -188,6 +231,56 @@ export default function MyAccountPage() {
           </Button>
         </form>
       </FormSection>
+
+      <div className="mt-5">
+        <FormSection title={P.changePhone} icon={<IconPhone />}>
+          {!otpSent ? (
+            <form onSubmit={reqPhone} className="space-y-4">
+              <Input
+                id="newphone"
+                label={P.newPhone}
+                dir="ltr"
+                inputMode="tel"
+                required
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                className="text-end"
+                placeholder="09xxxxxxxx"
+              />
+              <p className="text-xs text-ink-muted">{P.phoneHint}</p>
+              <Button type="submit" disabled={phoneBusy}>
+                {phoneBusy ? m.common.loading : P.sendCode}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={confirmPhone} className="space-y-4">
+              <p className="rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">
+                {P.codeSent}
+              </p>
+              <Input
+                id="phonecode"
+                label={P.code}
+                dir="ltr"
+                inputMode="numeric"
+                required
+                value={phoneCode}
+                onChange={(e) => setPhoneCode(e.target.value)}
+                className="text-center font-mono text-lg tracking-[0.4em]"
+                placeholder="••••••"
+                maxLength={6}
+              />
+              <Button type="submit" disabled={phoneBusy}>
+                {phoneBusy ? m.common.loading : P.confirmChange}
+              </Button>
+            </form>
+          )}
+          {phoneMsg && (
+            <p className="mt-3 rounded-control bg-success/10 px-3 py-2 text-sm text-success">
+              {phoneMsg}
+            </p>
+          )}
+        </FormSection>
+      </div>
 
       <div className="mt-5">
         <FormSection title={A.recentLogins} icon={<IconStatus />}>

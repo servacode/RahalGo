@@ -92,6 +92,64 @@ func (s *Service) RequestOTP(ctx context.Context, rawPhone string) error {
 	return nil
 }
 
+// RequestPhoneChange يرسل رمز تحقق إلى الرقم الجديد لتأكيد تغيير رقم الحساب —
+// لأي مستخدم لنفسه. الرقم الجديد يجب ألّا يكون مملوكاً لحساب آخر.
+func (s *Service) RequestPhoneChange(ctx context.Context, userID, rawPhone string) error {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return ErrInvalidPhone
+	}
+	if u, _, err := s.repo.UserByPhone(ctx, phone); err == nil && u.ID != userID {
+		return ErrPhoneTaken
+	}
+	key := "otp:chg:" + phone
+	n, err := s.rdb.Incr(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+	if n == 1 {
+		s.rdb.Expire(ctx, key, 15*time.Minute)
+	}
+	if n > otpMaxPer15m {
+		return ErrOTPRateLimited
+	}
+	code, err := randomDigits(6)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "phone_change", otpTTL); err != nil {
+		return err
+	}
+	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
+		s.logger.Error("otp send failed", "error", err)
+		return ErrOTPSendFailed
+	}
+	return nil
+}
+
+// ConfirmPhoneChange يتحقق من رمز الرقم الجديد ويحدّث رقم الحساب.
+func (s *Service) ConfirmPhoneChange(ctx context.Context, userID, rawPhone, code, ip string) error {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return ErrInvalidPhone
+	}
+	if u, _, err := s.repo.UserByPhone(ctx, phone); err == nil && u.ID != userID {
+		return ErrPhoneTaken
+	}
+	valid, err := s.repo.ConsumeOTP(ctx, phone, s.hashOTP(phone, code), "phone_change")
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return ErrOTPInvalid
+	}
+	if err := s.repo.SetPhone(ctx, userID, phone); err != nil {
+		return err
+	}
+	s.repo.Audit(ctx, &userID, "auth.phone_change", "user", userID, ip, nil)
+	return nil
+}
+
 // VerifyOTP يتحقق من الرمز؛ ينشئ حساب زبون تلقائياً للرقم الجديد، ويصدر التوكنات.
 func (s *Service) VerifyOTP(ctx context.Context, rawPhone, code, userAgent, ip string) (*AuthResult, error) {
 	phone, ok := NormalizePhone(rawPhone)

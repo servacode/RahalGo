@@ -4,12 +4,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, IconUser, IconLock, IconView } from "@rahalgo/ui";
+import { Button, Input, IconUser, IconLock, IconView, IconPhone } from "@rahalgo/ui";
 import { api, mediaUrl, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const A = m.rep.account;
+const P = m.site.account; // مفاتيح تغيير رقم الهاتف المشتركة
 
 interface MeSummary {
   full_name: string;
@@ -37,6 +38,47 @@ export default function AccountPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+
+  const [newPhone, setNewPhone] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [phoneCode, setPhoneCode] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState(false);
+
+  async function reqPhone(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMsg("");
+    setPhoneBusy(true);
+    try {
+      await api("/api/v1/auth/phone/request", { method: "POST", body: JSON.stringify({ phone: newPhone }) });
+      setOtpSent(true);
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setPhoneBusy(false);
+    }
+  }
+
+  async function confirmPhone(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMsg("");
+    setPhoneBusy(true);
+    try {
+      await api("/api/v1/auth/phone/confirm", {
+        method: "POST",
+        body: JSON.stringify({ phone: newPhone, code: phoneCode }),
+      });
+      setMsg(P.phoneSaved);
+      setOtpSent(false);
+      setNewPhone("");
+      setPhoneCode("");
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setPhoneBusy(false);
+    }
+  }
 
   useEffect(() => {
     api<MeSummary>("/api/v1/me/summary")
@@ -180,6 +222,57 @@ export default function AccountPage() {
             {busy ? m.common.loading : m.common.save}
           </Button>
         </form>
+      </section>
+
+      <section className="rounded-card border border-line bg-surface p-5">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-bold">
+          <IconPhone size={16} className="text-primary" />
+          {P.changePhone}
+        </h2>
+        {!otpSent ? (
+          <form onSubmit={reqPhone} className="space-y-4">
+            <div>
+              <Input
+                id="newphone"
+                label={P.newPhone}
+                icon={<IconPhone />}
+                dir="ltr"
+                inputMode="tel"
+                required
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                className="text-end"
+                placeholder="09xxxxxxxx"
+              />
+              <p className="mt-1 text-xs text-ink-muted">{P.phoneHint}</p>
+            </div>
+            <Button type="submit" disabled={phoneBusy} className="w-full py-2.5">
+              {phoneBusy ? m.common.loading : P.sendCode}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={confirmPhone} className="space-y-4">
+            <p className="rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">
+              {P.codeSent}
+            </p>
+            <Input
+              id="phonecode"
+              label={P.code}
+              dir="ltr"
+              inputMode="numeric"
+              required
+              autoFocus
+              value={phoneCode}
+              onChange={(e) => setPhoneCode(e.target.value)}
+              className="text-center font-mono text-lg tracking-[0.4em]"
+              placeholder="••••••"
+              maxLength={6}
+            />
+            <Button type="submit" disabled={phoneBusy} className="w-full py-2.5">
+              {phoneBusy ? m.common.loading : P.confirmChange}
+            </Button>
+          </form>
+        )}
       </section>
 
       {msg && (
