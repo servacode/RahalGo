@@ -9,7 +9,9 @@ package testdb
 
 import (
 	"context"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,6 +26,18 @@ func Pool(t *testing.T) *pgxpool.Pool {
 	if url == "" {
 		t.Skip("TEST_DATABASE_URL غير مضبوط — تُتخطّى اختبارات القاعدة")
 	}
+	// **حارس**: الاختبارات تُنشئ مستخدمين ومتاجر وطلبات وقيوداً مالية. تشغيلها
+	// على قاعدة التطوير يلوّثها ببيانات تبدو حقيقية — وقد حدث فعلاً: خمس عشرة
+	// نسخة من متجر اختبار غرقت واجهة الزبون، وقيود عمولة لطلبات لم تقع.
+	// وأخطر منه احتمال تشغيلها على قاعدة إنتاج.
+	//
+	// فلا تقبل هذه الحزمة إلا قاعدة يقول اسمها إنها للاختبار. الشرط في الاسم لا
+	// في العنوان لأن الاسم هو ما يكتبه الإنسان ويخطئ فيه.
+	if !isTestDatabase(url) {
+		t.Fatalf("TEST_DATABASE_URL لا يشير إلى قاعدة اختبار (يجب أن ينتهي اسمها بـ _test): %s",
+			redactURL(url))
+	}
+
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
@@ -37,6 +51,28 @@ func Pool(t *testing.T) *pgxpool.Pool {
 	}
 	t.Cleanup(pool.Close)
 	return pool
+}
+
+// isTestDatabase يتحقق أن اسم القاعدة ينتهي بـ_test.
+func isTestDatabase(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	name := strings.TrimPrefix(u.Path, "/")
+	return strings.HasSuffix(name, "_test")
+}
+
+// redactURL يحجب كلمة المرور قبل طباعة العنوان في رسالة خطأ.
+func redactURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "(عنوان غير صالح)"
+	}
+	if u.User != nil {
+		u.User = url.User(u.User.Username())
+	}
+	return u.Redacted()
 }
 
 // NewUser ينشئ مستخدماً بهاتف فريد ويعيد معرّفه — لكل اختبار بياناته.
