@@ -1,9 +1,16 @@
 "use client";
 
-/** شريط موقع الزبون — نفس الشريط العلوي المركزي المستعمل في اللوحات. */
+/**
+ * شريط موقع الزبون — نفس الشريط العلوي المركزي المستعمل في اللوحات.
+ *
+ * **بلا قائمة منسدلة عن قصد**: كانت تُخفي خلف نقرةٍ ما هو أصلاً معروضٌ بجانبها
+ * (السلة والطلبات والإشعارات)، وتُخفي خلفها ما ليس معروضاً (التقييمات ولوحة
+ * التحكم) — فلا هي اختصار ولا هي ترتيب. الآن كل شيء ظاهر: الأيقونة وحدها على
+ * الهاتف والاسمُ معها على الشاشات الأوسع، والصورة نفسها زرُّ الحساب.
+ */
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
@@ -13,8 +20,6 @@ import {
   WalletPill,
   Avatar,
   CountBadge,
-  MenuPanel,
-  MenuItem,
   LiveNotifications,
   useLiveRefresh,
   IconOrder,
@@ -22,7 +27,6 @@ import {
   IconUser,
   IconLogout,
   IconOverview,
-  IconChevronDown,
   IconStar,
   IconCart,
   IconBell,
@@ -51,8 +55,6 @@ export default function Header() {
   const pathname = usePathname();
   const logged = isLoggedIn(user);
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const loadSummary = useCallback(() => {
     if (logged) api<Summary>("/api/v1/me/summary").then(setSummary).catch(() => undefined);
@@ -65,16 +67,6 @@ export default function Header() {
   // الرصيد والصورة يتحدّثان لحظياً — بلا إعادة تحميل
   // ("profile" حدث محلي يبثّه AccountSettings عند تغيير الصورة أو الرقم)
   useLiveRefresh(["wallet", "profile"], loadSummary);
-
-  useEffect(() => setOpen(false), [pathname]);
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
 
   const portal = user ? portalFor(user.roles) : null;
 
@@ -120,6 +112,26 @@ export default function Header() {
         </>
       )}
 
+      {logged && (
+        <TopBarLink
+          Link={Link}
+          href="/ratings"
+          title={m.terms.ratings}
+          tone={pathname.startsWith("/ratings") ? "active" : "plain"}
+        >
+          <IconStar size={16} />
+          <span className="hidden md:inline">{m.terms.ratings}</span>
+        </TopBarLink>
+      )}
+
+      {/* لوحة التحكم تظهر لمن له لوحة فقط — الزبون لا لوحة له وعناصره كلها هنا */}
+      {logged && portal && (
+        <TopBarChip tone="accent" onClick={backToDashboard} title={m.shared.backToDashboard}>
+          <IconOverview size={16} />
+          <span className="hidden md:inline">{m.shared.backToDashboard}</span>
+        </TopBarChip>
+      )}
+
       <TopBarLink
         Link={Link}
         href="/cart"
@@ -133,53 +145,44 @@ export default function Header() {
       </TopBarLink>
 
       {logged ? (
-        <div className="relative" ref={menuRef}>
-          <TopBarChip
-            onClick={() => setOpen((o) => !o)}
-            className="border border-line ps-1 hover:bg-page"
+        <>
+          {/* الصورة نفسها زرُّ الحساب: أقصر طريق إلى ما يخصّ صاحبها */}
+          <TopBarLink
+            Link={Link}
+            href="/account"
+            title={m.terms.account}
+            tone={pathname.startsWith("/account") ? "active" : "plain"}
+            className="border border-line ps-1"
           >
-            <Avatar url={mediaUrl(summary?.avatar_thumb_url)} name={summary?.full_name || user?.phone || ""} />
-            <span className="hidden max-w-[8rem] truncate font-medium text-ink sm:inline">
+            <Avatar
+              url={mediaUrl(summary?.avatar_thumb_url)}
+              name={summary?.full_name || user?.phone || ""}
+            />
+            <span className="hidden max-w-[8rem] truncate font-medium sm:inline">
               {summary?.full_name || user?.phone}
             </span>
-            <IconChevronDown size={15} className="text-ink-muted" />
-          </TopBarChip>
+          </TopBarLink>
 
-          {open && (
-            <MenuPanel>
-              <MenuItem Link={Link} href="/account" icon={<IconUser size={16} />} label={m.terms.account} />
-              <MenuItem Link={Link} href="/wallet" icon={<IconWallet size={16} />} label={m.terms.wallet} />
-              <MenuItem Link={Link} href="/orders" icon={<IconOrder size={16} />} label={m.terms.orders} />
-              <MenuItem Link={Link} href="/ratings" icon={<IconStar size={16} />} label={m.terms.ratings} />
-              <MenuItem Link={Link} href="/notifications" icon={<IconBell size={16} />} label={m.shared.notifications.title} />
-              <MenuItem Link={Link} href="/cart" icon={<IconCart size={16} />} label={m.terms.cart} />
-              {portal && (
-                <MenuItem
-                  icon={<IconOverview size={16} />}
-                  label={m.shared.backToDashboard}
-                  onClick={backToDashboard}
-                  tone="accent"
-                />
-              )}
-              <div className="my-1 border-t border-line" />
-              <MenuItem
-                icon={<IconLogout size={16} />}
-                label={m.auth.logout}
-                tone="danger"
-                onClick={() => {
-                  logout();
-                  router.push("/");
-                }}
-              />
-            </MenuPanel>
-          )}
-        </div>
+          <TopBarChip
+            tone="danger"
+            title={m.auth.logout}
+            aria-label={m.auth.logout}
+            onClick={() => {
+              logout();
+              router.push("/");
+            }}
+          >
+            <IconLogout size={16} />
+            <span className="hidden lg:inline">{m.auth.logout}</span>
+          </TopBarChip>
+        </>
       ) : (
         <TopBarLink Link={Link} href="/login" className="border border-line">
           <IconUser size={16} />
           {N.login}
         </TopBarLink>
       )}
+
     </TopBar>
   );
 }

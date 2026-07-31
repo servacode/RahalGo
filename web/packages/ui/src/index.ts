@@ -56,8 +56,6 @@ export {
   WalletPill,
   Avatar,
   CountBadge,
-  MenuPanel,
-  MenuItem,
   type ChipTone,
 } from "./topbar";
 export {
