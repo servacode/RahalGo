@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
@@ -39,6 +40,7 @@ import {
   IconWallet,
   IconWarning,
   IconWhatsApp,
+  IconView,
 } from "@rahalgo/ui";
 import { api, mediaUrl, ApiError } from "@/lib/api";
 
@@ -230,17 +232,26 @@ export default function ClientsPage() {
                   </>
                 }
                 actions={
-                  mr.owner_phone ? (
-                    <a
-                      href={`https://wa.me/${mr.owner_phone.replace(/[^0-9]/g, "")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-page"
+                  <>
+                    <Link
+                      href={`/portal/merchants/${mr.id}`}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-control bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                     >
-                      <IconWhatsApp size={15} />
-                      {C.contact}
-                    </a>
-                  ) : undefined
+                      <IconView size={15} />
+                      {m.rep.merchantDetail.open}
+                    </Link>
+                    {mr.owner_phone && (
+                      <a
+                        href={`https://wa.me/${mr.owner_phone.replace(/[^0-9]/g, "")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-page"
+                      >
+                        <IconWhatsApp size={15} />
+                        {C.contact}
+                      </a>
+                    )}
+                  </>
                 }
               />
             );

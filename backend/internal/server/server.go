@@ -153,6 +153,8 @@ func (s *Server) Router() http.Handler {
 			r.Use(s.RequireRoles("sales"))
 			r.Get("/me", s.handleRepMe)
 			r.Get("/merchants", s.handleRepMerchants)
+			// تفاصيل عميل: طلباته وعمولة المندوب عن كلٍّ منها — شفافية العمولة
+			r.Get("/merchants/{id}", s.handleRepMerchantDetail)
 			r.Get("/wallet", s.handleRepWallet)
 			r.Get("/leads", s.handleRepLeads)
 			// يسجّل عميلاً باسمه من الميدان — يبقى معلّقاً حتى موافقة الإدارة
