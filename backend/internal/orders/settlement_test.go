@@ -384,3 +384,58 @@ func TestDelivery_CreditsMerchantEarning(t *testing.T) {
 		t.Fatalf("بقي مستحقّ عن طلب مُسترجَع: %d والمتوقع 0", got)
 	}
 }
+
+// أجر السائق يُقيَّد بالتسليم، **خارج** مبلغ الدَّين عليه.
+//
+// صندوقه يسجّل ما يدين به للمنصة، ومحفظته تسجّل ما تدين به له. خلطُهما (أن
+// يسلّم المبلغ ناقصاً أجره) يجعل تسوية الصندوق غير قابلة للمطابقة: لا يعود
+// مجموع ما حصّله يساوي مجموع ما سلّمه.
+func TestDelivery_PaysDriverShare(t *testing.T) {
+	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
+	ctx := context.Background()
+
+	// النمط الافتراضي: نسبة من رسم التوصيل (70% من 10,000 = 7,000)
+	if _, err := f.pool.Exec(ctx, `
+		INSERT INTO app_settings (key, value) VALUES ('drivers.share_mode','"percent"'::jsonb),
+		                                             ('drivers.share_value','70'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value`); err != nil {
+		t.Fatalf("تعذّر ضبط الإعدادات: %v", err)
+	}
+
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "delivered", ""); err != nil {
+		t.Fatalf("التسليم فشل: %v", err)
+	}
+
+	if got := f.balance(t, f.driver); got != 7_000 {
+		t.Fatalf("أجر السائق = %d، والمتوقع 7000 (70%% من رسم التوصيل)", got)
+	}
+	// والدَّين كامل غير منقوص من الأجر
+	if got := f.held(t); got != 110_000 {
+		t.Fatalf("صندوق السائق = %d، والمتوقع 110000 كاملاً — الأجر خارج الدَّين", got)
+	}
+}
+
+// النمط المقطوع: مبلغ ثابت لكل طلب مهما كان رسم التوصيل.
+func TestDelivery_DriverShare_FixedMode(t *testing.T) {
+	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
+	ctx := context.Background()
+
+	if _, err := f.pool.Exec(ctx, `
+		INSERT INTO app_settings (key, value) VALUES ('drivers.share_mode','"fixed"'::jsonb),
+		                                             ('drivers.share_value','5000'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value`); err != nil {
+		t.Fatalf("تعذّر ضبط الإعدادات: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `
+			UPDATE app_settings SET value = '"percent"'::jsonb WHERE key='drivers.share_mode';
+			UPDATE app_settings SET value = '70'::jsonb WHERE key='drivers.share_value'`)
+	})
+
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "delivered", ""); err != nil {
+		t.Fatalf("التسليم فشل: %v", err)
+	}
+	if got := f.balance(t, f.driver); got != 5_000 {
+		t.Fatalf("أجر السائق المقطوع = %d، والمتوقع 5000", got)
+	}
+}

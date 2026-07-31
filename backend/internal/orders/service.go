@@ -73,10 +73,15 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	if len(in.Items) == 0 || in.AddressText == "" || in.MerchantID == "" {
 		return nil, ErrBadItems
 	}
+	// طريقتان لا ثلاث: نقداً عند الاستلام، أو من المحفظة كاملاً.
+	//
+	// أُلغي «المختلط» بقرار المالك: كان يدفع ما في المحفظة ويترك الباقي نقداً،
+	// فيصير للطلب الواحد مصدرا دفعٍ ومسارا تسويةٍ ومسارا استرجاع — تعقيدٌ في
+	// أخطر جزء من النظام مقابل راحةٍ لا يطلبها أحد.
 	switch in.PaymentMethod {
 	case "", "cash":
 		in.PaymentMethod = "cash"
-	case "wallet", "mixed":
+	case "wallet":
 	default:
 		return nil, ErrBadItems
 	}
@@ -155,12 +160,6 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	switch in.PaymentMethod {
 	case "wallet":
 		walletPaid = total
-	case "mixed":
-		balance, err := s.wallet.Balance(ctx, customerID)
-		if err != nil {
-			return nil, err
-		}
-		walletPaid = min64(balance, total)
 	}
 	cashDue := total - walletPaid
 

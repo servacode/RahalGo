@@ -174,6 +174,12 @@ func (s *Server) Router() http.Handler {
 			r.Get("/orders/{id}", s.handleMerchantGetOrder)
 			r.Post("/orders/{id}/transition", s.handleMerchantTransition)
 			r.Patch("/menu/items/{itemID}/availability", s.handleMerchantItemAvailability)
+			// القائمة بضاعته: يضيف ويعدّل ويحذف بنفسه — الحارس مختلف والعملية واحدة
+			r.Post("/stores/{id}/menu/sections", s.handleMerchantCreateSection)
+			r.Delete("/menu/sections/{sectionID}", s.handleMerchantDeleteSection)
+			r.Post("/stores/{id}/menu/items", s.handleMerchantCreateItem)
+			r.Patch("/menu/items/{itemID}", s.handleMerchantUpdateItem)
+			r.Delete("/menu/items/{itemID}", s.handleMerchantDeleteItem)
 		})
 
 		// نقاط الإدارة — أدمن/عمليات فقط، والتعديلات الحساسة للأدمن حصراً

@@ -23,12 +23,13 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 
 	var from string
 	var driverID *string
-	var walletPaid, cashDue int64
+	var walletPaid, cashDue, deliveryFee int64
 	var customerID, promoCode string
 	err = tx.QueryRow(ctx, `
-		SELECT status, driver_id, wallet_paid, cash_due, customer_id, COALESCE(promo_code,'')
+		SELECT status, driver_id, wallet_paid, cash_due, delivery_fee, customer_id,
+		       COALESCE(promo_code,'')
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
-		Scan(&from, &driverID, &walletPaid, &cashDue, &customerID, &promoCode)
+		Scan(&from, &driverID, &walletPaid, &cashDue, &deliveryFee, &customerID, &promoCode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -95,7 +96,7 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 	if err := s.settle(ctx, tx, settlement{
 		orderID: orderID, from: from, to: to, actorID: actorID,
 		customerID: customerID, driverID: driverID,
-		walletPaid: walletPaid, cashDue: cashDue,
+		walletPaid: walletPaid, cashDue: cashDue, deliveryFee: deliveryFee,
 	}, &done); err != nil {
 		return nil, err
 	}
@@ -126,7 +127,7 @@ type settled struct {
 type settlement struct {
 	orderID, from, to, actorID, customerID string
 	driverID                               *string
-	walletPaid, cashDue                    int64
+	walletPaid, cashDue, deliveryFee       int64
 }
 
 // settle ينفّذ كل الأثر المالي لانتقال الحالة داخل معاملة المستدعي.
@@ -147,12 +148,15 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 		}
 	}
 
-	// (2) التسليم — تحصيل النقد وتسوية العمولات
+	// (2) التسليم — تحصيل النقد وتسوية العمولات والأجور
 	if in.to == StDelivered {
 		if in.cashDue > 0 && in.driverID != nil {
 			if err := s.cashbox.CollectTx(ctx, q, *in.driverID, in.cashDue, in.orderID, &in.actorID); err != nil {
 				return err
 			}
+		}
+		if err := s.payDriver(ctx, q, in); err != nil {
+			return err
 		}
 		return s.settleCommissions(ctx, q, in.orderID, in.actorID, out)
 	}
@@ -352,4 +356,40 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 		}
 	}
 	return s.Transition(ctx, actorID, []string{"ops"}, orderID, StAssigned, note)
+}
+
+// payDriver يقيّد أجر السائق عن طلبٍ سلّمه.
+//
+// **الأجر خارج مبلغ الدَّين عمداً**: يُقيَّد في محفظته مستقلاً ويسلّم النقد كاملاً
+// للمكتب. لو سلّم المبلغ ناقصاً أجره لما عاد مجموع ما حصّله يساوي مجموع ما
+// سلّمه، فتصير تسوية الصندوق غير قابلة للمطابقة — وهي آخر ما يُراجَع عند الخلاف.
+//
+// والنمط من الإعدادات لا من الشيفرة: نسبةً من رسم التوصيل أو مبلغاً مقطوعاً،
+// يُبدَّل بلا نشر. (ونمطٌ ثالث حسب المسافة حين تتوفّر مواقع السائقين الحيّة.)
+func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement) error {
+	if in.driverID == nil {
+		return nil
+	}
+	var mode string
+	var value float64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE((SELECT value#>>'{}' FROM app_settings WHERE key = 'drivers.share_mode'), 'percent'),
+		       COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key = 'drivers.share_value'), 70)`).
+		Scan(&mode, &value); err != nil {
+		return err
+	}
+
+	var share int64
+	switch mode {
+	case "fixed":
+		share = int64(value)
+	default: // percent — من رسم التوصيل لا من قيمة الطلب: أجرُ توصيلٍ لا حصةٌ من بيع
+		share = int64(float64(in.deliveryFee) * value / 100)
+	}
+	if share <= 0 {
+		return nil
+	}
+	_, err := s.wallet.ApplyTx(ctx, q, *in.driverID, share, "driver_earning",
+		in.orderID, "أجر توصيل طلب مُسلَّم", &in.actorID)
+	return err
 }
