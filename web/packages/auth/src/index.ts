@@ -21,3 +21,4 @@ export {
 export { homeFor, portalFor, goTo, routeByRole, safeNext, APP_URLS, type Destination } from "./routing";
 export { LoginCard, errText } from "./LoginCard";
 export { SsoPage } from "./SsoPage";
+export { PasswordGate } from "./PasswordGate";

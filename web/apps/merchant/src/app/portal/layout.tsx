@@ -19,6 +19,7 @@ import {
   IconUser,
   IconWarning,
 } from "@rahalgo/ui";
+import { PasswordGate } from "@rahalgo/auth";
 import { useAuth, canAccessPortal } from "@/lib/auth";
 import { StoreProvider, useStore } from "@/lib/store";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -119,6 +120,7 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
       Link={Link}
       wsUrl={`${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws")}/api/v1/ws`}
       token={tokenStore.access}
+      notificationsHref="/portal/notifications"
       phone={user?.phone}
       shopUrl={process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003"}
       shopLabel={m.shared.shopAsCustomer}
@@ -134,9 +136,12 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
 }
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
+  // كلمة المرور المؤقتة تُبدَّل قبل أي شاشة — البوابة تحجب اللوحة حتى ذلك
   return (
-    <StoreProvider>
-      <PortalChrome>{children}</PortalChrome>
-    </StoreProvider>
+    <PasswordGate>
+      <StoreProvider>
+        <PortalChrome>{children}</PortalChrome>
+      </StoreProvider>
+    </PasswordGate>
   );
 }

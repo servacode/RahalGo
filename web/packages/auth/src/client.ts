@@ -36,6 +36,8 @@ export interface AuthUser {
   has_password: boolean;
   invite_code: string | null;
   roles: string[];
+  /** كلمة المرور وضعها طرف ثالث — تُجبر الواجهة على تبديلها قبل أي شاشة */
+  must_change_password: boolean;
   avatar_thumb_url: string | null;
   last_seen_at: string | null;
   created_at: string;

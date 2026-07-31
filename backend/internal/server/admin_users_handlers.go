@@ -214,8 +214,11 @@ func (s *Server) handleAdminResetPassword(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
-	tag, err := s.pg.Exec(r.Context(),
-		`UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`, id, hash)
+	// كلمة مرور وضعها الأدمن — مؤقتة: يُجبَر صاحب الحساب على تبديلها عند أول دخول
+	// فلا تبقى كلمة مرور يعرفها غيره.
+	tag, err := s.pg.Exec(r.Context(), `
+		UPDATE users SET password_hash = $2, must_change_password = true, updated_at = now()
+		WHERE id = $1`, id, hash)
 	if err != nil {
 		s.respondErr(w, err)
 		return

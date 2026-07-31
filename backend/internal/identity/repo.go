@@ -26,13 +26,13 @@ func (r *Repo) getUserBy(ctx context.Context, where, arg string) (*User, string,
 	var u User
 	var passwordHash *string
 	err := r.db.QueryRow(ctx, `
-		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash, u.invite_code, am.thumb_path, u.last_seen_at, u.created_at,
+		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash, u.invite_code, u.must_change_password, am.thumb_path, u.last_seen_at, u.created_at,
 		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}')
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		LEFT JOIN media am ON am.id = u.avatar_media_id
 		WHERE `+where+` GROUP BY u.id, am.thumb_path`, arg).
-		Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &passwordHash, &u.InviteCode, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles)
+		Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &passwordHash, &u.InviteCode, &u.MustChangePassword, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles)
 	u.AvatarURL = media.URLForPtr(u.AvatarURL)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, "", ErrNotFound
@@ -239,9 +239,19 @@ func (r *Repo) EnsureInviteCode(ctx context.Context, userID string) error {
 	return errors.New("identity: failed to generate invite code")
 }
 
+// SetPassword يضبط كلمة المرور — ويرفع إجبار التبديل لأن صاحب الحساب هو من ضبطها.
 func (r *Repo) SetPassword(ctx context.Context, userID, hash string) error {
-	_, err := r.db.Exec(ctx,
-		`UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`, userID, hash)
+	_, err := r.db.Exec(ctx, `
+		UPDATE users SET password_hash = $2, must_change_password = false, updated_at = now()
+		WHERE id = $1`, userID, hash)
+	return err
+}
+
+// SetTempPassword كلمة مرور وضعها طرف ثالث — تُجبر صاحب الحساب على تبديلها.
+func (r *Repo) SetTempPassword(ctx context.Context, userID, hash string) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE users SET password_hash = $2, must_change_password = true, updated_at = now()
+		WHERE id = $1`, userID, hash)
 	return err
 }
 
