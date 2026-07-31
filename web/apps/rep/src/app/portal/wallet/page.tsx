@@ -1,10 +1,17 @@
 "use client";
 
-/** كشف عمولات المندوب — حركات محفظته مع كل طلب مُسلَّم. */
+/** المحفظة — حركات عمولات المندوب. */
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconWallet } from "@rahalgo/ui";
+import {
+  PageContainer,
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  ListRow,
+  IconWallet,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -28,46 +35,39 @@ export default function WalletPage() {
       .catch(() => setTxs([]));
   }, []);
 
-  if (!txs) {
-    return <p className="py-12 text-center text-ink-muted">{m.common.loading}</p>;
-  }
+  if (!txs) return <LoadingState />;
 
   return (
-    <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-lg font-bold">
-        <IconWallet size={20} className="text-primary" />
-        {m.terms.wallet}
-      </h1>
+    <PageContainer>
+      <PageHeader icon={IconWallet} title={m.terms.wallet} />
 
       {txs.length === 0 ? (
-        <p className="rounded-card border border-line bg-surface p-6 text-center text-sm text-ink-muted">
-          {m.rep.walletEmpty}
-        </p>
+        <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
       ) : (
         <ul className="space-y-2">
           {txs.map((tx) => (
-            <li
+            <ListRow
               key={tx.id}
-              className="flex items-center gap-3 rounded-card border border-line bg-surface p-3 text-sm"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{KIND_LABELS[tx.kind] ?? tx.kind}</p>
-                {tx.note && <p className="truncate text-xs text-ink-muted">{tx.note}</p>}
-              </div>
-              <span
-                className={`font-bold ${tx.amount >= 0 ? "text-success" : "text-danger"}`}
-                dir="ltr"
-              >
-                {tx.amount >= 0 ? "+" : ""}
-                {fmt.format(tx.amount)}
-              </span>
-              <span className="text-xs text-ink-muted" dir="ltr">
-                {new Date(tx.created_at).toLocaleDateString("ar-SY")}
-              </span>
-            </li>
+              title={KIND_LABELS[tx.kind] ?? tx.kind}
+              subtitle={tx.note || undefined}
+              trailing={
+                <>
+                  <span
+                    className={`font-bold ${tx.amount >= 0 ? "text-success" : "text-danger"}`}
+                    dir="ltr"
+                  >
+                    {tx.amount >= 0 ? "+" : ""}
+                    {fmt.format(tx.amount)}
+                  </span>
+                  <span className="text-xs text-ink-muted" dir="ltr">
+                    {new Date(tx.created_at).toLocaleDateString("ar-SY")}
+                  </span>
+                </>
+              }
+            />
           ))}
         </ul>
       )}
-    </div>
+    </PageContainer>
   );
 }

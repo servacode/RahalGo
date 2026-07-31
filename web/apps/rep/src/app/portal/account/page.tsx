@@ -1,9 +1,9 @@
 "use client";
 
-/** حسابي — مكوّن إعدادات الحساب المشترك (نسخة واحدة مركزية). */
+/** حسابي — مكوّن إعدادات الحساب المشترك. */
 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { AccountSettings, IconUser } from "@rahalgo/ui";
+import { AccountSettings, PageContainer, PageHeader, IconUser } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -12,12 +12,9 @@ const m = getMessages(defaultLocale);
 export default function AccountPage() {
   const { user } = useAuth();
   return (
-    <div className="mx-auto max-w-lg">
-      <h1 className="mb-5 flex items-center gap-2 text-lg font-bold">
-        <IconUser className="text-primary" />
-        {m.terms.account}
-      </h1>
+    <PageContainer width="narrow">
+      <PageHeader icon={IconUser} title={m.terms.account} />
       <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} />
-    </div>
+    </PageContainer>
   );
 }

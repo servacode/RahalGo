@@ -28,7 +28,7 @@ interface RatedOrder {
 
 function StarRow({ n }: { n: number }) {
   return (
-    <span dir="ltr" className="text-amber-400">
+    <span dir="ltr" className="text-accent">
       {"★".repeat(n)}
       <span className="text-line">{"★".repeat(5 - n)}</span>
     </span>

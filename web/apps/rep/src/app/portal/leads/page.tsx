@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Badge, IconOrder } from "@rahalgo/ui";
+import { Badge, PageContainer, PageHeader, EmptyState, LoadingState, IconOrder } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -37,20 +37,15 @@ export default function LeadsPage() {
   }, []);
 
   if (!leads) {
-    return <p className="py-12 text-center text-ink-muted">{m.common.loading}</p>;
+    return <LoadingState />;
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-lg font-bold">
-        <IconOrder size={20} className="text-primary" />
-        {m.terms.leads}
-      </h1>
+    <PageContainer>
+      <PageHeader icon={IconOrder} title={m.terms.leads} />
 
       {leads.length === 0 ? (
-        <p className="rounded-card border border-line bg-surface p-6 text-center text-sm text-ink-muted">
-          {m.rep.leadsEmpty}
-        </p>
+        <EmptyState icon={IconOrder} title={m.rep.leadsEmpty} />
       ) : (
         <ul className="space-y-2">
           {leads.map((l) => (
@@ -76,6 +71,6 @@ export default function LeadsPage() {
           ))}
         </ul>
       )}
-    </div>
+    </PageContainer>
   );
 }

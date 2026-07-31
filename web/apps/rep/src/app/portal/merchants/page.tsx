@@ -1,10 +1,18 @@
 "use client";
 
-/** متاجر المندوب — المتاجر المنسوبة له وأداؤها. */
+/** عملائي — المتاجر التي جلبها المندوب وأداؤها. */
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Badge, IconStore } from "@rahalgo/ui";
+import {
+  Badge,
+  PageContainer,
+  PageHeader,
+  EmptyState,
+  LoadingState,
+  ListRow,
+  IconStore,
+} from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -20,7 +28,7 @@ interface RepMerchant {
   delivered_orders: number;
 }
 
-export default function MerchantsPage() {
+export default function ClientsPage() {
   const [merchants, setMerchants] = useState<RepMerchant[] | null>(null);
 
   useEffect(() => {
@@ -29,53 +37,48 @@ export default function MerchantsPage() {
       .catch(() => setMerchants([]));
   }, []);
 
-  if (!merchants) {
-    return <p className="py-12 text-center text-ink-muted">{m.common.loading}</p>;
-  }
+  if (!merchants) return <LoadingState />;
 
   return (
-    <div className="space-y-4">
-      <h1 className="flex items-center gap-2 text-lg font-bold">
-        <IconStore size={20} className="text-primary" />
-        {m.terms.clients}
-      </h1>
+    <PageContainer>
+      <PageHeader icon={IconStore} title={m.terms.clients} />
 
       {merchants.length === 0 ? (
-        <p className="rounded-card border border-line bg-surface p-6 text-center text-sm text-ink-muted">
-          {m.rep.merchantsEmpty}
-        </p>
+        <EmptyState icon={IconStore} title={m.rep.merchantsEmpty} />
       ) : (
         <ul className="space-y-2">
           {merchants.map((mr) => {
             const logo = mediaUrl(mr.logo_thumb_url);
             return (
-              <li
+              <ListRow
                 key={mr.id}
-                className="flex items-center gap-3 rounded-card border border-line bg-surface p-3"
-              >
-                {logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logo} alt="" className="h-11 w-11 rounded-control object-cover" />
-                ) : (
-                  <span className="flex h-11 w-11 items-center justify-center rounded-control bg-primary-light">
-                    {mr.category_icon}
-                  </span>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{mr.name}</p>
-                  <p className="text-xs text-ink-muted">
+                leading={
+                  logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logo} alt="" className="h-11 w-11 rounded-control object-cover" />
+                  ) : (
+                    <span className="flex h-11 w-11 items-center justify-center rounded-control bg-primary-light">
+                      {mr.category_icon}
+                    </span>
+                  )
+                }
+                title={mr.name}
+                subtitle={
+                  <>
                     {m.rep.joinedAt} <span dir="ltr">{mr.joined_at}</span> —{" "}
                     {m.rep.deliveredCount.replace("{n}", fmt.format(mr.delivered_orders))}
-                  </p>
-                </div>
-                <Badge variant={mr.status === "active" ? "success" : "danger"}>
-                  {mr.status === "active" ? m.terms.active : m.terms.suspended}
-                </Badge>
-              </li>
+                  </>
+                }
+                trailing={
+                  <Badge variant={mr.status === "active" ? "success" : "danger"}>
+                    {mr.status === "active" ? m.terms.active : m.terms.suspended}
+                  </Badge>
+                }
+              />
             );
           })}
         </ul>
       )}
-    </div>
+    </PageContainer>
   );
 }

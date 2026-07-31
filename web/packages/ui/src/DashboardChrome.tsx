@@ -188,11 +188,11 @@ export function DashboardChrome({
             {showRating && rep && rep.rating.count > 0 && (
               <Link
                 href={ratingHref ?? accountHref}
-                className="flex items-center gap-1 rounded-control bg-amber-50 px-2.5 py-1.5 text-sm font-bold text-amber-600 hover:bg-amber-100"
+                className="flex items-center gap-1 rounded-control bg-accent/10 px-2.5 py-1.5 text-sm font-bold text-accent-dark hover:bg-accent/20"
                 title={m.terms.myRating}
               >
                 <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
-                <span className="text-amber-400">★</span>
+                <span className="text-accent">★</span>
                 {rep.rating.trend === "up" && <span className="text-success">▲</span>}
                 {rep.rating.trend === "down" && <span className="text-danger">▼</span>}
               </Link>

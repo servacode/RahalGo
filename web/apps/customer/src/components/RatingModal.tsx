@@ -20,7 +20,7 @@ function Stars({ value, onChange }: { value: number; onChange: (n: number) => vo
           type="button"
           onClick={() => onChange(n)}
           className={`text-2xl transition-transform hover:scale-110 ${
-            n <= value ? "text-amber-400" : "text-line"
+            n <= value ? "text-accent" : "text-line"
           }`}
           aria-label={`${n}`}
         >

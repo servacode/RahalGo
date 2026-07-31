@@ -35,6 +35,7 @@
   /* الزوايا */
   --radius-control: 8px;
   --radius-card: 16px;
+  --radius-badge: 9999px;
 
   /* نقاط القياس الموحدة */
   --breakpoint-sm: 640px;

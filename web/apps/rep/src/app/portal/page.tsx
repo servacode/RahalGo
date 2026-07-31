@@ -13,11 +13,14 @@ import {
   IconSuccess,
   IconPromos,
   IconLink,
+  PageContainer,
+  StatGrid,
+  StatCard,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Me {
   invite_code: string | null;
@@ -37,33 +40,15 @@ export default function OverviewPage() {
   }, []);
 
   if (!me) {
-    return <p className="py-12 text-center text-ink-muted">{m.common.loading}</p>;
+    return <LoadingState />;
   }
 
   const code = me.invite_code ?? "—";
   const shareText = encodeURIComponent(m.rep.shareText.replace("{code}", code));
 
-  const stats = [
-    { label: m.rep.stats.merchants, value: fmt.format(me.merchants), icon: <IconStore /> },
-    {
-      label: m.rep.stats.delivered,
-      value: fmt.format(me.delivered_orders),
-      icon: <IconSuccess className="text-success" />,
-    },
-    {
-      label: `${m.rep.stats.commissions} (${m.common.currency})`,
-      value: fmt.format(me.total_commissions),
-      icon: <IconOrder />,
-    },
-    {
-      label: `${m.rep.stats.balance} (${m.common.currency})`,
-      value: fmt.format(me.balance),
-      icon: <IconWallet className="text-primary" />,
-    },
-  ];
 
   return (
-    <div className="space-y-6">
+    <PageContainer>
       {/* الكود — قلب اللوحة */}
       <section className="rounded-card bg-primary p-6 text-center text-white">
         <p className="mb-2 flex items-center justify-center gap-2 text-sm opacity-80">
@@ -103,15 +88,12 @@ export default function OverviewPage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-card border border-line bg-surface p-4">
-            <div className="mb-1 text-ink-muted">{s.icon}</div>
-            <p className="text-xl font-bold">{s.value}</p>
-            <p className="text-xs text-ink-muted">{s.label}</p>
-          </div>
-        ))}
-      </div>
-    </div>
+      <StatGrid>
+        <StatCard icon={IconStore} label={m.rep.stats.merchants} value={me.merchants} />
+        <StatCard icon={IconSuccess} label={m.rep.stats.delivered} value={me.delivered_orders} tone="success" />
+        <StatCard icon={IconOrder} label={`${m.rep.stats.commissions} (${m.common.currency})`} value={me.total_commissions} />
+        <StatCard icon={IconWallet} label={`${m.terms.walletBalance} (${m.common.currency})`} value={me.balance} tone="accent" />
+      </StatGrid>
+    </PageContainer>
   );
 }

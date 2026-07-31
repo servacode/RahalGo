@@ -29,7 +29,7 @@ export const colors = {
 
 export const fontFamily = {
   /** الخط المعتمد للعربية واللاتينية معاً (BRAND.md) */
-  sans: `"IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif`,
+  sans: `"Tajawal", "IBM Plex Sans Arabic", system-ui, sans-serif`,
 } as const;
 
 export const radius = {

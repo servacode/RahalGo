@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Badge } from "./components";
+import { PageHeader, PageContainer, EmptyState, LoadingState, ListRow, StatGrid, StatCard, Stars } from "./layout";
 import { IconStar, IconSupport } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -37,15 +38,6 @@ interface Reputation {
   complaints: Complaint[];
 }
 
-function Stars({ n }: { n: number }) {
-  return (
-    <span dir="ltr" className="text-amber-400">
-      {"★".repeat(n)}
-      <span className="text-line">{"★".repeat(Math.max(0, 5 - n))}</span>
-    </span>
-  );
-}
-
 function useReputation(api: ApiFn) {
   const [data, setData] = useState<Reputation | null>(null);
   useEffect(() => {
@@ -56,44 +48,29 @@ function useReputation(api: ApiFn) {
 
 export function ReputationReviews({ api }: { api: ApiFn }) {
   const data = useReputation(api);
-  if (!data) return <p className="py-12 text-center text-ink-muted">{m.common.loading}</p>;
+  if (!data) return <LoadingState />;
 
   const trendText =
     data.rating.trend === "up" ? R.trendUp : data.rating.trend === "down" ? R.trendDown : R.trendFlat;
 
   return (
-    <div className="space-y-5">
-      <h1 className="flex items-center gap-2 text-lg font-bold">
-        <IconStar size={20} className="text-primary" />
-        {T.ratings}
-      </h1>
+    <PageContainer>
+      <PageHeader icon={IconStar} title={T.ratings} subtitle={R.reviewsHint} />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-card border border-line bg-surface p-4">
-          <p className="text-2xl font-bold text-amber-500" dir="ltr">
-            {data.rating.avg.toFixed(1)} ★
-          </p>
-          <p className="text-xs text-ink-muted">{T.avgRating}</p>
-        </div>
-        <div className="rounded-card border border-line bg-surface p-4">
-          <p className="text-2xl font-bold">{fmt.format(data.rating.count)}</p>
-          <p className="text-xs text-ink-muted">{T.ratingsCount}</p>
-        </div>
-        <div className="col-span-2 flex items-center rounded-card border border-line bg-surface p-4 sm:col-span-1">
-          <p className="text-sm font-medium">{trendText}</p>
-        </div>
-      </div>
+      <StatGrid>
+        <StatCard label={T.avgRating} value={`${data.rating.avg.toFixed(1)} ★`} tone="accent" />
+        <StatCard label={T.ratingsCount} value={data.rating.count} />
+        <StatCard label={T.myRating} value={trendText} />
+      </StatGrid>
 
       {data.reviews.length === 0 ? (
-        <p className="rounded-card border border-line bg-surface p-6 text-center text-sm text-ink-muted">
-          {R.reviewsEmpty}
-        </p>
+        <EmptyState icon={IconStar} title={R.reviewsEmpty} />
       ) : (
         <ul className="space-y-2">
           {data.reviews.map((rv, i) => (
             <li key={i} className="rounded-card border border-line bg-surface p-4">
               <div className="flex items-center justify-between gap-2">
-                <Stars n={rv.stars} />
+                <Stars value={rv.stars} />
                 <span className="text-xs text-ink-muted" dir="ltr">
                   {new Date(rv.created_at).toLocaleDateString("ar-SY")}
                 </span>
@@ -106,7 +83,7 @@ export function ReputationReviews({ api }: { api: ApiFn }) {
           ))}
         </ul>
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -118,22 +95,14 @@ const CVARIANT: Record<Complaint["status"], "warning" | "primary" | "success"> =
 
 export function ReputationComplaints({ api }: { api: ApiFn }) {
   const data = useReputation(api);
-  if (!data) return <p className="py-12 text-center text-ink-muted">{m.common.loading}</p>;
+  if (!data) return <LoadingState />;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-lg font-bold">
-          <IconSupport size={20} className="text-primary" />
-          {T.complaints}
-        </h1>
-        <p className="mt-1 text-sm text-ink-muted">{R.complaintsHint}</p>
-      </div>
+    <PageContainer>
+      <PageHeader icon={IconSupport} title={T.complaints} subtitle={R.complaintsHint} />
 
       {data.complaints.length === 0 ? (
-        <p className="rounded-card border border-line bg-surface p-6 text-center text-sm text-success">
-          {R.complaintsEmpty}
-        </p>
+        <EmptyState icon={IconSupport} title={R.complaintsEmpty} tone="success" />
       ) : (
         <ul className="space-y-2">
           {data.complaints.map((c) => (
@@ -156,6 +125,6 @@ export function ReputationComplaints({ api }: { api: ApiFn }) {
           ))}
         </ul>
       )}
-    </div>
+    </PageContainer>
   );
 }
