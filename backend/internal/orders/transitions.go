@@ -9,6 +9,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
 // Transition ينفّذ انتقال حالة بعد التحقق من شرعيته للأدوار الفاعلة،
@@ -87,44 +88,95 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 		}
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	// كل التسويات المالية **داخل** معاملة الانتقال: إمّا تتم الحالة والمال معاً
+	// أو لا يتم شيء. كانت تُنفَّذ بعد الإيداع وأخطاؤها تُبتلع في السجل، فيصير
+	// الطلب مُسلَّماً بلا عمولة ولا نقد مقيَّد — خلل مالي صامت لا أثر له.
+	var done settled
+	if err := s.settle(ctx, tx, settlement{
+		orderID: orderID, from: from, to: to, actorID: actorID,
+		customerID: customerID, driverID: driverID,
+		walletPaid: walletPaid, cashDue: cashDue,
+	}, &done); err != nil {
 		return nil, err
 	}
 
-	// استرجاع المدفوع من المحفظة تلقائياً عند أي نهاية غير التسليم
-	if refundOnEnter(to) && walletPaid > 0 {
-		if _, err := s.wallet.Apply(ctx, customerID, walletPaid, "refund",
-			orderID, fmt.Sprintf("استرجاع طلب (%s)", to), &actorID); err != nil {
-			s.logger.Error("wallet refund failed", "order", orderID, "error", err)
-		}
-	}
-
-	// عند التسليم: نقد الطلب يُقيَّد على صندوق السائق + تسوية العمولات
-	if to == StDelivered {
-		if cashDue > 0 && driverID != nil {
-			if err := s.cashbox.Collect(ctx, *driverID, cashDue, orderID, &actorID); err != nil {
-				s.logger.Error("cash collect failed", "order", orderID, "error", err)
-			}
-		}
-		if err := s.settleCommissions(ctx, orderID, actorID); err != nil {
-			s.logger.Error("commission settle failed", "order", orderID, "error", err)
-		}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
 
 	updated, err := s.GetByID(ctx, orderID)
 	if err == nil {
 		s.publishOrder(updated)
+		// بعد الإيداع: فشل الإشعار لا يُبطل تسليماً وقع فعلاً
+		s.notifyTransition(ctx, orderID, to, note)
+		s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
 	}
 	return updated, err
 }
 
+// settled ما وقع فعلاً من تسويات — يُملأ داخل المعاملة ويُقرأ بعد نجاحها
+// لإطلاق الإشعارات. متغيّر محلي لكل طلب: الخدمة مشتركة بين كل الطلبات المتزامنة
+// فلا يجوز أن تحمل حالة طلب بعينه.
+type settled struct {
+	repID          string
+	commissionPaid int64
+}
+
+// settlement مدخلات التسوية المالية لانتقال واحد.
+type settlement struct {
+	orderID, from, to, actorID, customerID string
+	driverID                               *string
+	walletPaid, cashDue                    int64
+}
+
+// settle ينفّذ كل الأثر المالي لانتقال الحالة داخل معاملة المستدعي.
+//
+// القاعدة المحاسبية المعتمدة — الاسترجاع يعكس ما قيّده التسليم بالضبط:
+//   - نهاية غير التسليم **قبل** التسليم: يُعاد المدفوع من المحفظة فقط
+//     (النقد لم يُحصَّل أصلاً).
+//   - استرجاع **بعد** التسليم: يُعاد **كامل المبلغ** إلى محفظة الزبون — لأنه
+//     دفع النقد فعلاً للسائق — وتُعكس عمولة المندوب وتُصفَّر عمولة المنصة.
+//     صندوق السائق يبقى كما هو عن قصد: النقد الذي قبضه ما زال بحوزته ويدين به
+//     للمنصة، والمنصة هي من ردّت للزبون. هكذا يتوازن الطرفان بلا رصيد سالب.
+func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
+	// (1) نهاية غير التسليم قبل التسليم — استرجاع ما دُفع من المحفظة
+	if refundOnEnter(in.to) && in.from != StDelivered && in.walletPaid > 0 {
+		if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, in.walletPaid, "refund",
+			in.orderID, fmt.Sprintf("استرجاع طلب (%s)", in.to), &in.actorID); err != nil {
+			return err
+		}
+	}
+
+	// (2) التسليم — تحصيل النقد وتسوية العمولات
+	if in.to == StDelivered {
+		if in.cashDue > 0 && in.driverID != nil {
+			if err := s.cashbox.CollectTx(ctx, q, *in.driverID, in.cashDue, in.orderID, &in.actorID); err != nil {
+				return err
+			}
+		}
+		return s.settleCommissions(ctx, q, in.orderID, in.actorID, out)
+	}
+
+	// (3) استرجاع بعد التسليم — عكس كل ما سبق
+	if refundOnEnter(in.to) && in.from == StDelivered {
+		if total := in.walletPaid + in.cashDue; total > 0 {
+			if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, total, "refund",
+				in.orderID, "استرجاع طلب مُسلَّم", &in.actorID); err != nil {
+				return err
+			}
+		}
+		return s.reverseCommissions(ctx, q, in.orderID, in.actorID)
+	}
+	return nil
+}
+
 // settleCommissions يحسب عمولة المنصة من المتجر (لقطة على الطلب)،
 // ويقيّد نسبة المندوب منها لمحفظته تلقائياً (PLAN §6.3 + قرار 13).
-func (s *Service) settleCommissions(ctx context.Context, orderID, actorID string) error {
+func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, orderID, actorID string, out *settled) error {
 	var subtotal int64
 	var merchantPct int
 	var repID *string
-	err := s.db.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		SELECT o.subtotal, m.commission_percent, m.sales_rep_user_id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.id = $1`, orderID).Scan(&subtotal, &merchantPct, &repID)
@@ -133,7 +185,7 @@ func (s *Service) settleCommissions(ctx context.Context, orderID, actorID string
 	}
 
 	platformCommission := subtotal * int64(merchantPct) / 100
-	if _, err := s.db.Exec(ctx,
+	if _, err := q.Exec(ctx,
 		`UPDATE orders SET platform_commission = $2 WHERE id = $1`,
 		orderID, platformCommission); err != nil {
 		return err
@@ -142,20 +194,59 @@ func (s *Service) settleCommissions(ctx context.Context, orderID, actorID string
 		return nil
 	}
 
-	// نسبة المندوب من عمولة المنصة — إعداد ديناميكي
-	var repPct float64
-	if err := s.db.QueryRow(ctx, `
-		SELECT COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings
-		                 WHERE key = 'sales.commission_percent'), 10)`).Scan(&repPct); err != nil {
+	repCommission, err := s.repShare(ctx, q, platformCommission)
+	if err != nil || repCommission <= 0 {
 		return err
 	}
-	repCommission := int64(float64(platformCommission) * repPct / 100)
-	if repCommission <= 0 {
+	if _, err := s.wallet.ApplyTx(ctx, q, *repID, repCommission, "commission",
+		orderID, "عمولة مندوب عن طلب مسلَّم", &actorID); err != nil {
+		return err
+	}
+	out.repID, out.commissionPaid = *repID, repCommission
+	return nil
+}
+
+// reverseCommissions يعكس أثر التسليم المالي عند استرجاع طلب مُسلَّم:
+// قيد مضاد لعمولة المندوب (الدفاتر لا تُعدَّل ولا تُحذف — تُصحَّح بقيد مقابل)
+// وتصفير لقطة عمولة المنصة كي لا تتضخّم التقارير وفواتير المتاجر.
+func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
+	var platformCommission int64
+	var repID *string
+	err := q.QueryRow(ctx, `
+		SELECT o.platform_commission, m.sales_rep_user_id
+		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1`, orderID).Scan(&platformCommission, &repID)
+	if err != nil {
+		return err
+	}
+	if _, err := q.Exec(ctx,
+		`UPDATE orders SET platform_commission = 0 WHERE id = $1`, orderID); err != nil {
+		return err
+	}
+	if platformCommission == 0 || repID == nil {
 		return nil
 	}
-	_, err = s.wallet.Apply(ctx, *repID, repCommission, "commission",
-		orderID, "عمولة مندوب عن طلب مسلَّم", &actorID)
+
+	repCommission, err := s.repShare(ctx, q, platformCommission)
+	if err != nil || repCommission <= 0 {
+		return err
+	}
+	// قد يكون رصيد المندوب أقلّ من العمولة (سحبها) — عندها يُرفض القيد بـ
+	// insufficient_balance، وهو رفض صحيح: الدَّين يُسوّى يدوياً من المالية.
+	_, err = s.wallet.ApplyTx(ctx, q, *repID, -repCommission, "adjustment",
+		orderID, "عكس عمولة مندوب — طلب مُسترجَع", &actorID)
 	return err
+}
+
+// repShare نصيب المندوب من عمولة المنصة — نسبة ديناميكية من الإعدادات.
+func (s *Service) repShare(ctx context.Context, q wallet.Querier, platformCommission int64) (int64, error) {
+	var repPct float64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings
+		                 WHERE key = 'sales.commission_percent'), 10)`).Scan(&repPct); err != nil {
+		return 0, err
+	}
+	return int64(float64(platformCommission) * repPct / 100), nil
 }
 
 // AssignDriver إسناد يدوي من العمليات: يتحقق أن الحساب سائق نشط ثم يسند وينقل الحالة.

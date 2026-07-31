@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -98,7 +99,14 @@ func (s *Service) StatementFor(ctx context.Context, driverID string, limit int) 
 	return st, rows.Err()
 }
 
-// apply حركة ذرّية: قيد + تحديث الرصيد (نمط المحفظة نفسه).
+// Querier ما يُنفَّذ عليه الاستعلام: المجمّع أو معاملة قائمة — كي يقيّد محرك
+// الطلبات نقد التسليم **داخل** معاملة الانتقال نفسها لا بعدها.
+type Querier interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+// apply حركة ذرّية بمعاملة خاصة بها (نمط المحفظة نفسه).
 func (s *Service) apply(ctx context.Context, driverID string, amount int64, kind, ref, note string, actorID *string) (int64, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -106,13 +114,22 @@ func (s *Service) apply(ctx context.Context, driverID string, amount int64, kind
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := tx.Exec(ctx, `
+	held, err := s.applyTx(ctx, tx, driverID, amount, kind, ref, note, actorID)
+	if err != nil {
+		return 0, err
+	}
+	return held, tx.Commit(ctx)
+}
+
+// applyTx نفس apply داخل معاملة يملكها المستدعي.
+func (s *Service) applyTx(ctx context.Context, q Querier, driverID string, amount int64, kind, ref, note string, actorID *string) (int64, error) {
+	if _, err := q.Exec(ctx, `
 		INSERT INTO driver_cash_boxes (driver_id) VALUES ($1)
 		ON CONFLICT (driver_id) DO NOTHING`, driverID); err != nil {
 		return 0, err
 	}
 	var held int64
-	err = tx.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		UPDATE driver_cash_boxes SET held = held + $2, updated_at = now()
 		WHERE driver_id = $1 RETURNING held`, driverID, amount).Scan(&held)
 	if isCheckViolation(err) {
@@ -121,12 +138,12 @@ func (s *Service) apply(ctx context.Context, driverID string, amount int64, kind
 	if err != nil {
 		return 0, err
 	}
-	if _, err := tx.Exec(ctx, `
+	if _, err := q.Exec(ctx, `
 		INSERT INTO driver_cash_entries (driver_id, amount, kind, ref, note, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6)`, driverID, amount, kind, ref, note, actorID); err != nil {
 		return 0, err
 	}
-	return held, tx.Commit(ctx)
+	return held, nil
 }
 
 // Collect تحصيل نقد طلب مسلَّم (يستدعيه محرك الطلبات عند التسليم).
@@ -135,6 +152,15 @@ func (s *Service) Collect(ctx context.Context, driverID string, amount int64, or
 		return nil
 	}
 	_, err := s.apply(ctx, driverID, amount, "order_collection", orderID, "تحصيل طلب", actorID)
+	return err
+}
+
+// CollectTx تحصيل نقد التسليم داخل معاملة الانتقال — فإن فشل الانتقال لم يبقَ قيد يتيم.
+func (s *Service) CollectTx(ctx context.Context, q Querier, driverID string, amount int64, orderID string, actorID *string) error {
+	if amount <= 0 {
+		return nil
+	}
+	_, err := s.applyTx(ctx, q, driverID, amount, "order_collection", orderID, "تحصيل طلب", actorID)
 	return err
 }
 

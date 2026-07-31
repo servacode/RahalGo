@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -88,28 +89,49 @@ func (s *Service) StatementFor(ctx context.Context, userID string, limit int) (*
 	return st, rows.Err()
 }
 
-// Apply ينفّذ حركة (موجبة أو سالبة) ذرّياً: قيد في الدفتر + تحديث الرصيد معاً.
+// Querier ما يُنفَّذ عليه الاستعلام: المجمّع أو معاملة قائمة. يسمح لمن يملك
+// معاملة (محرك الطلبات) بأن يُدخل حركة المحفظة **داخلها** فتُلغى معه إن فشل،
+// بدل أن تنجح وحدها ويبقى المال معلّقاً بلا طلب.
+type Querier interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+// Apply ينفّذ حركة (موجبة أو سالبة) ذرّياً بمعاملة خاصة بها.
 // خصمٌ يتجاوز الرصيد يُرفض بـ insufficient_balance (قيد CHECK في القاعدة).
 func (s *Service) Apply(ctx context.Context, userID string, amount int64, kind, ref, note string, actorID *string) (int64, error) {
-	if amount == 0 {
-		return 0, ErrInvalidAmount
-	}
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return 0, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	balance, err := s.ApplyTx(ctx, tx, userID, amount, kind, ref, note, actorID)
+	if err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, err
+	}
+	return balance, nil
+}
+
+// ApplyTx نفس Apply لكن داخل معاملة يملكها المستدعي — لا يفتح معاملة ولا يُنهيها.
+func (s *Service) ApplyTx(ctx context.Context, q Querier, userID string, amount int64, kind, ref, note string, actorID *string) (int64, error) {
+	if amount == 0 {
+		return 0, ErrInvalidAmount
+	}
+
 	// ضمان وجود المحفظة أولاً ثم التحديث — لأن CHECK يُفحص على صف الإدراج
 	// المقترح قبل اكتشاف التعارض، فإدراج مبلغ سالب مباشرة يفشل خطأً.
-	if _, err := tx.Exec(ctx, `
+	if _, err := q.Exec(ctx, `
 		INSERT INTO wallets (user_id) VALUES ($1)
 		ON CONFLICT (user_id) DO NOTHING`, userID); err != nil {
 		return 0, err
 	}
 
 	var balance int64
-	err = tx.QueryRow(ctx, `
+	err := q.QueryRow(ctx, `
 		UPDATE wallets SET balance = balance + $2, updated_at = now()
 		WHERE user_id = $1
 		RETURNING balance`, userID, amount).Scan(&balance)
@@ -120,13 +142,10 @@ func (s *Service) Apply(ctx context.Context, userID string, amount int64, kind, 
 		return 0, err
 	}
 
-	if _, err := tx.Exec(ctx, `
+	if _, err := q.Exec(ctx, `
 		INSERT INTO wallet_transactions (user_id, amount, kind, ref, note, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6)`,
 		userID, amount, kind, ref, note, actorID); err != nil {
-		return 0, err
-	}
-	if err := tx.Commit(ctx); err != nil {
 		return 0, err
 	}
 	return balance, nil
