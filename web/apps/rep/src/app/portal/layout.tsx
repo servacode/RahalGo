@@ -15,8 +15,6 @@ import {
   IconWallet,
   IconOrder,
   IconUser,
-  IconStar,
-  IconSupport,
 } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -30,8 +28,6 @@ const NAV: ChromeNavItem[] = [
   // لا قسم مستقل لطلبات الانضمام: العميل المعلّق يظهر في "عملائي" بحالته
   { href: "/portal/merchants", label: m.terms.clients, icon: IconStore },
   { href: "/portal/wallet", label: m.terms.wallet, icon: IconWallet },
-  { href: "/portal/reviews", label: m.rep.reputation.reviewsTitle, icon: IconStar },
-  { href: "/portal/complaints", label: m.rep.reputation.complaintsTitle, icon: IconSupport },
   { href: "/portal/account", label: m.terms.account, icon: IconUser },
 ];
 
@@ -61,9 +57,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       homeHref="/portal"
       accountHref="/portal/account"
       walletHref="/portal/wallet"
-      ratingHref="/portal/reviews"
-      showRating
-      ratingLabel={m.rep.reputation.myRating}
       api={api}
       mediaUrl={mediaUrl}
       Link={Link}

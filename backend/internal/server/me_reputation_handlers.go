@@ -45,7 +45,10 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 	// نحدّد نطاق الطلبات ذات الصلة حسب الدور الأساسي:
 	//  - المتجر: طلبات متاجره، وعمود النجوم merchant_stars
 	//  - السائق: طلبات سلّمها، وعمود driver_stars
-	//  - المندوب: طلبات متاجره (جودة محفظته)، merchant_stars
+	//
+	// المندوب **ليس منهما عمداً**: عمله جلب العملاء وقبض العمولة، ولا أحد
+	// يقيّمه. كان يُعرض له تقييم متاجره باسم "تقييمي" — رقم لا يقيس عمله ولا
+	// يملك تغييره. من لا سمعة له يُعاد له كشف فارغ لا كشف غيره.
 	// ownerCond: شرط ربط الطلب بالمستخدم؛ starCol: عمود النجوم المعني.
 	var ownerJoin, ownerCond, starCol string
 	switch {
@@ -57,10 +60,6 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 		ownerJoin = ``
 		ownerCond = `o.driver_id = $1`
 		starCol = `rt.driver_stars`
-	case has("sales"):
-		ownerJoin = `JOIN merchants mm ON mm.id = o.merchant_id`
-		ownerCond = `mm.sales_rep_user_id = $1`
-		starCol = `rt.merchant_stars`
 	default:
 		httpx.JSON(w, http.StatusOK, map[string]any{
 			"rating":     map[string]any{"avg": 0, "count": 0, "trend": "flat"},

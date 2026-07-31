@@ -1106,31 +1106,9 @@
       "link": "الرابط والباركود",
       "merchants": "عملائي",
       "wallet": "عمولاتي",
-      "reviews": "التقييمات والتعليقات",
-      "complaints": "الشكاوى والبلاغات",
       "account": "حسابي"
     },
     "shopAsCustomer": "تسوّق كزبون",
-    "reputation": {
-      "myRating": "تقييم متاجري",
-      "reviewsTitle": "تقييمات متاجري",
-      "reviewsHint": "ما قيّمه الزبائن وكتبوه عن المتاجر التي جلبتها — جودة محفظتك",
-      "reviewsEmpty": "لا تقييمات بعد",
-      "complaintsTitle": "شكاوى على متاجري",
-      "complaintsHint": "البلاغات المقدّمة على طلبات متاجرك",
-      "complaintsEmpty": "لا شكاوى على متاجرك — محفظة نظيفة",
-      "avg": "متوسط تقييم متاجري",
-      "count": "عدد التقييمات",
-      "trendUp": "تقييمك في تحسّن",
-      "trendDown": "تقييمك في انخفاض",
-      "trendFlat": "تقييمك مستقر",
-      "order": "طلب",
-      "ticketStatus": {
-        "open": "مفتوحة",
-        "in_progress": "قيد المعالجة",
-        "resolved": "محلولة"
-      }
-    },
     "account": {
       "title": "حسابي",
       "photo": "الصورة الشخصية",
