@@ -36,7 +36,9 @@ export {
   StatCard,
   Stars,
   TabCards,
+  EntityCard,
   type TabItem,
+  type EntityStat,
 } from "./layout";
 export { Checkbox } from "./components";
 export {

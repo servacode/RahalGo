@@ -354,3 +354,101 @@ export function TabCards({
     </div>
   );
 }
+
+// ---------- بطاقة كيان ----------
+
+export interface EntityStat {
+  label: string;
+  value: ReactNode;
+  /** لون القيمة — للأرقام التي تعني ربحاً أو خسارة */
+  tone?: "default" | "success" | "danger" | "muted";
+}
+
+const statTone = {
+  default: "text-ink",
+  success: "text-success",
+  danger: "text-danger",
+  muted: "text-ink-muted",
+} as const;
+
+/**
+ * بطاقة كيان — الشكل الموحّد لعرض «شيء له هوية»: متجر، سائق، مستخدم.
+ *
+ * بُنيت لأن الصفوف المسطّحة (`ListRow`) تصلح لسجلٍّ يُمسح بالعين، لا لكيانٍ
+ * يُقاس ويُقارَن. الفرق أن الكيان له **أرقامه**: البطاقة تعرضها في شريط ثابت
+ * الموضع، فتُقارَن بطاقتان بالنظر بلا قراءة.
+ *
+ * وثلاثة قرارات تحكم شكلها:
+ *  - **الهوية أولاً** (صورة/أيقونة + اسم + تصنيف + حالة): من يبحث عن متجر
+ *    يبحث باسمه لا برقمه.
+ *  - **الأرقام في شريط بمواضع ثابتة**: عمود يقابل عموداً في البطاقة المجاورة.
+ *  - **الإجراء في القاع مفصولاً**: لا يُضغط سهواً عند تصفّح البطاقات.
+ */
+export function EntityCard({
+  media,
+  title,
+  subtitle,
+  badge,
+  stats,
+  footer,
+  actions,
+  muted = false,
+  className = "",
+}: {
+  media?: ReactNode;
+  title: ReactNode;
+  subtitle?: ReactNode;
+  badge?: ReactNode;
+  stats?: EntityStat[];
+  footer?: ReactNode;
+  actions?: ReactNode;
+  /** كيان غير فعّال — يبهت بلا أن يختفي */
+  muted?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex flex-col rounded-card border bg-surface p-4 transition-shadow hover:shadow-md ${
+        muted ? "border-dashed border-line opacity-75" : "border-line"
+      } ${className}`}
+    >
+      <div className="flex items-start gap-3">
+        {media && <div className="shrink-0">{media}</div>}
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-bold">{title}</p>
+          {subtitle && <p className="mt-0.5 truncate text-xs text-ink-muted">{subtitle}</p>}
+        </div>
+        {badge && <div className="shrink-0">{badge}</div>}
+      </div>
+
+      {!!stats?.length && (
+        <div
+          className="mt-3 grid gap-2 border-t border-line pt-3"
+          style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
+        >
+          {stats.map((st, i) => (
+            <div key={i} className="min-w-0">
+              <p
+                className={`truncate text-base font-bold ${statTone[st.tone ?? "default"]}`}
+                dir="ltr"
+              >
+                {st.value}
+              </p>
+              <p className="truncate text-[11px] text-ink-muted">{st.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {footer && (
+        <p className="mt-3 border-t border-line pt-2.5 text-[11px] leading-relaxed text-ink-muted">
+          {footer}
+        </p>
+      )}
+
+      {actions && (
+        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-line pt-3">{actions}</div>
+      )}
+    </div>
+  );
+}

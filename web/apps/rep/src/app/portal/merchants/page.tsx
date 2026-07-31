@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
   CategoryIcon,
   Badge,
@@ -25,7 +25,7 @@ import {
   PageHeader,
   EmptyState,
   LoadingState,
-  ListRow,
+  EntityCard,
   useLiveData,
   useLiveRefresh,
   IconStore,
@@ -36,6 +36,7 @@ import {
   IconLock,
   IconSuccess,
   IconWarning,
+  IconWhatsApp,
 } from "@rahalgo/ui";
 import { api, mediaUrl, ApiError } from "@/lib/api";
 
@@ -58,10 +59,14 @@ interface RepMerchant {
   id: string;
   name: string;
   category_icon: string;
+  category_name: string;
   logo_thumb_url: string | null;
   status: string;
   joined_at: string;
+  owner_phone: string | null;
   delivered_orders: number;
+  my_commission: number;
+  last_order_at: string | null;
 }
 
 interface Lead {
@@ -85,6 +90,12 @@ function errText(err: unknown): string {
   if (!(err instanceof ApiError)) return m.errors.internal;
   const key = err.body.message_key.split(".").pop() ?? "";
   return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
+}
+
+/** منذ كم يوم آخر نشاط — «منذ 12 يوماً» يقول ما لا يقوله تاريخٌ مجرّد. */
+function sinceLabel(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  return days < 1 ? C.activeToday : C.activeDays.replace("{n}", fmtNum(days));
 }
 
 /** منذ كم يوم أُرسل الطلب — كي يرى المندوب ما طال انتظاره. */
@@ -133,14 +144,15 @@ export default function ClientsPage() {
       {empty ? (
         <EmptyState icon={IconStore} title={m.rep.merchantsEmpty} action={addButton} />
       ) : (
-        <ul className="space-y-2">
-          {/* المعلّق أولاً — هو ما يحتاج متابعة */}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {/* المعلّق أولاً — هو ما يحتاج متابعة، ويبقى مُتقطّع الحدّ ليُميَّز */}
           {open.map((l) => (
-            <ListRow
+            <EntityCard
               key={l.id}
-              leading={
-                <span className="flex h-11 w-11 items-center justify-center rounded-control bg-page">
-                  <CategoryIcon name={l.category_icon ?? "other"} size={16} />
+              muted
+              media={
+                <span className="flex h-12 w-12 items-center justify-center rounded-control bg-page">
+                  <CategoryIcon name={l.category_icon ?? "other"} size={20} />
                 </span>
               }
               title={l.store_name}
@@ -148,49 +160,76 @@ export default function ClientsPage() {
                 <>
                   {l.owner_name && <span>{l.owner_name} — </span>}
                   <span dir="ltr">{l.phone}</span>
-                  {l.status === "new" && <span> — {waitedLabel(l.created_at)}</span>}
                 </>
               }
-              trailing={
+              badge={
                 <Badge variant={l.status === "new" ? "warning" : "danger"}>
                   {l.status === "new" ? C.pending : C.rejected}
                 </Badge>
               }
-              className="border-dashed"
+              footer={l.status === "new" ? waitedLabel(l.created_at) : undefined}
             />
           ))}
 
           {active.map((mr) => {
             const logo = mediaUrl(mr.logo_thumb_url);
+            const live = mr.status === "active";
             return (
-              <ListRow
+              <EntityCard
                 key={mr.id}
-                leading={
+                muted={!live}
+                media={
                   logo ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logo} alt="" className="h-11 w-11 rounded-control object-cover" />
+                    <img src={logo} alt="" className="h-12 w-12 rounded-control object-cover" />
                   ) : (
-                    <span className="flex h-11 w-11 items-center justify-center rounded-control bg-primary-light">
-                      <CategoryIcon name={mr.category_icon} size={16} />
+                    <span className="flex h-12 w-12 items-center justify-center rounded-control bg-primary-light">
+                      <CategoryIcon name={mr.category_icon} size={20} />
                     </span>
                   )
                 }
                 title={mr.name}
-                subtitle={
+                subtitle={mr.category_name}
+                badge={
+                  <Badge variant={live ? "success" : "danger"}>
+                    {live ? m.terms.active : m.terms.suspended}
+                  </Badge>
+                }
+                stats={[
+                  { label: C.statDelivered, value: fmtNum(mr.delivered_orders) },
+                  {
+                    label: C.statCommission,
+                    value: fmtNum(mr.my_commission),
+                    // صفرٌ ليس ربحاً ولا خسارة: تلوينه أخضر يَعِد بما ليس
+                    tone: mr.my_commission > 0 ? "success" : "muted",
+                  },
+                ]}
+                footer={
                   <>
-                    {m.rep.joinedAt} <span dir="ltr">{mr.joined_at}</span> —{" "}
-                    {m.rep.deliveredCount.replace("{n}", fmtNum(mr.delivered_orders))}
+                    {m.rep.joinedAt} <span dir="ltr">{fmtDate(mr.joined_at)}</span>
+                    {" · "}
+                    {mr.last_order_at
+                      ? `${C.lastOrder} ${sinceLabel(mr.last_order_at)}`
+                      : C.noOrders}
                   </>
                 }
-                trailing={
-                  <Badge variant={mr.status === "active" ? "success" : "danger"}>
-                    {mr.status === "active" ? m.terms.active : m.terms.suspended}
-                  </Badge>
+                actions={
+                  mr.owner_phone ? (
+                    <a
+                      href={`https://wa.me/${mr.owner_phone.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-page"
+                    >
+                      <IconWhatsApp size={15} />
+                      {C.contact}
+                    </a>
+                  ) : undefined
                 }
               />
             );
           })}
-        </ul>
+        </div>
       )}
 
       {adding && (

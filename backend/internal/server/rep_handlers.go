@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
@@ -33,8 +34,15 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		       (SELECT count(*) FROM merchants m WHERE m.sales_rep_user_id = u.id),
 		       (SELECT count(*) FROM orders o JOIN merchants m ON m.id = o.merchant_id
 		        WHERE m.sales_rep_user_id = u.id AND o.status = 'delivered'),
+		       -- العمولة **الصافية** لا الإجمالية: العمولات ناقصَ ما عُكس منها عن
+		       -- طلبات مُسترجَعة. عرض الإجمالي كان يناقض بطاقات العملاء في الشاشة
+		       -- نفسها، ويَعِد المندوب بمالٍ سُحب منه فعلاً. (التسويات اليدوية من
+		       -- الإدارة مرجعها فارغ فلا تدخل هنا.)
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
-		                 WHERE t.user_id = u.id AND t.kind = 'commission'), 0),
+		                 WHERE t.user_id = u.id
+		                   AND (t.kind = 'commission'
+		                        OR (t.kind = 'adjustment' AND t.ref <> ''
+		                            AND EXISTS (SELECT 1 FROM orders o3 WHERE o3.id::text = t.ref)))), 0),
 		       COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = u.id), 0),
 		       -- الشهر الجاري بتوقيت سوريا (لا UTC: نهاية الشهر تهمّ المندوب)
 		       (SELECT count(*) FROM merchants m
@@ -46,7 +54,10 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		          AND date_trunc('month', o.delivered_at AT TIME ZONE 'Asia/Damascus')
 		            = date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')),
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
-		                 WHERE t.user_id = u.id AND t.kind = 'commission'
+		                 WHERE t.user_id = u.id
+		                   AND (t.kind = 'commission'
+		                        OR (t.kind = 'adjustment' AND t.ref <> ''
+		                            AND EXISTS (SELECT 1 FROM orders o4 WHERE o4.id::text = t.ref)))
 		                   AND date_trunc('month', t.created_at AT TIME ZONE 'Asia/Damascus')
 		                     = date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')), 0),
 		       COALESCE((SELECT (value#>>'{}')::int FROM app_settings
@@ -73,11 +84,25 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 
 // handleRepMerchants متاجر المندوب مع نشاط كل متجر.
 func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
+	// البطاقة تجيب سؤال المندوب الحقيقي عن كل عميل: **هل ينتج لي؟** فلا يكفي
+	// اسمٌ وتاريخ انضمام — تلزمه العمولة الصافية وآخر نشاط ووسيلة تواصل.
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT m.id, m.name, c.icon, lm.thumb_path, m.status, m.created_at::date::text,
-		       (SELECT count(*) FROM orders o WHERE o.merchant_id = m.id AND o.status = 'delivered')
+		SELECT m.id, m.name, c.icon, c.name, lm.thumb_path, m.status,
+		       m.created_at::date::text,
+		       NULLIF(COALESCE(ou.whatsapp_phone::text, ou.phone::text), ''),
+		       (SELECT count(*) FROM orders o WHERE o.merchant_id = m.id AND o.status = 'delivered'),
+		       -- العمولة **الصافية**: العمولات ناقصَ ما عُكس منها عن طلبات مُسترجَعة.
+		       -- عرض الإجمالي وحده يَعِد المندوب بمالٍ سُحب منه فعلاً.
+		       -- تسويات الإدارة اليدوية لا تدخل هنا: مرجعها فارغ فلا يطابق طلباً.
+		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
+		                 JOIN orders o2 ON t.ref <> '' AND o2.id::text = t.ref
+		                 WHERE t.user_id = $1 AND t.kind IN ('commission', 'adjustment')
+		                   AND o2.merchant_id = m.id), 0),
+		       (SELECT max(o.delivered_at) FROM orders o
+		        WHERE o.merchant_id = m.id AND o.status = 'delivered')
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
+		LEFT JOIN users ou ON ou.id = m.owner_user_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
 		WHERE m.sales_rep_user_id = $1
 		ORDER BY m.created_at DESC`, userIDFrom(r))
@@ -88,19 +113,24 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type repMerchant struct {
-		ID           string  `json:"id"`
-		Name         string  `json:"name"`
-		CategoryIcon string  `json:"category_icon"`
-		LogoThumbURL *string `json:"logo_thumb_url"`
-		Status       string  `json:"status"`
-		JoinedAt     string  `json:"joined_at"`
-		Delivered    int     `json:"delivered_orders"`
+		ID           string     `json:"id"`
+		Name         string     `json:"name"`
+		CategoryIcon string     `json:"category_icon"`
+		CategoryName string     `json:"category_name"`
+		LogoThumbURL *string    `json:"logo_thumb_url"`
+		Status       string     `json:"status"`
+		JoinedAt     string     `json:"joined_at"`
+		OwnerPhone   *string    `json:"owner_phone"`
+		Delivered    int        `json:"delivered_orders"`
+		MyCommission int64      `json:"my_commission"`
+		LastOrderAt  *time.Time `json:"last_order_at"`
 	}
 	out := []repMerchant{}
 	for rows.Next() {
 		var m repMerchant
-		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.LogoThumbURL,
-			&m.Status, &m.JoinedAt, &m.Delivered); err != nil {
+		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.CategoryName, &m.LogoThumbURL,
+			&m.Status, &m.JoinedAt, &m.OwnerPhone, &m.Delivered,
+			&m.MyCommission, &m.LastOrderAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}
