@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Modal, IconSettings, IconEdit } from "@rahalgo/ui";
+import {
+  PageHeader, Button, Modal, IconSettings, IconEdit,
+} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -40,10 +42,7 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 flex items-center gap-2 text-2xl font-bold">
-        <IconSettings className="text-primary" />
-        {m.admin.settingsPage.title}
-      </h1>
+      <PageHeader icon={IconSettings} title={m.admin.settingsPage.title} />
       <p className="mb-6 text-sm text-ink-muted">{m.admin.settingsPage.hint}</p>
 
       {error && (

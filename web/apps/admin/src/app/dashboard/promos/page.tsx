@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  PageHeader,
   Button,
   Input,
   Select,
@@ -77,10 +78,7 @@ export default function PromosPage() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <IconPromos className="text-primary" />
-          {m.admin.promos.title}
-        </h1>
+        <PageHeader icon={IconPromos} title={m.admin.promos.title} />
         <div role="group" className="flex rounded-control border border-line bg-page p-1">
           {(["codes", "banners"] as const).map((t) => (
             <button

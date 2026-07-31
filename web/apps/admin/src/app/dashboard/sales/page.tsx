@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  PageHeader,
   Button,
   Badge,
   DataView,
@@ -181,10 +182,7 @@ export default function SalesPage() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <IconUser className="text-primary" />
-          {m.admin.sales.title}
-        </h1>
+        <PageHeader icon={IconUser} title={m.admin.sales.title} />
         <ViewToggle
           view={view}
           onChange={setView}

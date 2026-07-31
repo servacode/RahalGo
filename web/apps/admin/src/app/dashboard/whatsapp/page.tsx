@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Badge, IconWhatsApp } from "@rahalgo/ui";
+import {
+  PageHeader, Button, Badge, IconWhatsApp,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -44,10 +46,7 @@ export default function WhatsAppPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <IconWhatsApp className="text-primary" />
-          {m.admin.whatsappPage.title}
-        </h1>
+        <PageHeader icon={IconWhatsApp} title={m.admin.whatsappPage.title} />
         <Button variant="secondary" onClick={load}>
           {m.admin.whatsappPage.refresh}
         </Button>

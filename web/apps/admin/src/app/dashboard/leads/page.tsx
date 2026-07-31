@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  PageHeader,
   Button,
   Badge,
   DataView,
@@ -175,10 +176,7 @@ export default function LeadsPage() {
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <IconLink className="text-primary" />
-          {m.admin.leads.title}
-        </h1>
+        <PageHeader icon={IconLink} title={m.admin.leads.title} />
         <ViewToggle
           view={view}
           onChange={setView}

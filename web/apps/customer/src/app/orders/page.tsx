@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Badge, Button, IconOrder, IconStar } from "@rahalgo/ui";
+import { Badge, Button, PageContainer, PageHeader, EmptyState, LoadingState, IconOrder, IconStar } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import RatingModal from "@/components/RatingModal";
@@ -66,16 +66,13 @@ export default function MyOrdersPage() {
     loadRatings();
   }, [user, loading, router, loadRatings]);
 
-  if (!orders) return <p className="py-10 text-center text-ink-muted">{m.common.loading}</p>;
+  if (!orders) return <LoadingState />;
 
   return (
-    <div>
-      <h1 className="mb-5 flex items-center gap-2 text-xl font-bold">
-        <IconOrder className="text-primary" />
-        {m.terms.orders}
-      </h1>
+    <PageContainer width="wide">
+      <PageHeader icon={IconOrder} title={m.terms.orders} />
       {orders.length === 0 ? (
-        <p className="py-10 text-center text-ink-muted">{m.site.orders.empty}</p>
+        <EmptyState icon={IconOrder} title={m.site.orders.empty} />
       ) : (
         <ul className="space-y-2">
           {orders.map((o) => {
@@ -130,6 +127,6 @@ export default function MyOrdersPage() {
           }}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }

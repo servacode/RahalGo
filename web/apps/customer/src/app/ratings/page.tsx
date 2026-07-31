@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, IconStar } from "@rahalgo/ui";
+import { Button, PageContainer, PageHeader, EmptyState, LoadingState, Stars, IconStar } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import RatingModal from "@/components/RatingModal";
@@ -24,15 +24,6 @@ interface RatedOrder {
   comment: string;
   rated: boolean;
   created_at: string;
-}
-
-function StarRow({ n }: { n: number }) {
-  return (
-    <span dir="ltr" className="text-accent">
-      {"★".repeat(n)}
-      <span className="text-line">{"★".repeat(5 - n)}</span>
-    </span>
-  );
 }
 
 export default function RatingsPage() {
@@ -56,17 +47,14 @@ export default function RatingsPage() {
     load();
   }, [user, loading, router, load]);
 
-  if (!orders) return <p className="py-10 text-center text-ink-muted">{m.common.loading}</p>;
+  if (!orders) return <LoadingState />;
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="mb-5 flex items-center gap-2 text-xl font-bold">
-        <IconStar className="text-primary" />
-        {m.terms.ratings}
-      </h1>
+    <PageContainer width="medium">
+      <PageHeader icon={IconStar} title={m.terms.ratings} />
 
       {orders.length === 0 ? (
-        <p className="py-10 text-center text-ink-muted">{R.empty}</p>
+        <EmptyState icon={IconStar} title={R.empty} />
       ) : (
         <ul className="space-y-2">
           {orders.map((o) => (
@@ -78,7 +66,7 @@ export default function RatingsPage() {
               <span className="min-w-0 flex-1 truncate text-sm">{o.merchant_name}</span>
               {o.rated ? (
                 <div className="flex flex-col items-end gap-0.5">
-                  <StarRow n={o.merchant_stars} />
+                  <Stars value={o.merchant_stars} />
                   {o.comment && (
                     <span className="max-w-xs truncate text-xs text-ink-muted">{o.comment}</span>
                   )}
@@ -104,6 +92,6 @@ export default function RatingsPage() {
           }}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }

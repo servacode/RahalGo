@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  PageHeader,
   Button,
   Input,
   Badge,
@@ -145,10 +146,7 @@ export default function ZonesPage() {
   return (
     <div className="flex h-[calc(100vh-6rem)] flex-col lg:h-[calc(100vh-3rem)]">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <IconZones className="text-primary" />
-          {m.admin.zones.title}
-        </h1>
+        <PageHeader icon={IconZones} title={m.admin.zones.title} />
         {isAdmin && !draft && (
           <Button onClick={startCreate} className="flex items-center gap-1.5">
             <IconAdd size={16} />

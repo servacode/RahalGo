@@ -5,7 +5,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { AccountSettings, IconUser } from "@rahalgo/ui";
+import { AccountSettings, PageContainer, PageHeader, LoadingState, IconUser } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 
@@ -20,16 +20,13 @@ export default function AccountPage() {
   }, [user, loading, router]);
 
   if (loading || !isLoggedIn(user)) {
-    return <p className="py-10 text-center text-ink-muted">{m.common.loading}</p>;
+    return <LoadingState />;
   }
 
   return (
-    <div className="mx-auto max-w-lg">
-      <h1 className="mb-5 flex items-center gap-2 text-xl font-bold">
-        <IconUser className="text-primary" />
-        {m.terms.account}
-      </h1>
+    <PageContainer width="narrow">
+      <PageHeader icon={IconUser} title={m.terms.account} />
       <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} />
-    </div>
+    </PageContainer>
   );
 }

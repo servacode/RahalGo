@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconWallet } from "@rahalgo/ui";
+import { PageContainer, PageHeader, EmptyState, LoadingState, ListRow, Card, IconWallet } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 
@@ -42,14 +42,11 @@ export default function WalletPage() {
       .catch(() => setSt({ balance: 0, transactions: [] }));
   }, [user, loading, router]);
 
-  if (!st) return <p className="py-10 text-center text-ink-muted">{m.common.loading}</p>;
+  if (!st) return <LoadingState />;
 
   return (
-    <div className="mx-auto max-w-xl">
-      <h1 className="mb-5 flex items-center gap-2 text-xl font-bold">
-        <IconWallet className="text-primary" />
-        {m.terms.wallet}
-      </h1>
+    <PageContainer width="medium">
+      <PageHeader icon={IconWallet} title={m.terms.wallet} />
 
       <div className="mb-3 rounded-card bg-primary p-6 text-center text-white">
         <p className="text-sm opacity-80">{m.site.wallet.balance}</p>
@@ -61,9 +58,9 @@ export default function WalletPage() {
         {m.site.wallet.hint}
       </p>
 
-      <h2 className="mb-3 font-bold">{m.terms.transactions}</h2>
+      <h2 className="font-bold">{m.terms.transactions}</h2>
       {st.transactions.length === 0 ? (
-        <p className="py-6 text-center text-sm text-ink-muted">{m.terms.noTransactions}</p>
+        <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
       ) : (
         <ul className="space-y-2">
           {st.transactions.map((tx) => (
@@ -89,6 +86,6 @@ export default function WalletPage() {
           ))}
         </ul>
       )}
-    </div>
+    </PageContainer>
   );
 }

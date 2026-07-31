@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  PageHeader,
   Button,
   Input,
   Badge,
@@ -149,10 +150,7 @@ export default function DriversPage() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <IconDriver className="text-primary" />
-          {m.admin.drivers.title}
-        </h1>
+        <PageHeader icon={IconDriver} title={m.admin.drivers.title} />
         <div className="flex items-center gap-3">
           <Badge variant="neutral">
             {m.admin.drivers.cashLimit}: {fmt.format(cashLimit)} {m.common.currency}

@@ -4,7 +4,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, FormSection, IconBalance, IconStore, IconUser } from "@rahalgo/ui";
+import {
+  PageHeader, Button, Input, FormSection, IconBalance, IconStore, IconUser,
+} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -73,10 +75,7 @@ export default function CommissionsPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-1 flex items-center gap-2 text-2xl font-bold">
-        <IconBalance className="text-primary" />
-        {C.title}
-      </h1>
+      <PageHeader icon={IconBalance} title={C.title} />
       <p className="mb-6 text-sm text-ink-muted">{C.subtitle}</p>
 
       {/* شرح تدفّق العمولة */}

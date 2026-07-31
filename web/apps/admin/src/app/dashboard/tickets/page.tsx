@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  PageHeader,
   Button,
   Input,
   Select,
@@ -177,10 +178,7 @@ export default function TicketsPage() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <IconSupport className="text-primary" />
-          {m.admin.tickets.title}
-        </h1>
+        <PageHeader icon={IconSupport} title={m.admin.tickets.title} />
         <div className="flex items-center gap-2">
           <ViewToggle
             view={view}

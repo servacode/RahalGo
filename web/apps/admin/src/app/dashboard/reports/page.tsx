@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  PageHeader,
   Input,
   IconOrder,
   IconWallet,
@@ -181,10 +182,7 @@ export default function ReportsPage() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <IconStatus className="text-primary" />
-          {r.title}
-        </h1>
+        <PageHeader icon={IconStatus} title={r.title} />
         <div className="flex items-end gap-2">
           <div className="w-40">
             <Input
