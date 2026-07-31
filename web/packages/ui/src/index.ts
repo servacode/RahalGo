@@ -1,8 +1,23 @@
 export { colors, fontFamily, radius, breakpoints } from "./tokens";
-export { Button, Input, Select, Badge, Modal, FormSection } from "./components";
+export {
+  Button,
+  Input,
+  Select,
+  Badge,
+  Modal,
+  FormSection,
+  OtpInput,
+  PasswordMeter,
+  passwordScore,
+} from "./components";
 export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } from "./dataview";
 export { AccountSettings } from "./AccountSettings";
-export { ReputationReviews, ReputationComplaints } from "./Reputation";
+export { NotificationsPage } from "./NotificationsPage";
+export {
+  ReputationReviews,
+  ReputationComplaints,
+  type ReputationLabels,
+} from "./Reputation";
 export { DashboardChrome, type ChromeNavItem } from "./DashboardChrome";
 export {
   PageContainer,
@@ -44,6 +59,7 @@ export {
   useLiveEvent,
   useLiveStatus,
   useLiveData,
+  emitLocal,
   type AppNotification,
   type LiveEvent,
 } from "./Notifications";

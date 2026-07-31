@@ -5,7 +5,7 @@
  * كل الأنماط من توكنز الثيم المركزي، وكلها RTL-جاهزة (خصائص منطقية فقط).
  */
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { IconView, IconViewOff, IconCheck } from "./icons";
 
@@ -55,6 +55,16 @@ export function Input({
   const [reveal, setReveal] = useState(false);
   const isPassword = type === "password";
   const effectiveType = isPassword && reveal ? "text" : type;
+
+  // الزخارف (الأيقونة وزر الإظهار) تُوضع بالنسبة لاتجاه *الحاوية*، أما حشوة
+  // الحقل فتتبع اتجاه *الحقل نفسه*. حقل ltr داخل صفحة rtl (رقم هاتف مثلاً)
+  // ينعكس جانباه، فتبقى جهة الأيقونة بلا حشوة ويتداخل النص معها — لذا نحسب
+  // الجانبين صراحةً بدل افتراض تطابق الاتجاهين.
+  const flipped = props.dir === "ltr";
+  const padStart =
+    (flipped ? isPassword : !!icon) ? "ps-10" : "ps-3";
+  const padEnd =
+    (flipped ? !!icon : isPassword) ? "pe-10" : "pe-3";
   return (
     <div>
       {label && (
@@ -75,7 +85,7 @@ export function Input({
           {...props}
           className={`w-full rounded-control border bg-surface py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 ${
             error ? "border-danger" : "border-line hover:border-ink-muted/40"
-          } ${icon ? "ps-10" : "ps-3"} ${isPassword ? "pe-10" : "pe-3"} ${className}`}
+          } ${padStart} ${padEnd} ${className}`}
         />
         {isPassword && (
           <button
@@ -120,6 +130,128 @@ export function Checkbox({
       </span>
       <span className="text-ink-muted transition-colors group-hover:text-ink">{label}</span>
     </label>
+  );
+}
+
+// ---------- OtpInput ----------
+
+/**
+ * حقل رمز التحقق — خانة لكل رقم بدل حقل واحد طويل. الأرقام تُقرأ وتُصحَّح أسرع،
+ * والتقدّم التلقائي واللصق يجعلان إدخال الرمز حركة واحدة.
+ * الحاوية LTR دائماً: الأرقام تُملأ من اليسار مهما كانت لغة الواجهة.
+ */
+export function OtpInput({
+  value,
+  onChange,
+  length = 6,
+  autoFocus,
+  boxLabel,
+  onComplete,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  length?: number;
+  autoFocus?: boolean;
+  /** تسمية وصفية لكل خانة (تُمرَّر من المعجم) — {n} يُستبدل برقم الخانة */
+  boxLabel: string;
+  /** يُستدعى عند اكتمال كل الخانات — لتقديم الإرسال بلا نقرة إضافية */
+  onComplete?: (v: string) => void;
+}) {
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
+  const digits = value.padEnd(length, " ").slice(0, length).split("");
+
+  function commit(next: string) {
+    onChange(next);
+    if (next.length === length && !next.includes(" ")) onComplete?.(next);
+  }
+
+  function setAt(i: number, digit: string) {
+    const chars = digits.map((d) => (d === " " ? "" : d));
+    chars[i] = digit;
+    commit(chars.join("").slice(0, length));
+  }
+
+  function onKey(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !(digits[i] ?? "").trim() && i > 0) {
+      e.preventDefault();
+      setAt(i - 1, "");
+      refs.current[i - 1]?.focus();
+      return;
+    }
+    // الأسهم تتحرك بصرياً: اليمين في RTL هو الخانة السابقة
+    if (e.key === "ArrowLeft") refs.current[Math.min(length - 1, i + 1)]?.focus();
+    if (e.key === "ArrowRight") refs.current[Math.max(0, i - 1)]?.focus();
+  }
+
+  return (
+    <div dir="ltr" className="flex justify-center gap-2">
+      {digits.map((d, i) => (
+        <input
+          key={i}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+          value={d.trim()}
+          inputMode="numeric"
+          autoComplete={i === 0 ? "one-time-code" : "off"}
+          autoFocus={autoFocus && i === 0}
+          aria-label={boxLabel.replace("{n}", String(i + 1))}
+          maxLength={1}
+          onChange={(e) => {
+            const digit = e.target.value.replace(/\D/g, "").slice(-1);
+            setAt(i, digit);
+            if (digit && i < length - 1) refs.current[i + 1]?.focus();
+          }}
+          onKeyDown={(e) => onKey(i, e)}
+          onFocus={(e) => e.target.select()}
+          onPaste={(e) => {
+            e.preventDefault();
+            const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
+            if (!pasted) return;
+            commit(pasted);
+            refs.current[Math.min(pasted.length, length - 1)]?.focus();
+          }}
+          className={`h-13 w-11 rounded-control border bg-surface text-center font-mono text-xl font-bold text-ink outline-none transition-all sm:w-12 ${
+            d.trim()
+              ? "border-primary bg-primary-light/40 text-primary-dark"
+              : "border-line hover:border-ink-muted/40"
+          } focus:border-primary focus:ring-2 focus:ring-primary/20`}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ---------- PasswordMeter ----------
+
+/** قوة كلمة المرور: الطول أولاً ثم تنوّع المحارف — مؤشر بصري بألوان الحالات. */
+export function passwordScore(pw: string): 0 | 1 | 2 | 3 {
+  if (pw.length < 8) return pw.length === 0 ? 0 : 1;
+  const variety =
+    Number(/[a-z]/.test(pw)) + Number(/[A-Z]/.test(pw)) + Number(/\d/.test(pw)) + Number(/[^\w]/.test(pw));
+  if (pw.length >= 12 && variety >= 3) return 3;
+  if (variety >= 2) return 2;
+  return 1;
+}
+
+/** شريط قوة كلمة المرور — يُظهر للمستخدم أثر ما يكتبه بدل رسالة رفض بعد الإرسال. */
+export function PasswordMeter({ value, labels }: { value: string; labels: [string, string, string] }) {
+  const score = passwordScore(value);
+  if (score === 0) return null;
+  const tone = (["bg-danger", "bg-warning", "bg-success"] as const)[score - 1];
+  const text = (["text-danger", "text-warning", "text-success"] as const)[score - 1];
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex flex-1 gap-1">
+        {[1, 2, 3].map((i) => (
+          <span
+            key={i}
+            className={`h-1 flex-1 rounded-badge transition-colors ${i <= score ? tone : "bg-line"}`}
+          />
+        ))}
+      </div>
+      <span className={`text-xs font-medium ${text}`}>{labels[score - 1]}</span>
+    </div>
   );
 }
 

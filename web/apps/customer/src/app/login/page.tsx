@@ -6,7 +6,7 @@
  * بكل لوحة. إنشاء الحساب الذاتي للزبون فقط (يتم تلقائياً عند التحقق برمز واتساب).
  */
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LoginCard, routeByRole, safeNext, useAuth } from "@rahalgo/auth";
@@ -22,16 +22,34 @@ export default function LoginPage() {
 }
 
 function Login() {
-  const { setUser } = useAuth();
+  const { user, loading, setUser } = useAuth();
   const next = safeNext(useSearchParams().get("next"));
+  const sent = useRef(false); // التحويل مرة واحدة — لا يتكرر مع كل إعادة رسم
+
+  // من هو داخل أصلاً لا يرى شاشة الدخول إطلاقاً: يُنقل فوراً إلى مكانه حسب دوره.
+  // (لتبديل الحساب: الخروج من الشريط العلوي ثم العودة إلى /login)
+  useEffect(() => {
+    if (loading || !user || sent.current) return;
+    sent.current = true;
+    void routeByRole(user, next ?? undefined);
+  }, [user, loading, next]);
+
+  if (loading || user) {
+    return (
+      <main className="flex flex-1 items-center justify-center text-ink-muted">
+        {m.common.loading}
+      </main>
+    );
+  }
+
   return (
     <LoginCard
       title={m.site.loginTitle}
       subtitle={m.site.loginSubtitle}
       methods="both"
-      onSuccess={async (user) => {
-        setUser(user);
-        await routeByRole(user, next ?? undefined);
+      onSuccess={async (u) => {
+        setUser(u);
+        await routeByRole(u, next ?? undefined);
       }}
     />
   );

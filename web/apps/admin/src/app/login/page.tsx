@@ -5,6 +5,7 @@
  * البطاقة المركزية، فلا يختلف شكلاً ولا سلوكاً عن دخول بقية المنصة.
  */
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LoginCard, tokenStore, hasRole, PANEL_ROLES, useAuth } from "@rahalgo/auth";
@@ -13,7 +14,21 @@ const m = getMessages(defaultLocale);
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { setUser } = useAuth();
+  const { user, loading, setUser } = useAuth();
+  const signedIn = hasRole(user, ...PANEL_ROLES);
+
+  // موظف داخل أصلاً لا يرى شاشة الدخول — يُنقل للوحته مباشرة.
+  useEffect(() => {
+    if (!loading && signedIn) router.replace("/dashboard");
+  }, [loading, signedIn, router]);
+
+  if (loading || signedIn) {
+    return (
+      <main className="flex flex-1 items-center justify-center text-ink-muted">
+        {m.common.loading}
+      </main>
+    );
+  }
 
   return (
     <LoginCard
