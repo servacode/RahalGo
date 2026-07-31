@@ -70,7 +70,7 @@ export default function OrderTrackingPage() {
   const failed = ["rejected", "cancelled", "failed", "refunded"].includes(order.status);
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">
           {m.site.orders.orderTitle.replace("{n}", fmtNum(order.number))}

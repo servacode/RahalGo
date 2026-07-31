@@ -38,7 +38,6 @@ export default function CustomerWalletPage() {
       hint={m.site.wallet.hint}
       holderName={user?.full_name}
       holderPhone={user?.phone}
-      width="medium"
     />
   );
 }

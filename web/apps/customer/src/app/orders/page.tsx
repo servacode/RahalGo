@@ -95,7 +95,7 @@ export default function MyOrdersPage() {
   if (!orders) return <LoadingState />;
 
   return (
-    <PageContainer width="wide">
+    <PageContainer>
       <PageHeader icon={IconOrder} title={m.terms.orders} />
       {orders.length === 0 ? (
         <EmptyState icon={IconOrder} title={m.site.orders.empty} />

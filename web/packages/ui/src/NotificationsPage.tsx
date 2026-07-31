@@ -62,7 +62,17 @@ function dayLabel(iso: string): string {
   return fmtLongDate(d);
 }
 
-export function NotificationsPage({ api, Link }: { api: ApiFn; Link: LinkType }) {
+export function NotificationsPage({
+  api,
+  Link,
+  // اللوحات تحصر العرض لأن سايدبارها يقتطع جانباً؛ وموقع الزبون بلا سايدبار
+  // فيأخذ الصفحة كاملة — الفرق في الهيكل لا في المكوّن، فصار مُعامِلاً.
+  width = "wide",
+}: {
+  api: ApiFn;
+  Link: LinkType;
+  width?: "wide" | "full";
+}) {
   const [kind, setKind] = useState("");
 
   const { data, loading, reload } = useLiveData<Feed>(
@@ -110,7 +120,7 @@ export function NotificationsPage({ api, Link }: { api: ApiFn; Link: LinkType })
   ];
 
   return (
-    <PageContainer width="wide">
+    <PageContainer width={width}>
       <PageHeader
         icon={IconBell}
         title={N.title}

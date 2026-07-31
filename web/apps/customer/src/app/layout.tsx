@@ -31,8 +31,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CartProvider>
             <div className="flex min-h-screen flex-col p-3">
               <Header />
-              {/* نفس إيقاع اللوحات: المحتوى يبدأ على استقامة محتوى الشريط */}
-              <main className="flex min-w-0 flex-1 flex-col px-4 pb-4">{children}</main>
+              {/*
+                المحتوى بعرض الصفحة كاملاً. اللوحات تحصر عرضها لأن لها سايدباراً
+                يقتطع جانباً، وهذا الموقع بلا سايدبار — فحصرُه يترك فراغين لا
+                يملؤهما شيء، ويضغط البطاقات في عمودٍ ضيّق بلا سبب.
+              */}
+              <main className="flex min-w-0 flex-1 flex-col pb-4">{children}</main>
             </div>
           </CartProvider>
         </AuthProvider>

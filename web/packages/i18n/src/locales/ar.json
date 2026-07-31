@@ -134,8 +134,8 @@
     },
     "showPassword": "إظهار كلمة المرور",
     "hidePassword": "إخفاء كلمة المرور",
-    "shopAsCustomer": "تسوّق كزبون",
-    "backToDashboard": "العودة إلى لوحتي",
+    "shopAsCustomer": "تسوّق",
+    "backToDashboard": "لوحتي",
     "txKinds": {
       "topup": "شحن رصيد",
       "order_payment": "دفع طلب",
@@ -1070,7 +1070,7 @@
       "cart": "السلة",
       "account": "حسابي",
       "login": "تسجيل الدخول",
-      "backToDashboard": "العودة إلى لوحتي"
+      "backToDashboard": "لوحتي"
     },
     "menu": {
       "addToCart": "أضف للسلة",
@@ -1171,7 +1171,7 @@
       "wallet": "عمولاتي",
       "account": "حسابي"
     },
-    "shopAsCustomer": "تسوّق كزبون",
+    "shopAsCustomer": "تسوّق",
     "account": {
       "title": "حسابي",
       "photo": "الصورة الشخصية",

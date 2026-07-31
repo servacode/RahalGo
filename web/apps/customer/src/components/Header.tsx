@@ -99,15 +99,6 @@ export default function Header() {
             balance={summary?.balance ?? 0}
             icon={<IconWallet size={15} />}
           />
-          <TopBarLink
-            Link={Link}
-            href="/orders"
-            title={m.terms.orders}
-            tone={pathname.startsWith("/orders") ? "active" : "plain"}
-          >
-            <IconOrder size={16} />
-            <span className="hidden md:inline">{m.terms.orders}</span>
-          </TopBarLink>
         </>
       )}
 
@@ -117,6 +108,21 @@ export default function Header() {
           <IconOverview size={16} />
           <span className="hidden md:inline">{m.shared.backToDashboard}</span>
         </TopBarChip>
+      )}
+
+      {/* الطلبات والسلة متجاورتان: كلتاهما «سلّة» في ذهن الزبون — واحدة لما
+          اشتراه وأخرى لما ينوي شراءه. وأيقونتان بلا نصّ لأن معناهما بديهي. */}
+      {logged && (
+        <TopBarLink
+          Link={Link}
+          href="/orders"
+          title={m.terms.orders}
+          aria-label={m.terms.orders}
+          tone={pathname.startsWith("/orders") ? "active" : "plain"}
+          className="!px-2.5"
+        >
+          <IconOrder size={18} />
+        </TopBarLink>
       )}
 
       <TopBarLink
@@ -139,15 +145,15 @@ export default function Header() {
             href="/account"
             title={m.terms.account}
             tone={pathname.startsWith("/account") ? "active" : "plain"}
-            className="border border-line ps-1"
+            aria-label={m.terms.account}
+            className="!p-1"
           >
+            {/* الصورة وحدها: الاسم يعرفه صاحبه، وإطالةُ الشريط به تزاحم ما يفيده */}
             <Avatar
               url={mediaUrl(summary?.avatar_thumb_url)}
               name={summary?.full_name || user?.phone || ""}
+              size={30}
             />
-            <span className="hidden max-w-[8rem] truncate font-medium sm:inline">
-              {summary?.full_name || user?.phone}
-            </span>
           </TopBarLink>
 
           <TopBarChip

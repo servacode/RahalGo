@@ -56,8 +56,9 @@ const chipTones = {
   primary: "bg-primary font-medium text-white hover:bg-primary-dark",
   /** ثانوي مميّز — التقييم/التسوّق كزبون */
   accent: "bg-accent/10 font-bold text-accent-dark hover:bg-accent/20",
-  /** خطر — الخروج */
-  danger: "text-danger hover:bg-danger/10",
+  /** خطر — الخروج. ممتلئ لا شفّاف: زرّ الخروج يجب أن يُميَّز بلمحة كي لا
+   *  يُضغط سهواً، والنصّ الأحمر على أبيض يذوب بين بقية العناصر. */
+  danger: "bg-danger font-medium text-white hover:bg-danger/90",
 } as const;
 
 export type ChipTone = keyof typeof chipTones;
