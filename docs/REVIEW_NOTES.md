@@ -35,6 +35,10 @@
 5. **لا لون خارج التوكنز** — لا `amber-*` ولا hex في المكوّنات؛ فقط
    `primary/accent/success/warning/danger/ink/line/surface/page`.
 6. **المكوّن المشترك محايد** — `@rahalgo/ui` لا يقرأ من نطاق تطبيق بعينه.
+7. **لا إيموجي في الواجهة ولا في البيانات** — الإيموجي يُرسم بخط النظام فيختلف بين
+   أبل/أندرويد/ويندوز، ولا يرث لون التوكنز ولا سماكة الخط، وقد يظهر مربّعاً على
+   أنظمة قديمة. كل رمز مرئي أيقونة من `ui → icons.ts` أو مكوّن مركزي
+   (`CategoryIcon`, `Stars`). أيقونات التصنيفات مفاتيح نصّية في القاعدة.
 
 ### خريطة المركزية الحالية
 
@@ -45,7 +49,8 @@
 | الهيكل (سايدبار+توب بار) | `ui → DashboardChrome` |
 | الشريط العلوي وعناصره | `ui → topbar.tsx` (TopBar/TopBarChip/TopBarLink/WalletPill/Avatar/CountBadge/MenuPanel/MenuItem) — **موقع الزبون واللوحات نفس الشريط** |
 | العناصر البصرية | `ui → layout.tsx` (PageHeader/PageContainer/Card/ListRow/EmptyState/LoadingState/StatCard/StatGrid/Stars) |
-| عناصر النماذج | `ui → components.tsx` (Button/Input/Select/Badge/Modal/FormSection) |
+| عناصر النماذج | `ui → components.tsx` (Button/Input/Select/Badge/Modal/FormSection/Checkbox) — الأيقونة **داخل** الحقل دائماً |
+| أيقونات التصنيفات | `ui → CategoryIcon` (مفتاح مخزّن ↔ أيقونة) — **لا إيموجي في القاعدة** |
 | الجداول والكروت | `ui → dataview.tsx` (DataView/ViewToggle) |
 | إعدادات الحساب | `ui → AccountSettings` |
 | السمعة | `ui → ReputationReviews/ReputationComplaints` |

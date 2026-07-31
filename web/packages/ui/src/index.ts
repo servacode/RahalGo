@@ -15,6 +15,15 @@ export {
   StatCard,
   Stars,
 } from "./layout";
+export { Checkbox } from "./components";
+export {
+  CategoryIcon,
+  CategoryIconPicker,
+  CATEGORY_ICONS,
+  CATEGORY_ICON_KEYS,
+  categoryIconLabel,
+  type CategoryIconKey,
+} from "./CategoryIcon";
 export {
   TopBar,
   TopBarChip,

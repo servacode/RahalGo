@@ -4,6 +4,7 @@
 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  CategoryIcon,
   Badge,
   PageContainer,
   PageHeader,
@@ -53,7 +54,7 @@ export default function LeadsPage() {
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    {l.category_icon && <span>{l.category_icon}</span>}
+                    {l.category_icon && <CategoryIcon name={l.category_icon} size={15} className="text-ink-muted" />}
                     <p className="truncate font-medium">{l.store_name}</p>
                     <Badge variant={STATUS_VARIANT[l.status]}>{m.rep.leadStatus[l.status]}</Badge>
                   </div>

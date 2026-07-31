@@ -20,6 +20,9 @@ import {
   IconSuccess,
   IconWarning,
   IconDriver,
+  IconBell,
+  IconBellOff,
+  IconEdit,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -144,7 +147,8 @@ export default function OrdersBoard() {
                 : "border-line text-ink-muted"
             }`}
           >
-            {soundOn ? `🔔 ${m.merchant.header.soundOn}` : `🔕 ${m.merchant.header.soundOff}`}
+            {soundOn ? <IconBell size={15} /> : <IconBellOff size={15} />}
+            {soundOn ? m.merchant.header.soundOn : m.merchant.header.soundOff}
           </button>
         </div>
       </div>
@@ -321,7 +325,7 @@ function OrderCard({
                       — {it.options.map((op) => op.name).join(m.common.listSeparator)}
                     </span>
                   )}
-                  {it.note && <p className="text-xs text-accent-dark">✎ {it.note}</p>}
+                  {it.note && <p className="text-xs text-accent-dark"><IconEdit size={11} className="inline align-[-1px]" /> {it.note}</p>}
                 </li>
               ))}
             </ul>

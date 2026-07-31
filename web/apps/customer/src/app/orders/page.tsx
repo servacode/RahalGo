@@ -125,7 +125,7 @@ export default function MyOrdersPage() {
                   </Button>
                 )}
                 {o.status === "delivered" && rate?.rated && (
-                  <span className="shrink-0 text-xs text-success">★ {m.site.rating.myTitle}</span>
+                  <span className="flex shrink-0 items-center gap-1 text-xs text-success"><IconStar size={12} className="fill-success" />{m.site.rating.myTitle}</span>
                 )}
               </li>
             );

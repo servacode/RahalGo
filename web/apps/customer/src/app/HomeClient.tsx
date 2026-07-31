@@ -5,7 +5,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Badge } from "@rahalgo/ui";
+import { CategoryIcon, Badge } from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -87,7 +87,8 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                 : "border border-line text-ink-muted"
             }`}
           >
-            {c.icon} {c.name}
+            <CategoryIcon name={c.icon} size={15} />
+            {c.name}
           </button>
         ))}
       </div>
@@ -108,7 +109,7 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                 <img src={logo} alt="" className="h-14 w-14 rounded-control object-cover" />
               ) : (
                 <span className="flex h-14 w-14 items-center justify-center rounded-control bg-primary-light text-xl">
-                  {mr.category_icon}
+                  <CategoryIcon name={mr.category_icon} size={18} />
                 </span>
               )}
               <div className="min-w-0 flex-1">

@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Badge, Button, Modal } from "@rahalgo/ui";
+import { CategoryIcon, Badge, Button, Modal } from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
 import { useCart, type CartLine } from "@/lib/cart";
 
@@ -60,7 +60,7 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
           <img src={logo} alt="" className="h-16 w-16 rounded-card object-cover" />
         ) : (
           <span className="flex h-16 w-16 items-center justify-center rounded-card bg-primary-light text-2xl">
-            {merchant.category_icon}
+            <CategoryIcon name={merchant.category_icon} size={18} />
           </span>
         )}
         <div>

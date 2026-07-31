@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Badge, Button, useLiveEvent, IconStar, IconSuccess } from "@rahalgo/ui";
+import { IconCheck, IconLocation, Badge, Button, useLiveEvent, IconStar, IconSuccess } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -95,7 +95,7 @@ export default function OrderTrackingPage() {
                       done ? "bg-primary text-white" : "border border-line text-ink-muted"
                     } ${current ? "animate-pulse" : ""}`}
                   >
-                    {done && !current ? "✓" : i + 1}
+                    {done && !current ? <IconCheck size={14} strokeWidth={3} /> : i + 1}
                   </span>
                   {i < FLOW.length - 1 && (
                     <span className={`h-6 w-0.5 ${stepIdx > i ? "bg-primary" : "bg-line"}`} />
@@ -143,7 +143,7 @@ export default function OrderTrackingPage() {
             {fmt.format(order.cash_due)}
           </p>
         )}
-        <p className="mt-2 text-xs text-ink-muted">📍 {order.address_text}</p>
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-muted"><IconLocation size={13} />{order.address_text}</p>
       </section>
 
       {order.status === "delivered" &&

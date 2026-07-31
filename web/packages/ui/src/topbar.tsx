@@ -18,6 +18,7 @@ type LinkType = ComponentType<{
   title?: string;
   children: ReactNode;
   onClick?: () => void;
+  "aria-label"?: string;
 }>;
 
 /** كرت الشريط العلوي العائم. start يمين (شعار/عنوان)، children يسار (الأدوات). */
@@ -78,6 +79,7 @@ export function TopBarLink({
   title,
   className = "",
   children,
+  ...rest
 }: {
   Link: LinkType;
   href: string;
@@ -85,9 +87,15 @@ export function TopBarLink({
   title?: string;
   className?: string;
   children: ReactNode;
+  "aria-label"?: string;
 }) {
   return (
-    <Link href={href} title={title} className={`${chipBase} ${chipTones[tone]} ${className}`}>
+    <Link
+      {...rest}
+      href={href}
+      title={title}
+      className={`${chipBase} ${chipTones[tone]} ${className}`}
+    >
       {children}
     </Link>
   );

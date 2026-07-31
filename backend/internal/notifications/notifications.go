@@ -39,15 +39,15 @@ func New(db *pgxpool.Pool, hub Publisher, logger *slog.Logger) *Service {
 
 // Notification إشعار واحد كما يُعاد للواجهة.
 type Notification struct {
-	ID        string  `json:"id"`
-	Kind      string  `json:"kind"`
-	Title     string  `json:"title"`
-	Body      string  `json:"body"`
-	Entity    string  `json:"entity"`
-	EntityID  string  `json:"entity_id"`
-	Href      string  `json:"href"`
-	Read      bool    `json:"read"`
-	CreatedAt string  `json:"created_at"`
+	ID        string `json:"id"`
+	Kind      string `json:"kind"`
+	Title     string `json:"title"`
+	Body      string `json:"body"`
+	Entity    string `json:"entity"`
+	EntityID  string `json:"entity_id"`
+	Href      string `json:"href"`
+	Read      bool   `json:"read"`
+	CreatedAt string `json:"created_at"`
 }
 
 // Input بيانات إنشاء إشعار.

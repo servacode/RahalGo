@@ -4,32 +4,12 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button } from "@rahalgo/ui";
+import { Button, Modal, Stars } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const R = m.site.rating;
 const COMMENT_MAX = 200;
-
-function Stars({ value, onChange }: { value: number; onChange: (n: number) => void }) {
-  return (
-    <div className="flex gap-1" dir="ltr">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          onClick={() => onChange(n)}
-          className={`text-2xl transition-transform hover:scale-110 ${
-            n <= value ? "text-accent" : "text-line"
-          }`}
-          aria-label={`${n}`}
-        >
-          ★
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export default function RatingModal({
   order,
@@ -81,12 +61,12 @@ export default function RatingModal({
         <form onSubmit={submit} className="space-y-4">
           <div>
             <p className="mb-1.5 text-sm font-medium">{R.merchant}</p>
-            <Stars value={merchantStars} onChange={setMerchantStars} />
+            <Stars value={merchantStars} onChange={setMerchantStars} size="lg" />
           </div>
           {order.has_driver && (
             <div>
               <p className="mb-1.5 text-sm font-medium">{R.driver}</p>
-              <Stars value={driverStars} onChange={setDriverStars} />
+              <Stars value={driverStars} onChange={setDriverStars} size="lg" />
             </div>
           )}
           <div>

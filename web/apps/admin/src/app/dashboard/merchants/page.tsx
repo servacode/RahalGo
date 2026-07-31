@@ -7,6 +7,10 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 
 const PickMap = dynamic(() => import("@/components/map/PickMap"), { ssr: false });
 import {
+  CategoryIcon,
+  CategoryIconPicker,
+  type CategoryIconKey,
+  IconPrev,
   useLiveRefresh,
   Button,
   Input,
@@ -267,7 +271,8 @@ export default function MerchantsPage() {
             <option value="">{m.admin.merchants.allCategories}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.icon} {c.name}
+                <CategoryIcon name={c.icon} size={15} />
+                {c.name}
               </option>
             ))}
           </Select>
@@ -484,7 +489,7 @@ function HoursModal({
                 onChange={(e) => updateDay(i, { open_time: e.target.value })}
                 className="rounded-control border border-line px-2 py-1 disabled:opacity-40"
               />
-              <span className="text-ink-muted">←</span>
+              <IconPrev size={14} className="text-ink-muted" />
               <input
                 type="time"
                 disabled={d.closed}
@@ -598,7 +603,8 @@ function MerchantModal({
             >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.icon} {c.name}
+                  <CategoryIcon name={c.icon} size={15} />
+                {c.name}
                 </option>
               ))}
             </Select>
@@ -724,7 +730,7 @@ function CategoriesModal({
   onChanged: () => Promise<void> | void;
 }) {
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState("");
+  const [icon, setIcon] = useState<CategoryIconKey>("other");
   const [error, setError] = useState("");
 
   async function addCategory(e: React.FormEvent) {
@@ -736,7 +742,7 @@ function CategoriesModal({
         body: JSON.stringify({ name, icon, sort_order: categories.length + 1 }),
       });
       setName("");
-      setIcon("");
+      setIcon("other");
       await onChanged();
     } catch (err) {
       setError(errText(err));
@@ -765,7 +771,8 @@ function CategoriesModal({
             className="flex items-center justify-between rounded-control border border-line px-3 py-2"
           >
             <span className={c.active ? "" : "text-ink-muted line-through"}>
-              {c.icon} {c.name}
+              <CategoryIcon name={c.icon} size={15} />
+                {c.name}
             </span>
             <Button variant={c.active ? "danger" : "secondary"} onClick={() => toggleActive(c)}>
               {c.active ? m.admin.merchants.deactivate : m.admin.merchants.activate}
@@ -773,25 +780,19 @@ function CategoriesModal({
           </li>
         ))}
       </ul>
-      <form onSubmit={addCategory} className="flex items-end gap-2">
-        <div className="flex-1">
-          <Input
-            id="cat-name"
-            label={m.admin.merchants.categoryName}
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-        <div className="w-24">
-          <Input
-            id="cat-icon"
-            label={m.admin.merchants.categoryIcon}
-            value={icon}
-            onChange={(e) => setIcon(e.target.value)}
-            placeholder="🍕"
-          />
-        </div>
+      <form onSubmit={addCategory} className="space-y-3">
+        <Input
+          id="cat-name"
+          label={m.admin.merchants.categoryName}
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <CategoryIconPicker
+          label={m.admin.merchants.categoryIcon}
+          value={icon}
+          onChange={setIcon}
+        />
         <Button type="submit" className="flex items-center gap-1">
           <IconAdd size={15} />
           {m.admin.merchants.addCategory}

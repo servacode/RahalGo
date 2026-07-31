@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  IconPrev,
   Button,
   Input,
   Select,
@@ -149,7 +150,7 @@ export default function MenuPage() {
             onClick={() => router.push("/dashboard/merchants")}
             className="mb-1 text-sm text-ink-muted hover:text-primary"
           >
-            ← {m.admin.merchants.title}
+            <IconPrev size={15} /> {m.admin.merchants.title}
           </button>
           <h1 className="flex items-center gap-2 text-2xl font-bold">
             <IconStore className="text-primary" />

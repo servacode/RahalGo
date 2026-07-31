@@ -206,7 +206,7 @@ func (s *Server) handleMerchantEmergency(w http.ResponseWriter, r *http.Request)
 	}
 	s.notify.NotifyOps(r.Context(), notifications.Input{
 		Kind: notifications.KindAccount, Title: title,
-		Body: s.merchantName(r.Context(), merchantID),
+		Body:   s.merchantName(r.Context(), merchantID),
 		Entity: "merchant", EntityID: merchantID, Href: "/dashboard/merchants",
 	})
 	s.touch("merchant", "ops", "merchant:"+merchantID)

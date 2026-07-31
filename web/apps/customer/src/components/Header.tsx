@@ -118,9 +118,15 @@ export default function Header() {
         </>
       )}
 
-      <TopBarLink Link={Link} href="/cart" tone="primary" title={m.terms.cart} className="relative">
-        <IconCart size={16} />
-        <span className="hidden sm:inline">{m.terms.cart}</span>
+      <TopBarLink
+        Link={Link}
+        href="/cart"
+        tone="primary"
+        title={m.terms.cart}
+        aria-label={m.terms.cart}
+        className="relative !px-2.5"
+      >
+        <IconCart size={18} />
         <CountBadge count={count} />
       </TopBarLink>
 

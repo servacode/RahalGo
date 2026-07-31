@@ -178,6 +178,142 @@ func (s *Service) VerifyOTP(ctx context.Context, rawPhone, code, userAgent, ip s
 	return s.issueFor(ctx, user, userAgent, ip, "auth.otp_login")
 }
 
+// sendOTPFor يُصدر رمزاً لغرض محدّد مع تحديد معدّل خاص بذلك الغرض.
+// مسار واحد لكل رموز التحقق — لا يعيد كل تدفّق كتابة المنطق نفسه.
+func (s *Service) sendOTPFor(ctx context.Context, phone, purpose, rateKey string) error {
+	key := rateKey + phone
+	n, err := s.rdb.Incr(ctx, key).Result()
+	if err != nil {
+		return err
+	}
+	if n == 1 {
+		s.rdb.Expire(ctx, key, 15*time.Minute)
+	}
+	if n > otpMaxPer15m {
+		return ErrOTPRateLimited
+	}
+	code, err := randomDigits(6)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), purpose, otpTTL); err != nil {
+		return err
+	}
+	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
+		s.logger.Error("otp send failed", "error", err)
+		return ErrOTPSendFailed
+	}
+	return nil
+}
+
+// RequestPasswordReset يرسل رمزاً لاستعادة كلمة المرور. لا يكشف إن كان الرقم
+// مسجّلاً أم لا (تعداد الحسابات) — الرد ناجح دائماً من وجهة نظر المتصل.
+func (s *Service) RequestPasswordReset(ctx context.Context, rawPhone string) error {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return ErrInvalidPhone
+	}
+	if _, _, err := s.repo.UserByPhone(ctx, phone); err != nil {
+		return nil // رقم غير مسجّل: صمت مقصود
+	}
+	return s.sendOTPFor(ctx, phone, "reset", "otp:rst:")
+}
+
+// ConfirmPasswordReset يتحقق من الرمز ويضبط كلمة مرور جديدة، ثم يفتح جلسة
+// جديدة — فلا يعيد المستخدم إدخال ما ضبطه للتوّ.
+func (s *Service) ConfirmPasswordReset(ctx context.Context, rawPhone, code, password, userAgent, ip string) (*AuthResult, error) {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return nil, ErrInvalidPhone
+	}
+	if len(password) < minPasswordLn {
+		return nil, ErrWeakPassword
+	}
+	valid, err := s.repo.ConsumeOTP(ctx, phone, s.hashOTP(phone, code), "reset")
+	if err != nil {
+		return nil, err
+	}
+	if !valid {
+		return nil, ErrOTPInvalid
+	}
+	user, _, err := s.repo.UserByPhone(ctx, phone)
+	if err != nil {
+		return nil, err
+	}
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.SetPassword(ctx, user.ID, hash); err != nil {
+		return nil, err
+	}
+	s.repo.Audit(ctx, &user.ID, "auth.password_reset", "user", user.ID, ip, nil)
+	// جلسة جديدة تُبطل كل ما سبق — من سرق الحساب يخرج فوراً
+	return s.issueFor(ctx, user, userAgent, ip, "auth.password_reset")
+}
+
+// RequestSignup يرسل رمز تأكيد لإنشاء حساب زبون جديد.
+func (s *Service) RequestSignup(ctx context.Context, rawPhone string) error {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return ErrInvalidPhone
+	}
+	// حساب موجود بكلمة مرور = ليس تسجيلاً جديداً
+	if _, hash, err := s.repo.UserByPhone(ctx, phone); err == nil && hash != "" {
+		return ErrPhoneTaken
+	}
+	return s.sendOTPFor(ctx, phone, "signup", "otp:sgn:")
+}
+
+// ConfirmSignup ينشئ حساب **زبون** باسم وكلمة مرور بعد تأكيد الرقم.
+// لا يُنشأ أي دور آخر من هنا إطلاقاً — المتجر/السائق/المندوب عبر الإدارة أو مندوب.
+func (s *Service) ConfirmSignup(ctx context.Context, rawPhone, code, fullName, password, userAgent, ip string) (*AuthResult, error) {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return nil, ErrInvalidPhone
+	}
+	if len(password) < minPasswordLn {
+		return nil, ErrWeakPassword
+	}
+	valid, err := s.repo.ConsumeOTP(ctx, phone, s.hashOTP(phone, code), "signup")
+	if err != nil {
+		return nil, err
+	}
+	if !valid {
+		return nil, ErrOTPInvalid
+	}
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return nil, err
+	}
+	user, _, err := s.repo.UserByPhone(ctx, phone)
+	if errors.Is(err, ErrNotFound) {
+		user, err = s.repo.CreateUserWithRole(ctx, phone, fullName, "customer")
+		if err != nil {
+			return nil, err
+		}
+		if err := s.repo.SetPassword(ctx, user.ID, hash); err != nil {
+			return nil, err
+		}
+		s.repo.Audit(ctx, &user.ID, "user.register", "user", user.ID, ip, nil)
+	} else if err != nil {
+		return nil, err
+	} else {
+		// حساب أُنشئ سابقاً برمز التحقق وبلا كلمة مرور — يكمل بياناته الآن
+		if err := s.repo.SetPassword(ctx, user.ID, hash); err != nil {
+			return nil, err
+		}
+		if fullName != "" {
+			_ = s.repo.SetFullName(ctx, user.ID, fullName)
+		}
+	}
+	user, _, err = s.repo.UserByID(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	return s.issueFor(ctx, user, userAgent, ip, "auth.signup")
+}
+
 // LoginPassword دخول بكلمة المرور (للموظفين والأدوار التشغيلية غالباً).
 func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAgent, ip string) (*AuthResult, error) {
 	phone, ok := NormalizePhone(rawPhone)

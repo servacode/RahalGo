@@ -144,7 +144,13 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 	return users, total, rows.Err()
 }
 
-// UpdateUser يعدّل الاسم و/أو الحالة — يعيد ErrNotFound لمعرف غير موجود.
+// SetFullName يضبط اسم المستخدم (يُستعمل عند إكمال تسجيل حساب زبون).
+func (r *Repo) SetFullName(ctx context.Context, userID, name string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE users SET full_name = $2, updated_at = now() WHERE id = $1`, userID, name)
+	return err
+}
+
 // SetPhone يحدّث رقم هاتف المستخدم (بعد تأكيد الرمز على الرقم الجديد).
 func (r *Repo) SetPhone(ctx context.Context, userID, phone string) error {
 	_, err := r.db.Exec(ctx,
@@ -160,6 +166,7 @@ func (r *Repo) SetAvatar(ctx context.Context, userID, mediaID string) error {
 	return err
 }
 
+// UpdateUser يعدّل الاسم و/أو الحالة — يعيد ErrNotFound لمعرف غير موجود.
 func (r *Repo) UpdateUser(ctx context.Context, userID string, fullName, status, avatarMediaID, statusReason, phone, adminNotes *string) error {
 	tag, err := r.db.Exec(ctx, `
 		UPDATE users SET

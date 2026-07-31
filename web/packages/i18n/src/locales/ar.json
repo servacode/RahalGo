@@ -65,6 +65,24 @@
       "ops": "العمليات",
       "finance": "المالية",
       "admin": "مدير المنصة"
+    },
+    "categoryIcons": {
+      "food": "مطاعم ووجبات",
+      "grocery": "بقالة وسوبرماركت",
+      "pharmacy": "صيدليات",
+      "sweets": "حلويات",
+      "gifts": "هدايا",
+      "drinks": "مشروبات",
+      "clothes": "ألبسة",
+      "bakery": "مخابز",
+      "butcher": "لحوم",
+      "produce": "خضار وفواكه",
+      "flowers": "ورود",
+      "electronics": "إلكترونيات",
+      "books": "قرطاسية وكتب",
+      "baby": "مستلزمات أطفال",
+      "beauty": "تجميل وعناية",
+      "other": "أخرى"
     }
   },
   "shared": {
@@ -159,7 +177,27 @@
     "loginWithPassword": "بكلمة المرور",
     "loginWithOtp": "برمز التحقق",
     "sendOtp": "إرسال الرمز",
-    "changePhone": "تغيير الرقم"
+    "changePhone": "تغيير الرقم",
+    "rememberMe": "تذكّرني على هذا الجهاز",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "noAccount": "ليس لديك حساب؟",
+    "createAccount": "إنشاء حساب",
+    "haveAccount": "لديك حساب بالفعل؟",
+    "backToLogin": "العودة لتسجيل الدخول",
+    "resetTitle": "استعادة كلمة المرور",
+    "resetSubtitle": "أدخل رقمك ونرسل لك رمز تحقق لضبط كلمة مرور جديدة",
+    "resetSend": "إرسال رمز الاستعادة",
+    "resetConfirm": "حفظ كلمة المرور الجديدة",
+    "newPassword": "كلمة المرور الجديدة",
+    "signupTitle": "حساب جديد",
+    "signupSubtitle": "حساب زبون — للتسوّق والطلب في الرقة",
+    "signupSend": "إرسال رمز التأكيد",
+    "signupConfirm": "إنشاء الحساب",
+    "fullName": "الاسم الكامل",
+    "otpSentTo": "أرسلنا رمز التحقق إلى",
+    "resendOtp": "إعادة إرسال الرمز",
+    "passwordHint": "٨ محارف على الأقل",
+    "staffOnly": "حسابات المتاجر والسائقين والمندوبين تُنشأ عبر المنصة أو مندوب معتمد"
   },
   "orders": {
     "title": "الطلبات",

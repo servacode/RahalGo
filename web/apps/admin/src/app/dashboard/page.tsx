@@ -60,7 +60,7 @@ export default function DashboardPage() {
     <div>
       <h1 className="text-2xl font-bold">
         {m.admin.dashboard.welcome}
-        {user?.full_name ? `${m.common.listSeparator}${user.full_name}` : ""} 👋
+        {user?.full_name ? `${m.common.listSeparator}${user.full_name}` : ""}
       </h1>
 
       {stats && (

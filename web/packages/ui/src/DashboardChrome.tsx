@@ -12,6 +12,9 @@ import { LiveNotifications, useLiveRefresh } from "./Notifications";
 import { TopBar, TopBarChip, TopBarLink, WalletPill, Avatar } from "./topbar";
 import {
   IconWallet,
+  IconStar,
+  IconTrendUp,
+  IconTrendDown,
   IconLogout,
   IconHamburger,
   IconClose,
@@ -207,10 +210,10 @@ export function DashboardChrome({
               tone="accent"
               title={m.terms.myRating}
             >
+              <IconStar size={14} className="fill-accent text-accent" />
               <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
-              <span className="text-accent">★</span>
-              {rep.rating.trend === "up" && <span className="text-success">▲</span>}
-              {rep.rating.trend === "down" && <span className="text-danger">▼</span>}
+              {rep.rating.trend === "up" && <IconTrendUp size={13} className="text-success" />}
+              {rep.rating.trend === "down" && <IconTrendDown size={13} className="text-danger" />}
             </TopBarLink>
           )}
           {walletHref && (

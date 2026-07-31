@@ -60,7 +60,7 @@ export function ReputationReviews({ api }: { api: ApiFn }) {
       <PageHeader icon={IconStar} title={T.ratings} subtitle={R.reviewsHint} />
 
       <StatGrid>
-        <StatCard label={T.avgRating} value={`${data.rating.avg.toFixed(1)} ★`} tone="accent" />
+        <StatCard label={T.avgRating} value={data.rating.avg.toFixed(1)} icon={IconStar} tone="accent" />
         <StatCard label={T.ratingsCount} value={data.rating.count} />
         <StatCard label={T.myRating} value={trendText} />
       </StatGrid>

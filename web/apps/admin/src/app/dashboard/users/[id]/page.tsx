@@ -207,8 +207,8 @@ export default function UserProfilePage() {
   if (feedback?.avg_received != null) {
     stats.push({
       label: P.avgRating,
-      value: `${feedback.avg_received.toFixed(1)} ★`,
-      icon: <IconStar className="text-accent" />,
+      value: feedback.avg_received.toFixed(1),
+      icon: <IconStar className="fill-accent text-accent" />,
     });
   }
   if (has("driver")) {
@@ -612,10 +612,10 @@ export default function UserProfilePage() {
                         #{fmt.format(rt.order_number)}
                       </button>
                       <span className="text-ink-muted">{rt.merchant_name}</span>
-                      <span className="text-accent-dark">★ {rt.merchant_stars}</span>
+                      <span className="flex items-center gap-1 text-accent-dark"><IconStar size={12} className="fill-accent-dark" />{rt.merchant_stars}</span>
                       {rt.driver_stars != null && (
                         <span className="text-xs text-ink-muted">
-                          ({m.admin.ordersPage.rating.driver}: ★ {rt.driver_stars})
+                          ({m.admin.ordersPage.rating.driver}: {rt.driver_stars})
                         </span>
                       )}
                       {rt.comment && (
@@ -645,7 +645,7 @@ export default function UserProfilePage() {
                       <Badge variant={rt.as === "driver" ? "primary" : "warning"}>
                         {rt.as === "driver" ? P.asDriver : P.asMerchant}
                       </Badge>
-                      <span className="text-accent-dark">★ {rt.stars}</span>
+                      <span className="flex items-center gap-1 text-accent-dark"><IconStar size={12} className="fill-accent-dark" />{rt.stars}</span>
                       <button
                         type="button"
                         onClick={() => router.push(`/dashboard/orders?q=${rt.order_number}`)}

@@ -91,6 +91,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/refresh", s.handleRefresh)
 			r.Post("/logout", s.handleLogout)
 			r.Post("/sso", s.handleSSO) // استبدال رمز التسليم بجلسة (عام)
+			r.Post("/password/reset/request", s.handleResetRequest)
+			r.Post("/password/reset/confirm", s.handleResetConfirm)
+			r.Post("/signup/request", s.handleSignupRequest) // إنشاء حساب زبون فقط
+			r.Post("/signup/confirm", s.handleSignupConfirm)
 
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireAuth)

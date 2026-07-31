@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  IconCheck,
+  IconCopy,
   useLiveRefresh,
   PageHeader,
   Button,
@@ -61,7 +63,7 @@ function CopyCode({ code }: { code: string }) {
     >
       {code}
       <span className="text-xs font-normal">
-        {copied ? m.admin.sales.copied : `📋`}
+        {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
       </span>
     </button>
   );

@@ -7,7 +7,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconView, IconViewOff } from "./icons";
+import { IconView, IconViewOff, IconCheck } from "./icons";
 
 const m = getMessages(defaultLocale);
 
@@ -58,14 +58,14 @@ export function Input({
   return (
     <div>
       {label && (
-        <label htmlFor={id} className="mb-1 flex items-center gap-1.5 text-sm font-medium">
-          {icon && <span className="text-ink-muted [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
+        <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink">
           {label}
         </label>
       )}
       <div className="relative">
-        {!label && icon && (
-          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-muted [&>svg]:h-4 [&>svg]:w-4">
+        {/* الأيقونة داخل الحقل دائماً — لا تُعلَّق بجانب العنوان */}
+        {icon && (
+          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-muted [&>svg]:h-[18px] [&>svg]:w-[18px]">
             {icon}
           </span>
         )}
@@ -73,9 +73,9 @@ export function Input({
           id={id}
           type={effectiveType}
           {...props}
-          className={`w-full rounded-control border bg-surface px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 ${
-            error ? "border-danger" : "border-line"
-          } ${!label && icon ? "ps-9" : ""} ${isPassword ? "pe-10" : ""} ${className}`}
+          className={`w-full rounded-control border bg-surface py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+            error ? "border-danger" : "border-line hover:border-ink-muted/40"
+          } ${icon ? "ps-10" : "ps-3"} ${isPassword ? "pe-10" : "pe-3"} ${className}`}
         />
         {isPassword && (
           <button
@@ -83,7 +83,7 @@ export function Input({
             onClick={() => setReveal((r) => !r)}
             tabIndex={-1}
             aria-label={reveal ? m.shared.hidePassword : m.shared.showPassword}
-            className="absolute inset-y-0 end-3 flex items-center text-ink-muted transition-colors hover:text-ink [&>svg]:h-4 [&>svg]:w-4"
+            className="absolute inset-y-0 end-3 flex items-center text-ink-muted transition-colors hover:text-ink [&>svg]:h-[18px] [&>svg]:w-[18px]"
           >
             {reveal ? <IconViewOff /> : <IconView />}
           </button>
@@ -91,6 +91,35 @@ export function Input({
       </div>
       {error && <p className="mt-1 text-xs text-danger">{error}</p>}
     </div>
+  );
+}
+
+// ---------- Checkbox ----------
+
+/** مربّع اختيار موحّد — مرسوم بالتوكنز لا بمظهر المتصفح الافتراضي. */
+export function Checkbox({
+  label,
+  id,
+  className = "",
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string }) {
+  return (
+    <label htmlFor={id} className={`group flex cursor-pointer items-center gap-2 text-sm ${className}`}>
+      <span className="relative flex h-[18px] w-[18px] shrink-0 items-center justify-center">
+        <input
+          id={id}
+          type="checkbox"
+          {...props}
+          className="peer h-full w-full cursor-pointer appearance-none rounded-[5px] border border-line bg-surface transition-colors checked:border-primary checked:bg-primary focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:outline-none"
+        />
+        <IconCheck
+          size={12}
+          strokeWidth={3.5}
+          className="pointer-events-none absolute text-white opacity-0 transition-opacity peer-checked:opacity-100"
+        />
+      </span>
+      <span className="text-ink-muted transition-colors group-hover:text-ink">{label}</span>
+    </label>
   );
 }
 

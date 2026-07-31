@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  IconNote,
+  IconEdit,
+  Stars,
   useLiveEvent,
   useLiveStatus,
   Button,
@@ -502,7 +505,7 @@ function OrderDetailModal({
               <IconLocation size={15} className="mt-0.5 shrink-0" />
               {order.address_text}
             </p>
-            {order.notes && <p className="mt-1 text-sm text-ink-muted">📝 {order.notes}</p>}
+            {order.notes && <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-muted"><IconNote size={14} />{order.notes}</p>}
           </FormSection>
 
           <FormSection title={m.admin.ordersPage.itemsSection} icon={<IconOrder />}>
@@ -520,7 +523,7 @@ function OrderDetailModal({
                       {it.options.map((op) => `${op.group}: ${op.name}`).join(" · ")}
                     </p>
                   )}
-                  {it.note && <p className="mt-0.5 text-xs text-accent-dark">✎ {it.note}</p>}
+                  {it.note && <p className="mt-0.5 text-xs text-accent-dark"><IconEdit size={11} className="inline align-[-1px]" /> {it.note}</p>}
                 </li>
               ))}
             </ul>
@@ -633,12 +636,12 @@ function OrderDetailModal({
           {order.rating && (
             <FormSection title={m.admin.ordersPage.rating.title} icon={<IconStar />}>
               <div className="space-y-2 text-sm">
-                <StarsRow
+                <LabeledStars
                   label={m.admin.ordersPage.rating.merchant}
                   stars={order.rating.merchant_stars}
                 />
                 {order.rating.driver_stars != null && (
-                  <StarsRow
+                  <LabeledStars
                     label={m.admin.ordersPage.rating.driver}
                     stars={order.rating.driver_stars}
                   />
@@ -660,19 +663,13 @@ function OrderDetailModal({
   );
 }
 
-function StarsRow({ label, stars }: { label: string; stars: number }) {
+
+/** سطر تقييم بعنوان — يستعمل نجوم المكتبة المركزية. */
+function LabeledStars({ label, stars }: { label: string; stars: number }) {
   return (
     <div className="flex items-center gap-2">
       <span className="w-24 text-ink-muted">{label}</span>
-      <span className="flex gap-0.5" aria-label={`${stars}/5`}>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <IconStar
-            key={i}
-            size={16}
-            className={i <= stars ? "fill-accent text-accent" : "text-line"}
-          />
-        ))}
-      </span>
+      <Stars value={stars} size="md" />
     </div>
   );
 }

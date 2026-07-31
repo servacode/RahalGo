@@ -11,6 +11,7 @@ import (
 // صفّ إشعار في صندوق أحد. القاعدة الفاصلة:
 //   - إشعار (s.notify) = شخص يحتاج أن *يعلم*.
 //   - touch            = شاشة تحتاج أن *تتحدّث*.
+//
 // entity هو نوع الحدث الذي تشترك به الواجهة: useLiveRefresh(["zone"], load).
 func (s *Server) touch(entity string, topics ...string) {
 	if len(topics) == 0 {

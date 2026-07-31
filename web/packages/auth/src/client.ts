@@ -55,20 +55,32 @@ export interface AuthResult {
 const ACCESS_KEY = "rahalgo_access";
 const REFRESH_KEY = "rahalgo_refresh";
 
+/**
+ * خزنة التوكنات. "تذكّرني" ليست زينة: عند تفعيلها تُحفظ الجلسة في localStorage
+ * فتبقى بعد إغلاق المتصفح، وعند تركها تُحفظ في sessionStorage فتموت مع اللسان —
+ * وهذا ما يهمّ فعلاً على جهاز مشترك.
+ */
 export const tokenStore = {
   get access() {
-    return typeof window === "undefined" ? null : localStorage.getItem(ACCESS_KEY);
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(ACCESS_KEY) ?? sessionStorage.getItem(ACCESS_KEY);
   },
   get refresh() {
-    return typeof window === "undefined" ? null : localStorage.getItem(REFRESH_KEY);
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(REFRESH_KEY) ?? sessionStorage.getItem(REFRESH_KEY);
   },
-  set(tokens: TokenPair) {
-    localStorage.setItem(ACCESS_KEY, tokens.access_token);
-    localStorage.setItem(REFRESH_KEY, tokens.refresh_token);
+  /** remember=false يقصر الجلسة على لسان المتصفح الحالي. */
+  set(tokens: TokenPair, remember = true) {
+    this.clear();
+    const store = remember ? localStorage : sessionStorage;
+    store.setItem(ACCESS_KEY, tokens.access_token);
+    store.setItem(REFRESH_KEY, tokens.refresh_token);
   },
   clear() {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    for (const store of [localStorage, sessionStorage]) {
+      store.removeItem(ACCESS_KEY);
+      store.removeItem(REFRESH_KEY);
+    }
   },
 };
 
@@ -131,6 +143,28 @@ export const authApi = {
     rawRequest<AuthResult>("/api/v1/auth/otp/verify", {
       method: "POST",
       body: JSON.stringify({ phone, code }),
+    }),
+  /** استعادة كلمة المرور: إرسال الرمز ثم ضبط كلمة جديدة (تفتح جلسة مباشرة). */
+  requestReset: (phone: string) =>
+    rawRequest<{ sent: boolean }>("/api/v1/auth/password/reset/request", {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    }),
+  confirmReset: (phone: string, code: string, password: string) =>
+    rawRequest<AuthResult>("/api/v1/auth/password/reset/confirm", {
+      method: "POST",
+      body: JSON.stringify({ phone, code, password }),
+    }),
+  /** إنشاء حساب زبون — لا يُنشئ أي دور آخر. */
+  requestSignup: (phone: string) =>
+    rawRequest<{ sent: boolean }>("/api/v1/auth/signup/request", {
+      method: "POST",
+      body: JSON.stringify({ phone }),
+    }),
+  confirmSignup: (phone: string, code: string, full_name: string, password: string) =>
+    rawRequest<AuthResult>("/api/v1/auth/signup/confirm", {
+      method: "POST",
+      body: JSON.stringify({ phone, code, full_name, password }),
     }),
   sso: (code: string) =>
     rawRequest<AuthResult>("/api/v1/auth/sso", {

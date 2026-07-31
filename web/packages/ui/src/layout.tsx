@@ -8,6 +8,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { IconStar } from "./icons";
 
 const m = getMessages(defaultLocale);
 const fmt = new Intl.NumberFormat("ar-SY");
@@ -217,12 +218,52 @@ export function StatCard({
 // ---------- النجوم ----------
 
 /** عرض التقييم بالنجوم — نسخة واحدة بلون التمييز المركزي. */
-export function Stars({ value, size = "md" }: { value: number; size?: "sm" | "md" }) {
+export function Stars({
+  value,
+  size = "md",
+  onChange,
+}: {
+  value: number;
+  size?: "sm" | "md" | "lg";
+  /** عند تمريرها تصبح النجوم قابلة للنقر (وضع التقييم) */
+  onChange?: (v: number) => void;
+}) {
   const n = Math.max(0, Math.min(5, Math.round(value)));
+  const px = { sm: 14, md: 18, lg: 30 }[size];
+  // نجوم من مجموعة الأيقونات لا من محرف ★ — تتبع التوكنز وتظهر متطابقة في كل نظام
   return (
-    <span dir="ltr" className={`text-accent ${size === "sm" ? "text-sm" : ""}`}>
-      {"★".repeat(n)}
-      <span className="text-line">{"★".repeat(5 - n)}</span>
+    <span
+      dir="ltr"
+      className="inline-flex items-center gap-0.5 align-middle"
+      role={onChange ? "radiogroup" : undefined}
+      aria-label={`${n}/5`}
+    >
+      {[1, 2, 3, 4, 5].map((i) => {
+        const star = (
+          <IconStar
+            size={px}
+            strokeWidth={1.8}
+            className={i <= n ? "fill-accent text-accent" : "text-line"}
+          />
+        );
+        return onChange ? (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onChange(i)}
+            aria-label={String(i)}
+            aria-checked={i === n}
+            role="radio"
+            className="rounded-control p-0.5 transition-transform hover:scale-110"
+          >
+            {star}
+          </button>
+        ) : (
+          <span key={i}>{star}</span>
+        );
+      })}
     </span>
   );
 }
+
+

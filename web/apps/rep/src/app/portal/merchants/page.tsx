@@ -4,6 +4,7 @@
 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  CategoryIcon,
   Badge,
   PageContainer,
   PageHeader,
@@ -56,7 +57,7 @@ export default function ClientsPage() {
                     <img src={logo} alt="" className="h-11 w-11 rounded-control object-cover" />
                   ) : (
                     <span className="flex h-11 w-11 items-center justify-center rounded-control bg-primary-light">
-                      {mr.category_icon}
+                      <CategoryIcon name={mr.category_icon} size={16} />
                     </span>
                   )
                 }

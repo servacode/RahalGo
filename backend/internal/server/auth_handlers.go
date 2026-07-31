@@ -171,6 +171,78 @@ func (s *Server) handleMyLogins(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
+// --- استعادة كلمة المرور: رمز على الهاتف ثم كلمة مرور جديدة ---
+
+func (s *Server) handleResetRequest(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.RequestPasswordReset(r.Context(), req.Phone); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"sent": true})
+}
+
+func (s *Server) handleResetConfirm(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone    string `json:"phone"`
+		Code     string `json:"code"`
+		Password string `json:"password"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	res, err := s.identity.ConfirmPasswordReset(r.Context(), req.Phone, req.Code, req.Password, r.UserAgent(), clientIP(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, res)
+}
+
+// --- إنشاء حساب زبون: رمز تأكيد ثم اسم وكلمة مرور. الزبون فقط، لا دور آخر. ---
+
+func (s *Server) handleSignupRequest(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.RequestSignup(r.Context(), req.Phone); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"sent": true})
+}
+
+func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone    string `json:"phone"`
+		Code     string `json:"code"`
+		FullName string `json:"full_name"`
+		Password string `json:"password"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	res, err := s.identity.ConfirmSignup(r.Context(), req.Phone, req.Code,
+		strings.TrimSpace(req.FullName), req.Password, r.UserAgent(), clientIP(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, res)
+}
+
 // handleHandoff ينشئ رمز تسليم لمرّة واحدة (SSO): يفتح المستخدم تطبيقاً آخر مسجّلاً
 // بلا كلمة مرور. الرمز قصير العمر (60ث) ويُستهلك مرّة واحدة.
 func (s *Server) handleHandoff(w http.ResponseWriter, r *http.Request) {

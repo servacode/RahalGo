@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, Select } from "@rahalgo/ui";
+import { IconEdit, Button, Input, Select } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
@@ -143,7 +143,7 @@ export default function CartPage() {
                 {l.option_names.length > 0 && (
                   <p className="text-xs text-ink-muted">{l.option_names.join(m.common.listSeparator)}</p>
                 )}
-                {l.note && <p className="text-xs text-accent-dark">✎ {l.note}</p>}
+                {l.note && <p className="text-xs text-accent-dark"><IconEdit size={11} className="inline align-[-1px]" /> {l.note}</p>}
               </div>
               <span className="text-sm font-bold text-primary-dark">
                 {fmt.format(l.price * l.qty)}

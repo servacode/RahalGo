@@ -167,7 +167,7 @@ function JoinForm() {
             <option value="">{J.pickCategory}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.icon} {c.name}
+                {c.name}
               </option>
             ))}
           </Select>
