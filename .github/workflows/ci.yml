@@ -12,6 +12,21 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # الخدمات المالية منطقها في SQL (قيود CHECK ومعاملات ذرّية) — اختبارها
+    # بمحاكاة يختبر المحاكاة لا النظام، فيشتغل CI على قاعدة حقيقية بالهجرات نفسها.
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: rahalgo
+          POSTGRES_PASSWORD: rahalgo_test
+          POSTGRES_DB: rahalgo_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rahalgo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -23,6 +38,8 @@ jobs:
       - name: Build
         run: make build
       - name: Test
+        env:
+          TEST_DATABASE_URL: postgres://rahalgo:rahalgo_test@localhost:5432/rahalgo_test?sslmode=disable
         run: make test
 
   web:
