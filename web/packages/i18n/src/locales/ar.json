@@ -1120,7 +1120,12 @@
       "commentPlaceholder": "أخبرنا عن تجربتك (اختياري)",
       "submitRating": "إرسال التقييم",
       "rated": "شكراً لتقييمك 💚",
-      "reorder": "أعد الطلب"
+      "reorder": "أعد الطلب",
+      "statItems": "صنف",
+      "statTotal": "الإجمالي",
+      "itemsMore": "و{n} غيرها",
+      "openOrder": "تفاصيل الطلب",
+      "noItems": "بلا أصناف مسجّلة"
     },
     "wallet": {
       "title": "محفظتي",

@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
 const orderSelect = `
@@ -17,10 +18,19 @@ const orderSelect = `
 	       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       o.zone_id, z.name,
 	       o.payment_method, o.subtotal, o.delivery_fee, o.discount, o.total,
-	       o.wallet_paid, o.cash_due, o.promo_code, o.notes, o.cancel_reason, o.created_at
+	       o.wallet_paid, o.cash_due, o.promo_code, o.notes, o.cancel_reason, o.created_at,
+	       lm.thumb_path,
+	       -- ملخّص الأصناف في القائمة نفسها: «ماذا طلبتُ؟» أول سؤال يسأله صاحب
+	       -- الطلب، وكان يلزمه فتح الطلب ليعرف. العدد بالكمّيات لا بالأسطر
+	       -- (صنفان من الشيء نفسه سطرٌ واحد وقطعتان)، والمعاينة أول ثلاثة أسماء.
+	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
+	       COALESCE((SELECT string_agg(x.name, '، ' ORDER BY x.rn)
+	                 FROM (SELECT oi.name, row_number() OVER (ORDER BY oi.name) AS rn
+	                       FROM order_items oi WHERE oi.order_id = o.id LIMIT 3) x), '')
 	FROM orders o
 	JOIN users cu ON cu.id = o.customer_id
 	JOIN merchants mr ON mr.id = o.merchant_id
+	LEFT JOIN media lm ON lm.id = mr.logo_media_id
 	LEFT JOIN users dr ON dr.id = o.driver_id
 	LEFT JOIN delivery_zones z ON z.id = o.zone_id`
 
@@ -30,10 +40,14 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.MerchantID, &o.MerchantName, &o.DriverID, &o.DriverPhone,
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.Discount, &o.Total,
-		&o.WalletPaid, &o.CashDue, &o.PromoCode, &o.Notes, &o.CancelReason, &o.CreatedAt)
+		&o.WalletPaid, &o.CashDue, &o.PromoCode, &o.Notes, &o.CancelReason, &o.CreatedAt,
+		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview)
 	if err != nil {
 		return nil, err
 	}
+	// بادئة "/media/" تُضاف هنا مرّة واحدة لكل قارئ للطلبات (زبون/متجر/إدارة/سائق)
+	// بدل أن يتذكّرها كل معالِج على حدة — ونسيانُها يعني صورةً لا تظهر.
+	o.MerchantLogoThumb = media.URLForPtr(o.MerchantLogoThumb)
 	return &o, nil
 }
 

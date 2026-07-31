@@ -9,6 +9,7 @@ import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
+  EntityCard,
   PageContainer,
   PageHeader,
   EmptyState,
@@ -16,8 +17,11 @@ import {
   useLiveRefresh,
   IconOrder,
   IconStar,
+  IconStore,
+  IconWallet,
+  IconCart,
 } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import RatingModal from "@/components/RatingModal";
 
@@ -37,6 +41,9 @@ interface Order {
   id: string;
   number: number;
   merchant_name: string;
+  merchant_logo_thumb_url: string | null;
+  items_count: number;
+  items_preview: string;
   status: string;
   total: number;
   created_at: string;
@@ -89,44 +96,90 @@ export default function MyOrdersPage() {
       {orders.length === 0 ? (
         <EmptyState icon={IconOrder} title={m.site.orders.empty} />
       ) : (
-        <ul className="space-y-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {orders.map((o) => {
             const rate = rateMap[o.id];
             const canRate = o.status === "delivered" && rate && !rate.rated;
+            const logo = mediaUrl(o.merchant_logo_thumb_url);
+            const more = o.items_count - o.items_preview.split("، ").filter(Boolean).length;
             return (
-              <li
+              <EntityCard
                 key={o.id}
-                className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-4"
-              >
-                <Link
-                  href={`/orders/${o.id}`}
-                  className="flex min-w-0 flex-1 flex-wrap items-center gap-3 hover:opacity-80"
-                >
-                  <span className="font-bold">#{fmtNum(o.number)}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm">{o.merchant_name}</span>
+                media={
+                  logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={logo} alt="" className="h-12 w-12 rounded-control object-cover" />
+                  ) : (
+                    <span className="flex h-12 w-12 items-center justify-center rounded-control bg-primary-light">
+                      <IconStore size={20} className="text-primary-dark" />
+                    </span>
+                  )
+                }
+                title={
+                  <span className="flex items-center gap-2">
+                    <span className="truncate">{o.merchant_name}</span>
+                    <span className="shrink-0 text-xs font-normal text-ink-muted" dir="ltr">
+                      #{fmtNum(o.number)}
+                    </span>
+                  </span>
+                }
+                /* «ماذا طلبتُ؟» أول سؤال يسأله صاحب الطلب — وكان يلزمه فتح
+                   الطلب ليعرف. الأصناف هنا مباشرةً تحت اسم المتجر. */
+                subtitle={
+                  o.items_preview
+                    ? more > 0
+                      ? `${o.items_preview} ${m.site.orders.itemsMore.replace("{n}", fmtNum(more))}`
+                      : o.items_preview
+                    : m.site.orders.noItems
+                }
+                badge={
                   <Badge variant={VARIANT[o.status] ?? "primary"}>
                     {STATUS_LABELS[o.status] ?? o.status}
                   </Badge>
-                  <span className="text-sm font-bold text-primary-dark">
-                    {fmtNum(o.total)} {m.common.currency}
-                  </span>
-                  <span className="text-xs text-ink-muted" dir="ltr">
-                    {fmtDateTime(o.created_at)}
-                  </span>
-                </Link>
-                {canRate && (
-                  <Button onClick={() => setRating(rate)} className="flex shrink-0 items-center gap-1.5">
-                    <IconStar size={15} />
-                    {m.site.rating.rateOrder}
-                  </Button>
-                )}
-                {o.status === "delivered" && rate?.rated && (
-                  <span className="flex shrink-0 items-center gap-1 text-xs text-success"><IconStar size={12} className="fill-success" />{m.site.rating.myTitle}</span>
-                )}
-              </li>
+                }
+                stats={[
+                  {
+                    label: m.site.orders.statItems,
+                    value: fmtNum(o.items_count),
+                    icon: <IconCart />,
+                  },
+                  {
+                    label: `${m.site.orders.statTotal} (${m.common.currency})`,
+                    value: fmtNum(o.total),
+                    icon: <IconWallet />,
+                  },
+                ]}
+                footer={<span dir="ltr">{fmtDateTime(o.created_at)}</span>}
+                actions={
+                  <>
+                    <Link
+                      href={`/orders/${o.id}`}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-page"
+                    >
+                      <IconOrder size={15} />
+                      {m.site.orders.openOrder}
+                    </Link>
+                    {canRate && (
+                      <Button
+                        onClick={() => setRating(rate)}
+                        className="flex flex-1 items-center justify-center gap-1.5 !py-1.5"
+                      >
+                        <IconStar size={15} />
+                        {m.site.rating.rateOrder}
+                      </Button>
+                    )}
+                    {o.status === "delivered" && rate?.rated && (
+                      <span className="flex flex-1 items-center justify-center gap-1 rounded-control bg-success/10 px-3 py-1.5 text-xs font-medium text-success">
+                        <IconStar size={12} className="fill-success" />
+                        {m.site.rating.myTitle}
+                      </span>
+                    )}
+                  </>
+                }
+              />
             );
           })}
-        </ul>
+        </div>
       )}
 
       {rating && (
