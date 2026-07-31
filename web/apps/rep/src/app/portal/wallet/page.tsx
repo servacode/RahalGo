@@ -9,11 +9,14 @@
  * وفوقه مجموعُه — الرقم الذي يبحث عنه أصلاً.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
+  StatementSheet,
+  currentMonthRange,
+  type StatementData,
   Input,
   Modal,
   PageContainer,
@@ -29,6 +32,7 @@ import {
   IconWarning,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const P = m.shared.payout;
@@ -49,6 +53,7 @@ const KIND_ORDER = [
 
 const ALL = "all";
 const REQUESTS = "requests";
+const STATEMENT = "statement";
 
 interface Tx {
   id: string;
@@ -80,8 +85,24 @@ function errText(err: unknown): string {
 }
 
 export default function WalletPage() {
+  const { user } = useAuth();
   const [asking, setAsking] = useState(false);
   const [tab, setTab] = useState(ALL);
+
+  // كشف الحساب يُجلب بمداه الخاص — لا يشتقّ من لمحة اللوحة (آخر 50) وإلا
+  // كان مستنداً مالياً ناقصاً بصمت.
+  const [range, setRange] = useState(currentMonthRange());
+  const [sheet, setSheet] = useState<StatementData | null>(null);
+  const [sheetLoading, setSheetLoading] = useState(false);
+
+  useEffect(() => {
+    if (tab !== STATEMENT) return;
+    setSheetLoading(true);
+    api<StatementData>(`/api/v1/rep/wallet?from=${range.from}&to=${range.to}`)
+      .then(setSheet)
+      .catch(() => setSheet(null))
+      .finally(() => setSheetLoading(false));
+  }, [tab, range]);
 
   const {
     data: statement,
@@ -113,6 +134,7 @@ export default function WalletPage() {
       { key: ALL, label: W.all, count: txs.length },
       ...(requests.length ? [{ key: REQUESTS, label: W.requests, count: requests.length }] : []),
       ...present.map((k) => ({ key: k, label: KIND_LABELS[k] ?? k, count: counts.get(k) })),
+      { key: STATEMENT, label: m.shared.statement.open },
     ];
   }, [txs, requests]);
 
@@ -151,11 +173,23 @@ export default function WalletPage() {
         <Tabs items={tabs} active={current} onChange={setTab} className="mb-3" />
 
         {/* شرح النوع: أسماء القيود المحاسبية ليست بديهية لمن لم يكتبها */}
-        {KIND_HINTS[current] && (
+        {current !== STATEMENT && KIND_HINTS[current] && (
           <p className="mb-3 text-xs leading-relaxed text-ink-muted">{KIND_HINTS[current]}</p>
         )}
 
-        {current === REQUESTS ? (
+        {current === STATEMENT ? (
+          <StatementSheet
+            data={sheet}
+            loading={sheetLoading}
+            from={range.from}
+            to={range.to}
+            onFrom={(from) => setRange((r) => ({ ...r, from }))}
+            onTo={(to) => setRange((r) => ({ ...r, to }))}
+            onQuick={(from, to) => setRange({ from, to })}
+            holderName={user?.full_name}
+            holderPhone={user?.phone}
+          />
+        ) : current === REQUESTS ? (
           <ul className="space-y-2">
             {requests.map((p) => (
               <ListRow

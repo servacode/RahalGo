@@ -14,6 +14,12 @@ export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } fro
 export { AccountSettings } from "./AccountSettings";
 export { NotificationsPage } from "./NotificationsPage";
 export {
+  StatementSheet,
+  currentMonthRange,
+  type StatementData,
+  type StatementTx,
+} from "./Statement";
+export {
   ReputationReviews,
   ReputationComplaints,
   type ReputationLabels,

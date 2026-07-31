@@ -115,3 +115,58 @@ func TestApplyTx_RollsBackWithCallerTransaction(t *testing.T) {
 		t.Fatalf("حركة نجت من تراجع معاملة المستدعي — الرصيد %d", balance)
 	}
 }
+
+// كشف الحساب مستند مالي: من يراجعه يجمع أسطره، فإن لم تُغلق المعادلة
+// (افتتاحي + حركات = ختامي) فقد الثقة بالمنصة كلها. وهذا يجب أن يصحّ **حتى
+// حين يُقصّ الكشف** عند السقف — وهي الحالة التي يسهل أن تنكسر بصمت.
+func TestStatement_BalancesEvenWhenTruncated(t *testing.T) {
+	pool := testdb.Pool(t)
+	svc := wallet.NewService(pool)
+	ctx := context.Background()
+	user := testdb.NewUser(t, pool, "customer")
+
+	for i := 0; i < 5; i++ {
+		if _, err := svc.Apply(ctx, user, 10_000, "topup", "", "شحن", nil); err != nil {
+			t.Fatalf("الشحن %d فشل: %v", i, err)
+		}
+	}
+
+	// كشف كامل
+	full, err := svc.Statement(ctx, user, wallet.StatementRange{Limit: 10})
+	if err != nil {
+		t.Fatalf("تعذّر الكشف الكامل: %v", err)
+	}
+	if full.Truncated {
+		t.Fatal("الكشف الكامل أُعلن مقصوصاً وهو ليس كذلك")
+	}
+	if got := sumTx(full.Transactions); full.Opening+got != full.Closing {
+		t.Fatalf("الكشف الكامل لا يتوازن: %d + %d ≠ %d", full.Opening, got, full.Closing)
+	}
+
+	// كشف مقصوص: ثلاثة أسطر من خمسة
+	cut, err := svc.Statement(ctx, user, wallet.StatementRange{Limit: 3})
+	if err != nil {
+		t.Fatalf("تعذّر الكشف المقصوص: %v", err)
+	}
+	if len(cut.Transactions) != 3 {
+		t.Fatalf("عدد الأسطر = %d، والمتوقع 3", len(cut.Transactions))
+	}
+	if !cut.Truncated {
+		t.Fatal("الكشف قُصّ ولم يُعلن ذلك — كشفٌ ناقص يصمت عن نقصه أسوأ من لا كشف")
+	}
+	// الافتتاحي يُحسب من المعروض لا من المدى، فيبقى الجمع صحيحاً بين يدَي المراجع
+	if got := sumTx(cut.Transactions); cut.Opening+got != cut.Closing {
+		t.Fatalf("الكشف المقصوص لا يتوازن: %d + %d ≠ %d", cut.Opening, got, cut.Closing)
+	}
+	if cut.Opening != 20_000 {
+		t.Fatalf("الافتتاحي المقصوص = %d، والمتوقع 20000 (سطران لم يُعرضا)", cut.Opening)
+	}
+}
+
+func sumTx(txs []wallet.Transaction) int64 {
+	var s int64
+	for _, t := range txs {
+		s += t.Amount
+	}
+	return s
+}

@@ -46,6 +46,7 @@ export {
   KeyRound as IconKey,
   UserPlus as IconSignup,
   BadgeCheck as IconVerified,
+  Printer as IconPrint,
   // تصنيفات المتاجر — أيقونة لكل نشاط بدل الإيموجي
   UtensilsCrossed as IconCatFood,
   ShoppingBag as IconCatGrocery,

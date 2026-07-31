@@ -43,3 +43,46 @@
   --breakpoint-lg: 1024px;
   --breakpoint-xl: 1280px;
 }
+
+/* ---------- الطباعة ----------
+ * الورقة المطبوعة مستندٌ مالي لا لقطةُ شاشة: تُطوى فيها كل عناصر التنقّل
+ * والأزرار (لا معنى لزرّ على ورق)، ويُطبع المقصود وحده بعرض الصفحة كاملاً.
+ * العنصر المراد طبعه يُعلَّم data-print="sheet"، وما لا يُطبع بـ .no-print.
+ */
+@media print {
+  .no-print,
+  header,
+  nav,
+  aside,
+  button {
+    display: none !important;
+  }
+
+  /* الورقة تخرج من تدفّق الصفحة لتملأها: حاويات اللوحة تحصرها بعرض ضيّق */
+  [data-print="sheet"] {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: #fff;
+    color: #000;
+  }
+
+  /* الجدول لا يُقطع سطراً في منتصفه بين صفحتين */
+  [data-print="sheet"] tr,
+  [data-print="sheet"] li {
+    break-inside: avoid;
+  }
+
+  /* رأس الجدول يتكرّر في كل صفحة — كشفٌ بلا رؤوس أعمدة في صفحته الثانية يُقرأ غلطاً */
+  [data-print="sheet"] thead {
+    display: table-header-group;
+  }
+
+  @page {
+    margin: 14mm;
+  }
+}

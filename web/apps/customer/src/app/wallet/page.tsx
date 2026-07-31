@@ -15,6 +15,9 @@ import {
   Card,
   Tabs,
   type TabItem,
+  StatementSheet,
+  currentMonthRange,
+  type StatementData,
   useLiveRefresh,
   IconWallet,
 } from "@rahalgo/ui";
@@ -29,6 +32,7 @@ const KIND_HINTS: Record<string, string> = m.shared.walletKindHints;
 /** ترتيب التبويبات من منظور الزبون: ماله أولاً، ثم ما صُرف منه. */
 const KIND_ORDER = ["topup", "order_payment", "refund", "compensation", "adjustment"];
 const ALL = "all";
+const STATEMENT = "statement";
 
 interface Tx {
   id: string;
@@ -47,6 +51,20 @@ export default function WalletPage() {
   const router = useRouter();
   const [st, setSt] = useState<Statement | null>(null);
   const [tab, setTab] = useState(ALL);
+
+  // كشف الحساب بمداه الخاص لا بلمحة الصفحة (آخر 50) — وإلا كان ناقصاً بصمت
+  const [range, setRange] = useState(currentMonthRange());
+  const [sheet, setSheet] = useState<StatementData | null>(null);
+  const [sheetLoading, setSheetLoading] = useState(false);
+
+  useEffect(() => {
+    if (tab !== STATEMENT) return;
+    setSheetLoading(true);
+    api<StatementData>(`/api/v1/my/wallet?from=${range.from}&to=${range.to}`)
+      .then(setSheet)
+      .catch(() => setSheet(null))
+      .finally(() => setSheetLoading(false));
+  }, [tab, range]);
 
   const load = useCallback(() => {
     api<Statement>("/api/v1/my/wallet")
@@ -76,6 +94,7 @@ export default function WalletPage() {
     return [
       { key: ALL, label: W.all, count: txs.length },
       ...present.map((k) => ({ key: k, label: KIND_LABELS[k] ?? k, count: counts.get(k) })),
+      { key: STATEMENT, label: m.shared.statement.open },
     ];
   }, [txs]);
 
@@ -103,11 +122,23 @@ export default function WalletPage() {
         <Tabs items={tabs} active={current} onChange={setTab} className="mb-3" />
 
         {/* شرح النوع: أسماء القيود المحاسبية ليست بديهية لمن لم يكتبها */}
-        {KIND_HINTS[current] && (
+        {current !== STATEMENT && KIND_HINTS[current] && (
           <p className="mb-3 text-xs leading-relaxed text-ink-muted">{KIND_HINTS[current]}</p>
         )}
 
-        {shown.length === 0 ? (
+        {current === STATEMENT ? (
+          <StatementSheet
+            data={sheet}
+            loading={sheetLoading}
+            from={range.from}
+            to={range.to}
+            onFrom={(from) => setRange((r) => ({ ...r, from }))}
+            onTo={(to) => setRange((r) => ({ ...r, to }))}
+            onQuick={(from, to) => setRange({ from, to })}
+            holderName={user?.full_name}
+            holderPhone={user?.phone}
+          />
+        ) : shown.length === 0 ? (
           <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
         ) : (
           <>

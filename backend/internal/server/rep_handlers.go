@@ -112,7 +112,8 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 
 // handleRepWallet كشف محفظة المندوب (العمولات والتسويات).
 func (s *Server) handleRepWallet(w http.ResponseWriter, r *http.Request) {
-	st, err := s.wallet.StatementFor(r.Context(), userIDFrom(r), 50)
+	// بلا مدى: لمحة اللوحة (آخر 50). بمدى: كشف حساب كامل قابل للطباعة.
+	st, err := s.wallet.Statement(r.Context(), userIDFrom(r), statementRange(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
