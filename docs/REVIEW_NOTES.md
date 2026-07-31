@@ -49,15 +49,20 @@
 | إعدادات الحساب | `ui → AccountSettings` |
 | السمعة | `ui → ReputationReviews/ReputationComplaints` |
 | التوكنز | `ui → tokens.ts + theme.css` |
-| نقاط الخادم الموحّدة | `/me/summary`، `/me/reputation`، `/me/avatar`، `/auth/phone/*`، `/auth/handoff`+`/auth/sso` |
+| المصادقة والهوية | `@rahalgo/auth` (client/provider/routing/LoginCard/SsoPage) |
+| تسجيل الدخول | شاشة واحدة في تطبيق المنصة تُوجّه حسب الدور (`homeFor`) — الإدارة معزولة عمداً |
+| الأدوار | `auth → ROLES / PANEL_ROLES / hasRole` |
+| الإشعارات | `ui → NotificationBell/Toast/useLiveNotifications` + `backend/internal/notifications` |
+| نقاط الخادم الموحّدة | `/me/summary`، `/me/reputation`، `/me/avatar`، `/me/notifications`، `/auth/phone/*`، `/auth/handoff`+`/auth/sso` |
 
 ### متبقٍّ للمركزية (الجولات القادمة)
 
-- **المصادقة**: `api.ts` و`auth.tsx` مكرّران 4 مرات (99٪ و90٪) → حزمة `@rahalgo/auth`،
-  وشاشة دخول واحدة تُوجّه حسب الدور (الإدارة معزولة).
-- **اللحظي والإشعارات**: 3 صفحات حيّة من ~45، ونوعا حدث من ~26، والمندوب محظور من
-  الويبسوكِت، ولا جدول إشعارات → جدول دائم + بثّ لكل حدث + جرس مركزي في `DashboardChrome`.
+- **بقية أحداث الإشعارات**: التذاكر وردودها، التقييمات، إسناد السائق، تغيير حالة
+  الحساب، الإغلاق الطارئ للمتجر. البنية جاهزة — كل حدث سطر واحد.
 - **الجداول**: `DataView` مستعمل في الإدارة فقط؛ ~18 قائمة يدوية في بقية اللوحات.
+- **الصفحات الساكنة**: بقيت صفحات تجلب مرة واحدة (تذاكر/حسابات/تقارير الإدارة) —
+  تُربط بالبث لتصبح حيّة.
+- **تعميم `Card`/`ListRow`/`StatCard`** على ما تبقّى من الكروت اليدوية.
 
 
 ---
