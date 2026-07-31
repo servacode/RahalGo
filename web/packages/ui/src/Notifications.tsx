@@ -59,6 +59,15 @@ function fan<T>(set: Set<(v: T) => void>, v: T) {
 const emitKind = (kind: string) => fan(listeners, kind);
 const emitEvent = (e: LiveEvent) => fan(eventListeners, e);
 
+/**
+ * emitLocal يبثّ حدثاً **محلياً** (بلا خادم) لبقية أجزاء التطبيق المفتوح.
+ * ليس كل تغيير يمرّ عبر البث الحي: تغيير المستخدم صورته أو اسمه يخصّ متصفحه
+ * وحده، وكان الشريط العلوي لا يعلم به فتبقى الصورة القديمة حتى تحديث الصفحة.
+ */
+export function emitLocal(kind: string) {
+  emitKind(kind);
+}
+
 /** يستقبل رسائل البث الخام — لمن يحتاج أدق من الإشعارات (تتبّع طلب مثلاً). */
 export function useLiveEvent(onEvent: (e: LiveEvent) => void) {
   const fn = useRef(onEvent);
@@ -249,11 +258,14 @@ export function LiveNotifications({
   wsUrl,
   token,
   Link,
+  allHref,
 }: {
   api: ApiFn;
   wsUrl: string;
   token: string | null;
   Link: LinkType;
+  /** مسار صفحة الإشعارات الكاملة في هذا التطبيق */
+  allHref?: string;
 }) {
   const notif = useLiveNotifications(api, wsUrl, token);
   return (
@@ -263,6 +275,7 @@ export function LiveNotifications({
         unread={notif.unread}
         markRead={notif.markRead}
         Link={Link}
+        allHref={allHref}
       />
       <NotificationToast notification={notif.toast} onDismiss={notif.dismissToast} />
     </>
@@ -308,11 +321,13 @@ export function NotificationBell({
   unread,
   markRead,
   Link,
+  allHref,
 }: {
   items: AppNotification[];
   unread: number;
   markRead: (id?: string) => void;
   Link: LinkType;
+  allHref?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -391,6 +406,14 @@ export function NotificationBell({
                 );
               })}
             </ul>
+          )}
+          {allHref && (
+            <Link
+              href={allHref}
+              className="block border-t border-line px-3 py-2 text-center text-sm font-medium text-primary hover:bg-page"
+            >
+              {N.viewAll}
+            </Link>
           )}
         </div>
       )}

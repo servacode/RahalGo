@@ -58,9 +58,11 @@ export function DashboardChrome({
   shopUrl,
   shopLabel,
   showRating = false,
+  ratingLabel,
   topbarStart,
   wsUrl,
   token,
+  notificationsHref,
   children,
 }: {
   brand: string;
@@ -78,11 +80,15 @@ export function DashboardChrome({
   shopUrl?: string;
   shopLabel?: string;
   showRating?: boolean;
+  /** تسمية شارة التقييم — تختلف بالدور (تقييمي للمتجر، تقييم متاجري للمندوب) */
+  ratingLabel?: string;
   topbarStart?: ReactNode;
   /** عنوان قناة البث الحي (ws://…/api/v1/ws) */
   wsUrl?: string;
   /** توكن الوصول للبث — بلا ترويسات في WebSocket */
   token?: string | null;
+  /** مسار صفحة الإشعارات الكاملة في هذا التطبيق */
+  notificationsHref?: string;
   children: ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -98,8 +104,9 @@ export function DashboardChrome({
     loadSummary();
   }, [loadSummary, pathname]);
 
-  // الرصيد والتقييم في الشريط العلوي يتحدّثان لحظياً بلا إعادة تحميل
-  useLiveRefresh(["wallet", "rating"], loadSummary);
+  // الرصيد والتقييم والصورة في الشريط العلوي تتحدّث لحظياً بلا إعادة تحميل
+  // ("profile" حدث محلي يبثّه AccountSettings عند تغيير الصورة أو الرقم)
+  useLiveRefresh(["wallet", "rating", "profile"], loadSummary);
 
   useEffect(() => setMenuOpen(false), [pathname]);
 
@@ -202,13 +209,13 @@ export function DashboardChrome({
             </>
           }
         >
-          <LiveNotifications api={api} wsUrl={wsUrl ?? ""} token={token ?? null} Link={Link} />
+          <LiveNotifications api={api} wsUrl={wsUrl ?? ""} token={token ?? null} Link={Link} allHref={notificationsHref} />
           {showRating && rep && rep.rating.count > 0 && (
             <TopBarLink
               Link={Link}
               href={ratingHref ?? accountHref}
               tone="accent"
-              title={m.terms.myRating}
+              title={ratingLabel ?? m.terms.myRating}
             >
               <IconStar size={14} className="fill-accent text-accent" />
               <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>

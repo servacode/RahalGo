@@ -15,6 +15,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -27,10 +28,11 @@ type noopPublisher struct{}
 
 func (noopPublisher) Publish(string, any) {}
 
-// Notifier واجهة الإشعارات المركزية — يستعملها المحرك ليُعلم من يخصّه المال
-// (عمولة المندوب مثلاً). تُحقن بعد الإنشاء لأن خدمة الإشعارات تُبنى في الخادم.
+// Notifier واجهة الإشعارات المركزية — يستعملها المحرك ليُعلم أطراف الطلب بما يقع.
+// تُحقن بعد الإنشاء لأن خدمة الإشعارات تُبنى في الخادم.
 type Notifier interface {
-	NotifyWallet(ctx context.Context, userID, title, body, href string)
+	Notify(ctx context.Context, in notifications.Input)
+	NotifyRoles(ctx context.Context, roles []string, in notifications.Input)
 }
 
 type Service struct {
@@ -231,6 +233,7 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	created, err := s.GetByID(ctx, orderID)
 	if err == nil {
 		s.publishOrder(created)
+		s.notifyCreated(ctx, created)
 	}
 	return created, err
 }

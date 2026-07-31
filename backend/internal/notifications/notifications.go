@@ -141,15 +141,16 @@ func (s *Service) NotifyRoles(ctx context.Context, roles []string, in Input) {
 }
 
 // List إشعارات المستخدم (الأحدث أولاً) مع عدد غير المقروء.
-func (s *Service) List(ctx context.Context, userID string, limit int) ([]Notification, int, error) {
-	if limit <= 0 || limit > 100 {
+// kind فارغ = كل الأنواع (الجرس يطلب الأحدث، والصفحة الكاملة تفلتر وتوسّع الحد).
+func (s *Service) List(ctx context.Context, userID string, limit int, kind string) ([]Notification, int, error) {
+	if limit <= 0 || limit > 200 {
 		limit = 30
 	}
 	rows, err := s.db.Query(ctx, `
 		SELECT id, kind, title, body, entity, entity_id, href,
 		       (read_at IS NOT NULL), created_at::text
-		FROM notifications WHERE user_id = $1
-		ORDER BY created_at DESC LIMIT $2`, userID, limit)
+		FROM notifications WHERE user_id = $1 AND ($3 = '' OR kind = $3)
+		ORDER BY created_at DESC LIMIT $2`, userID, limit, kind)
 	if err != nil {
 		return nil, 0, err
 	}

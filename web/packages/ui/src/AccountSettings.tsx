@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
+import { emitLocal } from "./Notifications";
 import { IconUser, IconLock, IconPhone } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -82,6 +83,7 @@ export function AccountSettings({
       const res = await api<{ avatar_thumb_url: string }>("/api/v1/me/avatar", { method: "POST", body: fd });
       setAvatar(res.avatar_thumb_url);
       setMsg(A.photoSaved);
+      emitLocal("profile"); // الشريط العلوي يلتقط الصورة الجديدة فوراً
     } catch (err) {
       setError(errText(err));
     }
@@ -95,6 +97,7 @@ export function AccountSettings({
       await api("/api/v1/me/avatar", { method: "DELETE" });
       setAvatar(null);
       setMsg(A.photoSaved);
+      emitLocal("profile");
     } catch (err) {
       setError(errText(err));
     }
@@ -148,6 +151,7 @@ export function AccountSettings({
         body: JSON.stringify({ phone: newPhone, code: phoneCode }),
       });
       setMsg(A.phoneSaved);
+      emitLocal("profile");
       setOtpSent(false);
       setNewPhone("");
       setPhoneCode("");
