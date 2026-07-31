@@ -2,6 +2,7 @@
 @import "@rahalgo/ui/theme.css";
 /* مسح مصادر الحزمة المشتركة لتوليد فئات مكوناتها */
 @source "../../../../packages/ui/src";
+@source "../../../../packages/auth/src";
 
 body {
   background-color: var(--color-page);

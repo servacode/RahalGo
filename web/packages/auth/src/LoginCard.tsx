@@ -329,51 +329,64 @@ export function LoginCard({
   const isAuxMode = mode === "reset" || mode === "signup";
 
   return (
-    <div className="flex flex-1 items-center justify-center p-4">
-      <div className="w-full max-w-[26rem]">
-        <div className="rounded-card border border-line bg-surface p-7 shadow-[0_1px_2px_rgba(16,24,40,.04),0_8px_24px_-12px_rgba(16,24,40,.12)] sm:p-8">
-          <div className="mb-7 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-card bg-primary text-2xl font-bold text-white shadow-sm">
+    // خلفية موحّدة بلمسة العلامة: تدرّج ناعم من لون العلامة الفاتح إلى لون الصفحة،
+    // فلا تبقى شاشة الدخول رمادية مسطّحة.
+    <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-gradient-to-b from-primary-light/50 via-page to-page p-4">
+      {/* هالتان لونيتان خفيفتان تعطيان الخلفية عمقاً بلا ضجيج */}
+      <div className="pointer-events-none absolute -top-24 start-1/4 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 end-1/4 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
+
+      <div className="relative w-full max-w-[25rem]">
+        <div className="overflow-hidden rounded-card border border-line/80 bg-surface shadow-[0_1px_3px_rgba(16,24,40,.05),0_12px_40px_-16px_rgba(16,24,40,.2)]">
+          {/* رأس البطاقة — شريط بلون العلامة يحمل الشعار، فتبدو مؤطّرة لا سادة */}
+          <div className="flex flex-col items-center gap-3 bg-gradient-to-b from-primary to-primary-dark px-7 pb-6 pt-7 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-card bg-white/15 text-2xl font-bold text-white ring-1 ring-white/25 backdrop-blur">
               {m.terms.brandInitial}
             </div>
-            <h1 className="text-xl font-bold tracking-tight">{head.title}</h1>
-            {head.subtitle && (
-              <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{head.subtitle}</p>
-            )}
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-white">{head.title}</h1>
+              {head.subtitle && (
+                <p className="mx-auto mt-1 max-w-[20rem] text-sm leading-relaxed text-white/80">
+                  {head.subtitle}
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* مبدّل طريقة الدخول — يظهر في وضع الدخول فقط */}
-          {methods === "both" && !isAuxMode && (
-            <div role="group" className="mb-6 flex rounded-control bg-page p-1">
-              {(["password", "otp"] as const).map((mo) => (
-                <button
-                  key={mo}
-                  type="button"
-                  onClick={() => go(mo)}
-                  className={`flex-1 rounded-[7px] px-3 py-1.5 text-sm transition-all ${
-                    mode === mo
-                      ? "bg-surface font-medium text-primary-dark shadow-sm"
-                      : "text-ink-muted hover:text-ink"
-                  }`}
-                >
-                  {mo === "password" ? A.loginWithPassword : A.loginWithOtp}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="p-6 sm:p-7">
+            {/* مبدّل طريقة الدخول — يظهر في وضع الدخول فقط */}
+            {methods === "both" && !isAuxMode && (
+              <div role="group" className="mb-6 flex rounded-control bg-page p-1">
+                {(["password", "otp"] as const).map((mo) => (
+                  <button
+                    key={mo}
+                    type="button"
+                    onClick={() => go(mo)}
+                    className={`flex-1 rounded-[7px] px-3 py-1.5 text-sm transition-all ${
+                      mode === mo
+                        ? "bg-surface font-medium text-primary-dark shadow-sm"
+                        : "text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    {mo === "password" ? A.loginWithPassword : A.loginWithOtp}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {body()}
+            {body()}
 
-          {isAuxMode ? (
-            <div className="mt-6 border-t border-line pt-4 text-center">
-              {linkBtn(A.backToLogin, () => go("password"), <IconPrev size={15} />)}
-            </div>
-          ) : (
-            <div className="mt-6 border-t border-line pt-4 text-center text-sm text-ink-muted">
-              {A.noAccount}{" "}
-              {linkBtn(A.createAccount, () => go("signup"), <IconSignup size={15} />)}
-            </div>
-          )}
+            {isAuxMode ? (
+              <div className="mt-6 border-t border-line pt-4 text-center">
+                {linkBtn(A.backToLogin, () => go("password"), <IconPrev size={15} />)}
+              </div>
+            ) : (
+              <div className="mt-6 border-t border-line pt-4 text-center text-sm text-ink-muted">
+                {A.noAccount}{" "}
+                {linkBtn(A.createAccount, () => go("signup"), <IconSignup size={15} />)}
+              </div>
+            )}
+          </div>
         </div>
 
         {footer && <div className="mt-4 text-center">{footer}</div>}
