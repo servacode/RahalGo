@@ -10,9 +10,12 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// Claims محتوى توكن الوصول: هوية المستخدم وأدواره.
+// Claims محتوى توكن الوصول: هوية المستخدم وأدواره وعائلة جلسته.
+// SID يجعل إبطال الجلسة فورياً: توكن الوصول عديم الحالة وصالح 15 دقيقة، فبدونه
+// يبقى الخروج نافذاً على الورق فقط حتى انتهاء صلاحيته.
 type Claims struct {
 	Roles []string `json:"roles"`
+	SID   string   `json:"sid,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -25,10 +28,14 @@ func NewTokenIssuer(secret string, accessTTL time.Duration) *TokenIssuer {
 	return &TokenIssuer{secret: []byte(secret), accessTTL: accessTTL}
 }
 
-func (t *TokenIssuer) IssueAccess(userID string, roles []string) (string, time.Time, error) {
+// AccessTTL عمر توكن الوصول — تحتاجه قائمة الإبطال لتضبط مدة بقائها.
+func (t *TokenIssuer) AccessTTL() time.Duration { return t.accessTTL }
+
+func (t *TokenIssuer) IssueAccess(userID string, roles []string, sessionID string) (string, time.Time, error) {
 	exp := time.Now().Add(t.accessTTL)
 	claims := Claims{
 		Roles: roles,
+		SID:   sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID,
 			ExpiresAt: jwt.NewNumericDate(exp),

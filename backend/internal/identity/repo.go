@@ -294,17 +294,40 @@ func (r *Repo) ConsumeOTP(ctx context.Context, phone, codeHash, purpose string) 
 
 // --- Refresh Tokens ---
 
-// StoreRefresh يخزّن توكن تجديد داخل عائلة جلسة. sessionID فارغ = عائلة جديدة.
-func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl time.Duration, userAgent, ip, sessionID string) error {
+// StoreRefresh يخزّن توكن تجديد داخل عائلة جلسة ويعيد معرّفها.
+// sessionID فارغ = عائلة جديدة تولّدها القاعدة — ونحتاج معرّفها لنضعه في توكن
+// الوصول، فبه وحده يصير إبطال الجلسة فورياً.
+func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl time.Duration, userAgent, ip, sessionID string) (string, error) {
 	var sid any
 	if sessionID != "" {
 		sid = sessionID
 	}
-	_, err := r.db.Exec(ctx, `
+	var out string
+	err := r.db.QueryRow(ctx, `
 		INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip, session_id)
-		VALUES ($1, $2, now() + $3, $4, $5, COALESCE($6::uuid, gen_random_uuid()))`,
-		userID, tokenHash, ttl, userAgent, ip, sid)
-	return err
+		VALUES ($1, $2, now() + $3, $4, $5, COALESCE($6::uuid, gen_random_uuid()))
+		RETURNING session_id::text`,
+		userID, tokenHash, ttl, userAgent, ip, sid).Scan(&out)
+	return out, err
+}
+
+// ActiveSessionIDs كل عائلات الجلسات الفعّالة لحساب — لإبطالها دفعة واحدة.
+func (r *Repo) ActiveSessionIDs(ctx context.Context, userID string) ([]string, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT DISTINCT session_id::text FROM refresh_tokens
+		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var sid string
+		if rows.Scan(&sid) == nil {
+			out = append(out, sid)
+		}
+	}
+	return out, rows.Err()
 }
 
 // RevokeRefresh يُبطل التوكن ويعيد صاحبه وعائلة جلسته — ErrNotFound إن كان غير صالح.
@@ -344,6 +367,15 @@ func (r *Repo) Audit(ctx context.Context, actorID *string, action, entity, entit
 	_, _ = r.db.Exec(ctx, `
 		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip, details)
 		VALUES ($1, $2, $3, $4, $5, $6)`, actorID, action, entity, entityID, ip, d)
+}
+
+// RevokeSession يُبطل كل توكنات عائلة جلسة واحدة (تمتد على تطبيقات المنصة).
+func (r *Repo) RevokeSession(ctx context.Context, userID, sessionID string) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE refresh_tokens SET revoked_at = now()
+		WHERE user_id = $1 AND session_id = $2::uuid
+		  AND revoked_at IS NULL AND expires_at > now()`, userID, sessionID)
+	return err
 }
 
 // RevokeAllTokens يُبطل كل توكنات التجديد الفعالة لحساب — يعيد عددها.

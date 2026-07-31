@@ -188,8 +188,14 @@ func isUniqueViolation(err error) bool {
 
 // AdminLogoutAll يُبطل كل جلسات الحساب فوراً (توكنات التجديد) — لقطع وصول موقوف.
 func (s *Service) AdminLogoutAll(ctx context.Context, actorID, userID, ip string) (int, error) {
-	n, err := s.repo.RevokeAllTokens(ctx, userID)
+	sids, err := s.repo.ActiveSessionIDs(ctx, userID)
 	if err != nil {
+		return 0, err
+	}
+	n := len(sids)
+	// الإبطال في القاعدة وفي قائمة Redis معاً — وإلا بقيت توكنات الوصول
+	// القائمة صالحة حتى انتهاء مهلتها رغم "إنهاء الجلسات".
+	if err := s.revokeAllSessions(ctx, userID); err != nil {
 		return 0, err
 	}
 	s.repo.Audit(ctx, &actorID, "admin.logout_all", "user", userID, ip, map[string]any{"sessions": n})

@@ -41,6 +41,12 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 			httpx.Error(w, errForbidden)
 			return
 		}
+		// جلسة أُنهيت لا يبقى توكنها صالحاً حتى انتهاء مهلته: الخروج فوري
+		// على كل تطبيقات المنصة لا على التطبيق الذي طلبه وحده.
+		if s.identity.SessionRevoked(r.Context(), claims.SID) {
+			httpx.Error(w, errUnauthorized)
+			return
+		}
 		ctx := context.WithValue(r.Context(), ctxUserID, claims.Subject)
 		ctx = context.WithValue(ctx, ctxRoles, claims.Roles)
 		s.touchPresence(claims.Subject)

@@ -20,6 +20,11 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, errUnauthorized)
 		return
 	}
+	// جلسة أُنهيت لا تبقى لها قناة بث مفتوحة
+	if s.identity.SessionRevoked(r.Context(), claims.SID) {
+		httpx.Error(w, errUnauthorized)
+		return
+	}
 
 	topics := []string{}
 	if slices.ContainsFunc(claims.Roles, func(role string) bool {
