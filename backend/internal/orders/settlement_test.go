@@ -187,3 +187,57 @@ func TestCancelBeforeDelivery_RefundsWalletOnly(t *testing.T) {
 		t.Errorf("عمولة قُيّدت لطلب لم يُسلَّم: %d", got)
 	}
 }
+
+// المندوب لا يقبض عمولةً على شرائه هو.
+//
+// العمولة تكافئ **جلب الزبائن**، وشراءُ المندوب من متجره استهلاكٌ لا ترويج.
+// وكان النظام يدفعها له: مالٌ يخرج بلا قيمة مقابلة، وأرقامٌ تقيس إنفاقه لا عمله.
+// ويحرس الاختبار الاتجاهين معاً — فعكسُ عمولةٍ لم تُدفع خطأٌ مساوٍ في فداحته.
+func TestDelivery_NoCommissionWhenRepIsTheBuyer(t *testing.T) {
+	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
+	ctx := context.Background()
+
+	// نجعل المندوب نفسه زبونَ الطلب
+	if _, err := f.pool.Exec(ctx,
+		`UPDATE orders SET customer_id = $2 WHERE id = $1`, f.orderID, f.rep); err != nil {
+		t.Fatalf("تعذّر جعل المندوب زبوناً: %v", err)
+	}
+
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "delivered", ""); err != nil {
+		t.Fatalf("التسليم فشل: %v", err)
+	}
+
+	// نفحص **قيود العمولة بذاتها** لا الرصيد: الرصيد يتحرّك أيضاً باسترجاع ثمن
+	// الطلب إليه كزبون، فقياسه يخلط أثرين ويخفي الخطأ الذي نبحث عنه.
+	if n := f.commissionEntries(t); n != 0 {
+		t.Fatalf("قُيّدت %d حركة عمولة للمندوب على شرائه هو، والمتوقع 0", n)
+	}
+	// عمولة المنصة تبقى كاملة: المتجر باع فعلاً ويدين بها
+	if got := f.platformCommission(t); got != 10_000 {
+		t.Fatalf("عمولة المنصة = %d، والمتوقع 10000 — الملغى نصيب المندوب لا العمولة", got)
+	}
+
+	// والاسترجاع لا يخصم منه شيئاً لم يقبضه
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"admin"}, f.orderID, "refunded", ""); err != nil {
+		t.Fatalf("الاسترجاع فشل: %v", err)
+	}
+	if n := f.commissionEntries(t); n != 0 {
+		t.Fatalf("عُكست عمولة لم تُدفع: %d حركة، والمتوقع 0", n)
+	}
+	if got := f.platformCommission(t); got != 0 {
+		t.Fatalf("عمولة المنصة بعد الاسترجاع = %d، والمتوقع 0", got)
+	}
+}
+
+// commissionEntries عدد قيود العمولة وعكسها المرتبطة بهذا الطلب لهذا المندوب.
+func (f *fixture) commissionEntries(t *testing.T) int {
+	t.Helper()
+	var n int
+	if err := f.pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM wallet_transactions
+		WHERE user_id = $1 AND ref = $2::text AND kind IN ('commission', 'adjustment')`,
+		f.rep, f.orderID).Scan(&n); err != nil {
+		t.Fatalf("تعذّرت قراءة قيود العمولة: %v", err)
+	}
+	return n
+}

@@ -17,9 +17,10 @@ import (
 // في الدفتر نفسه. الخصم لحظة الصرف لا لحظة الطلب (لا نجمّد مال أحد بطلب).
 
 var (
-	errPayoutPending = httpx.NewError(http.StatusConflict, "payout_pending", "errors.payout_pending")
-	errPayoutOver    = httpx.NewError(http.StatusConflict, "insufficient_balance", "errors.insufficient_balance")
-	errPayoutClosed  = httpx.NewError(http.StatusConflict, "payout_closed", "errors.payout_closed")
+	errPayoutPending    = httpx.NewError(http.StatusConflict, "payout_pending", "errors.payout_pending")
+	errPayoutOver       = httpx.NewError(http.StatusConflict, "insufficient_balance", "errors.insufficient_balance")
+	errPayoutNotAllowed = httpx.NewError(http.StatusForbidden, "payout_not_allowed", "errors.payout_not_allowed")
+	errPayoutClosed     = httpx.NewError(http.StatusConflict, "payout_closed", "errors.payout_closed")
 )
 
 type payout struct {
@@ -76,8 +77,34 @@ func (s *Server) handleMyPayouts(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
+// payoutRoles من يحقّ له سحب رصيده نقداً من المنصة.
+//
+// **الفرق ليس في المال بل في مصدره**: المندوب والسائق يكسبان رصيدهما من المنصة
+// (عمولة، أجر) فالسحب هو قبضُ ما استحقّاه. أمّا رصيد الزبون فمصدره شحنٌ سلّمه
+// نقداً أو استرجاعُ طلب — وهو **رصيد إنفاق لا رصيد دخل**، وتحويله إلى نقدٍ
+// يجعل المحفظة قناة صرافة لا وسيلة دفع.
+//
+// وكان الفحص غائباً كلياً: الواجهة تُخفي الزرّ عن الزبون، والإخفاء ليس قفلاً.
+var payoutRoles = []string{"sales", "driver"}
+
+func mayRequestPayout(roles []string) bool {
+	for _, r := range roles {
+		for _, allowed := range payoutRoles {
+			if r == allowed {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // handleCreatePayout طلب سحب جديد — بحدود الرصيد الحالي وبطلب معلّق واحد.
 func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
+	roles, _ := r.Context().Value(ctxRoles).([]string)
+	if !mayRequestPayout(roles) {
+		s.respondErr(w, errPayoutNotAllowed)
+		return
+	}
 	req, err := decode[struct {
 		Amount int64  `json:"amount"`
 		Note   string `json:"note"`

@@ -176,10 +176,12 @@ func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, order
 	var subtotal int64
 	var merchantPct int
 	var repID *string
+	var repIsBuyer bool
 	err := q.QueryRow(ctx, `
-		SELECT o.subtotal, m.commission_percent, m.sales_rep_user_id
+		SELECT o.subtotal, m.commission_percent, m.sales_rep_user_id,
+		       m.sales_rep_user_id = o.customer_id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).Scan(&subtotal, &merchantPct, &repID)
+		WHERE o.id = $1`, orderID).Scan(&subtotal, &merchantPct, &repID, &repIsBuyer)
 	if err != nil {
 		return err
 	}
@@ -191,6 +193,17 @@ func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, order
 		return err
 	}
 	if platformCommission == 0 || repID == nil {
+		return nil
+	}
+	// المندوب لا يقبض عمولةً على شرائه هو.
+	//
+	// العمولة أُنشئت لتكافئ **جلب الزبائن**، وشراءُ المندوب من متجره ليس ترويجاً
+	// بل استهلاك. دفعُها له يعني مالاً يخرج من المنصة بلا قيمة مقابلة، ويضخّم
+	// أرقامه فتصير مقاييس أدائه تقيس إنفاقه لا عمله.
+	//
+	// وعمولة المنصة تبقى كاملة: المتجر باع فعلاً ويدين بها — الملغى هو **نصيب
+	// المندوب** منها لا العمولة نفسها.
+	if repIsBuyer {
 		return nil
 	}
 
@@ -212,10 +225,12 @@ func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, order
 func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
 	var platformCommission int64
 	var repID *string
+	var repIsBuyer bool
 	err := q.QueryRow(ctx, `
-		SELECT o.platform_commission, m.sales_rep_user_id
+		SELECT o.platform_commission, m.sales_rep_user_id,
+		       m.sales_rep_user_id = o.customer_id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).Scan(&platformCommission, &repID)
+		WHERE o.id = $1`, orderID).Scan(&platformCommission, &repID, &repIsBuyer)
 	if err != nil {
 		return err
 	}
@@ -224,6 +239,12 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 		return err
 	}
 	if platformCommission == 0 || repID == nil {
+		return nil
+	}
+	// لم تُدفع له عمولة على شرائه هو، فلا شيء يُعكس.
+	// **والتماثل هنا شرط لا تجميل**: عكسٌ بلا دفعٍ سابق يخصم من رصيده مالاً لم
+	// يقبضه قط — خطأ محاسبي في الاتجاه المعاكس.
+	if repIsBuyer {
 		return nil
 	}
 

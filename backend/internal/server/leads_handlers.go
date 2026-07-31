@@ -234,7 +234,26 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 //
 // كلمة المرور يضعها المندوب ويسلّمها لصاحب المتجر — لكنها **مؤقتة**: يُجبَر
 // المالك على تبديلها عند أول دخول، فلا تبقى كلمة مرور يعرفها غير صاحبها.
+// repLeadsPerHour سقف تسجيل العملاء للمندوب الواحد في الساعة.
+//
+// السقف سخيّ عمداً: مندوبٌ نشط قد يسجّل عدّة متاجر في جولة ميدانية واحدة، فحدٌّ
+// ضيّق يعاقب المجتهد. لكنه موجود لأن النقطة تُنشئ **حسابات وكلمات مرور** —
+// وأي نقطة تُنشئ حسابات بلا سقف هي أداة إغراق جاهزة (GROUND-RULES §5).
+const repLeadsPerHour = 30
+
 func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
+	// التحديد **بالمندوب لا بعنوانه**: المناديب يعملون من شبكات مشتركة (مقهى،
+	// مكتب) فحدُّ العنوان يوقف زملاءه معه، وهو مصادَق أصلاً فهويّته معروفة.
+	key := "rep:lead:" + userIDFrom(r)
+	if n, err := s.rdb.Incr(r.Context(), key).Result(); err == nil {
+		if n == 1 {
+			s.rdb.Expire(r.Context(), key, time.Hour)
+		}
+		if n > repLeadsPerHour {
+			s.respondErr(w, httpx.NewError(http.StatusTooManyRequests, "rate_limited", "errors.rate_limited"))
+			return
+		}
+	}
 	req, err := decode[struct {
 		StoreName  string   `json:"store_name"`
 		OwnerName  string   `json:"owner_name"`

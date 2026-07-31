@@ -82,6 +82,13 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
+// repMerchantsMax سقف صلب لقائمة عملاء المندوب.
+//
+// ليس ترقيماً بل حاجزُ حجم: مندوبٌ بمئات المتاجر يجرّها كلها في طلب واحد
+// فيثقل الخادم والمتصفح معاً. والسقف بعيدٌ عن أي رقم واقعي — من يبلغه فحاله
+// يستحقّ بحثاً وترقيماً حقيقيَّين لا تمريرَ قائمة أطول.
+const repMerchantsMax = 500
+
 // handleRepMerchants متاجر المندوب مع نشاط كل متجر.
 func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 	// البطاقة تجيب سؤال المندوب الحقيقي عن كل عميل: **هل ينتج لي؟** فلا يكفي
@@ -110,7 +117,8 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
 		WHERE m.sales_rep_user_id = $1
-		ORDER BY m.created_at DESC`, userIDFrom(r))
+		ORDER BY m.created_at DESC
+		LIMIT $2`, userIDFrom(r), repMerchantsMax)
 	if err != nil {
 		s.respondErr(w, err)
 		return
