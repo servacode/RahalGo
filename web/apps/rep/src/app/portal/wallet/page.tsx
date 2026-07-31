@@ -1,13 +1,15 @@
 "use client";
 
 /**
- * عمولاتي — الرصيد وحركاته، **وطلب سحبه**.
+ * المحفظة — الرصيد وحركاته **مبوّبةً بنوعها**، وطلب السحب.
  *
- * كانت العمولات تدخل المحفظة وتقف بلا طريق للصرف: رقم يكبر بلا معنى عملي.
- * الآن تُغلق الدورة هنا — يطلب المندوب سحب رصيده، وتراه المالية، ويصله قرارها.
+ * كانت الحركات قائمة واحدة يختلط فيها كل شيء: عمولةٌ فوق تسويةٍ فوق سحبٍ فوق
+ * تعويض. والمندوب لا يسأل «ماذا جرى في محفظتي؟» بل يسأل سؤالاً محدّداً: كم
+ * عمولةً قبضت؟ أين ذهب المبلغ الذي سحبته؟ ما هذه التسوية؟ فصار لكل سؤالٍ تبويبه،
+ * وفوقه مجموعُه — الرقم الذي يبحث عنه أصلاً.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
   Badge,
@@ -20,6 +22,8 @@ import {
   LoadingState,
   ListRow,
   Card,
+  Tabs,
+  type TabItem,
   useLiveData,
   IconWallet,
   IconWarning,
@@ -28,7 +32,22 @@ import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const P = m.shared.payout;
+const W = m.shared.walletTabs;
 const KIND_LABELS: Record<string, string> = m.shared.txKinds;
+
+/** ترتيب التبويبات: الأهمّ للمندوب أولاً، لا ترتيب ورودها في القاعدة. */
+const KIND_ORDER = [
+  "commission",
+  "payout",
+  "compensation",
+  "adjustment",
+  "refund",
+  "topup",
+  "order_payment",
+];
+
+const ALL = "all";
+const REQUESTS = "requests";
 
 interface Tx {
   id: string;
@@ -61,6 +80,7 @@ function errText(err: unknown): string {
 
 export default function WalletPage() {
   const [asking, setAsking] = useState(false);
+  const [tab, setTab] = useState(ALL);
 
   const {
     data: statement,
@@ -79,12 +99,31 @@ export default function WalletPage() {
     reloadPayouts();
   }, [reload, reloadPayouts]);
 
+  const txs = useMemo(() => statement?.transactions ?? [], [statement]);
+  const requests = useMemo(() => payouts ?? [], [payouts]);
+
+  // تبويبات الأنواع الموجودة فعلاً فقط: تبويبٌ فارغ يَعِد بشيء ثم يخذل.
+  const tabs = useMemo<TabItem[]>(() => {
+    const counts = new Map<string, number>();
+    for (const t of txs) counts.set(t.kind, (counts.get(t.kind) ?? 0) + 1);
+    const present = KIND_ORDER.filter((k) => counts.has(k));
+    for (const k of counts.keys()) if (!present.includes(k)) present.push(k);
+    return [
+      { key: ALL, label: W.all, count: txs.length },
+      ...(requests.length ? [{ key: REQUESTS, label: W.requests, count: requests.length }] : []),
+      ...present.map((k) => ({ key: k, label: KIND_LABELS[k] ?? k, count: counts.get(k) })),
+    ];
+  }, [txs, requests]);
+
   if (loading) return <LoadingState />;
 
   const balance = statement?.balance ?? 0;
-  const txs = statement?.transactions ?? [];
-  const requests = payouts ?? [];
   const hasPending = requests.some((p) => p.status === "pending");
+
+  // التبويب المختار قد يختفي بعد تحديث حيّ (آخر حركة من نوعه أُلغيت) — نرتدّ للكل
+  const current = tabs.some((t) => t.key === tab) ? tab : ALL;
+  const shown = current === ALL ? txs : txs.filter((t) => t.kind === current);
+  const total = shown.reduce((s, t) => s + t.amount, 0);
 
   return (
     <PageContainer>
@@ -107,8 +146,10 @@ export default function WalletPage() {
         <p className="mt-2 text-xs opacity-70">{P.hint}</p>
       </div>
 
-      {requests.length > 0 && (
-        <Card title={P.myRequests} icon={IconWallet}>
+      <Card title={m.terms.transactions} icon={IconWallet}>
+        <Tabs items={tabs} active={current} onChange={setTab} className="mb-4" />
+
+        {current === REQUESTS ? (
           <ul className="space-y-2">
             {requests.map((p) => (
               <ListRow
@@ -130,36 +171,48 @@ export default function WalletPage() {
               />
             ))}
           </ul>
-        </Card>
-      )}
-
-      <Card title={m.terms.transactions} icon={IconWallet}>
-        {txs.length === 0 ? (
+        ) : shown.length === 0 ? (
           <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
         ) : (
-          <ul className="space-y-2">
-            {txs.map((tx) => (
-              <ListRow
-                key={tx.id}
-                title={KIND_LABELS[tx.kind] ?? tx.kind}
-                subtitle={tx.note || undefined}
-                trailing={
-                  <>
-                    <span
-                      className={`font-bold ${tx.amount >= 0 ? "text-success" : "text-danger"}`}
-                      dir="ltr"
-                    >
-                      {tx.amount >= 0 ? "+" : ""}
-                      {fmtNum(tx.amount)}
-                    </span>
-                    <span className="text-xs text-ink-muted" dir="ltr">
-                      {fmtDate(tx.created_at)}
-                    </span>
-                  </>
-                }
-              />
-            ))}
-          </ul>
+          <>
+            {/* مجموع التبويب — سؤال المندوب الحقيقي: «كم قبضت؟» لا «كم حركة؟» */}
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-control bg-page px-3 py-2 text-sm">
+              <span className="text-ink-muted">
+                {current === ALL ? W.netAll : W.netOf.replace("{kind}", KIND_LABELS[current] ?? current)}
+              </span>
+              <span
+                className={`font-bold ${total >= 0 ? "text-success" : "text-danger"}`}
+                dir="ltr"
+              >
+                {total >= 0 ? "+" : ""}
+                {fmtNum(total)} {m.common.currency}
+              </span>
+            </div>
+
+            <ul className="space-y-2">
+              {shown.map((tx) => (
+                <ListRow
+                  key={tx.id}
+                  title={KIND_LABELS[tx.kind] ?? tx.kind}
+                  subtitle={tx.note || undefined}
+                  trailing={
+                    <>
+                      <span
+                        className={`font-bold ${tx.amount >= 0 ? "text-success" : "text-danger"}`}
+                        dir="ltr"
+                      >
+                        {tx.amount >= 0 ? "+" : ""}
+                        {fmtNum(tx.amount)}
+                      </span>
+                      <span className="text-xs text-ink-muted" dir="ltr">
+                        {fmtDate(tx.created_at)}
+                      </span>
+                    </>
+                  }
+                />
+              ))}
+            </ul>
+          </>
         )}
       </Card>
 

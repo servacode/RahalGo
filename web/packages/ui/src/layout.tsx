@@ -266,3 +266,68 @@ export function Stars({
 }
 
 
+
+// ---------- تبويبات ----------
+
+export interface TabItem {
+  /** المفتاح المستعمل في المقارنة — لا يُعرض */
+  key: string;
+  label: string;
+  /** عدّاد اختياري بجانب العنوان — يُخفى إن كان صفراً */
+  count?: number;
+}
+
+/**
+ * شريط تبويبات موحّد — بديلٌ عن قائمة طويلة يختلط فيها كل شيء.
+ *
+ * قابل للتمرير أفقياً على الهاتف بدل أن ينكسر إلى سطور: التبويبات صفٌّ واحد
+ * ذهنياً، وكسرها إلى ثلاثة سطور يُفقدها معناها. والمؤشّر خطٌّ سفليّ لا خلفية
+ * ممتلئة، كي لا ينافس التبويبُ المحتوى تحته على الانتباه.
+ */
+export function Tabs({
+  items,
+  active,
+  onChange,
+  className = "",
+}: {
+  items: TabItem[];
+  active: string;
+  onChange: (key: string) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="tablist"
+      className={`-mb-px flex gap-1 overflow-x-auto border-b border-line ${className}`}
+    >
+      {items.map((t) => {
+        const on = t.key === active;
+        return (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onChange(t.key)}
+            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+              on
+                ? "border-primary text-primary-dark"
+                : "border-transparent text-ink-muted hover:border-line hover:text-ink"
+            }`}
+          >
+            {t.label}
+            {!!t.count && (
+              <span
+                className={`rounded-badge px-1.5 py-0.5 text-[11px] font-bold ${
+                  on ? "bg-primary-light text-primary-dark" : "bg-page text-ink-muted"
+                }`}
+              >
+                {fmtNum(t.count)}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

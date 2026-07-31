@@ -31,22 +31,38 @@ function toDate(v: string | number | Date): Date {
   return v instanceof Date ? v : new Date(v);
 }
 
+/**
+ * ينزع علامات الاتجاه المخفية التي تحشرها Intl داخل التاريخ.
+ *
+ * محلّية ar-SY تُخرج «31<U+200F>/7<U+200F>/2026»: علامة RTL بعد كل رقم لتضمن
+ * قراءة صحيحة داخل نص عربي. لكننا نعرض التواريخ في عناصر dir="ltr" (لأن أرقامنا
+ * لاتينية)، فتصطدم العلامة باتجاه الحاوية ويخرج التاريخ مبعثراً: «312026/7/».
+ * الاتجاه مسؤولية الحاوية لا مسؤولية النص، فنُخرج نصاً محايداً.
+ */
+// بترميزها الصريح لا بحرفها: هذه محارف غير مرئية، وكتابتها كما هي تجعل السطر
+// يبدو `/[]/` لمن يقرأه، ومعرّضةً للضياع في أي أداة تنظّف المسافات.
+// U+200E علامة LTR · U+200F علامة RTL · U+061C علامة عربية للفصل
+const BIDI_MARKS = /[\u200E\u200F\u061C]/g;
+function clean(s: string): string {
+  return s.replace(BIDI_MARKS, "");
+}
+
 /** تاريخ قصير: 31/7/2026 */
 export function fmtDate(v: string | number | Date): string {
-  return dateFmt.format(toDate(v));
+  return clean(dateFmt.format(toDate(v)));
 }
 
 /** تاريخ ووقت: 31/7/2026، 2:05 م */
 export function fmtDateTime(v: string | number | Date): string {
-  return dateTimeFmt.format(toDate(v));
+  return clean(dateTimeFmt.format(toDate(v)));
 }
 
 /** وقت فقط: 2:05 م */
 export function fmtTime(v: string | number | Date): string {
-  return timeFmt.format(toDate(v));
+  return clean(timeFmt.format(toDate(v)));
 }
 
 /** تاريخ طويل بأشهر عربية وأرقام إنجليزية: 31 تموز 2026 */
 export function fmtLongDate(v: string | number | Date): string {
-  return longDateFmt.format(toDate(v));
+  return clean(longDateFmt.format(toDate(v)));
 }

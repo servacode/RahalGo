@@ -187,6 +187,12 @@
         "paid": "صُرف",
         "rejected": "مرفوض"
       }
+    },
+    "walletTabs": {
+      "all": "الكل",
+      "requests": "طلباتي",
+      "netAll": "صافي الحركات",
+      "netOf": "مجموع «{kind}»"
     }
   },
   "common": {
