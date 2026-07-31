@@ -189,3 +189,39 @@ func (s *Server) handleMyWallet(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, st)
 }
+
+// handleCustomerCancelOrder إلغاء الزبون لطلبه.
+//
+// **كانت الخارطة تسمح له ولا مسار يوصله**: `pending → cancelled` مخوّلة لدور
+// الزبون منذ البداية، لكن لا نقطة في الخادم تنادي الانتقال باسمه — فكان الإلغاء
+// حقّاً على الورق بلا باب. وهذا نوعٌ من الخلل لا يظهر في قراءة الشيفرة: كلٌّ من
+// الطرفين سليم وحده، والوصلة بينهما مفقودة.
+//
+// والمحرّك هو من يحكم: يسمح ما دام «بانتظار التأكيد»، ويسمح بعد القبول ضمن
+// نافذة التدارُك، ويرفض بعدها.
+func (s *Server) handleCustomerCancelOrder(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	o, err := s.orders.GetByID(r.Context(), id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if o.CustomerID != userIDFrom(r) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	req, err := decode[struct {
+		Note string `json:"note"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	updated, err := s.orders.Transition(r.Context(), userIDFrom(r), []string{"customer"},
+		id, "cancelled", clip(req.Note, 300))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, updated)
+}

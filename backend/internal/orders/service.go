@@ -320,7 +320,7 @@ func (s *Service) priceItems(ctx context.Context, merchantID string, inputs []It
 			}
 			rules[groupID].chosen++
 			it.UnitPrice += delta
-			it.Options = append(it.Options, OptionSnapshot{Group: groupName, Name: optName, PriceDelta: delta})
+			it.Options = append(it.Options, OptionSnapshot{ID: optID, Group: groupName, Name: optName, PriceDelta: delta})
 		}
 		for _, r := range rules {
 			if r.chosen < r.min || r.chosen > r.max {

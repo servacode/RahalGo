@@ -120,6 +120,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/home", s.handlePublicHome)
 		r.Get("/public/merchants/{id}", s.handlePublicMerchant)
 		r.Get("/public/zone", s.handlePublicZone)
+		// البحث عام كالتصفّح — من يشتهي صنفاً لا يعرف اسم المتجر الذي يصنعه
+		r.Get("/public/search", s.handlePublicSearch)
 		r.Get("/public/invite", s.handlePublicInvite)
 		r.Post("/public/join", s.handlePublicJoin)
 
@@ -128,9 +130,19 @@ func (s *Server) Router() http.Handler {
 			r.Use(s.RequireAuth)
 			r.Post("/orders", s.handleCustomerCreateOrder)
 			r.Post("/orders/{id}/rating", s.handleRateOrder)
+			// إلغاء الزبون — كان حقّاً في خارطة الحالات بلا باب يوصله
+			r.Post("/orders/{id}/cancel", s.handleCustomerCancelOrder)
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/wallet", s.handleMyWallet)
+			// عناوينه المحفوظة — يكتبها مرّة ويستعملها دائماً
+			r.Get("/my/addresses", s.handleMyAddresses)
+			r.Post("/my/addresses", s.handleCreateAddress)
+			r.Delete("/my/addresses/{id}", s.handleDeleteAddress)
+			r.Post("/my/addresses/{id}/default", s.handleSetDefaultAddress)
+			// المفضّلة — زرٌّ واحد ينقلب، فنقطةٌ واحدة تقلبه
+			r.Get("/my/favorites", s.handleMyFavorites)
+			r.Post("/my/favorites/{id}", s.handleToggleFavorite)
 			// بيانات التوب بار الموحّدة لأي مستخدم (اسم، صورة، رصيد) وإدارة صورته
 			r.Get("/me/summary", s.handleMeSummary)
 			r.Post("/me/avatar", s.handleMyAvatar)

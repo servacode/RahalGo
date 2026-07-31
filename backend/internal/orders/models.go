@@ -9,17 +9,23 @@ import (
 )
 
 var (
-	ErrMerchantClosed  = httpx.NewError(http.StatusConflict, "merchant_closed", "errors.merchant_closed")
-	ErrItemUnavailable = httpx.NewError(http.StatusConflict, "item_unavailable", "errors.item_unavailable")
-	ErrBadItems        = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
-	ErrOutOfZone       = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
-	ErrBelowMinOrder   = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
-	ErrInvalidPromo    = httpx.NewError(http.StatusBadRequest, "invalid_promo", "errors.invalid_promo")
-	ErrBadTransition   = httpx.NewError(http.StatusConflict, "invalid_transition", "errors.invalid_transition")
-	ErrNeedsDriver     = httpx.NewError(http.StatusConflict, "driver_required", "errors.driver_required")
+	ErrMerchantClosed     = httpx.NewError(http.StatusConflict, "merchant_closed", "errors.merchant_closed")
+	ErrItemUnavailable    = httpx.NewError(http.StatusConflict, "item_unavailable", "errors.item_unavailable")
+	ErrBadItems           = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
+	ErrOutOfZone          = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
+	ErrBelowMinOrder      = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
+	ErrInvalidPromo       = httpx.NewError(http.StatusBadRequest, "invalid_promo", "errors.invalid_promo")
+	ErrBadTransition      = httpx.NewError(http.StatusConflict, "invalid_transition", "errors.invalid_transition")
+	ErrNeedsDriver        = httpx.NewError(http.StatusConflict, "driver_required", "errors.driver_required")
+	ErrCancelWindowPassed = httpx.NewError(http.StatusConflict, "cancel_window_passed", "errors.cancel_window_passed")
 )
 
 type OptionSnapshot struct {
+	// معرّف الخيار — يُحفظ لتصحّ **إعادة الطلب** بخياراته كما كان.
+	// كانت اللقطة تحفظ الاسم والفرق فقط، فتعذّر إعادةُ صنفٍ له خيارات إلزامية:
+	// لا سبيل لاستنتاج المعرّف من الاسم، وقد يتغيّر الاسم أو يتكرّر.
+	// (طلباتٌ قديمة بلا معرّف تبقى صالحةً للعرض وتُستثنى من إعادة الطلب.)
+	ID         string `json:"id,omitempty"`
 	Group      string `json:"group"`
 	Name       string `json:"name"`
 	PriceDelta int64  `json:"price_delta"`

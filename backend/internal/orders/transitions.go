@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -86,6 +87,24 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 		if _, err := tx.Exec(ctx, `
 			DELETE FROM promo_redemptions WHERE order_id = $1`, orderID); err != nil {
 			return nil, err
+		}
+	}
+
+	// نافذة إلغاء الزبون بعد القبول — تُفرض هنا لا في الخارطة لأنها **زمنية**
+	// لا دورية: الخارطة تقول من يملك الانتقال، والزمن يقول متى.
+	if to == StCancelled && from == StAccepted && slices.Contains(actorRoles, "customer") &&
+		!slices.Contains(actorRoles, "ops") && !slices.Contains(actorRoles, "admin") {
+		var withinWindow bool
+		if err := tx.QueryRow(ctx, `
+			SELECT accepted_at IS NOT NULL
+			   AND accepted_at > now() - make_interval(secs =>
+			       COALESCE((SELECT (value#>>'{}')::int FROM app_settings
+			                 WHERE key = 'orders.customer_cancel_window_sec'), 120))
+			FROM orders WHERE id = $1`, orderID).Scan(&withinWindow); err != nil {
+			return nil, err
+		}
+		if !withinWindow {
+			return nil, ErrCancelWindowPassed
 		}
 	}
 
