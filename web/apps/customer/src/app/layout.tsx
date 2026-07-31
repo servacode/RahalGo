@@ -28,11 +28,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang={defaultLocale} dir={getDir(defaultLocale)}>
-      <body>
+      <body className="flex min-h-screen flex-col">
         <AuthProvider>
           <CartProvider>
-            <Header />
-            <main className="w-full flex-1 px-4 py-5">{children}</main>
+            <div className="flex min-h-screen flex-col p-3">
+              <Header />
+              {/* نفس إيقاع اللوحات: المحتوى يبدأ على استقامة محتوى الشريط */}
+              <main className="flex min-w-0 flex-1 flex-col px-4 pb-4">{children}</main>
+            </div>
           </CartProvider>
         </AuthProvider>
       </body>

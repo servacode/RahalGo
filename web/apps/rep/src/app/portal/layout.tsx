@@ -45,7 +45,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   if (loading || !isRep(user)) {
     return (
-      <main className="flex min-h-screen items-center justify-center text-ink-muted">
+      <main className="flex flex-1 items-center justify-center text-ink-muted">
         {m.common.loading}
       </main>
     );

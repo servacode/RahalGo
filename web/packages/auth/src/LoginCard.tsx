@@ -113,7 +113,7 @@ export function LoginCard({
   ) : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-page p-4">
+    <div className="flex flex-1 items-center justify-center p-4">
       <div className="w-full max-w-sm rounded-card border border-line bg-surface p-8 shadow-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-card bg-primary text-2xl font-bold text-white">
@@ -208,6 +208,6 @@ export function LoginCard({
 
         {footer && <div className="mt-4">{footer}</div>}
       </div>
-    </main>
+    </div>
   );
 }

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang={defaultLocale} dir={getDir(defaultLocale)}>
-      <body>
+      <body className="flex min-h-screen flex-col">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

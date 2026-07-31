@@ -58,7 +58,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading || !canAccessPanel(user)) {
     return (
-      <main className="flex min-h-screen items-center justify-center text-ink-muted">
+      <main className="flex flex-1 items-center justify-center text-ink-muted">
         {m.common.loading}
       </main>
     );

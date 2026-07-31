@@ -17,7 +17,7 @@ export default function Home() {
   }, [user, loading, router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center text-ink-muted">
+    <main className="flex flex-1 items-center justify-center text-ink-muted">
       {m.common.loading}
     </main>
   );

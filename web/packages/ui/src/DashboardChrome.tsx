@@ -9,9 +9,9 @@
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LiveNotifications, useLiveRefresh } from "./Notifications";
+import { TopBar, TopBarChip, TopBarLink, WalletPill, Avatar } from "./topbar";
 import {
   IconWallet,
-  IconStar,
   IconLogout,
   IconHamburger,
   IconClose,
@@ -19,7 +19,6 @@ import {
 } from "./icons";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 type IconType = ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
@@ -103,7 +102,6 @@ export function DashboardChrome({
 
   const isActive = (href: string) => (href === homeHref ? pathname === href : pathname.startsWith(href));
   const activeLabel = nav.find((i) => isActive(i.href))?.label ?? brand;
-  const avatar = mediaUrl(summary?.avatar_thumb_url);
 
   async function shopAsCustomer() {
     if (!shopUrl) return;
@@ -186,69 +184,59 @@ export function DashboardChrome({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col p-3">
-        <header className="mb-3 flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-2.5 shadow-sm">
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="text-ink-muted hover:text-ink lg:hidden"
-            aria-label={brand}
+        <TopBar
+          start={
+            <>
+              <TopBarChip
+                onClick={() => setMenuOpen(true)}
+                className="lg:hidden"
+                aria-label={brand}
+              >
+                <IconHamburger size={22} />
+              </TopBarChip>
+              <h2 className="text-sm font-bold text-ink">{activeLabel}</h2>
+              {topbarStart}
+            </>
+          }
+        >
+          <LiveNotifications api={api} wsUrl={wsUrl ?? ""} token={token ?? null} Link={Link} />
+          {showRating && rep && rep.rating.count > 0 && (
+            <TopBarLink
+              Link={Link}
+              href={ratingHref ?? accountHref}
+              tone="accent"
+              title={m.terms.myRating}
+            >
+              <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
+              <span className="text-accent">★</span>
+              {rep.rating.trend === "up" && <span className="text-success">▲</span>}
+              {rep.rating.trend === "down" && <span className="text-danger">▼</span>}
+            </TopBarLink>
+          )}
+          {walletHref && (
+            <WalletPill
+              Link={Link}
+              href={walletHref}
+              balance={summary?.balance ?? 0}
+              icon={<IconWallet size={15} />}
+            />
+          )}
+          <TopBarLink
+            Link={Link}
+            href={accountHref}
+            title={summary?.full_name || phone || ""}
+            className="border border-line ps-1 hover:bg-page"
           >
-            <IconHamburger size={22} />
-          </button>
-          <h2 className="text-sm font-bold text-ink">{activeLabel}</h2>
-
-          {topbarStart}
-
-          <div className="ms-auto flex items-center gap-2.5">
-            <LiveNotifications api={api} wsUrl={wsUrl ?? ""} token={token ?? null} Link={Link} />
-            {showRating && rep && rep.rating.count > 0 && (
-              <Link
-                href={ratingHref ?? accountHref}
-                className="flex items-center gap-1 rounded-control bg-accent/10 px-2.5 py-1.5 text-sm font-bold text-accent-dark hover:bg-accent/20"
-                title={m.terms.myRating}
-              >
-                <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
-                <span className="text-accent">★</span>
-                {rep.rating.trend === "up" && <span className="text-success">▲</span>}
-                {rep.rating.trend === "down" && <span className="text-danger">▼</span>}
-              </Link>
-            )}
-            {walletHref && (
-              <Link
-                href={walletHref}
-                className="flex items-center gap-1.5 rounded-control bg-primary-light px-2.5 py-1.5 text-sm font-bold text-primary-dark hover:bg-primary-light/70"
-                title={m.terms.wallet}
-              >
-                <IconWallet size={15} />
-                <span dir="ltr">{fmt.format(summary?.balance ?? 0)}</span>
-                <span className="hidden text-xs font-normal sm:inline">{m.common.currency}</span>
-              </Link>
-            )}
-            <Link
-              href={accountHref}
-              title={summary?.full_name || phone || ""}
-              className="flex items-center gap-1.5 rounded-control border border-line py-1 pe-2 ps-1 hover:bg-page"
-            >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-sm font-bold text-primary-dark">
-                {avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatar} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  (summary?.full_name || phone || m.terms.avatarFallback).slice(0, 1)
-                )}
-              </span>
-              <span className="hidden max-w-[7rem] truncate text-sm font-medium text-ink sm:inline">
-                {summary?.full_name || phone}
-              </span>
-            </Link>
-            <button
-              onClick={onLogout}
-              className="flex items-center gap-1.5 rounded-control px-2 py-1.5 text-sm text-danger hover:bg-danger/10"
-            >
-              <IconLogout size={16} />
-              <span className="hidden sm:inline">{m.auth.logout}</span>
-            </button>
-          </div>
-        </header>
+            <Avatar url={mediaUrl(summary?.avatar_thumb_url)} name={summary?.full_name || phone || ""} />
+            <span className="hidden max-w-[7rem] truncate font-medium text-ink sm:inline">
+              {summary?.full_name || phone}
+            </span>
+          </TopBarLink>
+          <TopBarChip onClick={onLogout} tone="danger">
+            <IconLogout size={16} />
+            <span className="hidden sm:inline">{m.auth.logout}</span>
+          </TopBarChip>
+        </TopBar>
 
         <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-4 shadow-sm">
           {children}

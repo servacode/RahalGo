@@ -46,7 +46,7 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
 
   if (loading || storesLoading || !canAccessPortal(user)) {
     return (
-      <main className="flex min-h-screen items-center justify-center text-ink-muted">
+      <main className="flex flex-1 items-center justify-center text-ink-muted">
         {m.common.loading}
       </main>
     );
@@ -54,7 +54,7 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
 
   if (!store) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6 text-center text-ink-muted">
+      <main className="flex flex-1 items-center justify-center p-6 text-center text-ink-muted">
         {m.merchant.noStores}
       </main>
     );

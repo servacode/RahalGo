@@ -42,7 +42,7 @@ function Sso({ loginPath }: { loginPath: string }) {
   }, [code]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-page text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
       {failed ? (
         <>
           <p className="text-lg font-bold text-danger">{m.shared.sso.failed}</p>
@@ -51,6 +51,6 @@ function Sso({ loginPath }: { loginPath: string }) {
       ) : (
         <p className="text-ink-muted">{m.shared.sso.loading}</p>
       )}
-    </main>
+    </div>
   );
 }

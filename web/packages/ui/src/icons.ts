@@ -24,6 +24,7 @@ export {
   Wallet as IconWallet,
   Truck as IconDriver,
   ShoppingBasket as IconOrder,
+  ShoppingCart as IconCart,
   LifeBuoy as IconSupport,
   Eye as IconView,
   EyeOff as IconViewOff,
