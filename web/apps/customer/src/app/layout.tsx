@@ -3,10 +3,8 @@ import { getMessages, getDir, defaultLocale } from "@rahalgo/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
-// الخط المعتمد (BRAND.md) مستضاف ذاتياً
-import "@fontsource/tajawal/400.css";
-import "@fontsource/tajawal/500.css";
-import "@fontsource/tajawal/700.css";
+// خط المنصة — مصدر مركزي واحد (packages/ui/src/fonts.css)
+import "@rahalgo/ui/fonts.css";
 import "./globals.css";
 
 const m = getMessages(defaultLocale);

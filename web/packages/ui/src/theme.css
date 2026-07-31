@@ -28,8 +28,8 @@
   --color-surface: #ffffff;
   --color-page: #f8fafc;
 
-  /* الخط المعتمد */
-  --font-sans: "Tajawal", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  /* الخط المعتمد (BRAND.md) — ملفاته تُحمّل من @rahalgo/ui/fonts.css */
+  --font-sans: "Tajawal", system-ui, sans-serif;
   --font-weight-normal: 500;
 
   /* الزوايا */

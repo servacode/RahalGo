@@ -28,8 +28,8 @@ export const colors = {
 } as const;
 
 export const fontFamily = {
-  /** الخط المعتمد للعربية واللاتينية معاً (BRAND.md) */
-  sans: `"Tajawal", "IBM Plex Sans Arabic", system-ui, sans-serif`,
+  /** الخط المعتمد للعربية واللاتينية معاً (BRAND.md) — ملفاته في fonts.css */
+  sans: `"Tajawal", system-ui, sans-serif`,
 } as const;
 
 export const radius = {
