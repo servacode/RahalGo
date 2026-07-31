@@ -239,6 +239,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@rahalgo/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       lucide-react:
         specifier: ^1.28.0
         version: 1.28.0(react@19.2.8)

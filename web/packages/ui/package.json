@@ -20,6 +20,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@rahalgo/i18n": "workspace:*",
     "lucide-react": "^1.28.0"
   }
 }

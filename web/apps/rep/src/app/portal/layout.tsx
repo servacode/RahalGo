@@ -108,6 +108,16 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           <IconClose size={20} />
         </button>
       </div>
+      {/* تسوّق كزبون — بالأعلى ليكون واضحاً */}
+      <div className="p-3 pb-0">
+        <button
+          onClick={shopAsCustomer}
+          className="flex w-full items-center gap-2.5 rounded-control bg-accent/10 px-3 py-2 text-sm font-medium text-accent-dark transition-colors hover:bg-accent/20"
+        >
+          <IconStore size={17} />
+          {m.rep.shopAsCustomer}
+        </button>
+      </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {NAV.map((item) => {
           const active =
@@ -128,16 +138,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           );
         })}
       </nav>
-      {/* تسوّق كزبون — تسليم SSO لتطبيق الزبون بلا كلمة مرور */}
-      <div className="border-t border-line p-3">
-        <button
-          onClick={shopAsCustomer}
-          className="flex w-full items-center gap-2.5 rounded-control bg-accent/10 px-3 py-2 text-sm font-medium text-accent-dark transition-colors hover:bg-accent/20"
-        >
-          <IconStore size={17} />
-          {m.rep.shopAsCustomer}
-        </button>
-      </div>
     </>
   );
 
