@@ -174,6 +174,20 @@ func (s *Server) Router() http.Handler {
 			r.Get("/categories", s.handleListCategories) // تصنيفات المتاجر للنموذج
 		})
 
+		// بوابة السائق — كان الطرف الوحيد بلا باب رغم أن الخارطة تخوّله سبعة انتقالات
+		r.Route("/driver", func(r chi.Router) {
+			r.Use(s.RequireAuth)
+			r.Use(s.RequireRoles("driver"))
+			r.Get("/me", s.handleDriverMe)
+			r.Post("/shift", s.handleDriverShift)
+			r.Get("/queue", s.handleDriverQueue)
+			r.Get("/orders", s.handleDriverOrders)
+			r.Post("/orders/{id}/accept", s.handleDriverAccept)
+			r.Post("/orders/{id}/transition", s.handleDriverTransition)
+			r.Post("/orders/{id}/release", s.handleDriverRelease)
+			r.Get("/cash", s.handleDriverCash)
+		})
+
 		// بوابة المتجر — صاحب المتجر حصراً، وكل نقطة تتحقق من الملكية
 		r.Route("/merchant", func(r chi.Router) {
 			r.Use(s.RequireAuth)

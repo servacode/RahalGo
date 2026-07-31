@@ -20,17 +20,31 @@ const buttonVariants = {
   ghost: "text-ink-muted hover:bg-page hover:text-ink",
 } as const;
 
+/**
+ * مقاسان لا مقاس واحد.
+ *
+ * `lg` وُلد لتطبيق السائق: يمسك هاتفه بيدٍ واحدة وهو واقفٌ في الشارع، وزرٌّ
+ * بارتفاع ٣٦ بكسل يُخطئه الإبهام. والمقاس هنا لا في التطبيق، وإلا صار كلُّ
+ * شاشةٍ تُقدّر بنفسها فتتفاوت — وقد رأينا ذلك في هذا المشروع مرّاتٍ.
+ */
+const buttonSizes = {
+  md: "px-4 py-2 text-sm",
+  lg: "px-5 py-4 text-base",
+} as const;
+
 export function Button({
   variant = "primary",
+  size = "md",
   className = "",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: keyof typeof buttonVariants;
+  size?: keyof typeof buttonSizes;
 }) {
   return (
     <button
       {...props}
-      className={`rounded-control px-4 py-2 text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-60 ${buttonVariants[variant]} ${className}`}
+      className={`rounded-control font-medium transition-colors disabled:pointer-events-none disabled:opacity-60 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
     />
   );
 }

@@ -10,6 +10,7 @@ export const APP_URLS = {
   merchant: () => process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3002",
   customer: () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003",
   rep: () => process.env.NEXT_PUBLIC_REP_URL ?? "http://localhost:3004",
+  driver: () => process.env.NEXT_PUBLIC_DRIVER_URL ?? "http://localhost:3005",
 };
 
 export interface Destination {
@@ -22,6 +23,9 @@ export interface Destination {
 /**
  * homeFor يحدد وجهة المستخدم بعد الدخول حسب دوره.
  * الأولوية: موظفو المنصة ← المتجر ← المندوب ← السائق ← الزبون.
+ *
+ * والسائق له تطبيقه منذ الآن: كان يُردّ إلى واجهة الزبون لأنه بلا بيت، فيرى
+ * متاجر ولا يرى طلباته.
  */
 export function homeFor(roles: string[]): Destination {
   const has = (r: string) => roles.includes(r);
@@ -29,7 +33,7 @@ export function homeFor(roles: string[]): Destination {
     return { origin: APP_URLS.admin(), path: "/dashboard" };
   if (has("merchant")) return { origin: APP_URLS.merchant(), path: "/portal" };
   if (has("sales")) return { origin: APP_URLS.rep(), path: "/portal" };
-  // السائق تطبيق أندرويد (قرار 19) — على الويب يبقى بواجهة الزبون
+  if (has("driver")) return { origin: APP_URLS.driver(), path: "/portal" };
   return { origin: APP_URLS.customer(), path: "/" };
 }
 
