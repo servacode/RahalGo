@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   StatCard,
@@ -19,7 +19,6 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Stats {
   customers: number;
@@ -72,7 +71,7 @@ export default function DashboardPage() {
               icon={IconStore}
               label={m.admin.dashboard.stats.merchantsActive}
               value={stats.merchants_active}
-              sub={m.admin.dashboard.totalSuffix.replace("{n}", fmt.format(stats.merchants_total))}
+              sub={m.admin.dashboard.totalSuffix.replace("{n}", fmtNum(stats.merchants_total))}
             />
             <StatCard icon={IconUser} label={m.admin.dashboard.stats.salesReps} value={stats.sales_reps} />
             <StatCard icon={IconOrder} label={m.admin.dashboard.stats.menuItems} value={stats.menu_items} />

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   PageHeader,
   Button,
@@ -21,7 +21,6 @@ import type { ZoneShape } from "./ZonesMap";
 const ZonesMap = dynamic(() => import("./ZonesMap"), { ssr: false });
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Zone extends ZoneShape {
   min_order: number;
@@ -275,7 +274,7 @@ export default function ZonesPage() {
               </div>
               <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-muted">
                 <IconWallet size={14} />
-                {fmt.format(z.delivery_fee)} {m.common.currency}
+                {fmtNum(z.delivery_fee)} {m.common.currency}
                 <span className="text-xs">
                   · {(z.radius_m / 1000).toFixed(1)} {m.admin.zones.km}
                 </span>

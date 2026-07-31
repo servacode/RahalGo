@@ -7,11 +7,10 @@
  */
 
 import type { ComponentType, ReactNode } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { IconStar } from "./icons";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 type IconType = ComponentType<{ size?: number; className?: string }>;
 
@@ -207,7 +206,7 @@ export function StatCard({
     >
       {Icon && <Icon size={18} className="mb-1 text-ink-muted" />}
       <p className={`text-xl font-bold ${toneCls}`}>
-        {typeof value === "number" ? fmt.format(value) : value}
+        {typeof value === "number" ? fmtNum(value) : value}
       </p>
       <p className="text-xs text-ink-muted">{label}</p>
       {sub && <p className="mt-0.5 text-xs text-ink-muted">{sub}</p>}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, fmtDateTime } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   PageHeader,
@@ -31,7 +31,6 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Reply {
   id: number;
@@ -118,7 +117,7 @@ export default function TicketsPage() {
       header: m.admin.tickets.table.number,
       icon: <IconSupport />,
       primary: true,
-      cell: (t) => <span className="font-bold">#{fmt.format(t.number)}</span>,
+      cell: (t) => <span className="font-bold">#{fmtNum(t.number)}</span>,
     },
     {
       id: "customer",
@@ -146,7 +145,7 @@ export default function TicketsPage() {
       icon: <IconOrder />,
       cell: (t) =>
         t.order_number ? (
-          <span className="font-medium">#{fmt.format(t.order_number)}</span>
+          <span className="font-medium">#{fmtNum(t.order_number)}</span>
         ) : (
           <span className="text-ink-muted">—</span>
         ),
@@ -158,7 +157,7 @@ export default function TicketsPage() {
       cell: (t) =>
         t.compensation > 0 ? (
           <Badge variant="primary">
-            {fmt.format(t.compensation)} {m.common.currency}
+            {fmtNum(t.compensation)} {m.common.currency}
           </Badge>
         ) : (
           <span className="text-ink-muted">{m.admin.tickets.noCompensation}</span>
@@ -168,7 +167,7 @@ export default function TicketsPage() {
       id: "created",
       header: m.admin.tickets.table.created,
       icon: <IconDate />,
-      cell: (t) => new Date(t.created_at).toLocaleDateString("ar-SY"),
+      cell: (t) => fmtDate(t.created_at),
     },
     {
       id: "status",
@@ -460,7 +459,7 @@ function TicketDetailModal({
       open
       onClose={onClose}
       size="lg"
-      title={`${m.admin.tickets.detail} #${fmt.format(ticket.number)}`}
+      title={`${m.admin.tickets.detail} #${fmtNum(ticket.number)}`}
     >
       <div className="space-y-5">
         <FormSection title={m.admin.tickets.table.customer} icon={<IconUser />}>
@@ -476,7 +475,7 @@ function TicketDetailModal({
                 onClick={() => router.push(`/dashboard/orders?q=${ticket.order_number}`)}
                 className="font-medium text-primary hover:underline"
               >
-                {m.admin.tickets.viewOrder} #{fmt.format(ticket.order_number)}
+                {m.admin.tickets.viewOrder} #{fmtNum(ticket.order_number)}
               </button>
             )}
           </div>
@@ -490,10 +489,7 @@ function TicketDetailModal({
                 <li key={r.id} className="rounded-control bg-page px-3 py-2 text-sm">
                   <p className="whitespace-pre-wrap">{r.body}</p>
                   <p className="mt-1 text-xs text-ink-muted">
-                    {new Date(r.created_at).toLocaleString("ar-SY", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                    {fmtDateTime(r.created_at)}
                   </p>
                 </li>
               ))}
@@ -527,7 +523,7 @@ function TicketDetailModal({
                   {m.admin.tickets.table.compensation}:{" "}
                   {ticket.compensation > 0 ? (
                     <Badge variant="primary">
-                      {fmt.format(ticket.compensation)} {m.common.currency}
+                      {fmtNum(ticket.compensation)} {m.common.currency}
                     </Badge>
                   ) : (
                     <span className="text-ink-muted">{m.admin.tickets.noCompensation}</span>
@@ -536,10 +532,7 @@ function TicketDetailModal({
                 {ticket.resolved_at && (
                   <span className="text-xs text-ink-muted">
                     {m.admin.tickets.resolvedAt}{" "}
-                    {new Date(ticket.resolved_at).toLocaleString("ar-SY", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                    {fmtDateTime(ticket.resolved_at)}
                   </span>
                 )}
               </div>

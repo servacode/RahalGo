@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
   PageContainer,
   PageHeader,
@@ -20,7 +20,6 @@ import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 const KIND_LABELS: Record<string, string> = m.shared.txKinds;
 
 interface Tx {
@@ -66,7 +65,7 @@ export default function WalletPage() {
       <div className="mb-3 rounded-card bg-primary p-6 text-center text-white">
         <p className="text-sm opacity-80">{m.site.wallet.balance}</p>
         <p className="mt-1 text-3xl font-bold">
-          {fmt.format(st.balance)} <span className="text-base font-normal">{m.common.currency}</span>
+          {fmtNum(st.balance)} <span className="text-base font-normal">{m.common.currency}</span>
         </p>
       </div>
       <p className="mb-6 rounded-control bg-page px-3 py-2 text-xs leading-relaxed text-ink-muted">
@@ -92,10 +91,10 @@ export default function WalletPage() {
                 dir="ltr"
               >
                 {tx.amount >= 0 ? "+" : ""}
-                {fmt.format(tx.amount)}
+                {fmtNum(tx.amount)}
               </span>
               <span className="text-xs text-ink-muted" dir="ltr">
-                {new Date(tx.created_at).toLocaleDateString("ar-SY")}
+                {fmtDate(tx.created_at)}
               </span>
             </li>
           ))}

@@ -3,7 +3,7 @@
 /** حسابي: بطاقة الأدوار + إعدادات الحساب المشتركة + آخر الدخولات. */
 
 import { useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
 import { AccountSettings, FormSection, IconUser, IconStatus } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -75,10 +75,7 @@ export default function MyAccountPage() {
                   <span className="flex items-center gap-3 text-xs text-ink-muted" dir="ltr">
                     <span>{l.ip}</span>
                     <span>
-                      {new Date(l.created_at).toLocaleString("ar-SY", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      })}
+                      {fmtDateTime(l.created_at)}
                     </span>
                   </span>
                 </li>

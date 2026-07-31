@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import {
   IconNote,
   IconEdit,
@@ -32,7 +32,6 @@ import {
 import { api, ApiError, type AuthUser } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 // ---------- الأنواع ----------
 
@@ -219,7 +218,7 @@ export default function OrdersPage() {
       icon: <IconWallet />,
       cell: (o) => (
         <span>
-          <span className="font-bold text-primary-dark">{fmt.format(o.total)}</span>{" "}
+          <span className="font-bold text-primary-dark">{fmtNum(o.total)}</span>{" "}
           <span className="text-xs text-ink-muted">{PAYMENT_LABELS[o.payment_method]}</span>
         </span>
       ),
@@ -247,7 +246,7 @@ export default function OrdersPage() {
       id: "time",
       header: m.admin.ordersPage.time,
       cell: (o) =>
-        new Date(o.created_at).toLocaleTimeString("ar-SY", { hour: "2-digit", minute: "2-digit" }),
+        fmtTime(o.created_at),
     },
   ];
 
@@ -516,7 +515,7 @@ function OrderDetailModal({
                     <span>
                       {it.name} ×{it.qty}
                     </span>
-                    <span>{fmt.format(it.unit_price * it.qty)}</span>
+                    <span>{fmtNum(it.unit_price * it.qty)}</span>
                   </div>
                   {it.options.length > 0 && (
                     <p className="mt-0.5 text-xs text-ink-muted">
@@ -533,33 +532,33 @@ function OrderDetailModal({
             <dl className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <dt className="text-ink-muted">{m.admin.ordersPage.subtotal}</dt>
-                <dd>{fmt.format(order.subtotal)}</dd>
+                <dd>{fmtNum(order.subtotal)}</dd>
               </div>
               {order.discount > 0 && (
                 <div className="flex justify-between text-success">
                   <dt>{m.admin.ordersPage.discount}</dt>
-                  <dd>-{fmt.format(order.discount)}</dd>
+                  <dd>-{fmtNum(order.discount)}</dd>
                 </div>
               )}
               <div className="flex justify-between">
                 <dt className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</dt>
-                <dd>{fmt.format(order.delivery_fee)}</dd>
+                <dd>{fmtNum(order.delivery_fee)}</dd>
               </div>
               <div className="flex justify-between border-t border-line pt-1 font-bold">
                 <dt>{m.admin.ordersPage.total}</dt>
                 <dd>
-                  {fmt.format(order.total)} {m.common.currency}
+                  {fmtNum(order.total)} {m.common.currency}
                 </dd>
               </div>
               {order.wallet_paid > 0 && (
                 <div className="flex justify-between text-primary-dark">
                   <dt>{m.admin.ordersPage.walletPaid}</dt>
-                  <dd>{fmt.format(order.wallet_paid)}</dd>
+                  <dd>{fmtNum(order.wallet_paid)}</dd>
                 </div>
               )}
               <div className="flex justify-between">
                 <dt className="text-ink-muted">{m.admin.ordersPage.cashDue}</dt>
-                <dd className="font-medium">{fmt.format(order.cash_due)}</dd>
+                <dd className="font-medium">{fmtNum(order.cash_due)}</dd>
               </div>
             </dl>
           </FormSection>
@@ -621,11 +620,7 @@ function OrderDetailModal({
                   <span className="h-2 w-2 shrink-0 rounded-badge bg-primary" />
                   <span className="font-medium">{STATUS_LABELS[e.to_status] ?? e.to_status}</span>
                   <span className="text-xs text-ink-muted">
-                    {new Date(e.created_at).toLocaleTimeString("ar-SY", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
+                    {fmtTime(e.created_at)}
                   </span>
                   {e.note && <span className="text-xs text-ink-muted">— {e.note}</span>}
                 </li>

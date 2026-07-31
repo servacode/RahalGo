@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   PageHeader,
   Input,
@@ -16,7 +16,6 @@ import {
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface DailyPoint {
   day: string;
@@ -214,29 +213,29 @@ export default function ReportsPage() {
       {s && (
         <>
           <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <Stat icon={IconOrder} label={r.summary.ordersTotal} value={fmt.format(s.orders_total)} />
+            <Stat icon={IconOrder} label={r.summary.ordersTotal} value={fmtNum(s.orders_total)} />
             <Stat
               icon={IconOrder}
               label={r.summary.delivered}
-              value={fmt.format(s.delivered)}
-              sub={`${fmt.format(s.cancelled)} ${r.summary.cancelled}`}
+              value={fmtNum(s.delivered)}
+              sub={`${fmtNum(s.cancelled)} ${r.summary.cancelled}`}
             />
             <Stat
               icon={IconWallet}
               label={r.summary.grossSales}
-              value={`${fmt.format(s.gross_sales)} ${m.common.currency}`}
+              value={`${fmtNum(s.gross_sales)} ${m.common.currency}`}
             />
             <Stat
               icon={IconWallet}
               label={r.summary.commissions}
-              value={`${fmt.format(s.commissions)} ${m.common.currency}`}
-              sub={`${r.summary.deliveryFees}: ${fmt.format(s.delivery_fees)}`}
+              value={`${fmtNum(s.commissions)} ${m.common.currency}`}
+              sub={`${r.summary.deliveryFees}: ${fmtNum(s.delivery_fees)}`}
             />
             <Stat
               icon={IconStatus}
               label={r.summary.avgDelivery}
-              value={`${fmt.format(s.avg_delivery_min)} ${r.summary.minutes}`}
-              sub={`${fmt.format(s.active_customers)} ${r.summary.activeCustomers}`}
+              value={`${fmtNum(s.avg_delivery_min)} ${r.summary.minutes}`}
+              sub={`${fmtNum(s.active_customers)} ${r.summary.activeCustomers}`}
             />
           </div>
 
@@ -245,13 +244,13 @@ export default function ReportsPage() {
               title={r.dailyOrders}
               data={report.daily}
               value={(d) => d.orders}
-              format={(v) => fmt.format(v)}
+              format={(v) => fmtNum(v)}
             />
             <DailyBars
               title={r.dailySales}
               data={report.daily}
               value={(d) => d.sales}
-              format={(v) => `${fmt.format(v)} ${m.common.currency}`}
+              format={(v) => `${fmtNum(v)} ${m.common.currency}`}
             />
           </div>
 
@@ -272,10 +271,10 @@ export default function ReportsPage() {
                           {i + 1}
                         </span>
                         {t.name}
-                        <span className="text-xs text-ink-muted"> · {fmt.format(t.delivered)} {r.deliveries}</span>
+                        <span className="text-xs text-ink-muted"> · {fmtNum(t.delivered)} {r.deliveries}</span>
                       </span>
                       <span className="font-bold text-primary-dark">
-                        {fmt.format(t.sales)} {m.common.currency}
+                        {fmtNum(t.sales)} {m.common.currency}
                       </span>
                     </li>
                   ))}
@@ -301,7 +300,7 @@ export default function ReportsPage() {
                         {t.name || <span dir="ltr">{t.phone}</span>}
                       </span>
                       <span>
-                        <span className="font-bold">{fmt.format(t.delivered)}</span>{" "}
+                        <span className="font-bold">{fmtNum(t.delivered)}</span>{" "}
                         <span className="text-xs text-ink-muted">{r.deliveries}</span>
                       </span>
                     </li>

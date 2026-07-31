@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
   PageHeader,
   Button,
@@ -26,7 +26,6 @@ import ImageUpload from "@/components/ImageUpload";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Promo {
   id: string;
@@ -148,7 +147,7 @@ function CodesTab({ isAdmin }: { isAdmin: boolean }) {
         <Badge variant="primary">
           {KIND_LABEL[p.kind]}
           {p.kind === "percent" && ` ${p.value}%`}
-          {p.kind === "fixed" && ` ${fmt.format(p.value)}`}
+          {p.kind === "fixed" && ` ${fmtNum(p.value)}`}
         </Badge>
       ),
     },
@@ -156,7 +155,7 @@ function CodesTab({ isAdmin }: { isAdmin: boolean }) {
       id: "min",
       header: m.admin.promos.minOrder,
       icon: <IconWallet />,
-      cell: (p) => `${fmt.format(p.min_order)} ${m.common.currency}`,
+      cell: (p) => `${fmtNum(p.min_order)} ${m.common.currency}`,
     },
     {
       id: "uses",
@@ -169,7 +168,7 @@ function CodesTab({ isAdmin }: { isAdmin: boolean }) {
       icon: <IconDate />,
       cell: (p) =>
         p.expires_at ? (
-          new Date(p.expires_at).toLocaleDateString("ar-SY")
+          fmtDate(p.expires_at)
         ) : (
           <span className="text-ink-muted">{m.admin.promos.noExpiry}</span>
         ),

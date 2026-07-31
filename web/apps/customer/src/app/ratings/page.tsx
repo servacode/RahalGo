@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   Button,
   PageContainer,
@@ -21,7 +21,6 @@ import RatingModal from "@/components/RatingModal";
 
 const m = getMessages(defaultLocale);
 const R = m.site.rating;
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface RatedOrder {
   order_id: string;
@@ -73,7 +72,7 @@ export default function RatingsPage() {
               key={o.order_id}
               className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-4"
             >
-              <span className="font-bold">#{fmt.format(o.number)}</span>
+              <span className="font-bold">#{fmtNum(o.number)}</span>
               <span className="min-w-0 flex-1 truncate text-sm">{o.merchant_name}</span>
               {o.rated ? (
                 <div className="flex flex-col items-end gap-0.5">

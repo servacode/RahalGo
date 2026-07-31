@@ -4,12 +4,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { IconCheck, IconLocation, Badge, Button, useLiveEvent, IconStar, IconSuccess } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 const STATUS_LABELS: Record<string, string> = m.orders.status;
 
 // مسار التقدم الطبيعي المعروض للزبون
@@ -74,7 +73,7 @@ export default function OrderTrackingPage() {
     <div className="mx-auto max-w-2xl">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">
-          {m.site.orders.orderTitle.replace("{n}", fmt.format(order.number))}
+          {m.site.orders.orderTitle.replace("{n}", fmtNum(order.number))}
         </h1>
         <Badge variant={failed ? "danger" : order.status === "delivered" ? "success" : "primary"}>
           {STATUS_LABELS[order.status] ?? order.status}
@@ -125,22 +124,22 @@ export default function OrderTrackingPage() {
           {order.items?.map((it, i) => (
             <li key={i} className="flex justify-between">
               <span>
-                {it.name} ×{fmt.format(it.qty)}
+                {it.name} ×{fmtNum(it.qty)}
               </span>
-              <span className="text-ink-muted">{fmt.format(it.unit_price * it.qty)}</span>
+              <span className="text-ink-muted">{fmtNum(it.unit_price * it.qty)}</span>
             </li>
           ))}
         </ul>
         <div className="mt-2 flex justify-between border-t border-line pt-2 font-bold">
           <span>{m.site.cart.total}</span>
           <span className="text-primary-dark">
-            {fmt.format(order.total)} {m.common.currency}
+            {fmtNum(order.total)} {m.common.currency}
           </span>
         </div>
         {order.wallet_paid > 0 && (
           <p className="mt-1 text-xs text-ink-muted">
-            {m.orders.payment.wallet}: {fmt.format(order.wallet_paid)} — {m.orders.payment.cash}:{" "}
-            {fmt.format(order.cash_due)}
+            {m.orders.payment.wallet}: {fmtNum(order.wallet_paid)} — {m.orders.payment.cash}:{" "}
+            {fmtNum(order.cash_due)}
           </p>
         )}
         <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-muted"><IconLocation size={13} />{order.address_text}</p>

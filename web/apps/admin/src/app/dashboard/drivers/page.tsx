@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   PageHeader,
@@ -24,7 +24,6 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Driver {
   id: string;
@@ -92,7 +91,7 @@ export default function DriversPage() {
     return (
       <span className="flex flex-col items-end gap-0.5 sm:items-start">
         <Badge variant={variant}>
-          {fmt.format(d.cash_held)} {m.common.currency}
+          {fmtNum(d.cash_held)} {m.common.currency}
         </Badge>
         {ratio >= 1 && <span className="text-xs text-danger">{m.admin.drivers.overLimit}</span>}
         {ratio >= 0.7 && ratio < 1 && (
@@ -136,7 +135,7 @@ export default function DriversPage() {
     {
       id: "today",
       header: m.admin.drivers.deliveredToday,
-      cell: (d) => fmt.format(d.delivered_today),
+      cell: (d) => fmtNum(d.delivered_today),
     },
     {
       id: "status",
@@ -156,7 +155,7 @@ export default function DriversPage() {
         <PageHeader icon={IconDriver} title={m.admin.drivers.title} />
         <div className="flex items-center gap-3">
           <Badge variant="neutral">
-            {m.admin.drivers.cashLimit}: {fmt.format(cashLimit)} {m.common.currency}
+            {m.admin.drivers.cashLimit}: {fmtNum(cashLimit)} {m.common.currency}
           </Badge>
           <ViewToggle
             view={view}
@@ -271,7 +270,7 @@ function CashBoxModal({
             {m.admin.drivers.cashHeld}
           </span>
           <span className="text-2xl font-bold text-primary-dark">
-            {held === null ? "…" : `${fmt.format(held)} ${m.common.currency}`}
+            {held === null ? "…" : `${fmtNum(held)} ${m.common.currency}`}
           </span>
         </div>
         {/* شريط السقف */}
@@ -282,7 +281,7 @@ function CashBoxModal({
           />
         </div>
         <p className="mt-1 text-end text-xs text-primary-dark/70">
-          {m.admin.drivers.cashLimit}: {fmt.format(limit)}
+          {m.admin.drivers.cashLimit}: {fmtNum(limit)}
         </p>
       </div>
 
@@ -343,7 +342,7 @@ function CashBoxModal({
               </span>
               <span className={`font-bold ${e.amount > 0 ? "text-primary-dark" : "text-success"}`}>
                 {e.amount > 0 ? "+" : ""}
-                {fmt.format(e.amount)}
+                {fmtNum(e.amount)}
               </span>
             </li>
           ))}

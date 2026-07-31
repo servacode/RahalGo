@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   IconCheck,
   IconCopy,
@@ -31,7 +31,6 @@ import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Rep {
   id: string;
@@ -149,7 +148,7 @@ export default function SalesPage() {
       id: "merchants",
       header: m.admin.sales.merchantsCount,
       icon: <IconStore />,
-      cell: (p) => <span className="font-bold">{fmt.format(p.merchants_count)}</span>,
+      cell: (p) => <span className="font-bold">{fmtNum(p.merchants_count)}</span>,
     },
     {
       id: "commissions",
@@ -157,14 +156,14 @@ export default function SalesPage() {
       icon: <IconWallet />,
       cell: (p) => (
         <span className="font-bold text-success">
-          {fmt.format(p.total_commissions)} {m.common.currency}
+          {fmtNum(p.total_commissions)} {m.common.currency}
         </span>
       ),
     },
     {
       id: "balance",
       header: m.admin.sales.balance,
-      cell: (p) => `${fmt.format(p.balance)} ${m.common.currency}`,
+      cell: (p) => `${fmtNum(p.balance)} ${m.common.currency}`,
     },
     {
       id: "status",

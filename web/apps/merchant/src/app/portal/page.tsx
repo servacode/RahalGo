@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import {
   EmptyState,
   useLiveEvent,
@@ -29,7 +29,6 @@ import { useStore } from "@/lib/store";
 import { useRinger } from "@/lib/ringer";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 const STATUS_LABELS: Record<string, string> = m.orders.status;
 
 interface OrderItem {
@@ -137,7 +136,7 @@ export default function OrdersBoard() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-ink-muted">
-            {m.merchant.orders.doneToday}: <b className="text-success">{fmt.format(doneToday)}</b>
+            {m.merchant.orders.doneToday}: <b className="text-success">{fmtNum(doneToday)}</b>
           </span>
           <button
             onClick={() => setSoundOn(!soundOn)}
@@ -165,7 +164,7 @@ export default function OrdersBoard() {
       >
         <h2 className="mb-3 flex items-center gap-2 font-bold">
           <IconWarning size={18} className={pending.length ? "text-danger" : "text-ink-muted"} />
-          {m.merchant.orders.newOrders} ({fmt.format(pending.length)})
+          {m.merchant.orders.newOrders} ({fmtNum(pending.length)})
         </h2>
         {pending.length === 0 ? (
           <p className="text-sm text-ink-muted">{m.merchant.orders.empty}</p>
@@ -292,19 +291,16 @@ function OrderCard({
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center justify-between text-start"
       >
-        <span className="font-bold">#{fmt.format(order.number)}</span>
+        <span className="font-bold">#{fmtNum(order.number)}</span>
         <span className="text-sm font-bold text-primary-dark">
-          {fmt.format(order.subtotal)} {m.common.currency}
+          {fmtNum(order.subtotal)} {m.common.currency}
         </span>
       </button>
       <p className="mt-1 flex items-center gap-1 text-xs text-ink-muted">
         <IconLocation size={12} className="shrink-0" />
         <span className="truncate">{order.address_text}</span>
         <span className="ms-auto shrink-0" dir="ltr">
-          {new Date(order.created_at).toLocaleTimeString("ar-SY", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {fmtTime(order.created_at)}
         </span>
       </p>
 
@@ -317,7 +313,7 @@ function OrderCard({
               {items.map((it, i) => (
                 <li key={i}>
                   <span className="font-medium">
-                    {it.name} ×{fmt.format(it.qty)}
+                    {it.name} ×{fmtNum(it.qty)}
                   </span>
                   {it.options.length > 0 && (
                     <span className="text-xs text-ink-muted">

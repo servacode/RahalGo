@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   IconPrev,
   Button,
@@ -19,7 +19,6 @@ import { api, ApiError } from "@/lib/api";
 import ImageUpload, { MediaThumb } from "@/components/ImageUpload";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface ModifierOption {
   name: string;
@@ -234,7 +233,7 @@ export default function MenuPage() {
                       )}
                     </div>
                     <span className="font-bold text-primary-dark">
-                      {fmt.format(item.price)} {m.common.currency}
+                      {fmtNum(item.price)} {m.common.currency}
                     </span>
                     <Badge variant={item.available ? "success" : "warning"}>
                       {item.available ? m.admin.menu.available : m.admin.menu.unavailable}

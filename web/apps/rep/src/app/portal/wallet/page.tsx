@@ -2,7 +2,7 @@
 
 /** المحفظة — حركات عمولات المندوب. */
 
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
   PageContainer,
   PageHeader,
@@ -15,7 +15,6 @@ import {
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 const KIND_LABELS: Record<string, string> = m.shared.txKinds;
 
 interface Tx {
@@ -55,10 +54,10 @@ export default function WalletPage() {
                     dir="ltr"
                   >
                     {tx.amount >= 0 ? "+" : ""}
-                    {fmt.format(tx.amount)}
+                    {fmtNum(tx.amount)}
                   </span>
                   <span className="text-xs text-ink-muted" dir="ltr">
-                    {new Date(tx.created_at).toLocaleDateString("ar-SY")}
+                    {fmtDate(tx.created_at)}
                   </span>
                 </>
               }

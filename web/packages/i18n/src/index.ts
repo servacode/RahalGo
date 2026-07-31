@@ -22,3 +22,5 @@ export function getMessages(locale: Locale): Messages {
 export function getDir(locale: Locale): "rtl" | "ltr" {
   return locales[locale].dir;
 }
+
+export { fmtNum, fmtDate, fmtDateTime, fmtTime, fmtLongDate } from "./format";

@@ -6,7 +6,7 @@
  */
 
 import { useCallback } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import { Badge } from "./components";
 import { useLiveData } from "./Notifications";
 import { PageHeader, PageContainer, EmptyState, LoadingState, ListRow, StatGrid, StatCard, Stars } from "./layout";
@@ -15,7 +15,6 @@ import { IconStar, IconSupport } from "./icons";
 const m = getMessages(defaultLocale);
 const T = m.terms;
 const R = m.shared.reputation;
-const fmt = new Intl.NumberFormat("ar-SY");
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
@@ -74,11 +73,11 @@ export function ReputationReviews({ api }: { api: ApiFn }) {
               <div className="flex items-center justify-between gap-2">
                 <Stars value={rv.stars} />
                 <span className="text-xs text-ink-muted" dir="ltr">
-                  {new Date(rv.created_at).toLocaleDateString("ar-SY")}
+                  {fmtDate(rv.created_at)}
                 </span>
               </div>
               <p className="mt-1 text-sm text-ink-muted">
-                {rv.merchant_name} — {T.order} #{fmt.format(rv.order_number)}
+                {rv.merchant_name} — {T.order} #{fmtNum(rv.order_number)}
               </p>
               {rv.comment && <p className="mt-1 text-sm">{rv.comment}</p>}
             </li>
@@ -112,16 +111,16 @@ export function ReputationComplaints({ api }: { api: ApiFn }) {
               key={c.number}
               className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-4"
             >
-              <span className="font-bold">#{fmt.format(c.number)}</span>
+              <span className="font-bold">#{fmtNum(c.number)}</span>
               <span className="min-w-0 flex-1 text-sm">{c.subject}</span>
               {c.order_number != null && (
                 <span className="text-xs text-ink-muted">
-                  {T.order} #{fmt.format(c.order_number)}
+                  {T.order} #{fmtNum(c.order_number)}
                 </span>
               )}
               <Badge variant={CVARIANT[c.status]}>{T.ticketStatus[c.status]}</Badge>
               <span className="text-xs text-ink-muted" dir="ltr">
-                {new Date(c.created_at).toLocaleDateString("ar-SY")}
+                {fmtDate(c.created_at)}
               </span>
             </li>
           ))}

@@ -3,7 +3,7 @@
 /** طلبات انضمام المتاجر — واردة عبر روابط المندوبين؛ مراجعة ووسم الحالة. */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDate } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   PageHeader,
@@ -170,7 +170,7 @@ export default function LeadsPage() {
       header: m.admin.leads.date,
       cell: (l) => (
         <span dir="ltr" className="text-xs text-ink-muted">
-          {new Date(l.created_at).toLocaleDateString("ar-SY")}
+          {fmtDate(l.created_at)}
         </span>
       ),
     },

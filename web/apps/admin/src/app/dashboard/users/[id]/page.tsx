@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -37,7 +37,6 @@ import { MediaThumb } from "@/components/ImageUpload";
 import RoleBadge from "@/components/RoleBadge";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 const P = m.admin.users.profile;
 const KINDS: Record<string, string> = m.admin.users.txKinds;
 const ACTIONS: Record<string, string> = m.admin.users.auditActions;
@@ -175,7 +174,7 @@ export default function UserProfilePage() {
   const stats: { label: string; value: string; icon: React.ReactNode; onClick?: () => void }[] = [
     {
       label: `${m.admin.customers.balance} (${m.common.currency})`,
-      value: fmt.format(p.balance),
+      value: fmtNum(p.balance),
       icon: <IconWallet className="text-primary" />,
     },
   ];
@@ -183,23 +182,23 @@ export default function UserProfilePage() {
     stats.push(
       {
         label: P.ordersCount,
-        value: fmt.format(p.orders_count),
+        value: fmtNum(p.orders_count),
         icon: <IconOrder />,
         onClick: () => router.push(`/dashboard/orders?q=${encodeURIComponent(p.phone)}`),
       },
       {
         label: `${P.spent} (${m.common.currency})`,
-        value: fmt.format(p.orders_spent),
+        value: fmtNum(p.orders_spent),
         icon: <IconOrder className="text-success" />,
       }
     );
   }
   if (has("sales")) {
     stats.push(
-      { label: P.repStores, value: fmt.format(p.rep_stores), icon: <IconStore /> },
+      { label: P.repStores, value: fmtNum(p.rep_stores), icon: <IconStore /> },
       {
         label: `${P.commissions} (${m.common.currency})`,
-        value: fmt.format(p.commissions),
+        value: fmtNum(p.commissions),
         icon: <IconWallet className="text-success" />,
       }
     );
@@ -215,13 +214,13 @@ export default function UserProfilePage() {
     stats.push(
       {
         label: P.deliveries,
-        value: fmt.format(p.deliveries),
+        value: fmtNum(p.deliveries),
         icon: <IconDriver />,
         onClick: () => router.push("/dashboard/drivers"),
       },
       {
         label: `${P.driverCash} (${m.common.currency})`,
-        value: fmt.format(p.driver_cash),
+        value: fmtNum(p.driver_cash),
         icon: <IconWallet className="text-accent-dark" />,
         onClick: () => router.push("/dashboard/drivers"),
       }
@@ -252,7 +251,7 @@ export default function UserProfilePage() {
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <IconDate size={12} />
-                  {new Date(p.created_at).toLocaleDateString("ar-SY")}
+                  {fmtDate(p.created_at)}
                 </span>
                 {p.invite_code && (
                   <span dir="ltr" className="rounded-badge bg-accent/15 px-1.5 font-mono text-accent-dark">
@@ -318,7 +317,7 @@ export default function UserProfilePage() {
                   className="flex items-center gap-1.5 !px-2.5"
                 >
                   <IconLogout size={15} />
-                  {P.logoutAllShort} ({fmt.format(p.active_sessions)})
+                  {P.logoutAllShort} ({fmtNum(p.active_sessions)})
                 </Button>
                 {me?.id !== p.id &&
                   (p.status === "active" ? (
@@ -453,12 +452,12 @@ export default function UserProfilePage() {
                         onClick={() => router.push(`/dashboard/orders?q=${t.order_number}`)}
                         className="text-xs font-medium text-primary hover:underline"
                       >
-                        {P.orderRef} #{fmt.format(t.order_number)}
+                        {P.orderRef} #{fmtNum(t.order_number)}
                       </button>
                     )}
                     {t.ticket_number != null && (
                       <span className="text-xs font-medium text-primary">
-                        {P.ticketRef} #{fmt.format(t.ticket_number)}
+                        {P.ticketRef} #{fmtNum(t.ticket_number)}
                       </span>
                     )}
                     {t.note && <span className="truncate text-xs text-ink-muted">{t.note}</span>}
@@ -470,10 +469,10 @@ export default function UserProfilePage() {
                 <span className="flex shrink-0 items-center gap-3">
                   <span className={`font-bold ${t.amount > 0 ? "text-success" : "text-danger"}`} dir="ltr">
                     {t.amount > 0 ? "+" : ""}
-                    {fmt.format(t.amount)}
+                    {fmtNum(t.amount)}
                   </span>
                   <span className="text-xs text-ink-muted" dir="ltr">
-                    {new Date(t.created_at).toLocaleString("ar-SY", { dateStyle: "short", timeStyle: "short" })}
+                    {fmtDateTime(t.created_at)}
                   </span>
                 </span>
               </li>
@@ -545,7 +544,7 @@ export default function UserProfilePage() {
                       </span>
                     </div>
                     <span className="shrink-0 text-xs text-ink-muted" dir="ltr">
-                      {new Date(e.date).toLocaleDateString("ar-SY")}
+                      {fmtDate(e.date)}
                     </span>
                   </li>
                 ))}
@@ -569,13 +568,13 @@ export default function UserProfilePage() {
                     className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm hover:bg-page"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="font-bold">#{fmt.format(t.number)}</span>
+                      <span className="font-bold">#{fmtNum(t.number)}</span>
                       <span className="truncate">{t.subject}</span>
                     </span>
                     <span className="flex items-center gap-2">
                       {t.compensation > 0 && (
                         <span className="text-xs text-success">
-                          +{fmt.format(t.compensation)} {m.common.currency}
+                          +{fmtNum(t.compensation)} {m.common.currency}
                         </span>
                       )}
                       <Badge
@@ -584,7 +583,7 @@ export default function UserProfilePage() {
                         {(m.admin.tickets.status as Record<string, string>)[t.status] ?? t.status}
                       </Badge>
                       <span className="text-xs text-ink-muted" dir="ltr">
-                        {new Date(t.created_at).toLocaleDateString("ar-SY")}
+                        {fmtDate(t.created_at)}
                       </span>
                     </span>
                   </li>
@@ -609,7 +608,7 @@ export default function UserProfilePage() {
                         onClick={() => router.push(`/dashboard/orders?q=${rt.order_number}`)}
                         className="font-medium text-primary hover:underline"
                       >
-                        #{fmt.format(rt.order_number)}
+                        #{fmtNum(rt.order_number)}
                       </button>
                       <span className="text-ink-muted">{rt.merchant_name}</span>
                       <span className="flex items-center gap-1 text-accent-dark"><IconStar size={12} className="fill-accent-dark" />{rt.merchant_stars}</span>
@@ -623,7 +622,7 @@ export default function UserProfilePage() {
                       )}
                     </span>
                     <span className="text-xs text-ink-muted" dir="ltr">
-                      {new Date(rt.created_at).toLocaleDateString("ar-SY")}
+                      {fmtDate(rt.created_at)}
                     </span>
                   </li>
                 ))}
@@ -651,7 +650,7 @@ export default function UserProfilePage() {
                         onClick={() => router.push(`/dashboard/orders?q=${rt.order_number}`)}
                         className="font-medium text-primary hover:underline"
                       >
-                        #{fmt.format(rt.order_number)}
+                        #{fmtNum(rt.order_number)}
                       </button>
                       <span className="text-xs text-ink-muted">{rt.merchant_name}</span>
                       {rt.comment && (
@@ -659,7 +658,7 @@ export default function UserProfilePage() {
                       )}
                     </span>
                     <span className="text-xs text-ink-muted" dir="ltr">
-                      {new Date(rt.created_at).toLocaleDateString("ar-SY")}
+                      {fmtDate(rt.created_at)}
                     </span>
                   </li>
                 ))}
@@ -693,7 +692,7 @@ export default function UserProfilePage() {
                     )}
                   </span>
                   <span className="shrink-0 text-xs text-ink-muted" dir="ltr">
-                    {new Date(a.created_at).toLocaleString("ar-SY", { dateStyle: "short", timeStyle: "short" })}
+                    {fmtDateTime(a.created_at)}
                   </span>
                 </li>
               ))}
@@ -973,7 +972,7 @@ function FinBucket({
     <FormSection title={title} icon={<IconWallet />}>
       <p className={`mb-3 text-2xl font-bold ${tone}`} dir="ltr">
         {positive ? "+" : ""}
-        {fmt.format(total)}{" "}
+        {fmtNum(total)}{" "}
         <span className="text-sm font-normal text-ink-muted">{m.common.currency}</span>
       </p>
       {items.length === 0 ? (
@@ -999,7 +998,7 @@ function FinBucket({
                 )}
               </div>
               <span className={`shrink-0 font-bold ${tone}`} dir="ltr">
-                {fmt.format(e.amount)}
+                {fmtNum(e.amount)}
               </span>
             </li>
           ))}

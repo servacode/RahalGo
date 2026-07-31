@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -22,7 +22,6 @@ import { useAuth, isLoggedIn } from "@/lib/auth";
 import RatingModal from "@/components/RatingModal";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 const STATUS_LABELS: Record<string, string> = m.orders.status;
 
 const VARIANT: Record<string, "warning" | "primary" | "success" | "danger" | "neutral"> = {
@@ -103,19 +102,16 @@ export default function MyOrdersPage() {
                   href={`/orders/${o.id}`}
                   className="flex min-w-0 flex-1 flex-wrap items-center gap-3 hover:opacity-80"
                 >
-                  <span className="font-bold">#{fmt.format(o.number)}</span>
+                  <span className="font-bold">#{fmtNum(o.number)}</span>
                   <span className="min-w-0 flex-1 truncate text-sm">{o.merchant_name}</span>
                   <Badge variant={VARIANT[o.status] ?? "primary"}>
                     {STATUS_LABELS[o.status] ?? o.status}
                   </Badge>
                   <span className="text-sm font-bold text-primary-dark">
-                    {fmt.format(o.total)} {m.common.currency}
+                    {fmtNum(o.total)} {m.common.currency}
                   </span>
                   <span className="text-xs text-ink-muted" dir="ltr">
-                    {new Date(o.created_at).toLocaleString("ar-SY", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
+                    {fmtDateTime(o.created_at)}
                   </span>
                 </Link>
                 {canRate && (

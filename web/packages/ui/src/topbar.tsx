@@ -7,10 +7,9 @@
  */
 
 import type { ComponentType, ReactNode } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 type LinkType = ComponentType<{
   href: string;
@@ -121,7 +120,7 @@ export function WalletPill({
       className="bg-primary-light font-bold text-primary-dark hover:bg-primary-light/70"
     >
       {icon}
-      <span dir="ltr">{fmt.format(balance)}</span>
+      <span dir="ltr">{fmtNum(balance)}</span>
       <span className="hidden text-xs font-normal sm:inline">{m.common.currency}</span>
     </TopBarLink>
   );
@@ -161,7 +160,7 @@ export function CountBadge({ count, tone = "accent" }: { count: number; tone?: "
         tone === "danger" ? "bg-danger" : "bg-accent"
       }`}
     >
-      {fmt.format(count)}
+      {fmtNum(count)}
     </span>
   );
 }

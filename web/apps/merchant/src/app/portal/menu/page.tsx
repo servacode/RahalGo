@@ -3,13 +3,12 @@
 /** التوفر اليومي: صلاحية المتجر الوحيدة على القائمة — إيقاف/إعادة صنف فوراً. */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { Badge, Button, IconStore } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface MenuItem {
   id: string;
@@ -109,7 +108,7 @@ export default function MerchantMenuPage() {
                       )}
                     </div>
                     <span className="font-bold text-primary-dark">
-                      {fmt.format(item.price)} {m.common.currency}
+                      {fmtNum(item.price)} {m.common.currency}
                     </span>
                     <Badge variant={item.available ? "success" : "warning"}>
                       {item.available ? m.merchant.menu.available : m.merchant.menu.unavailable}

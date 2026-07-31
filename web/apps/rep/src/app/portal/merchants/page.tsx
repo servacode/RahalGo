@@ -2,7 +2,7 @@
 
 /** عملائي — المتاجر التي جلبها المندوب وأداؤها. */
 
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   CategoryIcon,
   Badge,
@@ -17,7 +17,6 @@ import {
 import { api, mediaUrl } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface RepMerchant {
   id: string;
@@ -65,7 +64,7 @@ export default function ClientsPage() {
                 subtitle={
                   <>
                     {m.rep.joinedAt} <span dir="ltr">{mr.joined_at}</span> —{" "}
-                    {m.rep.deliveredCount.replace("{n}", fmt.format(mr.delivered_orders))}
+                    {m.rep.deliveredCount.replace("{n}", fmtNum(mr.delivered_orders))}
                   </>
                 }
                 trailing={

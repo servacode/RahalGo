@@ -3,13 +3,12 @@
 /** تقارير المتجر: ملخص بمدى زمني + أعمدة يومية (منهجية dataviz الموحدة). */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { IconStatus, IconOrder, IconSuccess, IconError, IconWallet, Input } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Report {
   summary: {
@@ -57,25 +56,25 @@ export default function MerchantReportsPage() {
 
   const cards = s
     ? [
-        { label: m.merchant.reports.orders, value: fmt.format(s.orders), icon: <IconOrder /> },
+        { label: m.merchant.reports.orders, value: fmtNum(s.orders), icon: <IconOrder /> },
         {
           label: m.merchant.reports.delivered,
-          value: fmt.format(s.delivered),
+          value: fmtNum(s.delivered),
           icon: <IconSuccess className="text-success" />,
         },
         {
           label: m.merchant.reports.cancelled,
-          value: fmt.format(s.cancelled),
+          value: fmtNum(s.cancelled),
           icon: <IconError className="text-danger" />,
         },
         {
           label: `${m.merchant.reports.sales} (${m.common.currency})`,
-          value: fmt.format(s.sales),
+          value: fmtNum(s.sales),
           icon: <IconWallet />,
         },
         {
           label: `${m.merchant.reports.net} (${m.common.currency})`,
-          value: fmt.format(net),
+          value: fmtNum(net),
           icon: <IconWallet className="text-success" />,
         },
       ]
@@ -125,8 +124,8 @@ export default function MerchantReportsPage() {
                   style={{ height: Math.max(3, (d.sales / maxSales) * 140) }}
                 />
                 <div className="pointer-events-none absolute bottom-full start-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-control bg-ink px-2 py-1 text-xs text-white group-hover:block rtl:translate-x-1/2">
-                  {fmt.format(d.sales)} {m.common.currency} — {fmt.format(d.delivered)}/
-                  {fmt.format(d.orders)}
+                  {fmtNum(d.sales)} {m.common.currency} — {fmtNum(d.delivered)}/
+                  {fmtNum(d.orders)}
                 </div>
               </div>
             ))}

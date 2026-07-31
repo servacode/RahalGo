@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { IconEdit, Button, Input, Select } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
@@ -15,7 +15,6 @@ import { useCart } from "@/lib/cart";
 const PickMap = dynamic(() => import("@/components/map/PickMap"), { ssr: false });
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 function translateKey(key: string): string {
   let node: unknown = m;
@@ -146,7 +145,7 @@ export default function CartPage() {
                 {l.note && <p className="text-xs text-accent-dark"><IconEdit size={11} className="inline align-[-1px]" /> {l.note}</p>}
               </div>
               <span className="text-sm font-bold text-primary-dark">
-                {fmt.format(l.price * l.qty)}
+                {fmtNum(l.price * l.qty)}
               </span>
               <div className="flex items-center gap-1.5">
                 <button
@@ -155,7 +154,7 @@ export default function CartPage() {
                 >
                   −
                 </button>
-                <span className="w-5 text-center text-sm font-bold">{fmt.format(l.qty)}</span>
+                <span className="w-5 text-center text-sm font-bold">{fmtNum(l.qty)}</span>
                 <button
                   onClick={() => setQty(i, l.qty + 1)}
                   className="h-7 w-7 rounded-control border border-line text-sm font-bold"
@@ -171,19 +170,19 @@ export default function CartPage() {
           <div className="flex justify-between">
             <dt className="text-ink-muted">{m.site.cart.subtotal}</dt>
             <dd className="font-medium">
-              {fmt.format(subtotal)} {m.common.currency}
+              {fmtNum(subtotal)} {m.common.currency}
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-ink-muted">{m.site.cart.delivery}</dt>
             <dd className="font-medium">
-              {zone ? `${fmt.format(zone.delivery_fee)} ${m.common.currency}` : "—"}
+              {zone ? `${fmtNum(zone.delivery_fee)} ${m.common.currency}` : "—"}
             </dd>
           </div>
           <div className="flex justify-between border-t border-line pt-1 text-base">
             <dt className="font-bold">{m.site.cart.total}</dt>
             <dd className="font-bold text-primary-dark">
-              {zone ? fmt.format(subtotal + zone.delivery_fee) : fmt.format(subtotal)}{" "}
+              {zone ? fmtNum(subtotal + zone.delivery_fee) : fmtNum(subtotal)}{" "}
               {m.common.currency}
             </dd>
           </div>
@@ -226,9 +225,9 @@ export default function CartPage() {
                 <p className="mt-1.5 text-xs text-success">
                   {m.site.cart.zoneFee
                     .replace("{name}", zone.name)
-                    .replace("{fee}", `${fmt.format(zone.delivery_fee)} ${m.common.currency}`)}
+                    .replace("{fee}", `${fmtNum(zone.delivery_fee)} ${m.common.currency}`)}
                   {zone.min_order > 0 &&
-                    ` — ${m.site.cart.minOrder.replace("{v}", `${fmt.format(zone.min_order)} ${m.common.currency}`)}`}
+                    ` — ${m.site.cart.minOrder.replace("{v}", `${fmtNum(zone.min_order)} ${m.common.currency}`)}`}
                 </p>
               )}
               {zoneErr && <p className="mt-1.5 text-xs text-danger">{zoneErr}</p>}
@@ -248,7 +247,7 @@ export default function CartPage() {
               <p className="text-xs text-ink-muted">
                 {m.site.cart.walletBalance.replace(
                   "{v}",
-                  `${fmt.format(balance)} ${m.common.currency}`
+                  `${fmtNum(balance)} ${m.common.currency}`
                 )}
               </p>
             )}

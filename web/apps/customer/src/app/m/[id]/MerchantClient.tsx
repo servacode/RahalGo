@@ -3,13 +3,12 @@
 /** صفحة المتجر: القائمة كاملة، نافذة الصنف بخياراته (حدود min/max)، إضافة للسلة. */
 
 import { useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { CategoryIcon, Badge, Button, Modal } from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
 import { useCart, type CartLine } from "@/lib/cart";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Option {
   id: string;
@@ -100,7 +99,7 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
                         <p className="line-clamp-1 text-xs text-ink-muted">{item.description}</p>
                       )}
                       <p className="mt-1 font-bold text-primary-dark">
-                        {fmt.format(item.price)} {m.common.currency}
+                        {fmtNum(item.price)} {m.common.currency}
                       </p>
                     </div>
                     {!item.available && <Badge variant="warning">{m.site.menu.unavailable}</Badge>}
@@ -213,7 +212,7 @@ function ItemModal({
                   >
                     {o.name}
                     {o.price_delta > 0 && (
-                      <span className="text-xs text-ink-muted"> +{fmt.format(o.price_delta)}</span>
+                      <span className="text-xs text-ink-muted"> +{fmtNum(o.price_delta)}</span>
                     )}
                   </button>
                 );
@@ -238,7 +237,7 @@ function ItemModal({
             >
               −
             </button>
-            <span className="w-6 text-center font-bold">{fmt.format(qty)}</span>
+            <span className="w-6 text-center font-bold">{fmtNum(qty)}</span>
             <button
               onClick={() => setQty(qty + 1)}
               className="h-8 w-8 rounded-control border border-line font-bold"
@@ -247,7 +246,7 @@ function ItemModal({
             </button>
           </div>
           <span className="font-bold text-primary-dark">
-            {fmt.format(unit * qty)} {m.common.currency}
+            {fmtNum(unit * qty)} {m.common.currency}
           </span>
         </div>
 
@@ -275,7 +274,7 @@ function ItemModal({
           </div>
         ) : (
           <Button onClick={submit} className="w-full py-2.5">
-            {m.site.menu.addToCart} — {fmt.format(unit * qty)} {m.common.currency}
+            {m.site.menu.addToCart} — {fmtNum(unit * qty)} {m.common.currency}
           </Button>
         )}
       </div>

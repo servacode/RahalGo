@@ -3,12 +3,11 @@
 /** نافذة المحفظة المشتركة — تُستخدم في أقسام المستخدمين والزبائن والمندوبين. */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { Button, Input, Select, Modal, IconWallet } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
-const fmtNum = new Intl.NumberFormat("ar-SY");
 
 function translateKey(key: string): string {
   let node: unknown = m;
@@ -88,7 +87,7 @@ export default function WalletModal({
           {m.admin.users.balance}
         </span>
         <span className="text-2xl font-bold text-primary-dark">
-          {balance === null ? "…" : `${fmtNum.format(balance)} ${m.common.currency}`}
+          {balance === null ? "…" : `${fmtNum(balance)} ${m.common.currency}`}
         </span>
       </div>
 

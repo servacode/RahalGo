@@ -2,7 +2,7 @@
 
 /** طلبات الانضمام عبر رابط المندوب — سجل المتاجر التي سجّلت عبره. */
 
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDate } from "@rahalgo/i18n";
 import {
   CategoryIcon,
   Badge,
@@ -65,7 +65,7 @@ export default function LeadsPage() {
                   </p>
                 </div>
                 <span className="shrink-0 text-xs text-ink-muted" dir="ltr">
-                  {new Date(l.created_at).toLocaleDateString("ar-SY")}
+                  {fmtDate(l.created_at)}
                 </span>
               </div>
             </li>

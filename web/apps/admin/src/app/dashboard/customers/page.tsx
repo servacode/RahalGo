@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   PageHeader,
@@ -26,7 +26,6 @@ import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
 
 const m = getMessages(defaultLocale);
-const fmt = new Intl.NumberFormat("ar-SY");
 
 interface Customer {
   id: string;
@@ -107,9 +106,9 @@ export default function CustomersPage() {
       icon: <IconOrder />,
       cell: (c) => (
         <span>
-          <span className="font-bold">{fmt.format(c.orders_count)}</span>{" "}
+          <span className="font-bold">{fmtNum(c.orders_count)}</span>{" "}
           <span className="text-xs text-success">
-            ({fmt.format(c.delivered_count)} {m.admin.customers.deliveredCount})
+            ({fmtNum(c.delivered_count)} {m.admin.customers.deliveredCount})
           </span>
         </span>
       ),
@@ -120,7 +119,7 @@ export default function CustomersPage() {
       icon: <IconWallet />,
       cell: (c) => (
         <span className="font-bold text-primary-dark">
-          {fmt.format(c.total_spent)} {m.common.currency}
+          {fmtNum(c.total_spent)} {m.common.currency}
         </span>
       ),
     },
@@ -129,7 +128,7 @@ export default function CustomersPage() {
       header: m.admin.customers.balance,
       cell: (c) =>
         c.balance > 0 ? (
-          <Badge variant="primary">{fmt.format(c.balance)}</Badge>
+          <Badge variant="primary">{fmtNum(c.balance)}</Badge>
         ) : (
           <span className="text-ink-muted">{m.common.zero}</span>
         ),
@@ -140,7 +139,7 @@ export default function CustomersPage() {
       icon: <IconDate />,
       cell: (c) =>
         c.last_order_at ? (
-          new Date(c.last_order_at).toLocaleDateString("ar-SY")
+          fmtDate(c.last_order_at)
         ) : (
           <span className="text-ink-muted">{m.admin.customers.never}</span>
         ),
