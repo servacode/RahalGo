@@ -27,7 +27,6 @@ import {
   IconUser,
   IconLogout,
   IconOverview,
-  IconStar,
   IconCart,
   IconBell,
 } from "@rahalgo/ui";
@@ -110,18 +109,6 @@ export default function Header() {
             <span className="hidden md:inline">{m.terms.orders}</span>
           </TopBarLink>
         </>
-      )}
-
-      {logged && (
-        <TopBarLink
-          Link={Link}
-          href="/ratings"
-          title={m.terms.ratings}
-          tone={pathname.startsWith("/ratings") ? "active" : "plain"}
-        >
-          <IconStar size={16} />
-          <span className="hidden md:inline">{m.terms.ratings}</span>
-        </TopBarLink>
       )}
 
       {/* لوحة التحكم تظهر لمن له لوحة فقط — الزبون لا لوحة له وعناصره كلها هنا */}

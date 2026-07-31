@@ -17,6 +17,7 @@ import {
   useLiveRefresh,
   IconOrder,
   IconStar,
+  Stars,
   IconStore,
   IconWallet,
   IconCart,
@@ -55,6 +56,9 @@ interface RateInfo {
   merchant_name: string;
   has_driver: boolean;
   rated: boolean;
+  merchant_stars: number;
+  driver_stars: number | null;
+  comment: string;
 }
 
 export default function MyOrdersPage() {
@@ -169,9 +173,10 @@ export default function MyOrdersPage() {
                       </Button>
                     )}
                     {o.status === "delivered" && rate?.rated && (
-                      <span className="flex flex-1 items-center justify-center gap-1 rounded-control bg-success/10 px-3 py-1.5 text-xs font-medium text-success">
-                        <IconStar size={12} className="fill-success" />
-                        {m.site.rating.myTitle}
+                      // نجومٌ لا شارة: «تقييماتي» تقول إنك قيّمت ولا تقول بكم
+                      <span className="flex flex-1 items-center justify-center gap-2 rounded-control bg-page px-3 py-1.5">
+                        <span className="text-xs text-ink-muted">{m.site.rating.merchant}</span>
+                        <Stars value={rate.merchant_stars} size="sm" />
                       </span>
                     )}
                   </>
