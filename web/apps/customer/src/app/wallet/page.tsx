@@ -24,6 +24,7 @@ import { useAuth, isLoggedIn } from "@/lib/auth";
 const m = getMessages(defaultLocale);
 const W = m.shared.walletTabs;
 const KIND_LABELS: Record<string, string> = m.shared.txKinds;
+const KIND_HINTS: Record<string, string> = m.shared.walletKindHints;
 
 /** ترتيب التبويبات من منظور الزبون: ماله أولاً، ثم ما صُرف منه. */
 const KIND_ORDER = ["topup", "order_payment", "refund", "compensation", "adjustment"];
@@ -99,7 +100,12 @@ export default function WalletPage() {
       </p>
 
       <Card title={m.terms.transactions} icon={IconWallet}>
-        <Tabs items={tabs} active={current} onChange={setTab} className="mb-4" />
+        <Tabs items={tabs} active={current} onChange={setTab} className="mb-3" />
+
+        {/* شرح النوع: أسماء القيود المحاسبية ليست بديهية لمن لم يكتبها */}
+        {KIND_HINTS[current] && (
+          <p className="mb-3 text-xs leading-relaxed text-ink-muted">{KIND_HINTS[current]}</p>
+        )}
 
         {shown.length === 0 ? (
           <EmptyState icon={IconWallet} title={m.terms.noTransactions} />

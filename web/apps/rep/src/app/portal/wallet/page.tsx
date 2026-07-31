@@ -34,6 +34,7 @@ const m = getMessages(defaultLocale);
 const P = m.shared.payout;
 const W = m.shared.walletTabs;
 const KIND_LABELS: Record<string, string> = m.shared.txKinds;
+const KIND_HINTS: Record<string, string> = m.shared.walletKindHints;
 
 /** ترتيب التبويبات: الأهمّ للمندوب أولاً، لا ترتيب ورودها في القاعدة. */
 const KIND_ORDER = [
@@ -147,7 +148,12 @@ export default function WalletPage() {
       </div>
 
       <Card title={m.terms.transactions} icon={IconWallet}>
-        <Tabs items={tabs} active={current} onChange={setTab} className="mb-4" />
+        <Tabs items={tabs} active={current} onChange={setTab} className="mb-3" />
+
+        {/* شرح النوع: أسماء القيود المحاسبية ليست بديهية لمن لم يكتبها */}
+        {KIND_HINTS[current] && (
+          <p className="mb-3 text-xs leading-relaxed text-ink-muted">{KIND_HINTS[current]}</p>
+        )}
 
         {current === REQUESTS ? (
           <ul className="space-y-2">
