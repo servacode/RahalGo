@@ -3,6 +3,10 @@
 /**
  * لوحات السمعة المشتركة — نسخة واحدة لكل بوابات الموظفين (مندوب/متجر):
  * التقييمات والتعليقات المتلقّاة، والشكاوى والبلاغات. يُحقن لها api الخاص بالتطبيق.
+ *
+ * النصوص قابلة للتخصيص بحسب الدور: ما يراه **المتجر** تقييماً لخدمته يراه
+ * **المندوب** تقييماً لمتاجره — والمصدر واحد لكنه لا يعني الشيء نفسه، فتسميته
+ * "تقييمي" عند المندوب تضليل. كل بوابة تمرّر نصوصها من معجمها.
  */
 
 import { useCallback } from "react";
@@ -17,6 +21,17 @@ const T = m.terms;
 const R = m.shared.reputation;
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
+
+/** نصوص قابلة للتخصيص — الافتراضي محايد من `shared.reputation`. */
+export interface ReputationLabels {
+  reviewsTitle?: string;
+  reviewsHint?: string;
+  reviewsEmpty?: string;
+  avgLabel?: string;
+  complaintsTitle?: string;
+  complaintsHint?: string;
+  complaintsEmpty?: string;
+}
 
 interface Review {
   order_number: number;
@@ -47,7 +62,7 @@ function useReputation(api: ApiFn) {
   return data;
 }
 
-export function ReputationReviews({ api }: { api: ApiFn }) {
+export function ReputationReviews({ api, labels = {} }: { api: ApiFn; labels?: ReputationLabels }) {
   const data = useReputation(api);
   if (!data) return <LoadingState />;
 
@@ -56,16 +71,25 @@ export function ReputationReviews({ api }: { api: ApiFn }) {
 
   return (
     <PageContainer>
-      <PageHeader icon={IconStar} title={T.ratings} subtitle={R.reviewsHint} />
+      <PageHeader
+        icon={IconStar}
+        title={labels.reviewsTitle ?? T.ratings}
+        subtitle={labels.reviewsHint ?? R.reviewsHint}
+      />
 
       <StatGrid>
-        <StatCard label={T.avgRating} value={data.rating.avg.toFixed(1)} icon={IconStar} tone="accent" />
+        <StatCard
+          label={labels.avgLabel ?? T.avgRating}
+          value={data.rating.avg.toFixed(1)}
+          icon={IconStar}
+          tone="accent"
+        />
         <StatCard label={T.ratingsCount} value={data.rating.count} />
-        <StatCard label={T.myRating} value={trendText} />
+        <StatCard label={T.trend} value={trendText} />
       </StatGrid>
 
       {data.reviews.length === 0 ? (
-        <EmptyState icon={IconStar} title={R.reviewsEmpty} />
+        <EmptyState icon={IconStar} title={labels.reviewsEmpty ?? R.reviewsEmpty} />
       ) : (
         <ul className="space-y-2">
           {data.reviews.map((rv, i) => (
@@ -94,16 +118,20 @@ const CVARIANT: Record<Complaint["status"], "warning" | "primary" | "success"> =
   resolved: "success",
 };
 
-export function ReputationComplaints({ api }: { api: ApiFn }) {
+export function ReputationComplaints({ api, labels = {} }: { api: ApiFn; labels?: ReputationLabels }) {
   const data = useReputation(api);
   if (!data) return <LoadingState />;
 
   return (
     <PageContainer>
-      <PageHeader icon={IconSupport} title={T.complaints} subtitle={R.complaintsHint} />
+      <PageHeader
+        icon={IconSupport}
+        title={labels.complaintsTitle ?? T.complaints}
+        subtitle={labels.complaintsHint ?? R.complaintsHint}
+      />
 
       {data.complaints.length === 0 ? (
-        <EmptyState icon={IconSupport} title={R.complaintsEmpty} tone="success" />
+        <EmptyState icon={IconSupport} title={labels.complaintsEmpty ?? R.complaintsEmpty} tone="success" />
       ) : (
         <ul className="space-y-2">
           {data.complaints.map((c) => (

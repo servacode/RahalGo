@@ -19,6 +19,12 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		DeliveredOrders  int     `json:"delivered_orders"`
 		TotalCommissions int64   `json:"total_commissions"`
 		Balance          int64   `json:"balance"`
+		// الشهر الجاري — الهدف يُقاس عليه لا على المجموع التراكمي
+		MonthMerchants   int   `json:"month_merchants"`
+		MonthDelivered   int   `json:"month_delivered"`
+		MonthCommissions int64 `json:"month_commissions"`
+		MonthlyTarget    int   `json:"monthly_target"`
+		PendingLeads     int   `json:"pending_leads"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.invite_code, u.full_name,
@@ -27,10 +33,29 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		        WHERE m.sales_rep_user_id = u.id AND o.status = 'delivered'),
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 WHERE t.user_id = u.id AND t.kind = 'commission'), 0),
-		       COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = u.id), 0)
+		       COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = u.id), 0),
+		       -- الشهر الجاري بتوقيت سوريا (لا UTC: نهاية الشهر تهمّ المندوب)
+		       (SELECT count(*) FROM merchants m
+		        WHERE m.sales_rep_user_id = u.id
+		          AND date_trunc('month', m.created_at AT TIME ZONE 'Asia/Damascus')
+		            = date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')),
+		       (SELECT count(*) FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		        WHERE m.sales_rep_user_id = u.id AND o.status = 'delivered'
+		          AND date_trunc('month', o.delivered_at AT TIME ZONE 'Asia/Damascus')
+		            = date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')),
+		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
+		                 WHERE t.user_id = u.id AND t.kind = 'commission'
+		                   AND date_trunc('month', t.created_at AT TIME ZONE 'Asia/Damascus')
+		                     = date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')), 0),
+		       COALESCE((SELECT (value#>>'{}')::int FROM app_settings
+		                 WHERE key = 'sales.monthly_target'), 5),
+		       (SELECT count(*) FROM merchant_leads l
+		        WHERE l.sales_rep_user_id = u.id AND l.status = 'new')
 		FROM users u WHERE u.id = $1`, uid).
 		Scan(&out.InviteCode, &out.FullName, &out.Merchants, &out.DeliveredOrders,
-			&out.TotalCommissions, &out.Balance)
+			&out.TotalCommissions, &out.Balance,
+			&out.MonthMerchants, &out.MonthDelivered, &out.MonthCommissions,
+			&out.MonthlyTarget, &out.PendingLeads)
 	if err != nil {
 		s.respondErr(w, err)
 		return
