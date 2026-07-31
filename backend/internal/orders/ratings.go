@@ -14,10 +14,11 @@ import (
 )
 
 var (
-	ErrNotDelivered = httpx.NewError(http.StatusConflict, "not_delivered", "errors.not_delivered")
-	ErrAlreadyRated = httpx.NewError(http.StatusConflict, "already_rated", "errors.already_rated")
-	ErrBadStars     = httpx.NewError(http.StatusBadRequest, "invalid_stars", "errors.validation")
-	ErrNotYourOrder = httpx.NewError(http.StatusForbidden, "forbidden", "errors.forbidden")
+	ErrNotDelivered  = httpx.NewError(http.StatusConflict, "not_delivered", "errors.not_delivered")
+	ErrAlreadyRated  = httpx.NewError(http.StatusConflict, "already_rated", "errors.already_rated")
+	ErrBadStars      = httpx.NewError(http.StatusBadRequest, "invalid_stars", "errors.validation")
+	ErrNotYourOrder  = httpx.NewError(http.StatusForbidden, "forbidden", "errors.forbidden")
+	ErrRateOwnClient = httpx.NewError(http.StatusForbidden, "rate_own_client", "errors.rate_own_client")
 )
 
 type Rating struct {
@@ -37,9 +38,13 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 
 	var status, customerID string
 	var driverID *string
-	err := s.db.QueryRow(ctx,
-		`SELECT status, customer_id, driver_id FROM orders WHERE id = $1`, orderID).
-		Scan(&status, &customerID, &driverID)
+	var repIsBuyer bool
+	err := s.db.QueryRow(ctx, `
+		SELECT o.status, o.customer_id, o.driver_id,
+		       m.sales_rep_user_id = o.customer_id
+		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1`, orderID).
+		Scan(&status, &customerID, &driverID, &repIsBuyer)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.ErrNotFound
 	}
@@ -51,6 +56,15 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 	}
 	if customerID != actorID && !slices.Contains(actorRoles, "admin") {
 		return ErrNotYourOrder
+	}
+	// المندوب لا يقيّم متجراً هو مندوبه.
+	//
+	// التقييم شهادةُ زبونٍ مستقلّ، وشهادةُ من ينتفع بنجاح المتجر ليست شهادة.
+	// وبلا هذا المنع يستطيع رفع تقييم عملائه بطلباتٍ يشتريها بنفسه — وهو نظير
+	// قبضِه عمولةً على شرائه، وقد مُنع للسبب نفسه: **لا مكافأة على ما ليس ترويجاً**.
+	// والأدمن مستثنى: تدخّله موثّق في سجل التدقيق ومسؤوليته عليه.
+	if repIsBuyer && !slices.Contains(actorRoles, "admin") {
+		return ErrRateOwnClient
 	}
 	if driverID == nil {
 		driverStars = nil

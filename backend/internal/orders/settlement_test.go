@@ -2,6 +2,7 @@ package orders_test
 
 import (
 	"context"
+	"errors"
 	"github.com/jackc/pgx/v5"
 	"log/slog"
 	"os"
@@ -313,4 +314,36 @@ func countOrders(t *testing.T, pool interface {
 		t.Fatalf("تعذّر عدّ الطلبات: %v", err)
 	}
 	return n
+}
+
+// المندوب لا يقيّم متجراً هو مندوبه.
+//
+// التقييم شهادةُ زبونٍ مستقلّ، وشهادةُ من ينتفع بنجاح المتجر ليست شهادة. وهو
+// نظير منعِ عمولته على شرائه: لا مكافأة على ما ليس ترويجاً.
+func TestRate_RepCannotRateOwnClient(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	f := setup(t, "at_dropoff", 50_000, 5_000, 0)
+
+	if _, err := pool.Exec(ctx,
+		`UPDATE orders SET customer_id = $2 WHERE id = $1`, f.orderID, f.rep); err != nil {
+		t.Fatalf("تعذّر جعل المندوب زبوناً: %v", err)
+	}
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "delivered", ""); err != nil {
+		t.Fatalf("التسليم فشل: %v", err)
+	}
+
+	err := f.svc.RateOrder(ctx, f.rep, []string{"sales"}, f.orderID, 5, nil, "ممتاز")
+	if !errors.Is(err, orders.ErrRateOwnClient) {
+		t.Fatalf("قيّم المندوب متجره: الخطأ %v والمتوقع rate_own_client", err)
+	}
+
+	// وزبونٌ عادي على المتجر نفسه يقيّم بلا مانع
+	if _, err := pool.Exec(ctx,
+		`UPDATE orders SET customer_id = $2 WHERE id = $1`, f.orderID, f.customer); err != nil {
+		t.Fatalf("تعذّرت إعادة الزبون: %v", err)
+	}
+	if err := f.svc.RateOrder(ctx, f.customer, []string{"customer"}, f.orderID, 4, nil, ""); err != nil {
+		t.Fatalf("مُنع زبون عادي من التقييم: %v", err)
+	}
 }
