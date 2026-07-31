@@ -226,6 +226,14 @@ func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, order
 	if repIsBuyer {
 		return nil
 	}
+	// عتبة التفعيل: لا عمولة عن عميلٍ لم يُثبت أنه يعمل.
+	activated, err := s.merchantActivated(ctx, q, orderID)
+	if err != nil {
+		return err
+	}
+	if !activated {
+		return nil
+	}
 
 	repCommission, err := s.repShare(ctx, q, platformCommission)
 	if err != nil || repCommission <= 0 {
@@ -392,4 +400,35 @@ func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement
 	_, err := s.wallet.ApplyTx(ctx, q, *in.driverID, share, "driver_earning",
 		in.orderID, "أجر توصيل طلب مُسلَّم", &in.actorID)
 	return err
+}
+
+// merchantActivated هل بلغ عميلُ هذا الطلب عتبةَ التفعيل؟
+//
+// **طلبات المندوب نفسه لا تُحتسب في العتبة**. ولولا هذا الاستثناء لصارت العتبة
+// بلا معنى: يشتري المندوب خمس مرّات من متجره فيُفعّله بيده، ثم يقبض عمّا بعدها.
+// وقد مُنع من العمولة على شرائه فلا يُترك له بابٌ يفتحه بها.
+//
+// والعدّ **يشمل الطلب الحالي**: هو طلبٌ مُسلَّم فعلاً، فاستثناؤه يؤخّر التفعيل
+// طلباً بلا سبب.
+func (s *Service) merchantActivated(ctx context.Context, q wallet.Querier, orderID string) (bool, error) {
+	var threshold int
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE((SELECT (value#>>'{}')::int FROM app_settings
+		                 WHERE key = 'sales.activation_orders'), 5)`).Scan(&threshold); err != nil {
+		return false, err
+	}
+	if threshold <= 1 {
+		return true, nil
+	}
+	var delivered int
+	if err := q.QueryRow(ctx, `
+		SELECT count(*)
+		FROM orders o
+		JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.merchant_id = (SELECT merchant_id FROM orders WHERE id = $1)
+		  AND o.status = 'delivered'
+		  AND o.customer_id IS DISTINCT FROM m.sales_rep_user_id`, orderID).Scan(&delivered); err != nil {
+		return false, err
+	}
+	return delivered >= threshold, nil
 }

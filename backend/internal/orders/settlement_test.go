@@ -52,6 +52,14 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 	f.svc = orders.NewService(pool, nil, f.wallet, f.cashbox, nil,
 		slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})))
 
+	// العتبة = 1 تعني «بلا عتبة»: هذه الاختبارات تفحص التسوية لا التفعيل، وطلبٌ
+	// واحد يجب أن يُنتج عمولة فيها. واختبارات التفعيل ترفعها صراحةً.
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO app_settings (key, value) VALUES ('sales.activation_orders','1'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value`); err != nil {
+		t.Fatalf("تعذّر ضبط عتبة التفعيل: %v", err)
+	}
+
 	var categoryID string
 	if err := pool.QueryRow(ctx, `SELECT id FROM categories LIMIT 1`).Scan(&categoryID); err != nil {
 		t.Fatalf("لا تصنيفات في القاعدة: %v", err)
@@ -438,4 +446,78 @@ func TestDelivery_DriverShare_FixedMode(t *testing.T) {
 	if got := f.balance(t, f.driver); got != 5_000 {
 		t.Fatalf("أجر السائق المقطوع = %d، والمتوقع 5000", got)
 	}
+}
+
+// عتبة التفعيل: لا عمولة عن عميلٍ لم يُثبت أنه يعمل.
+//
+// كانت العمولة تُقيَّد من الطلب الأول، فمن يسجّل خمسين متجراً ينتج كلٌّ منها طلباً
+// واحداً يقبض عن الخمسين — الكمّ يُكافأ كما يُكافأ الإنتاج.
+func TestCommission_HeldUntilMerchantActivates(t *testing.T) {
+	ctx := context.Background()
+	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
+
+	// **بعد** setup: هي تضبط العتبة إلى 1، فضبطُها قبلها يُمحى
+	if _, err := f.pool.Exec(ctx, `
+		UPDATE app_settings SET value = '3'::jsonb WHERE key = 'sales.activation_orders'`); err != nil {
+		t.Fatalf("تعذّر ضبط العتبة: %v", err)
+	}
+
+	// الطلب الأول: دون العتبة (3) فلا عمولة
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "delivered", ""); err != nil {
+		t.Fatalf("التسليم الأول فشل: %v", err)
+	}
+	if got := f.balance(t, f.rep); got != 0 {
+		t.Fatalf("قُيّدت عمولة قبل بلوغ العتبة: %d", got)
+	}
+
+	// طلبان آخران من زبون عادي يبلغان بهما العتبة
+	for i := 0; i < 2; i++ {
+		id := f.extraDeliveredOrder(t, f.customer)
+		if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, id, "delivered", ""); err != nil {
+			t.Fatalf("تسليم إضافي فشل: %v", err)
+		}
+	}
+	// الثالث بلغ العتبة فقُيّدت عنه عمولة
+	if got := f.balance(t, f.rep); got <= 0 {
+		t.Fatalf("لم تُقيَّد عمولة بعد بلوغ العتبة: %d", got)
+	}
+}
+
+// طلبات المندوب نفسه لا تُحتسب في العتبة — وإلا فعّل عميله بيده.
+func TestActivation_RepOwnOrdersDoNotCount(t *testing.T) {
+	ctx := context.Background()
+	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
+
+	// **بعد** setup: هي تضبط العتبة إلى 1، فضبطُها قبلها يُمحى
+	if _, err := f.pool.Exec(ctx, `
+		UPDATE app_settings SET value = '3'::jsonb WHERE key = 'sales.activation_orders'`); err != nil {
+		t.Fatalf("تعذّر ضبط العتبة: %v", err)
+	}
+
+	// ثلاثة طلبات اشتراها المندوب نفسه — لا تُفعّل ولا تُعطي عمولة
+	for i := 0; i < 3; i++ {
+		id := f.extraDeliveredOrder(t, f.rep)
+		if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, id, "delivered", ""); err != nil {
+			t.Fatalf("تسليم فشل: %v", err)
+		}
+	}
+	if got := f.balance(t, f.rep); got != 0 {
+		t.Fatalf("فعّل المندوب عميله بمشترياته: الرصيد %d والمتوقع 0", got)
+	}
+}
+
+// extraDeliveredOrder ينشئ طلباً جاهزاً للتسليم على المتجر نفسه لزبونٍ معيّن.
+func (f *fixture) extraDeliveredOrder(t *testing.T, customerID string) string {
+	t.Helper()
+	var id string
+	if err := f.pool.QueryRow(context.Background(), `
+		INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text, dropoff,
+			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due)
+		VALUES ($1, $2, $3, 'at_dropoff', 'عنوان', 
+			ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
+			'cash', 100000, 10000, 110000, 0, 110000)
+		RETURNING id`, customerID, f.merchantID, f.driver).Scan(&id); err != nil {
+		t.Fatalf("تعذّر إنشاء طلب إضافي: %v", err)
+	}
+	return id
 }

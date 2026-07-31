@@ -113,6 +113,25 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 	if rep, err := s.identity.SalesRepByInviteCode(r.Context(), req.Ref); err == nil && rep.Status == "active" {
 		repID = &rep.ID
 	}
+	// **لا نسبة لمتجرٍ على المنصة أصلاً**.
+	//
+	// المندوب يُكافأ على **جلب** متجر، ومتجرٌ يعمل عندنا لم يُجلَب. وبلا هذا
+	// الفحص يستطيع من يعرف متاجر المنصة أن يدعو متجراً قائماً برقمٍ آخر
+	// فيَنسبه لنفسه ويقبض عن مبيعاته. (وهو ما تمنعه DoorDash صراحةً في شروط
+	// إحالتها: لا مكافأة لمتجرٍ له حساب سابق.)
+	//
+	// والطلب لا يُرفض — يمضي بلا نسبة. فالمتجر قد يكون فرعاً جديداً بحقّ،
+	// وحرمانُه من التسجيل عقوبةٌ على المندوب لا عليه.
+	if repID != nil {
+		var exists bool
+		if err := s.pg.QueryRow(r.Context(), `
+			SELECT EXISTS(
+				SELECT 1 FROM merchants m
+				JOIN users u ON u.id = m.owner_user_id
+				WHERE u.phone = $1)`, phone).Scan(&exists); err == nil && exists {
+			repID = nil
+		}
+	}
 	if _, err := s.pg.Exec(r.Context(), `
 		INSERT INTO merchant_leads
 			(store_name, owner_name, phone, area, category_id, lat, lng, owner_password_hash, sales_rep_user_id)

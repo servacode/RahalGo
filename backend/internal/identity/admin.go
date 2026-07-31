@@ -85,7 +85,10 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 		if err != nil {
 			return nil, err
 		}
-		if err := s.repo.SetPassword(ctx, user.ID, hash); err != nil {
+		// **مؤقّتة لا نهائية**: الأدمن هو من وضعها، فمرّت بيدِ ثالث كما تمرّ كلمة
+		// المتجر بيد المندوب. وكان الإنشاء يستدعي SetPassword فتُعتمد كأنّ صاحبها
+		// اختارها — فيبقى موظّف المنصة بكلمة مرور يعرفها غيره إلى الأبد.
+		if err := s.repo.SetTempPassword(ctx, user.ID, hash); err != nil {
 			return nil, err
 		}
 	}
