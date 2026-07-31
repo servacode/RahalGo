@@ -41,25 +41,37 @@ import {
   IconWallet,
   IconDate,
   IconStatus,
+  IconNote,
+  IconBalance,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const D = m.rep.merchantDetail;
-const ST: Record<string, string> = m.orders.status;
+const CANCELLED = new Set(["rejected", "cancelled", "failed", "refunded"]);
 
-/** لون الحالة: المُسلَّم نجاح، ونهاياتُ الفشل خطر، وما بينهما جارٍ. */
-const TONE: Record<string, "success" | "danger" | "warning"> = {
-  delivered: "success",
-  rejected: "danger",
-  cancelled: "danger",
-  failed: "danger",
-  refunded: "danger",
-};
+/**
+ * ثلاث دِلاء بدل أربع عشرة حالة.
+ *
+ * «السائق في المتجر» و«جارٍ إسناد سائق» تفاصيل تشغيل لا تعني المندوب ولا يملك
+ * تغييرها، وعرضُها عليه يُثقل الشاشة بما لا يفيده. يعنيه سؤالان: أتمّ الطلب
+ * فقبضتُ عمولته؟ أم ضاع؟ — وما بينهما «قيد التنفيذ» يُبقي المجاميع متطابقة
+ * بلا أن يكشف عملياتٍ ليست شأنه.
+ */
+function bucketOf(status: string): {
+  key: "delivered" | "cancelled" | "running";
+  label: string;
+  tone: "success" | "danger" | "warning";
+} {
+  if (status === "delivered") return { key: "delivered", label: D.stDelivered, tone: "success" };
+  if (CANCELLED.has(status)) return { key: "cancelled", label: D.stCancelled, tone: "danger" };
+  return { key: "running", label: D.stRunning, tone: "warning" };
+}
 
 interface RepOrder {
   number: number;
   status: string;
+  cancel_reason: string;
   total: number;
   subtotal: number;
   delivery_fee: number;
@@ -149,17 +161,33 @@ export default function MerchantDetailPage() {
       id: "status",
       header: D.colStatus,
       icon: <IconStatus />,
-      cell: (o) => <Badge variant={TONE[o.status] ?? "warning"}>{ST[o.status] ?? o.status}</Badge>,
+      cell: (o) => {
+        const b = bucketOf(o.status);
+        return <Badge variant={b.tone}>{b.label}</Badge>;
+      },
+    },
+    {
+      id: "reason",
+      header: D.colReason,
+      icon: <IconNote />,
+      // يظهر للملغى وحده: عمودُ سببٍ فارغ في كل الصفوف ضجيج
+      cell: (o) =>
+        bucketOf(o.status).key === "cancelled" ? (
+          <span className="text-danger">{o.cancel_reason || D.noReason}</span>
+        ) : (
+          <span className="text-ink-muted">—</span>
+        ),
     },
     {
       id: "total",
       header: D.colTotal,
-      icon: <IconWallet />,
+      icon: <IconOrder />,
       cell: (o) => <span dir="ltr">{fmtNum(o.total)}</span>,
     },
     {
       id: "commission",
       header: D.colCommission,
+      icon: <IconBalance />,
       cell: (o) => (
         <span dir="ltr" className="text-ink-muted">
           {fmtNum(o.platform_commission)}
@@ -169,6 +197,7 @@ export default function MerchantDetailPage() {
     {
       id: "share",
       header: D.colMyShare,
+      icon: <IconWallet />,
       cell: (o) => (
         // الصفر رمادي لا أخضر: طلبٌ مُسترجَع لا نصيب فيه، وتلوينه يَعِد بما ليس
         <span dir="ltr" className={o.my_share > 0 ? "font-bold text-success" : "text-ink-muted"}>
@@ -240,12 +269,9 @@ export default function MerchantDetailPage() {
             }}
             className="w-44"
           >
-            <option value="">{m.terms.allStatuses}</option>
-            {Object.entries(ST).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
+            <option value="">{D.filterAll}</option>
+            <option value="delivered">{D.stDelivered}</option>
+            <option value="cancelled">{D.stCancelled}</option>
           </Select>
           <ViewToggle
             view={view}

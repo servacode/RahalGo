@@ -126,13 +126,20 @@ export function DataView<T>({
                 </div>
               ))}
             </div>
-            <dl className="flex-1 space-y-2 text-sm">
-              {rest.map((c) => (
-                <div key={c.id} className="flex items-start justify-between gap-3">
+            {/* كل حقل سطرٌ مفصول بخطّ خفيف: بلا فاصل تسيح الحقول في كتلة واحدة
+                فيُقرأ عنوانٌ مع قيمة جارِه — والبطاقة تُمسح بالعين لا تُدرَس. */}
+            <dl className="flex-1 text-sm">
+              {rest.map((c, i) => (
+                <div
+                  key={c.id}
+                  className={`flex items-start justify-between gap-3 py-2 ${
+                    i < rest.length - 1 ? "border-b border-line/60" : ""
+                  }`}
+                >
                   <dt className="shrink-0 text-ink-muted">
                     <FieldLabel icon={c.icon} text={c.header} />
                   </dt>
-                  <dd className="text-end">{c.cell(item)}</dd>
+                  <dd className="min-w-0 text-end">{c.cell(item)}</dd>
                 </div>
               ))}
             </dl>

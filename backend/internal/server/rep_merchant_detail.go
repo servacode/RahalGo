@@ -70,13 +70,25 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	if perPage < 1 || perPage > 100 {
 		perPage = 20
 	}
-	status := q.Get("status") // فلترة اختيارية بحالة الطلب
-
-	where := `WHERE o.merchant_id = $1 AND ($2 = '' OR o.status = $2)`
+	// الفلترة بـ**دلوٍ** لا بحالة خام. المندوب لا شأن له بحالات التشغيل الأربع
+	// عشرة — «السائق في المتجر» و«جارٍ إسناد سائق» تفاصيل عمليات لا تعنيه ولا
+	// يملك تغييرها. يعنيه سؤالان: أتمّ الطلب فقبضتُ عمولته؟ أم ضاع؟
+	//   delivered  → مُسلَّم
+	//   cancelled  → كل نهاية غير التسليم
+	//   ما عداهما  → لا فلترة (الكل)
+	bucket := q.Get("status")
+	// قيمة لا نعرفها تُعامَل كـ«الكل» لا كفلترةٍ لا تُطابق شيئاً: جدولٌ فارغ
+	// بلا سبب ظاهر يوهم المندوب أن لا طلبات لعميله.
+	if bucket != "delivered" && bucket != "cancelled" {
+		bucket = ""
+	}
+	where := `WHERE o.merchant_id = $1 AND ($2 = '' OR
+	          ($2 = 'delivered' AND o.status = 'delivered') OR
+	          ($2 = 'cancelled' AND o.status IN ('rejected','cancelled','failed','refunded')))`
 
 	var total int
 	if err := s.pg.QueryRow(ctx,
-		`SELECT count(*) FROM orders o `+where, merchantID, status).Scan(&total); err != nil {
+		`SELECT count(*) FROM orders o `+where, merchantID, bucket).Scan(&total); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -85,14 +97,14 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	// الجمع لا الاختيار: الطلب المُسترجَع له قيدان يلغي أحدهما الآخر فيظهر صفراً
 	// — وهو الصدق بعينه، لا إخفاءَ السطر ولا إظهارَ عمولةٍ سُحبت.
 	rows, err := s.pg.Query(ctx, `
-		SELECT o.number, o.status, o.total, o.subtotal, o.delivery_fee,
+		SELECT o.number, o.status, o.cancel_reason, o.total, o.subtotal, o.delivery_fee,
 		       o.platform_commission, o.created_at, o.delivered_at,
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 WHERE t.user_id = $3 AND t.ref = o.id::text
 		                   AND t.kind IN ('commission', 'adjustment')), 0)
 		FROM orders o `+where+`
 		ORDER BY o.number DESC LIMIT $4 OFFSET $5`,
-		merchantID, status, uid, perPage, (page-1)*perPage)
+		merchantID, bucket, uid, perPage, (page-1)*perPage)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -100,20 +112,22 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	defer rows.Close()
 
 	type repOrder struct {
-		Number      int64      `json:"number"`
-		Status      string     `json:"status"`
-		Total       int64      `json:"total"`
-		Subtotal    int64      `json:"subtotal"`
-		DeliveryFee int64      `json:"delivery_fee"`
-		Commission  int64      `json:"platform_commission"`
-		MyShare     int64      `json:"my_share"`
-		CreatedAt   time.Time  `json:"created_at"`
-		DeliveredAt *time.Time `json:"delivered_at"`
+		Number int64  `json:"number"`
+		Status string `json:"status"`
+		// سبب الإلغاء يُرسل مع الطلب الملغى: «ضاع طلبٌ» سؤال ناقص بلا جوابه
+		CancelReason string     `json:"cancel_reason"`
+		Total        int64      `json:"total"`
+		Subtotal     int64      `json:"subtotal"`
+		DeliveryFee  int64      `json:"delivery_fee"`
+		Commission   int64      `json:"platform_commission"`
+		MyShare      int64      `json:"my_share"`
+		CreatedAt    time.Time  `json:"created_at"`
+		DeliveredAt  *time.Time `json:"delivered_at"`
 	}
 	list := []repOrder{}
 	for rows.Next() {
 		var o repOrder
-		if err := rows.Scan(&o.Number, &o.Status, &o.Total, &o.Subtotal, &o.DeliveryFee,
+		if err := rows.Scan(&o.Number, &o.Status, &o.CancelReason, &o.Total, &o.Subtotal, &o.DeliveryFee,
 			&o.Commission, &o.CreatedAt, &o.DeliveredAt, &o.MyShare); err != nil {
 			s.respondErr(w, err)
 			return
