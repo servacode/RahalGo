@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"net"
 	"net/http"
 	"time"
 
@@ -31,6 +32,7 @@ var (
 	ErrInvalidRefresh     = httpx.NewError(http.StatusUnauthorized, "invalid_refresh", "errors.unauthorized")
 	ErrWeakPassword       = httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password")
 	ErrOTPSendFailed      = httpx.NewError(http.StatusServiceUnavailable, "otp_send_failed", "errors.otp_send_failed")
+	ErrTooManyAttempts    = httpx.NewError(http.StatusTooManyRequests, "too_many_attempts", "errors.too_many_attempts")
 )
 
 const (
@@ -38,6 +40,12 @@ const (
 	otpMaxPer15m  = 3
 	refreshTTL    = 30 * 24 * time.Hour
 	minPasswordLn = 8
+
+	// حدّ محاولات الدخول بكلمة المرور. رموز التحقق كانت محمية والكلمة مفتوحة —
+	// وأرقام المتاجر ظاهرة في واجهة الزبون العامة، فالتخمين كان بلا سقف.
+	loginMaxPerPhone = 5  // لكل رقم — يوقف تخمين حساب بعينه
+	loginMaxPerIP    = 30 // لكل عنوان — أوسع: مقهى أو مكتب يشترك فيه عدة أشخاص
+	loginFailWindow  = 15 * time.Minute
 )
 
 type Service struct {
@@ -314,14 +322,52 @@ func (s *Service) ConfirmSignup(ctx context.Context, rawPhone, code, fullName, p
 	return s.issueFor(ctx, user, userAgent, ip, "auth.signup")
 }
 
+// loginKeys مفاتيح عدّ المحاولات الفاشلة: بالرقم وبالعنوان.
+func loginKeys(phone, ip string) (string, string) {
+	if host, _, err := net.SplitHostPort(ip); err == nil {
+		ip = host // المنفذ العابر يتغيّر مع كل اتصال — المفتاح للعنوان
+	}
+	return "login:fail:p:" + phone, "login:fail:i:" + ip
+}
+
+// loginLocked هل تجاوز الرقم أو العنوان حدّ المحاولات الفاشلة؟
+// عطل الكاش لا يقفل الدخول (يفشل مفتوحاً عمداً — كما ActiveStatus).
+func (s *Service) loginLocked(ctx context.Context, phone, ip string) bool {
+	pk, ik := loginKeys(phone, ip)
+	if n, err := s.rdb.Get(ctx, pk).Int(); err == nil && n >= loginMaxPerPhone {
+		return true
+	}
+	if n, err := s.rdb.Get(ctx, ik).Int(); err == nil && n >= loginMaxPerIP {
+		return true
+	}
+	return false
+}
+
+// noteLoginFail يعدّ محاولة فاشلة على الرقم والعنوان معاً.
+func (s *Service) noteLoginFail(ctx context.Context, phone, ip string) {
+	pk, ik := loginKeys(phone, ip)
+	for _, k := range []string{pk, ik} {
+		if n, err := s.rdb.Incr(ctx, k).Result(); err == nil && n == 1 {
+			s.rdb.Expire(ctx, k, loginFailWindow)
+		}
+	}
+}
+
 // LoginPassword دخول بكلمة المرور (للموظفين والأدوار التشغيلية غالباً).
 func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAgent, ip string) (*AuthResult, error) {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return nil, ErrInvalidPhone
 	}
+	// الفحص قبل قراءة الحساب: لا نكشف وجود الرقم لمن تجاوز الحد
+	if s.loginLocked(ctx, phone, ip) {
+		return nil, ErrTooManyAttempts
+	}
 	user, hash, err := s.repo.UserByPhone(ctx, phone)
 	if errors.Is(err, ErrNotFound) || (err == nil && hash == "") {
+		// نعدّ المحاولة حتى لرقم غير مسجّل: وإلا صار الفرق في السلوك كاشفاً
+		// لأي رقم له حساب (تعداد حسابات).
+		s.noteLoginFail(ctx, phone, ip)
 		return nil, ErrInvalidCredentials
 	}
 	if err != nil {
@@ -332,9 +378,13 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 		return nil, err
 	}
 	if !match {
+		s.noteLoginFail(ctx, phone, ip)
 		s.repo.Audit(ctx, nil, "auth.password_failed", "user", user.ID, ip, nil)
 		return nil, ErrInvalidCredentials
 	}
+	// نجاح: يمسح عدّاد الرقم فلا يُعاقَب صاحبه بمحاولاته السابقة
+	pk, _ := loginKeys(phone, ip)
+	s.rdb.Del(ctx, pk)
 	return s.issueFor(ctx, user, userAgent, ip, "auth.password_login")
 }
 
@@ -373,20 +423,23 @@ func (s *Service) issueSession(ctx context.Context, user *User, userAgent, ip, a
 	if user.Status != "active" {
 		return nil, ErrUserBlocked
 	}
-	access, exp, err := s.tokens.IssueAccess(user.ID, user.Roles)
-	if err != nil {
-		return nil, err
-	}
 	rawRefresh, refreshHash, err := auth.NewOpaqueToken()
 	if err != nil {
 		return nil, err
 	}
+	// دخول جديد يُبطل ما سبق — والإبطال يشمل قائمة Redis كي يسري فوراً
 	if sessionID == "" {
-		if _, err := s.repo.RevokeAllTokens(ctx, user.ID); err != nil {
+		if err := s.revokeAllSessions(ctx, user.ID); err != nil {
 			return nil, err
 		}
 	}
-	if err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, refreshTTL, userAgent, ip, sessionID); err != nil {
+	// نخزّن التجديد أولاً لنعرف عائلة الجلسة، ثم نضعها في توكن الوصول
+	sid, err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, refreshTTL, userAgent, ip, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	access, exp, err := s.tokens.IssueAccess(user.ID, user.Roles, sid)
+	if err != nil {
 		return nil, err
 	}
 	s.repo.Audit(ctx, &user.ID, action, "user", user.ID, ip, nil)
@@ -417,15 +470,63 @@ func (s *Service) Refresh(ctx context.Context, rawRefresh, userAgent, ip string)
 	return s.issueSession(ctx, user, userAgent, ip, "auth.refresh", sessionID)
 }
 
+// sessionRevokedKey مفتاح إبطال جلسة في Redis.
+func sessionRevokedKey(sid string) string { return "sess:revoked:" + sid }
+
+// SessionRevoked هل أُبطلت هذه الجلسة؟ يفحصه الوسيط مع كل طلب.
+// يفشل مفتوحاً عند عطل الكاش (لا نقفل المنصة بسبب Redis).
+func (s *Service) SessionRevoked(ctx context.Context, sid string) bool {
+	if sid == "" {
+		return false
+	}
+	n, err := s.rdb.Exists(ctx, sessionRevokedKey(sid)).Result()
+	return err == nil && n > 0
+}
+
+// revokeSession يُبطل عائلة جلسة: في القاعدة (توكنات التجديد) وفي Redis
+// (توكنات الوصول القائمة). مدة المفتاح = عمر توكن الوصول، فبعدها لا يبقى توكن حيّ.
+func (s *Service) revokeSession(ctx context.Context, userID, sid string) error {
+	if sid == "" {
+		return nil
+	}
+	if err := s.repo.RevokeSession(ctx, userID, sid); err != nil {
+		return err
+	}
+	s.rdb.Set(ctx, sessionRevokedKey(sid), "1", s.tokens.AccessTTL()+time.Minute)
+	return nil
+}
+
+// revokeAllSessions يُبطل كل جلسات الحساب — يستعمله الدخول الجديد وخروج الإدارة.
+func (s *Service) revokeAllSessions(ctx context.Context, userID string) error {
+	sids, err := s.repo.ActiveSessionIDs(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.repo.RevokeAllTokens(ctx, userID); err != nil {
+		return err
+	}
+	for _, sid := range sids {
+		s.rdb.Set(ctx, sessionRevokedKey(sid), "1", s.tokens.AccessTTL()+time.Minute)
+	}
+	return nil
+}
+
+// Logout يُنهي الجلسة على **كل تطبيقات المنصة** لا على التطبيق الذي طلب الخروج.
+// الجلسة الواحدة تمتد على الأربعة عبر عائلة session_id (هجرة 0026): إبطال توكن
+// واحد كان يترك الحساب مفتوحاً في تبويب آخر — وعلى جهاز مشترك هذا خطر حقيقي.
 func (s *Service) Logout(ctx context.Context, rawRefresh, ip string) error {
-	userID, _, err := s.repo.RevokeRefresh(ctx, auth.HashToken(rawRefresh))
+	userID, sid, err := s.repo.RevokeRefresh(ctx, auth.HashToken(rawRefresh))
 	if errors.Is(err, ErrNotFound) {
 		return nil // خروج توكن ميت = نجاح صامت
 	}
-	if err == nil {
-		s.repo.Audit(ctx, &userID, "auth.logout", "user", userID, ip, nil)
+	if err != nil {
+		return err
 	}
-	return err
+	if err := s.revokeSession(ctx, userID, sid); err != nil {
+		return err
+	}
+	s.repo.Audit(ctx, &userID, "auth.logout", "user", userID, ip, nil)
+	return nil
 }
 
 func (s *Service) Me(ctx context.Context, userID string) (*User, error) {
