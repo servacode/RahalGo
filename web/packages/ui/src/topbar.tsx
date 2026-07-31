@@ -8,6 +8,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { IconLogout } from "./icons";
 
 const m = getMessages(defaultLocale);
 
@@ -42,6 +43,16 @@ export function TopBar({
     </header>
   );
 }
+
+/**
+ * مقاس أيقونات الشريط — رقم واحد لا يقرّره كل عنصر بنفسه.
+ *
+ * كانت أربعة مقاسات في شريط واحد (14 و15 و16 و18) فبدت الأيقونات غير متساوية
+ * وإن كان كلٌّ منها سليماً وحده. التفاوت في المقاس يُقرأ فوضىً حتى لو لم يُلحظ
+ * سببه، والصورة الشخصية وحدها تكبر لأنها هوية لا رمز.
+ */
+export const TOPBAR_ICON = 17;
+export const TOPBAR_AVATAR = 30;
 
 /** ارتفاع وحواف موحّدة لكل عناصر الشريط — لا يقرّر كل عنصر مقاسه بنفسه. */
 const chipBase =
@@ -163,5 +174,76 @@ export function CountBadge({ count, tone = "accent" }: { count: number; tone?: "
     >
       {fmtNum(count)}
     </span>
+  );
+}
+
+// ---------- مجموعة أدوات الشريط ----------
+
+/**
+ * الأدوات على يسار الشريط — **تركيبٌ واحد لكل تطبيقات المشروع**.
+ *
+ * كانت العناصر مشتركة والتركيبُ مبنيّاً مرّتين: مرّة في هيكل اللوحات ومرّة في
+ * شريط الموقع. فاختلفا بلا أن يقصد أحد — الصورة باسمٍ هنا وبلا اسمٍ هناك،
+ * والخروج يظهر عند `sm` في واحد و`lg` في الآخر. عناصرٌ مشتركة بتركيبٍ مكرّر
+ * تُنتج شريطين مختلفين، وهذا هو الانحراف الذي تمنعه المركزية لا التكرار وحده.
+ *
+ * والترتيب هنا **واحد لا يُبدَّل**: الإشعارات، فالمحفظة، فما يخصّ التطبيق،
+ * فالحساب، فالخروج. من يعرف موضع زرٍّ في لوحةٍ يجده في مكانه في الأخرى.
+ */
+export function TopBarActions({
+  Link,
+  notifications,
+  walletHref,
+  balance,
+  walletIcon,
+  accountHref,
+  accountLabel,
+  avatarUrl,
+  name,
+  onLogout,
+  logoutLabel,
+  extras,
+  active = "",
+}: {
+  Link: LinkType;
+  /** مكوّن الجرس الحيّ — يُمرَّر جاهزاً لأنه يحتاج api وwsUrl الخاصَّين بالتطبيق */
+  notifications?: ReactNode;
+  walletHref?: string;
+  balance?: number;
+  walletIcon?: ReactNode;
+  accountHref: string;
+  accountLabel: string;
+  avatarUrl: string | null;
+  name: string;
+  onLogout: () => void;
+  logoutLabel: string;
+  /** ما يخصّ التطبيق وحده: السلة، الطلبات، لوحتي، شارة التقييم */
+  extras?: ReactNode;
+  /** المسار الحالي — لتمييز القسم المفتوح */
+  active?: string;
+}) {
+  return (
+    <>
+      {notifications}
+      {walletHref && (
+        <WalletPill Link={Link} href={walletHref} balance={balance ?? 0} icon={walletIcon} />
+      )}
+      {extras}
+      {/* الصورة وحدها بلا اسم: صاحبها يعرف اسمه، وإطالةُ الشريط به تزاحم ما يفيده */}
+      <TopBarLink
+        Link={Link}
+        href={accountHref}
+        title={accountLabel}
+        aria-label={accountLabel}
+        tone={active.startsWith(accountHref) ? "active" : "plain"}
+        className="!p-1"
+      >
+        <Avatar url={avatarUrl} name={name} size={TOPBAR_AVATAR} />
+      </TopBarLink>
+      <TopBarChip tone="danger" onClick={onLogout} title={logoutLabel} aria-label={logoutLabel}>
+        <IconLogout size={TOPBAR_ICON} />
+        <span className="hidden lg:inline">{logoutLabel}</span>
+      </TopBarChip>
+    </>
   );
 }

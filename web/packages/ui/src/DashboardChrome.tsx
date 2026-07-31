@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LiveNotifications, useLiveRefresh } from "./Notifications";
-import { TopBar, TopBarChip, TopBarLink, WalletPill, Avatar } from "./topbar";
+import { TopBar, TopBarChip, TopBarLink, TopBarActions, TOPBAR_ICON } from "./topbar";
 import {
   IconWallet,
   IconStar,
@@ -209,43 +209,45 @@ export function DashboardChrome({
             </>
           }
         >
-          <LiveNotifications api={api} wsUrl={wsUrl ?? ""} token={token ?? null} Link={Link} allHref={notificationsHref} />
-          {showRating && rep && rep.rating.count > 0 && (
-            <TopBarLink
-              Link={Link}
-              href={ratingHref ?? accountHref}
-              tone="accent"
-              title={ratingLabel ?? m.terms.myRating}
-            >
-              <IconStar size={14} className="fill-accent text-accent" />
-              <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
-              {rep.rating.trend === "up" && <IconTrendUp size={13} className="text-success" />}
-              {rep.rating.trend === "down" && <IconTrendDown size={13} className="text-danger" />}
-            </TopBarLink>
-          )}
-          {walletHref && (
-            <WalletPill
-              Link={Link}
-              href={walletHref}
-              balance={summary?.balance ?? 0}
-              icon={<IconWallet size={15} />}
-            />
-          )}
-          <TopBarLink
+          <TopBarActions
             Link={Link}
-            href={accountHref}
-            title={summary?.full_name || phone || ""}
-            className="border border-line ps-1 hover:bg-page"
-          >
-            <Avatar url={mediaUrl(summary?.avatar_thumb_url)} name={summary?.full_name || phone || ""} />
-            <span className="hidden max-w-[7rem] truncate font-medium text-ink sm:inline">
-              {summary?.full_name || phone}
-            </span>
-          </TopBarLink>
-          <TopBarChip onClick={onLogout} tone="danger">
-            <IconLogout size={16} />
-            <span className="hidden sm:inline">{m.auth.logout}</span>
-          </TopBarChip>
+            notifications={
+              <LiveNotifications
+                api={api}
+                wsUrl={wsUrl ?? ""}
+                token={token ?? null}
+                Link={Link}
+                allHref={notificationsHref}
+              />
+            }
+            walletHref={walletHref}
+            balance={summary?.balance ?? 0}
+            walletIcon={<IconWallet size={TOPBAR_ICON} />}
+            accountHref={accountHref}
+            accountLabel={m.terms.account}
+            avatarUrl={mediaUrl(summary?.avatar_thumb_url)}
+            name={summary?.full_name || phone || ""}
+            onLogout={onLogout}
+            logoutLabel={m.auth.logout}
+            active={pathname}
+            extras={
+              showRating &&
+              rep &&
+              rep.rating.count > 0 && (
+                <TopBarLink
+                  Link={Link}
+                  href={ratingHref ?? accountHref}
+                  tone="accent"
+                  title={ratingLabel ?? m.terms.myRating}
+                >
+                  <IconStar size={TOPBAR_ICON} className="fill-accent text-accent" />
+                  <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
+                  {rep.rating.trend === "up" && <IconTrendUp size={TOPBAR_ICON} className="text-success" />}
+                  {rep.rating.trend === "down" && <IconTrendDown size={TOPBAR_ICON} className="text-danger" />}
+                </TopBarLink>
+              )
+            }
+          />
         </TopBar>
 
         <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-4 shadow-sm">

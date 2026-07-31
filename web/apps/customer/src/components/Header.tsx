@@ -17,15 +17,14 @@ import {
   TopBar,
   TopBarLink,
   TopBarChip,
-  WalletPill,
-  Avatar,
+  TopBarActions,
+  TOPBAR_ICON,
   CountBadge,
   LiveNotifications,
   useLiveRefresh,
   IconOrder,
   IconWallet,
   IconUser,
-  IconLogout,
   IconOverview,
   IconCart,
   IconBell,
@@ -89,93 +88,85 @@ export default function Header() {
 
   return (
     <TopBar start={brand} sticky>
-      {logged && (
-        <>
-          {/* الإشعارات والبث الحي — نفس مكوّن اللوحات */}
-          <LiveNotifications api={api} wsUrl={WS_URL} token={tokenStore.access} Link={Link} allHref="/notifications" />
-          <WalletPill
-            Link={Link}
-            href="/wallet"
-            balance={summary?.balance ?? 0}
-            icon={<IconWallet size={15} />}
-          />
-        </>
-      )}
-
-      {/* لوحة التحكم تظهر لمن له لوحة فقط — الزبون لا لوحة له وعناصره كلها هنا */}
-      {logged && portal && (
-        <TopBarChip tone="accent" onClick={backToDashboard} title={m.shared.backToDashboard}>
-          <IconOverview size={16} />
-          <span className="hidden md:inline">{m.shared.backToDashboard}</span>
-        </TopBarChip>
-      )}
-
-      {/* الطلبات والسلة متجاورتان: كلتاهما «سلّة» في ذهن الزبون — واحدة لما
-          اشتراه وأخرى لما ينوي شراءه. وأيقونتان بلا نصّ لأن معناهما بديهي. */}
-      {logged && (
-        <TopBarLink
-          Link={Link}
-          href="/orders"
-          title={m.terms.orders}
-          aria-label={m.terms.orders}
-          tone={pathname.startsWith("/orders") ? "active" : "plain"}
-          className="!px-2.5"
-        >
-          <IconOrder size={18} />
-        </TopBarLink>
-      )}
-
-      <TopBarLink
-        Link={Link}
-        href="/cart"
-        tone="primary"
-        title={m.terms.cart}
-        aria-label={m.terms.cart}
-        className="relative !px-2.5"
-      >
-        <IconCart size={18} />
-        <CountBadge count={count} />
-      </TopBarLink>
-
       {logged ? (
+        <TopBarActions
+          Link={Link}
+          notifications={
+            <LiveNotifications
+              api={api}
+              wsUrl={WS_URL}
+              token={tokenStore.access}
+              Link={Link}
+              allHref="/notifications"
+            />
+          }
+          walletHref="/wallet"
+          balance={summary?.balance ?? 0}
+          walletIcon={<IconWallet size={TOPBAR_ICON} />}
+          accountHref="/account"
+          accountLabel={m.terms.account}
+          avatarUrl={mediaUrl(summary?.avatar_thumb_url)}
+          name={summary?.full_name || user?.phone || ""}
+          onLogout={() => {
+            logout();
+            router.push("/");
+          }}
+          logoutLabel={m.auth.logout}
+          active={pathname}
+          extras={
+            <>
+              {/* الطلبات والسلة متجاورتان: كلتاهما «سلّة» في ذهن الزبون —
+                  واحدة لما اشتراه وأخرى لما ينوي شراءه. */}
+              <TopBarLink
+                Link={Link}
+                href="/orders"
+                title={m.terms.orders}
+                aria-label={m.terms.orders}
+                tone={pathname.startsWith("/orders") ? "active" : "plain"}
+                className="!px-2.5"
+              >
+                <IconOrder size={TOPBAR_ICON} />
+              </TopBarLink>
+              <TopBarLink
+                Link={Link}
+                href="/cart"
+                tone="primary"
+                title={m.terms.cart}
+                aria-label={m.terms.cart}
+                className="relative !px-2.5"
+              >
+                <IconCart size={TOPBAR_ICON} />
+                <CountBadge count={count} />
+              </TopBarLink>
+              {/* لوحتي لمن له لوحة فقط — الزبون لا لوحة له وعناصره كلها هنا */}
+              {portal && (
+                <TopBarChip tone="accent" onClick={backToDashboard} title={m.shared.backToDashboard}>
+                  <IconOverview size={TOPBAR_ICON} />
+                  <span className="hidden md:inline">{m.shared.backToDashboard}</span>
+                </TopBarChip>
+              )}
+            </>
+          }
+        />
+      ) : (
         <>
-          {/* الصورة نفسها زرُّ الحساب: أقصر طريق إلى ما يخصّ صاحبها */}
           <TopBarLink
             Link={Link}
-            href="/account"
-            title={m.terms.account}
-            tone={pathname.startsWith("/account") ? "active" : "plain"}
-            aria-label={m.terms.account}
-            className="!p-1"
+            href="/cart"
+            tone="primary"
+            title={m.terms.cart}
+            aria-label={m.terms.cart}
+            className="relative !px-2.5"
           >
-            {/* الصورة وحدها: الاسم يعرفه صاحبه، وإطالةُ الشريط به تزاحم ما يفيده */}
-            <Avatar
-              url={mediaUrl(summary?.avatar_thumb_url)}
-              name={summary?.full_name || user?.phone || ""}
-              size={30}
-            />
+            <IconCart size={TOPBAR_ICON} />
+            <CountBadge count={count} />
           </TopBarLink>
-
-          <TopBarChip
-            tone="danger"
-            title={m.auth.logout}
-            aria-label={m.auth.logout}
-            onClick={() => {
-              logout();
-              router.push("/");
-            }}
-          >
-            <IconLogout size={16} />
-            <span className="hidden lg:inline">{m.auth.logout}</span>
-          </TopBarChip>
+          <TopBarLink Link={Link} href="/login" className="border border-line">
+            <IconUser size={TOPBAR_ICON} />
+            {N.login}
+          </TopBarLink>
         </>
-      ) : (
-        <TopBarLink Link={Link} href="/login" className="border border-line">
-          <IconUser size={16} />
-          {N.login}
-        </TopBarLink>
       )}
-
     </TopBar>
   );
 }
