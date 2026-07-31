@@ -226,6 +226,77 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
+// handleRepCreateLead تسجيل عميل جديد من بوابة المندوب مباشرة.
+//
+// المندوب واقف في المحل: أن يملأ النموذج بنفسه في نصف دقيقة أنجع من إرسال رابط
+// يُنسى. الطلب يُنسب له تلقائياً بهويّته (لا كود دعوة ولا انتحال)، ويبقى
+// **معلّقاً** حتى موافقة الإدارة — لا يُنشئ متجراً ولا حساباً (قرار حوكمة الضمّ).
+//
+// كلمة المرور يضعها المندوب ويسلّمها لصاحب المتجر — لكنها **مؤقتة**: يُجبَر
+// المالك على تبديلها عند أول دخول، فلا تبقى كلمة مرور يعرفها غير صاحبها.
+func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		StoreName  string   `json:"store_name"`
+		OwnerName  string   `json:"owner_name"`
+		Phone      string   `json:"phone"`
+		Area       string   `json:"area"`
+		CategoryID string   `json:"category_id"`
+		Password   string   `json:"password"`
+		Lat        *float64 `json:"lat"`
+		Lng        *float64 `json:"lng"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if len(req.Password) < 8 {
+		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password"))
+		return
+	}
+	pwHash, err := auth.HashPassword(req.Password)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	req.StoreName = clip(req.StoreName, leadMaxShort)
+	req.OwnerName = clip(req.OwnerName, leadMaxShort)
+	req.Area = clip(req.Area, leadMaxShort)
+	if req.StoreName == "" || req.CategoryID == "" {
+		s.respondErr(w, errValidation)
+		return
+	}
+	if !isUUID(req.CategoryID) {
+		s.respondErr(w, errValidation)
+		return
+	}
+	phone, ok := identity.NormalizePhone(req.Phone)
+	if !ok {
+		s.respondErr(w, identity.ErrInvalidPhone)
+		return
+	}
+
+	repID := userIDFrom(r)
+	var leadID string
+	if err := s.pg.QueryRow(r.Context(), `
+		INSERT INTO merchant_leads
+			(store_name, owner_name, phone, area, category_id, lat, lng, owner_password_hash, sales_rep_user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id`,
+		req.StoreName, req.OwnerName, phone, req.Area,
+		req.CategoryID, req.Lat, req.Lng, pwHash, repID).Scan(&leadID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	// مكتب المنصة يعرف فوراً أن عميلاً ينتظر الموافقة
+	s.notify.NotifyOps(r.Context(), notifications.Input{
+		Kind: notifications.KindLead, Title: m.leadNewOps,
+		Body: req.StoreName, Entity: "lead", EntityID: leadID, Href: "/dashboard/leads",
+	})
+	s.touch("lead", "ops", "sales:"+repID)
+	httpx.JSON(w, http.StatusCreated, map[string]any{"id": leadID})
+}
+
 // handleRepLeads طلبات انضمام المندوب نفسه (بوابة المندوب).
 func (s *Server) handleRepLeads(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(),
@@ -344,9 +415,11 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 			updated_at = now()
 		WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)`,
 		mrch.ID, ownerName)
+	// كلمة المرور وضعها طرف ثالث (المندوب أو نموذج التسجيل) — مؤقتة يُجبَر
+	// صاحب المتجر على تبديلها عند أول دخول قبل الوصول إلى بوابته.
 	if !ownerExisted && pwHash != "" {
 		_, _ = s.pg.Exec(ctx, `
-			UPDATE users SET password_hash = $2, updated_at = now()
+			UPDATE users SET password_hash = $2, must_change_password = true, updated_at = now()
 			WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)
 			  AND COALESCE(password_hash,'') = ''`,
 			mrch.ID, pwHash)

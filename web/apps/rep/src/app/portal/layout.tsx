@@ -18,6 +18,7 @@ import {
   IconStar,
   IconSupport,
 } from "@rahalgo/ui";
+import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, isRep } from "@/lib/auth";
 
@@ -26,11 +27,11 @@ const m = getMessages(defaultLocale);
 const NAV: ChromeNavItem[] = [
   { href: "/portal", label: m.rep.nav.overview, icon: IconOverview },
   { href: "/portal/link", label: m.rep.nav.link, icon: IconLink },
-  { href: "/portal/leads", label: m.terms.leads, icon: IconOrder },
+  // لا قسم مستقل لطلبات الانضمام: العميل المعلّق يظهر في "عملائي" بحالته
   { href: "/portal/merchants", label: m.terms.clients, icon: IconStore },
   { href: "/portal/wallet", label: m.terms.wallet, icon: IconWallet },
-  { href: "/portal/reviews", label: m.terms.ratings, icon: IconStar },
-  { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
+  { href: "/portal/reviews", label: m.rep.reputation.reviewsTitle, icon: IconStar },
+  { href: "/portal/complaints", label: m.rep.reputation.complaintsTitle, icon: IconSupport },
   { href: "/portal/account", label: m.terms.account, icon: IconUser },
 ];
 
@@ -52,6 +53,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   }
 
   return (
+    <PasswordGate>
     <DashboardChrome
       brand={m.rep.loginTitle}
       nav={NAV}
@@ -61,11 +63,13 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       walletHref="/portal/wallet"
       ratingHref="/portal/reviews"
       showRating
+      ratingLabel={m.rep.reputation.myRating}
       api={api}
       mediaUrl={mediaUrl}
       Link={Link}
       wsUrl={`${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws")}/api/v1/ws`}
       token={tokenStore.access}
+      notificationsHref="/portal/notifications"
       phone={user?.phone}
       shopUrl={process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003"}
       shopLabel={m.shared.shopAsCustomer}
@@ -76,5 +80,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     >
       {children}
     </DashboardChrome>
+    </PasswordGate>
   );
 }

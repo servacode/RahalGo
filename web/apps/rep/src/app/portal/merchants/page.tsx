@@ -1,22 +1,58 @@
 "use client";
 
-/** عملائي — المتاجر التي جلبها المندوب وأداؤها. */
+/**
+ * عملائي — الصفحة الواحدة لعلاقة المندوب بمتاجره.
+ *
+ * دُمج فيها ما كان قسماً مستقلاً ("طلبات الانضمام"): العميل الذي سجّله المندوب
+ * يظهر هنا **بحالته** (بانتظار الموافقة / مرفوض) ثم يصبح عميلاً فعّالاً عند
+ * موافقة الإدارة — فلا يتنقّل المندوب بين قسمين لمتابعة العميل نفسه.
+ *
+ * ومنها يسجّل عميلاً جديداً وهو واقف في المحل: أنجع من إرسال رابط يُنسى.
+ */
 
+import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   CategoryIcon,
   Badge,
+  Button,
+  Input,
+  Select,
+  Modal,
+  PasswordMeter,
   PageContainer,
   PageHeader,
   EmptyState,
   LoadingState,
   ListRow,
   useLiveData,
+  useLiveRefresh,
   IconStore,
+  IconAdd,
+  IconUser,
+  IconPhone,
+  IconLocation,
+  IconLock,
+  IconSuccess,
+  IconWarning,
 } from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
+import { api, mediaUrl, ApiError } from "@/lib/api";
+
+// الخريطة من الحزمة المشتركة — مدخل فرعي كي لا تُجرّ مكتبتها لكل صفحة
+const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), {
+  ssr: false,
+  loading: () => <div className="h-64 w-full animate-pulse rounded-card bg-page" />,
+});
+
+interface Place {
+  label: string;
+  lat: number;
+  lng: number;
+}
 
 const m = getMessages(defaultLocale);
+const C = m.rep.clients;
 
 interface RepMerchant {
   id: string;
@@ -28,24 +64,103 @@ interface RepMerchant {
   delivered_orders: number;
 }
 
+interface Lead {
+  id: string;
+  store_name: string;
+  owner_name: string;
+  phone: string;
+  area: string;
+  category_icon: string | null;
+  status: "new" | "converted" | "rejected";
+  created_at: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+function errText(err: unknown): string {
+  if (!(err instanceof ApiError)) return m.errors.internal;
+  const key = err.body.message_key.split(".").pop() ?? "";
+  return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
+}
+
+/** منذ كم يوم أُرسل الطلب — كي يرى المندوب ما طال انتظاره. */
+function waitedLabel(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  return days < 1 ? C.waitingToday : C.waitingSince.replace("{n}", fmtNum(days));
+}
+
 export default function ClientsPage() {
-  const { data, loading } = useLiveData<RepMerchant[]>(
-    () => api("/api/v1/rep/merchants"),
-    ["lead", "order", "account"],
+  const [adding, setAdding] = useState(false);
+
+  const {
+    data: merchants,
+    loading,
+    reload,
+  } = useLiveData<RepMerchant[]>(() => api("/api/v1/rep/merchants"), ["lead", "order", "account"]);
+  const { data: leads, reload: reloadLeads } = useLiveData<Lead[]>(
+    () => api("/api/v1/rep/leads"),
+    ["lead"],
   );
 
+  const refreshAll = useCallback(() => {
+    reload();
+    reloadLeads();
+  }, [reload, reloadLeads]);
+  useLiveRefresh(["lead"], refreshAll);
+
   if (loading) return <LoadingState />;
-  const merchants = data ?? [];
+
+  const active = merchants ?? [];
+  // المحوَّل صار متجراً فعلياً في القائمة أعلاه — نعرض المعلّق والمرفوض فقط
+  const open = (leads ?? []).filter((l) => l.status !== "converted");
+  const empty = active.length === 0 && open.length === 0;
+
+  const addButton = (
+    <Button onClick={() => setAdding(true)} className="flex items-center gap-1.5">
+      <IconAdd size={16} />
+      {C.add}
+    </Button>
+  );
 
   return (
     <PageContainer>
-      <PageHeader icon={IconStore} title={m.terms.clients} />
+      <PageHeader icon={IconStore} title={m.terms.clients} actions={addButton} />
 
-      {merchants.length === 0 ? (
-        <EmptyState icon={IconStore} title={m.rep.merchantsEmpty} />
+      {empty ? (
+        <EmptyState icon={IconStore} title={m.rep.merchantsEmpty} action={addButton} />
       ) : (
         <ul className="space-y-2">
-          {merchants.map((mr) => {
+          {/* المعلّق أولاً — هو ما يحتاج متابعة */}
+          {open.map((l) => (
+            <ListRow
+              key={l.id}
+              leading={
+                <span className="flex h-11 w-11 items-center justify-center rounded-control bg-page">
+                  <CategoryIcon name={l.category_icon ?? "other"} size={16} />
+                </span>
+              }
+              title={l.store_name}
+              subtitle={
+                <>
+                  {l.owner_name && <span>{l.owner_name} — </span>}
+                  <span dir="ltr">{l.phone}</span>
+                  {l.status === "new" && <span> — {waitedLabel(l.created_at)}</span>}
+                </>
+              }
+              trailing={
+                <Badge variant={l.status === "new" ? "warning" : "danger"}>
+                  {l.status === "new" ? C.pending : C.rejected}
+                </Badge>
+              }
+              className="border-dashed"
+            />
+          ))}
+
+          {active.map((mr) => {
             const logo = mediaUrl(mr.logo_thumb_url);
             return (
               <ListRow
@@ -77,6 +192,287 @@ export default function ClientsPage() {
           })}
         </ul>
       )}
+
+      {adding && (
+        <AddClientModal
+          onClose={() => setAdding(false)}
+          onDone={() => {
+            setAdding(false);
+            refreshAll();
+          }}
+        />
+      )}
     </PageContainer>
+  );
+}
+
+/**
+ * نموذج تسجيل عميل — بلا كلمة مرور عمداً: لا يجوز أن يعرف المندوب كلمة مرور
+ * صاحب المتجر (يدخل برمز واتساب ثم يضبطها بنفسه). وبدل خريطة ثقيلة، زرّ يلتقط
+ * موقع المتجر من الجهاز — والمندوب واقف داخله فيكون أدقّ من أي دبوس يدوي.
+ */
+function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const { data: categories } = useLiveData<Category[]>(() => api("/api/v1/rep/categories"));
+
+  const [storeName, setStoreName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [area, setArea] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [suggestions, setSuggestions] = useState<Place[]>([]);
+  const [areaTouched, setAreaTouched] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+
+  /**
+   * الموقع ← عنوان: يقترح وصفاً من الخريطة ما لم يكن المندوب قد كتب عنواناً
+   * بنفسه (لا نطمس ما كتبه — تغطية العنونة في الرقة ضعيفة ووصفه أدقّ غالباً).
+   */
+  const fillAddress = useCallback(
+    async (la: number, ln: number) => {
+      if (areaTouched) return;
+      try {
+        const p = await api<Place>(`/api/v1/geo/reverse?lat=${la}&lng=${ln}`);
+        if (p.label) setArea(p.label);
+      } catch {
+        /* العنونة مساعدة لا شرط — الصمت مقصود */
+      }
+    },
+    [areaTouched],
+  );
+
+  // عنوان مكتوب ← مواقع مرشّحة (بتهدئة). قائمة فارغة نتيجة مشروعة: يبقى الدبوس يدوياً.
+  const areaRef = useRef(area);
+  areaRef.current = area;
+  useEffect(() => {
+    if (!areaTouched || area.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const found = await api<Place[]>(`/api/v1/geo/search?q=${encodeURIComponent(area)}`);
+        if (areaRef.current === area) setSuggestions(found.slice(0, 4));
+      } catch {
+        setSuggestions([]);
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [area, areaTouched]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (!categoryId) return setError(m.site.join.pickCategory);
+    if (password.length < 8) return setError(m.errors.weak_password);
+    if (password !== confirm) return setError(m.errors.password_mismatch);
+    setBusy(true);
+    try {
+      await api("/api/v1/rep/leads", {
+        method: "POST",
+        body: JSON.stringify({
+          store_name: storeName,
+          owner_name: ownerName,
+          phone,
+          area,
+          category_id: categoryId,
+          password,
+          lat: coords?.lat ?? null,
+          lng: coords?.lng ?? null,
+        }),
+      });
+      setDone(true);
+    } catch (err) {
+      setError(errText(err));
+      setBusy(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <Modal open onClose={onDone} title={C.addTitle}>
+        <div className="py-4 text-center">
+          <IconSuccess size={40} className="mx-auto mb-3 text-success" />
+          <p className="text-sm text-ink">{C.done}</p>
+          <Button onClick={onDone} className="mt-5 w-full py-2.5">
+            {m.common.confirm}
+          </Button>
+        </div>
+      </Modal>
+    );
+  }
+
+  return (
+    // نافذة عريضة بعمودين: البيانات يميناً والموقع يساراً — النموذج الطولي
+    // كان يفرض تمريراً مزعجاً بينما نصف الشاشة فارغ.
+    <Modal open onClose={onClose} title={C.addTitle} size="xl">
+      <form onSubmit={submit} className="grid gap-6 lg:grid-cols-2">
+        {/* ---------- العمود الأول: بيانات المتجر وصاحبه ---------- */}
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              id="store-name"
+              label={m.site.join.storeName}
+              icon={<IconStore />}
+              required
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+            />
+            <Select
+              id="category"
+              label={m.site.join.category}
+              required
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
+              <option value="">{m.site.join.pickCategory}</option>
+              {(categories ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              id="owner-name"
+              label={m.site.join.ownerName}
+              icon={<IconUser />}
+              value={ownerName}
+              onChange={(e) => setOwnerName(e.target.value)}
+            />
+            <Input
+              id="owner-phone"
+              label={m.site.join.phone}
+              icon={<IconPhone />}
+              dir="ltr"
+              inputMode="tel"
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="text-end"
+              placeholder="09xxxxxxxx"
+            />
+          </div>
+
+          {/* كلمة مرور مؤقتة يسلّمها المندوب — يُجبَر المالك على تبديلها أول دخول */}
+          <div className="rounded-card border border-line bg-page/60 p-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                id="owner-pw"
+                label={m.site.join.password}
+                icon={<IconLock />}
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <Input
+                id="owner-pw2"
+                label={m.site.join.confirmPassword}
+                icon={<IconLock />}
+                type="password"
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
+            </div>
+            <div className="mt-2">
+              <PasswordMeter
+                value={password}
+                labels={[m.auth.strength.weak, m.auth.strength.fair, m.auth.strength.strong]}
+              />
+            </div>
+            <p className="mt-2 text-xs text-ink-muted">{C.passwordHint}</p>
+          </div>
+        </div>
+
+        {/* ---------- العمود الثاني: العنوان والموقع ---------- */}
+        <div className="flex flex-col gap-3">
+          <div className="relative">
+            <Input
+              id="area"
+              label={m.site.join.area}
+              icon={<IconLocation />}
+              value={area}
+              onChange={(e) => {
+                setArea(e.target.value);
+                setAreaTouched(true);
+              }}
+              placeholder={m.site.join.areaPlaceholder}
+            />
+            {/* المرشّحات تطفو فوق الخريطة بدل أن تدفعها للأسفل */}
+            {suggestions.length > 0 && (
+              <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-control border border-line bg-surface shadow-lg">
+                {suggestions.map((p, i) => (
+                  <li key={i} className="border-b border-line last:border-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoords({ lat: p.lat, lng: p.lng });
+                        setArea(p.label);
+                        setSuggestions([]);
+                      }}
+                      className="flex w-full items-start gap-2 px-3 py-2 text-start text-sm transition-colors hover:bg-page"
+                    >
+                      <IconLocation size={15} className="mt-0.5 shrink-0 text-primary" />
+                      {p.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <PickMap
+            lat={coords?.lat ?? null}
+            lng={coords?.lng ?? null}
+            height="h-56 lg:h-full lg:min-h-[16rem]"
+            onPick={(la, ln) => {
+              setCoords({ lat: la, lng: ln });
+              void fillAddress(la, ln);
+            }}
+            onLocated={(la, ln) => void fillAddress(la, ln)}
+          />
+
+          <p className="flex items-center gap-1.5 text-xs text-ink-muted">
+            {coords ? (
+              <>
+                <IconSuccess size={14} className="text-success" />
+                {C.locationCaptured}
+              </>
+            ) : (
+              m.map.pickHint
+            )}
+          </p>
+        </div>
+
+        {/* ---------- التذييل عبر العمودين ---------- */}
+        <div className="lg:col-span-2">
+          {error && (
+            <p
+              role="alert"
+              className="mb-3 flex items-start gap-2 rounded-control border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger"
+            >
+              <IconWarning size={16} className="mt-0.5 shrink-0" />
+              {error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2 border-t border-line pt-4">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              {m.common.cancel}
+            </Button>
+            <Button type="submit" disabled={busy}>
+              {busy ? C.sending : C.submit}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Modal>
   );
 }
