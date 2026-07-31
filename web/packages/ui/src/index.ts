@@ -15,6 +15,12 @@ export { AccountSettings } from "./AccountSettings";
 export { NotificationsPage } from "./NotificationsPage";
 export { WalletPage } from "./WalletPage";
 export {
+  MenuManager,
+  type MenuPaths,
+  type MenuSection,
+  type MenuItem,
+} from "./MenuManager";
+export {
   StatementSheet,
   currentMonthRange,
   type StatementData,
