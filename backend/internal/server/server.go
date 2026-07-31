@@ -242,6 +242,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/settings", s.handleListSettings)
 			r.Get("/stats", s.handleAdminStats)
 			r.Get("/reports", s.handleReports)
+			// سجلّ الأحداث — للأدمن والمالية دون العمليات: يحوي مبالغ التعويضات
+			// والسحوبات وأرصدة المحافظ، وموظّف العمليات ليس طرفاً في المال.
+			r.With(s.RequireRoles("admin", "finance")).
+				Get("/audit", s.handleAdminAudit)
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/users/{id}/wallet", s.handleAdminWalletApply)

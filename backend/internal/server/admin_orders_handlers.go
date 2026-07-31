@@ -70,6 +70,12 @@ func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// موظّفٌ يحرّك طلباً نيابةً عن طرفه: إلغاءٌ أو استرجاعٌ بيده يُطلق تسويات
+	// مالية معاكسة. **ولا يُسجَّل انتقالُ الأطراف أنفسهم** — المتجر يقبل مئة
+	// طلب في اليوم، وتسجيلُها يُغرق السجلّ فيصير لا يُقرأ.
+	s.audit(r, "ops.order_transition", "order", chi.URLParam(r, "id"), map[string]any{
+		"to": req.To, "note": req.Note,
+	})
 	httpx.JSON(w, http.StatusOK, o)
 }
 
@@ -88,6 +94,10 @@ func (s *Server) handleOrderAssign(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	s.audit(r, "ops.order_assign", "order", chi.URLParam(r, "id"), map[string]any{
+		"driver_id": req.DriverID, "note": req.Note,
+	})
+
 	// السائق يعرف بإسناد الطلب فوراً (يستعمله تطبيقه)
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: req.DriverID, Kind: notifications.KindOrder,

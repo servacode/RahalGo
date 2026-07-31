@@ -19,6 +19,7 @@ import (
 var (
 	errPayoutPending    = httpx.NewError(http.StatusConflict, "payout_pending", "errors.payout_pending")
 	errPayoutOver       = httpx.NewError(http.StatusConflict, "insufficient_balance", "errors.insufficient_balance")
+	errPayoutBelowMin   = httpx.NewError(http.StatusConflict, "payout_below_min", "errors.payout_below_min")
 	errPayoutNotAllowed = httpx.NewError(http.StatusForbidden, "payout_not_allowed", "errors.payout_not_allowed")
 	errPayoutClosed     = httpx.NewError(http.StatusConflict, "payout_closed", "errors.payout_closed")
 )
@@ -119,6 +120,14 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// حدٌّ أدنى: طلبٌ بليرةٍ واحدة يمرّ بدورة الموافقة كاملةً ويشغل المالية،
+	// وقيمة القرار أكبر من قيمة المبلغ. **ويُستثنى من يسحب رصيده كلَّه** —
+	// من بقي له ألفٌ لا يُحبس عنه لأن الألف دون الحدّ.
+	minAmount := s.settings.GetInt(r.Context(), "payouts.min_amount")
+	if req.Amount < minAmount && req.Amount != balance {
+		s.respondErr(w, errPayoutBelowMin)
+		return
+	}
 	if req.Amount <= 0 || req.Amount > balance {
 		s.respondErr(w, errPayoutOver)
 		return
@@ -212,6 +221,11 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+
+	s.audit(r, "finance.payout_decide", "payout", id, map[string]any{
+		"status": req.Status, "amount": amount, "user_id": userID,
+		"decision": req.Decision,
+	})
 
 	title := notifTitles.payoutPaid
 	if req.Status == "rejected" {

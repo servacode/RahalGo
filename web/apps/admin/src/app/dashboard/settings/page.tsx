@@ -1,44 +1,82 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+/**
+ * الإعدادات — أخطر شاشة في المنصة.
+ *
+ * كانت محرّر JSON خاماً: اسمٌ لاتينيّ (`drivers.share_value`) وقيمةٌ في مربّع
+ * نصٍّ حرّ. ويُطلب من صاحب المنصة — رجلٍ في الرقة لا مبرمج — أن يكتب JSON
+ * صحيحاً في حقلٍ يحكم رواتب سائقيه. وحرفٌ زائد يكسر خطّ التوصيل كلَّه.
+ *
+ * والتعريف كلُّه من الخادم: نوع الحقل ومداه وخياراته. **المدى الذي يحرسه
+ * الخادم هو المدى الذي يعرضه الحقل** — ولو كُتب هنا لانحرف عنه يوماً، فيرى
+ * المالك حقلاً يقبل ما يرفضه الحفظ.
+ */
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import {
-  PageHeader, Button, Modal, IconSettings, IconEdit,
+  PageHeader, Button, Input, Select, Checkbox, Badge, Card,
+  IconSettings, IconWarning, IconCheck,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
+const S = m.admin.settings;
+
+type Kind = "int" | "money" | "bool" | "choice" | "text";
 
 interface Setting {
   key: string;
+  group: string;
+  kind: Kind;
+  min?: number;
+  max?: number;
+  options?: string[];
+  unit?: string;
+  default: unknown;
+  sensitive?: boolean;
   value: unknown;
-  updated_at: string;
+  updated_at: string | null;
+  updated_by: string | null;
 }
 
-function errText(err: unknown): string {
-  return err instanceof ApiError ? m.errors.internal : m.errors.internal;
-}
+const label = (k: string) =>
+  (S.keys as Record<string, { label: string; hint: string }>)[k]?.label ?? k;
+const hint = (k: string) =>
+  (S.keys as Record<string, { label: string; hint: string }>)[k]?.hint ?? "";
+const unitText = (u?: string) => (u ? (S.units as Record<string, string>)[u] ?? "" : "");
+const choiceText = (c: string) => (S.choices as Record<string, string>)[c] ?? c;
 
 export default function SettingsPage() {
   const { user: me } = useAuth();
   const isAdmin = !!me?.roles.includes("admin");
-  const [settings, setSettings] = useState<Setting[]>([]);
+  const [list, setList] = useState<Setting[] | null>(null);
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState<Setting | null>(null);
 
   const load = useCallback(async () => {
     try {
-      setSettings(await api<Setting[]>("/api/v1/admin/settings"));
+      setList(await api<Setting[]>("/api/v1/admin/settings"));
       setError("");
-    } catch (err) {
-      setError(errText(err));
+    } catch {
+      setError(m.errors.internal);
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // المجموعات بترتيب الخادم لا بترتيب أبجديّ: المفاتيح مجموعةٌ بالموضوع،
+  // وبعثرتُها تفصل «مهلة القبول» عن «مهلة التوصيل».
+  const groups = useMemo(() => {
+    if (!list) return [];
+    const seen: string[] = [];
+    for (const s of list) if (!seen.includes(s.group)) seen.push(s.group);
+    return seen.map((g) => ({ g, items: list.filter((s) => s.group === g) }));
+  }, [list]);
+
+  if (!list) return <p className="p-6 text-center text-ink-muted">{m.common.loading}</p>;
 
   return (
     <div>
@@ -49,103 +87,195 @@ export default function SettingsPage() {
         <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
-      <div className="space-y-3">
-        {settings.map((s) => (
-          <div
-            key={s.key}
-            className="flex items-start justify-between gap-4 rounded-card border border-line bg-surface p-4"
-          >
-            <div className="min-w-0">
-              <p dir="ltr" className="text-end font-mono text-sm font-bold text-primary-dark">
-                {s.key}
-              </p>
-              <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-muted">
-                {typeof s.value === "string" ? s.value : JSON.stringify(s.value)}
-              </p>
+      <div className="space-y-6">
+        {groups.map(({ g, items }) => (
+          <section key={g}>
+            <h2 className="mb-2 font-bold">
+              {(S.groups as Record<string, string>)[g] ?? g}
+            </h2>
+            <div className="space-y-3">
+              {items.map((s) => (
+                <SettingRow key={s.key} s={s} editable={isAdmin} onSaved={load} />
+              ))}
             </div>
-            {isAdmin && (
-              <Button
-                variant="secondary"
-                onClick={() => setEditing(s)}
-                className="flex shrink-0 items-center gap-1.5"
-              >
-                <IconEdit size={15} />
-                {m.admin.settingsPage.edit}
-              </Button>
-            )}
-          </div>
+          </section>
         ))}
       </div>
-
-      {editing && (
-        <EditModal
-          setting={editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            void load();
-          }}
-        />
-      )}
     </div>
   );
 }
 
-function EditModal({
-  setting,
-  onClose,
+/**
+ * صفٌّ واحد — يحرّر نفسه في مكانه.
+ *
+ * ولا نافذة منبثقة: النافذة تُخفي بقية الإعدادات، ومن يضبط «مهلة القبول» يريد
+ * أن يرى «مهلة السائق» وهو يضبطها. والحفظ لكل صفٍّ على حدة لا زرّ واحد في
+ * الأسفل — كي لا يحفظ من غيّر رقماً واحداً عشرين رقماً بلا قصد.
+ */
+function SettingRow({
+  s,
+  editable,
   onSaved,
 }: {
-  setting: Setting;
-  onClose: () => void;
+  s: Setting;
+  editable: boolean;
   onSaved: () => void;
 }) {
-  const isString = typeof setting.value === "string";
-  const [value, setValue] = useState(
-    isString ? (setting.value as string) : JSON.stringify(setting.value, null, 2),
-  );
-  const [error, setError] = useState("");
+  const [draft, setDraft] = useState<string>(() => String(s.value ?? ""));
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    setDraft(String(s.value ?? ""));
+  }, [s.value]);
+
+  const numeric = s.kind === "int" || s.kind === "money";
+  const dirty =
+    s.kind === "bool" ? false : draft !== String(s.value ?? "");
+
+  async function save(raw: unknown) {
     setBusy(true);
     setError("");
     try {
-      const parsed = isString ? value : JSON.parse(value);
-      await api(`/api/v1/admin/settings/${setting.key}`, {
+      await api(`/api/v1/admin/settings/${s.key}`, {
         method: "PUT",
-        body: JSON.stringify({ value: parsed }),
+        body: JSON.stringify({ value: raw }),
       });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
       onSaved();
     } catch (err) {
-      setError(err instanceof SyntaxError ? m.errors.validation : errText(err));
+      // الخادم يردّ `validation` لكل رفض — والمدى معروفٌ هنا، فنقول السبب
+      setError(
+        err instanceof ApiError && numeric
+          ? S.range.replace("{min}", fmtNum(s.min ?? 0)).replace("{max}", fmtNum(s.max ?? 0))
+          : m.errors.validation,
+      );
     } finally {
       setBusy(false);
     }
   }
 
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (numeric) {
+      const n = Number(draft);
+      if (!Number.isInteger(n)) return setError(m.errors.validation);
+      // الفحص قبل الشبكة: رحلةٌ إلى الخادم لتُردّ برسالة نعرفها سلفاً بطءٌ بلا سبب
+      if ((s.min !== undefined && n < s.min) || (s.max !== undefined && n > s.max)) {
+        return setError(
+          S.range.replace("{min}", fmtNum(s.min ?? 0)).replace("{max}", fmtNum(s.max ?? 0)),
+        );
+      }
+      return void save(n);
+    }
+    void save(draft);
+  }
+
   return (
-    <Modal open onClose={onClose} title={`${m.admin.settingsPage.editTitle}: ${setting.key}`}>
-      <form onSubmit={submit} className="space-y-4">
-        <textarea
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          rows={6}
-          className="w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-        />
-        {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
-        )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {m.common.save}
-          </Button>
+    <Card>
+      <form onSubmit={submit}>
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <span className="font-medium">{label(s.key)}</span>
+          {s.sensitive && (
+            <Badge variant="warning">
+              <span className="flex items-center gap-1">
+                <IconWarning size={12} />
+                {S.sensitive}
+              </span>
+            </Badge>
+          )}
+          {saved && (
+            <Badge variant="success">
+              <span className="flex items-center gap-1">
+                <IconCheck size={12} strokeWidth={3} />
+                {S.saved}
+              </span>
+            </Badge>
+          )}
         </div>
+        <p className="mb-3 text-xs leading-relaxed text-ink-muted">{hint(s.key)}</p>
+
+        <div className="flex flex-wrap items-end gap-2">
+          {s.kind === "bool" ? (
+            <Checkbox
+              id={s.key}
+              label={label(s.key)}
+              checked={s.value === true}
+              disabled={!editable || busy}
+              onChange={(e) => void save(e.target.checked)}
+            />
+          ) : s.kind === "choice" ? (
+            <Select
+              id={s.key}
+              value={draft}
+              disabled={!editable || busy}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                void save(e.target.value);
+              }}
+              className="min-w-52"
+            >
+              {(s.options ?? []).map((o) => (
+                <option key={o} value={o}>
+                  {choiceText(o)}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <>
+              <Input
+                id={s.key}
+                type={numeric ? "number" : "text"}
+                inputMode={numeric ? "numeric" : undefined}
+                min={s.min}
+                max={s.max}
+                value={draft}
+                disabled={!editable || busy}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  setError("");
+                }}
+                className={numeric ? "w-40" : "w-full"}
+              />
+              {s.unit && (
+                <span className="pb-2 text-sm text-ink-muted">{unitText(s.unit)}</span>
+              )}
+              {editable && dirty && (
+                <Button type="submit" disabled={busy}>
+                  {m.common.save}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+
+        {numeric && s.min !== undefined && s.max !== undefined && (
+          <p className="mt-1.5 text-xs text-ink-muted">
+            {S.range.replace("{min}", fmtNum(s.min)).replace("{max}", fmtNum(s.max))}
+            {" · "}
+            {S.defaultIs.replace("{v}", fmtNum(Number(s.default)))}
+          </p>
+        )}
+
+        {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
+
+        {/* من غيّره ومتى: إعدادٌ يحكم المال يجب أن يُعرف صاحبُ قراره */}
+        <p className="mt-2 text-xs text-ink-muted">
+          {s.updated_at
+            ? S.lastChange
+                .replace("{who}", s.updated_by ?? m.admin.audit.system)
+                .replace("{when}", fmtDateTime(s.updated_at))
+            : S.neverChanged}
+        </p>
+
+        {s.sensitive && dirty && (
+          <p className="mt-2 rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">
+            {S.sensitiveHint}
+          </p>
+        )}
       </form>
-    </Modal>
+    </Card>
   );
 }

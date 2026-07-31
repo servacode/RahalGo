@@ -397,21 +397,25 @@ func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement
 	if in.driverID == nil {
 		return nil
 	}
+	// مفتاحان لا مفتاح: النسبة والمبلغ المقطوع لكلٍّ منهما مداه. ومفتاحٌ واحد
+	// يعني معنيين لا يمكن حراسة مداه — كان يقبل ٢٠٠ لأنها مبلغٌ معقول، وهي
+	// نسبةٌ تجعل المنصة تدفع ضعف ما قبضت.
 	var mode string
-	var value float64
+	var pct, fixed float64
 	if err := q.QueryRow(ctx, `
 		SELECT COALESCE((SELECT value#>>'{}' FROM app_settings WHERE key = 'drivers.share_mode'), 'percent'),
-		       COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key = 'drivers.share_value'), 70)`).
-		Scan(&mode, &value); err != nil {
+		       COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key = 'drivers.share_percent'), 70),
+		       COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key = 'drivers.share_fixed'), 5000)`).
+		Scan(&mode, &pct, &fixed); err != nil {
 		return err
 	}
 
 	var share int64
 	switch mode {
 	case "fixed":
-		share = int64(value)
+		share = int64(fixed)
 	default: // percent — من رسم التوصيل لا من قيمة الطلب: أجرُ توصيلٍ لا حصةٌ من بيع
-		share = int64(float64(in.deliveryFee) * value / 100)
+		share = int64(float64(in.deliveryFee) * pct / 100)
 	}
 	if share <= 0 {
 		return nil

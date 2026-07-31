@@ -33,6 +33,8 @@ func (noopPublisher) Publish(string, any) {}
 type Notifier interface {
 	Notify(ctx context.Context, in notifications.Input)
 	NotifyRoles(ctx context.Context, roles []string, in notifications.Input)
+	// NotifyOps مكتب المنصة كاملاً — يستعمله الراصد للتصعيد الباقي
+	NotifyOps(ctx context.Context, in notifications.Input)
 }
 
 type Service struct {

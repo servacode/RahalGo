@@ -61,6 +61,13 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	// أخطر زرٍّ في المنصة: هو المخرج الوحيد حين يخطئ النظام، ولذلك وجب أن
+	// يترك أثراً. والدفتر لا يُعدَّل عندنا بل يُصحَّح بقيدٍ مضادّ — وهذا الزرّ
+	// هو ذلك القيد، فمن ضغطه ولماذا سؤالٌ يُطرح يوماً.
+	s.audit(r, "finance.wallet_apply", "user", chi.URLParam(r, "id"), map[string]any{
+		"amount": amount, "kind": req.Kind, "note": req.Note, "balance_after": balance,
+	})
+
 	// صاحب المحفظة يعرف فوراً بأي إيداع/خصم — شفافية مالية بلا تحديث صفحة.
 	title := notifTitles.walletCredit
 	if amount < 0 {

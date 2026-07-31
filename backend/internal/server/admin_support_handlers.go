@@ -132,6 +132,13 @@ func (s *Server) handleTicketResolve(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// التعويض مالٌ يخرج من المنصة بقرار موظّف — يُسجَّل حتى لو كان صفراً،
+	// فحلُّ الشكوى بلا تعويض قرارٌ أيضاً وقد يُراجَع.
+	s.audit(r, "finance.ticket_resolve", "ticket", t.ID, map[string]any{
+		"compensation": req.Compensation, "resolution": t.Resolution,
+		"customer_id": t.CustomerID,
+	})
+
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: t.CustomerID, Kind: notifications.KindTicket,
 		Title: notifTitles.ticketResolved, Body: t.Resolution,

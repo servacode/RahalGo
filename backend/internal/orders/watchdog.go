@@ -3,6 +3,8 @@ package orders
 import (
 	"context"
 	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
 // Alert تنبيه تصعيد لطلب عالق — يظهر أحمر في غرفة العمليات.
@@ -63,6 +65,11 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 
 // RunWatchdog حلقة الراصد: فحص دوري وبث التنبيهات لغرفة العمليات.
 // يبث فقط عند تغير مجموعة التنبيهات — لا إزعاج متكرراً بلا جديد.
+//
+// **والبثّ يصل الشاشات المفتوحة وحدها.** فمن أغلق اللوحة ليلاً لم يصله شيء،
+// والطلب يبقى عالقاً حتى الصباح. فصار الراصد يُنشئ كذلك **إشعاراً باقياً**
+// يجده الموظّف حين يفتح، مرّةً واحدة لكل طلب (`alerted_at` علامةٌ في القاعدة
+// لا في الذاكرة: ذاكرةٌ تُفقد بإعادة التشغيل فيُعاد إنذار الجميع دفعةً).
 func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -89,7 +96,45 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 			s.pub.Publish("ops", map[string]any{"type": "alerts", "alerts": alerts})
 			if len(alerts) > 0 {
 				s.logger.Warn("watchdog escalation", "count", len(alerts))
+				s.escalate(ctx, alerts)
 			}
 		}
 	}
+}
+
+// escalate يُنشئ إشعاراً باقياً لكل طلبٍ عَلِق ولم يُنذَر بعد.
+//
+// والعلامة تُوضع **قبل** الإشعار لا بعده: لو أُشعر ثم فشلت الكتابة لأُعيد
+// الإشعار كل ثلاثين ثانية إلى الأبد. وإشعارٌ ضائع أهون من إشعارٍ يتكرّر
+// مئتي مرّة — الثاني يُدرَّب المستخدم على تجاهله فيصير كالصمت.
+func (s *Service) escalate(ctx context.Context, alerts []Alert) {
+	if s.notify == nil {
+		return
+	}
+	for _, a := range alerts {
+		tag, err := s.db.Exec(ctx,
+			`UPDATE orders SET alerted_at = now() WHERE id = $1 AND alerted_at IS NULL`, a.OrderID)
+		if err != nil {
+			s.logger.Error("watchdog: تعذّر وسم الإنذار", "order", a.OrderID, "error", err)
+			continue
+		}
+		if tag.RowsAffected() == 0 {
+			continue // أُنذر سابقاً
+		}
+		s.notify.NotifyOps(ctx, notifications.Input{
+			Kind:     notifications.KindOrder,
+			Title:    alertTitles[a.Reason],
+			Body:     a.MerchantName,
+			Entity:   "order",
+			EntityID: a.OrderID,
+			Href:     "/dashboard/orders",
+		})
+	}
+}
+
+// alertTitles نصوص التصعيد — مصدرٌ واحد بجانب بقية نصوص الإشعارات.
+var alertTitles = map[string]string{
+	"no_accept": "طلبٌ لم يقبله متجره",
+	"no_driver": "طلبٌ بلا سائق",
+	"too_long":  "طلبٌ تأخّر عن موعده",
 }

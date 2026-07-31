@@ -25,6 +25,7 @@ var (
 	errOrderTaken    = httpx.NewError(http.StatusConflict, "order_taken", "errors.order_taken")
 	errCashLimitFull = httpx.NewError(http.StatusConflict, "cash_limit_reached", "errors.cash_limit_reached")
 	errNotOnShift    = httpx.NewError(http.StatusConflict, "not_on_shift", "errors.not_on_shift")
+	errTooManyActive = httpx.NewError(http.StatusConflict, "too_many_active_orders", "errors.too_many_active_orders")
 )
 
 // handleDriverMe حالته: دوامه، ونقدٌ بحوزته، وأجرٌ له، وحصيلة يومه.
@@ -178,19 +179,29 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 
 	var onShift bool
+	var active int
 	var held, limit, cashDue int64
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT u.on_shift,
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
 		       COALESCE((SELECT (value#>>'{}')::bigint FROM app_settings
 		                 WHERE key = 'drivers.cash_limit'), 500000),
-		       COALESCE((SELECT cash_due FROM orders WHERE id = $2), 0)
-		FROM users u WHERE u.id = $1`, uid, orderID).Scan(&onShift, &held, &limit, &cashDue); err != nil {
+		       COALESCE((SELECT cash_due FROM orders WHERE id = $2), 0),
+		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL)
+		FROM users u WHERE u.id = $1`, uid, orderID).
+		Scan(&onShift, &held, &limit, &cashDue, &active); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	if !onShift {
 		s.respondErr(w, errNotOnShift)
+		return
+	}
+	// سقفُ ما بيده: كان يأخذ ما شاء ما دام السقف النقدي يتّسع — والسقف النقدي
+	// لا يمنع تكديس الطلبات الصغيرة. وخمسةُ طلبات بيد سائقٍ واحد تعني أربعة
+	// زبائن ينتظرون ساعة.
+	if int64(active) >= s.settings.GetInt(r.Context(), "drivers.max_active_orders") {
+		s.respondErr(w, errTooManyActive)
 		return
 	}
 	// السقف يُفحص **قبل** القبول لا عند التسليم: رفضٌ عند الباب أرحم من طلبٍ

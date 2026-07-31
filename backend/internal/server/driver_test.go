@@ -7,8 +7,13 @@ package server
 // يعرفها المحرّك**: الدوام، وسقف النقد، وذرّية الأخذ من طابورٍ مشترك. وهذه لو
 // انكسرت لانكسرت صامتةً: طلبٌ يأخذه سائقان فيصل مرّتين أو لا يصل.
 //
-// وتُبنى `Server` هنا بحقولها الثلاثة التي تلمسها هذه المعالِجات فقط (القاعدة،
-// المحرّك، السجلّ) — لا ضرورة للتهيئة الكاملة، فالاختبار يقيس ما يُختبر.
+// وتُبنى `Server` هنا بحقولها التي تلمسها هذه المعالِجات فقط — لا ضرورة
+// للتهيئة الكاملة، فالاختبار يقيس ما يُختبر.
+//
+// وهذا ثمنُ البناء الجزئيّ: حقلٌ جديد يستعمله معالِجٌ مُختبَر يُسقط الاختبار
+// بمؤشّرٍ فارغ لا برسالةٍ مفهومة. وقد وقع فعلاً حين صار الأخذ يقرأ سقف
+// الطلبات من الإعدادات. والسقوط أفضل من مرورٍ كاذب — لكنّ الرسالة رديئة،
+// فوجب أن تُقرأ هذه الملاحظة قبل الحيرة في «مؤشّر فارغ في السطر ٢٢».
 
 import (
 	"context"
@@ -45,15 +50,17 @@ func newDriverFixture(t *testing.T, driverCount int) *driverFixture {
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
 
 	walletSvc := wallet.NewService(pool)
-	cashboxSvc := cashbox.NewService(pool, settings.NewStore(pool))
+	settingsStore := settings.NewStore(pool)
+	cashboxSvc := cashbox.NewService(pool, settingsStore)
 	f := &driverFixture{
 		pool: pool,
 		srv: &Server{
-			pg:      pool,
-			logger:  quiet,
-			hub:     realtime.NewHub(quiet),
-			cashbox: cashboxSvc,
-			orders:  orders.NewService(pool, nil, walletSvc, cashboxSvc, nil, quiet),
+			pg:       pool,
+			logger:   quiet,
+			hub:      realtime.NewHub(quiet),
+			cashbox:  cashboxSvc,
+			settings: settingsStore,
+			orders:   orders.NewService(pool, nil, walletSvc, cashboxSvc, nil, quiet),
 		},
 	}
 
@@ -74,6 +81,14 @@ func newDriverFixture(t *testing.T, driverCount int) *driverFixture {
 		f.drivers = append(f.drivers, testdb.NewUser(t, pool, "driver"))
 	}
 	return f
+}
+
+// setSetting يضبط إعداداً للاختبار — عبر المخزن كي يمرّ بتحقّق الكتالوج نفسه.
+func (f *driverFixture) setSetting(t *testing.T, key string, v any) {
+	t.Helper()
+	if err := settings.NewStore(f.pool).SetInternal(context.Background(), key, v); err != nil {
+		t.Fatalf("تعذّر ضبط %s: %v", key, err)
+	}
 }
 
 // onShift يرفع علَم دوام السائق — الحالة التي يفترضها الطابور.
@@ -156,6 +171,16 @@ func TestAccept_DriversRace(t *testing.T) {
 	for _, d := range f.drivers {
 		f.onShift(t, d, true)
 	}
+	// **سقفُ الطلبات يُرفع هنا عمداً.**
+	//
+	// الفائز يحتفظ بطلبه في الجولات التالية، فمن فاز مرّتين يبلغ السقف
+	// الافتراضي (٢) ويُمنع في الثالثة — فتسقط جولةٌ بلا فائز ويفشل الاختبار
+	// **عشوائياً حسب من فاز**. واختبارٌ يفشل أحياناً يُدرَّب فريقُه على إعادة
+	// تشغيله بدل قراءته، فيصير أسوأ من لا اختبار.
+	//
+	// وهذا الاختبار يقيس **ذرّية الأخذ** لا السقف — فيُرفع السقف عن طريقه،
+	// وللسقف اختبارُه المستقلّ أدناه.
+	f.setSetting(t, "drivers.max_active_orders", raceRounds+1)
 
 	for round := 0; round < raceRounds; round++ {
 		orderID := f.dispatchingOrder(t, 48000, 10000)
@@ -259,5 +284,32 @@ func TestAccept_RejectsOrderAlreadyTaken(t *testing.T) {
 	w := f.accept(f.drivers[1], orderID)
 	if code := errCode(t, w); code != "order_taken" {
 		t.Fatalf("توقّعنا order_taken، والنتيجة %q (حالة %d)", code, w.Code)
+	}
+}
+
+// TestAccept_RejectsWhenTooManyActive سقفُ ما بيد السائق من طلبات.
+//
+// كان يأخذ ما شاء ما دام سقفه النقدي يتّسع — والسقف النقدي لا يمنع تكديس
+// الطلبات الصغيرة. وخمسةُ طلبات بيد سائقٍ واحد تعني أربعة زبائن ينتظرون ساعة.
+func TestAccept_RejectsWhenTooManyActive(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	driverID := f.drivers[0]
+	f.onShift(t, driverID, true)
+	f.setSetting(t, "drivers.max_active_orders", 2)
+
+	for i := 0; i < 2; i++ {
+		id := f.dispatchingOrder(t, 3000, 1000)
+		if w := f.accept(driverID, id); w.Code != http.StatusOK {
+			t.Fatalf("رُفض الطلب %d وهو دون السقف: %d — %s", i+1, w.Code, w.Body.String())
+		}
+	}
+
+	third := f.dispatchingOrder(t, 3000, 1000)
+	w := f.accept(driverID, third)
+	if code := errCode(t, w); code != "too_many_active_orders" {
+		t.Fatalf("توقّعنا too_many_active_orders، والنتيجة %q (حالة %d)", code, w.Code)
+	}
+	if d := f.assignedDriver(t, third); d != nil {
+		t.Fatalf("أُسند الطلب رغم بلوغ السقف: %s", *d)
 	}
 }

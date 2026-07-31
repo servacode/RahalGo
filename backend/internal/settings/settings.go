@@ -35,8 +35,50 @@ func (s *Store) GetString(ctx context.Context, key, fallback string) string {
 	return v
 }
 
+// GetInt يقرأ عدداً ويعيد افتراضي الكتالوج عند غيابه أو فساده — لا يفشل أبداً.
+//
+// كان كل موضعٍ يحتاج رقماً يكتب استعلامه بنفسه مع `COALESCE(..., 500000)`،
+// فصار الافتراضي مكتوباً في خمسة أماكن. وتغييرُ واحدٍ منها يترك الأربعة
+// تعمل بالرقم القديم — وهو أسوأ من غياب الافتراضي كلّه.
+func (s *Store) GetInt(ctx context.Context, key string) int64 {
+	def, known := Lookup(key)
+	fallback := int64(0)
+	if known {
+		if n, ok := toNumber(def.Default); ok {
+			fallback = int64(n)
+		}
+	}
+	var v float64
+	if err := s.Get(ctx, key, &v); err != nil {
+		return fallback
+	}
+	return int64(v)
+}
+
+// GetBool مثلها للمفاتيح المنطقية.
+func (s *Store) GetBool(ctx context.Context, key string) bool {
+	var v bool
+	if err := s.Get(ctx, key, &v); err != nil {
+		if def, ok := Lookup(key); ok {
+			b, _ := def.Default.(bool)
+			return b
+		}
+		return false
+	}
+	return v
+}
+
+// Set يكتب قيمة بعد التحقق من الكتالوج.
+//
+// **والمفتاح المجهول يُرفض** ولا يُنشأ: كان `ON CONFLICT` يعني أن خطأً مطبعياً
+// في اسم المفتاح يُولّد مفتاحاً جديداً لا يقرؤه أحد، ويمضي النظام بالافتراضي
+// بينما يظنّ المالك أنه غيّر. صمتٌ أسوأ من خطأ.
 func (s *Store) Set(ctx context.Context, key string, value any, updatedBy *string) error {
-	raw, err := json.Marshal(value)
+	clean, err := Validate(key, value)
+	if err != nil {
+		return err
+	}
+	raw, err := json.Marshal(clean)
 	if err != nil {
 		return err
 	}
@@ -45,6 +87,19 @@ func (s *Store) Set(ctx context.Context, key string, value any, updatedBy *strin
 		ON CONFLICT (key) DO UPDATE
 		SET value = EXCLUDED.value, updated_at = now(), updated_by = EXCLUDED.updated_by`,
 		key, raw, updatedBy)
+	return err
+}
+
+// SetInternal يكتب بلا تحقق — للبذر والترحيلات لا للمستخدمين.
+func (s *Store) SetInternal(ctx context.Context, key string, value any) error {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(ctx, `
+		INSERT INTO app_settings (key, value) VALUES ($1, $2)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+		key, raw)
 	return err
 }
 

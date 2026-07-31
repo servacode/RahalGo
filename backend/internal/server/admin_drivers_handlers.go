@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -14,6 +15,9 @@ import (
 func (s *Server) handleListDrivers(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT u.id, u.phone, u.full_name, u.status,
+		       -- الدوام: بُني علَمُه للسائق ولم تكن اللوحة تراه، فبقيت العمليات
+		       -- تسأل «من يعمل الآن؟» بالهاتف وهي تملك الجواب في قاعدتها.
+		       u.on_shift, u.shift_started_at,
 		       COALESCE(cb.held, 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered'
@@ -29,18 +33,21 @@ func (s *Server) handleListDrivers(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type driver struct {
-		ID             string `json:"id"`
-		Phone          string `json:"phone"`
-		FullName       string `json:"full_name"`
-		Status         string `json:"status"`
-		CashHeld       int64  `json:"cash_held"`
-		OpenOrders     int    `json:"open_orders"`
-		DeliveredToday int    `json:"delivered_today"`
+		ID             string     `json:"id"`
+		Phone          string     `json:"phone"`
+		FullName       string     `json:"full_name"`
+		Status         string     `json:"status"`
+		OnShift        bool       `json:"on_shift"`
+		ShiftStartedAt *time.Time `json:"shift_started_at"`
+		CashHeld       int64      `json:"cash_held"`
+		OpenOrders     int        `json:"open_orders"`
+		DeliveredToday int        `json:"delivered_today"`
 	}
 	out := []driver{}
 	for rows.Next() {
 		var d driver
 		if err := rows.Scan(&d.ID, &d.Phone, &d.FullName, &d.Status,
+			&d.OnShift, &d.ShiftStartedAt,
 			&d.CashHeld, &d.OpenOrders, &d.DeliveredToday); err != nil {
 			s.respondErr(w, err)
 			return
@@ -79,6 +86,12 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// نقدٌ يُسلَّم في مكتب: لا إيصال إلكتروني له إلا هذا القيد. ومن أنكر
+	// التسليم أو أنكر الاستلام، فالسطر هنا هو ما يُرجَع إليه.
+	s.audit(r, "finance.driver_settle", "user", driverID, map[string]any{
+		"amount": req.Amount, "note": req.Note, "held_after": held,
+	})
+
 	// نقود تنتقل من يد إلى يد: صاحبها يعرف، وشاشة الصناديق تتحدّث لحظياً.
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: driverID, Kind: notifications.KindWallet,

@@ -11,11 +11,11 @@ import (
 
 // عناوين الزبون المحفوظة — يكتبها مرّة ويستعملها دائماً.
 
-// maxAddresses سقف العناوين لكل مستخدم.
+// سقف العناوين لكل مستخدم — صار إعداداً (`customers.max_addresses`).
 //
 // ليس ترقيماً بل حاجزُ معنى: من له عشرون عنواناً لا يجد عنوانه بينها، فتنقلب
-// الميزة على نفسها. والعشرة سخيّة لأي استعمال واقعي.
-const maxAddresses = 10
+// الميزة على نفسها. والعشرة سخيّة لأي استعمال واقعي — لكنّ من يعرف زبائنه
+// أَولى بتقديرها من مبرمجٍ كتب رقماً.
 
 var errTooManyAddresses = httpx.NewError(http.StatusConflict, "too_many_addresses", "errors.too_many_addresses")
 
@@ -79,7 +79,7 @@ func (s *Server) handleCreateAddress(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if count >= maxAddresses {
+	if int64(count) >= s.settings.GetInt(r.Context(), "customers.max_addresses") {
 		s.respondErr(w, errTooManyAddresses)
 		return
 	}

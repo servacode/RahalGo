@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   PageHeader,
@@ -30,6 +30,8 @@ interface Driver {
   phone: string;
   full_name: string;
   status: string;
+  on_shift: boolean;
+  shift_started_at: string | null;
   cash_held: number;
   open_orders: number;
   delivered_today: number;
@@ -119,6 +121,22 @@ export default function DriversPage() {
           {d.phone}
         </span>
       ),
+    },
+    {
+      // الدوام أوّل ما تسأل عنه العمليات: «من يعمل الآن؟». وكانت تسأله بالهاتف
+      // بينما الجواب في قاعدتها منذ أن بُني علَم السائق.
+      id: "shift",
+      header: m.terms.onShift,
+      icon: <IconDriver />,
+      primary: true,
+      cell: (d) =>
+        d.on_shift ? (
+          <Badge variant="success">
+            {d.shift_started_at ? fmtTime(d.shift_started_at) : m.terms.onShift}
+          </Badge>
+        ) : (
+          <Badge variant="neutral">{m.terms.offShift}</Badge>
+        ),
     },
     {
       id: "cash",
