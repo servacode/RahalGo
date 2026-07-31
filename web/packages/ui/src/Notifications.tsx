@@ -14,7 +14,12 @@ const m = getMessages(defaultLocale);
 const N = m.shared.notifications;
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
-type LinkType = ComponentType<{ href: string; className?: string; children: ReactNode }>;
+type LinkType = ComponentType<{
+  href: string;
+  className?: string;
+  children: ReactNode;
+  onClick?: () => void;
+}>;
 
 export interface AppNotification {
   id: string;
@@ -67,6 +72,9 @@ const emitEvent = (e: LiveEvent) => fan(eventListeners, e);
 export function emitLocal(kind: string) {
   emitKind(kind);
 }
+
+/** حدث «تغيّرت حالة قراءة الإشعارات» — يبطل الجرس والصفحة معاً. */
+export const READ_EVENT = "notifications:read";
 
 /** يستقبل رسائل البث الخام — لمن يحتاج أدق من الإشعارات (تتبّع طلب مثلاً). */
 export function useLiveEvent(onEvent: (e: LiveEvent) => void) {
@@ -179,6 +187,11 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
     void refresh();
   }, [refresh]);
 
+  // الجرس وصفحة الإشعارات حالتان منفصلتان لنفس البيانات: تعليم القراءة في
+  // إحداهما كان لا يصل الأخرى، فيبقى العدّاد كما هو حتى تحديث الصفحة.
+  // حدث مركزي واحد يبطل الحالتين معاً.
+  useLiveRefresh([READ_EVENT], refresh);
+
   useEffect(() => {
     if (!token) return;
     let ws: WebSocket | null = null;
@@ -239,6 +252,7 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
           method: "POST",
           body: JSON.stringify({ id: id ?? "" }),
         });
+        emitKind(READ_EVENT); // بقية الشاشات تلتقط التغيير فوراً
       } catch {
         /* تجاهل */
       }
@@ -390,6 +404,7 @@ export function NotificationBell({
                     {n.href ? (
                       <Link
                         href={n.href}
+                        onClick={() => !n.read && markRead(n.id)}
                         className={`block px-3 py-2 hover:bg-page ${n.read ? "" : "bg-primary-light/30"}`}
                       >
                         {row}

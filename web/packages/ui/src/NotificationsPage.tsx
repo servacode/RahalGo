@@ -12,7 +12,7 @@ import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtTime, fmtLongDate } from "@rahalgo/i18n";
 import { PageContainer, PageHeader, EmptyState, LoadingState } from "./layout";
 import { Button } from "./components";
-import { useLiveData, type AppNotification } from "./Notifications";
+import { useLiveData, emitLocal, READ_EVENT, type AppNotification } from "./Notifications";
 import {
   IconBell,
   IconOrder,
@@ -27,7 +27,12 @@ const m = getMessages(defaultLocale);
 const N = m.shared.notifications;
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
-type LinkType = ComponentType<{ href: string; className?: string; children: ReactNode }>;
+type LinkType = ComponentType<{
+  href: string;
+  className?: string;
+  children: ReactNode;
+  onClick?: () => void;
+}>;
 
 interface Feed {
   items: AppNotification[];
@@ -62,17 +67,19 @@ export function NotificationsPage({ api, Link }: { api: ApiFn; Link: LinkType })
 
   const { data, loading, reload } = useLiveData<Feed>(
     () => api(`/api/v1/me/notifications?limit=200${kind ? `&kind=${kind}` : ""}`),
-    ["order", "ticket", "wallet", "rating", "lead", "account"],
+    ["order", "ticket", "wallet", "rating", "lead", "account", READ_EVENT],
   );
 
   const markAll = useCallback(async () => {
     await api("/api/v1/me/notifications/read", { method: "POST", body: JSON.stringify({ id: "" }) });
+    emitLocal(READ_EVENT); // الجرس يلتقط الصفر فوراً بلا تحديث صفحة
     reload();
   }, [api, reload]);
 
   const markOne = useCallback(
     async (id: string) => {
       await api("/api/v1/me/notifications/read", { method: "POST", body: JSON.stringify({ id }) });
+      emitLocal(READ_EVENT);
       reload();
     },
     [api, reload],
@@ -173,7 +180,11 @@ export function NotificationsPage({ api, Link }: { api: ApiFn; Link: LinkType })
                       className={`border-b border-line last:border-0 ${n.read ? "" : "bg-primary-light/25"}`}
                     >
                       {n.href ? (
-                        <Link href={n.href} className="block transition-colors hover:bg-page">
+                        <Link
+                          href={n.href}
+                          onClick={() => !n.read && void markOne(n.id)}
+                          className="block transition-colors hover:bg-page"
+                        >
                           {inner}
                         </Link>
                       ) : (
