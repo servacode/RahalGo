@@ -54,7 +54,7 @@
 | الهيكل (سايدبار+توب بار) | `ui → DashboardChrome` |
 | الشريط العلوي وعناصره | `ui → topbar.tsx` (TopBar/TopBarChip/TopBarLink/WalletPill/Avatar/CountBadge/MenuPanel/MenuItem) — **موقع الزبون واللوحات نفس الشريط** |
 | العناصر البصرية | `ui → layout.tsx` (PageHeader/PageContainer/Card/ListRow/EmptyState/LoadingState/StatCard/StatGrid/Stars) |
-| عناصر النماذج | `ui → components.tsx` (Button/Input/Select/Badge/Modal/FormSection/Checkbox) — الأيقونة **داخل** الحقل دائماً |
+| عناصر النماذج | `ui → components.tsx` (Button/Input/Select/Badge/Modal/FormSection/Checkbox/**OtpInput**/**PasswordMeter**) — الأيقونة **داخل** الحقل دائماً |
 | أيقونات التصنيفات | `ui → CategoryIcon` (مفتاح مخزّن ↔ أيقونة) — **لا إيموجي في القاعدة** |
 | الجداول والكروت | `ui → dataview.tsx` (DataView/ViewToggle) |
 | إعدادات الحساب | `ui → AccountSettings` |
