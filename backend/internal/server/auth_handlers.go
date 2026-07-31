@@ -322,6 +322,39 @@ func (s *Server) handlePhoneChangeConfirm(w http.ResponseWriter, r *http.Request
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 
+// --- توثيق رقم واتساب: رمز عبر واتساب يثبت أن الرقم حيّ ويملكه صاحب الحساب ---
+
+func (s *Server) handleWhatsAppVerifyRequest(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.RequestWhatsAppVerify(r.Context(), userIDFrom(r), req.Phone); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"sent": true})
+}
+
+func (s *Server) handleWhatsAppVerifyConfirm(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.ConfirmWhatsAppVerify(r.Context(), userIDFrom(r), req.Phone, req.Code, clientIP(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"verified": true})
+}
+
 // --- حذف الحساب نهائياً: رمز تأكيد على هاتف صاحبه ثم تجريد وإقفال ---
 
 func (s *Server) handleDeleteAccountRequest(w http.ResponseWriter, r *http.Request) {

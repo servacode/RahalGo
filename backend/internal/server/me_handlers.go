@@ -15,13 +15,18 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 		FullName    string  `json:"full_name"`
 		AvatarThumb *string `json:"avatar_thumb_url"`
 		Balance     int64   `json:"balance"`
+		// قناة التواصل الموثّقة — تُعرض في «حسابي» وتفتح أدوات المندوب
+		WhatsAppPhone    *string `json:"whatsapp_phone"`
+		WhatsAppVerified bool    `json:"whatsapp_verified"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name,
 		       (SELECT m.thumb_path FROM media m WHERE m.id = u.avatar_media_id),
-		       COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = u.id), 0)
+		       COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = u.id), 0),
+		       u.whatsapp_phone, u.whatsapp_verified_at IS NOT NULL
 		FROM users u WHERE u.id = $1`, uid).
-		Scan(&out.FullName, &out.AvatarThumb, &out.Balance)
+		Scan(&out.FullName, &out.AvatarThumb, &out.Balance,
+			&out.WhatsAppPhone, &out.WhatsAppVerified)
 	if err != nil {
 		s.respondErr(w, err)
 		return

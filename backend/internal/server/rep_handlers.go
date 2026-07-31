@@ -25,6 +25,8 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		MonthCommissions int64 `json:"month_commissions"`
 		MonthlyTarget    int   `json:"monthly_target"`
 		PendingLeads     int   `json:"pending_leads"`
+		// أدوات الدعوة مقفلة حتى يوثّق المندوب قناة تواصله
+		WhatsAppVerified bool `json:"whatsapp_verified"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.invite_code, u.full_name,
@@ -50,15 +52,21 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT (value#>>'{}')::int FROM app_settings
 		                 WHERE key = 'sales.monthly_target'), 5),
 		       (SELECT count(*) FROM merchant_leads l
-		        WHERE l.sales_rep_user_id = u.id AND l.status = 'new')
+		        WHERE l.sales_rep_user_id = u.id AND l.status = 'new'),
+		       u.whatsapp_verified_at IS NOT NULL
 		FROM users u WHERE u.id = $1`, uid).
 		Scan(&out.InviteCode, &out.FullName, &out.Merchants, &out.DeliveredOrders,
 			&out.TotalCommissions, &out.Balance,
 			&out.MonthMerchants, &out.MonthDelivered, &out.MonthCommissions,
-			&out.MonthlyTarget, &out.PendingLeads)
+			&out.MonthlyTarget, &out.PendingLeads, &out.WhatsAppVerified)
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// القفل في الخادم لا في الواجهة: إخفاء الكود من الشاشة وحدها ليس قفلاً —
+	// من يفتح أدوات المتصفح يقرأه من الاستجابة. فلا يُرسل أصلاً قبل التوثيق.
+	if !out.WhatsAppVerified {
+		out.InviteCode = nil
 	}
 	httpx.JSON(w, http.StatusOK, out)
 }

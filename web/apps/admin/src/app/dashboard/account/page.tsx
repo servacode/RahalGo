@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
-import { AccountSettings, FormSection, IconUser, IconStatus } from "@rahalgo/ui";
+import { AccountSettings, FormSection, PageContainer, PageHeader, IconUser, IconStatus } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import RoleBadge from "@/components/RoleBadge";
@@ -36,14 +36,10 @@ export default function MyAccountPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-lg">
-      <h1 className="mb-1 flex items-center gap-2 text-xl font-bold">
-        <IconUser className="text-primary" />
-        {m.terms.account}
-      </h1>
-      <p className="mb-5 text-sm text-ink-muted">{A.subtitle}</p>
+    <PageContainer>
+      <PageHeader icon={IconUser} title={m.terms.account} subtitle={A.subtitle} />
 
-      <div className="mb-6 flex items-center gap-3 rounded-card border border-line bg-surface p-4">
+      <div className="flex items-center gap-3 rounded-card border border-line bg-surface p-4">
         <div className="min-w-0 flex-1">
           <p className="font-bold">{user?.full_name || "—"}</p>
           <p className="text-xs text-ink-muted" dir="ltr">
@@ -67,7 +63,7 @@ export default function MyAccountPage() {
         }}
       />
 
-      <div className="mt-6">
+      <div>
         <FormSection title={A.recentLogins} icon={<IconStatus />}>
           <p className="mb-2 text-xs text-ink-muted">{A.loginsHint}</p>
           {logins.length === 0 ? (
@@ -94,6 +90,6 @@ export default function MyAccountPage() {
           )}
         </FormSection>
       </div>
-    </div>
+    </PageContainer>
   );
 }

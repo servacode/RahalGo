@@ -24,7 +24,7 @@ export default function AccountPage() {
   }
 
   return (
-    <PageContainer width="narrow">
+    <PageContainer>
       <PageHeader icon={IconUser} title={m.terms.account} />
       <AccountSettings
         api={api}

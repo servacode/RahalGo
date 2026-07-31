@@ -3,9 +3,10 @@
 /** رابط وباركود التسجيل — يرسله المندوب للمتاجر ليسجّلوا عبره تلقائياً. */
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import QRCode from "qrcode";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, IconLink, IconQr } from "@rahalgo/ui";
+import { Button, LoadingState, IconLink, IconQr, IconLock } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -13,16 +14,18 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
 
 interface Me {
   invite_code: string | null;
+  whatsapp_verified: boolean;
 }
 
 export default function LinkPage() {
-  const [code, setCode] = useState<string | null>(null);
+  const [me, setMe] = useState<Me | null>(null);
   const [qr, setQr] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const code = me?.invite_code ?? null;
 
   useEffect(() => {
     api<Me>("/api/v1/rep/me")
-      .then((me) => setCode(me.invite_code))
+      .then(setMe)
       .catch(() => undefined);
   }, []);
 
@@ -34,6 +37,27 @@ export default function LinkPage() {
       .then(setQr)
       .catch(() => undefined);
   }, [link]);
+
+  if (!me) return <LoadingState />;
+
+  // مقفلة حتى التوثيق — والخادم لا يرسل الكود أصلاً قبله، فالقفل حقيقي لا بصري
+  if (!me.whatsapp_verified) {
+    return (
+      <div className="mx-auto max-w-md rounded-card border border-line bg-surface p-8 text-center">
+        <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-warning/10 text-warning">
+          <IconLock size={26} />
+        </span>
+        <h1 className="mb-2 text-lg font-bold">{m.rep.lockedTitle}</h1>
+        <p className="mb-5 text-sm leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
+        <Link
+          href="/portal/account"
+          className="inline-block rounded-control bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-dark"
+        >
+          {m.rep.lockedCta}
+        </Link>
+      </div>
+    );
+  }
 
   if (!code) {
     return <p className="py-12 text-center text-ink-muted">{m.common.loading}</p>;

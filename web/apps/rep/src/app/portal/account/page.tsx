@@ -14,12 +14,13 @@ export default function AccountPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   return (
-    <PageContainer width="narrow">
+    <PageContainer>
       <PageHeader icon={IconUser} title={m.terms.account} />
       <AccountSettings
         api={api}
         mediaUrl={mediaUrl}
         phone={user?.phone}
+        onVerified={() => router.refresh()}
         onDeleted={() => {
           logout();
           router.replace("/login");

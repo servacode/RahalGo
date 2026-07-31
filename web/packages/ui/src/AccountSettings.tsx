@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { emitLocal } from "./Notifications";
-import { IconUser, IconLock, IconPhone, IconWarning, IconCheck } from "./icons";
+import { IconUser, IconLock, IconPhone, IconWarning, IconCheck, IconWhatsApp, IconVerified } from "./icons";
 
 const m = getMessages(defaultLocale);
 const A = m.shared.account;
@@ -42,12 +42,15 @@ export function AccountSettings({
   mediaUrl,
   phone,
   onDeleted,
+  onVerified,
 }: {
   api: ApiFn;
   mediaUrl: (p: string | null | undefined) => string | null;
   phone?: string;
   /** يُستدعى بعد حذف الحساب — كل تطبيق يقرر وجهته (الخروج ثم صفحة الدخول) */
   onDeleted?: () => void;
+  /** يُستدعى بعد توثيق واتساب — تفتح به الصفحات المقفلة بلا تحديث */
+  onVerified?: () => void;
 }) {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -63,6 +66,13 @@ export function AccountSettings({
   const [phoneCode, setPhoneCode] = useState("");
   const [phoneBusy, setPhoneBusy] = useState(false);
 
+  const [wa, setWa] = useState("");
+  const [waVerified, setWaVerified] = useState(false);
+  const [waSent, setWaSent] = useState(false);
+  const [waCode, setWaCode] = useState("");
+  const [waBusy, setWaBusy] = useState(false);
+  const [waEditing, setWaEditing] = useState(false);
+
   const [delSent, setDelSent] = useState(false);
   const [delCode, setDelCode] = useState("");
   const [delBusy, setDelBusy] = useState(false);
@@ -72,13 +82,21 @@ export function AccountSettings({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<{ full_name: string; avatar_thumb_url: string | null }>("/api/v1/me/summary")
+    api<{
+      full_name: string;
+      avatar_thumb_url: string | null;
+      whatsapp_phone: string | null;
+      whatsapp_verified: boolean;
+    }>("/api/v1/me/summary")
       .then((s) => {
         setAvatar(s.avatar_thumb_url);
         setName(s.full_name);
+        setWaVerified(s.whatsapp_verified);
+        // رقم الدخول اقتراحٌ مبدئي: أغلب الناس واتسابهم عليه، فلا نطلب كتابته
+        setWa(s.whatsapp_phone ?? phone ?? "");
       })
       .catch(() => undefined);
-  }, [api]);
+  }, [api, phone]);
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -167,6 +185,43 @@ export function AccountSettings({
       setError(errText(err));
     } finally {
       setPhoneBusy(false);
+    }
+  }
+
+  async function reqWhatsApp(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMsg("");
+    setWaBusy(true);
+    try {
+      await api("/api/v1/auth/whatsapp/request", { method: "POST", body: JSON.stringify({ phone: wa }) });
+      setWaSent(true);
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setWaBusy(false);
+    }
+  }
+
+  async function confirmWhatsApp(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setWaBusy(true);
+    try {
+      await api("/api/v1/auth/whatsapp/confirm", {
+        method: "POST",
+        body: JSON.stringify({ phone: wa, code: waCode }),
+      });
+      setWaVerified(true);
+      setWaSent(false);
+      setWaEditing(false);
+      setWaCode("");
+      setMsg(A.whatsappDone);
+      onVerified?.();
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setWaBusy(false);
     }
   }
 
@@ -262,6 +317,93 @@ export function AccountSettings({
             <Button type="submit" disabled={phoneBusy} className="w-full py-2.5">
               {phoneBusy ? m.common.loading : A.confirmChange}
             </Button>
+          </form>
+        )}
+      </Section>
+
+      {/* توثيق واتساب — قناة التواصل، لا هوية الدخول (قسم مستقل عن تغيير الرقم) */}
+      <Section title={A.whatsapp} icon={<IconWhatsApp />}>
+        {waVerified && !waEditing ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 rounded-control border border-success/30 bg-success/5 px-3 py-2.5">
+              <span dir="ltr" className="min-w-0 truncate font-medium text-ink">
+                {wa}
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-success">
+                <IconVerified size={16} />
+                {A.whatsappVerified}
+              </span>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setWaEditing(true);
+                setWaSent(false);
+              }}
+            >
+              {A.whatsappChange}
+            </Button>
+          </div>
+        ) : !waSent ? (
+          <form onSubmit={reqWhatsApp} className="space-y-4">
+            <div>
+              <Input
+                id="wa-phone"
+                label={A.whatsapp}
+                icon={<IconWhatsApp />}
+                dir="ltr"
+                inputMode="tel"
+                required
+                value={wa}
+                onChange={(e) => setWa(e.target.value)}
+                className="text-end"
+                placeholder="09xxxxxxxx"
+              />
+              <p className="mt-1 text-xs text-ink-muted">{A.whatsappHint}</p>
+            </div>
+            {!waVerified && (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-warning">
+                <IconWarning size={14} />
+                {A.whatsappUnverified}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={waBusy} className="flex-1 py-2.5">
+                {waBusy ? m.common.loading : A.whatsappVerify}
+              </Button>
+              {waEditing && (
+                <Button type="button" variant="secondary" onClick={() => setWaEditing(false)}>
+                  {m.common.cancel}
+                </Button>
+              )}
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={confirmWhatsApp} className="space-y-4">
+            <p className="rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">
+              {A.whatsappCodeSent}
+            </p>
+            <Input
+              id="wa-code"
+              label={A.code}
+              dir="ltr"
+              inputMode="numeric"
+              required
+              autoFocus
+              value={waCode}
+              onChange={(e) => setWaCode(e.target.value)}
+              className="text-center font-mono text-lg tracking-[0.4em]"
+              placeholder="••••••"
+              maxLength={6}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={waBusy} className="flex-1 py-2.5">
+                {waBusy ? m.common.loading : A.whatsappVerify}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setWaSent(false)}>
+                {m.common.cancel}
+              </Button>
+            </div>
           </form>
         )}
       </Section>

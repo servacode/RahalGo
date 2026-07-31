@@ -14,6 +14,7 @@ import {
   IconSuccess,
   IconPromos,
   IconLink,
+  IconLock,
   IconTrendUp,
   PageContainer,
   StatGrid,
@@ -38,6 +39,7 @@ interface Me {
   month_commissions: number;
   monthly_target: number;
   pending_leads: number;
+  whatsapp_verified: boolean;
 }
 
 /** كم يوماً بقي في الشهر — الهدف بلا مهلة ظاهرة لا يحرّك أحداً. */
@@ -64,43 +66,61 @@ export default function OverviewPage() {
 
   return (
     <PageContainer>
-      {/* الكود — قلب اللوحة */}
+      {/* الكود — قلب اللوحة، ومقفل حتى يوثّق المندوب قناة تواصله */}
       <section className="rounded-card bg-primary p-6 text-center text-white">
-        <p className="mb-2 flex items-center justify-center gap-2 text-sm opacity-80">
-          <IconPromos size={16} />
-          {m.rep.codeTitle}
-        </p>
-        <p className="font-mono text-4xl font-bold tracking-widest" dir="ltr">
-          {code}
-        </p>
-        <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed opacity-80">{m.rep.codeHint}</p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              void navigator.clipboard.writeText(code);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-          >
-            {copied ? m.rep.copied : m.rep.copy}
-          </Button>
-          <a
-            href={`https://wa.me/?text=${shareText}`}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-control bg-white px-4 py-2 text-sm font-medium text-primary-dark"
-          >
-            {m.rep.share}
-          </a>
-          <Link
-            href="/portal/link"
-            className="flex items-center gap-1.5 rounded-control border border-white/40 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
-          >
-            <IconLink size={15} />
-            {m.rep.nav.link}
-          </Link>
-        </div>
+        {!me.whatsapp_verified ? (
+          <>
+            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
+              <IconLock size={22} />
+            </span>
+            <p className="text-lg font-bold">{m.rep.lockedTitle}</p>
+            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed opacity-80">{m.rep.lockedHint}</p>
+            <Link
+              href="/portal/account"
+              className="mt-4 inline-block rounded-control bg-white px-5 py-2.5 text-sm font-medium text-primary-dark"
+            >
+              {m.rep.lockedCta}
+            </Link>
+          </>
+        ) : (
+          <>
+            <p className="mb-2 flex items-center justify-center gap-2 text-sm opacity-80">
+              <IconPromos size={16} />
+              {m.rep.codeTitle}
+            </p>
+            <p className="font-mono text-4xl font-bold tracking-widest" dir="ltr">
+              {code}
+            </p>
+            <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed opacity-80">{m.rep.codeHint}</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  void navigator.clipboard.writeText(code);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
+              >
+                {copied ? m.rep.copied : m.rep.copy}
+              </Button>
+              <a
+                href={`https://wa.me/?text=${shareText}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-control bg-white px-4 py-2 text-sm font-medium text-primary-dark"
+              >
+                {m.rep.share}
+              </a>
+              <Link
+                href="/portal/link"
+                className="flex items-center gap-1.5 rounded-control border border-white/40 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
+              >
+                <IconLink size={15} />
+                {m.rep.nav.link}
+              </Link>
+            </div>
+          </>
+        )}
       </section>
 
       {/* هدف الشهر — الرقم الذي يقيس عمل المندوب فعلاً (PLAN §7) */}
