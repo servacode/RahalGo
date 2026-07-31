@@ -44,7 +44,7 @@ export default function LeadsPage() {
     <div className="space-y-4">
       <h1 className="flex items-center gap-2 text-lg font-bold">
         <IconOrder size={20} className="text-primary" />
-        {m.rep.leadsTitle}
+        {m.terms.leads}
       </h1>
 
       {leads.length === 0 ? (

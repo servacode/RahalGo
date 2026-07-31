@@ -124,7 +124,7 @@ function LoginForm() {
               <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
             )}
             <Button type="submit" disabled={busy} className="w-full py-2.5">
-              {busy ? m.admin.loggingIn : m.auth.login}
+              {busy ? m.shared.loggingIn : m.auth.login}
             </Button>
             <button
               type="button"

@@ -30,21 +30,21 @@ import { useAuth, canAccessPanel } from "@/lib/auth";
 const m = getMessages(defaultLocale);
 
 const NAV: ChromeNavItem[] = [
-  { href: "/dashboard", label: m.admin.nav.dashboard, icon: IconDashboard },
-  { href: "/dashboard/orders", label: m.admin.nav.orders, icon: IconOrder },
-  { href: "/dashboard/customers", label: m.admin.nav.customers, icon: IconUser },
-  { href: "/dashboard/tickets", label: m.admin.nav.tickets, icon: IconSupport },
-  { href: "/dashboard/drivers", label: m.admin.nav.drivers, icon: IconDriver },
-  { href: "/dashboard/sales", label: m.admin.nav.sales, icon: IconUsers },
-  { href: "/dashboard/leads", label: m.admin.nav.leads, icon: IconLink },
-  { href: "/dashboard/commissions", label: m.admin.nav.commissions, icon: IconBalance },
-  { href: "/dashboard/users", label: m.admin.nav.users, icon: IconUsers },
-  { href: "/dashboard/merchants", label: m.admin.nav.merchants, icon: IconStore },
-  { href: "/dashboard/zones", label: m.admin.nav.zones, icon: IconZones },
-  { href: "/dashboard/promos", label: m.admin.nav.promos, icon: IconPromos },
-  { href: "/dashboard/reports", label: m.admin.nav.reports, icon: IconStatus },
+  { href: "/dashboard", label: m.terms.dashboard, icon: IconDashboard },
+  { href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder },
+  { href: "/dashboard/customers", label: m.terms.customers, icon: IconUser },
+  { href: "/dashboard/tickets", label: m.terms.complaints, icon: IconSupport },
+  { href: "/dashboard/drivers", label: m.terms.drivers, icon: IconDriver },
+  { href: "/dashboard/sales", label: m.terms.reps, icon: IconUsers },
+  { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink },
+  { href: "/dashboard/commissions", label: m.terms.commissions, icon: IconBalance },
+  { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers },
+  { href: "/dashboard/merchants", label: m.terms.merchants, icon: IconStore },
+  { href: "/dashboard/zones", label: m.terms.zones, icon: IconZones },
+  { href: "/dashboard/promos", label: m.terms.promos, icon: IconPromos },
+  { href: "/dashboard/reports", label: m.terms.reports, icon: IconStatus },
   { href: "/dashboard/whatsapp", label: m.admin.nav.whatsapp, icon: IconWhatsApp },
-  { href: "/dashboard/settings", label: m.admin.nav.settings, icon: IconSettings },
+  { href: "/dashboard/settings", label: m.terms.settings, icon: IconSettings },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

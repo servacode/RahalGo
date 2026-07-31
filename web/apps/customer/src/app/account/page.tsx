@@ -27,7 +27,7 @@ export default function AccountPage() {
     <div className="mx-auto max-w-lg">
       <h1 className="mb-5 flex items-center gap-2 text-xl font-bold">
         <IconUser className="text-primary" />
-        {m.site.account.title}
+        {m.terms.account}
       </h1>
       <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} />
     </div>

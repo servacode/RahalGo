@@ -18,9 +18,9 @@ interface Login {
   created_at: string;
 }
 const LOGIN_LABELS: Record<string, string> = {
-  "auth.otp_login": "دخول برمز تحقق",
-  "auth.password_login": "دخول بكلمة المرور",
-  "auth.password_failed": "محاولة فاشلة",
+  "auth.otp_login": m.admin.users.auditActions["auth.otp_login"],
+  "auth.password_login": m.admin.users.auditActions["auth.password_login"],
+  "auth.password_failed": m.admin.users.auditActions["auth.password_failed"],
 };
 
 export default function MyAccountPage() {
@@ -37,7 +37,7 @@ export default function MyAccountPage() {
     <div className="mx-auto max-w-lg">
       <h1 className="mb-1 flex items-center gap-2 text-xl font-bold">
         <IconUser className="text-primary" />
-        {A.title}
+        {m.terms.account}
       </h1>
       <p className="mb-5 text-sm text-ink-muted">{A.subtitle}</p>
 

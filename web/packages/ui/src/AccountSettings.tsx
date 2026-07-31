@@ -12,7 +12,7 @@ import { Button, Input } from "./components";
 import { IconUser, IconLock, IconPhone } from "./icons";
 
 const m = getMessages(defaultLocale);
-const A = m.site.account;
+const A = m.shared.account;
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
@@ -104,7 +104,7 @@ export function AccountSettings({
     e.preventDefault();
     setError("");
     setMsg("");
-    if (next !== confirm) return setError(A.mismatch);
+    if (next !== confirm) return setError(m.errors.password_mismatch);
     setBusy(true);
     try {
       await api("/api/v1/auth/password", {
@@ -169,7 +169,7 @@ export function AccountSettings({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              (name || phone || "؟").slice(0, 1)
+              (name || phone || m.terms.avatarFallback).slice(0, 1)
             )}
           </div>
           <div className="flex flex-wrap gap-2">

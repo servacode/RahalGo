@@ -11,7 +11,8 @@ import { Badge } from "./components";
 import { IconStar, IconSupport } from "./icons";
 
 const m = getMessages(defaultLocale);
-const R = m.rep.reputation;
+const T = m.terms;
+const R = m.shared.reputation;
 const fmt = new Intl.NumberFormat("ar-SY");
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
@@ -64,7 +65,7 @@ export function ReputationReviews({ api }: { api: ApiFn }) {
     <div className="space-y-5">
       <h1 className="flex items-center gap-2 text-lg font-bold">
         <IconStar size={20} className="text-primary" />
-        {R.reviewsTitle}
+        {T.ratings}
       </h1>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -72,11 +73,11 @@ export function ReputationReviews({ api }: { api: ApiFn }) {
           <p className="text-2xl font-bold text-amber-500" dir="ltr">
             {data.rating.avg.toFixed(1)} ★
           </p>
-          <p className="text-xs text-ink-muted">{R.avg}</p>
+          <p className="text-xs text-ink-muted">{T.avgRating}</p>
         </div>
         <div className="rounded-card border border-line bg-surface p-4">
           <p className="text-2xl font-bold">{fmt.format(data.rating.count)}</p>
-          <p className="text-xs text-ink-muted">{R.count}</p>
+          <p className="text-xs text-ink-muted">{T.ratingsCount}</p>
         </div>
         <div className="col-span-2 flex items-center rounded-card border border-line bg-surface p-4 sm:col-span-1">
           <p className="text-sm font-medium">{trendText}</p>
@@ -98,7 +99,7 @@ export function ReputationReviews({ api }: { api: ApiFn }) {
                 </span>
               </div>
               <p className="mt-1 text-sm text-ink-muted">
-                {rv.merchant_name} — {R.order} #{fmt.format(rv.order_number)}
+                {rv.merchant_name} — {T.order} #{fmt.format(rv.order_number)}
               </p>
               {rv.comment && <p className="mt-1 text-sm">{rv.comment}</p>}
             </li>
@@ -124,7 +125,7 @@ export function ReputationComplaints({ api }: { api: ApiFn }) {
       <div>
         <h1 className="flex items-center gap-2 text-lg font-bold">
           <IconSupport size={20} className="text-primary" />
-          {R.complaintsTitle}
+          {T.complaints}
         </h1>
         <p className="mt-1 text-sm text-ink-muted">{R.complaintsHint}</p>
       </div>
@@ -144,10 +145,10 @@ export function ReputationComplaints({ api }: { api: ApiFn }) {
               <span className="min-w-0 flex-1 text-sm">{c.subject}</span>
               {c.order_number != null && (
                 <span className="text-xs text-ink-muted">
-                  {R.order} #{fmt.format(c.order_number)}
+                  {T.order} #{fmt.format(c.order_number)}
                 </span>
               )}
-              <Badge variant={CVARIANT[c.status]}>{R.ticketStatus[c.status]}</Badge>
+              <Badge variant={CVARIANT[c.status]}>{T.ticketStatus[c.status]}</Badge>
               <span className="text-xs text-ink-muted" dir="ltr">
                 {new Date(c.created_at).toLocaleDateString("ar-SY")}
               </span>

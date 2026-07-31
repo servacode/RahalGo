@@ -9,7 +9,7 @@ import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const fmt = new Intl.NumberFormat("ar-SY");
-const KIND_LABELS: Record<string, string> = m.admin.users.txKinds;
+const KIND_LABELS: Record<string, string> = m.shared.txKinds;
 
 interface Tx {
   id: string;
@@ -36,7 +36,7 @@ export default function WalletPage() {
     <div className="space-y-4">
       <h1 className="flex items-center gap-2 text-lg font-bold">
         <IconWallet size={20} className="text-primary" />
-        {m.rep.walletTitle}
+        {m.terms.wallet}
       </h1>
 
       {txs.length === 0 ? (

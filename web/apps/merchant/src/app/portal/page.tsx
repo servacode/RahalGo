@@ -132,7 +132,7 @@ export default function OrdersBoard() {
             {m.merchant.nav.orders}
           </h1>
           <Badge variant={connected ? "success" : "danger"}>
-            {connected ? m.admin.ordersPage.live : m.admin.ordersPage.liveOff}
+            {connected ? m.shared.live : m.shared.liveOff}
           </Badge>
         </div>
         <div className="flex items-center gap-3">

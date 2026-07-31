@@ -37,7 +37,7 @@ export default function MerchantsPage() {
     <div className="space-y-4">
       <h1 className="flex items-center gap-2 text-lg font-bold">
         <IconStore size={20} className="text-primary" />
-        {m.rep.merchantsTitle}
+        {m.terms.clients}
       </h1>
 
       {merchants.length === 0 ? (
@@ -69,7 +69,7 @@ export default function MerchantsPage() {
                   </p>
                 </div>
                 <Badge variant={mr.status === "active" ? "success" : "danger"}>
-                  {mr.status === "active" ? m.admin.merchants.active : m.admin.merchants.inactive}
+                  {mr.status === "active" ? m.terms.active : m.terms.suspended}
                 </Badge>
               </li>
             );

@@ -106,7 +106,7 @@ export function DashboardChrome({
       <div className="flex items-center justify-between border-b border-line p-4">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-white">
-            ر
+            {m.terms.brandInitial}
           </div>
           <span className="font-bold">{brand}</span>
         </div>
@@ -189,7 +189,7 @@ export function DashboardChrome({
               <Link
                 href={ratingHref ?? accountHref}
                 className="flex items-center gap-1 rounded-control bg-amber-50 px-2.5 py-1.5 text-sm font-bold text-amber-600 hover:bg-amber-100"
-                title={m.rep.reputation.myRating}
+                title={m.terms.myRating}
               >
                 <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
                 <span className="text-amber-400">★</span>
@@ -201,7 +201,7 @@ export function DashboardChrome({
               <Link
                 href={walletHref}
                 className="flex items-center gap-1.5 rounded-control bg-primary-light px-2.5 py-1.5 text-sm font-bold text-primary-dark hover:bg-primary-light/70"
-                title={m.site.wallet.title}
+                title={m.terms.wallet}
               >
                 <IconWallet size={15} />
                 <span dir="ltr">{fmt.format(summary?.balance ?? 0)}</span>
@@ -218,7 +218,7 @@ export function DashboardChrome({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatar} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  (summary?.full_name || phone || "؟").slice(0, 1)
+                  (summary?.full_name || phone || m.terms.avatarFallback).slice(0, 1)
                 )}
               </span>
               <span className="hidden max-w-[7rem] truncate text-sm font-medium text-ink sm:inline">

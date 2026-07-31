@@ -90,7 +90,7 @@ export default function Header() {
               <Link
                 href="/wallet"
                 className="flex items-center gap-1.5 rounded-control bg-primary-light px-2.5 py-1.5 text-sm font-bold text-primary-dark hover:bg-primary-light/70"
-                title={m.site.wallet.title}
+                title={m.terms.wallet}
               >
                 <IconWallet size={15} />
                 <span dir="ltr">{fmt.format(summary?.balance ?? 0)}</span>
@@ -104,10 +104,10 @@ export default function Header() {
                     ? "bg-primary-light font-medium text-primary-dark"
                     : "text-ink-muted hover:text-ink"
                 }`}
-                title={N.orders}
+                title={m.terms.orders}
               >
                 <IconOrder size={16} />
-                <span className="hidden md:inline">{N.orders}</span>
+                <span className="hidden md:inline">{m.terms.orders}</span>
               </Link>
             </>
           )}
@@ -117,7 +117,7 @@ export default function Header() {
             href="/cart"
             className="relative flex items-center gap-1.5 rounded-control bg-primary px-3 py-1.5 text-sm font-medium text-white"
           >
-            🛒 <span className="hidden sm:inline">{N.cart}</span>
+            🛒 <span className="hidden sm:inline">{m.terms.cart}</span>
             {count > 0 && (
               <span className="absolute -top-2 -start-2 flex h-5 min-w-5 items-center justify-center rounded-badge bg-accent px-1 text-xs font-bold text-white">
                 {fmt.format(count)}
@@ -137,7 +137,7 @@ export default function Header() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={avatar} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    (summary?.full_name || user?.phone || "؟").slice(0, 1)
+                    (summary?.full_name || user?.phone || m.terms.avatarFallback).slice(0, 1)
                   )}
                 </span>
                 <span className="hidden max-w-[8rem] truncate text-sm font-medium text-ink sm:inline">
@@ -148,18 +148,18 @@ export default function Header() {
 
               {open && (
                 <div className="absolute end-0 mt-1 w-52 overflow-hidden rounded-card border border-line bg-surface py-1 shadow-lg">
-                  <MenuLink href="/account" icon={<IconUser size={16} />} label={N.account} />
-                  <MenuLink href="/wallet" icon={<IconWallet size={16} />} label={N.wallet} />
-                  <MenuLink href="/orders" icon={<IconOrder size={16} />} label={N.orders} />
-                  <MenuLink href="/ratings" icon={<IconStar size={16} />} label={m.site.rating.myTitle} />
-                  <MenuLink href="/cart" icon={<span className="text-base">🛒</span>} label={N.cart} />
+                  <MenuLink href="/account" icon={<IconUser size={16} />} label={m.terms.account} />
+                  <MenuLink href="/wallet" icon={<IconWallet size={16} />} label={m.terms.wallet} />
+                  <MenuLink href="/orders" icon={<IconOrder size={16} />} label={m.terms.orders} />
+                  <MenuLink href="/ratings" icon={<IconStar size={16} />} label={m.terms.ratings} />
+                  <MenuLink href="/cart" icon={<span className="text-base">🛒</span>} label={m.terms.cart} />
                   {portal && (
                     <button
                       onClick={backToDashboard}
                       className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-accent-dark hover:bg-accent/10"
                     >
                       <IconOverview size={16} />
-                      {N.backToDashboard}
+                      {m.shared.backToDashboard}
                     </button>
                   )}
                   <div className="my-1 border-t border-line" />

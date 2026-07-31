@@ -72,7 +72,7 @@ export default function MyOrdersPage() {
     <div>
       <h1 className="mb-5 flex items-center gap-2 text-xl font-bold">
         <IconOrder className="text-primary" />
-        {m.site.orders.title}
+        {m.terms.orders}
       </h1>
       {orders.length === 0 ? (
         <p className="py-10 text-center text-ink-muted">{m.site.orders.empty}</p>

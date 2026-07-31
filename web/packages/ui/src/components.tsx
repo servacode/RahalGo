@@ -6,7 +6,10 @@
  */
 
 import { useEffect, useState, type ReactNode } from "react";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { IconView, IconViewOff } from "./icons";
+
+const m = getMessages(defaultLocale);
 
 // ---------- Button ----------
 
@@ -79,7 +82,7 @@ export function Input({
             type="button"
             onClick={() => setReveal((r) => !r)}
             tabIndex={-1}
-            aria-label={reveal ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+            aria-label={reveal ? m.shared.hidePassword : m.shared.showPassword}
             className="absolute inset-y-0 end-3 flex items-center text-ink-muted transition-colors hover:text-ink [&>svg]:h-4 [&>svg]:w-4"
           >
             {reveal ? <IconViewOff /> : <IconView />}

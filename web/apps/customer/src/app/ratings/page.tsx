@@ -62,7 +62,7 @@ export default function RatingsPage() {
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-5 flex items-center gap-2 text-xl font-bold">
         <IconStar className="text-primary" />
-        {R.myTitle}
+        {m.terms.ratings}
       </h1>
 
       {orders.length === 0 ? (

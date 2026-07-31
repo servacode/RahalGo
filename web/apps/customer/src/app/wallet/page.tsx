@@ -12,7 +12,7 @@ import { useAuth, isLoggedIn } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const fmt = new Intl.NumberFormat("ar-SY");
-const KIND_LABELS: Record<string, string> = m.admin.users.txKinds;
+const KIND_LABELS: Record<string, string> = m.shared.txKinds;
 
 interface Tx {
   id: string;
@@ -48,7 +48,7 @@ export default function WalletPage() {
     <div className="mx-auto max-w-xl">
       <h1 className="mb-5 flex items-center gap-2 text-xl font-bold">
         <IconWallet className="text-primary" />
-        {m.site.wallet.title}
+        {m.terms.wallet}
       </h1>
 
       <div className="mb-3 rounded-card bg-primary p-6 text-center text-white">
@@ -61,9 +61,9 @@ export default function WalletPage() {
         {m.site.wallet.hint}
       </p>
 
-      <h2 className="mb-3 font-bold">{m.site.wallet.statement}</h2>
+      <h2 className="mb-3 font-bold">{m.terms.transactions}</h2>
       {st.transactions.length === 0 ? (
-        <p className="py-6 text-center text-sm text-ink-muted">{m.site.wallet.empty}</p>
+        <p className="py-6 text-center text-sm text-ink-muted">{m.terms.noTransactions}</p>
       ) : (
         <ul className="space-y-2">
           {st.transactions.map((tx) => (

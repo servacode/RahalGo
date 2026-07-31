@@ -26,12 +26,12 @@ const m = getMessages(defaultLocale);
 const NAV: ChromeNavItem[] = [
   { href: "/portal", label: m.rep.nav.overview, icon: IconOverview },
   { href: "/portal/link", label: m.rep.nav.link, icon: IconLink },
-  { href: "/portal/leads", label: m.rep.nav.leads, icon: IconOrder },
-  { href: "/portal/merchants", label: m.rep.nav.merchants, icon: IconStore },
-  { href: "/portal/wallet", label: m.rep.nav.wallet, icon: IconWallet },
-  { href: "/portal/reviews", label: m.rep.nav.reviews, icon: IconStar },
-  { href: "/portal/complaints", label: m.rep.nav.complaints, icon: IconSupport },
-  { href: "/portal/account", label: m.rep.nav.account, icon: IconUser },
+  { href: "/portal/leads", label: m.terms.leads, icon: IconOrder },
+  { href: "/portal/merchants", label: m.terms.clients, icon: IconStore },
+  { href: "/portal/wallet", label: m.terms.wallet, icon: IconWallet },
+  { href: "/portal/reviews", label: m.terms.ratings, icon: IconStar },
+  { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
+  { href: "/portal/account", label: m.terms.account, icon: IconUser },
 ];
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -66,7 +66,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       Link={Link}
       phone={user?.phone}
       shopUrl={process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003"}
-      shopLabel={m.rep.shopAsCustomer}
+      shopLabel={m.shared.shopAsCustomer}
       onLogout={() => {
         logout();
         router.replace("/login");

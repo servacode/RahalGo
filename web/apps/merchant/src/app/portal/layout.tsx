@@ -26,12 +26,12 @@ import { api, mediaUrl } from "@/lib/api";
 const m = getMessages(defaultLocale);
 
 const NAV: ChromeNavItem[] = [
-  { href: "/portal", label: m.merchant.nav.orders, icon: IconOrder },
-  { href: "/portal/menu", label: m.merchant.nav.menu, icon: IconStore },
-  { href: "/portal/reports", label: m.merchant.nav.reports, icon: IconStatus },
-  { href: "/portal/reviews", label: m.rep.reputation.reviewsTitle, icon: IconStar },
-  { href: "/portal/complaints", label: m.rep.reputation.complaintsTitle, icon: IconSupport },
-  { href: "/portal/account", label: m.rep.nav.account, icon: IconUser },
+  { href: "/portal", label: m.terms.orders, icon: IconOrder },
+  { href: "/portal/menu", label: m.terms.menu, icon: IconStore },
+  { href: "/portal/reports", label: m.terms.reports, icon: IconStatus },
+  { href: "/portal/reviews", label: m.terms.ratings, icon: IconStar },
+  { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
+  { href: "/portal/account", label: m.terms.account, icon: IconUser },
 ];
 
 function PortalChrome({ children }: { children: React.ReactNode }) {
@@ -119,7 +119,7 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
       Link={Link}
       phone={user?.phone}
       shopUrl={process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003"}
-      shopLabel={m.rep.shopAsCustomer}
+      shopLabel={m.shared.shopAsCustomer}
       topbarStart={storeControls}
       onLogout={() => {
         logout();
