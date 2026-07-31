@@ -21,7 +21,7 @@ import {
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
-const PickMap = dynamic(() => import("@/components/map/PickMap"), { ssr: false });
+const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), { ssr: false });
 
 const m = getMessages(defaultLocale);
 const J = m.site.join;

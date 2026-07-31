@@ -12,7 +12,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
-const PickMap = dynamic(() => import("@/components/map/PickMap"), { ssr: false });
+const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), { ssr: false });
 
 const m = getMessages(defaultLocale);
 

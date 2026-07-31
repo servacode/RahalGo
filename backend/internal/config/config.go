@@ -18,6 +18,8 @@ type Config struct {
 	OTPProvider string // dev | whatsapp
 	AdminPhone  string // هاتف أول أدمن — يُمنح الدور تلقائياً عند الإقلاع
 	UploadsDir  string // مجلد تخزين الوسائط المرفوعة (خارج الحاوية في الإنتاج)
+	// خدمة العنونة (Nominatim) — تُستبدل بنسخة ذاتية الاستضافة عند النشر
+	GeocoderURL string
 }
 
 func Load() (*Config, error) {
@@ -30,6 +32,7 @@ func Load() (*Config, error) {
 		OTPProvider: getEnv("OTP_PROVIDER", "dev"),
 		AdminPhone:  getEnv("ADMIN_PHONE", ""),
 		UploadsDir:  getEnv("UPLOADS_DIR", "./uploads"),
+		GeocoderURL: getEnv("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
 	}
 
 	if cfg.Env == "production" {

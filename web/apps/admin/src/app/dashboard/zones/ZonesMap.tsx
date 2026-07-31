@@ -7,7 +7,7 @@
 
 import { MapContainer, Circle, CircleMarker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import FallbackTileLayer from "@/components/map/FallbackTileLayer";
+import { FallbackTileLayer } from "@rahalgo/ui/map";
 
 const RAQQA_CENTER: [number, number] = [35.9528, 39.0079];
 

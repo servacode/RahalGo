@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 
-const PickMap = dynamic(() => import("@/components/map/PickMap"), { ssr: false });
+const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), { ssr: false });
 import {
   CategoryIcon,
   CategoryIconPicker,

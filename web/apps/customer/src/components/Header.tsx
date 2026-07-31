@@ -25,6 +25,7 @@ import {
   IconChevronDown,
   IconStar,
   IconCart,
+  IconBell,
 } from "@rahalgo/ui";
 import { homeFor, portalFor, goTo } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -61,8 +62,9 @@ export default function Header() {
     loadSummary();
   }, [loadSummary, pathname]);
 
-  // الرصيد يتحدّث لحظياً عند أي حركة على المحفظة — بلا إعادة تحميل
-  useLiveRefresh(["wallet"], loadSummary);
+  // الرصيد والصورة يتحدّثان لحظياً — بلا إعادة تحميل
+  // ("profile" حدث محلي يبثّه AccountSettings عند تغيير الصورة أو الرقم)
+  useLiveRefresh(["wallet", "profile"], loadSummary);
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -99,7 +101,7 @@ export default function Header() {
       {logged && (
         <>
           {/* الإشعارات والبث الحي — نفس مكوّن اللوحات */}
-          <LiveNotifications api={api} wsUrl={WS_URL} token={tokenStore.access} Link={Link} />
+          <LiveNotifications api={api} wsUrl={WS_URL} token={tokenStore.access} Link={Link} allHref="/notifications" />
           <WalletPill
             Link={Link}
             href="/wallet"
@@ -149,6 +151,7 @@ export default function Header() {
               <MenuItem Link={Link} href="/wallet" icon={<IconWallet size={16} />} label={m.terms.wallet} />
               <MenuItem Link={Link} href="/orders" icon={<IconOrder size={16} />} label={m.terms.orders} />
               <MenuItem Link={Link} href="/ratings" icon={<IconStar size={16} />} label={m.terms.ratings} />
+              <MenuItem Link={Link} href="/notifications" icon={<IconBell size={16} />} label={m.shared.notifications.title} />
               <MenuItem Link={Link} href="/cart" icon={<IconCart size={16} />} label={m.terms.cart} />
               {portal && (
                 <MenuItem
