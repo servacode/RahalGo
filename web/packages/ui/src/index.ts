@@ -13,6 +13,7 @@ export {
 export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } from "./dataview";
 export { AccountSettings } from "./AccountSettings";
 export { NotificationsPage } from "./NotificationsPage";
+export { WalletPage } from "./WalletPage";
 export {
   StatementSheet,
   currentMonthRange,
