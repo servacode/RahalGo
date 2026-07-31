@@ -17,6 +17,7 @@ import {
   IconStar,
   IconSupport,
   IconUser,
+  IconWallet,
   IconWarning,
 } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
@@ -32,6 +33,7 @@ const NAV: ChromeNavItem[] = [
   { href: "/portal/reports", label: m.terms.reports, icon: IconStatus },
   { href: "/portal/reviews", label: m.terms.ratings, icon: IconStar },
   { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
+  { href: "/portal/wallet", label: m.terms.wallet, icon: IconWallet },
   { href: "/portal/account", label: m.terms.account, icon: IconUser },
 ];
 

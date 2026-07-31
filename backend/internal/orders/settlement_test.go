@@ -347,3 +347,40 @@ func TestRate_RepCannotRateOwnClient(t *testing.T) {
 		t.Fatalf("مُنع زبون عادي من التقييم: %v", err)
 	}
 }
+
+// مستحقّ المتجر يُقيَّد بالتسليم ويُعكس بالاسترجاع.
+//
+// المتجر كان الطرف الوحيد بلا دفتر: المال يقع (الزبون يدفع، والسائق يسوّي
+// للمنصة) والمنصة تمسك مال المتجر بلا قيدٍ يقول كم عليها. وأساس المستحقّ
+// **subtotal** لا `total`: رسم التوصيل أجرُ خدمة المنصة لا نصيبَ المتجر.
+func TestDelivery_CreditsMerchantEarning(t *testing.T) {
+	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
+	ctx := context.Background()
+
+	var ownerID string
+	if err := f.pool.QueryRow(ctx, `
+		INSERT INTO users (phone, full_name) VALUES ('+96399' || floor(random()*10000000)::text, 'مالك')
+		RETURNING id`).Scan(&ownerID); err != nil {
+		t.Fatalf("تعذّر إنشاء مالك: %v", err)
+	}
+	if _, err := f.pool.Exec(ctx,
+		`UPDATE merchants SET owner_user_id = $2 WHERE id = $1`, f.merchantID, ownerID); err != nil {
+		t.Fatalf("تعذّر ربط المالك: %v", err)
+	}
+
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "delivered", ""); err != nil {
+		t.Fatalf("التسليم فشل: %v", err)
+	}
+
+	// 100,000 بضاعة − 10,000 عمولة (10%) = 90,000 — ورسم التوصيل 10,000 للمنصة
+	if got := f.balance(t, ownerID); got != 90_000 {
+		t.Fatalf("مستحقّ المتجر = %d، والمتوقع 90000 (subtotal − عمولة، بلا رسم التوصيل)", got)
+	}
+
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"admin"}, f.orderID, "refunded", ""); err != nil {
+		t.Fatalf("الاسترجاع فشل: %v", err)
+	}
+	if got := f.balance(t, ownerID); got != 0 {
+		t.Fatalf("بقي مستحقّ عن طلب مُسترجَع: %d والمتوقع 0", got)
+	}
+}

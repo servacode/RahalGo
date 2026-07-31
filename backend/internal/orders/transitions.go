@@ -175,13 +175,14 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, orderID, actorID string, out *settled) error {
 	var subtotal int64
 	var merchantPct int
-	var repID *string
+	var repID, ownerID *string
 	var repIsBuyer bool
 	err := q.QueryRow(ctx, `
 		SELECT o.subtotal, m.commission_percent, m.sales_rep_user_id,
-		       m.sales_rep_user_id = o.customer_id
+		       m.sales_rep_user_id = o.customer_id, m.owner_user_id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).Scan(&subtotal, &merchantPct, &repID, &repIsBuyer)
+		WHERE o.id = $1`, orderID).
+		Scan(&subtotal, &merchantPct, &repID, &repIsBuyer, &ownerID)
 	if err != nil {
 		return err
 	}
@@ -191,6 +192,21 @@ func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, order
 		`UPDATE orders SET platform_commission = $2 WHERE id = $1`,
 		orderID, platformCommission); err != nil {
 		return err
+	}
+
+	// مستحقّ المتجر: قيمة بضاعته ناقصَ عمولة المنصة.
+	//
+	// **لا `total`**: رسم التوصيل أجرُ خدمةٍ تؤدّيها المنصة بسائقها فليس من
+	// نصيبه — والعمولة نفسها محسوبة على `subtotal`، فالأساسان متسقان.
+	//
+	// ويُقيَّد لحظة التسليم لا لحظة الطلب: البيع يتمّ بالتسليم، والاسترجاع يعكسه.
+	if ownerID != nil {
+		if due := subtotal - platformCommission; due > 0 {
+			if _, err := s.wallet.ApplyTx(ctx, q, *ownerID, due, "merchant_earning",
+				orderID, "مستحقّ عن طلب مُسلَّم", &actorID); err != nil {
+				return err
+			}
+		}
 	}
 	if platformCommission == 0 || repID == nil {
 		return nil
@@ -223,17 +239,31 @@ func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, order
 // قيد مضاد لعمولة المندوب (الدفاتر لا تُعدَّل ولا تُحذف — تُصحَّح بقيد مقابل)
 // وتصفير لقطة عمولة المنصة كي لا تتضخّم التقارير وفواتير المتاجر.
 func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
-	var platformCommission int64
-	var repID *string
+	var platformCommission, subtotal int64
+	var repID, ownerID *string
 	var repIsBuyer bool
 	err := q.QueryRow(ctx, `
-		SELECT o.platform_commission, m.sales_rep_user_id,
-		       m.sales_rep_user_id = o.customer_id
+		SELECT o.platform_commission, o.subtotal, m.sales_rep_user_id,
+		       m.sales_rep_user_id = o.customer_id, m.owner_user_id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).Scan(&platformCommission, &repID, &repIsBuyer)
+		WHERE o.id = $1`, orderID).
+		Scan(&platformCommission, &subtotal, &repID, &repIsBuyer, &ownerID)
 	if err != nil {
 		return err
 	}
+
+	// عكس مستحقّ المتجر أولاً: المنصة ردّت للزبون ثمن البضاعة، فلا يبقى للمتجر
+	// مستحقٌّ عن بيعٍ لم يتمّ. وبلا هذا العكس يبقى مالٌ في دفتره عن طلب مُسترجَع —
+	// وهو نفس تسريب R-14 من باب المتجر.
+	if ownerID != nil {
+		if due := subtotal - platformCommission; due > 0 {
+			if _, err := s.wallet.ApplyTx(ctx, q, *ownerID, -due, "adjustment",
+				orderID, "عكس مستحقّ متجر — طلب مُسترجَع", &actorID); err != nil {
+				return err
+			}
+		}
+	}
+
 	if _, err := q.Exec(ctx,
 		`UPDATE orders SET platform_commission = 0 WHERE id = $1`, orderID); err != nil {
 		return err
