@@ -65,6 +65,8 @@ interface Merchant {
   logo_url: string | null;
   logo_thumb_url: string | null;
   status: string;
+  /** إلغاءاتُ المتجر داخل نافذة الحظر وبعد آخر عفو */
+  violations: number;
   commission_percent: number;
   emergency_closed: boolean;
   created_at: string;
@@ -161,6 +163,40 @@ export default function MerchantsPage() {
     }
   }
 
+  /**
+   * الحظرُ ورفعُه.
+   *
+   * **`suspended` لا `inactive`**: الثانيةُ يملكها المتجر — إجازةٌ أو ترميم —
+   * ولو حُظر بها لرفع الحظرَ عن نفسه من بوابته.
+   */
+  async function suspend(mr: Merchant, on: boolean) {
+    try {
+      await api(`/api/v1/admin/merchants/${mr.id}/suspend`, {
+        method: "POST",
+        body: JSON.stringify({ suspended: on, note: "" }),
+      });
+      await load();
+    } catch (err) {
+      setError(errText(err));
+    }
+  }
+
+  /**
+   * العفو — يُصفَّر العدّاد ولا يُمحى الماضي.
+   *
+   * **وهو منفصلٌ عن رفع الحظر عمداً**: رفعُ الحظر وحده يُعيده يعمل وعدّادُه
+   * كما هو — «أعدناك على وعد». ودمجُهما يجعل كلَّ رفعِ حظرٍ عفواً، **فيتعلّم
+   * المتجرُ أن الإلغاء بلا ثمن.**
+   */
+  async function forgive(mr: Merchant) {
+    try {
+      await api(`/api/v1/admin/merchants/${mr.id}/clear-violations`, { method: "POST" });
+      await load();
+    } catch (err) {
+      setError(errText(err));
+    }
+  }
+
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.per_page)) : 1;
 
   const columns: DataColumn<Merchant>[] = [
@@ -219,10 +255,58 @@ export default function MerchantsPage() {
       header: m.admin.merchants.status,
       icon: <IconStatus />,
       cell: (mr) => (
-        <Badge variant={mr.status === "active" ? "success" : "danger"}>
-          {mr.status === "active" ? m.admin.merchants.active : m.admin.merchants.inactive}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge
+            variant={
+              mr.status === "active"
+                ? "success"
+                : mr.status === "suspended"
+                  ? "danger"
+                  : "neutral"
+            }
+          >
+            {mr.status === "active"
+              ? m.admin.merchants.active
+              : mr.status === "suspended"
+                ? m.admin.merchants.suspended
+                : m.admin.merchants.inactive}
+          </Badge>
+          {/* **العدّادُ يُرى قبل أن يبلغ.**
+
+              متجرٌ على ٤ من ٥ تتّصل به العملياتُ فتنقذ الطرفين، وحظرٌ يقع
+              فجأةً يُفاجئ من لم يكن يعلم أن هناك عدّاداً. ولا يُعرض صفراً:
+              **لا مخالفةَ خبرٌ سارّ لا تحذير.** */}
+          {mr.violations > 0 && (
+            <Badge variant="warning">
+              {m.admin.merchants.violations.replace("{n}", String(mr.violations))}
+            </Badge>
+          )}
+        </div>
       ),
+    },
+    {
+      id: "ban",
+      header: m.admin.merchants.banActions,
+      cell: (mr) =>
+        isAdmin ? (
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              variant={mr.status === "suspended" ? "primary" : "secondary"}
+              onClick={() => void suspend(mr, mr.status !== "suspended")}
+            >
+              {mr.status === "suspended"
+                ? m.admin.merchants.unban
+                : m.admin.merchants.ban}
+            </Button>
+            {mr.violations > 0 && (
+              <Button variant="ghost" onClick={() => void forgive(mr)}>
+                {m.admin.merchants.forgive}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <span className="text-ink-muted">—</span>
+        ),
     },
   ];
 

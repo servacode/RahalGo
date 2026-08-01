@@ -30,23 +30,28 @@ type Category struct {
 }
 
 type Merchant struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	Description     string    `json:"description"`
-	CategoryID      string    `json:"category_id"`
-	CategoryName    string    `json:"category_name"`
-	CategoryIcon    string    `json:"category_icon"`
-	Phone           string    `json:"phone"`
-	AddressText     string    `json:"address_text"`
-	OwnerUserID     *string   `json:"owner_user_id"`
-	OwnerPhone      *string   `json:"owner_phone"`
-	SalesRepPhone   *string   `json:"sales_rep_phone"`
-	SalesRepCode    *string   `json:"sales_rep_code"`
-	Lat             *float64  `json:"lat"`
-	Lng             *float64  `json:"lng"`
-	LogoURL         *string   `json:"logo_url"`
-	LogoThumbURL    *string   `json:"logo_thumb_url"`
-	Status          string    `json:"status"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	CategoryID    string   `json:"category_id"`
+	CategoryName  string   `json:"category_name"`
+	CategoryIcon  string   `json:"category_icon"`
+	Phone         string   `json:"phone"`
+	AddressText   string   `json:"address_text"`
+	OwnerUserID   *string  `json:"owner_user_id"`
+	OwnerPhone    *string  `json:"owner_phone"`
+	SalesRepPhone *string  `json:"sales_rep_phone"`
+	SalesRepCode  *string  `json:"sales_rep_code"`
+	Lat           *float64 `json:"lat"`
+	Lng           *float64 `json:"lng"`
+	LogoURL       *string  `json:"logo_url"`
+	LogoThumbURL  *string  `json:"logo_thumb_url"`
+	Status        string   `json:"status"`
+	// Violations إلغاءاتُ المتجر داخل نافذة الحظر وبعد آخر عفو.
+	//
+	// **في القائمة لا في صفحةٍ منفصلة**: متجرٌ على ٤ من ٥ تتّصل به العملياتُ
+	// فتنقذ الطرفين — **وعدّادٌ لا يُرى إلا بفتح صفحةٍ عدّادٌ لا يُقرأ.**
+	Violations      int       `json:"violations"`
 	CommissionPct   int       `json:"commission_percent"`
 	EmergencyClosed bool      `json:"emergency_closed"`
 	CreatedAt       time.Time `json:"created_at"`
@@ -144,7 +149,19 @@ const merchantSelect = `
 	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone, sr.invite_code,
 	       ST_Y(m.location::geometry), ST_X(m.location::geometry),
 	       lm.path, lm.thumb_path,
-	       m.status, m.commission_percent, m.emergency_closed, m.created_at
+	       m.status,
+	       -- **بشرط العدّ نفسه** الذي في orders.MerchantViolations، لا بشرطٍ
+	       -- يشبهه: عدّادٌ في الشاشة يخالف العدّادَ الذي يحظر يُفقد الثقةَ
+	       -- بالاثنين. والنافذةُ ثابتةٌ هنا بثلاثين يوماً لأن هذا استعلامُ
+	       -- عرضٍ لا قرار — **والقرارُ يقرأ الإعداد.**
+	       (SELECT count(*) FROM orders o
+	        WHERE o.merchant_id = m.id
+	          AND o.ended_by = 'merchant'
+	          AND o.status IN ('rejected', 'cancelled')
+	          AND o.closed_at > now() - interval '30 days'
+	          AND (m.violations_cleared_at IS NULL
+	               OR o.closed_at > m.violations_cleared_at)),
+	       m.commission_percent, m.emergency_closed, m.created_at
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
@@ -156,7 +173,7 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
-		&m.Status, &m.CommissionPct, &m.EmergencyClosed, &m.CreatedAt)
+		&m.Status, &m.Violations, &m.CommissionPct, &m.EmergencyClosed, &m.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +278,11 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 }
 
 func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in MerchantInput, ip string) (*Merchant, error) {
-	if in.Status != nil && *in.Status != "active" && *in.Status != "inactive" {
+	// `suspended` تُقبل هنا للأدمن، ولها نقطتُها الخاصّة (merchant_violations.go)
+	// التي تُسجّل السبب. **وقبولُها هنا يمنع حالةً لا تُرفع إلا بجراحةٍ في
+	// القاعدة** لو أُغفلت.
+	if in.Status != nil && *in.Status != "active" && *in.Status != "inactive" &&
+		*in.Status != "suspended" {
 		return nil, ErrNameRequired
 	}
 	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, ip)
