@@ -226,14 +226,9 @@ export default function ZonesPage() {
                   value={draft.fee}
                   onChange={(e) => setDraft({ ...draft, fee: e.target.value })}
                 />
-                <Input
-                  id="z-min"
-                  label={m.admin.zones.minOrder}
-                  type="number"
-                  min="0"
-                  value={draft.minOrder}
-                  onChange={(e) => setDraft({ ...draft, minOrder: e.target.value })}
-                />
+                {/* لا حقل «حدّ أدنى»: المنصة لا تفرض حدّاً (قرار المالك) —
+                    رسم التوصيل يُؤخذ كاملاً مهما كانت قيمة الطلب. وحقلٌ يكتب
+                    قيمةً لا يقرؤها أحد **زرٌّ كاذب**: يظنّ صاحبُه أنه ضبط شيئاً. */}
               </div>
               {draft.lat == null && (
                 <p className="rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">

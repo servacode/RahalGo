@@ -137,19 +137,16 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	if err != nil {
 		return nil, err
 	}
-	// الأعلى بين حدّ المنطقة وحدّ المتجر هو المُلزِم — لا يُلغي أحدهما الآخر.
-	// المنطقة تحمي جدوى التوصيل، والمتجر يحمي جدوى التحضير.
-	var merchantMin int64
-	if err := s.db.QueryRow(ctx,
-		`SELECT min_order FROM merchants WHERE id = $1`, in.MerchantID).Scan(&merchantMin); err != nil {
-		return nil, err
-	}
-	if merchantMin > minOrder {
-		minOrder = merchantMin
-	}
-	if subtotal < minOrder {
-		return nil, ErrBelowMinOrder
-	}
+	// **لا حدّ أدنى للطلب في هذه المنصة** (قرار المالك، ٢٠٢٦-٠٨-٠١).
+	//
+	// رسمُ التوصيل يُؤخذ كاملاً من الزبون مهما كانت قيمة طلبه، فالمنصة لا تخسر
+	// على الطلب الصغير ولا شأن لها بقيمته. والمنصات التي تفرض حدّاً أدنى إنما
+	// تفرضه لأنها تُموّل جزءاً من التوصيل — وهذه لا تفعل.
+	//
+	// وكان قبل الإلغاء يُفرض **الأعلى** بين حدّ المنطقة وحدّ المتجر بينما تعرض
+	// السلّة حدّ المنطقة وحده: فطلبٌ يتجاوز ما رآه صاحبُه يرسب في ما لم يره،
+	// ورسالةُ الرفض تنسبه إلى المنطقة وهي قد قبلته. **حدٌّ خفيّ أسوأ من حدٍّ عالٍ.**
+	_ = minOrder
 
 	// كود الخصم
 	var promoID *string

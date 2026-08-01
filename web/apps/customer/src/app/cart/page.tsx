@@ -268,8 +268,8 @@ export default function CartPage() {
                   {m.site.cart.zoneFee
                     .replace("{name}", zone.name)
                     .replace("{fee}", `${fmtNum(zone.delivery_fee)} ${m.common.currency}`)}
-                  {zone.min_order > 0 &&
-                    ` — ${m.site.cart.minOrder.replace("{v}", `${fmtNum(zone.min_order)} ${m.common.currency}`)}`}
+                  {/* لا حدّ أدنى في هذه المنصة — رسم التوصيل كاملٌ من الزبون
+                      مهما كانت قيمة طلبه، فلا شأن للمنصة بها. */}
                 </p>
               )}
               {zoneErr && <p className="mt-1.5 text-xs text-danger">{zoneErr}</p>}
