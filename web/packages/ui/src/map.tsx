@@ -137,6 +137,23 @@ export function PickMap({
   }
 
   return (
+    <div>
+      {/* **زرُّ الموقع فوق الخريطة لا داخلها.**
+          كان في زاويتها السفلى بلون الحياد، فيختفي بين البلاطات — فيظلّ الزبون
+          يحرّك الدبّوس بيده وهو يملك موقعه بضغطةٍ واحدة. **وأدقُّ دبّوسٍ يضعه
+          الجهاز لا الإصبع**، ودقّتُه هي ما يُبلغ السائقَ البابَ.
+
+          ولونٌ بارزٌ ممتلئ: زرٌّ محايدٌ في مشهدٍ مزدحم لا يُطلَب منه أن يُلحَظ. */}
+      <button
+        type="button"
+        onClick={locateMe}
+        disabled={locating}
+        className="mb-2 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-accent-dark disabled:opacity-60"
+      >
+        <IconLocateMe size={17} className={locating ? "animate-pulse" : ""} />
+        {locating ? m.common.loading : m.common.locateMe}
+      </button>
+
     <div className="relative overflow-hidden rounded-card border border-line">
       <MapContainer
         ref={mapRef}
@@ -189,24 +206,13 @@ export function PickMap({
         )}
       </MapContainer>
 
-      <button
-        type="button"
-        onClick={locateMe}
-        disabled={locating}
-        className="absolute bottom-2 end-2 z-[1000] flex items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-2 text-xs font-medium text-ink shadow-sm transition-colors hover:bg-page disabled:opacity-60"
-      >
-        <IconLocateMe
-          size={15}
-          className={locating ? "animate-pulse text-primary" : "text-primary"}
-        />
-        {locating ? m.common.loading : m.common.locateMe}
-      </button>
 
       {denied && (
         <p className="absolute bottom-2 start-2 z-[1000] rounded-control bg-danger/90 px-2.5 py-1.5 text-xs text-white">
           {m.map.denied}
         </p>
       )}
+      </div>
     </div>
   );
 }

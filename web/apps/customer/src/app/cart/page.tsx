@@ -279,14 +279,10 @@ export default function CartPage() {
             {m.site.cart.from} {cart.merchant_name}
           </span>
         </h1>
-        {/* **ما في السلّة طلبٌ واحد مهما تعدّدت أصنافه.**
-            الأسطر المتعدّدة تُقرأ طلباتٍ متعدّدة إن لم يُقَل غير ذلك — وقد
-            قرأها صاحب المنصة هكذا في أوّل تجربةٍ بشرية. */}
-        <p className="mb-4 text-xs text-ink-muted">
-          {m.site.cart.itemsCount.replace("{n}", fmtNum(cart.lines.length))}
-          {m.common.listSeparator}
-          {m.site.cart.oneOrderHint}
-        </p>
+        {/* حُذف سطرُ «طلبٌ واحد مهما تعدّدت أصنافه»: صار الكرتُ الجامع يقوله
+            بلا كلام — **ما يُرى لا يُشرح**. (كان لازماً حين كانت الأصناف أسطراً
+            متفرّقة على الصفحة — R-88.) */}
+        <div className="mt-3 rounded-card border border-line bg-page p-3">
         <ul className="space-y-2">
           {cart.lines.map((l, i) => (
             <li
@@ -321,6 +317,21 @@ export default function CartPage() {
             </li>
           ))}
         </ul>
+
+        {/* **ملاحظات المطعم مع الأصناف لا في عمود الدفع.**
+            هي تخصّ ما يُطبَخ لا ما يُدفَع — ومكانُها بجانب ما تصفه. وكانت
+            «ملاحظات عامّة» في آخر عمود الدفع، فتُقرأ ملاحظةً على الطلب كلِّه
+            (العنوان؟ الوقت؟) لا على الطعام. */}
+        <div className="mt-3 border-t border-line pt-3">
+          <Input
+            id="notes"
+            label={m.site.cart.notes}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={m.site.cart.notesHint}
+          />
+        </div>
+        </div>
 
         <dl className="mt-4 space-y-1 rounded-card border border-line bg-surface p-4 text-sm">
           <div className="flex justify-between">
@@ -443,13 +454,6 @@ export default function CartPage() {
               />
               <p className="mt-1 text-xs text-ink-muted">{m.site.cart.promoHint}</p>
             </div>
-            <Input
-              id="notes"
-              label={m.site.cart.notes}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-
             {error && (
               <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
             )}
