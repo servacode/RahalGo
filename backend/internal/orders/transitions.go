@@ -125,13 +125,69 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 	}
 
 	updated, err := s.GetByID(ctx, orderID)
-	if err == nil {
-		s.publishOrder(updated)
-		// بعد الإيداع: فشل الإشعار لا يُبطل تسليماً وقع فعلاً
-		s.notifyTransition(ctx, orderID, to, note)
-		s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
+	if err != nil {
+		return updated, err
 	}
-	return updated, err
+	s.publishOrder(updated)
+	// بعد الإيداع: فشل الإشعار لا يُبطل تسليماً وقع فعلاً
+	s.notifyTransition(ctx, orderID, to, note)
+	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
+
+	// **الإنزال التلقائيّ إلى طابور السائقين.**
+	//
+	// **خارج المعاملة عمداً، وبعد بثّ الأوّل وإشعاره**: هو انتقالٌ ثانٍ قائمٌ
+	// بذاته له تسوياتُه وإشعاراتُه. وحشرُه في معاملة الأوّل يجعل تعثّرَه يُلغي
+	// انتقالاً وقع فعلاً — **وطلبٌ قُبل ثم رُدَّ قبولُه لأن الطابور تعثّر أسوأ
+	// من طلبٍ ينتظر ضغطةً يدوية.**
+	//
+	// فإن تعثّر: يبقى الطلبُ حيث هو، وتراه العملياتُ بزرّ «طلب سائق» كما كان.
+	// **تعطُّلُ الأتمتة يعيدنا إلى اليد، لا إلى لا شيء.**
+	if s.autoDispatch(ctx, to) {
+		dispatched, derr := s.Transition(ctx, actorID, []string{"ops"},
+			orderID, StDispatching, autoDispatchNote)
+		if derr != nil {
+			s.logger.Warn("الإنزال التلقائي تعثّر — الطلب ينتظر إسناداً يدوياً",
+				"order", orderID, "from", to, "error", derr)
+		} else {
+			return dispatched, nil
+		}
+	}
+	return updated, nil
+}
+
+// autoDispatchNote يُكتب في أثر الأحداث — **فيُعرف أن الآلة نقلته لا الموظّف.**
+const autoDispatchNote = "إنزالٌ تلقائيّ إلى طابور السائقين"
+
+// autoDispatch أيُنزَّل الطلبُ إلى الطابور بعد هذا الانتقال؟
+//
+// **ومن أيّ حالةٍ يُنزَّل يتبع من يدير الطلبات:**
+//
+//   - **المتجر يدير**: من `preparing` — وهنا. المتجرُ قال «بدأتُ الطبخ»،
+//     فيُنادى السائق ليصل مع الجاهزية لا بعدها بربع ساعة.
+//   - **المنصة تدير**: **بعد إبلاغ المتجر بالرسالة** — لا هنا، بل في
+//     `server.handleSendOrderToMerchant`. **فالقبولُ وحده لا يعني أن المطعم
+//     يعلم**، واستدعاءُ سائقٍ قبل أن يعلم يرسله إلى بابٍ لم يُطبخ خلفه شيء.
+//
+// ولا يُنزَّل من `accepted` هنا البتّة: في وضع «المتجر يدير» يعني ذلك أن
+// السائق يسبق الطبخَ فيقف عند الباب، وفي وضع «المنصة تدير» يسبق الإبلاغ.
+func (s *Service) autoDispatch(ctx context.Context, to string) bool {
+	if s.settings == nil || to != StPreparing {
+		return false
+	}
+	return s.settings.GetBool(ctx, "orders.auto_dispatch") &&
+		s.settings.GetBool(ctx, "merchants.self_manage_orders")
+}
+
+// AutoDispatchEnabled أمُشغَّلٌ الإنزالُ التلقائيّ؟ يسأله الإبلاغُ بالرسالة.
+func (s *Service) AutoDispatchEnabled(ctx context.Context) bool {
+	return s.settings != nil && s.settings.GetBool(ctx, "orders.auto_dispatch")
+}
+
+// AutoDispatch ينزل الطلبَ إلى الطابور باسم النظام — يُنادى بعد إبلاغ المتجر.
+func (s *Service) AutoDispatch(ctx context.Context, actorID, orderID string) error {
+	_, err := s.Transition(ctx, actorID, []string{"ops"}, orderID,
+		StDispatching, autoDispatchNote)
+	return err
 }
 
 // settled ما وقع فعلاً من تسويات — يُملأ داخل المعاملة ويُقرأ بعد نجاحها

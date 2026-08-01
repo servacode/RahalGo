@@ -81,6 +81,14 @@ var Catalog = []Def{
 	// و١٢٠ ثانية قرارٌ أدقّ من «دقيقتين».
 	{Key: "orders.customer_cancel_window_sec", Group: GroupOrders, Kind: KindInt,
 		Min: 0, Max: 1800, Unit: "second", Default: 120},
+	// **الطلبُ ينزل إلى السائقين وحده.**
+	//
+	// كان الانتقال إلى الطابور بيد العمليات: موظّفٌ يضغط «طلب سائق» لكل طلب.
+	// **فيتأخّر الطلبُ بقدر ما يتأخّر انتباهُه** — وهو ينظر إلى عشرين في الساعة.
+	//
+	// والسائقُ يرى في بطاقة الطابور «جاهز خلال ن دقيقة»، فيقرّر بنفسه أيأخذه
+	// الآن أم يدع غيرَه. **فالقرارُ عند من يعرف موقعَه لا عند موظّفٍ يخمّن.**
+	{Key: "orders.auto_dispatch", Group: GroupOrders, Kind: KindBool, Default: true},
 
 	// ── السائقون ──────────────────────────────────────────────────────────
 	{Key: "drivers.share_mode", Group: GroupDrivers, Kind: KindChoice,

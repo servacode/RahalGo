@@ -41,10 +41,18 @@ type Config struct {
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		Env:         getEnv("APP_ENV", "development"),
-		HTTPAddr:    getEnv("HTTP_ADDR", ":8080"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://rahalgo:rahalgo_dev@localhost:5432/rahalgo?sslmode=disable"),
-		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379/0"),
+		Env:      getEnv("APP_ENV", "development"),
+		HTTPAddr: getEnv("HTTP_ADDR", ":8080"),
+		// **المنفذان ٥٤٣٤ و٦٣٨٠ — لا ٥٤٣٢ و٦٣٧٩.**
+		//
+		// هذان منفذا حاويتَي المشروع في `docker-compose.yml`. والمنفذان
+		// القياسيّان يشغلهما مشروعٌ آخر على الجهاز نفسه، **فافتراضُهما هنا
+		// يجعل تشغيلاً بلا بيئةٍ يمدّ يدَه إلى قاعدة غيرنا** — وهو ما وقع
+		// فعلاً (نجا بفشل استيثاق، لا بتصميم).
+		//
+		// **والافتراضُ يوافق ما في `docker-compose.yml` لا ما هو شائع.**
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://rahalgo:rahalgo_dev@localhost:5434/rahalgo?sslmode=disable"),
+		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6380/0"),
 		JWTSecret:   getEnv("JWT_SECRET", "dev-secret-change-me"),
 		OTPProvider: getEnv("OTP_PROVIDER", "dev"),
 

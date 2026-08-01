@@ -175,6 +175,20 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 		`UPDATE orders SET sent_to_merchant_at = now() WHERE id = $1`, orderID); err != nil {
 		s.logger.Error("dispatch: تعذّر وسم الإرسال", "order", orderID, "error", err)
 	}
+	// **الآن — لا قبل الآن — يُستدعى السائق.**
+	//
+	// المطعمُ علم بالطلب، فبدأ عدّادُ التحضير عنده فعلاً. واستدعاءُ السائق قبل
+	// هذه اللحظة يرسله إلى بابٍ لم يُطبخ خلفه شيء.
+	//
+	// وفشلُ الإنزال لا يُبطل إرسالاً وقع: الرسالةُ وصلت المتجرَ ولا تُستردّ.
+	// **يبقى الطلب حيث هو وتراه العملياتُ بزرّ «طلب سائق» كما كان.**
+	if s.orders.AutoDispatchEnabled(r.Context()) {
+		if err := s.orders.AutoDispatch(r.Context(), userIDFrom(r), orderID); err != nil {
+			s.logger.Warn("الإنزال التلقائي بعد الإبلاغ تعثّر — ينتظر إسناداً يدوياً",
+				"order", orderID, "error", err)
+		}
+	}
+
 	s.touch("order", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"sent": true, "phone": phone})
 }

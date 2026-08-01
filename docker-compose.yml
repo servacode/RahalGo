@@ -1,5 +1,14 @@
 # بيئة التطوير المحلية — RahalGo
 # التشغيل: docker compose up -d
+#
+# **المنافذُ المنشورة ٥٤٣٤ و٦٣٨٠ — لا ٥٤٣٢ و٦٣٧٩.**
+#
+# على جهاز التطوير مشروعٌ آخر يشغل المنفذين القياسيّين. ونشرُهما هنا يعني
+# أحدَ أمرين: إمّا يفشل الإقلاع لأن المنفذ مأخوذ، **وإمّا ينجح فيسرق منفذ
+# مشروعٍ آخر** — وحينها يتصل خادمُ ذاك المشروع بقاعدتنا أو نتصل نحن بقاعدته.
+#
+# وقد وقع هذا فعلاً: خادمُنا حاول ٥٤٣٢ ونجا **بفشل استيثاقٍ لا بتصميم**.
+# **ونجاةٌ بالصدفة ليست حمايةً**، فصار الافتراضُ هنا وفي `config.go` واحداً.
 services:
   postgres:
     image: postgis/postgis:16-3.4
@@ -9,7 +18,7 @@ services:
       POSTGRES_PASSWORD: rahalgo_dev
       POSTGRES_DB: rahalgo
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,7 +32,7 @@ services:
     container_name: rahalgo-redis
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redisdata:/data
     healthcheck:
