@@ -476,7 +476,8 @@
     "whatsapp_required": "وثّق رقم واتسابك قبل الطلب",
     "no_merchant_phone": "لا رقم واتساب لهذا المتجر",
     "sms_not_configured": "بوّابة الرسائل غير مضبوطة — راجع إعدادات الخادم",
-    "sms_failed": "تعذّر إرسال الرسالة — راجع سجلّ الخادم"
+    "sms_failed": "تعذّر إرسال الرسالة — راجع سجلّ الخادم",
+    "bad_channel": "قناةُ إبلاغٍ غير معروفة"
   },
   "admin": {
     "appTitle": "رحال غو — لوحة التحكم",
@@ -539,10 +540,9 @@
       "reasonPlaceholder": "نفد الصنف · المطبخ مغلق · الزبون لا يردّ…",
       "confirm": "تأكيد",
       "assignHere": "إسناد سائق",
-      "sendWhatsApp": "إرسال الطلب للمتجر",
-      "sentWhatsApp": "أُرسل للمتجر",
-      "sendPreview": "نصُّ الرسالة كما سيصل المتجر",
-      "sendConfirm": "إرسال",
+      "sendWhatsApp": "تحويل الطلب إلى المتجر",
+      "sentWhatsApp": "حُوِّل — إعادة التحويل",
+      "sendPreview": "نصُّ الرسالة",
       "noDriversOnShift": "لا سائق على الدوام الآن",
       "timeline": "خط الزمن",
       "financials": "المالية",
@@ -573,7 +573,9 @@
         "merchant": "تقييم المتجر",
         "driver": "تقييم السائق",
         "comment": "التعليق"
-      }
+      },
+      "sendViaWhatsApp": "فتح واتساب المتجر",
+      "sendViaSMS": "إرسال رسالة نصّية"
     },
     "customers": {
       "title": "الزبائن",

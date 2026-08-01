@@ -37,17 +37,20 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 )
 
 var (
 	errNoMerchantPhone  = httpx.NewError(http.StatusConflict, "no_merchant_phone", "errors.no_merchant_phone")
 	errSMSNotConfigured = httpx.NewError(http.StatusServiceUnavailable, "sms_not_configured", "errors.sms_not_configured")
 	errSMSFailed        = httpx.NewError(http.StatusBadGateway, "sms_failed", "errors.sms_failed")
+	errBadChannel       = httpx.NewError(http.StatusBadRequest, "bad_channel", "errors.bad_channel")
 )
 
 // buildMerchantMessage نصُّ الرسالة — مصدرٌ واحد يقرؤه الإرسالُ والمعاينة.
@@ -87,22 +90,39 @@ type orderMessage struct {
 	Notes  string
 }
 
+// merchantPhones رقما المتجر — **لأن القناتين لا تريدان الرقمَ نفسه.**
+type merchantPhones struct {
+	// SMS خطُّ المحلّ أوّلاً ثم خطُّ صاحبه: الرسالةُ النصّية تصل أيَّ خطّ.
+	SMS string
+	// WhatsApp الموثَّق أوّلاً، **ثم جوّالُ صاحبه، وخطُّ المحلّ آخراً**.
+	//
+	// **ورابطُ واتساب على خطٍّ أرضيّ رابطٌ ميّت**: يفتح التطبيقَ فيقول «الرقم
+	// غير مسجّل»، ويظنّ الموظّفُ أنه حوّل الطلبَ وقد فتح صفحةَ خطأ.
+	//
+	// وخطُّ محلِّ المطعم في الرقة أرضيٌّ غالباً (`022…`) بينما صاحبُه على جوّال
+	// (`09…`) — **فترتيبُ SMS مقلوبٌ هنا عمداً**: تلك تريد خطَّ المحلّ لأنه
+	// يصله من في المطبخ، وهذه تريد من يحمل واتساب.
+	WhatsApp string
+}
+
 // loadOrderMessage يجمع ما يدخل الرسالة — ولا شيء غيره.
-func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMessage, string, error) {
+func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMessage, merchantPhones, error) {
 	var msg orderMessage
-	var phone string
-	// هاتفُ المتجر أوّلاً ثم هاتفُ صاحبه: المتجر قد يكون له خطٌّ للمحلّ، وقد
-	// لا يكون — فيُبلَّغ صاحبُه على خطّه.
+	var ph merchantPhones
 	if err := s.pg.QueryRow(ctx, `
 		SELECT o.number, o.notes,
 		       COALESCE(NULLIF(m.phone::text, ''),
 		                NULLIF(ou.whatsapp_phone::text, ''),
-		                NULLIF(ou.phone::text, ''), '')
+		                NULLIF(ou.phone::text, ''), ''),
+		       COALESCE(NULLIF(ou.whatsapp_phone::text, ''),
+		                NULLIF(ou.phone::text, ''),
+		                NULLIF(m.phone::text, ''), '')
 		FROM orders o
 		JOIN merchants m ON m.id = o.merchant_id
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
-		WHERE o.id = $1`, orderID).Scan(&msg.Number, &msg.Notes, &phone); err != nil {
-		return nil, "", err
+		WHERE o.id = $1`, orderID).
+		Scan(&msg.Number, &msg.Notes, &ph.SMS, &ph.WhatsApp); err != nil {
+		return nil, merchantPhones{}, err
 	}
 
 	rows, err := s.pg.Query(ctx, `
@@ -112,64 +132,124 @@ func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMe
 		                      WITH ORDINALITY AS t(x, ord)), '{}')
 		FROM order_items oi WHERE oi.order_id = $1 ORDER BY oi.id`, orderID)
 	if err != nil {
-		return nil, "", err
+		return nil, merchantPhones{}, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var it orderMessageItem
 		if err := rows.Scan(&it.Name, &it.Qty, &it.Note, &it.Options); err != nil {
-			return nil, "", err
+			return nil, merchantPhones{}, err
 		}
 		msg.Items = append(msg.Items, it)
 	}
-	return &msg, phone, rows.Err()
+	return &msg, ph, rows.Err()
+}
+
+// waLink رابطُ واتساب يفتح محادثةَ المتجر والنصُّ مكتوبٌ فيها.
+//
+// **يُبنى في الخادم لا في المتصفّح** — للسبب الذي بُني لأجله النصُّ نفسه:
+// لو رُكّب في الواجهة لأمكن أن يختلف الرابطُ عمّا عُرض في المعاينة، فيرى
+// الموظّفُ نصّاً ويفتح واتساب بغيره. **ومصدرٌ واحد لا مصدران متشابهان.**
+//
+// وتوحيدُ الرقم هنا كذلك: `wa.me` تريده دولياً بلا `+` ولا صفرٍ بادئ،
+// و`identity.NormalizePhone` هي التي تعرف الصيغ السورية. **ولا تُعاد كتابتها
+// في TypeScript** — فنسختان من قاعدةٍ واحدة تفترقان يوماً.
+func waLink(phone, text string) string {
+	e164, ok := identity.NormalizePhone(phone)
+	if !ok {
+		return ""
+	}
+	return "https://wa.me/" + strings.TrimPrefix(e164, "+") +
+		"?text=" + url.QueryEscape(text)
 }
 
 // handleOrderMessagePreview نصُّ الرسالة كما سيصل المتجر — قبل الإرسال.
 //
 // **ما يُرسَل باسم المنصة يُقرأ قبل أن يُرسَل.**
 func (s *Server) handleOrderMessagePreview(w http.ResponseWriter, r *http.Request) {
-	msg, phone, err := s.loadOrderMessage(r.Context(), chi.URLParam(r, "id"))
+	msg, ph, err := s.loadOrderMessage(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
+	text := buildMerchantMessage(msg)
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"text":  buildMerchantMessage(msg),
-		"phone": phone,
+		"text":    text,
+		"phone":   ph.WhatsApp,
+		"wa_link": waLink(ph.WhatsApp, text),
+		// أمُهيَّأةٌ بوّابةُ الرسائل؟ **الواجهةُ لا تعرض زرّاً لا يعمل.**
+		// وزرٌّ يُضغط فيردّ «غير مضبوطة» يُعلّم الموظّفَ ألّا يثق بالأزرار.
+		"sms_ready": s.textSender.Configured(),
 	})
 }
 
-// handleSendOrderToMerchant يُرسل الطلب إلى المتجر برسالةٍ نصّية.
+// handleSendOrderToMerchant يُبلّغ المتجرَ بطلبه — بقناتين لا واحدة.
+//
+// ## قناتان لأن إحداهما لا تكفي
+//
+//   - **`whatsapp`** — تحويلٌ يدويّ: يفتح الموظّفُ محادثةَ المتجر والنصُّ
+//     مكتوبٌ فيها، ويضغط إرسال. **يعمل اليوم بلا بوّابةٍ ولا اشتراكٍ ولا
+//     اتفاق**، ومن حساب المنصة الرسميّ في التطبيق الذي يعمل عليه المطعمُ
+//     أصلاً. **والإنسانُ هو من يضغط — فلا حظرَ لإرسالٍ آليّ.**
+//   - **`sms`** — إرسالٌ آليّ عبر بوّابة. لا يحتاج موظّفاً، ويحتاج مزوّداً.
+//
+// ## وما يُسجَّل يفرّق بينهما
+//
+// **«أُبلغ المتجر» وحدها لا تكفي حين يقول المطعمُ «لم يصلني».** فالسجلّ يقول
+// بأيّ قناة: بوّابةٌ ردّت بنجاح، أم موظّفٌ فتح واتساب. والسؤالُ التالي يختلف.
+//
+// ## وحدَّ ما نعرفه لا أكثر
+//
+// في التحويل اليدويّ **نعلم أن الموظّف فتح المحادثة، ولا نعلم أنه ضغط إرسال**.
+// فالوسمُ يعني «حُوِّل» لا «وصل» — واللفظُ في الشاشة يقول ذلك بلا تجميل.
 func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
-	msg, phone, err := s.loadOrderMessage(r.Context(), orderID)
+	req, err := decode[struct {
+		Channel string `json:"channel"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if req.Channel != "whatsapp" && req.Channel != "sms" {
+		s.respondErr(w, errBadChannel)
+		return
+	}
+
+	msg, ph, err := s.loadOrderMessage(r.Context(), orderID)
 	if err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
+	}
+	phone := ph.WhatsApp
+	if req.Channel == "sms" {
+		phone = ph.SMS
 	}
 	if phone == "" {
 		s.respondErr(w, errNoMerchantPhone)
 		return
 	}
 
-	if !s.textSender.Configured() {
-		s.respondErr(w, errSMSNotConfigured)
-		return
-	}
-	text := buildMerchantMessage(msg)
-	if err := s.textSender.SendText(r.Context(), phone, text); err != nil {
-		// **السببُ في السجلّ والرسالةُ العامّة للشاشة**: ردُّ المزوّد قد يحمل
-		// مفتاحاً أو تفصيلَ حسابٍ لا يُعرض لموظّف.
-		s.logger.Error("dispatch: تعذّر إرسال الطلب للمتجر",
-			"order", orderID, "phone", phone, "error", err)
-		s.respondErr(w, errSMSFailed)
-		return
+	if req.Channel == "sms" {
+		if !s.textSender.Configured() {
+			s.respondErr(w, errSMSNotConfigured)
+			return
+		}
+		text := buildMerchantMessage(msg)
+		if err := s.textSender.SendText(r.Context(), ph.SMS, text); err != nil {
+			// **السببُ في السجلّ والرسالةُ العامّة للشاشة**: ردُّ المزوّد قد
+			// يحمل مفتاحاً أو تفصيلَ حسابٍ لا يُعرض لموظّف.
+			s.logger.Error("dispatch: تعذّر إرسال الطلب للمتجر",
+				"order", orderID, "phone", phone, "error", err)
+			s.respondErr(w, errSMSFailed)
+			return
+		}
 	}
 
-	// **يُسجَّل**: رسالةٌ باسم المنصة إلى طرفٍ خارجها، ومن أرسلها سؤالٌ يُطرح.
+	// **يُسجَّل**: إبلاغٌ باسم المنصة إلى طرفٍ خارجها — ومن أبلغ وبأيّ قناة
+	// سؤالان يُطرحان حين يقول المطعمُ «لم يصلني الطلب».
 	s.audit(r, "ops.order_notify", "order", orderID, map[string]any{
-		"phone": phone, "number": msg.Number,
+		"phone": phone, "number": msg.Number, "channel": req.Channel,
 	})
 	if _, err := s.pg.Exec(r.Context(),
 		`UPDATE orders SET sent_to_merchant_at = now() WHERE id = $1`, orderID); err != nil {
@@ -190,5 +270,7 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 	}
 
 	s.touch("order", "ops")
-	httpx.JSON(w, http.StatusOK, map[string]any{"sent": true, "phone": phone})
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"sent": true, "phone": phone, "channel": req.Channel,
+	})
 }

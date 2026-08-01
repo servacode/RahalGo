@@ -36,6 +36,16 @@ const m = getMessages(defaultLocale);
 
 // ---------- الأنواع ----------
 
+/** رسالةُ المتجر كما يبنيها الخادم — نصّاً ورابطاً معاً، فلا يفترقان. */
+type MerchantMessage = {
+  text: string;
+  phone: string;
+  /** رابطُ واتساب جاهزاً — فارغٌ إن كان رقمُ المتجر غيرَ صالح */
+  wa_link: string;
+  /** أمُهيَّأةٌ بوّابةُ الرسائل النصّية؟ */
+  sms_ready: boolean;
+};
+
 interface DriverRow {
   id: string;
   full_name: string;
@@ -53,7 +63,7 @@ interface OrderRow {
   merchant_name: string;
   driver_phone: string | null;
   driver_name: string | null;
-  /** متى أُرسل الطلب إلى المتجر على واتساب — فارغٌ يعني لم يُرسل */
+  /** متى حُوِّل الطلب إلى المتجر — فارغٌ يعني لم يُحوَّل بعد */
   sent_to_merchant_at: string | null;
   /** أجرُ السائق — تقديرٌ قبل التسليم وواقعٌ بعده، من مصدر الحساب نفسه */
   driver_fee: number;
@@ -535,8 +545,8 @@ function OrderActions({
   /** قائمةُ السائقين مفتوحةٌ للإسناد اليدوي */
   const [assigning, setAssigning] = useState(false);
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
-  /** معاينةُ رسالة واتساب قبل إرسالها */
-  const [preview, setPreview] = useState<string | null>(null);
+  /** معاينةُ الرسالة قبل تحويلها — ومعها ما يلزم لإرسالها */
+  const [preview, setPreview] = useState<MerchantMessage | null>(null);
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
 
@@ -561,23 +571,39 @@ function OrderActions({
     }
   }
 
-  // **ما يُرسَل باسم المنصة يُقرأ قبل أن يُرسَل.** والنصُّ من الخادم لا من هنا:
-  // لو بُني في الواجهة لاختلف عمّا يصل المتجر، ولا يكتشفه أحدٌ حتى يشتكي.
+  // **ما يُرسَل باسم المنصة يُقرأ قبل أن يُرسَل.** والنصُّ والرابطُ من الخادم
+  // لا من هنا: لو رُكّبا في الواجهة لأمكن أن يفترقا عمّا يصل المتجر، ولا
+  // يكتشفه أحدٌ حتى يشتكي متجر.
   async function openSend() {
     setErr("");
     try {
-      const res = await api<{ text: string }>(`/api/v1/admin/orders/${o.id}/message`);
-      setPreview(res.text);
+      setPreview(await api<MerchantMessage>(`/api/v1/admin/orders/${o.id}/message`));
     } catch (e) {
       setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
     }
   }
 
-  async function sendWhatsApp() {
-    setBusy("wa");
+  /**
+   * التحويل إلى المتجر.
+   *
+   * **النافذةُ تُفتح قبل الشبكة لا بعدها.** المتصفّحات تمنع فتحَ نافذةٍ لا
+   * ينشأ عن ضغطةٍ مباشرة، و`await` قبلها يقطع هذا النسب — فتُحجب النافذة
+   * ويظنّ الموظّفُ أن الزرّ معطوب.
+   *
+   * **والوسمُ يقول ما نعلمه**: فتحنا المحادثةَ والنصُّ فيها. أمّا أنه ضغط
+   * إرسال فلا نعلمه — فاللفظ «حُوِّل» لا «وصل».
+   */
+  async function send(channel: "whatsapp" | "sms") {
+    if (channel === "whatsapp" && preview?.wa_link) {
+      window.open(preview.wa_link, "_blank", "noopener");
+    }
+    setBusy(channel);
     setErr("");
     try {
-      await api(`/api/v1/admin/orders/${o.id}/whatsapp`, { method: "POST" });
+      await api(`/api/v1/admin/orders/${o.id}/whatsapp`, {
+        method: "POST",
+        body: JSON.stringify({ channel }),
+      });
       setPreview(null);
       onChanged();
     } catch (e) {
@@ -630,15 +656,30 @@ function OrderActions({
   if (preview !== null) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium">{m.admin.ordersPage.sendPreview}</p>
+        <p className="text-xs font-medium">
+          {m.admin.ordersPage.sendPreview} · {preview.phone}
+        </p>
         <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-control bg-page p-3 text-xs leading-relaxed">
-          {preview}
+          {preview.text}
         </pre>
         {err && <p className="text-xs text-danger">{err}</p>}
-        <div className="flex gap-2">
-          <Button disabled={busy !== ""} onClick={() => void sendWhatsApp()}>
-            {m.admin.ordersPage.sendConfirm}
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          {preview.wa_link && (
+            <Button disabled={busy !== ""} onClick={() => void send("whatsapp")}>
+              {m.admin.ordersPage.sendViaWhatsApp}
+            </Button>
+          )}
+          {/* **لا يُعرض زرٌّ لا يعمل.** بوّابةٌ غير مضبوطة تردّ خطأً، وزرٌّ
+              يُضغط فيعتذر يُعلّم الموظّفَ ألّا يثق بالأزرار. */}
+          {preview.sms_ready && (
+            <Button
+              variant="secondary"
+              disabled={busy !== ""}
+              onClick={() => void send("sms")}
+            >
+              {m.admin.ordersPage.sendViaSMS}
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => setPreview(null)}>
             {m.common.cancel}
           </Button>
@@ -732,14 +773,19 @@ function OrderActions({
           </Button>
         );
       })}
-      {/* **التحضيرُ من اختصاص المتجر لا المنصة.**
+      {/* **التحويلُ إلى المتجر — في الوضعين لا في وضعٍ واحد.**
 
-          في وضع «المنصة تدير»، تقبل العملياتُ الطلبَ نيابةً عن المتجر — ثم
-          **تُرسله إليه** ولا تعلن بدء تحضيرٍ لم تبدأه. فيحلّ زرُّ الإرسال محلّ
-          «بدء التحضير» في حالة «مقبول». */}
-      {!selfManage && o.status === "accepted" && (
+          في «المنصة تدير» هو الفعلُ الأساسيّ: تقبل العملياتُ نيابةً عن المتجر
+          ثم تُحوّل إليه الطلب، ولا تعلن بدء تحضيرٍ لم تبدأه.
+
+          وفي «المتجر يدير» يبقى بيدها: **المطعمُ لا يردّ على بوّابته أحياناً**
+          — والطلبُ الذي في الشاشة لا يُطبخ حتى يراه أحد. فتُحوّله على واتساب
+          حيث يعمل صاحبُه أصلاً، وهو ثانويٌّ هنا لا أساسيّ.
+
+          والنافذةُ حتى `preparing`: بعد بدء الطبخ لم يعد المطبخُ يحتاج خبراً. */}
+      {(o.status === "accepted" || o.status === "preparing") && (
         <Button
-          variant={o.sent_to_merchant_at ? "secondary" : "primary"}
+          variant={o.sent_to_merchant_at || selfManage ? "secondary" : "primary"}
           disabled={busy !== ""}
           onClick={() => void openSend()}
         >
