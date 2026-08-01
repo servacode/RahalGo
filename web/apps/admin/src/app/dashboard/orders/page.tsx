@@ -616,8 +616,6 @@ function OrderActions({
   /** قائمةُ السائقين مفتوحةٌ للإسناد اليدوي */
   const [assigning, setAssigning] = useState(false);
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
-  /** معاينةُ الرسالة قبل تحويلها — ومعها ما يلزم لإرسالها */
-  const [preview, setPreview] = useState<MerchantMessage | null>(null);
   /** تفصيلُ توزيع المال — يُجلب عند الطلب لا مع كل بطاقة */
   const [split, setSplit] = useState<Breakdown | null>(null);
   /** نموذجُ تعويض السائق عن طلبٍ فشل */
@@ -651,47 +649,47 @@ function OrderActions({
   // **ما يُرسَل باسم المنصة يُقرأ قبل أن يُرسَل.** والنصُّ والرابطُ من الخادم
   // لا من هنا: لو رُكّبا في الواجهة لأمكن أن يفترقا عمّا يصل المتجر، ولا
   // يكتشفه أحدٌ حتى يشتكي متجر.
-  async function openSend() {
-    setErr("");
-    try {
-      setPreview(await api<MerchantMessage>(`/api/v1/admin/orders/${o.id}/message`));
-    } catch (e) {
-      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
-    }
-  }
-
   /**
-   * التحويل إلى المتجر.
+   * **التحويلُ إلى المتجر — ضغطةٌ واحدة.**
    *
-   * **النافذةُ تُفتح قبل الشبكة لا بعدها.** المتصفّحات تمنع فتحَ نافذةٍ لا
-   * ينشأ عن ضغطةٍ مباشرة، و`await` قبلها يقطع هذا النسب — فتُحجب النافذة
-   * ويظنّ الموظّفُ أن الزرّ معطوب.
+   * كانت ضغطتين: معاينةٌ ثم فتحُ واتساب. **وحجّةُ المعاينة أن ما يُرسَل باسم
+   * المنصة يُقرأ قبل أن يُرسَل — وواتسابُ يعرضه في صندوق الكتابة قبل الإرسال.**
+   * فكانت شاشتُنا **ثالثةَ موضعٍ يعرض النصَّ نفسه**، وخطوةً تُضغط بلا خبرٍ جديد.
    *
-   * **والوسمُ يقول ما نعلمه**: فتحنا المحادثةَ والنصُّ فيها. أمّا أنه ضغط
-   * إرسال فلا نعلمه — فاللفظ «حُوِّل» لا «وصل».
+   * **والنافذةُ تُفتح فارغةً قبل الشبكة ثم تُوجَّه.**
+   *
+   * المتصفّحُ يمنع فتحَ نافذةٍ لا تنشأ عن ضغطةٍ مباشرة، و`await` قبل الفتح
+   * يقطع هذا النسب فتُحجب. فتُفتح فارغةً في اللحظة نفسها — **وهي ابنةُ
+   * الضغطة** — ثم يُنقل عنوانُها حين يصل الرابط.
    */
-  async function send(channel: "whatsapp" | "sms") {
-    if (channel === "whatsapp" && preview?.wa_link) {
-      window.open(preview.wa_link, "_blank", "noopener");
-    }
-    setBusy(channel);
+  async function forwardToMerchant() {
     setErr("");
+    const win = window.open("", "_blank");
+    setBusy("wa");
     try {
+      const msg = await api<MerchantMessage>(`/api/v1/admin/orders/${o.id}/message`);
+      if (!msg.wa_link) {
+        win?.close();
+        setErr(m.admin.ordersPage.noWhatsApp);
+        return;
+      }
+      if (win) win.location.href = msg.wa_link;
+      // **الوسمُ يقع ولو حُجبت النافذة**: الموظّفُ يفتحها بنفسه، **والطلبُ
+      // لا يبقى معلّقاً لأن متصفّحاً تشدّد.**
       await api(`/api/v1/admin/orders/${o.id}/whatsapp`, {
         method: "POST",
-        body: JSON.stringify({ channel }),
+        body: JSON.stringify({ channel: "whatsapp" }),
       });
-      setPreview(null);
+      if (!win) setErr(m.admin.ordersPage.popupBlocked);
       onChanged();
     } catch (e) {
+      win?.close();
       setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
     } finally {
       setBusy("");
     }
   }
 
-  // **يُجلب عند الضغط لا مع القائمة**: عشرون بطاقةً تعني عشرين نداءً لما
-  // ينظر إليه واحدٌ منها.
   async function openSplit() {
     setErr("");
     try {
@@ -846,41 +844,6 @@ function OrderActions({
               setErr("");
             }}
           >
-            {m.common.cancel}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (preview !== null) {
-    return (
-      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium">
-          {m.admin.ordersPage.sendPreview} · {preview.phone}
-        </p>
-        <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-control bg-page p-3 text-xs leading-relaxed">
-          {preview.text}
-        </pre>
-        {err && <p className="text-xs text-danger">{err}</p>}
-        <div className="flex flex-wrap gap-2">
-          {preview.wa_link && (
-            <Button disabled={busy !== ""} onClick={() => void send("whatsapp")}>
-              {m.admin.ordersPage.sendViaWhatsApp}
-            </Button>
-          )}
-          {/* **لا يُعرض زرٌّ لا يعمل.** بوّابةٌ غير مضبوطة تردّ خطأً، وزرٌّ
-              يُضغط فيعتذر يُعلّم الموظّفَ ألّا يثق بالأزرار. */}
-          {preview.sms_ready && (
-            <Button
-              variant="secondary"
-              disabled={busy !== ""}
-              onClick={() => void send("sms")}
-            >
-              {m.admin.ordersPage.sendViaSMS}
-            </Button>
-          )}
-          <Button variant="secondary" onClick={() => setPreview(null)}>
             {m.common.cancel}
           </Button>
         </div>
@@ -1044,7 +1007,7 @@ function OrderActions({
         <Button
           variant={o.sent_to_merchant_at || selfManage ? "secondary" : "primary"}
           disabled={busy !== ""}
-          onClick={() => void openSend()}
+          onClick={() => void forwardToMerchant()}
         >
           {o.sent_to_merchant_at
             ? m.admin.ordersPage.sentWhatsApp

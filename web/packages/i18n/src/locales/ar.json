@@ -556,7 +556,6 @@
       "assignHere": "إسناد سائق",
       "sendWhatsApp": "تحويل الطلب إلى المتجر",
       "sentWhatsApp": "حُوِّل — إعادة التحويل",
-      "sendPreview": "نصُّ الرسالة",
       "noDriversOnShift": "لا سائق على الدوام الآن",
       "timeline": "خط الزمن",
       "financials": "المالية",
@@ -588,8 +587,6 @@
         "driver": "تقييم السائق",
         "comment": "التعليق"
       },
-      "sendViaWhatsApp": "فتح واتساب المتجر",
-      "sendViaSMS": "إرسال رسالة نصّية",
       "goodsToMerchant": "المتجر استردّ البضاعة",
       "goodsToPlatform": "رفض الاسترداد — المنصة تتحمّل",
       "goodsSettledMerchant": "البضاعة عادت للمتجر",
@@ -609,7 +606,9 @@
         "platform": "المنصة",
         "customer": "الزبون",
         "other": "تسوية"
-      }
+      },
+      "noWhatsApp": "لا رقم واتساب صالح لهذا المتجر",
+      "popupBlocked": "حُوِّل الطلب — لكنّ المتصفّح منع فتح واتساب. افتحه يدوياً."
     },
     "customers": {
       "title": "الزبائن",
