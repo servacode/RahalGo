@@ -12,14 +12,25 @@ body {
 }
 
 /* ── حركةُ السلّة العائمة ───────────────────────────────────────────────
-   طفوٌ بطيءٌ دائم يلفت العين بلا أن يشغلها، ونبضةٌ قصيرة عند كل إضافة تقول
-   «وصلَك شيء». والمسافةُ ستّة بكسلات: أقلُّ ما يُلحَظ وأكثرُ ما لا يُزعج. */
-@keyframes cart-float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-7px); }
+
+   **العربة تتقدّم ثم تلتفّ ثم تعود** — حركةٌ لها معنى لا زخرفةٌ عامّة: عربةُ
+   تسوّقٍ تُدفع خطوةً، تدور حول نفسها، ثم ترجع إلى مكانها.
+
+   وثلاثُ دوراتٍ لا اثنتان: الدورتان تُقرآن ترنّحاً، والثلاثُ تُقرأ لفّةً
+   مقصودة.
+
+   **والدورة كلُّها في أوّل ثلث المدّة والباقي سكون.** حركةٌ متّصلة في زاوية
+   الشاشة تُتعب العين وتُفقد أثرها بالتكرار — والسكونُ بين اللفّات هو ما يجعل
+   اللفّة تُلحَظ. */
+@keyframes cart-roll {
+  0%, 6%    { transform: translateX(0) rotate(0deg); }
+  14%       { transform: translateX(18px) rotate(0deg); }
+  48%       { transform: translateX(18px) rotate(1080deg); }
+  58%, 100% { transform: translateX(0) rotate(1080deg); }
 }
 
-/* النبضة: تكبر ثم تعود — لا تدور ولا تهتزّ. الاهتزازُ يُقرأ خطأً لا ترحيباً. */
+/* النبضة عند الإضافة: تكبر ثم تعود — لا تدور ولا تهتزّ. الاهتزازُ يُقرأ خطأً
+   لا ترحيباً. */
 @keyframes cart-pop {
   0%   { transform: scale(1); }
   35%  { transform: scale(1.22); }
@@ -27,18 +38,18 @@ body {
   100% { transform: scale(1); }
 }
 
-/* حلقةٌ تتمدّد وتخفت خلف الحقيبة عند الإضافة — أثرُ لمسةٍ لا زخرفة دائمة. */
+/* حلقةٌ تتمدّد وتخفت خلف العربة عند الإضافة — أثرُ لمسةٍ لا زخرفة دائمة. */
 @keyframes cart-ring {
   0%   { transform: scale(0.7); opacity: 0.55; }
   100% { transform: scale(2.1); opacity: 0; }
 }
 
-.cart-float { animation: cart-float 3.2s ease-in-out infinite; }
-.cart-pop   { animation: cart-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.cart-ring  { animation: cart-ring 0.7s ease-out forwards; }
+.cart-roll { animation: cart-roll 7s ease-in-out infinite; }
+.cart-pop  { animation: cart-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.cart-ring { animation: cart-ring 0.7s ease-out forwards; }
 
 /* **من طلب سكوناً يُعطاه.** حركةٌ دائمة في زاوية الشاشة تُتعب من يتأثّر بها،
    وبعضُ الناس يُصابون بدوارٍ منها فعلاً — لا مجرّد انزعاج. */
 @media (prefers-reduced-motion: reduce) {
-  .cart-float, .cart-pop, .cart-ring { animation: none; }
+  .cart-roll, .cart-pop, .cart-ring { animation: none; }
 }
