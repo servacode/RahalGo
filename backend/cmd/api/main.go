@@ -123,8 +123,17 @@ func run(logger *slog.Logger) error {
 		Handler: func() http.Handler {
 			srv := server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc,
 				settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub, otpStatus)
-			// مُرسِلُ الرسائل — يستعمله إرسالُ الطلب إلى المتجر على واتساب
-			srv.SetOTPSender(otpSender)
+			// **إبلاغُ المتاجر برسالةٍ نصّية لا ببوت واتساب**: البوت غيرُ رسميّ
+			// ويُحظَر إن أكثر من الإرسال الآليّ. وواتساب الرسميّ لاحقاً — يدخل
+			// من الواجهة نفسها (`notify.TextSender`) بلا تغييرٍ فيمن يستعملها.
+			srv.SetTextSender(notify.NewSMSSender(notify.SMSConfig{
+				URL:         cfg.SMSURL,
+				Method:      cfg.SMSMethod,
+				Body:        cfg.SMSBody,
+				ContentType: cfg.SMSContentType,
+				AuthHeader:  cfg.SMSAuthHeader,
+				Sender:      cfg.SMSSender,
+			}, logger))
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,

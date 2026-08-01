@@ -1,6 +1,6 @@
 package server
 
-// إرسالُ الطلب إلى المتجر عبر واتساب.
+// إرسالُ الطلب إلى المتجر برسالةٍ نصّية.
 //
 // ## لماذا
 //
@@ -11,16 +11,25 @@ package server
 // فصار للمنصة وضعان (`merchants.self_manage_orders`):
 //
 //   - **المتجر يدير**: يستقبل الطلب في بوابته ويقبله ويحضّره — وهذا الأصل.
-//   - **المنصة تدير**: العمليات تقبل نيابةً عنه، ثم **تُرسل له الطلب على
-//     واتساب**. فيقرؤه في المكان الذي يعمل فيه أصلاً.
+//   - **المنصة تدير**: العمليات تقبل نيابةً عنه، ثم **تُرسل له الطلب برسالةٍ
+//     نصّية**. فيصله في هاتفه بلا تطبيقٍ ولا اقتران.
+//
+// ## ولماذا رسالةٌ نصّية لا بوت واتساب
+//
+// بوتُ واتساب عندنا **غيرُ رسميّ** (`whatsmeow`): يحتاج اقتراناً بهاتف،
+// وينقطع، **ويُحظَر حسابُه إن أكثر من الإرسال الآليّ** — وحظرُه يُوقف رموزَ
+// التحقّق معه، فيُعطَّل الدخول كلُّه لأجل إبلاغِ مطعم.
+//
+// والرسالةُ النصّية تصل أيَّ هاتفٍ بلا شيء. **وواتسابٌ رسميّ لاحقاً** — يدخل
+// من الواجهة نفسها بلا تغييرٍ فيمن يستعملها.
 //
 // ## وماذا في الرسالة
 //
 // **رقمُ الطلب والأصنافُ وملاحظةُ الزبون — ولا شيء غير ذلك.**
 //
 // لا اسمَ زبونٍ ولا هاتفَ ولا عنوانَ ولا مبلغ: **الرسالةُ تخضع لما يخضع له
-// الردّ** (`merchant_privacy.go`) — وإلّا صار واتساب باباً خلفياً لما سُدّ في
-// الواجهة. **وثغرةٌ في قناةٍ ثانية تُبطل الحجب في الأولى.**
+// الردّ** (`merchant_privacy.go`) — وإلّا صارت الرسالةُ باباً خلفياً لما سُدّ
+// في الواجهة. **وثغرةٌ في قناةٍ ثانية تُبطل الحجب في الأولى.**
 //
 // والمالُ خارجها كذلك: هي **ورقةُ مطبخ** تقول ماذا يُطبخ وما يُراعى فيه.
 
@@ -33,12 +42,12 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
-	"github.com/servacode/rahalgo/backend/internal/notify"
 )
 
 var (
-	errNoMerchantPhone = httpx.NewError(http.StatusConflict, "no_merchant_phone", "errors.no_merchant_phone")
-	errWhatsAppOffline = httpx.NewError(http.StatusServiceUnavailable, "whatsapp_offline", "errors.whatsapp_offline")
+	errNoMerchantPhone  = httpx.NewError(http.StatusConflict, "no_merchant_phone", "errors.no_merchant_phone")
+	errSMSNotConfigured = httpx.NewError(http.StatusServiceUnavailable, "sms_not_configured", "errors.sms_not_configured")
+	errSMSFailed        = httpx.NewError(http.StatusBadGateway, "sms_failed", "errors.sms_failed")
 )
 
 // buildMerchantMessage نصُّ الرسالة — مصدرٌ واحد يقرؤه الإرسالُ والمعاينة.
@@ -131,7 +140,7 @@ func (s *Server) handleOrderMessagePreview(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// handleSendOrderToMerchant يُرسل الطلب إلى المتجر على واتساب.
+// handleSendOrderToMerchant يُرسل الطلب إلى المتجر برسالةٍ نصّية.
 func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	msg, phone, err := s.loadOrderMessage(r.Context(), orderID)
@@ -144,21 +153,22 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	sender, ok := s.otpSender.(notify.TextSender)
-	if !ok {
-		s.respondErr(w, errWhatsAppOffline)
+	if !s.textSender.Configured() {
+		s.respondErr(w, errSMSNotConfigured)
 		return
 	}
 	text := buildMerchantMessage(msg)
-	if err := sender.SendText(r.Context(), phone, text); err != nil {
+	if err := s.textSender.SendText(r.Context(), phone, text); err != nil {
+		// **السببُ في السجلّ والرسالةُ العامّة للشاشة**: ردُّ المزوّد قد يحمل
+		// مفتاحاً أو تفصيلَ حسابٍ لا يُعرض لموظّف.
 		s.logger.Error("dispatch: تعذّر إرسال الطلب للمتجر",
 			"order", orderID, "phone", phone, "error", err)
-		s.respondErr(w, errWhatsAppOffline)
+		s.respondErr(w, errSMSFailed)
 		return
 	}
 
 	// **يُسجَّل**: رسالةٌ باسم المنصة إلى طرفٍ خارجها، ومن أرسلها سؤالٌ يُطرح.
-	s.audit(r, "ops.order_whatsapp", "order", orderID, map[string]any{
+	s.audit(r, "ops.order_notify", "order", orderID, map[string]any{
 		"phone": phone, "number": msg.Number,
 	})
 	if _, err := s.pg.Exec(r.Context(),

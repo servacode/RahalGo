@@ -1,0 +1,151 @@
+package notify
+
+// مُرسِلُ الرسائل النصّية — بوّابةٌ عامّة تُضبَط بالبيئة.
+//
+// ## لماذا عامّة ولمزوّدٍ بعينه
+//
+// مزوّدو الرسائل في سوريا يتغيّرون، وكثيرٌ من البوّابات العالمية لا تصلها.
+// **وربطُ المشروع بمزوّدٍ واحد في الشيفرة يعني تعديلَ شيفرةٍ ونشراً كلَّما
+// تغيّر المزوّد** — وقد يتغيّر لأسبابٍ لا يملكها أحد.
+//
+// فالبوّابة هنا **قالبٌ يُملأ**: عنوانٌ وطريقةٌ وجسمٌ فيه `{phone}` و`{text}`،
+// وترويسةُ استيثاقٍ اختيارية. ومن يبدّل مزوّده يبدّل ثلاثة متغيّرات بيئة.
+//
+// ## ولماذا لا في الإعدادات
+//
+// مفتاحُ المزوّد **سرّ**. وجدولُ `app_settings` تقرؤه نقطةُ `/admin/settings`
+// المتاحة للأدمن والعمليات والمالية — **فوضعُه هناك يُسلّمه لثلاثة أدوار لا
+// شأن لاثنين منها به**. والأسرارُ في البيئة كـ`JWT_SECRET`.
+//
+// ## والفشلُ يُقال ولا يُبتلَع
+//
+// بوّابةٌ غيرُ مضبوطة أو لا تستجيب تُرجع خطأً صريحاً. **ورسالةٌ ابتُلعت أسوأ
+// من رسالةٍ لم تُرسَل**: الأولى يظنّ صاحبُها أنها وصلت، فينتظر المطعمُ طلباً
+// لا يعلم به وينتظر الزبونُ طعاماً لا يُطبخ.
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"strings"
+	"time"
+)
+
+var ErrSMSNotConfigured = errors.New("notify: بوّابة الرسائل غير مضبوطة")
+
+// SMSConfig ضبطُ البوّابة — كلُّه من البيئة.
+type SMSConfig struct {
+	// URL عنوان البوّابة. يقبل `{phone}` و`{text}` للمزوّدين الذين يأخذونهما
+	// في المسار أو في سلسلة الاستعلام.
+	URL string
+	// Method الافتراضي POST.
+	Method string
+	// Body قالبُ الجسم — يقبل `{phone}` و`{text}`. فارغٌ يعني بلا جسم.
+	Body string
+	// ContentType الافتراضي application/json.
+	ContentType string
+	// AuthHeader ترويسةُ الاستيثاق كاملةً، مثل: `Authorization: Bearer xxx`.
+	AuthHeader string
+	// Sender اسمُ المُرسِل إن طلبه المزوّد — يُتاح في القالب كـ`{sender}`.
+	Sender string
+}
+
+type SMSSender struct {
+	cfg    SMSConfig
+	client *http.Client
+	logger *slog.Logger
+}
+
+func NewSMSSender(cfg SMSConfig, logger *slog.Logger) *SMSSender {
+	if cfg.Method == "" {
+		cfg.Method = http.MethodPost
+	}
+	if cfg.ContentType == "" {
+		cfg.ContentType = "application/json"
+	}
+	return &SMSSender{
+		cfg: cfg,
+		// مهلةٌ قصيرة: بوّابةٌ بطيئة تُجمّد شاشةَ الموظّف وهو ينتظر ردّاً
+		client: &http.Client{Timeout: 15 * time.Second},
+		logger: logger,
+	}
+}
+
+// Configured هل البوّابة جاهزة؟ يُسأل قبل عرض الزرّ.
+func (s *SMSSender) Configured() bool { return s != nil && s.cfg.URL != "" }
+
+func (s *SMSSender) fill(tpl, phone, text string) string {
+	r := strings.NewReplacer(
+		"{phone}", phone,
+		"{text}", text,
+		"{sender}", s.cfg.Sender,
+	)
+	return r.Replace(tpl)
+}
+
+// SendText يُرسل رسالةً نصّية.
+func (s *SMSSender) SendText(ctx context.Context, phone, text string) error {
+	if !s.Configured() {
+		return ErrSMSNotConfigured
+	}
+
+	var body io.Reader
+	if s.cfg.Body != "" {
+		body = bytes.NewBufferString(s.fill(s.cfg.Body, phone, jsonEscape(text)))
+	}
+	req, err := http.NewRequestWithContext(ctx, s.cfg.Method,
+		s.fill(s.cfg.URL, phone, urlEscape(text)), body)
+	if err != nil {
+		return fmt.Errorf("notify: بناء طلب الرسالة: %w", err)
+	}
+	if s.cfg.Body != "" {
+		req.Header.Set("Content-Type", s.cfg.ContentType)
+	}
+	if k, v, ok := strings.Cut(s.cfg.AuthHeader, ":"); ok {
+		req.Header.Set(strings.TrimSpace(k), strings.TrimSpace(v))
+	}
+
+	res, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("notify: بوّابة الرسائل لا تستجيب: %w", err)
+	}
+	defer res.Body.Close()
+	// أوّلُ ٥١٢ بايت من الردّ في السجلّ عند الفشل: رسالةُ المزوّد هي ما يشرح
+	// السبب، وبلا قراءتها يبقى «فشل الإرسال» بلا جواب.
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		snippet, _ := io.ReadAll(io.LimitReader(res.Body, 512))
+		return fmt.Errorf("notify: بوّابة الرسائل ردّت %d: %s",
+			res.StatusCode, strings.TrimSpace(string(snippet)))
+	}
+	return nil
+}
+
+// jsonEscape يهرّب النصّ ليصلح داخل سلسلة JSON — الرسالة عربيةٌ وفيها أسطر.
+func jsonEscape(s string) string {
+	r := strings.NewReplacer(
+		`\`, `\\`,
+		`"`, `\"`,
+		"\n", `\n`,
+		"\r", `\r`,
+		"\t", `\t`,
+	)
+	return r.Replace(s)
+}
+
+// urlEscape للمزوّدين الذين يأخذون النصّ في سلسلة الاستعلام.
+func urlEscape(s string) string {
+	var b strings.Builder
+	for _, r := range []byte(s) {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || r == '-' || r == '_' || r == '.' || r == '~' {
+			b.WriteByte(r)
+			continue
+		}
+		fmt.Fprintf(&b, "%%%02X", r)
+	}
+	return b.String()
+}

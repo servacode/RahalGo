@@ -48,13 +48,13 @@ type Server struct {
 	geo       *geo.Service
 	notify    *notifications.Service
 	otpStatus func() map[string]any
-	// otpSender مُرسِلُ الرسائل — يُسأل بـtype assertion عن `notify.TextSender`
-	// لأن مُرسِل التطوير يطبع في الطرفية ولا يملك أن يُرسل إلى أحد.
-	otpSender notify.OTPSender
+	// textSender مُرسِلُ الرسائل إلى المتاجر — رسالةٌ نصّية اليوم، وواتسابٌ
+	// رسميّ لاحقاً من الواجهة نفسها.
+	textSender *notify.SMSSender
 }
 
-// SetOTPSender يحقن مُرسِل الرسائل (يُنادى مرّة عند الإقلاع).
-func (s *Server) SetOTPSender(sender notify.OTPSender) { s.otpSender = sender }
+// SetTextSender يحقن مُرسِل الرسائل (يُنادى مرّة عند الإقلاع).
+func (s *Server) SetTextSender(sender *notify.SMSSender) { s.textSender = sender }
 
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,

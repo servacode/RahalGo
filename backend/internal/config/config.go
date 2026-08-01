@@ -16,8 +16,25 @@ type Config struct {
 
 	JWTSecret   string
 	OTPProvider string // dev | whatsapp
-	AdminPhone  string // هاتف أول أدمن — يُمنح الدور تلقائياً عند الإقلاع
-	UploadsDir  string // مجلد تخزين الوسائط المرفوعة (خارج الحاوية في الإنتاج)
+
+	// بوّابةُ الرسائل النصّية — إبلاغُ المتاجر بطلباتها.
+	//
+	// **رسالةٌ نصّية لا بوت واتساب**: البوت عندنا غيرُ رسميّ، يحتاج اقتراناً
+	// بهاتفٍ وينقطع، **ويُحظَر حسابُه إن أكثر من الإرسال الآليّ**. والرسالةُ
+	// النصّية تصل أيَّ هاتفٍ بلا اقتران. (وواتساب الرسميّ لاحقاً — والواجهة
+	// `TextSender` تقبله بلا تغييرٍ فيمن يستعملها.)
+	//
+	// **وأسرارُها في البيئة لا في الإعدادات**: جدولُ `app_settings` تقرؤه
+	// نقطةٌ متاحة للأدمن والعمليات والمالية — فمفتاحُ المزوّد فيها يُسلَّم
+	// لثلاثة أدوار لا شأن لاثنين منها به.
+	SMSURL         string
+	SMSMethod      string
+	SMSBody        string
+	SMSContentType string
+	SMSAuthHeader  string
+	SMSSender      string
+	AdminPhone     string // هاتف أول أدمن — يُمنح الدور تلقائياً عند الإقلاع
+	UploadsDir     string // مجلد تخزين الوسائط المرفوعة (خارج الحاوية في الإنتاج)
 	// خدمة العنونة (Nominatim) — تُستبدل بنسخة ذاتية الاستضافة عند النشر
 	GeocoderURL string
 }
@@ -30,9 +47,16 @@ func Load() (*Config, error) {
 		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379/0"),
 		JWTSecret:   getEnv("JWT_SECRET", "dev-secret-change-me"),
 		OTPProvider: getEnv("OTP_PROVIDER", "dev"),
-		AdminPhone:  getEnv("ADMIN_PHONE", ""),
-		UploadsDir:  getEnv("UPLOADS_DIR", "./uploads"),
-		GeocoderURL: getEnv("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
+
+		SMSURL:         getEnv("SMS_URL", ""),
+		SMSMethod:      getEnv("SMS_METHOD", "POST"),
+		SMSBody:        getEnv("SMS_BODY", ""),
+		SMSContentType: getEnv("SMS_CONTENT_TYPE", "application/json"),
+		SMSAuthHeader:  getEnv("SMS_AUTH_HEADER", ""),
+		SMSSender:      getEnv("SMS_SENDER", ""),
+		AdminPhone:     getEnv("ADMIN_PHONE", ""),
+		UploadsDir:     getEnv("UPLOADS_DIR", "./uploads"),
+		GeocoderURL:    getEnv("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
 	}
 
 	if cfg.Env == "production" {
