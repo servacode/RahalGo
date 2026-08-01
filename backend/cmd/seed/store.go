@@ -312,8 +312,8 @@ func seedStore(ctx context.Context, tx pgx.Tx) {
 		storeRep.Phone, storeRep.Name, repHash, storeRep.Code).Scan(&repID); err != nil {
 		log.Fatalf("rep: %v", err)
 	}
-	// المندوب زبونٌ أيضاً — يتسوّق من المنصة كما يسوّق لها (نفس منطق GrantRole)
-	for _, role := range []string{"sales", "customer"} {
+	// دورُ الزبون بالمفتاح المركزي — مُطفأٌ مؤقّتاً لأجل التجربة
+	for _, role := range fieldRoles("sales") {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO user_roles (user_id, role_code) VALUES ($1, $2)
 			ON CONFLICT DO NOTHING`, repID, role); err != nil {
@@ -333,8 +333,7 @@ func seedStore(ctx context.Context, tx pgx.Tx) {
 		RETURNING id`, storeOwner.Phone, storeOwner.Name, hash).Scan(&ownerID); err != nil {
 		log.Fatalf("owner: %v", err)
 	}
-	// دورا المتجر والزبون معاً — صاحب المتجر يتسوّق أيضاً (نفس منطق GrantRole)
-	for _, role := range []string{"merchant", "customer"} {
+	for _, role := range fieldRoles("merchant") {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO user_roles (user_id, role_code) VALUES ($1, $2)
 			ON CONFLICT DO NOTHING`, ownerID, role); err != nil {

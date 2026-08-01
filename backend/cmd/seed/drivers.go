@@ -49,8 +49,7 @@ func seedDrivers(ctx context.Context, tx pgx.Tx) {
 			RETURNING id`, d.Phone, d.Name, hash).Scan(&id); err != nil {
 			log.Fatalf("driver %s: %v", d.Phone, err)
 		}
-		// السائق زبونٌ أيضاً — يطلب من المنصة كما يوصّل لها (نفس منطق GrantRole)
-		for _, role := range []string{"driver", "customer"} {
+		for _, role := range fieldRoles("driver") {
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO user_roles (user_id, role_code) VALUES ($1, $2)
 				ON CONFLICT DO NOTHING`, id, role); err != nil {

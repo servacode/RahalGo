@@ -16,7 +16,7 @@ import {
   IconOrder,
   IconUser,
 } from "@rahalgo/ui";
-import { PasswordGate } from "@rahalgo/auth";
+import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, isRep } from "@/lib/auth";
 
@@ -64,7 +64,12 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       token={tokenStore.access}
       notificationsHref="/portal/notifications"
       phone={user?.phone}
-      shopUrl={process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003"}
+      // زرّ «تسوّق» يتبع دورَ الزبون: بلا الدور لا يستطيع صاحبه أن يطلب
+      shopUrl={
+        FIELD_ROLES_ARE_CUSTOMERS
+          ? (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003")
+          : undefined
+      }
       shopLabel={m.shared.shopAsCustomer}
       onLogout={() => {
         logout();

@@ -36,6 +36,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/database"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/migrate"
 )
 
@@ -136,11 +137,11 @@ func main() {
 			ON CONFLICT DO NOTHING`, id, a.Role); err != nil {
 			log.Fatalf("role %s: %v", a.Phone, err)
 		}
-		// المندوب/المتجر/السائق هم أيضاً زبائن (نفس منطق GrantRole في الخدمة).
-		if a.Role == "merchant" || a.Role == "driver" || a.Role == "sales" {
+		// دورُ الزبون للأدوار الميدانية — بالمفتاح المركزي لا بشرطٍ محلّي
+		for _, extra := range fieldRoles(a.Role)[1:] {
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'customer')
-				ON CONFLICT DO NOTHING`, id); err != nil {
+				INSERT INTO user_roles (user_id, role_code) VALUES ($1, $2)
+				ON CONFLICT DO NOTHING`, id, extra); err != nil {
 				log.Fatalf("customer role %s: %v", a.Phone, err)
 			}
 		}
@@ -202,6 +203,18 @@ func main() {
 		fmt.Printf("  %-14s %-28s %-10s %s\n", a.Phone, a.Name, a.Role, a.Password)
 	}
 	os.Exit(0)
+}
+
+// fieldRoles الأدوار التي تُمنح لصاحب حسابٍ ميدانيّ.
+//
+// دورُ الزبون يُضاف **إن كان المفتاح المركزي مرفوعاً** (`identity.FieldRolesAreCustomers`)
+// — وهو مُطفأٌ مؤقّتاً لأجل التجربة. والزراعة تمرّ بالمفتاح نفسه كي لا تُنشئ
+// حساباتٍ تخالف ما يفعله الخادم.
+func fieldRoles(role string) []string {
+	if identity.FieldRolesAreCustomers {
+		return []string{role, "customer"}
+	}
+	return []string{role}
 }
 
 // seedDemo البيانات التجريبية: متجران بقوائمهما وكود خصم ترحيبي.
