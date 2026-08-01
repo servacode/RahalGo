@@ -65,6 +65,13 @@ export function ViewToggle({
 }
 
 export interface DataColumn<T> {
+  /**
+   * حقلٌ **يأخذ عرض البطاقة كاملاً** بدل صفّ «تسمية ← قيمة».
+   *
+   * قوائمُ الأصناف والملاحظاتُ الطويلة تُحشَر في العمود الأيسر الضيّق فتتكسّر
+   * كلماتُها ويصعب مسحُها بالعين. **وما يُقرأ سطراً سطراً لا يُوضَع في خانة.**
+   */
+  block?: boolean;
   id: string;
   header: string;
   cell: (item: T) => ReactNode;
@@ -110,7 +117,8 @@ export function DataView<T>({
 
   if (view === "cards") {
     const primaries = columns.filter((c) => c.primary);
-    const rest = columns.filter((c) => !c.primary);
+    const rest = columns.filter((c) => !c.primary && !c.block);
+    const blocks = columns.filter((c) => !c.primary && c.block);
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((item) => (
@@ -143,6 +151,17 @@ export function DataView<T>({
                 </div>
               ))}
             </dl>
+
+            {/* الحقول الطويلة بعرض البطاقة: تسميةٌ فوق ومحتوىً تحتها */}
+            {blocks.map((c) => (
+              <div key={c.id} className="mt-3 border-t border-line/60 pt-3">
+                <p className="mb-1 text-xs text-ink-muted">
+                  <FieldLabel icon={c.icon} text={c.header} />
+                </p>
+                <div className="text-sm">{c.cell(item)}</div>
+              </div>
+            ))}
+
             {actions && (
               <div
                 onClick={(e) => e.stopPropagation()}

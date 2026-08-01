@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -55,6 +56,18 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, o)
 }
 
+// requiresReason الانتقالاتُ التي لا تُقبل بلا تعليل.
+//
+// كلُّها تُنهي الطلب أو تعكس مالاً: الرفضُ والإلغاءُ يُرجعان ما دُفع، والفشلُ
+// يُغلق بلا تسليم، والاسترجاعُ يعكس تسويةً تمّت. **والسببُ ليس زينةً**: هو ما
+// يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر الإلغاء.
+var requiresReason = map[string]bool{
+	"rejected":  true,
+	"cancelled": true,
+	"failed":    true,
+	"refunded":  true,
+}
+
 func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		To   string `json:"to"`
@@ -64,8 +77,21 @@ func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **ما لا يُستدرَك يلزمه سبب.**
+	//
+	// كان السبب إلزامياً على المتجر وحده (`merchant_handlers.go`) ومفتوحاً
+	// للعمليات. فيُلغى طلبٌ من اللوحة بلا كلمة، ويبقى الزبون والمتجر يخمّنان
+	// — **ولا يُقاس موظّفٌ يُكثر الإلغاء ولا متجرٌ يُكثر الرفض**.
+	//
+	// والحارسُ هنا لا في الخارطة: الخارطةُ تقول **من يملك** الانتقال، وهذا
+	// شرطٌ على **كيف** يُمارَس.
+	if requiresReason[req.To] && strings.TrimSpace(req.Note) == "" {
+		s.respondErr(w, errReasonRequired)
+		return
+	}
+
 	o, err := s.orders.Transition(r.Context(), userIDFrom(r), rolesFrom(r),
-		chi.URLParam(r, "id"), req.To, req.Note)
+		chi.URLParam(r, "id"), req.To, strings.TrimSpace(req.Note))
 	if err != nil {
 		s.respondErr(w, err)
 		return

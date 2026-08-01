@@ -231,19 +231,27 @@ export default function OrdersPage() {
       id: "items",
       header: m.admin.ordersPage.itemsSection,
       icon: <IconOrder />,
+      // بعرض البطاقة: قائمةٌ تُقرأ سطراً سطراً لا تُحشَر في خانةٍ ضيّقة
+      block: true,
       cell: (o) => (
-        <ul className="space-y-0.5 text-xs">
+        <ul className="space-y-1.5">
           {(o.items ?? []).map((it) => (
-            <li key={it.id}>
-              <span className="font-medium">{it.name}</span>
-              <span className="text-ink-muted"> ×{fmtNum(it.qty)}</span>
-              {it.options?.length > 0 && (
-                <span className="text-ink-muted">
-                  {" "}
-                  ({it.options.map((x) => x.name).join(m.common.listSeparator)})
-                </span>
-              )}
-              {it.note && <span className="text-accent-dark"> — {it.note}</span>}
+            <li key={it.id} className="flex items-start gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-badge bg-primary" />
+              <span className="min-w-0">
+                <span className="font-medium">{it.name}</span>
+                <span className="font-bold text-primary-dark"> ×{fmtNum(it.qty)}</span>
+                {it.options && it.options.length > 0 && (
+                  <span className="block text-xs text-ink-muted">
+                    {it.options.map((x) => x.name).join(m.common.listSeparator)}
+                  </span>
+                )}
+                {it.note && (
+                  <span className="block text-xs text-accent-dark">
+                    <IconEdit size={11} className="inline align-[-1px]" /> {it.note}
+                  </span>
+                )}
+              </span>
             </li>
           ))}
           {(o.items ?? []).length === 0 && <li className="text-ink-muted">—</li>}
@@ -287,6 +295,7 @@ export default function OrdersPage() {
       id: "note",
       header: m.admin.ordersPage.customerNote,
       icon: <IconNote />,
+      block: true,
       cell: (o) =>
         o.notes ? (
           <span className="text-xs text-accent-dark">{o.notes}</span>
@@ -500,48 +509,89 @@ function OrderActions({
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState("");
-  const [confirming, setConfirming] = useState("");
+  /** الفعلُ الهدّام المفتوح الآن — يُطلب سببُه قبل تنفيذه */
+  const [asking, setAsking] = useState("");
+  const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
 
   const next = OPS_NEXT[o.status] ?? [];
 
-  async function go(to: string) {
+  async function go(to: string, note: string) {
     setBusy(to);
     setErr("");
     try {
       await api(`/api/v1/admin/orders/${o.id}/transition`, {
         method: "POST",
-        body: JSON.stringify({ to, note: "" }),
+        body: JSON.stringify({ to, note }),
       });
+      setAsking("");
+      setReason("");
       onChanged();
     } catch (e) {
       setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
     } finally {
       setBusy("");
-      setConfirming("");
     }
+  }
+
+  // **السببُ بدل الضغطتين العمياوين.**
+  //
+  // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
+  // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
+  // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
+  if (asking) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium text-danger">
+          {m.admin.ordersPage.reasonTitle.replace("{action}", ACTION_LABELS[asking] ?? asking)}
+        </p>
+        <Input
+          id={`reason-${o.id}`}
+          autoFocus
+          value={reason}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setErr("");
+          }}
+          placeholder={m.admin.ordersPage.reasonPlaceholder}
+        />
+        <p className="text-xs text-ink-muted">{m.admin.ordersPage.reasonHint}</p>
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <div className="flex gap-2">
+          <Button
+            variant="danger"
+            disabled={!reason.trim() || busy !== ""}
+            onClick={() => void go(asking, reason.trim())}
+          >
+            {m.admin.ordersPage.confirm}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setAsking("");
+              setReason("");
+              setErr("");
+            }}
+          >
+            {m.common.cancel}
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <>
       {next.map((to) => {
         const destructive = DESTRUCTIVE.has(to);
-        const armed = confirming === to;
         return (
           <Button
             key={to}
             variant={destructive ? "danger" : "primary"}
             disabled={busy !== ""}
-            onClick={() => {
-              if (destructive && !armed) {
-                setConfirming(to);
-                return;
-              }
-              void go(to);
-            }}
-            onBlur={() => armed && setConfirming("")}
+            onClick={() => (destructive ? setAsking(to) : void go(to, ""))}
           >
-            {armed ? m.admin.ordersPage.confirmOnce : ACTION_LABELS[to] ?? to}
+            {ACTION_LABELS[to] ?? to}
           </Button>
         );
       })}
