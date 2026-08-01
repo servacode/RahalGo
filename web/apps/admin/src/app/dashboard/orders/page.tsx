@@ -28,6 +28,7 @@ import {
   IconStatus,
   IconLocation,
   IconStar,
+  IconBalance,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 
@@ -42,6 +43,9 @@ interface OrderRow {
   customer_name: string;
   merchant_name: string;
   driver_phone: string | null;
+  driver_name: string | null;
+  /** أجرُ السائق — تقديرٌ قبل التسليم وواقعٌ بعده، من مصدر الحساب نفسه */
+  driver_fee: number;
   status: string;
   payment_method: "cash" | "wallet";
   subtotal: number;
@@ -109,6 +113,15 @@ const STATUS_VARIANT: Record<string, "warning" | "primary" | "success" | "danger
   failed: "danger",
   refunded: "neutral",
 };
+
+/**
+ * الأفعالُ الهدّامة — تُطلب لها ضغطةٌ ثانية على البطاقة.
+ *
+ * كلُّها تُنهي الطلب أو تعكس مالاً: الرفضُ والإلغاءُ يُرجعان ما دُفع، والفشلُ
+ * يُغلق بلا تسليم، والاسترجاعُ يعكس تسويةً تمّت. **وما لا يُستدرَك لا يُترك
+ * لضغطةٍ واحدة.**
+ */
+const DESTRUCTIVE = new Set(["rejected", "cancelled", "failed", "refunded"]);
 
 // أزرار الانتقال المتاحة للعمليات/الأدمن حسب الحالة (مرآة لخارطة الخادم)
 const OPS_NEXT: Record<string, string[]> = {
@@ -211,6 +224,75 @@ export default function OrdersPage() {
       header: m.admin.ordersPage.merchant,
       icon: <IconStore />,
       cell: (o) => o.merchant_name,
+    },
+    {
+      // **الأصناف على البطاقة لا خلف «التفاصيل»**: «ماذا طلب؟» أوّلُ ما تسأله
+      // غرفةُ العمليات، وكان يلزمها فتحُ نافذةٍ لكل طلب — وهي تنظر إلى عشرين.
+      id: "items",
+      header: m.admin.ordersPage.itemsSection,
+      icon: <IconOrder />,
+      cell: (o) => (
+        <ul className="space-y-0.5 text-xs">
+          {(o.items ?? []).map((it) => (
+            <li key={it.id}>
+              <span className="font-medium">{it.name}</span>
+              <span className="text-ink-muted"> ×{fmtNum(it.qty)}</span>
+              {it.options?.length > 0 && (
+                <span className="text-ink-muted">
+                  {" "}
+                  ({it.options.map((x) => x.name).join(m.common.listSeparator)})
+                </span>
+              )}
+              {it.note && <span className="text-accent-dark"> — {it.note}</span>}
+            </li>
+          ))}
+          {(o.items ?? []).length === 0 && <li className="text-ink-muted">—</li>}
+        </ul>
+      ),
+    },
+    {
+      // **قيمة البضاعة وحدها**: هي ما يخصّ المتجر، ورسمُ التوصيل شأنٌ آخر
+      // لصاحبٍ آخر. وجمعُهما في رقمٍ واحد يُخفي أين يذهب المال.
+      id: "goods",
+      header: m.admin.ordersPage.goodsValue,
+      icon: <IconBalance />,
+      cell: (o) => (
+        <span className="font-medium">
+          {fmtNum(o.subtotal)} {m.common.currency}
+        </span>
+      ),
+    },
+    {
+      // **السائق وأجرُه — أو أجرةُ التوصيل قبل أن يُسنَد أحد.**
+      // الطلبُ يولد بلا سائق، والخانةُ الفارغة لا تقول شيئاً: فيُعرض ما يُدفع
+      // عن التوصيل حتى يُعرف من سيقبضه.
+      id: "driver",
+      header: m.admin.ordersPage.driver,
+      icon: <IconDriver />,
+      cell: (o) =>
+        o.driver_name || o.driver_phone ? (
+          <span>
+            {o.driver_name || o.driver_phone}
+            <span className="block text-xs text-ink-muted">
+              {m.admin.ordersPage.driverFee}: {fmtNum(o.driver_fee)} {m.common.currency}
+            </span>
+          </span>
+        ) : (
+          <span className="text-ink-muted">
+            {m.admin.ordersPage.deliveryFee}: {fmtNum(o.delivery_fee)} {m.common.currency}
+          </span>
+        ),
+    },
+    {
+      id: "note",
+      header: m.admin.ordersPage.customerNote,
+      icon: <IconNote />,
+      cell: (o) =>
+        o.notes ? (
+          <span className="text-xs text-accent-dark">{o.notes}</span>
+        ) : (
+          <span className="text-ink-muted">—</span>
+        ),
     },
     {
       id: "total",
@@ -360,9 +442,7 @@ export default function OrdersPage() {
         view={view}
         empty={m.admin.ordersPage.empty}
         actions={(o) => (
-          <Button variant="secondary" onClick={() => setDetailID(o.id)}>
-            {m.admin.ordersPage.details}
-          </Button>
+          <OrderActions o={o} onOpen={() => setDetailID(o.id)} onChanged={load} />
         )}
       />
 
@@ -395,6 +475,83 @@ export default function OrdersPage() {
 }
 
 // ---------- تفاصيل الطلب ----------
+
+/**
+ * أزرارُ الفعل على البطاقة — لا خلف «التفاصيل».
+ *
+ * كانت كلُّ حركةٍ تكلّف: فتحُ النافذة ← انتظارُ تحميلها ← الفعل ← الإغلاق ←
+ * **البحث عن موضعك في القائمة من جديد**. وفي ساعة ذروةٍ فيها عشرون طلباً هذه
+ * عشرون رحلةَ ذهابٍ وإياب — والنافذةُ تُخفي بقيّة الطلبات وهي مفتوحة، فيعمل
+ * الموظّف أعمى عمّا يجري.
+ *
+ * **والهدّامةُ لا تُنفَّذ بضغطةٍ واحدة**: رفضٌ أو إلغاءٌ في صفٍّ مزدحم يُتلف
+ * طلبَ زبونٍ بإصبعٍ زلّ. فتُطلب ضغطةٌ ثانية تؤكّد — **تأكيدٌ في مكانه أخفُّ من
+ * نافذةٍ تُفتح وتُغلق**، وأصدقُ من ثقةٍ في دقّة الإصبع.
+ *
+ * **وإسنادُ السائق يبقى في التفاصيل**: يحتاج قائمةَ اختيارٍ لا زرّاً.
+ */
+function OrderActions({
+  o,
+  onOpen,
+  onChanged,
+}: {
+  o: OrderRow;
+  onOpen: () => void;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState("");
+  const [confirming, setConfirming] = useState("");
+  const [err, setErr] = useState("");
+
+  const next = OPS_NEXT[o.status] ?? [];
+
+  async function go(to: string) {
+    setBusy(to);
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/transition`, {
+        method: "POST",
+        body: JSON.stringify({ to, note: "" }),
+      });
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    } finally {
+      setBusy("");
+      setConfirming("");
+    }
+  }
+
+  return (
+    <>
+      {next.map((to) => {
+        const destructive = DESTRUCTIVE.has(to);
+        const armed = confirming === to;
+        return (
+          <Button
+            key={to}
+            variant={destructive ? "danger" : "primary"}
+            disabled={busy !== ""}
+            onClick={() => {
+              if (destructive && !armed) {
+                setConfirming(to);
+                return;
+              }
+              void go(to);
+            }}
+            onBlur={() => armed && setConfirming("")}
+          >
+            {armed ? m.admin.ordersPage.confirmOnce : ACTION_LABELS[to] ?? to}
+          </Button>
+        );
+      })}
+      <Button variant="secondary" onClick={onOpen}>
+        {m.admin.ordersPage.details}
+      </Button>
+      {err && <p className="w-full text-xs text-danger">{err}</p>}
+    </>
+  );
+}
 
 function OrderDetailModal({
   orderID,

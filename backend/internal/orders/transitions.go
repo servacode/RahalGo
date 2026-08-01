@@ -393,13 +393,16 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 //
 // والنمط من الإعدادات لا من الشيفرة: نسبةً من رسم التوصيل أو مبلغاً مقطوعاً،
 // يُبدَّل بلا نشر. (ونمطٌ ثالث حسب المسافة حين تتوفّر مواقع السائقين الحيّة.)
-func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement) error {
-	if in.driverID == nil {
-		return nil
-	}
-	// مفتاحان لا مفتاح: النسبة والمبلغ المقطوع لكلٍّ منهما مداه. ومفتاحٌ واحد
-	// يعني معنيين لا يمكن حراسة مداه — كان يقبل ٢٠٠ لأنها مبلغٌ معقول، وهي
-	// نسبةٌ تجعل المنصة تدفع ضعف ما قبضت.
+// driverShare أجرُ السائق عن رسم توصيلٍ معلوم.
+//
+// **مصدرٌ واحد للحساب**: يستعمله قيدُ الأجر عند التسليم، وتستعمله غرفةُ
+// العمليات لتعرف الأجر **قبل** الإسناد. ولو حُسب في موضعين لانحرف أحدهما يوماً
+// — فتُسنِد العمليات على رقمٍ ويُقيَّد للسائق غيره.
+//
+// ومفتاحان لا مفتاح: النسبة والمبلغ المقطوع لكلٍّ منهما مداه. ومفتاحٌ واحد
+// يعني معنيين لا يمكن حراسة مداه — كان يقبل ٢٠٠ لأنها مبلغٌ معقول، وهي نسبةٌ
+// تجعل المنصة تدفع ضعف ما قبضت.
+func driverShare(ctx context.Context, q wallet.Querier, deliveryFee int64) (int64, error) {
 	var mode string
 	var pct, fixed float64
 	if err := q.QueryRow(ctx, `
@@ -407,20 +410,27 @@ func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement
 		       COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key = 'drivers.share_percent'), 70),
 		       COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key = 'drivers.share_fixed'), 5000)`).
 		Scan(&mode, &pct, &fixed); err != nil {
-		return err
+		return 0, err
 	}
+	if mode == "fixed" {
+		return int64(fixed), nil
+	}
+	// percent — من رسم التوصيل لا من قيمة الطلب: أجرُ توصيلٍ لا حصةٌ من بيع
+	return int64(float64(deliveryFee) * pct / 100), nil
+}
 
-	var share int64
-	switch mode {
-	case "fixed":
-		share = int64(fixed)
-	default: // percent — من رسم التوصيل لا من قيمة الطلب: أجرُ توصيلٍ لا حصةٌ من بيع
-		share = int64(float64(in.deliveryFee) * pct / 100)
+func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement) error {
+	if in.driverID == nil {
+		return nil
+	}
+	share, err := driverShare(ctx, q, in.deliveryFee)
+	if err != nil {
+		return err
 	}
 	if share <= 0 {
 		return nil
 	}
-	_, err := s.wallet.ApplyTx(ctx, q, *in.driverID, share, "driver_earning",
+	_, err = s.wallet.ApplyTx(ctx, q, *in.driverID, share, "driver_earning",
 		in.orderID, "أجر توصيل طلب مُسلَّم", &in.actorID)
 	return err
 }

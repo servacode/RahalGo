@@ -13,7 +13,7 @@ import (
 
 const orderSelect = `
 	SELECT o.id, o.number, o.customer_id, cu.phone, cu.full_name,
-	       o.merchant_id, mr.name, o.driver_id, dr.phone,
+	       o.merchant_id, mr.name, o.driver_id, dr.phone, NULLIF(dr.full_name, ''),
 	       o.status, o.address_text,
 	       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       o.zone_id, z.name,
@@ -27,7 +27,20 @@ const orderSelect = `
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
 	       COALESCE((SELECT string_agg(x.name, '، ' ORDER BY x.rn)
 	                 FROM (SELECT oi.name, row_number() OVER (ORDER BY oi.name) AS rn
-	                       FROM order_items oi WHERE oi.order_id = o.id LIMIT 3) x), '')
+	                       FROM order_items oi WHERE oi.order_id = o.id LIMIT 3) x), ''),
+	       -- **الأصناف كاملةً في القائمة نفسها.**
+	       --
+	       -- كانت المعاينةُ ثلاثةَ أسماء بلا كمّيات ولا خيارات، فتُضطر غرفةُ
+	       -- العمليات إلى فتح كل طلبٍ لترى ما فيه — وهي تنظر إلى عشرين طلباً
+	       -- في الساعة. وجلبُها بنداءٍ لكل بطاقة يعني عشرين نداءً لصفحةٍ واحدة،
+	       -- فتُجمَع هنا في استعلامٍ واحد.
+	       COALESCE((SELECT json_agg(json_build_object(
+	                          'id', oi.id, 'menu_item_id', oi.menu_item_id,
+	                          'name', oi.name, 'unit_price', oi.unit_price,
+	                          'qty', oi.qty, 'note', oi.note,
+	                          'options', COALESCE(oi.options, '[]'::jsonb))
+	                        ORDER BY oi.id)
+	                 FROM order_items oi WHERE oi.order_id = o.id), '[]'::json)
 	FROM orders o
 	JOIN users cu ON cu.id = o.customer_id
 	JOIN merchants mr ON mr.id = o.merchant_id
@@ -37,16 +50,19 @@ const orderSelect = `
 
 func scanOrder(row pgx.Row) (*Order, error) {
 	var o Order
+	var items []byte
 	err := row.Scan(&o.ID, &o.Number, &o.CustomerID, &o.CustomerPhone, &o.CustomerName,
-		&o.MerchantID, &o.MerchantName, &o.DriverID, &o.DriverPhone,
+		&o.MerchantID, &o.MerchantName, &o.DriverID, &o.DriverPhone, &o.DriverName,
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.Discount, &o.Total,
 		&o.WalletPaid, &o.CashDue, &o.PromoCode, &o.Notes, &o.CancelReason, &o.CreatedAt,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.DeliveredAt,
-		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview)
+		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items)
 	if err != nil {
 		return nil, err
 	}
+	// أصنافٌ لا تُفكّ لا تُسقط الطلب: البطاقة تعرض ما بقي وتُخفي القائمة وحدها.
+	_ = json.Unmarshal(items, &o.Items)
 	// بادئة "/media/" تُضاف هنا مرّة واحدة لكل قارئ للطلبات (زبون/متجر/إدارة/سائق)
 	// بدل أن يتذكّرها كل معالِج على حدة — ونسيانُها يعني صورةً لا تظهر.
 	o.MerchantLogoThumb = media.URLForPtr(o.MerchantLogoThumb)
@@ -158,6 +174,14 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+
+	// أجرُ السائق: **من الدالّة نفسها التي تقيّده في الدفتر** — فلا رقمان
+	// لشيءٍ واحد. وغرفةُ العمليات تحتاجه قبل الإسناد لا بعده.
+	//
+	// وفشلُ قراءته لا يُسقط القائمة: يبقى صفراً وتظهر بقيّةُ الطلب.
+	for i := range orders {
+		orders[i].DriverFee, _ = driverShare(ctx, s.db, orders[i].DeliveryFee)
 	}
 	return &OrderPage{Orders: orders, Total: total, Page: f.Page, PerPage: f.PerPage}, nil
 }
