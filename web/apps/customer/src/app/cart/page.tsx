@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   IconEdit,
+  IconCheck,
+  IconLocation,
   Button,
   Input,
   Select,
@@ -22,6 +24,7 @@ import { useCart } from "@/lib/cart";
 const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), { ssr: false });
 
 const m = getMessages(defaultLocale);
+const A = m.site.addresses;
 
 function translateKey(key: string): string {
   let node: unknown = m;
@@ -79,6 +82,19 @@ export default function CartPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  /**
+   * الطلبُ نجح بعنوانٍ ليس من المحفوظة — نسأل صاحبَه أيحفظه.
+   *
+   * **والعنوان عندنا دبّوسٌ لا نصّ**، ودقّتُه هي ما يُبلغ السائقَ البابَ. فمن
+   * كتب عنوانه وحرّك دبّوسه بدقّة ثم ضاع عملُه، يُعيده في كل طلب.
+   *
+   * **والسؤال بعد النجاح لا قبله**: ما يقف بين الزبون وزرّ التأكيد يُسرَّع
+   * عليه ويُغلَق بلا قراءة — ولا شأن له بالطلب أصلاً.
+   */
+  const [placed, setPlaced] = useState<{ id: string } | null>(null);
+  const [saveLabel, setSaveLabel] = useState("");
+  const [saveErr, setSaveErr] = useState("");
+
   const logged = isLoggedIn(user);
 
   useEffect(() => {
@@ -102,6 +118,81 @@ export default function CartPage() {
     const t = setTimeout(quote, 400);
     return () => clearTimeout(t);
   }, [quote]);
+
+  /**
+   * سؤالُ حفظ العنوان — **قبل حارس «السلّة فارغة»**.
+   *
+   * السلّة تُفرَّغ لحظةَ نجاح الطلب (وهذا صحيح: طلبٌ وُلد لا يُطلب مرّتين)،
+   * فلو جاء السؤال بعد الحارس لَما ظهر أبداً — تُفرَّغ السلّة فيرتدّ الحارس
+   * قبل أن يُقرأ السؤال.
+   */
+  if (placed) {
+    const goOn = () => router.push(`/orders/${placed.id}?placed=1`);
+    return (
+      <div className="mx-auto max-w-md py-10">
+        <div className="rounded-card border border-line bg-surface p-6">
+          <p className="mb-1 flex items-center gap-2 font-bold">
+            <IconCheck size={18} strokeWidth={3} className="text-success" />
+            {m.site.orders.placed}
+          </p>
+          <p className="mb-5 text-sm text-ink-muted">{m.site.orders.placedHint}</p>
+
+          <div className="rounded-card border border-dashed border-accent bg-accent/5 p-4">
+            <p className="flex items-center gap-2 font-medium">
+              <IconLocation size={17} className="text-accent-dark" />
+              {A.saveThisTitle}
+            </p>
+            <p className="mt-1 truncate text-xs text-ink-muted">{address}</p>
+            <p className="mt-1 text-xs text-ink-muted">{A.saveThisHint}</p>
+
+            <div className="mt-3">
+              <Input
+                id="save-label"
+                label={A.label}
+                value={saveLabel}
+                onChange={(e) => {
+                  setSaveLabel(e.target.value);
+                  setSaveErr("");
+                }}
+                placeholder={A.labelPlaceholder}
+              />
+            </div>
+            {saveErr && <p className="mt-1 text-xs text-danger">{saveErr}</p>}
+
+            <div className="mt-3 flex gap-2">
+              <Button
+                className="flex-1"
+                disabled={!saveLabel.trim()}
+                onClick={async () => {
+                  try {
+                    await api("/api/v1/my/addresses", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        label: saveLabel.trim(),
+                        address_text: address,
+                        lat,
+                        lng,
+                      }),
+                    });
+                    goOn();
+                  } catch (err) {
+                    // **ولا يُحبس الزبون عن طلبه إن فشل الحفظ**: الطلب تمّ،
+                    // والعنوان زيادةٌ عليه. يُقال له السبب ويُترك له المضيّ.
+                    setSaveErr(errText(err));
+                  }
+                }}
+              >
+                {m.common.save}
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={goOn}>
+                {A.saveThisSkip}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!cart || cart.lines.length === 0) {
     return (
@@ -140,7 +231,20 @@ export default function CartPage() {
         }),
       });
       clear();
-      router.push(`/orders/${o.id}?placed=1`);
+      // أهو من عناوينه المحفوظة؟ المقارنة بالنصّ **وبالدبّوس معاً**: من عدّل
+      // موضع دبّوسه على العنوان نفسه فقد صنع عنواناً آخر فعلاً.
+      const known = saved.some(
+        (a) =>
+          a.address_text.trim() === address.trim() &&
+          Math.abs(a.lat - lat) < 1e-5 &&
+          Math.abs(a.lng - lng) < 1e-5,
+      );
+      if (known) {
+        router.push(`/orders/${o.id}?placed=1`);
+        return;
+      }
+      setPlaced({ id: o.id });
+      setBusy(false);
     } catch (err) {
       setError(errText(err));
       setBusy(false);
@@ -256,7 +360,12 @@ export default function CartPage() {
               label={m.site.cart.address}
               required
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              // تعديلُ النصّ يُلغي علامة العنوان المحفوظ: العلامةُ على عنوانٍ
+              // لم يعد هو المستعمَل **تقول للزبون غيرَ الواقع**.
+              onChange={(e) => {
+                setAddress(e.target.value);
+                setPickedID("");
+              }}
               placeholder={m.site.cart.addressPlaceholder}
             />
             <div>
