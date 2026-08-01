@@ -9,8 +9,13 @@ package main
 //
 //	go run ./cmd/seed -store
 //
-// ولا يُنشئ غير المتجر وصاحبه: لا زبون ولا سائق ولا مندوب. ومتجرٌ بلا مندوب
-// لا عمولة إحالةٍ عليه — سُجّل بكود المنصة كأنّ صاحبه سجّل بنفسه.
+// **ومعه مندوبُه.** فالمتجر في هذه المنصة لا يأتي من فراغ: مندوبٌ يزوره في
+// السوق ويعطيه رابط دعوته، فيسجّل صاحبه، فتوافق الإدارة. ومتجرٌ بلا مندوب
+// يُخفي نصف الدورة — لا عمولة إحالةٍ عليه، ولا عميلَ في لوحة مندوب، ولا عتبةَ
+// تفعيلٍ تُختبر. فالزراعة تُنشئ الطرفين وتربطهما كما يربطهما الواقع، وتترك
+// **أثر الرحلة**: طلبُ انضمامٍ مُحوَّل يشير إلى المتجر الذي وُلد منه.
+//
+// ولا يُنشئ غير هذين: لا زبون ولا سائق.
 
 import (
 	"context"
@@ -27,6 +32,18 @@ var storeOwner = struct{ Phone, Name, Password string }{
 	Phone:    "+963932556677",
 	Name:     "أبو محمود الحاج علي",
 	Password: "Matam@2026",
+}
+
+// storeRep المندوب الذي جلب المطعم.
+//
+// وكودُ دعوته **ثابتٌ في الزراعة لا مولَّد**: الكود المولَّد يتغيّر في كل
+// قاعدة، فلا يصلح أن يُكتب في وثيقةٍ ولا أن يُجرَّب رابطُه مرّتين. وفي المسار
+// الحقيقي يولّده `GrantRole` عشوائياً — وهذا مسار زراعةٍ لا مسارُ منصّة.
+var storeRep = struct{ Phone, Name, Password, Code string }{
+	Phone:    "+963944778899",
+	Name:     "زياد العبدالله",
+	Password: "Mandoub@2026",
+	Code:     "RH-BAYT1",
 }
 
 // hoursSeed دوام يومٍ واحد. والأيام: 0 الأحد … 6 السبت.
@@ -273,6 +290,31 @@ func seedStore(ctx context.Context, tx pgx.Tx) {
 		log.Fatal(err)
 	}
 
+	// المندوب أولاً — فالمتجر يُنسب إليه عند إنشائه لا بعده.
+	repHash, err := auth.HashPassword(storeRep.Password)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var repID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO users (phone, full_name, password_hash, invite_code)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (phone) DO UPDATE SET
+			full_name = EXCLUDED.full_name, password_hash = EXCLUDED.password_hash,
+			invite_code = COALESCE(users.invite_code, EXCLUDED.invite_code)
+		RETURNING id`,
+		storeRep.Phone, storeRep.Name, repHash, storeRep.Code).Scan(&repID); err != nil {
+		log.Fatalf("rep: %v", err)
+	}
+	// المندوب زبونٌ أيضاً — يتسوّق من المنصة كما يسوّق لها (نفس منطق GrantRole)
+	for _, role := range []string{"sales", "customer"} {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO user_roles (user_id, role_code) VALUES ($1, $2)
+			ON CONFLICT DO NOTHING`, repID, role); err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	// صاحب المتجر. **وكلمة مرورٍ نهائية لا مؤقّتة**: الحسابات التي يُنشئها
 	// الأدمن من اللوحة تُلزم صاحبها بالتغيير لأن طرفاً ثالثاً يعرف كلمتها —
 	// وهذا حسابُ زراعةٍ للتجربة، لا يُسلَّم لأحد.
@@ -300,17 +342,43 @@ func seedStore(ctx context.Context, tx pgx.Tx) {
 	if err == pgx.ErrNoRows {
 		err = tx.QueryRow(ctx, `
 			INSERT INTO merchants (name, description, category_id, phone, address_text,
-			                       owner_user_id, commission_percent, default_prep_minutes,
-			                       min_order, location)
-			SELECT $1, $2, c.id, $3, $4, $5, $6, $7, $8,
-			       ST_SetSRID(ST_MakePoint($10, $9), 4326)::geography
-			FROM categories c WHERE c.name = $11
+			                       owner_user_id, sales_rep_user_id, commission_percent,
+			                       default_prep_minutes, min_order, location)
+			SELECT $1, $2, c.id, $3, $4, $5, $6, $7, $8, $9,
+			       ST_SetSRID(ST_MakePoint($11, $10), 4326)::geography
+			FROM categories c WHERE c.name = $12
 			RETURNING id`,
-			m.Name, m.Desc, m.Phone, m.Address, ownerID, m.Commission,
+			m.Name, m.Desc, m.Phone, m.Address, ownerID, repID, m.Commission,
 			m.PrepMinutes, m.MinOrder, m.Lat, m.Lng, m.Category).Scan(&mid)
+	} else if err == nil {
+		// متجرٌ قائم من تشغيلٍ سابق: تُصحَّح نسبتُه **إن كانت فارغة فقط**.
+		//
+		// وشرطُ `IS NULL` ليس احتياطاً زائداً: نقلُ متجرٍ من مندوبٍ إلى آخر
+		// ينقل دخلاً من إنسانٍ إلى إنسان، وهو قرارٌ لا يتّخذه سكربتُ زراعة.
+		// (وهذا نفسه ما سُدّ في R-59 حين كان الرابط يُعيد نسبة متجرٍ قائم.)
+		if _, err := tx.Exec(ctx, `
+			UPDATE merchants SET sales_rep_user_id = $2
+			WHERE id = $1 AND sales_rep_user_id IS NULL`, mid, repID); err != nil {
+			log.Fatalf("attribute: %v", err)
+		}
 	}
 	if err != nil {
 		log.Fatalf("merchant: %v", err)
+	}
+
+	// أثرُ الرحلة: طلبُ انضمامٍ مُحوَّل يشير إلى المتجر الذي وُلد منه. وبدونه
+	// يظهر المتجر في «عملائي» عند المندوب بلا قصّةٍ تسبقه — كأنّه هبط.
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO merchant_leads (store_name, owner_name, phone, area, note,
+		                            sales_rep_user_id, status, merchant_id,
+		                            category_id, lat, lng, owner_password_hash)
+		SELECT $1, $2, $3, $4, $5, $6, 'converted', $7, c.id, $8, $9, $10
+		FROM categories c WHERE c.name = $11
+		  AND NOT EXISTS (SELECT 1 FROM merchant_leads WHERE merchant_id = $7)`,
+		m.Name, storeOwner.Name, storeOwner.Phone, "وسط المدينة",
+		"زيارة ميدانية — وافق صاحب المطعم في نفس اليوم",
+		repID, mid, m.Lat, m.Lng, hash, m.Category); err != nil {
+		log.Fatalf("lead: %v", err)
 	}
 
 	for _, h := range m.Hours {
@@ -381,11 +449,20 @@ func seedStore(ctx context.Context, tx pgx.Tx) {
 		}
 	}
 
+	var repOf string
+	_ = tx.QueryRow(ctx, `
+		SELECT COALESCE(u.full_name, '—') FROM merchants mm
+		LEFT JOIN users u ON u.id = mm.sales_rep_user_id WHERE mm.id = $1`, mid).Scan(&repOf)
+
 	fmt.Printf("✅ زُرع المتجر: %s\n", m.Name)
 	fmt.Printf("   %d قسماً · %d صنفاً · %d مجموعة خيارات · %d خياراً\n",
 		len(m.Sections), items, groups, opts)
-	fmt.Printf("   الدخول: %s / %s   (%s)\n",
-		storeOwner.Phone, storeOwner.Password, storeOwner.Name)
 	fmt.Printf("   التحضير %d دقيقة · الحدّ الأدنى %d · العمولة %d%%\n",
 		m.PrepMinutes, m.MinOrder, m.Commission)
+	fmt.Println()
+	fmt.Printf("   صاحب المتجر : %s / %s   (%s)\n",
+		storeOwner.Phone, storeOwner.Password, storeOwner.Name)
+	fmt.Printf("   المندوب     : %s / %s   (%s · كوده %s)\n",
+		storeRep.Phone, storeRep.Password, storeRep.Name, storeRep.Code)
+	fmt.Printf("   والمتجر منسوبٌ إلى: %s\n", repOf)
 }
