@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
 import { Badge, Button, Input, Modal } from "./components";
 import { PageContainer, PageHeader, Card, EmptyState, LoadingState, ListRow, TabCards } from "./layout";
 import type { TabItem } from "./layout";
@@ -38,6 +38,17 @@ interface Tx {
   amount: number;
   note: string;
   created_at: string;
+  /**
+   * **رقمُ الطلب — يُرسله الخادمُ وكانت الواجهةُ ترميه.**
+   *
+   * فتعرض شظيّةَ المعرّف من نصّ الملاحظة: «دفع طلب ‎#1d448c90» — وهي حروفٌ
+   * لا يعرفها صاحبُ المحفظة ولا يجدها في شيء. **ورقمٌ لا يُبحث به ليس
+   * رقماً، هو ضجيج.**
+   */
+  order_number?: number | null;
+  ticket_number?: number | null;
+  /** منفّذُ الحركة — يُعرض للحركات اليدوية وحدها */
+  by_name?: string | null;
 }
 
 interface Payout {
@@ -61,6 +72,75 @@ function errText(err: unknown): string {
       ? ((err as { body?: { message_key?: string } }).body?.message_key ?? "").split(".").pop() ?? ""
       : "";
   return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
+}
+
+/**
+ * بطاقةُ حركةٍ واحدة.
+ *
+ * كان السطرُ يقول نوعَ الحركة والمبلغَ والتاريخ — **ويسكت عن سببها**. فيرى
+ * صاحبُ المحفظة «دفع طلب ‎−108,000» ولا يعرف أيَّ طلب، ولا متى بالساعة، ولا
+ * أيّ حركةٍ هي إن سأل عنها.
+ *
+ * **وأربعةُ أشياء تجعل الرقمَ مفهوماً:**
+ *
+ *   - **ما هو**: نوعُ الحركة بلفظٍ عربيّ لا باسم قيدٍ محاسبيّ
+ *   - **لماذا**: الطلبُ برقمه — لا بشظيّة معرّفه
+ *   - **متى**: اليومَ والساعة. **والساعةُ ليست زينة**: من يرى حركتين في يومٍ
+ *     واحد يفرّق بينهما بها وحدها
+ *   - **أيُّها**: رقمُ الحركة — وهو ما يُقال للمالية حين يُسأل «أيّ حركة؟»
+ *
+ * والمبلغُ أكبرُ ما في البطاقة ولونُه يقول اتجاهه قبل أن تُقرأ إشارتُه.
+ */
+function TxCard({ tx }: { tx: Tx }) {
+  const positive = tx.amount >= 0;
+  const T = m.shared.txCard;
+  return (
+    <li className="rounded-card border border-line bg-surface p-3.5 transition-colors hover:border-primary/40">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-bold">{KIND_LABELS[tx.kind] ?? tx.kind}</p>
+          {/* **سببُ الحركة** — الطلبُ أو التذكرة برقمه المقروء. */}
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+            {tx.order_number != null && (
+              <span className="font-medium text-ink">
+                {T.order} <span dir="ltr">#{fmtNum(tx.order_number)}</span>
+              </span>
+            )}
+            {tx.ticket_number != null && (
+              <span className="font-medium text-ink">
+                {T.ticket} <span dir="ltr">#{fmtNum(tx.ticket_number)}</span>
+              </span>
+            )}
+            <span dir="ltr">
+              {fmtDate(tx.created_at)} · {fmtTime(tx.created_at)}
+            </span>
+            <span dir="ltr" className="opacity-70">
+              {T.txNo}
+              {fmtNum(Number(tx.id))}
+            </span>
+          </p>
+        </div>
+        <span
+          className={`shrink-0 text-lg font-bold tabular-nums ${
+            positive ? "text-success" : "text-danger"
+          }`}
+          dir="ltr"
+        >
+          {positive ? "+" : "−"}
+          {fmtNum(Math.abs(tx.amount))}
+        </span>
+      </div>
+
+      {/* **الملاحظةُ سطرٌ قائمٌ بذاته لا ذيلٌ مقتطع**: هي غالباً سببُ حركةٍ
+          يدوية — «تعويض عن طلبٍ فشل» — وقطعُها يُبقي السؤال. */}
+      {tx.note && (
+        <p className="mt-2 border-t border-line pt-2 text-xs leading-relaxed text-ink-muted">
+          {tx.note}
+          {tx.by_name && <span className="opacity-70"> — {tx.by_name}</span>}
+        </p>
+      )}
+    </li>
+  );
 }
 
 export function WalletPage({
@@ -240,27 +320,9 @@ export function WalletPage({
           <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
         ) : (
           // لا شريط مجموع هنا: البطاقة النشطة تعرضه فوق — تكراره ضجيج
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {shown.map((tx) => (
-              <ListRow
-                key={tx.id}
-                title={KIND_LABELS[tx.kind] ?? tx.kind}
-                subtitle={tx.note || undefined}
-                trailing={
-                  <>
-                    <span
-                      className={`font-bold ${tx.amount >= 0 ? "text-success" : "text-danger"}`}
-                      dir="ltr"
-                    >
-                      {tx.amount >= 0 ? "+" : ""}
-                      {fmtNum(tx.amount)}
-                    </span>
-                    <span className="text-xs text-ink-muted" dir="ltr">
-                      {fmtDate(tx.created_at)}
-                    </span>
-                  </>
-                }
-              />
+              <TxCard key={tx.id} tx={tx} />
             ))}
           </ul>
         )}

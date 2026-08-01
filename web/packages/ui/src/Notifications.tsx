@@ -284,13 +284,7 @@ export function LiveNotifications({
   const notif = useLiveNotifications(api, wsUrl, token);
   return (
     <>
-      <NotificationBell
-        items={notif.items}
-        unread={notif.unread}
-        markRead={notif.markRead}
-        Link={Link}
-        allHref={allHref}
-      />
+      <NotificationBell unread={notif.unread} Link={Link} allHref={allHref} />
       <NotificationToast notification={notif.toast} onDismiss={notif.dismissToast} />
     </>
   );
@@ -329,109 +323,56 @@ export function NotificationToast({
   );
 }
 
-/** جرس الإشعارات مع عدّاد غير المقروء وقائمة منسدلة. */
+/**
+ * جرسُ الإشعارات — **رابطٌ إلى الصفحة لا قائمةٌ منسدلة.**
+ *
+ * كانت القائمةُ تعرض آخرَ ما وصل ثم تُذيّل بـ«عرض الكلّ» — **خطوتان إلى مكانٍ
+ * واحد**: من فتحها إمّا وجد ما يريد في ثلاثة أسطر مقتطعة، وإمّا ضغط مرّةً
+ * ثانية. **ونافذةٌ صغيرة تعرض بعضَ الخبر تُغري بالاكتفاء بالبعض.**
+ *
+ * والصفحةُ تفعل ما تفعله القائمةُ وزيادة: تُظهر الكلَّ، وتُعلّم بالقراءة،
+ * وتُصفّي. **فبقاؤهما معاً شاشتان لخبرٍ واحد تفترقان يوماً.**
+ *
+ * ويبقى **العدّادُ الأحمر** فوق الجرس: هو ما يُقرأ من بعيد، وهو وحده ما كان
+ * يلزم من القائمة. والتنبيهُ العابر يبقى كذلك — يقول «وصل الآن» بلا ضغطة.
+ */
 export function NotificationBell({
-  items,
   unread,
-  markRead,
   Link,
   allHref,
 }: {
-  items: AppNotification[];
   unread: number;
-  markRead: (id?: string) => void;
   Link: LinkType;
+  /** مسار صفحة الإشعارات — بلاه لا وجهةَ للجرس */
   allHref?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="relative flex items-center rounded-control p-1.5 text-ink-muted transition-colors hover:bg-page hover:text-ink"
-        title={N.title}
-        aria-label={N.title}
-      >
-        <IconBell size={19} />
-        {unread > 0 && (
-          <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-badge bg-danger px-1 text-[10px] font-bold text-white">
-            {unread > 9 ? "9+" : unread}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div className="absolute end-0 mt-1 max-h-96 w-80 overflow-y-auto rounded-card border border-line bg-surface shadow-lg">
-          <div className="flex items-center justify-between border-b border-line px-3 py-2">
-            <span className="text-sm font-bold">{N.title}</span>
-            {unread > 0 && (
-              <button
-                onClick={() => markRead()}
-                className="text-xs text-primary hover:underline"
-              >
-                {N.markAllRead}
-              </button>
-            )}
-          </div>
-          {items.length === 0 ? (
-            <p className="px-3 py-8 text-center text-sm text-ink-muted">{N.empty}</p>
-          ) : (
-            <ul>
-              {items.map((n) => {
-                const row = (
-                  <span className="flex items-start gap-2">
-                    {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-badge bg-primary" />}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{n.title}</span>
-                      {n.body && (
-                        <span className="block truncate text-xs text-ink-muted">{n.body}</span>
-                      )}
-                    </span>
-                  </span>
-                );
-                return (
-                  <li key={n.id} className="border-b border-line last:border-0">
-                    {n.href ? (
-                      <Link
-                        href={n.href}
-                        onClick={() => !n.read && markRead(n.id)}
-                        className={`block px-3 py-2 hover:bg-page ${n.read ? "" : "bg-primary-light/30"}`}
-                      >
-                        {row}
-                      </Link>
-                    ) : (
-                      <div
-                        onClick={() => markRead(n.id)}
-                        className={`cursor-pointer px-3 py-2 hover:bg-page ${n.read ? "" : "bg-primary-light/30"}`}
-                      >
-                        {row}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {allHref && (
-            <Link
-              href={allHref}
-              className="block border-t border-line px-3 py-2 text-center text-sm font-medium text-primary hover:bg-page"
-            >
-              {N.viewAll}
-            </Link>
-          )}
-        </div>
+  const cls =
+    "relative flex items-center rounded-control p-1.5 text-ink-muted transition-colors hover:bg-page hover:text-ink";
+  const inner = (
+    <>
+      {/* **اسمٌ مقروءٌ للقارئ الصوتيّ**: أيقونةٌ وحدها رابطٌ بلا اسم.
+          و`title` لا يمرّ عبر `LinkType` — وتوسيعُ نوعٍ مشتركٍ لأجل صفةٍ
+          واحدة يُثقل كلَّ من يستعمله. */}
+      <span className="sr-only">{N.title}</span>
+      <IconBell size={19} />
+      {unread > 0 && (
+        <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-badge bg-danger px-1 text-[10px] font-bold text-white">
+          {unread > 9 ? "9+" : unread}
+        </span>
       )}
-    </div>
+    </>
+  );
+
+  // **بلا وجهةٍ لا زرّ**: جرسٌ يُضغط ولا يحدث شيء يُعلّم المستخدمَ ألّا يثق
+  // بالأيقونات. وكلُّ تطبيقاتنا تمرّر المسار — وهذا لِما بعدها.
+  if (!allHref) {
+    return (
+      <span className={cls}>{inner}</span>
+    );
+  }
+  return (
+    <Link href={allHref} className={cls}>
+      {inner}
+    </Link>
   );
 }

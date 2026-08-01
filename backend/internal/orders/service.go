@@ -4,7 +4,6 @@ package orders
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -305,7 +304,17 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	// فيتراجع الطلب كلّه، ولا يبقى أثر لطلبٍ لم يُدفع.
 	if walletPaid > 0 {
 		if _, err := s.wallet.ApplyTx(ctx, tx, customerID, -walletPaid, "order_payment",
-			orderID, fmt.Sprintf("دفع طلب #%s", orderID[:8]), &actorID); err != nil {
+			// **بلا ملاحظة.**
+			//
+			// كانت `دفع طلب #1d448c90` — **ثمانيةُ أحرفٍ من معرّفٍ داخليّ** لا
+			// يعرفها صاحبُ المحفظة ولا يجدها في شيء. ورقمُ الطلب لم يكن قد
+			// وُلد بعد في هذه اللحظة (يُولّده الإدراج)، **فكُتب ما هو متاحٌ لا
+			// ما هو مفيد.**
+			//
+			// والمرجعُ (`ref`) يحمل معرّفَ الطلب، وكشفُ الحساب يترجمه إلى رقمه
+			// المقروء بضمّه إلى الجدول. **فالملاحظةُ هنا تكرارٌ لعنوان الحركة
+			// بلفظٍ أسوأ** — وحذفُها يُظهر الرقمَ الصحيح مكانها.
+			orderID, "", &actorID); err != nil {
 			return nil, err
 		}
 	}
