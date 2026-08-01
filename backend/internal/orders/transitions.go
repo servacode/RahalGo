@@ -45,9 +45,11 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 	// الجهل يجب أن يكون أقلَّ الوضعين تدخّلاً من المنصة**.
 	selfManage := s.settings == nil ||
 		s.settings.GetBool(ctx, "merchants.self_manage_orders")
-	if !canTransition(from, to, rolesUnderMode(selfManage, from, to, actorRoles, driverID != nil)) {
+	effRoles := rolesUnderMode(selfManage, from, to, actorRoles, driverID != nil)
+	if !canTransition(from, to, effRoles) {
 		return nil, ErrBadTransition
 	}
+	endedBy := authorizingRole(from, to, effRoles)
 	// لا استلام بلا سائق مسند
 	if (to == StAtPickup || to == StPickedUp) && driverID == nil {
 		return nil, ErrNeedsDriver
@@ -76,6 +78,18 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 	}
 	if _, err := tx.Exec(ctx, `UPDATE orders SET `+set+` WHERE id = $1`, args...); err != nil {
 		return nil, err
+	}
+
+	// **من أنهى الطلب** — يُسجَّل مع الإغلاق ويُقرأ في عدّ المخالفات.
+	//
+	// وبتحديثٍ ثانٍ لا بحشره في الأوّل: الأوّلُ يبني نصَّه بالتركيب، **ودمجُ
+	// قيمةٍ آتيةٍ من رمز الدخول في نصٍّ يُركَّب بابُ حقنٍ لا داعيَ له** — والصفُّ
+	// مقفولٌ في المعاملة نفسها فلا يراه أحدٌ بين التحديثين.
+	if terminal(to) && endedBy != "" {
+		if _, err := tx.Exec(ctx,
+			`UPDATE orders SET ended_by = $2 WHERE id = $1`, orderID, endedBy); err != nil {
+			return nil, err
+		}
 	}
 
 	if _, err := tx.Exec(ctx, `
@@ -139,6 +153,15 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 	// بعد الإيداع: فشل الإشعار لا يُبطل تسليماً وقع فعلاً
 	s.notifyTransition(ctx, orderID, to, note)
 	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
+
+	// **حظرُ المتجر كثيرِ الإلغاء** — بعد الإيداع لا داخله.
+	//
+	// الحظرُ قرارٌ قائمٌ بذاته، وتعثّرُه يجب ألّا يُلغي إلغاءً وقع فعلاً:
+	// **وطلبٌ أُلغي ثم رُدَّ إلغاؤه لأن الحظر تعثّر يترك الزبونَ ينتظر طعاماً
+	// لن يأتي.**
+	if endedBy == "merchant" && (to == StCancelled || to == StRejected) {
+		s.enforceMerchantViolations(ctx, orderID)
+	}
 
 	// **الإنزال التلقائيّ إلى طابور السائقين.**
 	//

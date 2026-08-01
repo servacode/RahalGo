@@ -127,6 +127,19 @@ var Catalog = []Def{
 	// فيقرؤه في المكان الذي يعمل فيه أصلاً.
 	{Key: "merchants.self_manage_orders", Group: GroupMerchants, Kind: KindBool,
 		Default: true},
+	// **حظرُ كثيرِ الإلغاء — والزرُّ ذكيٌّ لأن له وضعين لا حالتين.**
+	//
+	// «آليّ» يحظر بنفسه، و«يدويّ» يُنبّه العملياتِ وتقرّر هي. **وحظرٌ يقع
+	// ليلاً بلا من يراه يُفقد المنصةَ متجراً ويُفقد المتجرَ رزقاً** — فالوضعُ
+	// اختيارُ المالك لا حتمُ النظام.
+	{Key: "merchants.cancel_ban_mode", Group: GroupMerchants, Kind: KindChoice,
+		Options: []string{"manual", "auto"}, Default: "manual"},
+	// **العتبةُ داخل نافذة لا مدى الحياة**: متجرٌ سلّم ثلاثمئة وألغى ستّاً في
+	// سنة ليس سيّئاً، والعدُّ التراكميّ يحظره يوماً حتماً.
+	{Key: "merchants.cancel_ban_count", Group: GroupMerchants, Kind: KindInt,
+		Min: 1, Max: 100, Default: 5},
+	{Key: "merchants.cancel_ban_days", Group: GroupMerchants, Kind: KindInt,
+		Min: 1, Max: 365, Unit: "day", Default: 30},
 	// **جديد**: كان ٢٠ دقيقة مكتوباً في الترحيل كافتراضي عمود. والمتجر الجديد
 	// يرثه بلا أن يملك المالك تغييره لمن يأتي بعده.
 	{Key: "merchants.default_prep_minutes", Group: GroupMerchants, Kind: KindInt,

@@ -93,6 +93,23 @@ var allowedTransitions = map[string][]transition{
 	},
 }
 
+// authorizingRole أيُّ أدوارِ الفاعل خوّله هذا الانتقال.
+//
+// **يُسجَّل لحظةَ وقوعه لا يُخمَّن لاحقاً.** عدُّ المخالفات يسأل «من ألغى؟»،
+// و`cancelled` يصل إليها الزبونُ والمتجرُ والعملياتُ والأدمن — **فحسبانُها
+// كلَّها على المتجر يحظر بريئاً**. واستنتاجُه لاحقاً من جدول الأدوار يكذب:
+// **الأدوارُ تتغيّر والماضي لا يتغيّر.**
+//
+// والترتيبُ يتبع ترتيبَ الفاعل نفسه: أوّلُ دورٍ يخوّله هو الذي عمل به.
+func authorizingRole(from, to string, roles []string) string {
+	for _, r := range roles {
+		if canTransition(from, to, []string{r}) {
+			return r
+		}
+	}
+	return ""
+}
+
 // terminal الحالات النهائية — تُغلق الطلب.
 func terminal(status string) bool {
 	switch status {

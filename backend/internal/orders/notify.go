@@ -23,6 +23,7 @@ var t = struct {
 	accepted, preparing, onTheWay, delivered string
 	rejected, cancelled, failed, refunded    string
 	merchantDelivered, commission            string
+	violationsWarn, violationsBanned         string
 }{
 	newOrderMerchant:  "طلب جديد وصلك",
 	newOrderOps:       "طلب جديد في المنصة",
@@ -36,6 +37,8 @@ var t = struct {
 	refunded:          "استُرجع مبلغ طلبك",
 	merchantDelivered: "سُلّم طلب من متجرك",
 	commission:        "عمولة جديدة في محفظتك",
+	violationsWarn:    "متجرٌ بلغ حدّ المخالفات",
+	violationsBanned:  "حُظر متجرٌ لكثرة الإلغاء",
 }
 
 // orderParties أطراف الطلب الذين قد يُشعَرون.
