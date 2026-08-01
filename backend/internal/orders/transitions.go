@@ -263,7 +263,12 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 		if err := s.payDriver(ctx, q, in); err != nil {
 			return err
 		}
-		return s.settleCommissions(ctx, q, in.orderID, in.actorID, out)
+		if err := s.settleCommissions(ctx, q, in.orderID, in.actorID, out); err != nil {
+			return err
+		}
+		// **الطرفُ الرابع** — بعد أن تُقيَّد أنصبةُ الجميع، فيقرأ ما وقع
+		// لا ما نُوي. (treasury.go)
+		return s.creditTreasury(ctx, q, in.orderID, in.actorID, false)
 	}
 
 	// (3) استرجاع بعد التسليم — عكس كل ما سبق
@@ -273,6 +278,11 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 				in.orderID, "استرجاع طلب مُسلَّم", &in.actorID); err != nil {
 				return err
 			}
+		}
+		// **العكسُ قبل عكس الأنصبة**: بعده تصير مجاميعُ الأطراف صفراً فيُقرأ
+		// الربحُ كاملاً وكأن أحداً لم يقبض شيئاً.
+		if err := s.creditTreasury(ctx, q, in.orderID, in.actorID, true); err != nil {
+			return err
 		}
 		return s.reverseCommissions(ctx, q, in.orderID, in.actorID)
 	}

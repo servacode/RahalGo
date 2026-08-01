@@ -82,9 +82,30 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 	}
 
 	actor := userIDFrom(r)
-	// **بمرجع الطلب** — فيُقرأ لاحقاً في كشف السائق وفي تقارير الطلب معاً.
-	if _, err := s.wallet.Apply(r.Context(), *driverID, req.Amount,
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(r.Context()) }()
+
+	// **بمرجع الطلب** — فيُقرأ لاحقاً في كشف السائق وفي تفصيل الطلب معاً.
+	if _, err := s.wallet.ApplyTx(r.Context(), tx, *driverID, req.Amount,
 		"compensation", orderID, note, &actor); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **ويخرج من الخزينة في القيد نفسه.**
+	//
+	// تعويضٌ يُقيَّد للسائق وحده يجعل المنصةَ تظهر رابحةً وهي تدفع — **والربحُ
+	// الذي لا يعرف مصاريفه ليس ربحاً.** ومعاً في معاملةٍ واحدة: أحدُهما بلا
+	// الآخر دفترٌ لا يتوازن.
+	if err := s.orders.DebitTreasury(r.Context(), tx, req.Amount,
+		orderID, "تعويضُ سائقٍ عن طلبٍ فشل", actor); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -150,6 +171,12 @@ func (s *Server) handleSettleGoods(w http.ResponseWriter, r *http.Request) {
 			if _, err := s.wallet.ApplyTx(r.Context(), tx, *ownerID, paid,
 				"compensation", orderID,
 				"تعويضُ بضاعةٍ لم تُسترَدّ — طلبٌ فشل", &actor); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			// **«المنصةُ تتحمّل كاملاً» تُكتب في دفترها لا في نيّتها.**
+			if err := s.orders.DebitTreasury(r.Context(), tx, paid,
+				orderID, "بضاعةٌ لم يستردّها المتجر — تحمّلتها المنصة", actor); err != nil {
 				s.respondErr(w, err)
 				return
 			}

@@ -153,6 +153,15 @@ var Catalog = []Def{
 	{Key: "sales.monthly_target", Group: GroupSales, Kind: KindInt,
 		Min: 1, Max: 100, Unit: "merchant", Default: 5},
 
+	// ── المنصة ────────────────────────────────────────────────────────────
+	// **حسابُ الخزينة** — الأدمن أو المدير المالي، يحدّده المالك.
+	//
+	// ولم يُختَر بالدور بل بالحساب: **الأدوارُ يحملها أكثرُ من واحد، والخزينةُ
+	// واحدة.** وفارغٌ يعني «لم تُختَر»، فلا يُكتب قيدُ خزينةٍ **ولا يُعطَّل
+	// تسليم**: طلبٌ يُرفض لأن المالك لم يفتح صفحةَ الإعدادات خسارةٌ لا تُحتمَل.
+	{Key: "platform.treasury_user_id", Group: GroupPlatform, Kind: KindText,
+		Max: 64, Default: "", Sensitive: true},
+
 	// ── الزبائن ───────────────────────────────────────────────────────────
 	// **جديد**: كان `maxAddresses = 10` ثابتاً في المعالِج.
 	{Key: "customers.max_addresses", Group: GroupCustomers, Kind: KindInt,

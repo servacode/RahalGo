@@ -279,6 +279,10 @@ func (s *Server) Router() http.Handler {
 			// إرسال الطلب إلى المتجر على واتساب — في وضع «المنصة تدير»
 			r.Get("/orders/{id}/message", s.handleOrderMessagePreview)
 			r.Post("/orders/{id}/whatsapp", s.handleSendOrderToMerchant)
+			// **تفصيلُ مال الطلب** — مقروءاً من الدفتر (order_breakdown.go).
+			// للمالية والأدمن: يحوي أنصبةَ الأطراف وربحَ المنصة.
+			r.With(s.RequireRoles("admin", "finance")).
+				Get("/orders/{id}/breakdown", s.handleOrderBreakdown)
 			r.Post("/orders/{id}/transition", s.handleOrderTransition)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
 
