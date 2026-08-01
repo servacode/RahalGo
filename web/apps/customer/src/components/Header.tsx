@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   TopBar,
   TopBarLink,
@@ -49,6 +49,21 @@ interface Summary {
 export default function Header() {
   const { user, logout } = useAuth();
   const { count } = useCart();
+
+  /**
+   * تسميةُ السلّة تقول **ما يعنيه الرقم**.
+   *
+   * كان الرقم عارياً بجانب أيقونةٍ تشبه أيقونة «الطلبات» المجاورة، فيُقرأ
+   * «أربعة طلبات» وهو عدد أصناف طلبٍ واحد. وقد قرأه صاحب المنصة هكذا في أوّل
+   * تجربةٍ بشرية — ومن قرأه هكذا مرّة يقرؤه كذلك كلَّ مرّة.
+   */
+  const cartTitle =
+    count > 0
+      ? m.site.cart.badgeTitle.replace(
+          "{n}",
+          m.site.cart.itemsCount.replace("{n}", fmtNum(count)),
+        )
+      : m.terms.cart;
   const router = useRouter();
   const pathname = usePathname();
   const logged = isLoggedIn(user);
@@ -115,8 +130,8 @@ export default function Header() {
           active={pathname}
           extras={
             <>
-              {/* الطلبات والسلة متجاورتان: كلتاهما «سلّة» في ذهن الزبون —
-                  واحدة لما اشتراه وأخرى لما ينوي شراءه. */}
+              {/* الطلبات فاتورةٌ والسلّة عربة — كانتا سلّتين متجاورتين لا
+                  يفرّق بينهما ناظر، فيُقرأ رقمُ السلّة «طلبات». */}
               <TopBarLink
                 Link={Link}
                 href="/orders"
@@ -131,8 +146,8 @@ export default function Header() {
                 Link={Link}
                 href="/cart"
                 tone="primary"
-                title={m.terms.cart}
-                aria-label={m.terms.cart}
+                title={cartTitle}
+                aria-label={cartTitle}
                 className="relative !px-2.5"
               >
                 <IconCart size={TOPBAR_ICON} />
@@ -154,8 +169,8 @@ export default function Header() {
             Link={Link}
             href="/cart"
             tone="primary"
-            title={m.terms.cart}
-            aria-label={m.terms.cart}
+            title={cartTitle}
+            aria-label={cartTitle}
             className="relative !px-2.5"
           >
             <IconCart size={TOPBAR_ICON} />

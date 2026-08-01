@@ -23,7 +23,15 @@ export {
   MapPin as IconLocation,
   Wallet as IconWallet,
   Truck as IconDriver,
-  ShoppingBasket as IconOrder,
+  // **الطلباتُ سجلّاتٌ لا تسوّق.**
+  //
+  // كانت `ShoppingBasket` — سلّةً بجانب عربة السلّة في شريط الزبون، فلا يفرّق
+  // بينهما ناظر. والرقمُ على إحداهما يُقرأ «طلبات» وهو عدد أصناف السلّة.
+  // (اكتشفه صاحب المنصة في أوّل تجربةٍ بشرية: «٤ أنواع لا تُعدّ ٤ طلبات».)
+  //
+  // والفاتورة أصدق في كل موضع: في لوحة الإدارة والمتجر والسائق «الطلبات»
+  // سجلّاتٌ تُدار وتُقرأ، لا بضاعةٌ تُشترى. **والعربةُ وحدها للسلّة.**
+  ReceiptText as IconOrder,
   ShoppingCart as IconCart,
   LifeBuoy as IconSupport,
   Eye as IconView,

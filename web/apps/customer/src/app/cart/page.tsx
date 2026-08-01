@@ -150,12 +150,20 @@ export default function CartPage() {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <section>
-        <h1 className="mb-4 text-xl font-bold">
+        <h1 className="mb-1 text-xl font-bold">
           {m.site.cart.title}{" "}
           <span className="text-sm font-normal text-ink-muted">
             {m.site.cart.from} {cart.merchant_name}
           </span>
         </h1>
+        {/* **ما في السلّة طلبٌ واحد مهما تعدّدت أصنافه.**
+            الأسطر المتعدّدة تُقرأ طلباتٍ متعدّدة إن لم يُقَل غير ذلك — وقد
+            قرأها صاحب المنصة هكذا في أوّل تجربةٍ بشرية. */}
+        <p className="mb-4 text-xs text-ink-muted">
+          {m.site.cart.itemsCount.replace("{n}", fmtNum(cart.lines.length))}
+          {m.common.listSeparator}
+          {m.site.cart.oneOrderHint}
+        </p>
         <ul className="space-y-2">
           {cart.lines.map((l, i) => (
             <li
