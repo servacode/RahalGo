@@ -36,6 +36,54 @@ const m = getMessages(defaultLocale);
 
 // ---------- الأنواع ----------
 
+/**
+ * تفصيلُ توزيع مال الطلب — **مقروءاً من الدفتر لا محسوباً هنا.**
+ *
+ * لو حُسبت الأنصبةُ في الواجهة بالمعادلات لظهرت طلباتُ الأمس بأجرٍ لم يُقبض
+ * حين تتغيّر نسبةُ السائق اليوم. **وشاشةٌ تقرأ الدفتر لا تكذب عليه.**
+ */
+type Breakdown = {
+  total: number;
+  subtotal: number;
+  delivery_fee: number;
+  discount: number;
+  to_parties: number;
+  platform: number;
+  lines: {
+    party: "merchant" | "driver" | "sales" | "platform" | "customer" | "other";
+    name: string;
+    kind: string;
+    amount: number;
+    note: string;
+  }[];
+};
+
+/** سطرٌ في تفصيل التوزيع — عنوانٌ يميناً ومبلغٌ يساراً بخانةٍ ثابتة. */
+function Row({
+  label,
+  value,
+  strong,
+  danger,
+}: {
+  label: string;
+  value: number;
+  strong?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 ${
+        strong ? "font-bold" : ""
+      } ${danger ? "text-danger" : ""}`}
+    >
+      <span className="truncate">{label}</span>
+      <span dir="ltr" className="shrink-0 tabular-nums">
+        {fmtNum(value)} {m.common.currency}
+      </span>
+    </div>
+  );
+}
+
 /** رسالةُ المتجر كما يبنيها الخادم — نصّاً ورابطاً معاً، فلا يفترقان. */
 type MerchantMessage = {
   text: string;
@@ -570,6 +618,8 @@ function OrderActions({
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   /** معاينةُ الرسالة قبل تحويلها — ومعها ما يلزم لإرسالها */
   const [preview, setPreview] = useState<MerchantMessage | null>(null);
+  /** تفصيلُ توزيع المال — يُجلب عند الطلب لا مع كل بطاقة */
+  const [split, setSplit] = useState<Breakdown | null>(null);
   /** نموذجُ تعويض السائق عن طلبٍ فشل */
   const [compensating, setCompensating] = useState(false);
   const [amount, setAmount] = useState("");
@@ -637,6 +687,17 @@ function OrderActions({
       setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
     } finally {
       setBusy("");
+    }
+  }
+
+  // **يُجلب عند الضغط لا مع القائمة**: عشرون بطاقةً تعني عشرين نداءً لما
+  // ينظر إليه واحدٌ منها.
+  async function openSplit() {
+    setErr("");
+    try {
+      setSplit(await api<Breakdown>(`/api/v1/admin/orders/${o.id}/breakdown`));
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
     }
   }
 
@@ -723,6 +784,40 @@ function OrderActions({
   // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
   // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
+  if (split !== null) {
+    const OP = m.admin.ordersPage;
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium">{OP.splitTitle}</p>
+        <div className="space-y-1 rounded-control bg-page p-3 text-xs">
+          <Row label={OP.splitPaid} value={split.total} strong />
+          {split.lines
+            .filter((l) => l.party !== "customer")
+            .map((l, i) => (
+              <Row
+                key={i}
+                label={`${OP.party[l.party]} — ${l.name}`}
+                value={l.amount}
+              />
+            ))}
+          {/* **الفارقُ يُعرض ولا يُخفى.** لو ظهر رقمٌ هنا فمالٌ تحرّك بلا طرفٍ
+              معروف — وهو أوّلُ ما يُسأل عنه، لا آخرُ ما يُكتشف. */}
+          {split.total - split.to_parties - split.platform !== 0 && (
+            <Row
+              label={OP.splitUnaccounted}
+              value={split.total - split.to_parties - split.platform}
+              danger
+            />
+          )}
+        </div>
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <Button variant="secondary" onClick={() => setSplit(null)}>
+          {m.common.back}
+        </Button>
+      </div>
+    );
+  }
+
   if (compensating) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -878,6 +973,16 @@ function OrderActions({
           </Button>
         );
       })}
+      {/* **توزيعُ المال — لمن أُغلق أمرُه.**
+
+          لا يُعرض قبل الإغلاق: طلبٌ في الطريق لم تُقيَّد أنصبتُه بعد، **وشاشةٌ
+          تعرض أصفاراً تُقرأ خطأً لا نقصاً.** */}
+      {(o.status === "delivered" || o.status === "failed" || o.status === "refunded") && (
+        <Button variant="secondary" disabled={busy !== ""} onClick={() => void openSplit()}>
+          {m.admin.ordersPage.splitButton}
+        </Button>
+      )}
+
       {/* **ما بعد الفشل — سؤالان لا يُجيبهما النظام وحده.**
 
           طلبٌ فشل يترك طعاماً مطبوخاً ورحلةً مقطوعة. والقيدُ المالي لا يقع

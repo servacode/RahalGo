@@ -163,6 +163,12 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.status = 'dispatching' AND o.driver_id IS NULL
+		  -- **في نمط «بالترتيب» لا يراه إلّا صاحبُ الدور.**
+		  --
+		  -- وفارغٌ يعني معروضٌ للجميع: إمّا النمطُ «الأسرع»، وإمّا انقضى الدورُ
+		  -- على الجميع فعاد الطلبُ مشاعاً. **وحجبُه عن الكلّ حينها يُخفي طلباً
+		  -- لا يملكه أحد.**
+		  AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
 		ORDER BY o.ready_at NULLS LAST, o.created_at
 		LIMIT 50`)
 }
@@ -216,8 +222,13 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	// يضغطان معاً — أحدهما يُحدّث صفّاً والآخر يجد صفراً. ولو فُحص ثم حُدّث
 	// لأخذاه معاً.
 	tag, err := s.pg.Exec(r.Context(), `
-		UPDATE orders SET driver_id = $2, updated_at = now()
-		WHERE id = $1 AND driver_id IS NULL AND status = 'dispatching'`, orderID, uid)
+		UPDATE orders SET driver_id = $2, updated_at = now(),
+		    offered_driver_id = NULL, offer_expires_at = NULL
+		WHERE id = $1 AND driver_id IS NULL AND status = 'dispatching'
+		  -- **والدورُ شرطٌ في التحديث لا فحصٌ قبله**: سائقٌ يرى الطلبَ في
+		  -- لحظة انتقال الدور إليه ثم ينقضي وهو يضغط — الشرطُ هنا يمنعه،
+		  -- والفحصُ قبله يسمح به.
+		  AND (offered_driver_id IS NULL OR offered_driver_id = $2)`, orderID, uid)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -225,6 +236,13 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	if tag.RowsAffected() == 0 {
 		s.respondErr(w, errOrderTaken)
 		return
+	}
+
+	// **من أخذ طلباً هبط إلى آخر الصفّ** — وهو ما يجعل الترتيبَ يُصحّح نفسه
+	// بلا دفترٍ يمسكه أحد.
+	if _, err := s.pg.Exec(r.Context(),
+		`UPDATE users SET last_assigned_at = now() WHERE id = $1`, uid); err != nil {
+		s.logger.Error("الترتيب: تعذّر تحديث آخر إسناد", "driver", uid, "error", err)
 	}
 
 	o, err := s.orders.Transition(r.Context(), uid, []string{"driver"}, orderID, orders.StAssigned, "")

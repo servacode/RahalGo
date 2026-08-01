@@ -80,6 +80,10 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			// **انتقالُ الدور مع نبضة الراصد** — لا مع نداءِ سائقٍ للطابور:
+			// لو انتظرنا من يسأل لبقي طلبٌ محجوزاً لسائقٍ نائمٍ حتى يفتح
+			// غيرُه التطبيق. **والزبونُ لا ينتظر أن يتذكّر أحدٌ أن ينظر.**
+			s.SweepExpiredOffers(ctx)
 			alerts, err := s.Alerts(ctx)
 			if err != nil {
 				s.logger.Error("watchdog scan failed", "error", err)

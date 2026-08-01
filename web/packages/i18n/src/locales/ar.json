@@ -586,7 +586,19 @@
       "compensateDriver": "تعويض السائق",
       "compensateTitle": "تعويض السائق عن مشوارٍ لم يُثمر",
       "compensateAmount": "المبلغ",
-      "compensateReason": "السبب — يُسجَّل"
+      "compensateReason": "السبب — يُسجَّل",
+      "splitButton": "توزيع المبلغ",
+      "splitTitle": "كيف وُزّع مبلغ الطلب",
+      "splitPaid": "ما دفعه الزبون",
+      "splitUnaccounted": "فارقٌ بلا طرف",
+      "party": {
+        "merchant": "المتجر",
+        "driver": "السائق",
+        "sales": "المندوب",
+        "platform": "المنصة",
+        "customer": "الزبون",
+        "other": "تسوية"
+      }
     },
     "customers": {
       "title": "الزبائن",

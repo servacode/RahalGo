@@ -111,6 +111,16 @@ var Catalog = []Def{
 	// وخمسة طلبات بيد سائقٍ واحد تعني أربعة زبائن ينتظرون ساعة.
 	{Key: "drivers.max_active_orders", Group: GroupDrivers, Kind: KindInt,
 		Min: 1, Max: 20, Unit: "order", Default: 2},
+	// **نظاما التوزيع.**
+	//
+	// `queue` الأسرعُ التقاطاً: سريعٌ في الذروة **ويُجوّع البطيء** — سائقٌ
+	// بهاتفٍ قديم أو حيٍّ ضعيف الشبكة لا يصل قبل غيره أبداً.
+	// `rotation` بالترتيب: يُعرض على واحدٍ في دوره، **عدلٌ وثمنُه ثوانٍ**.
+	{Key: "drivers.assignment_mode", Group: GroupDrivers, Kind: KindChoice,
+		Options: []string{"queue", "rotation"}, Default: "queue"},
+	// **مهلةُ العرض**: قصيرةٌ تُتعب السائق وهو يقود، وطويلةٌ تُبرّد الطعام.
+	{Key: "drivers.offer_timeout_sec", Group: GroupDrivers, Kind: KindInt,
+		Min: 10, Max: 300, Unit: "second", Default: 45},
 
 	// ── المتاجر ───────────────────────────────────────────────────────────
 	{Key: "merchants.default_commission_percent", Group: GroupMerchants, Kind: KindInt,

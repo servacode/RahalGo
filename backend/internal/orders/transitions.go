@@ -154,6 +154,16 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 	s.notifyTransition(ctx, orderID, to, note)
 	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
 
+	// **أوّلُ عرضٍ في نمط «بالترتيب»** — لحظةَ نزول الطلب إلى الطابور.
+	//
+	// وبعد الإيداع: العرضُ ترتيبٌ لا مال، **وتعثّرُه يترك الطلبَ مشاعاً للجميع
+	// لا يُلغي نزولَه.**
+	if to == StDispatching {
+		if err := s.OfferNext(ctx, orderID, nil); err != nil {
+			s.logger.Error("الترتيب: تعذّر أوّل عرض", "order", orderID, "error", err)
+		}
+	}
+
 	// **حظرُ المتجر كثيرِ الإلغاء** — بعد الإيداع لا داخله.
 	//
 	// الحظرُ قرارٌ قائمٌ بذاته، وتعثّرُه يجب ألّا يُلغي إلغاءً وقع فعلاً:
