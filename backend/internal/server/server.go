@@ -79,7 +79,19 @@ func (s *Server) Router() http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(30 * time.Second))
+	// **المهلةُ لكل طلبٍ إلّا قناة البثّ.**
+	//
+	// كانت تلفّ `/ws` معها، فتُلغي سياقَ الطلب بعد ثلاثين ثانية — و`handleWS`
+	// يقرأ `<-ctx.Done()` فينصرف. **فكانت كلُّ شاشةٍ في المنصة تموت بثّياً بعد
+	// نصف دقيقة من فتحها**: العمليات والمتجر والزبون والسائق.
+	//
+	// ولم يشتكِ شيء. الشاشةُ تبقى معروضةً بآخر ما جلبت، **والجمودُ يبدو هدوءاً**
+	// — حتى يُحدّث أحدٌ الصفحةَ فيرى ما فاته.
+	//
+	// وأثرُه كان في السجلّ طوال الوقت: `WriteHeader on hijacked connection` —
+	// الوسيطُ يحاول كتابة 504 على اتصالٍ خطفه WebSocket. **رسالةٌ قيلت ولم
+	// تُقرأ.**
+	r.Use(exceptPaths(middleware.Timeout(30*time.Second), "/api/v1/ws"))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   s.allowedOrigins(),
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},

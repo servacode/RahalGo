@@ -76,6 +76,48 @@ func (s *Service) publishOrder(o *Order) {
 	s.pub.Publish("ops", event)
 	s.pub.Publish("merchant:"+o.MerchantID, event)
 	s.pub.Publish("customer:"+o.CustomerID, event)
+
+	// **السائقُ الذي يحمل الطلب يعلم بما يجري فيه.**
+	//
+	// كان يُستثنى من البثّ كلِّه: تُسند إليه العملياتُ طلباً فلا يعلم حتى
+	// يُحدّث الصفحة، وتُلغيه فيمضي إلى عنوانٍ لا طلبَ فيه.
+	if o.DriverID != nil && *o.DriverID != "" {
+		s.pub.Publish("driver:"+*o.DriverID, event)
+	}
+
+	// **وإشارةٌ للطابور — بلا حمولة.**
+	//
+	// كان الطلبُ ينزل إلى الطابور ولا يعلم به أحد: تبقى شاشةُ السائق كما هي
+	// حتى يُحدّثها بيده. **والطابورُ الذي لا يُرى حتى يُحدَّث ليس طابوراً حيّاً،
+	// هو قائمةٌ يتذكّر أحدٌ أن ينظر إليها.**
+	//
+	// وتُرسَل عند الدخول وعند الخروج معاً: من أخذه واحدٌ يجب أن يختفي عن
+	// شاشات الباقين، **وإلّا ضغطوا عليه فردَّهم «سبقك غيرُك»** — وهو ردٌّ صحيح
+	// يُغني عنه عرضٌ صحيح.
+	if queueAffecting(o.Status) {
+		s.pub.Publish(topicDriverQueue, map[string]any{"type": "order"})
+	}
+}
+
+// topicDriverQueue نسخةٌ محلّية من `realtime.TopicDriverQueue`.
+//
+// **حرفياً لا استيراداً**: هذه الحزمة تنشر عبر واجهة `Publisher` ولا تعرف من
+// ينفّذها — واستيرادُ `realtime` هنا يربط محرّك الطلبات بتنفيذِ بثٍّ بعينه.
+// (وهو ما تفعله `"ops"` و`"merchant:"` فوق أصلاً.)
+//
+// **والانحرافُ بينهما يُمسك باختبار** لا بالانتباه: `TestDriverQueueTopic`.
+const topicDriverQueue = "drivers:queue"
+
+// queueAffecting أيغيّر هذا الوضعُ ما يراه السائقون في الطابور؟
+//
+// **دخولٌ وخروج لا دخولٌ وحده**: `dispatching` تُدخله، والباقيةُ تُخرجه —
+// أخذَه سائقٌ أو أُلغي أو رُفض أو فشل.
+func queueAffecting(status string) bool {
+	switch status {
+	case StDispatching, StAssigned, StCancelled, StRejected, StFailed:
+		return true
+	}
+	return false
 }
 
 // Create ينشئ طلباً كاملاً: تحقق المتجر، تسعير خادمي للأصناف والخيارات،

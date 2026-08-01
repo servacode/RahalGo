@@ -12,6 +12,23 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 )
 
+// exceptPaths يُعفي مساراتٍ بعينها من وسيطٍ يلفّ الباقي.
+//
+// **الاستثناءُ صريحٌ في مكانٍ واحد** — لا مهلةٌ ثانية داخل المعالج ولا فرعٌ
+// مخفيّ فيه. ومن قرأ سطرَ الوسيط عرف من يُعفى منه قبل أن يبحث.
+func exceptPaths(mw func(http.Handler) http.Handler, paths ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		wrapped := mw(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if slices.Contains(paths, r.URL.Path) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			wrapped.ServeHTTP(w, r)
+		})
+	}
+}
+
 // handleWS اتصال البث الحي. المتصفح لا يرسل ترويسات مع WebSocket،
 // فالتوكن يصل عبر معامل الاستعلام ويُتحقق منه كأي طلب.
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
@@ -50,9 +67,12 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if slices.Contains(claims.Roles, "customer") {
 		topics = append(topics, "customer:"+claims.Subject)
 	}
-	// السائق: موضوعه الشخصي (إسناد الطلبات والنقد — يستعمله التطبيق)
+	// السائق: موضوعه الشخصي (إسناد الطلبات والنقد) **وإشارةُ الطابور**.
+	//
+	// والطابورُ موضوعٌ مشترك بين كل السائقين — **لذلك لا حمولةَ فيه**: يقول
+	// «تغيّر شيء» فيُعيد التطبيقُ الجلب، وتحكم نقطةُ الطابور ما يُرى.
 	if slices.Contains(claims.Roles, "driver") {
-		topics = append(topics, "driver:"+claims.Subject)
+		topics = append(topics, "driver:"+claims.Subject, realtime.TopicDriverQueue)
 	}
 	// المندوب: موضوعه الشخصي (طلبات الانضمام والعمولات)
 	if slices.Contains(claims.Roles, "sales") {
