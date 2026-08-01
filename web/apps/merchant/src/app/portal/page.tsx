@@ -16,7 +16,6 @@ import {
   Modal,
   Input,
   IconOrder,
-  IconLocation,
   IconSuccess,
   IconWarning,
   IconDriver,
@@ -47,9 +46,9 @@ interface Order {
   prep_minutes: number | null;
   ready_at: string | null;
   accepted_at: string | null;
-  address_text: string;
-  payment_method: string;
-  subtotal: number;
+  // **لا عنوان ولا سعر ولا طريقة دفع**: الخادم يحجبها عن المتجر
+  // (`merchant_privacy.go`). وإبقاؤها في النوع يُغري ببنائها في شاشةٍ غداً
+  // فتُقرأ أصفاراً — **حقلٌ ميّت أخطرُ من حقلٍ غائب**.
   total: number;
   notes: string;
   created_at: string;
@@ -316,18 +315,23 @@ function OrderCard({
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center justify-between text-start"
       >
+        {/* **ورقةُ مطبخٍ لا فاتورة.**
+
+            لا سعرَ ولا عنوانَ ولا اسمَ زبون: السائقُ يأتي إلى المتجر ولا يذهب
+            المتجرُ إلى أحد، فلا حاجةَ له بالعنوان. وهاتفُ الزبون وعنوانُه في
+            يد مطعمٍ يعني أنه يستطيع الاتصال به مباشرةً في الطلب القادم —
+            **فتصير المنصةُ دليلَ زبائنَ يُبنى على ظهرها ثم يُستغنى عنها**.
+
+            والمالُ يراه في محفظته وتقاريره، **وهي أدقّ**: تعرض مستحقّه هو لا
+            ما دفعه الزبون (وفيه رسمُ توصيلٍ ليس له).
+
+            والحجبُ في الخادم لا هنا (`merchant_privacy.go`) — وهذا عرضُ ما
+            وصل، لا إخفاءُ ما وصل. */}
         <span className="font-bold">#{fmtNum(order.number)}</span>
-        <span className="text-sm font-bold text-primary-dark">
-          {fmtNum(order.subtotal)} {m.common.currency}
-        </span>
-      </button>
-      <p className="mt-1 flex items-center gap-1 text-xs text-ink-muted">
-        <IconLocation size={12} className="shrink-0" />
-        <span className="truncate">{order.address_text}</span>
-        <span className="ms-auto shrink-0" dir="ltr">
+        <span className="text-xs text-ink-muted" dir="ltr">
           {fmtTime(order.created_at)}
         </span>
-      </p>
+      </button>
 
       {expanded && (
         <div className="mt-2 border-t border-line pt-2">

@@ -84,6 +84,10 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// خصوصيةُ الزبون تبقى عند المنصة — والحجبُ هنا لا في الواجهة
+	for i := range res.Orders {
+		redactForMerchant(&res.Orders[i])
+	}
 	httpx.JSON(w, http.StatusOK, res)
 }
 
@@ -109,6 +113,7 @@ func (s *Server) handleMerchantGetOrder(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	redactForMerchant(o)
 	httpx.JSON(w, http.StatusOK, o)
 }
 
@@ -151,6 +156,8 @@ func (s *Server) handleMerchantTransition(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
+	// وردُّ الانتقال يُعيد الطلب كاملاً — منفذُ تسريبٍ لو نُسي
+	redactForMerchant(o)
 	httpx.JSON(w, http.StatusOK, o)
 }
 
