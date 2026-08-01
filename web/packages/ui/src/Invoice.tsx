@@ -13,6 +13,7 @@
 
 import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import { Button } from "./components";
+import { SheetHeader } from "./layout";
 import { IconPrint } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -69,37 +70,43 @@ export function Invoice({
       </div>
 
       <div data-print="sheet" className="rounded-card border border-line bg-surface p-6 text-sm">
-        {/* الترويسة: من، ولمن، ومتى — ورقةٌ تُقرأ بعد شهر بلا شاشة */}
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-line pb-4">
-          <div>
-            <p className="text-lg font-bold">{V.title}</p>
-            <p className="mt-1 text-ink-muted">
-              {V.number} <span dir="ltr">#{fmtNum(order.number)}</span>
-            </p>
-            <p className="text-xs text-ink-muted">
-              {V.issuedAt} <span dir="ltr">{fmtDateTime(order.created_at)}</span>
-            </p>
-            {order.delivered_at && (
-              <p className="text-xs text-ink-muted">
-                {V.deliveredAt} <span dir="ltr">{fmtDateTime(order.delivered_at)}</span>
-              </p>
-            )}
-          </div>
-          <div className="text-end">
-            <p className="font-bold">{m.common.appName}</p>
-            <p className="text-ink-muted">{order.merchant_name}</p>
-            {order.customer_name && <p className="text-xs text-ink-muted">{order.customer_name}</p>}
-            {order.customer_phone && (
-              <p className="text-xs text-ink-muted" dir="ltr">
-                {order.customer_phone}
-              </p>
-            )}
-          </div>
-        </div>
+        {/* العلامةُ والاسمُ ووقتُ الطباعة — ترويسةٌ واحدة للفاتورة والكشف */}
+        <SheetHeader />
 
-        <p className="mb-4 text-xs text-ink-muted">
-          {V.address} {order.address_text}
-        </p>
+        {/* **سطرُ التعريف**: رقمُ الطلب ومن هو صاحبُه وأين — ما يُبحث به.
+            وتاريخُ الطلب هنا لا في الترويسة: تلك تحمل وقتَ الطباعة، **وخلطُهما
+            يجعل ورقةً تُطبع بعد شهرٍ تبدو طلباً وقع اليوم.** */}
+        <div className="mb-4 grid gap-x-6 gap-y-1 border-b border-line pb-3 text-xs sm:grid-cols-2">
+          <p className="text-base font-bold">
+            {V.title} <span dir="ltr">#{fmtNum(order.number)}</span>
+          </p>
+          <p className="sm:text-end">
+            <span className="text-ink-muted">{V.issuedAt} </span>
+            <span dir="ltr">{fmtDateTime(order.created_at)}</span>
+          </p>
+          {order.customer_name && (
+            <p>
+              <span className="text-ink-muted">{V.customer} </span>
+              <span className="font-medium">{order.customer_name}</span>
+              {order.customer_phone && (
+                <span dir="ltr" className="ms-2 text-ink-muted">
+                  {order.customer_phone}
+                </span>
+              )}
+            </p>
+          )}
+          {order.delivered_at && (
+            <p className="sm:text-end">
+              <span className="text-ink-muted">{V.deliveredAt} </span>
+              <span dir="ltr">{fmtDateTime(order.delivered_at)}</span>
+            </p>
+          )}
+          <p className="sm:col-span-2">
+            <span className="text-ink-muted">{V.address} </span>
+            {order.address_text}
+          </p>
+          <p className="sm:col-span-2 text-ink-muted">{order.merchant_name}</p>
+        </div>
 
         {items.length > 0 && (
           <div className="overflow-x-auto">
@@ -157,6 +164,15 @@ export function Invoice({
           {order.wallet_paid > 0 && order.cash_due === 0
             ? V.paidWallet
             : V.paidCash.replace("{n}", fmtNum(order.cash_due))}
+        </p>
+
+        {/* **آخرُ ما تقع عليه العين.**
+
+            ورقةٌ تنتهي برقمٍ تنتهي جافّة، **والفاتورةُ آخرُ ما يبقى من الطلب
+            في يد الزبون** — فتقول كلمةً قبل أن تُطوى. وهي في المعجم لا في
+            الشيفرة: يبدّلها المالكُ متى شاء بلا نشر. */}
+        <p className="mt-5 border-t border-line pt-4 text-center text-sm font-medium text-primary">
+          {V.thanks}
         </p>
 
         {showMerchantSettlement && (

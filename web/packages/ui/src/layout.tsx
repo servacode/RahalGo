@@ -7,7 +7,7 @@
  */
 
 import type { ComponentType, ReactNode } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
 import { IconStar } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -458,6 +458,44 @@ export function EntityCard({
       {actions && (
         <div className="mt-3 flex flex-wrap gap-1.5 border-t border-line pt-3">{actions}</div>
       )}
+    </div>
+  );
+}
+
+/**
+ * ترويسةُ ورقةٍ رسمية — للفاتورة ولكشف الحساب معاً.
+ *
+ * **ثلاثةُ أثلاث بترتيبٍ ثابت**: العلامةُ في المبدأ، واسمُ المنصة في الوسط،
+ * ووقتُ الطباعة في المنتهى. **ووقتُ الطباعة لا تاريخُ المستند** — واللفظُ
+ * يقول ذلك صراحةً:
+ *
+ * ورقةٌ تحمل تاريخاً بلا لفظٍ يشرحه تُقرأ بعد شهرٍ على أنها تاريخُ الطلب،
+ * **فيُحاسَب أحدٌ على يومٍ لم يحدث فيه شيء.** وتاريخُ المستند نفسه (الطلبُ
+ * أو المدى) في السطر الذي تحتها — كلٌّ في موضعه ولا يلتبسان.
+ *
+ * **وواحدةٌ لا اثنتان**: كانت الفاتورةُ وكشفُ الحساب يبنيان ترويستيهما، فتُحسَّن
+ * إحداهما وتُنسى الأخرى — وهذا كيف تنشأ الفروقُ التي لا يقصدها أحد.
+ */
+export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | string }) {
+  return (
+    <div className="mb-4 flex items-center justify-between gap-4 border-b border-line pb-4">
+      {/* العلامة — نفسُ علامة الشاشة، فالورقةُ والتطبيقُ شيءٌ واحد */}
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary text-lg font-bold text-white">
+        {m.terms.brandInitial}
+      </div>
+
+      <div className="min-w-0 flex-1 text-center">
+        <p className="truncate text-lg font-bold">{m.common.appName}</p>
+        <p className="truncate text-xs text-ink-muted">{m.common.appTagline}</p>
+      </div>
+
+      <div className="shrink-0 text-end text-xs text-ink-muted">
+        <p>{m.shared.sheet.printedAt}</p>
+        <p dir="ltr" className="font-medium text-ink">
+          {fmtDate(printedAt)}
+        </p>
+        <p dir="ltr">{fmtTime(printedAt)}</p>
+      </div>
     </div>
   );
 }

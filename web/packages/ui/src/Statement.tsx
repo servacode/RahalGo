@@ -14,8 +14,9 @@
  */
 
 import { useMemo } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDate, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
+import { SheetHeader } from "./layout";
 import { IconPrint } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -142,25 +143,26 @@ export function StatementSheet({
         data-print="sheet"
         className="rounded-card border border-line bg-surface p-6 text-sm"
       >
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-line pb-4">
-          <div>
-            <p className="text-lg font-bold">{S.title}</p>
-            <p className="mt-1 text-ink-muted">
-              {S.period} <span dir="ltr">{fmtDate(from)}</span> — <span dir="ltr">{fmtDate(to)}</span>
+        {/* **الترويسةُ نفسها** — الفاتورةُ والكشفُ ورقتان من دارٍ واحدة. */}
+        <SheetHeader />
+
+        {/* وسطرُ التعريف: ما هذه الورقة، ولمن، وعن أيّ مدى. */}
+        <div className="mb-4 grid gap-x-6 gap-y-1 border-b border-line pb-3 text-xs sm:grid-cols-2">
+          <p className="text-base font-bold">{S.title}</p>
+          <p className="sm:text-end">
+            <span className="text-ink-muted">{S.period} </span>
+            <span dir="ltr">{fmtDate(from)}</span> — <span dir="ltr">{fmtDate(to)}</span>
+          </p>
+          {holderName && (
+            <p>
+              <span className="font-medium">{holderName}</span>
+              {holderPhone && (
+                <span dir="ltr" className="ms-2 text-ink-muted">
+                  {holderPhone}
+                </span>
+              )}
             </p>
-          </div>
-          <div className="text-end">
-            <p className="font-bold">{m.common.appName}</p>
-            {holderName && <p className="text-ink-muted">{holderName}</p>}
-            {holderPhone && (
-              <p className="text-ink-muted" dir="ltr">
-                {holderPhone}
-              </p>
-            )}
-            <p className="mt-1 text-xs text-ink-muted">
-              {S.issuedAt} <span dir="ltr">{fmtDateTime(new Date())}</span>
-            </p>
-          </div>
+          )}
         </div>
 
         {loading ? (
