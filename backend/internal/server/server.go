@@ -267,6 +267,9 @@ func (s *Server) Router() http.Handler {
 			// والسحوبات وأرصدة المحافظ، وموظّف العمليات ليس طرفاً في المال.
 			r.With(s.RequireRoles("admin", "finance")).
 				Get("/audit", s.handleAdminAudit)
+			// حاملو الخزينة المحتملون — للأدمن وحده (merchant_violations.go)
+			r.With(s.RequireRoles("admin")).
+				Get("/treasury-candidates", s.handleTreasuryCandidates)
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/users/{id}/wallet", s.handleAdminWalletApply)

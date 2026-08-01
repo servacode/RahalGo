@@ -131,6 +131,33 @@ function SettingRow({
   }, [s.value]);
 
   const numeric = s.kind === "int" || s.kind === "money";
+  /**
+   * **حسابُ الخزينة يُختار من قائمة لا يُكتب معرّفُه بالحروف.**
+   *
+   * كان حقلَ نصّ يطلب من المالك أن يبحث عن معرّفٍ في مكانٍ آخر ويلصقه —
+   * **وحرفٌ ناقصٌ فيه يعني خزينةً على حسابٍ لا وجود له، فتمضي المنصةُ بلا
+   * دفترٍ ولا تقول شيئاً.**
+   *
+   * ولا يُعرض إلّا الأدمن والمالية: **الخزينةُ على حساب سائقٍ ليست خطأً
+   * يُكتشف، هي مالٌ يُقيَّد لمن لا يخصّه.**
+   */
+  const isTreasury = s.key === "platform.treasury_user_id";
+  const [holders, setHolders] = useState<{ id: string; full_name: string; phone: string }[]>([]);
+  useEffect(() => {
+    if (!isTreasury) return;
+    void (async () => {
+      try {
+        // **نقطةٌ مخصّصة**: قائمةُ المستخدمين تستبعد الأدمن عمداً، وتوسيعُها
+        // لأجل هذه القائمة يُضعف حارساً قائماً لأجل راحةٍ عابرة.
+        const res = await api<{ users: { id: string; full_name: string; phone: string }[] }>(
+          "/api/v1/admin/treasury-candidates",
+        );
+        setHolders(res.users ?? []);
+      } catch {
+        setHolders([]);
+      }
+    })();
+  }, [isTreasury]);
   const dirty =
     s.kind === "bool" ? false : draft !== String(s.value ?? "");
 
@@ -206,6 +233,27 @@ function SettingRow({
               disabled={!editable || busy}
               onChange={(e) => void save(e.target.checked)}
             />
+          ) : isTreasury ? (
+            <Select
+              id={s.key}
+              value={draft}
+              disabled={!editable || busy}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                void save(e.target.value);
+              }}
+              className="min-w-64"
+            >
+              {/* **الفراغُ خيارٌ صريح**: «لم تُختَر بعد» حالةٌ يعمل فيها كلُّ
+                  شيء ويبقى الدفترُ ناقصَ طرف — وإخفاؤها يجعل أوّلَ فتحٍ
+                  للصفحة يختار حساباً بلا قصد. */}
+              <option value="">{m.admin.settings.treasuryNone}</option>
+              {holders.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name || u.phone}
+                </option>
+              ))}
+            </Select>
           ) : s.kind === "choice" ? (
             <Select
               id={s.key}

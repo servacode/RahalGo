@@ -110,3 +110,43 @@ func (s *Server) handleClearViolations(w http.ResponseWriter, r *http.Request) {
 	s.touch("merchant", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"cleared": true})
 }
+
+// handleTreasuryCandidates حساباتٌ تصلح لحمل خزينة المنصة.
+//
+// **نقطةٌ مخصّصة لا ثقبٌ في قائمة المستخدمين**: تلك تستبعد الأدمن عمداً
+// (`HAVING NOT bool_or(role_code = 'admin')`) — وتوسيعُها لأجل قائمةٍ واحدة
+// **يُضعف حارساً قائماً لأجل راحةٍ عابرة.**
+//
+// **والأدمن والمالية وحدهما**: خزينةٌ على حساب سائقٍ ليست خطأً يُكتشف، هي
+// **مالٌ يُقيَّد لمن لا يخصّه** — ومن يفتح قائمةً يختار من فيها.
+//
+// وللأدمن وحده: **من يختار حاملَ الخزينة يملك مالَ المنصة كلَّه.**
+func (s *Server) handleTreasuryCandidates(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT DISTINCT u.id, COALESCE(NULLIF(u.full_name, ''), u.phone::text), u.phone::text
+		FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id
+		WHERE ur.role_code IN ('admin', 'finance') AND u.status = 'active'
+		ORDER BY 2`)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+
+	type candidate struct {
+		ID       string `json:"id"`
+		FullName string `json:"full_name"`
+		Phone    string `json:"phone"`
+	}
+	out := []candidate{}
+	for rows.Next() {
+		var c candidate
+		if err := rows.Scan(&c.ID, &c.FullName, &c.Phone); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out = append(out, c)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"users": out})
+}
