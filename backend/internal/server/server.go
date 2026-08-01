@@ -282,6 +282,17 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/transition", s.handleOrderTransition)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
 
+			// **ما بعد فشل الطلب** — من يحمل الخسارة (failure_aftermath.go).
+			//
+			// التعويضُ للمالية والأدمن لا للعمليات: **مالٌ يخرج من المنصة
+			// بتقدير إنسان**، وموظّفُ العمليات ليس طرفاً في المال — وهو
+			// الفصلُ نفسه المطبَّق على سجلّ الأحداث وحركات المحفظة.
+			r.With(s.RequireRoles("admin", "finance")).
+				Post("/orders/{id}/compensate-driver", s.handleCompensateDriver)
+			// ومصيرُ البضاعة تحسمه العملياتُ: **هي من يستلمها في المكتب**
+			// وتعرف أاستردّها المتجرُ أم رفض. والقيدُ المالي يتبع قرارَها.
+			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods)
+
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			r.Get("/customers", s.handleListCustomers)
 			r.Get("/salesreps", s.handleListSalesReps)

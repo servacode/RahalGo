@@ -65,6 +65,8 @@ interface OrderRow {
   driver_name: string | null;
   /** متى حُوِّل الطلب إلى المتجر — فارغٌ يعني لم يُحوَّل بعد */
   sent_to_merchant_at: string | null;
+  /** مصيرُ بضاعة طلبٍ فشل — فارغٌ يعني لم يُحسم بعد */
+  goods_settled_to: "merchant" | "platform" | null;
   /** أجرُ السائق — تقديرٌ قبل التسليم وواقعٌ بعده، من مصدر الحساب نفسه */
   driver_fee: number;
   status: string;
@@ -568,6 +570,9 @@ function OrderActions({
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   /** معاينةُ الرسالة قبل تحويلها — ومعها ما يلزم لإرسالها */
   const [preview, setPreview] = useState<MerchantMessage | null>(null);
+  /** نموذجُ تعويض السائق عن طلبٍ فشل */
+  const [compensating, setCompensating] = useState(false);
+  const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
 
@@ -635,6 +640,49 @@ function OrderActions({
     }
   }
 
+  // **مصيرُ البضاعة** — من يحمل ثمنَ طعامٍ طُبخ ولم يُسلَّم.
+  async function settleGoods(to: "merchant" | "platform") {
+    setBusy("goods");
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/settle-goods`, {
+        method: "POST",
+        body: JSON.stringify({ to }),
+      });
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  // **تعويضُ السائق — بمبلغٍ يقدّره إنسان.**
+  //
+  // أجرُ التوصيل مقابل تسليمٍ تمّ، وما وقع رحلةٌ لا تسليم. وتقديرُ الرحلة
+  // يختلف: مشوارٌ إلى الحيّ المجاور ليس كمشوارٍ عبر المدينة، **ورقمٌ آليٌّ
+  // واحد يظلم أحدهما.**
+  async function compensate() {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0 || reason.trim() === "") return;
+    setBusy("compensate");
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/compensate-driver`, {
+        method: "POST",
+        body: JSON.stringify({ amount: Math.round(value), note: reason.trim() }),
+      });
+      setCompensating(false);
+      setAmount("");
+      setReason("");
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function assign(driverID: string) {
     setBusy("assign");
     setErr("");
@@ -675,6 +723,41 @@ function OrderActions({
   // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
   // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
+  if (compensating) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium">{m.admin.ordersPage.compensateTitle}</p>
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder={m.admin.ordersPage.compensateAmount}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        <Input
+          placeholder={m.admin.ordersPage.compensateReason}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <div className="flex gap-2">
+          <Button disabled={busy !== ""} onClick={() => void compensate()}>
+            {m.common.confirm}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setCompensating(false);
+              setErr("");
+            }}
+          >
+            {m.common.cancel}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (preview !== null) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -795,6 +878,53 @@ function OrderActions({
           </Button>
         );
       })}
+      {/* **ما بعد الفشل — سؤالان لا يُجيبهما النظام وحده.**
+
+          طلبٌ فشل يترك طعاماً مطبوخاً ورحلةً مقطوعة. والقيدُ المالي لا يقع
+          تلقائياً لأنّ الجواب ليس في القاعدة: **أاستردّ المتجرُ بضاعته؟ وكم
+          يستحقّ السائقُ عن مشوارٍ لم يُثمر؟** يجيبهما من رأى، لا من حسب. */}
+      {o.status === "failed" && (
+        <>
+          {o.goods_settled_to === null ? (
+            <>
+              <Button
+                variant="secondary"
+                disabled={busy !== ""}
+                onClick={() => void settleGoods("merchant")}
+              >
+                {m.admin.ordersPage.goodsToMerchant}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy !== ""}
+                onClick={() => void settleGoods("platform")}
+              >
+                {m.admin.ordersPage.goodsToPlatform}
+              </Button>
+            </>
+          ) : (
+            <span className="text-xs text-ink-muted">
+              {o.goods_settled_to === "merchant"
+                ? m.admin.ordersPage.goodsSettledMerchant
+                : m.admin.ordersPage.goodsSettledPlatform}
+            </span>
+          )}
+          {o.driver_name && (
+            <Button
+              variant="secondary"
+              disabled={busy !== ""}
+              onClick={() => {
+                setAmount("");
+                setReason("");
+                setCompensating(true);
+              }}
+            >
+              {m.admin.ordersPage.compensateDriver}
+            </Button>
+          )}
+        </>
+      )}
+
       {/* **التحويلُ إلى المتجر — في الوضعين لا في وضعٍ واحد.**
 
           في «المنصة تدير» هو الفعلُ الأساسيّ: تقبل العملياتُ نيابةً عن المتجر

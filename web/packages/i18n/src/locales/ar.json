@@ -477,7 +477,10 @@
     "no_merchant_phone": "لا رقم واتساب لهذا المتجر",
     "sms_not_configured": "بوّابة الرسائل غير مضبوطة — راجع إعدادات الخادم",
     "sms_failed": "تعذّر إرسال الرسالة — راجع سجلّ الخادم",
-    "bad_channel": "قناةُ إبلاغٍ غير معروفة"
+    "bad_channel": "قناةُ إبلاغٍ غير معروفة",
+    "order_not_failed": "هذا الإجراء لطلبٍ فشل فقط",
+    "goods_already_settled": "مصيرُ البضاعة محسومٌ سلفاً",
+    "order_has_no_driver": "لا سائق على هذا الطلب"
   },
   "admin": {
     "appTitle": "رحال غو — لوحة التحكم",
@@ -575,7 +578,15 @@
         "comment": "التعليق"
       },
       "sendViaWhatsApp": "فتح واتساب المتجر",
-      "sendViaSMS": "إرسال رسالة نصّية"
+      "sendViaSMS": "إرسال رسالة نصّية",
+      "goodsToMerchant": "المتجر استردّ البضاعة",
+      "goodsToPlatform": "رفض الاسترداد — المنصة تتحمّل",
+      "goodsSettledMerchant": "البضاعة عادت للمتجر",
+      "goodsSettledPlatform": "تحمّلتها المنصة ودُفع للمتجر",
+      "compensateDriver": "تعويض السائق",
+      "compensateTitle": "تعويض السائق عن مشوارٍ لم يُثمر",
+      "compensateAmount": "المبلغ",
+      "compensateReason": "السبب — يُسجَّل"
     },
     "customers": {
       "title": "الزبائن",

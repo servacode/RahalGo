@@ -19,6 +19,7 @@ const orderSelect = `
 	       o.zone_id, z.name,
 	       o.payment_method, o.subtotal, o.delivery_fee, o.discount, o.total,
 	       o.wallet_paid, o.cash_due, o.promo_code, o.notes, o.cancel_reason, o.created_at,
+	       o.sent_to_merchant_at, o.goods_settled_to,
 	       o.prep_minutes, o.ready_at, o.accepted_at, o.delivered_at,
 	       lm.thumb_path,
 	       -- ملخّص الأصناف في القائمة نفسها: «ماذا طلبتُ؟» أول سؤال يسأله صاحب
@@ -56,6 +57,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.Discount, &o.Total,
 		&o.WalletPaid, &o.CashDue, &o.PromoCode, &o.Notes, &o.CancelReason, &o.CreatedAt,
+		&o.SentToMerchantAt, &o.GoodsSettledTo,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.DeliveredAt,
 		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items)
 	if err != nil {

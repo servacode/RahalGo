@@ -75,27 +75,36 @@ type Order struct {
 	// **قبل التسليم تقديرٌ وبعده واقع**: يُحسب من رسم التوصيل وإعدادات الحصّة
 	// حتى يُقيَّد فعلاً في الدفتر. وغرفةُ العمليات تحتاج الرقم قبل التسليم لا
 	// بعده — فهي تقرّر به الإسناد.
-	DriverFee     int64       `json:"driver_fee"`
-	Status        string      `json:"status"`
-	AddressText   string      `json:"address_text"`
-	Lat           float64     `json:"lat"`
-	Lng           float64     `json:"lng"`
-	ZoneID        *string     `json:"zone_id"`
-	ZoneName      *string     `json:"zone_name"`
-	PaymentMethod string      `json:"payment_method"`
-	Subtotal      int64       `json:"subtotal"`
-	DeliveryFee   int64       `json:"delivery_fee"`
-	Discount      int64       `json:"discount"`
-	Total         int64       `json:"total"`
-	WalletPaid    int64       `json:"wallet_paid"`
-	CashDue       int64       `json:"cash_due"`
-	PromoCode     *string     `json:"promo_code"`
-	Notes         string      `json:"notes"`
-	CancelReason  string      `json:"cancel_reason"`
-	Items         []OrderItem `json:"items,omitempty"`
-	Events        []Event     `json:"events,omitempty"`
-	Rating        *Rating     `json:"rating,omitempty"`
-	CreatedAt     time.Time   `json:"created_at"`
+	DriverFee     int64   `json:"driver_fee"`
+	Status        string  `json:"status"`
+	AddressText   string  `json:"address_text"`
+	Lat           float64 `json:"lat"`
+	Lng           float64 `json:"lng"`
+	ZoneID        *string `json:"zone_id"`
+	ZoneName      *string `json:"zone_name"`
+	PaymentMethod string  `json:"payment_method"`
+	Subtotal      int64   `json:"subtotal"`
+	DeliveryFee   int64   `json:"delivery_fee"`
+	Discount      int64   `json:"discount"`
+	Total         int64   `json:"total"`
+	WalletPaid    int64   `json:"wallet_paid"`
+	CashDue       int64   `json:"cash_due"`
+	PromoCode     *string `json:"promo_code"`
+	Notes         string  `json:"notes"`
+	CancelReason  string  `json:"cancel_reason"`
+	// SentToMerchantAt متى حُوِّل الطلب إلى المتجر — لا «متى وصله».
+	//
+	// **كان يُكتب ولا يُقرأ**: تكتبه نقطةُ الإبلاغ في القاعدة ولا يعود في
+	// الردّ، فوسمُ «حُوِّل» في اللوحة لا يظهر أبداً — **ويُحوَّل الطلبُ مرّتين
+	// فيُطبخ مرّتين.** حقلٌ يُكتب ولا يُقرأ ليس حقلاً، هو نيّة.
+	SentToMerchantAt *time.Time `json:"sent_to_merchant_at"`
+	// GoodsSettledTo مصيرُ بضاعة طلبٍ فشل: merchant استردّها · platform
+	// تحمّلتها المنصةُ ودفعت للمتجر · فارغٌ يعني **لم يُحسم بعد**.
+	GoodsSettledTo *string     `json:"goods_settled_to"`
+	Items          []OrderItem `json:"items,omitempty"`
+	Events         []Event     `json:"events,omitempty"`
+	Rating         *Rating     `json:"rating,omitempty"`
+	CreatedAt      time.Time   `json:"created_at"`
 }
 
 type OrderPage struct {
