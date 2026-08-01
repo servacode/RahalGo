@@ -173,10 +173,20 @@ export default function OrdersBoard() {
         {pending.length === 0 ? (
           <p className="text-sm text-ink-muted">{m.merchant.orders.empty}</p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+          /*
+            **بطاقاتٌ بعرضٍ محدود لا تمتدّ بامتداد الشاشة.**
+
+            كانت `md:grid-cols-2`، فالبطاقةُ الوحيدة تأخذ نصف الشاشة وزرُّ
+            القبول فيها يمتدّ ذراعاً كاملة. **وزرٌّ بعرض الشاشة لا يبدو أهمّ،
+            يبدو مكسوراً** — والعينُ تقرأ العرضَ الزائد فوضىً لا تأكيداً.
+
+            وأربعةُ أعمدة على الشاشات الواسعة: هذه بطاقاتُ **مطبخ** تُمسح بالعين
+            بسرعة، لا صفحاتُ تفصيل.
+          */
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {pending.map((o) => (
               <OrderCard key={o.id} order={o} highlight>
-                <Button onClick={() => setAccepting(o)} className="flex-1">
+                <Button onClick={() => setAccepting(o)}>
                   {m.merchant.orders.accept}
                 </Button>
                 <Button variant="danger" onClick={() => setRejecting(o)}>
@@ -192,7 +202,7 @@ export default function OrdersBoard() {
         <Column title={m.merchant.orders.accepted} icon={<IconSuccess size={16} />}>
           {accepted.map((o) => (
             <OrderCard key={o.id} order={o}>
-              <Button onClick={() => startPreparing(o)} className="flex-1">
+              <Button onClick={() => startPreparing(o)}>
                 {m.merchant.orders.startPreparing}
               </Button>
               <Button variant="danger" onClick={() => setCancelling(o)}>
@@ -363,7 +373,17 @@ function OrderCard({
         </div>
       )}
 
-      {children && <div className="mt-3 flex items-center gap-2">{children}</div>}
+      {/* **الأزرار تتقاسم السطر بالتساوي.**
+
+          كان زرُّ القبول `flex-1` وزرُّ الرفض بمقاسه الطبيعي، فيبتلع الأوّل كلَّ
+          الفراغ ويبدو الثاني ملصقاً به. **وزرٌّ يمتدّ ذراعاً لا يبدو أهمّ، يبدو
+          مكسوراً.** والأهميّةُ تُقال باللون لا بالعرض — والقبولُ ممتلئٌ والرفضُ
+          خفيف. */}
+      {children && (
+        <div className="mt-3 flex items-center gap-2 [&>button]:flex-1 [&>button]:!px-3">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
