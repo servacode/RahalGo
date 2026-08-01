@@ -4,11 +4,17 @@
 //
 //	make seed   أو   go run ./cmd/seed
 //
+// **ووضعٌ ثانٍ**: `go run ./cmd/seed -staff` يزرع **طاقم المنصة وحده** —
+// أدمن وعمليات ومالية، بلا متاجر ولا زبائن ولا أرصدة تجريبية. وهو ما يلزم
+// بعد تنظيف القاعدة لبدايةٍ نظيفة: **قاعدةٌ بلا أدمن قاعدةٌ لا يُدخَل إليها**،
+// وبقية الكيانات يصنعها صاحبها من اللوحة كما يصنعها في الإنتاج.
+//
 // ممنوع في الإنتاج: يرفض العمل إذا APP_ENV=production.
 package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -38,6 +44,9 @@ var accounts = []struct {
 }
 
 func main() {
+	staffOnly := flag.Bool("staff", false, "زراعة طاقم المنصة وحده (أدمن/عمليات/مالية) بلا بيانات تجريبية")
+	flag.Parse()
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal(err)
@@ -68,6 +77,10 @@ func main() {
 	// ---------- الحسابات والأدوار والمحافظ ----------
 	ids := map[string]string{} // phone → user id
 	for _, a := range accounts {
+		// وضع الطاقم: الأدوار الثلاثة التي تُدير المنصة لا التي تستعملها
+		if *staffOnly && a.Role != "admin" && a.Role != "ops" && a.Role != "finance" {
+			continue
+		}
 		hash, err := auth.HashPassword(a.Password)
 		if err != nil {
 			log.Fatal(err)
@@ -137,6 +150,30 @@ func main() {
 	}
 
 	// ---------- المتاجر بقوائمها ----------
+	//
+	// وضعُ الطاقم يتخطّاها ويتخطّى كود الخصم: **المناطق تبقى** لأن بلا منطقةٍ
+	// واحدة لا يُقبل أيّ طلب — وهي بنيةُ عملٍ لا بيانات عرض. أمّا المتاجر
+	// فيصنعها صاحبها من اللوحة كما يصنعها في الإنتاج.
+	if !*staffOnly {
+		seedDemo(ctx, tx, ids)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("✅ الزراعة اكتملت — الحسابات:")
+	for _, a := range accounts {
+		if *staffOnly && a.Role != "admin" && a.Role != "ops" && a.Role != "finance" {
+			continue
+		}
+		fmt.Printf("  %-14s %-28s %-10s %s\n", a.Phone, a.Name, a.Role, a.Password)
+	}
+	os.Exit(0)
+}
+
+// seedDemo البيانات التجريبية: متجران بقوائمهما وكود خصم ترحيبي.
+func seedDemo(ctx context.Context, tx pgx.Tx, ids map[string]string) {
 	seedMerchant(ctx, tx, merchantSeed{
 		Name: "مطعم قصر الشام", Category: "مطاعم", Phone: "0223456789",
 		Address: "شارع تل أبيض، مقابل الجامع الكبير", Desc: "مشاوي ووجبات شرقية",
