@@ -111,7 +111,17 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		                 WHERE t.user_id = $1 AND t.kind IN ('commission', 'adjustment')
 		                   AND o2.merchant_id = m.id), 0),
 		       (SELECT max(o.delivered_at) FROM orders o
-		        WHERE o.merchant_id = m.id AND o.status = 'delivered')
+		        WHERE o.merchant_id = m.id AND o.status = 'delivered'),
+		       -- **عدّادُ التفعيل — بشرط القاعدة حرفياً لا بشرطٍ يشبهه.**
+		       --
+		       -- العمولة محجوزة حتى يُسلّم المتجرُ عدداً من الطلبات، والقاعدة
+		       -- في orders.merchantActivated **تستثني ما اشتراه المندوبُ
+		       -- نفسه**. فلو عُدّ هنا بلا هذا الاستثناء لرأى «٥ من ٥» ولم يقبض
+		       -- شيئاً — **وعدّادٌ يقول «اكتمل» ومالٌ لا يأتي أسوأ من لا عدّاد**:
+		       -- الأول يجعله يشكّ في المنصة، والثاني يجعله يسأل.
+		       (SELECT count(*) FROM orders o
+		        WHERE o.merchant_id = m.id AND o.status = 'delivered'
+		          AND o.customer_id IS DISTINCT FROM m.sales_rep_user_id)
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
@@ -138,16 +148,23 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		Cancelled    int        `json:"cancelled_orders"`
 		MyCommission int64      `json:"my_commission"`
 		LastOrderAt  *time.Time `json:"last_order_at"`
+		// ActivationDone كم طلباً احتُسب نحو التفعيل، و**ActivationNeeded** كم
+		// يلزم. متساويان أو أكثر يعني أن العمولة تجري.
+		ActivationDone   int   `json:"activation_done"`
+		ActivationNeeded int64 `json:"activation_needed"`
 	}
+	// **العتبةُ تُقرأ مرّةً لا لكل متجر** — وهي إعدادُ منصةٍ لا خاصّيةُ متجر.
+	activationNeeded := s.settings.GetInt(r.Context(), "sales.activation_orders")
 	out := []repMerchant{}
 	for rows.Next() {
 		var m repMerchant
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.CategoryName, &m.LogoThumbURL,
 			&m.Status, &m.JoinedAt, &m.OwnerPhone, &m.Delivered, &m.Cancelled,
-			&m.MyCommission, &m.LastOrderAt); err != nil {
+			&m.MyCommission, &m.LastOrderAt, &m.ActivationDone); err != nil {
 			s.respondErr(w, err)
 			return
 		}
+		m.ActivationNeeded = activationNeeded
 		m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
 		out = append(out, m)
 	}

@@ -71,6 +71,10 @@ interface RepMerchant {
   delivered_orders: number;
   cancelled_orders: number;
   my_commission: number;
+  /** كم طلباً احتُسب نحو تفعيل العمولة — بشرط القاعدة نفسه */
+  activation_done: number;
+  /** كم يلزم لتبدأ العمولة — 0 يعني لا عتبة */
+  activation_needed: number;
   last_order_at: string | null;
 }
 
@@ -224,6 +228,23 @@ export default function ClientsPage() {
                 ]}
                 footer={
                   <>
+                    {/* **لماذا لا عمولة بعد.**
+
+                        العمولة محجوزة حتى يُثبت المتجرُ أنه يعمل. وكانت القاعدة
+                        تُطبَّق في الخادم **ولا تُقال في شاشة**: يرى المندوبُ
+                        طلباتٍ مُسلَّمة وعمولةً صفراً، ولا شيء يربط بينهما —
+                        **فيظنّ المنصةَ أكلت حقَّه.**
+
+                        وتختفي حين يُفعَّل: خبرٌ انتهى مفعولُه يبقى ضجيجاً. */}
+                    {mr.activation_needed > 1 &&
+                      mr.activation_done < mr.activation_needed && (
+                        <span className="text-warning">
+                          {C.activationHint
+                            .replace("{done}", fmtNum(mr.activation_done))
+                            .replace("{needed}", fmtNum(mr.activation_needed))}
+                          {" · "}
+                        </span>
+                      )}
                     {m.rep.joinedAt} <span dir="ltr">{fmtDate(mr.joined_at)}</span>
                     {" · "}
                     {mr.last_order_at

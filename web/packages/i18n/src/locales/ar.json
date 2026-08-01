@@ -1609,7 +1609,8 @@
       "contact": "مراسلة",
       "activeToday": "اليوم",
       "activeDays": "منذ {n} يوم",
-      "statCancelled": "ملغي"
+      "statCancelled": "ملغي",
+      "activationHint": "العمولة تبدأ بعد {needed} طلبات مُسلَّمة — بلغتَ {done}"
     },
     "target": {
       "title": "هدف الشهر",
