@@ -34,7 +34,7 @@ export function TopBar({
 }) {
   return (
     <header
-      className={`mb-3 flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-2.5 shadow-sm ${
+      className={`mb-3 flex items-center gap-3 rounded-card border border-line bg-surface px-5 py-3.5 shadow-sm ${
         sticky ? "sticky top-3 z-40" : ""
       }`}
     >
@@ -51,12 +51,17 @@ export function TopBar({
  * وإن كان كلٌّ منها سليماً وحده. التفاوت في المقاس يُقرأ فوضىً حتى لو لم يُلحظ
  * سببه، والصورة الشخصية وحدها تكبر لأنها هوية لا رمز.
  */
-export const TOPBAR_ICON = 17;
-export const TOPBAR_AVATAR = 30;
+//
+// **وكبر المقاس بطلب المالك (٢٠٢٦-٠٨-٠١)**: شريطٌ ضيّق برموزٍ صغيرة يُقرأ
+// بمشقّة — والرموز بلا تسميات لا تُفهم إلا بالنظر إليها. والزيادةُ هنا
+// مركزيةٌ فيرثها الخمسة معاً؛ ولو كُبّر في الموقع وحده لانفصل شكلُه عن اللوحات
+// وهي منصّةٌ واحدة.
+export const TOPBAR_ICON = 20;
+export const TOPBAR_AVATAR = 36;
 
 /** ارتفاع وحواف موحّدة لكل عناصر الشريط — لا يقرّر كل عنصر مقاسه بنفسه. */
 const chipBase =
-  "flex items-center gap-1.5 rounded-control px-2.5 py-1.5 text-sm transition-colors";
+  "flex items-center gap-2 rounded-control px-3 py-2 text-sm transition-colors";
 
 const chipTones = {
   /** محايد — اختصار عادي */
