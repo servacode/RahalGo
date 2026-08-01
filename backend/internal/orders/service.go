@@ -16,6 +16,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -45,10 +46,18 @@ type Service struct {
 	pub      Publisher
 	notify   Notifier
 	logger   *slog.Logger
+	// settings قواعدُ العمل التي يملك المالك ضبطها من اللوحة.
+	//
+	// **اختيارية**: بلا حقنٍ يعمل المحرّك بسلوكه الافتراضي، فاختبارات التسويات
+	// لا تحتاج مخزناً لتفحص حساباً. ومن يحتاجها يحقنها عند الإقلاع.
+	settings *settings.Store
 }
 
 // SetNotifier يحقن خدمة الإشعارات بعد بناء الخادم (لا إشعارات قبلها).
 func (s *Service) SetNotifier(n Notifier) { s.notify = n }
+
+// SetSettings يحقن مخزن الإعدادات (يُنادى مرّة عند الإقلاع).
+func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
 
 func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wallet.Service,
 	cashboxSvc *cashbox.Service, pub Publisher, logger *slog.Logger) *Service {
@@ -121,6 +130,26 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	items, subtotal, err := s.priceItems(ctx, in.MerchantID, in.Items)
 	if err != nil {
 		return nil, err
+	}
+
+	// **لا طلب قبل توثيق واتساب.**
+	//
+	// الرقمُ الوهميّ يعني سائقاً يقف أمام بابٍ لا أحد فيه، وطلباً نقدياً لا
+	// يُقبض، ومتجراً حضّر بضاعةً لا تُستلَم. والخسارة تقع على ثلاثة أطراف لا
+	// على من كتب الرقم.
+	//
+	// **والتحقق هنا لا في الواجهة وحدها**: الواجهة تُخفي الزرّ، والخادم يمنع
+	// الفعل. ومن يستطيع أن ينادي النقطة مباشرةً لا يوقفه إخفاءُ زرّ.
+	if s.settings != nil && s.settings.GetBool(ctx, "customers.require_whatsapp") {
+		var verified bool
+		if err := s.db.QueryRow(ctx,
+			`SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`,
+			customerID).Scan(&verified); err != nil {
+			return nil, err
+		}
+		if !verified {
+			return nil, ErrWhatsAppRequired
+		}
 	}
 
 	// منطقة التسليم من الدبوس

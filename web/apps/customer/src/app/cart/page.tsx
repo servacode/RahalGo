@@ -11,6 +11,7 @@ import {
   IconEdit,
   IconCheck,
   IconLocation,
+  IconWhatsApp,
   Button,
   Input,
   Select,
@@ -58,6 +59,12 @@ export default function CartPage() {
   const [lat, setLat] = useState(RAQQA.lat);
   const [lng, setLng] = useState(RAQQA.lng);
 
+  useEffect(() => {
+    api<{ whatsapp_verified: boolean }>("/api/v1/me/summary")
+      .then((s) => setWaVerified(s.whatsapp_verified))
+      .catch(() => setWaVerified(null));
+  }, []);
+
   // العنوان الافتراضي يُملأ تلقائياً — من له عنوانٌ واحد لا يُسأل عنه
   useEffect(() => {
     api<SavedAddress[]>("/api/v1/my/addresses")
@@ -79,6 +86,18 @@ export default function CartPage() {
   const [promo, setPromo] = useState("");
   const [notes, setNotes] = useState("");
   const [balance, setBalance] = useState<number | null>(null);
+
+  /**
+   * توثيقُ واتساب — شرطُ الطلب.
+   *
+   * الرقمُ الوهميّ يعني سائقاً يقف أمام بابٍ لا أحد فيه، وطلباً نقدياً لا
+   * يُقبض، ومتجراً حضّر بضاعةً لا تُستلَم. **والخسارة تقع على ثلاثة أطراف لا
+   * على من كتب الرقم.**
+   *
+   * و`null` تعني «لم نعرف بعد» لا «غير موثَّق»: لو بدأناها `false` لظهرت
+   * اللافتة لحظةً لكل زبونٍ موثَّق — **ووميضُ تحذيرٍ كاذب يُفقد الثقة بكل تحذير**.
+   */
+  const [waVerified, setWaVerified] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -400,7 +419,9 @@ export default function CartPage() {
             >
               <option value="cash">{m.orders.payment.cash}</option>
               <option value="wallet">{m.orders.payment.wallet}</option>
-              <option value="mixed">{m.orders.payment.mixed}</option>
+              {/* لا «مختلط»: أُلغي من المحرّك — مصدرا دفعٍ ومسارا تسويةٍ
+                  ومسارا استرجاع لطلبٍ واحد. **وخيارٌ يُعرض ويرفضه الخادم أسوأ
+                  من خيارٍ غائب**: من اختاره ظنّ أن النظام انكسر. */}
             </Select>
             {balance != null && payment !== "cash" && (
               <p className="text-xs text-ink-muted">
@@ -432,9 +453,31 @@ export default function CartPage() {
             {error && (
               <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
             )}
+
+            {/* التوثيق يُقال **قبل** الملء لا عند الرفض: من ملأ سلّته ثم رُدّ
+                يشعر أنه خُدع، ومن عرف أوّلاً يوثّق ويمضي. */}
+            {waVerified === false && (
+              <div className="rounded-card border border-warning/40 bg-warning/5 p-4">
+                <p className="flex items-center gap-2 font-medium text-warning">
+                  <IconWhatsApp size={17} />
+                  {m.site.cart.waTitle}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+                  {m.site.cart.waHint}
+                </p>
+                <Link
+                  href="/account"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-control bg-warning px-4 py-2 text-sm font-medium text-white"
+                >
+                  <IconWhatsApp size={15} />
+                  {m.site.cart.waAction}
+                </Link>
+              </div>
+            )}
+
             <Button
               onClick={placeOrder}
-              disabled={busy || !address || !zone}
+              disabled={busy || !address || !zone || waVerified === false}
               className="w-full py-3 text-base"
             >
               {busy ? m.site.cart.placing : m.site.cart.placeOrder}

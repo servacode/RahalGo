@@ -126,6 +126,11 @@ var Catalog = []Def{
 	// **جديد**: كان `maxAddresses = 10` ثابتاً في المعالِج.
 	{Key: "customers.max_addresses", Group: GroupCustomers, Kind: KindInt,
 		Min: 1, Max: 50, Unit: "address", Default: 10},
+	// **إعدادٌ لا شرطٌ مضمَّن**: قاعدةُ عملٍ يملك المالك تشديدها وإرخاءها. وقد
+	// يحتاج إرخاءها يوماً تعطّل فيه بوت واتساب — وقاعدةٌ مضمَّنة في الشيفرة
+	// تعني توقّف المنصة حتى نشرٍ جديد.
+	{Key: "customers.require_whatsapp", Group: GroupCustomers, Kind: KindBool,
+		Default: true},
 
 	// ── السحوبات ──────────────────────────────────────────────────────────
 	// **جديد**: لم يكن حدٌّ أدنى. فطلبُ سحبٍ بليرةٍ واحدة يمرّ بدورة الموافقة

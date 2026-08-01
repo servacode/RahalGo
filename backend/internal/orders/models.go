@@ -14,6 +14,7 @@ var (
 	ErrBadItems           = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
 	ErrOutOfZone          = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
 	ErrBelowMinOrder      = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
+	ErrWhatsAppRequired   = httpx.NewError(http.StatusForbidden, "whatsapp_required", "errors.whatsapp_required")
 	ErrInvalidPromo       = httpx.NewError(http.StatusBadRequest, "invalid_promo", "errors.invalid_promo")
 	ErrBadTransition      = httpx.NewError(http.StatusConflict, "invalid_transition", "errors.invalid_transition")
 	ErrNeedsDriver        = httpx.NewError(http.StatusConflict, "driver_required", "errors.driver_required")
@@ -106,7 +107,7 @@ type CreateInput struct {
 	AddressText   string      `json:"address_text"`
 	Lat           float64     `json:"lat"`
 	Lng           float64     `json:"lng"`
-	PaymentMethod string      `json:"payment_method"` // cash | wallet | mixed
+	PaymentMethod string      `json:"payment_method"` // cash | wallet
 	PromoCode     string      `json:"promo_code"`
 	Notes         string      `json:"notes"`
 }

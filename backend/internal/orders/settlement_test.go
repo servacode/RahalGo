@@ -312,6 +312,79 @@ func TestCreate_WalletChargeFailure_LeavesNoOrder(t *testing.T) {
 	}
 }
 
+// TestCreate_RequiresWhatsAppVerified لا طلب قبل توثيق واتساب.
+//
+// الرقمُ الوهميّ يعني سائقاً يقف أمام بابٍ لا أحد فيه، وطلباً نقدياً لا يُقبض،
+// ومتجراً حضّر بضاعةً لا تُستلَم. **والخسارة تقع على ثلاثة أطراف لا على من كتب
+// الرقم** — ولذلك الحارسُ في المحرّك لا في الواجهة: إخفاءُ زرٍّ لا يوقف من
+// ينادي النقطة مباشرةً.
+func TestCreate_RequiresWhatsAppVerified(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	f := setup(t, "pending", 1, 0, 0)
+
+	// الحارس يقرأ إعداداً — وبلا حقنِ المخزن لا يعمل أصلاً (وهو ما يجعل بقية
+	// اختبارات التسويات تمضي بلا توثيق).
+	f.svc.SetSettings(settings.NewStore(pool))
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO app_settings (key, value) VALUES ('customers.require_whatsapp','true'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value`); err != nil {
+		t.Fatalf("تعذّر ضبط الإعداد: %v", err)
+	}
+
+	var sectionID, itemID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO menu_sections (merchant_id, name, sort_order) VALUES ($1, 'قسم', 1)
+		RETURNING id`, f.merchantID).Scan(&sectionID); err != nil {
+		t.Fatalf("قسم: %v", err)
+	}
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO menu_items (merchant_id, section_id, name, price, available)
+		VALUES ($1, $2, 'صنف', 20000, true) RETURNING id`,
+		f.merchantID, sectionID).Scan(&itemID); err != nil {
+		t.Fatalf("صنف: %v", err)
+	}
+	var zoneID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO delivery_zones (name, delivery_fee, min_order, active, center, radius_m)
+		VALUES ('منطقة اختبار التوثيق', 5000, 0, true,
+		        ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography, 50000)
+		RETURNING id`).Scan(&zoneID); err != nil {
+		t.Fatalf("منطقة: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM delivery_zones WHERE id = $1`, zoneID)
+	})
+
+	// رصيدٌ يكفي — كي يكون التوثيق هو المانع الوحيد، لا نقصُ المال.
+	if _, err := f.wallet.Apply(ctx, f.customer, 100_000, "topup", "", "رصيد اختبار", nil); err != nil {
+		t.Fatalf("تعذّر شحن المحفظة: %v", err)
+	}
+
+	in := orders.CreateInput{
+		CustomerID:    f.customer,
+		MerchantID:    f.merchantID,
+		Items:         []orders.ItemInput{{MenuItemID: itemID, Qty: 1}},
+		AddressText:   "عنوان اختبار",
+		Lat:           35.9528,
+		Lng:           39.0079,
+		PaymentMethod: "wallet",
+	}
+
+	if _, err := f.svc.Create(ctx, f.customer, []string{"customer"}, in, "127.0.0.1"); err == nil {
+		t.Fatal("قُبل طلبٌ من حسابٍ غير موثَّق")
+	}
+
+	// ويمرّ بعد التوثيق — كي لا يمرّ الاختبار لأن كل شيءٍ مرفوض
+	if _, err := pool.Exec(ctx,
+		`UPDATE users SET whatsapp_verified_at = now() WHERE id = $1`, f.customer); err != nil {
+		t.Fatalf("تعذّر التوثيق: %v", err)
+	}
+	if _, err := f.svc.Create(ctx, f.customer, []string{"customer"}, in, "127.0.0.1"); err != nil {
+		t.Fatalf("رُفض طلبٌ من حسابٍ موثَّق: %v", err)
+	}
+}
+
 func countOrders(t *testing.T, pool interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 }, customerID string) int {

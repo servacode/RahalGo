@@ -43,7 +43,7 @@ interface OrderRow {
   merchant_name: string;
   driver_phone: string | null;
   status: string;
-  payment_method: "cash" | "wallet" | "mixed";
+  payment_method: "cash" | "wallet";
   subtotal: number;
   delivery_fee: number;
   discount: number;

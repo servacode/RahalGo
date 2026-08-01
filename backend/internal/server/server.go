@@ -58,6 +58,8 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	geoSvc := geo.New(cfg.GeocoderURL, rdb, logger)
 	// محرك الطلبات يحتاج الإشعارات (عمولة المندوب) وقد بُني قبلها — نحقنها الآن.
 	ordersSvc.SetNotifier(notify)
+	// وقواعدَ العمل من اللوحة: اشتراطُ توثيق واتساب قبل الطلب وما يليه.
+	ordersSvc.SetSettings(settingsStore)
 	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
