@@ -7,26 +7,27 @@
  * فتصبح متاحة كفئات: bg-primary, text-accent, rounded-card, ...
  */
 @theme {
-  /* ألوان العلامة */
-  --color-primary: #0e7490;
-  --color-primary-dark: #155e75;
-  --color-primary-light: #ecfeff;
-  --color-accent: #f59e0b;
-  --color-accent-dark: #d97706;
+  /* ألوان العلامة — أزرقُ اللوغو وبرتقاليُّه (tokens.ts فيه الشرح) */
+  --color-primary: #14708f;
+  --color-primary-dark: #0e5570;
+  --color-primary-light: #e6f2f7;
+  --color-accent: #f7941d;
+  --color-accent-dark: #c2740a;
+  --color-accent-light: #fff3e3;
 
   /* الألوان الوظيفية (الحالات) */
   --color-success: #16a34a;
-  --color-warning: #eab308;
+  --color-warning: #b45309;
   --color-danger: #dc2626;
   --color-info: #0284c7;
   --color-violet: #7c3aed;
 
-  /* المحايدة */
-  --color-ink: #1e293b;
-  --color-ink-muted: #64748b;
-  --color-line: #e2e8f0;
+  /* المحايدة — مصبوغةٌ نحو الأزرق بدرجة */
+  --color-ink: #152b33;
+  --color-ink-muted: #55707c;
+  --color-line: #dce7eb;
   --color-surface: #ffffff;
-  --color-page: #f8fafc;
+  --color-page: #f5f9fa;
 
   /* الخط المعتمد (BRAND.md) — ملفاته تُحمّل من @rahalgo/ui/fonts.css */
   --font-sans: "Tajawal", system-ui, sans-serif;
@@ -49,6 +50,33 @@
  * والأزرار (لا معنى لزرّ على ورق)، ويُطبع المقصود وحده بعرض الصفحة كاملاً.
  * العنصر المراد طبعه يُعلَّم data-print="sheet"، وما لا يُطبع بـ .no-print.
  */
+/*
+ * **خيطُ العلامة** — شريطٌ رفيعٌ يمضي من الأزرق إلى البرتقاليّ.
+ *
+ * هو دمجُ اللونين في عنصرٍ واحد، **ويُستعمل في ثلاثة مواضعَ لا أكثر**:
+ * ترويسةُ الورق، وبطاقةُ الدخول، وحافّةُ الشريط العلويّ. **والتدرّجُ إن تكرّر
+ * صار زخرفةً، وإن قلّ صار توقيعاً** — والفرقُ بينهما عددُ مرّاتِ ظهوره.
+ *
+ * ويتّجه من `start` إلى `end` فيتبع اتجاهَ الصفحة: يبدأ أزرقَ من جهة العلامة
+ * وينتهي برتقالياً — **كالطريق في اللوغو**.
+ */
+.brand-rule {
+  background-image: linear-gradient(
+    to left,
+    var(--color-primary) 0%,
+    var(--color-primary) 45%,
+    var(--color-accent) 100%
+  );
+}
+[dir="ltr"] .brand-rule {
+  background-image: linear-gradient(
+    to right,
+    var(--color-primary) 0%,
+    var(--color-primary) 45%,
+    var(--color-accent) 100%
+  );
+}
+
 @media print {
   .no-print,
   header,

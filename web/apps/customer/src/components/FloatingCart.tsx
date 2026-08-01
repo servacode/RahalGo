@@ -82,13 +82,18 @@ export function FloatingCart() {
       className="fixed bottom-24 end-8 z-50 block transition-transform hover:scale-110 active:scale-95"
     >
       <span
-        className={`relative block text-primary [filter:drop-shadow(0_5px_12px_rgb(0_0_0/0.3))] ${
+        /* **السلّةُ برتقالية — وهي أظهرُ ما تتحرّك في الموقع.**
+
+             قاعدةُ العلامة: الأزرقُ ما ثبت والبرتقاليُّ ما يتحرّك. وهي تدور
+             وتتقدّم وتعود — **فلونُها البرتقاليُّ ليس زينةً، هو تطبيقُ
+             القاعدة على أوضح مثالٍ لها.** وتُميَّز به عن كل زرقاء الشاشة. */
+        className={`relative block text-accent [filter:drop-shadow(0_5px_12px_rgb(0_0_0/0.3))] ${
           pop ? "cart-pop" : "cart-roll"
         }`}
       >
         {/* الحلقة خلف العربة — أثرُ لمسةٍ يختفي، لا زخرفة دائمة */}
         {pop && (
-          <span className="cart-ring pointer-events-none absolute inset-0 -z-10 rounded-badge bg-primary/35" />
+          <span className="cart-ring pointer-events-none absolute inset-0 -z-10 rounded-badge bg-accent/35" />
         )}
 
         <IconCart size={56} strokeWidth={1.7} />

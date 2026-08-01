@@ -123,7 +123,12 @@ export function Timeline({
                   n.state === "done"
                     ? TONE_SOLID[tone]
                     : n.state === "current"
-                      ? `${TONE_SOLID[tone]} ring-4 ring-primary/20`
+                      ? // **الجاريةُ برتقالية — والمنتهيةُ زرقاء.**
+                        //
+                        // قاعدةُ العلامة: الأزرقُ ما ثبت، والبرتقاليُّ ما
+                        // يتحرّك. **وهنا تُرى القاعدةُ عاملةً**: عينُ الزبون
+                        // تقع على مكانِ طلبه الآن قبل أن تقرأ حرفاً.
+                        "bg-accent text-white ring-4 ring-accent/20"
                       : "border-2 border-line bg-surface text-ink-muted"
                 }`}
               >

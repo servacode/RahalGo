@@ -497,18 +497,21 @@ export function EntityCard({
  */
 export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | string }) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-4 border-b border-line pb-4">
+    <>
+    <div className="mb-4 flex items-center justify-between gap-4 pb-4">
       {/* العلامة — نفسُ علامة الشاشة، فالورقةُ والتطبيقُ شيءٌ واحد */}
       {/* **العلامةُ تُطبع.**
 
           المتصفّحاتُ لا تطبع الخلفياتِ افتراضاً — فمربّعٌ ملوّنٌ بحرفٍ أبيض
           يخرج **بياضاً على بياض**: ورقةٌ رسمية بلا علامة. والوسمُ هنا تلتقطه
           قاعدةُ طباعةٍ تقلبه إلى إطارٍ وحرفٍ أسودين. */}
+      {/* **الحرفُ أزرقُ والطريقُ تحته برتقاليّ** — اختصارُ اللوغو في مربّع. */}
       <div
         data-print-mark
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary text-lg font-bold text-white"
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary text-lg font-bold text-white"
       >
         {m.terms.brandInitial}
+        <span aria-hidden className="absolute inset-x-0 bottom-0 h-1.5 bg-accent" />
       </div>
 
       <div className="min-w-0 flex-1 text-center">
@@ -524,5 +527,9 @@ export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | str
         <p dir="ltr">{fmtTime(printedAt)}</p>
       </div>
     </div>
+    {/* **توقيعُ العلامة** — خيطٌ يمضي من الأزرق إلى البرتقاليّ تحت الترويسة.
+        وهو حدُّها في الوقت نفسه، فلا يزيد على الورقة سطراً. */}
+    <div aria-hidden className="brand-rule -mt-4 mb-4 h-[3px] rounded-badge" />
+    </>
   );
 }
