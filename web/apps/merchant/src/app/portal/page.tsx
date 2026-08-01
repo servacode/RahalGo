@@ -188,10 +188,9 @@ export default function OrdersBoard() {
               <OrderCard key={o.id} order={o} highlight>
                 {/* **حين تُدير المنصةُ الطلبات لا أزرارَ هنا.**
 
-                    وإخفاءُ الأزرار وحده لا يكفي — الخادمُ يبقى يقبل الانتقال
-                    من دور المتجر. لكنّ هذا وضعٌ يختاره المالك لمتجرٍ لا يجلس
-                    إلى شاشةٍ أصلاً، لا حاجزُ أمانٍ ضدّ خصم. **ومن فتح بوابته
-                    وقبل طلبَه فقد فعل ما يُراد به.** */}
+                    والحكمُ في الخادم لا هنا (`orders/modes.go`): من استدعى
+                    الواجهةَ البرمجية مباشرةً يُردّ. **وهذه الشاشةُ تعرض
+                    السياسةَ ولا تصنعها.** */}
                 {selfManage && (
                   <>
                     <Button onClick={() => setAccepting(o)}>
@@ -212,12 +211,16 @@ export default function OrdersBoard() {
         <Column title={m.merchant.orders.accepted} icon={<IconSuccess size={16} />}>
           {accepted.map((o) => (
             <OrderCard key={o.id} order={o}>
-              <Button onClick={() => startPreparing(o)}>
-                {m.merchant.orders.startPreparing}
-              </Button>
-              <Button variant="danger" onClick={() => setCancelling(o)}>
-                {MO.cancelOrder}
-              </Button>
+              {selfManage && (
+                <>
+                  <Button onClick={() => startPreparing(o)}>
+                    {m.merchant.orders.startPreparing}
+                  </Button>
+                  <Button variant="danger" onClick={() => setCancelling(o)}>
+                    {MO.cancelOrder}
+                  </Button>
+                </>
+              )}
             </OrderCard>
           ))}
           {accepted.length === 0 && <EmptyState title={m.merchant.orders.empty} />}
@@ -226,10 +229,14 @@ export default function OrdersBoard() {
         <Column title={m.merchant.orders.preparing} icon={<IconOrder size={16} />}>
           {preparing.map((o) => (
             <OrderCard key={o.id} order={o}>
-              <ReadyControl order={o} onDone={load} />
-              <Button variant="danger" onClick={() => setCancelling(o)}>
-                {MO.cancelOrder}
-              </Button>
+              {selfManage && (
+                <>
+                  <ReadyControl order={o} onDone={load} />
+                  <Button variant="danger" onClick={() => setCancelling(o)}>
+                    {MO.cancelOrder}
+                  </Button>
+                </>
+              )}
             </OrderCard>
           ))}
           {preparing.length === 0 && <EmptyState title={m.merchant.orders.empty} />}

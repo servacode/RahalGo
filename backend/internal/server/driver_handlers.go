@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -252,8 +253,19 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	// **ما لا يُستدرَك يلزمه سبب — والسائقُ كالعمليات في هذا.**
+	//
+	// كان الحارسُ على اللوحة وحدها، فيُفشل السائقُ طلباً بلا كلمة. و«فشل»
+	// بلا سبب تُقرأ على وجوهٍ: أالزبونُ لم يردّ؟ أالمطعمُ مغلق؟ أالسائق
+	// تعب؟ — **ثلاثةُ أخطاءٍ في ثلاث جهاتٍ يُخفيها لفظٌ واحد.**
+	note := strings.TrimSpace(req.Note)
+	if requiresReason[req.To] && note == "" {
+		s.respondErr(w, errReasonRequired)
+		return
+	}
+
 	o, err := s.orders.Transition(r.Context(), userIDFrom(r), []string{"driver"},
-		orderID, req.To, clip(req.Note, 300))
+		orderID, req.To, clip(note, 300))
 	if err != nil {
 		s.respondErr(w, err)
 		return

@@ -158,6 +158,27 @@ const OPS_NEXT: Record<string, string[]> = {
   delivered: ["refunded"],
 };
 
+/**
+ * ما تملكه العملياتُ فعلاً بعد حساب الوضع — مرآةُ `orders/modes.go`.
+ *
+ * **والخادمُ هو الحَكَم**: هذه الدالة تُخفي ما سيُردّ، فلا يضغط الموظّفُ زرّاً
+ * يعتذر. ولو انحرفت عن الخادم لظهر زرٌّ لا يعمل — **وهو أخفُّ ضرراً من زرٍّ
+ * يعمل ولا يجب أن يعمل**.
+ */
+function opsNext(status: string, selfManage: boolean, hasDriver: boolean): string[] {
+  let next = OPS_NEXT[status] ?? [];
+  // **المتجر يدير — والمنصةُ عينٌ لا يد**: القبولُ والرفضُ اختصاصُه.
+  if (selfManage && status === "pending") {
+    next = next.filter((t) => t !== "accepted" && t !== "rejected");
+  }
+  // **وبعد أن يمسكه سائق، لا تُلغيه العمليات**: هو عند الباب يرى ما لا تراه
+  // غرفةُ العمليات، وإلغاؤها من بعيدٍ يُلغي طلباً ربّما استُلم فعلاً.
+  if (!selfManage && hasDriver) {
+    next = next.filter((t) => t !== "cancelled");
+  }
+  return next;
+}
+
 function translateKey(key: string): string {
   let node: unknown = m;
   for (const part of key.split(".")) {
@@ -550,7 +571,8 @@ function OrderActions({
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
 
-  const next = OPS_NEXT[o.status] ?? [];
+  // **ما تملكه العملياتُ بعد حساب الوضع** — لا الخريطةُ الخام.
+  const next = opsNext(o.status, selfManage, o.driver_name !== null);
 
   // **الإسنادُ اليدوي مخرجٌ لا طريق.** السائقون يلتقطون من الطابور بأنفسهم
   // (تطبيق :3005)، وهذا لمن لم يلتقطه أحد. ولذلك يُجلب السائقون **عند فتح

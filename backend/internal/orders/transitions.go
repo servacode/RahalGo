@@ -38,7 +38,14 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 		return nil, err
 	}
 
-	if !canTransition(from, to, actorRoles) {
+	// **الوضعُ يُنقّي الأدوارَ ثم تُسأل الخريطة** — فحكمُ السياسة في الخادم
+	// لا في الشاشة. (انظر modes.go)
+	//
+	// وبلا مخزن إعدادات يُفترض «المتجر يدير»: هو الأصل، **والافتراضُ عند
+	// الجهل يجب أن يكون أقلَّ الوضعين تدخّلاً من المنصة**.
+	selfManage := s.settings == nil ||
+		s.settings.GetBool(ctx, "merchants.self_manage_orders")
+	if !canTransition(from, to, rolesUnderMode(selfManage, from, to, actorRoles, driverID != nil)) {
 		return nil, ErrBadTransition
 	}
 	// لا استلام بلا سائق مسند

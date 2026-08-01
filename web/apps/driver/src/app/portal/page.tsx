@@ -413,11 +413,21 @@ function TaskCard({
         ) : (
           <span />
         )}
-        {o.status === "at_dropoff" && (
+        {/* **المخرجُ عند الطرفين — لا عند الزبون وحده.**
+
+            كان الإفشالُ متاحاً عند باب الزبون فقط. فلو وصل السائقُ إلى المطعم
+            ووجده **مغلقاً**، أو لم تصله الرسالةُ أصلاً، أو رفض التحضير —
+            **بقي الطلبُ معلّقاً بلا نهاية ممكنة**: مالُ الزبون محجوز، والسائقُ
+            مربوطٌ بطلبٍ لا يُقفل وسقفُه النقديّ مشغولٌ به.
+
+            **وهو من هناك، فهو من يقول.** واللفظُ يختلف بالموضع: عند المطعم
+            «المطعم لم يسلّمني»، وعند الزبون «الزبون لم يستلم». و«فشل» وحدها
+            تُخفي ثلاثة أخطاءٍ في ثلاث جهات. */}
+        {(o.status === "at_pickup" || o.status === "at_dropoff") && (
           <Button variant="ghost" disabled={busy} onClick={onFail} className="text-danger">
             <span className="flex items-center gap-1.5">
               <IconWarning size={15} />
-              {D.act.failed}
+              {o.status === "at_pickup" ? D.act.failedAtPickup : D.act.failed}
             </span>
           </Button>
         )}
