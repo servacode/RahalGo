@@ -20,5 +20,6 @@ export {
 } from "./provider";
 export { homeFor, portalFor, goTo, routeByRole, safeNext, APP_URLS, type Destination } from "./routing";
 export { LoginCard, errText } from "./LoginCard";
+export { PanelLogin } from "./PanelLogin";
 export { SsoPage } from "./SsoPage";
 export { PasswordGate } from "./PasswordGate";

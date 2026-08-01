@@ -1,20 +1,30 @@
 "use client";
 
-/** لا شاشة دخول خاصة بهذه اللوحة — الدخول موحّد من تطبيق المنصة، والتوجيه بالدور. */
+/**
+ * باب هذه اللوحة — غلافٌ رفيع حول `PanelLogin` المركزي.
+ *
+ * كان تحويلاً إلى بوابة الزبون، فاستحال فتحُ لوحتين بحسابين: البوابة لا تعرض
+ * النموذج لمن هو داخلٌ أصلاً، والخروجُ لتفريغها يقتل الجلسة التي سلّمَت إليها.
+ * والتعليل الكامل في `packages/auth/src/PanelLogin.tsx`.
+ */
 
-import { useEffect } from "react";
-import { APP_URLS } from "@rahalgo/auth";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { PanelLogin } from "@rahalgo/auth";
+import { isDriver } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
-export default function LoginRedirect() {
-  useEffect(() => {
-    window.location.replace(`${APP_URLS.customer()}/login`);
-  }, []);
+export default function LoginPage() {
+  const router = useRouter();
   return (
-    <main className="flex flex-1 items-center justify-center text-ink-muted">
-      {m.common.loading}
-    </main>
+    <PanelLogin
+      title={m.driver.loginTitle}
+      subtitle={m.driver.loginSubtitle}
+      allows={isDriver}
+      notAllowed={m.driver.notAllowed}
+      home="/portal"
+      replace={(href) => router.replace(href)}
+    />
   );
 }

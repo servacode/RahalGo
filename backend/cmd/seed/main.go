@@ -12,6 +12,9 @@
 //   - `go run ./cmd/seed -drivers` يزرع **ثلاثة سائقين خارج الدوام**. والعدد
 //     ليس اعتباطاً: الطابور مشترك، وسائقٌ واحد لا يُظهر التنافس عليه ولا سقفَ
 //     الطلبات المتزامنة ولا الحاجةَ إلى الإسناد اليدوي.
+//   - `go run ./cmd/seed -customer` يزرع **زبوناً بعنوانَين ورصيدِ محفظة**.
+//     والرصيد **مُقيَّدٌ لا مكتوب**: الرصيد عمودٌ مشتقّ من دفتر، وكتابتُه بلا
+//     قيدٍ يقابله تُنتج محفظةً بمالٍ لا مصدر له.
 //   - `go run ./cmd/seed -staff` يزرع **طاقم المنصة وحده** —
 //
 // أدمن وعمليات ومالية، بلا متاجر ولا زبائن ولا أرصدة تجريبية. وهو ما يلزم
@@ -56,6 +59,7 @@ func main() {
 	staffOnly := flag.Bool("staff", false, "زراعة طاقم المنصة وحده (أدمن/عمليات/مالية) بلا بيانات تجريبية")
 	storeOnly := flag.Bool("store", false, "زراعة متجرٍ واحد كامل وصاحبه ومندوبه — ولا شيء غيره")
 	driversOnly := flag.Bool("drivers", false, "زراعة ثلاثة سائقين خارج الدوام — ولا شيء غيرهم")
+	customerOnly := flag.Bool("customer", false, "زراعة زبونٍ بعنوانَين ورصيدِ محفظةٍ مُقيَّد — ولا شيء غيره")
 	flag.Parse()
 
 	cfg, err := config.Load()
@@ -86,12 +90,15 @@ func main() {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	// أوضاعٌ مركَّزة: كلٌّ يزرع ما يخصّه ولا يمرّ ببقية الزراعة
-	if *storeOnly || *driversOnly {
+	if *storeOnly || *driversOnly || *customerOnly {
 		if *storeOnly {
 			seedStore(ctx, tx)
 		}
 		if *driversOnly {
 			seedDrivers(ctx, tx)
+		}
+		if *customerOnly {
+			seedCustomer(ctx, tx)
 		}
 		if err := tx.Commit(ctx); err != nil {
 			log.Fatal(err)
