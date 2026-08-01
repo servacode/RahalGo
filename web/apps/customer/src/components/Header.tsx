@@ -12,27 +12,24 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   TopBar,
   TopBarLink,
   TopBarChip,
   TopBarActions,
   TOPBAR_ICON,
-  CountBadge,
   LiveNotifications,
   useLiveRefresh,
   IconOrder,
   IconWallet,
   IconUser,
   IconOverview,
-  IconCart,
   IconBell,
 } from "@rahalgo/ui";
 import { homeFor, portalFor, goTo } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
-import { useCart } from "@/lib/cart";
 
 const m = getMessages(defaultLocale);
 const N = m.site.nav;
@@ -48,22 +45,6 @@ interface Summary {
 
 export default function Header() {
   const { user, logout } = useAuth();
-  const { count } = useCart();
-
-  /**
-   * تسميةُ السلّة تقول **ما يعنيه الرقم**.
-   *
-   * كان الرقم عارياً بجانب أيقونةٍ تشبه أيقونة «الطلبات» المجاورة، فيُقرأ
-   * «أربعة طلبات» وهو عدد أصناف طلبٍ واحد. وقد قرأه صاحب المنصة هكذا في أوّل
-   * تجربةٍ بشرية — ومن قرأه هكذا مرّة يقرؤه كذلك كلَّ مرّة.
-   */
-  const cartTitle =
-    count > 0
-      ? m.site.cart.badgeTitle.replace(
-          "{n}",
-          m.site.cart.itemsCount.replace("{n}", fmtNum(count)),
-        )
-      : m.terms.cart;
   const router = useRouter();
   const pathname = usePathname();
   const logged = isLoggedIn(user);
@@ -130,28 +111,18 @@ export default function Header() {
           active={pathname}
           extras={
             <>
-              {/* الطلبات فاتورةٌ والسلّة عربة — كانتا سلّتين متجاورتين لا
-                  يفرّق بينهما ناظر، فيُقرأ رقمُ السلّة «طلبات». */}
+              {/* **لا سلّة في الشريط**: صارت عائمةً أسفل الصفحة (`FloatingCart`)
+                  لأن الشريط يمضي مع التمرير، فتغيب السلّة في اللحظة التي
+                  تُستعمل فيها. وذهابُها يحسم كذلك التباسها بـ«الطلبات»
+                  المجاورة — R-88. */}
               <TopBarLink
                 Link={Link}
                 href="/orders"
                 title={m.terms.orders}
                 aria-label={m.terms.orders}
                 tone={pathname.startsWith("/orders") ? "active" : "plain"}
-                className="!px-2.5"
               >
                 <IconOrder size={TOPBAR_ICON} />
-              </TopBarLink>
-              <TopBarLink
-                Link={Link}
-                href="/cart"
-                tone="primary"
-                title={cartTitle}
-                aria-label={cartTitle}
-                className="relative !px-2.5"
-              >
-                <IconCart size={TOPBAR_ICON} />
-                <CountBadge count={count} />
               </TopBarLink>
               {/* لوحتي لمن له لوحة فقط — الزبون لا لوحة له وعناصره كلها هنا */}
               {portal && (
@@ -165,17 +136,6 @@ export default function Header() {
         />
       ) : (
         <>
-          <TopBarLink
-            Link={Link}
-            href="/cart"
-            tone="primary"
-            title={cartTitle}
-            aria-label={cartTitle}
-            className="relative !px-2.5"
-          >
-            <IconCart size={TOPBAR_ICON} />
-            <CountBadge count={count} />
-          </TopBarLink>
           <TopBarLink Link={Link} href="/login" className="border border-line">
             <IconUser size={TOPBAR_ICON} />
             {N.login}

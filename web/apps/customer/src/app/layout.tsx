@@ -3,6 +3,7 @@ import { getMessages, getDir, defaultLocale } from "@rahalgo/i18n";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
+import { FloatingCart } from "@/components/FloatingCart";
 // خط المنصة — مصدر مركزي واحد (packages/ui/src/fonts.css)
 import "@rahalgo/ui/fonts.css";
 import "./globals.css";
@@ -46,6 +47,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-5 shadow-sm">
                 {children}
               </main>
+              {/* السلّة العائمة خارج الكرت: تُرافق التصفّح ولا تختفي بالتمرير */}
+              <FloatingCart />
             </div>
           </CartProvider>
         </AuthProvider>
