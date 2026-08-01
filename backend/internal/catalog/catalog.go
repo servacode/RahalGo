@@ -236,13 +236,18 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 
 	var id string
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location, logo_media_id, commission_percent)
+		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location, logo_media_id, commission_percent, default_prep_minutes)
 		VALUES ($1, COALESCE($2,''), $3, COALESCE($4,''), COALESCE($5,''), $6, $7,
 		        CASE WHEN $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
 		             THEN ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography END,
 		        NULLIF(COALESCE($10, ''), '')::uuid,
 		        COALESCE($11, (SELECT (value#>>'{}')::int FROM app_settings
-		                       WHERE key = 'merchants.default_commission_percent'), 10))
+		                       WHERE key = 'merchants.default_commission_percent'), 10),
+		        -- وقت التحضير الافتراضي من اللوحة لا من افتراض العمود: كان ٢٠
+		        -- مكتوباً في الترحيل 0035، يرثه كل متجرٍ جديد ولا يملك المالك
+		        -- تغييره لمن يأتي بعده.
+		        COALESCE((SELECT (value#>>'{}')::int FROM app_settings
+		                  WHERE key = 'merchants.default_prep_minutes'), 20))
 		RETURNING id`,
 		*in.Name, in.Description, *in.CategoryID, in.Phone, in.AddressText, ownerID, repID, in.Lat, in.Lng, in.LogoMediaID, in.CommissionPct).Scan(&id)
 	if isFKViolation(err) {

@@ -93,6 +93,16 @@ func run(logger *slog.Logger) error {
 	}
 
 	identitySvc := identity.NewService(identity.NewRepo(pg), rdb, tokens, otpSender, cfg.JWTSecret, logger)
+	// طول كلمة المرور وسقف محاولات الدخول من اللوحة — قرارا أمانٍ يتّخذهما
+	// المالك لا قرارا نشرٍ ينتظران مبرمجاً. (يُربط هنا كي لا تعتمد حزمةُ
+	// الهوية على حزمة الإعدادات.)
+	identitySvc.SetSettingReader(func(ctx context.Context, key string, fallback int64) int64 {
+		var v float64
+		if err := settingsStore.Get(ctx, key, &v); err != nil {
+			return fallback
+		}
+		return int64(v)
+	})
 	if err := identitySvc.BootstrapAdmin(ctx, cfg.AdminPhone); err != nil {
 		return err
 	}

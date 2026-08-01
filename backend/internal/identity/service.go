@@ -36,9 +36,13 @@ var (
 )
 
 const (
-	otpTTL        = 5 * time.Minute
-	otpMaxPer15m  = 3
-	refreshTTL    = 30 * 24 * time.Hour
+	otpTTL       = 5 * time.Minute
+	otpMaxPer15m = 3
+	refreshTTL   = 30 * 24 * time.Hour
+
+	// احتياطيّاتٌ تعمل بها الخدمة إن لم تُربط باللوحة. والقيم الفعلية في
+	// `security.password_min_length` و`security.login_max_attempts` — قرارا
+	// أمانٍ يتّخذهما المالك لا قرارا نشرٍ ينتظران مبرمجاً.
 	minPasswordLn = 8
 
 	// حدّ محاولات الدخول بكلمة المرور. رموز التحقق كانت محمية والكلمة مفتوحة —
@@ -55,10 +59,31 @@ type Service struct {
 	sender notify.OTPSender
 	secret string // لتجزئة رموز OTP (HMAC)
 	logger *slog.Logger
+	// setting يقرأ إعداداً عددياً من اللوحة، أو يعيد الاحتياطي.
+	//
+	// **دالّة لا مخزن**: لو حُقن `*settings.Store` لاعتمدت حزمةُ الهوية على
+	// حزمة الإعدادات، وهي أدنى منها في الترتيب. والدالّة تكسر الاتجاه بلا
+	// واجهةٍ اصطناعية.
+	setting func(ctx context.Context, key string, fallback int64) int64
 }
 
 func NewService(repo *Repo, rdb *redis.Client, tokens *auth.TokenIssuer, sender notify.OTPSender, secret string, logger *slog.Logger) *Service {
 	return &Service{repo: repo, rdb: rdb, tokens: tokens, sender: sender, secret: secret, logger: logger}
+}
+
+// SetSettingReader يربط الخدمة بإعدادات اللوحة (تُنادى مرّة عند الإقلاع).
+//
+// وبلا ربطٍ تعمل الخدمة بالاحتياطيات — فاختبارات الهوية لا تحتاج مخزناً.
+func (s *Service) SetSettingReader(f func(ctx context.Context, key string, fallback int64) int64) {
+	s.setting = f
+}
+
+// intSetting القيمة من اللوحة أو الاحتياطي — لا تفشل أبداً.
+func (s *Service) intSetting(ctx context.Context, key string, fallback int64) int64 {
+	if s.setting == nil {
+		return fallback
+	}
+	return s.setting(ctx, key, fallback)
 }
 
 func (s *Service) hashOTP(phone, code string) string {
@@ -234,7 +259,7 @@ func (s *Service) ConfirmPasswordReset(ctx context.Context, rawPhone, code, pass
 	if !ok {
 		return nil, ErrInvalidPhone
 	}
-	if len(password) < minPasswordLn {
+	if int64(len(password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) {
 		return nil, ErrWeakPassword
 	}
 	valid, err := s.repo.ConsumeOTP(ctx, phone, s.hashOTP(phone, code), "reset")
@@ -280,7 +305,7 @@ func (s *Service) ConfirmSignup(ctx context.Context, rawPhone, code, fullName, p
 	if !ok {
 		return nil, ErrInvalidPhone
 	}
-	if len(password) < minPasswordLn {
+	if int64(len(password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) {
 		return nil, ErrWeakPassword
 	}
 	valid, err := s.repo.ConsumeOTP(ctx, phone, s.hashOTP(phone, code), "signup")
@@ -334,7 +359,7 @@ func loginKeys(phone, ip string) (string, string) {
 // عطل الكاش لا يقفل الدخول (يفشل مفتوحاً عمداً — كما ActiveStatus).
 func (s *Service) loginLocked(ctx context.Context, phone, ip string) bool {
 	pk, ik := loginKeys(phone, ip)
-	if n, err := s.rdb.Get(ctx, pk).Int(); err == nil && n >= loginMaxPerPhone {
+	if n, err := s.rdb.Get(ctx, pk).Int(); err == nil && int64(n) >= s.intSetting(ctx, "security.login_max_attempts", loginMaxPerPhone) {
 		return true
 	}
 	if n, err := s.rdb.Get(ctx, ik).Int(); err == nil && n >= loginMaxPerIP {
@@ -543,7 +568,7 @@ func (s *Service) SetOwnAvatar(ctx context.Context, userID, mediaID string) erro
 }
 
 func (s *Service) SetPassword(ctx context.Context, userID, password, currentPassword, ip string) error {
-	if len(password) < minPasswordLn {
+	if int64(len(password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) {
 		return ErrWeakPassword
 	}
 	// من يملك كلمة مرور يجب أن يثبتها قبل تغييرها (صفحة "حسابي")

@@ -34,3 +34,7 @@ Thumbs.db
 .vscode/
 *.log
 uploads/
+
+# مخرجات بايثون المؤقّتة (سكربتات scripts/)
+__pycache__/
+*.pyc

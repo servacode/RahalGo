@@ -56,6 +56,7 @@ function JoinForm() {
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
 
+  const [repName, setRepName] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
@@ -63,8 +64,11 @@ function JoinForm() {
   // كود الدعوة المعروض: كود المندوب إن صحّ، وإلا كود المنصة (تسجيل مباشر).
   useEffect(() => {
     const q = ref ? `?ref=${encodeURIComponent(ref)}` : "";
-    api<{ code: string }>(`/api/v1/public/invite${q}`)
-      .then((r) => setInviteCode(r.code))
+    api<{ code: string; by: string; rep_name?: string }>(`/api/v1/public/invite${q}`)
+      .then((r) => {
+        setInviteCode(r.code);
+        setRepName(r.by === "rep" ? (r.rep_name ?? "") : "");
+      })
       .catch(() => setInviteCode(""))
       .finally(() => setChecking(false));
   }, [ref]);
@@ -131,6 +135,21 @@ function JoinForm() {
         <h1 className="text-2xl font-bold">{J.title}</h1>
         <p className="mt-1 text-sm text-ink-muted">{J.subtitle}</p>
       </div>
+
+      {/* من دعاك.
+          كانت الصفحة تعرض كوداً مبهماً بلا صاحب، ويُطلب من صاحب المتجر أن
+          يكتب اسمه وهاتفه وكلمة مروره لمجهول. ورابطُ الإحالة كلُّه قائمٌ على
+          أن يُعرف صاحبه — يشاركه المندوب بعد لقاءٍ في السوق، والصفحة التي لا
+          تذكر اسمه تنقض ذلك اللقاء. */}
+      {repName && (
+        <div className="mb-4 rounded-card border border-accent/40 bg-accent/5 p-4">
+          <p className="flex items-center gap-2 font-medium text-accent-dark">
+            <IconUser size={17} />
+            {J.invitedBy.replace("{name}", repName)}
+          </p>
+          <p className="mt-1 text-xs text-ink-muted">{J.invitedByHint}</p>
+        </div>
+      )}
 
       <form onSubmit={submit} className="rounded-card border border-line bg-surface p-6">
         {/* كود الدعوة — للقراءة فقط */}

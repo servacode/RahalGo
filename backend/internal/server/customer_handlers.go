@@ -80,8 +80,14 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 		m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
 		merchants = append(merchants, m)
 	}
+	// رقم الدعم يُحمَّل مع الصفحة الأولى لا بنداءٍ ثانٍ: هو سطرٌ واحد في
+	// التذييل، ونداءٌ مستقلٌّ له تكلفةُ رحلةٍ كاملة لسطر.
+	//
+	// وكان الرقم لا وجود له أصلاً: الشكوى تذهب إلى التذاكر وحدها، ومن لا يعرف
+	// التذاكر لا يجد باباً. ويبقى فارغاً حتى يكتبه المالك، فتُخفيه الواجهة.
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"banners": active, "categories": categories, "merchants": merchants,
+		"support_phone": s.settings.GetString(r.Context(), "platform.support_phone", ""),
 	})
 }
 

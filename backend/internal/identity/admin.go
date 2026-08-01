@@ -64,7 +64,7 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 			return nil, ErrInvalidRole
 		}
 	}
-	if len(in.Password) < minPasswordLn { // إلزامية — لا حساب موظف بلا كلمة مرور
+	if int64(len(in.Password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) { // إلزامية — لا حساب موظف بلا كلمة مرور
 		return nil, ErrWeakPassword
 	}
 

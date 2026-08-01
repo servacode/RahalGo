@@ -178,7 +178,21 @@ func (s *Server) handlePublicInvite(w http.ResponseWriter, r *http.Request) {
 	ref := r.URL.Query().Get("ref")
 	if ref != "" {
 		if rep, err := s.identity.SalesRepByInviteCode(r.Context(), ref); err == nil && rep.Status == "active" {
-			httpx.JSON(w, http.StatusOK, map[string]any{"code": ref, "by": "rep"})
+			// **واسمُه معه.**
+			//
+			// كانت النقطة تعرف المندوب — تجلب صفَّه وتتحقق من نشاطه — ثم تردّ
+			// «by: rep» بلا اسم. فيصل صاحبُ المتجر إلى صفحة تسجيلٍ لا يعرف من
+			// دعاه إليها، ويُطلب منه أن يكتب اسمه وهاتفه وكلمة مروره لمجهول.
+			//
+			// **ورابطُ الإحالة كلُّه قائمٌ على أن يُعرف صاحبه**: المندوب يشاركه
+			// عبر واتساب بعد لقاءٍ في السوق، والصفحة التي لا تذكر اسمه تنقض
+			// ذلك اللقاء.
+			//
+			// والاسم ليس تسريباً: المندوب موظّفٌ يعمل علناً باسمه، ويقوله بفمه
+			// لكل متجرٍ يزوره. والتعداد محروسٌ بحدّ المعدّل أعلاه.
+			httpx.JSON(w, http.StatusOK, map[string]any{
+				"code": ref, "by": "rep", "rep_name": rep.FullName,
+			})
 			return
 		}
 	}
