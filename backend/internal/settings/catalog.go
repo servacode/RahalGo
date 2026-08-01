@@ -109,6 +109,16 @@ var Catalog = []Def{
 		Min: 0, Max: 100, Unit: "percent", Default: 10, Sensitive: true},
 	{Key: "merchants.menu_requires_approval", Group: GroupMerchants, Kind: KindBool,
 		Default: false},
+	// **من يدير الطلبات: المتجر أم المنصة؟**
+	//
+	// ليس كلُّ متجرٍ يجلس إلى شاشة. مطعمٌ صغير في الرقة لا يملك جهازاً في
+	// المطبخ ولا من يراقبه — يعمل على واتساب كما يعمل يومَه كلَّه. وإلزامُه
+	// ببوابةٍ يفتحها يعني **طلباتٍ تتأخّر حتى يتذكّر أحدهم أن ينظر**.
+	//
+	// فحين تُطفأ: تقبل العملياتُ الطلب نيابةً عنه ثم تُرسله إليه على واتساب،
+	// فيقرؤه في المكان الذي يعمل فيه أصلاً.
+	{Key: "merchants.self_manage_orders", Group: GroupMerchants, Kind: KindBool,
+		Default: true},
 	// **جديد**: كان ٢٠ دقيقة مكتوباً في الترحيل كافتراضي عمود. والمتجر الجديد
 	// يرثه بلا أن يملك المالك تغييره لمن يأتي بعده.
 	{Key: "merchants.default_prep_minutes", Group: GroupMerchants, Kind: KindInt,

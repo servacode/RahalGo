@@ -53,6 +53,8 @@ interface OrderRow {
   merchant_name: string;
   driver_phone: string | null;
   driver_name: string | null;
+  /** متى أُرسل الطلب إلى المتجر على واتساب — فارغٌ يعني لم يُرسل */
+  sent_to_merchant_at: string | null;
   /** أجرُ السائق — تقديرٌ قبل التسليم وواقعٌ بعده، من مصدر الحساب نفسه */
   driver_fee: number;
   status: string;
@@ -170,6 +172,23 @@ export default function OrdersPage() {
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  /**
+   * أيُدير المتجرُ طلباته بنفسه؟
+   *
+   * **`null` تعني «لم نعرف بعد»** لا «المنصة تدير»: لو بدأناها `false` لظهر
+   * زرُّ الإرسال لحظةً في كل بطاقة ثم اختفى — **ووميضُ زرٍّ كاذب يُفقد الثقة
+   * بكل زرّ**.
+   */
+  const [selfManage, setSelfManage] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    api<{ key: string; value: unknown }[]>("/api/v1/admin/settings")
+      .then((all) => {
+        const row = all.find((x) => x.key === "merchants.self_manage_orders");
+        setSelfManage(row ? row.value === true : true);
+      })
+      .catch(() => setSelfManage(true));
+  }, []);
   const [view, setView] = useViewMode("orders");
 
   const load = useCallback(async () => {
@@ -323,17 +342,6 @@ export default function OrdersPage() {
       ),
     },
     {
-      id: "driver",
-      header: m.admin.ordersPage.driver,
-      icon: <IconDriver />,
-      cell: (o) =>
-        o.driver_phone ? (
-          <span dir="ltr">{o.driver_phone}</span>
-        ) : (
-          <span className="text-ink-muted">{m.admin.ordersPage.noDriver}</span>
-        ),
-    },
-    {
       id: "status",
       header: m.admin.ordersPage.statusCol,
       icon: <IconStatus />,
@@ -465,7 +473,9 @@ export default function OrdersPage() {
         columns={columns}
         view={view}
         empty={m.admin.ordersPage.empty}
-        actions={(o) => <OrderActions o={o} onChanged={load} />}
+        actions={(o) => (
+          <OrderActions o={o} onChanged={load} selfManage={selfManage !== false} />
+        )}
       />
 
       {data && (
@@ -512,9 +522,12 @@ export default function OrdersPage() {
 function OrderActions({
   o,
   onChanged,
+  selfManage,
 }: {
   o: OrderRow;
   onChanged: () => void;
+  /** حين تكون `false` تُدير المنصةُ الطلبات وتُرسلها للمتجر على واتساب */
+  selfManage: boolean;
 }) {
   const [busy, setBusy] = useState("");
   /** الفعلُ الهدّام المفتوح الآن — يُطلب سببُه قبل تنفيذه */
@@ -522,6 +535,8 @@ function OrderActions({
   /** قائمةُ السائقين مفتوحةٌ للإسناد اليدوي */
   const [assigning, setAssigning] = useState(false);
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
+  /** معاينةُ رسالة واتساب قبل إرسالها */
+  const [preview, setPreview] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
 
@@ -543,6 +558,32 @@ function OrderActions({
       setDrivers(list.filter((x) => x.on_shift && x.status === "active"));
     } catch {
       setDrivers([]);
+    }
+  }
+
+  // **ما يُرسَل باسم المنصة يُقرأ قبل أن يُرسَل.** والنصُّ من الخادم لا من هنا:
+  // لو بُني في الواجهة لاختلف عمّا يصل المتجر، ولا يكتشفه أحدٌ حتى يشتكي.
+  async function openSend() {
+    setErr("");
+    try {
+      const res = await api<{ text: string }>(`/api/v1/admin/orders/${o.id}/message`);
+      setPreview(res.text);
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    }
+  }
+
+  async function sendWhatsApp() {
+    setBusy("wa");
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/whatsapp`, { method: "POST" });
+      setPreview(null);
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    } finally {
+      setBusy("");
     }
   }
 
@@ -586,6 +627,26 @@ function OrderActions({
   // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
   // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
+  if (preview !== null) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium">{m.admin.ordersPage.sendPreview}</p>
+        <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-control bg-page p-3 text-xs leading-relaxed">
+          {preview}
+        </pre>
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <div className="flex gap-2">
+          <Button disabled={busy !== ""} onClick={() => void sendWhatsApp()}>
+            {m.admin.ordersPage.sendConfirm}
+          </Button>
+          <Button variant="secondary" onClick={() => setPreview(null)}>
+            {m.common.cancel}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (assigning) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -671,6 +732,22 @@ function OrderActions({
           </Button>
         );
       })}
+      {/* **التحضيرُ من اختصاص المتجر لا المنصة.**
+
+          في وضع «المنصة تدير»، تقبل العملياتُ الطلبَ نيابةً عن المتجر — ثم
+          **تُرسله إليه** ولا تعلن بدء تحضيرٍ لم تبدأه. فيحلّ زرُّ الإرسال محلّ
+          «بدء التحضير» في حالة «مقبول». */}
+      {!selfManage && o.status === "accepted" && (
+        <Button
+          variant={o.sent_to_merchant_at ? "secondary" : "primary"}
+          disabled={busy !== ""}
+          onClick={() => void openSend()}
+        >
+          {o.sent_to_merchant_at
+            ? m.admin.ordersPage.sentWhatsApp
+            : m.admin.ordersPage.sendWhatsApp}
+        </Button>
+      )}
       {canAssign && (
         <Button variant="secondary" disabled={busy !== ""} onClick={() => void openAssign()}>
           {m.admin.ordersPage.assignHere}

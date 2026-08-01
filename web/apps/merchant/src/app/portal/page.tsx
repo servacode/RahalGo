@@ -72,7 +72,7 @@ function errText(err: unknown): string {
 const WITH_DRIVER = ["dispatching", "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff"];
 
 export default function OrdersBoard() {
-  const { store } = useStore();
+  const { store, selfManage } = useStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [doneToday, setDoneToday] = useState(0);
   const [accepting, setAccepting] = useState<Order | null>(null);
@@ -186,12 +186,22 @@ export default function OrdersBoard() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {pending.map((o) => (
               <OrderCard key={o.id} order={o} highlight>
-                <Button onClick={() => setAccepting(o)}>
-                  {m.merchant.orders.accept}
-                </Button>
-                <Button variant="danger" onClick={() => setRejecting(o)}>
-                  {m.merchant.orders.reject}
-                </Button>
+                {/* **حين تُدير المنصةُ الطلبات لا أزرارَ هنا.**
+
+                    وإخفاءُ الأزرار وحده لا يكفي — الخادمُ يبقى يقبل الانتقال
+                    من دور المتجر. لكنّ هذا وضعٌ يختاره المالك لمتجرٍ لا يجلس
+                    إلى شاشةٍ أصلاً، لا حاجزُ أمانٍ ضدّ خصم. **ومن فتح بوابته
+                    وقبل طلبَه فقد فعل ما يُراد به.** */}
+                {selfManage && (
+                  <>
+                    <Button onClick={() => setAccepting(o)}>
+                      {m.merchant.orders.accept}
+                    </Button>
+                    <Button variant="danger" onClick={() => setRejecting(o)}>
+                      {m.merchant.orders.reject}
+                    </Button>
+                  </>
+                )}
               </OrderCard>
             ))}
           </div>

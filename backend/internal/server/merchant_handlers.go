@@ -60,7 +60,13 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 		m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
 		out = append(out, m)
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	// **أيدير المتجرُ طلباته بنفسه؟** إعدادُ منصّةٍ لا يملك المتجرُ قراءته من
+	// بابه (`/admin/settings` للإدارة)، ويحتاجه ليعرف أيعرض أزرارَ القبول.
+	// فيُمرَّر مع متاجره — **الجوابُ مع السؤال، لا نداءٌ ثانٍ لسطرٍ واحد**.
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"stores":             out,
+		"self_manage_orders": s.settings.GetBool(r.Context(), "merchants.self_manage_orders"),
+	})
 }
 
 // handleMerchantOrders طلبات متجر مملوك.

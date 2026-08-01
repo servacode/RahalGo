@@ -22,6 +22,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/notify"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -47,7 +48,13 @@ type Server struct {
 	geo       *geo.Service
 	notify    *notifications.Service
 	otpStatus func() map[string]any
+	// otpSender مُرسِلُ الرسائل — يُسأل بـtype assertion عن `notify.TextSender`
+	// لأن مُرسِل التطوير يطبع في الطرفية ولا يملك أن يُرسل إلى أحد.
+	otpSender notify.OTPSender
 }
+
+// SetOTPSender يحقن مُرسِل الرسائل (يُنادى مرّة عند الإقلاع).
+func (s *Server) SetOTPSender(sender notify.OTPSender) { s.otpSender = sender }
 
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
@@ -257,6 +264,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/orders", s.handleListOrders)
 			r.Get("/orders/alerts", s.handleOrderAlerts)
 			r.Get("/orders/{id}", s.handleGetOrder)
+			// إرسال الطلب إلى المتجر على واتساب — في وضع «المنصة تدير»
+			r.Get("/orders/{id}/message", s.handleOrderMessagePreview)
+			r.Post("/orders/{id}/whatsapp", s.handleSendOrderToMerchant)
 			r.Post("/orders/{id}/transition", s.handleOrderTransition)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
 

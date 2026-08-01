@@ -8,6 +8,15 @@ import (
 	"log/slog"
 )
 
+// TextSender من يستطيع إرسال رسالةٍ حرّة لا رمزَ تحقّقٍ فقط.
+//
+// **واجهةٌ ثانية لا توسيعٌ للأولى**: مُرسِلُ التطوير يطبع الرمز في الطرفية ولا
+// يملك أن يُرسل شيئاً إلى أحد، فإلزامُه بها يجعله يكذب. ومن يحتاج الإرسال
+// يسأل بـtype assertion ويتصرّف عند الغياب.
+type TextSender interface {
+	SendText(ctx context.Context, phone, text string) error
+}
+
 type OTPSender interface {
 	SendOTP(ctx context.Context, phone, code string) error
 }

@@ -18,8 +18,16 @@ interface StoreState {
   stores: Store[];
   store: Store | null;
   loading: boolean;
-  select: (id: string) => void;
+  /**
+   * أيدير المتجرُ طلباته بنفسه؟ إعدادُ منصّةٍ يصل مع المتاجر.
+   *
+   * **الافتراضُ `true` عند الجهل**: من يدير طلباته يرى أزراره، ومن لا يديرها
+   * تديرها المنصةُ عنه. **وإخفاءُ الأزرار خطأً يُجمّد متجراً**، وإظهارُها خطأً
+   * يُظهر زرّاً يعمل — والأوّل أسوأ.
+   */
+  selfManage: boolean;
   refresh: () => Promise<void>;
+  select: (id: string) => void;
 }
 
 const StoreContext = createContext<StoreState | null>(null);
@@ -30,9 +38,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [stores, setStores] = useState<Store[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [selfManage, setSelfManage] = useState(true);
 
   const refresh = useCallback(async () => {
-    const list = await api<Store[]>("/api/v1/merchant/stores");
+    const res = await api<{ stores: Store[]; self_manage_orders: boolean } | Store[]>(
+      "/api/v1/merchant/stores",
+    );
+    const list = Array.isArray(res) ? res : res.stores;
+    if (!Array.isArray(res)) setSelfManage(res.self_manage_orders !== false);
     setStores(list);
     setSelected((cur) => {
       const saved = cur || localStorage.getItem(SELECTED_KEY) || "";
@@ -54,7 +67,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const store = stores.find((s) => s.id === selected) ?? null;
 
   return (
-    <StoreContext.Provider value={{ stores, store, loading, select, refresh }}>
+    <StoreContext.Provider value={{ stores, store, loading, selfManage, select, refresh }}>
       {children}
     </StoreContext.Provider>
   );

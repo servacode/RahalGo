@@ -85,6 +85,7 @@ DELETE FROM app_settings WHERE key NOT IN (
     'drivers.max_active_orders',
     'merchants.default_commission_percent',
     'merchants.menu_requires_approval',
+    'merchants.self_manage_orders',
     'merchants.default_prep_minutes',
     'sales.commission_percent',
     'sales.activation_orders',

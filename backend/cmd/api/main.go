@@ -119,8 +119,14 @@ func run(logger *slog.Logger) error {
 	}
 
 	srv := &http.Server{
-		Addr:              cfg.HTTPAddr,
-		Handler:           server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc, settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub, otpStatus).Router(),
+		Addr: cfg.HTTPAddr,
+		Handler: func() http.Handler {
+			srv := server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc,
+				settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub, otpStatus)
+			// مُرسِلُ الرسائل — يستعمله إرسالُ الطلب إلى المتجر على واتساب
+			srv.SetOTPSender(otpSender)
+			return srv.Router()
+		}(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

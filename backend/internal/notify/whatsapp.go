@@ -147,6 +147,24 @@ func (s *WhatsAppSender) SendOTP(ctx context.Context, phone, code string) error 
 	return nil
 }
 
+// SendText يُرسل رسالةً حرّة — يستعمله إرسالُ الطلب إلى المتجر.
+//
+// **ونفسُ حارس `SendOTP`**: بوتٌ غيرُ مقترن يرمي خطأً واضحاً بدل أن يبتلع
+// الرسالة صامتاً. ورسالةٌ ابتُلعت أسوأ من رسالةٍ لم تُرسَل: الأولى يظنّ صاحبُها
+// أنها وصلت.
+func (s *WhatsAppSender) SendText(ctx context.Context, phone, text string) error {
+	if !s.client.IsLoggedIn() {
+		return errWANotReady
+	}
+	jid := types.NewJID(strings.TrimPrefix(phone, "+"), types.DefaultUserServer)
+	if _, err := s.client.SendMessage(ctx, jid, &waE2E.Message{
+		Conversation: proto.String(text),
+	}); err != nil {
+		return fmt.Errorf("whatsapp: send text: %w", err)
+	}
+	return nil
+}
+
 // Status حالة البوت — تعرضها نقطة أدمن لمتابعة الاقتران والاتصال.
 func (s *WhatsAppSender) Status() map[string]any {
 	s.mu.RLock()
