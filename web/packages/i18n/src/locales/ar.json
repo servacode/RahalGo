@@ -535,6 +535,8 @@
       "reasonHint": "يُقال للزبون ويُقاس به المتجر — فلا يُترك فارغاً",
       "reasonPlaceholder": "نفد الصنف · المطبخ مغلق · الزبون لا يردّ…",
       "confirm": "تأكيد",
+      "assignHere": "إسناد سائق",
+      "noDriversOnShift": "لا سائق على الدوام الآن",
       "timeline": "خط الزمن",
       "financials": "المالية",
       "subtotal": "المجموع",

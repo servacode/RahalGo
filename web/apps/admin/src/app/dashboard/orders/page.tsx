@@ -36,6 +36,15 @@ const m = getMessages(defaultLocale);
 
 // ---------- الأنواع ----------
 
+interface DriverRow {
+  id: string;
+  full_name: string;
+  phone: string;
+  status: string;
+  on_shift: boolean;
+  open_orders: number;
+}
+
 interface OrderRow {
   id: string;
   number: number;
@@ -160,7 +169,6 @@ export default function OrdersPage() {
   const [openOnly, setOpenOnly] = useState(initialQ === "");
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
-  const [detailID, setDetailID] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [view, setView] = useViewMode("orders");
 
@@ -371,8 +379,15 @@ export default function OrdersPage() {
           <ul className="space-y-1.5">
             {alerts.map((a) => (
               <li key={a.order_id + a.reason} className="flex flex-wrap items-center gap-2 text-sm">
+                {/* الإنذارُ يجلب طلبَه إلى القائمة بدل أن يفتح نافذة:
+                    **البطاقة نفسها صارت تحمل كل ما يُقرَّر به** — والنافذة
+                    كانت تُخفي بقيّة الطلبات وهي مفتوحة. */}
                 <button
-                  onClick={() => setDetailID(a.order_id)}
+                  onClick={() => {
+                    setQuery(String(a.number));
+                    setOpenOnly(false);
+                    setPage(1);
+                  }}
                   className="font-bold text-danger underline-offset-2 hover:underline"
                 >
                   #{a.number}
@@ -450,9 +465,7 @@ export default function OrdersPage() {
         columns={columns}
         view={view}
         empty={m.admin.ordersPage.empty}
-        actions={(o) => (
-          <OrderActions o={o} onOpen={() => setDetailID(o.id)} onChanged={load} />
-        )}
+        actions={(o) => <OrderActions o={o} onChanged={load} />}
       />
 
       {data && (
@@ -476,9 +489,6 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {detailID && (
-        <OrderDetailModal orderID={detailID} onClose={() => setDetailID(null)} onChanged={load} />
-      )}
     </div>
   );
 }
@@ -501,20 +511,57 @@ export default function OrdersPage() {
  */
 function OrderActions({
   o,
-  onOpen,
   onChanged,
 }: {
   o: OrderRow;
-  onOpen: () => void;
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState("");
   /** الفعلُ الهدّام المفتوح الآن — يُطلب سببُه قبل تنفيذه */
   const [asking, setAsking] = useState("");
+  /** قائمةُ السائقين مفتوحةٌ للإسناد اليدوي */
+  const [assigning, setAssigning] = useState(false);
+  const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
 
   const next = OPS_NEXT[o.status] ?? [];
+
+  // **الإسنادُ اليدوي مخرجٌ لا طريق.** السائقون يلتقطون من الطابور بأنفسهم
+  // (تطبيق :3005)، وهذا لمن لم يلتقطه أحد. ولذلك يُجلب السائقون **عند فتح
+  // القائمة** لا مع كل بطاقة: عشرون بطاقةً تعني عشرين نداءً لقائمةٍ واحدة.
+  //
+  // ولا يُعرض إلا **من هو على الدوام**: إسنادُ طلبٍ إلى منصرفٍ يُخفيه عن
+  // الطابور ولا يوصله أحد.
+  const canAssign = o.status === "preparing" || o.status === "dispatching";
+
+  async function openAssign() {
+    setAssigning(true);
+    try {
+      const res = await api<{ drivers: DriverRow[] } | DriverRow[]>("/api/v1/admin/drivers");
+      const list = Array.isArray(res) ? res : res.drivers;
+      setDrivers(list.filter((x) => x.on_shift && x.status === "active"));
+    } catch {
+      setDrivers([]);
+    }
+  }
+
+  async function assign(driverID: string) {
+    setBusy("assign");
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/assign`, {
+        method: "POST",
+        body: JSON.stringify({ driver_id: driverID, note: "" }),
+      });
+      setAssigning(false);
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    } finally {
+      setBusy("");
+    }
+  }
 
   async function go(to: string, note: string) {
     setBusy(to);
@@ -539,6 +586,35 @@ function OrderActions({
   // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
   // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
+  if (assigning) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium">{m.admin.ordersPage.chooseDriver}</p>
+        {drivers.length === 0 ? (
+          <p className="text-xs text-ink-muted">{m.admin.ordersPage.noDriversOnShift}</p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {drivers.map((dv) => (
+              <Button
+                key={dv.id}
+                variant="secondary"
+                disabled={busy !== ""}
+                onClick={() => void assign(dv.id)}
+              >
+                {dv.full_name || dv.phone}
+                {dv.open_orders > 0 && ` (${fmtNum(dv.open_orders)})`}
+              </Button>
+            ))}
+          </div>
+        )}
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <Button variant="secondary" onClick={() => setAssigning(false)}>
+          {m.common.cancel}
+        </Button>
+      </div>
+    );
+  }
+
   if (asking) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -595,283 +671,12 @@ function OrderActions({
           </Button>
         );
       })}
-      <Button variant="secondary" onClick={onOpen}>
-        {m.admin.ordersPage.details}
-      </Button>
+      {canAssign && (
+        <Button variant="secondary" disabled={busy !== ""} onClick={() => void openAssign()}>
+          {m.admin.ordersPage.assignHere}
+        </Button>
+      )}
       {err && <p className="w-full text-xs text-danger">{err}</p>}
     </>
-  );
-}
-
-function OrderDetailModal({
-  orderID,
-  onClose,
-  onChanged,
-}: {
-  orderID: string;
-  onClose: () => void;
-  onChanged: () => void;
-}) {
-  const [order, setOrder] = useState<OrderRow | null>(null);
-  const [drivers, setDrivers] = useState<AuthUser[]>([]);
-  const [driverID, setDriverID] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      setOrder(await api<OrderRow>(`/api/v1/admin/orders/${orderID}`));
-      setError("");
-    } catch (err) {
-      setError(errText(err));
-    }
-  }, [orderID]);
-
-  useEffect(() => {
-    void load();
-    api<{ users: AuthUser[] }>("/api/v1/admin/users?role=driver&per_page=100")
-      .then((p) => setDrivers(p.users.filter((u) => u.status === "active")))
-      .catch(() => undefined);
-  }, [load]);
-
-  async function transition(to: string) {
-    let note = "";
-    if (to === "cancelled" || to === "rejected") {
-      note = prompt(m.admin.ordersPage.cancelReasonPrompt) ?? "";
-      if (!note) return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/v1/admin/orders/${orderID}/transition`, {
-        method: "POST",
-        body: JSON.stringify({ to, note }),
-      });
-      await load();
-      onChanged();
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function assign() {
-    if (!driverID) return;
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/v1/admin/orders/${orderID}/assign`, {
-        method: "POST",
-        body: JSON.stringify({ driver_id: driverID }),
-      });
-      await load();
-      onChanged();
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!order) {
-    return (
-      <Modal open onClose={onClose} title={m.admin.ordersPage.orderDetails}>
-        <p className="p-4 text-center text-ink-muted">{m.common.loading}</p>
-      </Modal>
-    );
-  }
-
-  const next = OPS_NEXT[order.status] ?? [];
-  const canAssign = order.status === "preparing" || order.status === "dispatching";
-
-  return (
-    <Modal open onClose={onClose} size="xl" title={`${m.admin.ordersPage.orderDetails} #${order.number}`}>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Badge variant={STATUS_VARIANT[order.status] ?? "neutral"}>
-          {STATUS_LABELS[order.status]}
-        </Badge>
-        <Badge variant="neutral">{PAYMENT_LABELS[order.payment_method]}</Badge>
-        {order.promo_code && <Badge variant="warning">{order.promo_code}</Badge>}
-        {order.cancel_reason && (
-          <span className="text-xs text-danger">({order.cancel_reason})</span>
-        )}
-      </div>
-
-      <div className="grid gap-5 md:grid-cols-2">
-        <div className="space-y-5">
-          <FormSection title={m.admin.ordersPage.customer} icon={<IconUser />}>
-            <p className="text-sm">
-              {order.customer_name || "—"} —{" "}
-              <span dir="ltr" className="font-medium">
-                {order.customer_phone}
-              </span>
-            </p>
-            <p className="mt-1 flex items-start gap-1.5 text-sm text-ink-muted">
-              <IconLocation size={15} className="mt-0.5 shrink-0" />
-              {order.address_text}
-            </p>
-            {order.notes && <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-muted"><IconNote size={14} />{order.notes}</p>}
-          </FormSection>
-
-          <FormSection title={m.admin.ordersPage.itemsSection} icon={<IconOrder />}>
-            <ul className="space-y-2 text-sm">
-              {order.items?.map((it) => (
-                <li key={it.id} className="rounded-control border border-line p-2.5">
-                  <div className="flex justify-between font-medium">
-                    <span>
-                      {it.name} ×{it.qty}
-                    </span>
-                    <span>{fmtNum(it.unit_price * it.qty)}</span>
-                  </div>
-                  {it.options.length > 0 && (
-                    <p className="mt-0.5 text-xs text-ink-muted">
-                      {it.options.map((op) => `${op.group}: ${op.name}`).join(" · ")}
-                    </p>
-                  )}
-                  {it.note && <p className="mt-0.5 text-xs text-accent-dark"><IconEdit size={11} className="inline align-[-1px]" /> {it.note}</p>}
-                </li>
-              ))}
-            </ul>
-          </FormSection>
-
-          <FormSection title={m.admin.ordersPage.financials} icon={<IconWallet />}>
-            <dl className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-ink-muted">{m.admin.ordersPage.subtotal}</dt>
-                <dd>{fmtNum(order.subtotal)}</dd>
-              </div>
-              {order.discount > 0 && (
-                <div className="flex justify-between text-success">
-                  <dt>{m.admin.ordersPage.discount}</dt>
-                  <dd>-{fmtNum(order.discount)}</dd>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <dt className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</dt>
-                <dd>{fmtNum(order.delivery_fee)}</dd>
-              </div>
-              <div className="flex justify-between border-t border-line pt-1 font-bold">
-                <dt>{m.admin.ordersPage.total}</dt>
-                <dd>
-                  {fmtNum(order.total)} {m.common.currency}
-                </dd>
-              </div>
-              {order.wallet_paid > 0 && (
-                <div className="flex justify-between text-primary-dark">
-                  <dt>{m.admin.ordersPage.walletPaid}</dt>
-                  <dd>{fmtNum(order.wallet_paid)}</dd>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <dt className="text-ink-muted">{m.admin.ordersPage.cashDue}</dt>
-                <dd className="font-medium">{fmtNum(order.cash_due)}</dd>
-              </div>
-            </dl>
-          </FormSection>
-        </div>
-
-        <div className="space-y-5">
-          <FormSection title={m.admin.ordersPage.statusCol} icon={<IconStatus />}>
-            {canAssign && (
-              <div className="mb-3 flex items-end gap-2 rounded-control bg-page p-3">
-                <div className="flex-1">
-                  <Select
-                    id="assign-driver"
-                    label={m.admin.ordersPage.chooseDriver}
-                    value={driverID}
-                    onChange={(e) => setDriverID(e.target.value)}
-                  >
-                    <option value="">—</option>
-                    {drivers.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.full_name || d.phone}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <Button onClick={assign} disabled={busy || !driverID}>
-                  {m.admin.ordersPage.assignDriver}
-                </Button>
-              </div>
-            )}
-            <div className="flex flex-wrap gap-2">
-              {next.map((to) => (
-                <Button
-                  key={to}
-                  variant={
-                    to === "cancelled" || to === "rejected" || to === "failed"
-                      ? "danger"
-                      : to === "delivered"
-                        ? "primary"
-                        : "secondary"
-                  }
-                  disabled={busy}
-                  onClick={() => transition(to)}
-                >
-                  {ACTION_LABELS[to]}
-                </Button>
-              ))}
-            </div>
-            {error && (
-              <p className="mt-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">
-                {error}
-              </p>
-            )}
-          </FormSection>
-
-          <FormSection title={m.admin.ordersPage.timeline} icon={<IconStatus />}>
-            <ol className="space-y-1.5 text-sm">
-              {order.events?.map((e, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-badge bg-primary" />
-                  <span className="font-medium">{STATUS_LABELS[e.to_status] ?? e.to_status}</span>
-                  <span className="text-xs text-ink-muted">
-                    {fmtTime(e.created_at)}
-                  </span>
-                  {e.note && <span className="text-xs text-ink-muted">— {e.note}</span>}
-                </li>
-              ))}
-            </ol>
-          </FormSection>
-
-          {order.rating && (
-            <FormSection title={m.admin.ordersPage.rating.title} icon={<IconStar />}>
-              <div className="space-y-2 text-sm">
-                <LabeledStars
-                  label={m.admin.ordersPage.rating.merchant}
-                  stars={order.rating.merchant_stars}
-                />
-                {order.rating.driver_stars != null && (
-                  <LabeledStars
-                    label={m.admin.ordersPage.rating.driver}
-                    stars={order.rating.driver_stars}
-                  />
-                )}
-                {order.rating.comment && (
-                  <p className="rounded-control bg-page px-3 py-2">
-                    <span className="text-xs text-ink-muted">
-                      {m.admin.ordersPage.rating.comment}:
-                    </span>{" "}
-                    {order.rating.comment}
-                  </p>
-                )}
-              </div>
-            </FormSection>
-          )}
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-
-/** سطر تقييم بعنوان — يستعمل نجوم المكتبة المركزية. */
-function LabeledStars({ label, stars }: { label: string; stars: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="w-24 text-ink-muted">{label}</span>
-      <Stars value={stars} size="md" />
-    </div>
   );
 }
