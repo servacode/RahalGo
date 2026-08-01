@@ -82,6 +82,28 @@
     display: table-header-group;
   }
 
+  /* **العلامةُ إطارٌ لا خلفية**: الخلفياتُ لا تُطبع، فيُقلب المربّعُ الملوّن
+     إلى حدٍّ أسودَ وحرفٍ أسود — علامةٌ تُرى على الورق كما تُرى على الشاشة. */
+  [data-print-mark] {
+    background: transparent !important;
+    color: #000 !important;
+    border: 2px solid #000;
+  }
+
+  /* **الأرقامُ بخانةٍ ثابتة**: عمودُ مبالغَ حروفُه مختلفة العرض لا يُجمع
+     بالنظر — وهو أوّلُ ما يفعله من يراجع كشفاً على ورق. */
+  [data-print="sheet"] [dir="ltr"],
+  [data-print="sheet"] .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* كتلةُ المجاميع لا تُقطع بين صفحتين: نصفُ حسابٍ في ورقةٍ ونصفُه في أخرى
+     يُقرأ خطأً قبل أن تُقلب الورقة. */
+  [data-print="sheet"] dl,
+  [data-print="sheet"] [data-print-keep] {
+    break-inside: avoid;
+  }
+
   @page {
     margin: 14mm;
   }

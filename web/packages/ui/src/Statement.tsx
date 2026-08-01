@@ -180,12 +180,12 @@ export function StatementSheet({
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-start">
                 <thead>
-                  <tr className="border-b border-line text-xs text-ink-muted">
+                  <tr className="border-b-2 border-ink/20 text-[11px] uppercase tracking-wide text-ink-muted">
                     <th className="py-2 text-start font-medium">{S.colDate}</th>
-                    <th className="py-2 text-start font-medium">{S.colKind}</th>
-                    <th className="py-2 text-start font-medium">{S.colNote}</th>
-                    <th className="py-2 text-end font-medium">{S.colAmount}</th>
-                    <th className="py-2 text-end font-medium">{S.colRunning}</th>
+                    <th className="py-2 text-start font-bold">{S.colKind}</th>
+                    <th className="py-2 text-start font-bold">{S.colNote}</th>
+                    <th className="w-28 py-2 text-end font-bold">{S.colAmount}</th>
+                    <th className="w-28 py-2 text-end font-bold">{S.colRunning}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -197,7 +197,7 @@ export function StatementSheet({
                       {S.opening}
                     </td>
                     <td className="py-2" />
-                    <td className="py-2 text-end" dir="ltr">
+                    <td className="py-2 text-end tabular-nums" dir="ltr">
                       {fmtNum(data?.opening ?? 0)}
                     </td>
                   </tr>
@@ -217,7 +217,7 @@ export function StatementSheet({
                         )}
                       </td>
                       <td
-                        className={`py-2 text-end align-top font-medium ${
+                        className={`py-2 text-end align-top font-bold tabular-nums ${
                           t.amount >= 0 ? "text-success" : "text-danger"
                         }`}
                         dir="ltr"
@@ -225,7 +225,7 @@ export function StatementSheet({
                         {t.amount >= 0 ? "+" : ""}
                         {fmtNum(t.amount)}
                       </td>
-                      <td className="py-2 text-end align-top" dir="ltr">
+                      <td className="py-2 text-end align-top tabular-nums text-ink-muted" dir="ltr">
                         {fmtNum(running[i] ?? 0)}
                       </td>
                     </tr>
@@ -239,7 +239,7 @@ export function StatementSheet({
                       {S.closing}
                     </td>
                     <td className="py-2" />
-                    <td className="py-2 text-end" dir="ltr">
+                    <td className="py-2 text-end tabular-nums" dir="ltr">
                       {fmtNum(data?.closing ?? 0)}
                     </td>
                   </tr>

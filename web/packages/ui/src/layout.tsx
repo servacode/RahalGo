@@ -395,6 +395,7 @@ export function EntityCard({
   footer,
   actions,
   muted = false,
+  spine,
   className = "",
 }: {
   media?: ReactNode;
@@ -406,11 +407,29 @@ export function EntityCard({
   actions?: ReactNode;
   /** كيان غير فعّال — يبهت بلا أن يختفي */
   muted?: boolean;
+  /**
+   * عمودٌ ملوّنٌ على حافّة البطاقة يقول حالتَها.
+   *
+   * **يُقرأ قبل أن تُقرأ الشارة**: شبكةٌ من اثنتي عشرة بطاقة تُمسح بالعين
+   * مسحاً، **والشارةُ نصٌّ يلزمه وقوف**. والعمودُ لونٌ يُلتقط في اللمحة
+   * الأولى — فيعرف صاحبُه أيَّ بطاقةٍ يقصد قبل أن يقرأ شيئاً.
+   */
+  spine?: "primary" | "success" | "danger" | "warning" | "info" | "violet";
   className?: string;
 }) {
+  const SPINE: Record<string, string> = {
+    primary: "border-s-primary",
+    success: "border-s-success",
+    danger: "border-s-danger",
+    warning: "border-s-warning",
+    info: "border-s-info",
+    violet: "border-s-violet",
+  };
   return (
     <div
       className={`flex flex-col rounded-card border bg-surface p-4 transition-shadow hover:shadow-md ${
+        spine ? `border-s-4 ${SPINE[spine]} ` : ""
+      }${
         muted ? "border-dashed border-line opacity-75" : "border-line"
       } ${className}`}
     >
@@ -480,7 +499,15 @@ export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | str
   return (
     <div className="mb-4 flex items-center justify-between gap-4 border-b border-line pb-4">
       {/* العلامة — نفسُ علامة الشاشة، فالورقةُ والتطبيقُ شيءٌ واحد */}
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary text-lg font-bold text-white">
+      {/* **العلامةُ تُطبع.**
+
+          المتصفّحاتُ لا تطبع الخلفياتِ افتراضاً — فمربّعٌ ملوّنٌ بحرفٍ أبيض
+          يخرج **بياضاً على بياض**: ورقةٌ رسمية بلا علامة. والوسمُ هنا تلتقطه
+          قاعدةُ طباعةٍ تقلبه إلى إطارٍ وحرفٍ أسودين. */}
+      <div
+        data-print-mark
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary text-lg font-bold text-white"
+      >
         {m.terms.brandInitial}
       </div>
 

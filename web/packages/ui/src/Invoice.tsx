@@ -112,11 +112,13 @@ export function Invoice({
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b border-line text-xs text-ink-muted">
-                  <th className="py-2 text-start font-medium">{V.colItem}</th>
-                  <th className="py-2 text-end font-medium">{V.colQty}</th>
-                  <th className="py-2 text-end font-medium">{V.colUnit}</th>
-                  <th className="py-2 text-end font-medium">{V.colLine}</th>
+                {/* **رأسٌ يُميَّز بحدٍّ لا بلونٍ**: الألوانُ لا تُطبع، ورأسُ
+                    جدولٍ يذوب في صفوفه يجعل العمودَ الأوّل يُقرأ مبلغاً. */}
+                <tr className="border-b-2 border-ink/20 text-[11px] uppercase tracking-wide text-ink-muted">
+                  <th className="py-2 text-start font-bold">{V.colItem}</th>
+                  <th className="w-16 py-2 text-end font-bold">{V.colQty}</th>
+                  <th className="w-24 py-2 text-end font-bold">{V.colUnit}</th>
+                  <th className="w-28 py-2 text-end font-bold">{V.colLine}</th>
                 </tr>
               </thead>
               <tbody>
@@ -131,13 +133,13 @@ export function Invoice({
                       )}
                       {it.note && <span className="block text-xs text-ink-muted">{it.note}</span>}
                     </td>
-                    <td className="py-2 text-end align-top" dir="ltr">
+                    <td className="py-2 text-end align-top tabular-nums" dir="ltr">
                       {fmtNum(it.qty)}
                     </td>
-                    <td className="py-2 text-end align-top" dir="ltr">
+                    <td className="py-2 text-end align-top tabular-nums text-ink-muted" dir="ltr">
                       {fmtNum(it.unit_price)}
                     </td>
-                    <td className="py-2 text-end align-top font-medium" dir="ltr">
+                    <td className="py-2 text-end align-top font-bold tabular-nums" dir="ltr">
                       {fmtNum(it.unit_price * it.qty)}
                     </td>
                   </tr>
@@ -148,17 +150,27 @@ export function Invoice({
         )}
 
         {/* الحساب: كل سطر يُجمع مع ما قبله فيبلغ الإجمالي — يُراجَع لا يُصدَّق */}
-        <dl className="mt-4 space-y-1.5 border-t border-line pt-3 text-sm">
-          <Row label={V.subtotal} value={order.subtotal} />
-          <Row label={V.deliveryFee} value={order.delivery_fee} />
-          {order.discount > 0 && <Row label={V.discount} value={-order.discount} tone="success" />}
-          <div className="flex items-center justify-between border-t border-line pt-2 text-base font-bold">
-            <dt>{V.total}</dt>
-            <dd dir="ltr">
-              {fmtNum(order.total)} {m.common.currency}
-            </dd>
-          </div>
-        </dl>
+        {/* **المجاميعُ كتلةٌ إلى المنتهى لا شريطٌ بعرض الورقة.**
+
+            سطرٌ ممتدٌّ من الحافة إلى الحافة يُبعد اللفظَ عن رقمه شبراً، **فتُقرأ
+            الأرقامُ في عمودٍ واحدٍ ويُبحث عن أسمائها**. وجمعُهما في كتلةٍ ضيّقة
+            يجعل كلَّ لفظٍ ملاصقاً لمبلغه. */}
+        <div className="mt-5 flex justify-end" data-print-keep>
+          <dl className="w-full max-w-xs space-y-1.5 text-sm">
+            <Row label={V.subtotal} value={order.subtotal} />
+            <Row label={V.deliveryFee} value={order.delivery_fee} />
+            {order.discount > 0 && (
+              <Row label={V.discount} value={-order.discount} tone="success" />
+            )}
+            <div className="flex items-center justify-between border-t-2 border-ink/20 pt-2 text-lg font-bold">
+              <dt>{V.total}</dt>
+              <dd dir="ltr" className="tabular-nums">
+                {fmtNum(order.total)}{" "}
+                <span className="text-sm font-normal">{m.common.currency}</span>
+              </dd>
+            </div>
+          </dl>
+        </div>
 
         <p className="mt-3 rounded-control bg-page px-3 py-2 text-xs text-ink-muted">
           {order.wallet_paid > 0 && order.cash_due === 0
@@ -210,7 +222,9 @@ function Row({
     <div className="flex items-center justify-between">
       <dt className="text-ink-muted">{label}</dt>
       <dd
-        className={tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : ""}
+        className={`tabular-nums ${
+          tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : ""
+        }`}
         dir="ltr"
       >
         {fmtNum(value)}

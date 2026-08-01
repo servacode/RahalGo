@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import {
   IconCheck,
   IconLocation,
@@ -15,6 +15,7 @@ import {
   IconSuccess,
   IconPrint,
   Invoice,
+  Timeline,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -23,6 +24,19 @@ const STATUS_LABELS: Record<string, string> = m.orders.status;
 
 // مسار التقدم الطبيعي المعروض للزبون
 const FLOW = ["pending", "accepted", "preparing", "assigned", "on_the_way", "delivered"];
+
+/**
+ * وقتُ كل خطوةٍ من الحقل الذي يحملها.
+ *
+ * **وما لا وقتَ له يبقى بلا وقت** — لا يُخمَّن ولا يُملأ بوقتٍ قريب. وقتٌ
+ * مُخمَّنٌ في شاشةٍ يُقرأ حقيقةً، ثم يُبنى عليه اتّهامٌ لمن لم يتأخّر.
+ */
+const STEP_TIME: Record<string, (o: Order) => string | undefined> = {
+  pending: (o) => fmtTime(o.created_at),
+  accepted: (o) => (o.accepted_at ? fmtTime(o.accepted_at) : undefined),
+  preparing: (o) => (o.ready_at ? fmtTime(o.ready_at) : undefined),
+  delivered: (o) => (o.delivered_at ? fmtTime(o.delivered_at) : undefined),
+};
 // تطبيع الحالات الوسيطة لخط التقدم
 const NORMALIZE: Record<string, string> = {
   dispatching: "preparing",
@@ -125,33 +139,55 @@ export default function OrderTrackingPage() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold">
-          {m.site.orders.orderTitle.replace("{n}", fmtNum(order.number))}
-        </h1>
-        <div className="flex items-center gap-2">
-          <Badge variant={failed ? "danger" : order.status === "delivered" ? "success" : "primary"}>
-            {STATUS_LABELS[order.status] ?? order.status}
-          </Badge>
-          <Button
-            variant="secondary"
-            onClick={() => setShowInvoice((v) => !v)}
-            className="flex items-center gap-1.5"
-          >
-            <IconPrint size={15} />
-            {m.shared.invoice.open}
-          </Button>
+      {/* **ترويسةٌ واحدة تجيب ثلاثة أسئلة معاً**: أيُّ طلبٍ هذا، وأين وصل،
+          ومتى يصل. كانت ثلاثةَ أسطرٍ متفرّقة — **والعينُ تقفز بينها لتجمع
+          خبراً واحداً.** */}
+      <header
+        className={`mb-5 overflow-hidden rounded-card border ${
+          failed ? "border-danger/30" : "border-line"
+        } bg-surface`}
+      >
+        <div
+          className={`flex flex-wrap items-center justify-between gap-3 px-5 py-4 ${
+            failed
+              ? "bg-danger/5"
+              : order.status === "delivered"
+                ? "bg-success/5"
+                : "bg-primary-light"
+          }`}
+        >
+          <div className="min-w-0">
+            <p className="text-xs text-ink-muted">{order.merchant_name}</p>
+            <h1 className="mt-0.5 text-2xl font-bold tabular-nums" dir="ltr">
+              #{fmtNum(order.number)}
+            </h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant={failed ? "danger" : order.status === "delivered" ? "success" : "primary"}
+            >
+              {STATUS_LABELS[order.status] ?? order.status}
+            </Badge>
+            <Button
+              variant="secondary"
+              onClick={() => setShowInvoice((v) => !v)}
+              className="flex items-center gap-1.5"
+            >
+              <IconPrint size={15} />
+              {m.shared.invoice.open}
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* الوقت المتوقّع: «قيد التحضير» وحدها لا تقول عشر دقائق أم ساعة */}
-      {!failed && order.status !== "delivered" && order.accepted_at && order.prep_minutes && (
-        <p className="mb-4 flex items-center gap-2 rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">
-          <IconCheck size={16} strokeWidth={3} />
-          <span className="font-medium">{m.site.orders.eta}:</span>
-          {etaText(order)}
-        </p>
-      )}
+        {/* الوقت المتوقّع: «قيد التحضير» وحدها لا تقول عشر دقائق أم ساعة */}
+        {!failed && order.status !== "delivered" && order.accepted_at && order.prep_minutes && (
+          <p className="flex items-center gap-2 border-t border-line px-5 py-2.5 text-sm text-primary-dark">
+            <IconCheck size={16} strokeWidth={3} />
+            <span className="font-medium">{m.site.orders.eta}:</span>
+            {etaText(order)}
+          </p>
+        )}
+      </header>
 
       {/* الإلغاء: نافذة تدارُك قصيرة بعد قبول المتجر */}
       {(order.status === "pending" || order.status === "accepted") && (
@@ -192,36 +228,29 @@ export default function OrderTrackingPage() {
       )}
 
       {/* خط التقدم الحي */}
+      {/* **الرحلةُ بأوقاتها لا بترتيبها وحده.**
+
+          «قُبل الطلب» تقول أنه وقع، **و«قُبل ٠٩:٤٠» تقول متى** — ومنها يعرف
+          الزبونُ أين طال الانتظار: أعند المطعم أم في الطريق. وهو أوّلُ ما
+          يسأل عنه حين يتأخّر، وأوّلُ ما كانت الشاشةُ تسكت عنه. */}
       {!failed && (
-        <ol className="mb-6 space-y-0">
-          {FLOW.map((st, i) => {
-            const done = stepIdx >= i;
-            const current = stepIdx === i && order.status !== "delivered";
-            return (
-              <li key={st} className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-badge text-xs font-bold ${
-                      done ? "bg-primary text-white" : "border border-line text-ink-muted"
-                    } ${current ? "animate-pulse" : ""}`}
-                  >
-                    {done && !current ? <IconCheck size={14} strokeWidth={3} /> : i + 1}
-                  </span>
-                  {i < FLOW.length - 1 && (
-                    <span className={`h-6 w-0.5 ${stepIdx > i ? "bg-primary" : "bg-line"}`} />
-                  )}
-                </div>
-                <span
-                  className={`pt-1 text-sm ${done ? "font-medium" : "text-ink-muted"} ${
-                    current ? "text-primary-dark" : ""
-                  }`}
-                >
-                  {STATUS_LABELS[st]}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
+        <section className="mb-6 rounded-card border border-line bg-surface p-4">
+          <Timeline
+            nodes={FLOW.map((st, i) => ({
+              id: st,
+              state:
+                stepIdx > i || order.status === "delivered"
+                  ? ("done" as const)
+                  : stepIdx === i
+                    ? ("current" as const)
+                    : ("todo" as const),
+              icon: stepIdx > i || order.status === "delivered" ? IconCheck : undefined,
+              tone: st === "delivered" ? ("success" as const) : ("primary" as const),
+              title: STATUS_LABELS[st],
+              trailing: STEP_TIME[st]?.(order) ?? undefined,
+            }))}
+          />
+        </section>
       )}
       {failed && order.cancel_reason && (
         <p className="mb-6 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">

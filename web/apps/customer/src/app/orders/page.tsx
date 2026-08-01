@@ -39,6 +39,21 @@ const VARIANT: Record<string, "warning" | "primary" | "success" | "danger" | "ne
   refunded: "neutral",
 };
 
+/**
+ * لونُ العمود الجانبيّ.
+ *
+ * **لا يُشتقّ من `VARIANT`** رغم تشابههما: تلك تحوي `neutral` وهو لونُ شارةٍ
+ * لا لونُ عمود — **وعمودٌ رماديّ لا يقول شيئاً، فوجودُه ضجيجٌ بلا خبر**.
+ * فالمُسترجَعُ بلا عمودٍ أصلاً، وطلبٌ بلا عمودٍ طلبٌ انتهى أمرُه.
+ */
+const SPINE: Record<string, "warning" | "primary" | "success" | "danger"> = {
+  pending: "warning",
+  delivered: "success",
+  rejected: "danger",
+  cancelled: "danger",
+  failed: "danger",
+};
+
 interface OrderLineOption {
   id?: string;
   group: string;
@@ -176,6 +191,7 @@ export default function MyOrdersPage() {
             return (
               <EntityCard
                 key={o.id}
+                spine={o.status === "refunded" ? undefined : (SPINE[o.status] ?? "primary")}
                 media={
                   logo ? (
                     // eslint-disable-next-line @next/next/no-img-element

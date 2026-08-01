@@ -135,20 +135,28 @@ export function NotificationsPage({
       />
 
       {filters.length > 1 && (
-        <div className="flex flex-wrap gap-2">
+        /* **شريطٌ مقسّم لا أزرارٌ متناثرة**: المرشّحاتُ خياراتُ شيءٍ واحد،
+           وحدٌّ يجمعها يقول ذلك قبل أن تُقرأ. */
+        <div className="inline-flex flex-wrap gap-1 rounded-card border border-line bg-surface p-1">
           {filters.map((f) => (
             <button
               key={f.id}
               type="button"
               onClick={() => setKind(f.id)}
-              className={`rounded-badge px-3 py-1.5 text-sm transition-colors ${
+              className={`flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm transition-colors ${
                 kind === f.id
-                  ? "bg-primary font-medium text-white"
-                  : "border border-line text-ink-muted hover:text-ink"
+                  ? "bg-primary font-bold text-white shadow-sm"
+                  : "text-ink-muted hover:bg-page hover:text-ink"
               }`}
             >
               {f.label}
-              <span className="ms-1.5 opacity-70">{fmtNum(f.n)}</span>
+              <span
+                className={`rounded-badge px-1.5 text-[11px] tabular-nums ${
+                  kind === f.id ? "bg-white/20" : "bg-page"
+                }`}
+              >
+                {fmtNum(f.n)}
+              </span>
             </button>
           ))}
         </div>
@@ -157,38 +165,65 @@ export function NotificationsPage({
       {items.length === 0 ? (
         <EmptyState icon={IconBell} title={N.empty} />
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {groups.map((g) => (
             <section key={g.day}>
-              <h2 className="mb-2 text-xs font-medium text-ink-muted">{g.day}</h2>
+              {/* **عنوانُ اليوم يلتصق عند التمرير.**
+
+                  أرشيفٌ من مئتي سطرٍ يفقد صاحبَه: يمرّر فينسى أيَّ يومٍ يقرأ.
+                  **والعنوانُ الذي يهرب مع التمرير عنوانٌ لا يُقرأ إلّا مرّة.** */}
+              <div className="sticky top-0 z-10 -mx-1 mb-2 bg-page/85 px-1 py-1.5 backdrop-blur">
+                <h2 className="flex items-center gap-2 text-xs font-bold text-ink-muted">
+                  <span className="h-px flex-1 bg-line" />
+                  <span className="shrink-0">{g.day}</span>
+                  <span className="h-px flex-1 bg-line" />
+                </h2>
+              </div>
               <ul className="overflow-hidden rounded-card border border-line bg-surface">
                 {g.rows.map((n) => {
                   const meta = KINDS[n.kind] ?? KINDS.account!;
                   const Icon = meta.icon;
                   const inner = (
-                    <div className="flex items-start gap-3 px-4 py-3">
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${meta.tone}`}>
+                    /* **غيرُ المقروء بعمودٍ جانبيّ لا بغسلةِ لون.**
+
+                       كانت خلفيةٌ زرقاء تغمر السطرَ كلَّه — فيبهت النصُّ فيها
+                       ويصير الأحدثُ أصعبَ قراءةً من الأقدم. **وما يُميَّز
+                       بإضعافه لم يُميَّز.** والعمودُ يقول الشيءَ نفسه بحرفٍ
+                       واحد ولا يمسّ النصّ. */
+                    <div
+                      className={`flex items-start gap-3 border-s-[3px] py-3 pe-4 ps-3.5 ${
+                        n.read ? "border-transparent" : "border-primary bg-primary-light/40"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${meta.tone}`}
+                      >
                         <Icon size={17} />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className={`truncate ${n.read ? "text-ink" : "font-bold text-ink"}`}>
+                        <p
+                          className={`leading-snug ${n.read ? "text-ink" : "font-bold text-ink"}`}
+                        >
                           {n.title}
                         </p>
-                        {n.body && <p className="truncate text-sm text-ink-muted">{n.body}</p>}
+                        {/* **الجسدُ سطران لا سطرٌ مقتطع**: «تعويض عن طلبٍ فشل —
+                            المطعم مغلق» يُقصّ عند «طلبٍ» فيبقى السؤال. */}
+                        {n.body && (
+                          <p className="mt-0.5 line-clamp-2 text-sm leading-relaxed text-ink-muted">
+                            {n.body}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="text-xs text-ink-muted" dir="ltr">
-                          {fmtTime(n.created_at)}
-                        </span>
-                        {!n.read && <span className="h-2 w-2 rounded-badge bg-primary" />}
-                      </div>
+                      <span
+                        className="shrink-0 pt-0.5 text-xs tabular-nums text-ink-muted"
+                        dir="ltr"
+                      >
+                        {fmtTime(n.created_at)}
+                      </span>
                     </div>
                   );
                   return (
-                    <li
-                      key={n.id}
-                      className={`border-b border-line last:border-0 ${n.read ? "" : "bg-primary-light/25"}`}
-                    >
+                    <li key={n.id} className="border-b border-line last:border-0">
                       {n.href ? (
                         <Link
                           href={n.href}
