@@ -236,6 +236,11 @@ func (s *Service) AutoDispatch(ctx context.Context, actorID, orderID string) err
 	return err
 }
 
+// pastPickup حالاتٌ صار الطعامُ فيها بيد السائق — والمتجرُ قبض ثمنَه.
+var pastPickup = map[string]bool{
+	StPickedUp: true, StOnTheWay: true, StAtDropoff: true,
+}
+
 // settled ما وقع فعلاً من تسويات — يُملأ داخل المعاملة ويُقرأ بعد نجاحها
 // لإطلاق الإشعارات. متغيّر محلي لكل طلب: الخدمة مشتركة بين كل الطلبات المتزامنة
 // فلا يجوز أن تحمل حالة طلب بعينه.
@@ -269,25 +274,60 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 		}
 	}
 
-	// (2) التسليم — تحصيل النقد وتسوية العمولات والأجور
+	// (2) **الاستلامُ من المتجر — وهنا يقبض المتجر.**
+	//
+	// **المتجرُ ليس طرفاً في التوصيل**: باع وسلّم وانتهى، وما يجري بعد ذلك
+	// بين المنصة والسائق والزبون لا يخصّه. **فمستحقُّه لحظةَ خروج البضاعة من
+	// يده لا لحظةَ وصولها.**
+	//
+	// وأثرُه أن **الخزينةَ تهبط تحت الصفر بين الاستلام والتسليم** — دفعت ولم
+	// تقبض. **والسالبُ هناك ليس خطأً، هو الواقع**: مقدارُه ما في يد المتجر
+	// من مال المنصة.
+	//
+	// **وهذا يُسقط سؤالاً كنّا نبنيه**: «أاستردّ المتجرُ بضاعتَه أم تتحمّلها
+	// المنصة؟» — فالمنصةُ **اشترت** الطعامَ لحظةَ خروجه، **وهو ملكُها**،
+	// والخسارةُ تقع تلقائياً حيث يجب بلا قرارٍ من أحد.
+	if in.to == StPickedUp {
+		if err := s.settleMerchant(ctx, q, in.orderID, in.actorID); err != nil {
+			return err
+		}
+		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+	}
+
+	// (3) التسليم — تحصيل النقد وأجرُ السائق ونصيبُ المندوب
+	//
+	// **ولا مستحقَّ متجرٍ هنا**: قُيّد عند الاستلام. ولو أُعيد لَقُيّد مرّتين.
 	if in.to == StDelivered {
 		if in.cashDue > 0 && in.driverID != nil {
 			if err := s.cashbox.CollectTx(ctx, q, *in.driverID, in.cashDue, in.orderID, &in.actorID); err != nil {
 				return err
 			}
 		}
+		// **احتياطٌ لا تكرار**: تُهمل إن قُيّد المتجرُ عند الاستلام، وتُدرك
+		// ما فات إن قُفز فوقه.
+		if err := s.settleMerchant(ctx, q, in.orderID, in.actorID); err != nil {
+			return err
+		}
 		if err := s.payDriver(ctx, q, in); err != nil {
 			return err
 		}
-		if err := s.settleCommissions(ctx, q, in.orderID, in.actorID, out); err != nil {
+		if err := s.settleRep(ctx, q, in.orderID, in.actorID, out); err != nil {
 			return err
 		}
 		// **الطرفُ الرابع** — بعد أن تُقيَّد أنصبةُ الجميع، فيقرأ ما وقع
 		// لا ما نُوي. (treasury.go)
-		return s.creditTreasury(ctx, q, in.orderID, in.actorID, false)
+		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
 
-	// (3) استرجاع بعد التسليم — عكس كل ما سبق
+	// (4) نهايةٌ فاشلةٌ بعد الاستلام — **الخسارةُ تُقيَّد بلا قرارٍ من أحد**
+	//
+	// المتجرُ قبض عند الاستلام والزبونُ لم يدفع (أو رُدّ له). **فالفرقُ على
+	// المنصة** — وتقيّده الخزينةُ وحدها حين تُعيد الحساب.
+	if refundOnEnter(in.to) && in.from != StDelivered && pastPickup[in.from] {
+		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+	}
+
+	// (5) استرجاع بعد التسليم — عكس كل ما سبق
 	if refundOnEnter(in.to) && in.from == StDelivered {
 		if total := in.walletPaid + in.cashDue; total > 0 {
 			if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, total, "refund",
@@ -295,30 +335,50 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 				return err
 			}
 		}
-		// **العكسُ قبل عكس الأنصبة**: بعده تصير مجاميعُ الأطراف صفراً فيُقرأ
-		// الربحُ كاملاً وكأن أحداً لم يقبض شيئاً.
-		if err := s.creditTreasury(ctx, q, in.orderID, in.actorID, true); err != nil {
+		if err := s.reverseCommissions(ctx, q, in.orderID, in.actorID); err != nil {
 			return err
 		}
-		return s.reverseCommissions(ctx, q, in.orderID, in.actorID)
+		// **بعد عكس الأنصبة لا قبله**: الخزينةُ تقرأ ما بقي مقيَّداً، فلو
+		// قُرئت قبل العكس لحسبت أنصبةً ستُلغى بعد سطر.
+		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
 	return nil
 }
 
-// settleCommissions يحسب عمولة المنصة من المتجر (لقطة على الطلب)،
-// ويقيّد نسبة المندوب منها لمحفظته تلقائياً (PLAN §6.3 + قرار 13).
-func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, orderID, actorID string, out *settled) error {
+// settleMerchant يقيّد مستحقَّ المتجر وعمولةَ المنصة — **عند الاستلام**.
+//
+// **المتجرُ ليس طرفاً في التوصيل**: باع وسلّم وانتهى. فمستحقُّه لحظةَ خروج
+// البضاعة من يده، **وما يجري بعدها لا يخصّه** — لا فشلُ تسليمٍ ولا رفضُ زبون.
+//
+// **والعمولةُ معه**: هي تكلفةُ بيعته، والبيعةُ وقعت. (السياسة §٣-١)
+func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
+	// **لا يُقيَّد مرّتين.**
+	//
+	// تُنادى عند الاستلام، **وتُنادى ثانيةً عند التسليم احتياطاً**: الخريطةُ
+	// تمنع بلوغَ التسليم بلا استلام، **لكنّ تجاوزَ أدمنٍ أو إصلاحَ بياناتٍ قد
+	// يقفز فوقه** — وحينها يبقى المتجرُ بلا مستحقّ وعمولةُ المنصة صفراً،
+	// **فيُقرأ الطلبُ ربحاً كاملاً وهو لم يُدفع ثمنُه.**
+	//
+	// **ومنعُ التكرار بالدفتر لا بالحالة**: يُسأل عن قيدٍ وقع، لا عن حالةٍ
+	// يُظنّ أنها مرّت.
+	var already bool
+	if err := q.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM wallet_transactions
+		               WHERE ref = $1 AND kind = 'merchant_earning')`,
+		orderID).Scan(&already); err != nil {
+		return err
+	}
+	if already {
+		return nil
+	}
+
 	var subtotal int64
 	var merchantPct int
-	var repID, ownerID *string
-	var repIsBuyer bool
-	err := q.QueryRow(ctx, `
-		SELECT o.subtotal, m.commission_percent, m.sales_rep_user_id,
-		       m.sales_rep_user_id = o.customer_id, m.owner_user_id
+	var ownerID *string
+	if err := q.QueryRow(ctx, `
+		SELECT o.subtotal, m.commission_percent, m.owner_user_id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).
-		Scan(&subtotal, &merchantPct, &repID, &repIsBuyer, &ownerID)
-	if err != nil {
+		WHERE o.id = $1`, orderID).Scan(&subtotal, &merchantPct, &ownerID); err != nil {
 		return err
 	}
 
@@ -328,24 +388,42 @@ func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, order
 		orderID, platformCommission); err != nil {
 		return err
 	}
+	if ownerID == nil {
+		return nil
+	}
 
 	// مستحقّ المتجر: قيمة بضاعته ناقصَ عمولة المنصة.
 	//
 	// **لا `total`**: رسم التوصيل أجرُ خدمةٍ تؤدّيها المنصة بسائقها فليس من
-	// نصيبه — والعمولة نفسها محسوبة على `subtotal`، فالأساسان متسقان.
-	//
-	// ويُقيَّد لحظة التسليم لا لحظة الطلب: البيع يتمّ بالتسليم، والاسترجاع يعكسه.
-	if ownerID != nil {
-		if due := subtotal - platformCommission; due > 0 {
-			if _, err := s.wallet.ApplyTx(ctx, q, *ownerID, due, "merchant_earning",
-				orderID, "مستحقّ عن طلب مُسلَّم", &actorID); err != nil {
-				return err
-			}
-		}
+	// نصيبه — والعمولة نفسها محسوبة على البضاعة، فالأساسان متسقان.
+	due := subtotal - platformCommission
+	if due <= 0 {
+		return nil
+	}
+	_, err := s.wallet.ApplyTx(ctx, q, *ownerID, due, "merchant_earning",
+		orderID, "مستحقّ عن بضاعةٍ سُلّمت للسائق", &actorID)
+	return err
+}
+
+// settleRep يقيّد نصيبَ المندوب — **عند التسليم**.
+//
+// **وعند الفشل لا يُقيَّد شيء**: عمولتُه على طلبٍ وصل، لا على طلبٍ خرج من
+// المطبخ. (وهو قرارُ المالك: «عند الفشل يُشطب ويُكتب ملغي».)
+func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, actorID string, out *settled) error {
+	var platformCommission int64
+	var repID *string
+	var repIsBuyer bool
+	if err := q.QueryRow(ctx, `
+		SELECT o.platform_commission, m.sales_rep_user_id,
+		       m.sales_rep_user_id = o.customer_id
+		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1`, orderID).Scan(&platformCommission, &repID, &repIsBuyer); err != nil {
+		return err
 	}
 	if platformCommission == 0 || repID == nil {
 		return nil
 	}
+
 	// المندوب لا يقبض عمولةً على شرائه هو.
 	//
 	// العمولة أُنشئت لتكافئ **جلب الزبائن**، وشراءُ المندوب من متجره ليس ترويجاً
@@ -359,11 +437,8 @@ func (s *Service) settleCommissions(ctx context.Context, q wallet.Querier, order
 	}
 	// عتبة التفعيل: لا عمولة عن عميلٍ لم يُثبت أنه يعمل.
 	activated, err := s.merchantActivated(ctx, q, orderID)
-	if err != nil {
+	if err != nil || !activated {
 		return err
-	}
-	if !activated {
-		return nil
 	}
 
 	repCommission, err := s.repShare(ctx, q, platformCommission)
