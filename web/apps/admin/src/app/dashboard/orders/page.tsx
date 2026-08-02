@@ -31,6 +31,7 @@ import {
   IconBalance,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
@@ -208,22 +209,70 @@ const OPS_NEXT: Record<string, string[]> = {
   delivered: ["refunded"],
 };
 
+/** مراحلُ الطريق — لا يملكها إلّا من يسير فيها (مرآةُ `driverOnly`). */
+const DRIVER_ONLY = new Set([
+  "at_pickup",
+  "picked_up",
+  "on_the_way",
+  "at_dropoff",
+  "delivered",
+  "failed",
+]);
+
+/** ما بلغه الطلبُ بعد تحويله إلى المتجر (مرآةُ `afterHandoff`). */
+const AFTER_HANDOFF = new Set([
+  "dispatching",
+  "assigned",
+  "at_pickup",
+  "picked_up",
+  "on_the_way",
+  "at_dropoff",
+]);
+
 /**
- * ما تملكه العملياتُ فعلاً بعد حساب الوضع — مرآةُ `orders/modes.go`.
+ * ما تملكه العملياتُ فعلاً — **مرآةُ `orders/modes.go`**.
  *
- * **والخادمُ هو الحَكَم**: هذه الدالة تُخفي ما سيُردّ، فلا يضغط الموظّفُ زرّاً
- * يعتذر. ولو انحرفت عن الخادم لظهر زرٌّ لا يعمل — **وهو أخفُّ ضرراً من زرٍّ
- * يعمل ولا يجب أن يعمل**.
+ * # القاعدةُ الحاكمة
+ *
+ * **بعد التحويل إلى المتجر: المنصةُ عينٌ لا يد.** قامت بدورها — قبلت وحوّلت —
+ * وانتهى عملُها. وما بعدها يقع في مطبخٍ لا تراه وعلى طريقٍ لا تسلكه.
+ *
+ * # والخادمُ هو الحَكَم
+ *
+ * هذه الدالة **تُخفي ما سيُردّ** فلا يضغط الموظّفُ زرّاً يعتذر. ولو انحرفت عن
+ * الخادم لظهر زرٌّ لا يعمل — **وهو أخفُّ ضرراً من زرٍّ يعمل ولا يجب أن يعمل**.
+ *
+ * # والأدمن فوقها
+ *
+ * المالكُ يبقى قادراً وكلُّ فعلٍ له مُسجَّل. **ونظامٌ بلا تجاوزٍ في أيّ موضع
+ * يُصلَح بجراحةٍ في قاعدة البيانات حين يقع ما لم يُحسب.**
  */
-function opsNext(status: string, selfManage: boolean, hasDriver: boolean): string[] {
+function opsNext(
+  status: string,
+  selfManage: boolean,
+  hasDriver: boolean,
+  isAdmin: boolean,
+): string[] {
   let next = OPS_NEXT[status] ?? [];
-  // **المتجر يدير — والمنصةُ عينٌ لا يد**: القبولُ والرفضُ اختصاصُه.
+  if (isAdmin) return next;
+
+  // **المتجر يدير**: القبولُ والرفضُ اختصاصُه.
   if (selfManage && status === "pending") {
     next = next.filter((t) => t !== "accepted" && t !== "rejected");
   }
-  // **وبعد أن يمسكه سائق، لا تُلغيه العمليات**: هو عند الباب يرى ما لا تراه
-  // غرفةُ العمليات، وإلغاؤها من بعيدٍ يُلغي طلباً ربّما استُلم فعلاً.
-  if (!selfManage && hasDriver) {
+
+  // **ولا تُعلن العملياتُ بدءَ تحضيرٍ لم تبدأه** — التحضيرُ فعلٌ في مطبخٍ
+  // خارج النظام. وقد وقعت فعلاً في تجربةٍ حيّة: ضُغطت بعد ثانيةٍ من القبول
+  // **والمتجرُ لم يُبلَّغ بعد**.
+  next = next.filter((t) => t !== "preparing");
+
+  // **ومراحلُ الطريق للسائق وحده** — المنصةُ لا تعلم أنه وصل: ربّما كان في
+  // طلبٍ آخر وهو عائدٌ إليه. **وزرٌّ هنا يكتب في السجلّ حدثاً لم يقع.**
+  next = next.filter((t) => !DRIVER_ONLY.has(t));
+
+  // **وبعد التحويل لا تُلغي طلباً** — ولو لم يمسكه سائقٌ بعد. وما قبله بيدها:
+  // طلبٌ لم يعلم به مطبخٌ ولا تحرّك له سائق.
+  if (AFTER_HANDOFF.has(status)) {
     next = next.filter((t) => t !== "cancelled");
   }
   return next;
@@ -261,6 +310,9 @@ export default function OrdersPage() {
    * بكل زرّ**.
    */
   const [selfManage, setSelfManage] = useState<boolean | null>(null);
+  // **الأدمن فوق قاعدة «عينٌ لا يد»** — تجاوزُ المالك، وكلُّ فعلٍ له مُسجَّل.
+  const { user: me } = useAuth();
+  const isAdmin = !!me?.roles.includes("admin");
 
   useEffect(() => {
     api<{ key: string; value: unknown }[]>("/api/v1/admin/settings")
@@ -555,7 +607,12 @@ export default function OrdersPage() {
         view={view}
         empty={m.admin.ordersPage.empty}
         actions={(o) => (
-          <OrderActions o={o} onChanged={load} selfManage={selfManage !== false} />
+          <OrderActions
+            o={o}
+            onChanged={load}
+            selfManage={selfManage !== false}
+            isAdmin={isAdmin}
+          />
         )}
       />
 
@@ -604,11 +661,14 @@ function OrderActions({
   o,
   onChanged,
   selfManage,
+  isAdmin,
 }: {
   o: OrderRow;
   onChanged: () => void;
   /** حين تكون `false` تُدير المنصةُ الطلبات وتُرسلها للمتجر على واتساب */
   selfManage: boolean;
+  /** الأدمن فوق القاعدة — تجاوزُ المالك، وهو مُسجَّل */
+  isAdmin: boolean;
 }) {
   const [busy, setBusy] = useState("");
   /** الفعلُ الهدّام المفتوح الآن — يُطلب سببُه قبل تنفيذه */
@@ -625,7 +685,7 @@ function OrderActions({
   const [err, setErr] = useState("");
 
   // **ما تملكه العملياتُ بعد حساب الوضع** — لا الخريطةُ الخام.
-  const next = opsNext(o.status, selfManage, o.driver_name !== null);
+  const next = opsNext(o.status, selfManage, o.driver_name !== null, isAdmin);
 
   // **الإسنادُ اليدوي مخرجٌ لا طريق.** السائقون يلتقطون من الطابور بأنفسهم
   // (تطبيق :3005)، وهذا لمن لم يلتقطه أحد. ولذلك يُجلب السائقون **عند فتح

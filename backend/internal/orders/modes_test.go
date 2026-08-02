@@ -47,12 +47,37 @@ func TestRolesUnderMode(t *testing.T) {
 			[]string{"merchant"}, false, false},
 
 		// ── حدُّ الإلغاء: قبل السائق وبعده ───────────────────────────────
-		{"العملياتُ تلغي ما لم يمسكه سائق", platformManages, StDispatching, StCancelled,
-			[]string{"ops"}, false, true},
-		{"ولا تلغي ما في يد سائق", platformManages, StAtPickup, StCancelled,
-			[]string{"ops"}, true, false},
 		{"والسائقُ يُفشله من عند الباب", platformManages, StAtPickup, StFailed,
 			[]string{"driver"}, true, true},
+
+		// ── «المنصةُ عينٌ لا يد» — قرارُ المالك ٢٠٢٦-٠٨-٠٢ ──────────────
+		//
+		// **وأوّلُها وقع أمامنا حيّاً**: ضغطت العملياتُ «بدء التحضير» بعد
+		// ثانيةٍ من القبول والمتجرُ لم يُبلَّغ بعد.
+		{"العملياتُ لا تُعلن تحضيراً", platformManages, StAccepted, StPreparing,
+			[]string{"ops"}, false, false},
+		{"ولا تقول وصلَ المتجر", platformManages, StAssigned, StAtPickup,
+			[]string{"ops"}, true, false},
+		{"ولا تقول استلم", platformManages, StAtPickup, StPickedUp,
+			[]string{"ops"}, true, false},
+		{"ولا تقول سلّم", platformManages, StAtDropoff, StDelivered,
+			[]string{"ops"}, true, false},
+		{"ولا تُفشل نيابةً عنه", platformManages, StAtDropoff, StFailed,
+			[]string{"ops"}, true, false},
+		// **والسائقُ يملكها كلَّها** — فالنزعُ من العمليات لا يعطّل الطريق.
+		{"والسائقُ يملكها", platformManages, StAtPickup, StPickedUp,
+			[]string{"driver"}, true, true},
+
+		// ── الإلغاء: قبل التحويل وبعده ──────────────────────────────────
+		//
+		// **ما قبل التحويل بيدها**: طلبٌ لم يعلم به مطبخٌ ولا تحرّك له سائق.
+		{"تُلغي ما لم يُحوَّل", platformManages, StAccepted, StCancelled,
+			[]string{"ops"}, false, true},
+		// **وما بعده ليس لها** — ولو لم يمسكه سائقٌ بعد.
+		{"ولا تُلغي بعد التحويل", platformManages, StDispatching, StCancelled,
+			[]string{"ops"}, false, false},
+		{"ولا بعد الإسناد", platformManages, StAssigned, StCancelled,
+			[]string{"ops"}, true, false},
 
 		// ── الأدمن فوق الوضعين ─────────────────────────────────────────
 		{"الأدمن يقبل ولو كان المتجر يدير", merchantManages, StPending, StAccepted,
