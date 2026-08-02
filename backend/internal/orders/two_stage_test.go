@@ -29,12 +29,12 @@ func TestMerchantPaidAtPickup(t *testing.T) {
 		f.orderID, "picked_up", ""); err != nil {
 		t.Fatalf("الاستلام فشل: %v", err)
 	}
-	if got := f.balance(t, owner); got != 90_000 {
-		t.Fatalf("مستحقّ المتجر عند الاستلام = %d، والمتوقّع 90000", got)
+	if got := f.balance(t, owner); got != 81_000 {
+		t.Fatalf("مستحقّ المتجر عند الاستلام = %d، والمتوقّع 81000", got)
 	}
 	// **نقديٌّ فلم تقبض المنصةُ شيئاً** — فالخزينةُ سالبةٌ بما دفعت.
-	if got := f.balance(t, treasury); got != -90_000 {
-		t.Errorf("الخزينة عند الاستلام = %d، والمتوقّع -90000", got)
+	if got := f.balance(t, treasury); got != -81_000 {
+		t.Errorf("الخزينة عند الاستلام = %d، والمتوقّع -81000", got)
 	}
 	if got := f.balance(t, f.driver); got != 0 {
 		t.Errorf("السائق قبض قبل أن يسلّم: %d", got)
@@ -51,7 +51,7 @@ func TestMerchantPaidAtPickup(t *testing.T) {
 		}
 	}
 
-	if got := f.balance(t, owner); got != 90_000 {
+	if got := f.balance(t, owner); got != 81_000 {
 		t.Errorf("قُيّد للمتجر مرّتين: %d", got)
 	}
 	if got := f.balance(t, f.driver); got != 7_000 {
@@ -60,9 +60,9 @@ func TestMerchantPaidAtPickup(t *testing.T) {
 	if got := f.balance(t, f.rep); got != 1_000 {
 		t.Errorf("عمولة المندوب = %d، والمتوقّع 1000", got)
 	}
-	// **١١٠٬٠٠٠ − (٩٠٬٠٠٠ + ٧٬٠٠٠ + ١٬٠٠٠) = ١٢٬٠٠٠** — نفسُ رقمٍ قبل التقسيم.
-	if got := f.balance(t, treasury); got != 12_000 {
-		t.Errorf("الخزينة بعد التسليم = %d، والمتوقّع 12000", got)
+	// **١١٠٬٠٠٠ − (٨١٬٠٠٠ + ٧٬٠٠٠ + ١٬٠٠٠) = ٢١٬٠٠٠** — نفسُ رقمٍ قبل التقسيم.
+	if got := f.balance(t, treasury); got != 21_000 {
+		t.Errorf("الخزينة بعد التسليم = %d، والمتوقّع 21000", got)
 	}
 }
 
@@ -88,15 +88,19 @@ func TestFailureAfterPickup_PlatformBearsIt(t *testing.T) {
 	}
 
 	// **المتجرُ يبقى بماله** — لا يخسر بمن أخطأ بعده.
-	if got := f.balance(t, owner); got != 90_000 {
-		t.Errorf("مستحقّ المتجر = %d، والمتوقّع 90000 يبقى كما هو", got)
+	if got := f.balance(t, owner); got != 81_000 {
+		t.Errorf("مستحقّ المتجر = %d، والمتوقّع 81000 يبقى كما هو", got)
 	}
 	if got := f.balance(t, f.rep); got != 0 {
 		t.Errorf("المندوب قبض عن طلبٍ فشل: %d", got)
 	}
 	// **والخسارةُ الفعلية = ما دُفع للمتجر** — مكتوبةٌ في الدفتر بلا تقرير.
-	if got := f.balance(t, treasury); got != -90_000 {
-		t.Errorf("خسارة المنصة = %d، والمتوقّع -90000", got)
+	//
+	// **وهي سعرُ الشراء ناقصَ عمولتنا لا سعرُ البيع**: ما خسرناه ما دفعناه،
+	// **والهامشُ الذي لم نقبضه ربحٌ فائتٌ لا خسارةٌ واقعة** — وقاعدةُ المالك
+	// «الفعلية لا الافتراضية».
+	if got := f.balance(t, treasury); got != -81_000 {
+		t.Errorf("خسارة المنصة = %d، والمتوقّع -81000", got)
 	}
 }
 
@@ -113,9 +117,9 @@ func TestWalletOrder_TwoStagesSameTotal(t *testing.T) {
 		f.orderID, "picked_up", ""); err != nil {
 		t.Fatalf("الاستلام فشل: %v", err)
 	}
-	// **قُبض ١١٠٬٠٠٠ ودُفع ٩٠٬٠٠٠** — فالباقي عندها ٢٠٬٠٠٠ حتى تدفع الأجور.
-	if got := f.balance(t, treasury); got != 20_000 {
-		t.Errorf("الخزينة عند الاستلام = %d، والمتوقّع 20000", got)
+	// **قُبض ١١٠٬٠٠٠ ودُفع ٨١٬٠٠٠** — فالباقي عندها ٢٩٬٠٠٠ حتى تدفع الأجور.
+	if got := f.balance(t, treasury); got != 29_000 {
+		t.Errorf("الخزينة عند الاستلام = %d، والمتوقّع 29000", got)
 	}
 
 	for _, st := range []string{"on_the_way", "at_dropoff", "delivered"} {
@@ -124,11 +128,11 @@ func TestWalletOrder_TwoStagesSameTotal(t *testing.T) {
 			t.Fatalf("%s فشل: %v", st, err)
 		}
 	}
-	if got := f.balance(t, owner); got != 90_000 {
+	if got := f.balance(t, owner); got != 81_000 {
 		t.Errorf("مستحقّ المتجر = %d", got)
 	}
-	if got := f.balance(t, treasury); got != 12_000 {
-		t.Errorf("الخزينة = %d، والمتوقّع 12000 — نفسُ رقم النقديّ", got)
+	if got := f.balance(t, treasury); got != 21_000 {
+		t.Errorf("الخزينة = %d، والمتوقّع 21000 — نفسُ رقم النقديّ", got)
 	}
 }
 

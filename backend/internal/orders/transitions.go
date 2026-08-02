@@ -492,17 +492,36 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		return nil
 	}
 
-	var subtotal int64
+	// **الأساسُ سعرُ الشراء لا سعرُ البيع.**
+	//
+	// `o.subtotal` صار **ما يدفعه الزبون** — سعرَ الشراء زائدَ هامشِنا.
+	// **والمتجرُ لا يبيع بذلك السعر ولا يراه**، فمستحقُّه منه يعطيه هامشَنا،
+	// **وعمولتُنا عليه تخصم منه على مالٍ لم يقبضه.**
+	//
+	// **وعمولةٌ على سعرٍ لا يراه المتجرُ عمولةٌ لا يفهمها**: يُقال له «٢٪»
+	// فيحسبها على رقمه، فإن حُسبت على رقمنا **وجد خصماً لم يتوقّعه ولم
+	// يُخبَر به** — والثقةُ تنكسر هكذا لا بالهامش المُعلَن.
+	//
+	// و`merchant_price` لقطةٌ في بند الطلب: **تكلفةُ الأمس تُقرأ كما كانت.**
+	var goodsCost, subtotal int64
 	var merchantPct int
 	var ownerID *string
 	if err := q.QueryRow(ctx, `
-		SELECT o.subtotal, m.commission_percent, m.owner_user_id
+		SELECT COALESCE((SELECT sum(oi.merchant_price * oi.qty)
+		                 FROM order_items oi WHERE oi.order_id = o.id), 0),
+		       o.subtotal, m.commission_percent, m.owner_user_id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).Scan(&subtotal, &merchantPct, &ownerID); err != nil {
+		WHERE o.id = $1`, orderID).
+		Scan(&goodsCost, &subtotal, &merchantPct, &ownerID); err != nil {
 		return err
 	}
+	// **وطلبٌ بلا بنود يقع على القديم** — طلباتُ ما قبل السعرين، أو ما أُنشئ
+	// بلا `order_items`. **وصفرٌ هنا يعني «لا مستحقّ» وهو أسوأُ من الخطأ.**
+	if goodsCost == 0 {
+		goodsCost = subtotal
+	}
 
-	platformCommission := subtotal * int64(merchantPct) / 100
+	platformCommission := goodsCost * int64(merchantPct) / 100
 	if _, err := q.Exec(ctx,
 		`UPDATE orders SET platform_commission = $2 WHERE id = $1`,
 		orderID, platformCommission); err != nil {
@@ -512,11 +531,11 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		return nil
 	}
 
-	// مستحقّ المتجر: قيمة بضاعته ناقصَ عمولة المنصة.
+	// مستحقّ المتجر: **سعرُ شرائه ناقصَ العمولة** — لا سعرُ البيع.
 	//
 	// **لا `total`**: رسم التوصيل أجرُ خدمةٍ تؤدّيها المنصة بسائقها فليس من
-	// نصيبه — والعمولة نفسها محسوبة على البضاعة، فالأساسان متسقان.
-	due := subtotal - platformCommission
+	// نصيبه — والعمولة نفسها محسوبة على بضاعته، فالأساسان متسقان.
+	due := goodsCost - platformCommission
 	if due <= 0 {
 		return nil
 	}
@@ -561,7 +580,23 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		return err
 	}
 
-	repCommission, err := s.repShare(ctx, q, platformCommission)
+	// **نصيبُه من الهامش لا من العمولة.**
+	//
+	// **الـ٢٪ مالٌ مرصودٌ لخسارة** — للطلبات التي تفشل فتتحمّلها المنصة. ولو
+	// أخذ منها **لربح على متجرٍ هامشُه صفر والمنصةُ تدفع له من جيبها.**
+	//
+	// **وبالهامش يربح حين تربح ولا يربح حين لا تربح** — وهو أعدلُ حافزٍ
+	// بينهما. ومتجرٌ جلبه ثمّ لم يُوضع على أصنافه هامشٌ لا يُنتج عمولة،
+	// **وهو الصدق: لم تربح المنصةُ منه شيئاً.**
+	//
+	// والهامشُ **يُحسب من اللقطتين لا يُخزَّن** — فلا يفترق عن مصدريه.
+	var margin int64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE(sum((oi.unit_price - oi.merchant_price) * oi.qty), 0)
+		FROM order_items oi WHERE oi.order_id = $1`, orderID).Scan(&margin); err != nil {
+		return err
+	}
+	repCommission, err := s.repShare(ctx, q, margin)
 	if err != nil || repCommission <= 0 {
 		return err
 	}
@@ -593,9 +628,24 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 	// عكس مستحقّ المتجر أولاً: المنصة ردّت للزبون ثمن البضاعة، فلا يبقى للمتجر
 	// مستحقٌّ عن بيعٍ لم يتمّ. وبلا هذا العكس يبقى مالٌ في دفتره عن طلب مُسترجَع —
 	// وهو نفس تسريب R-14 من باب المتجر.
+	//
+	// **ويُعكس ما قُيّد فعلاً لا ما تقول المعادلة.**
+	//
+	// كان يُحسب `subtotal - platform_commission`، **و`subtotal` صار سعرَ البيع
+	// لا سعرَ الشراء** — فلو بقيت الحسبةُ لَخُصم من المتجر هامشُنا معه: **مالٌ
+	// لم يقبضه يُسترَدّ منه.** وفوقها تتغيّر النسبةُ بين القيد والعكس فيبقى
+	// فرقٌ في محفظته بلا سبب.
+	//
+	// **والدفترُ يقول كم دُفع** — ولا يحتاج أن يُسأل مرّتين.
 	if ownerID != nil {
-		if due := subtotal - platformCommission; due > 0 {
-			if _, err := s.wallet.ApplyTx(ctx, q, *ownerID, -due, "adjustment",
+		var paid int64
+		if err := q.QueryRow(ctx, `
+			SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
+			WHERE ref = $1 AND kind = 'merchant_earning'`, orderID).Scan(&paid); err != nil {
+			return err
+		}
+		if paid > 0 {
+			if _, err := s.wallet.ApplyTx(ctx, q, *ownerID, -paid, "adjustment",
 				orderID, "عكس مستحقّ متجر — طلب مُسترجَع", &actorID); err != nil {
 				return err
 			}
@@ -616,13 +666,23 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 		return nil
 	}
 
-	repCommission, err := s.repShare(ctx, q, platformCommission)
-	if err != nil || repCommission <= 0 {
+	// **وعمولتُه تُعكس بما قُيّد لا بما يُحسب.**
+	//
+	// أساسُها صار الهامشَ لا العمولة، **ونسبةُ المندوب إعدادٌ قد يتغيّر بين
+	// الطلب واسترجاعه** — فحسبةٌ جديدةٌ تعكس مبلغاً غيرَ الذي قُبض، فيبقى فرقٌ
+	// في محفظته إلى الأبد.
+	var repPaid int64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
+		WHERE ref = $1 AND kind = 'commission'`, orderID).Scan(&repPaid); err != nil {
 		return err
+	}
+	if repPaid <= 0 {
+		return nil
 	}
 	// قد يكون رصيد المندوب أقلّ من العمولة (سحبها) — عندها يُرفض القيد بـ
 	// insufficient_balance، وهو رفض صحيح: الدَّين يُسوّى يدوياً من المالية.
-	_, err = s.wallet.ApplyTx(ctx, q, *repID, -repCommission, "adjustment",
+	_, err = s.wallet.ApplyTx(ctx, q, *repID, -repPaid, "adjustment",
 		orderID, "عكس عمولة مندوب — طلب مُسترجَع", &actorID)
 	return err
 }

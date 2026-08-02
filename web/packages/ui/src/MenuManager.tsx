@@ -42,7 +42,10 @@ export interface MenuItem {
   section_id: string;
   name: string;
   description: string;
+  /** **سعرُ البيع** — ما يدفعه الزبون. تحسبه المنصةُ ولا يُكتب هنا. */
   price: number;
+  /** **سعرُ الشراء** — ما يضعه المتجر وهو ما يقبضه. */
+  merchant_price: number;
   image_url: string | null;
   image_thumb_url: string | null;
   available: boolean;
@@ -235,7 +238,18 @@ export function MenuManager({
                         )}
                       </div>
                       <span className="font-bold text-primary-dark" dir="ltr">
-                        {fmtNum(item.price)} {m.common.currency}
+                        {/* **السعران معاً لمن يراهما.**
+
+                            المتجرُ يرى سعرَه وحدَه (`merchant_price === price`
+                            حين لا هامش، والخادمُ يُسقط سعرَ الشراء عن الزبون).
+                            **والأدمن يرى الاثنين** — وهو من يضع الهامش،
+                            **ومن يضع رقماً لا يرى أثرَه يضعه أعمى.** */}
+                        {fmtNum(item.merchant_price || item.price)} {m.common.currency}
+                        {item.merchant_price > 0 && item.price > item.merchant_price && (
+                          <span className="ms-1.5 text-2xs text-success">
+                            ← {fmtNum(item.price)}
+                          </span>
+                        )}
                       </span>
                       <Badge variant={item.available ? "success" : "warning"}>
                         {item.available ? L.available : L.unavailable}
@@ -307,7 +321,12 @@ function ItemModal({
   const item = editing.item;
   const [name, setName] = useState(item?.name ?? "");
   const [description, setDescription] = useState(item?.description ?? "");
-  const [price, setPrice] = useState(item ? String(item.price) : "");
+  // **المُحرَّرُ سعرُ الشراء لا سعرُ البيع.**
+  //
+  // **ولو حُرِّر سعرُ البيع لَضاع الهامشُ في أوّل تعديل**: يفتح المتجرُ الصنفَ
+  // فيرى ١٢٬٠٠٠ (وسعرُه ١٠٬٠٠٠)، **فيحفظ فيصير سعرُ شرائه اثني عشر** ويُضاف
+  // عليه الهامشُ من جديد — **ورقمٌ يرتفع بكلّ فتحةٍ للنافذة.**
+  const [price, setPrice] = useState(item ? String(item.merchant_price || item.price) : "");
   const [sectionId, setSectionId] = useState(editing.sectionId);
   const [groups, setGroups] = useState<ModifierGroup[]>(
     item?.modifiers.map((g) => ({ ...g, options: [...g.options] })) ?? [],
@@ -367,6 +386,12 @@ function ItemModal({
           onChange={(e) => setName(e.target.value)}
         />
         <div className="grid grid-cols-2 gap-3">
+          <div>
+          {/* **اللفظُ يقول أيَّ سعرٍ هو.**
+
+              «السعر» وحدَها تحتمل الاثنين، **وصاحبُ المتجر يقرؤها سعرَ البيع**
+              فيضع فيها ما يريد أن يدفعه الزبون — **فيُضاف عليه هامشُنا فيصير
+              الصنفُ أغلى ممّا قصد**، ويشكو من رقمٍ لم يضعه. */}
           <Input
             id="i-price"
             label={`${L.price} (${m.common.currency})`}
@@ -376,6 +401,8 @@ function ItemModal({
             value={price}
             onChange={(e) => setPrice(e.target.value)}
           />
+          <p className="mt-1 text-2xs text-ink-muted">{L.priceHint}</p>
+          </div>
           <Select
             id="i-section"
             label={L.section}

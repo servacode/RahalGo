@@ -14,6 +14,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
 var (
@@ -67,11 +68,17 @@ type MerchantPage struct {
 type Service struct {
 	db       *pgxpool.Pool
 	identity *identity.Service
+	// settings مفاتيحُ الهامش — **تُقرأ عند كلّ عرضٍ لا تُخزَّن**، فتغييرُ
+	// المالك يظهر في القائمة فوراً بلا إعادة حسابِ ألف صنف.
+	settings *settings.Store
 }
 
 func NewService(db *pgxpool.Pool, identitySvc *identity.Service) *Service {
 	return &Service{db: db, identity: identitySvc}
 }
+
+// SetSettings يحقن مخزن الإعدادات (يُنادى مرّة عند الإقلاع).
+func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
 
 // ---------- الفئات ----------
 

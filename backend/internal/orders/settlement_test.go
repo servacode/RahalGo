@@ -32,6 +32,9 @@ type fixture struct {
 	rep        string
 	merchantID string
 	orderID    string
+	// merchantCost سعرُ الشراء المزروع — **الأساسُ الذي تُحسب عليه العمولة
+	// ومستحقُّ المتجر**، والفرقُ بينه وبين `subtotal` هو الهامش.
+	merchantCost int64
 }
 
 // setup يبني أقلّ ما يلزم لطلب قابل للتسليم: متجر منسوب لمندوب، وزبون، وسائق،
@@ -88,6 +91,22 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 		Scan(&f.orderID); err != nil {
 		t.Fatalf("تعذّر إنشاء طلب: %v", err)
 	}
+
+	// **بندٌ واحدٌ بسعرين — وهو ما تقرؤه التسوية.**
+	//
+	// بعد نموذج السعرين صار كلُّ حسابٍ يقرأ `order_items`: **مستحقُّ المتجر من
+	// `merchant_price`، وعمولةُ المندوب من الفرق.** وطلبٌ بلا بنود يجعل
+	// الهامشَ صفراً — **فيمرّ الاختبار على نموذجٍ لا وجودَ له.**
+	//
+	// والهامشُ عُشر سعر البيع: `100000` بيعاً و`90000` شراءً. **ورقمٌ مستدير
+	// يجعل الخطأ يُرى بالعين** حين يقع.
+	f.merchantCost = subtotal * 9 / 10
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO order_items (order_id, name, unit_price, merchant_price, qty, options)
+		VALUES ($1, 'صنف اختبار', $2, $3, 1, '[]'::jsonb)`,
+		f.orderID, subtotal, f.merchantCost); err != nil {
+		t.Fatalf("تعذّر إنشاء بند الطلب: %v", err)
+	}
 	return f
 }
 
@@ -131,10 +150,14 @@ func TestDelivery_CreditsCashAndCommissions(t *testing.T) {
 	if got := f.held(t); got != 110_000 {
 		t.Errorf("صندوق السائق = %d، والمتوقع 110000 (كامل المبلغ نقداً)", got)
 	}
-	if got := f.platformCommission(t); got != 10_000 {
-		t.Errorf("عمولة المنصة = %d، والمتوقع 10000 (10%% من 100000)", got)
+	// **على سعر الشراء لا سعر البيع** — بيعةُ المتجر هي ما يُحاسَب عليه.
+	if got := f.platformCommission(t); got != 9_000 {
+		t.Errorf("عمولة المنصة = %d، والمتوقع 9000 (10%% من 90000)", got)
 	}
-	// نصيب المندوب = النسبة الديناميكية من عمولة المنصة (الافتراضي 10%)
+	// **نصيبُه من الهامش لا من العمولة** — ١٠٪ من ١٠٬٠٠٠ = ١٬٠٠٠.
+	//
+	// **والـ٢٪ مالٌ مرصودٌ لخسارة**: لو أخذ منها لربح على متجرٍ هامشُه صفر
+	// **والمنصةُ تدفع له من جيبها.**
 	if got := f.balance(t, f.rep); got != 1_000 {
 		t.Errorf("عمولة المندوب = %d، والمتوقع 1000", got)
 	}
@@ -223,8 +246,8 @@ func TestDelivery_NoCommissionWhenRepIsTheBuyer(t *testing.T) {
 		t.Fatalf("قُيّدت %d حركة عمولة للمندوب على شرائه هو، والمتوقع 0", n)
 	}
 	// عمولة المنصة تبقى كاملة: المتجر باع فعلاً ويدين بها
-	if got := f.platformCommission(t); got != 10_000 {
-		t.Fatalf("عمولة المنصة = %d، والمتوقع 10000 — الملغى نصيب المندوب لا العمولة", got)
+	if got := f.platformCommission(t); got != 9_000 {
+		t.Fatalf("عمولة المنصة = %d، والمتوقع 9000 — الملغى نصيب المندوب لا العمولة", got)
 	}
 
 	// والاسترجاع لا يخصم منه شيئاً لم يقبضه
@@ -454,8 +477,10 @@ func TestDelivery_CreditsMerchantEarning(t *testing.T) {
 	}
 
 	// 100,000 بضاعة − 10,000 عمولة (10%) = 90,000 — ورسم التوصيل 10,000 للمنصة
-	if got := f.balance(t, ownerID); got != 90_000 {
-		t.Fatalf("مستحقّ المتجر = %d، والمتوقع 90000 (subtotal − عمولة، بلا رسم التوصيل)", got)
+	// **الأساسُ سعرُ الشراء**: ٩٠٬٠٠٠ ناقصَ عمولةِ ١٠٪ = ٨١٬٠٠٠.
+	// **ولا يأخذ هامشَنا معه** — هو لم يبعه بذلك السعر ولا يراه.
+	if got := f.balance(t, ownerID); got != 81_000 {
+		t.Fatalf("مستحقّ المتجر = %d، والمتوقع 81000 (سعرُ الشراء − عمولة)", got)
 	}
 
 	if _, err := f.svc.Transition(ctx, f.driver, []string{"admin"}, f.orderID, "refunded", ""); err != nil {
@@ -591,6 +616,13 @@ func (f *fixture) extraDeliveredOrder(t *testing.T, customerID string) string {
 			'cash', 100000, 10000, 110000, 0, 110000)
 		RETURNING id`, customerID, f.merchantID, f.driver).Scan(&id); err != nil {
 		t.Fatalf("تعذّر إنشاء طلب إضافي: %v", err)
+	}
+	// **وبندٌ بسعرين كالطلب الأصليّ** — وإلّا كان هامشُه صفراً فلا عمولة
+	// للمندوب، **فيبدو الاختبارُ ساقطاً والسببُ زراعتُه لا الشيفرة.**
+	if _, err := f.pool.Exec(context.Background(), `
+		INSERT INTO order_items (order_id, name, unit_price, merchant_price, qty, options)
+		VALUES ($1, 'صنف اختبار', 100000, 90000, 1, '[]'::jsonb)`, id); err != nil {
+		t.Fatalf("تعذّر إنشاء بند الطلب الإضافي: %v", err)
 	}
 	return id
 }

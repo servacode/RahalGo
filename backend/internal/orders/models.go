@@ -33,13 +33,21 @@ type OptionSnapshot struct {
 }
 
 type OrderItem struct {
-	ID         string           `json:"id"`
-	MenuItemID *string          `json:"menu_item_id"`
-	Name       string           `json:"name"`
-	UnitPrice  int64            `json:"unit_price"`
-	Qty        int              `json:"qty"`
-	Note       string           `json:"note"`
-	Options    []OptionSnapshot `json:"options"`
+	ID         string  `json:"id"`
+	MenuItemID *string `json:"menu_item_id"`
+	Name       string  `json:"name"`
+	UnitPrice  int64   `json:"unit_price"`
+	// MerchantPrice سعرُ الشراء لحظةَ الطلب — **لقطةٌ لا قراءةٌ لاحقة**.
+	//
+	// يرفع المتجرُ سعرَه غداً **فتُعاد قراءةُ طلبات الأمس بتكلفةٍ لم تقع**،
+	// فيبدو هامشُنا أصغرَ أو أكبرَ ممّا كان. **وتقريرُ ربحٍ يقرأ أسعارَ اليوم
+	// على طلبات الأمس تقريرٌ يكذب بلا أن يخطئ أحد.**
+	//
+	// **ولا يُرسل إلى الزبون** — انظر `order_breakdown.go`.
+	MerchantPrice int64            `json:"-"`
+	Qty           int              `json:"qty"`
+	Note          string           `json:"note"`
+	Options       []OptionSnapshot `json:"options"`
 }
 
 type Event struct {

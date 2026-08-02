@@ -113,6 +113,20 @@ func (s *Server) handlePublicMerchant(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **سعرُ الشراء لا يصل الزبون.**
+	//
+	// **وحذفُه من الشاشة لا يكفي**: من فتح أدوات المتصفّح قرأ الردَّ كما هو،
+	// **وسعرُ شرائنا مكتوبٌ فيه بجانب سعر بيعنا** — فيُعرف هامشُنا بضغطة.
+	//
+	// **والضررُ ليس في معرفته وحدَها**: الهامشُ **مُعلَنٌ للمتجر** ولا نكتمه.
+	// لكنّ رقماً بعينه لكلّ صنفٍ يصل الزبونَ **يصل المتجرَ من بعده**، ومنافساً
+	// يبني قائمتَه على أرقامنا. **والحذفُ عند المصدر لا عند العرض.**
+	for si := range menu {
+		for ii := range menu[si].Items {
+			menu[si].Items[ii].MerchantPrice = 0
+			menu[si].Items[ii].MarginOverride = nil
+		}
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"merchant": m, "menu": menu})
 }
 

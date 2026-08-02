@@ -15,6 +15,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
@@ -273,9 +274,10 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 
 	for _, it := range items {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO order_items (order_id, menu_item_id, name, unit_price, qty, note, options)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			orderID, it.MenuItemID, it.Name, it.UnitPrice, it.Qty, it.Note,
+			INSERT INTO order_items (order_id, menu_item_id, name, unit_price,
+			                         merchant_price, qty, note, options)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			orderID, it.MenuItemID, it.Name, it.UnitPrice, it.MerchantPrice, it.Qty, it.Note,
 			marshalOptions(it.Options)); err != nil {
 			return nil, err
 		}
@@ -342,17 +344,32 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 func (s *Service) priceItems(ctx context.Context, merchantID string, inputs []ItemInput) ([]OrderItem, int64, error) {
 	items := make([]OrderItem, 0, len(inputs))
 	var subtotal int64
+	rule := pricing.RuleFrom(ctx, s.settings)
 
 	for _, in := range inputs {
 		if in.Qty < 1 || in.Qty > 50 {
 			return nil, 0, ErrBadItems
 		}
+		// **سعرُ البيع يُحسب هنا لا يُقرأ.**
+		//
+		// `menu_items.price` قد يكون قديماً: **الهامشُ إعدادٌ يملك المالكُ
+		// تغييرَه في أيّ لحظة**، ولو قُرئ العمودُ المخزَّن لَبِيع بسعر الأمس
+		// حتى يُعاد حسابُ ألف صنف. **وحسبةٌ عند الطلب لا تتخلّف أبداً.**
+		//
+		// والتجاوزان يُقرآن مع الصنف في استعلامٍ واحد: **الصنفُ يرث تصنيفَه،
+		// والتصنيفُ يرث العام.**
 		var it OrderItem
 		var available bool
+		var itemMargin, catMargin *int64
 		err := s.db.QueryRow(ctx, `
-			SELECT id, name, price, available FROM menu_items
-			WHERE id = $1 AND merchant_id = $2`, in.MenuItemID, merchantID).
-			Scan(&it.MenuItemID, &it.Name, &it.UnitPrice, &available)
+			SELECT mi.id, mi.name, mi.merchant_price, mi.available,
+			       mi.margin_override, c.margin_override
+			FROM menu_items mi
+			JOIN merchants mm ON mm.id = mi.merchant_id
+			LEFT JOIN categories c ON c.id = mm.category_id
+			WHERE mi.id = $1 AND mi.merchant_id = $2`, in.MenuItemID, merchantID).
+			Scan(&it.MenuItemID, &it.Name, &it.MerchantPrice, &available,
+				&itemMargin, &catMargin)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, 0, ErrBadItems
 		}
@@ -362,6 +379,7 @@ func (s *Service) priceItems(ctx context.Context, merchantID string, inputs []It
 		if !available {
 			return nil, 0, ErrItemUnavailable
 		}
+		it.UnitPrice = rule.SalePrice(it.MerchantPrice, itemMargin, catMargin)
 		it.Qty = in.Qty
 		it.Note = in.Note
 		it.Options = []OptionSnapshot{}
@@ -405,6 +423,12 @@ func (s *Service) priceItems(ctx context.Context, merchantID string, inputs []It
 				return nil, 0, ErrItemUnavailable
 			}
 			rules[groupID].chosen++
+			// **الفارقُ يُضاف إلى السعرين معاً.**
+			//
+			// «جبنة إضافية +٢٠٠٠» ثمنٌ يقبضه المتجرُ كما يقبض أصلَ الصنف،
+			// **فإضافتُه إلى سعر البيع وحدَه تجعله هامشاً لنا** — ونربح على
+			// ما لم نضف إليه شيئاً، **ويُحرم المتجرُ ثمنَ ما صنعه.**
+			it.MerchantPrice += delta
 			it.UnitPrice += delta
 			it.Options = append(it.Options, OptionSnapshot{ID: optID, Group: groupName, Name: optName, PriceDelta: delta})
 		}

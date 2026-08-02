@@ -17,7 +17,27 @@ type Store struct {
 
 func NewStore(db *pgxpool.Pool) *Store { return &Store{db: db} }
 
+// errNoStore يُعاد حين لا مخزن — **ويُبتلع في القرّاء الآمنين** فيعيدون
+// افتراضاتهم. **ولا يُصدَّر**: ليس خطأً يُعالَج بل حالٌ تُقرأ.
+var errNoStore = errors.New("settings: لا مخزن")
+
+// Get يقرأ قيمةً خاماً ويفكّها في `out`.
+//
+// # ومخزنٌ فارغٌ يُقرأ كغيابِ قيمة لا كانهيار
+//
+// **`*Store` فارغٌ حالٌ مشروعةٌ في هذا المشروع**: خدماتٌ تُبنى قبل حقن المخزن،
+// واختباراتٌ تمرّره `nil` عمداً لتفحص السلوك الافتراضيّ. **وكلُّ نداءٍ يتحقّق
+// بنفسه شرطٌ يُنسى مرّةً فينهار الخادم.**
+//
+// **وقد وقع فعلاً**: `pricing.RuleFrom` تأخذ واجهةً، **ومؤشّرٌ فارغٌ داخل واجهة
+// ليس واجهةً فارغة** — فمرّ فحصُ `st == nil` ثمّ انهار عند `s.db`. **وشرطٌ
+// يبدو صحيحاً وهو لا يُمسك شيئاً أخطرُ من غياب الشرط.**
+//
+// **فالحارسُ هنا يحرس كلَّ النداءات** — لا نداءً واحداً.
 func (s *Store) Get(ctx context.Context, key string, out any) error {
+	if s == nil || s.db == nil {
+		return errNoStore
+	}
 	var raw []byte
 	err := s.db.QueryRow(ctx, `SELECT value FROM app_settings WHERE key = $1`, key).Scan(&raw)
 	if err != nil {

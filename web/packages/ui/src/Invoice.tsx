@@ -31,7 +31,7 @@ export interface InvoiceItem {
 export interface InvoiceOrder {
   number: number;
   status: string;
-  merchant_name: string;
+  merchant_name?: string;
   customer_name?: string;
   customer_phone?: string;
   address_text: string;
@@ -52,9 +52,18 @@ export function Invoice({
   order,
   /** عرضُ سطر العمولة وصافي المستحقّ — للمتجر وحده */
   showMerchantSettlement = false,
+  /**
+   * إظهارُ مصدر البضاعة — **للمتجر والعمليات لا للزبون.**
+   *
+   * **وافتراضُه الإخفاء لا الإظهار.** من نسي تمريرَه في شاشةٍ جديدة يُخفي —
+   * **وخطأُ الإخفاء يُكتشف بسؤالٍ من موظّف، وخطأُ الإظهار لا يُكتشف أبداً**:
+   * يمضي في آلاف الفواتير قبل أن ينتبه أحد.
+   */
+  showSource = false,
 }: {
   order: InvoiceOrder;
   showMerchantSettlement?: boolean;
+  showSource?: boolean;
 }) {
   const items = order.items ?? [];
   const commission = order.platform_commission ?? 0;
@@ -105,7 +114,20 @@ export function Invoice({
             <span className="text-ink-muted">{V.address} </span>
             {order.address_text}
           </p>
-          <p className="sm:col-span-2 text-ink-muted">{order.merchant_name}</p>
+          {/* **الفاتورةُ صادرةٌ من «رحّال غو» لا من المتجر.**
+
+              الزبونُ اشترى منّا: نحن من عرض السعرَ وقبض الثمنَ وأوصل. **واسمُ
+              المتجر في الفاتورة يقول له من أين نشتري** — فيتّصل به في المرّة
+              القادمة **ويوفّر رسمَ التوصيل والمتجرُ يوفّر عمولتنا.** وكلُّ
+              منصةِ توصيلٍ تموت من هذا الباب لا من غيره.
+
+              **والورقةُ أبقى من الشاشة**: صفحةٌ تُغلق، **وفاتورةٌ تُطبع تبقى
+              في البيت شهراً وتُقرأ مرّةً بعد مرّة.**
+
+              وتُعرض للمتجر والعمليات كما هي: `showSource` تُمرَّر من شاشتهما. */}
+          {showSource && order.merchant_name && (
+            <p className="sm:col-span-2 text-ink-muted">{order.merchant_name}</p>
+          )}
         </div>
 
         {items.length > 0 && (

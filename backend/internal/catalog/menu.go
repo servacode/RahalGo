@@ -9,6 +9,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // نموذج القائمة الكامل: أقسام ← أصناف ← مجموعات مُعدِّلات ← خيارات.
@@ -33,16 +34,26 @@ type ModifierGroup struct {
 }
 
 type MenuItem struct {
-	ID            string          `json:"id"`
-	SectionID     string          `json:"section_id"`
-	Name          string          `json:"name"`
-	Description   string          `json:"description"`
-	Price         int64           `json:"price"`
-	ImageURL      *string         `json:"image_url"`
-	ImageThumbURL *string         `json:"image_thumb_url"`
-	Available     bool            `json:"available"`
-	SortOrder     int             `json:"sort_order"`
-	Modifiers     []ModifierGroup `json:"modifiers"`
+	ID          string `json:"id"`
+	SectionID   string `json:"section_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	// Price **سعرُ البيع** — ما يدفعه الزبون. يُحسب من `MerchantPrice`
+	// والهامش، **ولا يُقرأ من العمود المخزَّن**: الهامشُ إعدادٌ يملك المالكُ
+	// تغييرَه، **ولو قُرئ المخزَّنُ لَبِيع بسعر الأمس حتى يُعاد حسابُ ألف صنف.**
+	Price int64 `json:"price"`
+	// MerchantPrice **سعرُ الشراء** — ما وضعه المتجر وهو ما يقبضه.
+	//
+	// **ولا يصل الزبون**: `handlePublicMerchant` تُسقطه. ويصل المتجرَ (هو
+	// سعرُه) والأدمن (هو من يضع الهامش).
+	MerchantPrice int64 `json:"merchant_price"`
+	// MarginOverride تجاوزُ هامش الصنف — **فراغُه «اتبع تصنيفَك» لا «بلا هامش»**.
+	MarginOverride *int64          `json:"margin_override"`
+	ImageURL       *string         `json:"image_url"`
+	ImageThumbURL  *string         `json:"image_thumb_url"`
+	Available      bool            `json:"available"`
+	SortOrder      int             `json:"sort_order"`
+	Modifiers      []ModifierGroup `json:"modifiers"`
 }
 
 type MenuSection struct {
@@ -82,8 +93,21 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	}
 
 	itemIdx := map[string][2]int{} // itemID → (sectionIdx, itemIdx)
+	// **تجاوزُ التصنيف يُقرأ مع الصنف** — فالحسبةُ في Go لا في SQL.
+	//
+	// **ولو حُسب السعرُ في الاستعلام لَصارت المعادلةُ في موضعين**: هنا وفي
+	// `priceItems` عند الطلب. **ورقمان لمعنًى واحد يفترقان** — فيرى الزبونُ
+	// سعراً في القائمة ويُحاسَب بغيره في السلّة.
+	rule := pricing.RuleFrom(ctx, s.settings)
+	var catMargin *int64
+	_ = s.db.QueryRow(ctx, `
+		SELECT c.margin_override FROM merchants m
+		LEFT JOIN categories c ON c.id = m.category_id WHERE m.id = $1`,
+		merchantID).Scan(&catMargin)
+
 	rows, err = s.db.Query(ctx, `
-		SELECT i.id, i.section_id, i.name, i.description, i.price,
+		SELECT i.id, i.section_id, i.name, i.description,
+		       i.merchant_price, i.margin_override,
 		       im.path, im.thumb_path, i.available, i.sort_order
 		FROM menu_items i
 		LEFT JOIN media im ON im.id = i.image_media_id
@@ -94,10 +118,12 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	for rows.Next() {
 		var it MenuItem
 		if err := rows.Scan(&it.ID, &it.SectionID, &it.Name, &it.Description,
-			&it.Price, &it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder); err != nil {
+			&it.MerchantPrice, &it.MarginOverride,
+			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder); err != nil {
 			rows.Close()
 			return nil, err
 		}
+		it.Price = rule.SalePrice(it.MerchantPrice, it.MarginOverride, catMargin)
 		it.ImageURL = media.URLForPtr(it.ImageURL)
 		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.Modifiers = []ModifierGroup{}
@@ -230,8 +256,20 @@ type MenuItemInput struct {
 	SectionID   *string `json:"section_id"`
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
-	Price       *int64  `json:"price"`
-	Available   *bool   `json:"available"`
+	// Price **سعرُ الشراء** — ما وضعه المتجر وهو ما يقبضه.
+	//
+	// **والاسمُ يبقى `price` عمداً**: هو ما تُرسله شاشةُ المتجر منذ البداية،
+	// **وتغييرُ اسمِ حقلٍ في الواجهة يكسر كلَّ شاشةٍ لم تُحدَّث بعد** — فيُرسل
+	// المتجرُ سعراً ويُقرأ فارغاً، **فيصير كلُّ صنفٍ بصفر.**
+	//
+	// وسعرُ البيع لا يُرسَل أصلاً: **تحسبه المنصةُ ولا يملك المتجرُ وضعَه.**
+	Price *int64 `json:"price"`
+	// MarginOverride تجاوزُ هامش الصنف — **للأدمن لا للمتجر**.
+	//
+	// **وفراغُه «اتبع تصنيفَك» لا «بلا هامش»**: مؤشّرٌ لا رقم، فالصفرُ قرارٌ
+	// يُفرَّق عن غياب القرار.
+	MarginOverride *int64 `json:"margin_override"`
+	Available      *bool  `json:"available"`
 	// معرف وسائط الصورة: غير مُرسل = بلا تغيير، "" = إزالة الصورة
 	ImageMediaID *string `json:"image_media_id"`
 	// إن أُرسلت (حتى فارغة) تُستبدل شجرة المُعدِّلات بالكامل
@@ -250,8 +288,9 @@ func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in
 
 	var id string
 	err = tx.QueryRow(ctx, `
-		INSERT INTO menu_items (merchant_id, section_id, name, description, price, image_media_id, sort_order)
-		SELECT $1, $2, $3, COALESCE($4,''), $5, NULLIF(COALESCE($6, ''), '')::uuid,
+		INSERT INTO menu_items (merchant_id, section_id, name, description,
+		                        merchant_price, price, image_media_id, sort_order)
+		SELECT $1, $2, $3, COALESCE($4,''), $5, $5, NULLIF(COALESCE($6, ''), '')::uuid,
 		       COALESCE((SELECT max(sort_order)+1 FROM menu_items WHERE section_id=$2), 1)
 		WHERE EXISTS (SELECT 1 FROM menu_sections WHERE id = $2 AND merchant_id = $1)
 		RETURNING id`,
@@ -286,13 +325,26 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 			section_id  = COALESCE($2, section_id),
 			name        = COALESCE($3, name),
 			description = COALESCE($4, description),
-			price       = COALESCE($5, price),
+			-- **السعرُ المُرسَل سعرُ شراء** — وعمودُ price يتبعه كي لا يبقى
+			-- القديمُ يحمل رقماً لا معنى له. **وسعرُ البيع يُحسب عند العرض**
+			-- (حزمة pricing) فلا يُقرأ هذا العمودُ في مسارٍ يراه زبون.
+			merchant_price = COALESCE($5, merchant_price),
+			price          = COALESCE($5, price),
+			-- **التجاوزُ يُمحى صراحةً بسالبِ واحد.**
+			--
+			-- COALESCE وحدَه لا يفرّق بين «لم يُرسَل» و«أُرسل فارغاً» — وكلاهما
+			-- NULL. **فمن أراد أن يعيد صنفاً إلى وراثة تصنيفه لم يملك سبيلاً**:
+			-- كلُّ إرسالٍ يُقرأ «بلا تغيير».
+			margin_override = CASE WHEN $8::bigint IS NULL THEN margin_override
+			                       WHEN $8 < 0 THEN NULL
+			                       ELSE $8 END,
 			available   = COALESCE($6, available),
 			image_media_id = CASE WHEN $7::text IS NULL THEN image_media_id
 			                      ELSE NULLIF($7, '')::uuid END,
 			updated_at  = now()
 		WHERE id = $1`,
-		itemID, in.SectionID, in.Name, in.Description, in.Price, in.Available, in.ImageMediaID)
+		itemID, in.SectionID, in.Name, in.Description, in.Price, in.Available,
+		in.ImageMediaID, in.MarginOverride)
 	if err != nil {
 		return err
 	}

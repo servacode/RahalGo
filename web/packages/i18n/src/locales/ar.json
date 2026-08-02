@@ -247,7 +247,7 @@
       "itemName": "اسم الصنف",
       "itemDescription": "الوصف",
       "itemImage": "صورة الصنف",
-      "price": "السعر",
+      "price": "سعرك — ما تقبضه",
       "section": "القسم",
       "available": "متوفر",
       "unavailable": "نافد",
@@ -263,7 +263,9 @@
       "optional": "اختياري",
       "optionName": "اسم الخيار",
       "priceDelta": "فرق السعر",
-      "addOption": "خيار"
+      "addOption": "خيار",
+      "priceHint": "المنصة تضيف هامشها فوقه، وهذا الرقم هو مستحقّك كاملاً",
+      "salePrice": "سعر البيع للزبون"
     },
     "invoice": {
       "open": "الفاتورة",
