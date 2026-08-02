@@ -40,9 +40,10 @@ import (
 )
 
 var (
-	errNotFailed       = httpx.NewError(http.StatusConflict, "order_not_failed", "errors.order_not_failed")
-	errGoodsSettled    = httpx.NewError(http.StatusConflict, "goods_already_settled", "errors.goods_already_settled")
-	errNoDriverOnOrder = httpx.NewError(http.StatusConflict, "order_has_no_driver", "errors.order_has_no_driver")
+	errNotFailed        = httpx.NewError(http.StatusConflict, "order_not_failed", "errors.order_not_failed")
+	errGoodsSettled     = httpx.NewError(http.StatusConflict, "goods_already_settled", "errors.goods_already_settled")
+	errNoDriverOnOrder  = httpx.NewError(http.StatusConflict, "order_has_no_driver", "errors.order_has_no_driver")
+	errGoodsFlowChanged = httpx.NewError(http.StatusGone, "goods_flow_changed", "errors.goods_flow_changed")
 )
 
 // handleCompensateDriver تعويضُ سائقٍ عن طلبٍ فشل — بمبلغٍ يقدّره إنسان.
@@ -117,8 +118,30 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 	httpx.JSON(w, http.StatusOK, map[string]any{"compensated": req.Amount})
 }
 
-// handleSettleGoods يحسم مصير بضاعة طلبٍ فشل.
+// handleSettleGoods **مهجورة** — كانت تعوّض المتجرَ عن بضاعةٍ لم يستردّها.
+//
+// # لماذا بطلت
+//
+// وُضعت حين كان المتجرُ **يقبض عند التسليم**: يفشل الطلبُ فلا يقبض شيئاً،
+// فتُسأل العملياتُ «أنعوّضه؟».
+//
+// **وبعد أن صار يقبض عند خروج البضاعة، صار استعمالُها دفعاً ثانياً**: مالٌ
+// قبضه عند الاستلام يُدفع له مرّةً أخرى باسم التعويض. **ونقطةٌ تعمل بمنطقٍ
+// انقضى أخطرُ من نقطةٍ لا تعمل** — هذه تُردّ وتلك تدفع.
+//
+// **والسؤالُ انقلب**: لم يعد «أنعوّضه؟» بل **«أنستردّ منه؟»** — وذاك
+// handleReturnToMerchant.
+//
+// وتُبقى مردودةً لا محذوفة: **واجهةٌ تختفي فجأةً تُسقط شاشةً لم تُحدَّث بعد**،
+// وردٌّ صريحٌ يقول ما جرى.
 func (s *Server) handleSettleGoods(w http.ResponseWriter, r *http.Request) {
+	s.respondErr(w, errGoodsFlowChanged)
+}
+
+// handleSettleGoodsLegacy الجسدُ القديم — يبقى للقراءة لا للنداء.
+//
+//nolint:unused
+func (s *Server) handleSettleGoodsLegacy(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	req, err := decode[struct {
 		To string `json:"to"` // merchant | platform

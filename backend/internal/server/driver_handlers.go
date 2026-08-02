@@ -25,6 +25,7 @@ var (
 	errNotYourOrder  = httpx.NewError(http.StatusForbidden, "not_your_order", "errors.not_your_order")
 	errOrderTaken    = httpx.NewError(http.StatusConflict, "order_taken", "errors.order_taken")
 	errCashLimitFull = httpx.NewError(http.StatusConflict, "cash_limit_reached", "errors.cash_limit_reached")
+	errBadFailReason = httpx.NewError(http.StatusBadRequest, "bad_fail_reason", "errors.bad_fail_reason")
 	errNotOnShift    = httpx.NewError(http.StatusConflict, "not_on_shift", "errors.not_on_shift")
 	errTooManyActive = httpx.NewError(http.StatusConflict, "too_many_active_orders", "errors.too_many_active_orders")
 )
@@ -266,9 +267,21 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	req, err := decode[struct {
 		To   string `json:"to"`
 		Note string `json:"note"`
+		// Reason رمزٌ من `FailReasons` — **يلزم عند التعذّر**، ومنه يُشتقّ
+		// الذنبُ الذي يقرّر التعويض.
+		Reason string `json:"reason"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
+		return
+	}
+	// **سببٌ مصنَّفٌ لا نصٌّ حرّ.**
+	//
+	// كُتب في تجربةٍ حيّة «الزبون لا يقبل او رفض او لم اجد احد او العنوان
+	// وهمي» — **أربعةُ أحكامٍ في سطر**، وأحدُها يستوجب مراجعةَ زبونٍ والآخر
+	// لا يستوجب شيئاً. **ونصٌّ حرٌّ لا يُعدّ ولا يُقاس.**
+	if req.To == orders.StFailed && orders.FaultOf(req.Reason) == "" {
+		s.respondErr(w, errBadFailReason)
 		return
 	}
 	// **ما لا يُستدرَك يلزمه سبب — والسائقُ كالعمليات في هذا.**
@@ -282,8 +295,8 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	o, err := s.orders.Transition(r.Context(), userIDFrom(r), []string{"driver"},
-		orderID, req.To, clip(note, 300))
+	o, err := s.orders.TransitionWithReason(r.Context(), userIDFrom(r), []string{"driver"},
+		orderID, req.To, clip(note, 300), req.Reason)
 	if err != nil {
 		s.respondErr(w, err)
 		return

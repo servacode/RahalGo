@@ -15,7 +15,16 @@ import (
 
 // Transition ينفّذ انتقال حالة بعد التحقق من شرعيته للأدوار الفاعلة،
 // ويسجل الحدث، ويطلق التسويات (استرجاع المحفظة، تحرير كود الخصم) عند الإغلاق.
+// Transition ينقل الطلبَ في مساره.
+//
+// `failReason` رمزُ سببٍ من `FailReasons` — يلزم عند `failed` ومنه يُشتقّ
+// الذنبُ الذي يقرّر التعويض. **ويُهمَل في غيرها.**
 func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []string, orderID, to, note string) (*Order, error) {
+	return s.TransitionWithReason(ctx, actorID, actorRoles, orderID, to, note, "")
+}
+
+// TransitionWithReason كالسابقة، ومعها سببُ التعذّر المُصنَّف.
+func (s *Service) TransitionWithReason(ctx context.Context, actorID string, actorRoles []string, orderID, to, note, failReason string) (*Order, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -84,6 +93,18 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 	}
 	if _, err := tx.Exec(ctx, `UPDATE orders SET `+set+` WHERE id = $1`, args...); err != nil {
 		return nil, err
+	}
+
+	// **سببُ التعذّر وذنبُه** — يُكتبان قبل التسوية لأن التعويضَ يقرأهما.
+	//
+	// **والذنبُ من القائمة لا من تقدير أحد**: كلُّ سببٍ يحمل ذنبَه
+	// (`failreasons.go`)، **فلا يُترك حكمٌ ماليٌّ لاجتهادٍ في لحظة.**
+	if to == StFailed && failReason != "" {
+		if _, err := tx.Exec(ctx,
+			`UPDATE orders SET fail_reason = $2, fault = NULLIF($3, '') WHERE id = $1`,
+			orderID, failReason, FaultOf(failReason)); err != nil {
+			return nil, err
+		}
 	}
 
 	// **من أنهى الطلب** — يُسجَّل مع الإغلاق ويُقرأ في عدّ المخالفات.
@@ -236,6 +257,51 @@ func (s *Service) AutoDispatch(ctx context.Context, actorID, orderID string) err
 	return err
 }
 
+// compensateDriverOnFail يعوّض السائقَ عن مشوارٍ لم يُثمر — **بلا يد**.
+//
+// # ولماذا نسبةٌ من رسم التوصيل
+//
+// **الثابتُ يظلم طرفاً حتماً**: خمسةُ آلافٍ كثيرةٌ على مشوارٍ في الحيّ وقليلةٌ
+// على مشوارٍ عبر المدينة. **والنسبةُ تتبع المسافةَ لأن رسم التوصيل يتبعها.**
+//
+// # ولماذا نصفٌ لا كلّ
+//
+// **لا يُعدل أن تتحمّل المنصةُ الخسارةَ وحدها** — وقد خسرت بضاعةَ المتجر
+// أصلاً. **والنصفُ يقسم ما لا ذنبَ لأحدٍ منهما فيه.**
+//
+// # ويخرج من الخزينة في القيد نفسه
+//
+// **تعويضٌ يُقيَّد للسائق وحده يجعل المنصةَ تظهر رابحةً وهي تدفع.**
+func (s *Service) compensateDriverOnFail(ctx context.Context, q wallet.Querier, in settlement) error {
+	if in.driverID == nil || in.deliveryFee <= 0 || s.settings == nil {
+		return nil
+	}
+	var fault string
+	if err := q.QueryRow(ctx,
+		`SELECT COALESCE(fault, '') FROM orders WHERE id = $1`, in.orderID).
+		Scan(&fault); err != nil {
+		return err
+	}
+	if fault != FaultCustomer {
+		return nil
+	}
+
+	pct := s.settings.GetInt(ctx, "drivers.failed_compensation_percent")
+	if pct <= 0 {
+		return nil
+	}
+	amount := in.deliveryFee * pct / 100
+	if amount <= 0 {
+		return nil
+	}
+	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, amount, "compensation",
+		in.orderID, "تعويضٌ عن تعذّر التسليم — الحقُّ على الزبون", &in.actorID); err != nil {
+		return err
+	}
+	return s.DebitTreasury(ctx, q, amount, in.orderID,
+		"تعويضُ سائقٍ عن تعذّر تسليم", in.actorID)
+}
+
 // pastPickup حالاتٌ صار الطعامُ فيها بيد السائق — والمتجرُ قبض ثمنَه.
 var pastPickup = map[string]bool{
 	StPickedUp: true, StOnTheWay: true, StAtDropoff: true,
@@ -319,15 +385,32 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
 
-	// (4) نهايةٌ فاشلةٌ بعد الاستلام — **الخسارةُ تُقيَّد بلا قرارٍ من أحد**
+	// (4) تعذّرُ التسليم — **تعويضُ السائق تلقائياً حين يكون الحقُّ على الزبون**
+	//
+	// **بلا يد** (قرار المالك). ولو تُرك لتقديرٍ لاحق **لَصار قاعدةً تُنفَّذ
+	// بيدٍ — وقاعدةٌ تُنفَّذ بيدٍ ليست قاعدة، هي عادة.**
+	//
+	// **وذنبُ السائق لا تعويضَ فيه**، وذنبُ المتجر كذلك: المنصةُ تتحمّل
+	// بضاعتَه وتعوّض سائقَها، **ولا تجمع عليها الاثنين بلا سبب**.
+	if in.to == StFailed {
+		if err := s.compensateDriverOnFail(ctx, q, in); err != nil {
+			return err
+		}
+	}
+
+	// (5) نهايةٌ فاشلةٌ بعد الاستلام — **الخسارةُ تُقيَّد بلا قرارٍ من أحد**
 	//
 	// المتجرُ قبض عند الاستلام والزبونُ لم يدفع (أو رُدّ له). **فالفرقُ على
 	// المنصة** — وتقيّده الخزينةُ وحدها حين تُعيد الحساب.
 	if refundOnEnter(in.to) && in.from != StDelivered && pastPickup[in.from] {
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
+	// وقبل الاستلام: لا مالَ تحرّك، فلا خزينةَ تُحدَّث — **إلّا إن عُوّض سائق.**
+	if in.to == StFailed {
+		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+	}
 
-	// (5) استرجاع بعد التسليم — عكس كل ما سبق
+	// (6) استرجاع بعد التسليم — عكس كل ما سبق
 	if refundOnEnter(in.to) && in.from == StDelivered {
 		if total := in.walletPaid + in.cashDue; total > 0 {
 			if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, total, "refund",

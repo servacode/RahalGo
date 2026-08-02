@@ -19,53 +19,45 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
-// TestSettleGoods_PlatformAbsorbs المتجرُ يُجبَر بما كان سيقبضه — لا أكثر.
+// TestReturn_ReversesMerchantEarning الإرجاعُ يستردّ ما دُفع — لا ما يُحسب.
 //
-// **هذا اختبارُ مبلغٍ لا اختبارُ مسار.** «المنصةُ تتحمّل كاملاً» تقبل قراءتين:
-// أن يُدفع للمتجر ثمنُ البضاعة كاملاً، أو ما كان سيقبضه لو نجح الطلب. والفرقُ
-// بينهما عمولةُ المنصة — **وبالقراءة الأولى يربح المتجرُ من فشلٍ أكثر ممّا
-// يربح من نجاح**، وهو حافزٌ مقلوب.
+// **المتجرُ قبض عند خروج البضاعة.** فإن عادت إليه **عاد معها مالُها** — فلا
+// هو خسر ولا ربح. **ولو تُرك له المالُ والبضاعةُ معاً لربح من الفشل أكثرَ
+// ممّا يربح من النجاح**، وهو حافزٌ مقلوب.
 //
-// فالمعتمد: البضاعةُ ناقصَ العمولة، بالمعادلة نفسها التي في تسوية التسليم.
-func TestSettleGoods_PlatformAbsorbs(t *testing.T) {
+// **ويُعكس ما قُيّد فعلاً لا ما تقول المعادلة**: عمولتُه قد تكون تغيّرت منذ
+// الاستلام، **وحسبةٌ جديدةٌ تعكس مبلغاً غيرَ الذي دُفع** فيبقى فرقٌ في محفظته
+// بلا سبب.
+func TestReturn_ReversesMerchantEarning(t *testing.T) {
 	f := newAftermathFixture(t)
-
-	// 100,000 بضاعة و10% عمولة → المتجر كان سيقبض 90,000
-	orderID := f.failedOrder(t, 100_000)
-	f.settleGoods(t, orderID, "platform", 200)
+	orderID := f.paidThenFailed(t, 100_000)
+	f.setReturns(t, true)
 
 	if got := f.balance(t, f.owner); got != 90_000 {
-		t.Errorf("رصيدُ المتجر = %d، والمتوقّع 90000 (البضاعة ناقصَ العمولة)", got)
+		t.Fatalf("مستحقّ المتجر قبل الإرجاع = %d، والمتوقّع 90000", got)
 	}
-	// **ولا يُدفع مرّتين**: ضغطةٌ ثانية تُردّ.
-	f.settleGoods(t, orderID, "platform", 409)
-	if got := f.balance(t, f.owner); got != 90_000 {
-		t.Errorf("دُفع مرّتين: الرصيد = %d", got)
+	f.returnOrder(t, orderID, 200)
+	if got := f.balance(t, f.owner); got != 0 {
+		t.Errorf("بعد الإرجاع = %d، والمتوقّع 0 — أخذ بضاعتَه وردّ ثمنَها", got)
+	}
+	// **ولا يُستردّ مرّتين.**
+	f.returnOrder(t, orderID, 409)
+	if got := f.balance(t, f.owner); got != 0 {
+		t.Errorf("استُردّ مرّتين: %d", got)
 	}
 }
 
-// TestSettleGoods_MerchantTookBack المتجرُ استردّ بضاعته — فلا قيد.
-func TestSettleGoods_MerchantTookBack(t *testing.T) {
-	f := newAftermathFixture(t)
-	orderID := f.failedOrder(t, 100_000)
-	f.settleGoods(t, orderID, "merchant", 200)
-
-	if got := f.balance(t, f.owner); got != 0 {
-		t.Errorf("رصيدُ المتجر = %d، والمتوقّع 0 — أخذ بضاعته فلا مالَ له", got)
-	}
-}
-
-// TestSettleGoods_OnlyFailedOrders التسويةُ لطلبٍ فشل لا لغيره.
+// TestReturn_RefusedMerchant متجرٌ لا يستردّ لا يُخصم منه.
 //
-// **وإلّا صارت باباً خلفياً**: تسويةُ بضاعةٍ على طلبٍ مُسلَّم تدفع للمتجر مرّةً
-// ثانيةً عن بيعةٍ قُبضت.
-func TestSettleGoods_OnlyFailedOrders(t *testing.T) {
+// **والمنصةُ تتحمّل كاملاً** — وهي التي اشترت الطعامَ لحظةَ خروجه.
+func TestReturn_RefusedMerchant(t *testing.T) {
 	f := newAftermathFixture(t)
-	orderID := f.orderWithStatus(t, "delivered", 100_000)
-	f.settleGoods(t, orderID, "platform", 409)
+	orderID := f.paidThenFailed(t, 100_000)
+	f.setReturns(t, false)
 
-	if got := f.balance(t, f.owner); got != 0 {
-		t.Errorf("دُفع عن طلبٍ مُسلَّم: الرصيد = %d", got)
+	f.returnOrder(t, orderID, 409)
+	if got := f.balance(t, f.owner); got != 90_000 {
+		t.Errorf("خُصم من متجرٍ لا يستردّ: %d", got)
 	}
 }
 
@@ -147,20 +139,42 @@ func (f *aftermathFixture) balance(t *testing.T, user string) int64 {
 	return v
 }
 
-// settleGoods ينادي المعالِج الحقيقي ويتحقّق من رمز الردّ.
-func (f *aftermathFixture) settleGoods(t *testing.T, orderID, to string, wantStatus int) {
+// setReturns يضبط سياسةَ استرداد المتجر.
+func (f *aftermathFixture) setReturns(t *testing.T, on bool) {
+	t.Helper()
+	if _, err := f.pool.Exec(context.Background(),
+		`UPDATE merchants SET accepts_returns = $2 WHERE id = $1`, f.merchantID, on); err != nil {
+		t.Fatalf("تعذّر ضبط الاسترداد: %v", err)
+	}
+}
+
+// paidThenFailed طلبٌ قُيّد مستحقُّ متجره ثمّ فشل — الحالُ الذي يلي الاستلام.
+func (f *aftermathFixture) paidThenFailed(t *testing.T, subtotal int64) string {
+	t.Helper()
+	id := f.orderWithStatus(t, "failed", subtotal)
+	ctx := context.Background()
+	// **يُقيَّد كما يقيّده المحرّك** — بنوعه ومرجعه، فيجده الإرجاعُ ويعكسه.
+	actor := f.owner
+	if _, err := f.srv.wallet.Apply(ctx, f.owner, 90_000, "merchant_earning",
+		id, "مستحقّ عن بضاعةٍ سُلّمت للسائق", &actor); err != nil {
+		t.Fatalf("تعذّر قيدُ المستحقّ: %v", err)
+	}
+	return id
+}
+
+// returnOrder ينادي معالِجَ الإرجاع ويتحقّق من رمز الردّ.
+func (f *aftermathFixture) returnOrder(t *testing.T, orderID string, wantStatus int) {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPost,
-		"/admin/orders/"+orderID+"/settle-goods",
-		strings.NewReader(`{"to":"`+to+`"}`))
+		"/driver/orders/"+orderID+"/return", strings.NewReader("{}"))
 	rc := chi.NewRouteContext()
 	rc.URLParams.Add("id", orderID)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rc)
-	ctx = context.WithValue(ctx, ctxUserID, f.owner)
-	ctx = context.WithValue(ctx, ctxRoles, []string{"ops"})
+	ctx = context.WithValue(ctx, ctxUserID, f.drivers[0])
+	ctx = context.WithValue(ctx, ctxRoles, []string{"driver"})
 
 	w := httptest.NewRecorder()
-	f.srv.handleSettleGoods(w, req.WithContext(ctx))
+	f.srv.handleDriverReturn(w, req.WithContext(ctx))
 	if w.Code != wantStatus {
 		t.Fatalf("الرمز %d والمتوقّع %d — %s", w.Code, wantStatus, w.Body.String())
 	}

@@ -202,6 +202,11 @@ func (s *Server) Router() http.Handler {
 			r.Get("/me", s.handleDriverMe)
 			r.Post("/shift", s.handleDriverShift)
 			r.Get("/queue", s.handleDriverQueue)
+			// **أسبابُ التعذّر من الخادم** — قائمةٌ تُكرَّر في مكانين تفترق
+			// حين يُضاف سببٌ في أحدهما (driver_return.go)
+			r.Get("/fail-reasons", s.handleFailReasons)
+			// **إرجاعُ البضاعة** — لمتاجرِ الاسترداد وحدها
+			r.Post("/orders/{id}/return", s.handleDriverReturn)
 			r.Get("/orders", s.handleDriverOrders)
 			r.Post("/orders/{id}/accept", s.handleDriverAccept)
 			r.Post("/orders/{id}/transition", s.handleDriverTransition)

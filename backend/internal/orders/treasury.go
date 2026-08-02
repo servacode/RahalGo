@@ -156,3 +156,12 @@ func (s *Service) DebitTreasury(ctx context.Context, q wallet.Querier, amount in
 		ref, note, &actorID)
 	return err
 }
+
+// CreditTreasuryTx يُعيد حسابَ نصيب المنصة من خارج المحرّك — بعد إرجاعٍ أو
+// تعويضٍ يقرّره إنسان.
+//
+// **ويُنادى داخل معاملة المستدعي**: قيدُ الإرجاع ونصيبُ الخزينة إمّا يقعان
+// معاً أو لا يقع أحدُهما — **ودفترٌ نصفُه مكتوبٌ أسوأُ من دفترٍ لم يُكتب.**
+func (s *Service) CreditTreasuryTx(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
+	return s.creditTreasury(ctx, q, orderID, actorID)
+}
