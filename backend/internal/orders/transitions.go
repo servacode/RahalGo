@@ -64,6 +64,12 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 	case StDelivered:
 		set += `, delivered_at = now(), closed_at = now()`
 	case StDispatching:
+		// **متى نزل إلى الطابور** — ومنه يُقاس انتظارُ الإسناد.
+		//
+		// **ويُعاد كتابتُه عند فكّ الإسناد**: طلبٌ أخذه سائقٌ ثمّ تركه **عاد
+		// إلى أوّل الصفّ لا إلى وسطه** — فمهلةُ انتظاره تبدأ من جديد، ولا
+		// يُنبَّه عنه فوراً لأن أوّلَ نزولٍ له كان قبل ساعة.
+		set += `, dispatched_at = now()`
 		if from == StAssigned { // فك الإسناد
 			set += `, driver_id = NULL`
 		}

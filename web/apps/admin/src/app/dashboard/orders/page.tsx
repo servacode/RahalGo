@@ -114,6 +114,8 @@ interface OrderRow {
   driver_name: string | null;
   /** متى حُوِّل الطلب إلى المتجر — فارغٌ يعني لم يُحوَّل بعد */
   sent_to_merchant_at: string | null;
+  /** متى نزل إلى طابور السائقين — ومنه تُقاس مهلةُ زرّ الإسناد */
+  dispatched_at: string | null;
   /** مصيرُ بضاعة طلبٍ فشل — فارغٌ يعني لم يُحسم بعد */
   goods_settled_to: "merchant" | "platform" | null;
   /** أجرُ السائق — تقديرٌ قبل التسليم وواقعٌ بعده، من مصدر الحساب نفسه */
@@ -310,6 +312,8 @@ export default function OrdersPage() {
    * بكل زرّ**.
    */
   const [selfManage, setSelfManage] = useState<boolean | null>(null);
+  /** مهلةُ ظهور زرّ الإسناد اليدويّ — من الإعدادات لا من الشيفرة */
+  const [assignAfterMin, setAssignAfterMin] = useState(10);
   // **الأدمن فوق قاعدة «عينٌ لا يد»** — تجاوزُ المالك، وكلُّ فعلٍ له مُسجَّل.
   const { user: me } = useAuth();
   const isAdmin = !!me?.roles.includes("admin");
@@ -317,6 +321,8 @@ export default function OrdersPage() {
   useEffect(() => {
     api<{ key: string; value: unknown }[]>("/api/v1/admin/settings")
       .then((all) => {
+        const delay = all.find((x) => x.key === "orders.manual_assign_after_min");
+        setAssignAfterMin(typeof delay?.value === "number" ? delay.value : 10);
         const row = all.find((x) => x.key === "merchants.self_manage_orders");
         setSelfManage(row ? row.value === true : true);
       })
@@ -612,6 +618,7 @@ export default function OrdersPage() {
             onChanged={load}
             selfManage={selfManage !== false}
             isAdmin={isAdmin}
+            assignAfterMin={assignAfterMin}
           />
         )}
       />
@@ -662,6 +669,7 @@ function OrderActions({
   onChanged,
   selfManage,
   isAdmin,
+  assignAfterMin,
 }: {
   o: OrderRow;
   onChanged: () => void;
@@ -669,6 +677,8 @@ function OrderActions({
   selfManage: boolean;
   /** الأدمن فوق القاعدة — تجاوزُ المالك، وهو مُسجَّل */
   isAdmin: boolean;
+  /** كم دقيقةً ينتظر الطابورُ قبل أن يظهر الإسنادُ اليدويّ */
+  assignAfterMin: number;
 }) {
   const [busy, setBusy] = useState("");
   /** الفعلُ الهدّام المفتوح الآن — يُطلب سببُه قبل تنفيذه */
@@ -686,6 +696,18 @@ function OrderActions({
 
   // **ما تملكه العملياتُ بعد حساب الوضع** — لا الخريطةُ الخام.
   const next = opsNext(o.status, selfManage, o.driver_name !== null, isAdmin);
+
+  /**
+   * أمضت المهلةُ في الطابور بلا التقاط؟
+   *
+   * **ويُقاس من `dispatched_at` لا من `created_at`**: طلبٌ قُبل بعد ربع ساعةٍ
+   * من إنشائه لم ينتظر سائقاً تلك الربعَ — **وقياسٌ من أوّل الطلب يُظهر
+   * الزرَّ قبل أن يبدأ الانتظار أصلاً.**
+   */
+  const assignReady =
+    isAdmin ||
+    (!!o.dispatched_at &&
+      Date.now() - new Date(o.dispatched_at).getTime() >= assignAfterMin * 60_000);
 
   // **الإسنادُ اليدوي مخرجٌ لا طريق.** السائقون يلتقطون من الطابور بأنفسهم
   // (تطبيق :3005)، وهذا لمن لم يلتقطه أحد. ولذلك يُجلب السائقون **عند فتح
@@ -1074,7 +1096,14 @@ function OrderActions({
             : m.admin.ordersPage.sendWhatsApp}
         </Button>
       )}
-      {canAssign && (
+      {/* **الإسنادُ اليدويّ احتياطٌ لا أصل.**
+
+          **وزرٌّ متاحٌ دائماً يُستعمل دائماً** — فيصير هو الطريقَ ويصير ترتيبُ
+          السائقين زينة. فلا يظهر إلّا حين **يعجز الطابورُ**: مضت المهلةُ ولم
+          يلتقطه أحد.
+
+          والأدمنُ يراه دائماً — تجاوزُ المالك. */}
+      {canAssign && assignReady && (
         <Button variant="secondary" disabled={busy !== ""} onClick={() => void openAssign()}>
           {m.admin.ordersPage.assignHere}
         </Button>

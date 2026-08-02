@@ -31,7 +31,11 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 			CASE
 				WHEN o.status = 'pending' AND o.created_at < now() - make_interval(mins => t.accept_min::int)
 					THEN 'no_accept'
-				WHEN o.status IN ('preparing','dispatching') AND o.updated_at < now() - make_interval(mins => t.driver_min::int)
+				-- **من dispatched_at لا من updated_at**: الثاني يتغيّر مع
+				-- أيّ تعديل، **فطلبٌ يُعرض على خمسة سائقين بالتناوب لا يُنبَّه
+				-- عنه أبداً** — كلُّ عرضٍ يُجدّد عمرَه.
+				WHEN o.status IN ('preparing','dispatching') AND o.driver_id IS NULL
+				     AND COALESCE(o.dispatched_at, o.updated_at) < now() - make_interval(mins => t.driver_min::int)
 					THEN 'no_driver'
 				ELSE 'too_long'
 			END AS reason,
@@ -42,7 +46,8 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 		JOIN users cu ON cu.id = o.customer_id
 		WHERE o.closed_at IS NULL AND (
 			(o.status = 'pending' AND o.created_at < now() - make_interval(mins => t.accept_min::int)) OR
-			(o.status IN ('preparing','dispatching') AND o.updated_at < now() - make_interval(mins => t.driver_min::int)) OR
+			(o.status IN ('preparing','dispatching') AND o.driver_id IS NULL
+			 AND COALESCE(o.dispatched_at, o.updated_at) < now() - make_interval(mins => t.driver_min::int)) OR
 			(o.created_at < now() - make_interval(mins => t.delivery_min::int))
 		)
 		ORDER BY o.created_at`)

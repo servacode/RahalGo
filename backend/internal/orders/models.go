@@ -98,6 +98,10 @@ type Order struct {
 	// الردّ، فوسمُ «حُوِّل» في اللوحة لا يظهر أبداً — **ويُحوَّل الطلبُ مرّتين
 	// فيُطبخ مرّتين.** حقلٌ يُكتب ولا يُقرأ ليس حقلاً، هو نيّة.
 	SentToMerchantAt *time.Time `json:"sent_to_merchant_at"`
+	// DispatchedAt متى نزل إلى طابور السائقين — **ومنه تُقاس مهلةُ ظهور
+	// زرّ الإسناد اليدويّ**، فلا تعتمد الشاشةُ على `updated_at` الذي يتغيّر
+	// مع كل مسّ.
+	DispatchedAt *time.Time `json:"dispatched_at"`
 	// GoodsSettledTo مصيرُ بضاعة طلبٍ فشل: merchant استردّها · platform
 	// تحمّلتها المنصةُ ودفعت للمتجر · فارغٌ يعني **لم يُحسم بعد**.
 	GoodsSettledTo *string     `json:"goods_settled_to"`
