@@ -207,7 +207,14 @@ export default function TasksPage() {
             <IconBalance size={17} className="text-ink-muted" />
             {D.cash.title}
           </span>
-          <span dir="ltr" className="font-bold">
+          {/* **ما بذمّته يُكتب سالباً — لا رصيداً يملكه.**
+
+              كان يُعرض رقماً موجباً بجانب سقفه، **فيُقرأ كأنّه له**: سائقٌ
+              يرى «٥٠٠٠٠» في شاشته لا يقرؤها ديناً عليه إلّا إن قيل له.
+              **والمالُ الذي في جيبه ليس ماله** — هو مال المنصة يحمله حتى
+              يورّده، **وإشارةُ السالب هي كلُّ الفرق بين الأمرين.** */}
+          <span dir="ltr" className={`font-bold ${me.cash_held > 0 ? "text-warning" : ""}`}>
+            {me.cash_held > 0 ? "−" : ""}
             {fmtNum(me.cash_held)} / {fmtNum(me.cash_limit)}
           </span>
         </div>
@@ -405,8 +412,16 @@ function TaskCard({
       )}
 
       <div className="mt-2 flex items-center justify-between">
-        {/* الإعادة للطابور متاحة قبل بلوغ المتجر فقط: بعد الاستلام صار الطلب بيده */}
-        {o.status === "assigned" ? (
+        {/* **الإعادةُ للطابور متاحةٌ حتى الاستلام — لا حتى الوصول.**
+
+            كانت تختفي بمجرّد أن يقول «وصلتُ المتجر»، **فمن عرض له عارضٌ وهو
+            عند الباب لم يبقَ له إلّا زرُّ «تعذّر التسليم»**: يُقفل طلباً
+            بضاعتُه لم تخرج بعد، ويُحسب ذنبٌ لم يقع، **ويُحرم زبونٌ من طلبٍ
+            كان سائقٌ آخر يوصله في دقائق.**
+
+            **وحدُّها الاستلام**: بعد أن تصير البضاعةُ في يده لا يُترك الطلبُ
+            لغيره. */}
+        {o.status === "assigned" || o.status === "at_pickup" ? (
           <Button variant="ghost" disabled={busy} onClick={onRelease} title={D.order.releaseHint}>
             {D.order.release}
           </Button>
