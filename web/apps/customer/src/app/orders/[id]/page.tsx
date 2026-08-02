@@ -16,6 +16,7 @@ import {
   IconPrint,
   Invoice,
   Timeline,
+  Modal,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import ComplaintModal from "@/components/ComplaintModal";
@@ -54,7 +55,8 @@ interface Rating {
 interface Order {
   id: string;
   number: number;
-  merchant_name: string;
+  // **ولا حقلَ متجرٍ** — يمسحه الخادم (`customer_privacy.go`)، **وحقلٌ في
+  // النوع يُغري بعرضه يوماً.**
   driver_phone: string | null;
   status: string;
   total: number;
@@ -139,6 +141,8 @@ export default function OrderTrackingPage() {
   const [cancelLeft, setCancelLeft] = useState(0);
 
   const [cancelError, setCancelError] = useState("");
+  /** نافذةُ التأكيد — **والإلغاءُ لا يُتراجع عنه.** */
+  const [confirming, setConfirming] = useState(false);
 
   const load = useCallback(() => {
     api<Order>(`/api/v1/my/orders/${id}`)
@@ -214,7 +218,12 @@ export default function OrderTrackingPage() {
           }`}
         >
           <div className="min-w-0">
-            <p className="text-xs text-ink-muted">{order.merchant_name}</p>
+            {/* **ولا اسمَ متجرٍ هنا** — الزبونُ اشترى من «رحّال غو».
+
+                والقائمةُ تحجبه منذ المرحلة الثانية، **وصفحةُ الطلب كانت تعرضه**
+                — وهي التي يفتحها الزبونُ بعد أن يعرف أنّ طلبَه وصل.
+                (شهده المالكُ ٢٠٢٦-٠٨-٠٣، والحجبُ صار في الخادم كذلك.) */}
+            <p className="text-xs text-ink-muted">{m.site.orders.fromPlatform}</p>
             <h1 className="mt-0.5 text-2xl font-bold tabular-nums" dir="ltr">
               #{fmtNum(order.number)}
             </h1>
@@ -269,25 +278,12 @@ export default function OrderTrackingPage() {
           ويختفي بانقضائها فلا زرَّ يعتذر. */}
       {(order.status === "pending" || (order.status === "accepted" && cancelLeft > 0)) && (
         <div className="mb-4">
-          <Button
-            variant="danger"
-            disabled={cancelBusy}
-            onClick={async () => {
-              setCancelBusy(true);
-              setCancelError("");
-              try {
-                await api(`/api/v1/orders/${order.id}/cancel`, {
-                  method: "POST",
-                  body: JSON.stringify({ note: "" }),
-                });
-                load();
-              } catch (err) {
-                setCancelError(errText(err));
-              } finally {
-                setCancelBusy(false);
-              }
-            }}
-          >
+          {/* **ولا يُلغى طلبٌ بضغطةٍ واحدة.**
+
+              زرُّ الإلغاء جارُ زرِّ التتبّع، **والإلغاءُ لا يُتراجع عنه**: من
+              أخطأ الضغطةَ خسر طلبَه ولا يملك ردَّه — يعيده من أوّله ويعود إلى
+              آخر الطابور. **وسؤالٌ واحدٌ ثمنُه ثانية، وخطؤه ثمنُه طلب.** */}
+          <Button variant="danger" disabled={cancelBusy} onClick={() => setConfirming(true)}>
             {m.site.orders.cancel}
           </Button>
           {order.status === "accepted" && (
@@ -296,6 +292,49 @@ export default function OrderTrackingPage() {
             </p>
           )}
           {cancelError && <p className="mt-1 text-sm text-danger">{cancelError}</p>}
+
+          <Modal
+            open={confirming}
+            onClose={() => setConfirming(false)}
+            title={m.site.orders.cancelConfirmTitle}
+          >
+            <p className="mb-4 text-sm text-ink-muted">{m.site.orders.cancelConfirmBody}</p>
+            {order.status === "accepted" && (
+              <p className="mb-4 text-xs text-ink-muted">
+                {m.site.orders.cancelWindow.replace("{t}", fmtClock(cancelLeft))}
+              </p>
+            )}
+            <div className="flex gap-2">
+              {/* **والتراجعُ أوّلاً**: من فتح النافذةَ بالخطأ يجد المخرجَ في
+                  موضع الزرّ الذي اعتاده، **ولا يؤكّد الخطأ بضغطةٍ ثانية.** */}
+              <Button variant="secondary" onClick={() => setConfirming(false)}>
+                {m.site.orders.cancelConfirmNo}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={cancelBusy}
+                onClick={async () => {
+                  setCancelBusy(true);
+                  setCancelError("");
+                  try {
+                    await api(`/api/v1/orders/${order.id}/cancel`, {
+                      method: "POST",
+                      body: JSON.stringify({ note: "" }),
+                    });
+                    setConfirming(false);
+                    load();
+                  } catch (err) {
+                    setConfirming(false);
+                    setCancelError(errText(err));
+                  } finally {
+                    setCancelBusy(false);
+                  }
+                }}
+              >
+                {m.site.orders.cancelConfirmYes}
+              </Button>
+            </div>
+          </Modal>
         </div>
       )}
 
@@ -372,7 +411,7 @@ export default function OrderTrackingPage() {
       )}
 
       <section className="mb-5 rounded-card border border-line bg-surface p-4">
-        <p className="mb-2 font-bold">{order.merchant_name}</p>
+        <p className="mb-2 font-bold">{m.site.orders.itemsTitle}</p>
         <ul className="space-y-1 text-sm">
           {order.items?.map((it, i) => (
             <li key={i} className="flex justify-between">

@@ -14,7 +14,7 @@
  * - «تعذّر التسليم» زرٌّ ثانويّ صغير تحته: هو مخرجٌ حقيقي لكنه ليس الطريق.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import {
   Button,
@@ -110,11 +110,56 @@ export default function TasksPage() {
   const [proving, setProving] = useState<DriverOrder | null>(null);
   const [reason, setReason] = useState("");
 
+  /**
+   * **التنبيهُ الصوتيّ عند وصول طلبٍ جديد.**
+   *
+   * السائقُ على درّاجته لا أمام شاشته. **وطلبٌ يظهر صامتاً يُقرأ بعد أن ينقضي
+   * دورُه** — فيراه ذاهباً لا قادماً، ويظنّ أنّ المنصة لا تعطيه شيئاً.
+   *
+   * **ولا ملفَّ صوتٍ خارجيّاً**: يُولَّد بالنغمة في المتصفّح — لا شبكةَ تُنتظر،
+   * ولا ملفَّ يضيع في نشرةٍ قادمة.
+   */
+  const known = useRef<Set<string>>(new Set());
+  const chime = useCallback(() => {
+    try {
+      const Ctx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      // نغمتان صاعدتان — تُميَّز عن رنّات الهاتف الأخرى ولا تُشبه إنذاراً.
+      [880, 1175].forEach((hz, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = hz;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const t = ctx.currentTime + i * 0.18;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+        osc.start(t);
+        osc.stop(t + 0.18);
+      });
+    } catch {
+      // صوتٌ لا يعمل لا يُسقط الشاشة — **والبطاقةُ تظهر على أيّ حال.**
+    }
+  }, []);
+
   const load = useCallback(() => {
     api<Me>("/api/v1/driver/me").then(setMe).catch(() => undefined);
     api<DriverOrder[]>("/api/v1/driver/orders").then(setMine).catch(() => undefined);
-    api<DriverOrder[]>("/api/v1/driver/queue").then(setQueue).catch(() => undefined);
-  }, []);
+    api<DriverOrder[]>("/api/v1/driver/queue")
+      .then((rows) => {
+        // **يُرنّ للجديد وحدَه** — لا لكلّ تحديثٍ يمرّ، وإلّا صار الصوتُ ضجيجاً
+        // يُطفئه السائقُ في أوّل يوم.
+        const fresh = rows.some((o) => !known.current.has(o.id));
+        known.current = new Set(rows.map((o) => o.id));
+        if (fresh) chime();
+        setQueue(rows);
+      })
+      .catch(() => undefined);
+  }, [chime]);
 
   useEffect(load, [load]);
 

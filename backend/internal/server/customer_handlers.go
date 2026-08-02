@@ -214,6 +214,7 @@ func (s *Server) handleMyOrders(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	redactAllForCustomer(res.Orders)
 	httpx.JSON(w, http.StatusOK, res)
 }
 
@@ -227,6 +228,7 @@ func (s *Server) handleMyOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
+	redactForCustomer(o)
 	// **المهلةُ تُرسل مع الطلب لا في نداءٍ ثانٍ.**
 	//
 	// الشاشةُ تعرض عدّاداً تنازلياً لزرّ الإلغاء، **ورقمُ المهلة إعدادٌ يملك

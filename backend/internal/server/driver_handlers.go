@@ -168,19 +168,36 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-// handleDriverQueue الطلبات المعروضة لمن يقبلها.
+// handleDriverQueue **«طلباتٌ قادمة»** — ما عُرض على هذا السائق في دوره.
 //
-// **معروضة للجميع بحكم كونها طابوراً** — لا حارس ملكية هنا. لكنّ القبول نفسه
-// محروس: أول من يضغط يأخذها، ومن تأخّر يُردّ عليه.
+// # ولم يكن كذلك
+//
+// كان الشرطُ `offered_driver_id IS NULL OR = أنا` — **فالطلبُ الذي انقضى دورُه
+// على الجميع يعود مشاعاً يراه الكلّ ومن سبق أخذ.** وهو **«الأسرعُ التقاطاً»
+// بعينه**: النمطُ الذي رفضه المالك.
+//
+// **فكان النظامُ يقول «بالترتيب» ويعمل «بالأسرع» في كلّ مرّةٍ ينقضي فيها
+// الدور** — ولا أحدَ يرى الانتقال، لأنّ الشاشة تُسمّيه «الطابور» في الحالين.
+//
+// **قرارُ المالك (٢٠٢٦-٠٨-٠٣)**: «نحن الآن نعمل على النظام التلقائيّ لتوزيع
+// الطلبات وليس للأسرع التقاطاً» · «أمّا الطابور ألغِه».
+//
+// # وأين يذهب طلبٌ لم يبقَ له سائق
+//
+// **إلى العمليات لا إلى المشاع.** يبقى في `dispatching` بلا عرض، **ويظهر
+// للإدارة زرُّ الإسناد اليدويّ بعد `orders.manual_assign_after_min`** —
+// وينبّهها الحارسُ بـ`no_driver`. **فيدٌ تُسنده خيرٌ من عشرةٍ تتسابق عليه.**
+//
+// وفي نمط «الأسرع» يبقى السلوكُ القديم — **لأنه هو النمطُ نفسُه.**
 func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
+	// **في «بالترتيب» لا يرى السائقُ إلّا ما عُرض عليه باسمه.**
+	mine := `AND o.offered_driver_id = $1`
+	if s.orders.AssignmentMode(r.Context()) != "rotation" {
+		mine = `AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)`
+	}
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-		  -- **في نمط «بالترتيب» لا يراه إلّا صاحبُ الدور.**
-		  --
-		  -- وفارغٌ يعني معروضٌ للجميع: إمّا النمطُ «الأسرع»، وإمّا انقضى الدورُ
-		  -- على الجميع فعاد الطلبُ مشاعاً. **وحجبُه عن الكلّ حينها يُخفي طلباً
-		  -- لا يملكه أحد.**
-		  AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
+		  `+mine+`
 		ORDER BY o.ready_at NULLS LAST, o.created_at
 		LIMIT 50`)
 }
@@ -230,17 +247,27 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// **والحارسُ نفسُه في القبول لا في العرض وحده.**
+	//
+	// شاشةٌ لا تعرض الطلبَ لا تمنع من ينادي الواجهةَ البرمجية مباشرةً —
+	// **وحجبٌ في العرض وحدَه وعدٌ بحجب.**
+	own := `AND (offered_driver_id IS NULL OR offered_driver_id = $2)`
+	if s.orders.AssignmentMode(r.Context()) == "rotation" {
+		own = `AND offered_driver_id = $2`
+	}
+
 	// **الإسناد ذرّي**: الشرط `driver_id IS NULL` داخل التحديث نفسه. سائقان
 	// يضغطان معاً — أحدهما يُحدّث صفّاً والآخر يجد صفراً. ولو فُحص ثم حُدّث
 	// لأخذاه معاً.
+	//
+	// **والدورُ شرطٌ في التحديث لا فحصٌ قبله**: سائقٌ يرى الطلبَ في لحظة
+	// انتقال الدور إليه ثم ينقضي وهو يضغط — الشرطُ هنا يمنعه، والفحصُ قبله
+	// يسمح به.
 	tag, err := s.pg.Exec(r.Context(), `
 		UPDATE orders SET driver_id = $2, updated_at = now(),
 		    offered_driver_id = NULL, offer_expires_at = NULL
 		WHERE id = $1 AND driver_id IS NULL AND status = 'dispatching'
-		  -- **والدورُ شرطٌ في التحديث لا فحصٌ قبله**: سائقٌ يرى الطلبَ في
-		  -- لحظة انتقال الدور إليه ثم ينقضي وهو يضغط — الشرطُ هنا يمنعه،
-		  -- والفحصُ قبله يسمح به.
-		  AND (offered_driver_id IS NULL OR offered_driver_id = $2)`, orderID, uid)
+		  `+own, orderID, uid)
 	if err != nil {
 		s.respondErr(w, err)
 		return

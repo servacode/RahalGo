@@ -74,11 +74,17 @@ func (s *Server) handleDeleteMyAvatar(w http.ResponseWriter, r *http.Request) {
 
 // handleMyRatings طلبات الزبون المُسلَّمة مع حالة تقييم كل منها (لصفحة "تقييماتي").
 func (s *Server) handleMyRatings(w http.ResponseWriter, r *http.Request) {
+	// **ولا اسمَ متجرٍ هنا** — الزبونُ يعرف طلبَه بما طلب لا بمن طبخه، **وصفحةُ
+	// تقييماتٍ تسمّي المطعم تهدم ما تحرسه صفحةُ الطلب.** (انظر `customer_privacy.go`)
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT o.id::text, o.number, m.name, (o.driver_id IS NOT NULL),
+		SELECT o.id::text, o.number,
+		       COALESCE((SELECT string_agg(x.name, '، ' ORDER BY x.rn)
+		                 FROM (SELECT oi.name, row_number() OVER (ORDER BY oi.name) AS rn
+		                       FROM order_items oi WHERE oi.order_id = o.id LIMIT 3) x), ''),
+		       (o.driver_id IS NOT NULL),
 		       COALESCE(rt.platform_stars, 0), rt.driver_stars, COALESCE(rt.comment, ''),
 		       (rt.order_id IS NOT NULL), o.created_at
-		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		FROM orders o
 		LEFT JOIN order_ratings rt ON rt.order_id = o.id
 		WHERE o.customer_id = $1 AND o.status = 'delivered'
 		ORDER BY o.created_at DESC LIMIT 100`, userIDFrom(r))
@@ -88,9 +94,10 @@ func (s *Server) handleMyRatings(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	type ratedOrder struct {
-		OrderID       string    `json:"order_id"`
-		Number        int64     `json:"number"`
-		MerchantName  string    `json:"merchant_name"`
+		OrderID string `json:"order_id"`
+		Number  int64  `json:"number"`
+		// ItemsPreview **بدل اسم المتجر** — «ماذا طلبتُ؟» لا «من طبخه؟»
+		ItemsPreview  string    `json:"items_preview"`
 		HasDriver     bool      `json:"has_driver"`
 		PlatformStars int       `json:"platform_stars"`
 		DriverStars   *int      `json:"driver_stars"`
@@ -101,7 +108,7 @@ func (s *Server) handleMyRatings(w http.ResponseWriter, r *http.Request) {
 	out := []ratedOrder{}
 	for rows.Next() {
 		var o ratedOrder
-		if err := rows.Scan(&o.OrderID, &o.Number, &o.MerchantName, &o.HasDriver,
+		if err := rows.Scan(&o.OrderID, &o.Number, &o.ItemsPreview, &o.HasDriver,
 			&o.PlatformStars, &o.DriverStars, &o.Comment, &o.Rated, &o.CreatedAt); err != nil {
 			s.respondErr(w, err)
 			return

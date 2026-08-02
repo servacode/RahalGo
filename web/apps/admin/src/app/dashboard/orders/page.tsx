@@ -361,6 +361,15 @@ export default function OrdersPage() {
   const [selfManage, setSelfManage] = useState<boolean | null>(null);
   /** مهلةُ ظهور زرّ الإسناد اليدويّ — من الإعدادات لا من الشيفرة */
   const [assignAfterMin, setAssignAfterMin] = useState(10);
+  /**
+   * **كم سائقاً في الدوام الآن** — يُقرأ قبل التحويل لا بعده.
+   *
+   * التحويلُ يُبلّغ المطعمَ فيبدأ الطبخ، **ثمّ ينزل الطلبُ إلى من يحمله.**
+   * فإن لم يكن أحدٌ في الدوام **طُبخ طعامٌ لا حاملَ له** — ويبرد بينما تنتظر
+   * العملياتُ سائقاً لا يأتي. **و`null` مجهولٌ لا صفر**: تعذُّرُ القراءة لا
+   * يوقف العمل بإنذارٍ كاذب.
+   */
+  const [onShift, setOnShift] = useState<number | null>(null);
   // **الأدمن فوق قاعدة «عينٌ لا يد»** — تجاوزُ المالك، وكلُّ فعلٍ له مُسجَّل.
   const { user: me } = useAuth();
   const isAdmin = !!me?.roles.includes("admin");
@@ -390,6 +399,14 @@ export default function OrdersPage() {
       setError("");
     } catch (err) {
       setError(errText(err));
+    }
+    // **ويُقرأ مع كلّ تحديث** — سائقٌ يفتح دوامَه أو يُغلقه لا يُنتظر تحديثُ صفحة.
+    try {
+      const res = await api<{ drivers: DriverRow[] } | DriverRow[]>("/api/v1/admin/drivers");
+      const list = Array.isArray(res) ? res : res.drivers;
+      setOnShift(list.filter((x) => x.on_shift && x.status === "active").length);
+    } catch {
+      setOnShift(null);
     }
   }, [status, query, openOnly, page]);
 
@@ -730,6 +747,7 @@ export default function OrdersPage() {
             selfManage={selfManage !== false}
             isAdmin={isAdmin}
             assignAfterMin={assignAfterMin}
+            onShift={onShift}
           />
         )}
       />
@@ -781,6 +799,7 @@ function OrderActions({
   selfManage,
   isAdmin,
   assignAfterMin,
+  onShift,
 }: {
   o: OrderRow;
   onChanged: () => void;
@@ -790,12 +809,16 @@ function OrderActions({
   isAdmin: boolean;
   /** كم دقيقةً ينتظر الطابورُ قبل أن يظهر الإسنادُ اليدويّ */
   assignAfterMin: number;
+  /** كم سائقاً في الدوام — **و`null` مجهولٌ لا صفر** */
+  onShift: number | null;
 }) {
   const [busy, setBusy] = useState("");
   /** الفعلُ الهدّام المفتوح الآن — يُطلب سببُه قبل تنفيذه */
   const [asking, setAsking] = useState("");
   /** نافذةُ التحويل إلى متجرٍ آخر — القاعدةُ الاحتياطية. */
   const [transferring, setTransferring] = useState(false);
+  /** تنبيهُ «لا سائقَ في الدوام» — يُقال قبل التحويل لا بعده. */
+  const [noDriverWarn, setNoDriverWarn] = useState(false);
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [target, setTarget] = useState("");
   const [unmatched, setUnmatched] = useState<string[]>([]);
@@ -866,7 +889,26 @@ function OrderActions({
    * يقطع هذا النسب فتُحجب. فتُفتح فارغةً في اللحظة نفسها — **وهي ابنةُ
    * الضغطة** — ثم يُنقل عنوانُها حين يصل الرابط.
    */
+  /**
+   * **ولا يُحوَّل طلبٌ ولا سائقَ في الدوام قبل أن يُقال ذلك.**
+   *
+   * التحويلُ يُبلّغ المطعمَ **فيبدأ الطبخ**، ثمّ ينزل الطلبُ إلى من يحمله.
+   * فإن لم يكن أحدٌ **طُبخ طعامٌ لا حاملَ له** — ويبرد بينما تنتظر العملياتُ
+   * سائقاً لا يأتي، **ويدفع المتجرُ والزبونُ ثمنَ خبرٍ لم يُقل.**
+   *
+   * **ولا يُمنع**: قد يفتح سائقٌ دوامَه بعد دقيقة، **والمنعُ يقرّر عن المالك ما
+   * لا يعرفه.** يُقال له الرقمُ ويقرّر هو. (قرارُ المالك ٢٠٢٦-٠٨-٠٣)
+   */
+  function askThenForward() {
+    if (onShift === 0) {
+      setNoDriverWarn(true);
+      return;
+    }
+    void forwardToMerchant();
+  }
+
   async function forwardToMerchant() {
+    setNoDriverWarn(false);
     setErr("");
     const win = window.open("", "_blank");
     setBusy("wa");
@@ -1312,13 +1354,30 @@ function OrderActions({
         <Button
           variant={o.sent_to_merchant_at || selfManage ? "secondary" : "primary"}
           disabled={busy !== ""}
-          onClick={() => void forwardToMerchant()}
+          onClick={askThenForward}
         >
           {o.sent_to_merchant_at
             ? m.admin.ordersPage.sentWhatsApp
             : m.admin.ordersPage.sendWhatsApp}
         </Button>
       )}
+
+      <Modal
+        open={noDriverWarn}
+        onClose={() => setNoDriverWarn(false)}
+        title={m.admin.ordersPage.noDriverTitle}
+      >
+        <p className="mb-4 text-sm text-ink-muted">{m.admin.ordersPage.noDriverBody}</p>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setNoDriverWarn(false)}>
+            {m.admin.ordersPage.noDriverWait}
+          </Button>
+          {/* **والتحويلُ يبقى متاحاً** — المنعُ يقرّر عن المالك ما لا يعرفه. */}
+          <Button variant="primary" onClick={() => void forwardToMerchant()}>
+            {m.admin.ordersPage.noDriverAnyway}
+          </Button>
+        </div>
+      </Modal>
       {/* **الإسنادُ اليدويّ احتياطٌ لا أصل.**
 
           **وزرٌّ متاحٌ دائماً يُستعمل دائماً** — فيصير هو الطريقَ ويصير ترتيبُ

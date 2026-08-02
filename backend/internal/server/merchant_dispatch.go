@@ -173,10 +173,34 @@ func (s *Server) handleOrderMessagePreview(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	text := buildMerchantMessage(msg)
+
+	// **وكم سائقاً في الدوام الآن.**
+	//
+	// التحويلُ يُبلّغ المطعمَ فيبدأ الطبخ، **ثمّ ينزل الطلبُ إلى من يحمله.**
+	// فإن لم يكن أحدٌ في الدوام **طُبخ طعامٌ لا حاملَ له** — ويبرد بينما تنتظر
+	// العملياتُ سائقاً لا يأتي.
+	//
+	// **ولا يُمنع التحويل**: قد يفتح سائقٌ دوامَه بعد دقيقة، **والمنعُ يقرّر
+	// عن المالك ما لا يعرفه.** يُقال له الرقمُ ويقرّر هو.
+	//
+	// قرارُ المالك (٢٠٢٦-٠٨-٠٣): «عندما لا يكون هناك سائق على الدوام يجب
+	// تنبيه الإدارة **قبل** تحويل الطلب للمتجر».
+	var onShift int
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*) FROM users u
+		WHERE u.deleted_at IS NULL AND u.status = 'active' AND u.on_shift
+		  AND EXISTS (SELECT 1 FROM user_roles r
+		              WHERE r.user_id = u.id AND r.role_code = 'driver')`).
+		Scan(&onShift); err != nil {
+		s.logger.Error("تعذّر عدّ السائقين في الدوام", "error", err)
+		onShift = -1 // **مجهولٌ لا صفر** — وصفرٌ كاذبٌ يوقف العمل بلا سبب
+	}
+
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"text":    text,
-		"phone":   ph.WhatsApp,
-		"wa_link": waLink(ph.WhatsApp, text),
+		"text":             text,
+		"phone":            ph.WhatsApp,
+		"wa_link":          waLink(ph.WhatsApp, text),
+		"drivers_on_shift": onShift,
 		// أمُهيَّأةٌ بوّابةُ الرسائل؟ **الواجهةُ لا تعرض زرّاً لا يعمل.**
 		// وزرٌّ يُضغط فيردّ «غير مضبوطة» يُعلّم الموظّفَ ألّا يثق بالأزرار.
 		"sms_ready": s.textSender.Configured(),

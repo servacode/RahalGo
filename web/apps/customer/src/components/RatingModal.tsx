@@ -24,7 +24,8 @@ export default function RatingModal({
   onClose,
   onRated,
 }: {
-  order: { order_id: string; number: number; merchant_name: string; has_driver: boolean };
+  /** **ولا اسمَ متجرٍ هنا** — الأصنافُ تُعرّف الطلبَ، والمصدرُ محجوب. */
+  order: { order_id: string; number: number; items_preview: string; has_driver: boolean };
   onClose: () => void;
   onRated: () => void;
 }) {
@@ -64,7 +65,7 @@ export default function RatingModal({
       >
         <h2 className="mb-1 text-lg font-bold">{R.title}</h2>
         <p className="mb-4 text-sm text-ink-muted">
-          #{order.number} — {order.merchant_name}
+          #{order.number} — {order.items_preview}
         </p>
         <form onSubmit={submit} className="space-y-4">
           <div>

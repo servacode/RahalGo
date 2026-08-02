@@ -64,9 +64,8 @@ interface OrderLineOption {
 interface Order {
   id: string;
   number: number;
-  merchant_id: string;
-  merchant_name: string;
-  merchant_logo_thumb_url: string | null;
+  // **ولا حقلَ متجرٍ هنا** — الخادمُ يمسح الاسمَ والمعرّفَ والشعار قبل الإرسال
+  // (`customer_privacy.go`). **وحقلٌ في النوع يُغري بعرضه يوماً.**
   items_count: number;
   items_preview: string;
   items?: {
@@ -85,7 +84,7 @@ interface Order {
 interface RateInfo {
   order_id: string;
   number: number;
-  merchant_name: string;
+  items_preview: string;
   has_driver: boolean;
   rated: boolean;
   platform_stars: number;
@@ -187,21 +186,17 @@ export default function MyOrdersPage() {
           {orders.map((o) => {
             const rate = rateMap[o.id];
             const canRate = o.status === "delivered" && rate && !rate.rated;
-            const logo = mediaUrl(o.merchant_logo_thumb_url);
             const more = o.items_count - o.items_preview.split("، ").filter(Boolean).length;
             return (
               <EntityCard
                 key={o.id}
                 spine={o.status === "refunded" ? undefined : (SPINE[o.status] ?? "primary")}
+                /* **وشعارُ المتجر لا يُعرض** — صورةُ مطعمٍ يعرفه أهلُ الحيّ
+                   **تُعرف قبل أن تُقرأ الكلمة**، فحجبُ الاسم وحدَه حجبٌ ناقص. */
                 media={
-                  logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logo} alt="" className="h-12 w-12 rounded-control object-cover" />
-                  ) : (
-                    <span className="flex h-12 w-12 items-center justify-center rounded-control bg-primary-light">
-                      <IconStore size={20} className="text-primary-dark" />
-                    </span>
-                  )
+                  <span className="flex h-12 w-12 items-center justify-center rounded-control bg-primary-light">
+                    <IconStore size={20} className="text-primary-dark" />
+                  </span>
                 }
                 title={
                   <span className="flex items-center gap-2">
