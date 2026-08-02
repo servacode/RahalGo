@@ -24,6 +24,7 @@ var t = struct {
 	rejected, cancelled, failed, refunded    string
 	merchantDelivered, commission            string
 	violationsWarn, violationsBanned         string
+	endedOps                                 string
 }{
 	newOrderMerchant:  "طلب جديد وصلك",
 	newOrderOps:       "طلب جديد في المنصة",
@@ -39,6 +40,21 @@ var t = struct {
 	commission:        "عمولة جديدة في محفظتك",
 	violationsWarn:    "متجرٌ بلغ حدّ المخالفات",
 	violationsBanned:  "حُظر متجرٌ لكثرة الإلغاء",
+	endedOps:          "انتهى طلبٌ قبل تسليمه",
+}
+
+// endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.
+//
+// **وثلاثةُ أخبارٍ يُخفيها لفظُ «ملغي» وحدَه**: إلغاءُ الزبون خبرٌ لا يستوجب
+// شيئاً، **وإلغاءُ المتجر يستوجب اتّصالاً به** وقد يُحتسب عليه مخالفة، وإلغاءُ
+// العمليات فعلُنا نحن. **ومن لا يعرف أيُّها وقع يتّصل بالثلاثة أو لا يتّصل
+// بأحد.**
+var endedByLabel = map[string]string{
+	"customer": "ألغاه الزبون",
+	"merchant": "ألغاه المتجر",
+	"ops":      "ألغته العمليات",
+	"admin":    "ألغته الإدارة",
+	"driver":   "أنهاه السائق",
 }
 
 // orderParties أطراف الطلب الذين قد يُشعَرون.
@@ -98,7 +114,7 @@ var customerTitles = map[string]string{
 
 // notifyTransition يُعلم من يخصّه هذا الانتقال. يُستدعى بعد نجاح الإيداع:
 // فشل الإشعار لا يُبطل تسليماً وقع فعلاً.
-func (s *Service) notifyTransition(ctx context.Context, orderID, to, note string) {
+func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, endedBy string) {
 	if s.notify == nil {
 		return
 	}
@@ -120,6 +136,29 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note string
 		Title: title, Body: body,
 		Entity: "order", EntityID: orderID, Href: "/orders/" + orderID,
 	})
+
+	// **والعملياتُ تُخبَر بمن أنهى** — لا بأنّ الطلب انتهى.
+	//
+	// كانت لا تُخبَر أصلاً: تكتشف الإلغاءَ حين تنظر في القائمة، **وتقرأ فيها
+	// «ملغي» بلا فاعل**. فإن كان المتجرُ هو من ألغى فثمّة مكالمةٌ تستحقّ أن
+	// تُجرى ومخالفةٌ تُحتسب، وإن كان الزبونَ فلا شيء.
+	//
+	// **ولا تُخبَر بفعل نفسِها**: من ألغى بيده لا يُنبَّه أنّ إلغاءً وقع.
+	if (to == StCancelled || to == StRejected || to == StFailed) &&
+		endedBy != "" && endedBy != "ops" && endedBy != "admin" {
+		who := endedByLabel[endedBy]
+		if to == StFailed {
+			who = "تعذّر التسليم"
+		}
+		opsBody := ref + " — " + who + " · " + p.merchantName
+		if note != "" {
+			opsBody += " · " + note
+		}
+		s.notify.NotifyRoles(ctx, notifications.OpsDesk, notifications.Input{
+			Kind: notifications.KindOrder, Title: t.endedOps, Body: opsBody,
+			Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
+		})
+	}
 
 	// التسليم يخصّ المتجر أيضاً (اكتمل التزامه)
 	if to == StDelivered && p.merchantOwner != nil {

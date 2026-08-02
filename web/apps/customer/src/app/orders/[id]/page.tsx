@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtTime, fmtClock } from "@rahalgo/i18n";
 import {
   IconCheck,
   IconLocation,
@@ -66,6 +66,8 @@ interface Order {
   merchant_id: string;
   prep_minutes?: number | null;
   accepted_at?: string | null;
+  /** ما بقي من مهلة الإلغاء بالثواني — و`-1` تعني «بلا مهلة» (قبل القبول). */
+  cancel_seconds_left?: number;
   ready_at?: string | null;
   subtotal: number;
   delivery_fee: number;
@@ -112,6 +114,15 @@ export default function OrderTrackingPage() {
   const [error, setError] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
+  /**
+   * ما بقي من نافذة الإلغاء بالثواني.
+   *
+   * **يُعاد حسابُه كلَّ ثانية** — فالعدّادُ الذي لا يعدّ ليس عدّاداً. ويُقرأ
+   * من `accepted_at` والمهلةِ الآتية من الخادم، **فلا رقمَ مكتوبٌ في الشاشة
+   * يخالف رقماً في الإعدادات.**
+   */
+  const [cancelLeft, setCancelLeft] = useState(0);
+
   const [cancelError, setCancelError] = useState("");
 
   const load = useCallback(() => {
@@ -123,6 +134,26 @@ export default function OrderTrackingPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  /**
+   * العدّادُ ينطلق من رقم الخادم **لا من حسابٍ محليّ**.
+   *
+   * الرقمُ نسبيٌّ عند وصوله، **فيُثبَّت مرساه بساعة الجهاز نفسِه** ويُطرح منه
+   * ما مضى. وبهذا لا تدخل ساعةُ الخادم في الحساب أصلاً — **وفارقُ الساعتين
+   * لا يجعل زرّاً حيّاً يبدو منقضياً.**
+   */
+  useEffect(() => {
+    const left = order?.cancel_seconds_left ?? 0;
+    if (left <= 0) {
+      setCancelLeft(0);
+      return;
+    }
+    const anchor = Date.now();
+    const tick = () => setCancelLeft(Math.max(0, left - Math.floor((Date.now() - anchor) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [order?.cancel_seconds_left]);
 
   // البث الحي المركزي — قناة واحدة للتطبيق كله، بلا استطلاع دوري
   useLiveEvent((event) => {
@@ -166,7 +197,16 @@ export default function OrderTrackingPage() {
             <Badge
               variant={failed ? "danger" : order.status === "delivered" ? "success" : "primary"}
             >
-              {STATUS_LABELS[order.status] ?? order.status}
+              {/* **الشارةُ تقرأ المُطبَّعة كما يقرؤها الخطّ.**
+
+                  كانت تقرأ الحالةَ الخام — ففي `dispatching` تقول «جارٍ إسناد
+                  سائق» **والخطُّ تحتها يُضيء «قيد التحضير»: جوابان في شاشةٍ
+                  واحدة.**
+
+                  وأسوأُ من التناقض معناه: **«جارٍ إسناد سائق» تُخبر الزبونَ
+                  بشؤوننا الداخلية** فيقرؤها قلقاً — ولا يحتاج أن يعرف أن لنا
+                  طابوراً. */}
+              {STATUS_LABELS[norm] ?? order.status}
             </Badge>
             <Button
               variant="secondary"
@@ -189,8 +229,19 @@ export default function OrderTrackingPage() {
         )}
       </header>
 
-      {/* الإلغاء: نافذة تدارُك قصيرة بعد قبول المتجر */}
-      {(order.status === "pending" || order.status === "accepted") && (
+      {/* **الإلغاء: نافذةٌ تُرى وهي تنقضي.**
+
+          كان الزرُّ يبقى طوالَ حالة «مقبول» **بلا فحصٍ للوقت** — فيُضغط بعد
+          ساعةٍ فيعتذر. **وزرٌّ يَعِد بما لا يفعله الخادم** هو ما نطارده منذ
+          يومين.
+
+          والنصُّ كان يقول «خلال دقيقتين» **مكتوبةً بالحرف والمهلةُ إعدادٌ
+          يملك المالكُ تغييره** — **ورقمٌ في نصٍّ يخالف رقماً في إعدادٍ أخطرُ
+          من غياب الرقم: غيابُه يُسأل عنه، وخلافُه يُصدَّق.**
+
+          **والعدّادُ يحلّهما معاً**: يقرأ المهلةَ من الخادم فلا نصَّ يُكتب،
+          ويختفي بانقضائها فلا زرَّ يعتذر. */}
+      {(order.status === "pending" || (order.status === "accepted" && cancelLeft > 0)) && (
         <div className="mb-4">
           <Button
             variant="danger"
@@ -214,7 +265,9 @@ export default function OrderTrackingPage() {
             {m.site.orders.cancel}
           </Button>
           {order.status === "accepted" && (
-            <p className="mt-1 text-xs text-ink-muted">{m.site.orders.cancelWindow}</p>
+            <p className="mt-1 text-xs text-ink-muted">
+              {m.site.orders.cancelWindow.replace("{t}", fmtClock(cancelLeft))}
+            </p>
           )}
           {cancelError && <p className="mt-1 text-sm text-danger">{cancelError}</p>}
         </div>

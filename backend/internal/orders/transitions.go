@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -142,13 +143,18 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	// لا دورية: الخارطة تقول من يملك الانتقال، والزمن يقول متى.
 	if to == StCancelled && from == StAccepted && slices.Contains(actorRoles, "customer") &&
 		!slices.Contains(actorRoles, "ops") && !slices.Contains(actorRoles, "admin") {
+		// **الافتراضيُّ من الفهرس لا من الاستعلام.**
+		//
+		// كان `COALESCE(..., 120)` مكتوباً هنا **والفهرسُ يحمل افتراضَه أيضاً**
+		// — رقمان لمعنًى واحد. ولو غيّر المالكُ الافتراضَ في الفهرس لبقي هذا
+		// الاستعلامُ يعمل بالقديم عند غياب الصفّ. **وافتراضٌ في موضعين
+		// افتراضٌ لا يُعتمد عليه.**
 		var withinWindow bool
 		if err := tx.QueryRow(ctx, `
 			SELECT accepted_at IS NOT NULL
-			   AND accepted_at > now() - make_interval(secs =>
-			       COALESCE((SELECT (value#>>'{}')::int FROM app_settings
-			                 WHERE key = 'orders.customer_cancel_window_sec'), 120))
-			FROM orders WHERE id = $1`, orderID).Scan(&withinWindow); err != nil {
+			   AND accepted_at > now() - make_interval(secs => $2)
+			FROM orders WHERE id = $1`,
+			orderID, s.cancelWindowSec(ctx)).Scan(&withinWindow); err != nil {
 			return nil, err
 		}
 		if !withinWindow {
@@ -178,7 +184,7 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	}
 	s.publishOrder(updated)
 	// بعد الإيداع: فشل الإشعار لا يُبطل تسليماً وقع فعلاً
-	s.notifyTransition(ctx, orderID, to, note)
+	s.notifyTransition(ctx, orderID, to, note, endedBy)
 	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
 
 	// **أوّلُ عرضٍ في نمط «بالترتيب»** — لحظةَ نزول الطلب إلى الطابور.
@@ -734,4 +740,36 @@ func (s *Service) merchantActivated(ctx context.Context, q wallet.Querier, order
 		return false, err
 	}
 	return delivered >= threshold, nil
+}
+
+// cancelWindowSec مهلةُ تدارُك الزبون بالثواني.
+//
+// **تُقرأ من موضعين**: المحرّكُ يفرضها، والشاشةُ تعدّها تنازلياً. ولو حسبها
+// كلٌّ بنفسه **لعدّ الزبونُ ثانيةً والخادمُ ثانيةً أخرى** — فيضغط على زرٍّ
+// يراه حيّاً ويُردّ عليه بـ«انقضت المهلة».
+func (s *Service) cancelWindowSec(ctx context.Context) int64 {
+	if s.settings == nil {
+		return 120
+	}
+	return s.settings.GetInt(ctx, "orders.customer_cancel_window_sec")
+}
+
+// CancelSecondsLeft ما بقي للزبون من مهلة الإلغاء — وصفرٌ إن لم يبقَ شيء.
+//
+// **يُرسل رقماً نسبياً لا موعداً مطلقاً**: ساعةُ الهاتف قد تسبق ساعةَ الخادم
+// بدقائق، **فموعدٌ مطلقٌ يُقرأ عند المستخدم منقضياً وهو حيّ** أو حيّاً وهو
+// منقضٍ. والنسبيُّ لا يعرف الساعتين.
+func (s *Service) CancelSecondsLeft(ctx context.Context, o *Order) int {
+	if o.Status != StAccepted || o.AcceptedAt == nil {
+		if o.Status == StPending {
+			// **قبل قبول المتجر لا مهلة أصلاً** — يُلغي متى شاء.
+			return -1
+		}
+		return 0
+	}
+	left := s.cancelWindowSec(ctx) - int64(time.Since(*o.AcceptedAt).Seconds())
+	if left < 0 {
+		return 0
+	}
+	return int(left)
 }

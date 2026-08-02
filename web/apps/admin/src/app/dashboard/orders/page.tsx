@@ -132,6 +132,10 @@ interface OrderRow {
   address_text: string;
   notes: string;
   cancel_reason: string;
+  /** الدورُ الذي أنهى الطلب — يُقرأ ولا يُرسَل. */
+  ended_by?: string;
+  fail_reason?: string;
+  fault?: string;
   created_at: string;
   items?: {
     id: string;
@@ -168,6 +172,7 @@ interface Alert {
 }
 
 const STATUS_LABELS: Record<string, string> = m.orders.status;
+const ENDED_BY: Record<string, string> = m.admin.ordersPage.endedBy;
 const ACTION_LABELS: Record<string, string> = m.admin.ordersPage.actions;
 const PAYMENT_LABELS: Record<string, string> = m.orders.payment;
 
@@ -485,7 +490,20 @@ export default function OrdersPage() {
       header: m.admin.ordersPage.statusCol,
       icon: <IconStatus />,
       cell: (o) => (
-        <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>{STATUS_LABELS[o.status]}</Badge>
+        <span className="inline-flex flex-wrap items-center gap-1">
+          <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>{STATUS_LABELS[o.status]}</Badge>
+          {/* **ومن أنهاه بجانب أنّه انتهى.**
+
+              كانت العملياتُ تقرأ «ملغي» **بلا فاعل** — وثلاثةُ أخبارٍ يخفيها
+              اللفظُ الواحد: إلغاءُ الزبون لا يستوجب شيئاً، **وإلغاءُ المتجر
+              يستوجب مكالمةً ومخالفةً تُحتسب**، وإلغاؤنا نحن فعلُنا نعرفه.
+
+              وكان الحقلُ يُكتب في قاعدة البيانات منذ البداية **ولا يقرؤه
+              أحد** — وحقلٌ يُملأ ولا يُقرأ كلفةُ كتابةٍ بلا فائدة. */}
+          {o.ended_by && ENDED_BY[o.ended_by] && (
+            <Badge variant="neutral">{ENDED_BY[o.ended_by]}</Badge>
+          )}
+        </span>
       ),
     },
     {

@@ -182,7 +182,17 @@ func (s *Server) handleMyOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, o)
+	// **المهلةُ تُرسل مع الطلب لا في نداءٍ ثانٍ.**
+	//
+	// الشاشةُ تعرض عدّاداً تنازلياً لزرّ الإلغاء، **ورقمُ المهلة إعدادٌ يملك
+	// المالكُ تغييره** — فلو كُتب في الشاشة لخالف الخادمَ بعد أوّل تعديل.
+	// **وزرٌّ يَعِد بما يرفضه الخادم أسوأُ من زرٍّ لا يظهر.**
+	//
+	// و`-1` تعني «بلا مهلة» — أي قبل قبول المتجر: يُلغي متى شاء.
+	httpx.JSON(w, http.StatusOK, struct {
+		*orders.Order
+		CancelSecondsLeft int `json:"cancel_seconds_left"`
+	}{o, s.orders.CancelSecondsLeft(r.Context(), o)})
 }
 
 // handleMyWallet رصيد الزبون وكشف حركاته.

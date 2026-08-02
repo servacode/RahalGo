@@ -93,7 +93,12 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 		                WHERE b.driver_id = u.id), 0) < $2
 		  AND (SELECT count(*) FROM orders o
 		       WHERE o.driver_id = u.id AND o.closed_at IS NULL) < $3
-		ORDER BY u.last_assigned_at NULLS FIRST, u.id
+		-- **ومن لم يأخذ بعدُ يُرتّبون بمن بكّر بالدوام.**
+		--
+		-- كان الفاصلُ u.id — **معرّفٌ عشوائيٌّ لا معنى له**: من سُجّل أوّلاً
+		-- يسبق من بكّر بالدوام. **وقاعدةُ المالك: من فتح دوامَه أوّلاً يستحقّ
+		-- أوّلَ طلب** — وهو ما يجعل التبكير مجدياً.
+		ORDER BY u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
 		LIMIT 1`, skip, limit, maxActive).Scan(&driverID)
 
 	if err != nil {

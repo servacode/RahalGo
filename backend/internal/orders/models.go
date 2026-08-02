@@ -102,6 +102,18 @@ type Order struct {
 	// زرّ الإسناد اليدويّ**، فلا تعتمد الشاشةُ على `updated_at` الذي يتغيّر
 	// مع كل مسّ.
 	DispatchedAt *time.Time `json:"dispatched_at"`
+	// EndedBy الدورُ الذي أنهى الطلب: customer · merchant · ops · driver.
+	//
+	// **كان يُكتب ولا يُقرأ**: ترى العملياتُ «ملغي» ولا تعرف من ألغاه —
+	// **وثلاثةُ أخبارٍ يُخفيها لفظٌ واحد**، وأحدُها يستوجب اتّصالاً بالمتجر
+	// والآخر لا يستوجب شيئاً.
+	EndedBy string `json:"ended_by"`
+	// Fault من تسبّب في الفشل — **غيرُ `EndedBy`**: ذاك من ضغط وهذا من تسبّب.
+	Fault string `json:"fault"`
+	// FailReason رمزُ سبب التعذّر المُصنَّف
+	FailReason string `json:"fail_reason"`
+	// ReturnedAt متى أُعيدت البضاعةُ إلى متجرها
+	ReturnedAt *time.Time `json:"returned_at"`
 	// GoodsSettledTo مصيرُ بضاعة طلبٍ فشل: merchant استردّها · platform
 	// تحمّلتها المنصةُ ودفعت للمتجر · فارغٌ يعني **لم يُحسم بعد**.
 	GoodsSettledTo *string     `json:"goods_settled_to"`

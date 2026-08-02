@@ -24,3 +24,14 @@ export function getDir(locale: Locale): "rtl" | "ltr" {
 }
 
 export { fmtNum, fmtDate, fmtDateTime, fmtTime, fmtLongDate } from "./format";
+
+/**
+ * ثوانٍ إلى «م:ث» — لعدّادٍ تنازليّ.
+ *
+ * **بخانتين للثواني دائماً**: «١:٥» تُقرأ دقيقةً وخمسَ ثوانٍ أو خمسين، **ورقمٌ
+ * يحتمل قراءتين في عدّادٍ ينقضي أسوأُ من لا عدّاد.**
+ */
+export function fmtClock(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
