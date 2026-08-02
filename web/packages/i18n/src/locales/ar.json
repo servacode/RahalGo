@@ -510,7 +510,11 @@
     "bad_complaint_reason": "اختر سبباً من القائمة",
     "order_not_closed": "الشكوى بعد انتهاء الطلب",
     "too_many_sources": "أصنافُ سلّتك من مصادر أكثر من المسموح",
-    "multi_source_order": "تعذّر تحديد مصدر بعض الأصناف"
+    "multi_source_order": "تعذّر تحديد مصدر بعض الأصناف",
+    "transfer_too_late": "تعذّر التحويل — البضاعة خرجت من المتجر",
+    "transfer_same_merchant": "هذا هو متجر الطلب نفسه",
+    "transfer_items_unmatched": "بعض الأصناف لا يوجد ما يطابقها",
+    "order_not_preparing": "الطلب ليس قيد التحضير"
   },
   "admin": {
     "appTitle": "رحال غو — لوحة التحكم",
@@ -642,7 +646,14 @@
       "manualStep": "تدخّل يدويّ: {s}",
       "manualTitle": "تدخّل يدويّ",
       "manualHint": "هذه خطوةُ السائق. تُسجَّل باسمك أنّ المنصة أعلنتها — لا أنّ السائق قالها. اكتب السبب.",
-      "manualConfirm": "أعلنها باسمي"
+      "manualConfirm": "أعلنها باسمي",
+      "transfer": "تحويل لمتجر آخر",
+      "transferTitle": "تحويل الطلب إلى متجر آخر",
+      "transferHint": "سعر الزبون لا يتغيّر — والفرق على المنصة. والأصناف تُطابَق بالاسم.",
+      "transferPick": "— اختر المتجر —",
+      "transferReason": "لماذا؟ (اعتذر عن صنف، مغلق، …)",
+      "transferConfirm": "حوّل الطلب",
+      "transferUnmatched": "لا يوجد ما يطابقها في المتجر الجديد:"
     },
     "customers": {
       "title": "الزبائن",

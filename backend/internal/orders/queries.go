@@ -142,6 +142,12 @@ type ListFilter struct {
 	DriverID   string
 	Query      string // رقم طلب أو هاتف زبون
 	OpenOnly   bool   // الطلبات الجارية فقط
+	// ClosedOnly المنتهيةُ وحدَها — **سجلٌّ لا شاشةَ متابعة.**
+	//
+	// يُستعمل حين تدير المنصةُ الطلبات: **المتجرُ لا يملك زرّاً في الجارية**،
+	// وشاشةٌ تُشاهَد ولا تُلمَس تُربك أكثرَ ممّا تُفيد. **وسؤالُه الحقيقيّ
+	// «ماذا بعتُ اليومَ وبكم؟» — وجوابُه في السجلّ.**
+	ClosedOnly bool
 	Page       int
 	PerPage    int
 }
@@ -158,19 +164,21 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		AND ($3 = '' OR o.customer_id::text = $3)
 		AND ($4 = '' OR o.driver_id::text = $4)
 		AND ($5 = '' OR o.number::text = $5 OR cu.phone ILIKE '%'||$5||'%')
-		AND (NOT $6 OR o.closed_at IS NULL)`
+		AND (NOT $6 OR o.closed_at IS NULL)
+		AND (NOT $7 OR o.closed_at IS NOT NULL)`
 
 	var total int
 	if err := s.db.QueryRow(ctx, `
 		SELECT count(*) FROM orders o JOIN users cu ON cu.id = o.customer_id`+where,
-		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly).Scan(&total); err != nil {
+		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
+		f.ClosedOnly).Scan(&total); err != nil {
 		return nil, err
 	}
 
 	rows, err := s.db.Query(ctx, orderSelect+where+`
-		ORDER BY o.created_at DESC LIMIT $7 OFFSET $8`,
+		ORDER BY o.created_at DESC LIMIT $8 OFFSET $9`,
 		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-		f.PerPage, (f.Page-1)*f.PerPage)
+		f.ClosedOnly, f.PerPage, (f.Page-1)*f.PerPage)
 	if err != nil {
 		return nil, err
 	}

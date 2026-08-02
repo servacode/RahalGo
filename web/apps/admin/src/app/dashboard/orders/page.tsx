@@ -110,6 +110,7 @@ interface OrderRow {
   customer_phone: string;
   customer_name: string;
   merchant_name: string;
+  merchant_id: string;
   driver_phone: string | null;
   driver_name: string | null;
   /** متى حُوِّل الطلب إلى المتجر — فارغٌ يعني لم يُحوَّل بعد */
@@ -227,6 +228,16 @@ const NEXT_AFTER: Record<string, string> = {
   on_the_way: "at_dropoff",
   at_dropoff: "delivered",
 };
+
+/** الحالاتُ التي يجوز فيها التحويل — **قبل خروج البضاعة**. */
+const TRANSFERABLE = new Set([
+  "pending",
+  "accepted",
+  "preparing",
+  "dispatching",
+  "assigned",
+  "at_pickup",
+]);
 
 const DRIVER_ONLY = new Set([
   "at_pickup",
@@ -725,6 +736,11 @@ function OrderActions({
   const [busy, setBusy] = useState("");
   /** الفعلُ الهدّام المفتوح الآن — يُطلب سببُه قبل تنفيذه */
   const [asking, setAsking] = useState("");
+  /** نافذةُ التحويل إلى متجرٍ آخر — القاعدةُ الاحتياطية. */
+  const [transferring, setTransferring] = useState(false);
+  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
+  const [target, setTarget] = useState("");
+  const [unmatched, setUnmatched] = useState<string[]>([]);
   /** قائمةُ السائقين مفتوحةٌ للإسناد اليدوي */
   const [assigning, setAssigning] = useState(false);
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
@@ -889,6 +905,39 @@ function OrderActions({
     }
   }
 
+  /**
+   * **التحويلُ إلى متجرٍ آخر** — حين يعتذر المتجرُ على الواتساب.
+   *
+   * **وسعرُ الزبون لا يُمسّ**: الفرقُ على المنصة ولو كان الجديدُ أغلى. والزبونُ
+   * **لا يعلم أنّ مصدراً تبدّل** — وفاتورةٌ تتغيّر بعد الطلب تنقض ذلك في سطر.
+   *
+   * **وصنفٌ لا يُطابق يُوقف التحويلَ ويُسمّى** — لا يُخمَّن «الأقرب».
+   */
+  async function transfer() {
+    if (!target || !reason.trim()) return;
+    setBusy("transfer");
+    setErr("");
+    setUnmatched([]);
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/transfer`, {
+        method: "POST",
+        body: JSON.stringify({ merchant_id: target, note: reason.trim() }),
+      });
+      setTransferring(false);
+      setReason("");
+      setTarget("");
+      onChanged();
+    } catch (e) {
+      if (e instanceof ApiError) {
+        const items = (e.body as { items?: string[] }).items;
+        if (items?.length) setUnmatched(items);
+        else setErr(translateKey(e.body.message_key));
+      } else setErr(m.errors.internal);
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function go(to: string, note: string, manualOverride = false) {
     setBusy(to);
     setErr("");
@@ -1006,6 +1055,63 @@ function OrderActions({
         <Button variant="secondary" onClick={() => setAssigning(false)}>
           {m.common.cancel}
         </Button>
+      </div>
+    );
+  }
+
+  if (transferring) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium text-primary-dark">
+          {m.admin.ordersPage.transferTitle}
+        </p>
+        <p className="text-xs text-ink-muted">{m.admin.ordersPage.transferHint}</p>
+        <Select
+          id={`t-${o.id}`}
+          value={target}
+          onChange={(e) => {
+            setTarget(e.target.value);
+            setUnmatched([]);
+          }}
+        >
+          <option value="">{m.admin.ordersPage.transferPick}</option>
+          {stores.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
+            </option>
+          ))}
+        </Select>
+        <Input
+          id={`tr-${o.id}`}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder={m.admin.ordersPage.transferReason}
+        />
+        {/* **وصنفٌ لا يُطابق يُسمّى** — «لا يُطابق» وحدَها تترك الموظّفَ
+            يفتح قائمتين ويقارن بعينه. */}
+        {unmatched.length > 0 && (
+          <p className="rounded-control bg-danger/10 px-3 py-2 text-xs text-danger">
+            {m.admin.ordersPage.transferUnmatched} {unmatched.join(" · ")}
+          </p>
+        )}
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <div className="flex gap-2">
+          <Button disabled={!target || !reason.trim() || busy !== ""} onClick={() => void transfer()}>
+            {m.admin.ordersPage.transferConfirm}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setTransferring(false);
+              setReason("");
+              setTarget("");
+              setUnmatched([]);
+              setErr("");
+            }}
+          >
+            {m.common.cancel}
+          </Button>
+        </div>
       </div>
     );
   }
@@ -1194,6 +1300,30 @@ function OrderActions({
             m.orders.status[(NEXT_AFTER[o.status] ?? "") as keyof typeof m.orders.status] ?? "",
           )}
         </button>
+      )}
+
+      {/* **التحويلُ إلى متجرٍ آخر — قاعدةٌ احتياطية.**
+
+          سياسةُ الإخفاء تمنع الحاجةَ إليه: صنفٌ غيرُ متاحٍ لا يُعرض. **لكنّ
+          الطارئَ يبقى** — والمتجرُ قد يعتذر على الواتساب.
+
+          **ولا يظهر بعد خروج البضاعة**: المتجرُ الأوّلُ قبض عند الاستلام،
+          فتحويلٌ بعدها **طلبان لا واحد.** */}
+      {TRANSFERABLE.has(o.status) && (
+        <Button
+          variant="ghost"
+          disabled={busy !== ""}
+          onClick={() => {
+            setTransferring(true);
+            if (stores.length === 0) {
+              void api<{ id: string; name: string }[]>("/api/v1/admin/merchants")
+                .then((r) => setStores((Array.isArray(r) ? r : []).filter((x) => x.id !== o.merchant_id)))
+                .catch(() => setStores([]));
+            }
+          }}
+        >
+          {m.admin.ordersPage.transfer}
+        </Button>
       )}
 
       {canAssign && assignReady && (

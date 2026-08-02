@@ -132,6 +132,17 @@ func main() {
 			log.Fatalf("user %s: %v", a.Phone, err)
 		}
 		ids[a.Phone] = id
+		// **وزبونُ التطوير موثَّقُ الواتساب.**
+		//
+		// الحارسُ يمنع الطلبَ من رقمٍ غير موثَّق — **وهو صحيح**: الرقمُ الوهميّ
+		// يعني سائقاً يقف أمام بابٍ لا أحد فيه. **لكنّ زبوناً مزروعاً لا
+		// يستطيع أن يطلب زبونٌ لا ينفع في تجربة**، فيُطفأ الحارسُ في كلّ
+		// تجربةٍ — **وحارسٌ يُطفأ ليُجرَّب النظامُ حارسٌ لا يُجرَّب أبداً.**
+		if _, err := tx.Exec(ctx, `
+			UPDATE users SET whatsapp_phone = phone, whatsapp_verified_at = now()
+			WHERE id = $1 AND whatsapp_verified_at IS NULL`, id); err != nil {
+			log.Fatalf("whatsapp %s: %v", a.Phone, err)
+		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO user_roles (user_id, role_code) VALUES ($1, $2)
 			ON CONFLICT DO NOTHING`, id, a.Role); err != nil {

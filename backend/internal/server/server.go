@@ -320,6 +320,10 @@ func (s *Server) Router() http.Handler {
 			// للمالية والأدمن: يحوي أنصبةَ الأطراف وربحَ المنصة.
 			r.With(s.RequireRoles("admin", "finance")).
 				Get("/orders/{id}/breakdown", s.handleOrderBreakdown)
+			// **تحويلُ الطلب إلى متجرٍ آخر** — قاعدةٌ احتياطية، وسعرُ الزبون
+			// لا يُمسّ. (انظر `order_transfer.go`)
+			r.With(s.RequireRoles("admin", "ops")).
+				Post("/orders/{id}/transfer", s.handleTransferOrder)
 			r.Post("/orders/{id}/transition", s.handleOrderTransition)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
 

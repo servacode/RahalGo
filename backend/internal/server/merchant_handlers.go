@@ -79,13 +79,31 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
 	perPage, _ := strconv.Atoi(q.Get("per_page"))
-	res, err := s.orders.List(r.Context(), orders.ListFilter{
+
+	// **الجاريةُ تُخفى في وضع «المنصة تدير» — والسجلُّ يبقى كاملاً.**
+	//
+	// قرارُ المالك (٢٠٢٦-٠٨-٠٢): **«غيرُ مجبرٍ على فتح البرنامج، الطلباتُ
+	// تصله عبر الواتساب»**. وشاشةُ طلباتٍ جاريةٍ لا يملك فيها زرّاً **تُوهمه
+	// أنّ عليه متابعتها**، فيفتحها ويجدها تتحرّك بلا يده — **وشاشةٌ تُشاهَد
+	// ولا تُلمَس تُربك أكثرَ ممّا تُفيد.**
+	//
+	// **والسجلُّ ضرورةٌ لا ترفٌ**: صاحبُ المطعم يسأل «ماذا بعتُ اليومَ وبكم؟»
+	// — وذاك حقُّه في كلّ الأوضاع.
+	//
+	// **والحجبُ في الخادم لا في الشاشة**: من فتح أدوات المتصفّح قرأ الردَّ
+	// كما هو.
+	f := orders.ListFilter{
 		MerchantID: merchantID,
 		Status:     q.Get("status"),
 		OpenOnly:   q.Get("open_only") == "true",
 		Page:       page,
 		PerPage:    perPage,
-	})
+	}
+	if !s.settings.GetBool(r.Context(), "merchants.self_manage_orders") {
+		f.ClosedOnly = true
+		f.OpenOnly = false
+	}
+	res, err := s.orders.List(r.Context(), f)
 	if err != nil {
 		s.respondErr(w, err)
 		return
