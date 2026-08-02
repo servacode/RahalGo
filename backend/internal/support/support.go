@@ -29,27 +29,27 @@ type Reply struct {
 }
 
 type Ticket struct {
-	ID            string     `json:"id"`
-	Number        int64      `json:"number"`
-	CustomerID    string     `json:"customer_id"`
-	CustomerPhone string     `json:"customer_phone"`
-	CustomerName  string     `json:"customer_name"`
-	OrderID       *string    `json:"order_id"`
-	OrderNumber   *int64     `json:"order_number"`
-	Subject       string     `json:"subject"`
+	ID            string  `json:"id"`
+	Number        int64   `json:"number"`
+	CustomerID    string  `json:"customer_id"`
+	CustomerPhone string  `json:"customer_phone"`
+	CustomerName  string  `json:"customer_name"`
+	OrderID       *string `json:"order_id"`
+	OrderNumber   *int64  `json:"order_number"`
+	Subject       string  `json:"subject"`
 	// Reason رمزُ سببٍ من `ComplaintReasons` — فارغٌ في تذكرةٍ فتحها موظّف.
 	//
 	// **والمصنَّفُ يُعدّ**: «كم شكوى ‹لم يصلني طلبي› هذا الشهر» سؤالٌ له جوابٌ
 	// الآن، **وكان قبلَه بحثاً في نصوصٍ حرّة.**
 	Reason string `json:"reason"`
 	// OpenedByCustomer فتحها صاحبُها بنفسه لا موظّفٌ عنه.
-	OpenedByCustomer bool `json:"opened_by_customer"`
-	Status        string     `json:"status"`
-	Compensation  int64      `json:"compensation"`
-	Resolution    string     `json:"resolution"`
-	CreatedAt     time.Time  `json:"created_at"`
-	ResolvedAt    *time.Time `json:"resolved_at"`
-	Replies       []Reply    `json:"replies,omitempty"`
+	OpenedByCustomer bool       `json:"opened_by_customer"`
+	Status           string     `json:"status"`
+	Compensation     int64      `json:"compensation"`
+	Resolution       string     `json:"resolution"`
+	CreatedAt        time.Time  `json:"created_at"`
+	ResolvedAt       *time.Time `json:"resolved_at"`
+	Replies          []Reply    `json:"replies,omitempty"`
 }
 
 type TicketPage struct {
