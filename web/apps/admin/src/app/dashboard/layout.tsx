@@ -13,6 +13,7 @@ import {
   IconOrder,
   IconUser,
   IconDriver,
+  IconWarning,
   IconUsers,
   IconStore,
   IconZones,
@@ -51,6 +52,8 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard/customers", label: m.terms.customers, icon: IconUser },
   { href: "/dashboard/tickets", label: m.terms.complaints, icon: IconSupport },
   { href: "/dashboard/drivers", label: m.terms.drivers, icon: IconDriver },
+  // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
+  { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning },
   { href: "/dashboard/sales", label: m.terms.reps, icon: IconUsers },
   { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink },
   // المال — الأدمن والمالية. والعمليات ليست طرفاً فيه.

@@ -214,6 +214,9 @@ func (s *Server) Router() http.Handler {
 			// **أسبابُ التعذّر من الخادم** — قائمةٌ تُكرَّر في مكانين تفترق
 			// حين يُضاف سببٌ في أحدهما (driver_return.go)
 			r.Get("/fail-reasons", s.handleFailReasons)
+			// **الطارئ** — ضغطةٌ واحدة: موقعٌ يُلتقط، وعملياتٌ تُنبَّه، وطلبٌ
+			// يُحرَّر. **ومن كُسرت يدُه لا يملأ ثلاث شاشات.**
+			r.Post("/orders/{id}/emergency", s.handleDriverEmergency)
 			// **إرجاعُ البضاعة** — لمتاجرِ الاسترداد وحدها
 			r.Post("/orders/{id}/return", s.handleDriverReturn)
 			r.Get("/orders", s.handleDriverOrders)
@@ -342,6 +345,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
 			// **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
 			r.Get("/cash/outstanding", s.handleCashOutstanding)
+			// **الطوارئُ مجموعةً** — ولا تُغلق بمرور الوقت: طارئٌ يختفي وحدَه
+			// يُنسى، **ومن سأل عنه بعد يومين لم يجد من يقول ماذا جرى.**
+			r.Get("/emergencies", s.handleOpenEmergencies)
+			r.Post("/emergencies/{id}/resolve", s.handleResolveEmergency)
 			// **الخسارةُ الفعلية من الدفتر** — لا من إعادة حسابٍ لما حُسب.
 			r.Get("/reports/losses", s.handlePlatformLosses)
 			r.With(s.RequireRoles("admin", "finance")).

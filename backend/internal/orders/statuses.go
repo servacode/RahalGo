@@ -92,15 +92,35 @@ var allowedTransitions = map[string][]transition{
 		{StDispatching, driverOps},
 		{StCancelled, opsRoles},
 	},
+	// **وما بعد الاستلام كان بلا مخرجٍ ألبتّة.**
+	//
+	// `picked_up` لا تؤدّي إلّا إلى `on_the_way`، وتلك لا تؤدّي إلّا إلى
+	// `at_dropoff`. **فسائقٌ اختفى بطلبٍ في يده يترك الطلبَ عالقاً إلى الأبد**:
+	// لا يُلغى، ولا يُفشل، ولا يُسنَد لغيره. **والزبونُ ينتظر طعاماً لن يأتي
+	// ولا أحد يملك أن يُنهي انتظارَه.**
+	//
+	// وهي العلّةُ نفسُها التي كانت في `at_pickup` — **بابٌ يُدخَل منه ولا
+	// يُخرَج**، والفرقُ أن هذه البضاعةُ فيها خرجت فعلاً.
+	//
+	// **والمخارجُ للعمليات وحدَها**: التحريرُ بعد الاستلام قرارُ منصةٍ لا
+	// قرارُ سائق — **وإلّا لَترك كلُّ من ثقل عليه طلبٌ طلبَه.**
 	StPickedUp: {
 		{StOnTheWay, driverOps},
+		{StDispatching, opsRoles},
+		{StFailed, opsRoles},
+		{StCancelled, opsRoles},
 	},
 	StOnTheWay: {
 		{StAtDropoff, driverOps},
+		{StDispatching, opsRoles},
+		{StFailed, opsRoles},
+		{StCancelled, opsRoles},
 	},
 	StAtDropoff: {
 		{StDelivered, driverOps},
 		{StFailed, driverOps}, // زبون لا يرد / يرفض الاستلام
+		{StDispatching, opsRoles},
+		{StCancelled, opsRoles},
 	},
 	StDelivered: {
 		{StRefunded, []string{}}, // أدمن فقط

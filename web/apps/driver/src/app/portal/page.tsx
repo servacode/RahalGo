@@ -63,6 +63,10 @@ interface DriverOrder {
   customer_phone: string;
   total: number;
   cash_due: number;
+  /** نقطةُ استلامٍ بديلة — البضاعةُ مع سائقٍ سابقٍ وقع له طارئ، لا في المتجر. */
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  pickup_note?: string;
   items_count: number;
   ready_at: string | null;
   prep_minutes: number | null;
@@ -100,6 +104,7 @@ export default function TasksPage() {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [failing, setFailing] = useState<DriverOrder | null>(null);
+  const [emergency, setEmergency] = useState<DriverOrder | null>(null);
   const [reason, setReason] = useState("");
 
   const load = useCallback(() => {
@@ -269,6 +274,7 @@ export default function TasksPage() {
                   setFailing(o);
                 }}
                 onRelease={() => act(o, "dispatching")}
+                onEmergency={() => setEmergency(o)}
               />
             ))}
           </div>
@@ -293,6 +299,17 @@ export default function TasksPage() {
           </div>
         )}
       </section>
+
+      {emergency && (
+        <EmergencyModal
+          order={emergency}
+          onClose={() => setEmergency(null)}
+          onDone={() => {
+            setEmergency(null);
+            load();
+          }}
+        />
+      )}
 
       {/* تعذّر التسليم — السبب إلزامي: طلبٌ يسقط بلا سبب خلافٌ مؤجَّل */}
       <Modal
@@ -338,12 +355,14 @@ function TaskCard({
   onAct,
   onFail,
   onRelease,
+  onEmergency,
 }: {
   o: DriverOrder;
   busy: boolean;
   onAct: (to: string) => void;
   onFail: () => void;
   onRelease: () => void;
+  onEmergency: () => void;
 }) {
   const next = NEXT[o.status];
   // قبل الاستلام وجهتُه المتجر، وبعده وجهتُه الزبون — الملاحة تتبع الرحلة
@@ -362,9 +381,15 @@ function TaskCard({
 
       <Leg
         icon={IconStore}
-        label={D.order.pickup}
-        name={o.merchant_name}
-        detail={D.order.items.replace("{n}", fmtNum(o.items_count))}
+        label={o.pickup_lat != null ? D.order.pickupOverride : D.order.pickup}
+        name={o.pickup_lat != null ? D.order.pickupFromDriver : o.merchant_name}
+        detail={
+          o.pickup_lat != null
+            ? o.pickup_note || D.order.pickupOverrideHint
+            : D.order.items.replace("{n}", fmtNum(o.items_count))
+        }
+        href={o.pickup_lat != null ? mapsHref(o.pickup_lat, o.pickup_lng ?? 0) : undefined}
+        hrefLabel={o.pickup_lat != null ? D.order.navigate : undefined}
         phone={o.merchant_phone}
         callLabel={D.order.callMerchant}
         dim={!heading}
@@ -438,14 +463,31 @@ function TaskCard({
             **وهو من هناك، فهو من يقول.** واللفظُ يختلف بالموضع: عند المطعم
             «المطعم لم يسلّمني»، وعند الزبون «الزبون لم يستلم». و«فشل» وحدها
             تُخفي ثلاثة أخطاءٍ في ثلاث جهات. */}
-        {(o.status === "at_pickup" || o.status === "at_dropoff") && (
-          <Button variant="ghost" disabled={busy} onClick={onFail} className="text-danger">
+        <span className="flex items-center gap-1">
+          {(o.status === "at_pickup" || o.status === "at_dropoff") && (
+            <Button variant="ghost" disabled={busy} onClick={onFail} className="text-danger">
+              <span className="flex items-center gap-1.5">
+                <IconWarning size={15} />
+                {o.status === "at_pickup" ? D.act.failedAtPickup : D.act.failed}
+              </span>
+            </Button>
+          )}
+          {/* **الطارئ — لما لا يحتمل شاشة.**
+
+              من وقع له حادثٌ وهو حاملٌ الطعام لم يكن يملك إلّا «تعذّر
+              التسليم»: **يُقفل طلبٌ كان يمكن أن يصل**، ويُحسب ذنبٌ لم يقع،
+              **ويبقى هو مشغولاً بشاشةٍ وهو في حالٍ لا تحتمل الشاشات.**
+
+              **وضغطةٌ واحدة لا ثلاث**: موقعُه يُلتقط، والعملياتُ تُنبَّه،
+              والطلبُ يعود إلى الطابور، ودوامُه يُغلق. **وكلُّ حقلٍ نطلبه منه
+              في تلك اللحظة حقلٌ لن يُملأ** — فيُترك الزرُّ ولا يُضغط. */}
+          <Button variant="ghost" disabled={busy} onClick={onEmergency} className="text-danger">
             <span className="flex items-center gap-1.5">
               <IconWarning size={15} />
-              {o.status === "at_pickup" ? D.act.failedAtPickup : D.act.failed}
+              {D.act.emergency}
             </span>
           </Button>
-        )}
+        </span>
       </div>
     </Card>
   );
@@ -555,5 +597,77 @@ function QueueCard({ o, busy, onAccept }: { o: DriverOrder; busy: boolean; onAcc
         {D.queue.accept}
       </Button>
     </Card>
+  );
+}
+
+/**
+ * **الطارئ** — ضغطةٌ واحدة لا ثلاث.
+ *
+ * من كُسرت يدُه لا يملأ نموذجاً. **وكلُّ حقلٍ نطلبه منه في تلك اللحظة حقلٌ لن
+ * يُملأ** — فيُترك الزرُّ ولا يُضغط، **ويبقى الطلبُ معه ولا نعلم.**
+ *
+ * فالملاحظةُ اختيارية، **والموقعُ يُلتقط بلا أن يُطلب**، وتعذّرُه لا يوقف
+ * شيئاً: جهازٌ مرفوضُ الإذن أو داخلَ بناءٍ لا إشارةَ فيه — **وطارئٌ يُردّ لأن
+ * الموقعَ لم يُقرأ طارئٌ ضاع.** والعملياتُ تتّصل به فتعرف أين هو.
+ */
+function EmergencyModal({
+  order,
+  onClose,
+  onDone,
+}: {
+  order: DriverOrder;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit() {
+    setBusy(true);
+    setError("");
+    // **الموقعُ بمهلة**: انتظارٌ بلا حدٍّ يجعل الزرَّ يبدو معطّلاً في اللحظة
+    // التي يجب أن يعمل فيها أسرعَ ما يكون.
+    const point = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () => resolve(null),
+        { timeout: 6000, enableHighAccuracy: true },
+      );
+    });
+    try {
+      await api(`/api/v1/driver/orders/${order.id}/emergency`, {
+        method: "POST",
+        body: JSON.stringify({ lat: point?.lat ?? null, lng: point?.lng ?? null, note: note.trim() }),
+      });
+      onDone();
+    } catch (e) {
+      setError(errText(e));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={D.emergency.title} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-sm text-ink-muted">{D.emergency.hint}</p>
+        <Input
+          label={D.emergency.note}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder={D.emergency.notePlaceholder}
+        />
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex gap-2">
+          <Button variant="danger" disabled={busy} onClick={submit}>
+            {busy ? D.emergency.sending : D.emergency.confirm}
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

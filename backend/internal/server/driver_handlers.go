@@ -121,6 +121,14 @@ type driverOrder struct {
 	PrepMinutes   *int       `json:"prep_minutes"`
 	AcceptedAt    *time.Time `json:"accepted_at"`
 	CreatedAt     time.Time  `json:"created_at"`
+	// PickupLat نقطةُ الاستلام البديلة — تُملأ حين تكون البضاعةُ ليست في
+	// المتجر: **طارئٌ وقع لسائقٍ سابقٍ وهي في يده حيث وقف.**
+	//
+	// **ومن ذهب إلى المطعم استلم طلباً ثانياً من مطبخٍ حضّر واحداً** — فتُدفع
+	// البضاعةُ مرّتين، ويبقى الطلبُ الأوّل في الشارع.
+	PickupLat  *float64 `json:"pickup_lat"`
+	PickupLng  *float64 `json:"pickup_lng"`
+	PickupNote string   `json:"pickup_note"`
 }
 
 const driverOrderSelect = `
@@ -129,7 +137,9 @@ const driverOrderSelect = `
 	       o.address_text, ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       cu.full_name, cu.phone::text, o.total, o.cash_due,
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
-	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at
+	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at,
+	       ST_Y(o.pickup_override::geometry), ST_X(o.pickup_override::geometry),
+	       o.pickup_override_note
 	FROM orders o
 	JOIN merchants m ON m.id = o.merchant_id
 	JOIN users cu ON cu.id = o.customer_id
@@ -148,7 +158,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 		if err := rows.Scan(&o.ID, &o.Number, &o.Status, &o.MerchantName, &o.MerchantPhone,
 			&o.AddressText, &o.Lat, &o.Lng, &o.CustomerName, &o.CustomerPhone,
 			&o.Total, &o.CashDue, &o.ItemsCount, &o.ReadyAt, &o.PrepMinutes,
-			&o.AcceptedAt, &o.CreatedAt); err != nil {
+			&o.AcceptedAt, &o.CreatedAt,
+			&o.PickupLat, &o.PickupLng, &o.PickupNote); err != nil {
 			s.respondErr(w, err)
 			return
 		}
