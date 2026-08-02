@@ -36,8 +36,6 @@ import (
 var (
 	errTransferTooLate = httpx.NewError(http.StatusConflict,
 		"transfer_too_late", "errors.transfer_too_late")
-	errTransferNoMatch = httpx.NewError(http.StatusConflict,
-		"transfer_items_unmatched", "errors.transfer_items_unmatched")
 	errSameMerchant = httpx.NewError(http.StatusConflict,
 		"transfer_same_merchant", "errors.transfer_same_merchant")
 )
@@ -93,8 +91,11 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// **المطابقةُ بالاسم — والفشلُ يُسمّي.**
+	// **والمعرّفُ نصٌّ لا رقم**: `order_items.id` من نوع `uuid`. **وقراءتُه في
+	// عددٍ صحيحٍ تنهار عند أوّل صفّ** — لا في الترجمة بل في التشغيل، **فيُردّ
+	// `500` على تحويلٍ صحيحٍ تماماً.** كشفه فحصٌ حيٌّ لا اختبار.
 	rows, err := tx.Query(r.Context(), `
-		SELECT oi.id, oi.name, ni.id::text, ni.merchant_price
+		SELECT oi.id::text, oi.name, ni.id::text, ni.merchant_price
 		FROM order_items oi
 		LEFT JOIN menu_items ni
 		       ON ni.merchant_id = $2 AND ni.name = oi.name AND ni.available
@@ -104,7 +105,7 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type row struct {
-		itemID   int64
+		itemID   string
 		name     string
 		newID    *string
 		newPrice *int64
@@ -139,7 +140,7 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	for _, x := range list {
 		if _, err := tx.Exec(r.Context(),
 			`UPDATE order_items SET menu_item_id = $2::uuid, merchant_id = $3::uuid,
-			        merchant_price = $4 WHERE id = $1`,
+			        merchant_price = $4 WHERE id = $1::uuid`,
 			x.itemID, *x.newID, req.MerchantID, *x.newPrice); err != nil {
 			s.respondErr(w, err)
 			return
