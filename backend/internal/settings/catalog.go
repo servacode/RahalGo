@@ -45,6 +45,7 @@ const (
 	GroupCustomers Group = "customers"
 	GroupPayouts   Group = "payouts"
 	GroupSecurity  Group = "security"
+	GroupSupport   Group = "support"
 	GroupPlatform  Group = "platform"
 )
 
@@ -197,6 +198,16 @@ var Catalog = []Def{
 	// كاملةً ويشغل المالية — وقيمة القرار أكبر من قيمة المبلغ.
 	{Key: "payouts.min_amount", Group: GroupPayouts, Kind: KindMoney,
 		Min: 0, Max: 100000000, Unit: "currency", Default: 50000},
+
+	// ── الدعم ─────────────────────────────────────────────────────────────
+	// **مهلةُ الشكوى — لأن الذاكرةَ تُنسى والدليلَ يذهب.**
+	//
+	// شكوى بعد شهرٍ لا تُحقَّق: السائقُ لا يذكر، والبضاعةُ ذهبت، **ولا يبقى
+	// إلّا كلمةٌ ضدّ كلمة** — فتُقبل بلا بيّنة أو تُردّ بلا بيّنة، وكلاهما ظلمٌ
+	// لأحدهما. **وأربعٌ وعشرون ساعةً تكفي من نسي أن يفتح الطلبَ ليلَتَه**
+	// (قرار المالك ٢٠٢٦-٠٨-٠١).
+	{Key: "support.complaint_window_hours", Group: GroupSupport, Kind: KindInt,
+		Min: 1, Max: 720, Unit: "hour", Default: 24},
 
 	// ── الأمان ────────────────────────────────────────────────────────────
 	// **جديد**: كانا ثابتين في `identity`. ورفعُ طول كلمة المرور قرارُ أمانٍ

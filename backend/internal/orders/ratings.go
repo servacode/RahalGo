@@ -22,7 +22,12 @@ var (
 )
 
 type Rating struct {
-	MerchantStars int       `json:"merchant_stars"`
+	// PlatformStars تقييمُ الخدمة — **للمنصة لا للمتجر**.
+	//
+	// الزبونُ لا يرى اسمَ المتجر ولا يختاره: يطلب من «رحّال غو» ونحن نختار
+	// من أين نشتري. **فنجمةٌ تُنسب إلى متجرٍ لم يعرفه نجمةٌ بلا معنى** — وهو
+	// يحكم على طعامٍ ووقتٍ ومعاملة، **وثلاثتُها من عندنا.**
+	PlatformStars int       `json:"platform_stars"`
 	DriverStars   *int      `json:"driver_stars"`
 	Comment       string    `json:"comment"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -30,8 +35,8 @@ type Rating struct {
 
 // RateOrder تقييم مزدوج لطلب مُسلَّم — مرة واحدة، من زبون الطلب نفسه (أو الأدمن).
 func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []string,
-	orderID string, merchantStars int, driverStars *int, comment string) error {
-	if merchantStars < 1 || merchantStars > 5 ||
+	orderID string, platformStars int, driverStars *int, comment string) error {
+	if platformStars < 1 || platformStars > 5 ||
 		(driverStars != nil && (*driverStars < 1 || *driverStars > 5)) {
 		return ErrBadStars
 	}
@@ -71,8 +76,8 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 	}
 
 	_, err = s.db.Exec(ctx, `
-		INSERT INTO order_ratings (order_id, customer_id, merchant_stars, driver_stars, comment)
-		VALUES ($1, $2, $3, $4, $5)`, orderID, customerID, merchantStars, driverStars, comment)
+		INSERT INTO order_ratings (order_id, customer_id, platform_stars, driver_stars, comment)
+		VALUES ($1, $2, $3, $4, $5)`, orderID, customerID, platformStars, driverStars, comment)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 		return ErrAlreadyRated
@@ -84,9 +89,9 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 func (s *Service) ratingFor(ctx context.Context, orderID string) *Rating {
 	var r Rating
 	err := s.db.QueryRow(ctx, `
-		SELECT merchant_stars, driver_stars, comment, created_at
+		SELECT platform_stars, driver_stars, comment, created_at
 		FROM order_ratings WHERE order_id = $1`, orderID).
-		Scan(&r.MerchantStars, &r.DriverStars, &r.Comment, &r.CreatedAt)
+		Scan(&r.PlatformStars, &r.DriverStars, &r.Comment, &r.CreatedAt)
 	if err != nil {
 		return nil
 	}

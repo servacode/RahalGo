@@ -15,6 +15,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -36,6 +37,13 @@ type Ticket struct {
 	OrderID       *string    `json:"order_id"`
 	OrderNumber   *int64     `json:"order_number"`
 	Subject       string     `json:"subject"`
+	// Reason رمزُ سببٍ من `ComplaintReasons` — فارغٌ في تذكرةٍ فتحها موظّف.
+	//
+	// **والمصنَّفُ يُعدّ**: «كم شكوى ‹لم يصلني طلبي› هذا الشهر» سؤالٌ له جوابٌ
+	// الآن، **وكان قبلَه بحثاً في نصوصٍ حرّة.**
+	Reason string `json:"reason"`
+	// OpenedByCustomer فتحها صاحبُها بنفسه لا موظّفٌ عنه.
+	OpenedByCustomer bool `json:"opened_by_customer"`
 	Status        string     `json:"status"`
 	Compensation  int64      `json:"compensation"`
 	Resolution    string     `json:"resolution"`
@@ -55,15 +63,21 @@ type Service struct {
 	db       *pgxpool.Pool
 	identity *identity.Service
 	wallet   *wallet.Service
+	// settings مهلةُ الشكوى وما يتبعها — يملك المالكُ ضبطَها من اللوحة.
+	settings *settings.Store
 }
 
 func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wallet.Service) *Service {
 	return &Service{db: db, identity: identitySvc, wallet: walletSvc}
 }
 
+// SetSettings يحقن مخزن الإعدادات (يُنادى مرّة عند الإقلاع).
+func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
+
 const ticketSelect = `
 	SELECT t.id, t.number, t.customer_id, cu.phone, cu.full_name,
-	       t.order_id, o.number, t.subject, t.status, t.compensation, t.resolution,
+	       t.order_id, o.number, t.subject, COALESCE(t.reason,''), t.opened_by_customer,
+	       t.status, t.compensation, t.resolution,
 	       t.created_at, t.resolved_at
 	FROM tickets t
 	JOIN users cu ON cu.id = t.customer_id
@@ -72,7 +86,8 @@ const ticketSelect = `
 func scanTicket(row pgx.Row) (*Ticket, error) {
 	var t Ticket
 	err := row.Scan(&t.ID, &t.Number, &t.CustomerID, &t.CustomerPhone, &t.CustomerName,
-		&t.OrderID, &t.OrderNumber, &t.Subject, &t.Status, &t.Compensation, &t.Resolution,
+		&t.OrderID, &t.OrderNumber, &t.Subject, &t.Reason, &t.OpenedByCustomer,
+		&t.Status, &t.Compensation, &t.Resolution,
 		&t.CreatedAt, &t.ResolvedAt)
 	if err != nil {
 		return nil, err

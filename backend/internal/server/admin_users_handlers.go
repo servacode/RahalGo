@@ -316,7 +316,7 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	rows.Close()
 
 	rows, err = s.pg.Query(r.Context(), `
-		SELECT o.number, m.name, rt.merchant_stars, rt.driver_stars, rt.comment, rt.created_at
+		SELECT o.number, m.name, rt.platform_stars, rt.driver_stars, rt.comment, rt.created_at
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
 		JOIN merchants m ON m.id = o.merchant_id
@@ -334,7 +334,7 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 		if err := rows.Scan(&num, &mName, &ms, &ds, &comment, &at); err == nil {
 			out.Given = append(out.Given, map[string]any{
 				"order_number": num, "merchant_name": mName,
-				"merchant_stars": ms, "driver_stars": ds, "comment": comment, "created_at": at})
+				"platform_stars": ms, "driver_stars": ds, "comment": comment, "created_at": at})
 		}
 	}
 	rows.Close()
@@ -347,7 +347,7 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 		JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.driver_id = $1 AND rt.driver_stars IS NOT NULL
 		UNION ALL
-		SELECT o.number, m.name, rt.merchant_stars, rt.comment, rt.created_at, 'merchant'
+		SELECT o.number, m.name, rt.platform_stars, rt.comment, rt.created_at, 'platform'
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
 		JOIN merchants m ON m.id = o.merchant_id

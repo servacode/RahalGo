@@ -88,7 +88,7 @@ interface RateInfo {
   merchant_name: string;
   has_driver: boolean;
   rated: boolean;
-  merchant_stars: number;
+  platform_stars: number;
   driver_stars: number | null;
   comment: string;
 }
@@ -269,7 +269,7 @@ export default function MyOrdersPage() {
                       // نجومٌ لا شارة: «تقييماتي» تقول إنك قيّمت ولا تقول بكم
                       <span className="flex flex-1 items-center justify-center gap-2 rounded-control bg-page px-3 py-1.5">
                         <span className="text-xs text-ink-muted">{m.site.rating.merchant}</span>
-                        <Stars value={rate.merchant_stars} size="sm" />
+                        <Stars value={rate.platform_stars} size="sm" />
                       </span>
                     )}
                   </>

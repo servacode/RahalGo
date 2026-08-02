@@ -48,6 +48,8 @@ interface Complaint {
   created_at: string;
 }
 interface Reputation {
+  /** هل لهذا الدور نجومٌ أصلاً — يقولها الخادم ولا تُستنتج من العدد. */
+  rated: boolean;
   rating: { avg: number; count: number; trend: "up" | "down" | "flat" };
   reviews: Review[];
   complaints: Complaint[];
@@ -68,6 +70,28 @@ export function ReputationReviews({ api, labels = {} }: { api: ApiFn; labels?: R
 
   const trendText =
     data.rating.trend === "up" ? R.trendUp : data.rating.trend === "down" ? R.trendDown : R.trendFlat;
+
+  // **من لا يُقيَّم لا تُعرض له بطاقةُ تقييم.**
+  //
+  // المتجرُ لم يعد له نجوم: الزبونُ لا يرى اسمَه ولا يختاره، **فما حكَم عليه
+  // خدمتُنا كلُّها لا طعامُه وحده.** و«٠٫٠ من ٥» في شاشته أسوأُ من غياب
+  // البطاقة — **يقرؤها حكماً عليه** فيسأل عمّا فعل، ولم يفعل شيئاً.
+  //
+  // **والخادمُ يقولها ولا تُستنتج من العدد**: صفرُ تقييماتٍ لمن يُقيَّم يعني
+  // «لم يُقيَّم بعد»، **وصفرٌ لمن لا يُقيَّم يعني «لا يُقيَّم»** — ومعنيان
+  // يفترقان في ما يُعرض.
+  if (!data.rated) {
+    return (
+      <PageContainer>
+        <PageHeader
+          icon={IconStar}
+          title={labels.reviewsTitle ?? T.ratings}
+          subtitle={R.notRatedHint}
+        />
+        <EmptyState icon={IconStar} title={R.notRated} />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>

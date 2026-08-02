@@ -1,6 +1,14 @@
 "use client";
 
-/** نافذة تقييم طلب مُسلَّم: نجوم المتجر (إلزامي) + السائق (إن وُجد) + تعليق قصير اختياري. */
+/**
+ * نافذة تقييم طلب مُسلَّم: نجوم الخدمة (إلزامي) + السائق (إن وُجد) + تعليق.
+ *
+ * **والنجمةُ للمنصة لا للمتجر.** الزبونُ لا يرى اسمَ متجرٍ ولا يختاره: يطلب
+ * من «رحّال غو» ونحن نختار من أين نشتري. **فنجمةٌ تُنسب إلى متجرٍ لم يعرفه
+ * نجمةٌ بلا معنى** — وهو يحكم على طعامٍ ووقتٍ ومعاملة، **وثلاثتُها من
+ * عندنا.** وأسوأُ من انعدام المعنى أثرُه: **متجرٌ يُحاسَب على تأخيرٍ سببُه
+ * سائقُنا.**
+ */
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
@@ -20,7 +28,7 @@ export default function RatingModal({
   onClose: () => void;
   onRated: () => void;
 }) {
-  const [merchantStars, setMerchantStars] = useState(0);
+  const [platformStars, setPlatformStars] = useState(0);
   const [driverStars, setDriverStars] = useState(0);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,14 +36,14 @@ export default function RatingModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (merchantStars < 1) return setError(R.pickStars);
+    if (platformStars < 1) return setError(R.pickStars);
     setBusy(true);
     setError("");
     try {
       await api(`/api/v1/orders/${order.order_id}/rating`, {
         method: "POST",
         body: JSON.stringify({
-          merchant_stars: merchantStars,
+          platform_stars: platformStars,
           driver_stars: order.has_driver && driverStars > 0 ? driverStars : null,
           comment: comment.trim(),
         }),
@@ -60,8 +68,8 @@ export default function RatingModal({
         </p>
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <p className="mb-1.5 text-sm font-medium">{R.merchant}</p>
-            <Stars value={merchantStars} onChange={setMerchantStars} size="lg" />
+            <p className="mb-1.5 text-sm font-medium">{R.platform}</p>
+            <Stars value={platformStars} onChange={setPlatformStars} size="lg" />
           </div>
           {order.has_driver && (
             <div>

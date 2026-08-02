@@ -113,6 +113,7 @@ func run(logger *slog.Logger) error {
 	ordersSvc := orders.NewService(pg, identitySvc, walletSvc, cashboxSvc, hub, logger)
 	go ordersSvc.RunWatchdog(ctx, 30*time.Second)
 	supportSvc := support.NewService(pg, identitySvc, walletSvc)
+	supportSvc.SetSettings(settingsStore)
 	mediaSvc, err := media.NewService(pg, cfg.UploadsDir)
 	if err != nil {
 		return err

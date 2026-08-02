@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -43,19 +44,31 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// نحدّد نطاق الطلبات ذات الصلة حسب الدور الأساسي:
-	//  - المتجر: طلبات متاجره، وعمود النجوم merchant_stars
 	//  - السائق: طلبات سلّمها، وعمود driver_stars
+	//  - المتجر: طلبات متاجره — **بلا نجوم**، انظر أدناه
 	//
 	// المندوب **ليس منهما عمداً**: عمله جلب العملاء وقبض العمولة، ولا أحد
 	// يقيّمه. كان يُعرض له تقييم متاجره باسم "تقييمي" — رقم لا يقيس عمله ولا
 	// يملك تغييره. من لا سمعة له يُعاد له كشف فارغ لا كشف غيره.
 	// ownerCond: شرط ربط الطلب بالمستخدم؛ starCol: عمود النجوم المعني.
+	//
+	// **والمتجرُ بلا نجومٍ عمداً.**
+	//
+	// كان يُعرض له متوسّطُ `merchant_stars` — **وهي صارت نجمةَ المنصة**: الزبونُ
+	// لا يرى اسمَ متجرٍ ولا يختاره، فما حكَم عليه هو خدمتُنا كلُّها. **ومتجرٌ
+	// يُحاسَب على تأخيرٍ سببُه سائقُنا يُظلم**، وآخرُ يُمدح على سرعةٍ سببُها
+	// قربُ العنوان.
+	//
+	// **ولا يُترك له الرقمُ القديمَ ولو تغيّر معناه**: رقمٌ يراه في شاشته يصدّقه
+	// ويقيس عليه، **ومعنًى انقلب في الخلفية لا يبلغه.**
+	//
+	// **وما يبقى له أصدق**: الشكاوى على طلباته — واقعةٌ بواقعة، لا متوسّطٌ
+	// يخلط ما يملكه بما لا يملكه.
 	var ownerJoin, ownerCond, starCol string
 	switch {
 	case has("merchant"):
 		ownerJoin = `JOIN merchants mm ON mm.id = o.merchant_id`
 		ownerCond = `mm.owner_user_id = $1`
-		starCol = `rt.merchant_stars`
 	case has("driver"):
 		ownerJoin = ``
 		ownerCond = `o.driver_id = $1`
@@ -76,44 +89,18 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 		} `json:"rating"`
 		Complaints []repComplaint `json:"complaints"`
 		Reviews    []repReview    `json:"reviews"`
-	}{Complaints: []repComplaint{}, Reviews: []repReview{}}
+		// Rated هل لهذا الدور نجومٌ أصلاً — **فبطاقةٌ فارغةٌ تُقرأ صفراً.**
+		//
+		// «٠٫٠ من ٥» في شاشةِ من لا يُقيَّم أسوأُ من غياب البطاقة: **يقرؤها
+		// حكماً عليه** فيسأل عمّا فعل، ولم يفعل شيئاً.
+		Rated bool `json:"rated"`
+	}{Complaints: []repComplaint{}, Reviews: []repReview{}, Rated: starCol != ""}
 
 	// التقييم: المتوسط والعدد، ومتوسط آخر 30 يوماً لاستنتاج الاتجاه.
-	_ = s.pg.QueryRow(ctx, `
-		SELECT COALESCE(avg(`+starCol+`), 0), count(`+starCol+`),
-		       COALESCE(avg(`+starCol+`) FILTER (WHERE rt.created_at > now() - interval '30 days'), 0)
-		FROM order_ratings rt JOIN orders o ON o.id = rt.order_id `+ownerJoin+`
-		WHERE `+ownerCond+` AND `+starCol+` IS NOT NULL`, uid).
-		Scan(&out.Rating.Avg, &out.Rating.Count, &out.Rating.RecentAvg)
-	switch {
-	case out.Rating.Count == 0 || out.Rating.RecentAvg == 0:
-		out.Rating.Trend = "flat"
-	case out.Rating.RecentAvg > out.Rating.Avg+0.1:
-		out.Rating.Trend = "up"
-	case out.Rating.RecentAvg < out.Rating.Avg-0.1:
-		out.Rating.Trend = "down"
-	default:
-		out.Rating.Trend = "flat"
+	if starCol != "" {
+		s.fillRating(ctx, uid, starCol, ownerJoin, ownerCond, &out.Rating, &out.Reviews)
 	}
-
-	// التقييمات والتعليقات المتلقّاة (نُظهر ذوات التعليق أولاً).
-	rows, err := s.pg.Query(ctx, `
-		SELECT o.number, m.name, `+starCol+`, COALESCE(rt.comment, ''), rt.created_at
-		FROM order_ratings rt
-		JOIN orders o ON o.id = rt.order_id
-		JOIN merchants m ON m.id = o.merchant_id
-		`+ownerJoin+`
-		WHERE `+ownerCond+` AND `+starCol+` IS NOT NULL
-		ORDER BY (rt.comment <> '') DESC, rt.created_at DESC LIMIT 50`, uid)
-	if err == nil {
-		for rows.Next() {
-			var rv repReview
-			if rows.Scan(&rv.OrderNumber, &rv.MerchantName, &rv.Stars, &rv.Comment, &rv.CreatedAt) == nil {
-				out.Reviews = append(out.Reviews, rv)
-			}
-		}
-		rows.Close()
-	}
+	out.Rating.Trend = trendOf(out.Rating.Count, out.Rating.Avg, out.Rating.RecentAvg)
 
 	// الشكاوى/البلاغات بحقّه (تذاكر على طلباته).
 	crows, err := s.pg.Query(ctx, `
@@ -134,4 +121,55 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// trendOf اتّجاهُ التقييم من متوسّطه العامّ ومتوسّط شهره الأخير.
+func trendOf(count int, avg, recent float64) string {
+	switch {
+	case count == 0 || recent == 0:
+		return "flat"
+	case recent > avg+0.1:
+		return "up"
+	case recent < avg-0.1:
+		return "down"
+	}
+	return "flat"
+}
+
+// rating الشكلُ المشترك — يُمرَّر بالمرجع كي تُملأ حقولُه.
+type ratingOut = struct {
+	Avg       float64 `json:"avg"`
+	Count     int     `json:"count"`
+	RecentAvg float64 `json:"recent_avg"`
+	Trend     string  `json:"trend"`
+}
+
+// fillRating نجومُ من يُقيَّم — ولا تُنادى لمن لا يُقيَّم.
+func (s *Server) fillRating(ctx context.Context, uid, starCol, ownerJoin, ownerCond string,
+	out *ratingOut, reviews *[]repReview) {
+	_ = s.pg.QueryRow(ctx, `
+		SELECT COALESCE(avg(`+starCol+`), 0), count(`+starCol+`),
+		       COALESCE(avg(`+starCol+`) FILTER (WHERE rt.created_at > now() - interval '30 days'), 0)
+		FROM order_ratings rt JOIN orders o ON o.id = rt.order_id `+ownerJoin+`
+		WHERE `+ownerCond+` AND `+starCol+` IS NOT NULL`, uid).
+		Scan(&out.Avg, &out.Count, &out.RecentAvg)
+
+	// التقييمات والتعليقات المتلقّاة (نُظهر ذوات التعليق أولاً).
+	rows, err := s.pg.Query(ctx, `
+		SELECT o.number, m.name, `+starCol+`, COALESCE(rt.comment, ''), rt.created_at
+		FROM order_ratings rt
+		JOIN orders o ON o.id = rt.order_id
+		JOIN merchants m ON m.id = o.merchant_id
+		`+ownerJoin+`
+		WHERE `+ownerCond+` AND `+starCol+` IS NOT NULL
+		ORDER BY (rt.comment <> '') DESC, rt.created_at DESC LIMIT 50`, uid)
+	if err == nil {
+		for rows.Next() {
+			var rv repReview
+			if rows.Scan(&rv.OrderNumber, &rv.MerchantName, &rv.Stars, &rv.Comment, &rv.CreatedAt) == nil {
+				*reviews = append(*reviews, rv)
+			}
+		}
+		rows.Close()
+	}
 }

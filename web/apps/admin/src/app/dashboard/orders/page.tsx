@@ -147,7 +147,7 @@ interface OrderRow {
   }[];
   events?: { from_status: string; to_status: string; note: string; created_at: string }[];
   rating?: {
-    merchant_stars: number;
+    platform_stars: number;
     driver_stars: number | null;
     comment: string;
     created_at: string;

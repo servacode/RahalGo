@@ -47,6 +47,9 @@ interface Ticket {
   order_id: string | null;
   order_number: number | null;
   subject: string;
+  /** رمزُ سببٍ مصنَّف — فارغٌ في تذكرةٍ فتحها موظّف. */
+  reason?: string;
+  opened_by_customer?: boolean;
   status: "open" | "in_progress" | "resolved";
   compensation: number;
   resolution: string;
@@ -63,6 +66,7 @@ interface TicketPage {
 }
 
 const STATUS_LABELS: Record<string, string> = m.admin.tickets.status;
+const REASONS: Record<string, string> = m.site.complaint.reasons;
 const STATUS_VARIANT: Record<string, "warning" | "primary" | "success"> = {
   open: "warning",
   in_progress: "primary",
@@ -137,7 +141,19 @@ export default function TicketsPage() {
       id: "subject",
       header: m.admin.tickets.table.subject,
       icon: <IconReply />,
-      cell: (t) => <span className="line-clamp-1">{t.subject}</span>,
+      cell: (t) => (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className="line-clamp-1">{t.subject}</span>
+          {/* **السببُ المصنَّف بجانب النصّ.**
+
+              الموضوعُ يقول «شكوى على الطلب #١٢» ولا يقول **ما الشكوى** —
+              فيُفتح كلُّ سطرٍ ليُعرف. **والرمزُ يُقرأ من الصفّ**: من يبحث عن
+              «لم يصلني طلبي» يجدها بالنظر لا بالفتح. */}
+          {t.reason && REASONS[t.reason] && (
+            <Badge variant="warning">{REASONS[t.reason]}</Badge>
+          )}
+        </span>
+      ),
     },
     {
       id: "order",

@@ -92,7 +92,7 @@ interface Activity {
 
 interface Feedback {
   tickets: { number: number; subject: string; status: string; compensation: number; created_at: string }[];
-  ratings_given: { order_number: number; merchant_name: string; merchant_stars: number; driver_stars: number | null; comment: string; created_at: string }[];
+  ratings_given: { order_number: number; merchant_name: string; platform_stars: number; driver_stars: number | null; comment: string; created_at: string }[];
   ratings_received: { order_number: number; merchant_name: string; stars: number; comment: string; created_at: string; as: string }[];
   avg_received: number | null;
 }
@@ -611,7 +611,7 @@ export default function UserProfilePage() {
                         #{fmtNum(rt.order_number)}
                       </button>
                       <span className="text-ink-muted">{rt.merchant_name}</span>
-                      <span className="flex items-center gap-1 text-accent-dark"><IconStar size={12} className="fill-accent-dark" />{rt.merchant_stars}</span>
+                      <span className="flex items-center gap-1 text-accent-dark"><IconStar size={12} className="fill-accent-dark" />{rt.platform_stars}</span>
                       {rt.driver_stars != null && (
                         <span className="text-xs text-ink-muted">
                           ({m.admin.ordersPage.rating.driver}: {rt.driver_stars})

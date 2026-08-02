@@ -18,6 +18,7 @@ import {
   Timeline,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
+import ComplaintModal from "@/components/ComplaintModal";
 
 const m = getMessages(defaultLocale);
 const STATUS_LABELS: Record<string, string> = m.orders.status;
@@ -46,7 +47,7 @@ const NORMALIZE: Record<string, string> = {
 };
 
 interface Rating {
-  merchant_stars: number;
+  platform_stars: number;
   driver_stars: number | null;
   comment: string;
 }
@@ -68,6 +69,7 @@ interface Order {
   accepted_at?: string | null;
   /** ما بقي من مهلة الإلغاء بالثواني — و`-1` تعني «بلا مهلة» (قبل القبول). */
   cancel_seconds_left?: number;
+  closed_at?: string | null;
   ready_at?: string | null;
   subtotal: number;
   delivery_fee: number;
@@ -114,6 +116,9 @@ export default function OrderTrackingPage() {
   const [error, setError] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [showComplaint, setShowComplaint] = useState(false);
+  /** رقمُ الشكوى المفتوحة على هذا الطلب — و`0` إن لا شكوى. */
+  const [ticketNo, setTicketNo] = useState(0);
   /**
    * ما بقي من نافذة الإلغاء بالثواني.
    *
@@ -134,6 +139,17 @@ export default function OrderTrackingPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // **الشكوى المفتوحة تُقرأ لا تُخمَّن.**
+  //
+  // بلا هذا يضغط الزبونُ الزرَّ ثمّ يعود بعد ساعةٍ فيجده كما هو، **فيضغطه
+  // ثانيةً ويُردّ عليه «شكواك مفتوحة»** — وردٌّ يقول له ما كان ينبغي أن يراه.
+  useEffect(() => {
+    if (!order?.closed_at) return;
+    api<{ ticket: { number: number } | null }>(`/api/v1/my/orders/${id}/complaint`)
+      .then((r) => setTicketNo(r.ticket?.number ?? 0))
+      .catch(() => undefined);
+  }, [id, order?.closed_at]);
 
   /**
    * العدّادُ ينطلق من رقم الخادم **لا من حسابٍ محليّ**.
@@ -273,6 +289,40 @@ export default function OrderTrackingPage() {
         </div>
       )}
 
+      {/* **بابُ الشكوى عند الطلب — لا في رقم هاتفٍ يتّصل به.**
+
+          «طلبي لم يصلني» على طلبٍ حالتُه «مُسلَّم» يعني أحدَ أمرين: **سائقٌ
+          ضغط الزرَّ ولم يسلّم، أو تسليمٌ إلى غير صاحبه.** وكلاهما مالٌ خرج من
+          الزبون بلا مقابل، **ولا يُكتشف إلّا إن قاله هو** — لا قيدَ في دفترنا
+          يشي به.
+
+          **والصمتُ يُقرأ رضاً وهو ليس رضاً**: عشرُ شكاوى لم تُقل تبدو في
+          تقاريرنا عشرَ طلباتٍ ناجحة. */}
+      {order.closed_at && (
+        <div className="mb-4">
+          {ticketNo > 0 ? (
+            <p className="text-sm text-ink-muted">
+              {m.site.complaint.opened.replace("{n}", fmtNum(ticketNo))}
+            </p>
+          ) : (
+            <Button variant="ghost" onClick={() => setShowComplaint(true)}>
+              {m.site.complaint.open}
+            </Button>
+          )}
+        </div>
+      )}
+      {showComplaint && (
+        <ComplaintModal
+          orderId={order.id}
+          orderNumber={order.number}
+          onClose={() => setShowComplaint(false)}
+          onOpened={(n) => {
+            setTicketNo(n);
+            setShowComplaint(false);
+          }}
+        />
+      )}
+
       {/* الفاتورة: سجلُّ الواقعة — يفتحها الزبون ويطبعها متى شاء */}
       {showInvoice && (
         <div className="mb-6">
@@ -388,7 +438,7 @@ function RatingForm({
       await api(`/api/v1/orders/${orderID}/rating`, {
         method: "POST",
         body: JSON.stringify({
-          merchant_stars: merchantStars,
+          platform_stars: merchantStars,
           driver_stars: hasDriver && driverStars > 0 ? driverStars : null,
           comment,
         }),

@@ -156,6 +156,15 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/wallet", s.handleMyWallet)
+			// **بابُ الشكوى عند الطلب لا في رقم هاتف.**
+			//
+			// كانت التذاكرُ تُفتح من لوحة الإدارة وحدَها: يتّصل الزبونُ فيفتح
+			// موظّفٌ تذكرةً بالنيابة عنه. **فمن لم يجد من يردّ لم يجد باباً** —
+			// وشكواه تضيع ونحن لا نعلم أنّها وقعت. **والصمتُ يُقرأ رضاً وهو
+			// ليس رضاً.**
+			r.Get("/my/orders/{id}/complaint-reasons", s.handleComplaintReasons)
+			r.Get("/my/orders/{id}/complaint", s.handleMyComplaint)
+			r.Post("/my/orders/{id}/complaint", s.handleOpenComplaint)
 			// عناوينه المحفوظة — يكتبها مرّة ويستعملها دائماً
 			r.Get("/my/addresses", s.handleMyAddresses)
 			r.Post("/my/addresses", s.handleCreateAddress)
