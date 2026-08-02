@@ -82,6 +82,13 @@ func (s *Service) GetByID(ctx context.Context, id string) (*Order, error) {
 	if err != nil {
 		return nil, err
 	}
+	// **تقديرُ الطريق من الإعدادات** — كان رقماً مكتوباً في شاشة الزبون.
+	o.DeliveryEstimateMin = 15
+	if s.settings != nil {
+		if v := s.settings.GetInt(ctx, "orders.delivery_estimate_min"); v > 0 {
+			o.DeliveryEstimateMin = int(v)
+		}
+	}
 
 	rows, err := s.db.Query(ctx, `
 		SELECT id, menu_item_id, name, unit_price, qty, note, options

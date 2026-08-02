@@ -69,6 +69,8 @@ interface Order {
   accepted_at?: string | null;
   /** ما بقي من مهلة الإلغاء بالثواني — و`-1` تعني «بلا مهلة» (قبل القبول). */
   cancel_seconds_left?: number;
+  /** تقديرُ زمن الطريق — **من الإعدادات لا من رقمٍ في الشاشة**. */
+  delivery_estimate_min?: number;
   closed_at?: string | null;
   ready_at?: string | null;
   subtotal: number;
@@ -94,7 +96,14 @@ interface Order {
  * «يصل ٨:٤٧». وإن أعلن المتجر الجاهزية سقط وقت التحضير من الحساب — صار الطلب
  * ينتظر السائق لا المطبخ.
  */
-const DELIVERY_ESTIMATE_MIN = 15;
+/**
+ * **الافتراضُ حين يسكت الخادم** — لا الرقمُ المعتمَد.
+ *
+ * كان `15` مكتوباً هنا **والمفتاحُ في اللوحة منذ البداية**: يغيّره المالكُ ولا
+ * يتغيّر شيء. **وإعدادٌ لا يفعل شيئاً أسوأُ من غيابه** — غيابُه يُسأل عنه،
+ * **ووجودُه يُصدَّق.**
+ */
+const ETA_FALLBACK_MIN = 15;
 
 /** رسالة الخطأ من مفتاح الخادم — لا نصّ إنجليزي يصل المستخدم. */
 function errText(err: unknown): string {
@@ -106,7 +115,8 @@ function errText(err: unknown): string {
 function etaText(o: Order): string {
   const accepted = new Date(o.accepted_at!).getTime();
   const prepDone = o.ready_at ? new Date(o.ready_at).getTime() : accepted + (o.prep_minutes ?? 0) * 60_000;
-  const left = Math.round((prepDone + DELIVERY_ESTIMATE_MIN * 60_000 - Date.now()) / 60_000);
+  const est = o.delivery_estimate_min || ETA_FALLBACK_MIN;
+  const left = Math.round((prepDone + est * 60_000 - Date.now()) / 60_000);
   return m.site.orders.etaValue.replace("{n}", fmtNum(Math.max(1, left)));
 }
 
