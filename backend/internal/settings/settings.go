@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -93,7 +94,27 @@ func (s *Store) GetBool(ctx context.Context, key string) bool {
 // **والمفتاح المجهول يُرفض** ولا يُنشأ: كان `ON CONFLICT` يعني أن خطأً مطبعياً
 // في اسم المفتاح يُولّد مفتاحاً جديداً لا يقرؤه أحد، ويمضي النظام بالافتراضي
 // بينما يظنّ المالك أنه غيّر. صمتٌ أسوأ من خطأ.
+// marginCeiling حدُّ الهامش بحسب نمطه.
+//
+// **النسبةُ تُحدُّ بمئتين**: ضعفٌ ونصفُ الثمن سقفٌ لا يُتجاوَز في تجارةِ
+// توصيل، **وما فوقه خطأُ كتابةٍ لا قرارُ تسعير.** والثابتُ يبقى بحدّ الفهرس:
+// صينيةٌ بستّين ألفاً قد يُضاف عليها عشرة، **والرقمُ الكبير فيه معقول.**
+const marginPercentMax = 200
+
 func (s *Store) Set(ctx context.Context, key string, value any, updatedBy *string) error {
+	// **الحدُّ الذي لا يعرفه الفهرس** — لأنه يتوقّف على قيمة مفتاحٍ آخر.
+	if key == "pricing.margin_value" {
+		if n, ok := toNumber(value); ok &&
+			s.GetString(ctx, "pricing.margin_mode", "percent") == "percent" &&
+			n > marginPercentMax {
+			return ErrInvalidValue{Key: key,
+				Reason: fmt.Sprintf("النسبةُ لا تتجاوز %d%%", marginPercentMax)}
+		}
+	}
+	return s.set(ctx, key, value, updatedBy)
+}
+
+func (s *Store) set(ctx context.Context, key string, value any, updatedBy *string) error {
 	clean, err := Validate(key, value)
 	if err != nil {
 		return err

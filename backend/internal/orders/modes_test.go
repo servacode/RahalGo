@@ -114,3 +114,59 @@ func TestRolesUnderMode_KeepsOtherRoles(t *testing.T) {
 		t.Errorf("دورُ العمليات سقط معه: %v", eff)
 	}
 }
+
+// TestAdminIsAboveAuthorityNotAboveKnowledge المالكُ فوق السلطة لا فوق العِلم.
+//
+// # ما يمسكه
+//
+// كان `if isAdmin { return roles }` يتخطّى الحُرّاسَ كلَّها — **فسقط أهمُّها
+// عمّن أحدث المشكلة**: شكوى المالك الحيّة قالت «ضُغطت **بيد الأدمن**».
+//
+// **وثلاثةُ أزرارٍ بقيت ظاهرةً له وحدَه**، وكشفها بعينه في تجربة ٢٠٢٦-٠٨-٠٢
+// بعد أن قرأ التوثيقَ وظنّ أنّ شيئاً لم يتغيّر. **وكان محقّاً: من مقعده لم
+// يتغيّر شيء.**
+func TestAdminIsAboveAuthorityNotAboveKnowledge(t *testing.T) {
+	admin := []string{"admin", "ops"}
+
+	// ── ما لا يملكه أحدٌ: عِلمٌ لا سلطة ──────────────────────────────────
+	if canTransition(StAccepted, StPreparing,
+		rolesUnderMode(false, StAccepted, StPreparing, admin, false)) {
+		t.Error("المالكُ يُعلن بدءَ تحضيرٍ في مطبخٍ لا يراه")
+	}
+	for _, to := range []string{StAtPickup, StPickedUp, StOnTheWay, StAtDropoff, StDelivered} {
+		eff := rolesUnderMode(false, StAssigned, to, admin, true)
+		if canTransition(StAssigned, to, eff) {
+			t.Errorf("المالكُ يُعلن %q بلا توقيع — **ومراحلُ الطريق مقروءةٌ لا ملموسة**", to)
+		}
+	}
+
+	// ── وبالتوقيع الصريح يملكها — **والسجلُّ يقول إنّها منه** ────────────
+	signed := append(append([]string{}, admin...), RoleManualOverride)
+	if !canTransition(StAssigned, StAtPickup,
+		rolesUnderMode(false, StAssigned, StAtPickup, signed, true)) {
+		t.Error("التوقيعُ الصريح لم يفتح الخطوة — **وهاتفٌ نفدت بطاريتُه يترك الطلبَ عالقاً**")
+	}
+
+	// ── وما هو سلطةٌ يبقى له ────────────────────────────────────────────
+	if !canTransition(StDispatching, StCancelled,
+		rolesUnderMode(false, StDispatching, StCancelled, admin, false)) {
+		t.Error("المالكُ فقد الإلغاءَ بعد التحويل — **وهو سلطتُه لا عِلمُه**")
+	}
+	if !canTransition(StPending, StAccepted,
+		rolesUnderMode(true, StPending, StAccepted, admin, false)) {
+		t.Error("المالكُ فقد القبولَ نيابةً عن متجرٍ لا يستجيب")
+	}
+
+	// ── والعملياتُ تبقى ممنوعةً حيث كانت ────────────────────────────────
+	ops := []string{"ops"}
+	if canTransition(StDispatching, StCancelled,
+		rolesUnderMode(false, StDispatching, StCancelled, ops, false)) {
+		t.Error("العملياتُ تُلغي بعد التحويل")
+	}
+	// **والتوقيعُ لا ينفع من ليس مالكاً** — والمعالِجُ يمنعه أصلاً.
+	opsSigned := []string{"ops", RoleManualOverride}
+	if canTransition(StAssigned, StAtPickup,
+		rolesUnderMode(false, StAssigned, StAtPickup, opsSigned, true)) {
+		t.Error("العملياتُ أعلنت مرحلةَ سائقٍ بتوقيعٍ ليس لها")
+	}
+}

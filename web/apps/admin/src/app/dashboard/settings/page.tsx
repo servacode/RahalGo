@@ -67,6 +67,11 @@ export default function SettingsPage() {
     void load();
   }, [load]);
 
+  // **نمطُ الهامش يُقرأ مرّةً للصفحة** — تتبعه لافتةُ حقل القيمة.
+  const marginMode = String(
+    list?.find((x) => x.key === "pricing.margin_mode")?.value ?? "percent",
+  );
+
   // المجموعات بترتيب الخادم لا بترتيب أبجديّ: المفاتيح مجموعةٌ بالموضوع،
   // وبعثرتُها تفصل «مهلة القبول» عن «مهلة التوصيل».
   const groups = useMemo(() => {
@@ -95,7 +100,7 @@ export default function SettingsPage() {
             </h2>
             <div className="space-y-3">
               {items.map((s) => (
-                <SettingRow key={s.key} s={s} editable={isAdmin} onSaved={load} />
+                <SettingRow key={s.key} s={s} editable={isAdmin} onSaved={load} marginMode={marginMode} />
               ))}
             </div>
           </section>
@@ -116,10 +121,13 @@ function SettingRow({
   s,
   editable,
   onSaved,
+  marginMode,
 }: {
   s: Setting;
   editable: boolean;
   onSaved: () => void;
+  /** نمطُ الهامش — **تتبعه لافتةُ حقل القيمة**: «٪» أو «ل.س». */
+  marginMode: string;
 }) {
   const [draft, setDraft] = useState<string>(() => String(s.value ?? ""));
   const [busy, setBusy] = useState(false);
@@ -287,8 +295,20 @@ function SettingRow({
                 }}
                 className={numeric ? "w-40" : "w-full"}
               />
-              {s.unit && (
-                <span className="pb-2 text-sm text-ink-muted">{unitText(s.unit)}</span>
+              {/* **ولافتةُ الهامش تتبع نمطَه.**
+
+                  مفتاحٌ واحدٌ بمعنيين: «٣٠٠٠» ثلاثةُ آلاف ليرةٍ في الثابت،
+                  **وواحدٌ وثلاثون ضعفاً في النسبة.** وقد وقع فعلاً في تجربةٍ
+                  حيّة: كُتب ٣٠٠٠ قصداً للّيرة **فبِيع طلبٌ تكلفتُه ٦٥ ألفاً
+                  بمليونين** — والحقلُ لا يقول أيَّهما يُكتب. */}
+              {s.key === "pricing.margin_value" ? (
+                <span className="pb-2 text-sm font-medium text-primary-dark">
+                  {marginMode === "fixed" ? m.common.currency : "%"}
+                </span>
+              ) : (
+                s.unit && (
+                  <span className="pb-2 text-sm text-ink-muted">{unitText(s.unit)}</span>
+                )
               )}
               {editable && dirty && (
                 <Button type="submit" disabled={busy}>

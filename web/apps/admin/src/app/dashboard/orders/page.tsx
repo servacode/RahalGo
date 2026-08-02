@@ -116,6 +116,8 @@ interface OrderRow {
   sent_to_merchant_at: string | null;
   /** متى نزل إلى طابور السائقين — ومنه تُقاس مهلةُ زرّ الإسناد */
   dispatched_at: string | null;
+  /** لماذا لا يلتقطه أحد — **وفارغٌ حين لا مشكلة**. */
+  blocked_reason?: string;
   /** مصيرُ بضاعة طلبٍ فشل — فارغٌ يعني لم يُحسم بعد */
   goods_settled_to: "merchant" | "platform" | null;
   /** أجرُ السائق — تقديرٌ قبل التسليم وواقعٌ بعده، من مصدر الحساب نفسه */
@@ -217,6 +219,15 @@ const OPS_NEXT: Record<string, string[]> = {
 };
 
 /** مراحلُ الطريق — لا يملكها إلّا من يسير فيها (مرآةُ `driverOnly`). */
+/** الخطوةُ التالية في مسار السائق — لنافذة التدخّل اليدويّ. */
+const NEXT_AFTER: Record<string, string> = {
+  assigned: "at_pickup",
+  at_pickup: "picked_up",
+  picked_up: "on_the_way",
+  on_the_way: "at_dropoff",
+  at_dropoff: "delivered",
+};
+
 const DRIVER_ONLY = new Set([
   "at_pickup",
   "picked_up",
@@ -261,6 +272,23 @@ function opsNext(
   isAdmin: boolean,
 ): string[] {
   let next = OPS_NEXT[status] ?? [];
+
+  // **ولا تُعلن العملياتُ ولا المالكُ بدءَ تحضيرٍ لم يبدأه أحدٌ منهما.**
+  //
+  // **قبل استثناء الأدمن لا بعده**: كان الاستثناءُ يسبق كلَّ حارس، **فسقط
+  // أهمُّها عمّن أحدث المشكلة** — وشكوى المالك قالت «ضُغطت بيد الأدمن».
+  //
+  // **وهي مسألةُ معرفةٍ لا صلاحية**: كونُك المالكَ لا يمنحك عِلماً بما يجري في
+  // مطبخِ غيرك. والمحرّكُ يفرضها أيضاً (`modes.go`) — **والشاشةُ تُخفي ما
+  // يرفضه الخادم، فلا زرَّ يَعِد بما يُعتذر عنه.**
+  if (!selfManage) next = next.filter((t) => t !== "preparing");
+
+  // **ومراحلُ الطريق مقروءةٌ للمنصة لا ملموسة** — نصُّ قرار المالك. ولا
+  // استثناءَ له: **لا هو ولا موظّفُه يعلم أنّ السائقَ وصل أو استلم.**
+  next = next.filter((t) => !DRIVER_ONLY.has(t));
+
+  // **وما بقي فسلطةٌ يملكها المالك** — تدخّلٌ مسجَّلٌ في سجلّ التدقيق:
+  // القبولُ نيابةً عن متجرٍ لا يستجيب، والإلغاءُ بعد التحويل.
   if (isAdmin) return next;
 
   // **المتجر يدير**: القبولُ والرفضُ اختصاصُه.
@@ -272,10 +300,6 @@ function opsNext(
   // خارج النظام. وقد وقعت فعلاً في تجربةٍ حيّة: ضُغطت بعد ثانيةٍ من القبول
   // **والمتجرُ لم يُبلَّغ بعد**.
   next = next.filter((t) => t !== "preparing");
-
-  // **ومراحلُ الطريق للسائق وحده** — المنصةُ لا تعلم أنه وصل: ربّما كان في
-  // طلبٍ آخر وهو عائدٌ إليه. **وزرٌّ هنا يكتب في السجلّ حدثاً لم يقع.**
-  next = next.filter((t) => !DRIVER_ONLY.has(t));
 
   // **وبعد التحويل لا تُلغي طلباً** — ولو لم يمسكه سائقٌ بعد. وما قبله بيدها:
   // طلبٌ لم يعلم به مطبخٌ ولا تحرّك له سائق.
@@ -722,10 +746,16 @@ function OrderActions({
    * من إنشائه لم ينتظر سائقاً تلك الربعَ — **وقياسٌ من أوّل الطلب يُظهر
    * الزرَّ قبل أن يبدأ الانتظار أصلاً.**
    */
+  // **والمهلةُ تسري على المالك كما تسري على موظّفه.**
+  //
+  // كان `isAdmin` يتخطّاها — **وزرٌّ متاحٌ دائماً يُستعمل دائماً**، فيصير
+  // الإسنادُ اليدويُّ هو الأصلَ وترتيبُ السائقين زينة. وهي علّةُ `G-09` نفسُها
+  // التي أُصلحت للعمليات **وبقيت للمالك**، وهو أكثرُ من يفتح اللوحة.
+  //
+  // **والاحتياطُ يبقى**: المهلةُ في الإعدادات — من أرادها دقيقةً جعلها دقيقة.
   const assignReady =
-    isAdmin ||
-    (!!o.dispatched_at &&
-      Date.now() - new Date(o.dispatched_at).getTime() >= assignAfterMin * 60_000);
+    !!o.dispatched_at &&
+    Date.now() - new Date(o.dispatched_at).getTime() >= assignAfterMin * 60_000;
 
   // **الإسنادُ اليدوي مخرجٌ لا طريق.** السائقون يلتقطون من الطابور بأنفسهم
   // (تطبيق :3005)، وهذا لمن لم يلتقطه أحد. ولذلك يُجلب السائقون **عند فتح
@@ -859,13 +889,13 @@ function OrderActions({
     }
   }
 
-  async function go(to: string, note: string) {
+  async function go(to: string, note: string, manualOverride = false) {
     setBusy(to);
     setErr("");
     try {
       await api(`/api/v1/admin/orders/${o.id}/transition`, {
         method: "POST",
-        body: JSON.stringify({ to, note }),
+        body: JSON.stringify({ to, note, manual_override: manualOverride }),
       });
       setAsking("");
       setReason("");
@@ -981,10 +1011,19 @@ function OrderActions({
   }
 
   if (asking) {
+    // **والنافذةُ نفسُها تخدم التوقيع** — سبباً إلزامياً في الحالين.
+    //
+    // **ونصُّها يختلف**: الإلغاءُ يسأل «لماذا ألغيت»، والتدخّلُ يقول **«تُسجَّل
+    // باسمك أنّ المنصة أعلنتها — لا أنّ السائق قالها»**. ونصٌّ واحدٌ لمعنيين
+    // يجعل من يوقّع لا يعرف ما وقّع عليه.
+    const manual = asking.startsWith("manual:");
+    const target = manual ? asking.slice(7) : asking;
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium text-danger">
-          {m.admin.ordersPage.reasonTitle.replace("{action}", ACTION_LABELS[asking] ?? asking)}
+        <p className={`text-xs font-medium ${manual ? "text-warning" : "text-danger"}`}>
+          {manual
+            ? m.admin.ordersPage.manualTitle
+            : m.admin.ordersPage.reasonTitle.replace("{action}", ACTION_LABELS[asking] ?? asking)}
         </p>
         <Input
           id={`reason-${o.id}`}
@@ -996,15 +1035,17 @@ function OrderActions({
           }}
           placeholder={m.admin.ordersPage.reasonPlaceholder}
         />
-        <p className="text-xs text-ink-muted">{m.admin.ordersPage.reasonHint}</p>
+        <p className="text-xs text-ink-muted">
+          {manual ? m.admin.ordersPage.manualHint : m.admin.ordersPage.reasonHint}
+        </p>
         {err && <p className="text-xs text-danger">{err}</p>}
         <div className="flex gap-2">
           <Button
-            variant="danger"
+            variant={manual ? "secondary" : "danger"}
             disabled={!reason.trim() || busy !== ""}
-            onClick={() => void go(asking, reason.trim())}
+            onClick={() => void go(target, reason.trim(), manual)}
           >
-            {m.admin.ordersPage.confirm}
+            {manual ? m.admin.ordersPage.manualConfirm : m.admin.ordersPage.confirm}
           </Button>
           <Button
             variant="secondary"
@@ -1121,6 +1162,40 @@ function OrderActions({
           يلتقطه أحد.
 
           والأدمنُ يراه دائماً — تجاوزُ المالك. */}
+      {/* **ولماذا لا يلتقطه أحد — يُقال هنا لا في تنبيهٍ بعد عشر دقائق.**
+
+          طلبٌ فوق سقف النقد لا يظهر لسائقٍ أبداً، **والعملياتُ ترى «جارٍ إسناد
+          سائق» وتنتظر من لن يأتي.** والصمتُ أسوأُ من الرفض: الرفضُ يُقرأ
+          ويُعالَج، **والصمتُ يُنتظَر.** */}
+      {o.blocked_reason && (
+        <p className="w-full rounded-control bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
+          {o.blocked_reason}
+        </p>
+      )}
+
+      {/* **التدخّلُ اليدويّ — منفصلٌ عن الأزرار العادية.**
+
+          مراحلُ الطريق بيد السائق، **والمنصةُ لا تعلم أنّه وصل.** لكنّ هاتفاً
+          نفدت بطاريتُه يترك الطلبَ عالقاً بلا من يُكمله — **وقد يكون المالكُ
+          وحدَه من يدير.**
+
+          **والمشكلةُ لم تكن «من ضغط» بل «ماذا يقول السجلّ»**: بالتوقيع يصدق
+          السجلُّ فيقول «أعلنتها المنصة». **ويُفصل عن بقيّة الأزرار كي لا
+          يُضغط سهواً** كما وقع في `#1004`. */}
+      {isAdmin && DRIVER_ONLY.has(NEXT_AFTER[o.status] ?? "") && (
+        <button
+          type="button"
+          disabled={busy !== ""}
+          onClick={() => setAsking("manual:" + (NEXT_AFTER[o.status] ?? ""))}
+          className="w-full rounded-control border border-dashed border-warning/60 px-3 py-1.5 text-xs text-warning hover:bg-warning/5"
+        >
+          {m.admin.ordersPage.manualStep.replace(
+            "{s}",
+            m.orders.status[(NEXT_AFTER[o.status] ?? "") as keyof typeof m.orders.status] ?? "",
+          )}
+        </button>
+      )}
+
       {canAssign && assignReady && (
         <Button variant="secondary" disabled={busy !== ""} onClick={() => void openAssign()}>
           {m.admin.ordersPage.assignHere}

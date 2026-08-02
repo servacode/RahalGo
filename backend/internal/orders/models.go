@@ -131,6 +131,10 @@ type Order struct {
 	// زرّ الإسناد اليدويّ**، فلا تعتمد الشاشةُ على `updated_at` الذي يتغيّر
 	// مع كل مسّ.
 	DispatchedAt *time.Time `json:"dispatched_at"`
+	// BlockedReason لماذا لا يلتقط الطلبَ أحد — **وفارغٌ حين لا مشكلة.**
+	//
+	// **والصمتُ أسوأُ من الرفض**: الرفضُ يُقرأ ويُعالَج، والصمتُ يُنتظَر.
+	BlockedReason string `json:"blocked_reason"`
 	// EndedBy الدورُ الذي أنهى الطلب: customer · merchant · ops · driver.
 	//
 	// **كان يُكتب ولا يُقرأ**: ترى العملياتُ «ملغي» ولا تعرف من ألغاه —

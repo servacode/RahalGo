@@ -177,3 +177,52 @@ func (s *Service) SweepExpiredOffers(ctx context.Context) {
 		}
 	}
 }
+
+// NoEligibleReason لماذا لا يلتقط الطلبَ أحد — **حين لا يلتقطه أحد.**
+//
+// # المسألة
+//
+// طلبٌ فوق سقف نقد السائقين **لا يظهر لأحدٍ منهم**، فيبقى في الطابور صامتاً.
+// **والعملياتُ ترى «جارٍ إسناد سائق» ولا تعرف أنّ أحداً لن يأتي** — تنتظر،
+// ثمّ يوقظها الحارسُ بعد عشر دقائق بـ«لا سائق»، **ولا يقول لها لماذا.**
+//
+// ووقع فعلاً في التجربة الحيّة (طلب #1001، ٢٠٢٦-٠٨-٠٢): نقدُه ٢٬٠٦١٬٠٠٠
+// وسقفُ السائق ٥٠٠٬٠٠٠ — **فما كان ليلتقطه أحدٌ أبداً.**
+//
+// **والصمتُ هنا أسوأُ من الرفض**: الرفضُ يُقرأ ويُعالَج، **والصمتُ يُنتظَر.**
+//
+// يعيد نصّاً فارغاً حين لا مشكلة.
+func (s *Service) NoEligibleReason(ctx context.Context, orderID string) string {
+	var cashDue int64
+	var hasDriver bool
+	if err := s.db.QueryRow(ctx,
+		`SELECT cash_due, driver_id IS NOT NULL FROM orders WHERE id = $1`,
+		orderID).Scan(&cashDue, &hasDriver); err != nil || hasDriver {
+		return ""
+	}
+
+	limit := int64(500000)
+	if s.settings != nil {
+		if v := s.settings.GetInt(ctx, "drivers.cash_limit"); v > 0 {
+			limit = v
+		}
+	}
+	if cashDue > limit {
+		// **ويُقال بالرقمين لا بالحكم**: «فوق السقف» تُغلق الباب، **و«٢٬٠٦١٬٠٠٠
+		// والسقفُ ٥٠٠٬٠٠٠» تقول أين المخرج** — يُرفع السقفُ أو يُقسَّم الطلب.
+		return "نقدُ الطلب فوق سقف السائقين — لن يلتقطه أحد"
+	}
+
+	// **ثمّ: أعلى الدوامَ أحدٌ أصلاً؟**
+	//
+	// طلبٌ ينزل ليلاً ولا سائقَ على الدوام يبقى صامتاً كذلك، **والسببُ آخرُ
+	// تماماً**: هذا يُحلّ بمكالمةٍ لا برفع سقف.
+	var onShift int
+	if err := s.db.QueryRow(ctx,
+		`SELECT count(*) FROM users u
+		 JOIN user_roles r ON r.user_id = u.id AND r.role_code = 'driver'
+		 WHERE u.on_shift AND u.status = 'active'`).Scan(&onShift); err == nil && onShift == 0 {
+		return "لا سائقَ على الدوام الآن"
+	}
+	return ""
+}

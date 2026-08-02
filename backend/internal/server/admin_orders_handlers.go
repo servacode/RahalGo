@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -34,6 +35,16 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **ولماذا لا يلتقطه أحد — يُقال في البطاقة لا في تنبيهٍ بعد عشر دقائق.**
+	//
+	// طلبٌ فوق سقف النقد لا يظهر لسائقٍ أبداً، **والعملياتُ ترى «جارٍ إسناد
+	// سائق» وتنتظر من لن يأتي.** ويُحسب للطابور وحدَه: **سؤالٌ لكلّ بطاقةٍ
+	// في صفحةٍ من عشرين حملٌ بلا حاجة.**
+	for i := range res.Orders {
+		if res.Orders[i].Status == orders.StDispatching {
+			res.Orders[i].BlockedReason = s.orders.NoEligibleReason(r.Context(), res.Orders[i].ID)
+		}
 	}
 	httpx.JSON(w, http.StatusOK, res)
 }
@@ -72,6 +83,16 @@ func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		To   string `json:"to"`
 		Note string `json:"note"`
+		// ManualOverride توقيعُ المالك أنّ ما يفعله **تدخّلٌ يدويّ** لا فعلُ
+		// صاحبِ الدور.
+		//
+		// **يلزم لمراحل السائق**: هاتفٌ نفدت بطاريتُه يترك الطلبَ عالقاً بلا
+		// من يُكمله — **وسؤالُ المالك كشفه**: «ربما لن يكون هناك موظفين وفقط
+		// مدير المنصة سوف يدير العمل».
+		//
+		// **والمشكلةُ لم تكن «من ضغط» بل «ماذا يقول السجلّ»**: بالتوقيع يصدق
+		// السجلُّ — «أعلنتها المنصةُ» لا «قالها السائق».
+		ManualOverride bool `json:"manual_override"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -90,8 +111,29 @@ func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	o, err := s.orders.Transition(r.Context(), userIDFrom(r), rolesFrom(r),
-		chi.URLParam(r, "id"), req.To, strings.TrimSpace(req.Note))
+	// **والتوقيعُ لا يُقبل من غير المالك** — ولا يُقبل بلا كلمةٍ تشرحه.
+	//
+	// **دورٌ اصطناعيّ يُضاف هنا ولا يُمنح لأحد في القاعدة**: `rolesUnderMode`
+	// تقرأ الأدوارَ وحدَها، **ومعاملٌ جديدٌ يمرّ عبر خمس دوالّ ليصل.**
+	roles := rolesFrom(r)
+	note := strings.TrimSpace(req.Note)
+	if req.ManualOverride {
+		if !slices.Contains(roles, "admin") {
+			s.respondErr(w, errForbidden)
+			return
+		}
+		if note == "" {
+			s.respondErr(w, errReasonRequired)
+			return
+		}
+		roles = append(roles, orders.RoleManualOverride)
+		// **والسجلُّ يحمل التوقيع** — فمن قرأه بعد شهرٍ عرف أنّ المنصةَ
+		// أعلنته، **ولم يقله السائق.**
+		note = "تدخّلٌ يدويّ من المنصة — " + note
+	}
+
+	o, err := s.orders.Transition(r.Context(), userIDFrom(r), roles,
+		chi.URLParam(r, "id"), req.To, note)
 	if err != nil {
 		s.respondErr(w, err)
 		return
