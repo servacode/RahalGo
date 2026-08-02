@@ -503,45 +503,92 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 	// يُخبَر به** — والثقةُ تنكسر هكذا لا بالهامش المُعلَن.
 	//
 	// و`merchant_price` لقطةٌ في بند الطلب: **تكلفةُ الأمس تُقرأ كما كانت.**
-	var goodsCost, subtotal int64
-	var merchantPct int
-	var ownerID *string
-	if err := q.QueryRow(ctx, `
-		SELECT COALESCE((SELECT sum(oi.merchant_price * oi.qty)
-		                 FROM order_items oi WHERE oi.order_id = o.id), 0),
-		       o.subtotal, m.commission_percent, m.owner_user_id
-		FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).
-		Scan(&goodsCost, &subtotal, &merchantPct, &ownerID); err != nil {
+	// **ولكلِّ مصدرٍ مستحقُّه وعمولتُه.**
+	//
+	// كان الطلبُ من مصدرٍ واحد فيُقرأ `orders.merchant_id`. **وبعد مصدرين صار
+	// ذلك يدفع لصاحب المحطّة الأولى ثمنَ بضاعةِ الثاني** — فيربح من لم يبع،
+	// **ويُحرم من باع.**
+	//
+	// **والعمولةُ لكلِّ متجرٍ بنسبته**: متجرٌ اتُّفق معه على ٢٪ وآخرُ على ٥٪
+	// **لا تجمعهما نسبةٌ واحدة**، ونسبةُ صاحب المحطّة الأولى ليست عقداً على
+	// غيره.
+	//
+	// وتُجمع البنودُ بمصدرها من **لقطةِ البند** لا من `menu_items` اليوم:
+	// **يُنقل صنفٌ فتُعاد قراءةُ طلبات الأمس بمصدرٍ لم يحضّرها.**
+	rows, err := q.Query(ctx, `
+		SELECT COALESCE(oi.merchant_id, o.merchant_id)::text,
+		       m.commission_percent, m.owner_user_id::text,
+		       sum(oi.merchant_price * oi.qty)
+		FROM order_items oi
+		JOIN orders o ON o.id = oi.order_id
+		JOIN merchants m ON m.id = COALESCE(oi.merchant_id, o.merchant_id)
+		WHERE oi.order_id = $1
+		GROUP BY 1, 2, 3`, orderID)
+	if err != nil {
 		return err
 	}
+	type share struct {
+		ownerID    *string
+		commission int64
+		due        int64
+	}
+	shares := []share{}
+	var totalCommission int64
+	for rows.Next() {
+		var merchantID string
+		var pct int
+		var owner *string
+		var cost int64
+		if err := rows.Scan(&merchantID, &pct, &owner, &cost); err != nil {
+			rows.Close()
+			return err
+		}
+		c := cost * int64(pct) / 100
+		totalCommission += c
+		shares = append(shares, share{ownerID: owner, commission: c, due: cost - c})
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
 	// **وطلبٌ بلا بنود يقع على القديم** — طلباتُ ما قبل السعرين، أو ما أُنشئ
 	// بلا `order_items`. **وصفرٌ هنا يعني «لا مستحقّ» وهو أسوأُ من الخطأ.**
-	if goodsCost == 0 {
-		goodsCost = subtotal
+	if len(shares) == 0 {
+		var subtotal int64
+		var pct int
+		var owner *string
+		if err := q.QueryRow(ctx, `
+			SELECT o.subtotal, m.commission_percent, m.owner_user_id::text
+			FROM orders o JOIN merchants m ON m.id = o.merchant_id
+			WHERE o.id = $1`, orderID).Scan(&subtotal, &pct, &owner); err != nil {
+			return err
+		}
+		c := subtotal * int64(pct) / 100
+		totalCommission = c
+		shares = append(shares, share{ownerID: owner, commission: c, due: subtotal - c})
 	}
 
-	platformCommission := goodsCost * int64(merchantPct) / 100
 	if _, err := q.Exec(ctx,
 		`UPDATE orders SET platform_commission = $2 WHERE id = $1`,
-		orderID, platformCommission); err != nil {
+		orderID, totalCommission); err != nil {
 		return err
 	}
-	if ownerID == nil {
-		return nil
-	}
 
-	// مستحقّ المتجر: **سعرُ شرائه ناقصَ العمولة** — لا سعرُ البيع.
+	// مستحقّ كلِّ متجر: **سعرُ شرائه ناقصَ عمولته** — لا سعرُ البيع.
 	//
 	// **لا `total`**: رسم التوصيل أجرُ خدمةٍ تؤدّيها المنصة بسائقها فليس من
 	// نصيبه — والعمولة نفسها محسوبة على بضاعته، فالأساسان متسقان.
-	due := goodsCost - platformCommission
-	if due <= 0 {
-		return nil
+	for _, sh := range shares {
+		if sh.ownerID == nil || sh.due <= 0 {
+			continue
+		}
+		if _, err := s.wallet.ApplyTx(ctx, q, *sh.ownerID, sh.due, "merchant_earning",
+			orderID, "مستحقّ عن بضاعةٍ سُلّمت للسائق", &actorID); err != nil {
+			return err
+		}
 	}
-	_, err := s.wallet.ApplyTx(ctx, q, *ownerID, due, "merchant_earning",
-		orderID, "مستحقّ عن بضاعةٍ سُلّمت للسائق", &actorID)
-	return err
+	return nil
 }
 
 // settleRep يقيّد نصيبَ المندوب — **عند التسليم**.

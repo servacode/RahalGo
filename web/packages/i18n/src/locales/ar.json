@@ -505,7 +505,9 @@
     "complaint_window_passed": "انقضت مهلةُ الشكوى على هذا الطلب. تواصل مع الدعم.",
     "complaint_already_open": "لديك شكوى مفتوحة على هذا الطلب",
     "bad_complaint_reason": "اختر سبباً من القائمة",
-    "order_not_closed": "الشكوى بعد انتهاء الطلب"
+    "order_not_closed": "الشكوى بعد انتهاء الطلب",
+    "too_many_sources": "أصنافُ سلّتك من مصادر أكثر من المسموح",
+    "multi_source_order": "تعذّر تحديد مصدر بعض الأصناف"
   },
   "admin": {
     "appTitle": "رحال غو — لوحة التحكم",
@@ -1590,7 +1592,10 @@
       "zoneFee": "منطقة {name} — توصيل {fee}",
       "minOrder": "الحد الأدنى للطلب {v}",
       "walletBalance": "رصيد محفظتك: {v}",
-      "fromPlatform": "من رحّال غو"
+      "fromPlatform": "من رحّال غو",
+      "extraSource": "مقابل الاستلام من مكان إضافي",
+      "tooManySources": "لا يمكن الطلب من أكثر من {n} مصدر في الطلب الواحد — احذف بعض الأصناف",
+      "feeLine": "رسوم التوصيل إلى هذا الموقع: {fee}"
     },
     "orders": {
       "title": "طلباتي",

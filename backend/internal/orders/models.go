@@ -10,8 +10,13 @@ import (
 
 var (
 	ErrMerchantClosed = httpx.NewError(http.StatusConflict, "merchant_closed", "errors.merchant_closed")
-	// ErrMultiSource أصنافٌ من مصدرين — **حتى يُبنى الطلبُ متعدّدُ المصادر.**
-	ErrMultiSource        = httpx.NewError(http.StatusConflict, "multi_source_order", "errors.multi_source_order")
+	// ErrMultiSource أصنافٌ من مصدرٍ لا وجودَ له.
+	ErrMultiSource = httpx.NewError(http.StatusConflict, "multi_source_order", "errors.multi_source_order")
+	// ErrTooManySources تجاوزُ سقف المصادر — **والسقفُ في الإعدادات لا الشيفرة.**
+	//
+	// **ويُردّ صراحةً لا يُقبل صامتاً**: من طلب من ثلاثةِ مطابخَ يُقال له،
+	// **ولا يُترك طلبٌ ثلثُه هنا وثلثُه هناك بلا من يجمعه.**
+	ErrTooManySources     = httpx.NewError(http.StatusConflict, "too_many_sources", "errors.too_many_sources")
 	ErrItemUnavailable    = httpx.NewError(http.StatusConflict, "item_unavailable", "errors.item_unavailable")
 	ErrBadItems           = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
 	ErrOutOfZone          = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
@@ -46,10 +51,17 @@ type OrderItem struct {
 	// على طلبات الأمس تقريرٌ يكذب بلا أن يخطئ أحد.**
 	//
 	// **ولا يُرسل إلى الزبون** — انظر `order_breakdown.go`.
-	MerchantPrice int64            `json:"-"`
-	Qty           int              `json:"qty"`
-	Note          string           `json:"note"`
-	Options       []OptionSnapshot `json:"options"`
+	MerchantPrice int64 `json:"-"`
+	// MerchantID مصدرُ هذا البند — **لقطةٌ لا قراءةٌ لاحقة.**
+	//
+	// يُنقل صنفٌ إلى متجرٍ آخر أو يُحذف، **فتُعاد قراءةُ طلبات الأمس بمصدرٍ لم
+	// يحضّرها.** ومن حضّره حينها هو من يُقيَّد له، ولو أُغلق متجرُه بعدها.
+	//
+	// **ولا يصل الزبون.**
+	MerchantID string           `json:"-"`
+	Qty        int              `json:"qty"`
+	Note       string           `json:"note"`
+	Options    []OptionSnapshot `json:"options"`
 }
 
 type Event struct {

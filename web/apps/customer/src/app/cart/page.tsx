@@ -42,10 +42,23 @@ function errText(err: unknown): string {
 // مركز الرقة الافتراضي
 const RAQQA = { lat: 35.9528, lng: 39.0079 };
 
-interface Zone {
-  name: string;
+/**
+ * تسعيرةُ السلّة — **من الخادم لا من حسبةٍ محلّية.**
+ *
+ * **ولا تُسمّى `Zone` بعد اليوم**: لم تعد رسمَ منطقةٍ بل حسبةً كاملة تعرف
+ * المصادرَ والمسافةَ بينها. **واسمٌ يبقى على معناه القديم يُقرأ خطأً.**
+ */
+interface Quote {
+  subtotal: number;
   delivery_fee: number;
-  min_order: number;
+  base_fee: number;
+  /** ما زِيد لأجل المصادر الإضافية — **وصفرٌ حين لا يكلّف**. */
+  sources_fee: number;
+  total: number;
+  sources: number;
+  max_sources: number;
+  too_many_sources: boolean;
+  far_apart: boolean;
 }
 
 export default function CartPage() {
@@ -80,7 +93,7 @@ export default function CartPage() {
       })
       .catch(() => undefined);
   }, []);
-  const [zone, setZone] = useState<Zone | null>(null);
+  const [zone, setZone] = useState<Quote | null>(null);
   const [zoneErr, setZoneErr] = useState("");
   const [payment, setPayment] = useState("cash");
   const [promo, setPromo] = useState("");
@@ -123,15 +136,40 @@ export default function CartPage() {
       .catch(() => undefined);
   }, [logged]);
 
+  /**
+   * **التسعيرةُ من الخادم — رقمٌ يتغيّر أمام العين.**
+   *
+   * رسمُ التوصيل لم يعد رقمَ المنطقة وحدَه: **يتغيّر بعدد المطابخ وبُعدها.**
+   * وكانت السلّةُ تقرأ رسمَ المنطقة — **فيرى الزبونُ رقماً ويُحاسَب بآخر.**
+   *
+   * **ورقمٌ يتغيّر أمام العين يُقبل، ورقمٌ يظهر عند الدفع يُراجَع**: من أضاف
+   * صنفاً فارتفع الرسمُ أمامه يفهم أن السببَ إضافتُه، **ومن رآه عند الدفع
+   * يظنّ أنه خُدع.**
+   *
+   * **والسلّةُ لا تحسب بنفسها**: لا تعرف المصادر — أخفيناها عنها عمداً — ولا
+   * المسافةَ بينها. **والحسبةُ حيث المعرفة.**
+   */
   const quote = useCallback(async () => {
     try {
-      setZone(await api<Zone>(`/api/v1/public/zone?lat=${lat}&lng=${lng}`));
+      const q = await api<Quote>("/api/v1/public/quote", {
+        method: "POST",
+        body: JSON.stringify({
+          lat,
+          lng,
+          items: (cart?.lines ?? []).map((l) => ({
+            menu_item_id: l.menu_item_id,
+            qty: l.qty,
+            option_ids: l.option_ids,
+          })),
+        }),
+      });
+      setZone(q);
       setZoneErr("");
     } catch (err) {
       setZone(null);
       setZoneErr(errText(err));
     }
-  }, [lat, lng]);
+  }, [lat, lng, cart]);
 
   useEffect(() => {
     const t = setTimeout(quote, 400);
@@ -347,6 +385,26 @@ export default function CartPage() {
               {zone ? `${fmtNum(zone.delivery_fee)} ${m.common.currency}` : "—"}
             </dd>
           </div>
+          {/* **ورقمان يقولان سببَ الزيادة.**
+
+              رقمٌ واحدٌ يرتفع بلا تفسير يُقرأ زيادةً بلا سبب، **ورقمان يقولان
+              «هذا للمنطقة وهذا لأنك اخترت من مكانين بعيدين» يُقرآن حساباً.**
+
+              **ولا يُعرض حين يكون صفراً**: سطرٌ بصفرٍ يلفت إلى ما لا يعني. */}
+          {zone && zone.sources_fee > 0 && (
+            <div className="flex justify-between text-xs">
+              <dt className="text-ink-muted">{m.site.cart.extraSource}</dt>
+              <dd className="text-ink-muted">
+                {fmtNum(zone.sources_fee)} {m.common.currency}
+              </dd>
+            </div>
+          )}
+          {/* **وتجاوزُ السقف يُقال في السلّة لا عند الدفع.** */}
+          {zone?.too_many_sources && (
+            <p className="rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">
+              {m.site.cart.tooManySources.replace("{n}", fmtNum(zone.max_sources))}
+            </p>
+          )}
           <div className="flex justify-between border-t border-line pt-1 text-base">
             <dt className="font-bold">{m.site.cart.total}</dt>
             <dd className="font-bold text-primary-dark">
@@ -413,9 +471,15 @@ export default function CartPage() {
               </div>
               {zone && (
                 <p className="mt-1.5 text-xs text-success">
-                  {m.site.cart.zoneFee
-                    .replace("{name}", zone.name)
-                    .replace("{fee}", `${fmtNum(zone.delivery_fee)} ${m.common.currency}`)}
+                  {/* **واسمُ المنطقة لم يعد يُعرض.**
+
+                      الرسمُ لم يعد رسمَ المنطقة وحدَه: **فيه أساسُها وفيه ما
+                      زِيد للمصادر.** ونسبتُه إلى المنطقة وحدَها **تجعل الزبونَ
+                      يقارنه برسم جاره فيجده أعلى ولا يعرف لماذا.** */}
+                  {m.site.cart.feeLine.replace(
+                    "{fee}",
+                    `${fmtNum(zone.delivery_fee)} ${m.common.currency}`,
+                  )}
                   {/* لا حدّ أدنى في هذه المنصة — رسم التوصيل كاملٌ من الزبون
                       مهما كانت قيمة طلبه، فلا شأن للمنصة بها. */}
                 </p>

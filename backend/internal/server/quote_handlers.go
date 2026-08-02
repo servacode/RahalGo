@@ -1,0 +1,45 @@
+package server
+
+// تسعيرةُ السلّة قبل الطلب — **رقمٌ يتغيّر أمام العين.**
+//
+// # المسألة
+//
+// رسمُ التوصيل صار يتغيّر بعدد المصادر وبُعدها، **ولم يعد رقماً ثابتاً للمنطقة**.
+// وكانت السلّةُ تقرأ رسمَ المنطقة وحدَه — **فيرى الزبونُ رقماً ويُحاسَب بآخر.**
+//
+// **ورقمٌ يتغيّر أمام العين يُقبل، ورقمٌ يظهر عند الدفع يُراجَع**: من أضاف صنفاً
+// فارتفع الرسمُ أمامه يفهم أن السببَ إضافتُه، **ومن رآه عند الدفع يظنّ أنه
+// خُدع.**
+//
+// # ولماذا الخادمُ يحسبها لا السلّة
+//
+// السلّةُ **لا تعرف المصادر** — أخفيناها عنها عمداً، ولا تعرف المسافةَ بينها.
+// **والحسبةُ حيث المعرفة**، وهي عند الخادم وحدَه.
+//
+// **ولا تُنشئ شيئاً**: قراءةٌ محضة، فمن استعرض عشرَ مرّاتٍ لم يترك أثراً.
+
+import (
+	"net/http"
+
+	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
+)
+
+// handleQuote تسعيرةُ سلّةٍ في موقعٍ بعينه.
+func (s *Server) handleQuote(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Items []orders.ItemInput `json:"items"`
+		Lat   float64            `json:"lat"`
+		Lng   float64            `json:"lng"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	q, err := s.orders.Quote(r.Context(), req.Items, req.Lat, req.Lng)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, q)
+}

@@ -143,6 +143,9 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/home", s.handlePublicHome)
 		r.Get("/public/merchants/{id}", s.handlePublicMerchant)
 		r.Get("/public/zone", s.handlePublicZone)
+		// **تسعيرةُ السلّة قبل الطلب** — رقمٌ يتغيّر أمام العين يُقبل، ورقمٌ
+		// يظهر عند الدفع يُراجَع. (انظر `quote_handlers.go`)
+		r.Post("/public/quote", s.handleQuote)
 		// البحث عام كالتصفّح — من يشتهي صنفاً لا يعرف اسم المتجر الذي يصنعه
 		// **التصفّحُ بالأصناف لا بالمتاجر** — الزبونُ يشتهي شاورما ولا يعرف
 		// من يصنع أفضلَها. (انظر `sections_handlers.go`)

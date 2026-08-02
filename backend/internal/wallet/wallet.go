@@ -162,6 +162,12 @@ func (s *Service) Statement(ctx context.Context, userID string, rng StatementRan
 type Querier interface {
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
 	QueryRow(context.Context, string, ...any) pgx.Row
+	// Query لقراءةِ صفوفٍ متعدّدة داخل المعاملة نفسِها.
+	//
+	// **أُضيفت حين صار الطلبُ من مصدرين**: التسويةُ تقرأ مستحقَّ كلِّ مصدرٍ على
+	// حدة، **وقراءةٌ خارج المعاملة تقرأ ما قبلها لا ما فيها** — فتُقسَّم
+	// مستحقّاتٌ على بنودٍ لم تُكتب بعد.
+	Query(context.Context, string, ...any) (pgx.Rows, error)
 }
 
 // Apply ينفّذ حركة (موجبة أو سالبة) ذرّياً بمعاملة خاصة بها.

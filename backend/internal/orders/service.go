@@ -131,12 +131,22 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	//
 	// **ويبقى مقبولاً إن أُرسل**: الطلبُ الهاتفيّ تكتبه العملياتُ وهي ترى
 	// المتاجر، **وواجهةٌ تختفي فجأةً تُسقط شاشةً لم تُحدَّث بعد.**
-	if in.MerchantID == "" && len(in.Items) > 0 {
-		derived, err := s.sourceOf(ctx, in.Items)
-		if err != nil {
+	var sources *Sources
+	if len(in.Items) > 0 {
+		var err error
+		if sources, err = s.SourcesOf(ctx, in.Items); err != nil {
 			return nil, err
 		}
-		in.MerchantID = derived
+		// **والسقفُ يُفحص هنا لا في المتصفّح.**
+		//
+		// السلّةُ لا تعرف المصادر — أخفيناها عنها عمداً — **فلا تملك أن
+		// تمنع.** والخادمُ يعرف، **وهو الموضعُ الذي لا يُلتفّ عليه.**
+		if len(sources.IDs) > s.maxSources(ctx) {
+			return nil, ErrTooManySources
+		}
+		if in.MerchantID == "" {
+			in.MerchantID = sources.IDs[0]
+		}
 	}
 	if len(in.Items) == 0 || in.AddressText == "" || in.MerchantID == "" {
 		return nil, ErrBadItems
@@ -191,7 +201,7 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	}
 
 	// التسعير الخادمي للأصناف والخيارات (لقطة ثابتة)
-	items, subtotal, err := s.priceItems(ctx, in.MerchantID, in.Items)
+	items, subtotal, err := s.priceItems(ctx, in.Items)
 	if err != nil {
 		return nil, err
 	}
@@ -240,6 +250,15 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	// السلّة حدّ المنطقة وحده: فطلبٌ يتجاوز ما رآه صاحبُه يرسب في ما لم يره،
 	// ورسالةُ الرفض تنسبه إلى المنطقة وهي قد قبلته. **حدٌّ خفيّ أسوأ من حدٍّ عالٍ.**
 	_ = minOrder
+
+	// **ورسمُ المصدر الإضافيّ — مجّانيٌّ حين لا يكلّف، محسوبٌ حين يكلّف.**
+	//
+	// وقفةٌ زائدةٌ بدقيقتين لا تكلّف شيئاً يُذكر، **ورسمٌ يُؤخذ بلا تكلفةٍ رسمٌ
+	// يُشعر الزبونَ أنه يُعاقَب على اختياره.**
+	//
+	// **ويُضاف قبل الخصم**: كودٌ يُصفّر التوصيلَ يُصفّره كلَّه — **وأن يبقى
+	// جزءٌ منه بعد «توصيلٌ مجّانيّ» وعدٌ يُخلَف.**
+	deliveryFee += s.extraSourceFee(ctx, sources)
 
 	// كود الخصم
 	var promoID *string
@@ -290,9 +309,10 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	for _, it := range items {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO order_items (order_id, menu_item_id, name, unit_price,
-			                         merchant_price, qty, note, options)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			orderID, it.MenuItemID, it.Name, it.UnitPrice, it.MerchantPrice, it.Qty, it.Note,
+			                         merchant_price, merchant_id, qty, note, options)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			orderID, it.MenuItemID, it.Name, it.UnitPrice, it.MerchantPrice,
+			it.MerchantID, it.Qty, it.Note,
 			marshalOptions(it.Options)); err != nil {
 			return nil, err
 		}
@@ -356,7 +376,14 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 }
 
 // priceItems يجلب الأسعار الحقيقية من القائمة ويتحقق من الخيارات وقيود المجموعات.
-func (s *Service) priceItems(ctx context.Context, merchantID string, inputs []ItemInput) ([]OrderItem, int64, error) {
+// priceItems يُسعّر الأصنافَ — **ولا يُقيّدها بمتجرٍ واحد.**
+//
+// كان يشترط `merchant_id = $2` **لأن الطلبَ كان من مصدرٍ واحد**. وبعد أن صار
+// من مصدرين **صار الشرطُ يُسقط نصفَ السلّة صامتاً**: يُقرأ الصنفُ فلا يوجد،
+// فيُردّ `ErrBadItems` — **ورسالةٌ تقول «صنفٌ غير صالح» عن صنفٍ صالحٍ تماماً.**
+//
+// **والحارسُ لم يسقط بل انتقل**: `SourcesOf` تفحص السقفَ قبل أن يُسعَّر شيء.
+func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderItem, int64, error) {
 	items := make([]OrderItem, 0, len(inputs))
 	var subtotal int64
 	rule := pricing.RuleFrom(ctx, s.settings)
@@ -383,12 +410,12 @@ func (s *Service) priceItems(ctx context.Context, merchantID string, inputs []It
 		var itemMargin, sectionMargin *int64
 		err := s.db.QueryRow(ctx, `
 			SELECT mi.id, mi.name, mi.merchant_price, mi.available,
-			       mi.margin_override, ps.margin_override
+			       mi.margin_override, ps.margin_override, mi.merchant_id::text
 			FROM menu_items mi
 			LEFT JOIN platform_sections ps ON ps.id = mi.platform_section_id
-			WHERE mi.id = $1 AND mi.merchant_id = $2`, in.MenuItemID, merchantID).
+			WHERE mi.id = $1`, in.MenuItemID).
 			Scan(&it.MenuItemID, &it.Name, &it.MerchantPrice, &available,
-				&itemMargin, &sectionMargin)
+				&itemMargin, &sectionMargin, &it.MerchantID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, 0, ErrBadItems
 		}
