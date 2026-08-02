@@ -73,6 +73,8 @@ const ALL_NAV: NavItem[] = [
     roles: ["admin", "finance"] },
   // البناء — الأدمن وحده يملك أزراره
   { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers, roles: ["admin"] },
+  // **أقسامُ المنصة قبل المتاجر** — الزبونُ يتصفّحها، والمتاجرُ خلفها.
+  { href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore, roles: ["admin"] },
   { href: "/dashboard/merchants", label: m.terms.merchants, icon: IconStore, roles: ["admin"] },
   { href: "/dashboard/zones", label: m.terms.zones, icon: IconZones, roles: ["admin"] },
   { href: "/dashboard/promos", label: m.terms.promos, icon: IconPromos, roles: ["admin"] },

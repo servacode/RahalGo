@@ -46,11 +46,20 @@ export interface MenuItem {
   price: number;
   /** **سعرُ الشراء** — ما يضعه المتجر وهو ما يقبضه. */
   merchant_price: number;
+  /** قسمُ المنصة — **وفراغُه يعني أن الصنفَ لا يظهر في التصفّح.** */
+  platform_section_id: string | null;
+  platform_section_name: string;
   image_url: string | null;
   image_thumb_url: string | null;
   available: boolean;
   modifiers: ModifierGroup[];
 }
+/** قسمُ منصةٍ كما تراه شاشةُ التحرير — الاسمُ وحدَه يلزم. */
+export interface PlatformSection {
+  id: string;
+  name: string;
+}
+
 export interface MenuSection {
   id: string;
   name: string;
@@ -97,9 +106,24 @@ export function MenuManager({
   thumb?: (url: string | null, alt: string) => ReactNode;
 }) {
   const [sections, setSections] = useState<MenuSection[]>([]);
+  /**
+   * أقسامُ المنصة — **ما يجعل الصنفَ مرئياً في التصفّح.**
+   *
+   * **وتُقرأ هنا مرّةً لا في كلّ نافذة**: تُفتح نافذةُ الصنف عشرَ مرّاتٍ في
+   * الجلسة، **وعشرةُ نداءاتٍ لقائمةٍ لا تتغيّر حملٌ بلا حاجة.**
+   */
+  const [platformSections, setPlatformSections] = useState<PlatformSection[]>([]);
   const [error, setError] = useState("");
   const [sectionName, setSectionName] = useState("");
   const [editing, setEditing] = useState<{ item: MenuItem | null; sectionId: string } | null>(null);
+
+  useEffect(() => {
+    api<{ sections: PlatformSection[] }>("/api/v1/admin/sections")
+      .then((r) => setPlatformSections(r.sections ?? []))
+      // **وتعذّرُها لا يمنع تحرير القائمة**: من لا يملك صلاحيةَ الأقسام
+      // (صاحبُ المتجر) يحرّر أصنافَه كما كان، **والتصنيفُ شأنُ الأدمن.**
+      .catch(() => undefined);
+  }, [api]);
 
   const load = useCallback(async () => {
     try {
@@ -283,6 +307,7 @@ export function MenuManager({
           paths={paths}
           merchantID={merchantID}
           sections={sections}
+          platformSections={platformSections}
           editing={editing}
           imageUpload={imageUpload}
           onClose={() => setEditing(null)}
@@ -301,6 +326,7 @@ function ItemModal({
   paths,
   merchantID,
   sections,
+  platformSections,
   editing,
   imageUpload,
   onClose,
@@ -310,6 +336,7 @@ function ItemModal({
   paths: MenuPaths;
   merchantID: string;
   sections: MenuSection[];
+  platformSections: PlatformSection[];
   editing: { item: MenuItem | null; sectionId: string };
   imageUpload?: (
     initialUrl: string | null | undefined,
@@ -327,6 +354,7 @@ function ItemModal({
   // فيرى ١٢٬٠٠٠ (وسعرُه ١٠٬٠٠٠)، **فيحفظ فيصير سعرُ شرائه اثني عشر** ويُضاف
   // عليه الهامشُ من جديد — **ورقمٌ يرتفع بكلّ فتحةٍ للنافذة.**
   const [price, setPrice] = useState(item ? String(item.merchant_price || item.price) : "");
+  const [psID, setPsID] = useState(item?.platform_section_id ?? "");
   const [sectionId, setSectionId] = useState(editing.sectionId);
   const [groups, setGroups] = useState<ModifierGroup[]>(
     item?.modifiers.map((g) => ({ ...g, options: [...g.options] })) ?? [],
@@ -358,6 +386,8 @@ function ItemModal({
       name,
       description,
       price: Number(price) || 0,
+      // **والفراغُ الصريح يرفع التصنيف** — يقرؤه الخادمُ «ارفع» لا «بلا تغيير».
+      platform_section_id: psID,
       modifiers: groups,
       ...(imageID !== null ? { image_media_id: imageID } : {}),
     };
@@ -416,6 +446,35 @@ function ItemModal({
             ))}
           </Select>
         </div>
+
+        {/* **وبلا قسمِ منصةٍ لا يظهر الصنفُ في التصفّح.**
+
+            الزبونُ يتصفّح أقساماً — شاورما، بيتزا — **وصنفٌ بلا قسمٍ صنفٌ لا
+            يراه أحد**: موجودٌ في القاعدة، قابلٌ للطلب برابطه، **ولا طريقَ
+            إليه.**
+
+            **والتنبيهُ عند الحقل لا في صفحةٍ أخرى**: من يضيف صنفاً يقرؤه في
+            اللحظة التي يملك فيها أن يصحّح. */}
+        {platformSections.length > 0 && (
+          <div>
+            <Select
+              id="i-psection"
+              label={L.platformSection}
+              value={psID}
+              onChange={(e) => setPsID(e.target.value)}
+            >
+              <option value="">{L.noPlatformSection}</option>
+              {platformSections.map((ps) => (
+                <option key={ps.id} value={ps.id}>
+                  {ps.name}
+                </option>
+              ))}
+            </Select>
+            {!psID && (
+              <p className="mt-1 text-2xs text-warning">{L.noPlatformSectionHint}</p>
+            )}
+          </div>
+        )}
         <Input
           id="i-desc"
           label={L.itemDescription}
