@@ -266,7 +266,7 @@ export function AccountSettings({
     <div className="grid gap-5 md:grid-cols-2">
       <Section title={A.photo} icon={<IconUser />}>
         <div className="flex items-center gap-4">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-primary-light text-2xl font-bold text-primary-dark">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-badge border border-line bg-primary-light text-2xl font-bold text-primary-dark">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt="" className="h-full w-full object-cover" />

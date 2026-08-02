@@ -117,7 +117,7 @@ function DailyBars({
         {/* محور الأيام */}
         <div className="mt-1 flex gap-0.5 border-t border-line pt-1" dir="ltr">
           {data.map((d) => (
-            <div key={d.day} className="flex-1 text-center text-[10px] text-ink-muted">
+            <div key={d.day} className="flex-1 text-center text-2xs text-ink-muted">
               {d.day.slice(8)}
             </div>
           ))}

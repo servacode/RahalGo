@@ -356,7 +356,7 @@ export function NotificationBell({
       <span className="sr-only">{N.title}</span>
       <IconBell size={19} />
       {unread > 0 && (
-        <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-badge bg-danger px-1 text-[10px] font-bold text-white">
+        <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-badge bg-danger px-1 text-2xs font-bold text-white">
           {unread > 9 ? "9+" : unread}
         </span>
       )}

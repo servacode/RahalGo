@@ -151,7 +151,7 @@ export function NotificationsPage({
             >
               {f.label}
               <span
-                className={`rounded-badge px-1.5 text-[11px] tabular-nums ${
+                className={`rounded-badge px-1.5 text-2xs tabular-nums ${
                   kind === f.id ? "bg-white/20" : "bg-page"
                 }`}
               >

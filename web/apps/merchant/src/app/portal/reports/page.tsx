@@ -132,7 +132,7 @@ export default function MerchantReportsPage() {
           </div>
           <div className="mt-1 flex gap-2 border-t border-line pt-1">
             {report.days.map((d) => (
-              <span key={d.date} className="flex-1 text-center text-[10px] text-ink-muted" dir="ltr">
+              <span key={d.date} className="flex-1 text-center text-2xs text-ink-muted" dir="ltr">
                 {d.date.slice(8)}
               </span>
             ))}

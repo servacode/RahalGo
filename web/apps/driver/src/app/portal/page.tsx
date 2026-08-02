@@ -176,7 +176,7 @@ export default function TasksPage() {
       <Card>
         <div className="flex items-center gap-3">
           <span
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-badge ${
               me.on_shift ? "bg-success/10 text-success" : "bg-page text-ink-muted"
             }`}
           >
@@ -211,9 +211,9 @@ export default function TasksPage() {
             {fmtNum(me.cash_held)} / {fmtNum(me.cash_limit)}
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-page">
+        <div className="h-2 overflow-hidden rounded-badge bg-page">
           <div
-            className={`h-full rounded-full ${
+            className={`h-full rounded-badge ${
               cashRatio >= 1 ? "bg-danger" : cashRatio >= 0.8 ? "bg-warning" : "bg-success"
             }`}
             style={{ width: `${Math.min(100, cashRatio * 100)}%` }}

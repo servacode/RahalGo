@@ -156,7 +156,7 @@ export function Avatar({
   return (
     <span
       style={{ width: size, height: size }}
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-sm font-bold text-primary-dark"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-badge bg-primary-light text-sm font-bold text-primary-dark"
     >
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element

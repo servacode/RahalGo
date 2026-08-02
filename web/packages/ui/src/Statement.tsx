@@ -180,7 +180,7 @@ export function StatementSheet({
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-start">
                 <thead>
-                  <tr className="border-b-2 border-ink/20 text-[11px] uppercase tracking-wide text-ink-muted">
+                  <tr className="border-b-2 border-ink/20 text-2xs uppercase tracking-wide text-ink-muted">
                     <th className="py-2 text-start font-medium">{S.colDate}</th>
                     <th className="py-2 text-start font-bold">{S.colKind}</th>
                     <th className="py-2 text-start font-bold">{S.colNote}</th>

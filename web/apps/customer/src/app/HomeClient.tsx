@@ -143,7 +143,7 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
             type="button"
             onClick={() => setQ("")}
             aria-label={m.common.cancel}
-            className="absolute inset-block-0 end-2 my-auto flex h-7 w-7 items-center justify-center rounded-full text-ink-muted hover:bg-page"
+            className="absolute inset-block-0 end-2 my-auto flex h-7 w-7 items-center justify-center rounded-badge text-ink-muted hover:bg-page"
           >
             <IconClose size={16} />
           </button>
@@ -229,7 +229,7 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                   onClick={() => toggleFav(mr.id)}
                   aria-label={favs.has(mr.id) ? m.site.favorites.remove : m.site.favorites.add}
                   title={favs.has(mr.id) ? m.site.favorites.remove : m.site.favorites.add}
-                  className="absolute top-2 end-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-surface/90 shadow-sm"
+                  className="absolute top-2 end-2 z-10 flex h-8 w-8 items-center justify-center rounded-badge bg-surface/90 shadow-sm"
                 >
                   <IconStar
                     size={17}

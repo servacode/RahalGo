@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from "react";
+import { IconList, IconGrid } from "./icons";
 
 export type ViewMode = "table" | "cards";
 
@@ -218,21 +219,15 @@ export function DataView<T>({
   );
 }
 
+// **الأيقونتان من المركز لا مرسومتين هنا.**
+//
+// كانتا `<svg>` بالحرف — وهما الوحيدتان في المشروع كلِّه. **وأيقونةٌ تُرسم في
+// مكوّنٍ تُرسم ثانيةً في غيره بخطٍّ مختلف**، فتفترق سماكتُها ومقاسُها عن
+// أخواتها ولا يلاحظ أحدٌ إلّا حين تُصفّ بجانبها.
 function TableIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
-    </svg>
-  );
+  return <IconList size={15} />;
 }
 
 function CardsIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <rect x="3" y="3" width="8" height="8" rx="1.5" />
-      <rect x="13" y="3" width="8" height="8" rx="1.5" />
-      <rect x="3" y="13" width="8" height="8" rx="1.5" />
-      <rect x="13" y="13" width="8" height="8" rx="1.5" />
-    </svg>
-  );
+  return <IconGrid size={15} />;
 }

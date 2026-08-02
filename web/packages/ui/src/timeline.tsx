@@ -119,7 +119,7 @@ export function Timeline({
                 />
               )}
               <span
-                className={`relative z-10 mt-1.5 flex h-7 w-7 items-center justify-center rounded-badge text-[11px] font-bold transition-colors ${
+                className={`relative z-10 mt-1.5 flex h-7 w-7 items-center justify-center rounded-badge text-2xs font-bold transition-colors ${
                   n.state === "done"
                     ? TONE_SOLID[tone]
                     : n.state === "current"

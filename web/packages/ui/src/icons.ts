@@ -43,6 +43,11 @@ export {
   EyeOff as IconViewOff,
   LocateFixed as IconLocateMe,
   Scale as IconBalance,
+  // **قائمةٌ وشبكة** — كانتا مرسومتين بالحرف داخل `dataview.tsx`.
+  // **وأيقونةٌ تُرسم في مكوّنٍ تُرسم ثانيةً في غيره بخطٍّ مختلف** — فتفترق
+  // سماكتُها ومقاسُها ولا يلاحظ أحد.
+  List as IconList,
+  LayoutGrid as IconGrid,
   Bell as IconBell,
   ChevronDown as IconChevronDown,
   Link2 as IconLink,

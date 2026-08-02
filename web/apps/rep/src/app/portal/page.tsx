@@ -70,7 +70,7 @@ export default function OverviewPage() {
       <section className="rounded-card bg-primary p-6 text-center text-white">
         {!me.whatsapp_verified ? (
           <>
-            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/15">
+            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-white/15">
               <IconLock size={22} />
             </span>
             <p className="text-lg font-bold">{m.rep.lockedTitle}</p>

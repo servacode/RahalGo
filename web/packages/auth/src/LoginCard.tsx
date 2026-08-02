@@ -409,11 +409,11 @@ export function LoginCard({
     <div className="relative flex flex-1 items-center justify-center overflow-hidden p-3 sm:p-6">
       {/* خلفية العلامة: تدرّج ناعم وهالتان تعطيان عمقاً بلا ضجيج */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-primary-light/60 via-page to-page" />
-      <div className="pointer-events-none absolute -top-32 start-1/4 -z-10 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 end-1/4 -z-10 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
+      <div className="pointer-events-none absolute -top-32 start-1/4 -z-10 h-80 w-80 rounded-badge bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 end-1/4 -z-10 h-80 w-80 rounded-badge bg-accent/10 blur-3xl" />
 
       <div className="w-full max-w-5xl">
-        <div className="grid overflow-hidden rounded-card border border-line/70 bg-surface shadow-[0_1px_3px_rgba(16,24,40,.04),0_24px_64px_-32px_rgba(16,24,40,.28)] lg:grid-cols-[1.05fr_1fr]">
+        <div className="grid overflow-hidden rounded-card border border-line/70 bg-surface shadow-card lg:grid-cols-[1.05fr_1fr]">
           {/* ---------- جانب العلامة ---------- */}
           <aside className="relative overflow-hidden bg-gradient-to-br from-primary-dark via-primary to-primary-dark p-6 text-white sm:p-8 lg:p-10">
             {/* موجة الفرات — رمز العلامة (BRAND.md): النهر يعبر الصحراء */}
@@ -427,7 +427,7 @@ export function LoginCard({
               <path d="M-20 240 C 90 185, 150 280, 250 220 S 390 165, 440 200" fill="none" stroke="currentColor" strokeWidth="1.5" />
               <path d="M-20 180 C 70 120, 130 215, 230 155 S 370 100, 440 140" fill="none" stroke="currentColor" strokeWidth="1" />
             </svg>
-            <div className="pointer-events-none absolute -end-16 -top-16 h-56 w-56 rounded-full bg-accent/20 blur-3xl" />
+            <div className="pointer-events-none absolute -end-16 -top-16 h-56 w-56 rounded-badge bg-accent/20 blur-3xl" />
 
             <div className="relative flex h-full flex-col">
               <div className="flex items-center gap-3">

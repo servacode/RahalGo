@@ -114,7 +114,7 @@ export function Invoice({
               <thead>
                 {/* **رأسٌ يُميَّز بحدٍّ لا بلونٍ**: الألوانُ لا تُطبع، ورأسُ
                     جدولٍ يذوب في صفوفه يجعل العمودَ الأوّل يُقرأ مبلغاً. */}
-                <tr className="border-b-2 border-ink/20 text-[11px] uppercase tracking-wide text-ink-muted">
+                <tr className="border-b-2 border-ink/20 text-2xs uppercase tracking-wide text-ink-muted">
                   <th className="py-2 text-start font-bold">{V.colItem}</th>
                   <th className="w-16 py-2 text-end font-bold">{V.colQty}</th>
                   <th className="w-24 py-2 text-end font-bold">{V.colUnit}</th>
@@ -197,7 +197,7 @@ export function Invoice({
                 {fmtNum(net)} {m.common.currency}
               </dd>
             </div>
-            <p className="pt-1 text-[11px] leading-relaxed text-ink-muted">{V.settlementHint}</p>
+            <p className="pt-1 text-2xs leading-relaxed text-ink-muted">{V.settlementHint}</p>
           </dl>
         )}
 

@@ -329,7 +329,7 @@ export function TabCards({
               </span>
               {!!t.count && (
                 <span
-                  className={`shrink-0 rounded-badge px-1.5 py-0.5 text-[11px] font-bold ${
+                  className={`shrink-0 rounded-badge px-1.5 py-0.5 text-2xs font-bold ${
                     on ? "bg-primary/15 text-primary-dark" : "bg-page text-ink-muted"
                   }`}
                 >
@@ -457,7 +457,7 @@ export function EntityCard({
               >
                 {st.value}
               </p>
-              <p className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-ink-muted">
+              <p className="mt-0.5 flex items-center justify-center gap-1 text-2xs text-ink-muted">
                 {st.icon && (
                   <span className="shrink-0 [&>svg]:h-3.5 [&>svg]:w-3.5">{st.icon}</span>
                 )}
@@ -469,7 +469,7 @@ export function EntityCard({
       )}
 
       {footer && (
-        <p className="mt-3 border-t border-line pt-2.5 text-[11px] leading-relaxed text-ink-muted">
+        <p className="mt-3 border-t border-line pt-2.5 text-2xs leading-relaxed text-ink-muted">
           {footer}
         </p>
       )}
