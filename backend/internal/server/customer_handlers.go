@@ -14,15 +14,12 @@ import (
 // واجهة الزبون: نقاط عامة للتصفح (بلا حساب) ونقاط الطلب/التتبع/المحفظة
 // بحساب الزبون — الطلب حصراً من هنا (قرار 18).
 
-// openNowSQL: المتجر يستقبل الآن؟ فعال + غير مغلق طارئاً + ضمن دوام اليوم
-// (بتوقيت سوريا) — ولا صفوف دوام تعني مفتوحاً دائماً.
-const openNowSQL = `(m.status = 'active' AND NOT m.emergency_closed AND (
-	NOT EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id
-	            AND h.day_of_week = EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Damascus'))::int)
-	OR EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id
-	           AND h.day_of_week = EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Damascus'))::int
-	           AND NOT h.closed
-	           AND (now() AT TIME ZONE 'Asia/Damascus')::time BETWEEN h.open_time AND h.close_time)))`
+// openNowSQL: المتجر يستقبل الآن؟
+//
+// **والنصُّ في `orders` لا هنا** — لأن إنشاءَ الطلب يفحصه أيضاً، **ونصّان
+// لمعنًى واحد يفترقان**: يُصلَح أحدُهما ويبقى الآخر، فيقول العرضُ «مغلق»
+// ويقبل الإنشاءُ الطلب.
+const openNowSQL = orders.OpenNowSQL
 
 type publicMerchant struct {
 	ID           string  `json:"id"`

@@ -581,6 +581,15 @@ function HoursModal({
                 onChange={(e) => updateDay(i, { close_time: e.target.value })}
                 className="rounded-control border border-line px-2 py-1 disabled:opacity-40"
               />
+              {/* **دوامٌ يعبر منتصفَ الليل مقبولٌ ومُعلَن.**
+
+                  ساعةُ إغلاقٍ أصغرُ من ساعة الفتح تعني «إلى ما بعد منتصف
+                  الليل» — **ومطاعمُ الشاورما في الرقّة تعمل هكذا.** وبلا
+                  هذه الكلمة يظنّها من يضبطها خطأً فيتراجع، **أو يضبطها
+                  ولا يثق أنّها فُهمت.** */}
+              {!d.closed && d.close_time <= d.open_time && (
+                <span className="text-2xs text-ink-muted">{m.admin.hours.overnight}</span>
+              )}
             </div>
           ))}
         </div>

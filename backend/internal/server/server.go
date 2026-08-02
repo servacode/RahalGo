@@ -228,6 +228,9 @@ func (s *Server) Router() http.Handler {
 			r.Use(s.RequireAuth)
 			r.Use(s.RequireRoles("merchant"))
 			r.Get("/stores", s.handleMerchantStores)
+			// **ومن أُنذر يرى إنذارَه.** إشعارٌ يمرّ في الشريط يُقرأ مرّةً
+			// ويُنسى، **ثمّ يُحظر المتجرُ ولم يعلم أنّ عليه شيئاً.**
+			r.Get("/warnings", s.handleMerchantWarnings)
 			r.Get("/stores/{id}/orders", s.handleMerchantOrders)
 			r.Get("/stores/{id}/menu", s.handleMerchantMenu)
 			r.Get("/stores/{id}/reports", s.handleMerchantReports)
@@ -271,6 +274,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/merchants", s.handleListMerchants)
 			r.Get("/merchants/{id}/menu", s.handleGetMenu)
 			r.Get("/merchants/{id}/hours", s.handleGetHours)
+			r.Get("/merchants/{id}/warnings", s.handleAdminMerchantWarnings)
 			r.Get("/zones", s.handleListZones)
 			r.Get("/promos", s.handleListPromos)
 			r.Get("/banners", s.handleListBanners)
@@ -352,6 +356,7 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
 				// **الحظرُ والعفو** — merchant_violations.go
 				r.Get("/merchants/{id}/violations", s.handleMerchantViolations)
+				r.Post("/merchants/{id}/warnings", s.handleIssueWarning)
 				r.Post("/merchants/{id}/suspend", s.handleSuspendMerchant)
 				r.Post("/merchants/{id}/clear-violations", s.handleClearViolations)
 				r.Post("/merchants/{id}/menu/sections", s.handleCreateSection)

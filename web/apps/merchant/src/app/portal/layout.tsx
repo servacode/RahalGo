@@ -14,7 +14,6 @@ import {
   IconOrder,
   IconStore,
   IconStatus,
-  IconStar,
   IconSupport,
   IconUser,
   IconWallet,
@@ -31,7 +30,8 @@ const NAV: ChromeNavItem[] = [
   { href: "/portal", label: m.terms.orders, icon: IconOrder },
   { href: "/portal/menu", label: m.terms.menu, icon: IconStore },
   { href: "/portal/reports", label: m.terms.reports, icon: IconStatus },
-  { href: "/portal/reviews", label: m.terms.ratings, icon: IconStar },
+  // **الصفحةُ صارت إنذارات لا تقييمات** — والمتجرُ لم يعد له نجوم.
+  { href: "/portal/reviews", label: m.terms.warnings, icon: IconWarning },
   { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
   { href: "/portal/wallet", label: m.terms.wallet, icon: IconWallet },
   { href: "/portal/account", label: m.terms.account, icon: IconUser },

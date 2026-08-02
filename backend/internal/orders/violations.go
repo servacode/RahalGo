@@ -39,18 +39,34 @@ func (s *Service) MerchantViolations(ctx context.Context, q wallet.Querier, merc
 			days = v
 		}
 	}
+	// **وما أفشله بامتناعه يُعدّ كما يُعدّ ما ألغاه بيده.**
+	//
+	// كان الشرطُ `ended_by = 'merchant'` وحدَه — **فمن أغلق بابَه والسائقُ
+	// عنده لم يُحسب عليه شيء**: الطلبُ ينتهي `failed` وينهيه السائقُ لا
+	// المتجر، **فـ`ended_by` تقول «السائق» والذنبُ للمتجر.**
+	//
+	// **وهو أسوأُ من الإلغاء لا أهون**: في الإلغاء يعرف الزبونُ باكراً، وفي
+	// الامتناع يكون السائقُ قد قاد والزبونُ قد انتظر — **ثمّ لا شيء.**
+	//
+	// و`fault` هو الفاصل: يُكتب من قائمة الأسباب لا من تقدير أحد.
 	var n int
 	err := q.QueryRow(ctx, `
 		SELECT count(*)
 		FROM orders o
 		JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.merchant_id = $1
-		  AND o.ended_by = 'merchant'
-		  AND o.status IN ('rejected', 'cancelled')
+		  AND ((o.ended_by = 'merchant' AND o.status IN ('rejected', 'cancelled'))
+		       OR (o.status = 'failed' AND o.fault = 'merchant'))
 		  AND o.closed_at > now() - make_interval(days => $2::int)
 		  AND (m.violations_cleared_at IS NULL OR o.closed_at > m.violations_cleared_at)`,
 		merchantID, days).Scan(&n)
-	return n, err
+	if err != nil {
+		return 0, err
+	}
+	// **والإنذارُ اليدويُّ يُضاف** — متجرٌ رفع أسعارَه عن المتّفق أو أساء إلى
+	// سائق **لا طلبَ يشهد عليه**، ومن لا يُعدّ إنذارُه لا يبلغ حدّاً أبداً.
+	manual, err := s.ManualWarnings(ctx, q, merchantID)
+	return n + manual, err
 }
 
 // enforceMerchantViolations يُحظر المتجرَ إن تجاوز العتبةَ والوضعُ آليّ.

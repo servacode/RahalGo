@@ -151,19 +151,26 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		customerID = u.ID
 	}
 
-	// المتجر فعّال وغير مغلق طارئاً
-	var merchantActive bool
-	var emergencyClosed bool
+	// **المتجرُ يستقبل الآن — دوامُه لا حالتُه وحدَها.**
+	//
+	// كان الفحصُ «فعّالٌ وغيرُ مغلقٍ طارئاً» ولا ينظر في الدوام أصلاً. **فمن
+	// فتح الصفحةَ قبل الإغلاق بدقيقة، أو تركها مفتوحةً ساعةً، يطلب من متجرٍ
+	// مغلق** — فيصل الطلبُ ولا أحدَ يحضّره، ويبقى معلّقاً حتى تنتبه العمليات.
+	//
+	// **والشاشةُ كانت تعرف وتُخفيه**: `open_now` محسوبةٌ في كل صفحةٍ منذ
+	// البداية، **ولا يفحصها إلّا العرض.** وحارسٌ في الشاشة وحدَها ليس حارساً:
+	// كلُّ من يعرف النقطةَ يتجاوزه، **وكلُّ صفحةٍ قديمةٍ تتجاوزه بلا قصد.**
+	var openNow bool
 	err := s.db.QueryRow(ctx,
-		`SELECT status = 'active', emergency_closed FROM merchants WHERE id = $1`,
-		in.MerchantID).Scan(&merchantActive, &emergencyClosed)
+		`SELECT `+OpenNowSQL+` FROM merchants m WHERE m.id = $1`,
+		in.MerchantID).Scan(&openNow)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	if !merchantActive || emergencyClosed {
+	if !openNow {
 		return nil, ErrMerchantClosed
 	}
 

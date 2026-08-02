@@ -30,7 +30,9 @@ var notifTitles = struct {
 	storeClosed, storeReopened, cashSettled, roleGranted, roleRevoked        string
 	leadRejected, commissionEarned, passwordReset, sessionsRevoked           string
 	payoutRequested, payoutPaid, payoutRejected                              string
+	warningIssued                                                            string
 }{
+	warningIssued:    "إنذارٌ على متجرك",
 	walletCredit:     "إيداع في محفظتك",
 	walletDebit:      "خصم من محفظتك",
 	ratingNew:        "تقييم جديد على خدمتك",

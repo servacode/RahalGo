@@ -24,7 +24,7 @@ var t = struct {
 	rejected, cancelled, failed, refunded    string
 	merchantDelivered, commission            string
 	violationsWarn, violationsBanned         string
-	endedOps                                 string
+	endedOps, warningIssued                  string
 }{
 	newOrderMerchant:  "طلب جديد وصلك",
 	newOrderOps:       "طلب جديد في المنصة",
@@ -41,6 +41,7 @@ var t = struct {
 	violationsWarn:    "متجرٌ بلغ حدّ المخالفات",
 	violationsBanned:  "حُظر متجرٌ لكثرة الإلغاء",
 	endedOps:          "انتهى طلبٌ قبل تسليمه",
+	warningIssued:     "إنذارٌ على متجرك",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.

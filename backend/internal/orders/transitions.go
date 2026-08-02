@@ -225,6 +225,14 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 		s.enforceMerchantViolations(ctx, orderID)
 	}
 
+	// **وامتناعُ المتجر يُنذَر كما يُنذَر إلغاؤه.**
+	//
+	// كان الفشلُ بذنبه يمرّ بلا أثر: إشعارٌ يُقرأ ويُنسى، **ولا عدٌّ ولا سجلّ.**
+	// فمن أغلق بابَه عشر مرّاتٍ والسائقُ عنده بقي بلا مخالفةٍ واحدة.
+	if to == StFailed && failReason != "" {
+		s.warnMerchantOnFault(ctx, orderID, FaultOf(failReason), failReason)
+	}
+
 	// **الإنزال التلقائيّ إلى طابور السائقين.**
 	//
 	// **خارج المعاملة عمداً، وبعد بثّ الأوّل وإشعاره**: هو انتقالٌ ثانٍ قائمٌ
