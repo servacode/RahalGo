@@ -267,10 +267,28 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 	}
 	toEnd := to.AddDate(0, 0, 1)
 
+	// **المبيعاتُ تُقاس بخروج البضاعة لا بوصولها.**
+	//
+	// كان الشرطُ `status = 'delivered'` — **وهو منطقُ زمنٍ انقضى**: المتجرُ
+	// صار يقبض لحظةَ خروج بضاعته من يده، **فطلبٌ استُلم منه ثمّ تعذّر تسليمُه
+	// مالُه في محفظته وتقريرُه يقول لم يبع شيئاً.**
+	//
+	// **ورقمان يختلفان لمعنًى واحد أسوأُ من رقمٍ ناقص**: صاحبُ المتجر يرى
+	// رصيدَه أكبرَ من مبيعاته فيظنّ خطأً في أحدهما، **ولا يعرف أيَّهما
+	// يصدّق.**
+	//
+	// **والمرتجعُ يُطرح**: بضاعةٌ عادت إليه وردّ ثمنَها لم تُبَع.
+	//
+	// و`picked_up_at` هي الفاصل — **لحظةُ خروج البضاعة**، مكتوبةٌ في الطلب
+	// لحظةَ وقوعها لا مستنتَجةٌ من حالةٍ نهائية.
 	var summary struct {
-		Orders     int   `json:"orders"`
-		Delivered  int   `json:"delivered"`
-		Cancelled  int   `json:"cancelled"`
+		Orders    int `json:"orders"`
+		Delivered int `json:"delivered"`
+		Cancelled int `json:"cancelled"`
+		// Sold ما خرج من يده — **وهو ما قبض عليه**.
+		Sold int `json:"sold"`
+		// Returned ما عاد إليه فرُدّ ثمنُه.
+		Returned   int   `json:"returned"`
 		Sales      int64 `json:"sales"`
 		Commission int64 `json:"platform_commission"`
 	}
@@ -278,18 +296,23 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		SELECT count(*),
 		       count(*) FILTER (WHERE status = 'delivered'),
 		       count(*) FILTER (WHERE status IN ('cancelled','rejected','failed')),
-		       COALESCE(sum(subtotal) FILTER (WHERE status = 'delivered'), 0),
-		       COALESCE(sum(platform_commission) FILTER (WHERE status = 'delivered'), 0)
+		       count(*) FILTER (WHERE picked_up_at IS NOT NULL AND returned_at IS NULL),
+		       count(*) FILTER (WHERE returned_at IS NOT NULL),
+		       COALESCE(sum(subtotal) FILTER (WHERE picked_up_at IS NOT NULL
+		                                        AND returned_at IS NULL), 0),
+		       COALESCE(sum(platform_commission) FILTER (WHERE picked_up_at IS NOT NULL
+		                                                  AND returned_at IS NULL), 0)
 		FROM orders
 		WHERE merchant_id = $1 AND created_at >= $2 AND created_at < $3`,
 		merchantID, from, toEnd).
 		Scan(&summary.Orders, &summary.Delivered, &summary.Cancelled,
-			&summary.Sales, &summary.Commission)
+			&summary.Sold, &summary.Returned, &summary.Sales, &summary.Commission)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 
+	// **والرسمُ البيانيّ بالمقياس نفسِه** — وإلّا لَخالف مجموعُه ملخّصَه فوقه.
 	type day struct {
 		Date      string `json:"date"`
 		Orders    int    `json:"orders"`
@@ -303,7 +326,8 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN (
 			SELECT created_at::date AS day, count(*) AS orders,
 			       count(*) FILTER (WHERE status = 'delivered') AS delivered,
-			       COALESCE(sum(subtotal) FILTER (WHERE status = 'delivered'), 0) AS sales
+			       COALESCE(sum(subtotal) FILTER (WHERE picked_up_at IS NOT NULL
+			                                        AND returned_at IS NULL), 0) AS sales
 			FROM orders WHERE merchant_id = $1 AND created_at >= $2 AND created_at < $4
 			GROUP BY 1
 		) o ON o.day = d::date`,

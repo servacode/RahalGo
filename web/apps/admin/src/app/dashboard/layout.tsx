@@ -56,6 +56,12 @@ const ALL_NAV: NavItem[] = [
   // المال — الأدمن والمالية. والعمليات ليست طرفاً فيه.
   { href: "/dashboard/commissions", label: m.terms.commissions, icon: IconBalance,
     roles: ["admin", "finance"] },
+  // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
+  { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
+    roles: ["admin", "finance", "ops"] },
+  // **الخسارةُ الفعلية** — لا الافتراضية التي لم تُدفع.
+  { href: "/dashboard/losses", label: m.admin.nav.losses, icon: IconBalance,
+    roles: ["admin", "finance"] },
   { href: "/dashboard/payouts", label: m.shared.payout.title, icon: IconWallet,
     roles: ["admin", "finance"] },
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconStatus,

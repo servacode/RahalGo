@@ -15,6 +15,10 @@ interface Report {
     orders: number;
     delivered: number;
     cancelled: number;
+    /** ما خرج من يده — **وهو ما قبض عليه**. */
+    sold: number;
+    /** ما عاد إليه فرُدّ ثمنُه. */
+    returned: number;
     sales: number;
     platform_commission: number;
   };
@@ -66,6 +70,22 @@ export default function MerchantReportsPage() {
           label: m.merchant.reports.cancelled,
           value: fmtNum(s.cancelled),
           icon: <IconError className="text-danger" />,
+        },
+        // **ما خرج من يده هو ما قبض عليه** — لا ما وصل الزبون.
+        //
+        // كان الرقمُ يُحسب على `delivered`، **فطلبٌ استُلم منه ثمّ تعذّر
+        // تسليمُه مالُه في محفظته وتقريرُه يقول لم يبع شيئاً.** ورقمان
+        // يختلفان لمعنًى واحد أسوأُ من رقمٍ ناقص: **يرى رصيدَه أكبرَ من
+        // مبيعاته فلا يعرف أيَّهما يصدّق.**
+        {
+          label: m.merchant.reports.sold,
+          value: fmtNum(s.sold),
+          icon: <IconSuccess className="text-success" />,
+        },
+        {
+          label: m.merchant.reports.returned,
+          value: fmtNum(s.returned),
+          icon: <IconError className="text-warning" />,
         },
         {
           label: `${m.merchant.reports.sales} (${m.common.currency})`,

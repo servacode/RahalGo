@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -93,9 +94,20 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// نقود تنتقل من يد إلى يد: صاحبها يعرف، وشاشة الصناديق تتحدّث لحظياً.
+	//
+	// **والإشعارُ يقول المبلغَ والباقي.**
+	//
+	// كان نصُّه `req.Note` وحدَه — **والملاحظةُ اختيارية**، فإن تُركت فارغةً
+	// وصل السائقَ «سُلّم صندوقك» بلا رقم. **وخبرُ مالٍ لا يقول كم مالٌ خبرٌ
+	// يجب أن يُتحقّق منه في مكانٍ آخر** — فلا يُغني عن السؤال الذي وُضع
+	// ليمنعه، **ويترك بابَ الخلاف مفتوحاً: «سلّمتُ خمسين» «بل أربعين».**
+	body := fmt.Sprintf("%d — والباقي بذمّتك %d", req.Amount, held)
+	if req.Note != "" {
+		body += " · " + req.Note
+	}
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: driverID, Kind: notifications.KindWallet,
-		Title: notifTitles.cashSettled, Body: req.Note,
+		Title: notifTitles.cashSettled, Body: body,
 		Entity: "cashbox", Href: "/",
 	})
 	s.touch("wallet", "ops")

@@ -340,6 +340,10 @@ func (s *Server) Router() http.Handler {
 			// السائقون والصندوق النقدي
 			r.Get("/drivers", s.handleListDrivers)
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
+			// **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
+			r.Get("/cash/outstanding", s.handleCashOutstanding)
+			// **الخسارةُ الفعلية من الدفتر** — لا من إعادة حسابٍ لما حُسب.
+			r.Get("/reports/losses", s.handlePlatformLosses)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/drivers/{id}/settle", s.handleDriverSettle)
 			r.Group(func(r chi.Router) {
