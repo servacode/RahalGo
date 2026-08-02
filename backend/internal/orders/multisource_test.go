@@ -145,3 +145,80 @@ func TestSources_CapEnforced(t *testing.T) {
 		t.Errorf("عددُ المصادر = %d، والمتوقّع 3", len(src.IDs))
 	}
 }
+
+// TestTwoSources_RefundReversesEach الاستردادُ يعكس لكلِّ مطبخٍ ما قُيّد له هو.
+//
+// # الخللُ الذي كشفته التجربةُ الحيّة (طلب #1009)
+//
+// كان العكسُ يجمع قيودَ `merchant_earning` كلَّها ثمّ **يخصم المجموعَ من صاحب
+// المحطّة الأولى وحدَه.** ففي طلبٍ من مطبخين:
+//
+//	الأوّل  :  قبض ٤٣٬٢٠٠  ثمّ خُصم منه ٥٠٬٨٠٠  →  **رصيدٌ سالبٌ بما لم يقبض**
+//	الثاني  :  قبض  ٧٬٦٠٠  ولم يُعكس عنه شيء   →  **مالٌ على طلبٍ مُسترَدّ**
+//
+// **وهي علّةُ التسوية الأمامية نفسُها في مرآتها**: أُصلحت هناك ونُسيت هنا.
+//
+// **ولم يكشفها اختبار**: كلُّ اختبارات الاسترداد كانت بمصدرٍ واحد، **والمصدرُ
+// الواحد يُخفي الخلل تماماً** — المجموعُ هو نصيبُه.
+func TestTwoSources_RefundReversesEach(t *testing.T) {
+	f := setup(t, "at_pickup", 100_000, 10_000, 0)
+	ctx := context.Background()
+	owner, _ := f.armTreasury(t)
+
+	var categoryID string
+	if err := f.pool.QueryRow(ctx, `SELECT id FROM categories LIMIT 1`).Scan(&categoryID); err != nil {
+		t.Fatalf("لا تصنيفات: %v", err)
+	}
+	owner2 := testdb.NewUser(t, f.pool, "merchant")
+	var merchant2 string
+	if err := f.pool.QueryRow(ctx, `
+		INSERT INTO merchants (name, category_id, commission_percent, owner_user_id)
+		VALUES ('المصدرُ الثاني للاسترداد', $1, 10, $2) RETURNING id`, categoryID, owner2).
+		Scan(&merchant2); err != nil {
+		t.Fatalf("تعذّر إنشاء متجر ثانٍ: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM merchants WHERE id = $1`, merchant2)
+	})
+
+	if _, err := f.pool.Exec(ctx, `DELETE FROM order_items WHERE order_id = $1`, f.orderID); err != nil {
+		t.Fatalf("تعذّر مسح البنود: %v", err)
+	}
+	for _, b := range []struct {
+		merchant string
+		cost     int64
+	}{{f.merchantID, 60_000}, {merchant2, 40_000}} {
+		if _, err := f.pool.Exec(ctx, `
+			INSERT INTO order_items (order_id, merchant_id, name, unit_price, merchant_price, qty, options)
+			VALUES ($1, $2, 'صنف', $3, $3, 1, '[]'::jsonb)`,
+			f.orderID, b.merchant, b.cost); err != nil {
+			t.Fatalf("تعذّر إنشاء بند: %v", err)
+		}
+	}
+
+	for _, st := range []string{"picked_up", "on_the_way", "at_dropoff", "delivered"} {
+		if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"},
+			f.orderID, st, ""); err != nil {
+			t.Fatalf("%s فشل: %v", st, err)
+		}
+	}
+	if got := f.balance(t, owner); got != 54_000 {
+		t.Fatalf("مستحقّ الأوّل قبل الاسترداد = %d، والمتوقّع 54000", got)
+	}
+	if got := f.balance(t, owner2); got != 36_000 {
+		t.Fatalf("مستحقّ الثاني قبل الاسترداد = %d، والمتوقّع 36000", got)
+	}
+
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"admin"},
+		f.orderID, "refunded", "تجربة"); err != nil {
+		t.Fatalf("الاسترداد فشل: %v", err)
+	}
+
+	// **وكلٌّ يعود إلى صفره** — لا الأوّلُ يهبط تحته ولا الثاني يبقى فوقه.
+	if got := f.balance(t, owner); got != 0 {
+		t.Errorf("المصدر الأوّل بعد الاسترداد = %d، والمتوقّع 0 — **خُصم منه ما لم يقبض**", got)
+	}
+	if got := f.balance(t, owner2); got != 0 {
+		t.Errorf("المصدر الثاني بعد الاسترداد = %d، والمتوقّع 0 — **بقي بمالِ طلبٍ مُسترَدّ**", got)
+	}
+}

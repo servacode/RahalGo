@@ -684,18 +684,48 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 	// فرقٌ في محفظته بلا سبب.
 	//
 	// **والدفترُ يقول كم دُفع** — ولا يحتاج أن يُسأل مرّتين.
-	if ownerID != nil {
-		var paid int64
-		if err := q.QueryRow(ctx, `
-			SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
-			WHERE ref = $1 AND kind = 'merchant_earning'`, orderID).Scan(&paid); err != nil {
+	// **ولكلِّ مطبخٍ عكسُه هو — لا مجموعُهما على واحد.**
+	//
+	// كشفته التجربةُ الحيّة (طلب #1009): كان يجمع قيودَ `merchant_earning`
+	// كلَّها ثمّ **يخصم المجموعَ من صاحب المحطّة الأولى وحدَه**. ففي طلبٍ من
+	// مطبخين قبض الأوّلُ ٤٣٬٢٠٠ **وخُصم منه ٥٠٬٨٠٠** — فصار رصيدُه سالباً
+	// بسبعة آلافٍ لم يقبضها قطّ، **والثاني احتفظ بماله كاملاً على طلبٍ
+	// مُسترَدّ.**
+	//
+	// **وهي علّةُ التسوية الأمامية نفسُها في مرآتها**: أُصلحت هناك ونُسيت هنا.
+	// **والقيدُ يُعكس إلى المحفظة التي خرج منها**، لا إلى محفظةٍ يُظنّ أنها
+	// صاحبتُه.
+	mrows, err := q.Query(ctx, `
+		SELECT user_id::text, sum(amount) FROM wallet_transactions
+		WHERE ref = $1 AND kind = 'merchant_earning'
+		GROUP BY user_id`, orderID)
+	if err != nil {
+		return err
+	}
+	type paidTo struct {
+		userID string
+		amount int64
+	}
+	paidList := []paidTo{}
+	for mrows.Next() {
+		var x paidTo
+		if err := mrows.Scan(&x.userID, &x.amount); err != nil {
+			mrows.Close()
 			return err
 		}
-		if paid > 0 {
-			if _, err := s.wallet.ApplyTx(ctx, q, *ownerID, -paid, "adjustment",
-				orderID, "عكس مستحقّ متجر — طلب مُسترجَع", &actorID); err != nil {
-				return err
-			}
+		paidList = append(paidList, x)
+	}
+	mrows.Close()
+	if err := mrows.Err(); err != nil {
+		return err
+	}
+	for _, p := range paidList {
+		if p.amount <= 0 {
+			continue
+		}
+		if _, err := s.wallet.ApplyTx(ctx, q, p.userID, -p.amount, "adjustment",
+			orderID, "عكس مستحقّ متجر — طلب مُسترجَع", &actorID); err != nil {
+			return err
 		}
 	}
 

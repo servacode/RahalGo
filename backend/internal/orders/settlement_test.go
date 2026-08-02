@@ -294,8 +294,8 @@ func TestCreate_WalletChargeFailure_LeavesNoOrder(t *testing.T) {
 		t.Fatalf("تعذّر إنشاء قسم: %v", err)
 	}
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO menu_items (merchant_id, section_id, name, price, available)
-		VALUES ($1, $2, 'صنف', 20000, true) RETURNING id`,
+		INSERT INTO menu_items (merchant_id, section_id, name, merchant_price, price, available)
+		VALUES ($1, $2, 'صنف', 20000, 20000, true) RETURNING id`,
 		f.merchantID, sectionID).Scan(&itemID); err != nil {
 		t.Fatalf("تعذّر إنشاء صنف: %v", err)
 	}
@@ -362,8 +362,8 @@ func TestCreate_RequiresWhatsAppVerified(t *testing.T) {
 		t.Fatalf("قسم: %v", err)
 	}
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO menu_items (merchant_id, section_id, name, price, available)
-		VALUES ($1, $2, 'صنف', 20000, true) RETURNING id`,
+		INSERT INTO menu_items (merchant_id, section_id, name, merchant_price, price, available)
+		VALUES ($1, $2, 'صنف', 20000, 20000, true) RETURNING id`,
 		f.merchantID, sectionID).Scan(&itemID); err != nil {
 		t.Fatalf("صنف: %v", err)
 	}

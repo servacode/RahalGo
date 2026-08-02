@@ -425,9 +425,14 @@ func seedStore(ctx context.Context, tx pgx.Tx) {
 				continue // موجودٌ سلفاً — لا نُكرّر خياراته
 			}
 			if err := tx.QueryRow(ctx, `
+			// **السعران معاً.**
+			//
+			// سعرُ الشراء هو ما يقبضه المتجر، **وسعرُ البيع يُحسب من الهامش عند
+			// العرض** — فالعمودُ المخزَّن لا يُقرأ في مسارٍ يراه زبون. وتُزرع
+			// بالسعر نفسِه: **هامشُ الزراعة صفرٌ حتى يضعه المالك.**
 				INSERT INTO menu_items (merchant_id, section_id, name, description,
-				                        price, available, sort_order)
-				VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+				                        merchant_price, price, available, sort_order)
+				VALUES ($1, $2, $3, $4, $5, $5, $6, $7) RETURNING id`,
 				mid, secID, it.Name, it.Desc, it.Price, !it.Unavailable, ii+1).Scan(&itemID); err != nil {
 				log.Fatalf("item %s: %v", it.Name, err)
 			}

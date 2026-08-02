@@ -342,8 +342,9 @@ func seedMerchant(ctx context.Context, tx pgx.Tx, m merchantSeed) {
 				`SELECT id FROM menu_items WHERE merchant_id = $1 AND name = $2`, id, it.Name).Scan(&itemID)
 			if err == pgx.ErrNoRows {
 				err = tx.QueryRow(ctx, `
-					INSERT INTO menu_items (merchant_id, section_id, name, description, price, sort_order)
-					VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+					INSERT INTO menu_items (merchant_id, section_id, name, description,
+					                        merchant_price, price, sort_order)
+					VALUES ($1, $2, $3, $4, $5, $5, $6) RETURNING id`,
 					id, secID, it.Name, it.Desc, it.Price, ii+1).Scan(&itemID)
 				if err != nil {
 					log.Fatal(err)
