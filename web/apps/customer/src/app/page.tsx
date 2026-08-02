@@ -9,7 +9,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  let data: HomeData = { banners: [], categories: [], merchants: [] };
+  let data: HomeData = { banners: [], categories: [], sections: [] };
   try {
     const res = await fetch(`${API}/api/v1/public/home`, { cache: "no-store" });
     const json = (await res.json()) as { data?: HomeData };
@@ -17,7 +17,8 @@ export default async function HomePage() {
   } catch {
     /* الخادم غير متاح — تُعرض صفحة فارغة بدل الانهيار */
   }
-  if (data.merchants.length === 0) {
+  // **وفراغُ الأقسام لا فراغُ المتاجر** — الزبونُ يتصفّح أقساماً.
+  if (data.sections.length === 0) {
     return <p className="py-16 text-center text-ink-muted">{m.errors.offline}</p>;
   }
   return <HomeClient initial={data} />;

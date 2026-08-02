@@ -234,7 +234,8 @@ export default function CartPage() {
       const o = await api<{ id: string; number: number }>("/api/v1/orders", {
         method: "POST",
         body: JSON.stringify({
-          merchant_id: cart.merchant_id,
+          // **ولا `merchant_id`** — الخادمُ يستنتجه من الأصناف، وهو من
+          // يعرف المصادر لا نحن.
           items: cart.lines.map((l) => ({
             menu_item_id: l.menu_item_id,
             qty: l.qty,
@@ -276,7 +277,7 @@ export default function CartPage() {
         <h1 className="mb-1 text-xl font-bold">
           {m.site.cart.title}{" "}
           <span className="text-sm font-normal text-ink-muted">
-            {m.site.cart.from} {cart.merchant_name}
+            {m.site.cart.fromPlatform}
           </span>
         </h1>
         {/* حُذف سطرُ «طلبٌ واحد مهما تعدّدت أصنافه»: صار الكرتُ الجامع يقوله

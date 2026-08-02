@@ -160,12 +160,11 @@ function ItemModal({
   item: Item;
   onClose: () => void;
 }) {
-  const { add, clear } = useCart();
+  const { add } = useCart();
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState("");
   const [chosen, setChosen] = useState<Record<string, string[]>>({});
   const [error, setError] = useState("");
-  const [askClear, setAskClear] = useState<CartLine | null>(null);
 
   function toggle(g: Group, optID: string) {
     setChosen((c) => {
@@ -208,10 +207,9 @@ function ItemModal({
   function submit() {
     const line = buildLine();
     if (!line) return;
-    if (!add(merchant.id, merchant.name, line)) {
-      setAskClear(line);
-      return;
-    }
+    // **والسلّةُ لا تعرف المصدر بعد اليوم** — سقفُ المصادر يُفرض في الخادم،
+    // **وهو الموضعُ الذي لا يُلتفّ عليه.**
+    add(line);
     onClose();
   }
 
@@ -287,29 +285,15 @@ function ItemModal({
           <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
         )}
 
-        {askClear ? (
-          <div className="rounded-control bg-accent/10 p-3 text-sm">
-            <p className="mb-2">{m.site.menu.otherMerchantCart}</p>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  clear();
-                  add(merchant.id, merchant.name, askClear);
-                  onClose();
-                }}
-              >
-                {m.common.confirm}
-              </Button>
-              <Button variant="secondary" onClick={() => setAskClear(null)}>
-                {m.common.cancel}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Button onClick={submit} className="w-full py-2.5">
-            {m.site.menu.addToCart} — {fmtNum(unit * qty)} {m.common.currency}
-          </Button>
-        )}
+        {/* **وسؤالُ «سلّتك من متجرٍ آخر» سقط بسقوط سببه.**
+
+            كانت السلّةُ ترفض صنفاً من متجرٍ ثانٍ **وهي تعرف المتجرين**.
+            واليومَ لا تعرفهما — **والخادمُ يعرف ويردّ إن تعدّدت المصادر**،
+            وهو الموضعُ الذي لا يُلتفّ عليه. */}
+
+        <Button onClick={submit} className="w-full py-2.5">
+          {m.site.menu.addToCart} — {fmtNum(unit * qty)} {m.common.currency}
+        </Button>
       </div>
     </Modal>
   );

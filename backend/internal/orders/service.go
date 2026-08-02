@@ -123,6 +123,21 @@ func queueAffecting(status string) bool {
 // Create ينشئ طلباً كاملاً: تحقق المتجر، تسعير خادمي للأصناف والخيارات،
 // منطقة التسليم ورسمها، كود الخصم، ثم الدفع (نقدي/محفظة/مختلط) — كله ذرّياً.
 func (s *Service) Create(ctx context.Context, actorID string, actorRoles []string, in CreateInput, ip string) (*Order, error) {
+	// **والمصدرُ يُستنتج من الأصناف لا يُرسَل.**
+	//
+	// الزبونُ لا يرى المتاجر ولا يعرف معرّفاتها — **يطلب أصنافاً ونحن نعرف من
+	// أين نشتريها.** وطلبُ `merchant_id` منه يعني أن التطبيق يعرفه، **ومعرّفٌ
+	// يعرفه التطبيقُ معرّفٌ يُقرأ من الشبكة** فيُفتح به اسمُ المتجر.
+	//
+	// **ويبقى مقبولاً إن أُرسل**: الطلبُ الهاتفيّ تكتبه العملياتُ وهي ترى
+	// المتاجر، **وواجهةٌ تختفي فجأةً تُسقط شاشةً لم تُحدَّث بعد.**
+	if in.MerchantID == "" && len(in.Items) > 0 {
+		derived, err := s.sourceOf(ctx, in.Items)
+		if err != nil {
+			return nil, err
+		}
+		in.MerchantID = derived
+	}
 	if len(in.Items) == 0 || in.AddressText == "" || in.MerchantID == "" {
 		return nil, ErrBadItems
 	}
@@ -360,16 +375,20 @@ func (s *Service) priceItems(ctx context.Context, merchantID string, inputs []It
 		// والتصنيفُ يرث العام.**
 		var it OrderItem
 		var available bool
-		var itemMargin, catMargin *int64
+		// **والطبقةُ الوسطى قسمُ المنصة لا تصنيفُ المتجر.**
+		//
+		// الشاورما تُسعَّر كشاورما **سواءٌ جاءت من مطعمٍ أو مشاوٍ أو
+		// كافتيريا**. وتصنيفُ المتجر يصف بائعَه لا سلعتَه، **وهامشٌ يتبع
+		// البائعَ يجعل الصنفَ الواحد بسعرين.**
+		var itemMargin, sectionMargin *int64
 		err := s.db.QueryRow(ctx, `
 			SELECT mi.id, mi.name, mi.merchant_price, mi.available,
-			       mi.margin_override, c.margin_override
+			       mi.margin_override, ps.margin_override
 			FROM menu_items mi
-			JOIN merchants mm ON mm.id = mi.merchant_id
-			LEFT JOIN categories c ON c.id = mm.category_id
+			LEFT JOIN platform_sections ps ON ps.id = mi.platform_section_id
 			WHERE mi.id = $1 AND mi.merchant_id = $2`, in.MenuItemID, merchantID).
 			Scan(&it.MenuItemID, &it.Name, &it.MerchantPrice, &available,
-				&itemMargin, &catMargin)
+				&itemMargin, &sectionMargin)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, 0, ErrBadItems
 		}
@@ -379,7 +398,7 @@ func (s *Service) priceItems(ctx context.Context, merchantID string, inputs []It
 		if !available {
 			return nil, 0, ErrItemUnavailable
 		}
-		it.UnitPrice = rule.SalePrice(it.MerchantPrice, itemMargin, catMargin)
+		it.UnitPrice = rule.SalePrice(it.MerchantPrice, itemMargin, sectionMargin)
 		it.Qty = in.Qty
 		it.Note = in.Note
 		it.Options = []OptionSnapshot{}
@@ -514,4 +533,47 @@ func min64(a, b int64) int64 {
 		return a
 	}
 	return b
+}
+
+// sourceOf مصدرُ الأصناف — **ويلزم أن يكون واحداً.**
+//
+// # لماذا واحدٌ اليوم
+//
+// الطلبُ متعدّدُ المصادر قرارٌ مُتَّفقٌ عليه (سقفُ اثنين وشرطُ قرب)، **لكنّه
+// يغيّر التوصيلَ والتسوية معاً**: مسارُ سائقٍ إلى بابين، ورسمٌ إضافيّ،
+// ومستحقّان لمتجرين. **وفتحُه قبل أن يُبنى ذلك كلُّه يُنتج طلباتٍ لا يعرف
+// المحرّكُ كيف يسوّيها.**
+//
+// **فيُردّ صراحةً لا يُقبل صامتاً**: من طلب من مصدرين يُقال له، **ولا يُترك
+// طلبٌ نصفُه في مطبخٍ ونصفُه في آخر بلا من يجمعهما.**
+func (s *Service) sourceOf(ctx context.Context, items []ItemInput) (string, error) {
+	ids := make([]string, 0, len(items))
+	for _, it := range items {
+		ids = append(ids, it.MenuItemID)
+	}
+	rows, err := s.db.Query(ctx, `
+		SELECT DISTINCT merchant_id::text FROM menu_items WHERE id = ANY($1::uuid[])`, ids)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	found := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return "", err
+		}
+		found = append(found, id)
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	switch len(found) {
+	case 1:
+		return found[0], nil
+	case 0:
+		// **صنفٌ لا وجودَ له** — والخطأُ يُقال باسمه لا بـ«لا مصدر».
+		return "", ErrBadItems
+	}
+	return "", ErrMultiSource
 }

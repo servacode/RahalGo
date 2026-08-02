@@ -61,12 +61,18 @@ type MenuItem struct {
 	//
 	// **قل متى يعود لا أنه غيرُ متاح**: «متاح من ١٠ صباحاً» موعدٌ يُعاد إليه،
 	// و«غير متاح» طريقٌ مسدود.
-	SourceOpensAt *time.Time      `json:"source_opens_at"`
-	ImageURL      *string         `json:"image_url"`
-	ImageThumbURL *string         `json:"image_thumb_url"`
-	Available     bool            `json:"available"`
-	SortOrder     int             `json:"sort_order"`
-	Modifiers     []ModifierGroup `json:"modifiers"`
+	SourceOpensAt *time.Time `json:"source_opens_at"`
+	// PlatformSectionID قسمُ المنصة الذي يُعرض فيه — **وفراغُه «غيرُ مصنَّف»**.
+	//
+	// **ولا يُعرض في التصفّح ما لم يُصنَّف**: يبقى قابلاً للطلب من صفحة متجره
+	// فلا ينقطع ما كان يعمل، **ويراه الأدمنُ في اللوحة فارغاً فيصنّفه.**
+	PlatformSectionID   *string         `json:"platform_section_id"`
+	PlatformSectionName string          `json:"platform_section_name"`
+	ImageURL            *string         `json:"image_url"`
+	ImageThumbURL       *string         `json:"image_thumb_url"`
+	Available           bool            `json:"available"`
+	SortOrder           int             `json:"sort_order"`
+	Modifiers           []ModifierGroup `json:"modifiers"`
 }
 
 type MenuSection struct {
@@ -112,22 +118,27 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	// `priceItems` عند الطلب. **ورقمان لمعنًى واحد يفترقان** — فيرى الزبونُ
 	// سعراً في القائمة ويُحاسَب بغيره في السلّة.
 	rule := pricing.RuleFrom(ctx, s.settings)
-	var catMargin *int64
+	// **ولا هامشَ واحدٌ للقائمة كلِّها.**
+	//
+	// أصنافُ متجرٍ واحدٍ تقع في أقسامٍ مختلفة — شاورما وعصير في مطعمٍ واحد —
+	// **فقراءةُ قسمٍ واحدٍ للقائمة كلِّها تُسعّر العصيرَ بهامش الشاورما.**
+	// ويُقرأ مع كلّ صنفٍ في الاستعلام نفسه.
 	// **ودوامُ المصدر يُقرأ مرّةً للقائمة كلِّها** — كلُّ أصنافها من متجرٍ
 	// واحد، **وسؤالُ القاعدة لكلّ صنفٍ عن الشيء نفسِه مئةُ استعلامٍ بلا سبب.**
 	var open bool
 	var opensAt *time.Time
 	_ = s.db.QueryRow(ctx, `
-		SELECT c.margin_override, `+orders.OpenNowSQL+`, `+orders.NextOpenSQL+`
-		FROM merchants m
-		LEFT JOIN categories c ON c.id = m.category_id WHERE m.id = $1`,
-		merchantID).Scan(&catMargin, &open, &opensAt)
+		SELECT `+orders.OpenNowSQL+`, `+orders.NextOpenSQL+`
+		FROM merchants m WHERE m.id = $1`,
+		merchantID).Scan(&open, &opensAt)
 
 	rows, err = s.db.Query(ctx, `
 		SELECT i.id, i.section_id, i.name, i.description,
-		       i.merchant_price, i.margin_override,
+		       i.merchant_price, i.margin_override, ps.margin_override,
+		       i.platform_section_id, COALESCE(ps.name, ''),
 		       im.path, im.thumb_path, i.available, i.sort_order
 		FROM menu_items i
+		LEFT JOIN platform_sections ps ON ps.id = i.platform_section_id
 		LEFT JOIN media im ON im.id = i.image_media_id
 		WHERE i.merchant_id = $1 ORDER BY i.sort_order, i.created_at`, merchantID)
 	if err != nil {
@@ -135,13 +146,15 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	}
 	for rows.Next() {
 		var it MenuItem
+		var sectionMargin *int64
 		if err := rows.Scan(&it.ID, &it.SectionID, &it.Name, &it.Description,
-			&it.MerchantPrice, &it.MarginOverride,
+			&it.MerchantPrice, &it.MarginOverride, &sectionMargin,
+			&it.PlatformSectionID, &it.PlatformSectionName,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder); err != nil {
 			rows.Close()
 			return nil, err
 		}
-		it.Price = rule.SalePrice(it.MerchantPrice, it.MarginOverride, catMargin)
+		it.Price = rule.SalePrice(it.MerchantPrice, it.MarginOverride, sectionMargin)
 		it.SourceClosed = !open
 		if !open {
 			it.SourceOpensAt = opensAt
@@ -291,7 +304,10 @@ type MenuItemInput struct {
 	// **وفراغُه «اتبع تصنيفَك» لا «بلا هامش»**: مؤشّرٌ لا رقم، فالصفرُ قرارٌ
 	// يُفرَّق عن غياب القرار.
 	MarginOverride *int64 `json:"margin_override"`
-	Available      *bool  `json:"available"`
+	// PlatformSectionID قسمُ المنصة — **وسالبُ الواحدِ لا يصلح هنا**: هو
+	// معرّفٌ نصّي، **والفراغُ الصريح `""` يعني «ارفع التصنيف».**
+	PlatformSectionID *string `json:"platform_section_id"`
+	Available         *bool   `json:"available"`
 	// معرف وسائط الصورة: غير مُرسل = بلا تغيير، "" = إزالة الصورة
 	ImageMediaID *string `json:"image_media_id"`
 	// إن أُرسلت (حتى فارغة) تُستبدل شجرة المُعدِّلات بالكامل
@@ -363,10 +379,13 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 			available   = COALESCE($6, available),
 			image_media_id = CASE WHEN $7::text IS NULL THEN image_media_id
 			                      ELSE NULLIF($7, '')::uuid END,
+			-- **والفراغُ الصريح يرفع التصنيف** — لا يُقرأ «بلا تغيير».
+			platform_section_id = CASE WHEN $9::text IS NULL THEN platform_section_id
+			                           ELSE NULLIF($9, '')::uuid END,
 			updated_at  = now()
 		WHERE id = $1`,
 		itemID, in.SectionID, in.Name, in.Description, in.Price, in.Available,
-		in.ImageMediaID, in.MarginOverride)
+		in.ImageMediaID, in.MarginOverride, in.PlatformSectionID)
 	if err != nil {
 		return err
 	}
@@ -433,4 +452,58 @@ func insertModifiers(ctx context.Context, tx pgx.Tx, itemID string, groups []Mod
 		}
 	}
 	return nil
+}
+
+// ItemModifiers خياراتُ صنفٍ واحد — لصفحة الصنف في تصفّح الأقسام.
+//
+// **ولا تُنتزع من `GetMenu`.** تلك تقرأ قائمةَ متجرٍ كاملة بثلاثة استعلامات
+// ثمّ تربطها، **وقراءةُ قائمةٍ كاملةٍ لعرض صنفٍ واحدٍ حملٌ بلا حاجة** — ومئةُ
+// صنفٍ تُقرأ ليُعرض واحد.
+func (s *Service) ItemModifiers(ctx context.Context, itemID string) ([]ModifierGroup, error) {
+	groups := []ModifierGroup{}
+	idx := map[string]int{}
+	rows, err := s.db.Query(ctx, `
+		SELECT id, name, min_select, max_select, sort_order
+		FROM modifier_groups WHERE item_id = $1 ORDER BY sort_order`, itemID)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var g ModifierGroup
+		if err := rows.Scan(&g.ID, &g.Name, &g.MinSelect, &g.MaxSelect, &g.SortOrder); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		g.Options = []ModifierOption{}
+		idx[g.ID] = len(groups)
+		groups = append(groups, g)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(groups) == 0 {
+		return groups, nil
+	}
+
+	rows, err = s.db.Query(ctx, `
+		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order
+		FROM modifier_options o
+		JOIN modifier_groups g ON g.id = o.group_id
+		WHERE g.item_id = $1 ORDER BY o.sort_order`, itemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var o ModifierOption
+		var groupID string
+		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder); err != nil {
+			return nil, err
+		}
+		if i, ok := idx[groupID]; ok {
+			groups[i].Options = append(groups[i].Options, o)
+		}
+	}
+	return groups, rows.Err()
 }

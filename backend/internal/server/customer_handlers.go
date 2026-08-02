@@ -89,8 +89,35 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 	//
 	// وكان الرقم لا وجود له أصلاً: الشكوى تذهب إلى التذاكر وحدها، ومن لا يعرف
 	// التذاكر لا يجد باباً. ويبقى فارغاً حتى يكتبه المالك، فتُخفيه الواجهة.
+	// **والأقسامُ تُرسل مع الرئيسية.**
+	//
+	// **ونداءٌ ثانٍ من الصفحة الأولى نداءٌ يُرى تأخيراً**: الرئيسيةُ تُقدَّم من
+	// الخادم، **فما لم يصل معها يظهر بعد ومضةٍ فارغة.**
+	sections := []map[string]any{}
+	srows, err := s.pg.Query(r.Context(), `
+		SELECT ps.id, ps.name, ps.icon,
+		       count(i.id) FILTER (WHERE i.available AND `+orders.OpenNowSQL+`)
+		FROM platform_sections ps
+		LEFT JOIN menu_items i ON i.platform_section_id = ps.id
+		LEFT JOIN merchants m ON m.id = i.merchant_id AND m.status = 'active'
+		WHERE ps.active
+		GROUP BY ps.id, ps.name, ps.icon, ps.sort_order
+		ORDER BY ps.sort_order, ps.name`)
+	if err == nil {
+		for srows.Next() {
+			var id, name, icon string
+			var n int
+			if srows.Scan(&id, &name, &icon, &n) == nil {
+				sections = append(sections,
+					map[string]any{"id": id, "name": name, "icon": icon, "count": n})
+			}
+		}
+		srows.Close()
+	}
+
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"banners": active, "categories": categories, "merchants": merchants,
+		"sections":      sections,
 		"support_phone": s.settings.GetString(r.Context(), "platform.support_phone", ""),
 	})
 }

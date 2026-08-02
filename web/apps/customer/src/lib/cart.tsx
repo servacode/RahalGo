@@ -1,6 +1,22 @@
 "use client";
 
-/** سلة الزبون: متجر واحد في المرة (المعيار في تطبيقات التوصيل) — تُحفظ محلياً. */
+/**
+ * سلّةُ الزبون — **أصنافٌ بلا مصدر.**
+ *
+ * # لماذا لم تعد تحمل المتجر
+ *
+ * الزبونُ لا يرى المتاجر: **يطلب أصنافاً ونحن نعرف من أين نشتريها.** ومعرّفُ
+ * متجرٍ محفوظٌ في `localStorage` **يُقرأ بسطرٍ واحدٍ في أدوات المتصفّح** —
+ * فالإخفاءُ الذي حرسناه في الشبكة يسقط في ذاكرة الجهاز.
+ *
+ * # وسقفُ المصادر يُفرض في الخادم
+ *
+ * كانت السلّةُ ترفض صنفاً من متجرٍ آخر **وهي تعرف المتجرين**. واليومَ لا
+ * تعرفهما، **والخادمُ يعرف**: يستنتج المصدرَ من الأصناف ويردّ إن تعدّدت.
+ *
+ * **وهو الموضعُ الذي لا يُلتفّ عليه**: حارسٌ في المتصفّح يتجاوزه كلُّ من يعرف
+ * النقطة، **وحارسٌ في الخادم لا يتجاوزه أحد.**
+ */
 
 import { createContext, useContext, useEffect, useState } from "react";
 
@@ -16,15 +32,13 @@ export interface CartLine {
 }
 
 export interface Cart {
-  merchant_id: string;
-  merchant_name: string;
   lines: CartLine[];
 }
 
 interface CartState {
   cart: Cart | null;
   count: number;
-  add: (merchantID: string, merchantName: string, line: CartLine) => boolean;
+  add: (line: CartLine) => void;
   setQty: (index: number, qty: number) => void;
   clear: () => void;
 }
@@ -50,16 +64,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     else localStorage.removeItem(KEY);
   }
 
-  // يعيد false إذا كانت السلة لمتجر آخر (الواجهة تسأل قبل الإفراغ)
-  function add(merchantID: string, merchantName: string, line: CartLine): boolean {
-    if (cart && cart.merchant_id !== merchantID && cart.lines.length > 0) return false;
-    const base = cart && cart.merchant_id === merchantID ? cart : null;
-    persist({
-      merchant_id: merchantID,
-      merchant_name: merchantName,
-      lines: [...(base?.lines ?? []), line],
-    });
-    return true;
+  function add(line: CartLine) {
+    persist({ lines: [...(cart?.lines ?? []), line] });
   }
 
   function setQty(index: number, qty: number) {

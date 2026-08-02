@@ -144,6 +144,12 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/merchants/{id}", s.handlePublicMerchant)
 		r.Get("/public/zone", s.handlePublicZone)
 		// البحث عام كالتصفّح — من يشتهي صنفاً لا يعرف اسم المتجر الذي يصنعه
+		// **التصفّحُ بالأصناف لا بالمتاجر** — الزبونُ يشتهي شاورما ولا يعرف
+		// من يصنع أفضلَها. (انظر `sections_handlers.go`)
+		r.Get("/public/sections", s.handlePublicSections)
+		r.Get("/public/sections/{id}/items", s.handlePublicSectionItems)
+		r.Get("/public/items/{id}", s.handlePublicItem)
+		r.Get("/public/search/items", s.handleSearchItems)
 		r.Get("/public/search", s.handlePublicSearch)
 		r.Get("/public/invite", s.handlePublicInvite)
 		r.Post("/public/join", s.handlePublicJoin)
@@ -276,6 +282,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/users/{id}/feedback", s.handleAdminUserFeedback)
 			r.Get("/users/{id}/financials", s.handleAdminUserFinancials)
 			r.Get("/categories", s.handleListCategories)
+			// **أقسامُ المنصة** — ما نبيعه، لا من نشتري منه.
+			r.Get("/sections", s.handleListPlatformSections)
 			r.Get("/merchants", s.handleListMerchants)
 			r.Get("/merchants/{id}/menu", s.handleGetMenu)
 			r.Get("/merchants/{id}/hours", s.handleGetHours)
@@ -357,6 +365,9 @@ func (s *Server) Router() http.Handler {
 				Post("/drivers/{id}/settle", s.handleDriverSettle)
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRoles("admin"))
+				r.Post("/sections", s.handleCreatePlatformSection)
+				r.Patch("/sections/{id}", s.handleUpdatePlatformSection)
+				r.Delete("/sections/{id}", s.handleDeletePlatformSection)
 				r.Post("/users", s.handleAdminCreateUser)
 				r.Patch("/users/{id}", s.handleAdminUpdateUser)
 				r.Post("/users/{id}/roles", s.handleAdminGrantRole)

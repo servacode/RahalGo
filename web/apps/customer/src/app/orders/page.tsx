@@ -141,7 +141,8 @@ export default function MyOrdersPage() {
     }
     // السلّة لمتجرٍ واحد: إعادة طلبٍ من متجرٍ آخر تستبدلها لا تخلطها
     clear();
-    for (const l of lines) add(o.merchant_id, o.merchant_name, l);
+    // **والسلّةُ لا تعرف المصدر** — يستنتجه الخادمُ من الأصناف.
+    for (const l of lines) add(l);
     setNotice(skipped > 0 ? m.site.orders.reorderPartial.replace("{n}", fmtNum(skipped)) : "");
     router.push("/cart");
   }
@@ -204,7 +205,8 @@ export default function MyOrdersPage() {
                 }
                 title={
                   <span className="flex items-center gap-2">
-                    <span className="truncate">{o.merchant_name}</span>
+                    {/* **واسمُ المتجر لا يُعرض** — الزبونُ اشترى من «رحّال غو». */}
+                    <span className="truncate">{m.site.orders.fromPlatform}</span>
                     <span className="shrink-0 text-xs font-normal text-ink-muted" dir="ltr">
                       #{fmtNum(o.number)}
                     </span>

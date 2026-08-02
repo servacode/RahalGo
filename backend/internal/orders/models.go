@@ -9,7 +9,9 @@ import (
 )
 
 var (
-	ErrMerchantClosed     = httpx.NewError(http.StatusConflict, "merchant_closed", "errors.merchant_closed")
+	ErrMerchantClosed = httpx.NewError(http.StatusConflict, "merchant_closed", "errors.merchant_closed")
+	// ErrMultiSource أصنافٌ من مصدرين — **حتى يُبنى الطلبُ متعدّدُ المصادر.**
+	ErrMultiSource        = httpx.NewError(http.StatusConflict, "multi_source_order", "errors.multi_source_order")
 	ErrItemUnavailable    = httpx.NewError(http.StatusConflict, "item_unavailable", "errors.item_unavailable")
 	ErrBadItems           = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
 	ErrOutOfZone          = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
