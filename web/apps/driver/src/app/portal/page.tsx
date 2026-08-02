@@ -35,6 +35,7 @@ import {
   IconWallet,
   IconDriver,
   IconWarning,
+  IconCamera,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -105,6 +106,8 @@ export default function TasksPage() {
   const [error, setError] = useState("");
   const [failing, setFailing] = useState<DriverOrder | null>(null);
   const [emergency, setEmergency] = useState<DriverOrder | null>(null);
+  /** الطلبُ الذي يُطلب إثباتُ تسليمه — **قبل «سُلّم» لا بعده**. */
+  const [proving, setProving] = useState<DriverOrder | null>(null);
   const [reason, setReason] = useState("");
 
   const load = useCallback(() => {
@@ -268,7 +271,14 @@ export default function TasksPage() {
                 key={o.id}
                 o={o}
                 busy={busy === o.id}
-                onAct={(to) => act(o, to)}
+                onAct={(to) => {
+                  // **الإثباتُ قبل الإغلاق لا بعده.**
+                  //
+                  // بعد الإغلاق يصير الطلبُ تاريخاً، **وصورةٌ تُضاف إلى تاريخٍ
+                  // مغلقٍ تُقرأ إضافةً متأخّرة** — وهي أضعفُ ما يُحتجّ به.
+                  if (to === "delivered") setProving(o);
+                  else act(o, to);
+                }}
                 onFail={() => {
                   setReason("");
                   setFailing(o);
@@ -299,6 +309,18 @@ export default function TasksPage() {
           </div>
         )}
       </section>
+
+      {proving && (
+        <ProofModal
+          order={proving}
+          onClose={() => setProving(null)}
+          onDone={() => {
+            const o = proving;
+            setProving(null);
+            if (o) void act(o, "delivered");
+          }}
+        />
+      )}
 
       {emergency && (
         <EmergencyModal
@@ -667,6 +689,155 @@ function EmergencyModal({
             {m.common.cancel}
           </Button>
         </div>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * **إثباتُ التسليم** — صورةٌ وإحداثياتٌ ووقت.
+ *
+ * # لماذا
+ *
+ * قاعدتُنا أنّ **الزبونَ يُصدَّق أوّلَ مرّة** — والمنصةُ تتحمّل. **وقاعدةٌ بلا
+ * دليلٍ تكلفةٌ بلا سقف**: من عرف أنّ كلمتَه تكفي قالها مرّةً بعد مرّة، **ولا
+ * يبقى للسائق الصادق ما يدفع به عن نفسه.**
+ *
+ * # والمعيارُ العالميّ ثلاثةٌ لا واحد
+ *
+ * الصورةُ تُظهر **موضعَ التسليم** لا الطردَ وحدَه · **والإحداثياتُ تُلتقط
+ * آلياً** فتثبت أنّه كان هناك · والوقتُ آليٌّ كذلك.
+ *
+ * **وأهمُّها الإحداثيات**: صورةُ بابٍ قد تكون لأيّ باب.
+ *
+ * # ولا يقف التسليمُ على كاميرا
+ *
+ * هاتفٌ لا يعمل، أو إذنٌ مرفوض، أو ليلٌ لا يُرى فيه شيء — **وسائقٌ لا يستطيع
+ * إنهاء طلبٍ سلّمه فعلاً يقف في الشارع.** فالتخطّي متاحٌ **بكلمةٍ تُقرأ يومَ
+ * النزاع.**
+ */
+function ProofModal({
+  order,
+  onClose,
+  onDone,
+}: {
+  order: DriverOrder;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [skipping, setSkipping] = useState(false);
+  const [reason, setReason] = useState("");
+
+  /** الموقعُ بمهلة — انتظارٌ بلا حدٍّ يجعل الزرَّ يبدو معطّلاً. */
+  async function where(): Promise<{ lat: number; lng: number } | null> {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () => resolve(null),
+        { timeout: 6000, enableHighAccuracy: true },
+      );
+    });
+  }
+
+  async function upload(file: File) {
+    setBusy(true);
+    setError("");
+    const point = await where();
+    const fd = new FormData();
+    fd.append("file", file);
+    if (point) {
+      fd.append("lat", String(point.lat));
+      fd.append("lng", String(point.lng));
+    }
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+      const res = await fetch(`${base}/api/v1/driver/orders/${order.id}/proof`, {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      onDone();
+    } catch {
+      setError(m.errors.internal);
+      setBusy(false);
+    }
+  }
+
+  async function skip() {
+    if (!reason.trim()) return setError(D.proof.reasonRequired);
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/driver/orders/${order.id}/proof/skip`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      onDone();
+    } catch (e) {
+      setError(errText(e));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={D.proof.title} onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-sm text-ink-muted">{D.proof.hint}</p>
+
+        {!skipping ? (
+          <>
+            {/* **الكاميرا مباشرةً لا معرضُ الصور.**
+
+                `capture` تفتح آلةَ التصوير — **وصورةٌ تُختار من المعرض قد تكون
+                لأيّ يومٍ ولأيّ باب**، فتسقط حجّتُها في أوّل نزاع. */}
+            <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/50 py-6 text-primary-dark">
+              <IconCamera size={20} />
+              <span className="font-medium">{busy ? D.proof.sending : D.proof.take}</span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                disabled={busy}
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void upload(f);
+                }}
+              />
+            </label>
+            {error && <p className="text-sm text-danger">{error}</p>}
+            <button
+              type="button"
+              onClick={() => setSkipping(true)}
+              className="w-full text-xs text-ink-muted underline"
+            >
+              {D.proof.cannot}
+            </button>
+          </>
+        ) : (
+          <>
+            <Input
+              id="pod-reason"
+              label={D.proof.reason}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={D.proof.reasonHint}
+            />
+            {error && <p className="text-sm text-danger">{error}</p>}
+            <div className="flex gap-2">
+              <Button variant="secondary" disabled={busy} onClick={skip}>
+                {D.proof.skipConfirm}
+              </Button>
+              <Button variant="ghost" onClick={() => setSkipping(false)}>
+                {m.common.cancel}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </Modal>
   );

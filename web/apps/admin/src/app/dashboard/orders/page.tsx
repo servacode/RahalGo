@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtTime , fmtDateTime } from "@rahalgo/i18n";
 import {
   IconNote,
   IconEdit,
@@ -25,6 +25,7 @@ import {
   IconStore,
   IconWallet,
   IconDriver,
+  IconCamera,
   IconStatus,
   IconLocation,
   IconStar,
@@ -113,6 +114,12 @@ interface OrderRow {
   merchant_id: string;
   driver_phone: string | null;
   driver_name: string | null;
+  /** إثباتُ التسليم — صورةٌ ومسافةٌ ووقت. */
+  proof_url?: string | null;
+  proof_taken_at?: string | null;
+  /** بُعدُ موضع التسليم عن عنوان الزبون — و`-1` تعني «لا موضعَ محفوظ». */
+  proof_meters?: number;
+  proof_skip_reason?: string;
   /** متى حُوِّل الطلب إلى المتجر — فارغٌ يعني لم يُحوَّل بعد */
   sent_to_merchant_at: string | null;
   /** متى نزل إلى طابور السائقين — ومنه تُقاس مهلةُ زرّ الإسناد */
@@ -480,6 +487,57 @@ export default function OrdersPage() {
       // **السائق وأجرُه — أو أجرةُ التوصيل قبل أن يُسنَد أحد.**
       // الطلبُ يولد بلا سائق، والخانةُ الفارغة لا تقول شيئاً: فيُعرض ما يُدفع
       // عن التوصيل حتى يُعرف من سيقبضه.
+      // **إثباتُ التسليم — وهو موضعُ الحسم في كلّ نزاعٍ على «لم يصلني».**
+      //
+      // **والمسافةُ أهمُّ من الصورة**: صورةُ بابٍ قد تكون لأيّ باب، **وصورةٌ
+      // على بُعد أمتارٍ من عنوان الزبون بيّنة.** ولذلك تُعرض بالرقم لا بحكم.
+      //
+      // **ولا يُخفى تعذّرُ الصورة**: كلمةُ السائق تُقرأ يومَ النزاع، **ومن
+      // تخطّى عشراً يُقرأ ذلك في صفّه.**
+      id: "proof",
+      header: m.admin.ordersPage.proof,
+      icon: <IconCamera />,
+      block: true,
+      cell: (o) => {
+        if (o.proof_skip_reason) {
+          return (
+            <span className="text-xs text-warning">
+              {m.admin.ordersPage.proofSkipped} {o.proof_skip_reason}
+            </span>
+          );
+        }
+        if (!o.proof_url) return <span className="text-xs text-ink-muted">—</span>;
+        const noGps = (o.proof_meters ?? -1) < 0;
+        const away = Math.round(o.proof_meters ?? 0);
+        return (
+          <span className="flex flex-wrap items-center gap-2">
+            <a href={o.proof_url} target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={o.proof_url}
+                alt=""
+                className="h-16 w-16 rounded-control border border-line object-cover"
+              />
+            </a>
+            <span className="flex flex-col gap-1">
+              {noGps ? (
+                <Badge variant="neutral">{m.admin.ordersPage.proofNoGps}</Badge>
+              ) : (
+                <Badge variant={away <= 150 ? "success" : "warning"}>
+                  {m.admin.ordersPage.proofMeters.replace("{n}", fmtNum(away))}
+                </Badge>
+              )}
+              {o.proof_taken_at && (
+                <span className="text-2xs text-ink-muted" dir="ltr">
+                  {fmtDateTime(o.proof_taken_at)}
+                </span>
+              )}
+            </span>
+          </span>
+        );
+      },
+    },
+    {
       id: "driver",
       header: m.admin.ordersPage.driver,
       icon: <IconDriver />,

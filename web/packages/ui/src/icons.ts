@@ -99,4 +99,8 @@ export {
   CircleAlert as IconWarning,
   CircleX as IconError,
   Loader as IconLoading,
+  // **أيقونةُ الكاميرا** — لإثبات التسليم. **ولا تُضاف أيقونةٌ إلّا لمعنًى
+  // جديد**: مجموعةٌ تتضخّم بالمترادفات تجعل كلَّ شاشةٍ تختار غيرَ ما اختارت
+  // أختُها.
+  Camera as IconCamera,
 } from "lucide-react";

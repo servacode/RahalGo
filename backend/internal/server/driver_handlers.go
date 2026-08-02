@@ -306,6 +306,17 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// **ولا «سُلّم» بلا إثبات.**
+	//
+	// قاعدتُنا أنّ الزبونَ يُصدَّق أوّلَ مرّة — **وقاعدةٌ بلا دليلٍ تكلفةٌ بلا
+	// سقف.** والإثباتُ صورةٌ بموقعٍ ووقت، **أو كلمةٌ تقول لماذا تعذّرت.**
+	if req.To == orders.StDelivered {
+		if err := s.requireProofBeforeDelivery(r, orderID); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+
 	o, err := s.orders.TransitionWithReason(r.Context(), userIDFrom(r), []string{"driver"},
 		orderID, req.To, clip(note, 300), req.Reason)
 	if err != nil {

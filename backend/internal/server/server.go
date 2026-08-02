@@ -228,6 +228,10 @@ func (s *Server) Router() http.Handler {
 			// **الطارئ** — ضغطةٌ واحدة: موقعٌ يُلتقط، وعملياتٌ تُنبَّه، وطلبٌ
 			// يُحرَّر. **ومن كُسرت يدُه لا يملأ ثلاث شاشات.**
 			r.Post("/orders/{id}/emergency", s.handleDriverEmergency)
+			// **إثباتُ التسليم** — صورةٌ وإحداثياتٌ ووقت. والمعيارُ العالميّ
+			// ثلاثةٌ لا واحد. (انظر `delivery_proof.go`)
+			r.Post("/orders/{id}/proof", s.handleDeliveryProof)
+			r.Post("/orders/{id}/proof/skip", s.handleSkipDeliveryProof)
 			// **إرجاعُ البضاعة** — لمتاجرِ الاسترداد وحدها
 			r.Post("/orders/{id}/return", s.handleDriverReturn)
 			r.Get("/orders", s.handleDriverOrders)
