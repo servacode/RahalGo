@@ -53,3 +53,38 @@ const OpenNowSQL = `(m.status = 'active' AND NOT m.emergency_closed AND (
 		  AND h.close_time <= h.open_time
 		  AND h.day_of_week = EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Damascus') - interval '1 day')::int
 		  AND (now() AT TIME ZONE 'Asia/Damascus')::time < h.close_time)))`
+
+// NextOpenSQL موعدُ فتحِ المتجر القادم — و`NULL` إن كان مفتوحاً الآن أو بلا دوام.
+//
+// # لماذا موعدٌ لا كلمة
+//
+// **قل متى يعود لا أنه غيرُ متاح.** «متاح من ١٠ صباحاً» **موعدٌ يُعاد إليه**،
+// و«غير متاح» **طريقٌ مسدود** — من قرأه أغلق الصفحة، ومن قرأ الأوّل عاد.
+//
+// **والفرق بين «مغلق» و«يفتح ١١:٠٠» هو الفرق بين زبونٍ ضاع وزبونٍ عاد.**
+//
+// # والبياناتُ موجودةٌ منذ البداية
+//
+// `merchant_hours` تحمل الجواب، **ولا تصعد إلى الردّ** — فالزائرُ يقرأ «مغلق
+// الآن» ولا يعرف أن عليه العودة بعد ثلاث ساعات. (وهي `D-11` المؤجَّلة.)
+//
+// # ولماذا سبعةُ أيام
+//
+// متجرٌ يفتح الجمعةَ وحدَها **يجب أن يقول ذلك لا أن يسكت.** والبحثُ في الغد
+// وحدَه يعيد فراغاً لمن يفتح بعد ثلاثة أيام، **وفراغٌ يُعرض «غير متاح» فنعود
+// إلى ما هربنا منه.**
+//
+// يفترض أن جدول المتاجر باسم `m`.
+const NextOpenSQL = `(
+	SELECT (date_trunc('day', (now() AT TIME ZONE 'Asia/Damascus') + make_interval(days => d))
+	        + h.open_time) AT TIME ZONE 'Asia/Damascus'
+	FROM generate_series(0, 7) d
+	JOIN merchant_hours h ON h.merchant_id = m.id
+	 AND h.day_of_week = EXTRACT(dow FROM
+	     (now() AT TIME ZONE 'Asia/Damascus') + make_interval(days => d))::int
+	WHERE NOT h.closed
+	  -- **وما مضى اليومَ لا يُعرض موعداً**: من فتح التاسعةَ والساعةُ الثالثة
+	  -- لا يُقال له «يفتح التاسعة» — **موعدٌ في الماضي أسوأُ من لا موعد.**
+	  AND (date_trunc('day', (now() AT TIME ZONE 'Asia/Damascus') + make_interval(days => d))
+	       + h.open_time) > (now() AT TIME ZONE 'Asia/Damascus')
+	ORDER BY 1 LIMIT 1)`

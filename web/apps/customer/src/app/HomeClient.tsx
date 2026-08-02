@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale , fmtTime } from "@rahalgo/i18n";
 import { CategoryIcon, Badge, Input, IconSearch, IconStar, IconClose } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
@@ -34,6 +34,8 @@ interface Merchant {
   category_icon: string;
   logo_thumb_url: string | null;
   open_now: boolean;
+  /** موعدُ الفتح القادم — **وفارغٌ إن كان مفتوحاً**. */
+  opens_at?: string | null;
 }
 
 interface SearchHit {
@@ -256,8 +258,14 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                 {mr.description && (
                   <p className="truncate text-xs text-ink-muted">{mr.description}</p>
                 )}
-                <Badge variant={mr.open_now ? "success" : "danger"} className="mt-1">
-                  {mr.open_now ? m.site.open : m.site.closed}
+                {/* **قل متى يعود لا أنه مغلق** — «مغلق» طريقٌ مسدود،
+                    و«يفتح ١١:٠٠» موعدٌ يُعاد إليه. */}
+                <Badge variant={mr.open_now ? "success" : "warning"} className="mt-1">
+                  {mr.open_now
+                    ? m.site.open
+                    : mr.opens_at
+                      ? m.site.opensAt.replace("{t}", fmtTime(mr.opens_at))
+                      : m.site.closed}
                 </Badge>
               </div>
             </Link>

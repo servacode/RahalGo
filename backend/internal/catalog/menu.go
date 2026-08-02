@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
@@ -48,12 +50,23 @@ type MenuItem struct {
 	// سعرُه) والأدمن (هو من يضع الهامش).
 	MerchantPrice int64 `json:"merchant_price"`
 	// MarginOverride تجاوزُ هامش الصنف — **فراغُه «اتبع تصنيفَك» لا «بلا هامش»**.
-	MarginOverride *int64          `json:"margin_override"`
-	ImageURL       *string         `json:"image_url"`
-	ImageThumbURL  *string         `json:"image_thumb_url"`
-	Available      bool            `json:"available"`
-	SortOrder      int             `json:"sort_order"`
-	Modifiers      []ModifierGroup `json:"modifiers"`
+	MarginOverride *int64 `json:"margin_override"`
+	// SourceClosed مصدرُ الصنف خارجَ دوامه الآن.
+	//
+	// **والصنفُ لا يُطلب ممّن ينام.** `Available` علَمٌ يرفعه المتجرُ بيده
+	// («نفد الصنف»)، **وهذا يقوله الوقتُ عنه** — ومن خلط بينهما جعل المتجرَ
+	// يطفئ أصنافَه كلَّ ليلةٍ ويشعلها كلَّ صباح.
+	SourceClosed bool `json:"source_closed"`
+	// SourceOpensAt متى يعود.
+	//
+	// **قل متى يعود لا أنه غيرُ متاح**: «متاح من ١٠ صباحاً» موعدٌ يُعاد إليه،
+	// و«غير متاح» طريقٌ مسدود.
+	SourceOpensAt *time.Time      `json:"source_opens_at"`
+	ImageURL      *string         `json:"image_url"`
+	ImageThumbURL *string         `json:"image_thumb_url"`
+	Available     bool            `json:"available"`
+	SortOrder     int             `json:"sort_order"`
+	Modifiers     []ModifierGroup `json:"modifiers"`
 }
 
 type MenuSection struct {
@@ -100,10 +113,15 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	// سعراً في القائمة ويُحاسَب بغيره في السلّة.
 	rule := pricing.RuleFrom(ctx, s.settings)
 	var catMargin *int64
+	// **ودوامُ المصدر يُقرأ مرّةً للقائمة كلِّها** — كلُّ أصنافها من متجرٍ
+	// واحد، **وسؤالُ القاعدة لكلّ صنفٍ عن الشيء نفسِه مئةُ استعلامٍ بلا سبب.**
+	var open bool
+	var opensAt *time.Time
 	_ = s.db.QueryRow(ctx, `
-		SELECT c.margin_override FROM merchants m
+		SELECT c.margin_override, `+orders.OpenNowSQL+`, `+orders.NextOpenSQL+`
+		FROM merchants m
 		LEFT JOIN categories c ON c.id = m.category_id WHERE m.id = $1`,
-		merchantID).Scan(&catMargin)
+		merchantID).Scan(&catMargin, &open, &opensAt)
 
 	rows, err = s.db.Query(ctx, `
 		SELECT i.id, i.section_id, i.name, i.description,
@@ -124,6 +142,10 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 			return nil, err
 		}
 		it.Price = rule.SalePrice(it.MerchantPrice, it.MarginOverride, catMargin)
+		it.SourceClosed = !open
+		if !open {
+			it.SourceOpensAt = opensAt
+		}
 		it.ImageURL = media.URLForPtr(it.ImageURL)
 		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.Modifiers = []ModifierGroup{}

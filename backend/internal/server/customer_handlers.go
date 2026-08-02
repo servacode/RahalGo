@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -30,6 +31,12 @@ type publicMerchant struct {
 	LogoURL      *string `json:"logo_url"`
 	LogoThumbURL *string `json:"logo_thumb_url"`
 	OpenNow      bool    `json:"open_now"`
+	// OpensAt موعدُ الفتح القادم — **وفارغٌ إن كان مفتوحاً الآن.**
+	//
+	// **قل متى يعود لا أنه غيرُ متاح**: «متاح من ١٠ صباحاً» موعدٌ يُعاد إليه،
+	// و«غير متاح» طريقٌ مسدود. **والفرقُ بينهما هو الفرق بين زبونٍ ضاع وزبونٍ
+	// عاد** — والبياناتُ في `merchant_hours` منذ البداية ولم تكن تصعد.
+	OpensAt *time.Time `json:"opens_at"`
 }
 
 // handlePublicHome بيانات الصفحة الرئيسية: بانرات وفئات ومتاجر فعالة بحالة فتحها.
@@ -54,7 +61,7 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT m.id, m.name, m.description, m.category_id, c.icon,
-		       lm.path, lm.thumb_path, `+openNowSQL+`
+		       lm.path, lm.thumb_path, `+openNowSQL+`, `+orders.NextOpenSQL+`
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
@@ -69,7 +76,7 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m publicMerchant
 		if err := rows.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryIcon,
-			&m.LogoURL, &m.LogoThumbURL, &m.OpenNow); err != nil {
+			&m.LogoURL, &m.LogoThumbURL, &m.OpenNow, &m.OpensAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -94,13 +101,13 @@ func (s *Server) handlePublicMerchant(w http.ResponseWriter, r *http.Request) {
 	var m publicMerchant
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT m.id, m.name, m.description, m.category_id, c.icon,
-		       lm.path, lm.thumb_path, `+openNowSQL+`
+		       lm.path, lm.thumb_path, `+openNowSQL+`, `+orders.NextOpenSQL+`
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
 		WHERE m.id = $1 AND m.status = 'active'`, id).
 		Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryIcon,
-			&m.LogoURL, &m.LogoThumbURL, &m.OpenNow)
+			&m.LogoURL, &m.LogoThumbURL, &m.OpenNow, &m.OpensAt)
 	if err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return

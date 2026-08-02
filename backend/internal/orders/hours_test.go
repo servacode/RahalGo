@@ -121,3 +121,99 @@ func TestOpenNow_CrossesMidnight(t *testing.T) {
 		t.Error("يومُ عطلةٍ قُرئ مفتوحاً")
 	}
 }
+
+// TestNextOpen موعدُ الفتح القادم — **ولا يُعرض موعدٌ في الماضي.**
+//
+// # ما يمسكه
+//
+// متجرٌ يفتح التاسعةَ والساعةُ الثالثة: **البحثُ الساذج يجد صفَّ اليوم فيقول
+// «يفتح التاسعة»** — وهي مضت. **وموعدٌ في الماضي أسوأُ من لا موعد**: من قرأه
+// انتظر ساعةً ثمّ اكتشف أنّه انتظر يوماً.
+//
+// **وسبعةُ أيامٍ لا يومٌ واحد**: متجرٌ يفتح الجمعةَ وحدَها يجب أن يقول ذلك،
+// **وفراغٌ يُعرض «غير متاح» فنعود إلى ما هربنا منه.**
+func TestNextOpen(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+
+	var damascus time.Time
+	if err := pool.QueryRow(ctx,
+		`SELECT (now() AT TIME ZONE 'Asia/Damascus')`).Scan(&damascus); err != nil {
+		t.Fatalf("تعذّرت قراءة الساعة: %v", err)
+	}
+
+	var categoryID string
+	if err := pool.QueryRow(ctx, `SELECT id FROM categories LIMIT 1`).Scan(&categoryID); err != nil {
+		t.Fatalf("لا تصنيفات: %v", err)
+	}
+	var merchantID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO merchants (name, category_id, commission_percent, status)
+		VALUES ('متجرُ المواعيد', $1, 10, 'active') RETURNING id`, categoryID).
+		Scan(&merchantID); err != nil {
+		t.Fatalf("تعذّر إنشاء متجر: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM merchants WHERE id = $1`, merchantID)
+	})
+
+	nextOpen := func() *time.Time {
+		var v *time.Time
+		if err := pool.QueryRow(ctx,
+			`SELECT `+orders.NextOpenSQL+` FROM merchants m WHERE m.id = $1`, merchantID).
+			Scan(&v); err != nil {
+			t.Fatalf("تعذّر حساب الموعد: %v", err)
+		}
+		return v
+	}
+
+	// **بلا صفوفِ دوامٍ لا موعد** — مفتوحٌ دائماً، فلا شيء يُقال.
+	if got := nextOpen(); got != nil {
+		t.Errorf("قيل موعدٌ لمن لا دوامَ له: %v", got)
+	}
+
+	set := func(day int, open, close string, closed bool) {
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO merchant_hours (merchant_id, day_of_week, closed, open_time, close_time)
+			VALUES ($1, $2, $3, $4::time, $5::time)
+			ON CONFLICT (merchant_id, day_of_week) DO UPDATE
+			SET closed = excluded.closed, open_time = excluded.open_time,
+			    close_time = excluded.close_time`,
+			merchantID, day, closed, open, close); err != nil {
+			t.Fatalf("تعذّر ضبط الدوام: %v", err)
+		}
+	}
+
+	// **يومٌ واحدٌ في الأسبوع** — بعد الغد. ولو كان البحثُ في الغد وحدَه لَعاد
+	// فارغاً، **ولَقيل للزبون «غير متاح» وهو يفتح بعد يومين.**
+	target := damascus.AddDate(0, 0, 2)
+	set(int(target.Weekday()), "10:00", "22:00", false)
+	got := nextOpen()
+	if got == nil {
+		t.Fatal("لم يُوجد موعدٌ لمتجرٍ يفتح بعد يومين — والبحثُ يمتدّ سبعةَ أيام")
+	}
+	if got.Before(time.Now()) {
+		t.Errorf("موعدٌ في الماضي: %v", got)
+	}
+
+	// **وما مضى اليومَ لا يُعرض.**
+	//
+	// نضع دواماً بدأ وانتهى قبل ساعات: **صفُّ اليومِ موجودٌ وموعدُه فات**،
+	// فيجب أن يقفز البحثُ إلى ما بعده لا أن يعيده.
+	if damascus.Hour() >= 3 {
+		set(int(damascus.Weekday()),
+			damascus.Add(-3*time.Hour).Format("15:04"),
+			damascus.Add(-1*time.Hour).Format("15:04"), false)
+		if got := nextOpen(); got != nil && got.Before(time.Now()) {
+			t.Errorf("عُرض موعدٌ مضى اليومَ: %v", got)
+		}
+	}
+
+	// **ويومٌ معلَّمٌ مغلقاً لا يُعرض موعداً.**
+	for d := 0; d < 7; d++ {
+		set(d, "10:00", "22:00", true)
+	}
+	if got := nextOpen(); got != nil {
+		t.Errorf("قيل موعدٌ لمتجرٍ كلُّ أيامه عطلة: %v", got)
+	}
+}

@@ -3,7 +3,7 @@
 /** صفحة المتجر: القائمة كاملة، نافذة الصنف بخياراته (حدود min/max)، إضافة للسلة. */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import { CategoryIcon, Badge, Button, Modal } from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
 import { useCart, type CartLine } from "@/lib/cart";
@@ -31,6 +31,9 @@ interface Item {
   image_thumb_url: string | null;
   available: boolean;
   modifiers: Group[];
+  /** مصدرُ الصنف خارجَ دوامه — **يقوله الوقتُ لا المتجر**. */
+  source_closed?: boolean;
+  source_opens_at?: string | null;
 }
 export interface Section {
   id: string;
@@ -44,6 +47,8 @@ export interface Merchant {
   category_icon: string;
   logo_thumb_url: string | null;
   open_now: boolean;
+  /** موعدُ الفتح القادم — **وفارغٌ إن كان مفتوحاً**. */
+  opens_at?: string | null;
 }
 
 export default function MerchantClient({ merchant, menu }: { merchant: Merchant; menu: Section[] }) {
@@ -64,8 +69,19 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
         )}
         <div>
           <h1 className="text-2xl font-bold">{merchant.name}</h1>
-          <Badge variant={merchant.open_now ? "success" : "danger"}>
-            {merchant.open_now ? m.site.open : m.site.closed}
+          {/* **قل متى يعود لا أنه مغلق.**
+
+              «مغلق» **طريقٌ مسدود**: من قرأه أغلق الصفحة ولم يعد. و«يفتح
+              ١١:٠٠» **موعدٌ يُعاد إليه** — والبياناتُ في `merchant_hours` منذ
+              البداية، **ولم تكن تصعد إلى الردّ.**
+
+              **والفرقُ بينهما هو الفرقُ بين زبونٍ ضاع وزبونٍ عاد.** */}
+          <Badge variant={merchant.open_now ? "success" : "warning"}>
+            {merchant.open_now
+              ? m.site.open
+              : merchant.opens_at
+                ? m.site.opensAt.replace("{t}", fmtTime(merchant.opens_at))
+                : m.site.closed}
           </Badge>
         </div>
       </div>
@@ -81,7 +97,7 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
                   <button
                     key={item.id}
                     type="button"
-                    disabled={!item.available || !merchant.open_now}
+                    disabled={!item.available || item.source_closed || !merchant.open_now}
                     onClick={() => setPicking(item)}
                     className="flex items-center gap-3 rounded-card border border-line bg-surface p-3 text-start transition-shadow enabled:hover:shadow-md disabled:opacity-50"
                   >
@@ -102,7 +118,24 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
                         {fmtNum(item.price)} {m.common.currency}
                       </p>
                     </div>
-                    {!item.available && <Badge variant="warning">{m.site.menu.unavailable}</Badge>}
+                    {/* **وسببُ الغياب يُقال.**
+
+                        «غير متاح» تُخفي سببين: **نفد الصنفُ** (علَمٌ يرفعه
+                        المتجرُ بيده) **ونام مصدرُه** (يقوله الوقتُ عنه).
+                        والأوّلُ لا موعدَ لعودته، **والثاني موعدُه معروف** —
+                        فمن قيل له «متاح من ١٠ صباحاً» عاد. */}
+                    {!item.available ? (
+                      <Badge variant="warning">{m.site.menu.unavailable}</Badge>
+                    ) : item.source_closed ? (
+                      <Badge variant="neutral">
+                        {item.source_opens_at
+                          ? m.site.menu.availableFrom.replace(
+                              "{t}",
+                              fmtTime(item.source_opens_at),
+                            )
+                          : m.site.menu.unavailable}
+                      </Badge>
+                    ) : null}
                   </button>
                 );
               })}
