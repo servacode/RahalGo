@@ -97,3 +97,35 @@ func (s *Service) ManualWarnings(ctx context.Context, q wallet.Querier, merchant
 		merchantID, days).Scan(&n)
 	return n, err
 }
+
+// openMerchantClaim يفتح مطالبةً على المتجر بما دفعته المنصةُ بسببه.
+//
+// # المنصةُ تدفع أوّلاً ثمّ تُطالِب
+//
+// **السائقُ لا ينتظر نزاعاً ليُقبض له.** ونزاعٌ يستغرق يوماً يترك من قاد
+// مشوارَه بلا مقابلٍ يومَه كلَّه — **ومن قاد بلا مقابلٍ مرّةً يتردّد في
+// الثانية.**
+//
+// **والمطالبةُ تُسجَّل على الإنذار نفسِه** لا في جدولٍ ثالث: الإنذارُ يقول
+// **ماذا فعل**، والمطالبةُ تقول **كم كلّف**. **وجدولان لواقعةٍ واحدة
+// يفترقان** — يُغلق أحدُهما ويبقى الآخر، فيُطالَب متجرٌ بما سُوّي.
+//
+// **ولا تُخصم هنا**: الخصمُ قرارُ إنسانٍ بعد أن يسمع المتجر. **ومالٌ يخرج من
+// محفظةِ متجرٍ قبل أن يُسأل نزاعٌ خُسر قبل أن يُفتح.**
+func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
+	orderID string, amount int64) error {
+	if amount <= 0 {
+		return nil
+	}
+	// **والإنذارُ يُكتب هنا إن لم يكن كُتب** — فقد يقع التعويضُ قبله.
+	// `ON CONFLICT` يجعل الترتيبَ لا يهمّ: **من سبق كتب، ومن تلاه أضاف
+	// المطالبة.**
+	_, err := q.Exec(ctx, `
+		INSERT INTO merchant_warnings (merchant_id, reason, order_id, claim_amount)
+		SELECT o.merchant_id, COALESCE(o.fail_reason, 'merchant_refused'), o.id, $2
+		FROM orders o WHERE o.id = $1
+		ON CONFLICT (order_id) WHERE order_id IS NOT NULL
+		DO UPDATE SET claim_amount = merchant_warnings.claim_amount + $2`,
+		orderID, amount)
+	return err
+}

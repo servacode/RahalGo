@@ -165,3 +165,27 @@ func (s *Service) DebitTreasury(ctx context.Context, q wallet.Querier, amount in
 func (s *Service) CreditTreasuryTx(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
 	return s.creditTreasury(ctx, q, orderID, actorID)
 }
+
+// CreditTreasuryDirect يقيّد مبلغاً موجباً للخزينة بمرجعٍ حرّ.
+//
+// **وتختلف عن `CreditTreasuryTx`**: تلك تحسب نصيبَ المنصة من طلبٍ بعينه
+// **فرقاً بين ما قُبض وما دُفع**، وهذه **تقيّد مبلغاً بعينه** جاء من خارج
+// الطلب — استردادُ مطالبةٍ من متجر مثلاً.
+//
+// **ولولاها لَخُصم من المتجر ولم يعد شيءٌ إلى الخزينة** — فتبدو المنصةُ خاسرةً
+// وقد استُرِدّ لها. **والربحُ الذي لا يعرف ما عاد إليه ليس ربحاً.**
+func (s *Service) CreditTreasuryDirect(ctx context.Context, q wallet.Querier,
+	amount int64, ref, note, actorID string) error {
+	if amount <= 0 {
+		return nil
+	}
+	tid := s.treasuryID(ctx)
+	if tid == "" {
+		return nil
+	}
+	if err := s.ensureTreasuryWallet(ctx, q, tid); err != nil {
+		return err
+	}
+	_, err := s.wallet.ApplyTx(ctx, q, tid, amount, "platform_profit", ref, note, &actorID)
+	return err
+}

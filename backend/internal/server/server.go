@@ -362,6 +362,11 @@ func (s *Server) Router() http.Handler {
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
 			// **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
 			r.Get("/cash/outstanding", s.handleCashOutstanding)
+			// **نزاعاتُ المتاجر** — ما دفعته المنصةُ بسببهم. **ومطالبةٌ لا
+			// تُرى مجموعةً لا تُتابَع.**
+			r.Get("/claims", s.handleOpenClaims)
+			r.With(s.RequireRoles("admin", "finance")).
+				Post("/claims/{id}/settle", s.handleSettleClaim)
 			// **الطوارئُ مجموعةً** — ولا تُغلق بمرور الوقت: طارئٌ يختفي وحدَه
 			// يُنسى، **ومن سأل عنه بعد يومين لم يجد من يقول ماذا جرى.**
 			r.Get("/emergencies", s.handleOpenEmergencies)

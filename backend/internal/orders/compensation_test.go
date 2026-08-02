@@ -61,3 +61,54 @@ func TestCompensation_UnknownReasonRejected(t *testing.T) {
 		t.Errorf("عُوّض على سببٍ مجهول: %d", got)
 	}
 }
+
+// TestMerchantFault_CompensatesAndOpensClaim المتجرُ يعتذر — **السائقُ يُعوَّض
+// فوراً، والمطالبةُ تُفتح عليه.**
+//
+// # قرارُ المالك (٢٠٢٦-٠٨-٠٣)
+//
+// **«نعم، المنصة تعوّضه — وبفتح نزاع مع المتجر لحلّ القصة.»**
+//
+// # وكانت القاعدةُ تظلم السائق
+//
+// بُنيت سابقاً: «ذنبُ المتجر لا تعويضَ فيه — المنصةُ تتحمّل بضاعتَه وتعوّض
+// سائقَها فلا نجمع عليها الاثنين». **فكان السائقُ يقود المشوارَ كاملاً ولا
+// يأخذ شيئاً** بسبب متجرٍ اعتذر متأخّراً — **وهو لا يملك من أمر ذلك شيئاً.**
+//
+// # ولماذا يُدفع قبل الحسم
+//
+// **نزاعٌ يستغرق يوماً يترك من قاد مشوارَه بلا مقابلٍ يومَه كلَّه** — ومن قاد
+// بلا مقابلٍ مرّةً يتردّد في الثانية. **والمطالبةُ تجري في مسارها.**
+func TestMerchantFault_CompensatesAndOpensClaim(t *testing.T) {
+	f := setup(t, "at_pickup", 100_000, 10_000, 0)
+	ctx := context.Background()
+	f.armTreasury(t)
+
+	// **المتجرُ يعتذر والسائقُ عند بابه** — ذنبُه من القائمة لا من تقدير أحد.
+	if _, err := f.svc.TransitionWithReason(ctx, f.driver, []string{"driver"},
+		f.orderID, "failed", "اعتذر عن الصنف", "merchant_refused"); err != nil {
+		t.Fatalf("الإفشال فشل: %v", err)
+	}
+
+	// **١ · السائقُ عُوِّض** — نصفُ رسم التوصيل (الافتراضيّ).
+	comp := f.balance(t, f.driver)
+	if comp <= 0 {
+		t.Fatalf("السائقُ لم يُعوَّض عن مشوارٍ ضاع بذنب المتجر: %d", comp)
+	}
+
+	// **٢ · والمطالبةُ فُتحت بما دُفع** — لا برقمٍ يُحسب من جديد.
+	var claim int64
+	var settlement *string
+	if err := f.pool.QueryRow(ctx, `
+		SELECT claim_amount, settlement FROM merchant_warnings WHERE order_id = $1`,
+		f.orderID).Scan(&claim, &settlement); err != nil {
+		t.Fatalf("لم تُفتح مطالبة: %v", err)
+	}
+	if claim != comp {
+		t.Errorf("المطالبة = %d والتعويضُ = %d — **يجب أن يتطابقا**", claim, comp)
+	}
+	// **ومفتوحةٌ لا محسومة**: الخصمُ قرارُ إنسانٍ بعد أن يسمع المتجر.
+	if settlement != nil {
+		t.Errorf("حُسمت المطالبةُ آلياً: %q — **ومالٌ يخرج قبل أن يُسأل نزاعٌ خُسر**", *settlement)
+	}
+}

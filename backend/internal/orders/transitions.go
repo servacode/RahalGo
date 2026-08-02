@@ -319,7 +319,18 @@ func (s *Service) compensateDriverOnFail(ctx context.Context, q wallet.Querier, 
 		Scan(&fault); err != nil {
 		return err
 	}
-	if fault != FaultCustomer {
+	// **ويُعوَّض في الحالين: ذنبُ الزبون وذنبُ المتجر.**
+	//
+	// قرارُ المالك (٢٠٢٦-٠٨-٠٣): **«نعم، المنصة تعوّضه — وبفتح نزاع مع المتجر
+	// لحلّ القصة.»**
+	//
+	// وكانت القاعدةُ سابقاً «ذنبُ المتجر لا تعويضَ فيه» — **وهي تظلم السائق**:
+	// قاد المشوارَ كاملاً **بسبب متجرٍ اعتذر متأخّراً**، وهو لا يملك من أمر
+	// ذلك شيئاً. **ومن قاد بلا مقابلٍ مرّةً يتردّد في الثانية.**
+	//
+	// **وذنبُ السائق وحدَه لا تعويضَ فيه** — ومن أخّر فبرد الطعامُ لا يُؤجَر
+	// على تأخيره.
+	if fault != FaultCustomer && fault != FaultMerchant {
 		return nil
 	}
 
@@ -331,12 +342,26 @@ func (s *Service) compensateDriverOnFail(ctx context.Context, q wallet.Querier, 
 	if amount <= 0 {
 		return nil
 	}
+	who := "الحقُّ على الزبون"
+	if fault == FaultMerchant {
+		who = "المتجرُ اعتذر"
+	}
 	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, amount, "compensation",
-		in.orderID, "تعويضٌ عن تعذّر التسليم — الحقُّ على الزبون", &in.actorID); err != nil {
+		in.orderID, "تعويضٌ عن تعذّر التسليم — "+who, &in.actorID); err != nil {
 		return err
 	}
-	return s.DebitTreasury(ctx, q, amount, in.orderID,
-		"تعويضُ سائقٍ عن تعذّر تسليم", in.actorID)
+	if err := s.DebitTreasury(ctx, q, amount, in.orderID,
+		"تعويضُ سائقٍ عن تعذّر تسليم", in.actorID); err != nil {
+		return err
+	}
+	// **والمطالبةُ تُفتح على المتجر** — تُدفع الآن وتُحسم في مسارها.
+	//
+	// **والمنصةُ تدفع أوّلاً لا بعد الحسم**: نزاعٌ يستغرق يوماً يترك من قاد
+	// مشوارَه بلا مقابلٍ يومَه كلَّه.
+	if fault == FaultMerchant {
+		return s.openMerchantClaim(ctx, q, in.orderID, amount)
+	}
+	return nil
 }
 
 // pastPickup حالاتٌ صار الطعامُ فيها بيد السائق — والمتجرُ قبض ثمنَه.

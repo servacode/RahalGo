@@ -62,6 +62,9 @@ const ALL_NAV: NavItem[] = [
   // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
   { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
     roles: ["admin", "finance", "ops"] },
+  // **ما دفعناه بسبب متجر** — والسائقُ عُوّض فوراً، والحسمُ هنا.
+  { href: "/dashboard/claims", label: m.admin.nav.claims, icon: IconStore,
+    roles: ["admin", "finance", "ops"] },
   // **الخسارةُ الفعلية** — لا الافتراضية التي لم تُدفع.
   { href: "/dashboard/losses", label: m.admin.nav.losses, icon: IconBalance,
     roles: ["admin", "finance"] },
