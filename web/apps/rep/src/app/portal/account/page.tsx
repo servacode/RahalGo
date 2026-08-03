@@ -25,6 +25,11 @@ export default function AccountPage() {
           logout();
           router.replace("/login");
         }}
+      
+        onLogout={() => {
+          logout();
+          router.replace("/login");
+        }}
       />
     </PageContainer>
   );

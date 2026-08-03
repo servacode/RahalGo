@@ -90,6 +90,11 @@ export default function AccountPage() {
           logout();
           router.replace("/");
         }}
+      
+        onLogout={() => {
+          logout();
+          router.replace("/login");
+        }}
       />
 
       {/* دفتر العناوين — يُكتب مرّة ويُستعمل في كل طلب */}

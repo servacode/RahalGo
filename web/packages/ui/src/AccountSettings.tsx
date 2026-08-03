@@ -25,14 +25,32 @@ function errText(err: unknown): string {
   return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
 }
 
+/**
+ * **بطاقةٌ في سطرٍ أفقيّ — لا صندوقٌ طويل.**
+ *
+ * كان العنوانُ فوق والحقولُ تحته، **فكلُّ حقلٍ صغيرٍ يأخذ صندوقاً بارتفاع
+ * ثلاثة أسطر** — وستُّ بطاقاتٍ تصير صفحةً تُمرَّر مرّتين.
+ *
+ * فصار العنوانُ **عموداً ضيّقاً يميناً** والحقولُ تمتدّ بجانبه: **سطرٌ واحدٌ
+ * لكلّ شأن**، والصفحةُ تُمسح بلمحة.
+ *
+ * **وعلى الهاتف يعود العنوانُ فوق** — عمودان في شاشةٍ عرضُها راحةُ يدٍ يقصّان
+ * الحقول. (قرارُ المالك ٢٠٢٦-٠٨-٠٣.)
+ */
 function Section({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-card border border-line bg-surface p-4">
+    /* **بطاقاتٌ بارتفاعٍ واحد.**
+
+       كان `items-start` يترك كلَّ بطاقةٍ بطولها الطبيعيّ، **فيصير السطرُ
+       درجاتٍ متفاوتة** — والعينُ تقرأ الاختلافَ عيباً في التنسيق لا فرقاً في
+       المحتوى. **والشبكةُ تمدّها لأطولهنّ** والعنوانُ يبقى في الأعلى.
+       (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */
+    <section className="flex h-full flex-col rounded-card border border-line bg-surface p-4">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-bold">
         <span className="text-primary [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
         {title}
       </h2>
-      {children}
+      <div className="flex-1">{children}</div>
     </section>
   );
 }
@@ -43,10 +61,19 @@ export function AccountSettings({
   phone,
   onDeleted,
   onVerified,
+  onLogout,
 }: {
   api: ApiFn;
   mediaUrl: (p: string | null | undefined) => string | null;
   phone?: string;
+  /**
+   * تسجيلُ الخروج — **يُعرض على الهاتف وحدَه.**
+   *
+   * زرُّ الخروج طُوي من الشريط في الشاشات الضيّقة (كان رقعةً حمراءَ تزاحم
+   * وتُضغط بالخطأ)، **فلا بدّ من بابٍ يخرج منه صاحبُ الهاتف** — وموضعُه
+   * المعتاد في كلّ تطبيق: صفحةُ الحساب.
+   */
+  onLogout?: () => void;
   /** يُستدعى بعد حذف الحساب — كل تطبيق يقرر وجهته (الخروج ثم صفحة الدخول) */
   onDeleted?: () => void;
   /** يُستدعى بعد توثيق واتساب — تفتح به الصفحات المقفلة بلا تحديث */
@@ -330,7 +357,12 @@ export function AccountSettings({
        والحقولُ قريبةٌ من بعضها لا متباعدةٌ في فراغ.
        (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «اجعل الكروت بصف واحد، ما يلزم الكروت بهذا
        الشكل ماخذة مساحات كبيرة».) */
-    <div className="mx-auto grid max-w-2xl gap-3">
+    /* **ثلاثُ بطاقاتٍ في السطر — لا أربعٌ ولا عمود.**
+
+       بالدمج صار لكلّ شأنٍ بطاقة: **من أنت** (الصورةُ والاسم) · **مفتاحُك**
+       (كلمةُ المرور) · **كيف نصل إليك** (الرقمُ والواتساب). **وثلاثةٌ تملأ
+       السطرَ بلا فراغٍ رابعٍ يتيم.** */
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {/* **بابُ تغيير الاسم.**
 
           كانت الصفحةُ تقرأ الاسمَ وتعرضه في الصورة الرمزية **ولا تكتبه** —
@@ -339,29 +371,7 @@ export function AccountSettings({
 
           **والاسمُ يُقرأ حيث يهمّ**: يناديه السائقُ عند الباب، ويُكتب في
           الفاتورة، ويظهر لغرفة العمليات حين يتّصل. (شهده المالك ٢٠٢٦-٠٨-٠٣) */}
-      <Section title={A.name} icon={<IconUser />}>
-        <form onSubmit={onName} className="space-y-4">
-          <Input
-            id="my-name"
-            label={A.fullName}
-            icon={<IconUser />}
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            placeholder={A.namePlaceholder}
-          />
-          {/* **ولا يُفعَّل الزرُّ بلا تغيير** — زرٌّ يُضغط فلا يقع شيءٌ يُعلّم
-              صاحبَه ألّا يثق بالأزرار. */}
-          <Button
-            type="submit"
-            disabled={nameBusy || nameDraft.trim() === name.trim() || nameDraft.trim().length < 2}
-            className="w-full py-2.5"
-          >
-            {A.saveName}
-          </Button>
-        </form>
-      </Section>
-
-      <Section title={A.photo} icon={<IconUser />}>
+      <Section title={A.identity} icon={<IconUser />}>
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-2xl font-bold text-primary-dark">
             {avatarUrl ? (
@@ -383,10 +393,34 @@ export function AccountSettings({
             )}
           </div>
         </div>
+      
+        <div className="mt-4 border-t border-line pt-4">
+        <form onSubmit={onName} className="space-y-3">
+          <div>
+            <Input
+              id="my-name"
+              label={A.fullName}
+              icon={<IconUser />}
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              placeholder={A.namePlaceholder}
+            />
+          </div>
+          {/* **ولا يُفعَّل الزرُّ بلا تغيير** — زرٌّ يُضغط فلا يقع شيءٌ يُعلّم
+              صاحبَه ألّا يثق بالأزرار. */}
+          <Button
+            type="submit"
+            disabled={nameBusy || nameDraft.trim() === name.trim() || nameDraft.trim().length < 2}
+            className="w-full py-2.5"
+          >
+            {A.saveName}
+          </Button>
+        </form>
+      </div>
       </Section>
 
       <Section title={A.changePassword} icon={<IconLock />}>
-        <form onSubmit={onPassword} className="space-y-4">
+        <form onSubmit={onPassword} className="space-y-3">
           <Input id="cur-pw" label={A.currentPassword} icon={<IconLock />} type="password" required value={current} onChange={(e) => setCurrent(e.target.value)} />
           <Input id="new-pw" label={A.newPassword} icon={<IconLock />} type="password" required value={next} onChange={(e) => setNext(e.target.value)} />
           <Input id="conf-pw" label={A.confirmPassword} icon={<IconLock />} type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
@@ -396,9 +430,9 @@ export function AccountSettings({
         </form>
       </Section>
 
-      <Section title={A.changePhone} icon={<IconPhone />}>
+      <Section title={A.contact} icon={<IconPhone />}>
         {!otpSent ? (
-          <form onSubmit={reqPhone} className="space-y-4">
+          <form onSubmit={reqPhone} className="space-y-3">
             <div>
               <Input id="new-phone" label={A.newPhone} icon={<IconPhone />} dir="ltr" inputMode="tel" required value={newPhone} onChange={(e) => setNewPhone(e.target.value)} className="text-end" placeholder="09xxxxxxxx" />
               <p className="mt-1 text-xs text-ink-muted">{A.phoneHint}</p>
@@ -408,18 +442,22 @@ export function AccountSettings({
             </Button>
           </form>
         ) : (
-          <form onSubmit={confirmPhone} className="space-y-4">
+          <form onSubmit={confirmPhone} className="space-y-3">
             <p className="rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">{A.codeSent}</p>
-            <Input id="phone-code" label={A.code} dir="ltr" inputMode="numeric" required autoFocus value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="text-center font-mono text-lg tracking-[0.4em]" placeholder="••••••" maxLength={6} />
+            <div>
+              <Input id="phone-code" label={A.code} dir="ltr" inputMode="numeric" required autoFocus value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="text-center font-mono text-lg tracking-[0.4em]" placeholder="••••••" maxLength={6} />
+            </div>
             <Button type="submit" disabled={phoneBusy} className="w-full py-2.5">
               {phoneBusy ? m.common.loading : A.confirmChange}
             </Button>
           </form>
         )}
-      </Section>
-
-      {/* توثيق واتساب — قناة التواصل، لا هوية الدخول (قسم مستقل عن تغيير الرقم) */}
-      <Section title={A.whatsapp} icon={<IconWhatsApp />}>
+      
+        <div className="mt-4 border-t border-line pt-4">
+          <p className="mb-2 flex items-center gap-2 text-xs font-bold text-ink-muted">
+            <IconWhatsApp className="h-4 w-4 text-primary" />
+            {A.whatsapp}
+          </p>
         {waVerified && !waEditing ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-3 rounded-control border border-success/30 bg-success/5 px-3 py-2.5">
@@ -442,7 +480,7 @@ export function AccountSettings({
             </Button>
           </div>
         ) : !waSent ? (
-          <form onSubmit={reqWhatsApp} className="space-y-4">
+          <form onSubmit={reqWhatsApp} className="space-y-3">
             <div>
               <Input
                 id="wa-phone"
@@ -476,7 +514,7 @@ export function AccountSettings({
             </div>
           </form>
         ) : (
-          <form onSubmit={confirmWhatsApp} className="space-y-4">
+          <form onSubmit={confirmWhatsApp} className="space-y-3">
             <p className="rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">
               {A.whatsappCodeSent}
             </p>
@@ -503,10 +541,10 @@ export function AccountSettings({
             </div>
           </form>
         )}
+      </div>
       </Section>
 
-      {/* منطقة الخطر — تمتدّ عبر العمودين وتُفصل بصرياً عمّا فوقها */}
-      <section className="rounded-card border border-danger/30 bg-danger/5 p-5">
+      <section className="rounded-card border border-danger/30 bg-danger/5 p-4 sm:col-span-2 lg:col-span-3">
         <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-danger">
           <span className="[&>svg]:h-4 [&>svg]:w-4">
             <IconWarning />
@@ -560,13 +598,23 @@ export function AccountSettings({
         )}
       </section>
 
+      {/* **الخروجُ هنا على الهاتف** — طُوي من الشريط فلا يُزاحم، **وبابٌ
+          يُغلق بلا بديلٍ حبسٌ لا تبسيط.** */}
+      {onLogout && (
+        <section className="rounded-card border border-line bg-surface p-4 sm:hidden">
+          <Button variant="secondary" onClick={onLogout} className="w-full !text-danger">
+            {m.auth.logout}
+          </Button>
+        </section>
+      )}
+
       {msg && (
-        <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success">
+        <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success sm:col-span-2 lg:col-span-3">
           {msg}
         </p>
       )}
       {error && (
-        <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">
+        <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger sm:col-span-2 lg:col-span-3">
           {error}
         </p>
       )}

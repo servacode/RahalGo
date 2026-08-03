@@ -249,10 +249,21 @@ export function TopBarActions({
       >
         <Avatar url={avatarUrl} name={name} size={TOPBAR_AVATAR} />
       </TopBarLink>
-      <TopBarChip tone="danger" onClick={onLogout} title={logoutLabel} aria-label={logoutLabel}>
-        <IconLogout size={TOPBAR_ICON} />
-        <span className="hidden lg:inline">{logoutLabel}</span>
-      </TopBarChip>
+      {/* **الخروجُ لا يُزاحم على الهاتف.**
+
+          كان رقعةً حمراءَ مصمتةً في أضيق شريط: **أبرزُ ما في الشاشة، وهو
+          أقلُّ ما يُستعمل** — ويجاور الصورةَ والجرسَ فيُضغط بالخطأ، **وإصبعٌ
+          واحدةٌ على شاشةِ هاتفٍ لا تُخطئ خطأً يُتدارَك.**
+
+          فيبقى في الشاشات الواسعة كما كان، **وعلى الهاتف يُطوى إلى صفحة
+          «حسابي»** — وهي موضعُه المعتاد في كلّ تطبيق.
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */}
+      <span className="hidden sm:contents">
+        <TopBarChip tone="danger" onClick={onLogout} title={logoutLabel} aria-label={logoutLabel}>
+          <IconLogout size={TOPBAR_ICON} />
+          <span className="hidden lg:inline">{logoutLabel}</span>
+        </TopBarChip>
+      </span>
     </>
   );
 }
