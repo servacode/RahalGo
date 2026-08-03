@@ -11,6 +11,7 @@ import {
   type ChromeNavItem,
   IconOrder,
   IconWallet,
+  IconBalance,
   IconUser,
   IconLocation,
   IconStar,
@@ -29,6 +30,8 @@ const NAV: ChromeNavItem[] = [
   { href: "/portal/incoming", label: m.driver.nav.incoming, icon: IconLocation },
   { href: "/portal", label: m.driver.nav.tasks, icon: IconOrder },
   { href: "/portal/wallet", label: m.driver.nav.wallet, icon: IconWallet },
+  // **ومالٌ في ذمّته يُقرأ مفصَّلاً** — لا مجموعاً في رأس الشاشة.
+  { href: "/portal/cash", label: m.driver.cashbox.title, icon: IconBalance },
   // **تقييماتُه وشكاواه** — كانتا لا بابَ لهما في لوحته: الرقمُ في الشريط
   // وحدَه، **ومن اشتُكي عليه ولا يعلم لا يُصلح شيئاً.**
   { href: "/portal/reviews", label: m.terms.ratings, icon: IconStar },

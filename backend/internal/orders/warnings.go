@@ -120,12 +120,33 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 	// **والإنذارُ يُكتب هنا إن لم يكن كُتب** — فقد يقع التعويضُ قبله.
 	// `ON CONFLICT` يجعل الترتيبَ لا يهمّ: **من سبق كتب، ومن تلاه أضاف
 	// المطالبة.**
-	_, err := q.Exec(ctx, `
-		INSERT INTO merchant_warnings (merchant_id, reason, order_id, claim_amount)
-		SELECT o.merchant_id, COALESCE(o.fail_reason, 'merchant_refused'), o.id, $2
+	//
+	// **والمبلغُ لم يعد يُكتب هنا** (هجرة `0063`): الإنذارُ سلوكٌ يُعدّ ولا
+	// يُسوّى، **والنزاعُ مالٌ يُسوّى ويُغلق** — وهما واقعتان لا واحدة. وبقاءُ
+	// المال في صفّ الإنذار **هو ما منع أن يكون للسائق أو الزبون نزاعٌ أصلاً.**
+	var warningID string
+	if err := q.QueryRow(ctx, `
+		INSERT INTO merchant_warnings (merchant_id, reason, order_id)
+		SELECT o.merchant_id, COALESCE(o.fail_reason, 'merchant_refused'), o.id
 		FROM orders o WHERE o.id = $1
 		ON CONFLICT (order_id) WHERE order_id IS NOT NULL
-		DO UPDATE SET claim_amount = merchant_warnings.claim_amount + $2`,
-		orderID, amount)
+		DO UPDATE SET reason = merchant_warnings.reason
+		RETURNING id::text`, orderID).Scan(&warningID); err != nil {
+		return err
+	}
+
+	// **والنزاعُ في جدوله، ومرجعُه إنذارُه.**
+	//
+	// `ON CONFLICT` على (الطلب · الطرف) يحرس التكرار: **التعويضُ قد يُنادى
+	// مرّتين لطلبٍ واحد** (طارئٌ ثمّ فشل)، فيُطالَب المتجرُ مرّتين بالواقعة
+	// نفسِها. **ويُجمع لا يُستبدل** — كلفتان وقعتا فعلاً.
+	_, err := q.Exec(ctx, `
+		INSERT INTO disputes (party_role, merchant_id, order_id, warning_id, reason, amount)
+		SELECT 'merchant', o.merchant_id, o.id, $3,
+		       COALESCE(o.fail_reason, 'merchant_refused'), $2
+		FROM orders o WHERE o.id = $1
+		ON CONFLICT (order_id, party_role) WHERE order_id IS NOT NULL
+		DO UPDATE SET amount = disputes.amount + $2`,
+		orderID, amount, warningID)
 	return err
 }

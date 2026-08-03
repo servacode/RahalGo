@@ -34,12 +34,17 @@ type merchantStore struct {
 	LogoThumbURL    *string `json:"logo_thumb_url"`
 	Status          string  `json:"status"`
 	EmergencyClosed bool    `json:"emergency_closed"`
+	// **وضبطُه الذي يملكه بيده** — كان يُكتب في القاعدة ولا يُقرأ في بابه،
+	// **فصفحةُ إعداداتٍ تفتح بحقولٍ فارغةٍ ثمّ يكتب المالكُ فيها ما يظنّه.**
+	PrepMinutes int   `json:"default_prep_minutes"`
+	MinOrder    int64 `json:"min_order"`
 }
 
 // handleMerchantStores متاجر صاحب الحساب.
 func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT m.id, m.name, c.icon, lm.thumb_path, m.status, m.emergency_closed
+		SELECT m.id, m.name, c.icon, lm.thumb_path, m.status, m.emergency_closed,
+		       m.default_prep_minutes, m.min_order
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
@@ -53,7 +58,7 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m merchantStore
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.LogoThumbURL,
-			&m.Status, &m.EmergencyClosed); err != nil {
+			&m.Status, &m.EmergencyClosed, &m.PrepMinutes, &m.MinOrder); err != nil {
 			s.respondErr(w, err)
 			return
 		}

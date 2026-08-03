@@ -16,6 +16,7 @@ import {
   IconStatus,
   IconSupport,
   IconUser,
+  IconSettings,
   IconWallet,
   IconWarning,
 } from "@rahalgo/ui";
@@ -34,6 +35,8 @@ const NAV: ChromeNavItem[] = [
   { href: "/portal/reviews", label: m.terms.warnings, icon: IconWarning },
   { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
   { href: "/portal/wallet", label: m.terms.wallet, icon: IconWallet },
+  // **وضبطُ المتجر بيد صاحبه** — الدوامُ ومدّةُ التحضير والحدُّ الأدنى.
+  { href: "/portal/settings", label: m.terms.settings, icon: IconSettings },
   { href: "/portal/account", label: m.terms.account, icon: IconUser },
 ];
 

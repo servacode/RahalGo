@@ -12,6 +12,9 @@ export interface Store {
   logo_thumb_url: string | null;
   status: string;
   emergency_closed: boolean;
+  /** **ضبطُ المتجر الذي يملكه بيده** — يُقرأ في صفحة إعداداته. */
+  default_prep_minutes: number;
+  min_order: number;
 }
 
 interface StoreState {

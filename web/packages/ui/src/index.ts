@@ -86,4 +86,5 @@ export {
 export * from "./timeline";
 export * from "./ordertrack";
 export * from "./MyAddresses";
+export { StoreHours, type DayHours } from "./StoreHours";
 export * from "./icons";
