@@ -95,7 +95,12 @@ func (s *Server) handleMerchantCreateItem(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id})
+	// **وصنفٌ جديدٌ يُراجَع كلَّه** — لا شيءَ منه رآه أحدٌ بعد.
+	pending := s.menuNeedsApproval(r)
+	if pending {
+		s.holdForReview(r, id)
+	}
+	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id, "pending_review": pending})
 }
 
 func (s *Server) handleMerchantUpdateItem(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +122,13 @@ func (s *Server) handleMerchantUpdateItem(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+	// **والإتاحةُ وحدَها لا تُعلّق الصنف** — «نفد» قرارُ مطبخٍ في لحظته،
+	// **ومراجعتُه تجعل المتجرَ يبيع ما نفد حتى نستيقظ.**
+	pending := s.menuNeedsApproval(r) && touchesContent(*req)
+	if pending {
+		s.holdForReview(r, itemID)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true, "pending_review": pending})
 }
 
 func (s *Server) handleMerchantDeleteItem(w http.ResponseWriter, r *http.Request) {

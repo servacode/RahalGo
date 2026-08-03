@@ -421,7 +421,7 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 		// البائعَ يجعل الصنفَ الواحد بسعرين.**
 		var itemMargin, sectionMargin *int64
 		err := s.db.QueryRow(ctx, `
-			SELECT mi.id, mi.name, mi.merchant_price, mi.available,
+			SELECT mi.id, mi.name, mi.merchant_price, mi.available AND mi.approved,
 			       mi.margin_override, ps.margin_override, mi.merchant_id::text
 			FROM menu_items mi
 			LEFT JOIN platform_sections ps ON ps.id = mi.platform_section_id
@@ -434,6 +434,15 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 		if err != nil {
 			return nil, 0, err
 		}
+		// **والحجبُ في مسار الطلب لا في العرض وحدَه.**
+		//
+		// إخفاءُ صنفٍ من التصفّح لا يمنع طلبَه: **سلّةٌ فُتحت قبل التعليق
+		// ما زالت تحمل معرّفَه**، ورابطٌ محفوظٌ يُفتح، **ونداءُ الطلب لا يمرّ
+		// على شاشة.** فالحارسُ حيث يُقرّر لا حيث يُعرض — **وهي عائلةُ «قاعدةٌ
+		// تُطبَّق في الشاشة ولا يفرضها المحرّك» التي تكرّرت.**
+		//
+		// **ورسالةٌ واحدةٌ للحالين**: «هذا الصنف غير متاح الآن» — والزبونُ لا
+		// شأنَ له بأنّ سببَه نفادٌ أو مراجعةٌ عندنا.
 		if !available {
 			return nil, 0, ErrItemUnavailable
 		}

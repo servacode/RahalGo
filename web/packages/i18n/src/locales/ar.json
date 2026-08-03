@@ -279,7 +279,9 @@
       "salePrice": "سعر البيع للزبون",
       "platformSection": "قسم المنصة",
       "noPlatformSection": "— بلا قسم —",
-      "noPlatformSectionHint": "بلا قسم لن يظهر الصنف في تصفّح الزبون"
+      "noPlatformSectionHint": "بلا قسم لن يظهر الصنف في تصفّح الزبون",
+      "pendingReview": "بانتظار المراجعة",
+      "rejected": "رُدّ — عدّله ليُراجَع"
     },
     "invoice": {
       "open": "الفاتورة",
@@ -1637,6 +1639,14 @@
       "rep": "المندوب",
       "ordersHint": "طلباتُه في السجلّ — بجدوله وأزراره كاملةً",
       "openOrders": "افتح طلباته"
+    },
+    "menuReview": {
+      "title": "أصنافٌ تنتظر المراجعة",
+      "hint": "ما أضافه المتاجرُ أو عدّلوه — ولا يراه الزبونُ حتى تُقرّه",
+      "approve": "انشر",
+      "reject": "ردّ",
+      "rejectNote": "سببُ الردّ — يصل صاحبَه",
+      "rejectConfirm": "ردّ وأخطِره"
     }
   },
   "merchant": {

@@ -52,6 +52,15 @@ export interface MenuItem {
   image_url: string | null;
   image_thumb_url: string | null;
   available: boolean;
+  /**
+   * **أنُشر للزبائن؟** — يهبط حين يُرفع مفتاحُ مراجعة القائمة.
+   *
+   * **واختياريٌّ عمداً**: ردٌّ قديمٌ لا يحمله، **وغيابُه يُقرأ «منشور» لا
+   * «معلَّق»** — فلا تختفي قائمةٌ لأنّ حقلاً لم يصل.
+   */
+  approved?: boolean;
+  /** سببُ الردّ — **يُقال لصاحبه**، فلا يُعيد إرسالَه كما هو. */
+  review_note?: string;
   modifiers: ModifierGroup[];
 }
 /** قسمُ منصةٍ كما تراه شاشةُ التحرير — الاسمُ وحدَه يلزم. */
@@ -275,9 +284,21 @@ export function MenuManager({
                           </span>
                         )}
                       </span>
-                      <Badge variant={item.available ? "success" : "warning"}>
-                        {item.available ? L.available : L.unavailable}
-                      </Badge>
+                      {/* **ومعلَّقٌ لا مختفٍ.**
+
+                          حين يُرفع مفتاحُ مراجعة القائمة يبقى الصنفُ في قائمة
+                          صاحبه **ولا يُعرض للزبون حتى يُقَرّ**. ولو أُخفي عنه
+                          **لأضافه ثانيةً وثالثة** فيمتلئ الطابورُ بنسخٍ من
+                          الشيء الواحد. */}
+                      {item.approved === false ? (
+                        <Badge variant="warning" title={item.review_note || undefined}>
+                          {item.review_note ? L.rejected : L.pendingReview}
+                        </Badge>
+                      ) : (
+                        <Badge variant={item.available ? "success" : "warning"}>
+                          {item.available ? L.available : L.unavailable}
+                        </Badge>
+                      )}
                       <div className="flex gap-1.5">
                         <Button variant="secondary" onClick={() => toggleAvailable(item)}>
                           {item.available ? L.markUnavailable : L.markAvailable}

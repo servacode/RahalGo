@@ -29,7 +29,7 @@ func (s *Server) handlePublicSearch(w http.ResponseWriter, r *http.Request) {
 		       -- سبب الظهور: اسمُ المتجر أم صنفٌ فيه؟ يُعرض للزبون كي يفهم النتيجة
 		       COALESCE((SELECT string_agg(x.name, '، ')
 		                 FROM (SELECT i.name FROM menu_items i
-		                       WHERE i.merchant_id = m.id AND i.available
+		                       WHERE i.merchant_id = m.id AND i.available AND i.approved
 		                         AND i.name ILIKE '%'||$1||'%' LIMIT 3) x), '')
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
@@ -37,7 +37,7 @@ func (s *Server) handlePublicSearch(w http.ResponseWriter, r *http.Request) {
 		WHERE m.status = 'active'
 		  AND (m.name ILIKE '%'||$1||'%'
 		       OR EXISTS (SELECT 1 FROM menu_items i
-		                  WHERE i.merchant_id = m.id AND i.available
+		                  WHERE i.merchant_id = m.id AND i.available AND i.approved
 		                    AND i.name ILIKE '%'||$1||'%'))
 		ORDER BY (m.name ILIKE '%'||$1||'%') DESC, m.name
 		LIMIT 30`, q)

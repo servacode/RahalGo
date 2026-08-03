@@ -396,6 +396,11 @@ func (s *Server) Router() http.Handler {
 			// **التقييماتُ مجموعةً** — «أيُّ سائقٍ يشكو منه الناس؟» سؤالٌ لا
 			// جوابَ له إلّا بفتح عشرين ملفّاً، **فلا يُفتح فلا يُعرف.**
 			r.Get("/ratings", s.handleAdminRatings)
+			// **طابورُ مراجعة القائمة** — يعمل حين يُرفع مفتاحُ
+			// `merchants.menu_requires_approval`، وكان المفتاحُ يَعِد ولا يفعل.
+			r.Get("/menu/pending", s.handlePendingMenuItems)
+			r.With(s.RequireRoles("admin")).
+				Post("/menu/items/{itemID}/review", s.handleReviewMenuItem)
 			r.Get("/broadcast/count", s.handleBroadcastCount)
 			r.With(s.RequireRoles("admin")).Post("/broadcast", s.handleBroadcast)
 			r.Get("/disputes", s.handleListDisputes)

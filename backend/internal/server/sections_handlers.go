@@ -48,6 +48,12 @@ type publicItem struct {
 //
 // **وسعرُ البيع يُحسب في Go لا في SQL** — فالمعادلةُ في `pricing` وحدَها،
 // **ولو كُتبت هنا لَافترقت عن حسبةِ الطلب** فيرى الزبونُ سعراً ويُحاسَب بغيره.
+//
+// # ولا يُعرض ما لم يُنشَر بعد
+//
+// شرطُ `i.approved` يحرس مراجعةَ القائمة. **والعمودُ يبقى صادقاً لكلّ ما وُجد
+// قبل الهجرة ٠٠٦٤ ولكلّ ما يُنشأ والمفتاحُ مُطفأ** — فالشرطُ لا يُخفي شيئاً
+// حتى يُرفع المفتاح، **ولا يُطفئ سوقاً قائماً في لحظة.**
 const itemSelect = `
 	SELECT i.id, i.name, i.description, i.merchant_price, i.margin_override,
 	       im.thumb_path, i.available, ps.id, ps.name, ps.margin_override,
@@ -56,7 +62,8 @@ const itemSelect = `
 	JOIN merchants m ON m.id = i.merchant_id
 	JOIN platform_sections ps ON ps.id = i.platform_section_id
 	LEFT JOIN media im ON im.id = i.image_media_id
-	WHERE m.status = 'active' AND ps.active`
+	WHERE m.status = 'active' AND ps.active
+	  AND i.approved`
 
 func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, args ...any) {
 	rule := pricing.RuleFrom(r.Context(), s.settings)

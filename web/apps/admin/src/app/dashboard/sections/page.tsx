@@ -38,6 +38,7 @@ import {
   IconStatus,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
+import MenuReviewQueue from "@/components/MenuReviewQueue";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
@@ -78,6 +79,12 @@ export default function SectionsPage() {
         subtitle={S.hint}
         actions={<Button onClick={() => setEditing("new")}>{S.add}</Button>}
       />
+
+      {/* **طابورُ مراجعة القائمة — حيث يُقرَّر ما يُعرض في السوق.**
+
+          يظهر حين يكون فيه عمل، **ولا يظهر حين يكون المفتاحُ مُطفأً**: قسمٌ
+          فارغٌ دائماً يُتعلَّم تجاهلُه، ثمّ يُرفع المفتاحُ يوماً فلا يُنظر إليه. */}
+      <MenuReviewQueue />
 
       {list.length === 0 ? (
         <EmptyState icon={IconStatus} title={S.empty} />
