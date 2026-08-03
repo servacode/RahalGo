@@ -75,6 +75,38 @@ type ViolationRow struct {
 	ClosedAt time.Time `json:"closed_at"`
 }
 
+// ViolationsCountSQL عدّادُ مخالفات متجرٍ **استعلاماً فرعياً** — ليُدمج في
+// استعلامٍ آخر بدل أن يُكتب شرطُه من جديد.
+//
+// # لماذا يُصدَّر
+//
+// كان في `catalog.merchantSelect` عدّادٌ ثانٍ **يشبه** هذا ولا يساويه: يعدّ
+// الإلغاءَ والرفض **ويُغفل الفشلَ بذنب المتجر والإنذاراتِ اليدوية**، ونافذتُه
+// ثلاثون يوماً ثابتةً لا الإعداد.
+//
+// **فيرى المالكُ في القائمة «٢» وفي الملفّ «٤»** — ولا يعرف أيّهما يُصدّق،
+// **ولا أيّهما يحظر.** وتعليقُ ذلك الاستعلام كان يقول بلفظه «بشرط العدّ نفسه
+// لا بشرطٍ يشبهه» — **والوصفُ صحيحٌ والتنفيذُ خالفه.**
+//
+// **و`$1` معرّفُ المتجر و`$2` عددُ الأيام** — يمرّرهما المستدعي.
+func ViolationsCountSQL(merchantExpr, daysExpr string) string {
+	return `((SELECT count(*) FROM orders o
+	          JOIN merchants mv ON mv.id = o.merchant_id
+	          WHERE o.merchant_id = ` + merchantExpr + `
+	            AND ((o.ended_by = 'merchant' AND o.status IN ('rejected', 'cancelled'))
+	                 OR (o.status = 'failed' AND o.fault = 'merchant'))
+	            AND o.closed_at > now() - make_interval(days => ` + daysExpr + `::int)
+	            AND (mv.violations_cleared_at IS NULL
+	                 OR o.closed_at > mv.violations_cleared_at))
+	        + (SELECT count(*) FROM merchant_warnings w
+	           JOIN merchants mw ON mw.id = w.merchant_id
+	           WHERE w.merchant_id = ` + merchantExpr + `
+	             AND w.order_id IS NULL
+	             AND w.created_at > now() - make_interval(days => ` + daysExpr + `::int)
+	             AND (mw.violations_cleared_at IS NULL
+	                  OR w.created_at > mw.violations_cleared_at)))`
+}
+
 // violationsWhere شرطُ المخالفة — **مكتوبٌ مرّةً يُقرأ في العدّ وفي القائمة.**
 //
 // **ولو نُسخ لَافترقا يوماً**: يُضاف شرطٌ في العدّ فيُقال «٤ مخالفات» وتُعرض

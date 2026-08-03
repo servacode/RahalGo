@@ -14,6 +14,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
@@ -151,29 +152,45 @@ func (s *Service) UpdateCategory(ctx context.Context, actorID, id string, in Cat
 
 // ---------- المتاجر ----------
 
-const merchantSelect = `
+// merchantSelect **دالّةٌ لا ثابت** — لأنّها تبني عدّادَ المخالفات من مصدره
+// (`orders.ViolationsCountSQL`) بدل أن تكتبه من جديد، **ورقمُ معامل النافذة
+// يختلف باختلاف الاستعلام**: القائمةُ تحمل مرشِّحاتٍ قبله، والمفردُ لا يحمل.
+func merchantSelect(daysExpr string) string {
+	return `
 	SELECT m.id, m.name, m.description, m.category_id, c.name, c.icon,
 	       m.phone, m.address_text, m.owner_user_id, u.phone, sr.phone, sr.invite_code,
 	       ST_Y(m.location::geometry), ST_X(m.location::geometry),
 	       lm.path, lm.thumb_path,
 	       m.status,
-	       -- **بشرط العدّ نفسه** الذي في orders.MerchantViolations، لا بشرطٍ
-	       -- يشبهه: عدّادٌ في الشاشة يخالف العدّادَ الذي يحظر يُفقد الثقةَ
-	       -- بالاثنين. والنافذةُ ثابتةٌ هنا بثلاثين يوماً لأن هذا استعلامُ
-	       -- عرضٍ لا قرار — **والقرارُ يقرأ الإعداد.**
-	       (SELECT count(*) FROM orders o
-	        WHERE o.merchant_id = m.id
-	          AND o.ended_by = 'merchant'
-	          AND o.status IN ('rejected', 'cancelled')
-	          AND o.closed_at > now() - interval '30 days'
-	          AND (m.violations_cleared_at IS NULL
-	               OR o.closed_at > m.violations_cleared_at)),
+	       -- **بشرط العدّ نفسه** الذي يحظر — لا بشرطٍ يشبهه.
+	       --
+	       -- وكان هنا عدّادٌ ثانٍ مكتوبٌ بيده: يعدّ الإلغاءَ والرفض **ويُغفل
+	       -- الفشلَ بذنب المتجر والإنذاراتِ اليدوية**، ونافذتُه ثلاثون يوماً
+	       -- ثابتةً لا الإعداد. **فيرى المالكُ في القائمة «٢» وفي الملفّ «٤»**
+	       -- ولا يعرف أيّهما يُصدّق ولا أيّهما يحظر.
+	       --
+	       -- والتعليقُ القديم كان يقول «بشرط العدّ نفسه لا بشرطٍ يشبهه» —
+	       -- **والوصفُ صحيحٌ والتنفيذُ خالفه.** فصار الشرطُ يأتي من مصدره.
+	       ` + orders.ViolationsCountSQL("m.id", daysExpr) + `,
 	       m.commission_percent, m.emergency_closed, m.created_at
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
 	LEFT JOIN users sr ON sr.id = m.sales_rep_user_id
 	LEFT JOIN media lm ON lm.id = m.logo_media_id`
+}
+
+// banDays نافذةُ عدّ المخالفات — **من الإعداد لا من رقمٍ ثابت.**
+//
+// **وثلاثون عند الجهل** كما في المحرّك، فلا يختلف عرضٌ عن قرار.
+func (s *Service) banDays(ctx context.Context) int64 {
+	if s.settings != nil {
+		if v := s.settings.GetInt(ctx, "merchants.cancel_ban_days"); v > 0 {
+			return v
+		}
+	}
+	return 30
+}
 
 func scanMerchant(row pgx.Row) (*Merchant, error) {
 	var m Merchant
@@ -213,9 +230,9 @@ func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status, 
 		return nil, err
 	}
 
-	rows, err := s.db.Query(ctx, merchantSelect+where+`
-		ORDER BY m.created_at DESC LIMIT $5 OFFSET $6`,
-		query, categoryID, status, repID, perPage, (page-1)*perPage)
+	rows, err := s.db.Query(ctx, merchantSelect("$5")+where+`
+		ORDER BY m.created_at DESC LIMIT $6 OFFSET $7`,
+		query, categoryID, status, repID, s.banDays(ctx), perPage, (page-1)*perPage)
 	if err != nil {
 		return nil, err
 	}
@@ -342,8 +359,18 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 	return s.merchantByID(ctx, id)
 }
 
+// MerchantByID متجرٌ بعينه — **لملفّه المفرد.**
+//
+// **والمتجرُ كيانٌ لا شخص**: له قائمةٌ وساعاتٌ وعمولةٌ ومخالفاتٌ ومبيعات،
+// **وصاحبُه حسابٌ آخر.** فيلزمه ملفٌّ كما لزم الأشخاصَ ملفُّهم — وكانت كلُّ
+// هذه في نوافذَ منبثقةٍ داخل جدول، **تُفتح واحدةً وتُغلق لتُفتح أخرى.**
+func (s *Service) MerchantByID(ctx context.Context, id string) (*Merchant, error) {
+	return s.merchantByID(ctx, id)
+}
+
 func (s *Service) merchantByID(ctx context.Context, id string) (*Merchant, error) {
-	m, err := scanMerchant(s.db.QueryRow(ctx, merchantSelect+` WHERE m.id = $1`, id))
+	m, err := scanMerchant(s.db.QueryRow(ctx,
+		merchantSelect("$2")+` WHERE m.id = $1`, id, s.banDays(ctx)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}

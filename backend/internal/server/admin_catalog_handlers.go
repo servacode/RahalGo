@@ -87,3 +87,22 @@ func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, m)
 }
+
+// handleAdminGetMerchant متجرٌ بعينه — **لملفّه المفرد.**
+//
+// كان الوصولُ إليه بالبحث في القائمة باسمه، **ومتجران متشابها الاسم يُخلطان.**
+// وكلُّ ما يخصّه — قائمتُه وساعاتُه ومخالفاتُه — كان في نوافذَ منبثقةٍ داخل
+// جدول: **تُفتح واحدةً وتُغلق لتُفتح أخرى، ولا تُرى صورتُه مجتمعةً.**
+func (s *Server) handleAdminGetMerchant(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	mr, err := s.catalog.MerchantByID(r.Context(), id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, mr)
+}

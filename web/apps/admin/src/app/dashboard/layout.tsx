@@ -21,6 +21,7 @@ import {
   IconWhatsApp,
   IconStatus,
   IconSupport,
+  IconStar,
   IconSettings,
   IconLink,
   IconBalance,
@@ -52,6 +53,9 @@ const ALL_NAV: NavItem[] = [
   // **والسجلُّ بابٌ ثانٍ** — «ماذا جرى؟» سؤالٌ غيرُ «ما الذي يحتاجني الآن؟».
   { href: "/dashboard/history", label: m.admin.nav.history, icon: IconStatus },
   { href: "/dashboard/tickets", label: m.terms.complaints, icon: IconSupport },
+  // **وما يقوله الناس مجموعاً** — «أيُّ سائقٍ يشكو منه الناس؟» سؤالٌ لا جوابَ
+  // له إلّا بفتح عشرين ملفّاً، فلا يُفتح فلا يُعرف.
+  { href: "/dashboard/ratings", label: m.admin.nav.ratings, icon: IconStar },
   // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
   { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning },
   { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink },

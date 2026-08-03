@@ -295,6 +295,9 @@ func (s *Server) Router() http.Handler {
 			// **أقسامُ المنصة** — ما نبيعه، لا من نشتري منه.
 			r.Get("/sections", s.handleListPlatformSections)
 			r.Get("/merchants", s.handleListMerchants)
+			// **ومتجرٌ بعينه لملفّه** — كان يُبحث عنه بالاسم في القائمة،
+			// **ومتجران متشابها الاسم يُخلطان.**
+			r.Get("/merchants/{id}", s.handleAdminGetMerchant)
 			r.Get("/merchants/{id}/menu", s.handleGetMenu)
 			r.Get("/merchants/{id}/hours", s.handleGetHours)
 			r.Get("/merchants/{id}/warnings", s.handleAdminMerchantWarnings)
@@ -390,6 +393,9 @@ func (s *Server) Router() http.Handler {
 				Get("/orders/export", s.handleOrdersExport)
 			r.With(s.RequireRoles("admin", "finance")).
 				Get("/ledger/export", s.handleLedgerExport)
+			// **التقييماتُ مجموعةً** — «أيُّ سائقٍ يشكو منه الناس؟» سؤالٌ لا
+			// جوابَ له إلّا بفتح عشرين ملفّاً، **فلا يُفتح فلا يُعرف.**
+			r.Get("/ratings", s.handleAdminRatings)
 			r.Get("/broadcast/count", s.handleBroadcastCount)
 			r.With(s.RequireRoles("admin")).Post("/broadcast", s.handleBroadcast)
 			r.Get("/disputes", s.handleListDisputes)

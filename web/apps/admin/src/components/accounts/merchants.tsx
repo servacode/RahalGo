@@ -408,13 +408,18 @@ export default function MerchantsTable() {
           isAdmin
             ? (mr) => (
                 <>
+                  {/* **الملفُّ قبل القائمة.**
+
+                      كان الزرُّ يفتح القائمةَ مباشرةً، **وكلُّ ما سواها في
+                      نوافذَ منبثقة**: تُفتح واحدةً وتُغلق لتُفتح أخرى، ولا
+                      تُرى صورةُ المتجر مجتمعة. **والقائمةُ صارت تبويباً فيه.** */}
                   <Button
                     variant="secondary"
-                    onClick={() => router.push(`/dashboard/merchants/${mr.id}/menu`)}
+                    onClick={() => router.push(`/dashboard/merchants/${mr.id}`)}
                     className="flex items-center gap-1.5"
                   >
                     <IconMenu size={15} />
-                    {m.admin.menu.manageMenu}
+                    {m.admin.merchants.openProfile}
                   </Button>
                   <Button
                     variant="ghost"
