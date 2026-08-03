@@ -78,6 +78,8 @@ export function NotificationsPage({
   const { data, loading, reload } = useLiveData<Feed>(
     () => api(`/api/v1/me/notifications?limit=200${kind ? `&kind=${kind}` : ""}`),
     ["order", "ticket", "wallet", "rating", "lead", "account", READ_EVENT],
+    // **والنوعُ يُعيد الجلب** — بدونه تُضيء الشريحةُ ولا تُنادى الشبكة.
+    [kind],
   );
 
   const markAll = useCallback(async () => {

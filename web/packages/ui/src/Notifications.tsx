@@ -128,8 +128,23 @@ export function useLiveRefresh(kinds: string[], onEvent: () => void) {
  * useLiveData هو الطريقة المركزية لجلب بيانات أي صفحة: يجلب مرة عند الفتح،
  * ثم يعيد الجلب تلقائياً كلما وقع حدث من الأنواع المذكورة — فلا يحتاج أحد
  * تحديث الصفحة. سطر واحد يغني عن useEffect يدوي في كل صفحة.
+ *
+ * # و`deps` — **ما يُعيد الجلبَ حين يتغيّر**
+ *
+ * دالّةُ التحميل محفوظةٌ في مرجعٍ كي لا يُعاد الاشتراكُ مع كلّ رسم. **وثمنُ
+ * ذلك أنّ ما تلتقطه الدالّةُ من حالةٍ لا يُلاحَظ تغيّرُه**: صفحةٌ تبني عنوانَها
+ * من مُرشِّح (`?kind=` أو `?status=`) **تُغيّر المُرشِّحَ ولا تُنادي الشبكة.**
+ *
+ * **فتُضيء الشريحةُ ولا يتغيّر شيء** — والمستخدمُ يظنّ أن لا نتائج، **ويظنّ
+ * المطوّرُ أنّ الفلترَ يعمل لأنّه رأى اللونَ يتحرّك.**
+ *
+ * **ووقع في موضعين**: مُرشِّحُ أنواع الإشعارات (شهده المالك ٢٠٢٦-٠٨-٠٣:
+ * «الإشعارات يوجد أنواع لكن الفلتر وهميّ لا يعمل») **ومُرشِّحُ حالة طلبات
+ * السحب في اللوحة** — ولم يشتكِ منه أحدٌ بعد.
+ *
+ * **ومن مرّر مُرشِّحاً في العنوان يمرّره هنا.**
  */
-export function useLiveData<T>(load: () => Promise<T>, kinds: string[] = []) {
+export function useLiveData<T>(load: () => Promise<T>, kinds: string[] = [], deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -156,7 +171,8 @@ export function useLiveData<T>(load: () => Promise<T>, kinds: string[] = []) {
     return () => {
       alive = false;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
 
   useEffect(() => reload(), [reload]);
   useLiveRefresh(kinds, reload);

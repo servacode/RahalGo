@@ -18,15 +18,26 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 		// قناة التواصل الموثّقة — تُعرض في «حسابي» وتفتح أدوات المندوب
 		WhatsAppPhone    *string `json:"whatsapp_phone"`
 		WhatsAppVerified bool    `json:"whatsapp_verified"`
+		// OpenTickets شكاواه المفتوحة — **وأيقونةُ الشكاوى تظهر بها وتغيب.**
+		//
+		// **بابٌ لا يُفتح إلّا حين يُحتاج**: أيقونةٌ دائمةٌ في شريطٍ ضيّقٍ تزاحم
+		// ما يُستعمل كلَّ يوم، **وشكوى تُفتح مرّةً في السنة لا تستحقّ مكاناً
+		// دائماً.** ومن اشتكى ظهرت له حتى تُغلق شكواه.
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «أيقونة بالتوب بار، فقط عند الإبلاغ تظهر
+		// وتختفي بإغلاق الشكوى».)
+		OpenTickets int `json:"open_tickets"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name,
 		       (SELECT m.thumb_path FROM media m WHERE m.id = u.avatar_media_id),
 		       COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = u.id), 0),
-		       u.whatsapp_phone, u.whatsapp_verified_at IS NOT NULL
+		       u.whatsapp_phone, u.whatsapp_verified_at IS NOT NULL,
+		       (SELECT count(*) FROM tickets t
+		        WHERE t.customer_id = u.id AND t.status <> 'resolved')
 		FROM users u WHERE u.id = $1`, uid).
 		Scan(&out.FullName, &out.AvatarThumb, &out.Balance,
-			&out.WhatsAppPhone, &out.WhatsAppVerified)
+			&out.WhatsAppPhone, &out.WhatsAppVerified, &out.OpenTickets)
 	if err != nil {
 		s.respondErr(w, err)
 		return

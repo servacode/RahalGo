@@ -65,6 +65,9 @@ export default function PayoutsPage() {
   const { data, loading, reload } = useLiveData<Payout[]>(
     () => api(`/api/v1/admin/payouts${status ? `?status=${status}` : ""}`),
     ["wallet"],
+    // **والحالةُ تُعيد الجلب** — وكانت تُضيء ولا تُنادي الشبكة، **ولم يشتكِ
+    // منه أحدٌ بعد**: من رأى القائمةَ لا تتغيّر ظنّ أن لا طلباتٍ في تلك الحالة.
+    [status],
   );
 
   if (loading) return <LoadingState />;

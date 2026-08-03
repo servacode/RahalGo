@@ -184,7 +184,12 @@ export default function CartPage() {
    * قبل أن يُقرأ السؤال.
    */
   if (placed) {
-    const goOn = () => router.push(`/orders/${placed.id}?placed=1`);
+    // **إلى قائمة الطلبات لا إلى صفحةِ طلبٍ منفردة.**
+    //
+    // صفحةُ التفاصيل حُذفت: **البطاقةُ صارت تحمل كلَّ ما كان فيها** — الأصنافَ
+    // وأسعارَها والمسارَ والوقتَ المتوقَّع والفاتورةَ والشكوى. **وصفحتان تقولان
+    // الشيءَ نفسَه تفترقان يوماً**، وإحداهما تبقى بلا صيانة.
+    const goOn = () => router.push("/orders");
     return (
       <div className="mx-auto max-w-md py-10">
         <div className="rounded-card border border-line bg-surface p-6">
@@ -298,7 +303,7 @@ export default function CartPage() {
           Math.abs(a.lng - lng) < 1e-5,
       );
       if (known) {
-        router.push(`/orders/${o.id}?placed=1`);
+        router.push("/orders");
         return;
       }
       setPlaced({ id: o.id });

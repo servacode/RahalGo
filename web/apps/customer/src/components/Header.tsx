@@ -22,6 +22,7 @@ import {
   LiveNotifications,
   useLiveRefresh,
   IconOrder,
+  IconSupport,
   IconWallet,
   IconUser,
   IconOverview,
@@ -41,6 +42,8 @@ interface Summary {
   full_name: string;
   avatar_thumb_url: string | null;
   balance: number;
+  /** شكاواه المفتوحة — **الأيقونةُ تظهر بها وتغيب بإغلاقها.** */
+  open_tickets: number;
 }
 
 export default function Header() {
@@ -115,6 +118,24 @@ export default function Header() {
                   لأن الشريط يمضي مع التمرير، فتغيب السلّة في اللحظة التي
                   تُستعمل فيها. وذهابُها يحسم كذلك التباسها بـ«الطلبات»
                   المجاورة — R-88. */}
+              {/* **بابُ الشكاوى لا يُفتح إلّا حين يُحتاج.**
+
+                  أيقونةٌ دائمةٌ في شريطٍ ضيّقٍ تزاحم ما يُستعمل كلَّ يوم،
+                  **وشكوى تُفتح مرّةً في السنة لا تستحقّ مكاناً دائماً.** فمن
+                  اشتكى ظهرت له **حتى تُغلق شكواه**، ومن لا شكوى له لا يراها.
+
+                  (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */}
+              {(summary?.open_tickets ?? 0) > 0 && (
+                <TopBarLink
+                  Link={Link}
+                  href="/complaints"
+                  title={m.site.complaint.mine}
+                  aria-label={m.site.complaint.mine}
+                  tone={pathname.startsWith("/complaints") ? "active" : "plain"}
+                >
+                  <IconSupport size={TOPBAR_ICON} />
+                </TopBarLink>
+              )}
               <TopBarLink
                 Link={Link}
                 href="/orders"

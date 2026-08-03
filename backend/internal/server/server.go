@@ -190,6 +190,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/me/avatar", s.handleMyAvatar)
 			r.Delete("/me/avatar", s.handleDeleteMyAvatar)
 			r.Get("/my/ratings", s.handleMyRatings)
+			// **شكاواه هو** — والتذاكرُ كلُّها كانت تحت /admin، فلا يرى صاحبُها حالَها
+			r.Get("/my/tickets", s.handleMyTickets)
 			r.Get("/me/reputation", s.handleMeReputation)
 			r.Get("/me/notifications", s.handleMyNotifications)
 			// العنونة: مساعدة لتحديد المواقع — لأي مستخدم مسجّل
