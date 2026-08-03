@@ -38,6 +38,9 @@ func redactForCustomer(o *orders.Order) {
 	o.MerchantID = ""
 	o.MerchantName = ""
 	o.MerchantLogoThumb = nil
+	// **واسمُ من عُرض عليه الطلبُ ولم يقبل** — شأنُ توزيعٍ داخليّ، **والزبونُ
+	// يعرف سائقَه حين يصير سائقَه لا قبله.**
+	o.OfferedDriverName = nil
 }
 
 // redactAllForCustomer لقائمة الطلبات.

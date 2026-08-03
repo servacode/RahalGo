@@ -42,6 +42,8 @@ func redactForMerchant(o *orders.Order) {
 
 	// السائق كذلك: المتجر يسلّم لمن يأتي، ولا شأن له بمن هو ولا بأجره
 	o.DriverID, o.DriverPhone, o.DriverName = nil, nil, nil
+	// **ومن عُرض عليه كذلك** — شأنُ توزيعٍ داخليّ لا يخصّ المطبخ.
+	o.OfferedDriverName = nil
 	// **وصورةُ التسليم تُظهر بابَ الزبون** — والمتجرُ لا يرى عنوانَه أصلاً.
 	o.ProofURL, o.ProofTakenAt = nil, nil
 	o.ProofMeters, o.ProofSkipReason = 0, ""

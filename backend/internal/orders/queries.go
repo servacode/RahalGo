@@ -20,6 +20,8 @@ const orderSelect = `
 	       o.payment_method, o.subtotal, o.delivery_fee, o.discount, o.total,
 	       o.wallet_paid, o.cash_due, o.promo_code, o.notes, o.cancel_reason, o.created_at,
 	       o.sent_to_merchant_at, o.dispatched_at,
+	       -- **ومن عُرض عليه ولم يقبل بعد** — يُعرض ما دام العرضُ حيّاً.
+	       CASE WHEN o.offer_expires_at > now() THEN od.full_name END,
 	       pm.path, o.pod_taken_at,
 	       -- **المسافةُ تُقاس ساعةَ السؤال من نقطتين محفوظتين.**
 	       COALESCE(ST_Distance(o.pod_at, o.dropoff), -1),
@@ -53,6 +55,7 @@ const orderSelect = `
 	JOIN merchants mr ON mr.id = o.merchant_id
 	LEFT JOIN media lm ON lm.id = mr.logo_media_id
 	LEFT JOIN users dr ON dr.id = o.driver_id
+	LEFT JOIN users od ON od.id = o.offered_driver_id
 	LEFT JOIN delivery_zones z ON z.id = o.zone_id
 	LEFT JOIN media pm ON pm.id = o.pod_media_id`
 
@@ -64,7 +67,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.Discount, &o.Total,
 		&o.WalletPaid, &o.CashDue, &o.PromoCode, &o.Notes, &o.CancelReason, &o.CreatedAt,
-		&o.SentToMerchantAt, &o.DispatchedAt,
+		&o.SentToMerchantAt, &o.DispatchedAt, &o.OfferedDriverName,
 		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason,
 		&o.EndedBy, &o.Fault, &o.FailReason, &o.ReturnedAt, &o.GoodsSettledTo,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.DeliveredAt,

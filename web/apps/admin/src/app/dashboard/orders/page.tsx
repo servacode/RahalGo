@@ -114,6 +114,8 @@ interface OrderRow {
   merchant_id: string;
   driver_phone: string | null;
   driver_name: string | null;
+  /** من عُرض عليه الطلبُ ولم يقبل بعد — **يُعرض ما دام العرضُ حيّاً.** */
+  offered_driver_name: string | null;
   /** إثباتُ التسليم — صورةٌ ومسافةٌ ووقت. */
   proof_url?: string | null;
   proof_taken_at?: string | null;
@@ -564,6 +566,21 @@ export default function OrdersPage() {
             {o.driver_name || o.driver_phone}
             <span className="block text-xs text-ink-muted">
               {m.admin.ordersPage.driverFee}: {fmtNum(o.driver_fee)} {m.common.currency}
+            </span>
+          </span>
+        ) : o.offered_driver_name ? (
+          /* **«جارٍ إسناد سائق» وحدَها لا تقول شيئاً.**
+
+             العملياتُ ترى الطلبَ يتأخّر **ولا تعرف على من عُرض** — فلا تعرف
+             من يتأخّر، **ولا تستطيع أن تتّصل بمن بيده القرارُ الآن.** ورقمٌ
+             يتأخّر بلا اسمٍ يُقرأ «النظامُ بطيء»، **وباسمه يُقرأ «فلانٌ لا
+             يردّ»** — وهو خبرٌ يُبنى عليه.
+
+             (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */
+          <span>
+            {o.offered_driver_name}
+            <span className="block text-xs text-warning">
+              {m.admin.ordersPage.awaitingAccept}
             </span>
           </span>
         ) : (

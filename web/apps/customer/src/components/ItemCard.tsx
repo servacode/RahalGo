@@ -10,7 +10,10 @@
  * متاح» طريقٌ مسدود.
  */
 
-import Link from "next/link";
+import { useCallback, useState } from "react";
+import { Modal, LoadingState } from "@rahalgo/ui";
+import ItemClient, { type Group } from "@/app/i/[id]/ItemClient";
+import { api } from "@/lib/api";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import { Badge } from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
@@ -31,12 +34,44 @@ export interface BrowseItem {
 }
 
 export default function ItemCard({ item }: { item: BrowseItem }) {
+  /**
+   * **الصنفُ يُفتح في نافذةٍ لا في صفحة.**
+   *
+   * الزبونُ في قسمٍ يتصفّح عشرةَ أصناف: يفتح واحداً، يقرأ خياراتِه، **يرجع
+   * ليفتح غيرَه** — وكلُّ رجعةٍ تعيده إلى أعلى القائمة فيبحث عن موضعه.
+   * **والنافذةُ تُبقيه حيث هو.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بعد أن يدخل إلى قسم معيّن ويضغط على نوع،
+   * هنا تكون نافذة منبثقة».)
+   */
+  const [openItem, setOpenItem] = useState<{ item: BrowseItem; modifiers: Group[] } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const open = useCallback(async () => {
+    // **الخياراتُ تُجلب عند الفتح** — بطاقةُ التصفّح لا تحملها، وجلبُها لكلّ
+    // بطاقةٍ في القائمة عشرةُ نداءاتٍ لينظر في واحد.
+    setLoading(true);
+    setOpenItem(null);
+    try {
+      const d = await api<{ item?: BrowseItem; modifiers?: Group[] }>(
+        `/api/v1/public/items/${item.id}`,
+      );
+      if (d.item) setOpenItem({ item: d.item, modifiers: d.modifiers ?? [] });
+    } catch {
+      /* تعذّر الجلب — تُغلق النافذة ولا تُفتح فارغة */
+    } finally {
+      setLoading(false);
+    }
+  }, [item.id]);
+
   const img = mediaUrl(item.image_thumb_url);
   const off = !item.available || item.source_closed;
 
   return (
-    <Link
-      href={`/i/${item.id}`}
+    <>
+    <button
+      type="button"
+      onClick={open}
       className={`flex items-center gap-3 rounded-card border border-line bg-surface p-3 transition-shadow hover:shadow-md ${
         off ? "opacity-60" : ""
       }`}
@@ -68,6 +103,20 @@ export default function ItemCard({ item }: { item: BrowseItem }) {
             : m.site.menu.unavailable}
         </Badge>
       ) : null}
-    </Link>
+    </button>
+
+      <Modal
+        open={loading || !!openItem}
+        onClose={() => setOpenItem(null)}
+        title={openItem?.item.name ?? item.name}
+        size="lg"
+      >
+        {loading || !openItem ? (
+          <LoadingState />
+        ) : (
+          <ItemClient item={openItem.item} modifiers={openItem.modifiers} />
+        )}
+      </Modal>
+    </>
   );
 }

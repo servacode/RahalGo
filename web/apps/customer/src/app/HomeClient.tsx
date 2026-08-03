@@ -21,7 +21,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { CategoryIcon, Input, IconSearch, IconClose, Modal, LoadingState } from "@rahalgo/ui";
+import { CategoryIcon, Input, IconSearch, IconClose } from "@rahalgo/ui";
 import ItemCard, { type BrowseItem } from "@/components/ItemCard";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
@@ -56,28 +56,6 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
   const { banners, sections } = initial;
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<BrowseItem[] | null>(null);
-  /** القسمُ المفتوحُ في النافذة — **وأصنافُه تُجلب عند فتحه لا قبله.** */
-  const [openSec, setOpenSec] = useState<{ id: string; name: string } | null>(null);
-  const [secItems, setSecItems] = useState<BrowseItem[]>([]);
-  const [secLoading, setSecLoading] = useState(false);
-
-  /**
-   * يفتح القسمَ ويجلب أصنافَه — **عند الفتح لا قبله**، فلا تُجلب تسعةُ أقسامٍ
-   * ليُنظر في واحد.
-   */
-  const openSection = useCallback(async (sec: { id: string; name: string }) => {
-    setOpenSec(sec);
-    setSecItems([]);
-    setSecLoading(true);
-    try {
-      const d = await api<{ items?: BrowseItem[] }>(`/api/v1/public/sections/${sec.id}/items`);
-      setSecItems(d.items ?? []);
-    } catch {
-      setSecItems([]);
-    } finally {
-      setSecLoading(false);
-    }
-  }, []);
 
   // البحث بعد سكون الكتابة لا مع كل حرف: كلُّ حرفٍ طلبٌ للخادم، والكاتب لم
   // ينتهِ من كلمته بعد. ٣٠٠ مللي ثانية هي حدُّ ما يُحسّ به المستخدم تأخيراً.
@@ -159,21 +137,10 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
           <p className="mb-4 text-sm text-ink-muted">{m.site.sections.hint}</p>
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {sections.map((sec) => (
-              /* **القسمُ يُفتح في نافذةٍ لا في صفحة.**
-
-                 كان يُنقل الزبونُ إلى `/s/{id}` — **صفحةٌ كاملةٌ لقائمةِ
-                 أصناف**، ثمّ يرجع ليختار قسماً آخر فيُنقل ثانيةً. **وثلاثةُ
-                 أقسامٍ يتصفّحها تعني ستَّ انتقالاتٍ ذهاباً وإياباً.**
-
-                 والنافذةُ تُبقيه حيث هو: **يفتح، ينظر، يُغلق، يفتح غيرَه** —
-                 بلا أن يفقد موضعَه من الصفحة. (قرارُ المالك ٢٠٢٦-٠٨-٠٣:
-                 «بنافذة منبثقة تظهر، لا حاجة لدخول صفحة جديدة ونزيد الأمر
-                 تعقيداً».) */
-              <button
-                type="button"
+              <Link
                 key={sec.id}
-                onClick={() => openSection(sec)}
-                className={`flex items-center gap-3 rounded-card border border-line bg-surface p-4 text-start transition-shadow hover:shadow-md ${
+                href={`/s/${sec.id}`}
+                className={`flex items-center gap-3 rounded-card border border-line bg-surface p-4 transition-shadow hover:shadow-md ${
                   sec.count === 0 ? "opacity-60" : ""
                 }`}
               >
@@ -186,31 +153,11 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                     {m.site.sections.count.replace("{n}", fmtNum(sec.count))}
                   </p>
                 </div>
-              </button>
+              </Link>
             ))}
           </div>
         </>
       )}
-
-      {/* نافذةُ القسم — **أصنافُه من كلّ المصادر مختلطةً.** */}
-      <Modal
-        open={!!openSec}
-        onClose={() => setOpenSec(null)}
-        title={openSec?.name ?? ""}
-        size="lg"
-      >
-        {secLoading ? (
-          <LoadingState />
-        ) : secItems.length === 0 ? (
-          <p className="py-8 text-center text-ink-muted">{m.site.sections.empty}</p>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {secItems.map((it) => (
-              <ItemCard key={it.id} item={it} />
-            ))}
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }
