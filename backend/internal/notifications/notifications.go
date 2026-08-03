@@ -64,7 +64,12 @@ type Input struct {
 // Notify يحفظ الإشعار ويبثّه لصاحبه فوراً. لا يُفشل العملية الأصلية أبداً —
 // فشل الإشعار يُسجَّل ولا يُرجع خطأً للمستدعي.
 func (s *Service) Notify(ctx context.Context, in Input) {
-	if in.UserID == "" || in.Title == "" {
+	// **وخدمةٌ غيرُ مهيّأة تصمت ولا تُسقط.**
+	//
+	// وهو عهدُ هذه الحزمة المكتوبُ أعلاه: **«لا يُفشل العملية الأصلية أبداً».**
+	// **وذعرٌ يُسقط النداءَ كلَّه أشدُّ من خطأٍ يُرجَع** — يُبطل الطارئَ الذي
+	// سُجّل، والانتقالَ الذي وقع، **ويردّ خمسمئة على فعلٍ نجح.**
+	if s == nil || in.UserID == "" || in.Title == "" {
 		return
 	}
 	var id, createdAt string
@@ -121,6 +126,11 @@ func (s *Service) NotifyOps(ctx context.Context, in Input) {
 // NotifyRoles يرسل الإشعار لحاملي أي من الأدوار المذكورة — مرة واحدة لكل شخص
 // مهما تعددت أدواره.
 func (s *Service) NotifyRoles(ctx context.Context, roles []string, in Input) {
+	// **والحارسُ هنا كما في `Notify`** — هذه تمسّ القاعدةَ بنفسها فلا يحميها
+	// حارسُ تلك.
+	if s == nil {
+		return
+	}
 	rows, err := s.db.Query(ctx, `
 		SELECT DISTINCT u.id FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id

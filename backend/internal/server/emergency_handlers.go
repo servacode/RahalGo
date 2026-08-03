@@ -96,13 +96,31 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	// حضّر واحداً** — فتُدفع البضاعةُ مرّتين.
 	afterPickup := status == orders.StPickedUp || status == orders.StOnTheWay ||
 		status == orders.StAtDropoff
-	if afterPickup && hasPoint {
-		if _, err := s.pg.Exec(ctx, `
-			UPDATE orders
-			SET pickup_override = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
-			    pickup_override_note = $4
-			WHERE id = $1`,
-			orderID, *req.Lng, *req.Lat, "استلامٌ من موضع طارئ — البضاعةُ مع السائق"); err != nil {
+	if afterPickup {
+		if hasPoint {
+			if _, err := s.pg.Exec(ctx, `
+				UPDATE orders
+				SET pickup_override = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+				    pickup_override_note = $4
+				WHERE id = $1`,
+				orderID, *req.Lng, *req.Lat, "استلامٌ من موضع طارئ — البضاعةُ مع السائق"); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+		} else if _, err := s.pg.Exec(ctx, `
+			UPDATE orders SET pickup_override_note = $2 WHERE id = $1`,
+			orderID,
+			"البضاعةُ مع سائقٍ سابقٍ وقع له طارئ — لا تذهب إلى المتجر، اتّصل بالعمليات",
+		); err != nil {
+			// **وكلمةٌ بلا نقطةٍ خيرٌ من نقطةٍ لم تُلتقط.**
+			//
+			// كان الشرطُ `afterPickup && hasPoint` — **فإن رُفض إذنُ الموقع أو
+			// كان السائقُ داخل بناءٍ لم يُكتب شيءٌ إطلاقاً**، ويذهب الثاني إلى
+			// مطعمٍ سلّم بضاعتَه وقبض ثمنَها. **فتُدفع البضاعةُ مرّتين.**
+			//
+			// والطارئُ نفسُه لا يُردّ لغياب الموقع — وهو صواب: «طارئٌ يُردّ لأن
+			// الموقعَ لم يُقرأ طارئٌ ضاع». **لكنّ البضاعةَ حينها كانت بلا عنوان
+			// ولا كلمة.** والآن لها كلمةٌ يقرؤها من يلتقطه.
 			s.respondErr(w, err)
 			return
 		}
