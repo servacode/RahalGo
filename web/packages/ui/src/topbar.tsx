@@ -34,7 +34,7 @@ export function TopBar({
 }) {
   return (
     <header
-      className={`mb-3 flex items-center gap-3 rounded-card border border-accent bg-surface px-5 py-3.5 shadow-sm ${
+      className={`mb-3 flex items-center gap-3 rounded-card bg-surface px-5 py-3.5 shadow-sm ${
         sticky ? "sticky top-3 z-40" : ""
       }`}
     >

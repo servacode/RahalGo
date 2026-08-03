@@ -178,7 +178,7 @@ export function DashboardChrome({
 
   return (
     <div className="flex min-h-screen bg-shell">
-      <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col overflow-hidden rounded-card border border-accent bg-surface shadow-sm lg:flex">
+      <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col overflow-hidden rounded-card bg-surface shadow-sm lg:flex">
         {sidebar}
       </aside>
 
@@ -256,7 +256,12 @@ export function DashboardChrome({
           />
         </TopBar>
 
-        <main className="min-w-0 flex-1 rounded-card border border-accent bg-surface p-3 shadow-sm sm:p-4">
+        {/* **بلا حدٍّ حول الهيكل.**
+
+            الحدُّ يُرسم ليفصل ما لا يفصله اللون. **وهنا البطاقةُ زرقاءُ
+            والشاشةُ حبريّة** — والفرقُ بينهما يُرى بلا خطّ، **فخطٌّ فوقه
+            زخرفةٌ تُثقل الإطار.** (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
+        <main className="min-w-0 flex-1 rounded-card bg-surface p-3 shadow-sm sm:p-4">
           {children}
         </main>
       </div>

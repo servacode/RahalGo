@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 سايدباراً يقتطع جانباً، وهذا الموقع بلا سايدبار — فحصرُه يترك
                 فراغين لا يملؤهما شيء.
               */}
-              <main className="min-w-0 flex-1 rounded-card border border-accent bg-surface p-5 shadow-sm">
+              <main className="min-w-0 flex-1 rounded-card bg-surface p-5 shadow-sm">
                 {children}
               </main>
               {/* السلّة العائمة خارج الكرت: تُرافق التصفّح ولا تختفي بالتمرير */}
