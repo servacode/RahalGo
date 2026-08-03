@@ -21,7 +21,7 @@ export const colors = {
      */
     primaryLight: "#CFE3F0",
     /** برتقاليُّ اللوغو — الطريق والدرّاجة و«Go» */
-    accent: "#F7941D",
+    accent: "#FD9503",
     accentDark: "#C2740A",
     /**
      * **تِنتٌ برتقاليّ — جديد.**

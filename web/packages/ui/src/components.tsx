@@ -14,11 +14,14 @@ const m = getMessages(defaultLocale);
 // ---------- Button ----------
 
 const buttonVariants = {
-  /* **نصُّ الزرّ داكنٌ لا أبيض.**
+  /* **الزرُّ برتقاليُّ اللوغو — وهو ثاني لونَي العلامة.**
 
-     على بطاقةٍ داكنةٍ لا يُرى زرٌّ داكن — **فتعبئتُه فاتحةٌ لتنفصل**، وأبيضُ
-     النصّ عليها يذوب (٢٫٩٨ فقط). **والداكنُ عليها يقرأ بعشرة أضعاف.** */
-  primary: "bg-primary text-shell hover:bg-primary-dark",
+     الأزرقُ صار خلفيةَ كلّ شيء: البطاقةُ والشريطُ والجانب. **وزرٌّ أزرقُ على
+     بطاقةٍ زرقاء يذوب فيها**، والبرتقاليُّ يقطعها فيُرى قبل أن يُقرأ.
+
+     **ونصُّه داكنٌ لا أبيض**: الأبيضُ على البرتقاليّ ٢٫٢٢ — **يذوب**،
+     والداكنُ ٨٫٤٩. (قرارُ المالك ٢٠٢٦-٠٨-٠٣: #FD9503 للأزرار.) */
+  primary: "bg-accent text-shell hover:opacity-90",
   secondary: "border border-line bg-surface text-ink hover:bg-page",
   danger: "bg-danger text-white hover:bg-danger/90",
   ghost: "text-ink-muted hover:bg-page hover:text-ink",
