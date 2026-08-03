@@ -363,7 +363,7 @@ export function NotificationBell({
   allHref?: string;
 }) {
   const cls =
-    "relative flex items-center rounded-control p-1.5 text-ink-muted transition-colors hover:bg-page hover:text-ink";
+    "relative flex items-center rounded-control p-1.5 text-ink-muted transition-colors hover:text-accent";
   const inner = (
     <>
       {/* **اسمٌ مقروءٌ للقارئ الصوتيّ**: أيقونةٌ وحدها رابطٌ بلا اسم.

@@ -34,7 +34,7 @@ export function TopBar({
 }) {
   return (
     <header
-      className={`mb-3 flex items-center gap-3 rounded-card border border-line bg-surface px-5 py-3.5 shadow-sm ${
+      className={`mb-3 flex items-center gap-3 rounded-card border border-accent bg-surface px-5 py-3.5 shadow-sm ${
         sticky ? "sticky top-3 z-40" : ""
       }`}
     >
@@ -63,15 +63,25 @@ export const TOPBAR_AVATAR = 36;
 const chipBase =
   "flex items-center gap-2 rounded-control px-3 py-2 text-sm transition-colors";
 
+/**
+ * **لا صندوقَ خلف الأيقونات.**
+ *
+ * كان لكلّ أيقونةٍ مستطيلٌ ملوّنٌ خلفها — **وشريطٌ فيه ستّةُ مستطيلاتٍ متجاورة
+ * يصير سلسلةَ صناديقَ لا صفَّ أدوات**، والعينُ تعدّ الحدودَ قبل أن تقرأ ما
+ * فيها. **والحالةُ تُقال بلون الأيقونة لا بصندوقٍ حولها.**
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «هذا المربع خلف الأيقونات لا أريده أبداً».)
+ */
 const chipTones = {
   /** محايد — اختصار عادي */
-  plain: "text-ink-muted hover:bg-page hover:text-ink",
-  /** نشِط — القسم المفتوح حالياً */
-  active: "bg-primary-light font-medium text-primary-dark",
+  plain: "text-ink-muted hover:text-ink",
+  /** نشِط — القسم المفتوح حالياً. **أبيضُ بلا صندوق**: الباهتُ يخفت
+   *  والنشِطُ يسطع، **والفرقُ بينهما يكفي بلا لونٍ ثالث.**
+   *  (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «أيقونة الطلبات ترجع بيضاء لا برتقالية».) */
+  active: "font-medium text-ink",
   /** بارز — إجراء رئيسي (السلة مثلاً) */
-  primary: "bg-primary font-medium text-white hover:bg-primary-dark",
+  primary: "font-medium text-ink hover:text-accent",
   /** ثانوي مميّز — التقييم/التسوّق كزبون */
-  accent: "bg-accent/10 font-bold text-accent-dark hover:bg-accent/20",
+  accent: "font-bold text-accent hover:opacity-80",
   /** خطر — الخروج. ممتلئ لا شفّاف: زرّ الخروج يجب أن يُميَّز بلمحة كي لا
    *  يُضغط سهواً، والنصّ الأحمر على أبيض يذوب بين بقية العناصر. */
   danger: "bg-danger-solid font-medium text-white hover:opacity-90",
@@ -134,7 +144,7 @@ export function WalletPill({
       Link={Link}
       href={href}
       title={m.terms.wallet}
-      className="bg-primary-light font-bold text-primary-dark hover:bg-primary-light/70"
+      className="font-bold text-ink hover:text-accent"
     >
       {icon}
       <span dir="ltr">{fmtNum(balance)}</span>
