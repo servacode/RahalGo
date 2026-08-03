@@ -88,6 +88,22 @@ interface Order {
   lat?: number;
   lng?: number;
   payment_method?: string;
+  /**
+   * **لماذا انتهى قبل أن يصل.**
+   *
+   * الخادمُ يُلزم بالسبب في الرفض والإلغاء والفشل والاسترجاع
+   * (`requiresReason` في `admin_orders_handlers.go`) **ويحفظه ويرسله** —
+   * **وكانت البطاقةُ وحدَها لا تقرؤه.** فيقرأ الزبونُ «مرفوض» بلا كلمة،
+   * ويبقى السببُ مكتوباً في قاعدةٍ لا يراها.
+   *
+   * (ملاحظةُ المالك ٢٠٢٦-٠٨-٠٣: «لا يوجد سبب واضح للرفض».)
+   *
+   * **وحقلٌ واحدٌ يكفي للأربع**: `transitions.go` يكتب التعليلَ في
+   * `cancel_reason` عند كلّ نهايةٍ غير التسليم — رفضاً وإلغاءً وفشلاً
+   * واسترجاعاً. **و`fail_reason` رمزُ تصنيفٍ لا نصٌّ يُقرأ**، وموضعُه لوحةُ
+   * الإدارة حيث يُقاس به الذنب.
+   */
+  cancel_reason?: string;
 }
 
 interface RateInfo {
@@ -486,9 +502,26 @@ function OrderCard({
       {closed ? (
         /* **ولا مسارَ لما انتهى قبل أن يصل.** شريطٌ يقف في منتصفه يُقرأ
            «عالق» لا «انتهى» — فيُقال بالحرف. */
-        <p className="rounded-control bg-page px-3 py-2 text-center text-sm text-ink-muted">
-          {m.site.orders.trackClosed.replace("{s}", STATUS_LABELS[o.status] ?? o.status)}
-        </p>
+        <div className="space-y-1.5 rounded-control bg-page px-3 py-2 text-center">
+          <p className="text-sm text-ink-muted">
+            {m.site.orders.trackClosed.replace("{s}", STATUS_LABELS[o.status] ?? o.status)}
+          </p>
+          {/* **والسببُ يُقال لصاحبه.**
+
+              الخادمُ يمنع الرفضَ والإلغاءَ والفشلَ بلا تعليل (`requiresReason`)،
+              **ثمّ كانت البطاقةُ تبتلع ما كُتب**: يقرأ الزبونُ «مرفوض» ولا يعرف
+              أنفدت الأصنافُ أم أُغلق المتجر أم أخطأ عنوانُه — **فيعيد الطلبَ
+              نفسَه فيُرفض مرّةً ثانية.**
+
+              وهو ظاهرٌ للإدارة وللمندوب منذ البداية — **وللزبون وحدَه لا.**
+              (ملاحظةُ المالك ٢٠٢٦-٠٨-٠٣: «لا يوجد سبب واضح للرفض».) */}
+          {o.cancel_reason?.trim() && (
+            <p className="text-sm">
+              <span className="text-ink-muted">{m.site.orders.endedReason}: </span>
+              <span className="font-medium text-danger">{o.cancel_reason}</span>
+            </p>
+          )}
+        </div>
       ) : (
         <div className="space-y-2">
           <OrderTrack

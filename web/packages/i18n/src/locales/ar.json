@@ -1718,6 +1718,7 @@
       "againConfirm": "أرسل الطلب",
       "againDone": "أُرسل طلبك برقم {n}",
       "trackClosed": "انتهى هذا الطلب — {s}",
+      "endedReason": "السبب",
       "track": {
         "pending": "بانتظار القبول",
         "accepted": "قُبل",
