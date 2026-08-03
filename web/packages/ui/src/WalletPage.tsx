@@ -261,10 +261,12 @@ export function WalletPage({
   const shown = current === ALL ? txs : txs.filter((t) => t.kind === current);
 
   const statementBtn = (
+    /* **كشفُ الحساب أخضرُ لا برتقاليّ** — وهو لونُ زرّ الطباعة نفسِه:
+       **كلاهما إخراجُ ورقة**، والبرتقاليُّ للفعل الذي يُنشئ شيئاً.
+       (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
     <Button
-      variant="secondary"
       onClick={() => setTab(tab === STATEMENT ? ALL : STATEMENT)}
-      className="flex items-center gap-2"
+      className="flex items-center gap-2 !bg-success-solid !text-white hover:!opacity-90"
     >
       <IconPrint size={16} />
       {m.shared.statement.open}
@@ -290,7 +292,12 @@ export function WalletPage({
       />
 
       {/* الرصيد — الرقم الذي يهمّ صاحبه أولاً */}
-      <div className="rounded-card bg-primary p-6 text-center text-white">
+      {/* **بطاقةُ الرصيد برتقاليّة** — وهي أهمُّ رقمٍ في الصفحة.
+          والأزرقُ صار خلفيةَ كلّ شيء، **فبطاقةٌ زرقاءُ على بطاقةٍ زرقاء لا
+          تُميَّز**؛ والبرتقاليُّ يقطعها فيقع الرصيدُ في العين أوّلاً.
+          **ونصُّها داكنٌ لا أبيض**: الأبيضُ على البرتقاليّ ٢٫٢٢ يذوب،
+          والداكنُ ٨٫٤٩. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
+      <div className="rounded-card bg-accent p-6 text-center text-shell">
         <p className="text-sm opacity-80">{balanceLabel}</p>
         <p className="mt-1 text-3xl font-bold" dir="ltr">
           {fmtNum(balance)} <span className="text-base font-normal">{m.common.currency}</span>
