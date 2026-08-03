@@ -3,13 +3,15 @@
 /** طلباتي: السجل الكامل مع حالة كل طلب. */
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
-  EntityCard,
+  Card,
+  Modal,
+  Invoice,
+  OrderTrack,
   PageContainer,
   PageHeader,
   EmptyState,
@@ -18,11 +20,10 @@ import {
   IconOrder,
   IconStar,
   Stars,
-  IconStore,
-  IconWallet,
-  IconCart,
+  IconPrint,
+  IconDriver,
 } from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import RatingModal from "@/components/RatingModal";
@@ -37,21 +38,6 @@ const VARIANT: Record<string, "warning" | "primary" | "success" | "danger" | "ne
   cancelled: "danger",
   failed: "danger",
   refunded: "neutral",
-};
-
-/**
- * لونُ العمود الجانبيّ.
- *
- * **لا يُشتقّ من `VARIANT`** رغم تشابههما: تلك تحوي `neutral` وهو لونُ شارةٍ
- * لا لونُ عمود — **وعمودٌ رماديّ لا يقول شيئاً، فوجودُه ضجيجٌ بلا خبر**.
- * فالمُسترجَعُ بلا عمودٍ أصلاً، وطلبٌ بلا عمودٍ طلبٌ انتهى أمرُه.
- */
-const SPINE: Record<string, "warning" | "primary" | "success" | "danger"> = {
-  pending: "warning",
-  delivered: "success",
-  rejected: "danger",
-  cancelled: "danger",
-  failed: "danger",
 };
 
 interface OrderLineOption {
@@ -129,6 +115,8 @@ export default function MyOrdersPage() {
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [rateMap, setRateMap] = useState<Record<string, RateInfo>>({});
   const [rating, setRating] = useState<RateInfo | null>(null);
+  /** الطلبُ الذي تُعرض فاتورتُه — **نافذةٌ لا صفحة**. */
+  const [invoice, setInvoice] = useState<Order | null>(null);
   const [notice, setNotice] = useState("");
   const { add, clear } = useCart();
 
@@ -182,99 +170,24 @@ export default function MyOrdersPage() {
       {orders.length === 0 ? (
         <EmptyState icon={IconOrder} title={m.site.orders.empty} />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {orders.map((o) => {
-            const rate = rateMap[o.id];
-            const canRate = o.status === "delivered" && rate && !rate.rated;
-            const more = o.items_count - o.items_preview.split("، ").filter(Boolean).length;
-            return (
-              <EntityCard
-                key={o.id}
-                spine={o.status === "refunded" ? undefined : (SPINE[o.status] ?? "primary")}
-                /* **وشعارُ المتجر لا يُعرض** — صورةُ مطعمٍ يعرفه أهلُ الحيّ
-                   **تُعرف قبل أن تُقرأ الكلمة**، فحجبُ الاسم وحدَه حجبٌ ناقص. */
-                media={
-                  <span className="flex h-12 w-12 items-center justify-center rounded-control bg-primary-light">
-                    <IconStore size={20} className="text-primary-dark" />
-                  </span>
-                }
-                title={
-                  <span className="flex items-center gap-2">
-                    {/* **واسمُ المتجر لا يُعرض** — الزبونُ اشترى من «رحّال غو». */}
-                    <span className="truncate">{m.site.orders.fromPlatform}</span>
-                    <span className="shrink-0 text-xs font-normal text-ink-muted" dir="ltr">
-                      #{fmtNum(o.number)}
-                    </span>
-                  </span>
-                }
-                /* «ماذا طلبتُ؟» أول سؤال يسأله صاحب الطلب — وكان يلزمه فتح
-                   الطلب ليعرف. الأصناف هنا مباشرةً تحت اسم المتجر. */
-                subtitle={
-                  o.items_preview
-                    ? more > 0
-                      ? `${o.items_preview} ${m.site.orders.itemsMore.replace("{n}", fmtNum(more))}`
-                      : o.items_preview
-                    : m.site.orders.noItems
-                }
-                badge={
-                  <Badge variant={VARIANT[o.status] ?? "primary"}>
-                    {STATUS_LABELS[o.status] ?? o.status}
-                  </Badge>
-                }
-                stats={[
-                  {
-                    label: m.site.orders.statItems,
-                    value: fmtNum(o.items_count),
-                    icon: <IconCart />,
-                  },
-                  {
-                    label: `${m.site.orders.statTotal} (${m.common.currency})`,
-                    value: fmtNum(o.total),
-                    icon: <IconWallet />,
-                  },
-                ]}
-                footer={<span dir="ltr">{fmtDateTime(o.created_at)}</span>}
-                actions={
-                  <>
-                    {!!o.items?.length && (
-                      <Button
-                        variant="secondary"
-                        onClick={() => reorder(o)}
-                        className="flex flex-1 items-center justify-center gap-1.5 !py-1.5"
-                      >
-                        <IconOrder size={15} />
-                        {m.site.orders.reorder}
-                      </Button>
-                    )}
-                    <Link
-                      href={`/orders/${o.id}`}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-page"
-                    >
-                      <IconOrder size={15} />
-                      {m.site.orders.openOrder}
-                    </Link>
-                    {canRate && (
-                      <Button
-                        onClick={() => setRating(rate)}
-                        className="flex flex-1 items-center justify-center gap-1.5 !py-1.5"
-                      >
-                        <IconStar size={15} />
-                        {m.site.rating.rateOrder}
-                      </Button>
-                    )}
-                    {o.status === "delivered" && rate?.rated && (
-                      // نجومٌ لا شارة: «تقييماتي» تقول إنك قيّمت ولا تقول بكم
-                      <span className="flex flex-1 items-center justify-center gap-2 rounded-control bg-page px-3 py-1.5">
-                        <span className="text-xs text-ink-muted">{m.site.rating.merchant}</span>
-                        <Stars value={rate.platform_stars} size="sm" />
-                      </span>
-                    )}
-                  </>
-                }
-              />
-            );
-          })}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {orders.map((o) => (
+            <OrderCard
+              key={o.id}
+              o={o}
+              rate={rateMap[o.id]}
+              onReorder={() => reorder(o)}
+              onRate={() => setRating(rateMap[o.id] ?? null)}
+              onInvoice={() => setInvoice(o)}
+            />
+          ))}
         </div>
+      )}
+
+      {invoice && (
+        <Modal open title={m.site.orders.invoice} onClose={() => setInvoice(null)} size="lg">
+          <Invoice order={invoice as never} />
+        </Modal>
       )}
 
       {rating && (
@@ -288,5 +201,201 @@ export default function MyOrdersPage() {
         />
       )}
     </PageContainer>
+  );
+}
+
+/**
+ * **مراحلُ الطلب كما يراها الزبون** — لا كما تُسمّى في المحرّك.
+ *
+ * المحرّكُ يعرف `assigned` و`at_pickup` و`picked_up` و`on_the_way` و
+ * `at_dropoff` — **وهي شؤونٌ داخلية لا تخصّ من ينتظر طعامه.** فتُطوى في مرحلةٍ
+ * واحدة: «في الطريق».
+ *
+ * **وخمسُ عُقَدٍ لا تسع**: بطاقةٌ في قائمة، وأسماءٌ تحت العُقَد. **وأربعٌ تُقرأ
+ * بلمحة.**
+ */
+const TRACK = ["pending", "accepted", "preparing", "onway", "delivered"] as const;
+
+/** الحالةُ الخام ← موضعُها على المسار. */
+function trackIndex(status: string): number {
+  switch (status) {
+    case "pending":
+      return 0;
+    case "accepted":
+      return 1;
+    case "preparing":
+    case "dispatching":
+      return 2;
+    case "assigned":
+    case "at_pickup":
+    case "picked_up":
+    case "on_the_way":
+    case "at_dropoff":
+      return 3;
+    case "delivered":
+      return 4;
+    default:
+      return -1; // ملغى · مرفوض · مُخفق · مُسترجَع — **لا مسارَ لهم**
+  }
+}
+
+/**
+ * **بطاقةُ الطلب — قائمةٌ بذاتها.**
+ *
+ * قرارُ المالك (٢٠٢٦-٠٨-٠٣): «لا يوجد داعي لزرّ تفاصيل الطلب · حالة الطلب
+ * تكون بنفس الكرت · بالكرت كلّ صنف وسعره في حقلٍ خاصّ مرتّب · الفاتورة تصير
+ * أيقونة».
+ *
+ * **وكلُّ ما كان خلف ضغطةٍ صار في وجه البطاقة**: ماذا طلبتُ، وبكم، وأين هو
+ * الآن. **والانتقالُ إلى صفحةٍ لقراءة سطرين ضريبةٌ تُدفع في كلّ مرّة.**
+ */
+function OrderCard({
+  o,
+  rate,
+  onReorder,
+  onRate,
+  onInvoice,
+}: {
+  o: Order;
+  rate?: RateInfo;
+  onReorder: () => void;
+  onRate: () => void;
+  onInvoice: () => void;
+}) {
+  const at = trackIndex(o.status);
+  const closed = at < 0;
+  const live = !closed && o.status !== "delivered";
+  const canRate = o.status === "delivered" && rate && !rate.rated;
+  const items = o.items ?? [];
+
+  return (
+    <Card className="flex flex-col gap-4">
+      {/* ── الترويسة: علامةُ المنصة · الرقم · الحالة ─────────────────── */}
+      <div className="flex items-start gap-3">
+        {/* **علامةُ المنصة لا أيقونةُ متجر.**
+
+            الزبونُ اشترى من «رحّال غو» — **واسمُ المتجر محجوبٌ عمداً**، فأيقونةُ
+            متجرٍ عامّة تقول شيئاً لا نقوله. والعلامةُ هي نفسُها في الشريط
+            العلويّ وفي الفاتورة: **حرفٌ أبيضُ على أزرق وطريقٌ برتقاليّ تحته.** */}
+        <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary text-xl font-bold text-white">
+          {m.terms.brandInitial}
+          <span aria-hidden className="absolute inset-x-0 bottom-0 h-1.5 bg-accent" />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-bold leading-tight">{m.site.orders.fromPlatform}</p>
+          {/* **الوقتُ تحت الاسم** — سطرٌ خافتٌ يُقرأ حين يُبحث عنه ولا يزاحم. */}
+          <p className="mt-0.5 text-xs text-ink-muted" dir="ltr">
+            {fmtDateTime(o.created_at)}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {/* **الرقمُ بحقلٍ خاصّ** — هو ما يُقال في الهاتف حين يُسأل عن طلب،
+              **ورقمٌ خافتٌ بجانب عنوانٍ يضيع.** */}
+          <span
+            dir="ltr"
+            className="rounded-control bg-primary-light px-2.5 py-1 text-sm font-bold tabular-nums text-primary-dark"
+          >
+            #{fmtNum(o.number)}
+          </span>
+          <Badge variant={VARIANT[o.status] ?? "primary"}>
+            {STATUS_LABELS[o.status] ?? o.status}
+          </Badge>
+        </div>
+      </div>
+
+      {/* ── الأصناف: كلٌّ في سطره وسعرُه أمامه ────────────────────────── */}
+      {items.length > 0 ? (
+        <ul className="divide-y divide-line rounded-control bg-page/60">
+          {items.map((it, i) => (
+            <li key={i} className="flex items-start gap-3 px-3 py-2 text-sm">
+              <span className="min-w-0 flex-1">
+                {it.name}
+                {it.qty > 1 && (
+                  <span className="text-ink-muted" dir="ltr">
+                    {" "}
+                    ×{fmtNum(it.qty)}
+                  </span>
+                )}
+                {/* الخياراتُ تحت الاسم — **هي ما يُميّز طلباً عن طلب.** */}
+                {it.options?.length > 0 && (
+                  <span className="block text-xs text-ink-muted">
+                    {it.options.map((x) => x.name).join("، ")}
+                  </span>
+                )}
+              </span>
+              <span dir="ltr" className="shrink-0 tabular-nums text-ink-muted">
+                {fmtNum(it.unit_price * it.qty)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-ink-muted">{o.items_preview || m.site.orders.noItems}</p>
+      )}
+
+      {/* ── الإجمالي ──────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between border-t border-line pt-3">
+        <span className="text-sm text-ink-muted">{m.site.orders.statTotal}</span>
+        <span dir="ltr" className="text-lg font-bold tabular-nums">
+          {fmtNum(o.total)}{" "}
+          <span className="text-xs font-normal text-ink-muted">{m.common.currency}</span>
+        </span>
+      </div>
+
+      {/* ── أين هو الآن ───────────────────────────────────────────────── */}
+      {closed ? (
+        /* **ولا مسارَ لما انتهى قبل أن يصل.** شريطٌ يقف في منتصفه يُقرأ
+           «عالق» لا «انتهى» — فيُقال بالحرف. */
+        <p className="rounded-control bg-page px-3 py-2 text-center text-sm text-ink-muted">
+          {m.site.orders.trackClosed.replace("{s}", STATUS_LABELS[o.status] ?? o.status)}
+        </p>
+      ) : (
+        <OrderTrack
+          stages={TRACK.map((id) => ({ id, label: m.site.orders.track[id] }))}
+          current={at}
+          vehicle={IconDriver}
+          live={live}
+        />
+      )}
+
+      {/* ── الأفعال ───────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2">
+        {items.length > 0 && (
+          <Button
+            variant="secondary"
+            onClick={onReorder}
+            className="flex flex-1 items-center justify-center gap-1.5 !py-1.5"
+          >
+            <IconOrder size={15} />
+            {m.site.orders.reorder}
+          </Button>
+        )}
+        {canRate && (
+          <Button onClick={onRate} className="flex flex-1 items-center justify-center gap-1.5 !py-1.5">
+            <IconStar size={15} />
+            {m.site.rating.rateOrder}
+          </Button>
+        )}
+        {o.status === "delivered" && rate?.rated && (
+          <span className="flex flex-1 items-center justify-center gap-2 rounded-control bg-page px-3 py-1.5">
+            <span className="text-xs text-ink-muted">{m.site.rating.merchant}</span>
+            <Stars value={rate.platform_stars} size="sm" />
+          </span>
+        )}
+        {/* **الفاتورةُ أيقونة** — يحتاجها من يطبع، ولا يحتاجها الباقون.
+            **وزرٌّ بعرض الثلث لفعلٍ نادرٍ يزاحم فعلاً يوميّاً.** */}
+        <button
+          type="button"
+          onClick={onInvoice}
+          aria-label={m.site.orders.invoice}
+          title={m.site.orders.invoice}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-line text-ink-muted transition-colors hover:bg-page hover:text-ink"
+        >
+          <IconPrint size={16} />
+        </button>
+      </div>
+    </Card>
   );
 }

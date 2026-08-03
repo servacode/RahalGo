@@ -1696,6 +1696,15 @@
       "reorderPartial": "أُضيفت الأصناف المتاحة. {n} منها لم تعد متاحة.",
       "fromPlatform": "رحّال غو",
       "itemsTitle": "أصناف الطلب",
+      "invoice": "الفاتورة",
+      "trackClosed": "انتهى هذا الطلب — {s}",
+      "track": {
+        "pending": "بانتظار القبول",
+        "accepted": "قُبل",
+        "preparing": "قيد التحضير",
+        "onway": "في الطريق",
+        "delivered": "تم التسليم"
+      },
       "cancelConfirmTitle": "إلغاء الطلب؟",
       "cancelConfirmBody": "لن نتمكّن من التراجع بعد الإلغاء، وستحتاج إلى إعادة الطلب من جديد.",
       "cancelConfirmYes": "نعم، ألغِ الطلب",
