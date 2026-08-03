@@ -156,7 +156,11 @@ export function Avatar({
   return (
     <span
       style={{ width: size, height: size }}
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-badge bg-primary-light text-sm font-bold text-primary-dark"
+      /* **دائريّةٌ لا مربّعةٌ بزوايا.** `rounded-badge` نصفُ قطرٍ ثابت — على
+         حجمٍ صغيرٍ يبدو مربّعاً مشذّبَ الأركان. **وصورةُ الشخص دائرةٌ في كلّ
+         مكان**، وشكلٌ يخالف ما اعتادته العينُ يُقرأ خطأً في التصميم.
+         (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-sm font-bold text-primary-dark"
     >
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element

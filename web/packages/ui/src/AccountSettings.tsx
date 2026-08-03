@@ -102,13 +102,47 @@ export function AccountSettings({
       .catch(() => undefined);
   }, [api, phone]);
 
+  /**
+   * **تُصغَّر في المتصفّح قبل أن تُرسَل.**
+   *
+   * حدُّ الخادم خمسةُ ميغا، **وصورةُ هاتفٍ حديثة تتجاوزه** — فيُردّ الرفعُ
+   * بـ«الصورة أكبر من الحدّ». والرسالةُ صحيحةٌ **والتجربةُ فاشلة**: من التقط
+   * صورةً بهاتفه لا يعرف كيف يُصغّرها، **فيترك الصورةَ ولا يرفع.**
+   *
+   * **والخادمُ يُصغّرها بعد الرفع أصلاً** — فرفعُ اثني عشر ميغا لتصير مئةَ
+   * كيلو **إهدارُ باقةِ إنترنتٍ في مدينةٍ باقتُها غالية**، ثمّ يُردّ.
+   *
+   * فتُرسم على لوحةٍ بحدٍّ أقصى ١٢٠٠ بكسل وتُحوَّل JPEG. **وما فشل تصغيرُه
+   * يُرسَل كما هو** — عطبٌ في اللوحة يجب ألّا يمنع رفعاً قد ينجح.
+   */
+  async function shrink(file: File): Promise<Blob> {
+    const MAX = 1200;
+    try {
+      const bmp = await createImageBitmap(file);
+      const scale = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+      if (scale === 1 && file.size <= 2 * 1024 * 1024) return file;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bmp.width * scale);
+      canvas.height = Math.round(bmp.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return file;
+      ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((res) =>
+        canvas.toBlob(res, "image/jpeg", 0.85),
+      );
+      return blob ?? file;
+    } catch {
+      return file;
+    }
+  }
+
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setError("");
     setMsg("");
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", await shrink(file), "avatar.jpg");
     try {
       const res = await api<{ avatar_thumb_url: string }>("/api/v1/me/avatar", { method: "POST", body: fd });
       setAvatar(res.avatar_thumb_url);
@@ -321,7 +355,7 @@ export function AccountSettings({
 
       <Section title={A.photo} icon={<IconUser />}>
         <div className="flex items-center gap-4">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-badge border border-line bg-primary-light text-2xl font-bold text-primary-dark">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-2xl font-bold text-primary-dark">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
