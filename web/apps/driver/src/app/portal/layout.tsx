@@ -13,6 +13,8 @@ import {
   IconWallet,
   IconUser,
   IconLocation,
+  IconStar,
+  IconSupport,
 } from "@rahalgo/ui";
 import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -27,6 +29,10 @@ const NAV: ChromeNavItem[] = [
   { href: "/portal/incoming", label: m.driver.nav.incoming, icon: IconLocation },
   { href: "/portal", label: m.driver.nav.tasks, icon: IconOrder },
   { href: "/portal/wallet", label: m.driver.nav.wallet, icon: IconWallet },
+  // **تقييماتُه وشكاواه** — كانتا لا بابَ لهما في لوحته: الرقمُ في الشريط
+  // وحدَه، **ومن اشتُكي عليه ولا يعلم لا يُصلح شيئاً.**
+  { href: "/portal/reviews", label: m.terms.ratings, icon: IconStar },
+  { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
   { href: "/portal/account", label: m.driver.nav.account, icon: IconUser },
 ];
 
@@ -65,7 +71,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         phone={user?.phone}
         // التقييم يخصّ السائق مباشرةً — الزبون يقيّم توصيلته لا متجراً
         showRating
-        ratingHref="/portal/account"
+        ratingHref="/portal/reviews"
         ratingLabel={m.terms.myRating}
         // زرّ «تسوّق» يتبع دورَ الزبون: بلا الدور لا يستطيع صاحبه أن يطلب
         shopUrl={
