@@ -27,7 +27,7 @@ function asPercent(v: unknown): string {
   return "";
 }
 
-export default function CommissionsPage() {
+export default function CommissionsPanel() {
   const { user } = useAuth();
   const isAdmin = !!user?.roles.includes("admin");
   const [repPct, setRepPct] = useState("");

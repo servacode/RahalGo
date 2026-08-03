@@ -20,6 +20,9 @@ import {
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import CommissionsPanel from "@/components/settings/commissions";
+import ZonesPanel from "@/components/settings/zones";
+import WhatsAppPanel from "@/components/settings/whatsapp";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.settings;
@@ -53,6 +56,8 @@ export default function SettingsPage() {
   const isAdmin = !!me?.roles.includes("admin");
   const [list, setList] = useState<Setting[] | null>(null);
   const [error, setError] = useState("");
+  /** التبويبُ المفتوح — وفراغُه يعني «أوّلَ مجموعةٍ يرسلها الخادم». */
+  const [tab, setTab] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -83,29 +88,68 @@ export default function SettingsPage() {
 
   if (!list) return <p className="p-6 text-center text-ink-muted">{m.common.loading}</p>;
 
+  /**
+   * **التبويباتُ ثلاثةُ أنواعٍ في شريطٍ واحد.**
+   *
+   * مجموعاتُ المفاتيح تأتي من الخادم (`orders` · `drivers` · …)، **وثلاثةٌ
+   * ليست مفاتيحَ بل شاشات**: العمولاتُ والمناطقُ وبوتُ واتساب. وكانت أقساماً
+   * مستقلّةً في القائمة الجانبية **وهي كلُّها ضبطٌ لا تشغيل** — ومن يفتح
+   * «الإعدادات» يبحث فيها عمّا لا يجده.
+   *
+   * قرارُ المالك (٢٠٢٦-٠٨-٠٣): «العمولاتُ يجب أن تكون بالإعدادات وليست بقسمٍ
+   * منفصل · مناطقُ التغطية تكون بالإعدادات أيضاً · بوتُ واتساب أيضاً
+   * بالإعدادات · الإعداداتُ تكون تبويباتٍ لكلّ قسمٍ زرُّ تبويب».
+   *
+   * **ولم تُحذف شاشاتُها — نُقلت كما هي.** فالعمولاتُ صفحةٌ تجمع نسبَ المال
+   * كلَّها في نظرةٍ واحدة، **ومفاتيحُها متفرّقةٌ بين أربع مجموعات** — فلو
+   * تُركت للمجموعات لَضاعت النظرةُ الجامعة.
+   */
+  const extra = [
+    { key: "commissions", label: m.terms.commissions },
+    { key: "zones", label: m.terms.zones },
+    { key: "whatsapp", label: m.admin.nav.whatsapp },
+  ];
+  const active = tab || groups[0]?.g || "";
+  const activeGroup = groups.find((x) => x.g === active);
+
   return (
     <div>
       <PageHeader icon={IconSettings} title={m.admin.settingsPage.title} />
-      <p className="mb-6 text-sm text-ink-muted">{m.admin.settingsPage.hint}</p>
+      <p className="mb-4 text-sm text-ink-muted">{m.admin.settingsPage.hint}</p>
 
       {error && (
         <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
-      <div className="space-y-6">
-        {groups.map(({ g, items }) => (
-          <section key={g}>
-            <h2 className="mb-2 font-bold">
-              {(S.groups as Record<string, string>)[g] ?? g}
-            </h2>
-            <div className="space-y-3">
-              {items.map((s) => (
-                <SettingRow key={s.key} s={s} editable={isAdmin} onSaved={load} marginMode={marginMode} />
-              ))}
-            </div>
-          </section>
+      <div className="mb-4 flex flex-wrap gap-1 border-b border-line">
+        {[
+          ...groups.map((x) => ({ key: x.g, label: (S.groups as Record<string, string>)[x.g] ?? x.g })),
+          ...extra,
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`border-b-2 px-3.5 py-2 text-sm transition-colors ${
+              active === t.key
+                ? "border-primary font-bold text-primary-dark"
+                : "border-transparent text-ink-muted hover:text-ink"
+            }`}
+          >
+            {t.label}
+          </button>
         ))}
       </div>
+
+      {activeGroup && (
+        <div className="space-y-3">
+          {activeGroup.items.map((s) => (
+            <SettingRow key={s.key} s={s} editable={isAdmin} onSaved={load} marginMode={marginMode} />
+          ))}
+        </div>
+      )}
+      {active === "commissions" && <CommissionsPanel />}
+      {active === "zones" && <ZonesPanel />}
+      {active === "whatsapp" && <WhatsAppPanel />}
     </div>
   );
 }

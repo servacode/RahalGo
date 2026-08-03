@@ -314,6 +314,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/users/{id}/wallet", s.handleAdminWalletApply)
+			// **وعناوينُه في ملفّه** — من يتابع شكوى «لم يصلني» يحتاج أن يرى
+			// أين يسكن قبل أن يسأل.
+			r.Get("/users/{id}/addresses", s.handleAdminUserAddresses)
 
 			// الطلبات — غرفة العمليات تدير ولا تُنشئ (قرار 18):
 			// الإنشاء حصراً عبر واجهات الزبون (الموقع/التطبيق)

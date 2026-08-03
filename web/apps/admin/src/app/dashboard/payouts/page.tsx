@@ -23,9 +23,12 @@ import {
   IconStatus,
   IconDate,
   IconWarning,
+  IconAdd,
 } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth, hasRole } from "@/lib/auth";
+import WalletModal from "@/components/WalletModal";
+import CreditPicker from "@/components/CreditPicker";
 
 const m = getMessages(defaultLocale);
 const P = m.shared.payout;
@@ -58,8 +61,13 @@ function errText(err: unknown): string {
 export default function PayoutsPage() {
   const { user } = useAuth();
   const canDecide = hasRole(user, "admin", "finance");
+  /** **والشحنُ اليدويُّ للأدمن والمالية** — كحارس الخادم نفسِه. */
+  const canCredit = canDecide;
   const [status, setStatus] = useState("");
   const [deciding, setDeciding] = useState<{ p: Payout; approve: boolean } | null>(null);
+  /** **إضافةُ الرصيد** — اختيارٌ ثمّ شحن. */
+  const [creditOpen, setCreditOpen] = useState(false);
+  const [creditUser, setCreditUser] = useState<AuthUser | null>(null);
   const [view, setView] = useViewMode("payouts");
 
   const { data, loading, reload } = useLiveData<Payout[]>(
@@ -133,11 +141,30 @@ export default function PayoutsPage() {
 
   return (
     <PageContainer width="full">
+      {/* **والقسمُ يخرج مالاً ويُدخله** — لا يخرجه وحدَه.
+
+          كان اسمُه «السحوبات» وفعلُه واحد: **البتُّ في طلبٍ يتقدّم به صاحبُه.**
+          **وإضافةُ الرصيد اليدويةُ مبنيّةٌ منذ البداية** (`POST /users/{id}/wallet`)
+          **ومخبوءةٌ في صفحة حسابٍ لا يفتحها من يفكّر في المال.**
+
+          ومن أراد أن يشحن محفظةَ زبونٍ نقداً، أو يعوّض سائقاً خارج طلب، أو
+          يسوّي حساباً مع متجر — **فتح ملفَّ كلٍّ منهم على حدة.** والفعلُ واحدٌ
+          والموضعُ يجب أن يكون واحداً.
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «سحبٌ وإضافةُ رصيد — هذا القسم وليس فقط
+          سحب، فيمكن إضافةُ رصيدٍ للمناديب أو الزبائن أو المتاجر بشكلٍ يدويّ
+          وللسائقين».) */}
       <PageHeader
         icon={IconWallet}
-        title={P.title}
+        title={P.titleWithCredit}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {canCredit && (
+              <Button onClick={() => setCreditOpen(true)} className="flex items-center gap-1.5">
+                <IconAdd size={16} />
+                {P.creditBtn}
+              </Button>
+            )}
             <div className="flex rounded-control border border-line bg-page p-1">
               {filters.map((f) => (
                 <button
@@ -188,6 +215,26 @@ export default function PayoutsPage() {
                   ) : null
               : undefined
           }
+        />
+      )}
+
+      {creditOpen && (
+        <CreditPicker
+          onClose={() => setCreditOpen(false)}
+          onPick={(u) => {
+            setCreditOpen(false);
+            setCreditUser(u);
+          }}
+        />
+      )}
+      {creditUser && (
+        <WalletModal
+          user={creditUser}
+          isAdmin
+          onClose={() => {
+            setCreditUser(null);
+            reload();
+          }}
         />
       )}
 

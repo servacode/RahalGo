@@ -29,8 +29,15 @@ import {
   IconBlock,
   IconUnblock,
   IconBalance,
+  IconLocation,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
+import {
+  OrdersTab,
+  AddressesTab,
+  CashboxTab,
+  StoresTab,
+} from "@/components/ProfileRoleTabs";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
 import { MediaThumb } from "@/components/ImageUpload";
@@ -131,9 +138,17 @@ export default function UserProfilePage() {
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<string | null>(null);
   const [fin, setFin] = useState<FinData | null>(null);
-  const [tab, setTab] = useState<"overview" | "wallet" | "financials" | "feedback" | "activity">(
-    "overview",
-  );
+  const [tab, setTab] = useState<
+    | "overview"
+    | "orders"
+    | "addresses"
+    | "cashbox"
+    | "stores"
+    | "wallet"
+    | "financials"
+    | "feedback"
+    | "activity"
+  >("overview");
   const [notice, setNotice] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -359,17 +374,45 @@ export default function UserProfilePage() {
         <p className="mb-4 rounded-control bg-success/10 px-3 py-2 text-sm text-success">{notice}</p>
       )}
 
-      {/* التبويبات — كل قسم في تبويبه (ملاحظة مراجعة) */}
-      <div className="mb-3 flex gap-1 border-b border-line">
+      {/* التبويبات — كل قسم في تبويبه (ملاحظة مراجعة)
+
+          **وتبويباتُ الدور تظهر لمن يملكه وحدَه.** «صندوق نقده» في ملفّ زبونٍ
+          سطرٌ فارغٌ يُسأل عنه، **و«متاجرُ جلبها» في ملفّ سائقٍ كذلك.** فالملفُّ
+          يعرض ما يخصّ صاحبَه لا ما يخصّ النظام. */}
+      <div className="mb-3 flex flex-wrap gap-1 border-b border-line">
         {(
           [
-            { key: "overview", label: P.tabs.overview, icon: <IconUser size={15} /> },
-            { key: "wallet", label: P.tabs.wallet, icon: <IconWallet size={15} /> },
-            { key: "financials", label: P.tabs.financials, icon: <IconBalance size={15} /> },
-            { key: "feedback", label: P.tabs.feedback, icon: <IconStar size={15} /> },
-            { key: "activity", label: P.tabs.activity, icon: <IconStatus size={15} /> },
+            { key: "overview", label: P.tabs.overview, icon: <IconUser size={15} />, show: true },
+            {
+              key: "orders",
+              label: P.roleTabs.orders,
+              icon: <IconOrder size={15} />,
+              show: has("customer") || has("driver"),
+            },
+            {
+              key: "addresses",
+              label: P.roleTabs.addresses,
+              icon: <IconLocation size={15} />,
+              show: has("customer"),
+            },
+            {
+              key: "cashbox",
+              label: P.roleTabs.cashbox,
+              icon: <IconBalance size={15} />,
+              show: has("driver"),
+            },
+            {
+              key: "stores",
+              label: P.roleTabs.stores,
+              icon: <IconStore size={15} />,
+              show: has("merchant") || has("sales"),
+            },
+            { key: "wallet", label: P.tabs.wallet, icon: <IconWallet size={15} />, show: true },
+            { key: "financials", label: P.tabs.financials, icon: <IconBalance size={15} />, show: true },
+            { key: "feedback", label: P.tabs.feedback, icon: <IconStar size={15} />, show: true },
+            { key: "activity", label: P.tabs.activity, icon: <IconStatus size={15} />, show: true },
           ] as const
-        ).map((t) => (
+        ).filter((t) => t.show).map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -384,6 +427,13 @@ export default function UserProfilePage() {
           </button>
         ))}
       </div>
+
+      {tab === "orders" && <OrdersTab userID={id} roles={p.roles} />}
+      {tab === "addresses" && <AddressesTab userID={id} />}
+      {tab === "cashbox" && (
+        <CashboxTab userID={id} canSettle={canWallet} onSettled={() => void load()} />
+      )}
+      {tab === "stores" && <StoresTab userID={id} roles={p.roles} />}
 
       {tab === "overview" && (
       <>

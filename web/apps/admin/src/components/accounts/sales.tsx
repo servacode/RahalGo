@@ -68,7 +68,7 @@ function CopyCode({ code }: { code: string }) {
   );
 }
 
-export default function SalesPage() {
+export default function SalesTable() {
   const { user: me } = useAuth();
   const router = useRouter();
   const canWallet = !!me?.roles.some((r) => r === "admin" || r === "finance");

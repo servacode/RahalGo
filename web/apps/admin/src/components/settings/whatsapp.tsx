@@ -19,7 +19,7 @@ interface WAStatus {
   last_error?: string;
 }
 
-export default function WhatsAppPage() {
+export default function WhatsAppPanel() {
   const [status, setStatus] = useState<WAStatus | null>(null);
   const [qrDataURL, setQrDataURL] = useState("");
 

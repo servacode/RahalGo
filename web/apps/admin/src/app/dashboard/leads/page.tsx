@@ -59,7 +59,20 @@ const FILTERS: { key: string; label: string }[] = [
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [filter, setFilter] = useState("");
+  /**
+   * **والقسمُ للمعلَّق لا للمنتهي.**
+   *
+   * كان يفتح على «الكلّ»، **فتبقى الفرصةُ المحوَّلة بينها بعد أن صارت متجراً**
+   * — ويُقرأ العددُ عملاً باقياً وهو مُنجَز. **وبابٌ اسمُه «طلبات الانضمام»
+   * يعرض من انضمّ فعلاً يفقد معناه.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بعد الموافقة على طلب متجرٍ لا يجب أن يبقى بقسم
+   * طلبات الانضمام — فالطلبُ قُبل والمتجرُ تحوّل إلى المتاجر».)
+   *
+   * **والمرشِّحُ يبقى** — من أراد المحوَّلةَ وجدها بضغطة، **ولا شيءَ يُحذف من
+   * القاعدة.**
+   */
+  const [filter, setFilter] = useState("new");
   const [view, setView] = useViewMode("leads", "cards");
 
   const load = useCallback(async () => {

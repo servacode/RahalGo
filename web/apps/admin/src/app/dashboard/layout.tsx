@@ -49,16 +49,12 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard", label: m.terms.dashboard, icon: IconDashboard },
   // التشغيل اليومي — مشتركٌ بين الثلاثة
   { href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder },
-  { href: "/dashboard/customers", label: m.terms.customers, icon: IconUser },
+  // **والسجلُّ بابٌ ثانٍ** — «ماذا جرى؟» سؤالٌ غيرُ «ما الذي يحتاجني الآن؟».
+  { href: "/dashboard/history", label: m.admin.nav.history, icon: IconStatus },
   { href: "/dashboard/tickets", label: m.terms.complaints, icon: IconSupport },
-  { href: "/dashboard/drivers", label: m.terms.drivers, icon: IconDriver },
   // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
   { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning },
-  { href: "/dashboard/sales", label: m.terms.reps, icon: IconUsers },
   { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink },
-  // المال — الأدمن والمالية. والعمليات ليست طرفاً فيه.
-  { href: "/dashboard/commissions", label: m.terms.commissions, icon: IconBalance,
-    roles: ["admin", "finance"] },
   // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
   { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
     roles: ["admin", "finance", "ops"] },
@@ -75,13 +71,13 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard/reports", label: m.terms.reports, icon: IconStatus,
     roles: ["admin", "finance"] },
   // البناء — الأدمن وحده يملك أزراره
+  //
+  // **وبابٌ واحدٌ لكلّ من في المنصة**: الزبائنُ والمتاجرُ والسائقون والمندوبون
+  // صاروا تبويباتٍ فيه — **بجداولهم كما هي، لا بجدولٍ واحدٍ يُفقد أعمدتَهم.**
   { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers, roles: ["admin"] },
   // **أقسامُ المنصة قبل المتاجر** — الزبونُ يتصفّحها، والمتاجرُ خلفها.
   { href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore, roles: ["admin"] },
-  { href: "/dashboard/merchants", label: m.terms.merchants, icon: IconStore, roles: ["admin"] },
-  { href: "/dashboard/zones", label: m.terms.zones, icon: IconZones, roles: ["admin"] },
   { href: "/dashboard/promos", label: m.terms.promos, icon: IconPromos, roles: ["admin"] },
-  { href: "/dashboard/whatsapp", label: m.admin.nav.whatsapp, icon: IconWhatsApp, roles: ["admin"] },
   // الإعدادات تبقى للجميع **للقراءة**: العمليات تحتاج أن تعرف المهل التي
   // تُحاسَب عليها، وإخفاؤها يجعلها تعمل بقواعد لا تراها. والتعديل للأدمن وحده
   // ويُحرسه الخادم.

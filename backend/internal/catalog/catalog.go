@@ -189,7 +189,13 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 	return &m, nil
 }
 
-func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status string, page, perPage int) (*MerchantPage, error) {
+// ListMerchants متاجرُ المنصة بمرشِّحاتها.
+//
+// **و`repID` يجعلها تصلح لملفّ المندوب**: «أيُّ متاجرَ جلبها هذا؟» سؤالٌ يُسأل
+// في ملفّه لا في قائمةٍ عامّةٍ تُبحث بالاسم. **ونقطةٌ ثانيةٌ تُبنى لأجله كانت
+// ستُكرّر الاستعلامَ نفسَه بشرطٍ واحدٍ زائد** — وهي عائلةُ «قاعدةٌ مكتوبةٌ
+// مرّتين» التي أتعبتنا.
+func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status, repID string, page, perPage int) (*MerchantPage, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -198,17 +204,18 @@ func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status s
 	}
 	where := ` WHERE ($1 = '' OR m.name ILIKE '%'||$1||'%' OR m.phone ILIKE '%'||$1||'%')
 	           AND ($2 = '' OR m.category_id::text = $2)
-	           AND ($3 = '' OR m.status = $3)`
+	           AND ($3 = '' OR m.status = $3)
+	           AND ($4 = '' OR m.sales_rep_user_id::text = $4)`
 
 	var total int
 	if err := s.db.QueryRow(ctx, `SELECT count(*) FROM merchants m`+where,
-		query, categoryID, status).Scan(&total); err != nil {
+		query, categoryID, status, repID).Scan(&total); err != nil {
 		return nil, err
 	}
 
 	rows, err := s.db.Query(ctx, merchantSelect+where+`
-		ORDER BY m.created_at DESC LIMIT $4 OFFSET $5`,
-		query, categoryID, status, perPage, (page-1)*perPage)
+		ORDER BY m.created_at DESC LIMIT $5 OFFSET $6`,
+		query, categoryID, status, repID, perPage, (page-1)*perPage)
 	if err != nil {
 		return nil, err
 	}

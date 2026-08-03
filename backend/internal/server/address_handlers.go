@@ -37,11 +37,27 @@ type address struct {
 }
 
 func (s *Server) handleMyAddresses(w http.ResponseWriter, r *http.Request) {
+	s.writeAddresses(w, r, userIDFrom(r))
+}
+
+// handleAdminUserAddresses عناوينُ زبونٍ بعينه — **في ملفّه لا في بحثٍ عنه.**
+//
+// من يتّصل به زبونٌ يقول «طلبي لم يصل» يحتاج أن يرى **أين يسكن** قبل أن يسأل.
+// **وكانت لا تُقرأ إلّا من حساب صاحبها** — فتُقرأ من الطلب وحدَه، ومن لا طلبَ
+// له اليومَ لا عنوانَ له عندنا.
+//
+// **وقراءةٌ لا كتابة**: عنوانُ بيتِ إنسانٍ يكتبه هو.
+func (s *Server) handleAdminUserAddresses(w http.ResponseWriter, r *http.Request) {
+	s.writeAddresses(w, r, chi.URLParam(r, "id"))
+}
+
+// writeAddresses **استعلامٌ واحدٌ لموضعين** — ولو نُسخ لَافترقا حين يُزاد حقل.
+func (s *Server) writeAddresses(w http.ResponseWriter, r *http.Request, userID string) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT id, label, address_text,
 		       ST_Y(location::geometry), ST_X(location::geometry), is_default
 		FROM user_addresses WHERE user_id = $1
-		ORDER BY is_default DESC, created_at DESC`, userIDFrom(r))
+		ORDER BY is_default DESC, created_at DESC`, userID)
 	if err != nil {
 		s.respondErr(w, err)
 		return

@@ -58,7 +58,7 @@ function errText(err: unknown): string {
   return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
 }
 
-export default function DriversPage() {
+export default function DriversTable() {
   const { user: me } = useAuth();
   const canSettle = !!me?.roles.some((r) => r === "admin" || r === "finance");
 

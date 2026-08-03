@@ -50,7 +50,7 @@ function errText(err: unknown): string {
   return err instanceof ApiError ? m.errors.internal : m.errors.internal;
 }
 
-export default function CustomersPage() {
+export default function CustomersTable() {
   const { user: me } = useAuth();
   const router = useRouter();
   const canWallet = !!me?.roles.some((r) => r === "admin" || r === "finance");

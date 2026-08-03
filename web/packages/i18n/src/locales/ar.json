@@ -199,7 +199,11 @@
         "pending": "بانتظار المالية",
         "paid": "صُرف",
         "rejected": "مرفوض"
-      }
+      },
+      "titleWithCredit": "سحبٌ وإضافةُ رصيد",
+      "creditBtn": "إضافة رصيد",
+      "creditPick": "لمن تُضيف الرصيد؟",
+      "creditNoResults": "لا نتائج — ابحث بالاسم أو الهاتف"
     },
     "walletTabs": {
       "all": "الكل",
@@ -368,7 +372,7 @@
       "merchant_not_ready": "المتجر لم يجهّز الطلب",
       "order_unknown": "المتجر لا يعرف هذا الطلب"
     },
-    "zero":"0",
+    "zero": "0",
     "appTagline": "توصيل طلبات الرقة"
   },
   "auth": {
@@ -567,8 +571,9 @@
       "cash": "أموالٌ لم تُستلم",
       "losses": "الخسائر",
       "emergencies": "الطوارئ",
-      "sections": "أقسام المنصة",
-      "claims": "نزاعات المتاجر"
+      "sections": "السوق",
+      "claims": "نزاعات المتاجر",
+      "history": "سجلّ الطلبات"
     },
     "ordersPage": {
       "title": "الطلبات",
@@ -687,7 +692,8 @@
       "proof": "إثبات التسليم",
       "proofMeters": "على بُعد {n} م من العنوان",
       "proofNoGps": "بلا موقع",
-      "proofSkipped": "تعذّر التصوير:"
+      "proofSkipped": "تعذّر التصوير:",
+      "historyTitle": "سجلّ الطلبات"
     },
     "customers": {
       "title": "الزبائن",
@@ -925,7 +931,30 @@
         "notesHint": "يراها موظفو المنصة فقط — لا تظهر لصاحب الحساب أبداً",
         "notesSaved": "حُفظت الملاحظات",
         "viewOrders": "عرض طلباته",
-        "viewCashbox": "كشف صندوقه"
+        "viewCashbox": "كشف صندوقه",
+        "roleTabs": {
+          "orders": "طلباته",
+          "ordersAsCustomer": "طلباتٌ طلبها",
+          "ordersAsDriver": "طلباتٌ أوصلها",
+          "ordersEmpty": "لا طلبات",
+          "addresses": "عناوينه",
+          "addressesEmpty": "لا عناوين محفوظة",
+          "defaultAddress": "الافتراضي",
+          "cashbox": "صندوق نقده",
+          "cashHeld": "في ذمّته الآن",
+          "settle": "تسوية الصندوق",
+          "settleNote": "تسوية من ملفّ السائق",
+          "cashEmpty": "لا حركات",
+          "cashKinds": {
+            "collect": "قبضٌ من زبون",
+            "settle": "تسليمٌ للمنصة",
+            "adjust": "تعديل"
+          },
+          "stores": "متاجره",
+          "storesOwned": "متاجرُ يملكها",
+          "storesBrought": "متاجرُ جلبها",
+          "storesEmpty": "لا متاجر"
+        }
       },
       "suspended": "موقوف",
       "suspend": "إيقاف",
@@ -964,7 +993,14 @@
       },
       "roleReasonTitle": "سبب تغيير الدور",
       "roleReasonLabel": "السبب (يُحفظ في السجل)",
-      "export": "تصدير CSV"
+      "export": "تصدير CSV",
+      "groupTabs": {
+        "all": "كل الحسابات",
+        "customers": "الزبائن",
+        "merchants": "المتاجر",
+        "drivers": "السائقون",
+        "reps": "المندوبون"
+      }
     },
     "merchants": {
       "title": "المتاجر",
@@ -1203,7 +1239,9 @@
         "customers": "الزبائن",
         "payouts": "السحوبات",
         "security": "الأمان",
-        "platform": "المنصة"
+        "platform": "المنصة",
+        "pricing": "التسعير والهامش",
+        "support": "الدعم والشكاوى"
       },
       "units": {
         "minute": "دقيقة",
@@ -1699,7 +1737,13 @@
       "placed": "تمّ طلبك",
       "placedHint": "وصل المتجرَ الآن — ستتابع حالته لحظةً بلحظة",
       "empty": "لا طلبات بعد — جرّب أول طلب لك",
-      "track": "تتبع",
+      "track": {
+        "pending": "بانتظار القبول",
+        "accepted": "قُبل",
+        "preparing": "قيد التحضير",
+        "onway": "في الطريق",
+        "delivered": "تم التسليم"
+      },
       "details": "التفاصيل",
       "orderTitle": "الطلب #{n}",
       "liveTracking": "التتبع الحي",
@@ -1730,13 +1774,6 @@
       "againDone": "أُرسل طلبك برقم {n}",
       "trackClosed": "انتهى هذا الطلب — {s}",
       "endedReason": "السبب",
-      "track": {
-        "pending": "بانتظار القبول",
-        "accepted": "قُبل",
-        "preparing": "قيد التحضير",
-        "onway": "في الطريق",
-        "delivered": "تم التسليم"
-      },
       "cancelConfirmTitle": "إلغاء الطلب؟",
       "cancelConfirmBody": "لن نتمكّن من التراجع بعد الإلغاء، وستحتاج إلى إعادة الطلب من جديد.",
       "cancelConfirmYes": "نعم، ألغِ الطلب",

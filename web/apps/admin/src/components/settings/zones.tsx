@@ -49,7 +49,7 @@ interface Draft {
   minOrder: string;
 }
 
-export default function ZonesPage() {
+export default function ZonesPanel() {
   const { user: me } = useAuth();
   const isAdmin = !!me?.roles.includes("admin");
 

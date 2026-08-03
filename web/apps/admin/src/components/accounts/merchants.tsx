@@ -99,7 +99,7 @@ function errText(err: unknown): string {
   return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
 }
 
-export default function MerchantsPage() {
+export default function MerchantsTable() {
   const { user: me } = useAuth();
   const router = useRouter();
   const isAdmin = !!me?.roles.includes("admin");
