@@ -74,7 +74,7 @@ const chipTones = {
   accent: "bg-accent/10 font-bold text-accent-dark hover:bg-accent/20",
   /** خطر — الخروج. ممتلئ لا شفّاف: زرّ الخروج يجب أن يُميَّز بلمحة كي لا
    *  يُضغط سهواً، والنصّ الأحمر على أبيض يذوب بين بقية العناصر. */
-  danger: "bg-danger font-medium text-white hover:bg-danger/90",
+  danger: "bg-danger-solid font-medium text-white hover:opacity-90",
 } as const;
 
 export type ChipTone = keyof typeof chipTones;
@@ -177,8 +177,11 @@ export function CountBadge({ count, tone = "accent" }: { count: number; tone?: "
   if (count <= 0) return null;
   return (
     <span
-      className={`absolute -top-1.5 -start-1.5 flex h-5 min-w-5 items-center justify-center rounded-badge px-1 text-xs font-bold text-white ${
-        tone === "danger" ? "bg-danger" : "bg-accent"
+      /* **العدّادُ برتقاليٌّ بنصٍّ داكن** — لا أبيض: الأبيضُ على البرتقاليّ
+         ٢٫٢٢ **يذوب**، والداكنُ ٨٫٤٩. **والجرسُ يبقى أبيضَ كما هو.**
+         (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «العدّاد فقط وليس الجرس».) */
+      className={`absolute -top-1.5 -start-1.5 flex h-5 min-w-5 items-center justify-center rounded-badge px-1 text-xs font-bold ${
+        tone === "danger" ? "bg-danger-solid text-white" : "bg-accent text-shell"
       }`}
     >
       {fmtNum(count)}

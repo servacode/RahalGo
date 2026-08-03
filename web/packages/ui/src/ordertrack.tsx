@@ -62,9 +62,9 @@ export function OrderTrack({
   return (
     <div className={`w-full ${className}`}>
       {/* الدرّاجةُ فوق الشريط — تنزلق إلى موضع المرحلة */}
-      <div className="relative mb-1 h-6">
+      <div className="relative mb-1 h-7">
         <span
-          className={`absolute top-0 -translate-x-1/2 text-primary ${
+          className={`absolute top-0 -translate-x-1/2 text-accent ${
             live ? "motion-safe:animate-[rahalgo-ride_1.6s_ease-in-out_infinite]" : ""
           }`}
           style={{
@@ -81,7 +81,7 @@ export function OrderTrack({
               المسارُ يمشي من اليمين إلى اليسار — كاتّجاه القراءة — **وأيقونةُ
               المركبة في المكتبة موجَّهةٌ إلى اليمين**، فتبدو ماشيةً إلى الخلف.
               **وقلبُها أفقياً يجعلها تسير حيث تنظر.** */}
-          <Vehicle size={22} className="-scale-x-100" />
+          <Vehicle size={28} className="-scale-x-100" />
         </span>
       </div>
 
@@ -89,14 +89,14 @@ export function OrderTrack({
       <div className="relative h-1.5" aria-hidden>
         <div className="absolute inset-0 rounded-badge bg-page" />
         <div
-          className="absolute inset-y-0 right-0 rounded-badge bg-primary transition-[width] duration-700 ease-out"
+          className="absolute inset-y-0 right-0 rounded-badge bg-accent transition-[width] duration-700 ease-out"
           style={{ width: `${pct}%` }}
         />
         {stages.map((s, i) => (
           <span
             key={s.id}
             className={`absolute top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full border-2 transition-colors ${
-              i <= at ? "border-primary bg-primary" : "border-line bg-surface"
+              i <= at ? "border-accent bg-accent" : "border-line bg-surface"
             }`}
             style={{ right: `${(i / last) * 100}%` }}
           />
@@ -110,7 +110,7 @@ export function OrderTrack({
             key={s.id}
             className={`flex-1 text-center ${
               i === at
-                ? "font-bold text-primary-dark"
+                ? "font-bold text-accent"
                 : i < at
                   ? "text-ink-muted"
                   : "text-ink-muted opacity-50"

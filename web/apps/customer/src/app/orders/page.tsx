@@ -431,7 +431,9 @@ function OrderCard({
               **ورقمٌ خافتٌ بجانب عنوانٍ يضيع.** */}
           <span
             dir="ltr"
-            className="rounded-control bg-primary-light px-2.5 py-1 text-sm font-bold tabular-nums text-primary-dark"
+            /* **رقمُ الطلب برتقاليّ** — هو ما يُقال في الهاتف حين يُسأل عنه،
+               **فيُلمح في البطاقة قبل أن يُبحث عنه.** */
+            className="rounded-control bg-accent px-2.5 py-1 text-sm font-bold tabular-nums text-shell"
           >
             #{fmtNum(o.number)}
           </span>
@@ -572,8 +574,9 @@ function OrderCard({
       {/* ── الأفعال ───────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2">
         {items.length > 0 && (
+          /* **الفعلُ الأكثرُ تكراراً يلبس لونَ العلامة** — ومن طلب مرّةً
+             يطلب ثانية، **وزرٌّ باهتٌ لأكثر ما يُضغط يُبطئ ما يجب أن يسرع.** */
           <Button
-            variant="secondary"
             onClick={onReorder}
             className="flex flex-1 items-center justify-center gap-1.5 !py-1.5"
           >
@@ -600,7 +603,11 @@ function OrderCard({
           onClick={onInvoice}
           aria-label={m.site.orders.invoice}
           title={m.site.orders.invoice}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-line text-ink-muted transition-colors hover:bg-page hover:text-ink"
+          /* **الطباعةُ خضراء والشكوى حمراء** — فعلان متجاوران ومعناهما متضادّ:
+             أحدُهما يحفظ والآخر يشتكي. **ولونٌ واحدٌ لهما يجعل الضغطةَ قرعةً**،
+             والعينُ تفرّق بالألوان قبل أن تقرأ الأيقونات.
+             (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-success-solid text-white transition-opacity hover:opacity-90"
         >
           <IconPrint size={16} />
         </button>
@@ -637,7 +644,7 @@ function OrderCard({
                  **وحدودٌ حمراءُ وخلفيةٌ خفيفةٌ تجعله يُرى** بجانب أيقونة
                  الطباعة الرمادية: الفعلان مختلفان، **فلا يُلبسان لباساً
                  واحداً.** */
-              className="flex h-9 shrink-0 items-center gap-1.5 rounded-control border border-danger/40 bg-danger/5 px-2.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10"
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-control bg-danger-solid px-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
             >
               <IconSupport size={16} />
               {m.site.complaint.short}
