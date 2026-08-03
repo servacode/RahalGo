@@ -27,7 +27,7 @@ function errText(err: unknown): string {
 
 function Section({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-card border border-line bg-surface p-5">
+    <section className="rounded-card border border-line bg-surface p-4">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-bold">
         <span className="text-primary [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
         {title}
@@ -320,9 +320,17 @@ export function AccountSettings({
   }
 
   return (
-    // مربعان في السطر على الشاشات المتوسطة فأكبر — كانت الأقسام مرصوفة طولياً
-    // فيتمدّد النموذج بلا داعٍ ونصف العرض فارغ.
-    <div className="grid gap-5 md:grid-cols-2">
+    /* **عمودٌ واحدٌ ضيّق — لا مربّعان يملآن الشاشة.**
+
+       كانت مربّعين في السطر على الشاشات المتوسطة فأكبر: **صندوقان كبيران لكلّ
+       حقلٍ صغير**، فتمتدّ الصفحةُ عرضاً وطولاً معاً و«حسابي» يصير لوحةَ تحكّم.
+       **وهي صفحةٌ تُفتح مرّةً في الشهر لتغيير كلمةٍ أو رقم.**
+
+       فصارت عموداً واحداً محدودَ العرض: **يُمسح بالعين من أعلى إلى أسفل**،
+       والحقولُ قريبةٌ من بعضها لا متباعدةٌ في فراغ.
+       (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «اجعل الكروت بصف واحد، ما يلزم الكروت بهذا
+       الشكل ماخذة مساحات كبيرة».) */
+    <div className="mx-auto grid max-w-2xl gap-3">
       {/* **بابُ تغيير الاسم.**
 
           كانت الصفحةُ تقرأ الاسمَ وتعرضه في الصورة الرمزية **ولا تكتبه** —
@@ -498,7 +506,7 @@ export function AccountSettings({
       </Section>
 
       {/* منطقة الخطر — تمتدّ عبر العمودين وتُفصل بصرياً عمّا فوقها */}
-      <section className="rounded-card border border-danger/30 bg-danger/5 p-5 md:col-span-2">
+      <section className="rounded-card border border-danger/30 bg-danger/5 p-5">
         <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-danger">
           <span className="[&>svg]:h-4 [&>svg]:w-4">
             <IconWarning />
@@ -553,12 +561,12 @@ export function AccountSettings({
       </section>
 
       {msg && (
-        <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success md:col-span-2">
+        <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success">
           {msg}
         </p>
       )}
       {error && (
-        <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger md:col-span-2">
+        <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">
           {error}
         </p>
       )}
