@@ -85,7 +85,14 @@ export function Card({
   children: ReactNode;
 }) {
   return (
-    <section className={`rounded-card border border-line bg-surface ${pads[padding]} ${className}`}>
+    /* **والبطاقةُ تتلقّى ضوءاً وتستجيب.**
+
+       `surface-lit` تعطيها عمقاً — ضوءٌ من أعلى وثقلٌ في القاع وخيطٌ لامعٌ
+       على الحرف. **والاستجابةُ عند المرور** تجعلها تُحسّ حيّةً: ترتفع قليلاً
+       بظلٍّ أعمق. **وسطحٌ لا يردّ على يدٍ تمرّ عليه سطحٌ ميّت.** */
+    <section
+      className={`surface-lit rounded-card border border-line bg-surface transition-shadow duration-200 hover:shadow-lift ${pads[padding]} ${className}`}
+    >
       {(title || actions) && (
         <div className="mb-3 flex items-center justify-between gap-2">
           {title && (
