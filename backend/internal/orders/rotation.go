@@ -60,6 +60,22 @@ func (s *Service) offerTimeout(ctx context.Context) time.Duration {
 //
 // `skip` سائقون مرّ عليهم الدورُ في هذا الطلب فلا يُعادون إليه — **وإلّا دار
 // العرضُ على الأوّل أبداً**: هو أطولُ انتظاراً وسيبقى كذلك ما دام لم يأخذ.
+//
+// # وسقفُ النقد يُقاس بما بحوزته **وبنقد هذا الطلب معاً**
+//
+// كان الشرطُ هنا `held < limit` وحدَه، **والقبولُ يفحص `held + cash_due >
+// limit`** — قاعدةٌ واحدةٌ مكتوبةٌ في موضعين، **فافترقا.**
+//
+// **فيُعرض الطلبُ على من لا يستطيع أخذَه**: سائقٌ حوزتُه صفرٌ مؤهَّلٌ للعرض،
+// وطلبٌ نقدُه فوق السقف **يُردّ عند الضغط.** ويدور العرضُ على الجميع بمهلته
+// كاملةً ثمّ يسقط إلى «لا أحد» — **والعملياتُ ترى «جارٍ إسناد سائق» وتنتظر من
+// لن يأتي.**
+//
+// **ووقع أمام المالك** (٢٠٢٦-٠٨-٠٣): طلبٌ نقدُه ٦٢٦٬٠٠٠ وسقفُ السائق ٥٠٠٬٠٠٠
+// — عُرض على سائقٍ حوزتُه صفر.
+//
+// **ولم يُمسك لأنّ الاثنين يعملان**: العرضُ يعرض والقبولُ يردّ، وكلٌّ صحيحٌ
+// وحدَه. **والخللُ في أنّهما لا يتّفقان** — وهو ما لا يراه اختبارٌ يفحص أحدَهما.
 func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) error {
 	if s.AssignmentMode(ctx) != "rotation" {
 		return nil
@@ -89,8 +105,11 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 		  -- و NOT (id = ANY(NULL)) يُنتج NULL لا TRUE — **فيسقط كلُّ سائقٍ
 		  -- في المنصة ويعود الطلبُ مشاعاً وكأن لا أحدَ أهلٌ له.**
 		  AND NOT (u.id = ANY(COALESCE($1::uuid[], '{}')))
+		  -- **وسقفُ النقد يُقاس بما بحوزته وبنقد هذا الطلب معاً** — انظر
+		  -- تعليلَه فوق الدالّة.
 		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b
-		                WHERE b.driver_id = u.id), 0) < $2
+		                WHERE b.driver_id = u.id), 0)
+		      + COALESCE((SELECT o.cash_due FROM orders o WHERE o.id = $4), 0) <= $2
 		  AND (SELECT count(*) FROM orders o
 		       WHERE o.driver_id = u.id AND o.closed_at IS NULL) < $3
 		-- **ومن لم يأخذ بعدُ يُرتّبون بمن بكّر بالدوام.**
@@ -99,7 +118,7 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 		-- يسبق من بكّر بالدوام. **وقاعدةُ المالك: من فتح دوامَه أوّلاً يستحقّ
 		-- أوّلَ طلب** — وهو ما يجعل التبكير مجدياً.
 		ORDER BY u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
-		LIMIT 1`, skip, limit, maxActive).Scan(&driverID)
+		LIMIT 1`, skip, limit, maxActive, orderID).Scan(&driverID)
 
 	if err != nil {
 		// **خطأُ الاستعلام لا يُقرأ «لا أحد».**
