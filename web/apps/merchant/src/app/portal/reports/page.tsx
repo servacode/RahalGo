@@ -23,6 +23,8 @@ interface Report {
     platform_commission: number;
   };
   days: { date: string; orders: number; delivered: number; sales: number }[];
+  /** تفصيلُ الأصناف — **«ماذا بعتُ؟» لا «كم بعتُ؟»**. */
+  items: { name: string; qty: number; revenue: number }[];
 }
 
 function isoDaysAgo(n: number): string {
@@ -156,6 +158,44 @@ export default function MerchantReportsPage() {
                 {d.date.slice(8)}
               </span>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* **تفصيلُ الأصناف.**
+
+          المجاميعُ تقول إنّ الأسبوع كان جيّداً **ولا تقول لماذا.** وصاحبُ
+          المتجر لا يُدير مطبخَه برقمٍ واحد: يسأل أيُّ صنفٍ يمشي وأيُّه راكد،
+          فيزيد من هذا ويوقف ذاك. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
+      {report && report.items.length > 0 && (
+        <section className="mt-6 rounded-card border border-line bg-surface p-4">
+          <h2 className="mb-3 font-bold">{m.merchant.reports.itemsTitle}</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line text-xs text-ink-muted">
+                  <th className="py-2 text-start font-medium">{m.merchant.reports.itemName}</th>
+                  <th className="py-2 text-center font-medium">{m.merchant.reports.itemQty}</th>
+                  <th className="py-2 text-end font-medium">
+                    {m.merchant.reports.itemRevenue} ({m.common.currency})
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.items.map((it) => (
+                  <tr key={it.name} className="border-b border-line/60 last:border-0">
+                    <td className="py-2">{it.name}</td>
+                    <td className="py-2 text-center tabular-nums" dir="ltr">
+                      {fmtNum(it.qty)}
+                    </td>
+                    {/* **وهو ما يقبضه هو** — قبل العمولة ودون هامش المنصة. */}
+                    <td className="py-2 text-end font-medium tabular-nums" dir="ltr">
+                      {fmtNum(it.revenue)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
       )}

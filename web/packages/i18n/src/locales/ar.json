@@ -1545,6 +1545,10 @@
     },
     "reports": {
       "title": "تقارير المتجر",
+      "itemsTitle": "مبيعاتك بالتفصيل — كل صنف",
+      "itemName": "الصنف",
+      "itemQty": "الكمية",
+      "itemRevenue": "ما استحققته",
       "orders": "الطلبات",
       "delivered": "مُسلَّمة",
       "cancelled": "ملغاة/مرفوضة",

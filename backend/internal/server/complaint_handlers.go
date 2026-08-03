@@ -52,7 +52,8 @@ func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: t.CustomerID, Kind: notifications.KindTicket,
 		Title: notifTitles.ticketOpened, Body: t.Subject,
-		Entity: "ticket", EntityID: t.ID, Href: "/orders/" + orderID,
+		// **إلى صفحة الشكاوى لا إلى صفحةِ طلبٍ محذوفة** — وهناك يرى حالَها.
+		Entity: "ticket", EntityID: t.ID, Href: "/complaints",
 	})
 	// **والعملياتُ تُخبَر فوراً لا حين تفتح اللوحة.**
 	//

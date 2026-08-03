@@ -75,7 +75,19 @@ func (s *Service) publishOrder(o *Order) {
 	event := map[string]any{"type": "order", "order": o}
 	s.pub.Publish("ops", event)
 	s.pub.Publish("merchant:"+o.MerchantID, event)
-	s.pub.Publish("customer:"+o.CustomerID, event)
+
+	// **وحدثُ الزبون بلا مصدر.**
+	//
+	// حُجب اسمُ المتجر في التصفّح وفي الطلبات وفي التقييمات وفي الإشعارات —
+	// **وبقي في البثّ الحيّ**: نسخةٌ كاملةٌ من الطلب تُرسَل إلى قناة الزبون
+	// في كلّ انتقال. **ولا تظهر في شاشةٍ فتُنتبَه**، بل تُقرأ في أدوات
+	// المتصفّح — وهي أهدأُ مواضع التسريب وأبقاها.
+	//
+	// **وحجبٌ في أربعة مواضعَ من خمسة ليس حجباً.** (وُجد في فحص البثّ نفسِه،
+	// ٢٠٢٦-٠٨-٠٣.)
+	cust := *o
+	cust.MerchantID, cust.MerchantName, cust.MerchantLogoThumb = "", "", nil
+	s.pub.Publish("customer:"+o.CustomerID, map[string]any{"type": "order", "order": &cust})
 
 	// **السائقُ الذي يحمل الطلب يعلم بما يجري فيه.**
 	//

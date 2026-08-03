@@ -127,15 +127,27 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 	if err != nil {
 		return
 	}
+	// **ولا اسمَ متجرٍ في إشعار الزبون.**
+	//
+	// حُجب المصدرُ في التصفّح وفي الطلبات وفي التقييمات — **وبقي في الإشعارات
+	// وحدها**، وهي أكثرُ ما يُقرأ: تصل بلا أن تُطلب. **وشهده المالكُ في شاشته**
+	// (٢٠٢٦-٠٨-٠٣): «يذكر اسم مطعم بيت الرقة».
+	//
+	// **وحجبٌ في ثلاثة مواضعَ من أربعة ليس حجباً** — يكفي بابٌ واحدٌ مفتوح.
 	ref := fmt.Sprintf("#%d", p.number)
-	body := ref + " — " + p.merchantName
+	body := ref
 	if note != "" && (to == StRejected || to == StCancelled || to == StFailed) {
-		body = ref + " — " + note // السبب أهمّ من اسم المتجر عند الرفض
+		body = ref + " — " + note // **والسببُ يُقال**: من أُلغي طلبُه يستحقّ لماذا
 	}
+	// **والرابطُ إلى القائمة لا إلى صفحةِ طلبٍ منفردة.**
+	//
+	// صفحةُ التفاصيل حُذفت — **البطاقةُ صارت تحمل كلَّ ما كان فيها.** وإشعارٌ
+	// يفتح صفحةً غيرَ موجودة أسوأُ من إشعارٍ بلا رابط: **يُضغط فيصل إلى لا
+	// شيء**، فيُقرأ عطباً في المنصة.
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: p.customerID, Kind: notifications.KindOrder,
 		Title: title, Body: body,
-		Entity: "order", EntityID: orderID, Href: "/orders/" + orderID,
+		Entity: "order", EntityID: orderID, Href: "/orders",
 	})
 
 	// **والعملياتُ تُخبَر بمن أنهى** — لا بأنّ الطلب انتهى.

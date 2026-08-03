@@ -364,7 +364,54 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		}
 		days = append(days, d)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"summary": summary, "days": days})
+	// **وتفصيلُ الأصناف — «ماذا بعتُ؟» لا «كم بعتُ؟».**
+	//
+	// كان التقريرُ مجاميعَ يومية: عددُ طلباتٍ ومبلغٌ. **وصاحبُ المتجر لا يُدير
+	// مطبخَه برقمٍ واحد** — يسأل أيُّ صنفٍ يمشي وأيُّه راكد، فيزيد من هذا
+	// ويوقف ذاك. **ورقمٌ إجماليٌّ يقول إنّ الأسبوع كان جيّداً ولا يقول لماذا.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بالمتجر يجب أن يكون هناك قسم مبيعات ليعرف
+	// المتجر ما هي مبيعاته بشكل مفصّل».)
+	//
+	// **والمقياسُ خروجُ البضاعة كما في المجاميع** — لا حالةُ الطلب النهائية،
+	// **ولا يُطرح المرتجَع مرّتين**: يُستثنى هنا كما استُثني هناك.
+	//
+	// **والسعرُ سعرُه هو** (`merchant_price`) لا ما دفعه الزبون: بينهما هامشُ
+	// المنصة، **وتقريرٌ يعرض ما لا يقبضه يجعله يحسب أرباحاً ليست له.**
+	type soldItem struct {
+		Name string `json:"name"`
+		Qty  int    `json:"qty"`
+		// Revenue ما استحقّه عن هذا الصنف قبل العمولة.
+		Revenue int64 `json:"revenue"`
+	}
+	irows, err := s.pg.Query(r.Context(), `
+		SELECT oi.name, sum(oi.qty)::int, sum(oi.merchant_price * oi.qty)::bigint
+		FROM order_items oi
+		JOIN orders o ON o.id = oi.order_id
+		WHERE oi.merchant_id = $1
+		  AND o.created_at >= $2 AND o.created_at < $3
+		  AND o.picked_up_at IS NOT NULL AND o.returned_at IS NULL
+		GROUP BY oi.name
+		ORDER BY 3 DESC, 2 DESC
+		LIMIT 100`, merchantID, from.Format("2006-01-02"), toEnd)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer irows.Close()
+	items := []soldItem{}
+	for irows.Next() {
+		var it soldItem
+		if err := irows.Scan(&it.Name, &it.Qty, &it.Revenue); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		items = append(items, it)
+	}
+
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"summary": summary, "days": days, "items": items,
+	})
 }
 
 // merchantName اسم المتجر لنص الإشعار (فارغ عند التعذّر — لا يُفشل العملية).
