@@ -100,10 +100,19 @@ interface Order {
    *
    * **وحقلٌ واحدٌ يكفي للأربع**: `transitions.go` يكتب التعليلَ في
    * `cancel_reason` عند كلّ نهايةٍ غير التسليم — رفضاً وإلغاءً وفشلاً
-   * واسترجاعاً. **و`fail_reason` رمزُ تصنيفٍ لا نصٌّ يُقرأ**، وموضعُه لوحةُ
-   * الإدارة حيث يُقاس به الذنب.
+   * واسترجاعاً.
    */
   cancel_reason?: string;
+  /**
+   * **ورمزُ التعذّر يسدّ ما يتركه النصّ.**
+   *
+   * صار التفصيلُ الحرُّ اختيارياً للسائق — «القائمةُ تُصنّف والنصُّ يشرح»
+   * (`failreasons.go`) — **فطلبٌ تعذّر بلا تفصيلٍ يبقى `cancel_reason` فيه
+   * فارغاً**، فيقرأ الزبونُ «تعذّر التسليم» بلا كلمة وقد عاد بلا طعامه.
+   *
+   * **والرمزُ مصنَّفٌ فيُترجَم** — ولا يُعرض خاماً.
+   */
+  fail_reason?: string;
 }
 
 interface RateInfo {
@@ -337,6 +346,24 @@ export default function MyOrdersPage() {
 const TRACK = ["pending", "accepted", "preparing", "onway", "delivered"] as const;
 
 /** الحالةُ الخام ← موضعُها على المسار. */
+/**
+ * **لماذا انتهى — بأوّل ما يُقال، لا بأدقّه.**
+ *
+ * التفصيلُ الحرُّ أدلُّ حين يُكتب («الباب مغلق ولا أحد يردّ»)، **لكنّه اختياريّ
+ * للسائق**. فإن غاب بقي الرمزُ المصنَّف — **وهو يقول شيئاً ولو أقلّ**، وسطرٌ
+ * ناقصٌ خيرٌ من صمتٍ أمام زبونٍ عاد بلا طعامه.
+ *
+ * **والرمزُ يُترجَم ولا يُعرض خاماً** — و`customer_absent` في شاشةِ زبونٍ
+ * عطبٌ يُقرأ، لا معلومة.
+ */
+function endedReason(o: Order): string {
+  const free = o.cancel_reason?.trim();
+  if (free) return free;
+  const code = o.fail_reason?.trim();
+  if (!code) return "";
+  return m.common.failReasons[code as keyof typeof m.common.failReasons] ?? "";
+}
+
 function trackIndex(status: string): number {
   switch (status) {
     case "pending":
@@ -515,10 +542,10 @@ function OrderCard({
 
               وهو ظاهرٌ للإدارة وللمندوب منذ البداية — **وللزبون وحدَه لا.**
               (ملاحظةُ المالك ٢٠٢٦-٠٨-٠٣: «لا يوجد سبب واضح للرفض».) */}
-          {o.cancel_reason?.trim() && (
+          {endedReason(o) && (
             <p className="text-sm">
               <span className="text-ink-muted">{m.site.orders.endedReason}: </span>
-              <span className="font-medium text-danger">{o.cancel_reason}</span>
+              <span className="font-medium text-danger">{endedReason(o)}</span>
             </p>
           )}
         </div>

@@ -129,6 +129,14 @@ type driverOrder struct {
 	PickupLat  *float64 `json:"pickup_lat"`
 	PickupLng  *float64 `json:"pickup_lng"`
 	PickupNote string   `json:"pickup_note"`
+	// AcceptsReturns هل يستردّ هذا المتجرُ بضاعةَ طلبٍ تعذّر تسليمُه.
+	//
+	// **سياسةُ متجرٍ لا قاعدةُ منصة** — وهي ما يقرّر إلى أين يمضي السائقُ
+	// بالطعام: **إلى المطعم أو إلى المكتب.** ومن لم يعرف وقف في الشارع
+	// يتّصل بمن يسأله.
+	AcceptsReturns bool `json:"merchant_accepts_returns"`
+	// FailReason رمزُ التعذّر — **ليُعرَض عليه سببُه فيما بقي في يده.**
+	FailReason string `json:"fail_reason"`
 }
 
 const driverOrderSelect = `
@@ -139,7 +147,7 @@ const driverOrderSelect = `
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
 	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at,
 	       ST_Y(o.pickup_override::geometry), ST_X(o.pickup_override::geometry),
-	       o.pickup_override_note
+	       o.pickup_override_note, m.accepts_returns, COALESCE(o.fail_reason, '')
 	FROM orders o
 	JOIN merchants m ON m.id = o.merchant_id
 	JOIN users cu ON cu.id = o.customer_id
@@ -159,7 +167,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.AddressText, &o.Lat, &o.Lng, &o.CustomerName, &o.CustomerPhone,
 			&o.Total, &o.CashDue, &o.ItemsCount, &o.ReadyAt, &o.PrepMinutes,
 			&o.AcceptedAt, &o.CreatedAt,
-			&o.PickupLat, &o.PickupLng, &o.PickupNote); err != nil {
+			&o.PickupLat, &o.PickupLng, &o.PickupNote,
+			&o.AcceptsReturns, &o.FailReason); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -216,9 +225,27 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleDriverOrders طلباته هو — الجارية أولاً.
+//
+// **ومهمّةٌ لا تنتهي بإغلاق الطلب: تنتهي حين تخرج البضاعةُ من يده.**
+//
+// كان الشرطُ `closed_at IS NULL` وحدَه، **و`failed` نهايةٌ تُغلق** — فيضغط
+// السائقُ «تعذّر التسليم» **فيختفي الطلبُ من شاشته والطعامُ في صندوقه.** ولا
+// يبقى له ما يقول أين يذهب به، **ولا زرٌّ يُقرّ به أنّه أعاده**، ونقطةُ
+// الإرجاع (`handleDriverReturn`) مبنيّةٌ لا يصلها أحد.
+//
+// **وقاعدةُ المالك تحسمها** (٢٠٢٦-٠٨-٠٣): «يجب أن ينتهي الطلبُ ويعود السائقُ
+// إلى المكتب» — **والعودةُ فعلٌ يُقرّ به، لا افتراض.**
+//
+// فيبقى الطلبُ ظاهراً حتى تُحسم بضاعتُه: **أعادها إلى المتجر** (`returned_at`)
+// **أو حسمتها الإدارة** (`goods_settled_to`). ولا ثالثَ يُبقيه معلّقاً إلى
+// الأبد.
 func (s *Server) handleDriverOrders(w http.ResponseWriter, r *http.Request) {
 	s.scanDriverOrders(w, r, driverOrderSelect+`
-		WHERE o.driver_id = $1 AND o.closed_at IS NULL
+		WHERE o.driver_id = $1
+		  AND (o.closed_at IS NULL
+		       OR (o.status = 'failed'
+		           AND o.returned_at IS NULL
+		           AND o.goods_settled_to IS NULL))
 		ORDER BY o.created_at`, userIDFrom(r))
 }
 
@@ -340,8 +367,18 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	// كان الحارسُ على اللوحة وحدها، فيُفشل السائقُ طلباً بلا كلمة. و«فشل»
 	// بلا سبب تُقرأ على وجوهٍ: أالزبونُ لم يردّ؟ أالمطعمُ مغلق؟ أالسائق
 	// تعب؟ — **ثلاثةُ أخطاءٍ في ثلاث جهاتٍ يُخفيها لفظٌ واحد.**
+	//
+	// **والرمزُ المصنَّفُ يُغني عن النصّ.**
+	//
+	// الحارسان معاً كانا يطلبان شيئين عن واقعةٍ واحدة: رمزاً **وكلمةً**. وهو
+	// خلافُ ما قرّرناه في `failreasons.go` بالحرف — «تفصيلُ ما وقع يبقى في
+	// نصٍّ **اختياريّ** بجانب السبب: القائمةُ تُصنّف والنصُّ يشرح».
+	//
+	// **ومن أُلزم بالكتابة على درّاجةٍ تحت الشمس كتب حرفاً ليمرّ** — فيمتلئ
+	// الحقلُ بـ«1» و«.» و«اا»، **ويصير الإلزامُ ضجيجاً يُفسد ما جُمع.** وقد
+	// وقع فعلاً: `#1004` سببُه المحفوظ «1».
 	note := strings.TrimSpace(req.Note)
-	if requiresReason[req.To] && note == "" {
+	if requiresReason[req.To] && note == "" && req.Reason == "" {
 		s.respondErr(w, errReasonRequired)
 		return
 	}

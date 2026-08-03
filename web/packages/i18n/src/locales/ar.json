@@ -357,7 +357,18 @@
     },
     "listSeparator": "، ",
     "nameSeparator": "، ",
-    "zero": "0",
+    "failReasons": {
+      "customer_absent": "الزبون غير موجود",
+      "customer_refused": "الزبون رفض استلام الطلب",
+      "customer_unreachable": "الزبون لا يردّ على الهاتف",
+      "address_wrong": "العنوان غير صحيح",
+      "driver_late": "تأخّرتُ فلم يعد الطلب صالحاً",
+      "merchant_closed": "المتجر مغلق",
+      "merchant_refused": "المتجر رفض تسليمي الطلب",
+      "merchant_not_ready": "المتجر لم يجهّز الطلب",
+      "order_unknown": "المتجر لا يعرف هذا الطلب"
+    },
+    "zero":"0",
     "appTagline": "توصيل طلبات الرقة"
   },
   "auth": {
@@ -2034,7 +2045,12 @@
       "failedAtPickup": "المطعم لم يسلّمني",
       "failedTitle": "لماذا تعذّر التسليم؟",
       "failedReason": "السبب",
+      "failedDetail": "تفصيلٌ إضافيّ (اختياريّ)",
       "failedHint": "يُسجَّل السبب في الطلب ويراه الزبون والعمليات",
+      "failedNoReasons": "لا أسبابَ معرَّفةٌ لهذه المرحلة",
+      "returnGoods": "أعدتُ البضاعة إلى المتجر",
+      "returnToOffice": "أعِد البضاعة إلى المكتب — المتجرُ لا يقبل الاسترجاع",
+      "goodsPending": "البضاعةُ ما زالت بيدك",
       "confirmDelivered": "تأكيد التسليم",
       "confirmCash": "أقررتُ بقبض {amount} نقداً — تُسجَّل في ذمّتك",
       "emergency": "طارئ"

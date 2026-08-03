@@ -73,6 +73,10 @@ interface DriverOrder {
   prep_minutes: number | null;
   accepted_at: string | null;
   created_at: string;
+  /** **سياسةُ هذا المتجر في الاسترجاع** — وهي ما يقرّر وجهةَ البضاعة بعد التعذّر. */
+  merchant_accepts_returns: boolean;
+  /** رمزُ التعذّر — يُعرَض مترجَماً على البطاقة التي بقيت بيده. */
+  fail_reason: string;
 }
 
 interface Me {
@@ -107,7 +111,19 @@ export default function TasksPage() {
   const [emergency, setEmergency] = useState<DriverOrder | null>(null);
   /** الطلبُ الذي يُطلب إثباتُ تسليمه — **قبل «سُلّم» لا بعده**. */
   const [proving, setProving] = useState<DriverOrder | null>(null);
+  /** **رمزُ** السبب المختار — لا نصُّه. */
   const [reason, setReason] = useState("");
+  /** التفصيلُ الحرّ بجانبه — اختياريّ. */
+  const [detail, setDetail] = useState("");
+  /**
+   * أسبابُ التعذّر المتاحةُ في مرحلة هذا الطلب.
+   *
+   * **تُجلَب من الخادم عند فتح النافذة** — و`FailReasonsAt` تُرجع ما يخصّ
+   * المرحلة وحدَها: **أسبابُ باب المتجر ليست أسبابَ باب الزبون**، ومن رأى
+   * «المتجر مغلق» وهو واقفٌ أمام بيت الزبون يختار أقربَ لفظٍ إليه فيكذب
+   * السجلّ.
+   */
+  const [reasons, setReasons] = useState<{ code: string; fault: string }[]>([]);
 
   const load = useCallback(() => {
     api<Me>("/api/v1/driver/me").then(setMe).catch(() => undefined);
@@ -120,14 +136,36 @@ export default function TasksPage() {
   // — **فشاشةٌ لا تتحدّث تجعل السائقَ يضغط على ما لم يعد قائماً.**
   useLiveRefresh(["order", "wallet"], load);
 
-  async function act(o: DriverOrder, to: string, note = "") {
+  async function act(o: DriverOrder, to: string, note = "", failReason = "") {
     setBusy(o.id);
     setError("");
     try {
       await api(`/api/v1/driver/orders/${o.id}/transition`, {
         method: "POST",
-        body: JSON.stringify({ to, note }),
+        // **والرمزُ يُرسل** — كان يُغفَل، فيردّ الخادمُ `bad_fail_reason`
+        // على كلّ محاولةٍ ويبقى الطلبُ قائماً بيد سائقٍ لا يفهم لماذا.
+        body: JSON.stringify({ to, note, reason: failReason }),
       });
+      load();
+    } catch (e) {
+      setError(errText(e));
+      load();
+    } finally {
+      setBusy("");
+    }
+  }
+
+  /**
+   * إقرارُ السائق أنّه أعاد البضاعةَ إلى متجرها.
+   *
+   * **والنقطةُ مبنيّةٌ منذ البداية ولم يكن لها زرّ** — فيبقى الطعامُ بيده
+   * ومستحقُّ المتجر في محفظته، **ولا يعرف أحدٌ أين ذهبت البضاعة.**
+   */
+  async function returnGoods(o: DriverOrder) {
+    setBusy(o.id);
+    setError("");
+    try {
+      await api(`/api/v1/driver/orders/${o.id}/return`, { method: "POST" });
       load();
     } catch (e) {
       setError(errText(e));
@@ -270,10 +308,20 @@ export default function TasksPage() {
                 }}
                 onFail={() => {
                   setReason("");
+                  setDetail("");
+                  // **أسبابُ هذه المرحلة وحدَها** — تُجلَب قبل أن تُفتح
+                  // النافذة، فلا تظهر فارغةً ثمّ تمتلئ تحت إصبعه.
+                  setReasons([]);
+                  api<{ reasons: { code: string; fault: string }[] }>(
+                    `/api/v1/driver/fail-reasons?at=${o.status}`,
+                  )
+                    .then((r) => setReasons(r.reasons ?? []))
+                    .catch(() => setReasons([]));
                   setFailing(o);
                 }}
                 onRelease={() => act(o, "dispatching")}
                 onEmergency={() => setEmergency(o)}
+                onReturn={() => void returnGoods(o)}
               />
             ))}
           </div>
@@ -307,19 +355,60 @@ export default function TasksPage() {
         />
       )}
 
-      {/* تعذّر التسليم — السبب إلزامي: طلبٌ يسقط بلا سبب خلافٌ مؤجَّل */}
+      {/* تعذّر التسليم — **سببٌ مصنَّفٌ يُختار، لا نصٌّ حرٌّ يُكتب.**
+
+          كان الحقلُ نصّاً حرّاً **والخادمُ يرفض كلَّ ما ليس رمزاً من قائمته**
+          (`FaultOf(reason) == ""`) — **فكلُّ ضغطةٍ تعود بخطأ والطلبُ لا يتحرّك.**
+          وشهده المالكُ في شاشته (٢٠٢٦-٠٨-٠٣): «رغم أنني قلت تعذّر التسليم ما
+          زال زرّ سلّمت الطلب يظهر والطلب قائم».
+
+          **والرموزُ تُجلَب من الخادم لا تُكتب هنا**: قائمةٌ في مكانين تفترق
+          حين يُضاف سببٌ في أحدهما — **وهي عائلةُ الخلل نفسُها التي تكرّرت في
+          أنواع الوسائط وسقف النقد وشرط الساعات.**
+
+          **والذنبُ يُشتقّ من الرمز لا من تقدير أحد** — وهو ما يقرّر التعويض. */}
       <Modal
         open={failing !== null}
         onClose={() => setFailing(null)}
         title={D.act.failedTitle}
       >
         <div className="space-y-3">
+          <p className="text-sm font-medium">{D.act.failedReason}</p>
+          {reasons.length === 0 ? (
+            <p className="text-sm text-ink-muted">{D.act.failedNoReasons}</p>
+          ) : (
+            <div className="space-y-1.5">
+              {reasons.map((x) => (
+                <label
+                  key={x.code}
+                  className={`flex cursor-pointer items-center gap-2.5 rounded-control border px-3 py-2 text-sm transition-colors ${
+                    reason === x.code
+                      ? "border-accent bg-accent/10 font-medium"
+                      : "border-line hover:border-accent/60"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="fail-reason"
+                    className="accent-accent"
+                    checked={reason === x.code}
+                    onChange={() => setReason(x.code)}
+                  />
+                  {/* **ورمزٌ بلا ترجمةٍ يُعرض كما هو** — لا فارغاً. فمن أضاف
+                      سبباً في الخادم ونسي القاموسَ يرى نقصَه في الشاشة. */}
+                  {m.common.failReasons[x.code as keyof typeof m.common.failReasons] ?? x.code}
+                </label>
+              ))}
+            </div>
+          )}
+          {/* **والتفصيلُ اختياريّ**: «القائمةُ تُصنّف والنصُّ يشرح»
+              (`failreasons.go`). ومن أُلزم بالكتابة على درّاجةٍ تحت الشمس
+              كتب حرفاً ليمرّ. */}
           <Input
-            id="fail-reason"
-            label={D.act.failedReason}
-            required
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            id="fail-detail"
+            label={D.act.failedDetail}
+            value={detail}
+            onChange={(e) => setDetail(e.target.value)}
           />
           <p className="text-xs text-ink-muted">{D.act.failedHint}</p>
           <div className="flex justify-end gap-2">
@@ -328,11 +417,11 @@ export default function TasksPage() {
             </Button>
             <Button
               variant="danger"
-              disabled={!reason.trim() || busy !== ""}
+              disabled={!reason || busy !== ""}
               onClick={() => {
                 const o = failing;
                 setFailing(null);
-                if (o) act(o, "failed", reason.trim());
+                if (o) act(o, "failed", detail.trim(), reason);
               }}
             >
               {D.act.failed}
@@ -352,6 +441,7 @@ function TaskCard({
   onFail,
   onRelease,
   onEmergency,
+  onReturn,
 }: {
   o: DriverOrder;
   busy: boolean;
@@ -359,6 +449,7 @@ function TaskCard({
   onFail: () => void;
   onRelease: () => void;
   onEmergency: () => void;
+  onReturn: () => void;
 }) {
   const next = NEXT[o.status];
   // قبل الاستلام وجهتُه المتجر، وبعده وجهتُه الزبون — الملاحة تتبع الرحلة
@@ -421,15 +512,50 @@ function TaskCard({
         )}
       </p>
 
-      {next && (
-        <Button
-          size="lg"
-          className="mt-3 w-full"
-          disabled={busy}
-          onClick={() => onAct(next)}
-        >
-          {D.act[next as keyof typeof D.act]}
-        </Button>
+      {/* **وطلبٌ تعذّر تسليمُه لا ينتهي حتى تخرج بضاعتُه من يده.**
+
+          الحالةُ `failed` نهايةٌ في الدفاتر — **وليست نهايةً في الشارع**:
+          الطعامُ في صندوقه بعدُ. فتبقى البطاقةُ ظاهرةً بفعلٍ واحدٍ يُنهيها،
+          **بدل أن تختفي فتضيع البضاعةُ بلا أثر.**
+
+          (قاعدةُ المالك ٢٠٢٦-٠٨-٠٣: «يجب أن ينتهي الطلبُ ويعود السائقُ إلى
+          المكتب».)
+
+          **والوجهةُ سياسةُ المتجر لا اجتهادُ السائق**: من يستردّ يستردّ،
+          ومن يرفض تتحمّل المنصةُ بضاعتَه — **ولو تُرك له المالُ والبضاعةُ
+          معاً لربح من الفشل أكثرَ من النجاح.** */}
+      {o.status === "failed" ? (
+        <div className="mt-3 space-y-2 rounded-control border border-danger/40 bg-danger/5 p-3">
+          <p className="flex items-center gap-2 text-sm font-medium text-danger">
+            <IconWarning size={16} />
+            {o.fail_reason
+              ? m.common.failReasons[o.fail_reason as keyof typeof m.common.failReasons] ??
+                o.fail_reason
+              : D.act.failed}
+          </p>
+          <p className="text-sm">{D.act.goodsPending}</p>
+          {o.merchant_accepts_returns ? (
+            <Button size="lg" className="w-full" disabled={busy} onClick={onReturn}>
+              {D.act.returnGoods}
+            </Button>
+          ) : (
+            /* **ولا زرَّ لما لا نملك إثباتَه.** تسليمُ البضاعة إلى المكتب
+               يقع بين يدي من يستلمها، **وإقرارُ السائق وحدَه ليس تسليماً** —
+               فتُغلق من لوحة الإدارة بزرّ «تتحمّلها المنصة». */
+            <p className="text-sm text-ink-muted">{D.act.returnToOffice}</p>
+          )}
+        </div>
+      ) : (
+        next && (
+          <Button
+            size="lg"
+            className="mt-3 w-full"
+            disabled={busy}
+            onClick={() => onAct(next)}
+          >
+            {D.act[next as keyof typeof D.act]}
+          </Button>
+        )
       )}
 
       <div className="mt-2 flex items-center justify-between">
