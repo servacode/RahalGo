@@ -76,6 +76,23 @@ func (s *Service) offerTimeout(ctx context.Context) time.Duration {
 //
 // **ولم يُمسك لأنّ الاثنين يعملان**: العرضُ يعرض والقبولُ يردّ، وكلٌّ صحيحٌ
 // وحدَه. **والخللُ في أنّهما لا يتّفقان** — وهو ما لا يراه اختبارٌ يفحص أحدَهما.
+//
+// # وعرضٌ حيٌّ واحدٌ لكلّ سائق — **طلبٌ لكلّ واحدٍ لا ثلاثةٌ لواحد**
+//
+// كلُّ طلبٍ كان يختار «أطولَ انتظاراً» **مستقلاًّ عن الآخر، ولا يعلم أنّ عرضاً
+// حيّاً عند ذاك السائق**. وثلاثةُ طلباتٍ تُحوَّل معاً وثلاثةُ سائقين في الدوام
+// **تقع كلُّها على الأوّل**: يراها الثلاثةَ في شاشته، والاثنان الآخران شاشتاهما
+// فارغة. ثمّ تنقضي مهلتُه على الثلاثة **فتنتقل كلُّها معاً إلى الثاني** — دورةٌ
+// كاملةٌ تُهدر وثلاثةُ زبائنَ ينتظرون.
+//
+// **وقرارُ المالك (٢٠٢٦-٠٨-٠٣)**: «المفروض الآن يوجد ٣ سائقين، الطلب الأوّل
+// يذهب للأوّل والثاني للثاني والثالث للثالث».
+//
+// **فمن عنده عرضٌ حيٌّ لا يُعرض عليه ثانٍ**: يتوزّع الحملُ من أوّل لحظة،
+// **ويقرّر كلُّ سائقٍ في طلبٍ واحدٍ لا في ثلاثة.**
+//
+// **وما لم يبقَ له سائقٌ ينتظر بلا عرض** — لا يُهمَل: `SweepExpiredOffers`
+// يلتقطه حين يتحرّر أحدُهم.
 func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) error {
 	if s.AssignmentMode(ctx) != "rotation" {
 		return nil
@@ -112,6 +129,14 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 		      + COALESCE((SELECT o.cash_due FROM orders o WHERE o.id = $4), 0) <= $2
 		  AND (SELECT count(*) FROM orders o
 		       WHERE o.driver_id = u.id AND o.closed_at IS NULL) < $3
+		  -- **وعرضٌ حيٌّ واحدٌ لكلّ سائق** — انظر تعليلَه فوق الدالّة.
+		  AND NOT EXISTS (
+		      SELECT 1 FROM orders o2
+		      WHERE o2.offered_driver_id = u.id
+		        AND o2.id <> $4
+		        AND o2.status = 'dispatching'
+		        AND o2.driver_id IS NULL
+		        AND o2.offer_expires_at > now())
 		-- **ومن لم يأخذ بعدُ يُرتّبون بمن بكّر بالدوام.**
 		--
 		-- كان الفاصلُ u.id — **معرّفٌ عشوائيٌّ لا معنى له**: من سُجّل أوّلاً
@@ -193,6 +218,57 @@ func (s *Service) SweepExpiredOffers(ctx context.Context) {
 		}
 		if err := s.OfferNext(ctx, e.orderID, skip); err != nil {
 			s.logger.Error("الترتيب: تعذّر نقل الدور", "order", e.orderID, "error", err)
+		}
+	}
+
+	s.offerWaiting(ctx)
+}
+
+// offerWaiting يعرض ما ينتظر بلا عرض — **حين يتحرّر سائق.**
+//
+// # لماذا لزمت
+//
+// **العرضُ الحيُّ واحدٌ لكلّ سائق**، فطلبٌ رابعٌ يأتي وثلاثةُ سائقين مشغولون
+// بعروضهم **لا يجد أحداً فيبقى بلا عرض.** ولا شيءَ يوقظه بعدها: الكانسُ كان
+// ينظر إلى **العروض المنقضية** وحدَها، **وهذا لا عرضَ له أصلاً** — فيبقى
+// ساكناً حتى يمرّ حدثٌ آخرُ بمحض الصدفة.
+//
+// **وطلبٌ ينتظر بصمتٍ أسوأُ من طلبٍ يُرفض**: الرفضُ يُقرأ ويُعالَج، **والصمتُ
+// يُنتظَر.**
+//
+// فيُنادى مع كلّ كنسة: من تحرّر أخذ ما ينتظر.
+func (s *Service) offerWaiting(ctx context.Context) {
+	rows, err := s.db.Query(ctx, `
+		SELECT id FROM orders
+		WHERE status = 'dispatching' AND driver_id IS NULL
+		  AND offered_driver_id IS NULL
+		-- **والأقدمُ أوّلاً** — ومن انتظر أطولَ يستحقّ أوّلَ سائقٍ يتحرّر.
+		ORDER BY dispatched_at NULLS FIRST, created_at
+		LIMIT 50`)
+	if err != nil {
+		s.logger.Error("الترتيب: تعذّرت قراءة المنتظِرين", "error", err)
+		return
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+
+	for _, id := range ids {
+		// **ومن مرّ عليه الدورُ في هذا الطلب يبقى مستثنى** — يُقرأ من الطلب
+		// نفسِه، فلا تُعاد الجولةُ على من رفض.
+		var skip []string
+		if err := s.db.QueryRow(ctx,
+			`SELECT array(SELECT unnest(offer_passed)::text) FROM orders WHERE id = $1`,
+			id).Scan(&skip); err != nil {
+			continue
+		}
+		if err := s.OfferNext(ctx, id, skip); err != nil {
+			s.logger.Error("الترتيب: تعذّر عرضُ منتظِر", "order", id, "error", err)
 		}
 	}
 }
