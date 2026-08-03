@@ -116,7 +116,7 @@ export default function IncomingPage() {
       ) : rows.length === 0 ? (
         <EmptyState icon={IconOrder} title={D.queue.empty} />
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3 xl:grid-cols-2">
           {rows.map((o) => (
             <IncomingCard key={o.id} o={o} busy={busy === o.id} onAccept={() => void accept(o)} />
           ))}

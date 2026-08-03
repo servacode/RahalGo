@@ -193,7 +193,13 @@ export function DashboardChrome({
         {sidebar}
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col p-3">
+      {/* **حشوةٌ واحدةٌ لا اثنتان.**
+
+          كانت `p-3` هنا و`p-4` في `main` — **ثمانيةٌ وعشرون بكسلاً من كلّ
+          جانبٍ قبل أن يبدأ المحتوى**، وجداولُ اللوحة تُقصّ أعمدتَها لتتّسع.
+          فبقيت واحدةٌ صغيرةٌ تفصل البطاقةَ عن حافّة الشاشة، **والمحتوى يتمدّد.**
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */}
+      <div className="flex min-w-0 flex-1 flex-col p-2 lg:p-3">
         <TopBar
           start={
             <>
@@ -250,7 +256,7 @@ export function DashboardChrome({
           />
         </TopBar>
 
-        <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-4 shadow-sm">
+        <main className="min-w-0 flex-1 rounded-card border border-line bg-surface p-3 shadow-sm sm:p-4">
           {children}
         </main>
       </div>

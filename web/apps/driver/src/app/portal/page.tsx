@@ -159,7 +159,10 @@ export default function TasksPage() {
   const cashRatio = me.cash_limit > 0 ? me.cash_held / me.cash_limit : 0;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    /* **تتمدّد بعرض اللوحة** — كان سقفُها `max-w-2xl`: عمودٌ ضيّقٌ في وسط
+       شاشةٍ واسعة **ونصفُ العرض فارغ**، والسائقُ على حاسوبٍ يرى بطاقاتٍ
+       مقصوصةً بلا سبب. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
+    <div className="space-y-4">
       {error && (
         <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       )}
@@ -249,7 +252,9 @@ export default function TasksPage() {
         {mine.length === 0 ? (
           <EmptyState icon={IconOrder} title={D.tasks.empty} action={<span className="text-sm text-ink-muted">{D.tasks.emptyHint}</span>} />
         ) : (
-          <div className="space-y-3">
+          /* **شبكةٌ لا عمود** — بطاقةُ مهمّةٍ بعرض شاشةٍ كاملةٍ تُبعثر العينَ
+             بين طرفيها، **واثنتان في السطر تُقرآن معاً.** */
+          <div className="grid gap-3 xl:grid-cols-2">
             {mine.map((o) => (
               <TaskCard
                 key={o.id}
