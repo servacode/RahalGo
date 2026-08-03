@@ -75,15 +75,20 @@ func (s *Service) treasuryID(ctx context.Context) string {
 // والصفُّ يُنشأ إن لم يكن: **حسابٌ لم يقبض شيئاً قطُّ لا محفظةَ له**، وهو
 // أوّلُ ما يقع للخزينة — تدفع قبل أن تقبض.
 func (s *Service) ensureTreasuryWallet(ctx context.Context, q wallet.Querier, tid string) error {
+	// **واحدةٌ لا اثنتان**: الفهرسُ الفريد يمنع الثانية، فتُنزع الصفةُ عمّن
+	// سبق **قبل** أن تُمنح لمن اختير.
+	//
+	// **والترتيبُ ليس ذوقاً.** كان الإدراجُ أوّلاً، **فتغييرُ حساب الخزينة إلى
+	// مستخدمٍ لا محفظةَ له يصطدم بالفهرس ويسقط**: `ON CONFLICT (user_id)`
+	// يحرس تكرارَ المستخدم **ولا يحرس تكرارَ الصفة.** فيُردّ أوّلُ قيدٍ بعد
+	// التغيير، **ويُظنّ الخللُ في التسوية وهو في الإعداد.**
+	if _, err := q.Exec(ctx,
+		`UPDATE wallets SET is_treasury = false WHERE is_treasury AND user_id <> $1`, tid); err != nil {
+		return err
+	}
 	if _, err := q.Exec(ctx,
 		`INSERT INTO wallets (user_id, is_treasury) VALUES ($1, true)
 		 ON CONFLICT (user_id) DO NOTHING`, tid); err != nil {
-		return err
-	}
-	// **واحدةٌ لا اثنتان**: الفهرسُ الفريد يمنع الثانية، فتُنزع الصفةُ عمّن
-	// سبق قبل أن تُمنح لمن اختير.
-	if _, err := q.Exec(ctx,
-		`UPDATE wallets SET is_treasury = false WHERE is_treasury AND user_id <> $1`, tid); err != nil {
 		return err
 	}
 	_, err := q.Exec(ctx,
@@ -107,8 +112,21 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 		Scan(&walletPaid, &cashDue, &status); err != nil {
 		return err
 	}
+	// **والاسترجاعُ لا يُلغي قبضاً وقع.**
+	//
+	// كان الشرطُ `status == StDelivered` وحدَه — **فطلبٌ نقديٌّ سُلّم ثمّ
+	// استُرجع تُقرأ حالتُه `refunded` فيصير المقبوضُ صفراً**، والزبونُ قبضه
+	// السائقُ فعلاً وهو في صندوقه الآن. **فتُقيَّد الخسارةُ مرّتين**: مرّةً
+	// بأنّ المالَ لم يدخل، ومرّةً بأنّه رُدّ.
+	//
+	// وقع فعلاً في `#1003`: طلبٌ قدرُه ٢٢٬٠٠٠ خسرت فيه الخزينةُ ٣٩٬٨٠٠،
+	// **وأجرُ السائق وحدَه سبعةُ آلاف.**
+	//
+	// **و`refunded` لا تأتي إلّا من `delivered`** (خارطةُ `statuses.go`) —
+	// فوجودُها إقرارٌ بأنّ المالَ قُبض. **والالتزامُ المقابلُ يُقيَّد وحدَه
+	// في `refund`**، وهذا هو التمييزُ المحاسبيُّ بين قبضٍ وقع والتزامٍ نشأ.
 	paid := walletPaid
-	if status == StDelivered {
+	if status == StDelivered || status == StRefunded {
 		paid += cashDue
 	}
 

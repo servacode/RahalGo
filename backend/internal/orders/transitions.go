@@ -626,7 +626,7 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	var repIsBuyer bool
 	if err := q.QueryRow(ctx, `
 		SELECT o.platform_commission, m.sales_rep_user_id,
-		       m.sales_rep_user_id = o.customer_id
+		       COALESCE(m.sales_rep_user_id = o.customer_id, false)
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.id = $1`, orderID).Scan(&platformCommission, &repID, &repIsBuyer); err != nil {
 		return err
@@ -680,6 +680,13 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	return nil
 }
 
+// **ومتجرٌ بلا مندوبٍ لا يُسقط استرجاعاً.**
+//
+// المقارنةُ `sales_rep_user_id = customer_id` تُنتج NULL لا false حين لا مندوبَ
+// للمتجر، **فيسقط المسحُ في bool ويعود الاسترجاعُ بخطأ** — ولا يُردّ للزبون
+// شيء. **ولم يظهر في التجربة الحيّة لأنّ متجرَ الميدان له مندوب**، وكلُّ متجرٍ
+// بلا مندوبٍ كان استرجاعُ طلبه مستحيلاً. كشفه أوّلُ اختبارٍ نادى هذا المسار.
+//
 // reverseCommissions يعكس أثر التسليم المالي عند استرجاع طلب مُسلَّم:
 // قيد مضاد لعمولة المندوب (الدفاتر لا تُعدَّل ولا تُحذف — تُصحَّح بقيد مقابل)
 // وتصفير لقطة عمولة المنصة كي لا تتضخّم التقارير وفواتير المتاجر.
@@ -689,7 +696,7 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 	var repIsBuyer bool
 	err := q.QueryRow(ctx, `
 		SELECT o.platform_commission, o.subtotal, m.sales_rep_user_id,
-		       m.sales_rep_user_id = o.customer_id, m.owner_user_id
+		       COALESCE(m.sales_rep_user_id = o.customer_id, false), m.owner_user_id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.id = $1`, orderID).
 		Scan(&platformCommission, &subtotal, &repID, &repIsBuyer, &ownerID)
@@ -748,7 +755,25 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 		if p.amount <= 0 {
 			continue
 		}
-		if _, err := s.wallet.ApplyTx(ctx, q, p.userID, -p.amount, "adjustment",
+		// **والقيدُ المضادُّ يُكتب في الحساب الذي يعكسه.**
+		//
+		// كان يُكتب `adjustment` — **نوعاً جامعاً** يكتبه أيضاً التعديلُ
+		// اليدويُّ من لوحة المحفظة ومطالبةُ المنصة على المتجر. **وحسبةُ نصيب
+		// المنصة تجمع `merchant_earning` و`driver_earning` و`commission` ولا
+		// ترى `adjustment`** — فيبقى في دفترها أنّها دفعت للمتجر وقد استردّت.
+		//
+		// وقع فعلاً في `#1003`: خسرت الخزينةُ ٣٩٬٨٠٠ على طلبٍ قدرُه ٢٢٬٠٠٠،
+		// **وعشرةُ آلافٍ وثمانمئةٍ منها عكسٌ مكتوبٌ لا تراه.**
+		//
+		// **وضمُّ `adjustment` إلى الجمع يفتح باباً أسوأ**: تعديلٌ يدويٌّ
+		// بمرجع طلبٍ يُحرّك أرباحَه بلا قصد. **والصوابُ أن يعود القيدُ إلى
+		// حسابه** — فتصير كلُّ حسبةٍ تجمع بالنوع صحيحةً من نفسها، **ولا
+		// يبقى نوعٌ يُنسى.**
+		//
+		// **وفائدةٌ ثانيةٌ تأتي معه**: من يقرأ `sum(merchant_earning)` يقرأ
+		// **الصافي** — فعكسٌ ثانٍ يجد صفراً فلا يقع، **والتكرارُ يمتنع من
+		// نفسه** بدل أن يُخصم من متجرٍ مرّتين.
+		if _, err := s.wallet.ApplyTx(ctx, q, p.userID, -p.amount, "merchant_earning",
 			orderID, "عكس مستحقّ متجر — طلب مُسترجَع", &actorID); err != nil {
 			return err
 		}

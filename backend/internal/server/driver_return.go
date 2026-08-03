@@ -91,8 +91,12 @@ func (s *Server) handleDriverReturn(w http.ResponseWriter, r *http.Request) {
 
 	actor := userIDFrom(r)
 	if paid > 0 && ownerID != nil {
+		// **والقيدُ المضادُّ في حساب المستحقّ لا في حسابٍ جامع** — وإلّا بقي
+		// في دفتر الخزينة أنّها دفعت للمتجر وقد استردّت (`treasury.go`).
+		// **وهو العطبُ نفسُه الذي كُشف في الاسترجاع بعد التسليم** — ولم
+		// يُكشف هنا لأنّ هذا المسارَ لم يُجرَّب بعد.
 		if _, err := s.wallet.ApplyTx(r.Context(), tx, *ownerID, -paid,
-			"adjustment", orderID, "طلب مسترد — أُعيدت البضاعة", &actor); err != nil {
+			"merchant_earning", orderID, "طلب مسترد — أُعيدت البضاعة", &actor); err != nil {
 			s.respondErr(w, err)
 			return
 		}

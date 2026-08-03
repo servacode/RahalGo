@@ -46,7 +46,7 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 	var repIsBuyer bool
 	err := s.db.QueryRow(ctx, `
 		SELECT o.status, o.customer_id, o.driver_id,
-		       m.sales_rep_user_id = o.customer_id
+		       COALESCE(m.sales_rep_user_id = o.customer_id, false)
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.id = $1`, orderID).
 		Scan(&status, &customerID, &driverID, &repIsBuyer)

@@ -214,6 +214,24 @@ const STATUS_VARIANT: Record<string, "warning" | "primary" | "success" | "danger
  */
 const DESTRUCTIVE = new Set(["rejected", "cancelled", "failed", "refunded"]);
 
+/**
+ * **الحالاتُ المنتهية** — مرآةُ `terminal()` في المحرّك.
+ *
+ * تلزم هنا لأنّ في الصفحة **مُرشِّحَين يستطيعان التناقض**: قائمةُ الحالة
+ * و«الجارية فقط». **واختيارُ «مُسلَّم» والمربّعُ مؤشَّرٌ يُخرج لا شيء** —
+ * `AND (NOT $6 OR o.closed_at IS NULL)` — **ولا كلمةَ تقول لماذا.**
+ *
+ * وقع فعلاً (٢٠٢٦-٠٨-٠٣): بحث المالكُ عن طلبٍ مُسلَّمٍ ليسترجعه فلم يجد شيئاً.
+ * **وقائمةٌ فارغةٌ تُقرأ «لا طلباتِ لديك» لا «مُرشِّحاك يتنازعان».**
+ */
+const CLOSED_STATUSES = new Set([
+  "delivered",
+  "rejected",
+  "cancelled",
+  "failed",
+  "refunded",
+]);
+
 // أزرار الانتقال المتاحة للعمليات/الأدمن حسب الحالة (مرآة لخارطة الخادم)
 const OPS_NEXT: Record<string, string[]> = {
   pending: ["accepted", "rejected", "cancelled"],
@@ -713,7 +731,15 @@ export default function OrdersPage() {
           <Select
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value);
+              const next = e.target.value;
+              setStatus(next);
+              // **واختيارٌ صريحٌ يغلب افتراضاً صامتاً.**
+              //
+              // «الجارية فقط» مؤشَّرٌ منذ فتح الصفحة، **ومن اختار «مُسلَّم»
+              // منها خرجت قائمتُه فارغةً** — طلبٌ صريحٌ ألغاه مربّعٌ لم
+              // يقصده أحد، **ولا كلمةَ تقول لماذا.** فيُقرأ «لا طلبات» لا
+              // «مُرشِّحاك يتنازعان».
+              if (CLOSED_STATUSES.has(next)) setOpenOnly(false);
               setPage(1);
             }}
           >
