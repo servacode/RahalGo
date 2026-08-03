@@ -19,7 +19,7 @@ export const colors = {
      * كان `#ECFEFF` نعناعياً يميل إلى الأخضر — وهو لونٌ من عائلةٍ أخرى يجلس
      * تحت الأزرق فيبدو **كأن الشاشة خُلطت من ثيمين**.
      */
-    primaryLight: "#E6F2F7",
+    primaryLight: "#CFE3F0",
     /** برتقاليُّ اللوغو — الطريق والدرّاجة و«Go» */
     accent: "#F7941D",
     accentDark: "#C2740A",
@@ -60,9 +60,9 @@ export const colors = {
      */
     textPrimary: "#152B33",
     textSecondary: "#55707C",
-    border: "#DCE7EB",
-    surface: "#FFFFFF",
-    page: "#F5F9FA",
+    border: "#B9D1E4",
+    surface: "#E9F1F8",
+    page: "#D8E6F2",
     /** خلفيةُ الشاشة خلف كلّ شيء — أزرقٌ حبريٌّ غامق. */
     shell: "#0B2740",
   },
