@@ -215,7 +215,29 @@ func (s *Server) handleMyOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	redactAllForCustomer(res.Orders)
-	httpx.JSON(w, http.StatusOK, res)
+
+	// **ومهلةُ الإلغاء مع كلّ طلبٍ في القائمة.**
+	//
+	// كانت تُرسَل في صفحة الطلب وحدَها — **وقد حُذفت**، وصار الإلغاءُ في
+	// البطاقة. **وزرٌّ بلا مهلةٍ إمّا يظهر دائماً فيعتذر، أو لا يظهر أبداً
+	// فيُحبس الزبونُ في طلبٍ لم يبدأ.**
+	//
+	// **والرقمُ من الخادم لا من حسابٍ في الشاشة**: المهلةُ إعدادٌ يملك المالكُ
+	// تغييرَه، **ورقمٌ محسوبٌ في المتصفّح يخالفه بعد أوّل تعديل.**
+	type withWindow struct {
+		orders.Order
+		CancelSecondsLeft int `json:"cancel_seconds_left"`
+	}
+	out := make([]withWindow, len(res.Orders))
+	for i := range res.Orders {
+		out[i] = withWindow{
+			Order:             res.Orders[i],
+			CancelSecondsLeft: s.orders.CancelSecondsLeft(r.Context(), &res.Orders[i]),
+		}
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"orders": out, "total": res.Total, "page": res.Page, "per_page": res.PerPage,
+	})
 }
 
 func (s *Server) handleMyOrder(w http.ResponseWriter, r *http.Request) {

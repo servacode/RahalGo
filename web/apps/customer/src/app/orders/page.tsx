@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtClock } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -81,6 +81,8 @@ interface Order {
   prep_minutes?: number | null;
   delivery_estimate_min?: number;
   closed_at?: string | null;
+  /** ما بقي من مهلة الإلغاء بالثواني — و`-1` تعني «بلا مهلة» (قبل القبول). */
+  cancel_seconds_left?: number;
   /** ما يحتاجه **الطلبُ السريع**: العنوانُ نفسُه وطريقةُ الدفع نفسُها. */
   address_text?: string;
   lat?: number;
@@ -245,6 +247,7 @@ export default function MyOrdersPage() {
               onReorder={() => setAgain(o)}
               onRate={() => setRating(rateMap[o.id] ?? null)}
               onInvoice={() => setInvoice(o)}
+              onChanged={load}
             />
           ))}
         </div>
@@ -356,15 +359,42 @@ function OrderCard({
   onReorder,
   onRate,
   onInvoice,
+  onChanged,
 }: {
   o: Order;
   rate?: RateInfo;
   onReorder: () => void;
   onRate: () => void;
   onInvoice: () => void;
+  /** يُعاد التحميلُ بعد إلغاءٍ ناجح — **البطاقةُ تُظهر النتيجة بلا تحديث.** */
+  onChanged: () => void;
 }) {
   /** نافذةُ الشكوى — **في البطاقة لا في صفحةٍ أخرى.** */
   const [complaining, setComplaining] = useState(false);
+  /** نافذةُ تأكيد الإلغاء — **والإلغاءُ لا يُتراجع عنه.** */
+  const [confirming, setConfirming] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelErr, setCancelErr] = useState("");
+  /**
+   * **العدّادُ يعدّ فعلاً.**
+   *
+   * الرقمُ من الخادم نسبيٌّ عند وصوله، **فيُثبَّت مرساه بساعة الجهاز نفسِه**
+   * ويُطرح منه ما مضى — **فلا تدخل ساعةُ الخادم في الحساب**، وفارقُ الساعتين
+   * لا يجعل زرّاً حيّاً يبدو منقضياً.
+   */
+  const [left, setLeft] = useState(0);
+  useEffect(() => {
+    const n = o.cancel_seconds_left ?? 0;
+    if (n <= 0) {
+      setLeft(0);
+      return;
+    }
+    const anchor = Date.now();
+    const tick = () => setLeft(Math.max(0, n - Math.floor((Date.now() - anchor) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [o.cancel_seconds_left]);
   const [ticketNo, setTicketNo] = useState(0);
   const at = trackIndex(o.status);
   const closed = at < 0;
@@ -478,6 +508,64 @@ function OrderCard({
               {m.site.orders.eta}: {etaText(o)}
             </p>
           )}
+        </div>
+      )}
+
+      {/* ── الإلغاء: نافذةٌ تُرى وهي تنقضي ───────────────────────────── */}
+      {(o.status === "pending" || (o.status === "accepted" && left > 0)) && (
+        <div>
+          <Button
+            variant="danger"
+            disabled={cancelBusy}
+            onClick={() => setConfirming(true)}
+            className="w-full !py-2"
+          >
+            {m.site.orders.cancel}
+          </Button>
+          {o.status === "accepted" && (
+            <p className="mt-1 text-center text-xs text-ink-muted">
+              {m.site.orders.cancelWindow.replace("{t}", fmtClock(left))}
+            </p>
+          )}
+          {cancelErr && <p className="mt-1 text-sm text-danger">{cancelErr}</p>}
+
+          <Modal
+            open={confirming}
+            onClose={() => setConfirming(false)}
+            title={m.site.orders.cancelConfirmTitle}
+          >
+            <p className="mb-4 text-sm text-ink-muted">{m.site.orders.cancelConfirmBody}</p>
+            <div className="flex gap-2">
+              {/* **والتراجعُ أوّلاً** — من فتح النافذةَ بالخطأ يجد المخرجَ في
+                  موضع الزرّ الذي اعتاده. */}
+              <Button variant="secondary" onClick={() => setConfirming(false)}>
+                {m.site.orders.cancelConfirmNo}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={cancelBusy}
+                onClick={async () => {
+                  setCancelBusy(true);
+                  setCancelErr("");
+                  try {
+                    await api(`/api/v1/orders/${o.id}/cancel`, {
+                      method: "POST",
+                      body: JSON.stringify({ note: "" }),
+                    });
+                    setConfirming(false);
+                    onChanged();
+                  } catch (e) {
+                    setConfirming(false);
+                    setCancelErr(errText(e));
+                  } finally {
+                    setCancelBusy(false);
+                  }
+                }}
+              >
+                {m.site.orders.cancelConfirmYes}
+              </Button>
+            </div>
+          </Modal>
         </div>
       )}
 
