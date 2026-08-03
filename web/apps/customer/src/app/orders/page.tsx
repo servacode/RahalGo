@@ -22,11 +22,15 @@ import {
   Stars,
   IconPrint,
   IconDriver,
+  IconWarning,
+  IconCheck,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import RatingModal from "@/components/RatingModal";
+import ComplaintModal from "@/components/ComplaintModal";
+import { etaText, hasEta } from "@/lib/eta";
 
 const m = getMessages(defaultLocale);
 const STATUS_LABELS: Record<string, string> = m.orders.status;
@@ -65,6 +69,12 @@ interface Order {
   status: string;
   total: number;
   created_at: string;
+  /** حقولُ الوقت المتوقَّع — **يرسلها الخادمُ أصلاً وكان النوعُ يتجاهلها.** */
+  accepted_at?: string | null;
+  ready_at?: string | null;
+  prep_minutes?: number | null;
+  delivery_estimate_min?: number;
+  closed_at?: string | null;
 }
 
 interface RateInfo {
@@ -170,7 +180,7 @@ export default function MyOrdersPage() {
       {orders.length === 0 ? (
         <EmptyState icon={IconOrder} title={m.site.orders.empty} />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {orders.map((o) => (
             <OrderCard
               key={o.id}
@@ -262,10 +272,15 @@ function OrderCard({
   onRate: () => void;
   onInvoice: () => void;
 }) {
+  /** نافذةُ الشكوى — **في البطاقة لا في صفحةٍ أخرى.** */
+  const [complaining, setComplaining] = useState(false);
+  const [ticketNo, setTicketNo] = useState(0);
   const at = trackIndex(o.status);
   const closed = at < 0;
   const live = !closed && o.status !== "delivered";
   const canRate = o.status === "delivered" && rate && !rate.rated;
+  /** **انتهى أمرُه** — سُلّم أو أُغلق. وعندها وحدَها تُفتح الشكوى. */
+  const finished = closed || o.status === "delivered";
   const items = o.items ?? [];
 
   return (
@@ -352,12 +367,27 @@ function OrderCard({
           {m.site.orders.trackClosed.replace("{s}", STATUS_LABELS[o.status] ?? o.status)}
         </p>
       ) : (
-        <OrderTrack
-          stages={TRACK.map((id) => ({ id, label: m.site.orders.track[id] }))}
-          current={at}
-          vehicle={IconDriver}
-          live={live}
-        />
+        <div className="space-y-2">
+          <OrderTrack
+            stages={TRACK.map((id) => ({ id, label: m.site.orders.track[id] }))}
+            current={at}
+            vehicle={IconDriver}
+            live={live}
+          />
+          {/* **الوقتُ المتوقَّع تحت المسار مباشرةً.**
+
+              «قيد التحضير» وحدَها لا تقول عشرَ دقائقَ أم ساعة. **والمسارُ يقول
+              أين، والوقتُ يقول متى** — ولا يُقرأ أحدُهما بلا الآخر.
+
+              وحسابُه مشتركٌ مع صفحة التتبّع (`lib/eta.ts`) — **ولو نُسخ لَافترقا
+              يوماً، فتقول البطاقةُ عشرين وتقول الصفحةُ خمساً.** */}
+          {hasEta(o, o.status, closed) && (
+            <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-primary-dark">
+              <IconCheck size={13} strokeWidth={3} />
+              {m.site.orders.eta}: {etaText(o)}
+            </p>
+          )}
+        </div>
       )}
 
       {/* ── الأفعال ───────────────────────────────────────────────────── */}
@@ -395,7 +425,48 @@ function OrderCard({
         >
           <IconPrint size={16} />
         </button>
+
+        {/* **وبابُ الشكوى في البطاقة.**
+
+            كان خلف صفحة التفاصيل — **وقد أُغلق بابُها.** ومن وقع له خطأٌ في
+            طلبه لا يبحث عن مكانِ الشكوى، **ومن لم يجدها في ثانيتين يتّصل أو
+            يسكت** — والسكوتُ أسوأ: نخسر الزبونَ ولا نعرف لماذا.
+
+            **ولا يظهر إلّا بعد أن ينتهي الطلب**: شكوى على طلبٍ في الطريق
+            شكوى على ما لم يقع بعد. */}
+        {finished &&
+          (ticketNo > 0 ? (
+            <span
+              title={m.site.complaint.opened.replace("{n}", fmtNum(ticketNo))}
+              className="flex h-9 shrink-0 items-center rounded-control bg-page px-2 text-xs text-ink-muted"
+              dir="ltr"
+            >
+              #{fmtNum(ticketNo)}
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setComplaining(true)}
+              aria-label={m.site.complaint.open}
+              title={m.site.complaint.open}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-line text-ink-muted transition-colors hover:bg-danger/5 hover:text-danger"
+            >
+              <IconWarning size={16} />
+            </button>
+          ))}
       </div>
+
+      {complaining && (
+        <ComplaintModal
+          orderId={o.id}
+          orderNumber={o.number}
+          onClose={() => setComplaining(false)}
+          onOpened={(n) => {
+            setTicketNo(n);
+            setComplaining(false);
+          }}
+        />
+      )}
     </Card>
   );
 }

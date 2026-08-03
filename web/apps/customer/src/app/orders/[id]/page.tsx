@@ -20,6 +20,8 @@ import {
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import ComplaintModal from "@/components/ComplaintModal";
+// **حسابُ الوقت المتوقَّع مشتركٌ مع بطاقة الطلب** — لا يُكتب مرّتين.
+import { etaText } from "@/lib/eta";
 
 const m = getMessages(defaultLocale);
 const STATUS_LABELS: Record<string, string> = m.orders.status;
@@ -98,14 +100,6 @@ interface Order {
  * «يصل ٨:٤٧». وإن أعلن المتجر الجاهزية سقط وقت التحضير من الحساب — صار الطلب
  * ينتظر السائق لا المطبخ.
  */
-/**
- * **الافتراضُ حين يسكت الخادم** — لا الرقمُ المعتمَد.
- *
- * كان `15` مكتوباً هنا **والمفتاحُ في اللوحة منذ البداية**: يغيّره المالكُ ولا
- * يتغيّر شيء. **وإعدادٌ لا يفعل شيئاً أسوأُ من غيابه** — غيابُه يُسأل عنه،
- * **ووجودُه يُصدَّق.**
- */
-const ETA_FALLBACK_MIN = 15;
 
 /** رسالة الخطأ من مفتاح الخادم — لا نصّ إنجليزي يصل المستخدم. */
 function errText(err: unknown): string {
@@ -114,13 +108,6 @@ function errText(err: unknown): string {
   return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
 }
 
-function etaText(o: Order): string {
-  const accepted = new Date(o.accepted_at!).getTime();
-  const prepDone = o.ready_at ? new Date(o.ready_at).getTime() : accepted + (o.prep_minutes ?? 0) * 60_000;
-  const est = o.delivery_estimate_min || ETA_FALLBACK_MIN;
-  const left = Math.round((prepDone + est * 60_000 - Date.now()) / 60_000);
-  return m.site.orders.etaValue.replace("{n}", fmtNum(Math.max(1, left)));
-}
 
 export default function OrderTrackingPage() {
   const { id } = useParams<{ id: string }>();
