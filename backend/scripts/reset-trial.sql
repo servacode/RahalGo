@@ -27,6 +27,12 @@
 BEGIN;
 
 -- ١ · الطلباتُ وما تعلّق بها
+--
+-- **والتذاكرُ منها**: شكوى تشير إلى طلبٍ مُحيَ لا تُقرأ، **وقيدُ المفتاح
+-- الأجنبيّ يمنع المحوَ أصلاً** — فسقط التصفيرُ في أوّل جولةٍ فُتحت فيها شكوى
+-- (٢٠٢٦-٠٨-٠٣). **ونصُّ تنظيفٍ يسقط عند أوّل حالةٍ حقيقية ليس نصَّ تنظيف.**
+DELETE FROM ticket_replies WHERE ticket_id IN (SELECT id FROM tickets);
+DELETE FROM tickets;
 DELETE FROM order_ratings;
 DELETE FROM order_events;
 DELETE FROM order_items;
