@@ -21,19 +21,25 @@ import {
   IconStar,
   Stars,
   IconPrint,
-  IconDriver,
-  IconWarning,
+  IconMoto,
+  IconLocation,
+  IconSupport,
   IconCheck,
 } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
-import { useCart } from "@/lib/cart";
 import RatingModal from "@/components/RatingModal";
 import ComplaintModal from "@/components/ComplaintModal";
 import { etaText, hasEta } from "@/lib/eta";
 
 const m = getMessages(defaultLocale);
 const STATUS_LABELS: Record<string, string> = m.orders.status;
+
+/** رسالةُ الخطأ من مفتاح الخادم — **لا نصَّ إنجليزيّ يصل الزبون.** */
+function errText(e: unknown): string {
+  const key = e instanceof ApiError ? ((e.body.message_key ?? "").split(".").pop() ?? "") : "";
+  return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
+}
 
 const VARIANT: Record<string, "warning" | "primary" | "success" | "danger" | "neutral"> = {
   pending: "warning",
@@ -75,6 +81,11 @@ interface Order {
   prep_minutes?: number | null;
   delivery_estimate_min?: number;
   closed_at?: string | null;
+  /** ما يحتاجه **الطلبُ السريع**: العنوانُ نفسُه وطريقةُ الدفع نفسُها. */
+  address_text?: string;
+  lat?: number;
+  lng?: number;
+  payment_method?: string;
 }
 
 interface RateInfo {
@@ -128,20 +139,65 @@ export default function MyOrdersPage() {
   /** الطلبُ الذي تُعرض فاتورتُه — **نافذةٌ لا صفحة**. */
   const [invoice, setInvoice] = useState<Order | null>(null);
   const [notice, setNotice] = useState("");
-  const { add, clear } = useCart();
+  /** الطلبُ الذي يُسأل عن تكراره — **سؤالٌ واحدٌ لا خطوات.** */
+  const [again, setAgain] = useState<Order | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function reorder(o: Order) {
+  /**
+   * **إعادةُ الطلب: طلبٌ مباشرٌ لا سلّة.**
+   *
+   * كانت تملأ السلّةَ وتنقل الزبونَ إلى `/cart` — **فيُعيد الخطواتِ التي أراد
+   * أن يتخطّاها**: يراجع، ويختار عنواناً، ويختار دفعاً، ويضغط. **وأربعُ ضغطاتٍ
+   * لطلبٍ سبق أن طلبه.**
+   *
+   * قرارُ المالك (٢٠٢٦-٠٨-٠٣): «ليس المقصود ع سلّة، يجب أن يقوم بطلب سريع
+   * مباشر وليس إعادة الخطوات».
+   *
+   * **والعنوانُ والدفعُ من الطلب السابق** — هما ما اختاره حين طلبه أوّلَ مرّة.
+   *
+   * **ويُسأل مرّةً واحدة قبل الإنشاء.** لا لأنّها خطوة، **بل لأنّ ضغطةً
+   * خاطئةً في قائمةٍ تُنشئ طلباً حقيقياً يُطبخ ويُوصَّل** — والزبونُ يدفع نقداً
+   * عند الباب. **وسؤالٌ ثمنُه ثانية، وخطؤه ثمنُه طلب.**
+   */
+  async function orderAgain(o: Order) {
     const { lines, skipped } = reorderLines(o);
     if (lines.length === 0) {
       setNotice(m.site.orders.reorderNone);
+      setAgain(null);
       return;
     }
-    // السلّة لمتجرٍ واحد: إعادة طلبٍ من متجرٍ آخر تستبدلها لا تخلطها
-    clear();
-    // **والسلّةُ لا تعرف المصدر** — يستنتجه الخادمُ من الأصناف.
-    for (const l of lines) add(l);
-    setNotice(skipped > 0 ? m.site.orders.reorderPartial.replace("{n}", fmtNum(skipped)) : "");
-    router.push("/cart");
+    setBusy(true);
+    setNotice("");
+    try {
+      const created = await api<{ number: number }>("/api/v1/orders", {
+        method: "POST",
+        body: JSON.stringify({
+          items: lines.map((l) => ({
+            menu_item_id: l.menu_item_id,
+            qty: l.qty,
+            note: l.note,
+            option_ids: l.option_ids,
+          })),
+          address_text: o.address_text ?? "",
+          lat: o.lat ?? 0,
+          lng: o.lng ?? 0,
+          payment_method: o.payment_method ?? "cash",
+        }),
+      });
+      setAgain(null);
+      setNotice(
+        (skipped > 0 ? m.site.orders.reorderPartial.replace("{n}", fmtNum(skipped)) + " " : "") +
+          m.site.orders.againDone.replace("{n}", fmtNum(created.number)),
+      );
+      load();
+    } catch (e) {
+      // **وسببُ الرفض يُقال**: متجرٌ أغلق، أو صنفٌ نفد، أو رصيدٌ لا يكفي —
+      // **و«تعذّر» وحدَها تترك الزبونَ يعيد المحاولة على ما لن ينجح.**
+      setNotice(errText(e));
+      setAgain(null);
+    } finally {
+      setBusy(false);
+    }
   }
 
   const loadRatings = useCallback(() => {
@@ -186,12 +242,47 @@ export default function MyOrdersPage() {
               key={o.id}
               o={o}
               rate={rateMap[o.id]}
-              onReorder={() => reorder(o)}
+              onReorder={() => setAgain(o)}
               onRate={() => setRating(rateMap[o.id] ?? null)}
               onInvoice={() => setInvoice(o)}
             />
           ))}
         </div>
+      )}
+
+      {again && (
+        <Modal open title={m.site.orders.againTitle} onClose={() => setAgain(null)}>
+          <p className="mb-3 text-sm text-ink-muted">{m.site.orders.againBody}</p>
+          <ul className="mb-3 divide-y divide-line rounded-control bg-page/60">
+            {(again.items ?? []).map((it, i) => (
+              <li key={i} className="flex items-center justify-between px-3 py-2 text-sm">
+                <span className="min-w-0 flex-1">
+                  {it.name}
+                  {it.qty > 1 && <span className="text-ink-muted" dir="ltr"> ×{fmtNum(it.qty)}</span>}
+                </span>
+                <span dir="ltr" className="shrink-0 tabular-nums text-ink-muted">
+                  {fmtNum(it.unit_price * it.qty)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {/* **العنوانُ يُعرض لا يُفترض** — من طلب إلى بيته أمسِ قد يكون اليومَ
+              في عمله، **وطلبٌ يصل إلى عنوانٍ خاطئٍ خسارةٌ للجميع.** */}
+          {again.address_text && (
+            <p className="mb-4 flex items-start gap-2 rounded-control bg-page px-3 py-2 text-sm">
+              <IconLocation size={15} className="mt-0.5 shrink-0 text-ink-muted" />
+              <span className="min-w-0 flex-1">{again.address_text}</span>
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setAgain(null)}>
+              {m.common.cancel}
+            </Button>
+            <Button disabled={busy} onClick={() => void orderAgain(again)}>
+              {busy ? m.common.loading : m.site.orders.againConfirm}
+            </Button>
+          </div>
+        </Modal>
       )}
 
       {invoice && (
@@ -371,7 +462,7 @@ function OrderCard({
           <OrderTrack
             stages={TRACK.map((id) => ({ id, label: m.site.orders.track[id] }))}
             current={at}
-            vehicle={IconDriver}
+            vehicle={IconMoto}
             live={live}
           />
           {/* **الوقتُ المتوقَّع تحت المسار مباشرةً.**
@@ -449,9 +540,19 @@ function OrderCard({
               onClick={() => setComplaining(true)}
               aria-label={m.site.complaint.open}
               title={m.site.complaint.open}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-line text-ink-muted transition-colors hover:bg-danger/5 hover:text-danger"
+              /* **أيقونةُ الشكوى هي أيقونتُها في اللوحة كلِّها** — طوقُ
+                 النجاة: قسمُ التذاكر، ورأسُ صفحتها، وبطاقاتُها.
+
+                 وكانت مثلّثَ تحذير — **وهو يُقرأ «في هذه البطاقة خطأ» لا
+                 «اشتكِ من هذا الطلب»**، فيقلق من لا شكوى له.
+
+                 **وحدودٌ حمراءُ وخلفيةٌ خفيفةٌ تجعله يُرى** بجانب أيقونة
+                 الطباعة الرمادية: الفعلان مختلفان، **فلا يُلبسان لباساً
+                 واحداً.** */
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-control border border-danger/40 bg-danger/5 px-2.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10"
             >
-              <IconWarning size={16} />
+              <IconSupport size={16} />
+              {m.site.complaint.short}
             </button>
           ))}
       </div>

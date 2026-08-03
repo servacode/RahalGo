@@ -23,6 +23,9 @@ export {
   MapPin as IconLocation,
   Wallet as IconWallet,
   Truck as IconDriver,
+  // **الدرّاجةُ النارية** — مركبةُ التوصيل في الرقّة، لا شاحنة. تُستعمل في
+  // مسار الطلب عند الزبون (`OrderTrack`).
+  Motorbike as IconMoto,
   // **الطلباتُ سجلّاتٌ لا تسوّق.**
   //
   // كانت `ShoppingBasket` — سلّةً بجانب عربة السلّة في شريط الزبون، فلا يفرّق

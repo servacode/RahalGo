@@ -12,7 +12,9 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/redis/go-redis/v9"
 
@@ -33,6 +35,7 @@ var (
 	ErrWeakPassword       = httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password")
 	ErrOTPSendFailed      = httpx.NewError(http.StatusServiceUnavailable, "otp_send_failed", "errors.otp_send_failed")
 	ErrTooManyAttempts    = httpx.NewError(http.StatusTooManyRequests, "too_many_attempts", "errors.too_many_attempts")
+	ErrNameTooShort       = httpx.NewError(http.StatusBadRequest, "name_too_short", "errors.name_too_short")
 )
 
 const (
@@ -565,6 +568,38 @@ func (s *Service) Me(ctx context.Context, userID string) (*User, error) {
 // SetOwnAvatar يضبط صورة المستخدم لنفسه (mediaID فارغ = إزالة).
 func (s *Service) SetOwnAvatar(ctx context.Context, userID, mediaID string) error {
 	return s.repo.SetAvatar(ctx, userID, mediaID)
+}
+
+// SetOwnName يغيّر المستخدمُ اسمَه بنفسه.
+//
+// # لماذا لزم
+//
+// **لم يكن له بابٌ ألبتّة**: صفحةُ «حسابي» تقرأ الاسمَ وتعرضه **ولا تكتبه** —
+// ومن أخطأ في اسمه عند التسجيل، أو كُتب له بيد موظّفٍ في طلبٍ هاتفيّ، **يبقى
+// عليه إلى الأبد** أو يتّصل بالمنصة ليُغيّره له إنسان.
+//
+// **والاسمُ يُقرأ في مواضعَ يهمّ فيها**: يناديه السائقُ عند الباب، ويُكتب في
+// الفاتورة، ويظهر لغرفة العمليات حين يتّصل. **واسمٌ خاطئٌ يُربك الثلاثة.**
+//
+// (شهده المالك ٢٠٢٦-٠٨-٠٣: «بحسابي لا يوجد مكان لتبديل اسم الشخص».)
+//
+// # ولا يُقبل فارغاً
+//
+// **اسمٌ فارغٌ أسوأُ من اسمٍ خاطئ**: الخاطئُ يُنادى به فيُصحَّح، **والفارغُ
+// يجعل السائقَ يقف أمام بابٍ لا يعرف من يطرقه**، وغرفةَ العمليات تقرأ سطراً
+// بلا صاحب.
+func (s *Service) SetOwnName(ctx context.Context, userID, name string) error {
+	name = strings.TrimSpace(name)
+	if utf8.RuneCountInString(name) < 2 {
+		return ErrNameTooShort
+	}
+	// **والحدُّ الأعلى بالمحارف لا بالبايتات**: الاسمُ العربيُّ محرفُه بايتان،
+	// **وقصٌّ بالبايتات يقطع حرفاً في نصفه** فيخرج مربّعاً في الشاشة.
+	r := []rune(name)
+	if len(r) > 60 {
+		name = string(r[:60])
+	}
+	return s.repo.SetFullName(ctx, userID, name)
 }
 
 func (s *Service) SetPassword(ctx context.Context, userID, password, currentPassword, ip string) error {

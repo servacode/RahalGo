@@ -35,6 +35,29 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
+// handleSetMyName يغيّر المستخدمُ اسمَه بنفسه.
+//
+// **لم يكن له بابٌ ألبتّة**: صفحةُ «حسابي» تقرأ الاسمَ وتعرضه **ولا تكتبه** —
+// ومن أخطأ في اسمه عند التسجيل، أو كُتب له بيد موظّفٍ في طلبٍ هاتفيّ، **يبقى
+// عليه إلى الأبد.** (شهده المالك ٢٠٢٦-٠٨-٠٣.)
+func (s *Server) handleSetMyName(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		FullName string `json:"full_name"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.SetOwnName(r.Context(), userIDFrom(r), req.FullName); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **ويُسجَّل**: الاسمُ يُقرأ في الفاتورة وعند باب الزبون، **ومن غيّره مرّاتٍ
+	// يُقرأ ذلك حين يُسأل عن طلبٍ باسمٍ لا يطابق.**
+	s.audit(r, "user.rename_self", "user", userIDFrom(r), nil)
+	httpx.JSON(w, http.StatusOK, map[string]any{"full_name": req.FullName})
+}
+
 // handleMyAvatar يرفع صورة المستخدم لنفسه (نوع avatar) ويضبطها، ويعيد رابط المصغّرة.
 func (s *Server) handleMyAvatar(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, media.MaxUploadBytes+64<<10)

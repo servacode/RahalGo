@@ -54,6 +54,9 @@ export function AccountSettings({
 }) {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [name, setName] = useState("");
+  /** الاسمُ المكتوبُ في الحقل — **يُفصل عن المحفوظ** ليُعرف هل تغيّر. */
+  const [nameDraft, setNameDraft] = useState("");
+  const [nameBusy, setNameBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [current, setCurrent] = useState("");
@@ -91,6 +94,7 @@ export function AccountSettings({
       .then((s) => {
         setAvatar(s.avatar_thumb_url);
         setName(s.full_name);
+        setNameDraft(s.full_name);
         setWaVerified(s.whatsapp_verified);
         // رقم الدخول اقتراحٌ مبدئي: أغلب الناس واتسابهم عليه، فلا نطلب كتابته
         setWa(s.whatsapp_phone ?? phone ?? "");
@@ -260,10 +264,61 @@ export function AccountSettings({
 
   const avatarUrl = mediaUrl(avatar);
 
+  async function onName(e: React.FormEvent) {
+    e.preventDefault();
+    setNameBusy(true);
+    setMsg("");
+    setError("");
+    try {
+      await api("/api/v1/me/name", {
+        method: "PATCH",
+        body: JSON.stringify({ full_name: nameDraft.trim() }),
+      });
+      setName(nameDraft.trim());
+      setMsg(A.nameSaved);
+      // **والشريطُ العلويّ يقرأ الاسمَ** — فيُخبَر ليُحدّثه بلا تحديث صفحة.
+      onVerified?.();
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setNameBusy(false);
+    }
+  }
+
   return (
     // مربعان في السطر على الشاشات المتوسطة فأكبر — كانت الأقسام مرصوفة طولياً
     // فيتمدّد النموذج بلا داعٍ ونصف العرض فارغ.
     <div className="grid gap-5 md:grid-cols-2">
+      {/* **بابُ تغيير الاسم.**
+
+          كانت الصفحةُ تقرأ الاسمَ وتعرضه في الصورة الرمزية **ولا تكتبه** —
+          ومن أخطأ فيه عند التسجيل، أو كُتب له بيد موظّفٍ في طلبٍ هاتفيّ،
+          **يبقى عليه إلى الأبد** أو يتّصل بالمنصة ليُغيّره له إنسان.
+
+          **والاسمُ يُقرأ حيث يهمّ**: يناديه السائقُ عند الباب، ويُكتب في
+          الفاتورة، ويظهر لغرفة العمليات حين يتّصل. (شهده المالك ٢٠٢٦-٠٨-٠٣) */}
+      <Section title={A.name} icon={<IconUser />}>
+        <form onSubmit={onName} className="space-y-4">
+          <Input
+            id="my-name"
+            label={A.fullName}
+            icon={<IconUser />}
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            placeholder={A.namePlaceholder}
+          />
+          {/* **ولا يُفعَّل الزرُّ بلا تغيير** — زرٌّ يُضغط فلا يقع شيءٌ يُعلّم
+              صاحبَه ألّا يثق بالأزرار. */}
+          <Button
+            type="submit"
+            disabled={nameBusy || nameDraft.trim() === name.trim() || nameDraft.trim().length < 2}
+            className="w-full py-2.5"
+          >
+            {A.saveName}
+          </Button>
+        </form>
+      </Section>
+
       <Section title={A.photo} icon={<IconUser />}>
         <div className="flex items-center gap-4">
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-badge border border-line bg-primary-light text-2xl font-bold text-primary-dark">

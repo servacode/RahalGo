@@ -186,6 +186,7 @@ func (s *Server) Router() http.Handler {
 			r.Post("/my/favorites/{id}", s.handleToggleFavorite)
 			// بيانات التوب بار الموحّدة لأي مستخدم (اسم، صورة، رصيد) وإدارة صورته
 			r.Get("/me/summary", s.handleMeSummary)
+			r.Patch("/me/name", s.handleSetMyName)
 			r.Post("/me/avatar", s.handleMyAvatar)
 			r.Delete("/me/avatar", s.handleDeleteMyAvatar)
 			r.Get("/my/ratings", s.handleMyRatings)
