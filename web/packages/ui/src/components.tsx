@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconView, IconViewOff, IconCheck } from "./icons";
+import { IconView, IconViewOff, IconCheck, IconClose } from "./icons";
 
 const m = getMessages(defaultLocale);
 
@@ -364,7 +364,27 @@ export function Modal({
         className={`max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface p-6 shadow-lg ${modalSizes[size]}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-bold">{title}</h2>
+        {/* **العنوانُ وزرُّ الإغلاق في سطرٍ واحد.**
+
+            كان الإغلاقُ بثلاثةِ طرقٍ **لا يُرى أيٌّ منها**: الضغطُ خارج
+            النافذة، ومفتاحُ `Esc`، وزرٌّ في أسفل بعض النوافذ لا كلِّها.
+            **ومن لا يعرف أنّ الخارج يُغلق يبحث عن ✕ فلا يجده** — فيظنّ نفسه
+            محبوساً، وعلى الهاتف لا `Esc` ولا «خارج» واضح.
+
+            **وزرٌّ يُرى يُغني عن ثلاثةٍ تُعرَف بالتجربة.**
+            (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */}
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h2 className="text-lg font-bold">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={m.common.close}
+            title={m.common.close}
+            className="-me-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-page hover:text-ink"
+          >
+            <IconClose size={18} />
+          </button>
+        </div>
         {children}
       </div>
     </div>
