@@ -14,7 +14,7 @@
  * - «تعذّر التسليم» زرٌّ ثانويّ صغير تحته: هو مخرجٌ حقيقي لكنه ليس الطريق.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import {
   Button,
@@ -101,7 +101,6 @@ function mapsHref(lat: number, lng: number): string {
 export default function TasksPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [mine, setMine] = useState<DriverOrder[]>([]);
-  const [queue, setQueue] = useState<DriverOrder[]>([]);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [failing, setFailing] = useState<DriverOrder | null>(null);
@@ -110,61 +109,15 @@ export default function TasksPage() {
   const [proving, setProving] = useState<DriverOrder | null>(null);
   const [reason, setReason] = useState("");
 
-  /**
-   * **التنبيهُ الصوتيّ عند وصول طلبٍ جديد.**
-   *
-   * السائقُ على درّاجته لا أمام شاشته. **وطلبٌ يظهر صامتاً يُقرأ بعد أن ينقضي
-   * دورُه** — فيراه ذاهباً لا قادماً، ويظنّ أنّ المنصة لا تعطيه شيئاً.
-   *
-   * **ولا ملفَّ صوتٍ خارجيّاً**: يُولَّد بالنغمة في المتصفّح — لا شبكةَ تُنتظر،
-   * ولا ملفَّ يضيع في نشرةٍ قادمة.
-   */
-  const known = useRef<Set<string>>(new Set());
-  const chime = useCallback(() => {
-    try {
-      const Ctx =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      // نغمتان صاعدتان — تُميَّز عن رنّات الهاتف الأخرى ولا تُشبه إنذاراً.
-      [880, 1175].forEach((hz, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = hz;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const t = ctx.currentTime + i * 0.18;
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-        osc.start(t);
-        osc.stop(t + 0.18);
-      });
-    } catch {
-      // صوتٌ لا يعمل لا يُسقط الشاشة — **والبطاقةُ تظهر على أيّ حال.**
-    }
-  }, []);
-
   const load = useCallback(() => {
     api<Me>("/api/v1/driver/me").then(setMe).catch(() => undefined);
     api<DriverOrder[]>("/api/v1/driver/orders").then(setMine).catch(() => undefined);
-    api<DriverOrder[]>("/api/v1/driver/queue")
-      .then((rows) => {
-        // **يُرنّ للجديد وحدَه** — لا لكلّ تحديثٍ يمرّ، وإلّا صار الصوتُ ضجيجاً
-        // يُطفئه السائقُ في أوّل يوم.
-        const fresh = rows.some((o) => !known.current.has(o.id));
-        known.current = new Set(rows.map((o) => o.id));
-        if (fresh) chime();
-        setQueue(rows);
-      })
-      .catch(() => undefined);
-  }, [chime]);
+  }, []);
 
   useEffect(load, [load]);
 
-  // الطابور حيٌّ: طلبٌ يظهر لسائقين في اللحظة نفسها، ومن أخذه سبق. فبلا بثٍّ
-  // يرى السائق طلباً أُخذ قبل دقيقتين فيضغط ثم يُردّ عليه — وهذا يُتعِب لا يُفيد.
+  // **حيٌّ**: حالةُ المهمّة تتغيّر بفعل العمليات أيضاً — إلغاءٌ أو إسنادٌ يدويّ
+  // — **فشاشةٌ لا تتحدّث تجعل السائقَ يضغط على ما لم يعد قائماً.**
   useLiveRefresh(["order", "wallet"], load);
 
   async function act(o: DriverOrder, to: string, note = "") {
@@ -175,20 +128,6 @@ export default function TasksPage() {
         method: "POST",
         body: JSON.stringify({ to, note }),
       });
-      load();
-    } catch (e) {
-      setError(errText(e));
-      load();
-    } finally {
-      setBusy("");
-    }
-  }
-
-  async function accept(o: DriverOrder) {
-    setBusy(o.id);
-    setError("");
-    try {
-      await api(`/api/v1/driver/orders/${o.id}/accept`, { method: "POST" });
       load();
     } catch (e) {
       setError(errText(e));
@@ -336,24 +275,9 @@ export default function TasksPage() {
         )}
       </section>
 
-      {/* الطابور */}
-      <section>
-        <h2 className="mb-2 flex items-center gap-2 font-bold">
-          <IconLocation size={18} className="text-ink-muted" />
-          {D.queue.title}
-        </h2>
-        {!me.on_shift ? (
-          <EmptyState icon={IconDriver} title={D.queue.offEmpty} />
-        ) : queue.length === 0 ? (
-          <EmptyState icon={IconOrder} title={D.queue.empty} />
-        ) : (
-          <div className="space-y-3">
-            {queue.map((o) => (
-              <QueueCard key={o.id} o={o} busy={busy === o.id} onAccept={() => accept(o)} />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* **و«طلبات قادمة» صارت قسماً قائماً بذاته** — `/portal/incoming`.
+          كانت هنا ذيلاً لمهامّي، **فيقرؤها السائقُ بعد أن يمرّ على مهامّه**،
+          وهي أوّلُ ما يحتاجه لا آخرُه. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
 
       {proving && (
         <ProofModal
@@ -617,53 +541,6 @@ function Leg({
         )}
       </div>
     </div>
-  );
-}
-
-/** بطاقة الطابور — أقلّ ممّا في المهمّة: قرار الأخذ لا يحتاج رقم هاتف. */
-function QueueCard({ o, busy, onAccept }: { o: DriverOrder; busy: boolean; onAccept: () => void }) {
-  const readyLeft = o.ready_at
-    ? 0
-    : o.accepted_at && o.prep_minutes
-      ? Math.max(
-          0,
-          Math.round(
-            (new Date(o.accepted_at).getTime() + o.prep_minutes * 60_000 - Date.now()) / 60_000,
-          ),
-        )
-      : null;
-
-  return (
-    <Card>
-      <div className="mb-2 flex items-center gap-2">
-        <Badge variant="primary">#{fmtNum(o.number)}</Badge>
-        {readyLeft !== null && (
-          <Badge variant={readyLeft === 0 ? "success" : "warning"}>
-            {readyLeft === 0 ? D.queue.readyNow : D.queue.readyIn.replace("{n}", fmtNum(readyLeft))}
-          </Badge>
-        )}
-        <span className="ms-auto text-sm font-bold" dir="ltr">
-          {fmtNum(o.total)} {m.common.currency}
-        </span>
-      </div>
-      <p className="flex items-center gap-2 text-sm font-medium">
-        <IconStore size={16} className="text-ink-muted" />
-        {o.merchant_name}
-      </p>
-      <p className="mt-1 flex items-start gap-2 text-sm text-ink-muted">
-        <IconLocation size={16} className="mt-0.5 shrink-0" />
-        <span className="min-w-0 flex-1">{o.address_text}</span>
-      </p>
-      {o.cash_due > 0 && (
-        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-warning">
-          <IconBalance size={14} />
-          {D.order.cashCollect}: <span dir="ltr">{fmtNum(o.cash_due)}</span>
-        </p>
-      )}
-      <Button size="lg" className="mt-3 w-full" disabled={busy} onClick={onAccept}>
-        {D.queue.accept}
-      </Button>
-    </Card>
   );
 }
 

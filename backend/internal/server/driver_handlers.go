@@ -195,11 +195,24 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	if s.orders.AssignmentMode(r.Context()) != "rotation" {
 		mine = `AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)`
 	}
+	// **ومعرّفُ السائق يُمرَّر.**
+	//
+	// كان `$1` مكتوباً في الاستعلام **ولا يُمرَّر إليه شيء** — فيردّ الاستعلامُ
+	// `expected 1 arguments, got 0`، **وتردّ الواجهةُ خمسمئة في كلّ نداء.**
+	// وشاشةُ السائق تبتلع الخطأ (`.catch(() => undefined)`) **فتبقى القائمةُ
+	// فارغةً بلا كلمة.**
+	//
+	// **وهذا سببُ «لم يتم تحويل الطلب للسائق»**: لم يكن الترتيبُ معطوباً —
+	// **كان الطابورُ نفسُه لا يُقرأ أبداً.** فلم يرَ سائقٌ طلباً قطّ، واضطُرّ
+	// المالكُ إلى الإسناد اليدويّ في كلّ مرّة.
+	//
+	// **ولم يُمسك في بناءٍ ولا `vet` ولا اختبار**: عددُ الوسائط يُفحص وقتَ
+	// التنفيذ لا وقتَ الترجمة، **ولا اختبارَ كان ينادي هذا المسار.**
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.status = 'dispatching' AND o.driver_id IS NULL
 		  `+mine+`
 		ORDER BY o.ready_at NULLS LAST, o.created_at
-		LIMIT 50`)
+		LIMIT 50`, userIDFrom(r))
 }
 
 // handleDriverOrders طلباته هو — الجارية أولاً.
