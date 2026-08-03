@@ -330,6 +330,10 @@ func (s *Server) Router() http.Handler {
 			// للمالية والأدمن: يحوي أنصبةَ الأطراف وربحَ المنصة.
 			r.With(s.RequireRoles("admin", "finance")).
 				Get("/orders/{id}/breakdown", s.handleOrderBreakdown)
+			// **وتصحيحُ تسويةٍ قديمة بقيدٍ مقابل** — لا بتصفير البيانات.
+			// **والأدمنُ وحدَه**: قيدٌ ماليٌّ يُنشأ بيد.
+			r.With(s.RequireRoles("admin")).
+				Post("/orders/{id}/recompute", s.handleRecomputeSettlement)
 			// **تحويلُ الطلب إلى متجرٍ آخر** — قاعدةٌ احتياطية، وسعرُ الزبون
 			// لا يُمسّ. (انظر `order_transfer.go`)
 			r.With(s.RequireRoles("admin", "ops")).
@@ -370,11 +374,24 @@ func (s *Server) Router() http.Handler {
 			// السائقون والصندوق النقدي
 			r.Get("/drivers", s.handleListDrivers)
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
+			// **وإغلاقُ دوامٍ نُسي** — من ذهب إلى بيته وعلَمُه مرفوعٌ يبقى في
+			// الدور، فيتأخّر كلُّ طلبٍ بمقدار غيابه. **إغلاقٌ فقط لا تشغيل.**
+			r.Post("/drivers/{id}/end-shift", s.handleAdminEndShift)
 			// **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
 			r.Get("/cash/outstanding", s.handleCashOutstanding)
 			// **نزاعاتُ المنصة مع الأربعة** — المتجرِ والسائقِ والمندوبِ
 			// والزبون. **ونزاعٌ لا يُرى مجموعاً لا يُتابَع**، وثلاثةٌ منها لم
 			// يكن لها مكانٌ إطلاقاً قبل هجرة `0063`.
+			// **إعلانُ المنصة** — أن تخاطب أهلَها بلا واقعةٍ تُولّده.
+			// **والأدمنُ وحدَه**: صوتُ المنصة لا يُعار.
+			// **وتصديرُ الأصل لا المجاميع** — من شكّ في مجموعٍ عاد إلى السطور.
+			// وللمالية والأدمن: فيه أنصبةُ الأطراف وربحُ المنصة.
+			r.With(s.RequireRoles("admin", "finance")).
+				Get("/orders/export", s.handleOrdersExport)
+			r.With(s.RequireRoles("admin", "finance")).
+				Get("/ledger/export", s.handleLedgerExport)
+			r.Get("/broadcast/count", s.handleBroadcastCount)
+			r.With(s.RequireRoles("admin")).Post("/broadcast", s.handleBroadcast)
 			r.Get("/disputes", s.handleListDisputes)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/disputes", s.handleCreateDispute)

@@ -37,6 +37,7 @@ import {
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import ImageUpload, { MediaThumb } from "@/components/ImageUpload";
+import ViolationsModal from "@/components/ViolationsModal";
 
 const m = getMessages(defaultLocale);
 
@@ -114,6 +115,8 @@ export default function MerchantsTable() {
   const [editing, setEditing] = useState<Merchant | null | "new">(null);
   const [catsOpen, setCatsOpen] = useState(false);
   const [hoursFor, setHoursFor] = useState<Merchant | null>(null);
+  /** **سجلُّ مخالفاتِ متجرٍ بعينه** — ومنه يُصدَر الإنذار. */
+  const [violationsFor, setViolationsFor] = useState<Merchant | null>(null);
   const [view, setView] = useViewMode("merchants", "cards");
 
   const loadCategories = useCallback(async () => {
@@ -298,6 +301,13 @@ export default function MerchantsTable() {
                 ? m.admin.merchants.unban
                 : m.admin.merchants.ban}
             </Button>
+            {/* **السجلُّ قبل الحكم.**
+
+                كان زرُّ العفو وحدَه بجانب عدّادٍ مجرّد — **فيُعفى أو يُحظر بلا
+                أن يُرى ما وقع.** (الثغرة `G-01`.) */}
+            <Button variant="ghost" onClick={() => setViolationsFor(mr)}>
+              {m.admin.merchants.violationsLog.viewLog}
+            </Button>
             {mr.violations > 0 && (
               <Button variant="ghost" onClick={() => void forgive(mr)}>
                 {m.admin.merchants.forgive}
@@ -478,6 +488,13 @@ export default function MerchantsTable() {
         <HoursModal
           merchant={hoursFor}
           onClose={() => setHoursFor(null)}
+          onChanged={load}
+        />
+      )}
+      {violationsFor && (
+        <ViolationsModal
+          merchant={violationsFor}
+          onClose={() => setViolationsFor(null)}
           onChanged={load}
         />
       )}

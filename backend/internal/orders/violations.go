@@ -26,6 +26,7 @@ package orders
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -53,12 +54,7 @@ func (s *Service) MerchantViolations(ctx context.Context, q wallet.Querier, merc
 	err := q.QueryRow(ctx, `
 		SELECT count(*)
 		FROM orders o
-		JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.merchant_id = $1
-		  AND ((o.ended_by = 'merchant' AND o.status IN ('rejected', 'cancelled'))
-		       OR (o.status = 'failed' AND o.fault = 'merchant'))
-		  AND o.closed_at > now() - make_interval(days => $2::int)
-		  AND (m.violations_cleared_at IS NULL OR o.closed_at > m.violations_cleared_at)`,
+		JOIN merchants m ON m.id = o.merchant_id`+violationsWhere,
 		merchantID, days).Scan(&n)
 	if err != nil {
 		return 0, err
@@ -67,6 +63,76 @@ func (s *Service) MerchantViolations(ctx context.Context, q wallet.Querier, merc
 	// سائق **لا طلبَ يشهد عليه**، ومن لا يُعدّ إنذارُه لا يبلغ حدّاً أبداً.
 	manual, err := s.ManualWarnings(ctx, q, merchantID)
 	return n + manual, err
+}
+
+// ViolationRow مخالفةٌ واحدةٌ مقروءة — **طلبٌ وقع، لا رقمٌ في عدّاد.**
+type ViolationRow struct {
+	Number   *int64    `json:"order_number"`
+	Status   string    `json:"status"`
+	Reason   string    `json:"reason"`
+	Note     string    `json:"note"`
+	Manual   bool      `json:"manual"`
+	ClosedAt time.Time `json:"closed_at"`
+}
+
+// violationsWhere شرطُ المخالفة — **مكتوبٌ مرّةً يُقرأ في العدّ وفي القائمة.**
+//
+// **ولو نُسخ لَافترقا يوماً**: يُضاف شرطٌ في العدّ فيُقال «٤ مخالفات» وتُعرض
+// ثلاث، **فيُقرأ ذلك عطباً في المنصة لا فرقاً في استعلامين.** وهي عائلةُ الخلل
+// التي تكرّرت في هذه الجولة سبعَ مرّات.
+const violationsWhere = `
+	WHERE o.merchant_id = $1
+	  AND ((o.ended_by = 'merchant' AND o.status IN ('rejected', 'cancelled'))
+	       OR (o.status = 'failed' AND o.fault = 'merchant'))
+	  AND o.closed_at > now() - make_interval(days => $2::int)
+	  AND (m.violations_cleared_at IS NULL OR o.closed_at > m.violations_cleared_at)`
+
+// MerchantViolationList **أيُّ طلباتٍ هي** — الجوابُ الذي كان ناقصاً.
+//
+// كانت العملياتُ ترى «٤ مخالفات» **ولا تملك أن ترى أيَّ طلباتٍ هي** (الثغرة
+// `G-01`)، ثمّ تُقرّر الحظرَ أو العفوَ على رقمٍ مجرّد. **وقرارٌ يُبنى على عدد
+// بلا وقائعَ قرارٌ لا يُراجَع.**
+//
+// **والإنذاراتُ اليدويّةُ معها في القائمة نفسِها** — لأنّها تُعدّ في العدّاد
+// نفسِه. **ومن رأى ثلاثةً وعدّادُه أربعة يظنّ في المنصة خللاً.**
+func (s *Service) MerchantViolationList(ctx context.Context, q wallet.Querier, merchantID string) ([]ViolationRow, error) {
+	days := int64(30)
+	if s.settings != nil {
+		if v := s.settings.GetInt(ctx, "merchants.cancel_ban_days"); v > 0 {
+			days = v
+		}
+	}
+	rows, err := q.Query(ctx, `
+		SELECT o.number, o.status,
+		       COALESCE(NULLIF(o.fail_reason, ''), o.status),
+		       COALESCE(o.cancel_reason, ''), false, o.closed_at
+		FROM orders o
+		JOIN merchants m ON m.id = o.merchant_id`+violationsWhere+`
+		UNION ALL
+		SELECT NULL, 'warning', w.reason, w.note, true, w.created_at
+		FROM merchant_warnings w
+		JOIN merchants m2 ON m2.id = w.merchant_id
+		WHERE w.merchant_id = $1
+		  AND w.order_id IS NULL
+		  AND w.created_at > now() - make_interval(days => $2::int)
+		  AND (m2.violations_cleared_at IS NULL OR w.created_at > m2.violations_cleared_at)
+		ORDER BY 6 DESC
+		LIMIT 100`, merchantID, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []ViolationRow{}
+	for rows.Next() {
+		var v ViolationRow
+		if err := rows.Scan(&v.Number, &v.Status, &v.Reason, &v.Note,
+			&v.Manual, &v.ClosedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
 }
 
 // enforceMerchantViolations يُحظر المتجرَ إن تجاوز العتبةَ والوضعُ آليّ.

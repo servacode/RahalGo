@@ -12,6 +12,11 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
+// errDriverHasOpenOrders **لا يُغلق دوامُ من بيده طلبٌ حيّ** — الطلبُ في صندوقه
+// والزبونُ ينتظره، وإغلاقُ دوامه لا يُعيده إلى الطابور.
+var errDriverHasOpenOrders = httpx.NewError(http.StatusConflict,
+	"driver_has_open_orders", "errors.driver_has_open_orders")
+
 // قائمة السائقين مع صندوق كل منهم وطلباته الجارية.
 func (s *Server) handleListDrivers(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
@@ -113,4 +118,83 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 	s.touch("wallet", "ops")
 	s.touchUser(driverID, "wallet")
 	httpx.JSON(w, http.StatusOK, map[string]any{"held": held})
+}
+
+// handleAdminEndShift **تُغلق الإدارةُ دوامَ سائقٍ نسي أن يُغلقه.**
+//
+// # المسألة
+//
+// علَمُ الدوام بيد السائق وحدَه. **ومن ذهب إلى بيته ونسي أن يُطفئه يبقى في
+// الدور**: يُعرض عليه كلُّ طلبٍ خمساً وأربعين ثانيةً ثمّ يمضي إلى غيره — **فكلُّ
+// طلبٍ يتأخّر بمقدار غيابه**، وقد يمرّ على ثلاثةٍ غائبين فيضيع دقيقتان قبل أن
+// يصل إلى من يعمل.
+//
+// **والعملياتُ تراه «على الدوام» ولا تملك إنزاله** — فتتّصل به، فإن لم يردّ
+// انتظرت.
+//
+// # ولا تُفتَح بيد الإدارة
+//
+// **إغلاقٌ فقط لا تشغيل.** فتحُ الدوام إقرارٌ من إنسانٍ بأنّه جاهزٌ الآن
+// **وشهادةٌ على نفسه** — ومن فُتح له دوامُه وهو نائمٌ تُسند إليه طلباتٌ لا
+// يعرف بها. **والمنصةُ تُعلن ما تعلم**: تعلم أنّه لا يستجيب، ولا تعلم أنّه
+// جاهز.
+//
+// # ويُخطَر بما وقع
+//
+// **ومن أُغلق دوامُه بلا علمه يظنّ أنّ النظام أعطبه** — فيشتكي، أو يظنّ أنّ
+// لا طلباتِ اليوم.
+func (s *Server) handleAdminEndShift(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	req, err := decode[struct {
+		Note string `json:"note"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	// **ولا يُغلق دوامُ من بيده طلبٌ حيّ.**
+	//
+	// الطلبُ في صندوقه والزبونُ ينتظره، **وإغلاقُ دوامه لا يُعيد الطلبَ إلى
+	// الطابور** — يتركه معلّقاً بيد من صار في النظام «غير عامل». ومن أراد أن
+	// يُخرجه من طلبه فله «إسنادٌ يدويّ» في الطلب نفسِه.
+	var open int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM orders WHERE driver_id = $1 AND closed_at IS NULL`,
+		id).Scan(&open); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if open > 0 {
+		s.respondErr(w, errDriverHasOpenOrders)
+		return
+	}
+
+	tag, err := s.pg.Exec(r.Context(), `
+		UPDATE users SET on_shift = false, shift_started_at = NULL, updated_at = now()
+		WHERE id = $1 AND on_shift`, id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+
+	if s.notify != nil {
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: id, Kind: notifications.KindAccount,
+			Title: "أُغلق دوامُك من المنصة",
+			Body:  req.Note,
+			Href:  "/portal",
+		})
+	}
+	s.audit(r, "ops.driver_shift_ended", "user", id, map[string]any{"note": req.Note})
+	s.touch("order", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"on_shift": false})
 }

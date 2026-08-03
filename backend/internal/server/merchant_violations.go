@@ -48,8 +48,17 @@ func (s *Server) handleMerchantViolations(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
+	// **والوقائعُ مع العدد** — لا عددٌ مجرّدٌ يُقرّر عليه حظرٌ أو عفو.
+	//
+	// **وتعذّرُ القائمة لا يُسقط العدّاد**: من فتح الملفَّ ليرى أهو على ٤ من ٥
+	// يجب أن يرى الرقمَ ولو لم تُقرأ التفاصيل.
+	list, err := s.orders.MerchantViolationList(r.Context(), s.pg, id)
+	if err != nil {
+		list = nil
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"violations": n,
+		"items":      list,
 		"limit":      s.settings.GetInt(r.Context(), "merchants.cancel_ban_count"),
 		"days":       s.settings.GetInt(r.Context(), "merchants.cancel_ban_days"),
 		"mode":       s.settings.GetString(r.Context(), "merchants.cancel_ban_mode", "manual"),

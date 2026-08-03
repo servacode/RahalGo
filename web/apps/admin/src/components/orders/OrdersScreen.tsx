@@ -232,6 +232,14 @@ const CLOSED_STATUSES = new Set([
   "refunded",
 ]);
 
+/**
+ * **الحالاتُ التي جرت فيها تسويةٌ ماليّة** — وهي وحدَها تُعاد حسبتُها.
+ *
+ * الملغى والمرفوض **لا أنصبةَ لهما**: لم تخرج بضاعةٌ ولم يُقبض مال. **وزرُّ
+ * تصحيحٍ على طلبٍ لا شيءَ فيه يُضغط فلا يقع شيء** — فيُظنّ أنّه معطوب.
+ */
+const SETTLED_STATUSES = new Set(["delivered", "failed", "refunded"]);
+
 // أزرار الانتقال المتاحة للعمليات/الأدمن حسب الحالة (مرآة لخارطة الخادم)
 const OPS_NEXT: Record<string, string[]> = {
   pending: ["accepted", "rejected", "cancelled"],
@@ -866,6 +874,8 @@ function OrderActions({
   onShift: number | null;
 }) {
   const [busy, setBusy] = useState("");
+  /** خبرٌ يُقال بعد فعلٍ نجح — **وكم صُحِّح** في إعادة الحساب. */
+  const [notice, setNotice] = useState("");
   /** الفعلُ الهدّام المفتوح الآن — يُطلب سببُه قبل تنفيذه */
   const [asking, setAsking] = useState("");
   /** نافذةُ التحويل إلى متجرٍ آخر — القاعدةُ الاحتياطية. */
@@ -983,6 +993,32 @@ function OrderActions({
       onChanged();
     } catch (e) {
       win?.close();
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  /**
+   * إعادةُ حساب التسوية — **وتقول كم صُحِّح.**
+   *
+   * **ولا تقول «تمّ» عن نداءٍ لم يُغيّر شيئاً**: من ضغط ورأى «تمّ» ظنّ أنّ خللاً
+   * صُلح وهو لم يكن. **وصفرٌ يُقال صراحةً أصدقُ من نجاحٍ مبهم.**
+   */
+  async function recompute() {
+    setBusy("recompute");
+    setErr("");
+    try {
+      const res = await api<{ delta: number }>(`/api/v1/admin/orders/${o.id}/recompute`, {
+        method: "POST",
+      });
+      setNotice(
+        res.delta === 0
+          ? m.admin.ordersPage.recomputeNone
+          : m.admin.ordersPage.recomputeDone.replace("{n}", fmtNum(res.delta)),
+      );
+      onChanged();
+    } catch (e) {
       setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
     } finally {
       setBusy("");
@@ -1344,6 +1380,28 @@ function OrderActions({
         <Button variant="secondary" disabled={busy !== ""} onClick={() => void openSplit()}>
           {m.admin.ordersPage.splitButton}
         </Button>
+      )}
+      {/* **وتصحيحُ تسويةٍ قديمة — بقيدٍ مقابلٍ لا بتصفير.**
+
+          حسبةُ الخزينة تُصحّح نفسَها بمجرّد أن تُنادى، **ولا شيءَ ينادِيها على
+          طلبٍ أُغلق.** فإن كُشف خللٌ في المعادلة — كما وقع في `#1003` — بقي
+          القيدُ الخاطئ ولو أُصلح الكود، **ولم يبقَ إلّا تصفيرُ البيانات كلِّها.**
+
+          **والأدمنُ وحدَه**: قيدٌ ماليٌّ يُنشأ بيد. */}
+      {isAdmin && SETTLED_STATUSES.has(o.status) && (
+        <Button
+          variant="ghost"
+          disabled={busy !== ""}
+          title={m.admin.ordersPage.recomputeHint}
+          onClick={() => void recompute()}
+        >
+          {m.admin.ordersPage.recompute}
+        </Button>
+      )}
+      {notice && (
+        <span className="rounded-control bg-success/10 px-2.5 py-1 text-xs text-success">
+          {notice}
+        </span>
       )}
 
       {/* **ما بعد الفشل — سؤالان لا يُجيبهما النظام وحده.**

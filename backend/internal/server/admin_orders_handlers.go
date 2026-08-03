@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -86,6 +87,11 @@ var requiresReason = map[string]bool{
 	"failed":    true,
 	"refunded":  true,
 }
+
+// errOrderStillOpen **لا تُعاد تسويةُ طلبٍ لم يُغلق** — تسويتُه ستُنادى في
+// مسارها، وقيدٌ يُقحَم في منتصف حياته يُفسد قراءةَ ترتيبه.
+var errOrderStillOpen = httpx.NewError(http.StatusConflict,
+	"order_still_open", "errors.order_still_open")
 
 func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
@@ -181,4 +187,80 @@ func (s *Server) handleOrderAssign(w http.ResponseWriter, r *http.Request) {
 		EntityID: chi.URLParam(r, "id"), Href: "/orders",
 	})
 	httpx.JSON(w, http.StatusOK, o)
+}
+
+// handleRecomputeSettlement **يُعيد حسابَ نصيب المنصة من طلبٍ بعينه.**
+//
+// # لماذا يلزم
+//
+// حسبةُ الخزينة **بالفرق لا بالمجموع**: تحسب النصيبَ كاملاً بحاله الآن، وتطرح
+// ما قُيّد سابقاً، وتضع الفرق. **فهي تُصحّح نفسها بمجرّد أن تُنادى.**
+//
+// **ولا شيءَ ينادِيها على طلبٍ أُغلق.** فإن كُشف خللٌ في المعادلة — كما وقع في
+// `#1003` (خسرت الخزينةُ ٣٩٬٨٠٠ على طلبٍ قدرُه ٢٢٬٠٠٠) — **بقي القيدُ الخاطئ في
+// الدفتر ولو أُصلح الكود**، ولم يكن أمامنا إلّا تصفيرُ البيانات كلِّها.
+//
+// # والدفاترُ لا تُعدَّل ولا تُحذف
+//
+// **تُصحَّح بقيدٍ مقابل** — وهذا ما تفعله المعادلةُ من نفسها: تضع الفرقَ قيداً
+// جديداً ويبقى الخطأُ مسطوراً. **ومن قرأ الدفترَ بعد سنةٍ رأى الخطأَ وتصحيحَه
+// معاً** — وهو ما يُميّز دفتراً من قاعدة بيانات.
+//
+// # ولا تُنادى إلّا على مُغلَق
+//
+// طلبٌ جارٍ ستُنادى تسويتُه في مسارها، **وإعادةُ الحساب عليه تُقحم قيداً في
+// منتصف حياته** فيصعب قراءةُ ترتيبه. **والأدمنُ وحدَه**: قيدٌ ماليٌّ يُنشأ بيد.
+func (s *Server) handleRecomputeSettlement(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var closed *time.Time
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT closed_at FROM orders WHERE id = $1`, id).Scan(&closed); err != nil {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	if closed == nil {
+		s.respondErr(w, errOrderStillOpen)
+		return
+	}
+
+	actor := userIDFrom(r)
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(r.Context()) }()
+
+	// **الفرقُ يُقاس قبلَ وبعد** — فيُقال للمالك كم صُحِّح، **ولا يُقال «تمّ»
+	// عن نداءٍ لم يُغيّر شيئاً.**
+	var before int64
+	if err := tx.QueryRow(r.Context(), `
+		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
+		WHERE ref = $1 AND kind = 'platform_profit'`, id).Scan(&before); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.orders.CreditTreasuryTx(r.Context(), tx, id, actor); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	var after int64
+	if err := tx.QueryRow(r.Context(), `
+		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
+		WHERE ref = $1 AND kind = 'platform_profit'`, id).Scan(&after); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	s.audit(r, "finance.settlement_recomputed", "order", id, map[string]any{
+		"before": before, "after": after, "delta": after - before,
+	})
+	s.touch("wallet", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"before": before, "after": after, "delta": after - before,
+	})
 }

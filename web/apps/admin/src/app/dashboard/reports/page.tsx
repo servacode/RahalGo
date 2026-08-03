@@ -5,6 +5,7 @@ import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   PageHeader,
   Input,
+  Button,
   IconOrder,
   IconWallet,
   IconStore,
@@ -13,7 +14,7 @@ import {
   IconStatus,
   IconDate,
 } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, tokenStore } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 
@@ -162,6 +163,37 @@ export default function ReportsPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState("");
 
+  /**
+   * تنزيلُ CSV — **بالمدّة المعروضة نفسِها.**
+   *
+   * **ولا يُطلب تاريخان مرّةً ثانية**: من ضبط المدّةَ ليرى التقرير يريد
+   * تصديرَ ما يراه، **وحقلان ثانيان يجعلان الملفَّ يخالف الشاشة بلا أن يُلاحظ.**
+   */
+  function download(kind: "orders" | "ledger") {
+    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+    const path = kind === "orders" ? "orders/export" : "ledger/export";
+    void (async () => {
+      try {
+        const res = await fetch(`${base}/api/v1/admin/${path}?from=${from}&to=${to}`, {
+          headers: { Authorization: `Bearer ${tokenStore.access ?? ""}` },
+        });
+        if (!res.ok) {
+          setError(m.errors.internal);
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${kind}-${from}_${to}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        setError(m.errors.internal);
+      }
+    })();
+  }
+
   const load = useCallback(async () => {
     try {
       setReport(await api<Report>(`/api/v1/admin/reports?from=${from}&to=${to}`));
@@ -203,6 +235,20 @@ export default function ReportsPage() {
               onChange={(e) => setTo(e.target.value)}
             />
           </div>
+          {/* **وتصديرُ الأصل لا المجاميع.**
+
+              التقاريرُ تُخرج المجاميع، **وما ينقص هو السطور التي تُبنى عليها**:
+              من دفع كم، ولمن ذهب، وماذا بقي. **ومن شكّ في مجموعٍ عاد إلى
+              السطور، ومن لا يملكها يُصدّق أو يشكّ بلا سبيل.**
+
+              وكان التصديرُ للحسابات وحدَها — **ومحاسبٌ يريد كشفاً شهرياً لا
+              يجد ما يأخذه**، فينسخ من الشاشة صفحةً صفحة. */}
+          <Button variant="secondary" onClick={() => download("orders")}>
+            {r.exportOrders}
+          </Button>
+          <Button variant="secondary" onClick={() => download("ledger")}>
+            {r.exportLedger}
+          </Button>
         </div>
       </div>
 

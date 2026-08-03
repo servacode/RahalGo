@@ -96,19 +96,29 @@ func TestMerchantFault_CompensatesAndOpensClaim(t *testing.T) {
 		t.Fatalf("السائقُ لم يُعوَّض عن مشوارٍ ضاع بذنب المتجر: %d", comp)
 	}
 
-	// **٢ · والمطالبةُ فُتحت بما دُفع** — لا برقمٍ يُحسب من جديد.
+	// **٢ · والنزاعُ فُتح بما دُفع** — لا برقمٍ يُحسب من جديد.
+	//
+	// **وموضعُه `disputes` لا صفُّ الإنذار** (هجرة `0063`): الإنذارُ سلوكٌ يُعدّ
+	// ولا يُسوّى، **والنزاعُ مالٌ يُسوّى ويُغلق.** وبقاءُ المال في صفّ الإنذار
+	// هو ما منع أن يكون للسائق أو الزبون نزاعٌ أصلاً.
 	var claim int64
-	var settlement *string
+	var status string
+	var warningID *string
 	if err := f.pool.QueryRow(ctx, `
-		SELECT claim_amount, settlement FROM merchant_warnings WHERE order_id = $1`,
-		f.orderID).Scan(&claim, &settlement); err != nil {
-		t.Fatalf("لم تُفتح مطالبة: %v", err)
+		SELECT amount, status, warning_id::text FROM disputes
+		WHERE order_id = $1 AND party_role = 'merchant'`,
+		f.orderID).Scan(&claim, &status, &warningID); err != nil {
+		t.Fatalf("لم يُفتح نزاع: %v", err)
 	}
 	if claim != comp {
-		t.Errorf("المطالبة = %d والتعويضُ = %d — **يجب أن يتطابقا**", claim, comp)
+		t.Errorf("النزاع = %d والتعويضُ = %d — **يجب أن يتطابقا**", claim, comp)
 	}
-	// **ومفتوحةٌ لا محسومة**: الخصمُ قرارُ إنسانٍ بعد أن يسمع المتجر.
-	if settlement != nil {
-		t.Errorf("حُسمت المطالبةُ آلياً: %q — **ومالٌ يخرج قبل أن يُسأل نزاعٌ خُسر**", *settlement)
+	// **ومفتوحٌ لا محسوم**: الخصمُ قرارُ إنسانٍ بعد أن يسمع المتجر.
+	if status != "open" {
+		t.Errorf("حُسم النزاعُ آلياً: %q — **ومالٌ يخرج قبل أن يُسأل نزاعٌ خُسر**", status)
+	}
+	// **والرابطُ يمنع نسختين من الحقيقة** — من قرأ الإنذارَ وجد كلفتَه.
+	if warningID == nil {
+		t.Error("النزاعُ بلا إنذارٍ مرجعيّ — **ومن قرأ الإنذارَ لا يجد كلفتَه**")
 	}
 }

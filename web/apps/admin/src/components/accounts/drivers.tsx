@@ -66,6 +66,8 @@ export default function DriversTable() {
   const [cashLimit, setCashLimit] = useState(0);
   const [error, setError] = useState("");
   const [boxFor, setBoxFor] = useState<Driver | null>(null);
+  /** **السائقُ الذي يُغلَق دوامُه** — بكلمةٍ تصله، لا بصمت. */
+  const [endShiftFor, setEndShiftFor] = useState<Driver | null>(null);
   const [view, setView] = useViewMode("drivers");
 
   const load = useCallback(async () => {
@@ -195,10 +197,25 @@ export default function DriversTable() {
         view={view}
         empty={m.admin.drivers.empty}
         actions={(d) => (
-          <Button variant="secondary" onClick={() => setBoxFor(d)} className="flex items-center gap-1.5">
-            <IconWallet size={15} />
-            {m.admin.drivers.cashBox}
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => setBoxFor(d)} className="flex items-center gap-1.5">
+              <IconWallet size={15} />
+              {m.admin.drivers.cashBox}
+            </Button>
+            {/* **إغلاقُ دوامٍ نُسي.**
+
+                علَمُ الدوام بيد السائق وحدَه، **ومن ذهب إلى بيته ونسي أن
+                يُطفئه يبقى في الدور**: يُعرض عليه كلُّ طلبٍ خمساً وأربعين
+                ثانيةً ثمّ يمضي — **فكلُّ طلبٍ يتأخّر بمقدار غيابه.**
+
+                **ولا يُفتَح من هنا**: فتحُ الدوام إقرارٌ من إنسانٍ بأنّه جاهز،
+                والمنصةُ تعلم أنّه لا يستجيب ولا تعلم أنّه جاهز. */}
+            {d.on_shift && d.open_orders === 0 && (
+              <Button variant="ghost" onClick={() => setEndShiftFor(d)}>
+                {m.admin.drivers.endShift}
+              </Button>
+            )}
+          </>
         )}
       />
 
@@ -210,7 +227,76 @@ export default function DriversTable() {
           onChanged={load}
         />
       )}
+      {endShiftFor && (
+        <EndShiftModal
+          driver={endShiftFor}
+          onClose={() => setEndShiftFor(null)}
+          onDone={() => {
+            setEndShiftFor(null);
+            void load();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * إغلاقُ الدوام — **بكلمةٍ تصل صاحبَه.**
+ *
+ * **ومن أُغلق دوامُه بلا علمه يظنّ أنّ النظام أعطبه** — فيشتكي، أو يظنّ أن لا
+ * طلباتِ اليوم فيمضي إلى بيته. **والكلمةُ ليست تجميلاً: هي الفرقُ بين إجراءٍ
+ * وبين عطبٍ يبدو عشوائياً.**
+ */
+function EndShiftModal({
+  driver,
+  onClose,
+  onDone,
+}: {
+  driver: Driver;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function submit() {
+    setBusy(true);
+    setErr("");
+    try {
+      await api(`/api/v1/admin/drivers/${driver.id}/end-shift`, {
+        method: "POST",
+        body: JSON.stringify({ note: note.trim() }),
+      });
+      onDone();
+    } catch (e) {
+      setErr(errText(e));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`${m.admin.drivers.endShift}: ${driver.full_name}`}>
+      <div className="space-y-3">
+        <p className="text-sm text-ink-muted">{m.admin.drivers.endShiftHint}</p>
+        <Input
+          id="end-shift-note"
+          label={m.admin.drivers.endShiftNote}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+        {err && <p className="text-sm text-danger">{err}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+          <Button variant="danger" disabled={busy} onClick={() => void submit()}>
+            {m.admin.drivers.endShift}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
