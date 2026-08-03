@@ -8,40 +8,40 @@
  */
 @theme {
   /* ألوان العلامة — أزرقُ اللوغو وبرتقاليُّه (tokens.ts فيه الشرح) */
-  --color-primary: #14708f;
-  --color-primary-dark: #0e5570;
-  --color-primary-light: #cfe3f0;
-  --color-accent: #f7941d;
-  --color-accent-dark: #c2740a;
-  --color-accent-light: #fff3e3;
+  --color-primary: #6fd8f5;
+  --color-primary-dark: #dff2fb;
+  --color-primary-light: #084e66;
+  --color-accent: #fbbf24;
+  --color-accent-dark: #fbd9a5;
+  --color-accent-light: #5a3b0c;
 
   /* الألوان الوظيفية (الحالات) */
-  --color-success: #16a34a;
-  --color-warning: #b45309;
-  --color-danger: #dc2626;
-  --color-info: #0284c7;
-  --color-violet: #7c3aed;
+  --color-success: #86efac;
+  --color-warning: #fde68a;
+  --color-danger: #fda4af;
+  --color-info: #7dd3fc;
+  --color-violet: #a78bfa;
 
   /* المحايدة — مصبوغةٌ نحو الأزرق بدرجة */
-  --color-ink: #152b33;
-  --color-ink-muted: #55707c;
-  --color-line: #b9d1e4;
+  --color-ink: #ffffff;
+  --color-ink-muted: #d6ebf5;
+  --color-line: #8fcde2;
   /* **السطحُ مشتقٌّ من الأزرق لا أبيضَ ناصع.**
      أبيضٌ على حبريٍّ يقطع قطعاً حادّاً، **وزرقةٌ فاتحةٌ تنتمي إليه**: البطاقةُ
      تُرى منفصلةً وتبقى من العائلة نفسِها.
      (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
-  --color-surface: #e9f1f8;
+  --color-surface: #036e91;
   /* `page` **حقلٌ باهتٌ داخل البطاقة** لا خلفيةُ الشاشة — يُستعمل في اثنين
      وسبعين موضعاً: صفوفُ الأصناف، وخلفيةُ التحويم، وحقولُ البيانات.
      **وأعمقُ من السطح بدرجة**: لو بقي أفتحَ منه لانقلب الترتيبُ — الحقلُ
      يبدو طافياً فوق بطاقته. */
-  --color-page: #d8e6f2;
+  --color-page: #02536e;
 
   /* `shell` **خلفيةُ الشاشة خلف كلّ شيء** — أزرقٌ حبريٌّ غامق.
      **والبطاقةُ البيضاء تطفو عليه**، فينفصل المحتوى عمّا تحته انفصالاً
      يُرى — بخلاف الأبيضِ على أبيضَ الذي كان.
      (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «أريدها أزرق حبري غامق».) */
-  --color-shell: #0b2740;
+  --color-shell: #00141c;
 
   /* الخط المعتمد (BRAND.md) — ملفاته تُحمّل من @rahalgo/ui/fonts.css */
   --font-sans: "Tajawal", system-ui, sans-serif;

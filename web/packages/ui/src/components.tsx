@@ -14,7 +14,11 @@ const m = getMessages(defaultLocale);
 // ---------- Button ----------
 
 const buttonVariants = {
-  primary: "bg-primary text-white hover:bg-primary-dark",
+  /* **نصُّ الزرّ داكنٌ لا أبيض.**
+
+     على بطاقةٍ داكنةٍ لا يُرى زرٌّ داكن — **فتعبئتُه فاتحةٌ لتنفصل**، وأبيضُ
+     النصّ عليها يذوب (٢٫٩٨ فقط). **والداكنُ عليها يقرأ بعشرة أضعاف.** */
+  primary: "bg-primary text-shell hover:bg-primary-dark",
   secondary: "border border-line bg-surface text-ink hover:bg-page",
   danger: "bg-danger text-white hover:bg-danger/90",
   ghost: "text-ink-muted hover:bg-page hover:text-ink",
