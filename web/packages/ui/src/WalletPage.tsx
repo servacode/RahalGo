@@ -174,7 +174,6 @@ export function WalletPage({
   path,
   kindOrder,
   balanceLabel,
-  hint,
   payouts = false,
   holderName,
   holderPhone,
@@ -186,7 +185,13 @@ export function WalletPage({
   /** ترتيب التبويبات بأهمّيتها لهذا الدور، لا بورودها في القاعدة */
   kindOrder: string[];
   balanceLabel: string;
-  hint: string;
+  /**
+   * **`hint` لم تعد تُعرض** — وتبقى في النوع كي لا تنكسر خمسُ صفحاتٍ تمرّرها.
+   *
+   * كانت جملةً تحت الرصيد: «المحفظة اختيارية…» — **تُقرأ مرّةً ثمّ تشغل
+   * بطاقةَ الرصيد كلَّ يوم.** (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بلاها».)
+   */
+  hint?: string;
   /** هل يملك صاحب الحساب طلب سحب رصيده (المندوب نعم، الزبون لا) */
   payouts?: boolean;
   holderName?: string;
@@ -297,12 +302,27 @@ export function WalletPage({
           تُميَّز**؛ والبرتقاليُّ يقطعها فيقع الرصيدُ في العين أوّلاً.
           **ونصُّها داكنٌ لا أبيض**: الأبيضُ على البرتقاليّ ٢٫٢٢ يذوب،
           والداكنُ ٨٫٤٩. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
-      <div className="rounded-card bg-accent p-6 text-center text-shell">
-        <p className="text-sm opacity-80">{balanceLabel}</p>
-        <p className="mt-1 text-3xl font-bold" dir="ltr">
-          {fmtNum(balance)} <span className="text-base font-normal">{m.common.currency}</span>
+      {/* **وبقدرِ ما تقول لا بقدرِ أهميّتها.**
+
+          كانت لوحاً يملأ عرضَ الشاشة لسطرين: **عنوانٌ ورقم**. والمساحةُ
+          الفارغةُ حولهما لا تزيدهما وضوحاً، **وتدفع سجلَّ الحركات — وهو ما
+          جاء الزبونُ ليقرأه — إلى ما تحت الطيّة.**
+
+          فصارت سطراً واحداً: العنوانُ والرقمُ متجاورين، **والشرحُ تحتهما
+          بخطٍّ صغير.**
+
+          **ولا تمتدّ بعرض الصفحة**: رقمٌ من ستّة أرقامٍ في لوحٍ عرضُه شاشةٌ
+          كاملة **يترك فراغاً لا يقول شيئاً**، وتُقرأ البطاقةُ بحجم ما فيها لا
+          بحجم ما حولها. (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «كرت المحفظة كبير، اجعله
+          صغيراً مناسباً · اجعل بادينغ للكرت، لا تجعله بامتداد الصفحة».) */}
+      <div className="mx-auto w-full max-w-sm rounded-card bg-accent px-4 py-3 text-center text-shell">
+        <p className="text-sm font-medium opacity-90">{balanceLabel}</p>
+        {/* **والشرحُ حُذف**: «المحفظة اختيارية…» جملةٌ تُقرأ مرّةً ثمّ تبقى
+            تشغل بطاقةَ الرصيد كلَّ يوم. **وما يُقال مرّةً لا يُكتب دائماً.**
+            (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بلاها».) */}
+        <p className="mt-0.5 text-2xl font-bold" dir="ltr">
+          {fmtNum(balance)} <span className="text-sm font-normal">{m.common.currency}</span>
         </p>
-        <p className="mx-auto mt-2 max-w-lg text-xs leading-relaxed opacity-70">{hint}</p>
       </div>
 
       <Card title={m.terms.transactions} icon={IconWallet}>
