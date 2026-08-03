@@ -4,7 +4,7 @@
 
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { AccountSettings, PageContainer, PageHeader, IconUser } from "@rahalgo/ui";
+import { AccountSettings, MyAddresses, PageContainer, PageHeader, IconUser } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -31,6 +31,11 @@ export default function AccountPage() {
           router.replace("/login");
         }}
       />
+
+      {/* **وعناوينه** — كلُّ من في الميدان زبونٌ أيضاً: يطلب لبيته ولأهله.
+          **وعنوانٌ يُكتب مرّةً ويُستعمل دائماً**، ومن لا يجد دفترَه في لوحته
+          يكتبه من جديد في كلّ طلب. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
+      <MyAddresses api={api} />
     </PageContainer>
   );
 }

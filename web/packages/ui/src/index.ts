@@ -85,4 +85,5 @@ export {
 } from "./Notifications";
 export * from "./timeline";
 export * from "./ordertrack";
+export * from "./MyAddresses";
 export * from "./icons";
