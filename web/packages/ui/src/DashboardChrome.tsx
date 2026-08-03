@@ -177,7 +177,7 @@ export function DashboardChrome({
   );
 
   return (
-    <div className="flex min-h-screen bg-page">
+    <div className="flex min-h-screen bg-shell">
       <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col overflow-hidden rounded-card border border-line bg-surface shadow-sm lg:flex">
         {sidebar}
       </aside>

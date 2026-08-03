@@ -63,6 +63,8 @@ export const colors = {
     border: "#DCE7EB",
     surface: "#FFFFFF",
     page: "#F5F9FA",
+    /** خلفيةُ الشاشة خلف كلّ شيء — أزرقٌ حبريٌّ غامق. */
+    shell: "#0B2740",
   },
 } as const;
 

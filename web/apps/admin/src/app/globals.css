@@ -5,7 +5,10 @@
 @source "../../../../packages/auth/src";
 
 body {
-  background-color: var(--color-page);
+  /* **خلفيةُ الشاشة أزرقٌ حبريٌّ غامق** — لا `page`، فتلك حقلٌ باهتٌ داخل
+     البطاقات. **والبطاقةُ البيضاء تطفو على الحبريّ** فينفصل المحتوى عمّا
+     تحته انفصالاً يُرى. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
+  background-color: var(--color-shell);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-weight: 500; /* تجوال ميديم أساساً — العناوين 700 */
