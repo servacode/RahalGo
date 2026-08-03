@@ -23,6 +23,28 @@ func (s *Server) touch(entity string, topics ...string) {
 	}
 }
 
+// touchUser يبثّ إشارةَ تحديثٍ **إلى صاحب الشأن نفسِه** — لا إلى غرفة العمليات.
+//
+// # المسألة
+//
+// كلُّ مواضع تغيير الرصيد كانت تبثّ `touch("wallet", "ops")` **وحدَها**: تتحدّث
+// لوحةُ المنصة، **ولا يصل صاحبَ المال خبر.** فيُعوَّض الزبونُ ثمّ ينظر إلى
+// رصيده فيجده كما كان — **ويُحدّث الصفحةَ بيده أو يظنّ التعويضَ لم يقع.**
+//
+// **وشهده المالكُ** (٢٠٢٦-٠٨-٠٣): «تمّ التعويض ولكن المحفظة لم تتحدّث بشكل
+// فوري».
+//
+// **وموضوعُ `user:` يشترك فيه كلُّ مستخدمٍ مهما كان دورُه** — فهو الباب الذي
+// لا يبقى أحدٌ خارجَه.
+func (s *Server) touchUser(userID string, entities ...string) {
+	if userID == "" {
+		return
+	}
+	for _, e := range entities {
+		s.hub.Publish("user:"+userID, map[string]any{"type": e})
+	}
+}
+
 // نصوص الإشعارات المركزية — مصدر واحد لكل نصوص الإشعارات في الخادم.
 var notifTitles = struct {
 	walletCredit, walletDebit, ratingNew, accountSuspended, accountActivated string

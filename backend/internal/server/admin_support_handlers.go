@@ -142,7 +142,12 @@ func (s *Server) handleTicketResolve(w http.ResponseWriter, r *http.Request) {
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: t.CustomerID, Kind: notifications.KindTicket,
 		Title: notifTitles.ticketResolved, Body: t.Resolution,
-		Entity: "ticket", EntityID: t.ID, Href: "/orders",
+		// **إلى صفحة شكاواه** — حيث يرى حالَها وردَّنا والتعويض.
+		Entity: "ticket", EntityID: t.ID, Href: "/complaints",
 	})
+	// **ورصيدُه يتحدّث في شريطه فوراً** — عُوّض فنظر فوجده كما كان،
+	// **فحدّث الصفحةَ بيده أو ظنّ التعويضَ لم يقع.**
+	s.touchUser(t.CustomerID, "wallet", "ticket")
+	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, t)
 }

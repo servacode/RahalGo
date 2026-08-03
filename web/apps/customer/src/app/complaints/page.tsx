@@ -23,6 +23,8 @@ import {
   LoadingState,
   useLiveData,
   IconSupport,
+  IconReply,
+  IconCheck,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -66,19 +68,29 @@ export default function ComplaintsPage() {
       {rows.length === 0 ? (
         <EmptyState icon={IconSupport} title={C.noneTitle} />
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-4 lg:grid-cols-2">
           {rows.map((t) => (
-            <Card key={t.id} className="space-y-3">
+            /**
+             * **كلُّ عنصرٍ في حقلٍ مستقلّ يُقرأ وحدَه.**
+             *
+             * كانت أسطراً متتابعةً بلا حدود: **العينُ لا تعرف أين ينتهي خبرٌ
+             * ويبدأ آخر** — فيُقرأ التاريخُ جزءاً من السبب، والتعويضُ جزءاً من
+             * الردّ. **وشكوى تُقرأ خطأً تُعاد.**
+             */
+            <Card key={t.id} className="flex flex-col gap-4">
+              {/* ── الترويسة: السببُ · الرقمُ · الحالة ─────────────────── */}
               <div className="flex items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary-light text-primary-dark">
+                  <IconSupport size={20} />
+                </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold leading-tight">
                     {(m.site.complaint.reasons as Record<string, string>)[t.reason] || t.subject}
                   </p>
-                  <p className="mt-0.5 text-xs text-ink-muted" dir="ltr">
-                    {fmtDateTime(t.created_at)}
-                  </p>
+                  <p className="mt-0.5 text-xs text-ink-muted">{C.mineOne}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  {/* **الرقمُ بحقلٍ خاصّ** — هو ما يقوله حين يتّصل يسأل. */}
                   <span
                     dir="ltr"
                     className="rounded-control bg-primary-light px-2.5 py-1 text-sm font-bold tabular-nums text-primary-dark"
@@ -91,34 +103,49 @@ export default function ComplaintsPage() {
                 </div>
               </div>
 
-              {t.order_number !== null && (
-                <p className="text-sm text-ink-muted">
-                  {C.onOrder}{" "}
-                  <span dir="ltr" className="font-medium text-ink">
-                    #{fmtNum(t.order_number)}
-                  </span>
+              {/* ── حقلان مستقلّان: متى · وعلى أيّ طلب ─────────────────── */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-control bg-page/70 px-3 py-2">
+                  <p className="text-2xs text-ink-muted">{C.fieldWhen}</p>
+                  <p className="mt-0.5 text-sm font-medium tabular-nums" dir="ltr">
+                    {fmtDateTime(t.created_at)}
+                  </p>
+                </div>
+                <div className="rounded-control bg-page/70 px-3 py-2">
+                  <p className="text-2xs text-ink-muted">{C.fieldOrder}</p>
+                  <p className="mt-0.5 text-sm font-medium tabular-nums" dir="ltr">
+                    {t.order_number !== null ? `#${fmtNum(t.order_number)}` : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* ── ردُّ المنصة — **حقلٌ مُعنوَنٌ لا سطرٌ عائم** ──────────── */}
+              <div className="flex-1 rounded-control border border-line bg-surface p-3">
+                <p className="mb-1 flex items-center gap-1.5 text-2xs font-bold text-ink-muted">
+                  <IconReply size={13} />
+                  {C.fieldReply}
                 </p>
-              )}
+                {t.resolution ? (
+                  <p className="text-sm">{t.resolution}</p>
+                ) : (
+                  /* **ومفتوحةٌ بلا ردٍّ تقول ذلك** — الصمتُ في الشاشة يُقرأ
+                     إهمالاً، **وجملةٌ واحدةٌ تحوّل الانتظارَ من قلقٍ إلى مهلة.** */
+                  <p className="text-sm text-ink-muted">{C.waiting}</p>
+                )}
+              </div>
 
-              {/* **وكلمةُ المنصة تُقرأ** — وشكوى تُغلق بلا كلمة تُقرأ تجاهلاً،
-                  ولو كان القرارُ في صالحه. */}
-              {t.resolution && (
-                <p className="rounded-control bg-page px-3 py-2 text-sm">{t.resolution}</p>
-              )}
-
+              {/* ── التعويضُ حقلٌ قائمٌ بذاته — **وهو ماله** ─────────────── */}
               {t.compensation > 0 && (
-                <p className="flex items-center justify-between rounded-control bg-success/10 px-3 py-2 text-sm font-medium text-success">
-                  <span>{C.compensated}</span>
-                  <span dir="ltr" className="tabular-nums">
-                    {fmtNum(t.compensation)} {m.common.currency}
+                <div className="flex items-center justify-between rounded-control border border-success/30 bg-success/5 px-3 py-2.5">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-success">
+                    <IconCheck size={15} strokeWidth={3} />
+                    {C.compensated}
                   </span>
-                </p>
-              )}
-
-              {/* **ومفتوحةٌ بلا ردٍّ تقول ذلك** — الصمتُ في الشاشة يُقرأ إهمالاً،
-                  **وجملةٌ واحدةٌ تحوّل الانتظارَ من قلقٍ إلى مهلة.** */}
-              {!t.resolution && !t.resolved_at && (
-                <p className="text-sm text-ink-muted">{C.waiting}</p>
+                  <span dir="ltr" className="text-base font-bold tabular-nums text-success">
+                    {fmtNum(t.compensation)}{" "}
+                    <span className="text-xs font-normal">{m.common.currency}</span>
+                  </span>
+                </div>
               )}
             </Card>
           ))}

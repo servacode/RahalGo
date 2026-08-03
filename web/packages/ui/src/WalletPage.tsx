@@ -18,7 +18,9 @@ import { PageContainer, PageHeader, Card, EmptyState, LoadingState, ListRow, Tab
 import type { TabItem } from "./layout";
 import { StatementSheet, currentMonthRange, type StatementData } from "./Statement";
 import { useLiveData } from "./Notifications";
-import { IconWallet, IconWarning, IconPrint } from "./icons";
+import {
+  IconArrowIn,
+  IconArrowOut, IconWallet, IconWarning, IconPrint } from "./icons";
 
 const m = getMessages(defaultLocale);
 const P = m.shared.payout;
@@ -91,35 +93,32 @@ function errText(err: unknown): string {
  *
  * والمبلغُ أكبرُ ما في البطاقة ولونُه يقول اتجاهه قبل أن تُقرأ إشارتُه.
  */
+/**
+ * **بطاقةُ حركةٍ — كلُّ عنصرٍ في حقلٍ مستقلّ.**
+ *
+ * كانت سطراً واحداً تتزاحم فيه أربعةُ أخبار: النوعُ والطلبُ والتاريخُ ورقمُ
+ * الحركة — **مفصولةً بنقاطٍ صغيرة**. فتُقرأ كتلةً واحدة، **ومن بحث عن تاريخ
+ * قرأ رقمَ حركة.**
+ *
+ * **والمالُ أوّلُ ما يُنظر إليه**: مبلغٌ كبيرٌ بإشارته ولونه، **وسهمٌ يقول
+ * داخلٌ أم خارج** — فاللونُ وحدَه لا يكفي لمن لا يميّزه.
+ */
 function TxCard({ tx }: { tx: Tx }) {
   const positive = tx.amount >= 0;
   const T = m.shared.txCard;
   return (
-    <li className="rounded-card border border-line bg-surface p-3.5 transition-colors hover:border-primary/40">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-bold">{KIND_LABELS[tx.kind] ?? tx.kind}</p>
-          {/* **سببُ الحركة** — الطلبُ أو التذكرة برقمه المقروء. */}
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
-            {tx.order_number != null && (
-              <span className="font-medium text-ink">
-                {T.order} <span dir="ltr">#{fmtNum(tx.order_number)}</span>
-              </span>
-            )}
-            {tx.ticket_number != null && (
-              <span className="font-medium text-ink">
-                {T.ticket} <span dir="ltr">#{fmtNum(tx.ticket_number)}</span>
-              </span>
-            )}
-            <span dir="ltr">
-              {fmtDate(tx.created_at)} · {fmtTime(tx.created_at)}
-            </span>
-            <span dir="ltr" className="opacity-70">
-              {T.txNo}
-              {fmtNum(Number(tx.id))}
-            </span>
-          </p>
-        </div>
+    <li className="rounded-card border border-line bg-surface p-4 transition-colors hover:border-primary/40">
+      {/* ── الترويسة: الاتجاهُ · النوعُ · المبلغ ────────────────────── */}
+      <div className="flex items-center gap-3">
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${
+            positive ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+          }`}
+          aria-hidden
+        >
+          {positive ? <IconArrowIn size={18} /> : <IconArrowOut size={18} />}
+        </span>
+        <p className="min-w-0 flex-1 truncate font-bold">{KIND_LABELS[tx.kind] ?? tx.kind}</p>
         <span
           className={`shrink-0 text-lg font-bold tabular-nums ${
             positive ? "text-success" : "text-danger"
@@ -127,14 +126,41 @@ function TxCard({ tx }: { tx: Tx }) {
           dir="ltr"
         >
           {positive ? "+" : "−"}
-          {fmtNum(Math.abs(tx.amount))}
+          {fmtNum(Math.abs(tx.amount))}{" "}
+          <span className="text-xs font-normal opacity-70">{m.common.currency}</span>
         </span>
       </div>
 
-      {/* **الملاحظةُ سطرٌ قائمٌ بذاته لا ذيلٌ مقتطع**: هي غالباً سببُ حركةٍ
+      {/* ── حقولٌ مُعنوَنة: متى · على ماذا · رقمُ الحركة ──────────────── */}
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="rounded-control bg-page/70 px-2.5 py-1.5">
+          <p className="text-2xs text-ink-muted">{T.when}</p>
+          <p className="mt-0.5 text-xs font-medium tabular-nums" dir="ltr">
+            {fmtDate(tx.created_at)} · {fmtTime(tx.created_at)}
+          </p>
+        </div>
+        <div className="rounded-control bg-page/70 px-2.5 py-1.5">
+          <p className="text-2xs text-ink-muted">{T.about}</p>
+          <p className="mt-0.5 text-xs font-medium tabular-nums" dir="ltr">
+            {tx.order_number != null
+              ? `${T.order} #${fmtNum(tx.order_number)}`
+              : tx.ticket_number != null
+                ? `${T.ticket} #${fmtNum(tx.ticket_number)}`
+                : "—"}
+          </p>
+        </div>
+        <div className="rounded-control bg-page/70 px-2.5 py-1.5">
+          <p className="text-2xs text-ink-muted">{T.txNo}</p>
+          <p className="mt-0.5 text-xs font-medium tabular-nums" dir="ltr">
+            {fmtNum(Number(tx.id))}
+          </p>
+        </div>
+      </div>
+
+      {/* **الملاحظةُ حقلٌ قائمٌ بذاته لا ذيلٌ مقتطع**: هي غالباً سببُ حركةٍ
           يدوية — «تعويض عن طلبٍ فشل» — وقطعُها يُبقي السؤال. */}
       {tx.note && (
-        <p className="mt-2 border-t border-line pt-2 text-xs leading-relaxed text-ink-muted">
+        <p className="mt-2 rounded-control border border-line px-3 py-2 text-xs leading-relaxed text-ink-muted">
           {tx.note}
           {tx.by_name && <span className="opacity-70"> — {tx.by_name}</span>}
         </p>

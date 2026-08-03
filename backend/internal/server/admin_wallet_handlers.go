@@ -78,5 +78,9 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		Title: title, Body: req.Note,
 		Entity: "wallet", Href: "/wallet",
 	})
+	// **والرقمُ في شريطه يتغيّر معه** — إشعارٌ يقول «أُودع لك» ورصيدٌ لا
+	// يتحرّك **يجعل صاحبَه يشكّ في أحدهما.**
+	s.touchUser(chi.URLParam(r, "id"), "wallet")
+	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"balance": balance})
 }

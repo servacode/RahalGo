@@ -153,6 +153,7 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 		Href: "/dashboard/payouts",
 	})
 	s.touch("wallet", "ops")
+	s.touchUser(uid, "wallet")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id})
 }
 
@@ -236,6 +237,8 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 		Body: req.Decision, Entity: "payout", EntityID: id, Href: "/portal/wallet",
 	})
 	s.touch("wallet", "ops")
+	// **وصاحبُ الطلب يرى قرارَه ورصيدَه فوراً** — لا حين يُحدّث الصفحة.
+	s.touchUser(userID, "wallet")
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 

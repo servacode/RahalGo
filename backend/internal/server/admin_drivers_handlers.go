@@ -111,5 +111,6 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 		Entity: "cashbox", Href: "/",
 	})
 	s.touch("wallet", "ops")
+	s.touchUser(driverID, "wallet")
 	httpx.JSON(w, http.StatusOK, map[string]any{"held": held})
 }
