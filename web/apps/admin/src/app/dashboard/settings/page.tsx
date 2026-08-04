@@ -41,6 +41,8 @@ interface Setting {
   value: unknown;
   updated_at: string | null;
   updated_by: string | null;
+  /** **شرطُ الظهور** — مفتاحٌ آخرُ بإحدى قيمٍ بعينها. */
+  show_when?: { key: string; equals: string[] };
 }
 
 const label = (k: string) =>
@@ -49,6 +51,18 @@ const hint = (k: string) =>
   (S.keys as Record<string, { label: string; hint: string }>)[k]?.hint ?? "";
 const unitText = (u?: string) => (u ? (S.units as Record<string, string>)[u] ?? "" : "");
 const choiceText = (c: string) => (S.choices as Record<string, string>)[c] ?? c;
+/**
+ * **ما يعنيه الصفرُ في هذا المفتاح** — إن كان له معنًى خاصّ.
+ *
+ * «أجرة التوصيل = ٠» رقمٌ صحيحٌ لا خطأ، **ومعناه «التوصيل مجّانيّ»** — وهو
+ * قرارٌ كبيرٌ يُتّخذ بحرفٍ واحد. **ورقمٌ لا يقول ما يفعله يُترك على صفره سهواً
+ * ويُكتشف في آخر الشهر.**
+ *
+ * **ولا يُقال إلّا حين يقع**: شرحٌ دائمٌ تحت الحقل زحامٌ، **وشارةٌ تظهر عند
+ * الصفر وحدَه تُقرأ.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
+ */
+const zeroNote = (k: string) =>
+  (S.keys as Record<string, { zero?: string }>)[k]?.zero ?? "";
 /**
  * حالُ مفتاحٍ منطقيّ بالكلمات — **«المنصة تدير الطلبات» لا «مُطفأ».**
  *
@@ -98,10 +112,33 @@ export default function SettingsPage() {
    * أوّلُ ظهورٍ للمجموعة هو موضعُها — **فقسمٌ بلا مفاتيحَ لا يظهر أصلاً**،
    * ولا يُبنى قسمٌ يُملأ على مراحل.
    */
+  /**
+   * **ولا يُعرض مفتاحٌ لا أثرَ له في الوضع الحاليّ.**
+   *
+   * مهلةُ العرض لا تُستعمل في «الأسرع» — **وحقلٌ لا أثرَ له يُضبط ثمّ
+   * يُنتظر أثرُه فلا يقع**، فيُشكّ في الشاشة كلِّها.
+   *
+   * **والشرطُ من الخادم لا من هنا**: الفهرسُ يقوله (`ShowWhen`)، **ولو كُتب
+   * في الواجهة لَافترق عمّا يعمل به المحرّك.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «مهلةُ العرض يجب أن تظهر فقط بوضع التساوي».)
+   */
+  const visible = useCallback(
+    (s: Setting, all: Setting[]) => {
+      if (!s.show_when) return true;
+      const on = all.find((x) => x.key === s.show_when!.key);
+      return !!on && s.show_when.equals.includes(String(on.value));
+    },
+    [],
+  );
+
   const groups = useMemo(() => {
     if (!list) return [];
-    return order.map((g) => ({ g, items: list.filter((s) => s.group === g) }));
-  }, [list, order]);
+    return order.map((g) => ({
+      g,
+      items: list.filter((s) => s.group === g && visible(s, list)),
+    }));
+  }, [list, order, visible]);
 
   if (!list) return <p className="p-6 text-center text-ink-muted">{m.common.loading}</p>;
 
@@ -291,6 +328,9 @@ function SettingRow({
                 {S.sensitive}
               </span>
             </Badge>
+          )}
+          {zeroNote(s.key) && Number(s.value) === 0 && (
+            <Badge variant="warning">{zeroNote(s.key)}</Badge>
           )}
           {saved && (
             <Badge variant="success">

@@ -1343,7 +1343,8 @@
         },
         "delivery.fee": {
           "label": "أجرة التوصيل",
-          "hint": ""
+          "hint": "",
+          "zero": "التوصيل مجّاني"
         },
         "platform.orders_mode": {
           "label": "إدارة الطلبات",

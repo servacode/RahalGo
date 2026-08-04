@@ -104,6 +104,22 @@ type Def struct {
 	Default any `json:"default"`
 	// Sensitive يمسّ المال مباشرةً — تُبرزه اللوحة ويُطلب تأكيدٌ قبل حفظه.
 	Sensitive bool `json:"sensitive,omitempty"`
+	// ShowWhen **لا يظهر هذا المفتاحُ إلّا حين يكون آخرُ بقيمةٍ بعينها.**
+	//
+	// مهلةُ العرض لا تُستعمل في «الأسرع» — **وحقلٌ لا أثرَ له في الوضع
+	// الحاليّ يُضبط ثمّ يُنتظر أثرُه فلا يقع.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤:
+	// «يجب أن تظهر فقط بوضع التساوي».)
+	//
+	// **والشرطُ في الفهرس لا في الشاشة**: الشاشةُ تُخفي والمحرّكُ يقرأ —
+	// **ولو كُتب الشرطُ في الواجهة لَافترق عمّا يعمل به الخادم.**
+	ShowWhen *Condition `json:"show_when,omitempty"`
+}
+
+// Condition شرطُ ظهورِ مفتاحٍ — مفتاحٌ آخرُ بإحدى قيمٍ بعينها.
+type Condition struct {
+	Key string `json:"key"`
+	// Equals القيمُ التي يظهر عندها — **قائمةٌ لا واحدة**: قد يلزم في وضعين.
+	Equals []string `json:"equals"`
 }
 
 // Catalog **فارغٌ عمداً — ولا مفتاحَ فيه.**
@@ -191,7 +207,8 @@ var Catalog = []Def{
 	// **وصفرُها يُبطل الوضعَ لا يُسرّعه**: العرضُ ينقضي في لحظته، فيدور الطلبُ
 	// على السائقين كلِّهم في ثوانٍ **ثمّ يبقى بلا عرض** — فحدُّها الأدنى عشر.
 	{Key: "drivers.offer_timeout_sec", Group: GroupDrivers, Kind: KindInt,
-		Min: 10, Max: 300, Unit: "second", Default: 45},
+		Min: 10, Max: 300, Unit: "second", Default: 45,
+		ShowWhen: &Condition{Key: "drivers.assignment_mode", Equals: []string{"rotation"}}},
 
 	// **أجرةُ التوصيل — رقمٌ مقطوعٌ واحدٌ لكلّ طلب.**
 	//

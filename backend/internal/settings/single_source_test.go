@@ -36,6 +36,9 @@ import (
 // settingsCatalog يكشف الفهرسَ للاختبار الخارجيّ.
 func settingsCatalog() []settings.Def { return settings.Catalog }
 
+// settingsLookup يكشف البحثَ للاختبار الخارجيّ.
+func settingsLookup(k string) (settings.Def, bool) { return settings.Lookup(k) }
+
 // TestNoRawSettingsReads لا استعلامَ يقرأ `app_settings` خارجَ هذه الحزمة.
 func TestNoRawSettingsReads(t *testing.T) {
 	// **والجذرُ يُبنى من موضع الاختبار** — لا مسارٌ مطلقٌ يتبع جهازَ من كتبه.
@@ -151,4 +154,41 @@ func itoa(n int) string {
 		n /= 10
 	}
 	return string(b)
+}
+
+// TestShowWhen_PointsAtRealKeysAndValues **شرطُ الظهور يشير إلى ما هو قائم.**
+//
+// # المسألة
+//
+// `ShowWhen` يقول «لا تُظهرني إلّا إذا كان مفتاحُ كذا يساوي كذا». **وإن كان
+// المفتاحُ المذكورُ غيرَ موجودٍ أو القيمةُ ليست من خياراته، لم يظهر الحقلُ
+// أبداً** — لا في وضعٍ ولا في آخر.
+//
+// **وغيابٌ صامتٌ أسوأُ من خطأ**: يُضبط المفتاحُ في الفهرس ولا يُرى في الشاشة،
+// **فيُظنّ أنّه لم يُضَف** فيُضاف ثانيةً باسمٍ آخر.
+func TestShowWhen_PointsAtRealKeysAndValues(t *testing.T) {
+	for _, d := range settingsCatalog() {
+		if d.ShowWhen == nil {
+			continue
+		}
+		on, ok := settingsLookup(d.ShowWhen.Key)
+		if !ok {
+			t.Errorf("%s مشروطٌ بمفتاحٍ لا وجودَ له: %s", d.Key, d.ShowWhen.Key)
+			continue
+		}
+		if len(d.ShowWhen.Equals) == 0 {
+			t.Errorf("%s مشروطٌ بلا قيمة — فلا يظهر أبداً", d.Key)
+			continue
+		}
+		// **والقيمةُ من خيارات المفتاح المشروط به** — وإلّا لم تتحقّق قطّ.
+		if on.Kind != "choice" {
+			continue
+		}
+		for _, want := range d.ShowWhen.Equals {
+			if !contains(on.Options, want) {
+				t.Errorf("%s مشروطٌ بـ%s=%q وهي ليست من خياراته %v",
+					d.Key, on.Key, want, on.Options)
+			}
+		}
+	}
 }
