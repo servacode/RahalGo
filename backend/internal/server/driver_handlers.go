@@ -49,8 +49,8 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
-		       COALESCE((SELECT (value#>>'{}')::bigint FROM app_settings
-		                 WHERE key = 'drivers.cash_limit'), 500000),
+		       -- **وسقفُ النقد يُمرَّر من المخزن** — لا يُقرأ هنا برقمٍ مكتوب.
+		       $2::bigint,
 		       COALESCE((SELECT balance FROM wallets WHERE user_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered'
 		          AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')),
@@ -58,7 +58,7 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		                 WHERE t.user_id = u.id AND t.kind = 'driver_earning'
 		                   AND t.created_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL)
-		FROM users u WHERE u.id = $1`, uid).
+		FROM users u WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "drivers.cash_limit")).
 		Scan(&out.FullName, &out.OnShift, &out.ShiftStartedAt, &out.CashHeld, &out.CashLimit,
 			&out.Balance, &out.TodayDelivered, &out.TodayEarned, &out.ActiveOrders)
 	if err != nil {
@@ -260,11 +260,11 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT u.on_shift,
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
-		       COALESCE((SELECT (value#>>'{}')::bigint FROM app_settings
-		                 WHERE key = 'drivers.cash_limit'), 500000),
+		       $3::bigint,
 		       COALESCE((SELECT cash_due FROM orders WHERE id = $2), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL)
-		FROM users u WHERE u.id = $1`, uid, orderID).
+		FROM users u WHERE u.id = $1`, uid, orderID,
+		s.settings.GetInt(r.Context(), "drivers.cash_limit")).
 		Scan(&onShift, &held, &limit, &cashDue, &active); err != nil {
 		s.respondErr(w, err)
 		return

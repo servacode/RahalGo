@@ -47,13 +47,34 @@ func (s *Store) Get(ctx context.Context, key string, out any) error {
 	return json.Unmarshal(raw, out)
 }
 
-// GetString يقرأ قيمة نصية ويعيد الاحتياطي عند غيابها — لا يفشل أبداً.
-func (s *Store) GetString(ctx context.Context, key, fallback string) string {
+// GetString يقرأ قيمةً نصيةً ويعيد افتراضَ الفهرس عند غيابها — لا يفشل أبداً.
+//
+// # ولا يأخذ احتياطياً من المنادي
+//
+// كان توقيعُها `GetString(ctx, key, fallback)`، **فكتب كلُّ منادٍ افتراضَه
+// بيده**: «percent» في التسعير، و«queue» في التوزيع، و«manual» في الحظر —
+// **والفهرسُ يحمل الافتراضَ نفسَه في موضعٍ آخر.**
+//
+// **ورقمان لمعنًى واحدٍ يفترقان**: يُغيَّر افتراضُ الفهرس فتبقى الشيفرةُ على
+// القديم، **أو يُنادى المفتاحُ من موضعين باحتياطيّين مختلفين** فيعمل النظامُ
+// بقيمتين لمفتاحٍ واحدٍ بحسب من سأل. **ولا يظهر ذلك في أيّ خطأ.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «الأرقامُ تصدر من مكانٍ مركزيٍّ واحدٍ وليس من
+// أماكنَ متفرّقة».)
+//
+// **ومفتاحٌ ليس في الفهرس يعيد فراغاً** — وهو ما يجب: المفتاحُ المجهول لا
+// افتراضَ له، **واختراعُ قيمةٍ له يُخفي خطأً مطبعيّاً.**
+func (s *Store) GetString(ctx context.Context, key string) string {
 	var v string
-	if err := s.Get(ctx, key, &v); err != nil || v == "" {
-		return fallback
+	if err := s.Get(ctx, key, &v); err == nil && v != "" {
+		return v
 	}
-	return v
+	if def, ok := Lookup(key); ok {
+		if str, ok := def.Default.(string); ok {
+			return str
+		}
+	}
+	return ""
 }
 
 // GetInt يقرأ عدداً ويعيد افتراضي الكتالوج عند غيابه أو فساده — لا يفشل أبداً.
@@ -105,7 +126,7 @@ func (s *Store) Set(ctx context.Context, key string, value any, updatedBy *strin
 	// **الحدُّ الذي لا يعرفه الفهرس** — لأنه يتوقّف على قيمة مفتاحٍ آخر.
 	if key == "pricing.margin_value" {
 		if n, ok := toNumber(value); ok &&
-			s.GetString(ctx, "pricing.margin_mode", "percent") == "percent" &&
+			s.GetString(ctx, "pricing.margin_mode") == "percent" &&
 			n > marginPercentMax {
 			return ErrInvalidValue{Key: key,
 				Reason: fmt.Sprintf("النسبةُ لا تتجاوز %d%%", marginPercentMax)}

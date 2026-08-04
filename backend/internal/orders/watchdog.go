@@ -20,12 +20,17 @@ type Alert struct {
 
 // Alerts يفحص الطلبات العالقة وفق المهل الديناميكية (PLAN §6.1).
 func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
+	// **والمهلُ تُقرأ من المخزن وتُمرَّر معاملاتٍ.**
+	//
+	// كانت ثلاثةَ `COALESCE` داخل الاستعلام **وفيها الأرقامُ مكتوبةً ثانيةً**
+	// (٥ و١٠ و٦٠) — **والفهرسُ يحملها أيضاً.** فيُغيَّر افتراضُ الفهرس ويبقى
+	// الحارسُ ينبّه بمهلة الأمس.
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «الأرقامُ تصدر من مكانٍ مركزيٍّ واحد».)
 	rows, err := s.db.Query(ctx, `
 		WITH t AS (
-			SELECT
-				COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key='orders.accept_timeout_min'), 5)   AS accept_min,
-				COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key='orders.driver_timeout_min'), 10)  AS driver_min,
-				COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key='orders.delivery_timeout_min'), 60) AS delivery_min
+			SELECT $1::float8 AS accept_min, $2::float8 AS driver_min,
+			       $3::float8 AS delivery_min
 		)
 		SELECT o.id, o.number, o.status, m.name, cu.phone,
 			CASE
@@ -50,7 +55,10 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 			 AND COALESCE(o.dispatched_at, o.updated_at) < now() - make_interval(mins => t.driver_min::int)) OR
 			(o.created_at < now() - make_interval(mins => t.delivery_min::int))
 		)
-		ORDER BY o.created_at`)
+		ORDER BY o.created_at`,
+		s.settingInt(ctx, "orders.accept_timeout_min"),
+		s.settingInt(ctx, "orders.driver_timeout_min"),
+		s.settingInt(ctx, "orders.delivery_timeout_min"))
 	if err != nil {
 		return nil, err
 	}

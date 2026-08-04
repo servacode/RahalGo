@@ -54,6 +54,12 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 	}
 	f.svc = orders.NewService(pool, nil, f.wallet, f.cashbox, nil,
 		slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})))
+	// **ومخزنُ الإعدادات يُحقَن كما يُحقَن في الإقلاع** (`server.go`).
+	//
+	// كانت العُدّةُ تبنيه بلا مخزن **وتمرّ الاختبارات** — لأنّ قواعدَ المال
+	// كانت تُقرأ بـSQL خامٍّ يتجاوزه. **فكانت تفحص مساراً لا وجودَ له في
+	// الإنتاج.** ولمّا صار المصدرُ واحداً ظهر الفرق.
+	f.svc.SetSettings(settings.NewStore(pool))
 
 	// العتبة = 1 تعني «بلا عتبة»: هذه الاختبارات تفحص التسوية لا التفعيل، وطلبٌ
 	// واحد يجب أن يُنتج عمولة فيها. واختبارات التفعيل ترفعها صراحةً.

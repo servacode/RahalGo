@@ -37,7 +37,7 @@ func (s *Service) treasuryID(ctx context.Context) string {
 	if s.settings == nil {
 		return ""
 	}
-	return s.settings.GetString(ctx, "platform.treasury_user_id", "")
+	return s.settings.GetString(ctx, "platform.treasury_user_id")
 }
 
 // creditTreasury يُسوّي نصيبَ المنصة من الطلب — **بالفرق لا بالمجموع**.

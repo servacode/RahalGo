@@ -206,7 +206,7 @@ func (s *Server) handlePublicInvite(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	code := s.settings.GetString(r.Context(), "platform.invite_code", "RAHALGO")
+	code := s.settings.GetString(r.Context(), "platform.invite_code")
 	httpx.JSON(w, http.StatusOK, map[string]any{"code": code, "by": "platform"})
 }
 

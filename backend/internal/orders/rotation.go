@@ -36,6 +36,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
 // AssignmentMode نمطُ التوزيع الحاليّ.
@@ -43,17 +45,28 @@ func (s *Service) AssignmentMode(ctx context.Context) string {
 	if s.settings == nil {
 		return "queue"
 	}
-	return s.settings.GetString(ctx, "drivers.assignment_mode", "queue")
+	return s.settings.GetString(ctx, "drivers.assignment_mode")
 }
 
 func (s *Service) offerTimeout(ctx context.Context) time.Duration {
-	sec := int64(45)
-	if s.settings != nil {
-		if v := s.settings.GetInt(ctx, "drivers.offer_timeout_sec"); v > 0 {
-			sec = v
-		}
+	return time.Duration(s.settingInt(ctx, "drivers.offer_timeout_sec")) * time.Second
+}
+
+// settingInt رقمٌ من الإعدادات — **ولا احتياطيَّ مكتوبٌ هنا.**
+//
+// كان كلُّ قارئٍ يكتب رقمَه: `sec := 45` و`limit := 500000` و`maxActive := 2`
+// — **والفهرسُ يحمل الأرقامَ نفسَها.** فيُغيَّر افتراضُ الفهرس ويبقى القارئُ
+// على القديم، **ولا يظهر ذلك إلّا حين يُمحى المفتاحُ من القاعدة** فيعمل
+// موضعٌ برقمٍ وموضعٌ بآخر.
+//
+// **و`GetInt` تقرأ افتراضَ الفهرس أصلاً** — فالحارسُ هنا للمخزن الغائب وحدَه.
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «الأرقامُ تصدر من مكانٍ مركزيٍّ واحد».)
+func (s *Service) settingInt(ctx context.Context, key string) int64 {
+	if s.settings == nil {
+		return settings.Default(key)
 	}
-	return time.Duration(sec) * time.Second
+	return s.settings.GetInt(ctx, key)
 }
 
 // OfferNext يعرض الطلبَ على صاحب الدور، أو يُفرّغ العرضَ إن لم يبقَ أحد.
@@ -98,16 +111,8 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 		return nil
 	}
 
-	limit := int64(500000)
-	maxActive := int64(2)
-	if s.settings != nil {
-		if v := s.settings.GetInt(ctx, "drivers.cash_limit"); v > 0 {
-			limit = v
-		}
-		if v := s.settings.GetInt(ctx, "drivers.max_active_orders"); v > 0 {
-			maxActive = v
-		}
-	}
+	limit := s.settingInt(ctx, "drivers.cash_limit")
+	maxActive := s.settingInt(ctx, "drivers.max_active_orders")
 
 	// **الأهليةُ تُفحص في الاستعلام لا بعده**: جلبُ الجميع ثم غربلتُهم في Go
 	// يعني قراءةَ كل سائقٍ في المنصة لاختيار واحد.
@@ -296,12 +301,7 @@ func (s *Service) NoEligibleReason(ctx context.Context, orderID string) string {
 		return ""
 	}
 
-	limit := int64(500000)
-	if s.settings != nil {
-		if v := s.settings.GetInt(ctx, "drivers.cash_limit"); v > 0 {
-			limit = v
-		}
-	}
+	limit := s.settingInt(ctx, "drivers.cash_limit")
 	if cashDue > limit {
 		// **ويُقال بالرقمين لا بالحكم**: «فوق السقف» تُغلق الباب، **و«٢٬٠٦١٬٠٠٠
 		// والسقفُ ٥٠٠٬٠٠٠» تقول أين المخرج** — يُرفع السقفُ أو يُقسَّم الطلب.

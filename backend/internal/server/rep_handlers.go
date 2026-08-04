@@ -60,12 +60,12 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		                            AND EXISTS (SELECT 1 FROM orders o4 WHERE o4.id::text = t.ref)))
 		                   AND date_trunc('month', t.created_at AT TIME ZONE 'Asia/Damascus')
 		                     = date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')), 0),
-		       COALESCE((SELECT (value#>>'{}')::int FROM app_settings
-		                 WHERE key = 'sales.monthly_target'), 5),
+		       -- **وهدفُ الشهر يُمرَّر من المخزن** — لا يُقرأ هنا برقمٍ مكتوب.
+		       $2::int,
 		       (SELECT count(*) FROM merchant_leads l
 		        WHERE l.sales_rep_user_id = u.id AND l.status = 'new'),
 		       u.whatsapp_verified_at IS NOT NULL
-		FROM users u WHERE u.id = $1`, uid).
+		FROM users u WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "sales.monthly_target")).
 		Scan(&out.InviteCode, &out.FullName, &out.Merchants, &out.DeliveredOrders,
 			&out.TotalCommissions, &out.Balance,
 			&out.MonthMerchants, &out.MonthDelivered, &out.MonthCommissions,

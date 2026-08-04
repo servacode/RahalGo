@@ -77,10 +77,14 @@ func run(logger *slog.Logger) error {
 	case "dev":
 		otpSender = &notify.DevSender{Logger: logger}
 	case "whatsapp":
-		const defaultTemplate = "رمز التحقق الخاص بك في رحال غو هو: {code}\n\nلا تشارك هذا الرمز مع أي شخص."
+		// **والقالبُ من الفهرس لا من هنا.**
+		//
+		// كان مكتوباً في هذا الملفّ **وفي الفهرس** — نصّان لرسالةٍ واحدة.
+		// **فيُصحَّح أحدُهما ويبقى الآخرُ** يُرسَل لمن لم يُخزَّن له قالبٌ بعد،
+		// **ولا يظهر الفرقُ إلّا في هاتف زبون.**
 		wa, err := notify.NewWhatsAppSender(ctx, cfg.DatabaseURL, logger,
 			func(ctx context.Context, code string) string {
-				tpl := settingsStore.GetString(ctx, "whatsapp.otp_template", defaultTemplate)
+				tpl := settingsStore.GetString(ctx, "whatsapp.otp_template")
 				return strings.ReplaceAll(tpl, "{code}", code)
 			})
 		if err != nil {

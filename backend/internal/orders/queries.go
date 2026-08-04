@@ -210,9 +210,9 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	// أجرُ السائق: **من الدالّة نفسها التي تقيّده في الدفتر** — فلا رقمان
 	// لشيءٍ واحد. وغرفةُ العمليات تحتاجه قبل الإسناد لا بعده.
 	//
-	// وفشلُ قراءته لا يُسقط القائمة: يبقى صفراً وتظهر بقيّةُ الطلب.
+	// وبلا مخزنٍ يبقى صفراً وتظهر بقيّةُ الطلب.
 	for i := range orders {
-		orders[i].DriverFee, _ = driverShare(ctx, s.db, orders[i].DeliveryFee)
+		orders[i].DriverFee = s.driverShare(ctx, orders[i].DeliveryFee)
 	}
 	return &OrderPage{Orders: orders, Total: total, Page: f.Page, PerPage: f.PerPage}, nil
 }

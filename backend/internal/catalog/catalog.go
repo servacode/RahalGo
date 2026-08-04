@@ -305,10 +305,12 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 		        -- وقت التحضير الافتراضي من اللوحة لا من افتراض العمود: كان ٢٠
 		        -- مكتوباً في الترحيل 0035، يرثه كل متجرٍ جديد ولا يملك المالك
 		        -- تغييره لمن يأتي بعده.
-		        COALESCE((SELECT (value#>>'{}')::int FROM app_settings
-		                  WHERE key = 'merchants.default_prep_minutes'), 20))
+		        -- **ومن المخزن لا برقمٍ مكتوبٍ هنا** — الافتراضُ في الفهرس وحدَه.
+		        $12)
 		RETURNING id`,
-		*in.Name, in.Description, *in.CategoryID, in.Phone, in.AddressText, ownerID, repID, in.Lat, in.Lng, in.LogoMediaID, in.CommissionPct).Scan(&id)
+		*in.Name, in.Description, *in.CategoryID, in.Phone, in.AddressText, ownerID,
+		repID, in.Lat, in.Lng, in.LogoMediaID, in.CommissionPct,
+		s.settings.GetInt(ctx, "merchants.default_prep_minutes")).Scan(&id)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}

@@ -194,7 +194,7 @@ func (s *Service) enforceMerchantViolations(ctx context.Context, orderID string)
 
 	// **الإشارةُ تُرفع في الوضعين** — الفرقُ في اليد لا في العين. ومن اختار
 	// «يدويّ» يريد أن يعلم، لا أن يبقى في العمى.
-	auto := s.settings.GetString(ctx, "merchants.cancel_ban_mode", "manual") == "auto"
+	auto := s.settings.GetString(ctx, "merchants.cancel_ban_mode") == "auto"
 	if s.notify != nil {
 		var name string
 		_ = s.db.QueryRow(ctx, `SELECT name FROM merchants WHERE id = $1`,

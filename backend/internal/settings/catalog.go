@@ -74,6 +74,22 @@ var Groups = []Group{
 	GroupCustomers, GroupPayouts, GroupSupport, GroupSecurity,
 }
 
+// Default افتراضُ مفتاحٍ رقميّ — **لمن لا مخزنَ لديه.**
+//
+// **ولا يُكتب الرقمُ في القارئ**: خدمةٌ تُبنى قبل حقن المخزن (اختبارٌ أو
+// إقلاعٌ نصفُ مهيَّأ) تحتاج رقماً، **وكتابتُه عندها تُنشئ نسخةً ثانيةً من
+// الافتراض** تفترق عن الفهرس بلا صوت.
+//
+// **ومفتاحٌ مجهولٌ يعيد صفراً** — لا يُخترع له رقم.
+func Default(key string) int64 {
+	if def, ok := Lookup(key); ok {
+		if n, ok := toNumber(def.Default); ok {
+			return int64(n)
+		}
+	}
+	return 0
+}
+
 // Def تعريف مفتاح واحد.
 type Def struct {
 	Key     string   `json:"key"`

@@ -106,7 +106,7 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"banners": active, "categories": categories, "merchants": merchants,
 		"sections":      sections,
-		"support_phone": s.settings.GetString(r.Context(), "platform.support_phone", ""),
+		"support_phone": s.settings.GetString(r.Context(), "platform.support_phone"),
 	})
 }
 

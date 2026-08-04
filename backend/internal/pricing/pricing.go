@@ -46,7 +46,11 @@ type MarginRule struct {
 // Store ما يلزم لقراءة المفاتيح — واجهةٌ ضيّقة **كي لا تجرّ الحزمةُ إعداداتٍ
 // كاملةً خلفها**، ولتُختبَر بلا قاعدة بيانات.
 type Store interface {
-	GetString(ctx context.Context, key, fallback string) string
+	// GetString **بلا احتياطيٍّ من المنادي** — الافتراضُ في الفهرس وحدَه.
+	//
+	// كان يأخذه، **فكتب كلُّ منادٍ افتراضَه بيده** ووُجد الافتراضُ نفسُه في
+	// موضعين. **ورقمان لمعنًى واحدٍ يفترقان.**
+	GetString(ctx context.Context, key string) string
 	GetInt(ctx context.Context, key string) int64
 }
 
@@ -59,7 +63,7 @@ func RuleFrom(ctx context.Context, st Store) MarginRule {
 		return MarginRule{Mode: "percent"}
 	}
 	return MarginRule{
-		Mode:     st.GetString(ctx, "pricing.margin_mode", "percent"),
+		Mode:     st.GetString(ctx, "pricing.margin_mode"),
 		Value:    st.GetInt(ctx, "pricing.margin_value"),
 		Rounding: st.GetInt(ctx, "pricing.rounding"),
 	}
@@ -155,12 +159,16 @@ func (a Amount) Of(base int64) int64 {
 // **وهو ما يجعل التغييرَ يسري فوراً**: لا لقطةَ في عمودٍ ولا قيمةَ تُحمل مع
 // الخدمة عند الإقلاع. **ومفتاحٌ يُقرأ مرّةً عند البدء يجعل المالكَ يغيّر
 // الرقمَ ويرى القديمَ يعمل** — فيغيّره ثانيةً وثالثة.
-func amountFrom(ctx context.Context, st Store, modeKey, valueKey string, fallback int64) Amount {
+func amountFrom(ctx context.Context, st Store, modeKey, valueKey string) Amount {
+	// **وبلا مخزنٍ لا مال.**
+	//
+	// **ورقمٌ يُخترع هنا يخترع ديناً**: خدمةٌ تُبنى بلا مخزن (اختبارٌ أو إقلاعٌ
+	// نصفُ مهيَّأ) تقتطع عمولةً لم يقرّرها أحد، **ولا يظهر ذلك إلّا في كشف حساب.**
 	if st == nil {
-		return Amount{Mode: "percent", Value: fallback}
+		return Amount{Mode: "percent"}
 	}
 	return Amount{
-		Mode:  st.GetString(ctx, modeKey, "percent"),
+		Mode:  st.GetString(ctx, modeKey),
 		Value: st.GetInt(ctx, valueKey),
 	}
 }
@@ -174,12 +182,12 @@ func MerchantCommission(ctx context.Context, st Store, override *int64) Amount {
 	if override != nil {
 		return Amount{Mode: "percent", Value: *override}
 	}
-	return amountFrom(ctx, st, "merchants.commission_mode", "merchants.commission_value", 10)
+	return amountFrom(ctx, st, "merchants.commission_mode", "merchants.commission_value")
 }
 
 // RepCommission عمولةُ المندوب من عمولة المنصة — **حصّةٌ من حصّتنا لا من البيع.**
 func RepCommission(ctx context.Context, st Store) Amount {
-	return amountFrom(ctx, st, "sales.commission_mode", "sales.commission_value", 10)
+	return amountFrom(ctx, st, "sales.commission_mode", "sales.commission_value")
 }
 
 // ── أجرةُ التوصيل — ثلاثةُ أنماطٍ ومصدرٌ واحد ──────────────────────────────
@@ -219,7 +227,7 @@ func DeliveryFrom(ctx context.Context, st Store) DeliveryRule {
 		return DeliveryRule{Mode: DeliveryZone}
 	}
 	return DeliveryRule{
-		Mode:     st.GetString(ctx, "delivery.fee_mode", DeliveryZone),
+		Mode:     st.GetString(ctx, "delivery.fee_mode"),
 		Flat:     st.GetInt(ctx, "delivery.flat_fee"),
 		Base:     st.GetInt(ctx, "delivery.base_fee"),
 		PerKm:    st.GetInt(ctx, "delivery.per_km"),

@@ -241,12 +241,11 @@ func TestAccept_RejectsWhenCashLimitWouldBreak(t *testing.T) {
 	driverID := f.drivers[0]
 	f.onShift(t, driverID, true)
 
-	var limit int64
-	if err := f.pool.QueryRow(context.Background(),
-		`SELECT COALESCE((SELECT (value#>>'{}')::bigint FROM app_settings
-		                  WHERE key = 'drivers.cash_limit'), 500000)`).Scan(&limit); err != nil {
-		t.Fatalf("تعذّرت قراءة السقف: %v", err)
-	}
+	// **والسقفُ من المخزن لا من استعلامٍ يكتب افتراضَه بيده.**
+	//
+	// اختبارٌ يحمل نسخةً من الافتراض **يمرّ وهو يفحص رقماً غيرَ الذي يعمل به
+	// النظام** — فيُصدَّق وهو يكذب.
+	limit := f.srv.settings.GetInt(context.Background(), "drivers.cash_limit")
 
 	// بحوزته ما يملأ السقف إلا قليلاً، والطلب أكبر من ذلك القليل
 	held := limit - 5000

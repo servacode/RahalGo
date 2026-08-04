@@ -15,11 +15,11 @@ import (
 // fakeStore مخزنُ إعداداتٍ في الذاكرة — **يُغيَّر بين نداءين ليُثبَت السريان.**
 type fakeStore map[string]any
 
-func (f fakeStore) GetString(_ context.Context, key, fallback string) string {
+func (f fakeStore) GetString(_ context.Context, key string) string {
 	if v, ok := f[key].(string); ok {
 		return v
 	}
-	return fallback
+	return ""
 }
 func (f fakeStore) GetInt(_ context.Context, key string) int64 {
 	if v, ok := f[key].(int64); ok {

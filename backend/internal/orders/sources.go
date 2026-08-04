@@ -115,24 +115,12 @@ func (s *Service) SourcesOf(ctx context.Context, items []ItemInput) (*Sources, e
 
 // maxSources سقفُ المصادر — **في الإعدادات لا في الشيفرة** (قرار المالك).
 func (s *Service) maxSources(ctx context.Context) int {
-	if s.settings == nil {
-		return 2
-	}
-	if v := s.settings.GetInt(ctx, "orders.max_sources"); v > 0 {
-		return int(v)
-	}
-	return 2
+	return int(s.settingInt(ctx, "orders.max_sources"))
 }
 
 // sourceProximityM نصفُ قطر القرب بالأمتار.
 func (s *Service) sourceProximityM(ctx context.Context) int64 {
-	if s.settings == nil {
-		return 1500
-	}
-	if v := s.settings.GetInt(ctx, "orders.source_proximity_m"); v > 0 {
-		return v
-	}
-	return 1500
+	return s.settingInt(ctx, "orders.source_proximity_m")
 }
 
 // extraSourceFee رسمُ المصدر الإضافيّ — **ويُضاف مرّةً لكلّ مصدرٍ بعد الأوّل.**

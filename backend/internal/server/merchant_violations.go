@@ -61,7 +61,7 @@ func (s *Server) handleMerchantViolations(w http.ResponseWriter, r *http.Request
 		"items":      list,
 		"limit":      s.settings.GetInt(r.Context(), "merchants.cancel_ban_count"),
 		"days":       s.settings.GetInt(r.Context(), "merchants.cancel_ban_days"),
-		"mode":       s.settings.GetString(r.Context(), "merchants.cancel_ban_mode", "manual"),
+		"mode":       s.settings.GetString(r.Context(), "merchants.cancel_ban_mode"),
 	})
 }
 

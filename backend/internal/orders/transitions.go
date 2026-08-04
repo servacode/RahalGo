@@ -903,35 +903,34 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 // ومفتاحان لا مفتاح: النسبة والمبلغ المقطوع لكلٍّ منهما مداه. ومفتاحٌ واحد
 // يعني معنيين لا يمكن حراسة مداه — كان يقبل ٢٠٠ لأنها مبلغٌ معقول، وهي نسبةٌ
 // تجعل المنصة تدفع ضعف ما قبضت.
-func driverShare(ctx context.Context, q wallet.Querier, deliveryFee int64) (int64, error) {
-	var mode string
-	var pct, fixed float64
-	if err := q.QueryRow(ctx, `
-		SELECT COALESCE((SELECT value#>>'{}' FROM app_settings WHERE key = 'drivers.share_mode'), 'percent'),
-		       COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key = 'drivers.share_percent'), 70),
-		       COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings WHERE key = 'drivers.share_fixed'), 5000)`).
-		Scan(&mode, &pct, &fixed); err != nil {
-		return 0, err
+func (s *Service) driverShare(ctx context.Context, deliveryFee int64) int64 {
+	// **ومن المخزن لا من SQL خام.**
+	//
+	// كان استعلاماً يقرأ `app_settings` بيده بثلاثة `COALESCE`، **وفيه
+	// الأرقامُ مكتوبةً ثانيةً**: `'percent'` و`70` و`5000` — **والفهرسُ يحملها
+	// أيضاً.** فيُغيَّر افتراضُ الفهرس ويبقى هذا على القديم، **ويُدفع للسائق
+	// غيرُ ما يُعرض له.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «الأرقامُ تصدر من مكانٍ مركزيٍّ واحد».)
+	if s.settings == nil {
+		return 0
 	}
-	if mode == "fixed" {
-		return int64(fixed), nil
+	if s.settings.GetString(ctx, "drivers.share_mode") == "fixed" {
+		return s.settings.GetInt(ctx, "drivers.share_fixed")
 	}
 	// percent — من رسم التوصيل لا من قيمة الطلب: أجرُ توصيلٍ لا حصةٌ من بيع
-	return int64(float64(deliveryFee) * pct / 100), nil
+	return deliveryFee * s.settings.GetInt(ctx, "drivers.share_percent") / 100
 }
 
 func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement) error {
 	if in.driverID == nil {
 		return nil
 	}
-	share, err := driverShare(ctx, q, in.deliveryFee)
-	if err != nil {
-		return err
-	}
+	share := s.driverShare(ctx, in.deliveryFee)
 	if share <= 0 {
 		return nil
 	}
-	_, err = s.wallet.ApplyTx(ctx, q, *in.driverID, share, "driver_earning",
+	_, err := s.wallet.ApplyTx(ctx, q, *in.driverID, share, "driver_earning",
 		in.orderID, "أجر توصيل طلب مُسلَّم", &in.actorID)
 	return err
 }
@@ -945,16 +944,12 @@ func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement
 // والعدّ **يشمل الطلب الحالي**: هو طلبٌ مُسلَّم فعلاً، فاستثناؤه يؤخّر التفعيل
 // طلباً بلا سبب.
 func (s *Service) merchantActivated(ctx context.Context, q wallet.Querier, orderID string) (bool, error) {
-	var threshold int
-	if err := q.QueryRow(ctx, `
-		SELECT COALESCE((SELECT (value#>>'{}')::int FROM app_settings
-		                 WHERE key = 'sales.activation_orders'), 5)`).Scan(&threshold); err != nil {
-		return false, err
-	}
+	// **والعتبةُ من المخزن لا من SQL خام** — الافتراضُ في الفهرس وحدَه.
+	threshold := s.settingInt(ctx, "sales.activation_orders")
 	if threshold <= 1 {
 		return true, nil
 	}
-	var delivered int
+	var delivered int64
 	if err := q.QueryRow(ctx, `
 		SELECT count(*)
 		FROM orders o

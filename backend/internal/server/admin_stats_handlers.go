@@ -61,13 +61,10 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 			CROSS JOIN day
 			WHERE t.kind = 'driver_earning' AND o2.delivered_at >= day.start
 		),
+		-- **والمهلُ تُمرَّر معاملاتٍ من المخزن** — لا تُقرأ هنا بأرقامٍ
+		-- مكتوبةٍ ثانيةً يحملها الفهرسُ أيضاً. (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
 		lim AS (
-			SELECT COALESCE((SELECT (value#>>'{}')::int FROM app_settings
-			                 WHERE key='orders.accept_timeout_min'), 5) AS accept_min,
-			       COALESCE((SELECT (value#>>'{}')::int FROM app_settings
-			                 WHERE key='orders.driver_timeout_min'), 10) AS driver_min,
-			       COALESCE((SELECT (value#>>'{}')::int FROM app_settings
-			                 WHERE key='orders.delivery_timeout_min'), 60) AS delivery_min
+			SELECT $1::int AS accept_min, $2::int AS driver_min, $3::int AS delivery_min
 		)
 		SELECT
 			(SELECT count(*) FROM orders WHERE closed_at IS NULL),
@@ -102,7 +99,10 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 			(SELECT count(*) FROM merchants),
 			(SELECT count(*) FROM menu_items),
 			(SELECT count(*) FROM delivery_zones WHERE active),
-			(SELECT count(*) FROM promo_codes WHERE active)`).
+			(SELECT count(*) FROM promo_codes WHERE active)`,
+		s.settings.GetInt(r.Context(), "orders.accept_timeout_min"),
+		s.settings.GetInt(r.Context(), "orders.driver_timeout_min"),
+		s.settings.GetInt(r.Context(), "orders.delivery_timeout_min")).
 		Scan(&st.OrdersOpen, &st.OrdersStuck, &st.DriversOnShift, &st.DriversBusy,
 			&st.MerchantsOpen, &st.PayoutsPending, &st.TicketsOpen,
 			&st.OrdersToday, &st.DeliveredToday, &st.CancelledToday,
