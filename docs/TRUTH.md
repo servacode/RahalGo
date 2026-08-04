@@ -129,17 +129,17 @@
 | السائق عند المتجر `at_pickup` | في الطابور `dispatching` | العمليات · المالك · السائق |
 | السائق عند المتجر `at_pickup` | ملغى `cancelled` | المالك |
 | استلم السائق `picked_up` | في الطريق `on_the_way` | السائق |
-| استلم السائق `picked_up` | في الطابور `dispatching` | **لا أحد** |
+| استلم السائق `picked_up` | في الطابور `dispatching` | العمليات · المالك |
 | استلم السائق `picked_up` | تعذّر التسليم `failed` | **لا أحد** |
-| استلم السائق `picked_up` | ملغى `cancelled` | **لا أحد** |
+| استلم السائق `picked_up` | ملغى `cancelled` | المالك |
 | في الطريق `on_the_way` | عند الزبون `at_dropoff` | السائق |
-| في الطريق `on_the_way` | في الطابور `dispatching` | **لا أحد** |
+| في الطريق `on_the_way` | في الطابور `dispatching` | العمليات · المالك |
 | في الطريق `on_the_way` | تعذّر التسليم `failed` | **لا أحد** |
-| في الطريق `on_the_way` | ملغى `cancelled` | **لا أحد** |
+| في الطريق `on_the_way` | ملغى `cancelled` | المالك |
 | عند الزبون `at_dropoff` | سُلّم `delivered` | السائق |
 | عند الزبون `at_dropoff` | تعذّر التسليم `failed` | السائق |
-| عند الزبون `at_dropoff` | في الطابور `dispatching` | **لا أحد** |
-| عند الزبون `at_dropoff` | ملغى `cancelled` | **لا أحد** |
+| عند الزبون `at_dropoff` | في الطابور `dispatching` | العمليات · المالك |
+| عند الزبون `at_dropoff` | ملغى `cancelled` | المالك |
 | سُلّم `delivered` | مُسترَدّ `refunded` | المالك |
 <!-- /gen:platform-managed -->
 
@@ -386,6 +386,7 @@
 <!-- gen:settings -->
 | المفتاح | المجموعة | النوع | الافتراضيّ |
 |---|---|---|---|
+| `platform.orders_mode` | المنصة | choice | `platform` |
 <!-- /gen:settings -->
 
 ---

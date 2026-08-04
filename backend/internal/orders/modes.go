@@ -46,7 +46,10 @@ package orders
 //
 // فالأدمن — وهو المالك — يبقى قادراً، **وكلُّ فعلٍ له مُسجَّل**.
 
-import "slices"
+import (
+	"context"
+	"slices"
+)
 
 // rolesUnderMode يُنقّي أدوارَ الفاعل ممّا يمنعه الوضعُ الحاليّ.
 //
@@ -54,6 +57,7 @@ import "slices"
 // آخر يخوّله يمرّ به — **ولا يُحرَم أحدٌ من حقٍّ يملكه بسببٍ يخصّ حقّاً آخر**.
 //
 // selfManage: أالمتجرُ يدير طلباته؟ · driverHolds: أفي يد سائقٍ الآن؟
+
 func rolesUnderMode(selfManage bool, from, to string, roles []string, driverHolds bool) []string {
 	// **والأدمنُ فوق السلطة لا فوق العِلم.**
 	//
@@ -165,7 +169,20 @@ func rolesUnderMode(selfManage bool, from, to string, roles []string, driverHold
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لا يجوز تدخّلُ المنصة — بمجرّد أن السائق
 	// استلم الطلب هي تراقب فقط عمليةَ التسليم، لم يعد بإمكانها التحكّم بشيء».)
-	if goodsWithDriver[from] {
+	// **والحدُّ على ما يُعلَن لا على كلّ فعل.**
+	//
+	// كان الشرطُ `goodsWithDriver[from]` وحدَه — **فسقط معه مخرجُ الطلب
+	// العالق**: سائقٌ اختفى بطلبٍ في يده كان يترك الطلبَ إلى الأبد، لا يُلغى
+	// ولا يُفشل ولا يُسنَد لغيره. **وأمسكه `TestPostPickupHasExit`.**
+	//
+	// **والفرقُ بين الفعلين جوهريّ**:
+	//
+	//	«تمّ التسليم»  ←  إعلانُ واقعةٍ لا يعلمها من في المكتب
+	//	«حرّر الطلب»   ←  التخلّي عن إسنادٍ لم يُثمر — وهو قرارُ منصةٍ محض
+	//
+	// **والأوّلُ يحرّك المال** على قولٍ لا شاهدَ له، **والثاني يعيد الطلبَ إلى
+	// الطابور ولا يقيّد قرشاً.**
+	if goodsWithDriver[from] && driverOnly[to] {
 		roles = drop("ops")
 		roles = drop("admin")
 	}
@@ -187,7 +204,36 @@ func rolesUnderMode(selfManage bool, from, to string, roles []string, driverHold
 	return roles
 }
 
+// MerchantsSelfManage **هل المتاجرُ تدير طلباتِها بنفسها؟**
+//
+// # ولماذا دالّةٌ واحدة
+//
+// كان المفتاحُ يُقرأ في أربعة مواضع: مرّتين هنا ومرّتين في الخادم. **وقاعدةٌ
+// تُقرأ في أربعةٍ تُنسى في الخامس** — ولمّا صار المفتاحُ وضعين لا «نعم/لا»
+// لزم تعديلُ أربعةٍ، **ومن نسي واحداً جعل شاشةً تعمل بوضعٍ ومحرّكاً بآخر.**
+//
+// # وبلا مخزنٍ وضعُ المنصة
+//
+// **وهو أقلُّ الوضعين مفاجأةً**: المكتبُ يقبل ويحوّل، فلا يبقى طلبٌ ينتظر
+// متجراً لا يعلم أنّ عليه أن ينظر. **وافتراضٌ يفتح بوابةً لم تُفتح يترك
+// الزبونَ ينتظر من لا يعرف.**
+func (s *Service) MerchantsSelfManage(ctx context.Context) bool {
+	if s.settings == nil {
+		return false
+	}
+	return s.settings.GetString(ctx, "platform.orders_mode") == ModeMerchants
+}
+
+// أوضاعُ إدارة الطلبات.
+const (
+	// ModePlatform المكتبُ يقبل ويحوّل، والمتجرُ يُبلَّغ برسالة.
+	ModePlatform = "platform"
+	// ModeMerchants المتجرُ يفتح بوابتَه ويقبل بنفسه.
+	ModeMerchants = "merchants"
+)
+
 // driverOnly مراحلُ الطريق — لا يملكها إلّا من يسير فيها.
+
 var driverOnly = map[string]bool{
 	StAtPickup: true, StPickedUp: true, StOnTheWay: true,
 	StAtDropoff: true, StDelivered: true, StFailed: true,

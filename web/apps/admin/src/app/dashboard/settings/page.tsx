@@ -301,7 +301,18 @@ function SettingRow({
             </Badge>
           )}
         </div>
-        <p className="mb-3 text-xs leading-relaxed text-ink-muted">{hint(s.key)}</p>
+        {/* **وشرحٌ فارغٌ لا يترك مكانَه.**
+
+            كان السطرُ يُرسَم دائماً — **فمفتاحٌ بلا شرحٍ يخلّف فراغاً بين
+            اسمه وزرّه** يُقرأ نقصاً: أين الجملةُ التي كانت هنا؟
+
+            **ولا كلَّ مفتاحٍ يحتاج شرحاً**: «وضع المنصة / وضع المتاجر» يقول
+            نفسَه، **وجملةٌ تشرح ما لا يحتاج شرحاً تُعلّم العينَ أن تتخطّى
+            الشروحَ كلَّها.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «بدون أيّ شرحٍ
+            وأشياءَ مزعجة، فقط زرٌّ ذكيّ».) */}
+        {hint(s.key) && (
+          <p className="mb-3 text-xs leading-relaxed text-ink-muted">{hint(s.key)}</p>
+        )}
 
         <div className="flex flex-wrap items-end gap-2">
           {s.kind === "bool" ? (
@@ -417,14 +428,17 @@ function SettingRow({
 
         {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
 
-        {/* من غيّره ومتى: إعدادٌ يحكم المال يجب أن يُعرف صاحبُ قراره */}
-        <p className="mt-2 text-xs text-ink-muted">
-          {s.updated_at
-            ? S.lastChange
-                .replace("{who}", s.updated_by ?? m.admin.audit.system)
-                .replace("{when}", fmtDateTime(s.updated_at))
-            : S.neverChanged}
-        </p>
+        {/* **من غيّره ومتى** — إعدادٌ يحكم المال يجب أن يُعرف صاحبُ قراره.
+
+            **ولا يُقال «لم يُغيَّر» تحت كلّ مفتاح**: سطرٌ يتكرّر بلا خبرٍ
+            تحت كلّ بطاقةٍ زحامٌ، **ويُخفي السطرَ الذي يحمل خبراً حين يظهر.** */}
+        {s.updated_at && (
+          <p className="mt-2 text-xs text-ink-muted">
+            {S.lastChange
+              .replace("{who}", s.updated_by ?? m.admin.audit.system)
+              .replace("{when}", fmtDateTime(s.updated_at))}
+          </p>
+        )}
 
         {/* **وما يُحفظ باللمس يقول ذلك قبل أن يُلمس.**
 

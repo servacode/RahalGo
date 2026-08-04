@@ -70,7 +70,7 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 	// فيُمرَّر مع متاجره — **الجوابُ مع السؤال، لا نداءٌ ثانٍ لسطرٍ واحد**.
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"stores":             out,
-		"self_manage_orders": s.settings.GetBool(r.Context(), "merchants.self_manage_orders"),
+		"self_manage_orders": s.orders.MerchantsSelfManage(r.Context()),
 	})
 }
 
@@ -104,7 +104,7 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 		Page:       page,
 		PerPage:    perPage,
 	}
-	if !s.settings.GetBool(r.Context(), "merchants.self_manage_orders") {
+	if !s.orders.MerchantsSelfManage(r.Context()) {
 		f.ClosedOnly = true
 		f.OpenOnly = false
 	}

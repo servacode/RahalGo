@@ -54,8 +54,7 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	//
 	// وبلا مخزن إعدادات يُفترض «المتجر يدير»: هو الأصل، **والافتراضُ عند
 	// الجهل يجب أن يكون أقلَّ الوضعين تدخّلاً من المنصة**.
-	selfManage := s.settings == nil ||
-		s.settings.GetBool(ctx, "merchants.self_manage_orders")
+	selfManage := s.MerchantsSelfManage(ctx)
 	effRoles := rolesUnderMode(selfManage, from, to, actorRoles, driverID != nil)
 	if !canTransition(from, to, effRoles) {
 		return nil, ErrBadTransition
@@ -280,7 +279,7 @@ func (s *Service) autoDispatch(ctx context.Context, to string) bool {
 		return false
 	}
 	return s.settings.GetBool(ctx, "orders.auto_dispatch") &&
-		s.settings.GetBool(ctx, "merchants.self_manage_orders")
+		s.MerchantsSelfManage(ctx)
 }
 
 // AutoDispatchEnabled أمُشغَّلٌ الإنزالُ التلقائيّ؟ يسأله الإبلاغُ بالرسالة.

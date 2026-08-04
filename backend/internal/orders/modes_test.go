@@ -1,8 +1,11 @@
 package orders
 
 import (
+	"context"
 	"slices"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
 // TestRolesUnderMode الوضعُ يمنع فعلاً لا في الشاشة وحدها.
@@ -206,6 +209,21 @@ func TestPlatformWatchesAfterPickup(t *testing.T) {
 		}
 	}
 
+	// ── والتحريرُ يبقى مفتوحاً — فليس إعلانَ واقعة ────────────────────
+	//
+	// **سائقٌ اختفى بطلبٍ في يده** كان يترك الطلبَ إلى الأبد: لا يُلغى ولا
+	// يُفشل ولا يُسنَد لغيره. **والحارسُ الأوّلُ سدّ هذا البابَ معه** —
+	// وأمسكه `TestPostPickupHasExit`.
+	//
+	//	«تمّ التسليم»  ←  إعلانُ واقعةٍ لا يعلمها من في المكتب — يُمنع
+	//	«حرّر الطلب»   ←  التخلّي عن إسنادٍ لم يُثمر — يبقى
+	for _, from := range []string{StPickedUp, StOnTheWay, StAtDropoff} {
+		if !canTransition(from, StDispatching,
+			rolesUnderMode(false, from, StDispatching, []string{"ops"}, true)) {
+			t.Errorf("العملياتُ فقدت تحريرَ طلبٍ عالقٍ من %q — والزبونُ ينتظر من لن يأتي", from)
+		}
+	}
+
 	// ── وقبل الاستلام يبقى التوقيعُ يعمل ────────────────────────────────
 	//
 	// **وإلّا صار هاتفٌ نفدت بطاريتُه يترك الطلبَ عالقاً بلا مخرج** — والبضاعةُ
@@ -217,5 +235,38 @@ func TestPlatformWatchesAfterPickup(t *testing.T) {
 		if !canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, signed, true)) {
 			t.Errorf("التوقيعُ لم يفتح %q←%q — وهي قبل خروج البضاعة", c.from, c.to)
 		}
+	}
+}
+
+// TestMerchantsSelfManage_ReadsTheMode **الوضعُ يُقرأ من مفتاحٍ واحد.**
+//
+// كان المفتاحُ منطقيّاً يُقرأ في أربعة مواضع، **فلمّا صار وضعين لزم تعديلُ
+// أربعةٍ** — ومن نسي واحداً جعل شاشةً تعمل بوضعٍ ومحرّكاً بآخر.
+//
+// **وبلا مخزنٍ وضعُ المنصة**: المكتبُ يقبل ويحوّل، **فلا يبقى طلبٌ ينتظر
+// متجراً لا يعلم أنّ عليه أن ينظر.**
+func TestMerchantsSelfManage_ReadsTheMode(t *testing.T) {
+	var s Service
+	if s.MerchantsSelfManage(context.Background()) {
+		t.Error("بلا مخزنٍ قُرئ وضعُ المتاجر — والافتراضُ وضعُ المنصة")
+	}
+}
+
+// TestOrdersMode_BothValuesAreInTheCatalog **ولفظا الوضعين هما خياراه.**
+//
+// **وقيمةٌ في الشيفرة ليست في الفهرس تُقرأ ولا تُكتب**: يعمل المحرّكُ بها
+// **ولا يستطيع أحدٌ أن يعيده إليها من الشاشة.**
+func TestOrdersMode_BothValuesAreInTheCatalog(t *testing.T) {
+	def, ok := settings.Lookup("platform.orders_mode")
+	if !ok {
+		t.Fatal("مفتاحُ وضع الطلبات ليس في الفهرس")
+	}
+	for _, want := range []string{ModePlatform, ModeMerchants} {
+		if !slices.Contains(def.Options, want) {
+			t.Errorf("الوضع %q ليس من خيارات المفتاح %v", want, def.Options)
+		}
+	}
+	if def.Default != ModePlatform {
+		t.Errorf("الافتراضُ %v والمنتظَر %q — وهو أقلُّ الوضعين مفاجأة", def.Default, ModePlatform)
 	}
 }
