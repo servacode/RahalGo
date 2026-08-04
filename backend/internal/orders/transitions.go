@@ -659,9 +659,8 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	//
 	// والهامشُ **يُحسب من اللقطتين لا يُخزَّن** — فلا يفترق عن مصدريه.
 	var margin int64
-	if err := q.QueryRow(ctx, `
-		SELECT COALESCE(sum((oi.unit_price - oi.merchant_price) * oi.qty), 0)
-		FROM order_items oi WHERE oi.order_id = $1`, orderID).Scan(&margin); err != nil {
+	if err := q.QueryRow(ctx,
+		`SELECT `+OrderMarginSQL("$1"), orderID).Scan(&margin); err != nil {
 		return err
 	}
 	repCommission, err := s.repShare(ctx, q, margin)

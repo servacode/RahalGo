@@ -11,6 +11,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
@@ -106,16 +107,27 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	// — وهو الصدق بعينه، لا إخفاءَ السطر ولا إظهارَ عمولةٍ سُحبت.
 	rows, err := s.pg.Query(ctx, `
 		SELECT o.number, o.status, o.cancel_reason, o.total, o.subtotal, o.delivery_fee,
-		       o.platform_commission, o.created_at, o.delivered_at,
-		       -- **العمولة المشطوبة**: ما كان سيُحتسب لولا الإلغاء.
-		       -- الدفتر يُصفّر عمولة الطلب الملغى — وهو الصواب المحاسبي، لكن عرض
-		       -- صفرٍ للمندوب يخفي عنه حجم ما ضاع. فنحسبها هنا للعرض وحده،
-		       -- ويقولها الشطب صراحةً: رقمٌ كان ولم يصر.
-		       o.subtotal, mm.commission_percent,
+		       -- **الهامشُ لا عمولةُ المتاجر.**
+		       --
+		       -- **ونصيبُ المندوب نسبةٌ منه** — فعرضُ عمولةِ المتاجر بجانبه
+		       -- يجعل الرقمين لا يتّسقان: يرى «٢٬٦٠٠» و«٥٠٠» فيحسب فلا يخرج
+		       -- ١٠٪. **ورقمان متجاوران لا تربطهما حسبةٌ يُفقدان الثقةَ في
+		       -- الاثنين.**
+		       --
+		       -- (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «يجب أن تجلب هامشَ الربح بدل عمولة
+		       -- المنصة، والاسمُ يبقى عمولة المنصة».)
+		       `+orders.OrderMarginSQL("o.id")+`, o.created_at, o.delivered_at,
+		       -- **والمشطوبُ ما كان سيُحتسب لولا الإلغاء.**
+		       --
+		       -- الدفترُ يُصفّر عمولةَ الطلب الملغى — وهو الصوابُ المحاسبيّ،
+		       -- **لكنّ عرضَ صفرٍ للمندوب يخفي عنه حجمَ ما ضاع.** فيُحسب هنا
+		       -- للعرض وحدَه، **ويقوله الشطبُ صراحةً: رقمٌ كان ولم يصر.**
+		       --
+		       -- **وهو الهامشُ نفسُه** — فبنودُ الطلب باقيةٌ ولو أُلغي.
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 WHERE t.user_id = $3 AND t.ref = o.id::text
 		                   AND t.kind IN ('commission', 'adjustment')), 0)
-		FROM orders o JOIN merchants mm ON mm.id = o.merchant_id `+where+`
+		FROM orders o `+where+`
 		ORDER BY o.number DESC LIMIT $4 OFFSET $5`,
 		merchantID, bucket, uid, perPage, (page-1)*perPage)
 	if err != nil {
@@ -143,16 +155,14 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	list := []repOrder{}
 	for rows.Next() {
 		var o repOrder
-		var sub int64
-		var mPct *int64
 		if err := rows.Scan(&o.Number, &o.Status, &o.CancelReason, &o.Total, &o.Subtotal, &o.DeliveryFee,
-			&o.Commission, &o.CreatedAt, &o.DeliveredAt, &sub, &mPct, &o.MyShare); err != nil {
+			&o.Commission, &o.CreatedAt, &o.DeliveredAt, &o.MyShare); err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		// **العمولةُ المشطوبة**: ما كان سيُحتسب لولا الإلغاء — بالمعادلة
-		// النافذة اليومَ، **فلا يفترق المعروضُ عن المقيَّد بحسبةٍ ثانية.**
-		o.Forfeited = pricing.MerchantCommission(ctx, s.settings, mPct).Of(sub)
+		// **والمشطوبُ هو الهامشُ نفسُه** — بنودُ الطلب باقيةٌ ولو أُلغي،
+		// **فما كان سيُحتسب يُقرأ من مصدره لا من حسبةٍ ثانية.**
+		o.Forfeited = o.Commission
 		o.ForfeitedShare = repRule.Of(o.Forfeited)
 		list = append(list, o)
 	}

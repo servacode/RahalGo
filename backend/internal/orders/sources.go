@@ -268,3 +268,23 @@ func (s *Service) DeliveryAt(ctx context.Context, lat, lng float64) (DeliveryCha
 	out.Fee = pricing.DeliveryFee(ctx, s.settings)
 	return out, nil
 }
+
+// OrderMarginSQL هامشُ طلبٍ من لقطات بنوده — **معادلةٌ واحدةٌ لمن يقرؤها.**
+//
+// # لماذا تُصدَّر
+//
+// تحسبها التسويةُ لتقيّد نصيبَ المندوب، **وتحسبها شاشتُه لتعرضه.** ولو كُتبت
+// مرّتين لَافترقتا يوماً — **فيرى المندوبُ رقماً ويُقيَّد له غيرُه**، وهي
+// عائلةُ الخلل التي طاردناها في التوصيل والمخالفات وأقسام السوق.
+//
+// # ومن اللقطتين لا من `menu_items` اليوم
+//
+// **سعرُ البيع وسعرُ الشراء محفوظان في البند لحظةَ الطلب.** ولو قُرئا من
+// القائمة اليومَ **لَتغيّر هامشُ طلبٍ مضى** كلَّما غُيّر سعرٌ أو هامش —
+// فيُعاد حسابُ عمولةِ مندوبٍ قُبضت.
+//
+// `orderExpr` تعبيرٌ يعطي معرّفَ الطلب في السياق المحيط.
+func OrderMarginSQL(orderExpr string) string {
+	return `COALESCE((SELECT sum((oi.unit_price - oi.merchant_price) * oi.qty)
+	                  FROM order_items oi WHERE oi.order_id = ` + orderExpr + `), 0)`
+}
