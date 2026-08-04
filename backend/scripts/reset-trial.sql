@@ -37,6 +37,13 @@ DELETE FROM order_ratings;
 DELETE FROM order_events;
 DELETE FROM order_items;
 DELETE FROM promo_redemptions;
+-- **والنزاعاتُ قبل الإنذارات وقبل الطلبات** (هجرة ٠٠٦٣).
+--
+-- تشير إلى الاثنين بمفتاحين أجنبيّين، **ومحوُ الطلب قبلها يُسقط النصَّ** —
+-- وهي العلّةُ نفسُها التي أسقطته عند أوّل شكوى (٢٠٢٦-٠٨-٠٣). **وجدولٌ يُضاف
+-- إلى القاعدة ولا يُضاف إلى نصّ التنظيف قنبلةٌ موقوتة**: لا يظهر أثرُه حتى
+-- تقع أوّلُ حالةٍ حقيقية.
+DELETE FROM disputes;
 DELETE FROM merchant_warnings;
 DELETE FROM driver_emergencies;
 DELETE FROM orders;
@@ -73,7 +80,16 @@ DELETE FROM notifications;
 UPDATE users SET last_assigned_at = NULL
 WHERE EXISTS (SELECT 1 FROM user_roles r WHERE r.user_id = users.id AND r.role_code = 'driver');
 
--- ٨ · وأرقامُ الطلبات تعود إلى أوّلها
+-- ٨ · والقائمةُ تعود منشورةً كاملة
+--
+-- مراجعةُ القائمة (هجرة ٠٠٦٤) تُنزل عَلَمَ النشر عن صنفٍ حتى يُقَرّ. **وميدانٌ
+-- يبدأ بأصنافٍ معلّقةٍ سوقٌ ناقص**: يتصفّح المالكُ فلا يجد ما وضعه بيده، **ثمّ
+-- يظنّ أنّ العرضَ عطب.**
+--
+-- **وسببُ الردّ يُمحى معه** — كلمةٌ عن قرارٍ لم يعد له وجود.
+UPDATE menu_items SET approved = true, review_note = '' WHERE NOT approved OR review_note <> '';
+
+-- ٩ · وأرقامُ الطلبات تعود إلى أوّلها
 --
 -- **رقمٌ إنسانيّ لا مفتاح**: يُقال في الهاتف ويُكتب في الوثيقة. **وتجربةٌ
 -- تبدأ من ١٠٠٧ تُقرأ استئنافاً لما قبلها** — والذي قبلها مُحي.
@@ -89,4 +105,9 @@ UNION ALL SELECT 'مجموع المحافظ', COALESCE(sum(balance), 0)::text FR
 UNION ALL SELECT 'نقدٌ بيد السائقين', COALESCE(sum(held), 0)::text FROM driver_cash_boxes
 UNION ALL SELECT 'الحسابات', count(*)::text FROM users
 UNION ALL SELECT 'المتاجر', count(*)::text FROM merchants
-UNION ALL SELECT 'الأصناف', count(*)::text FROM menu_items;
+UNION ALL SELECT 'الأصناف', count(*)::text FROM menu_items
+-- **وما يجب أن يكون صفراً يُقرأ صريحاً** — لا يُستنتج من غيابه.
+UNION ALL SELECT 'أصنافٌ معلّقة', count(*)::text FROM menu_items WHERE NOT approved
+UNION ALL SELECT 'النزاعات', count(*)::text FROM disputes
+UNION ALL SELECT 'الشكاوى', count(*)::text FROM tickets
+UNION ALL SELECT 'الإشعارات', count(*)::text FROM notifications;
