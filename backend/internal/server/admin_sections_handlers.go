@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
 type adminPlatformSection struct {
@@ -28,16 +29,24 @@ type adminPlatformSection struct {
 	MarginOverride *int64 `json:"margin_override"`
 	// Items عددُ الأصناف المربوطة — **لتُعرف قيمةُ القسم قبل حذفه.**
 	Items int `json:"items"`
+	// ImageMediaID صورةُ القسم — **وجهُه في السوق.**
+	//
+	// **والأيقونةُ تبقى بجانبها**: هي ما يُعرض قبل أن تُرفع صورة، وفي المواضع
+	// الضيّقة. **وقسمٌ بلا صورةٍ لا يظهر فارغاً.**
+	ImageMediaID  *string `json:"image_media_id"`
+	ImageURL      *string `json:"image_url"`
+	ImageThumbURL *string `json:"image_thumb_url"`
 }
 
 // handleListPlatformSections الأقسامُ كلُّها — الفعّالةُ والمُطفَأة.
 func (s *Server) handleListPlatformSections(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT ps.id, ps.name, ps.icon, ps.sort_order, ps.active, ps.margin_override,
-		       count(i.id)
+		       count(i.id), ps.image_media_id::text, sm.path, sm.thumb_path
 		FROM platform_sections ps
 		LEFT JOIN menu_items i ON i.platform_section_id = ps.id
-		GROUP BY ps.id
+		LEFT JOIN media sm ON sm.id = ps.image_media_id
+		GROUP BY ps.id, sm.path, sm.thumb_path
 		ORDER BY ps.sort_order, ps.name`)
 	if err != nil {
 		s.respondErr(w, err)
@@ -48,10 +57,12 @@ func (s *Server) handleListPlatformSections(w http.ResponseWriter, r *http.Reque
 	for rows.Next() {
 		var x adminPlatformSection
 		if err := rows.Scan(&x.ID, &x.Name, &x.Icon, &x.SortOrder, &x.Active,
-			&x.MarginOverride, &x.Items); err != nil {
+			&x.MarginOverride, &x.Items, &x.ImageMediaID, &x.ImageURL, &x.ImageThumbURL); err != nil {
 			s.respondErr(w, err)
 			return
 		}
+		x.ImageURL = media.URLForPtr(x.ImageURL)
+		x.ImageThumbURL = media.URLForPtr(x.ImageThumbURL)
 		out = append(out, x)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"sections": out})
@@ -67,6 +78,8 @@ type platformSectionInput struct {
 	// `COALESCE` وحدَه لا يفرّق بين «لم يُرسَل» و«أُرسل فارغاً» — وكلاهما
 	// `NULL`. **فمن أراد أن يعيد قسماً إلى الهامش العامّ لم يملك سبيلاً.**
 	MarginOverride *int64 `json:"margin_override"`
+	// ImageMediaID صورةُ القسم — **وجهُه في السوق**، والفراغُ الصريحُ يرفعها.
+	ImageMediaID *string `json:"image_media_id"`
 }
 
 func (s *Server) handleCreatePlatformSection(w http.ResponseWriter, r *http.Request) {
@@ -89,9 +102,10 @@ func (s *Server) handleCreatePlatformSection(w http.ResponseWriter, r *http.Requ
 	}
 	var id string
 	if err := s.pg.QueryRow(r.Context(), `
-		INSERT INTO platform_sections (name, icon, sort_order, margin_override)
-		VALUES ($1, $2, $3, $4) RETURNING id`,
-		strings.TrimSpace(*req.Name), icon, sort, req.MarginOverride).Scan(&id); err != nil {
+		INSERT INTO platform_sections (name, icon, sort_order, margin_override, image_media_id)
+		VALUES ($1, $2, $3, $4, NULLIF(COALESCE($5, ''), '')::uuid) RETURNING id`,
+		strings.TrimSpace(*req.Name), icon, sort, req.MarginOverride,
+		req.ImageMediaID).Scan(&id); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -115,9 +129,13 @@ func (s *Server) handleUpdatePlatformSection(w http.ResponseWriter, r *http.Requ
 			active     = COALESCE($5, active),
 			margin_override = CASE WHEN $6::bigint IS NULL THEN margin_override
 			                       WHEN $6 < 0 THEN NULL
-			                       ELSE $6 END
+			                       ELSE $6 END,
+			-- **والفراغُ الصريحُ يرفع الصورة** — لا يُقرأ «بلا تغيير».
+			image_media_id = CASE WHEN $7::text IS NULL THEN image_media_id
+			                      ELSE NULLIF($7, '')::uuid END
 		WHERE id = $1`,
-		id, req.Name, req.Icon, req.SortOrder, req.Active, req.MarginOverride)
+		id, req.Name, req.Icon, req.SortOrder, req.Active, req.MarginOverride,
+		req.ImageMediaID)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -150,4 +168,60 @@ func (s *Server) handleDeletePlatformSection(w http.ResponseWriter, r *http.Requ
 	s.audit(r, "catalog.section_delete", "section", id, nil)
 	s.touch("catalog", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": true})
+}
+
+// handleSectionItems أصنافُ قسمٍ بعينه — **كما هي لا كما يراها الزبون.**
+//
+// # لماذا نقطةٌ خاصّة
+//
+// نقطةُ التصفّح العامّة (`/public/sections/{id}/items`) **تُرشِّح**: متجرٌ فعّالٌ
+// وقسمٌ فعّالٌ وصنفٌ مُقَرّ. **وهي الصواب للزبون وخطأٌ للإدارة**: من يفتح قسماً
+// ليقرّر إطفاءَه يريد أن يرى ما فيه كلَّه — **بما فيه ما لا يظهر ولماذا لا
+// يظهر.**
+//
+// **وقسمٌ يبدو فارغاً في اللوحة وفيه عشرةُ أصنافٍ من متجرٍ مُطفَأ يُحذف بلا
+// علمٍ بما فيه.**
+func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT i.id::text, i.name, i.merchant_price, i.available, i.approved,
+		       m.name, m.status, im.thumb_path
+		FROM menu_items i
+		JOIN merchants m ON m.id = i.merchant_id
+		LEFT JOIN media im ON im.id = i.image_media_id
+		WHERE i.platform_section_id = $1
+		ORDER BY m.name, i.name
+		LIMIT 500`, id)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+
+	type item struct {
+		ID             string  `json:"id"`
+		Name           string  `json:"name"`
+		MerchantPrice  int64   `json:"merchant_price"`
+		Available      bool    `json:"available"`
+		Approved       bool    `json:"approved"`
+		MerchantName   string  `json:"merchant_name"`
+		MerchantStatus string  `json:"merchant_status"`
+		ThumbURL       *string `json:"thumb_url"`
+	}
+	out := []item{}
+	for rows.Next() {
+		var x item
+		if err := rows.Scan(&x.ID, &x.Name, &x.MerchantPrice, &x.Available,
+			&x.Approved, &x.MerchantName, &x.MerchantStatus, &x.ThumbURL); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		x.ThumbURL = media.URLForPtr(x.ThumbURL)
+		out = append(out, x)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"items": out, "count": len(out)})
 }

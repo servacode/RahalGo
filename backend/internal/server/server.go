@@ -294,6 +294,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/categories", s.handleListCategories)
 			// **أقسامُ المنصة** — ما نبيعه، لا من نشتري منه.
 			r.Get("/sections", s.handleListPlatformSections)
+			// **وأصنافُ القسم كما هي** — لا كما يراها الزبون: من يفتح قسماً
+			// ليقرّر إطفاءَه يريد ما فيه كلَّه، **بما لا يظهر ولماذا.**
+			r.Get("/sections/{id}/items", s.handleSectionItems)
 			r.Get("/merchants", s.handleListMerchants)
 			// **ومتجرٌ بعينه لملفّه** — كان يُبحث عنه بالاسم في القائمة،
 			// **ومتجران متشابها الاسم يُخلطان.**

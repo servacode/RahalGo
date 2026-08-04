@@ -1561,7 +1561,18 @@
       "off": "مُطفأ",
       "turnOff": "إطفاء",
       "turnOn": "تفعيل",
-      "empty": "لا أقسام بعد — أضف أوّل قسم"
+      "empty": "لا أقسام بعد — أضف أوّل قسم",
+      "image": "صورة القسم",
+      "view": "عرض القسم",
+      "available": "متاح",
+      "unavailable": "غير متاح",
+      "makeAvailable": "اجعله متاحاً",
+      "makeUnavailable": "اجعله غير متاح",
+      "noItems": "لا أصناف في هذا القسم",
+      "itemPending": "بانتظار المراجعة",
+      "itemOut": "نفد",
+      "itemStoreOff": "متجرُه مُطفأ",
+      "itemLive": "معروض"
     },
     "claims": {
       "title": "النزاعات",
