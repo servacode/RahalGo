@@ -32,15 +32,15 @@ func withCatalog(t *testing.T, defs ...Def) {
 // دفعةُ مفاتيحَ للاختبار — **تصف أنواعَ التحقّق كلَّها لا منصةً بعينها.**
 func testDefs() []Def {
 	return []Def{
-		{Key: "t.percent", Group: GroupNew, Kind: KindInt, Min: 0, Max: 100, Default: 70},
-		{Key: "t.money", Group: GroupNew, Kind: KindMoney, Min: 0, Max: 10000000, Default: 5000},
-		{Key: "t.minutes", Group: GroupNew, Kind: KindInt, Min: 1, Max: 120, Default: 5},
-		{Key: "t.count", Group: GroupNew, Kind: KindInt, Min: 1, Max: 20, Default: 2},
-		{Key: "t.length", Group: GroupNew, Kind: KindInt, Min: 6, Max: 64, Default: 8},
-		{Key: "t.flag", Group: GroupNew, Kind: KindBool, Default: false},
-		{Key: "t.mode", Group: GroupNew, Kind: KindChoice,
+		{Key: "t.percent", Group: GroupPlatform, Kind: KindInt, Min: 0, Max: 100, Default: 70},
+		{Key: "t.money", Group: GroupPlatform, Kind: KindMoney, Min: 0, Max: 10000000, Default: 5000},
+		{Key: "t.minutes", Group: GroupPlatform, Kind: KindInt, Min: 1, Max: 120, Default: 5},
+		{Key: "t.count", Group: GroupPlatform, Kind: KindInt, Min: 1, Max: 20, Default: 2},
+		{Key: "t.length", Group: GroupPlatform, Kind: KindInt, Min: 6, Max: 64, Default: 8},
+		{Key: "t.flag", Group: GroupPlatform, Kind: KindBool, Default: false},
+		{Key: "t.mode", Group: GroupPlatform, Kind: KindChoice,
 			Options: []string{"percent", "fixed"}, Default: "percent"},
-		{Key: "t.text", Group: GroupNew, Kind: KindText, Max: 500, Default: "نصٌّ افتراضيّ"},
+		{Key: "t.text", Group: GroupPlatform, Kind: KindText, Max: 500, Default: "نصٌّ افتراضيّ"},
 	}
 }
 

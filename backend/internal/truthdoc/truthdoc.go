@@ -56,15 +56,17 @@ func Sections() map[string]string {
 // **ومفتاحٌ موجودٌ لا يُذكر** يبقى على افتراضه أبداً ولا أحد يعلم أنّه يملك
 // تغييرَه.
 func settingsTable() string {
-	groups := []settings.Group{
-		settings.GroupNew, settings.GroupOrders, settings.GroupDrivers,
-		settings.GroupMerchants,
-	}
+	// **والمجموعاتُ من `settings.Groups` لا من قائمةٍ هنا.**
+	//
+	// كانت مكتوبةً في هذا الملفّ: أربعُ مجموعاتٍ باسمها. **فحُذفت مجموعةٌ من
+	// الفهرس فسقط البناء** — ووثيقةٌ تُبنى من قائمةٍ ثانيةٍ ليست وثيقةً من
+	// المحرّك.
+	groups := settings.Groups
 	labels := map[settings.Group]string{
-		settings.GroupNew:       "قواعد المال",
-		settings.GroupOrders:    "الطلبات",
+		settings.GroupPlatform:  "المنصة",
 		settings.GroupDrivers:   "السائقون",
 		settings.GroupMerchants: "المتاجر",
+		settings.GroupSales:     "المندوبون",
 	}
 	var b strings.Builder
 	b.WriteString("| المفتاح | المجموعة | النوع | الافتراضيّ |\n|---|---|---|---|\n")
