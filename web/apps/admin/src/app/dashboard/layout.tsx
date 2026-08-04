@@ -59,6 +59,13 @@ const ALL_NAV: NavItem[] = [
   // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
   { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning },
   { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink },
+  // **خزينةُ المنصة — أصلُ كلّ حركة.**
+  //
+  // **لا يُدفع لأحدٍ إلّا وخرج منها، ولا يدخل مالٌ إلّا ودخلها.** (قرارُ
+  // المالك ٢٠٢٦-٠٨-٠٤.) وهي محفظةُ الحساب الحامل لها — فيراها صاحبُها
+  // كشفاً كاملاً، **ويرى غيرُه محفظتَه هو.**
+  { href: "/dashboard/wallet", label: m.admin.nav.treasury, icon: IconWallet,
+    roles: ["admin", "finance"] },
   // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
   { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
     roles: ["admin", "finance", "ops"] },
@@ -115,10 +122,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <PasswordGate>
-    {/* لا walletHref: موظّفو المنصة (أدمن/عمليات/مالية) لا محافظ لهم — وشارةٌ
-        برصيد صفر تشير إلى صفحة الحساب تَعِد بما لا يملكه صاحبها. الشريط خريطة ما
-        يملكه المستخدم لا قائمة ثابتة (R-34). */}
+    {/* **وشارةُ المحفظة عادت.**
+
+        كانت القاعدةُ: «موظّفو المنصة لا محافظ لهم — وشارةٌ برصيد صفرٍ تَعِد
+        بما لا يملكه صاحبها» (R-34). **وكانت صحيحةً يومَها**: المحفظةُ تُنشأ
+        عند أوّل حركة، وحسابُ الأدمن لا يقبض ولا يُخصم منه.
+
+        **وقد بطل سببُها**: صار لكلّ حسابٍ محفظةٌ تُخلق معه، وصارت محفظةُ
+        الأدمن هي خزينةَ المنصة — **فالرقمُ فيها أهمُّ رقمٍ في اللوحة**، لا
+        صفراً يُخفى. (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
+
+        **والشريطُ يبقى خريطةَ ما يملكه المستخدم** — والقاعدةُ لم تُنقض، بل
+        صار المستخدمُ يملك. */}
     <DashboardChrome
+      walletHref="/dashboard/wallet"
       brand={m.common.appName}
       nav={nav}
       pathname={pathname}
