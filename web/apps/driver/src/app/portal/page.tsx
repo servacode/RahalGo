@@ -42,6 +42,19 @@ import { api, ApiError } from "@/lib/api";
 const m = getMessages(defaultLocale);
 const D = m.driver;
 
+/** سببٌ مصنَّفٌ وذنبُه — **والذنبُ يقرّر التعويض** (`failreasons.go`). */
+type FailReason = { code: string; fault: string };
+
+/**
+ * المرحلتان اللتان يملك السائقُ فيهما إعلانَ التعذّر — **وهو من هناك فهو من
+ * يقول**: عند باب المتجر «المطعم لم يسلّمني»، وعند باب الزبون «لم يستلم».
+ *
+ * **ومصدرٌ واحدٌ للاثنتين**: الزرُّ يظهر بها والأسبابُ تُجلَب بها. وكانتا
+ * مكتوبتين في موضعٍ واحدٍ فقط، **فلو أُضيفت ثالثةٌ في الزرّ وحدَه لظهر زرٌّ
+ * بلا أسباب.**
+ */
+const FAIL_AT = ["at_pickup", "at_dropoff"] as const;
+
 /** الفعل التالي لكل حالة — مصدرٌ واحد يقابل خارطة الحالات في الخادم. */
 const NEXT: Record<string, string> = {
   assigned: "at_pickup",
@@ -116,14 +129,18 @@ export default function TasksPage() {
   /** التفصيلُ الحرّ بجانبه — اختياريّ. */
   const [detail, setDetail] = useState("");
   /**
-   * أسبابُ التعذّر المتاحةُ في مرحلة هذا الطلب.
+   * أسبابُ التعذّر لكلّ مرحلة — **مفتاحُها الحالة**.
    *
-   * **تُجلَب من الخادم عند فتح النافذة** — و`FailReasonsAt` تُرجع ما يخصّ
-   * المرحلة وحدَها: **أسبابُ باب المتجر ليست أسبابَ باب الزبون**، ومن رأى
-   * «المتجر مغلق» وهو واقفٌ أمام بيت الزبون يختار أقربَ لفظٍ إليه فيكذب
-   * السجلّ.
+   * `FailReasonsAt` تُرجع ما يخصّ المرحلة وحدَها: **أسبابُ باب المتجر ليست
+   * أسبابَ باب الزبون**، ومن رأى «المتجر مغلق» وهو واقفٌ أمام بيت الزبون
+   * يختار أقربَ لفظٍ إليه فيكذب السجلّ.
+   *
+   * **ومرحلةٌ غائبةٌ من الخريطة ليست مرحلةً بلا أسباب** — هي مرحلةٌ لم
+   * تصل بعد. والفرقُ بينهما هو كلُّ ما في الأمر (انظر النافذة).
    */
-  const [reasons, setReasons] = useState<{ code: string; fault: string }[]>([]);
+  const [reasonsBy, setReasonsBy] = useState<Record<string, FailReason[]>>({});
+  /** **وتعذّرُ الجلب يُقال** — لا يُعرض سكوتاً يشبه «لا أسباب». */
+  const [reasonsErr, setReasonsErr] = useState(false);
 
   const load = useCallback(() => {
     api<Me>("/api/v1/driver/me").then(setMe).catch(() => undefined);
@@ -131,6 +148,44 @@ export default function TasksPage() {
   }, []);
 
   useEffect(load, [load]);
+
+  /**
+   * **تُجلَب مع الشاشة لا مع الضغطة.**
+   *
+   * كانت تُطلب في `onFail` ثمّ تُفتح النافذةُ في السطر التالي بلا انتظار،
+   * **فتُعرض «لا أسبابَ معرَّفة» بينما الطلبُ في الطريق** — جملةٌ تحكم على
+   * الإعدادات، والحقيقةُ أنّها لم تُسأل بعد. وأيُّ إخفاقٍ — شبكةٌ منقطعةٌ
+   * على درّاجة، خادمٌ يُعاد تشغيله، جلسةٌ انتهت — **كان يسقط في `catch`
+   * فيصير القائمةَ الفارغةَ نفسَها.**
+   *
+   * **وثلاثُ حالاتٍ مختلفةٍ تُعرض بجملةٍ واحدة لا يُشخَّص منها شيء**: يقف
+   * السائقُ أمام زرٍّ مُطفأ ولا يعرف أيرجع أم يعيد المحاولة أم يتّصل.
+   *
+   * والمرحلتان معروفتان سلفاً، فتُجلبان مرّةً واحدة: **حين يضغط تكون
+   * القائمةُ عنده.**
+   */
+  const loadReasons = useCallback(async () => {
+    setReasonsErr(false);
+    try {
+      const pairs = await Promise.all(
+        FAIL_AT.map(
+          async (at) =>
+            [
+              at,
+              (await api<{ reasons: FailReason[] }>(`/api/v1/driver/fail-reasons?at=${at}`))
+                .reasons ?? [],
+            ] as const,
+        ),
+      );
+      setReasonsBy(Object.fromEntries(pairs));
+    } catch {
+      setReasonsErr(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadReasons();
+  }, [loadReasons]);
 
   // **حيٌّ**: حالةُ المهمّة تتغيّر بفعل العمليات أيضاً — إلغاءٌ أو إسنادٌ يدويّ
   // — **فشاشةٌ لا تتحدّث تجعل السائقَ يضغط على ما لم يعد قائماً.**
@@ -195,6 +250,12 @@ export default function TasksPage() {
   if (!me) return <p className="p-6 text-center text-ink-muted">{m.common.loading}</p>;
 
   const cashRatio = me.cash_limit > 0 ? me.cash_held / me.cash_limit : 0;
+
+  /**
+   * أسبابُ مرحلةِ الطلبِ المفتوحةِ نافذتُه — **و`undefined` ليست فارغة**:
+   * الأولى «لم تصل»، والثانية «وصلت ولا شيء فيها».
+   */
+  const stageReasons = failing ? reasonsBy[failing.status] : undefined;
 
   return (
     /* **تتمدّد بعرض اللوحة** — كان سقفُها `max-w-2xl`: عمودٌ ضيّقٌ في وسط
@@ -309,14 +370,9 @@ export default function TasksPage() {
                 onFail={() => {
                   setReason("");
                   setDetail("");
-                  // **أسبابُ هذه المرحلة وحدَها** — تُجلَب قبل أن تُفتح
-                  // النافذة، فلا تظهر فارغةً ثمّ تمتلئ تحت إصبعه.
-                  setReasons([]);
-                  api<{ reasons: { code: string; fault: string }[] }>(
-                    `/api/v1/driver/fail-reasons?at=${o.status}`,
-                  )
-                    .then((r) => setReasons(r.reasons ?? []))
-                    .catch(() => setReasons([]));
+                  // **والقائمةُ حاضرةٌ سلفاً** — جُلبت مع الشاشة (`loadReasons`).
+                  // وإن كان جلبُها قد أخفق تُعاد المحاولةُ من داخل النافذة.
+                  if (reasonsErr) void loadReasons();
                   setFailing(o);
                 }}
                 onRelease={() => act(o, "dispatching")}
@@ -374,11 +430,28 @@ export default function TasksPage() {
       >
         <div className="space-y-3">
           <p className="text-sm font-medium">{D.act.failedReason}</p>
-          {reasons.length === 0 ? (
+          {/* **أربعُ حالاتٍ لا واحدة.**
+
+              «لم تصل بعد» و«تعذّر الوصولُ إليها» و«وصلت فارغة» ثلاثةُ أشياء،
+              **وكانت تُعرض جميعاً بجملةٍ واحدةٍ تقول إنّ الإعدادات خاليةٌ من
+              أسبابٍ لهذه المرحلة** — وهي أشدُّها بُعداً عن الحقيقة.
+
+              **والزرُّ مُطفأٌ في الثلاث**، فمن لم يُخبَر أيُّها وقع لم يعرف
+              أيرجع أم يعيد المحاولة. */}
+          {reasonsErr && !stageReasons ? (
+            <div className="space-y-2 rounded-control border border-danger/40 bg-danger/5 px-3 py-2">
+              <p className="text-sm text-danger">{D.act.failedReasonsError}</p>
+              <Button variant="secondary" onClick={() => void loadReasons()}>
+                {m.common.retry}
+              </Button>
+            </div>
+          ) : !stageReasons ? (
+            <p className="text-sm text-ink-muted">{m.common.loading}</p>
+          ) : stageReasons.length === 0 ? (
             <p className="text-sm text-ink-muted">{D.act.failedNoReasons}</p>
           ) : (
             <div className="space-y-1.5">
-              {reasons.map((x) => (
+              {stageReasons.map((x) => (
                 <label
                   key={x.code}
                   className={`flex cursor-pointer items-center gap-2.5 rounded-control border px-3 py-2 text-sm transition-colors ${
@@ -586,7 +659,7 @@ function TaskCard({
             «المطعم لم يسلّمني»، وعند الزبون «الزبون لم يستلم». و«فشل» وحدها
             تُخفي ثلاثة أخطاءٍ في ثلاث جهات. */}
         <span className="flex items-center gap-1">
-          {(o.status === "at_pickup" || o.status === "at_dropoff") && (
+          {(FAIL_AT as readonly string[]).includes(o.status) && (
             <Button variant="ghost" disabled={busy} onClick={onFail} className="text-danger">
               <span className="flex items-center gap-1.5">
                 <IconWarning size={15} />
