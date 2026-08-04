@@ -386,41 +386,6 @@
 <!-- gen:settings -->
 | المفتاح | المجموعة | النوع | الافتراضيّ |
 |---|---|---|---|
-| `delivery.fee_mode` | قواعد المال | choice | `zone` |
-| `delivery.flat_fee` | قواعد المال | money | `0` |
-| `delivery.base_fee` | قواعد المال | money | `0` |
-| `delivery.per_km` | قواعد المال | money | `0` |
-| `pricing.margin_mode` | قواعد المال | choice | `percent` |
-| `pricing.margin_value` | قواعد المال | int | `0` |
-| `merchants.commission_mode` | قواعد المال | choice | `percent` |
-| `merchants.commission_value` | قواعد المال | int | `10` |
-| `sales.commission_mode` | قواعد المال | choice | `percent` |
-| `sales.commission_value` | قواعد المال | int | `10` |
-| `pricing.rounding` | قواعد المال | int | `500` |
-| `merchants.self_manage_orders` | قواعد المال | bool | `true` |
-| `orders.accept_timeout_min` | الطلبات | int | `5` |
-| `orders.driver_timeout_min` | الطلبات | int | `10` |
-| `orders.delivery_timeout_min` | الطلبات | int | `60` |
-| `orders.delivery_estimate_min` | الطلبات | int | `15` |
-| `orders.customer_cancel_window_sec` | الطلبات | int | `120` |
-| `orders.auto_dispatch` | الطلبات | bool | `true` |
-| `orders.manual_assign_after_min` | الطلبات | int | `10` |
-| `orders.max_sources` | الطلبات | int | `2` |
-| `orders.extra_source_fee` | الطلبات | money | `0` |
-| `orders.source_proximity_m` | الطلبات | int | `1500` |
-| `drivers.share_mode` | السائقون | choice | `percent` |
-| `drivers.share_percent` | السائقون | int | `70` |
-| `drivers.share_fixed` | السائقون | money | `5000` |
-| `drivers.cash_limit` | السائقون | money | `500000` |
-| `drivers.max_active_orders` | السائقون | int | `2` |
-| `drivers.assignment_mode` | السائقون | choice | `queue` |
-| `drivers.alert_seconds` | السائقون | int | `20` |
-| `drivers.offer_timeout_sec` | السائقون | int | `45` |
-| `merchants.menu_requires_approval` | المتاجر | bool | `false` |
-| `merchants.cancel_ban_mode` | المتاجر | choice | `manual` |
-| `merchants.cancel_ban_count` | المتاجر | int | `5` |
-| `merchants.cancel_ban_days` | المتاجر | int | `30` |
-| `merchants.default_prep_minutes` | المتاجر | int | `20` |
 <!-- /gen:settings -->
 
 ---
