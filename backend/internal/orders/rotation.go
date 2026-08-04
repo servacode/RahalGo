@@ -52,6 +52,19 @@ func (s *Service) offerTimeout(ctx context.Context) time.Duration {
 	return time.Duration(s.settingInt(ctx, "drivers.offer_timeout_sec")) * time.Second
 }
 
+// directAssign أيصير الطلبُ مهمّتَه بلا سؤال.
+//
+// **ولا معنى له خارج «بالتساوي»** — هناك لا سائقَ مختاراً يُسنَد إليه. والشرطُ
+// مكتوبٌ في الفهرس أيضاً (`ShowWhen`)، **وهنا لأنّ الشاشةَ تُخفي والمحرّكَ
+// يقرأ**: مفتاحٌ بقي مرفوعاً من وضعٍ سابقٍ لا يصنع إسناداً في وضعٍ لا يحتمله.
+func (s *Service) directAssign(ctx context.Context) bool {
+	if s.settings == nil {
+		return false
+	}
+	return s.AssignmentMode(ctx) == "rotation" &&
+		s.settings.GetBool(ctx, "drivers.direct_assign")
+}
+
 // settingInt رقمٌ من الإعدادات — **ولا احتياطيَّ مكتوبٌ هنا.**
 //
 // كان كلُّ قارئٍ يكتب رقمَه: `sec := 45` و`limit := 500000` و`maxActive := 2`
@@ -168,6 +181,35 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 		return e
 	}
 
+	// **الإسنادُ المباشر — الطلبُ يصير مهمّتَه في القيد نفسِه.**
+	//
+	// `driver_id` و`assigned` معاً، **و`offered_driver_id` يبقى مكتوباً**:
+	// منه يُعرف صاحبُ الدور حين يُنزع الطلبُ منه، **ومنه يُبنى `offer_passed`
+	// فلا يعود إليه.** و`offer_expires_at` صار **مهلةَ صمتٍ لا مهلةَ ردّ**.
+	//
+	// **ودورُه ينتقل إلى آخر الصفّ لحظتَها** (`last_assigned_at`) — فسائقٌ
+	// نائمٌ يعطّل طلباً واحداً لا كلَّ الطلبات.
+	if s.directAssign(ctx) {
+		_, err = s.db.Exec(ctx, `
+			UPDATE orders
+			SET offered_driver_id = $2, driver_id = $2, status = 'assigned',
+			    accepted_at = now(),
+			    offer_expires_at = now() + make_interval(secs => $3)
+			WHERE id = $1 AND status = 'dispatching' AND driver_id IS NULL`,
+			orderID, driverID, s.offerTimeout(ctx).Seconds())
+		if err == nil {
+			if _, e := s.db.Exec(ctx,
+				`UPDATE users SET last_assigned_at = now() WHERE id = $1`,
+				driverID); e != nil {
+				s.logger.Error("الترتيب: تعذّر تحريكُ الدور", "driver", driverID, "error", e)
+			}
+			s.pub.Publish(topicDriverQueue, map[string]any{"type": "order"})
+			s.pub.Publish("driver:"+driverID, map[string]any{"type": "order"})
+			s.pub.Publish("ops", map[string]any{"type": "order"})
+		}
+		return err
+	}
+
 	_, err = s.db.Exec(ctx, `
 		UPDATE orders
 		SET offered_driver_id = $2, offer_expires_at = now() + make_interval(secs => $3)
@@ -182,6 +224,80 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 	return err
 }
 
+// reclaimSilentAssignments ينزع طلباً أُسند مباشرةً ولم يتحرّك صاحبُه.
+//
+// # المسألة
+//
+// في العرض، انقضاءُ المهلة ينقل الدورَ وحدَه: الطلبُ ما زال `dispatching` بلا
+// سائق. **وفي الإسناد المباشر لا شيءَ ينقضي** — الطلبُ في مهامّه، وهو نائمٌ
+// أو هاتفُه في جيبه. **فيقف الزبونُ على من لا يعلم أنّ له مهمّة.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «ينتقل إلى التالي بعد مدّة».)
+//
+// # وما معنى «لم يتحرّك»
+//
+// **بقاؤه في `assigned`.** ومن فتحه ومضى إلى المتجر صار `at_pickup` — فخرج
+// من هذا الشرط ولا يُنزع منه شيءٌ وهو في الطريق. **والحركةُ فعلٌ لا فتحُ
+// شاشة**: من نظر ثمّ نام كمن لم ينظر.
+//
+// # وينزل إلى الطابور لا يُلغى
+//
+// يعود `dispatching` بلا سائق، **ويُوسَم أنّ الدورَ مرّ عليه** فلا يعود إليه
+// — ثمّ تلتقطه الجولةُ التالية لغيره. **وطلبٌ يُنزع ولا يُعرض على أحدٍ أسوأُ
+// ممّا كان.**
+func (s *Service) reclaimSilentAssignments(ctx context.Context) {
+	if !s.directAssign(ctx) {
+		return
+	}
+	rows, err := s.db.Query(ctx, `
+		SELECT id, driver_id FROM orders
+		WHERE status = 'assigned' AND driver_id IS NOT NULL
+		  AND offer_expires_at IS NOT NULL AND offer_expires_at <= now()`)
+	if err != nil {
+		s.logger.Error("الترتيب: تعذّرت قراءة الإسنادات الصامتة", "error", err)
+		return
+	}
+	type silent struct{ orderID, driverID string }
+	var list []silent
+	for rows.Next() {
+		var x silent
+		if rows.Scan(&x.orderID, &x.driverID) == nil {
+			list = append(list, x)
+		}
+	}
+	rows.Close()
+
+	for _, x := range list {
+		// **النزعُ والوسمُ في قيدٍ واحد** — ولو وقع النزعُ وحدَه لعاد الطلبُ
+		// إلى الصامت نفسِه في الجولة التالية: هو ما زال أطولَ انتظاراً.
+		//
+		// **والشرطُ يتكرّر في التحديث**: بين القراءة والكتابة قد يكون تحرّك،
+		// **ونزعُ طلبٍ من سائقٍ صار في الطريق إليه أسوأُ من تركه نائماً.**
+		var skip []string
+		if err := s.db.QueryRow(ctx, `
+			UPDATE orders
+			SET driver_id = NULL, status = 'dispatching', accepted_at = NULL,
+			    offered_driver_id = NULL, offer_expires_at = NULL,
+			    dispatched_at = now(), offer_passed = offer_passed || $2::uuid,
+			    updated_at = now()
+			WHERE id = $1 AND status = 'assigned' AND driver_id = $2
+			RETURNING array(SELECT unnest(offer_passed)::text)`,
+			x.orderID, x.driverID).Scan(&skip); err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				s.logger.Error("الترتيب: تعذّر نزعُ إسنادٍ صامت",
+					"order", x.orderID, "error", err)
+			}
+			continue
+		}
+		s.pub.Publish("driver:"+x.driverID, map[string]any{"type": "order"})
+		s.pub.Publish("ops", map[string]any{"type": "order"})
+		if err := s.OfferNext(ctx, x.orderID, skip); err != nil {
+			s.logger.Error("الترتيب: تعذّر نقلُ الدور بعد النزع",
+				"order", x.orderID, "error", err)
+		}
+	}
+}
+
 // SweepExpiredOffers ينقل الدورَ عن العروض التي انقضت مهلتها.
 //
 // **يُنادى من الراصد** — لا من نداءِ سائقٍ للطابور: لو انتظرنا من يسأل لبقي
@@ -191,6 +307,7 @@ func (s *Service) SweepExpiredOffers(ctx context.Context) {
 	if s.AssignmentMode(ctx) != "rotation" {
 		return
 	}
+	s.reclaimSilentAssignments(ctx)
 	rows, err := s.db.Query(ctx, `
 		SELECT id, offered_driver_id FROM orders
 		WHERE status = 'dispatching' AND driver_id IS NULL

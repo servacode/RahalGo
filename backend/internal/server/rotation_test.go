@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
@@ -25,27 +27,7 @@ func armRotation(t *testing.T, f *driverFixture, timeoutSec int) {
 		f.drivers); err != nil {
 		t.Fatalf("تعذّر عزلُ السائقين: %v", err)
 	}
-	// **وعزلُ السائقين وحدَه لا يكفي — الطلباتُ الغابرةُ تزاحم أيضاً.**
-	//
-	// `SweepExpiredOffers` يمسح **كلَّ** طلبٍ منتظرٍ في القاعدة لا طلبَ هذا
-	// الاختبار. وطلباتُ تجاربَ سابقةٍ تبقى `dispatching` إلى الأبد، **فتأخذ
-	// عروضُها سائقي هذا الاختبار** — و«عرضٌ حيٌّ واحدٌ لكلّ سائق» يجعلهم
-	// جميعاً غيرَ مؤهّلين لطلبنا.
-	//
-	// **فيسقط الاختبار بـ«لا عرضَ وثمّة سائقون مؤهّلون»** — وهو صادقٌ في
-	// وصفه كاذبٌ في سببه: العلّةُ ركامُ القاعدة لا منطقُ الدور. **ولا يسقط
-	// إلّا بعد أن يتراكم ما يكفي**، فيبدو تقلّباً عشوائياً.
-	//
-	// **والحالةُ تُبدَّل لا `closed_at` وحدَه**: `offerWaiting` و
-	// `SweepExpiredOffers` يقرآن `status = 'dispatching'` **ولا يقرآن
-	// `closed_at`** — فإغلاقٌ بلا تبديلِ حالةٍ يترك الطلبَ يُعرض ويأخذ سائقاً.
-	// (وهي حالٌ لا تقع في الإنتاج: كلُّ إغلاقٍ يبدّل الحالةَ معه.)
-	if _, err := f.pool.Exec(context.Background(),
-		`UPDATE orders SET status = 'cancelled', closed_at = now(),
-		                   offered_driver_id = NULL, offer_expires_at = NULL
-		 WHERE status = 'dispatching' AND closed_at IS NULL`); err != nil {
-		t.Fatalf("تعذّر عزلُ الطلبات الغابرة: %v", err)
-	}
+	isolateStaleOrders(t, f.pool)
 	f.setSetting(t, "drivers.assignment_mode", "rotation")
 	if timeoutSec > 0 {
 		f.setSetting(t, "drivers.offer_timeout_sec", timeoutSec)
@@ -53,6 +35,52 @@ func armRotation(t *testing.T, f *driverFixture, timeoutSec int) {
 	t.Cleanup(func() {
 		f.setSetting(t, "drivers.assignment_mode", "queue")
 	})
+}
+
+// isolateStaleOrders يُغلق ركامَ التجارب السابقة — **قبل أن يُنشأ طلبُ الاختبار.**
+//
+// # لماذا يلزم
+//
+// محرّكُ الترتيب يقرأ **كلَّ** طلبٍ مفتوحٍ في القاعدة لا طلبَ هذا الاختبار:
+// `offerWaiting` يعرض المنتظِر، و`reclaim` يستردّ الإسنادَ الصامت. وطلباتُ
+// تجاربَ سابقةٍ تبقى مفتوحةً إلى الأبد، **فتُعرض على سائقي الاختبار فيصيرون
+// مشغولين** — ويسقط الاختبارُ بـ«لا عرضَ وثمّة سائقون مؤهّلون»، **صادقاً في
+// وصفه كاذباً في سببه.** ولا يسقط إلّا بعد أن يتراكم ما يكفي، فيبدو تقلّباً
+// عشوائياً.
+//
+// # وكلُّ مفتوحٍ لا `dispatching` وحدَها
+//
+// كان الشرطُ عليها، **ثمّ جاء الإسنادُ المباشر فصار الركامُ `assigned` أيضاً.**
+// **ومحرّكٌ يقرأ كلَّ الطلبات يلزمه عزلٌ يشمل كلَّ الطلبات.**
+//
+// # والحالةُ تُبدَّل لا `closed_at` وحدَه
+//
+// المحرّكُ يقرأ `status` **ولا يقرأ `closed_at`** — فإغلاقٌ بلا تبديلِ حالةٍ
+// يترك الطلبَ يُعرض ويأخذ سائقاً. (وهي حالٌ لا تقع في الإنتاج: كلُّ إغلاقٍ
+// يبدّل الحالةَ معه.)
+//
+// # وهو آمنٌ لأنّ الحزمَ لا تتوازى
+//
+// **نمطُ التوزيع إعدادٌ في القاعدة لا في الذاكرة.** فحين ترفعه هذه الحزمةُ إلى
+// «بالتساوي» **يرتفع لكلّ حزمةٍ تعمل في اللحظة نفسِها** — واختبارٌ في حزمة
+// الطلبات ينقل طلباً إلى `dispatching` فيُنادى `OfferNext` من حيث لا يتوقّع
+// أحد، **ثمّ يُلغيه هذا العزل.** (وقع فعلاً ٢٠٢٦-٠٨-٠٥: «الحالة cancelled
+// والمتوقّع dispatching» — ولا شيءَ في تلك الحزمة يفسّره.)
+//
+// **وقيدُ عمرٍ لا يحلّها**: ركامُ هذه الحزمة عمرُه ثوانٍ أيضاً، فالحدُّ الذي
+// يحمي غيرَنا يترك ركامَنا.
+//
+// **فالحلُّ في `-p 1`** (انظر `Makefile`): حزمةٌ واحدةٌ في المرّة. **ومَوردٌ
+// عامٌّ مشتركٌ لا يُقسَّم بحيلةٍ في استعلام.**
+func isolateStaleOrders(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(),
+		`UPDATE orders SET status = 'cancelled', closed_at = now(),
+		                   offered_driver_id = NULL, offer_expires_at = NULL,
+		                   driver_id = NULL
+		 WHERE closed_at IS NULL`); err != nil {
+		t.Fatalf("تعذّر عزلُ الطلبات الغابرة: %v", err)
+	}
 }
 
 // driverEligibility حالُ كلِّ سائقٍ بمقاييس `OfferNext` الخمسة.

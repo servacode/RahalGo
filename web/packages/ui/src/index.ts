@@ -88,3 +88,6 @@ export * from "./ordertrack";
 export * from "./MyAddresses";
 export { StoreHours, type DayHours } from "./StoreHours";
 export * from "./icons";
+
+/** نغمةُ تنبيهٍ تُولَّد في المتصفّح — ومكرّرةٌ لمهمّةٍ وقعت بلا طلب. */
+export { useChime, useRepeatingChime } from "./chime";

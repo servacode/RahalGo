@@ -31,7 +31,7 @@ endif
 test-db:
 	@docker exec rahalgo-postgres psql -U rahalgo -d postgres -c "CREATE DATABASE rahalgo_test" 2>/dev/null || true
 	@docker exec rahalgo-postgres psql -U rahalgo -d rahalgo_test -c "CREATE EXTENSION IF NOT EXISTS postgis" >/dev/null
-	TEST_DATABASE_URL="postgres://rahalgo:rahalgo_dev@localhost:5434/rahalgo_test?sslmode=disable" go test -count=1 ./...
+	TEST_DATABASE_URL="postgres://rahalgo:rahalgo_dev@localhost:5434/rahalgo_test?sslmode=disable" go test -count=1 -p 1 ./...
 
 fmt:
 	gofmt -l -w .

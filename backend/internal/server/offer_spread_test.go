@@ -83,14 +83,9 @@ func TestOffer_WaitingPickedUpWhenDriverFrees(t *testing.T) {
 	driverID := f.drivers[0]
 	f.onShift(t, driverID, true)
 
-	// **العزل**: قاعدةُ الاختبار مشتركة، وفيها طلباتُ تجاربَ سابقة معلّقة في
-	// `dispatching` — **وهي أقدمُ من طلبي فتسبقه إلى السائق**، فيسقط الاختبارُ
-	// بسببٍ لا يخصّ ما يُختبَر. (وهو عزلُ السائقين نفسُه في `armRotation`.)
-	if _, err := f.pool.Exec(ctx,
-		`UPDATE orders SET status = 'cancelled', closed_at = now()
-		 WHERE status = 'dispatching'`); err != nil {
-		t.Fatalf("تعذّر عزلُ الطلبات القديمة: %v", err)
-	}
+	// **والعزلُ من مصدرٍ واحد** — كان مكتوباً هنا بلا قيدِ عمرٍ فيقتل
+	// طلباتِ حزمةٍ أخرى تعمل بالتوازي. (انظر `isolateStaleOrders`.)
+	isolateStaleOrders(t, f.pool)
 
 	first := f.dispatchingOrder(t, 40_000, 8_000)
 	waiting := f.dispatchingOrder(t, 30_000, 8_000)

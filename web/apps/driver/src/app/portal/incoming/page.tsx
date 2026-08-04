@@ -20,7 +20,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { EmptyState, IconOrder, IconDriver, useLiveRefresh } from "@rahalgo/ui";
+import { EmptyState, IconOrder, IconDriver, useLiveRefresh, useChime } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { IncomingCard, type DriverOrder } from "@/components/incoming";
 
@@ -39,36 +39,11 @@ export default function IncomingPage() {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
-  /**
-   * **نغمةٌ تُولَّد في المتصفّح** — لا ملفَّ صوتٍ يُنتظر من الشبكة، ولا ملفَّ
-   * يضيع في نشرةٍ قادمة.
-   */
+  /** **والنغمةُ من الحزمة المشتركة** — تلزم في «مهامّي» أيضاً بعد الإسناد
+      المباشر، **ونسخةٌ ثانيةٌ منها تفترق يوماً.** */
   const known = useRef<Set<string>>(new Set());
   const first = useRef(true);
-  const chime = useCallback(() => {
-    try {
-      const Ctx =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
-      [880, 1175].forEach((hz, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = hz;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const t = ctx.currentTime + i * 0.18;
-        gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-        osc.start(t);
-        osc.stop(t + 0.18);
-      });
-    } catch {
-      // صوتٌ لا يعمل لا يُسقط الشاشة — **والبطاقةُ تظهر على أيّ حال.**
-    }
-  }, []);
+  const chime = useChime();
 
   const load = useCallback(() => {
     api<{ on_shift: boolean }>("/api/v1/driver/me")

@@ -79,10 +79,23 @@ func redactURL(rawURL string) string {
 func NewUser(t *testing.T, pool *pgxpool.Pool, role string) string {
 	t.Helper()
 	ctx := context.Background()
+	// **رقمٌ لا يتكرّر — لا رقمٌ يُرجى ألّا يتكرّر.**
+	//
+	// كان `random()` على ثمانِ خاناتٍ في قاعدةٍ فيها آلافُ المستخدمين المتراكمين
+	// من تجاربَ سابقة. **واحتمالُ التصادم يكبر مع كلّ تشغيل**، فيسقط اختبارٌ
+	// لا علاقةَ له بالأرقام برسالةِ `users_phone_key` — **ويُعاد تشغيلُه فيمرّ**،
+	// فيُقرأ تقلّباً في الشبكة أو القاعدة ويُهمَل.
+	//
+	// **والتسلسلُ يقطع الشكّ**: القاعدةُ نفسُها تعطي الرقمَ التالي، فلا
+	// اثنان يتفقان **ولو تشاركت حزمتان القاعدةَ في اللحظة نفسِها.**
+	if _, err := pool.Exec(ctx,
+		`CREATE SEQUENCE IF NOT EXISTS test_phone_seq START 1`); err != nil {
+		t.Fatalf("تعذّر تهيئةُ تسلسل الأرقام: %v", err)
+	}
 	var id string
 	err := pool.QueryRow(ctx, `
 		INSERT INTO users (phone, full_name)
-		VALUES ('+9639' || lpad((floor(random() * 100000000))::text, 8, '0'), $1)
+		VALUES ('+9639' || lpad((nextval('test_phone_seq') % 100000000)::text, 8, '0'), $1)
 		RETURNING id`, "اختبار "+role).Scan(&id)
 	if err != nil {
 		t.Fatalf("تعذّر إنشاء مستخدم: %v", err)
