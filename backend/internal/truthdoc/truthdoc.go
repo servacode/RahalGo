@@ -57,14 +57,14 @@ func Sections() map[string]string {
 // تغييرَه.
 func settingsTable() string {
 	groups := []settings.Group{
-		settings.GroupOrders, settings.GroupDrivers,
-		settings.GroupMerchants, settings.GroupPricing,
+		settings.GroupNew, settings.GroupOrders, settings.GroupDrivers,
+		settings.GroupMerchants,
 	}
 	labels := map[settings.Group]string{
+		settings.GroupNew:       "قواعد المال",
 		settings.GroupOrders:    "الطلبات",
 		settings.GroupDrivers:   "السائقون",
 		settings.GroupMerchants: "المتاجر",
-		settings.GroupPricing:   "التسعير",
 	}
 	var b strings.Builder
 	b.WriteString("| المفتاح | المجموعة | النوع | الافتراضيّ |\n|---|---|---|---|\n")

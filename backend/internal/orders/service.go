@@ -239,7 +239,13 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	}
 
 	// منطقة التسليم من الدبوس — **من مصدرٍ واحدٍ لا استعلامين.**
-	zone, err := s.ZoneAt(ctx, in.Lat, in.Lng)
+	// **ومصادرُ الطلب تُمرَّر للنمط المسافيّ** — وطلبٌ بلا أصنافٍ (يكتبه
+	// المكتبُ هاتفيّاً) لا مصادرَ له، فتبقى المسافةُ صفراً والأساسُ وحدَه.
+	var srcIDs []string
+	if sources != nil {
+		srcIDs = sources.IDs
+	}
+	zone, err := s.DeliveryAt(ctx, in.Lat, in.Lng, srcIDs)
 	if errors.Is(err, ErrOutOfZone) {
 		return nil, ErrOutOfZone
 	}
@@ -247,7 +253,8 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		return nil, err
 	}
 	zoneID := zone.ID
-	deliveryFee, minOrder := zone.DeliveryFee, zone.MinOrder
+	// **والأجرةُ النافذةُ لا أجرةُ المنطقة** — النمطُ قد يكون مقطوعاً أو مسافيّاً.
+	deliveryFee, minOrder := zone.Fee, zone.MinOrder
 	// **لا حدّ أدنى للطلب في هذه المنصة** (قرار المالك، ٢٠٢٦-٠٨-٠١).
 	//
 	// رسمُ التوصيل يُؤخذ كاملاً من الزبون مهما كانت قيمة طلبه، فالمنصة لا تخسر

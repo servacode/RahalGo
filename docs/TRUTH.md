@@ -386,6 +386,18 @@
 <!-- gen:settings -->
 | المفتاح | المجموعة | النوع | الافتراضيّ |
 |---|---|---|---|
+| `delivery.fee_mode` | قواعد المال | choice | `zone` |
+| `delivery.flat_fee` | قواعد المال | money | `0` |
+| `delivery.base_fee` | قواعد المال | money | `0` |
+| `delivery.per_km` | قواعد المال | money | `0` |
+| `pricing.margin_mode` | قواعد المال | choice | `percent` |
+| `pricing.margin_value` | قواعد المال | int | `0` |
+| `merchants.commission_mode` | قواعد المال | choice | `percent` |
+| `merchants.commission_value` | قواعد المال | int | `10` |
+| `sales.commission_mode` | قواعد المال | choice | `percent` |
+| `sales.commission_value` | قواعد المال | int | `10` |
+| `pricing.rounding` | قواعد المال | int | `500` |
+| `merchants.self_manage_orders` | قواعد المال | bool | `true` |
 | `orders.accept_timeout_min` | الطلبات | int | `5` |
 | `orders.driver_timeout_min` | الطلبات | int | `10` |
 | `orders.delivery_timeout_min` | الطلبات | int | `60` |
@@ -403,16 +415,11 @@
 | `drivers.max_active_orders` | السائقون | int | `2` |
 | `drivers.assignment_mode` | السائقون | choice | `queue` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
-| `merchants.default_commission_percent` | المتاجر | int | `10` |
 | `merchants.menu_requires_approval` | المتاجر | bool | `false` |
-| `merchants.self_manage_orders` | المتاجر | bool | `true` |
 | `merchants.cancel_ban_mode` | المتاجر | choice | `manual` |
 | `merchants.cancel_ban_count` | المتاجر | int | `5` |
 | `merchants.cancel_ban_days` | المتاجر | int | `30` |
 | `merchants.default_prep_minutes` | المتاجر | int | `20` |
-| `pricing.margin_mode` | التسعير | choice | `percent` |
-| `pricing.margin_value` | التسعير | int | `0` |
-| `pricing.rounding` | التسعير | int | `500` |
 <!-- /gen:settings -->
 
 ---

@@ -53,8 +53,12 @@ type Merchant struct {
 	//
 	// **في القائمة لا في صفحةٍ منفصلة**: متجرٌ على ٤ من ٥ تتّصل به العملياتُ
 	// فتنقذ الطرفين — **وعدّادٌ لا يُرى إلا بفتح صفحةٍ عدّادٌ لا يُقرأ.**
-	Violations      int       `json:"violations"`
-	CommissionPct   int       `json:"commission_percent"`
+	Violations int `json:"violations"`
+	// CommissionPct **تجاوزُ عمولة هذا المتجر** — و`null` تعني «اتبع العامّ».
+	//
+	// كان رقماً دائماً يُنسخ لحظةَ الإنشاء، **فتغييرُ المفتاح لا يمسّ متجراً
+	// قائماً.** (الترحيل ٠٠٦٧.)
+	CommissionPct   *int64    `json:"commission_percent"`
 	EmergencyClosed bool      `json:"emergency_closed"`
 	CreatedAt       time.Time `json:"created_at"`
 }
@@ -253,13 +257,15 @@ func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status, 
 }
 
 type MerchantInput struct {
-	Name            *string  `json:"name"`
-	Description     *string  `json:"description"`
-	CategoryID      *string  `json:"category_id"`
-	Phone           *string  `json:"phone"`
-	AddressText     *string  `json:"address_text"`
-	Status          *string  `json:"status"`
-	CommissionPct   *int     `json:"commission_percent"`
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	CategoryID  *string `json:"category_id"`
+	Phone       *string `json:"phone"`
+	AddressText *string `json:"address_text"`
+	Status      *string `json:"status"`
+	// CommissionPct تجاوزُ عمولة هذا المتجر — **وسالبُ الواحدِ يمحوه**
+	// فيعود إلى `merchants.commission_value` العامّ.
+	CommissionPct   *int64   `json:"commission_percent"`
 	EmergencyClosed *bool    `json:"emergency_closed"`
 	OwnerPhone      *string  `json:"owner_phone"`    // يربط/ينشئ حساب صاحب المتجر بدور merchant
 	SalesRepCode    *string  `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
@@ -289,8 +295,13 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 		        CASE WHEN $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
 		             THEN ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography END,
 		        NULLIF(COALESCE($10, ''), '')::uuid,
-		        COALESCE($11, (SELECT (value#>>'{}')::int FROM app_settings
-		                       WHERE key = 'merchants.default_commission_percent'), 10),
+		        -- **ولا يُنسخ الافتراضُ في العمود.**
+		        --
+		        -- كان يُقرأ المفتاحُ هنا بـCOALESCE — فيولد كلُّ متجرٍ برقمٍ
+		        -- خاصٍّ به يساوي العامَّ يومَ وُلد، **ثمّ لا يتحرّك حين يتحرّك
+		        -- العامّ.** والفراغُ الآن يعني «اتبع العامّ» فعلاً.
+		        $11,
+
 		        -- وقت التحضير الافتراضي من اللوحة لا من افتراض العمود: كان ٢٠
 		        -- مكتوباً في الترحيل 0035، يرثه كل متجرٍ جديد ولا يملك المالك
 		        -- تغييره لمن يأتي بعده.
@@ -333,7 +344,15 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 			phone         = COALESCE($5, phone),
 			address_text  = COALESCE($6, address_text),
 			status        = COALESCE($7, status),
-			commission_percent = COALESCE($13, commission_percent),
+			-- **وسالبُ الواحدِ يمحو التجاوز.**
+			--
+			-- COALESCE وحدَه لا يفرّق بين «لم يُرسَل» و«أُرسل فارغاً» — وكلاهما
+			-- NULL. **فمن أراد أن يعيد متجراً إلى العمولة العامّة لم يملك
+			-- سبيلاً**: كلُّ إرسالٍ يُقرأ «بلا تغيير»، فيبقى رقمُه القديم
+			-- يحكمه **بينما يظنّ المالكُ أنّ المفتاحَ العامَّ يحكمه.**
+			commission_percent = CASE WHEN $13::bigint IS NULL THEN commission_percent
+			                          WHEN $13 < 0 THEN NULL
+			                          ELSE $13 END,
 			emergency_closed = COALESCE($8, emergency_closed),
 			owner_user_id = COALESCE($9, owner_user_id),
 			sales_rep_user_id = COALESCE($10, sales_rep_user_id),

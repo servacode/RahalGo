@@ -17,6 +17,8 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // Sources مصادرُ أصنافٍ، مرتّبةً بالأوّلِ ظهوراً في السلّة.
@@ -194,8 +196,8 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 	}
 	out.Subtotal = subtotal
 
-	if z, err := s.ZoneAt(ctx, lat, lng); err == nil {
-		out.BaseFee = z.DeliveryFee
+	if z, err := s.DeliveryAt(ctx, lat, lng, src.IDs); err == nil {
+		out.BaseFee = z.Fee
 	} else {
 		// **خارجَ التغطية ليس خطأً في التسعيرة** — الرسمُ يبقى صفراً ويُردّ
 		// الطلبُ عند الإنشاء بـ`out_of_zone`. **وسلّةٌ تنهار لأن الدبوسَ لم
@@ -241,4 +243,62 @@ func (s *Service) ZoneAt(ctx context.Context, lat, lng float64) (ZoneCharge, err
 		return z, ErrOutOfZone
 	}
 	return z, err
+}
+
+// DeliveryCharge أجرةُ التوصيل ومنطقتُها — **مصدرُ الحقيقة الواحد.**
+type DeliveryCharge struct {
+	ZoneCharge
+	// Fee الأجرةُ النافذة بعد تطبيق النمط — **وهي غيرُ `ZoneCharge.DeliveryFee`**:
+	// تلك أجرةُ المنطقة كما ضُبطت، وهذه ما يُحاسَب به فعلاً.
+	Fee int64
+	// Mode النمطُ الذي حُسبت به — يُقال في التسعيرة كي يُفهَم الرقم.
+	Mode string
+	// Meters أبعدُ مصدرٍ عن الزبون — **صفرٌ في غير النمط المسافيّ.**
+	Meters float64
+}
+
+// DeliveryAt أجرةُ التوصيل لهذا الدبّوس من هذه المصادر.
+//
+// # لماذا في موضعٍ واحد
+//
+// الأجرةُ تُحسب مرّتين: في التسعيرة (قبل الطلب) وعند الإنشاء (لحظتَه).
+// **ولو حُسبت بحسبتين لَقالت السلّةُ رقماً ويُحاسَب الزبونُ بغيره** — وهو
+// أسوأُ ما يقع في شاشة دفع.
+//
+// (ملاحظةُ المالك ٢٠٢٦-٠٨-٠٤: «قيمُ التوصيل يجب أن تأتي من مكانٍ واحدٍ بكلّ
+// المشروع».)
+//
+// # والتغطيةُ بالمناطق في الأنماط الثلاثة
+//
+// **نمطُ الأجرة غيرُ حدّ التغطية.** المناطقُ تقول «إلى أين نُوصّل»، والنمطُ
+// يقول «بكم». **ومن خلطهما فتح المدينةَ كلَّها بمجرّد أن جعل الأجرةَ
+// مقطوعة** — فيُقبل طلبٌ من قريةٍ لا يصلها سائق.
+//
+// # والمسافةُ أبعدُ مصدرٍ عن الزبون
+//
+// السائقُ يمرّ على المصادر كلِّها ثمّ يقصد الزبون. **وأقربُها يجعل طلباً من
+// طرفَي المدينة بأجرة الجار.** ورسمُ الوقفة الزائدة محسوبٌ وحدَه — **هذا ثمنُ
+// الطريق وذاك ثمنُ الوقفة.**
+func (s *Service) DeliveryAt(ctx context.Context, lat, lng float64, sourceIDs []string) (DeliveryCharge, error) {
+	var out DeliveryCharge
+	z, err := s.ZoneAt(ctx, lat, lng)
+	if err != nil {
+		return out, err
+	}
+	out.ZoneCharge = z
+
+	rule := pricing.DeliveryFrom(ctx, s.settings)
+	out.Mode = rule.Mode
+	if rule.Mode == pricing.DeliveryDistance && len(sourceIDs) > 0 {
+		// **وتعذّرُ القياس لا يُصفّر الأجرة**: متجرٌ بلا إحداثيّات يجعل
+		// المسافةَ صفراً، **فيصير الأساسُ وحدَه** — لا مجّاناً.
+		_ = s.db.QueryRow(ctx, `
+			SELECT COALESCE(max(ST_Distance(m.location,
+			         ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)), 0)
+			FROM merchants m
+			WHERE m.id = ANY($3::uuid[]) AND m.location IS NOT NULL`,
+			lat, lng, sourceIDs).Scan(&out.Meters)
+	}
+	out.Fee = rule.Fee(z.DeliveryFee, out.Meters)
+	return out, nil
 }

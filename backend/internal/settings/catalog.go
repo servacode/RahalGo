@@ -46,7 +46,6 @@ const (
 	GroupPayouts   Group = "payouts"
 	GroupSecurity  Group = "security"
 	GroupSupport   Group = "support"
-	GroupPricing   Group = "pricing"
 	GroupPlatform  Group = "platform"
 	// GroupNew **القسمُ الذي يُبنى على مراحل.**
 	//
@@ -72,7 +71,7 @@ const (
 var Groups = []Group{
 	GroupNew,
 	GroupOrders, GroupDrivers, GroupMerchants, GroupSales, GroupPlatform,
-	GroupCustomers, GroupPayouts, GroupPricing, GroupSupport, GroupSecurity,
+	GroupCustomers, GroupPayouts, GroupSupport, GroupSecurity,
 }
 
 // Def تعريف مفتاح واحد.
@@ -95,6 +94,72 @@ type Def struct {
 
 // Catalog كل ما تعرفه المنصة. الترتيب هنا هو ترتيب العرض داخل المجموعة.
 var Catalog = []Def{
+	// ── القسم الجديد ──────────────────────────────────────────────────────
+	//
+	// **قواعدُ المال في موضعٍ واحد** — تُبنى بقرارٍ لا بتراكم.
+	//
+	// **وكلُّها تُقرأ عند كلّ استعمالٍ لا مرّةً عند الإقلاع**: تغييرٌ هنا يسري
+	// على الطلب التالي. (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لازم كلُّ المشروع يأخذ
+	// الإعداداتِ هذه بحيث تُطبَّق بشكلٍ حقيقيٍّ فوريٍّ عند أيّ تغيّر».)
+
+	// **أجرةُ التوصيل — ثلاثةُ أنماط.**
+	//
+	//	مقطوعة    ←  رقمٌ واحدٌ للجميع              ← بسيطٌ ويُفهَم
+	//	بالمنطقة  ←  أجرةُ الدائرة التي يقع فيها    ← القائمُ قبلها
+	//	بالمسافة  ←  أساسٌ + رقمٌ لكلّ كيلومتر       ← أعدلُ للبعيد والقريب
+	//
+	// **والتغطيةُ تبقى بالمناطق في الأنماط الثلاثة**: خارجَ الدوائر يُرفض
+	// الطلب. **ونمطُ الأجرة غيرُ حدّ التغطية** — ومن خلطهما فتح المدينةَ
+	// كلَّها بمجرّد أن جعل الأجرةَ مقطوعة.
+	{Key: "delivery.fee_mode", Group: GroupNew, Kind: KindChoice,
+		Options: []string{"flat", "zone", "distance"}, Default: "zone", Sensitive: true},
+	{Key: "delivery.flat_fee", Group: GroupNew, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	// **أساسُ النمط المسافيّ** — ما يُدفع قبل أن يتحرّك السائقُ متراً.
+	//
+	// **وصفرٌ فيه يجعل الجارَ يُوصَّل بلا شيء**: خروجُ السائق تكلفةٌ ولو كان
+	// الباب مقابلَ الباب.
+	{Key: "delivery.base_fee", Group: GroupNew, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	{Key: "delivery.per_km", Group: GroupNew, Kind: KindMoney,
+		Min: 0, Max: 1000000, Unit: "currency", Default: 0, Sensitive: true},
+
+	// **الهامشُ الربحيّ** — ما تضيفه المنصةُ فوق سعر الشراء، ويدفعه الزبون.
+	{Key: "pricing.margin_mode", Group: GroupNew, Kind: KindChoice,
+		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
+	{Key: "pricing.margin_value", Group: GroupNew, Kind: KindInt,
+		Min: 0, Max: 1000000, Default: 0, Sensitive: true},
+
+	// **عمولةُ المنصة من المتاجر** — تُقتطع من سعر شراء المتجر.
+	//
+	// **وحيّةٌ لا لقطة**: كانت تُنسخ في عمود المتجر لحظةَ إنشائه، **فتغييرُ
+	// المفتاح لا يمسّ متجراً قائماً** — يظنّ المالكُ أنّه رفع العمولةَ على
+	// الجميع وهو لم يرفعها على أحد. (الترحيل ٠٠٦٧.)
+	//
+	// **ويبقى للمتجر تجاوزٌ خاصٌّ** حين يُتّفق معه على غير العامّ — كتجاوزِ
+	// هامش الصنف: **فراغُه «اتبع العام» لا «بلا عمولة».**
+	{Key: "merchants.commission_mode", Group: GroupNew, Kind: KindChoice,
+		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
+	{Key: "merchants.commission_value", Group: GroupNew, Kind: KindInt,
+		Min: 0, Max: 1000000, Default: 10, Sensitive: true},
+
+	// **عمولةُ المندوب** — حصّتُه ممّا تقبضه المنصةُ من متجرِه.
+	//
+	// **وهي حصّةٌ من حصّتنا لا من البيع**: نسبةٌ من قيمة الطلب تجعل المندوبَ
+	// يأخذ أكثرَ ممّا نأخذ في المتاجر منخفضةِ العمولة.
+	{Key: "sales.commission_mode", Group: GroupNew, Kind: KindChoice,
+		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
+	{Key: "sales.commission_value", Group: GroupNew, Kind: KindInt,
+		Min: 0, Max: 1000000, Default: 10, Sensitive: true},
+
+	// **والتقريبُ ليس تجميلاً** — قائمةٌ فيها ٨٬١٢٥ و١١٬٣٧٥ تقول «هذه آلةٌ
+	// تحسب»، وقائمةٌ فيها ٨٬٠٠٠ و١١٬٥٠٠ تقول «هذا سعرُنا».
+	//
+	// **وهو واحدٌ للبيع والتوصيل**: خانتان تجعلان المجموعَ رقماً لا يُحسب
+	// في الجيب — وهو ما التقريبُ كلُّه من أجله.
+	{Key: "pricing.rounding", Group: GroupNew, Kind: KindInt,
+		Min: 0, Max: 10000, Default: 500},
+
 	// ── الطلبات ───────────────────────────────────────────────────────────
 	{Key: "orders.accept_timeout_min", Group: GroupOrders, Kind: KindInt,
 		Min: 1, Max: 120, Unit: "minute", Default: 5},
@@ -160,8 +225,6 @@ var Catalog = []Def{
 		Min: 10, Max: 300, Unit: "second", Default: 45},
 
 	// ── المتاجر ───────────────────────────────────────────────────────────
-	{Key: "merchants.default_commission_percent", Group: GroupMerchants, Kind: KindInt,
-		Min: 0, Max: 100, Unit: "percent", Default: 10, Sensitive: true},
 	{Key: "merchants.menu_requires_approval", Group: GroupMerchants, Kind: KindBool,
 		Default: false},
 	// **من يدير الطلبات: المتجر أم المنصة؟**
@@ -172,7 +235,7 @@ var Catalog = []Def{
 	//
 	// فحين تُطفأ: تقبل العملياتُ الطلب نيابةً عنه ثم تُرسله إليه على واتساب،
 	// فيقرؤه في المكان الذي يعمل فيه أصلاً.
-	{Key: "merchants.self_manage_orders", Group: GroupMerchants, Kind: KindBool,
+	{Key: "merchants.self_manage_orders", Group: GroupNew, Kind: KindBool,
 		Default: true},
 	// **حظرُ كثيرِ الإلغاء — والزرُّ ذكيٌّ لأن له وضعين لا حالتين.**
 	//
@@ -193,8 +256,6 @@ var Catalog = []Def{
 		Min: 1, Max: 240, Unit: "minute", Default: 20},
 
 	// ── المندوبون ─────────────────────────────────────────────────────────
-	{Key: "sales.commission_percent", Group: GroupSales, Kind: KindInt,
-		Min: 0, Max: 100, Unit: "percent", Default: 10, Sensitive: true},
 	{Key: "sales.activation_orders", Group: GroupSales, Kind: KindInt,
 		Min: 1, Max: 100, Unit: "order", Default: 5, Sensitive: true},
 	{Key: "sales.monthly_target", Group: GroupSales, Kind: KindInt,
@@ -242,36 +303,6 @@ var Catalog = []Def{
 	// مشوارُ دقائق في مدينةٍ كالرقّة.
 	{Key: "orders.source_proximity_m", Group: GroupOrders, Kind: KindInt,
 		Min: 100, Max: 20000, Unit: "meter", Default: 1500},
-
-	// ── التسعير ───────────────────────────────────────────────────────────
-	//
-	// **نمطان لأن التكلفتين تختلفان.** الثابتُ يوافق تكلفتَك: سائقٌ وعملياتٌ
-	// لا يتضاعفان بتضاعف قيمة الطعام — **وصينيةٌ بستّين ألفاً لا تكلّفك عشرةَ
-	// أضعاف الشاورما.** والنسبةُ تمنع أن يبدو الرخيصُ غالياً: **خمسون بالمئة
-	// على الشاورما يراها من يعرف سعرَها.** وطبقةُ التصنيف تحلّهما معاً.
-	{Key: "pricing.margin_mode", Group: GroupPricing, Kind: KindChoice,
-		Options: []string{"percent", "fixed"}, Default: "percent"},
-	// **وافتراضُه صفر** — فسعرُ البيع سعرُ الشراء حتى يقرّر المالك.
-	//
-	// **وأيُّ افتراضٍ غيرِه يخترع ربحاً لم يُتّفق عليه**: يُرحَّل ألفُ صنفٍ
-	// بهامشٍ لم يقرّره أحد، **فيرتفع سعرُ كلّ شيءٍ ليلةَ النشر ولا أحد يعلم
-	// لماذا.**
-	// **وحدُّه يتبع نمطَه** — يُفرض في `settings.Set` لأن الفهرس لا يعرف
-	// قيمةَ مفتاحٍ آخر.
-	//
-	// **ومفتاحٌ واحدٌ بمعنيين خطرٌ لا يُرى**: «٣٠٠٠» تعني ثلاثةَ آلاف ليرةٍ
-	// في الثابت، **وواحداً وثلاثين ضعفاً في النسبة.** وقد وقع فعلاً في
-	// تجربةٍ حيّة (٢٠٢٦-٠٨-٠٢): كُتب ٣٠٠٠ قصداً للّيرة، **فصار طلبٌ تكلفتُه
-	// ٦٥ ألفاً يُباع بمليونين** — ولا حدَّ يمنع ولا لافتةَ تُنبّه.
-	{Key: "pricing.margin_value", Group: GroupPricing, Kind: KindInt,
-		Min: 0, Max: 1000000, Default: 0},
-	// **والتقريبُ ليس تجميلاً.**
-	//
-	// قائمةٌ فيها ٨٬١٢٥ و١١٬٣٧٥ **تقول «هذه آلةٌ تحسب»**، وقائمةٌ فيها ٨٬٠٠٠
-	// و١١٬٥٠٠ تقول **«هذا سعرُنا»**. وفي سوريا حيث الفئاتُ كبيرة **هو ما يجعل
-	// الحسابَ ممكناً في الجيب.**
-	{Key: "pricing.rounding", Group: GroupPricing, Kind: KindInt,
-		Min: 0, Max: 10000, Default: 500},
 
 	// ── الدعم ─────────────────────────────────────────────────────────────
 	// **مهلةُ الشكوى — لأن الذاكرةَ تُنسى والدليلَ يذهب.**

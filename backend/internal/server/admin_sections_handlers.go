@@ -223,8 +223,12 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 
 		// --- الحسبتان: واحدةٌ تنزل على المتجر وأخرى تصعد على الزبون ---
 
-		// CommissionPct نسبةُ عمولة المنصة على هذا المتجر.
+		// CommissionPct نسبةُ عمولة المنصة النافذة — **بعد الوراثة**:
+		// تجاوزُ المتجر إن كان، وإلّا العامّ. **ورقمُ الإعدادات وحدَه يكذب
+		// على متجرٍ اتُّفق معه على غيره.**
 		CommissionPct int `json:"commission_percent"`
+		// CommissionMode «نسبة» أم «مقطوع» — **فلا تُكتب «٪» على رقمٍ بالليرة.**
+		CommissionMode string `json:"commission_mode"`
 		// Commission قيمةُ العمولة بالليرة — **تُقتطع من المتجر لا تُضاف للزبون.**
 		Commission int64 `json:"commission"`
 		// MerchantNet **ما يقبضه المتجر فعلاً** — سعرُ الشراء ناقصَ العمولة.
@@ -248,16 +252,21 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var x item
 		var sectionMargin *int64
+		var commOverride *int64
 		if err := rows.Scan(&x.ID, &x.Name, &x.MerchantPrice, &x.Available,
 			&x.Approved, &x.MerchantName, &x.MerchantStatus, &x.ThumbURL, &x.ImageURL,
-			&x.CommissionPct, &x.MarginOverride, &sectionMargin); err != nil {
+			&commOverride, &x.MarginOverride, &sectionMargin); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		x.ThumbURL = media.URLForPtr(x.ThumbURL)
 		x.ImageURL = media.URLForPtr(x.ImageURL)
 
-		x.Commission = x.MerchantPrice * int64(x.CommissionPct) / 100
+		// **والعمولةُ من `pricing` كالهامش** — نمطاً ووراثةً.
+		comm := pricing.MerchantCommission(r.Context(), s.settings, commOverride)
+		x.CommissionPct = int(comm.Value)
+		x.CommissionMode = comm.Mode
+		x.Commission = comm.Of(x.MerchantPrice)
 		x.MerchantNet = x.MerchantPrice - x.Commission
 
 		x.MarginPct = rule.Value

@@ -11,6 +11,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -561,14 +562,15 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 	var totalCommission int64
 	for rows.Next() {
 		var merchantID string
-		var pct int
+		// **وعمودُ العمولة تجاوزٌ لا نسخة** — فراغُه «اتبع العامّ».
+		var pct *int64
 		var owner *string
 		var cost int64
 		if err := rows.Scan(&merchantID, &pct, &owner, &cost); err != nil {
 			rows.Close()
 			return err
 		}
-		c := cost * int64(pct) / 100
+		c := pricing.MerchantCommission(ctx, s.settings, pct).Of(cost)
 		totalCommission += c
 		shares = append(shares, share{ownerID: owner, commission: c, due: cost - c})
 	}
@@ -581,7 +583,7 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 	// بلا `order_items`. **وصفرٌ هنا يعني «لا مستحقّ» وهو أسوأُ من الخطأ.**
 	if len(shares) == 0 {
 		var subtotal int64
-		var pct int
+		var pct *int64
 		var owner *string
 		if err := q.QueryRow(ctx, `
 			SELECT o.subtotal, m.commission_percent, m.owner_user_id::text
@@ -589,7 +591,7 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 			WHERE o.id = $1`, orderID).Scan(&subtotal, &pct, &owner); err != nil {
 			return err
 		}
-		c := subtotal * int64(pct) / 100
+		c := pricing.MerchantCommission(ctx, s.settings, pct).Of(subtotal)
 		totalCommission = c
 		shares = append(shares, share{ownerID: owner, commission: c, due: subtotal - c})
 	}
@@ -819,15 +821,15 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 	return nil
 }
 
-// repShare نصيب المندوب من عمولة المنصة — نسبة ديناميكية من الإعدادات.
-func (s *Service) repShare(ctx context.Context, q wallet.Querier, platformCommission int64) (int64, error) {
-	var repPct float64
-	if err := q.QueryRow(ctx, `
-		SELECT COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings
-		                 WHERE key = 'sales.commission_percent'), 10)`).Scan(&repPct); err != nil {
-		return 0, err
-	}
-	return int64(float64(platformCommission) * repPct / 100), nil
+// repShare نصيب المندوب من عمولة المنصة — **من مخزن الإعدادات لا من SQL.**
+//
+// كان الاستعلامُ مكتوباً بيده هنا وفي `admin_financials` وفي `rep_merchant_detail`
+// — **ثلاثةُ نسخٍ لقاعدةٍ واحدة**. فلمّا صار للعمولة نمطٌ (نسبةٌ أو مقطوع)
+// لزم أن يُعدَّل ثلاثةُ مواضع، **ومن نسي واحداً دفع للمندوب غيرَ ما يُعرض له.**
+//
+// **والقراءةُ عند كلّ تسوية** — فتغييرُ المالك يسري على الطلب التالي.
+func (s *Service) repShare(ctx context.Context, _ wallet.Querier, platformCommission int64) (int64, error) {
+	return pricing.RepCommission(ctx, s.settings).Of(platformCommission), nil
 }
 
 // AssignDriver إسناد يدوي من العمليات: يتحقق أن الحساب سائق نشط ثم يسند وينقل الحالة.

@@ -50,6 +50,16 @@ const hint = (k: string) =>
   (S.keys as Record<string, { label: string; hint: string }>)[k]?.hint ?? "";
 const unitText = (u?: string) => (u ? (S.units as Record<string, string>)[u] ?? "" : "");
 const choiceText = (c: string) => (S.choices as Record<string, string>)[c] ?? c;
+/**
+ * حالُ مفتاحٍ منطقيّ بالكلمات — **«المنصة تدير الطلبات» لا «مُطفأ».**
+ *
+ * **و«نعم/لا» لا تقول شيئاً**: من قرأ «لا» تحت «المتجر يدير طلباته» عرف أنّه
+ * لا يديرها **ولم يعرف من يديرها.** والبديلُ العامّ يبقى لمفاتيحَ لم تُوصَف
+ * بعد — فلا تُفرَض كتابةُ وصفين لكلّ مفتاح.
+ */
+const boolText = (k: string, side: "on" | "off") =>
+  (S.boolStates as Record<string, { on: string; off: string }>)[k]?.[side] ??
+  (side === "on" ? S.boolOn : S.boolOff);
 
 export default function SettingsPage() {
   const { user: me } = useAuth();
@@ -304,13 +314,31 @@ function SettingRow({
 
         <div className="flex flex-wrap items-end gap-2">
           {s.kind === "bool" ? (
-            <Checkbox
-              id={s.key}
-              label={label(s.key)}
-              checked={s.value === true}
-              disabled={!editable || busy}
-              onChange={(e) => void save(e.target.checked)}
-            />
+            /* **زرٌّ ذكيٌّ يقول الحال لا الفعل.**
+
+               مربّعُ اختيارٍ باسم المفتاح يسأل من ينظر: **أهذا وصفُ ما هو
+               قائمٌ الآن أم وصفُ ما سيصير إن ضغطتُ؟** — والفرقُ في إعدادٍ
+               يحكم من يدير الطلبات فرقُ يومٍ كامل.
+
+               **فيُقال الحالُ صراحةً** فوق المربّع: «الآن: …».
+
+               (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «زرٌّ ذكيٌّ للتبديل بين المنصة تدير
+               المتاجر أو المتاجر تدير نفسها».) */
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-ink-muted">
+                {S.nowIs.replace(
+                  "{v}",
+                  s.value === true ? boolText(s.key, "on") : boolText(s.key, "off"),
+                )}
+              </span>
+              <Checkbox
+                id={s.key}
+                label={label(s.key)}
+                checked={s.value === true}
+                disabled={!editable || busy}
+                onChange={(e) => void save(e.target.checked)}
+              />
+            </div>
           ) : isTreasury ? (
             <Select
               id={s.key}

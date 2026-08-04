@@ -11,6 +11,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // تفاصيل عميل المندوب — شفافية العمولة.
@@ -61,14 +62,12 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	}
 	head.LogoThumbURL = media.URLForPtr(head.LogoThumbURL)
 
-	// نسبة المندوب من عمولة المنصة — تُقرأ مرّة لحساب المشطوب المعروض
-	var repPct float64
-	if err := s.pg.QueryRow(ctx, `
-		SELECT COALESCE((SELECT (value#>>'{}')::float8 FROM app_settings
-		                 WHERE key = 'sales.commission_percent'), 10)`).Scan(&repPct); err != nil {
-		s.respondErr(w, err)
-		return
-	}
+	// نسبةُ المندوب وعمولةُ المتجر — **من مخزن الإعدادات لا من SQL.**
+	//
+	// **والعمولتان تُقرآن هنا لا في الاستعلام**: الحسبةُ في `pricing` وحدَها،
+	// **ولو كُتبت في SQL لَما عرفت النمطَ المقطوع** — فتعرض للمندوب نسبةً من
+	// عمولةٍ لم تُحسب بها.
+	repRule := pricing.RepCommission(ctx, s.settings)
 
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
@@ -112,7 +111,7 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 		       -- الدفتر يُصفّر عمولة الطلب الملغى — وهو الصواب المحاسبي، لكن عرض
 		       -- صفرٍ للمندوب يخفي عنه حجم ما ضاع. فنحسبها هنا للعرض وحده،
 		       -- ويقولها الشطب صراحةً: رقمٌ كان ولم يصر.
-		       (o.subtotal * mm.commission_percent / 100),
+		       o.subtotal, mm.commission_percent,
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 WHERE t.user_id = $3 AND t.ref = o.id::text
 		                   AND t.kind IN ('commission', 'adjustment')), 0)
@@ -144,13 +143,17 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	list := []repOrder{}
 	for rows.Next() {
 		var o repOrder
+		var sub int64
+		var mPct *int64
 		if err := rows.Scan(&o.Number, &o.Status, &o.CancelReason, &o.Total, &o.Subtotal, &o.DeliveryFee,
-			&o.Commission, &o.CreatedAt, &o.DeliveredAt, &o.Forfeited, &o.MyShare); err != nil {
+			&o.Commission, &o.CreatedAt, &o.DeliveredAt, &sub, &mPct, &o.MyShare); err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		// نصيب المندوب من المشطوبة — بالنسبة نفسها المعتمدة وقت العرض
-		o.ForfeitedShare = o.Forfeited * int64(repPct) / 100
+		// **العمولةُ المشطوبة**: ما كان سيُحتسب لولا الإلغاء — بالمعادلة
+		// النافذة اليومَ، **فلا يفترق المعروضُ عن المقيَّد بحسبةٍ ثانية.**
+		o.Forfeited = pricing.MerchantCommission(ctx, s.settings, mPct).Of(sub)
+		o.ForfeitedShare = repRule.Of(o.Forfeited)
 		list = append(list, o)
 	}
 	if err := rows.Err(); err != nil {

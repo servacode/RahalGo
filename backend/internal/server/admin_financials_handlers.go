@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // كشف مالي لأي شخص حسب دوره: ما استحقه (له)، وما عليه، والطلبات المرتجعة وأسبابها.
@@ -64,12 +65,14 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 	}{Roles: roles, Rates: []finRate{}, OwedTo: finBucket{Items: []finEntry{}}, OwedBy: finBucket{Items: []finEntry{}}, Returns: []finEntry{}}
 
 	// ---- النِسَب المطبّقة حسب الدور ----
+	// **والنسبةُ المعروضة هي النافذةُ لا رقمٌ يُقرأ من عمود.**
+	//
+	// كانت تُقرأ بـSQL هنا وبـSQL في التسوية — **ورقمان لمعنًى واحدٍ يفترقان**،
+	// فيرى المندوبُ نسبةً ويُقيَّد له بغيرها.
 	if has("sales") {
-		var pct int
-		_ = s.pg.QueryRow(ctx, `
-			SELECT COALESCE((SELECT (value#>>'{}')::int FROM app_settings
-			                 WHERE key = 'sales.commission_percent'), 10)`).Scan(&pct)
-		out.Rates = append(out.Rates, finRate{Label: "نسبة عمولة المندوب من عمولة المنصة", Percent: pct})
+		rep := pricing.RepCommission(ctx, s.settings)
+		out.Rates = append(out.Rates, finRate{
+			Label: "نسبة عمولة المندوب من عمولة المنصة", Percent: int(rep.Value)})
 	}
 	if has("merchant") {
 		rows, err := s.pg.Query(ctx,
@@ -77,9 +80,11 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 		if err == nil {
 			for rows.Next() {
 				var name string
-				var pct int
-				if rows.Scan(&name, &pct) == nil {
-					out.Rates = append(out.Rates, finRate{Label: "عمولة المنصة على " + name, Percent: pct})
+				var override *int64
+				if rows.Scan(&name, &override) == nil {
+					rate := pricing.MerchantCommission(ctx, s.settings, override)
+					out.Rates = append(out.Rates, finRate{
+						Label: "عمولة المنصة على " + name, Percent: int(rate.Value)})
 				}
 			}
 			rows.Close()

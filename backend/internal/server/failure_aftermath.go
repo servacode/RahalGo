@@ -37,6 +37,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 var (
@@ -165,7 +166,8 @@ func (s *Server) handleSettleGoodsLegacy(w http.ResponseWriter, r *http.Request)
 	var status string
 	var settled *string
 	var subtotal int64
-	var merchantPct int
+	// **تجاوزُ المتجر** — وفراغُه «اتبع العامّ».
+	var merchantPct *int64
 	var ownerID *string
 	// **القفل داخل المعاملة**: ضغطتان متزامنتان تدفعان للمتجر مرّتين لولاه.
 	if err := tx.QueryRow(r.Context(), `
@@ -189,7 +191,7 @@ func (s *Server) handleSettleGoodsLegacy(w http.ResponseWriter, r *http.Request)
 	if req.To == "platform" && ownerID != nil {
 		// **ما كان سيقبضه لو نجح الطلب** — بالمعادلة نفسها التي في التسوية،
 		// فلا يفترق تعويضُ الفشل عن أجر النجاح بحسبةٍ ثانية تنحرف يوماً.
-		if paid = subtotal - subtotal*int64(merchantPct)/100; paid > 0 {
+		if paid = subtotal - pricing.MerchantCommission(r.Context(), s.settings, merchantPct).Of(subtotal); paid > 0 {
 			actor := userIDFrom(r)
 			if _, err := s.wallet.ApplyTx(r.Context(), tx, *ownerID, paid,
 				"compensation", orderID,
