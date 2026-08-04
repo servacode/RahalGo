@@ -10,14 +10,17 @@
  *
  * **والزبونُ يرى الثاني وحدَه.**
  *
- * # وهامشُ القسم هنا لا في تصنيف المتجر
+ * # والقسمُ صورةٌ واسم — لا أكثر
  *
- * الشاورما تُسعَّر كشاورما **سواءٌ جاءت من مطعمٍ أو مشاوٍ أو كافتيريا**.
- * وتصنيفُ المتجر يصف بائعَه لا سلعتَه، **وهامشٌ يتبع البائعَ يجعل الصنفَ
- * الواحد بسعرين.**
+ * كان معه **شبكةُ أيقوناتٍ تُختار منها وحقلُ هامشٍ خاصّ**. فحقلان لهويّةٍ
+ * واحدة: **من اختار أيقونةً ظنّ أنّه أنهى وجهَ القسم** ولم يرفع صورة.
  *
- * **والفراغُ غيرُ الصفر**: الصفرُ يعني «لا هامشَ على هذا القسم»، والفراغُ
- * «اتبع الهامشَ العام». **ومن خلط بينهما جعل قسماً كاملاً يُباع بسعر شرائه.**
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «ألغِ الأيقوناتِ والهامش، ولازم تعرض الصورةَ بمكان
+ * الأيقونة كصورة لا أيقونة».)
+ *
+ * **وهامشُ القسم لم يُحذف من القاعدة** — العمودُ باقٍ وما ضُبط سابقاً يعمل.
+ * **ولا يُضبط من هذه الشاشة**: التسعيرُ يُدار من الإعدادات، **ورقمٌ يُغيَّر في
+ * موضعين يُنسى أحدُهما.**
  */
 
 import { useEffect, useState } from "react";
@@ -32,7 +35,6 @@ import {
   EmptyState,
   LoadingState,
   CategoryIcon,
-  CategoryIconPicker,
   useLiveData,
   IconStore,
   IconStatus,
@@ -161,10 +163,6 @@ export default function SectionsPage() {
                   <p className="truncate font-bold">{sec.name}</p>
                   <p className="text-xs text-ink-muted">
                     {S.items.replace("{n}", fmtNum(sec.items))}
-                    {/* **والهامشُ يُقال حين يُخصّ** — وسكوتُه يعني الوراثة. */}
-                    {sec.margin_override !== null && (
-                      <> · {S.margin.replace("{n}", fmtNum(sec.margin_override))}</>
-                    )}
                   </p>
                 </div>
 
@@ -214,15 +212,7 @@ function SectionModal({
   onSaved: () => void;
 }) {
   const [name, setName] = useState(section?.name ?? "");
-  const [icon, setIcon] = useState(section?.icon ?? "food");
   const [sort, setSort] = useState(String(section?.sort_order ?? 0));
-  // **فارغٌ يعني «اتبع العام»** — لا صفراً. والحقلُ نصٌّ كي يُفرَّق الفراغُ
-  // من الصفر، **ورقمٌ لا يملك أن يكون فارغاً يجعلهما شيئاً واحداً.**
-  const [margin, setMargin] = useState(
-    section?.margin_override === null || section?.margin_override === undefined
-      ? ""
-      : String(section.margin_override),
-  );
   /**
    * **صورةُ القسم** — و`null` تعني «بلا تغيير»، و`""` تعني «ارفعها».
    *
@@ -240,10 +230,7 @@ function SectionModal({
     try {
       const body = JSON.stringify({
         name: name.trim(),
-        icon,
         sort_order: Number(sort) || 0,
-        // **وسالبُ الواحدِ يمحو التجاوز** — `null` وحدَه يُقرأ «بلا تغيير».
-        margin_override: margin.trim() === "" ? -1 : Number(margin),
         image_media_id: imageID,
       });
       if (section) {
@@ -263,35 +250,25 @@ function SectionModal({
     <Modal open title={section ? S.editTitle : S.add} onClose={onClose}>
       <div className="space-y-3">
         <Input label={S.name} value={name} onChange={(e) => setName(e.target.value)} />
-        {/* **الصورةُ وجهُ القسم، والأيقونةُ بديلُها.**
+        {/* **الصورةُ في موضع الأيقونة — صورةً لا رمزاً.**
 
-            **ولا تُغني إحداهما عن الأخرى**: الصورةُ في السوق حيث المساحة،
-            **والأيقونةُ في الشريط والقوائم المختصرة** حيث لا تتّسع صورة. */}
+            كانت شبكةُ أيقوناتٍ تُختار منها، **وصورةٌ تُرفع بجانبها**: حقلان
+            لهويّةٍ واحدة، **ومن اختار أيقونةً ظنّ أنّه أنهى وجهَ القسم.**
+
+            (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «ألغِ الأيقوناتِ والهامش، ولازم تعرض
+            الصورةَ بمكان الأيقونة كصورة لا أيقونة».) */}
         <ImageUpload
           kind="banner"
           label={S.image}
           initialUrl={section?.image_url}
           onChange={setImageID}
         />
-        <CategoryIconPicker value={icon} onChange={setIcon} />
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label={S.sort}
-            type="number"
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-          />
-          <div>
-            <Input
-              label={S.marginField}
-              type="number"
-              value={margin}
-              placeholder={S.marginInherit}
-              onChange={(e) => setMargin(e.target.value)}
-            />
-            <p className="mt-1 text-2xs text-ink-muted">{S.marginHint}</p>
-          </div>
-        </div>
+        <Input
+          label={S.sort}
+          type="number"
+          value={sort}
+          onChange={(e) => setSort(e.target.value)}
+        />
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex gap-2">
           <Button disabled={busy} onClick={submit}>
