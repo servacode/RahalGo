@@ -27,6 +27,8 @@ import {
   StatCard,
   useLiveRefresh,
   useRepeatingChime,
+  useLocationBeacon,
+  fmtDistance,
   IconOrder,
   IconStore,
   IconLocation,
@@ -42,6 +44,8 @@ import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const D = m.driver;
+/** وحداتُ المسافة — من القاموس لا من نصٍّ مكتوبٍ في كلّ شاشة. */
+const UNITS = m.admin.settings.units;
 
 /** سببٌ مصنَّفٌ وذنبُه — **والذنبُ يقرّر التعويض** (`failreasons.go`). */
 type FailReason = { code: string; fault: string };
@@ -91,6 +95,10 @@ interface DriverOrder {
   merchant_accepts_returns: boolean;
   /** رمزُ التعذّر — يُعرَض مترجَماً على البطاقة التي بقيت بيده. */
   fail_reason: string;
+  /** كم بينه وبين نقطة الاستلام — **بالمتر، وسالبٌ يعني «لا يُعرف»**. */
+  to_pickup_m: number;
+  /** طولُ المشوار: من الاستلام إلى باب الزبون. */
+  leg_m: number;
 }
 
 interface Me {
@@ -205,6 +213,10 @@ export default function TasksPage() {
    */
   const waiting = mine.some((o) => o.status === "assigned");
   useRepeatingChime(waiting);
+
+  // **ونبضةُ موضعه مع دوامه** — منها تُقاس المسافةُ إلى المتجر. **ومن أُغلق
+  // دوامُه أُغلقت نبضتُه**: تعقّبٌ بلا سبب واستنزافُ بطّارية.
+  useLocationBeacon(api, me?.on_shift === true);
 
   // **حيٌّ**: حالةُ المهمّة تتغيّر بفعل العمليات أيضاً — إلغاءٌ أو إسنادٌ يدويّ
   // — **فشاشةٌ لا تتحدّث تجعل السائقَ يضغط على ما لم يعد قائماً.**
@@ -551,6 +563,33 @@ function TaskCard({
         <span className="ms-auto text-sm font-bold" dir="ltr">
           {fmtNum(o.total)} {m.common.currency}
         </span>
+      </div>
+
+      {/* **المسافتان — ورقمٌ يُقرأ قراراً.**
+
+          بلاهما يفتح الخريطةَ لكلّ بطاقةٍ ليعرف أيُّها أقرب. **و«إليك ٤٠٠ م»
+          يقول له بأيّها يبدأ**، و«المشوار ٣٫٢ كم» يقول كم سيأخذ.
+
+          **وسالبٌ يعني «لا تُعرف» لا «صفر»**: الجهلُ ليس قرباً — ومن أطفأ
+          الموقعَ يُقال له ذلك بدل أن يُعرض عليه رقمٌ كاذب. */}
+      <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+        {o.to_pickup_m >= 0 ? (
+          <span className="flex items-center gap-1">
+            <IconDriver size={13} />
+            {D.distance.toPickup}: {fmtDistance(o.to_pickup_m, UNITS.meter, UNITS.km)}
+          </span>
+        ) : (
+          <span className="flex items-center gap-1">
+            <IconDriver size={13} />
+            {D.distance.unknown}
+          </span>
+        )}
+        {o.leg_m >= 0 && (
+          <span className="flex items-center gap-1">
+            <IconLocation size={13} />
+            {D.distance.leg}: {fmtDistance(o.leg_m, UNITS.meter, UNITS.km)}
+          </span>
+        )}
       </div>
 
       <Leg

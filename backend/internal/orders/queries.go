@@ -28,6 +28,14 @@ const orderSelect = `
 	       o.pod_skip_reason,
 	       COALESCE(o.ended_by,''), COALESCE(o.fault,''), COALESCE(o.fail_reason,''),
 	       o.returned_at, o.goods_settled_to,
+	       -- **طولُ المشوار وبُعدُ السائق** — جوابُ «لماذا تأخّر» و«لماذا هو».
+	       -- وسالبٌ يعني «لا يُعرف»: **الجهلُ ليس قرباً.**
+	       COALESCE(ST_Distance(COALESCE(o.pickup_override, mr.location), o.dropoff), -1),
+	       COALESCE(ST_Distance(
+	           (SELECT du.last_location FROM users du
+	            WHERE du.id = o.driver_id
+	              AND du.last_location_at > now() - interval '15 minutes'),
+	           COALESCE(o.pickup_override, mr.location)), -1),
 	       -- **أيستردّ كلُّ مصدرٍ في هذا الطلب؟** — bool_and لا bool_or:
 	       -- الزرُّ يسترجع من الجميع، **ومن لا يستردّ لا يُسترجع منه.**
 	       COALESCE((SELECT bool_and(m2.accepts_returns) FROM merchants m2
@@ -76,6 +84,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.SentToMerchantAt, &o.DispatchedAt, &o.OfferedDriverName,
 		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason,
 		&o.EndedBy, &o.Fault, &o.FailReason, &o.ReturnedAt, &o.GoodsSettledTo,
+		&o.LegM, &o.DriverToPickupM,
 		&o.AcceptsReturns,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.DeliveredAt,
 		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items)

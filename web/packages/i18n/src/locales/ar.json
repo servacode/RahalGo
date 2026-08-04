@@ -707,7 +707,8 @@
       "recomputeDone": "صُحِّح بمقدار {n}",
       "recomputeNone": "لا فرق — التسويةُ صحيحة",
       "invoice": "الفاتورة",
-      "noDriverYet": "لم يُسنَد بعد"
+      "noDriverYet": "لم يُسنَد بعد",
+      "driverWasAway": "كان على بُعد"
     },
     "customers": {
       "title": "الزبائن",
@@ -1287,7 +1288,9 @@
         "merchant": "متجر",
         "address": "عنوان",
         "letter": "حرف",
-        "attempt": "محاولة"
+        "attempt": "محاولة",
+        "meter": "م",
+        "km": "كم"
       },
       "choices": {
         "percent": "نسبة مئوية",
@@ -2426,6 +2429,11 @@
         "customer_conduct": "سوءُ تعاملٍ من الزبون",
         "other": "سببٌ آخر"
       }
+    },
+    "distance": {
+      "toPickup": "إليك",
+      "leg": "طولُ المشوار",
+      "unknown": "المسافةُ لا تُعرف — فعّل الموقع"
     }
   }
 }

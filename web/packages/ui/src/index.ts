@@ -91,3 +91,6 @@ export * from "./icons";
 
 /** نغمةُ تنبيهٍ تُولَّد في المتصفّح — ومكرّرةٌ لمهمّةٍ وقعت بلا طلب. */
 export { useChime, useRepeatingChime } from "./chime";
+
+/** نبضةُ موضعِ السائق ومسافةٌ مقروءة — **والدورُ عدلٌ في الوقت أعمى في المكان.** */
+export { useLocationBeacon, fmtDistance } from "./useLocationBeacon";

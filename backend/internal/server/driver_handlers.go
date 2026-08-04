@@ -161,6 +161,15 @@ type driverOrder struct {
 	AcceptsReturns bool `json:"merchant_accepts_returns"`
 	// FailReason رمزُ التعذّر — **ليُعرَض عليه سببُه فيما بقي في يده.**
 	FailReason string `json:"fail_reason"`
+	// ToPickupM كم بينه وبين نقطة الاستلام — **بالمتر، وسالبٌ يعني «لا يُعرف».**
+	//
+	// **ورقمٌ يقول «٤٠٠ متر» يُقرأ قراراً**: يبدأ بها لا بالتي بعدها. وبلاه
+	// يفتح الخريطةَ لكلّ بطاقةٍ ليعرف أيُّها أقرب.
+	//
+	// **وسالبٌ لا صفر**: صفرٌ يعني «أنت هناك»، **والجهلُ ليس قرباً.**
+	ToPickupM float64 `json:"to_pickup_m"`
+	// LegM طولُ المشوار: من نقطة الاستلام إلى باب الزبون.
+	LegM float64 `json:"leg_m"`
 }
 
 const driverOrderSelect = `
@@ -171,7 +180,21 @@ const driverOrderSelect = `
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
 	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at,
 	       ST_Y(o.pickup_override::geometry), ST_X(o.pickup_override::geometry),
-	       o.pickup_override_note, m.accepts_returns, COALESCE(o.fail_reason, '')
+	       o.pickup_override_note, m.accepts_returns, COALESCE(o.fail_reason, ''),
+	       -- **من السائق إلى نقطة الاستلام** — ونقطةُ الاستلام قد تكون بديلةً
+	       -- (بضاعةٌ مع سائقٍ وقع له طارئ)، فتُقاس إليها لا إلى المتجر.
+	       --
+	       -- **وموضعٌ شاخ لا يُقاس عليه**: من أغلق التطبيقَ قبل ساعةٍ يبقى
+	       -- موضعُه مكتوباً، فيُحسب أقربَ الجميع وهو في بيته.
+	       -- **وتُقاس من السائق السائل لا من صاحب الطلب**: في الطابور لا صاحبَ
+	       -- له بعد، **والسؤالُ سؤالُ من ينظر الآن**: كم بيني وبين هذا الطلب؟
+	       COALESCE(ST_Distance(
+	           (SELECT du.last_location FROM users du
+	            WHERE du.id = $1::uuid
+	              AND du.last_location_at > now() - make_interval(mins => $2::int)),
+	           COALESCE(o.pickup_override, m.location)), -1),
+	       -- **وطولُ المشوار** — من الاستلام إلى الباب.
+	       COALESCE(ST_Distance(COALESCE(o.pickup_override, m.location), o.dropoff), -1)
 	FROM orders o
 	JOIN merchants m ON m.id = o.merchant_id
 	JOIN users cu ON cu.id = o.customer_id
@@ -192,7 +215,7 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.Total, &o.CashDue, &o.ItemsCount, &o.ReadyAt, &o.PrepMinutes,
 			&o.AcceptedAt, &o.CreatedAt,
 			&o.PickupLat, &o.PickupLng, &o.PickupNote,
-			&o.AcceptsReturns, &o.FailReason); err != nil {
+			&o.AcceptsReturns, &o.FailReason, &o.ToPickupM, &o.LegM); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -245,7 +268,7 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 		WHERE o.status = 'dispatching' AND o.driver_id IS NULL
 		  `+mine+`
 		ORDER BY o.ready_at NULLS LAST, o.created_at
-		LIMIT 50`, userIDFrom(r))
+		LIMIT 50`, userIDFrom(r), staleLocationMinutes)
 }
 
 // handleDriverOrders طلباته هو — **المفتوحةُ وحدَها.**
@@ -274,7 +297,7 @@ func (s *Server) handleDriverOrders(w http.ResponseWriter, r *http.Request) {
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.driver_id = $1
 		  AND o.closed_at IS NULL
-		ORDER BY o.created_at`, userIDFrom(r))
+		ORDER BY o.created_at`, userIDFrom(r), staleLocationMinutes)
 }
 
 // handleDriverAccept يأخذ السائق طلباً من الطابور.

@@ -39,11 +39,14 @@ import {
   IconPhone,
   IconWhatsApp,
   IconSwap,
+  fmtDistance,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
+/** وحداتُ المسافة — من القاموس لا من نصٍّ مكتوبٍ في كلّ شاشة. */
+const UNITS = m.admin.settings.units;
 
 // ---------- الأنواع ----------
 
@@ -130,6 +133,10 @@ interface OrderRow {
   proof_taken_at?: string | null;
   /** بُعدُ موضع التسليم عن عنوان الزبون — و`-1` تعني «لا موضعَ محفوظ». */
   proof_meters?: number;
+  /** طولُ المشوار من المتجر إلى الباب — **بالمتر، وسالبٌ يعني «لا يُعرف»**. */
+  leg_m?: number;
+  /** كم كان بين السائق ونقطة الاستلام — **جوابُ «لماذا هذا السائق؟»**. */
+  driver_to_pickup_m?: number;
   proof_skip_reason?: string;
   /** متى حُوِّل الطلب إلى المتجر — فارغٌ يعني لم يُحوَّل بعد */
   sent_to_merchant_at: string | null;
@@ -766,6 +773,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         o.driver_name || o.driver_phone ? (
           <span>
             {o.driver_name || o.driver_phone}
+            {/* **جوابُ «لماذا هذا السائق؟»** — سؤالٌ يُسأل حين يتأخّر طلبٌ
+                ولم يكن له جوابٌ في أيّ شاشة. **ورقمٌ يقول «كان على بُعد
+                ٤٠٠ متر» يُنهي النقاش**، ورقمٌ يقول «٦ كم» يُنهيه أيضاً. */}
+            {typeof o.driver_to_pickup_m === "number" && o.driver_to_pickup_m >= 0 && (
+              <span className="block text-xs text-ink-muted">
+                {m.admin.ordersPage.driverWasAway}:{" "}
+                {fmtDistance(o.driver_to_pickup_m, UNITS.meter, UNITS.km)}
+              </span>
+            )}
             {/* **ولا أجرَ سائقٍ في بطاقة الطلب.**
 
                 لم يُطلب قطّ — أُضيف من تلقائه ثمّ عُلّق عليه شرحٌ حين

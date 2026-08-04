@@ -29,10 +29,14 @@ import {
   IconStore,
   IconLocation,
   IconBalance,
+  IconDriver,
+  fmtDistance,
 } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
 const D = m.driver;
+/** وحداتُ المسافة — من القاموس لا من نصٍّ مكتوبٍ في كلّ شاشة. */
+const UNITS = m.admin.settings.units;
 
 /** طلبٌ كما يراه السائق — الحقولُ نفسُها في القسمين. */
 export interface DriverOrder {
@@ -57,6 +61,10 @@ export interface DriverOrder {
   prep_minutes: number | null;
   accepted_at: string | null;
   created_at: string;
+  /** كم بينه وبين نقطة الاستلام — **بالمتر، وسالبٌ يعني «لا يُعرف»**. */
+  to_pickup_m: number;
+  /** طولُ المشوار: من الاستلام إلى باب الزبون. */
+  leg_m: number;
 }
 
 /** بطاقةُ الطلب القادم — أقلّ ممّا في المهمّة: قرارُ الأخذ لا يحتاج رقمَ هاتف. */
@@ -108,6 +116,25 @@ export function IncomingCard({
         <IconLocation size={16} className="mt-0.5 shrink-0" />
         <span className="min-w-0 flex-1">{o.address_text}</span>
       </p>
+      {/* **والمسافتان هنا أهمُّ منهما في المهمّة.**
+
+          هذا موضعُ القرار: **يرى ثلاثةَ طلباتٍ ويأخذ واحداً.** وبلا مسافةٍ
+          يأخذ الأعلى أجراً ولو كان في آخر المدينة، **ثمّ يعود بعد ساعةٍ وقد
+          ضاع عليه ثلاثة.** */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+        <span className="flex items-center gap-1">
+          <IconDriver size={13} />
+          {o.to_pickup_m >= 0
+            ? `${D.distance.toPickup}: ${fmtDistance(o.to_pickup_m, UNITS.meter, UNITS.km)}`
+            : D.distance.unknown}
+        </span>
+        {o.leg_m >= 0 && (
+          <span className="flex items-center gap-1">
+            <IconLocation size={13} />
+            {D.distance.leg}: {fmtDistance(o.leg_m, UNITS.meter, UNITS.km)}
+          </span>
+        )}
+      </div>
       {o.cash_due > 0 && (
         <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-warning">
           <IconBalance size={14} />
