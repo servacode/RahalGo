@@ -1590,8 +1590,19 @@
       "merchantHasNoSections": "لا أقسام في قائمة هذا المتجر — أنشئ قسماً فيه أوّلاً",
       "itemName": "اسم الصنف",
       "itemNameRequired": "اكتب اسم الصنف",
-      "itemPrice": "سعر الشراء — ما يقبضه المتجر",
-      "itemImage": "صورة الصنف"
+      "itemPrice": "سعر الشراء — ما يضعه المتجر",
+      "itemImage": "صورة الصنف",
+      "editItem": "تعديل الصنف",
+      "buyPrice": "سعر الشراء",
+      "commission": "عمولة المنصة {n}٪",
+      "afterCommission": "بعد العمولة — للمتجر",
+      "margin": "هامش الربح {n}٪",
+      "marginFixed": "هامش الربح",
+      "afterMargin": "بعد الهامش — للزبون",
+      "marginField": "هامش هذا الصنف ٪",
+      "marginFieldFixed": "هامش هذا الصنف",
+      "marginInheritHint": "اتركه فارغاً ليتبع القسم",
+      "marginHintItem": "الفارغ يعني «اتبع هامش القسم» — والصفر يعني «بلا هامش». والعمولة تُضبط من صفحة المتجر لأنها عليه كله."
     },
     "claims": {
       "title": "النزاعات",

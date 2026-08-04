@@ -70,6 +70,7 @@ interface Section {
 interface SectionItem {
   id: string;
   name: string;
+  /** **سعرُ الشراء** — ما وضعه المتجر، وأصلُ الحسبتين. */
   merchant_price: number;
   available: boolean;
   approved: boolean;
@@ -77,6 +78,22 @@ interface SectionItem {
   merchant_status: string;
   thumb_url: string | null;
   image_url: string | null;
+  /**
+   * **الحسبتان — واحدةٌ تنزل وأخرى تصعد.**
+   *
+   *	عمولةُ المنصة  ←  تُقتطع من المتجر   ←  `merchant_net` ما يقبضه
+   *	هامشُ المنصة   ←  يُضاف على الزبون   ←  `sale_price`  ما يدفعه
+   *
+   * **ولا تُجمعان في رقمٍ واحد**: من رأى «ربحُ المنصة ٣٬٦٠٠» لا يعرف أيُّهما
+   * يُعدَّل حين يشتكي المتجرُ أو يشتكي الزبون. **وربحُ المنصة مجموعُهما.**
+   */
+  commission_percent: number;
+  commission: number;
+  merchant_net: number;
+  margin_percent: number;
+  margin: number;
+  sale_price: number;
+  margin_override: number | null;
 }
 
 /**
@@ -100,6 +117,9 @@ export default function SectionPage() {
   const [q, setQ] = useState("");
   const [state, setState] = useState("");
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<SectionItem | null>(null);
+  /** **نمطُ الهامش** — «نسبة» أم «ثابت»، فلا تُكتب «٪» على رقمٍ بالليرة. */
+  const [marginMode, setMarginMode] = useState("percent");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -108,13 +128,31 @@ export default function SectionPage() {
       // **ونقطةٌ ثانيةٌ لصفٍّ واحدٍ سطحٌ يُصان بلا حاجة.**
       const list = await api<{ sections: Section[] }>("/api/v1/admin/sections");
       setSec((list.sections ?? []).find((x) => x.id === id) ?? null);
-      const res = await api<{ items: SectionItem[] }>(`/api/v1/admin/sections/${id}/items`);
+      const res = await api<{ items: SectionItem[]; margin_mode: string }>(
+        `/api/v1/admin/sections/${id}/items`,
+      );
       setRows(res.items ?? []);
+      setMarginMode(res.margin_mode ?? "percent");
       setError("");
     } catch {
       setError(m.errors.internal);
     }
   }, [id]);
+
+  /**
+   * **قلبُ الإتاحة — زرٌّ واحدٌ يقول الحال.**
+   *
+   * **ولا يُخفى حين يكون المتجرُ مُطفأً**: «نفد» قرارُ مطبخٍ في صنفه،
+   * **وإطفاءُ المتجر حالٌ أخرى** — ومن خلطهما وجد صنفاً لا يستطيع إعادتَه
+   * حتى يُفتح متجرُه.
+   */
+  async function toggle(it: SectionItem) {
+    await api(`/api/v1/admin/menu/items/${it.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ available: !it.available }),
+    });
+    await load();
+  }
 
   useEffect(() => {
     void load();
@@ -205,7 +243,7 @@ export default function SectionPage() {
       {shown.length === 0 ? (
         <EmptyState icon={IconStore} title={S.noItems} />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((it) => {
             const st = itemState(it);
             return (
@@ -237,16 +275,56 @@ export default function SectionPage() {
                   </span>
                 </div>
 
-                <div className="flex flex-1 flex-col gap-1 p-3">
-                  <p className="truncate font-bold">{it.name}</p>
-                  <div className="flex items-baseline justify-between gap-2">
+                <div className="flex flex-1 flex-col gap-2 p-3">
+                  <div>
+                    <p className="truncate font-bold">{it.name}</p>
                     {/* **واسمُ المتجر يبقى هنا وحدَه** — شاشتُنا لا شاشةُ الزبون.
                         السوقُ يُخفي المصدر عن الزبون، **والإدارةُ لا تُدير ما
                         لا ترى مصدرَه.** */}
                     <p className="truncate text-xs text-ink-muted">{it.merchant_name}</p>
-                    <p dir="ltr" className="shrink-0 text-sm font-bold tabular-nums">
-                      {fmtNum(it.merchant_price)}
-                    </p>
+                  </div>
+
+                  {/* **الحسبتان مفصولتان — واحدةٌ تنزل وأخرى تصعد.**
+
+                      (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «عمولة المنصة والسعر بعد
+                      العمولة · هامش الربح والسعر بعد الهامش».)
+
+                      **والعمولةُ تُقتطع من المتجر ولا تُضاف على الزبون**: هي
+                      حصّتُنا من سعر الشراء. **والهامشُ يُضاف فوقه** فيصير سعرَ
+                      البيع. **ولا تُجمعان في رقمٍ واحد**: من رأى «ربحُ المنصة»
+                      مجموعاً لا يعرف أيَّهما يُعدّل حين يشتكي أحدُ الطرفين. */}
+                  <dl className="space-y-1 border-t border-line pt-2 text-xs tabular-nums">
+                    <Row label={S.buyPrice} value={fmtNum(it.merchant_price)} />
+                    <Row
+                      label={S.commission.replace("{n}", fmtNum(it.commission_percent))}
+                      value={"−" + fmtNum(it.commission)}
+                      tone="muted"
+                    />
+                    <Row label={S.afterCommission} value={fmtNum(it.merchant_net)} strong />
+                    <Row
+                      label={
+                        marginMode === "fixed"
+                          ? S.marginFixed
+                          : S.margin.replace("{n}", fmtNum(it.margin_percent))
+                      }
+                      value={"+" + fmtNum(it.margin)}
+                      tone="muted"
+                    />
+                    <Row label={S.afterMargin} value={fmtNum(it.sale_price)} strong />
+                  </dl>
+
+                  <div className="mt-auto flex gap-1.5 pt-1 [&_button]:flex-1 [&_button]:!px-2 [&_button]:text-xs">
+                    <Button variant="secondary" onClick={() => setEditing(it)}>
+                      {m.common.edit}
+                    </Button>
+                    {/* **زرٌّ واحدٌ يقلب الحال** — كزرّ القسم، لا زرّان أحدُهما
+                        معطّلٌ دائماً. */}
+                    <Button
+                      variant={it.available ? "ghost" : "primary"}
+                      onClick={() => void toggle(it)}
+                    >
+                      {it.available ? S.makeUnavailable : S.makeAvailable}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -266,7 +344,40 @@ export default function SectionPage() {
           }}
         />
       )}
+      {editing && (
+        <EditItemModal
+          item={editing}
+          marginMode={marginMode}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void load();
+          }}
+        />
+      )}
     </PageContainer>
+  );
+}
+
+/** سطرُ حسبة — **اللفظُ يميناً والرقمُ يساراً**، فالعينُ تمسح عموداً واحداً. */
+function Row({
+  label,
+  value,
+  strong,
+  tone,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  tone?: "muted";
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className={tone === "muted" ? "text-ink-muted" : ""}>{label}</dt>
+      <dd dir="ltr" className={strong ? "font-bold" : tone === "muted" ? "text-ink-muted" : ""}>
+        {value}
+      </dd>
+    </div>
   );
 }
 
@@ -408,6 +519,114 @@ function AddItemModal({
           value={price}
           onChange={(e) => setPrice(e.target.value)}
         />
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex gap-2">
+          <Button disabled={busy} onClick={submit}>
+            {m.common.save}
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * **تعديلُ الصنف من بابِ السوق.**
+ *
+ * # وما يُعدَّل هنا وما لا يُعدَّل
+ *
+ * **سعرُ الشراء وهامشُ الصنف** — لأنّهما الرقمان اللذان تعرضهما البطاقة،
+ * **وعرضُ رقمٍ لا يُمسّ من موضعه يجعل الشاشةَ تقريراً لا لوحةَ تحكّم.**
+ *
+ * **والعمولةُ لا تُعدَّل هنا**: هي على المتجر كلِّه لا على صنفه — **ورقمٌ
+ * يُغيَّر من شاشة صنفٍ ويقع على مئة صنفٍ آخر خللٌ ينتظر.** موضعُها صفحةُ
+ * المتجر.
+ *
+ * **والمتجرُ لا يُنقل**: صنفٌ يُنقل من متجرٍ إلى متجرٍ يترك طلباتِ الأمس تشير
+ * إلى مصدرٍ لم يحضّرها. **من أراد صنفاً عند غيره أنشأه عنده.**
+ */
+function EditItemModal({
+  item,
+  marginMode,
+  onClose,
+  onSaved,
+}: {
+  item: SectionItem;
+  marginMode: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(item.name);
+  const [price, setPrice] = useState(String(item.merchant_price));
+  /**
+   * **تجاوزُ هامش الصنف — والفراغُ «اتبع قسمَك» لا «بلا هامش».**
+   *
+   * الصفرُ قرارٌ («لا هامشَ على هذا») والفراغُ غيابُ قرار. **ومن خلط بينهما
+   * جعل كلَّ صنفٍ لم يُلمس بلا هامش** — فبِيع كلُّ شيءٍ بسعر شرائه.
+   */
+  const [margin, setMargin] = useState(
+    item.margin_override === null ? "" : String(item.margin_override),
+  );
+  const [imageID, setImageID] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit() {
+    if (!name.trim()) return setError(S.itemNameRequired);
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/menu/items/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: name.trim(),
+          price: Number(price) || 0,
+          // **وسالبُ الواحد يمحو التجاوز** — هو ما يقرؤه الخادمُ «اتبع قسمَك»،
+          // **وفراغٌ يُقرأ «بلا تغيير»** فلا يملك أحدٌ إعادةَ صنفٍ إلى وراثته.
+          margin_override: margin.trim() === "" ? -1 : Number(margin) || 0,
+          ...(imageID !== null ? { image_media_id: imageID } : {}),
+        }),
+      });
+      onSaved();
+    } catch (err) {
+      const key = err instanceof ApiError ? (err.body.message_key.split(".").pop() ?? "") : "";
+      setError((m.errors as Record<string, string>)[key] ?? m.errors.internal);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={S.editItem} onClose={onClose}>
+      <div className="space-y-3">
+        {/* **واسمُ المتجر يُقال ولا يُغيَّر** — من فتح النافذة يعرف على مالِ من
+            يعمل، **وحقلٌ معطَّلٌ يُغري بمحاولةٍ تفشل.** */}
+        <p className="text-sm text-ink-muted">
+          {S.merchant}: <span className="font-medium text-ink">{item.merchant_name}</span>
+        </p>
+        <ImageUpload
+          kind="menu_item"
+          label={S.itemImage}
+          initialUrl={item.image_url}
+          onChange={setImageID}
+        />
+        <Input label={S.itemName} value={name} onChange={(e) => setName(e.target.value)} />
+        <Input
+          label={S.itemPrice}
+          type="number"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+        />
+        <Input
+          label={marginMode === "fixed" ? S.marginFieldFixed : S.marginField}
+          type="number"
+          placeholder={S.marginInheritHint}
+          value={margin}
+          onChange={(e) => setMargin(e.target.value)}
+        />
+        <p className="text-xs text-ink-muted">{S.marginHintItem}</p>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex gap-2">
           <Button disabled={busy} onClick={submit}>

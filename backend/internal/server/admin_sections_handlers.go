@@ -18,6 +18,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 type adminPlatformSection struct {
@@ -189,9 +190,11 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT i.id::text, i.name, i.merchant_price, i.available, i.approved,
-		       m.name, m.status, im.thumb_path, im.path
+		       m.name, m.status, im.thumb_path, im.path,
+		       m.commission_percent, i.margin_override, ps.margin_override
 		FROM menu_items i
 		JOIN merchants m ON m.id = i.merchant_id
+		JOIN platform_sections ps ON ps.id = i.platform_section_id
 		LEFT JOIN media im ON im.id = i.image_media_id
 		WHERE i.platform_section_id = $1
 		ORDER BY m.name, i.name
@@ -203,8 +206,9 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type item struct {
-		ID             string  `json:"id"`
-		Name           string  `json:"name"`
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		// MerchantPrice **سعرُ الشراء** — ما وضعه المتجر، وأصلُ الحسبتين.
 		MerchantPrice  int64   `json:"merchant_price"`
 		Available      bool    `json:"available"`
 		Approved       bool    `json:"approved"`
@@ -216,18 +220,60 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		// المصغَّرةُ حدُّها ٤٠٠ بكسل، **وبطاقةٌ تمطّها تبهت** — وهو ما حدث في
 		// بطاقة القسم قبلها.
 		ImageURL *string `json:"image_url"`
+
+		// --- الحسبتان: واحدةٌ تنزل على المتجر وأخرى تصعد على الزبون ---
+
+		// CommissionPct نسبةُ عمولة المنصة على هذا المتجر.
+		CommissionPct int `json:"commission_percent"`
+		// Commission قيمةُ العمولة بالليرة — **تُقتطع من المتجر لا تُضاف للزبون.**
+		Commission int64 `json:"commission"`
+		// MerchantNet **ما يقبضه المتجر فعلاً** — سعرُ الشراء ناقصَ العمولة.
+		MerchantNet int64 `json:"merchant_net"`
+		// MarginPct هامشُ الصنف النافذ — **بعد الوراثة**: تجاوزُ الصنف، فتجاوزُ
+		// قسمه، فالعام. **ورقمُ الإعدادات وحدَه يكذب على من خُصّ بغيره.**
+		MarginPct int64 `json:"margin_percent"`
+		// Margin قيمةُ الهامش بالليرة — **يشمل أثرَ التقريب**، فهو الفرقُ
+		// المحسوب لا حاصلُ ضربٍ يُعاد. **ورقمٌ يُحسب مرّتين يفترق.**
+		Margin int64 `json:"margin"`
+		// SalePrice **ما يدفعه الزبون** — من `pricing` وحدَها.
+		SalePrice int64 `json:"sale_price"`
+		// MarginOverride تجاوزُ هذا الصنف — **وفراغُه «اتبع قسمَك».**
+		MarginOverride *int64 `json:"margin_override"`
 	}
+	// **والسعرُ من `pricing` لا من هنا.** المعادلةُ (نمطٌ ووراثةٌ وتقريب) في
+	// حزمةٍ واحدة، **ولو حُسبت هنا لَافترقت عن حسبة القائمة وحسبة الطلب** —
+	// فيُقرأ في اللوحة رقمٌ ويُباع بغيره.
+	rule := pricing.RuleFrom(r.Context(), s.settings)
 	out := []item{}
 	for rows.Next() {
 		var x item
+		var sectionMargin *int64
 		if err := rows.Scan(&x.ID, &x.Name, &x.MerchantPrice, &x.Available,
-			&x.Approved, &x.MerchantName, &x.MerchantStatus, &x.ThumbURL, &x.ImageURL); err != nil {
+			&x.Approved, &x.MerchantName, &x.MerchantStatus, &x.ThumbURL, &x.ImageURL,
+			&x.CommissionPct, &x.MarginOverride, &sectionMargin); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		x.ThumbURL = media.URLForPtr(x.ThumbURL)
 		x.ImageURL = media.URLForPtr(x.ImageURL)
+
+		x.Commission = x.MerchantPrice * int64(x.CommissionPct) / 100
+		x.MerchantNet = x.MerchantPrice - x.Commission
+
+		x.MarginPct = rule.Value
+		switch {
+		case x.MarginOverride != nil:
+			x.MarginPct = *x.MarginOverride
+		case sectionMargin != nil:
+			x.MarginPct = *sectionMargin
+		}
+		x.SalePrice = rule.SalePrice(x.MerchantPrice, x.MarginOverride, sectionMargin)
+		x.Margin = x.SalePrice - x.MerchantPrice
 		out = append(out, x)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": out, "count": len(out)})
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"items": out, "count": len(out),
+		// MarginMode **«نسبة» أم «ثابت»** — والشاشةُ لا تكتب «٪» على رقمٍ بالليرة.
+		"margin_mode": rule.Mode,
+	})
 }
