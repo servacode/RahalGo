@@ -134,11 +134,11 @@ export default function SectionsPage() {
                   فيُنسى أنّ صورتَه لم تُرفع.
 
                   **فيُقال صراحةً «أضف صورة»** — نقصٌ يُرى يُعالَج. */}
-              <div className="relative flex h-24 items-center justify-center bg-page">
-                {sec.image_thumb_url ? (
+              <div className="relative flex aspect-[4/3] items-center justify-center bg-page">
+                {sec.image_url || sec.image_thumb_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={mediaUrl(sec.image_thumb_url) ?? ""}
+                    src={mediaUrl(sec.image_url ?? sec.image_thumb_url) ?? ""}
                     alt={sec.name}
                     className="h-full w-full object-cover"
                   />

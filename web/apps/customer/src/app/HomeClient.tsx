@@ -47,7 +47,13 @@ interface Section {
   id: string;
   name: string;
   icon: string;
-  /** **صورةُ القسم — هويّتُه.** والسوقُ يُتصفَّح بالصور لا بالرموز. */
+  /**
+   * **صورةُ القسم — هويّتُه.** والسوقُ يُتصفَّح بالصور لا بالرموز.
+   *
+   * **والأصلُ لا المصغَّرة**: المصغَّرةُ حدُّها ٤٠٠ بكسل، **وبطاقةٌ تمطّها
+   * تبهت.** والمصغَّرةُ تبقى بديلاً لما رُفع قبل هذا التغيير.
+   */
+  image_url: string | null;
   image_thumb_url: string | null;
   /** **عددُ المتاح الآن لا كلُّ ما سُجّل** — قسمٌ يقول ١٢ ثمّ يُفتح على ثلاثة
    *  يجعل الزبونَ يشكّ في كلّ رقمٍ بعده. */
@@ -154,11 +160,11 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                   sec.count === 0 ? "opacity-60" : ""
                 }`}
               >
-                <span className="flex h-24 items-center justify-center bg-page">
-                  {sec.image_thumb_url ? (
+                <span className="flex aspect-[4/3] items-center justify-center bg-page">
+                  {sec.image_url || sec.image_thumb_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={mediaUrl(sec.image_thumb_url) ?? ""}
+                      src={mediaUrl(sec.image_url ?? sec.image_thumb_url) ?? ""}
                       alt={sec.name}
                       className="h-full w-full object-cover"
                     />
