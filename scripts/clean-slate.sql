@@ -31,6 +31,13 @@
 BEGIN;
 
 -- ١ · الأحداث
+--
+-- **والتذاكرُ قبل الطلبات** — `tickets.order_id` مفتاحٌ أجنبيّ إليها. وكانت
+-- تُحذف في القسم الثالث، **فمرّ التنظيفُ ما دامت لا تذكرة تشير إلى طلب**،
+-- وسقط أوّلَ مرّةٍ فُتحت فيها شكوى على طلب. (وقع فعلاً ٢٠٢٦-٠٨-٠٥.)
+DELETE FROM ticket_replies;
+DELETE FROM tickets;
+
 DELETE FROM order_ratings;
 DELETE FROM order_events;
 DELETE FROM order_items;
@@ -46,9 +53,13 @@ UPDATE driver_cash_boxes SET held = 0, updated_at = now();
 
 DELETE FROM payout_requests;
 
--- ٣ · التواصل والتفضيلات
-DELETE FROM ticket_replies;
-DELETE FROM tickets;
+-- **ودَينُ المتجر يُصفَّر معها** — وهو من عائلة `wallets.balance` نفسِها:
+-- عمودٌ مصانٌ لا محسوب. **فحذفُ الطلبات وحدَه يترك ديناً عن بضاعةٍ رُدّت في
+-- طلبٍ لم يعد موجوداً** — يُقتطع من أوّل مستحقٍّ في التجربة الجديدة، ولا
+-- سطرَ في أيّ دفترٍ يقول لماذا.
+UPDATE merchants SET debt = 0 WHERE debt <> 0;
+
+-- ٣ · التواصل والتفضيلات (والتذاكرُ سبقت مع الطلبات)
 DELETE FROM notifications;
 DELETE FROM user_favorites;
 DELETE FROM user_addresses;
