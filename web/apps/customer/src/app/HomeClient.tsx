@@ -158,7 +158,7 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                   {sec.image_thumb_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={sec.image_thumb_url}
+                      src={mediaUrl(sec.image_thumb_url) ?? ""}
                       alt={sec.name}
                       className="h-full w-full object-cover"
                     />

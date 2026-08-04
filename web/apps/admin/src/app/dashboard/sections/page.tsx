@@ -40,7 +40,7 @@ import {
   IconStatus,
   IconCamera,
 } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, mediaUrl } from "@/lib/api";
 import MenuReviewQueue from "@/components/MenuReviewQueue";
 import ImageUpload from "@/components/ImageUpload";
 
@@ -138,7 +138,7 @@ export default function SectionsPage() {
                 {sec.image_thumb_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={sec.image_thumb_url}
+                    src={mediaUrl(sec.image_thumb_url) ?? ""}
                     alt={sec.name}
                     className="h-full w-full object-cover"
                   />
