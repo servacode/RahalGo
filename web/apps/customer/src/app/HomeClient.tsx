@@ -47,6 +47,8 @@ interface Section {
   id: string;
   name: string;
   icon: string;
+  /** **صورةُ القسم — هويّتُه.** والسوقُ يُتصفَّح بالصور لا بالرموز. */
+  image_thumb_url: string | null;
   /** **عددُ المتاح الآن لا كلُّ ما سُجّل** — قسمٌ يقول ١٢ ثمّ يُفتح على ثلاثة
    *  يجعل الزبونَ يشكّ في كلّ رقمٍ بعده. */
   count: number;
@@ -135,19 +137,40 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
         <>
           <h2 className="mb-3 text-lg font-bold">{m.site.sections.title}</h2>
           <p className="mb-4 text-sm text-ink-muted">{m.site.sections.hint}</p>
-          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {/* **صورةُ القسم هويّتُه — لا رمزٌ رماديّ.**
+
+              **والسوقُ يُتصفَّح بالصور**: الزبونُ يعرف الشاورما من صورتها قبل
+              أن يقرأ اسمَها، **ورمزٌ واحدٌ لعشرة أقسامٍ يجعلها كلَّها شيئاً
+              واحداً** فتُمسح العينُ فوقها بلا أن تقف.
+
+              (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «رح نرفع صورةً معبّرةً عن القسم، ما
+              بدّي أيقوناتٍ عادية».) */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {sections.map((sec) => (
               <Link
                 key={sec.id}
                 href={`/s/${sec.id}`}
-                className={`flex items-center gap-3 rounded-card border border-line bg-surface p-4 transition-shadow hover:shadow-md ${
+                className={`flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-shadow hover:shadow-md ${
                   sec.count === 0 ? "opacity-60" : ""
                 }`}
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-control bg-primary-light">
-                  <CategoryIcon name={sec.icon} size={20} />
+                <span className="flex h-24 items-center justify-center bg-page">
+                  {sec.image_thumb_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={sec.image_thumb_url}
+                      alt={sec.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    /* **والأيقونةُ تبقى للزبون وحدَه** — لا لنا.
+
+                       شاشتُنا تقول «أضف صورة» لأنّنا من يضيف، **وشاشةُ الزبون
+                       لا تعرض له نقصَنا**: بطاقةٌ فارغةٌ تُقرأ عطباً. */
+                    <CategoryIcon name={sec.icon} size={26} />
+                  )}
                 </span>
-                <div className="min-w-0">
+                <div className="min-w-0 p-3">
                   <p className="truncate font-bold">{sec.name}</p>
                   <p className="text-xs text-ink-muted">
                     {m.site.sections.count.replace("{n}", fmtNum(sec.count))}

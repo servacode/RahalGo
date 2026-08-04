@@ -1572,7 +1572,8 @@
       "itemPending": "بانتظار المراجعة",
       "itemOut": "نفد",
       "itemStoreOff": "متجرُه مُطفأ",
-      "itemLive": "معروض"
+      "itemLive": "معروض",
+      "addImage": "أضف صورة"
     },
     "claims": {
       "title": "النزاعات",

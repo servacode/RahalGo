@@ -105,13 +105,14 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 // مع مصادرها.
 func (s *Server) handlePublicSections(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT ps.id, ps.name, ps.icon,
+		SELECT ps.id, ps.name, ps.icon, sm.thumb_path,
 		       count(i.id) FILTER (WHERE i.available AND `+orders.OpenNowSQL+`)
 		FROM platform_sections ps
 		LEFT JOIN menu_items i ON i.platform_section_id = ps.id
 		LEFT JOIN merchants m ON m.id = i.merchant_id AND m.status = 'active'
+		LEFT JOIN media sm ON sm.id = ps.image_media_id
 		WHERE ps.active
-		GROUP BY ps.id, ps.name, ps.icon, ps.sort_order
+		GROUP BY ps.id, ps.name, ps.icon, sm.thumb_path, ps.sort_order
 		ORDER BY ps.sort_order, ps.name`)
 	if err != nil {
 		s.respondErr(w, err)
@@ -120,18 +121,26 @@ func (s *Server) handlePublicSections(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type section struct {
-		ID    string `json:"id"`
-		Name  string `json:"name"`
-		Icon  string `json:"icon"`
-		Count int    `json:"count"`
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		Icon string `json:"icon"`
+		// ImageThumbURL **صورةُ القسم — وهي هويّتُه عند الزبون.**
+		//
+		// **والسوقُ يُتصفَّح بالصور لا بالرموز**: الزبونُ يعرف الشاورما من
+		// صورتها قبل أن يقرأ اسمَها، **ورمزٌ رماديٌّ لعشرة أقسامٍ يجعلها كلَّها
+		// شيئاً واحداً.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «رح نرفع صورةً معبّرةً عن
+		// القسم، ما بدّي أيقوناتٍ عادية».)
+		ImageThumbURL *string `json:"image_thumb_url"`
+		Count         int     `json:"count"`
 	}
 	out := []section{}
 	for rows.Next() {
 		var x section
-		if err := rows.Scan(&x.ID, &x.Name, &x.Icon, &x.Count); err != nil {
+		if err := rows.Scan(&x.ID, &x.Name, &x.Icon, &x.ImageThumbURL, &x.Count); err != nil {
 			s.respondErr(w, err)
 			return
 		}
+		x.ImageThumbURL = media.URLForPtr(x.ImageThumbURL)
 		out = append(out, x)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"sections": out})

@@ -36,6 +36,7 @@ import {
   useLiveData,
   IconStore,
   IconStatus,
+  IconCamera,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import MenuReviewQueue from "@/components/MenuReviewQueue";
@@ -108,14 +109,14 @@ export default function SectionsPage() {
 
           قرارُ المالك (٢٠٢٦-٠٨-٠٤): «لازم يكون كرت لكلّ قسم فيه اسمُ القسم
           وصورةُ القسم · وأزرار: عرضُ القسم · تعديل · زرٌّ ذكيّ متاح/غير متاح
-          بدل إيقافٍ وتشغيل · والأقسامُ كلُّ ٦ أقسامٍ بسطر».
+          بدل إيقافٍ وتشغيل · والأقسامُ كلُّ ٥ أقسامٍ بسطر».
 
           **والزرُّ الذكيُّ يقول الحالَ لا الفعل**: «متاح» و«غير متاح» يقرأهما
           من ينظر، **و«تشغيل/إيقاف» يسأل: أهذا حالُه أم ما سيصير إليه؟** */}
       {list.length === 0 ? (
         <EmptyState icon={IconStatus} title={S.empty} />
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {list.map((sec) => (
             <div
               key={sec.id}
@@ -123,9 +124,15 @@ export default function SectionsPage() {
                 sec.active ? "" : "opacity-60"
               }`}
             >
-              {/* **الصورةُ أوّلاً — وهي وجهُ القسم.**
-                  **والأيقونةُ حين لا صورة**: قسمٌ بلا صورةٍ لا يظهر فارغاً. */}
-              <div className="relative flex h-24 items-center justify-center bg-primary-light">
+              {/* **الصورةُ أوّلاً — وهي هويّةُ القسم لا زينتُه.**
+
+                  **ولا أيقونةَ بديلاً**: قرارُ المالك (٢٠٢٦-٠٨-٠٤) «رح نرفع
+                  صورةً معبّرةً عن القسم، ما بدّي أيقوناتٍ عادية». **ورمزٌ
+                  رماديٌّ يملأ الفراغَ يجعل القسمَ يبدو تامّاً وهو ناقص** —
+                  فيُنسى أنّ صورتَه لم تُرفع.
+
+                  **فيُقال صراحةً «أضف صورة»** — نقصٌ يُرى يُعالَج. */}
+              <div className="relative flex h-24 items-center justify-center bg-page">
                 {sec.image_thumb_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -134,7 +141,13 @@ export default function SectionsPage() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <CategoryIcon name={sec.icon} size={30} />
+                  <button
+                    onClick={() => setEditing(sec)}
+                    className="flex flex-col items-center gap-1 text-xs text-ink-muted hover:text-ink"
+                  >
+                    <IconCamera size={20} />
+                    {S.addImage}
+                  </button>
                 )}
                 <span className="absolute end-1.5 top-1.5">
                   <Badge variant={sec.active ? "success" : "neutral"}>
