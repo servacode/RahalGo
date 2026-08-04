@@ -389,6 +389,7 @@
 | `platform.orders_mode` | المنصة | choice | `platform` |
 | `drivers.assignment_mode` | السائقون | choice | `queue` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
+| `delivery.fee` | السائقون | money | `0` |
 <!-- /gen:settings -->
 
 ---

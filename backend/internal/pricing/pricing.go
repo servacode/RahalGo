@@ -190,69 +190,37 @@ func RepCommission(ctx context.Context, st Store) Amount {
 	return amountFrom(ctx, st, "sales.commission_mode", "sales.commission_value")
 }
 
-// ── أجرةُ التوصيل — ثلاثةُ أنماطٍ ومصدرٌ واحد ──────────────────────────────
+// ── أجرةُ التوصيل — رقمٌ مقطوعٌ واحد ──────────────────────────────────────
 //
-// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «أجرةُ التوصيل حسب المسافة · مقطوعةٌ رقمٌ ثابت»
-// ثمّ «الاثنان معاً — ثلاثةُ أنماط».)
-
-// DeliveryMode أنماطُ أجرة التوصيل.
-const (
-	// DeliveryFlat رقمٌ واحدٌ للجميع.
-	DeliveryFlat = "flat"
-	// DeliveryZone أجرةُ المنطقة التي يقع فيها الدبّوس — **القائمُ قبل الأنماط.**
-	DeliveryZone = "zone"
-	// DeliveryDistance أساسٌ زائدَ رقمٍ لكلّ كيلومتر.
-	DeliveryDistance = "distance"
-)
-
-// DeliveryRule ما يلزم لحساب أجرة التوصيل.
-type DeliveryRule struct {
-	Mode  string
-	Flat  int64
-	Base  int64
-	PerKm int64
-	// Rounding خانةُ التقريب — **وهي خانةُ التسعير نفسُها.**
-	//
-	// **ولا خانتان**: قائمةٌ تُقرَّب إلى الخمسمئة وتوصيلٌ بـ٧٬٠٢٠ يجعل المجموعَ
-	// رقماً لا يُحسب في الجيب — **وهو ما التقريبُ كلُّه من أجله.**
-	Rounding int64
-}
-
-// DeliveryFrom يقرأ مفاتيح التوصيل.
+// # لماذا رقمٌ واحد
 //
-// **وبلا مخزنٍ يبقى نمطُ المنطقة** — هو ما كانت المنصةُ تعمل به قبل الأنماط،
-// **ولا يُخترع سلوكٌ جديدٌ لغياب إعداد.**
-func DeliveryFrom(ctx context.Context, st Store) DeliveryRule {
+// كانت ثلاثةَ أنماط: مقطوعةٌ وبالمنطقة وبالمسافة. **وثلاثةُ أنماطٍ تعني أربعةَ
+// مفاتيحَ وحقلَ أجرةٍ في كلّ منطقة** — ومن أراد أن يعرف بكم يُوصَّل طلبٌ فتح
+// ثلاثة مواضعَ وجمع.
+//
+// **والأجرةُ الواحدةُ تُقال في جملة**: «التوصيل عندنا كذا». يعرفها الزبونُ
+// قبل أن يطلب، ويعرفها السائقُ قبل أن يأخذ، **ولا تُحسب بحسبةٍ يشكّ فيها
+// أحدُهما.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «حقلٌ ندخل المبلغ — لا نسبة ولا مسافة ولا شيء،
+// رقمٌ مقطوعٌ فقط».)
+//
+// # والمناطقُ تبقى تغطيةً لا تسعيراً
+//
+// **حدُّ التغطية غيرُ الأجرة**: الدوائرُ تقول «إلى أين نُوصّل»، والرقمُ يقول
+// «بكم». **ومن خلطهما فتح المدينةَ كلَّها بمجرّد أن وحّد الأجرة.**
+
+// DeliveryFee أجرةُ التوصيل — **رقمٌ واحدٌ لكلّ طلب.**
+//
+// **وبلا مخزنٍ صفر**: لا يُخترع رسمٌ لم يقرّره أحد. **وصفرٌ هنا يعني توصيلاً
+// مجّانيّاً** — فيُقال في الشاشة صراحةً لا يُترك يُكتشف في آخر الشهر.
+func DeliveryFee(ctx context.Context, st Store) int64 {
 	if st == nil {
-		return DeliveryRule{Mode: DeliveryZone}
+		return 0
 	}
-	return DeliveryRule{
-		Mode:     st.GetString(ctx, "delivery.fee_mode"),
-		Flat:     st.GetInt(ctx, "delivery.flat_fee"),
-		Base:     st.GetInt(ctx, "delivery.base_fee"),
-		PerKm:    st.GetInt(ctx, "delivery.per_km"),
-		Rounding: st.GetInt(ctx, "pricing.rounding"),
-	}
-}
-
-// Fee أجرةُ التوصيل — `zoneFee` أجرةُ المنطقة، و`meters` أبعدُ مصدرٍ عن الزبون.
-//
-// **والمسافةُ أبعدُ مصدرٍ لا أقربُه**: السائقُ يمرّ عليها كلِّها، **وأقربُها
-// يجعل طلباً من طرفَي المدينة بأجرة الجار.** ورسمُ الوقفة الزائدة محسوبٌ
-// وحدَه (`extraSourceFee`) — **هذا ثمنُ الطريق وذاك ثمنُ الوقفة.**
-func (r DeliveryRule) Fee(zoneFee int64, meters float64) int64 {
-	var fee int64
-	switch r.Mode {
-	case DeliveryFlat:
-		fee = r.Flat
-	case DeliveryDistance:
-		km := meters / 1000
-		fee = r.Base + int64(km*float64(r.PerKm))
-	default:
-		fee = zoneFee
-	}
+	fee := st.GetInt(ctx, "delivery.fee")
 	if fee < 0 {
 		return 0
 	}
-	return roundTo(fee, r.Rounding)
+	return fee
 }

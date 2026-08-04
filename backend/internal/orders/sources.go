@@ -184,7 +184,7 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 	}
 	out.Subtotal = subtotal
 
-	if z, err := s.DeliveryAt(ctx, lat, lng, src.IDs); err == nil {
+	if z, err := s.DeliveryAt(ctx, lat, lng); err == nil {
 		out.BaseFee = z.Fee
 	} else {
 		// **خارجَ التغطية ليس خطأً في التسعيرة** — الرسمُ يبقى صفراً ويُردّ
@@ -236,16 +236,11 @@ func (s *Service) ZoneAt(ctx context.Context, lat, lng float64) (ZoneCharge, err
 // DeliveryCharge أجرةُ التوصيل ومنطقتُها — **مصدرُ الحقيقة الواحد.**
 type DeliveryCharge struct {
 	ZoneCharge
-	// Fee الأجرةُ النافذة بعد تطبيق النمط — **وهي غيرُ `ZoneCharge.DeliveryFee`**:
-	// تلك أجرةُ المنطقة كما ضُبطت، وهذه ما يُحاسَب به فعلاً.
+	// Fee الأجرةُ النافذة — **رقمٌ مقطوعٌ من الإعدادات، لا من عمود المنطقة.**
 	Fee int64
-	// Mode النمطُ الذي حُسبت به — يُقال في التسعيرة كي يُفهَم الرقم.
-	Mode string
-	// Meters أبعدُ مصدرٍ عن الزبون — **صفرٌ في غير النمط المسافيّ.**
-	Meters float64
 }
 
-// DeliveryAt أجرةُ التوصيل لهذا الدبّوس من هذه المصادر.
+// DeliveryAt أجرةُ التوصيل لهذا الدبّوس — **والمنطقةُ تغطيةٌ لا تسعير.**
 //
 // # لماذا في موضعٍ واحد
 //
@@ -256,37 +251,20 @@ type DeliveryCharge struct {
 // (ملاحظةُ المالك ٢٠٢٦-٠٨-٠٤: «قيمُ التوصيل يجب أن تأتي من مكانٍ واحدٍ بكلّ
 // المشروع».)
 //
-// # والتغطيةُ بالمناطق في الأنماط الثلاثة
+// # والدوائرُ تقول «إلى أين» لا «بكم»
 //
-// **نمطُ الأجرة غيرُ حدّ التغطية.** المناطقُ تقول «إلى أين نُوصّل»، والنمطُ
-// يقول «بكم». **ومن خلطهما فتح المدينةَ كلَّها بمجرّد أن جعل الأجرةَ
-// مقطوعة** — فيُقبل طلبٌ من قريةٍ لا يصلها سائق.
+// **حدُّ التغطية غيرُ الأجرة.** خارجَ الدوائر يُرفض الطلبُ بـ`out_of_zone`،
+// **وداخلَها الأجرةُ واحدةٌ للجميع** — رقمٌ مقطوعٌ في الإعدادات.
 //
-// # والمسافةُ أبعدُ مصدرٍ عن الزبون
-//
-// السائقُ يمرّ على المصادر كلِّها ثمّ يقصد الزبون. **وأقربُها يجعل طلباً من
-// طرفَي المدينة بأجرة الجار.** ورسمُ الوقفة الزائدة محسوبٌ وحدَه — **هذا ثمنُ
-// الطريق وذاك ثمنُ الوقفة.**
-func (s *Service) DeliveryAt(ctx context.Context, lat, lng float64, sourceIDs []string) (DeliveryCharge, error) {
+// **وعمودُ `delivery_zones.delivery_fee` لم يعد يُقرأ**: بقي في القاعدة ولا
+// يُعرض في الشاشة، **فلا حقلٌ يَعِد بأثرٍ لا يقع.**
+func (s *Service) DeliveryAt(ctx context.Context, lat, lng float64) (DeliveryCharge, error) {
 	var out DeliveryCharge
 	z, err := s.ZoneAt(ctx, lat, lng)
 	if err != nil {
 		return out, err
 	}
 	out.ZoneCharge = z
-
-	rule := pricing.DeliveryFrom(ctx, s.settings)
-	out.Mode = rule.Mode
-	if rule.Mode == pricing.DeliveryDistance && len(sourceIDs) > 0 {
-		// **وتعذّرُ القياس لا يُصفّر الأجرة**: متجرٌ بلا إحداثيّات يجعل
-		// المسافةَ صفراً، **فيصير الأساسُ وحدَه** — لا مجّاناً.
-		_ = s.db.QueryRow(ctx, `
-			SELECT COALESCE(max(ST_Distance(m.location,
-			         ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)), 0)
-			FROM merchants m
-			WHERE m.id = ANY($3::uuid[]) AND m.location IS NOT NULL`,
-			lat, lng, sourceIDs).Scan(&out.Meters)
-	}
-	out.Fee = rule.Fee(z.DeliveryFee, out.Meters)
+	out.Fee = pricing.DeliveryFee(ctx, s.settings)
 	return out, nil
 }

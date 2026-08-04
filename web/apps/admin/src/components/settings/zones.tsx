@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   PageHeader,
   Button,
@@ -11,7 +11,6 @@ import {
   IconAdd,
   IconDelete,
   IconZones,
-  IconWallet,
   IconClose,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
@@ -45,7 +44,6 @@ interface Draft {
   lat: number | null;
   lng: number | null;
   radiusM: number;
-  fee: string;
   minOrder: string;
 }
 
@@ -74,7 +72,7 @@ export default function ZonesPanel() {
 
   function startCreate() {
     setSelectedID(null);
-    setDraft({ id: null, name: "", lat: null, lng: null, radiusM: 2000, fee: "", minOrder: "0" });
+    setDraft({ id: null, name: "", lat: null, lng: null, radiusM: 2000, minOrder: "0" });
   }
 
   function startEdit(z: Zone) {
@@ -85,7 +83,6 @@ export default function ZonesPanel() {
       lat: z.lat,
       lng: z.lng,
       radiusM: z.radius_m,
-      fee: String(z.delivery_fee),
       minOrder: String(z.min_order),
     });
   }
@@ -99,7 +96,9 @@ export default function ZonesPanel() {
       lat: draft.lat,
       lng: draft.lng,
       radius_m: draft.radiusM,
-      delivery_fee: Number(draft.fee) || 0,
+      // **والعمودُ يُكتب صفراً ولا يُقرأ** — بقي في القاعدة لتاريخٍ مضى،
+      // **ولا يُحذف بترحيلٍ لأنّ حذفَ عمودٍ لا يُتراجع عنه.**
+      delivery_fee: 0,
       min_order: Number(draft.minOrder) || 0,
     };
     try {
@@ -216,20 +215,19 @@ export default function ZonesPanel() {
                   className="w-full accent-primary"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  id="z-fee"
-                  label={`${m.admin.zones.deliveryFee} (${m.common.currency})`}
-                  type="number"
-                  min="0"
-                  required
-                  value={draft.fee}
-                  onChange={(e) => setDraft({ ...draft, fee: e.target.value })}
-                />
-                {/* لا حقل «حدّ أدنى»: المنصة لا تفرض حدّاً (قرار المالك) —
-                    رسم التوصيل يُؤخذ كاملاً مهما كانت قيمة الطلب. وحقلٌ يكتب
-                    قيمةً لا يقرؤها أحد **زرٌّ كاذب**: يظنّ صاحبُه أنه ضبط شيئاً. */}
-              </div>
+              {/* **ولا حقلَ أجرةٍ هنا** — المنطقةُ تغطيةٌ لا تسعير.
+
+                  كانت لكلّ دائرةٍ أجرتُها. **وصارت الأجرةُ رقماً مقطوعاً
+                  واحداً في الإعدادات** (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «رقمٌ
+                  مقطوعٌ فقط، لا نسبة ولا مسافة ولا شيء») — فبقي الحقلُ
+                  يُكتب ولا يُقرأ.
+
+                  **وحقلٌ يكتب قيمةً لا يقرؤها أحدٌ زرٌّ كاذب**: يظنّ صاحبُه
+                  أنّه ضبط شيئاً. وهي القاعدةُ التي حُذف بها حقلُ «الحدّ
+                  الأدنى» من هنا قبله.
+
+                  **والدائرةُ تقول «إلى أين نُوصّل» والرقمُ يقول «بكم»** —
+                  ومن خلطهما فتح المدينةَ كلَّها بمجرّد أن وحّد الأجرة. */}
               {draft.lat == null && (
                 <p className="rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">
                   {m.admin.zones.centerUnset}
@@ -268,11 +266,7 @@ export default function ZonesPanel() {
                 </Badge>
               </div>
               <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-muted">
-                <IconWallet size={14} />
-                {fmtNum(z.delivery_fee)} {m.common.currency}
-                <span className="text-xs">
-                  · {(z.radius_m / 1000).toFixed(1)} {m.admin.zones.km}
-                </span>
+                {(z.radius_m / 1000).toFixed(1)} {m.admin.zones.km}
               </p>
               {z.id === selectedID && isAdmin && (
                 <div className="mt-2 flex gap-2 border-t border-line pt-2">

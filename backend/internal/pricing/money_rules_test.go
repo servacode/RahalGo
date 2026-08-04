@@ -123,55 +123,30 @@ func TestMerchantCommission_OverrideBeatsGlobal(t *testing.T) {
 	}
 }
 
-// TestDeliveryFee_ThreeModes **ثلاثةُ أنماطٍ ومصدرٌ واحد.**
+// TestDeliveryFee_FlatOnly **رقمٌ مقطوعٌ واحد — لا نمطَ ولا حسبة.**
 //
 // (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
-func TestDeliveryFee_ThreeModes(t *testing.T) {
-	cases := []struct {
-		name    string
-		rule    pricing.DeliveryRule
-		zoneFee int64
-		meters  float64
-		want    int64
-	}{
-		{"المنطقةُ هي الافتراض",
-			pricing.DeliveryRule{Mode: pricing.DeliveryZone}, 7_000, 0, 7_000},
-		{"والمقطوعةُ تتجاهل المنطقة",
-			pricing.DeliveryRule{Mode: pricing.DeliveryFlat, Flat: 5_000}, 7_000, 4_200, 5_000},
-		{"والمسافةُ أساسٌ زائدَ كيلومترات",
-			pricing.DeliveryRule{Mode: pricing.DeliveryDistance, Base: 2_000, PerKm: 1_000},
-			7_000, 3_500, 5_500},
-		{"وكسرُ الكيلومتر يُحسب بنسبته",
-			pricing.DeliveryRule{Mode: pricing.DeliveryDistance, Base: 0, PerKm: 1_000},
-			0, 500, 500},
-		{"وصفرُ المسافةِ يُبقي الأساس — لا مجّاناً",
-			pricing.DeliveryRule{Mode: pricing.DeliveryDistance, Base: 2_000, PerKm: 1_000},
-			7_000, 0, 2_000},
-		// **والتقريبُ واحدٌ للبيع والتوصيل** — خانتان تجعلان المجموعَ رقماً
-		// لا يُحسب في الجيب، وهو ما التقريبُ كلُّه من أجله.
-		{"والتقريبُ لأعلى يُطبَّق على الناتج",
-			pricing.DeliveryRule{Mode: pricing.DeliveryDistance, Base: 2_000, PerKm: 1_000, Rounding: 500},
-			0, 3_450, 5_500},
+func TestDeliveryFee_FlatOnly(t *testing.T) {
+	ctx := context.Background()
+	st := fakeStore{"delivery.fee": int64(10_000)}
+	if got := pricing.DeliveryFee(ctx, st); got != 10_000 {
+		t.Fatalf("الأجرة %d والمنتظَر ١٠٠٠٠", got)
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			if got := c.rule.Fee(c.zoneFee, c.meters); got != c.want {
-				t.Fatalf("الأجرة %d والمنتظَر %d", got, c.want)
-			}
-		})
-	}
-}
 
-// TestDeliveryFrom_NoStoreKeepsZone **بلا مخزنٍ يبقى ما كانت المنصةُ تعمل به.**
-//
-// **ولا يُخترع سلوكٌ جديدٌ لغياب إعداد**: نمطٌ مقطوعٌ افتراضيٌّ بصفرٍ يجعل
-// التوصيلَ مجّانيّاً في كلّ طلب — **وخسارةٌ صامتةٌ تُكتشف في آخر الشهر.**
-func TestDeliveryFrom_NoStoreKeepsZone(t *testing.T) {
-	r := pricing.DeliveryFrom(context.Background(), nil)
-	if r.Mode != pricing.DeliveryZone {
-		t.Fatalf("النمطُ %q والمنتظَر %q", r.Mode, pricing.DeliveryZone)
+	// **والتغييرُ يسري على الطلب التالي.**
+	st["delivery.fee"] = int64(7_500)
+	if got := pricing.DeliveryFee(ctx, st); got != 7_500 {
+		t.Fatalf("بعد التغيير %d والمنتظَر ٧٥٠٠ — الإعدادُ لم يسرِ", got)
 	}
-	if got := r.Fee(7_000, 9_000); got != 7_000 {
-		t.Fatalf("الأجرة %d والمنتظَر أجرةَ المنطقة ٧٠٠٠", got)
+
+	// **وبلا مخزنٍ صفر** — لا يُخترع رسمٌ لم يقرّره أحد.
+	if got := pricing.DeliveryFee(ctx, nil); got != 0 {
+		t.Fatalf("بلا مخزنٍ %d والمنتظَر صفراً", got)
+	}
+
+	// **وسالبٌ يُقرأ صفراً** — رسمٌ سالبٌ يجعل المنصةَ تدفع للزبون ليطلب.
+	st["delivery.fee"] = int64(-5_000)
+	if got := pricing.DeliveryFee(ctx, st); got != 0 {
+		t.Fatalf("سالبٌ أعطى %d والمنتظَر صفراً", got)
 	}
 }

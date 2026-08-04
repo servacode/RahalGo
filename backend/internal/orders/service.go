@@ -239,13 +239,7 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	}
 
 	// منطقة التسليم من الدبوس — **من مصدرٍ واحدٍ لا استعلامين.**
-	// **ومصادرُ الطلب تُمرَّر للنمط المسافيّ** — وطلبٌ بلا أصنافٍ (يكتبه
-	// المكتبُ هاتفيّاً) لا مصادرَ له، فتبقى المسافةُ صفراً والأساسُ وحدَه.
-	var srcIDs []string
-	if sources != nil {
-		srcIDs = sources.IDs
-	}
-	zone, err := s.DeliveryAt(ctx, in.Lat, in.Lng, srcIDs)
+	zone, err := s.DeliveryAt(ctx, in.Lat, in.Lng)
 	if errors.Is(err, ErrOutOfZone) {
 		return nil, ErrOutOfZone
 	}
