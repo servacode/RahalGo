@@ -634,7 +634,7 @@
       "empty": "لا طلبات مطابقة",
       "actions": {
         "accepted": "قبول",
-        "rejected": "رفض المتجر",
+        "rejected": "رفض",
         "preparing": "بدء التحضير",
         "dispatching": "طلب سائق",
         "at_pickup": "وصل للمتجر",
