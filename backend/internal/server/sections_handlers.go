@@ -32,10 +32,15 @@ import (
 
 // publicItem صنفٌ كما يراه الزبون — **بلا مصدره.**
 type publicItem struct {
-	ID            string     `json:"id"`
-	Name          string     `json:"name"`
-	Description   string     `json:"description"`
-	Price         int64      `json:"price"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Price       int64  `json:"price"`
+	// ImageURL **الأصلُ للبطاقة، والمصغَّرةُ للمواضع الضيّقة.**
+	//
+	// المصغَّرةُ حدُّها ٤٠٠ بكسل، **وبطاقةٌ تمطّها تبهت** — وقد حدث في بطاقة
+	// القسم قبلها، **وشكلٌ واحدٌ في الشاشتين يعني جودةً واحدة.**
+	ImageURL      *string    `json:"image_url"`
 	ImageThumbURL *string    `json:"image_thumb_url"`
 	Available     bool       `json:"available"`
 	SourceClosed  bool       `json:"source_closed"`
@@ -56,7 +61,7 @@ type publicItem struct {
 // حتى يُرفع المفتاح، **ولا يُطفئ سوقاً قائماً في لحظة.**
 const itemSelect = `
 	SELECT i.id, i.name, i.description, i.merchant_price, i.margin_override,
-	       im.thumb_path, i.available, ps.id, ps.name, ps.margin_override,
+	       im.path, im.thumb_path, i.available, ps.id, ps.name, ps.margin_override,
 	       ` + orders.OpenNowSQL + `, ` + orders.NextOpenSQL + `
 	FROM menu_items i
 	JOIN merchants m ON m.id = i.merchant_id
@@ -82,12 +87,13 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 		var open bool
 		var opensAt *time.Time
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
-			&it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
+			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
 			&sectionMargin, &open, &opensAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
+		it.ImageURL = media.URLForPtr(it.ImageURL)
 		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.SourceClosed = !open
 		if !open {
@@ -195,12 +201,13 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 	if err := s.pg.QueryRow(r.Context(), itemSelect+` AND i.id = $1`,
 		chi.URLParam(r, "id")).
 		Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
-			&it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
+			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
 			&sectionMargin, &open, &opensAt); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
 	it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
+	it.ImageURL = media.URLForPtr(it.ImageURL)
 	it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 	it.SourceClosed = !open
 	if !open {

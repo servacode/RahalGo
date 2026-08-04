@@ -133,7 +133,9 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
             {m.site.search.empty}
           </p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          /* **ونتائجُ البحث بشبكة الأقسام نفسِها** — من كتب في الحقل لا يجد
+             الصفحةَ صارت شيئاً آخر تحته. */
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {hits.map((it) => (
               <ItemCard key={it.id} item={it} />
             ))}

@@ -39,7 +39,10 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
           {m.site.sections.empty}
         </p>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        /* **بعددِ أعمدةِ الأقسام نفسِه** — من فتح قسماً لا يجد الشبكةَ تغيّرت
+           تحته. (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «شكلُ العرض للأصناف يجب أن يكون
+           موحّداً».) */
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {items.map((it) => (
             <ItemCard key={it.id} item={it} />
           ))}
