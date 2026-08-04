@@ -704,7 +704,8 @@
       "recomputeHint": "يقرأ الدفتر ويضع الفرقَ قيداً مقابلاً — ولا يُعدَّل قيدٌ قديم",
       "recomputeDone": "صُحِّح بمقدار {n}",
       "recomputeNone": "لا فرق — التسويةُ صحيحة",
-      "invoice": "الفاتورة"
+      "invoice": "الفاتورة",
+      "noDriverYet": "لم يُسنَد بعد"
     },
     "customers": {
       "title": "الزبائن",

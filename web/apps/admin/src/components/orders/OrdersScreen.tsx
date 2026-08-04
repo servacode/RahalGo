@@ -539,11 +539,31 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
   const columns: DataColumn<OrderRow>[] = [
     {
+      // **الرقمُ يميناً والحالةُ يساراً في سطرٍ واحد.**
+      //
+      // قرارُ المالك (٢٠٢٦-٠٨-٠٤): «الحالةُ فوق بالأعلى يسار رقم الطلب أفضل
+      // وأحترافيّ، وتحته الوقتُ والتاريخُ الذي تمّ به الطلب».
+      //
+      // **وسطرٌ مُعنوَنٌ للحالة كان يُنزلها بين الحقول** — ومن يمسح عشرين
+      // بطاقةً يقرأ الحالةَ من طرف عينه، **لا يبحث عنها في قائمةِ حقول.**
       id: "number",
       header: m.admin.ordersPage.number,
       icon: <IconOrder />,
       primary: true,
-      cell: (o) => <span className="font-bold">#{o.number}</span>,
+      cell: (o) => (
+        <span className="flex items-center justify-between gap-2">
+          <span className="font-bold">#{o.number}</span>
+          <span className="inline-flex flex-wrap items-center gap-1">
+            <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>
+              {STATUS_LABELS[o.status]}
+            </Badge>
+            {/* **ومن أنهاه بجانب أنّه انتهى** — «ملغي» بلا فاعلٍ ثلاثةُ أخبار. */}
+            {o.ended_by && ENDED_BY[o.ended_by] && (
+              <Badge variant="neutral">{ENDED_BY[o.ended_by]}</Badge>
+            )}
+          </span>
+        </span>
+      ),
     },
     {
       id: "customer",
@@ -560,31 +580,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       ),
     },
     {
-      // **الحالةُ أوّلَ ما يُقرأ** — قرارُ المالك (٢٠٢٦-٠٨-٠٤): «الحالة يجب
-      // أن تكون أعلى الكرت، وأيضاً الوقت تحت الحالة».
+      // **التاريخُ والوقتُ في الترويسة تحت الحالة** — لا حقلاً مُعنوَناً بينها.
       //
-      // **ومن يمسح عشرين بطاقةً يسأل «أين هو الآن؟» قبل كلّ شيء** — لا عن
-      // الأصناف ولا عن المال.
-      id: "status",
-      header: m.admin.ordersPage.statusCol,
-      icon: <IconStatus />,
-      cell: (o) => (
-        <span className="inline-flex flex-wrap items-center gap-1">
-          <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>{STATUS_LABELS[o.status]}</Badge>
-          {/* **ومن أنهاه بجانب أنّه انتهى.**
-
-              كانت العملياتُ تقرأ «ملغي» **بلا فاعل** — وثلاثةُ أخبارٍ يخفيها
-              اللفظُ الواحد. */}
-          {o.ended_by && ENDED_BY[o.ended_by] && (
-            <Badge variant="neutral">{ENDED_BY[o.ended_by]}</Badge>
-          )}
-        </span>
-      ),
-    },
-    {
+      // **والتاريخُ معه لا الوقتُ وحدَه**: سجلُّ الطلبات يمتدّ أياماً، **و«٣:١١»
+      // بلا يومٍ لا تقول شيئاً** لمن يراجع شكوى الأسبوع الماضي.
       id: "time",
       header: m.admin.ordersPage.time,
-      cell: (o) => fmtTime(o.created_at),
+      primary: true,
+      cell: (o) => (
+        <span dir="ltr" className="block">
+          {fmtDateTime(o.created_at)}
+        </span>
+      ),
     },
     {
       id: "merchant",
@@ -618,9 +625,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             </span>
           </span>
         ) : (
-          <span className="text-ink-muted">
-            {m.admin.ordersPage.deliveryFee}: {fmtNum(o.delivery_fee)} {m.common.currency}
-          </span>
+          /* **ولا يُكرَّر التوصيلُ هنا** — صار في ذيل الفاتورة حيث يُجمع.
+             **ورقمٌ يظهر مرّتين يُقرأ مرّتين**، فيُظنّ أنّ ثمّة أجرين. */
+          <span className="text-ink-muted">{m.admin.ordersPage.noDriverYet}</span>
         ),
     },
     {
@@ -696,7 +703,20 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
               **والخصمُ يُقال حين يقع** — وسكوتُه يجعل الإجماليَّ لا يساوي ما
               فوقه، **فيُظنّ خطأً في الحساب.** */}
+          {/* **والحسبةُ تُقرأ صاعدة**: أصنافٌ ← توصيلٌ ← إجمالي.
+
+              قرارُ المالك (٢٠٢٦-٠٨-٠٤): «التوصيلَ اتركه تحت الفاتورة ليكون
+              الإجماليُّ صحيحاً بصرياً — الشخصُ يعرف قيمةَ الطلب ويعرف قيمةَ
+              التوصيل وكم أصبح الإجمالي».
+
+              **ورقمٌ لا يُرى ما جُمع فيه يُصدَّق أو يُشكّ فيه بلا سبيل.** */}
           <li className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm">
+            <span className="text-ink-muted">{m.admin.ordersPage.goodsValue}</span>
+            <span dir="ltr" className="tabular-nums">
+              {fmtNum(o.subtotal)}
+            </span>
+          </li>
+          <li className="flex items-center justify-between text-sm">
             <span className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</span>
             <span dir="ltr" className="tabular-nums">
               {fmtNum(o.delivery_fee)}
