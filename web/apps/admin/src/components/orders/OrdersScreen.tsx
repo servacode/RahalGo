@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtTime , fmtDateTime } from "@rahalgo/i18n";
+import {
+  getMessages,
+  defaultLocale,
+  fmtNum,
+  fmtTime,
+  fmtDateTime,
+} from "@rahalgo/i18n";
 import {
   IconNote,
   IconEdit,
@@ -157,7 +163,12 @@ interface OrderRow {
     note: string;
     options: { group: string; name: string; price_delta: number }[];
   }[];
-  events?: { from_status: string; to_status: string; note: string; created_at: string }[];
+  events?: {
+    from_status: string;
+    to_status: string;
+    note: string;
+    created_at: string;
+  }[];
   rating?: {
     platform_stars: number;
     driver_stars: number | null;
@@ -188,7 +199,10 @@ const ENDED_BY: Record<string, string> = m.admin.ordersPage.endedBy;
 const ACTION_LABELS: Record<string, string> = m.admin.ordersPage.actions;
 const PAYMENT_LABELS: Record<string, string> = m.orders.payment;
 
-const STATUS_VARIANT: Record<string, "warning" | "primary" | "success" | "danger" | "neutral"> = {
+const STATUS_VARIANT: Record<
+  string,
+  "warning" | "primary" | "success" | "danger" | "neutral"
+> = {
   pending: "warning",
   accepted: "primary",
   preparing: "primary",
@@ -247,7 +261,12 @@ const SETTLED_STATUSES = new Set(["delivered", "failed", "refunded"]);
  * طلبٍ لم يُقبل بعد يُسأل عنه ولا جواب** — «كيف والطلبُ لسّا ما وافقنا عليه
  * أساساً؟» (المالك ٢٠٢٦-٠٨-٠٤).
  */
-const PROOF_STATUSES = new Set(["at_dropoff", "delivered", "failed", "refunded"]);
+const PROOF_STATUSES = new Set([
+  "at_dropoff",
+  "delivered",
+  "failed",
+  "refunded",
+]);
 
 /**
  * **الحالاتُ التي يكون فيها للسائق معنى.**
@@ -289,8 +308,14 @@ const DRIVER_STATUSES = new Set([
  *
  * **والصوابُ الطرحُ لا الجمع**: الصنفُ عارياً = المحفوظ − مجموعُ الفروق.
  */
-function basePrice(it: { unit_price: number; options?: { price_delta: number }[] }): number {
-  return it.unit_price - (it.options ?? []).reduce((s, x) => s + (x.price_delta || 0), 0);
+function basePrice(it: {
+  unit_price: number;
+  options?: { price_delta: number }[];
+}): number {
+  return (
+    it.unit_price -
+    (it.options ?? []).reduce((s, x) => s + (x.price_delta || 0), 0)
+  );
 }
 
 // أزرار الانتقال المتاحة للعمليات/الأدمن حسب الحالة (مرآة لخارطة الخادم)
@@ -454,7 +479,9 @@ function translateKey(key: string): string {
   return typeof node === "string" ? node : m.errors.internal;
 }
 function errText(err: unknown): string {
-  return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
+  return err instanceof ApiError
+    ? translateKey(err.body.message_key)
+    : m.errors.internal;
 }
 
 // ---------- الشاشة الرئيسية ----------
@@ -514,7 +541,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   useEffect(() => {
     api<{ key: string; value: unknown }[]>("/api/v1/admin/settings")
       .then((all) => {
-        const delay = all.find((x) => x.key === "orders.manual_assign_after_min");
+        const delay = all.find(
+          (x) => x.key === "orders.manual_assign_after_min",
+        );
         setAssignAfterMin(typeof delay?.value === "number" ? delay.value : 10);
         const row = all.find((x) => x.key === "merchants.self_manage_orders");
         setSelfManage(row ? row.value === true : true);
@@ -541,9 +570,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     }
     // **ويُقرأ مع كلّ تحديث** — سائقٌ يفتح دوامَه أو يُغلقه لا يُنتظر تحديثُ صفحة.
     try {
-      const res = await api<{ drivers: DriverRow[] } | DriverRow[]>("/api/v1/admin/drivers");
+      const res = await api<{ drivers: DriverRow[] } | DriverRow[]>(
+        "/api/v1/admin/drivers",
+      );
       const list = Array.isArray(res) ? res : res.drivers;
-      setOnShift(list.filter((x) => x.on_shift && x.status === "active").length);
+      setOnShift(
+        list.filter((x) => x.on_shift && x.status === "active").length,
+      );
     } catch {
       setOnShift(null);
     }
@@ -561,10 +594,14 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   });
   const liveConnected = useLiveStatus();
   useEffect(() => {
-    api<Alert[]>("/api/v1/admin/orders/alerts").then(setAlerts).catch(() => undefined);
+    api<Alert[]>("/api/v1/admin/orders/alerts")
+      .then(setAlerts)
+      .catch(() => undefined);
   }, []);
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.per_page)) : 1;
+  const totalPages = data
+    ? Math.max(1, Math.ceil(data.total / data.per_page))
+    : 1;
 
   const columns: DataColumn<OrderRow>[] = [
     {
@@ -643,7 +680,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           <span>
             {o.driver_name || o.driver_phone}
             <span className="block text-xs text-ink-muted">
-              {m.admin.ordersPage.driverFee}: {fmtNum(o.driver_fee)} {m.common.currency}
+              {m.admin.ordersPage.driverFee}: {fmtNum(o.driver_fee)}{" "}
+              {m.common.currency}
             </span>
           </span>
         ) : o.offered_driver_name ? (
@@ -659,8 +697,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </span>
         ) : (
           /* **ولا يُكرَّر التوصيلُ هنا** — صار في ذيل الفاتورة حيث يُجمع.
-             **ورقمٌ يظهر مرّتين يُقرأ مرّتين**، فيُظنّ أنّ ثمّة أجرين. */
-          <span className="text-ink-muted">{m.admin.ordersPage.noDriverYet}</span>
+           **ورقمٌ يظهر مرّتين يُقرأ مرّتين**، فيُظنّ أنّ ثمّة أجرين. */
+          <span className="text-ink-muted">
+            {m.admin.ordersPage.noDriverYet}
+          </span>
         ),
     },
     {
@@ -677,96 +717,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       icon: <IconOrder />,
       // بعرض البطاقة: قائمةٌ تُقرأ سطراً سطراً لا تُحشَر في خانةٍ ضيّقة
       block: true,
-      cell: (o) => (
-        <ul className="space-y-1.5">
-          {(o.items ?? []).map((it) => {
-            /** **الخياراتُ صنفان**: ما لا سعرَ له يُلحق بالاسم، وما له سعرٌ
-                يُفرد سطراً. **و«عادي» ليس بنداً في الفاتورة** — هو وصفٌ للصنف،
-                **و«جبنة» بند** لأنّها زادت الحساب. */
-            const free = (it.options ?? []).filter((x) => !x.price_delta);
-            const paid = (it.options ?? []).filter((x) => x.price_delta > 0);
-            return (
-              <li key={it.id}>
-                <span className="flex items-start gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-badge bg-primary" />
-                  <span className="min-w-0 flex-1">
-                    <span className="font-medium">{it.name}</span>
-                    {free.length > 0 && (
-                      <span className="text-ink-muted">
-                        {" "}
-                        {free.map((x) => x.name).join(m.common.listSeparator)}
-                      </span>
-                    )}
-                    <span className="font-bold text-primary-dark"> ×{fmtNum(it.qty)}</span>
-                    {it.note && (
-                      <span className="block text-xs text-accent-dark">
-                        <IconEdit size={11} className="inline align-[-1px]" /> {it.note}
-                      </span>
-                    )}
-                  </span>
-                  {/* **سعرُ الصنف عارياً × الكمّية** — والإضافاتُ تحته بأسعارها،
-                      **فمجموعُ السطور يبلغ قيمةَ الطلب بلا نقصٍ ولا فائض.** */}
-                  <span dir="ltr" className="shrink-0 tabular-nums">
-                    {fmtNum(basePrice(it) * it.qty)}
-                  </span>
-                </span>
-
-                {/* **وكلُّ إضافةٍ بسطرها وسعرها** — قرارُ المالك (٢٠٢٦-٠٨-٠٤). */}
-                {paid.map((x, i) => (
-                  <span key={i} className="flex items-center gap-2 ps-4 text-sm">
-                    <span className="min-w-0 flex-1 text-ink-muted">+ {x.name}</span>
-                    <span dir="ltr" className="shrink-0 tabular-nums text-accent-dark">
-                      {fmtNum(x.price_delta * it.qty)}
-                    </span>
-                  </span>
-                ))}
-              </li>
-            );
-          })}
-          {(o.items ?? []).length === 0 && <li className="text-ink-muted">—</li>}
-
-          {/* **وذيلُ الفاتورة: التوصيلُ ثمّ الإجمالي.**
-
-              **والخصمُ يُقال حين يقع** — وسكوتُه يجعل الإجماليَّ لا يساوي ما
-              فوقه، **فيُظنّ خطأً في الحساب.** */}
-          {/* **والحسبةُ تُقرأ صاعدة**: أصنافٌ ← توصيلٌ ← إجمالي.
-
-              قرارُ المالك (٢٠٢٦-٠٨-٠٤): «التوصيلَ اتركه تحت الفاتورة ليكون
-              الإجماليُّ صحيحاً بصرياً — الشخصُ يعرف قيمةَ الطلب ويعرف قيمةَ
-              التوصيل وكم أصبح الإجمالي».
-
-              **ورقمٌ لا يُرى ما جُمع فيه يُصدَّق أو يُشكّ فيه بلا سبيل.** */}
-          <li className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm">
-            <span className="text-ink-muted">{m.admin.ordersPage.goodsValue}</span>
-            <span dir="ltr" className="tabular-nums">
-              {fmtNum(o.subtotal)}
-            </span>
-          </li>
-          <li className="flex items-center justify-between text-sm">
-            <span className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</span>
-            <span dir="ltr" className="tabular-nums">
-              {fmtNum(o.delivery_fee)}
-            </span>
-          </li>
-          {o.discount > 0 && (
-            <li className="flex items-center justify-between text-sm text-success">
-              <span>{m.admin.ordersPage.discount}</span>
-              <span dir="ltr" className="tabular-nums">
-                −{fmtNum(o.discount)}
-              </span>
-            </li>
-          )}
-          <li className="flex items-center justify-between border-t border-line pt-2">
-            <span className="font-medium">{m.admin.ordersPage.total}</span>
-            <span dir="ltr" className="text-lg font-bold tabular-nums text-primary-dark">
-              {fmtNum(o.total)}{" "}
-              <span className="text-xs font-normal text-ink-muted">
-                {PAYMENT_LABELS[o.payment_method]}
-              </span>
-            </span>
-          </li>
-        </ul>
-      ),
+      // **وفي الجدول زرٌّ لا قائمة.**
+      //
+      // فاتورةٌ من عشرة سطورٍ تُفسد صفَّ جدول: **ترتفع الصفوفُ وتتباين
+      // أطوالُها فيُقرأ الجدولُ عشوائياً.** والزرُّ يفتحها حين تُطلب.
+      tableCell: (o) => <InvoiceButton order={o} />,
+      cell: (o) => <InvoiceList o={o} />,
     },
     {
       // **السائق وأجرُه — أو أجرةُ التوصيل قبل أن يُسنَد أحد.**
@@ -799,7 +755,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             </span>
           );
         }
-        if (!o.proof_url) return <span className="text-xs text-ink-muted">—</span>;
+        if (!o.proof_url)
+          return <span className="text-xs text-ink-muted">—</span>;
         const noGps = (o.proof_meters ?? -1) < 0;
         const away = Math.round(o.proof_meters ?? 0);
         return (
@@ -852,16 +809,19 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           {live ? m.admin.ordersPage.title : m.admin.ordersPage.historyTitle}
           <span
             className={`flex items-center gap-1.5 rounded-badge px-2.5 py-1 text-xs font-medium ${
-              liveConnected ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+              liveConnected
+                ? "bg-success/10 text-success"
+                : "bg-danger/10 text-danger"
             }`}
           >
             <span
               className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`}
             />
-            {liveConnected ? m.admin.ordersPage.live : m.admin.ordersPage.liveOff}
+            {liveConnected
+              ? m.admin.ordersPage.live
+              : m.admin.ordersPage.liveOff}
           </span>
         </h1>
-
       </div>
 
       {/* تنبيهات التصعيد */}
@@ -873,7 +833,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </p>
           <ul className="space-y-1.5">
             {alerts.map((a) => (
-              <li key={a.order_id + a.reason} className="flex flex-wrap items-center gap-2 text-sm">
+              <li
+                key={a.order_id + a.reason}
+                className="flex flex-wrap items-center gap-2 text-sm"
+              >
                 {/* الإنذارُ يجلب طلبَه إلى القائمة بدل أن يفتح نافذة:
                     **البطاقة نفسها صارت تحمل كل ما يُقرَّر به** — والنافذة
                     كانت تُخفي بقيّة الطلبات وهي مفتوحة. */}
@@ -888,11 +851,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 >
                   #{a.number}
                 </button>
-                <Badge variant="danger">{m.admin.ordersPage.alertReasons[a.reason]}</Badge>
+                <Badge variant="danger">
+                  {m.admin.ordersPage.alertReasons[a.reason]}
+                </Badge>
                 <span>{a.merchant_name}</span>
-                <span dir="ltr" className="text-xs text-ink-muted">{a.customer_phone}</span>
+                <span dir="ltr" className="text-xs text-ink-muted">
+                  {a.customer_phone}
+                </span>
                 <span className="text-xs text-ink-muted">
-                  {m.admin.ordersPage.sinceMinutes.replace("{m}", String(a.minutes))}
+                  {m.admin.ordersPage.sinceMinutes.replace(
+                    "{m}",
+                    String(a.minutes),
+                  )}
                 </span>
                 <Badge variant="warning">{STATUS_LABELS[a.status]}</Badge>
               </li>
@@ -948,7 +918,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">
+          {error}
+        </p>
       )}
 
       <DataView
@@ -971,9 +943,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
       {data && (
         <div className="mt-4 flex items-center justify-between text-sm text-ink-muted">
-          <span>{m.admin.users.totalCount.replace("{count}", String(data.total))}</span>
+          <span>
+            {m.admin.users.totalCount.replace("{count}", String(data.total))}
+          </span>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <Button
+              variant="secondary"
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+            >
               {m.admin.users.prev}
             </Button>
             <span>
@@ -989,7 +967,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </div>
         </div>
       )}
-
     </div>
   );
 }
@@ -1084,7 +1061,9 @@ function OrderActions({
   async function openAssign() {
     setAssigning(true);
     try {
-      const res = await api<{ drivers: DriverRow[] } | DriverRow[]>("/api/v1/admin/drivers");
+      const res = await api<{ drivers: DriverRow[] } | DriverRow[]>(
+        "/api/v1/admin/drivers",
+      );
       const list = Array.isArray(res) ? res : res.drivers;
       setDrivers(list.filter((x) => x.on_shift && x.status === "active"));
     } catch {
@@ -1132,7 +1111,9 @@ function OrderActions({
     const win = window.open("", "_blank");
     setBusy("wa");
     try {
-      const msg = await api<MerchantMessage>(`/api/v1/admin/orders/${o.id}/message`);
+      const msg = await api<MerchantMessage>(
+        `/api/v1/admin/orders/${o.id}/message`,
+      );
       if (!msg.wa_link) {
         win?.close();
         setErr(m.admin.ordersPage.noWhatsApp);
@@ -1149,7 +1130,11 @@ function OrderActions({
       onChanged();
     } catch (e) {
       win?.close();
-      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
     } finally {
       setBusy("");
     }
@@ -1165,9 +1150,12 @@ function OrderActions({
     setBusy("recompute");
     setErr("");
     try {
-      const res = await api<{ delta: number }>(`/api/v1/admin/orders/${o.id}/recompute`, {
-        method: "POST",
-      });
+      const res = await api<{ delta: number }>(
+        `/api/v1/admin/orders/${o.id}/recompute`,
+        {
+          method: "POST",
+        },
+      );
       setNotice(
         res.delta === 0
           ? m.admin.ordersPage.recomputeNone
@@ -1175,7 +1163,11 @@ function OrderActions({
       );
       onChanged();
     } catch (e) {
-      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
     } finally {
       setBusy("");
     }
@@ -1186,7 +1178,11 @@ function OrderActions({
     try {
       setSplit(await api<Breakdown>(`/api/v1/admin/orders/${o.id}/breakdown`));
     } catch (e) {
-      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
     }
   }
 
@@ -1201,7 +1197,11 @@ function OrderActions({
       });
       onChanged();
     } catch (e) {
-      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
     } finally {
       setBusy("");
     }
@@ -1220,14 +1220,21 @@ function OrderActions({
     try {
       await api(`/api/v1/admin/orders/${o.id}/compensate-driver`, {
         method: "POST",
-        body: JSON.stringify({ amount: Math.round(value), note: reason.trim() }),
+        body: JSON.stringify({
+          amount: Math.round(value),
+          note: reason.trim(),
+        }),
       });
       setCompensating(false);
       setAmount("");
       setReason("");
       onChanged();
     } catch (e) {
-      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
     } finally {
       setBusy("");
     }
@@ -1244,7 +1251,11 @@ function OrderActions({
       setAssigning(false);
       onChanged();
     } catch (e) {
-      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
     } finally {
       setBusy("");
     }
@@ -1295,7 +1306,11 @@ function OrderActions({
       setReason("");
       onChanged();
     } catch (e) {
-      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
     } finally {
       setBusy("");
     }
@@ -1343,7 +1358,9 @@ function OrderActions({
   if (compensating) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium">{m.admin.ordersPage.compensateTitle}</p>
+        <p className="text-xs font-medium">
+          {m.admin.ordersPage.compensateTitle}
+        </p>
         <Input
           type="number"
           inputMode="numeric"
@@ -1380,7 +1397,9 @@ function OrderActions({
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
         <p className="text-xs font-medium">{m.admin.ordersPage.chooseDriver}</p>
         {drivers.length === 0 ? (
-          <p className="text-xs text-ink-muted">{m.admin.ordersPage.noDriversOnShift}</p>
+          <p className="text-xs text-ink-muted">
+            {m.admin.ordersPage.noDriversOnShift}
+          </p>
         ) : (
           <div className="flex flex-col gap-1.5">
             {drivers.map((dv) => (
@@ -1410,7 +1429,9 @@ function OrderActions({
         <p className="text-xs font-medium text-primary-dark">
           {m.admin.ordersPage.transferTitle}
         </p>
-        <p className="text-xs text-ink-muted">{m.admin.ordersPage.transferHint}</p>
+        <p className="text-xs text-ink-muted">
+          {m.admin.ordersPage.transferHint}
+        </p>
         <Select
           id={`t-${o.id}`}
           value={target}
@@ -1441,7 +1462,10 @@ function OrderActions({
         )}
         {err && <p className="text-xs text-danger">{err}</p>}
         <div className="flex gap-2">
-          <Button disabled={!target || !reason.trim() || busy !== ""} onClick={() => void transfer()}>
+          <Button
+            disabled={!target || !reason.trim() || busy !== ""}
+            onClick={() => void transfer()}
+          >
             {m.admin.ordersPage.transferConfirm}
           </Button>
           <Button
@@ -1471,10 +1495,15 @@ function OrderActions({
     const target = manual ? asking.slice(7) : asking;
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className={`text-xs font-medium ${manual ? "text-warning" : "text-danger"}`}>
+        <p
+          className={`text-xs font-medium ${manual ? "text-warning" : "text-danger"}`}
+        >
           {manual
             ? m.admin.ordersPage.manualTitle
-            : m.admin.ordersPage.reasonTitle.replace("{action}", ACTION_LABELS[asking] ?? asking)}
+            : m.admin.ordersPage.reasonTitle.replace(
+                "{action}",
+                ACTION_LABELS[asking] ?? asking,
+              )}
         </p>
         <Input
           id={`reason-${o.id}`}
@@ -1487,7 +1516,9 @@ function OrderActions({
           placeholder={m.admin.ordersPage.reasonPlaceholder}
         />
         <p className="text-xs text-ink-muted">
-          {manual ? m.admin.ordersPage.manualHint : m.admin.ordersPage.reasonHint}
+          {manual
+            ? m.admin.ordersPage.manualHint
+            : m.admin.ordersPage.reasonHint}
         </p>
         {err && <p className="text-xs text-danger">{err}</p>}
         <div className="flex gap-2">
@@ -1496,7 +1527,9 @@ function OrderActions({
             disabled={!reason.trim() || busy !== ""}
             onClick={() => void go(target, reason.trim(), manual)}
           >
-            {manual ? m.admin.ordersPage.manualConfirm : m.admin.ordersPage.confirm}
+            {manual
+              ? m.admin.ordersPage.manualConfirm
+              : m.admin.ordersPage.confirm}
           </Button>
           <Button
             variant="secondary"
@@ -1532,8 +1565,14 @@ function OrderActions({
 
           لا يُعرض قبل الإغلاق: طلبٌ في الطريق لم تُقيَّد أنصبتُه بعد، **وشاشةٌ
           تعرض أصفاراً تُقرأ خطأً لا نقصاً.** */}
-      {(o.status === "delivered" || o.status === "failed" || o.status === "refunded") && (
-        <Button variant="secondary" disabled={busy !== ""} onClick={() => void openSplit()}>
+      {(o.status === "delivered" ||
+        o.status === "failed" ||
+        o.status === "refunded") && (
+        <Button
+          variant="secondary"
+          disabled={busy !== ""}
+          onClick={() => void openSplit()}
+        >
           {m.admin.ordersPage.splitButton}
         </Button>
       )}
@@ -1619,7 +1658,9 @@ function OrderActions({
           والنافذةُ حتى `preparing`: بعد بدء الطبخ لم يعد المطبخُ يحتاج خبراً. */}
       {(o.status === "accepted" || o.status === "preparing") && (
         <Button
-          variant={o.sent_to_merchant_at || selfManage ? "secondary" : "primary"}
+          variant={
+            o.sent_to_merchant_at || selfManage ? "secondary" : "primary"
+          }
           disabled={busy !== ""}
           onClick={askThenForward}
         >
@@ -1634,7 +1675,9 @@ function OrderActions({
         onClose={() => setNoDriverWarn(false)}
         title={m.admin.ordersPage.noDriverTitle}
       >
-        <p className="mb-4 text-sm text-ink-muted">{m.admin.ordersPage.noDriverBody}</p>
+        <p className="mb-4 text-sm text-ink-muted">
+          {m.admin.ordersPage.noDriverBody}
+        </p>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setNoDriverWarn(false)}>
             {m.admin.ordersPage.noDriverWait}
@@ -1681,7 +1724,9 @@ function OrderActions({
         >
           {m.admin.ordersPage.manualStep.replace(
             "{s}",
-            m.orders.status[(NEXT_AFTER[o.status] ?? "") as keyof typeof m.orders.status] ?? "",
+            m.orders.status[
+              (NEXT_AFTER[o.status] ?? "") as keyof typeof m.orders.status
+            ] ?? "",
           )}
         </button>
       )}
@@ -1703,8 +1748,16 @@ function OrderActions({
           onClick={() => {
             setTransferring(true);
             if (stores.length === 0) {
-              void api<{ id: string; name: string }[]>("/api/v1/admin/merchants")
-                .then((r) => setStores((Array.isArray(r) ? r : []).filter((x) => x.id !== o.merchant_id)))
+              void api<{ id: string; name: string }[]>(
+                "/api/v1/admin/merchants",
+              )
+                .then((r) =>
+                  setStores(
+                    (Array.isArray(r) ? r : []).filter(
+                      (x) => x.id !== o.merchant_id,
+                    ),
+                  ),
+                )
                 .catch(() => setStores([]));
             }
           }}
@@ -1714,11 +1767,157 @@ function OrderActions({
       )}
 
       {canAssign && assignReady && (
-        <Button variant="secondary" disabled={busy !== ""} onClick={() => void openAssign()}>
+        <Button
+          variant="secondary"
+          disabled={busy !== ""}
+          onClick={() => void openAssign()}
+        >
           {m.admin.ordersPage.assignHere}
         </Button>
       )}
       {err && <p className="w-full text-xs text-danger">{err}</p>}
+    </>
+  );
+}
+
+/**
+ * **الفاتورة — مكوّنٌ واحدٌ للبطاقة وللنافذة.**
+ *
+ * تُعرض كاملةً في البطاقة، **وفي الجدول خلف زرّ**: فاتورةٌ من عشرة سطورٍ تُفسد
+ * صفَّ جدول — **ترتفع الصفوفُ وتتباين أطوالُها فيُقرأ الجدولُ عشوائياً.**
+ *
+ * **ونسختان تفترقان يوماً** — فتقول البطاقةُ رقماً وتقول النافذةُ غيرَه.
+ */
+function InvoiceList({ o }: { o: OrderRow }) {
+  return (
+    <ul className="space-y-1.5">
+      {(o.items ?? []).map((it) => {
+        /** **الخياراتُ صنفان**: ما لا سعرَ له يُلحق بالاسم، وما له سعرٌ
+                يُفرد سطراً. **و«عادي» ليس بنداً في الفاتورة** — هو وصفٌ للصنف،
+                **و«جبنة» بند** لأنّها زادت الحساب. */
+        const free = (it.options ?? []).filter((x) => !x.price_delta);
+        const paid = (it.options ?? []).filter((x) => x.price_delta > 0);
+        return (
+          <li key={it.id}>
+            <span className="flex items-start gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-badge bg-primary" />
+              <span className="min-w-0 flex-1">
+                <span className="font-medium">{it.name}</span>
+                {free.length > 0 && (
+                  <span className="text-ink-muted">
+                    {" "}
+                    {free.map((x) => x.name).join(m.common.listSeparator)}
+                  </span>
+                )}
+                <span className="font-bold text-primary-dark">
+                  {" "}
+                  ×{fmtNum(it.qty)}
+                </span>
+                {it.note && (
+                  <span className="block text-xs text-accent-dark">
+                    <IconEdit size={11} className="inline align-[-1px]" />{" "}
+                    {it.note}
+                  </span>
+                )}
+              </span>
+              {/* **سعرُ الصنف عارياً × الكمّية** — والإضافاتُ تحته بأسعارها،
+               **فمجموعُ السطور يبلغ قيمةَ الطلب بلا نقصٍ ولا فائض.** */}
+              <span dir="ltr" className="shrink-0 tabular-nums">
+                {fmtNum(basePrice(it) * it.qty)}
+              </span>
+            </span>
+
+            {/* **وكلُّ إضافةٍ بسطرها وسعرها** — قرارُ المالك (٢٠٢٦-٠٨-٠٤). */}
+            {paid.map((x, i) => (
+              <span key={i} className="flex items-center gap-2 ps-4 text-sm">
+                <span className="min-w-0 flex-1 text-ink-muted">
+                  + {x.name}
+                </span>
+                <span
+                  dir="ltr"
+                  className="shrink-0 tabular-nums text-accent-dark"
+                >
+                  {fmtNum(x.price_delta * it.qty)}
+                </span>
+              </span>
+            ))}
+          </li>
+        );
+      })}
+      {(o.items ?? []).length === 0 && <li className="text-ink-muted">—</li>}
+
+      {/* **وذيلُ الفاتورة: التوصيلُ ثمّ الإجمالي.**
+
+              **والخصمُ يُقال حين يقع** — وسكوتُه يجعل الإجماليَّ لا يساوي ما
+              فوقه، **فيُظنّ خطأً في الحساب.** */}
+      {/* **والحسبةُ تُقرأ صاعدة**: أصنافٌ ← توصيلٌ ← إجمالي.
+
+              قرارُ المالك (٢٠٢٦-٠٨-٠٤): «التوصيلَ اتركه تحت الفاتورة ليكون
+              الإجماليُّ صحيحاً بصرياً — الشخصُ يعرف قيمةَ الطلب ويعرف قيمةَ
+              التوصيل وكم أصبح الإجمالي».
+
+              **ورقمٌ لا يُرى ما جُمع فيه يُصدَّق أو يُشكّ فيه بلا سبيل.** */}
+      <li className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm">
+        <span className="text-ink-muted">{m.admin.ordersPage.goodsValue}</span>
+        <span dir="ltr" className="tabular-nums">
+          {fmtNum(o.subtotal)}
+        </span>
+      </li>
+      <li className="flex items-center justify-between text-sm">
+        <span className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</span>
+        <span dir="ltr" className="tabular-nums">
+          {fmtNum(o.delivery_fee)}
+        </span>
+      </li>
+      {o.discount > 0 && (
+        <li className="flex items-center justify-between text-sm text-success">
+          <span>{m.admin.ordersPage.discount}</span>
+          <span dir="ltr" className="tabular-nums">
+            −{fmtNum(o.discount)}
+          </span>
+        </li>
+      )}
+      <li className="flex items-center justify-between border-t border-line pt-2">
+        <span className="font-medium">{m.admin.ordersPage.total}</span>
+        <span
+          dir="ltr"
+          className="text-lg font-bold tabular-nums text-primary-dark"
+        >
+          {fmtNum(o.total)}{" "}
+          <span className="text-xs font-normal text-ink-muted">
+            {PAYMENT_LABELS[o.payment_method]}
+          </span>
+        </span>
+      </li>
+    </ul>
+  );
+}
+
+/** زرُّ الفاتورة في الجدول — **يفتحها حين تُطلب ولا يُثقل الصفّ.** */
+function InvoiceButton({ order }: { order: OrderRow }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        variant="secondary"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(true);
+        }}
+      >
+        {m.admin.ordersPage.invoice}
+      </Button>
+      {open && (
+        <span onClick={(e) => e.stopPropagation()}>
+          <Modal
+            open
+            onClose={() => setOpen(false)}
+            title={`${m.admin.ordersPage.invoice} · #${order.number}`}
+          >
+            <InvoiceList o={order} />
+          </Modal>
+        </span>
+      )}
     </>
   );
 }

@@ -238,20 +238,16 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		}
 	}
 
-	// منطقة التسليم من الدبوس
-	var zoneID, zoneName string
-	var deliveryFee, minOrder int64
-	err = s.db.QueryRow(ctx, `
-		SELECT id, name, delivery_fee, min_order FROM delivery_zones
-		WHERE active AND ST_DWithin(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, radius_m)
-		ORDER BY ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
-		LIMIT 1`, in.Lat, in.Lng).Scan(&zoneID, &zoneName, &deliveryFee, &minOrder)
-	if errors.Is(err, pgx.ErrNoRows) {
+	// منطقة التسليم من الدبوس — **من مصدرٍ واحدٍ لا استعلامين.**
+	zone, err := s.ZoneAt(ctx, in.Lat, in.Lng)
+	if errors.Is(err, ErrOutOfZone) {
 		return nil, ErrOutOfZone
 	}
 	if err != nil {
 		return nil, err
 	}
+	zoneID := zone.ID
+	deliveryFee, minOrder := zone.DeliveryFee, zone.MinOrder
 	// **لا حدّ أدنى للطلب في هذه المنصة** (قرار المالك، ٢٠٢٦-٠٨-٠١).
 	//
 	// رسمُ التوصيل يُؤخذ كاملاً من الزبون مهما كانت قيمة طلبه، فالمنصة لا تخسر

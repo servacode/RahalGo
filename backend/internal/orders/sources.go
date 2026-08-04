@@ -14,6 +14,9 @@ package orders
 
 import (
 	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // Sources مصادرُ أصنافٍ، مرتّبةً بالأوّلِ ظهوراً في السلّة.
@@ -191,11 +194,9 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 	}
 	out.Subtotal = subtotal
 
-	if err := s.db.QueryRow(ctx, `
-		SELECT delivery_fee FROM delivery_zones
-		WHERE active AND ST_DWithin(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, radius_m)
-		ORDER BY ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
-		LIMIT 1`, lat, lng).Scan(&out.BaseFee); err != nil {
+	if z, err := s.ZoneAt(ctx, lat, lng); err == nil {
+		out.BaseFee = z.DeliveryFee
+	} else {
 		// **خارجَ التغطية ليس خطأً في التسعيرة** — الرسمُ يبقى صفراً ويُردّ
 		// الطلبُ عند الإنشاء بـ`out_of_zone`. **وسلّةٌ تنهار لأن الدبوسَ لم
 		// يُوضع بعد سلّةٌ لا تُستعمل.**
@@ -205,4 +206,39 @@ func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64
 	out.DeliveryFee = out.BaseFee + out.SourcesFee
 	out.Total = out.Subtotal + out.DeliveryFee
 	return out, nil
+}
+
+// ZoneCharge منطقةُ التسليم ورسمُها — **مصدرُ الحقيقة الواحد.**
+type ZoneCharge struct {
+	ID          string
+	Name        string
+	DeliveryFee int64
+	MinOrder    int64
+}
+
+// ZoneAt المنطقةُ التي يقع فيها هذا الدبوس — **وأقربُها مركزاً حين تتداخل.**
+//
+// # لماذا في موضعٍ واحد
+//
+// كان الاستعلامُ مكتوباً مرّتين: في إنشاء الطلب وفي التسعيرة. **وهما يتّفقان
+// اليومَ ويفترقان يوماً** — يُضاف شرطٌ في أحدهما (منطقةٌ تُغلق ليلاً، رسمٌ
+// يتغيّر بالمسافة) فتقول السلّةُ رقماً ويُحاسَب الزبونُ بغيره. **ورقمٌ يظهر
+// عند الدفع غيرَ الذي رآه في السلّة يُفقد الثقةَ بالتسعيرة كلِّها.**
+//
+// (ملاحظةُ المالك ٢٠٢٦-٠٨-٠٤: «قيمُ التوصيل يجب أن تأتي من مكانٍ واحدٍ بكلّ
+// المشروع — من غير المعقول أن يكون هناك أكثرُ من مكانٍ لأجرة التوصيل».)
+//
+// **والرسمُ الكاملُ ليس هذا وحدَه**: يُضاف إليه رسمُ المصدر الإضافيّ
+// (`extraSourceFee`) في الموضعين. **وهذه قاعدةُ المنطقة، تلك قاعدةُ التعدّد.**
+func (s *Service) ZoneAt(ctx context.Context, lat, lng float64) (ZoneCharge, error) {
+	var z ZoneCharge
+	err := s.db.QueryRow(ctx, `
+		SELECT id::text, name, delivery_fee, min_order FROM delivery_zones
+		WHERE active AND ST_DWithin(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, radius_m)
+		ORDER BY ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
+		LIMIT 1`, lat, lng).Scan(&z.ID, &z.Name, &z.DeliveryFee, &z.MinOrder)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return z, ErrOutOfZone
+	}
+	return z, err
 }

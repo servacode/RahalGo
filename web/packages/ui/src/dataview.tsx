@@ -38,11 +38,15 @@ export function ViewToggle({
   tableLabel: string;
   cardsLabel: string;
 }) {
-  const base = "flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm transition-colors";
+  const base =
+    "flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm transition-colors";
   const active = "bg-surface font-medium text-primary-dark shadow-sm";
   const idle = "text-ink-muted hover:text-ink";
   return (
-    <div role="group" className="flex rounded-control border border-line bg-page p-1">
+    <div
+      role="group"
+      className="flex rounded-control border border-line bg-page p-1"
+    >
       <button
         type="button"
         aria-pressed={view === "table"}
@@ -87,6 +91,17 @@ export interface DataColumn<T> {
    * عمودٍ لصفٍّ يُزحزح ما بعده.**
    */
   hide?: (item: T) => boolean;
+  /**
+   * **خليّةٌ مختصرةٌ للجدول** — حين لا يصلح شكلُ البطاقة في خانة.
+   *
+   * فاتورةٌ من عشرة سطورٍ تُقرأ في بطاقةٍ وتُفسد صفَّ جدول: **ترتفع الصفوفُ
+   * وتتباين أطوالُها، فيُقرأ الجدولُ عشوائياً.** فيُعرض في الجدول زرٌّ يفتح
+   * ما يلزم، **وفي البطاقة يُعرض كاملاً.**
+   *
+   * (ملاحظةُ المالك ٢٠٢٦-٠٨-٠٤: «بالجدول يكفي أن يكون زرٌّ اسمُه الفاتورة
+   * يعرض بنافذةٍ منبثقة ليبقى الشكلُ بصرياً بحالٍ احترافية».)
+   */
+  tableCell?: (item: T) => ReactNode;
   /** primary: يظهر كعنوان البطاقة في وضع البطاقات */
   primary?: boolean;
   /** أيقونة معبرة للحقل — تظهر برأس العمود وفي تسمية حقل البطاقة */
@@ -96,7 +111,11 @@ export interface DataColumn<T> {
 function FieldLabel({ icon, text }: { icon?: ReactNode; text: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      {icon && <span className="text-ink-muted/70 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
+      {icon && (
+        <span className="text-ink-muted/70 [&>svg]:h-4 [&>svg]:w-4">
+          {icon}
+        </span>
+      )}
       {text}
     </span>
   );
@@ -141,7 +160,14 @@ export function DataView<T>({
           >
             <div className="mb-3 border-b border-line pb-3">
               {primaries.map((c, i) => (
-                <div key={c.id} className={i === 0 ? "text-base font-bold" : "mt-0.5 text-sm text-ink-muted"}>
+                <div
+                  key={c.id}
+                  className={
+                    i === 0
+                      ? "text-base font-bold"
+                      : "mt-0.5 text-sm text-ink-muted"
+                  }
+                >
                   {c.cell(item)}
                 </div>
               ))}
@@ -151,30 +177,34 @@ export function DataView<T>({
             <dl className="flex-1 text-sm">
               {/* **ويُرشَّح لكلّ بطاقةٍ على حدة** — حقلٌ لا معنى له في هذا الصفّ
                   لا يُعرض فارغاً فيه. */}
-              {rest.filter((c) => !c.hide?.(item)).map((c, i, shown) => (
-                <div
-                  key={c.id}
-                  className={`flex items-start justify-between gap-3 py-2 ${
-                    i < shown.length - 1 ? "border-b border-line/60" : ""
-                  }`}
-                >
-                  <dt className="shrink-0 text-ink-muted">
-                    <FieldLabel icon={c.icon} text={c.header} />
-                  </dt>
-                  <dd className="min-w-0 text-end">{c.cell(item)}</dd>
-                </div>
-              ))}
+              {rest
+                .filter((c) => !c.hide?.(item))
+                .map((c, i, shown) => (
+                  <div
+                    key={c.id}
+                    className={`flex items-start justify-between gap-3 py-2 ${
+                      i < shown.length - 1 ? "border-b border-line/60" : ""
+                    }`}
+                  >
+                    <dt className="shrink-0 text-ink-muted">
+                      <FieldLabel icon={c.icon} text={c.header} />
+                    </dt>
+                    <dd className="min-w-0 text-end">{c.cell(item)}</dd>
+                  </div>
+                ))}
             </dl>
 
             {/* الحقول الطويلة بعرض البطاقة: تسميةٌ فوق ومحتوىً تحتها */}
-            {blocks.filter((c) => !c.hide?.(item)).map((c) => (
-              <div key={c.id} className="mt-3 border-t border-line/60 pt-3">
-                <p className="mb-1 text-xs text-ink-muted">
-                  <FieldLabel icon={c.icon} text={c.header} />
-                </p>
-                <div className="text-sm">{c.cell(item)}</div>
-              </div>
-            ))}
+            {blocks
+              .filter((c) => !c.hide?.(item))
+              .map((c) => (
+                <div key={c.id} className="mt-3 border-t border-line/60 pt-3">
+                  <p className="mb-1 text-xs text-ink-muted">
+                    <FieldLabel icon={c.icon} text={c.header} />
+                  </p>
+                  <div className="text-sm">{c.cell(item)}</div>
+                </div>
+              ))}
 
             {actions && (
               <div
@@ -192,13 +222,31 @@ export function DataView<T>({
     );
   }
 
+  /**
+   * **والإخفاءُ يسري على الجدول أيضاً — بعمودٍ لا بخليّة.**
+   *
+   * أعمدةُ الجدول ثابتةٌ لكلّ الصفوف: **إخفاءُ خليّةٍ في صفٍّ يُزحزح ما بعدها
+   * فينهار الجدول.** فيُخفى **العمودُ كلُّه** حين لا يحتاجه صفٌّ واحدٌ ممّا
+   * يُعرض — وذلك عينُ ما تفعله البطاقات، بحدّها الأدنى.
+   *
+   * **وقاعدةٌ تُطبَّق في وضعٍ وتُنسى في الآخر ليست قاعدة** (ملاحظةُ المالك
+   * ٢٠٢٦-٠٨-٠٤): «التعديلاتُ يجب أن تُطبَّق في حالة الجداول أو الكروت بنفس
+   * الوقت، لا نطبّق تعديلاتٍ في مكانٍ ونترك الآخر».
+   */
+  const shown = columns.filter(
+    (c) => !c.hide || items.some((it) => !c.hide!(it)),
+  );
+
   return (
     <div className="overflow-x-auto rounded-card border border-line bg-surface">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line text-ink-muted">
-            {columns.map((c) => (
-              <th key={c.id} className="p-3 text-start font-medium">
+            {shown.map((c) => (
+              <th
+                key={c.id}
+                className="whitespace-nowrap p-3 text-start font-medium align-middle"
+              >
                 <FieldLabel icon={c.icon} text={c.header} />
               </th>
             ))}
@@ -212,9 +260,17 @@ export function DataView<T>({
               onClick={onRowClick ? () => onRowClick(item) : undefined}
               className={`border-b border-line last:border-0 hover:bg-page/60 ${onRowClick ? "cursor-pointer" : ""}`}
             >
-              {columns.map((c) => (
-                <td key={c.id} className="p-3">
-                  {c.cell(item)}
+              {shown.map((c) => (
+                // **والصفوفُ متساويةُ الارتفاع، والمحتوى في وسطها.**
+                //
+                // خليّةٌ تحمل سطراً وأخرى تحمل خمسةً تجعل الصفَّ يتمدّد
+                // **والقيمُ تسبح في فراغه**، فيُقرأ الجدولُ عشوائياً.
+                <td key={c.id} className="p-3 align-middle">
+                  {c.hide?.(item) ? (
+                    <span className="text-ink-muted">—</span>
+                  ) : (
+                    (c.tableCell ?? c.cell)(item)
+                  )}
                 </td>
               ))}
               {actions && (
