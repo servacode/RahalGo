@@ -193,6 +193,8 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 		return updated, err
 	}
 	s.publishOrder(updated)
+	// **وكلُّ من تحرّكت محفظتُه يُبلَّغ** — بعد الإيداع لا داخلَه.
+	s.publishWalletsOf(ctx, orderID)
 	// بعد الإيداع: فشل الإشعار لا يُبطل تسليماً وقع فعلاً
 	s.notifyTransition(ctx, orderID, to, note, endedBy)
 	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
