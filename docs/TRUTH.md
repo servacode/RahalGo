@@ -388,14 +388,18 @@
 |---|---|---|---|
 | `platform.orders_mode` | المنصة | choice | `platform` |
 | `orders.max_sources` | المنصة | int | `2` |
+| `orders.delivery_timeout_min` | المنصة | int | `60` |
+| `orders.customer_cancel_window_sec` | المنصة | int | `120` |
 | `pricing.margin_fixed` | المنصة | money | `0` |
 | `drivers.assignment_mode` | السائقون | choice | `queue` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
 | `delivery.fee` | السائقون | money | `0` |
 | `drivers.cash_limit` | السائقون | money | `500000` |
 | `drivers.max_active_orders` | السائقون | int | `2` |
+| `orders.driver_timeout_min` | السائقون | int | `10` |
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |
 | `merchants.commission_percent` | المتاجر | int | `0` |
+| `orders.accept_timeout_min` | المتاجر | int | `5` |
 | `merchants.return_support_percent` | المتاجر | int | `0` |
 | `sales.commission_percent` | المندوبون | int | `0` |
 <!-- /gen:settings -->
