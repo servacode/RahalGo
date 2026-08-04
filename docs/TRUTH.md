@@ -396,6 +396,7 @@
 | `drivers.max_active_orders` | السائقون | int | `2` |
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |
 | `merchants.commission_percent` | المتاجر | int | `0` |
+| `merchants.return_support_percent` | المتاجر | int | `0` |
 | `sales.commission_percent` | المندوبون | int | `0` |
 <!-- /gen:settings -->
 

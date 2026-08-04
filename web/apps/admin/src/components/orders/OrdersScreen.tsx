@@ -139,6 +139,8 @@ interface OrderRow {
   blocked_reason?: string;
   /** مصيرُ بضاعة طلبٍ فشل — فارغٌ يعني لم يُحسم بعد */
   goods_settled_to: "merchant" | "platform" | null;
+  /** أيستردّ كلُّ مصدرٍ في هذا الطلب بضاعتَه — سياسةُ متجرٍ لا قاعدةُ منصة. */
+  merchant_accepts_returns: boolean;
   /** أجرُ السائق — تقديرٌ قبل التسليم وواقعٌ بعده، من مصدر الحساب نفسه */
   status: string;
   payment_method: "cash" | "wallet";
@@ -1285,7 +1287,7 @@ function OrderActions({
     setBusy("goods");
     setErr("");
     try {
-      await api(`/api/v1/admin/orders/${o.id}/settle-goods`, {
+      await api(`/api/v1/admin/orders/${o.id}/goods`, {
         method: "POST",
         body: JSON.stringify({ to }),
       });
@@ -1690,13 +1692,21 @@ function OrderActions({
         <>
           {o.goods_settled_to === null ? (
             <>
-              <Button
-                variant="secondary"
-                disabled={busy !== ""}
-                onClick={() => void settleGoods("merchant")}
-              >
-                {m.admin.ordersPage.goodsToMerchant}
-              </Button>
+              {/* **والزرّان معاً لمن يستردّ.**
+
+                  متجرٌ يستردّ نظاماً **قد يكون مغلقاً يومَها أو يرفض هذه
+                  بعينها** — فلو تبع الزرُّ بندَ الاسترداد حرفياً لَبقي الطلبُ
+                  معلّقاً بلا مخرج. **ومن لا يستردّ يرى «إلى المكتب» وحدَه**:
+                  لا يُعرض عليه ما لا يقع. */}
+              {o.merchant_accepts_returns && (
+                <Button
+                  variant="secondary"
+                  disabled={busy !== ""}
+                  onClick={() => void settleGoods("merchant")}
+                >
+                  {m.admin.ordersPage.goodsToMerchant}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 disabled={busy !== ""}

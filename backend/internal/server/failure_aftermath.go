@@ -31,12 +31,14 @@ package server
 // **فلا تربح من فشل** بل تتحمّل التوصيل كلَّه.
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
@@ -137,6 +139,60 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 // وردٌّ صريحٌ يقول ما جرى.
 func (s *Server) handleSettleGoods(w http.ResponseWriter, r *http.Request) {
 	s.respondErr(w, errGoodsFlowChanged)
+}
+
+// handleGoods يحسم مصيرَ بضاعةِ طلبٍ فشل — **زرّان في شاشة العمليات.**
+//
+// # ولماذا هنا لا عند السائق
+//
+// كان زرُّ «أعدتُ البضاعة» في شاشة السائق، **وإقرارُ من يحملها ليس تسليماً**:
+// يقع الأمرُ بين يدي من يستلمها في المكتب، وهو من يعرف أاستردّها المتجرُ أم
+// رفض. (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
+//
+// # والزرّان معاً لمن يستردّ
+//
+// متجرٌ يستردّ نظاماً **قد يكون مغلقاً يومَها أو يرفض هذه بعينها** — فلو تبع
+// الزرُّ بندَ الاسترداد حرفياً لَبقي الطلبُ معلّقاً بلا مخرج. **ومن لا يستردّ
+// يرى «إلى المكتب» وحدَه** — لا يُعرض عليه ما لا يقع.
+//
+// **والحسابُ في المحرّك لا هنا** (`orders/goods.go`): هذه تقرأ الطلبَ وتنادي.
+func (s *Server) handleGoods(w http.ResponseWriter, r *http.Request) {
+	orderID := chi.URLParam(r, "id")
+	req, err := decode[struct {
+		To string `json:"to"` // merchant | platform
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if req.To != orders.GoodsToMerchant && req.To != orders.GoodsToOffice {
+		s.respondErr(w, errValidation)
+		return
+	}
+
+	switch err := s.orders.SettleGoods(r.Context(), orderID, req.To, userIDFrom(r)); {
+	case err == nil:
+	case errors.Is(err, orders.ErrGoodsNotFailed):
+		s.respondErr(w, errNotFailed)
+		return
+	case errors.Is(err, orders.ErrGoodsAlreadySettled):
+		s.respondErr(w, errGoodsSettled)
+		return
+	case errors.Is(err, orders.ErrGoodsLedgerMismatch):
+		// **ولا يُسترجع بالتقدير**: مالُ الناس لا يُقاس بالتقريب، **ورفضٌ
+		// صريحٌ يُقرأ خيرٌ من قيدٍ يمرّ وهو خطأ.**
+		s.respondErr(w, httpx.NewError(http.StatusConflict,
+			"goods_ledger_mismatch", "errors.goods_ledger_mismatch"))
+		return
+	default:
+		s.respondErr(w, err)
+		return
+	}
+
+	s.audit(r, "finance.goods_settled", "order", orderID, map[string]any{"to": req.To})
+	s.touch("order", "ops")
+	s.touch("wallet", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"settled_to": req.To})
 }
 
 // handleSettleGoodsLegacy الجسدُ القديم — يبقى للقراءة لا للنداء.

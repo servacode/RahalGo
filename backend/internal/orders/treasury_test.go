@@ -37,16 +37,16 @@ func TestTreasury_ProfitIsWhatRemains(t *testing.T) {
 		t.Fatalf("تعذّر ربط المالك: %v", err)
 	}
 
+	// **وسابقةٌ تُنزع أوّلاً، ورصيدُها يُصفَّر معها** — وإلّا بقي الوسمُ أبدياً
+	// على خزينةٍ سالبةٍ فسقط كلُّ اختبارٍ بعدها. (انظر `clearTreasury`.)
+	clearTreasury(t, f.pool)
 	treasury := testdb.NewUser(t, f.pool, "admin")
 	if _, err := f.pool.Exec(ctx, `
 		UPDATE wallets SET is_treasury = true WHERE user_id = $1`, treasury); err != nil {
 		t.Fatalf("تعذّر وسمُ الخزينة: %v", err)
 	}
 	// **والوسمُ وحدَه يعيّنها** — لا مفتاحَ في الإعدادات بعد اليوم.
-	t.Cleanup(func() {
-		_, _ = f.pool.Exec(context.Background(),
-			`UPDATE wallets SET is_treasury = false WHERE user_id = $1`, treasury)
-	})
+	t.Cleanup(func() { clearTreasury(t, f.pool) })
 	f.svc.SetSettings(settings.NewStore(f.pool))
 
 	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"},

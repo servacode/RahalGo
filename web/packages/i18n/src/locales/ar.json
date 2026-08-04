@@ -531,6 +531,7 @@
     "order_has_no_driver": "لا سائق على هذا الطلب",
     "bad_fail_reason": "اختر سببَ تعذّر التسليم",
     "goods_flow_changed": "تغيّرت آليةُ التعامل مع البضاعة — حدّث الصفحة",
+    "goods_ledger_mismatch": "ما يُسترجع لا يطابق ما قُيّد — راجِع دفترَ الطلب",
     "merchant_no_returns": "هذا المتجر لا يستقبل المرتجعات",
     "already_returned": "أُعيدت البضاعةُ سلفاً",
     "order_not_returnable": "الإرجاع لطلبٍ تعذّر تسليمُه فقط",
@@ -656,10 +657,10 @@
         "driver": "تقييم السائق",
         "comment": "التعليق"
       },
-      "goodsToMerchant": "المتجر استردّ البضاعة",
-      "goodsToPlatform": "رفض الاسترداد — المنصة تتحمّل",
-      "goodsSettledMerchant": "البضاعة عادت للمتجر",
-      "goodsSettledPlatform": "تحمّلتها المنصة ودُفع للمتجر",
+      "goodsToMerchant": "رُدّت إلى المتجر",
+      "goodsToPlatform": "إلى المكتب — المنصة تتحمّل",
+      "goodsSettledMerchant": "رُدّت إلى المتجر واستُرجع ثمنُها",
+      "goodsSettledPlatform": "إلى المكتب — تحمّلتها المنصة",
       "compensateDriver": "تعويض السائق",
       "compensateTitle": "تعويض السائق عن مشوارٍ لم يُثمر",
       "compensateAmount": "المبلغ",
@@ -1362,6 +1363,11 @@
           "label": "عمولة المنصة من المتاجر",
           "hint": "",
           "zero": "بلا عمولة"
+        },
+        "merchants.return_support_percent": {
+          "label": "دعم المتجر عند ردّ البضاعة",
+          "hint": "",
+          "zero": "بلا دعم"
         },
         "platform.orders_mode": {
           "label": "إدارة الطلبات",

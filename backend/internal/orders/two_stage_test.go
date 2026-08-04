@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
@@ -136,6 +138,18 @@ func TestWalletOrder_TwoStagesSameTotal(t *testing.T) {
 	}
 }
 
+// clearTreasury ينزع وسمَ الخزينة عمّن يحمله — **ويصفّر رصيدَه معه.**
+//
+// **والتصفيرُ شرطُ النزع لا زينة**: `balance >= 0 OR is_treasury` — فمن أنفق
+// أكثرَ ممّا قبض لا يُنزع وسمُه إلّا بعد أن يعود رصيدُه إلى الصفر.
+func clearTreasury(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(),
+		`UPDATE wallets SET balance = 0, is_treasury = false WHERE is_treasury`); err != nil {
+		t.Fatalf("تعذّر نزعُ وسم الخزينة: %v", err)
+	}
+}
+
 // armTreasury يُهيّئ متجراً بمالكٍ وخزينةً مختارة.
 func (f *fixture) armTreasury(t *testing.T) (owner, treasury string) {
 	t.Helper()
@@ -146,15 +160,22 @@ func (f *fixture) armTreasury(t *testing.T) (owner, treasury string) {
 		t.Fatalf("تعذّر ربط المالك: %v", err)
 	}
 	// **والخزينةُ تُوسَم في محفظتها** — صفةٌ في الحساب لا مفتاحٌ في الإعدادات.
+	//
+	// **وخزينةٌ سابقةٌ تُنزع أوّلاً.** فهرسٌ فريدٌ يمنع ثانيةً، **وواحدةٌ
+	// بقيت من تجربةٍ ماتت تُسقط كلَّ اختبارٍ بعدها** برسالةٍ عن مفتاحٍ مكرّر
+	// لا عن الخلل الحقيقي — وقع فعلاً (٢٠٢٦-٠٨-٠٤).
+	//
+	// **والرصيدُ يُصفَّر معها**: شرطُ `balance >= 0 OR is_treasury` يسمح
+	// للخزينة وحدَها بالسالب، **فنزعُ الوسم عن سالبةٍ يُرفض** — وخزينةٌ
+	// أنفقت أكثرَ ممّا قبضت (وهو الشائع في اختبارات التعويض) **تصير وسماً
+	// أبدياً لا يُنزع.**
+	clearTreasury(t, f.pool)
 	treasury = testdb.NewUser(t, f.pool, "admin")
 	if _, err := f.pool.Exec(ctx,
 		`UPDATE wallets SET is_treasury = true WHERE user_id = $1`, treasury); err != nil {
 		t.Fatalf("تعذّر وسمُ الخزينة: %v", err)
 	}
-	t.Cleanup(func() {
-		_, _ = f.pool.Exec(context.Background(),
-			`UPDATE wallets SET is_treasury = false WHERE user_id = $1`, treasury)
-	})
+	t.Cleanup(func() { clearTreasury(t, f.pool) })
 	f.svc.SetSettings(settings.NewStore(f.pool))
 	return owner, treasury
 }

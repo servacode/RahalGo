@@ -166,7 +166,13 @@ type Order struct {
 	ReturnedAt *time.Time `json:"returned_at"`
 	// GoodsSettledTo مصيرُ بضاعة طلبٍ فشل: merchant استردّها · platform
 	// تحمّلتها المنصةُ ودفعت للمتجر · فارغٌ يعني **لم يُحسم بعد**.
-	GoodsSettledTo *string     `json:"goods_settled_to"`
+	GoodsSettledTo *string `json:"goods_settled_to"`
+	// AcceptsReturns أيستردّ كلُّ متاجر هذا الطلب بضاعتَهم؟
+	//
+	// **سياسةُ متجرٍ لا قاعدةُ منصة** — وعليها يظهر زرُّ «رُدّت للمتجر». وفي
+	// طلبٍ من مصدرين **لا يكفي أن يستردّ أحدُهما**: الزرُّ يسترجع من الجميع،
+	// ومن لا يستردّ لا يُسترجع منه.
+	AcceptsReturns bool        `json:"merchant_accepts_returns"`
 	Items          []OrderItem `json:"items,omitempty"`
 	Events         []Event     `json:"events,omitempty"`
 	Rating         *Rating     `json:"rating,omitempty"`

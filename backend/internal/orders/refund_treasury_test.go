@@ -72,6 +72,8 @@ func newTreasuryFixture(t *testing.T, subtotal, deliveryFee int64) *treasuryFixt
 	f.svc = orders.NewService(pool, nil, f.wallet, cashbox.NewService(pool, store), nil, quiet)
 	f.svc.SetSettings(store)
 
+	// **وسابقةٌ تُنزع أوّلاً** — فهرسٌ فريدٌ يمنع ثانية.
+	clearTreasury(t, pool)
 	if _, err := pool.Exec(ctx,
 		`UPDATE wallets SET is_treasury = true WHERE user_id = $1`, f.treasury); err != nil {
 		t.Fatalf("تعذّر وسمُ الخزينة: %v", err)

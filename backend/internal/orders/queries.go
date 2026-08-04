@@ -28,6 +28,12 @@ const orderSelect = `
 	       o.pod_skip_reason,
 	       COALESCE(o.ended_by,''), COALESCE(o.fault,''), COALESCE(o.fail_reason,''),
 	       o.returned_at, o.goods_settled_to,
+	       -- **أيستردّ كلُّ مصدرٍ في هذا الطلب؟** — bool_and لا bool_or:
+	       -- الزرُّ يسترجع من الجميع، **ومن لا يستردّ لا يُسترجع منه.**
+	       COALESCE((SELECT bool_and(m2.accepts_returns) FROM merchants m2
+	                 WHERE m2.id IN (SELECT COALESCE(oi.merchant_id, o.merchant_id)
+	                                 FROM order_items oi WHERE oi.order_id = o.id
+	                                 UNION SELECT o.merchant_id)), mr.accepts_returns),
 	       o.prep_minutes, o.ready_at, o.accepted_at, o.delivered_at,
 	       lm.thumb_path,
 	       -- ملخّص الأصناف في القائمة نفسها: «ماذا طلبتُ؟» أول سؤال يسأله صاحب
@@ -70,6 +76,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.SentToMerchantAt, &o.DispatchedAt, &o.OfferedDriverName,
 		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason,
 		&o.EndedBy, &o.Fault, &o.FailReason, &o.ReturnedAt, &o.GoodsSettledTo,
+		&o.AcceptsReturns,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.DeliveredAt,
 		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items)
 	if err != nil {

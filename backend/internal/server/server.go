@@ -358,7 +358,8 @@ func (s *Server) Router() http.Handler {
 				Post("/orders/{id}/compensate-driver", s.handleCompensateDriver)
 			// ومصيرُ البضاعة تحسمه العملياتُ: **هي من يستلمها في المكتب**
 			// وتعرف أاستردّها المتجرُ أم رفض. والقيدُ المالي يتبع قرارَها.
-			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods)
+			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods) // مهجورة — 410
+			r.Post("/orders/{id}/goods", s.handleGoods)
 
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			r.Get("/customers", s.handleListCustomers)

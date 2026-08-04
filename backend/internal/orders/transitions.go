@@ -550,6 +550,7 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		return err
 	}
 	type share struct {
+		merchantID string
 		ownerID    *string
 		commission int64
 		due        int64
@@ -568,7 +569,7 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		}
 		c := pricing.MerchantCommission(ctx, s.settings, pct).Of(cost)
 		totalCommission += c
-		shares = append(shares, share{ownerID: owner, commission: c, due: cost - c})
+		shares = append(shares, share{merchantID: merchantID, ownerID: owner, commission: c, due: cost - c})
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
@@ -578,18 +579,19 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 	// **وطلبٌ بلا بنود يقع على القديم** — طلباتُ ما قبل السعرين، أو ما أُنشئ
 	// بلا `order_items`. **وصفرٌ هنا يعني «لا مستحقّ» وهو أسوأُ من الخطأ.**
 	if len(shares) == 0 {
+		var fallbackID string
 		var subtotal int64
 		var pct *int64
 		var owner *string
 		if err := q.QueryRow(ctx, `
-			SELECT o.subtotal, m.commission_percent, m.owner_user_id::text
+			SELECT m.id::text, o.subtotal, m.commission_percent, m.owner_user_id::text
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
-			WHERE o.id = $1`, orderID).Scan(&subtotal, &pct, &owner); err != nil {
+			WHERE o.id = $1`, orderID).Scan(&fallbackID, &subtotal, &pct, &owner); err != nil {
 			return err
 		}
 		c := pricing.MerchantCommission(ctx, s.settings, pct).Of(subtotal)
 		totalCommission = c
-		shares = append(shares, share{ownerID: owner, commission: c, due: subtotal - c})
+		shares = append(shares, share{merchantID: fallbackID, ownerID: owner, commission: c, due: subtotal - c})
 	}
 
 	if _, err := q.Exec(ctx,
@@ -610,8 +612,55 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 			orderID, "مستحقّ عن بضاعةٍ سُلّمت للسائق", &actorID); err != nil {
 			return err
 		}
+		// **ودَينُ بضاعةٍ رُدّت يُقتطع من أوّل مستحقٍّ قادم** (قرارُ المالك
+		// ٢٠٢٦-٠٨-٠٤). وهو ما بقي حين لم تحتمله محفظتُه يومَ الردّ.
+		if err := s.offsetMerchantDebt(ctx, q, sh.merchantID, *sh.ownerID,
+			sh.due, orderID, actorID); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+// offsetMerchantDebt يقتطع من مستحقٍّ جديدٍ ما بقي من دَينِ بضاعةٍ رُدّت.
+//
+// # ولماذا قيدان لا مبلغٌ منقوص
+//
+// كان يمكن أن يُقيَّد المستحقُّ ناقصاً من أوّله. **ومتجرٌ يرى رقماً أصغرَ بلا
+// سطرٍ يقول لماذا يظنّ أنّه غُبن** — ويسأل، ولا يجد في كشفه ما يجيبه.
+//
+// **فسطرٌ يُعطي وسطرٌ يستردّ**، وكلاهما بمرجع طلبه.
+//
+// # وبالنوع نفسِه سالباً
+//
+// الخزينةُ تجمع `merchant_earning` لتعرف ما خرج للأطراف (`treasury.go`).
+// **ونوعٌ لا تعرفه يجعلها تحسب أنّ المالَ خرج وهو عاد** — فتُقرأ خاسرةً وقد
+// استُرِدّ لها.
+func (s *Service) offsetMerchantDebt(ctx context.Context, q wallet.Querier,
+	merchantID, ownerID string, available int64, orderID, actorID string) error {
+	var debt int64
+	if err := q.QueryRow(ctx,
+		`SELECT debt FROM merchants WHERE id = $1 FOR UPDATE`, merchantID).
+		Scan(&debt); err != nil {
+		return err
+	}
+	if debt <= 0 {
+		return nil
+	}
+	take := debt
+	if available < take {
+		take = available
+	}
+	if take <= 0 {
+		return nil
+	}
+	if _, err := s.wallet.ApplyTx(ctx, q, ownerID, -take, "merchant_earning",
+		orderID, "اقتطاعُ دَينٍ عن بضاعةٍ رُدّت سابقاً", &actorID); err != nil {
+		return err
+	}
+	_, err := q.Exec(ctx,
+		`UPDATE merchants SET debt = debt - $2 WHERE id = $1`, merchantID, take)
+	return err
 }
 
 // settleRep يقيّد نصيبَ المندوب — **عند التسليم**.
