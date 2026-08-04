@@ -145,16 +145,16 @@ func (f *fixture) armTreasury(t *testing.T) (owner, treasury string) {
 		`UPDATE merchants SET owner_user_id = $2 WHERE id = $1`, f.merchantID, owner); err != nil {
 		t.Fatalf("تعذّر ربط المالك: %v", err)
 	}
-	// **ولا يُوسَم العمودُ هنا**: المفتاحُ هو الحقيقة، والمحرّكُ يُصحّح العمودَ
-	// عند أوّل قيد. **واختبارٌ يُهيّئ ما يُهيّئه النظامُ نفسُه يُخفي عطبَه.**
+	// **والخزينةُ تُوسَم في محفظتها** — صفةٌ في الحساب لا مفتاحٌ في الإعدادات.
 	treasury = testdb.NewUser(t, f.pool, "admin")
-	store := settings.NewStore(f.pool)
-	if err := store.SetInternal(ctx, "platform.treasury_user_id", treasury); err != nil {
-		t.Fatalf("تعذّر ضبط الخزينة: %v", err)
+	if _, err := f.pool.Exec(ctx,
+		`UPDATE wallets SET is_treasury = true WHERE user_id = $1`, treasury); err != nil {
+		t.Fatalf("تعذّر وسمُ الخزينة: %v", err)
 	}
 	t.Cleanup(func() {
-		_ = store.SetInternal(context.Background(), "platform.treasury_user_id", "")
+		_, _ = f.pool.Exec(context.Background(),
+			`UPDATE wallets SET is_treasury = false WHERE user_id = $1`, treasury)
 	})
-	f.svc.SetSettings(store)
+	f.svc.SetSettings(settings.NewStore(f.pool))
 	return owner, treasury
 }

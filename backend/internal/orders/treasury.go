@@ -29,15 +29,31 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
-// treasuryID حسابُ الخزينة، أو فراغٌ إن لم يُختَر بعد.
+// treasuryID حسابُ الخزينة، أو فراغٌ إن لم تُوسَم محفظةٌ بعد.
 //
-// **وفراغُه لا يُعطّل تسليماً**: طلبٌ يُرفض لأن المالك لم يفتح صفحةَ الإعدادات
-// خسارةٌ لا تُحتمَل. يُسلَّم الطلبُ ويبقى الدفترُ ناقصَ طرفٍ حتى تُختار.
+// # ولماذا من المحفظة لا من الإعدادات
+//
+// كان مفتاحاً في `app_settings` يحمل معرّفَ مستخدم. **والعمودُ `is_treasury`
+// قائمٌ في `wallets` أيضاً** — فصار للخزينة مصدران: مفتاحٌ يقول من هي،
+// وعمودٌ يقول من هي. **وإن افترقا فأيُّهما يُصدَّق؟**
+//
+// **والعمودُ أصدقُ**: عليه الفهرسُ الفريد الذي يمنع خزينتين، وعليه شرطُ
+// `balance >= 0 OR is_treasury` الذي يسمح لها وحدَها بالسالب. **فالقاعدةُ
+// تحرسه ولا تحرس المفتاح.**
+//
+// **وصفةٌ في حسابٍ ليست إعداداً**: هي كالدور — تُمنح لحسابٍ بعينه، ولا تُضبط
+// برقمٍ في شاشة. (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «كلُّ المبالغ تُضاف وتُخصم من
+// محفظة الأدمن فقط» — بعد «لا أريد أن يبقى أيُّ إعداد».)
+//
+// **وفراغُه لا يُعطّل تسليماً**: يُسلَّم الطلبُ ويبقى الدفترُ ناقصَ طرفٍ حتى
+// تُوسَم محفظة. **وطلبٌ يُرفض لأنّ صفةً لم تُمنح خسارةٌ لا تُحتمَل.**
 func (s *Service) treasuryID(ctx context.Context) string {
-	if s.settings == nil {
+	var id string
+	if err := s.db.QueryRow(ctx,
+		`SELECT user_id::text FROM wallets WHERE is_treasury LIMIT 1`).Scan(&id); err != nil {
 		return ""
 	}
-	return s.settings.GetString(ctx, "platform.treasury_user_id")
+	return id
 }
 
 // creditTreasury يُسوّي نصيبَ المنصة من الطلب — **بالفرق لا بالمجموع**.
@@ -59,52 +75,11 @@ func (s *Service) treasuryID(ctx context.Context) string {
 //     الاستلام يجعل الخزينةَ رابحةً قبل أن يُدفع لها شيء.
 //   - **وما رُدَّ يُطرح**: طلبٌ استُرجع ثمنُه لم يُدفع للمنصة، **وإبقاؤه في
 //     الحساب يُظهر ربحاً من طلبٍ خسرته.**
-//
-// ensureTreasuryWallet يجعل محفظةَ الحساب المختار **هي الخزينة** — ولا غيرها.
-//
-// # لماذا يُعاد كلَّ مرّة
-//
-// كان `wallets.is_treasury` عموداً يُضبط بيد، و`platform.treasury_user_id`
-// مفتاحاً يُضبط بأخرى — **مصدرانِ لحقيقةٍ واحدة**. ومن غيّر المفتاح ونسي
-// العمود **ترك خزينةً لا تُقيَّد**: أوّلُ نصيبٍ سالبٍ يُردّ بـ
-// `insufficient_balance`، **فيسقط تسليمُ طلبٍ بسبب إعدادٍ لم يُتمّه أحد.**
-//
-// **فصار المفتاحُ هو الحقيقةَ والعمودُ أثرَها**: يُصحَّح عند كلِّ قيد.
-// **ونظامٌ يُصحّح نفسَه أوثقُ من نظامٍ يطلب أن يُصحَّح.**
-//
-// والصفُّ يُنشأ إن لم يكن: **حسابٌ لم يقبض شيئاً قطُّ لا محفظةَ له**، وهو
-// أوّلُ ما يقع للخزينة — تدفع قبل أن تقبض.
-func (s *Service) ensureTreasuryWallet(ctx context.Context, q wallet.Querier, tid string) error {
-	// **واحدةٌ لا اثنتان**: الفهرسُ الفريد يمنع الثانية، فتُنزع الصفةُ عمّن
-	// سبق **قبل** أن تُمنح لمن اختير.
-	//
-	// **والترتيبُ ليس ذوقاً.** كان الإدراجُ أوّلاً، **فتغييرُ حساب الخزينة إلى
-	// مستخدمٍ لا محفظةَ له يصطدم بالفهرس ويسقط**: `ON CONFLICT (user_id)`
-	// يحرس تكرارَ المستخدم **ولا يحرس تكرارَ الصفة.** فيُردّ أوّلُ قيدٍ بعد
-	// التغيير، **ويُظنّ الخللُ في التسوية وهو في الإعداد.**
-	if _, err := q.Exec(ctx,
-		`UPDATE wallets SET is_treasury = false WHERE is_treasury AND user_id <> $1`, tid); err != nil {
-		return err
-	}
-	if _, err := q.Exec(ctx,
-		`INSERT INTO wallets (user_id, is_treasury) VALUES ($1, true)
-		 ON CONFLICT (user_id) DO NOTHING`, tid); err != nil {
-		return err
-	}
-	_, err := q.Exec(ctx,
-		`UPDATE wallets SET is_treasury = true WHERE user_id = $1 AND NOT is_treasury`, tid)
-	return err
-}
-
 func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
 	tid := s.treasuryID(ctx)
 	if tid == "" {
 		return nil
 	}
-	if err := s.ensureTreasuryWallet(ctx, q, tid); err != nil {
-		return err
-	}
-
 	var walletPaid, cashDue int64
 	var status string
 	if err := q.QueryRow(ctx,
@@ -164,9 +139,6 @@ func (s *Service) DebitTreasury(ctx context.Context, q wallet.Querier, amount in
 	if tid == "" || amount <= 0 {
 		return nil
 	}
-	if err := s.ensureTreasuryWallet(ctx, q, tid); err != nil {
-		return err
-	}
 	// **`platform_expense` لا `platform_profit`**: هذه نفقةٌ قرّرها إنسان،
 	// **والمحرّكُ يجمع أرباحَه ليعرف كم بقي عليه** — فلو وجدها بينها لحسبها
 	// من عمله وصحّحها، **فيمحو تعويضاً وقع فعلاً.**
@@ -200,9 +172,6 @@ func (s *Service) CreditTreasuryDirect(ctx context.Context, q wallet.Querier,
 	tid := s.treasuryID(ctx)
 	if tid == "" {
 		return nil
-	}
-	if err := s.ensureTreasuryWallet(ctx, q, tid); err != nil {
-		return err
 	}
 	_, err := s.wallet.ApplyTx(ctx, q, tid, amount, "platform_profit", ref, note, &actorID)
 	return err

@@ -72,8 +72,9 @@ func newTreasuryFixture(t *testing.T, subtotal, deliveryFee int64) *treasuryFixt
 	f.svc = orders.NewService(pool, nil, f.wallet, cashbox.NewService(pool, store), nil, quiet)
 	f.svc.SetSettings(store)
 
-	if err := store.SetInternal(ctx, "platform.treasury_user_id", f.treasury); err != nil {
-		t.Fatalf("تعذّر ضبط حساب الخزينة: %v", err)
+	if _, err := pool.Exec(ctx,
+		`UPDATE wallets SET is_treasury = true WHERE user_id = $1`, f.treasury); err != nil {
+		t.Fatalf("تعذّر وسمُ الخزينة: %v", err)
 	}
 	// **وتُطوى خزينةُ الاختبار طيّاً كاملاً.**
 	//
@@ -84,7 +85,7 @@ func newTreasuryFixture(t *testing.T, subtotal, deliveryFee int64) *treasuryFixt
 		c := context.Background()
 		_, _ = pool.Exec(c, `DELETE FROM wallet_transactions WHERE user_id = $1`, f.treasury)
 		_, _ = pool.Exec(c, `DELETE FROM wallets WHERE user_id = $1`, f.treasury)
-		_ = settings.NewStore(pool).SetInternal(c, "platform.treasury_user_id", "")
+		_, _ = pool.Exec(c, `UPDATE wallets SET is_treasury = false WHERE user_id = $1`, f.treasury)
 	})
 
 	var categoryID string

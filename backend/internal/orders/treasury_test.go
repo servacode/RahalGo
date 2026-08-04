@@ -42,14 +42,12 @@ func TestTreasury_ProfitIsWhatRemains(t *testing.T) {
 		UPDATE wallets SET is_treasury = true WHERE user_id = $1`, treasury); err != nil {
 		t.Fatalf("تعذّر وسمُ الخزينة: %v", err)
 	}
-	store := settings.NewStore(f.pool)
-	if err := store.SetInternal(ctx, "platform.treasury_user_id", treasury); err != nil {
-		t.Fatalf("تعذّر ضبط الخزينة: %v", err)
-	}
+	// **والوسمُ وحدَه يعيّنها** — لا مفتاحَ في الإعدادات بعد اليوم.
 	t.Cleanup(func() {
-		_ = store.SetInternal(context.Background(), "platform.treasury_user_id", "")
+		_, _ = f.pool.Exec(context.Background(),
+			`UPDATE wallets SET is_treasury = false WHERE user_id = $1`, treasury)
 	})
-	f.svc.SetSettings(store)
+	f.svc.SetSettings(settings.NewStore(f.pool))
 
 	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"},
 		f.orderID, "delivered", ""); err != nil {
@@ -82,11 +80,11 @@ func TestTreasury_ProfitIsWhatRemains(t *testing.T) {
 func TestTreasury_UnsetDoesNotBlockDelivery(t *testing.T) {
 	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
 	ctx := context.Background()
-	store := settings.NewStore(f.pool)
-	if err := store.SetInternal(ctx, "platform.treasury_user_id", ""); err != nil {
-		t.Fatalf("تعذّر ضبط الخزينة: %v", err)
+	// **ولا محفظةَ موسومةً** — فلا خزينة.
+	if _, err := f.pool.Exec(ctx, `UPDATE wallets SET is_treasury = false WHERE is_treasury`); err != nil {
+		t.Fatalf("تعذّر نزعُ الوسم: %v", err)
 	}
-	f.svc.SetSettings(store)
+	f.svc.SetSettings(settings.NewStore(f.pool))
 
 	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"},
 		f.orderID, "delivered", ""); err != nil {
