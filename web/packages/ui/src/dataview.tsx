@@ -76,6 +76,17 @@ export interface DataColumn<T> {
   id: string;
   header: string;
   cell: (item: T) => ReactNode;
+  /**
+   * **يُخفى الحقلُ لصفٍّ لا معنى له فيه.**
+   *
+   * «إثباتُ التسليم» في طلبٍ لم يُقبل بعد **سطرٌ فارغٌ يُسأل عنه ولا جواب**،
+   * و«سببُ الإنهاء» في طلبٍ يمشي كذلك. **وحقلٌ يظهر فارغاً دائماً يُتعلَّم
+   * تجاهلُه**، ثمّ يمتلئ يوماً فلا يُنظر إليه.
+   *
+   * **وفي وضع البطاقات وحدَه**: الجدولُ أعمدتُه ثابتةٌ لكلّ الصفوف، **وإخفاءُ
+   * عمودٍ لصفٍّ يُزحزح ما بعده.**
+   */
+  hide?: (item: T) => boolean;
   /** primary: يظهر كعنوان البطاقة في وضع البطاقات */
   primary?: boolean;
   /** أيقونة معبرة للحقل — تظهر برأس العمود وفي تسمية حقل البطاقة */
@@ -138,11 +149,13 @@ export function DataView<T>({
             {/* كل حقل سطرٌ مفصول بخطّ خفيف: بلا فاصل تسيح الحقول في كتلة واحدة
                 فيُقرأ عنوانٌ مع قيمة جارِه — والبطاقة تُمسح بالعين لا تُدرَس. */}
             <dl className="flex-1 text-sm">
-              {rest.map((c, i) => (
+              {/* **ويُرشَّح لكلّ بطاقةٍ على حدة** — حقلٌ لا معنى له في هذا الصفّ
+                  لا يُعرض فارغاً فيه. */}
+              {rest.filter((c) => !c.hide?.(item)).map((c, i, shown) => (
                 <div
                   key={c.id}
                   className={`flex items-start justify-between gap-3 py-2 ${
-                    i < rest.length - 1 ? "border-b border-line/60" : ""
+                    i < shown.length - 1 ? "border-b border-line/60" : ""
                   }`}
                 >
                   <dt className="shrink-0 text-ink-muted">
@@ -154,7 +167,7 @@ export function DataView<T>({
             </dl>
 
             {/* الحقول الطويلة بعرض البطاقة: تسميةٌ فوق ومحتوىً تحتها */}
-            {blocks.map((c) => (
+            {blocks.filter((c) => !c.hide?.(item)).map((c) => (
               <div key={c.id} className="mt-3 border-t border-line/60 pt-3">
                 <p className="mb-1 text-xs text-ink-muted">
                   <FieldLabel icon={c.icon} text={c.header} />

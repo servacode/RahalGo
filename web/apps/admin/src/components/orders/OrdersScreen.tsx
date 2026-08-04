@@ -240,9 +240,49 @@ const CLOSED_STATUSES = new Set([
  */
 const SETTLED_STATUSES = new Set(["delivered", "failed", "refunded"]);
 
+/**
+ * **الحالاتُ التي يكون فيها لإثبات التسليم معنى.**
+ *
+ * الإثباتُ لا يوجد إلّا بعد أن يسلّم السائقُ أو يتعذّر عليه. **وسطرٌ فارغٌ في
+ * طلبٍ لم يُقبل بعد يُسأل عنه ولا جواب** — «كيف والطلبُ لسّا ما وافقنا عليه
+ * أساساً؟» (المالك ٢٠٢٦-٠٨-٠٤).
+ */
+const PROOF_STATUSES = new Set(["at_dropoff", "delivered", "failed", "refunded"]);
+
+/**
+ * **سعرُ الوحدة شاملاً خياراتِها** — والحسبةُ هنا لا في الخادم.
+ *
+ * `unit_price` سعرُ الصنف وحدَه، **وفروقُ الخيارات تُضاف إليه عند الطلب**
+ * (`priceItems`). فعرضُ `unit_price` مجرّداً يجعل السطورَ لا تبلغ الإجمالي،
+ * **ومن راجع طلباً مختلَفاً عليه لا يعرف أين ذهب الفرق.**
+ */
+function lineUnit(it: { unit_price: number; options?: { price_delta: number }[] }): number {
+  return it.unit_price + (it.options ?? []).reduce((s, x) => s + (x.price_delta || 0), 0);
+}
+function lineTotal(it: {
+  unit_price: number;
+  qty: number;
+  options?: { price_delta: number }[];
+}): number {
+  return lineUnit(it) * it.qty;
+}
+
 // أزرار الانتقال المتاحة للعمليات/الأدمن حسب الحالة (مرآة لخارطة الخادم)
 const OPS_NEXT: Record<string, string[]> = {
-  pending: ["accepted", "rejected", "cancelled"],
+  // **وزرٌّ واحدٌ للإنهاء قبل القبول.**
+  //
+  // كان «رفض المتجر» و«إلغاء الطلب» جنباً إلى جنبٍ في طلبٍ لم يُقبل بعد —
+  // **وأثرُهما عند الزبون واحد**: طلبٌ انتهى قبل أن يبدأ، ولا مالَ تحرّك، ولا
+  // مخالفةَ تُحسب (المنهي هو العمليات لا المتجر). **وزرّان لفعلٍ واحدٍ يجعلان
+  // من يضغط يتردّد ثمّ يختار عشوائياً.**
+  //
+  // **وبقي «الرفض» لا «الإلغاء»** — بقرار المالك (٢٠٢٦-٠٨-٠٤): «نخلّي رفض
+  // المتجر، مشان إذا فعّلنا المتاجر لاحقاً: رفضُ المتجر لا يذهب للزبون مباشرةً
+  // بل يعود للمنصة وتحوّله لمتجرٍ آخر». **فاللفظُ يحمل مستقبلَه.**
+  //
+  // **والإلغاءُ يبقى بعد القبول** — هناك يختلفان: أُعلن للزبون أنّ طلبَه قُبل،
+  // فإنهاؤه إلغاءٌ لالتزامٍ لا ردٌّ لطلب.
+  pending: ["accepted", "rejected"],
   accepted: ["preparing", "cancelled"],
   preparing: ["cancelled"], // + إسناد سائق
   dispatching: ["cancelled"], // + إسناد سائق
@@ -265,8 +305,29 @@ const NEXT_AFTER: Record<string, string> = {
 };
 
 /** الحالاتُ التي يجوز فيها التحويل — **قبل خروج البضاعة**. */
+/**
+ * **الحالاتُ التي يجوز فيها التحويل** — **قبل خروج البضاعة.**
+ *
+ * # ولا يُعرض في وضع «المنصة تدير»
+ *
+ * قرارُ المالك (٢٠٢٦-٠٨-٠٤): «احذف التحويل لمتجرٍ آخر، نمشي حركةً حركة» —
+ * ثمّ في النفَس نفسِه: «نُبقي رفضَ المتجر، **مشان إذا فعّلنا المتاجر لاحقاً:
+ * رفضُ المتجر لا يذهب للزبون مباشرةً بل يعود للمنصة وتحوّله لمتجرٍ آخر**».
+ *
+ * **فالتحويلُ ليس زائداً — هو سابقٌ لأوانه.** ومعناه يولد حين يملك المتجرُ
+ * أن يرفض: عندها يعود الطلبُ إلى المنصة **ولها أن تُنقذه بمتجرٍ ثانٍ بدل أن
+ * تعتذر للزبون.** وفي وضعنا اليوم لا رفضَ من متجرٍ أصلاً، **فالزرُّ يعرض
+ * علاجاً لمرضٍ لا وجودَ له.**
+ *
+ * **ولم تُحذف شيفرتُه** — تُحذف الميزةُ فتُعاد كتابتُها من الذاكرة ناقصة.
+ *
+ * # ولا قبل القبول
+ *
+ * `pending` نُزعت: **التحويلُ يقبل الطلبَ ضمناً** (يردّ المسارُ `accepted`)،
+ * **فضغطةٌ عليه تقبل نيابةً عن المالك بلا أن يقول قبلت** وتبدأ مهلةُ إلغاء
+ * الزبون. والحارسُ في المحرّك أيضاً لا في الشاشة وحدَها.
+ */
 const TRANSFERABLE = new Set([
-  "pending",
   "accepted",
   "preparing",
   "dispatching",
@@ -499,16 +560,80 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       ),
     },
     {
+      // **الحالةُ أوّلَ ما يُقرأ** — قرارُ المالك (٢٠٢٦-٠٨-٠٤): «الحالة يجب
+      // أن تكون أعلى الكرت، وأيضاً الوقت تحت الحالة».
+      //
+      // **ومن يمسح عشرين بطاقةً يسأل «أين هو الآن؟» قبل كلّ شيء** — لا عن
+      // الأصناف ولا عن المال.
+      id: "status",
+      header: m.admin.ordersPage.statusCol,
+      icon: <IconStatus />,
+      cell: (o) => (
+        <span className="inline-flex flex-wrap items-center gap-1">
+          <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>{STATUS_LABELS[o.status]}</Badge>
+          {/* **ومن أنهاه بجانب أنّه انتهى.**
+
+              كانت العملياتُ تقرأ «ملغي» **بلا فاعل** — وثلاثةُ أخبارٍ يخفيها
+              اللفظُ الواحد. */}
+          {o.ended_by && ENDED_BY[o.ended_by] && (
+            <Badge variant="neutral">{ENDED_BY[o.ended_by]}</Badge>
+          )}
+        </span>
+      ),
+    },
+    {
+      id: "time",
+      header: m.admin.ordersPage.time,
+      cell: (o) => fmtTime(o.created_at),
+    },
+    {
       id: "merchant",
       header: m.admin.ordersPage.merchant,
       icon: <IconStore />,
       cell: (o) => o.merchant_name,
     },
     {
-      // **الأصناف على البطاقة لا خلف «التفاصيل»**: «ماذا طلب؟» أوّلُ ما تسأله
-      // غرفةُ العمليات، وكان يلزمها فتحُ نافذةٍ لكل طلب — وهي تنظر إلى عشرين.
+      // **السائقُ وأجرُه قبل الفاتورة** — قرارُ المالك (٢٠٢٦-٠٨-٠٤): «اسمُ
+      // المتجر · أجرةُ توصيل السائق · ثمّ الفاتورة».
+      id: "driver",
+      header: m.admin.ordersPage.driver,
+      icon: <IconDriver />,
+      cell: (o) =>
+        o.driver_name || o.driver_phone ? (
+          <span>
+            {o.driver_name || o.driver_phone}
+            <span className="block text-xs text-ink-muted">
+              {m.admin.ordersPage.driverFee}: {fmtNum(o.driver_fee)} {m.common.currency}
+            </span>
+          </span>
+        ) : o.offered_driver_name ? (
+          /* **«جارٍ إسناد سائق» وحدَها لا تقول شيئاً.**
+
+             العملياتُ ترى الطلبَ يتأخّر **ولا تعرف على من عُرض** — فلا تعرف
+             من يتأخّر، **ولا تستطيع أن تتّصل بمن بيده القرارُ الآن.** */
+          <span>
+            {o.offered_driver_name}
+            <span className="block text-xs text-warning">
+              {m.admin.ordersPage.awaitingAccept}
+            </span>
+          </span>
+        ) : (
+          <span className="text-ink-muted">
+            {m.admin.ordersPage.deliveryFee}: {fmtNum(o.delivery_fee)} {m.common.currency}
+          </span>
+        ),
+    },
+    {
+      // **الفاتورة — أصنافٌ بأسعارها ثمّ إجماليٌّ يشمل التوصيل.**
+      //
+      // قرارُ المالك (٢٠٢٦-٠٨-٠٤): «الفاتورة، تحتها الأصناف كلُّ صنفٍ بسطر
+      // وتحته إضافاتُه، والسعرُ على اليسار مفصَّلاً، **ثمّ السعرُ الإجماليّ
+      // للفاتورة مع سعر التوصيل**».
+      //
+      // **و«قيمةُ الطلب» حُذفت** — «لا فائدةَ منها أساساً»: رقمٌ بين السطور
+      // والإجمالي **لا يُسأل عنه أحد**، ومجموعُ السطور يقوله لمن أراده.
       id: "items",
-      header: m.admin.ordersPage.itemsSection,
+      header: m.admin.ordersPage.invoice,
       icon: <IconOrder />,
       // بعرض البطاقة: قائمةٌ تُقرأ سطراً سطراً لا تُحشَر في خانةٍ ضيّقة
       block: true,
@@ -517,12 +642,31 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           {(o.items ?? []).map((it) => (
             <li key={it.id} className="flex items-start gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-badge bg-primary" />
-              <span className="min-w-0">
+              <span className="min-w-0 flex-1">
                 <span className="font-medium">{it.name}</span>
                 <span className="font-bold text-primary-dark"> ×{fmtNum(it.qty)}</span>
+                {/* **والخيارُ يُقال بسعره.**
+
+                    كانت تُعرض أسماءً مجرّدة — «جبنة، عادي» — **ولا يُعرف أيُّها
+                    زاد الحساب.** فمن راجع طلباً مختلَفاً عليه يجمع الأصنافَ
+                    فلا يبلغ الإجمالي، **ولا يعرف أين ذهب الفرق.**
+
+                    (ملاحظةُ المالك ٢٠٢٦-٠٨-٠٤: «لازم تكتب سعر الصنف وإذا في
+                    إضافة تكتب الإضافة أيضاً وسعرها».) */}
                 {it.options && it.options.length > 0 && (
                   <span className="block text-xs text-ink-muted">
-                    {it.options.map((x) => x.name).join(m.common.listSeparator)}
+                    {it.options.map((x, i) => (
+                      <span key={i}>
+                        {i > 0 && m.common.listSeparator}
+                        {x.name}
+                        {x.price_delta > 0 && (
+                          <span dir="ltr" className="text-accent-dark">
+                            {" "}
+                            +{fmtNum(x.price_delta)}
+                          </span>
+                        )}
+                      </span>
+                    ))}
                   </span>
                 )}
                 {it.note && (
@@ -531,22 +675,51 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                   </span>
                 )}
               </span>
+              {/* **وسعرُ السطر مجموعاً** — الوحدةُ حين تختلف عنه.
+
+                  **والسعرُ يشمل الخيارات**: صنفٌ بعشرة وجبنةٌ بألفين يُقرأ
+                  «١٢٬٠٠٠» لا «١٠٬٠٠٠» — **ورقمٌ لا يجمع ما فوقه لا يُطابق
+                  الإجمالي.** */}
+              <span dir="ltr" className="shrink-0 text-end tabular-nums">
+                <span className="font-bold">{fmtNum(lineTotal(it))}</span>
+                {it.qty > 1 && (
+                  <span className="block text-2xs text-ink-muted">
+                    {fmtNum(lineUnit(it))} × {fmtNum(it.qty)}
+                  </span>
+                )}
+              </span>
             </li>
           ))}
           {(o.items ?? []).length === 0 && <li className="text-ink-muted">—</li>}
+
+          {/* **وذيلُ الفاتورة: التوصيلُ ثمّ الإجمالي.**
+
+              **والخصمُ يُقال حين يقع** — وسكوتُه يجعل الإجماليَّ لا يساوي ما
+              فوقه، **فيُظنّ خطأً في الحساب.** */}
+          <li className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm">
+            <span className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</span>
+            <span dir="ltr" className="tabular-nums">
+              {fmtNum(o.delivery_fee)}
+            </span>
+          </li>
+          {o.discount > 0 && (
+            <li className="flex items-center justify-between text-sm text-success">
+              <span>{m.admin.ordersPage.discount}</span>
+              <span dir="ltr" className="tabular-nums">
+                −{fmtNum(o.discount)}
+              </span>
+            </li>
+          )}
+          <li className="flex items-center justify-between border-t border-line pt-2">
+            <span className="font-medium">{m.admin.ordersPage.total}</span>
+            <span dir="ltr" className="text-lg font-bold tabular-nums text-primary-dark">
+              {fmtNum(o.total)}{" "}
+              <span className="text-xs font-normal text-ink-muted">
+                {PAYMENT_LABELS[o.payment_method]}
+              </span>
+            </span>
+          </li>
         </ul>
-      ),
-    },
-    {
-      // **قيمة البضاعة وحدها**: هي ما يخصّ المتجر، ورسمُ التوصيل شأنٌ آخر
-      // لصاحبٍ آخر. وجمعُهما في رقمٍ واحد يُخفي أين يذهب المال.
-      id: "goods",
-      header: m.admin.ordersPage.goodsValue,
-      icon: <IconBalance />,
-      cell: (o) => (
-        <span className="font-medium">
-          {fmtNum(o.subtotal)} {m.common.currency}
-        </span>
       ),
     },
     {
@@ -560,10 +733,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       //
       // **ولا يُخفى تعذّرُ الصورة**: كلمةُ السائق تُقرأ يومَ النزاع، **ومن
       // تخطّى عشراً يُقرأ ذلك في صفّه.**
+      // **ولا يُعرض قبل أن يكون له معنى.**
+      //
+      // إثباتُ التسليم لا يوجد إلّا بعد أن يسلّم السائقُ أو يتعذّر عليه.
+      // **وسطرٌ فارغٌ في طلبٍ لم يُقبل بعد يُسأل عنه ولا جواب** — «كيف والطلبُ
+      // لسّا ما وافقنا عليه أساساً؟» (المالك ٢٠٢٦-٠٨-٠٤).
+      //
+      // **وملاحظةُ الزبون تبقى** — كُتبت لحظةَ الطلب وتُقرأ من أوّله.
       id: "proof",
       header: m.admin.ordersPage.proof,
       icon: <IconCamera />,
       block: true,
+      hide: (o: OrderRow) => !PROOF_STATUSES.has(o.status),
       cell: (o) => {
         if (o.proof_skip_reason) {
           return (
@@ -604,39 +785,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       },
     },
     {
-      id: "driver",
-      header: m.admin.ordersPage.driver,
-      icon: <IconDriver />,
-      cell: (o) =>
-        o.driver_name || o.driver_phone ? (
-          <span>
-            {o.driver_name || o.driver_phone}
-            <span className="block text-xs text-ink-muted">
-              {m.admin.ordersPage.driverFee}: {fmtNum(o.driver_fee)} {m.common.currency}
-            </span>
-          </span>
-        ) : o.offered_driver_name ? (
-          /* **«جارٍ إسناد سائق» وحدَها لا تقول شيئاً.**
-
-             العملياتُ ترى الطلبَ يتأخّر **ولا تعرف على من عُرض** — فلا تعرف
-             من يتأخّر، **ولا تستطيع أن تتّصل بمن بيده القرارُ الآن.** ورقمٌ
-             يتأخّر بلا اسمٍ يُقرأ «النظامُ بطيء»، **وباسمه يُقرأ «فلانٌ لا
-             يردّ»** — وهو خبرٌ يُبنى عليه.
-
-             (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */
-          <span>
-            {o.offered_driver_name}
-            <span className="block text-xs text-warning">
-              {m.admin.ordersPage.awaitingAccept}
-            </span>
-          </span>
-        ) : (
-          <span className="text-ink-muted">
-            {m.admin.ordersPage.deliveryFee}: {fmtNum(o.delivery_fee)} {m.common.currency}
-          </span>
-        ),
-    },
-    {
       id: "note",
       header: m.admin.ordersPage.customerNote,
       icon: <IconNote />,
@@ -647,44 +795,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         ) : (
           <span className="text-ink-muted">—</span>
         ),
-    },
-    {
-      id: "total",
-      header: m.admin.ordersPage.total,
-      icon: <IconWallet />,
-      cell: (o) => (
-        <span>
-          <span className="font-bold text-primary-dark">{fmtNum(o.total)}</span>{" "}
-          <span className="text-xs text-ink-muted">{PAYMENT_LABELS[o.payment_method]}</span>
-        </span>
-      ),
-    },
-    {
-      id: "status",
-      header: m.admin.ordersPage.statusCol,
-      icon: <IconStatus />,
-      cell: (o) => (
-        <span className="inline-flex flex-wrap items-center gap-1">
-          <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>{STATUS_LABELS[o.status]}</Badge>
-          {/* **ومن أنهاه بجانب أنّه انتهى.**
-
-              كانت العملياتُ تقرأ «ملغي» **بلا فاعل** — وثلاثةُ أخبارٍ يخفيها
-              اللفظُ الواحد: إلغاءُ الزبون لا يستوجب شيئاً، **وإلغاءُ المتجر
-              يستوجب مكالمةً ومخالفةً تُحتسب**، وإلغاؤنا نحن فعلُنا نعرفه.
-
-              وكان الحقلُ يُكتب في قاعدة البيانات منذ البداية **ولا يقرؤه
-              أحد** — وحقلٌ يُملأ ولا يُقرأ كلفةُ كتابةٍ بلا فائدة. */}
-          {o.ended_by && ENDED_BY[o.ended_by] && (
-            <Badge variant="neutral">{ENDED_BY[o.ended_by]}</Badge>
-          )}
-        </span>
-      ),
-    },
-    {
-      id: "time",
-      header: m.admin.ordersPage.time,
-      cell: (o) =>
-        fmtTime(o.created_at),
     },
   ];
 
@@ -1537,7 +1647,10 @@ function OrderActions({
 
           **ولا يظهر بعد خروج البضاعة**: المتجرُ الأوّلُ قبض عند الاستلام،
           فتحويلٌ بعدها **طلبان لا واحد.** */}
-      {TRANSFERABLE.has(o.status) && (
+      {/* **ولا يُعرض في وضع «المنصة تدير»** — لا رفضَ من متجرٍ فيه أصلاً،
+          **فالزرُّ يعرض علاجاً لمرضٍ لا وجودَ له.** ويعود حين يملك المتجرُ أن
+          يرفض: عندها يعود الطلبُ إلى المنصة **ولها أن تُنقذه بمتجرٍ ثانٍ.** */}
+      {selfManage && TRANSFERABLE.has(o.status) && (
         <Button
           variant="ghost"
           disabled={busy !== ""}
