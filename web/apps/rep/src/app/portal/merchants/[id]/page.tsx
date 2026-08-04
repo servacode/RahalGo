@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -192,7 +192,7 @@ export default function MerchantDetailPage() {
       header: D.colNumber,
       icon: <IconOrder />,
       primary: true,
-      cell: (o) => <span dir="ltr">#{fmtNum(o.number)}</span>,
+      cell: (o) => <span dir="ltr">#{fmtRef(o.number)}</span>,
     },
     {
       id: "date",

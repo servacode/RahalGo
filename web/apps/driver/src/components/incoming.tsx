@@ -21,7 +21,7 @@
  * فلا يظهر طلبٌ في القسمين معاً، **ولا يختفي من أحدهما بلا أن يظهر في الآخر.**
  */
 
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef } from "@rahalgo/i18n";
 import {
   Card,
   Badge,
@@ -83,7 +83,7 @@ export function IncomingCard({
   return (
     <Card>
       <div className="mb-2 flex items-center gap-2">
-        <Badge variant="primary">#{fmtNum(o.number)}</Badge>
+        <Badge variant="primary">#{fmtRef(o.number)}</Badge>
         {readyLeft !== null && (
           <Badge variant={readyLeft === 0 ? "success" : "warning"}>
             {readyLeft === 0 ? D.queue.readyNow : D.queue.readyIn.replace("{n}", fmtNum(readyLeft))}

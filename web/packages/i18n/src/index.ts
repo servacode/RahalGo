@@ -23,7 +23,7 @@ export function getDir(locale: Locale): "rtl" | "ltr" {
   return locales[locale].dir;
 }
 
-export { fmtNum, fmtDate, fmtDateTime, fmtTime, fmtLongDate } from "./format";
+export { fmtNum, fmtRef, fmtDate, fmtDateTime, fmtTime, fmtLongDate } from "./format";
 
 /**
  * ثوانٍ إلى «م:ث» — لعدّادٍ تنازليّ.

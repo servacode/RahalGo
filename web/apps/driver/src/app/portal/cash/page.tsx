@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   PageContainer,
   PageHeader,
@@ -99,7 +99,7 @@ export default function DriverCashPage() {
               <span className="min-w-0 flex-1">
                 {e.order_number != null ? (
                   <span dir="ltr" className="flex items-center gap-1 font-bold tabular-nums">
-                    <IconOrder size={14} />#{fmtNum(e.order_number)}
+                    <IconOrder size={14} />#{fmtRef(e.order_number)}
                   </span>
                 ) : (
                   <span className="font-medium">

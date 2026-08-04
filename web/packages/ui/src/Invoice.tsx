@@ -11,7 +11,7 @@
  * عقدٌ بين المتجر والمنصة لا شأن للزبون به — ولا يُخفى عن المتجر لأنه طرفه.
  */
 
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import { Button } from "./components";
 import { SheetHeader } from "./layout";
 import { IconPrint } from "./icons";
@@ -87,7 +87,7 @@ export function Invoice({
             يجعل ورقةً تُطبع بعد شهرٍ تبدو طلباً وقع اليوم.** */}
         <div className="mb-4 grid gap-x-6 gap-y-1 border-b border-line pb-3 text-xs sm:grid-cols-2">
           <p className="text-base font-bold">
-            {V.title} <span dir="ltr">#{fmtNum(order.number)}</span>
+            {V.title} <span dir="ltr">#{fmtRef(order.number)}</span>
           </p>
           <p className="sm:text-end">
             <span className="text-ink-muted">{V.issuedAt} </span>

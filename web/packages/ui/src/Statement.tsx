@@ -14,7 +14,7 @@
  */
 
 import { useMemo } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { SheetHeader } from "./layout";
 import { IconPrint } from "./icons";
@@ -212,7 +212,7 @@ export function StatementSheet({
                         {t.note}
                         {!!t.order_number && (
                           <span className="ms-1" dir="ltr">
-                            #{fmtNum(t.order_number)}
+                            #{fmtRef(t.order_number)}
                           </span>
                         )}
                       </td>

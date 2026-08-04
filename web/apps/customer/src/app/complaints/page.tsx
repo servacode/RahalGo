@@ -13,7 +13,7 @@
  * حالة الشكوى؟».)
  */
 
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
   Card,
@@ -95,7 +95,7 @@ export default function ComplaintsPage() {
                     dir="ltr"
                     className="rounded-control bg-primary-light px-2.5 py-1 text-sm font-bold tabular-nums text-primary-dark"
                   >
-                    #{fmtNum(t.number)}
+                    #{fmtRef(t.number)}
                   </span>
                   <Badge variant={TONE[t.status] ?? "neutral"}>
                     {(m.admin.tickets.status as Record<string, string>)[t.status] ?? t.status}
@@ -114,7 +114,7 @@ export default function ComplaintsPage() {
                 <div className="rounded-control bg-page/70 px-3 py-2">
                   <p className="text-2xs text-ink-muted">{C.fieldOrder}</p>
                   <p className="mt-0.5 text-sm font-medium tabular-nums" dir="ltr">
-                    {t.order_number !== null ? `#${fmtNum(t.order_number)}` : "—"}
+                    {t.order_number !== null ? `#${fmtRef(t.order_number)}` : "—"}
                   </p>
                 </div>
               </div>

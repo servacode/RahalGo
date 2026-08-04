@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime } from "@rahalgo/i18n";
 import {
   Button,
   Badge,
@@ -459,7 +459,7 @@ function TaskCard({
   return (
     <Card>
       <div className="mb-3 flex items-center gap-2">
-        <Badge variant="primary">#{fmtNum(o.number)}</Badge>
+        <Badge variant="primary">#{fmtRef(o.number)}</Badge>
         <Badge variant="neutral">{m.orders.status[o.status as keyof typeof m.orders.status]}</Badge>
         <span className="ms-auto text-sm font-bold" dir="ltr">
           {fmtNum(o.total)} {m.common.currency}

@@ -28,7 +28,7 @@
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -199,7 +199,7 @@ export default function DisputesPage() {
 
               {d.order_number != null && (
                 <span dir="ltr" className="flex shrink-0 items-center gap-1 text-sm text-ink-muted">
-                  <IconOrder size={14} />#{fmtNum(d.order_number)}
+                  <IconOrder size={14} />#{fmtRef(d.order_number)}
                 </span>
               )}
 

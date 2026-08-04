@@ -13,7 +13,7 @@
  * يطمئنّ على أحد.
  */
 
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   Button,
   PageContainer,
@@ -72,7 +72,7 @@ export default function EmergenciesPage() {
                     {x.driver_name || x.driver_phone}
                     {x.order_number !== null && (
                       <span className="ms-2 text-sm font-normal text-ink-muted" dir="ltr">
-                        #{fmtNum(x.order_number)}
+                        #{fmtRef(x.order_number)}
                       </span>
                     )}
                   </p>

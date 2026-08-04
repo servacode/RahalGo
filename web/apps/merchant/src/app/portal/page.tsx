@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime } from "@rahalgo/i18n";
 import {
   EmptyState,
   useLiveEvent,
@@ -354,7 +354,7 @@ function OrderCard({
 
             والحجبُ في الخادم لا هنا (`merchant_privacy.go`) — وهذا عرضُ ما
             وصل، لا إخفاءُ ما وصل. */}
-        <span className="font-bold">#{fmtNum(order.number)}</span>
+        <span className="font-bold">#{fmtRef(order.number)}</span>
         <span className="text-xs text-ink-muted" dir="ltr">
           {fmtTime(order.created_at)}
         </span>
@@ -632,7 +632,7 @@ function CancelModal({
   }
 
   return (
-    <Modal open onClose={onClose} title={`${MO.cancelOrder} #${fmtNum(order.number)}`}>
+    <Modal open onClose={onClose} title={`${MO.cancelOrder} #${fmtRef(order.number)}`}>
       <form onSubmit={submit} className="space-y-4">
         <div>
           <Input

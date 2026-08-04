@@ -10,7 +10,7 @@
  */
 
 import { useCallback } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i18n";
 import { Badge } from "./components";
 import { useLiveData } from "./Notifications";
 import { PageHeader, PageContainer, EmptyState, LoadingState, ListRow, StatGrid, StatCard, Stars } from "./layout";
@@ -125,7 +125,7 @@ export function ReputationReviews({ api, labels = {} }: { api: ApiFn; labels?: R
                 </span>
               </div>
               <p className="mt-1 text-sm text-ink-muted">
-                {rv.merchant_name} — {T.order} #{fmtNum(rv.order_number)}
+                {rv.merchant_name} — {T.order} #{fmtRef(rv.order_number)}
               </p>
               {rv.comment && <p className="mt-1 text-sm">{rv.comment}</p>}
             </li>
@@ -163,11 +163,11 @@ export function ReputationComplaints({ api, labels = {} }: { api: ApiFn; labels?
               key={c.number}
               className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-4"
             >
-              <span className="font-bold">#{fmtNum(c.number)}</span>
+              <span className="font-bold">#{fmtRef(c.number)}</span>
               <span className="min-w-0 flex-1 text-sm">{c.subject}</span>
               {c.order_number != null && (
                 <span className="text-xs text-ink-muted">
-                  {T.order} #{fmtNum(c.order_number)}
+                  {T.order} #{fmtRef(c.order_number)}
                 </span>
               )}
               <Badge variant={CVARIANT[c.status]}>{T.ticketStatus[c.status]}</Badge>

@@ -16,7 +16,7 @@
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   PageContainer,
   PageHeader,
@@ -87,7 +87,7 @@ export default function LossesPage() {
       id: "order",
       header: m.terms.order,
       icon: <IconOrder />,
-      cell: (x) => (x.order_number === null ? "—" : <span dir="ltr">#{fmtNum(x.order_number)}</span>),
+      cell: (x) => (x.order_number === null ? "—" : <span dir="ltr">#{fmtRef(x.order_number)}</span>),
     },
     {
       id: "date",

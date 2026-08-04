@@ -49,8 +49,6 @@ interface Tx {
    */
   order_number?: number | null;
   ticket_number?: number | null;
-  /** منفّذُ الحركة — يُعرض للحركات اليدوية وحدها */
-  by_name?: string | null;
 }
 
 interface Payout {
@@ -142,27 +140,35 @@ function TxCard({ tx }: { tx: Tx }) {
         <div className="rounded-control bg-page/70 px-2.5 py-1.5">
           <p className="text-2xs text-ink-muted">{T.about}</p>
           <p className="mt-0.5 text-xs font-medium tabular-nums" dir="ltr">
+            {/* **ورقمُ الطلب معرّفٌ لا مبلغ — بلا فاصلةِ آلاف.**
+
+                كان `fmtNum` فصار «طلب #1,002». **ومن يبحث عنه في الشاشة
+                يكتب `1002` فلا يجده**، ومن قرأه في الهاتف قاله «ألفاً
+                واثنين». **والفاصلةُ تقول «هذا مبلغ» وهو اسم.** */}
             {tx.order_number != null
-              ? `${T.order} #${fmtNum(tx.order_number)}`
+              ? `${T.order} #${tx.order_number}`
               : tx.ticket_number != null
-                ? `${T.ticket} #${fmtNum(tx.ticket_number)}`
+                ? `${T.ticket} #${tx.ticket_number}`
                 : "—"}
-          </p>
-        </div>
-        <div className="rounded-control bg-page/70 px-2.5 py-1.5">
-          <p className="text-2xs text-ink-muted">{T.txNo}</p>
-          <p className="mt-0.5 text-xs font-medium tabular-nums" dir="ltr">
-            {fmtNum(Number(tx.id))}
           </p>
         </div>
       </div>
 
       {/* **الملاحظةُ حقلٌ قائمٌ بذاته لا ذيلٌ مقتطع**: هي غالباً سببُ حركةٍ
           يدوية — «تعويض عن طلبٍ فشل» — وقطعُها يُبقي السؤال. */}
+      {/* **ولا يُذيَّل باسم من ضغط الزرّ.**
+
+          كان يُلحق `by_name` — **وهو فاعلُ الانتقال لا طرفُ القيد.** فقُرئ في
+          محفظة المندوب «عمولة مندوب عن طلب مسلَّم — عمر الشيخ»، **وعمرُ سائقٌ
+          لا شأنَ له بعمولته**: ضغط «تمّ التسليم» فوقعت التسويةُ باسمه.
+
+          **واسمُ غريبٍ في قيدِ مالٍ يُقرأ طرفاً فيه** — فيُسأل: ولماذا يظهر
+          السائقُ في محفظتي؟ (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
+
+          **ومن نفّذ يبقى في سجلّ التدقيق** — حيث يُسأل عنه. */}
       {tx.note && (
         <p className="mt-2 rounded-control border border-line px-3 py-2 text-xs leading-relaxed text-ink-muted">
           {tx.note}
-          {tx.by_name && <span className="opacity-70"> — {tx.by_name}</span>}
         </p>
       )}
     </li>

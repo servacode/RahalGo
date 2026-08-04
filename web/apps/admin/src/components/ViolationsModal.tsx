@@ -24,7 +24,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -142,7 +142,7 @@ export default function ViolationsModal({
                 <span className="flex flex-wrap items-center gap-2">
                   {r.order_number != null ? (
                     <span dir="ltr" className="flex items-center gap-1 font-bold tabular-nums">
-                      <IconOrder size={13} />#{fmtNum(r.order_number)}
+                      <IconOrder size={13} />#{fmtRef(r.order_number)}
                     </span>
                   ) : (
                     <Badge variant="warning">{V.manual}</Badge>

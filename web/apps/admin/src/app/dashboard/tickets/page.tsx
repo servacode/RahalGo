@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDate, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   PageHeader,
@@ -121,7 +121,7 @@ export default function TicketsPage() {
       header: m.admin.tickets.table.number,
       icon: <IconSupport />,
       primary: true,
-      cell: (t) => <span className="font-bold">#{fmtNum(t.number)}</span>,
+      cell: (t) => <span className="font-bold">#{fmtRef(t.number)}</span>,
     },
     {
       id: "customer",
@@ -161,7 +161,7 @@ export default function TicketsPage() {
       icon: <IconOrder />,
       cell: (t) =>
         t.order_number ? (
-          <span className="font-medium">#{fmtNum(t.order_number)}</span>
+          <span className="font-medium">#{fmtRef(t.order_number)}</span>
         ) : (
           <span className="text-ink-muted">—</span>
         ),
@@ -475,7 +475,7 @@ function TicketDetailModal({
       open
       onClose={onClose}
       size="lg"
-      title={`${m.admin.tickets.detail} #${fmtNum(ticket.number)}`}
+      title={`${m.admin.tickets.detail} #${fmtRef(ticket.number)}`}
     >
       <div className="space-y-5">
         <FormSection title={m.admin.tickets.table.customer} icon={<IconUser />}>
@@ -491,7 +491,7 @@ function TicketDetailModal({
                 onClick={() => router.push(`/dashboard/orders?q=${ticket.order_number}`)}
                 className="font-medium text-primary hover:underline"
               >
-                {m.admin.tickets.viewOrder} #{fmtNum(ticket.order_number)}
+                {m.admin.tickets.viewOrder} #{fmtRef(ticket.order_number)}
               </button>
             )}
           </div>

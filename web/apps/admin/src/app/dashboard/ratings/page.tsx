@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   PageHeader,
   Select,
@@ -173,7 +173,7 @@ export default function RatingsPage() {
               <li key={i} className="rounded-card border border-line bg-surface p-3">
                 <div className="mb-1 flex flex-wrap items-center gap-2 text-sm">
                   <span dir="ltr" className="flex items-center gap-1 font-bold tabular-nums">
-                    <IconOrder size={13} />#{fmtNum(c.order_number)}
+                    <IconOrder size={13} />#{fmtRef(c.order_number)}
                   </span>
                   <span className="text-ink-muted">{c.customer}</span>
                   {c.driver && <Badge variant="neutral">{c.driver}</Badge>}

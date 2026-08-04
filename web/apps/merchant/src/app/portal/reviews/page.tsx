@@ -18,7 +18,7 @@
  */
 
 import { useCallback } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i18n";
 import {
   PageContainer,
   PageHeader,
@@ -80,7 +80,7 @@ export default function WarningsPage() {
               </div>
               {x.order_number !== null && (
                 <p className="mt-1 text-sm text-ink-muted">
-                  {m.terms.order} #{fmtNum(x.order_number)}
+                  {m.terms.order} #{fmtRef(x.order_number)}
                 </p>
               )}
               {x.note && <p className="mt-1 text-sm">{x.note}</p>}

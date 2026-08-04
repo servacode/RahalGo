@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDate, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -502,12 +502,12 @@ export default function UserProfilePage() {
                         onClick={() => router.push(`/dashboard/orders?q=${t.order_number}`)}
                         className="text-xs font-medium text-primary hover:underline"
                       >
-                        {P.orderRef} #{fmtNum(t.order_number)}
+                        {P.orderRef} #{fmtRef(t.order_number)}
                       </button>
                     )}
                     {t.ticket_number != null && (
                       <span className="text-xs font-medium text-primary">
-                        {P.ticketRef} #{fmtNum(t.ticket_number)}
+                        {P.ticketRef} #{fmtRef(t.ticket_number)}
                       </span>
                     )}
                     {t.note && <span className="truncate text-xs text-ink-muted">{t.note}</span>}
@@ -618,7 +618,7 @@ export default function UserProfilePage() {
                     className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm hover:bg-page"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="font-bold">#{fmtNum(t.number)}</span>
+                      <span className="font-bold">#{fmtRef(t.number)}</span>
                       <span className="truncate">{t.subject}</span>
                     </span>
                     <span className="flex items-center gap-2">
@@ -658,7 +658,7 @@ export default function UserProfilePage() {
                         onClick={() => router.push(`/dashboard/orders?q=${rt.order_number}`)}
                         className="font-medium text-primary hover:underline"
                       >
-                        #{fmtNum(rt.order_number)}
+                        #{fmtRef(rt.order_number)}
                       </button>
                       <span className="text-ink-muted">{rt.merchant_name}</span>
                       <span className="flex items-center gap-1 text-accent-dark"><IconStar size={12} className="fill-accent-dark" />{rt.platform_stars}</span>
@@ -700,7 +700,7 @@ export default function UserProfilePage() {
                         onClick={() => router.push(`/dashboard/orders?q=${rt.order_number}`)}
                         className="font-medium text-primary hover:underline"
                       >
-                        #{fmtNum(rt.order_number)}
+                        #{fmtRef(rt.order_number)}
                       </button>
                       <span className="text-xs text-ink-muted">{rt.merchant_name}</span>
                       {rt.comment && (

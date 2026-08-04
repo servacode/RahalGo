@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtClock } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, fmtClock } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -478,7 +478,7 @@ function OrderCard({
                **فيُلمح في البطاقة قبل أن يُبحث عنه.** */
             className="rounded-control bg-accent px-2.5 py-1 text-sm font-bold tabular-nums text-shell"
           >
-            #{fmtNum(o.number)}
+            #{fmtRef(o.number)}
           </span>
           <Badge variant={VARIANT[o.status] ?? "primary"}>
             {STATUS_LABELS[o.status] ?? o.status}
@@ -687,7 +687,7 @@ function OrderCard({
               className="flex h-9 shrink-0 items-center rounded-control bg-page px-2 text-xs text-ink-muted"
               dir="ltr"
             >
-              #{fmtNum(ticketNo)}
+              #{fmtRef(ticketNo)}
             </span>
           ) : (
             <button
