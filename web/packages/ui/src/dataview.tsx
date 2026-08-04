@@ -7,7 +7,10 @@
  */
 
 import { useEffect, useState, type ReactNode } from "react";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { IconList, IconGrid } from "./icons";
+
+const L = getMessages(defaultLocale).common;
 
 export type ViewMode = "table" | "cards";
 
@@ -102,6 +105,14 @@ export interface DataColumn<T> {
    * يعرض بنافذةٍ منبثقة ليبقى الشكلُ بصرياً بحالٍ احترافية».)
    */
   tableCell?: (item: T) => ReactNode;
+  /**
+   * **حقلٌ لوضعٍ دون آخر.**
+   *
+   * الحالةُ في البطاقة شارةٌ في الترويسة مقابلَ الرقم — **وفي الجدول عمودٌ له
+   * رأسٌ يُقرأ.** ولو عُرضت في الوضعين بالتعريف نفسِه لَظهرت مرّتين في
+   * البطاقة، **أو غاب رأسُها في الجدول فيُقرأ العمودُ بلا اسم.**
+   */
+  only?: "table" | "cards";
   /** primary: يظهر كعنوان البطاقة في وضع البطاقات */
   primary?: boolean;
   /** أيقونة معبرة للحقل — تظهر برأس العمود وفي تسمية حقل البطاقة */
@@ -147,9 +158,10 @@ export function DataView<T>({
   }
 
   if (view === "cards") {
-    const primaries = columns.filter((c) => c.primary);
-    const rest = columns.filter((c) => !c.primary && !c.block);
-    const blocks = columns.filter((c) => !c.primary && c.block);
+    const forCards = columns.filter((c) => c.only !== "table");
+    const primaries = forCards.filter((c) => c.primary);
+    const rest = forCards.filter((c) => !c.primary && !c.block);
+    const blocks = forCards.filter((c) => !c.primary && c.block);
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((item) => (
@@ -234,23 +246,35 @@ export function DataView<T>({
    * الوقت، لا نطبّق تعديلاتٍ في مكانٍ ونترك الآخر».
    */
   const shown = columns.filter(
-    (c) => !c.hide || items.some((it) => !c.hide!(it)),
+    (c) => c.only !== "cards" && (!c.hide || items.some((it) => !c.hide!(it))),
   );
 
   return (
     <div className="overflow-x-auto rounded-card border border-line bg-surface">
       <table className="w-full text-sm">
         <thead>
+          {/* **والرؤوسُ فوق قيمها لا بجانبها.**
+
+              محاذاةٌ إلى الوسط تجعل العمودَ كتلةً واحدةً تُمسح بالعين: **رأسٌ
+              وقيمٌ على محورٍ واحد.** وبمحاذاة البدء تتباعد الرؤوسُ عن قيمها
+              حين تختلف أطوالُها، **فيُقرأ رأسٌ مع قيمة جارِه.** */}
           <tr className="border-b border-line text-ink-muted">
             {shown.map((c) => (
               <th
                 key={c.id}
-                className="whitespace-nowrap p-3 text-start font-medium align-middle"
+                className="whitespace-nowrap p-3 text-center align-middle font-medium"
               >
-                <FieldLabel icon={c.icon} text={c.header} />
+                <span className="inline-flex justify-center">
+                  <FieldLabel icon={c.icon} text={c.header} />
+                </span>
               </th>
             ))}
-            {actions && <th className="p-3" />}
+            {/* **وعمودُ الأفعال له رأسٌ أيضاً** — عمودٌ بلا اسمٍ يُقرأ زائداً. */}
+            {actions && (
+              <th className="whitespace-nowrap p-3 text-center align-middle font-medium">
+                {L.actions}
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -265,7 +289,7 @@ export function DataView<T>({
                 //
                 // خليّةٌ تحمل سطراً وأخرى تحمل خمسةً تجعل الصفَّ يتمدّد
                 // **والقيمُ تسبح في فراغه**، فيُقرأ الجدولُ عشوائياً.
-                <td key={c.id} className="p-3 align-middle">
+                <td key={c.id} className="p-3 text-center align-middle">
                   {c.hide?.(item) ? (
                     <span className="text-ink-muted">—</span>
                   ) : (
@@ -274,8 +298,8 @@ export function DataView<T>({
                 </td>
               ))}
               {actions && (
-                <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex flex-nowrap justify-end gap-1.5 whitespace-nowrap">
+                <td className="p-3 align-middle" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex flex-nowrap justify-center gap-1.5 whitespace-nowrap">
                     {actions(item)}
                   </div>
                 </td>

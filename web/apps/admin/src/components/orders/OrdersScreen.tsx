@@ -630,16 +630,42 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </span>
         </span>
       ),
+      // **وفي الجدول الرقمُ وحدَه** — الحالةُ عمودٌ له رأسُه.
+      tableCell: (o) => <span className="font-bold">#{o.number}</span>,
+    },
+    {
+      // **الحالةُ عمودٌ في الجدول وشارةٌ في ترويسة البطاقة.**
+      //
+      // ولو عُرضت في الوضعين بالتعريف نفسِه **لَظهرت مرّتين في البطاقة**، أو
+      // **غاب رأسُها في الجدول فيُقرأ العمودُ بلا اسم.**
+      id: "status",
+      header: m.admin.ordersPage.statusCol,
+      icon: <IconStatus />,
+      only: "table",
+      cell: (o) => (
+        <span className="inline-flex flex-wrap items-center justify-center gap-1">
+          <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>
+            {STATUS_LABELS[o.status]}
+          </Badge>
+          {o.ended_by && ENDED_BY[o.ended_by] && (
+            <Badge variant="neutral">{ENDED_BY[o.ended_by]}</Badge>
+          )}
+        </span>
+      ),
     },
     {
       id: "customer",
       header: m.admin.ordersPage.customer,
       icon: <IconUser />,
       primary: true,
+      // **الاسمُ فوق ورقمُه تحته** — لا في سطرٍ واحد.
+      //
+      // اسمٌ ورقمٌ متجاوران يطولان فيكسران الخانةَ ويرفعان الصفّ، **ويُقرأ
+      // الرقمُ امتداداً للاسم.** ومن يبحث عن رقمٍ يمسح عموداً واحداً بعينه.
       cell: (o) => (
-        <span>
-          {o.customer_name || "—"}{" "}
-          <span dir="ltr" className="text-xs text-ink-muted">
+        <span className="block">
+          <span className="block">{o.customer_name || "—"}</span>
+          <span dir="ltr" className="block text-xs text-ink-muted">
             {o.customer_phone}
           </span>
         </span>
