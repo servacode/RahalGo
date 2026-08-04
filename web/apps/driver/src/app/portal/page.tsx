@@ -210,26 +210,6 @@ export default function TasksPage() {
     }
   }
 
-  /**
-   * إقرارُ السائق أنّه أعاد البضاعةَ إلى متجرها.
-   *
-   * **والنقطةُ مبنيّةٌ منذ البداية ولم يكن لها زرّ** — فيبقى الطعامُ بيده
-   * ومستحقُّ المتجر في محفظته، **ولا يعرف أحدٌ أين ذهبت البضاعة.**
-   */
-  async function returnGoods(o: DriverOrder) {
-    setBusy(o.id);
-    setError("");
-    try {
-      await api(`/api/v1/driver/orders/${o.id}/return`, { method: "POST" });
-      load();
-    } catch (e) {
-      setError(errText(e));
-      load();
-    } finally {
-      setBusy("");
-    }
-  }
-
   async function toggleShift() {
     if (!me) return;
     setBusy("shift");
@@ -377,7 +357,6 @@ export default function TasksPage() {
                 }}
                 onRelease={() => act(o, "dispatching")}
                 onEmergency={() => setEmergency(o)}
-                onReturn={() => void returnGoods(o)}
               />
             ))}
           </div>
@@ -514,7 +493,6 @@ function TaskCard({
   onFail,
   onRelease,
   onEmergency,
-  onReturn,
 }: {
   o: DriverOrder;
   busy: boolean;
@@ -522,7 +500,6 @@ function TaskCard({
   onFail: () => void;
   onRelease: () => void;
   onEmergency: () => void;
-  onReturn: () => void;
 }) {
   const next = NEXT[o.status];
   // قبل الاستلام وجهتُه المتجر، وبعده وجهتُه الزبون — الملاحة تتبع الرحلة
@@ -585,50 +562,25 @@ function TaskCard({
         )}
       </p>
 
-      {/* **وطلبٌ تعذّر تسليمُه لا ينتهي حتى تخرج بضاعتُه من يده.**
+      {/* **ولا بطاقةَ لطلبٍ مُغلَق.**
 
-          الحالةُ `failed` نهايةٌ في الدفاتر — **وليست نهايةً في الشارع**:
-          الطعامُ في صندوقه بعدُ. فتبقى البطاقةُ ظاهرةً بفعلٍ واحدٍ يُنهيها،
-          **بدل أن تختفي فتضيع البضاعةُ بلا أثر.**
+          كانت بطاقةُ `failed` تبقى حتى تُحسم بضاعتُها، **فتزاحم البطاقاتِ
+          التي فيها فعلٌ ولا فعلَ فيها هي**: متجرٌ لا يستردّ يترك بطاقةً لا
+          تُغلق أبداً — أوّلُ ما يراه كلَّ صباح.
 
-          (قاعدةُ المالك ٢٠٢٦-٠٨-٠٣: «يجب أن ينتهي الطلبُ ويعود السائقُ إلى
-          المكتب».)
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «مهمّاتٌ تفشل التسليم لا يجب أن تبقى
+          بالمهام لدى السائق — خلص، تُعتبر مغلقةً منتهية».)
 
-          **والوجهةُ سياسةُ المتجر لا اجتهادُ السائق**: من يستردّ يستردّ،
-          ومن يرفض تتحمّل المنصةُ بضاعتَه — **ولو تُرك له المالُ والبضاعةُ
-          معاً لربح من الفشل أكثرَ من النجاح.** */}
-      {o.status === "failed" ? (
-        <div className="mt-3 space-y-2 rounded-control border border-danger/40 bg-danger/5 p-3">
-          <p className="flex items-center gap-2 text-sm font-medium text-danger">
-            <IconWarning size={16} />
-            {o.fail_reason
-              ? m.common.failReasons[o.fail_reason as keyof typeof m.common.failReasons] ??
-                o.fail_reason
-              : D.act.failed}
-          </p>
-          <p className="text-sm">{D.act.goodsPending}</p>
-          {o.merchant_accepts_returns ? (
-            <Button size="lg" className="w-full" disabled={busy} onClick={onReturn}>
-              {D.act.returnGoods}
-            </Button>
-          ) : (
-            /* **ولا زرَّ لما لا نملك إثباتَه.** تسليمُ البضاعة إلى المكتب
-               يقع بين يدي من يستلمها، **وإقرارُ السائق وحدَه ليس تسليماً** —
-               فتُغلق من لوحة الإدارة بزرّ «تتحمّلها المنصة». */
-            <p className="text-sm text-ink-muted">{D.act.returnToOffice}</p>
-          )}
-        </div>
-      ) : (
-        next && (
-          <Button
-            size="lg"
-            className="mt-3 w-full"
-            disabled={busy}
-            onClick={() => onAct(next)}
-          >
-            {D.act[next as keyof typeof D.act]}
-          </Button>
-        )
+          **والقائمةُ لم تعد تحمله أصلاً** (`handleDriverOrders`). */}
+      {next && (
+        <Button
+          size="lg"
+          className="mt-3 w-full"
+          disabled={busy}
+          onClick={() => onAct(next)}
+        >
+          {D.act[next as keyof typeof D.act]}
+        </Button>
       )}
 
       <div className="mt-2 flex items-center justify-between">

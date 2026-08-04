@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -24,6 +25,27 @@ func armRotation(t *testing.T, f *driverFixture, timeoutSec int) {
 		f.drivers); err != nil {
 		t.Fatalf("تعذّر عزلُ السائقين: %v", err)
 	}
+	// **وعزلُ السائقين وحدَه لا يكفي — الطلباتُ الغابرةُ تزاحم أيضاً.**
+	//
+	// `SweepExpiredOffers` يمسح **كلَّ** طلبٍ منتظرٍ في القاعدة لا طلبَ هذا
+	// الاختبار. وطلباتُ تجاربَ سابقةٍ تبقى `dispatching` إلى الأبد، **فتأخذ
+	// عروضُها سائقي هذا الاختبار** — و«عرضٌ حيٌّ واحدٌ لكلّ سائق» يجعلهم
+	// جميعاً غيرَ مؤهّلين لطلبنا.
+	//
+	// **فيسقط الاختبار بـ«لا عرضَ وثمّة سائقون مؤهّلون»** — وهو صادقٌ في
+	// وصفه كاذبٌ في سببه: العلّةُ ركامُ القاعدة لا منطقُ الدور. **ولا يسقط
+	// إلّا بعد أن يتراكم ما يكفي**، فيبدو تقلّباً عشوائياً.
+	//
+	// **والحالةُ تُبدَّل لا `closed_at` وحدَه**: `offerWaiting` و
+	// `SweepExpiredOffers` يقرآن `status = 'dispatching'` **ولا يقرآن
+	// `closed_at`** — فإغلاقٌ بلا تبديلِ حالةٍ يترك الطلبَ يُعرض ويأخذ سائقاً.
+	// (وهي حالٌ لا تقع في الإنتاج: كلُّ إغلاقٍ يبدّل الحالةَ معه.)
+	if _, err := f.pool.Exec(context.Background(),
+		`UPDATE orders SET status = 'cancelled', closed_at = now(),
+		                   offered_driver_id = NULL, offer_expires_at = NULL
+		 WHERE status = 'dispatching' AND closed_at IS NULL`); err != nil {
+		t.Fatalf("تعذّر عزلُ الطلبات الغابرة: %v", err)
+	}
 	f.setSetting(t, "drivers.assignment_mode", "rotation")
 	if timeoutSec > 0 {
 		f.setSetting(t, "drivers.offer_timeout_sec", timeoutSec)
@@ -31,6 +53,46 @@ func armRotation(t *testing.T, f *driverFixture, timeoutSec int) {
 	t.Cleanup(func() {
 		f.setSetting(t, "drivers.assignment_mode", "queue")
 	})
+}
+
+// driverEligibility حالُ كلِّ سائقٍ بمقاييس `OfferNext` الخمسة.
+//
+// **وشرطٌ يسقط بلا صوت لا يُشخَّص من رسالةٍ تقول «لا عرض».** والعلّةُ في
+// قاعدةٍ مشتركةٍ تتراكم عادةً خارجَ ما يُختبَر — **فيُقرأ أيُّها منع بدل أن
+// يُخمَّن.**
+func (f *driverFixture) driverEligibility(t *testing.T, orderID string) string {
+	t.Helper()
+	rows, err := f.pool.Query(context.Background(), `
+		SELECT u.id::text, u.on_shift, u.status,
+		       COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = u.id), 0),
+		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL),
+		       (SELECT count(*) FROM orders o2 WHERE o2.offered_driver_id = u.id
+		          AND o2.id <> $2 AND o2.status = 'dispatching'
+		          AND o2.driver_id IS NULL AND o2.offer_expires_at > now())
+		FROM users u WHERE u.id = ANY($1::uuid[])`, f.drivers, orderID)
+	if err != nil {
+		return "تعذّرت قراءةُ حال السائقين: " + err.Error()
+	}
+	defer rows.Close()
+
+	out := "\tالسائق | دوام | حال | نقدٌ بيده | طلباتٌ مفتوحة | عروضٌ حيّةٌ أخرى\n"
+	for rows.Next() {
+		var id, status string
+		var onShift bool
+		var held int64
+		var open, offers int
+		if err := rows.Scan(&id, &onShift, &status, &held, &open, &offers); err != nil {
+			return "تعذّرت قراءةُ صفّ: " + err.Error()
+		}
+		out += fmt.Sprintf("\t%s | %v | %s | %d | %d | %d\n",
+			id[:8], onShift, status, held, open, offers)
+	}
+	var passed int
+	_ = f.pool.QueryRow(context.Background(),
+		`SELECT coalesce(array_length(offer_passed, 1), 0) FROM orders WHERE id = $1`,
+		orderID).Scan(&passed)
+	out += fmt.Sprintf("\tمرّ عليهم الدورُ في هذا الطلب: %d", passed)
+	return out
 }
 
 // TestRotation_TurnPassesAndNeverReturns الدورُ ينتقل ولا يعود إلى من مرّ عليه.
@@ -61,7 +123,10 @@ func TestRotation_TurnPassesAndNeverReturns(t *testing.T) {
 			t.Fatalf("تعذّرت قراءة العرض: %v", err)
 		}
 		if offered == nil {
-			t.Fatalf("الجولة %d: لا عرضَ وثمّة سائقون مؤهّلون", round)
+			// **ولا يُقال «لا عرض» ويُسكت**: شروطُ الأهلية خمسة، وواحدٌ منها
+			// يسقط بلا صوت. فيُطبع حالُ كلِّ سائقٍ ليُقرأ أيُّها منع.
+			t.Fatalf("الجولة %d: لا عرضَ وثمّة سائقون مؤهّلون\n%s",
+				round, f.driverEligibility(t, orderID))
 		}
 		if seen[*offered] {
 			t.Fatalf("الجولة %d: عاد الدورُ إلى من مرّ عليه — %s", round, *offered)
