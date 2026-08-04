@@ -610,8 +610,6 @@
       "orderDetails": "تفاصيل الطلب",
       "itemsSection": "الأصناف",
       "goodsValue": "قيمة الطلب",
-      "driverFee": "أجر السائق",
-      "driverFeeOf": "(من أصل {n} توصيل)",
       "awaitingAccept": "بانتظار موافقته",
       "deliveryFee": "التوصيل",
       "customerNote": "ملاحظة الزبون",

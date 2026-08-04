@@ -108,28 +108,22 @@ type Order struct {
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «يجب أن يُكتب اسم السائق الذي أُسندت إليه
 	// ويُكتب بانتظار الموافقة — لنعرف من هو السائق الذي يتأخّر».)
 	OfferedDriverName *string `json:"offered_driver_name"`
-	// DriverFee أجرُ السائق عن هذا الطلب.
-	//
-	// **قبل التسليم تقديرٌ وبعده واقع**: يُحسب من رسم التوصيل وإعدادات الحصّة
-	// حتى يُقيَّد فعلاً في الدفتر. وغرفةُ العمليات تحتاج الرقم قبل التسليم لا
-	// بعده — فهي تقرّر به الإسناد.
-	DriverFee     int64   `json:"driver_fee"`
-	Status        string  `json:"status"`
-	AddressText   string  `json:"address_text"`
-	Lat           float64 `json:"lat"`
-	Lng           float64 `json:"lng"`
-	ZoneID        *string `json:"zone_id"`
-	ZoneName      *string `json:"zone_name"`
-	PaymentMethod string  `json:"payment_method"`
-	Subtotal      int64   `json:"subtotal"`
-	DeliveryFee   int64   `json:"delivery_fee"`
-	Discount      int64   `json:"discount"`
-	Total         int64   `json:"total"`
-	WalletPaid    int64   `json:"wallet_paid"`
-	CashDue       int64   `json:"cash_due"`
-	PromoCode     *string `json:"promo_code"`
-	Notes         string  `json:"notes"`
-	CancelReason  string  `json:"cancel_reason"`
+	Status            string  `json:"status"`
+	AddressText       string  `json:"address_text"`
+	Lat               float64 `json:"lat"`
+	Lng               float64 `json:"lng"`
+	ZoneID            *string `json:"zone_id"`
+	ZoneName          *string `json:"zone_name"`
+	PaymentMethod     string  `json:"payment_method"`
+	Subtotal          int64   `json:"subtotal"`
+	DeliveryFee       int64   `json:"delivery_fee"`
+	Discount          int64   `json:"discount"`
+	Total             int64   `json:"total"`
+	WalletPaid        int64   `json:"wallet_paid"`
+	CashDue           int64   `json:"cash_due"`
+	PromoCode         *string `json:"promo_code"`
+	Notes             string  `json:"notes"`
+	CancelReason      string  `json:"cancel_reason"`
 	// SentToMerchantAt متى حُوِّل الطلب إلى المتجر — لا «متى وصله».
 	//
 	// **كان يُكتب ولا يُقرأ**: تكتبه نقطةُ الإبلاغ في القاعدة ولا يعود في

@@ -140,7 +140,6 @@ interface OrderRow {
   /** مصيرُ بضاعة طلبٍ فشل — فارغٌ يعني لم يُحسم بعد */
   goods_settled_to: "merchant" | "platform" | null;
   /** أجرُ السائق — تقديرٌ قبل التسليم وواقعٌ بعده، من مصدر الحساب نفسه */
-  driver_fee: number;
   status: string;
   payment_method: "cash" | "wallet";
   subtotal: number;
@@ -765,23 +764,14 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         o.driver_name || o.driver_phone ? (
           <span>
             {o.driver_name || o.driver_phone}
-            {/* **أجرُ السائق يُقال مع أصله — لا رقماً وحدَه.**
+            {/* **ولا أجرَ سائقٍ في بطاقة الطلب.**
 
-                رقمان بالليرة في بطاقةٍ واحدة (توصيلٌ ١٠٬٠٠٠ وأجرٌ ٥٬٠٠٠)
-                **ولا شيءَ يقول إنّ أحدَهما من الآخر** — فيُقرأ الثاني أجرةَ
-                توصيلٍ ثانيةً، **ويُظنّ أنّ في المنصة مكانين للرسم يفترقان.**
-                (وقع فعلاً ٢٠٢٦-٠٨-٠٤.)
+                لم يُطلب قطّ — أُضيف من تلقائه ثمّ عُلّق عليه شرحٌ حين
+                التبس. **وسطرٌ يحتاج شرحاً ليُفهَم سطرٌ لم يكن مكانُه هنا.**
+                (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «هذه احذفها، أنا لم أطلبها أصلاً».)
 
-                **والمصدرُ واحدٌ فعلاً**: هذا حصّتُه من ذاك. فيُقال الأصلُ
-                بجانبه، **فلا يُبحث عن عطبٍ لا وجود له.** */}
-            <span className="block text-xs text-ink-muted">
-              {m.admin.ordersPage.driverFee}: {fmtNum(o.driver_fee)}{" "}
-              {m.common.currency}
-              <span className="opacity-70">
-                {" "}
-                {m.admin.ordersPage.driverFeeOf.replace("{n}", fmtNum(o.delivery_fee))}
-              </span>
-            </span>
+                **وموضعُ أجر السائق دفترُه**: محفظتُه وكشفُ حسابه — **حيث
+                يُقرأ مجموعاً لا رقماً في بطاقةِ طلبٍ واحد.** */}
           </span>
         ) : o.offered_driver_name ? (
           /* **«جارٍ إسناد سائق» وحدَها لا تقول شيئاً.**

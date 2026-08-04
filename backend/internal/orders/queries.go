@@ -207,12 +207,12 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		return nil, err
 	}
 
-	// أجرُ السائق: **من الدالّة نفسها التي تقيّده في الدفتر** — فلا رقمان
-	// لشيءٍ واحد. وغرفةُ العمليات تحتاجه قبل الإسناد لا بعده.
+	// **ولا يُحسب أجرُ السائق هنا.**
 	//
-	// وبلا مخزنٍ يبقى صفراً وتظهر بقيّةُ الطلب.
-	for i := range orders {
-		orders[i].DriverFee = s.driverShare(ctx, orders[i].DeliveryFee)
-	}
+	// كان يُحسب لكلّ طلبٍ في القائمة — **قراءةُ إعداداتٍ لكلّ صفٍّ لرقمٍ لا
+	// يعرضه أحد.** وقد حُذف من بطاقة الطلب (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لم
+	// أطلبها أصلاً»).
+	//
+	// **وموضعُه دفترُه**: محفظةُ السائق وكشفُ حسابه — حيث يُقرأ مجموعاً.
 	return &OrderPage{Orders: orders, Total: total, Page: f.Page, PerPage: f.PerPage}, nil
 }

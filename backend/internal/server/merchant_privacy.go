@@ -47,7 +47,6 @@ func redactForMerchant(o *orders.Order) {
 	// **وصورةُ التسليم تُظهر بابَ الزبون** — والمتجرُ لا يرى عنوانَه أصلاً.
 	o.ProofURL, o.ProofTakenAt = nil, nil
 	o.ProofMeters, o.ProofSkipReason = 0, ""
-	o.DriverFee = 0
 
 	// المال — يراه في محفظته وتقاريره
 	o.Subtotal, o.DeliveryFee, o.Discount, o.Total = 0, 0, 0, 0
