@@ -275,21 +275,22 @@ const DRIVER_STATUSES = new Set([
 ]);
 
 /**
- * **سعرُ الوحدة شاملاً خياراتِها** — والحسبةُ هنا لا في الخادم.
+ * **سعرُ الصنف عارياً من إضافاته.**
  *
- * `unit_price` سعرُ الصنف وحدَه، **وفروقُ الخيارات تُضاف إليه عند الطلب**
- * (`priceItems`). فعرضُ `unit_price` مجرّداً يجعل السطورَ لا تبلغ الإجمالي،
- * **ومن راجع طلباً مختلَفاً عليه لا يعرف أين ذهب الفرق.**
+ * # وتصحيحُ خطأ
+ *
+ * `order_items.unit_price` **يشمل فروقَ الخيارات أصلاً**: المحرّكُ يجمعها فيه
+ * عند الإنشاء (`it.UnitPrice += delta` في `priceItems`)، **و`subtotal` حاصلُ
+ * ضربه في الكمّية.**
+ *
+ * فكتبتُ دالّةً تجمعها **مرّةً ثانية**، فظهر السطرُ `٣٧٬٥٠٠` وقيمةُ الطلب
+ * `٣٢٬٥٠٠` — **ورقمان لواقعةٍ واحدةٍ يتناقضان في شاشةٍ واحدة.** كشفه المالكُ
+ * في فاتورته (٢٠٢٦-٠٨-٠٤).
+ *
+ * **والصوابُ الطرحُ لا الجمع**: الصنفُ عارياً = المحفوظ − مجموعُ الفروق.
  */
-function lineUnit(it: { unit_price: number; options?: { price_delta: number }[] }): number {
-  return it.unit_price + (it.options ?? []).reduce((s, x) => s + (x.price_delta || 0), 0);
-}
-function lineTotal(it: {
-  unit_price: number;
-  qty: number;
-  options?: { price_delta: number }[];
-}): number {
-  return lineUnit(it) * it.qty;
+function basePrice(it: { unit_price: number; options?: { price_delta: number }[] }): number {
+  return it.unit_price - (it.options ?? []).reduce((s, x) => s + (x.price_delta || 0), 0);
 }
 
 // أزرار الانتقال المتاحة للعمليات/الأدمن حسب الحالة (مرآة لخارطة الخادم)
@@ -678,57 +679,50 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       block: true,
       cell: (o) => (
         <ul className="space-y-1.5">
-          {(o.items ?? []).map((it) => (
-            <li key={it.id} className="flex items-start gap-2">
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-badge bg-primary" />
-              <span className="min-w-0 flex-1">
-                <span className="font-medium">{it.name}</span>
-                <span className="font-bold text-primary-dark"> ×{fmtNum(it.qty)}</span>
-                {/* **والخيارُ يُقال بسعره.**
-
-                    كانت تُعرض أسماءً مجرّدة — «جبنة، عادي» — **ولا يُعرف أيُّها
-                    زاد الحساب.** فمن راجع طلباً مختلَفاً عليه يجمع الأصنافَ
-                    فلا يبلغ الإجمالي، **ولا يعرف أين ذهب الفرق.**
-
-                    (ملاحظةُ المالك ٢٠٢٦-٠٨-٠٤: «لازم تكتب سعر الصنف وإذا في
-                    إضافة تكتب الإضافة أيضاً وسعرها».) */}
-                {it.options && it.options.length > 0 && (
-                  <span className="block text-xs text-ink-muted">
-                    {it.options.map((x, i) => (
-                      <span key={i}>
-                        {i > 0 && m.common.listSeparator}
-                        {x.name}
-                        {x.price_delta > 0 && (
-                          <span dir="ltr" className="text-accent-dark">
-                            {" "}
-                            +{fmtNum(x.price_delta)}
-                          </span>
-                        )}
+          {(o.items ?? []).map((it) => {
+            /** **الخياراتُ صنفان**: ما لا سعرَ له يُلحق بالاسم، وما له سعرٌ
+                يُفرد سطراً. **و«عادي» ليس بنداً في الفاتورة** — هو وصفٌ للصنف،
+                **و«جبنة» بند** لأنّها زادت الحساب. */
+            const free = (it.options ?? []).filter((x) => !x.price_delta);
+            const paid = (it.options ?? []).filter((x) => x.price_delta > 0);
+            return (
+              <li key={it.id}>
+                <span className="flex items-start gap-2">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-badge bg-primary" />
+                  <span className="min-w-0 flex-1">
+                    <span className="font-medium">{it.name}</span>
+                    {free.length > 0 && (
+                      <span className="text-ink-muted">
+                        {" "}
+                        {free.map((x) => x.name).join(m.common.listSeparator)}
                       </span>
-                    ))}
+                    )}
+                    <span className="font-bold text-primary-dark"> ×{fmtNum(it.qty)}</span>
+                    {it.note && (
+                      <span className="block text-xs text-accent-dark">
+                        <IconEdit size={11} className="inline align-[-1px]" /> {it.note}
+                      </span>
+                    )}
                   </span>
-                )}
-                {it.note && (
-                  <span className="block text-xs text-accent-dark">
-                    <IconEdit size={11} className="inline align-[-1px]" /> {it.note}
+                  {/* **سعرُ الصنف عارياً × الكمّية** — والإضافاتُ تحته بأسعارها،
+                      **فمجموعُ السطور يبلغ قيمةَ الطلب بلا نقصٍ ولا فائض.** */}
+                  <span dir="ltr" className="shrink-0 tabular-nums">
+                    {fmtNum(basePrice(it) * it.qty)}
                   </span>
-                )}
-              </span>
-              {/* **وسعرُ السطر مجموعاً** — الوحدةُ حين تختلف عنه.
+                </span>
 
-                  **والسعرُ يشمل الخيارات**: صنفٌ بعشرة وجبنةٌ بألفين يُقرأ
-                  «١٢٬٠٠٠» لا «١٠٬٠٠٠» — **ورقمٌ لا يجمع ما فوقه لا يُطابق
-                  الإجمالي.** */}
-              <span dir="ltr" className="shrink-0 text-end tabular-nums">
-                <span className="font-bold">{fmtNum(lineTotal(it))}</span>
-                {it.qty > 1 && (
-                  <span className="block text-2xs text-ink-muted">
-                    {fmtNum(lineUnit(it))} × {fmtNum(it.qty)}
+                {/* **وكلُّ إضافةٍ بسطرها وسعرها** — قرارُ المالك (٢٠٢٦-٠٨-٠٤). */}
+                {paid.map((x, i) => (
+                  <span key={i} className="flex items-center gap-2 ps-4 text-sm">
+                    <span className="min-w-0 flex-1 text-ink-muted">+ {x.name}</span>
+                    <span dir="ltr" className="shrink-0 tabular-nums text-accent-dark">
+                      {fmtNum(x.price_delta * it.qty)}
+                    </span>
                   </span>
-                )}
-              </span>
-            </li>
-          ))}
+                ))}
+              </li>
+            );
+          })}
           {(o.items ?? []).length === 0 && <li className="text-ink-muted">—</li>}
 
           {/* **وذيلُ الفاتورة: التوصيلُ ثمّ الإجمالي.**
