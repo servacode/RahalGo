@@ -15,7 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import {
-  PageHeader, Button, Input, Select, Checkbox, Badge, Card,
+  PageHeader, Button, Input, Select, Checkbox, Badge, Card, EmptyState,
   IconSettings, IconWarning, IconCheck,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
@@ -58,10 +58,14 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
   /** التبويبُ المفتوح — وفراغُه يعني «أوّلَ مجموعةٍ يرسلها الخادم». */
   const [tab, setTab] = useState("");
+  /** **ترتيبُ الأقسام من الخادم** — فيه القسمُ الفارغُ الذي لا مفتاحَ فيه بعد. */
+  const [order, setOrder] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     try {
-      setList(await api<Setting[]>("/api/v1/admin/settings"));
+      const res = await api<{ settings: Setting[]; groups: string[] }>("/api/v1/admin/settings");
+      setList(res.settings ?? []);
+      setOrder(res.groups ?? []);
       setError("");
     } catch {
       setError(m.errors.internal);
@@ -77,14 +81,18 @@ export default function SettingsPage() {
     list?.find((x) => x.key === "pricing.margin_mode")?.value ?? "percent",
   );
 
-  // المجموعات بترتيب الخادم لا بترتيب أبجديّ: المفاتيح مجموعةٌ بالموضوع،
-  // وبعثرتُها تفصل «مهلة القبول» عن «مهلة التوصيل».
+  /**
+   * المجموعات **بترتيب الخادم** لا بترتيب أبجديّ: المفاتيح مجموعةٌ بالموضوع،
+   * وبعثرتُها تفصل «مهلة القبول» عن «مهلة التوصيل».
+   *
+   * **والترتيبُ يأتي قائمةً صريحةً لا مشتقّاً من المفاتيح.** كان يُشتقّ —
+   * أوّلُ ظهورٍ للمجموعة هو موضعُها — **فقسمٌ بلا مفاتيحَ لا يظهر أصلاً**،
+   * ولا يُبنى قسمٌ يُملأ على مراحل.
+   */
   const groups = useMemo(() => {
     if (!list) return [];
-    const seen: string[] = [];
-    for (const s of list) if (!seen.includes(s.group)) seen.push(s.group);
-    return seen.map((g) => ({ g, items: list.filter((s) => s.group === g) }));
-  }, [list]);
+    return order.map((g) => ({ g, items: list.filter((s) => s.group === g) }));
+  }, [list, order]);
 
   if (!list) return <p className="p-6 text-center text-ink-muted">{m.common.loading}</p>;
 
@@ -140,13 +148,31 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {activeGroup && (
-        <div className="space-y-3">
-          {activeGroup.items.map((s) => (
-            <SettingRow key={s.key} s={s} editable={isAdmin} onSaved={load} marginMode={marginMode} />
-          ))}
-        </div>
-      )}
+      {activeGroup &&
+        (activeGroup.items.length === 0 ? (
+          /* **قسمٌ فارغٌ يقول إنّه فارغٌ عمداً.**
+
+             شاشةٌ بيضاءُ تُقرأ عطباً: يظنّ من فتحها أنّ التحميل تعثّر فيُعيد،
+             **أو أنّ إعداداتِه اختفت.** والفراغُ هنا مرحلةٌ لا خلل — يُملأ
+             مفتاحاً مفتاحاً. */
+          <EmptyState
+            icon={IconSettings}
+            title={S.emptyGroup}
+            action={<p className="text-xs text-ink-muted">{S.emptyGroupHint}</p>}
+          />
+        ) : (
+          <div className="space-y-3">
+            {activeGroup.items.map((s) => (
+              <SettingRow
+                key={s.key}
+                s={s}
+                editable={isAdmin}
+                onSaved={load}
+                marginMode={marginMode}
+              />
+            ))}
+          </div>
+        ))}
       {active === "commissions" && <CommissionsPanel />}
       {active === "zones" && <ZonesPanel />}
       {active === "whatsapp" && <WhatsAppPanel />}

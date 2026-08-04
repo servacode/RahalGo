@@ -539,8 +539,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const isAdmin = !!me?.roles.includes("admin");
 
   useEffect(() => {
-    api<{ key: string; value: unknown }[]>("/api/v1/admin/settings")
-      .then((all) => {
+    api<{ settings: { key: string; value: unknown }[] }>("/api/v1/admin/settings")
+      .then(({ settings: all }) => {
         const delay = all.find(
           (x) => x.key === "orders.manual_assign_after_min",
         );

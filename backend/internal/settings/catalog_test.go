@@ -138,3 +138,24 @@ func TestCatalog_NoDuplicateKeys(t *testing.T) {
 		t.Fatalf("الفهرس %d والكتالوج %d", len(seen), len(Catalog))
 	}
 }
+
+// TestGroups_CoversCatalog **كلُّ مجموعةٍ لها مفاتيحُ لها موضعٌ في الترتيب.**
+//
+// الترتيبُ صار قائمةً مستقلّةً عن `Catalog` كي يظهر قسمٌ فارغ. **وقائمتان
+// تصفان الشيءَ نفسَه تفترقان**: تُضاف مجموعةٌ لمفتاحٍ جديدٍ ولا تُضاف هنا،
+// **فتختفي مفاتيحُها من اللوحة كلَّها** — ولا شيءَ يقول إنّها اختفت.
+func TestGroups_CoversCatalog(t *testing.T) {
+	listed := map[Group]bool{}
+	for _, g := range Groups {
+		if listed[g] {
+			t.Fatalf("مجموعةٌ مكرّرةٌ في الترتيب: %s", g)
+		}
+		listed[g] = true
+	}
+	for _, d := range Catalog {
+		if !listed[d.Group] {
+			t.Fatalf("المفتاح %s في مجموعة %s وهي ليست في Groups — لن تظهر في اللوحة",
+				d.Key, d.Group)
+		}
+	}
+}

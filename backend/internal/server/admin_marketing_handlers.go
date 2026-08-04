@@ -160,7 +160,17 @@ func (s *Server) handleListSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, item)
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	// **وترتيبُ الأقسام يُرسَل معها.**
+	//
+	// كانت اللوحةُ تشتقّه من المفاتيح: أوّلُ ظهورٍ للمجموعة هو موضعُها.
+	// **فقسمٌ بلا مفاتيحَ لا يظهر** — ولا يُبنى قسمٌ يُملأ على مراحل.
+	//
+	// **ولا يُكتب في الواجهة**: ترتيبان يصفان الشيءَ نفسَه يفترقان — وقد
+	// طاردنا هذه العائلةَ اليومَ في التوصيل والمخالفات وأقسام السوق.
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"settings": out,
+		"groups":   settings.Groups,
+	})
 }
 
 func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {

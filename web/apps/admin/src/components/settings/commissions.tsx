@@ -38,7 +38,7 @@ export default function CommissionsPanel() {
 
   const load = useCallback(async () => {
     try {
-      const all = await api<Setting[]>("/api/v1/admin/settings");
+      const all = (await api<{ settings: Setting[] }>("/api/v1/admin/settings")).settings;
       setRepPct(asPercent(all.find((s) => s.key === REP_KEY)?.value));
       setMerchantPct(asPercent(all.find((s) => s.key === MERCHANT_KEY)?.value));
     } catch (err) {
