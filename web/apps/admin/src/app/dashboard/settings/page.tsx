@@ -246,8 +246,17 @@ function SettingRow({
       }
     })();
   }, [isTreasury]);
+  /**
+   * **هل يُنتظر حفظ؟**
+   *
+   * **والمفاتيحُ التي تُحفظ بالضغطة لا تنتظر شيئاً**: المنطقيُّ والخيارُ
+   * يُرسلان لحظةَ اللمس، **وزرُّ «حفظ» يظهر بجانبهما يقول إنّ شيئاً لم
+   * يُحفظ بعد** — فيُضغط مرّةً ثانية على ما حُفظ.
+   */
   const dirty =
-    s.kind === "bool" ? false : draft !== String(s.value ?? "");
+    s.kind === "bool" || s.kind === "choice"
+      ? false
+      : draft !== String(s.value ?? "");
 
   async function save(raw: unknown) {
     setBusy(true);
@@ -361,22 +370,42 @@ function SettingRow({
               ))}
             </Select>
           ) : s.kind === "choice" ? (
-            <Select
-              id={s.key}
-              value={draft}
-              disabled={!editable || busy}
-              onChange={(e) => {
-                setDraft(e.target.value);
-                void save(e.target.value);
-              }}
-              className="min-w-52"
-            >
-              {(s.options ?? []).map((o) => (
-                <option key={o} value={o}>
-                  {choiceText(o)}
-                </option>
-              ))}
-            </Select>
+            /* **أزرارٌ متجاورةٌ لا قائمةٌ منسدلة — والبدائلُ تُرى كلُّها.**
+
+               المنسدلةُ تعرض المختارَ وتُخفي ما سواه: **من فتح الصفحة لا
+               يعرف أنّ للإعداد بديلاً أصلاً** حتى يضغط. و«الأسرع التقاطاً»
+               وحدَها في مربّعٍ تُقرأ عنواناً لا خياراً.
+
+               **والمتجاورةُ تقول الحالَ والبديلَ معاً**: هذا ما يعمل الآن،
+               وهذا ما يصير إن ضغطت — وهو معنى الزرّ الذكيّ.
+
+               (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «خيارُ الطلبات تلقائي أو الأسرع
+               أيضاً لازم يكون زرّاً ذكيّاً».) */
+            <div className="flex flex-wrap gap-1 rounded-control border border-line bg-page p-1">
+              {(s.options ?? []).map((o) => {
+                const on = draft === o;
+                return (
+                  <button
+                    key={o}
+                    type="button"
+                    disabled={!editable || busy}
+                    aria-pressed={on}
+                    onClick={() => {
+                      if (on) return;
+                      setDraft(o);
+                      void save(o);
+                    }}
+                    className={`rounded-control px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
+                      on
+                        ? "bg-primary font-bold text-white shadow-sm"
+                        : "text-ink-muted hover:bg-surface hover:text-ink"
+                    }`}
+                  >
+                    {choiceText(o)}
+                  </button>
+                );
+              })}
+            </div>
           ) : (
             <>
               <Input
@@ -436,7 +465,12 @@ function SettingRow({
             : S.neverChanged}
         </p>
 
-        {s.sensitive && dirty && (
+        {/* **وما يُحفظ باللمس يقول ذلك قبل أن يُلمس.**
+
+            التنبيهُ كان يظهر حين يُنتظر حفظ. **والزرُّ الذكيُّ لا ينتظر** —
+            يُضغط فيسري، **فلا فرصةَ لتنبيهٍ يظهر بعده.** فيُقال دائماً في
+            المفاتيح التي تمسّ المال وتُحفظ باللمس. */}
+        {s.sensitive && (dirty || s.kind === "bool" || s.kind === "choice") && (
           <p className="mt-2 rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">
             {S.sensitiveHint}
           </p>
