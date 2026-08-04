@@ -11,6 +11,11 @@ export {
   Map as IconZones,
   TicketPercent as IconPromos,
   MessageCircle as IconWhatsApp,
+  // **تبديلُ المتجر — سهمان متبادلان.**
+  //
+  // **والصورةُ تسبق اللفظ**: من يرى سهمين متبادلين يعرف أنّ شيئاً يحلّ محلَّ
+  // شيء **قبل أن يقرأ الكلمة** — وسهمٌ واحدٌ يُقرأ «إرسالاً» لا «تبديلاً».
+  Repeat as IconSwap,
   Settings as IconSettings,
   // الحقول والبيانات
   User as IconUser,

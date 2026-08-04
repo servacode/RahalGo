@@ -36,6 +36,8 @@ import {
   IconLocation,
   IconStar,
   IconBalance,
+  IconWhatsApp,
+  IconSwap,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -1771,9 +1773,16 @@ function OrderActions({
           disabled={busy !== ""}
           onClick={askThenForward}
         >
-          {o.sent_to_merchant_at
-            ? m.admin.ordersPage.sentWhatsApp
-            : m.admin.ordersPage.sendWhatsApp}
+          {/* **والأيقونةُ تقول القناة قبل الكلمة.**
+
+              «تحويلٌ إلى المتجر» لا تقول كيف — **ومن ضغطها أوّلَ مرّةٍ فوجئ
+              بنافذة واتساب تُفتح.** والرمزُ يقولها في نظرة. */}
+          <span className="flex items-center gap-1.5">
+            <IconWhatsApp size={15} />
+            {o.sent_to_merchant_at
+              ? m.admin.ordersPage.sentWhatsApp
+              : m.admin.ordersPage.sendWhatsApp}
+          </span>
         </Button>
       )}
 
@@ -1869,7 +1878,12 @@ function OrderActions({
             }
           }}
         >
-          {m.admin.ordersPage.transfer}
+          {/* **وسهمان متبادلان يقولان «تبديل» قبل الكلمة** — وسهمٌ واحدٌ
+              يُقرأ «إرسالاً» لا «استبدالاً». */}
+          <span className="flex items-center gap-1.5">
+            <IconSwap size={15} />
+            {m.admin.ordersPage.transfer}
+          </span>
         </Button>
       )}
 
