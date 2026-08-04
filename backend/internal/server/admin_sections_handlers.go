@@ -233,9 +233,9 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		Commission int64 `json:"commission"`
 		// MerchantNet **ما يقبضه المتجر فعلاً** — سعرُ الشراء ناقصَ العمولة.
 		MerchantNet int64 `json:"merchant_net"`
-		// MarginPct هامشُ الصنف النافذ — **بعد الوراثة**: تجاوزُ الصنف، فتجاوزُ
+		// MarginValue هامشُ الصنف النافذ بالليرة — **بعد الوراثة**: تجاوزُ الصنف، فتجاوزُ
 		// قسمه، فالعام. **ورقمُ الإعدادات وحدَه يكذب على من خُصّ بغيره.**
-		MarginPct int64 `json:"margin_percent"`
+		MarginValue int64 `json:"margin_value"`
 		// Margin قيمةُ الهامش بالليرة — **يشمل أثرَ التقريب**، فهو الفرقُ
 		// المحسوب لا حاصلُ ضربٍ يُعاد. **ورقمٌ يُحسب مرّتين يفترق.**
 		Margin int64 `json:"margin"`
@@ -269,20 +269,17 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		x.Commission = comm.Of(x.MerchantPrice)
 		x.MerchantNet = x.MerchantPrice - x.Commission
 
-		x.MarginPct = rule.Value
+		x.MarginValue = rule.Value
 		switch {
 		case x.MarginOverride != nil:
-			x.MarginPct = *x.MarginOverride
+			x.MarginValue = *x.MarginOverride
 		case sectionMargin != nil:
-			x.MarginPct = *sectionMargin
+			x.MarginValue = *sectionMargin
 		}
 		x.SalePrice = rule.SalePrice(x.MerchantPrice, x.MarginOverride, sectionMargin)
 		x.Margin = x.SalePrice - x.MerchantPrice
 		out = append(out, x)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"items": out, "count": len(out),
-		// MarginMode **«نسبة» أم «ثابت»** — والشاشةُ لا تكتب «٪» على رقمٍ بالليرة.
-		"margin_mode": rule.Mode,
-	})
+	// **والهامشُ ثابتٌ دائماً** — لا نمطَ يُرسَل. (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
+	httpx.JSON(w, http.StatusOK, map[string]any{"items": out, "count": len(out)})
 }

@@ -73,8 +73,7 @@ func TestCommissions_LiveOnEveryRead(t *testing.T) {
 	ctx := context.Background()
 	st := fakeStore{
 		"merchants.commission_percent": int64(10),
-		"sales.commission_mode":        "percent",
-		"sales.commission_value":       int64(10),
+		"sales.commission_percent":     int64(10),
 	}
 
 	if got := pricing.MerchantCommission(ctx, st, nil).Of(26_000); got != 2_600 {
@@ -88,7 +87,7 @@ func TestCommissions_LiveOnEveryRead(t *testing.T) {
 	}
 
 	// **وحصّةُ المندوب من عمولتنا لا من البيع.**
-	st["sales.commission_value"] = int64(25)
+	st["sales.commission_percent"] = int64(25)
 	if got := pricing.RepCommission(ctx, st).Of(4_000); got != 1_000 {
 		t.Fatalf("حصّةُ المندوب %d والمنتظَر ١٠٠٠", got)
 	}

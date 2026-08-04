@@ -90,7 +90,8 @@ interface SectionItem {
   commission_percent: number;
   commission: number;
   merchant_net: number;
-  margin_percent: number;
+  /** هامشُ الصنف النافذ بالليرة — **بعد الوراثة**. */
+  margin_value: number;
   margin: number;
   sale_price: number;
   margin_override: number | null;
@@ -118,8 +119,6 @@ export default function SectionPage() {
   const [state, setState] = useState("");
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<SectionItem | null>(null);
-  /** **نمطُ الهامش** — «نسبة» أم «ثابت»، فلا تُكتب «٪» على رقمٍ بالليرة. */
-  const [marginMode, setMarginMode] = useState("percent");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -128,11 +127,8 @@ export default function SectionPage() {
       // **ونقطةٌ ثانيةٌ لصفٍّ واحدٍ سطحٌ يُصان بلا حاجة.**
       const list = await api<{ sections: Section[] }>("/api/v1/admin/sections");
       setSec((list.sections ?? []).find((x) => x.id === id) ?? null);
-      const res = await api<{ items: SectionItem[]; margin_mode: string }>(
-        `/api/v1/admin/sections/${id}/items`,
-      );
+      const res = await api<{ items: SectionItem[] }>(`/api/v1/admin/sections/${id}/items`);
       setRows(res.items ?? []);
-      setMarginMode(res.margin_mode ?? "percent");
       setError("");
     } catch {
       setError(m.errors.internal);
@@ -302,11 +298,7 @@ export default function SectionPage() {
                     />
                     <Row label={S.afterCommission} value={fmtNum(it.merchant_net)} strong />
                     <Row
-                      label={
-                        marginMode === "fixed"
-                          ? S.marginFixed
-                          : S.margin.replace("{n}", fmtNum(it.margin_percent))
-                      }
+                      label={S.marginFixed}
                       value={"+" + fmtNum(it.margin)}
                       tone="muted"
                     />
@@ -347,7 +339,6 @@ export default function SectionPage() {
       {editing && (
         <EditItemModal
           item={editing}
-          marginMode={marginMode}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -550,12 +541,10 @@ function AddItemModal({
  */
 function EditItemModal({
   item,
-  marginMode,
   onClose,
   onSaved,
 }: {
   item: SectionItem;
-  marginMode: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -620,7 +609,7 @@ function EditItemModal({
           onChange={(e) => setPrice(e.target.value)}
         />
         <Input
-          label={marginMode === "fixed" ? S.marginFieldFixed : S.marginField}
+          label={S.marginFieldFixed}
           type="number"
           placeholder={S.marginInheritHint}
           value={margin}

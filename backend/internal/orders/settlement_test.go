@@ -63,10 +63,21 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 
 	// العتبة = 1 تعني «بلا عتبة»: هذه الاختبارات تفحص التسوية لا التفعيل، وطلبٌ
 	// واحد يجب أن يُنتج عمولة فيها. واختبارات التفعيل ترفعها صراحةً.
+	//
+	// **ونسبةُ المندوب تُصرَّح ولا تُترك للافتراض.**
+	//
+	// كانت تتّكئ على افتراضِ الفهرس (١٠٪). **ولمّا صار الافتراضُ صفراً — «لم
+	// يُقرَّر بعد» — سقطت أربعةُ اختباراتٍ تفحص التسوية لا الافتراض.**
+	//
+	// **واختبارٌ يتّكئ على افتراضٍ يفحص شيئين**: القاعدةَ التي كُتب لها،
+	// **والرقمَ الذي لم يُكتب له** — فيسقط حين يتغيّر الثاني ويُظنّ أنّ الأوّل
+	// انكسر.
 	if _, err := pool.Exec(ctx, `
-		INSERT INTO app_settings (key, value) VALUES ('sales.activation_orders','1'::jsonb)
+		INSERT INTO app_settings (key, value) VALUES
+			('sales.activation_orders','1'::jsonb),
+			('sales.commission_percent','10'::jsonb)
 		ON CONFLICT (key) DO UPDATE SET value = excluded.value`); err != nil {
-		t.Fatalf("تعذّر ضبط عتبة التفعيل: %v", err)
+		t.Fatalf("تعذّر ضبط مفاتيح التسوية: %v", err)
 	}
 
 	var categoryID string

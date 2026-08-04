@@ -35,12 +35,10 @@ import "context"
 
 // MarginRule ما يلزم لحساب سعر بيعٍ من سعر شراء.
 type MarginRule struct {
-	// Mode "percent" أو "fixed".
-	Mode string
-	// Value الهامشُ العام — يُستعمل حين لا تجاوزَ للصنف ولا لتصنيفه.
+	// Value الهامشُ العام بالليرة — **رقمٌ ثابتٌ يُضاف، لا نسبة.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «هامشُ ربح المنصة حقلُ رقمٍ ثابتٍ فقط».)
 	Value int64
-	// Rounding خانةُ التقريب — و`0` تعني بلا تقريب.
-	Rounding int64
 }
 
 // Store ما يلزم لقراءة المفاتيح — واجهةٌ ضيّقة **كي لا تجرّ الحزمةُ إعداداتٍ
@@ -54,19 +52,15 @@ type Store interface {
 	GetInt(ctx context.Context, key string) int64
 }
 
-// RuleFrom يقرأ مفاتيح التسعير.
+// RuleFrom يقرأ مفتاحَ الهامش.
 //
 // **وبلا مخزنٍ لا هامش**: صفرٌ يعني «سعرُ البيع = سعرُ الشراء» — **وهو الحال
 // قبل أن يقرّر المالك**، ولا يخترع ربحاً لم يُتّفق عليه.
 func RuleFrom(ctx context.Context, st Store) MarginRule {
 	if st == nil {
-		return MarginRule{Mode: "percent"}
+		return MarginRule{}
 	}
-	return MarginRule{
-		Mode:     st.GetString(ctx, "pricing.margin_mode"),
-		Value:    st.GetInt(ctx, "pricing.margin_value"),
-		Rounding: st.GetInt(ctx, "pricing.rounding"),
-	}
+	return MarginRule{Value: st.GetInt(ctx, "pricing.margin_fixed")}
 }
 
 // SalePrice سعرُ البيع من سعر الشراء والتجاوزات.
@@ -81,32 +75,13 @@ func (r MarginRule) SalePrice(merchantPrice int64, itemOverride, categoryOverrid
 		margin = *categoryOverride
 	}
 
-	var sale int64
-	if r.Mode == "fixed" {
-		sale = merchantPrice + margin
-	} else {
-		sale = merchantPrice + merchantPrice*margin/100
-	}
+	sale := merchantPrice + margin
 	// **ولا يُباع بأقلّ من ثمنه.** هامشٌ سالبٌ بالخطأ يجعل المنصةَ تدفع من
 	// جيبها عن كلّ بيعة — **وخسارةٌ تتكرّر بلا حدث تُكتشف في آخر الشهر.**
 	if sale < merchantPrice {
-		sale = merchantPrice
+		return merchantPrice
 	}
-	return roundTo(sale, r.Rounding)
-}
-
-// roundTo يقرّب إلى أقرب مضاعفٍ لأعلى.
-//
-// **ولأعلى لا لأقرب**: التقريبُ لأقرب يبتلع من الهامش نصفَ الخانة في نصف
-// الأصناف — **وهامشٌ قرّره المالكُ لا ينبغي أن ينقص لأن الرقمَ لم يستوِ.**
-func roundTo(n, step int64) int64 {
-	if step <= 1 || n <= 0 {
-		return n
-	}
-	if r := n % step; r != 0 {
-		n += step - r
-	}
-	return n
+	return sale
 }
 
 // ── نسبةٌ أو مقطوع — والقاعدةُ واحدةٌ لثلاثة أموال ─────────────────────────
@@ -154,25 +129,6 @@ func (a Amount) Of(base int64) int64 {
 	return v
 }
 
-// amountFrom يقرأ نمطاً وقيمةً من الإعدادات — **عند كلّ استعمالٍ لا مرّةً.**
-//
-// **وهو ما يجعل التغييرَ يسري فوراً**: لا لقطةَ في عمودٍ ولا قيمةَ تُحمل مع
-// الخدمة عند الإقلاع. **ومفتاحٌ يُقرأ مرّةً عند البدء يجعل المالكَ يغيّر
-// الرقمَ ويرى القديمَ يعمل** — فيغيّره ثانيةً وثالثة.
-func amountFrom(ctx context.Context, st Store, modeKey, valueKey string) Amount {
-	// **وبلا مخزنٍ لا مال.**
-	//
-	// **ورقمٌ يُخترع هنا يخترع ديناً**: خدمةٌ تُبنى بلا مخزن (اختبارٌ أو إقلاعٌ
-	// نصفُ مهيَّأ) تقتطع عمولةً لم يقرّرها أحد، **ولا يظهر ذلك إلّا في كشف حساب.**
-	if st == nil {
-		return Amount{Mode: "percent"}
-	}
-	return Amount{
-		Mode:  st.GetString(ctx, modeKey),
-		Value: st.GetInt(ctx, valueKey),
-	}
-}
-
 // MerchantCommission عمولةُ المنصة من المتجر — **تُقتطع من سعر شرائه.**
 //
 // **والمتجرُ قد يُخصّ بنسبةٍ غير العامّة** (`merchants.commission_percent`
@@ -191,9 +147,15 @@ func MerchantCommission(ctx context.Context, st Store, override *int64) Amount {
 	return Amount{Mode: "percent", Value: st.GetInt(ctx, "merchants.commission_percent")}
 }
 
-// RepCommission عمولةُ المندوب من عمولة المنصة — **حصّةٌ من حصّتنا لا من البيع.**
+// RepCommission نسبةُ المندوب من عمولة المنصة — **حصّةٌ من حصّتنا لا من البيع.**
+//
+// **ونسبةٌ لا نمط**: ما يأخذه جزءٌ ممّا نكسبه، **ومقطوعٌ منها لا معنى له** —
+// قد يتجاوز العمولةَ نفسَها في طلبٍ صغير.
 func RepCommission(ctx context.Context, st Store) Amount {
-	return amountFrom(ctx, st, "sales.commission_mode", "sales.commission_value")
+	if st == nil {
+		return Amount{Mode: "percent"}
+	}
+	return Amount{Mode: "percent", Value: st.GetInt(ctx, "sales.commission_percent")}
 }
 
 // ── أجرةُ التوصيل — رقمٌ مقطوعٌ واحد ──────────────────────────────────────
