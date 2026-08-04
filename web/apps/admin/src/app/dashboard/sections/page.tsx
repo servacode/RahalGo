@@ -159,9 +159,14 @@ export default function SectionsPage() {
               </div>
 
               <div className="flex flex-1 flex-col gap-2 p-3">
-                <div className="min-w-0 flex-1">
+                {/* **الاسمُ يميناً والعددُ يساراً** — لا تحته.
+
+                    سطرٌ تحت الاسم يُقرأ امتداداً له، **والعددُ رقمٌ يُمسح
+                    بالعين في عمودٍ واحدٍ حين يقابل الاسمَ.** (قرارُ المالك
+                    ٢٠٢٦-٠٨-٠٤: «عددُ الأصناف خلّيها محاذاةً لليسار أفضل».) */}
+                <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
                   <p className="truncate font-bold">{sec.name}</p>
-                  <p className="text-xs text-ink-muted">
+                  <p className="shrink-0 text-xs text-ink-muted">
                     {S.items.replace("{n}", fmtNum(sec.items))}
                   </p>
                 </div>
@@ -249,20 +254,18 @@ function SectionModal({
   return (
     <Modal open title={section ? S.editTitle : S.add} onClose={onClose}>
       <div className="space-y-3">
-        <Input label={S.name} value={name} onChange={(e) => setName(e.target.value)} />
-        {/* **الصورةُ في موضع الأيقونة — صورةً لا رمزاً.**
+        {/* **الصورةُ أوّلاً — بترتيب البطاقة نفسِه.**
 
-            كانت شبكةُ أيقوناتٍ تُختار منها، **وصورةٌ تُرفع بجانبها**: حقلان
-            لهويّةٍ واحدة، **ومن اختار أيقونةً ظنّ أنّه أنهى وجهَ القسم.**
-
-            (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «ألغِ الأيقوناتِ والهامش، ولازم تعرض
-            الصورةَ بمكان الأيقونة كصورة لا أيقونة».) */}
+            قرارُ المالك (٢٠٢٦-٠٨-٠٤): «أوّلُ شيءٍ الصورة، بعدها اسمُ القسم،
+            بعدها الترتيب». **ونافذةُ التحرير تُقرأ كما تُقرأ البطاقة** — ومن
+            رأى الصورةَ فوقها في السوق يبحث عنها فوقها هنا. */}
         <ImageUpload
           kind="banner"
           label={S.image}
           initialUrl={section?.image_url}
           onChange={setImageID}
         />
+        <Input label={S.name} value={name} onChange={(e) => setName(e.target.value)} />
         <Input
           label={S.sort}
           type="number"

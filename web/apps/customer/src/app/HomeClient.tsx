@@ -176,9 +176,11 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                     <CategoryIcon name={sec.icon} size={26} />
                   )}
                 </span>
-                <div className="min-w-0 p-3">
+                {/* **الاسمُ يميناً والعددُ يساراً** — كما في لوحة الإدارة.
+                    **وشكلٌ يختلف بين الشاشتين يجعل المراجعةَ تخميناً.** */}
+                <div className="flex min-w-0 items-baseline justify-between gap-2 p-3">
                   <p className="truncate font-bold">{sec.name}</p>
-                  <p className="text-xs text-ink-muted">
+                  <p className="shrink-0 text-xs text-ink-muted">
                     {m.site.sections.count.replace("{n}", fmtNum(sec.count))}
                   </p>
                 </div>

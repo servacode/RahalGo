@@ -93,26 +93,14 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 	//
 	// **ونداءٌ ثانٍ من الصفحة الأولى نداءٌ يُرى تأخيراً**: الرئيسيةُ تُقدَّم من
 	// الخادم، **فما لم يصل معها يظهر بعد ومضةٍ فارغة.**
-	sections := []map[string]any{}
-	srows, err := s.pg.Query(r.Context(), `
-		SELECT ps.id, ps.name, ps.icon,
-		       count(i.id) FILTER (WHERE i.available AND `+orders.OpenNowSQL+`)
-		FROM platform_sections ps
-		LEFT JOIN menu_items i ON i.platform_section_id = ps.id
-		LEFT JOIN merchants m ON m.id = i.merchant_id AND m.status = 'active'
-		WHERE ps.active
-		GROUP BY ps.id, ps.name, ps.icon, ps.sort_order
-		ORDER BY ps.sort_order, ps.name`)
-	if err == nil {
-		for srows.Next() {
-			var id, name, icon string
-			var n int
-			if srows.Scan(&id, &name, &icon, &n) == nil {
-				sections = append(sections,
-					map[string]any{"id": id, "name": name, "icon": icon, "count": n})
-			}
-		}
-		srows.Close()
+	// **ومن مصدرٍ واحدٍ مع نقطة الأقسام** — لا باستعلامٍ ثانٍ يشبهه.
+	//
+	// كان مكتوباً هنا بيده، **فأُضيفت صورةُ القسم في تلك ولم تُضف في هذه**:
+	// نقطةُ الأقسام تُخرجها والرئيسيةُ لا. **والرئيسيةُ هي ما يفتحه الزبون**،
+	// فبقيت الصورُ لا تظهر بعد أن رُفعت وأُصلحت روابطُها.
+	sections, err := s.publicSections(r)
+	if err != nil {
+		sections = []publicSection{}
 	}
 
 	httpx.JSON(w, http.StatusOK, map[string]any{

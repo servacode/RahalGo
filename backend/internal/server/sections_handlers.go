@@ -104,6 +104,44 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 // يُفتح على ثلاثةٍ **يجعل الزبونَ يشكّ في كلّ رقمٍ بعده** — وقد نام تسعةٌ منها
 // مع مصادرها.
 func (s *Server) handlePublicSections(w http.ResponseWriter, r *http.Request) {
+	out, err := s.publicSections(r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"sections": out})
+}
+
+// publicSection قسمٌ كما يراه الزبون.
+type publicSection struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Icon string `json:"icon"`
+	// ImageURL **صورةُ القسم — وهي هويّتُه عند الزبون.**
+	//
+	// **والسوقُ يُتصفَّح بالصور لا بالرموز**: الزبونُ يعرف الشاورما من صورتها
+	// قبل أن يقرأ اسمَها، **ورمزٌ رماديٌّ لعشرة أقسامٍ يجعلها كلَّها شيئاً
+	// واحداً.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
+	//
+	// **والأصلُ لا المصغَّرة**: المصغَّرةُ حدُّها ٤٠٠ بكسل، **وبطاقةٌ تمطّها
+	// تبهت.** والمصغَّرةُ تبقى للمواضع الضيّقة.
+	ImageURL      *string `json:"image_url"`
+	ImageThumbURL *string `json:"image_thumb_url"`
+	Count         int     `json:"count"`
+}
+
+// publicSections **مصدرُ الحقيقة الواحد لأقسام الزبون.**
+//
+// # لماذا دالّةٌ لا استعلامان
+//
+// كان الاستعلامُ مكتوباً مرّتين: هنا وفي `handlePublicHome`. **فأُضيفت الصورةُ
+// في أحدهما وحدَه** — ونقطةُ الأقسام تُخرجها، **والرئيسيةُ لا**. والرئيسيةُ هي
+// ما يفتحه الزبون، **فبقيت الصورُ لا تظهر بعد أن رُفعت وأُصلحت الروابط.**
+// كشفه المالكُ بتكرار الملاحظة: «الصورُ يجب أن تظهر بالموقع كما هي بالقسم».
+//
+// **وهي عائلةُ الخلل نفسُها التي طاردناها اليوم في التوصيل والمخالفات** —
+// وقعتُ فيها بيدي هذه المرّة.
+func (s *Server) publicSections(r *http.Request) ([]publicSection, error) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT ps.id, ps.name, ps.icon, sm.path, sm.thumb_path,
 		       count(i.id) FILTER (WHERE i.available AND `+orders.OpenNowSQL+`)
@@ -115,42 +153,22 @@ func (s *Server) handlePublicSections(w http.ResponseWriter, r *http.Request) {
 		GROUP BY ps.id, ps.name, ps.icon, sm.path, sm.thumb_path, ps.sort_order
 		ORDER BY ps.sort_order, ps.name`)
 	if err != nil {
-		s.respondErr(w, err)
-		return
+		return nil, err
 	}
 	defer rows.Close()
 
-	type section struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-		Icon string `json:"icon"`
-		// ImageURL **صورةُ القسم — وهي هويّتُه عند الزبون.**
-		//
-		// **والسوقُ يُتصفَّح بالصور لا بالرموز**: الزبونُ يعرف الشاورما من
-		// صورتها قبل أن يقرأ اسمَها، **ورمزٌ رماديٌّ لعشرة أقسامٍ يجعلها كلَّها
-		// شيئاً واحداً.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «رح نرفع صورةً معبّرةً عن
-		// القسم، ما بدّي أيقوناتٍ عادية».)
-		//
-		// **والأصلُ لا المصغَّرة**: المصغَّرةُ حدُّها ٤٠٠ بكسل، **وبطاقةُ قسمٍ
-		// بعرض الشاشة تمطّها فتبهت.** (ملاحظته: «الصورةُ صغيرة، لن تظهر صورةُ
-		// القسم بشكلٍ واضح».) والمصغَّرةُ تبقى للمواضع الضيّقة.
-		ImageURL      *string `json:"image_url"`
-		ImageThumbURL *string `json:"image_thumb_url"`
-		Count         int     `json:"count"`
-	}
-	out := []section{}
+	out := []publicSection{}
 	for rows.Next() {
-		var x section
+		var x publicSection
 		if err := rows.Scan(&x.ID, &x.Name, &x.Icon, &x.ImageURL,
 			&x.ImageThumbURL, &x.Count); err != nil {
-			s.respondErr(w, err)
-			return
+			return nil, err
 		}
 		x.ImageURL = media.URLForPtr(x.ImageURL)
 		x.ImageThumbURL = media.URLForPtr(x.ImageThumbURL)
 		out = append(out, x)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"sections": out})
+	return out, rows.Err()
 }
 
 // handlePublicSectionItems أصنافُ قسمٍ — **من كلّ المصادر مختلطةً.**
