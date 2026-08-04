@@ -1573,7 +1573,13 @@
       "itemOut": "نفد",
       "itemStoreOff": "متجرُه مُطفأ",
       "itemLive": "معروض",
-      "addImage": "أضف صورة"
+      "addImage": "أضف صورة",
+      "backToMarket": "عودة إلى السوق",
+      "statAll": "كل الأصناف",
+      "statLive": "معروض الآن",
+      "statHidden": "لا يظهر",
+      "searchItems": "ابحث في أصناف القسم",
+      "allStates": "كل الحالات"
     },
     "claims": {
       "title": "النزاعات",

@@ -23,7 +23,8 @@
  * موضعين يُنسى أحدُهما.**
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   Badge,
@@ -34,7 +35,6 @@ import {
   PageHeader,
   EmptyState,
   LoadingState,
-  CategoryIcon,
   useLiveData,
   IconStore,
   IconStatus,
@@ -61,25 +61,13 @@ interface Section {
   image_media_id: string | null;
 }
 
-/** صنفٌ في قسم — **وحالُه يقول لماذا يظهر أو لا يظهر.** */
-interface SectionItem {
-  id: string;
-  name: string;
-  merchant_price: number;
-  available: boolean;
-  approved: boolean;
-  merchant_name: string;
-  merchant_status: string;
-}
-
 export default function SectionsPage() {
   const { data, reload } = useLiveData<{ sections: Section[] }>(
     () => api("/api/v1/admin/sections"),
     ["catalog"],
   );
   const [editing, setEditing] = useState<Section | null | "new">(null);
-  /** القسمُ المفتوحُ لعرض أصنافه — **كما هي لا كما يراها الزبون.** */
-  const [viewing, setViewing] = useState<Section | null>(null);
+  const router = useRouter();
 
   if (!data) return <LoadingState />;
   const list = data.sections ?? [];
@@ -172,7 +160,12 @@ export default function SectionsPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 [&_button]:flex-1 [&_button]:!px-2 [&_button]:text-xs">
-                  <Button variant="secondary" onClick={() => setViewing(sec)}>
+                  {/* **صفحةٌ لا نافذة.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «عرضُ القسم
+                      يجب أن يفتح صفحةً منفصلة وليس نافذةً منبثقة».) */}
+                  <Button
+                    variant="secondary"
+                    onClick={() => router.push(`/dashboard/sections/${sec.id}`)}
+                  >
                     {S.view}
                   </Button>
                   <Button variant="secondary" onClick={() => setEditing(sec)}>
@@ -202,7 +195,6 @@ export default function SectionsPage() {
           }}
         />
       )}
-      {viewing && <SectionItemsModal section={viewing} onClose={() => setViewing(null)} />}
     </PageContainer>
   );
 }
@@ -286,61 +278,3 @@ function SectionModal({
   );
 }
 
-/**
- * **أصنافُ القسم — كما هي لا كما يراها الزبون.**
- *
- * نقطةُ التصفّح العامّة تُرشِّح: متجرٌ فعّالٌ وقسمٌ فعّالٌ وصنفٌ مُقَرّ. **وهي
- * الصواب للزبون وخطأٌ للإدارة**: من يفتح قسماً ليقرّر إطفاءَه يريد ما فيه
- * كلَّه — **بما لا يظهر ولماذا لا يظهر.**
- *
- * **وقسمٌ يبدو فارغاً وفيه عشرةُ أصنافٍ من متجرٍ مُطفَأ يُحذف بلا علمٍ بما فيه.**
- */
-function SectionItemsModal({
-  section,
-  onClose,
-}: {
-  section: Section;
-  onClose: () => void;
-}) {
-  const [rows, setRows] = useState<SectionItem[] | null>(null);
-
-  useEffect(() => {
-    api<{ items: SectionItem[] }>(`/api/v1/admin/sections/${section.id}/items`)
-      .then((r) => setRows(r.items ?? []))
-      .catch(() => setRows([]));
-  }, [section.id]);
-
-  return (
-    <Modal open onClose={onClose} title={`${S.view}: ${section.name}`}>
-      {!rows ? (
-        <p className="py-6 text-center text-ink-muted">{m.common.loading}</p>
-      ) : rows.length === 0 ? (
-        <EmptyState icon={IconStore} title={S.noItems} />
-      ) : (
-        <ul className="max-h-[26rem] divide-y divide-line overflow-y-auto">
-          {rows.map((it) => (
-            <li key={it.id} className="flex items-center gap-3 py-2 text-sm">
-              <span className="min-w-0 flex-1">
-                <span className="block font-medium">{it.name}</span>
-                <span className="block text-xs text-ink-muted">{it.merchant_name}</span>
-              </span>
-              <span dir="ltr" className="shrink-0 tabular-nums">
-                {fmtNum(it.merchant_price)}
-              </span>
-              {/* **ولماذا لا يظهر يُقال** — لا يُترك للتخمين. */}
-              {!it.approved ? (
-                <Badge variant="warning">{S.itemPending}</Badge>
-              ) : !it.available ? (
-                <Badge variant="warning">{S.itemOut}</Badge>
-              ) : it.merchant_status !== "active" ? (
-                <Badge variant="danger">{S.itemStoreOff}</Badge>
-              ) : (
-                <Badge variant="success">{S.itemLive}</Badge>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Modal>
-  );
-}
