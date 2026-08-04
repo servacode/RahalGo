@@ -18,6 +18,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { EmptyState, IconOrder, IconDriver, useLiveRefresh } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
@@ -32,6 +33,7 @@ function errText(e: unknown): string {
 }
 
 export default function IncomingPage() {
+  const router = useRouter();
   const [rows, setRows] = useState<DriverOrder[]>([]);
   const [onShift, setOnShift] = useState<boolean | null>(null);
   const [busy, setBusy] = useState("");
@@ -93,9 +95,22 @@ export default function IncomingPage() {
     setError("");
     try {
       await api(`/api/v1/driver/orders/${o.id}/accept`, { method: "POST" });
-      // **ومجرّدُ الأخذ ينتقل إلى «مهامّي»** — فيختفي من هنا في التحميل التالي.
-      load();
+      /**
+       * **ومن أخذ طلباً يُنقَل إليه — لا يُترك أمام قائمةٍ نقص منها.**
+       *
+       * كان يبقى في «طلبات قادمة» ويختفي الطلبُ من تحته. **فيُقرأ الأخذُ
+       * فشلاً**: ضغط فذهب ما ضغط عليه ولم يظهر شيء. ثمّ يبحث عنه في
+       * التبويبات، **وثوانٍ يقضيها في البحث ثوانٍ ينتظرها الزبون.**
+       *
+       * (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «بعد الضغط على زرّ خذ الطلب يجب أن ينتقل
+       * بشكلٍ تلقائيّ إلى مهامّي ليكمل مهامّ الطلب».)
+       *
+       * **والانتقالُ قبل التحميل**: لا معنى لتحديث شاشةٍ نغادرها.
+       */
+      router.push("/portal");
     } catch (e) {
+      // **وفشلُ الأخذ يبقيه هنا** — «سبقك غيرُك» خبرٌ يُقرأ في مكانه،
+      // **ونقلٌ إلى مهامَّ لم تزد شيئاً يجعل الخبرَ يضيع في الطريق.**
       setError(errText(e));
       load();
     } finally {

@@ -170,3 +170,52 @@ func TestAdminIsAboveAuthorityNotAboveKnowledge(t *testing.T) {
 		t.Error("العملياتُ أعلنت مرحلةَ سائقٍ بتوقيعٍ ليس لها")
 	}
 }
+
+// TestPlatformWatchesAfterPickup **بعد الاستلام مراقبةٌ لا تحكّم.**
+//
+// # القاعدة
+//
+// **بمجرّد أن تصير البضاعةُ بيد السائق تفقد المنصةُ كلَّ زرّ.** (قرارُ المالك
+// ٢٠٢٦-٠٨-٠٤.)
+//
+// # ولماذا لا يفتحه التوقيع
+//
+// التوقيعُ يُصدّق السجلَّ («أعلنتها المنصة») **ولا يُصدّق الواقع**: من يقول
+// «تمّ التسليم» وهو في المكتب يقول ما لا يعلمه. **والمالُ يتحرّك على قوله** —
+// يُقيَّد للمتجر ولنا وللمندوب، ويُحمَّل السائقُ نقداً لم يقبضه.
+//
+// **ووقع أمام المالك** (٢٠٢٦-٠٨-٠٤): زرُّ «تدخّل يدويّ: تمّ التسليم» معروضٌ
+// على طلبٍ حالتُه «السائق وصل».
+func TestPlatformWatchesAfterPickup(t *testing.T) {
+	admin := []string{"admin", "ops"}
+	signed := append(append([]string{}, admin...), RoleManualOverride)
+
+	// ── بعد الاستلام: لا بالتوقيع ولا بدونه ─────────────────────────────
+	after := []struct{ from, to string }{
+		{StPickedUp, StOnTheWay},
+		{StOnTheWay, StAtDropoff},
+		{StAtDropoff, StDelivered},
+		{StAtDropoff, StFailed},
+	}
+	for _, c := range after {
+		if canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, signed, true)) {
+			t.Errorf("المنصةُ تحكّمت في %q←%q بعد أن صارت البضاعةُ بيد السائق", c.from, c.to)
+		}
+		if canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, admin, true)) {
+			t.Errorf("المنصةُ تحكّمت في %q←%q بلا توقيعٍ أصلاً", c.from, c.to)
+		}
+	}
+
+	// ── وقبل الاستلام يبقى التوقيعُ يعمل ────────────────────────────────
+	//
+	// **وإلّا صار هاتفٌ نفدت بطاريتُه يترك الطلبَ عالقاً بلا مخرج** — والبضاعةُ
+	// لم تخرج من المتجر بعد، **فلا مالَ تحرّك ولا شيءَ يُصحَّح.**
+	for _, c := range []struct{ from, to string }{
+		{StAssigned, StAtPickup},
+		{StAtPickup, StPickedUp},
+	} {
+		if !canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, signed, true)) {
+			t.Errorf("التوقيعُ لم يفتح %q←%q — وهي قبل خروج البضاعة", c.from, c.to)
+		}
+	}
+}

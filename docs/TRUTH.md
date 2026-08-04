@@ -128,18 +128,18 @@
 | السائق عند المتجر `at_pickup` | تعذّر التسليم `failed` | السائق · المالك **بتوقيع يدويّ** |
 | السائق عند المتجر `at_pickup` | في الطابور `dispatching` | العمليات · المالك · السائق |
 | السائق عند المتجر `at_pickup` | ملغى `cancelled` | المالك |
-| استلم السائق `picked_up` | في الطريق `on_the_way` | السائق · المالك **بتوقيع يدويّ** |
-| استلم السائق `picked_up` | في الطابور `dispatching` | العمليات · المالك |
-| استلم السائق `picked_up` | تعذّر التسليم `failed` | **لا أحد** · المالك **بتوقيع يدويّ** |
-| استلم السائق `picked_up` | ملغى `cancelled` | المالك |
-| في الطريق `on_the_way` | عند الزبون `at_dropoff` | السائق · المالك **بتوقيع يدويّ** |
-| في الطريق `on_the_way` | في الطابور `dispatching` | العمليات · المالك |
-| في الطريق `on_the_way` | تعذّر التسليم `failed` | **لا أحد** · المالك **بتوقيع يدويّ** |
-| في الطريق `on_the_way` | ملغى `cancelled` | المالك |
-| عند الزبون `at_dropoff` | سُلّم `delivered` | السائق · المالك **بتوقيع يدويّ** |
-| عند الزبون `at_dropoff` | تعذّر التسليم `failed` | السائق · المالك **بتوقيع يدويّ** |
-| عند الزبون `at_dropoff` | في الطابور `dispatching` | العمليات · المالك |
-| عند الزبون `at_dropoff` | ملغى `cancelled` | المالك |
+| استلم السائق `picked_up` | في الطريق `on_the_way` | السائق |
+| استلم السائق `picked_up` | في الطابور `dispatching` | **لا أحد** |
+| استلم السائق `picked_up` | تعذّر التسليم `failed` | **لا أحد** |
+| استلم السائق `picked_up` | ملغى `cancelled` | **لا أحد** |
+| في الطريق `on_the_way` | عند الزبون `at_dropoff` | السائق |
+| في الطريق `on_the_way` | في الطابور `dispatching` | **لا أحد** |
+| في الطريق `on_the_way` | تعذّر التسليم `failed` | **لا أحد** |
+| في الطريق `on_the_way` | ملغى `cancelled` | **لا أحد** |
+| عند الزبون `at_dropoff` | سُلّم `delivered` | السائق |
+| عند الزبون `at_dropoff` | تعذّر التسليم `failed` | السائق |
+| عند الزبون `at_dropoff` | في الطابور `dispatching` | **لا أحد** |
+| عند الزبون `at_dropoff` | ملغى `cancelled` | **لا أحد** |
 | سُلّم `delivered` | مُسترَدّ `refunded` | المالك |
 <!-- /gen:platform-managed -->
 
@@ -414,6 +414,7 @@
 | `drivers.cash_limit` | السائقون | money | `500000` |
 | `drivers.max_active_orders` | السائقون | int | `2` |
 | `drivers.assignment_mode` | السائقون | choice | `queue` |
+| `drivers.alert_seconds` | السائقون | int | `20` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
 | `merchants.menu_requires_approval` | المتاجر | bool | `false` |
 | `merchants.cancel_ban_mode` | المتاجر | choice | `manual` |
