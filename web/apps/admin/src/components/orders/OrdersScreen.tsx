@@ -36,6 +36,7 @@ import {
   IconLocation,
   IconStar,
   IconBalance,
+  IconPhone,
   IconWhatsApp,
   IconSwap,
 } from "@rahalgo/ui";
@@ -732,11 +733,16 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       //
       // اسمٌ ورقمٌ متجاوران يطولان فيكسران الخانةَ ويرفعان الصفّ، **ويُقرأ
       // الرقمُ امتداداً للاسم.** ومن يبحث عن رقمٍ يمسح عموداً واحداً بعينه.
+      // **وأيقونةُ هاتفٍ على الرقم** — فيُعرف أنّه رقمُه لا رقمَ طلبٍ ولا
+      // تاريخاً. **ورقمٌ مجرّدٌ تحت اسمٍ يُقرأ أيَّ رقم**: من نظر إلى البطاقة
+      // ورأى `+963935667788` تحت `#1001` وتاريخاً **جمع ثلاثةَ أرقامٍ بلا
+      // معنًى يفرّق بينها.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
       cell: (o) => (
         <span className="block">
           <span className="block">{o.customer_name || "—"}</span>
-          <span dir="ltr" className="block text-xs text-ink-muted">
-            {o.customer_phone}
+          <span className="flex items-center gap-1 text-xs text-ink-muted">
+            <IconPhone size={12} className="shrink-0" />
+            <span dir="ltr">{o.customer_phone}</span>
           </span>
         </span>
       ),
