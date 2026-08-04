@@ -37,6 +37,8 @@ const NAV: ChromeNavItem[] = [
   { href: "/portal/cash", label: m.driver.cashbox.title, icon: IconBalance },
   // **تقييماتُه وشكاواه** — كانتا لا بابَ لهما في لوحته: الرقمُ في الشريط
   // وحدَه، **ومن اشتُكي عليه ولا يعلم لا يُصلح شيئاً.**
+  // **هدفُه ومكافآتُه** — وحافزٌ لا يُرى لا يحفّز.
+  { href: "/portal/incentives", label: m.driver.nav.incentives, icon: IconStar },
   { href: "/portal/reviews", label: m.terms.ratings, icon: IconStar },
   { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
   { href: "/portal/account", label: m.driver.nav.account, icon: IconUser },

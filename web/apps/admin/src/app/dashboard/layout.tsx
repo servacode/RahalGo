@@ -99,6 +99,9 @@ const ALL_NAV: NavItem[] = [
   // **وبابٌ واحدٌ لكلّ من في المنصة**: الزبائنُ والمتاجرُ والسائقون والمندوبون
   // صاروا تبويباتٍ فيه — **بجداولهم كما هي، لا بجدولٍ واحدٍ يُفقد أعمدتَهم.**
   { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers, roles: ["admin"] },
+  // **الأهدافُ والمكافآت** — الشاشةُ تقول من بلغ، **والمكافأةُ بيدٍ لا بمعادلة.**
+  { href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconStar,
+    roles: ["admin", "finance"] },
   { href: "/dashboard/promos", label: m.terms.promos, icon: IconPromos, roles: ["admin"] },
   // الإعدادات تبقى للجميع **للقراءة**: العمليات تحتاج أن تعرف المهل التي
   // تُحاسَب عليها، وإخفاؤها يجعلها تعمل بقواعد لا تراها. والتعديل للأدمن وحده

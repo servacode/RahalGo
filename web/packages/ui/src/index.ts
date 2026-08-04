@@ -94,3 +94,6 @@ export { useChime, useRepeatingChime } from "./chime";
 
 /** نبضةُ موضعِ السائق ومسافةٌ مقروءة — **والدورُ عدلٌ في الوقت أعمى في المكان.** */
 export { useLocationBeacon, fmtDistance } from "./useLocationBeacon";
+
+/** هدفي ومكافآتي — **وحافزٌ لا يُرى لا يحفّز.** */
+export { MyIncentives } from "./Incentives";

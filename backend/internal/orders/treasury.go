@@ -47,6 +47,12 @@ import (
 //
 // **وفراغُه لا يُعطّل تسليماً**: يُسلَّم الطلبُ ويبقى الدفترُ ناقصَ طرفٍ حتى
 // تُوسَم محفظة. **وطلبٌ يُرفض لأنّ صفةً لم تُمنح خسارةٌ لا تُحتمَل.**
+// TreasuryID **مكشوفةٌ لمن يدفع من خارج الطلبات** — الحوافزُ مثلاً.
+//
+// **ومصدرٌ واحدٌ لمن هي الخزينة**: قراءةٌ ثانيةٌ في حزمةٍ أخرى تفترق يوماً،
+// **فتدفع مكافأةً من حسابٍ وتُقيّد ربحاً في آخر.**
+func (s *Service) TreasuryID(ctx context.Context) string { return s.treasuryID(ctx) }
+
 func (s *Service) treasuryID(ctx context.Context) string {
 	var id string
 	if err := s.db.QueryRow(ctx,

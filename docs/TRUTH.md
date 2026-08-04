@@ -398,11 +398,13 @@
 | `drivers.cash_limit` | السائقون | money | `500000` |
 | `drivers.max_active_orders` | السائقون | int | `2` |
 | `orders.driver_timeout_min` | السائقون | int | `10` |
+| `drivers.monthly_target` | السائقون | int | `0` |
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |
 | `merchants.commission_percent` | المتاجر | int | `0` |
 | `orders.accept_timeout_min` | المتاجر | int | `5` |
 | `merchants.return_support_percent` | المتاجر | int | `0` |
 | `sales.commission_percent` | المندوبون | int | `0` |
+| `sales.monthly_target` | المندوبون | int | `0` |
 <!-- /gen:settings -->
 
 ---

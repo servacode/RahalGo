@@ -20,6 +20,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/geo"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
+	"github.com/servacode/rahalgo/backend/internal/incentives"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/notify"
@@ -31,23 +32,24 @@ import (
 )
 
 type Server struct {
-	cfg       *config.Config
-	logger    *slog.Logger
-	pg        *pgxpool.Pool
-	rdb       *redis.Client
-	tokens    *auth.TokenIssuer
-	identity  *identity.Service
-	catalog   *catalog.Service
-	settings  *settings.Store
-	wallet    *wallet.Service
-	orders    *orders.Service
-	cashbox   *cashbox.Service
-	support   *support.Service
-	media     *media.Service
-	hub       *realtime.Hub
-	geo       *geo.Service
-	notify    *notifications.Service
-	otpStatus func() map[string]any
+	cfg        *config.Config
+	logger     *slog.Logger
+	pg         *pgxpool.Pool
+	rdb        *redis.Client
+	tokens     *auth.TokenIssuer
+	identity   *identity.Service
+	catalog    *catalog.Service
+	settings   *settings.Store
+	wallet     *wallet.Service
+	orders     *orders.Service
+	cashbox    *cashbox.Service
+	support    *support.Service
+	incentives *incentives.Service
+	media      *media.Service
+	hub        *realtime.Hub
+	geo        *geo.Service
+	notify     *notifications.Service
+	otpStatus  func() map[string]any
 	// textSender مُرسِلُ الرسائل إلى المتاجر — رسالةٌ نصّية اليوم، وواتسابٌ
 	// رسميّ لاحقاً من الواجهة نفسها.
 	textSender *notify.SMSSender
@@ -69,10 +71,14 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	ordersSvc.SetSettings(settingsStore)
 	// **والقائمةُ تحسب سعرَ البيع من الهامش** — انظر `pricing`.
 	catalogSvc.SetSettings(settingsStore)
-	return &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
+	srv := &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
 		media: mediaSvc, hub: hub, otpStatus: otpStatus, notify: notify, geo: geoSvc}
+	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
+	// **ولا تُقرأ مرّتين بطريقتين.**
+	srv.incentives = incentives.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID)
+	return srv
 }
 
 func (s *Server) Router() http.Handler {
@@ -216,6 +222,8 @@ func (s *Server) Router() http.Handler {
 			// يسجّل عميلاً باسمه من الميدان — يبقى معلّقاً حتى موافقة الإدارة
 			r.Post("/leads", s.handleRepCreateLead)
 			r.Get("/categories", s.handleListCategories) // تصنيفات المتاجر للنموذج
+			// **وهدفُ المندوب كهدف السائق** — المقياسُ يختلف والمعنى واحد.
+			r.Get("/incentives", s.handleMyIncentives)
 		})
 
 		// بوابة السائق — كان الطرف الوحيد بلا باب رغم أن الخارطة تخوّله سبعة انتقالات
@@ -250,6 +258,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/transition", s.handleDriverTransition)
 			r.Post("/orders/{id}/release", s.handleDriverRelease)
 			r.Get("/cash", s.handleDriverCash)
+			// **هدفُه وما ناله** — ومكافأةٌ لا يراها صاحبُها لم تُصرف في نظره.
+			r.Get("/incentives", s.handleMyIncentives)
 		})
 
 		// بوابة المتجر — صاحب المتجر حصراً، وكل نقطة تتحقق من الملكية
@@ -364,6 +374,11 @@ func (s *Server) Router() http.Handler {
 			// الفصلُ نفسه المطبَّق على سجلّ الأحداث وحركات المحفظة.
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/orders/{id}/compensate-driver", s.handleCompensateDriver)
+			// **المكافآتُ والعقوبات** — مالٌ يخرج بتقدير إنسان،
+			// **وموظّفُ العمليات ليس طرفاً في المال**: الحارسُ نفسُه الذي
+			// على تعويض السائق.
+			r.With(s.RequireRoles("admin", "finance")).
+				Post("/users/{id}/incentive", s.handleIncentiveGrant)
 			// ومصيرُ البضاعة تحسمه العملياتُ: **هي من يستلمها في المكتب**
 			// وتعرف أاستردّها المتجرُ أم رفض. والقيدُ المالي يتبع قرارَها.
 			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods) // مهجورة — 410
@@ -371,6 +386,9 @@ func (s *Server) Router() http.Handler {
 
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			r.Get("/customers", s.handleListCustomers)
+			// **الأهدافُ تُقرأ ولا تُدفع** — تقول من بلغ، ولا تُعطي.
+			r.Get("/incentives/{role}", s.handleIncentiveStandings)
+			r.Get("/users/{id}/incentives", s.handleIncentiveList)
 			r.Get("/salesreps", s.handleListSalesReps)
 			r.Get("/leads", s.handleAdminLeads)
 			r.Post("/leads/{id}/status", s.handleAdminLeadStatus)

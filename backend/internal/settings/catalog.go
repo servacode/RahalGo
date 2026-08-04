@@ -343,6 +343,21 @@ var Catalog = []Def{
 	{Key: "orders.driver_timeout_min", Group: GroupDrivers, Kind: KindInt,
 		Min: 1, Max: 120, Unit: "minute", Default: 10},
 
+	// **هدفُ السائق الشهريّ — عددُ طلباتٍ مُسلَّمة.**
+	//
+	// **وبالعدد لا بالقيمة**: قيمةُ الطلب ليست بيده — **فمن وصّل عشرةً صغيرةً
+	// يخسر أمام من وصّل واحدةً كبيرة**، وهو لم يختر أيَّهما يأتيه. والعددُ
+	// ما يملك تغييرَه بعمله، **وهدفٌ لا يملكه لا يحفّز.**
+	//
+	// **وشهريٌّ يبدأ مع الشهر** — إيقاعُ الرواتب والتقارير، فلا يُسأل «من متى
+	// يُحسب؟».
+	//
+	// **وصفرُه لا هدف** — ولا شارةَ ولا شريطَ تقدّمٍ في شاشته.
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
+	{Key: "drivers.monthly_target", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 5000, Unit: "order", Default: 0},
+
 	{Key: "drivers.failed_compensation_percent", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 100, Unit: "percent", Default: 0, Sensitive: true},
 
@@ -417,6 +432,16 @@ var Catalog = []Def{
 	// **ودورُه جلبُ العميل**: يُقيَّد له عن كلّ طلبٍ يُسلَّم من متجرٍ جلبه هو.
 	{Key: "sales.commission_percent", Group: GroupSales, Kind: KindInt,
 		Min: 0, Max: 100, Unit: "percent", Default: 0, Sensitive: true},
+
+	// **هدفُ المندوب الشهريّ — طلباتٌ سُلّمت من متاجرَ جلبها هو.**
+	//
+	// **وهو المقياسُ نفسُه بمعناه عنده**: السائقُ يُقاس بما وصّل، والمندوبُ
+	// بما أنتجه من جلب. **ومتجرٌ جُلب ولم يبع لم يُنتج شيئاً** — والعدلُ أن
+	// يُقاس بما وقع لا بما وُقّع.
+	//
+	// **وصفرُه لا هدف.**
+	{Key: "sales.monthly_target", Group: GroupSales, Kind: KindInt,
+		Min: 0, Max: 5000, Unit: "order", Default: 0},
 }
 
 // byKey فهرسٌ يُبنى مرّة — البحث الخطّي في كل كتابة إعداد ترفٌ لا داعي له.

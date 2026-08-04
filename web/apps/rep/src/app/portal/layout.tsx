@@ -13,6 +13,7 @@ import {
   IconLink,
   IconStore,
   IconWallet,
+  IconStar,
   IconOrder,
   IconUser,
 } from "@rahalgo/ui";
@@ -27,6 +28,8 @@ const NAV: ChromeNavItem[] = [
   { href: "/portal/link", label: m.rep.nav.link, icon: IconLink },
   // لا قسم مستقل لطلبات الانضمام: العميل المعلّق يظهر في "عملائي" بحالته
   { href: "/portal/merchants", label: m.terms.clients, icon: IconStore },
+  // **وهدفُه كهدف السائق** — المقياسُ يختلف والمعنى واحد.
+  { href: "/portal/incentives", label: m.rep.nav.incentives, icon: IconStar },
   { href: "/portal/wallet", label: m.terms.wallet, icon: IconWallet },
   { href: "/portal/account", label: m.terms.account, icon: IconUser },
 ];
