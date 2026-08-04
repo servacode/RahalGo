@@ -90,14 +90,6 @@ func TruthTable(selfManage bool) string {
 				// يُقرأ «لم يُفكَّر فيه».**
 				who = "**لا أحد**"
 			}
-			// **والتوقيعُ يُذكر حيث يلزم** — فلا يُظنّ الفعلُ ممنوعاً مطلقاً.
-			if driverOnly[tr.To] && !selfManage {
-				signed := rolesUnderMode(selfManage, from, tr.To,
-					[]string{"admin", RoleManualOverride}, true)
-				if canTransition(from, tr.To, signed) {
-					who += " · المالك **بتوقيع يدويّ**"
-				}
-			}
 			b.WriteString(fmt.Sprintf("| %s | %s | %s |\n",
 				label(from), label(tr.To), who))
 		}

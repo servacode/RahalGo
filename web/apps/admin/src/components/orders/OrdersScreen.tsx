@@ -385,40 +385,24 @@ const OPS_NEXT: Record<string, string[]> = {
 };
 
 /** مراحلُ الطريق — لا يملكها إلّا من يسير فيها (مرآةُ `driverOnly`). */
-/** الخطوةُ التالية في مسار السائق — لنافذة التدخّل اليدويّ. */
-const NEXT_AFTER: Record<string, string> = {
-  assigned: "at_pickup",
-  at_pickup: "picked_up",
-  picked_up: "on_the_way",
-  on_the_way: "at_dropoff",
-  at_dropoff: "delivered",
-};
-
 /**
- * **من أين يجوز التدخّلُ اليدويّ — وأين يقف.**
+ * **ولا تدخّلَ يدويٌّ في مراحل الطريق — لا في شيءٍ منها.**
  *
- * # القاعدة
+ * كان زرٌّ يُعلن «وصل المتجر» و«تمّ الاستلام» بتوقيع المالك. **والتوقيعُ
+ * يُصدّق السجلَّ ولا يُصدّق الواقع.**
  *
- * **بمجرّد أن يستلم السائقُ البضاعةَ تصير المنصةُ مراقبةً لا متحكّمة.**
- * (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لا يجوز تدخّلُ المنصة — قلنا المنصة بمجرّد أن
- * السائق استلم الطلب هي تراقب فقط عمليةَ التسليم، لم يعد بإمكانها التحكّم
- * بشيء».)
+ * **وقولُها من مكتبٍ ادّعاءُ ما لا يُعلَم**: من يجلس خلف مكتبه لا يعرف أين
+ * المتجرُ ولا تحرّك من مكانه — **فكيف يقول إنّ السائقَ استلم؟** (قرارُ المالك
+ * ٢٠٢٦-٠٨-٠٤ بلفظه.)
  *
- * # ولماذا هنا بالذات
+ * # وماذا لو تعطّل هاتفُ السائق؟
  *
- * **قبل الاستلام لا شيءَ بيد أحد**: طلبٌ أُسند ولم يتحرّك له سائق، **والمنصةُ
- * تملك أن تُنقذه** — تعلن وصولَه إلى المتجر إن كان السائقُ هناك ولا شبكة.
+ * **يُحرَّر الطلبُ لا تُعلَن مرحلتُه**: `→ dispatching` يُفرّغ الإسنادَ ويعيده
+ * إلى الطابور، **فيأخذه سائقٌ آخرُ ويقول هو ما جرى.**
  *
- * **وبعد الاستلام البضاعةُ بيده**: من يقول «تمّ التسليم» يقول ما لا يعلمه —
- * **والمالُ يتحرّك على قوله**: يُقيَّد للمتجر ولنا وللمندوب، ويُحمَّل السائقُ
- * نقداً لم يقبضه. **وتصحيحُ قيدٍ وقع أصعبُ من انتظار من يعرف.**
- *
- * # وإن تعطّل هاتفُ السائق؟
- *
- * **بابُه الاستغاثة لا زرُّ التسليم**: يُفتح على الطلب أثرٌ يُقرأ ويُعالَج،
- * **ولا يُكتب في الدفتر تسليمٌ لم يشهده أحد.**
+ * **والتحريرُ تخلٍّ عن إسنادٍ لم يُثمر، والإعلانُ شهادةٌ على واقعة** — والأوّلُ
+ * لا يقيّد قرشاً والثاني يحرّك المالَ كلَّه.
  */
-const MANUAL_STEP_FROM = new Set(["assigned", "at_pickup"]);
 
 /** الحالاتُ التي يجوز فيها التحويل — **قبل خروج البضاعة**. */
 /**
@@ -1414,13 +1398,13 @@ function OrderActions({
     }
   }
 
-  async function go(to: string, note: string, manualOverride = false) {
+  async function go(to: string, note: string) {
     setBusy(to);
     setErr("");
     try {
       await api(`/api/v1/admin/orders/${o.id}/transition`, {
         method: "POST",
-        body: JSON.stringify({ to, note, manual_override: manualOverride }),
+        body: JSON.stringify({ to, note }),
       });
       setAsking("");
       setReason("");
@@ -1611,19 +1595,13 @@ function OrderActions({
     // **ونصُّها يختلف**: الإلغاءُ يسأل «لماذا ألغيت»، والتدخّلُ يقول **«تُسجَّل
     // باسمك أنّ المنصة أعلنتها — لا أنّ السائق قالها»**. ونصٌّ واحدٌ لمعنيين
     // يجعل من يوقّع لا يعرف ما وقّع عليه.
-    const manual = asking.startsWith("manual:");
-    const target = manual ? asking.slice(7) : asking;
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p
-          className={`text-xs font-medium ${manual ? "text-warning" : "text-danger"}`}
-        >
-          {manual
-            ? m.admin.ordersPage.manualTitle
-            : m.admin.ordersPage.reasonTitle.replace(
-                "{action}",
-                ACTION_LABELS[asking] ?? asking,
-              )}
+        <p className="text-xs font-medium text-danger">
+          {m.admin.ordersPage.reasonTitle.replace(
+            "{action}",
+            ACTION_LABELS[asking] ?? asking,
+          )}
         </p>
         <Input
           id={`reason-${o.id}`}
@@ -1635,21 +1613,15 @@ function OrderActions({
           }}
           placeholder={m.admin.ordersPage.reasonPlaceholder}
         />
-        <p className="text-xs text-ink-muted">
-          {manual
-            ? m.admin.ordersPage.manualHint
-            : m.admin.ordersPage.reasonHint}
-        </p>
+        <p className="text-xs text-ink-muted">{m.admin.ordersPage.reasonHint}</p>
         {err && <p className="text-xs text-danger">{err}</p>}
         <div className="flex gap-2">
           <Button
-            variant={manual ? "secondary" : "danger"}
+            variant="danger"
             disabled={!reason.trim() || busy !== ""}
-            onClick={() => void go(target, reason.trim(), manual)}
+            onClick={() => void go(asking, reason.trim())}
           >
-            {manual
-              ? m.admin.ordersPage.manualConfirm
-              : m.admin.ordersPage.confirm}
+            {m.admin.ordersPage.confirm}
           </Button>
           <Button
             variant="secondary"
@@ -1831,31 +1803,6 @@ function OrderActions({
         <p className="w-full rounded-control bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
           {o.blocked_reason}
         </p>
-      )}
-
-      {/* **التدخّلُ اليدويّ — منفصلٌ عن الأزرار العادية.**
-
-          مراحلُ الطريق بيد السائق، **والمنصةُ لا تعلم أنّه وصل.** لكنّ هاتفاً
-          نفدت بطاريتُه يترك الطلبَ عالقاً بلا من يُكمله — **وقد يكون المالكُ
-          وحدَه من يدير.**
-
-          **والمشكلةُ لم تكن «من ضغط» بل «ماذا يقول السجلّ»**: بالتوقيع يصدق
-          السجلُّ فيقول «أعلنتها المنصة». **ويُفصل عن بقيّة الأزرار كي لا
-          يُضغط سهواً** كما وقع في `#1004`. */}
-      {isAdmin && MANUAL_STEP_FROM.has(o.status) && (
-        <button
-          type="button"
-          disabled={busy !== ""}
-          onClick={() => setAsking("manual:" + (NEXT_AFTER[o.status] ?? ""))}
-          className="w-full rounded-control border border-dashed border-warning/60 px-3 py-1.5 text-xs text-warning hover:bg-warning/5"
-        >
-          {m.admin.ordersPage.manualStep.replace(
-            "{s}",
-            m.orders.status[
-              (NEXT_AFTER[o.status] ?? "") as keyof typeof m.orders.status
-            ] ?? "",
-          )}
-        </button>
       )}
 
       {/* **التحويلُ إلى متجرٍ آخر — قاعدةٌ احتياطية.**

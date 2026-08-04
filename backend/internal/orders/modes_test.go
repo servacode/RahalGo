@@ -143,11 +143,17 @@ func TestAdminIsAboveAuthorityNotAboveKnowledge(t *testing.T) {
 		}
 	}
 
-	// ── وبالتوقيع الصريح يملكها — **والسجلُّ يقول إنّها منه** ────────────
-	signed := append(append([]string{}, admin...), RoleManualOverride)
-	if !canTransition(StAssigned, StAtPickup,
-		rolesUnderMode(false, StAssigned, StAtPickup, signed, true)) {
-		t.Error("التوقيعُ الصريح لم يفتح الخطوة — **وهاتفٌ نفدت بطاريتُه يترك الطلبَ عالقاً**")
+	// ── ولا يفتحها توقيعٌ ولا سلطة ───────────────────────────────────────
+	//
+	// **والتوقيعُ يُصدّق السجلَّ ولا يُصدّق الواقع.** ومن يجلس خلف مكتبه لا
+	// يعرف أين المتجرُ ولا تحرّك من مكانه — **فكيف يقول إنّ السائقَ استلم؟**
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
+	//
+	// **ومخرجُ الطلب العالق التحريرُ لا الإعلان** — يُفحص أدناه.
+	for _, to := range []string{StAtPickup, StPickedUp, StOnTheWay, StAtDropoff, StDelivered, StFailed} {
+		if canTransition(StAssigned, to, rolesUnderMode(false, StAssigned, to, admin, true)) {
+			t.Errorf("المنصةُ أعلنت %q — ومراحلُ الطريق لمن يسير فيها", to)
+		}
 	}
 
 	// ── وما هو سلطةٌ يبقى له ────────────────────────────────────────────
@@ -165,12 +171,6 @@ func TestAdminIsAboveAuthorityNotAboveKnowledge(t *testing.T) {
 	if canTransition(StDispatching, StCancelled,
 		rolesUnderMode(false, StDispatching, StCancelled, ops, false)) {
 		t.Error("العملياتُ تُلغي بعد التحويل")
-	}
-	// **والتوقيعُ لا ينفع من ليس مالكاً** — والمعالِجُ يمنعه أصلاً.
-	opsSigned := []string{"ops", RoleManualOverride}
-	if canTransition(StAssigned, StAtPickup,
-		rolesUnderMode(false, StAssigned, StAtPickup, opsSigned, true)) {
-		t.Error("العملياتُ أعلنت مرحلةَ سائقٍ بتوقيعٍ ليس لها")
 	}
 }
 
@@ -191,9 +191,8 @@ func TestAdminIsAboveAuthorityNotAboveKnowledge(t *testing.T) {
 // على طلبٍ حالتُه «السائق وصل».
 func TestPlatformWatchesAfterPickup(t *testing.T) {
 	admin := []string{"admin", "ops"}
-	signed := append(append([]string{}, admin...), RoleManualOverride)
 
-	// ── بعد الاستلام: لا بالتوقيع ولا بدونه ─────────────────────────────
+	// ── بعد الاستلام: لا شيءَ بيدها ──────────────────────────────────────
 	after := []struct{ from, to string }{
 		{StPickedUp, StOnTheWay},
 		{StOnTheWay, StAtDropoff},
@@ -201,11 +200,8 @@ func TestPlatformWatchesAfterPickup(t *testing.T) {
 		{StAtDropoff, StFailed},
 	}
 	for _, c := range after {
-		if canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, signed, true)) {
-			t.Errorf("المنصةُ تحكّمت في %q←%q بعد أن صارت البضاعةُ بيد السائق", c.from, c.to)
-		}
 		if canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, admin, true)) {
-			t.Errorf("المنصةُ تحكّمت في %q←%q بلا توقيعٍ أصلاً", c.from, c.to)
+			t.Errorf("المنصةُ تحكّمت في %q←%q بعد أن صارت البضاعةُ بيد السائق", c.from, c.to)
 		}
 	}
 
@@ -224,16 +220,17 @@ func TestPlatformWatchesAfterPickup(t *testing.T) {
 		}
 	}
 
-	// ── وقبل الاستلام يبقى التوقيعُ يعمل ────────────────────────────────
+	// ── وقبل الاستلام كذلك — لا استثناءَ لمرحلةِ طريق ────────────────────
 	//
-	// **وإلّا صار هاتفٌ نفدت بطاريتُه يترك الطلبَ عالقاً بلا مخرج** — والبضاعةُ
-	// لم تخرج من المتجر بعد، **فلا مالَ تحرّك ولا شيءَ يُصحَّح.**
+	// **كان التوقيعُ يفتح `assigned→at_pickup` و`at_pickup→picked_up`** بحجّة
+	// هاتفٍ نفدت بطاريتُه. **وقولُ «وصل المتجر» من مكتبٍ ادّعاءُ ما لا يُعلَم
+	// كقولِ «تمّ التسليم»** — والمخرجُ التحريرُ لا الإعلان.
 	for _, c := range []struct{ from, to string }{
 		{StAssigned, StAtPickup},
 		{StAtPickup, StPickedUp},
 	} {
-		if !canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, signed, true)) {
-			t.Errorf("التوقيعُ لم يفتح %q←%q — وهي قبل خروج البضاعة", c.from, c.to)
+		if canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, admin, true)) {
+			t.Errorf("المنصةُ أعلنت %q←%q — وهي مرحلةُ طريق", c.from, c.to)
 		}
 	}
 }
