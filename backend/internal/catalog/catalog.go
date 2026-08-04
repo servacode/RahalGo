@@ -58,9 +58,12 @@ type Merchant struct {
 	//
 	// كان رقماً دائماً يُنسخ لحظةَ الإنشاء، **فتغييرُ المفتاح لا يمسّ متجراً
 	// قائماً.** (الترحيل ٠٠٦٧.)
-	CommissionPct   *int64    `json:"commission_percent"`
-	EmergencyClosed bool      `json:"emergency_closed"`
-	CreatedAt       time.Time `json:"created_at"`
+	CommissionPct   *int64 `json:"commission_percent"`
+	EmergencyClosed bool   `json:"emergency_closed"`
+	// AcceptsReturns أيستردّ بضاعةَ طلبٍ تعذّر تسليمُه — **وعليه يظهر زرُّ
+	// «رُدّت إلى المتجر» في شاشة العمليات.**
+	AcceptsReturns bool      `json:"accepts_returns"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type MerchantPage struct {
@@ -176,7 +179,7 @@ func merchantSelect(daysExpr string) string {
 	       -- والتعليقُ القديم كان يقول «بشرط العدّ نفسه لا بشرطٍ يشبهه» —
 	       -- **والوصفُ صحيحٌ والتنفيذُ خالفه.** فصار الشرطُ يأتي من مصدره.
 	       ` + orders.ViolationsCountSQL("m.id", daysExpr) + `,
-	       m.commission_percent, m.emergency_closed, m.created_at
+	       m.commission_percent, m.emergency_closed, m.accepts_returns, m.created_at
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
@@ -201,7 +204,7 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
-		&m.Status, &m.Violations, &m.CommissionPct, &m.EmergencyClosed, &m.CreatedAt)
+		&m.Status, &m.Violations, &m.CommissionPct, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -265,12 +268,19 @@ type MerchantInput struct {
 	Status      *string `json:"status"`
 	// CommissionPct تجاوزُ عمولة هذا المتجر — **وسالبُ الواحدِ يمحوه**
 	// فيعود إلى `merchants.commission_value` العامّ.
-	CommissionPct   *int64   `json:"commission_percent"`
-	EmergencyClosed *bool    `json:"emergency_closed"`
-	OwnerPhone      *string  `json:"owner_phone"`    // يربط/ينشئ حساب صاحب المتجر بدور merchant
-	SalesRepCode    *string  `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
-	Lat             *float64 `json:"lat"`            // دبوس الموقع على الخريطة
-	Lng             *float64 `json:"lng"`
+	CommissionPct   *int64 `json:"commission_percent"`
+	EmergencyClosed *bool  `json:"emergency_closed"`
+	// AcceptsReturns أيستردّ هذا المتجرُ بضاعةَ طلبٍ تعذّر تسليمُه.
+	//
+	// **بندٌ في الاتّفاق معه لا رأيٌ يُبديه ساعتَها** — وعليه يظهر زرُّ «رُدّت
+	// إلى المتجر» في شاشة العمليات. **ومن يملك تغييرَه وحدَه يغلقه ساعةَ تُردّ
+	// إليه بضاعة**، ولذلك موضعُه بطاقةُ المتجر عند الإدارة (قرارُ المالك
+	// ٢٠٢٦-٠٨-٠٤).
+	AcceptsReturns *bool    `json:"accepts_returns"`
+	OwnerPhone     *string  `json:"owner_phone"`    // يربط/ينشئ حساب صاحب المتجر بدور merchant
+	SalesRepCode   *string  `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
+	Lat            *float64 `json:"lat"`            // دبوس الموقع على الخريطة
+	Lng            *float64 `json:"lng"`
 	// معرف وسائط الشعار: غير مُرسل = بلا تغيير، "" = إزالة الشعار
 	LogoMediaID *string `json:"logo_media_id"`
 }
@@ -356,6 +366,7 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 			                          WHEN $13 < 0 THEN NULL
 			                          ELSE $13 END,
 			emergency_closed = COALESCE($8, emergency_closed),
+			accepts_returns = COALESCE($15, accepts_returns),
 			owner_user_id = COALESCE($9, owner_user_id),
 			sales_rep_user_id = COALESCE($10, sales_rep_user_id),
 			location      = COALESCE(
@@ -366,7 +377,7 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 			                     ELSE NULLIF($14, '')::uuid END,
 			updated_at    = now()
 		WHERE id = $1`,
-		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct, in.LogoMediaID)
+		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct, in.LogoMediaID, in.AcceptsReturns)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}

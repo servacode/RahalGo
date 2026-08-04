@@ -1794,6 +1794,9 @@
         "orders": "الطلبات"
       },
       "violations": "المخالفات",
+      "acceptsReturns": "يستردّ بضاعةَ طلبٍ تعذّر تسليمُه",
+      "returnsYes": "يستردّ",
+      "returnsNo": "لا يستردّ",
       "joined": "تاريخ الانضمام",
       "owner": "صاحبه",
       "address": "العنوان",

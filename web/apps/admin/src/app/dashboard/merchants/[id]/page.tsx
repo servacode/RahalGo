@@ -64,6 +64,8 @@ interface Merchant {
   violations: number;
   commission_percent: number;
   emergency_closed: boolean;
+  /** أيستردّ بضاعةَ طلبٍ تعذّر تسليمُه — وعليه يظهر زرُّ الردّ في الطلبات. */
+  accepts_returns: boolean;
   created_at: string;
 }
 
@@ -86,6 +88,7 @@ export default function MerchantProfilePage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [violationsOpen, setViolationsOpen] = useState(false);
   const [error, setError] = useState("");
+  const [savingReturns, setSavingReturns] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -95,6 +98,25 @@ export default function MerchantProfilePage() {
       setError(m.errors.internal);
     }
   }, [id]);
+
+  /** بندُ الاسترداد — يُحفظ فوراً ثمّ يُعاد التحميلُ ليُقرأ من القاعدة. */
+  const setAcceptsReturns = useCallback(
+    async (v: boolean) => {
+      setSavingReturns(true);
+      try {
+        await api(`/api/v1/admin/merchants/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ accepts_returns: v }),
+        });
+        await load();
+      } catch {
+        setError(m.errors.internal);
+      } finally {
+        setSavingReturns(false);
+      }
+    },
+    [id, load],
+  );
 
   useEffect(() => {
     void load();
@@ -195,6 +217,31 @@ export default function MerchantProfilePage() {
           <Row label={P.address} value={mr.address_text} />
           <Row label={m.terms.category} value={mr.category_name} />
           <Row label={P.rep} value={mr.sales_rep_phone ?? "—"} ltr />
+          {/* **بندٌ في الاتّفاق لا رأيٌ يُبديه ساعتَها.**
+
+              عليه يظهر زرُّ «رُدّت إلى المتجر» حين يتعذّر تسليمُ طلبٍ من
+              عنده — **ومن يملك تغييرَه وحدَه يغلقه ساعةَ تُردّ إليه بضاعة.**
+              فموضعُه هنا لا في شاشته. (قرارُ المالك ٢٠٢٦-٠٨-٠٤.) */}
+          <div className="flex items-center justify-between gap-3 sm:col-span-2">
+            <dt className="shrink-0 text-sm text-ink-muted">{P.acceptsReturns}</dt>
+            <dd className="flex gap-1">
+              {[true, false].map((v) => (
+                <button
+                  key={String(v)}
+                  type="button"
+                  disabled={savingReturns}
+                  onClick={() => void setAcceptsReturns(v)}
+                  className={`rounded-control border px-3 py-1 text-sm transition-colors ${
+                    mr.accepts_returns === v
+                      ? "border-accent bg-accent/10 font-medium"
+                      : "border-line text-ink-muted hover:border-accent/60"
+                  }`}
+                >
+                  {v ? P.returnsYes : P.returnsNo}
+                </button>
+              ))}
+            </dd>
+          </div>
         </dl>
       )}
       {tab === "menu" && <MenuManager api={api} paths={PATHS} merchantID={mr.id} />}
