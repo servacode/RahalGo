@@ -2293,7 +2293,8 @@
       "incoming": "طلبات قادمة",
       "tasks": "مهامّي",
       "wallet": "المحفظة",
-      "account": "حسابي"
+      "account": "حسابي",
+      "history": "طلباتي السابقة"
     },
     "shift": {
       "title": "الدوام",
@@ -2318,7 +2319,9 @@
     "today": {
       "title": "حصيلة اليوم",
       "delivered": "طلبات مُسلّمة",
-      "earned": "أجرك اليوم"
+      "earned": "أجرك اليوم",
+      "failed": "لم تُسلَّم",
+      "ofWhichCompensation": "منها تعويض"
     },
     "tasks": {
       "title": "مهامّي",
@@ -2398,6 +2401,30 @@
         "collect": "قبضٌ من زبون",
         "settle": "تسليمٌ للمنصة",
         "adjust": "تعديل"
+      }
+    },
+    "history": {
+      "title": "طلباتي السابقة",
+      "subtitle": "ما نفّذتَه — نجح أم تعذّر",
+      "empty": "لا طلباتٍ منتهيةً بعد",
+      "report": "بلاغ",
+      "reportTitle": "بلاغٌ على الطلب",
+      "reportAgainst": "على من البلاغ؟",
+      "reportNote": "تفصيلٌ إضافيّ (اختياريّ)",
+      "reportHint": "يصل البلاغُ غرفةَ العمليات ويُتابَع",
+      "reportSend": "أرسل البلاغ",
+      "reportSent": "وصل بلاغُك — ستتابعه العمليات",
+      "reasonsError": "تعذّر جلبُ الأسباب — ولا يُرسَل بلاغٌ بلا سبب",
+      "reportReasons": {
+        "merchant_slow": "المتجر أوقفني طويلاً",
+        "merchant_refused": "المتجر رفض التسليم",
+        "merchant_wrong_goods": "بضاعةٌ غيرُ مطابقة",
+        "merchant_conduct": "سوءُ تعاملٍ من المتجر",
+        "customer_absent": "الزبون لم يكن موجوداً",
+        "customer_address": "عنوانٌ خاطئ",
+        "customer_refused": "الزبون رفض الاستلام",
+        "customer_conduct": "سوءُ تعاملٍ من الزبون",
+        "other": "سببٌ آخر"
       }
     }
   }

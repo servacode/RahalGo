@@ -9,7 +9,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtTime, fmtLongDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtLongDate } from "@rahalgo/i18n";
 import { PageContainer, PageHeader, EmptyState, LoadingState } from "./layout";
 import { Button } from "./components";
 import { useLiveData, emitLocal, READ_EVENT, type AppNotification } from "./Notifications";
@@ -216,11 +216,17 @@ export function NotificationsPage({
                           </p>
                         )}
                       </div>
+                      {/* **التاريخُ مع الساعة — لا الساعةُ وحدَها.**
+
+                          العناوينُ تجمع بالأيام («اليوم» و«أمس»)، **وسطرٌ
+                          يقول «٣:٤٠ م» وحدَه يُقرأ خارجَ عنوانه**: يُنسخ في
+                          رسالةٍ أو يُذكر في اتّصال فلا يُعرف أيُّ يومٍ هو.
+                          (قرارُ المالك ٢٠٢٦-٠٨-٠٥.) */}
                       <span
                         className="shrink-0 pt-0.5 text-xs tabular-nums text-ink-muted"
                         dir="ltr"
                       >
-                        {fmtTime(n.created_at)}
+                        {fmtDateTime(n.created_at)}
                       </span>
                     </div>
                   );

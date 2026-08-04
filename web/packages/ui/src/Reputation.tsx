@@ -14,7 +14,7 @@ import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i1
 import { Badge } from "./components";
 import { useLiveData } from "./Notifications";
 import { PageHeader, PageContainer, EmptyState, LoadingState, ListRow, StatGrid, StatCard, Stars } from "./layout";
-import { IconStar, IconSupport } from "./icons";
+import { IconStar, IconSupport, IconUser } from "./icons";
 
 const m = getMessages(defaultLocale);
 const T = m.terms;
@@ -36,6 +36,8 @@ export interface ReputationLabels {
 interface Review {
   order_number: number;
   merchant_name: string;
+  /** من قيّم — **وهو من فتح البابَ له**؛ ونجومٌ بلا اسمٍ لا تُنسَب إلى واقعة. */
+  customer_name: string;
   stars: number;
   comment: string;
   created_at: string;
@@ -127,6 +129,14 @@ export function ReputationReviews({ api, labels = {} }: { api: ApiFn; labels?: R
               <p className="mt-1 text-sm text-ink-muted">
                 {rv.merchant_name} — {T.order} #{fmtRef(rv.order_number)}
               </p>
+              {/* **ومن قيّم** — كان التقييمُ نجوماً ورقمَ طلبٍ بلا وجه، **فمن
+                  نال ثلاثاً لا يعرف أيَّ بابٍ كان** فلا يتعلّم منها شيئاً. */}
+              {rv.customer_name && (
+                <p className="mt-0.5 flex items-center gap-1.5 text-sm">
+                  <IconUser size={14} className="text-ink-muted" />
+                  {rv.customer_name}
+                </p>
+              )}
               {rv.comment && <p className="mt-1 text-sm">{rv.comment}</p>}
             </li>
           ))}

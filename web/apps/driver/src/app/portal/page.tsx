@@ -101,7 +101,11 @@ interface Me {
   cash_limit: number;
   balance: number;
   today_delivered: number;
+  /** ما لم يُسلَّم اليوم — **ولا يُخفى**: يومٌ فيه تعذّرٌ ليس يومَ تسليماتٍ فقط. */
+  today_failed: number;
   today_earned: number;
+  /** جزءٌ من `today_earned` لا زيادةٌ عليه — يُعرض ليُعرف مصدرُه. */
+  today_compensated: number;
   active_orders: number;
 }
 
@@ -324,6 +328,14 @@ export default function TasksPage() {
         </p>
       </Card>
 
+      {/* **ويومُه ما وقع فيه لا ما نجح منه.**
+
+          كانت البطاقتان «مُسلَّمة» و«أجرُك» وحدَهما، **فيومٌ فيه ثلاثُ
+          تسليماتٍ وتعذّرٌ واحدٌ يُقرأ ثلاثَ تسليمات** — والسائقُ يعرف أنّه
+          وقف عند بابٍ ولم يُسلّم، **فشاشةٌ لا تذكره تُقرأ إخفاءً.**
+
+          **والتعويضُ كان في رصيده ولا في أجر يومه** — رقمان يختلفان عن اليوم
+          نفسِه ولا سطرَ يفسّر الفرق. */}
       <StatGrid>
         <StatCard
           icon={IconCheck}
@@ -331,9 +343,19 @@ export default function TasksPage() {
           value={fmtNum(me.today_delivered)}
         />
         <StatCard
+          icon={IconWarning}
+          label={D.today.failed}
+          value={fmtNum(me.today_failed)}
+        />
+        <StatCard
           icon={IconWallet}
           label={D.today.earned}
           value={`${fmtNum(me.today_earned)} ${m.common.currency}`}
+          sub={
+            me.today_compensated > 0
+              ? `${D.today.ofWhichCompensation}: ${fmtNum(me.today_compensated)}`
+              : undefined
+          }
         />
       </StatGrid>
 

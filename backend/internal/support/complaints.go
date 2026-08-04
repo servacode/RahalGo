@@ -128,13 +128,9 @@ func (s *Service) Complaint(ctx context.Context, customerID, orderID, reason, no
 	// شكوى بعد شهرٍ لا تُحقَّق: السائقُ لا يذكر، والبضاعةُ ذهبت، **ولا يبقى
 	// إلّا كلمةٌ ضدّ كلمة** — فتُقبل بلا بيّنة أو تُردّ بلا بيّنة، وكلاهما
 	// ظلمٌ لأحدهما. والمهلةُ في الإعدادات: يملك المالكُ توسيعَها.
-	hours := int64(24)
-	if s.settings != nil {
-		if v := s.settings.GetInt(ctx, "support.complaint_window_hours"); v > 0 {
-			hours = v
-		}
-	}
-	if time.Since(*closedAt) > time.Duration(hours)*time.Hour {
+	if over, err := s.pastComplaintWindow(ctx, *closedAt); err != nil {
+		return nil, err
+	} else if over {
 		return nil, ErrComplaintWindow
 	}
 

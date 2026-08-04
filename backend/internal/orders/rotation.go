@@ -181,33 +181,16 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 		return e
 	}
 
-	// **الإسنادُ المباشر — الطلبُ يصير مهمّتَه في القيد نفسِه.**
+	// **الإسنادُ المباشر — الطلبُ يصير مهمّتَه بلا سؤال.**
 	//
-	// `driver_id` و`assigned` معاً، **و`offered_driver_id` يبقى مكتوباً**:
-	// منه يُعرف صاحبُ الدور حين يُنزع الطلبُ منه، **ومنه يُبنى `offer_passed`
-	// فلا يعود إليه.** و`offer_expires_at` صار **مهلةَ صمتٍ لا مهلةَ ردّ**.
+	// `offered_driver_id` يبقى مكتوباً: منه يُعرف صاحبُ الدور حين يُنزع الطلبُ
+	// منه، **ومنه يُبنى `offer_passed` فلا يعود إليه.** و`offer_expires_at`
+	// صار **مهلةَ صمتٍ لا مهلةَ ردّ**.
 	//
 	// **ودورُه ينتقل إلى آخر الصفّ لحظتَها** (`last_assigned_at`) — فسائقٌ
 	// نائمٌ يعطّل طلباً واحداً لا كلَّ الطلبات.
 	if s.directAssign(ctx) {
-		_, err = s.db.Exec(ctx, `
-			UPDATE orders
-			SET offered_driver_id = $2, driver_id = $2, status = 'assigned',
-			    accepted_at = now(),
-			    offer_expires_at = now() + make_interval(secs => $3)
-			WHERE id = $1 AND status = 'dispatching' AND driver_id IS NULL`,
-			orderID, driverID, s.offerTimeout(ctx).Seconds())
-		if err == nil {
-			if _, e := s.db.Exec(ctx,
-				`UPDATE users SET last_assigned_at = now() WHERE id = $1`,
-				driverID); e != nil {
-				s.logger.Error("الترتيب: تعذّر تحريكُ الدور", "driver", driverID, "error", e)
-			}
-			s.pub.Publish(topicDriverQueue, map[string]any{"type": "order"})
-			s.pub.Publish("driver:"+driverID, map[string]any{"type": "order"})
-			s.pub.Publish("ops", map[string]any{"type": "order"})
-		}
-		return err
+		return s.assignDirectly(ctx, orderID, driverID)
 	}
 
 	_, err = s.db.Exec(ctx, `
@@ -223,6 +206,68 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 	}
 	return err
 }
+
+// assignDirectly يضع الطلبَ في مهامّ صاحب الدور — **بالمسار نفسِه الذي يسلكه
+// من يضغط «خذ الطلب»**.
+//
+// # ولماذا لا يُكتب بيدٍ في جدول الطلبات
+//
+// كان قيداً واحداً يضع `driver_id` و`status` معاً، **ففاته شيئان لا يُرى
+// غيابُهما إلّا بعد أسبوع**:
+//
+//  1. **لا حدثَ في سجلّ الطلب.** فيُقرأ المسارُ `dispatching → at_pickup`،
+//     **ولا يُعرف متى وصل السائقَ الطلبُ ولا كيف** — أخذه بنفسه أم أُسند إليه.
+//     وهو أوّلُ ما يُسأل عنه حين يتأخّر طلب. (شهده المالك ٢٠٢٦-٠٨-٠٥.)
+//  2. **كان يكتب `accepted_at = now()`** — وهو **وقتُ قبول المتجر** لا وقتُ
+//     الإسناد. فيُمحى وقتُ القبول ويُقرأ الطلبُ كأنّ المتجرَ قبله لحظةَ نزوله
+//     إلى الطابور، **فيصير قياسُ سرعة المتاجر كذباً.**
+//
+// **والمحرّكُ يكتب الاثنين وحدَه** — فيُنادى كما يُنادى من الأخذ اليدويّ:
+// `driver_id` أوّلاً بشرطٍ ذرّيّ، ثمّ انتقالٌ عاديّ.
+func (s *Service) assignDirectly(ctx context.Context, orderID, driverID string) error {
+	// **الشرطُ الذرّيّ يبقى**: سائقٌ ضغط «خذ الطلب» في اللحظة نفسِها يجد صفراً.
+	tag, err := s.db.Exec(ctx, `
+		UPDATE orders
+		SET offered_driver_id = $2, driver_id = $2, updated_at = now(),
+		    offer_expires_at = now() + make_interval(secs => $3)
+		WHERE id = $1 AND status = 'dispatching' AND driver_id IS NULL`,
+		orderID, driverID, s.offerTimeout(ctx).Seconds())
+	if err != nil {
+		return err
+	}
+	// **وسبقَنا إليه غيرُنا** — لا خطأ: الطلبُ في يدٍ أمينة.
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+
+	if _, e := s.db.Exec(ctx,
+		`UPDATE users SET last_assigned_at = now() WHERE id = $1`, driverID); e != nil {
+		s.logger.Error("الترتيب: تعذّر تحريكُ الدور", "driver", driverID, "error", e)
+	}
+
+	// **والانتقالُ بالمحرّك — فيُكتب الحدثُ ويُبثّ ما يجب.**
+	//
+	// **والفاعلُ هو السائق** لا «النظام»: الطلبُ صار في يده وهو المسؤولُ عنه،
+	// **والنصُّ يقول إنّه لم يختره** فلا يُقرأ الحدثُ أخذاً طوعياً.
+	if _, err := s.Transition(ctx, driverID, []string{"driver"},
+		orderID, StAssigned, autoAssignNote); err != nil {
+		// **وتراجعٌ عن الإسناد** — لولاه بقي الطلبُ محجوزاً لسائقٍ لم يقبله
+		// المحرّك، فلا يراه أحدٌ ولا يعمل عليه أحد.
+		if _, e := s.db.Exec(ctx, `
+			UPDATE orders SET driver_id = NULL, offered_driver_id = NULL,
+			                  offer_expires_at = NULL
+			WHERE id = $1 AND driver_id = $2`, orderID, driverID); e != nil {
+			s.logger.Error("الترتيب: تعذّر التراجعُ عن الإسناد",
+				"order", orderID, "error", e)
+		}
+		return err
+	}
+	s.pub.Publish(topicDriverQueue, map[string]any{"type": "order"})
+	return nil
+}
+
+// autoAssignNote نصُّ حدثِ الإسناد التلقائيّ — **يُقرأ في سجلّ الطلب.**
+const autoAssignNote = "إسنادٌ تلقائيٌّ بالدور"
 
 // reclaimSilentAssignments ينزع طلباً أُسند مباشرةً ولم يتحرّك صاحبُه.
 //

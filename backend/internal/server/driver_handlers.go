@@ -42,9 +42,19 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		CashLimit int64 `json:"cash_limit"`
 		Balance   int64 `json:"balance"`
 		// حصيلة اليوم بتوقيت دمشق لا UTC: يومُ السائق ينتهي عنده لا في غرينتش
-		TodayDelivered int   `json:"today_delivered"`
-		TodayEarned    int64 `json:"today_earned"`
-		ActiveOrders   int   `json:"active_orders"`
+		TodayDelivered int `json:"today_delivered"`
+		// TodayFailed ما لم يُسلَّم اليوم — **ولا يُخفى.**
+		//
+		// كانت الشاشةُ تعرض المسلَّمَ وحدَه، **فيومٌ فيه ثلاثُ تسليماتٍ وتعذّرٌ
+		// واحدٌ يُقرأ ثلاثَ تسليمات.** والسائقُ يعرف أنّه وقف عند بابٍ ولم
+		// يُسلّم، **فشاشةٌ لا تذكره تُقرأ إخفاءً لا اختصاراً** — ثمّ يُسأل عنه
+		// في آخر الشهر ولا يجد له أثراً في تطبيقه.
+		TodayFailed int   `json:"today_failed"`
+		TodayEarned int64 `json:"today_earned"`
+		// TodayCompensated تعويضاتُ اليوم — **جزءٌ من `TodayEarned` لا زيادةٌ
+		// عليه**، ويُعرض وحدَه ليُعرف أنّ فيه مالاً لم يأتِ من تسليم.
+		TodayCompensated int64 `json:"today_compensated"`
+		ActiveOrders     int   `json:"active_orders"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -54,13 +64,27 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT balance FROM wallets WHERE user_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered'
 		          AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')),
+		       -- **وما تعذّر اليوم يُعدّ كما يُعدّ ما سُلّم** — وبوقت الإغلاق
+		       -- لأنّ الفشلَ إغلاقٌ ولا وقتَ تسليمٍ له.
+		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'failed'
+		          AND o.closed_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')),
+		       -- **وأجرُ اليوم يشمل التعويض.**
+		       --
+		       -- كان أجرَ التوصيل وحدَه، **فسائقٌ قاد مشواراً وتعذّر تسليمُه
+		       -- يرى تعويضَه في رصيده ولا يراه في أجر يومه** — رقمان يختلفان
+		       -- عن اليوم نفسِه، ولا سطرَ يفسّر الفرق. **وأجرٌ لا يُطابق ما دخل
+		       -- المحفظةَ يُقرأ نقصاً في الحقّ.**
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
-		                 WHERE t.user_id = u.id AND t.kind = 'driver_earning'
+		                 WHERE t.user_id = u.id AND t.kind IN ('driver_earning','compensation')
+		                   AND t.created_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')), 0),
+		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
+		                 WHERE t.user_id = u.id AND t.kind = 'compensation'
 		                   AND t.created_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL)
 		FROM users u WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "drivers.cash_limit")).
 		Scan(&out.FullName, &out.OnShift, &out.ShiftStartedAt, &out.CashHeld, &out.CashLimit,
-			&out.Balance, &out.TodayDelivered, &out.TodayEarned, &out.ActiveOrders)
+			&out.Balance, &out.TodayDelivered, &out.TodayFailed, &out.TodayEarned,
+			&out.TodayCompensated, &out.ActiveOrders)
 	if err != nil {
 		s.respondErr(w, err)
 		return

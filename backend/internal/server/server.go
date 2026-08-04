@@ -238,6 +238,11 @@ func (s *Server) Router() http.Handler {
 			// **إرجاعُ البضاعة** — لمتاجرِ الاسترداد وحدها
 			r.Post("/orders/{id}/return", s.handleDriverReturn)
 			r.Get("/orders", s.handleDriverOrders)
+			// **سجلُّه** — ما نفّذه نجح أم فشل. **وما انتهى كان يختفي**، فلا
+			// يجد طلباً يتذكّره ليُبلّغ عنه. (انظر `driver_history.go`)
+			r.Get("/orders/history", s.handleDriverHistory)
+			r.Get("/orders/report-reasons", s.handleDriverReportReasons)
+			r.Post("/orders/{id}/report", s.handleDriverReport)
 			r.Post("/orders/{id}/accept", s.handleDriverAccept)
 			r.Post("/orders/{id}/transition", s.handleDriverTransition)
 			r.Post("/orders/{id}/release", s.handleDriverRelease)

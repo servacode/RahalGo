@@ -66,6 +66,39 @@ func TestDirectAssign_LandsInHisTasks(t *testing.T) {
 	if !moved {
 		t.Fatal("لم ينتقل دورُه — **فالطلبُ التالي يقع عليه أيضاً وهو لم يردّ على الأوّل**")
 	}
+
+	// **ولحظةُ الإسناد تُكتب في سجلّ الطلب.**
+	//
+	// كان القيدُ يكتب الحالةَ بيده فلا حدثَ يُسجَّل، **فيُقرأ المسارُ
+	// `dispatching → at_pickup`** ولا يُعرف متى وصل السائقَ الطلبُ ولا كيف —
+	// أخذه بنفسه أم أُسند إليه. **وهو أوّلُ ما يُسأل عنه حين يتأخّر طلب.**
+	var actor, note string
+	if err := f.pool.QueryRow(ctx, `
+		SELECT actor_id::text, note FROM order_events
+		WHERE order_id = $1 AND to_status = 'assigned'`, orderID).Scan(&actor, &note); err != nil {
+		t.Fatalf("لا حدثَ إسنادٍ في سجلّ الطلب: %v", err)
+	}
+	if actor != f.drivers[0] {
+		t.Fatalf("فاعلُ الحدث %q لا السائق — **والطلبُ صار في يده وهو المسؤولُ عنه**", actor)
+	}
+	if note == "" {
+		t.Fatal("حدثٌ بلا نصّ — **فلا يُفرَّق بين إسنادٍ وقع عليه وأخذٍ اختاره**")
+	}
+
+	// **ووقتُ قبول المتجر لا يُمسّ.**
+	//
+	// كان الإسنادُ يكتب `accepted_at = now()` — **وهو وقتُ قبول المتجر**،
+	// فيُقرأ الطلبُ كأنّ المتجرَ قبله لحظةَ نزوله إلى الطابور. **وقياسُ سرعة
+	// المتاجر يصير كذباً.**
+	var touched bool
+	if err := f.pool.QueryRow(ctx,
+		`SELECT accepted_at IS NOT NULL FROM orders WHERE id = $1`, orderID).
+		Scan(&touched); err != nil {
+		t.Fatalf("تعذّرت قراءةُ وقت القبول: %v", err)
+	}
+	if touched {
+		t.Fatal("كُتب وقتُ قبولٍ ولم يقبل متجرٌ شيئاً — **والإسنادُ ليس قبولاً**")
+	}
 }
 
 // TestDirectAssign_IgnoredInQueueMode **ولا إسنادَ في «الأسرع».**

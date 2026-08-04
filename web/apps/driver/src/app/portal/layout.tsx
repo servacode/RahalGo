@@ -10,6 +10,7 @@ import {
   DashboardChrome,
   type ChromeNavItem,
   IconOrder,
+  IconCheck,
   IconWallet,
   IconBalance,
   IconUser,
@@ -29,6 +30,8 @@ const m = getMessages(defaultLocale);
 const NAV: ChromeNavItem[] = [
   { href: "/portal/incoming", label: m.driver.nav.incoming, icon: IconLocation },
   { href: "/portal", label: m.driver.nav.tasks, icon: IconOrder },
+  // **وسجلُّه** — كان «ما انتهى اختفى»، فلا يجد طلباً يتذكّره ليُبلّغ عنه.
+  { href: "/portal/history", label: m.driver.nav.history, icon: IconCheck },
   { href: "/portal/wallet", label: m.driver.nav.wallet, icon: IconWallet },
   // **ومالٌ في ذمّته يُقرأ مفصَّلاً** — لا مجموعاً في رأس الشاشة.
   { href: "/portal/cash", label: m.driver.cashbox.title, icon: IconBalance },
