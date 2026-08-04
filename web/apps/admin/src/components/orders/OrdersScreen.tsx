@@ -250,6 +250,31 @@ const SETTLED_STATUSES = new Set(["delivered", "failed", "refunded"]);
 const PROOF_STATUSES = new Set(["at_dropoff", "delivered", "failed", "refunded"]);
 
 /**
+ * **الحالاتُ التي يكون فيها للسائق معنى.**
+ *
+ * الطلبُ لا يبلغ السائقَ إلّا بعد أن يُقبل ويُحوَّل ويُعلن جاهزاً — **فحقلُ
+ * سائقٍ في طلبٍ «بانتظار التأكيد» يسأل عمّن لا وجودَ له بعد.**
+ *
+ * قرارُ المالك (٢٠٢٦-٠٨-٠٤): «إسنادُ السائق لا يظهر في هذه المرحلة أصلاً —
+ * الطلبُ ما زال بالانتظار، كيف يكون اسمُ السائق موجوداً؟ وغيرُ احترافيٍّ
+ * وجودُه بهذه المرحلة».
+ *
+ * **وهي القاعدةُ نفسُها التي أخفت إثباتَ التسليم**: حقلٌ يظهر فارغاً قبل أوانه
+ * **يُتعلَّم تجاهلُه، ثمّ يمتلئ يوماً فلا يُنظر إليه.**
+ */
+const DRIVER_STATUSES = new Set([
+  "dispatching",
+  "assigned",
+  "at_pickup",
+  "picked_up",
+  "on_the_way",
+  "at_dropoff",
+  "delivered",
+  "failed",
+  "refunded",
+]);
+
+/**
  * **سعرُ الوحدة شاملاً خياراتِها** — والحسبةُ هنا لا في الخادم.
  *
  * `unit_price` سعرُ الصنف وحدَه، **وفروقُ الخيارات تُضاف إليه عند الطلب**
@@ -605,6 +630,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       id: "driver",
       header: m.admin.ordersPage.driver,
       icon: <IconDriver />,
+      // **ولا يُعرض قبل أن يبلغ الطلبُ السائقين** — ولا حتى فارغاً.
+      // **ومن أُسند له سائقٌ ثمّ انتهى الطلبُ يبقى اسمُه مقروءاً**: من يراجع
+      // شكوى يسأل «من أوصله؟» بعد أن أُغلق.
+      hide: (o: OrderRow) => !DRIVER_STATUSES.has(o.status),
       cell: (o) =>
         o.driver_name || o.driver_phone ? (
           <span>
