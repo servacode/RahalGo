@@ -16,6 +16,7 @@ const PATHS: MenuPaths = {
   section: (id) => `/api/v1/merchant/menu/sections/${id}`,
   items: (id) => `/api/v1/merchant/stores/${id}/menu/items`,
   item: (id) => `/api/v1/merchant/menu/items/${id}`,
+  platformSections: () => `/api/v1/merchant/platform-sections`,
 };
 
 export default function MerchantMenuPage() {

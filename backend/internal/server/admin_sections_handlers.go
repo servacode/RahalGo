@@ -189,7 +189,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT i.id::text, i.name, i.merchant_price, i.available, i.approved,
-		       m.name, m.status, im.thumb_path
+		       m.name, m.status, im.thumb_path, im.path
 		FROM menu_items i
 		JOIN merchants m ON m.id = i.merchant_id
 		LEFT JOIN media im ON im.id = i.image_media_id
@@ -211,16 +211,22 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		MerchantName   string  `json:"merchant_name"`
 		MerchantStatus string  `json:"merchant_status"`
 		ThumbURL       *string `json:"thumb_url"`
+		// ImageURL **الأصلُ للبطاقة، والمصغَّرةُ للسطر.**
+		//
+		// المصغَّرةُ حدُّها ٤٠٠ بكسل، **وبطاقةٌ تمطّها تبهت** — وهو ما حدث في
+		// بطاقة القسم قبلها.
+		ImageURL *string `json:"image_url"`
 	}
 	out := []item{}
 	for rows.Next() {
 		var x item
 		if err := rows.Scan(&x.ID, &x.Name, &x.MerchantPrice, &x.Available,
-			&x.Approved, &x.MerchantName, &x.MerchantStatus, &x.ThumbURL); err != nil {
+			&x.Approved, &x.MerchantName, &x.MerchantStatus, &x.ThumbURL, &x.ImageURL); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		x.ThumbURL = media.URLForPtr(x.ThumbURL)
+		x.ImageURL = media.URLForPtr(x.ImageURL)
 		out = append(out, x)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"items": out, "count": len(out)})

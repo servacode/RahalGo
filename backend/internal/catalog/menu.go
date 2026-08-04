@@ -333,15 +333,25 @@ func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	// **وقسمُ السوق يُكتب هنا كما يُكتب في التعديل.**
+	//
+	// كان الحقلُ يُرسَل من النافذة ولا يُذكر في الإدخال، **فيولد كلُّ صنفٍ خارج
+	// السوق**: لا يراه الزبونُ ولا يُعَدُّ في قسمه، **حتى يفتحه أحدٌ ويحفظه
+	// ثانيةً بلا تغيير** — فالتعديلُ وحدَه كان يكتبه.
+	//
+	// **وهي عائلةُ الخلل نفسُها**: قاعدةٌ مكتوبةٌ في موضعين افترقت بلا صوت.
 	var id string
 	err = tx.QueryRow(ctx, `
 		INSERT INTO menu_items (merchant_id, section_id, name, description,
-		                        merchant_price, price, image_media_id, sort_order)
+		                        merchant_price, price, image_media_id, sort_order,
+		                        platform_section_id)
 		SELECT $1, $2, $3, COALESCE($4,''), $5, $5, NULLIF(COALESCE($6, ''), '')::uuid,
-		       COALESCE((SELECT max(sort_order)+1 FROM menu_items WHERE section_id=$2), 1)
+		       COALESCE((SELECT max(sort_order)+1 FROM menu_items WHERE section_id=$2), 1),
+		       NULLIF(COALESCE($7, ''), '')::uuid
 		WHERE EXISTS (SELECT 1 FROM menu_sections WHERE id = $2 AND merchant_id = $1)
 		RETURNING id`,
-		merchantID, *in.SectionID, *in.Name, in.Description, *in.Price, in.ImageMediaID).Scan(&id)
+		merchantID, *in.SectionID, *in.Name, in.Description, *in.Price, in.ImageMediaID,
+		in.PlatformSectionID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", httpx.ErrNotFound
 	}

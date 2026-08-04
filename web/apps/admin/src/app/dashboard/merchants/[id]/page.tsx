@@ -74,6 +74,7 @@ const PATHS: MenuPaths = {
   section: (id) => `/api/v1/admin/menu/sections/${id}`,
   items: (id) => `/api/v1/admin/merchants/${id}/menu/items`,
   item: (id) => `/api/v1/admin/menu/items/${id}`,
+  platformSections: () => `/api/v1/admin/sections`,
 };
 
 type Tab = "overview" | "menu" | "hours" | "orders";

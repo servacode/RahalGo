@@ -266,6 +266,8 @@ func (s *Server) Router() http.Handler {
 			// القائمة بضاعته: يضيف ويعدّل ويحذف بنفسه — الحارس مختلف والعملية واحدة
 			r.Post("/stores/{id}/menu/sections", s.handleMerchantCreateSection)
 			r.Delete("/menu/sections/{sectionID}", s.handleMerchantDeleteSection)
+			// أقسامُ السوق ليختار الصنفُ موضعَه — **والمراجعةُ تبقى الحارس.**
+			r.Get("/platform-sections", s.handleMerchantPlatformSections)
 			r.Post("/stores/{id}/menu/items", s.handleMerchantCreateItem)
 			r.Patch("/menu/items/{itemID}", s.handleMerchantUpdateItem)
 			r.Delete("/menu/items/{itemID}", s.handleMerchantDeleteItem)

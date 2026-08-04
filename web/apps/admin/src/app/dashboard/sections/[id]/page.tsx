@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * **صفحةُ القسم — أصنافُه كما هي لا كما يراها الزبون.**
+ * **صفحةُ القسم — بضاعةُ المتاجر مجموعةً في بابٍ واحد.**
  *
  * # لماذا صفحةٌ لا نافذة
  *
@@ -19,6 +19,15 @@
  * نقطةُ التصفّح العامّة تُرشِّح: متجرٌ فعّالٌ وقسمٌ فعّالٌ وصنفٌ مُقَرّ. **وهي
  * الصواب للزبون وخطأٌ للإدارة**: من يفتح قسماً ليقرّر إطفاءَه يريد ما فيه
  * كلَّه — **بما لا يظهر ولماذا لا يظهر.**
+ *
+ * # والصنفُ يأتي من متجر — من البابين
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «كلُّ شيءٍ يُضاف بالمتاجر يجب أن يأتي إلى هنا
+ * تلقائياً، أو من هنا نضيف عنصراً جديداً ونحدّد هو تابعٌ لأيّ متجر».)
+ *
+ * **ولا صنفَ تملكه المنصة**: كلُّ صفٍّ هنا له `merchant_id`، **وإضافةٌ من هذه
+ * الصفحة تسأل عن المتجر أوّلاً** — لا لتزيد خطوة، **بل لأنّ صنفاً بلا مصدرٍ
+ * لا يُطبخ ولا يُحاسَب عليه أحد.**
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -29,6 +38,7 @@ import {
   Button,
   Input,
   Select,
+  Modal,
   PageContainer,
   PageHeader,
   EmptyState,
@@ -40,8 +50,10 @@ import {
   IconSearch,
   IconOrder,
   IconWarning,
+  IconCamera,
 } from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
+import { api, ApiError, mediaUrl } from "@/lib/api";
+import ImageUpload from "@/components/ImageUpload";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
@@ -64,6 +76,7 @@ interface SectionItem {
   merchant_name: string;
   merchant_status: string;
   thumb_url: string | null;
+  image_url: string | null;
 }
 
 /**
@@ -86,6 +99,7 @@ export default function SectionPage() {
   const [rows, setRows] = useState<SectionItem[] | null>(null);
   const [q, setQ] = useState("");
   const [state, setState] = useState("");
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -149,6 +163,7 @@ export default function SectionPage() {
         <Badge variant={sec.active ? "success" : "neutral"}>
           {sec.active ? S.available : S.unavailable}
         </Badge>
+        <Button onClick={() => setAdding(true)}>{S.addItem}</Button>
       </div>
 
       <StatGrid>
@@ -181,37 +196,228 @@ export default function SectionPage() {
         </div>
       </div>
 
+      {/* **بطاقةٌ لكلّ صنفٍ بصورته — كبطاقة القسم.**
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لازم يكون كرت يحوي على صورة لكلّ طعام
+          واسمِ المتجر الخاصّ بالصنف والسعر ومعروضٌ أو لا».)
+
+          **والشكلُ واحدٌ في الشاشتين**: من يمسح السوقَ بالعين ثمّ يفتح قسماً
+          **لا يُعيد تعلُّمَ أين يقع كلُّ شيء.** */}
       {shown.length === 0 ? (
         <EmptyState icon={IconStore} title={S.noItems} />
       ) : (
-        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {shown.map((it) => {
             const st = itemState(it);
             return (
-              <li key={it.id} className="flex items-center gap-3 p-3">
-                <span className="h-11 w-11 shrink-0 overflow-hidden rounded-control bg-page">
-                  {it.thumb_url && (
+              <div
+                key={it.id}
+                className={`flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-shadow hover:shadow-md ${
+                  st.variant === "success" ? "" : "opacity-70"
+                }`}
+              >
+                <div className="relative flex aspect-[4/3] items-center justify-center bg-page">
+                  {it.image_url || it.thumb_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={mediaUrl(it.thumb_url) ?? ""}
+                      src={mediaUrl(it.image_url ?? it.thumb_url) ?? ""}
                       alt={it.name}
                       className="h-full w-full object-cover"
                     />
+                  ) : (
+                    /* **ونقصُ الصورة يُقال لا يُملأ برمز** — رمزٌ رماديٌّ يجعل
+                       الصنفَ يبدو تامّاً وهو ناقص، فيُنسى أنّ صورتَه لم تُرفع. */
+                    <span className="flex flex-col items-center gap-1 text-xs text-ink-muted">
+                      <IconCamera size={18} />
+                      {S.noImage}
+                    </span>
                   )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{it.name}</span>
-                  <span className="block text-xs text-ink-muted">{it.merchant_name}</span>
-                </span>
-                <span dir="ltr" className="shrink-0 tabular-nums">
-                  {fmtNum(it.merchant_price)}
-                </span>
-                <Badge variant={st.variant}>{st.label}</Badge>
-              </li>
+                  {/* **الحالُ فوق الصورة** — تُقرأ قبل الاسم، وهي أوّلُ ما يُسأل عنه. */}
+                  <span className="absolute end-1.5 top-1.5">
+                    <Badge variant={st.variant}>{st.label}</Badge>
+                  </span>
+                </div>
+
+                <div className="flex flex-1 flex-col gap-1 p-3">
+                  <p className="truncate font-bold">{it.name}</p>
+                  <div className="flex items-baseline justify-between gap-2">
+                    {/* **واسمُ المتجر يبقى هنا وحدَه** — شاشتُنا لا شاشةُ الزبون.
+                        السوقُ يُخفي المصدر عن الزبون، **والإدارةُ لا تُدير ما
+                        لا ترى مصدرَه.** */}
+                    <p className="truncate text-xs text-ink-muted">{it.merchant_name}</p>
+                    <p dir="ltr" className="shrink-0 text-sm font-bold tabular-nums">
+                      {fmtNum(it.merchant_price)}
+                    </p>
+                  </div>
+                </div>
+              </div>
             );
           })}
-        </ul>
+        </div>
+      )}
+
+      {adding && (
+        <AddItemModal
+          sectionID={id}
+          sectionName={sec.name}
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setAdding(false);
+            void load();
+          }}
+        />
       )}
     </PageContainer>
+  );
+}
+
+interface MerchantRow {
+  id: string;
+  name: string;
+}
+interface MenuSectionRow {
+  id: string;
+  name: string;
+}
+
+/**
+ * **إضافةُ صنفٍ من بابِ السوق — والمتجرُ يُسأل عنه أوّلاً.**
+ *
+ * # ولماذا قسمُ المتجر أيضاً
+ *
+ * الصنفُ يعيش في قائمة متجره (`section_id`) **ويُعرض في قسم السوق**
+ * (`platform_section_id`) — **موضعان لا واحد**: الأوّلُ ترتيبُ المطبخ يراه
+ * صاحبُه، والثاني بابُ الزبون. **ولا يُنشأ صنفٌ بلا موضعٍ في قائمة صاحبه**:
+ * يصير يتيماً لا يجده من يملكه.
+ *
+ * **وقسمُ السوق مثبَّتٌ هنا** — هو الصفحةُ التي فُتح منها، فلا يُسأل عنه.
+ */
+function AddItemModal({
+  sectionID,
+  sectionName,
+  onClose,
+  onSaved,
+}: {
+  sectionID: string;
+  sectionName: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [merchants, setMerchants] = useState<MerchantRow[]>([]);
+  const [merchantID, setMerchantID] = useState("");
+  const [menuSections, setMenuSections] = useState<MenuSectionRow[] | null>(null);
+  const [menuSectionID, setMenuSectionID] = useState("");
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [imageID, setImageID] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api<{ merchants: MerchantRow[] }>("/api/v1/admin/merchants")
+      .then((r) => setMerchants(r.merchants ?? []))
+      .catch(() => setError(m.errors.internal));
+  }, []);
+
+  // **وقائمةُ المتجر تُقرأ حين يُختار** — لا قبله: أقسامُ متجرٍ لم يُختر
+  // بعدُ لا معنى لها، **وقراءةُ قوائم كلّ المتاجر سلفاً حملٌ بلا سبب.**
+  useEffect(() => {
+    if (!merchantID) {
+      setMenuSections(null);
+      setMenuSectionID("");
+      return;
+    }
+    setMenuSections(null);
+    api<MenuSectionRow[]>(`/api/v1/admin/merchants/${merchantID}/menu`)
+      .then((r) => {
+        const list = r ?? [];
+        setMenuSections(list);
+        setMenuSectionID(list[0]?.id ?? "");
+      })
+      .catch(() => setError(m.errors.internal));
+  }, [merchantID]);
+
+  async function submit() {
+    if (!merchantID) return setError(S.pickMerchant);
+    if (!menuSectionID) return setError(S.pickMenuSection);
+    if (!name.trim()) return setError(S.itemNameRequired);
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/merchants/${merchantID}/menu/items`, {
+        method: "POST",
+        body: JSON.stringify({
+          section_id: menuSectionID,
+          name: name.trim(),
+          price: Number(price) || 0,
+          platform_section_id: sectionID,
+          ...(imageID !== null ? { image_media_id: imageID } : {}),
+        }),
+      });
+      onSaved();
+    } catch (err) {
+      const key = err instanceof ApiError ? (err.body.message_key.split(".").pop() ?? "") : "";
+      setError((m.errors as Record<string, string>)[key] ?? m.errors.internal);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={S.addItemTo.replace("{s}", sectionName)} onClose={onClose}>
+      <div className="space-y-3">
+        <Select
+          label={S.merchant}
+          value={merchantID}
+          onChange={(e) => setMerchantID(e.target.value)}
+        >
+          <option value="">{S.pickMerchant}</option>
+          {merchants.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
+            </option>
+          ))}
+        </Select>
+
+        {/* **وقسمُ المطبخ لا يُسأل عنه قبل المتجر** — حقلٌ فارغٌ معطَّلٌ يُقرأ
+            عطباً، **وغيابُه يقول «اختر المتجر أوّلاً» بلا كلمة.** */}
+        {merchantID &&
+          (menuSections === null ? (
+            <p className="text-sm text-ink-muted">{m.common.loading}</p>
+          ) : menuSections.length === 0 ? (
+            <p className="text-sm text-danger">{S.merchantHasNoSections}</p>
+          ) : (
+            <Select
+              label={S.menuSection}
+              value={menuSectionID}
+              onChange={(e) => setMenuSectionID(e.target.value)}
+            >
+              {menuSections.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
+              ))}
+            </Select>
+          ))}
+
+        <ImageUpload kind="menu_item" label={S.itemImage} onChange={setImageID} />
+        <Input label={S.itemName} value={name} onChange={(e) => setName(e.target.value)} />
+        {/* **سعرُ الشراء لا سعرُ البيع** — ما يقبضه المتجر، **والمنصةُ تحسب
+            الهامشَ فوقه.** واللفظُ يقول أيَّهما، فـ«السعر» وحدَها تحتمل الاثنين. */}
+        <Input
+          label={S.itemPrice}
+          type="number"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+        />
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex gap-2">
+          <Button disabled={busy} onClick={submit}>
+            {m.common.save}
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

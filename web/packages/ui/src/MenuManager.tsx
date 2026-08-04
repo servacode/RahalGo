@@ -83,6 +83,16 @@ export interface MenuPaths {
   section: (sectionID: string) => string;
   items: (merchantID: string) => string;
   item: (itemID: string) => string;
+  /**
+   * أقسامُ السوق — **وكلُّ بوابةٍ تقرؤها من بابها.**
+   *
+   * كان العنوانُ مكتوباً في المكوّن: `/api/v1/admin/sections`. **فيُردُّ صاحبُ
+   * المتجر ٤٠٣ فيُخفى الحقلُ كلُّه** — فكلُّ ما يضيفه يبقى خارج السوق حتى
+   * يصنّفه الأدمنُ بيده.
+   *
+   * **ومكوّنٌ مشتركٌ لا يعرف بوابتَه**: يأخذها كما يأخذ بقيّة مساراته.
+   */
+  platformSections: () => string;
 }
 
 function errText(err: unknown): string {
@@ -127,12 +137,11 @@ export function MenuManager({
   const [editing, setEditing] = useState<{ item: MenuItem | null; sectionId: string } | null>(null);
 
   useEffect(() => {
-    api<{ sections: PlatformSection[] }>("/api/v1/admin/sections")
+    api<{ sections: PlatformSection[] }>(paths.platformSections())
       .then((r) => setPlatformSections(r.sections ?? []))
-      // **وتعذّرُها لا يمنع تحرير القائمة**: من لا يملك صلاحيةَ الأقسام
-      // (صاحبُ المتجر) يحرّر أصنافَه كما كان، **والتصنيفُ شأنُ الأدمن.**
+      // **وتعذّرُها لا يمنع تحرير القائمة** — يبقى الحقلُ مخفيّاً والباقي يعمل.
       .catch(() => undefined);
-  }, [api]);
+  }, [api, paths]);
 
   const load = useCallback(async () => {
     try {

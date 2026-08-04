@@ -1579,7 +1579,19 @@
       "statLive": "معروض الآن",
       "statHidden": "لا يظهر",
       "searchItems": "ابحث في أصناف القسم",
-      "allStates": "كل الحالات"
+      "allStates": "كل الحالات",
+      "noImage": "بلا صورة",
+      "addItem": "أضف صنفاً",
+      "addItemTo": "أضف صنفاً إلى {s}",
+      "merchant": "المتجر",
+      "pickMerchant": "اختر المتجر",
+      "menuSection": "قسمه في قائمة المتجر",
+      "pickMenuSection": "اختر قسمه في قائمة المتجر",
+      "merchantHasNoSections": "لا أقسام في قائمة هذا المتجر — أنشئ قسماً فيه أوّلاً",
+      "itemName": "اسم الصنف",
+      "itemNameRequired": "اكتب اسم الصنف",
+      "itemPrice": "سعر الشراء — ما يقبضه المتجر",
+      "itemImage": "صورة الصنف"
     },
     "claims": {
       "title": "النزاعات",

@@ -143,3 +143,45 @@ func (s *Server) handleMerchantDeleteItem(w http.ResponseWriter, r *http.Request
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": true})
 }
+
+// handleMerchantPlatformSections أقسامُ السوق كما يراها المتجر — **ليختار**.
+//
+// # لماذا نقطةٌ للمتجر
+//
+// **السوقُ يجمع بضاعةَ المتاجر، والمتجرُ يعرف ما يبيع.** وشاشةُ الصنف كانت
+// تقرأ أقسامَ السوق من نقطة الأدمن، **فيُردُّ صاحبُ المتجر ٤٠٣ فيُخفى الحقلُ
+// كلُّه** — فكلُّ ما يضيفه يبقى غيرَ مصنَّفٍ حتى يدخل الأدمنُ ويصنّفه بيده،
+// **ولا شيءَ يقول له إنّ هناك أصنافاً تنتظر.**
+//
+// **والاختيارُ لا يُنشر بذاته**: مراجعةُ القائمة تبقى الحارس — الصنفُ الجديد
+// يُعلَّق حتى يُقَرّ، **فالمتجرُ يقترح موضعَه ولا يفرضه.**
+//
+// # ولا يُعرض إلّا الفعّال
+//
+// قسمٌ مُطفأٌ لا يظهر في السوق، **وعرضُه للاختيار يَعِد بما لا يقع**: يضع
+// المتجرُ صنفَه فيه ثمّ لا يجده معروضاً ولا يعرف لماذا.
+func (s *Server) handleMerchantPlatformSections(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT id::text, name FROM platform_sections
+		WHERE active ORDER BY sort_order, name`)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+
+	type section struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	out := []section{}
+	for rows.Next() {
+		var x section
+		if err := rows.Scan(&x.ID, &x.Name); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out = append(out, x)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"sections": out})
+}
