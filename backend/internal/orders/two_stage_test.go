@@ -54,15 +54,15 @@ func TestMerchantPaidAtPickup(t *testing.T) {
 	if got := f.balance(t, owner); got != 81_000 {
 		t.Errorf("قُيّد للمتجر مرّتين: %d", got)
 	}
-	if got := f.balance(t, f.driver); got != 7_000 {
-		t.Errorf("أجر السائق = %d، والمتوقّع 7000", got)
+	if got := f.balance(t, f.driver); got != 10_000 {
+		t.Errorf("أجرُ السائق = %d، والمتوقّع 10000 — أجرةُ التوصيل كلُّها", got)
 	}
 	if got := f.balance(t, f.rep); got != 1_000 {
 		t.Errorf("عمولة المندوب = %d، والمتوقّع 1000", got)
 	}
 	// **١١٠٬٠٠٠ − (٨١٬٠٠٠ + ٧٬٠٠٠ + ١٬٠٠٠) = ٢١٬٠٠٠** — نفسُ رقمٍ قبل التقسيم.
-	if got := f.balance(t, treasury); got != 21_000 {
-		t.Errorf("الخزينة بعد التسليم = %d، والمتوقّع 21000", got)
+	if got := f.balance(t, treasury); got != 18_000 {
+		t.Errorf("الخزينة بعد التسليم = %d، والمتوقّع 18000", got)
 	}
 }
 
@@ -131,8 +131,8 @@ func TestWalletOrder_TwoStagesSameTotal(t *testing.T) {
 	if got := f.balance(t, owner); got != 81_000 {
 		t.Errorf("مستحقّ المتجر = %d", got)
 	}
-	if got := f.balance(t, treasury); got != 21_000 {
-		t.Errorf("الخزينة = %d، والمتوقّع 21000 — نفسُ رقم النقديّ", got)
+	if got := f.balance(t, treasury); got != 18_000 {
+		t.Errorf("الخزينة = %d، والمتوقّع 18000 — نفسُ رقم النقديّ", got)
 	}
 }
 

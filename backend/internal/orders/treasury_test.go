@@ -57,8 +57,8 @@ func TestTreasury_ProfitIsWhatRemains(t *testing.T) {
 	if got := f.balance(t, f.rep); got != 1_000 {
 		t.Fatalf("عمولة المندوب = %d، والمتوقّع 1000", got)
 	}
-	if got := f.balance(t, f.driver); got != 7_000 {
-		t.Fatalf("أجر السائق = %d، والمتوقّع 7000", got)
+	if got := f.balance(t, f.driver); got != 10_000 {
+		t.Fatalf("أجرُ السائق = %d، والمتوقّع 10000 — أجرةُ التوصيل كلُّها", got)
 	}
 	if got := f.balance(t, owner); got != 81_000 {
 		t.Fatalf("مستحقّ المتجر = %d، والمتوقّع 81000 (سعرُ الشراء − عمولة)", got)
@@ -68,8 +68,8 @@ func TestTreasury_ProfitIsWhatRemains(t *testing.T) {
 	// دخلَ ١١٠٬٠٠٠ (بضاعةٌ بسعر البيع + توصيل)، وخرج ٨١٬٠٠٠ للمتجر و٧٬٠٠٠
 	// للسائق و١٬٠٠٠ للمندوب. **والفرقُ عن النموذج القديم هامشُنا**: كان
 	// يُدفع للمتجر لأن مستحقَّه كان يُحسب من سعر البيع.
-	if got := f.balance(t, treasury); got != 21_000 {
-		t.Errorf("ربح المنصة = %d، والمتوقّع 21000", got)
+	if got := f.balance(t, treasury); got != 18_000 {
+		t.Errorf("ربحُ المنصة = %d، والمتوقّع 18000", got)
 	}
 }
 
@@ -90,7 +90,7 @@ func TestTreasury_UnsetDoesNotBlockDelivery(t *testing.T) {
 		f.orderID, "delivered", ""); err != nil {
 		t.Fatalf("التسليم فشل بلا خزينة: %v", err)
 	}
-	if got := f.balance(t, f.driver); got != 7_000 {
-		t.Errorf("أجر السائق = %d، والمتوقّع 7000", got)
+	if got := f.balance(t, f.driver); got != 10_000 {
+		t.Errorf("أجرُ السائق = %d، والمتوقّع 10000 — أجرةُ التوصيل كلُّها", got)
 	}
 }

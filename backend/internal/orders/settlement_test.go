@@ -75,7 +75,13 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO app_settings (key, value) VALUES
 			('sales.activation_orders','1'::jsonb),
-			('sales.commission_percent','10'::jsonb)
+			('sales.commission_percent','10'::jsonb),
+			-- **ونسبةُ تعويض السائق كذلك.**
+			--
+			-- **وهي ليست في الفهرس بعدُ**: حُذفت مع الإعدادات ولم يُقرّر
+			-- بديلُها، **فتُقرأ صفراً في المنصة** — أي لا تعويضَ لسائقٍ ضاع
+			-- مشوارُه. تُبذَر هنا لتُفحَص المعادلةُ لا الافتراض.
+			('drivers.failed_compensation_percent','50'::jsonb)
 		ON CONFLICT (key) DO UPDATE SET value = excluded.value`); err != nil {
 		t.Fatalf("تعذّر ضبط مفاتيح التسوية: %v", err)
 	}
@@ -177,6 +183,22 @@ func TestDelivery_CreditsCashAndCommissions(t *testing.T) {
 	// **والمنصةُ تدفع له من جيبها.**
 	if got := f.balance(t, f.rep); got != 1_000 {
 		t.Errorf("عمولة المندوب = %d، والمتوقع 1000", got)
+	}
+
+	// **وحصّةُ السائق هي أجرةُ التوصيل — كلُّها.**
+	//
+	// # ولماذا يُفحص هنا بالذات
+	//
+	// كانت تُشتقّ من ثلاثة مفاتيح (نمطٌ ونسبةٌ ومقطوع). **وحُذفت مع الإعدادات
+	// ولم تُعَد** — فقُرئت أصفاراً، **فسلّم السائقُ ولم يُقيَّد له قرش**
+	// وابتلعت الخزينةُ أجرةَ التوصيل كاملة. (وقع في `#1001` ٢٠٢٦-٠٨-٠٤.)
+	//
+	// **ولم يصرخ شيء**: `payDriver` تخرج بهدوءٍ حين تكون الحصّةُ صفراً —
+	// **ولا اختبارَ كان يقيس محفظتَه.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «حصّةُ السائق هي أجرة التوصيل».)
+	if got := f.balance(t, f.driver); got != 10_000 {
+		t.Errorf("أجرُ السائق = %d، والمتوقّع 10000 — وهي أجرةُ التوصيل كلُّها", got)
 	}
 }
 
@@ -515,58 +537,81 @@ func TestDelivery_CreditsMerchantEarning(t *testing.T) {
 	}
 }
 
-// أجر السائق يُقيَّد بالتسليم، **خارج** مبلغ الدَّين عليه.
+// أجرُ السائق يُقيَّد بالتسليم، **خارج** مبلغ الدَّين عليه.
 //
-// صندوقه يسجّل ما يدين به للمنصة، ومحفظته تسجّل ما تدين به له. خلطُهما (أن
-// يسلّم المبلغ ناقصاً أجره) يجعل تسوية الصندوق غير قابلة للمطابقة: لا يعود
-// مجموع ما حصّله يساوي مجموع ما سلّمه.
-func TestDelivery_PaysDriverShare(t *testing.T) {
+// صندوقُه يسجّل ما يدين به للمنصة، ومحفظتُه تسجّل ما تدين به له. **وخلطُهما
+// (أن يسلّم المبلغ ناقصاً أجرَه) يجعل تسويةَ الصندوق غيرَ قابلةٍ للمطابقة**:
+// لا يعود مجموعُ ما حصّله يساوي مجموعَ ما سلّمه.
+//
+// # وهو أجرةُ التوصيل كلُّها
+//
+// كان يُشتقّ من ثلاثة مفاتيح (نمطٌ ونسبةٌ ومقطوع). **وحُذفت مع الإعدادات ولم
+// تُعَد** — فقُرئت أصفاراً، **فسلّم السائقُ ولم يُقيَّد له قرش** وابتلعت
+// الخزينةُ أجرةَ التوصيل كاملة. (وقع في `#1001` ٢٠٢٦-٠٨-٠٤.)
+//
+// **والقاعدةُ الآن لا تحتاج مفتاحاً**: ما يدفعه الزبونُ توصيلاً يقبضه من
+// أوصل. **ورقمٌ لا يُشتقّ لا يفترق** ولا يسقط بغياب إعداد.
+//
+// **والمنصةُ لا تربح من مشوارٍ لم تقده** — ربحُها الهامشُ وعمولةُ المتاجر.
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «حصّةُ السائق هي أجرة التوصيل».)
+func TestDelivery_PaysDriverTheDeliveryFee(t *testing.T) {
 	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
 	ctx := context.Background()
-
-	// النمط الافتراضي: نسبة من رسم التوصيل (70% من 10,000 = 7,000)
-	if _, err := f.pool.Exec(ctx, `
-		INSERT INTO app_settings (key, value) VALUES ('drivers.share_mode','"percent"'::jsonb),
-		                                             ('drivers.share_value','70'::jsonb)
-		ON CONFLICT (key) DO UPDATE SET value = excluded.value`); err != nil {
-		t.Fatalf("تعذّر ضبط الإعدادات: %v", err)
-	}
 
 	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "delivered", ""); err != nil {
 		t.Fatalf("التسليم فشل: %v", err)
 	}
 
-	if got := f.balance(t, f.driver); got != 7_000 {
-		t.Fatalf("أجر السائق = %d، والمتوقع 7000 (70%% من رسم التوصيل)", got)
+	if got := f.balance(t, f.driver); got != 10_000 {
+		t.Fatalf("أجرُ السائق = %d، والمتوقّع 10000 — وهي أجرةُ التوصيل كلُّها", got)
 	}
-	// والدَّين كامل غير منقوص من الأجر
+	// **والدَّينُ كاملٌ غيرُ منقوصٍ من الأجر.**
 	if got := f.held(t); got != 110_000 {
 		t.Fatalf("صندوق السائق = %d، والمتوقع 110000 كاملاً — الأجر خارج الدَّين", got)
 	}
 }
 
-// النمط المقطوع: مبلغ ثابت لكل طلب مهما كان رسم التوصيل.
-func TestDelivery_DriverShare_FixedMode(t *testing.T) {
+// **ولا مفتاحَ يُبطله.**
+//
+// **وهو ما أسقط `#1001`**: مفتاحٌ محذوفٌ يُقرأ صفراً فيُضرب في الأجرة —
+// **فيخرج صفرٌ بهدوءٍ ولا يصرخ شيء.**
+func TestDriverFee_SurvivesEmptySettings(t *testing.T) {
 	f := setup(t, "at_dropoff", 100_000, 10_000, 0)
 	ctx := context.Background()
 
-	if _, err := f.pool.Exec(ctx, `
-		INSERT INTO app_settings (key, value) VALUES ('drivers.share_mode','"fixed"'::jsonb),
-		                                             ('drivers.share_value','5000'::jsonb)
-		ON CONFLICT (key) DO UPDATE SET value = excluded.value`); err != nil {
-		t.Fatalf("تعذّر ضبط الإعدادات: %v", err)
+	// **تُمحى إعداداتُ السائقين** — الحالُ الذي وقع فيه الخلل.
+	//
+	// **وتُعاد بعده**: قاعدةُ الاختبار مشتركة، **ومحوٌ لا يُتراجَع عنه يُسقط
+	// اختباراتٍ أخرى بعد حين** — فيُظنّ العطبُ فيها وهو في هذا.
+	var saved [][]any
+	rows, err := f.pool.Query(ctx, `SELECT key, value FROM app_settings WHERE key LIKE 'drivers.%'`)
+	if err != nil {
+		t.Fatalf("تعذّرت قراءةُ الإعدادات: %v", err)
 	}
+	for rows.Next() {
+		var k string
+		var v []byte
+		if err := rows.Scan(&k, &v); err == nil {
+			saved = append(saved, []any{k, v})
+		}
+	}
+	rows.Close()
 	t.Cleanup(func() {
-		_, _ = f.pool.Exec(context.Background(), `
-			UPDATE app_settings SET value = '"percent"'::jsonb WHERE key='drivers.share_mode';
-			UPDATE app_settings SET value = '70'::jsonb WHERE key='drivers.share_value'`)
+		for _, r := range saved {
+			_, _ = f.pool.Exec(context.Background(), `
+				INSERT INTO app_settings (key, value) VALUES ($1, $2)
+				ON CONFLICT (key) DO UPDATE SET value = excluded.value`, r[0], r[1])
+		}
 	})
+	if _, err := f.pool.Exec(ctx, `DELETE FROM app_settings WHERE key LIKE 'drivers.%'`); err != nil {
+		t.Fatalf("تعذّر محوُ الإعدادات: %v", err)
+	}
 
 	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "delivered", ""); err != nil {
 		t.Fatalf("التسليم فشل: %v", err)
 	}
-	if got := f.balance(t, f.driver); got != 5_000 {
-		t.Fatalf("أجر السائق المقطوع = %d، والمتوقع 5000", got)
+	if got := f.balance(t, f.driver); got != 10_000 {
+		t.Fatalf("أجرُ السائق بلا إعدادات = %d، والمتوقّع 10000", got)
 	}
 }
 
