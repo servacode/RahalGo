@@ -286,11 +286,21 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 	//
 	// وفشلُ الإنزال لا يُبطل إرسالاً وقع: الرسالةُ وصلت المتجرَ ولا تُستردّ.
 	// **يبقى الطلب حيث هو وتراه العملياتُ بزرّ «طلب سائق» كما كان.**
-	if s.orders.AutoDispatchEnabled(r.Context()) {
-		if err := s.orders.AutoDispatch(r.Context(), userIDFrom(r), orderID); err != nil {
-			s.logger.Warn("الإنزال التلقائي بعد الإبلاغ تعثّر — ينتظر إسناداً يدوياً",
-				"order", orderID, "error", err)
-		}
+	//
+	// # ولا يُشترط بمفتاح
+	//
+	// كان مشروطاً بـ`orders.auto_dispatch`. **والمفتاحُ ليس في الفهرس** فيُقرأ
+	// «لا» — **فيبقى الطلبُ في «تم القبول» بلا بابٍ يوصله إلى سائق.**
+	//
+	// **والتحويلُ هو الفعلُ لا خطوةٌ قبله**: قرارُ المالك (٢٠٢٦-٠٨-٠٤) أنّ
+	// المنصةَ تُحوّل إلى المتجر أو إلى متجرٍ آخر، **ولا شيءَ بعدها اسمُه «طلب
+	// سائق» تنتظره ضغطةٌ ثانية.**
+	//
+	// **وشرطٌ على مفتاحٍ لا وجودَ له شرطٌ لا يتحقّق أبداً** — ووعدٌ في تعليقٍ
+	// لا يفي به الكود.
+	if err := s.orders.AutoDispatch(r.Context(), userIDFrom(r), orderID); err != nil {
+		s.logger.Warn("الإنزال بعد الإبلاغ تعثّر — ينتظر إسناداً يدوياً",
+			"order", orderID, "error", err)
 	}
 
 	s.touch("order", "ops")

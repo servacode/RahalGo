@@ -347,11 +347,34 @@ const OPS_NEXT: Record<string, string[]> = {
   // **والإلغاءُ يبقى بعد القبول** — هناك يختلفان: أُعلن للزبون أنّ طلبَه قُبل،
   // فإنهاؤه إلغاءٌ لالتزامٍ لا ردٌّ لطلب.
   pending: ["accepted", "rejected"],
-  accepted: ["preparing", "cancelled"],
-  preparing: ["cancelled"], // + إسناد سائق
-  dispatching: ["cancelled"], // + إسناد سائق
-  assigned: ["at_pickup", "cancelled"],
-  at_pickup: ["picked_up", "cancelled"],
+  // **ولا «بدء تحضير» في المنصة — ولا إلغاءَ بعد القبول.**
+  //
+  // # «بدء التحضير» لا وجودَ له
+  //
+  // **المطبخُ خارج النظام**: يُبلَّغ على واتساب ولا يضغط شيئاً. **فإعلانُ
+  // «بدأ يحضّر» عنه ادّعاءُ ما لا نعلمه** — وقد يكون الطبّاخُ لم يفتح الرسالة.
+  //
+  // والفعلُ الحقيقيُّ اسمُه ما هو: **تحويلُ الطلب إلى المتجر**، أو إلى متجرٍ
+  // آخر. **والمحرّكُ يسمح `accepted → dispatching` رأساً** — دون المرور بحالٍ
+  // لا يعلمها أحد.
+  //
+  // # والإلغاءُ بعد القبول مايصير
+  //
+  // **قبلنا الطلبَ فالتزمنا.** ومتجرٌ لا يستطيع لا يُلغي الطلبَ بل يُحوَّل إلى
+  // غيره — **والمنصةُ لم تُفتح لترفض طلبات.**
+  //
+  // **ويبقى الإلغاءُ لغيرها**: للزبون في نافذته، وللمتجر حين ينفد صنفُه —
+  // **وهما يعلمان ما لا تعلمه.**
+  //
+  // (قرارُ المالك ٢٠٢٦-٠٨-٠٤ — وقد صُحّحت هذه البطاقةُ مرّاتٍ قبله: «ما في
+  // شي بالمنصة اسمه بدء التحضير، خلص اسمه تحويل للمتجر أو تحويل لمتجر آخر.
+  // وإلغاء الطلب ما يصير أساساً لأنّنا وافقنا على طلب — حتى لو ما في عندي
+  // متجرٌ معيّن نجيب من متجرٍ ثانٍ. ونحن ما فتحنا المنصة مشان نرفض طلبات».)
+  accepted: [],
+  preparing: [], // + إسناد سائق
+  dispatching: [], // + إسناد سائق
+  assigned: ["at_pickup"],
+  at_pickup: ["picked_up"],
   picked_up: ["on_the_way"],
   on_the_way: ["at_dropoff"],
   at_dropoff: ["delivered", "failed"],
@@ -581,10 +604,19 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           (x) => x.key === "orders.manual_assign_after_min",
         );
         setAssignAfterMin(typeof delay?.value === "number" ? delay.value : 10);
-        const row = all.find((x) => x.key === "merchants.self_manage_orders");
-        setSelfManage(row ? row.value === true : true);
+        // **ومن المفتاح الحيّ لا المحذوف.**
+        //
+        // كان يقرأ `merchants.self_manage_orders` — **وقد صار
+        // `platform.orders_mode` بوضعين.** فلم يُوجَد الصفُّ فسقط على `true`،
+        // **فظنّت الشاشةُ أنّ المتاجر تدير وهي لا تدير** — فعادت أزرارُ وضعٍ
+        // آخر إلى بطاقةٍ صُحّحت مرّاتٍ من قبل.
+        //
+        // **ومفتاحٌ يُقرأ باسمه القديم لا يصرخ**: لا خطأَ ولا سجلّ، **بل
+        // احتياطيٌّ صامتٌ يقلب السلوك.**
+        const row = all.find((x) => x.key === "platform.orders_mode");
+        setSelfManage(row?.value === "merchants");
       })
-      .catch(() => setSelfManage(true));
+      .catch(() => setSelfManage(false));
   }, []);
   const [view, setView] = useViewMode("orders");
 

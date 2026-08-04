@@ -282,11 +282,6 @@ func (s *Service) autoDispatch(ctx context.Context, to string) bool {
 		s.MerchantsSelfManage(ctx)
 }
 
-// AutoDispatchEnabled أمُشغَّلٌ الإنزالُ التلقائيّ؟ يسأله الإبلاغُ بالرسالة.
-func (s *Service) AutoDispatchEnabled(ctx context.Context) bool {
-	return s.settings != nil && s.settings.GetBool(ctx, "orders.auto_dispatch")
-}
-
 // AutoDispatch ينزل الطلبَ إلى الطابور باسم النظام — يُنادى بعد إبلاغ المتجر.
 func (s *Service) AutoDispatch(ctx context.Context, actorID, orderID string) error {
 	_, err := s.Transition(ctx, actorID, []string{"ops"}, orderID,

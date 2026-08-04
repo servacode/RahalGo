@@ -50,9 +50,6 @@ func TestAutoDispatchNeedsSettings(t *testing.T) {
 			t.Errorf("autoDispatch(%s) بلا إعدادات = true، والمتوقّع false", to)
 		}
 	}
-	if s.AutoDispatchEnabled(t.Context()) {
-		t.Error("AutoDispatchEnabled بلا إعدادات = true، والمتوقّع false")
-	}
 }
 
 func TestTerminal(t *testing.T) {
@@ -64,6 +61,46 @@ func TestTerminal(t *testing.T) {
 	for _, st := range []string{StPending, StPreparing, StOnTheWay} {
 		if terminal(st) {
 			t.Errorf("terminal(%s) should be false", st)
+		}
+	}
+}
+
+// TestAcceptedGoesStraightToDispatching **لا حالَ بين القبول والطابور.**
+//
+// # القاعدة
+//
+// **المطبخُ خارج النظام**: يُبلَّغ على واتساب ولا يضغط شيئاً. **فإعلانُ «بدأ
+// يحضّر» عنه ادّعاءُ ما لا نعلمه** — وقد يكون الطبّاخُ لم يفتح الرسالة.
+//
+// **والفعلُ اسمُه ما هو**: تحويلُ الطلب إلى المتجر، أو إلى متجرٍ آخر.
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «ما في شي بالمنصة اسمه بدء التحضير، خلص اسمه
+// تحويل للمتجر أو تحويل لمتجر آخر» — **وقد صُحّحت هذه البطاقةُ مرّاتٍ قبله
+// وارتدّت**، فيحرسها اختبارٌ لا انتباه.)
+func TestAcceptedGoesStraightToDispatching(t *testing.T) {
+	if !canTransition(StAccepted, StDispatching, opsRoles) {
+		t.Fatal("العملياتُ لا تملك تحويلَ طلبٍ مقبولٍ إلى الطابور — فيبقى عالقاً بلا باب")
+	}
+}
+
+// TestPlatformDoesNotCancelAfterAccept **قبلنا فالتزمنا.**
+//
+// **ومتجرٌ لا يستطيع لا يُلغي الطلبَ بل يُحوَّل إلى غيره** — والمنصةُ لم تُفتح
+// لترفض طلبات. (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
+//
+// **ويبقى الإلغاءُ لغيرها**: للزبون في نافذته، وللمتجر حين ينفد صنفُه —
+// **وهما يعلمان ما لا تعلمه.**
+func TestPlatformDoesNotCancelAfterAccept(t *testing.T) {
+	// **والخارطةُ تُبقيه لهما** — الحجبُ في الشاشة على العمليات وحدَها.
+	for _, who := range []struct {
+		role string
+		may  bool
+	}{
+		{"customer", true},
+		{"merchant", true},
+	} {
+		if got := canTransition(StAccepted, StCancelled, []string{who.role}); got != who.may {
+			t.Errorf("%s إلغاءُ طلبٍ مقبول = %v، والمنتظَر %v", who.role, got, who.may)
 		}
 	}
 }
