@@ -182,7 +182,13 @@ func MerchantCommission(ctx context.Context, st Store, override *int64) Amount {
 	if override != nil {
 		return Amount{Mode: "percent", Value: *override}
 	}
-	return amountFrom(ctx, st, "merchants.commission_mode", "merchants.commission_value")
+	// **نسبةٌ لا نمط.** كانت نمطاً وقيمةً (نسبةٌ أو مقطوع)، **ومقطوعٌ من متجرٍ
+	// صغيرٍ يبيع بعشرة آلافٍ غيرُ مقطوعٍ من متجرٍ يبيع بمئة** — والنسبةُ تتبع
+	// حجمَه وحدَها. (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «نسبةُ عمولة المنصة».)
+	if st == nil {
+		return Amount{Mode: "percent"}
+	}
+	return Amount{Mode: "percent", Value: st.GetInt(ctx, "merchants.commission_percent")}
 }
 
 // RepCommission عمولةُ المندوب من عمولة المنصة — **حصّةٌ من حصّتنا لا من البيع.**

@@ -1346,6 +1346,11 @@
           "hint": "",
           "zero": "التوصيل مجّاني"
         },
+        "merchants.commission_percent": {
+          "label": "عمولة المنصة من المتاجر",
+          "hint": "",
+          "zero": "بلا عمولة"
+        },
         "platform.orders_mode": {
           "label": "إدارة الطلبات",
           "hint": ""

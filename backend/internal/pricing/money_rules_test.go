@@ -72,10 +72,9 @@ func TestAmount_Of(t *testing.T) {
 func TestCommissions_LiveOnEveryRead(t *testing.T) {
 	ctx := context.Background()
 	st := fakeStore{
-		"merchants.commission_mode":  "percent",
-		"merchants.commission_value": int64(10),
-		"sales.commission_mode":      "percent",
-		"sales.commission_value":     int64(10),
+		"merchants.commission_percent": int64(10),
+		"sales.commission_mode":        "percent",
+		"sales.commission_value":       int64(10),
 	}
 
 	if got := pricing.MerchantCommission(ctx, st, nil).Of(26_000); got != 2_600 {
@@ -83,16 +82,9 @@ func TestCommissions_LiveOnEveryRead(t *testing.T) {
 	}
 
 	// **يُغيَّر المفتاحُ ولا يُعاد بناءُ شيء.**
-	st["merchants.commission_value"] = int64(15)
+	st["merchants.commission_percent"] = int64(15)
 	if got := pricing.MerchantCommission(ctx, st, nil).Of(26_000); got != 3_900 {
 		t.Fatalf("بعد التغيير %d والمنتظَر ٣٩٠٠ — الإعدادُ لم يسرِ", got)
-	}
-
-	// **ونمطُه يُقلب فيتغيّر المعنى لا الرقمُ وحدَه.**
-	st["merchants.commission_mode"] = "fixed"
-	st["merchants.commission_value"] = int64(4_000)
-	if got := pricing.MerchantCommission(ctx, st, nil).Of(26_000); got != 4_000 {
-		t.Fatalf("بالمقطوع %d والمنتظَر ٤٠٠٠", got)
 	}
 
 	// **وحصّةُ المندوب من عمولتنا لا من البيع.**
@@ -109,7 +101,7 @@ func TestCommissions_LiveOnEveryRead(t *testing.T) {
 // المنصةُ بلا دخلٍ ولا يظهر ذلك إلّا في آخر الشهر.
 func TestMerchantCommission_OverrideBeatsGlobal(t *testing.T) {
 	ctx := context.Background()
-	st := fakeStore{"merchants.commission_mode": "percent", "merchants.commission_value": int64(10)}
+	st := fakeStore{"merchants.commission_percent": int64(10)}
 	n := func(v int64) *int64 { return &v }
 
 	if got := pricing.MerchantCommission(ctx, st, n(2)).Of(100_000); got != 2_000 {
