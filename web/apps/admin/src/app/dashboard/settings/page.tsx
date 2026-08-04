@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   PageHeader, Button, Input, Select, Checkbox, Badge, Card, EmptyState,
   IconSettings, IconWarning, IconCheck,
@@ -428,17 +428,16 @@ function SettingRow({
 
         {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
 
-        {/* **من غيّره ومتى** — إعدادٌ يحكم المال يجب أن يُعرف صاحبُ قراره.
+        {/* **ولا سطرَ «آخر تغيير» تحت أيّ مفتاح.**
 
-            **ولا يُقال «لم يُغيَّر» تحت كلّ مفتاح**: سطرٌ يتكرّر بلا خبرٍ
-            تحت كلّ بطاقةٍ زحامٌ، **ويُخفي السطرَ الذي يحمل خبراً حين يظهر.** */}
-        {s.updated_at && (
-          <p className="mt-2 text-xs text-ink-muted">
-            {S.lastChange
-              .replace("{who}", s.updated_by ?? m.admin.audit.system)
-              .replace("{when}", fmtDateTime(s.updated_at))}
-          </p>
-        )}
+            كان يقول «مدير المنصة — ٤/٨/٢٠٢٦، ٣:٥٦ م». **وهو خبرٌ يُقرأ مرّةً
+            ثمّ يشغل سطراً تحت كلّ بطاقةٍ إلى الأبد** — ومن يفتح الإعدادات
+            يريد أن يضبط لا أن يقرأ تاريخاً.
+
+            **ولا يُفقَد شيء**: `admin.setting_update` يُقيَّد في سجلّ الأحداث
+            بـ«كان» و«صار» ومن فعل — **وهو موضعُ المراجعة، لا بطاقةُ الضبط.**
+
+            (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لا يوجد داعٍ لهذا بأيّ إعداد».) */}
 
         {/* **وما يُحفظ باللمس يقول ذلك قبل أن يُلمس.**
 

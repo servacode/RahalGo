@@ -1296,8 +1296,8 @@
         "flat": "مقطوعة — رقم واحد للجميع",
         "zone": "حسب المنطقة",
         "distance": "حسب المسافة — لكل كيلومتر",
-        "queue": "الأسرع التقاطاً",
-        "rotation": "بالدور",
+        "queue": "الأسرع",
+        "rotation": "بالتساوي",
         "manual": "بيد المكتب",
         "auto": "تلقائي",
         "platform": "وضع المنصة",
@@ -1333,6 +1333,10 @@
       "outOfRange": "القيمة خارج المدى المسموح",
       "saved": "حُفظ",
       "keys": {
+        "drivers.assignment_mode": {
+          "label": "توزيع الطلبات",
+          "hint": ""
+        },
         "platform.orders_mode": {
           "label": "إدارة الطلبات",
           "hint": ""

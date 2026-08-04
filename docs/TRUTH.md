@@ -387,6 +387,7 @@
 | المفتاح | المجموعة | النوع | الافتراضيّ |
 |---|---|---|---|
 | `platform.orders_mode` | المنصة | choice | `platform` |
+| `drivers.assignment_mode` | السائقون | choice | `queue` |
 <!-- /gen:settings -->
 
 ---
