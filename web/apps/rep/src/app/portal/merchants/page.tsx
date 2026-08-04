@@ -87,6 +87,13 @@ interface Lead {
   category_icon: string | null;
   status: "new" | "converted" | "rejected";
   created_at: string;
+  /**
+   * **سببُ ردّ الإدارة** — يُقرأ في البطاقة لا في إشعارٍ يمرّ.
+   *
+   * من رُدّت فرصتُه بلا سببٍ **يلاحق عميلاً ميتاً أو يعيد إرسالها** فتُردّ
+   * ثانية. **والإشعارُ يُقرأ مرّةً ويُنسى، والبطاقةُ تبقى.**
+   */
+  decision_note?: string;
 }
 
 interface Category {
@@ -176,7 +183,15 @@ export default function ClientsPage() {
                   {l.status === "new" ? C.pending : C.rejected}
                 </Badge>
               }
-              footer={l.status === "new" ? waitedLabel(l.created_at) : undefined}
+              footer={
+                l.status === "new" ? (
+                  waitedLabel(l.created_at)
+                ) : l.decision_note ? (
+                  <span className="text-danger">
+                    {C.reason}: {l.decision_note}
+                  </span>
+                ) : undefined
+              }
             />
           ))}
 

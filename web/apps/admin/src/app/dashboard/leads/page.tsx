@@ -23,6 +23,8 @@ import {
   IconSuccess,
   IconBlock,
   IconUnblock,
+  Modal,
+  Input,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -41,6 +43,9 @@ interface Lead {
   rep_name: string | null;
   rep_code: string | null;
   status: "new" | "converted" | "rejected";
+  /** ما كتبه المندوبُ حين أرسل — **يُقرأ قبل الردّ، فقد يكون فيه جوابُ سؤالك.** */
+  note?: string;
+  decision_note?: string;
   created_at: string;
 }
 
@@ -74,6 +79,9 @@ export default function LeadsPage() {
    */
   const [filter, setFilter] = useState("new");
   const [view, setView] = useViewMode("leads", "cards");
+  /** الفرصةُ التي تُردّ الآن — **ولا تُردّ حتى تُكتب كلمة.** */
+  const [rejecting, setRejecting] = useState<Lead | null>(null);
+  const [note, setNote] = useState("");
 
   const load = useCallback(async () => {
     const q = filter ? `?status=${filter}` : "";
@@ -86,11 +94,13 @@ export default function LeadsPage() {
 
   useLiveRefresh(["lead"], load);
 
-  async function setStatus(id: string, status: string) {
+  async function setStatus(id: string, status: string, note = "") {
     await api(`/api/v1/admin/leads/${id}/status`, {
       method: "POST",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, note }),
     });
+    setRejecting(null);
+    setNote("");
     await load();
   }
 
@@ -237,9 +247,18 @@ export default function LeadsPage() {
               </Button>
             )}
             {l.status !== "rejected" ? (
+              /* **والردُّ يلزمه كلمة.**
+
+                 كان يُردّ بضغطةٍ صامتة، فيصل المندوبَ «رُدّ طلبُ الانضمام»
+                 واسمُ المتجر وحدَه — **فلا يعرف أمكرّرٌ هو أم خارج التغطية أم
+                 الرقمُ خطأ.** فيلاحق عميلاً ميتاً، **أو يعيد إرسال الفرصة
+                 نفسِها** فتُردّ ثانية.
+
+                 **والقاعدةُ مفروضةٌ في كلّ ردٍّ سواه** — والفرصةُ وحدَها كانت
+                 تُردّ صامتة. */
               <Button
                 variant="secondary"
-                onClick={() => void setStatus(l.id, "rejected")}
+                onClick={() => setRejecting(l)}
                 className="flex items-center gap-1.5 !text-danger"
               >
                 <IconBlock size={15} />
@@ -258,6 +277,53 @@ export default function LeadsPage() {
           </>
         )}
       />
+
+      {rejecting && (
+        <Modal
+          open
+          onClose={() => {
+            setRejecting(null);
+            setNote("");
+          }}
+          title={`${m.admin.leads.markRejected}: ${rejecting.store_name}`}
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-ink-muted">{m.admin.leads.rejectHint}</p>
+            {/* **وما كتبه المندوبُ يُقرأ قبل الردّ** — قد يكون فيه جوابُ سؤالك. */}
+            {rejecting.note && (
+              <p className="rounded-control bg-page px-3 py-2 text-sm">
+                <span className="text-ink-muted">{m.admin.leads.repNote}: </span>
+                {rejecting.note}
+              </p>
+            )}
+            <Input
+              id="lead-reject-note"
+              label={m.admin.leads.rejectNote}
+              required
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setRejecting(null);
+                  setNote("");
+                }}
+              >
+                {m.common.cancel}
+              </Button>
+              <Button
+                variant="danger"
+                disabled={!note.trim()}
+                onClick={() => void setStatus(rejecting.id, "rejected", note.trim())}
+              >
+                {m.admin.leads.markRejected}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

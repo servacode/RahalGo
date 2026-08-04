@@ -291,9 +291,11 @@ export function MenuManager({
                           **لأضافه ثانيةً وثالثة** فيمتلئ الطابورُ بنسخٍ من
                           الشيء الواحد. */}
                       {item.approved === false ? (
-                        <Badge variant="warning" title={item.review_note || undefined}>
-                          {item.review_note ? L.rejected : L.pendingReview}
-                        </Badge>
+                        <span title={item.review_note || undefined}>
+                          <Badge variant="warning">
+                            {item.review_note ? L.rejected : L.pendingReview}
+                          </Badge>
+                        </span>
                       ) : (
                         <Badge variant={item.available ? "success" : "warning"}>
                           {item.available ? L.available : L.unavailable}

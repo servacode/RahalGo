@@ -146,7 +146,17 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 		s.notify.Notify(r.Context(), notifications.Input{
 			UserID: *repID, Kind: notifications.KindLead,
 			Title: m.leadNew, Body: req.StoreName,
-			Entity: "lead", Href: "/portal/leads",
+			// **والرابطُ إلى صفحةٍ قائمة.**
+			//
+			// كان يشير إلى `/portal/leads` **ولا وجودَ لها في لوحة المندوب** —
+			// فيُضغط الإشعارُ فيصل إلى لا شيء. **وإشعارٌ يفتح صفحةً غيرَ موجودة
+			// أسوأُ من إشعارٍ بلا رابط**: يُقرأ عطباً في المنصة.
+			//
+			// والفرصُ تُعرض في «متاجري» مع المتاجر — **رحلةُ المتجر واحدةٌ من
+			// فرصةٍ إلى متجرٍ يعمل**، وفصلُها بابين يجعل المندوبَ يتنقّل بينهما.
+			//
+			// وهي علّةُ `N-21` نفسُها في لوحةٍ أخرى.
+			Entity: "lead", Href: "/portal/merchants",
 		})
 	}
 	s.notify.NotifyOps(r.Context(), notifications.Input{
@@ -214,6 +224,12 @@ type lead struct {
 	RepCode      *string   `json:"rep_code"`
 	Status       string    `json:"status"`
 	CreatedAt    time.Time `json:"created_at"`
+	// Note ما كتبه المندوبُ حين أرسل — **صوتُه هو.**
+	Note string `json:"note"`
+	// DecisionNote سببُ ردّ الإدارة — **صوتٌ آخرُ في حقلٍ آخر.**
+	//
+	// **وخلطُهما يمحو ما كتبه صاحبُ الفرصة**، ويجعل حقلاً واحداً يحمل صوتين.
+	DecisionNote string `json:"decision_note"`
 }
 
 func scanLeads(rows interface {
@@ -225,7 +241,8 @@ func scanLeads(rows interface {
 		var l lead
 		if err := rows.Scan(&l.ID, &l.StoreName, &l.OwnerName, &l.Phone, &l.Area,
 			&l.CategoryName, &l.CategoryIcon, &l.Lat, &l.Lng,
-			&l.RepName, &l.RepCode, &l.Status, &l.CreatedAt); err != nil {
+			&l.RepName, &l.RepCode, &l.Status, &l.CreatedAt,
+			&l.Note, &l.DecisionNote); err != nil {
 			return nil, err
 		}
 		out = append(out, l)
@@ -236,7 +253,8 @@ func scanLeads(rows interface {
 const leadSelect = `
 	SELECT l.id, l.store_name, l.owner_name, l.phone, l.area,
 	       c.name, c.icon, l.lat, l.lng,
-	       NULLIF(COALESCE(u.full_name, u.phone::text), ''), u.invite_code, l.status, l.created_at
+	       NULLIF(COALESCE(u.full_name, u.phone::text), ''), u.invite_code, l.status, l.created_at,
+	       l.note, l.decision_note
 	FROM merchant_leads l
 	LEFT JOIN users u ON u.id = l.sales_rep_user_id
 	LEFT JOIN categories c ON c.id = l.category_id`
@@ -372,9 +390,23 @@ func (s *Server) handleRepLeads(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Status string `json:"status"`
+		Note   string `json:"note"`
 	}](r)
 	if err != nil || (req.Status != "converted" && req.Status != "rejected" && req.Status != "new") {
 		s.respondErr(w, errValidation)
+		return
+	}
+	// **والردُّ يلزمه كلمة — كما كلُّ ردٍّ في هذه المنصة.**
+	//
+	// المندوبُ الذي رُدّت فرصتُه بلا سببٍ **يلاحق عميلاً ميتاً أو يعيد إرسالَ
+	// الفرصة نفسِها** — فتُردّ ثانيةً، ويدور هو والمكتبُ في حلقة.
+	//
+	// **والقاعدةُ مفروضةٌ في كلّ موضعٍ سواه**: الرفضُ والإلغاءُ والفشلُ
+	// والاسترجاعُ وحسمُ النزاع وردُّ صنفٍ في المراجعة. **والفرصةُ وحدَها كانت
+	// تُردّ صامتة.**
+	note := strings.TrimSpace(req.Note)
+	if req.Status == "rejected" && note == "" {
+		s.respondErr(w, errReasonRequired)
 		return
 	}
 	id := chi.URLParam(r, "id")
@@ -393,17 +425,19 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 	var repID *string
 	var storeName string
 	if err := s.pg.QueryRow(r.Context(),
-		`UPDATE merchant_leads SET status = $2, updated_at = now() WHERE id = $1
+		`UPDATE merchant_leads SET status = $2, decision_note = $3, updated_at = now()
+		 WHERE id = $1
 		 RETURNING sales_rep_user_id, store_name`,
-		id, req.Status).Scan(&repID, &storeName); err != nil {
+		id, req.Status, note).Scan(&repID, &storeName); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
 	// الرفض يخصّ المندوب بقدر ما تخصّه الموافقة — وإلا بقي يلاحق عميلاً ميتاً.
+	// **والسببُ في متن الإشعار** — لا في صفحةٍ يُطلب منه أن يفتحها.
 	if req.Status == "rejected" && repID != nil {
 		s.notify.Notify(r.Context(), notifications.Input{
 			UserID: *repID, Kind: notifications.KindLead,
-			Title: notifTitles.leadRejected, Body: storeName,
+			Title: notifTitles.leadRejected, Body: storeName + " — " + note,
 			Entity: "lead", EntityID: id, Href: "/portal/leads",
 		})
 	}

@@ -789,7 +789,10 @@
         "new": "جديد",
         "converted": "سُجّل",
         "rejected": "مرفوض"
-      }
+      },
+      "rejectHint": "السببُ يصل المندوبَ في إشعاره — ومن رُدّت فرصتُه بلا سببٍ يعيد إرسالها.",
+      "rejectNote": "سببُ الردّ",
+      "repNote": "ملاحظة المندوب"
     },
     "commissions": {
       "title": "إعدادات العمولات",
@@ -2065,7 +2068,8 @@
       "activeToday": "اليوم",
       "activeDays": "منذ {n} يوم",
       "statCancelled": "ملغي",
-      "activationHint": "العمولة تبدأ بعد {needed} طلبات مُسلَّمة — بلغتَ {done}"
+      "activationHint": "العمولة تبدأ بعد {needed} طلبات مُسلَّمة — بلغتَ {done}",
+      "reason": "السبب"
     },
     "target": {
       "title": "هدف الشهر",

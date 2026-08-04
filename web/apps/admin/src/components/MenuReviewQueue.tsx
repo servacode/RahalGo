@@ -102,7 +102,7 @@ export default function MenuReviewQueue() {
         {rows.map((it) => (
           <li key={it.id} className="rounded-card border border-line bg-page/40 p-3">
             <div className="flex flex-wrap items-center gap-3">
-              {it.thumb_url && <MediaThumb url={it.thumb_url} alt={it.name} />}
+              {it.thumb_url && <MediaThumb url={it.thumb_url} alt={it.name} fallback={it.name.slice(0, 1)} />}
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">{it.name}</span>
                 {it.description && (
