@@ -1337,6 +1337,10 @@
           "label": "توزيع الطلبات",
           "hint": ""
         },
+        "drivers.offer_timeout_sec": {
+          "label": "مهلة العرض على السائق",
+          "hint": ""
+        },
         "platform.orders_mode": {
           "label": "إدارة الطلبات",
           "hint": ""
