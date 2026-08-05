@@ -47,7 +47,50 @@ func (s *Server) handleDriverHistory(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, res)
+
+	// **وأيُّها قيّمتَه سلفاً** — زرٌّ يُعرض على ما قُيّم يُضغط فيُردّ،
+	// **ورفضٌ بعد ضغطةٍ يُقرأ عطباً لا قاعدة.**
+	rated := map[string]bool{}
+	ids := make([]string, 0, len(res.Orders))
+	for i := range res.Orders {
+		ids = append(ids, res.Orders[i].ID)
+	}
+	if len(ids) > 0 {
+		rows, err := s.pg.Query(r.Context(),
+			`SELECT order_id::text FROM merchant_ratings WHERE order_id = ANY($1::uuid[])`, ids)
+		if err == nil {
+			for rows.Next() {
+				var id string
+				if rows.Scan(&id) == nil {
+					rated[id] = true
+				}
+			}
+			rows.Close()
+		}
+	}
+
+	type withRating struct {
+		orders.Order
+		// MerchantRated أقيّمتُ متجرَه — **ومن قيّم لا يُعرض عليه الزرُّ ثانيةً.**
+		MerchantRated bool `json:"merchant_rated"`
+		// CanRateMerchant **وقف عند بابه فعلاً** — ومن لم يقف لا رأيَ له فيه.
+		CanRateMerchant bool `json:"can_rate_merchant"`
+	}
+	out := make([]withRating, len(res.Orders))
+	for i := range res.Orders {
+		o := res.Orders[i]
+		out[i] = withRating{
+			Order:         o,
+			MerchantRated: rated[o.ID],
+			// **والشرطُ هو شرطُ الخادم نفسُه** — نسخةٌ ثانيةٌ تفترق فيُعرض
+			// زرٌّ يُردّ أو يُخفى زرٌّ يجوز.
+			CanRateMerchant: o.PickedUpAt != nil ||
+				(o.Status == "failed" && o.Fault == "merchant"),
+		}
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"orders": out, "total": res.Total, "page": res.Page, "per_page": res.PerPage,
+	})
 }
 
 // handleDriverReportReasons ما يملك السائقُ اختيارَه، وعلى من هو.

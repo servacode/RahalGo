@@ -91,7 +91,10 @@ type Order struct {
 	DeliveryEstimateMin int        `json:"delivery_estimate_min"`
 	ReadyAt             *time.Time `json:"ready_at"`
 	AcceptedAt          *time.Time `json:"accepted_at"`
-	DeliveredAt         *time.Time `json:"delivered_at"`
+	// PickedUpAt متى خرجت البضاعةُ من يد المتجر — **ومنه يُعرف من وقف عند
+	// بابه فعلاً**، فلا يقيّمه من لم يقف.
+	PickedUpAt  *time.Time `json:"picked_up_at"`
+	DeliveredAt *time.Time `json:"delivered_at"`
 	// شعار المتجر وملخّص الأصناف — لبطاقة الطلب في القوائم
 	MerchantLogoThumb *string `json:"merchant_logo_thumb_url"`
 	ItemsCount        int     `json:"items_count"`

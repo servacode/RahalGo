@@ -121,18 +121,37 @@ export function IncomingCard({
           هذا موضعُ القرار: **يرى ثلاثةَ طلباتٍ ويأخذ واحداً.** وبلا مسافةٍ
           يأخذ الأعلى أجراً ولو كان في آخر المدينة، **ثمّ يعود بعد ساعةٍ وقد
           ضاع عليه ثلاثة.** */}
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
-        <span className="flex items-center gap-1">
-          <IconDriver size={13} />
-          {o.to_pickup_m >= 0
-            ? `${D.distance.toPickup}: ${fmtDistance(o.to_pickup_m, UNITS.meter, UNITS.km)}`
-            : D.distance.unknown}
-        </span>
-        {o.leg_m >= 0 && (
-          <span className="flex items-center gap-1">
-            <IconLocation size={13} />
-            {D.distance.leg}: {fmtDistance(o.leg_m, UNITS.meter, UNITS.km)}
+      {/* **سطران لا سطرٌ مزدحم.**
+
+          كانا «إليك ٤٠٠ م · المشوار ٣٫٢ كم» في سطرٍ واحدٍ بخطٍّ رماديٍّ صغير،
+          **فلا يُعرف أيُّ رقمٍ لأيّ شيء** — والمالك سألني عنهما.
+
+          **والاسمُ يقول الطرفين**: «منك إلى المتجر» و«من المتجر إلى الزبون»
+          — لا «إليك» و«المشوار». **واسمٌ يحتاج شرحاً اسمٌ لم يُختَر بعد.** */}
+      <div className="mt-2 space-y-1 rounded-control bg-page px-2.5 py-2 text-xs">
+        <p className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-ink-muted">
+            <IconDriver size={13} />
+            {D.distance.toPickup}
           </span>
+          <span className="font-bold tabular-nums" dir="ltr">
+            {o.to_pickup_m >= 0
+              ? fmtDistance(o.to_pickup_m, UNITS.meter, UNITS.km)
+              : "—"}
+          </span>
+        </p>
+        <p className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-ink-muted">
+            <IconLocation size={13} />
+            {D.distance.leg}
+          </span>
+          <span className="font-bold tabular-nums" dir="ltr">
+            {o.leg_m >= 0 ? fmtDistance(o.leg_m, UNITS.meter, UNITS.km) : "—"}
+          </span>
+        </p>
+        {/* **وشرطةٌ تُسأل عنها** — فيُقال سببُها تحتها مرّةً واحدة. */}
+        {o.to_pickup_m < 0 && (
+          <p className="pt-0.5 text-2xs text-warning">{D.distance.unknown}</p>
         )}
       </div>
       {o.cash_due > 0 && (

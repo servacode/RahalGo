@@ -42,7 +42,7 @@ const orderSelect = `
 	                 WHERE m2.id IN (SELECT COALESCE(oi.merchant_id, o.merchant_id)
 	                                 FROM order_items oi WHERE oi.order_id = o.id
 	                                 UNION SELECT o.merchant_id)), mr.accepts_returns),
-	       o.prep_minutes, o.ready_at, o.accepted_at, o.delivered_at,
+	       o.prep_minutes, o.ready_at, o.accepted_at, o.picked_up_at, o.delivered_at,
 	       lm.thumb_path,
 	       -- ملخّص الأصناف في القائمة نفسها: «ماذا طلبتُ؟» أول سؤال يسأله صاحب
 	       -- الطلب، وكان يلزمه فتح الطلب ليعرف. العدد بالكمّيات لا بالأسطر
@@ -86,7 +86,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.EndedBy, &o.Fault, &o.FailReason, &o.ReturnedAt, &o.GoodsSettledTo,
 		&o.LegM, &o.DriverToPickupM,
 		&o.AcceptsReturns,
-		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.DeliveredAt,
+		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.PickedUpAt, &o.DeliveredAt,
 		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items)
 	if err != nil {
 		return nil, err

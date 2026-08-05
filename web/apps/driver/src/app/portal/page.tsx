@@ -572,23 +572,27 @@ function TaskCard({
 
           **وسالبٌ يعني «لا تُعرف» لا «صفر»**: الجهلُ ليس قرباً — ومن أطفأ
           الموقعَ يُقال له ذلك بدل أن يُعرض عليه رقمٌ كاذب. */}
-      <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
-        {o.to_pickup_m >= 0 ? (
-          <span className="flex items-center gap-1">
+      <div className="mb-2 space-y-1 rounded-control bg-page px-2.5 py-2 text-xs">
+        <p className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-ink-muted">
             <IconDriver size={13} />
-            {D.distance.toPickup}: {fmtDistance(o.to_pickup_m, UNITS.meter, UNITS.km)}
+            {D.distance.toPickup}
           </span>
-        ) : (
-          <span className="flex items-center gap-1">
-            <IconDriver size={13} />
-            {D.distance.unknown}
+          <span className="font-bold tabular-nums" dir="ltr">
+            {o.to_pickup_m >= 0 ? fmtDistance(o.to_pickup_m, UNITS.meter, UNITS.km) : "—"}
           </span>
-        )}
-        {o.leg_m >= 0 && (
-          <span className="flex items-center gap-1">
+        </p>
+        <p className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-ink-muted">
             <IconLocation size={13} />
-            {D.distance.leg}: {fmtDistance(o.leg_m, UNITS.meter, UNITS.km)}
+            {D.distance.leg}
           </span>
+          <span className="font-bold tabular-nums" dir="ltr">
+            {o.leg_m >= 0 ? fmtDistance(o.leg_m, UNITS.meter, UNITS.km) : "—"}
+          </span>
+        </p>
+        {o.to_pickup_m < 0 && (
+          <p className="pt-0.5 text-2xs text-warning">{D.distance.unknown}</p>
         )}
       </div>
 

@@ -31,6 +31,7 @@ import {
   IconLocation,
   IconWarning,
   IconSupport,
+  IconStar,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -48,6 +49,10 @@ interface HistoryOrder {
   cash_due: number;
   fail_reason: string;
   created_at: string;
+  /** أقيّمتُ متجرَه — **ومن قيّم لا يُعرض عليه الزرُّ ثانيةً.** */
+  merchant_rated: boolean;
+  /** **وقف عند بابه فعلاً** — ومن لم يقف لا رأيَ له فيه. */
+  can_rate_merchant: boolean;
 }
 
 type ReportReason = { code: string; against: string };
@@ -67,6 +72,11 @@ export default function DriverHistoryPage() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState("");
+  /** **وتقييمُ المتجر — والزبونُ يرى الطعامَ ولا يرى المطبخ.** */
+  const [rating, setRating] = useState<HistoryOrder | null>(null);
+  const [speed, setSpeed] = useState(0);
+  const [conduct, setConduct] = useState(0);
+  const [rateNote, setRateNote] = useState("");
 
   const load = useCallback(() => {
     api<{ orders: HistoryOrder[] }>("/api/v1/driver/orders/history")
@@ -113,6 +123,30 @@ export default function DriverHistoryPage() {
       });
       setReporting(null);
       setDone(D.history.reportSent);
+    } catch (e) {
+      setError(errText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendRating() {
+    const o = rating;
+    if (!o || speed < 1 || conduct < 1) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/driver/orders/${o.id}/rate-merchant`, {
+        method: "POST",
+        body: JSON.stringify({
+          speed_stars: speed,
+          conduct_stars: conduct,
+          comment: rateNote.trim(),
+        }),
+      });
+      setRating(null);
+      setDone(D.history.rateSent);
+      load();
     } catch (e) {
       setError(errText(e));
     } finally {
@@ -179,7 +213,30 @@ export default function DriverHistoryPage() {
                   </p>
                 )}
 
-                <div className="mt-3 flex justify-end">
+                <div className="mt-3 flex items-center justify-end gap-1">
+                  {/* **ومن وقف عند بابه يقيّمه** — والزرُّ لا يُعرض على من
+                      لم يقف، **ولا على من قيّم**: زرٌّ يُضغط فيُردّ يُقرأ
+                      عطباً لا قاعدة. */}
+                  {o.can_rate_merchant &&
+                    (o.merchant_rated ? (
+                      <span className="px-2 text-xs text-ink-muted">{D.history.rated}</span>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setSpeed(0);
+                          setConduct(0);
+                          setRateNote("");
+                          setDone("");
+                          setRating(o);
+                        }}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <IconStar size={15} />
+                          {D.history.rate}
+                        </span>
+                      </Button>
+                    ))}
                   <Button
                     variant="ghost"
                     onClick={() => {
@@ -265,6 +322,68 @@ export default function DriverHistoryPage() {
           </div>
         </div>
       </Modal>
+      {/* **نجمتان لا واحدة.**
+
+          «المتجر» و«التعامل» شيئان يفترقان: مطعمٌ سريعٌ فظّ، وآخرُ بطيءٌ
+          مهذّب. **ونجمةٌ واحدةٌ تجمعهما تُخفي أيَّهما المشكلة** — فلا يُعرف
+          أنُكلّم المطبخَ أم صاحبَ المحلّ. */}
+      <Modal
+        open={rating !== null}
+        onClose={() => setRating(null)}
+        title={`${D.history.rateTitle} — ${rating?.merchant_name ?? ""}`}
+      >
+        <div className="space-y-3">
+          <StarRow label={D.history.rateSpeed} value={speed} onPick={setSpeed} />
+          <StarRow label={D.history.rateConduct} value={conduct} onPick={setConduct} />
+          <Input
+            id="rate-note"
+            label={D.history.rateComment}
+            value={rateNote}
+            onChange={(e) => setRateNote(e.target.value)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setRating(null)}>
+              {m.common.cancel}
+            </Button>
+            <Button
+              disabled={busy || speed < 1 || conduct < 1}
+              onClick={() => void sendRating()}
+            >
+              {D.history.rateSend}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/** صفُّ نجومٍ يُضغط — **وخمسٌ لا عشر**: مقياسٌ يعرفه الناسُ بلا شرح. */
+function StarRow({
+  label,
+  value,
+  onPick,
+}: {
+  label: string;
+  value: number;
+  onPick: (n: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm font-medium">{label}</span>
+      <span className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-label={`${label} ${n}`}
+            onClick={() => onPick(n)}
+            className={n <= value ? "text-accent" : "text-line"}
+          >
+            <IconStar size={22} />
+          </button>
+        ))}
+      </span>
     </div>
   );
 }

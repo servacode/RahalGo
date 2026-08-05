@@ -261,6 +261,9 @@ func (s *Server) Router() http.Handler {
 			r.Get("/orders/history", s.handleDriverHistory)
 			r.Get("/orders/report-reasons", s.handleDriverReportReasons)
 			r.Post("/orders/{id}/report", s.handleDriverReport)
+			// **ومن وقف عند بابه يقيّمه** — الزبونُ يرى الطعامَ ولا يرى
+			// المطبخ. (`merchant_rating_handlers.go`)
+			r.Post("/orders/{id}/rate-merchant", s.handleDriverRateMerchant)
 			r.Post("/orders/{id}/accept", s.handleDriverAccept)
 			r.Post("/orders/{id}/transition", s.handleDriverTransition)
 			r.Post("/orders/{id}/release", s.handleDriverRelease)
