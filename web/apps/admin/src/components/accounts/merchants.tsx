@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 
 const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), { ssr: false });
 import {
+  Pagination,
   Alert,
   CategoryIcon,
   CategoryIconPicker,
@@ -453,23 +454,19 @@ export default function MerchantsTable() {
       />
 
       {data && (
-        <div className="mt-4 flex items-center justify-between text-sm text-ink-muted">
-          <span>{m.admin.users.totalCount.replace("{count}", String(data.total))}</span>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-              {m.admin.users.prev}
-            </Button>
-            <span>
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="secondary"
-              disabled={page >= totalPages}
-              onClick={() => setPage(page + 1)}
-            >
-              {m.admin.users.next}
-            </Button>
-          </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted">
+          <span>{m.admin.users.totalCount.replace("{count}", fmtNum(data.total))}</span>
+          {/* **والترقيمُ من المكوّن المشترك.**
+
+              كان مكتوباً هنا وفي ثلاثة ملفّاتٍ أخرى بالشكل نفسِه، **وأرقامُه
+              لاتينيّةٌ في واجهةٍ عربية** (`{page} / {totalPages}`) لأنّها لم
+              تمرّ بـ`fmtNum`. */}
+          <Pagination
+            page={page}
+            total={data.total}
+            perPage={data.per_page}
+            onChange={setPage}
+          />
         </div>
       )}
 

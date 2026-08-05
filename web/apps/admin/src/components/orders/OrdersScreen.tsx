@@ -10,6 +10,7 @@ import {
   fmtDateTime,
 } from "@rahalgo/i18n";
 import {
+  Pagination,
   Alert,
   IconNote,
   IconEdit,
@@ -1055,30 +1056,20 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       />
 
       {data && (
-        <div className="mt-4 flex items-center justify-between text-sm text-ink-muted">
-          <span>
-            {m.admin.users.totalCount.replace("{count}", String(data.total))}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-            >
-              {m.admin.users.prev}
-            </Button>
-            <span>
-              {page} / {totalPages}
-            </span>
-            <Button
-              variant="secondary"
-              disabled={page >= totalPages}
-              onClick={() => setPage(page + 1)}
-            >
-              {m.admin.users.next}
-            </Button>
-          </div>
-        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted">
+              <span>
+                {m.admin.users.totalCount.replace("{count}", fmtNum(data.total))}
+              </span>
+              {/* **والترقيمُ من المكوّن المشترك** — وكان مكتوباً هنا وفي أربعة
+                  ملفّاتٍ أخرى بالشكل نفسِه، **وأرقامُه لاتينيّةٌ في واجهةٍ
+                  عربية.** */}
+              <Pagination
+                page={page}
+                total={data.total}
+                perPage={data.per_page}
+                onChange={setPage}
+              />
+            </div>
       )}
     </div>
   );
