@@ -86,14 +86,45 @@ export function BannerSlider({
   if (!cur) return null;
 
   const inner = (
-    <div className="relative h-40 w-full overflow-hidden rounded-card bg-page sm:h-52">
+    /*
+      **نسبةٌ لا ارتفاع.**
+
+      كان `h-40 sm:h-52` — **رقمان ثابتان بالبكسل**، والإطارُ يتمدّد بعرض
+      الشاشة والارتفاعُ لا يتحرّك. **فالصورةُ الواحدةُ تُقصّ قصّاً مختلفاً في
+      كلّ شاشة**: على الجوّال إطارٌ نسبتُه ٢:١، وعلى اللابتوب شريطٌ نسبتُه
+      ٦:١ **يبتلع أعلى اللافتة وأسفلَها** — فيضيع العنوانُ المرسومُ فيها
+      ويبقى وسطُها وحدَه. (شهده المالك ٢٠٢٦-٠٨-٠٥.)
+
+      **والنسبةُ تتحرّك مع العرض**: يتّسع الإطارُ فيرتفع معه، **فتبقى الصورةُ
+      صورةً لا شريطاً.**
+
+      وتضيق النسبةُ كلّما اتّسعت الشاشة — **لأنّ الملء ليس هدفاً**: لافتةٌ
+      بنسبة ١٦:٩ على شاشةٍ عريضة تصير سبعمئة بكسلٍ من الطول **تملأ الشاشة
+      وحدَها** ولا يُرى تحتها شيء.
+
+      **وثلاثُ نسبٍ ثمّ سقفٌ بالبكسل:**
+
+          جوّال   ٣١١ بكسلاً عرضاً · ١٦:٩ ← ١٧٥ طولاً
+          لوحيّ   ٥٧٦ ·············· ٥:٢ ← ٢٣٠
+          لابتوب  ٩٦٠ ·············· ١٦:٥ ← ٣٠٠
+          أعرض    السقفُ يمسك عند ٣٦٠ **فتزداد عرضاً لا طولاً**
+
+      **والسقفُ ليس زينة**: بلاه يصير على شاشةٍ ١٩٢٠ خمسمئةً وثمانين بكسلاً
+      **من لافتةٍ واحدة** — ومن فتح الصفحة لا يرى إلّا إيّاها.
+    */
+    <div className="relative aspect-[16/9] max-h-[360px] w-full overflow-hidden rounded-card bg-page sm:aspect-[5/2] lg:aspect-[16/5]">
       {cur.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={cur.imageUrl} alt={cur.title} className="h-full w-full object-cover" />
+        <img
+          src={cur.imageUrl}
+          alt={cur.title}
+          draggable={false}
+          className="h-full w-full select-none object-cover"
+        />
       ) : (
         <div className="h-full w-full bg-gradient-to-l from-primary/20 to-accent/20" />
       )}
-      <span className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-ink/70 to-transparent p-3 text-sm font-bold text-white">
+      <span className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-ink/70 to-transparent p-3 text-sm font-bold text-white sm:p-4 sm:text-base">
         {cur.title}
       </span>
     </div>

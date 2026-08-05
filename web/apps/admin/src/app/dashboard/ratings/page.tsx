@@ -26,6 +26,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
+  PageContainer,
   PageHeader,
   Select,
   Badge,
@@ -95,9 +96,8 @@ export default function RatingsPage() {
   if (!data) return <LoadingState />;
 
   return (
-    <div>
-      <PageHeader icon={IconStar} title={R.title} />
-      <p className="mb-4 text-sm text-ink-muted">{R.hint}</p>
+    <PageContainer>
+      <PageHeader icon={IconStar} title={R.title} subtitle={R.hint} />
 
       <StatGrid>
         <StatCard label={R.total} value={fmtNum(data.total)} icon={IconStar} />
@@ -109,7 +109,7 @@ export default function RatingsPage() {
         <StatCard label={R.lowCount} value={fmtNum(data.low)} icon={IconWarning} />
       </StatGrid>
 
-      <section className="mt-6">
+      <section>
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <h2 className="font-bold">{R.driversTitle}</h2>
           <div className="w-56">
@@ -162,7 +162,7 @@ export default function RatingsPage() {
         )}
       </section>
 
-      <section className="mt-6">
+      <section>
         <h2 className="mb-3 font-bold">{R.commentsTitle}</h2>
         <p className="mb-3 text-xs text-ink-muted">{R.commentsHint}</p>
         {data.comments.length === 0 ? (
@@ -197,6 +197,6 @@ export default function RatingsPage() {
           </ul>
         )}
       </section>
-    </div>
+    </PageContainer>
   );
 }

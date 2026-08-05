@@ -17,8 +17,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { EmptyState, LoadingState, BannerSlider, IconPromos } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import {
+  EmptyState,
+  LoadingState,
+  BannerSlider,
+  PageContainer,
+  PageHeader,
+  IconPromos,
+} from "@rahalgo/ui";
+import { api, mediaUrl } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const C = m.customer.offers;
@@ -51,9 +58,12 @@ export default function OffersPage() {
     api<{ offers: Offer[] }>("/api/v1/public/offers")
       .then((r) => setRows(r.offers ?? []))
       .catch(() => setRows([]));
-    // **واللافتاتُ من جدولها لا من العروض** — شيءٌ واحدٌ في مكانين يفترق.
-    api<Banner[]>("/api/v1/banners")
-      .then((r) => setBanners(r ?? []))
+    // **واللافتاتُ من مصدر الرئيسية نفسِه.**
+    //
+    // كانت تُطلب من `/banners` — **وهو طريقُ الإدارة**، يردّ للزبون «غيرُ
+    // موجود» **فيبقى السلايدرُ فارغاً أبداً** ولا خطأ يُقال.
+    api<{ banners: Banner[] }>("/api/v1/public/home")
+      .then((r) => setBanners(r.banners ?? []))
       .catch(() => setBanners([]));
   }, []);
 
@@ -62,14 +72,8 @@ export default function OffersPage() {
   const discounts = rows;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5 p-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold">
-          <IconPromos size={20} className="text-ink-muted" />
-          {C.title}
-        </h1>
-        <p className="mt-1 text-sm text-ink-muted">{C.subtitle}</p>
-      </div>
+    <PageContainer>
+      <PageHeader icon={IconPromos} title={C.title} subtitle={C.subtitle} />
 
       {rows.length === 0 && banners.length === 0 && (
         <EmptyState icon={IconPromos} title={C.empty} />
@@ -81,13 +85,16 @@ export default function OffersPage() {
         items={banners.map((b) => ({
           id: b.id,
           title: b.title,
-          imageUrl: b.image_url,
+          // **والمسارُ يُحوَّل إلى رابط** — كان يُمرَّر خاماً، **فالصورةُ لا
+          // تُحمَّل ويبقى إطارٌ رماديٌّ بعنوان.**
+          imageUrl: mediaUrl(b.image_url) ?? null,
           href: b.target || undefined,
         }))}
       />
 
       {discounts.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        /* **وبطاقةٌ واحدةٌ بعرض الشاشة تُبعثر العين** — فتُقسم بما يتّسع. */
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {discounts.map((o) => (
             <Link
               key={o.id}
@@ -121,6 +128,6 @@ export default function OffersPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

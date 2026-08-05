@@ -554,6 +554,11 @@ function BannerModal({
           initialUrl={banner?.image_thumb_url}
           onChange={setImageID}
         />
+        {/* **والمقاسُ يُقال قبل الرفع لا بعده.**
+
+            الإطارُ عريضٌ ويقصّ ما زاد عن نسبته، **فصورةٌ طويلةٌ يضيع أعلاها
+            وأسفلُها** — ومن رفعها لا يعرف لماذا خرجت ناقصة. */}
+        <p className="-mt-2 text-xs text-ink-muted">{m.admin.promos.bannerImageHint}</p>
         <Input
           id="b-target"
           label={m.admin.promos.bannerTarget}

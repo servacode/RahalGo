@@ -16,7 +16,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { Button, LoadingState, StatGrid, StatCard, IconLink, IconUser, IconWallet } from "@rahalgo/ui";
+import {
+  Button,
+  LoadingState,
+  PageContainer,
+  PageHeader,
+  StatGrid,
+  StatCard,
+  IconLink,
+  IconUser,
+  IconWallet,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -65,19 +75,17 @@ export default function InvitePage() {
   if (!data) return <LoadingState />;
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5 p-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold">
-          <IconLink size={20} className="text-ink-muted" />
-          {V.title}
-        </h1>
-        {/* **والرقمُ في الصدر** — «ادعُ أصدقاءك» لا تعني شيئاً. */}
-        <p className="mt-1 text-sm text-ink-muted">
-          {data.next_reward > 0
+    <PageContainer>
+      {/* **والرقمُ في الصدر** — «ادعُ أصدقاءك» لا تعني شيئاً. */}
+      <PageHeader
+        icon={IconLink}
+        title={V.title}
+        subtitle={
+          data.next_reward > 0
             ? V.subtitle.replace("{n}", fmtNum(data.next_reward))
-            : V.subtitleNoReward}
-        </p>
-      </div>
+            : V.subtitleNoReward
+        }
+      />
 
       <div className="rounded-card border border-line bg-surface p-4">
         <p className="text-xs text-ink-muted">{V.yourLink}</p>
@@ -110,6 +118,6 @@ export default function InvitePage() {
       </StatGrid>
 
       <p className="rounded-control bg-page px-3 py-2 text-xs text-ink-muted">{V.hint}</p>
-    </div>
+    </PageContainer>
   );
 }
