@@ -27,7 +27,12 @@ const LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-3 py-4 text-xs text-ink-muted">
+    /* **وشريطٌ كالعلويّ لا كتلةٌ سائبة.**
+
+       كان بلا حدٍّ ولا خلفيّة — **فيطفو في أسفل الصفحة كنصٍّ نُسي**، ويبدو
+       منفصلاً عمّا فوقه. **والحدُّ العلويُّ يُغلق الصفحة** كما يفتحها الشريطُ
+       العلويّ: **موقعٌ يبدأ بشريطٍ وينتهي بشريط.** */
+    <footer className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-line bg-surface px-3 py-5 text-xs text-ink-muted">
       {LINKS.map((l) => (
         <Link key={l.href} href={l.href} className="transition-colors hover:text-accent-text">
           {l.label}
