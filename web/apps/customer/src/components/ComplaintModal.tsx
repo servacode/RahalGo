@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button } from "@rahalgo/ui";
+import { Button, Radio, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -82,39 +82,37 @@ export default function ComplaintModal({
         <h2 className="mb-1 text-lg font-bold">{C.title}</h2>
         <p className="mb-4 text-sm text-ink-muted">#{orderNumber}</p>
         <form onSubmit={submit} className="space-y-4">
+          {/* **الاختيارُ من العُدّة لا مرتجَلاً.**
+
+              كان `<input type="radio" className="accent-primary">` — **والرسمُ
+              متروكٌ للمتصفّح**، فدائرةُ ويندوز تخالف دائرةَ أندرويد.
+
+              **و`rounded-input` لا وجودَ له في الثيم**: صنفٌ يُكتب ولا يفعل
+              شيئاً، **فالبطاقاتُ هنا مربّعةُ الأركان** وكلُّ بطاقةٍ في المنصة
+              مستديرة — ولا يصرخ به بناءٌ ولا تحذير. */}
           <div className="space-y-1.5">
             {reasons.map((r) => (
-              <label
+              <Radio
                 key={r.code}
-                className={`flex cursor-pointer items-center gap-2 rounded-input border p-2.5 text-sm ${
+                id={`cr-${r.code}`}
+                name="reason"
+                checked={reason === r.code}
+                onChange={() => setReason(r.code)}
+                label={C.reasons[r.code as keyof typeof C.reasons] ?? r.code}
+                className={`rounded-control border p-2.5 ${
                   reason === r.code ? "border-primary bg-primary-light" : "border-line"
                 }`}
-              >
-                <input
-                  type="radio"
-                  name="reason"
-                  className="accent-primary"
-                  checked={reason === r.code}
-                  onChange={() => setReason(r.code)}
-                />
-                {C.reasons[r.code as keyof typeof C.reasons] ?? r.code}
-              </label>
+              />
             ))}
           </div>
-          <div>
-            <label htmlFor="cn" className="mb-1.5 block text-sm font-medium">
-              {C.note}
-            </label>
-            <textarea
-              id="cn"
-              rows={3}
-              maxLength={NOTE_MAX}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={C.noteHint}
-              className="w-full rounded-input border border-line bg-surface p-2 text-sm"
-            />
-          </div>
+          <Textarea
+            id="cn"
+            label={C.note}
+            maxLength={NOTE_MAX}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={C.noteHint}
+          />
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={busy}>

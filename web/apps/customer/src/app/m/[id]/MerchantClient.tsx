@@ -5,7 +5,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
-import { CategoryIcon, Badge, Button, Modal, FavoriteButton, useFavorites } from "@rahalgo/ui";
+import {
+  CategoryIcon,
+  Badge,
+  Button,
+  Input,
+  Modal,
+  FavoriteButton,
+  useFavorites,
+} from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 import { useCart, type CartLine } from "@/lib/cart";
@@ -92,25 +100,6 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
           </Badge>
         </div>
 
-        {/* **والقلبُ عند اسم المتجر** — حيث يقرّر الزبونُ أنّه أعجبه.
-
-            **ولا في بطاقة القائمة**: من يتصفّح لا يعرف بعدُ إن كان يحبّه،
-            **ومن قرأ قائمتَه يعرف.** */}
-        <FavoriteButton
-          className="ms-auto"
-          merchant={{
-            id: merchant.id,
-            name: merchant.name,
-            category_icon: merchant.category_icon,
-            logo_thumb_url: merchant.logo_thumb_url,
-            emergency_closed: false,
-          }}
-          on={has(merchant.id)}
-          onToggle={toggle}
-          onRequireLogin={
-            signedIn ? undefined : () => router.push(`/login?next=/m/${merchant.id}`)
-          }
-        />
       </div>
 
       <div className="space-y-6">
@@ -121,12 +110,21 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
               {sec.items.map((item) => {
                 const img = mediaUrl(item.image_thumb_url);
                 return (
-                  <button
+                  /* **البطاقةُ غلافٌ والزرُّ داخلَه.**
+
+                     كانت البطاقةُ نفسُها `<button>`، **وزرٌّ داخل زرٍّ لا
+                     يجوز**: المتصفّحُ يفكّه كما يشاء فتضيع إحدى الضغطتين.
+                     فصار الغلافُ يحمل الحدَّ والخلفية، **والقلبُ أخاً للزرّ
+                     لا ابناً له.** */
+                  <div
                     key={item.id}
+                    className="flex items-center gap-2 rounded-card border border-line bg-surface p-3 transition-shadow hover:shadow-md"
+                  >
+                  <button
                     type="button"
                     disabled={!item.available || item.source_closed || !merchant.open_now}
                     onClick={() => setPicking(item)}
-                    className="flex items-center gap-3 rounded-card border border-line bg-surface p-3 text-start transition-shadow enabled:hover:shadow-md disabled:opacity-50"
+                    className="flex min-w-0 flex-1 items-center gap-3 text-start disabled:opacity-50"
                   >
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -164,6 +162,23 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
                       </Badge>
                     ) : null}
                   </button>
+
+                  {/* **والقلبُ عند الصنف نفسِه** — حيث يقرّر الزبونُ أنّه
+                      أعجبه.
+
+                      **ويبقى عاملاً وإن كان الصنفُ موقوفاً**: من نفدت شاورماه
+                      اليومَ يريد أن يحفظها لغدٍ — **ومنعُه يعني أن يبحث عنها
+                      من جديد.** */}
+                  <FavoriteButton
+                    size="sm"
+                    itemID={item.id}
+                    on={has(item.id)}
+                    onToggle={toggle}
+                    onRequireLogin={
+                      signedIn ? undefined : () => router.push(`/login?next=/m/${merchant.id}`)
+                    }
+                  />
+                  </div>
                 );
               })}
             </div>
@@ -279,11 +294,13 @@ function ItemModal({
           </div>
         ))}
 
-        <input
+        {/* **الحقلُ من العُدّة** — كان منسوخاً بأصنافه، **وحلقةُ التركيز
+            ناقصةً فيه** (`focus:border-primary` بلا `ring`): يقف المؤشّر ولا
+            يظهر أثرٌ يُذكر. */}
+        <Input
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder={m.site.menu.itemNote}
-          className="w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
         />
 
         <div className="flex items-center justify-between">

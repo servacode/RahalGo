@@ -144,6 +144,56 @@ for (const file of files) {
   }
 }
 
+// ٩ · **صنفٌ يُسمّي توكناً لا وجودَ له.**
+//
+// # وهو أخطرُ ما في الباب
+//
+// كُتب `rounded-input` في نافذتين — **وليس في الثيم**. فلا خطأً في البناء ولا
+// تحذيراً ولا شيء: **الصنفُ يُقرأ سليماً ويُرسم لا شيء**، وحقلُ الشكوى مربّعُ
+// الأركان وكلُّ حقلٍ في المنصة مستدير.
+//
+// **وخطأٌ صامتٌ لا يُكتشف إلّا بالعين** — ولا أحدَ يفتح كلَّ نافذةٍ في كلّ
+// إصدار.
+//
+// **ويُفحص ما نملكه لا ما تملكه تيلويند**: `rounded-card` لنا و`rounded-full`
+// لها — فتُقرأ أسماءُ التوكنز من `theme.css` **ولا يُحكم على ما ليس منها.**
+{
+  const css = readFileSync(join(ROOT, "packages/ui/src/theme.css"), "utf8");
+  const known = {
+    color: new Set([...css.matchAll(/--color-([a-z0-9-]+):/g)].map((x) => x[1])),
+    radius: new Set([...css.matchAll(/--radius-([a-z0-9-]+):/g)].map((x) => x[1])),
+    text: new Set([...css.matchAll(/--text-([a-z0-9-]+):/g)].map((x) => x[1])),
+    shadow: new Set([...css.matchAll(/--shadow-([a-z0-9-]+):/g)].map((x) => x[1])),
+    drop: new Set([...css.matchAll(/--drop-shadow-([a-z0-9-]+):/g)].map((x) => x[1])),
+  };
+  // البادئاتُ التي تُشتقّ من توكناتنا، وما تقابله من مجموعات.
+  // **وجهاتُ الزوايا من تيلويند لا منّا**: `rounded-t` و`rounded-se` وأخواتُها
+  // **تُقصّ قبل الفحص** — وإلّا أبلغ الحارسُ عن صنفٍ سليمٍ فيُقرأ كاذباً.
+  const SIDES = "t|b|s|e|l|r|tl|tr|bl|br|ss|se|es|ee";
+  const PREFIX = [
+    // **والجهةُ وحدَها صنفٌ قائم** (`rounded-t`) — فتُقبل كما تُقبل `full`.
+    [new RegExp(`\\brounded(?:-(?:${SIDES}))?-([a-z][a-z0-9-]*)\\b`, "g"),
+      known.radius, "radius", ["full", "none", ...SIDES.split("|")]],
+    [/\bdrop-shadow-([a-z][a-z0-9-]*)\b/g, known.drop, "drop-shadow", ["none", "sm", "md", "lg", "xl"]],
+  ];
+  for (const file of files.filter((f) => f.endsWith(".tsx") || f.endsWith(".ts"))) {
+    if (SOURCES.colors.includes(file)) continue;
+    const src = stripComments(readFileSync(join(ROOT, file), "utf8"));
+    src.split("\n").forEach((line, i) => {
+      for (const [re, set, label, builtin] of PREFIX) {
+        re.lastIndex = 0;
+        let mm;
+        while ((mm = re.exec(line))) {
+          const name = mm[1];
+          if (set.has(name) || builtin.includes(name)) continue;
+          report(file, i + 1, `صنفٌ يسمّي توكناً غيرَ موجود`, mm[0],
+            `لا يوجد --${label}-${name} في theme.css — والمتاح: ${[...set].join(" · ")}`);
+        }
+      }
+    });
+  }
+}
+
 // ٨ · **ولا لوحةَ ألوانٍ ثانيةٍ تعود.**
 //
 // كانت في `tokens.ts` لوحةٌ كاملةٌ ومثلُها في `theme.css`، وتعليقُها يقول

@@ -1,43 +1,50 @@
 "use client";
 
 /**
- * **المفضّلة** — متاجرُ يعود إليها صاحبُها.
+ * **المفضّلة** — أصنافٌ يعود إليها صاحبُها.
  *
- * # لماذا الآن
+ * # على الصنف لا على المتجر
  *
- * كانت مبنيّةً في الخادم بالكامل (`GET /my/favorites` و`POST
- * /my/favorites/{id}`) **ولا بابَ لها في الواجهة** — صفرُ نداءٍ من التطبيق
- * كلِّه. **وميزةٌ لا يصل إليها أحدٌ ميزةٌ غيرُ موجودة.**
+ * **الزبونُ لا يشتهي متجراً، يشتهي صحناً.** ومن أحبّ شاورما مطعمٍ بعينه لا
+ * يريد قائمتَه كلَّها — يريد ذلك الصحن، **وبينه وبينه ثلاثُ ضغطاتٍ في كلّ
+ * مرّة**: المتجرُ ثمّ القسمُ ثمّ الصنف. **ومفضّلةُ المتاجر تختصر واحدةً من
+ * ثلاث.** (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
  *
  * # ولماذا مكوّنٌ واحدٌ لا ثلاثة
  *
- * القلبُ في صفحة المتجر، والقائمةُ في صفحتها، **والاثنان يقرآن الشيءَ نفسَه.**
- * ولو قرأ كلٌّ منهما وحدَه **لَافترقا**: يُضاف متجرٌ من صفحته فلا يظهر في
+ * القلبُ في بطاقة الصنف، والقائمةُ في صفحتها، **والاثنان يقرآن الشيءَ نفسَه.**
+ * ولو قرأ كلٌّ منهما وحدَه **لَافترقا**: يُحفظ صنفٌ من شاشة المتجر فلا يظهر في
  * القائمة حتّى تُحدَّث الصفحةُ كلُّها.
  *
  * # والقلبُ ينقلب قبل أن يردّ الخادم
  *
- * **ضغطةٌ لا يظهر أثرُها فوراً تُضغط مرّتين** — فيُضاف المتجرُ ثمّ يُحذف،
+ * **ضغطةٌ لا يظهر أثرُها فوراً تُضغط مرّتين** — فيُحفظ الصنفُ ثمّ يُحذف،
  * **ويظنّ صاحبُه أنّ الزرّ لا يعمل.** فيُقلَب في الشاشة أوّلاً، **ويُردّ إن
  * فشل النداء** — لا يُترك على كذبة.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { CategoryIcon } from "./CategoryIcon";
+import { Badge } from "./components";
 import { PageContainer, PageHeader, EmptyState, LoadingState } from "./layout";
-import { IconHeart, IconStore } from "./icons";
+import { IconHeart } from "./icons";
 
 const m = getMessages(defaultLocale);
 const F = m.customer.favorites;
 
-export interface FavoriteMerchant {
+/** صنفٌ محفوظ — **ومعه متجرُه وسعرُه الآن.** */
+export interface FavoriteItem {
   id: string;
   name: string;
+  price: number;
+  image_thumb_url: string | null;
+  merchant_id: string;
+  merchant_name: string;
   category_icon: string;
-  logo_thumb_url: string | null;
-  emergency_closed: boolean;
+  /** **لا يُطلب اليوم** — أوقفه المتجر أو أُغلق طارئاً. */
+  unavailable: boolean;
 }
 
 type Api = <T>(path: string, init?: RequestInit) => Promise<T>;
@@ -50,7 +57,7 @@ type Api = <T>(path: string, init?: RequestInit) => Promise<T>;
  */
 export function useFavorites(api: Api, enabled = true) {
   const [ids, setIds] = useState<Set<string> | null>(null);
-  const [rows, setRows] = useState<FavoriteMerchant[] | null>(null);
+  const [rows, setRows] = useState<FavoriteItem[] | null>(null);
 
   const load = useCallback(() => {
     if (!enabled) {
@@ -58,7 +65,7 @@ export function useFavorites(api: Api, enabled = true) {
       setRows([]);
       return;
     }
-    api<FavoriteMerchant[]>("/api/v1/my/favorites")
+    api<FavoriteItem[]>("/api/v1/my/favorites")
       .then((r) => {
         const list = r ?? [];
         setRows(list);
@@ -74,23 +81,29 @@ export function useFavorites(api: Api, enabled = true) {
 
   const has = useCallback((id: string) => ids?.has(id) ?? false, [ids]);
 
-  /** toggle يقلب الحالَ في الشاشة ثمّ يُثبته — **ويردّه إن تعذّر.** */
+  /**
+   * toggle يقلب الحالَ في الشاشة ثمّ يُثبته — **ويردّه إن تعذّر.**
+   *
+   * **ويكفيه المعرّف**: من ضغط القلبَ في بطاقةٍ لا يملك تفاصيلَ الصنف كلَّها،
+   * **والقائمةُ تُعاد قراءتُها بعد الإضافة** — أرخصُ من حمل البطاقة كلِّها
+   * في كلّ نداء.
+   */
   const toggle = useCallback(
-    async (mer: FavoriteMerchant) => {
-      const was = ids?.has(mer.id) ?? false;
+    async (itemID: string) => {
+      const was = ids?.has(itemID) ?? false;
       setIds((s) => {
         const next = new Set(s ?? []);
-        if (was) next.delete(mer.id);
-        else next.add(mer.id);
+        if (was) next.delete(itemID);
+        else next.add(itemID);
         return next;
       });
-      setRows((s) => (was ? (s ?? []).filter((x) => x.id !== mer.id) : [mer, ...(s ?? [])]));
+      if (was) setRows((s) => (s ?? []).filter((x) => x.id !== itemID));
       try {
-        // **والخادمُ يقول ما استقرّ عليه** — لا ما ظنّته الشاشة.
-        const r = await api<{ favorite: boolean }>(`/api/v1/my/favorites/${mer.id}`, {
+        const r = await api<{ favorite: boolean }>(`/api/v1/my/favorites/${itemID}`, {
           method: "POST",
         });
-        if (r.favorite === was) load();
+        // **والخادمُ يقول ما استقرّ عليه** — لا ما ظنّته الشاشة.
+        if (r.favorite === was || r.favorite) load();
       } catch {
         load();
       }
@@ -106,44 +119,56 @@ export function useFavorites(api: Api, enabled = true) {
  *
  * **وزرٌّ لا يفعل شيئاً أسوأُ من زرٍّ غائب**: من ضغطه ولم يقع شيءٌ يظنّ العطبَ
  * في المنصة، **ومن سيق إلى الدخول فهم أنّ الميزةَ له إن دخل.**
+ *
+ * **ويوقف الضغطةَ عن أن تصعد**: القلبُ داخل بطاقةٍ كلُّها زرّ، **فمن أراد
+ * الحفظَ لَفُتحت له نافذةُ الطلب** — ضغطةٌ تفعل شيئين ليست ضغطةً واحدة.
  */
 export function FavoriteButton({
-  merchant,
+  itemID,
   on,
   onToggle,
   onRequireLogin,
+  size = "md",
   className = "",
 }: {
-  merchant: FavoriteMerchant;
+  itemID: string;
   on: boolean;
-  onToggle: (mer: FavoriteMerchant) => void;
+  onToggle: (itemID: string) => void;
   onRequireLogin?: () => void;
+  /** `sm` لبطاقة القائمة و`md` لشاشة الصنف. */
+  size?: "sm" | "md";
   className?: string;
 }) {
   const label = on ? F.remove : F.add;
+  const box = size === "sm" ? "h-8 w-8" : "h-10 w-10";
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
       aria-pressed={on}
-      onClick={() => (onRequireLogin ? onRequireLogin() : onToggle(merchant))}
-      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-control border transition-colors ${
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onRequireLogin) onRequireLogin();
+        else onToggle(itemID);
+      }}
+      className={`inline-flex shrink-0 items-center justify-center rounded-control border transition-colors ${box} ${
         on
           ? "border-danger/30 bg-danger/10 text-danger"
           : "border-line text-ink-muted hover:border-danger/40 hover:text-danger"
       } ${className}`}
     >
       {/* **والممتلئُ يُقرأ بلمحة** — وقلبان بالحدّ نفسِه لا يفترقان في العين. */}
-      <IconHeart size={18} className={on ? "fill-current" : ""} />
+      <IconHeart size={size === "sm" ? 15 : 18} className={on ? "fill-current" : ""} />
     </button>
   );
 }
 
 /**
- * FavoritesPage صفحةُ المفضّلة — **قائمةٌ تُضغط لا عرضٌ للأسماء.**
+ * FavoritesPage صفحةُ المفضّلة — **صحونٌ تُضغط فتُفتح في مطبخها.**
  *
- * @param LinkComp رابطُ الإطار — يختلف بين `next/link` وغيره.
+ * @param Link رابطُ الإطار — يختلف بين `next/link` وغيره.
  */
 export function FavoritesPage({
   api,
@@ -175,29 +200,42 @@ export function FavoritesPage({
               key={f.id}
               className="flex items-center gap-3 rounded-card border border-line bg-surface p-3"
             >
-              <Link href={`/m/${f.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                {f.logo_thumb_url ? (
+              {/* **والوجهةُ مطبخُه لا الصنفُ وحدَه**: الطلبُ يبدأ من شاشة
+                  المتجر — وهناك خياراتُه وكمّيتُه. */}
+              <Link
+                href={`/m/${f.merchant_id}`}
+                className="flex min-w-0 flex-1 items-center gap-3"
+              >
+                {f.image_thumb_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={f.logo_thumb_url}
+                    src={f.image_thumb_url}
                     alt=""
-                    className="h-12 w-12 shrink-0 rounded-control object-cover"
+                    className="h-14 w-14 shrink-0 rounded-control object-cover"
                   />
                 ) : (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-primary-light">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-control bg-primary-light">
                     <CategoryIcon name={f.category_icon} size={18} />
                   </span>
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{f.name}</span>
-                  {/* **ومغلقٌ يُقال هنا لا بعد الضغط** — من فتح متجراً مغلقاً
-                      وعاد يعدّها عطباً في المنصة. */}
-                  {f.emergency_closed && (
-                    <span className="block text-xs text-warning">{m.site.closed}</span>
-                  )}
+                  <span className="block truncate font-bold">{f.name}</span>
+                  {/* **واسمُ المطعم تحته**: «شاورما دجاج» في ثلاثة مطاعم،
+                      **ومن رأى اسماً بلا مطعمٍ لا يعرف أيَّها حفظ.** */}
+                  <span className="block truncate text-xs text-ink-muted">
+                    {f.merchant_name}
+                  </span>
+                  <span className="mt-1 flex items-center gap-2">
+                    {/* **والسعرُ الآن لا يومَ الحفظ** — ومن اكتشف الفرقَ في
+                        السلّة اكتشفه في أسوأ لحظة. */}
+                    <span className="font-bold text-primary-dark">
+                      {fmtNum(f.price)} {m.common.currency}
+                    </span>
+                    {f.unavailable && <Badge variant="warning">{F.unavailable}</Badge>}
+                  </span>
                 </span>
               </Link>
-              <FavoriteButton merchant={f} on={has(f.id)} onToggle={toggle} />
+              <FavoriteButton itemID={f.id} on={has(f.id)} onToggle={toggle} />
             </div>
           ))}
         </div>

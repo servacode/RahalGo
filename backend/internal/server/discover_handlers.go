@@ -69,13 +69,35 @@ func (s *Server) handlePublicSearch(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, out)
 }
 
+// handleMyFavorites أصنافُه المفضّلة — **صحونٌ لا متاجر.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «المفضّلة لازم تكون ع صنف وليس ع متجر».)
+//
+// # ولماذا يُعاد معها متجرُها وسعرُها
+//
+// **بطاقةٌ باسم الصنف وحدَه لا تكفي**: «شاورما دجاج» في ثلاثة مطاعم، **ومن
+// رأى اسماً بلا مطعمٍ لا يعرف أيَّها حفظ.**
+//
+// **والسعرُ يُقرأ الآن لا يومَ الحفظ**: من حفظ صحناً بألفين ورآه بألفين وقد
+// صار بثلاثة **يكتشفها في السلّة** — وهي أسوأُ لحظةٍ لاكتشافها.
+//
+// # وما لا يُعرض
+//
+// **الصنفُ الذي رفعه المتجرُ من قائمته يسقط من الجدول نفسِه** (`ON DELETE
+// CASCADE`). **والذي أوقفه مؤقّتاً يبقى ويُقال عنه** — لأنّه يعود.
 func (s *Server) handleMyFavorites(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT m.id, m.name, c.icon, lm.thumb_path, m.emergency_closed
+		SELECT i.id, i.name, i.price, im.thumb_path,
+		       m.id, m.name, c.icon,
+		       -- **غيرُ متاحٍ الآن**: أوقفه المتجر، أو أُغلق طارئاً، أو
+		       -- **لم يُعتمد بعد** — وثلاثتُها «لا يُطلب اليوم».
+		       (NOT i.available OR NOT i.approved OR m.emergency_closed
+		        OR m.status <> 'active') AS unavailable
 		FROM user_favorites f
-		JOIN merchants m ON m.id = f.merchant_id AND m.status = 'active'
+		JOIN menu_items i ON i.id = f.menu_item_id
+		JOIN merchants m ON m.id = i.merchant_id
 		JOIN categories c ON c.id = m.category_id
-		LEFT JOIN media lm ON lm.id = m.logo_media_id
+		LEFT JOIN media im ON im.id = i.image_media_id
 		WHERE f.user_id = $1
 		ORDER BY f.created_at DESC`, userIDFrom(r))
 	if err != nil {
@@ -85,41 +107,45 @@ func (s *Server) handleMyFavorites(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type fav struct {
-		ID           string  `json:"id"`
-		Name         string  `json:"name"`
-		CategoryIcon string  `json:"category_icon"`
-		LogoThumbURL *string `json:"logo_thumb_url"`
-		Closed       bool    `json:"emergency_closed"`
+		ID            string  `json:"id"`
+		Name          string  `json:"name"`
+		Price         int64   `json:"price"`
+		ImageThumbURL *string `json:"image_thumb_url"`
+		MerchantID    string  `json:"merchant_id"`
+		MerchantName  string  `json:"merchant_name"`
+		CategoryIcon  string  `json:"category_icon"`
+		Unavailable   bool    `json:"unavailable"`
 	}
 	out := []fav{}
 	for rows.Next() {
 		var f fav
-		if err := rows.Scan(&f.ID, &f.Name, &f.CategoryIcon, &f.LogoThumbURL, &f.Closed); err != nil {
+		if err := rows.Scan(&f.ID, &f.Name, &f.Price, &f.ImageThumbURL,
+			&f.MerchantID, &f.MerchantName, &f.CategoryIcon, &f.Unavailable); err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		f.LogoThumbURL = media.URLForPtr(f.LogoThumbURL)
+		f.ImageThumbURL = media.URLForPtr(f.ImageThumbURL)
 		out = append(out, f)
 	}
 	httpx.JSON(w, http.StatusOK, out)
 }
 
-// handleToggleFavorite يضيف متجراً للمفضّلة أو يزيله — عمليةٌ واحدة لا اثنتان.
+// handleToggleFavorite يضيف صنفاً للمفضّلة أو يزيله — عمليةٌ واحدة لا اثنتان.
 //
 // الزرّ في الواجهة زرٌّ واحد يُضغط فينقلب، فمنطقُه في الخادم يجب أن يطابقه:
 // نقطتان (إضافة/حذف) تفتحان باب اختلافٍ بين ما تظنّه الشاشة وما في القاعدة.
 func (s *Server) handleToggleFavorite(w http.ResponseWriter, r *http.Request) {
 	uid := userIDFrom(r)
-	mid := chi.URLParam(r, "id")
+	itemID := chi.URLParam(r, "id")
 	var added bool
 	if err := s.pg.QueryRow(r.Context(), `
 		WITH removed AS (
-			DELETE FROM user_favorites WHERE user_id = $1 AND merchant_id = $2 RETURNING 1
+			DELETE FROM user_favorites WHERE user_id = $1 AND menu_item_id = $2 RETURNING 1
 		), added AS (
-			INSERT INTO user_favorites (user_id, merchant_id)
+			INSERT INTO user_favorites (user_id, menu_item_id)
 			SELECT $1, $2 WHERE NOT EXISTS (SELECT 1 FROM removed) RETURNING 1
 		)
-		SELECT EXISTS (SELECT 1 FROM added)`, uid, mid).Scan(&added); err != nil {
+		SELECT EXISTS (SELECT 1 FROM added)`, uid, itemID).Scan(&added); err != nil {
 		s.respondErr(w, err)
 		return
 	}

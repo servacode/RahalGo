@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Modal, Stars } from "@rahalgo/ui";
+import { Button, Modal, Stars, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -79,20 +79,18 @@ export default function RatingModal({
             </div>
           )}
           <div>
-            <label htmlFor="rc" className="mb-1.5 block text-sm font-medium">
-              {R.comment}
-            </label>
-            <textarea
+            {/* **والعدّادُ من العُدّة** — كان مكتوباً هنا وفي نافذةِ الشكوى
+                بصيغتين، **ورقمٌ لاتينيٌّ في واجهةٍ عربية** لأنّه لم يمرّ
+                بـ`fmtNum`. */}
+            <Textarea
               id="rc"
+              label={R.comment}
               value={comment}
               onChange={(e) => setComment(e.target.value.slice(0, COMMENT_MAX))}
               rows={2}
+              maxLength={COMMENT_MAX}
               placeholder={R.commentHint}
-              className="w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
-            <p className="mt-0.5 text-end text-xs text-ink-muted">
-              {comment.length}/{COMMENT_MAX}
-            </p>
           </div>
           {error && (
             <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>

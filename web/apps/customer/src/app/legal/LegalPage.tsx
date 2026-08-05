@@ -19,22 +19,26 @@
  * بنشر — **فيبقى الرقمُ القديمُ معروضاً شهراً ومن اتّصل به لم يجد أحداً.**
  *
  * **وفارغُها يُحذف لا يُعرض**: سطرٌ يقول «الهاتف: —» يُقرأ عطباً في المنصة.
+ *
+ * # وتُقرأ في الخادم لا في المتصفّح
+ *
+ * كانت تُجلب بـ`useEffect` **فيخرج من الخادم اسمُ العلامة ثمّ يُبدَّل**، و«تواصل
+ * معنا» لا يظهر في المصدر أصلاً. **ووثيقةٌ قانونيةٌ تُقرأ من فهارس البحث**:
+ * من بحث عن اسم الشركة لم يجد صفحةَ شروطها. (انظر `contact.ts`.)
+ *
+ * # والأيقونةُ مفتاحٌ لا دالّة
+ *
+ * **الصفحةُ تُرسم في الخادم والهيكلُ في المتصفّح** — ودالّةٌ لا تعبر بينهما:
+ * «Functions cannot be passed directly to Client Components». **فيُمرَّر
+ * مفتاحٌ نصيٌّ ويُختار المكوّنُ هنا**، والنصوصُ والهويّةُ بياناتٌ تعبر.
  */
 
-import { useEffect, useState } from "react";
-import type { ComponentType } from "react";
-import { PageContainer, PageHeader } from "@rahalgo/ui";
+import { PageContainer, PageHeader, IconNote, IconLock, IconSupport } from "@rahalgo/ui";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { api } from "@/lib/api";
+import type { Contact } from "./contact";
 
 const m = getMessages(defaultLocale);
 const L = m.site.legal;
-
-export interface Contact {
-  legal_name: string;
-  support_phone: string;
-  address: string;
-}
 
 export interface Block {
   /** عنوانُ الفقرة — **وفارغُه يعني نصّاً بلا عنوان**. */
@@ -64,24 +68,24 @@ function fill(text: string, c: Contact | null): string {
     .replace(/\{address\}/g, c?.address ?? "");
 }
 
+/** أيقونةُ كلّ صفحة — **تُختار هنا لأنّ الدالّة لا تعبر إلى المتصفّح.** */
+const ICONS = { terms: IconNote, privacy: IconLock, help: IconSupport } as const;
+
 export function LegalPage({
-  icon,
+  kind,
   title,
   subtitle,
   blocks,
+  contact,
 }: {
-  icon: ComponentType<{ size?: number; className?: string }>;
+  kind: keyof typeof ICONS;
   title: string;
   subtitle?: string;
   blocks: Block[];
+  /** **تصل جاهزةً من الخادم** — لا تُجلب هنا. */
+  contact: Contact | null;
 }) {
-  const [contact, setContact] = useState<Contact | null>(null);
-
-  useEffect(() => {
-    api<Contact>("/api/v1/public/contact")
-      .then(setContact)
-      .catch(() => setContact(null));
-  }, []);
+  const icon = ICONS[kind];
 
   return (
     <PageContainer width="medium">

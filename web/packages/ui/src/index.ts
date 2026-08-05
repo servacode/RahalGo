@@ -5,6 +5,8 @@ export { cssVar, themeColor } from "./cssvar";
 export {
   Button,
   Input,
+  Textarea,
+  Radio,
   Select,
   Badge,
   Modal,
@@ -107,5 +109,5 @@ export {
   FavoritesPage,
   FavoriteButton,
   useFavorites,
-  type FavoriteMerchant,
+  type FavoriteItem,
 } from "./Favorites";
