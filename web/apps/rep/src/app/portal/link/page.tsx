@@ -51,7 +51,7 @@ export default function LinkPage() {
         <p className="mb-5 text-sm leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
         <Link
           href="/portal/account"
-          className="inline-block rounded-control bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-dark"
+          className="inline-block rounded-control bg-primary px-5 py-2.5 text-sm font-medium text-on-solid hover:bg-primary-dark"
         >
           {m.rep.lockedCta}
         </Link>
@@ -82,7 +82,7 @@ export default function LinkPage() {
           <img
             src={qr}
             alt={m.rep.linkTitle}
-            className="h-56 w-56 rounded-card border border-line bg-white p-2"
+            className="h-56 w-56 rounded-card border border-line bg-paper p-2"
           />
         ) : (
           <div className="flex h-56 w-56 items-center justify-center rounded-card bg-page text-ink-muted">
@@ -113,7 +113,7 @@ export default function LinkPage() {
             href={`https://wa.me/?text=${shareText}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+            className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-on-solid hover:bg-primary-dark"
           >
             {m.rep.share}
           </a>

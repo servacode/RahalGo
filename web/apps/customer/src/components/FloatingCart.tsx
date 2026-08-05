@@ -87,7 +87,7 @@ export function FloatingCart() {
              قاعدةُ العلامة: الأزرقُ ما ثبت والبرتقاليُّ ما يتحرّك. وهي تدور
              وتتقدّم وتعود — **فلونُها البرتقاليُّ ليس زينةً، هو تطبيقُ
              القاعدة على أوضح مثالٍ لها.** وتُميَّز به عن كل زرقاء الشاشة. */
-        className={`relative block text-accent [filter:drop-shadow(0_5px_12px_rgb(0_0_0/0.3))] ${
+        className={`relative block text-accent drop-shadow-float ${
           pop ? "cart-pop" : "cart-roll"
         }`}
       >
@@ -100,7 +100,7 @@ export function FloatingCart() {
 
         {count > 0 && (
           // العدّاد على العربة: يُقرأ قبل النصّ ويُفهم بلا قراءة
-          <span className="absolute -top-1 -end-1 flex h-7 min-w-7 items-center justify-center rounded-badge bg-danger px-1.5 text-sm font-bold text-white shadow-sm">
+          <span className="absolute -top-1 -end-1 flex h-7 min-w-7 items-center justify-center rounded-badge bg-danger px-1.5 text-sm font-bold text-on-solid shadow-sm">
             {fmtNum(count)}
           </span>
         )}

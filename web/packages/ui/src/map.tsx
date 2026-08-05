@@ -15,7 +15,12 @@ import { MapContainer, CircleMarker, Circle, TileLayer, useMapEvents, useMap } f
 import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { colors } from "./tokens";
+// **ألوانُ الخريطة من الثيم لا من لوحةٍ ثانية.**
+//
+// كانت تُقرأ من `tokens.ts` — **ولوحتُه شاخت**: `primary` فيها أزرقُ داكنٌ
+// والثيمُ صار سماويّاً، **فكانت الخريطةُ ترسم بألوان منصّةٍ أخرى** ولا يظهر
+// خطأً. (انظر `cssvar.ts`.)
+import { themeColor } from "./cssvar";
 import { IconLocateMe, IconAdd, IconClose } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -148,7 +153,7 @@ export function PickMap({
         type="button"
         onClick={locateMe}
         disabled={locating}
-        className="mb-2 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-accent-dark disabled:opacity-60"
+        className="mb-2 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-shell shadow-sm transition-colors hover:bg-accent-dark disabled:opacity-60"
       >
         <IconLocateMe size={17} className={locating ? "animate-pulse" : ""} />
         {locating ? m.common.loading : m.common.locateMe}
@@ -174,8 +179,8 @@ export function PickMap({
                 center={[lat, lng]}
                 radius={radiusM}
                 pathOptions={{
-                  color: colors.brand.primaryDark,
-                  fillColor: colors.brand.primary,
+                  color: themeColor("primary-dark"),
+                  fillColor: themeColor("primary"),
                   fillOpacity: 0.15,
                   weight: 2,
                 }}
@@ -186,8 +191,8 @@ export function PickMap({
               center={[lat, lng]}
               radius={14}
               pathOptions={{
-                color: colors.brand.primary,
-                fillColor: colors.brand.primary,
+                color: themeColor("primary"),
+                fillColor: themeColor("primary"),
                 fillOpacity: 0.18,
                 weight: 0,
               }}
@@ -196,8 +201,8 @@ export function PickMap({
               center={[lat, lng]}
               radius={7}
               pathOptions={{
-                color: colors.neutral.surface,
-                fillColor: colors.brand.primary,
+                color: themeColor("surface"),
+                fillColor: themeColor("primary"),
                 fillOpacity: 1,
                 weight: 3,
               }}
@@ -208,7 +213,7 @@ export function PickMap({
 
 
       {denied && (
-        <p className="absolute bottom-2 start-2 z-[1000] rounded-control bg-danger/90 px-2.5 py-1.5 text-xs text-white">
+        <p className="absolute bottom-2 start-2 z-[1000] rounded-control bg-danger/90 px-2.5 py-1.5 text-xs text-on-solid">
           {m.map.denied}
         </p>
       )}

@@ -541,7 +541,7 @@ export default function CartPage() {
                 </p>
                 <Link
                   href="/account"
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-control bg-warning px-4 py-2 text-sm font-medium text-white"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-control bg-warning px-4 py-2 text-sm font-medium text-on-solid"
                 >
                   <IconWhatsApp size={15} />
                   {m.site.cart.waAction}

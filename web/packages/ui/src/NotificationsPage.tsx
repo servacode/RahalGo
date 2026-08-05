@@ -151,14 +151,14 @@ export function NotificationsPage({
               onClick={() => setKind(f.id)}
               className={`flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm transition-colors ${
                 kind === f.id
-                  ? "bg-primary font-bold text-white shadow-sm"
+                  ? "bg-primary font-bold text-on-solid shadow-sm"
                   : "text-ink-muted hover:bg-page hover:text-ink"
               }`}
             >
               {f.label}
               <span
                 className={`rounded-badge px-1.5 text-2xs tabular-nums ${
-                  kind === f.id ? "bg-white/20" : "bg-page"
+                  kind === f.id ? "bg-on-solid/20" : "bg-page"
                 }`}
               >
                 {fmtNum(f.n)}

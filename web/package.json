@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint",
-    "typecheck": "turbo typecheck"
+    "lint": "node scripts/check-central.mjs && turbo lint",
+    "typecheck": "turbo typecheck",
+    "check:central": "node scripts/check-central.mjs"
   },
   "devDependencies": {
     "turbo": "^2.5.0"

@@ -33,13 +33,37 @@ export function TopBar({
   sticky?: boolean;
 }) {
   return (
+    /*
+      **شريطٌ لا يدفع الصفحةَ جانباً.**
+
+      كان `flex` بلا `min-w-0` ولا حدٍّ للفيض: الشعارُ وثمانيةُ اختصاراتٍ
+      ورصيدُ المحفظة برقمه **يزيدون عن عرض الجوّال**، فيتمدّد الشريطُ ويجرّ
+      `body` معه — **والصفحةُ كلُّها تنزلق أفقيّاً**، وكلُّ سطرٍ فيها يبدأ من
+      خارج الشاشة.
+
+      **وحشوةٌ أصغرُ على الصغير** (`px-3`) تكسب أربعين بكسلاً — وهي فرقُ
+      اختصارٍ كامل.
+    */
     <header
-      className={`surface-lit mb-3 flex items-center gap-3 rounded-card bg-surface px-5 py-3.5 ${
+      className={`surface-lit mb-3 flex items-center gap-2 rounded-card bg-surface px-3 py-3.5 sm:gap-3 sm:px-5 ${
         sticky ? "sticky top-3 z-40" : ""
       }`}
     >
-      {start}
-      <div className="ms-auto flex items-center gap-2">{children}</div>
+      {/* **والشعارُ يتقلّص ولا يُقصّ** — بلا `min-w-0` يفرض عرضَه كاملاً. */}
+      <div className="flex min-w-0 items-center">{start}</div>
+
+      {/*
+        **وصفُّ الأدوات ينزلق وحدَه إن ضاق.**
+
+        **والالتفافُ إلى سطرٍ ثانٍ مرفوض**: الشريطُ يعلو فيدفع المحتوى، **ومن
+        ثبّته (`sticky`) يأكل ثلثَ شاشة الجوّال.**
+
+        `[scrollbar-width:none]` — **شريطُ تمريرٍ داخل الشريط يُقرأ عطباً**،
+        والانزلاقُ بالإصبع لا يحتاج مقبضاً يُرى.
+      */}
+      <div className="ms-auto flex min-w-0 items-center gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
+        {children}
+      </div>
     </header>
   );
 }
@@ -59,9 +83,15 @@ export function TopBar({
 export const TOPBAR_ICON = 20;
 export const TOPBAR_AVATAR = 36;
 
-/** ارتفاع وحواف موحّدة لكل عناصر الشريط — لا يقرّر كل عنصر مقاسه بنفسه. */
+/** ارتفاع وحواف موحّدة لكل عناصر الشريط — لا يقرّر كل عنصر مقاسه بنفسه.
+ *
+ * **و`shrink-0` لأنّ الصفَّ ينزلق**: بدونها يضغط `flex` الحبّاتِ حتّى تتداخل
+ * أيقوناتُها، **فيصير الشريطُ صفّاً من رموزٍ مقصوصة** بدل أن ينزلق سليماً.
+ *
+ * **وحشوةٌ أضيقُ على الجوّال** (`px-2`) — ثمانيةُ اختصاراتٍ × ثمانية بكسلات
+ * تكسب اختصاراً كاملاً في العرض. */
 const chipBase =
-  "flex items-center gap-2 rounded-control px-3 py-2 text-sm transition-colors";
+  "flex shrink-0 items-center gap-2 rounded-control px-2 py-2 text-sm transition-colors sm:gap-2 sm:px-3";
 
 /**
  * **لا صندوقَ خلف الأيقونات.**
@@ -84,7 +114,7 @@ const chipTones = {
   accent: "font-bold text-accent hover:opacity-80",
   /** خطر — الخروج. ممتلئ لا شفّاف: زرّ الخروج يجب أن يُميَّز بلمحة كي لا
    *  يُضغط سهواً، والنصّ الأحمر على أبيض يذوب بين بقية العناصر. */
-  danger: "bg-danger-solid font-medium text-white hover:opacity-90",
+  danger: "bg-danger-solid font-medium text-on-solid hover:opacity-90",
 } as const;
 
 export type ChipTone = keyof typeof chipTones;
@@ -191,7 +221,7 @@ export function CountBadge({ count, tone = "accent" }: { count: number; tone?: "
          ٢٫٢٢ **يذوب**، والداكنُ ٨٫٤٩. **والجرسُ يبقى أبيضَ كما هو.**
          (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «العدّاد فقط وليس الجرس».) */
       className={`absolute -top-1.5 -start-1.5 flex h-5 min-w-5 items-center justify-center rounded-badge px-1 text-xs font-bold ${
-        tone === "danger" ? "bg-danger-solid text-white" : "bg-accent text-shell"
+        tone === "danger" ? "bg-danger-solid text-on-solid" : "bg-accent text-shell"
       }`}
     >
       {fmtNum(count)}

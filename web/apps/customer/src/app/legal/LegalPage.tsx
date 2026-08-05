@@ -43,13 +43,25 @@ export interface Block {
   p: string[];
 }
 
-/** حقولُ الهويّة التي تُملأ في النصّ — `{name}` و`{phone}` و`{address}`. */
+/**
+ * حقولُ الهويّة التي تُملأ في النصّ — `{name}` و`{phone}` و`{address}`.
+ *
+ * **ولا يُترك قالبٌ ظاهراً أبداً.**
+ *
+ * كان يعود بالنصّ كما هو حين لا هويّةَ بعد — **فيقرأ الزائرُ «{name} منصّةُ
+ * توصيل»** في أوّل رسمٍ قبل أن يصل الردّ، **وإلى الأبد إن تعثّر الطلب.**
+ *
+ * **ووثيقةٌ قانونيةٌ فيها قوسٌ لم يُملأ تُقرأ منصّةً غيرَ جاهزة** — وهي أوّلُ
+ * ما يفتحه من يريد أن يطمئنّ.
+ *
+ * **واسمُ العلامة يكفي حتّى يصل الاسمُ المسجَّل**: هو صحيحٌ في الحالين، ولا
+ * يقول شيئاً كاذباً.
+ */
 function fill(text: string, c: Contact | null): string {
-  if (!c) return text;
   return text
-    .replace(/\{name\}/g, c.legal_name || m.common.appName)
-    .replace(/\{phone\}/g, c.support_phone)
-    .replace(/\{address\}/g, c.address);
+    .replace(/\{name\}/g, c?.legal_name || m.common.appName)
+    .replace(/\{phone\}/g, c?.support_phone ?? "")
+    .replace(/\{address\}/g, c?.address ?? "");
 }
 
 export function LegalPage({

@@ -409,7 +409,7 @@ function SettingRow({
                     }}
                     className={`rounded-control px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
                       on
-                        ? "bg-primary font-bold text-white shadow-sm"
+                        ? "bg-primary font-bold text-on-solid shadow-sm"
                         : "text-ink-muted hover:bg-surface hover:text-ink"
                     }`}
                   >

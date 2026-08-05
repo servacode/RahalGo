@@ -83,7 +83,7 @@ export default function Header() {
 
   const brand = (
     <Link href="/" className="flex items-center gap-2">
-      <span className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-white">
+      <span className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-on-solid">
         {m.terms.brandInitial}
       </span>
       <span className="hidden font-bold sm:inline">{m.common.appName}</span>

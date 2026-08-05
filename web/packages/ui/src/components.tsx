@@ -23,7 +23,7 @@ const buttonVariants = {
      والداكنُ ٨٫٤٩. (قرارُ المالك ٢٠٢٦-٠٨-٠٣: #FD9503 للأزرار.) */
   primary: "bg-accent text-shell hover:opacity-90",
   secondary: "border border-line bg-surface text-ink hover:bg-page",
-  danger: "bg-danger text-white hover:bg-danger/90",
+  danger: "bg-danger text-on-solid hover:bg-danger/90",
   ghost: "text-ink-muted hover:bg-page hover:text-ink",
 } as const;
 
@@ -146,7 +146,7 @@ export function Checkbox({
         <IconCheck
           size={12}
           strokeWidth={3.5}
-          className="pointer-events-none absolute text-white opacity-0 transition-opacity peer-checked:opacity-100"
+          className="pointer-events-none absolute text-on-solid opacity-0 transition-opacity peer-checked:opacity-100"
         />
       </span>
       <span className="text-ink-muted transition-colors group-hover:text-ink">{label}</span>

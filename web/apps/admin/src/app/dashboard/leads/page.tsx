@@ -219,7 +219,7 @@ export default function LeadsPage() {
             onClick={() => setFilter(f.key)}
             className={`rounded-control px-3 py-1.5 text-sm transition-colors ${
               filter === f.key
-                ? "bg-primary font-medium text-white"
+                ? "bg-primary font-medium text-on-solid"
                 : "bg-surface text-ink-muted hover:bg-page"
             }`}
           >

@@ -129,7 +129,7 @@ function JoinForm() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-5 text-center">
-        <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-card bg-primary text-2xl font-bold text-white">
+        <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-card bg-primary text-2xl font-bold text-on-solid">
           {m.terms.brandInitial}
         </span>
         <h1 className="text-2xl font-bold">{J.title}</h1>

@@ -127,7 +127,7 @@ export function DashboardChrome({
     <>
       <div className="flex items-center justify-between border-b border-line p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-white">
+          <div className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-on-solid">
             {m.terms.brandInitial}
           </div>
           <span className="font-bold">{brand}</span>

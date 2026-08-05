@@ -8,7 +8,7 @@
 import { MapContainer, Circle, CircleMarker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { FallbackTileLayer } from "@rahalgo/ui/map";
-import { colors } from "@rahalgo/ui";
+import { themeColor } from "@rahalgo/ui";
 
 const RAQQA_CENTER: [number, number] = [35.9528, 39.0079];
 
@@ -22,13 +22,25 @@ const RAQQA_CENTER: [number, number] = [35.9528, 39.0079];
  * **وهذا هو الفرقُ بين ثيمٍ مركزيّ وثيمٍ يُقال إنه مركزيّ**: أن يُغيَّر رقمٌ
  * واحد فيتبعه كلُّ شيء — بما فيه ما لا يُرسم بـCSS.
  */
-const C = {
-  primary: colors.brand.primary,
-  accent: colors.brand.accent,
-  accentDark: colors.brand.accentDark,
+//
+// **وقد كان يُقال إنّه مركزيّ وليس كذلك.**
+//
+// كانت تُقرأ من `tokens.ts` — **ولوحتُه شاخت** حين صار الثيمُ داكناً: بقي
+// `primary` فيها أزرقَ بترولياً والشاشةُ صارت سماويّة، **فرسمت الخريطةُ
+// مناطقَها بلونٍ لا وجودَ له في النافذة نفسِها** — وهو عينُ ما يحذّر منه
+// التعليقُ أعلاه.
+//
+// **والآن تُقرأ من الثيم لحظةَ الرسم** — يُغيَّر رقمٌ واحدٌ فيتبعه كلُّ شيء.
+//
+// **ودالّةٌ لا ثابت**: التوكنُ يُقرأ من الوثيقة، **وثابتٌ في أعلى الوحدة
+// يُحسَب مرّةً قبل أن يُحمَّل الثيم** فيعود الرمادَ الأخير.
+const C = () => ({
+  primary: themeColor("primary"),
+  accent: themeColor("accent"),
+  accentDark: themeColor("accent-dark"),
   /** منطقةٌ مُطفأة — محايدُ الحدود نفسه الذي في الرموز */
-  muted: colors.neutral.textSecondary,
-};
+  muted: themeColor("ink-muted"),
+});
 
 export interface ZoneShape {
   id: string;
@@ -64,6 +76,8 @@ export default function ZonesMap({
   onMapClick: (lat: number, lng: number) => void;
   onZoneClick: (id: string) => void;
 }) {
+  // **تُقرأ عند كلّ رسم** — والخريطةُ تُرسم في المتصفّح وحدَه.
+  const c = C();
   return (
     <MapContainer
       center={RAQQA_CENTER}
@@ -80,7 +94,7 @@ export default function ZonesMap({
           center={[z.lat, z.lng]}
           radius={z.radius_m}
           pathOptions={{
-            color: z.id === selectedID ? C.accent : z.active ? C.primary : C.muted,
+            color: z.id === selectedID ? c.accent : z.active ? c.primary : c.muted,
             fillOpacity: z.id === selectedID ? 0.3 : 0.15,
             weight: z.id === selectedID ? 3 : 2,
           }}
@@ -93,12 +107,12 @@ export default function ZonesMap({
           <Circle
             center={[draft.lat, draft.lng]}
             radius={draft.radiusM}
-            pathOptions={{ color: C.accentDark, fillColor: C.accent, fillOpacity: 0.2, dashArray: "8" }}
+            pathOptions={{ color: c.accentDark, fillColor: c.accent, fillOpacity: 0.2, dashArray: "8" }}
           />
           <CircleMarker
             center={[draft.lat, draft.lng]}
             radius={6}
-            pathOptions={{ color: C.accentDark, fillColor: C.accent, fillOpacity: 1 }}
+            pathOptions={{ color: c.accentDark, fillColor: c.accent, fillOpacity: 1 }}
           />
         </>
       )}

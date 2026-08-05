@@ -67,17 +67,17 @@ export default function OverviewPage() {
   return (
     <PageContainer>
       {/* الكود — قلب اللوحة، ومقفل حتى يوثّق المندوب قناة تواصله */}
-      <section className="rounded-card bg-primary p-6 text-center text-white">
+      <section className="rounded-card bg-primary p-6 text-center text-on-solid">
         {!me.whatsapp_verified ? (
           <>
-            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-white/15">
+            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-on-solid/15">
               <IconLock size={22} />
             </span>
             <p className="text-lg font-bold">{m.rep.lockedTitle}</p>
             <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed opacity-80">{m.rep.lockedHint}</p>
             <Link
               href="/portal/account"
-              className="mt-4 inline-block rounded-control bg-white px-5 py-2.5 text-sm font-medium text-primary-dark"
+              className="mt-4 inline-block rounded-control bg-on-solid px-5 py-2.5 text-sm font-medium text-primary-dark"
             >
               {m.rep.lockedCta}
             </Link>
@@ -107,13 +107,13 @@ export default function OverviewPage() {
                 href={`https://wa.me/?text=${shareText}`}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-control bg-white px-4 py-2 text-sm font-medium text-primary-dark"
+                className="rounded-control bg-on-solid px-4 py-2 text-sm font-medium text-primary-dark"
               >
                 {m.rep.share}
               </a>
               <Link
                 href="/portal/link"
-                className="flex items-center gap-1.5 rounded-control border border-white/40 px-4 py-2 text-sm font-medium text-white hover:bg-white/10"
+                className="flex items-center gap-1.5 rounded-control border border-on-solid/40 px-4 py-2 text-sm font-medium text-on-solid hover:bg-on-solid/10"
               >
                 <IconLink size={15} />
                 {m.rep.nav.link}

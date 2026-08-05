@@ -456,7 +456,7 @@ function OrderCard({
             الزبونُ اشترى من «رحّال غو» — **واسمُ المتجر محجوبٌ عمداً**، فأيقونةُ
             متجرٍ عامّة تقول شيئاً لا نقوله. والعلامةُ هي نفسُها في الشريط
             العلويّ وفي الفاتورة: **حرفٌ أبيضُ على أزرق وطريقٌ برتقاليّ تحته.** */}
-        <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary text-xl font-bold text-white">
+        <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary text-xl font-bold text-on-solid">
           {m.terms.brandInitial}
           <span aria-hidden className="absolute inset-x-0 bottom-0 h-1.5 bg-accent" />
         </span>
@@ -502,7 +502,7 @@ function OrderCard({
                 {/* الخياراتُ تحت الاسم — **هي ما يُميّز طلباً عن طلب.** */}
                 {it.options?.length > 0 && (
                   <span className="block text-xs text-ink-muted">
-                    {it.options.map((x) => x.name).join("، ")}
+                    {it.options.map((x) => x.name).join(m.common.listSep)}
                   </span>
                 )}
               </span>
@@ -667,7 +667,7 @@ function OrderCard({
              أحدُهما يحفظ والآخر يشتكي. **ولونٌ واحدٌ لهما يجعل الضغطةَ قرعةً**،
              والعينُ تفرّق بالألوان قبل أن تقرأ الأيقونات.
              (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-success-solid text-white transition-opacity hover:opacity-90"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-success-solid text-on-solid transition-opacity hover:opacity-90"
         >
           <IconPrint size={16} />
         </button>
@@ -704,7 +704,7 @@ function OrderCard({
                  **وحدودٌ حمراءُ وخلفيةٌ خفيفةٌ تجعله يُرى** بجانب أيقونة
                  الطباعة الرمادية: الفعلان مختلفان، **فلا يُلبسان لباساً
                  واحداً.** */
-              className="flex h-9 shrink-0 items-center gap-1.5 rounded-control bg-danger-solid px-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-control bg-danger-solid px-2.5 text-xs font-medium text-on-solid transition-opacity hover:opacity-90"
             >
               <IconSupport size={16} />
               {m.site.complaint.short}

@@ -1,4 +1,7 @@
-export { colors, fontFamily, radius, breakpoints } from "./tokens";
+// **والألوانُ ليست هنا** — مصدرُها `theme.css` وحدَه، ومن احتاجها قيمةً
+// يقرؤها بـ`themeColor`. (كانت لوحةً ثانيةً شاخت — انظر `tokens.ts`.)
+export { fontFamily, radius, breakpoints } from "./tokens";
+export { cssVar, themeColor } from "./cssvar";
 export {
   Button,
   Input,

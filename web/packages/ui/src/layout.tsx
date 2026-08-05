@@ -515,7 +515,7 @@ export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | str
       {/* **الحرفُ أزرقُ والطريقُ تحته برتقاليّ** — اختصارُ اللوغو في مربّع. */}
       <div
         data-print-mark
-        className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary text-lg font-bold text-white"
+        className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary text-lg font-bold text-on-solid"
       >
         {m.terms.brandInitial}
         <span aria-hidden className="absolute inset-x-0 bottom-0 h-1.5 bg-accent" />

@@ -277,7 +277,7 @@ export function WalletPage({
        (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
     <Button
       onClick={() => setTab(tab === STATEMENT ? ALL : STATEMENT)}
-      className="flex items-center gap-2 !bg-success-solid !text-white hover:!opacity-90"
+      className="flex items-center gap-2 !bg-success-solid !text-on-solid hover:!opacity-90"
     >
       <IconPrint size={16} />
       {m.shared.statement.open}

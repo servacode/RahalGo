@@ -124,7 +124,7 @@ export function BannerSlider({
       ) : (
         <div className="h-full w-full bg-gradient-to-l from-primary/20 to-accent/20" />
       )}
-      <span className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-ink/70 to-transparent p-3 text-sm font-bold text-white sm:p-4 sm:text-base">
+      <span className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-ink/70 to-transparent p-3 text-sm font-bold text-on-solid sm:p-4 sm:text-base">
         {cur.title}
       </span>
     </div>

@@ -46,12 +46,12 @@ export interface TimelineNode {
 }
 
 const TONE_SOLID: Record<string, string> = {
-  primary: "bg-primary text-white",
-  success: "bg-success text-white",
-  danger: "bg-danger text-white",
-  warning: "bg-warning text-white",
-  info: "bg-info text-white",
-  violet: "bg-violet text-white",
+  primary: "bg-primary text-on-solid",
+  success: "bg-success text-on-solid",
+  danger: "bg-danger text-on-solid",
+  warning: "bg-warning text-on-solid",
+  info: "bg-info text-on-solid",
+  violet: "bg-violet text-on-solid",
 };
 
 const TONE_RAIL: Record<string, string> = {
@@ -128,7 +128,7 @@ export function Timeline({
                         // قاعدةُ العلامة: الأزرقُ ما ثبت، والبرتقاليُّ ما
                         // يتحرّك. **وهنا تُرى القاعدةُ عاملةً**: عينُ الزبون
                         // تقع على مكانِ طلبه الآن قبل أن تقرأ حرفاً.
-                        "bg-accent text-white ring-4 ring-accent/20"
+                        "bg-accent text-shell ring-4 ring-accent/20"
                       : "border-2 border-line bg-surface text-ink-muted"
                 }`}
               >

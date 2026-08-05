@@ -243,9 +243,9 @@ export function LoginCard({
               <span
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-badge text-xs font-bold transition-colors ${
                   done
-                    ? "bg-success text-white"
+                    ? "bg-success text-on-solid"
                     : current
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-on-solid"
                       : "border border-line text-ink-muted"
                 }`}
               >
@@ -423,7 +423,7 @@ export function LoginCard({
       <div className="w-full max-w-5xl">
         <div className="grid overflow-hidden rounded-card border border-line/70 bg-surface shadow-card lg:grid-cols-[1.05fr_1fr]">
           {/* ---------- جانب العلامة ---------- */}
-          <aside className="relative overflow-hidden bg-gradient-to-br from-primary-dark via-primary to-primary-dark p-6 text-white sm:p-8 lg:p-10">
+          <aside className="relative overflow-hidden bg-gradient-to-br from-primary-dark via-primary to-primary-dark p-6 text-on-solid sm:p-8 lg:p-10">
             {/* موجة الفرات — رمز العلامة (BRAND.md): النهر يعبر الصحراء */}
             <svg
               viewBox="0 0 400 300"
@@ -439,13 +439,13 @@ export function LoginCard({
 
             <div className="relative flex h-full flex-col">
               <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-card bg-white/15 text-xl font-bold ring-1 ring-white/25 backdrop-blur">
+                <span className="flex h-12 w-12 items-center justify-center rounded-card bg-on-solid/15 text-xl font-bold ring-1 ring-white/25 backdrop-blur">
                   {m.terms.brandInitial}
                 </span>
                 <span className="text-lg font-bold tracking-tight">{m.common.appName}</span>
               </div>
 
-              <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/85 lg:mt-8 lg:text-base">
+              <p className="mt-5 max-w-sm text-sm leading-relaxed text-on-solid/85 lg:mt-8 lg:text-base">
                 {A.hero.tagline}
               </p>
 
@@ -455,12 +455,12 @@ export function LoginCard({
                   const Icon = p.icon;
                   return (
                     <li key={p.title} className="flex gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-white/10 ring-1 ring-white/15">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-on-solid/10 ring-1 ring-white/15">
                         <Icon size={17} />
                       </span>
                       <div className="min-w-0">
                         <p className="text-sm font-bold">{p.title}</p>
-                        <p className="mt-0.5 text-xs leading-relaxed text-white/70">{p.body}</p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-on-solid/70">{p.body}</p>
                       </div>
                     </li>
                   );
@@ -468,7 +468,7 @@ export function LoginCard({
               </ul>
 
               <div className="mt-auto hidden pt-8 lg:block">
-                <p className="text-xs text-white/50">{m.site.appDescription}</p>
+                <p className="text-xs text-on-solid/50">{m.site.appDescription}</p>
               </div>
             </div>
           </aside>
