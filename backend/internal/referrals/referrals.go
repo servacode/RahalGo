@@ -281,6 +281,26 @@ type Standing struct {
 	// **ووعدٌ مبهمٌ لا يُحرّك أحداً**: «ادعُ أصدقاءك» لا تعني شيئاً،
 	// **و«ادعُ صديقاً واربح ٥٬٠٠٠» تعني.**
 	NextReward int64 `json:"next_reward"`
+
+	// Tiers مكافآتُ الأولى والثانية والثالثة، و Rest ما بعدهنّ.
+	//
+	// # ولماذا تُعاد كلُّها لا القادمةُ وحدَها
+	//
+	// **الزبونُ يقرّر أن يدعو قبل أن يدعو**، والقرارُ يحتاج الصورةَ كاملة:
+	// **من يرى «الأولى ٥٬٠٠٠» وحدَها لا يعرف أيستمرّ أم تنقطع.**
+	//
+	// (شهد المالك ٢٠٢٦-٠٨-٠٥: «لازم نقدر نغيّر من الإعدادات، **ما تكون
+	// ثابتة، بحيث يفهم الزبونُ الآلية**: أوّلُ دعوةٍ شقد يربح والثانية
+	// والثالثة، **وهل الشرطُ عند إكمال التسجيل أو عند طلب الطرف الآخر**».)
+	Tiers []int64 `json:"tiers"`
+	Rest  int64   `json:"rest"`
+
+	// RewardOn متى تُصرف — `signup` أو `first_order`.
+	//
+	// **والشرطُ يُقال لا يُفترض**: كان النصُّ مكتوباً في الواجهة «تُصرف عند
+	// أوّل طلب» **بينما الإعدادُ يقول عند التسجيل** — فيقرأ الزبونُ شرطاً
+	// ويقع غيرُه. **ووعدٌ يُخالف ما يقع أسوأُ من ألّا يُوعَد.**
+	RewardOn string `json:"reward_on"`
 }
 
 func (s *Service) Standing(ctx context.Context, userID string) (*Standing, error) {
@@ -298,5 +318,10 @@ func (s *Service) Standing(ctx context.Context, userID string) (*Standing, error
 		return nil, err
 	}
 	out.NextReward = s.rewardFor(ctx, out.Invited+1)
+	// **ومن `rewardFor` نفسِها لا من قراءةٍ ثانيةٍ للإعدادات** — قائمتان
+	// للأرقام نفسِها تفترقان يوماً، **فيُعرض جدولٌ ويُصرف غيرُه.**
+	out.Tiers = []int64{s.rewardFor(ctx, 1), s.rewardFor(ctx, 2), s.rewardFor(ctx, 3)}
+	out.Rest = s.rewardFor(ctx, 4)
+	out.RewardOn = s.rewardOn(ctx)
 	return &out, nil
 }

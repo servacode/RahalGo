@@ -28,9 +28,16 @@ import (
 type fakeSettings struct {
 	mode   string
 	reward int64
+	// perKey يغلب `reward` حين يُملأ — **لاختبار الدرجات المتفاوتة.**
+	perKey map[string]int64
 }
 
-func (f fakeSettings) GetInt(context.Context, string) int64 { return f.reward }
+func (f fakeSettings) GetInt(_ context.Context, k string) int64 {
+	if f.perKey != nil {
+		return f.perKey[k]
+	}
+	return f.reward
+}
 func (f fakeSettings) GetString(_ context.Context, k string) string {
 	if k == "referral.reward_on" {
 		return f.mode
@@ -154,5 +161,66 @@ func TestRewardOnSignup_BodyDoesNotClaimAnOrder(t *testing.T) {
 	}
 	if got := f.notif.bodies[0]; got != "صديقٌ دعوتَه أكمل تسجيلَه" {
 		t.Fatalf("النصُّ %q — **وهو لم يطلب بعد**", got)
+	}
+}
+
+// TestStanding_ShowsTheSameTiersItPays **والجدولُ المعروضُ هو المصروف.**
+//
+// # الخلل الذي يمسكه
+//
+// الصفحةُ تعرض «الأولى ٥٬٠٠٠ · الثانية ٣٬٠٠٠ · الثالثة ١٬٠٠٠»، **والصرفُ يقرأ
+// إعداداتِه بنفسه.** ولو قرأت الواجهةُ من مصدرٍ ثانٍ — أو نسخت الأرقامَ في
+// نصوصها — **لَوعدَت بما لا يقع**، ولا يظهر في أيّ خطأ: الزبونُ يدعو ثلاثةً
+// ويعدّ ما ناله فيجده أقلّ، **ويقول إنّ المنصةَ سرقته.**
+//
+// **والشرطُ كذلك**: كان النصُّ مكتوباً «تُصرف عند أوّل طلب» والإعدادُ يقول
+// التسجيل — **فيقرأ الزبونُ شرطاً ويقع غيرُه.**
+func TestStanding_ShowsTheSameTiersItPays(t *testing.T) {
+	f := arm(t, referrals.OnFirstOrder)
+	ctx := context.Background()
+	f.svc = referrals.New(f.pool, wallet.NewService(f.pool),
+		fakeSettings{mode: referrals.OnFirstOrder, perKey: map[string]int64{
+			"referral.reward_1":    5_000,
+			"referral.reward_2":    3_000,
+			"referral.reward_3":    1_000,
+			"referral.reward_rest": 500,
+		}},
+		func(context.Context) string { return f.treasury }, f.notif)
+
+	st, err := f.svc.Standing(ctx, f.inviter)
+	if err != nil {
+		t.Fatalf("تعذّرت القراءة: %v", err)
+	}
+	if got := []int64{st.Tiers[0], st.Tiers[1], st.Tiers[2], st.Rest}; got[0] != 5_000 ||
+		got[1] != 3_000 || got[2] != 1_000 || got[3] != 500 {
+		t.Fatalf("الدرجاتُ %v — **والمعروضُ غيرُ المصروف**", got)
+	}
+	if st.RewardOn != referrals.OnFirstOrder {
+		t.Fatalf("الشرطُ %q — **فيقرأ الزبونُ شرطاً ويقع غيرُه**", st.RewardOn)
+	}
+
+	// **والقادمةُ هي التالية لمن انضمّ** — وفي العُدّة مدعوٌّ واحدٌ منسوبٌ
+	// سلفاً، **فالقادمةُ الثانيةُ لا الأولى.**
+	//
+	// **والصفحةُ تُبرز السطرَ نفسَه** (`invited` فهرساً في الجدول) — ولو
+	// اختلفا لَأشار السهمُ إلى سطرٍ ورقمُ الصدر إلى غيره.
+	if st.Invited != 1 {
+		t.Fatalf("المدعوّون %d والعُدّةُ تضع واحداً", st.Invited)
+	}
+	if st.NextReward != st.Tiers[1] {
+		t.Fatalf("القادمةُ %d وسطرُها في الجدول %d — **سهمٌ يشير إلى سطرٍ ورقمٌ إلى غيره**",
+			st.NextReward, st.Tiers[1])
+	}
+
+	// **والحُكمُ الأخير: ما يقع فعلاً.**
+	//
+	// **والمصروفُ بدرجة من نُسب لا بعدد من انضمّ**: هذا المدعوُّ رتبتُه
+	// الأولى، **فله أوّلُ الجدول** — والرتبةُ تُثبَّت لحظةَ النسب فلا يتغيّر
+	// نصيبُ من دُعي مبكّراً حين يكثر بعده الناس.
+	before := f.balance(t)
+	f.svc.SettleFirstOrder(ctx, f.invitee, "", f.inviter)
+	if got := f.balance(t) - before; got != st.Tiers[0] {
+		t.Fatalf("صُرف %d والجدولُ وعد بـ%d — **ويقول الزبونُ إنّ المنصةَ سرقته**",
+			got, st.Tiers[0])
 	}
 }

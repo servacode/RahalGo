@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/referrals"
 )
 
 // handleMyReferral رمزُ الدعوة وحالُها — لصاحب الحساب.
@@ -22,22 +23,25 @@ func (s *Server) handleMyReferral(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// **والرابطُ يُبنى في الخادم لا في الشاشة.**
+	// **والحالُ تُرسَل كما هي، والرابطُ يُضاف فوقها.**
 	//
-	// **وعنوانُ الموقع يتغيّر** — من نشرٍ إلى نشر، ومن نطاقٍ إلى نطاق.
-	// **ورابطٌ يُركَّب في متصفّحٍ يحمل عنوانَ الصفحة التي فُتحت منها**،
-	// فمن فتح اللوحةَ على `localhost` أرسل دعوةً إلى `localhost`.
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"code": st.Code,
-		// **ووجهتُه صفحةُ دخول الزبون لا صفحةُ انضمام المتاجر** —
-		// `/join` للمتاجر بكود المندوب، **وشيءٌ اسمُه «ref» في مكانين
-		// يُخلط بينهما.**
-		"link":        s.siteURL() + "/login?ref=" + st.Code,
-		"invited":     st.Invited,
-		"rewarded":    st.Rewarded,
-		"earned":      st.Earned,
-		"next_reward": st.NextReward,
-	})
+	// **وكانت الحقولُ تُنسخ حقلاً حقلاً** — فأُضيفت الدرجاتُ والشرطُ إلى
+	// `Standing` **ولم يصلا الشاشةَ أبداً، ولا خطأَ يُقال**: الخادمُ يبني،
+	// والواجهةُ تقرأ `undefined`، **والجدولُ لا يظهر ولا أحدَ يعرف لماذا.**
+	//
+	// **والتضمينُ يجعل الحقلَ الجديدَ يُشحن وحدَه** — وهي عائلةُ «قاعدةٌ
+	// مكتوبةٌ مرّتين تفترق بلا صوت» نفسُها.
+	//
+	// **والرابطُ يُبنى في الخادم لا في الشاشة**: عنوانُ الموقع يتغيّر من نشرٍ
+	// إلى نشر، **ورابطٌ يُركَّب في متصفّحٍ يحمل عنوانَ الصفحة التي فُتحت
+	// منها** — فمن فتح اللوحةَ على `localhost` أرسل دعوةً إلى `localhost`.
+	//
+	// **ووجهتُه صفحةُ دخول الزبون لا صفحةُ انضمام المتاجر** — `/join`
+	// للمتاجر بكود المندوب، **وشيءٌ اسمُه «ref» في مكانين يُخلط بينهما.**
+	httpx.JSON(w, http.StatusOK, struct {
+		*referrals.Standing
+		Link string `json:"link"`
+	}{st, s.siteURL() + "/login?ref=" + st.Code})
 }
 
 // siteURL عنوانُ موقع الزبائن — **من البيئة لا من رأس الطلب.**
