@@ -34,6 +34,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
+  Alert,
   Button,
   LoadingState,
   PageContainer,
@@ -93,7 +94,8 @@ export default function InvitePage() {
     ? `https://wa.me/?text=${encodeURIComponent(`${V.shareText}\n${data.link}`)}`
     : "";
 
-  if (error) return <p className="py-10 text-center text-danger">{error}</p>;
+  // **والخطأُ لافتةٌ لا سطرٌ أحمرُ في وسط الفراغ.**
+  if (error) return <Alert>{error}</Alert>;
   if (!data) return <LoadingState />;
 
   /**

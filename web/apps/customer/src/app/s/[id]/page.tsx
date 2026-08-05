@@ -7,6 +7,7 @@
 
 import Link from "next/link";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { Alert, EmptyState, IconStore } from "@rahalgo/ui";
 import ItemCard, { type BrowseItem } from "@/components/ItemCard";
 
 const m = getMessages(defaultLocale);
@@ -18,13 +19,24 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   let items: BrowseItem[] = [];
   let title = "";
+  /**
+   * **«لم أصل» غيرُ «وصلتُ فلم أجد».**
+   *
+   * كانت الصفحةُ تقول «لا أصنافَ في هذا القسم» **في الحالين** — فانقطاعُ
+   * الشبكة يُقرأ قسماً فارغاً، **فيظنّ الزبونُ أنّ المنصةَ خاوية** ولا يعود.
+   *
+   * **وهي العائلةُ نفسُها التي وقعت في الرئيسيّة** (٢٠٢٦-٠٨-٠٣) فذهب المالكُ
+   * يُعيد تشغيل المشروع كلَّه والخادمُ يردّ مئتين. **وأُصلحت هناك ونُسيت هنا.**
+   */
+  let reached = false;
   try {
     const res = await fetch(`${API}/api/v1/public/sections/${id}/items`, { cache: "no-store" });
+    reached = res.ok;
     const json = (await res.json()) as { data?: { items?: BrowseItem[] } };
     items = json.data?.items ?? [];
     title = items[0]?.section_name ?? "";
   } catch {
-    /* الخادم غير متاح — تُعرض صفحة فارغة بدل الانهيار */
+    /* الخادم غير متاح — **وهذه وحدَها رسالةُ الانقطاع** */
   }
 
   return (
@@ -34,10 +46,12 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
       </Link>
       <h1 className="mb-4 text-2xl font-bold">{title || m.site.sections.title}</h1>
 
-      {items.length === 0 ? (
-        <p className="rounded-card border border-line bg-surface p-10 text-center text-ink-muted">
-          {m.site.sections.empty}
-        </p>
+      {!reached ? (
+        <Alert tone="warning" title={m.errors.offline}>
+          {m.errors.offlineHint}
+        </Alert>
+      ) : items.length === 0 ? (
+        <EmptyState icon={IconStore} title={m.site.sections.empty} />
       ) : (
         /* **بعددِ أعمدةِ الأقسام نفسِه** — من فتح قسماً لا يجد الشبكةَ تغيّرت
            تحته. (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «شكلُ العرض للأصناف يجب أن يكون
