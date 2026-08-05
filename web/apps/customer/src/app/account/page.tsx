@@ -8,6 +8,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   AccountSettings,
   MyAddresses,
+  ReputationComplaints,
   PageContainer,
   PageHeader,
   LoadingState,
@@ -17,6 +18,7 @@ import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
+const R = m.customer.myReputation;
 
 export default function AccountPage() {
   const { user, loading, logout } = useAuth();
@@ -52,6 +54,24 @@ export default function AccountPage() {
           بلاقطه وخريطته، **ونسخُه إلى لوحةٍ أخرى نسختان تفترقان يوماً.** */}
       <MyAddresses api={api} />
 
+      {/* **وما يُكتب عنه — يراه صاحبُه.**
+
+          السائقون يرفعون بلاغاتٍ على الزبائن (عنوانٌ وهميّ، سوءُ تعامل،
+          امتناعٌ عن الاستلام)، **وكانت تُجمع في ملفّه ولا يبلغه منها شيء.**
+
+          **ومن لا يعلم لا يصحّح**: يُحظر يوماً ويقول «بلا سبب»، **ومن أُنذر
+          مرّةً يصحّح.** (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
+
+          **ولا نجومَ له**: لا أحدَ يقيّم الزبون، **و«٠٫٠ من ٥» في شاشته
+          تُقرأ حكماً عليه** وهي لا تقيس شيئاً. */}
+      <ReputationComplaints
+        api={api}
+        labels={{
+          complaintsTitle: R.title,
+          complaintsHint: R.hint,
+          complaintsEmpty: R.empty,
+        }}
+      />
     </PageContainer>
   );
 }

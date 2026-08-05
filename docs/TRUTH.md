@@ -387,6 +387,9 @@
 | المفتاح | المجموعة | النوع | الافتراضيّ |
 |---|---|---|---|
 | `platform.orders_mode` | المنصة | choice | `platform` |
+| `platform.legal_name` | المنصة | text | `` |
+| `platform.support_phone` | المنصة | text | `` |
+| `platform.address` | المنصة | text | `` |
 | `orders.max_sources` | المنصة | int | `2` |
 | `orders.delivery_timeout_min` | المنصة | int | `60` |
 | `orders.customer_cancel_window_sec` | المنصة | int | `120` |

@@ -100,3 +100,9 @@ export { MyIncentives } from "./Incentives";
 
 /** سلايدرُ اللافتات — **ومن لا يسحب لا يرى إلّا الأولى.** */
 export { BannerSlider, type SlideItem } from "./BannerSlider";
+export {
+  FavoritesPage,
+  FavoriteButton,
+  useFavorites,
+  type FavoriteMerchant,
+} from "./Favorites";

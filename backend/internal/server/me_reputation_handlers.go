@@ -74,7 +74,21 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 	//
 	// **وما يبقى له أصدق**: الشكاوى على طلباته — واقعةٌ بواقعة، لا متوسّطٌ
 	// يخلط ما يملكه بما لا يملكه.
+	// **والزبونُ آخرُهم لأنّ الأدوارَ تجتمع.**
+	//
+	// **وكلُّهم زبائنُ أيضاً**: للسائق حسابٌ يطلب به، وللمتجر كذلك. **فلو
+	// سُئل عن الزبون أوّلاً لَرأى السائقُ بلاغاتِ طلباته لا تقييمَ عمله.**
+	//
+	// # ولا نجومَ للزبون
+	//
+	// **لا أحدَ يقيّمه**: في `order_ratings` نجمتان — للمنصة وللسائق، **ولا
+	// ثالثةَ له.** فبطاقةُ «٠٫٠ من ٥» في شاشته **تُقرأ حكماً عليه** وهي لا
+	// تقيس شيئاً — و`Rated` تبقى كاذبةً فلا تُعرض.
+	//
+	// **وما يُكتب عنه بلاغاتٌ لا تقييم** — وهي وحدَها ما يستحقّ أن يراه.
 	var ownerJoin, ownerCond, starCol string
+	// complaintCond ما يُستثنى من كشفه — **افتراضُه لا شيء.**
+	complaintCond := ``
 	switch {
 	case has("merchant"):
 		ownerJoin = `JOIN merchants mm ON mm.id = o.merchant_id`
@@ -84,10 +98,12 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 		ownerCond = `o.driver_id = $1`
 		starCol = `rt.driver_stars`
 	default:
-		httpx.JSON(w, http.StatusOK, map[string]any{
-			"rating":     map[string]any{"avg": 0, "count": 0, "trend": "flat"},
-			"complaints": []repComplaint{}, "reviews": []repReview{}})
-		return
+		ownerCond = `o.customer_id = $1`
+		// **وشكواه هو ليست سمعتَه.**
+		//
+		// **وله صفحتُها** (`‎/complaints`) — ولو ظهرت هنا أيضاً **لَقرأ ما
+		// اشتكى منه شكوى عليه**، وعدَّ نفسَه متّهماً بما هو صاحبُ الحقّ فيه.
+		complaintCond = ` AND NOT t.opened_by_customer`
 	}
 
 	out := struct {
@@ -118,7 +134,7 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 		FROM tickets t
 		JOIN orders o ON o.id = t.order_id
 		`+ownerJoin+`
-		WHERE `+ownerCond+`
+		WHERE `+ownerCond+complaintCond+`
 		ORDER BY t.created_at DESC LIMIT 50`, uid)
 	if err == nil {
 		for crows.Next() {

@@ -170,6 +170,23 @@ var Catalog = []Def{
 	{Key: "platform.orders_mode", Group: GroupPlatform, Kind: KindChoice,
 		Options: []string{"platform", "merchants"}, Default: "platform"},
 
+	// ── هويّةُ المنصة — تُقرأ في الشروط والخصوصية والمساعدة ──────────────
+	//
+	// **ووثيقةٌ قانونيةٌ باسمٍ مكتوبٍ في الشيفرة وثيقةٌ لا تُصحَّح.**
+	//
+	// الشروطُ والخصوصيةُ تذكران **من يتعاقد ومن يُشتكى إليه وأين يقع**، وهذه
+	// تتغيّر: يُسجَّل الاسمُ التجاريّ، ويُبدَّل رقمُ الدعم، **وينتقل المكتب.**
+	// **ومن كُتب في شيفرةٍ لا يُبدَّل إلّا بنشرٍ** — فيبقى الرقمُ القديمُ
+	// معروضاً شهراً، **ومن اتّصل به لم يجد أحداً.**
+	//
+	// **وفارغُها لا يُعرض**: سطرٌ يقول «الهاتف: —» أسوأُ من غيابه.
+	{Key: "platform.legal_name", Group: GroupPlatform, Kind: KindText,
+		Max: 120, Default: ""},
+	{Key: "platform.support_phone", Group: GroupPlatform, Kind: KindText,
+		Max: 32, Default: ""},
+	{Key: "platform.address", Group: GroupPlatform, Kind: KindText,
+		Max: 200, Default: ""},
+
 	// **سقفُ المصادر — كم متجراً في الطلب الواحد.**
 	//
 	// **والقيدُ الحقيقيُّ «قريب» لا «كم»**: مصدران متجاوران وقفةٌ زائدةٌ

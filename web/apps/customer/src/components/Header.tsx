@@ -23,6 +23,7 @@ import {
   useLiveRefresh,
   IconOrder,
   IconPromos,
+  IconHeart,
   IconLink,
   IconSupport,
   IconWallet,
@@ -158,6 +159,21 @@ export default function Header() {
                 <IconPromos size={TOPBAR_ICON} />
               </TopBarLink>
               )}
+              {/* **المفضّلة — ومن يطلب من مطعمٍ كلَّ أسبوعٍ لا يبحث عنه كلَّ
+                  مرّة.**
+
+                  **وتظهر دائماً لا عند الامتلاء وحدَه**: العروضُ تُخفى على
+                  فراغٍ لأنّها خبرٌ يأتي من المنصة، **والمفضّلةُ بابٌ يملؤه
+                  صاحبُه** — ومن لا يراها لا يعرف أنّها له. */}
+              <TopBarLink
+                Link={Link}
+                href="/favorites"
+                title={m.customer.favorites.title}
+                aria-label={m.customer.favorites.title}
+                tone={pathname.startsWith("/favorites") ? "active" : "plain"}
+              >
+                <IconHeart size={TOPBAR_ICON} />
+              </TopBarLink>
               {/* **ادعُ صديقاً** — ومن جلب يُكافأ، والمنصةُ تدفع. */}
               <TopBarLink
                 Link={Link}

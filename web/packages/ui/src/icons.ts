@@ -65,6 +65,12 @@ export {
   QrCode as IconQr,
   LayoutDashboard as IconOverview,
   Star as IconStar,
+  // **المفضّلة قلبٌ لا نجمة.**
+  //
+  // **والنجمةُ هنا محجوزةٌ للتقييم** — تُستعمل في `Stars` وفي التقييمات كلِّها،
+  // **ونجمةٌ تعني «قيّمتُه» ونجمةٌ تعني «أحببتُه» في شاشةٍ واحدة** تجعل من
+  // يضغط إحداهما يتوقّع الأخرى.
+  Heart as IconHeart,
   MessageSquare as IconReply,
   StickyNote as IconNote,
   Copy as IconCopy,

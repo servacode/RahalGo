@@ -3,9 +3,11 @@
 /** صفحة المتجر: القائمة كاملة، نافذة الصنف بخياراته (حدود min/max)، إضافة للسلة. */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
-import { CategoryIcon, Badge, Button, Modal } from "@rahalgo/ui";
-import { mediaUrl } from "@/lib/api";
+import { CategoryIcon, Badge, Button, Modal, FavoriteButton, useFavorites } from "@rahalgo/ui";
+import { api, mediaUrl } from "@/lib/api";
+import { useAuth, isLoggedIn } from "@/lib/auth";
 import { useCart, type CartLine } from "@/lib/cart";
 
 const m = getMessages(defaultLocale);
@@ -53,6 +55,11 @@ export interface Merchant {
 
 export default function MerchantClient({ merchant, menu }: { merchant: Merchant; menu: Section[] }) {
   const [picking, setPicking] = useState<Item | null>(null);
+  const router = useRouter();
+  const { user } = useAuth();
+  const signedIn = isLoggedIn(user);
+  // **ولا يُنادى الخادمُ لزائرٍ لم يدخل** — يردّ «غيرَ مخوَّل» بلا فائدة.
+  const { has, toggle } = useFavorites(api, signedIn);
 
   const logo = mediaUrl(merchant.logo_thumb_url);
 
@@ -84,6 +91,26 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
                 : m.site.closed}
           </Badge>
         </div>
+
+        {/* **والقلبُ عند اسم المتجر** — حيث يقرّر الزبونُ أنّه أعجبه.
+
+            **ولا في بطاقة القائمة**: من يتصفّح لا يعرف بعدُ إن كان يحبّه،
+            **ومن قرأ قائمتَه يعرف.** */}
+        <FavoriteButton
+          className="ms-auto"
+          merchant={{
+            id: merchant.id,
+            name: merchant.name,
+            category_icon: merchant.category_icon,
+            logo_thumb_url: merchant.logo_thumb_url,
+            emergency_closed: false,
+          }}
+          on={has(merchant.id)}
+          onToggle={toggle}
+          onRequireLogin={
+            signedIn ? undefined : () => router.push(`/login?next=/m/${merchant.id}`)
+          }
+        />
       </div>
 
       <div className="space-y-6">
