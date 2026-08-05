@@ -17,13 +17,15 @@
  */
 
 export const fontFamily = {
-  /** الخط المعتمد للعربية واللاتينية معاً (BRAND.md) — ملفاته في fonts.css */
-  sans: `"Tajawal", system-ui, sans-serif`,
+  /** المتن — **مفاصلُ مفتوحةٌ وأرقامٌ ثابتةُ العرض** (ملفّاته في `fonts.css`). */
+  sans: `"IBM Plex Sans Arabic", system-ui, sans-serif`,
+  /** العناوين — **كوفيٌّ هندسيّ**، خطُّ وادي الفرات. */
+  display: `"Reem Kufi", "IBM Plex Sans Arabic", system-ui, sans-serif`,
 } as const;
 
 export const radius = {
-  control: "8px",
-  card: "16px",
+  control: "10px",
+  card: "20px",
   badge: "9999px",
 } as const;
 

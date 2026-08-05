@@ -13,18 +13,28 @@ const m = getMessages(defaultLocale);
 
 // ---------- Button ----------
 
+/**
+ * **الزرُّ جمرة** — وهو الموضعُ الأوّلُ من موضعين يظهر فيهما الجمرُ في الشاشة
+ * (والثاني شارةُ الخصم). **ولونٌ يُرى في كلّ زاويةٍ لا يبقى له معنى.**
+ *
+ * **ونصُّه داكنٌ لا أبيض**: الأبيضُ على الجمر ٢٫٣ — يذوب، **والداكنُ ٧٫٧٥.**
+ *
+ * # والتحويمُ يُفتح لا يُشفّ
+ *
+ * كان `hover:opacity-90` — **والشفافيّةُ تُخفت النصَّ والخلفيةَ معاً**، فيبهت
+ * الزرُّ كلُّه عند مرور الفأرة **ويُقرأ «تعطّل» لا «جاهز».** والتحويمُ يجب
+ * أن يُقرَّب لا أن يُبعد: **درجةٌ أفتحُ صريحة.**
+ *
+ * # والضغطةُ تُحسّ
+ *
+ * **زرٌّ لا يتحرّك تحت الإصبع لا يُصدَّق أنّه ضُغط** — وعلى شبكةٍ بطيئةٍ يُضغط
+ * مرّتين. **وبكسلٌ واحدٌ إلى الأسفل يكفي**: ما يُحسّ ولا يُرى.
+ */
 const buttonVariants = {
-  /* **الزرُّ برتقاليُّ اللوغو — وهو ثاني لونَي العلامة.**
-
-     الأزرقُ صار خلفيةَ كلّ شيء: البطاقةُ والشريطُ والجانب. **وزرٌّ أزرقُ على
-     بطاقةٍ زرقاء يذوب فيها**، والبرتقاليُّ يقطعها فيُرى قبل أن يُقرأ.
-
-     **ونصُّه داكنٌ لا أبيض**: الأبيضُ على البرتقاليّ ٢٫٢٢ — **يذوب**،
-     والداكنُ ٨٫٤٩. (قرارُ المالك ٢٠٢٦-٠٨-٠٣: #FD9503 للأزرار.) */
-  primary: "bg-accent text-shell hover:opacity-90",
-  secondary: "border border-line bg-surface text-ink hover:bg-page",
-  danger: "bg-danger text-on-solid hover:bg-danger/90",
-  ghost: "text-ink-muted hover:bg-page hover:text-ink",
+  primary: "bg-accent text-shell elev-1 hover:bg-accent-strong hover:elev-2",
+  secondary: "border border-line bg-surface text-ink hover:border-primary/40 hover:bg-raised",
+  danger: "bg-danger-solid text-on-solid elev-1 hover:brightness-110",
+  ghost: "text-ink-muted hover:bg-raised hover:text-ink",
 } as const;
 
 /**
@@ -35,7 +45,10 @@ const buttonVariants = {
  * شاشةٍ تُقدّر بنفسها فتتفاوت — وقد رأينا ذلك في هذا المشروع مرّاتٍ.
  */
 const buttonSizes = {
-  md: "px-4 py-2 text-sm",
+  /* **و`md` ارتفع من ٣٤ إلى ٤٠**: أربعةٌ وثلاثون أقلُّ من لبّ الإصبع بعشرة،
+     **وزرٌّ يُخطأ مرّتين يُترك.** (والأربعةُ والأربعون في `taparea` لما لا
+     يحتمل التكبير.) */
+  md: "px-4 py-2.5 text-sm",
   lg: "px-5 py-4 text-base",
 } as const;
 
@@ -51,7 +64,12 @@ export function Button({
   return (
     <button
       {...props}
-      className={`rounded-control font-medium transition-colors disabled:pointer-events-none disabled:opacity-60 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
+      /* **والمحتوى في الوسط بفجوة** — أيقونةٌ ونصٌّ في زرٍّ كتليٍّ يقفان حيث
+         وقعا، **فيلتصقان أو يزيغان عن المنتصف** حين يُمدّ الزرُّ عرضاً.
+
+         **ولا ينكسر النصُّ سطرين**: زرٌّ من كلمتين في عمودٍ ضيّقٍ ينقسم
+         **فيصير ارتفاعُه ضعفَ أخيه بجانبه.** */
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control font-medium transition-[background-color,border-color,box-shadow,transform,filter] duration-[--duration-fast] ease-[--ease-out] active:translate-y-px disabled:pointer-events-none disabled:opacity-60 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
     />
   );
 }
@@ -104,7 +122,7 @@ export function Input({
           id={id}
           type={effectiveType}
           {...props}
-          className={`w-full rounded-control border bg-surface py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+          className={`w-full rounded-control border bg-page py-2.5 text-sm text-ink outline-none transition-[border-color,box-shadow] duration-[--duration-fast] ease-[--ease-out] placeholder:text-ink-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/25 ${
             error ? "border-danger" : "border-line hover:border-ink-muted/40"
           } ${padStart} ${padEnd} ${className}`}
         />
@@ -170,7 +188,7 @@ export function Textarea({
         id={id}
         rows={props.rows ?? 3}
         {...props}
-        className={`w-full rounded-control border bg-surface px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+        className={`w-full rounded-control border bg-page px-3 py-2.5 text-sm text-ink outline-none transition-[border-color,box-shadow] duration-[--duration-fast] ease-[--ease-out] placeholder:text-ink-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/25 ${
           error ? "border-danger" : "border-line hover:border-ink-muted/40"
         } ${className}`}
       />
@@ -327,7 +345,7 @@ export function OtpInput({
             commit(pasted);
             refs.current[Math.min(pasted.length, length - 1)]?.focus();
           }}
-          className={`h-13 w-11 rounded-control border bg-surface text-center font-mono text-xl font-bold text-ink outline-none transition-all sm:w-12 ${
+          className={`h-13 w-11 rounded-control border bg-page text-center font-mono text-xl font-bold text-ink outline-none transition-all sm:w-12 ${
             d.trim()
               ? "border-primary bg-primary-light/40 text-primary-dark"
               : "border-line hover:border-ink-muted/40"
@@ -390,7 +408,7 @@ export function Select({
       <select
         id={id}
         {...props}
-        className={`w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${className}`}
+        className={`w-full rounded-control border border-line bg-page px-3 py-2.5 text-sm outline-none transition-[border-color,box-shadow] duration-[--duration-fast] ease-[--ease-out] focus:border-primary focus:ring-2 focus:ring-primary/25 ${className}`}
       >
         {children}
       </select>
@@ -400,12 +418,22 @@ export function Select({
 
 // ---------- Badge ----------
 
+/**
+ * **الشارةُ حشوةٌ ليّنةٌ وحدٌّ من لونها.**
+ *
+ * كانت حشوةً بلا حدّ — **ولطخةٌ ملوّنةٌ بلا حافّةٍ على بطاقةٍ داكنةٍ تُقرأ
+ * بقعةً** لا عنصراً. **والحدُّ بشفافيّةِ الرُّبع** يرسمها ولا يصرخ.
+ *
+ * **و`danger` هي شارةُ الخصم** — الموضعُ الثاني من موضعَي الجمر. فحُوّلت من
+ * الورديّ إلى الجمرة نفسِها: **الخصمُ والزرُّ لونٌ واحد**، وهو ما يربط
+ * «وفّرتَ» بـ«اضغط».
+ */
 const badgeVariants = {
-  neutral: "bg-page text-ink-muted",
-  primary: "bg-primary-light text-primary-dark",
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/10 text-warning",
-  danger: "bg-danger/10 text-danger",
+  neutral: "border border-line bg-page text-ink-muted",
+  primary: "border border-primary/25 bg-primary-light text-primary-dark",
+  success: "border border-success/25 bg-success/10 text-success",
+  warning: "border border-warning/25 bg-warning/10 text-warning",
+  danger: "border border-accent/30 bg-accent-soft text-accent-text",
 } as const;
 
 export function Badge({
@@ -427,6 +455,17 @@ export function Badge({
 }
 
 // ---------- Modal ----------
+
+/**
+ * **النافذةُ على السطح المرتفع لا على سطح البطاقة.**
+ *
+ * وُلد `--color-raised` للنوافذ والقوائم المنسدلة (انظر الثيم) **وبقيت النافذةُ
+ * على `surface`** — أي على لون البطاقات التي تحتها. **فذابت فيما جاءت لتغطّيه**
+ * ولم يميّزها إلّا حدُّها.
+ *
+ * **وارتفاعُها صار الرابع**: نافذةٌ تحجب الشاشةَ كلَّها وظلُّها ظلُّ بطاقةٍ
+ * **تُقرأ لصيقةً بالصفحة لا عائمةً فوقها.**
+ */
 
 const modalSizes = {
   md: "max-w-md",
@@ -463,7 +502,7 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface p-6 elev-3 ${modalSizes[size]}`}
+        className={`max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-raised p-6 elev-4 ${modalSizes[size]}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* **العنوانُ وزرُّ الإغلاق في سطرٍ واحد.**
@@ -482,7 +521,7 @@ export function Modal({
             onClick={onClose}
             aria-label={m.common.close}
             title={m.common.close}
-            className="taparea -me-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-page hover:text-ink"
+            className="taparea -me-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-surface hover:text-ink"
           >
             <IconClose size={18} />
           </button>
