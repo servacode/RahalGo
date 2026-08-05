@@ -264,8 +264,28 @@ export default function MyOrdersPage() {
       {orders.length === 0 ? (
         <EmptyState icon={IconOrder} title={m.site.orders.empty} />
       ) : (
+        <>
+        {/* **الجاري أوّلاً وبعنوانه — والمنتهي تحته.**
+
+            كانت القائمةُ واحدةً مرتّبةً بالتاريخ. **ومن له طلبٌ في الطريق
+            يفتح الشاشةَ ليتتبّعه** — لا ليقرأ سجلَّه، **وطلبٌ من الشهر
+            الماضي في الصفّ الأوّل يجعله يبحث عن طلبه بين طلباته.**
+
+            **والفصلُ بعنوانين لا بترتيبٍ وحدَه**: ترتيبٌ بلا عنوانٍ يُقرأ
+            صدفةً، **وعنوانٌ يقول «هذا يجري الآن».**
+
+            **ولا يُعرض العنوانان على فراغ**: من لا طلبَ جارياً له لا يرى
+            «الجاري» فارغةً — وقسمٌ فارغٌ يُقرأ عطباً. */}
+        {[
+          { key: "live", rows: orders.filter((o) => !o.closed_at), title: m.site.orders.live },
+          { key: "past", rows: orders.filter((o) => o.closed_at), title: m.site.orders.past },
+        ]
+          .filter((g) => g.rows.length > 0)
+          .map((g) => (
+        <section key={g.key} className="mb-6 last:mb-0">
+          <h2 className="mb-3 text-sm font-bold text-ink-muted">{g.title}</h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {orders.map((o) => (
+          {g.rows.map((o) => (
             <OrderCard
               key={o.id}
               o={o}
@@ -277,6 +297,9 @@ export default function MyOrdersPage() {
             />
           ))}
         </div>
+        </section>
+          ))}
+        </>
       )}
 
       {again && (

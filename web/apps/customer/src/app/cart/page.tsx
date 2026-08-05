@@ -315,6 +315,29 @@ export default function CartPage() {
     }
   }
 
+  /**
+   * **شريطُ الحسم — المبلغُ والزرُّ في مكانٍ واحدٍ لا يغيب.**
+   *
+   * # المسألة
+   *
+   * الصفحةُ خمسُمئةٍ وخمسةٌ وستّون سطراً: أصنافٌ ثمّ ملخّصٌ ثمّ دخولٌ ثمّ
+   * عناوينُ محفوظةٌ ثمّ خريطةٌ ثمّ طريقةُ دفعٍ ثمّ كودُ خصمٍ ثمّ توثيقُ
+   * واتساب — **ثمّ الزرّ.**
+   *
+   * **وعلى الجوّال أربعُ شاشاتٍ بين المبلغ والزرّ**: من قرأ «٤٧٬٠٠٠» في
+   * الأعلى ونزل يملأ عنوانَه **نسي الرقم**، ومن وصل الزرَّ لا يراه.
+   *
+   * **والمبلغُ آخرُ ما يُراجَع قبل الالتزام** — ورقمٌ لا يُرى لحظةَ الضغط
+   * يُراجَع بعد الطلب لا قبله.
+   *
+   * # ولماذا فوق الشريط السفليّ لا مكانَه
+   *
+   * **التنقّلُ يبقى**: من اكتشف أنّه نسي صنفاً يعود، **وحبسُه في السلّة
+   * يجعله يُلغي بدل أن يُكمل.**
+   */
+  const canPlace = !busy && !!address && !!zone && waVerified !== false;
+  const stickyTotal = zone ? subtotal + zone.delivery_fee : subtotal;
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <section>
@@ -552,7 +575,7 @@ export default function CartPage() {
 
             <Button
               onClick={placeOrder}
-              disabled={busy || !address || !zone || waVerified === false}
+              disabled={!canPlace}
               className="w-full py-3 text-base"
             >
               {busy ? m.site.cart.placing : m.site.cart.placeOrder}
@@ -560,6 +583,29 @@ export default function CartPage() {
           </div>
         )}
       </section>
+
+      {/* **وشريطُ الحسم على الجوّال وحدَه** — على الواسع الملخّصُ والزرُّ
+          في العمود الثاني، **وكلاهما مرئيٌّ بلا تمرير.** */}
+      {logged && cart.lines.length > 0 && (
+        <div
+          className="elev-4 fixed inset-x-0 bottom-[3.75rem] z-30 flex items-center gap-3 border-t border-line bg-raised px-4 py-3 md:hidden"
+          style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <div className="min-w-0">
+            <p className="text-2xs text-ink-muted">{m.site.cart.total}</p>
+            <p dir="ltr" className="font-bold tabular-nums text-primary-strong">
+              {fmtNum(stickyTotal)} {m.common.currency}
+            </p>
+          </div>
+          {/* **والزرُّ يُعطَّل بالسبب نفسِه** — ولو اختلفا لَظهر زرٌّ يُضغط
+              ولا يقع شيء. */}
+          <Button onClick={placeOrder} disabled={!canPlace} className="ms-auto shrink-0 px-6 py-3">
+            {busy ? m.site.cart.placing : m.site.cart.placeOrder}
+          </Button>
+        </div>
+      )}
+      {/* **وفراغٌ بارتفاع الشريطين** — وبلاه يختفي زرُّ الصفحة خلفهما. */}
+      {logged && cart.lines.length > 0 && <div aria-hidden className="h-20 md:hidden" />}
     </div>
   );
 }

@@ -2187,7 +2187,9 @@
       "cancelConfirmTitle": "إلغاء الطلب؟",
       "cancelConfirmBody": "لن نتمكّن من التراجع بعد الإلغاء، وستحتاج إلى إعادة الطلب من جديد.",
       "cancelConfirmYes": "نعم، ألغِ الطلب",
-      "cancelConfirmNo": "تراجع"
+      "cancelConfirmNo": "تراجع",
+      "live": "يجري الآن",
+      "past": "طلباتٌ سابقة"
     },
     "wallet": {
       "title": "محفظتي",
