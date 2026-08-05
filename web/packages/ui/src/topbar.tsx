@@ -204,7 +204,7 @@ export function Avatar({
     >
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" className="h-full w-full object-cover" />
+        <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
       ) : (
         (name || m.terms.avatarFallback).slice(0, 1)
       )}

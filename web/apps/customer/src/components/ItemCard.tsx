@@ -99,7 +99,7 @@ export default function ItemCard({ item }: { item: BrowseItem }) {
         <span className="relative flex aspect-[4/3] items-center justify-center bg-page">
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={img} alt="" className="h-full w-full object-cover" />
+            <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
           ) : (
             /* **وحرفُ الاسم لا رمزٌ رماديّ** — الرمزُ الواحدُ لعشرة أصنافٍ
                يجعلها شيئاً واحداً، **والحرفُ يفرّق بينها ويبقى لها.** */

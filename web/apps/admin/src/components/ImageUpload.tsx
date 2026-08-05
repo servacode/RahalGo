@@ -78,7 +78,7 @@ export default function ImageUpload({
           ) : preview ? (
             // صور الوسائط ديناميكية من خادمنا — لا تمر بمحسّن Next
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="" className="h-full w-full object-cover" />
+            <img src={preview} alt="" loading="lazy" className="h-full w-full object-cover" />
           ) : (
             <IconAdd size={24} />
           )}

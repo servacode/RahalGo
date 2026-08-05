@@ -1,6 +1,7 @@
 /** الرئيسية — تُقدَّم من الخادم (SEO): المحتوى في HTML الأولي، والترشيح تفاعلي. */
 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { Alert, EmptyState, IconStore } from "@rahalgo/ui";
 import HomeClient, { type HomeData } from "./HomeClient";
 
 const m = getMessages(defaultLocale);
@@ -34,16 +35,23 @@ export default async function HomePage() {
   }
 
   if (!reached) {
-    return <p className="py-16 text-center text-ink-muted">{m.errors.offline}</p>;
+    // **والانقطاعُ لافتةٌ لا سطرٌ رماديّ.**
+    //
+    // **سطرٌ باهتٌ في وسط صفحةٍ فارغةٍ يُقرأ «لا يوجد شيء»** لا «لم أصل» —
+    // وهي عينُ العائلة التي أخرجت هذا الحارسَ أصلاً.
+    return (
+      <div className="py-10">
+        <Alert tone="warning" title={m.errors.offline}>
+          {m.errors.offlineHint}
+        </Alert>
+      </div>
+    );
   }
   // **وفراغُ الأقسام لا فراغُ المتاجر** — الزبونُ يتصفّح أقساماً.
   if (data.sections.length === 0) {
-    return (
-      <div className="py-16 text-center">
-        <p className="font-medium">{m.site.home.emptyTitle}</p>
-        <p className="mt-1 text-sm text-ink-muted">{m.site.home.emptyHint}</p>
-      </div>
-    );
+    // **وفراغُ الأقسام حالُ فراغٍ لا نصٌّ مرتجَل** — بالشكل الذي يراه الزبونُ
+    // في كلّ شاشةٍ فارغةٍ من المنصة.
+    return <EmptyState icon={IconStore} title={m.site.home.emptyTitle} />;
   }
   return <HomeClient initial={data} />;
 }

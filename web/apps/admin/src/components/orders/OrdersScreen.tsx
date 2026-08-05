@@ -873,7 +873,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={o.proof_url}
-                alt=""
+                alt="" loading="lazy"
                 className="h-16 w-16 rounded-control border border-line object-cover"
               />
             </a>

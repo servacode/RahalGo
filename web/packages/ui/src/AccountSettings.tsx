@@ -377,7 +377,7 @@ export function AccountSettings({
           <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-2xl font-bold text-primary-dark">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+              <img src={avatarUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
             ) : (
               (name || phone || m.terms.avatarFallback).slice(0, 1)
             )}

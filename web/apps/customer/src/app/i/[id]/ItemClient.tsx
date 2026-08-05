@@ -102,7 +102,7 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
 
       {img && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={img} alt="" className="mb-4 h-56 w-full rounded-card object-cover" />
+        <img src={img} alt="" loading="lazy" className="mb-4 h-56 w-full rounded-card object-cover" />
       )}
 
       <h1 className="text-2xl font-bold">{item.name}</h1>

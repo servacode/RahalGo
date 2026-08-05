@@ -77,7 +77,7 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
       <div className="mb-6 flex items-center gap-4">
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logo} alt="" className="h-16 w-16 rounded-card object-cover" />
+          <img src={logo} alt="" loading="lazy" className="h-16 w-16 rounded-card object-cover" />
         ) : (
           <span className="flex h-16 w-16 items-center justify-center rounded-card bg-primary-light text-2xl">
             <CategoryIcon name={merchant.category_icon} size={18} />
@@ -106,7 +106,20 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
       <div className="space-y-6">
         {menu.map((sec) => (
           <section key={sec.id}>
-            <h2 className="mb-3 border-s-4 border-primary ps-2 text-lg font-bold">{sec.name}</h2>
+            {/* **وعنوانُ القسم يلتصق أثناء التمرير.**
+
+                قائمةُ مطعمٍ فيها ستّةُ أقسامٍ وأربعون صنفاً — **ومن نزل في
+                «المشاوي» عشرين صنفاً لا يعرف أين هو**، فيصعد ليقرأ العنوانَ
+                ثمّ ينزل من جديد.
+
+                **والعنوانُ اللاصقُ يجيب بلا حركة**: يبقى في أعلى الشاشة ما
+                دام قسمُه معروضاً، **ويُدفع بالذي بعده** حين ينتهي.
+
+                **وخلفيّةٌ تحته لا شفافيّة**: بلاها تمرّ الصورُ من ورائه
+                فيُقرأ نصّاً على طعام. */}
+            <h2 className="sticky top-[4.5rem] z-20 mb-3 -mx-1 border-s-4 border-primary bg-surface px-1 py-1.5 ps-2 text-lg font-bold">
+              {sec.name}
+            </h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {sec.items.map((item) => {
                 const img = mediaUrl(item.image_thumb_url);
@@ -129,9 +142,27 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
                   >
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img} alt="" className="h-16 w-16 rounded-control object-cover" />
+                      /* **والصورةُ تكبر — لأنّ الطعامَ يُشترى بالعين.**
+
+                         كانت أربعةً وستّين بكسلاً في **الشاشة التي يُطلب
+                         منها**، **والصنفُ نفسُه في صفحة القسم صورةٌ بنسبة
+                         ٤:٣ بعرض البطاقة** (`ItemCard`).
+
+                         **فالصحنُ الواحدُ شهيٌّ في شاشةٍ وطابعُ بريدٍ في
+                         الأخرى** — وهي التي يُضغط فيها زرُّ الإضافة.
+
+                         **ولم تُفتَّح خلفيّةُ الصفحة** كما كان في الخطّة:
+                         جُرّبت فأسقطت التباين (النصُّ الخافت ٣٫٦٣ والحدُّ
+                         ٢٫٥٥). **والعلاجُ في حجم الصورة لا في لون ما
+                         حولَها.** */
+                      <img
+                        src={img}
+                        alt=""
+                        loading="lazy"
+                        className="h-20 w-20 shrink-0 rounded-control object-cover sm:h-24 sm:w-24"
+                      />
                     ) : (
-                      <span className="flex h-16 w-16 items-center justify-center rounded-control bg-primary-light text-lg font-bold text-primary-dark">
+                      <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-control bg-primary-light text-lg font-bold text-primary-strong sm:h-24 sm:w-24">
                         {item.name.charAt(0)}
                       </span>
                     )}

@@ -88,7 +88,7 @@ export default function WhatsAppPanel() {
           {qrDataURL && !status?.logged_in && (
             <div className="flex flex-col items-center rounded-card border border-line bg-surface p-6">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrDataURL} alt="WhatsApp QR" className="rounded-control" />
+              <img src={qrDataURL} alt="WhatsApp QR" loading="lazy" className="rounded-control" />
               <p className="mt-3 max-w-xs text-center text-sm text-ink-muted">
                 {m.admin.whatsappPage.scanHint}
               </p>

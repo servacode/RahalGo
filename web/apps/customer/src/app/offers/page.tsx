@@ -105,7 +105,7 @@ export default function OffersPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={o.item_image_url}
-                  alt=""
+                  alt="" loading="lazy"
                   className="h-20 w-20 shrink-0 rounded-control object-cover"
                 />
               )}

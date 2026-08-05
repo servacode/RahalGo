@@ -21,7 +21,14 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { CategoryIcon, Input, BannerSlider, IconSearch, IconClose } from "@rahalgo/ui";
+import {
+  CategoryIcon,
+  EmptyState,
+  Input,
+  BannerSlider,
+  IconSearch,
+  IconClose,
+} from "@rahalgo/ui";
 import ItemCard, { type BrowseItem } from "@/components/ItemCard";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
@@ -88,7 +95,17 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">{m.site.hero}</h1>
+      {/* **والعنوانُ يصغر على الجوّال.**
+
+          كان `text-2xl` ثابتاً بهامشٍ أربعةٍ — **نحو ستّين بكسلاً من أوّل
+          شاشةٍ يراها الزبون** لجملةٍ تسويقيّةٍ لا يُضغط عليها. **والطيّةُ
+          الأولى على هاتفٍ ستُّمئة بكسلٍ لا أكثر**، والسلايدرُ يأخذ مئةً
+          وخمسةً وسبعين، والبحثُ خمسين — **فلا تبدأ الأقسامُ إلّا تحت
+          الطيّة.**
+
+          **ولا يُحذف**: هو ما يقول للزائر الجديد أين وقع. **إنّما يُقاس
+          بالشاشة لا بالذوق.** */}
+      <h1 className="mb-3 text-xl font-bold sm:mb-4 sm:text-2xl">{m.site.hero}</h1>
 
       {/* **سلايدرٌ لا شريطٌ يُسحب.**
 
@@ -105,8 +122,16 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
         }))}
       />
 
-      {/* البحث فوق كل شيء: من يعرف ما يريد لا يتصفّح */}
-      <div className="relative mb-5">
+      {/* **البحثُ فوق كلّ شيءٍ ويلتصق.**
+
+          من يعرف ما يريد لا يتصفّح. **والأقسامُ تطول** — عشرون قسماً في
+          شبكةٍ من عمودين على الجوّال عشرةُ صفوف، **ومن نزل فيها ثمّ قرّر أن
+          يبحث يصعد إلى الأعلى من جديد.**
+
+          **والالتصاقُ تحت الشريط لا فوقه** (`top-[4.5rem]`): الشريطُ لاصقٌ
+          أصلاً بارتفاعه، **ولو التصق البحثُ عند الصفر لَاختفى تحته.** */}
+      <div className="sticky top-[4.5rem] z-30 mb-5 -mx-1 bg-surface px-1 py-2">
+      <div className="relative">
         <Input
           id="site-search"
           icon={<IconSearch size={16} />}
@@ -125,12 +150,13 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
           </button>
         )}
       </div>
+      </div>
 
       {hits !== null ? (
         hits.length === 0 ? (
-          <p className="rounded-card border border-line bg-surface p-6 text-center text-sm text-ink-muted">
-            {m.site.search.empty}
-          </p>
+          /* **وفراغُ البحث حالُ فراغٍ لا بطاقةٌ مرتجَلة** — بالشكل نفسِه
+             الذي يراه في كلّ شاشةٍ فارغة. */
+          <EmptyState icon={IconSearch} title={m.site.search.empty} />
         ) : (
           /* **ونتائجُ البحث بشبكة الأقسام نفسِها** — من كتب في الحقل لا يجد
              الصفحةَ صارت شيئاً آخر تحته. */
