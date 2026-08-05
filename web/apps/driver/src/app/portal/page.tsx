@@ -469,7 +469,7 @@ export default function TasksPage() {
               أيرجع أم يعيد المحاولة. */}
           {reasonsErr && !stageReasons ? (
             <div className="space-y-2 rounded-control border border-danger/40 bg-danger/5 px-3 py-2">
-              <p className="text-sm text-danger">{D.act.failedReasonsError}</p>
+              <Alert>{D.act.failedReasonsError}</Alert>
               <Button variant="secondary" onClick={() => void loadReasons()}>
                 {m.common.retry}
               </Button>
@@ -839,7 +839,7 @@ function EmergencyModal({
           onChange={(e) => setNote(e.target.value)}
           placeholder={D.emergency.notePlaceholder}
         />
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <Alert>{error}</Alert>}
         <div className="flex gap-2">
           <Button variant="danger" disabled={busy} onClick={submit}>
             {busy ? D.emergency.sending : D.emergency.confirm}
@@ -968,7 +968,7 @@ function ProofModal({
                 }}
               />
             </label>
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {error && <Alert>{error}</Alert>}
             <button
               type="button"
               onClick={() => setSkipping(true)}
@@ -986,7 +986,7 @@ function ProofModal({
               onChange={(e) => setReason(e.target.value)}
               placeholder={D.proof.reasonHint}
             />
-            {error && <p className="text-sm text-danger">{error}</p>}
+            {error && <Alert>{error}</Alert>}
             <div className="flex gap-2">
               <Button variant="secondary" disabled={busy} onClick={skip}>
                 {D.proof.skipConfirm}

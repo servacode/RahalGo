@@ -167,7 +167,7 @@ export default function DriverHistoryPage() {
         <p className="mt-1 text-sm text-ink-muted">{D.history.subtitle}</p>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <Alert>{error}</Alert>}
       {done && (
         <Alert tone="success">{done}</Alert>
       )}
@@ -270,7 +270,7 @@ export default function DriverHistoryPage() {
 
           {reasonsErr && !reasons ? (
             <div className="space-y-2 rounded-control border border-danger/40 bg-danger/5 px-3 py-2">
-              <p className="text-sm text-danger">{D.history.reasonsError}</p>
+              <Alert>{D.history.reasonsError}</Alert>
               <Button variant="secondary" onClick={() => void loadReasons()}>
                 {m.common.retry}
               </Button>

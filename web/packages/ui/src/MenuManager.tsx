@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { Button, Input, Select, Badge, Modal } from "./components";
-import { Alert } from "./feedback";
+import { Confirm, Alert } from "./feedback";
 import { EmptyState } from "./layout";
 import { IconAdd, IconEdit, IconDelete, IconStore } from "./icons";
 
@@ -134,6 +134,9 @@ export function MenuManager({
    */
   const [platformSections, setPlatformSections] = useState<PlatformSection[]>([]);
   const [error, setError] = useState("");
+  /** الصنفُ الذي يُسأل عن حذفه — **وفارغُه يعني لا سؤال.** */
+  const [pendingDelete, setPendingDelete] = useState<MenuItem | null>(null);
+  const [busy, setBusy] = useState(false);
   const [sectionName, setSectionName] = useState("");
   const [editing, setEditing] = useState<{ item: MenuItem | null; sectionId: string } | null>(null);
 
@@ -192,13 +195,27 @@ export function MenuManager({
     }
   }
 
+  /**
+   * deleteItem حذفُ صنفٍ — **بتأكيدٍ من المنصة لا من النظام.**
+   *
+   * كان `confirm()` الأصليّ: **نافذةُ نظامٍ بخطّه ولغته**، تخرج من المنصة
+   * كلَّ خروج، **وأزرارُها «موافق/إلغاء» لا تقول ماذا سيقع.**
+   *
+   * **وهي تُوقف الصفحةَ كلَّها** (`blocking`) — فلا يُرى ما تحتها، ولا
+   * تُغلق بـ`Esc` في كلّ متصفّح، **وبعضُ المتصفّحات يعرض «امنع هذه الصفحة
+   * من فتح نوافذ» فيُطفئها المستخدمُ فلا يعود يُسأل أصلاً** — فيُحذف الصنفُ
+   * بضغطةٍ واحدةٍ بلا سؤال.
+   */
   async function deleteItem(item: MenuItem) {
-    if (!confirm(L.confirmDeleteItem)) return;
+    setBusy(true);
     try {
       await api(paths.item(item.id), { method: "DELETE" });
+      setPendingDelete(null);
       await load();
     } catch (err) {
       setError(errText(err));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -321,7 +338,7 @@ export function MenuManager({
                         >
                           <IconEdit size={15} />
                         </Button>
-                        <Button variant="ghost" onClick={() => deleteItem(item)}>
+                        <Button variant="ghost" onClick={() => setPendingDelete(item)}>
                           <IconDelete size={15} className="text-danger" />
                         </Button>
                       </div>
@@ -350,6 +367,17 @@ export function MenuManager({
           }}
         />
       )}
+    {/* **وتأكيدُ ما لا يُستدرَك** — بزرٍّ يقول فعلَه لا «موافق»،
+        **وتركيزٍ يبدأ على الإلغاء** فمن ضغط `Enter` بلا قراءةٍ لا يحذف. */}
+      <Confirm
+        open={!!pendingDelete}
+        title={L.confirmDeleteItem}
+        body={pendingDelete?.name}
+        confirmLabel={m.common.delete}
+        busy={busy}
+        onConfirm={() => pendingDelete && void deleteItem(pendingDelete)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
