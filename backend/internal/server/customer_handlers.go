@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -184,6 +185,13 @@ func (s *Server) handleCustomerCreateOrder(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
+	// **وطلبٌ كبيرٌ لا ينتظر يداً** — يُحوَّل تلقائياً إن بلغ العتبة، **ولا
+	// يُوسَم مُرسَلاً ما لم يُرسَل.** (انظر `auto_transfer.go`)
+	//
+	// **وبعد الردّ لا قبله**: التحويلُ يُبلّغ طرفاً خارجياً وقد يتعثّر،
+	// **وزبونٌ ينتظر شاشتَه بينما نُرسل رسالةً إلى مطعمٍ يقرأ بطئاً لا نجاحاً.**
+	go s.autoTransfer(context.WithoutCancel(r.Context()), o.ID, userIDFrom(r))
+
 	httpx.JSON(w, http.StatusCreated, o)
 }
 

@@ -120,6 +120,19 @@ func (s *Service) settingInt(ctx context.Context, key string) int64 {
 // **وما لم يبقَ له سائقٌ ينتظر بلا عرض** — لا يُهمَل: `SweepExpiredOffers`
 // يلتقطه حين يتحرّر أحدُهم.
 func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) error {
+	// **ونفسُ المسار قبل الدور — وقبل النمط.**
+	//
+	// **وهو قبل الدور لأنّه ليس منافساً له**: الدورُ يوزّع ما لا صاحبَ له،
+	// **وهذا يقول إنّ لهذا الطلب صاحباً بالفعل** — سائقٌ في طريقه إليه.
+	//
+	// **وقبل النمط لأنّه يعمل في الاثنين**: في «الأسرع» يُنتزع الطلبُ من
+	// السباق **فلا يأخذه من هو في آخر المدينة قبل من يقف أمام الباب.**
+	//
+	// **ولا يُحاوَل إلّا في أوّل مرّة** (`skip` فارغ): طلبٌ مرّ عليه الدورُ
+	// **صار له تاريخٌ من الرفض**، وإسنادُه قسراً بعد ذلك يُعيد ما رُفض.
+	if len(skip) == 0 && s.TrySameRoute(ctx, orderID) {
+		return nil
+	}
 	if s.AssignmentMode(ctx) != "rotation" {
 		return nil
 	}
@@ -190,7 +203,7 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 	// **ودورُه ينتقل إلى آخر الصفّ لحظتَها** (`last_assigned_at`) — فسائقٌ
 	// نائمٌ يعطّل طلباً واحداً لا كلَّ الطلبات.
 	if s.directAssign(ctx) {
-		return s.assignDirectly(ctx, orderID, driverID)
+		return s.assignDirectly(ctx, orderID, driverID, autoAssignNote)
 	}
 
 	_, err = s.db.Exec(ctx, `
@@ -224,7 +237,7 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 //
 // **والمحرّكُ يكتب الاثنين وحدَه** — فيُنادى كما يُنادى من الأخذ اليدويّ:
 // `driver_id` أوّلاً بشرطٍ ذرّيّ، ثمّ انتقالٌ عاديّ.
-func (s *Service) assignDirectly(ctx context.Context, orderID, driverID string) error {
+func (s *Service) assignDirectly(ctx context.Context, orderID, driverID, note string) error {
 	// **الشرطُ الذرّيّ يبقى**: سائقٌ ضغط «خذ الطلب» في اللحظة نفسِها يجد صفراً.
 	tag, err := s.db.Exec(ctx, `
 		UPDATE orders
@@ -250,7 +263,7 @@ func (s *Service) assignDirectly(ctx context.Context, orderID, driverID string) 
 	// **والفاعلُ هو السائق** لا «النظام»: الطلبُ صار في يده وهو المسؤولُ عنه،
 	// **والنصُّ يقول إنّه لم يختره** فلا يُقرأ الحدثُ أخذاً طوعياً.
 	if _, err := s.Transition(ctx, driverID, []string{"driver"},
-		orderID, StAssigned, autoAssignNote); err != nil {
+		orderID, StAssigned, note); err != nil {
 		// **وتراجعٌ عن الإسناد** — لولاه بقي الطلبُ محجوزاً لسائقٍ لم يقبله
 		// المحرّك، فلا يراه أحدٌ ولا يعمل عليه أحد.
 		if _, e := s.db.Exec(ctx, `

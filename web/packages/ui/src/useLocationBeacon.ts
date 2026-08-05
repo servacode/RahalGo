@@ -48,6 +48,10 @@ export function useLocationBeacon(api: Sender, on: boolean, everyMs = 60_000): v
             body: JSON.stringify({
               lat: pos.coords.latitude,
               lng: pos.coords.longitude,
+              // **وما يقوله الجهازُ عن نفسِه يُرسَل ولا يُخمَّن** — نقطةٌ
+              // بدقّةِ خمسِمئة مترٍ ليست نقطة، **والوقوفُ يُقاس بالأمتار.**
+              speed_mps: pos.coords.speed,
+              accuracy_m: pos.coords.accuracy,
             }),
           }).catch(() => undefined);
         },

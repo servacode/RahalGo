@@ -391,6 +391,8 @@
 | `orders.delivery_timeout_min` | المنصة | int | `60` |
 | `orders.customer_cancel_window_sec` | المنصة | int | `120` |
 | `pricing.margin_fixed` | المنصة | money | `0` |
+| `orders.auto_transfer_min_total` | المنصة | money | `0` |
+| `orders.auto_transfer_min_items` | المنصة | int | `0` |
 | `referral.reward_1` | المنصة | money | `0` |
 | `referral.reward_2` | المنصة | money | `0` |
 | `referral.reward_3` | المنصة | money | `0` |
