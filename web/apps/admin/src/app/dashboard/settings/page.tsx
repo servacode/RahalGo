@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
+  Alert,
   PageHeader, Button, Input, Select, Checkbox, Badge, Card, EmptyState,
   IconSettings, IconWarning, IconCheck,
 } from "@rahalgo/ui";
@@ -183,7 +184,7 @@ export default function SettingsPage() {
       <p className="mb-4 text-sm text-ink-muted">{m.admin.settingsPage.hint}</p>
 
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-4">{error}</Alert>
       )}
 
       <div className="mb-4 flex flex-wrap gap-1 border-b border-line">
@@ -485,9 +486,9 @@ function SettingRow({
             يُضغط فيسري، **فلا فرصةَ لتنبيهٍ يظهر بعده.** فيُقال دائماً في
             المفاتيح التي تمسّ المال وتُحفظ باللمس. */}
         {s.sensitive && (dirty || s.kind === "bool" || s.kind === "choice") && (
-          <p className="mt-2 rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">
+          <Alert tone="warning" className="mt-2">
             {S.sensitiveHint}
-          </p>
+          </Alert>
         )}
       </form>
     </Card>

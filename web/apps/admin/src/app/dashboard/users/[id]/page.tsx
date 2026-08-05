@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Alert,
   Badge,
   Button,
   Input,
@@ -371,7 +372,7 @@ export default function UserProfilePage() {
       </div>
 
       {notice && (
-        <p className="mb-4 rounded-control bg-success/10 px-3 py-2 text-sm text-success">{notice}</p>
+        <Alert tone="success" className="mb-4">{notice}</Alert>
       )}
 
       {/* التبويبات — كل قسم في تبويبه (ملاحظة مراجعة)
@@ -814,7 +815,7 @@ function ResetPasswordModal({ userID, onClose }: { userID: string; onClose: () =
     <Modal open onClose={onClose} title={P.resetPassword}>
       {done ? (
         <div className="space-y-4 text-center">
-          <p className="rounded-control bg-success/10 px-3 py-3 text-success">{P.resetDone}</p>
+          <Alert tone="success">{P.resetDone}</Alert>
           <Button onClick={onClose}>{m.common.confirm}</Button>
         </div>
       ) : (
@@ -831,7 +832,7 @@ function ResetPasswordModal({ userID, onClose }: { userID: string; onClose: () =
             className="font-mono"
           />
           {error && (
-            <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+            <Alert>{error}</Alert>
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={onClose}>
@@ -898,7 +899,7 @@ function ChangePhoneModal({
           {P.phoneHint}
         </p>
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

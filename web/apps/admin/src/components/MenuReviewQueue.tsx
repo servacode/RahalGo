@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Alert,
   Badge,
   Button,
   Input,
@@ -96,7 +97,7 @@ export default function MenuReviewQueue() {
     <FormSection title={`${Q.title} (${fmtNum(rows.length)})`} icon={<IconStore />}>
       <p className="mb-3 text-xs text-ink-muted">{Q.hint}</p>
       {error && (
-        <p className="mb-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-3">{error}</Alert>
       )}
       <ul className="space-y-2">
         {rows.map((it) => (

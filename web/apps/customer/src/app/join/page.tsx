@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  Alert,
   Button,
   Input,
   Select,
@@ -253,7 +254,7 @@ function JoinForm() {
         </div>
 
         {error && (
-          <p className="mt-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert className="mt-4">{error}</Alert>
         )}
         <Button type="submit" disabled={busy} className="mt-5 w-full py-2.5">
           {busy ? J.sending : J.submit}

@@ -16,6 +16,7 @@
 import { useMemo } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
+import { Alert } from "./feedback";
 import { SheetHeader } from "./layout";
 import { IconPrint } from "./icons";
 
@@ -172,9 +173,9 @@ export function StatementSheet({
         ) : (
           <>
             {data?.truncated && (
-              <p className="mb-3 rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">
+              <Alert tone="warning" className="mb-3">
                 {S.truncated}
-              </p>
+              </Alert>
             )}
 
             <div className="overflow-x-auto">

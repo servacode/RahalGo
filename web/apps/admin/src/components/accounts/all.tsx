@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  Alert,
   useLiveRefresh,
   Button,
   Input,
@@ -315,7 +316,7 @@ export default function AllAccountsTable() {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-4">{error}</Alert>
       )}
 
       <DataView
@@ -525,7 +526,7 @@ function CreateUserModal({
           />
         </div>
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -634,7 +635,7 @@ function ManageRolesModal({
         </div>
       )}
       {error && (
-        <p className="mt-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mt-3">{error}</Alert>
       )}
       <div className="mt-5 flex justify-end">
         <Button variant="secondary" onClick={onClose}>

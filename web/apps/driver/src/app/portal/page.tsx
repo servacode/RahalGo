@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime } from "@rahalgo/i18n";
 import {
+  Alert,
   Button,
   Badge,
   Modal,
@@ -274,7 +275,7 @@ export default function TasksPage() {
        مقصوصةً بلا سبب. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
     <div className="space-y-4">
       {error && (
-        <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert>{error}</Alert>
       )}
 
       {/* الدوام: العلَم الذي يرفعه هو — لا يُستنتج عنه من آخر ظهور */}

@@ -13,6 +13,7 @@
 import { useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  Alert,
   Button,
   Input,
   Checkbox,
@@ -177,28 +178,21 @@ export function LoginCard({
   );
 
   const errorBox = error ? (
-    <p
-      role="alert"
-      className="flex items-start gap-2 rounded-control border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger"
-    >
-      <IconWarning size={16} className="mt-0.5 shrink-0" />
-      <span>{error}</span>
-    </p>
+    // **وكانت لافتةً مكتوبةً بالحرف** — بأيقونتها وحدّها وحشوتها، وهي عينُ
+    // ما يفعله `Alert`. (وقد كُتبت هذه الصياغةُ في أربعة ملفّاتٍ متفرّقة.)
+    <Alert>{error}</Alert>
   ) : null;
 
   const sentNote = (
-    <div className="flex items-start gap-2.5 rounded-control border border-success/25 bg-success/10 px-3 py-2.5 text-sm text-success">
-      <IconCheck size={16} className="mt-0.5 shrink-0" strokeWidth={3} />
-      <div className="min-w-0">
-        <p>
-          {A.otpSentTo}{" "}
-          <span dir="ltr" className="font-bold">
-            {phone}
-          </span>
-        </p>
-        <p className="mt-0.5 text-xs opacity-80">{A.otpSentDev}</p>
-      </div>
-    </div>
+    <Alert tone="success">
+      <p>
+        {A.otpSentTo}{" "}
+        <span dir="ltr" className="font-bold">
+          {phone}
+        </span>
+      </p>
+      <p className="mt-0.5 text-xs opacity-80">{A.otpSentDev}</p>
+    </Alert>
   );
 
   const submit = (label: string) => (

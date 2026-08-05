@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  Alert,
   PageHeader, Button, Badge, IconWhatsApp,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
@@ -78,9 +79,9 @@ export default function WhatsAppPanel() {
               )}
             </div>
             {status?.last_error && (
-              <p className="rounded-control bg-danger/10 px-3 py-2 text-xs text-danger">
+              <Alert>
                 {m.admin.whatsappPage.lastError}: <span dir="ltr">{status.last_error}</span>
-              </p>
+              </Alert>
             )}
           </div>
 

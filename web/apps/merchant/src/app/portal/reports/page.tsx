@@ -4,7 +4,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { IconStatus, IconOrder, IconSuccess, IconError, IconWallet, Input } from "@rahalgo/ui";
+import {
+  Alert, IconStatus, IconOrder, IconSuccess, IconError, IconWallet, Input } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
@@ -122,7 +123,7 @@ export default function MerchantReportsPage() {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-4">{error}</Alert>
       )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">

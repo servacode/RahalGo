@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Alert,
   Badge,
   Button,
   Input,
@@ -302,13 +303,7 @@ function DecideModal({
           placeholder={P.notePlaceholder}
         />
         {error && (
-          <p
-            role="alert"
-            className="flex items-start gap-2 rounded-control border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger"
-          >
-            <IconWarning size={16} className="mt-0.5 shrink-0" />
-            {error}
-          </p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

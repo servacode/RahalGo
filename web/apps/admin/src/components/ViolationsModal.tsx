@@ -26,6 +26,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Alert,
   Badge,
   Button,
   Input,
@@ -165,7 +166,7 @@ export default function ViolationsModal({
       )}
 
       {error && (
-        <p className="mt-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mt-3">{error}</Alert>
       )}
 
       {/* **الإنذارُ اليدويّ** — لما لا طلبَ يشهد عليه. */}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import {
+  Alert,
   useLiveRefresh,
   PageHeader,
   Button,
@@ -187,7 +188,7 @@ export default function DriversTable() {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-4">{error}</Alert>
       )}
 
       <DataView
@@ -425,7 +426,7 @@ function CashBoxModal({
       )}
 
       {error && (
-        <p className="mb-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-3">{error}</Alert>
       )}
 
       <h3 className="mb-2 text-sm font-bold">{m.admin.drivers.entriesHistory}</h3>

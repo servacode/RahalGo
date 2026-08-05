@@ -8,6 +8,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
+import { SkeletonList, SkeletonStats } from "./feedback";
 import { IconStar } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -133,8 +134,49 @@ export function EmptyState({
 }
 
 /** حالة التحميل الموحّدة. */
-export function LoadingState({ label }: { label?: string }) {
-  return <p className="py-10 text-center text-sm text-ink-muted">{label ?? m.common.loading}</p>;
+/**
+ * **حالةُ التحميل تحجز المساحةَ ولا تعِدُ بها.**
+ *
+ * كانت سطرَ نصٍّ واحداً (`جارٍ التحميل`) **محلَّ صفحةٍ كاملة** — وثلاثون
+ * موضعاً تستدعيها هكذا:
+ *
+ * ```tsx
+ * if (!data) return <LoadingState />;
+ * ```
+ *
+ * **فحين تصل البيانات تنمو الصفحةُ من سطرٍ إلى شاشة**، ويقفز كلُّ ما فيها.
+ * **ومن كان إصبعُه فوق موضعٍ ضغط غيرَه** — وهو `Layout Shift`، وممنوعٌ صراحةً
+ * في معايير القبول.
+ *
+ * # ولماذا الافتراضيُّ قائمة
+ *
+ * **أكثرُ شاشات المنصة قوائم**: طلباتٌ ومتاجرُ وحركاتٌ وإشعارات. **والهيكلُ
+ * يقول شكلَ ما هو آتٍ** — من رأى صفوفاً عرف أنّ قائمةً تُحمَّل.
+ *
+ * **و`text` تبقى لمن يحتاج سطراً** داخل بطاقةٍ صغيرةٍ لا صفحةً كاملة.
+ */
+export function LoadingState({
+  label,
+  variant = "list",
+  rows = 4,
+}: {
+  label?: string;
+  variant?: "list" | "stats" | "text";
+  rows?: number;
+}) {
+  if (variant === "text") {
+    return <p className="py-10 text-center text-sm text-ink-muted">{label ?? m.common.loading}</p>;
+  }
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={label ?? m.common.loading}
+      className="space-y-3"
+    >
+      {variant === "stats" ? <SkeletonStats /> : <SkeletonList rows={rows} />}
+    </div>
+  );
 }
 
 // ---------- صف قائمة ----------

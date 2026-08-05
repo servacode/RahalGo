@@ -12,7 +12,8 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Modal, Stars, Textarea } from "@rahalgo/ui";
+import {
+  Alert, Button, Modal, Stars, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -93,7 +94,7 @@ export default function RatingModal({
             />
           </div>
           {error && (
-            <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+            <Alert>{error}</Alert>
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={onClose}>

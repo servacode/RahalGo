@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { Button, Input, Select, Badge, Modal } from "./components";
+import { Alert } from "./feedback";
 import { EmptyState } from "./layout";
 import { IconAdd, IconEdit, IconDelete, IconStore } from "./icons";
 
@@ -222,7 +223,7 @@ export function MenuManager({
       </div>
 
       {error && (
-        <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert>{error}</Alert>
       )}
 
       {sections.length === 0 ? (
@@ -627,7 +628,7 @@ function ItemModal({
         </div>
 
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

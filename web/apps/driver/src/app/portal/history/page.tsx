@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -168,7 +169,7 @@ export default function DriverHistoryPage() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {done && (
-        <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success">{done}</p>
+        <Alert tone="success">{done}</Alert>
       )}
 
       {rows.length === 0 ? (

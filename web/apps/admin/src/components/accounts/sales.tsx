@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
+  Alert,
   IconCheck,
   IconCopy,
   useLiveRefresh,
@@ -196,7 +197,7 @@ export default function SalesTable() {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-4">{error}</Alert>
       )}
 
       <DataView

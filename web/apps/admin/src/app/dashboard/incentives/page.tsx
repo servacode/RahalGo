@@ -20,6 +20,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
+  Alert,
   PageContainer,
   PageHeader,
   Button,
@@ -135,7 +136,7 @@ export default function IncentivesPage() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {notice && (
-        <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success">{notice}</p>
+        <Alert tone="success">{notice}</Alert>
       )}
 
       {rows === null ? (

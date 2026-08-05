@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, fmtClock } from "@rahalgo/i18n";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -257,7 +258,7 @@ export default function MyOrdersPage() {
     <PageContainer>
       <PageHeader icon={IconOrder} title={m.terms.orders} />
       {notice && (
-        <p className="mb-3 rounded-control bg-warning/10 px-3 py-2 text-sm text-warning">{notice}</p>
+        <Alert tone="warning" className="mb-3">{notice}</Alert>
       )}
 
       {orders.length === 0 ? (

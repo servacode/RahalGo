@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, PasswordMeter, IconLock, IconWarning, IconCheck } from "@rahalgo/ui";
+import { Alert, Button, Input, PasswordMeter, IconLock, IconWarning, IconCheck } from "@rahalgo/ui";
 import { useAuth } from "./provider";
 import { api, authApi } from "./client";
 import { errText } from "./LoginCard";
@@ -104,13 +104,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
           <p className="text-xs text-ink-muted">{A.passwordHint}</p>
 
           {error && (
-            <p
-              role="alert"
-              className="flex items-start gap-2 rounded-control border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger"
-            >
-              <IconWarning size={16} className="mt-0.5 shrink-0" />
-              {error}
-            </p>
+            <Alert>{error}</Alert>
           )}
 
           <Button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 py-3 text-base">

@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input, Badge } from "./components";
+import { Alert } from "./feedback";
 import { EmptyState } from "./layout";
 import { IconLocation, IconAdd, IconDelete, IconCheck } from "./icons";
 
@@ -167,7 +168,7 @@ export function AddressBook({
           </div>
           {picker?.(pin, setPin)}
           {error && (
-            <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+            <Alert>{error}</Alert>
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setAdding(false)}>

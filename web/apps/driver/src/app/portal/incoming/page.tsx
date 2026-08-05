@@ -20,7 +20,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { EmptyState, IconOrder, IconDriver, useLiveRefresh, useChime } from "@rahalgo/ui";
+import {
+  Alert, EmptyState, IconOrder, IconDriver, useLiveRefresh, useChime } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { IncomingCard, type DriverOrder } from "@/components/incoming";
 
@@ -98,7 +99,7 @@ export default function IncomingPage() {
       <h1 className="text-xl font-bold">{D.queue.title}</h1>
 
       {error && (
-        <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert>{error}</Alert>
       )}
 
       {onShift === false ? (

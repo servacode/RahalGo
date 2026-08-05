@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
 import { Badge, Button, Input, Modal } from "./components";
+import { Alert } from "./feedback";
 import { PageContainer, PageHeader, Card, EmptyState, LoadingState, ListRow, TabCards } from "./layout";
 import type { TabItem } from "./layout";
 import { StatementSheet, currentMonthRange, type StatementData } from "./Statement";
@@ -472,13 +473,7 @@ function PayoutModal({
         />
 
         {error && (
-          <p
-            role="alert"
-            className="flex items-start gap-2 rounded-control border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger"
-          >
-            <IconWarning size={16} className="mt-0.5 shrink-0" />
-            {error}
-          </p>
+          <Alert>{error}</Alert>
         )}
 
         <div className="flex justify-end gap-2">

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import {
+  Alert,
   CategoryIcon,
   Badge,
   Button,
@@ -326,7 +327,7 @@ function ItemModal({
         </div>
 
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
 
         {/* **وسؤالُ «سلّتك من متجرٍ آخر» سقط بسقوط سببه.**

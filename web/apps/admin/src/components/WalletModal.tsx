@@ -4,7 +4,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { Button, Input, Select, Modal, IconWallet } from "@rahalgo/ui";
+import {
+  Alert, Button, Input, Select, Modal, IconWallet } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -133,7 +134,7 @@ export default function WalletModal({
             onChange={(e) => setNote(e.target.value)}
           />
           {error && (
-            <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+            <Alert>{error}</Alert>
           )}
           <Button type="submit" disabled={busy} className="w-full">
             {m.admin.users.applyMovement}

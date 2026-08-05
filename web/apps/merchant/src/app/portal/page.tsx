@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime } from "@rahalgo/i18n";
 import {
+  Alert,
   EmptyState,
   useLiveEvent,
   useLiveStatus,
@@ -157,7 +158,7 @@ export default function OrdersBoard() {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-4">{error}</Alert>
       )}
 
       {/* الطلبات الجديدة — شريط بارز نابض مع الرنين */}
@@ -474,7 +475,7 @@ function AcceptModal({
           ))}
         </div>
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -534,7 +535,7 @@ function RejectModal({
           onChange={(e) => setReason(e.target.value)}
         />
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -645,7 +646,7 @@ function CancelModal({
           <p className="mt-1 text-xs text-ink-muted">{MO.cancelHint}</p>
         </div>
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

@@ -19,7 +19,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { Button, Input, Modal, FormSection, Checkbox, IconWhatsApp } from "@rahalgo/ui";
+import {
+  Alert, Button, Input, Modal, FormSection, Checkbox, IconWhatsApp } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -139,7 +140,7 @@ export default function BroadcastPanel() {
         )}
         {error && <p className="text-sm text-danger">{error}</p>}
         {sent && (
-          <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success">{sent}</p>
+          <Alert tone="success">{sent}</Alert>
         )}
 
         <div className="flex justify-end">

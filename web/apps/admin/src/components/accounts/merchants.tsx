@@ -7,6 +7,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 
 const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), { ssr: false });
 import {
+  Alert,
   CategoryIcon,
   CategoryIconPicker,
   type CategoryIconKey,
@@ -395,7 +396,7 @@ export default function MerchantsTable() {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-4">{error}</Alert>
       )}
 
       <DataView
@@ -618,7 +619,7 @@ function HoursModal({
       )}
 
       {error && (
-        <p className="mt-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mt-3">{error}</Alert>
       )}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
@@ -818,7 +819,7 @@ function MerchantModal({
         </FormSection>
 
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2 border-t border-line pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -914,7 +915,7 @@ function CategoriesModal({
         </Button>
       </form>
       {error && (
-        <p className="mt-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mt-3">{error}</Alert>
       )}
     </Modal>
   );

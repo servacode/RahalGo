@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
+  Alert,
   PageHeader,
   Button,
   Input,
@@ -220,7 +221,7 @@ function CodesTab({ isAdmin }: { isAdmin: boolean }) {
         />
       </div>
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-4">{error}</Alert>
       )}
       <DataView
         items={promos}
@@ -373,7 +374,7 @@ function PromoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
           </label>
         </div>
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -436,7 +437,7 @@ function BannersTab({ isAdmin }: { isAdmin: boolean }) {
         </Button>
       )}
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-4">{error}</Alert>
       )}
       {banners.length === 0 && (
         <div className="rounded-card border border-line bg-surface p-10 text-center text-ink-muted">
@@ -568,7 +569,7 @@ function BannerModal({
           placeholder="merchant:<id>"
         />
         {error && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          <Alert>{error}</Alert>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>

@@ -27,6 +27,7 @@
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button } from "./components";
+import { Alert } from "./feedback";
 import { IconPrev } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -161,12 +162,12 @@ export function StoreHours({
       )}
 
       {error && (
-        <p className="mt-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mt-3">{error}</Alert>
       )}
       {saved && (
-        <p className="mt-3 rounded-control bg-success/10 px-3 py-2 text-sm text-success">
+        <Alert tone="success" className="mt-3">
           {H.saved}
-        </p>
+        </Alert>
       )}
 
       <div className="mt-4 flex justify-end">

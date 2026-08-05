@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
+import { Alert } from "./feedback";
 import { emitLocal } from "./Notifications";
 import { IconUser, IconLock, IconPhone, IconWarning, IconCheck, IconWhatsApp, IconVerified } from "./icons";
 
@@ -609,14 +610,14 @@ export function AccountSettings({
       )}
 
       {msg && (
-        <p className="rounded-control bg-success/10 px-3 py-2 text-sm text-success sm:col-span-2 lg:col-span-3">
+        <Alert tone="success">
           {msg}
-        </p>
+        </Alert>
       )}
       {error && (
-        <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger sm:col-span-2 lg:col-span-3">
+        <Alert>
           {error}
-        </p>
+        </Alert>
       )}
     </div>
   );

@@ -15,6 +15,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
+  Alert,
   CategoryIcon,
   Badge,
   Button,
@@ -557,13 +558,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
         {/* ---------- التذييل عبر العمودين ---------- */}
         <div className="lg:col-span-2">
           {error && (
-            <p
-              role="alert"
-              className="mb-3 flex items-start gap-2 rounded-control border border-danger/25 bg-danger/10 px-3 py-2 text-sm text-danger"
-            >
-              <IconWarning size={16} className="mt-0.5 shrink-0" />
-              {error}
-            </p>
+            <Alert className="mb-3">{error}</Alert>
           )}
           <div className="flex justify-end gap-2 border-t border-line pt-4">
             <Button type="button" variant="secondary" onClick={onClose}>

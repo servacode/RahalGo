@@ -23,6 +23,7 @@
 
 import { getMessages, defaultLocale, fmtNum, fmtRef } from "@rahalgo/i18n";
 import {
+  Alert,
   Card,
   Badge,
   Button,
@@ -108,9 +109,9 @@ export function IncomingCard({
       {/* **والبضاعةُ قد لا تكون في المتجر** — طارئٌ وقع لسائقٍ قبله وهي في يده.
           فيُقال له قبل أن ينطلق، **لا بعد أن يقف أمام مطبخٍ سلّم.** */}
       {o.pickup_note ? (
-        <p className="mt-1 rounded-control bg-warning/10 px-2 py-1 text-xs text-warning">
+        <Alert tone="warning" className="mt-1">
           {o.pickup_note}
-        </p>
+        </Alert>
       ) : null}
       <p className="mt-1 flex items-start gap-2 text-sm text-ink-muted">
         <IconLocation size={16} className="mt-0.5 shrink-0" />

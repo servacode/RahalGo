@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  Alert,
   PageHeader,
   Button,
   Input,
@@ -159,7 +160,7 @@ export default function ZonesPanel() {
         </p>
       )}
       {error && (
-        <p className="mb-3 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+        <Alert className="mb-3">{error}</Alert>
       )}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
@@ -229,9 +230,9 @@ export default function ZonesPanel() {
                   **والدائرةُ تقول «إلى أين نُوصّل» والرقمُ يقول «بكم»** —
                   ومن خلطهما فتح المدينةَ كلَّها بمجرّد أن وحّد الأجرة. */}
               {draft.lat == null && (
-                <p className="rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">
+                <Alert tone="warning">
                   {m.admin.zones.centerUnset}
-                </p>
+                </Alert>
               )}
               <Button
                 onClick={save}

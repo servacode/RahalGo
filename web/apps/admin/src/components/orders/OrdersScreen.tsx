@@ -10,6 +10,7 @@ import {
   fmtDateTime,
 } from "@rahalgo/i18n";
 import {
+  Alert,
   IconNote,
   IconEdit,
   Stars,
@@ -1025,9 +1026,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       </div>
 
       {error && (
-        <p className="mb-4 rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">
+        <Alert className="mb-4">
           {error}
-        </p>
+        </Alert>
       )}
 
       <DataView
@@ -1568,9 +1569,9 @@ function OrderActions({
         {/* **وصنفٌ لا يُطابق يُسمّى** — «لا يُطابق» وحدَها تترك الموظّفَ
             يفتح قائمتين ويقارن بعينه. */}
         {unmatched.length > 0 && (
-          <p className="rounded-control bg-danger/10 px-3 py-2 text-xs text-danger">
+          <Alert>
             {m.admin.ordersPage.transferUnmatched} {unmatched.join(" · ")}
-          </p>
+          </Alert>
         )}
         {err && <p className="text-xs text-danger">{err}</p>}
         <div className="flex gap-2">
@@ -1816,9 +1817,9 @@ function OrderActions({
           سائق» وتنتظر من لن يأتي.** والصمتُ أسوأُ من الرفض: الرفضُ يُقرأ
           ويُعالَج، **والصمتُ يُنتظَر.** */}
       {o.blocked_reason && (
-        <p className="w-full rounded-control bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
+        <Alert tone="warning">
           {o.blocked_reason}
-        </p>
+        </Alert>
       )}
 
       {/* **التحويلُ إلى متجرٍ آخر — قاعدةٌ احتياطية.**

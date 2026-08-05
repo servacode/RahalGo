@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
+  Alert,
   IconEdit,
   IconCheck,
   IconLocation,
@@ -406,9 +407,9 @@ export default function CartPage() {
           )}
           {/* **وتجاوزُ السقف يُقال في السلّة لا عند الدفع.** */}
           {zone?.too_many_sources && (
-            <p className="rounded-control bg-warning/10 px-3 py-2 text-xs text-warning">
+            <Alert tone="warning">
               {m.site.cart.tooManySources.replace("{n}", fmtNum(zone.max_sources))}
-            </p>
+            </Alert>
           )}
           <div className="flex justify-between border-t border-line pt-1 text-base">
             <dt className="font-bold">{m.site.cart.total}</dt>
@@ -525,7 +526,7 @@ export default function CartPage() {
               <p className="mt-1 text-xs text-ink-muted">{m.site.cart.promoHint}</p>
             </div>
             {error && (
-              <p className="rounded-control bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+              <Alert>{error}</Alert>
             )}
 
             {/* التوثيق يُقال **قبل** الملء لا عند الرفض: من ملأ سلّته ثم رُدّ
