@@ -21,6 +21,7 @@ import {
   IconStar,
   IconLink,
   IconUser,
+  IconPromos,
 } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -48,6 +49,9 @@ const KINDS: Record<string, { icon: ComponentType<{ size?: number; className?: s
   rating: { icon: IconStar, tone: "text-accent-dark bg-accent/10" },
   lead: { icon: IconLink, tone: "text-info bg-info/10" },
   account: { icon: IconUser, tone: "text-ink-muted bg-page" },
+  // **والعرضُ له وجهُه** — إشعارٌ بلا أيقونةٍ خاصّةٍ يسقط على الافتراضيّ
+  // فيختلط بما ليس منه في قائمةٍ تُمسح بالعين.
+  offer: { icon: IconPromos, tone: "text-danger bg-danger/10" },
 };
 
 /** يوم الإشعار بصيغة قابلة للقراءة — "اليوم" و"أمس" أوضح من تاريخ كامل. */

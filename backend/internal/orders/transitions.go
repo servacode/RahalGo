@@ -199,6 +199,17 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	s.notifyTransition(ctx, orderID, to, note, endedBy)
 	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
 
+	// **ومكافأةُ من دعا هذا الزبون** — عند أوّل طلبٍ يُسلَّم له.
+	//
+	// **بعد الإيداع لا داخلَه**: مكافأةُ دعوةٍ لا تُبطل تسليماً وقع، **وقيدٌ
+	// يُضاف إلى معاملة التسليم يجعل خطأً في الترويج يُسقط طلباً.**
+	//
+	// **وتخرج صامتةً إن لم يكن ثمّة ما يُصرف** — والحارسُ في موضعٍ واحدٍ خيرٌ
+	// من شرطٍ يُكتب في كلّ نداء.
+	if to == StDelivered && s.referrals != nil {
+		s.referrals.SettleFirstOrder(ctx, customerID, orderID, actorID)
+	}
+
 	// **أوّلُ عرضٍ في نمط «بالترتيب»** — لحظةَ نزول الطلب إلى الطابور.
 	//
 	// وبعد الإيداع: العرضُ ترتيبٌ لا مال، **وتعثّرُه يترك الطلبَ مشاعاً للجميع

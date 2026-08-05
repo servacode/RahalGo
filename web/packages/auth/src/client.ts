@@ -163,10 +163,17 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ phone }),
     }),
-  confirmSignup: (phone: string, code: string, full_name: string, password: string) =>
+  /** @param ref رمزُ من دعاه — **اختياريّ**، ومن سجّل بلا دعوةٍ حسابُه كامل. */
+  confirmSignup: (
+    phone: string,
+    code: string,
+    full_name: string,
+    password: string,
+    ref?: string,
+  ) =>
     rawRequest<AuthResult>("/api/v1/auth/signup/confirm", {
       method: "POST",
-      body: JSON.stringify({ phone, code, full_name, password }),
+      body: JSON.stringify({ phone, code, full_name, password, ref: ref ?? "" }),
     }),
   sso: (code: string) =>
     rawRequest<AuthResult>("/api/v1/auth/sso", {

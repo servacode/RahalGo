@@ -53,6 +53,8 @@ type Service struct {
 	// «أعلى هذا الصنف خصمٌ الآن ومن يتحمّله؟». **وحقنُ الحزمة كلِّها يفتح
 	// باباً لقراءاتٍ لا تخصّه.**
 	offers DiscountReader
+	// referrals مكافأةُ من دعا الزبونَ — **تُصرف عند أوّل طلبٍ يُسلَّم له.**
+	referrals ReferralSettler
 	// settings قواعدُ العمل التي يملك المالك ضبطها من اللوحة.
 	//
 	// **اختيارية**: بلا حقنٍ يعمل المحرّك بسلوكه الافتراضي، فاختبارات التسويات
@@ -74,6 +76,14 @@ type DiscountReader interface {
 
 // SetOffers يحقن قارئَ الخصوم — **يُنادى مرّةً عند الإقلاع.**
 func (s *Service) SetOffers(r DiscountReader) { s.offers = r }
+
+// ReferralSettler ما يحتاجه المحرّكُ من الدعوات — **فعلٌ واحد.**
+type ReferralSettler interface {
+	SettleFirstOrder(ctx context.Context, customerID, orderID, actorID string)
+}
+
+// SetReferrals يحقن مُصرِّفَ مكافآت الدعوة.
+func (s *Service) SetReferrals(r ReferralSettler) { s.referrals = r }
 
 func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
 

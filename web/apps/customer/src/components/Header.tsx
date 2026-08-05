@@ -23,6 +23,7 @@ import {
   useLiveRefresh,
   IconOrder,
   IconPromos,
+  IconLink,
   IconSupport,
   IconWallet,
   IconUser,
@@ -157,6 +158,16 @@ export default function Header() {
                 <IconPromos size={TOPBAR_ICON} />
               </TopBarLink>
               )}
+              {/* **ادعُ صديقاً** — ومن جلب يُكافأ، والمنصةُ تدفع. */}
+              <TopBarLink
+                Link={Link}
+                href="/invite"
+                title={m.customer.invite.title}
+                aria-label={m.customer.invite.title}
+                tone={pathname.startsWith("/invite") ? "active" : "plain"}
+              >
+                <IconLink size={TOPBAR_ICON} />
+              </TopBarLink>
               <TopBarLink
                 Link={Link}
                 href="/orders"

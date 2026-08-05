@@ -224,6 +224,28 @@ var Catalog = []Def{
 	{Key: "pricing.margin_fixed", Group: GroupPlatform, Kind: KindMoney,
 		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
 
+	// **مكافأةُ الدعوة — سُلَّمٌ ثمّ ثابت.**
+	//
+	// **الأولى أصعبُها**: من لم يجرّب لا يعرف أنّها تنفع. **ثمّ تسهل** —
+	// فيُدفع للأولى أكثر ويقلّ حتى يستقرّ. **وثابتٌ من أوّلها يُغري
+	// القليلين، ومرتفعٌ دائماً يستنزف.**
+	//
+	// **وتُصرف عند أوّل طلبٍ يُسلَّم للمدعوّ لا عند تسجيله**: رقمُ هاتفٍ
+	// يُسجَّل لا يساوي شيئاً — تُفتح مئةُ حسابٍ في ساعةٍ بأرقامٍ تُشترى،
+	// **فتُدفع مئةُ مكافأةٍ على مئةٍ لن تطلب شيئاً.**
+	//
+	// **وصفرُها لا مكافأة** — والرابطُ يبقى يعمل، **فمن دعا يُنسب إليه ولو
+	// لم يُدفع له**: القياسُ يبقى وإن توقّف الصرف.
+	{Key: "referral.reward_1", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	{Key: "referral.reward_2", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	{Key: "referral.reward_3", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+	// **وما بعد الثالثة** — رقمٌ واحدٌ لا يتغيّر.
+	{Key: "referral.reward_rest", Group: GroupPlatform, Kind: KindMoney,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 0, Sensitive: true},
+
 	// ── السائقون ──────────────────────────────────────────────────────────
 
 	// **كيف يصل الطلبُ إلى سائق: بالتساوي أم للأسرع؟**

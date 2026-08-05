@@ -391,6 +391,10 @@
 | `orders.delivery_timeout_min` | المنصة | int | `60` |
 | `orders.customer_cancel_window_sec` | المنصة | int | `120` |
 | `pricing.margin_fixed` | المنصة | money | `0` |
+| `referral.reward_1` | المنصة | money | `0` |
+| `referral.reward_2` | المنصة | money | `0` |
+| `referral.reward_3` | المنصة | money | `0` |
+| `referral.reward_rest` | المنصة | money | `0` |
 | `drivers.assignment_mode` | السائقون | choice | `queue` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
 | `drivers.direct_assign` | السائقون | bool | `false` |

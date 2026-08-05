@@ -62,9 +62,17 @@ export function LoginCard({
   methods = "both",
   onSuccess,
   footer,
+  referral = "",
 }: {
   title: string;
   subtitle?: string;
+  /**
+   * رمزُ من دعا هذا المستخدم — **يُمرَّر من الرابط ولا يُكتب باليد.**
+   *
+   * **ومن سجّل بلا دعوةٍ حسابُه كامل**: الرمزُ زيادةٌ لا شرط. **ورمزٌ خاطئٌ
+   * لا يُسقط تسجيلاً** — يُحرَم المكافأةَ وحدَها.
+   */
+  referral?: string;
   /** طرق الدخول المتاحة — الافتراضي كلاهما */
   methods?: "both" | "password" | "otp";
   /** يُستدعى بعد نجاح الدخول (بعد تخزين التوكن) — هنا يقرر التطبيق الوجهة */
@@ -371,7 +379,7 @@ export function LoginCard({
         ) : (
           <form
             onSubmit={run(async () =>
-              enter((await authApi.confirmSignup(phone, code, fullName, password)) as never),
+              enter((await authApi.confirmSignup(phone, code, fullName, password, referral)) as never),
             )}
             className="space-y-4"
           >

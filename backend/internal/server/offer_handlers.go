@@ -14,10 +14,12 @@ package server
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
@@ -56,7 +58,38 @@ func (s *Server) handleCreateOffer(w http.ResponseWriter, r *http.Request) {
 	// **والزبائنُ يرونه فوراً** — عرضٌ يُنزَل ولا يظهر حتى يُحدَّث المتصفّحُ
 	// عرضٌ نصفُ منزَّل.
 	s.touch("offer", "ops")
+
+	// **وعرضٌ لا يعلم به أحدٌ عرضٌ لم يُنشر.**
+	//
+	// **والزبونُ لا يفتح شاشةَ العروض كلَّ صباحٍ ليرى أجديدٌ فيها** — يفتح
+	// التطبيقَ حين يجوع. **فيُبلَّغ في حينه أو يفوته.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «بمجرّد عرضه تصل إشعاراتٌ لكلّ المشتركين».)
+	//
+	// **ولا يُبلَّغ عرضٌ منزَّل**: يُنشأ بلا تفعيلٍ ليُراجَع، **وإشعارٌ عن عرضٍ
+	// لا يجده حين يفتحه أسوأُ من صمت.**
+	if o.Live {
+		s.notify.NotifyRole(r.Context(), "customer", notifications.Input{
+			Kind:     "offer",
+			Title:    o.Title,
+			Body:     offerBody(o),
+			Entity:   "offer",
+			EntityID: o.ID,
+			Href:     "/offers",
+		})
+	}
 	httpx.JSON(w, http.StatusOK, o)
+}
+
+// offerBody نصُّ الإشعار — **الرقمُ فيه لا في العنوان.**
+//
+// **وعنوانٌ يقول «عرضُ الريش» لا يُغري أحداً**: من قرأه لا يعرف أوفّر عشرةً
+// أم نصفَ الثمن. **والنسبةُ هي الخبر.**
+func offerBody(o *offers.Offer) string {
+	if o.DiscountPercent == nil {
+		return o.Body
+	}
+	return o.ItemName + " — " + strconv.Itoa(*o.DiscountPercent) + "٪"
 }
 
 // handleSetOfferActive يرفع العرضَ أو ينزله — **ولا حذف.**
@@ -78,6 +111,14 @@ func (s *Server) handleSetOfferActive(w http.ResponseWriter, r *http.Request) {
 	}
 	s.audit(r, "catalog.offer_active", "offer", o.ID, map[string]any{"active": req.Active})
 	s.touch("offer", "ops")
+	// **ومن رُفع بعد إنزالٍ عرضٌ جديدٌ في نظر من لم يره** — فيُبلَّغ كما
+	// يُبلَّغ أوّلُ مرّة. **وإنزالٌ لا يُبلَّغ**: لا خبرَ في أنّ شيئاً اختفى.
+	if req.Active && o.Live {
+		s.notify.NotifyRole(r.Context(), "customer", notifications.Input{
+			Kind: "offer", Title: o.Title, Body: offerBody(o),
+			Entity: "offer", EntityID: o.ID, Href: "/offers",
+		})
+	}
 	httpx.JSON(w, http.StatusOK, o)
 }
 

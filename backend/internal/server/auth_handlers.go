@@ -229,6 +229,8 @@ func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 		Code     string `json:"code"`
 		FullName string `json:"full_name"`
 		Password string `json:"password"`
+		// Ref رمزُ من دعاه — **اختياريّ**، ومن سجّل بلا دعوةٍ حسابُه كامل.
+		Ref string `json:"ref"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -239,6 +241,16 @@ func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+
+	// **والنسبُ بعد إنشاء الحساب لا قبله** — وحسابٌ لم يُنشأ لا يُنسب لأحد.
+	//
+	// **ورمزٌ خاطئٌ لا يُسقط تسجيلاً**: من كتب حرفاً زائداً في الرابط يفتح
+	// حسابَه ويُحرَم المكافأةَ وحدَها، **ولا يُردّ على بابٍ قطعه كلَّه.**
+	if req.Ref != "" && res != nil && res.User.ID != "" {
+		if err := s.referrals.Attach(r.Context(), res.User.ID, req.Ref); err != nil {
+			s.logger.Warn("الدعوة: تعذّر النسب", "code", req.Ref, "error", err)
+		}
 	}
 	httpx.JSON(w, http.StatusOK, res)
 }

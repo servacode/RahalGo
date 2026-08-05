@@ -23,7 +23,10 @@ export default function LoginPage() {
 
 function Login() {
   const { user, loading, setUser } = useAuth();
-  const next = safeNext(useSearchParams().get("next"));
+  const params = useSearchParams();
+  const next = safeNext(params.get("next"));
+  // **ورمزُ من دعاه يأتي في الرابط** — لا يُكتب باليد ولا يُطلب منه.
+  const referral = params.get("ref") ?? "";
   const sent = useRef(false); // التحويل مرة واحدة — لا يتكرر مع كل إعادة رسم
 
   // من هو داخل أصلاً لا يرى شاشة الدخول إطلاقاً: يُنقل فوراً إلى مكانه حسب دوره.
@@ -47,6 +50,7 @@ function Login() {
       title={m.site.loginTitle}
       subtitle={m.site.loginSubtitle}
       methods="both"
+      referral={referral}
       onSuccess={async (u) => {
         setUser(u);
         await routeByRole(u, next ?? undefined);

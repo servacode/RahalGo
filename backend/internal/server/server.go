@@ -27,6 +27,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
+	"github.com/servacode/rahalgo/backend/internal/referrals"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/support"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -47,6 +48,7 @@ type Server struct {
 	support    *support.Service
 	incentives *incentives.Service
 	offers     *offers.Service
+	referrals  *referrals.Service
 	media      *media.Service
 	hub        *realtime.Hub
 	geo        *geo.Service
@@ -83,6 +85,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **والخصمُ يُقرأ لحظةَ بناء الطلب** — لا من ذاكرةٍ محمّلة.
 	srv.offers = offers.New(pg)
 	ordersSvc.SetOffers(srv.offers)
+	// **ومكافأةُ من دعا** — تُصرف عند أوّل طلبٍ يُسلَّم للمدعوّ.
+	srv.referrals = referrals.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID, notify)
+	ordersSvc.SetReferrals(srv.referrals)
 	return srv
 }
 
@@ -138,6 +143,8 @@ func (s *Server) Router() http.Handler {
 				r.Get("/me", s.handleMe)
 				r.Post("/password", s.handleSetPassword)
 				r.Get("/my-logins", s.handleMyLogins)
+				// **رمزُ دعوته ورابطُه** — ومن جلب يُكافأ.
+				r.Get("/referral", s.handleMyReferral)
 				r.Post("/handoff", s.handleHandoff) // إنشاء رمز تسليم SSO
 				r.Post("/phone/request", s.handlePhoneChangeRequest)
 				r.Post("/phone/confirm", s.handlePhoneChangeConfirm)
