@@ -31,6 +31,27 @@ export interface ChromeNavItem {
   href: string;
   label: string;
   icon: IconType;
+  /**
+   * **عنوانُ المجموعة التي يبدؤها هذا البند** — واختياريّ.
+   *
+   * # لماذا وُجد
+   *
+   * قائمةُ الادمن **تسعةَ عشرَ بنداً مسطَّحة**: الطلباتُ ثمّ السجلُّ ثمّ
+   * الأقسامُ ثمّ الشكاوى ثمّ التقييماتُ ثمّ الطوارئ ثمّ الخزينةُ ثمّ
+   * الصندوقُ… **بلا فاصلٍ ولا عنوان.**
+   *
+   * **والعينُ تمسح تسعةَ عشرَ سطراً في كلّ مرّة** لتجد ما تريد — ولا
+   * تتعلّم مواضعَها لأنّ لا شيءَ يجمعها.
+   *
+   * **والمجموعاتُ في التعليقات أصلاً** («التشغيل اليوميّ» · «المال» ·
+   * «البناء») — **كُتبت لقارئ الشيفرة ولم تصل إلى الشاشة.**
+   *
+   * **ويُوضع على أوّل بندٍ فيها لا على كلٍّ** — فالقائمةُ تبقى مصفوفةً
+   * واحدة، **وترتيبٌ يُبنى من كائناتٍ متداخلةٍ يُخطئ فيه من يُضيف بنداً.**
+   */
+  group?: string;
+  /** يُخفى عن قائمة الجوّال — **لِما يُفتح من داخل صفحةٍ أخرى.** */
+  hideOnMobile?: boolean;
 }
 
 interface Summary {
@@ -158,18 +179,29 @@ export function DashboardChrome({
           const active = isActive(item.href);
           const Icon = item.icon;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors ${
-                active
-                  ? "bg-primary-light font-medium text-primary-dark"
-                  : "text-ink-muted hover:bg-page hover:text-ink"
-              }`}
-            >
-              <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
-              {item.label}
-            </Link>
+            <div key={item.href}>
+              {/* **وعنوانُ المجموعة يفصل ولا يُضغط.**
+
+                  **ولا خطَّ فاصلاً معه**: العنوانُ وحدَه يفصل، **وخطٌّ فوق
+                  كلّ مجموعةٍ يجعل القائمةَ سلسلةَ صناديق** — وهي عينُ ما
+                  خرجنا منه في الشريط العلويّ. */}
+              {item.group && (
+                <p className="px-3 pt-4 pb-1.5 text-2xs font-bold tracking-wider text-ink-muted/70 first:pt-0">
+                  {item.group}
+                </p>
+              )}
+              <Link
+                href={item.href}
+                className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors ${
+                  active
+                    ? "bg-primary-light font-medium text-primary-strong"
+                    : "text-ink-muted hover:bg-page hover:text-ink"
+                }`}
+              >
+                <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
+                {item.label}
+              </Link>
+            </div>
           );
         })}
       </nav>

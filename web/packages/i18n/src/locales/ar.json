@@ -612,7 +612,10 @@
       "sections": "السوق",
       "claims": "النزاعات",
       "history": "سجلّ الطلبات",
-      "ratings": "التقييمات"
+      "ratings": "التقييمات",
+      "groupOps": "التشغيلُ اليوميّ",
+      "groupMoney": "المال",
+      "groupBuild": "البناءُ والإعداد"
     },
     "ordersPage": {
       "title": "الطلبات",

@@ -49,7 +49,8 @@ type NavItem = ChromeNavItem & { roles?: string[] };
 const ALL_NAV: NavItem[] = [
   { href: "/dashboard", label: m.terms.dashboard, icon: IconDashboard },
   // التشغيل اليومي — مشتركٌ بين الثلاثة
-  { href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder },
+  { href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder,
+    group: m.admin.nav.groupOps },
   // **والسجلُّ بابٌ ثانٍ** — «ماذا جرى؟» سؤالٌ غيرُ «ما الذي يحتاجني الآن؟».
   { href: "/dashboard/history", label: m.admin.nav.history, icon: IconStatus },
   // **والسوقُ ثالثاً — أهمُّ ما بعد الطلبات.**
@@ -78,6 +79,7 @@ const ALL_NAV: NavItem[] = [
   // المالك ٢٠٢٦-٠٨-٠٤.) وهي محفظةُ الحساب الحامل لها — فيراها صاحبُها
   // كشفاً كاملاً، **ويرى غيرُه محفظتَه هو.**
   { href: "/dashboard/wallet", label: m.admin.nav.treasury, icon: IconWallet,
+    group: m.admin.nav.groupMoney,
     roles: ["admin", "finance"] },
   // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
   { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
@@ -98,7 +100,8 @@ const ALL_NAV: NavItem[] = [
   //
   // **وبابٌ واحدٌ لكلّ من في المنصة**: الزبائنُ والمتاجرُ والسائقون والمندوبون
   // صاروا تبويباتٍ فيه — **بجداولهم كما هي، لا بجدولٍ واحدٍ يُفقد أعمدتَهم.**
-  { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers, roles: ["admin"] },
+  { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers, roles: ["admin"],
+    group: m.admin.nav.groupBuild },
   // **الأهدافُ والمكافآت** — الشاشةُ تقول من بلغ، **والمكافأةُ بيدٍ لا بمعادلة.**
   { href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconStar,
     roles: ["admin", "finance"] },
@@ -111,11 +114,35 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard/settings", label: m.terms.settings, icon: IconSettings },
 ];
 
+/**
+ * navFor ما يراه صاحبُ هذه الأدوار — **وعناوينُ المجموعات تتبع من بقي.**
+ *
+ * # الفخُّ الذي أُغلق هنا
+ *
+ * **عنوانُ المجموعة يركب أوّلَ بندٍ منها** — و«البناءُ والإعداد» يركب
+ * «الحسابات» وهي للأدمن وحدَه. **فموظّفُ العمليات يفقد العنوانَ ويبقى ما
+ * تحته**: تظهر له «العروض» و«الإعدادات» **معلَّقتين بلا رأس**، ويُقرأ ذلك
+ * نقصاً في القائمة لا فلترةَ صلاحيات.
+ *
+ * **فالعنوانُ يُنقل إلى أوّل من نجا** — والمجموعةُ تختفي كلُّها إن لم ينجُ
+ * منها أحد.
+ */
 function navFor(roles: string[] | undefined): ChromeNavItem[] {
   const has = (r: string) => !!roles?.includes(r);
   // الأدمن يرى كل شيء بلا استثناء — لا حاجة لفحص كل سطر
   if (has("admin")) return ALL_NAV;
-  return ALL_NAV.filter((i) => !i.roles || i.roles.some(has));
+
+  const kept = ALL_NAV.filter((i) => !i.roles || i.roles.some(has));
+  // **والعنوانُ الضائعُ يُلتقط ويوضع على أوّل ناجٍ بعده.**
+  let pending: string | undefined;
+  const out: ChromeNavItem[] = [];
+  for (const item of ALL_NAV) {
+    if (item.group) pending = item.group;
+    if (!kept.includes(item)) continue;
+    out.push(pending ? { ...item, group: pending } : item);
+    pending = undefined;
+  }
+  return out;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
