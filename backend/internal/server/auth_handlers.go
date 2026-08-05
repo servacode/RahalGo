@@ -364,6 +364,17 @@ func (s *Server) handleWhatsAppVerifyConfirm(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, err)
 		return
 	}
+
+	// **وهنا يكتمل التسجيل** — لا عند فتح الحساب.
+	//
+	// **والواتسابُ هو الحارس**: بلاه تُفتح مئةُ حسابٍ في ساعةٍ بأرقامٍ تُشترى،
+	// **فتُدفع مئةُ مكافأةٍ على مئةٍ لا وجودَ لها.** والتوثيقُ يجعل لكلّ حسابٍ
+	// رقماً يملكه إنسان.
+	//
+	// **وتخرج صامتةً إن كان الوضعُ «عند أوّل طلب»** — أو إن لم يُدعَ أصلاً.
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «عند التسجيل وتوثيق واتساب... وهيك تصير ثقة».)
+	s.referrals.SettleOnSignup(r.Context(), userIDFrom(r), userIDFrom(r))
+
 	httpx.JSON(w, http.StatusOK, map[string]any{"verified": true})
 }
 

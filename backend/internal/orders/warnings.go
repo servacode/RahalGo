@@ -73,12 +73,14 @@ func warningText(reason string) string {
 	return "إنذارٌ على طلب"
 }
 
-// ManualWarnings عددُ الإنذارات اليدوية داخل النافذة وبعد آخر عفو.
+// UncountedWarnings عددُ الإنذارات التي لا يعدّها صفُّ الطلب.
 //
-// **واليدويةُ وحدَها هنا**: ما نشأ عن طلبٍ يُعدّ من الطلبات نفسِها في
+// **ولا يُعدّ ما عُدَّ**: ما نشأ عن طلبٍ صار مخالفةً يُعدّ من الطلب نفسِه في
 // `MerchantViolations` — **ولو عُدّ من الموضعين لَحُسب مرّتين**، فيُحظر المتجرُ
 // على نصف ما استحقّ.
-func (s *Service) ManualWarnings(ctx context.Context, q wallet.Querier, merchantID string) (int, error) {
+//
+// **والشرطُ في `warningsWhere` لا هنا** — يُقرأ منه العدُّ والقائمةُ معاً.
+func (s *Service) UncountedWarnings(ctx context.Context, q wallet.Querier, merchantID string) (int, error) {
 	days := int64(30)
 	if s.settings != nil {
 		if v := s.settings.GetInt(ctx, "merchants.cancel_ban_days"); v > 0 {
@@ -90,10 +92,7 @@ func (s *Service) ManualWarnings(ctx context.Context, q wallet.Querier, merchant
 		SELECT count(*)
 		FROM merchant_warnings w
 		JOIN merchants m ON m.id = w.merchant_id
-		WHERE w.merchant_id = $1
-		  AND w.order_id IS NULL
-		  AND w.created_at > now() - make_interval(days => $2::int)
-		  AND (m.violations_cleared_at IS NULL OR w.created_at > m.violations_cleared_at)`,
+		`+warningsWhere("$1", "$2", "m"),
 		merchantID, days).Scan(&n)
 	return n, err
 }

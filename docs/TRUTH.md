@@ -393,6 +393,7 @@
 | `pricing.margin_fixed` | المنصة | money | `0` |
 | `orders.auto_transfer_min_total` | المنصة | money | `0` |
 | `orders.auto_transfer_min_items` | المنصة | int | `0` |
+| `referral.reward_on` | المنصة | choice | `signup` |
 | `referral.reward_1` | المنصة | money | `0` |
 | `referral.reward_2` | المنصة | money | `0` |
 | `referral.reward_3` | المنصة | money | `0` |

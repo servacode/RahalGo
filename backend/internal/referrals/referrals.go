@@ -5,12 +5,21 @@ package referrals
 // # ثلاثةُ أسئلةٍ وثلاثةُ أجوبة
 //
 //	متى يُنسب؟   ←  لحظةَ إنشاء الحساب بالرمز
-//	متى يُصرف؟   ←  عند أوّل طلبٍ يُسلَّم للمدعوّ
+//	متى يُصرف؟   ←  **زرٌّ ذكيّ**: عند إكمال التسجيل أو عند أوّل طلب
 //	كم؟         ←  بترتيب الدعوة: الأولى ثمّ الثانية ثمّ الثالثة ثمّ ثابت
 //
-// **والنسبُ غيرُ الصرف** — بينهما زبونٌ قد لا يطلب أبداً. **ورقمُ هاتفٍ
-// يُسجَّل لا يساوي شيئاً**: تُفتح مئةُ حسابٍ في ساعةٍ بأرقامٍ تُشترى، **فتُدفع
-// مئةُ مكافأةٍ على مئةٍ لن تطلب.**
+// **والنسبُ غيرُ الصرف** — بينهما شرطٌ يُختار.
+//
+// # والوضعان يختلفان في الثقة لا في المال
+//
+// **«عند أوّل طلب» أحوطُ**: زبونٌ اشترى فعلاً. **لكنّ من دعا صديقَه ثمّ انتظر
+// أسبوعاً حتى يطلب يظنّ أنّنا نماطله** — فلا يدعو ثانياً ولا يُصدّق ما نقول.
+//
+// **و«عند إكمال التسجيل» يُوفي في دقيقة** — ويُشترى به ولاءٌ لا يُشتَرى
+// بإعلان. **والواتسابُ هو الحارس**: بلاه تُفتح مئةُ حسابٍ بأرقامٍ تُشترى،
+// **فتُدفع مئةُ مكافأةٍ على مئةٍ لا وجودَ لها.**
+//
+// **وهو الافتراض**: منصةٌ جديدةٌ تحتاج ثقةً قبل أن تحتاج حذراً.
 //
 // # والرتبةُ تُثبَّت لحظةَ النسب
 //
@@ -42,9 +51,27 @@ var (
 	ErrAlreadyInvited = httpx.NewError(http.StatusConflict, "already_invited", "errors.already_invited")
 )
 
-// Settings ما تقرؤه هذه الحزمة — **واجهةٌ ضيّقة**: أربعةُ أرقام.
+// Settings ما تقرؤه هذه الحزمة — أربعةُ أرقامٍ ووضعٌ واحد.
 type Settings interface {
 	GetInt(ctx context.Context, key string) int64
+	GetString(ctx context.Context, key string) string
+}
+
+// أوضاعُ صرف المكافأة.
+const (
+	// OnSignup عند إكمال التسجيل — **حسابٌ تمّ ورقمُ واتسابٍ وُثّق.**
+	OnSignup = "signup"
+	// OnFirstOrder عند أوّل طلبٍ يُسلَّم — **زبونٌ اشترى فعلاً.**
+	OnFirstOrder = "first_order"
+)
+
+// rewardOn الوضعُ النافذ — **وافتراضُه التسجيل**: منصةٌ جديدةٌ تحتاج ثقةً
+// قبل أن تحتاج حذراً.
+func (s *Service) rewardOn(ctx context.Context) string {
+	if v := s.settings.GetString(ctx, "referral.reward_on"); v != "" {
+		return v
+	}
+	return OnSignup
 }
 
 type Service struct {
@@ -156,11 +183,36 @@ func (s *Service) Attach(ctx context.Context, inviteeID, code string) error {
 	return err
 }
 
-// SettleFirstOrder يصرف مكافأةَ من دعا — **عند أوّل طلبٍ يُسلَّم للمدعوّ.**
+// SettleFirstOrder يصرف عند أوّل طلبٍ يُسلَّم — **إن كان ذاك هو الوضع.**
 //
 // **وتُنادى بعد كلّ تسليم** وتخرج صامتةً إن لم يكن ثمّة ما يُصرف: **حارسٌ في
 // موضعٍ واحدٍ خيرٌ من شرطٍ يُكتب في كلّ نداء.**
 func (s *Service) SettleFirstOrder(ctx context.Context, customerID, orderID, actorID string) {
+	if s.rewardOn(ctx) != OnFirstOrder {
+		return
+	}
+	s.settle(ctx, customerID, orderID, actorID)
+}
+
+// SettleOnSignup يصرف عند إكمال التسجيل — **إن كان ذاك هو الوضع.**
+//
+// **و«إكمالُ التسجيل» توثيقُ الواتساب لا فتحُ الحساب**: بلاه تُفتح مئةُ حسابٍ
+// في ساعةٍ بأرقامٍ تُشترى، **فتُدفع مئةُ مكافأةٍ على مئةٍ لا وجودَ لها.**
+//
+// **ومرجعُ القيد فارغٌ هنا** — لا طلبَ بعد. **ورقمٌ بلا مرجعٍ يُقرأ في الكشف
+// بنصّه**: «مكافأةُ دعوةِ زبون» تكفي.
+func (s *Service) SettleOnSignup(ctx context.Context, customerID, actorID string) {
+	if s.rewardOn(ctx) != OnSignup {
+		return
+	}
+	s.settle(ctx, customerID, "", actorID)
+}
+
+// settle جسدُ الصرف — **واحدٌ للوضعين.**
+//
+// **وحسبتان لصرفٍ واحدٍ تفترقان يوماً**: يُصلَح الختمُ في أحدهما ويبقى الآخر
+// **فتُصرف المكافأةُ مرّتين.**
+func (s *Service) settle(ctx context.Context, customerID, orderID, actorID string) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return
@@ -205,8 +257,15 @@ func (s *Service) SettleFirstOrder(ctx context.Context, customerID, orderID, act
 		return
 	}
 	if amount > 0 && s.notify != nil {
-		s.notify.NotifyWallet(ctx, inviterID, "مكافأةُ دعوة",
-			"صديقٌ دعوتَه طلب أوّلَ طلبٍ له", "/wallet")
+		// **والنصُّ يتبع الوضع.**
+		//
+		// **و«طلب أوّلَ طلبٍ له» تُقال لمن سجّل للتوّ كذبةٌ صغيرة** — يقرؤها
+		// الداعي فيسأل صديقَه عن طلبٍ لم يقع، **ويظنّ أنّ في الحساب خللاً.**
+		body := "صديقٌ دعوتَه أكمل تسجيلَه"
+		if orderID != "" {
+			body = "صديقٌ دعوتَه طلب أوّلَ طلبٍ له"
+		}
+		s.notify.NotifyWallet(ctx, inviterID, "مكافأةُ دعوة", body, "/wallet")
 	}
 }
 

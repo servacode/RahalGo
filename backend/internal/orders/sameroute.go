@@ -29,6 +29,9 @@ package orders
 
 import (
 	"context"
+	"strconv"
+
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
 // SameRouteRadiusM كم بين المتجرين ليُعدّا متجاورين.
@@ -140,5 +143,42 @@ func (s *Service) TrySameRoute(ctx context.Context, orderID string) bool {
 	s.logger.Info("نفسُ المسار: أُسند",
 		"order", orderID, "driver", c.DriverID, "anchor", c.AnchorOrderID,
 		"pickups_m", int(c.BetweenPickupsM), "dropoffs_m", int(c.BetweenDropoffsM))
+
+	// **وتنبيهٌ يقول لماذا** — لا «طلبٌ جديد» وحدَها.
+	//
+	// **والسائقُ في الطريق إلى مطعمٍ حين يصله**: تنبيهٌ لا يشرح يجعله يظنّ
+	// أنّ الطلبَ الأوّلَ أُلغي أو أنّ شيئاً اختلط، **فيقف ليقرأ ويسأل.**
+	//
+	// **و«بنفس مسارك» تُغني عن الوقوف**: يعرف أنّهما رحلةٌ واحدة، ويكمل.
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «يأتيه الطلبُ مع تنبيه: لديك طلبٌ جديدٌ
+	// بنفس المسار».)
+	if s.notify != nil {
+		var number int64
+		var merchant string
+		if err := s.db.QueryRow(ctx, `
+			SELECT o.number, m.name FROM orders o
+			JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1`,
+			orderID).Scan(&number, &merchant); err == nil {
+			s.notify.Notify(ctx, notifications.Input{
+				UserID:   c.DriverID,
+				Kind:     "order",
+				Title:    "طلبٌ جديدٌ بنفس مسارك",
+				Body:     merchant + " — على بُعد " + metersText(c.BetweenPickupsM) + " من وجهتك",
+				Entity:   "order",
+				EntityID: orderID,
+				Href:     "/portal",
+			})
+		}
+	}
 	return true
+}
+
+// metersText مسافةٌ مقروءة — **بالمتر تحت الكيلو وبالكيلو فوقه.**
+//
+// **و«٨٤٧ متراً» تُقرأ بلمحة، و«٠٫٨٤٧ كم» تُقرأ بتفكير** — والسائقُ على درّاجة.
+func metersText(m float64) string {
+	if m < 1000 {
+		return strconv.Itoa(int(m)) + " م"
+	}
+	return strconv.FormatFloat(m/1000, 'f', 1, 64) + " كم"
 }

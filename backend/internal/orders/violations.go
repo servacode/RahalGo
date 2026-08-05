@@ -59,10 +59,12 @@ func (s *Service) MerchantViolations(ctx context.Context, q wallet.Querier, merc
 	if err != nil {
 		return 0, err
 	}
-	// **والإنذارُ اليدويُّ يُضاف** — متجرٌ رفع أسعارَه عن المتّفق أو أساء إلى
-	// سائق **لا طلبَ يشهد عليه**، ومن لا يُعدّ إنذارُه لا يبلغ حدّاً أبداً.
-	manual, err := s.ManualWarnings(ctx, q, merchantID)
-	return n + manual, err
+	// **والإنذارُ الذي لا يعدّه صفُّ الطلب يُضاف** — متجرٌ رفع أسعارَه عن
+	// المتّفق **لا طلبَ يشهد عليه**، أو أغلق بابَه فعاد الطلبُ إلى المكتب
+	// **فلا هو `failed` ولا `cancelled`.** ومن لا يُعدّ إنذارُه لا يبلغ حدّاً
+	// أبداً.
+	rest, err := s.UncountedWarnings(ctx, q, merchantID)
+	return n + rest, err
 }
 
 // ViolationRow مخالفةٌ واحدةٌ مقروءة — **طلبٌ وقع، لا رقمٌ في عدّاد.**
@@ -93,18 +95,13 @@ func ViolationsCountSQL(merchantExpr, daysExpr string) string {
 	return `((SELECT count(*) FROM orders o
 	          JOIN merchants mv ON mv.id = o.merchant_id
 	          WHERE o.merchant_id = ` + merchantExpr + `
-	            AND ((o.ended_by = 'merchant' AND o.status IN ('rejected', 'cancelled'))
-	                 OR (o.status = 'failed' AND o.fault = 'merchant'))
+	            AND ` + violationPredicate("o") + `
 	            AND o.closed_at > now() - make_interval(days => ` + daysExpr + `::int)
 	            AND (mv.violations_cleared_at IS NULL
 	                 OR o.closed_at > mv.violations_cleared_at))
 	        + (SELECT count(*) FROM merchant_warnings w
 	           JOIN merchants mw ON mw.id = w.merchant_id
-	           WHERE w.merchant_id = ` + merchantExpr + `
-	             AND w.order_id IS NULL
-	             AND w.created_at > now() - make_interval(days => ` + daysExpr + `::int)
-	             AND (mw.violations_cleared_at IS NULL
-	                  OR w.created_at > mw.violations_cleared_at)))`
+	           ` + warningsWhere(merchantExpr, daysExpr, "mw") + `))`
 }
 
 // violationsWhere شرطُ المخالفة — **مكتوبٌ مرّةً يُقرأ في العدّ وفي القائمة.**
@@ -112,12 +109,45 @@ func ViolationsCountSQL(merchantExpr, daysExpr string) string {
 // **ولو نُسخ لَافترقا يوماً**: يُضاف شرطٌ في العدّ فيُقال «٤ مخالفات» وتُعرض
 // ثلاث، **فيُقرأ ذلك عطباً في المنصة لا فرقاً في استعلامين.** وهي عائلةُ الخلل
 // التي تكرّرت في هذه الجولة سبعَ مرّات.
-const violationsWhere = `
+var violationsWhere = `
 	WHERE o.merchant_id = $1
-	  AND ((o.ended_by = 'merchant' AND o.status IN ('rejected', 'cancelled'))
-	       OR (o.status = 'failed' AND o.fault = 'merchant'))
+	  AND ` + violationPredicate("o") + `
 	  AND o.closed_at > now() - make_interval(days => $2::int)
 	  AND (m.violations_cleared_at IS NULL OR o.closed_at > m.violations_cleared_at)`
+
+// violationPredicate **ما يجعل طلباً مخالفةً** — الشرطُ وحدَه بلا نافذةٍ ولا عفو.
+//
+// **ويُقرأ من موضعين لا يكفي أن يُكتب في أحدهما**: صفُّ الطلب يعدّ به، **وصفُّ
+// الإنذار يستثني به ما عُدَّ** — ولو افترقا لَعُدَّ الطلبُ الواحدُ مرّتين، **أو
+// لم يُعدَّ أصلاً.**
+func violationPredicate(a string) string {
+	return `((` + a + `.ended_by = 'merchant' AND ` + a + `.status IN ('rejected', 'cancelled'))
+	         OR (` + a + `.status = 'failed' AND ` + a + `.fault = 'merchant'))`
+}
+
+// warningsWhere شرطُ الإنذار المعدود — **ما لا يعدّه صفُّ الطلب.**
+//
+// # ولماذا لم يعد «اليدويّةُ وحدَها»
+//
+// كان يُعدّ منها ما لا طلبَ له، **لأنّ ما له طلبٌ يُعدّ من الطلب نفسِه** — ولو
+// عُدَّ من الموضعين لَحُسب مرّتين.
+//
+// **ثمّ ظهر ثالثٌ لا يراه أيٌّ منهما**: تعذّرٌ عند باب المتجر **يعود الطلبُ منه
+// إلى المكتب** — فلا هو `failed` ولا `cancelled`، **وصفُّ الطلب لا يعرفه**،
+// وإنذارُه له `order_id` **فصفُّ الإنذار كان يستبعده.** فمن أغلق بابَه عشر
+// مرّاتٍ بقي بلا مخالفةٍ واحدة.
+//
+// **والشرطُ الآن يقول ما يعنيه**: يُعدّ الإنذارُ إن لم يكن طلبُه معدوداً —
+// **بالشرط نفسِه لا بشرطٍ يشبهه.**
+func warningsWhere(merchantExpr, daysExpr, mAlias string) string {
+	return `WHERE w.merchant_id = ` + merchantExpr + `
+		  AND (w.order_id IS NULL OR NOT EXISTS (
+		        SELECT 1 FROM orders ov
+		        WHERE ov.id = w.order_id AND ` + violationPredicate("ov") + `))
+		  AND w.created_at > now() - make_interval(days => ` + daysExpr + `::int)
+		  AND (` + mAlias + `.violations_cleared_at IS NULL
+		       OR w.created_at > ` + mAlias + `.violations_cleared_at)`
+}
 
 // MerchantViolationList **أيُّ طلباتٍ هي** — الجوابُ الذي كان ناقصاً.
 //
@@ -141,13 +171,12 @@ func (s *Service) MerchantViolationList(ctx context.Context, q wallet.Querier, m
 		FROM orders o
 		JOIN merchants m ON m.id = o.merchant_id`+violationsWhere+`
 		UNION ALL
-		SELECT NULL, 'warning', w.reason, w.note, true, w.created_at
+		-- **و«يدويّ» تُقال عن اليدويّ وحدَه**: صفٌّ عن بابٍ مغلقٍ يُعرض «إنذاراً
+		-- يدويّاً» يجعل المتجرَ يحتجّ على شيءٍ لم يفعله أحد.
+		SELECT NULL, 'warning', w.reason, w.note, w.order_id IS NULL, w.created_at
 		FROM merchant_warnings w
 		JOIN merchants m2 ON m2.id = w.merchant_id
-		WHERE w.merchant_id = $1
-		  AND w.order_id IS NULL
-		  AND w.created_at > now() - make_interval(days => $2::int)
-		  AND (m2.violations_cleared_at IS NULL OR w.created_at > m2.violations_cleared_at)
+		`+warningsWhere("$1", "$2", "m2")+`
 		ORDER BY 6 DESC
 		LIMIT 100`, merchantID, days)
 	if err != nil {
