@@ -75,6 +75,13 @@ Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" |
 **والقتلُ بمالك المنفذ لا باسم العملية** (`Get-NetTCPConnection -LocalPort`)
 — فـ`node.exe` و`cmd.exe` يعمّان مشاريعَ أخرى على الجهاز.
 
+**ولا يُشغَّل `pnpm build` وخادمُ التطوير يعمل.** كلاهما يكتب في `.next`
+نفسِه، **فيقرأ خادمُ التطوير قِطَعَ الإنتاج فيسقط بـ٥٠٠**:
+`Cannot read properties of undefined (reading 'call')` من `webpack-runtime`.
+
+**والعطبُ يبدو في الشيفرة وليس فيها** — وقع (٢٠٢٦-٠٨-٠٦) بعد تعديلٍ سليمٍ
+بُني بنجاح. **فإن أردتَ البناءَ: أوقف التطوير، ابنِ، امسح `.next`، ثمّ شغّل.**
+
 **ولا تُمسّ حاويات مشاريعَ أخرى** — رحّال غو يستعمل `rahalgo-postgres` (5434)
 و`rahalgo-redis` (6380) وحدَهما.
 
