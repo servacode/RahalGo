@@ -114,7 +114,17 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
 
           **ولا يُحذف**: هو ما يقول للزائر الجديد أين وقع. **إنّما يُقاس
           بالشاشة لا بالذوق.** */}
-      <h1 className="mb-3 text-xl font-bold sm:mb-4 sm:text-2xl">{m.site.hero}</h1>
+      {/* **والعنوانُ الأوّلُ صار له صوت.**
+
+          كان `text-xl font-bold` — **نصَّ متنٍ مكبَّراً مغمَّقاً**، وهو ما
+          يفعله كلُّ من لا يملك خطَّ عناوين. **وقد صار كوفيّاً بالثيم** (قاعدةُ
+          `:where(h1,h2,h3)`) فبقي أن يأخذ الحجمَ الذي يستحقّه.
+
+          **وخيطُ العلامة تحته** — الشريطُ الذي يمضي من التركواز إلى الجمر،
+          **وهو الطريقُ في اللوغو.** ويُستعمل في ثلاثة مواضعَ لا أكثر:
+          **والتدرّجُ إن تكرّر صار زخرفةً، وإن قلّ صار توقيعاً.** */}
+      <h1 className="text-2xl font-bold sm:text-3xl">{m.site.hero}</h1>
+      <span aria-hidden className="brand-rule mt-2.5 mb-5 block h-0.5 w-16 rounded-badge sm:mb-6" />
 
       {/* **سلايدرٌ لا شريطٌ يُسحب.**
 
@@ -139,7 +149,9 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
 
           **والالتصاقُ تحت الشريط لا فوقه** (`top-[4.5rem]`): الشريطُ لاصقٌ
           أصلاً بارتفاعه، **ولو التصق البحثُ عند الصفر لَاختفى تحته.** */}
-      <div className="sticky top-[4.5rem] z-30 mb-5 -mx-1 bg-surface px-1 py-2">
+      {/* **واللاصقُ زجاجٌ كالشريط فوقه** — كان `bg-surface` مصمتاً على أرضٍ
+          هي `shell`، **فيُقرأ لوحاً دخيلاً معلَّقاً في منتصف الصفحة.** */}
+      <div className="sticky top-[4.5rem] z-30 -mx-1 mb-5 rounded-card bg-shell/85 px-1 py-2 backdrop-blur-xl">
       <div className="relative">
         <Input
           id="site-search"
@@ -183,8 +195,15 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
         )
       ) : (
         <>
-          <h2 className="mb-3 text-lg font-bold">{m.site.sections.title}</h2>
-          <p className="mb-4 text-sm text-ink-muted">{m.site.sections.hint}</p>
+          {/* **والعنوانُ ووصفُه كتلةٌ واحدةٌ لا كتلتان متباعدتان.**
+
+              كانا سطرين بينهما فراغان مختلفان (`mb-3` ثمّ `mb-4`) — **فيُقرأ
+              الوصفُ نصّاً مستقلّاً لا شرحاً للعنوان.** والقربُ هو ما يقول
+              «هذان واحد». */}
+          <div className="mb-4">
+            <h2 className="text-xl font-bold">{m.site.sections.title}</h2>
+            <p className="mt-1 text-sm text-ink-muted">{m.site.sections.hint}</p>
+          </div>
           {/* **صورةُ القسم هويّتُه — لا رمزٌ رماديّ.**
 
               **والسوقُ يُتصفَّح بالصور**: الزبونُ يعرف الشاورما من صورتها قبل
@@ -198,17 +217,20 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
               <Link
                 key={sec.id}
                 href={`/s/${sec.id}`}
-                className={`flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-shadow hover:elev-2 ${
+                /* **وبطاقةُ القسم كبطاقة الصنف حرفاً بحرف** — الرفعُ نفسُه
+                   والحدُّ نفسُه وتكبيرُ الصورة نفسُه. **ومن مسح السوقَ بالعين
+                   ثمّ فتح قسماً لا يجد الشبكةَ تغيّرت تحته.** */
+                className={`group flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-[transform,box-shadow,border-color] duration-[--duration-base] ease-[--ease-out] hover:-translate-y-0.5 hover:border-primary/30 hover:elev-3 ${
                   sec.count === 0 ? "opacity-60" : ""
                 }`}
               >
-                <span className="flex aspect-[4/3] items-center justify-center bg-page">
+                <span className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-page">
                   {sec.image_url || sec.image_thumb_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={mediaUrl(sec.image_url ?? sec.image_thumb_url) ?? ""}
                       alt={sec.name}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-transform duration-[--duration-slow] ease-[--ease-out] group-hover:scale-[1.03]"
                     />
                   ) : (
                     /* **والأيقونةُ تبقى للزبون وحدَه** — لا لنا.

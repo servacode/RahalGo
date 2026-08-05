@@ -104,7 +104,18 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
 
       {img && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={img} alt="" loading="lazy" className="mb-4 h-56 w-full rounded-card object-cover" />
+        /* **والصورةُ بنسبةٍ لا بارتفاعٍ مكتوب.**
+
+           كان `h-56` — **مئتان وأربعةٌ وعشرون بكسلاً مهما كان عرضُ النافذة**:
+           على الجوّال تقارب المربّع وعلى الحاسب تصير شريطاً مقصوصاً. **ونسبةُ
+           ٤:٣ هي نسبةُ البطاقة التي ضُغطت لفتحها** — فلا تُقصّ الصورةُ قصّاً
+           آخرَ بين الشاشتين. */
+        <img
+          src={img}
+          alt=""
+          loading="lazy"
+          className="mb-4 aspect-[4/3] w-full rounded-card object-cover elev-2 sm:aspect-[16/9]"
+        />
       )}
 
       <h1 className="text-2xl font-bold">{item.name}</h1>
@@ -164,8 +175,17 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
                     type="button"
                     disabled={!o.available}
                     onClick={() => toggle(g, o.id)}
-                    className={`rounded-badge border px-3 py-1.5 text-sm disabled:opacity-40 ${
-                      on ? "border-primary bg-primary-light font-medium" : "border-line"
+                    /* **والمختارُ يُقرأ بلمحةٍ لا بحدٍّ وحدَه.**
+
+                       كان الفرقُ حدّاً تركوازيّاً وحشوةً باهتة — **وفي صفٍّ
+                       من ستّة خياراتٍ لا تُميَّز إلّا بالتدقيق.** فصار النصُّ
+                       نفسُه تركوازاً: **اللونُ يسبق الشكلَ في العين.**
+
+                       **ويرتفع بكسلاً**: ما اختير أقربُ إلى الناظر. */
+                    className={`rounded-badge border px-3 py-1.5 text-sm transition-[background-color,border-color,color,transform] duration-[--duration-fast] ease-[--ease-out] disabled:opacity-40 ${
+                      on
+                        ? "-translate-y-px border-primary bg-primary-light font-medium text-primary-strong"
+                        : "border-line hover:border-primary/40 hover:bg-page"
                     }`}
                   >
                     {o.name}
@@ -189,12 +209,30 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
         />
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-control border border-line px-2 py-1">
-            <button type="button" onClick={() => setQty((n) => Math.max(1, n - 1))} className="px-2">
+          {/* **والعدّادُ زرّان لا محرفان.**
+
+              كان `px-2` على محرفٍ نصّيّ — **مساحةُ لمسٍ نحو عشرين بكسلاً**،
+              وهي نصفُ لبّ الإصبع. **ومن أخطأ «+» فزاد اثنين بدل واحدٍ يشتري
+              ما لا يريد.**
+
+              **والحقلُ يغور** كسائر الحقول، فيُقرأ شيئاً يُعدَّل لا نصّاً
+              يُقرأ. */}
+          <div className="flex items-center gap-1 rounded-control border border-line bg-page p-1">
+            <button
+              type="button"
+              aria-label={m.common.decrease}
+              onClick={() => setQty((n) => Math.max(1, n - 1))}
+              className="flex h-9 w-9 items-center justify-center rounded-control text-lg text-ink-muted transition-colors hover:bg-surface hover:text-ink"
+            >
               −
             </button>
-            <span className="min-w-6 text-center font-bold">{fmtNum(qty)}</span>
-            <button type="button" onClick={() => setQty((n) => Math.min(50, n + 1))} className="px-2">
+            <span className="min-w-8 text-center font-bold tabular-nums">{fmtNum(qty)}</span>
+            <button
+              type="button"
+              aria-label={m.common.increase}
+              onClick={() => setQty((n) => Math.min(50, n + 1))}
+              className="flex h-9 w-9 items-center justify-center rounded-control text-lg text-ink-muted transition-colors hover:bg-surface hover:text-ink"
+            >
               +
             </button>
           </div>
