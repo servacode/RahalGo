@@ -60,7 +60,10 @@ func newDriverFixture(t *testing.T, driverCount int) *driverFixture {
 			hub:      realtime.NewHub(quiet),
 			cashbox:  cashboxSvc,
 			settings: settingsStore,
-			orders:   orders.NewService(pool, nil, walletSvc, cashboxSvc, nil, quiet),
+			// **والمحفظةُ مركَّبةٌ في العُدّة** — كانت تُنشأ ولا تُسنَد،
+			// **فأيُّ اختبارٍ يمسّ المال ينهار بمؤشّرٍ فارغ.**
+			wallet: walletSvc,
+			orders: orders.NewService(pool, nil, walletSvc, cashboxSvc, nil, quiet),
 		},
 	}
 

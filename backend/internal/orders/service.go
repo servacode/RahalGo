@@ -297,12 +297,35 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	// جزءٌ منه بعد «توصيلٌ مجّانيّ» وعدٌ يُخلَف.**
 	deliveryFee += s.extraSourceFee(ctx, sources)
 
-	// كود الخصم
+	// الإنشاء الذرّي
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	// **كودُ الخصم يُفحص داخل المعاملة لا قبلها.**
+	//
+	// # الثغرةُ التي أُغلقت
+	//
+	// كان يُفحص على `s.db` **قبل أن تبدأ المعاملة**، ويُدرج القيدُ داخلها.
+	// **فطلبان يصلان معاً يقرآن كلاهما «لم يُستعمل بعد»** ثمّ يُدرجان —
+	// والفهرسُ الفريدُ على `(promo_id, order_id)` **لا يمنعهما لأنّ رقمَي
+	// الطلبين مختلفان.**
+	//
+	// **وأُثبتت حيّاً**: كودُ «مرّةٌ لكلّ زبون» صُرف مرّتين بطلبين متزامنين.
+	// **ولا تحتاج مهارة**: زرّان يُضغطان معاً، أو شبكةٌ بطيئةٌ تُعيد الإرسال.
+	//
+	// # ولماذا قفلُ الصفّ لا فهرسٌ فريد
+	//
+	// **الفهرسُ الفريدُ على `(promo_id, user_id)` يكسر ما يجوز**: كودٌ بلا
+	// `once_per_user` يُستعمل مرّاتٍ بحقّ. **والقفلُ يخدم القاعدتين معاً** —
+	// `once_per_user` و`max_uses` — لأنّه يُسلسل من يقرأ العدّاد.
 	var promoID *string
 	var discount int64
 	promoCode := strings.TrimSpace(strings.ToUpper(in.PromoCode))
 	if promoCode != "" {
-		promoID, discount, err = s.validatePromo(ctx, promoCode, customerID, subtotal, &deliveryFee)
+		promoID, discount, err = s.validatePromo(ctx, tx, promoCode, customerID, subtotal, &deliveryFee)
 		if err != nil {
 			return nil, err
 		}
@@ -320,13 +343,6 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		walletPaid = total
 	}
 	cashDue := total - walletPaid
-
-	// الإنشاء الذرّي
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
 
 	var orderID string
 	err = tx.QueryRow(ctx, `
@@ -566,17 +582,19 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 }
 
 // validatePromo يتحقق من كل قواعد الكود ويعيد الخصم (وقد يصفّر رسم التوصيل).
-func (s *Service) validatePromo(ctx context.Context, code, customerID string, subtotal int64, deliveryFee *int64) (*string, int64, error) {
+func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, customerID string, subtotal int64, deliveryFee *int64) (*string, int64, error) {
 	var id, kind string
 	var value, minOrder int64
 	var firstOnly, oncePerUser, active bool
 	var maxUses *int
 	var usedCount int
 	var expiresAt *time.Time
-	err := s.db.QueryRow(ctx, `
+	// **و`FOR UPDATE` هي القفل**: من وصل ثانياً ينتظر أن تُودَع الأولى، **ثمّ
+	// يقرأ عدّاداً محدَّثاً وقيداً مكتوباً** — فيُردّ كما يجب.
+	err := q.QueryRow(ctx, `
 		SELECT id, kind, value, min_order, first_order_only, once_per_user,
 		       max_uses, used_count, expires_at, active
-		FROM promo_codes WHERE code = $1`, code).
+		FROM promo_codes WHERE code = $1 FOR UPDATE`, code).
 		Scan(&id, &kind, &value, &minOrder, &firstOnly, &oncePerUser,
 			&maxUses, &usedCount, &expiresAt, &active)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -596,7 +614,7 @@ func (s *Service) validatePromo(ctx context.Context, code, customerID string, su
 
 	if oncePerUser {
 		var used bool
-		if err := s.db.QueryRow(ctx, `
+		if err := q.QueryRow(ctx, `
 			SELECT EXISTS(SELECT 1 FROM promo_redemptions WHERE promo_id = $1 AND user_id = $2)`,
 			id, customerID).Scan(&used); err != nil {
 			return nil, 0, err
@@ -607,7 +625,7 @@ func (s *Service) validatePromo(ctx context.Context, code, customerID string, su
 	}
 	if firstOnly {
 		var hasOrders bool
-		if err := s.db.QueryRow(ctx, `
+		if err := q.QueryRow(ctx, `
 			SELECT EXISTS(SELECT 1 FROM orders WHERE customer_id = $1
 				AND status NOT IN ('cancelled','rejected','failed'))`,
 			customerID).Scan(&hasOrders); err != nil {
