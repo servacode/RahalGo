@@ -88,6 +88,12 @@ func TestBrowse_HidesSource(t *testing.T) {
 	r.Get("/sections/{id}/items", srv.handlePublicSectionItems)
 	r.Get("/items/{id}", srv.handlePublicItem)
 	r.Get("/search", srv.handleSearchItems)
+	// **والصفحةُ الأولى كانت خارجَ الحراسة.**
+	//
+	// حرس هذا الاختبارُ الأقسامَ والأصنافَ والبحثَ منذ المرحلة الثانية،
+	// **و`/home` تُرسل قائمةَ المتاجر كاملةً بأسمائها وشعاراتها** — وهي
+	// أوّلُ ما يُفتح في المنصة. **فالبابُ الذي لم يُحرس هو الذي كان مفتوحاً.**
+	r.Get("/home", srv.handlePublicHome)
 
 	get := func(path string) string {
 		w := httptest.NewRecorder()
@@ -103,12 +109,15 @@ func TestBrowse_HidesSource(t *testing.T) {
 		"/sections/" + sectionID + "/items",
 		"/items/" + itemID,
 		"/search?q=" + "صنف",
+		"/home",
 	} {
 		body := get(path)
 		if strings.Contains(body, secret) {
 			t.Errorf("%s سرّب اسمَ المتجر", path)
 		}
-		// **والمعرّفُ يكفي لكشف الاسم** — يُفتح به `/public/merchants/{id}`.
+		// **والمعرّفُ يكفي لكشف الاسم**: كان يُفتح به `/public/merchants/{id}`
+		// **فحُذفت النقطةُ والصفحة** — ويبقى المعرّفُ محجوباً، فما حُذف اليوم
+		// يُعاد غداً **والمعرّفُ المسرَّبُ يبقى في الردّ حتّى يُنتبَه له.**
 		if strings.Contains(body, merchantID) {
 			t.Errorf("%s سرّب معرّفَ المتجر — وبه يُقرأ الاسمُ كاملاً", path)
 		}

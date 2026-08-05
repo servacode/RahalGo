@@ -28,7 +28,10 @@ package server
 // لو بُني كائنٌ جديدٌ بالحقول المسموحة **لنُسي حقلٌ جديدٌ يُضاف غداً فيُسرَّب
 // صامتاً.** والمسحُ يُبقي الإضافةَ ظاهرةً حتى يُنظر فيها.
 
-import "github.com/servacode/rahalgo/backend/internal/orders"
+import (
+	"github.com/servacode/rahalgo/backend/internal/offers"
+	"github.com/servacode/rahalgo/backend/internal/orders"
+)
 
 // redactForCustomer يمسح ما يدلّ على مصدر البضاعة.
 //
@@ -41,6 +44,22 @@ func redactForCustomer(o *orders.Order) {
 	// **واسمُ من عُرض عليه الطلبُ ولم يقبل** — شأنُ توزيعٍ داخليّ، **والزبونُ
 	// يعرف سائقَه حين يصير سائقَه لا قبله.**
 	o.OfferedDriverName = nil
+}
+
+// redactOffersForCustomer يمسح مصدرَ البضاعة من العروض.
+//
+// **وهي ثالثةُ الأبواب**: حُجب التصفّحُ (المرحلةُ الثانية)، ثمّ الطلباتُ
+// (٢٠٢٦-٠٨-٠٣)، **والعروضُ بقيت تحمل `merchant_name` و`merchant_id`** —
+// وشاشتُها تعرضهما تحت اسم الصنف.
+//
+// **وقاعدةٌ تُطبَّق في موضعين من ثلاثة قاعدةٌ لم تُطبَّق**: من أراد الاسمَ
+// يفتح صفحةَ العروض. (شهده المالك ٢٠٢٦-٠٨-٠٥: «المتاجرُ مخفيّةٌ بشكلٍ كاملٍ
+// عن الزبون — نحن بالمنصة عندنا السوقُ الذي يجلب من المتاجر».)
+func redactOffersForCustomer(rows []offers.Offer) {
+	for i := range rows {
+		rows[i].MerchantName = ""
+		rows[i].MerchantID = nil
+	}
 }
 
 // redactAllForCustomer لقائمة الطلبات.

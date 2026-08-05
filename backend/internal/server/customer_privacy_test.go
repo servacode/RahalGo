@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
@@ -82,5 +83,41 @@ func TestCustomerOrderJSON_HasNoSource(t *testing.T) {
 		if strings.Contains(body, leak) {
 			t.Errorf("خرج في الردّ ما يدلّ على المصدر: %q\nالردّ: %s", leak, body)
 		}
+	}
+}
+
+// TestRedactOffersForCustomer_HidesSource **وثالثةُ الأبواب.**
+//
+// حُجب التصفّحُ ثمّ الطلبات — **وبقيت العروضُ تحمل `merchant_name`
+// و`merchant_id`**، وشاشتُها تعرضهما تحت اسم الصنف. **ومن أراد اسمَ المطعم
+// يفتح صفحةَ العروض**، فالبابان المغلقان لا يُغنيان عن ثالثٍ مفتوح.
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «المتاجرُ مخفيّةٌ بشكلٍ كاملٍ عن الزبون — نحن
+// بالمنصة عندنا السوقُ الذي يجلب من المتاجر».)
+func TestRedactOffersForCustomer_HidesSource(t *testing.T) {
+	const name = "مطعم بيت الرقة"
+	mid := "cd6ea11d-9cd4-4a13-9f1c-835470cb6471"
+	rows := []offers.Offer{{
+		Title: "خصمُ الجمعة", ItemName: "شاورما دجاج",
+		MerchantName: name, MerchantID: &mid,
+		PriceBefore: 30000, PriceAfter: 24000,
+	}}
+	redactOffersForCustomer(rows)
+
+	b, err := json.Marshal(rows)
+	if err != nil {
+		t.Fatalf("ترميزُ العروض: %v", err)
+	}
+	body := string(b)
+	for _, leak := range []string{name, "cd6ea11d"} {
+		if strings.Contains(body, leak) {
+			t.Errorf("خرج في العروض ما يدلّ على المصدر: %q · الردّ: %s", leak, body)
+		}
+	}
+
+	// **ولا يُمحى العرضُ نفسُه** — السعران واسمُ الصنف هما ما يُغري، وحراسةٌ
+	// تمحوهما تُطفأ في أوّل شكوى.
+	if rows[0].PriceAfter == 0 || rows[0].ItemName == "" || rows[0].Title == "" {
+		t.Error("مُحي من العرض ما لا يدلّ على مصدره — والحراسةُ الزائدة تُطفأ")
 	}
 }

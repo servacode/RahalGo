@@ -45,7 +45,6 @@ interface Offer {
   body: string;
   menu_item_id: string | null;
   item_name: string;
-  merchant_name: string;
   item_image_url: string | null;
   price_before: number;
   price_after: number;
@@ -126,7 +125,13 @@ export default function OffersPage() {
           items={discounts.map((o) => ({
             id: o.menu_item_id ?? o.id,
             name: o.item_name || o.title,
-            description: o.merchant_name,
+            // **ولا اسمَ متجرٍ هنا.**
+            //
+            // **الزبونُ يشتري «من رحّال» لا «من مطعم فلان»** — والمتاجرُ
+            // مخفيّةٌ عنه بالكامل: المنصةُ سوقٌ يجلب منها. **وقد كتبتُه
+            // وصفاً في أوّل صياغةٍ فخالفتُ قاعدةً مكتوبةً في `ItemCard`
+            // نفسِها.** (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
+            description: o.body,
             price: o.price_after,
             price_before: o.price_before,
             discount_percent: o.discount_percent,

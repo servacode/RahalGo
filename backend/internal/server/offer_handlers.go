@@ -129,5 +129,8 @@ func (s *Server) handlePublicOffers(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **ولا مصدرَ للبضاعة في الردّ** — كالتصفّح والطلبات. (انظر
+	// `customer_privacy.go`.)
+	redactOffersForCustomer(rows)
 	httpx.JSON(w, http.StatusOK, map[string]any{"offers": rows})
 }

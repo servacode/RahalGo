@@ -34,14 +34,13 @@ import { IconHeart } from "./icons";
 const m = getMessages(defaultLocale);
 const F = m.customer.favorites;
 
-/** صنفٌ محفوظ — **ومعه متجرُه وسعرُه الآن.** */
+/** صنفٌ محفوظ — **ومعه سعرُه الآن، بلا متجرِه.** */
 export interface FavoriteItem {
   id: string;
   name: string;
   price: number;
   image_thumb_url: string | null;
-  merchant_id: string;
-  merchant_name: string;
+  /** **أيقونةُ التصنيف تصف السلعةَ لا بائعَها** — وتملأ البطاقةَ حين لا صورة. */
   category_icon: string;
   /** **لا يُطلب اليوم** — أوقفه المتجر أو أُغلق طارئاً. */
   unavailable: boolean;
@@ -202,12 +201,15 @@ export function FavoritesPage({
               key={f.id}
               className="flex items-center gap-3 rounded-card border border-line bg-surface p-3"
             >
-              {/* **والوجهةُ مطبخُه لا الصنفُ وحدَه**: الطلبُ يبدأ من شاشة
-                  المتجر — وهناك خياراتُه وكمّيتُه. */}
-              <Link
-                href={`/m/${f.merchant_id}`}
-                className="flex min-w-0 flex-1 items-center gap-3"
-              >
+              {/* **والوجهةُ صفحةُ الصنف لا مطبخُه.**
+
+                  **والمتاجرُ مخفيّةٌ عن الزبون بالكامل**: المنصةُ سوقٌ يجلب
+                  منها، **والزبونُ يشتري «من رحّال» لا «من مطعم فلان»**. وقد
+                  كانت تربط إلى `‎/m/{id}` **فتكشف المطبخَ وتفتح بابَه.**
+                  (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
+
+                  **وصفحةُ الصنف تحمل خياراتِه وكمّيتَه** — فلا ينقص شيء. */}
+              <Link href={`/i/${f.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                 {f.image_thumb_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -222,11 +224,6 @@ export function FavoritesPage({
                 )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-bold">{f.name}</span>
-                  {/* **واسمُ المطعم تحته**: «شاورما دجاج» في ثلاثة مطاعم،
-                      **ومن رأى اسماً بلا مطعمٍ لا يعرف أيَّها حفظ.** */}
-                  <span className="block truncate text-xs text-ink-muted">
-                    {f.merchant_name}
-                  </span>
                   <span className="mt-1 flex items-center gap-2">
                     {/* **والسعرُ الآن لا يومَ الحفظ** — ومن اكتشف الفرقَ في
                         السلّة اكتشفه في أسوأ لحظة. */}

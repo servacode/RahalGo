@@ -4,12 +4,10 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
-	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
@@ -23,24 +21,9 @@ import (
 // ويقبل الإنشاءُ الطلب.
 const openNowSQL = orders.OpenNowSQL
 
-type publicMerchant struct {
-	ID           string  `json:"id"`
-	Name         string  `json:"name"`
-	Description  string  `json:"description"`
-	CategoryID   string  `json:"category_id"`
-	CategoryIcon string  `json:"category_icon"`
-	LogoURL      *string `json:"logo_url"`
-	LogoThumbURL *string `json:"logo_thumb_url"`
-	OpenNow      bool    `json:"open_now"`
-	// OpensAt موعدُ الفتح القادم — **وفارغٌ إن كان مفتوحاً الآن.**
-	//
-	// **قل متى يعود لا أنه غيرُ متاح**: «متاح من ١٠ صباحاً» موعدٌ يُعاد إليه،
-	// و«غير متاح» طريقٌ مسدود. **والفرقُ بينهما هو الفرق بين زبونٍ ضاع وزبونٍ
-	// عاد** — والبياناتُ في `merchant_hours` منذ البداية ولم تكن تصعد.
-	OpensAt *time.Time `json:"opens_at"`
-}
-
-// handlePublicHome بيانات الصفحة الرئيسية: بانرات وفئات ومتاجر فعالة بحالة فتحها.
+// handlePublicHome بيانات الصفحة الأولى: لافتاتٌ وتصنيفاتٌ وأقسامُ سوق.
+//
+// **ولا متاجرَ فيها** — انظر الشرحَ عند الأقسام أدناه.
 func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 	banners, err := s.catalog.ListBanners(r.Context())
 	if err != nil {
@@ -60,31 +43,18 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := s.pg.Query(r.Context(), `
-		SELECT m.id, m.name, m.description, m.category_id, c.icon,
-		       lm.path, lm.thumb_path, `+openNowSQL+`, `+orders.NextOpenSQL+`
-		FROM merchants m
-		JOIN categories c ON c.id = m.category_id
-		LEFT JOIN media lm ON lm.id = m.logo_media_id
-		WHERE m.status = 'active'
-		ORDER BY `+openNowSQL+` DESC, m.created_at`)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	defer rows.Close()
-	merchants := []publicMerchant{}
-	for rows.Next() {
-		var m publicMerchant
-		if err := rows.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryIcon,
-			&m.LogoURL, &m.LogoThumbURL, &m.OpenNow, &m.OpensAt); err != nil {
-			s.respondErr(w, err)
-			return
-		}
-		m.LogoURL = media.URLForPtr(m.LogoURL)
-		m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
-		merchants = append(merchants, m)
-	}
+	// **ولا متاجرَ في الرئيسية.**
+	//
+	// كان يُستعلَم هنا عن كلّ متجرٍ فعّالٍ باسمِه ووصفِه وشعارِه **ويُرسل في
+	// كلّ فتحةِ صفحةٍ أولى** — **ولا أحدَ يقرؤه**: الرئيسيةُ تتصفّح أقساماً،
+	// وخريطةُ الموقع وحدَها كانت تأخذه لتنشر `/m/{id}` لغوغل.
+	//
+	// **والمتاجرُ مخفيّةٌ عن الزبون بالكامل**: المنصةُ سوقٌ يجلب منها، **وهو
+	// يشتري «من رحّال» لا «من مطعم فلان».** (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
+	//
+	// **وحقلٌ يصل المتصفّحَ يُقرأ في أدوات المطوّر**: حجبٌ في الشاشة ولا يفرضه
+	// المحرّك ليس حجباً — **وهي عائلةُ الخلل التي تكرّرت في هذه المنصة.**
+
 	// رقم الدعم يُحمَّل مع الصفحة الأولى لا بنداءٍ ثانٍ: هو سطرٌ واحد في
 	// التذييل، ونداءٌ مستقلٌّ له تكلفةُ رحلةٍ كاملة لسطر.
 	//
@@ -105,53 +75,26 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"banners": active, "categories": categories, "merchants": merchants,
+		"banners": active, "categories": categories,
 		"sections":      sections,
 		"support_phone": s.settings.GetString(r.Context(), "platform.support_phone"),
 	})
 }
 
-// handlePublicMerchant متجر واحد بقائمته الكاملة (النافد يظهر معطلاً).
-func (s *Server) handlePublicMerchant(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	var m publicMerchant
-	err := s.pg.QueryRow(r.Context(), `
-		SELECT m.id, m.name, m.description, m.category_id, c.icon,
-		       lm.path, lm.thumb_path, `+openNowSQL+`, `+orders.NextOpenSQL+`
-		FROM merchants m
-		JOIN categories c ON c.id = m.category_id
-		LEFT JOIN media lm ON lm.id = m.logo_media_id
-		WHERE m.id = $1 AND m.status = 'active'`, id).
-		Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryIcon,
-			&m.LogoURL, &m.LogoThumbURL, &m.OpenNow, &m.OpensAt)
-	if err != nil {
-		s.respondErr(w, httpx.ErrNotFound)
-		return
-	}
-	m.LogoURL = media.URLForPtr(m.LogoURL)
-	m.LogoThumbURL = media.URLForPtr(m.LogoThumbURL)
-
-	menu, err := s.catalog.GetMenu(r.Context(), id)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// **سعرُ الشراء لا يصل الزبون.**
-	//
-	// **وحذفُه من الشاشة لا يكفي**: من فتح أدوات المتصفّح قرأ الردَّ كما هو،
-	// **وسعرُ شرائنا مكتوبٌ فيه بجانب سعر بيعنا** — فيُعرف هامشُنا بضغطة.
-	//
-	// **والضررُ ليس في معرفته وحدَها**: الهامشُ **مُعلَنٌ للمتجر** ولا نكتمه.
-	// لكنّ رقماً بعينه لكلّ صنفٍ يصل الزبونَ **يصل المتجرَ من بعده**، ومنافساً
-	// يبني قائمتَه على أرقامنا. **والحذفُ عند المصدر لا عند العرض.**
-	for si := range menu {
-		for ii := range menu[si].Items {
-			menu[si].Items[ii].MerchantPrice = 0
-			menu[si].Items[ii].MarginOverride = nil
-		}
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"merchant": m, "menu": menu})
-}
+// **نقطةُ «متجرٌ واحدٌ بقائمته» حُذفت.**
+//
+// كانت تردّ اسمَ المتجر ووصفَه وشعارَه وقائمتَه كاملةً لأيّ زائرٍ يعرف
+// المعرّف — **بلا حسابٍ ولا حدّ.** وصفحتُها (`‎/m/{id}`) حُذفت معها.
+//
+// **والمتاجرُ مخفيّةٌ عن الزبون بالكامل**: المنصةُ سوقٌ يجلب منها، **وهو
+// يشتري «من رحّال» لا «من مطعم فلان»** — يتصفّح أقساماً وأصنافاً، **ولا
+// شاشةَ في المنصة تربط إلى متجرٍ بعينه.** (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
+//
+// **ونقطةٌ بلا شاشةٍ تبقى مفتوحة**: من قرأ معرّفَ متجرٍ يوماً فتحها من
+// الطرفيّة — **والحجبُ الذي يتوقّف عند الشاشة ليس حجباً.**
+//
+// **ومن يحتاج القائمةَ يقرؤها من قسمِها**: `‎/public/sections/{id}/items`
+// **تُخرج الأصنافَ بلا مصدرِها** — وهي ما يتصفّحه الزبونُ أصلاً.
 
 // handlePublicZone معاينة رسوم التوصيل والحد الأدنى لنقطة على الخريطة.
 func (s *Server) handlePublicZone(w http.ResponseWriter, r *http.Request) {

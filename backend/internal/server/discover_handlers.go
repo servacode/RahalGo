@@ -86,9 +86,19 @@ func (s *Server) handlePublicSearch(w http.ResponseWriter, r *http.Request) {
 // **الصنفُ الذي رفعه المتجرُ من قائمته يسقط من الجدول نفسِه** (`ON DELETE
 // CASCADE`). **والذي أوقفه مؤقّتاً يبقى ويُقال عنه** — لأنّه يعود.
 func (s *Server) handleMyFavorites(w http.ResponseWriter, r *http.Request) {
+	// **ولا اسمَ متجرٍ ولا معرّفَه في الردّ.**
+	//
+	// **المتاجرُ مخفيّةٌ عن الزبون بالكامل**: المنصةُ سوقٌ يجلب منها، **وهو
+	// يشتري «من رحّال» لا «من مطعم فلان»**. (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
+	//
+	// **والحجبُ في الردّ لا في الشاشة**: حقلٌ يصل المتصفّحَ يُقرأ في أدوات
+	// المطوّر ويُستعمل يوماً، **وقاعدةٌ تُطبَّق في الشاشة ولا يفرضها المحرّك
+	// قاعدةٌ سقطت.** وهي عائلةُ الخلل التي تكرّرت في هذه المنصة.
+	//
+	// **والتصنيفُ يبقى**: أيقونتُه تصف السلعةَ (مطعمٌ · صيدليّةٌ · بقالة) **لا
+	// بائعَها بعينه** — وهي ما يملأ البطاقةَ حين لا صورة.
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT i.id, i.name, i.price, im.thumb_path,
-		       m.id, m.name, c.icon,
+		SELECT i.id, i.name, i.price, im.thumb_path, c.icon,
 		       -- **غيرُ متاحٍ الآن**: أوقفه المتجر، أو أُغلق طارئاً، أو
 		       -- **لم يُعتمد بعد** — وثلاثتُها «لا يُطلب اليوم».
 		       (NOT i.available OR NOT i.approved OR m.emergency_closed
@@ -111,8 +121,6 @@ func (s *Server) handleMyFavorites(w http.ResponseWriter, r *http.Request) {
 		Name          string  `json:"name"`
 		Price         int64   `json:"price"`
 		ImageThumbURL *string `json:"image_thumb_url"`
-		MerchantID    string  `json:"merchant_id"`
-		MerchantName  string  `json:"merchant_name"`
 		CategoryIcon  string  `json:"category_icon"`
 		Unavailable   bool    `json:"unavailable"`
 	}
@@ -120,7 +128,7 @@ func (s *Server) handleMyFavorites(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var f fav
 		if err := rows.Scan(&f.ID, &f.Name, &f.Price, &f.ImageThumbURL,
-			&f.MerchantID, &f.MerchantName, &f.CategoryIcon, &f.Unavailable); err != nil {
+			&f.CategoryIcon, &f.Unavailable); err != nil {
 			s.respondErr(w, err)
 			return
 		}
