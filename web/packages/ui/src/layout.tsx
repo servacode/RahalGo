@@ -92,7 +92,9 @@ export function Card({
        على الحرف. **والاستجابةُ عند المرور** تجعلها تُحسّ حيّةً: ترتفع قليلاً
        بظلٍّ أعمق. **وسطحٌ لا يردّ على يدٍ تمرّ عليه سطحٌ ميّت.** */
     <section
-      className={`surface-lit rounded-card border border-line bg-surface transition-shadow duration-200 hover:shadow-e3 ${pads[padding]} ${className}`}
+      /* **واستجابتُها استجابةُ بطاقة الصنف نفسِها** — رفعٌ وحدٌّ يتلوّن، لا
+         ظلٌّ يزيد وحدَه. **وشكلان للاستجابة في منصّةٍ واحدةٍ يُقرآن سهواً.** */
+      className={`surface-lit rounded-card border border-line bg-surface transition-[transform,box-shadow,border-color] duration-[--duration-base] ease-[--ease-out] hover:-translate-y-0.5 hover:border-primary/25 hover:elev-3 ${pads[padding]} ${className}`}
     >
       {(title || actions) && (
         <div className="mb-3 flex items-center justify-between gap-2">
