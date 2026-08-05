@@ -88,7 +88,7 @@ function ZoomControls() {
   const btn =
     "flex h-8 w-8 items-center justify-center bg-surface text-ink transition-colors hover:bg-page disabled:opacity-40";
   return (
-    <div className="absolute end-2 top-2 z-[1000] overflow-hidden rounded-control border border-line shadow-sm">
+    <div className="absolute end-2 top-2 z-[1000] overflow-hidden rounded-control border border-line elev-1">
       <button type="button" aria-label="+" className={`${btn} border-b border-line`} onClick={() => map.zoomIn()}>
         <IconAdd size={16} />
       </button>
@@ -153,7 +153,7 @@ export function PickMap({
         type="button"
         onClick={locateMe}
         disabled={locating}
-        className="mb-2 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-shell shadow-sm transition-colors hover:bg-accent-dark disabled:opacity-60"
+        className="mb-2 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-shell elev-1 transition-colors hover:bg-accent-dark disabled:opacity-60"
       >
         <IconLocateMe size={17} className={locating ? "animate-pulse" : ""} />
         {locating ? m.common.loading : m.common.locateMe}

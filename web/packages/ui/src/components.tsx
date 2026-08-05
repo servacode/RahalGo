@@ -463,7 +463,7 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface p-6 shadow-lg ${modalSizes[size]}`}
+        className={`max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface p-6 elev-3 ${modalSizes[size]}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* **العنوانُ وزرُّ الإغلاق في سطرٍ واحد.**

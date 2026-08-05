@@ -118,7 +118,7 @@ export default function MerchantClient({ merchant, menu }: { merchant: Merchant;
                      لا ابناً له.** */
                   <div
                     key={item.id}
-                    className="flex items-center gap-2 rounded-card border border-line bg-surface p-3 transition-shadow hover:shadow-md"
+                    className="flex items-center gap-2 rounded-card border border-line bg-surface p-3 transition-shadow hover:elev-2"
                   >
                   <button
                     type="button"

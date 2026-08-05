@@ -100,7 +100,7 @@ export function FloatingCart() {
 
         {count > 0 && (
           // العدّاد على العربة: يُقرأ قبل النصّ ويُفهم بلا قراءة
-          <span className="absolute -top-1 -end-1 flex h-7 min-w-7 items-center justify-center rounded-badge bg-danger px-1.5 text-sm font-bold text-on-solid shadow-sm">
+          <span className="absolute -top-1 -end-1 flex h-7 min-w-7 items-center justify-center rounded-badge bg-danger px-1.5 text-sm font-bold text-on-solid elev-1">
             {fmtNum(count)}
           </span>
         )}

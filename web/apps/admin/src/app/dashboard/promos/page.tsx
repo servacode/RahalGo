@@ -85,7 +85,7 @@ export default function PromosPage() {
               key={t}
               onClick={() => setTab(t)}
               className={`rounded-control px-4 py-1.5 text-sm transition-colors ${
-                tab === t ? "bg-surface font-medium text-primary-dark shadow-sm" : "text-ink-muted"
+                tab === t ? "bg-surface font-medium text-primary-dark elev-1" : "text-ink-muted"
               }`}
             >
               {t === "codes"

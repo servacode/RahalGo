@@ -91,7 +91,7 @@ export default function ItemCard({ item }: { item: BrowseItem }) {
       <button
         type="button"
         onClick={open}
-        className={`flex flex-col overflow-hidden rounded-card border border-line bg-surface text-start transition-shadow hover:shadow-md ${
+        className={`flex flex-col overflow-hidden rounded-card border border-line bg-surface text-start transition-shadow hover:elev-2 ${
           off ? "opacity-60" : ""
         }`}
       >

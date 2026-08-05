@@ -106,7 +106,7 @@ function DailyBars({
                 />
                 {/* تلميح التحويم */}
                 {hover === i && (
-                  <div className="pointer-events-none absolute bottom-full mb-1 whitespace-nowrap rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs shadow-md">
+                  <div className="pointer-events-none absolute bottom-full mb-1 whitespace-nowrap rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs elev-2">
                     <span className="font-bold">{format(v)}</span>
                     <span className="text-ink-muted"> · {d.day.slice(5)}</span>
                   </div>

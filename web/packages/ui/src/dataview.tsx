@@ -43,7 +43,7 @@ export function ViewToggle({
 }) {
   const base =
     "flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm transition-colors";
-  const active = "bg-surface font-medium text-primary-dark shadow-sm";
+  const active = "bg-surface font-medium text-primary-dark elev-1";
   const idle = "text-ink-muted hover:text-ink";
   return (
     <div
@@ -168,7 +168,7 @@ export function DataView<T>({
           <div
             key={getKey(item)}
             onClick={onRowClick ? () => onRowClick(item) : undefined}
-            className={`flex flex-col rounded-card border border-line bg-surface p-4 transition-shadow hover:shadow-md ${onRowClick ? "cursor-pointer" : ""}`}
+            className={`flex flex-col rounded-card border border-line bg-surface p-4 transition-shadow hover:elev-2 ${onRowClick ? "cursor-pointer" : ""}`}
           >
             <div className="mb-3 border-b border-line pb-3">
               {primaries.map((c, i) => (

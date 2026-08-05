@@ -202,7 +202,7 @@ export function LoginCard({
   );
 
   const submit = (label: string) => (
-    <Button type="submit" disabled={busy} className="w-full py-3 text-base shadow-sm">
+    <Button type="submit" disabled={busy} className="w-full py-3 text-base elev-1">
       {busy ? m.shared.loggingIn : label}
     </Button>
   );
@@ -487,7 +487,7 @@ export function LoginCard({
               <div role="group" className="relative mb-6 flex rounded-control bg-page p-1">
                 <span
                   aria-hidden
-                  className="absolute inset-y-1 rounded-[7px] bg-surface shadow-sm transition-[inset-inline-start] duration-200"
+                  className="absolute inset-y-1 rounded-[7px] bg-surface elev-1 transition-[inset-inline-start] duration-200"
                   style={{
                     insetInlineStart: mode === "password" ? "0.25rem" : "calc(50% + 0.125rem)",
                     width: "calc(50% - 0.375rem)",

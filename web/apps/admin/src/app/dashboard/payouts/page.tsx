@@ -173,7 +173,7 @@ export default function PayoutsPage() {
                   onClick={() => setStatus(f.id)}
                   className={`rounded-[7px] px-3 py-1.5 text-sm transition-colors ${
                     status === f.id
-                      ? "bg-surface font-medium text-primary-dark shadow-sm"
+                      ? "bg-surface font-medium text-primary-dark elev-1"
                       : "text-ink-muted hover:text-ink"
                   }`}
                 >

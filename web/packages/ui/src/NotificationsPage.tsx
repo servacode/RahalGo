@@ -151,7 +151,7 @@ export function NotificationsPage({
               onClick={() => setKind(f.id)}
               className={`flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm transition-colors ${
                 kind === f.id
-                  ? "bg-primary font-bold text-on-solid shadow-sm"
+                  ? "bg-primary font-bold text-on-solid elev-1"
                   : "text-ink-muted hover:bg-page hover:text-ink"
               }`}
             >

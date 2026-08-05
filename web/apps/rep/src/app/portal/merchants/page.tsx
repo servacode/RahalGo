@@ -510,7 +510,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
             />
             {/* المرشّحات تطفو فوق الخريطة بدل أن تدفعها للأسفل */}
             {suggestions.length > 0 && (
-              <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-control border border-line bg-surface shadow-lg">
+              <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-control border border-line bg-surface elev-3">
                 {suggestions.map((p, i) => (
                   <li key={i} className="border-b border-line last:border-0">
                     <button

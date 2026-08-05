@@ -334,7 +334,7 @@ function OrderCard({
   return (
     <div
       className={`rounded-control border bg-surface p-3 ${
-        highlight ? "border-danger/40 shadow-sm" : "border-line"
+        highlight ? "border-danger/40 elev-1" : "border-line"
       }`}
     >
       <button

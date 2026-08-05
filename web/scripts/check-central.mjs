@@ -194,6 +194,37 @@ for (const file of files) {
   }
 }
 
+// ١٠ · **مُحوِّرٌ على صنفٍ لا تعرفه تيلويند.**
+//
+// `hover:elev-2` كُتبت في تسعة مواضعَ **ولم تفعل شيئاً**: `.elev-2` كان صنفاً
+// عاديّاً في `theme.css`، **وتيلويند لا تولّد مُحوِّراً لما لا تملكه.**
+//
+// **وهو الخطأُ الصامتُ نفسُه**: يُقرأ سليماً ويُرسم لا شيء — ولا بناءَ يصرخ.
+//
+// **والعلاجُ `@utility`** — فتسجّله عندها ويقبل المُحوِّرات.
+{
+  const css = readFileSync(join(ROOT, "packages/ui/src/theme.css"), "utf8");
+  // ما سُجّل بـ `@utility` يقبل المُحوِّرات، وما كُتب `.صنف {` لا يقبلها.
+  const asUtility = new Set([...css.matchAll(/@utility\s+([a-z][a-z0-9-]*)/g)].map((x) => x[1]));
+  const asPlain = new Set(
+    [...css.matchAll(/^\.([a-z][a-z0-9-]*)\s*\{/gm)].map((x) => x[1]).filter((c) => !asUtility.has(c)),
+  );
+  if (asPlain.size) {
+    const re = new RegExp(`\\b[a-z-]+:(${[...asPlain].join("|")})\\b`, "g");
+    for (const file of files.filter((f) => f.endsWith(".tsx"))) {
+      const src = stripComments(readFileSync(join(ROOT, file), "utf8"));
+      src.split("\n").forEach((line, i) => {
+        re.lastIndex = 0;
+        let mm;
+        while ((mm = re.exec(line))) {
+          report(file, i + 1, "مُحوِّرٌ على صنفٍ لا يقبله", mm[0],
+            `اجعله @utility في theme.css — الصنفُ العاديُّ لا تولّد له تيلويند مُحوِّراً`);
+        }
+      });
+    }
+  }
+}
+
 // ٨ · **ولا لوحةَ ألوانٍ ثانيةٍ تعود.**
 //
 // كانت في `tokens.ts` لوحةٌ كاملةٌ ومثلُها في `theme.css`، وتعليقُها يقول

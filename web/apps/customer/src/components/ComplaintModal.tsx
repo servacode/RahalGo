@@ -76,7 +76,7 @@ export default function ComplaintModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-card border border-line bg-surface p-5 shadow-xl"
+        className="w-full max-w-sm rounded-card border border-line bg-surface p-5 elev-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-1 text-lg font-bold">{C.title}</h2>

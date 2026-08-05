@@ -186,7 +186,7 @@ export function DashboardChrome({
         <div className="fixed inset-0 z-40 bg-ink/40 lg:hidden" onClick={() => setMenuOpen(false)} />
       )}
       <aside
-        className={`fixed inset-y-0 start-0 z-50 flex w-64 flex-col bg-surface shadow-xl transition-transform duration-200 lg:hidden ${
+        className={`fixed inset-y-0 start-0 z-50 flex w-64 flex-col bg-surface elev-4 transition-transform duration-200 lg:hidden ${
           menuOpen ? "translate-x-0" : "translate-x-full rtl:translate-x-full ltr:-translate-x-full"
         }`}
       >

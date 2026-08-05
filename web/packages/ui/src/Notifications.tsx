@@ -322,7 +322,7 @@ export function NotificationToast({
 
   if (!notification) return null;
   return (
-    <div className="fixed bottom-4 end-4 z-[100] w-80 max-w-[90vw] rounded-card border border-line bg-surface p-4 shadow-lg">
+    <div className="fixed bottom-4 end-4 z-[100] w-80 max-w-[90vw] rounded-card border border-line bg-surface p-4 elev-3">
       <div className="flex items-start gap-2">
         <IconBell size={18} className="mt-0.5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">

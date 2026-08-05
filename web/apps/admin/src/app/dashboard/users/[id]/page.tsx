@@ -444,7 +444,7 @@ export default function UserProfilePage() {
             key={s.label}
             onClick={s.onClick}
             className={`rounded-card border border-line bg-surface p-3 ${
-              s.onClick ? "cursor-pointer transition-shadow hover:border-primary/40 hover:shadow-sm" : ""
+              s.onClick ? "cursor-pointer transition-shadow hover:border-primary/40 hover:elev-1" : ""
             }`}
           >
             <div className="mb-1">{s.icon}</div>

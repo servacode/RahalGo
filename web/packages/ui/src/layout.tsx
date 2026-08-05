@@ -91,7 +91,7 @@ export function Card({
        على الحرف. **والاستجابةُ عند المرور** تجعلها تُحسّ حيّةً: ترتفع قليلاً
        بظلٍّ أعمق. **وسطحٌ لا يردّ على يدٍ تمرّ عليه سطحٌ ميّت.** */
     <section
-      className={`surface-lit rounded-card border border-line bg-surface transition-shadow duration-200 hover:shadow-lift ${pads[padding]} ${className}`}
+      className={`surface-lit rounded-card border border-line bg-surface transition-shadow duration-200 hover:shadow-e3 ${pads[padding]} ${className}`}
     >
       {(title || actions) && (
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -159,7 +159,7 @@ export function ListRow({
     <li
       onClick={onClick}
       className={`flex items-center gap-3 rounded-card border border-line bg-surface p-3 ${
-        onClick ? "cursor-pointer transition-shadow hover:border-primary/40 hover:shadow-sm" : ""
+        onClick ? "cursor-pointer transition-shadow hover:border-primary/40 hover:elev-1" : ""
       } ${className}`}
     >
       {leading}
@@ -434,7 +434,7 @@ export function EntityCard({
   };
   return (
     <div
-      className={`flex flex-col rounded-card border bg-surface p-4 transition-shadow hover:shadow-md ${
+      className={`flex flex-col rounded-card border bg-surface p-4 transition-shadow hover:elev-2 ${
         spine ? `border-s-4 ${SPINE[spine]} ` : ""
       }${
         muted ? "border-dashed border-line opacity-75" : "border-line"
