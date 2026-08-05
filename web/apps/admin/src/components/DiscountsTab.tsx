@@ -87,6 +87,8 @@ export default function DiscountsTab() {
         `/api/v1/public/search/items?q=${encodeURIComponent(itemQuery.trim())}`,
       )
         .then((r) => setItems(r.items ?? []))
+        // @empty-ok — **بحثٌ يُعاد بحرفٍ واحد**: من كتب فلم يجد يُضيف حرفاً
+        // فيُعاد النداء، **ولا قرارَ يُبنى على فراغه.**
         .catch(() => setItems([]));
     }, 250);
     return () => clearTimeout(t);

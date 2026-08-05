@@ -19,6 +19,8 @@ export interface Store {
 
 interface StoreState {
   stores: Store[];
+  /** تعذّرت قراءةُ المتاجر — **غيرُ «لا متاجرَ له».** */
+  failed: boolean;
   store: Store | null;
   loading: boolean;
   /**
@@ -41,6 +43,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [stores, setStores] = useState<Store[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  /**
+   * **وفشلُ القراءة ليس «لا متاجرَ لك».**
+   *
+   * كان `.catch(() => setStores([]))` — **فتصير اللوحةُ كلُّها فارغة**:
+   * لا طلباتٍ ولا قائمةٍ ولا محفظة، **ويظنّ صاحبُ المطعم أنّ متجرَه حُذف.**
+   * وهو يقف خلف الكاشير وطلباتُه تنتظر.
+   */
+  const [failed, setFailed] = useState(false);
   const [selfManage, setSelfManage] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -58,7 +68,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refresh()
-      .catch(() => setStores([]))
+      .catch(() => setFailed(true))
       .finally(() => setLoading(false));
   }, [refresh]);
 
@@ -70,7 +80,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const store = stores.find((s) => s.id === selected) ?? null;
 
   return (
-    <StoreContext.Provider value={{ stores, store, loading, selfManage, select, refresh }}>
+    <StoreContext.Provider value={{ stores, store, loading, failed, selfManage, select, refresh }}>
       {children}
     </StoreContext.Provider>
   );

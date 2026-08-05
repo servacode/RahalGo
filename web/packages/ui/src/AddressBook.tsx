@@ -54,10 +54,20 @@ export function AddressBook({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  /**
+   * **وفشلُ القراءة لا يُعرض «لا عناوينَ محفوظة».**
+   *
+   * كان `.catch(() => setList([]))` — **فيرسم الزبونُ دبّوسَه من جديد** وهو
+   * قد حفظ بيتَه من قبل، **ثمّ يجد عنوانين لبيتٍ واحد.**
+   */
   const load = useCallback(() => {
+    setError("");
     api<SavedAddress[]>("/api/v1/my/addresses")
       .then(setList)
-      .catch(() => setList([]));
+      .catch(() => {
+        setList([]);
+        setError(m.errors.offline);
+      });
   }, [api]);
 
   useEffect(load, [load]);

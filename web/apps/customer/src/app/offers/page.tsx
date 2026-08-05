@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
+  Alert,
   EmptyState,
   LoadingState,
   BannerSlider,
@@ -52,21 +53,36 @@ interface Offer {
 
 export default function OffersPage() {
   const [rows, setRows] = useState<Offer[] | null>(null);
+  /** **وفشلُ الجلب لا يُعرض «لا عروض»** — والزبونُ يقرؤها منصّةً بلا عروضٍ
+   *  فلا يعود يفتح الصفحة. **واللافتاتُ استثناء**: زينةٌ تُخفى بلا ضرر. */
+  const [failed, setFailed] = useState(false);
   const [banners, setBanners] = useState<Banner[]>([]);
 
   useEffect(() => {
     api<{ offers: Offer[] }>("/api/v1/public/offers")
       .then((r) => setRows(r.offers ?? []))
-      .catch(() => setRows([]));
+      .catch(() => setFailed(true));
     // **واللافتاتُ من مصدر الرئيسية نفسِه.**
     //
     // كانت تُطلب من `/banners` — **وهو طريقُ الإدارة**، يردّ للزبون «غيرُ
     // موجود» **فيبقى السلايدرُ فارغاً أبداً** ولا خطأ يُقال.
     api<{ banners: Banner[] }>("/api/v1/public/home")
       .then((r) => setBanners(r.banners ?? []))
+      // @empty-ok — **اللافتةُ زينةٌ تُخفى بلا ضرر**: الخصومُ هي المحتوى،
+      // وسلايدرٌ غائبٌ لا يُقرأ نقصاً.
       .catch(() => setBanners([]));
   }, []);
 
+  if (failed) {
+    return (
+      <PageContainer>
+        <PageHeader icon={IconPromos} title={C.title} subtitle={C.subtitle} />
+        <Alert tone="warning" title={m.errors.offline}>
+          {m.errors.offlineHint}
+        </Alert>
+      </PageContainer>
+    );
+  }
   if (rows === null) return <LoadingState />;
 
   const discounts = rows;

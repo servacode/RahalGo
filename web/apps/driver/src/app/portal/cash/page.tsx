@@ -16,6 +16,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Alert,
+  Button,
   PageContainer,
   PageHeader,
   LoadingState,
@@ -45,18 +47,50 @@ interface Me {
 export default function DriverCashPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [rows, setRows] = useState<Entry[] | null>(null);
+  const [failed, setFailed] = useState(false);
 
+  /**
+   * **وفشلُ الجلب لا يُعرض صفراً.**
+   *
+   * كان `.catch(() => setRows([]))` — **فتقول الشاشةُ «لا حركات»** حين تنقطع
+   * الشبكة. **وهذه شاشةُ المال الذي في جيبه**: سائقٌ يحمل مئتَي ألفٍ يرى
+   * صندوقاً فارغاً، **فيظنّ أنّ المالية سوّت ما عليه** — ويسلّم أقلَّ ممّا
+   * يجب، أو يطالب بما سُوّي.
+   *
+   * **وهي عائلةُ «لم أصل غير لا شيء» نفسُها** التي أُصلحت في صفحات الجلب من
+   * الخادم — **وهذه أخطرُ مواضعها لأنّها مال.**
+   */
   const load = useCallback(() => {
-    api<Me>("/api/v1/driver/me").then(setMe).catch(() => undefined);
-    api<Entry[] | { entries: Entry[] }>("/api/v1/driver/cash")
-      .then((r) => setRows(Array.isArray(r) ? r : (r.entries ?? [])))
-      .catch(() => setRows([]));
+    setFailed(false);
+    Promise.all([
+      api<Me>("/api/v1/driver/me"),
+      api<Entry[] | { entries: Entry[] }>("/api/v1/driver/cash"),
+    ])
+      .then(([m2, r]) => {
+        setMe(m2);
+        setRows(Array.isArray(r) ? r : (r.entries ?? []));
+      })
+      .catch(() => setFailed(true));
   }, []);
 
   useEffect(load, [load]);
   // **وتسويةُ المالية تصل بلا تحديثِ صفحة** — من سلّم صندوقَه يريد أن يراه صفراً.
   useLiveRefresh(["wallet", "order"], load);
 
+  // **والخطأُ يُقال ويُعاد المحاولة** — لا يُترك على صمت.
+  if (failed) {
+    return (
+      <PageContainer>
+        <PageHeader icon={IconBalance} title={C.title} />
+        <Alert tone="warning" title={m.errors.offline}>
+          {m.errors.offlineHint}
+        </Alert>
+        <Button variant="secondary" onClick={load}>
+          {m.common.retry}
+        </Button>
+      </PageContainer>
+    );
+  }
   if (!rows || !me) return <LoadingState />;
 
   const ratio = me.cash_limit > 0 ? me.cash_held / me.cash_limit : 0;

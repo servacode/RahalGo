@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtDateTime, fmtNum } from "@rahalgo/i18n";
 import {
+  Alert,
   PageHeader, TabCards, EmptyState, Badge,
   IconStatus, IconUser,
 } from "@rahalgo/ui";
@@ -77,10 +78,21 @@ export default function AuditPage() {
   const [prefix, setPrefix] = useState<string>("");
   const [list, setList] = useState<Entry[] | null>(null);
 
+  const [failed, setFailed] = useState(false);
+  /**
+   * **وسجلٌّ فارغٌ على خطأٍ شهادةُ زور.**
+   *
+   * كان `.catch(() => setList([]))` — **فيقرأ المدقّقُ «لا أحداث»** حين تفشل
+   * القراءة، **ويستنتج أنّ شيئاً لم يقع.** وهذه شاشةٌ تُفتح للتحقّق من
+   * واقعةٍ بعينها: **من بحث عن تعويضٍ صُرف ولم يجده يظنّ أنّه لم يُصرف.**
+   *
+   * **والسجلُّ الذي لا يُقرأ خيرٌ من سجلٍّ يكذب.**
+   */
   const load = useCallback(() => {
+    setFailed(false);
     api<Entry[]>(`/api/v1/admin/audit?limit=200${prefix ? `&prefix=${prefix}` : ""}`)
       .then(setList)
-      .catch(() => setList([]));
+      .catch(() => setFailed(true));
   }, [prefix]);
 
   useEffect(load, [load]);
@@ -88,6 +100,11 @@ export default function AuditPage() {
   return (
     <div>
       <PageHeader icon={IconStatus} title={A.title} />
+      {failed && (
+        <Alert tone="warning" title={m.errors.offline} className="mb-3">
+          {m.errors.offlineHint}
+        </Alert>
+      )}
       <p className="mb-4 text-sm text-ink-muted">{A.hint}</p>
 
       <TabCards

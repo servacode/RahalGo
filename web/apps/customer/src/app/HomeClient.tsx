@@ -88,6 +88,8 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
       )
         .then((r) => r.json())
         .then((j) => setHits(j.data?.items ?? []))
+        // @empty-ok — **البحثُ يُعاد بحرفٍ واحد**: من كتب فلم يجد يُضيف حرفاً
+        // فيُعاد النداء، **والأقسامُ تحته لم تُمسّ.**
         .catch(() => setHits([]));
     }, 300);
     return () => clearTimeout(t);

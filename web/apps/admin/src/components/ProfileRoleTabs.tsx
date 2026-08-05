@@ -28,6 +28,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Alert,
+  LoadingState,
   Badge,
   Button,
   FormSection,
@@ -193,15 +195,17 @@ function OrderList({
 
 /** **عناوينُه** — قراءةً لا كتابة: عنوانُ بيتِ إنسانٍ يكتبه هو. */
 export function AddressesTab({ userID }: { userID: string }) {
-  const [rows, setRows] = useState<AddressRow[] | null>(null);
+  const [rows, setRows] = useState<AddressRow[] | null | "failed">(null);
 
   useEffect(() => {
     api<AddressRow[]>(`/api/v1/admin/users/${userID}/addresses`)
       .then(setRows)
-      .catch(() => setRows([]));
+      .catch(() => setRows("failed"));
   }, [userID]);
 
-  if (!rows) return <p className="py-8 text-center text-ink-muted">{m.common.loading}</p>;
+  // **والفشلُ يُقال** — كان يُعرض «لا شيء» فيُقرأ حكماً على المستخدم.
+  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (!rows) return <LoadingState variant="text" />;
 
   return (
     <FormSection title={R.addresses} icon={<IconLocation />}>
@@ -248,7 +252,7 @@ export function CashboxTab({
   onSettled: () => void;
 }) {
   const [held, setHeld] = useState(0);
-  const [rows, setRows] = useState<CashEntry[] | null>(null);
+  const [rows, setRows] = useState<CashEntry[] | null | "failed">(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -257,7 +261,7 @@ export function CashboxTab({
         setHeld(r.held ?? 0);
         setRows(r.entries ?? []);
       })
-      .catch(() => setRows([]));
+      .catch(() => setRows("failed"));
   }, [userID]);
 
   useEffect(load, [load]);
@@ -276,7 +280,9 @@ export function CashboxTab({
     }
   }
 
-  if (!rows) return <p className="py-8 text-center text-ink-muted">{m.common.loading}</p>;
+  // **والفشلُ يُقال** — كان يُعرض «لا شيء» فيُقرأ حكماً على المستخدم.
+  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (!rows) return <LoadingState variant="text" />;
 
   return (
     <FormSection title={R.cashbox} icon={<IconBalance />}>
@@ -336,17 +342,19 @@ export function CashboxTab({
  */
 export function StoresTab({ userID, roles }: { userID: string; roles: string[] }) {
   const router = useRouter();
-  const [rows, setRows] = useState<StoreRow[] | null>(null);
+  const [rows, setRows] = useState<StoreRow[] | null | "failed">(null);
   const isRep = roles.includes("sales");
 
   useEffect(() => {
     const q = isRep ? `rep_id=${userID}` : `query=`;
     api<{ merchants: StoreRow[] }>(`/api/v1/admin/merchants?${q}&per_page=100`)
       .then((r) => setRows(r.merchants ?? []))
-      .catch(() => setRows([]));
+      .catch(() => setRows("failed"));
   }, [userID, isRep]);
 
-  if (!rows) return <p className="py-8 text-center text-ink-muted">{m.common.loading}</p>;
+  // **والفشلُ يُقال** — كان يُعرض «لا شيء» فيُقرأ حكماً على المستخدم.
+  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (!rows) return <LoadingState variant="text" />;
 
   return (
     <FormSection title={isRep ? R.storesBrought : R.storesOwned} icon={<IconStore />}>

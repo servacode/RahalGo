@@ -234,10 +234,22 @@ export default function MyOrdersPage() {
       .catch(() => undefined);
   }, []);
 
+  /**
+   * **وفشلُ الجلب لا يُعرض «لا طلبات».**
+   *
+   * كان `.catch(() => setOrders([]))` — **فيرى الزبونُ «لا طلباتِ لك»** حين
+   * تنقطع الشبكة، **وله طلبٌ في الطريق الآن.** فيظنّ أنّه ضاع أو أنّ المنصةَ
+   * ألغته، **ويتّصل بالمكتب أو يطلب من جديد.**
+   *
+   * **وهي العائلةُ نفسُها** التي أُصلحت في صفحات الخادم — وهذه في أكثر ما
+   * يُفتح قلقاً.
+   */
+  const [failed, setFailed] = useState(false);
   const load = useCallback(() => {
+    setFailed(false);
     api<{ orders: Order[] }>("/api/v1/my/orders?per_page=50")
       .then((d) => setOrders(d.orders))
-      .catch(() => setOrders([]));
+      .catch(() => setFailed(true));
     loadRatings();
   }, [loadRatings]);
 
@@ -252,6 +264,19 @@ export default function MyOrdersPage() {
 
   useLiveRefresh(["order", "rating"], load);
 
+  if (failed) {
+    return (
+      <PageContainer>
+        <PageHeader icon={IconOrder} title={m.terms.orders} />
+        <Alert tone="warning" title={m.errors.offline}>
+          {m.errors.offlineHint}
+        </Alert>
+        <Button variant="secondary" onClick={load}>
+          {m.common.retry}
+        </Button>
+      </PageContainer>
+    );
+  }
   if (!orders) return <LoadingState />;
 
   return (
