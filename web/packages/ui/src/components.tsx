@@ -482,7 +482,7 @@ export function Modal({
             onClick={onClose}
             aria-label={m.common.close}
             title={m.common.close}
-            className="-me-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-page hover:text-ink"
+            className="taparea -me-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-page hover:text-ink"
           >
             <IconClose size={18} />
           </button>

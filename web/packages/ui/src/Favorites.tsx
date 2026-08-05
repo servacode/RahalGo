@@ -153,7 +153,9 @@ export function FavoriteButton({
         if (onRequireLogin) onRequireLogin();
         else onToggle(itemID);
       }}
-      className={`inline-flex shrink-0 items-center justify-center rounded-control border transition-colors ${box} ${
+      /* **ومساحةُ اللمس تتّسع ولا يكبر الرسم** — قلبٌ بأربعةٍ وأربعين في
+         بطاقةٍ صغيرةٍ يزاحم اسمَ الصنف. (انظر `taparea` في الثيم.) */
+      className={`taparea inline-flex shrink-0 items-center justify-center rounded-control border transition-colors ${box} ${
         on
           ? "border-danger/30 bg-danger/10 text-danger"
           : "border-line text-ink-muted hover:border-danger/40 hover:text-danger"

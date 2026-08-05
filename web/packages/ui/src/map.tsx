@@ -86,7 +86,7 @@ function FlyTo({ lat, lng, zoom }: { lat: number | null; lng: number | null; zoo
 function ZoomControls() {
   const map = useMap();
   const btn =
-    "flex h-8 w-8 items-center justify-center bg-surface text-ink transition-colors hover:bg-page disabled:opacity-40";
+    "taparea flex h-8 w-8 items-center justify-center bg-surface text-ink transition-colors hover:bg-page disabled:opacity-40";
   return (
     <div className="absolute end-2 top-2 z-[1000] overflow-hidden rounded-control border border-line elev-1">
       <button type="button" aria-label="+" className={`${btn} border-b border-line`} onClick={() => map.zoomIn()}>
