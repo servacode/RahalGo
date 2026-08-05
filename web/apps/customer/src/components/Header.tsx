@@ -82,33 +82,32 @@ export default function Header() {
     }
   }
 
+  /**
+   * **العلامةُ ومعها بابُ التسوّق.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «التسوّق يجب أن يكون بجانب لوغو المنصة».)
+   *
+   * # ولماذا هنا لا في جهة الأدوات
+   *
+   * كان في صفّ الأدوات يساراً مع الإشعارات والمحفظة والخروج — **وتلك أدواتُ
+   * حسابٍ يفتحها من يعرف ما يريد.** والتسوّقُ **تنقّلٌ لا أداة**: هو الطريقُ
+   * الذي يمشي فيه الزائرُ أوّلَ مرّة.
+   *
+   * **والعينُ تبدأ من العلامة** — في صفحةٍ عربيّةٍ تقع في أقصى اليمين، فأوّلُ
+   * ما بعدها أوّلُ ما يُقرأ. **وطرفُ الشريط الآخرُ آخرُ ما يُنظر إليه.**
+   *
+   * **ويُرى قبل الدخول وبعده**: بقيّةُ الروابط داخل فرع الداخلين، **والتسوّقُ
+   * سببُ وجود الموقع** — ومن لم يدخل بعد هو أحوجُ الناس إليه.
+   */
   const brand = (
-    <Link href="/" className="flex items-center gap-2">
-      <span className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-on-solid">
-        {m.terms.brandInitial}
-      </span>
-      <span className="hidden font-bold sm:inline">{m.common.appName}</span>
-    </Link>
-  );
+    <>
+      <Link href="/" className="flex items-center gap-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-on-solid">
+          {m.terms.brandInitial}
+        </span>
+        <span className="hidden font-bold sm:inline">{m.common.appName}</span>
+      </Link>
 
-  return (
-    <TopBar start={brand} sticky>
-      {/* ══════════════════════════════════════════════════════════════════
-          **التسوّقُ قبل التفرّع — يراه الزائرُ والداخلُ معاً**
-          ══════════════════════════════════════════════════════════════════
-
-          **بقيّةُ الروابط داخل فرع `logged`** — وهي شؤونُ حسابٍ لا معنى لها
-          لمن لم يدخل (طلباتي · مفضّلتي · ادعُ صديقاً). **والتسوّقُ ليس منها**:
-          هو **سببُ وجود الموقع**، ومن لم يدخل بعد هو أحوجُ الناس إليه.
-
-          **ولو وُضع في فرع الداخلين** لَرأى الزائرُ شريطاً فيه «تسجيل الدخول»
-          وحدَه — **ولا شيءَ يقول له ماذا نبيع.** (شهده المالك ٢٠٢٦-٠٨-٠٦:
-          «لم تظهر أيُّ أيقونةٍ بالصفحة تدلّ على صفحة التسوّق؟»)
-
-          **والاسمُ يظهر مع الأيقونة على الشاشات المتّسعة**: أيقونةٌ وحدَها
-          تُخمَّن، **والتسوّقُ أهمُّ من أن يُترك للتخمين.** وعلى الجوّال تبقى
-          الأيقونةُ وحدَها — والشريطُ هناك يحمل ثمانيةَ عناصر.
-          ══════════════════════════════════════════════════════════════════ */}
       <TopBarLink
         Link={Link}
         href="/shop"
@@ -119,7 +118,11 @@ export default function Header() {
         <IconStore size={TOPBAR_ICON} />
         <span className="hidden sm:inline">{N.shop}</span>
       </TopBarLink>
+    </>
+  );
 
+  return (
+    <TopBar start={brand} sticky>
       {logged ? (
         <TopBarActions
           Link={Link}
