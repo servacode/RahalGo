@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
+  Tabs,
   Alert,
   PageHeader,
   Button,
@@ -80,23 +81,17 @@ export default function PromosPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <PageHeader icon={IconPromos} title={m.admin.promos.title} />
-        <div role="group" className="flex rounded-control border border-line bg-page p-1">
-          {(["codes", "banners", "discounts"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-control px-4 py-1.5 text-sm transition-colors ${
-                tab === t ? "bg-surface font-medium text-primary-dark elev-1" : "text-ink-muted"
-              }`}
-            >
-              {t === "codes"
-                ? m.admin.promos.tabCodes
-                : t === "banners"
-                  ? m.admin.promos.tabBanners
-                  : m.admin.promos.tabDiscounts}
-            </button>
-          ))}
-        </div>
+        {/* **وكانت حبّاتٍ ممتلئةً في صندوق** — والتبويبُ ليس فعلاً بل
+            موضعٌ أنت فيه، **والصندوقُ الممتلئُ يُقرأ زرّاً.** */}
+        <Tabs
+          items={[
+            { key: "codes" as const, label: m.admin.promos.tabCodes },
+            { key: "banners" as const, label: m.admin.promos.tabBanners },
+            { key: "discounts" as const, label: m.admin.promos.tabDiscounts },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
       </div>
       {/* **ثلاثةُ تبويباتٍ في صفحةٍ واحدة.**
 

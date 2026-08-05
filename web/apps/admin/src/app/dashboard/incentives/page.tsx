@@ -20,6 +20,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
+  Tabs,
+  type TabDef,
   Alert,
   PageContainer,
   PageHeader,
@@ -107,32 +109,16 @@ export default function IncentivesPage() {
     }
   }
 
-  const TABS: { key: Role; label: string; icon: React.ReactNode }[] = [
-    { key: "driver", label: P.tabDrivers, icon: <IconDriver size={15} /> },
-    { key: "sales", label: P.tabSales, icon: <IconUser size={15} /> },
+  const TABS: TabDef<Role>[] = [
+    { key: "driver", label: P.tabDrivers, icon: IconDriver },
+    { key: "sales", label: P.tabSales, icon: IconUser },
   ];
 
   return (
     <PageContainer>
       <PageHeader icon={IconStar} title={P.title} subtitle={P.subtitle} />
 
-      <div className="flex gap-1 border-b border-line">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setRole(t.key)}
-            className={`flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm transition-colors ${
-              role === t.key
-                ? "border-primary font-bold text-primary-dark"
-                : "border-transparent text-ink-muted hover:text-ink"
-            }`}
-          >
-            {t.icon}
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs items={TABS} value={role} onChange={setRole} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
       {notice && (

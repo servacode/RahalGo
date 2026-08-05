@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
+  Tabs,
   Alert,
   PageHeader, Button, Input, Select, Checkbox, Badge, Card, EmptyState,
   IconSettings, IconWarning, IconCheck,
@@ -175,7 +176,7 @@ export default function SettingsPage() {
   //
   // كان `groups[0]` — **والمجموعاتُ فارغةٌ اليوم**، فيبقى `active` فراغاً
   // ولا يُفتح شيء: **شريطُ تبويباتٍ وتحته بياض.**
-  const active = tab || groups[0]?.g || extraKeys[0];
+  const active = tab || groups[0]?.g || extraKeys[0] || "";
   const activeGroup = groups.find((x) => x.g === active);
 
   return (
@@ -187,24 +188,15 @@ export default function SettingsPage() {
         <Alert className="mb-4">{error}</Alert>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-1 border-b border-line">
-        {[
+      <Tabs
+        className="mb-4"
+        items={[
           ...groups.map((x) => ({ key: x.g, label: (S.groups as Record<string, string>)[x.g] ?? x.g })),
           ...extra,
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`border-b-2 px-3.5 py-2 text-sm transition-colors ${
-              active === t.key
-                ? "border-primary font-bold text-primary-dark"
-                : "border-transparent text-ink-muted hover:text-ink"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+        ]}
+        value={active}
+        onChange={setTab}
+      />
 
       {activeGroup &&
         (activeGroup.items.length === 0 ? (

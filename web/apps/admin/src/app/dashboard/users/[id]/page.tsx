@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Tabs,
   Alert,
   Badge,
   Button,
@@ -380,54 +381,45 @@ export default function UserProfilePage() {
           **وتبويباتُ الدور تظهر لمن يملكه وحدَه.** «صندوق نقده» في ملفّ زبونٍ
           سطرٌ فارغٌ يُسأل عنه، **و«متاجرُ جلبها» في ملفّ سائقٍ كذلك.** فالملفُّ
           يعرض ما يخصّ صاحبَه لا ما يخصّ النظام. */}
-      <div className="mb-3 flex flex-wrap gap-1 border-b border-line">
-        {(
-          [
-            { key: "overview", label: P.tabs.overview, icon: <IconUser size={15} />, show: true },
+      {/* **والفلترةُ بالأدوار تبقى** — من ليس متجراً لا يرى تبويبَ متاجره. */}
+      <Tabs
+        className="mb-3"
+        items={([
+            { key: "overview", label: P.tabs.overview, icon: IconUser, show: true },
             {
               key: "orders",
               label: P.roleTabs.orders,
-              icon: <IconOrder size={15} />,
+              icon: IconOrder,
               show: has("customer") || has("driver"),
             },
             {
               key: "addresses",
               label: P.roleTabs.addresses,
-              icon: <IconLocation size={15} />,
+              icon: IconLocation,
               show: has("customer"),
             },
             {
               key: "cashbox",
               label: P.roleTabs.cashbox,
-              icon: <IconBalance size={15} />,
+              icon: IconBalance,
               show: has("driver"),
             },
             {
               key: "stores",
               label: P.roleTabs.stores,
-              icon: <IconStore size={15} />,
+              icon: IconStore,
               show: has("merchant") || has("sales"),
             },
-            { key: "wallet", label: P.tabs.wallet, icon: <IconWallet size={15} />, show: true },
-            { key: "financials", label: P.tabs.financials, icon: <IconBalance size={15} />, show: true },
-            { key: "feedback", label: P.tabs.feedback, icon: <IconStar size={15} />, show: true },
-            { key: "activity", label: P.tabs.activity, icon: <IconStatus size={15} />, show: true },
-          ] as const
-        ).filter((t) => t.show).map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm transition-colors ${
-              tab === t.key
-                ? "border-primary font-bold text-primary-dark"
-                : "border-transparent text-ink-muted hover:text-ink"
-            }`}
-          >
-            {t.icon}
-            {t.label}
-          </button>
-        ))}
-      </div>
+            { key: "wallet", label: P.tabs.wallet, icon: IconWallet, show: true },
+            { key: "financials", label: P.tabs.financials, icon: IconBalance, show: true },
+            { key: "feedback", label: P.tabs.feedback, icon: IconStar, show: true },
+            { key: "activity", label: P.tabs.activity, icon: IconStatus, show: true },
+          ] as const)
+          .filter((t) => t.show)
+          .map(({ key, label, icon }) => ({ key, label, icon }))}
+        value={tab}
+        onChange={(k) => setTab(k as typeof tab)}
+      />
 
       {tab === "orders" && <OrdersTab userID={id} roles={p.roles} />}
       {tab === "addresses" && <AddressesTab userID={id} />}

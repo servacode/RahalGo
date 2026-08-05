@@ -36,7 +36,9 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconUsers, IconUser, IconStore, IconDriver, IconLink } from "@rahalgo/ui";
+import {
+  Tabs,
+  type TabDef, IconUsers, IconUser, IconStore, IconDriver, IconLink } from "@rahalgo/ui";
 import AllAccountsTable from "@/components/accounts/all";
 import CustomersTable from "@/components/accounts/customers";
 import DriversTable from "@/components/accounts/drivers";
@@ -48,12 +50,14 @@ const T = m.admin.users.groupTabs;
 
 type Tab = "all" | "customers" | "merchants" | "drivers" | "reps";
 
-const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
-  { key: "all", label: T.all, icon: <IconUsers size={15} /> },
-  { key: "customers", label: T.customers, icon: <IconUser size={15} /> },
-  { key: "merchants", label: T.merchants, icon: <IconStore size={15} /> },
-  { key: "drivers", label: T.drivers, icon: <IconDriver size={15} /> },
-  { key: "reps", label: T.reps, icon: <IconLink size={15} /> },
+// **والأيقونةُ نوعٌ لا عنصرٌ مُنشأ** — فيقرّر `Tabs` مقاسَها، **ومقاسٌ
+// يُكتب في كلّ بندٍ يفترق يوماً.**
+const TABS: TabDef<Tab>[] = [
+  { key: "all", label: T.all, icon: IconUsers },
+  { key: "customers", label: T.customers, icon: IconUser },
+  { key: "merchants", label: T.merchants, icon: IconStore },
+  { key: "drivers", label: T.drivers, icon: IconDriver },
+  { key: "reps", label: T.reps, icon: IconLink },
 ];
 
 export default function AccountsPage() {
@@ -61,22 +65,7 @@ export default function AccountsPage() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap gap-1 border-b border-line">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm transition-colors ${
-              tab === t.key
-                ? "border-primary font-bold text-primary-dark"
-                : "border-transparent text-ink-muted hover:text-ink"
-            }`}
-          >
-            {t.icon}
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs items={TABS} value={tab} onChange={setTab} className="mb-4" />
 
       {/* **ولا يُحمَّل تبويبٌ لم يُفتح** — خمسةُ جداولَ تُنادى معاً حملٌ بلا حاجة،
           **ومن يريد قائمةَ الزبائن لا ينتظر قائمةَ المتاجر.** */}

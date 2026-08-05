@@ -30,6 +30,7 @@
 import { useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Tabs,
   Badge,
   Button,
   Input,
@@ -139,29 +140,18 @@ export default function DisputesPage() {
       </StatGrid>
 
       {/* **تبويبُ الطرف — والعددُ عليه.** «مع من نتنازع؟» سؤالُ القسم الأوّل. */}
-      <div className="mb-3 mt-4 flex flex-wrap gap-1 border-b border-line">
-        {PARTY_TABS.map((t) => {
-          const n = t.key ? (counts[t.key] ?? 0) : totalOpen;
-          return (
-            <button
-              key={t.key || "all"}
-              onClick={() => setParty(t.key)}
-              className={`flex items-center gap-2 border-b-2 px-4 py-2 text-sm transition-colors ${
-                party === t.key
-                  ? "border-primary font-bold text-primary-dark"
-                  : "border-transparent text-ink-muted hover:text-ink"
-              }`}
-            >
-              {t.label}
-              {n > 0 && (
-                <span className="rounded-badge bg-warning px-1.5 text-xs font-bold text-shell">
-                  {fmtNum(n)}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {/* **والعدّادُ من المكوّن نفسِه** — كان شارةً مكتوبةً بالحرف
+          بلونٍ وحشوةٍ خاصّين بهذه الشاشة وحدَها. */}
+      <Tabs
+        className="mb-3 mt-4"
+        items={PARTY_TABS.map((t) => ({
+          key: t.key,
+          label: t.label,
+          count: t.key ? (counts[t.key] ?? 0) : totalOpen,
+        }))}
+        value={party}
+        onChange={setParty}
+      />
 
       <div className="mb-4 w-44">
         <Select value={status} onChange={(e) => setStatus(e.target.value)}>

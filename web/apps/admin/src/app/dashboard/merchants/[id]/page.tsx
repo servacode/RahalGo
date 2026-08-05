@@ -23,6 +23,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
+  Tabs,
+  type TabDef,
   Badge,
   Button,
   StoreHours,
@@ -125,11 +127,11 @@ export default function MerchantProfilePage() {
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!mr) return <LoadingState />;
 
-  const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
-    { key: "overview", label: P.tabs.overview, icon: <IconStore size={15} /> },
-    { key: "menu", label: P.tabs.menu, icon: <IconOrder size={15} /> },
-    { key: "hours", label: P.tabs.hours, icon: <IconDate size={15} /> },
-    { key: "orders", label: P.tabs.orders, icon: <IconOrder size={15} /> },
+  const TABS: TabDef<Tab>[] = [
+    { key: "overview", label: P.tabs.overview, icon: IconStore },
+    { key: "menu", label: P.tabs.menu, icon: IconOrder },
+    { key: "hours", label: P.tabs.hours, icon: IconDate },
+    { key: "orders", label: P.tabs.orders, icon: IconOrder },
   ];
 
   return (
@@ -194,22 +196,7 @@ export default function MerchantProfilePage() {
         )}
       </div>
 
-      <div className="mb-4 mt-5 flex flex-wrap gap-1 border-b border-line">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 border-b-2 px-4 py-2 text-sm transition-colors ${
-              tab === t.key
-                ? "border-primary font-bold text-primary-dark"
-                : "border-transparent text-ink-muted hover:text-ink"
-            }`}
-          >
-            {t.icon}
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs className="mb-4 mt-5" items={TABS} value={tab} onChange={setTab} />
 
       {tab === "overview" && (
         <dl className="grid gap-3 rounded-card border border-line bg-surface p-4 sm:grid-cols-2">
