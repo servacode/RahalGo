@@ -14,20 +14,59 @@ const L = getMessages(defaultLocale).common;
 
 export type ViewMode = "table" | "cards";
 
-/** تفضيل العرض محفوظ لكل شاشة (screenId) على حدة */
+/**
+ * **حدُّ الشاشة الذي لا يحتمل جدولاً.**
+ *
+ * جدولٌ بخمسة أعمدةٍ يحتاج نحوَ سبعمئة بكسل. **وتحتها ينزلق أفقيّاً**،
+ * **والقراءةُ الأفقيّةُ في واجهةٍ عربيةٍ أسوأ**: العينُ ترجع إلى اليمين فلا
+ * تجد أوّلَ السطر.
+ */
+const TABLE_MIN = 768;
+
+/**
+ * useViewMode تفضيلُ العرض محفوظٌ لكلّ شاشة — **والجوّالُ يغلب التفضيل.**
+ *
+ * # المسألة
+ *
+ * الافتراضُ `table` والتفضيلُ يُحفظ. **فمن فتح اللوحةَ على جوّالٍ يرى جدولاً
+ * ينزلق أفقيّاً**، ومن اختار «جدول» على لابتوبه **يحمل اختيارَه إلى هاتفه**
+ * لأنّ التفضيلَ في `localStorage` لا في الجهاز.
+ *
+ * # ولا يُبدَّل المحفوظ
+ *
+ * **الغلبةُ في العرض لا في التخزين**: من فضّل الجدولَ على مكتبه يجده كما
+ * تركه، **وهاتفُه يعرض بطاقاتٍ ولا يمحو تفضيلَه.**
+ *
+ * # والقياسُ بعد التركيب لا قبله
+ *
+ * `window` لا وجودَ له في الخادم — **وقراءتُه في أوّل رسمٍ تكسر الترطيب.**
+ * **والهيكلُ العظميُّ يشتري الوقت**: الشاشةُ تعرض هيكلاً حتّى تصل البيانات،
+ * **وقد قِيس العرضُ قبلها.**
+ */
 export function useViewMode(screenId: string, fallback: ViewMode = "table") {
   const [view, setView] = useState<ViewMode>(fallback);
+  const [narrow, setNarrow] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(`rahalgo_view:${screenId}`);
     if (saved === "table" || saved === "cards") setView(saved);
   }, [screenId]);
 
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${TABLE_MIN - 1}px)`);
+    const sync = () => setNarrow(mq.matches);
+    sync();
+    // **ويتابع الدوران**: من قلب هاتفَه أفقيّاً يتّسع فيعود الجدول.
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   const change = (v: ViewMode) => {
     setView(v);
     localStorage.setItem(`rahalgo_view:${screenId}`, v);
   };
-  return [view, change] as const;
+  // **والمعروضُ غيرُ المحفوظ** — الأوّلُ يغلبه الجهاز، والثاني يخصّ صاحبَه.
+  return [narrow ? ("cards" as ViewMode) : view, change, { narrow }] as const;
 }
 
 export function ViewToggle({
@@ -46,9 +85,14 @@ export function ViewToggle({
   const active = "bg-surface font-medium text-primary-dark elev-1";
   const idle = "text-ink-muted hover:text-ink";
   return (
+    /* **ويُخفى حيث لا يفعل شيئاً.**
+
+       تحت ٧٦٨ بكسلاً يُعرض بطاقاتٍ حتماً، **وزرُّ «جدول» يُضغط ولا يقع
+       شيء** — فيُقرأ عطباً. **وزرٌّ معطَّلٌ يُسأل عن سببه، وزرٌّ غائبٌ لا
+       يُفتقد.** */
     <div
       role="group"
-      className="flex rounded-control border border-line bg-page p-1"
+      className="hidden rounded-control border border-line bg-page p-1 md:flex"
     >
       <button
         type="button"
