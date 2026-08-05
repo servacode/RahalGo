@@ -322,7 +322,7 @@ export function WalletPage({
           كاملة **يترك فراغاً لا يقول شيئاً**، وتُقرأ البطاقةُ بحجم ما فيها لا
           بحجم ما حولها. (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «كرت المحفظة كبير، اجعله
           صغيراً مناسباً · اجعل بادينغ للكرت، لا تجعله بامتداد الصفحة».) */}
-      <div className="mx-auto w-full max-w-sm rounded-card bg-accent px-4 py-3 text-center text-shell">
+      <div className="mx-auto w-full max-w-sm rounded-card bg-accent px-4 py-3 text-center text-on-solid">
         <p className="text-sm font-medium opacity-90">{balanceLabel}</p>
         {/* **والشرحُ حُذف**: «المحفظة اختيارية…» جملةٌ تُقرأ مرّةً ثمّ تبقى
             تشغل بطاقةَ الرصيد كلَّ يوم. **وما يُقال مرّةً لا يُكتب دائماً.**

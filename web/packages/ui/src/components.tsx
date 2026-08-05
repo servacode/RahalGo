@@ -17,7 +17,19 @@ const m = getMessages(defaultLocale);
  * **الزرُّ جمرة** — وهو الموضعُ الأوّلُ من موضعين يظهر فيهما الجمرُ في الشاشة
  * (والثاني شارةُ الخصم). **ولونٌ يُرى في كلّ زاويةٍ لا يبقى له معنى.**
  *
- * **ونصُّه داكنٌ لا أبيض**: الأبيضُ على الجمر ٢٫٣ — يذوب، **والداكنُ ٧٫٧٥.**
+ * # ونصُّه انقلب حين انقلبت الأرض
+ *
+ * كان `text-shell` — **نصٌّ بلون خلفيّة الشاشة**، وكان يعمل لأنّ الشاشةَ
+ * كانت شبهَ سوداء. **فلمّا صارت الأرضُ فاتحةً صار النصُّ فاتحاً على جمرٍ
+ * فاتح**: ٢٫٣ — يذوب.
+ *
+ * **والخللُ في التوكن لا في القيمة**: `shell` معناه «خلفيّةُ الشاشة» لا
+ * «نصٌّ على تعبئة»، **واستعارتُه لمعنًى ثانٍ تصمد حتّى يتبدّل الأوّل.**
+ * فصار `on-solid` — وهو الموضوعُ لهذا بعينه.
+ *
+ * **والجمرُ عمُق ليحمل الأبيض**: كان `#ff7a18` يتوهّج على السواد، **وعلى
+ * أبيضَ يُقرأ صارخاً** ولا يحمل نصّاً. والعميقُ ٥٫١٨ بالأبيض، **وأرقى على
+ * أرضٍ هادئة.**
  *
  * # والتحويمُ يُفتح لا يُشفّ
  *
@@ -31,7 +43,7 @@ const m = getMessages(defaultLocale);
  * مرّتين. **وبكسلٌ واحدٌ إلى الأسفل يكفي**: ما يُحسّ ولا يُرى.
  */
 const buttonVariants = {
-  primary: "bg-accent text-shell elev-1 hover:bg-accent-strong hover:elev-2",
+  primary: "bg-accent text-on-solid elev-1 hover:bg-accent-strong hover:elev-2",
   secondary: "border border-line bg-surface text-ink hover:border-primary/40 hover:bg-raised",
   danger: "bg-danger-solid text-on-solid elev-1 hover:brightness-110",
   ghost: "text-ink-muted hover:bg-raised hover:text-ink",

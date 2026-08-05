@@ -171,7 +171,12 @@ export default function ItemCard({
               **لَأبهتها كلَّها**، وهي البضاعة. */}
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-shell/55 to-transparent"
+            /* **والحجابُ صار من الحبر لا من الأرض.**
+
+               كان `from-shell/55` يُعتم أعلى الصورة. **ولمّا صارت الأرضُ
+               فاتحةً صار يُبيّضه** — وبياضٌ على صورة طعامٍ يغسلها. **والحبرُ
+               داكنٌ في اللوحتين**، فيبقى الحجابُ حجاباً. */
+            className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-ink/35 to-transparent"
           />
 
           {/* **«نفد» و«نائم» خبران مختلفان** — الأوّلُ لا موعدَ له والثاني له
@@ -242,7 +247,7 @@ export default function ItemCard({
           on={favorite}
           onToggle={onFavorite ?? (() => undefined)}
           onRequireLogin={onRequireLogin}
-          className="border-transparent bg-shell/45 backdrop-blur-md"
+          className="border-transparent bg-ink/35 text-on-solid backdrop-blur-md"
         />
       </span>
       )}

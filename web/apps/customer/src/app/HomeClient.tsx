@@ -129,7 +129,9 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
       <section className="surface-lit relative overflow-hidden rounded-card border border-line bg-surface px-5 py-8 sm:px-8 sm:py-12">
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 -bottom-24 h-48 bg-[radial-gradient(60%_100%_at_50%_100%,var(--color-accent)_0%,transparent_70%)] opacity-[0.09]"
+          /* **وخفّت على الأرض الفاتحة**: تسعةٌ بالمئة على سوادٍ توهّجٌ،
+             **وعلى أبيضَ لطخةٌ برتقاليّة.** */
+          className="pointer-events-none absolute inset-x-0 -bottom-24 h-48 bg-[radial-gradient(60%_100%_at_50%_100%,var(--color-accent)_0%,transparent_70%)] opacity-[0.045]"
         />
         <div className="relative mx-auto max-w-2xl text-center">
           <h1 className="text-2xl font-bold sm:text-4xl">{m.site.hero}</h1>

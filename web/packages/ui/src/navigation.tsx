@@ -92,7 +92,7 @@ export function Tabs<K extends string>({
               <span
                 dir="ltr"
                 className={`rounded-badge px-1.5 text-2xs font-bold tabular-nums ${
-                  on ? "bg-accent text-shell" : "bg-page text-ink-muted"
+                  on ? "bg-accent text-on-solid" : "bg-page text-ink-muted"
                 }`}
               >
                 {fmtNum(t.count)}
