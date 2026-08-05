@@ -162,6 +162,10 @@ export default function Header() {
               {/* **المفضّلة — ومن يطلب من مطعمٍ كلَّ أسبوعٍ لا يبحث عنه كلَّ
                   مرّة.**
 
+                  **وتُخفى على الجوّال**: نزلت إلى الشريط السفليّ حيث يصل
+                  الإبهام، **وبندان لفعلٍ واحدٍ في شاشةٍ واحدةٍ يجعلان
+                  المستخدمَ يسأل أيّهما الصحيح.**
+
                   **وتظهر دائماً لا عند الامتلاء وحدَه**: العروضُ تُخفى على
                   فراغٍ لأنّها خبرٌ يأتي من المنصة، **والمفضّلةُ بابٌ يملؤه
                   صاحبُه** — ومن لا يراها لا يعرف أنّها له. */}
@@ -171,6 +175,7 @@ export default function Header() {
                 title={m.customer.favorites.title}
                 aria-label={m.customer.favorites.title}
                 tone={pathname.startsWith("/favorites") ? "active" : "plain"}
+                className="hidden md:flex"
               >
                 <IconHeart size={TOPBAR_ICON} />
               </TopBarLink>
@@ -190,6 +195,7 @@ export default function Header() {
                 title={m.terms.orders}
                 aria-label={m.terms.orders}
                 tone={pathname.startsWith("/orders") ? "active" : "plain"}
+                className="hidden md:flex"
               >
                 <IconOrder size={TOPBAR_ICON} />
               </TopBarLink>

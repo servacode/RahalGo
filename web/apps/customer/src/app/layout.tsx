@@ -5,6 +5,7 @@ import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { FloatingCart } from "@/components/FloatingCart";
+import { BottomNav, BottomNavSpacer } from "@/components/BottomNav";
 // خط المنصة — مصدر مركزي واحد (packages/ui/src/fonts.css)
 import "@rahalgo/ui/fonts.css";
 import "./globals.css";
@@ -53,7 +54,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Footer />
               {/* السلّة العائمة خارج الكرت: تُرافق التصفّح ولا تختفي بالتمرير */}
               <FloatingCart />
+              {/* **وفراغٌ بارتفاع الشريط السفليّ** — وبلاه يختفي آخرُ سطرٍ
+                  خلفه، وهو غالباً زرُّ الحسم. */}
+              <BottomNavSpacer />
             </div>
+            {/* **أقسامُ الزبون حيث يصل الإبهام** — على الجوّال وحدَه.
+                (خارجَ غلاف الحشوة لأنّه يلتصق بحافّة الشاشة.) */}
+            <BottomNav />
           </CartProvider>
         </AuthProvider>
       </body>

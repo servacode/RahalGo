@@ -8,6 +8,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   DashboardChrome,
+  MobileNav,
+  MobileNavSpacer,
   type ChromeNavItem,
   IconOrder,
   IconCheck,
@@ -27,6 +29,18 @@ const m = getMessages(defaultLocale);
 // أربعةُ أقسام: كلُّ قسمٍ زائد في تطبيقٍ يُستعمل بيدٍ واحدة ضغطةٌ ضائعة —
 // **و«طلبات قادمة» ليست زائدة**: هي أوّلُ ما يفتحه السائقُ في دوامه، وقرارُ
 // الأخذ يُتّخذ في ثوانٍ. (قرارُ المالك ٢٠٢٦-٠٨-٠٣)
+/**
+ * **وأربعةٌ منها تنزل إلى الشريط السفليّ.**
+ *
+ * **السائقُ أشدُّ من يحتاجه**: يمسك هاتفَه بيدٍ وهو واقفٌ في الشارع، **واليدُ
+ * الأخرى على الدرّاجة** — والقائمةُ الجانبيّةُ تحتاج فتحاً ثمّ اختياراً ثمّ
+ * إغلاقاً، **ثلاثُ لمساتٍ لِما يُفتح كلَّ دقيقتين.**
+ *
+ * **وهي الأربعةُ التي يفتحها في دوامه**: ما بيده الآن، وما يُعرض عليه،
+ * وما سلّمه، وما في ذمّته من نقد. **والباقي يبقى في القائمة الجانبيّة.**
+ */
+const BOTTOM = ["/portal", "/portal/incoming", "/portal/history", "/portal/cash"] as const;
+
 const NAV: ChromeNavItem[] = [
   { href: "/portal/incoming", label: m.driver.nav.incoming, icon: IconLocation },
   { href: "/portal", label: m.driver.nav.tasks, icon: IconOrder },
@@ -94,7 +108,16 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         }}
       >
         {children}
+        {/* **وفراغٌ بارتفاع الشريط** — وبلاه يختفي زرُّ «سلّمت» خلفه،
+            وهو آخرُ ما في الشاشة وأهمُّ ما فيها. */}
+        <MobileNavSpacer />
       </DashboardChrome>
+      {/* **أقسامُه الأربعةُ حيث يصل إبهامُه** — على الجوّال وحدَه. */}
+      <MobileNav
+        items={BOTTOM.map((h) => NAV.find((n) => n.href === h)!).filter(Boolean)}
+        active={pathname}
+        Link={Link}
+      />
     </PasswordGate>
   );
 }

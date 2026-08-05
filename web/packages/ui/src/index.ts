@@ -22,6 +22,9 @@ export { Tabs, Pagination, Breadcrumb, type TabDef } from "./navigation";
 // **ما يعلو الصفحة** — ورقةٌ تصعد على الجوّال، وتلميحٌ لِما قُصّ، ومفتاحٌ
 // لِما يقع فوراً.
 export { Sheet, Tooltip, Switch } from "./overlay";
+// **التنقّلُ السفليُّ على الجوّال** — الإبهامُ يصل الثلثَ السفليَّ وحدَه،
+// وسائقُنا يمسك هاتفَه بيدٍ وهو واقفٌ في الشارع.
+export { MobileNav, MobileNavSpacer, type NavItem } from "./MobileNav";
 export {
   Button,
   Input,
