@@ -249,7 +249,7 @@ export function Stars({
           <IconStar
             size={px}
             strokeWidth={1.8}
-            className={i <= n ? "fill-accent text-accent" : "text-line"}
+            className={i <= n ? "fill-accent text-accent-text" : "text-line"}
           />
         );
         return onChange ? (

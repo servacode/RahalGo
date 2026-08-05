@@ -64,7 +64,7 @@ export function OrderTrack({
       {/* الدرّاجةُ فوق الشريط — تنزلق إلى موضع المرحلة */}
       <div className="relative mb-1 h-7">
         <span
-          className={`absolute top-0 -translate-x-1/2 text-accent ${
+          className={`absolute top-0 -translate-x-1/2 text-accent-text ${
             live ? "motion-safe:animate-[rahalgo-ride_1.6s_ease-in-out_infinite]" : ""
           }`}
           style={{
@@ -110,7 +110,7 @@ export function OrderTrack({
             key={s.id}
             className={`flex-1 text-center ${
               i === at
-                ? "font-bold text-accent"
+                ? "font-bold text-accent-text"
                 : i < at
                   ? "text-ink-muted"
                   : "text-ink-muted opacity-50"

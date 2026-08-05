@@ -87,7 +87,7 @@ export function FloatingCart() {
              قاعدةُ العلامة: الأزرقُ ما ثبت والبرتقاليُّ ما يتحرّك. وهي تدور
              وتتقدّم وتعود — **فلونُها البرتقاليُّ ليس زينةً، هو تطبيقُ
              القاعدة على أوضح مثالٍ لها.** وتُميَّز به عن كل زرقاء الشاشة. */
-        className={`relative block text-accent drop-shadow-float ${
+        className={`relative block text-accent-text drop-shadow-float ${
           pop ? "cart-pop" : "cart-roll"
         }`}
       >

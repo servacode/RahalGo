@@ -29,7 +29,7 @@ export default function Footer() {
   return (
     <footer className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-3 py-4 text-xs text-ink-muted">
       {LINKS.map((l) => (
-        <Link key={l.href} href={l.href} className="transition-colors hover:text-accent">
+        <Link key={l.href} href={l.href} className="transition-colors hover:text-accent-text">
           {l.label}
         </Link>
       ))}

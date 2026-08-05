@@ -246,7 +246,7 @@ export function DashboardChrome({
                   tone="accent"
                   title={ratingLabel ?? m.terms.myRating}
                 >
-                  <IconStar size={TOPBAR_ICON} className="fill-accent text-accent" />
+                  <IconStar size={TOPBAR_ICON} className="fill-accent text-accent-text" />
                   <span dir="ltr">{rep.rating.avg.toFixed(1)}</span>
                   {rep.rating.trend === "up" && <IconTrendUp size={TOPBAR_ICON} className="text-success" />}
                   {rep.rating.trend === "down" && <IconTrendDown size={TOPBAR_ICON} className="text-danger" />}

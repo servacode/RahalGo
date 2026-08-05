@@ -222,7 +222,7 @@ export default function UserProfilePage() {
     stats.push({
       label: P.avgRating,
       value: feedback.avg_received.toFixed(1),
-      icon: <IconStar className="fill-accent text-accent" />,
+      icon: <IconStar className="fill-accent text-accent-text" />,
     });
   }
   if (has("driver")) {

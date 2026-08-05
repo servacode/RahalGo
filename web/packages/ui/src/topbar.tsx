@@ -109,9 +109,9 @@ const chipTones = {
    *  (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «أيقونة الطلبات ترجع بيضاء لا برتقالية».) */
   active: "font-medium text-ink",
   /** بارز — إجراء رئيسي (السلة مثلاً) */
-  primary: "font-medium text-ink hover:text-accent",
+  primary: "font-medium text-ink hover:text-accent-text",
   /** ثانوي مميّز — التقييم/التسوّق كزبون */
-  accent: "font-bold text-accent hover:opacity-80",
+  accent: "font-bold text-accent-text hover:opacity-80",
   /** خطر — الخروج. ممتلئ لا شفّاف: زرّ الخروج يجب أن يُميَّز بلمحة كي لا
    *  يُضغط سهواً، والنصّ الأحمر على أبيض يذوب بين بقية العناصر. */
   danger: "bg-danger-solid font-medium text-on-solid hover:opacity-90",
@@ -174,7 +174,7 @@ export function WalletPill({
       Link={Link}
       href={href}
       title={m.terms.wallet}
-      className="font-bold text-ink hover:text-accent"
+      className="font-bold text-ink hover:text-accent-text"
     >
       {icon}
       <span dir="ltr">{fmtNum(balance)}</span>

@@ -112,7 +112,7 @@ export function LegalPage({
             {contact.support_phone && (
               <p className="text-sm">
                 {L.phone}:{" "}
-                <a href={`tel:${contact.support_phone}`} dir="ltr" className="text-accent">
+                <a href={`tel:${contact.support_phone}`} dir="ltr" className="text-accent-text">
                   {contact.support_phone}
                 </a>
               </p>

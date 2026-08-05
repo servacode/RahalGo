@@ -2,6 +2,26 @@
 // يقرؤها بـ`themeColor`. (كانت لوحةً ثانيةً شاخت — انظر `tokens.ts`.)
 export { fontFamily, radius, breakpoints } from "./tokens";
 export { cssVar, themeColor } from "./cssvar";
+// **التغذيةُ الراجعة** — رسالةٌ في موضعها، وهيكلٌ قبل المحتوى، وخبرٌ يمرّ،
+// وتأكيدٌ لما لا يُستدرَك. (كانت مرتجَلةً في ٨٩ موضعاً بثمانِ صياغات.)
+export {
+  Alert,
+  Skeleton,
+  SkeletonText,
+  SkeletonList,
+  SkeletonStats,
+  ToastStack,
+  useToast,
+  Confirm,
+  type AlertTone,
+  type ToastMsg,
+} from "./feedback";
+// **التنقّلُ داخل الصفحة** — تبويبٌ كان مرتجَلاً في ٦ ملفّات، وترقيمٌ في ٥٦
+// موضعاً بلا مكوّن، وفتاتُ خبزٍ للوحةٍ بعمق ثلاثة مستويات.
+export { Tabs, Pagination, Breadcrumb, type TabDef } from "./navigation";
+// **ما يعلو الصفحة** — ورقةٌ تصعد على الجوّال، وتلميحٌ لِما قُصّ، ومفتاحٌ
+// لِما يقع فوراً.
+export { Sheet, Tooltip, Switch } from "./overlay";
 export {
   Button,
   Input,

@@ -378,7 +378,7 @@ function StarRow({
             type="button"
             aria-label={`${label} ${n}`}
             onClick={() => onPick(n)}
-            className={n <= value ? "text-accent" : "text-line"}
+            className={n <= value ? "text-accent-text" : "text-line"}
           >
             <IconStar size={22} />
           </button>
