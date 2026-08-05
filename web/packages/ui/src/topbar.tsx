@@ -21,11 +21,7 @@ type LinkType = ComponentType<{
   "aria-label"?: string;
 }>;
 
-/**
- * **الشريط العلويّ** — يمتدّ من حافّةٍ إلى حافّة، ومحتواه يحاذي محتوى الصفحة.
- *
- * `start` يميناً (شعارٌ أو عنوان) و`children` يساراً (الأدوات).
- */
+/** كرت الشريط العلوي العائم. start يمين (شعار/عنوان)، children يسار (الأدوات). */
 export function TopBar({
   start,
   children,
@@ -49,49 +45,10 @@ export function TopBar({
       اختصارٍ كامل.
     */
     <header
-      /*
-        **والملتصقُ زجاجٌ لا لوحٌ مصمت.**
-
-        كان `bg-surface` مصمتاً: **المحتوى يختفي تحت حافّته اختفاءً حادّاً**
-        فيُقرأ الشريطُ نهايةَ الصفحة لا طبقةً فوقها — **ولا يعرف الناظرُ أنّ
-        تحته ما يُمرَّر إليه.**
-
-        **والضبابُ يقول «تحتي شيء»** بلا أن يكشفه: لطخةُ لونٍ متحرّكةٍ خلف
-        الزجاج **تدلّ على العمق** وهي أصدقُ من حدٍّ مرسوم.
-
-        **والارتفاعُ يصير الثالثَ حين يلتصق وحدَه**: شريطٌ في أعلى صفحةٍ ساكنةٍ
-        بطاقةٌ كغيرها، **وشريطٌ يطفو فوق نصٍّ يمرّ تحته يجب أن يُقرأ أعلى.**
-      */
-      /*
-        **ولا حشوةَ ولا زوايا — ويمتدّ إلى الحوافّ الثلاث.**
-        (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «مدّده للأعلى ولليمين واليسار بلا أيّ
-        بادينك».)
-
-        كان لوحاً عائماً بزوايا عشرين يطفو بعيداً عن الحوافّ. **وحذفُ حشوته
-        وزواياه وحدَه صغّره ولم يمدّه** — لأنّ الحابسَ كان أباه المحشوّ، لا
-        هو. **فأُخرج من الأب** (انظر `layout.tsx` في تطبيق الزبون).
-
-        # وحشوةٌ داخليّةٌ تحاذي المحتوى لا تحبسه
-
-        **والفرقُ بينهما هو كلُّ المسألة**: الحشوةُ التي حُذفت كانت **حول
-        الشريط** فتمنعه من الحافّة. وهذه **داخلَه** تُحاذي صفَّه بأوّل بطاقةٍ
-        في الشبكة تحته — **وأرقامُها أرقامُ الغلاف نفسِها** (٣ · ٤ · ٦).
-
-        **وشعارٌ ملتصقٌ بحافّة الشاشة لا يُقرأ تصميماً**: العينُ تحتاج هامشاً
-        تبدأ منه، **والخطُّ العموديُّ الذي يجمع الشعارَ بما تحته هو ما يجعل
-        الصفحةَ تُقرأ عموداً واحداً.**
-
-        # والزجاجُ يمتدّ والصفُّ لا
-
-        الخلفيّةُ والضبابُ يعمّان العرضَ كلَّه، **والمحتوى محصورٌ بعرض الصفحة**
-        (`max-w-7xl`) — فلا يهرب الشعارُ إلى طرف شاشةٍ بألفٍ وأربعمئة **بينما
-        محتواها في الوسط.**
-      */
-      className={`surface-lit mb-3 bg-surface ${
-        sticky ? "sticky top-0 z-40 bg-surface/80 backdrop-blur-xl elev-3" : ""
+      className={`surface-lit mb-3 flex items-center gap-2 rounded-card bg-surface px-3 py-3.5 sm:gap-3 sm:px-5 ${
+        sticky ? "sticky top-3 z-40" : ""
       }`}
     >
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-4 lg:px-6">
       {/* **والشعارُ يتقلّص ولا يُقصّ** — بلا `min-w-0` يفرض عرضَه كاملاً. */}
       <div className="flex min-w-0 items-center">{start}</div>
 
@@ -106,7 +63,6 @@ export function TopBar({
       */}
       <div className="ms-auto flex min-w-0 items-center gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
         {children}
-      </div>
       </div>
     </header>
   );
@@ -265,7 +221,7 @@ export function CountBadge({ count, tone = "accent" }: { count: number; tone?: "
          ٢٫٢٢ **يذوب**، والداكنُ ٨٫٤٩. **والجرسُ يبقى أبيضَ كما هو.**
          (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «العدّاد فقط وليس الجرس».) */
       className={`absolute -top-1.5 -start-1.5 flex h-5 min-w-5 items-center justify-center rounded-badge px-1 text-xs font-bold ${
-        tone === "danger" ? "bg-danger-solid text-on-solid" : "bg-accent text-on-accent"
+        tone === "danger" ? "bg-danger-solid text-on-solid" : "bg-accent text-shell"
       }`}
     >
       {fmtNum(count)}

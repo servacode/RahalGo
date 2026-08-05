@@ -122,17 +122,7 @@ export default function ItemCard({
           داخل زرٍّ لا يجوز: المتصفّحُ يفكّه كما يشاء **فتضيع إحدى
           الضغطتين.** */}
       <div
-        /* **والبطاقةُ ترتفع لا تُضاء وحدَها.**
-
-           كان `hover:elev-2` — ظلٌّ يزيد ولا شيءَ يتحرّك، **وهو أثرٌ لا
-           يُلحَظ في شبكةٍ من عشرين.** والرفعُ بكسلين مع الظلّ **يقول
-           «هذه تحت مؤشّرك»** قبل أن تُقرأ.
-
-           **والحدُّ يتلوّن تركوازاً** — لا يسمك ولا يبيضّ: حدٌّ يغلظ عند
-           التحويم يُزحزح ما حوله بكسلاً، **وشبكةٌ تهتزّ عند مرور الفأرة.**
-
-           `group` كي تعرف الصورةُ في جوفها متى يُحوَّم على البطاقة. */
-        className={`group relative flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-[transform,box-shadow,border-color] duration-[--duration-base] ease-[--ease-out] hover:-translate-y-0.5 hover:border-primary/30 hover:elev-3 ${
+        className={`relative flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-shadow hover:elev-2 ${
           off ? "opacity-60" : ""
         }`}
       >
@@ -142,43 +132,15 @@ export default function ItemCard({
         className="flex flex-1 flex-col text-start"
       >
         {/* **الصورةُ أوّلاً وتملأ العرض** — كبطاقة القسم فوقها تماماً. */}
-        <span className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-page">
+        <span className="relative flex aspect-[4/3] items-center justify-center bg-page">
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
-            /* **والصورةُ تتقدّم قليلاً عند التحويم.**
-
-               **الصورةُ هي البضاعة** — وحركتُها هي ما يقول «انظر إليّ»،
-               **وثلاثةٌ بالمئةِ تكبيراً تُحسّ ولا تُلحَظ حيلةً.** وهي داخل
-               `overflow-hidden` فلا تتجاوز زواياها. */
-            <img
-              src={img}
-              alt=""
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-[--duration-slow] ease-[--ease-out] group-hover:scale-[1.03]"
-            />
+            <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
           ) : (
             /* **وحرفُ الاسم لا رمزٌ رماديّ** — الرمزُ الواحدُ لعشرة أصنافٍ
                يجعلها شيئاً واحداً، **والحرفُ يفرّق بينها ويبقى لها.** */
             <span className="text-3xl font-bold text-primary-dark">{item.name.charAt(0)}</span>
           )}
-          {/* **وحجابٌ متدرّجٌ من الأعلى تحت الشارات.**
-
-              **الشارةُ على صورةٍ لا يُعرف لونُها**: طبقٌ فاتحٌ يبتلع «−٢٥٪»
-              وطبقٌ داكنٌ يبتلع «نفد». **وشارةٌ تُقرأ في صورةٍ وتختفي في
-              أخرى ليست شارة.**
-
-              **والحجابُ من الأعلى وحدَه** حيث تقف الشارات — ولو عمّ الصورةَ
-              **لَأبهتها كلَّها**، وهي البضاعة. */}
-          <span
-            aria-hidden
-            /* **والحجابُ صار من الحبر لا من الأرض.**
-
-               كان `from-shell/55` يُعتم أعلى الصورة. **ولمّا صارت الأرضُ
-               فاتحةً صار يُبيّضه** — وبياضٌ على صورة طعامٍ يغسلها. **والحبرُ
-               داكنٌ في اللوحتين**، فيبقى الحجابُ حجاباً. */
-            className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-scrim/45 to-transparent"
-          />
-
           {/* **«نفد» و«نائم» خبران مختلفان** — الأوّلُ لا موعدَ له والثاني له
               موعد. **وموضعُهما فوق الصورة** كشارة القسم: تُقرأ قبل الاسم. */}
           {discounted && item.discount_percent ? (
@@ -213,12 +175,7 @@ export default function ItemCard({
                   {fmtNum(item.price_before!)}
                 </span>
               )}
-              {/* **والسعرُ المخصومُ جمرةٌ لا خُضرة.**
-
-                  كان أخضرَ — **ولونُ النجاح في هذه المنصة «تمّ» و«وصل»**،
-                  فسعرٌ أخضرُ يُقرأ حالةَ طلبٍ لا توفيراً. **والجمرُ لونُ
-                  الخصم وشارتِه والزرّ** — وثلاثتُها شيءٌ واحد: اضغط. */}
-              <span className={`font-bold ${discounted ? "text-accent-text" : "text-primary-strong"}`}>
+              <span className={`font-bold ${discounted ? "text-success" : "text-primary-strong"}`}>
                 {fmtNum(item.price)} {m.common.currency}
               </span>
             </span>
@@ -247,7 +204,7 @@ export default function ItemCard({
           on={favorite}
           onToggle={onFavorite ?? (() => undefined)}
           onRequireLogin={onRequireLogin}
-          className="border-transparent bg-scrim/45 text-on-solid backdrop-blur-md"
+          className="bg-surface/90 backdrop-blur-sm"
         />
       </span>
       )}

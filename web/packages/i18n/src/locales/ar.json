@@ -359,8 +359,6 @@
     }
   },
   "common": {
-    "increase": "زيادة",
-    "decrease": "إنقاص",
     "close": "إغلاق",
     "listSep": "، ",
     "appName": "رحال غو",

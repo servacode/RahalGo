@@ -335,18 +335,7 @@ export function Confirm({
   if (!open) return null;
   return (
     <div
-      /* **وحجابُ النافذة داكنٌ في اللوحتين.**
-
-         كان `bg-shell/70` — **بلون خلفيّة الشاشة**، فعمل ما دامت الشاشةُ
-         سوداء. **ولمّا صارت الأرضُ فاتحةً صار الحجابُ بياضاً على بياض**:
-         نافذةٌ تُفتح ولا يُعتم ما تحتها، **فلا يُعرف أنّ شيئاً فُتح.**
-
-         **وهو خللُ `text-shell` نفسُه**: توكنٌ يُستعار لمعنًى ليس له —
-         **يصمد حتّى يتبدّل معناه الأصليّ، ثمّ ينقلب صامتاً.**
-
-         `ink/45` هو ما تستعمله `Modal` أصلاً: **الحبرُ داكنٌ في اللوحتين
-         لأنّه لونُ النصّ**، وحجابٌ من الحبر يبقى حجاباً مهما انقلبت الأرض. */
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-scrim/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-shell/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onCancel}
     >
       {/* **وعلى الجوّال يصعد من الأسفل** — نافذةٌ في وسط شاشةٍ طويلةٍ تترك

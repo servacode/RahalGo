@@ -72,7 +72,7 @@ export function Sheet({
 
   return (
     <div
-      className="fixed inset-0 z-[65] flex items-end justify-center bg-scrim/60 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[65] flex items-end justify-center bg-shell/70 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div

@@ -103,82 +103,63 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
   }, [q]);
 
   return (
-    <div className="space-y-8 sm:space-y-10">
-      {/* ══════════════════════════════════════════════════════════════════
-          **صدرُ الصفحة** — لوحٌ واحدٌ يحمل الجملةَ والبحثَ معاً
-          ══════════════════════════════════════════════════════════════════
+    <div>
+      {/* **والعنوانُ يصغر على الجوّال.**
 
-          # ما كان
+          كان `text-2xl` ثابتاً بهامشٍ أربعةٍ — **نحو ستّين بكسلاً من أوّل
+          شاشةٍ يراها الزبون** لجملةٍ تسويقيّةٍ لا يُضغط عليها. **والطيّةُ
+          الأولى على هاتفٍ ستُّمئة بكسلٍ لا أكثر**، والسلايدرُ يأخذ مئةً
+          وخمسةً وسبعين، والبحثُ خمسين — **فلا تبدأ الأقسامُ إلّا تحت
+          الطيّة.**
 
-          ثلاثةُ عناصرَ متجاورةٍ بلا رابط: **عنوانٌ عائم**، ثمّ سلايدرُ لافتات،
-          ثمّ حقلُ بحثٍ ملتصقٌ في منتصف الصفحة. **ولا واحدٌ منها يقول للزائر
-          الجديد أين وقع** — والحقلُ الملتصقُ خصوصاً كان يبدو **دخيلاً معلَّقاً**
-          لا جزءاً من شيء.
+          **ولا يُحذف**: هو ما يقول للزائر الجديد أين وقع. **إنّما يُقاس
+          بالشاشة لا بالذوق.** */}
+      <h1 className="mb-3 text-xl font-bold sm:mb-4 sm:text-2xl">{m.site.hero}</h1>
 
-          # ولماذا البحثُ في الصدر
+      {/* **سلايدرٌ لا شريطٌ يُسحب.**
 
-          **من يعرف ما يريد لا يتصفّح.** وحقلُ البحث هو الفعلُ الأوّلُ في سوقٍ
-          فيه ألفُ صنف — **فموضعُه أوّلُ الشاشة لا منتصفُها.** وكان يُبلَغ بعد
-          السلايدر (١٧٥ بكسلاً) والعنوان (٦٠) — **أي بعد ثلثِ شاشةِ الجوّال.**
+          كان شريطاً أفقياً، **ومن لا يسحب لا يرى إلّا الأولى** — فالثانيةُ
+          والثالثةُ تُنشَران ولا يراهما أحد. (قرارُ المالك ٢٠٢٦-٠٨-٠٥.) */}
+      <BannerSlider
+        className="mb-6"
+        Link={Link}
+        items={banners.map((b) => ({
+          id: b.id,
+          title: b.title,
+          imageUrl: mediaUrl(b.image_url) ?? null,
+          href: b.target || undefined,
+        }))}
+      />
 
-          # والهالةُ من الأسفل
+      {/* **البحثُ فوق كلّ شيءٍ ويلتصق.**
 
-          توهّجٌ جمريٌّ خافتٌ في قاع اللوح — **نارُ الرحّال في آخر الطريق.**
-          وهو التوقيعُ الوحيدُ المسموحُ هنا: **ما يُحسّ ولا يُلحَظ حيلةً.**
-          ══════════════════════════════════════════════════════════════════ */}
-      <section className="surface-lit relative overflow-hidden rounded-card border border-line bg-surface px-5 py-8 sm:px-8 sm:py-12">
-        <span
-          aria-hidden
-          /* **وخفّت على الأرض الفاتحة**: تسعةٌ بالمئة على سوادٍ توهّجٌ،
-             **وعلى أبيضَ لطخةٌ برتقاليّة.** */
-          /* **والصدرُ يستضيء بالورديّ** — وهو لونُ الهالة الأولى في الخلفيّة
-             خلفه، **فالصدرُ يبدو مقتطعاً من الفضاء لا ملصقاً عليه.** */
-          className="pointer-events-none absolute inset-x-0 -bottom-24 h-48 bg-[radial-gradient(60%_100%_at_50%_100%,var(--color-accent)_0%,transparent_70%)] opacity-[0.16]"
+          من يعرف ما يريد لا يتصفّح. **والأقسامُ تطول** — عشرون قسماً في
+          شبكةٍ من عمودين على الجوّال عشرةُ صفوف، **ومن نزل فيها ثمّ قرّر أن
+          يبحث يصعد إلى الأعلى من جديد.**
+
+          **والالتصاقُ تحت الشريط لا فوقه** (`top-[4.5rem]`): الشريطُ لاصقٌ
+          أصلاً بارتفاعه، **ولو التصق البحثُ عند الصفر لَاختفى تحته.** */}
+      <div className="sticky top-[4.5rem] z-30 mb-5 -mx-1 bg-surface px-1 py-2">
+      <div className="relative">
+        <Input
+          id="site-search"
+          icon={<IconSearch size={16} />}
+          placeholder={m.site.search.itemsPlaceholder}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
         />
-        <div className="relative mx-auto max-w-2xl text-center">
-          <h1 className="text-2xl font-bold sm:text-4xl">{m.site.hero}</h1>
-          <span
-            aria-hidden
-            className="brand-rule mx-auto mt-3 mb-6 block h-0.5 w-20 rounded-badge sm:mt-4 sm:mb-8"
-          />
-
-          {/* **والحقلُ كبيرٌ هنا لا كحقلٍ في نموذج** — هو الفعلُ الأوّل،
-              **وحجمُ العنصر يقول رتبتَه** قبل أن يُقرأ ما فيه. */}
-          <div className="relative">
-            <Input
-              id="site-search"
-              icon={<IconSearch size={18} />}
-              placeholder={m.site.search.itemsPlaceholder}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="!py-3.5 !text-base"
-            />
-            {q && (
-              <button
-                type="button"
-                onClick={() => setQ("")}
-                aria-label={m.common.cancel}
-                className="taparea absolute inset-block-0 end-2.5 my-auto flex h-8 w-8 items-center justify-center rounded-badge text-ink-muted transition-colors hover:bg-raised hover:text-ink"
-              >
-                <IconClose size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* **واللافتاتُ بعد الصدر** — خبرٌ يُقرأ بنظرة، **ولا تسبق الفعلَ.** */}
-      {banners.length > 0 && (
-        <BannerSlider
-          Link={Link}
-          items={banners.map((b) => ({
-            id: b.id,
-            title: b.title,
-            imageUrl: mediaUrl(b.image_url) ?? null,
-            href: b.target || undefined,
-          }))}
-        />
-      )}
+        {q && (
+          <button
+            type="button"
+            onClick={() => setQ("")}
+            aria-label={m.common.cancel}
+            className="absolute inset-block-0 end-2 my-auto flex h-7 w-7 items-center justify-center rounded-badge text-ink-muted hover:bg-page"
+          >
+            <IconClose size={16} />
+          </button>
+        )}
+      </div>
+      </div>
 
       {hits !== null ? (
         hits.length === 0 ? (
@@ -202,23 +183,8 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
         )
       ) : (
         <>
-          {/* **والعنوانُ ووصفُه كتلةٌ واحدةٌ لا كتلتان متباعدتان.**
-
-              كانا سطرين بينهما فراغان مختلفان (`mb-3` ثمّ `mb-4`) — **فيُقرأ
-              الوصفُ نصّاً مستقلّاً لا شرحاً للعنوان.** والقربُ هو ما يقول
-              «هذان واحد». */}
-          {/* **وعنوانُ القسم له عينٌ صغيرةٌ فوقه.**
-
-              **سطرٌ جمريٌّ قصيرٌ ثمّ العنوان** — وهو ما يفصل قسماً عن قسمٍ في
-              صفحةٍ طويلةٍ **بلا خطٍّ يقطعها عرضاً.** والخطُّ العارضُ يقول
-              «انتهى»، **والعينُ تقول «بدأ شيءٌ جديد».** */}
-          <div className="mb-5 flex items-end justify-between gap-4">
-            <div>
-              <span aria-hidden className="mb-2 block h-0.5 w-8 rounded-badge bg-accent" />
-              <h2 className="text-xl font-bold sm:text-2xl">{m.site.sections.title}</h2>
-              <p className="mt-1 text-sm text-ink-muted">{m.site.sections.hint}</p>
-            </div>
-          </div>
+          <h2 className="mb-3 text-lg font-bold">{m.site.sections.title}</h2>
+          <p className="mb-4 text-sm text-ink-muted">{m.site.sections.hint}</p>
           {/* **صورةُ القسم هويّتُه — لا رمزٌ رماديّ.**
 
               **والسوقُ يُتصفَّح بالصور**: الزبونُ يعرف الشاورما من صورتها قبل
@@ -227,43 +193,22 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
 
               (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «رح نرفع صورةً معبّرةً عن القسم، ما
               بدّي أيقوناتٍ عادية».) */}
-          {/* ══════════════════════════════════════════════════════════
-              **وإيقاعُ الشبكة ليس واحداً**
-              ══════════════════════════════════════════════════════════
-
-              كانت خمسةَ أعمدةٍ من متساوياتٍ — **صفٌّ رتيبٌ تمسحه العينُ ولا
-              تقف عند شيء.** ولا شيءَ في الصفحة يقول «ابدأ من هنا».
-
-              **والأوّلُ يأخذ عمودين وصفّين**: قسمٌ واحدٌ يتصدّر فتقع عليه
-              العينُ أوّلاً، **ثمّ تنزل إلى البقيّة.** وهو الفرقُ بين رفٍّ
-              مرتَّبٍ وجدولِ بيانات.
-
-              **ولا يقع هذا على الجوّال**: عمودان لا يحتملان تصديراً،
-              **وبطاقةٌ بضعفِ الحجم في شاشةٍ ضيّقةٍ تدفع البقيّةَ تحت الطيّة.**
-              ══════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-            {sections.map((sec, i) => (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {sections.map((sec) => (
               <Link
                 key={sec.id}
                 href={`/s/${sec.id}`}
-                /* **وبطاقةُ القسم كبطاقة الصنف حرفاً بحرف** — الرفعُ نفسُه
-                   والحدُّ نفسُه وتكبيرُ الصورة نفسُه. **ومن مسح السوقَ بالعين
-                   ثمّ فتح قسماً لا يجد الشبكةَ تغيّرت تحته.** */
-                className={`group flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-[transform,box-shadow,border-color] duration-[--duration-base] ease-[--ease-out] hover:-translate-y-0.5 hover:border-primary/30 hover:elev-3 ${
-                  i === 0 ? "sm:col-span-2 sm:row-span-2" : ""
-                } ${sec.count === 0 ? "opacity-60" : ""}`}
+                className={`flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-shadow hover:elev-2 ${
+                  sec.count === 0 ? "opacity-60" : ""
+                }`}
               >
-                <span
-                  className={`flex items-center justify-center overflow-hidden bg-page ${
-                    i === 0 ? "aspect-[4/3] sm:aspect-square" : "aspect-[4/3]"
-                  }`}
-                >
+                <span className="flex aspect-[4/3] items-center justify-center bg-page">
                   {sec.image_url || sec.image_thumb_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={mediaUrl(sec.image_url ?? sec.image_thumb_url) ?? ""}
                       alt={sec.name}
-                      className="h-full w-full object-cover transition-transform duration-[--duration-slow] ease-[--ease-out] group-hover:scale-[1.03]"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
                     /* **والأيقونةُ تبقى للزبون وحدَه** — لا لنا.
@@ -275,11 +220,8 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                 </span>
                 {/* **الاسمُ يميناً والعددُ يساراً** — كما في لوحة الإدارة.
                     **وشكلٌ يختلف بين الشاشتين يجعل المراجعةَ تخميناً.** */}
-                {/* **والمتصدِّرُ يكبر اسمُه** — الحجمُ يقول الرتبةَ، **وبطاقةٌ
-                    بضعفِ المساحة واسمٍ بحجم أخواتها تُقرأ خطأً في التنضيد** لا
-                    تصديراً مقصوداً. */}
-                <div className="flex min-w-0 items-baseline justify-between gap-2 p-3 sm:p-4">
-                  <p className={`truncate font-bold ${i === 0 ? "sm:text-lg" : ""}`}>{sec.name}</p>
+                <div className="flex min-w-0 items-baseline justify-between gap-2 p-3">
+                  <p className="truncate font-bold">{sec.name}</p>
                   <p className="shrink-0 text-xs text-ink-muted">
                     {m.site.sections.count.replace("{n}", fmtNum(sec.count))}
                   </p>
