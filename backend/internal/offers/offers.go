@@ -92,11 +92,15 @@ type Offer struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// liveCond شرطُ السريان — **تعبيرٌ واحدٌ يُعاد استعماله.**
+// LiveCond شرطُ السريان — **تعبيرٌ واحدٌ يُعاد استعماله.**
 //
 // **ومكتوبٌ مرّةً**: الشاشةُ تقرؤه والزبونُ يقرؤه والمحرّكُ يقرؤه —
 // **وثلاثُ نسخٍ تفترق فيُعرض ما لا يُطبَّق.**
-const liveCond = `(o.active
+//
+// **وصُدِّر حين احتاجته شاشاتُ التصفّح**: بطاقةُ القسم ونافذةُ الصنف
+// **كانتا تعرضان السعرَ كاملاً** والعرضُ يقول غيرَه — **ونسخُ الشرط هناك
+// كان يفتح البابَ الذي أُغلق هنا.**
+const LiveCond = `(o.active
 	AND (o.starts_at IS NULL OR o.starts_at <= now())
 	AND (o.ends_at IS NULL OR o.ends_at > now()))`
 
@@ -107,7 +111,7 @@ const offerSelect = `
 	       mr.id::text, im.path,
 	       COALESCE(mi.price, 0),
 	       o.discount_percent, o.borne_by,
-	       o.starts_at, o.ends_at, o.active, ` + liveCond + `, o.created_at
+	       o.starts_at, o.ends_at, o.active, ` + LiveCond + `, o.created_at
 	FROM offers o
 	LEFT JOIN media mm ON mm.id = o.media_id
 	LEFT JOIN menu_items mi ON mi.id = o.menu_item_id
@@ -152,7 +156,7 @@ func (s *Service) List(ctx context.Context, liveOnly bool, marginOf func(int64) 
 	if liveOnly {
 		// **والخصمُ على صنفٍ غائبٍ أو غيرِ متاحٍ لا يُعرض** — يفتحه الزبونُ
 		// فلا يجده، **ووعدٌ لا يُوفى أسوأُ من صمت.**
-		q += ` WHERE ` + liveCond + `
+		q += ` WHERE ` + LiveCond + `
 			AND mi.id IS NOT NULL AND mi.available`
 	}
 	q += ` ORDER BY o.created_at DESC`
@@ -254,7 +258,7 @@ func (s *Service) LiveDiscount(ctx context.Context, menuItemID string) (percent 
 	var b *string
 	_ = s.db.QueryRow(ctx, `
 		SELECT o.discount_percent, o.borne_by FROM offers o
-		WHERE o.menu_item_id = $1 AND o.kind = 'discount' AND `+liveCond,
+		WHERE o.menu_item_id = $1 AND o.kind = 'discount' AND `+LiveCond,
 		menuItemID).Scan(&p, &b)
 	if p == nil || b == nil {
 		return 0, ""

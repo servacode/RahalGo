@@ -31,14 +31,24 @@ export default function ItemGrid({
   items,
   /** إلى أين يعود بعد الدخول — **ومن ساقه زرٌّ يعود إلى حيث كان.** */
   next = "/",
+  favorites,
 }: {
   items: BrowseItem[];
   next?: string;
+  /**
+   * **قائمةٌ جاهزةٌ حين تكون هي المعروضة** — صفحةُ المفضّلة تعرض ما حُفظ،
+   * **فلو جلبته الشبكةُ ثانيةً لَصارتا نسختين**: يُنزع القلبُ عن صنفٍ
+   * **فتُحدَّث نسخةُ الشبكة وتبقى البطاقةُ معروضة.**
+   */
+  favorites?: ReturnType<typeof useFavorites<BrowseItem>>;
 }) {
   const router = useRouter();
   const { user } = useAuth();
   const signedIn = isLoggedIn(user);
-  const { has, toggle } = useFavorites(api, signedIn);
+  // **ولا تُجلب مرّتين**: حين تُمرَّر القائمةُ يُعطَّل الجلبُ هنا — **والخطّافُ
+  // يُنادى دائماً** لأنّ ترتيبَ الخطّافات لا يحتمل شرطاً.
+  const own = useFavorites<BrowseItem>(api, signedIn && !favorites);
+  const { has, toggle } = favorites ?? own;
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">

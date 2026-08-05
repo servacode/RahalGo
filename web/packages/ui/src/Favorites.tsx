@@ -34,18 +34,16 @@ import { IconHeart } from "./icons";
 const m = getMessages(defaultLocale);
 const F = m.customer.favorites;
 
-/** صنفٌ محفوظ — **ومعه سعرُه الآن، بلا متجرِه.** */
-export interface FavoriteItem {
-  id: string;
-  name: string;
-  price: number;
-  image_thumb_url: string | null;
-  /** **أيقونةُ التصنيف تصف السلعةَ لا بائعَها** — وتملأ البطاقةَ حين لا صورة. */
-  category_icon: string;
-  /** **لا يُطلب اليوم** — أوقفه المتجر أو أُغلق طارئاً. */
-  unavailable: boolean;
-}
-
+/**
+ * معرّفاتُ ما حُفظ — **والبطاقةُ تُرسم في التطبيق لا هنا.**
+ *
+ * **صفحةُ المفضّلة صارت شبكةَ التصفّح نفسَها**: بطاقةٌ تُضغط فتُفتح في نافذةٍ
+ * منبثقة، **لا رابطٌ ينقل إلى صفحةٍ ثانية.** (قرارُ المالك ٢٠٢٦-٠٨-٠٥:
+ * «اتّفقنا نافذةٌ منبثقةٌ نفسَ نظام الموقع الصفحة الرئيسيّة».)
+ *
+ * **وبطاقةُ الصنف تعيش في تطبيق الزبون** — تفتح `ItemClient` وتنادي `api` —
+ * **فلا تصعد إلى الحزمة المشتركة.** وهذا الملفُّ يحمل الحالَ وحدَها.
+ */
 type Api = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 /**
@@ -54,9 +52,9 @@ type Api = <T>(path: string, init?: RequestInit) => Promise<T>;
  * **ولا يُنادى الخادمُ لمن لم يدخل**: `‎/my/favorites` يردّ «غيرَ مخوَّل»،
  * **وخطأٌ في السجلّ عند كلّ زائرٍ يُغرق ما يُقرأ.**
  */
-export function useFavorites(api: Api, enabled = true) {
+export function useFavorites<T extends { id: string }>(api: Api, enabled = true) {
   const [ids, setIds] = useState<Set<string> | null>(null);
-  const [rows, setRows] = useState<FavoriteItem[] | null>(null);
+  const [rows, setRows] = useState<T[] | null>(null);
 
   const load = useCallback(() => {
     if (!enabled) {
@@ -64,9 +62,11 @@ export function useFavorites(api: Api, enabled = true) {
       setRows([]);
       return;
     }
-    api<FavoriteItem[]>("/api/v1/my/favorites")
+    // **والردُّ ملفوفٌ في `items`** — لأنّه استعلامُ التصفّح نفسُه
+    // (`favoritesSelect`)، **وشكلُ الصنف واحدٌ في كلّ شاشة.**
+    api<{ items: T[] }>("/api/v1/my/favorites")
       .then((r) => {
-        const list = r ?? [];
+        const list = r.items ?? [];
         setRows(list);
         setIds(new Set(list.map((x) => x.id)));
       })
@@ -163,82 +163,5 @@ export function FavoriteButton({
       {/* **والممتلئُ يُقرأ بلمحة** — وقلبان بالحدّ نفسِه لا يفترقان في العين. */}
       <IconHeart size={size === "sm" ? 15 : 18} className={on ? "fill-current" : ""} />
     </button>
-  );
-}
-
-/**
- * FavoritesPage صفحةُ المفضّلة — **صحونٌ تُضغط فتُفتح في مطبخها.**
- *
- * @param Link رابطُ الإطار — يختلف بين `next/link` وغيره.
- */
-export function FavoritesPage({
-  api,
-  Link,
-  enabled = true,
-  empty,
-}: {
-  api: Api;
-  Link: ComponentType<{ href: string; className?: string; children: ReactNode }>;
-  /** هل دخل صاحبُ الشاشة — **ومن لم يدخل لا مفضّلةَ له.** */
-  enabled?: boolean;
-  /** ما يُعرض حين لا مفضّلة — **زرُّ تصفّحٍ خيرٌ من جملةٍ يائسة.** */
-  empty?: ReactNode;
-}) {
-  const { rows, has, toggle } = useFavorites(api, enabled);
-
-  if (rows === null) return <LoadingState />;
-
-  return (
-    <PageContainer>
-      <PageHeader icon={IconHeart} title={F.title} subtitle={F.subtitle} />
-
-      {rows.length === 0 ? (
-        <EmptyState icon={IconHeart} title={F.empty} action={empty} />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {rows.map((f) => (
-            <div
-              key={f.id}
-              className="flex items-center gap-3 rounded-card border border-line bg-surface p-3"
-            >
-              {/* **والوجهةُ صفحةُ الصنف لا مطبخُه.**
-
-                  **والمتاجرُ مخفيّةٌ عن الزبون بالكامل**: المنصةُ سوقٌ يجلب
-                  منها، **والزبونُ يشتري «من رحّال» لا «من مطعم فلان»**. وقد
-                  كانت تربط إلى `‎/m/{id}` **فتكشف المطبخَ وتفتح بابَه.**
-                  (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
-
-                  **وصفحةُ الصنف تحمل خياراتِه وكمّيتَه** — فلا ينقص شيء. */}
-              <Link href={`/i/${f.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                {f.image_thumb_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={f.image_thumb_url}
-                    alt="" loading="lazy"
-                    className="h-14 w-14 shrink-0 rounded-control object-cover"
-                  />
-                ) : (
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-control bg-primary-light">
-                    <CategoryIcon name={f.category_icon} size={18} />
-                  </span>
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-bold">{f.name}</span>
-                  <span className="mt-1 flex items-center gap-2">
-                    {/* **والسعرُ الآن لا يومَ الحفظ** — ومن اكتشف الفرقَ في
-                        السلّة اكتشفه في أسوأ لحظة. */}
-                    <span className="font-bold text-primary-dark">
-                      {fmtNum(f.price)} {m.common.currency}
-                    </span>
-                    {f.unavailable && <Badge variant="warning">{F.unavailable}</Badge>}
-                  </span>
-                </span>
-              </Link>
-              <FavoriteButton itemID={f.id} on={has(f.id)} onToggle={toggle} />
-            </div>
-          ))}
-        </div>
-      )}
-    </PageContainer>
   );
 }

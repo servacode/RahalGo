@@ -86,56 +86,16 @@ func (s *Server) handlePublicSearch(w http.ResponseWriter, r *http.Request) {
 // **الصنفُ الذي رفعه المتجرُ من قائمته يسقط من الجدول نفسِه** (`ON DELETE
 // CASCADE`). **والذي أوقفه مؤقّتاً يبقى ويُقال عنه** — لأنّه يعود.
 func (s *Server) handleMyFavorites(w http.ResponseWriter, r *http.Request) {
-	// **ولا اسمَ متجرٍ ولا معرّفَه في الردّ.**
+	// **والاستعلامُ هو استعلامُ التصفّح نفسُه** (`favoritesSelect`) — بعمودٍ
+	// واحدٍ يفرّقهما: من صاحبُها.
 	//
-	// **المتاجرُ مخفيّةٌ عن الزبون بالكامل**: المنصةُ سوقٌ يجلب منها، **وهو
-	// يشتري «من رحّال» لا «من مطعم فلان»**. (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
+	// **وكان مرتجَلاً هنا** فقرأ عمودَ `price` الخام بدل سعر البيع **ونسي
+	// الخصمَ السارّي** — فقالت المفضّلةُ للصنف الواحد رقماً والقسمُ غيرَه.
 	//
-	// **والحجبُ في الردّ لا في الشاشة**: حقلٌ يصل المتصفّحَ يُقرأ في أدوات
-	// المطوّر ويُستعمل يوماً، **وقاعدةٌ تُطبَّق في الشاشة ولا يفرضها المحرّك
-	// قاعدةٌ سقطت.** وهي عائلةُ الخلل التي تكرّرت في هذه المنصة.
-	//
-	// **والتصنيفُ يبقى**: أيقونتُه تصف السلعةَ (مطعمٌ · صيدليّةٌ · بقالة) **لا
-	// بائعَها بعينه** — وهي ما يملأ البطاقةَ حين لا صورة.
-	rows, err := s.pg.Query(r.Context(), `
-		SELECT i.id, i.name, i.price, im.thumb_path, c.icon,
-		       -- **غيرُ متاحٍ الآن**: أوقفه المتجر، أو أُغلق طارئاً، أو
-		       -- **لم يُعتمد بعد** — وثلاثتُها «لا يُطلب اليوم».
-		       (NOT i.available OR NOT i.approved OR m.emergency_closed
-		        OR m.status <> 'active') AS unavailable
-		FROM user_favorites f
-		JOIN menu_items i ON i.id = f.menu_item_id
-		JOIN merchants m ON m.id = i.merchant_id
-		JOIN categories c ON c.id = m.category_id
-		LEFT JOIN media im ON im.id = i.image_media_id
-		WHERE f.user_id = $1
-		ORDER BY f.created_at DESC`, userIDFrom(r))
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	defer rows.Close()
-
-	type fav struct {
-		ID            string  `json:"id"`
-		Name          string  `json:"name"`
-		Price         int64   `json:"price"`
-		ImageThumbURL *string `json:"image_thumb_url"`
-		CategoryIcon  string  `json:"category_icon"`
-		Unavailable   bool    `json:"unavailable"`
-	}
-	out := []fav{}
-	for rows.Next() {
-		var f fav
-		if err := rows.Scan(&f.ID, &f.Name, &f.Price, &f.ImageThumbURL,
-			&f.CategoryIcon, &f.Unavailable); err != nil {
-			s.respondErr(w, err)
-			return
-		}
-		f.ImageThumbURL = media.URLForPtr(f.ImageThumbURL)
-		out = append(out, f)
-	}
-	httpx.JSON(w, http.StatusOK, out)
+	// **والردُّ بشكل `publicItem`** لأنّ الشاشةَ تعرضه ببطاقة التصفّح نفسِها:
+	// **يُضغط فيُفتح في نافذةٍ لا في صفحة**، كالقسم والعروض تماماً. (قرارُ
+	// المالك ٢٠٢٦-٠٨-٠٥: «اتّفقنا نافذةٌ منبثقةٌ نفسَ نظام الصفحة الرئيسيّة».)
+	s.scanItems(w, r, favoritesSelect, userIDFrom(r))
 }
 
 // handleToggleFavorite يضيف صنفاً للمفضّلة أو يزيله — عمليةٌ واحدة لا اثنتان.

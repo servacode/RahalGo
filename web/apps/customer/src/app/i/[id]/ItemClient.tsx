@@ -64,6 +64,8 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
     0,
   );
   const unit = item.price + delta;
+  // **وخصمٌ بلا سعرٍ سابقٍ لا يُعرض** — الرقمُ وحدَه لا يقول إنّه أرخص.
+  const discounted = !!item.price_before && item.price_before > item.price;
   const off = !item.available || item.source_closed;
 
   function submit() {
@@ -107,8 +109,28 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
 
       <h1 className="text-2xl font-bold">{item.name}</h1>
       {item.description && <p className="mt-1 text-ink-muted">{item.description}</p>}
-      <p className="mt-2 text-xl font-bold text-primary-dark">
-        {fmtNum(unit)} {m.common.currency}
+      {/* **والخصمُ يُرى هنا كما يُرى في البطاقة.**
+
+          **كانت النافذةُ تعرض السعرَ كاملاً والبطاقةُ تحته تعرض المخصوم** —
+          رقمان متناقضان في شاشةٍ واحدة، **وزرُّ «أضف للسلّة» يحمل الأكبر.**
+          (شهده المالك ٢٠٢٦-٠٨-٠٥.)
+
+          **والمشطوبُ يُحسب من `price_before` لا يُقدَّر**: الخيارات تُضاف
+          إلى الاثنين بالمقدار نفسِه، **فالفرقُ بينهما يبقى هو الخصم.** */}
+      <p className="mt-2 flex items-baseline gap-2 text-xl font-bold text-primary-dark">
+        <span>
+          {fmtNum(unit)} {m.common.currency}
+        </span>
+        {discounted && (
+          <>
+            <span className="text-sm font-normal text-ink-muted line-through">
+              {fmtNum(item.price_before! + delta)}
+            </span>
+            {item.discount_percent ? (
+              <Badge variant="danger">−{item.discount_percent}%</Badge>
+            ) : null}
+          </>
+        )}
       </p>
 
       {/* **قل متى يعود لا أنه غير متاح.** */}

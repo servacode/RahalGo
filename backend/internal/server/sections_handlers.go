@@ -26,6 +26,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
@@ -47,6 +48,14 @@ type publicItem struct {
 	SourceOpensAt *time.Time `json:"source_opens_at"`
 	SectionID     string     `json:"section_id"`
 	SectionName   string     `json:"section_name"`
+
+	// PriceBefore سعرُ ما قبل الخصم — **وفارغٌ حين لا خصم.**
+	//
+	// **والمشطوبُ هو ما يجعل الخصمَ خصماً**: «٧٧٬٢٥٠» وحدَه رقمٌ، **و«١٠٣٬٠٠٠»
+	// مشطوبةً فوقه توفيرٌ يُرى.**
+	PriceBefore *int64 `json:"price_before"`
+	// DiscountPercent نسبةُ الحسم — **تُقرأ بلمحةٍ قبل أن يُقارَن الرقمان.**
+	DiscountPercent *int `json:"discount_percent"`
 }
 
 // itemSelect ما يُقرأ لكلّ صنفٍ معروض.
@@ -59,16 +68,91 @@ type publicItem struct {
 // شرطُ `i.approved` يحرس مراجعةَ القائمة. **والعمودُ يبقى صادقاً لكلّ ما وُجد
 // قبل الهجرة ٠٠٦٤ ولكلّ ما يُنشأ والمفتاحُ مُطفأ** — فالشرطُ لا يُخفي شيئاً
 // حتى يُرفع المفتاح، **ولا يُطفئ سوقاً قائماً في لحظة.**
-const itemSelect = `
+// itemFrom الأعمدةُ والضمُّ بلا شرطِ ظهور — **كي تُعيد استعمالَه المفضّلةُ
+// بشرطٍ آخر.**
+//
+// **والصنفُ الواحدُ يُقرأ بشكلٍ واحدٍ في كلّ شاشة**: القسمُ والبحثُ والنافذةُ
+// والمفضّلة. **واستعلامٌ ثانٍ يشبهه يفترق عنه يوماً** — كما افترقت المفضّلةُ
+// فقرأت عمودَ `price` الخام بدل سعر البيع، **فقالت للصنف الواحد رقمين.**
+const itemFrom = `
 	SELECT i.id, i.name, i.description, i.merchant_price, i.margin_override,
-	       im.path, im.thumb_path, i.available, ps.id, ps.name, ps.margin_override,
-	       ` + orders.OpenNowSQL + `, ` + orders.NextOpenSQL + `
+	       im.path, im.thumb_path,
+	       -- **«متاح» تعني «يُطلب الآن» لا «لم يوقفه المتجر».**
+	       --
+	       -- **والشرطُ كان في WHERE وحدَه**: ما سقط منه لا يُعرض أصلاً،
+	       -- **والمفضّلةُ تعرض ما سقط** — لأنّه يعود. فلو بقيت «متاح» عمودَ
+	       -- المتجر وحدَه **لَظهر صنفُ متجرٍ موقوفٍ قابلاً للطلب.**
+	       (i.available AND i.approved AND m.status = 'active' AND ps.active),
+	       ps.id, ps.name, ps.margin_override,
+	       ` + orders.OpenNowSQL + `, ` + orders.NextOpenSQL + `,
+	       o.discount_percent
 	FROM menu_items i
 	JOIN merchants m ON m.id = i.merchant_id
 	JOIN platform_sections ps ON ps.id = i.platform_section_id
 	LEFT JOIN media im ON im.id = i.image_media_id
+	-- **والخصمُ يُضمّ هنا لا يُنادى لكلّ صنف.**
+	--
+	-- **نداءٌ لكلّ بطاقةٍ يعني عشرين نداءً في شبكةٍ من عشرين** — وهذا
+	-- الاستعلامُ يخدم القسمَ والصنفَ والبحث، **فالضمُّ مرّةً يكفي ثلاثتَها.**
+	--
+	-- **وشرطُ السريان مستوردٌ لا منسوخ** (offers.LiveCond): نسختان
+	-- تفترقان يوماً **فيُعرض خصمٌ انتهى أو يُخفى خصمٌ سارٍ.**
+	LEFT JOIN offers o
+	       ON o.menu_item_id = i.id AND o.kind = 'discount' AND ` + offers.LiveCond
+
+// itemSelect ما يُقرأ لكلّ صنفٍ معروضٍ في التصفّح.
+const itemSelect = itemFrom + `
 	WHERE m.status = 'active' AND ps.active
 	  AND i.approved`
+
+// favoritesSelect أصنافُ صاحبِ الشاشة المحفوظة — **بالأعمدة نفسِها.**
+//
+// **والموقوفُ يبقى ويُقال عنه**: الصنفُ الذي رفعه المتجرُ من قائمته يسقط من
+// الجدول نفسِه (`ON DELETE CASCADE`)، **والذي أوقفه مؤقّتاً يعود.**
+const favoritesSelect = itemFrom + `
+	JOIN user_favorites f ON f.menu_item_id = i.id
+	WHERE f.user_id = $1
+	ORDER BY f.created_at DESC`
+
+// markDown يُلبس الصنفَ خصمَه — **وموضعٌ واحدٌ لكلّ شاشةٍ يقرأها الزبون.**
+//
+// # لماذا وُجدت
+//
+// **الخصمُ كان يُطبَّق في موضعٍ واحدٍ من سبعة**: `orders.Create` تنزّل السعرَ
+// في الدفتر، **وكلُّ شاشةٍ يقرأها الزبونُ تعرض السعرَ كاملاً** — بطاقةُ
+// القسم، ونافذةُ الصنف، وزرُّ «أضف للسلّة»، والسلّةُ نفسُها.
+//
+// **وصفحةُ العروض وحدَها كانت تعرف** — لأنّها تحسبه بنفسها من جدول العروض.
+//
+// **فشهده المالكُ على شاشته** (٢٠٢٦-٠٨-٠٥): بطاقةٌ تقول «٧٧٬٢٥٠» بشارة
+// «−٢٥٪»، **والنافذةُ فوقها تقول «أضف للسلّة — ١٠٣٬٠٠٠».** رقمان متناقضان
+// في شاشةٍ واحدة.
+//
+// # والكذبُ هنا في الاتّجاه الآخر
+//
+// **الزبونُ يُقال له أكثرَ ممّا يدفع** — وهو أهونُ من عكسه، **لكنّ الخصمَ
+// الذي لا يُرى لا يُغري**، وهو كلُّ سببِ وجوده. **وخصمٌ يُدفع من هامشنا ولا
+// يجلب طلباً خسارةٌ بلا مقابل.**
+//
+// # وحسبةٌ واحدة
+//
+// `offers.AfterDiscount` هي عينُها التي يستعملها المحرّكُ عند بناء الطلب —
+// **ولو حُسبت هنا بيدٍ لَافترق المعروضُ عن المقبوض** بتقريبٍ أو كسر.
+func markDown(it *publicItem, pct *int) {
+	if pct == nil || *pct <= 0 {
+		return
+	}
+	before := it.Price
+	it.Price = offers.AfterDiscount(before, *pct)
+	// **وخصمٌ لا يغيّر الرقمَ لا يُعرض** — «−١٪» على ألفٍ توفيرُ عشرة،
+	// **وشارةٌ بلا فرقٍ في الرقم تُقرأ خدعة.**
+	if it.Price >= before {
+		it.Price = before
+		return
+	}
+	it.PriceBefore = &before
+	it.DiscountPercent = pct
+}
 
 func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, args ...any) {
 	rule := pricing.RuleFrom(r.Context(), s.settings)
@@ -86,13 +170,15 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 		var itemMargin, sectionMargin *int64
 		var open bool
 		var opensAt *time.Time
+		var pct *int
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt); err != nil {
+			&sectionMargin, &open, &opensAt, &pct); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
+		markDown(&it, pct)
 		it.ImageURL = media.URLForPtr(it.ImageURL)
 		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.SourceClosed = !open
@@ -198,15 +284,17 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 	var itemMargin, sectionMargin *int64
 	var open bool
 	var opensAt *time.Time
+	var pct *int
 	if err := s.pg.QueryRow(r.Context(), itemSelect+` AND i.id = $1`,
 		chi.URLParam(r, "id")).
 		Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt); err != nil {
+			&sectionMargin, &open, &opensAt, &pct); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
 	it.Price = rule.SalePrice(cost, itemMargin, sectionMargin)
+	markDown(&it, pct)
 	it.ImageURL = media.URLForPtr(it.ImageURL)
 	it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 	it.SourceClosed = !open
