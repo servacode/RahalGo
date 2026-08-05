@@ -102,10 +102,9 @@ const ALL_NAV: NavItem[] = [
   // **الأهدافُ والمكافآت** — الشاشةُ تقول من بلغ، **والمكافأةُ بيدٍ لا بمعادلة.**
   { href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconStar,
     roles: ["admin", "finance"] },
-  { href: "/dashboard/promos", label: m.terms.promos, icon: IconPromos, roles: ["admin"] },
-  // **والعرضُ يُرى والكودُ يُكتب** — ومن لم يسمع بالكود لا يعلم أنّه فاته.
-  { href: "/dashboard/offers", label: m.admin.offersPage.title, icon: IconPromos,
-    roles: ["admin"] },
+  // **صفحةٌ واحدةٌ لثلاثة أشكال**: كودٌ يُكتب · ولافتةٌ تُرى · وخصمٌ
+  // يُطبَّق في الدفتر. **وشاشتان لغرضٍ واحدٍ تجعلان من يبحث يفتح الاثنتين.**
+  { href: "/dashboard/promos", label: m.admin.promos.title, icon: IconPromos, roles: ["admin"] },
   // الإعدادات تبقى للجميع **للقراءة**: العمليات تحتاج أن تعرف المهل التي
   // تُحاسَب عليها، وإخفاؤها يجعلها تعمل بقواعد لا تراها. والتعديل للأدمن وحده
   // ويُحرسه الخادم.

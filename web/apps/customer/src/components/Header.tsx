@@ -45,6 +45,8 @@ interface Summary {
   balance: number;
   /** شكاواه المفتوحة — **الأيقونةُ تظهر بها وتغيب بإغلاقها.** */
   open_tickets: number;
+  /** عروضٌ ساريةٌ الآن — **وأيقونةُ العروض تظهر بها وتغيب.** */
+  live_offers: number;
 }
 
 export default function Header() {
@@ -140,7 +142,11 @@ export default function Header() {
               {/* **أيقونةُ العروض — والعرضُ يُرى والكودُ يُكتب.**
 
                   ومن لم يسمع بكود الخصم لا يستفيد منه **ولا يعلم أنّه فاته.**
-                  (قرارُ المالك ٢٠٢٦-٠٨-٠٥.) */}
+
+                  **ولا تظهر على فراغ**: من ضغطها مرّةً فوجد شاشةً خاليةً لم
+                  يعد يضغطها، **فيفوته أوّلُ عرضٍ حقيقيّ.** (قرارُ المالك
+                  ٢٠٢٦-٠٨-٠٥.) */}
+              {(summary?.live_offers ?? 0) > 0 && (
               <TopBarLink
                 Link={Link}
                 href="/offers"
@@ -150,6 +156,7 @@ export default function Header() {
               >
                 <IconPromos size={TOPBAR_ICON} />
               </TopBarLink>
+              )}
               <TopBarLink
                 Link={Link}
                 href="/orders"

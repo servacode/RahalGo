@@ -97,3 +97,6 @@ export { useLocationBeacon, fmtDistance } from "./useLocationBeacon";
 
 /** هدفي ومكافآتي — **وحافزٌ لا يُرى لا يحفّز.** */
 export { MyIncentives } from "./Incentives";
+
+/** سلايدرُ اللافتات — **ومن لا يسحب لا يرى إلّا الأولى.** */
+export { BannerSlider, type SlideItem } from "./BannerSlider";

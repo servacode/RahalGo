@@ -40,9 +40,11 @@ var (
 	ErrItemHasOffer = httpx.NewError(http.StatusConflict, "item_already_discounted", "errors.item_already_discounted")
 )
 
-// أنواعُ العرض ومن يتحمّله.
+// KindDiscount النوعُ الوحيدُ الباقي — **واللافتاتُ في جدولها** (`banners`).
+//
+// **وشيءٌ واحدٌ في مكانين يفترق**: كانت لافتةٌ هنا ولافتةٌ هناك، فتُضاف في
+// أحدهما ولا تظهر في عرض الآخر. (انظر الترحيل ٠٠٧٥.)
 const (
-	KindBanner   = "banner"
 	KindDiscount = "discount"
 
 	ByPlatform = "platform"
@@ -126,7 +128,7 @@ func scan(rows interface {
 	}
 	o.ImageURL = media.URLForPtr(o.ImageURL)
 	o.ItemImageURL = media.URLForPtr(o.ItemImageURL)
-	if o.Kind == KindDiscount && o.DiscountPercent != nil {
+	if o.DiscountPercent != nil {
 		o.PriceBefore = marginOf(cost)
 		o.PriceAfter = AfterDiscount(o.PriceBefore, *o.DiscountPercent)
 	}
@@ -151,7 +153,7 @@ func (s *Service) List(ctx context.Context, liveOnly bool, marginOf func(int64) 
 		// **والخصمُ على صنفٍ غائبٍ أو غيرِ متاحٍ لا يُعرض** — يفتحه الزبونُ
 		// فلا يجده، **ووعدٌ لا يُوفى أسوأُ من صمت.**
 		q += ` WHERE ` + liveCond + `
-			AND (o.kind <> 'discount' OR (mi.id IS NOT NULL AND mi.available))`
+			AND mi.id IS NOT NULL AND mi.available`
 	}
 	q += ` ORDER BY o.created_at DESC`
 	rows, err := s.db.Query(ctx, q)
@@ -188,21 +190,15 @@ type Input struct {
 // Create ينشئ عرضاً — **والتحقّقُ هنا لا في الشاشة.**
 func (s *Service) Create(ctx context.Context, actorID string, in Input,
 	marginOf func(int64) int64) (*Offer, error) {
-	if in.Kind != KindBanner && in.Kind != KindDiscount {
-		return nil, ErrBadKind
-	}
+	// **والنوعُ يُفترض ولا يُسأل** — لم يبقَ إلّا واحد.
+	in.Kind = KindDiscount
 	if strings.TrimSpace(in.Title) == "" {
 		return nil, ErrNeedsTitle
 	}
-	if in.Kind == KindDiscount {
-		if in.MenuItemID == nil || in.DiscountPercent == nil ||
-			*in.DiscountPercent < 1 || *in.DiscountPercent > 90 ||
-			in.BorneBy == nil || (*in.BorneBy != ByPlatform && *in.BorneBy != ByMerchant) {
-			return nil, ErrBadDiscount
-		}
-	} else {
-		// **ولا حقولَ خصمٍ في لافتة** — حقلٌ يُملأ ولا يُقرأ يُقرأ يوماً.
-		in.MenuItemID, in.DiscountPercent, in.BorneBy = nil, nil, nil
+	if in.MenuItemID == nil || in.DiscountPercent == nil ||
+		*in.DiscountPercent < 1 || *in.DiscountPercent > 90 ||
+		in.BorneBy == nil || (*in.BorneBy != ByPlatform && *in.BorneBy != ByMerchant) {
+		return nil, ErrBadDiscount
 	}
 
 	active := true

@@ -27,6 +27,14 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 		// (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «أيقونة بالتوب بار، فقط عند الإبلاغ تظهر
 		// وتختفي بإغلاق الشكوى».)
 		OpenTickets int `json:"open_tickets"`
+		// LiveOffers عروضٌ ساريةٌ الآن — **وأيقونةُ العروض تظهر بها وتغيب.**
+		//
+		// **وأيقونةٌ تُفتح على فراغٍ تُعلّم ألّا تُفتح**: من ضغطها مرّةً فوجد
+		// شاشةً خاليةً لم يعد يضغطها، **فيفوته أوّلُ عرضٍ حقيقيّ.**
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-٠٥: «أيقونةُ العروض لا تظهر إلّا عندما يكون
+		// هناك عروضٌ مفعّلة».)
+		LiveOffers int `json:"live_offers"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name,
@@ -34,10 +42,18 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = u.id), 0),
 		       u.whatsapp_phone, u.whatsapp_verified_at IS NOT NULL,
 		       (SELECT count(*) FROM tickets t
-		        WHERE t.customer_id = u.id AND t.status <> 'resolved')
+		        WHERE t.customer_id = u.id AND t.status <> 'resolved'),
+		       -- **والشرطُ هو شرطُ الشاشة نفسُه** — لا نسخةٌ ثانيةٌ تفترق
+		       -- فتظهر الأيقونةُ على فراغٍ أو تغيب عن عرضٍ قائم.
+		       (SELECT count(*) FROM offers o
+		        LEFT JOIN menu_items mi ON mi.id = o.menu_item_id
+		        WHERE o.active
+		          AND (o.starts_at IS NULL OR o.starts_at <= now())
+		          AND (o.ends_at IS NULL OR o.ends_at > now())
+		          AND (o.kind <> 'discount' OR (mi.id IS NOT NULL AND mi.available)))
 		FROM users u WHERE u.id = $1`, uid).
 		Scan(&out.FullName, &out.AvatarThumb, &out.Balance,
-			&out.WhatsAppPhone, &out.WhatsAppVerified, &out.OpenTickets)
+			&out.WhatsAppPhone, &out.WhatsAppVerified, &out.OpenTickets, &out.LiveOffers)
 	if err != nil {
 		s.respondErr(w, err)
 		return

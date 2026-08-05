@@ -1180,7 +1180,7 @@
       "inactive": "موقوفة"
     },
     "promos": {
-      "title": "العروض والأكواد",
+      "title": "العروض والخصومات",
       "tabCodes": "أكواد الخصم",
       "tabBanners": "البانرات",
       "create": "كود جديد",
@@ -1203,7 +1203,8 @@
       "bannerTitle": "عنوان البانر",
       "bannerImage": "صورة البانر",
       "bannerTarget": "الوجهة عند النقر (اختياري)",
-      "bannersEmpty": "لا بانرات بعد"
+      "bannersEmpty": "لا بانرات بعد",
+      "tabDiscounts": "خصومات على أصناف"
     },
     "reports": {
       "title": "التقارير",

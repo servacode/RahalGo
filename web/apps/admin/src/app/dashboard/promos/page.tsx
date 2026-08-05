@@ -24,6 +24,7 @@ import {
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import ImageUpload from "@/components/ImageUpload";
 import { useAuth } from "@/lib/auth";
+import DiscountsTab from "@/components/DiscountsTab";
 
 const m = getMessages(defaultLocale);
 
@@ -72,14 +73,14 @@ const KIND_LABEL: Record<Promo["kind"], string> = {
 export default function PromosPage() {
   const { user: me } = useAuth();
   const isAdmin = !!me?.roles.includes("admin");
-  const [tab, setTab] = useState<"codes" | "banners">("codes");
+  const [tab, setTab] = useState<"codes" | "banners" | "discounts">("codes");
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <PageHeader icon={IconPromos} title={m.admin.promos.title} />
         <div role="group" className="flex rounded-control border border-line bg-page p-1">
-          {(["codes", "banners"] as const).map((t) => (
+          {(["codes", "banners", "discounts"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -87,12 +88,27 @@ export default function PromosPage() {
                 tab === t ? "bg-surface font-medium text-primary-dark shadow-sm" : "text-ink-muted"
               }`}
             >
-              {t === "codes" ? m.admin.promos.tabCodes : m.admin.promos.tabBanners}
+              {t === "codes"
+                ? m.admin.promos.tabCodes
+                : t === "banners"
+                  ? m.admin.promos.tabBanners
+                  : m.admin.promos.tabDiscounts}
             </button>
           ))}
         </div>
       </div>
-      {tab === "codes" ? <CodesTab isAdmin={isAdmin} /> : <BannersTab isAdmin={isAdmin} />}
+      {/* **ثلاثةُ تبويباتٍ في صفحةٍ واحدة.**
+
+          كودٌ يُكتب · ولافتةٌ تُرى · وخصمٌ يُطبَّق في الدفتر — **ثلاثةُ أشكالٍ
+          لغرضٍ واحد**، وشاشتان لهما تجعلان من يبحث عن عرضٍ يفتح الاثنتين.
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٥.) */}
+      {tab === "codes" ? (
+        <CodesTab isAdmin={isAdmin} />
+      ) : tab === "banners" ? (
+        <BannersTab isAdmin={isAdmin} />
+      ) : (
+        <DiscountsTab />
+      )}
     </div>
   );
 }

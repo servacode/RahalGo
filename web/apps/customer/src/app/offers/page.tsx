@@ -17,19 +17,23 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { EmptyState, LoadingState, IconPromos } from "@rahalgo/ui";
+import { EmptyState, LoadingState, BannerSlider, IconPromos } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const C = m.customer.offers;
 
+interface Banner {
+  id: string;
+  title: string;
+  image_url: string | null;
+  target: string | null;
+}
+
 interface Offer {
   id: string;
-  kind: "banner" | "discount";
   title: string;
   body: string;
-  image_url: string | null;
-  href: string;
   menu_item_id: string | null;
   item_name: string;
   merchant_name: string;
@@ -41,17 +45,21 @@ interface Offer {
 
 export default function OffersPage() {
   const [rows, setRows] = useState<Offer[] | null>(null);
+  const [banners, setBanners] = useState<Banner[]>([]);
 
   useEffect(() => {
     api<{ offers: Offer[] }>("/api/v1/public/offers")
       .then((r) => setRows(r.offers ?? []))
       .catch(() => setRows([]));
+    // **واللافتاتُ من جدولها لا من العروض** — شيءٌ واحدٌ في مكانين يفترق.
+    api<Banner[]>("/api/v1/banners")
+      .then((r) => setBanners(r ?? []))
+      .catch(() => setBanners([]));
   }, []);
 
   if (rows === null) return <LoadingState />;
 
-  const banners = rows.filter((o) => o.kind === "banner");
-  const discounts = rows.filter((o) => o.kind === "discount");
+  const discounts = rows;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5 p-4">
@@ -63,32 +71,20 @@ export default function OffersPage() {
         <p className="mt-1 text-sm text-ink-muted">{C.subtitle}</p>
       </div>
 
-      {rows.length === 0 && <EmptyState icon={IconPromos} title={C.empty} />}
+      {rows.length === 0 && banners.length === 0 && (
+        <EmptyState icon={IconPromos} title={C.empty} />
+      )}
 
       {/* **اللافتاتُ أوّلاً** — خبرٌ يُقرأ بنظرة، والخصومُ تحتها تُتصفَّح. */}
-      {banners.map((o) => {
-        const card = (
-          <div className="overflow-hidden rounded-card border border-line bg-surface">
-            {o.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={o.image_url} alt="" className="h-36 w-full object-cover" />
-            )}
-            <div className="p-4">
-              <p className="font-bold">{o.title}</p>
-              {o.body && <p className="mt-1 text-sm text-ink-muted">{o.body}</p>}
-            </div>
-          </div>
-        );
-        /* **ولافتةٌ بلا وجهةٍ تُقرأ ولا تُفتح** — وهي حالٌ مشروعة، **ورابطٌ
-           يُضغط ولا يذهب يُعلّم ألّا يُضغط ما بعده.** */
-        return o.href ? (
-          <Link key={o.id} href={o.href} className="block">
-            {card}
-          </Link>
-        ) : (
-          <div key={o.id}>{card}</div>
-        );
-      })}
+      <BannerSlider
+        Link={Link}
+        items={banners.map((b) => ({
+          id: b.id,
+          title: b.title,
+          imageUrl: b.image_url,
+          href: b.target || undefined,
+        }))}
+      />
 
       {discounts.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2">

@@ -21,7 +21,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { CategoryIcon, Input, IconSearch, IconClose } from "@rahalgo/ui";
+import { CategoryIcon, Input, BannerSlider, IconSearch, IconClose } from "@rahalgo/ui";
 import ItemCard, { type BrowseItem } from "@/components/ItemCard";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
@@ -32,6 +32,8 @@ interface Banner {
   id: string;
   title: string;
   image_url: string | null;
+  /** وجهةُ الضغط — **ولافتةٌ بلا وجهةٍ تُقرأ ولا تُفتح**، وهي حالٌ مشروعة. */
+  target: string | null;
 }
 interface Category {
   id: string;
@@ -88,23 +90,20 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
     <div>
       <h1 className="mb-4 text-2xl font-bold">{m.site.hero}</h1>
 
-      {banners.length > 0 && (
-        <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
-          {banners.map((b) => (
-            <div key={b.id} className="relative h-36 w-80 shrink-0 overflow-hidden rounded-card">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={mediaUrl(b.image_url) ?? ""}
-                alt={b.title}
-                className="h-full w-full object-cover"
-              />
-              <span className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-ink/70 to-transparent p-2 text-sm font-bold text-white">
-                {b.title}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* **سلايدرٌ لا شريطٌ يُسحب.**
+
+          كان شريطاً أفقياً، **ومن لا يسحب لا يرى إلّا الأولى** — فالثانيةُ
+          والثالثةُ تُنشَران ولا يراهما أحد. (قرارُ المالك ٢٠٢٦-٠٨-٠٥.) */}
+      <BannerSlider
+        className="mb-6"
+        Link={Link}
+        items={banners.map((b) => ({
+          id: b.id,
+          title: b.title,
+          imageUrl: mediaUrl(b.image_url) ?? null,
+          href: b.target || undefined,
+        }))}
+      />
 
       {/* البحث فوق كل شيء: من يعرف ما يريد لا يتصفّح */}
       <div className="relative mb-5">
