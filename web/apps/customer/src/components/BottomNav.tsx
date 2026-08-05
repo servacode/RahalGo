@@ -34,6 +34,7 @@ import {
   MobileNav,
   MobileNavSpacer,
   IconGrid,
+  IconStore,
   IconOrder,
   IconHeart,
   IconUser,
@@ -45,6 +46,11 @@ const m = getMessages(defaultLocale);
 
 const ITEMS: readonly NavItem[] = [
   { href: "/", label: m.site.nav.home, icon: IconGrid },
+  /* **والتسوّقُ ثانياً — بعد الرئيسيّة مباشرةً.**
+     **وهو سببُ وجود الموقع**: الرئيسيّةُ تُعرّف بالمنصة، **والتسوّقُ ما يأتي
+     الزبونُ من أجله.** فموضعُه حيث يصل الإبهامُ أوّلاً بعد البيت.
+     (شهده المالك ٢٠٢٦-٠٨-٠٦: «لم تظهر أيُّ أيقونةٍ تدلّ على صفحة التسوّق؟») */
+  { href: "/shop", label: m.site.nav.shop, icon: IconStore },
   { href: "/orders", label: m.terms.orders, icon: IconOrder },
   { href: "/favorites", label: m.customer.favorites.title, icon: IconHeart },
   { href: "/account", label: m.terms.account, icon: IconUser },
