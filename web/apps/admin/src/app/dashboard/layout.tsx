@@ -103,6 +103,9 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconStar,
     roles: ["admin", "finance"] },
   { href: "/dashboard/promos", label: m.terms.promos, icon: IconPromos, roles: ["admin"] },
+  // **والعرضُ يُرى والكودُ يُكتب** — ومن لم يسمع بالكود لا يعلم أنّه فاته.
+  { href: "/dashboard/offers", label: m.admin.offersPage.title, icon: IconPromos,
+    roles: ["admin"] },
   // الإعدادات تبقى للجميع **للقراءة**: العمليات تحتاج أن تعرف المهل التي
   // تُحاسَب عليها، وإخفاؤها يجعلها تعمل بقواعد لا تراها. والتعديل للأدمن وحده
   // ويُحرسه الخادم.

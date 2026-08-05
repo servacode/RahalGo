@@ -24,6 +24,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/notify"
+	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -45,6 +46,7 @@ type Server struct {
 	cashbox    *cashbox.Service
 	support    *support.Service
 	incentives *incentives.Service
+	offers     *offers.Service
 	media      *media.Service
 	hub        *realtime.Hub
 	geo        *geo.Service
@@ -78,6 +80,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
 	// **ولا تُقرأ مرّتين بطريقتين.**
 	srv.incentives = incentives.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID)
+	// **والخصمُ يُقرأ لحظةَ بناء الطلب** — لا من ذاكرةٍ محمّلة.
+	srv.offers = offers.New(pg)
+	ordersSvc.SetOffers(srv.offers)
 	return srv
 }
 
@@ -146,6 +151,8 @@ func (s *Server) Router() http.Handler {
 		})
 
 		// واجهة التصفح العامة — بلا حساب
+		// **والعروضُ عامّةٌ كالتصفّح** — تُرى قبل الدخول، **ومن رأى عرضاً سجّل.**
+		r.Get("/public/offers", s.handlePublicOffers)
 		r.Get("/public/home", s.handlePublicHome)
 		r.Get("/public/merchants/{id}", s.handlePublicMerchant)
 		r.Get("/public/zone", s.handlePublicZone)
@@ -385,6 +392,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/goods", s.handleGoods)
 
 			// الأقسام التشغيلية لكل دور (قرار 16)
+			// **العروضُ والخصومات** — لافتةٌ تُرى وخصمٌ يُطبَّق في الدفتر.
+			r.Get("/offers", s.handleAdminOffers)
+			r.With(s.RequireRoles("admin")).Post("/offers", s.handleCreateOffer)
+			r.With(s.RequireRoles("admin")).Post("/offers/{id}/active", s.handleSetOfferActive)
 			r.Get("/customers", s.handleListCustomers)
 			// **الأهدافُ تُقرأ ولا تُدفع** — تقول من بلغ، ولا تُعطي.
 			r.Get("/incentives/{role}", s.handleIncentiveStandings)

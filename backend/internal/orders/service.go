@@ -15,6 +15,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -46,6 +47,12 @@ type Service struct {
 	pub      Publisher
 	notify   Notifier
 	logger   *slog.Logger
+	// offers الخصومُ السارية — **تُقرأ لحظةَ بناء الطلب.**
+	//
+	// **وواجهةٌ ضيّقةٌ لا حزمةٌ كاملة**: هذا المحرّكُ يسأل سؤالاً واحداً —
+	// «أعلى هذا الصنف خصمٌ الآن ومن يتحمّله؟». **وحقنُ الحزمة كلِّها يفتح
+	// باباً لقراءاتٍ لا تخصّه.**
+	offers DiscountReader
 	// settings قواعدُ العمل التي يملك المالك ضبطها من اللوحة.
 	//
 	// **اختيارية**: بلا حقنٍ يعمل المحرّك بسلوكه الافتراضي، فاختبارات التسويات
@@ -57,6 +64,17 @@ type Service struct {
 func (s *Service) SetNotifier(n Notifier) { s.notify = n }
 
 // SetSettings يحقن مخزن الإعدادات (يُنادى مرّة عند الإقلاع).
+// DiscountReader ما يحتاجه المحرّكُ من العروض — **سؤالٌ واحدٌ لا حزمةٌ كاملة.**
+//
+// **وحقنُ الحزمة كلِّها يفتح باباً لقراءاتٍ لا تخصّه** — والواجهةُ الضيّقةُ
+// تقول ما يلزم بالضبط.
+type DiscountReader interface {
+	LiveDiscount(ctx context.Context, menuItemID string) (percent int, borneBy string)
+}
+
+// SetOffers يحقن قارئَ الخصوم — **يُنادى مرّةً عند الإقلاع.**
+func (s *Service) SetOffers(r DiscountReader) { s.offers = r }
+
 func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
 
 func NewService(db *pgxpool.Pool, identitySvc *identity.Service, walletSvc *wallet.Service,
@@ -444,6 +462,35 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 			return nil, 0, ErrItemUnavailable
 		}
 		it.UnitPrice = rule.SalePrice(it.MerchantPrice, itemMargin, sectionMargin)
+
+		// **والخصمُ يمرّ في اللقطة لا في الشاشة وحدَها.**
+		//
+		// **سعرٌ مشطوبٌ في العرض ثمنُه صفرٌ في الدفتر خدعة.** واللقطةُ هي ما
+		// تقرؤه التسويةُ كلُّها، **فيقع الخصمُ فيها مرّةً ولا يُحسب ثانيةً.**
+		//
+		//	تتحمّله المنصة  ←  سعرُ البيع ينزل وسعرُ الشراء كما هو
+		//	                   **فالهامشُ يضيق** — والمتجرُ يقبض كاملاً
+		//	يتحمّله المتجر  ←  ينزلان معاً بالمقدار نفسِه
+		//	                   **فالهامشُ كما هو** — والمتجرُ يقبض أقلّ
+		//
+		// **ولا يُقرأ من ذاكرةٍ محمّلة**: عرضٌ يُنزَل وطلبٌ يُبنى في اللحظة
+		// نفسِها، **والذاكرةُ تُعطي سعراً انتهى.**
+		if s.offers != nil && it.MenuItemID != nil {
+			if pct, by := s.offers.LiveDiscount(ctx, *it.MenuItemID); pct > 0 {
+				before := it.UnitPrice
+				it.UnitPrice = offers.AfterDiscount(before, pct)
+				if by == offers.ByMerchant {
+					// **وينزل سعرُ الشراء بالمقدار نفسِه لا بالنسبة نفسِها**:
+					// النسبةُ على سعرِ بيعٍ أكبرَ تُنتج خصماً أكبر، **فيتحمّل
+					// المتجرُ أكثرَ ممّا وُعد به الزبون.**
+					cut := before - it.UnitPrice
+					if cut > it.MerchantPrice {
+						cut = it.MerchantPrice
+					}
+					it.MerchantPrice -= cut
+				}
+			}
+		}
 		it.Qty = in.Qty
 		it.Note = in.Note
 		it.Options = []OptionSnapshot{}

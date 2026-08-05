@@ -22,6 +22,7 @@ import {
   LiveNotifications,
   useLiveRefresh,
   IconOrder,
+  IconPromos,
   IconSupport,
   IconWallet,
   IconUser,
@@ -136,6 +137,19 @@ export default function Header() {
                   <IconSupport size={TOPBAR_ICON} />
                 </TopBarLink>
               )}
+              {/* **أيقونةُ العروض — والعرضُ يُرى والكودُ يُكتب.**
+
+                  ومن لم يسمع بكود الخصم لا يستفيد منه **ولا يعلم أنّه فاته.**
+                  (قرارُ المالك ٢٠٢٦-٠٨-٠٥.) */}
+              <TopBarLink
+                Link={Link}
+                href="/offers"
+                title={m.customer.offers.title}
+                aria-label={m.customer.offers.title}
+                tone={pathname.startsWith("/offers") ? "active" : "plain"}
+              >
+                <IconPromos size={TOPBAR_ICON} />
+              </TopBarLink>
               <TopBarLink
                 Link={Link}
                 href="/orders"
