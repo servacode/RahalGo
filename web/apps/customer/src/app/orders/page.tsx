@@ -525,7 +525,7 @@ function OrderCard({
             dir="ltr"
             /* **رقمُ الطلب برتقاليّ** — هو ما يُقال في الهاتف حين يُسأل عنه،
                **فيُلمح في البطاقة قبل أن يُبحث عنه.** */
-            className="rounded-control bg-accent px-2.5 py-1 text-sm font-bold tabular-nums text-on-solid"
+            className="rounded-control bg-accent px-2.5 py-1 text-sm font-bold tabular-nums text-on-accent"
           >
             #{fmtRef(o.number)}
           </span>

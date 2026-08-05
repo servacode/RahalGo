@@ -346,7 +346,7 @@ export function Confirm({
 
          `ink/45` هو ما تستعمله `Modal` أصلاً: **الحبرُ داكنٌ في اللوحتين
          لأنّه لونُ النصّ**، وحجابٌ من الحبر يبقى حجاباً مهما انقلبت الأرض. */
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-ink/45 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-scrim/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onCancel}
     >
       {/* **وعلى الجوّال يصعد من الأسفل** — نافذةٌ في وسط شاشةٍ طويلةٍ تترك

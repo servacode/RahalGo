@@ -43,8 +43,13 @@ const m = getMessages(defaultLocale);
  * مرّتين. **وبكسلٌ واحدٌ إلى الأسفل يكفي**: ما يُحسّ ولا يُرى.
  */
 const buttonVariants = {
-  primary: "bg-accent text-on-solid elev-1 hover:bg-accent-strong hover:elev-2",
-  secondary: "border border-line bg-surface text-ink hover:border-primary/40 hover:bg-raised",
+  /* **والتوهّجُ عند اللمس لا دائماً.**
+
+     نيونٌ مشتعلٌ في كلّ زرٍّ على الشاشة **يُتعب العينَ ويفقد معناه**: التوهّجُ
+     يقول «هذا ما تضغطه الآن»، **فإن قالته عشرةُ عناصرَ معاً لم يقل شيئاً.**
+     (انظر `glow-accent` في الثيم.) */
+  primary: "bg-accent text-on-accent elev-1 hover:bg-accent-strong hover:glow-accent",
+  secondary: "border border-line bg-surface text-ink hover:border-primary/50 hover:text-primary",
   danger: "bg-danger-solid text-on-solid elev-1 hover:brightness-110",
   ghost: "text-ink-muted hover:bg-raised hover:text-ink",
 } as const;
@@ -508,7 +513,7 @@ export function Modal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim/55 p-4"
       onClick={onClose}
     >
       <div

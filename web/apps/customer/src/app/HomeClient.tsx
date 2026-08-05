@@ -131,7 +131,9 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
           aria-hidden
           /* **وخفّت على الأرض الفاتحة**: تسعةٌ بالمئة على سوادٍ توهّجٌ،
              **وعلى أبيضَ لطخةٌ برتقاليّة.** */
-          className="pointer-events-none absolute inset-x-0 -bottom-24 h-48 bg-[radial-gradient(60%_100%_at_50%_100%,var(--color-accent)_0%,transparent_70%)] opacity-[0.045]"
+          /* **والصدرُ يستضيء بالورديّ** — وهو لونُ الهالة الأولى في الخلفيّة
+             خلفه، **فالصدرُ يبدو مقتطعاً من الفضاء لا ملصقاً عليه.** */
+          className="pointer-events-none absolute inset-x-0 -bottom-24 h-48 bg-[radial-gradient(60%_100%_at_50%_100%,var(--color-accent)_0%,transparent_70%)] opacity-[0.16]"
         />
         <div className="relative mx-auto max-w-2xl text-center">
           <h1 className="text-2xl font-bold sm:text-4xl">{m.site.hero}</h1>

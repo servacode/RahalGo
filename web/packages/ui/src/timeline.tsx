@@ -128,7 +128,7 @@ export function Timeline({
                         // قاعدةُ العلامة: الأزرقُ ما ثبت، والبرتقاليُّ ما
                         // يتحرّك. **وهنا تُرى القاعدةُ عاملةً**: عينُ الزبون
                         // تقع على مكانِ طلبه الآن قبل أن تقرأ حرفاً.
-                        "bg-accent text-on-solid ring-4 ring-accent/20"
+                        "bg-accent text-on-accent ring-4 ring-accent/20"
                       : "border-2 border-line bg-surface text-ink-muted"
                 }`}
               >
