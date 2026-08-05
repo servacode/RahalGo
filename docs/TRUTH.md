@@ -391,6 +391,7 @@
 | `platform.support_phone` | المنصة | text | `` |
 | `platform.address` | المنصة | text | `` |
 | `orders.max_sources` | المنصة | int | `2` |
+| `orders.max_open_per_customer` | المنصة | int | `3` |
 | `orders.delivery_timeout_min` | المنصة | int | `60` |
 | `orders.customer_cancel_window_sec` | المنصة | int | `120` |
 | `pricing.margin_fixed` | المنصة | money | `0` |

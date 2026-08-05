@@ -19,11 +19,13 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   CategoryIcon,
   EmptyState,
+  useFavorites,
   Input,
   BannerSlider,
   IconSearch,
@@ -71,6 +73,11 @@ interface Section {
 
 export default function HomeClient({ initial }: { initial: HomeData }) {
   const { banners, sections } = initial;
+  const router = useRouter();
+  const { user } = useAuth();
+  const signedIn = isLoggedIn(user);
+  // **وقائمةُ المفضّلة واحدةٌ للصفحة كلِّها** — لا لكلّ بطاقة.
+  const { has, toggle } = useFavorites(api, signedIn);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<BrowseItem[] | null>(null);
 
@@ -164,7 +171,13 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
              الصفحةَ صارت شيئاً آخر تحته. */
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {hits.map((it) => (
-              <ItemCard key={it.id} item={it} />
+              <ItemCard
+                key={it.id}
+                item={it}
+                favorite={has(it.id)}
+                onFavorite={signedIn ? toggle : undefined}
+                onRequireLogin={signedIn ? undefined : () => router.push("/login?next=/")}
+              />
             ))}
           </div>
         )

@@ -264,6 +264,30 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		if !verified {
 			return nil, ErrWhatsAppRequired
 		}
+
+		// **وسقفُ ما بيده من طلباتٍ مفتوحة.**
+		//
+		// حرّاسُ الإنشاء كلُّها على المحتوى — **ولا شيءَ كان يمنع خمسين طلباً
+		// في دقيقة.** والزبونُ لا يدفع حتّى يستلم، **فمن أراد الأذى لا يخسر
+		// ليرة**: المتجرُ يغرق بما لا يُسلَّم، والسائقون تُعرض عليهم مشاويرُ
+		// وهميّة، **والراصدُ يُطلق خمسين إنذاراً.**
+		//
+		// **والسقفُ على المفتوح لا على ما مضى**: زبونٌ طلب ألفَ مرّةٍ في سنةٍ
+		// لا يُمنع، **ومن بين يديه سقفُه يُسأل قبل الذي بعده.**
+		//
+		// **ولا يُطبَّق على من يطلب بالنيابة** (`ops` والمتجر): المكتبُ يفتح
+		// طلبات الهاتف لزبائنَ شتّى، **وسقفُ زبونٍ لا يُقاس بحسابِ من كتبه.**
+		if cap := s.settingInt(ctx, "orders.max_open_per_customer"); cap > 0 {
+			var open int64
+			if err := s.db.QueryRow(ctx, `
+				SELECT count(*) FROM orders
+				WHERE customer_id = $1 AND closed_at IS NULL`, customerID).Scan(&open); err != nil {
+				return nil, err
+			}
+			if open >= cap {
+				return nil, ErrTooManyOpen
+			}
+		}
 	}
 
 	// منطقة التسليم من الدبوس — **من مصدرٍ واحدٍ لا استعلامين.**

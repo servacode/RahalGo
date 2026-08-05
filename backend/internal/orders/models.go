@@ -16,12 +16,14 @@ var (
 	//
 	// **ويُردّ صراحةً لا يُقبل صامتاً**: من طلب من ثلاثةِ مطابخَ يُقال له،
 	// **ولا يُترك طلبٌ ثلثُه هنا وثلثُه هناك بلا من يجمعه.**
-	ErrTooManySources     = httpx.NewError(http.StatusConflict, "too_many_sources", "errors.too_many_sources")
-	ErrItemUnavailable    = httpx.NewError(http.StatusConflict, "item_unavailable", "errors.item_unavailable")
-	ErrBadItems           = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
-	ErrOutOfZone          = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
-	ErrBelowMinOrder      = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
-	ErrWhatsAppRequired   = httpx.NewError(http.StatusForbidden, "whatsapp_required", "errors.whatsapp_required")
+	ErrTooManySources   = httpx.NewError(http.StatusConflict, "too_many_sources", "errors.too_many_sources")
+	ErrItemUnavailable  = httpx.NewError(http.StatusConflict, "item_unavailable", "errors.item_unavailable")
+	ErrBadItems         = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
+	ErrOutOfZone        = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
+	ErrBelowMinOrder    = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
+	ErrWhatsAppRequired = httpx.NewError(http.StatusForbidden, "whatsapp_required", "errors.whatsapp_required")
+	// ErrTooManyOpen بيده من الطلبات ما يكفي — **وسقفُه في الإعدادات.**
+	ErrTooManyOpen        = httpx.NewError(http.StatusConflict, "too_many_open_orders", "errors.too_many_open_orders")
 	ErrInvalidPromo       = httpx.NewError(http.StatusBadRequest, "invalid_promo", "errors.invalid_promo")
 	ErrBadTransition      = httpx.NewError(http.StatusConflict, "invalid_transition", "errors.invalid_transition")
 	ErrNeedsDriver        = httpx.NewError(http.StatusConflict, "driver_required", "errors.driver_required")

@@ -26,6 +26,7 @@ import {
   PageHeader,
   IconPromos,
 } from "@rahalgo/ui";
+import ItemGrid from "@/components/ItemGrid";
 import { api, mediaUrl } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -108,41 +109,37 @@ export default function OffersPage() {
         }))}
       />
 
+      {/* **والخصومُ بشكل الأصناف نفسِه.**
+
+          كانت بطاقةً أفقيّةً بمصغَّرةٍ ٨٠ بكسل — **والصنفُ نفسُه في السوق
+          والقسم والبحث بطاقةٌ بصورةٍ تملأ عرضَها.** فيُقرأ الصنفُ في العروض
+          **سطرَ جدولٍ وفي الأقسام سلعة**، وهو مقلوب: **العرضُ هو ما يُغري.**
+
+          (شهده المالك ٢٠٢٦-٠٨-٠٥: «العروضُ يجب أن تُعرض بنفس طريقة الأصناف
+          بالموقع الأساسيّ».)
+
+          **والسعرُ قبل الخصم يُقرأ من البطاقة نفسِها** — فيها `price` وهو
+          سعرُ البيع بعد الخصم، **وشارةُ النسبة تقول كم وُفِّر.** */}
       {discounts.length > 0 && (
-        /* **وبطاقةٌ واحدةٌ بعرض الشاشة تُبعثر العين** — فتُقسم بما يتّسع. */
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {discounts.map((o) => (
-            <Link
-              key={o.id}
-              href={`/item/${o.menu_item_id}`}
-              className="flex gap-3 rounded-card border border-line bg-surface p-3 transition-colors hover:border-accent"
-            >
-              {o.item_image_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={o.item_image_url}
-                  alt="" loading="lazy"
-                  className="h-20 w-20 shrink-0 rounded-control object-cover"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">{o.item_name || o.title}</p>
-                <p className="truncate text-sm text-ink-muted">{o.merchant_name}</p>
-                <div className="mt-1.5 flex items-baseline gap-2" dir="ltr">
-                  <span className="font-bold text-success">
-                    {fmtNum(o.price_after)} {m.common.currency}
-                  </span>
-                  <span className="text-xs text-ink-muted line-through">
-                    {fmtNum(o.price_before)}
-                  </span>
-                </div>
-                <span className="mt-1 inline-block rounded-badge bg-danger/10 px-2 py-0.5 text-2xs font-bold text-danger">
-                  −{o.discount_percent}%
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <ItemGrid
+          next="/offers"
+          items={discounts.map((o) => ({
+            id: o.menu_item_id ?? o.id,
+            name: o.item_name || o.title,
+            description: o.merchant_name,
+            price: o.price_after,
+            price_before: o.price_before,
+            discount_percent: o.discount_percent,
+            image_url: o.item_image_url,
+            image_thumb_url: o.item_image_url,
+            // **والعرضُ لا يُنشر على صنفٍ موقوف** — فما وصل هنا متاح.
+            available: true,
+            source_closed: false,
+            source_opens_at: null,
+            section_id: "",
+            section_name: "",
+          }))}
+        />
       )}
     </PageContainer>
   );

@@ -8,7 +8,8 @@
 import Link from "next/link";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Alert, EmptyState, IconStore } from "@rahalgo/ui";
-import ItemCard, { type BrowseItem } from "@/components/ItemCard";
+import ItemGrid from "@/components/ItemGrid";
+import { type BrowseItem } from "@/components/ItemCard";
 
 const m = getMessages(defaultLocale);
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -56,11 +57,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
         /* **بعددِ أعمدةِ الأقسام نفسِه** — من فتح قسماً لا يجد الشبكةَ تغيّرت
            تحته. (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «شكلُ العرض للأصناف يجب أن يكون
            موحّداً».) */
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {items.map((it) => (
-            <ItemCard key={it.id} item={it} />
-          ))}
-        </div>
+        <ItemGrid items={items} next={`/s/${id}`} />
       )}
     </div>
   );

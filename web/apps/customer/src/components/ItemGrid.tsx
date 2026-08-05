@@ -1,0 +1,58 @@
+"use client";
+
+/**
+ * **شبكةُ الأصناف** — شكلٌ واحدٌ لكلّ مكانٍ يُعرض فيه صنف.
+ *
+ * # لماذا وُجدت
+ *
+ * `ItemCard` بطاقةٌ واحدةٌ موحَّدة، **لكنّ قلبَ المفضّلة يحتاج قائمةً**:
+ * `useFavorites` نداءٌ واحدٌ للصفحة، **وبطاقةٌ تجلب مفضّلتَها بنفسها تعني
+ * عشرين نداءً في شبكةٍ من عشرين بطاقة.**
+ *
+ * **فالشبكةُ تحمل القائمةَ والبطاقاتُ تقرأ منها.**
+ *
+ * # وصفحةُ القسم خادميّة
+ *
+ * **و`useFavorites` خطّافٌ لا يعمل في الخادم** — فهذه غلافُها العميل.
+ *
+ * # وأعمدتُها أعمدةُ الأقسام
+ *
+ * **من فتح قسماً لا يجد الشبكةَ تغيّرت تحته.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤:
+ * «شكلُ العرض للأصناف يجب أن يكون موحّداً».)
+ */
+
+import { useRouter } from "next/navigation";
+import { useFavorites } from "@rahalgo/ui";
+import ItemCard, { type BrowseItem } from "@/components/ItemCard";
+import { api } from "@/lib/api";
+import { useAuth, isLoggedIn } from "@/lib/auth";
+
+export default function ItemGrid({
+  items,
+  /** إلى أين يعود بعد الدخول — **ومن ساقه زرٌّ يعود إلى حيث كان.** */
+  next = "/",
+}: {
+  items: BrowseItem[];
+  next?: string;
+}) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const signedIn = isLoggedIn(user);
+  const { has, toggle } = useFavorites(api, signedIn);
+
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {items.map((it) => (
+        <ItemCard
+          key={it.id}
+          item={it}
+          favorite={has(it.id)}
+          onFavorite={signedIn ? toggle : undefined}
+          onRequireLogin={
+            signedIn ? undefined : () => router.push(`/login?next=${encodeURIComponent(next)}`)
+          }
+        />
+      ))}
+    </div>
+  );
+}
