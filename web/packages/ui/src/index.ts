@@ -92,6 +92,8 @@ export {
   TopBarLink,
   WalletPill,
   TopBarActions,
+  AccountMenu,
+  type AccountMenuItem,
   TOPBAR_ICON,
   TOPBAR_AVATAR,
   Avatar,
