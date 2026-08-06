@@ -45,8 +45,14 @@ var (
 // **و`platform_logo` شعارُ المنصة** — يُرفع من الإعدادات ويُعرض في كلّ
 // شريطٍ علويٍّ وفوترٍ وفاتورة. (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا تنسَ إضافة هوية
 // المنصة أيضاً — الاسم واللوغو».)
+// **و`auth_background` خلفيّةُ شاشات الدخول** — تُرفع من الإعدادات وتُعرض
+// خلف بطاقة الدخول والتسجيل والاستعادة في الخمسة.
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «خيار بالإعدادات أرفع الصورة وأغيّرها إيمت
+//
+//	ما بدّي».)
 var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true,
-	"banner": true, "avatar": true, "delivery_proof": true, "platform_logo": true}
+	"banner": true, "avatar": true, "delivery_proof": true, "platform_logo": true,
+	"auth_background": true}
 
 type Media struct {
 	ID       string `json:"id"`

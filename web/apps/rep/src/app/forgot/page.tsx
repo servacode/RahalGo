@@ -11,21 +11,21 @@
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { PanelLogin } from "@rahalgo/auth";
-import { canAccessPanel } from "@/lib/auth";
+import { isRep } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
-export default function LoginPage() {
+export default function ForgotPage() {
   const router = useRouter();
   return (
     <PanelLogin
-      title={m.admin.loginTitle}
-      allows={canAccessPanel}
-      notAllowed={m.admin.notAllowed}
-      home="/dashboard"
-      replace={(href) => router.replace(href)}
-      /* **ولكلّ شاشةٍ عنوان** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦). */
+      initialMode="reset"
       onModeChange={(mo) => router.replace(mo === "reset" ? "/forgot" : "/login")}
+      title={m.rep.loginTitle}
+      allows={isRep}
+      notAllowed={m.rep.notAllowed}
+      home="/portal"
+      replace={(href) => router.replace(href)}
     />
   );
 }

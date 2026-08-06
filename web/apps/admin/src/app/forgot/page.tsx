@@ -15,17 +15,17 @@ import { canAccessPanel } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
-export default function LoginPage() {
+export default function ForgotPage() {
   const router = useRouter();
   return (
     <PanelLogin
+      initialMode="reset"
+      onModeChange={(mo) => router.replace(mo === "reset" ? "/forgot" : "/login")}
       title={m.admin.loginTitle}
       allows={canAccessPanel}
       notAllowed={m.admin.notAllowed}
       home="/dashboard"
       replace={(href) => router.replace(href)}
-      /* **ولكلّ شاشةٍ عنوان** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦). */
-      onModeChange={(mo) => router.replace(mo === "reset" ? "/forgot" : "/login")}
     />
   );
 }

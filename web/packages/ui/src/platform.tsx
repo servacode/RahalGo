@@ -60,9 +60,16 @@ export interface Platform {
    * ما يجب**، ولا يُحرَم أحدٌ باباً بسبب شبكةٍ بطيئة.
    */
   otpLogin: boolean;
+  /**
+   * **خلفيّةُ شاشات الدخول** (`auth.background` في الإعدادات) — **وفارغٌ
+   * يُبقي اللونَ وحدَه.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٦.)
+   */
+  authBg: string | null;
 }
 
-const EMPTY: Platform = { name: "", logo: null, otpLogin: true };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true, authBg: null };
 const PlatformContext = createContext<Platform>(EMPTY);
 
 export function PlatformProvider({
@@ -95,6 +102,7 @@ export function PlatformProvider({
             name: j.data.name ?? "",
             logo: j.data.logo ?? null,
             otpLogin: j.data.otp_login !== false,
+            authBg: j.data.auth_bg ?? null,
           });
       })
       .catch(() => undefined);

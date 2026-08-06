@@ -53,6 +53,8 @@ export function PanelLogin({
   replace,
   methods = "both",
   footer,
+  initialMode = "password",
+  onModeChange,
 }: {
   title: string;
   allows: (user: AuthUser | null) => boolean;
@@ -61,6 +63,10 @@ export function PanelLogin({
   replace: (href: string) => void;
   methods?: "both" | "password" | "otp";
   footer?: ReactNode;
+  /** الوضعُ الذي تُفتح عليه — من المسار (`/login` أو `/forgot`). */
+  initialMode?: "password" | "otp" | "reset";
+  /** **يُخبر التطبيقَ ليُبدّل المسارَ مع الوضع** — فلكلّ شاشةٍ عنوان. */
+  onModeChange?: (m: "password" | "otp" | "reset" | "signup") => void;
 }) {
   const { user, loading, enter, logout } = useAuth();
   const sent = useRef(false);
@@ -117,6 +123,8 @@ export function PanelLogin({
     <LoginCard
       title={title}
       methods={methods}
+      initialMode={initialMode}
+      onModeChange={onModeChange}
       footer={footer}
       onSuccess={(u) => {
         // **الطبقةُ ترتفع في الحالين**: من يخصّ حسابُه اللوحةَ يُنقل تحتها،

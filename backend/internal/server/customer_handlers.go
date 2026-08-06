@@ -27,7 +27,14 @@ const openNowSQL = orders.OpenNowSQL
 // **ولا يُحذف حرفُ العلامة**: منصّةٌ لم تَرفع شعاراً يجب أن تبقى تعمل،
 // **وشريطٌ علويٌّ بمربّعٍ فارغٍ أسوأُ من حرف.**
 func (s *Server) platformLogo(r *http.Request) *string {
-	id := s.settings.GetString(r.Context(), "platform.logo")
+	return s.settingMedia(r, "platform.logo")
+}
+
+// settingMedia مسارُ وسيطٍ مخزَّنٍ في الإعدادات — **واحدةٌ لكلّ مفتاحٍ من نوع
+// `media`.** كانت خاصّةً بالشعار، **فلمّا جاءت خلفيّةُ الدخول كان الحلُّ
+// نسخَها باسمٍ ثانٍ** — ونسختان تفترقان بلا صوت.
+func (s *Server) settingMedia(r *http.Request, key string) *string {
+	id := s.settings.GetString(r.Context(), key)
 	if id == "" {
 		return nil
 	}
@@ -65,6 +72,7 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		// **وشاشةُ الدخول لا تعرف أيَّ أبوابٍ تعرض حتّى تسأل**، ونداءٌ ثانٍ
 		// لسطرٍ واحدٍ رحلةٌ زائدةٌ في أوّل ما يُفتح.
 		"otp_login": s.settings.GetBool(r.Context(), "auth.otp_login"),
+		"auth_bg":   s.settingMedia(r, "auth.background"),
 	})
 }
 

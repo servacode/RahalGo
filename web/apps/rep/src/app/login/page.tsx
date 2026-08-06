@@ -24,6 +24,8 @@ export default function LoginPage() {
       notAllowed={m.rep.notAllowed}
       home="/portal"
       replace={(href) => router.replace(href)}
+      /* **ولكلّ شاشةٍ عنوان** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦). */
+      onModeChange={(mo) => router.replace(mo === "reset" ? "/forgot" : "/login")}
     />
   );
 }

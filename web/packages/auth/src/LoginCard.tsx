@@ -61,6 +61,8 @@ export function LoginCard({
   onSuccess,
   footer,
   referral = "",
+  initialMode = "password",
+  onModeChange,
 }: {
   title: string;
   /**
@@ -75,6 +77,24 @@ export function LoginCard({
   /** يُستدعى بعد نجاح الدخول (بعد تخزين التوكن) — هنا يقرر التطبيق الوجهة */
   onSuccess: (user: AuthUser) => void | Promise<void>;
   footer?: ReactNode;
+  /**
+   * **الوضعُ الذي تُفتح عليه** — يأتي من المسار.
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا يوجد رابطُ تسجيلٍ، يبقى ضمن تسجيل الدخول
+   *  — هل هذا شيءٌ طبيعيّ؟» والجواب: لا.)
+   *
+   * **ورابطُ الدعوة كان يقع على نموذج الدخول**: من دُعي ليُنشئ حساباً يصل
+   * `‎/login?ref=CODE` **فيرى شاشةً تطلب كلمةَ مرورٍ لا يملكها**، وعليه أن
+   * يجد «إنشاء حساب» بنفسه. **وصار `‎/signup?ref=CODE`.**
+   */
+  initialMode?: Mode;
+  /**
+   * **يُخبر التطبيقَ أنّ الوضعَ تبدّل** ليُبدّل المسارَ معه.
+   *
+   * **والتبديلُ داخلَ البطاقة يبقى كما هو** — لا انتقالَ صفحةٍ ولا فقدَ لما
+   * كُتب، **إنّما يصير لكلّ شاشةٍ عنوانٌ يُشارَك ويُحدَّث ويُقاس.**
+   */
+  onModeChange?: (m: Mode) => void;
 }) {
   /* ══════════════════════════════════════════════════════════════════
      **وبابُ رمز التحقّق يُطفأ من الإعدادات — لا من شيفرة كلّ تطبيق**
@@ -89,9 +109,9 @@ export function LoginCard({
 
      **ومن مرّر `otp` وحدَها ثمّ أُطفئ الرمزُ يسقط إلى كلمة المرور** — وإلّا
      بقيت بوّابتُه بلا بابٍ يعمل. */
-  const { otpLogin } = usePlatform();
+  const { otpLogin, authBg } = usePlatform();
   const allow: "both" | "password" | "otp" = otpLogin ? methods : "password";
-  const [mode, setMode] = useState<Mode>("password");
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   /* **والوضعُ يتبع ما هو مسموح**: من فُتح على `otp` ثمّ أُطفئ البابُ بعد أن
      وصل الردُّ **يبقى في شاشةٍ لا تعمل.** */
@@ -153,6 +173,7 @@ export function LoginCard({
 
   function go(next: Mode) {
     setMode(next);
+    onModeChange?.(next);
     setError("");
     setSent(false);
     setCode("");
@@ -547,7 +568,31 @@ export function LoginCard({
        **والخلفيّةُ المتدرّجةُ تُنافس النموذج**: ثلاثُ طبقاتٍ ملوّنةٍ خلف
        بطاقةٍ بيضاء **تسحب العينَ عمّا يُكتب فيها.**
        ══════════════════════════════════════════════════════════════════ */
-    <div className="flex flex-1 items-center justify-center p-3 sm:p-6">
+    <div className="relative flex flex-1 items-center justify-center p-3 sm:p-6">
+      {/* ══════════════════════════════════════════════════════════════
+          **خلفيّةٌ تُرفع من الإعدادات — ولا تُحشر في الشيفرة**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «باك‌غراوند خلف صفحات تسجيل الدخول
+           والحساب الجديد والاستعادة، بخيارٍ بالإعدادات أرفع الصورة وأغيّرها
+           إيمت ما بدّي».)
+
+          **وطبقةٌ داكنةٌ فوقها لا تحتها**: صورةٌ فاتحةٌ تبتلع النصَّ الأبيضَ
+          في البطاقة وحولَها، **وأيُّ صورةٍ يرفعها المالكُ غداً لا تُكسر
+          الشاشة.**
+
+          **و`fixed` لا `absolute`**: البطاقةُ تطول في وضع التسجيل، **وخلفيّةٌ
+          تتبع الطولَ تنقطع عند حافّة المحتوى.** */}
+      {authBg && (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center"
+            style={{ backgroundImage: `url(${authBg})` }}
+          />
+          <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-shell/70" />
+        </>
+      )}
       {/* **وعرضٌ يكفي حقلاً واحداً** — كان خمسةً ونصفاً لأنّ نصفَه كان دعاية.
           **ونموذجٌ ممدودٌ إلى ألفٍ يُقرأ صفحةً لا بطاقة.** */}
       <div className="w-full max-w-md">
