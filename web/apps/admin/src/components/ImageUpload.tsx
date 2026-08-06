@@ -31,7 +31,7 @@ export default function ImageUpload({
      هنا **يرفع صورةً يردّها الخادمُ بخطأٍ لا يفهمه المستعمل.**
      (و`platform_logo` أُضيف بقرار المالك ٢٠٢٦-٠٨-٠٦: هويّةُ المنصة.) */
   /** **يطابق `validKinds` في المحرّك** — ونوعٌ ليس فيه يُرفض عند الرفع. */
-  kind: "merchant_logo" | "menu_item" | "banner" | "avatar" | "platform_logo" | "auth_background";
+  kind: "merchant_logo" | "menu_item" | "banner" | "avatar" | "platform_logo" | "auth_background" | "site_background";
   label: string;
   /** الصورة الحالية للكيان (عند التعديل) */
   initialUrl?: string | null;

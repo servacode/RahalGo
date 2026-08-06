@@ -73,9 +73,16 @@ export interface Platform {
    * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «ضع خياراً للتحكّم بها… شريط من ٠ إلى ١٠٠».)
    */
   authBgDim: number;
+  /**
+   * **خلفيّةُ الموقع كلِّه** (`platform.background`) — **وفارغةٌ تُبقي التدرّجَ
+   * المرسوم.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦.)
+   */
+  siteBg: string | null;
+  /** حجابُها (٠..١٠٠) — **وصورةٌ فوتوغرافيّةٌ تحتاج غالباً ٥٠–٧٠.** */
+  siteBgDim: number;
 }
 
-const EMPTY: Platform = { name: "", logo: null, otpLogin: true, authBg: null, authBgDim: 70 };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true, authBg: null, authBgDim: 70, siteBg: null, siteBgDim: 55 };
 const PlatformContext = createContext<Platform>(EMPTY);
 
 export function PlatformProvider({
@@ -110,6 +117,8 @@ export function PlatformProvider({
             otpLogin: j.data.otp_login !== false,
             authBg: j.data.auth_bg ?? null,
             authBgDim: typeof j.data.auth_bg_dim === "number" ? j.data.auth_bg_dim : 70,
+            siteBg: j.data.site_bg ?? null,
+            siteBgDim: typeof j.data.site_bg_dim === "number" ? j.data.site_bg_dim : 55,
           });
       })
       .catch(() => undefined);
@@ -118,7 +127,38 @@ export function PlatformProvider({
     };
   }, [apiBase, initial]);
 
-  return <PlatformContext.Provider value={platform}>{children}</PlatformContext.Provider>;
+  /* ══════════════════════════════════════════════════════════════════
+     **خلفيّةُ الموقع تُحقَن مُتغيّراً في الجذر — لا تُرسم في مكوّن**
+     ══════════════════════════════════════════════════════════════════
+
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٦.)
+
+     **الخلفيّةُ على `body` في الثيم** — وهو يعرف الطبقاتِ الخمسَ وترتيبَها.
+     **والصورةُ تأتي من الشبكة**، فلا سبيلَ إلى كتابتها في ورقةٍ ساكنة.
+
+     **فيُحقن مُتغيّران في `<html>`** ويقرؤهما الثيم: **الطبقاتُ تبقى في
+     مكانٍ واحد**، ولا يُنشأ عنصرٌ ثانٍ يغطّي الصفحة.
+
+     **وفارغةٌ تعني `none`** — طبقةٌ لا تُرسم، فيبقى التدرّجُ وحدَه. */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--site-bg", platform.siteBg ? `url("${platform.siteBg}")` : "none");
+    root.style.setProperty("--site-bg-dim", platform.siteBg ? String(platform.siteBgDim / 100) : "0");
+  }, [platform.siteBg, platform.siteBgDim]);
+
+  return (
+    <PlatformContext.Provider value={platform}>
+      {/* **طبقةُ الصورة عنصرٌ لا إعلانٌ في `body`.**
+
+          (المرحلةُ: خلفيّةُ الموقع من الإعدادات ٢٠٢٦-٠٨-٠٦.)
+
+          **وتُرسم دائماً ولو بلا صورة**: `--site-bg` تساوي `none` فلا يُرسم
+          شيء، **وعنصرٌ ثابتٌ فارغٌ لا يكلّف** — **بينما إظهارُه وإخفاؤه
+          يُعيد ترتيبَ الطبقات في كلّ تبدّل.** */}
+      <div className="site-bg-image" aria-hidden />
+      {children}
+    </PlatformContext.Provider>
+  );
 }
 
 export function usePlatform(): Platform {

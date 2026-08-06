@@ -399,6 +399,8 @@
 | `platform.address` | المنصة | text | `` |
 | `platform.name` | المنصة | text | `` |
 | `platform.logo` | المنصة | media | `` |
+| `platform.background` | المنصة | media | `` |
+| `platform.background_dim` | المنصة | percent | `55` |
 | `auth.background` | المنصة | media | `` |
 | `auth.background_dim` | المنصة | percent | `70` |
 | `auth.otp_login` | المنصة | bool | `true` |

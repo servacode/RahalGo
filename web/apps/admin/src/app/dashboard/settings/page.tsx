@@ -93,9 +93,10 @@ const boolText = (k: string, side: "on" | "off") =>
  * **ومفتاحٌ جديدٌ بلا سطرٍ هنا يرفع بنوعٍ خطأ** — فالافتراضُ مكتوبٌ عند
  * الاستعمال ليُرى.
  */
-const MEDIA_KIND: Record<string, "platform_logo" | "auth_background"> = {
+const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_background"> = {
   "platform.logo": "platform_logo",
   "auth.background": "auth_background",
+  "platform.background": "site_background",
 };
 
 export default function SettingsPage() {

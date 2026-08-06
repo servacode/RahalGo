@@ -73,6 +73,8 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		// لسطرٍ واحدٍ رحلةٌ زائدةٌ في أوّل ما يُفتح.
 		"otp_login":   s.settings.GetBool(r.Context(), "auth.otp_login"),
 		"auth_bg":     s.settingMedia(r, "auth.background"),
+		"site_bg":     s.settingMedia(r, "platform.background"),
+		"site_bg_dim": s.settings.GetInt(r.Context(), "platform.background_dim"),
 		"auth_bg_dim": s.settings.GetInt(r.Context(), "auth.background_dim"),
 	})
 }

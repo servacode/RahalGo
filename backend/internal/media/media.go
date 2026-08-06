@@ -50,9 +50,16 @@ var (
 // (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «خيار بالإعدادات أرفع الصورة وأغيّرها إيمت
 //
 //	ما بدّي».)
+//
+// **و`site_background` خلفيّةُ الموقع كلِّه** — تُرفع من الإعدادات وتُرسم على
+// `body` فترثها البوّاباتُ الخمس.
+//
+// **ونوعٌ مستقلٌّ عن `auth_background` عمداً**: خلفيّةُ شاشة الدخول قد تكون
+// صورةً هادئةً وخلفيّةُ الموقع أخرى، **ونوعٌ واحدٌ للاثنين يجعل حذفَ إحداهما
+// يبحث في صور الأخرى.**
 var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true,
 	"banner": true, "avatar": true, "delivery_proof": true, "platform_logo": true,
-	"auth_background": true}
+	"auth_background": true, "site_background": true}
 
 type Media struct {
 	ID       string `json:"id"`
