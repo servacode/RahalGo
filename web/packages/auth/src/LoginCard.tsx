@@ -745,7 +745,7 @@ export function LoginCard({
 
             {/* مبدّل طريقة الدخول — مؤشر منزلق بخصائص منطقية (يعمل RTL وLTR) */}
             {allow === "both" && !isAuxMode && (
-              <div role="group" className="relative mb-6 flex rounded-control bg-page p-1">
+              <div role="group" className="relative mb-6 flex rounded-control bg-field p-1">
                 <span
                   aria-hidden
                   className="absolute inset-y-1 rounded-[7px] bg-surface elev-1 transition-[inset-inline-start] duration-200"

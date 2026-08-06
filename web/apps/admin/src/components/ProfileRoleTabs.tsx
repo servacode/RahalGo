@@ -286,7 +286,7 @@ export function CashboxTab({
 
   return (
     <FormSection title={R.cashbox} icon={<IconBalance />}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-control bg-page px-3 py-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-control bg-field px-3 py-2">
         <span className="text-sm text-ink-muted">{R.cashHeld}</span>
         <span dir="ltr" className={`text-lg font-bold tabular-nums ${held > 0 ? "text-warning" : ""}`}>
           {fmtNum(held)} <span className="text-xs font-normal">{m.common.currency}</span>

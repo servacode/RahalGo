@@ -358,7 +358,7 @@ export default function CartPage() {
         {/* حُذف سطرُ «طلبٌ واحد مهما تعدّدت أصنافه»: صار الكرتُ الجامع يقوله
             بلا كلام — **ما يُرى لا يُشرح**. (كان لازماً حين كانت الأصناف أسطراً
             متفرّقة على الصفحة — R-88.) */}
-        <div className="mt-3 rounded-card border border-line bg-page p-3">
+        <div className="mt-3 rounded-card border border-line bg-field p-3">
         <ul className="space-y-2">
           {cart.lines.map((l, i) => (
             <li

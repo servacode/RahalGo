@@ -85,13 +85,13 @@ export default function LinkPage() {
             className="h-56 w-56 rounded-card border border-line bg-paper p-2"
           />
         ) : (
-          <div className="flex h-56 w-56 items-center justify-center rounded-card bg-page text-ink-muted">
+          <div className="flex h-56 w-56 items-center justify-center rounded-card bg-field text-ink-muted">
             {m.common.loading}
           </div>
         )}
 
         {/* الرابط */}
-        <div className="flex w-full items-center gap-2 rounded-control border border-line bg-page px-3 py-2">
+        <div className="flex w-full items-center gap-2 rounded-control border border-line bg-field px-3 py-2">
           <IconLink size={16} className="shrink-0 text-ink-muted" />
           <span dir="ltr" className="min-w-0 flex-1 truncate text-sm text-ink" title={link}>
             {link}

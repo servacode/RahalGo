@@ -887,7 +887,7 @@ function ChangePhoneModal({
           className="text-end"
           placeholder="09xxxxxxxx"
         />
-        <p className="rounded-control bg-page px-3 py-2 text-xs leading-relaxed text-ink-muted">
+        <p className="rounded-control bg-field px-3 py-2 text-xs leading-relaxed text-ink-muted">
           {P.phoneHint}
         </p>
         {error && (
@@ -929,7 +929,7 @@ function NotesEditor({
           setSaved(false);
         }}
         rows={3}
-        className="w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
+        className="w-full surface-inset px-3 py-2 text-sm outline-none focus:border-primary"
       />
       <div className="flex items-center justify-end gap-2">
         {saved && <span className="text-xs text-success">{P.notesSaved}</span>}

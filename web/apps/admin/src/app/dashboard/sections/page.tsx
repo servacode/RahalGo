@@ -122,7 +122,7 @@ export default function SectionsPage() {
                   فيُنسى أنّ صورتَه لم تُرفع.
 
                   **فيُقال صراحةً «أضف صورة»** — نقصٌ يُرى يُعالَج. */}
-              <div className="relative flex aspect-[4/3] items-center justify-center bg-page">
+              <div className="relative flex aspect-[4/3] items-center justify-center bg-field">
                 {sec.image_url || sec.image_thumb_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

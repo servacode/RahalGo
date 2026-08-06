@@ -385,7 +385,7 @@ export function AccountSettings({
           الفاتورة، ويظهر لغرفة العمليات حين يتّصل. (شهده المالك ٢٠٢٦-٠٨-٠٣) */}
       <Section title={A.identity} icon={<IconUser />}>
         <div className="flex items-center gap-4">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-2xl font-bold text-primary-dark">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-tint text-2xl font-bold text-primary-dark">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatarUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -455,7 +455,7 @@ export function AccountSettings({
           </form>
         ) : (
           <form onSubmit={confirmPhone} className="space-y-3">
-            <p className="rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">{A.codeSent}</p>
+            <p className="rounded-control bg-primary-tint px-3 py-2 text-sm text-primary">{A.codeSent}</p>
             <div>
               <Input id="phone-code" label={A.code} dir="ltr" inputMode="numeric" required autoFocus value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="text-center font-mono text-lg tracking-[0.4em]" placeholder="••••••" maxLength={6} />
             </div>
@@ -527,7 +527,7 @@ export function AccountSettings({
           </form>
         ) : (
           <form onSubmit={confirmWhatsApp} className="space-y-3">
-            <p className="rounded-control bg-primary-light px-3 py-2 text-sm text-primary-dark">
+            <p className="rounded-control bg-primary-tint px-3 py-2 text-sm text-primary">
               {A.whatsappCodeSent}
             </p>
             <Input

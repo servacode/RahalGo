@@ -111,7 +111,7 @@ export default function DriverCashPage() {
             <span className="text-xs font-normal text-ink-muted">{m.common.currency}</span>
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-badge bg-page">
+        <div className="h-2 overflow-hidden rounded-badge bg-field">
           <div
             className={`h-full rounded-badge transition-[width] ${
               ratio > 0.8 ? "bg-danger" : ratio > 0.5 ? "bg-warning" : "bg-success"

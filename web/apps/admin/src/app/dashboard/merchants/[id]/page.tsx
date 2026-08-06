@@ -145,7 +145,7 @@ export default function MerchantProfilePage() {
       </button>
 
       <div className="mb-4 flex flex-wrap items-start gap-3">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-card bg-primary-light">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-card bg-primary-tint">
           <IconStore size={26} className="text-primary-dark" />
         </span>
         <div className="min-w-0 flex-1">

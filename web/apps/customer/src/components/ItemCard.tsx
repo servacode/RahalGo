@@ -148,7 +148,7 @@ export default function ItemCard({
 
            **ويخدم القوسَ**: انحناءةٌ فوق إطارٍ عريضٍ تأكل ثُلثَ ارتفاعه،
            **وفوق مربّعٍ تُقرأ تتويجاً.** */}
-        <span className="relative flex aspect-square items-center justify-center bg-page">
+        <span className="relative flex aspect-square items-center justify-center bg-field">
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />

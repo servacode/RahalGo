@@ -194,7 +194,7 @@ export function Invoice({
           </dl>
         </div>
 
-        <p className="mt-3 rounded-control bg-page px-3 py-2 text-xs text-ink-muted">
+        <p className="mt-3 rounded-control bg-field px-3 py-2 text-xs text-ink-muted">
           {order.wallet_paid > 0 && order.cash_due === 0
             ? V.paidWallet
             : V.paidCash.replace("{n}", fmtNum(order.cash_due))}

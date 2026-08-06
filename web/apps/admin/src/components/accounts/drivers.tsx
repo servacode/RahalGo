@@ -368,7 +368,7 @@ function CashBoxModal({
       size="lg"
       title={`${m.admin.drivers.boxTitle}: ${driver.full_name || driver.phone}`}
     >
-      <div className="mb-4 rounded-card bg-primary-light p-4">
+      <div className="mb-4 rounded-card bg-primary-tint p-4">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 font-medium text-primary-dark">
             <IconWallet size={18} />
@@ -431,7 +431,7 @@ function CashBoxModal({
 
       <h3 className="mb-2 text-sm font-bold">{m.admin.drivers.entriesHistory}</h3>
       {entries.length === 0 ? (
-        <p className="rounded-control bg-page p-4 text-center text-sm text-ink-muted">
+        <p className="rounded-control bg-field p-4 text-center text-sm text-ink-muted">
           {m.admin.drivers.noEntries}
         </p>
       ) : (

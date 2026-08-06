@@ -765,7 +765,7 @@ function MerchantModal({
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder={m.admin.merchants.addressPlaceholder}
               />
-              <div className="rounded-control bg-page p-3 text-xs leading-relaxed text-ink-muted">
+              <div className="rounded-control bg-field p-3 text-xs leading-relaxed text-ink-muted">
                 {m.admin.merchants.locationHint}
               </div>
               <Badge variant={lat != null ? "success" : "warning"}>

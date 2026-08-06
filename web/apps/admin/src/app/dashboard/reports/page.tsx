@@ -107,7 +107,7 @@ function DailyBars({
                 />
                 {/* تلميح التحويم */}
                 {hover === i && (
-                  <div className="pointer-events-none absolute bottom-full mb-1 whitespace-nowrap rounded-control border border-line bg-surface px-2.5 py-1.5 text-xs elev-2">
+                  <div className="pointer-events-none absolute bottom-full mb-1 whitespace-nowrap surface-inset px-2.5 py-1.5 text-xs elev-2">
                     <span className="font-bold">{format(v)}</span>
                     <span className="text-ink-muted"> · {d.day.slice(5)}</span>
                   </div>
@@ -142,7 +142,7 @@ function Stat({
 }) {
   return (
     <div className="flex items-center gap-3 surface p-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-primary-light">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-primary-tint">
         <Icon size={18} className="text-primary-dark" />
       </div>
       <div className="min-w-0">
@@ -314,7 +314,7 @@ export default function ReportsPage() {
                   {report.top_merchants.map((t, i) => (
                     <li key={t.name} className="flex items-center justify-between text-sm">
                       <span>
-                        <span className="me-2 inline-flex h-5 w-5 items-center justify-center rounded-badge bg-primary-light text-xs font-bold text-primary-dark">
+                        <span className="me-2 inline-flex h-5 w-5 items-center justify-center rounded-badge bg-primary-tint text-xs font-bold text-primary">
                           {i + 1}
                         </span>
                         {t.name}
@@ -341,7 +341,7 @@ export default function ReportsPage() {
                   {report.top_drivers.map((t, i) => (
                     <li key={t.phone} className="flex items-center justify-between text-sm">
                       <span>
-                        <span className="me-2 inline-flex h-5 w-5 items-center justify-center rounded-badge bg-primary-light text-xs font-bold text-primary-dark">
+                        <span className="me-2 inline-flex h-5 w-5 items-center justify-center rounded-badge bg-primary-tint text-xs font-bold text-primary">
                           {i + 1}
                         </span>
                         {t.name || <span dir="ltr">{t.phone}</span>}

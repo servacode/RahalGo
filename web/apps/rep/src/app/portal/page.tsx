@@ -138,7 +138,7 @@ export default function OverviewPage() {
           </p>
         </div>
 
-        <div className="mt-2 h-2 overflow-hidden rounded-badge bg-page">
+        <div className="mt-2 h-2 overflow-hidden rounded-badge bg-field">
           <div
             className={`h-full rounded-badge transition-all ${reached ? "bg-success" : "bg-primary"}`}
             style={{ width: `${pct}%` }}

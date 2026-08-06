@@ -88,7 +88,7 @@ function errText(err: unknown): string {
 }
 
 const textareaCls =
-  "w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary";
+  "w-full surface-inset px-3 py-2 text-sm outline-none focus:border-primary";
 
 export default function TicketsPage() {
   const [data, setData] = useState<TicketPage | null>(null);
@@ -492,7 +492,7 @@ function TicketDetailModal({
           {ticket.replies && ticket.replies.length > 0 ? (
             <ol className="space-y-2">
               {ticket.replies.map((r) => (
-                <li key={r.id} className="rounded-control bg-page px-3 py-2 text-sm">
+                <li key={r.id} className="rounded-control bg-field px-3 py-2 text-sm">
                   <p className="whitespace-pre-wrap">{r.body}</p>
                   <p className="mt-1 text-xs text-ink-muted">
                     {fmtDateTime(r.created_at)}

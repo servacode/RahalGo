@@ -138,7 +138,7 @@ export function StoreHours({
                 disabled={d.closed}
                 value={d.open_time}
                 onChange={(e) => updateDay(i, { open_time: e.target.value })}
-                className="rounded-control border border-line bg-surface px-2 py-1 disabled:opacity-40"
+                className="surface-inset px-2 py-1 disabled:opacity-40"
               />
               <IconPrev size={14} className="text-ink-muted" />
               <input
@@ -146,7 +146,7 @@ export function StoreHours({
                 disabled={d.closed}
                 value={d.close_time}
                 onChange={(e) => updateDay(i, { close_time: e.target.value })}
-                className="rounded-control border border-line bg-surface px-2 py-1 disabled:opacity-40"
+                className="surface-inset px-2 py-1 disabled:opacity-40"
               />
               {/* **دوامٌ يعبر منتصفَ الليل مقبولٌ ومُعلَن.**
 

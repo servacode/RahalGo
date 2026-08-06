@@ -175,7 +175,7 @@ export default function InvitePage() {
             ))}
           </ul>
           {/* **والشرطُ من الإعداد لا من الشيفرة** — قرأه الزبونُ فوقع غيرُه. */}
-          <p className="mt-3 rounded-control bg-page px-3 py-2 text-xs text-ink-muted">
+          <p className="mt-3 rounded-control bg-field px-3 py-2 text-xs text-ink-muted">
             {data.reward_on === "first_order" ? V.onFirstOrder : V.onSignup}
           </p>
         </div>

@@ -260,7 +260,7 @@ export function Avatar({
          حجمٍ صغيرٍ يبدو مربّعاً مشذّبَ الأركان. **وصورةُ الشخص دائرةٌ في كلّ
          مكان**، وشكلٌ يخالف ما اعتادته العينُ يُقرأ خطأً في التصميم.
          (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-light text-sm font-bold text-primary-dark"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-tint text-sm font-bold text-primary"
     >
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element

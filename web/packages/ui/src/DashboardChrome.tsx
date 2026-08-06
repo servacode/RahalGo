@@ -232,7 +232,7 @@ export function DashboardChrome({
                 href={item.href}
                 className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors ${
                   active
-                    ? "bg-primary-light font-medium text-primary-strong"
+                    ? "bg-primary-tint font-medium text-primary-strong"
                     : "text-ink-muted hover:bg-row-hover hover:text-ink"
                 }`}
               >

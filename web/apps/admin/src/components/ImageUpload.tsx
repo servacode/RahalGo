@@ -74,7 +74,7 @@ export default function ImageUpload({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-control border border-dashed border-line bg-page text-ink-muted transition-colors hover:border-primary hover:text-primary"
+          className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-control border border-dashed border-line bg-field text-ink-muted transition-colors hover:border-primary hover:text-primary"
           aria-label={label}
         >
           {busy ? (
@@ -137,7 +137,7 @@ export function MediaThumb({
   if (!src) {
     return (
       <span
-        className="flex shrink-0 items-center justify-center rounded-control bg-primary-light font-bold text-primary-dark"
+        className="flex shrink-0 items-center justify-center rounded-control bg-primary-tint font-bold text-primary"
         style={{ width: size, height: size, fontSize: size * 0.42 }}
       >
         {fallback.trim().charAt(0) || m.terms.avatarFallback}

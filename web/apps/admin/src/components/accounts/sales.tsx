@@ -122,7 +122,7 @@ export default function SalesTable() {
               e.stopPropagation();
               router.push(`/dashboard/users/${p.id}`);
             }}
-            className="shrink-0 rounded-control p-1 text-ink-muted transition-colors hover:bg-primary-light hover:text-primary"
+            className="shrink-0 rounded-control p-1 text-ink-muted transition-colors hover:bg-primary-tint hover:text-primary"
           >
             <IconView size={17} />
           </button>

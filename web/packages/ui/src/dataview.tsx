@@ -95,7 +95,7 @@ export function ViewToggle({
        يُفتقد.** */
     <div
       role="group"
-      /* **والحاضنُ زجاجٌ لا لوحٌ معتم** — `bg-page` صندوقٌ أسودُ فوق تدرّج. */
+      /* **والحاضنُ زجاجٌ لا لوحٌ معتم** — `bg-field` صندوقٌ أسودُ فوق تدرّج. */
       className="surface hidden rounded-control p-1 md:flex"
     >
       <button

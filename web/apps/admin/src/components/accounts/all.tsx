@@ -148,7 +148,7 @@ export default function AllAccountsTable() {
               e.stopPropagation();
               router.push(`/dashboard/users/${u.id}`);
             }}
-            className="shrink-0 rounded-control p-1 text-ink-muted transition-colors hover:bg-primary-light hover:text-primary"
+            className="shrink-0 rounded-control p-1 text-ink-muted transition-colors hover:bg-primary-tint hover:text-primary"
           >
             <IconView size={17} />
           </button>
@@ -228,7 +228,7 @@ export default function AllAccountsTable() {
         <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           <button
             onClick={() => setRole("")}
-            className={`rounded-card border p-2.5 text-center transition-colors ${role === "" ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary-edge"}`}
+            className={`rounded-card border p-2.5 text-center transition-colors ${role === "" ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
           >
             <p className="text-lg font-bold">{roleCounts.total}</p>
             <p className="text-xs text-ink-muted">{m.admin.users.allRoles}</p>
@@ -243,7 +243,7 @@ export default function AllAccountsTable() {
             <button
               key={key}
               onClick={() => { setRole(role === key ? "" : key); setPage(1); }}
-              className={`rounded-card border p-2.5 text-center transition-colors ${role === key ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary-edge"}`}
+              className={`rounded-card border p-2.5 text-center transition-colors ${role === key ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
             >
               <p className={`inline-flex items-center gap-1 text-lg font-bold ${style ? style.cls.split(" ").filter((c) => c.startsWith("text-")).join(" ") : ""}`}>
                 {style && <style.Icon size={15} />}

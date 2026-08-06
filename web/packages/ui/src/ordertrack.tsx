@@ -87,7 +87,7 @@ export function OrderTrack({
 
       {/* القضيبُ والعُقَد */}
       <div className="relative h-1.5" aria-hidden>
-        <div className="absolute inset-0 rounded-badge bg-page" />
+        <div className="absolute inset-0 rounded-badge bg-field" />
         <div
           className="absolute inset-y-0 right-0 rounded-badge bg-accent transition-[width] duration-700 ease-out"
           style={{ width: `${pct}%` }}

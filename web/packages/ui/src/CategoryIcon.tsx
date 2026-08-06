@@ -84,7 +84,7 @@ export function CategoryIconPicker({
   return (
     <div>
       {label && <span className="mb-1.5 block text-sm font-medium text-ink">{label}</span>}
-      <div className="flex flex-wrap gap-1.5 rounded-control border border-line bg-surface p-2">
+      <div className="flex flex-wrap gap-1.5 surface-inset p-2">
         {CATEGORY_ICON_KEYS.map((key) => {
           const Icon = CATEGORY_ICONS[key];
           const active = key === value;
@@ -98,7 +98,7 @@ export function CategoryIconPicker({
               aria-pressed={active}
               className={`flex h-9 w-9 items-center justify-center rounded-control border transition-colors ${
                 active
-                  ? "border-primary bg-primary-light text-primary-dark"
+                  ? "border-primary bg-primary-tint text-primary"
                   : "border-transparent text-ink-muted hover:bg-row-hover hover:text-ink"
               }`}
             >

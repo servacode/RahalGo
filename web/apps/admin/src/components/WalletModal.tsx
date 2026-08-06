@@ -82,7 +82,7 @@ export default function WalletModal({
       size="lg"
       title={`${m.admin.users.walletTitle}: ${user.full_name || user.phone}`}
     >
-      <div className="mb-4 flex items-center justify-between rounded-card bg-primary-light p-4">
+      <div className="mb-4 flex items-center justify-between rounded-card bg-primary-tint p-4">
         <span className="flex items-center gap-2 font-medium text-primary-dark">
           <IconWallet size={18} />
           {m.admin.users.balance}

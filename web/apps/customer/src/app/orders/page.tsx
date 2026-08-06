@@ -331,7 +331,7 @@ export default function MyOrdersPage() {
       {again && (
         <Modal open title={m.site.orders.againTitle} onClose={() => setAgain(null)}>
           <p className="mb-3 text-sm text-ink-muted">{m.site.orders.againBody}</p>
-          <ul className="mb-3 divide-y divide-line rounded-control bg-page">
+          <ul className="mb-3 divide-y divide-line rounded-control bg-field">
             {(again.items ?? []).map((it, i) => (
               <li key={i} className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="min-w-0 flex-1">
@@ -347,7 +347,7 @@ export default function MyOrdersPage() {
           {/* **العنوانُ يُعرض لا يُفترض** — من طلب إلى بيته أمسِ قد يكون اليومَ
               في عمله، **وطلبٌ يصل إلى عنوانٍ خاطئٍ خسارةٌ للجميع.** */}
           {again.address_text && (
-            <p className="mb-4 flex items-start gap-2 rounded-control bg-page px-3 py-2 text-sm">
+            <p className="mb-4 flex items-start gap-2 rounded-control bg-field px-3 py-2 text-sm">
               <IconLocation size={15} className="mt-0.5 shrink-0 text-ink-muted" />
               <span className="min-w-0 flex-1">{again.address_text}</span>
             </p>
@@ -540,7 +540,7 @@ function OrderCard({
 
       {/* ── الأصناف: كلٌّ في سطره وسعرُه أمامه ────────────────────────── */}
       {items.length > 0 ? (
-        <ul className="divide-y divide-line rounded-control bg-page">
+        <ul className="divide-y divide-line rounded-control bg-field">
           {items.map((it, i) => (
             <li key={i} className="flex items-start gap-3 px-3 py-2 text-sm">
               <span className="min-w-0 flex-1">
@@ -581,7 +581,7 @@ function OrderCard({
       {closed ? (
         /* **ولا مسارَ لما انتهى قبل أن يصل.** شريطٌ يقف في منتصفه يُقرأ
            «عالق» لا «انتهى» — فيُقال بالحرف. */
-        <div className="space-y-1.5 rounded-control bg-page px-3 py-2 text-center">
+        <div className="space-y-1.5 rounded-control bg-field px-3 py-2 text-center">
           <p className="text-sm text-ink-muted">
             {m.site.orders.trackClosed.replace("{s}", STATUS_LABELS[o.status] ?? o.status)}
           </p>
@@ -703,7 +703,7 @@ function OrderCard({
           </Button>
         )}
         {o.status === "delivered" && rate?.rated && (
-          <span className="flex flex-1 items-center justify-center gap-2 rounded-control bg-page px-3 py-1.5">
+          <span className="flex flex-1 items-center justify-center gap-2 rounded-control bg-field px-3 py-1.5">
             <span className="text-xs text-ink-muted">{m.site.rating.merchant}</span>
             <Stars value={rate.platform_stars} size="sm" />
           </span>
@@ -736,7 +736,7 @@ function OrderCard({
           (ticketNo > 0 ? (
             <span
               title={m.site.complaint.opened.replace("{n}", fmtNum(ticketNo))}
-              className="flex h-9 shrink-0 items-center rounded-control bg-page px-2 text-xs text-ink-muted"
+              className="flex h-9 shrink-0 items-center rounded-control bg-field px-2 text-xs text-ink-muted"
               dir="ltr"
             >
               #{fmtRef(ticketNo)}

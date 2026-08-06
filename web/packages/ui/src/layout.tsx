@@ -68,7 +68,7 @@ export function PageHeader({
 
        **وشريطٌ لا صندوق**: الحشوةُ ضيّقةٌ والزاويةُ واحدة — **فهو أثاثُ
        العنوان لا كرتٌ جامعٌ عاد من الباب الخلفيّ.** */
-    <div className="surface-lit flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-surface px-4 py-3">
+    <div className="surface-lit flex flex-wrap items-center justify-between gap-3 surface px-4 py-3">
       <div className="min-w-0">
         <h1 className="flex items-center gap-2 text-xl font-bold">
           {Icon && <Icon size={20} className="text-primary" />}
@@ -166,7 +166,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="surface-lit rounded-card border border-line bg-surface p-10 text-center">
+    <div className="surface-lit surface p-10 text-center">
       {Icon && <Icon size={28} className="mx-auto mb-2 text-ink-muted" />}
       <p className={`text-sm ${tone === "success" ? "text-success" : "text-ink-muted"}`}>{title}</p>
       {action && <div className="mt-3 flex justify-center">{action}</div>}
@@ -214,7 +214,7 @@ export function LoadingState({
        **وذهابُ الكرت الجامع كشف كلَّ ما كان يستره** — وهذا أوّلُهم: سطرٌ
        وحيدٌ يملأ الشاشة أثناء الجلب. **ولوحٌ صغيرٌ حوله يكفي.** */
     return (
-      <p className="surface-lit rounded-card border border-line bg-surface py-10 text-center text-sm text-ink-muted">
+      <p className="surface-lit surface py-10 text-center text-sm text-ink-muted">
         {label ?? m.common.loading}
       </p>
     );
@@ -252,7 +252,7 @@ export function ListRow({
   return (
     <li
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-card border border-line bg-surface p-3 ${
+      className={`flex items-center gap-3 surface p-3 ${
         onClick ? "cursor-pointer transition-shadow hover:border-primary-edge hover:elev-1" : ""
       } ${className}`}
     >
@@ -418,7 +418,7 @@ export function TabCards({
             onClick={() => onChange(t.key)}
             className={`rounded-card border p-3 text-start transition-colors ${
               on
-                ? "border-primary bg-primary-light"
+                ? "border-primary bg-primary-tint"
                 : "border-line bg-surface hover:border-primary-edge"
             }`}
           >
@@ -431,7 +431,7 @@ export function TabCards({
               {!!t.count && (
                 <span
                   className={`shrink-0 rounded-badge px-1.5 py-0.5 text-2xs font-bold ${
-                    on ? "bg-primary-tint text-primary-dark" : "bg-ink-faint text-ink-muted"
+                    on ? "bg-primary-tint text-primary" : "bg-ink-faint text-ink-muted"
                   }`}
                 >
                   {fmtNum(t.count)}
@@ -551,7 +551,7 @@ export function EntityCard({
           {stats.map((st, i) => (
             // حقلٌ مؤطَّر لكل رقم: بلا إطار تلتصق الأرقام فيُقرأ أحدها مكان
             // الآخر — وهي بطاقة تُمسح بالعين لا تُدرَس.
-            <div key={i} className="min-w-0 rounded-control bg-page px-2 py-1.5 text-center">
+            <div key={i} className="min-w-0 rounded-control bg-field px-2 py-1.5 text-center">
               <p
                 className={`truncate text-base font-bold ${statTone[st.tone ?? "default"]}`}
                 dir="ltr"

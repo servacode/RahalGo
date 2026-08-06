@@ -147,7 +147,7 @@ export default function OrdersBoard() {
             onClick={() => setSoundOn(!soundOn)}
             className={`rounded-control border px-3 py-1.5 text-sm transition-colors ${
               soundOn
-                ? "border-primary bg-primary-light text-primary-dark"
+                ? "border-primary bg-primary-tint text-primary"
                 : "border-line text-ink-muted"
             }`}
           >
@@ -384,7 +384,7 @@ function OrderCard({
             </ul>
           )}
           {order.notes && (
-            <p className="mt-2 rounded-control bg-page px-2 py-1 text-xs">
+            <p className="mt-2 rounded-control bg-field px-2 py-1 text-xs">
               <span className="text-ink-muted">{m.merchant.orders.customerNote}:</span> {order.notes}
             </p>
           )}
@@ -466,7 +466,7 @@ function AcceptModal({
               onClick={() => setMinutes(v)}
               className={`rounded-control border px-3 py-1 text-sm ${
                 minutes === v
-                  ? "border-primary bg-primary-light font-bold text-primary-dark"
+                  ? "border-primary bg-primary-tint font-bold text-primary"
                   : "border-line text-ink-muted"
               }`}
             >

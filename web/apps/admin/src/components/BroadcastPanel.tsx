@@ -155,7 +155,7 @@ export default function BroadcastPanel() {
         <p className="mb-4 text-sm">
           {B.confirmBody.replace("{n}", fmtNum(count ?? 0))}
         </p>
-        <p className="mb-4 rounded-control bg-page px-3 py-2 text-sm font-medium">{title}</p>
+        <p className="mb-4 rounded-control bg-field px-3 py-2 text-sm font-medium">{title}</p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setConfirming(false)}>
             {m.common.cancel}

@@ -24,16 +24,16 @@ interface RoleStyle {
   Icon: React.ComponentType<{ size?: number }>;
 }
 
-const FALLBACK: RoleStyle = { cls: "border border-line bg-page text-ink-muted", Icon: IconUser };
+const FALLBACK: RoleStyle = { cls: "border border-line bg-field text-ink-muted", Icon: IconUser };
 
 export const ROLE_STYLES: Record<string, RoleStyle> = {
   admin: { cls: "bg-danger-tint text-danger", Icon: IconRoles },
   ops: { cls: "bg-info-tint text-info", Icon: IconStatus },
   finance: { cls: "bg-success-tint text-success", Icon: IconWallet },
   merchant: { cls: "bg-accent-tint text-accent-dark", Icon: IconStore },
-  driver: { cls: "bg-primary-tint text-primary-dark", Icon: IconDriver },
+  driver: { cls: "bg-primary-tint text-primary", Icon: IconDriver },
   sales: { cls: "bg-violet-tint text-violet", Icon: IconUsers },
-  customer: { cls: "border border-line bg-page text-ink-muted", Icon: IconUser },
+  customer: { cls: "border border-line bg-field text-ink-muted", Icon: IconUser },
 };
 
 export default function RoleBadge({ role }: { role: string }) {

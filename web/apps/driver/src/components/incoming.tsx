@@ -129,7 +129,7 @@ export function IncomingCard({
 
           **والاسمُ يقول الطرفين**: «منك إلى المتجر» و«من المتجر إلى الزبون»
           — لا «إليك» و«المشوار». **واسمٌ يحتاج شرحاً اسمٌ لم يُختَر بعد.** */}
-      <div className="mt-2 space-y-1 rounded-control bg-page px-2.5 py-2 text-xs">
+      <div className="mt-2 space-y-1 rounded-control bg-field px-2.5 py-2 text-xs">
         <p className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-ink-muted">
             <IconDriver size={13} />

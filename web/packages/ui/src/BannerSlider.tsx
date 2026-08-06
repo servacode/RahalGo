@@ -139,7 +139,7 @@ export function BannerSlider({
         أعرض    السقفُ يمسك عند ٣٦٠ **فتزداد عرضاً لا طولاً**
   */
   const frame =
-    "relative aspect-[16/9] max-h-[360px] w-full overflow-hidden rounded-card bg-page sm:aspect-[5/2] lg:aspect-[16/5]";
+    "relative aspect-[16/9] max-h-[360px] w-full overflow-hidden rounded-card bg-field sm:aspect-[5/2] lg:aspect-[16/5]";
 
   const slide = (it: SlideItem, i: number) => {
     const on = i === cur;

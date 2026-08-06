@@ -71,7 +71,7 @@ function AddressPicker({
   return (
     <div className="space-y-2">
       <Suspense
-        fallback={<div className="h-64 w-full animate-pulse rounded-card bg-page" />}
+        fallback={<div className="h-64 w-full animate-pulse rounded-card bg-field" />}
       >
         <PickMap
           lat={value ? lat : null}

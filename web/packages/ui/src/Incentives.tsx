@@ -94,7 +94,7 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
               </span>
             )}
           </div>
-          <div className="h-2 overflow-hidden rounded-badge bg-page">
+          <div className="h-2 overflow-hidden rounded-badge bg-field">
             <div
               className={`h-full rounded-badge ${st.reached ? "bg-success" : "bg-accent"}`}
               style={{ width: `${pct}%` }}

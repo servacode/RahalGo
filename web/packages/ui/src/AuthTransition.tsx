@@ -84,7 +84,7 @@ export function AuthTransition({
 
           **ولا رقمَ معه**: النسبةُ تُكذَب حين لا تُعرف — والانتقالُ بين
           بوّابتين لا يُقاس. **وشريطٌ يمشي يقول «يجري» ولا يقول «بقي ٤٠٪».** */}
-      <span className="h-1 w-40 overflow-hidden rounded-badge bg-page">
+      <span className="h-1 w-40 overflow-hidden rounded-badge bg-field">
         <span className="block h-full w-1/3 rounded-badge bg-accent motion-safe:animate-[rahalgo-sweep_1.1s_ease-in-out_infinite]" />
       </span>
     </div>

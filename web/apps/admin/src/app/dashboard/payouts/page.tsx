@@ -166,7 +166,7 @@ export default function PayoutsPage() {
                 {P.creditBtn}
               </Button>
             )}
-            <div className="flex rounded-control border border-line bg-page p-1">
+            <div className="flex rounded-control border border-line bg-field p-1">
               {filters.map((f) => (
                 <button
                   key={f.id}
@@ -288,7 +288,7 @@ function DecideModal({
   return (
     <Modal open onClose={onClose} title={approve ? P.status.paid : P.status.rejected}>
       <form onSubmit={submit} className="space-y-4">
-        <div className="rounded-control border border-line bg-page px-3 py-2 text-sm">
+        <div className="rounded-control border border-line bg-field px-3 py-2 text-sm">
           <p className="font-bold">{payout.user_name}</p>
           <p className="text-ink-muted" dir="ltr">
             {fmtNum(payout.amount)} {m.common.currency}

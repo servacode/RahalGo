@@ -1430,7 +1430,7 @@ function OrderActions({
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
         <p className="text-xs font-medium">{OP.splitTitle}</p>
-        <div className="space-y-1 rounded-control bg-page p-3 text-xs">
+        <div className="space-y-1 rounded-control bg-field p-3 text-xs">
           <Row label={OP.splitPaid} value={split.total} strong />
           {split.lines
             .filter((l) => l.party !== "customer")

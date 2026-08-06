@@ -80,7 +80,7 @@ export default function ComplaintsPage() {
             <Card key={t.id} className="flex flex-col gap-4">
               {/* ── الترويسة: السببُ · الرقمُ · الحالة ─────────────────── */}
               <div className="flex items-start gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary-light text-primary-dark">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary-tint text-primary">
                   <IconSupport size={20} />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -93,7 +93,7 @@ export default function ComplaintsPage() {
                   {/* **الرقمُ بحقلٍ خاصّ** — هو ما يقوله حين يتّصل يسأل. */}
                   <span
                     dir="ltr"
-                    className="rounded-control bg-primary-light px-2.5 py-1 text-sm font-bold tabular-nums text-primary-dark"
+                    className="rounded-control bg-primary-tint px-2.5 py-1 text-sm font-bold tabular-nums text-primary-dark"
                   >
                     #{fmtRef(t.number)}
                   </span>
@@ -105,13 +105,13 @@ export default function ComplaintsPage() {
 
               {/* ── حقلان مستقلّان: متى · وعلى أيّ طلب ─────────────────── */}
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-control bg-page px-3 py-2">
+                <div className="rounded-control bg-field px-3 py-2">
                   <p className="text-2xs text-ink-muted">{C.fieldWhen}</p>
                   <p className="mt-0.5 text-sm font-medium tabular-nums" dir="ltr">
                     {fmtDateTime(t.created_at)}
                   </p>
                 </div>
-                <div className="rounded-control bg-page px-3 py-2">
+                <div className="rounded-control bg-field px-3 py-2">
                   <p className="text-2xs text-ink-muted">{C.fieldOrder}</p>
                   <p className="mt-0.5 text-sm font-medium tabular-nums" dir="ltr">
                     {t.order_number !== null ? `#${fmtRef(t.order_number)}` : "—"}
@@ -120,7 +120,7 @@ export default function ComplaintsPage() {
               </div>
 
               {/* ── ردُّ المنصة — **حقلٌ مُعنوَنٌ لا سطرٌ عائم** ──────────── */}
-              <div className="flex-1 rounded-control border border-line bg-surface p-3">
+              <div className="flex-1 surface-inset p-3">
                 <p className="mb-1 flex items-center gap-1.5 text-2xs font-bold text-ink-muted">
                   <IconReply size={13} />
                   {C.fieldReply}

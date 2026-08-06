@@ -442,7 +442,7 @@ function BannersTab({ isAdmin }: { isAdmin: boolean }) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {banners.map((b) => (
           <div key={b.id} className="overflow-hidden surface">
-            <div className="flex h-32 items-center justify-center bg-primary-light">
+            <div className="flex h-32 items-center justify-center bg-primary-tint">
               {b.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

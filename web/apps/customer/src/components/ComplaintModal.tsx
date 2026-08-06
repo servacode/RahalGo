@@ -100,7 +100,7 @@ export default function ComplaintModal({
                 onChange={() => setReason(r.code)}
                 label={C.reasons[r.code as keyof typeof C.reasons] ?? r.code}
                 className={`rounded-control border p-2.5 ${
-                  reason === r.code ? "border-primary bg-primary-light" : "border-line"
+                  reason === r.code ? "border-primary bg-primary-tint" : "border-line"
                 }`}
               />
             ))}

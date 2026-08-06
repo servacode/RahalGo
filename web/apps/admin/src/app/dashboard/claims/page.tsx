@@ -283,7 +283,7 @@ function SettleModal({
     <Modal open onClose={onClose} title={charge ? C.chargeTitle : C.waiveTitle}>
       <form onSubmit={submit} className="space-y-3">
         <p className="text-sm text-ink-muted">{charge ? C.chargeHint : C.waiveHint}</p>
-        <p className="rounded-control bg-page px-3 py-2 text-sm">
+        <p className="rounded-control bg-field px-3 py-2 text-sm">
           {dispute.party_name} —{" "}
           <span dir="ltr" className="font-bold tabular-nums">
             {fmtNum(dispute.amount)} {m.common.currency}

@@ -413,7 +413,7 @@ function SettingRow({
 
                (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «خيارُ الطلبات تلقائي أو الأسرع
                أيضاً لازم يكون زرّاً ذكيّاً».) */
-            <div className="flex flex-wrap gap-1 rounded-control border border-line bg-page p-1">
+            <div className="flex flex-wrap gap-1 rounded-control border border-line bg-field p-1">
               {(s.options ?? []).map((o) => {
                 const on = draft === o;
                 return (
@@ -460,7 +460,7 @@ function SettingRow({
                 onMouseUp={() => void save(Number(draft))}
                 onTouchEnd={() => void save(Number(draft))}
                 onKeyUp={() => void save(Number(draft))}
-                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-badge bg-page accent-accent"
+                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-badge bg-field accent-accent"
               />
               <span className="w-12 shrink-0 text-end text-sm font-medium tabular-nums text-primary-dark">
                 {draft === "" ? 0 : Number(draft)}%

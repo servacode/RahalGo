@@ -291,7 +291,7 @@ export default function LeadsPage() {
             <p className="text-sm text-ink-muted">{m.admin.leads.rejectHint}</p>
             {/* **وما كتبه المندوبُ يُقرأ قبل الردّ** — قد يكون فيه جوابُ سؤالك. */}
             {rejecting.note && (
-              <p className="rounded-control bg-page px-3 py-2 text-sm">
+              <p className="rounded-control bg-field px-3 py-2 text-sm">
                 <span className="text-ink-muted">{m.admin.leads.repNote}: </span>
                 {rejecting.note}
               </p>

@@ -130,10 +130,10 @@ export function AddressBook({
                 key={a.id}
                 onClick={onPick ? () => onPick(a) : undefined}
                 className={`flex items-center gap-3 rounded-card border p-3 ${
-                  chosen ? "border-primary bg-primary-light" : "border-line bg-surface"
+                  chosen ? "border-primary bg-primary-tint" : "border-line bg-surface"
                 } ${onPick ? "cursor-pointer" : ""}`}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-page">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-field">
                   {chosen ? (
                     <IconCheck size={17} strokeWidth={3} className="text-primary-dark" />
                   ) : (

@@ -82,7 +82,7 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
         <select
           value={store.id}
           onChange={(e) => select(e.target.value)}
-          className="max-w-40 rounded-control border border-line bg-surface px-2 py-1 text-sm font-bold"
+          className="max-w-40 surface-inset px-2 py-1 text-sm font-bold"
         >
           {stores.map((s) => (
             <option key={s.id} value={s.id}>

@@ -324,7 +324,7 @@ export default function TasksPage() {
             {fmtNum(me.cash_held)} / {fmtNum(me.cash_limit)}
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-badge bg-page">
+        <div className="h-2 overflow-hidden rounded-badge bg-field">
           <div
             className={`h-full rounded-badge ${
               cashRatio >= 1 ? "bg-danger" : cashRatio >= 0.8 ? "bg-warning" : "bg-success"
@@ -573,7 +573,7 @@ function TaskCard({
 
           **وسالبٌ يعني «لا تُعرف» لا «صفر»**: الجهلُ ليس قرباً — ومن أطفأ
           الموقعَ يُقال له ذلك بدل أن يُعرض عليه رقمٌ كاذب. */}
-      <div className="mb-2 space-y-1 rounded-control bg-page px-2.5 py-2 text-xs">
+      <div className="mb-2 space-y-1 rounded-control bg-field px-2.5 py-2 text-xs">
         <p className="flex items-center justify-between gap-2">
           <span className="flex items-center gap-1.5 text-ink-muted">
             <IconDriver size={13} />
@@ -745,7 +745,7 @@ function Leg({
 }) {
   return (
     <div className={`flex items-start gap-3 py-1.5 ${dim ? "opacity-50" : ""}`}>
-      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-page">
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-field">
         <Icon size={16} className="text-ink-muted" />
       </span>
       <div className="min-w-0 flex-1">
@@ -761,7 +761,7 @@ function Leg({
             rel="noreferrer"
             title={hrefLabel}
             aria-label={hrefLabel}
-            className="flex h-9 w-9 items-center justify-center rounded-control bg-primary-light text-primary-dark"
+            className="flex h-9 w-9 items-center justify-center rounded-control bg-primary-tint text-primary"
           >
             <IconLocation size={17} />
           </a>
@@ -771,7 +771,7 @@ function Leg({
             href={`tel:${phone}`}
             title={callLabel}
             aria-label={callLabel}
-            className="flex h-9 w-9 items-center justify-center rounded-control bg-page text-ink-muted"
+            className="flex h-9 w-9 items-center justify-center rounded-control bg-field text-ink-muted"
           >
             <IconPhone size={17} />
           </a>

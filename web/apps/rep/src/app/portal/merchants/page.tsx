@@ -48,7 +48,7 @@ import { api, mediaUrl, ApiError } from "@/lib/api";
 // الخريطة من الحزمة المشتركة — مدخل فرعي كي لا تُجرّ مكتبتها لكل صفحة
 const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), {
   ssr: false,
-  loading: () => <div className="h-64 w-full animate-pulse rounded-card bg-page" />,
+  loading: () => <div className="h-64 w-full animate-pulse rounded-card bg-field" />,
 });
 
 interface Place {
@@ -168,7 +168,7 @@ export default function ClientsPage() {
               key={l.id}
               muted
               media={
-                <span className="flex h-12 w-12 items-center justify-center rounded-control bg-page">
+                <span className="flex h-12 w-12 items-center justify-center rounded-control bg-field">
                   <CategoryIcon name={l.category_icon ?? "other"} size={20} />
                 </span>
               }
@@ -208,7 +208,7 @@ export default function ClientsPage() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={logo} alt="" loading="lazy" className="h-12 w-12 rounded-control object-cover" />
                   ) : (
-                    <span className="flex h-12 w-12 items-center justify-center rounded-control bg-primary-light">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-control bg-primary-tint">
                       <CategoryIcon name={mr.category_icon} size={20} />
                     </span>
                   )
@@ -464,7 +464,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
           </div>
 
           {/* كلمة مرور مؤقتة يسلّمها المندوب — يُجبَر المالك على تبديلها أول دخول */}
-          <div className="rounded-card border border-line bg-page p-3">
+          <div className="rounded-card border border-line bg-field p-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
                 id="owner-pw"
@@ -511,7 +511,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
             />
             {/* المرشّحات تطفو فوق الخريطة بدل أن تدفعها للأسفل */}
             {suggestions.length > 0 && (
-              <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-control border border-line bg-surface elev-3">
+              <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden surface-inset elev-3">
                 {suggestions.map((p, i) => (
                   <li key={i} className="border-b border-line-soft last:border-0">
                     <button

@@ -387,7 +387,7 @@ export function OtpInput({
           }}
           className={`h-13 w-11 rounded-control border bg-field text-center font-mono text-xl font-bold text-ink outline-none transition-all sm:w-12 ${
             d.trim()
-              ? "border-primary bg-primary-tint text-primary-dark"
+              ? "border-primary bg-primary-tint text-primary"
               : "border-line hover:border-line-soft"
           } focus:border-primary`}
         />
@@ -459,7 +459,7 @@ export function Select({
 // ---------- Badge ----------
 
 /* **والنغماتُ صبغةٌ ونصٌّ من الدلالة نفسِها** — كانت `primary` وحدَها خارجَ
-   اللغة (`bg-primary-light text-primary-dark`: تعبئةٌ مصمتةٌ ودرجةٌ لا دلالة)،
+   اللغة (`bg-primary-tint text-primary`: تعبئةٌ مصمتةٌ ودرجةٌ لا دلالة)،
    **فتُقرأ خمسُ شاراتٍ أربعاً وواحدةً غريبة.** (طلبُ المالك ٢٠٢٦-٠٨-٠٧.)
 
    **وزيدت `accent` و`info`** لأنّ من لم يجد نغمتَه بنى شارتَه بيده — **وهو

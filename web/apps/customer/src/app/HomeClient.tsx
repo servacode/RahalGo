@@ -202,7 +202,7 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                   sec.count === 0 ? "opacity-60" : ""
                 }`}
               >
-                <span className="flex aspect-[4/3] items-center justify-center bg-page">
+                <span className="flex aspect-[4/3] items-center justify-center bg-field">
                   {sec.image_url || sec.image_thumb_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

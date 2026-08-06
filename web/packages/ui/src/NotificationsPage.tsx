@@ -46,8 +46,8 @@ interface Feed {
 /** أيقونة ولون لكل نوع — مصدر واحد يخدم الصفحة والجرس. */
 const KINDS: Record<string, { icon: ComponentType<{ size?: number; className?: string }>; tone: string }> = {
   // **والنغمةُ صبغةٌ ونصٌّ من الدلالة نفسِها** — كانت ثلاثةٌ خارجَ اللغة:
-  // `bg-primary-light` تعبئةٌ مصمتة، و`text-accent-dark` درجةٌ لا دلالة،
-  // و`bg-page` لونُ صفحةٍ لا لونُ نوع. **فتُقرأ الستّةُ خمسةً وواحداً غريباً.**
+  // `bg-primary-tint` تعبئةٌ مصمتة، و`text-accent-dark` درجةٌ لا دلالة،
+  // و`bg-field` لونُ صفحةٍ لا لونُ نوع. **فتُقرأ الستّةُ خمسةً وواحداً غريباً.**
   order: { icon: IconOrder, tone: "text-primary bg-primary-tint" },
   ticket: { icon: IconSupport, tone: "text-danger bg-danger-tint" },
   wallet: { icon: IconWallet, tone: "text-success bg-success-tint" },
@@ -239,7 +239,7 @@ export function NotificationsPage({
 
                   (شهده المالك ٢٠٢٦-٠٨-٠٧ في صورة.)
 
-                  **كان الغلافُ يحمل خلفيّةً معتمة** (`bg-page`) — وقِيس:
+                  **كان الغلافُ يحمل خلفيّةً معتمة** (`bg-field`) — وقِيس:
                   **شريطٌ بعرض ١٣٦٨ من ١٤٠٠**، لوحٌ داكنٌ يعبر الشاشة فوق
                   خلفيّةٍ زجاجيّة. **ومن رآه قرأه فاصلاً مكسوراً لا عنواناً.**
 

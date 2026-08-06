@@ -226,7 +226,7 @@ export function Switch({
         /* **ومقاسُ اللمس ٤٤ بكسلاً** — والمفتاحُ نفسُه أصغرُ، فالمساحةُ حوله
            تُكمّله. */
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-badge border transition-colors disabled:opacity-50 ${
-          checked ? "border-success-edge bg-success-fill" : "border-line bg-page"
+          checked ? "border-success-edge bg-success-fill" : "border-line bg-field"
         }`}
       >
         <span
