@@ -11,6 +11,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtLongDate } from "@rahalgo/i18n";
 import { PageContainer, PageHeader, EmptyState, LoadingState } from "./layout";
+import { Chips } from "./navigation";
 import { Alert } from "./feedback";
 import { Button } from "./components";
 import { useLiveData, emitLocal, READ_EVENT, type AppNotification } from "./Notifications";
@@ -44,12 +45,15 @@ interface Feed {
 
 /** أيقونة ولون لكل نوع — مصدر واحد يخدم الصفحة والجرس. */
 const KINDS: Record<string, { icon: ComponentType<{ size?: number; className?: string }>; tone: string }> = {
-  order: { icon: IconOrder, tone: "text-primary bg-primary-light" },
+  // **والنغمةُ صبغةٌ ونصٌّ من الدلالة نفسِها** — كانت ثلاثةٌ خارجَ اللغة:
+  // `bg-primary-light` تعبئةٌ مصمتة، و`text-accent-dark` درجةٌ لا دلالة،
+  // و`bg-page` لونُ صفحةٍ لا لونُ نوع. **فتُقرأ الستّةُ خمسةً وواحداً غريباً.**
+  order: { icon: IconOrder, tone: "text-primary bg-primary-tint" },
   ticket: { icon: IconSupport, tone: "text-danger bg-danger-tint" },
   wallet: { icon: IconWallet, tone: "text-success bg-success-tint" },
-  rating: { icon: IconStar, tone: "text-accent-dark bg-accent-tint" },
+  rating: { icon: IconStar, tone: "text-accent bg-accent-tint" },
   lead: { icon: IconLink, tone: "text-info bg-info-tint" },
-  account: { icon: IconUser, tone: "text-ink-muted bg-page" },
+  account: { icon: IconUser, tone: "text-ink-muted bg-ink-faint" },
   // **والعرضُ له وجهُه** — إشعارٌ بلا أيقونةٍ خاصّةٍ يسقط على الافتراضيّ
   // فيختلط بما ليس منه في قائمةٍ تُمسح بالعين.
   offer: { icon: IconPromos, tone: "text-danger bg-danger-tint" },
@@ -67,16 +71,24 @@ function dayLabel(iso: string): string {
   return fmtLongDate(d);
 }
 
+/**
+ * **ولا خيارَ للعرض** — الصفحةُ تملأ ما أُعطيت.
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «صفحةُ الإشعارات لازم ما فيها بادينك بشكلٍ
+ *  مركزيّ مثل صفحة الزبون».)
+ *
+ * **كان مُعامِلاً**: الزبونُ يمرّر `full` والأربعُ تأخذ `wide` — **فتُحصر
+ * باثني عشرَ وثمانين بكسلاً ويبقى الفراغُ يمينَها ويسارَها.** وكان تعليلُه
+ * أنّ السايدبار يقتطع جانباً، **وهو تعليلُ صفحةٍ لا تُرى إلّا وحدَها.**
+ *
+ * **ومن فتح الزبونَ ثمّ اللوحةَ رأى صفحتين** — والمكوّنُ واحد.
+ */
 export function NotificationsPage({
   api,
   Link,
-  // اللوحات تحصر العرض لأن سايدبارها يقتطع جانباً؛ وموقع الزبون بلا سايدبار
-  // فيأخذ الصفحة كاملة — الفرق في الهيكل لا في المكوّن، فصار مُعامِلاً.
-  width = "wide",
 }: {
   api: ApiFn;
   Link: LinkType;
-  width?: "wide" | "full";
 }) {
   const [kind, setKind] = useState("");
 
@@ -131,7 +143,7 @@ export function NotificationsPage({
   return (
     /* **ولا حشوةَ هنا** — صارت مركزيّةً في غلاف الموقع (`<main>`).
        **ومكوّنٌ مشتركٌ يحمل حشوةَ موقعٍ بعينه يفرضها على اللوحات الأربع.** */
-    <PageContainer width={width}>
+    <PageContainer>
       <PageHeader
         icon={IconBell}
         title={N.title}
@@ -174,31 +186,18 @@ export function NotificationsPage({
            كانت `inline-flex flex-wrap` —
            **تحتضن الحافّةَ وتلتفّ سطرين على الجوّال**، فيزيد ارتفاعُ الرأس
            **ويُدفع أوّلُ إشعارٍ تحت الطيّة.** */
-        <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {filters.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setKind(f.id)}
-              className={`flex shrink-0 items-center gap-1.5 rounded-badge border px-3.5 py-2 text-sm transition-colors ${
-                kind === f.id
-                  ? "border-primary bg-primary font-bold text-on-solid"
-                  : "border-line bg-surface text-ink-muted hover:border-primary-edge hover:text-ink"
-              }`}
-            >
-              {/* **ولا رقمَ في الحبّة.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «ظهورُ
-                  الأرقام مزعج — ألغِه».)
+        /* **والصفُّ صار مركزيّاً** (`Chips`) — كان هنا بمقاسٍ، وفي حسابات
+           الإدارة بمقاسين، وفي صفحة الصنف بثالث. **وأربعةُ مقاساتٍ لعنصرٍ
+           واحدٍ تُقرأ أربعَ منصّات.** (طلبُ المالك ٢٠٢٦-٠٨-٠٧.)
 
-                  **والرقمُ كان يقول ما تقوله القائمةُ تحته**: من ضغط «عروض»
-                  رأى العروضَ وعدَّها بعينه. **وستُّ حبّاتٍ كلٌّ منها بشارةٍ
-                  عدديّةٍ تُقرأ لوحةَ إحصاء** لا مرشِّحات.
+           **ونصُّ المختارة صار داكناً**: كان أبيضَ على سماويٍّ فاتحٍ بتباين
+           ١٫٧٢ مقيسٍ على الشاشة — **والحدُّ ٤٫٥.**
 
-                  **وعددُ غير المقروء يبقى في الرأس** — وهو الرقمُ الوحيدُ
-                  الذي يُفيد: يقول كم بقي، لا كم يوجد. */}
-              {f.label}
-            </button>
-          ))}
-        </div>
+           **ولا رقمَ في الحبّة** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «ظهورُ الأرقام
+           مزعج — ألغِه»): **الرقمُ كان يقول ما تقوله القائمةُ تحته.** وعددُ
+           غير المقروء يبقى في الرأس — **وهو الرقمُ الوحيدُ الذي يُفيد: يقول
+           كم بقي لا كم يوجد.** */
+        <Chips items={filters} value={kind} onChange={setKind} />
       )}
 
       {/* ══════════════════════════════════════════════════════════════
@@ -234,11 +233,27 @@ export function NotificationsPage({
               {/* **لافتةٌ لا خطٌّ يعبر الشاشة.** كان الاسمُ بين خطّين يمتدّان
                   إلى الطرفين — **وعلى ألفٍ وتسعمئة يصير خطّاً بطول الشاشة
                   وكلمةٌ في وسطه**، فيُقرأ فاصلاً لا عنواناً. */}
-              <div className="sticky top-0 z-10 mb-3 bg-page py-2 backdrop-blur">
-                <h2 className="inline-flex items-center gap-2 rounded-badge border border-line bg-surface px-3 py-1 text-xs font-bold text-ink-muted">
+              {/* ══════════════════════════════════════════════════════
+                  **واللافتةُ وحدَها تلتصق — لا شريطٌ يعبر الشاشة**
+                  ══════════════════════════════════════════════════════
+
+                  (شهده المالك ٢٠٢٦-٠٨-٠٧ في صورة.)
+
+                  **كان الغلافُ يحمل خلفيّةً معتمة** (`bg-page`) — وقِيس:
+                  **شريطٌ بعرض ١٣٦٨ من ١٤٠٠**، لوحٌ داكنٌ يعبر الشاشة فوق
+                  خلفيّةٍ زجاجيّة. **ومن رآه قرأه فاصلاً مكسوراً لا عنواناً.**
+
+                  **والتضبيبُ كان على الغلاف** فأخذ معه العرضَ كلَّه. **وصار
+                  على اللافتة**: هي زجاجٌ (`surface`) تحمل تضبيبَها، **وما
+                  حولها يمرّ تحته المحتوى ظاهراً** — وهو المطلوب أصلاً.
+
+                  **والخطُّ الذي كان يتبع الاسمَ حُذف**: `flex-1` داخلَ
+                  `inline-flex` لا يمتدّ، **فكان عنصراً بعرض صفرٍ في الشجرة**
+                  يُقرأ في قارئ الشاشة ولا يُرى. (قِيس: عنصرٌ واحدٌ بعرض صفر.) */}
+              <div className="sticky top-0 z-10 mb-3 py-2">
+                <h2 className="surface inline-flex items-center gap-2 rounded-badge px-3 py-1 text-xs font-bold text-ink-muted">
                   <span className="h-1.5 w-1.5 rounded-badge bg-primary" />
                   <span className="shrink-0">{g.day}</span>
-                  <span className="h-px flex-1 bg-line" />
                 </h2>
               </div>
               {/* ══════════════════════════════════════════════════════

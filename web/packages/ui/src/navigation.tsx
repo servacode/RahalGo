@@ -106,6 +106,88 @@ export function Tabs<K extends string>({
 }
 
 // ══════════════════════════════════════════════════════════════════════
+//  Chips — حبّاتُ الترشيح
+// ══════════════════════════════════════════════════════════════════════
+
+export interface ChipDef<K extends string = string> {
+  id: K;
+  label: ReactNode;
+  /** خيارٌ معروضٌ ولا يُختار — **يُرى ليُعرف أنّه موجودٌ ونفد.** */
+  disabled?: boolean;
+}
+
+/**
+ * Chips صفُّ حبّاتِ ترشيحٍ موحَّد.
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «صفحاتُ الإشعارات عالجها بشكلٍ مركزيّ».)
+ *
+ * # ولماذا حبّةٌ لا تبويب
+ *
+ * **`Tabs` تقول «أنت هنا»** — موضعٌ في هيكلٍ ثابت. **والحبّةُ تقول «أريد
+ * هذه»** — ترشيحٌ يُضاف ويُرفع، وقد يُختار منه أكثرُ من واحد. **وخطٌّ تحت
+ * الاسم لا يصلح لاختيارٍ متعدّد**: لا يُرى منه كم اخترتَ.
+ *
+ * # وما وجده الجرد
+ *
+ * **خمسةُ ملفّاتٍ تبنيها بأيديها بخمس مقاسات**: `px-3.5 py-2` و`px-3 py-1.5`
+ * و`px-3 py-1` و`px-2.5 py-1` — **والفرقُ يُرى حين تُفتح شاشتان جنباً إلى
+ * جنب.**
+ *
+ * # والمختارةُ نصُّها داكنٌ لا أبيض
+ *
+ * **كانت `bg-primary text-on-solid` — أبيضُ على سماويٍّ فاتح.** وقِيس على
+ * الشاشة: **تباينُ ١٫٧٢** والحدُّ ٤٫٥. **ولوحةُ المشروع كلُّها باستيلات
+ * فاتحة**: الأبيضُ يسقط على السبعة (١٫٢٥–٢٫٠٩) والداكنُ ينجح (٨–١٣٫٥).
+ *
+ * **و`on-solid` تبقى لغرضها**: تعبئةٌ داكنةٌ مشبعةٌ كـ`danger-solid` — **وهي
+ * الحالةُ الوحيدةُ التي يفوز فيها الأبيض.**
+ */
+export function Chips<K extends string>({
+  items,
+  value,
+  onChange,
+  className = "",
+}: {
+  items: readonly ChipDef<K>[];
+  /** واحدةٌ أو عدّة — **والنوعُ نفسُه يقرّر السلوك** فلا عَلَمَ يُنسى. */
+  value: K | readonly K[];
+  onChange: (id: K) => void;
+  className?: string;
+}) {
+  const many = Array.isArray(value);
+  const on = (id: K) => (many ? (value as readonly K[]).includes(id) : value === id);
+  return (
+    /* **ولا هامشَ سالب** — كان `-mx-1` في مواضعَ فامتدّ الصفُّ خارجَ النافذة
+       بعد حذف حشوة الغلاف، **فظهر تمريرٌ أفقيٌّ للصفحة كلِّها.** */
+    <div
+      role={many ? "group" : "radiogroup"}
+      className={`flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+    >
+      {items.map((c) => {
+        const sel = on(c.id);
+        return (
+          <button
+            key={c.id}
+            type="button"
+            role={many ? "checkbox" : "radio"}
+            aria-checked={sel}
+            disabled={c.disabled}
+            onClick={() => onChange(c.id)}
+            className={`flex shrink-0 items-center gap-1.5 rounded-badge border px-3.5 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+              sel
+                ? "border-primary bg-primary font-bold text-on-bright"
+                : "border-line bg-surface text-ink-muted hover:border-primary-edge hover:text-ink"
+            }`}
+          >
+            {c.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  Pagination
 // ══════════════════════════════════════════════════════════════════════
 

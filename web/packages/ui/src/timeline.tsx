@@ -46,12 +46,12 @@ export interface TimelineNode {
 }
 
 const TONE_SOLID: Record<string, string> = {
-  primary: "bg-primary text-on-solid",
-  success: "bg-success text-on-solid",
-  danger: "bg-danger text-on-solid",
-  warning: "bg-warning text-on-solid",
-  info: "bg-info text-on-solid",
-  violet: "bg-violet text-on-solid",
+  primary: "bg-primary text-on-bright",
+  success: "bg-success text-on-bright",
+  danger: "bg-danger text-on-bright",
+  warning: "bg-warning text-on-bright",
+  info: "bg-info text-on-bright",
+  violet: "bg-violet text-on-bright",
 };
 
 const TONE_RAIL: Record<string, string> = {

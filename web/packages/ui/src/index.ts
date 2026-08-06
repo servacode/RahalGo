@@ -18,7 +18,7 @@ export {
 } from "./feedback";
 // **التنقّلُ داخل الصفحة** — تبويبٌ كان مرتجَلاً في ٦ ملفّات، وترقيمٌ في ٥٦
 // موضعاً بلا مكوّن، وفتاتُ خبزٍ للوحةٍ بعمق ثلاثة مستويات.
-export { Tabs, Pagination, Breadcrumb, type TabDef } from "./navigation";
+export { Tabs, Chips, Pagination, Breadcrumb, type TabDef, type ChipDef } from "./navigation";
 // **ما يعلو الصفحة** — ورقةٌ تصعد على الجوّال، وتلميحٌ لِما قُصّ، ومفتاحٌ
 // لِما يقع فوراً.
 export { Sheet, Tooltip, Switch } from "./overlay";

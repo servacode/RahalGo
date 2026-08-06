@@ -272,7 +272,7 @@ export default function ClientsPage() {
                   <>
                     <Link
                       href={`/portal/merchants/${mr.id}`}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-control bg-primary px-3 py-1.5 text-sm font-medium text-on-solid hover:bg-primary-dark"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-control bg-primary px-3 py-1.5 text-sm font-medium text-on-bright hover:bg-primary-dark"
                     >
                       <IconView size={15} />
                       {m.rep.merchantDetail.open}

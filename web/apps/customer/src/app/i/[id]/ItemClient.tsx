@@ -18,7 +18,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
-import { Badge, Button, Input } from "@rahalgo/ui";
+import { Badge, Button, Chips, Input } from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
 import { useCart, type CartLine } from "@/lib/cart";
 import type { BrowseItem } from "@/components/ItemCard";
@@ -155,29 +155,26 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
                   : `(${m.site.menu.chooseUpTo.replace("{n}", String(g.max_select))})`}
               </span>
             </p>
-            <div className="flex flex-wrap gap-2">
-              {g.options.map((o) => {
-                const on = (chosen[g.id] ?? []).includes(o.id);
-                return (
-                  <button
-                    key={o.id}
-                    type="button"
-                    disabled={!o.available}
-                    onClick={() => toggle(g, o.id)}
-                    className={`rounded-badge border px-3 py-1.5 text-sm disabled:opacity-40 ${
-                      on ? "border-primary bg-primary-light font-medium" : "border-line"
-                    }`}
-                  >
+            {/* **والخيارُ حبّةٌ مركزيّة** — كانت هنا بمقاسٍ ثالثٍ يخالف
+                حبّاتِ الإدارة والإشعارات. **والزيادةُ تبقى في اللافتة**:
+                من لا يرى السعرَ مع الاسم يضيفه ثمّ يفاجَأ بالمجموع. */}
+            <Chips
+              items={g.options.map((o) => ({
+                id: o.id,
+                disabled: !o.available,
+                label: (
+                  <>
                     {o.name}
                     {o.price_delta !== 0 && (
-                      <span className="ms-1 text-xs text-ink-muted">
-                        +{fmtNum(o.price_delta)}
-                      </span>
+                      <span className="text-xs text-ink-muted">+{fmtNum(o.price_delta)}</span>
                     )}
-                  </button>
-                );
-              })}
-            </div>
+                  </>
+                ),
+              }))}
+              value={chosen[g.id] ?? []}
+              onChange={(id) => toggle(g, id)}
+              className="flex-wrap"
+            />
           </div>
         ))}
 

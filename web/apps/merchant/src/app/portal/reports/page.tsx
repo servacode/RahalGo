@@ -146,7 +146,7 @@ export default function MerchantReportsPage() {
                   className="mx-auto w-3/5 rounded-t-[4px] bg-primary transition-colors group-hover:bg-primary-dark"
                   style={{ height: Math.max(3, (d.sales / maxSales) * 140) }}
                 />
-                <div className="pointer-events-none absolute bottom-full start-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-control bg-ink px-2 py-1 text-xs text-on-solid group-hover:block rtl:translate-x-1/2">
+                <div className="pointer-events-none absolute bottom-full start-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap surface-raised rounded-control px-2 py-1 text-xs text-ink group-hover:block rtl:translate-x-1/2">
                   {fmtNum(d.sales)} {m.common.currency} — {fmtNum(d.delivered)}/
                   {fmtNum(d.orders)}
                 </div>

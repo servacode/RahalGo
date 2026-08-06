@@ -7,5 +7,5 @@ import { NotificationsPage } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 export default function Page() {
-  return <NotificationsPage api={api} Link={Link} width="full" />;
+  return <NotificationsPage api={api} Link={Link} />;
 }

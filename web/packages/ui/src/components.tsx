@@ -458,12 +458,20 @@ export function Select({
 
 // ---------- Badge ----------
 
+/* **والنغماتُ صبغةٌ ونصٌّ من الدلالة نفسِها** — كانت `primary` وحدَها خارجَ
+   اللغة (`bg-primary-light text-primary-dark`: تعبئةٌ مصمتةٌ ودرجةٌ لا دلالة)،
+   **فتُقرأ خمسُ شاراتٍ أربعاً وواحدةً غريبة.** (طلبُ المالك ٢٠٢٦-٠٨-٠٧.)
+
+   **وزيدت `accent` و`info`** لأنّ من لم يجد نغمتَه بنى شارتَه بيده — **وهو
+   أصلُ الخمسِ مقاساتٍ التي وجدها الجرد.** */
 const badgeVariants = {
-  neutral: "bg-page text-ink-muted",
-  primary: "bg-primary-light text-primary-dark",
+  neutral: "bg-ink-faint text-ink-muted",
+  primary: "bg-primary-tint text-primary",
+  accent: "bg-accent-tint text-accent",
   success: "bg-success-tint text-success",
   warning: "bg-warning-tint text-warning",
   danger: "bg-danger-tint text-danger",
+  info: "bg-info-tint text-info",
 } as const;
 
 export function Badge({

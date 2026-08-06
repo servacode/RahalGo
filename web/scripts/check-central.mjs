@@ -26,6 +26,7 @@ const SOURCES = {
   colors: ["packages/ui/src/theme.css", "packages/ui/src/cssvar.ts"],
   /** **مصدرُ لغة الأسطح** — الثيمُ يعرّفها و`layout.tsx` تبنيها مكوّناً. */
   surfaces: ["packages/ui/src/theme.css", "packages/ui/src/layout.tsx"],
+  chips: ["packages/ui/src/navigation.tsx"],
   icons: ["packages/ui/src/icons.ts"],
   fonts: ["packages/ui/src/fonts.css"],
 };
@@ -171,6 +172,46 @@ for (const file of files) {
     scan(file, /[ "'`:](?:bg|text|border|ring|divide|from|to|via|fill|stroke)-[a-z-]+[/][0-9]/,
       "شفافيّةٌ مكتوبةٌ باليد",
       "استعمل مشتقّاً مسمّى: bg-danger-tint · bg-primary-fill · border-line-soft · text-ink-dim");
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  **نصٌّ أبيضُ فوق تعبئةٍ فاتحة**
+  // ═══════════════════════════════════════════════════════════════════
+  //
+  // (شهده المالك ٢٠٢٦-٠٨-٠٧ في صورةٍ لصفحة الإشعارات.)
+  //
+  // **لوحةُ المشروع باستيلات فاتحة** — والأبيضُ عليها يسقط:
+  //
+  //     primary 1.72 · accent 1.37 · success 1.43 · warning 1.25
+  //     danger 1.75 · info 2.09 · violet 2.06        (والحدُّ ٤٫٥)
+  //
+  // **والداكنُ ينجح على السبعة**: ٨٫٠٦ إلى ١٣٫٥٢.
+  //
+  // **وسبعةَ عشرَ صفَّ أصنافٍ كانت تكتبه** — منها تلميحٌ في تقارير المتجر
+  // `bg-ink text-on-solid`: **أبيضُ على أبيضَ لا يُرى أصلاً.**
+  //
+  // **و`on-solid` تبقى لغرضها**: `danger-solid` (٤٫٨٣) و`scrim` — تعبئةٌ
+  // داكنةٌ يفوز عليها الأبيض. **فالحارسُ يمنع الجوارَ لا الاسم.**
+  if (isTsx) {
+    scan(file, /bg-(?:primary|accent|success|warning|danger|info|violet|ink)(?![a-z-])[^"'`]*text-on-solid|text-on-solid[^"'`]*bg-(?:primary|accent|success|warning|danger|info|violet|ink)(?![a-z-])/,
+      "أبيضُ فوق تعبئةٍ فاتحة",
+      "استعمل text-on-bright — والأبيضُ لِما هو داكنٌ مشبع (danger-solid · scrim)");
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  **حبّةُ ترشيحٍ مبنيّةٌ باليد**
+  // ═══════════════════════════════════════════════════════════════════
+  //
+  // (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «صفحاتُ الإشعارات عالجها بشكلٍ مركزيّ».)
+  //
+  // **خمسةُ ملفّاتٍ كانت تبنيها بخمس مقاسات**: `px-3.5 py-2` و`px-3 py-1.5`
+  // و`px-3 py-1` و`px-2.5 py-1`. **والفرقُ يُرى حين تُفتح شاشتان معاً.**
+  //
+  // **والصنفُ `Chips` يحملها** — بمقاسٍ واحدٍ وتباينٍ صحيحٍ وأدوارِ ARIA.
+  if (isTsx && !SOURCES.chips.includes(file)) {
+    scan(file, /rounded-badge[^"'`]*border[^"'`]*px-[0-9]/,
+      "حبّةٌ مبنيّةٌ باليد",
+      "استعمل المكوّنَ المركزيّ Chips من @rahalgo/ui");
   }
 
   // ٣ · أيقونةٌ مرسومةٌ باليد — **تفترق سماكتُها عن أخواتها.**

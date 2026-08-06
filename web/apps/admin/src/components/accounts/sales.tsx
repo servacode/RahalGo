@@ -57,14 +57,15 @@ function CopyCode({ code }: { code: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
-      className="inline-flex items-center gap-1.5 rounded-badge border border-accent bg-accent-tint px-2.5 py-1 font-mono text-sm font-bold text-accent-dark transition-colors hover:bg-accent-tint"
+      /* **والشارةُ مركزيّة** — كانت حبّةً مبنيّةً باليد بمقاسٍ خامسٍ يخالف
+         حبّاتِ الإدارة والإشعارات والصنف. (طلبُ المالك ٢٠٢٦-٠٨-٠٧.) */
       dir="ltr"
       title={m.admin.sales.copyCode}
     >
-      {code}
-      <span className="text-xs font-normal">
-        {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
-      </span>
+      <Badge variant="accent" className="gap-1.5 font-mono font-bold">
+        {code}
+        <span className="font-normal">{copied ? <IconCheck size={14} /> : <IconCopy size={14} />}</span>
+      </Badge>
     </button>
   );
 }

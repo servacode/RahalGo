@@ -67,7 +67,7 @@ export default function OverviewPage() {
   return (
     <PageContainer>
       {/* الكود — قلب اللوحة، ومقفل حتى يوثّق المندوب قناة تواصله */}
-      <section className="rounded-card bg-primary p-6 text-center text-on-solid">
+      <section className="rounded-card bg-primary p-6 text-center text-on-bright">
         {!me.whatsapp_verified ? (
           <>
             <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-on-solid-tint">

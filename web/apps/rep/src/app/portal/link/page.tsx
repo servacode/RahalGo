@@ -51,7 +51,7 @@ export default function LinkPage() {
         <p className="mb-5 text-sm leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
         <Link
           href="/portal/account"
-          className="inline-block rounded-control bg-primary px-5 py-2.5 text-sm font-medium text-on-solid hover:bg-primary-dark"
+          className="inline-block rounded-control bg-primary px-5 py-2.5 text-sm font-medium text-on-bright hover:bg-primary-dark"
         >
           {m.rep.lockedCta}
         </Link>
@@ -113,7 +113,7 @@ export default function LinkPage() {
             href={`https://wa.me/?text=${shareText}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-on-solid hover:bg-primary-dark"
+            className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-on-bright hover:bg-primary-dark"
           >
             {m.rep.share}
           </a>

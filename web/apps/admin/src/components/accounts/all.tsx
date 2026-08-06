@@ -11,6 +11,7 @@ import {
   Input,
   Select,
   Badge,
+  Chips,
   Modal,
   DataView,
   ViewToggle,
@@ -483,22 +484,13 @@ function CreateUserModal({
         />
         <div>
           <span className="mb-1 block text-sm font-medium">{m.admin.users.rolesLabel}</span>
-          <div className="flex flex-wrap gap-2">
-            {ALL_ROLES.map((r) => (
-              <button
-                type="button"
-                key={r}
-                onClick={() => toggleRole(r)}
-                className={`rounded-badge border px-3 py-1 text-xs transition-colors ${
-                  roles.includes(r)
-                    ? "border-primary bg-primary-light text-primary-dark"
-                    : "border-line text-ink-muted hover:border-primary-edge"
-                }`}
-              >
-                {ROLE_LABELS[r]}
-              </button>
-            ))}
-          </div>
+          {/* **والحبّاتُ مركزيّة** — كانت هنا بـ`px-3 py-1` وفي نافذة الأدوار
+              بـ`px-3 py-1.5` وفي صفحة الصنف بثالث. (طلبُ المالك ٢٠٢٦-٠٨-٠٧.) */}
+          <Chips
+            items={ALL_ROLES.map((r) => ({ id: r, label: ROLE_LABELS[r] ?? r }))}
+            value={roles}
+            onChange={toggleRole}
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Input
@@ -592,22 +584,11 @@ function ManageRolesModal({
 
   return (
     <Modal open onClose={onClose} title={`${m.admin.users.rolesFor}: ${user.full_name || user.phone}`}>
-      <div className="flex flex-wrap gap-2">
-        {ALL_ROLES.map((r) => (
-          <button
-            type="button"
-            key={r}
-            onClick={() => toggle(r)}
-            className={`rounded-badge border px-3 py-1.5 text-sm transition-colors ${
-              current.includes(r)
-                ? "border-primary bg-primary-light text-primary-dark"
-                : "border-line text-ink-muted hover:border-primary-edge"
-            }`}
-          >
-            {ROLE_LABELS[r]}
-          </button>
-        ))}
-      </div>
+      <Chips
+        items={ALL_ROLES.map((r) => ({ id: r, label: ROLE_LABELS[r] ?? r }))}
+        value={current}
+        onChange={toggle}
+      />
       {pending && (
         <div className="mt-4 rounded-control border border-primary-edge bg-primary-tint p-3">
           <p className="mb-2 text-sm font-medium">
