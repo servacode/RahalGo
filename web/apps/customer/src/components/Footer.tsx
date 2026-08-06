@@ -32,10 +32,12 @@ export default function Footer({
   return (
     /* **وشريطٌ كالعلويّ لا كتلةٌ سائبة.**
 
-       كان بلا حدٍّ ولا خلفيّة — **فيطفو في أسفل الصفحة كنصٍّ نُسي**، ويبدو
-       منفصلاً عمّا فوقه. **والحدُّ العلويُّ يُغلق الصفحة** كما يفتحها الشريطُ
-       العلويّ: **موقعٌ يبدأ بشريطٍ وينتهي بشريط.** */
-    <footer className="surface-lit mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-line bg-surface px-3 py-5 text-xs text-ink-muted">
+       كان بلا حدٍّ ولا خلفيّة — **فيطفو في أسفل الصفحة كنصٍّ نُسي.** فصار
+       له سطحٌ كالشريط العلويّ: **موقعٌ يبدأ بشريطٍ وينتهي بشريط.**
+
+       **ولا حدَّ علويّاً** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦): **السطحُ الزجاجيُّ
+       يفصل بكثافته**، وخطٌّ فوقه يقطع الصورةَ التي يمرّ منها. */
+    <footer className="surface-lit mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 bg-surface px-3 py-5 text-xs text-ink-muted">
       {LINKS.map((l) => (
         <Link key={l.href} href={l.href} className="transition-colors hover:text-accent-text">
           {l.label}
