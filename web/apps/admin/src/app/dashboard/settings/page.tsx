@@ -48,7 +48,14 @@ interface Setting {
   updated_at: string | null;
   updated_by: string | null;
   /** **شرطُ الظهور** — مفتاحٌ آخرُ بإحدى قيمٍ بعينها. */
-  show_when?: { key: string; equals: string[] };
+  /**
+   * شرطُ الظهور من الفهرس.
+   *
+   * **و`equals` قد تصل `null`**: Go تُسلسل `[]string` الفارغةَ `null` لا `[]`
+   * — **فشرطٌ بلا قيمٍ يُسقط الصفحةَ كلَّها** بـ«Cannot read properties of
+   * null». (وقع فعلاً ٢٠٢٦-٠٨-٠٦ عند إضافة `not_empty`.)
+   */
+  show_when?: { key: string; equals: string[] | null; not_empty?: boolean };
 }
 
 const label = (k: string) =>
@@ -144,7 +151,11 @@ export default function SettingsPage() {
     (s: Setting, all: Setting[]) => {
       if (!s.show_when) return true;
       const on = all.find((x) => x.key === s.show_when!.key);
-      return !!on && s.show_when.equals.includes(String(on.value));
+      if (!on) return false;
+      // **وشرطُ «غيرِ الفارغ» للوسائط**: معرّفُ الصورة نصٌّ عشوائيّ لا يُقارن
+      // بقائمة، **والسؤالُ الوحيدُ المفيدُ عنه أرُفعت أم لا.**
+      if (s.show_when!.not_empty) return on.value !== "" && on.value != null;
+      return (s.show_when!.equals ?? []).includes(String(on.value));
     },
     [],
   );

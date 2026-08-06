@@ -137,7 +137,9 @@ type Def struct {
 type Condition struct {
 	Key string `json:"key"`
 	// Equals القيمُ التي يظهر عندها — **قائمةٌ لا واحدة**: قد يلزم في وضعين.
-	Equals []string `json:"equals"`
+	// **و`omitempty` تمنع `null`** — Go تُسلسل الشريحةَ الفارغةَ `null`،
+	// **وقارئٌ يفترضها مصفوفةً يسقط.** (وقع في لوحة الإعدادات ٢٠٢٦-٠٨-٠٦.)
+	Equals []string `json:"equals,omitempty"`
 	// NotEmpty يظهر متى كانت قيمةُ `Key` غيرَ فارغة.
 	//
 	// **ووسيطٌ لا يُقارن بقائمة**: معرّفُ الصورة نصٌّ عشوائيّ، **والسؤالُ

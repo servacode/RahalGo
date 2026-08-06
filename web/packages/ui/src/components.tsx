@@ -259,10 +259,21 @@ export function Checkbox({
           {...props}
           className="peer h-full w-full cursor-pointer appearance-none rounded-[5px] border border-line bg-surface transition-colors checked:border-primary checked:bg-primary focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:outline-none"
         />
+        {/* **وعلامةُ الصحّ داكنةٌ لا بيضاء.**
+
+            (شهده المالك ٢٠٢٦-٠٨-٠٦: «هذا على ما يبدو لونٌ فضّيّ».)
+
+            كانت `text-on-solid` (أبيض) على `bg-primary` — **وتباينُهما ١٫٨١**،
+            فتذوب العلامةُ في مربّعها **فيُقرأ المربّعُ لوحاً فضّيّاً فارغاً**
+            لا صندوقاً محدَّداً.
+
+            **و`on-bright` نظيرُها للتعبئة الساطعة** — تباينُها ٩٫٢٦: **وهو
+            التوكنُ نفسُه الذي يحمله الزرُّ الأساسيُّ وبطاقةُ الرصيد**، فلا
+            يُقرَّر هنا لونٌ ثانٍ. */}
         <IconCheck
           size={12}
           strokeWidth={3.5}
-          className="pointer-events-none absolute text-on-solid opacity-0 transition-opacity peer-checked:opacity-100"
+          className="pointer-events-none absolute text-on-bright opacity-0 transition-opacity peer-checked:opacity-100"
         />
       </span>
       <span className="text-ink-muted transition-colors group-hover:text-ink">{label}</span>

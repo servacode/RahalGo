@@ -287,7 +287,12 @@ export function LoginCard({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1 rounded-control text-sm font-medium text-primary transition-colors hover:text-primary-dark hover:underline"
+      /* **ونصُّ الرابط بالتوكن المُعدِّ للنصّ العاري.**
+
+         كان `text-primary` — **وتباينُه على البطاقة ٣٫٠٩** والحدُّ ٤٫٥ لنصٍّ
+         بأربعةَ عشرَ بكسلاً. **و`accent-text` صُنع لهذا بعينه** (٤٫٥٨):
+         التعبئةُ تبقى بالنبرة، **والنصُّ العاري يحتاج درجةً أفتح.** */
+      className="inline-flex items-center gap-1 rounded-control text-sm font-medium text-accent-text transition-colors hover:text-primary-dark hover:underline"
     >
       {icon}
       {label}
