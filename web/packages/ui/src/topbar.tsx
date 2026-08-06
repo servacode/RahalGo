@@ -233,8 +233,8 @@ export function CountBadge({ count, tone = "accent" }: { count: number; tone?: "
   if (count <= 0) return null;
   return (
     <span
-      /* **العدّادُ برتقاليٌّ بنصٍّ داكن** — لا أبيض: الأبيضُ على البرتقاليّ
-         ٢٫٢٢ **يذوب**، والداكنُ ٨٫٤٩. **والجرسُ يبقى أبيضَ كما هو.**
+      /* **العدّادُ بالنبرة بنصٍّ داكن** — لا أبيض: الأبيضُ على النبرة
+         ١٫٣٠ **يذوب**، والداكنُ ١٣٫٩٢. **والجرسُ يبقى أبيضَ كما هو.**
          (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «العدّاد فقط وليس الجرس».) */
       className={`absolute -top-1.5 -start-1.5 flex h-5 min-w-5 items-center justify-center rounded-badge px-1 text-xs font-bold ${
         tone === "danger" ? "bg-danger-solid text-on-solid" : "bg-accent text-shell"

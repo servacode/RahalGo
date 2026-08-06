@@ -554,7 +554,7 @@ export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | str
           المتصفّحاتُ لا تطبع الخلفياتِ افتراضاً — فمربّعٌ ملوّنٌ بحرفٍ أبيض
           يخرج **بياضاً على بياض**: ورقةٌ رسمية بلا علامة. والوسمُ هنا تلتقطه
           قاعدةُ طباعةٍ تقلبه إلى إطارٍ وحرفٍ أسودين. */}
-      {/* **الحرفُ أزرقُ والطريقُ تحته برتقاليّ** — اختصارُ اللوغو في مربّع. */}
+      {/* **الحرفُ على الأساسيّ والطريقُ تحته بالنبرة** — اختصارُ اللوغو. */}
       <div
         data-print-mark
         className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary text-lg font-bold text-on-solid"
@@ -576,7 +576,7 @@ export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | str
         <p dir="ltr">{fmtTime(printedAt)}</p>
       </div>
     </div>
-    {/* **توقيعُ العلامة** — خيطٌ يمضي من الأزرق إلى البرتقاليّ تحت الترويسة.
+    {/* **توقيعُ العلامة** — خيطٌ يمضي من الأساسيّ إلى النبرة تحت الترويسة.
         وهو حدُّها في الوقت نفسه، فلا يزيد على الورقة سطراً. */}
     <div aria-hidden className="brand-rule -mt-4 mb-4 h-[3px] rounded-badge" />
     </>
