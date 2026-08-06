@@ -15,15 +15,39 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
+/**
+ * **سياقُ صوتٍ واحدٌ للصفحة كلِّها — لا واحدٌ لكلّ رنّة.**
+ *
+ * (وُجد في فحص التهنيج ٢٠٢٦-٠٨-٠٧.)
+ *
+ * **كان `new AudioContext()` في كلّ نداءٍ ولا يُغلق أبداً.** والرنينُ المتكرّر
+ * ينادي كلَّ أربع ثوانٍ عشرين ثانية — **خمسةُ سياقاتٍ لتنبيهٍ واحد**، وكلُّ
+ * سياقٍ خيطُ صوتٍ حيٌّ في النظام.
+ *
+ * **وكروم يقف عند نحو ستّة** ثمّ يرمي — فيُبتلع الخطأُ هنا صامتاً **فلا
+ * يُسمع التنبيهُ أصلاً بعد أوّل دقيقة.** فالتسريبُ يكسر الوظيفةَ لا الأداءَ
+ * وحدَه.
+ *
+ * **والواحدُ يُستأنف إن علّقه المتصفّح**: كروم يوقف السياقَ حتّى أوّلِ لمسة.
+ */
+let shared: AudioContext | null = null;
+
+function audio(): AudioContext | null {
+  const Ctx =
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctx) return null;
+  shared ??= new Ctx();
+  if (shared.state === "suspended") void shared.resume();
+  return shared;
+}
+
 /** نغمتان صاعدتان — قصيرتان تُسمعان تحت خوذة. */
 export function useChime(): () => void {
   return useCallback(() => {
     try {
-      const Ctx =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctx) return;
-      const ctx = new Ctx();
+      const ctx = audio();
+      if (!ctx) return;
       [880, 1175].forEach((hz, i) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
