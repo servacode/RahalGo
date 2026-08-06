@@ -55,11 +55,18 @@ export interface RailItem {
 /**
  * **مهلةُ القسم قبل أن ينتقل إلى التالي.**
  *
- * **سبعُ ثوانٍ**: ما يكفي لتمرّ العينُ على صفٍّ من المنتجات وتقرأ سعراً أو
- * سعرين. **وأقلُّ منها يجعل الشاشةَ تتبدّل تحت من يقرأ** — وهو أسوأُ من ألّا
- * تتحرّك أصلاً.
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «يجب أن يكون الانتقال سريعاً للملاحظة».)
+ *
+ * **كانت سبعاً فبدت ساكنة**: من يفتح الصفحةَ وينظر خمسَ ثوانٍ **لا يرى
+ * انتقالاً واحداً**، فيظنّ الشريطَ صورةً ثابتة.
+ *
+ * **وأربعٌ ونصف تُرى ولا تُلاحق**: انتقالان في أوّل عشر ثوانٍ — يكفيان ليفهم
+ * الزائرُ أنّ الشريطَ يعرض عليه، **ويكفيان لتمرّ العينُ على صفٍّ من المنتجات.**
+ *
+ * **والسرعةُ وحدَها تنقلب ضرراً** لولا الشرطان تحتها: **تقف عند أوّل ضغطةٍ
+ * يدويّة، وتقف حين يخرج الشريطُ من النظر.**
  */
-const EVERY_MS = 7000;
+const EVERY_MS = 4500;
 
 export function SectionRail({
   items,
@@ -77,6 +84,38 @@ export function SectionRail({
   const box = useRef<HTMLDivElement>(null);
   const [held, setHeld] = useState(false);
   const [still, setStill] = useState(false);
+
+  /**
+   * **ومن اختار بيده انتهت الجولةُ عنده.**
+   *
+   * **الجولةُ تخدم من لم يقرّر بعد** — تعرض عليه ما لا يعرف أنّه موجود. **ومن
+   * ضغط قسماً فقد قرّر**، فتبديلُ الشاشة تحته بعد ثوانٍ **يسرق منه ما اختاره.**
+   *
+   * **ولا تعود**: عودةٌ مفاجئةٌ بعد صمتٍ أسوأُ من ألّا تقف — لأنّها تقع حين
+   * لا يتوقّعها.
+   */
+  const [taken, setTaken] = useState(false);
+
+  /**
+   * **وتقف حين يخرج الشريطُ من النظر.**
+   *
+   * من نزل يقرأ المنتجات **لا يرى الشريطَ ولا يعلم أنّه ينتقل** — فتتبدّل
+   * الشبكةُ تحت عينيه وهو يقرأ سعراً. **والحركةُ التي لا تُرى لا تُفهم، إنّما
+   * تُقرأ عطباً.**
+   *
+   * **وهي كذلك توفيرٌ**: جولةٌ تدور في شريطٍ خارج الشاشة تُحمّل وتُعيد الرسمَ
+   * بلا أن يراها أحد.
+   */
+  const [seen, setSeen] = useState(true);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const io = new IntersectionObserver((e) => setSeen(e[0]?.isIntersecting ?? true), {
+      threshold: 0.3,
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   /** **وإطفاءُ الحركة يُقرأ حيّاً** — من غيّره وهو يتصفّح لا ينتظر تحديثَ صفحة. */
   useEffect(() => {
@@ -96,7 +135,7 @@ export function SectionRail({
    * ما اختاره بعد ثانية.
    */
   useEffect(() => {
-    if (held || still || items.length < 2) return;
+    if (held || still || taken || !seen || items.length < 2) return;
     const t = setInterval(() => {
       const at = items.findIndex((x) => x.id === activeID);
       // **ومختارٌ لا وجودَ له يُعيد الجولةَ إلى أوّلها** — يقع حين يُحذف قسمٌ
@@ -106,7 +145,7 @@ export function SectionRail({
       if (next) onSelect(next.id);
     }, everyMs);
     return () => clearInterval(t);
-  }, [held, still, items, activeID, onSelect, everyMs]);
+  }, [held, still, taken, seen, items, activeID, onSelect, everyMs]);
 
   /**
    * **والشريطُ يسوق المختارَ إلى وسط النظر.**
@@ -154,7 +193,10 @@ export function SectionRail({
               key={it.id}
               data-rail={it.id}
               type="button"
-              onClick={() => onSelect(it.id)}
+              onClick={() => {
+                setTaken(true);
+                onSelect(it.id);
+              }}
               aria-pressed={on}
               /* **والعرضُ ثابتٌ لا يتقلّص** — بلا `shrink-0` يضغط `flex`
                  الدوائرَ حتّى تصير بيضاً، **فيختلف مقاسُها بعدد الأقسام.** */
