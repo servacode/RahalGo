@@ -193,7 +193,7 @@ export default function CartPage() {
     const goOn = () => router.push("/orders");
     return (
       <div className="mx-auto max-w-md py-10">
-        <div className="rounded-card border border-line bg-surface p-6">
+        <div className="surface p-6">
           <p className="mb-1 flex items-center gap-2 font-bold">
             <IconCheck size={18} strokeWidth={3} className="text-success" />
             {m.site.orders.placed}
@@ -267,7 +267,7 @@ export default function CartPage() {
          **وكلُّ نصٍّ في المنصة داخلَ سطح** — وهذه كانت آخرَ صفحةٍ تخالف.
          **ونصُّ الرابط بالنبرة لا بالأساسيّ**: الأساسيُّ ٣٫٠٩ على السطح
          والنبرةُ ٤٫٥٨، **وهي المُعدّةُ للنصّ العاري.** */
-      <div className="surface-lit rounded-card border border-line bg-surface px-4 py-16 text-center text-ink-muted">
+      <div className="surface px-4 py-16 text-center text-ink-muted">
         <p className="mb-4">{m.site.cart.empty}</p>
         <Link href="/" className="font-medium text-accent-text hover:underline">
           {m.site.nav.home}
@@ -363,7 +363,7 @@ export default function CartPage() {
           {cart.lines.map((l, i) => (
             <li
               key={i}
-              className="flex items-center gap-3 rounded-card border border-line bg-surface p-3"
+              className="flex items-center gap-3 surface p-3"
             >
               <div className="min-w-0 flex-1">
                 <p className="font-medium">{l.name}</p>
@@ -409,7 +409,7 @@ export default function CartPage() {
         </div>
         </div>
 
-        <dl className="mt-4 space-y-1 rounded-card border border-line bg-surface p-4 text-sm">
+        <dl className="mt-4 space-y-1 surface p-4 text-sm">
           <div className="flex justify-between">
             <dt className="text-ink-muted">{m.site.cart.subtotal}</dt>
             <dd className="font-medium">
@@ -456,7 +456,7 @@ export default function CartPage() {
         <h2 className="mb-4 text-xl font-bold">{m.site.cart.checkout}</h2>
 
         {!logged && !loading ? (
-          <div className="rounded-card border border-line bg-surface p-6 text-center">
+          <div className="surface p-6 text-center">
             <p className="mb-3 text-ink-muted">{m.site.cart.loginFirst}</p>
             <Link href="/login?next=/cart">
               <Button>{m.site.nav.login}</Button>

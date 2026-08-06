@@ -54,12 +54,12 @@ export default function WhatsAppPanel() {
       </div>
 
       {status?.provider === "dev" ? (
-        <div className="rounded-card border border-line bg-surface p-6 text-ink-muted">
+        <div className="surface p-6 text-ink-muted">
           {m.admin.whatsappPage.devMode}
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-4 rounded-card border border-line bg-surface p-6">
+          <div className="space-y-4 surface p-6">
             <div className="flex items-center justify-between">
               <span className="font-medium">{m.admin.whatsappPage.connection}</span>
               <Badge variant={status?.connected ? "success" : "danger"}>
@@ -86,7 +86,7 @@ export default function WhatsAppPanel() {
           </div>
 
           {qrDataURL && !status?.logged_in && (
-            <div className="flex flex-col items-center rounded-card border border-line bg-surface p-6">
+            <div className="flex flex-col items-center surface p-6">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrDataURL} alt="WhatsApp QR" loading="lazy" className="rounded-control" />
               <p className="mt-3 max-w-xs text-center text-sm text-ink-muted">

@@ -126,7 +126,7 @@ export default function RatingsPage() {
         {data.drivers.length === 0 ? (
           <EmptyState icon={IconDriver} title={R.noDrivers} />
         ) : (
-          <ul className="divide-y divide-line rounded-card border border-line bg-surface">
+          <ul className="divide-y divide-line surface">
             {data.drivers.map((d) => (
               <li key={d.id}>
                 <button
@@ -170,7 +170,7 @@ export default function RatingsPage() {
         ) : (
           <ul className="space-y-2">
             {data.comments.map((c, i) => (
-              <li key={i} className="rounded-card border border-line bg-surface p-3">
+              <li key={i} className="surface p-3">
                 <div className="mb-1 flex flex-wrap items-center gap-2 text-sm">
                   <span dir="ltr" className="flex items-center gap-1 font-bold tabular-nums">
                     <IconOrder size={13} />#{fmtRef(c.order_number)}

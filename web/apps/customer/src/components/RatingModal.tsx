@@ -61,7 +61,7 @@ export default function RatingModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-sm rounded-card border border-line bg-surface p-5 elev-4"
+        className="w-full max-w-sm surface p-5 elev-4"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-1 text-lg font-bold">{R.title}</h2>

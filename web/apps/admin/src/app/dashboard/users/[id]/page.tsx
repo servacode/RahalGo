@@ -255,7 +255,7 @@ export default function UserProfilePage() {
       </button>
 
       {/* الترويسة: البيانات في الصدارة والأزرار سطر واحد (ملاحظة مراجعة) */}
-      <div className="mb-3 rounded-card border border-line bg-surface p-3">
+      <div className="mb-3 surface p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <MediaThumb url={p.avatar_thumb_url} alt="" fallback={p.full_name || m.terms.avatarFallback} size={56} />
@@ -436,7 +436,7 @@ export default function UserProfilePage() {
           <div
             key={s.label}
             onClick={s.onClick}
-            className={`rounded-card border border-line bg-surface p-3 ${
+            className={`surface p-3 ${
               s.onClick ? "cursor-pointer transition-shadow hover:border-primary/40 hover:elev-1" : ""
             }`}
           >
@@ -448,7 +448,7 @@ export default function UserProfilePage() {
       </div>
 
       {p.merchants.length > 0 && (
-        <div className="mb-3 rounded-card border border-line bg-surface p-3">
+        <div className="mb-3 surface p-3">
           <p className="mb-2 flex items-center gap-1.5 text-sm font-bold">
             <IconStore size={15} className="text-primary" />
             {P.merchantsOwned}

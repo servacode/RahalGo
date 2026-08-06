@@ -142,8 +142,39 @@ export function PlatformProvider({
      **وفارغةٌ تعني `none`** — طبقةٌ لا تُرسم، فيبقى التدرّجُ وحدَه. */
   useEffect(() => {
     const root = document.documentElement;
-    root.style.setProperty("--site-bg", platform.siteBg ? `url("${platform.siteBg}")` : "none");
-    root.style.setProperty("--site-bg-dim", platform.siteBg ? String(platform.siteBgDim / 100) : "0");
+    /* ══════════════════════════════════════════════════════════════════
+       **ولا حجابَ حتّى تُحمَّل الصورةُ فعلاً**
+       ══════════════════════════════════════════════════════════════════
+
+       (خشيه المالك ٢٠٢٦-٠٨-٠٦: «ربّما يحصل عطلٌ ما فتختفي الصورةُ ويصبح
+        شكلُ الموقع بشعاً جدّاً» — **وقِيس فوقع.**)
+
+       **الأسطحُ كانت آمنةً في الحالات الثلاث** (بلا صورة · بصورةٍ تعمل ·
+       بصورةٍ ساقطة): شفّافةٌ كلَّها والحبرُ عليها فوق العشرة.
+
+       **والعطبُ كان في الحجاب**: يُرفع بمجرّد وجود الإعداد. **فملفٌّ حُذف من
+       القرص وبقي معرّفُه في الإعدادات يُطفئ اللوحةَ بستّين بالمئة** —
+       **ظلامٌ بلا صورةٍ تُبرّره.**
+
+       **فيُسبَق الرسمُ بتحميلٍ صامت**: إن نجح رُفعت الصورةُ وحجابُها معاً،
+       **وإن سقط بقي التدرّجُ كما هو** — لا صورةَ ولا ظلام.
+
+       **والافتراضُ صفرٌ حتّى يثبت النجاح** — لا العكس: **الطُّرقُ تُفتح على
+       السلامة لا على الأمل.** */
+    root.style.setProperty("--site-bg", "none");
+    root.style.setProperty("--site-bg-dim", "0");
+    if (!platform.siteBg) return;
+    let alive = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!alive) return;
+      root.style.setProperty("--site-bg", `url("${platform.siteBg}")`);
+      root.style.setProperty("--site-bg-dim", String(platform.siteBgDim / 100));
+    };
+    img.src = platform.siteBg;
+    return () => {
+      alive = false;
+    };
   }, [platform.siteBg, platform.siteBgDim]);
 
   return (

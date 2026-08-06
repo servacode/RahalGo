@@ -125,7 +125,7 @@ export default function AuditPage() {
           {list.map((e) => (
             <li
               key={e.id}
-              className="flex items-start gap-3 rounded-card border border-line bg-surface p-3"
+              className="flex items-start gap-3 surface p-3"
             >
               <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-page">
                 <IconUser size={15} className="text-ink-muted" />

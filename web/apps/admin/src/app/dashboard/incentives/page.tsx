@@ -130,7 +130,7 @@ export default function IncentivesPage() {
       ) : rows.length === 0 ? (
         <EmptyState icon={IconUser} title={P.empty} />
       ) : (
-        <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <div className="overflow-x-auto surface">
           <table className="w-full text-sm">
             <thead className="border-b border-line text-ink-muted">
               <tr>

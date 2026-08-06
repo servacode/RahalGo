@@ -301,7 +301,7 @@ function Column({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-card border border-line bg-surface p-3">
+    <section className="surface p-3">
       <h2 className="mb-3 flex items-center gap-1.5 text-sm font-bold text-ink-muted">
         {icon}
         {title}

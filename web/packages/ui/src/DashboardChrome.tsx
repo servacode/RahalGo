@@ -256,7 +256,7 @@ export function DashboardChrome({
        تحته ولا تُرى. **ولوحةُ التحكّم أربعةُ تطبيقاتٍ من خمسة**، فتبقى
        الخلفيّةُ في الموقع وحدَه. */
     <div className="flex min-h-screen">
-      <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col surface-lit overflow-hidden rounded-card bg-surface lg:flex">
+      <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col surface-lit overflow-hidden surface lg:flex">
         {sidebar}
       </aside>
 

@@ -46,7 +46,7 @@ function Section({ title, icon, children }: { title: string; icon: ReactNode; ch
        درجاتٍ متفاوتة** — والعينُ تقرأ الاختلافَ عيباً في التنسيق لا فرقاً في
        المحتوى. **والشبكةُ تمدّها لأطولهنّ** والعنوانُ يبقى في الأعلى.
        (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */
-    <section className="flex h-full flex-col rounded-card border border-line bg-surface p-4">
+    <section className="flex h-full flex-col surface p-4">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-bold">
         <span className="text-primary [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
         {title}
@@ -556,7 +556,7 @@ export function AccountSettings({
       </div>
       </Section>
 
-      <section className="surface-lit rounded-card border border-danger/45 bg-surface p-4 sm:col-span-2 lg:col-span-3">
+      <section className="surface-lit surface !border-danger/45 p-4 sm:col-span-2 lg:col-span-3">
         <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-danger">
           <span className="[&>svg]:h-4 [&>svg]:w-4">
             <IconWarning />
@@ -613,7 +613,7 @@ export function AccountSettings({
       {/* **الخروجُ هنا على الهاتف** — طُوي من الشريط فلا يُزاحم، **وبابٌ
           يُغلق بلا بديلٍ حبسٌ لا تبسيط.** */}
       {onLogout && (
-        <section className="rounded-card border border-line bg-surface p-4 sm:hidden">
+        <section className="surface p-4 sm:hidden">
           <Button variant="secondary" onClick={onLogout} className="w-full !text-danger">
             {m.auth.logout}
           </Button>

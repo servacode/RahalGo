@@ -119,7 +119,7 @@ export function ReputationReviews({ api, labels = {} }: { api: ApiFn; labels?: R
       ) : (
         <ul className="space-y-2">
           {(data.reviews ?? []).map((rv, i) => (
-            <li key={i} className="rounded-card border border-line bg-surface p-4">
+            <li key={i} className="surface p-4">
               <div className="flex items-center justify-between gap-2">
                 <Stars value={rv.stars} />
                 <span className="text-xs text-ink-muted" dir="ltr">
@@ -171,7 +171,7 @@ export function ReputationComplaints({ api, labels = {} }: { api: ApiFn; labels?
           {(data.complaints ?? []).map((c) => (
             <li
               key={c.number}
-              className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-4"
+              className="flex flex-wrap items-center gap-3 surface p-4"
             >
               <span className="font-bold">#{fmtRef(c.number)}</span>
               <span className="min-w-0 flex-1 text-sm">{c.subject}</span>

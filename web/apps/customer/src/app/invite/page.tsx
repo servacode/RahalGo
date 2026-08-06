@@ -128,7 +128,7 @@ export default function InvitePage() {
         }
       />
 
-      <div className="rounded-card border border-line bg-surface p-4">
+      <div className="surface p-4">
         <p className="text-xs text-ink-muted">{V.yourLink}</p>
         <p className="mt-1 break-all font-mono text-sm" dir="ltr">
           {data.link}
@@ -153,7 +153,7 @@ export default function InvitePage() {
           مكافأة» ولا تُخفى**: من عدّ ثلاثاً في الجدول ورأى اثنتين يظنّ في
           الحساب خللاً. */}
       {tiers.length > 0 && (
-        <div className="rounded-card border border-line bg-surface p-4">
+        <div className="surface p-4">
           <p className="mb-2 font-bold">{V.tiersTitle}</p>
           <ul className="divide-y divide-line">
             {tiers.map((t) => (

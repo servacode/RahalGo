@@ -99,7 +99,7 @@ export function StatementSheet({
   return (
     <div className="space-y-4">
       {/* أدوات المدى — لا تُطبع: الورقة تحمل المدى نصّاً لا حقولاً */}
-      <div className="no-print flex flex-wrap items-end gap-3 rounded-card border border-line bg-surface p-4">
+      <div className="no-print flex flex-wrap items-end gap-3 surface p-4">
         <Input
           id="st-from"
           label={S.from}
@@ -142,7 +142,7 @@ export function StatementSheet({
       {/* الورقة */}
       <div
         data-print="sheet"
-        className="rounded-card border border-line bg-surface p-6 text-sm"
+        className="surface p-6 text-sm"
       >
         {/* **الترويسةُ نفسها** — الفاتورةُ والكشفُ ورقتان من دارٍ واحدة. */}
         <SheetHeader />

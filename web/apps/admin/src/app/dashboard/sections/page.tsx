@@ -110,7 +110,7 @@ export default function SectionsPage() {
           {list.map((sec) => (
             <div
               key={sec.id}
-              className={`flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-shadow hover:elev-2 ${
+              className={`flex flex-col overflow-hidden surface transition-shadow hover:elev-2 ${
                 sec.active ? "" : "opacity-60"
               }`}
             >

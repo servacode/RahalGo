@@ -248,7 +248,7 @@ export function MenuManager({
       ) : (
         <div className="space-y-5">
           {sections.map((sec) => (
-            <section key={sec.id} className="rounded-card border border-line bg-surface">
+            <section key={sec.id} className="surface">
               <div className="flex items-center justify-between border-b border-line px-4 py-3">
                 <h2 className="font-bold">{sec.name}</h2>
                 <div className="flex gap-2">

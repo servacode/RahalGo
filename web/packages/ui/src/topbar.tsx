@@ -424,7 +424,7 @@ export function AccountMenu({
       role="menu"
       aria-label={accountLabel}
       style={{ top: at.top, left: at.left }}
-      className="fixed z-[80] w-56 overflow-hidden rounded-card border border-line bg-raised elev-3"
+      className="fixed z-[80] w-56 overflow-hidden surface-raised elev-3"
     >
       {/* **ورأسُها بابُ الحساب** — كانت الصورةُ رابطاً إليه، فلمّا صارت
           زرَّ قائمةٍ **فقد «حسابي» بابَه في الشريط.** */}

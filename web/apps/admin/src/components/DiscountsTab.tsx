@@ -159,7 +159,7 @@ export default function DiscountsTab() {
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
           {rows.map((o) => (
-            <div key={o.id} className="rounded-card border border-line bg-surface p-4">
+            <div key={o.id} className="surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 font-bold">

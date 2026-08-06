@@ -80,7 +80,7 @@ export function Sheet({
         aria-modal="true"
         aria-labelledby={id}
         onClick={(e) => e.stopPropagation()}
-        className="elev-4 flex max-h-[88vh] w-full flex-col rounded-t-card border border-line bg-raised sm:max-h-[90vh] sm:max-w-lg sm:rounded-card"
+        className="surface-sheet flex max-h-[88vh] w-full flex-col sm:max-h-[90vh] sm:max-w-lg"
       >
         {/* **المقبضُ على الجوّال وحدَه** — على الواسع نافذةٌ لا تُسحب. */}
         <span

@@ -152,7 +152,7 @@ function JoinForm() {
         </div>
       )}
 
-      <form onSubmit={submit} className="rounded-card border border-line bg-surface p-6">
+      <form onSubmit={submit} className="surface p-6">
         {/* كود الدعوة — للقراءة فقط */}
         <div className="mb-4">
           <label className="mb-1 flex items-center gap-1.5 text-sm font-medium">

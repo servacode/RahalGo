@@ -199,7 +199,7 @@ export default function MerchantProfilePage() {
       <Tabs className="mb-4 mt-5" items={TABS} value={tab} onChange={setTab} />
 
       {tab === "overview" && (
-        <dl className="grid gap-3 rounded-card border border-line bg-surface p-4 sm:grid-cols-2">
+        <dl className="grid gap-3 surface p-4 sm:grid-cols-2">
           <Row label={m.terms.phone} value={mr.phone} ltr />
           <Row label={P.address} value={mr.address_text} />
           <Row label={m.terms.category} value={mr.category_name} />
@@ -233,7 +233,7 @@ export default function MerchantProfilePage() {
       )}
       {tab === "menu" && <MenuManager api={api} paths={PATHS} merchantID={mr.id} />}
       {tab === "hours" && (
-        <div className="rounded-card border border-line bg-surface p-4">
+        <div className="surface p-4">
           <StoreHours
             api={api}
             path={`/api/v1/admin/merchants/${mr.id}/hours`}
@@ -253,7 +253,7 @@ export default function MerchantProfilePage() {
       {tab === "orders" && (
         /* **وطلباتُه في شاشتها** — الجدولُ هناك يحمل كلَّ أزراره، **ونسخُه
            هنا يجعل زرّاً يُصلَح في موضعٍ ويبقى معطوباً في الآخر.** */
-        <div className="rounded-card border border-line bg-surface p-6 text-center">
+        <div className="surface p-6 text-center">
           <p className="mb-3 text-sm text-ink-muted">{P.ordersHint}</p>
           <Button onClick={() => router.push(`/dashboard/history?q=${encodeURIComponent(mr.name)}`)}>
             {P.openOrders}

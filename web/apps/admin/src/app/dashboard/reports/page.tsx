@@ -74,7 +74,7 @@ function DailyBars({
   const max = Math.max(1, ...data.map(value));
 
   return (
-    <section className="rounded-card border border-line bg-surface p-5">
+    <section className="surface p-5">
       <h2 className="mb-4 text-sm font-bold">{title}</h2>
       <div className="relative">
         {/* شبكة خافتة: خطا الربع والنصف والثلاثة أرباع */}
@@ -141,7 +141,7 @@ function Stat({
   sub?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-card border border-line bg-surface p-4">
+    <div className="flex items-center gap-3 surface p-4">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-primary-light">
         <Icon size={18} className="text-primary-dark" />
       </div>
@@ -302,7 +302,7 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <section className="rounded-card border border-line bg-surface p-5">
+            <section className="surface p-5">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-bold">
                 <IconStore size={16} className="text-primary" />
                 {r.topMerchants}
@@ -329,7 +329,7 @@ export default function ReportsPage() {
               )}
             </section>
 
-            <section className="rounded-card border border-line bg-surface p-5">
+            <section className="surface p-5">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-bold">
                 <IconDriver size={16} className="text-primary" />
                 {r.topDrivers}

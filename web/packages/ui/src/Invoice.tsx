@@ -78,7 +78,7 @@ export function Invoice({
         </Button>
       </div>
 
-      <div data-print="sheet" className="rounded-card border border-line bg-surface p-6 text-sm">
+      <div data-print="sheet" className="surface p-6 text-sm">
         {/* العلامةُ والاسمُ ووقتُ الطباعة — ترويسةٌ واحدة للفاتورة والكشف */}
         <SheetHeader />
 

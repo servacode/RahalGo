@@ -86,10 +86,20 @@ export function PageHeader({
 const pads = { sm: "p-3", md: "p-4", lg: "p-5" } as const;
 
 /** الكرت الموحّد — الحاوية البصرية الوحيدة المسموحة للمحتوى. */
+/** نبراتُ السطح — **الحدُّ يقول المعنى والسطحُ يبقى واحداً.** */
+const tones = {
+  default: "border-line",
+  danger: "border-danger/45",
+  success: "border-success/45",
+  accent: "border-accent/45",
+} as const;
+
 export function Card({
   title,
   icon: Icon,
   padding = "md",
+  tone = "default",
+  as: Tag = "section",
   className = "",
   actions,
   children,
@@ -97,6 +107,21 @@ export function Card({
   title?: string;
   icon?: IconType;
   padding?: keyof typeof pads;
+  /**
+   * **نبرةُ الحدّ لا لونُ السطح.**
+   *
+   * (جردُ ٢٠٢٦-٠٨-٠٦: سبعةٌ وسبعون سطحاً مبنيّاً باليد، **وأكثرُها بُني
+   *  لأنّه أراد حدّاً بلونٍ آخر** — كقسم حذف الحساب.)
+   *
+   * **والسطحُ يبقى زجاجاً في كلّ النبرات**: لونٌ خافتٌ خلف النصّ يُسقط
+   * تباينَه، **والحدُّ يقول «خطر» بلا أن يمسّ ما يُقرأ.**
+   */
+  tone?: keyof typeof tones;
+  /**
+   * **وعنصرُ HTML يُختار** — `section` افتراضاً، **و`div` لِما ليس قسماً
+   * دلاليّاً.** (وهذا ما دفع ملفّاتٍ إلى بناء سطحها بيدها.)
+   */
+  as?: "section" | "div" | "article" | "aside";
   className?: string;
   actions?: ReactNode;
   children: ReactNode;
@@ -107,8 +132,8 @@ export function Card({
        `surface-lit` تعطيها عمقاً — ضوءٌ من أعلى وثقلٌ في القاع وخيطٌ لامعٌ
        على الحرف. **والاستجابةُ عند المرور** تجعلها تُحسّ حيّةً: ترتفع قليلاً
        بظلٍّ أعمق. **وسطحٌ لا يردّ على يدٍ تمرّ عليه سطحٌ ميّت.** */
-    <section
-      className={`surface-lit rounded-card border border-line bg-surface transition-shadow duration-200 hover:shadow-e3 ${pads[padding]} ${className}`}
+    <Tag
+      className={`surface-lit rounded-card border ${tones[tone]} bg-surface transition-shadow duration-200 hover:shadow-e3 ${pads[padding]} ${className}`}
     >
       {(title || actions) && (
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -122,7 +147,7 @@ export function Card({
         </div>
       )}
       {children}
-    </section>
+    </Tag>
   );
 }
 

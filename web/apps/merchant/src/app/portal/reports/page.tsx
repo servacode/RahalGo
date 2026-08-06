@@ -128,7 +128,7 @@ export default function MerchantReportsPage() {
 
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
         {cards.map((c) => (
-          <div key={c.label} className="rounded-card border border-line bg-surface p-4">
+          <div key={c.label} className="surface p-4">
             <div className="mb-1 flex items-center gap-2 text-ink-muted">{c.icon}</div>
             <p className="text-xl font-bold">{c.value}</p>
             <p className="text-xs text-ink-muted">{c.label}</p>
@@ -137,7 +137,7 @@ export default function MerchantReportsPage() {
       </div>
 
       {report && (
-        <section className="rounded-card border border-line bg-surface p-4">
+        <section className="surface p-4">
           <h2 className="mb-4 font-bold">{m.merchant.reports.daily}</h2>
           <div className="flex items-end gap-2" style={{ height: 160 }}>
             {report.days.map((d) => (
@@ -169,7 +169,7 @@ export default function MerchantReportsPage() {
           المتجر لا يُدير مطبخَه برقمٍ واحد: يسأل أيُّ صنفٍ يمشي وأيُّه راكد،
           فيزيد من هذا ويوقف ذاك. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
       {report && report.items.length > 0 && (
-        <section className="mt-6 rounded-card border border-line bg-surface p-4">
+        <section className="mt-6 surface p-4">
           <h2 className="mb-3 font-bold">{m.merchant.reports.itemsTitle}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

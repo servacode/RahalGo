@@ -177,7 +177,7 @@ export function AddressBook({
       )}
 
       {adding ? (
-        <form onSubmit={save} className="space-y-3 rounded-card border border-line bg-surface p-4">
+        <form onSubmit={save} className="space-y-3 surface p-4">
           <div>
             <Input
               id="addr-label"

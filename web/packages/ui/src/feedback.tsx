@@ -158,7 +158,7 @@ export function SkeletonList({ rows = 4 }: { rows?: number }) {
   return (
     <div className="space-y-2">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex items-center gap-3 rounded-card border border-line bg-surface p-3">
+        <div key={i} className="flex items-center gap-3 surface p-3">
           <Skeleton className="h-12 w-12 shrink-0" />
           <span className="min-w-0 flex-1 space-y-2">
             <Skeleton className="h-3.5 w-2/5" />
@@ -175,7 +175,7 @@ export function SkeletonStats({ count = 3 }: { count?: number }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="rounded-card border border-line bg-surface p-4">
+        <div key={i} className="surface p-4">
           <Skeleton className="h-3 w-20" />
           <Skeleton className="mt-2.5 h-6 w-28" />
         </div>
@@ -345,7 +345,7 @@ export function Confirm({
         aria-modal="true"
         aria-labelledby="cf-t"
         onClick={(e) => e.stopPropagation()}
-        className="elev-4 w-full max-w-sm rounded-t-card border border-line bg-raised p-5 sm:rounded-card"
+        className="surface-sheet w-full max-w-sm p-5"
       >
         <h2 id="cf-t" className="text-lg font-bold">
           {title}

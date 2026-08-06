@@ -668,7 +668,7 @@ export function LoginCard({
             **و`surface-lit` هي الزجاجُ المركزيّ**: تضبيبُ ما وراءها، وخيطُ
             ضوءٍ أعلاها، وثقلٌ في قاعها. **ولا يُكتب تضبيبٌ ثانٍ هنا** —
             وإلّا صار لكلّ سطحٍ زجاجُه. */}
-        <div className="surface-lit overflow-hidden rounded-card border border-line bg-surface elev-2">
+        <div className="overflow-hidden surface elev-2">
           {/* ---------- جانب النموذج ---------- */}
           <div className="p-6 sm:p-8 lg:p-10">
             {/* **والبطاقةُ تُقرأ من محورها**: العلامةُ فوق العنوان فوق الوصف

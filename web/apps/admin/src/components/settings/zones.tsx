@@ -182,7 +182,7 @@ export default function ZonesPanel() {
         <aside className="w-full shrink-0 space-y-3 overflow-y-auto md:w-80">
           {/* نموذج الإنشاء/التعديل */}
           {draft && (
-            <div className="space-y-3 rounded-card border border-accent bg-surface p-4">
+            <div className="space-y-3 surface !border-accent p-4">
               <div className="flex items-center justify-between">
                 <h2 className="font-bold">
                   {draft.id ? m.admin.zones.editZone : m.admin.zones.newZone}
@@ -246,7 +246,7 @@ export default function ZonesPanel() {
 
           {/* قائمة المناطق */}
           {zones.length === 0 && !draft && (
-            <p className="rounded-card border border-line bg-surface p-6 text-center text-sm text-ink-muted">
+            <p className="surface p-6 text-center text-sm text-ink-muted">
               {m.admin.zones.empty}
             </p>
           )}

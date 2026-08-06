@@ -69,7 +69,7 @@ export default function WarningsPage() {
       ) : (
         <ul className="space-y-2">
           {list.map((x) => (
-            <li key={x.id} className="rounded-card border border-line bg-surface p-4">
+            <li key={x.id} className="surface p-4">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">
                   {W.reasons[x.reason as keyof typeof W.reasons] ?? x.reason}

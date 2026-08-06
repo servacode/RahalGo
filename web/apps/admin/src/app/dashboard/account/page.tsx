@@ -39,7 +39,7 @@ export default function MyAccountPage() {
     <PageContainer>
       <PageHeader icon={IconUser} title={m.terms.account} subtitle={A.subtitle} />
 
-      <div className="flex items-center gap-3 rounded-card border border-line bg-surface p-4">
+      <div className="flex items-center gap-3 surface p-4">
         <div className="min-w-0 flex-1">
           <p className="font-bold">{user?.full_name || "—"}</p>
           <p className="text-xs text-ink-muted" dir="ltr">

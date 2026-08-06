@@ -103,7 +103,7 @@ export default function DriverCashPage() {
 
           والسقفُ ليس زينة: **من بلغه لا يُعرض عليه طلبٌ نقديٌّ جديد**، فيقف
           عمله ولا يعرف لماذا. */}
-      <div className="mb-4 rounded-card border border-line bg-surface p-4">
+      <div className="mb-4 surface p-4">
         <div className="mb-2 flex items-end justify-between">
           <span className="text-sm text-ink-muted">{C.held}</span>
           <span dir="ltr" className="text-2xl font-bold tabular-nums text-warning">
@@ -127,7 +127,7 @@ export default function DriverCashPage() {
       {rows.length === 0 ? (
         <EmptyState icon={IconBalance} title={C.empty} />
       ) : (
-        <ul className="divide-y divide-line rounded-card border border-line bg-surface">
+        <ul className="divide-y divide-line surface">
           {rows.map((e, i) => (
             <li key={i} className="flex items-center gap-3 px-3 py-2.5 text-sm">
               <span className="min-w-0 flex-1">

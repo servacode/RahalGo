@@ -43,7 +43,7 @@ export default function LinkPage() {
   // مقفلة حتى التوثيق — والخادم لا يرسل الكود أصلاً قبله، فالقفل حقيقي لا بصري
   if (!me.whatsapp_verified) {
     return (
-      <div className="mx-auto max-w-md rounded-card border border-line bg-surface p-8 text-center">
+      <div className="mx-auto max-w-md surface p-8 text-center">
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-badge bg-warning/10 text-warning">
           <IconLock size={26} />
         </span>
@@ -76,7 +76,7 @@ export default function LinkPage() {
       </div>
 
       {/* الباركود */}
-      <div className="flex flex-col items-center gap-4 rounded-card border border-line bg-surface p-6">
+      <div className="flex flex-col items-center gap-4 surface p-6">
         {qr ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

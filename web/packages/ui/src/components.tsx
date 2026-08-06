@@ -505,7 +505,7 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={`max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface p-6 elev-3 ${modalSizes[size]}`}
+        className={`max-h-[90vh] w-full overflow-y-auto surface p-6 elev-3 ${modalSizes[size]}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* **العنوانُ وزرُّ الإغلاق في سطرٍ واحد.**
@@ -556,7 +556,7 @@ export function FormSection({
 
        **وهو أثاثُ النموذج**: عنوانٌ وحدٌّ وحقول — **ولوحٌ حوله يجمعها ويُقرِئ
        ما بينها.** */
-    <section className="surface-lit rounded-card border border-line bg-surface p-4">
+    <section className="surface p-4">
       <h3 className="mb-3 flex items-center gap-1.5 border-b border-line pb-2 text-sm font-bold text-primary-dark">
         {icon && <span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
         {title}

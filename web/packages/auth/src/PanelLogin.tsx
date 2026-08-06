@@ -91,7 +91,7 @@ export function PanelLogin({
   if (user && !allows(user)) {
     return (
       <main className="flex flex-1 items-center justify-center p-6">
-        <div className="w-full max-w-sm rounded-card border border-line bg-surface p-6 text-center">
+        <div className="w-full max-w-sm surface p-6 text-center">
           <p className="font-bold">{notAllowed}</p>
           <p className="mt-1 text-sm text-ink-muted">
             {user.full_name || user.phone}

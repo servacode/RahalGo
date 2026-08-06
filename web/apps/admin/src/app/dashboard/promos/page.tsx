@@ -435,13 +435,13 @@ function BannersTab({ isAdmin }: { isAdmin: boolean }) {
         <Alert className="mb-4">{error}</Alert>
       )}
       {banners.length === 0 && (
-        <div className="rounded-card border border-line bg-surface p-10 text-center text-ink-muted">
+        <div className="surface p-10 text-center text-ink-muted">
           {m.admin.promos.bannersEmpty}
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {banners.map((b) => (
-          <div key={b.id} className="overflow-hidden rounded-card border border-line bg-surface">
+          <div key={b.id} className="overflow-hidden surface">
             <div className="flex h-32 items-center justify-center bg-primary-light">
               {b.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element

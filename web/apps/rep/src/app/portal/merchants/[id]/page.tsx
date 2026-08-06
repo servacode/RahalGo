@@ -171,7 +171,7 @@ export default function MerchantDetailPage() {
   if (missing) {
     return (
       <PageContainer>
-        <p className="rounded-card border border-line bg-surface p-10 text-center text-ink-muted">
+        <p className="surface p-10 text-center text-ink-muted">
           {D.notMine}
         </p>
         <Button variant="secondary" onClick={() => router.push("/portal/merchants")}>
@@ -256,7 +256,7 @@ export default function MerchantDetailPage() {
         }
       />
 
-      <div className="flex items-center gap-3 rounded-card border border-line bg-surface p-4">
+      <div className="flex items-center gap-3 surface p-4">
         {logo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logo} alt="" loading="lazy" className="h-14 w-14 rounded-control object-cover" />

@@ -111,7 +111,7 @@ export function LegalPage({
 
           **وهو اللوحُ نفسُه الذي يحمل التواصلَ أسفلَها** — فلا يُخترع سطحٌ
           ثانٍ لِما هو من جنسه. */}
-      <div className="surface-lit space-y-6 rounded-card border border-line bg-surface p-4 leading-relaxed sm:p-5">
+      <div className="space-y-6 surface p-4 leading-relaxed sm:p-5">
         {/* **والعنوانُ داخلَ اللوح لا فوقه.**
 
             (جردُ ٢٠٢٦-٠٨-٠٦، الجولةُ الثانية: بقي «المساعدة» عند ٢٫٨١ ووصفُه
@@ -134,7 +134,7 @@ export function LegalPage({
 
         {/* **والتواصلُ في الذيل** — من قرأ ولم يجد جواباً يريد باباً. */}
         {contact && (contact.support_phone || contact.address) && (
-          <section className="rounded-card border border-line bg-surface p-4">
+          <section className="surface p-4">
             <h2 className="mb-2 font-bold">{L.contactTitle}</h2>
             {contact.support_phone && (
               <p className="text-sm">

@@ -195,7 +195,7 @@ export function DataView<T>({
 }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-card border border-line bg-surface p-10 text-center text-ink-muted">
+      <div className="surface p-10 text-center text-ink-muted">
         {empty}
       </div>
     );
@@ -212,7 +212,7 @@ export function DataView<T>({
           <div
             key={getKey(item)}
             onClick={onRowClick ? () => onRowClick(item) : undefined}
-            className={`flex flex-col rounded-card border border-line bg-surface p-4 transition-shadow hover:elev-2 ${onRowClick ? "cursor-pointer" : ""}`}
+            className={`flex flex-col surface p-4 transition-shadow hover:elev-2 ${onRowClick ? "cursor-pointer" : ""}`}
           >
             <div className="mb-3 border-b border-line pb-3">
               {primaries.map((c, i) => (
@@ -294,7 +294,7 @@ export function DataView<T>({
   );
 
   return (
-    <div className="overflow-x-auto rounded-card border border-line bg-surface">
+    <div className="overflow-x-auto surface">
       <table className="w-full text-sm">
         <thead>
           {/* **والرؤوسُ فوق قيمها لا بجانبها.**

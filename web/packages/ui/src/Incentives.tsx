@@ -83,7 +83,7 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
           صفرٌ يعني «لا هدفَ مضبوط»، **وشريطٌ ممتلئٌ على هدفٍ صفرٍ يُقرأ
           إنجازاً** فيُهنّئ من لم يُطلب منه شيء. */}
       {st.target > 0 && (
-        <div className="rounded-card border border-line bg-surface p-4">
+        <div className="surface p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="font-bold">{T.monthTarget}</p>
             {st.reached ? (
@@ -131,7 +131,7 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
       ) : (
         <ul className="space-y-2">
           {entries.map((e) => (
-            <li key={e.id} className="rounded-card border border-line bg-surface p-4">
+            <li key={e.id} className="surface p-4">
               <div className="flex items-center justify-between gap-2">
                 <Badge variant={e.kind === "reward" ? "success" : "danger"}>
                   {e.kind === "reward" ? T.reward : T.penalty}

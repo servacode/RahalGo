@@ -169,7 +169,7 @@ export default function DisputesPage() {
           {rows.map((d) => (
             <li
               key={d.id}
-              className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-3"
+              className="flex flex-wrap items-center gap-3 surface p-3"
             >
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">
