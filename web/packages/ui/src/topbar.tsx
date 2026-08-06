@@ -73,13 +73,13 @@ export function TopBar({
       اختصارٍ كامل.
     */
     <header
-      className={`flex items-center gap-2 bg-surface px-3 py-3 sm:gap-3 ${
+      className={`surface-lit flex items-center gap-2 bg-surface px-3 py-3 sm:gap-3 ${
         shape === "card"
           ? /* **لوحٌ كلوح المحتوى تحته** — `surface-lit` لا حدٌّ: الأرضُ
                والبطاقةُ لونٌ واحدٌ منذ ٢٠٢٦-٠٨-٠٦، **وخيطُ الضوء أعلى اللوح
                هو ما يرفعه عمّا تحته.** (وهو عينُ ما يفعله `<main>`، فلو
                اختلفا لَقُرئا شيئين.) */
-            "surface-lit rounded-card"
+            "rounded-card"
           : /*
               **شريطٌ يمتدّ لا كرتٌ يطفو.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦.)
 
@@ -94,7 +94,10 @@ export function TopBar({
       } ${
         /* **ويلتصق عند الصفر**: موضعُ الالتصاق كان مشتقّاً من الزوايا — لوحٌ
            مدوَّرٌ يطفو بعيداً عن الحافّة، **وشريطٌ ممتدٌّ يلتصق بها.** */
-        sticky ? "sticky top-0 z-40 bg-surface/85 backdrop-blur-xl" : ""
+        /* **والتضبيبُ من `surface-lit` لا من هنا** — كان `backdrop-blur-xl`
+           يُكتب في حالة الالتصاق وحدَها، **فالشريطُ زجاجٌ حين يمرّر المستخدمُ
+           ولوحٌ مصمتٌ حين يقف.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦.) */
+        sticky ? "sticky top-0 z-40" : ""
       }`}
     >
       {/* **والشعارُ يتقلّص ولا يُقصّ** — بلا `min-w-0` يفرض عرضَه كاملاً. */}
