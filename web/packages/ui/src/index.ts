@@ -128,4 +128,6 @@ export { MyIncentives } from "./Incentives";
 
 /** سلايدرُ اللافتات — **ومن لا يسحب لا يرى إلّا الأولى.** */
 export { BannerSlider, type SlideItem } from "./BannerSlider";
+/** شريطُ الأقسام — **صورٌ دائريّةٌ تمشي وحدَها وتُساق باليد.** */
+export { SectionRail, type RailItem } from "./SectionRail";
 export { FavoriteButton, useFavorites } from "./Favorites";
