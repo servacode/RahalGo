@@ -53,7 +53,22 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    /* ══════════════════════════════════════════════════════════════════
+       **وشريطُ العنوان زجاجٌ — لأنّ ما تحته يتبدّل**
+       ══════════════════════════════════════════════════════════════════
+
+       (كشفه جردُ السائق ٢٠٢٦-٠٨-٠٦ بعد حذف كرت المحتوى بقرار المالك.)
+
+       **كان يستظلّ باللوح الجامع** — فلمّا ذهب صار يقف على الخلفيّة
+       المتدرّجة. **وقِيس**: «التقييمات» ٢٫٣٤ ووصفُها ٢٫١١، و«ما نفّذتَه»
+       ٣٫٨٢ — **كلُّها دون حدّها.**
+
+       **وعنوانٌ يُقرأ في صفحةٍ ولا يُقرأ في أخرى أسوأُ من عنوانٍ ثابتِ
+       اللون** — لأنّ صاحبَه يظنّ العيبَ في عينه.
+
+       **وشريطٌ لا صندوق**: الحشوةُ ضيّقةٌ والزاويةُ واحدة — **فهو أثاثُ
+       العنوان لا كرتٌ جامعٌ عاد من الباب الخلفيّ.** */
+    <div className="surface-lit flex flex-wrap items-center justify-between gap-3 rounded-card border border-line bg-surface px-4 py-3">
       <div className="min-w-0">
         <h1 className="flex items-center gap-2 text-xl font-bold">
           {Icon && <Icon size={20} className="text-primary" />}
@@ -126,7 +141,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-card border border-line bg-surface p-10 text-center">
+    <div className="surface-lit rounded-card border border-line bg-surface p-10 text-center">
       {Icon && <Icon size={28} className="mx-auto mb-2 text-ink-muted" />}
       <p className={`text-sm ${tone === "success" ? "text-success" : "text-ink-muted"}`}>{title}</p>
       {action && <div className="mt-3 flex justify-center">{action}</div>}
@@ -166,7 +181,18 @@ export function LoadingState({
   rows?: number;
 }) {
   if (variant === "text") {
-    return <p className="py-10 text-center text-sm text-ink-muted">{label ?? m.common.loading}</p>;
+    /* **وسطرُ الانتظار على لوحٍ لا على الخلفيّة.**
+
+       (كشفه جردُ السائق ٢٠٢٦-٠٨-٠٦ بعد حذف كرت المحتوى: **٣٫٦١** — والخلفيّةُ
+        متدرّجةٌ فيتبدّل ما تحته.)
+
+       **وذهابُ الكرت الجامع كشف كلَّ ما كان يستره** — وهذا أوّلُهم: سطرٌ
+       وحيدٌ يملأ الشاشة أثناء الجلب. **ولوحٌ صغيرٌ حوله يكفي.** */
+    return (
+      <p className="surface-lit rounded-card border border-line bg-surface py-10 text-center text-sm text-ink-muted">
+        {label ?? m.common.loading}
+      </p>
+    );
   }
   return (
     <div

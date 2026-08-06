@@ -33,6 +33,7 @@ import {
   IconWarning,
   IconSupport,
   IconStar,
+  PageHeader,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -159,13 +160,15 @@ export default function DriverHistoryPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold">
-          <IconOrder size={20} className="text-ink-muted" />
-          {D.history.title}
-        </h1>
-        <p className="mt-1 text-sm text-ink-muted">{D.history.subtitle}</p>
-      </div>
+      {/* **وترويسةٌ مركزيّةٌ لا مبنيّةٌ باليد.**
+
+          (كشفه جردُ السائق ٢٠٢٦-٠٨-٠٦: وصفُها عند **٣٫٨٢** — لأنّها كانت
+           `<div>` عارياً على الخلفيّة المتدرّجة.)
+
+          **وكانت تنسخ `PageHeader` حرفاً بحرف**: أيقونةٌ وعنوانٌ ووصفٌ
+          بالمقاسات نفسِها. **ونسخةٌ لا ترث إصلاحاً**: لمّا صار الأصلُ زجاجاً
+          بقيت هذه على الخلفيّة. */}
+      <PageHeader icon={IconOrder} title={D.history.title} subtitle={D.history.subtitle} />
 
       {error && <Alert>{error}</Alert>}
       {done && (

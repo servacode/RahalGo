@@ -61,7 +61,15 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!data) return <LoadingState />;
 
-  const { standing: st, entries } = data;
+  /* **وردٌّ ناقصُ `standing` يُبيّض الصفحة.**
+
+     (كشفه جردُ السائق ٢٠٢٦-٠٨-٠٦: `Cannot read properties of undefined
+      (reading 'target')`.)
+
+     **والحافزُ يُقرأ ليُحفِّز** — وشاشةٌ بيضاءُ مكانَه تقول للسائق إنّ
+     المنصةَ معطوبة. **وحقلٌ ناقصٌ يُعرض صفراً أهونُ من صفحةٍ تسقط.** */
+  const st = data.standing ?? { target: 0, done: 0, reached: false };
+  const entries = Array.isArray(data.entries) ? data.entries : [];
   // **ونسبةٌ تُحسب هنا لا في الخادم**: هي عرضٌ لا قاعدة. **والبلوغُ يقوله
   // الخادمُ** — شرطٌ يُحسب في موضعين يفترق يوماً.
   const pct = st.target > 0 ? Math.min(100, (st.done / st.target) * 100) : 0;

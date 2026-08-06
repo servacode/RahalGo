@@ -24,7 +24,17 @@ const buttonVariants = {
      ١٣٫٩٢. (قرارُ المالك ٢٠٢٦-٠٨-٠٣ للأزرار، ولوناً ٢٠٢٦-٠٨-٠٦.) */
   primary: "bg-accent text-on-bright hover:opacity-90",
   secondary: "border border-line bg-surface text-ink hover:bg-page",
-  danger: "bg-danger text-on-solid hover:bg-danger/90",
+  /* **وزرُّ الخطر بالتعبئة المصمتة لا بالفاتحة.**
+
+     (كشفه جردُ السائق ٢٠٢٦-٠٨-٠٦: «إرسال رمز التأكيد» عند **١٫٧٥**.)
+
+     كان `bg-danger` — **وهو أحمرُ فاتحٌ صُنع ليُقرأ نصّاً على بطاقةٍ داكنة**،
+     **والأبيضُ عليه ١٫٧٥.** فزرُّ الحذف كان أقلَّ ما يُقرأ في الشاشة، **وهو
+     الذي لا يُستدرَك.**
+
+     **و`danger-solid` مصنوعٌ للتعبئة**: الأبيضُ عليه ٤٫٨٣ — **وهو التوكنُ
+     نفسُه في عدّاد الإشعارات وأيقونات الخطر.** */
+  danger: "bg-danger-solid text-on-solid hover:opacity-90",
   ghost: "text-ink-muted hover:bg-page hover:text-ink",
 } as const;
 
@@ -536,7 +546,17 @@ export function FormSection({
   children: ReactNode;
 }) {
   return (
-    <section>
+    /* **وقسمُ النموذج لوحٌ لا فراغ.**
+
+       (كشفه جردُ السائق ٢٠٢٦-٠٨-٠٦: وصفُ «عناويني» عند **٤٫٠٤** — لأنّ
+        القسمَ كان `<section>` عارياً على الخلفيّة المتدرّجة.)
+
+       **وكان يصحّ يومَ كان كرتُ المحتوى يلفّ الصفحةَ كلَّها** — فلمّا ذهب
+       بقرار المالك **انكشف كلُّ ما كان يستظلّ به.**
+
+       **وهو أثاثُ النموذج**: عنوانٌ وحدٌّ وحقول — **ولوحٌ حوله يجمعها ويُقرِئ
+       ما بينها.** */
+    <section className="surface-lit rounded-card border border-line bg-surface p-4">
       <h3 className="mb-3 flex items-center gap-1.5 border-b border-line pb-2 text-sm font-bold text-primary-dark">
         {icon && <span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
         {title}

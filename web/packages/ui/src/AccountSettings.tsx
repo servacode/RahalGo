@@ -556,7 +556,7 @@ export function AccountSettings({
       </div>
       </Section>
 
-      <section className="rounded-card border border-danger/30 bg-danger/5 p-4 sm:col-span-2 lg:col-span-3">
+      <section className="surface-lit rounded-card border border-danger/45 bg-surface p-4 sm:col-span-2 lg:col-span-3">
         <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-danger">
           <span className="[&>svg]:h-4 [&>svg]:w-4">
             <IconWarning />
