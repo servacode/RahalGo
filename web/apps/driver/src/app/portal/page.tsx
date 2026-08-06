@@ -283,7 +283,7 @@ export default function TasksPage() {
         <div className="flex items-center gap-3">
           <span
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-badge ${
-              me.on_shift ? "bg-success/10 text-success" : "bg-page text-ink-muted"
+              me.on_shift ? "bg-success-tint text-success" : "bg-page text-ink-muted"
             }`}
           >
             <IconDriver size={20} />
@@ -468,7 +468,7 @@ export default function TasksPage() {
               **والزرُّ مُطفأٌ في الثلاث**، فمن لم يُخبَر أيُّها وقع لم يعرف
               أيرجع أم يعيد المحاولة. */}
           {reasonsErr && !stageReasons ? (
-            <div className="space-y-2 rounded-control border border-danger/40 bg-danger/5 px-3 py-2">
+            <div className="space-y-2 rounded-control border border-danger-edge bg-danger-tint px-3 py-2">
               <Alert>{D.act.failedReasonsError}</Alert>
               <Button variant="secondary" onClick={() => void loadReasons()}>
                 {m.common.retry}
@@ -485,8 +485,8 @@ export default function TasksPage() {
                   key={x.code}
                   className={`flex cursor-pointer items-center gap-2.5 rounded-control border px-3 py-2 text-sm transition-colors ${
                     reason === x.code
-                      ? "border-accent bg-accent/10 font-medium"
-                      : "border-line hover:border-accent/60"
+                      ? "border-accent bg-accent-tint font-medium"
+                      : "border-line hover:border-accent-edge"
                   }`}
                 >
                   <input
@@ -627,7 +627,7 @@ function TaskCard({
       {/* ما يقبضه: يُقال قبل التسليم لا بعده */}
       <p
         className={`mt-3 flex items-center gap-2 rounded-control px-3 py-2 text-sm ${
-          cash ? "bg-warning/10 font-bold text-warning" : "bg-page text-ink-muted"
+          cash ? "bg-warning-tint font-bold text-warning" : "bg-page text-ink-muted"
         }`}
       >
         <IconBalance size={16} />
@@ -953,7 +953,7 @@ function ProofModal({
 
                 `capture` تفتح آلةَ التصوير — **وصورةٌ تُختار من المعرض قد تكون
                 لأيّ يومٍ ولأيّ باب**، فتسقط حجّتُها في أوّل نزاع. */}
-            <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary/50 py-6 text-primary-dark">
+            <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary-edge py-6 text-primary-dark">
               <IconCamera size={20} />
               <span className="font-medium">{busy ? D.proof.sending : D.proof.take}</span>
               <input

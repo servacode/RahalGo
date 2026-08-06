@@ -464,7 +464,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
           </div>
 
           {/* كلمة مرور مؤقتة يسلّمها المندوب — يُجبَر المالك على تبديلها أول دخول */}
-          <div className="rounded-card border border-line bg-page/60 p-3">
+          <div className="rounded-card border border-line bg-page p-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
                 id="owner-pw"

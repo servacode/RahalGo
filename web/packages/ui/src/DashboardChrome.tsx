@@ -204,7 +204,7 @@ export function DashboardChrome({
         <div className="p-3 pb-0">
           <button
             onClick={shopAsCustomer}
-            className="flex w-full items-center gap-2.5 rounded-control bg-accent/10 px-3 py-2 text-sm font-medium text-accent-dark transition-colors hover:bg-accent/20"
+            className="flex w-full items-center gap-2.5 rounded-control bg-accent-tint px-3 py-2 text-sm font-medium text-accent-dark transition-colors hover:bg-accent-tint"
           >
             <IconStore size={17} />
             {shopLabel}

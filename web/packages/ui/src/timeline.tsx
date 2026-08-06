@@ -55,12 +55,12 @@ const TONE_SOLID: Record<string, string> = {
 };
 
 const TONE_RAIL: Record<string, string> = {
-  primary: "bg-primary/35",
-  success: "bg-success/35",
-  danger: "bg-danger/35",
-  warning: "bg-warning/35",
-  info: "bg-info/35",
-  violet: "bg-violet/35",
+  primary: "bg-primary-fill",
+  success: "bg-success-fill",
+  danger: "bg-danger-fill",
+  warning: "bg-warning-fill",
+  info: "bg-info-fill",
+  violet: "bg-violet-fill",
 };
 
 export function Timeline({
@@ -128,7 +128,7 @@ export function Timeline({
                         // قاعدةُ العلامة: الهادئُ ما ثبت، والنبرةُ لِما
                         // يتحرّك. **وهنا تُرى القاعدةُ عاملةً**: عينُ الزبون
                         // تقع على مكانِ طلبه الآن قبل أن تقرأ حرفاً.
-                        "bg-accent text-on-bright ring-4 ring-accent/20"
+                        "bg-accent text-on-bright ring-4 ring-accent-edge"
                       : "border-2 border-line bg-surface text-ink-muted"
                 }`}
               >

@@ -161,7 +161,7 @@ export default function InvitePage() {
                 <span className={t.now ? "font-bold" : "text-ink-muted"}>{t.label}</span>
                 {/* **ودَورُك الآن** — الجدولُ يقول أين أنت منه، لا أرقاماً مجرّدة. */}
                 {t.now && (
-                  <span className="rounded-badge bg-accent/10 px-2 py-0.5 text-2xs font-bold text-accent-text">
+                  <span className="rounded-badge bg-accent-tint px-2 py-0.5 text-2xs font-bold text-accent-text">
                     {V.tierNow}
                   </span>
                 )}

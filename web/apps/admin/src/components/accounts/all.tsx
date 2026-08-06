@@ -227,7 +227,7 @@ export default function AllAccountsTable() {
         <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           <button
             onClick={() => setRole("")}
-            className={`rounded-card border p-2.5 text-center transition-colors ${role === "" ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary/40"}`}
+            className={`rounded-card border p-2.5 text-center transition-colors ${role === "" ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary-edge"}`}
           >
             <p className="text-lg font-bold">{roleCounts.total}</p>
             <p className="text-xs text-ink-muted">{m.admin.users.allRoles}</p>
@@ -242,7 +242,7 @@ export default function AllAccountsTable() {
             <button
               key={key}
               onClick={() => { setRole(role === key ? "" : key); setPage(1); }}
-              className={`rounded-card border p-2.5 text-center transition-colors ${role === key ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary/40"}`}
+              className={`rounded-card border p-2.5 text-center transition-colors ${role === key ? "border-primary bg-primary-light" : "border-line bg-surface hover:border-primary-edge"}`}
             >
               <p className={`inline-flex items-center gap-1 text-lg font-bold ${style ? style.cls.split(" ").filter((c) => c.startsWith("text-")).join(" ") : ""}`}>
                 {style && <style.Icon size={15} />}
@@ -253,7 +253,7 @@ export default function AllAccountsTable() {
           ))}
           <button
             onClick={() => { setOnlineOnly(!onlineOnly); setPage(1); }}
-            className={`rounded-card border p-2.5 text-center transition-colors ${onlineOnly ? "border-success bg-success/10" : "border-line bg-surface hover:border-success/40"}`}
+            className={`rounded-card border p-2.5 text-center transition-colors ${onlineOnly ? "border-success bg-success-tint" : "border-line bg-surface hover:border-success-edge"}`}
           >
             <p className="inline-flex items-center gap-1.5 text-lg font-bold text-success">
               <span className="h-2 w-2 animate-pulse rounded-badge bg-success" />
@@ -492,7 +492,7 @@ function CreateUserModal({
                 className={`rounded-badge border px-3 py-1 text-xs transition-colors ${
                   roles.includes(r)
                     ? "border-primary bg-primary-light text-primary-dark"
-                    : "border-line text-ink-muted hover:border-primary/50"
+                    : "border-line text-ink-muted hover:border-primary-edge"
                 }`}
               >
                 {ROLE_LABELS[r]}
@@ -601,7 +601,7 @@ function ManageRolesModal({
             className={`rounded-badge border px-3 py-1.5 text-sm transition-colors ${
               current.includes(r)
                 ? "border-primary bg-primary-light text-primary-dark"
-                : "border-line text-ink-muted hover:border-primary/50"
+                : "border-line text-ink-muted hover:border-primary-edge"
             }`}
           >
             {ROLE_LABELS[r]}
@@ -609,7 +609,7 @@ function ManageRolesModal({
         ))}
       </div>
       {pending && (
-        <div className="mt-4 rounded-control border border-primary/30 bg-primary-light/40 p-3">
+        <div className="mt-4 rounded-control border border-primary-edge bg-primary-tint p-3">
           <p className="mb-2 text-sm font-medium">
             {m.admin.users.roleReasonTitle}: {ROLE_LABELS[pending.role]}
           </p>

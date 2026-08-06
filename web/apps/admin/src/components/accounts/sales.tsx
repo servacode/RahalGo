@@ -57,7 +57,7 @@ function CopyCode({ code }: { code: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
-      className="inline-flex items-center gap-1.5 rounded-badge border border-accent bg-accent/10 px-2.5 py-1 font-mono text-sm font-bold text-accent-dark transition-colors hover:bg-accent/20"
+      className="inline-flex items-center gap-1.5 rounded-badge border border-accent bg-accent-tint px-2.5 py-1 font-mono text-sm font-bold text-accent-dark transition-colors hover:bg-accent-tint"
       dir="ltr"
       title={m.admin.sales.copyCode}
     >

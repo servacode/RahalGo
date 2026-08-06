@@ -138,7 +138,7 @@ export function Input({
              (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «ألغِ البوردر الخارجيّ الذي يظهر على
               حقول الإدخال عند الوقوف عليها».)
 
-             كانت `focus:ring-2 focus:ring-primary/20` — **فيصير للحقل
+             كانت `focus:ring-2 focus:ring-primary-edge` — **فيصير للحقل
              حدّان**: حدُّه يتلوّن، وحلقةٌ باهتةٌ حولَه. **وخطّان متوازيان
              بلونٍ واحدٍ يُقرآن حدّاً سميكاً مهترئاً** لا تمييزاً.
 
@@ -149,8 +149,8 @@ export function Input({
              **والمفاتيحُ وصناديقُ الاختيار تُبقي حلقتَها** — حلقتُها
              `focus-visible:` لا `focus:`: **تظهر لمن ينتقل بالكيبورد ولا
              تظهر لمن ضغط بالفأرة**، فلا تزاحم أحداً ولا يفقد أحدٌ موضعَه. */
-          className={`w-full rounded-control border bg-field py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary ${
-            error ? "border-danger" : "border-line hover:border-ink-muted/40"
+          className={`w-full rounded-control border bg-field py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-primary ${
+            error ? "border-danger" : "border-line hover:border-line-soft"
           } ${padStart} ${padEnd} ${className}`}
         />
         {isPassword && (
@@ -215,8 +215,8 @@ export function Textarea({
         id={id}
         rows={props.rows ?? 3}
         {...props}
-        className={`w-full rounded-control border bg-field px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary ${
-          error ? "border-danger" : "border-line hover:border-ink-muted/40"
+        className={`w-full rounded-control border bg-field px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-primary ${
+          error ? "border-danger" : "border-line hover:border-line-soft"
         } ${className}`}
       />
       <div className="mt-1 flex items-start justify-between gap-2">
@@ -256,7 +256,7 @@ export function Radio({
     >
       <span className="relative flex h-[18px] w-[18px] shrink-0 items-center justify-center">
         <input id={id} type="radio" {...props} className="peer sr-only" />
-        <span className="absolute inset-0 rounded-full border border-line bg-surface transition-colors peer-checked:border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/30" />
+        <span className="absolute inset-0 rounded-full border border-line bg-surface transition-colors peer-checked:border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary-edge" />
         {/* **والنواةُ تكبر لا تظهر فجأة** — حركةٌ قصيرةٌ تؤكّد أنّ الضغطةَ وقعت. */}
         <span className="relative h-2 w-2 scale-0 rounded-full bg-primary transition-transform peer-checked:scale-100" />
       </span>
@@ -283,7 +283,7 @@ export function Checkbox({
           id={id}
           type="checkbox"
           {...props}
-          className="peer h-full w-full cursor-pointer appearance-none rounded-[5px] border border-line bg-surface transition-colors checked:border-primary checked:bg-primary focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:outline-none"
+          className="peer h-full w-full cursor-pointer appearance-none rounded-[5px] border border-line bg-surface transition-colors checked:border-primary checked:bg-primary focus-visible:ring-2 focus-visible:ring-primary-edge focus-visible:outline-none"
         />
         {/* **وعلامةُ الصحّ داكنةٌ لا بيضاء.**
 
@@ -387,8 +387,8 @@ export function OtpInput({
           }}
           className={`h-13 w-11 rounded-control border bg-field text-center font-mono text-xl font-bold text-ink outline-none transition-all sm:w-12 ${
             d.trim()
-              ? "border-primary bg-primary-light/40 text-primary-dark"
-              : "border-line hover:border-ink-muted/40"
+              ? "border-primary bg-primary-tint text-primary-dark"
+              : "border-line hover:border-line-soft"
           } focus:border-primary`}
         />
       ))}
@@ -461,9 +461,9 @@ export function Select({
 const badgeVariants = {
   neutral: "bg-page text-ink-muted",
   primary: "bg-primary-light text-primary-dark",
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/10 text-warning",
-  danger: "bg-danger/10 text-danger",
+  success: "bg-success-tint text-success",
+  warning: "bg-warning-tint text-warning",
+  danger: "bg-danger-tint text-danger",
 } as const;
 
 export function Badge({

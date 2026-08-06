@@ -220,8 +220,8 @@ export default function MerchantProfilePage() {
                   onClick={() => void setAcceptsReturns(v)}
                   className={`rounded-control border px-3 py-1 text-sm transition-colors ${
                     mr.accepts_returns === v
-                      ? "border-accent bg-accent/10 font-medium"
-                      : "border-line text-ink-muted hover:border-accent/60"
+                      ? "border-accent bg-accent-tint font-medium"
+                      : "border-line text-ink-muted hover:border-accent-edge"
                   }`}
                 >
                   {v ? P.returnsYes : P.returnsNo}

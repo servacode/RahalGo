@@ -84,7 +84,7 @@ export default function AccountPage() {
                   يخطئ ما دون أربعةٍ وأربعين، **وسطرٌ بارتفاع خمسين لا يُخطأ.** */}
               <Link
                 href={it.href}
-                className="flex items-center gap-3 rounded-control border border-line bg-page px-3 py-3 transition-colors hover:border-primary/40"
+                className="flex items-center gap-3 rounded-control border border-line bg-page px-3 py-3 transition-colors hover:border-primary-edge"
               >
                 <it.icon size={18} className="shrink-0 text-primary" />
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{it.label}</span>

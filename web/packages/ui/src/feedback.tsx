@@ -8,8 +8,8 @@
  * **رسالةُ الخطأ الواحدةُ مكتوبةٌ بثمانِ صياغاتٍ في تسعةٍ وثمانين موضعاً:**
  *
  *	20 × "text-sm text-danger"
- *	20 × "rounded-control bg-danger/10 px-3 py-2 text-sm text-danger"
- *	13 × "text-danger"          13 × "mb-4 rounded-control bg-danger/10 …"
+ *	20 × "rounded-control bg-danger-tint px-3 py-2 text-sm text-danger"
+ *	13 × "text-danger"          13 × "mb-4 rounded-control bg-danger-tint …"
  *	 8 × "text-xs text-danger"   6 × "py-10 text-center text-danger"
  *
  * **والمستخدمُ يرى شكلاً في شاشةٍ وشكلاً في التالية** — فيقرأ الثانيةَ من
@@ -40,10 +40,10 @@ const m = getMessages(defaultLocale);
  * بالمئة من الرجال) **يقرأ الشكلَ لا الصبغة.**
  */
 const tones = {
-  error: { cls: "border-danger/30 bg-danger/10 text-danger", Icon: IconError },
-  success: { cls: "border-success/30 bg-success/10 text-success", Icon: IconSuccess },
-  warning: { cls: "border-warning/30 bg-warning/10 text-warning", Icon: IconWarning },
-  info: { cls: "border-info/30 bg-info/10 text-info", Icon: IconNote },
+  error: { cls: "border-danger-edge bg-danger-tint text-danger", Icon: IconError },
+  success: { cls: "border-success-edge bg-success-tint text-success", Icon: IconSuccess },
+  warning: { cls: "border-warning-edge bg-warning-tint text-warning", Icon: IconWarning },
+  info: { cls: "border-info-edge bg-info-tint text-info", Icon: IconNote },
 } as const;
 
 export type AlertTone = keyof typeof tones;
@@ -132,7 +132,7 @@ export function Skeleton({
   // **والأصنافُ كاملةٌ لا مركَّبة**: تيلويند يمسح المصدرَ نصّاً، **و`rounded-${x}`
   // لا يراها فتخرج الحوافُّ حادّة.**
   return (
-    <span aria-hidden className={`block animate-pulse bg-ink/10 ${skelRadius[rounded]} ${className}`} />
+    <span aria-hidden className={`block animate-pulse bg-ink-faint ${skelRadius[rounded]} ${className}`} />
   );
 }
 
@@ -271,7 +271,7 @@ export function ToastStack({
           <Alert
             tone={t.tone}
             onDismiss={() => onDrop(t.id)}
-            className="bg-raised/95 backdrop-blur-sm"
+            className="surface-raised"
           >
             {t.text}
           </Alert>

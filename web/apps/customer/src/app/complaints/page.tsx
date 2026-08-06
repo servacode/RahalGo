@@ -105,13 +105,13 @@ export default function ComplaintsPage() {
 
               {/* ── حقلان مستقلّان: متى · وعلى أيّ طلب ─────────────────── */}
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-control bg-page/70 px-3 py-2">
+                <div className="rounded-control bg-page px-3 py-2">
                   <p className="text-2xs text-ink-muted">{C.fieldWhen}</p>
                   <p className="mt-0.5 text-sm font-medium tabular-nums" dir="ltr">
                     {fmtDateTime(t.created_at)}
                   </p>
                 </div>
-                <div className="rounded-control bg-page/70 px-3 py-2">
+                <div className="rounded-control bg-page px-3 py-2">
                   <p className="text-2xs text-ink-muted">{C.fieldOrder}</p>
                   <p className="mt-0.5 text-sm font-medium tabular-nums" dir="ltr">
                     {t.order_number !== null ? `#${fmtRef(t.order_number)}` : "—"}
@@ -136,7 +136,7 @@ export default function ComplaintsPage() {
 
               {/* ── التعويضُ حقلٌ قائمٌ بذاته — **وهو ماله** ─────────────── */}
               {t.compensation > 0 && (
-                <div className="flex items-center justify-between rounded-control border border-success/30 bg-success/5 px-3 py-2.5">
+                <div className="flex items-center justify-between rounded-control border border-success-edge bg-success-tint px-3 py-2.5">
                   <span className="flex items-center gap-1.5 text-sm font-medium text-success">
                     <IconCheck size={15} strokeWidth={3} />
                     {C.compensated}

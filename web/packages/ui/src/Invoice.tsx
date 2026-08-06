@@ -136,7 +136,7 @@ export function Invoice({
               <thead>
                 {/* **رأسٌ يُميَّز بحدٍّ لا بلونٍ**: الألوانُ لا تُطبع، ورأسُ
                     جدولٍ يذوب في صفوفه يجعل العمودَ الأوّل يُقرأ مبلغاً. */}
-                <tr className="border-b-2 border-ink/20 text-2xs uppercase tracking-wide text-ink-muted">
+                <tr className="border-b-2 border-line-soft text-2xs uppercase tracking-wide text-ink-muted">
                   <th className="py-2 text-start font-bold">{V.colItem}</th>
                   <th className="w-16 py-2 text-end font-bold">{V.colQty}</th>
                   <th className="w-24 py-2 text-end font-bold">{V.colUnit}</th>
@@ -145,7 +145,7 @@ export function Invoice({
               </thead>
               <tbody>
                 {items.map((it) => (
-                  <tr key={it.id} className="border-b border-line/60">
+                  <tr key={it.id} className="border-b border-line-soft">
                     <td className="py-2 align-top">
                       {it.name}
                       {!!it.options?.length && (
@@ -184,7 +184,7 @@ export function Invoice({
             {order.discount > 0 && (
               <Row label={V.discount} value={-order.discount} tone="success" />
             )}
-            <div className="flex items-center justify-between border-t-2 border-ink/20 pt-2 text-lg font-bold">
+            <div className="flex items-center justify-between border-t-2 border-line-soft pt-2 text-lg font-bold">
               <dt>{V.total}</dt>
               <dd dir="ltr" className="tabular-nums">
                 {fmtNum(order.total)}{" "}

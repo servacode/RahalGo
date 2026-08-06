@@ -184,7 +184,7 @@ export default function MerchantReportsPage() {
               </thead>
               <tbody>
                 {report.items.map((it) => (
-                  <tr key={it.name} className="border-b border-line/60 last:border-0">
+                  <tr key={it.name} className="border-b border-line-soft last:border-0">
                     <td className="py-2">{it.name}</td>
                     <td className="py-2 text-center tabular-nums" dir="ltr">
                       {fmtNum(it.qty)}

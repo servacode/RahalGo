@@ -330,6 +330,65 @@
   --color-accent-strong: #c9fbee;
   --color-accent-soft: #07473c;
 
+  /* ── ٤ب · مشتقّاتُ الدلالة — **صبغةٌ وقضيبٌ وحدّ** ───────────────────
+
+     (طلبُ المالك ٢٠٢٦-٠٨-٠٦: «صيدُ الألوان والأزرار والعناصر غير المركزيّة
+      بالصفحات ونلاحقها».)
+
+     **النيّةُ كانت واحدةً والكتابةُ إحدى عشرة**: سطحٌ ملوّنٌ بدلالةٍ كُتب
+     `bg-danger/5` و`/10` و`/15` و`/20` و`/35`، وحدُّه `/30` و`/40` و`/45`
+     و`/50` و`/60`. **مئةٌ وأربعةٌ وستّون موضعاً في سبعين نمطاً** — ولا أحدَ
+     منها قرارٌ، **كلُّها رقمٌ كُتب في لحظته ثمّ نُسخ.**
+
+     **وثلاثةُ أسماءٍ تقول الوظيفة**:
+
+     | الاسم  | لِمَ | أين |
+     |---|---|---|
+     | `tint` | صبغةٌ خفيفةٌ يُقرأ فوقها نصٌّ بالدلالة نفسِها | لوحُ تحذيرٍ · شارةُ حالة |
+     | `fill` | تعبئةٌ ظاهرةٌ لا يُقرأ فوقها نصّ | قضيبُ الخطّ الزمنيّ · نقطةُ حالة |
+     | `edge` | حدٌّ يُرى ولا يصرخ | إطارُ اللوح المحدَّد |
+
+     **وتُشتقّ من التوكن نفسِه بـ`color-mix` لا تُكتب قيمةً**: يومَ يتبدّل
+     `--color-danger` تتبدّل صبغتُه وحدُّه معه — **وثابتٌ مكتوبٌ باليد كان
+     يبقى على اللون القديم صامتاً.** */
+  --color-primary-tint: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  --color-accent-tint: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  --color-success-tint: color-mix(in oklab, var(--color-success) 12%, transparent);
+  --color-warning-tint: color-mix(in oklab, var(--color-warning) 12%, transparent);
+  --color-danger-tint: color-mix(in oklab, var(--color-danger) 12%, transparent);
+  --color-info-tint: color-mix(in oklab, var(--color-info) 12%, transparent);
+  --color-violet-tint: color-mix(in oklab, var(--color-violet) 12%, transparent);
+  --color-primary-fill: color-mix(in oklab, var(--color-primary) 35%, transparent);
+  --color-accent-fill: color-mix(in oklab, var(--color-accent) 35%, transparent);
+  --color-success-fill: color-mix(in oklab, var(--color-success) 35%, transparent);
+  --color-warning-fill: color-mix(in oklab, var(--color-warning) 35%, transparent);
+  --color-danger-fill: color-mix(in oklab, var(--color-danger) 35%, transparent);
+  --color-info-fill: color-mix(in oklab, var(--color-info) 35%, transparent);
+  --color-violet-fill: color-mix(in oklab, var(--color-violet) 35%, transparent);
+  --color-primary-edge: color-mix(in oklab, var(--color-primary) 40%, transparent);
+  --color-accent-edge: color-mix(in oklab, var(--color-accent) 40%, transparent);
+  --color-success-edge: color-mix(in oklab, var(--color-success) 40%, transparent);
+  --color-warning-edge: color-mix(in oklab, var(--color-warning) 40%, transparent);
+  --color-danger-edge: color-mix(in oklab, var(--color-danger) 40%, transparent);
+  --color-info-edge: color-mix(in oklab, var(--color-info) 40%, transparent);
+  --color-violet-edge: color-mix(in oklab, var(--color-violet) 40%, transparent);
+
+  /* **ومشتقّاتٌ محايدةٌ للبنية** — لا دلالةَ فيها، إنّما درجاتُ حضور.
+
+     | الاسم | لِمَ |
+     |---|---|
+     | `line-soft` | فاصلٌ داخلَ بطاقةٍ يُرى ولا يقسمها | كُتب `border-line/60` و`ink-muted/40` و`ink/20` |
+     | `ink-faint` | ما يومئ ولا يُقرأ — هيكلُ التحميل | كُتب `bg-ink/10` |
+     | `ink-dim` | نصٌّ أخفتُ من الخافت — الوحدةُ بعد الرقم | كُتب `text-ink-muted/60` و`/70` |
+     | `row-hover` | صفٌّ يستيقظ تحت المؤشّر ولا يقفز | كُتب `hover:bg-page/60` |
+     | `on-solid-tint`/`-edge` | زجاجٌ فوق تعبئةٍ صلبة | كُتب `bg-on-solid/15` و`border-on-solid/40` | */
+  --color-line-soft: color-mix(in oklab, var(--color-line) 55%, transparent);
+  --color-ink-faint: color-mix(in oklab, var(--color-ink) 12%, transparent);
+  --color-ink-dim: color-mix(in oklab, var(--color-ink-muted) 65%, transparent);
+  --color-row-hover: color-mix(in oklab, var(--color-ink) 6%, transparent);
+  --color-on-solid-tint: color-mix(in oklab, var(--color-on-solid) 12%, transparent);
+  --color-on-solid-edge: color-mix(in oklab, var(--color-on-solid) 40%, transparent);
+
   /* ── ٥ · سُلَّمٌ نصّيٌّ عربيٌّ ────────────────────────────────────────
      كان في الثيم **مقاسٌ واحدٌ** (`2xs`) وما عداه من افتراضات Tailwind —
      **فلا سُلَّمَ للمشروع أصلاً.**
@@ -481,6 +540,18 @@
     box-shadow: none;
     background: #fff;
     color: #000;
+  }
+
+  /* **والخطوطُ تسودّ على الورق.**
+
+     **حدودُ الفاتورة والكشف كانت `border-ink/20`** — و`--color-ink` أبيضُ في
+     ثيمٍ داكن، **فتُطبع خطوطاً بيضاءَ على ورقٍ أبيض**: جدولٌ بلا شبكةٍ وسطرُ
+     مجموعٍ لا يفصله شيءٌ عمّا فوقه. **ولا يُرى العطبُ على الشاشة أبداً.**
+
+     **والورقةُ تقلب الأرضيّةَ والحبر** (`background:#fff; color:#000`) **ولم
+     تكن تقلب الحدّ** — فيُقلب هنا مرّةً واحدةً لكلّ ما في الورقة. */
+  [data-print="sheet"] * {
+    border-color: rgb(0 0 0 / 0.25) !important;
   }
 
   /* الجدول لا يُقطع سطراً في منتصفه بين صفحتين */

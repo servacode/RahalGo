@@ -272,7 +272,7 @@ export default function DriverHistoryPage() {
           <p className="text-sm font-medium">{D.history.reportAgainst}</p>
 
           {reasonsErr && !reasons ? (
-            <div className="space-y-2 rounded-control border border-danger/40 bg-danger/5 px-3 py-2">
+            <div className="space-y-2 rounded-control border border-danger-edge bg-danger-tint px-3 py-2">
               <Alert>{D.history.reasonsError}</Alert>
               <Button variant="secondary" onClick={() => void loadReasons()}>
                 {m.common.retry}
@@ -287,8 +287,8 @@ export default function DriverHistoryPage() {
                   key={x.code}
                   className={`flex cursor-pointer items-center gap-2.5 rounded-control border px-3 py-2 text-sm transition-colors ${
                     reason === x.code
-                      ? "border-accent bg-accent/10 font-medium"
-                      : "border-line hover:border-accent/60"
+                      ? "border-accent bg-accent-tint font-medium"
+                      : "border-line hover:border-accent-edge"
                   }`}
                 >
                   <input

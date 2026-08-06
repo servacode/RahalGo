@@ -45,14 +45,14 @@ interface Feed {
 /** أيقونة ولون لكل نوع — مصدر واحد يخدم الصفحة والجرس. */
 const KINDS: Record<string, { icon: ComponentType<{ size?: number; className?: string }>; tone: string }> = {
   order: { icon: IconOrder, tone: "text-primary bg-primary-light" },
-  ticket: { icon: IconSupport, tone: "text-danger bg-danger/10" },
-  wallet: { icon: IconWallet, tone: "text-success bg-success/10" },
-  rating: { icon: IconStar, tone: "text-accent-dark bg-accent/10" },
-  lead: { icon: IconLink, tone: "text-info bg-info/10" },
+  ticket: { icon: IconSupport, tone: "text-danger bg-danger-tint" },
+  wallet: { icon: IconWallet, tone: "text-success bg-success-tint" },
+  rating: { icon: IconStar, tone: "text-accent-dark bg-accent-tint" },
+  lead: { icon: IconLink, tone: "text-info bg-info-tint" },
   account: { icon: IconUser, tone: "text-ink-muted bg-page" },
   // **والعرضُ له وجهُه** — إشعارٌ بلا أيقونةٍ خاصّةٍ يسقط على الافتراضيّ
   // فيختلط بما ليس منه في قائمةٍ تُمسح بالعين.
-  offer: { icon: IconPromos, tone: "text-danger bg-danger/10" },
+  offer: { icon: IconPromos, tone: "text-danger bg-danger-tint" },
 };
 
 /** يوم الإشعار بصيغة قابلة للقراءة — "اليوم" و"أمس" أوضح من تاريخ كامل. */
@@ -183,7 +183,7 @@ export function NotificationsPage({
               className={`flex shrink-0 items-center gap-1.5 rounded-badge border px-3.5 py-2 text-sm transition-colors ${
                 kind === f.id
                   ? "border-primary bg-primary font-bold text-on-solid"
-                  : "border-line bg-surface text-ink-muted hover:border-primary/40 hover:text-ink"
+                  : "border-line bg-surface text-ink-muted hover:border-primary-edge hover:text-ink"
               }`}
             >
               {/* **ولا رقمَ في الحبّة.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «ظهورُ
@@ -234,7 +234,7 @@ export function NotificationsPage({
               {/* **لافتةٌ لا خطٌّ يعبر الشاشة.** كان الاسمُ بين خطّين يمتدّان
                   إلى الطرفين — **وعلى ألفٍ وتسعمئة يصير خطّاً بطول الشاشة
                   وكلمةٌ في وسطه**، فيُقرأ فاصلاً لا عنواناً. */}
-              <div className="sticky top-0 z-10 mb-3 bg-shell/85 py-2 backdrop-blur">
+              <div className="sticky top-0 z-10 mb-3 bg-page py-2 backdrop-blur">
                 <h2 className="inline-flex items-center gap-2 rounded-badge border border-line bg-surface px-3 py-1 text-xs font-bold text-ink-muted">
                   <span className="h-1.5 w-1.5 rounded-badge bg-primary" />
                   <span className="shrink-0">{g.day}</span>
@@ -293,8 +293,8 @@ export function NotificationsPage({
                     <div
                       className={`flex h-full items-start gap-3 rounded-card border p-3.5 transition-colors ${
                         n.read
-                          ? "border-line bg-surface hover:border-primary/30"
-                          : "border-primary/50 bg-primary-light/40"
+                          ? "border-line bg-surface hover:border-primary-edge"
+                          : "border-primary-edge bg-primary-tint"
                       }`}
                     >
                       <span

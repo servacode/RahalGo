@@ -70,7 +70,7 @@ export default function OverviewPage() {
       <section className="rounded-card bg-primary p-6 text-center text-on-solid">
         {!me.whatsapp_verified ? (
           <>
-            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-on-solid/15">
+            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-on-solid-tint">
               <IconLock size={22} />
             </span>
             <p className="text-lg font-bold">{m.rep.lockedTitle}</p>
@@ -113,7 +113,7 @@ export default function OverviewPage() {
               </a>
               <Link
                 href="/portal/link"
-                className="flex items-center gap-1.5 rounded-control border border-on-solid/40 px-4 py-2 text-sm font-medium text-on-solid hover:bg-on-solid/10"
+                className="flex items-center gap-1.5 rounded-control border border-on-solid-edge px-4 py-2 text-sm font-medium text-on-solid hover:bg-on-solid-tint"
               >
                 <IconLink size={15} />
                 {m.rep.nav.link}

@@ -52,10 +52,13 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="relative flex flex-1 items-center justify-center overflow-hidden p-4">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-primary-light/60 via-page to-page" />
+      {/* **ولا تدرّجَ محلّيّ**: كان هنا تدرّجٌ يرسمه هذا المكوّنُ لنفسه من يومَ
+          كانت خلفيّةُ المشروع عارية. **وصار للموقع خلفيّةٌ واحدةٌ في
+          `theme.css`** (طلبُ المالك: «خلفيّةٌ واحدةٌ… في كلّ مكان») —
+          **وطبقةٌ فوقها تحجبها وتُقرأ شاشةً غريبةً عن أخواتها.** */}
       <div className="w-full max-w-md surface p-7 elev-1">
         <div className="mb-5 flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card bg-warning/15 text-warning">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card bg-warning-tint text-warning">
             <IconWarning size={22} />
           </span>
           <div>

@@ -271,7 +271,7 @@ export default function UserProfilePage() {
                   {fmtDate(p.created_at)}
                 </span>
                 {p.invite_code && (
-                  <span dir="ltr" className="rounded-badge bg-accent/15 px-1.5 font-mono text-accent-dark">
+                  <span dir="ltr" className="rounded-badge bg-accent-tint px-1.5 font-mono text-accent-dark">
                     {p.invite_code}
                   </span>
                 )}
@@ -437,7 +437,7 @@ export default function UserProfilePage() {
             key={s.label}
             onClick={s.onClick}
             className={`surface p-3 ${
-              s.onClick ? "cursor-pointer transition-shadow hover:border-primary/40 hover:elev-1" : ""
+              s.onClick ? "cursor-pointer transition-shadow hover:border-primary-edge hover:elev-1" : ""
             }`}
           >
             <div className="mb-1">{s.icon}</div>

@@ -167,7 +167,7 @@ function FieldLabel({ icon, text }: { icon?: ReactNode; text: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
       {icon && (
-        <span className="text-ink-muted/70 [&>svg]:h-4 [&>svg]:w-4">
+        <span className="text-ink-dim [&>svg]:h-4 [&>svg]:w-4">
           {icon}
         </span>
       )}
@@ -239,7 +239,7 @@ export function DataView<T>({
                   <div
                     key={c.id}
                     className={`flex items-start justify-between gap-3 py-2 ${
-                      i < shown.length - 1 ? "border-b border-line/60" : ""
+                      i < shown.length - 1 ? "border-b border-line-soft" : ""
                     }`}
                   >
                     <dt className="shrink-0 text-ink-muted">
@@ -254,7 +254,7 @@ export function DataView<T>({
             {blocks
               .filter((c) => !c.hide?.(item))
               .map((c) => (
-                <div key={c.id} className="mt-3 border-t border-line/60 pt-3">
+                <div key={c.id} className="mt-3 border-t border-line-soft pt-3">
                   <p className="mb-1 text-xs text-ink-muted">
                     <FieldLabel icon={c.icon} text={c.header} />
                   </p>
@@ -326,7 +326,7 @@ export function DataView<T>({
             <tr
               key={getKey(item)}
               onClick={onRowClick ? () => onRowClick(item) : undefined}
-              className={`border-b border-line last:border-0 hover:bg-page/60 ${onRowClick ? "cursor-pointer" : ""}`}
+              className={`border-b border-line last:border-0 hover:bg-row-hover ${onRowClick ? "cursor-pointer" : ""}`}
             >
               {shown.map((c) => (
                 // **والصفوفُ متساويةُ الارتفاع، والمحتوى في وسطها.**

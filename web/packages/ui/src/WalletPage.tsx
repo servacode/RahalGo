@@ -157,7 +157,7 @@ export function WalletPage({
             <span
               aria-hidden
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-control ${
-                tx.amount >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+                tx.amount >= 0 ? "bg-success-tint text-success" : "bg-danger-tint text-danger"
               }`}
             >
               {tx.amount >= 0 ? <IconArrowIn size={14} /> : <IconArrowOut size={14} />}

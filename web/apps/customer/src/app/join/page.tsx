@@ -143,7 +143,7 @@ function JoinForm() {
           أن يُعرف صاحبه — يشاركه المندوب بعد لقاءٍ في السوق، والصفحة التي لا
           تذكر اسمه تنقض ذلك اللقاء. */}
       {repName && (
-        <div className="mb-4 rounded-card border border-accent/40 bg-accent/5 p-4">
+        <div className="mb-4 rounded-card border border-accent-edge bg-accent-tint p-4">
           <p className="flex items-center gap-2 font-medium text-accent-dark">
             <IconUser size={17} />
             {J.invitedBy.replace("{name}", repName)}
@@ -163,7 +163,7 @@ function JoinForm() {
           </label>
           <div
             dir="ltr"
-            className="flex items-center justify-end rounded-control border border-dashed border-accent bg-accent/5 px-3 py-2 font-mono text-sm font-bold text-accent-dark"
+            className="flex items-center justify-end rounded-control border border-dashed border-accent bg-accent-tint px-3 py-2 font-mono text-sm font-bold text-accent-dark"
           >
             {inviteCode || "—"}
           </div>

@@ -27,12 +27,12 @@ interface RoleStyle {
 const FALLBACK: RoleStyle = { cls: "border border-line bg-page text-ink-muted", Icon: IconUser };
 
 export const ROLE_STYLES: Record<string, RoleStyle> = {
-  admin: { cls: "bg-danger/10 text-danger", Icon: IconRoles },
-  ops: { cls: "bg-info/10 text-info", Icon: IconStatus },
-  finance: { cls: "bg-success/10 text-success", Icon: IconWallet },
-  merchant: { cls: "bg-accent/15 text-accent-dark", Icon: IconStore },
-  driver: { cls: "bg-primary/10 text-primary-dark", Icon: IconDriver },
-  sales: { cls: "bg-violet/10 text-violet", Icon: IconUsers },
+  admin: { cls: "bg-danger-tint text-danger", Icon: IconRoles },
+  ops: { cls: "bg-info-tint text-info", Icon: IconStatus },
+  finance: { cls: "bg-success-tint text-success", Icon: IconWallet },
+  merchant: { cls: "bg-accent-tint text-accent-dark", Icon: IconStore },
+  driver: { cls: "bg-primary-tint text-primary-dark", Icon: IconDriver },
+  sales: { cls: "bg-violet-tint text-violet", Icon: IconUsers },
   customer: { cls: "border border-line bg-page text-ink-muted", Icon: IconUser },
 };
 

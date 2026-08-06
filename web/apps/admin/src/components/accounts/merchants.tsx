@@ -555,7 +555,7 @@ function HoursModal({
 
   return (
     <Modal open onClose={onClose} title={`${m.admin.hours.title}: ${merchant.name}`}>
-      <label className="mb-4 flex cursor-pointer items-center justify-between rounded-control border border-danger/40 bg-danger/5 px-3 py-2.5">
+      <label className="mb-4 flex cursor-pointer items-center justify-between rounded-control border border-danger-edge bg-danger-tint px-3 py-2.5">
         <span>
           <span className="block text-sm font-medium text-danger">
             {m.admin.hours.emergencyClose}

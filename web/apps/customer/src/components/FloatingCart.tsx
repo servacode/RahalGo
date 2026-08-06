@@ -93,7 +93,7 @@ export function FloatingCart() {
       >
         {/* الحلقة خلف العربة — أثرُ لمسةٍ يختفي، لا زخرفة دائمة */}
         {pop && (
-          <span className="cart-ring pointer-events-none absolute inset-0 -z-10 rounded-badge bg-accent/35" />
+          <span className="cart-ring pointer-events-none absolute inset-0 -z-10 rounded-badge bg-accent-fill" />
         )}
 
         <IconCart size={56} strokeWidth={1.7} />

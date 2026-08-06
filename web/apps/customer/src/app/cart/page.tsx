@@ -200,7 +200,7 @@ export default function CartPage() {
           </p>
           <p className="mb-5 text-sm text-ink-muted">{m.site.orders.placedHint}</p>
 
-          <div className="rounded-card border border-dashed border-accent bg-accent/5 p-4">
+          <div className="rounded-card border border-dashed border-accent bg-accent-tint p-4">
             <p className="flex items-center gap-2 font-medium">
               <IconLocation size={17} className="text-accent-dark" />
               {A.saveThisTitle}
@@ -563,7 +563,7 @@ export default function CartPage() {
             {/* التوثيق يُقال **قبل** الملء لا عند الرفض: من ملأ سلّته ثم رُدّ
                 يشعر أنه خُدع، ومن عرف أوّلاً يوثّق ويمضي. */}
             {waVerified === false && (
-              <div className="rounded-card border border-warning/40 bg-warning/5 p-4">
+              <div className="rounded-card border border-warning-edge bg-warning-tint p-4">
                 <p className="flex items-center gap-2 font-medium text-warning">
                   <IconWhatsApp size={17} />
                   {m.site.cart.waTitle}

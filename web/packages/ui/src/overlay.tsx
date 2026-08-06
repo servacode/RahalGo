@@ -85,7 +85,7 @@ export function Sheet({
         {/* **المقبضُ على الجوّال وحدَه** — على الواسع نافذةٌ لا تُسحب. */}
         <span
           aria-hidden
-          className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-badge bg-ink/25 sm:hidden"
+          className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-badge bg-line-soft sm:hidden"
         />
 
         <div className="flex shrink-0 items-start gap-2 px-5 pt-3 pb-2">
@@ -226,7 +226,7 @@ export function Switch({
         /* **ومقاسُ اللمس ٤٤ بكسلاً** — والمفتاحُ نفسُه أصغرُ، فالمساحةُ حوله
            تُكمّله. */
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-badge border transition-colors disabled:opacity-50 ${
-          checked ? "border-success/40 bg-success/30" : "border-line bg-page"
+          checked ? "border-success-edge bg-success-fill" : "border-line bg-page"
         }`}
       >
         <span

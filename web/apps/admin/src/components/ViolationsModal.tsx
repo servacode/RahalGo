@@ -121,7 +121,7 @@ export default function ViolationsModal({
       <p
         className={`mb-3 rounded-control px-3 py-2 text-sm ${
           limit > 0 && count >= limit
-            ? "bg-danger/10 font-bold text-danger"
+            ? "bg-danger-tint font-bold text-danger"
             : "bg-page text-ink-muted"
         }`}
       >

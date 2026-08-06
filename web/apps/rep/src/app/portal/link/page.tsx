@@ -44,7 +44,7 @@ export default function LinkPage() {
   if (!me.whatsapp_verified) {
     return (
       <div className="mx-auto max-w-md surface p-8 text-center">
-        <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-badge bg-warning/10 text-warning">
+        <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-badge bg-warning-tint text-warning">
           <IconLock size={26} />
         </span>
         <h1 className="mb-2 text-lg font-bold">{m.rep.lockedTitle}</h1>

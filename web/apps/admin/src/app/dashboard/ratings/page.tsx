@@ -131,7 +131,7 @@ export default function RatingsPage() {
               <li key={d.id}>
                 <button
                   onClick={() => router.push(`/dashboard/users/${d.id}`)}
-                  className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-start hover:bg-page/60"
+                  className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-start hover:bg-row-hover"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium">{d.name}</span>

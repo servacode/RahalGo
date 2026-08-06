@@ -173,7 +173,7 @@ export default function LeadsPage() {
           <span className="flex items-center gap-1.5">
             {l.rep_name}
             {l.rep_code && (
-              <span dir="ltr" className="rounded-badge bg-accent/10 px-1.5 font-mono text-xs text-accent-dark">
+              <span dir="ltr" className="rounded-badge bg-accent-tint px-1.5 font-mono text-xs text-accent-dark">
                 {l.rep_code}
               </span>
             )}

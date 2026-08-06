@@ -213,7 +213,7 @@ export function PickMap({
 
 
       {denied && (
-        <p className="absolute bottom-2 start-2 z-[1000] rounded-control bg-danger/90 px-2.5 py-1.5 text-xs text-on-solid">
+        <p className="absolute bottom-2 start-2 z-[1000] rounded-control bg-danger-fill px-2.5 py-1.5 text-xs text-on-solid">
           {m.map.denied}
         </p>
       )}

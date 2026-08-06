@@ -206,10 +206,10 @@ export function BannerSlider({
             className="relative h-full w-full select-none object-contain"
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-l from-primary/20 to-accent/20" />
+          <div className="h-full w-full bg-gradient-to-l from-primary-tint to-accent-tint" />
         )}
         {/* **والعنوانُ على حجابٍ متدرّج** — لا يُقرأ على صورةٍ لا يُعرف لونُها. */}
-        <span className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-ink/70 to-transparent p-3 text-sm font-bold text-on-solid sm:p-4 sm:text-base">
+        <span className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-scrim to-transparent p-3 text-sm font-bold text-on-solid sm:p-4 sm:text-base">
           {it.title}
         </span>
       </>
@@ -247,7 +247,7 @@ export function BannerSlider({
       type="button"
       onClick={() => go(dir)}
       aria-label={dir === 1 ? m.common.next : m.common.back}
-      className={`taparea absolute inset-block-0 my-auto hidden h-10 w-10 items-center justify-center rounded-badge scrim text-on-solid backdrop-blur-sm transition-colors hover:bg-ink/60 sm:flex ${
+      className={`taparea absolute inset-block-0 my-auto hidden h-10 w-10 items-center justify-center rounded-badge scrim text-on-solid backdrop-blur-sm transition-colors hover:bg-scrim sm:flex ${
         dir === 1 ? "start-2" : "end-2"
       }`}
     >

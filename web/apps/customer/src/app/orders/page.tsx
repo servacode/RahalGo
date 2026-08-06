@@ -331,7 +331,7 @@ export default function MyOrdersPage() {
       {again && (
         <Modal open title={m.site.orders.againTitle} onClose={() => setAgain(null)}>
           <p className="mb-3 text-sm text-ink-muted">{m.site.orders.againBody}</p>
-          <ul className="mb-3 divide-y divide-line rounded-control bg-page/60">
+          <ul className="mb-3 divide-y divide-line rounded-control bg-page">
             {(again.items ?? []).map((it, i) => (
               <li key={i} className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="min-w-0 flex-1">
@@ -540,7 +540,7 @@ function OrderCard({
 
       {/* ── الأصناف: كلٌّ في سطره وسعرُه أمامه ────────────────────────── */}
       {items.length > 0 ? (
-        <ul className="divide-y divide-line rounded-control bg-page/60">
+        <ul className="divide-y divide-line rounded-control bg-page">
           {items.map((it, i) => (
             <li key={i} className="flex items-start gap-3 px-3 py-2 text-sm">
               <span className="min-w-0 flex-1">

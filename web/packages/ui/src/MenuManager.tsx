@@ -562,7 +562,7 @@ function ItemModal({
 
           <div className="space-y-3">
             {groups.map((g, gi) => (
-              <div key={gi} className="rounded-control border border-line bg-page/50 p-3">
+              <div key={gi} className="rounded-control border border-line bg-page p-3">
                 <div className="mb-2 flex items-end gap-2">
                   <div className="flex-1">
                     <Input

@@ -472,7 +472,7 @@ export function AccountSettings({
           </p>
         {waVerified && !waEditing ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 rounded-control border border-success/30 bg-success/5 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3 rounded-control border border-success-edge bg-success-tint px-3 py-2.5">
               <span dir="ltr" className="min-w-0 truncate font-medium text-ink">
                 {wa}
               </span>
@@ -556,7 +556,7 @@ export function AccountSettings({
       </div>
       </Section>
 
-      <section className="surface-lit surface !border-danger/45 p-4 sm:col-span-2 lg:col-span-3">
+      <section className="surface-lit surface !border-danger-edge p-4 sm:col-span-2 lg:col-span-3">
         <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-danger">
           <span className="[&>svg]:h-4 [&>svg]:w-4">
             <IconWarning />

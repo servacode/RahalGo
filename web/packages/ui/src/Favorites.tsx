@@ -156,8 +156,8 @@ export function FavoriteButton({
          بطاقةٍ صغيرةٍ يزاحم اسمَ الصنف. (انظر `taparea` في الثيم.) */
       className={`taparea inline-flex shrink-0 items-center justify-center rounded-control border transition-colors ${box} ${
         on
-          ? "border-danger/30 bg-danger/10 text-danger"
-          : "border-line text-ink-muted hover:border-danger/40 hover:text-danger"
+          ? "border-danger-edge bg-danger-tint text-danger"
+          : "border-line text-ink-muted hover:border-danger-edge hover:text-danger"
       } ${className}`}
     >
       {/* **والممتلئُ يُقرأ بلمحة** — وقلبان بالحدّ نفسِه لا يفترقان في العين. */}

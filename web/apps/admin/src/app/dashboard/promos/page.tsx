@@ -451,7 +451,7 @@ function BannersTab({ isAdmin }: { isAdmin: boolean }) {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <IconPromos size={40} className="text-primary/40" />
+                <IconPromos size={40} className="text-primary-edge" />
               )}
             </div>
             <div className="p-4">

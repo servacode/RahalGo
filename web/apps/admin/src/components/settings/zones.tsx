@@ -155,7 +155,7 @@ export default function ZonesPanel() {
       </div>
 
       {draft && (
-        <p className="mb-3 rounded-control bg-accent/10 px-3 py-2 text-sm text-accent-dark">
+        <p className="mb-3 rounded-control bg-accent-tint px-3 py-2 text-sm text-accent-dark">
           {m.admin.zones.centerHint}
         </p>
       )}
@@ -256,8 +256,8 @@ export default function ZonesPanel() {
               onClick={() => (isAdmin ? startEdit(z) : setSelectedID(z.id))}
               className={`w-full rounded-card border p-3 text-start transition-colors ${
                 z.id === selectedID
-                  ? "border-accent bg-accent/5"
-                  : "border-line bg-surface hover:border-primary/40"
+                  ? "border-accent bg-accent-tint"
+                  : "border-line bg-surface hover:border-primary-edge"
               }`}
             >
               <div className="flex items-center justify-between">

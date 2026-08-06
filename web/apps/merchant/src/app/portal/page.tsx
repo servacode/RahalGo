@@ -164,7 +164,7 @@ export default function OrdersBoard() {
       {/* الطلبات الجديدة — شريط بارز نابض مع الرنين */}
       <section
         className={`mb-6 rounded-card border-2 p-4 ${
-          pending.length > 0 ? "animate-pulse border-danger bg-danger/5" : "border-line bg-surface"
+          pending.length > 0 ? "animate-pulse border-danger bg-danger-tint" : "border-line bg-surface"
         }`}
       >
         <h2 className="mb-3 flex items-center gap-2 font-bold">
@@ -335,7 +335,7 @@ function OrderCard({
   return (
     <div
       className={`rounded-control border bg-surface p-3 ${
-        highlight ? "border-danger/40 elev-1" : "border-line"
+        highlight ? "border-danger-edge elev-1" : "border-line"
       }`}
     >
       <button
@@ -562,7 +562,7 @@ function ReadyControl({ order, onDone }: { order: Order; onDone: () => void }) {
 
   if (order.ready_at) {
     return (
-      <span className="flex flex-1 items-center justify-center gap-1.5 rounded-control bg-success/10 px-3 py-1.5 text-sm font-medium text-success">
+      <span className="flex flex-1 items-center justify-center gap-1.5 rounded-control bg-success-tint px-3 py-1.5 text-sm font-medium text-success">
         <IconSuccess size={15} />
         {MO.readyDone}
       </span>

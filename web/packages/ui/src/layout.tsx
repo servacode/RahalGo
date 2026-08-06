@@ -89,9 +89,9 @@ const pads = { sm: "p-3", md: "p-4", lg: "p-5" } as const;
 /** نبراتُ السطح — **الحدُّ يقول المعنى والسطحُ يبقى واحداً.** */
 const tones = {
   default: "border-line",
-  danger: "border-danger/45",
-  success: "border-success/45",
-  accent: "border-accent/45",
+  danger: "border-danger-edge",
+  success: "border-success-edge",
+  accent: "border-accent-edge",
 } as const;
 
 export function Card({
@@ -253,7 +253,7 @@ export function ListRow({
     <li
       onClick={onClick}
       className={`flex items-center gap-3 rounded-card border border-line bg-surface p-3 ${
-        onClick ? "cursor-pointer transition-shadow hover:border-primary/40 hover:elev-1" : ""
+        onClick ? "cursor-pointer transition-shadow hover:border-primary-edge hover:elev-1" : ""
       } ${className}`}
     >
       {leading}
@@ -302,8 +302,8 @@ export function StatCard({
     <Tag
       onClick={onClick}
       className={`rounded-card border bg-surface p-4 text-start transition-colors ${
-        selected ? "border-primary ring-1 ring-primary/30" : "border-line"
-      } ${onClick ? "hover:border-primary/40" : ""}`}
+        selected ? "border-primary ring-1 ring-primary-edge" : "border-line"
+      } ${onClick ? "hover:border-primary-edge" : ""}`}
     >
       {Icon && <Icon size={18} className="mb-1 text-ink-muted" />}
       <p className={`text-xl font-bold ${toneCls}`}>
@@ -419,7 +419,7 @@ export function TabCards({
             className={`rounded-card border p-3 text-start transition-colors ${
               on
                 ? "border-primary bg-primary-light"
-                : "border-line bg-surface hover:border-primary/40"
+                : "border-line bg-surface hover:border-primary-edge"
             }`}
           >
             <span className="flex items-center justify-between gap-2">
@@ -431,7 +431,7 @@ export function TabCards({
               {!!t.count && (
                 <span
                   className={`shrink-0 rounded-badge px-1.5 py-0.5 text-2xs font-bold ${
-                    on ? "bg-primary/15 text-primary-dark" : "bg-page text-ink-muted"
+                    on ? "bg-primary-tint text-primary-dark" : "bg-page text-ink-muted"
                   }`}
                 >
                   {fmtNum(t.count)}

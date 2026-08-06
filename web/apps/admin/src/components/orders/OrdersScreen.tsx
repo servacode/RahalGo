@@ -919,8 +919,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           <span
             className={`flex items-center gap-1.5 rounded-badge px-2.5 py-1 text-xs font-medium ${
               liveConnected
-                ? "bg-success/10 text-success"
-                : "bg-danger/10 text-danger"
+                ? "bg-success-tint text-success"
+                : "bg-danger-tint text-danger"
             }`}
           >
             <span
@@ -935,7 +935,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
       {/* تنبيهات التصعيد */}
       {alerts.length > 0 && (
-        <div className="mb-4 rounded-card border-2 border-danger/50 bg-danger/5 p-4">
+        <div className="mb-4 rounded-card border-2 border-danger-edge bg-danger-tint p-4">
           <p className="mb-2 flex items-center gap-2 font-bold text-danger">
             <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-danger" />
             {m.admin.ordersPage.alertsTitle} ({alerts.length})
@@ -1686,7 +1686,7 @@ function OrderActions({
         </Button>
       )}
       {notice && (
-        <span className="rounded-control bg-success/10 px-2.5 py-1 text-xs text-success">
+        <span className="rounded-control bg-success-tint px-2.5 py-1 text-xs text-success">
           {notice}
         </span>
       )}

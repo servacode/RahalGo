@@ -230,7 +230,7 @@ export function SectionRail({
                 className={`relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-full bg-page transition-all duration-[--duration-base] ease-[--ease-out] ${
                   on
                     ? "scale-[1.06] ring-2 ring-accent ring-offset-2 ring-offset-shell elev-3"
-                    : "ring-1 ring-line group-hover:scale-[1.03] group-hover:ring-primary/60"
+                    : "ring-1 ring-line group-hover:scale-[1.03] group-hover:ring-primary-edge"
                 } ${it.count === 0 ? "opacity-50" : ""}`}
               >
                 {it.imageUrl ? (

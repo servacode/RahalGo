@@ -202,8 +202,8 @@ export default function IncentivesPage() {
                 onClick={() => setKind(k)}
                 className={`rounded-control border px-3 py-1.5 text-sm transition-colors ${
                   kind === k
-                    ? "border-accent bg-accent/10 font-medium"
-                    : "border-line text-ink-muted hover:border-accent/60"
+                    ? "border-accent bg-accent-tint font-medium"
+                    : "border-line text-ink-muted hover:border-accent-edge"
                 }`}
               >
                 {k === "reward" ? m.shared.incentives.reward : m.shared.incentives.penalty}

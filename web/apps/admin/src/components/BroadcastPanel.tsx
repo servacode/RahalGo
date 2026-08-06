@@ -132,7 +132,7 @@ export default function BroadcastPanel() {
         {count != null && (
           <p
             className={`rounded-control px-3 py-2 text-sm ${
-              count > 100 ? "bg-warning/10 font-bold text-warning" : "bg-page text-ink-muted"
+              count > 100 ? "bg-warning-tint font-bold text-warning" : "bg-page text-ink-muted"
             }`}
           >
             {B.willReach.replace("{n}", fmtNum(count))}

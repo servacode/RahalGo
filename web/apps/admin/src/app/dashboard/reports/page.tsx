@@ -82,7 +82,7 @@ function DailyBars({
           {[0.25, 0.5, 0.75].map((f) => (
             <div
               key={f}
-              className="absolute inset-x-0 border-t border-line/60"
+              className="absolute inset-x-0 border-t border-line-soft"
               style={{ bottom: `${f * 100}%` }}
             />
           ))}

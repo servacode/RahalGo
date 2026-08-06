@@ -233,7 +233,7 @@ export default function ItemCard({
           on={favorite}
           onToggle={onFavorite ?? (() => undefined)}
           onRequireLogin={onRequireLogin}
-          className="bg-surface/90 backdrop-blur-sm"
+          className="surface"
         />
       </span>
       )}

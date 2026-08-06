@@ -181,7 +181,7 @@ export function StatementSheet({
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-start">
                 <thead>
-                  <tr className="border-b-2 border-ink/20 text-2xs uppercase tracking-wide text-ink-muted">
+                  <tr className="border-b-2 border-line-soft text-2xs uppercase tracking-wide text-ink-muted">
                     <th className="py-2 text-start font-medium">{S.colDate}</th>
                     <th className="py-2 text-start font-bold">{S.colKind}</th>
                     <th className="py-2 text-start font-bold">{S.colNote}</th>
@@ -204,7 +204,7 @@ export function StatementSheet({
                   </tr>
 
                   {ordered.map((t, i) => (
-                    <tr key={t.id} className="border-b border-line/60">
+                    <tr key={t.id} className="border-b border-line-soft">
                       <td className="py-2 align-top" dir="ltr">
                         {fmtDate(t.created_at)}
                       </td>

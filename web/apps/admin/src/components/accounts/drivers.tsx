@@ -385,7 +385,7 @@ function CashBoxModal({
             style={{ width: `${ratio * 100}%` }}
           />
         </div>
-        <p className="mt-1 text-end text-xs text-primary-dark/70">
+        <p className="mt-1 text-end text-xs text-ink-muted">
           {m.admin.drivers.cashLimit}: {fmtNum(limit)}
         </p>
       </div>

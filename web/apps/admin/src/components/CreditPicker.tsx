@@ -64,7 +64,7 @@ export default function CreditPicker({
             <li key={u.id}>
               <button
                 onClick={() => onPick(u)}
-                className="flex w-full items-center gap-3 py-2.5 text-start hover:bg-page/60"
+                className="flex w-full items-center gap-3 py-2.5 text-start hover:bg-row-hover"
               >
                 <IconUser size={16} className="shrink-0 text-ink-muted" />
                 <span className="min-w-0 flex-1">
