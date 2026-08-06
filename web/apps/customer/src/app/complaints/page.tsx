@@ -63,7 +63,7 @@ export default function ComplaintsPage() {
 
   return (
     <PageContainer>
-      <PageHeader icon={IconSupport} title={C.mine} />
+      <PageHeader icon={IconSupport} title={m.terms.complaints} />
 
       {rows.length === 0 ? (
         <EmptyState icon={IconSupport} title={C.noneTitle} />

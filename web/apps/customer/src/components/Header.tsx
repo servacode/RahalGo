@@ -76,7 +76,11 @@ const MENU = [
   { href: "/offers", label: m.customer.offers.title, icon: IconPromos },
   { href: "/favorites", label: m.customer.favorites.title, icon: IconHeart },
   { href: "/invite", label: m.customer.invite.title, icon: IconLink },
-  { href: "/complaints", label: m.site.complaint.mine, icon: IconSupport },
+  /* **والاسمُ واحدٌ في الخمس** — كان «شكاواي» هنا و«الشكاوى والبلاغات» في
+     اللوحات الأربع. **والصفحةُ تحمل الاثنين**: ما رفعتَه وما رُفع عليك.
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «لازم بدل شكاوي تكون شكاوى وبلاغات، مثل باقي
+     اللوحات».) */
+  { href: "/complaints", label: m.terms.complaints, icon: IconSupport },
 ] as const;
 
 export default function Header({

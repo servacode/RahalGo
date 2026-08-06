@@ -101,6 +101,47 @@ for (const page of PAGES) {
         over.sort((a, b2) => b2.past - a.past);
         return { doc: document.documentElement.scrollWidth, n: over.length, over: over.slice(0, 3) };
       }, w);
+      /* ══════════════════════════════════════════════════════════════
+         **وزخرفةٌ تقع فوق نصِّ حقلِها**
+         ══════════════════════════════════════════════════════════════
+
+         (شهده المالك ٢٠٢٦-٠٨-٠٧: «الأيقونةُ فايتة برقم الهاتف».)
+
+         **الأيقونةُ تُوضع فوق الحقل بموضعٍ مطلق، والحشوةُ تُخلي لها مكاناً.**
+         فإن حُسبت الحشوةُ لجهةٍ والأيقونةُ لأخرى **وقع النصُّ فوقها** —
+         ولا يظهر ذلك في فيضٍ ولا في نوعٍ ولا في صنف.
+
+         **فيُقاس التقاطعُ نفسُه**: صندوقُ محتوى الحقل بعد الحشوة، وصندوقُ
+         الزخرفة — **وأيُّ تداخلٍ عطب.** */
+      const clash = await p.evaluate(() => {
+        const out = [];
+        for (const inp of document.querySelectorAll("input, textarea")) {
+          const wrap = inp.parentElement;
+          if (!wrap) continue;
+          const rc = inp.getBoundingClientRect();
+          if (rc.width === 0) continue;
+          const cs = getComputedStyle(inp);
+          const box = {
+            l: rc.left + parseFloat(cs.paddingLeft),
+            r: rc.right - parseFloat(cs.paddingRight),
+          };
+          for (const dec of wrap.children) {
+            if (dec === inp) continue;
+            const dcs = getComputedStyle(dec);
+            if (dcs.position !== "absolute") continue;
+            const d = dec.getBoundingClientRect();
+            if (d.width === 0) continue;
+            const over = Math.min(box.r, d.right) - Math.max(box.l, d.left);
+            if (over > 1) out.push({ id: inp.id || inp.name || "(بلا اسم)", over: Math.round(over) });
+          }
+        }
+        return out;
+      });
+      for (const c of clash) {
+        bad++;
+        console.log(`✗ ${page.padEnd(15)} ${name.padEnd(8)} ${w}px → زخرفةٌ فوق نصِّ الحقل «${c.id}» بمقدار ${c.over}px`);
+      }
+
       if (r.doc <= w + 1) continue;
       bad++;
       console.log(`✗ ${page.padEnd(15)} ${name.padEnd(8)} ${w}px → المستند ${r.doc} (فيضٌ ${r.doc - w}) · ${r.n} عنصراً`);
