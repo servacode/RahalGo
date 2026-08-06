@@ -109,7 +109,7 @@ export function LoginCard({
 
      **ومن مرّر `otp` وحدَها ثمّ أُطفئ الرمزُ يسقط إلى كلمة المرور** — وإلّا
      بقيت بوّابتُه بلا بابٍ يعمل. */
-  const { otpLogin, authBg } = usePlatform();
+  const { otpLogin, authBg, authBgDim } = usePlatform();
   const allow: "both" | "password" | "otp" = otpLogin ? methods : "password";
   const [mode, setMode] = useState<Mode>(initialMode);
 
@@ -371,37 +371,82 @@ export function LoginCard({
     }
 
     if (mode === "reset") {
+      // **ثلاثُ مراحلَ كالتسجيل** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا يجوز أن
+      // يفتح الفورمُ بمجرّد إرسال طلب استعادة»).
+      //
+      // **والاستعادةُ أخطرُ من التسجيل**: من فتح نموذجَ كلمةٍ جديدةٍ بمجرّد
+      // إرسال الرمز **يظنّ أنّه على وشك تغييرها**، فيكتبها مرّتين ثمّ يُرفض.
+      if (!sent) {
+        return (
+          <form
+            onSubmit={run(async () => {
+              await authApi.requestReset(phone);
+              setSent(true);
+              setBusy(false);
+            })}
+            className="space-y-4"
+          >
+            {phoneField}
+            {errorBox}
+            {submit(A.resetSend)}
+          </form>
+        );
+      }
+
+      if (!codeOK) {
+        const checkReset = (c: string = code) =>
+          run(async () => {
+            await authApi.verifyReset(phone, c);
+            setCode(c);
+            setCodeOK(true);
+            setBusy(false);
+          })();
+        return (
+          <form onSubmit={(e) => { e.preventDefault(); void checkReset(); }} className="space-y-4">
+            {sentNote}
+            {codeField((v) => void checkReset(v))}
+            {errorBox}
+            {submit(A.verifyCode)}
+            <div className="text-center">{linkBtn(A.changePhone, () => setSent(false))}</div>
+          </form>
+        );
+      }
+
       return (
-        <>
-          {!sent ? (
-            <form
-              onSubmit={run(async () => {
-                await authApi.requestReset(phone);
-                setSent(true);
-                setBusy(false);
-              })}
-              className="space-y-4"
-            >
-              {phoneField}
-              {errorBox}
-              {submit(A.resetSend)}
-            </form>
-          ) : (
-            <form
-              onSubmit={run(async () =>
-                enter((await authApi.confirmReset(phone, code, password)) as never),
-              )}
-              className="space-y-4"
-            >
-              {sentNote}
-              {codeField()}
-              {passwordField("new-password", A.newPassword, "new-password", true)}
-              <p className="text-xs text-ink-muted">{A.passwordHint}</p>
-              {errorBox}
-              {submit(A.resetConfirm)}
-            </form>
-          )}
-        </>
+        <form
+          onSubmit={run(async () => {
+            if (password !== password2) {
+              setError(A.passwordMismatch);
+              setBusy(false);
+              return;
+            }
+            await authApi.confirmReset(phone, code, password);
+            /* **ولا يُدخَل تلقائيّاً** — كالتسجيل: **من غيّر كلمتَه ثمّ دخل
+               بها يتأكّد أنّها تعمل**، ولا يكتشف بعد أسبوعٍ أنّه لا يذكرها.
+               (والخادمُ يُصدر جلسةً تُهمَل هنا.) */
+            setCreated(true);
+            setBusy(false);
+          })}
+          className="space-y-4"
+        >
+          {passwordField("new-password", A.newPassword, "new-password", true)}
+          {/* **وتأكيدُ الكلمة** — تُكتب مخفيّةً، **وخطأُ حرفٍ يُقفل الحسابَ
+              على صاحبه** ولا يُكتشف إلّا عند أوّل دخول. */}
+          <Input
+            id="new-password2"
+            label={A.confirmPassword}
+            icon={<IconLock />}
+            type="password"
+            autoComplete="new-password"
+            required
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
+            placeholder="••••••••"
+          />
+          <p className="text-xs text-ink-muted">{A.passwordHint}</p>
+          {errorBox}
+          {submit(A.resetConfirm)}
+        </form>
       );
     }
 
@@ -590,7 +635,17 @@ export function LoginCard({
             className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center"
             style={{ backgroundImage: `url(${authBg})` }}
           />
-          <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-shell/70" />
+          {/* **وشدّةُ الطبقة من الإعدادات** (قرارُ المالك ٢٠٢٦-٠٨-٠٦):
+              **صورةٌ داكنةٌ تكفيها عشرون وأخرى بيضاءُ تحتاج ثمانين** —
+              والمقدارُ يُحكَم عليه بالعين لا بالحساب. **وصفرٌ لا يرسم
+              طبقةً أصلاً** فلا تبقى عقدةٌ شفّافةٌ في الشجرة. */}
+          {authBgDim > 0 && (
+            <div
+              aria-hidden
+              className="pointer-events-none fixed inset-0 -z-10"
+              style={{ backgroundColor: "var(--color-shell)", opacity: authBgDim / 100 }}
+            />
+          )}
         </>
       )}
       {/* **وعرضٌ يكفي حقلاً واحداً** — كان خمسةً ونصفاً لأنّ نصفَه كان دعاية.
@@ -690,14 +745,16 @@ export function LoginCard({
               <Modal
                 open
                 onClose={() => go("password")}
-                title={A.signupDoneTitle}
+                title={mode === "reset" ? A.resetDoneTitle : A.signupDoneTitle}
               >
                 <div className="text-center">
                   <IconSuccess size={44} className="mx-auto mb-3 text-success" />
-                  <p className="text-sm leading-relaxed text-ink-muted">{A.signupDoneBody}</p>
+                  <p className="text-sm leading-relaxed text-ink-muted">
+                    {mode === "reset" ? A.resetDoneBody : A.signupDoneBody}
+                  </p>
                 </div>
                 <Button onClick={() => go("password")} className="mt-4 w-full py-3">
-                  {A.signupDoneGo}
+                  {mode === "reset" ? A.resetDoneGo : A.signupDoneGo}
                 </Button>
               </Modal>
             )}

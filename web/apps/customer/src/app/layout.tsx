@@ -49,7 +49,7 @@ async function identity(): Promise<Platform> {
     const res = await fetch(`${API}/api/v1/public/platform`, { cache: "no-store" });
     if (!res.ok) throw new Error(String(res.status));
     const j = (await res.json()) as {
-      data?: { name?: string; logo?: string | null; otp_login?: boolean; auth_bg?: string | null };
+      data?: { name?: string; logo?: string | null; otp_login?: boolean; auth_bg?: string | null; auth_bg_dim?: number };
     };
     // **والمسارُ يُحوَّل إلى رابطٍ كاملٍ هنا.**
     //
@@ -63,10 +63,11 @@ async function identity(): Promise<Platform> {
       logo: mediaUrl(j.data?.logo) ?? null,
       otpLogin: j.data?.otp_login !== false,
       authBg: mediaUrl(j.data?.auth_bg) ?? null,
+      authBgDim: typeof j.data?.auth_bg_dim === "number" ? j.data.auth_bg_dim : 70,
     };
   } catch {
     // @empty-ok — **ولا يُخترع اسمٌ عند الفشل**: علامةٌ ناقصةٌ أهونُ من كاذبة.
-    return { name: "", logo: null, otpLogin: true, authBg: null };
+    return { name: "", logo: null, otpLogin: true, authBg: null, authBgDim: 70 };
   }
 }
 

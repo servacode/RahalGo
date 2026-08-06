@@ -67,9 +67,15 @@ export interface Platform {
    * (قرارُ المالك ٢٠٢٦-٠٨-٠٦.)
    */
   authBg: string | null;
+  /**
+   * **شفافيّةُ الطبقة فوق الخلفيّة** (٠..١٠٠) — **وصفرٌ يعني بلا طبقة.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «ضع خياراً للتحكّم بها… شريط من ٠ إلى ١٠٠».)
+   */
+  authBgDim: number;
 }
 
-const EMPTY: Platform = { name: "", logo: null, otpLogin: true, authBg: null };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true, authBg: null, authBgDim: 70 };
 const PlatformContext = createContext<Platform>(EMPTY);
 
 export function PlatformProvider({
@@ -103,6 +109,7 @@ export function PlatformProvider({
             logo: j.data.logo ?? null,
             otpLogin: j.data.otp_login !== false,
             authBg: j.data.auth_bg ?? null,
+            authBgDim: typeof j.data.auth_bg_dim === "number" ? j.data.auth_bg_dim : 70,
           });
       })
       .catch(() => undefined);

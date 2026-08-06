@@ -311,11 +311,30 @@ func (s *Service) RequestSignup(ctx context.Context, rawPhone string) error {
 // **ولا تُنشئ حساباً ولا تُصدر جلسة** — تقول «الرمزُ صحيح» وتسكت. **والإنشاءُ
 // يبقى في `ConfirmSignup` حيث يُستهلك الرمزُ مرّةً واحدة.**
 func (s *Service) VerifySignupCode(ctx context.Context, rawPhone, code string) error {
+	return s.verifyCode(ctx, rawPhone, code, "signup")
+}
+
+// VerifyResetCode مثلُها لاستعادة كلمة المرور.
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا يجوز أن يفتح الفورمُ بمجرّد إرسال طلب
+//
+//	استعادة».)
+//
+// **والاستعادةُ أخطرُ من التسجيل**: من فتح نموذجَ كلمةٍ جديدةٍ بمجرّد إرسال
+// الرمز **يظنّ أنّه على وشك تغييرها**، ثمّ يُرفض بعد أن كتبها مرّتين.
+func (s *Service) VerifyResetCode(ctx context.Context, rawPhone, code string) error {
+	return s.verifyCode(ctx, rawPhone, code, "reset")
+}
+
+// verifyCode فحصٌ لا يستهلك — **واحدٌ للغرضين.**
+//
+// **ونسختان بغرضين تفترقان**: تُشدَّد إحداهما ويُنسى ما بجانبها.
+func (s *Service) verifyCode(ctx context.Context, rawPhone, code, purpose string) error {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return ErrInvalidPhone
 	}
-	valid, err := s.repo.CheckOTP(ctx, phone, s.hashOTP(phone, code), "signup")
+	valid, err := s.repo.CheckOTP(ctx, phone, s.hashOTP(phone, code), purpose)
 	if err != nil {
 		return err
 	}

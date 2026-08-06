@@ -134,6 +134,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/logout", s.handleLogout)
 			r.Post("/sso", s.handleSSO) // استبدال رمز التسليم بجلسة (عام)
 			r.Post("/password/reset/request", s.handleResetRequest)
+			// **والتحقّقُ من رمز الاستعادة قبل نموذج الكلمة الجديدة.**
+			r.Post("/password/reset/verify", s.handleResetVerify)
 			r.Post("/password/reset/confirm", s.handleResetConfirm)
 			r.Post("/signup/request", s.handleSignupRequest) // إنشاء حساب زبون فقط
 			// **والتحقّقُ من الرمز قبل النموذج** — لا يستهلكه ولا يُنشئ شيئاً.

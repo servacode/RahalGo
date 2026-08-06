@@ -30,7 +30,8 @@ export default function ImageUpload({
   /* **والأنواعُ تطابق `validKinds` في المحرّك** — ومن أضاف نوعاً هناك ونسي
      هنا **يرفع صورةً يردّها الخادمُ بخطأٍ لا يفهمه المستعمل.**
      (و`platform_logo` أُضيف بقرار المالك ٢٠٢٦-٠٨-٠٦: هويّةُ المنصة.) */
-  kind: "merchant_logo" | "menu_item" | "banner" | "avatar" | "platform_logo";
+  /** **يطابق `validKinds` في المحرّك** — ونوعٌ ليس فيه يُرفض عند الرفع. */
+  kind: "merchant_logo" | "menu_item" | "banner" | "avatar" | "platform_logo" | "auth_background";
   label: string;
   /** الصورة الحالية للكيان (عند التعديل) */
   initialUrl?: string | null;

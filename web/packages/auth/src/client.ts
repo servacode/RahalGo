@@ -157,6 +157,12 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ phone, code, password }),
     }),
+  /** **يتحقّق من رمز الاستعادة ولا يستهلكه** — قبل نموذج الكلمة الجديدة. */
+  verifyReset: (phone: string, code: string) =>
+    rawRequest<{ verified: boolean }>("/api/v1/auth/password/reset/verify", {
+      method: "POST",
+      body: JSON.stringify({ phone, code }),
+    }),
   /** إنشاء حساب زبون — لا يُنشئ أي دور آخر. */
   requestSignup: (phone: string) =>
     rawRequest<{ sent: boolean }>("/api/v1/auth/signup/request", {

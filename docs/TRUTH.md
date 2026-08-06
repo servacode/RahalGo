@@ -400,6 +400,7 @@
 | `platform.name` | المنصة | text | `` |
 | `platform.logo` | المنصة | media | `` |
 | `auth.background` | المنصة | media | `` |
+| `auth.background_dim` | المنصة | percent | `70` |
 | `auth.otp_login` | المنصة | bool | `true` |
 | `shop.rail_auto` | المنصة | bool | `true` |
 | `shop.rail_seconds` | المنصة | int | `5` |

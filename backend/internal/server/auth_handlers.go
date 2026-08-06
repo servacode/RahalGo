@@ -244,6 +244,25 @@ func (s *Server) handleSignupVerify(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"verified": true})
 }
 
+// handleResetVerify يتحقّق من رمز الاستعادة قبل عرض نموذج الكلمة الجديدة.
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٦.) **ولا يستهلك الرمز** — يُستهلك عند التأكيد.
+func (s *Server) handleResetVerify(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.VerifyResetCode(r.Context(), req.Phone, req.Code); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"verified": true})
+}
+
 func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Phone    string `json:"phone"`

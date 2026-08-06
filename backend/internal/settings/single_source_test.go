@@ -176,8 +176,12 @@ func TestShowWhen_PointsAtRealKeysAndValues(t *testing.T) {
 			t.Errorf("%s مشروطٌ بمفتاحٍ لا وجودَ له: %s", d.Key, d.ShowWhen.Key)
 			continue
 		}
-		if len(d.ShowWhen.Equals) == 0 {
+		// **وشرطٌ بلا قيمةٍ ولا `NotEmpty` لا يتحقّق أبداً.**
+		if len(d.ShowWhen.Equals) == 0 && !d.ShowWhen.NotEmpty {
 			t.Errorf("%s مشروطٌ بلا قيمة — فلا يظهر أبداً", d.Key)
+			continue
+		}
+		if d.ShowWhen.NotEmpty {
 			continue
 		}
 		// **والقيمةُ من خيارات المفتاح المشروط به** — وإلّا لم تتحقّق قطّ.

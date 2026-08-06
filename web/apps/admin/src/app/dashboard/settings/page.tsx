@@ -29,7 +29,8 @@ import WhatsAppPanel from "@/components/settings/whatsapp";
 const m = getMessages(defaultLocale);
 const S = m.admin.settings;
 
-type Kind = "int" | "money" | "bool" | "choice" | "text" | "media";
+/** **يطابق أنواعَ الكتالوج في المحرّك** — ونوعٌ يُضاف هناك ولا يُضاف هنا يسقط إلى الحقل النصّيّ. */
+type Kind = "int" | "money" | "bool" | "choice" | "text" | "media" | "percent";
 
 interface Setting {
   key: string;
@@ -78,6 +79,17 @@ const zeroNote = (k: string) =>
 const boolText = (k: string, side: "on" | "off") =>
   (S.boolStates as Record<string, { on: string; off: string }>)[k]?.[side] ??
   (side === "on" ? S.boolOn : S.boolOff);
+
+/**
+ * **نوعُ الوسيط لكلّ مفتاحِ صورة** — مصدرٌ واحدٌ يطابق `validKinds` في المحرّك.
+ *
+ * **ومفتاحٌ جديدٌ بلا سطرٍ هنا يرفع بنوعٍ خطأ** — فالافتراضُ مكتوبٌ عند
+ * الاستعمال ليُرى.
+ */
+const MEDIA_KIND: Record<string, "platform_logo" | "auth_background"> = {
+  "platform.logo": "platform_logo",
+  "auth.background": "auth_background",
+};
 
 export default function SettingsPage() {
   const { user: me } = useAuth();
@@ -414,6 +426,34 @@ function SettingRow({
                 );
               })}
             </div>
+          ) : s.kind === "percent" ? (
+            /* **شريطٌ يُسحب فيُرى الأثر.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «شريط
+               من ٠ إلى ١٠٠».)
+
+               **وحقلُ الرقم يُكتب ثمّ يُحفظ ثمّ يُنظر** — ثلاثُ خطواتٍ لضبط
+               شيءٍ يُحكَم عليه بالعين. **والرقمُ بجانبه يبقى** لمن أراد قيمةً
+               بعينها أو أراد أن ينقلها إلى منصّةٍ أخرى.
+
+               **ويُحفظ عند الإفلات لا مع كلّ بكسل** (`onMouseUp`/`onTouchEnd`
+               عبر `change`): **وإلّا صار سحبُ الشريط مئةَ نداءٍ للخادم.** */
+            <div className="flex flex-1 items-center gap-3">
+              <input
+                id={s.key}
+                type="range"
+                min={0}
+                max={100}
+                value={draft === "" ? 0 : Number(draft)}
+                disabled={!editable || busy}
+                onChange={(e) => setDraft(e.target.value)}
+                onMouseUp={() => void save(Number(draft))}
+                onTouchEnd={() => void save(Number(draft))}
+                onKeyUp={() => void save(Number(draft))}
+                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-badge bg-page accent-accent"
+              />
+              <span className="w-12 shrink-0 text-end text-sm font-medium tabular-nums text-primary-dark">
+                {draft === "" ? 0 : Number(draft)}%
+              </span>
+            </div>
           ) : s.kind === "media" ? (
             /* **وصورةٌ تُرفع لا معرّفٌ يُكتب.**
 
@@ -426,7 +466,13 @@ function SettingRow({
                **والرافعُ هو رافعُ اللوحة نفسُه** (`ImageUpload`) — بحدوده
                وفحصه ومصغَّرته. **ورافعٌ ثانٍ يعني حدَّ حجمٍ ثانياً يفترق.** */
             <ImageUpload
-              kind="platform_logo"
+              /* **ونوعُ الوسيط من المفتاح لا مثبَّتاً.**
+
+                 كان `"platform_logo"` لكلّ مفتاحٍ من نوع `media` — **وكان
+                 صحيحاً يومَ كان المفتاحُ واحداً.** ولمّا جاءت خلفيّةُ الدخول
+                 **كانت سترفع صورتَها باسم «شعار المنصة»** — فتُخزَّن بنوعٍ
+                 ليس نوعَها، **ولا يظهر الخطأُ إلّا لمن يقرأ القاعدة.** */
+              kind={MEDIA_KIND[s.key] ?? "platform_logo"}
               label={label(s.key)}
               initialUrl={typeof s.value === "string" && s.value ? s.media_url : null}
               onChange={(id) => void save(id)}
