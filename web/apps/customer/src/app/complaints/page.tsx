@@ -15,6 +15,7 @@
 
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
+  ReputationComplaints,
   Badge,
   Card,
   PageContainer,
@@ -30,6 +31,7 @@ import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const C = m.site.complaint;
+const R = m.customer.myReputation;
 
 interface Ticket {
   id: string;
@@ -151,6 +153,26 @@ export default function ComplaintsPage() {
           ))}
         </div>
       )}
+    
+      {/* ══════════════════════════════════════════════════════════════
+          **وما رُفع عليه يقع حيث يقع ما رفعه**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «يوجد قسمٌ خاصٌّ بالشكاوى والبلاغات».)
+
+          **كان في صفحة الحساب** — وهي صفحةُ بياناتٍ وعناوين. **فمن أراد
+          «الشكاوى والبلاغات» فتح هذا القسمَ فوجد نصفَه**، والنصفُ الآخرُ
+          في صفحةٍ أخرى لا يدلّ عليها شيء.
+
+          **وهما بابان لشيءٍ واحد**: ما رفعتَه، وما رُفع عليك. */}
+      <ReputationComplaints
+        api={api}
+        labels={{
+          complaintsTitle: R.title,
+          complaintsHint: R.hint,
+          complaintsEmpty: R.empty,
+        }}
+      />
     </PageContainer>
   );
 }

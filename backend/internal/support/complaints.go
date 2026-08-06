@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -134,7 +133,17 @@ func (s *Service) Complaint(ctx context.Context, customerID, orderID, reason, no
 		return nil, ErrComplaintWindow
 	}
 
-	subject = "شكوى على الطلب #" + strconv.FormatInt(number, 10)
+	// **ولا رقمَ في العنوان — الطلبُ خانةٌ قائمةٌ بذاتها.**
+	//
+	// (شهده المالك ٢٠٢٦-٠٨-٠٧: «مكرّرة بلا فائدة».)
+	//
+	// **كان العنوانُ يحمل «على الطلب ‎#1002» والصفُّ يحمل خانةَ «الطلب
+	// ‎#1002» بجانبه** — الرقمُ نفسُه مرّتين في سطرٍ واحد، **ونصفُ عرض
+	// الشاشة يقول ما يقوله ربعُها.**
+	//
+	// **والعنوانُ نصٌّ محفوظٌ في قاعدة البيانات** — فلا يتبع تبديلاً في
+	// الشاشة. **فيُكتب ما لا يوجد في خانةٍ أخرى، ولا يُكرَّر ما يوجد.**
+	subject = "شكوى على طلب"
 	var ticketID string
 	err = s.db.QueryRow(ctx, `
 		INSERT INTO tickets (customer_id, order_id, subject, reason, created_by, opened_by_customer)
