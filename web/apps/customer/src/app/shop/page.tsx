@@ -194,7 +194,8 @@ export default function ShopPage() {
   const active = sections?.find((s) => s.id === pick);
 
   return (
-    <div className="px-3">
+    /* **ولا حشوةَ هنا** — صارت مركزيّةً في `<main>` بغلاف الموقع. */
+    <div>
       {/* ١ · **اللافتات** — وتُخفى أثناء البحث: من كتب كلمةً ينتظر نتيجتَها،
              **وزينةٌ بينه وبين ما طلبه تُقرأ عائقاً.** */}
       {!typing && banners.length > 0 && (

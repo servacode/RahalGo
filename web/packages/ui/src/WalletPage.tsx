@@ -16,6 +16,7 @@ import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i
 import { Badge, Button, Input, Modal } from "./components";
 import { Alert } from "./feedback";
 import { PageContainer, PageHeader, Card, EmptyState, LoadingState, ListRow, TabCards } from "./layout";
+import { DataView, ViewToggle, useViewMode, type DataColumn } from "./dataview";
 import type { TabItem } from "./layout";
 import { StatementSheet, currentMonthRange, type StatementData } from "./Statement";
 import { useLiveData } from "./Notifications";
@@ -240,6 +241,85 @@ export function WalletPage({
   const txs = useMemo(() => statement?.transactions ?? [], [statement]);
   const reqs = useMemo(() => requests ?? [], [requests]);
 
+  /** **وتفضيلُ العرضِ محفوظٌ لصاحبه** — جدولاً أو بطاقات. */
+  const [view, setView] = useViewMode("wallet-tx");
+
+  /**
+   * **أعمدةُ الحركة — تعريفٌ واحدٌ يغذّي الجدولَ والبطاقات.**
+   *
+   * **والمبلغُ أوّلُ ما يُقرأ**: صاحبُ المحفظة ينظر كم دخل وكم خرج، **والنوعُ
+   * يشرح لماذا.** فكلاهما `primary` — وهما ما تعرضه البطاقةُ في رأسها.
+   */
+  const txColumns = useMemo<DataColumn<Tx>[]>(
+    () => [
+      {
+        id: "kind",
+        header: m.shared.txCard.kind,
+        icon: <IconWallet />,
+        primary: true,
+        cell: (tx) => (
+          <span className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-control ${
+                tx.amount >= 0 ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+              }`}
+            >
+              {tx.amount >= 0 ? <IconArrowIn size={14} /> : <IconArrowOut size={14} />}
+            </span>
+            <span className="min-w-0 truncate">{KIND_LABELS[tx.kind] ?? tx.kind}</span>
+          </span>
+        ),
+      },
+      {
+        id: "amount",
+        header: m.shared.txCard.amount,
+        primary: true,
+        cell: (tx) => (
+          /* **والإشارةُ تُكتب ولا يُترك اللونُ وحدَه** — من لا يفرّق الأخضرَ
+             عن الأحمر يقرأ الرقمَ ولا يعرف أدخل أم خرج. */
+          <span
+            dir="ltr"
+            className={`font-bold tabular-nums ${tx.amount >= 0 ? "text-success" : "text-danger"}`}
+          >
+            {tx.amount >= 0 ? "+" : "−"}
+            {fmtNum(Math.abs(tx.amount))} <span className="text-2xs font-normal opacity-70">{m.common.currency}</span>
+          </span>
+        ),
+      },
+      {
+        id: "about",
+        header: m.shared.txCard.about,
+        /* **ورقمُ الطلب معرّفٌ لا مبلغ — بلا فاصلةِ آلاف.** */
+        cell: (tx) =>
+          tx.order_number ? (
+            <span dir="ltr" className="tabular-nums">#{tx.order_number}</span>
+          ) : tx.ticket_number ? (
+            <span dir="ltr" className="tabular-nums">#{tx.ticket_number}</span>
+          ) : (
+            <span className="text-ink-muted">—</span>
+          ),
+      },
+      {
+        id: "when",
+        header: m.shared.txCard.when,
+        cell: (tx) => (
+          <span dir="ltr" className="tabular-nums text-ink-muted">
+            {fmtDate(tx.created_at)} · {fmtTime(tx.created_at)}
+          </span>
+        ),
+      },
+      {
+        id: "note",
+        header: m.shared.txCard.note,
+        block: true,
+        hide: (tx) => !tx.note,
+        cell: (tx) => <span className="text-ink-muted">{tx.note}</span>,
+      },
+    ],
+    [],
+  );
+
   const tabs = useMemo<TabItem[]>(() => {
     // العدّ والمجموع معاً: البطاقة تعرض «كم مرة» و«كم مبلغاً» في نظرة واحدة
     const agg = new Map<string, { n: number; sum: number }>();
@@ -303,40 +383,73 @@ export function WalletPage({
         }
       />
 
-      {/* الرصيد — الرقم الذي يهمّ صاحبه أولاً */}
-      {/* **بطاقةُ الرصيد برتقاليّة** — وهي أهمُّ رقمٍ في الصفحة.
-          والأزرقُ صار خلفيةَ كلّ شيء، **فبطاقةٌ زرقاءُ على بطاقةٍ زرقاء لا
-          تُميَّز**؛ والبرتقاليُّ يقطعها فيقع الرصيدُ في العين أوّلاً.
-          **ونصُّها داكنٌ لا أبيض**: الأبيضُ على البرتقاليّ ٢٫٢٢ يذوب،
-          والداكنُ ٨٫٤٩. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
-      {/* **وبقدرِ ما تقول لا بقدرِ أهميّتها.**
+      {/* ══════════════════════════════════════════════════════════════
+          **الرصيدُ مع البطاقات الذكيّة في صفٍّ واحدٍ أعلى الصفحة**
+          ══════════════════════════════════════════════════════════════
 
-          كانت لوحاً يملأ عرضَ الشاشة لسطرين: **عنوانٌ ورقم**. والمساحةُ
-          الفارغةُ حولهما لا تزيدهما وضوحاً، **وتدفع سجلَّ الحركات — وهو ما
-          جاء الزبونُ ليقرأه — إلى ما تحت الطيّة.**
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «الكروت الذكيّة بالأعلى، تحطّ المحفظة».)
 
-          فصارت سطراً واحداً: العنوانُ والرقمُ متجاورين، **والشرحُ تحتهما
-          بخطٍّ صغير.**
+          **كان الرصيدُ وحدَه في الأعلى والبطاقاتُ الذكيّةُ مدفونةً داخل بطاقة
+          المعاملات** — فيقرأ صاحبُ المحفظة رقماً واحداً، **ثمّ ينزل ليكتشف
+          أنّ ثمّة تصنيفاً بأرقامٍ أخرى.**
 
-          **ولا تمتدّ بعرض الصفحة**: رقمٌ من ستّة أرقامٍ في لوحٍ عرضُه شاشةٌ
-          كاملة **يترك فراغاً لا يقول شيئاً**، وتُقرأ البطاقةُ بحجم ما فيها لا
-          بحجم ما حولها. (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «كرت المحفظة كبير، اجعله
-          صغيراً مناسباً · اجعل بادينغ للكرت، لا تجعله بامتداد الصفحة».) */}
-      <div className="mx-auto w-full max-w-sm rounded-card bg-accent px-4 py-3 text-center text-shell">
-        <p className="text-sm font-medium opacity-90">{balanceLabel}</p>
-        {/* **والشرحُ حُذف**: «المحفظة اختيارية…» جملةٌ تُقرأ مرّةً ثمّ تبقى
-            تشغل بطاقةَ الرصيد كلَّ يوم. **وما يُقال مرّةً لا يُكتب دائماً.**
-            (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بلاها».) */}
-        <p className="mt-0.5 text-2xl font-bold" dir="ltr">
-          {fmtNum(balance)} <span className="text-sm font-normal">{m.common.currency}</span>
-        </p>
+          **والأرقامُ التي تُقارَن تُوضع متجاورة**: الرصيدُ وما دخل وما خرج
+          وعمولاتُه — **نظرةٌ واحدةٌ تقول الحال.**
+          ══════════════════════════════════════════════════════════════ */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+        {/* الرصيد — الرقم الذي يهمّ صاحبه أولاً */}
+        {/* **بطاقةُ الرصيد برتقاليّة** — وهي أهمُّ رقمٍ في الصفحة.
+            والأزرقُ صار خلفيةَ كلّ شيء، **فبطاقةٌ زرقاءُ على بطاقةٍ زرقاء لا
+            تُميَّز**؛ والبرتقاليُّ يقطعها فيقع الرصيدُ في العين أوّلاً.
+            **ونصُّها داكنٌ لا أبيض**: الأبيضُ على البرتقاليّ ٢٫٢٢ يذوب،
+            والداكنُ ٨٫٤٩. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
+        {/* **وبقدرِ ما تقول لا بقدرِ أهميّتها.**
+
+            كانت لوحاً يملأ عرضَ الشاشة لسطرين: **عنوانٌ ورقم**. والمساحةُ
+            الفارغةُ حولهما لا تزيدهما وضوحاً، **وتدفع سجلَّ الحركات — وهو ما
+            جاء الزبونُ ليقرأه — إلى ما تحت الطيّة.**
+
+            فصارت سطراً واحداً: العنوانُ والرقمُ متجاورين، **والشرحُ تحتهما
+            بخطٍّ صغير.**
+
+            **ولا تمتدّ بعرض الصفحة**: رقمٌ من ستّة أرقامٍ في لوحٍ عرضُه شاشةٌ
+            كاملة **يترك فراغاً لا يقول شيئاً**، وتُقرأ البطاقةُ بحجم ما فيها لا
+            بحجم ما حولها. (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «كرت المحفظة كبير، اجعله
+            صغيراً مناسباً · اجعل بادينغ للكرت، لا تجعله بامتداد الصفحة».) */}
+        <div className="w-full rounded-card bg-accent px-4 py-3 text-center text-shell sm:mx-0 sm:w-auto sm:min-w-56 sm:text-start">
+          <p className="text-sm font-medium opacity-90">{balanceLabel}</p>
+          {/* **والشرحُ حُذف**: «المحفظة اختيارية…» جملةٌ تُقرأ مرّةً ثمّ تبقى
+              تشغل بطاقةَ الرصيد كلَّ يوم. **وما يُقال مرّةً لا يُكتب دائماً.**
+              (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بلاها».) */}
+          <p className="mt-0.5 text-2xl font-bold" dir="ltr">
+            {fmtNum(balance)} <span className="text-sm font-normal">{m.common.currency}</span>
+          </p>
+        </div>
+
+
+        {/* **والبطاقاتُ الذكيّةُ تملأ ما بقي** — وهي مرشِّحاتٌ تُضغط، فتبقى
+            بشكلها ووظيفتها ولا تصير زينةً بجانب الرصيد. */}
+        {current !== STATEMENT && tabs.length > 0 && (
+          <div className="min-w-0 flex-1">
+            <TabCards items={tabs} active={current} onChange={setTab} />
+          </div>
+        )}
       </div>
 
-      <Card title={m.terms.transactions} icon={IconWallet}>
-        {current !== STATEMENT && (
-          <TabCards items={tabs} active={current} onChange={setTab} className="mb-4" />
-        )}
-
+      <Card
+        title={m.terms.transactions}
+        icon={IconWallet}
+        /* **ومبدّلُ العرض في ترويسة البطاقة.** بلاه يبقى الجدولُ بلا طريقٍ
+           إلى البطاقات — **ومن يفتحها على جوّالٍ يقرأ جدولاً بأربعة أعمدةٍ في
+           ثلاثمئةٍ وستّين.** (والتفضيلُ يُحفظ فلا يُعاد اختيارُه كلَّ زيارة.) */
+        actions={current !== STATEMENT ? <ViewToggle
+              view={view}
+              onChange={setView}
+              tableLabel={m.common.viewTable}
+              cardsLabel={m.common.viewCards}
+            /> : undefined}
+      >
+        {/* **ولا تبويبَ هنا** — صعد إلى الصفّ الأعلى مع الرصيد. */}
         {/* شرح النوع: أسماء القيود المحاسبية ليست بديهية لمن لم يكتبها */}
         {current !== STATEMENT && KIND_HINTS[current] && (
           <p className="mb-3 text-xs leading-relaxed text-ink-muted">{KIND_HINTS[current]}</p>
@@ -380,11 +493,29 @@ export function WalletPage({
           <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
         ) : (
           // لا شريط مجموع هنا: البطاقة النشطة تعرضه فوق — تكراره ضجيج
-          <ul className="space-y-2.5">
-            {shown.map((tx) => (
-              <TxCard key={tx.id} tx={tx} />
-            ))}
-          </ul>
+          /* ══════════════════════════════════════════════════════════
+             **جدولٌ وبطاقاتٌ من المركز — لا قائمةٌ مبنيّةٌ باليد**
+             ══════════════════════════════════════════════════════════
+
+             (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «نسوّيها جدولاً احترافيّاً».)
+
+             **والقاعدةُ الهندسيّةُ تسبق الطلب** (`GROUND-RULES` §٢): «كلُّ
+             قائمةٍ تُعرض جدولاً وبطاقاتٍ عبر `DataView` المركزيّ — تعريفُ
+             أعمدةٍ واحدٌ يغذّي الوضعين، **وممنوعٌ بناءُ جدولٍ يدويّ**.»
+
+             **وكانت المحفظةُ تخالفها**: بطاقاتٌ مكتوبةٌ بيدها (`TxCard`)
+             **بلا جدولٍ أصلاً** — فمن أراد أن يقارن عشرين حركةً يقرأ عشرين
+             صندوقاً بدل عشرين سطر.
+
+             **وتفضيلُ العرض يُحفظ لكلّ مستخدم** (`useViewMode`) — فمن اختار
+             الجدولَ مرّةً لا يُعيد اختيارَه كلَّ زيارة. */
+          <DataView
+            items={shown}
+            view={view}
+            getKey={(tx) => String(tx.id)}
+            empty={m.shared.txCard.empty}
+            columns={txColumns}
+          />
         )}
       </Card>
 
