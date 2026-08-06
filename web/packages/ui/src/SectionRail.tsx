@@ -59,6 +59,15 @@ export function SectionRail({
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [held, setHeld] = useState(false);
+  /**
+   * **والقائمةُ تُرسم مرّتين حين يفيض الشريط.**
+   *
+   * وهي شرطُ الدورة لا زينة: **ما يخرج من جهةٍ يجب أن يكون قد دخل من الأخرى.**
+   *
+   * **ولا تُنسخ إن ملأت العرضَ ولم تفض**: أربعةُ أقسامٍ على شاشةٍ عريضةٍ
+   * **تُرسم ثمانيةً بلا حركةٍ تبرّر التكرار** — فيُقرأ خطأً في البيانات.
+   */
+  const [twice, setTwice] = useState(false);
   const [still, setStill] = useState(false);
 
   /** **وإطفاءُ الحركة يُقرأ حيّاً** — من غيّره وهو يتصفّح لا ينتظر تحديثَ صفحة. */
@@ -87,20 +96,56 @@ export function SectionRail({
     el.scrollLeft = keep;
   }, [items.length]);
 
-  /** يمشي ذهاباً ثمّ إياباً — **والاتّجاه ينقلب عند الطرف لا يقفز إلى البداية.** */
-  const way = useRef(1);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const measure = () => {
+      // **عرضُ نسخةٍ واحدة** — يُقسَم على عدد النسخ المرسومة الآن.
+      const one = el.scrollWidth / (twice ? 2 : 1);
+      setTwice(one > el.clientWidth + 8);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [items.length, twice]);
+
+  /**
+   * **دورةٌ لا تنتهي — يخرج من جهةٍ فيعود من الأخرى.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «فتستمرّ بالتحرّك إلى اليمين لتظهر مرّةً أخرى
+   * من اليسار».)
+   *
+   * # وكنتُ بنيتُها ذهاباً وإياباً وخالفتُ
+   *
+   * حجّتي كانت: **الدورةُ تحتاج نسخَ القائمة، فيُرسم القسمُ مرّتين ومن ضغط
+   * النسخةَ الثانيةَ يظنّ أنّه رأى قسمين متشابهين.**
+   *
+   * **والحجّةُ سقطت بالتنفيذ**: النسخةُ الثانيةُ **تعمل كالأولى تماماً** —
+   * تُضغط فتفتح القسمَ نفسَه وتأخذ الحلقةَ نفسَها إن كان مختاراً. **فلا فرقَ
+   * يُدركه الناظر.**
+   *
+   * **وذهاباً وإياباً يُقرأ ترنّحاً** حين يطول الشريط: يمشي إلى طرفٍ ثمّ يرجع
+   * على عقبيه — **والعينُ تسأل لماذا رجع.**
+   *
+   * # والقفزةُ لا تُرى لأنّ ما تحتها نسخةٌ طبقُ الأصل
+   *
+   * حين يجتاز عرضَ النسخة الأولى **يُطرح ذلك العرضُ من موضعه** — فيقف على
+   * البكسل نفسِه من صورةٍ مطابقة. **ولا `scroll-smooth` هنا**: انتقالٌ ناعمٌ
+   * للقفزة يجعلها تُرى شريطاً يرجع.
+   */
   useEffect(() => {
     if (held || still) return;
     const el = box.current;
     if (!el) return;
     const id = setInterval(() => {
-      const span = el.scrollWidth - el.clientWidth;
+      // **طولُ الدورة = عرضُ نسخةٍ واحدة.**
+      const lap = el.scrollWidth / (twice ? 2 : 1);
       // **ولا مشيَ حيث لا فائض** — أقسامٌ قليلةٌ تملأ العرضَ ولا تنزلق.
-      if (span < 8) return;
-      const now = Math.abs(el.scrollLeft) + way.current * STEP;
-      if (now >= span) way.current = -1;
-      else if (now <= 0) way.current = 1;
-      el.scrollLeft = sign.current * Math.min(Math.max(now, 0), span);
+      if (lap - el.clientWidth < 8) return;
+      let now = Math.abs(el.scrollLeft) + STEP;
+      if (now >= lap) now -= lap;
+      el.scrollLeft = sign.current * now;
     }, 16);
     return () => clearInterval(id);
   }, [held, still, items.length]);
@@ -132,13 +177,25 @@ export function SectionRail({
         ref={box}
         /* **وشريطُ التمرير يُخفى ولا يُمنع التمرير** — مقبضٌ رماديٌّ تحت صفٍّ
            من الصور يُقرأ عطباً، **والانزلاقُ بالإصبع لا يحتاج مقبضاً يُرى.** */
-        className="flex gap-3 overflow-x-auto scroll-smooth px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        /* **وحشوةٌ خفيفةٌ حول الصفّ.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «خلّي بادينك خفيف
+           من اليسار كي لا تقصّ الدائرة».)
+
+           **والحلقةُ حول المختار تخرج عن حدّ الدائرة بأربعة بكسلات** (حلقةٌ
+           باثنين وإزاحةٌ باثنين)، **فتُقصّ عند حافّة الصندوق الذي يُمرَّر.**
+
+           **والحشوةُ في الجانبين لا في اليسار وحدَه** — فالصفحةُ تنقلب مع
+           اللغة، **ومن حشا جهةً بعينها كتب عربيّةً في الشيفرة.** */
+        className="flex gap-3 overflow-x-auto px-2 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {items.map((it) => {
-          const on = it.id === activeID;
+        {(twice ? [0, 1] : [0]).flatMap((copy) =>
+          items.map((it) => {
+            const on = it.id === activeID;
           return (
             <button
-              key={it.id}
+              key={`${copy}-${it.id}`}
+              /* **والنسخةُ الثانيةُ تعمل كالأولى** — تُضغط فتفتح القسمَ نفسَه
+                 وتأخذ الحلقةَ نفسَها إن كان مختاراً. **فلا فرقَ يُدركه
+                 الناظر**، وهو ما أسقط حجّتي على الدورة. */
               type="button"
               onClick={() => onSelect(it.id)}
               aria-pressed={on}
@@ -188,8 +245,9 @@ export function SectionRail({
                 {it.name}
               </span>
             </button>
-          );
-        })}
+            );
+          }),
+        )}
       </div>
 
     </div>
