@@ -4,6 +4,11 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "turbo dev",
+    "dev:customer": "pnpm --filter customer dev",
+    "dev:admin": "pnpm --filter admin dev",
+    "dev:merchant": "pnpm --filter merchant dev",
+    "dev:rep": "pnpm --filter rep dev",
+    "dev:driver": "pnpm --filter driver dev",
     "build": "turbo build",
     "lint": "node scripts/check-central.mjs && turbo lint",
     "typecheck": "turbo typecheck",
