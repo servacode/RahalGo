@@ -60,7 +60,7 @@ export function MobileNav({
 }) {
   return (
     <nav
-      className="elev-4 fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-raised md:hidden"
+      className="elev-4 fixed inset-x-0 bottom-0 z-40 flex border-t border-line-soft bg-raised md:hidden"
       /* **وحافّةُ الأمان تحت الشريط** — هواتفُ آيفون تضع خطَّ الإيماءة أسفلَ
          الشاشة، **وزرٌّ تحته يُضغط فيُغلق التطبيق** بدل أن يُفتح القسم. */
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}

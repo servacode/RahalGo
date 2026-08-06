@@ -569,7 +569,7 @@ function OrderCard({
       )}
 
       {/* ── الإجمالي ──────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between border-t border-line pt-3">
+      <div className="flex items-center justify-between border-t border-line-soft pt-3">
         <span className="text-sm text-ink-muted">{m.site.orders.statTotal}</span>
         <span dir="ltr" className="text-lg font-bold tabular-nums">
           {fmtNum(o.total)}{" "}

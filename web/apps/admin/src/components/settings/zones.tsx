@@ -270,7 +270,7 @@ export default function ZonesPanel() {
                 {(z.radius_m / 1000).toFixed(1)} {m.admin.zones.km}
               </p>
               {z.id === selectedID && isAdmin && (
-                <div className="mt-2 flex gap-2 border-t border-line pt-2">
+                <div className="mt-2 flex gap-2 border-t border-line-soft pt-2">
                   <Button
                     variant={z.active ? "danger" : "secondary"}
                     onClick={(e) => {

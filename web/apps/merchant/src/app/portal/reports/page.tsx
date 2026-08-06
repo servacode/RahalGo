@@ -153,7 +153,7 @@ export default function MerchantReportsPage() {
               </div>
             ))}
           </div>
-          <div className="mt-1 flex gap-2 border-t border-line pt-1">
+          <div className="mt-1 flex gap-2 border-t border-line-soft pt-1">
             {report.days.map((d) => (
               <span key={d.date} className="flex-1 text-center text-2xs text-ink-muted" dir="ltr">
                 {d.date.slice(8)}
@@ -174,7 +174,7 @@ export default function MerchantReportsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-line text-xs text-ink-muted">
+                <tr className="border-b border-line-soft text-xs text-ink-muted">
                   <th className="py-2 text-start font-medium">{m.merchant.reports.itemName}</th>
                   <th className="py-2 text-center font-medium">{m.merchant.reports.itemQty}</th>
                   <th className="py-2 text-end font-medium">

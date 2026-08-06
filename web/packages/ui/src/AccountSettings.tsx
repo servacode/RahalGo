@@ -406,7 +406,7 @@ export function AccountSettings({
           </div>
         </div>
       
-        <div className="mt-4 border-t border-line pt-4">
+        <div className="mt-4 border-t border-line-soft pt-4">
         <form onSubmit={onName} className="space-y-3">
           <div>
             <Input
@@ -465,7 +465,7 @@ export function AccountSettings({
           </form>
         )}
       
-        <div className="mt-4 border-t border-line pt-4">
+        <div className="mt-4 border-t border-line-soft pt-4">
           <p className="mb-2 flex items-center gap-2 text-xs font-bold text-ink-muted">
             <IconWhatsApp className="h-4 w-4 text-primary" />
             {A.whatsapp}

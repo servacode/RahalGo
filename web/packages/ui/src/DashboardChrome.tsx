@@ -170,7 +170,7 @@ export function DashboardChrome({
 
   const sidebar = (
     <>
-      <div className="flex items-center justify-between border-b border-line p-4">
+      <div className="flex items-center justify-between border-b border-line-soft p-4">
         <div className="flex items-center gap-2">
           {/* **علامةُ المنصة من الإعدادات** — شعارٌ إن رُفع وإلّا أوّلُ حرفٍ
               من الاسم. **والاسمُ بجانبها اسمُ المنصة لا اسمُ اللوحة**: كانت
@@ -233,7 +233,7 @@ export function DashboardChrome({
                 className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors ${
                   active
                     ? "bg-primary-light font-medium text-primary-strong"
-                    : "text-ink-muted hover:bg-page hover:text-ink"
+                    : "text-ink-muted hover:bg-row-hover hover:text-ink"
                 }`}
               >
                 <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />

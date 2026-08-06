@@ -139,7 +139,7 @@ export function Timeline({
             {n.href && Link ? (
               <Link
                 href={n.href}
-                className="-mx-2 flex min-w-0 flex-1 rounded-control px-2 transition-colors hover:bg-page"
+                className="-mx-2 flex min-w-0 flex-1 rounded-control px-2 transition-colors hover:bg-row-hover"
               >
                 {body}
               </Link>
@@ -147,7 +147,7 @@ export function Timeline({
               <button
                 type="button"
                 onClick={n.onClick}
-                className="-mx-2 flex min-w-0 flex-1 rounded-control px-2 text-start transition-colors hover:bg-page"
+                className="-mx-2 flex min-w-0 flex-1 rounded-control px-2 text-start transition-colors hover:bg-row-hover"
               >
                 {body}
               </button>

@@ -132,7 +132,7 @@ export default function IncentivesPage() {
       ) : (
         <div className="overflow-x-auto surface">
           <table className="w-full text-sm">
-            <thead className="border-b border-line text-ink-muted">
+            <thead className="border-b border-line-soft text-ink-muted">
               <tr>
                 <th className="p-3 text-start font-medium">{P.person}</th>
                 <th className="p-3 text-start font-medium">{P.progress}</th>
@@ -143,7 +143,7 @@ export default function IncentivesPage() {
             </thead>
             <tbody>
               {rows.map((x) => (
-                <tr key={x.user_id} className="border-b border-line last:border-0">
+                <tr key={x.user_id} className="border-b border-line-soft last:border-0">
                   <td className="p-3">
                     <span className="font-medium">{x.name || x.phone}</span>
                     {x.reached && (

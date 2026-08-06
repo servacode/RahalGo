@@ -818,7 +818,7 @@ function MerchantModal({
         {error && (
           <Alert>{error}</Alert>
         )}
-        <div className="flex justify-end gap-2 border-t border-line pt-4">
+        <div className="flex justify-end gap-2 border-t border-line-soft pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             {m.common.cancel}
           </Button>

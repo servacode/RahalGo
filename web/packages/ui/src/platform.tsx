@@ -288,7 +288,7 @@ export function BrandMark({
       style={{ ...box, fontSize: Math.round(size * 0.44) }}
       aria-hidden
       className={`flex shrink-0 items-center justify-center font-bold ${
-        letter ? "bg-primary text-on-bright" : "bg-page"
+        letter ? "bg-primary text-on-bright" : "bg-ink-faint"
       } ${shape} ${className}`}
     >
       {letter}

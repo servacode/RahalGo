@@ -23,7 +23,7 @@ const buttonVariants = {
      **ونصُّه داكنٌ لا أبيض**: الأبيضُ على النبرة ١٫٣٠ — **يذوب**، والداكنُ
      ١٣٫٩٢. (قرارُ المالك ٢٠٢٦-٠٨-٠٣ للأزرار، ولوناً ٢٠٢٦-٠٨-٠٦.) */
   primary: "bg-accent text-on-bright hover:opacity-90",
-  secondary: "border border-line bg-surface text-ink hover:bg-page",
+  secondary: "border border-line bg-surface text-ink hover:bg-row-hover",
   /* **وزرُّ الخطر بالتعبئة المصمتة لا بالفاتحة.**
 
      (كشفه جردُ السائق ٢٠٢٦-٠٨-٠٦: «إرسال رمز التأكيد» عند **١٫٧٥**.)
@@ -35,7 +35,7 @@ const buttonVariants = {
      **و`danger-solid` مصنوعٌ للتعبئة**: الأبيضُ عليه ٤٫٨٣ — **وهو التوكنُ
      نفسُه في عدّاد الإشعارات وأيقونات الخطر.** */
   danger: "bg-danger-solid text-on-solid hover:opacity-90",
-  ghost: "text-ink-muted hover:bg-page hover:text-ink",
+  ghost: "text-ink-muted hover:bg-row-hover hover:text-ink",
 } as const;
 
 /**
@@ -548,7 +548,7 @@ export function Modal({
             onClick={onClose}
             aria-label={m.common.close}
             title={m.common.close}
-            className="taparea -me-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-page hover:text-ink"
+            className="taparea -me-1.5 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
           >
             <IconClose size={18} />
           </button>
@@ -581,7 +581,7 @@ export function FormSection({
        **وهو أثاثُ النموذج**: عنوانٌ وحدٌّ وحقول — **ولوحٌ حوله يجمعها ويُقرِئ
        ما بينها.** */
     <section className="surface p-4">
-      <h3 className="mb-3 flex items-center gap-1.5 border-b border-line pb-2 text-sm font-bold text-primary-dark">
+      <h3 className="mb-3 flex items-center gap-1.5 border-b border-line-soft pb-2 text-sm font-bold text-primary-dark">
         {icon && <span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span>}
         {title}
       </h3>

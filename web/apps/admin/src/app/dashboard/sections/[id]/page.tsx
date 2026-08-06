@@ -289,7 +289,7 @@ export default function SectionPage() {
                       حصّتُنا من سعر الشراء. **والهامشُ يُضاف فوقه** فيصير سعرَ
                       البيع. **ولا تُجمعان في رقمٍ واحد**: من رأى «ربحُ المنصة»
                       مجموعاً لا يعرف أيَّهما يُعدّل حين يشتكي أحدُ الطرفين. */}
-                  <dl className="space-y-1 border-t border-line pt-2 text-xs tabular-nums">
+                  <dl className="space-y-1 border-t border-line-soft pt-2 text-xs tabular-nums">
                     <Row label={S.buyPrice} value={fmtNum(it.merchant_price)} />
                     <Row
                       label={S.commission.replace("{n}", fmtNum(it.commission_percent))}

@@ -148,7 +148,7 @@ export function StatementSheet({
         <SheetHeader />
 
         {/* وسطرُ التعريف: ما هذه الورقة، ولمن، وعن أيّ مدى. */}
-        <div className="mb-4 grid gap-x-6 gap-y-1 border-b border-line pb-3 text-xs sm:grid-cols-2">
+        <div className="mb-4 grid gap-x-6 gap-y-1 border-b border-line-soft pb-3 text-xs sm:grid-cols-2">
           <p className="text-base font-bold">{S.title}</p>
           <p className="sm:text-end">
             <span className="text-ink-muted">{S.period} </span>
@@ -190,7 +190,7 @@ export function StatementSheet({
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-line font-medium">
+                  <tr className="border-b border-line-soft font-medium">
                     <td className="py-2" dir="ltr">
                       {fmtDate(from)}
                     </td>
@@ -232,7 +232,7 @@ export function StatementSheet({
                     </tr>
                   ))}
 
-                  <tr className="border-t-2 border-line font-bold">
+                  <tr className="border-t-2 border-line-soft font-bold">
                     <td className="py-2" dir="ltr">
                       {fmtDate(to)}
                     </td>
@@ -248,7 +248,7 @@ export function StatementSheet({
               </table>
             </div>
 
-            <div className="mt-4 flex flex-wrap justify-end gap-x-8 gap-y-1 border-t border-line pt-3 text-sm">
+            <div className="mt-4 flex flex-wrap justify-end gap-x-8 gap-y-1 border-t border-line-soft pt-3 text-sm">
               <span>
                 {S.totalIn}{" "}
                 <span className="font-bold text-success" dir="ltr">
@@ -269,7 +269,7 @@ export function StatementSheet({
               </span>
             </div>
 
-            <p className="mt-4 border-t border-line pt-3 text-xs leading-relaxed text-ink-muted">
+            <p className="mt-4 border-t border-line-soft pt-3 text-xs leading-relaxed text-ink-muted">
               {S.footer}
             </p>
           </>

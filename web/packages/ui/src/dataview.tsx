@@ -234,7 +234,7 @@ export function DataView<T>({
                 لأنّها كلَّها على استقامةٍ واحدة.**
 
                 **وما زاد على اثنتين يلتفّ** ولا يزاحم. */}
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line pb-3">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line-soft pb-3">
               {primaries.map((c, i) => (
                 <div key={c.id} className={i === 0 ? "text-base font-bold" : "text-sm text-ink-muted"}>
                   {c.cell(item)}
@@ -280,7 +280,7 @@ export function DataView<T>({
                 onClick={(e) => e.stopPropagation()}
                 /* الأزرار تتقاسم السطر ما دامت تتسع، وتنزل سطراً جديداً بدل أن
                    تفيض خارج البطاقة — النصوص العربية تطول ولا تُقصّ. */
-                className="mt-3 flex flex-wrap gap-1.5 border-t border-line pt-3 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:!px-2 [&_button]:text-center"
+                className="mt-3 flex flex-wrap gap-1.5 border-t border-line-soft pt-3 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:!px-2 [&_button]:text-center"
               >
                 {actions(item)}
               </div>
@@ -315,7 +315,7 @@ export function DataView<T>({
               محاذاةٌ إلى الوسط تجعل العمودَ كتلةً واحدةً تُمسح بالعين: **رأسٌ
               وقيمٌ على محورٍ واحد.** وبمحاذاة البدء تتباعد الرؤوسُ عن قيمها
               حين تختلف أطوالُها، **فيُقرأ رأسٌ مع قيمة جارِه.** */}
-          <tr className="border-b border-line text-ink-muted">
+          <tr className="border-b border-line-soft text-ink-muted">
             {shown.map((c) => (
               <th
                 key={c.id}
@@ -339,7 +339,7 @@ export function DataView<T>({
             <tr
               key={getKey(item)}
               onClick={onRowClick ? () => onRowClick(item) : undefined}
-              className={`border-b border-line last:border-0 hover:bg-row-hover ${onRowClick ? "cursor-pointer" : ""}`}
+              className={`border-b border-line-soft last:border-0 hover:bg-row-hover ${onRowClick ? "cursor-pointer" : ""}`}
             >
               {shown.map((c) => (
                 // **والصفوفُ متساويةُ الارتفاع، والمحتوى في وسطها.**

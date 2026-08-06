@@ -153,7 +153,7 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
             type="button"
             onClick={() => setQ("")}
             aria-label={m.common.cancel}
-            className="absolute inset-block-0 end-2 my-auto flex h-7 w-7 items-center justify-center rounded-badge text-ink-muted hover:bg-page"
+            className="absolute inset-block-0 end-2 my-auto flex h-7 w-7 items-center justify-center rounded-badge text-ink-muted hover:bg-row-hover"
           >
             <IconClose size={16} />
           </button>

@@ -220,7 +220,7 @@ export default function LeadsPage() {
             className={`rounded-control px-3 py-1.5 text-sm transition-colors ${
               filter === f.key
                 ? "bg-primary font-medium text-on-bright"
-                : "bg-surface text-ink-muted hover:bg-page"
+                : "bg-surface text-ink-muted hover:bg-row-hover"
             }`}
           >
             {f.label}

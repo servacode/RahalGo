@@ -398,7 +398,7 @@ export default function CartPage() {
             هي تخصّ ما يُطبَخ لا ما يُدفَع — ومكانُها بجانب ما تصفه. وكانت
             «ملاحظات عامّة» في آخر عمود الدفع، فتُقرأ ملاحظةً على الطلب كلِّه
             (العنوان؟ الوقت؟) لا على الطعام. */}
-        <div className="mt-3 border-t border-line pt-3">
+        <div className="mt-3 border-t border-line-soft pt-3">
           <Input
             id="notes"
             label={m.site.cart.notes}
@@ -442,7 +442,7 @@ export default function CartPage() {
               {m.site.cart.tooManySources.replace("{n}", fmtNum(zone.max_sources))}
             </Alert>
           )}
-          <div className="flex justify-between border-t border-line pt-1 text-base">
+          <div className="flex justify-between border-t border-line-soft pt-1 text-base">
             <dt className="font-bold">{m.site.cart.total}</dt>
             <dd className="font-bold text-primary-dark">
               {zone ? fmtNum(subtotal + zone.delivery_fee) : fmtNum(subtotal)}{" "}
@@ -596,7 +596,7 @@ export default function CartPage() {
           في العمود الثاني، **وكلاهما مرئيٌّ بلا تمرير.** */}
       {logged && cart.lines.length > 0 && (
         <div
-          className="elev-4 fixed inset-x-0 bottom-[3.75rem] z-30 flex items-center gap-3 border-t border-line bg-raised px-4 py-3 md:hidden"
+          className="elev-4 fixed inset-x-0 bottom-[3.75rem] z-30 flex items-center gap-3 border-t border-line-soft bg-raised px-4 py-3 md:hidden"
           style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="min-w-0">

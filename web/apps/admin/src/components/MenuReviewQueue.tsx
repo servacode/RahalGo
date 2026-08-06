@@ -141,7 +141,7 @@ export default function MenuReviewQueue() {
             {/* **والردُّ يلزمه كلمة** — «رُدّ» بلا سببٍ يُعاد إرسالُه كما هو،
                 فيدور المتجرُ والمكتبُ في حلقة. */}
             {rejecting === it.id && (
-              <div className="mt-3 space-y-2 border-t border-line pt-3">
+              <div className="mt-3 space-y-2 border-t border-line-soft pt-3">
                 <Input
                   id={`reject-${it.id}`}
                   label={Q.rejectNote}

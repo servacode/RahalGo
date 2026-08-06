@@ -384,7 +384,7 @@ export function NotificationsPage({
                         <button
                           type="button"
                           onClick={() => markOne(n.id)}
-                          className="block w-full text-start transition-colors hover:bg-page"
+                          className="block w-full text-start transition-colors hover:bg-row-hover"
                         >
                           {inner}
                         </button>

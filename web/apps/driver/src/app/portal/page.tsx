@@ -283,7 +283,7 @@ export default function TasksPage() {
         <div className="flex items-center gap-3">
           <span
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-badge ${
-              me.on_shift ? "bg-success-tint text-success" : "bg-page text-ink-muted"
+              me.on_shift ? "bg-success-tint text-success" : "bg-ink-faint text-ink-muted"
             }`}
           >
             <IconDriver size={20} />
@@ -627,7 +627,7 @@ function TaskCard({
       {/* ما يقبضه: يُقال قبل التسليم لا بعده */}
       <p
         className={`mt-3 flex items-center gap-2 rounded-control px-3 py-2 text-sm ${
-          cash ? "bg-warning-tint font-bold text-warning" : "bg-page text-ink-muted"
+          cash ? "bg-warning-tint font-bold text-warning" : "bg-ink-faint text-ink-muted"
         }`}
       >
         <IconBalance size={16} />

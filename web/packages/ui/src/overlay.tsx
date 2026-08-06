@@ -106,7 +106,7 @@ export function Sheet({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">{children}</div>
 
         {footer && (
-          <div className="shrink-0 border-t border-line px-5 py-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="shrink-0 border-t border-line-soft px-5 py-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]">
             {footer}
           </div>
         )}

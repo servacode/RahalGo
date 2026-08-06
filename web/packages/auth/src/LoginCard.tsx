@@ -773,11 +773,11 @@ export function LoginCard({
             {body()}
 
             {isAuxMode ? (
-              <div className="mt-6 border-t border-line pt-4 text-center">
+              <div className="mt-6 border-t border-line-soft pt-4 text-center">
                 {linkBtn(A.backToLogin, () => go("password"), <IconPrev size={15} />)}
               </div>
             ) : signup ? (
-              <div className="mt-6 border-t border-line pt-4 text-center text-sm text-ink-muted">
+              <div className="mt-6 border-t border-line-soft pt-4 text-center text-sm text-ink-muted">
                 {A.noAccount}{" "}
                 {linkBtn(A.createAccount, () => go("signup"), <IconSignup size={15} />)}
               </div>

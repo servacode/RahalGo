@@ -228,7 +228,7 @@ export default function ShopPage() {
             type="button"
             onClick={() => setQ("")}
             aria-label={m.common.cancel}
-            className="taparea absolute inset-block-0 end-2 my-auto flex h-8 w-8 items-center justify-center rounded-badge text-ink-muted transition-colors hover:bg-page hover:text-ink"
+            className="taparea absolute inset-block-0 end-2 my-auto flex h-8 w-8 items-center justify-center rounded-badge text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
           >
             <IconClose size={16} />
           </button>

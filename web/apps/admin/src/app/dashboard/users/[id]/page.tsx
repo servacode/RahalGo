@@ -608,7 +608,7 @@ export default function UserProfilePage() {
                   <li
                     key={t.number}
                     onClick={() => router.push("/dashboard/tickets")}
-                    className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm hover:bg-page"
+                    className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm hover:bg-row-hover"
                   >
                     <span className="flex items-center gap-2">
                       <span className="font-bold">#{fmtRef(t.number)}</span>

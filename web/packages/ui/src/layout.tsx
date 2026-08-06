@@ -431,7 +431,7 @@ export function TabCards({
               {!!t.count && (
                 <span
                   className={`shrink-0 rounded-badge px-1.5 py-0.5 text-2xs font-bold ${
-                    on ? "bg-primary-tint text-primary-dark" : "bg-page text-ink-muted"
+                    on ? "bg-primary-tint text-primary-dark" : "bg-ink-faint text-ink-muted"
                   }`}
                 >
                   {fmtNum(t.count)}
@@ -545,7 +545,7 @@ export function EntityCard({
 
       {!!stats?.length && (
         <div
-          className="mt-3 grid gap-2 border-t border-line pt-3"
+          className="mt-3 grid gap-2 border-t border-line-soft pt-3"
           style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}
         >
           {stats.map((st, i) => (
@@ -570,13 +570,13 @@ export function EntityCard({
       )}
 
       {footer && (
-        <p className="mt-3 border-t border-line pt-2.5 text-2xs leading-relaxed text-ink-muted">
+        <p className="mt-3 border-t border-line-soft pt-2.5 text-2xs leading-relaxed text-ink-muted">
           {footer}
         </p>
       )}
 
       {actions && (
-        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-line pt-3">{actions}</div>
+        <div className="mt-3 flex flex-wrap gap-1.5 border-t border-line-soft pt-3">{actions}</div>
       )}
     </div>
   );

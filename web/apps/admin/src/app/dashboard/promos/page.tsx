@@ -462,7 +462,7 @@ function BannersTab({ isAdmin }: { isAdmin: boolean }) {
                 </Badge>
               </div>
               {isAdmin && (
-                <div className="mt-3 flex justify-end gap-2 border-t border-line pt-3">
+                <div className="mt-3 flex justify-end gap-2 border-t border-line-soft pt-3">
                   <Button variant="ghost" onClick={() => setEditing(b)}>
                     <IconEdit size={15} />
                   </Button>

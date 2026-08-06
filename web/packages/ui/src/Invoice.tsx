@@ -85,7 +85,7 @@ export function Invoice({
         {/* **سطرُ التعريف**: رقمُ الطلب ومن هو صاحبُه وأين — ما يُبحث به.
             وتاريخُ الطلب هنا لا في الترويسة: تلك تحمل وقتَ الطباعة، **وخلطُهما
             يجعل ورقةً تُطبع بعد شهرٍ تبدو طلباً وقع اليوم.** */}
-        <div className="mb-4 grid gap-x-6 gap-y-1 border-b border-line pb-3 text-xs sm:grid-cols-2">
+        <div className="mb-4 grid gap-x-6 gap-y-1 border-b border-line-soft pb-3 text-xs sm:grid-cols-2">
           <p className="text-base font-bold">
             {V.title} <span dir="ltr">#{fmtRef(order.number)}</span>
           </p>
@@ -205,15 +205,15 @@ export function Invoice({
             ورقةٌ تنتهي برقمٍ تنتهي جافّة، **والفاتورةُ آخرُ ما يبقى من الطلب
             في يد الزبون** — فتقول كلمةً قبل أن تُطوى. وهي في المعجم لا في
             الشيفرة: يبدّلها المالكُ متى شاء بلا نشر. */}
-        <p className="mt-5 border-t border-line pt-4 text-center text-sm font-medium text-primary">
+        <p className="mt-5 border-t border-line-soft pt-4 text-center text-sm font-medium text-primary">
           {V.thanks}
         </p>
 
         {showMerchantSettlement && (
-          <dl className="mt-4 space-y-1.5 border-t border-line pt-3 text-sm">
+          <dl className="mt-4 space-y-1.5 border-t border-line-soft pt-3 text-sm">
             <p className="mb-1 text-xs font-medium text-ink-muted">{V.settlementTitle}</p>
             <Row label={V.commission} value={-commission} tone="danger" />
-            <div className="flex items-center justify-between border-t border-line pt-2 font-bold">
+            <div className="flex items-center justify-between border-t border-line-soft pt-2 font-bold">
               <dt>{V.netDue}</dt>
               <dd className="text-success" dir="ltr">
                 {fmtNum(net)} {m.common.currency}
@@ -223,7 +223,7 @@ export function Invoice({
           </dl>
         )}
 
-        <p className="mt-4 border-t border-line pt-3 text-xs leading-relaxed text-ink-muted">
+        <p className="mt-4 border-t border-line-soft pt-3 text-xs leading-relaxed text-ink-muted">
           {V.footer}
         </p>
       </div>

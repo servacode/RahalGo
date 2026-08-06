@@ -99,7 +99,7 @@ export function CategoryIconPicker({
               className={`flex h-9 w-9 items-center justify-center rounded-control border transition-colors ${
                 active
                   ? "border-primary bg-primary-light text-primary-dark"
-                  : "border-transparent text-ink-muted hover:bg-page hover:text-ink"
+                  : "border-transparent text-ink-muted hover:bg-row-hover hover:text-ink"
               }`}
             >
               <Icon size={18} />

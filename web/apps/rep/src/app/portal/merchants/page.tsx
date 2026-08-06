@@ -282,7 +282,7 @@ export default function ClientsPage() {
                         href={`https://wa.me/${mr.owner_phone.replace(/[^0-9]/g, "")}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-page"
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-row-hover"
                       >
                         <IconWhatsApp size={15} />
                         {C.contact}
@@ -513,7 +513,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
             {suggestions.length > 0 && (
               <ul className="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-control border border-line bg-surface elev-3">
                 {suggestions.map((p, i) => (
-                  <li key={i} className="border-b border-line last:border-0">
+                  <li key={i} className="border-b border-line-soft last:border-0">
                     <button
                       type="button"
                       onClick={() => {
@@ -521,7 +521,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
                         setArea(p.label);
                         setSuggestions([]);
                       }}
-                      className="flex w-full items-start gap-2 px-3 py-2 text-start text-sm transition-colors hover:bg-page"
+                      className="flex w-full items-start gap-2 px-3 py-2 text-start text-sm transition-colors hover:bg-row-hover"
                     >
                       <IconLocation size={15} className="mt-0.5 shrink-0 text-primary" />
                       {p.label}
@@ -560,7 +560,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
           {error && (
             <Alert className="mb-3">{error}</Alert>
           )}
-          <div className="flex justify-end gap-2 border-t border-line pt-4">
+          <div className="flex justify-end gap-2 border-t border-line-soft pt-4">
             <Button type="button" variant="secondary" onClick={onClose}>
               {m.common.cancel}
             </Button>

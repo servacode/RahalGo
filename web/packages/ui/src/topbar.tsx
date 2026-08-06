@@ -436,7 +436,7 @@ export function AccountMenu({
           زرَّ قائمةٍ **فقد «حسابي» بابَه في الشريط.** */}
       <Link
         href={accountHref}
-        className="flex items-center gap-2 border-b border-line px-3 py-3 text-sm transition-colors hover:bg-page"
+        className="flex items-center gap-2 border-b border-line-soft px-3 py-3 text-sm transition-colors hover:bg-row-hover"
       >
         <Avatar url={avatarUrl} name={name} size={32} />
         <span className="min-w-0 flex-1">
@@ -458,7 +458,7 @@ export function AccountMenu({
                 key={it.href}
                 href={it.href}
                 className={`flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
-                  on ? "bg-page font-medium text-ink" : "text-ink-muted hover:bg-page hover:text-ink"
+                  on ? "bg-primary-tint font-medium text-ink" : "text-ink-muted hover:bg-row-hover hover:text-ink"
                 }`}
               >
                 <Icon size={17} />
@@ -478,7 +478,7 @@ export function AccountMenu({
           setOpen(false);
           onLogout();
         }}
-        className="flex w-full items-center gap-2.5 border-t border-line px-3 py-2.5 text-start text-sm text-danger transition-colors hover:bg-page"
+        className="flex w-full items-center gap-2.5 border-t border-line-soft px-3 py-2.5 text-start text-sm text-danger transition-colors hover:bg-row-hover"
       >
         <IconLogout size={17} />
         {logoutLabel}
@@ -495,7 +495,7 @@ export function AccountMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         className={`taparea flex shrink-0 items-center gap-2 rounded-control p-1 transition-colors ${
-          open || inMenu ? "bg-page text-ink" : "text-ink-muted hover:bg-page hover:text-ink"
+          open || inMenu ? "bg-row-hover text-ink" : "text-ink-muted hover:bg-row-hover hover:text-ink"
         }`}
       >
         <Avatar url={avatarUrl} name={name} size={TOPBAR_AVATAR} />

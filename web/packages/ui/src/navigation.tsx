@@ -66,7 +66,7 @@ export function Tabs<K extends string>({
   return (
     <div
       role="tablist"
-      className={`flex gap-1 overflow-x-auto border-b border-line [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+      className={`flex gap-1 overflow-x-auto border-b border-line-soft [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
     >
       {items.map((t) => {
         const on = t.key === value;
@@ -92,7 +92,7 @@ export function Tabs<K extends string>({
               <span
                 dir="ltr"
                 className={`rounded-badge px-1.5 text-2xs font-bold tabular-nums ${
-                  on ? "bg-accent text-on-bright" : "bg-page text-ink-muted"
+                  on ? "bg-accent text-on-bright" : "bg-ink-faint text-ink-muted"
                 }`}
               >
                 {fmtNum(t.count)}

@@ -1970,7 +1970,7 @@ function InvoiceList({ o }: { o: OrderRow }) {
               التوصيل وكم أصبح الإجمالي».
 
               **ورقمٌ لا يُرى ما جُمع فيه يُصدَّق أو يُشكّ فيه بلا سبيل.** */}
-      <li className="mt-2 flex items-center justify-between border-t border-line pt-2 text-sm">
+      <li className="mt-2 flex items-center justify-between border-t border-line-soft pt-2 text-sm">
         <span className="text-ink-muted">{m.admin.ordersPage.goodsValue}</span>
         <span dir="ltr" className="tabular-nums">
           {fmtNum(o.subtotal)}
@@ -1990,7 +1990,7 @@ function InvoiceList({ o }: { o: OrderRow }) {
           </span>
         </li>
       )}
-      <li className="flex items-center justify-between border-t border-line pt-2">
+      <li className="flex items-center justify-between border-t border-line-soft pt-2">
         <span className="font-medium">{m.admin.ordersPage.total}</span>
         <span
           dir="ltr"

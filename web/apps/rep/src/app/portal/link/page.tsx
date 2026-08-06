@@ -121,7 +121,7 @@ export default function LinkPage() {
             <a
               href={qr}
               download={`rahalgo-${code}.png`}
-              className="rounded-control border border-line px-4 py-2 text-sm font-medium text-ink hover:bg-page"
+              className="rounded-control border border-line px-4 py-2 text-sm font-medium text-ink hover:bg-row-hover"
             >
               {m.rep.downloadQr}
             </a>
