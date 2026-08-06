@@ -623,17 +623,36 @@ body {
  *
  * **والانتقالُ بتسعة آلاف ثانية** يمنع وميضَ اللون الأصفر لحظةَ التعبئة.
  */
-@layer base {
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus,
-  textarea:-webkit-autofill,
-  select:-webkit-autofill {
-    box-shadow: inset 0 0 0 1000px var(--color-surface);
-    -webkit-text-fill-color: var(--color-ink);
-    caret-color: var(--color-ink);
-    transition: background-color 9999s ease-in-out 0s;
-  }
+/* **وخارجَ الطبقات عمداً — لا في `@layer base`.**
+   (شهده المالك مرّةً ثانية ٢٠٢٦-٠٨-٠٦: «تخلّص من هذا اللون بالحقول».)
+
+   **كانت في `base` فغلبتها الأدوات**: الحقلُ عليه `focus:ring-2` — **وهي
+   ظلٌّ في طبقة `utilities`**، وطبقةُ الأدوات تغلب طبقةَ الأساس. **فيُمحى
+   الظلُّ الداخليُّ لحظةَ التركيز ويعود لونُ كروم.**
+
+   **والقواعدُ خارجَ الطبقات تغلب كلَّ طبقة** بحكم المواصفة — فهذه تصمد
+   مركَّزةً كانت أو غيرَ مركّزة.
+
+   **وحلقةُ التركيز تُعاد في الحالة المركّزة** — وإلّا فقد الحقلُ ما يقول
+   «أنت هنا». */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  box-shadow: inset 0 0 0 1000px var(--color-surface);
+  -webkit-text-fill-color: var(--color-ink);
+  caret-color: var(--color-ink);
+  transition: background-color 9999s ease-in-out 0s;
+}
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill:focus {
+  box-shadow:
+    inset 0 0 0 1000px var(--color-surface),
+    0 0 0 2px color-mix(in oklab, var(--color-primary) 20%, transparent);
+  -webkit-text-fill-color: var(--color-ink);
+  caret-color: var(--color-ink);
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 @keyframes rahalgo-sweep {
