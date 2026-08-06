@@ -43,8 +43,28 @@ function errText(e: unknown): string {
   return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
 }
 
-const VARIANT: Record<string, "warning" | "primary" | "success" | "danger" | "neutral"> = {
+/**
+ * **نبرةُ الحالة — ولكلّ طورٍ لونُه.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «الحالاتُ لازم تكون بشكلٍ أوضح».)
+ *
+ * **كانت ستُّ حالاتٍ مسمّاةً وثمانٍ تسقط على الافتراضيّ** — فالطلبُ من
+ * لحظة القبول إلى باب البيت بلونٍ واحد. **ومن فتح شاشتَه مرّتين في ساعةٍ
+ * رأى اللونَ نفسَه فظنّ أنّ شيئاً لم يقع.**
+ *
+ * **وثلاثةُ أطوارٍ تُقرأ بلمحة**: انتظارٌ عند المتجر (تنبيه) · تجهيزٌ
+ * وطريقٌ (خبر) · وانتهاء (نجاحٌ أو خطر).
+ */
+const VARIANT: Record<string, "warning" | "info" | "primary" | "success" | "danger" | "neutral"> = {
   pending: "warning",
+  accepted: "info",
+  preparing: "info",
+  dispatching: "primary",
+  assigned: "primary",
+  at_pickup: "primary",
+  picked_up: "primary",
+  on_the_way: "primary",
+  at_dropoff: "primary",
   delivered: "success",
   rejected: "danger",
   cancelled: "danger",
@@ -309,7 +329,15 @@ export default function MyOrdersPage() {
           .filter((g) => g.rows.length > 0)
           .map((g) => (
         <section key={g.key} className="mb-6 last:mb-0">
-          <h2 className="mb-3 text-sm font-bold text-ink-muted">{g.title}</h2>
+          {/* **ولا عنوانَ للجاري.** (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «احذف كلمة
+              يجري الآن».)
+
+              **الجاري في الأعلى فلا يحتاج من يقول إنّه الجاري** — وبطاقتُه
+              تقول حالَها بشارتها وشريطها. **والسابقُ يبقى عنوانُه** لأنّه
+              يقع بعد فاصلٍ فيُسأل: ما هذا الذي تحت؟ */}
+          {g.key !== "live" && (
+            <h2 className="mb-3 text-sm font-bold text-ink-muted">{g.title}</h2>
+          )}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {g.rows.map((o) => (
             <OrderCard
@@ -499,35 +527,33 @@ function OrderCard({
 
   return (
     <Card className="flex flex-col gap-4">
-      {/* ── الترويسة: علامةُ المنصة · الرقم · الحالة ─────────────────── */}
-      <div className="flex items-start gap-3">
-        {/* **علامةُ المنصة لا أيقونةُ متجر.**
+      {/* ══════════════════════════════════════════════════════════
+          **الترويسة: علامةٌ وتاريخُها · ورقمٌ وحالتُه**
+          ══════════════════════════════════════════════════════════
 
-            الزبونُ اشترى من «رحّال غو» — **واسمُ المتجر محجوبٌ عمداً**، فأيقونةُ
-            متجرٍ عامّة تقول شيئاً لا نقوله. والعلامةُ هي نفسُها في الشريط
-            العلويّ وفي الفاتورة — **ومن الإعدادات لا من المعجم**: شعارٌ إن
-            رُفع وإلّا أوّلُ حرفٍ من الاسم. (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «وأيضاً
-            على كروت الطلبات».) */}
-        <span className="relative shrink-0 overflow-hidden rounded-control">
-          <BrandMark size={48} />
-          <span aria-hidden className="absolute inset-x-0 bottom-0 h-1.5 bg-accent" />
-        </span>
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «احذف اسمَ المنصة · جِب اللوغو من المركز
+           بشكلٍ مركزيّ · التاريخُ لازم يكون تحت اللوغو».)
 
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-bold leading-tight">{m.site.orders.fromPlatform}</p>
-          {/* **الوقتُ تحت الاسم** — سطرٌ خافتٌ يُقرأ حين يُبحث عنه ولا يزاحم. */}
-          <p className="mt-0.5 text-xs text-ink-muted" dir="ltr">
+          **ولا اسمَ للمنصة هنا** — كان سطراً عريضاً يقول ما تقوله العلامةُ
+          فوقه. (قاعدةُ المالك: «لا تكتب اسمَ المنصة بأيّ مكان».)
+
+          **والعلامةُ كما تأتي من المركز** — كان حولها غلافٌ يقصّها وشريطٌ
+          ملوّنٌ أسفلَها، **زخرفةٌ محلّيّةٌ لا يعرفها باقي المواضع.**
+
+          **والتاريخُ تحتها**: عمودٌ واحدٌ يُقرأ من فوق إلى تحت — ما هذا،
+          ومتى. **وكان بجانبها فيزاحم الرقمَ على العرض نفسِه.** */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex shrink-0 flex-col items-start gap-1.5">
+          <BrandMark size={44} rounded="card" />
+          <span className="text-2xs tabular-nums text-ink-muted" dir="ltr">
             {fmtDateTime(o.created_at)}
-          </p>
+          </span>
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
-          {/* **الرقمُ بحقلٍ خاصّ** — هو ما يُقال في الهاتف حين يُسأل عن طلب،
-              **ورقمٌ خافتٌ بجانب عنوانٍ يضيع.** */}
+        <div className="flex min-w-0 flex-col items-end gap-1.5">
+          {/* **الرقمُ بالنبرة** — هو ما يُقال في الهاتف حين يُسأل عن طلب. */}
           <span
             dir="ltr"
-            /* **رقمُ الطلب بالنبرة** — هو ما يُقال في الهاتف حين يُسأل عنه،
-               **فيُلمح في البطاقة قبل أن يُبحث عنه.** */
             className="rounded-control bg-accent px-2.5 py-1 text-sm font-bold tabular-nums text-on-bright"
           >
             #{fmtRef(o.number)}
