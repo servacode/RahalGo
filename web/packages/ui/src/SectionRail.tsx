@@ -31,7 +31,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { CategoryIcon } from "./CategoryIcon";
 import { IconNext, IconPrev } from "./icons";
 
@@ -157,7 +157,12 @@ export function SectionRail({
               aria-pressed={on}
               /* **والعرضُ ثابتٌ لا يتقلّص** — بلا `shrink-0` يضغط `flex`
                  الدوائرَ حتّى تصير بيضاً، **فيختلف مقاسُها بعدد الأقسام.** */
-              className="flex w-[76px] shrink-0 flex-col items-center gap-1.5 sm:w-[88px]"
+              /* **وكبرت الدائرةُ بقرار المالك** (٢٠٢٦-٠٨-٠٦: «خلّي الدوائر
+                 أكبر وأوضح»): من ٧٦ إلى ١٠٤، ومن ٨٨ إلى ١٢٨ على المتّسع.
+
+                 **وصورةُ طعامٍ في ٧٦ بكسلاً تُقرأ لطخةً ملوّنة** — لا يُميَّز
+                 فيها الصنفُ إلّا بالاسم تحتها، **فتضيع فائدةُ الصورة أصلاً.** */
+              className="flex w-[104px] shrink-0 flex-col items-center gap-2 sm:w-[128px]"
             >
               <span
                 /* **والحلقةُ تقول المختار** — لا لونُ النصّ وحدَه: صفٌّ من
@@ -184,10 +189,17 @@ export function SectionRail({
                 )}
               </span>
 
-              <span className={`w-full truncate text-center text-2xs sm:text-xs ${on ? "font-bold text-ink" : "text-ink-muted"}`}>
+              {/* **ولا عددَ تحت الاسم.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «عدد
+                  المنتجات بالأصناف لا داعي لكتابتها».)
+
+                  **والرقمُ كان يزاحم الاسمَ ولا يُفيد**: من يتصفّح لا يختار
+                  قسماً لأنّ فيه اثني عشر صنفاً بدل خمسة، **إنّما يختار ما
+                  يشتهيه.** والعددُ خبرُ إدارةٍ لا خبرُ زبون.
+
+                  **والفارغُ يبقى يُقال بالبهتان** — لا برقمِ صفرٍ مكتوب. */}
+              <span className={`w-full truncate text-center text-xs sm:text-sm ${on ? "font-bold text-ink" : "text-ink-muted"}`}>
                 {it.name}
               </span>
-              <span className="text-2xs text-ink-muted/70">{fmtNum(it.count)}</span>
             </button>
           );
         })}
