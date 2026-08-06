@@ -88,7 +88,7 @@ function errText(err: unknown): string {
 }
 
 const textareaCls =
-  "w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary";
 
 export default function TicketsPage() {
   const [data, setData] = useState<TicketPage | null>(null);

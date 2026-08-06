@@ -105,7 +105,25 @@ export function Input({
           id={id}
           type={effectiveType}
           {...props}
-          className={`w-full rounded-control border bg-surface py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+          /* ══════════════════════════════════════════════════════════
+             **ولا حلقةَ خارجيّةً عند التركيز — الحدُّ وحدَه يقول**
+             ══════════════════════════════════════════════════════════
+
+             (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «ألغِ البوردر الخارجيّ الذي يظهر على
+              حقول الإدخال عند الوقوف عليها».)
+
+             كانت `focus:ring-2 focus:ring-primary/20` — **فيصير للحقل
+             حدّان**: حدُّه يتلوّن، وحلقةٌ باهتةٌ حولَه. **وخطّان متوازيان
+             بلونٍ واحدٍ يُقرآن حدّاً سميكاً مهترئاً** لا تمييزاً.
+
+             **وما زال التركيزُ يُرى**: `focus:border-primary` يقلب الحدَّ من
+             الرماديّ إلى الأساسيّ — **وهو تغيُّرٌ يكفي** ولا يزيد على الحقل
+             حجماً.
+
+             **والمفاتيحُ وصناديقُ الاختيار تُبقي حلقتَها** — حلقتُها
+             `focus-visible:` لا `focus:`: **تظهر لمن ينتقل بالكيبورد ولا
+             تظهر لمن ضغط بالفأرة**، فلا تزاحم أحداً ولا يفقد أحدٌ موضعَه. */
+          className={`w-full rounded-control border bg-surface py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary ${
             error ? "border-danger" : "border-line hover:border-ink-muted/40"
           } ${padStart} ${padEnd} ${className}`}
         />
@@ -136,7 +154,7 @@ export function Input({
  * لم يكن في العُدّة `Textarea`، **فارتجلته كلُّ نافذةٍ بنفسها** — وافترقتا:
  *
  *	نافذةُ الشكوى : `rounded-input border border-line bg-surface p-2 text-sm`
- *	نافذةُ التقييم: `rounded-control … px-3 py-2 … focus:border-primary focus:ring-2`
+ *	نافذةُ التقييم: `rounded-control … px-3 py-2 … focus:border-primary`
  *
  * **وواحدةٌ منهما تُضيء عند التركيز والأخرى لا** — فمن كتب شكواه لا يعرف أين
  * يقف المؤشّر.
@@ -171,7 +189,7 @@ export function Textarea({
         id={id}
         rows={props.rows ?? 3}
         {...props}
-        className={`w-full rounded-control border bg-surface px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+        className={`w-full rounded-control border bg-surface px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary ${
           error ? "border-danger" : "border-line hover:border-ink-muted/40"
         } ${className}`}
       />
@@ -334,7 +352,7 @@ export function OtpInput({
             d.trim()
               ? "border-primary bg-primary-light/40 text-primary-dark"
               : "border-line hover:border-ink-muted/40"
-          } focus:border-primary focus:ring-2 focus:ring-primary/20`}
+          } focus:border-primary`}
         />
       ))}
     </div>
@@ -393,7 +411,7 @@ export function Select({
       <select
         id={id}
         {...props}
-        className={`w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${className}`}
+        className={`w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary ${className}`}
       >
         {children}
       </select>
