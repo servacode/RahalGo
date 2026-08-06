@@ -7,8 +7,8 @@
  * لمنطقٍ واحد. وكل تحسين كان يُنفَّذ مرّتين أو يُنسى في إحداهما، وهذا كيف تنشأ
  * الفروق التي لا يقصدها أحد. (GROUND-RULES §1.2: يُبنى مرة هنا ويرثه الجميع.)
  *
- * ما يختلف بين الأدوار **مُعامِلات لا نسخ**: مسار النقطة، وترتيب التبويبات
- * (المندوب يبدأ بالعمولة، والزبون بالشحن)، ونصّ التنبيه، وهل يملك طلب سحب.
+ * ما يختلف بين الأدوار **مُعامِلات لا نسخ**: مسار النقطة، ونصّ عنوان الرصيد،
+ * وهل يملك صاحبُه طلبَ سحب.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -28,7 +28,6 @@ const m = getMessages(defaultLocale);
 const P = m.shared.payout;
 const W = m.shared.walletTabs;
 const KIND_LABELS: Record<string, string> = m.shared.txKinds;
-const KIND_HINTS: Record<string, string> = m.shared.walletKindHints;
 
 const ALL = "all";
 const REQUESTS = "requests";
@@ -76,111 +75,9 @@ function errText(err: unknown): string {
   return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
 }
 
-/**
- * بطاقةُ حركةٍ واحدة.
- *
- * كان السطرُ يقول نوعَ الحركة والمبلغَ والتاريخ — **ويسكت عن سببها**. فيرى
- * صاحبُ المحفظة «دفع طلب ‎−108,000» ولا يعرف أيَّ طلب، ولا متى بالساعة، ولا
- * أيّ حركةٍ هي إن سأل عنها.
- *
- * **وأربعةُ أشياء تجعل الرقمَ مفهوماً:**
- *
- *   - **ما هو**: نوعُ الحركة بلفظٍ عربيّ لا باسم قيدٍ محاسبيّ
- *   - **لماذا**: الطلبُ برقمه — لا بشظيّة معرّفه
- *   - **متى**: اليومَ والساعة. **والساعةُ ليست زينة**: من يرى حركتين في يومٍ
- *     واحد يفرّق بينهما بها وحدها
- *   - **أيُّها**: رقمُ الحركة — وهو ما يُقال للمالية حين يُسأل «أيّ حركة؟»
- *
- * والمبلغُ أكبرُ ما في البطاقة ولونُه يقول اتجاهه قبل أن تُقرأ إشارتُه.
- */
-/**
- * **بطاقةُ حركةٍ — كلُّ عنصرٍ في حقلٍ مستقلّ.**
- *
- * كانت سطراً واحداً تتزاحم فيه أربعةُ أخبار: النوعُ والطلبُ والتاريخُ ورقمُ
- * الحركة — **مفصولةً بنقاطٍ صغيرة**. فتُقرأ كتلةً واحدة، **ومن بحث عن تاريخ
- * قرأ رقمَ حركة.**
- *
- * **والمالُ أوّلُ ما يُنظر إليه**: مبلغٌ كبيرٌ بإشارته ولونه، **وسهمٌ يقول
- * داخلٌ أم خارج** — فاللونُ وحدَه لا يكفي لمن لا يميّزه.
- */
-function TxCard({ tx }: { tx: Tx }) {
-  const positive = tx.amount >= 0;
-  const T = m.shared.txCard;
-  return (
-    <li className="rounded-card border border-line bg-surface p-4 transition-colors hover:border-primary/40">
-      {/* ── الترويسة: الاتجاهُ · النوعُ · المبلغ ────────────────────── */}
-      <div className="flex items-center gap-3">
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-control ${
-            positive ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
-          }`}
-          aria-hidden
-        >
-          {positive ? <IconArrowIn size={18} /> : <IconArrowOut size={18} />}
-        </span>
-        <p className="min-w-0 flex-1 truncate font-bold">{KIND_LABELS[tx.kind] ?? tx.kind}</p>
-        <span
-          className={`shrink-0 text-lg font-bold tabular-nums ${
-            positive ? "text-success" : "text-danger"
-          }`}
-          dir="ltr"
-        >
-          {positive ? "+" : "−"}
-          {fmtNum(Math.abs(tx.amount))}{" "}
-          <span className="text-xs font-normal opacity-70">{m.common.currency}</span>
-        </span>
-      </div>
-
-      {/* ── حقولٌ مُعنوَنة: متى · على ماذا · رقمُ الحركة ──────────────── */}
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <div className="rounded-control bg-page/70 px-2.5 py-1.5">
-          <p className="text-2xs text-ink-muted">{T.when}</p>
-          <p className="mt-0.5 text-xs font-medium tabular-nums" dir="ltr">
-            {fmtDate(tx.created_at)} · {fmtTime(tx.created_at)}
-          </p>
-        </div>
-        <div className="rounded-control bg-page/70 px-2.5 py-1.5">
-          <p className="text-2xs text-ink-muted">{T.about}</p>
-          <p className="mt-0.5 text-xs font-medium tabular-nums" dir="ltr">
-            {/* **ورقمُ الطلب معرّفٌ لا مبلغ — بلا فاصلةِ آلاف.**
-
-                كان `fmtNum` فصار «طلب #1,002». **ومن يبحث عنه في الشاشة
-                يكتب `1002` فلا يجده**، ومن قرأه في الهاتف قاله «ألفاً
-                واثنين». **والفاصلةُ تقول «هذا مبلغ» وهو اسم.** */}
-            {tx.order_number != null
-              ? `${T.order} #${tx.order_number}`
-              : tx.ticket_number != null
-                ? `${T.ticket} #${tx.ticket_number}`
-                : "—"}
-          </p>
-        </div>
-      </div>
-
-      {/* **الملاحظةُ حقلٌ قائمٌ بذاته لا ذيلٌ مقتطع**: هي غالباً سببُ حركةٍ
-          يدوية — «تعويض عن طلبٍ فشل» — وقطعُها يُبقي السؤال. */}
-      {/* **ولا يُذيَّل باسم من ضغط الزرّ.**
-
-          كان يُلحق `by_name` — **وهو فاعلُ الانتقال لا طرفُ القيد.** فقُرئ في
-          محفظة المندوب «عمولة مندوب عن طلب مسلَّم — عمر الشيخ»، **وعمرُ سائقٌ
-          لا شأنَ له بعمولته**: ضغط «تمّ التسليم» فوقعت التسويةُ باسمه.
-
-          **واسمُ غريبٍ في قيدِ مالٍ يُقرأ طرفاً فيه** — فيُسأل: ولماذا يظهر
-          السائقُ في محفظتي؟ (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
-
-          **ومن نفّذ يبقى في سجلّ التدقيق** — حيث يُسأل عنه. */}
-      {tx.note && (
-        <p className="mt-2 rounded-control border border-line px-3 py-2 text-xs leading-relaxed text-ink-muted">
-          {tx.note}
-        </p>
-      )}
-    </li>
-  );
-}
-
 export function WalletPage({
   api,
   path,
-  kindOrder,
   balanceLabel,
   payouts = false,
   holderName,
@@ -190,8 +87,6 @@ export function WalletPage({
   api: ApiFn;
   /** نقطة كشف المحفظة — تختلف بالدور: `/api/v1/rep/wallet` أو `/api/v1/my/wallet` */
   path: string;
-  /** ترتيب التبويبات بأهمّيتها لهذا الدور، لا بورودها في القاعدة */
-  kindOrder: string[];
   balanceLabel: string;
   /**
    * **`hint` لم تعد تُعرض** — وتبقى في النوع كي لا تنكسر خمسُ صفحاتٍ تمرّرها.
@@ -320,37 +215,55 @@ export function WalletPage({
     [],
   );
 
-  const tabs = useMemo<TabItem[]>(() => {
-    // العدّ والمجموع معاً: البطاقة تعرض «كم مرة» و«كم مبلغاً» في نظرة واحدة
-    const agg = new Map<string, { n: number; sum: number }>();
-    for (const t of txs) {
-      const a = agg.get(t.kind) ?? { n: 0, sum: 0 };
-      agg.set(t.kind, { n: a.n + 1, sum: a.sum + t.amount });
-    }
-    // الأنواع الموجودة فعلاً فقط: تبويبٌ فارغ يَعِد بشيء ثم يخذل
-    const present = kindOrder.filter((k) => agg.has(k));
-    for (const k of agg.keys()) if (!present.includes(k)) present.push(k);
-    return [
-      { key: ALL, label: W.all, count: txs.length, value: txs.reduce((s, t) => s + t.amount, 0) },
-      // طلبات السحب بلا مجموع عمداً: خلط المعلّق بالمدفوع بالمرفوض في رقم واحد
-      // يعطي مبلغاً لا يعني شيئاً — العدد وحده هو الصادق هنا.
-      ...(reqs.length ? [{ key: REQUESTS, label: W.requests, count: reqs.length }] : []),
-      ...present.map((k) => ({
-        key: k,
-        label: KIND_LABELS[k] ?? k,
-        count: agg.get(k)?.n,
-        value: agg.get(k)?.sum,
-      })),
-    ];
-  }, [txs, reqs, kindOrder]);
+  /* ══════════════════════════════════════════════════════════════════
+     **ولا بطاقاتِ تصنيفٍ فوق الجدول — الرصيدُ والحركاتُ وحدَهما**
+     ══════════════════════════════════════════════════════════════════
+
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «الكروت الذكيّة ما لها لازمة، فقط المحفظة
+      والجدول للحركات».)
+
+     # ما كان
+
+     بطاقةٌ لكلِّ نوعٍ من الحركات بعددِه ومجموعِه: «شحن رصيد ‎+٢٥٠٬٠٠٠» ·
+     «دفع طلب ‎−١٢٤٬٠٠٠» · «استرجاع ‎+٧٧٬٠٠٠» — **وهي تقول ما يقوله عمودُ
+     النوع في الجدول تحتها**، سطراً سطراً وبتاريخِه ومرجعِه.
+
+     # ولماذا كان ضرراً لا تلخيصاً
+
+     **الجدولُ صار يحمل التصنيفَ في عموده الأوّل** — فبطاقةٌ تصفّي على
+     «استرجاع» تُخفي أربعةَ أخماسِ السجلّ لتُظهر ما كان يُقرأ بنظرةٍ إلى
+     العمود. **ومرشِّحٌ يحذف ما لا يُشتكى منه ليس ربحاً.**
+
+     **وأربعُ بطاقاتٍ تدفع الجدولَ — وهو ما جاء صاحبُ المحفظة ليقرأه —
+     تحت الطيّة.**
+
+     # وما بقي تنقّلٌ لا إحصاء
+
+     **«طلبات السحب» قائمةٌ أخرى ليست في الجدول أصلاً** — وحذفُها يُخفيها
+     عن الدرّاج والتاجر والمندوب **بلا بابٍ إليها.** فتبقى ومعها «الكلّ»
+     لِيُرجَع منها، **ولا تظهر أصلاً لمن لا سحبَ له** (الزبونُ والإدارة) —
+     **فيرى هؤلاء الرصيدَ والجدولَ ولا شيءَ بينهما.**
+     ══════════════════════════════════════════════════════════════════ */
+  const tabs = useMemo<TabItem[]>(
+    () =>
+      reqs.length
+        ? [
+            // ولا عددَ على «الكلّ» ولا مجموع: **بطاقةُ رجوعٍ لا لوحةُ إحصاء.**
+            { key: ALL, label: W.all },
+            // طلبات السحب بلا مجموع عمداً: خلط المعلّق بالمدفوع بالمرفوض في رقم
+            // واحد يعطي مبلغاً لا يعني شيئاً — العدد وحده هو الصادق هنا.
+            { key: REQUESTS, label: W.requests, count: reqs.length },
+          ]
+        : [],
+    [reqs],
+  );
 
   if (loading) return <LoadingState />;
 
   const balance = statement?.balance ?? 0;
   const hasPending = reqs.some((p) => p.status === "pending");
-  // التبويب المختار قد يختفي بعد تحديث حيّ (آخر حركة من نوعه أُلغيت) — نرتدّ للكل
+  // التبويب المختار قد يختفي بعد تحديث حيّ (آخر طلب سحب أُلغي) — نرتدّ للكل
   const current = tab === STATEMENT || tabs.some((t) => t.key === tab) ? tab : ALL;
-  const shown = current === ALL ? txs : txs.filter((t) => t.kind === current);
 
   const statementBtn = (
     /* **كشفُ الحساب أخضرُ لا برتقاليّ** — وهو لونُ زرّ الطباعة نفسِه:
@@ -427,8 +340,9 @@ export function WalletPage({
         </div>
 
 
-        {/* **والبطاقاتُ الذكيّةُ تملأ ما بقي** — وهي مرشِّحاتٌ تُضغط، فتبقى
-            بشكلها ووظيفتها ولا تصير زينةً بجانب الرصيد. */}
+        {/* **وما بقي من التبويب يملأ ما بعد الرصيد** — «طلبات السحب» وحدَها
+            لمن له سحب. **ولا شيءَ هنا عند الزبون والإدارة**، فيقع الجدولُ
+            مباشرةً تحت الرصيد. */}
         {current !== STATEMENT && tabs.length > 0 && (
           <div className="min-w-0 flex-1">
             <TabCards items={tabs} active={current} onChange={setTab} />
@@ -449,11 +363,9 @@ export function WalletPage({
               cardsLabel={m.common.viewCards}
             /> : undefined}
       >
-        {/* **ولا تبويبَ هنا** — صعد إلى الصفّ الأعلى مع الرصيد. */}
-        {/* شرح النوع: أسماء القيود المحاسبية ليست بديهية لمن لم يكتبها */}
-        {current !== STATEMENT && KIND_HINTS[current] && (
-          <p className="mb-3 text-xs leading-relaxed text-ink-muted">{KIND_HINTS[current]}</p>
-        )}
+        {/* **وذهب شرحُ النوع مع مرشِّحاته** — كان سطراً يشرح «استرجاع» لمن
+            ضغط بطاقتَها، **ولا بطاقةَ الآن تُضغط.** (ونصوصُه حُذفت من المعجم
+            كذلك: **نصٌّ يُترجَم ويُراجَع ولا يُرسَم دَينٌ صامت.**) */}
 
         {current === STATEMENT ? (
           <StatementSheet
@@ -489,7 +401,7 @@ export function WalletPage({
               />
             ))}
           </ul>
-        ) : shown.length === 0 ? (
+        ) : txs.length === 0 ? (
           <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
         ) : (
           // لا شريط مجموع هنا: البطاقة النشطة تعرضه فوق — تكراره ضجيج
@@ -510,7 +422,7 @@ export function WalletPage({
              **وتفضيلُ العرض يُحفظ لكلّ مستخدم** (`useViewMode`) — فمن اختار
              الجدولَ مرّةً لا يُعيد اختيارَه كلَّ زيارة. */
           <DataView
-            items={shown}
+            items={txs}
             view={view}
             getKey={(tx) => String(tx.id)}
             empty={m.shared.txCard.empty}

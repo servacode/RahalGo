@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * محفظتي — الصفحة المركزية نفسها بترتيب تبويبات الزبون.
+ * محفظتي — الصفحة المركزية نفسها: رصيدٌ وسجلُّ حركات، ولا سحبَ للزبون.
  *
  * الزبون لا لوحة له فالسجل هنا ضروري: يعرف أين صُرفت نقوده (دفع من المحفظة،
  * تعويض، استرجاع، أو تصحيح مالي). ولا يملك طلب سحب — رصيده يُنفَق لا يُقبَض.
@@ -15,9 +15,6 @@ import { api } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
-
-/** من منظور الزبون: ماله أولاً، ثم ما صُرف منه. */
-const KIND_ORDER = ["topup", "order_payment", "refund", "compensation", "adjustment"];
 
 export default function CustomerWalletPage() {
   const { user, loading } = useAuth();
@@ -33,7 +30,6 @@ export default function CustomerWalletPage() {
     <WalletPage
       api={api}
       path="/api/v1/my/wallet"
-      kindOrder={KIND_ORDER}
       balanceLabel={m.site.wallet.balance}
       hint={m.site.wallet.hint}
       holderName={user?.full_name}

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * المحفظة — الصفحة المركزية نفسها، بترتيب تبويبات السائق.
+ * المحفظة — الصفحة المركزية نفسها، وللسائق فيها طلبُ سحبٍ وسجلُّ طلباته.
  *
  * ولا نقطة خادمٍ خاصّة به: `/my/wallet` مفتوحة لكل موثَّق وتعيد كشفه هو. وقد
  * كان في المشروع مسارٌ لكل دور يفعل الشيء نفسه حرفاً بحرف — والنقطة الثالثة
@@ -15,24 +15,12 @@ import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
-/** الأهمّ للسائق أولاً: أجرُه ثم ما سحبه — لا ترتيب ورودها في القاعدة. */
-const KIND_ORDER = [
-  "driver_earning",
-  "payout",
-  "compensation",
-  "adjustment",
-  "refund",
-  "topup",
-  "order_payment",
-];
-
 export default function DriverWalletPage() {
   const { user } = useAuth();
   return (
     <WalletPage
       api={api}
       path="/api/v1/my/wallet"
-      kindOrder={KIND_ORDER}
       balanceLabel={m.shared.payout.available}
       hint={m.shared.payout.hint}
       payouts

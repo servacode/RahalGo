@@ -39,33 +39,12 @@ import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
-/**
- * **الأهمُّ للخزينة أوّلاً**: ربحُ المنصة ثمّ ما دفعته.
- *
- * **ولا ترتيبَ ورودها في القاعدة**: من يفتح الخزينةَ يسأل «كم ربحنا؟» قبل
- * «من شحن محفظتَه؟».
- */
-const KIND_ORDER = [
-  "platform_profit",
-  "platform_expense",
-  "merchant_earning",
-  "driver_earning",
-  "commission",
-  "compensation",
-  "refund",
-  "payout",
-  "adjustment",
-  "topup",
-  "order_payment",
-];
-
 export default function AdminWalletPage() {
   const { user } = useAuth();
   return (
     <WalletPage
       api={api}
       path="/api/v1/my/wallet"
-      kindOrder={KIND_ORDER}
       balanceLabel={m.admin.nav.treasury}
       holderName={user?.full_name}
       holderPhone={user?.phone}

@@ -269,8 +269,17 @@ export function DashboardChrome({
             logoutLabel={m.auth.logout}
             active={pathname}
             extras={
+              /* **والعضوُ يُحرَس كما يُحرَس الكائن.**
+
+                 كان `rep && rep.rating.count` — **يسأل عن الكائن ويثق بعضوه.**
+                 وردٌّ ناقصُ `rating` (٢٠٠ بجسمٍ غير متوقّع) يرمي هنا،
+                 **والرميةُ في `DashboardChrome` تُبيّض اللوحةَ كلَّها** — لا
+                 شريطَ ولا قائمةَ ولا محتوى، بل «حدث خطأ في التطبيق».
+                 (وقع فعلاً في فحصٍ بمتصفّح ٢٠٢٦-٠٨-٠٦.)
+
+                 **وخسارةُ نجمةٍ في الشريط أهونُ من خسارة اللوحة.** */
               showRating &&
-              rep &&
+              rep?.rating &&
               rep.rating.count > 0 && (
                 <TopBarLink
                   Link={Link}
