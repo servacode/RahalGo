@@ -383,9 +383,16 @@ export function LoginCard({
             className="space-y-4"
           >
             {phoneField}
-            <p className="rounded-control border border-line bg-page px-3 py-2 text-xs leading-relaxed text-ink-muted">
-              {A.staffOnly}
-            </p>
+            {/* **ولا لافتةَ تشرح مَن لا يُنشئ حساباً هنا.**
+
+                (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «حسابات المتاجر والسائقين
+                 والمندوبين تُنشأ عبر المنصة أو مندوب معتمد — احذفها».)
+
+                **كانت تقول لتسعةٍ وتسعين من مئةٍ ما لا يخصّهم**: من يفتح
+                «حساب جديد» في موقع الزبون زبونٌ، **وصاحبُ المتجر لا يمرّ من
+                هنا أصلاً ليقرأها.**
+
+                **وحقلُ هاتفٍ وزرٌّ واحدٌ لا يحتاج شرحاً بينهما.** */}
             {errorBox}
             {submit(A.signupSend)}
           </form>
@@ -421,7 +428,11 @@ export function LoginCard({
     password: { title },
     otp: { title },
     reset: { title: A.resetTitle, subtitle: A.resetSubtitle },
-    signup: { title: A.signupTitle, subtitle: A.signupSubtitle },
+    // **ولا وصفَ تحت «حساب جديد»** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «حساب زبون
+    // — للتسوّق والطلب في الرقة: احذفها»). **والعنوانُ يقول ما يقوله الوصف.**
+    // **والاستعادةُ وحدَها تُبقيه**: «أدخل رقمك ليصلك رمزٌ ثمّ اختر كلمةً
+    // جديدة» **خطوتان غيرُ بديهيّتين** — والباقي حقلٌ وزرّ.
+    signup: { title: A.signupTitle },
   };
   const head = heads[mode];
   const isAuxMode = mode === "reset" || mode === "signup";
