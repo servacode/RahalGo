@@ -92,8 +92,10 @@ function Screen({ mode }: { mode: AuthMode }) {
 
   return (
     <LoginCard
-      title={m.site.loginTitle}
       methods="both"
+      /* **والزبونُ وحدَه يُنشئ حسابَه بنفسه** — واللوحاتُ حساباتُها من
+         المنصة. (أمرُ المالك ٢٠٢٦-٠٨-٠٦: «اختلافُ الروابط حسب كلّ واجهة».) */
+      signup
       referral={referral}
       initialMode={mode}
       onModeChange={follow}

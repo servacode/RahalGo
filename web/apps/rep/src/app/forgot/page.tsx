@@ -21,7 +21,6 @@ export default function ForgotPage() {
     <PanelLogin
       initialMode="reset"
       onModeChange={(mo) => router.replace(mo === "reset" ? "/forgot" : "/login")}
-      title={m.rep.loginTitle}
       allows={isRep}
       notAllowed={m.rep.notAllowed}
       home="/portal"

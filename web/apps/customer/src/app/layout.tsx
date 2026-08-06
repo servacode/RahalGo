@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getMessages, getDir, defaultLocale } from "@rahalgo/i18n";
-import { mediaUrl } from "@/lib/api";
-import { PlatformProvider, type Platform } from "@rahalgo/ui";
+import { PlatformProvider, fetchPlatform } from "@rahalgo/ui";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
@@ -44,37 +43,9 @@ export const metadata: Metadata = {
  * **الاسمُ يسقط إلى المعجم والشعارُ إلى الحرف** — ومنصّةٌ لا تصل إعداداتُها
  * **يجب أن تبقى تعمل باسمها المكتوب**، لا أن تعرض شريطاً فارغاً.
  */
-async function identity(): Promise<Platform> {
-  try {
-    const res = await fetch(`${API}/api/v1/public/platform`, { cache: "no-store" });
-    if (!res.ok) throw new Error(String(res.status));
-    const j = (await res.json()) as {
-      data?: { name?: string; logo?: string | null; otp_login?: boolean; auth_bg?: string | null; auth_bg_dim?: number; site_bg?: string | null; site_bg_dim?: number };
-    };
-    // **والمسارُ يُحوَّل إلى رابطٍ كاملٍ هنا.**
-    //
-    // **الخادمُ يرسل `/media/...` نسبيّاً** — والوسائطُ على منفذ المحرّك
-    // (٨٠٨٠) لا على منفذ الموقع (٣٠٠٣). **فيطلبها المتصفّحُ من الموقع ويردّ
-    // ٤٠٤** — وشعارٌ مكسورٌ في كلّ صفحة.
-    //
-    // **وقِيس قبل الإصلاح**: `3003/media/…` ردّ ٤٠٤ و`8080/media/…` ردّ ٢٠٠.
-    return {
-      name: j.data?.name || "",
-      logo: mediaUrl(j.data?.logo) ?? null,
-      otpLogin: j.data?.otp_login !== false,
-      authBg: mediaUrl(j.data?.auth_bg) ?? null,
-      authBgDim: typeof j.data?.auth_bg_dim === "number" ? j.data.auth_bg_dim : 70,
-      siteBg: mediaUrl(j.data?.site_bg) ?? null,
-      siteBgDim: typeof j.data?.site_bg_dim === "number" ? j.data.site_bg_dim : 55,
-    };
-  } catch {
-    // @empty-ok — **ولا يُخترع اسمٌ عند الفشل**: علامةٌ ناقصةٌ أهونُ من كاذبة.
-    return { name: "", logo: null, otpLogin: true, authBg: null, authBgDim: 70, siteBg: null, siteBgDim: 55 };
-  }
-}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const brand = await identity();
+  const brand = await fetchPlatform(API);
   return (
     <html lang={defaultLocale} dir={getDir(defaultLocale)}>
       <body className="flex min-h-screen flex-col">

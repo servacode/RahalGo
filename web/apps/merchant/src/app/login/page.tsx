@@ -19,7 +19,6 @@ export default function LoginPage() {
   const router = useRouter();
   return (
     <PanelLogin
-      title={m.merchant.loginTitle}
       allows={canAccessPortal}
       notAllowed={m.merchant.notAllowed}
       home="/portal"

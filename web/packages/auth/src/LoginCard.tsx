@@ -56,15 +56,27 @@ export function errText(err: unknown): string {
    لمن أرادها في صفحةٍ تسويقيّةٍ لاحقاً.) */
 
 export function LoginCard({
-  title,
   methods = "both",
+  signup = false,
   onSuccess,
   footer,
   referral = "",
   initialMode = "password",
   onModeChange,
 }: {
-  title: string;
+  /**
+   * **هل يُنشئ أحدٌ حسابَه بنفسه في هذه الواجهة؟**
+   *
+   * (أمرُ المالك ٢٠٢٦-٠٨-٠٦: «شاشةُ تسجيل دخولٍ واحدةٌ لكلّ الواجهات، تصميمٌ
+   *  واحدٌ **مع اختلاف الروابط حسب كلّ واجهة**».)
+   *
+   * **وكان «إنشاء حساب» يظهر في الخمس** — واللوحاتُ الأربعُ حساباتُها تُنشأ
+   * من المنصة أو بمندوبٍ معتمد. **فرابطٌ يقود إلى بابٍ لا يخصّ صاحبَه يُعلّمه
+   * ألّا يثق بما يُعرض عليه.**
+   *
+   * **وهذا هو الفرقُ المسموح**: الروابطُ تختلف والتصميمُ واحد.
+   */
+  signup?: boolean;
   /**
    * رمزُ من دعا هذا المستخدم — **يُمرَّر من الرابط ولا يُكتب باليد.**
    *
@@ -579,9 +591,33 @@ export function LoginCard({
     );
   }
 
-  const heads: Record<Mode, { title: string; subtitle?: string }> = {
-    password: { title },
-    otp: { title },
+  /* ══════════════════════════════════════════════════════════════════
+     **ولا عنوانَ في شاشة الدخول — العلامةُ وحدَها**
+     ══════════════════════════════════════════════════════════════════
+
+     (أمرُ المالك ٢٠٢٦-٠٨-٠٦: «النصوصَ احذفها، بلا داعٍ أصلاً — والأيقونةُ
+      وحدَها بالشاشات الخمس».)
+
+     # ما كان
+
+     كلُّ واجهةٍ تمرّر عنوانَها: «بوابة المتجر» · «لوحة المندوب» · «بوابة
+     السائق» · «تسجيل الدخول إلى اللوحة». **فخمسُ شاشاتٍ تبدو خمساً وهي
+     واحدة** — ومن فتح اثنتين ظنّهما منصّتين.
+
+     # ولماذا لا يُوحَّد بل يُحذف
+
+     **العنوانُ كان يقول ما تقوله الشاشةُ تحته**: حقلُ هاتفٍ وكلمةُ مرورٍ وزرٌّ
+     مكتوبٌ عليه «تسجيل الدخول». **وسطرٌ يشرح ما يُرى تأخيرٌ لمن جاء ليدخل.**
+
+     **والعلامةُ تقول لمن هذه الشاشة** — وهي فوقه أصلاً.
+
+     # ويبقى للاستعادة والحساب الجديد
+
+     **لأنّهما شاشتان أخريان**: من ضغط «نسيت كلمة المرور» يحتاج أن يُقال له
+     أين صار. **والحذفُ هنا لأنّ العنوانَ زائد، لا لأنّ العناوينَ ممنوعة.** */
+  const heads: Record<Mode, { title?: string; subtitle?: string }> = {
+    password: {},
+    otp: {},
     reset: { title: A.resetTitle, subtitle: A.resetSubtitle },
     // **ولا وصفَ تحت «حساب جديد»** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «حساب زبون
     // — للتسوّق والطلب في الرقة: احذفها»). **والعنوانُ يقول ما يقوله الوصف.**
@@ -688,7 +724,9 @@ export function LoginCard({
                   **ومن الإعدادات لا من المعجم**: شعارٌ إن رُفع وإلّا أوّلُ
                   حرفٍ من الاسم المضبوط. */}
               <BrandMark size={48} rounded="card" className="mx-auto mb-4" />
-              <h1 className="text-xl font-bold tracking-tight text-ink">{head.title}</h1>
+              {head.title && (
+                <h1 className="text-xl font-bold tracking-tight text-ink">{head.title}</h1>
+              )}
               {/* **ولا سطرَ وصفٍ في شاشة الدخول** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦:
                   «أدخل رقمك — وسننقلك إلى مكانك حسب دورك: احذف هذه العبارة»).
 
@@ -738,12 +776,12 @@ export function LoginCard({
               <div className="mt-6 border-t border-line pt-4 text-center">
                 {linkBtn(A.backToLogin, () => go("password"), <IconPrev size={15} />)}
               </div>
-            ) : (
+            ) : signup ? (
               <div className="mt-6 border-t border-line pt-4 text-center text-sm text-ink-muted">
                 {A.noAccount}{" "}
                 {linkBtn(A.createAccount, () => go("signup"), <IconSignup size={15} />)}
               </div>
-            )}
+            ) : null}
 
             {footer && <div className="mt-4 text-center">{footer}</div>}
 

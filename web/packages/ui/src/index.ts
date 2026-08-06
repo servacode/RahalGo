@@ -88,6 +88,8 @@ export {
 } from "./CategoryIcon";
 /** هويّةُ المنصة — **من الإعدادات لا من المعجم**، وعلامةٌ ترثها الخمسة. */
 export { PlatformProvider, usePlatform, BrandMark, brandLetter, type Platform } from "./platform";
+/** جالبُ الهويّة في الخادم — **ملفٌّ غيرُ عميلٍ عمداً.** */
+export { fetchPlatform } from "./platform-server";
 export { AuthTransition, type AuthTransitionKind } from "./AuthTransition";
 export {
   TopBar,

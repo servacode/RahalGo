@@ -35,6 +35,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -83,6 +84,31 @@ export interface Platform {
 }
 
 const EMPTY: Platform = { name: "", logo: null, otpLogin: true, authBg: null, authBgDim: 70, siteBg: null, siteBgDim: 55 };
+
+/**
+ * **مسارُ الوسيط يصير رابطاً هنا — لا في كلّ تطبيق.**
+ *
+ * (عطبٌ شهده المالك ٢٠٢٦-٠٨-٠٦: «لوغو المنصة مكسورٌ بالأربع شاشات لأنّه يأتي
+ *  من مكانٍ غيرِ مركزيّ، لأنّه بشاشة الزبون يعمل بشكلٍ طبيعيّ» — **وتشخيصُه
+ *  صحيحٌ حرفاً.**)
+ *
+ * **المحرّكُ يردّ `/media/…` نسبيّاً** — والوسائطُ على منفذه (٨٠٨٠) لا على
+ * منفذ الواجهة. **فمن طلبها من منفذه ردّ ٤٠٤** (قِيس: ٣٠٠١ ردّ ٤٠٤ و٨٠٨٠
+ * ردّ ٢٠٠).
+ *
+ * **وموقعُ الزبون كان يحوّلها في غلافه** (`mediaUrl`) — **فعمل عنده وحدَه**،
+ * **وبقيت اللوحاتُ الأربعُ تعرض صورةً مكسورة.**
+ *
+ * **وهذا هو معنى «غيرِ مركزيّ» بالضبط**: قاعدةٌ صحيحةٌ مكتوبةٌ في تطبيقٍ
+ * واحدٍ من خمسة.
+ *
+ * **وهي عديمةُ الأثر على الرابط الكامل** — فمن مرّر مطلقاً بقي كما هو.
+ */
+const absolute = (path: string | null | undefined, base: string): string | null => {
+  if (!path) return null;
+  if (/^(https?:)?\/\//.test(path) || path.startsWith("data:")) return path;
+  return base.replace(/\/$/, "") + (path.startsWith("/") ? path : "/" + path);
+};
 const PlatformContext = createContext<Platform>(EMPTY);
 
 export function PlatformProvider({
@@ -99,7 +125,25 @@ export function PlatformProvider({
   initial?: Platform;
   apiBase: string;
 }) {
-  const [platform, setPlatform] = useState<Platform>(initial ?? EMPTY);
+  /* **والتحويلُ يُطبَّق على كلّ ما يدخل — لا على الوارد من الشبكة وحدَه.**
+
+     **وأوّلُ إصلاحٍ كسر الطرفَ الآخر**: حُوِّل الوارد من النداء فعملت اللوحاتُ
+     الأربع، **وانكسر الزبون** — لأنّه يقرأ الهويّةَ في الخادم ويمرّرها
+     `initial`، **والمزوّدُ يتخطّى النداءَ حينئذٍ فلا يمرّ التحويل.**
+
+     **ولولا أنّي قِستُ الخمسَ لا الأربعَ لَظننتُه مُصلَحاً.**
+
+     **فالتطبيعُ عند المدخل**: من أينما جاءت القيمةُ تخرج رابطاً كاملاً. */
+  const norm = useCallback(
+    (pl: Platform): Platform => ({
+      ...pl,
+      logo: absolute(pl.logo, apiBase),
+      authBg: absolute(pl.authBg, apiBase),
+      siteBg: absolute(pl.siteBg, apiBase),
+    }),
+    [apiBase],
+  );
+  const [platform, setPlatform] = useState<Platform>(() => (initial ? norm(initial) : EMPTY));
 
   useEffect(() => {
     // **ومن جاءته قيمةٌ مبدئيّةٌ لا يُنادي**: الخادمُ قرأها قبله.
@@ -111,7 +155,8 @@ export function PlatformProvider({
         // **وفشلُ النداء يُبقي الفراغَ ولا يخترع اسماً** — علامةٌ ناقصةٌ
         // أهونُ من علامةٍ كاذبة.
         if (alive && j?.data)
-          setPlatform({
+          setPlatform(
+            norm({
             name: j.data.name ?? "",
             logo: j.data.logo ?? null,
             otpLogin: j.data.otp_login !== false,
@@ -119,13 +164,14 @@ export function PlatformProvider({
             authBgDim: typeof j.data.auth_bg_dim === "number" ? j.data.auth_bg_dim : 70,
             siteBg: j.data.site_bg ?? null,
             siteBgDim: typeof j.data.site_bg_dim === "number" ? j.data.site_bg_dim : 55,
-          });
+            }),
+          );
       })
       .catch(() => undefined);
     return () => {
       alive = false;
     };
-  }, [apiBase, initial]);
+  }, [apiBase, initial, norm]);
 
   /* ══════════════════════════════════════════════════════════════════
      **خلفيّةُ الموقع تُحقَن مُتغيّراً في الجذر — لا تُرسم في مكوّن**

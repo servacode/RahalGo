@@ -19,7 +19,6 @@ export default function LoginPage() {
   const router = useRouter();
   return (
     <PanelLogin
-      title={m.admin.loginTitle}
       allows={canAccessPanel}
       notAllowed={m.admin.notAllowed}
       home="/dashboard"

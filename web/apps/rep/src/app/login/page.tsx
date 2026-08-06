@@ -19,7 +19,6 @@ export default function LoginPage() {
   const router = useRouter();
   return (
     <PanelLogin
-      title={m.rep.loginTitle}
       allows={isRep}
       notAllowed={m.rep.notAllowed}
       home="/portal"

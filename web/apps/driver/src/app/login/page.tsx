@@ -19,7 +19,6 @@ export default function LoginPage() {
   const router = useRouter();
   return (
     <PanelLogin
-      title={m.driver.loginTitle}
       allows={isDriver}
       notAllowed={m.driver.notAllowed}
       home="/portal"

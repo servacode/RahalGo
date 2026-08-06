@@ -21,7 +21,6 @@ export default function ForgotPage() {
     <PanelLogin
       initialMode="reset"
       onModeChange={(mo) => router.replace(mo === "reset" ? "/forgot" : "/login")}
-      title={m.merchant.loginTitle}
       allows={canAccessPortal}
       notAllowed={m.merchant.notAllowed}
       home="/portal"
