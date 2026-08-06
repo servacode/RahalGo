@@ -17,9 +17,35 @@
  *  2. **ولا يدور على واحدة**: لافتةٌ وحيدةٌ تُعرض ساكنةً بلا نقاطٍ ولا مؤقّت.
  *  3. **ويحترم من أطفأ الحركة** (`prefers-reduced-motion`) — لمن يدوخه
  *     المتحرّك، **وهو إعدادٌ في نظامه لا رأيٌ نُصدره نحن.**
+ *
+ * ═══════════════════════════════════════════════════════════════════════
+ * # وخمسةُ نواقصَ سُدَّت (٢٠٢٦-٠٨-٠٦، بطلب المالك: «السلايدر الاحترافيّ»)
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * **١ · كان يقفز ولا ينتقل.** لافتةٌ تحلّ محلَّ أختها في إطارٍ واحد **بلا
+ * انتقالٍ يُرى** — والعينُ تقرأ القفزةَ خطأً في الصفحة لا تبدُّلَ لافتة.
+ * **وهذا وحدَه الفرقُ بين سلايدرَ ومصفوفةِ صور.**
+ *
+ * **٢ · وكان يرسم واحدةً فقط.** فصورةُ التالية تبدأ تحميلَها **لحظةَ ظهورها**
+ * — فيقع إطارٌ رماديٌّ ثمّ تظهر. **والآن كلُّها مرسومةٌ فوق بعضها** والظاهرةُ
+ * وحدَها معتمة: **المتصفّحُ حمّلها قبل دورها.**
+ *
+ * **٣ · ولا سهمَين على الحاسب.** السحبُ يعمل بالإصبع، **ومن يجلس أمام شاشةٍ
+ * بفأرةٍ لا يسحب** — فلا يملك إلّا انتظارَ الدورة أو ضغطَ نقطةٍ بحجم ستّة
+ * بكسلات.
+ *
+ * **٤ · ولا لوحةَ مفاتيح.** من ينتقل بالتاب يقف على النقاط **ولا يستطيع
+ * التنقّلَ بالأسهم** — وهو أوّلُ ما يُجرَّب.
+ *
+ * **٥ · ولا يُعرَّف لقارئ الشاشة.** كتلةٌ تتبدّل وحدَها بلا `aria-live`
+ * **تُقرأ على الأعمى مرّةً واحدةً ثمّ تكذب عليه** بقيّةَ الوقت.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { IconNext, IconPrev } from "./icons";
+
+const m = getMessages(defaultLocale);
 
 export interface SlideItem {
   id: string;
@@ -28,7 +54,7 @@ export interface SlideItem {
   href?: string;
 }
 
-/** @param LinkComp رابطُ الإطار — يختلف بين `next/link` وغيره. */
+/** @param Link رابطُ الإطار — يختلف بين `next/link` وغيره. */
 export function BannerSlider({
   items,
   Link,
@@ -36,27 +62,40 @@ export function BannerSlider({
   className = "",
 }: {
   items: SlideItem[];
-  /** رابطُ الإطار — **نوعٌ فضفاضٌ عمداً**: `next/link` وغيرُه لا يتطابقان. */
   Link?: React.ComponentType<{ href: string; className?: string; children: React.ReactNode }>;
   everyMs?: number;
   className?: string;
 }) {
   const [at, setAt] = useState(0);
   const [paused, setPaused] = useState(false);
-
   const many = items.length > 1;
 
+  /**
+   * **وإطفاءُ الحركة يُقرأ حيّاً لا مرّةً عند الإقلاع.**
+   *
+   * كان يُفحص داخل المؤقّت **فيُقرأ عند أوّل رسمٍ وحدَه** — ومن غيّر الإعدادَ
+   * في نظامه وهو يتصفّح **يبقى السلايدرُ يدور عنده حتّى يُحدِّث الصفحة.**
+   */
+  const [still, setStill] = useState(false);
   useEffect(() => {
-    if (!many || paused) return;
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-    ) {
-      return;
-    }
-    const id = setInterval(() => setAt((i) => (i + 1) % items.length), everyMs);
+    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!mq) return;
+    const read = () => setStill(mq.matches);
+    read();
+    mq.addEventListener("change", read);
+    return () => mq.removeEventListener("change", read);
+  }, []);
+
+  const go = useCallback(
+    (step: number) => setAt((i) => (i + step + items.length) % items.length),
+    [items.length],
+  );
+
+  useEffect(() => {
+    if (!many || paused || still) return;
+    const id = setInterval(() => go(1), everyMs);
     return () => clearInterval(id);
-  }, [many, paused, items.length, everyMs]);
+  }, [many, paused, still, everyMs, go]);
 
   // **والفهرسُ يُقلَّم حين تنقص اللافتات** — عرضٌ يُنزَل والسلايدرُ واقفٌ
   // عليه يترك إطاراً فارغاً.
@@ -73,72 +112,121 @@ export function BannerSlider({
     (x: number) => {
       const dx = x - touch.current;
       // **وسحبةٌ قصيرةٌ ليست سحبة** — إصبعٌ يرتجف على شاشةٍ ليس أمراً.
-      if (Math.abs(dx) > 40 && many) {
-        setAt((i) => (i + (dx < 0 ? 1 : items.length - 1)) % items.length);
-      }
+      if (Math.abs(dx) > 40 && many) go(dx < 0 ? 1 : -1);
       setPaused(false);
     },
-    [many, items.length],
+    [many, go],
   );
 
-  const cur = items[Math.min(at, items.length - 1)];
   // **ولا إطارَ بلا لافتة** — وحارسٌ بعد القراءة يُرضي المدقّق أيضاً.
-  if (!cur) return null;
+  if (items.length === 0) return null;
+  const cur = Math.min(at, items.length - 1);
 
-  const inner = (
-    /*
-      **نسبةٌ لا ارتفاع.**
+  /*
+    كان `h-40 sm:h-52` — **رقمان ثابتان بالبكسل**، والإطارُ يتمدّد بعرض
+    الشاشة والارتفاعُ لا يتحرّك. **فالصورةُ الواحدةُ تُقصّ قصّاً مختلفاً في
+    كلّ شاشة**: على الجوّال إطارٌ نسبتُه ٢:١، وعلى اللابتوب شريطٌ نسبتُه
+    ٦:١ **يبتلع أعلى اللافتة وأسفلَها** — فيضيع العنوانُ المرسومُ فيها
+    ويبقى وسطُها وحدَه. (شهده المالك ٢٠٢٦-٠٨-٠٥.)
 
-      كان `h-40 sm:h-52` — **رقمان ثابتان بالبكسل**، والإطارُ يتمدّد بعرض
-      الشاشة والارتفاعُ لا يتحرّك. **فالصورةُ الواحدةُ تُقصّ قصّاً مختلفاً في
-      كلّ شاشة**: على الجوّال إطارٌ نسبتُه ٢:١، وعلى اللابتوب شريطٌ نسبتُه
-      ٦:١ **يبتلع أعلى اللافتة وأسفلَها** — فيضيع العنوانُ المرسومُ فيها
-      ويبقى وسطُها وحدَه. (شهده المالك ٢٠٢٦-٠٨-٠٥.)
+    وتضيق النسبةُ كلّما اتّسعت الشاشة — **لأنّ الملء ليس هدفاً**: لافتةٌ
+    بنسبة ١٦:٩ على شاشةٍ عريضة تصير سبعمئة بكسلٍ من الطول **تملأ الشاشة
+    وحدَها** ولا يُرى تحتها شيء.
 
-      **والنسبةُ تتحرّك مع العرض**: يتّسع الإطارُ فيرتفع معه، **فتبقى الصورةُ
-      صورةً لا شريطاً.**
+        جوّال   ٣١١ بكسلاً عرضاً · ١٦:٩ ← ١٧٥ طولاً
+        لوحيّ   ٥٧٦ ·············· ٥:٢ ← ٢٣٠
+        لابتوب  ٩٦٠ ·············· ١٦:٥ ← ٣٠٠
+        أعرض    السقفُ يمسك عند ٣٦٠ **فتزداد عرضاً لا طولاً**
+  */
+  const frame =
+    "relative aspect-[16/9] max-h-[360px] w-full overflow-hidden rounded-card bg-page sm:aspect-[5/2] lg:aspect-[16/5]";
 
-      وتضيق النسبةُ كلّما اتّسعت الشاشة — **لأنّ الملء ليس هدفاً**: لافتةٌ
-      بنسبة ١٦:٩ على شاشةٍ عريضة تصير سبعمئة بكسلٍ من الطول **تملأ الشاشة
-      وحدَها** ولا يُرى تحتها شيء.
+  const slide = (it: SlideItem, i: number) => {
+    const on = i === cur;
+    const body = (
+      <>
+        {it.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={it.imageUrl}
+            alt={it.title}
+            draggable={false}
+            /* **والأولى تُحمَّل فوراً وما بعدها كسولاً**: الأولى هي ما يُرى في
+               أوّل رسمٍ — **وتأجيلُها يترك فراغاً في أهمّ موضعٍ من الصفحة.** */
+            loading={i === 0 ? "eager" : "lazy"}
+            className="h-full w-full select-none object-cover"
+          />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-l from-primary/20 to-accent/20" />
+        )}
+        {/* **والعنوانُ على حجابٍ متدرّج** — لا يُقرأ على صورةٍ لا يُعرف لونُها. */}
+        <span className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-ink/70 to-transparent p-3 text-sm font-bold text-on-solid sm:p-4 sm:text-base">
+          {it.title}
+        </span>
+      </>
+    );
+    return (
+      <div
+        key={it.id}
+        aria-hidden={!on}
+        /* **والمخفيّةُ لا تُلتقط بالتاب**: `inert` تمنع تركيزَ ما تحتها،
+           **فلا يقف المتنقّلُ بالكيبورد على رابطٍ لا يراه.** */
+        {...(!on ? { inert: "" as unknown as boolean } : {})}
+        className={`absolute inset-0 transition-opacity ease-[--ease-out] ${
+          still ? "duration-0" : "duration-[--duration-slow]"
+        } ${on ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      >
+        {it.href && Link ? (
+          <Link href={it.href} className="block h-full w-full">
+            {body}
+          </Link>
+        ) : (
+          body
+        )}
+      </div>
+    );
+  };
 
-      **وثلاثُ نسبٍ ثمّ سقفٌ بالبكسل:**
-
-          جوّال   ٣١١ بكسلاً عرضاً · ١٦:٩ ← ١٧٥ طولاً
-          لوحيّ   ٥٧٦ ·············· ٥:٢ ← ٢٣٠
-          لابتوب  ٩٦٠ ·············· ١٦:٥ ← ٣٠٠
-          أعرض    السقفُ يمسك عند ٣٦٠ **فتزداد عرضاً لا طولاً**
-
-      **والسقفُ ليس زينة**: بلاه يصير على شاشةٍ ١٩٢٠ خمسمئةً وثمانين بكسلاً
-      **من لافتةٍ واحدة** — ومن فتح الصفحة لا يرى إلّا إيّاها.
-    */
-    <div className="relative aspect-[16/9] max-h-[360px] w-full overflow-hidden rounded-card bg-page sm:aspect-[5/2] lg:aspect-[16/5]">
-      {cur.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={cur.imageUrl}
-          alt={cur.title}
-          draggable={false}
-          className="h-full w-full select-none object-cover"
-        />
-      ) : (
-        <div className="h-full w-full bg-gradient-to-l from-primary/20 to-accent/20" />
-      )}
-      <span className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-ink/70 to-transparent p-3 text-sm font-bold text-on-solid sm:p-4 sm:text-base">
-        {cur.title}
-      </span>
-    </div>
+  /** سهمٌ على الحاسب — **ويُخفى على الجوّال حيث السحبُ أطوعُ من زرٍّ صغير.** */
+  const arrow = (dir: -1 | 1) => (
+    <button
+      type="button"
+      onClick={() => go(dir)}
+      aria-label={dir === 1 ? m.common.next : m.common.back}
+      className={`taparea absolute inset-block-0 my-auto hidden h-10 w-10 items-center justify-center rounded-badge bg-ink/40 text-on-solid backdrop-blur-sm transition-colors hover:bg-ink/60 sm:flex ${
+        dir === 1 ? "start-2" : "end-2"
+      }`}
+    >
+      {/* **والأيقونتان من المركز** (`IconNext`/`IconPrev`) — وهما تنقلبان مع
+          اتّجاه الصفحة كسائر أيقونات المنصة، **فلا يُقلَبان باليد هنا.** */}
+      {dir === 1 ? <IconNext size={18} /> : <IconPrev size={18} />}
+    </button>
   );
 
   return (
     <div
       className={className}
+      /* **ويُعرَّف كتلةً تتبدّل** — قارئُ الشاشة يقول «لافتة ٢ من ٣» بدل أن
+         يقرأ نصّاً يتغيّر تحته بلا خبر. */
+      role="region"
+      aria-roledescription="carousel"
+      aria-label={m.site.home.bannersLabel}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={(e) => onStart(e.touches[0]?.clientX ?? 0)}
       onTouchEnd={(e) => onEnd(e.changedTouches[0]?.clientX ?? 0)}
+      /* **والأسهمُ تنقل حين يقع التركيزُ داخله** — وهي أوّلُ ما يُجرَّب. */
+      onKeyDown={(e) => {
+        if (!many) return;
+        if (e.key === "ArrowLeft") go(1);
+        else if (e.key === "ArrowRight") go(-1);
+      }}
     >
-      {cur.href && Link ? <Link href={cur.href}>{inner}</Link> : inner}
+      <div className={frame} aria-live={paused ? "polite" : "off"}>
+        {items.map(slide)}
+        {many && arrow(1)}
+        {many && arrow(-1)}
+      </div>
 
       {/* **ونقاطٌ تُضغط لا تُرى فقط** — من رأى الثالثةَ وأراد العودةَ إلى
           الأولى لا ينتظر دورةً كاملة. */}
@@ -149,9 +237,10 @@ export function BannerSlider({
               key={it.id}
               type="button"
               aria-label={it.title}
+              aria-current={i === cur}
               onClick={() => setAt(i)}
-              className={`h-1.5 rounded-badge transition-all ${
-                i === at ? "w-5 bg-accent" : "w-1.5 bg-line"
+              className={`taparea h-1.5 rounded-badge transition-all duration-[--duration-base] ease-[--ease-out] ${
+                i === cur ? "w-5 bg-accent" : "w-1.5 bg-line hover:bg-ink-muted"
               }`}
             />
           ))}

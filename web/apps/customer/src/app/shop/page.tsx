@@ -30,9 +30,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Alert, EmptyState, Input, IconSearch, IconClose, LoadingState } from "@rahalgo/ui";
+import Link from "next/link";
+import {
+  Alert,
+  BannerSlider,
+  EmptyState,
+  Input,
+  IconSearch,
+  IconClose,
+  LoadingState,
+} from "@rahalgo/ui";
 import ItemGrid from "@/components/ItemGrid";
 import { type BrowseItem } from "@/components/ItemCard";
+import { mediaUrl } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -42,8 +52,18 @@ const MIN_CHARS = 2;
 /** سكونُ الكتابة قبل النداء — **حدُّ ما يُحسّ تأخيراً.** */
 const QUIET_MS = 300;
 
+/** لافتةٌ كما يُرسلها الخادم. */
+interface Banner {
+  id: string;
+  title: string;
+  image_url: string | null;
+  /** وجهةُ الضغط — **ولافتةٌ بلا وجهةٍ تُقرأ ولا تُفتح**، وهي حالٌ مشروعة. */
+  target: string | null;
+}
+
 export default function ShopPage() {
   const [q, setQ] = useState("");
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [hits, setHits] = useState<BrowseItem[] | null>(null);
   const [busy, setBusy] = useState(false);
   /** **لم أصل** — غيرُ «وصلتُ فلم أجد»، ولكلٍّ شاشتُه. */
@@ -94,6 +114,20 @@ export default function ShopPage() {
     return () => clearTimeout(t);
   }, [q, search]);
 
+  /**
+   * **واللافتاتُ تُجلب مرّةً عند الفتح.**
+   *
+   * **وفشلُها لا يُقال**: اللافتةُ زينةٌ تُخفى بلا ضرر — **والأصنافُ هي
+   * المحتوى**، وسلايدرٌ غائبٌ لا يُقرأ نقصاً. (بخلاف البحث: فراغُه كذبٌ.)
+   */
+  useEffect(() => {
+    fetch(`${API}/api/v1/public/home`)
+      .then((r) => r.json())
+      .then((j) => setBanners(j.data?.banners ?? []))
+      // @empty-ok — **زينةٌ تُخفى بلا ضرر** (انظر أعلاه).
+      .catch(() => setBanners([]));
+  }, []);
+
   const typing = q.trim().length >= MIN_CHARS;
 
   return (
@@ -122,6 +156,28 @@ export default function ShopPage() {
           </button>
         )}
       </div>
+
+      {/* **واللافتاتُ تحت البحث لا فوقه.**
+
+          **البحثُ هو الفعلُ الأوّل** — ومن يعرف ما يريد لا يتصفّح. **ولافتةٌ
+          بارتفاع ١٧٥ بكسلاً فوقه تدفعه تحت الطيّة** على شاشة جوّال.
+
+          **وتُخفى أثناء البحث**: من كتب كلمةً ينتظر نتيجتَها، **وزينةٌ بينه
+          وبين ما طلبه تُقرأ عائقاً.** */}
+      {!typing && banners.length > 0 && (
+        <BannerSlider
+          className="mt-5"
+          Link={Link}
+          items={banners.map((b) => ({
+            id: b.id,
+            title: b.title,
+            // **والمسارُ يُحوَّل إلى رابط** — كان يُمرَّر خاماً في موضعٍ آخرَ
+            // من قبل، **فالصورةُ لا تُحمَّل ويبقى إطارٌ رماديٌّ بعنوان.**
+            imageUrl: mediaUrl(b.image_url) ?? null,
+            href: b.target || undefined,
+          }))}
+        />
+      )}
 
       {/* **وما دون حرفين لا يُعرض شيء** — ولا رسالةَ «اكتب أكثر»: الحقلُ
           نفسُه يقول ما يُنتظر منه، **ورسالةٌ تحته تُقرأ خطأً لا إرشاداً.** */}
