@@ -22,7 +22,7 @@ const buttonVariants = {
 
      **ونصُّه داكنٌ لا أبيض**: الأبيضُ على النبرة ١٫٣٠ — **يذوب**، والداكنُ
      ١٣٫٩٢. (قرارُ المالك ٢٠٢٦-٠٨-٠٣ للأزرار، ولوناً ٢٠٢٦-٠٨-٠٦.) */
-  primary: "bg-accent text-shell hover:opacity-90",
+  primary: "bg-accent text-on-bright hover:opacity-90",
   secondary: "border border-line bg-surface text-ink hover:bg-page",
   danger: "bg-danger text-on-solid hover:bg-danger/90",
   ghost: "text-ink-muted hover:bg-page hover:text-ink",

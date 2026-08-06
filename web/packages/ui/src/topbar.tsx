@@ -237,7 +237,7 @@ export function CountBadge({ count, tone = "accent" }: { count: number; tone?: "
          ١٫٣٠ **يذوب**، والداكنُ ١٣٫٩٢. **والجرسُ يبقى أبيضَ كما هو.**
          (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «العدّاد فقط وليس الجرس».) */
       className={`absolute -top-1.5 -start-1.5 flex h-5 min-w-5 items-center justify-center rounded-badge px-1 text-xs font-bold ${
-        tone === "danger" ? "bg-danger-solid text-on-solid" : "bg-accent text-shell"
+        tone === "danger" ? "bg-danger-solid text-on-solid" : "bg-accent text-on-bright"
       }`}
     >
       {fmtNum(count)}

@@ -153,7 +153,7 @@ export function PickMap({
         type="button"
         onClick={locateMe}
         disabled={locating}
-        className="mb-2 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-shell elev-1 transition-colors hover:bg-accent-dark disabled:opacity-60"
+        className="mb-2 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-on-bright elev-1 transition-colors hover:bg-accent-dark disabled:opacity-60"
       >
         <IconLocateMe size={17} className={locating ? "animate-pulse" : ""} />
         {locating ? m.common.loading : m.common.locateMe}

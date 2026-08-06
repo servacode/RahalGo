@@ -525,7 +525,7 @@ function OrderCard({
             dir="ltr"
             /* **رقمُ الطلب بالنبرة** — هو ما يُقال في الهاتف حين يُسأل عنه،
                **فيُلمح في البطاقة قبل أن يُبحث عنه.** */
-            className="rounded-control bg-accent px-2.5 py-1 text-sm font-bold tabular-nums text-shell"
+            className="rounded-control bg-accent px-2.5 py-1 text-sm font-bold tabular-nums text-on-bright"
           >
             #{fmtRef(o.number)}
           </span>
