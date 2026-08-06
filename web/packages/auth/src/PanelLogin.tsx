@@ -64,7 +64,7 @@ export function PanelLogin({
   methods?: "both" | "password" | "otp";
   footer?: ReactNode;
 }) {
-  const { user, loading, setUser, logout } = useAuth();
+  const { user, loading, enter, logout } = useAuth();
   const sent = useRef(false);
 
   // من دخل بحسابٍ يخصّ هذه اللوحة يمضي إليها. **ولا يُحوَّل من لا يخصّها** —
@@ -122,7 +122,9 @@ export function PanelLogin({
       methods={methods}
       footer={footer}
       onSuccess={(u) => {
-        setUser(u);
+        // **الطبقةُ ترتفع في الحالين**: من يخصّ حسابُه اللوحةَ يُنقل تحتها،
+        // **ومن لا يخصّها تُطفأ عنه بعد تسعمئة فيقرأ سببَ الردّ.**
+        enter(u);
         // **ولا تحويل هنا إن كان الحساب لا يخصّ اللوحة**: إعادة الرسم تُظهر
         // رسالة الرفض. فمن دخل بحساب زبونٍ في بوابة المتجر يعرف لماذا رُدّ.
         if (allows(u)) replace(home);

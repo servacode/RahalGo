@@ -1,0 +1,101 @@
+"use client";
+
+/**
+ * **الطبقةُ الانتقاليّةُ عند الدخول والخروج.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «عند تسجيل الخروج لاحظتُ أنّه يحدث تسجيلُ خروجٍ
+ *  صامتٌ بدون أيّ تأثير أو شيءٍ واضح — أصلحه. وأيضاً عند تسجيل الدخول لا
+ *  يجوز أن يكون انتقالٌ بدون تأثير».)
+ *
+ * # ما كان
+ *
+ * **الخروجُ كان سطراً واحداً**: `logout()` ثمّ `router.push("/")` — تُمسح
+ * الجلسةُ وتُبدَّل الصفحةُ في إطارٍ واحد. **فمن ضغط الزرَّ لا يرى شيئاً وقع**:
+ * تتبدّل الشاشةُ فجأةً، **ويبقى يسأل: هل خرجتُ فعلاً أم أخطأتُ الضغط؟**
+ *
+ * **والدخولُ مثلُه**: بعد نجاح النداء يقع `replace(home)` — **وبينهما تحميلُ
+ * تطبيقٍ كاملٍ في الانتقال بين البوّابات**، فتبقى بطاقةُ الدخول ساكنةً
+ * ثانيتين **كأنّ الضغطةَ ضاعت.**
+ *
+ * # ولماذا طبقةٌ لا رسالةٌ عابرة (`toast`)
+ *
+ * **الرسالةُ العابرةُ تعيش في الصفحة التي تغادرها** — تُدفع ثمّ يقع الانتقالُ
+ * فتموت معها. **ولا تُرى أصلاً.**
+ *
+ * **والطبقةُ تغطّي زمنَ الانتقال نفسَه**: تظهر فوق الصفحة القديمة، **وتبقى
+ * مرئيّةً حتّى تحلّ الجديدةُ محلَّها** — فيملأ الفراغَ الذي كان صمتاً.
+ *
+ * # وثلاثةُ أشياءَ تجعلها «تأثيراً» لا شاشةَ انتظار
+ *
+ * **علامةُ المنصة** — فيُعرف أنّ ما يجري من المنصة لا عطبٌ في الشبكة.
+ * **وفعلٌ مسمًّى** — «جارٍ تسجيل الخروج» لا «جارٍ التحميل». **والثاني يقول
+ * أنّ شيئاً يحدث، والأوّل يقول أيَّ شيء.**
+ * **وشريطُ تقدّمٍ يمشي** — سكونٌ تامٌّ يُقرأ تعلّقاً بعد ثانيتين.
+ *
+ * # ومن أطفأ الحركة
+ *
+ * **الشريطُ يقف والطبقةُ تبقى** (`motion-safe:`): من عطّل الحركةَ في نظامه
+ * غالباً لأنّها تُدوّخه، **والنصُّ وحدَه يكفيه** — والمعلومةُ لا تُحجب عنه.
+ */
+
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
+
+const m = getMessages(defaultLocale);
+const A = m.auth;
+
+export type AuthTransitionKind = "in" | "out";
+
+export function AuthTransition({
+  kind,
+  name = "",
+  logo = null,
+  platform = "",
+}: {
+  kind: AuthTransitionKind;
+  /** اسمُ الداخل — يُرحَّب به باسمه، **وفارغٌ يُسقط الاسمَ ولا يترك فراغاً.** */
+  name?: string;
+  /** شعارُ المنصة إن رُفع — **ومنصّةٌ بلا شعارٍ تبقى تعمل بحرفها.** */
+  logo?: string | null;
+  platform?: string;
+}) {
+  const title =
+    kind === "out"
+      ? A.leavingTitle
+      : name
+        ? A.enteringTitle.replace("{name}", name)
+        : A.enteringTitle.replace("{name}", "").trim();
+  const hint = kind === "out" ? A.leavingHint : A.enteringHint;
+
+  return (
+    <div
+      /* **`fixed inset-0` فوق كلّ شيء** — الشريطُ عند ٤٠ والقوائمُ عند ٨٠،
+         **وطبقةٌ تحتهما تُقرأ نافذةً في صفحةٍ لا انتقالاً منها.** */
+      className="fixed inset-0 z-[95] flex flex-col items-center justify-center gap-5 bg-shell/95 backdrop-blur-md"
+      role="status"
+      aria-live="polite"
+    >
+      {/* **العلامةُ أوّلاً** — وهي ما يقول «المنصةُ تعمل» قبل أن يُقرأ حرف. */}
+      {logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logo} alt={platform || m.common.appName} className="h-16 w-16 rounded-card object-cover" />
+      ) : (
+        <span className="flex h-16 w-16 items-center justify-center rounded-card bg-primary text-2xl font-bold text-on-bright">
+          {m.terms.brandInitial}
+        </span>
+      )}
+
+      <div className="px-6 text-center">
+        <p className="text-lg font-bold text-ink">{title}</p>
+        <p className="mt-1 text-sm text-ink-muted">{hint}</p>
+      </div>
+
+      {/* **شريطٌ يمشي ولا يَعِد بنسبة.**
+
+          **ولا رقمَ معه**: النسبةُ تُكذَب حين لا تُعرف — والانتقالُ بين
+          بوّابتين لا يُقاس. **وشريطٌ يمشي يقول «يجري» ولا يقول «بقي ٤٠٪».** */}
+      <span className="h-1 w-40 overflow-hidden rounded-badge bg-page">
+        <span className="block h-full w-1/3 rounded-badge bg-accent motion-safe:animate-[rahalgo-sweep_1.1s_ease-in-out_infinite]" />
+      </span>
+    </div>
+  );
+}

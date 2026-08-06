@@ -22,7 +22,7 @@ export default function LoginPage() {
 }
 
 function Login() {
-  const { user, loading, setUser } = useAuth();
+  const { user, loading, enter } = useAuth();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
   // **ورمزُ من دعاه يأتي في الرابط** — لا يُكتب باليد ولا يُطلب منه.
@@ -52,7 +52,10 @@ function Login() {
       methods="both"
       referral={referral}
       onSuccess={async (u) => {
-        setUser(u);
+        // **`enter` لا `setUser`** — تضع الهويّةَ وترفع الطبقةَ الانتقاليّة
+        // معاً. **و`routeByRole` قد تعبر إلى بوّابةٍ أخرى** (تحميلُ تطبيقٍ
+        // كامل)، **وبينهما ثانيتان كانت البطاقةُ تقضيهما ساكنة.**
+        enter(u);
         await routeByRole(u, next ?? undefined);
       }}
     />

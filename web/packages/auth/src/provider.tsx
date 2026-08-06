@@ -5,7 +5,8 @@
  * يوفّر معاً `login` و`setUser` كي تستعمله كل اللوحات بلا اختلاف عقد.
  */
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { AuthTransition, type AuthTransitionKind } from "@rahalgo/ui";
 import { authApi, tokenStore, type AuthUser } from "./client";
 
 interface AuthState {
@@ -14,13 +15,55 @@ interface AuthState {
   setUser: (u: AuthUser | null) => void;
   login: (phone: string, password: string) => Promise<AuthUser>;
   logout: () => void;
+  /**
+   * **يُعلن دخولاً ناجحاً فتُغطّى الشاشةُ حتّى تحلّ الوجهة.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «عند تسجيل الدخول لا يجوز أن يكون انتقالٌ
+   *  بدون تأثير».)
+   *
+   * **والخروجُ لا يحتاج إعلاناً** — `logout` تُعلنه بنفسها، **فخمسةَ عشرَ
+   * نداءً في خمسة تطبيقاتٍ ترثه بلا أن يُلمس واحدٌ منها.** والدخولُ يُعلَن
+   * لأنّ نجاحَه يقع في `onSuccess` خارجَ الموفّر.
+   */
+  enter: (u: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({
+  children,
+  /** شعارُ المنصة واسمُها للطبقة الانتقاليّة — **وفارغٌ يُبقي حرفَ العلامة.** */
+  logo = null,
+  platform = "",
+}: {
+  children: ReactNode;
+  logo?: string | null;
+  platform?: string;
+}) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  /**
+   * **الطبقةُ الانتقاليّة — وتنطفئ وحدَها.**
+   *
+   * **الانتقالُ بين بوّابتين تحميلُ صفحةٍ كاملة**، فتموت الطبقةُ مع الصفحة
+   * القديمة ولا تحتاج إطفاءً. **وداخلَ التطبيق الواحد يبقى الموفّرُ حيّاً**
+   * — ولو تُركت لَغطّت الوجهةَ إلى الأبد.
+   *
+   * **ومهلةٌ تكفي لتُقرأ ولا تُملّ**: تسعمئةُ مِلّي ثانية.
+   */
+  const [transit, setTransit] = useState<{ kind: AuthTransitionKind; name: string } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flash = useCallback((kind: AuthTransitionKind, name = "") => {
+    if (timer.current) clearTimeout(timer.current);
+    setTransit({ kind, name });
+    timer.current = setTimeout(() => setTransit(null), 900);
+  }, []);
+
+  // **ومؤقّتٌ يبقى بعد رحيل الشاشة يُحدّث ما لا وجودَ له.**
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
 
   useEffect(() => {
     if (!tokenStore.refresh) {
@@ -42,13 +85,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    // **الطبقةُ تُرفع قبل المسح** — لو رُفعت بعده لَأُعيد رسمُ الصفحة زائراً
+    // **فتُرى شاشةُ الضيف لحظةً قبل الغطاء**، وهي الوميضةُ التي تُقرأ عطباً.
+    flash("out");
     authApi.logout();
     setUser(null);
-  }, []);
+  }, [flash]);
+
+  const enter = useCallback(
+    (u: AuthUser) => {
+      setUser(u);
+      flash("in", u.full_name || "");
+    },
+    [flash],
+  );
 
   return (
-    <AuthContext.Provider value={{ user, loading, setUser, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, setUser, login, logout, enter }}>
       {children}
+      {transit && (
+        <AuthTransition kind={transit.kind} name={transit.name} logo={logo} platform={platform} />
+      )}
     </AuthContext.Provider>
   );
 }

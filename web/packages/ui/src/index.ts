@@ -86,6 +86,7 @@ export {
   categoryIconLabel,
   type CategoryIconKey,
 } from "./CategoryIcon";
+export { AuthTransition, type AuthTransitionKind } from "./AuthTransition";
 export {
   TopBar,
   TopBarChip,
