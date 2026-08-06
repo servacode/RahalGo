@@ -6,7 +6,16 @@
  * مختلفة، فصار المصدر هنا وكلٌّ يمرّر محتواه فقط.
  */
 
-import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { IconChevronDown, IconLogout } from "./icons";
 
@@ -331,7 +340,50 @@ export function AccountMenu({
   active?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState({ top: 0, left: 0 });
+  const btn = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+
+  /* ══════════════════════════════════════════════════════════════════════
+     **موضعٌ يُحسب، وبوّابةٌ إلى `body` — لأنّ الشريط يقصّ**
+     ══════════════════════════════════════════════════════════════════════
+
+     (عطبٌ شهده المالك ٢٠٢٦-٠٨-٠٦: «القائمة لا تفتح، لا يوجد أيّ شيء
+      بداخلها».)
+
+     **صفُّ الأدوات فيه `overflow-x-auto`** — يمنع الشريطَ أن يجرّ الصفحةَ
+     أفقيّاً حين تكثر الأيقونات. **وأيُّ محورٍ غيرِ `visible` يجعل الآخرَ
+     `auto` بحكم المواصفة** — فصار الصفُّ يقصّ رأسيّاً أيضاً.
+
+     **فالقائمةُ كانت تُرسم داخلَه فتُقصّ عند حافّته**: موجودةٌ في الشجرة،
+     مقيسةُ الأبعاد، **ولا يُرى منها شيء.**
+
+     **ولا يكفي `position: fixed`**: الشريطُ عليه `backdrop-blur` —
+     **و`backdrop-filter` تُنشئ كتلةَ احتواءٍ للثابت** فيعود أسيرَ الشريط.
+
+     **فالبوّابةُ إلى `body` وحدَها تخرج من كلّ قاصّ** — ومعها يُحسب الموضعُ
+     بجافاسكربت لأنّ العنصرَ لم يعد جارَ زرّه في الشجرة.
+     ══════════════════════════════════════════════════════════════════════ */
+  const place = useCallback(() => {
+    const r = btn.current?.getBoundingClientRect();
+    if (!r) return;
+    const W = 224; // w-56
+    const vw = document.documentElement.clientWidth;
+    // **تحت الزرّ ومحصورةٌ في الشاشة**: تُوسَّط تحته ثمّ تُقصّ إلى الحافّتين
+    // بثمانيةٍ — **فلا تخرج يميناً في العربيّة ولا يساراً في اللاتينيّة.**
+    const left = Math.min(Math.max(r.left + r.width / 2 - W / 2, 8), vw - W - 8);
+    // **وتُعلَّق من حافّة الشريط لا من حافّة الزرّ**: بينهما حشوةُ الشريط
+    // (١٢px)، **فثمانيةٌ من الزرّ تضعها فوق الحافّة بأربعة** — تُقرأ ملتصقةً
+    // بالبار لا منسدلةً منه. (وقِيس: ‎−٤ في اللوحات و‎−٥ في الموقع.)
+    const bar = btn.current?.closest("header")?.getBoundingClientRect();
+    setAt({ top: (bar?.bottom ?? r.bottom) + 8, left });
+  }, []);
+
+  // **يُقاس قبل الطلاء** — `useEffect` يترك القائمةَ تُرسم عند (٠،٠) إطاراً
+  // ثمّ تقفز إلى موضعها، **وهي قفزةٌ تُرى.**
+  useLayoutEffect(() => {
+    if (open) place();
+  }, [open, place]);
 
   // **وتُغلق بتبدّل المسار** — بند القائمة ينقل، والقائمةُ الباقيةُ تغطّي
   // الوجهةَ التي فُتحت لأجلها.
@@ -340,104 +392,114 @@ export function AccountMenu({
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (btn.current?.contains(t) || panel.current?.contains(t)) return;
+      setOpen(false);
     };
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     // `pointerdown` لا `click`: **الإغلاق يقع مع بدء اللمسة** فلا يبقى
     // المنسدلُ ظاهراً بين ضغطةٍ ورفعها على الجوّال.
     document.addEventListener("pointerdown", away);
     document.addEventListener("keydown", esc);
+    // **والشريطُ لاصقٌ والقائمةُ ثابتة** — فلو مُرِّرت الصفحةُ بقيت معلّقةً
+    // في الهواء بلا زرّها. (`capture` يلتقط تمريرَ أيّ حاوية.)
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
     return () => {
       document.removeEventListener("pointerdown", away);
       document.removeEventListener("keydown", esc);
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
     };
-  }, [open]);
+  }, [open, place]);
 
   const inMenu = items.some((it) => active.startsWith(it.href)) || active.startsWith(accountHref);
 
-  return (
-    <div className="relative" ref={box}>
+  const menu = (
+    <div
+      ref={panel}
+      role="menu"
+      aria-label={accountLabel}
+      style={{ top: at.top, left: at.left }}
+      className="fixed z-[80] w-56 overflow-hidden rounded-card border border-line bg-raised elev-3"
+    >
+      {/* **ورأسُها بابُ الحساب** — كانت الصورةُ رابطاً إليه، فلمّا صارت
+          زرَّ قائمةٍ **فقد «حسابي» بابَه في الشريط.** */}
+      <Link
+        href={accountHref}
+        className="flex items-center gap-2 border-b border-line px-3 py-3 text-sm transition-colors hover:bg-page"
+      >
+        <Avatar url={avatarUrl} name={name} size={32} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold text-ink">{name}</span>
+          <span className="block text-xs text-ink-muted">{accountLabel}</span>
+        </span>
+      </Link>
+
+      {/* **وقائمةٌ بلا بنودٍ لا فراغَ فيها** — اللوحاتُ تمرّر مصفوفةً فارغةً
+          عمداً (قرارُ المالك: «أضِف فقط تسجيل الخروج للقائمة»)، **فلا يُرسم
+          حاوٍ فارغٌ بحشوته.** */}
+      {items.length > 0 && (
+        <div className="py-1">
+          {items.map((it) => {
+            const on = active.startsWith(it.href);
+            const Icon = it.icon;
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                className={`flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
+                  on ? "bg-page font-medium text-ink" : "text-ink-muted hover:bg-page hover:text-ink"
+                }`}
+              >
+                <Icon size={17} />
+                {it.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {/* **والخروجُ آخرُها بحدٍّ فوقه** — أخطرُ بندٍ فيها، **وحدٌّ يفصله
+          عن الروابط يمنع أن يُضغط بامتداد الإصبع.** */}
       <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
+          setOpen(false);
+          onLogout();
+        }}
+        className="flex w-full items-center gap-2.5 border-t border-line px-3 py-2.5 text-start text-sm text-danger transition-colors hover:bg-page"
+      >
+        <IconLogout size={17} />
+        {logoutLabel}
+      </button>
+    </div>
+  );
+
+  return (
+    <>
+      <button
+        ref={btn}
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={`taparea flex items-center gap-2 rounded-control p-1 transition-colors ${
+        className={`taparea flex shrink-0 items-center gap-2 rounded-control p-1 transition-colors ${
           open || inMenu ? "bg-page text-ink" : "text-ink-muted hover:bg-page hover:text-ink"
         }`}
       >
         <Avatar url={avatarUrl} name={name} size={TOPBAR_AVATAR} />
         {/* **والاسمُ يُقصّ ولا يمدّ الشريط**: أسماءٌ ثلاثيّةٌ تدفع ما بعدها
-            خارجَ الشاشة. **ويُخفى تحت ٦٤٠** حيث الشريطُ أضيقُ ما يكون —
-            والشريطُ السفليُّ يحمل «حسابي» بتسميته هناك. */}
+            خارجَ الشاشة. */}
         <span className="max-w-20 truncate text-sm font-medium sm:max-w-28">{name}</span>
         <IconChevronDown
           size={15}
           className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
-
-      {open && (
-        <div
-          role="menu"
-          aria-label={accountLabel}
-          /* **تُفتح إلى الداخل لا إلى الخارج**: `end-0` منطقيّةٌ تتبع اتجاهَ
-             الصفحة، **و`right-0` كانت ستدفعها خارجَ الشاشة في العربيّة.** */
-          /* **وتنزل تحت الشريط لا داخلَه**: `mt-2` كانت تضعها فوق حافّته
-             بخمسة بكسلات — **لأنّ `top-full` من أسفل الزرّ لا من أسفل
-             الشريط**، وبينهما حشوةُ الشريط (١٢px). فقُيست: ٢٠ − ١٢ = ثمانيةٌ
-             تحت الحافّة. */
-          className="absolute end-0 top-full z-50 mt-5 w-56 overflow-hidden rounded-card border border-line bg-raised elev-3"
-        >
-          {/* **ورأسُها بابُ الحساب** — كان الصورةُ رابطاً إليه، فلمّا صارت
-              زرَّ قائمةٍ **فقد «حسابي» بابَه في الشريط.** */}
-          <Link
-            href={accountHref}
-            className="flex items-center gap-2 border-b border-line px-3 py-3 text-sm transition-colors hover:bg-page"
-          >
-            <Avatar url={avatarUrl} name={name} size={32} />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-bold text-ink">{name}</span>
-              <span className="block text-xs text-ink-muted">{accountLabel}</span>
-            </span>
-          </Link>
-
-          <div className="py-1">
-            {items.map((it) => {
-              const on = active.startsWith(it.href);
-              const Icon = it.icon;
-              return (
-                <Link
-                  key={it.href}
-                  href={it.href}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
-                    on ? "bg-page font-medium text-ink" : "text-ink-muted hover:bg-page hover:text-ink"
-                  }`}
-                >
-                  <Icon size={17} />
-                  {it.label}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* **والخروجُ آخرُها بحدٍّ فوقه** — أخطرُ بندٍ فيها، **وحدٌّ يفصله
-              عن الروابط يمنع أن يُضغط بامتداد الإصبع.** */}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onLogout();
-            }}
-            className="flex w-full items-center gap-2.5 border-t border-line px-3 py-2.5 text-start text-sm text-danger transition-colors hover:bg-page"
-          >
-            <IconLogout size={17} />
-            {logoutLabel}
-          </button>
-        </div>
-      )}
-    </div>
+      {open && createPortal(menu, document.body)}
+    </>
   );
 }
 
@@ -476,9 +538,13 @@ export function TopBarActions({
   /**
    * **بنودُ قائمة الحساب — وبلاها تبقى الصورةُ رابطاً والخروجُ رقعةً.**
    *
-   * القائمةُ لموقع الزبون (قرارُ المالك ٢٠٢٦-٠٨-٠٦)، **واللوحاتُ الأربعُ
-   * لا تمرّرها فلا يتغيّر شريطُها حرفاً.** ولو أردناها لهنّ يوماً مُرّرت،
-   * **ولا تُبنى ثانيةً.**
+   * **ووجودُها لا طولُها هو ما يبدّل الشكل**: اللوحاتُ الأربعُ تمرّر مصفوفةً
+   * **فارغةً** عمداً (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «طبّق الاسم والقائمة مع باقي
+   * اللوحات وأضِف فقط تسجيل الخروج للقائمة») — **فتأخذ الاسمَ والقائمةَ
+   * وفيها الحسابُ والخروج، ولا بنودَ زائدة.**
+   *
+   * **ولو فُحص الطولُ لَسقطت اللوحاتُ إلى الشكل القديم صامتةً** — وهي عائلةُ
+   * الخلل التي تتكرّر هنا: **شرطٌ يقيس الحجمَ وهو يريد الوجود.**
    */
   menu?: readonly AccountMenuItem[];
   walletHref?: string;
@@ -502,7 +568,7 @@ export function TopBarActions({
         <WalletPill Link={Link} href={walletHref} balance={balance ?? 0} icon={walletIcon} />
       )}
       {extras}
-      {menu && menu.length > 0 ? (
+      {menu ? (
         <AccountMenu
           Link={Link}
           accountHref={accountHref}
@@ -538,7 +604,7 @@ export function TopBarActions({
           (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */}
       {/* **ولا خروجَ مرّتين**: من مرّر قائمةً فالخروجُ آخرُ بندٍ فيها،
           **ورقعةٌ حمراءُ بجانبها تسأل أيُّهما الحقيقيّ.** */}
-      {!(menu && menu.length > 0) && (
+      {!menu && (
         <span className="hidden sm:contents">
           <TopBarChip tone="danger" onClick={onLogout} title={logoutLabel} aria-label={logoutLabel}>
             <IconLogout size={TOPBAR_ICON} />

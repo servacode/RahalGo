@@ -9,7 +9,14 @@
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LiveNotifications, useLiveRefresh } from "./Notifications";
-import { TopBar, TopBarChip, TopBarLink, TopBarActions, TOPBAR_ICON } from "./topbar";
+import {
+  TopBar,
+  TopBarChip,
+  TopBarLink,
+  TopBarActions,
+  TOPBAR_ICON,
+  type AccountMenuItem,
+} from "./topbar";
 import {
   IconWallet,
   IconStar,
@@ -22,6 +29,20 @@ import {
 } from "./icons";
 
 const m = getMessages(defaultLocale);
+
+/**
+ * **قائمةُ حساب اللوحة — بلا بنودٍ زائدة.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «طبّق الاسم والقائمة مع باقي اللوحات وأضِف فقط
+ *  تسجيل الخروج للقائمة».)
+ *
+ * **وأبوابُ اللوحة في سايدبارها** — تسعةَ عشرَ بنداً بأسمائها ومجموعاتها،
+ * **فقائمةٌ تُكرّر منها بعضاً تصير باباً ثانياً لِما له باب.**
+ *
+ * **وخارجَ المكوّن لا داخلَه**: مصفوفةٌ تُبنى في كلّ طلاءٍ مرجعٌ جديدٌ في
+ * كلّ مرّة — **وهي تُمرَّر إلى `useEffect` عبر `items` في القائمة.**
+ */
+const ACCOUNT_MENU: readonly AccountMenuItem[] = [];
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 type IconType = ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
@@ -268,6 +289,7 @@ export function DashboardChrome({
                 allHref={notificationsHref}
               />
             }
+            menu={ACCOUNT_MENU}
             walletHref={walletHref}
             balance={summary?.balance ?? 0}
             walletIcon={<IconWallet size={TOPBAR_ICON} />}
