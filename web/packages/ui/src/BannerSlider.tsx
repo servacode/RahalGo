@@ -247,7 +247,7 @@ export function BannerSlider({
       type="button"
       onClick={() => go(dir)}
       aria-label={dir === 1 ? m.common.next : m.common.back}
-      className={`taparea absolute inset-block-0 my-auto hidden h-10 w-10 items-center justify-center rounded-badge bg-ink/40 text-on-solid backdrop-blur-sm transition-colors hover:bg-ink/60 sm:flex ${
+      className={`taparea absolute inset-block-0 my-auto hidden h-10 w-10 items-center justify-center rounded-badge scrim text-on-solid backdrop-blur-sm transition-colors hover:bg-ink/60 sm:flex ${
         dir === 1 ? "start-2" : "end-2"
       }`}
     >

@@ -671,22 +671,22 @@ export function LoginCard({
           تتبع الطولَ تنقطع عند حافّة المحتوى.** */}
       {authBg && (
         <>
+          {/* @single-child — بقيت الشظيّةُ لأنّ التعليقَ ولدٌ ثانٍ في JSX.
+              **والرسمُ كلُّه في `theme.css`** (`auth-bg-image`) — **الصورةُ
+              وحجابُها معاً.** كانت هنا أصنافاً مبعثرةً وطبقةً ثانيةً مخبوءةً
+              في `style`، **وما كان في `style` لا يراه حارسُ المركزيّة** فيدرج
+              خارجَ الثيم صامتاً. **ولم يبقَ هنا إلّا ما يأتي من الإعدادات:
+              أيُّ صورةٍ وكم شدّةُ حجابها.** */}
           <div
             aria-hidden
-            className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center"
-            style={{ backgroundImage: `url(${authBg})` }}
+            className="auth-bg-image"
+            style={
+              {
+                "--auth-bg": `url(${authBg})`,
+                "--auth-bg-dim": authBgDim / 100,
+              } as React.CSSProperties
+            }
           />
-          {/* **وشدّةُ الطبقة من الإعدادات** (قرارُ المالك ٢٠٢٦-٠٨-٠٦):
-              **صورةٌ داكنةٌ تكفيها عشرون وأخرى بيضاءُ تحتاج ثمانين** —
-              والمقدارُ يُحكَم عليه بالعين لا بالحساب. **وصفرٌ لا يرسم
-              طبقةً أصلاً** فلا تبقى عقدةٌ شفّافةٌ في الشجرة. */}
-          {authBgDim > 0 && (
-            <div
-              aria-hidden
-              className="pointer-events-none fixed inset-0 -z-10"
-              style={{ backgroundColor: "var(--color-shell)", opacity: authBgDim / 100 }}
-            />
-          )}
         </>
       )}
       {/* **وعرضٌ يكفي حقلاً واحداً** — كان خمسةً ونصفاً لأنّ نصفَه كان دعاية.

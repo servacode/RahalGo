@@ -66,7 +66,7 @@ export function AuthTransition({
     <div
       /* **`fixed inset-0` فوق كلّ شيء** — الشريطُ عند ٤٠ والقوائمُ عند ٨٠،
          **وطبقةٌ تحتهما تُقرأ نافذةً في صفحةٍ لا انتقالاً منها.** */
-      className="fixed inset-0 z-[95] flex flex-col items-center justify-center gap-5 bg-shell/95 backdrop-blur-md"
+      className="fixed inset-0 z-[95] flex flex-col items-center justify-center gap-5 scrim"
       role="status"
       aria-live="polite"
     >

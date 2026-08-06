@@ -261,7 +261,7 @@ export function DashboardChrome({
       </aside>
 
       {menuOpen && (
-        <div className="fixed inset-0 z-40 bg-ink/40 lg:hidden" onClick={() => setMenuOpen(false)} />
+        <div className="fixed inset-0 z-40 scrim lg:hidden" onClick={() => setMenuOpen(false)} />
       )}
       <aside
         /* **والدُّرجُ الجوّاليُّ يُضبّب ويثقل — وهو يعلو المحتوى.**

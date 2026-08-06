@@ -59,7 +59,7 @@ export default function RatingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center scrim p-4" onClick={onClose}>
       <div
         className="w-full max-w-sm surface p-5 elev-4"
         onClick={(e) => e.stopPropagation()}

@@ -335,7 +335,7 @@ export function Confirm({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-shell/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[70] flex items-end justify-center scrim p-0 sm:items-center sm:p-4"
       onClick={onCancel}
     >
       {/* **وعلى الجوّال يصعد من الأسفل** — نافذةٌ في وسط شاشةٍ طويلةٍ تترك
