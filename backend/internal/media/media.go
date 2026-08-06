@@ -42,8 +42,11 @@ var (
 )
 
 // **وإثباتُ التسليم نوعٌ منها** — له الفحصُ والحدُّ نفسُهما.
+// **و`platform_logo` شعارُ المنصة** — يُرفع من الإعدادات ويُعرض في كلّ
+// شريطٍ علويٍّ وفوترٍ وفاتورة. (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا تنسَ إضافة هوية
+// المنصة أيضاً — الاسم واللوغو».)
 var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true,
-	"banner": true, "avatar": true, "delivery_proof": true}
+	"banner": true, "avatar": true, "delivery_proof": true, "platform_logo": true}
 
 type Media struct {
 	ID       string `json:"id"`

@@ -25,7 +25,10 @@ const LINKS = [
   { href: "/privacy", label: L.privacyTitle },
 ];
 
-export default function Footer() {
+export default function Footer({
+  /** **اسمُ المنصة من الإعدادات** — وفارغٌ يعني «خذ من المعجم». */
+  name = "",
+}: { name?: string } = {}) {
   return (
     /* **وشريطٌ كالعلويّ لا كتلةٌ سائبة.**
 
@@ -40,7 +43,7 @@ export default function Footer() {
       ))}
       {/* **والسنةُ تُكتب ولا تُحسب في المتصفّح**: خادمٌ يقول ٢٠٢٦ ومتصفّحٌ
           ضُبط على ٢٠٢٧ يختلفان في أوّل رسمٍ فيصرخ React. */}
-      <span>© {m.common.appName}</span>
+      <span>© {name || m.common.appName}</span>
     </footer>
   );
 }

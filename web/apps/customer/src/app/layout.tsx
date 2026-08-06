@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getMessages, getDir, defaultLocale } from "@rahalgo/i18n";
+import { mediaUrl } from "@/lib/api";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
@@ -12,6 +13,7 @@ import "./globals.css";
 
 const m = getMessages(defaultLocale);
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
@@ -26,7 +28,47 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * **هويّةُ المنصة تُقرأ في الخادم مرّةً لكلّ صفحة.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا تنسَ إضافة هوية المنصة — الاسم واللوغو».)
+ *
+ * # ولماذا في الغلاف لا في الشريط
+ *
+ * **الشريطُ يظهر في كلّ صفحة** — فلو جلب الهويّةَ بنفسه لَنادى الخادمَ عند
+ * كلّ تنقّل. **والغلافُ يُرسم في الخادم**، فتصل الهويّةُ مع أوّل بايت.
+ *
+ * # وفشلُ الجلب لا يُسقط الموقع
+ *
+ * **الاسمُ يسقط إلى المعجم والشعارُ إلى الحرف** — ومنصّةٌ لا تصل إعداداتُها
+ * **يجب أن تبقى تعمل باسمها المكتوب**، لا أن تعرض شريطاً فارغاً.
+ */
+async function identity(): Promise<{ name: string; logo: string | null }> {
+  try {
+    const res = await fetch(`${API}/api/v1/public/home`, { cache: "no-store" });
+    if (!res.ok) throw new Error(String(res.status));
+    const j = (await res.json()) as {
+      data?: { platform_name?: string; platform_logo?: string | null };
+    };
+    // **والمسارُ يُحوَّل إلى رابطٍ كاملٍ هنا.**
+    //
+    // **الخادمُ يرسل `/media/...` نسبيّاً** — والوسائطُ على منفذ المحرّك
+    // (٨٠٨٠) لا على منفذ الموقع (٣٠٠٣). **فيطلبها المتصفّحُ من الموقع ويردّ
+    // ٤٠٤** — وشعارٌ مكسورٌ في كلّ صفحة.
+    //
+    // **وقِيس قبل الإصلاح**: `3003/media/…` ردّ ٤٠٤ و`8080/media/…` ردّ ٢٠٠.
+    return {
+      name: j.data?.platform_name || "",
+      logo: mediaUrl(j.data?.platform_logo) ?? null,
+    };
+  } catch {
+    // @empty-ok — **الاسمُ يسقط إلى المعجم والشعارُ إلى الحرف** (انظر أعلاه).
+    return { name: "", logo: null };
+  }
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const brand = await identity();
   return (
     <html lang={defaultLocale} dir={getDir(defaultLocale)}>
       <body className="flex min-h-screen flex-col">
@@ -36,7 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 مرّات): الصفحةُ تأخذ العرضَ كاملاً. **والعموديُّ في `main`
                 وحدَه** لأنّ الشريطَ والفوترَ شريطان يبلغان الحافّة. */}
             <div className="flex min-h-screen flex-col">
-              <Header />
+              <Header name={brand.name} logo={brand.logo} />
               {/* ══════════════════════════════════════════════════════════
                   **المحتوى يقف على الصفحة — لا داخلَ صندوق**
                   ══════════════════════════════════════════════════════════
@@ -63,7 +105,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <main className="min-w-0 flex-1 py-4">{children}</main>
               {/* **والشروطُ والمساعدةُ أسفلَ الصفحة** — حيث يُبحث عنها،
                   والشريطُ العلويُّ لما يُضغط كلَّ يوم. */}
-              <Footer />
+              <Footer name={brand.name} />
               {/* السلّة العائمة خارج الكرت: تُرافق التصفّح ولا تختفي بالتمرير */}
               <FloatingCart />
               {/* **وفراغٌ بارتفاع الشريط السفليّ** — وبلاه يختفي آخرُ سطرٍ

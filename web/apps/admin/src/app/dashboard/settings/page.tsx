@@ -20,6 +20,7 @@ import {
   PageHeader, Button, Input, Select, Checkbox, Badge, Card, EmptyState,
   IconSettings, IconWarning, IconCheck,
 } from "@rahalgo/ui";
+import ImageUpload from "@/components/ImageUpload";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import ZonesPanel from "@/components/settings/zones";
@@ -28,10 +29,12 @@ import WhatsAppPanel from "@/components/settings/whatsapp";
 const m = getMessages(defaultLocale);
 const S = m.admin.settings;
 
-type Kind = "int" | "money" | "bool" | "choice" | "text";
+type Kind = "int" | "money" | "bool" | "choice" | "text" | "media";
 
 interface Setting {
   key: string;
+  /** **مسارُ الصورة المشتقُّ من المعرّف** — يُرسله الخادمُ مع إعدادات الصور. */
+  media_url?: string | null;
   group: string;
   kind: Kind;
   min?: number;
@@ -411,6 +414,23 @@ function SettingRow({
                 );
               })}
             </div>
+          ) : s.kind === "media" ? (
+            /* **وصورةٌ تُرفع لا معرّفٌ يُكتب.**
+
+               (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا تنسَ إضافة هوية المنصة أيضاً —
+               الاسم واللوغو».)
+
+               **وقيمةُ الإعداد معرّفُ الوسيط**: المسارُ يتغيّر إن نُقل
+               التخزينُ، **والمعرّفُ يبقى** — والمسارُ يُشتقّ منه عند العرض.
+
+               **والرافعُ هو رافعُ اللوحة نفسُه** (`ImageUpload`) — بحدوده
+               وفحصه ومصغَّرته. **ورافعٌ ثانٍ يعني حدَّ حجمٍ ثانياً يفترق.** */
+            <ImageUpload
+              kind="platform_logo"
+              label={label(s.key)}
+              initialUrl={typeof s.value === "string" && s.value ? s.media_url : null}
+              onChange={(id) => void save(id)}
+            />
           ) : (
             <>
               <Input

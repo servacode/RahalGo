@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
@@ -20,6 +21,22 @@ import (
 // لمعنًى واحد يفترقان**: يُصلَح أحدُهما ويبقى الآخر، فيقول العرضُ «مغلق»
 // ويقبل الإنشاءُ الطلب.
 const openNowSQL = orders.OpenNowSQL
+
+// platformLogo مسارُ شعار المنصة — **وفارغٌ يعني أنّ الحرفَ يبقى.**
+//
+// **ولا يُحذف حرفُ العلامة**: منصّةٌ لم تَرفع شعاراً يجب أن تبقى تعمل،
+// **وشريطٌ علويٌّ بمربّعٍ فارغٍ أسوأُ من حرف.**
+func (s *Server) platformLogo(r *http.Request) *string {
+	id := s.settings.GetString(r.Context(), "platform.logo")
+	if id == "" {
+		return nil
+	}
+	var path *string
+	if s.pg.QueryRow(r.Context(), `SELECT path FROM media WHERE id = $1`, id).Scan(&path) != nil {
+		return nil
+	}
+	return media.URLForPtr(path)
+}
 
 // handlePublicHome بيانات الصفحة الأولى: لافتاتٌ وتصنيفاتٌ وأقسامُ سوق.
 //
@@ -78,6 +95,28 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 		"banners": active, "categories": categories,
 		"sections":      sections,
 		"support_phone": s.settings.GetString(r.Context(), "platform.support_phone"),
+
+		// **وإعداداتُ جولةِ الأقسام تصل مع الصفحة.**
+		//
+		// **ونداءٌ ثانٍ لمفتاحين تأخيرٌ يُرى**: صفحةُ التسوّق تجلب هذه الردّةَ
+		// أصلاً، **والجولةُ تبدأ مع أوّل رسم** — فلو انتظرت نداءً ثانياً
+		// لَبدأت ساكنةً ثمّ تحرّكت فجأة.
+		//
+		// **والثواني تُحوَّل إلى ملّي هنا لا في الشاشة**: الإعدادُ يُقرأ
+		// بالثانية لأنّ من يضبطه إنسان، **والمؤقّتُ يعمل بالملّي** — والتحويلُ
+		// في موضعٍ واحدٍ لا في كلّ من يقرؤه.
+		"rail_auto":     s.settings.GetBool(r.Context(), "shop.rail_auto"),
+		"rail_every_ms": s.settings.GetInt(r.Context(), "shop.rail_seconds") * 1000,
+
+		// **وهويّةُ المنصة تصل مع الصفحة الأولى.**
+		//
+		// **والاسمُ فارغٌ يعني «خذ من المعجم»** — لا يُفرض على المالك أن
+		// يملأه ليعمل الموقع.
+		//
+		// **والشعارُ مسارٌ لا معرّف**: الشاشةُ ترسم صورةً، **ومن أرسل إليها
+		// معرّفاً أجبرها على نداءٍ ثانٍ لتعرف أين هي.**
+		"platform_name": s.settings.GetString(r.Context(), "platform.name"),
+		"platform_logo": s.platformLogo(r),
 	})
 }
 

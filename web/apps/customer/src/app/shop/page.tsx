@@ -79,6 +79,16 @@ interface Section {
 
 export default function ShopPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
+  /**
+   * **وإعداداتُ الجولة من اللوحة لا من الشيفرة.**
+   *
+   * **السرعةُ ذوقٌ يُجرَّب** — ومن أراد أن يعرف أتناسبه أربعُ ثوانٍ أم سبع
+   * يجب أن يبدّلها ويرى، **لا أن ينتظر نشرةً جديدة.**
+   *
+   * **والافتراضُ هنا يطابق الكتالوج** (`shop.rail_auto` · `shop.rail_seconds`)
+   * — **فما يُرى قبل وصول الردّ هو ما سيُرى بعده.**
+   */
+  const [rail, setRail] = useState({ auto: true, everyMs: 5000 });
   const [sections, setSections] = useState<Section[] | null>(null);
   const [homeFailed, setHomeFailed] = useState(false);
 
@@ -102,6 +112,10 @@ export default function ShopPage() {
       })
       .then((j) => {
         setBanners(j.data?.banners ?? []);
+        setRail({
+          auto: j.data?.rail_auto ?? true,
+          everyMs: j.data?.rail_every_ms || 5000,
+        });
         const list: Section[] = j.data?.sections ?? [];
         setSections(list);
         // **وأوّلُ قسمٍ عامرٍ يُفتح** — ولا يُفتح فارغٌ فيُرى السوقُ ميّتاً.
@@ -252,6 +266,8 @@ export default function ShopPage() {
             className="mt-5"
             activeID={pick}
             onSelect={setPick}
+            auto={rail.auto}
+            everyMs={rail.everyMs}
             items={sections.map((s) => ({
               id: s.id,
               name: s.name,

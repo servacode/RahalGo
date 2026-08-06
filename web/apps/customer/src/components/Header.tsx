@@ -52,7 +52,15 @@ interface Summary {
   live_offers: number;
 }
 
-export default function Header() {
+export default function Header({
+  /** **اسمُ المنصة من الإعدادات** — وفارغٌ يعني «خذ من المعجم». */
+  name = "",
+  /** **شعارُها** — وفارغٌ يعني أنّ حرفَ العلامة يبقى. */
+  logo = null,
+}: {
+  name?: string;
+  logo?: string | null;
+} = {}) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -102,10 +110,25 @@ export default function Header() {
   const brand = (
     <>
       <Link href="/" className="flex items-center gap-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-on-solid">
-          {m.terms.brandInitial}
-        </span>
-        <span className="hidden font-bold sm:inline">{m.common.appName}</span>
+        {/* **والشعارُ يحلّ محلّ الحرف ولا يُلغيه.**
+
+            (قرارُ المالك ٢٠٢٦-٠٨-٠٦: هويّةُ المنصة — الاسمُ واللوغو.)
+
+            **ومنصّةٌ لم تَرفع شعاراً يجب أن تبقى تعمل**: مربّعٌ فارغٌ في
+            الشريط العلويّ **أسوأُ من حرف.** */}
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logo}
+            alt={name || m.common.appName}
+            className="h-9 w-9 rounded-control object-cover"
+          />
+        ) : (
+          <span className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-on-solid">
+            {m.terms.brandInitial}
+          </span>
+        )}
+        <span className="hidden font-bold sm:inline">{name || m.common.appName}</span>
       </Link>
 
       <TopBarLink

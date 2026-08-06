@@ -72,12 +72,20 @@ export function SectionRail({
   items,
   activeID,
   onSelect,
+  /**
+   * **أتدور الجولةُ أصلاً؟** — (`shop.rail_auto` في إعدادات اللوحة.)
+   *
+   * **جولةٌ تعرض المنصةَ نافعةٌ لسوقٍ فيه ستّةٌ وعشرون قسماً**، وقد تصير
+   * إزعاجاً في سوقٍ فيه أربعة. **ومن يملك المنصةَ يقرّر، لا من كتبها.**
+   */
+  auto = true,
   everyMs = EVERY_MS,
   className = "",
 }: {
   items: RailItem[];
   activeID?: string;
   onSelect: (id: string) => void;
+  auto?: boolean;
   everyMs?: number;
   className?: string;
 }) {
@@ -135,7 +143,7 @@ export function SectionRail({
    * ما اختاره بعد ثانية.
    */
   useEffect(() => {
-    if (held || still || taken || !seen || items.length < 2) return;
+    if (!auto || held || still || taken || !seen || items.length < 2) return;
     const t = setInterval(() => {
       const at = items.findIndex((x) => x.id === activeID);
       // **ومختارٌ لا وجودَ له يُعيد الجولةَ إلى أوّلها** — يقع حين يُحذف قسمٌ
@@ -145,7 +153,7 @@ export function SectionRail({
       if (next) onSelect(next.id);
     }, everyMs);
     return () => clearInterval(t);
-  }, [held, still, taken, seen, items, activeID, onSelect, everyMs]);
+  }, [auto, held, still, taken, seen, items, activeID, onSelect, everyMs]);
 
   /**
    * **والشريطُ يسوق المختارَ إلى وسط النظر.**

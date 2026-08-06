@@ -397,6 +397,10 @@
 | `platform.legal_name` | المنصة | text | `` |
 | `platform.support_phone` | المنصة | text | `` |
 | `platform.address` | المنصة | text | `` |
+| `platform.name` | المنصة | text | `` |
+| `platform.logo` | المنصة | media | `` |
+| `shop.rail_auto` | المنصة | bool | `true` |
+| `shop.rail_seconds` | المنصة | int | `5` |
 | `orders.max_sources` | المنصة | int | `2` |
 | `orders.max_open_per_customer` | المنصة | int | `3` |
 | `orders.delivery_timeout_min` | المنصة | int | `60` |

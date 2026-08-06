@@ -10,6 +10,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
@@ -142,6 +143,12 @@ func (s *Server) handleListSettings(w http.ResponseWriter, r *http.Request) {
 		Value     json.RawMessage `json:"value"`
 		UpdatedAt *time.Time      `json:"updated_at"`
 		UpdatedBy *string         `json:"updated_by"`
+		// MediaURL مسارُ الصورة المشتقُّ من المعرّف — **لإعدادات الصور وحدَها.**
+		//
+		// **والقيمةُ معرّفٌ لا مسار** (انظر `KindMedia`)، **واللوحةُ تحتاج أن
+		// تُري ما رُفع** — فلو أرسلنا المعرّفَ وحدَه لَعرضت مربّعاً فارغاً على
+		// شعارٍ موجود، **ويُقرأ «لم يُرفع شيء».**
+		MediaURL *string `json:"media_url,omitempty"`
 	}
 	// الترتيب ترتيبُ الكتالوج لا ترتيب القاعدة: المفاتيح مجموعةٌ بالموضوع،
 	// وترتيبُها الأبجدي يبعثر «مهلة القبول» عن «مهلة التوصيل».
@@ -157,6 +164,18 @@ func (s *Server) handleListSettings(w http.ResponseWriter, r *http.Request) {
 			// النظام يعمل به فعلاً، فإخفاؤه يُخفي سلوكاً قائماً.
 			raw, _ := json.Marshal(d.Default)
 			item.Value = raw
+		}
+		// **ومسارُ الصورة يُشتقّ هنا لا في اللوحة** — اللوحةُ لا تعرف كيف
+		// يُبنى مسارُ الوسيط، **ومن بناه فيها كتب قاعدةً ثانيةً تفترق.**
+		if d.Kind == settings.KindMedia {
+			var id string
+			if json.Unmarshal(item.Value, &id) == nil && id != "" {
+				var path *string
+				if s.pg.QueryRow(r.Context(),
+					`SELECT path FROM media WHERE id = $1`, id).Scan(&path) == nil {
+					item.MediaURL = media.URLForPtr(path)
+				}
+			}
 		}
 		out = append(out, item)
 	}
