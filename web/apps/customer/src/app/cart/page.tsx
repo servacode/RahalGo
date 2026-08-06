@@ -259,9 +259,17 @@ export default function CartPage() {
 
   if (!cart || cart.lines.length === 0) {
     return (
-      <div className="py-16 text-center text-ink-muted">
+      /* **والفراغُ داخلَ لوحٍ لا على الخلفيّة.**
+
+         (جردُ ٢٠٢٦-٠٨-٠٦: «الرئيسية» عند **١٫٢٧** — نصٌّ يقف على أفتح بقعةٍ
+          في التدرّج.)
+
+         **وكلُّ نصٍّ في المنصة داخلَ سطح** — وهذه كانت آخرَ صفحةٍ تخالف.
+         **ونصُّ الرابط بالنبرة لا بالأساسيّ**: الأساسيُّ ٣٫٠٩ على السطح
+         والنبرةُ ٤٫٥٨، **وهي المُعدّةُ للنصّ العاري.** */
+      <div className="surface-lit rounded-card border border-line bg-surface px-4 py-16 text-center text-ink-muted">
         <p className="mb-4">{m.site.cart.empty}</p>
-        <Link href="/" className="font-medium text-primary hover:underline">
+        <Link href="/" className="font-medium text-accent-text hover:underline">
           {m.site.nav.home}
         </Link>
       </div>

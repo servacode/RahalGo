@@ -271,7 +271,9 @@ export function WalletPage({
        شيئاً. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
     <Button
       onClick={() => setTab(tab === STATEMENT ? ALL : STATEMENT)}
-      className="flex items-center gap-2 !bg-success-solid !text-on-solid hover:!opacity-90"
+      /* **ونصُّه داكنٌ لا أبيض**: الأبيضُ على الأخضر المصمت **٣٫٥١** — دون
+         حدّ النصّ العاديّ. **والداكنُ ٤٫٨٠.** (كشفه جردُ ٢٠٢٦-٠٨-٠٦.) */
+      className="flex items-center gap-2 !bg-success-solid !text-on-bright hover:!opacity-90"
     >
       <IconPrint size={16} />
       {m.shared.statement.open}

@@ -106,7 +106,10 @@ export default function InvitePage() {
    * للرابط وحدَه.
    */
   const labels = [V.tier1, V.tier2, V.tier3];
-  const tiers = [...data.tiers.map((amount, i) => ({ label: labels[i] ?? "", amount })),
+  // **وردٌّ ناقصُ `tiers` يُبيّض الصفحة** — `.map` على غيرِ مصفوفةٍ ترمي،
+  // **والرميةُ هنا تُذهب الرابطَ والمكافأةَ معاً.** (كشفه جردُ ٢٠٢٦-٠٨-٠٦.)
+  const rows: number[] = Array.isArray(data.tiers) ? data.tiers : [];
+  const tiers = [...rows.map((amount, i) => ({ label: labels[i] ?? "", amount })),
     { label: V.tierRest, amount: data.rest }]
     .map((t, i) => ({ ...t, now: i === Math.min(data.invited, 3) }));
   const anyReward = tiers.some((t) => t.amount > 0);
