@@ -264,7 +264,17 @@ export function DashboardChrome({
         <div className="fixed inset-0 z-40 bg-ink/40 lg:hidden" onClick={() => setMenuOpen(false)} />
       )}
       <aside
-        className={`fixed inset-y-0 start-0 z-50 flex w-64 flex-col bg-surface elev-4 transition-transform duration-200 lg:hidden ${
+        /* **والدُّرجُ الجوّاليُّ يُضبّب ويثقل — وهو يعلو المحتوى.**
+
+           (المرحلةُ الثالثة ٢٠٢٦-٠٨-٠٦.)
+
+           كان `bg-surface` بلا تضبيب — **وكان مصمتاً يوم كان السطحُ مصمتاً.**
+           ولمّا صار السطحُ زجاجاً بخمسةٍ وستّين **صار محتوى الصفحة يُرى من
+           خلفه حادّاً**، فتُقرأ بنودُ القائمة فوق جدولٍ يتحرّك.
+
+           **و`raised` لا `surface`**: ما يعلو كلَّ شيءٍ يبقى أثقل — كالنوافذ
+           والقوائم، **وقائمةُ تنقّلٍ لا تُقرأ ليست قائمة.** */
+        className={`surface-lit fixed inset-y-0 start-0 z-50 flex w-64 flex-col bg-raised elev-4 transition-transform duration-200 lg:hidden ${
           menuOpen ? "translate-x-0" : "translate-x-full rtl:translate-x-full ltr:-translate-x-full"
         }`}
       >
