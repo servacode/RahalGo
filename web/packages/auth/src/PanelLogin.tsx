@@ -43,7 +43,6 @@ const m = getMessages(defaultLocale);
 
 export function PanelLogin({
   title,
-  subtitle,
   /** هل يخصّ هذا الحساب هذه اللوحة؟ يُمرَّر حارسُ التطبيق نفسه — لا تُكرَّر القاعدة */
   allows,
   /** نصّ الرفض من معجم هذا التطبيق (`admin.notAllowed` وأخواته) */
@@ -56,7 +55,6 @@ export function PanelLogin({
   footer,
 }: {
   title: string;
-  subtitle?: string;
   allows: (user: AuthUser | null) => boolean;
   notAllowed: string;
   home: string;
@@ -118,7 +116,6 @@ export function PanelLogin({
   return (
     <LoginCard
       title={title}
-      subtitle={subtitle}
       methods={methods}
       footer={footer}
       onSuccess={(u) => {

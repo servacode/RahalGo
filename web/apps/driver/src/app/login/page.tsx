@@ -20,7 +20,6 @@ export default function LoginPage() {
   return (
     <PanelLogin
       title={m.driver.loginTitle}
-      subtitle={m.driver.loginSubtitle}
       allows={isDriver}
       notAllowed={m.driver.notAllowed}
       home="/portal"

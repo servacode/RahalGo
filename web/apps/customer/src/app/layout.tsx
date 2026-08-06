@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getMessages, getDir, defaultLocale } from "@rahalgo/i18n";
 import { mediaUrl } from "@/lib/api";
-import { PlatformProvider } from "@rahalgo/ui";
+import { PlatformProvider, type Platform } from "@rahalgo/ui";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
@@ -44,12 +44,12 @@ export const metadata: Metadata = {
  * **الاسمُ يسقط إلى المعجم والشعارُ إلى الحرف** — ومنصّةٌ لا تصل إعداداتُها
  * **يجب أن تبقى تعمل باسمها المكتوب**، لا أن تعرض شريطاً فارغاً.
  */
-async function identity(): Promise<{ name: string; logo: string | null }> {
+async function identity(): Promise<Platform> {
   try {
     const res = await fetch(`${API}/api/v1/public/platform`, { cache: "no-store" });
     if (!res.ok) throw new Error(String(res.status));
     const j = (await res.json()) as {
-      data?: { name?: string; logo?: string | null };
+      data?: { name?: string; logo?: string | null; otp_login?: boolean };
     };
     // **والمسارُ يُحوَّل إلى رابطٍ كاملٍ هنا.**
     //
@@ -61,10 +61,11 @@ async function identity(): Promise<{ name: string; logo: string | null }> {
     return {
       name: j.data?.name || "",
       logo: mediaUrl(j.data?.logo) ?? null,
+      otpLogin: j.data?.otp_login !== false,
     };
   } catch {
     // @empty-ok — **ولا يُخترع اسمٌ عند الفشل**: علامةٌ ناقصةٌ أهونُ من كاذبة.
-    return { name: "", logo: null };
+    return { name: "", logo: null, otpLogin: true };
   }
 }
 

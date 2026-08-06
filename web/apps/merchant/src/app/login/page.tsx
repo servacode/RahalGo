@@ -20,7 +20,6 @@ export default function LoginPage() {
   return (
     <PanelLogin
       title={m.merchant.loginTitle}
-      subtitle={m.merchant.loginSubtitle}
       allows={canAccessPortal}
       notAllowed={m.merchant.notAllowed}
       home="/portal"

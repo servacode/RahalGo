@@ -20,7 +20,6 @@ export default function LoginPage() {
   return (
     <PanelLogin
       title={m.rep.loginTitle}
-      subtitle={m.rep.loginSubtitle}
       allows={isRep}
       notAllowed={m.rep.notAllowed}
       home="/portal"

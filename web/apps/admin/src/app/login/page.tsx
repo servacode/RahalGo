@@ -20,7 +20,6 @@ export default function LoginPage() {
   return (
     <PanelLogin
       title={m.admin.loginTitle}
-      subtitle={m.admin.loginSubtitle}
       allows={canAccessPanel}
       notAllowed={m.admin.notAllowed}
       home="/dashboard"

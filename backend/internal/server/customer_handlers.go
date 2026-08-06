@@ -61,6 +61,10 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"name": s.settings.GetString(r.Context(), "platform.name"),
 		"logo": s.platformLogo(r),
+		// **وما تحتاجه الشاشةُ قبل أن يكون هناك حساب** — لا الهويّةَ وحدَها.
+		// **وشاشةُ الدخول لا تعرف أيَّ أبوابٍ تعرض حتّى تسأل**، ونداءٌ ثانٍ
+		// لسطرٍ واحدٍ رحلةٌ زائدةٌ في أوّل ما يُفتح.
+		"otp_login": s.settings.GetBool(r.Context(), "auth.otp_login"),
 	})
 }
 

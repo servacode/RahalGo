@@ -48,7 +48,6 @@ function Login() {
   return (
     <LoginCard
       title={m.site.loginTitle}
-      subtitle={m.site.loginSubtitle}
       methods="both"
       referral={referral}
       onSuccess={async (u) => {

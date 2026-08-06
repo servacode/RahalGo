@@ -399,6 +399,7 @@
 | `platform.address` | المنصة | text | `` |
 | `platform.name` | المنصة | text | `` |
 | `platform.logo` | المنصة | media | `` |
+| `auth.otp_login` | المنصة | bool | `true` |
 | `shop.rail_auto` | المنصة | bool | `true` |
 | `shop.rail_seconds` | المنصة | int | `5` |
 | `orders.max_sources` | المنصة | int | `2` |

@@ -10,7 +10,7 @@
  * مضغوطة. كل الألوان من التوكنز حصراً وكل النصوص من المعجم (GROUND-RULES §1).
  */
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Alert,
@@ -27,6 +27,7 @@ import {
   IconPrev,
   IconCheck,
   BrandMark,
+  usePlatform,
 } from "@rahalgo/ui";
 import { authApi, tokenStore, ApiError, type AuthUser } from "./client";
 
@@ -54,14 +55,12 @@ export function errText(err: unknown): string {
 
 export function LoginCard({
   title,
-  subtitle,
   methods = "both",
   onSuccess,
   footer,
   referral = "",
 }: {
   title: string;
-  subtitle?: string;
   /**
    * رمزُ من دعا هذا المستخدم — **يُمرَّر من الرابط ولا يُكتب باليد.**
    *
@@ -75,7 +74,32 @@ export function LoginCard({
   onSuccess: (user: AuthUser) => void | Promise<void>;
   footer?: ReactNode;
 }) {
-  const [mode, setMode] = useState<Mode>(methods === "otp" ? "otp" : "password");
+  /* ══════════════════════════════════════════════════════════════════
+     **وبابُ رمز التحقّق يُطفأ من الإعدادات — لا من شيفرة كلّ تطبيق**
+     ══════════════════════════════════════════════════════════════════
+
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «جهّز بالإعدادات بلوحة الادمن خيار لإطفاء أو
+      تشغيل تسجيل الدخول برمز التحقّق. لا تنسَ أنّ كلّ شيءٍ يجب أن يكون بشكلٍ
+      مركزيّ — لا نريد أن نعدّل كلّ شيءٍ بكلّ مكان».)
+
+     **و`methods` تبقى**: هي ما يقوله التطبيقُ عن نفسِه (بوّابةٌ تقبل الرمزَ
+     أو لا)، **والإعدادُ ما تقوله المنصةُ عن الرمز كلِّه.** والأضيقُ يفوز.
+
+     **ومن مرّر `otp` وحدَها ثمّ أُطفئ الرمزُ يسقط إلى كلمة المرور** — وإلّا
+     بقيت بوّابتُه بلا بابٍ يعمل. */
+  const { otpLogin } = usePlatform();
+  const allow: "both" | "password" | "otp" = otpLogin ? methods : "password";
+  const [mode, setMode] = useState<Mode>("password");
+
+  /* **والوضعُ يتبع ما هو مسموح**: من فُتح على `otp` ثمّ أُطفئ البابُ بعد أن
+     وصل الردُّ **يبقى في شاشةٍ لا تعمل.** */
+  useEffect(() => {
+    setMode((cur) => {
+      if (allow === "password" && cur === "otp") return "password";
+      if (allow === "otp" && cur === "password") return "otp";
+      return cur;
+    });
+  }, [allow]);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -394,8 +418,8 @@ export function LoginCard({
   }
 
   const heads: Record<Mode, { title: string; subtitle?: string }> = {
-    password: { title, subtitle },
-    otp: { title, subtitle },
+    password: { title },
+    otp: { title },
     reset: { title: A.resetTitle, subtitle: A.resetSubtitle },
     signup: { title: A.signupTitle, subtitle: A.signupSubtitle },
   };
@@ -435,7 +459,11 @@ export function LoginCard({
         <div className="overflow-hidden rounded-card border border-line bg-surface elev-2">
           {/* ---------- جانب النموذج ---------- */}
           <div className="p-6 sm:p-8 lg:p-10">
-            <div className="mb-6">
+            {/* **والبطاقةُ تُقرأ من محورها**: العلامةُ فوق العنوان فوق الوصف
+                — **ثلاثةٌ على محورٍ واحدٍ تُقرأ سُلَّماً**، وواحدةٌ في الطرف
+                تجرّ العينَ إلى زاويةٍ ثمّ تعيدها. (قرارُ المالك ٢٠٢٦-٠٨-٠٦:
+                «اجعل اللوغو بالوسط محاذاة».) */}
+            <div className="mb-6 text-center">
               {/* **علامةُ المنصة أعلى البطاقة.**
 
                   (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «وأيضاً أعلى لوحة تسجيل الدخول
@@ -447,15 +475,26 @@ export function LoginCard({
 
                   **ومن الإعدادات لا من المعجم**: شعارٌ إن رُفع وإلّا أوّلُ
                   حرفٍ من الاسم المضبوط. */}
-              <BrandMark size={48} rounded="card" className="mb-4" />
+              <BrandMark size={48} rounded="card" className="mx-auto mb-4" />
               <h1 className="text-xl font-bold tracking-tight text-ink">{head.title}</h1>
+              {/* **ولا سطرَ وصفٍ في شاشة الدخول** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦:
+                  «أدخل رقمك — وسننقلك إلى مكانك حسب دورك: احذف هذه العبارة»).
+
+                  **وكان يشرح ما يفعله النموذجُ تحته**: حقلُ هاتفٍ وكلمةُ مرورٍ
+                  وزرٌّ اسمُه «تسجيل الدخول». **وشرحُ ما يُرى تأخيرٌ لمن جاء
+                  ليدخل.**
+
+                  **وحُذف الوسيطُ لا أُخفي به**: خمسةُ تطبيقاتٍ كانت تمرّره
+                  وخمسةُ نصوصٍ تُترجَم له — **ونصٌّ يُراجَع ولا يُرسَم دَينٌ
+                  صامت.** ويبقى الوصفُ للاستعادة والحساب الجديد **لأنّهما
+                  يشرحان خطوةً غيرَ بديهيّة**، ونصُّهما من داخل البطاقة. */}
               {head.subtitle && (
                 <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{head.subtitle}</p>
               )}
             </div>
 
             {/* مبدّل طريقة الدخول — مؤشر منزلق بخصائص منطقية (يعمل RTL وLTR) */}
-            {methods === "both" && !isAuxMode && (
+            {allow === "both" && !isAuxMode && (
               <div role="group" className="relative mb-6 flex rounded-control bg-page p-1">
                 <span
                   aria-hidden

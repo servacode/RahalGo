@@ -46,9 +46,23 @@ export interface Platform {
   name: string;
   /** رابطُ الشعار الجاهز — **وفارغٌ يُبقي الحرف.** */
   logo: string | null;
+  /**
+   * **هل بابُ رمز التحقّق مفتوح؟** (`auth.otp_login` في الإعدادات.)
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «جهّز بالإعدادات بلوحة الادمن خيار لإطفاء أو
+   *  تشغيل تسجيل الدخول برمز التحقّق».)
+   *
+   * **ومكانُه هنا لا في نداءٍ ثانٍ**: شاشةُ الدخول تحتاجه قبل أن يكون هناك
+   * حساب، **وهي تنادي الهويّةَ أصلاً** — ونداءان لسطرين رحلةٌ زائدةٌ في أوّل
+   * ما يُفتح.
+   *
+   * **والافتراضُ `true`** — فلو تأخّر الردُّ أو سقط **يُعرض البابان ثمّ يُخفى
+   * ما يجب**، ولا يُحرَم أحدٌ باباً بسبب شبكةٍ بطيئة.
+   */
+  otpLogin: boolean;
 }
 
-const EMPTY: Platform = { name: "", logo: null };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true };
 const PlatformContext = createContext<Platform>(EMPTY);
 
 export function PlatformProvider({
@@ -76,7 +90,12 @@ export function PlatformProvider({
       .then((j) => {
         // **وفشلُ النداء يُبقي الفراغَ ولا يخترع اسماً** — علامةٌ ناقصةٌ
         // أهونُ من علامةٍ كاذبة.
-        if (alive && j?.data) setPlatform({ name: j.data.name ?? "", logo: j.data.logo ?? null });
+        if (alive && j?.data)
+          setPlatform({
+            name: j.data.name ?? "",
+            logo: j.data.logo ?? null,
+            otpLogin: j.data.otp_login !== false,
+          });
       })
       .catch(() => undefined);
     return () => {
