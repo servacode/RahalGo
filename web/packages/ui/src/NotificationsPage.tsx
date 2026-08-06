@@ -11,6 +11,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtLongDate } from "@rahalgo/i18n";
 import { PageContainer, PageHeader, EmptyState, LoadingState } from "./layout";
+import { Alert } from "./feedback";
 import { Button } from "./components";
 import { useLiveData, emitLocal, READ_EVENT, type AppNotification } from "./Notifications";
 import {
@@ -79,7 +80,7 @@ export function NotificationsPage({
 }) {
   const [kind, setKind] = useState("");
 
-  const { data, loading, reload } = useLiveData<Feed>(
+  const { data, loading, error, reload } = useLiveData<Feed>(
     () => api(`/api/v1/me/notifications?limit=200${kind ? `&kind=${kind}` : ""}`),
     ["order", "ticket", "wallet", "rating", "lead", "account", READ_EVENT],
     // **والنوعُ يُعيد الجلب** — بدونه تُضيء الشريحةُ ولا تُنادى الشبكة.
@@ -143,16 +144,19 @@ export function NotificationsPage({
       {filters.length > 1 && (
         /* **شريطٌ مقسّم لا أزرارٌ متناثرة**: المرشّحاتُ خياراتُ شيءٍ واحد،
            وحدٌّ يجمعها يقول ذلك قبل أن تُقرأ. */
-        <div className="inline-flex flex-wrap gap-1 rounded-card border border-line bg-surface p-1">
+        /* **صفٌّ ينزلق لا كتلةٌ تلتفّ.** كانت `inline-flex flex-wrap` —
+           **تحتضن الحافّةَ وتلتفّ سطرين على الجوّال**، فيزيد ارتفاعُ الرأس
+           **ويُدفع أوّلُ إشعارٍ تحت الطيّة.** */
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {filters.map((f) => (
             <button
               key={f.id}
               type="button"
               onClick={() => setKind(f.id)}
-              className={`flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-badge border px-3.5 py-2 text-sm transition-colors ${
                 kind === f.id
-                  ? "bg-primary font-bold text-on-solid elev-1"
-                  : "text-ink-muted hover:bg-page hover:text-ink"
+                  ? "border-primary bg-primary font-bold text-on-solid"
+                  : "border-line bg-surface text-ink-muted hover:border-primary/40 hover:text-ink"
               }`}
             >
               {f.label}
@@ -168,7 +172,27 @@ export function NotificationsPage({
         </div>
       )}
 
-      {items.length === 0 ? (
+      {/* ══════════════════════════════════════════════════════════════
+          **«لم أصل» غيرُ «وصلتُ فلم أجد»**
+          ══════════════════════════════════════════════════════════════
+
+          **`useLiveData` تُرجع `error` والصفحةُ كانت لا تقرؤها** — تأخذ
+          `{ data, loading, reload }` وتترك الرابعة. **فيسقط النداءُ وتبقى
+          `data` فارغةً، فتُعرض «لا إشعارات».**
+
+          **وقِيس حيّاً** (٢٠٢٦-٠٨-٠٦): جلسةٌ منتهيةٌ ردّ نداؤها ٤٠١ **والشاشةُ
+          قالت «لا إشعارات»** — لا خطأَ ولا زرَّ إعادة.
+
+          **وأثرُه أنّ صاحبَ الحساب يظنّ إشعاراتِه مُحيت**: يقرأ «لا إشعارات»
+          وعنده اثنان وثلاثون. **والفراغُ كذبٌ حين يكون سببُه انقطاعاً.**
+
+          **وهي عائلةُ الخلل التي يحرسها `check-central` في نداءات `fetch`
+          المباشرة** — **وهذه داخل خطّافٍ فلم يرَها الحارس.** */}
+      {error ? (
+        <Alert tone="warning" title={m.errors.offline}>
+          {m.errors.offlineHint}
+        </Alert>
+      ) : items.length === 0 ? (
         <EmptyState icon={IconBell} title={N.empty} />
       ) : (
         <div className="space-y-6">
@@ -178,14 +202,37 @@ export function NotificationsPage({
 
                   أرشيفٌ من مئتي سطرٍ يفقد صاحبَه: يمرّر فينسى أيَّ يومٍ يقرأ.
                   **والعنوانُ الذي يهرب مع التمرير عنوانٌ لا يُقرأ إلّا مرّة.** */}
-              <div className="sticky top-0 z-10 -mx-1 mb-2 bg-page/85 px-1 py-1.5 backdrop-blur">
-                <h2 className="flex items-center gap-2 text-xs font-bold text-ink-muted">
-                  <span className="h-px flex-1 bg-line" />
+              {/* **لافتةٌ لا خطٌّ يعبر الشاشة.** كان الاسمُ بين خطّين يمتدّان
+                  إلى الطرفين — **وعلى ألفٍ وتسعمئة يصير خطّاً بطول الشاشة
+                  وكلمةٌ في وسطه**، فيُقرأ فاصلاً لا عنواناً. */}
+              <div className="sticky top-0 z-10 -mx-1 mb-3 bg-shell/85 px-1 py-2 backdrop-blur">
+                <h2 className="inline-flex items-center gap-2 rounded-badge border border-line bg-surface px-3 py-1 text-xs font-bold text-ink-muted">
+                  <span className="h-1.5 w-1.5 rounded-badge bg-primary" />
                   <span className="shrink-0">{g.day}</span>
                   <span className="h-px flex-1 bg-line" />
                 </h2>
               </div>
-              <ul className="overflow-hidden rounded-card border border-line bg-surface">
+              {/* ══════════════════════════════════════════════════════
+                  **بطاقاتٌ في شبكةٍ لا أسطرٌ تمتدّ ألفَ بكسل**
+                  ══════════════════════════════════════════════════════
+
+                  (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «إعادةُ هيكلةٍ كاملةٍ لصفحة
+                  الإشعارات».)
+
+                  **كان عموداً واحداً يملأ عرضَ الشاشة**: العنوانُ في أقصى
+                  اليمين والوقتُ في أقصى اليسار، **وبينهما ألفٌ وأربعمئة بكسلٍ
+                  فارغة** — فتقفز العينُ من طرفٍ إلى طرفٍ لتربط خبراً بوقته.
+
+                  **ولا يُحصر العرضُ** — قاعدةُ المالك: لا حشوةَ جانبيّةً
+                  والمحتوى يملأ الشاشة. **والبطاقاتُ تملأ العرضَ وتبقى مقروءة**:
+                  كلٌّ مغلقةٌ على نفسها بعنوانها ومتنِها ووقتِها.
+
+                  **والترتيبُ الزمنيُّ يبقى مفهوماً** لأنّ اليومَ مجموعٌ فوقها
+                  — ما داخل اليوم يُقرأ لوحةَ أخبارٍ لا سجلَّ ثوان.
+
+                  **وثلاثةٌ لا أربعة**: بطاقةٌ بأربعمئةٍ تسع عنواناً ومتناً بلا
+                  قصّ، **وأربعٌ تُضيّقها حتّى يُقصّ المتن.** */}
+              <ul className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
                 {g.rows.map((n) => {
                   const meta = KINDS[n.kind] ?? KINDS.account!;
                   const Icon = meta.icon;
@@ -197,8 +244,10 @@ export function NotificationsPage({
                        بإضعافه لم يُميَّز.** والعمودُ يقول الشيءَ نفسه بحرفٍ
                        واحد ولا يمسّ النصّ. */
                     <div
-                      className={`flex items-start gap-3 border-s-[3px] py-3 pe-4 ps-3.5 ${
-                        n.read ? "border-transparent" : "border-primary bg-primary-light/40"
+                      className={`flex h-full items-start gap-3 rounded-card border p-3.5 transition-colors ${
+                        n.read
+                          ? "border-line bg-surface hover:border-primary/30"
+                          : "border-primary/50 bg-primary-light/40"
                       }`}
                     >
                       <span
@@ -219,28 +268,31 @@ export function NotificationsPage({
                             {n.body}
                           </p>
                         )}
-                      </div>
-                      {/* **التاريخُ مع الساعة — لا الساعةُ وحدَها.**
+                        {/* **والوقتُ تحت المتن لا في طرف السطر.**
 
-                          العناوينُ تجمع بالأيام («اليوم» و«أمس»)، **وسطرٌ
-                          يقول «٣:٤٠ م» وحدَه يُقرأ خارجَ عنوانه**: يُنسخ في
-                          رسالةٍ أو يُذكر في اتّصال فلا يُعرف أيُّ يومٍ هو.
-                          (قرارُ المالك ٢٠٢٦-٠٨-٠٥.) */}
-                      <span
-                        className="shrink-0 pt-0.5 text-xs tabular-nums text-ink-muted"
-                        dir="ltr"
-                      >
-                        {fmtDateTime(n.created_at)}
-                      </span>
+                            كان مثبَّتاً في أقصى الجهة الأخرى — **وعلى شاشةٍ
+                            عريضةٍ يبعد عن عنوانه ألفاً وأربعمئة بكسل.**
+
+                            **والتاريخُ مع الساعة يبقى**: العناوينُ تجمع
+                            بالأيام، **وسطرٌ يقول «٣:٤٠ م» وحدَه يُقرأ خارجَ
+                            عنوانه** حين يُنسخ أو يُذكر. (قرارُ المالك
+                            ٢٠٢٦-٠٨-٠٥.) */}
+                        <span
+                          className="mt-2 block text-2xs tabular-nums text-ink-muted"
+                          dir="ltr"
+                        >
+                          {fmtDateTime(n.created_at)}
+                        </span>
+                      </div>
                     </div>
                   );
                   return (
-                    <li key={n.id} className="border-b border-line last:border-0">
+                    <li key={n.id} className="min-w-0">
                       {n.href ? (
                         <Link
                           href={n.href}
                           onClick={() => !n.read && void markOne(n.id)}
-                          className="block transition-colors hover:bg-page"
+                          className="block h-full"
                         >
                           {inner}
                         </Link>
