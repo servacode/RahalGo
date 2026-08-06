@@ -122,7 +122,17 @@ export default function ItemCard({
           داخل زرٍّ لا يجوز: المتصفّحُ يفكّه كما يشاء **فتضيع إحدى
           الضغطتين.** */}
       <div
-        className={`relative flex flex-col overflow-hidden rounded-card border border-line bg-surface transition-shadow hover:elev-2 ${
+        /* **قوسٌ أعلى وحافّةٌ مستقيمةٌ أسفل.**
+
+           (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «أريد شكلاً فريداً يستحقّ التميّز».)
+
+           **والقوسُ على الغلاف لا على الصورة**: لو رُوّست الصورةُ وحدَها داخل
+           غلافٍ بزوايا `card` **لَقُصّ القوسُ عند حدّ الغلاف** فيظهر خطّان
+           متداخلان. **فالغلافُ يحمل الشكلَ والصورةُ تُقصّ فيه.**
+
+           **والأسفلُ يبقى مستقيماً** — عليه يقف الاسمُ والوصفُ وثلاثةُ أرقامٍ
+           في سطر، **ولا سطرَ يستقيم على منحنى.** */
+        className={`relative flex flex-col overflow-hidden rounded-b-card rounded-t-arch border border-line bg-surface transition-shadow hover:elev-2 ${
           off ? "opacity-60" : ""
         }`}
       >
@@ -131,8 +141,14 @@ export default function ItemCard({
         onClick={open}
         className="flex flex-1 flex-col text-start"
       >
-        {/* **الصورةُ أوّلاً وتملأ العرض** — كبطاقة القسم فوقها تماماً. */}
-        <span className="relative flex aspect-[4/3] items-center justify-center bg-page">
+        {/* **والصورةُ مربّعةٌ لا عريضة.**
+
+           كانت ٤:٣ — **والصحنُ مستديرٌ في الغالب**، فالإطارُ العريضُ يقصّ
+           جانبيه ويترك فوقه وتحته فراغاً. **والمربّعُ يحيط بالصحن.**
+
+           **ويخدم القوسَ**: انحناءةٌ فوق إطارٍ عريضٍ تأكل ثُلثَ ارتفاعه،
+           **وفوق مربّعٍ تُقرأ تتويجاً.** */}
+        <span className="relative flex aspect-square items-center justify-center bg-page">
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />
@@ -144,15 +160,15 @@ export default function ItemCard({
           {/* **«نفد» و«نائم» خبران مختلفان** — الأوّلُ لا موعدَ له والثاني له
               موعد. **وموضعُهما فوق الصورة** كشارة القسم: تُقرأ قبل الاسم. */}
           {discounted && item.discount_percent ? (
-            <span className="absolute end-1.5 top-1.5">
+            <span className="absolute end-3 top-3">
               <Badge variant="danger">−{item.discount_percent}%</Badge>
             </span>
           ) : !item.available ? (
-            <span className="absolute end-1.5 top-1.5">
+            <span className="absolute end-3 top-3">
               <Badge variant="warning">{m.site.menu.unavailable}</Badge>
             </span>
           ) : item.source_closed ? (
-            <span className="absolute end-1.5 top-1.5">
+            <span className="absolute end-3 top-3">
               <Badge variant="neutral">
                 {item.source_opens_at
                   ? m.site.menu.availableFrom.replace("{t}", fmtTime(item.source_opens_at))

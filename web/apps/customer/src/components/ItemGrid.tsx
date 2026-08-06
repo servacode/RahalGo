@@ -51,7 +51,14 @@ export default function ItemGrid({
   const { has, toggle } = favorites ?? own;
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    /* **وأربعةُ أعمدةٍ لا خمسة.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦.)
+
+       خمسةٌ على شاشةٍ بألفٍ وأربعمئة تجعل البطاقةَ **مئتين وخمسين بكسلاً**،
+       **فيصير الصحنُ نقطةً** ويُقرأ الاسمُ بمشقّة. وأربعةٌ تعطيها **ثلاثمئةً
+       وعشرين** — والفرقُ سبعون بكسلاً في الصورة وحدَها.
+
+       **والفجوةُ تتّسع مع الشاشة**: بطاقاتٌ ملتصقةٌ تُقرأ شريطاً واحداً. */
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
       {items.map((it) => (
         <ItemCard
           key={it.id}
