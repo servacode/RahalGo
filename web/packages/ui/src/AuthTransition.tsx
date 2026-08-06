@@ -39,6 +39,7 @@
  */
 
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { BrandMark } from "./platform";
 
 const m = getMessages(defaultLocale);
 const A = m.auth;
@@ -48,15 +49,10 @@ export type AuthTransitionKind = "in" | "out";
 export function AuthTransition({
   kind,
   name = "",
-  logo = null,
-  platform = "",
 }: {
   kind: AuthTransitionKind;
   /** اسمُ الداخل — يُرحَّب به باسمه، **وفارغٌ يُسقط الاسمَ ولا يترك فراغاً.** */
   name?: string;
-  /** شعارُ المنصة إن رُفع — **ومنصّةٌ بلا شعارٍ تبقى تعمل بحرفها.** */
-  logo?: string | null;
-  platform?: string;
 }) {
   const title =
     kind === "out"
@@ -74,15 +70,10 @@ export function AuthTransition({
       role="status"
       aria-live="polite"
     >
-      {/* **العلامةُ أوّلاً** — وهي ما يقول «المنصةُ تعمل» قبل أن يُقرأ حرف. */}
-      {logo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logo} alt={platform || m.common.appName} className="h-16 w-16 rounded-card object-cover" />
-      ) : (
-        <span className="flex h-16 w-16 items-center justify-center rounded-card bg-primary text-2xl font-bold text-on-bright">
-          {m.terms.brandInitial}
-        </span>
-      )}
+      {/* **العلامةُ أوّلاً** — وهي ما يقول «المنصةُ تعمل» قبل أن يُقرأ حرف.
+          **ومن `BrandMark` لا من المعجم**: شعارُ الإعدادات إن رُفع، وإلّا
+          أوّلُ حرفٍ من الاسم المضبوط. (قرارُ المالك ٢٠٢٦-٠٨-٠٦.) */}
+      <BrandMark size={64} rounded="card" />
 
       <div className="px-6 text-center">
         <p className="text-lg font-bold text-ink">{title}</p>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getMessages, getDir, defaultLocale } from "@rahalgo/i18n";
 import { mediaUrl } from "@/lib/api";
+import { PlatformProvider } from "@rahalgo/ui";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
@@ -45,10 +46,10 @@ export const metadata: Metadata = {
  */
 async function identity(): Promise<{ name: string; logo: string | null }> {
   try {
-    const res = await fetch(`${API}/api/v1/public/home`, { cache: "no-store" });
+    const res = await fetch(`${API}/api/v1/public/platform`, { cache: "no-store" });
     if (!res.ok) throw new Error(String(res.status));
     const j = (await res.json()) as {
-      data?: { platform_name?: string; platform_logo?: string | null };
+      data?: { name?: string; logo?: string | null };
     };
     // **والمسارُ يُحوَّل إلى رابطٍ كاملٍ هنا.**
     //
@@ -58,11 +59,11 @@ async function identity(): Promise<{ name: string; logo: string | null }> {
     //
     // **وقِيس قبل الإصلاح**: `3003/media/…` ردّ ٤٠٤ و`8080/media/…` ردّ ٢٠٠.
     return {
-      name: j.data?.platform_name || "",
-      logo: mediaUrl(j.data?.platform_logo) ?? null,
+      name: j.data?.name || "",
+      logo: mediaUrl(j.data?.logo) ?? null,
     };
   } catch {
-    // @empty-ok — **الاسمُ يسقط إلى المعجم والشعارُ إلى الحرف** (انظر أعلاه).
+    // @empty-ok — **ولا يُخترع اسمٌ عند الفشل**: علامةٌ ناقصةٌ أهونُ من كاذبة.
     return { name: "", logo: null };
   }
 }
@@ -72,13 +73,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={defaultLocale} dir={getDir(defaultLocale)}>
       <body className="flex min-h-screen flex-col">
+        {/* **الهويّةُ تُقرأ في الخادم وتُمرَّر مبدئيّةً** — فلا تومض
+            العلامةُ فارغةً ثمّ تمتلئ. */}
+        <PlatformProvider apiBase={API} initial={brand}>
         <AuthProvider>
           <CartProvider>
             {/* **ولا حشوةَ يميناً ويساراً** — (قاعدةُ المالك، قالها أربعَ
                 مرّات): الصفحةُ تأخذ العرضَ كاملاً. **والعموديُّ في `main`
                 وحدَه** لأنّ الشريطَ والفوترَ شريطان يبلغان الحافّة. */}
             <div className="flex min-h-screen flex-col">
-              <Header name={brand.name} logo={brand.logo} />
+              <Header />
               {/* ══════════════════════════════════════════════════════════
                   **المحتوى يقف على الصفحة — لا داخلَ صندوق**
                   ══════════════════════════════════════════════════════════
@@ -140,6 +144,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <BottomNav />
           </CartProvider>
         </AuthProvider>
+        </PlatformProvider>
       </body>
     </html>
   );

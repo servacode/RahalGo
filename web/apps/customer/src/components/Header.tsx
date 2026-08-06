@@ -25,6 +25,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   TopBar,
+  BrandMark,
   TopBarLink,
   TopBarChip,
   TopBarActions,
@@ -142,19 +143,20 @@ export default function Header({
 
             **ومنصّةٌ لم تَرفع شعاراً يجب أن تبقى تعمل**: مربّعٌ فارغٌ في
             الشريط العلويّ **أسوأُ من حرف.** */}
-        {logo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={logo}
-            alt={name || m.common.appName}
-            className="h-9 w-9 rounded-control object-cover"
-          />
-        ) : (
-          <span className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-on-solid">
-            {m.terms.brandInitial}
-          </span>
-        )}
-        <span className="hidden font-bold sm:inline">{name || m.common.appName}</span>
+        {/* ══════════════════════════════════════════════════════════
+            **اللوغو وحدَه — ولا اسمَ بجانبه**
+            ══════════════════════════════════════════════════════════
+
+            (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «اسم المنصة لا داعي له في التوب بار،
+             فقط اترك لوغو المنصة».)
+
+            **والاسمُ كان يقول ما يقوله الشعار** — والشعارُ يُقرأ بلمحةٍ
+            والاسمُ يُقرأ بحرف. **وشريطٌ فيه علامةٌ واسمُها يكرّر نفسَه في
+            أضيق مكانٍ في الشاشة.**
+
+            **ويبقى للقارئ الصوتيّ**: `alt` الشعار اسمُ المنصة **فمن لا
+            يرى يسمعه**، ومن لا شعارَ عنده يقرأ حرفَ الاسم. */}
+        <BrandMark size={36} />
       </Link>
 
       <TopBarLink

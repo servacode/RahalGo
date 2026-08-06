@@ -10,6 +10,7 @@ import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
 import { SkeletonList, SkeletonStats } from "./feedback";
 import { IconStar } from "./icons";
+import { BrandMark } from "./platform";
 
 const m = getMessages(defaultLocale);
 
@@ -554,18 +555,19 @@ export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | str
           المتصفّحاتُ لا تطبع الخلفياتِ افتراضاً — فمربّعٌ ملوّنٌ بحرفٍ أبيض
           يخرج **بياضاً على بياض**: ورقةٌ رسمية بلا علامة. والوسمُ هنا تلتقطه
           قاعدةُ طباعةٍ تقلبه إلى إطارٍ وحرفٍ أسودين. */}
-      {/* **الحرفُ على الأساسيّ والطريقُ تحته بالنبرة** — اختصارُ اللوغو. */}
-      <div
-        data-print-mark
-        className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary text-lg font-bold text-on-solid"
-      >
-        {m.terms.brandInitial}
+      {/* **والعلامةُ من الإعدادات** — شعارٌ إن رُفع وإلّا أوّلُ حرفٍ من الاسم.
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «بنماذج الطباعة كما اتّفقنا».)
+          **والطريقُ تحته بالنبرة** — اختصارُ اللوغو حين لا شعارَ مرفوع. */}
+      <div data-print-mark className="relative shrink-0 overflow-hidden rounded-control">
+        <BrandMark size={44} />
         <span aria-hidden className="absolute inset-x-0 bottom-0 h-1.5 bg-accent" />
       </div>
 
       <div className="min-w-0 flex-1 text-center">
-        <p className="truncate text-lg font-bold">{m.common.appName}</p>
-        <p className="truncate text-xs text-ink-muted">{m.common.appTagline}</p>
+        {/* **ولا اسمَ في الورقة أيضاً** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦).
+            **والعلامةُ تكفي**: هي ما يُعرَف به المُصدِر، والوصفُ تحتها يقول
+            ما يفعل. */}
+        <p className="truncate text-sm text-ink-muted">{m.common.appTagline}</p>
       </div>
 
       <div className="shrink-0 text-end text-xs text-ink-muted">

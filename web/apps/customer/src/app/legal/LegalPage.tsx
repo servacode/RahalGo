@@ -33,7 +33,7 @@
  * مفتاحٌ نصيٌّ ويُختار المكوّنُ هنا**، والنصوصُ والهويّةُ بياناتٌ تعبر.
  */
 
-import { PageContainer, PageHeader, IconNote, IconLock, IconSupport } from "@rahalgo/ui";
+import { PageContainer, PageHeader, IconNote, IconLock, IconSupport, usePlatform } from "@rahalgo/ui";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import type { Contact } from "./contact";
 
@@ -61,9 +61,10 @@ export interface Block {
  * **واسمُ العلامة يكفي حتّى يصل الاسمُ المسجَّل**: هو صحيحٌ في الحالين، ولا
  * يقول شيئاً كاذباً.
  */
-function fill(text: string, c: Contact | null): string {
+function fill(text: string, c: Contact | null, platform: string): string {
+  // **والبديلُ اسمُ المنصة من الإعدادات لا من المعجم** (قرارُ المالك ٢٠٢٦-٠٨-٠٦)
   return text
-    .replace(/\{name\}/g, c?.legal_name || m.common.appName)
+    .replace(/\{name\}/g, c?.legal_name || platform)
     .replace(/\{phone\}/g, c?.support_phone ?? "")
     .replace(/\{address\}/g, c?.address ?? "");
 }
@@ -85,6 +86,8 @@ export function LegalPage({
   /** **تصل جاهزةً من الخادم** — لا تُجلب هنا. */
   contact: Contact | null;
 }) {
+  // **واسمُ المنصة بديلٌ للاسم المسجَّل** — من الإعدادات لا من المعجم.
+  const { name: platform } = usePlatform();
   const icon = ICONS[kind];
 
   return (
@@ -96,10 +99,10 @@ export function LegalPage({
       <div className="space-y-6 leading-relaxed">
         {blocks.map((b, i) => (
           <section key={i}>
-            {b.h && <h2 className="mb-2 font-bold">{fill(b.h, contact)}</h2>}
+            {b.h && <h2 className="mb-2 font-bold">{fill(b.h, contact, platform)}</h2>}
             {b.p.map((line, j) => (
               <p key={j} className="mb-2 text-sm text-ink-muted last:mb-0">
-                {fill(line, contact)}
+                {fill(line, contact, platform)}
               </p>
             ))}
           </section>

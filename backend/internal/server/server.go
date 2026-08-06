@@ -161,6 +161,8 @@ func (s *Server) Router() http.Handler {
 		// **والعروضُ عامّةٌ كالتصفّح** — تُرى قبل الدخول، **ومن رأى عرضاً سجّل.**
 		r.Get("/public/offers", s.handlePublicOffers)
 		r.Get("/public/home", s.handlePublicHome)
+		// **هويّةُ المنصة** — خفيفةٌ ومفتوحة، تناديها الخمسةُ وشاشةُ الدخول.
+		r.Get("/public/platform", s.handlePublicPlatform)
 		r.Get("/public/zone", s.handlePublicZone)
 		// **هويّةُ المنصة للشروط والخصوصية** — عامّةٌ لأنّ من يقرؤها قد لا
 		// يكون دخل بعد، **ومن سُئل أن يوافق قبل أن يقرأ لم يوافق.**

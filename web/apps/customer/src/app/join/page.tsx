@@ -18,6 +18,7 @@ import {
   IconLocation,
   IconLock,
   IconSuccess,
+  BrandMark,
   IconPromos,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
@@ -130,9 +131,8 @@ function JoinForm() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-5 text-center">
-        <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-card bg-primary text-2xl font-bold text-on-solid">
-          {m.terms.brandInitial}
-        </span>
+        {/* علامةُ المنصة من الإعدادات — شعارٌ إن رُفع وإلّا أوّلُ حرفٍ من الاسم */}
+        <BrandMark size={56} rounded="card" className="mx-auto mb-3" />
         <h1 className="text-2xl font-bold">{J.title}</h1>
         <p className="mt-1 text-sm text-ink-muted">{J.subtitle}</p>
       </div>

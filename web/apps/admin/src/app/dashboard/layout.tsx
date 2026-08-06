@@ -179,7 +179,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         صار المستخدمُ يملك. */}
     <DashboardChrome
       walletHref="/dashboard/wallet"
-      brand={m.common.appName}
+      /* **و`brand` تسميةٌ احتياطيّةٌ للوحة لا اسمُ المنصة** — تُعرض حين
+         لا يكون الاسمُ مضبوطاً في الإعدادات، **وتُقرأ للقارئ الصوتيّ على
+         زرّ القائمة.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦.) */
+      brand={m.admin.nav.dashboard}
       nav={nav}
       pathname={pathname}
       homeHref="/dashboard"

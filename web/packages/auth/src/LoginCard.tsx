@@ -26,6 +26,7 @@ import {
   IconSignup,
   IconPrev,
   IconCheck,
+  BrandMark,
 } from "@rahalgo/ui";
 import { authApi, tokenStore, ApiError, type AuthUser } from "./client";
 
@@ -435,6 +436,18 @@ export function LoginCard({
           {/* ---------- جانب النموذج ---------- */}
           <div className="p-6 sm:p-8 lg:p-10">
             <div className="mb-6">
+              {/* **علامةُ المنصة أعلى البطاقة.**
+
+                  (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «وأيضاً أعلى لوحة تسجيل الدخول
+                   والخروج واستعادة كلمة المرور».)
+
+                  **وشاشةُ الدخول أوّلُ ما يُرى قبل أن يكون هناك حساب** —
+                  وبطاقةٌ بيضاءُ بحقلَي هاتفٍ وكلمةِ مرورٍ بلا علامةٍ **لا
+                  تقول لمن هي.** ومن وصلها من رابطٍ لا يعرف أين وقع.
+
+                  **ومن الإعدادات لا من المعجم**: شعارٌ إن رُفع وإلّا أوّلُ
+                  حرفٍ من الاسم المضبوط. */}
+              <BrandMark size={48} rounded="card" className="mb-4" />
               <h1 className="text-xl font-bold tracking-tight text-ink">{head.title}</h1>
               {head.subtitle && (
                 <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{head.subtitle}</p>

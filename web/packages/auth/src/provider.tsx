@@ -30,16 +30,7 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-export function AuthProvider({
-  children,
-  /** شعارُ المنصة واسمُها للطبقة الانتقاليّة — **وفارغٌ يُبقي حرفَ العلامة.** */
-  logo = null,
-  platform = "",
-}: {
-  children: ReactNode;
-  logo?: string | null;
-  platform?: string;
-}) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   /**
@@ -103,9 +94,9 @@ export function AuthProvider({
   return (
     <AuthContext.Provider value={{ user, loading, setUser, login, logout, enter }}>
       {children}
-      {transit && (
-        <AuthTransition kind={transit.kind} name={transit.name} logo={logo} platform={platform} />
-      )}
+      {/* **والعلامةُ تُقرأ من `PlatformProvider` داخلَ الطبقة** — فلا تُمرَّر
+          عبر أربعِ طبقاتٍ من الوسائط. */}
+      {transit && <AuthTransition kind={transit.kind} name={transit.name} />}
     </AuthContext.Provider>
   );
 }

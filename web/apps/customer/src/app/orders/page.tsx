@@ -26,6 +26,7 @@ import {
   IconLocation,
   IconSupport,
   IconCheck,
+  BrandMark,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
@@ -504,9 +505,11 @@ function OrderCard({
 
             الزبونُ اشترى من «رحّال غو» — **واسمُ المتجر محجوبٌ عمداً**، فأيقونةُ
             متجرٍ عامّة تقول شيئاً لا نقوله. والعلامةُ هي نفسُها في الشريط
-            العلويّ وفي الفاتورة: **حرفٌ أبيضُ على الأساسيّ وطريقٌ بالنبرة تحته.** */}
-        <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary text-xl font-bold text-on-solid">
-          {m.terms.brandInitial}
+            العلويّ وفي الفاتورة — **ومن الإعدادات لا من المعجم**: شعارٌ إن
+            رُفع وإلّا أوّلُ حرفٍ من الاسم. (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «وأيضاً
+            على كروت الطلبات».) */}
+        <span className="relative shrink-0 overflow-hidden rounded-control">
+          <BrandMark size={48} />
           <span aria-hidden className="absolute inset-x-0 bottom-0 h-1.5 bg-accent" />
         </span>
 

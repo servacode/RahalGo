@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LiveNotifications, useLiveRefresh } from "./Notifications";
+import { BrandMark } from "./platform";
 import {
   TopBar,
   TopBarChip,
@@ -153,7 +154,9 @@ export function DashboardChrome({
   useEffect(() => setMenuOpen(false), [pathname]);
 
   const isActive = (href: string) => (href === homeHref ? pathname === href : pathname.startsWith(href));
-  const activeLabel = nav.find((i) => isActive(i.href))?.label ?? brand;
+  // **وعنوانُ الشريط اسمُ القسم المفتوح** — **وفارغٌ إن لم يُطابق شيء**،
+  // ولا يسقط إلى تسمية البوّابة (قرارُ المالك ٢٠٢٦-٠٨-٠٦).
+  const activeLabel = nav.find((i) => isActive(i.href))?.label ?? "";
 
   async function shopAsCustomer() {
     if (!shopUrl) return;
@@ -169,10 +172,24 @@ export function DashboardChrome({
     <>
       <div className="flex items-center justify-between border-b border-line p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-control bg-primary font-bold text-on-solid">
-            {m.terms.brandInitial}
-          </div>
-          <span className="font-bold">{brand}</span>
+          {/* **علامةُ المنصة من الإعدادات** — شعارٌ إن رُفع وإلّا أوّلُ حرفٍ
+              من الاسم. **والاسمُ بجانبها اسمُ المنصة لا اسمُ اللوحة**: كانت
+              الأربعُ تكتب أربعةَ أسماءٍ مختلفةً في شيفرتها — «رحّال غو»
+              و«بوّابة المتجر» وعنوانَي دخولِ السائق والمندوب.
+              (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «يجب أن يأتي من الإعدادات فقط».) */}
+          {/* ══════════════════════════════════════════════════════
+              **اللوغو وحدَه — لا اسمٌ ولا تسميةُ بوّابة**
+              ══════════════════════════════════════════════════════
+
+              (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا يوجد داعٍ لكتابة بوّابة السائق
+               والمندوب والمتجر والادمن — فقط يظهر لوغو المنصة بالسايدبار
+               بدون اسمٍ للمنصة أو شيءٍ آخر».)
+
+              **وكانت الأربعُ تكتب أربعةَ أسماءٍ مختلفةً في شيفرتها**، ثمّ
+              صارت تكتب اسمَ المنصة من الإعدادات — **والاثنان زائدان**:
+              من فتح بوّابتَه يعرف أيَّها فتح، **والسايدبارُ تحتها يقول
+              دورَه بتسعةَ عشرَ بنداً.** */}
+          <BrandMark size={36} />
         </div>
         <button
           onClick={() => setMenuOpen(false)}
