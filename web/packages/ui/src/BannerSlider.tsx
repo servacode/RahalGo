@@ -219,8 +219,13 @@ export function BannerSlider({
         key={it.id}
         aria-hidden={!on}
         /* **والمخفيّةُ لا تُلتقط بالتاب**: `inert` تمنع تركيزَ ما تحتها،
-           **فلا يقف المتنقّلُ بالكيبورد على رابطٍ لا يراه.** */
-        {...(!on ? { inert: "" as unknown as boolean } : {})}
+           **فلا يقف المتنقّلُ بالكيبورد على رابطٍ لا يراه.**
+
+           **وتُمرَّر منطقيّةً لا نصّاً فارغاً**: كتبتُها `inert=""` أوّلَ مرّةٍ
+           بحيلةِ نوع، **فأطلقت React تحذيراً في المتصفّح** — «نصٌّ فارغٌ لسمةٍ
+           منطقيّة». **وReact ١٩ تقبلها منطقيّةً أصلاً**، والحيلةُ كانت لغير
+           حاجة. (شهد المالك «1 Issue» في شاشته ٢٠٢٦-٠٨-٠٦.) */
+        inert={!on}
         className={`absolute inset-0 transition-opacity ease-[--ease-out] ${
           still ? "duration-0" : "duration-[--duration-slow]"
         } ${on ? "opacity-100" : "pointer-events-none opacity-0"}`}

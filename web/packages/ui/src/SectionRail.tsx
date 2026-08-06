@@ -30,12 +30,8 @@
  * **رأى الشريطَ واقفاً في نصف المتصفّحات** — والعطبُ لا يظهر عنده.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { useEffect, useRef, useState } from "react";
 import { CategoryIcon } from "./CategoryIcon";
-import { IconNext, IconPrev } from "./icons";
-
-const m = getMessages(defaultLocale);
 
 export interface RailItem {
   id: string;
@@ -109,27 +105,18 @@ export function SectionRail({
     return () => clearInterval(id);
   }, [held, still, items.length]);
 
-  /** سهمٌ ينقل صفحةً — **وعلى الحاسب وحدَه**: الإصبعُ على الجوّال أطوعُ منه. */
-  const nudge = useCallback((dir: -1 | 1) => {
-    const el = box.current;
-    if (!el) return;
-    el.scrollBy({ left: sign.current * dir * el.clientWidth * 0.8, behavior: "smooth" });
-  }, []);
 
   if (items.length === 0) return null;
 
-  const arrow = (dir: -1 | 1) => (
-    <button
-      type="button"
-      onClick={() => nudge(dir)}
-      aria-label={dir === 1 ? m.common.next : m.common.back}
-      className={`taparea absolute inset-block-0 my-auto hidden h-9 w-9 items-center justify-center rounded-badge border border-line bg-surface text-ink-muted transition-colors hover:text-ink sm:flex ${
-        dir === 1 ? "start-0" : "end-0"
-      }`}
-    >
-      {dir === 1 ? <IconNext size={16} /> : <IconPrev size={16} />}
-    </button>
-  );
+  /* **ولا سهمين.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «ألغِ السهم اليمين واليسار
+     تبع الأقسام ما تلزم».)
+
+     **والشريطُ يمشي وحدَه ذهاباً وإياباً** — فيُري كلَّ الأقسام بلا أن يُطلب
+     منه. **والسهمُ يخدم من يريد تجاوزَ الانتظار**، وهو ما لا يقع في تسعة
+     أقسامٍ يمرّ عليها الشريطُ في ثوان.
+
+     **وزرّان معلَّقان فوق الصور يزاحمانها** — والدائرتان الأوّلى والأخيرةُ
+     تختفيان تحتهما. **والسحبُ بالإصبع والتمريرُ بالفأرة يعملان بلا زرّ.** */
 
   return (
     <div
@@ -145,7 +132,7 @@ export function SectionRail({
         ref={box}
         /* **وشريطُ التمرير يُخفى ولا يُمنع التمرير** — مقبضٌ رماديٌّ تحت صفٍّ
            من الصور يُقرأ عطباً، **والانزلاقُ بالإصبع لا يحتاج مقبضاً يُرى.** */
-        className="flex gap-3 overflow-x-auto scroll-smooth px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:px-10 [&::-webkit-scrollbar]:hidden"
+        className="flex gap-3 overflow-x-auto scroll-smooth px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((it) => {
           const on = it.id === activeID;
@@ -205,8 +192,6 @@ export function SectionRail({
         })}
       </div>
 
-      {arrow(1)}
-      {arrow(-1)}
     </div>
   );
 }
