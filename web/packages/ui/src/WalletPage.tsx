@@ -82,7 +82,6 @@ export function WalletPage({
   payouts = false,
   holderName,
   holderPhone,
-  width = "full",
 }: {
   api: ApiFn;
   /** نقطة كشف المحفظة — تختلف بالدور: `/api/v1/rep/wallet` أو `/api/v1/my/wallet` */
@@ -99,7 +98,6 @@ export function WalletPage({
   payouts?: boolean;
   holderName?: string;
   holderPhone?: string;
-  width?: "full" | "medium";
 }) {
   const [tab, setTab] = useState(ALL);
   const [asking, setAsking] = useState(false);
@@ -190,7 +188,11 @@ export function WalletPage({
           tx.order_number ? (
             <span dir="ltr" className="tabular-nums">#{tx.order_number}</span>
           ) : tx.ticket_number ? (
-            <span dir="ltr" className="tabular-nums">#{tx.ticket_number}</span>
+            /* **والشكوى تُسمّى** — رأسُ العمود «رقم الطلب» (قرارُ المالك
+               ٢٠٢٦-٠٨-٠٧)، **ورقمُ شكوًى تحته يُقرأ طلباً لا شكوى.** */
+            <span className="tabular-nums">
+              {m.shared.txCard.ticket} <span dir="ltr">#{tx.ticket_number}</span>
+            </span>
           ) : (
             <span className="text-ink-muted">—</span>
           ),
@@ -273,7 +275,15 @@ export function WalletPage({
       onClick={() => setTab(tab === STATEMENT ? ALL : STATEMENT)}
       /* **ونصُّه داكنٌ لا أبيض**: الأبيضُ على الأخضر المصمت **٣٫٥١** — دون
          حدّ النصّ العاديّ. **والداكنُ ٤٫٨٠.** (كشفه جردُ ٢٠٢٦-٠٨-٠٦.) */
-      className="flex items-center gap-2 !bg-success-solid !text-on-bright hover:!opacity-90"
+      /* **ولا لونَ يُفرَض بـ`!`** — كان `!bg-success-solid`، **وهو أخضرُ
+         مكتوبٌ بالهكس من قبل تحويل اللوحة إلى التركوازيّ فلم يدر معها**:
+         لونٌ لا صلةَ له بالثيم، وأبيضُه ٣٫٥١ دونَ الحدّ. (قرارُ المالك
+         ٢٠٢٦-٠٨-٠٧: «الزرّ لسّا آخذٌ ألواناً غيرَ الثيم».)
+
+         **والنبرةُ للفعل الذي يُنشئ شيئاً**، وكشفُ الحساب إخراجُ ورقةٍ لا
+         إنشاء — **فهو ثانويٌّ بلغة الأزرار نفسِها لا بلونٍ خاصٍّ به.** */
+      variant="secondary"
+      className="flex items-center gap-2"
     >
       <IconPrint size={16} />
       {m.shared.statement.open}
@@ -281,7 +291,7 @@ export function WalletPage({
   );
 
   return (
-    <PageContainer width={width}>
+    <PageContainer>
       <PageHeader
         icon={IconWallet}
         title={m.terms.wallet}
@@ -331,12 +341,16 @@ export function WalletPage({
             كاملة **يترك فراغاً لا يقول شيئاً**، وتُقرأ البطاقةُ بحجم ما فيها لا
             بحجم ما حولها. (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «كرت المحفظة كبير، اجعله
             صغيراً مناسباً · اجعل بادينغ للكرت، لا تجعله بامتداد الصفحة».) */}
-        <div className="w-full rounded-card bg-accent px-4 py-3 text-center text-on-bright sm:mx-0 sm:w-auto sm:min-w-56 sm:text-start">
-          <p className="text-sm font-medium opacity-90">{balanceLabel}</p>
+        {/* **والكرتُ في الوسط لا الصفحة** — (تصحيحُ المالك ٢٠٢٦-٠٨-٠٧:
+              «اتّفقنا أنّه بدون بادينك، وأنا قصدتُ كرتَ المحفظة هو الذي يكون
+              محاذاةً بالوسط وليست الصفحة».) **وكان `sm:mx-0` يُلصقه بالحافّة
+              على الشاشات الواسعة.** */}
+        <div className="surface mx-auto w-full px-4 py-3 text-center sm:w-auto sm:min-w-56">
+          <p className="text-sm font-medium text-ink-muted">{balanceLabel}</p>
           {/* **والشرحُ حُذف**: «المحفظة اختيارية…» جملةٌ تُقرأ مرّةً ثمّ تبقى
               تشغل بطاقةَ الرصيد كلَّ يوم. **وما يُقال مرّةً لا يُكتب دائماً.**
               (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بلاها».) */}
-          <p className="mt-0.5 text-2xl font-bold" dir="ltr">
+          <p className="mt-0.5 text-2xl font-bold text-accent" dir="ltr">
             {fmtNum(balance)} <span className="text-sm font-normal">{m.common.currency}</span>
           </p>
         </div>

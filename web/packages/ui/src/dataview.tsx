@@ -82,7 +82,10 @@ export function ViewToggle({
 }) {
   const base =
     "flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm transition-colors";
-  const active = "bg-surface font-medium text-primary-dark elev-1";
+  /* **والمختارةُ كحبّةِ الترشيح** — كانت `bg-surface text-primary-dark`:
+     سطحٌ على سطحٍ لا يكاد يُرى، **ودرجةٌ لا دلالة.** (قرارُ المالك
+     ٢٠٢٦-٠٨-٠٧: «الزرّ لسّا آخذٌ ألواناً غيرَ الثيم».) */
+  const active = "bg-primary font-medium text-on-bright elev-1";
   const idle = "text-ink-muted hover:text-ink";
   return (
     /* **ويُخفى حيث لا يفعل شيئاً.**
@@ -92,7 +95,8 @@ export function ViewToggle({
        يُفتقد.** */
     <div
       role="group"
-      className="hidden rounded-control border border-line bg-page p-1 md:flex"
+      /* **والحاضنُ زجاجٌ لا لوحٌ معتم** — `bg-page` صندوقٌ أسودُ فوق تدرّج. */
+      className="surface hidden rounded-control p-1 md:flex"
     >
       <button
         type="button"
@@ -214,16 +218,25 @@ export function DataView<T>({
             onClick={onRowClick ? () => onRowClick(item) : undefined}
             className={`flex flex-col surface p-4 transition-shadow hover:elev-2 ${onRowClick ? "cursor-pointer" : ""}`}
           >
-            <div className="mb-3 border-b border-line pb-3">
+            {/* ══════════════════════════════════════════════════════
+                **والترويسةُ صفٌّ لا عمود**
+                ══════════════════════════════════════════════════════
+
+                (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «لازم يكون المبلغ محاذاةً لليسار
+                 أيضاً — وطبعاً كلُّ شيءٍ ذكرتُه يجب أن يتمّ بشكلٍ مركزيّ».)
+
+                **كانت الأوّليّاتُ مرصوفةً فوق بعضها** — الاسمُ ثمّ الرقمُ
+                تحته، وكلاهما ملتصقٌ بالحافّة نفسِها. **فيُقرآن شيئاً واحداً
+                من سطرين** لا اسماً وقيمة.
+
+                **فصارا طرفَي سطر**: الاسمُ حيث تبدأ القراءة والرقمُ حيث
+                تنتهي — **والعينُ تمسح عموداً من الأرقام في بطاقاتٍ متجاورة
+                لأنّها كلَّها على استقامةٍ واحدة.**
+
+                **وما زاد على اثنتين يلتفّ** ولا يزاحم. */}
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line pb-3">
               {primaries.map((c, i) => (
-                <div
-                  key={c.id}
-                  className={
-                    i === 0
-                      ? "text-base font-bold"
-                      : "mt-0.5 text-sm text-ink-muted"
-                  }
-                >
+                <div key={c.id} className={i === 0 ? "text-base font-bold" : "text-sm text-ink-muted"}>
                   {c.cell(item)}
                 </div>
               ))}

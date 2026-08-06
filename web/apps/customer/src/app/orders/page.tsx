@@ -719,7 +719,7 @@ function OrderCard({
              أحدُهما يحفظ والآخر يشتكي. **ولونٌ واحدٌ لهما يجعل الضغطةَ قرعةً**،
              والعينُ تفرّق بالألوان قبل أن تقرأ الأيقونات.
              (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-success-solid text-on-solid transition-opacity hover:opacity-90"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-success-tint text-success transition-opacity hover:opacity-90"
         >
           <IconPrint size={16} />
         </button>

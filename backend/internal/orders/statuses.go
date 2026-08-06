@@ -20,6 +20,53 @@ const (
 	StRefunded    = "refunded"
 )
 
+// statusAr اسمُ الحالة بالعربيّة — **لِما يُكتب لصاحب الحساب لا للسجلّ.**
+//
+// (شهده المالك ٢٠٢٦-٠٨-٠٧ في محفظته: «استرجاع طلب (cancelled) — فيه كلمةٌ
+// إنكليزيّةٌ غيرُ مفهومة».)
+//
+// **وملاحظةُ الحركة تُقرأ في المحفظة** — لا في سجلّ مطوّر. وكانت تُبنى
+// بـ%s من ثابت الحالة، **وثوابتُ الحالات إنكليزيّةٌ لأنّها مفاتيحُ قاعدةِ
+// بيانات** لا نصوصاً.
+//
+// **ولا يُترجَم هنا شيءٌ آخر**: هذه هي النصوصُ الوحيدةُ التي يكتبها المحرّك
+// في المال، **وما عداها يأتي من المعجم في الواجهة.**
+func statusAr(status string) string {
+	switch status {
+	case StPending:
+		return "بانتظار القبول"
+	case StAccepted:
+		return "مقبول"
+	case StPreparing:
+		return "قيد التحضير"
+	case StDispatching:
+		return "بحثٌ عن سائق"
+	case StAssigned:
+		return "مُسنَد"
+	case StAtPickup:
+		return "عند المتجر"
+	case StPickedUp:
+		return "استُلم من المتجر"
+	case StOnTheWay:
+		return "في الطريق"
+	case StAtDropoff:
+		return "عند العنوان"
+	case StDelivered:
+		return "مُسلَّم"
+	case StRejected:
+		return "مرفوض"
+	case StCancelled:
+		return "ملغى"
+	case StFailed:
+		return "فاشل"
+	case StRefunded:
+		return "مُسترَجع"
+	}
+	// **وحالةٌ لا اسمَ لها تُكتب كما هي** — نصٌّ غريبٌ أهونُ من نصٍّ ناقص،
+	// **وحارسٌ في الاختبار يمنع أن تمرّ حالةٌ جديدةٌ بلا اسم.**
+	return status
+}
+
 // transition يعرّف انتقالاً مسموحاً: إلى أي حالة، ومن أي الأدوار.
 type transition struct {
 	To    string

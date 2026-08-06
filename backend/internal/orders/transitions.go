@@ -428,7 +428,7 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	// (1) نهاية غير التسليم قبل التسليم — استرجاع ما دُفع من المحفظة
 	if refundOnEnter(in.to) && in.from != StDelivered && in.walletPaid > 0 {
 		if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, in.walletPaid, "refund",
-			in.orderID, fmt.Sprintf("استرجاع طلب (%s)", in.to), &in.actorID); err != nil {
+			in.orderID, fmt.Sprintf("استرجاع طلب %s", statusAr(in.to)), &in.actorID); err != nil {
 			return err
 		}
 	}
