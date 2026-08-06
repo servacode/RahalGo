@@ -43,8 +43,16 @@ export interface RailItem {
   count: number;
 }
 
-/** بكسلاتٌ في كلّ إطار — **ما يُحسّ مشياً ولا يُقرأ هرباً.** */
-const STEP = 0.4;
+/**
+ * **بكسلاتٌ في الثانية لا في الإطار.**
+ *
+ * كان `٠٫٤` في كلّ إطار — **فشاشةٌ بمئةٍ وعشرين هرتزاً تمشي ضعفَ ما تمشيه
+ * شاشةٌ بستّين**، والسرعةُ تختلف باختلاف الجهاز.
+ *
+ * **وخمسون تُقرأ انسياباً**: دائرةٌ بمئةٍ وثمانيةٍ وعشرين تمرّ في ثانيتين
+ * ونصف — **ما يُحسّ مشياً ولا يُقرأ هرباً.**
+ */
+const SPEED = 50;
 
 export function SectionRail({
   items,
@@ -86,6 +94,26 @@ export function SectionRail({
    * نضع واحداً موجباً ونقرأ: **إن قُصّ إلى الصفر فالعدُّ سالب** (المعيار في
    * العربيّة)، وإلّا فموجب. **وهو فحصٌ لا افتراض.**
    */
+  /**
+   * **موضعُ الشريط يُحفظ هنا لا يُقرأ من المتصفّح.**
+   *
+   * # العطبُ الذي أوقف الشريطَ تماماً
+   *
+   * كان يُحسب هكذا: `Math.abs(el.scrollLeft) + ٠٫٤` — **أي يُقرأ الموضعُ من
+   * المتصفّح في كلّ نبضةٍ ويُزاد عليه.**
+   *
+   * **والمتصفّحُ يُدوّر أربعةَ أعشارِ البكسل إلى صفر.** فيُكتب ٠٫٤، ويُقرأ في
+   * النبضة التالية صفراً، **فيُكتب ٠٫٤ ثانيةً — ولا يتقدّم أبداً.**
+   *
+   * **والشريطُ يقف وهو يعمل**: المؤقّتُ يدور ستّين مرّةً في الثانية والحسابُ
+   * صحيح، **ولا شيءَ يتحرّك.** (شهده المالك ٢٠٢٦-٠٨-٠٦: «لا تدور أساساً».)
+   *
+   * # فالموضعُ يتراكم في الذاكرة
+   *
+   * **والمتصفّحُ يُكتب إليه ولا يُقرأ منه** — فلا يضيع الكسر.
+   */
+  const seat = useRef(0);
+
   const sign = useRef(1);
   useEffect(() => {
     const el = box.current;
@@ -138,17 +166,24 @@ export function SectionRail({
     if (held || still) return;
     const el = box.current;
     if (!el) return;
-    const id = setInterval(() => {
-      // **طولُ الدورة = عرضُ نسخةٍ واحدة.**
+    let raf = 0;
+    let last = 0;
+    const tick = (t: number) => {
       const lap = el.scrollWidth / (twice ? 2 : 1);
       // **ولا مشيَ حيث لا فائض** — أقسامٌ قليلةٌ تملأ العرضَ ولا تنزلق.
-      if (lap - el.clientWidth < 8) return;
-      let now = Math.abs(el.scrollLeft) + STEP;
-      if (now >= lap) now -= lap;
-      el.scrollLeft = sign.current * now;
-    }, 16);
-    return () => clearInterval(id);
-  }, [held, still, items.length]);
+      if (last && lap - el.clientWidth >= 8) {
+        // **والمقدارُ بالثانية لا بالإطار** — شاشةٌ بمئةٍ وعشرين هرتزاً
+        // تمشي ضعفَ ما تمشيه شاشةٌ بستّين لو حُسب بالإطار.
+        seat.current += (SPEED * Math.min(t - last, 100)) / 1000;
+        if (seat.current >= lap) seat.current -= lap;
+        el.scrollLeft = sign.current * seat.current;
+      }
+      last = t;
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [held, still, twice, items.length]);
 
 
   if (items.length === 0) return null;
@@ -175,6 +210,13 @@ export function SectionRail({
     >
       <div
         ref={box}
+        /* **وما سحبه المستعملُ يُصبح الموضعَ الجديد.**
+
+           بلا هذا: يسحب الشريطَ بيده، **ثمّ يقفز إلى حيث تركه المؤقّتُ** حين
+           يرفع إصبعَه — لأنّ الذاكرةَ لم تعلم بما فعل. */
+        onScroll={() => {
+          if (held) seat.current = Math.abs(box.current?.scrollLeft ?? 0);
+        }}
         /* **وشريطُ التمرير يُخفى ولا يُمنع التمرير** — مقبضٌ رماديٌّ تحت صفٍّ
            من الصور يُقرأ عطباً، **والانزلاقُ بالإصبع لا يحتاج مقبضاً يُرى.** */
         /* **وحشوةٌ خفيفةٌ حول الصفّ.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «خلّي بادينك خفيف
