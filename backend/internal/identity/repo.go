@@ -310,6 +310,50 @@ func (r *Repo) ConsumeOTP(ctx context.Context, phone, codeHash, purpose string) 
 	return false, err
 }
 
+// CheckOTP يتحقق من صحة الرمز **بلا أن يستهلكه** — للتحقّق المسبق في تسجيل
+// حسابٍ جديد.
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «يدخل الرقم، يضغط إرسال رمز، **لا تظهر المعلومات
+//
+//	إلّا بعد التحقّق من الرمز**، ثمّ تظهر معلومات إنشاء الحساب».)
+//
+// # ولماذا لا يُستهلك
+//
+// **الاستهلاكُ يُبطل الرمز** — ثمّ يملأ صاحبُه الاسمَ وكلمتَي المرور ويوافق
+// ويضغط «إنشاء حساب»، **فيُرفض رمزُه الذي صُدِّق قبل دقيقة.**
+//
+// # وحدُّ المحاولات هو نفسُه
+//
+// **فحصٌ لا يعدّ الفاشلةَ يصير أداةَ تخمين**: رمزٌ من ستّة أرقامٍ يُكسر بمليون
+// نداءٍ إن لم يُبطَل. **فتُحتسب هنا كما تُحتسب في `ConsumeOTP`**، وبعد خمسٍ
+// يُبطل الرمزُ حتّى للصحيح.
+//
+// **والنافذةُ لم تتّسع**: الرمزُ كان صالحاً مدّةَ حياته قبلَ هذا وبعدَه —
+// **وهذا يقرأ ولا يمدّ.**
+func (r *Repo) CheckOTP(ctx context.Context, phone, codeHash, purpose string) (bool, error) {
+	var id string
+	err := r.db.QueryRow(ctx, `
+		SELECT id FROM otp_codes
+		WHERE phone = $1 AND purpose = $3 AND consumed_at IS NULL
+		  AND expires_at > now() AND attempts < 5 AND code_hash = $2
+		ORDER BY created_at DESC LIMIT 1`, phone, codeHash, purpose).Scan(&id)
+	if err == nil {
+		return true, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return false, err
+	}
+	// محاولة فاشلة — تُسجَّل على آخر رمز فعّال، كما في `ConsumeOTP` حرفاً بحرف
+	_, err = r.db.Exec(ctx, `
+		UPDATE otp_codes SET attempts = attempts + 1
+		WHERE id = (
+			SELECT id FROM otp_codes
+			WHERE phone = $1 AND purpose = $2 AND consumed_at IS NULL AND expires_at > now()
+			ORDER BY created_at DESC LIMIT 1
+		)`, phone, purpose)
+	return false, err
+}
+
 // --- Refresh Tokens ---
 
 // StoreRefresh يخزّن توكن تجديد داخل عائلة جلسة ويعيد معرّفها.

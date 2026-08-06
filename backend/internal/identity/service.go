@@ -303,6 +303,28 @@ func (s *Service) RequestSignup(ctx context.Context, rawPhone string) error {
 
 // ConfirmSignup ينشئ حساب **زبون** باسم وكلمة مرور بعد تأكيد الرقم.
 // لا يُنشأ أي دور آخر من هنا إطلاقاً — المتجر/السائق/المندوب عبر الإدارة أو مندوب.
+// VerifySignupCode يتحقّق من رمز التسجيل **بلا استهلاك** — خطوةٌ بين إرسال
+// الرمز وبين ملء البيانات.
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٦.)
+//
+// **ولا تُنشئ حساباً ولا تُصدر جلسة** — تقول «الرمزُ صحيح» وتسكت. **والإنشاءُ
+// يبقى في `ConfirmSignup` حيث يُستهلك الرمزُ مرّةً واحدة.**
+func (s *Service) VerifySignupCode(ctx context.Context, rawPhone, code string) error {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return ErrInvalidPhone
+	}
+	valid, err := s.repo.CheckOTP(ctx, phone, s.hashOTP(phone, code), "signup")
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return ErrOTPInvalid
+	}
+	return nil
+}
+
 func (s *Service) ConfirmSignup(ctx context.Context, rawPhone, code, fullName, password, userAgent, ip string) (*AuthResult, error) {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {

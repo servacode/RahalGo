@@ -223,6 +223,27 @@ func (s *Server) handleSignupRequest(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"sent": true})
 }
 
+// handleSignupVerify يتحقّق من الرمز قبل عرض نموذج البيانات.
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا تظهر المعلومات إلّا بعد التحقّق من الرمز».)
+//
+// **ولا يستهلك الرمز**: صاحبُه سيضغط «إنشاء حساب» بعد دقيقةٍ بالرمز نفسِه.
+func (s *Server) handleSignupVerify(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.identity.VerifySignupCode(r.Context(), req.Phone, req.Code); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"verified": true})
+}
+
 func (s *Server) handleSignupConfirm(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Phone    string `json:"phone"`

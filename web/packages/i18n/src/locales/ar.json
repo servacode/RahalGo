@@ -449,7 +449,18 @@
     "leavingHint": "نُغلق جلستك على هذا الجهاز",
     "leftTitle": "خرجتَ من حسابك",
     "enteringTitle": "أهلاً {name}",
-    "enteringHint": "نُجهّز حسابك"
+    "enteringHint": "نُجهّز حسابك",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "passwordMismatch": "الكلمتان غير متطابقتين",
+    "verifyCode": "تحقّق من الرمز",
+    "agreePrefix": "أوافق على",
+    "agreeTerms": "شروط الاستخدام",
+    "agreeAnd": "و",
+    "agreePrivacy": "سياسة الخصوصية",
+    "mustAgree": "يلزم قبول الشروط وسياسة الخصوصية",
+    "signupDoneTitle": "أُنشئ حسابك",
+    "signupDoneBody": "سجّل دخولك برقمك وكلمة المرور التي اخترتها.",
+    "signupDoneGo": "إلى تسجيل الدخول"
   },
   "orders": {
     "title": "الطلبات",

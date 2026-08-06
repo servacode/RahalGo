@@ -17,6 +17,7 @@ import {
   Button,
   Input,
   Checkbox,
+  Modal,
   OtpInput,
   PasswordMeter,
   IconPhone,
@@ -26,6 +27,7 @@ import {
   IconSignup,
   IconPrev,
   IconCheck,
+  IconSuccess,
   BrandMark,
   usePlatform,
 } from "@rahalgo/ui";
@@ -107,6 +109,20 @@ export function LoginCard({
   const [remember, setRemember] = useState(true);
   /** هل أُرسل الرمز في الوضع الحالي؟ (يخصّ otp/reset/signup) */
   const [sent, setSent] = useState(false);
+  /**
+   * **مرحلةُ التسجيل الثالثة** — تُفتح بعد أن يصدّق الخادمُ الرمز.
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «يدخل الرقم، يضغط إرسال رمز، **لا تظهر
+   *  المعلومات إلّا بعد التحقّق من الرمز**، ثمّ تظهر معلومات إنشاء الحساب».)
+   *
+   * **وكانت البياناتُ والرمزُ في نموذجٍ واحد** — فيملأ الاسمَ وكلمتين
+   * ويوافق، **ثمّ يُقال له إنّ رقمه الأوّل خطأ.** والخطأُ يُقال عند وقوعه.
+   */
+  const [codeOK, setCodeOK] = useState(false);
+  const [password2, setPassword2] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  /** **تمّ الإنشاء** — نافذةٌ تُقرّ ثمّ يُساق إلى الدخول اليدويّ. */
+  const [created, setCreated] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -140,6 +156,12 @@ export function LoginCard({
     setError("");
     setSent(false);
     setCode("");
+    // **ولا يبقى أثرُ محاولةٍ سابقةٍ في وضعٍ جديد** — رمزٌ صُدِّق لهاتفٍ ثمّ
+    // بُدّل الوضعُ يفتح نموذجَ البيانات بلا تحقّق.
+    setCodeOK(false);
+    setPassword2("");
+    setAgreed(false);
+    setCreated(false);
   }
 
   // ---------- الحقول المشتركة ----------
@@ -160,8 +182,27 @@ export function LoginCard({
     />
   );
 
-  /** خانات الرمز — onSubmit يُمرَّر ليُرسل النموذج فور اكتمال الرقم السادس. */
-  const codeField = (onDone?: () => void) => (
+  /**
+   * خانات الرمز — `onDone` يُستدعى فور اكتمال الرقم السادس.
+   *
+   * ══════════════════════════════════════════════════════════════════
+   * **والقيمةُ تُمرَّر ولا تُقرأ من الحالة**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * كان `onComplete={() => onDone?.()}` — **يرمي ما تعطيه `OtpInput`**،
+   * فيقرأ المستدعي `code` من الحالة. **وحالةُ React لا تكون قد تحدّثت بعد**:
+   * `onComplete` يقع في المعالج نفسِه الذي نادى `onChange`.
+   *
+   * **فيُرسَل خمسةُ أرقامٍ من ستّة.** وقِيس (٢٠٢٦-٠٨-٠٦): الحقولُ فيها
+   * `123456` **والجسمُ المُرسَل `{"code":"12345"}`** — والخادمُ يردّ ٤٠١
+   * على رمزٍ صحيح.
+   *
+   * **وهو يمسّ الدخولَ بالرمز والاستعادةَ أيضاً لا التسجيلَ وحدَه** — كلُّها
+   * تستعمل هذا الحقل. **ومن ضغط الزرَّ بيده كان ينجح** لأنّ الحالةَ تكون قد
+   * لحقت، **ومن اكتفى بالإكمال التلقائيّ يُرفض** — عطبٌ يظهر لبعض الناس
+   * ولا يظهر لبعض.
+   */
+  const codeField = (onDone?: (v: string) => void) => (
     <div className="space-y-2">
       <label className="block text-center text-sm font-medium text-ink">{A.otpTitle}</label>
       <OtpInput
@@ -169,7 +210,7 @@ export function LoginCard({
         onChange={setCode}
         autoFocus
         boxLabel={A.otpBoxLabel}
-        onComplete={() => onDone?.()}
+        onComplete={(v) => onDone?.(v)}
       />
     </div>
   );
@@ -241,41 +282,15 @@ export function LoginCard({
     />
   );
 
-  /**
-   * مؤشر الخطوات — التدفّقات ذات المرحلتين كانت تنقل المستخدم بلا إشعار بموقعه.
-   * يظهر أين هو وكم بقي، فيقلّ التسرّب عند شاشة الرمز.
-   */
-  const steps = (labels: [string, string]) => (
-    <div className="mb-5">
-      <div className="mb-2 flex items-center gap-2">
-        {labels.map((label, i) => {
-          const done = sent && i === 0;
-          const current = sent ? i === 1 : i === 0;
-          return (
-            <div key={label} className="flex flex-1 items-center gap-2">
-              <span
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-badge text-xs font-bold transition-colors ${
-                  done
-                    ? "bg-success text-on-solid"
-                    : current
-                      ? "bg-primary text-on-solid"
-                      : "border border-line text-ink-muted"
-                }`}
-              >
-                {done ? <IconCheck size={13} strokeWidth={3} /> : i + 1}
-              </span>
-              <span
-                className={`truncate text-xs ${current ? "font-medium text-ink" : "text-ink-muted"}`}
-              >
-                {label}
-              </span>
-              {i === 0 && <span className={`h-px flex-1 ${sent ? "bg-success" : "bg-line"}`} />}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  /* **وذهب مؤشّرُ الخطوات.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا داعي لها
+     احذفها أيضاً».)
+
+     كان شريطاً برقمين وعنوانين فوق كلّ تدفّقٍ من مرحلتين. **وهو يصف بنيةَ
+     النموذج لا يقدّم فيه خطوة**: من يرى حقلَ هاتفٍ وزرَّ إرسالٍ يعرف أنّه في
+     الأوّل، **ومن وصل شاشةَ الرمز يعرف أنّه تقدّم.**
+
+     **والشريطُ يأخذ ثمانيةً وأربعين بكسلاً من أعلى البطاقة** — في شاشةٍ
+     أطولُ ما فيها ثلاثةُ حقول. */
 
   // ---------- الأوضاع ----------
 
@@ -302,10 +317,11 @@ export function LoginCard({
     }
 
     if (mode === "otp") {
-      const verify = run(async () => enter((await authApi.verifyOtp(phone, code)) as never));
+      // **والرمزُ يأتي من الحقل لا من الحالة** — انظر `codeField`.
+      const verify = (c: string = code) =>
+        run(async () => enter((await authApi.verifyOtp(phone, c)) as never))();
       return (
         <>
-          {steps([A.steps.phone, A.steps.verify])}
           {!sent ? (
             <form
               onSubmit={run(async () => {
@@ -320,9 +336,9 @@ export function LoginCard({
               {submit(A.sendOtp)}
             </form>
           ) : (
-            <form onSubmit={verify} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); void verify(); }} className="space-y-4">
               {sentNote}
-              {codeField(() => void verify())}
+              {codeField((v) => void verify(v))}
               {rememberBox("remember-otp")}
               {errorBox}
               {submit(A.login)}
@@ -336,7 +352,6 @@ export function LoginCard({
     if (mode === "reset") {
       return (
         <>
-          {steps([A.steps.phone, A.steps.newPassword])}
           {!sent ? (
             <form
               onSubmit={run(async () => {
@@ -370,57 +385,126 @@ export function LoginCard({
     }
 
     // إنشاء حساب — زبون فقط
+    //
+    // **ثلاثُ مراحلَ لا اثنتان** (قرارُ المالك ٢٠٢٦-٠٨-٠٦):
+    //   ١ · الرقمُ ← إرسالُ الرمز
+    //   ٢ · الرمزُ ← تحقّقٌ عند الخادم **بلا استهلاك**
+    //   ٣ · البياناتُ ← إنشاءُ الحساب، ثمّ الدخولُ يدويّاً
+    if (!sent) {
+      return (
+        <form
+          onSubmit={run(async () => {
+            await authApi.requestSignup(phone);
+            setSent(true);
+            setBusy(false);
+          })}
+          className="space-y-4"
+        >
+          {phoneField}
+          {errorBox}
+          {submit(A.signupSend)}
+        </form>
+      );
+    }
+
+    if (!codeOK) {
+      const check = (c: string = code) =>
+        run(async () => {
+          await authApi.verifySignup(phone, c);
+          // **والرمزُ المصدَّقُ يُثبَّت في الحالة** — تستعمله المرحلةُ الثالثة
+          // عند الإنشاء، **وقد يكون ما في الحالة أنقصَ رقماً.**
+          setCode(c);
+          setCodeOK(true);
+          setBusy(false);
+        })();
+      return (
+        <form onSubmit={(e) => { e.preventDefault(); void check(); }} className="space-y-4">
+          {sentNote}
+          {/* **ويُصدَّق فور اكتمال الرقم السادس** — ولا يُنتظر ضغطُ زرّ. */}
+          {codeField((v) => void check(v))}
+          {errorBox}
+          {submit(A.verifyCode)}
+          <div className="text-center">{linkBtn(A.changePhone, () => setSent(false))}</div>
+        </form>
+      );
+    }
+
     return (
-      <>
-        {steps([A.steps.phone, A.steps.profile])}
-        {!sent ? (
-          <form
-            onSubmit={run(async () => {
-              await authApi.requestSignup(phone);
-              setSent(true);
-              setBusy(false);
-            })}
-            className="space-y-4"
-          >
-            {phoneField}
-            {/* **ولا لافتةَ تشرح مَن لا يُنشئ حساباً هنا.**
+      <form
+        onSubmit={run(async () => {
+          // **والكلمتان تُقارنان قبل النداء** — لا يُرسَل ما يُعرَف رفضُه.
+          if (password !== password2) {
+            setError(A.passwordMismatch);
+            setBusy(false);
+            return;
+          }
+          if (!agreed) {
+            setError(A.mustAgree);
+            setBusy(false);
+            return;
+          }
+          await authApi.confirmSignup(phone, code, fullName, password, referral);
+          /* ══════════════════════════════════════════════════════════════
+             **ولا يُدخَل تلقائيّاً — يُساق إلى الدخول اليدويّ**
+             ══════════════════════════════════════════════════════════════
 
-                (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «حسابات المتاجر والسائقين
-                 والمندوبين تُنشأ عبر المنصة أو مندوب معتمد — احذفها».)
+             (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «تظهر نافذةٌ تفيد أنّه تمّ إنشاء
+              الحساب بنجاح، تنتقل إلى شاشة تسجيل الدخول ليدخل بشكلٍ يدويّ».)
 
-                **كانت تقول لتسعةٍ وتسعين من مئةٍ ما لا يخصّهم**: من يفتح
-                «حساب جديد» في موقع الزبون زبونٌ، **وصاحبُ المتجر لا يمرّ من
-                هنا أصلاً ليقرأها.**
-
-                **وحقلُ هاتفٍ وزرٌّ واحدٌ لا يحتاج شرحاً بينهما.** */}
-            {errorBox}
-            {submit(A.signupSend)}
-          </form>
-        ) : (
-          <form
-            onSubmit={run(async () =>
-              enter((await authApi.confirmSignup(phone, code, fullName, password, referral)) as never),
-            )}
-            className="space-y-4"
-          >
-            {sentNote}
-            {codeField()}
-            <Input
-              id="full-name"
-              label={A.fullName}
-              icon={<IconUser />}
-              autoComplete="name"
-              required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-            />
-            {passwordField("signup-password", A.password, "new-password", true)}
-            <p className="text-xs text-ink-muted">{A.passwordHint}</p>
-            {errorBox}
-            {submit(A.signupConfirm)}
-          </form>
-        )}
-      </>
+             **والخادمُ يُصدر جلسةً مع الإنشاء** — تُهمَل هنا ولا تُخزَّن.
+             **فمن أنشأ حساباً ثمّ دخل بيده يتأكّد أنّ كلمتَه تعمل**، ولا
+             يكتشف بعد أسبوعٍ أنّه لا يذكرها. */
+          setCreated(true);
+          setBusy(false);
+        })}
+        className="space-y-4"
+      >
+        <Input
+          id="full-name"
+          label={A.fullName}
+          icon={<IconUser />}
+          autoComplete="name"
+          required
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
+        {passwordField("signup-password", A.password, "new-password", true)}
+        {/* **وتأكيدُ الكلمة** — تُكتب مخفيّةً، **وخطأُ حرفٍ واحدٍ يُقفل الحسابَ
+            على صاحبه** ولا يُكتشف إلّا عند أوّل دخول. */}
+        <Input
+          id="signup-password2"
+          label={A.confirmPassword}
+          icon={<IconLock />}
+          type="password"
+          autoComplete="new-password"
+          required
+          value={password2}
+          onChange={(e) => setPassword2(e.target.value)}
+          placeholder="••••••••"
+        />
+        <p className="text-xs text-ink-muted">{A.passwordHint}</p>
+        {/* **والموافقةُ صريحةٌ لا مضمرة** — والرابطان يُفتحان في تبويبٍ آخر
+            فلا يضيع ما مُلئ. */}
+        <Checkbox
+          id="agree-terms"
+          checked={agreed}
+          onChange={(e) => setAgreed(e.target.checked)}
+          label={
+            <span>
+              {A.agreePrefix}{" "}
+              <a href="/terms" target="_blank" rel="noreferrer" className="text-accent-text underline">
+                {A.agreeTerms}
+              </a>{" "}
+              {A.agreeAnd}{" "}
+              <a href="/privacy" target="_blank" rel="noreferrer" className="text-accent-text underline">
+                {A.agreePrivacy}
+              </a>
+            </span>
+          }
+        />
+        {errorBox}
+        {submit(A.signupConfirm)}
+      </form>
     );
   }
 
@@ -545,6 +629,33 @@ export function LoginCard({
             )}
 
             {footer && <div className="mt-4 text-center">{footer}</div>}
+
+            {/* ══════════════════════════════════════════════════════════
+                **نافذةُ الإتمام — تُقرّ ثمّ تسوق إلى الدخول**
+                ══════════════════════════════════════════════════════
+
+                (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «تظهر نافذةٌ تفيد أنّه تمّ إنشاء
+                 الحساب بنجاح، تنتقل إلى شاشة تسجيل الدخول ليدخل بشكلٍ
+                 يدويّ».)
+
+                **ولا تُغلق بالنقر خارجَها** (`onClose` تسوق إلى الدخول):
+                الإتمامُ خبرٌ يجب أن يُقرأ، **ونافذةٌ تُغلق سهواً تترك صاحبَها
+                لا يدري أنجح أم لا.** */}
+            {created && (
+              <Modal
+                open
+                onClose={() => go("password")}
+                title={A.signupDoneTitle}
+              >
+                <div className="text-center">
+                  <IconSuccess size={44} className="mx-auto mb-3 text-success" />
+                  <p className="text-sm leading-relaxed text-ink-muted">{A.signupDoneBody}</p>
+                </div>
+                <Button onClick={() => go("password")} className="mt-4 w-full py-3">
+                  {A.signupDoneGo}
+                </Button>
+              </Modal>
+            )}
           </div>
         </div>
       </div>

@@ -136,6 +136,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/password/reset/request", s.handleResetRequest)
 			r.Post("/password/reset/confirm", s.handleResetConfirm)
 			r.Post("/signup/request", s.handleSignupRequest) // إنشاء حساب زبون فقط
+			// **والتحقّقُ من الرمز قبل النموذج** — لا يستهلكه ولا يُنشئ شيئاً.
+			r.Post("/signup/verify", s.handleSignupVerify)
 			r.Post("/signup/confirm", s.handleSignupConfirm)
 
 			r.Group(func(r chi.Router) {

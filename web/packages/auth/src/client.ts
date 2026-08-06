@@ -163,6 +163,16 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ phone }),
     }),
+  /**
+   * **يتحقّق من الرمز ولا يستهلكه** — خطوةٌ بين إرساله وبين ملء البيانات.
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا تظهر المعلومات إلّا بعد التحقّق من الرمز».)
+   */
+  verifySignup: (phone: string, code: string) =>
+    rawRequest<{ verified: boolean }>("/api/v1/auth/signup/verify", {
+      method: "POST",
+      body: JSON.stringify({ phone, code }),
+    }),
   /** @param ref رمزُ من دعاه — **اختياريّ**، ومن سجّل بلا دعوةٍ حسابُه كامل. */
   confirmSignup: (
     phone: string,

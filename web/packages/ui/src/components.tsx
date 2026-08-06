@@ -229,7 +229,9 @@ export function Checkbox({
   id,
   className = "",
   ...props
-}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string }) {
+  /* **والتسميةُ عقدةٌ لا نصّ** — تسميةُ الموافقة تحمل رابطَي الشروط
+     والخصوصيّة داخلَها، **ورابطٌ داخل نصٍّ لا يُكتب حرفاً.** */
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> & { label: React.ReactNode }) {
   return (
     <label htmlFor={id} className={`group flex cursor-pointer items-center gap-2 text-sm ${className}`}>
       <span className="relative flex h-[18px] w-[18px] shrink-0 items-center justify-center">
