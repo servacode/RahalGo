@@ -144,10 +144,33 @@ export function NotificationsPage({
       {filters.length > 1 && (
         /* **شريطٌ مقسّم لا أزرارٌ متناثرة**: المرشّحاتُ خياراتُ شيءٍ واحد،
            وحدٌّ يجمعها يقول ذلك قبل أن تُقرأ. */
-        /* **صفٌّ ينزلق لا كتلةٌ تلتفّ.** كانت `inline-flex flex-wrap` —
+        /* ══════════════════════════════════════════════════════════════
+           **ولا هامشَ سالباً — وهو سببُ التمرير الأفقيّ**
+           ══════════════════════════════════════════════════════════════
+
+           (شهده المالك ٢٠٢٦-٠٨-٠٦: «هناك سكرول أفقيٌّ مزعج».)
+
+           كان `-mx-1` هنا وفي عنوان اليوم — **هامشٌ سالبٌ بأربعة بكسلاتٍ من
+           كلّ جهة** ليُبلّط حشوةَ الغلاف فيمتدّ الصفُّ إلى حافّتَي البطاقة.
+
+           **وحُذفت تلك الحشوةُ من الموقع** (قاعدةُ المالك: لا حشوةَ يميناً
+           ويساراً) — **فلم يبقَ ما يبتلع السالب**، فامتدّ العنصرُ ثمانيةَ
+           بكسلاتٍ خارجَ النافذة **وظهر شريطُ تمريرٍ أفقيٌّ للصفحة كلِّها.**
+
+           **وقِيس**: النافذةُ ١٦٠٠ و`scrollWidth` ١٦٠٤، والعنصران يمتدّان من
+           ‎−٤ إلى ١٦٠٤.
+
+           **وثمانيةُ بكسلاتٍ تكفي**: شريطُ التمرير لا يسأل عن المقدار.
+
+           **والدرسُ أوسعُ من الإصلاح**: كلُّ `-mx-*` كُتب في زمنِ غلافٍ محشوٍّ
+           **صار دَيناً حين حُذفت الحشوة.**
+
+           ── وما بقي من الصياغة الأولى ──
+
+           كانت `inline-flex flex-wrap` —
            **تحتضن الحافّةَ وتلتفّ سطرين على الجوّال**، فيزيد ارتفاعُ الرأس
            **ويُدفع أوّلُ إشعارٍ تحت الطيّة.** */
-        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {filters.map((f) => (
             <button
               key={f.id}
@@ -205,7 +228,7 @@ export function NotificationsPage({
               {/* **لافتةٌ لا خطٌّ يعبر الشاشة.** كان الاسمُ بين خطّين يمتدّان
                   إلى الطرفين — **وعلى ألفٍ وتسعمئة يصير خطّاً بطول الشاشة
                   وكلمةٌ في وسطه**، فيُقرأ فاصلاً لا عنواناً. */}
-              <div className="sticky top-0 z-10 -mx-1 mb-3 bg-shell/85 px-1 py-2 backdrop-blur">
+              <div className="sticky top-0 z-10 mb-3 bg-shell/85 py-2 backdrop-blur">
                 <h2 className="inline-flex items-center gap-2 rounded-badge border border-line bg-surface px-3 py-1 text-xs font-bold text-ink-muted">
                   <span className="h-1.5 w-1.5 rounded-badge bg-primary" />
                   <span className="shrink-0">{g.day}</span>
