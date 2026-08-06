@@ -137,6 +137,10 @@ export default function Header({
         title={N.shop}
         aria-label={N.shop}
         tone={pathname.startsWith("/shop") ? "active" : "primary"}
+        /* **ويُخفى على الجوّال** — الشريطُ السفليُّ يحمله بتسميته.
+           **وبابان لشيءٍ واحدٍ في شاشةٍ بثلاثمئةٍ وستّين يزاحمان ما لا بديلَ
+           له.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «الشكلُ كلُّه مو مفهوم».) */
+        className="hidden md:flex"
       >
         <IconStore size={TOPBAR_ICON} />
         <span className="hidden sm:inline">{N.shop}</span>
@@ -191,7 +195,8 @@ export default function Header({
                   title={m.site.complaint.mine}
                   aria-label={m.site.complaint.mine}
                   tone={pathname.startsWith("/complaints") ? "active" : "plain"}
-                >
+                
+                className="hidden md:flex">
                   <IconSupport size={TOPBAR_ICON} />
                 </TopBarLink>
               )}
@@ -209,7 +214,8 @@ export default function Header({
                 title={m.customer.offers.title}
                 aria-label={m.customer.offers.title}
                 tone={pathname.startsWith("/offers") ? "active" : "plain"}
-              >
+              
+                className="hidden md:flex">
                 <IconPromos size={TOPBAR_ICON} />
               </TopBarLink>
               )}
@@ -240,7 +246,8 @@ export default function Header({
                 title={m.customer.invite.title}
                 aria-label={m.customer.invite.title}
                 tone={pathname.startsWith("/invite") ? "active" : "plain"}
-              >
+              
+                className="hidden md:flex">
                 <IconLink size={TOPBAR_ICON} />
               </TopBarLink>
               <TopBarLink

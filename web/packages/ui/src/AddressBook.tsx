@@ -63,7 +63,20 @@ export function AddressBook({
   const load = useCallback(() => {
     setError("");
     api<SavedAddress[]>("/api/v1/my/addresses")
-      .then(setList)
+      /* **وردٌّ ليس قائمةً يُعامَل فشلاً لا قائمةً فارغة.**
+
+         كان `.then(setList)` بلا فحص — **فردٌّ بشكلٍ غيرِ متوقَّعٍ يُسند
+         كائناً إلى حالٍ تُرسم بـ`list.map`**، فينفجر الرسمُ **وتُفرَّغ صفحةُ
+         الحساب كلُّها**: لا اسمَ ولا عناوينَ ولا زرَّ خروج.
+
+         **وشاشةٌ بيضاءُ لا يُقرأ منها سبب** — والحارسُ حرفان.
+
+         **ولا يُعامَل قائمةً فارغة**: ذاك يُعيد الكذبةَ التي يمنعها التعليقُ
+         فوقه. (وقع في فحصٍ بمتصفّحٍ حقيقيّ ٢٠٢٦-٠٨-٠٦.) */
+      .then((r) => {
+        if (!Array.isArray(r)) throw new Error("shape");
+        setList(r);
+      })
       .catch(() => {
         setList([]);
         setError(m.errors.offline);

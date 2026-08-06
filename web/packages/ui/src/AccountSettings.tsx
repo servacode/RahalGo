@@ -121,8 +121,19 @@ export function AccountSettings({
     }>("/api/v1/me/summary")
       .then((s) => {
         setAvatar(s.avatar_thumb_url);
-        setName(s.full_name);
-        setNameDraft(s.full_name);
+        /* **واسمٌ غائبٌ يبقى فراغاً لا `undefined`.**
+
+           كان `setName(s.full_name)` — **وردٌّ بلا اسمٍ يجعل الحالَ غيرَ
+           معرَّف**، ثمّ ينفجر `name.trim()` في زرّ الحفظ **فتُفرَّغ صفحةُ
+           الحساب كلُّها**: لا اسمَ ولا عنوانَ ولا خروج.
+
+           **وشاشةٌ بيضاءُ من حقلٍ ناقصٍ في ردٍّ** أسوأُ ما يقع: **لا خطأَ
+           يُقرأ ولا سببَ يُخمَّن.** والحالُ مهيّأةٌ بفراغٍ أصلاً
+           (`useState("")`) — **والإسنادُ هو ما نقضه.**
+
+           (وقع في فحصٍ بمتصفّحٍ حقيقيّ ٢٠٢٦-٠٨-٠٦.) */
+        setName(s.full_name ?? "");
+        setNameDraft(s.full_name ?? "");
         setWaVerified(s.whatsapp_verified);
         // رقم الدخول اقتراحٌ مبدئي: أغلب الناس واتسابهم عليه، فلا نطلب كتابته
         setWa(s.whatsapp_phone ?? phone ?? "");

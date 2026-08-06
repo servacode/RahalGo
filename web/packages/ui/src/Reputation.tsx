@@ -118,7 +118,7 @@ export function ReputationReviews({ api, labels = {} }: { api: ApiFn; labels?: R
         <EmptyState icon={IconStar} title={labels.reviewsEmpty ?? R.reviewsEmpty} />
       ) : (
         <ul className="space-y-2">
-          {data.reviews.map((rv, i) => (
+          {(data.reviews ?? []).map((rv, i) => (
             <li key={i} className="rounded-card border border-line bg-surface p-4">
               <div className="flex items-center justify-between gap-2">
                 <Stars value={rv.stars} />
@@ -168,7 +168,7 @@ export function ReputationComplaints({ api, labels = {} }: { api: ApiFn; labels?
         <EmptyState icon={IconSupport} title={labels.complaintsEmpty ?? R.complaintsEmpty} tone="success" />
       ) : (
         <ul className="space-y-2">
-          {data.complaints.map((c) => (
+          {(data.complaints ?? []).map((c) => (
             <li
               key={c.number}
               className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface p-4"
