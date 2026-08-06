@@ -69,6 +69,22 @@ export function Button({
 
 // ---------- Input ----------
 
+/* ══════════════════════════════════════════════════════════════════════
+   **والحقلُ زجاجٌ لا سطحٌ ثانٍ فوق سطح**
+   ══════════════════════════════════════════════════════════════════════
+
+   (شهده المالك ٢٠٢٦-٠٨-٠٦ بصورة: البطاقةُ صارت زجاجاً **والحقلان داخلَها
+    صندوقان أسودان** — «الحقولُ أيضاً يجب أن تكون شفّافةً بشكلٍ مركزيّ».)
+
+   كانت `bg-surface` — **وهو لونُ البطاقة نفسِه.** فيقع سطحٌ فوق سطح: ٥٢٪
+   فوق ٥٢٪ = **سبعةٌ وسبعون بالمئة حجاب.** **وحقلٌ مصمتٌ في بطاقةٍ زجاجيّةٍ
+   يكسر الزجاجَ كلَّه** — والعينُ ترى الصندوقين قبل أن ترى اللوح.
+
+   **و`field` غسلةٌ سوداءُ خفيفة** (٢٢٪): تُعمّق الحقلَ عمّا حولَه **بلا أن
+   تحجب ما تحته** — فيبقى غائراً وتبقى الخلفيّةُ تُرى فيه.
+
+   **والحدُّ هو ما يرسم الحقل لا اللون** — وهو `line` كما كان.
+   ══════════════════════════════════════════════════════════════════════ */
 export function Input({
   label,
   error,
@@ -133,7 +149,7 @@ export function Input({
              **والمفاتيحُ وصناديقُ الاختيار تُبقي حلقتَها** — حلقتُها
              `focus-visible:` لا `focus:`: **تظهر لمن ينتقل بالكيبورد ولا
              تظهر لمن ضغط بالفأرة**، فلا تزاحم أحداً ولا يفقد أحدٌ موضعَه. */
-          className={`w-full rounded-control border bg-surface py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary ${
+          className={`w-full rounded-control border bg-field py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary ${
             error ? "border-danger" : "border-line hover:border-ink-muted/40"
           } ${padStart} ${padEnd} ${className}`}
         />
@@ -199,7 +215,7 @@ export function Textarea({
         id={id}
         rows={props.rows ?? 3}
         {...props}
-        className={`w-full rounded-control border bg-surface px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary ${
+        className={`w-full rounded-control border bg-field px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-muted/60 focus:border-primary ${
           error ? "border-danger" : "border-line hover:border-ink-muted/40"
         } ${className}`}
       />
@@ -369,7 +385,7 @@ export function OtpInput({
             commit(pasted);
             refs.current[Math.min(pasted.length, length - 1)]?.focus();
           }}
-          className={`h-13 w-11 rounded-control border bg-surface text-center font-mono text-xl font-bold text-ink outline-none transition-all sm:w-12 ${
+          className={`h-13 w-11 rounded-control border bg-field text-center font-mono text-xl font-bold text-ink outline-none transition-all sm:w-12 ${
             d.trim()
               ? "border-primary bg-primary-light/40 text-primary-dark"
               : "border-line hover:border-ink-muted/40"
@@ -432,7 +448,7 @@ export function Select({
       <select
         id={id}
         {...props}
-        className={`w-full rounded-control border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-primary ${className}`}
+        className={`w-full rounded-control border border-line bg-field px-3 py-2 text-sm outline-none focus:border-primary ${className}`}
       >
         {children}
       </select>

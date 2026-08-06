@@ -224,7 +224,7 @@ export function DashboardChrome({
                   كلّ مجموعةٍ يجعل القائمةَ سلسلةَ صناديق** — وهي عينُ ما
                   خرجنا منه في الشريط العلويّ. */}
               {item.group && (
-                <p className="px-3 pt-4 pb-1.5 text-2xs font-bold tracking-wider text-ink-muted/70 first:pt-0">
+                <p className="px-3 pt-4 pb-1.5 text-2xs font-bold tracking-wider text-ink-muted first:pt-0">
                   {item.group}
                 </p>
               )}
