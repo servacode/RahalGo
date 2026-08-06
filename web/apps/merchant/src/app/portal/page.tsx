@@ -184,7 +184,7 @@ export default function OrdersBoard() {
             وأربعةُ أعمدة على الشاشات الواسعة: هذه بطاقاتُ **مطبخ** تُمسح بالعين
             بسرعة، لا صفحاتُ تفصيل.
           */
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {pending.map((o) => (
               <OrderCard key={o.id} order={o} highlight>
                 {/* **حين تُدير المنصةُ الطلبات لا أزرارَ هنا.**
@@ -208,7 +208,7 @@ export default function OrdersBoard() {
         )}
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Column title={m.merchant.orders.accepted} icon={<IconSuccess size={16} />}>
           {accepted.map((o) => (
             <OrderCard key={o.id} order={o}>

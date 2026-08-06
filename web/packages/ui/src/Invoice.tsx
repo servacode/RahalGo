@@ -85,7 +85,7 @@ export function Invoice({
         {/* **سطرُ التعريف**: رقمُ الطلب ومن هو صاحبُه وأين — ما يُبحث به.
             وتاريخُ الطلب هنا لا في الترويسة: تلك تحمل وقتَ الطباعة، **وخلطُهما
             يجعل ورقةً تُطبع بعد شهرٍ تبدو طلباً وقع اليوم.** */}
-        <div className="mb-4 grid gap-x-6 gap-y-1 border-b border-line-soft pb-3 text-xs sm:grid-cols-2">
+        <div className="mb-4 grid grid-cols-1 gap-x-6 gap-y-1 border-b border-line-soft pb-3 text-xs sm:grid-cols-2">
           <p className="text-base font-bold">
             {V.title} <span dir="ltr">#{fmtRef(order.number)}</span>
           </p>

@@ -173,7 +173,7 @@ export function SkeletonList({ rows = 4 }: { rows?: number }) {
 /** SkeletonStats بطاقاتُ مؤشّرات — **صدرُ أكثرِ اللوحات.** */
 export function SkeletonStats({ count = 3 }: { count?: number }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="surface p-4">
           <Skeleton className="h-3 w-20" />

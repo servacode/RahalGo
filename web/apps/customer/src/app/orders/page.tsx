@@ -310,7 +310,7 @@ export default function MyOrdersPage() {
           .map((g) => (
         <section key={g.key} className="mb-6 last:mb-0">
           <h2 className="mb-3 text-sm font-bold text-ink-muted">{g.title}</h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {g.rows.map((o) => (
             <OrderCard
               key={o.id}
@@ -684,7 +684,7 @@ function OrderCard({
       )}
 
       {/* ── الأفعال ───────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {items.length > 0 && (
           /* **الفعلُ الأكثرُ تكراراً يلبس لونَ العلامة** — ومن طلب مرّةً
              يطلب ثانية، **وزرٌّ باهتٌ لأكثر ما يُضغط يُبطئ ما يجب أن يسرع.** */

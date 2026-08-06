@@ -148,7 +148,7 @@ export function StatementSheet({
         <SheetHeader />
 
         {/* وسطرُ التعريف: ما هذه الورقة، ولمن، وعن أيّ مدى. */}
-        <div className="mb-4 grid gap-x-6 gap-y-1 border-b border-line-soft pb-3 text-xs sm:grid-cols-2">
+        <div className="mb-4 grid grid-cols-1 gap-x-6 gap-y-1 border-b border-line-soft pb-3 text-xs sm:grid-cols-2">
           <p className="text-base font-bold">{S.title}</p>
           <p className="sm:text-end">
             <span className="text-ink-muted">{S.period} </span>

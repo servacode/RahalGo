@@ -178,7 +178,7 @@ export default function DriverHistoryPage() {
       {rows.length === 0 ? (
         <EmptyState icon={IconOrder} title={D.history.empty} />
       ) : (
-        <div className="grid gap-3 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {rows.map((o) => {
             const failed = o.status === "failed";
             return (

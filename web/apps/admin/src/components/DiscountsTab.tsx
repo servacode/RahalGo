@@ -157,7 +157,7 @@ export default function DiscountsTab() {
       ) : rows.length === 0 ? (
         <EmptyState icon={IconPromos} title={P.empty} />
       ) : (
-        <div className="grid gap-3 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {rows.map((o) => (
             <div key={o.id} className="surface p-4">
               <div className="flex items-start justify-between gap-3">

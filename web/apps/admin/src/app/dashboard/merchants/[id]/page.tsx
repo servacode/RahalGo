@@ -199,7 +199,7 @@ export default function MerchantProfilePage() {
       <Tabs className="mb-4 mt-5" items={TABS} value={tab} onChange={setTab} />
 
       {tab === "overview" && (
-        <dl className="grid gap-3 surface p-4 sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-3 surface p-4 sm:grid-cols-2">
           <Row label={m.terms.phone} value={mr.phone} ltr />
           <Row label={P.address} value={mr.address_text} />
           <Row label={m.terms.category} value={mr.category_name} />

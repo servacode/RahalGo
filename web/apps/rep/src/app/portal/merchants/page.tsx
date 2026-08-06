@@ -161,7 +161,7 @@ export default function ClientsPage() {
       {empty ? (
         <EmptyState icon={IconStore} title={m.rep.merchantsEmpty} action={addButton} />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {/* المعلّق أولاً — هو ما يحتاج متابعة، ويبقى مُتقطّع الحدّ ليُميَّز */}
           {open.map((l) => (
             <EntityCard
@@ -413,10 +413,10 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
     // نافذة عريضة بعمودين: البيانات يميناً والموقع يساراً — النموذج الطولي
     // كان يفرض تمريراً مزعجاً بينما نصف الشاشة فارغ.
     <Modal open onClose={onClose} title={C.addTitle} size="xl">
-      <form onSubmit={submit} className="grid gap-6 lg:grid-cols-2">
+      <form onSubmit={submit} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* ---------- العمود الأول: بيانات المتجر وصاحبه ---------- */}
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               id="store-name"
               label={m.site.join.storeName}
@@ -441,7 +441,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
             </Select>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               id="owner-name"
               label={m.site.join.ownerName}
@@ -465,7 +465,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
 
           {/* كلمة مرور مؤقتة يسلّمها المندوب — يُجبَر المالك على تبديلها أول دخول */}
           <div className="rounded-card border border-line bg-field p-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Input
                 id="owner-pw"
                 label={m.site.join.password}

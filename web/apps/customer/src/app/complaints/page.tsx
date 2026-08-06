@@ -15,7 +15,6 @@
 
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
-  ReputationComplaints,
   Badge,
   Card,
   PageContainer,
@@ -31,7 +30,6 @@ import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const C = m.site.complaint;
-const R = m.customer.myReputation;
 
 interface Ticket {
   id: string;
@@ -70,7 +68,7 @@ export default function ComplaintsPage() {
       {rows.length === 0 ? (
         <EmptyState icon={IconSupport} title={C.noneTitle} />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {rows.map((t) => (
             /**
              * **كلُّ عنصرٍ في حقلٍ مستقلّ يُقرأ وحدَه.**
@@ -154,25 +152,17 @@ export default function ComplaintsPage() {
         </div>
       )}
     
-      {/* ══════════════════════════════════════════════════════════════
-          **وما رُفع عليه يقع حيث يقع ما رفعه**
-          ══════════════════════════════════════════════════════════════
+      {/* **ولا قسمَ ثانٍ لِما رُفع عليه.**
 
-          (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «يوجد قسمٌ خاصٌّ بالشكاوى والبلاغات».)
+          (تصحيحُ المالك ٢٠٢٦-٠٨-٠٧: «أنت مكرّر البلاغ مرّتين وهو أصلاً
+           موجود».)
 
-          **كان في صفحة الحساب** — وهي صفحةُ بياناتٍ وعناوين. **فمن أراد
-          «الشكاوى والبلاغات» فتح هذا القسمَ فوجد نصفَه**، والنصفُ الآخرُ
-          في صفحةٍ أخرى لا يدلّ عليها شيء.
+          **نقلتُ «بلاغاتٌ على طلباتي» إلى هنا ظنّاً أنّها بياناتٌ أخرى.**
+          وهي ليست: `‎/my/tickets` تُرجع كلَّ تذاكر الزبون —
+          `WHERE t.customer_id = $1` بلا تمييزٍ لمن فتحها. **فبلاغُ السائق
+          داخلٌ في القائمة أعلاه منذ البداية**، ويُعرف بعنوانه.
 
-          **وهما بابان لشيءٍ واحد**: ما رفعتَه، وما رُفع عليك. */}
-      <ReputationComplaints
-        api={api}
-        labels={{
-          complaintsTitle: R.title,
-          complaintsHint: R.hint,
-          complaintsEmpty: R.empty,
-        }}
-      />
+          **والدرسُ أنّي حكمتُ على مصدرين باسميهما لا باستعلامَيهما.** */}
     </PageContainer>
   );
 }

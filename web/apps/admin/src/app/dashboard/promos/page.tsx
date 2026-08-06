@@ -439,7 +439,7 @@ function BannersTab({ isAdmin }: { isAdmin: boolean }) {
           {m.admin.promos.bannersEmpty}
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {banners.map((b) => (
           <div key={b.id} className="overflow-hidden surface">
             <div className="flex h-32 items-center justify-center bg-primary-tint">

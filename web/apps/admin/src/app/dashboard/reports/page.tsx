@@ -259,7 +259,7 @@ export default function ReportsPage() {
 
       {s && (
         <>
-          <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <Stat icon={IconOrder} label={r.summary.ordersTotal} value={fmtNum(s.orders_total)} />
             <Stat
               icon={IconOrder}
@@ -286,7 +286,7 @@ export default function ReportsPage() {
             />
           </div>
 
-          <div className="mb-6 grid gap-4 lg:grid-cols-2">
+          <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
             <DailyBars
               title={r.dailyOrders}
               data={report.daily}
@@ -301,7 +301,7 @@ export default function ReportsPage() {
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <section className="surface p-5">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-bold">
                 <IconStore size={16} className="text-primary" />

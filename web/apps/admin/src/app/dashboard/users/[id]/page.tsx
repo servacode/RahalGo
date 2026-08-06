@@ -547,7 +547,7 @@ export default function UserProfilePage() {
           )}
 
           {/* مستحق له / مستحق عليه */}
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <FinBucket
               title={P.fin.owedTo}
               total={fin.owed_to.total}

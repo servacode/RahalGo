@@ -149,7 +149,7 @@ export default function OverviewPage() {
           {reached ? G.done : G.remaining.replace("{n}", fmtNum(target - done))}
         </p>
 
-        <div className="mt-4 grid gap-3 border-t border-line-soft pt-4 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 border-t border-line-soft pt-4 sm:grid-cols-3">
           <div>
             <p className="text-lg font-bold">{fmtNum(me.month_delivered)}</p>
             <p className="text-xs text-ink-muted">{G.monthDelivered}</p>

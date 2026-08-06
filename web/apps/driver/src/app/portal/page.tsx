@@ -383,7 +383,7 @@ export default function TasksPage() {
         ) : (
           /* **شبكةٌ لا عمود** — بطاقةُ مهمّةٍ بعرض شاشةٍ كاملةٍ تُبعثر العينَ
              بين طرفيها، **واثنتان في السطر تُقرآن معاً.** */
-          <div className="grid gap-3 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
             {mine.map((o) => (
               <TaskCard
                 key={o.id}

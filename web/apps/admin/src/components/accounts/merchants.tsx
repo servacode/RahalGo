@@ -700,7 +700,7 @@ function MerchantModal({
       <form onSubmit={submit} className="space-y-6">
         {/* القسم 1: بيانات المتجر */}
         <FormSection title={m.admin.merchants.sectionInfo} icon={<IconStore />}>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               id="m-name"
               label={m.admin.merchants.name}
@@ -756,7 +756,7 @@ function MerchantModal({
 
         {/* القسم 2: الموقع — العنوان والخريطة جنباً إلى جنب */}
         <FormSection title={m.admin.merchants.sectionLocation} icon={<IconLocation />}>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-3">
               <Input
                 id="m-address"
@@ -787,7 +787,7 @@ function MerchantModal({
 
         {/* القسم 3: الحسابات المرتبطة */}
         <FormSection title={m.admin.merchants.sectionAccounts} icon={<IconUser />}>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Input
                 id="m-owner"

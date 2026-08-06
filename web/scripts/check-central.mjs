@@ -291,6 +291,31 @@ for (const file of files) {
   if (isTsx) {
     const raw = stripComments(readFileSync(join(ROOT, file), "utf8"));
     raw.split("\n").forEach((line, i) => {
+      // ═══════════════════════════════════════════════════════════════
+      //  **وشبكةٌ بلا عمودٍ أساسيٍّ أسوأُ من شبكةٍ بثلاثة**
+      // ═══════════════════════════════════════════════════════════════
+      //
+      // (شكوى المالك ٢٠٢٦-٠٨-٠٧: «التجاوبُ على الموبايل وكلّ الجوّالات
+      //  والشاشات أبداً مو مضبوط».)
+      //
+      // **`grid md:grid-cols-2` بلا `grid-cols-1`**: تحت `md` لا جدولَ
+      // أعمدةٍ أصلاً، **فيُنشئ المتصفّحُ عموداً ضمنيّاً مقاسُه
+      // `max-content`** — وهو لا يتقيّد بعرض الحاوية.
+      //
+      // **وقِيس على `/orders` بجوّال ٣٦٠**: الحاويةُ ٣٣٦ والمسارُ ٣٩٩٫٢٣،
+      // **والمستندُ ٤٢٢** — فتنزلق الصفحةُ أفقيّاً ويُقصّ الشريطُ العلويّ.
+      //
+      // **وثلاثون شبكةً كانت كذلك في الأقسام الستّة كلِّها.**
+      for (const g of line.matchAll(/["'`]([^"'`]*)["'`]/g)) {
+        const cls = g[1];
+        if (!/(?:^|[ ])grid(?:[ ]|$)/.test(cls)) continue;
+        if (!/(?:sm|md|lg|xl|2xl):grid-cols-[0-9]/.test(cls)) continue;
+        if (/(?:^|[ ])grid-cols-[0-9]/.test(cls) || cls.includes("grid-cols-[")) continue;
+        if (cls.includes("grid-flow-col") || cls.includes("auto-cols-")) continue;
+        report(file, i + 1, "شبكةٌ بلا عمودٍ أساسيّ", "grid … " + cls.slice(0, 34),
+          "ابدأ بعمودٍ ثمّ وسّع: grid grid-cols-1 md:grid-cols-2");
+      }
+
       const mm = line.match(/\bgrid-cols-([3-9]|1[0-2])\b/);
       if (mm && !/(sm|md|lg|xl|2xl):grid-cols-/.test(line)) {
         report(file, i + 1, "شبكةٌ بلا أساسٍ للجوّال", mm[0],
