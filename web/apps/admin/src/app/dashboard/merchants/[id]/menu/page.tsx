@@ -54,7 +54,9 @@ export default function AdminMenuPage() {
         </h1>
         <Button
           variant="secondary"
-          onClick={() => router.push("/dashboard/merchants")}
+          /* **والرجوعُ إلى بابٍ موجود** — كانت الصفحةُ تردّ 404،
+             والمتاجرُ تُدار في صفحة الحسابات بتبويبٍ لها. (٢٠٢٦-٠٨-٠٧.) */
+          onClick={() => router.push("/dashboard/users")}
           className="flex items-center gap-1.5"
         >
           <IconPrev size={15} />

@@ -9,6 +9,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
+  CategoryIcon,
   DashboardChrome,
   type ChromeNavItem,
   IconOrder,
@@ -91,8 +92,16 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
           ))}
         </select>
       ) : (
-        <span className="truncate text-sm font-bold">
-          {store.category_icon} {store.name}
+        <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-bold">
+          {/* **والأيقونةُ تُرسم لا تُطبع.**
+
+              (شهده المالك ٢٠٢٦-٠٨-٠٧: «نصوصٌ إنكليزيّة بكلّ اللوحات».)
+
+              **`category_icon` مفتاحٌ لا نصّ** — قيمتُه `food` و`grocery`،
+              **فكانت تُطبع حرفيّاً بجانب اسم المتجر** في كلّ صفحةٍ من
+              بوّابته. والمكوّنُ المركزيُّ يحوّلها إلى رسمٍ منذ زمن. */}
+          <CategoryIcon name={store.category_icon} size={15} />
+          <span className="truncate">{store.name}</span>
         </span>
       )}
       <Badge variant={store.emergency_closed ? "danger" : "success"}>
