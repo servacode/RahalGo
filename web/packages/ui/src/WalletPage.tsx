@@ -429,6 +429,7 @@ export function WalletPage({
             onQuick={(from, to) => setRange({ from, to })}
             holderName={holderName}
             holderPhone={holderPhone}
+            onBack={() => setTab(ALL)}
           />
         ) : current === REQUESTS ? (
           <ul className="space-y-2">

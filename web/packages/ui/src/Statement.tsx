@@ -18,7 +18,7 @@ import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i1
 import { Button, Input } from "./components";
 import { Alert } from "./feedback";
 import { SheetHeader } from "./layout";
-import { IconPrint } from "./icons";
+import { IconPrint, IconPrev } from "./icons";
 
 const m = getMessages(defaultLocale);
 const S = m.shared.statement;
@@ -62,6 +62,7 @@ export function StatementSheet({
   holderName,
   holderPhone,
   loading,
+  onBack,
 }: {
   data: StatementData | null;
   from: string;
@@ -73,6 +74,16 @@ export function StatementSheet({
   holderName?: string;
   holderPhone?: string;
   loading?: boolean;
+  /**
+   * **بابُ الرجوع** — وفارغٌ يعني لا زرّ.
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «عند الدخول على كشف حساب لا يوجد زرُّ رجوعٍ
+   *  للمحفظة».)
+   *
+   * **وكان الرجوعُ بالزرّ الذي جاء منه** — يُضغط ثانيةً فيُغلق. **ومن دخل
+   * باباً يبحث عن بابٍ يخرج منه، لا عن الذي دخل منه.**
+   */
+  onBack?: () => void;
 }) {
   const rows = data?.transactions ?? [];
 
@@ -100,6 +111,12 @@ export function StatementSheet({
     <div className="space-y-4">
       {/* أدوات المدى — لا تُطبع: الورقة تحمل المدى نصّاً لا حقولاً */}
       <div className="no-print flex flex-wrap items-end gap-3 surface p-4">
+        {onBack && (
+          <Button variant="ghost" onClick={onBack} className="flex items-center gap-1.5">
+            <IconPrev size={16} />
+            {m.common.back}
+          </Button>
+        )}
         <Input
           id="st-from"
           label={S.from}
