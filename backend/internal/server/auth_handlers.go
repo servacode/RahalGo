@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -40,7 +41,7 @@ func (s *Server) handleOTPRequest(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.RequestOTP(r.Context(), req.Phone); err != nil {
+	if err := s.identity.RequestOTP(r.Context(), req.Phone, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -137,8 +138,36 @@ func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 
+/*
+**عنوانُ العميل بلا منفذ.**
+
+(كشفه قياسٌ حيٌّ ٢٠٢٦-٠٨-٠٧: أُرسل أربعةٌ وثلاثون رمزاً من مضيفٍ واحدٍ
+
+	والحدُّ ثلاثون — **ولم يُمنع أحدُها.**)
+
+كانت تردّ `r.RemoteAddr` كما هو: `127.0.0.1:54321`. **والمنفذُ عابرٌ يتبدّل
+مع كلّ اتّصال**، فمفتاحُ الحدّ يتبدّل معه ولا يتراكم عدٌّ أبداً.
+
+**ولا يخصّ الرموزَ وحدَها**: `loginMaxPerIP` مبنيٌّ على هذه الدالّة —
+**فحدُّ محاولات الدخول للعنوان كان مكسوراً منذ كُتب.**
+
+**ولم يره اختبارُ وحدةٍ قطّ**: الاختباراتُ تمرّر عنواناً نظيفاً نصّاً فتُصدّق
+ما لا يقع. **وحدَه النداءُ الحيُّ كشفه.**
+
+**ولم يظهر في الإنتاج** لأنّ `middleware.RealIP` تعيد كتابة `RemoteAddr` من
+`X-Forwarded-For` حين توجد الترويسة — أي خلف وسيطٍ عكسيّ. **فالحدُّ يعمل خلف
+الوسيط ويسقط في النداء المباشر.**
+
+**والقسمةُ على النقطتين لا تكفي**: عنوانُ IPv6 فيه نقطتان كثيرة —
+`[2001:db8::1]:44300`. و`net.SplitHostPort` تعرف الفرق.
+*/
 func clientIP(r *http.Request) string {
-	return r.RemoteAddr
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		// لا منفذَ فيه — وهو ما تكتبه `RealIP` خلف الوسيط.
+		return r.RemoteAddr
+	}
+	return host
 }
 
 // handleMyLogins آخر دخولات الحساب — للمستخدم نفسه (شفافية أمان "هل كان هذا أنت؟").
@@ -181,7 +210,7 @@ func (s *Server) handleResetRequest(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.RequestPasswordReset(r.Context(), req.Phone); err != nil {
+	if err := s.identity.RequestPasswordReset(r.Context(), req.Phone, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -216,7 +245,7 @@ func (s *Server) handleSignupRequest(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.RequestSignup(r.Context(), req.Phone); err != nil {
+	if err := s.identity.RequestSignup(r.Context(), req.Phone, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -350,7 +379,7 @@ func (s *Server) handlePhoneChangeRequest(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.RequestPhoneChange(r.Context(), userIDFrom(r), req.Phone); err != nil {
+	if err := s.identity.RequestPhoneChange(r.Context(), userIDFrom(r), req.Phone, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -384,7 +413,7 @@ func (s *Server) handleWhatsAppVerifyRequest(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.RequestWhatsAppVerify(r.Context(), userIDFrom(r), req.Phone); err != nil {
+	if err := s.identity.RequestWhatsAppVerify(r.Context(), userIDFrom(r), req.Phone, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -421,7 +450,7 @@ func (s *Server) handleWhatsAppVerifyConfirm(w http.ResponseWriter, r *http.Requ
 // --- حذف الحساب نهائياً: رمز تأكيد على هاتف صاحبه ثم تجريد وإقفال ---
 
 func (s *Server) handleDeleteAccountRequest(w http.ResponseWriter, r *http.Request) {
-	if err := s.identity.RequestAccountDeletion(r.Context(), userIDFrom(r)); err != nil {
+	if err := s.identity.RequestAccountDeletion(r.Context(), userIDFrom(r), clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}

@@ -53,6 +53,20 @@ const (
 	loginMaxPerPhone = 5  // لكل رقم — يوقف تخمين حساب بعينه
 	loginMaxPerIP    = 30 // لكل عنوان — أوسع: مقهى أو مكتب يشترك فيه عدة أشخاص
 	loginFailWindow  = 15 * time.Minute
+
+	// **وحدُّ الرموز للعنوان أيضاً — لا للرقم وحدَه.**
+	//
+	// (كشفه فحصُ المشروع ٢٠٢٦-٠٨-٠٧.)
+	//
+	// كان الحدُّ لكلّ رقمٍ فقط: ثلاثةٌ في ربع ساعة. **فمن ملك مضيفاً واحداً
+	// أرسل ثلاثةً لكلّ رقمٍ في البلد ولم يبلغ حدّاً قطّ** — رسائلُ لا يريدها
+	// أصحابُها، ورصيدُ واتساب يُحرق، **ورقمُ المنصة يُبلَّغ عنه سبَماً
+	// فيُحجب.** وهو ما لا يُستدرَك بنشرة.
+	//
+	// **وأوسعُ من حدّ الرقم**: مقهىً أو مكتبٌ يشترك فيه عشرة — وحدٌّ ضيّقٌ
+	// يمنع من لم يُخطئ. وثلاثون طلباً في ربع ساعةٍ من عنوانٍ واحدٍ يكفي
+	// عشرةَ أشخاصٍ يخطئ كلٌّ منهم مرّتين.
+	otpMaxPerIP = 30
 )
 
 type Service struct {
@@ -96,12 +110,15 @@ func (s *Service) hashOTP(phone, code string) string {
 }
 
 // RequestOTP يولّد رمزاً ويرسله عبر القناة المهيأة، مع حد معدل لكل رقم.
-func (s *Service) RequestOTP(ctx context.Context, rawPhone string) error {
+func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) error {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return ErrInvalidPhone
 	}
 
+	if err := s.noteOTPSend(ctx, phone, ip); err != nil {
+		return err
+	}
 	key := "otp:req:" + phone
 	n, err := s.rdb.Incr(ctx, key).Result()
 	if err != nil {
@@ -130,13 +147,16 @@ func (s *Service) RequestOTP(ctx context.Context, rawPhone string) error {
 
 // RequestPhoneChange يرسل رمز تحقق إلى الرقم الجديد لتأكيد تغيير رقم الحساب —
 // لأي مستخدم لنفسه. الرقم الجديد يجب ألّا يكون مملوكاً لحساب آخر.
-func (s *Service) RequestPhoneChange(ctx context.Context, userID, rawPhone string) error {
+func (s *Service) RequestPhoneChange(ctx context.Context, userID, rawPhone, ip string) error {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return ErrInvalidPhone
 	}
 	if u, _, err := s.repo.UserByPhone(ctx, phone); err == nil && u.ID != userID {
 		return ErrPhoneTaken
+	}
+	if err := s.noteOTPSend(ctx, phone, ip); err != nil {
+		return err
 	}
 	key := "otp:chg:" + phone
 	n, err := s.rdb.Incr(ctx, key).Result()
@@ -214,9 +234,36 @@ func (s *Service) VerifyOTP(ctx context.Context, rawPhone, code, userAgent, ip s
 	return s.issueFor(ctx, user, userAgent, ip, "auth.otp_login")
 }
 
+// noteOTPSend يحسب حدَّي الإرسال: للرقم وللعنوان.
+//
+// **والعنوانُ يُعدّ قبل الرقم**: من يقصف أرقاماً مختلفةً لا يبلغ حدَّ رقمٍ
+// أبداً، **فحدُّ الرقم وحدَه لا يراه.**
+//
+// **ويُعدّ ولو رُفض**: وإلّا صار الرفضُ مجّانيّاً — يجرّب حتّى يمرّ.
+func (s *Service) noteOTPSend(ctx context.Context, phone, ip string) error {
+	if ip != "" {
+		key := "otp:ip:" + ip
+		n, err := s.rdb.Incr(ctx, key).Result()
+		if err != nil {
+			return err
+		}
+		if n == 1 {
+			s.rdb.Expire(ctx, key, 15*time.Minute)
+		}
+		if n > otpMaxPerIP {
+			return ErrOTPRateLimited
+		}
+	}
+	_ = phone
+	return nil
+}
+
 // sendOTPFor يُصدر رمزاً لغرض محدّد مع تحديد معدّل خاص بذلك الغرض.
 // مسار واحد لكل رموز التحقق — لا يعيد كل تدفّق كتابة المنطق نفسه.
-func (s *Service) sendOTPFor(ctx context.Context, phone, purpose, rateKey string) error {
+func (s *Service) sendOTPFor(ctx context.Context, phone, purpose, rateKey, ip string) error {
+	if err := s.noteOTPSend(ctx, phone, ip); err != nil {
+		return err
+	}
 	key := rateKey + phone
 	n, err := s.rdb.Incr(ctx, key).Result()
 	if err != nil {
@@ -244,7 +291,7 @@ func (s *Service) sendOTPFor(ctx context.Context, phone, purpose, rateKey string
 
 // RequestPasswordReset يرسل رمزاً لاستعادة كلمة المرور. لا يكشف إن كان الرقم
 // مسجّلاً أم لا (تعداد الحسابات) — الرد ناجح دائماً من وجهة نظر المتصل.
-func (s *Service) RequestPasswordReset(ctx context.Context, rawPhone string) error {
+func (s *Service) RequestPasswordReset(ctx context.Context, rawPhone, ip string) error {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return ErrInvalidPhone
@@ -252,7 +299,7 @@ func (s *Service) RequestPasswordReset(ctx context.Context, rawPhone string) err
 	if _, _, err := s.repo.UserByPhone(ctx, phone); err != nil {
 		return nil // رقم غير مسجّل: صمت مقصود
 	}
-	return s.sendOTPFor(ctx, phone, "reset", "otp:rst:")
+	return s.sendOTPFor(ctx, phone, "reset", "otp:rst:", ip)
 }
 
 // ConfirmPasswordReset يتحقق من الرمز ويضبط كلمة مرور جديدة، ثم يفتح جلسة
@@ -289,7 +336,7 @@ func (s *Service) ConfirmPasswordReset(ctx context.Context, rawPhone, code, pass
 }
 
 // RequestSignup يرسل رمز تأكيد لإنشاء حساب زبون جديد.
-func (s *Service) RequestSignup(ctx context.Context, rawPhone string) error {
+func (s *Service) RequestSignup(ctx context.Context, rawPhone, ip string) error {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return ErrInvalidPhone
@@ -298,7 +345,7 @@ func (s *Service) RequestSignup(ctx context.Context, rawPhone string) error {
 	if _, hash, err := s.repo.UserByPhone(ctx, phone); err == nil && hash != "" {
 		return ErrPhoneTaken
 	}
-	return s.sendOTPFor(ctx, phone, "signup", "otp:sgn:")
+	return s.sendOTPFor(ctx, phone, "signup", "otp:sgn:", ip)
 }
 
 // ConfirmSignup ينشئ حساب **زبون** باسم وكلمة مرور بعد تأكيد الرقم.

@@ -80,6 +80,19 @@ func Load() (*Config, error) {
 		if cfg.JWTSecret == "dev-secret-change-me" {
 			return nil, fmt.Errorf("config: JWT_SECRET must not use the dev default in production")
 		}
+		// **ومزوّدُ الرمز لا يكون `dev` في الإنتاج.**
+		//
+		// (كشفه فحصُ المشروع ٢٠٢٦-٠٨-٠٧.)
+		//
+		// `DevSender` **يطبع الرمزَ في السجلّ ولا يرسله**. ومن أقلع ونسي
+		// المتغيّرَ **فتح البابَ لمن يقرأ السجلّ**: رمزُ دخولِ أيِّ حساب
+		// مطبوعاً بجانب رقمه. **والخادمُ يقلع والدخولُ يعمل** — فلا شيءَ
+		// يقول إنّ الرمزَ يصل من لا يجب.
+		//
+		// **و`JWT_SECRET` له حارسُه فوق** — ونُسي أخوه.
+		if cfg.OTPProvider == "dev" {
+			return nil, fmt.Errorf("config: OTP_PROVIDER=dev prints codes to the log — not allowed in production")
+		}
 	}
 	return cfg, nil
 }

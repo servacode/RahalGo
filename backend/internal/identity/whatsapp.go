@@ -14,7 +14,7 @@ import (
 // أحدهم في حقل. التوثيق يجعله واقعاً: أرسلنا رمزاً عبر واتساب، فوصل، فأدخله.
 
 // RequestWhatsAppVerify يرسل رمزاً عبر واتساب إلى الرقم المراد توثيقه.
-func (s *Service) RequestWhatsAppVerify(ctx context.Context, userID, rawPhone string) error {
+func (s *Service) RequestWhatsAppVerify(ctx context.Context, userID, rawPhone, ip string) error {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return ErrInvalidPhone
@@ -22,7 +22,7 @@ func (s *Service) RequestWhatsAppVerify(ctx context.Context, userID, rawPhone st
 	// لا فحص تفرّد هنا عمداً: رقم الواتساب قناة تواصل لا هوية دخول، وقد يشترك
 	// فيه شريكان في متجر واحد. الفحص الذي يهمّ هو أن يصل الرمز إلى صاحبه.
 	_ = userID
-	return s.sendOTPFor(ctx, phone, "whatsapp", "otp:wa:")
+	return s.sendOTPFor(ctx, phone, "whatsapp", "otp:wa:", ip)
 }
 
 // ConfirmWhatsAppVerify يتحقق من الرمز ويثبّت الرقم موثَّقاً.

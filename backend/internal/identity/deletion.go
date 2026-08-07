@@ -29,7 +29,7 @@ var (
 // RequestAccountDeletion يرسل رمز تأكيد إلى هاتف صاحب الحساب.
 // نطلب رمزاً لا كلمة مرور: كثير من الزبائن دخلوا برمز ولا كلمة مرور لهم، والرمز
 // أقوى تأكيداً على كل حال — يثبت أن الطالب يملك الرقم لا الجلسة فقط.
-func (s *Service) RequestAccountDeletion(ctx context.Context, userID string) error {
+func (s *Service) RequestAccountDeletion(ctx context.Context, userID, ip string) error {
 	user, _, err := s.repo.UserByID(ctx, userID)
 	if err != nil {
 		return err
@@ -37,7 +37,7 @@ func (s *Service) RequestAccountDeletion(ctx context.Context, userID string) err
 	if err := s.checkDeletable(ctx, user); err != nil {
 		return err // لا نرسل رمزاً لطلب سيُرفض حتماً
 	}
-	return s.sendOTPFor(ctx, user.Phone, "delete", "otp:del:")
+	return s.sendOTPFor(ctx, user.Phone, "delete", "otp:del:", ip)
 }
 
 // checkDeletable يمنع الحذف عند وجود التزام أو حق قائم.

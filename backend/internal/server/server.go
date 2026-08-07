@@ -97,6 +97,9 @@ func (s *Server) Router() http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
+	// **وترويساتُ الأمان على كلّ ردّ** — قبل التوجيه، فتشمل الوسائطَ
+	// والصحّةَ كما تشمل الواجهة. (انظر security_headers.go.)
+	r.Use(securityHeaders)
 	// **المهلةُ لكل طلبٍ إلّا قناة البثّ.**
 	//
 	// كانت تلفّ `/ws` معها، فتُلغي سياقَ الطلب بعد ثلاثين ثانية — و`handleWS`
