@@ -27,6 +27,7 @@ import {
   TopBar,
   BrandMark,
   TopBarLink,
+  AppDownloadChip,
   TopBarChip,
   TopBarActions,
   TOPBAR_ICON,
@@ -255,6 +256,9 @@ export default function Header({
             <IconUser size={TOPBAR_ICON} />
             {N.login}
           </TopBarLink>
+          {/* **وبجانبه زرُّ التطبيق** — لمن لم يقرّر الدخولَ بعد.
+              (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «لازم يكون بالتوب بار».) */}
+          <AppDownloadChip label={m.auth.getApp} />
         </>
       )}
     </TopBar>

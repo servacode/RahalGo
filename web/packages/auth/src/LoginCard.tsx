@@ -30,8 +30,6 @@ import {
   IconSuccess,
   BrandMark,
   usePlatform,
-  IconApp,
-  ButtonLink,
 } from "@rahalgo/ui";
 import { authApi, tokenStore, ApiError, type AuthUser } from "./client";
 
@@ -123,7 +121,7 @@ export function LoginCard({
 
      **ومن مرّر `otp` وحدَها ثمّ أُطفئ الرمزُ يسقط إلى كلمة المرور** — وإلّا
      بقيت بوّابتُه بلا بابٍ يعمل. */
-  const { otpLogin, authBg, authBgDim, appUrl } = usePlatform();
+  const { otpLogin, authBg, authBgDim } = usePlatform();
   const allow: "both" | "password" | "otp" = otpLogin ? methods : "password";
   const [mode, setMode] = useState<Mode>(initialMode);
 
@@ -290,39 +288,11 @@ export function LoginCard({
     </Alert>
   );
 
-  /* **وزرُّ التطبيق بجانب زرِّ الدخول** — لا في زاويةٍ ولا في الفوتر.
-     (طلبُ المالك ٢٠٢٦-٠٨-٠٧.)
-
-     **ويُخفى إن لم يُضبط الرابط**: زرُّ تحميلٍ لا ينزّل شيئاً **يُقرأ عطباً
-     في المنصة** لا ميزةً ناقصة. (`platform.app_url` في الإعدادات.)
-
-     **وعلى شاشتَي الدخول وحدَهما**: من يستعيد كلمتَه أو ينشئ حساباً في
-     منتصف خطواتٍ — **وبابٌ يخرجه منها يُضيّع ما ملأ.** */
-  const submit = (label: string, withApp = false) => {
-    const btn = (
-      <Button type="submit" disabled={busy} className="w-full py-3 text-base elev-1">
-        {busy ? m.shared.loggingIn : label}
-      </Button>
-    );
-    if (!withApp || !appUrl) return btn;
-    return (
-      <div className="flex items-stretch gap-2">
-        <div className="min-w-0 flex-1">{btn}</div>
-        <ButtonLink
-          variant="secondary"
-          href={appUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={A.getApp}
-          aria-label={A.getApp}
-          className="shrink-0 elev-1"
-        >
-          <IconApp size={18} />
-          <span className="hidden sm:inline">{A.getApp}</span>
-        </ButtonLink>
-      </div>
-    );
-  };
+  const submit = (label: string) => (
+    <Button type="submit" disabled={busy} className="w-full py-3 text-base elev-1">
+      {busy ? m.shared.loggingIn : label}
+    </Button>
+  );
 
   /** رابط نصّي ثانوي داخل البطاقة — شكل واحد لكل روابط التبديل. */
   const linkBtn = (label: string, onClick: () => void, icon?: ReactNode) => (
@@ -379,7 +349,7 @@ export function LoginCard({
             {linkBtn(A.forgotPassword, () => go("reset"))}
           </div>
           {errorBox}
-          {submit(A.login, true)}
+          {submit(A.login)}
         </form>
       );
     }
@@ -401,7 +371,7 @@ export function LoginCard({
             >
               {phoneField}
               {errorBox}
-              {submit(A.sendOtp, true)}
+              {submit(A.sendOtp)}
             </form>
           ) : (
             <form onSubmit={(e) => { e.preventDefault(); void verify(); }} className="space-y-4">

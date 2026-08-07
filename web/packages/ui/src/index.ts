@@ -105,6 +105,7 @@ export {
   TopBar,
   TopBarChip,
   TopBarLink,
+  AppDownloadChip,
   WalletPill,
   TopBarActions,
   AccountMenu,

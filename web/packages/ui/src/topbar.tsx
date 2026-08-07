@@ -17,7 +17,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { IconChevronDown, IconLogout } from "./icons";
+import { IconChevronDown, IconLogout, IconApp } from "./icons";
+import { usePlatform } from "./platform";
 
 const m = getMessages(defaultLocale);
 
@@ -272,6 +273,38 @@ export function Avatar({
         (name || m.terms.avatarFallback).slice(0, 1)
       )}
     </span>
+  );
+}
+
+/**
+ * **زرُّ تحميل التطبيق — في الشريط لا في فورم الدخول.**
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «حطّيت حمّل التطبيق بلوحة تسجيل الدخول وهذا
+ *  غلط، لازم يكون بالتوب بار — هيك قصدت أنا، مو بفورم التسجيل».)
+ *
+ * **ووُضع أوّلاً بجانب زرّ الدخول داخلَ البطاقة** — قراءةً خاطئةً لـ«بجانب
+ * تسجيل الدخول». **والفورمُ مكانُ من قرّر أن يدخل**، وزرٌّ يخرجه منه يضيّع
+ * ما ملأ. **والشريطُ مكانُ من لم يقرّر بعد.**
+ *
+ * **ووجهتُه تأتي محلولةً من الخادم**: رابطُ المتجر إن ضُبط، وإلّا مسارُ
+ * تنزيل الملفّ، وإلّا فارغ. **وفارغٌ يُخفي الزرَّ كلَّه** — زرُّ تحميلٍ لا
+ * ينزّل شيئاً يُقرأ عطباً في المنصة لا ميزةً ناقصة.
+ */
+export function AppDownloadChip({ label }: { label: string }) {
+  const { appUrl } = usePlatform();
+  if (!appUrl) return null;
+  return (
+    <a
+      href={appUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={label}
+      aria-label={label}
+      className={`${chipBase} ${chipTones.plain} border border-line`}
+    >
+      <IconApp size={TOPBAR_ICON} />
+      <span className="hidden sm:inline">{label}</span>
+    </a>
   );
 }
 
