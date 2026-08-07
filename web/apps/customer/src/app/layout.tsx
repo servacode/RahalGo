@@ -116,7 +116,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   تُضيّق الصفحةَ وتمنع المحتوى من ملء الشاشة. **وهذه اثنا عشرَ
                   بكسلاً تُبعد الحرفَ عن الحافّة** ولا تحصر شيئاً.
                   ══════════════════════════════════════════════════════ */}
-              <main className="min-w-0 flex-1 px-3 py-4 sm:px-4">{children}</main>
+              <main className="flex min-w-0 flex-1 flex-col px-3 py-4 sm:px-4">
+                {children}
+              </main>
               {/* **والشروطُ والمساعدةُ أسفلَ الصفحة** — حيث يُبحث عنها،
                   والشريطُ العلويُّ لما يُضغط كلَّ يوم. */}
               <Footer name={brand.name} />

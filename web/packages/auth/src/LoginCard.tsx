@@ -669,7 +669,7 @@ export function LoginCard({
 
        **وعلى الجوّال تبقى في الوسط**: لا متّسعَ يُترك، **وبطاقةٌ ملتصقةٌ
        بحافّةِ شاشةٍ بعرض ٣٦٠ تُقرأ مقصوصةً لا مُصفَّفة.** */
-    <div className="relative flex flex-1 items-center justify-center p-3 sm:p-6 lg:min-h-[calc(100dvh-10rem)] lg:justify-start lg:ps-[7vw]">
+    <div className="relative flex flex-1 items-center justify-center p-3 sm:p-6 lg:justify-start lg:ps-[7vw]">
       {/* ══════════════════════════════════════════════════════════════
           **خلفيّةٌ تُرفع من الإعدادات — ولا تُحشر في الشيفرة**
           ══════════════════════════════════════════════════════════════

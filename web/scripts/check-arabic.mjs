@@ -115,6 +115,15 @@ const TOKENS = /(?:^|[^A-Za-z])(?:CSV|JPG|JPEG|PNG|WebP|GIF|PDF|SVG|MB|KB|GB|QR|
 const b = await chromium.launch({ executablePath: CHROME, headless: true });
 let bad = 0;
 let pages = 0;
+/* **وعطبُ الأداة ليس عطبَ المنتج.**
+
+   (وقع ٢٠٢٦-٠٨-٠٧: ماتت ثلاثةُ خوادمِ تطويرٍ فقال الحارسُ «٤٥ نصّاً
+    لاتينيّاً في ١١ صفحة» — **وهي `ERR_CONNECTION_REFUSED` لا كلمةً
+    إنكليزيّة.**)
+
+   **وحارسٌ يخلط الاثنين يُطفأ**: يُقرأ سقوطُه كذباً فيُتجاوز، ثمّ يمرّ
+   تحته عطبٌ حقيقيّ. **فلكلٍّ عدّادُه ورسالتُه.** */
+let dead = 0;
 
 for (const role of ROLES) {
   const ctx = await b.newContext({ locale: "ar", viewport: { width: 1400, height: 950 } });
@@ -124,7 +133,7 @@ for (const role of ROLES) {
   const tok = (await lg.json())?.data?.tokens;
   if (!tok?.access_token) {
     console.log(`✗ ${role.name}: تعذّر الدخول`);
-    bad++;
+    dead++;
     await ctx.close();
     continue;
   }
@@ -171,7 +180,9 @@ for (const role of ROLES) {
         console.log(`✗ ${role.name.padEnd(8)} ${path.padEnd(26)} «${f.t}»  ${f.where}`);
       }
     } catch (e) {
-      bad++;
+      // **ولا يُعدّ الفشلُ مرّتين** — كان يزيد `bad` أيضاً فيُقرأ خادمٌ
+      // ميّتٌ عشرَ كلماتٍ إنكليزيّة.
+      dead++;
       console.log(`✗ ${role.name} ${path}: ${String(e).slice(0, 60)}`);
     }
     await p.close();
@@ -180,8 +191,12 @@ for (const role of ROLES) {
 }
 await b.close();
 
+if (dead) {
+  console.log(`\n✗ ${dead} صفحةً لم تُقرأ أصلاً — خادمٌ لا يردّ أو حسابٌ لا يدخل، لا لغة.`);
+  console.log("   شغّل المنافذ 3001–3005 ثمّ أعد الفحص.");
+}
 if (bad) {
   console.log(`\n✗ ${bad} نصّاً لاتينيّاً على الشاشة من ${pages} صفحة.`);
-  process.exit(1);
 }
+if (bad || dead) process.exit(1);
 console.log(`✓ لا حرفَ لاتينيٍّ معروضاً في ${pages} صفحة`);
