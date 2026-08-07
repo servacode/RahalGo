@@ -557,6 +557,7 @@
     "bad_channel": "قناةُ إبلاغٍ غير معروفة",
     "order_not_failed": "هذا الإجراء لطلبٍ فشل فقط",
     "goods_already_settled": "مصيرُ البضاعة محسومٌ سلفاً",
+    "driver_already_compensated": "عُوِّض السائقُ عن هذا الطلب من قبل — ولا يُعوَّض مرّتين.",
     "order_has_no_driver": "لا سائق على هذا الطلب",
     "bad_fail_reason": "اختر سببَ تعذّر التسليم",
     "goods_flow_changed": "تغيّرت آليةُ التعامل مع البضاعة — حدّث الصفحة",

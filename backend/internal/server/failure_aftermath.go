@@ -47,6 +47,10 @@ var (
 	errGoodsSettled     = httpx.NewError(http.StatusConflict, "goods_already_settled", "errors.goods_already_settled")
 	errNoDriverOnOrder  = httpx.NewError(http.StatusConflict, "order_has_no_driver", "errors.order_has_no_driver")
 	errGoodsFlowChanged = httpx.NewError(http.StatusGone, "goods_flow_changed", "errors.goods_flow_changed")
+
+	// **وتعويضٌ وقع لا يقع مرّتين** — انظر الشرحَ عند `handleCompensateDriver`.
+	errAlreadyCompensated = httpx.NewError(http.StatusConflict,
+		"driver_already_compensated", "errors.driver_already_compensated")
 )
 
 // handleCompensateDriver تعويضُ سائقٍ عن طلبٍ فشل — بمبلغٍ يقدّره إنسان.
@@ -68,10 +72,39 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	/* ══════════════════════════════════════════════════════════════════
+	   **وتعويضٌ وقع لا يقع مرّتين**
+	   ══════════════════════════════════════════════════════════════════
+
+	   (كشفه فحصُ التغطية ٢٠٢٦-٠٨-٠٨، وأُصلح بقرار المالك: «نعم ابدأ بالخمسة».)
+
+	   كانت الحالةُ تُقرأ خارجَ المعاملة وبلا قفل، **ولا شيءَ يُعلَّم بعدها**:
+	   الطلبُ يبقى `failed` بعد التعويض كما كان قبله.
+
+	   **فمن نادى مرّتين دُفع التعويضُ مرّتين وخُصمت الخزينةُ مرّتين.**
+	   قِيس: نداءان متتاليان ← ٦٠٠٠ بدل ٣٠٠٠، وكلاهما ٢٠٠.
+
+	   **وليس سباقاً**: ضغطةٌ مكرّرةٌ أو شبكةٌ أعادت الإرسال تكفي. **والسباقُ
+	   يزيده سوءاً فقط.**
+
+	   **والعادةُ موجودةٌ في المشروع**: `settleMerchant` تفحص وجودَ قيدٍ
+	   بالمرجع نفسِه قبل أن تقيّد. **وهذا المسلكُ كان خارجَها.**
+
+	   **والقفلُ على صفّ الطلب هو ما يجعل الفحصَ صادقاً**: فحصٌ بلا قفلٍ يمرّ
+	   عليه اثنان معاً — وهو الدرسُ نفسُه من دفعة السحب.
+	   ══════════════════════════════════════════════════════════════════ */
+	actor := userIDFrom(r)
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(r.Context()) }()
+
 	var status string
 	var driverID *string
-	if err := s.pg.QueryRow(r.Context(),
-		`SELECT status, driver_id FROM orders WHERE id = $1`, orderID).
+	if err := tx.QueryRow(r.Context(),
+		`SELECT status, driver_id FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&status, &driverID); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
@@ -85,13 +118,18 @@ func (s *Server) handleCompensateDriver(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	actor := userIDFrom(r)
-	tx, err := s.pg.Begin(r.Context())
-	if err != nil {
+	var already bool
+	if err := tx.QueryRow(r.Context(), `
+		SELECT EXISTS(SELECT 1 FROM wallet_transactions
+		              WHERE ref = $1 AND kind = 'compensation' AND user_id = $2)`,
+		orderID, *driverID).Scan(&already); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	defer func() { _ = tx.Rollback(r.Context()) }()
+	if already {
+		s.respondErr(w, errAlreadyCompensated)
+		return
+	}
 
 	// **بمرجع الطلب** — فيُقرأ لاحقاً في كشف السائق وفي تفصيل الطلب معاً.
 	if _, err := s.wallet.ApplyTx(r.Context(), tx, *driverID, req.Amount,
