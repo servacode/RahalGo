@@ -49,11 +49,9 @@ export default function LinkPage() {
         </span>
         <h1 className="mb-2 text-lg font-bold">{m.rep.lockedTitle}</h1>
         <p className="mb-5 text-sm leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
-        <Link
-          href="/portal/account"
-          className="inline-block rounded-control bg-primary px-5 py-2.5 text-sm font-medium text-on-bright hover:bg-primary-dark"
-        >
-          {m.rep.lockedCta}
+        /* **وزرٌّ مركزيّ** — كان مبنيّاً باليد بتعبئةٍ صلبة. (قرارُ المالك ٢٠٢٦-٠٨-٠٧.) */
+        <Link href="/portal/account" className="inline-block">
+          <Button>{m.rep.lockedCta}</Button>
         </Link>
       </div>
     );
@@ -113,7 +111,7 @@ export default function LinkPage() {
             href={`https://wa.me/?text=${shareText}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-on-bright hover:bg-primary-dark"
+            className="rounded-control bg-accent px-4 py-2 text-sm font-medium text-on-bright transition-opacity hover:opacity-90"
           >
             {m.rep.share}
           </a>

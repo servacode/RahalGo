@@ -170,7 +170,22 @@ export function DashboardChrome({
 
   const sidebar = (
     <>
-      <div className="flex items-center justify-between border-b border-line-soft p-4">
+      {/* ══════════════════════════════════════════════════════════════
+          **ولا خطَّ يفصل العلامةَ عن بنودها**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «ألغِ الخطَّ الأبيض من السايدبار،
+           واللوغو خلّيه بالوسط وخلّيه أكبر من هيك يكون واضح».)
+
+          **السايدبارُ زجاجٌ واحدٌ متّصل** — وخطٌّ يعبره يقطعه قطعتين، **وهو
+          العيبُ نفسُه الذي أُزيل من الشريط العلويّ والذيل.**
+
+          **والعلامةُ في الوسط**: هي وحدَها في سطرها، **وشيءٌ واحدٌ يلتصق
+          بحافّةٍ يُقرأ منسيّاً هناك** لا مقصوداً.
+
+          **وزرُّ الإغلاق مطلقٌ لا شريكٌ في الصفّ** — وإلّا أزاح العلامةَ عن
+          الوسط على الجوّال وحدَه، **فتُرى الشاشتان مختلفتين.** */}
+      <div className="relative flex items-center justify-center p-4">
         <div className="flex items-center gap-2">
           {/* **علامةُ المنصة من الإعدادات** — شعارٌ إن رُفع وإلّا أوّلُ حرفٍ
               من الاسم. **والاسمُ بجانبها اسمُ المنصة لا اسمُ اللوحة**: كانت
@@ -189,11 +204,11 @@ export function DashboardChrome({
               صارت تكتب اسمَ المنصة من الإعدادات — **والاثنان زائدان**:
               من فتح بوّابتَه يعرف أيَّها فتح، **والسايدبارُ تحتها يقول
               دورَه بتسعةَ عشرَ بنداً.** */}
-          <BrandMark size={36} />
+          <BrandMark size={52} rounded="card" />
         </div>
         <button
           onClick={() => setMenuOpen(false)}
-          className="text-ink-muted hover:text-ink lg:hidden"
+          className="absolute end-4 text-ink-muted hover:text-ink lg:hidden"
           aria-label={m.common.cancel}
         >
           <IconClose size={20} />

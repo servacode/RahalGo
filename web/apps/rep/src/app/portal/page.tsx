@@ -67,31 +67,41 @@ export default function OverviewPage() {
   return (
     <PageContainer>
       {/* الكود — قلب اللوحة، ومقفل حتى يوثّق المندوب قناة تواصله */}
-      <section className="rounded-card bg-primary p-6 text-center text-on-bright">
+      {/* ══════════════════════════════════════════════════════════════
+          **وقلبُ اللوحة زجاجٌ كبقيّتها**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «بلوحة المندوب أيضاً في بعض العناصر
+           خارج المركزيّة والثيم».)
+
+          **كان `bg-primary` لوحاً سماويّاً مصمتاً** يملأ عرضَ الشاشة فوق
+          تدرّجٍ زجاجيّ — **يُقرأ لصاقةً على الشاشة لا جزءاً منها.**
+
+          **والرمزُ هو ما يُرى فيه** — فحُملت النبرةُ إليه وحدَه، وبقي ما
+          حولَه سطحاً كسائر الأسطح. **والبطاقةُ تُرى بما فيها لا بلونها.** */}
+      <section className="surface p-6 text-center">
         {!me.whatsapp_verified ? (
           <>
-            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-on-solid-tint">
+            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-warning-tint text-warning">
               <IconLock size={22} />
             </span>
             <p className="text-lg font-bold">{m.rep.lockedTitle}</p>
-            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed opacity-80">{m.rep.lockedHint}</p>
-            <Link
-              href="/portal/account"
-              className="mt-4 inline-block rounded-control bg-on-solid px-5 py-2.5 text-sm font-medium text-primary-dark"
-            >
-              {m.rep.lockedCta}
+            <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
+            {/* **وزرٌّ مركزيّ** — كان مبنيّاً باليد بتعبئةٍ بيضاء. */}
+            <Link href="/portal/account" className="mt-4 inline-block">
+              <Button>{m.rep.lockedCta}</Button>
             </Link>
           </>
         ) : (
           <>
-            <p className="mb-2 flex items-center justify-center gap-2 text-sm opacity-80">
+            <p className="mb-2 flex items-center justify-center gap-2 text-sm text-ink-muted">
               <IconPromos size={16} />
               {m.rep.codeTitle}
             </p>
-            <p className="font-mono text-4xl font-bold tracking-widest" dir="ltr">
+            <p className="font-mono text-4xl font-bold tracking-widest text-accent" dir="ltr">
               {code}
             </p>
-            <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed opacity-80">{m.rep.codeHint}</p>
+            <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-ink-muted">{m.rep.codeHint}</p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <Button
                 variant="secondary"
