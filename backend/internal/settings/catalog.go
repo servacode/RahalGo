@@ -704,6 +704,105 @@ var Catalog = []Def{
 	// **وصفرُه لا هدف.**
 	{Key: "sales.monthly_target", Group: GroupSales, Kind: KindInt,
 		Min: 0, Max: 5000, Unit: "order", Default: 0},
+
+	// ══════════════════════════════════════════════════════════════════
+	// **ستّةَ عشرَ مقبضاً كان في المحرّك ولا يُدار**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (كشفها حارسٌ كُتب في فحص التغطية ٢٠٢٦-٠٨-٠٧، بقرار المالك: «نعم ابدأ».)
+	//
+	// كانت تُقرأ في الشيفرة وليست هنا. **وهذا الكتالوجُ هو لوحةُ الإدارة**:
+	// الشاشةُ تدور عليه، و`Set` ترفض ما ليس فيه بـ`ErrUnknownKey`.
+	//
+	// **فقيمتُها مجمّدةٌ منذ زرعتها ترحيلة**: المالكُ لا يراها ولا يغيّرها —
+	// **وهي بعينُها ما بُني الكتالوجُ ليمنعه.**
+	//
+	// **والافتراضاتُ هنا هي المزروعةُ نفسُها** — فلا تتبدّل قيمةٌ قائمةٌ
+	// بإضافةِ مقبضٍ لها.
+	// ══════════════════════════════════════════════════════════════════
+
+	// ── الزبائن ───────────────────────────────────────
+	//
+	// **وحدٌّ للعناوين لأنّ الشاشةَ تعرضها كلَّها**: مئةُ عنوانٍ تجعل اختيارَ
+	// عنوانِ التوصيل أطولَ من الطلب نفسِه.
+	{Key: "customers.max_addresses", Group: GroupPlatform, Kind: KindInt,
+		Min: 1, Max: 50, Default: 10},
+
+	// **وتوثيقُ واتساب قناةُ الوصول** — ومن لا رقمَ موثَّقاً له لا يبلغه
+	// إشعارُ طلبه. **وإلزامُه قرارُ تشغيلٍ لا قرارُ نشر.**
+	{Key: "customers.require_whatsapp", Group: GroupPlatform, Kind: KindBool,
+		Default: true},
+
+	// ── السائقون ──────────────────────────────────────
+	//
+	// **وصورةُ التسليم بيّنةٌ يومَ النزاع** — انظر الترحيلة ٠٠٦١.
+	{Key: "drivers.require_delivery_photo", Group: GroupDrivers, Kind: KindBool,
+		Default: true},
+
+	// ── المتاجر ───────────────────────────────────────
+	//
+	// **وحظرُ الإلغاء ثلاثةُ مقابضَ لا واحد**: كم إلغاءً، وكم يوماً، وأيدوياً
+	// أم آليّاً. **والآليُّ يحظر بلا مراجعة** — فالافتراضُ اليدويّ.
+	{Key: "merchants.cancel_ban_mode", Group: GroupMerchants, Kind: KindChoice,
+		Options: []string{"manual", "auto"}, Default: "manual"},
+	{Key: "merchants.cancel_ban_count", Group: GroupMerchants, Kind: KindInt,
+		Min: 1, Max: 50, Unit: "order", Default: 5},
+	{Key: "merchants.cancel_ban_days", Group: GroupMerchants, Kind: KindInt,
+		Min: 1, Max: 365, Default: 30},
+
+	// **وزمنُ التحضير الافتراضيّ لمتجرٍ لم يضبط زمنَه** — يدخل في الوقت
+	// المتوقَّع للزبون.
+	{Key: "merchants.default_prep_minutes", Group: GroupMerchants, Kind: KindInt,
+		Min: 1, Max: 180, Unit: "minute", Default: 20},
+
+	// **ومراجعةُ الأصناف قبل ظهورها** — تُطفأ حين يُوثَق بالمتاجر، وتُشعل
+	// حين يكثر الجدد.
+	{Key: "merchants.menu_requires_approval", Group: GroupMerchants, Kind: KindBool,
+		Default: false},
+
+	// ── الطلبات ───────────────────────────────────────
+	//
+	// **والإرسالُ الآليُّ يوزّع بلا يد** — وإطفاؤه يجعل كلَّ طلبٍ ينتظر مُرسِلاً.
+	{Key: "orders.auto_dispatch", Group: GroupPlatform, Kind: KindBool,
+		Default: true},
+
+	// **والوقتُ المتوقَّعُ يُعرض للزبون** — ورقمٌ متفائلٌ يصنع شكوى.
+	{Key: "orders.delivery_estimate_min", Group: GroupPlatform, Kind: KindInt,
+		Min: 1, Max: 240, Unit: "minute", Default: 15},
+
+	// **ورسمُ المصدر الإضافيّ**: طلبٌ من متجرين يكلّف مشواراً ثانياً.
+	// **وصفرٌ يعني بلا رسم.**
+	{Key: "orders.extra_source_fee", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 100000, Unit: "currency", Default: 0},
+
+	// ── المال والدعم ──────────────────────────────────
+	//
+	// **وأقلُّ مبلغِ سحب**: تحويلٌ صغيرٌ تكلفتُه أكبرُ منه. **ومن رصيدُه أقلُّ
+	// من الحدّ يسحبه كاملاً** — وإلّا حُبس ماله.
+	{Key: "payouts.min_amount", Group: GroupPlatform, Kind: KindInt,
+		Min: 0, Max: 10000000, Unit: "currency", Default: 50000, Sensitive: true},
+
+	// **ونافذةُ الشكوى**: بعدها يُغلق الباب. **وطويلةٌ تعني نزاعاً على طلبٍ
+	// نُسي، وقصيرةٌ تعني من اكتشف متأخّراً لا يُسمع.**
+	{Key: "support.complaint_window_hours", Group: GroupPlatform, Kind: KindInt,
+		Min: 1, Max: 720, Default: 24},
+
+	// ── المندوبون ─────────────────────────────────────
+	//
+	// **ومتى يُحسب المتجر مفعَّلاً**: عددُ طلباتٍ يُتمّها فيُحتسب للمندوب.
+	{Key: "sales.activation_orders", Group: GroupSales, Kind: KindInt,
+		Min: 1, Max: 100, Unit: "order", Default: 5},
+
+	// ── الهويّة والرسائل ──────────────────────────────
+	//
+	// **ورمزُ دعوة المنصة** — يُعطى لمن يسجّل متجراً بلا مندوب.
+	{Key: "platform.invite_code", Group: GroupPlatform, Kind: KindText,
+		Max: 32, Default: "RAHALGO"},
+
+	// **وقالبُ رسالة الرمز**: `{code}` يُستبدل. **ونصٌّ بلا `{code}` يرسل
+	// رسالةً بلا رمز** — ولذلك يُحرس شكلُه في الاختبار.
+	{Key: "whatsapp.otp_template", Group: GroupPlatform, Kind: KindText,
+		Max: 300, Default: "رمز التحقق: {code}"},
 }
 
 // byKey فهرسٌ يُبنى مرّة — البحث الخطّي في كل كتابة إعداد ترفٌ لا داعي له.

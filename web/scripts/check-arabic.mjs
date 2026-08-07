@@ -109,8 +109,17 @@ const RAW_PAGES = ["/dashboard/audit"];
  *
  * **فتُنزع هذه من النصّ ثمّ يُسأل: أبقيَ حرفٌ لاتينيّ؟** — وهو أدقُّ من
  * مطابقة النصّ كلِّه: **يمسك كلمةً إنكليزيّةً في جملةٍ عربيّة، ويغفر رمزاً.**
+ *
+ * # والموضعُ النائبُ يُكتب حرفيّاً
+ *
+ * (وقع ٢٠٢٦-٠٨-٠٧ حين ظهر `whatsapp.otp_template` في اللوحة: شرحُه يقول
+ *  «يجب أن يحوي {code}» — **وهو موضعُ الرمز في القالب**، يكتبه المالكُ
+ *  كما هو أو لم تحمل الرسالةُ رمزاً.)
+ *
+ * **وترجمتُه تكسر الميزة** — كما تكسر ترجمةُ `CSV` معناها. فما بين قوسين
+ * معقوفين يُنزع كما تُنزع أسماءُ الصيغ.
  */
-const TOKENS = /(?:^|[^A-Za-z])(?:CSV|JPG|JPEG|PNG|WebP|GIF|PDF|SVG|MB|KB|GB|QR|SMS|OTP|API|URL|ID|GPS|KM|AM|PM|WhatsApp|RahalGo|SYP|SYR)(?![A-Za-z])/gi;
+const TOKENS = /\{[a-z_]+\}|(?:^|[^A-Za-z])(?:CSV|JPG|JPEG|PNG|WebP|GIF|PDF|SVG|MB|KB|GB|QR|SMS|OTP|API|URL|ID|GPS|KM|AM|PM|WhatsApp|RahalGo|SYP|SYR)(?![A-Za-z])/gi;
 
 const b = await chromium.launch({ executablePath: CHROME, headless: true });
 let bad = 0;

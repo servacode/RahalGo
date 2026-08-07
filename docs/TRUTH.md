@@ -419,6 +419,15 @@
 | `referral.reward_2` | المنصة | money | `0` |
 | `referral.reward_3` | المنصة | money | `0` |
 | `referral.reward_rest` | المنصة | money | `0` |
+| `customers.max_addresses` | المنصة | int | `10` |
+| `customers.require_whatsapp` | المنصة | bool | `true` |
+| `orders.auto_dispatch` | المنصة | bool | `true` |
+| `orders.delivery_estimate_min` | المنصة | int | `15` |
+| `orders.extra_source_fee` | المنصة | int | `0` |
+| `payouts.min_amount` | المنصة | int | `50000` |
+| `support.complaint_window_hours` | المنصة | int | `24` |
+| `platform.invite_code` | المنصة | text | `RAHALGO` |
+| `whatsapp.otp_template` | المنصة | text | `رمز التحقق: {code}` |
 | `drivers.assignment_mode` | السائقون | choice | `queue` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
 | `drivers.direct_assign` | السائقون | bool | `false` |
@@ -428,11 +437,18 @@
 | `orders.driver_timeout_min` | السائقون | int | `10` |
 | `drivers.monthly_target` | السائقون | int | `0` |
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |
+| `drivers.require_delivery_photo` | السائقون | bool | `true` |
 | `merchants.commission_percent` | المتاجر | int | `0` |
 | `orders.accept_timeout_min` | المتاجر | int | `5` |
 | `merchants.return_support_percent` | المتاجر | int | `0` |
+| `merchants.cancel_ban_mode` | المتاجر | choice | `manual` |
+| `merchants.cancel_ban_count` | المتاجر | int | `5` |
+| `merchants.cancel_ban_days` | المتاجر | int | `30` |
+| `merchants.default_prep_minutes` | المتاجر | int | `20` |
+| `merchants.menu_requires_approval` | المتاجر | bool | `false` |
 | `sales.commission_percent` | المندوبون | int | `0` |
 | `sales.monthly_target` | المندوبون | int | `0` |
+| `sales.activation_orders` | المندوبون | int | `5` |
 <!-- /gen:settings -->
 
 ---
