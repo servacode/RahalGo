@@ -39,6 +39,9 @@ export {
   passwordScore,
 } from "./components";
 export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } from "./dataview";
+/** **رفعُ الصور ومصغَّرُها** — كانا في لوحة الإدارة، **فبوّابةُ المتجر لا
+    تراهما**، وصورةُ الصنف مبنيّةٌ في المحرّك بلا يدٍ ترفعها. */
+export { ImageUpload, MediaThumb, type MediaKind } from "./ImageUpload";
 export { AccountSettings } from "./AccountSettings";
 /** **كرتُ الشكوى والبلاغ — واحدٌ في الخمس.** (قرارُ المالك ٢٠٢٦-٠٨-٠٧.) */
 export { ComplaintCard, ComplaintGrid, type ComplaintTicket } from "./ComplaintCard";

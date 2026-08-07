@@ -291,6 +291,10 @@ func (s *Server) Router() http.Handler {
 		r.Route("/merchant", func(r chi.Router) {
 			r.Use(s.RequireAuth)
 			r.Use(s.RequireRoles("merchant"))
+			// **وصورةُ الصنف تُرفع من بوّابته** — كان الرفعُ للإدارة وحدَها،
+			// **فصاحبُ المطعم لا يملك أن يضع صورةً لصنفه.** (طلبُ المالك
+			// ٢٠٢٦-٠٨-٠٧.) والأنواعُ محصورةٌ في `merchantKinds`.
+			r.Post("/media", s.handleMerchantUploadMedia)
 			r.Get("/stores", s.handleMerchantStores)
 			// **ومن أُنذر يرى إنذارَه.** إشعارٌ يمرّ في الشريط يُقرأ مرّةً
 			// ويُنسى، **ثمّ يُحظر المتجرُ ولم يعلم أنّ عليه شيئاً.**

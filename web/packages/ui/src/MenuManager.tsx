@@ -149,7 +149,18 @@ export function MenuManager({
 
   const load = useCallback(async () => {
     try {
-      setSections(await api<MenuSection[]>(paths.menu(merchantID)));
+      /* **وشكلٌ غيرُ متوقَّعٍ لا يُبيّض الشاشة.**
+
+         (كُشف ٢٠٢٦-٠٨-٠٧ بمسبار صورة الصنف: ردٌّ بجسمٍ بدل مصفوفةٍ رمى
+         `sections.map is not a function` **فسقطت الصفحةُ كلُّها.**)
+
+         **وهي عائلةُ العطب التي أسقطت بوّابةَ المتجر صباحاً** — قراءةٌ بلا
+         حارسٍ في مكوّنٍ يعلو الشجرة. **وقائمةٌ فارغةٌ تُقرأ «لا أصناف»
+         ويُعاد التحميل، وشاشةٌ بيضاءُ لا تُقرأ شيئاً.**
+
+         @empty-ok — الفراغُ هنا قرارٌ لا صمت. */
+      const res = await api<MenuSection[] | { sections?: MenuSection[] }>(paths.menu(merchantID));
+      setSections(Array.isArray(res) ? res : (res?.sections ?? []));
       setError("");
     } catch (err) {
       setError(errText(err));

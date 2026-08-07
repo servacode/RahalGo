@@ -368,7 +368,9 @@
     "viewCards": "بطاقات",
     "media": {
       "hint": "JPG أو PNG أو WebP — حتى 5MB، تُصغَّر وتُحسَّن تلقائياً",
-      "remove": "إزالة الصورة"
+      "remove": "إزالة الصورة",
+      "image": "صورة",
+      "sectionImage": "صورةُ القسم"
     },
     "listSeparator": "، ",
     "nameSeparator": "، ",
