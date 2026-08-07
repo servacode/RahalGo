@@ -74,6 +74,9 @@ export interface MenuSection {
   id: string;
   name: string;
   items: MenuItem[];
+  /** **وجهُ القسم** — وسوقٌ يُتصفَّح بالصور لا بالأسماء. (٢٠٢٦-٠٨-٠٧.) */
+  image_url?: string | null;
+  image_thumb_url?: string | null;
 }
 
 /** مسارات النقاط — تختلف بالبوابة والعملية واحدة. */
@@ -115,6 +118,7 @@ export function MenuManager({
   merchantID,
   title,
   imageUpload,
+  sectionImageUpload,
   thumb,
 }: {
   api: ApiFn;
@@ -123,6 +127,13 @@ export function MenuManager({
   title?: ReactNode;
   /** رافع الصور — يبقى محقوناً لأنه يعتمد على عميل الرفع الخاص بكل تطبيق */
   imageUpload?: (initialUrl: string | null | undefined, onChange: (id: string | null) => void) => ReactNode;
+  /**
+   * **رافعُ صورةِ القسم** — نوعُ وسائطه غيرُ نوع الصنف.
+   *
+   * **ونوعان في نداءٍ واحدٍ لا يجتمعان**: حارسُ المحرّك يفحص النوعَ، **وصورةُ
+   * قسمٍ تُرفع باسم صنفٍ تُحسب صنفاً حين تُنظَّف الوسائطُ غيرُ المستعملة.**
+   */
+  sectionImageUpload?: (initialUrl: string | null | undefined, onChange: (id: string | null) => void) => ReactNode;
   thumb?: (url: string | null, alt: string) => ReactNode;
 }) {
   const [sections, setSections] = useState<MenuSection[]>([]);
@@ -138,6 +149,10 @@ export function MenuManager({
   const [pendingDelete, setPendingDelete] = useState<MenuItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [sectionName, setSectionName] = useState("");
+  /* **وصورةُ القسم الجديد** — تُرفع قبل أن يُنشأ، فتُحفظ هنا حتّى يُرسَل. */
+  const [sectionImage, setSectionImage] = useState<string | null>(null);
+  /** القسمُ الذي تُبدَّل صورتُه الآن — **وفارغٌ يعني لا نافذةَ مفتوحة.** */
+  const [editSection, setEditSection] = useState<MenuSection | null>(null);
   const [editing, setEditing] = useState<{ item: MenuItem | null; sectionId: string } | null>(null);
 
   useEffect(() => {
@@ -176,9 +191,33 @@ export function MenuManager({
     try {
       await api(paths.sections(merchantID), {
         method: "POST",
-        body: JSON.stringify({ name: sectionName }),
+        /* **والصورةُ تُرسَل مع الاسم** — لا في نداءٍ ثانٍ يفشل نصفُه
+           فيبقى قسمٌ بلا وجهٍ ولا يعلم صاحبُه لماذا. */
+        body: JSON.stringify({ name: sectionName, image_media_id: sectionImage ?? "" }),
       });
       setSectionName("");
+      setSectionImage(null);
+      await load();
+    } catch (err) {
+      setError(errText(err));
+    }
+  }
+
+  /**
+   * **تعديلُ القسم** — اسماً أو صورة.
+   *
+   * **وكان القسمُ يُنشأ ويُحذف لا غير**: من أخطأ حرفاً في اسمه لم يملك
+   * تصحيحَه، **وأصنافُه تمنع حذفَه** — فيبقى الخطأُ معروضاً على زبائنه.
+   */
+  async function saveSection(sec: MenuSection, name: string, imageID: string | null) {
+    try {
+      await api(paths.section(sec.id), {
+        method: "PATCH",
+        /* **والغائبُ لا يمسّ الصورة** — `null` يعني «اتركها»، والفارغُ
+           «أزِلها»، والقيمةُ «هذه». */
+        body: JSON.stringify(imageID === null ? { name } : { name, image_media_id: imageID }),
+      });
+      setEditSection(null);
       await load();
     } catch (err) {
       setError(errText(err));
@@ -235,7 +274,7 @@ export function MenuManager({
       <div className="flex flex-wrap items-end justify-between gap-3">
         {title}
         {/* إضافة قسم في الرأس: أول ما يحتاجه متجرٌ فارغ، وآخر ما يحتاجه متجرٌ ممتلئ */}
-        <form onSubmit={addSection} className="flex items-end gap-2">
+        <form onSubmit={addSection} className="flex flex-wrap items-end gap-2">
           <Input
             id="sec-name"
             label={L.sectionName}
@@ -243,6 +282,9 @@ export function MenuManager({
             value={sectionName}
             onChange={(e) => setSectionName(e.target.value)}
           />
+          {/* **وصورةُ القسم عند إنشائه** — لا بعده في نافذةٍ يُبحث عنها.
+              (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «القسم لازم يكون له صورةٌ واسم».) */}
+          {sectionImageUpload?.(null, setSectionImage)}
           <Button type="submit" className="flex shrink-0 items-center gap-1.5">
             <IconAdd size={16} />
             {L.addSection}
@@ -260,8 +302,13 @@ export function MenuManager({
         <div className="space-y-5">
           {sections.map((sec) => (
             <section key={sec.id} className="surface">
-              <div className="flex items-center justify-between border-b border-line-soft px-4 py-3">
-                <h2 className="font-bold">{sec.name}</h2>
+              <div className="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3">
+                {/* **ووجهُ القسم قبل اسمه** — العينُ تمسح عموداً من الصور
+                    أسرعَ ممّا تقرأ عموداً من الأسماء. */}
+                <h2 className="flex min-w-0 items-center gap-2.5 font-bold">
+                  {thumb?.(sec.image_thumb_url ?? null, sec.name)}
+                  <span className="truncate">{sec.name}</span>
+                </h2>
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
@@ -270,6 +317,12 @@ export function MenuManager({
                   >
                     <IconAdd size={15} />
                     {L.addItem}
+                  </Button>
+                  {/* **وتعديلُ القسم** — اسماً أو وجهاً. **وكان يُنشأ ويُحذف
+                      لا غير**: من أخطأ حرفاً في اسمه لم يملك تصحيحَه،
+                      **وأصنافُه تمنع حذفَه**، فيبقى الخطأُ على زبائنه. */}
+                  <Button variant="ghost" onClick={() => setEditSection(sec)} aria-label={L.editSection}>
+                    <IconEdit size={15} />
                   </Button>
                   {/* الحذف لقسمٍ فارغ وحده: حذفُ قسمٍ فيه أصناف يمحوها معه بلا قصد */}
                   {sec.items.length === 0 && (
@@ -362,6 +415,15 @@ export function MenuManager({
         </div>
       )}
 
+      {/* **نافذةُ القسم — اسمٌ ووجه.** */}
+      {editSection && (
+        <SectionDialog
+          section={editSection}
+          imageUpload={sectionImageUpload}
+          onClose={() => setEditSection(null)}
+          onSave={saveSection}
+        />
+      )}
       {editing && (
         <ItemModal
           api={api}
@@ -676,6 +738,56 @@ function ItemModal({
           <Button type="submit" disabled={busy}>
             {m.common.save}
           </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * **نافذةُ القسم** — اسمُه ووجهُه.
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «أساساً القسم لازم يكون له صورةٌ واسم».)
+ *
+ * **وحالتُها محلّيّةٌ لا في المحرّر**: من فتح النافذةَ وكتب ثمّ أغلقها بلا
+ * حفظٍ **لا يترك أثراً في القائمة تحته.**
+ */
+function SectionDialog({
+  section,
+  imageUpload,
+  onClose,
+  onSave,
+}: {
+  section: MenuSection;
+  imageUpload?: (initialUrl: string | null | undefined, onChange: (id: string | null) => void) => ReactNode;
+  onClose: () => void;
+  onSave: (sec: MenuSection, name: string, imageID: string | null) => void | Promise<void>;
+}) {
+  const [name, setName] = useState(section.name);
+  /** **و`null` يعني «لم تُمسّ»** — فتبديلُ الاسم وحدَه لا يمحو الصورة. */
+  const [imageID, setImageID] = useState<string | null>(null);
+  return (
+    <Modal open onClose={onClose} title={L.editSection}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onSave(section, name.trim(), imageID);
+        }}
+        className="space-y-4"
+      >
+        <Input
+          id="sec-edit-name"
+          label={L.sectionName}
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        {imageUpload?.(section.image_url, setImageID)}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+          <Button type="submit">{m.common.save}</Button>
         </div>
       </form>
     </Modal>

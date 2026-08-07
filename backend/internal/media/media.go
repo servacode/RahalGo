@@ -57,7 +57,9 @@ var (
 // **ونوعٌ مستقلٌّ عن `auth_background` عمداً**: خلفيّةُ شاشة الدخول قد تكون
 // صورةً هادئةً وخلفيّةُ الموقع أخرى، **ونوعٌ واحدٌ للاثنين يجعل حذفَ إحداهما
 // يبحث في صور الأخرى.**
-var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true,
+// **و`menu_section` قسمُ قائمةِ متجرٍ — غيرُ `platform_section` الذي للمنصة.**
+// (هجرة ٠٠٨٣ · طلبُ المالك ٢٠٢٦-٠٨-٠٧.)
+var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true, "menu_section": true,
 	"banner": true, "avatar": true, "delivery_proof": true, "platform_logo": true,
 	"auth_background": true, "site_background": true}
 

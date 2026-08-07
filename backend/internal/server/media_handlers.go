@@ -42,7 +42,7 @@ func (s *Server) handleUploadMedia(w http.ResponseWriter, r *http.Request) {
 //
 // **وحراسةُ الدور تقول «هذا تاجر» ولا تقول «ماذا يرفع».** فالقائمةُ هنا،
 // **ومن أضاف نوعاً جديداً للمنصة لا يهبه للتجّار سهواً.**
-var merchantKinds = map[string]bool{"menu_item": true, "merchant_logo": true}
+var merchantKinds = map[string]bool{"menu_item": true, "menu_section": true, "merchant_logo": true}
 
 // handleMerchantUploadMedia رفعُ صورةٍ من بوّابة المتجر.
 //

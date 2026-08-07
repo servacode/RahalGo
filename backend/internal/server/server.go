@@ -312,6 +312,9 @@ func (s *Server) Router() http.Handler {
 			r.Patch("/menu/items/{itemID}/availability", s.handleMerchantItemAvailability)
 			// القائمة بضاعته: يضيف ويعدّل ويحذف بنفسه — الحارس مختلف والعملية واحدة
 			r.Post("/stores/{id}/menu/sections", s.handleMerchantCreateSection)
+			// **والقسمُ يُعدَّل** — كان يُنشأ ويُحذف لا غير، فمن أخطأ حرفاً في
+			// اسمه لم يملك تصحيحَه، **وأصنافُه تمنع حذفَه.** (٢٠٢٦-٠٨-٠٧.)
+			r.Patch("/menu/sections/{sectionID}", s.handleMerchantUpdateSection)
 			r.Delete("/menu/sections/{sectionID}", s.handleMerchantDeleteSection)
 			// أقسامُ السوق ليختار الصنفُ موضعَه — **والمراجعةُ تبقى الحارس.**
 			r.Get("/platform-sections", s.handleMerchantPlatformSections)
@@ -502,6 +505,7 @@ func (s *Server) Router() http.Handler {
 				r.Post("/merchants/{id}/suspend", s.handleSuspendMerchant)
 				r.Post("/merchants/{id}/clear-violations", s.handleClearViolations)
 				r.Post("/merchants/{id}/menu/sections", s.handleCreateSection)
+				r.Patch("/menu/sections/{sectionID}", s.handleUpdateSection)
 				r.Delete("/menu/sections/{sectionID}", s.handleDeleteSection)
 				r.Post("/merchants/{id}/menu/items", s.handleCreateItem)
 				r.Patch("/menu/items/{itemID}", s.handleUpdateItem)

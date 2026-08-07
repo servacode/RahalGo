@@ -41,7 +41,13 @@ const PATHS: MenuPaths = {
   platformSections: () => `/api/v1/merchant/platform-sections`,
 };
 
-/** **نقطةُ رفع بوّابة المتجر** — وحارسُ أنواعها في المحرّك أضيقُ من الإدارة. */
+/**
+ * **نقطةُ رفع بوّابة المتجر** — وحارسُ أنواعها في المحرّك أضيقُ من الإدارة.
+ *
+ * **ونوعُ صورةِ القسم غيرُ نوع الصنف** (`menu_section` لا `menu_item`):
+ * حارسُ المحرّك يفحص النوع، **وصورةُ قسمٍ تُرفع باسم صنفٍ تُحسب صنفاً حين
+ * تُنظَّف الوسائطُ غيرُ المستعملة.**
+ */
 const MEDIA = "/api/v1/merchant/media";
 
 /** **وترجمةُ خطأ الخادم تبقى في التطبيق** — `ApiError` نسخةُ كلٍّ من نفسِه. */
@@ -70,6 +76,18 @@ export default function MerchantMenuPage() {
             initialUrl={initialUrl}
             /* **والفراغُ يعني «أزِلها»** — `MenuManager` يميّز `null` من
                `undefined`، فالسلسلةُ الفارغةُ تُترجَم إزالةً صريحة. */
+            onChange={(id) => onChange(id || null)}
+            api={api}
+            mediaUrl={mediaUrl}
+            path={MEDIA}
+            errorText={errText}
+          />
+        )}
+        sectionImageUpload={(initialUrl, onChange) => (
+          <ImageUpload
+            kind="menu_section"
+            label={m.shared.menuEditor.sectionImage}
+            initialUrl={initialUrl}
             onChange={(id) => onChange(id || null)}
             api={api}
             mediaUrl={mediaUrl}

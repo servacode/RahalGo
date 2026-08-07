@@ -46,19 +46,37 @@ func (s *Server) handleMerchantCreateSection(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, errForbidden)
 		return
 	}
-	req, err := decode[struct {
-		Name string `json:"name"`
-	}](r)
+	req, err := decode[catalog.SectionInput](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	sec, err := s.catalog.CreateSection(r.Context(), userIDFrom(r), merchantID, req.Name, clientIP(r))
+	sec, err := s.catalog.CreateSection(r.Context(), userIDFrom(r), merchantID, *req, clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusCreated, sec)
+}
+
+// handleMerchantUpdateSection تعديلُ اسم القسم أو صورته — **بعد فحص الملكيّة.**
+func (s *Server) handleMerchantUpdateSection(w http.ResponseWriter, r *http.Request) {
+	sectionID := chi.URLParam(r, "sectionID")
+	if !s.ownsSection(r, sectionID) {
+		s.respondErr(w, errForbidden)
+		return
+	}
+	req, err := decode[catalog.SectionInput](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	sec, err := s.catalog.UpdateSection(r.Context(), userIDFrom(r), sectionID, *req, clientIP(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, sec)
 }
 
 func (s *Server) handleMerchantDeleteSection(w http.ResponseWriter, r *http.Request) {

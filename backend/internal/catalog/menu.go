@@ -87,10 +87,28 @@ type MenuItem struct {
 }
 
 type MenuSection struct {
-	ID        string     `json:"id"`
-	Name      string     `json:"name"`
-	SortOrder int        `json:"sort_order"`
-	Items     []MenuItem `json:"items"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// ImageURL وجهُ القسم — **وسوقٌ يُتصفَّح بالصور لا بالأسماء.**
+	//
+	// (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «أساساً القسم لازم يكون له صورةٌ واسم».)
+	//
+	// **وفارغٌ لا يكسر شيئاً**: القسمُ يُعرض باسمه كما كان — وكلُّ قسمٍ قائمٍ
+	// في القاعدة اليومَ بلا صورة.
+	ImageURL      *string    `json:"image_url"`
+	ImageThumbURL *string    `json:"image_thumb_url"`
+	SortOrder     int        `json:"sort_order"`
+	Items         []MenuItem `json:"items"`
+}
+
+// SectionInput ما يُرسَل عند الإنشاء أو التعديل.
+//
+// **و`ImageMediaID` ثلاثيُّ الحال**: غائبٌ يعني «لا تمسّ الصورة»، وفارغٌ
+// يعني «أزِلها»، وقيمةٌ تعني «هذه». **ومن خلط الغائبَ بالفارغ محا صورةَ
+// قسمٍ كلَّما بُدّل اسمُه.**
+type SectionInput struct {
+	Name         string  `json:"name"`
+	ImageMediaID *string `json:"image_media_id"`
 }
 
 // GetMenu يعيد شجرة القائمة كاملة لمتجر.
@@ -102,14 +120,16 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	sections := []MenuSection{}
 	secIdx := map[string]int{}
 	rows, err := s.db.Query(ctx, `
-		SELECT id, name, sort_order FROM menu_sections
-		WHERE merchant_id = $1 ORDER BY sort_order, created_at`, merchantID)
+		SELECT ms.id, ms.name, sm.path, sm.thumb_path, ms.sort_order
+		FROM menu_sections ms
+		LEFT JOIN media sm ON sm.id = ms.image_media_id
+		WHERE ms.merchant_id = $1 ORDER BY ms.sort_order, ms.created_at`, merchantID)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var sec MenuSection
-		if err := rows.Scan(&sec.ID, &sec.Name, &sec.SortOrder); err != nil {
+		if err := rows.Scan(&sec.ID, &sec.Name, &sec.ImageURL, &sec.ImageThumbURL, &sec.SortOrder); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -243,8 +263,8 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 
 // ---------- الأقسام ----------
 
-func (s *Service) CreateSection(ctx context.Context, actorID, merchantID, name string, ip string) (*MenuSection, error) {
-	if name == "" {
+func (s *Service) CreateSection(ctx context.Context, actorID, merchantID string, in SectionInput, ip string) (*MenuSection, error) {
+	if in.Name == "" {
 		return nil, ErrNameRequired
 	}
 	if _, err := s.merchantByID(ctx, merchantID); err != nil {
@@ -252,15 +272,58 @@ func (s *Service) CreateSection(ctx context.Context, actorID, merchantID, name s
 	}
 	var sec MenuSection
 	err := s.db.QueryRow(ctx, `
-		INSERT INTO menu_sections (merchant_id, name, sort_order)
-		VALUES ($1, $2, COALESCE((SELECT max(sort_order)+1 FROM menu_sections WHERE merchant_id=$1), 1))
-		RETURNING id, name, sort_order`, merchantID, name).
-		Scan(&sec.ID, &sec.Name, &sec.SortOrder)
+		WITH ins AS (
+			INSERT INTO menu_sections (merchant_id, name, sort_order, image_media_id)
+			VALUES ($1, $2,
+				COALESCE((SELECT max(sort_order)+1 FROM menu_sections WHERE merchant_id=$1), 1),
+				NULLIF($3, '')::uuid)
+			RETURNING id, name, sort_order, image_media_id
+		)
+		SELECT ins.id, ins.name, sm.path, sm.thumb_path, ins.sort_order
+		FROM ins LEFT JOIN media sm ON sm.id = ins.image_media_id`,
+		merchantID, in.Name, derefOr(in.ImageMediaID, "")).
+		Scan(&sec.ID, &sec.Name, &sec.ImageURL, &sec.ImageThumbURL, &sec.SortOrder)
 	if err != nil {
 		return nil, err
 	}
 	sec.Items = []MenuItem{}
 	s.audit(ctx, actorID, "menu.section_create", "menu_section", sec.ID, ip)
+	return &sec, nil
+}
+
+// UpdateSection يبدّل اسمَ القسم أو صورتَه.
+//
+// **وكان القسمُ يُنشأ ويُحذف ولا يُعدَّل** — فمن أخطأ حرفاً في اسمه حذفه
+// وأعاد بناءه، **وأصنافُه تمنع الحذف** (`ErrSectionNotEmpty`)، فيبقى الخطأُ
+// معروضاً على زبائنه.
+//
+// **والصورةُ كشفت النقص**: قسمٌ قائمٌ لا سبيلَ لإعطائه وجهاً.
+func (s *Service) UpdateSection(ctx context.Context, actorID, sectionID string, in SectionInput, ip string) (*MenuSection, error) {
+	if in.Name == "" {
+		return nil, ErrNameRequired
+	}
+	var sec MenuSection
+	err := s.db.QueryRow(ctx, `
+		WITH upd AS (
+			UPDATE menu_sections SET
+				name = $2,
+				-- **والغائبُ لا يمسّ الصورة**: تبديلُ الاسم وحدَه لا يمحو وجهَ القسم.
+				image_media_id = CASE
+					WHEN $3::text IS NULL THEN image_media_id
+					WHEN $3 = '' THEN NULL
+					ELSE $3::uuid END
+			WHERE id = $1
+			RETURNING id, name, sort_order, image_media_id
+		)
+		SELECT upd.id, upd.name, sm.path, sm.thumb_path, upd.sort_order
+		FROM upd LEFT JOIN media sm ON sm.id = upd.image_media_id`,
+		sectionID, in.Name, in.ImageMediaID).
+		Scan(&sec.ID, &sec.Name, &sec.ImageURL, &sec.ImageThumbURL, &sec.SortOrder)
+	if err != nil {
+		return nil, err
+	}
+	sec.Items = []MenuItem{}
+	s.audit(ctx, actorID, "menu.section_update", "menu_section", sec.ID, ip)
 	return &sec, nil
 }
 
@@ -528,4 +591,12 @@ func (s *Service) ItemModifiers(ctx context.Context, itemID string) ([]ModifierG
 		}
 	}
 	return groups, rows.Err()
+}
+
+// derefOr قيمةُ المؤشّر أو بديلُها — **والفارغُ يعني «لا صورة» لا «خطأ».**
+func derefOr(p *string, alt string) string {
+	if p == nil {
+		return alt
+	}
+	return *p
 }

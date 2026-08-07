@@ -19,19 +19,32 @@ func (s *Server) handleGetMenu(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreateSection(w http.ResponseWriter, r *http.Request) {
-	req, err := decode[struct {
-		Name string `json:"name"`
-	}](r)
+	req, err := decode[catalog.SectionInput](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	sec, err := s.catalog.CreateSection(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), req.Name, clientIP(r))
+	sec, err := s.catalog.CreateSection(r.Context(), userIDFrom(r), chi.URLParam(r, "id"), *req, clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusCreated, sec)
+}
+
+// handleUpdateSection تعديلُ اسم القسم أو صورته.
+func (s *Server) handleUpdateSection(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[catalog.SectionInput](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	sec, err := s.catalog.UpdateSection(r.Context(), userIDFrom(r), chi.URLParam(r, "sectionID"), *req, clientIP(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, sec)
 }
 
 func (s *Server) handleDeleteSection(w http.ResponseWriter, r *http.Request) {

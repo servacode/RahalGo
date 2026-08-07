@@ -74,6 +74,14 @@ export default function AdminMenuPage() {
             onChange={onChange}
           />
         )}
+        sectionImageUpload={(initialUrl, onChange) => (
+          <ImageUpload
+            kind="menu_section"
+            label={m.shared.menuEditor.sectionImage}
+            initialUrl={initialUrl}
+            onChange={onChange}
+          />
+        )}
         thumb={(url, alt) => <MediaThumb url={url} alt={alt} fallback={alt} size={48} />}
       />
     </PageContainer>
