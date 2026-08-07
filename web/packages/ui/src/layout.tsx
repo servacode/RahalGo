@@ -70,7 +70,7 @@ export function PageHeader({
        العنوان لا كرتٌ جامعٌ عاد من الباب الخلفيّ.** */
     <div className="surface-lit flex flex-wrap items-center justify-between gap-3 surface px-4 py-3">
       <div className="min-w-0">
-        <h1 className="flex items-center gap-2 text-xl font-bold">
+        <h1 className="heading-section flex items-center gap-2">
           {Icon && <Icon size={20} className="text-primary" />}
           {title}
         </h1>
@@ -306,7 +306,7 @@ export function StatCard({
       } ${onClick ? "hover:border-primary-edge" : ""}`}
     >
       {Icon && <Icon size={18} className="mb-1 text-ink-muted" />}
-      <p className={`text-xl font-bold ${toneCls}`}>
+      <p className={`figure ${toneCls}`}>
         {typeof value === "number" ? fmtNum(value) : value}
       </p>
       <p className="text-xs text-ink-muted">{label}</p>
@@ -440,9 +440,7 @@ export function TabCards({
             </span>
             {v !== undefined && (
               <span
-                className={`mt-1 block text-lg font-bold ${
-                  v > 0 ? "text-success" : v < 0 ? "text-danger" : "text-ink-muted"
-                }`}
+                className={`figure mt-1 block ${ v > 0 ? "text-success" : v < 0 ? "text-danger" : "text-ink-muted" }`}
                 dir="ltr"
               >
                 {v > 0 ? "+" : ""}

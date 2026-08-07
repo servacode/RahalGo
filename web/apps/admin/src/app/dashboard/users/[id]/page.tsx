@@ -260,7 +260,7 @@ export default function UserProfilePage() {
           <div className="flex min-w-0 items-center gap-3">
             <MediaThumb url={p.avatar_thumb_url} alt="" fallback={p.full_name || m.terms.avatarFallback} size={56} />
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold">{p.full_name || "—"}</h1>
+              <h1 className="heading-card truncate">{p.full_name || "—"}</h1>
               <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-muted">
                 <span className="inline-flex items-center gap-1">
                   <IconPhone size={12} />
@@ -441,7 +441,7 @@ export default function UserProfilePage() {
             }`}
           >
             <div className="mb-1">{s.icon}</div>
-            <p className="text-lg font-bold">{s.value}</p>
+            <p className="figure">{s.value}</p>
             <p className="text-xs text-ink-muted">{s.label}</p>
           </div>
         ))}
@@ -1013,7 +1013,7 @@ function FinBucket({
   const tone = positive ? "text-success" : "text-danger";
   return (
     <FormSection title={title} icon={<IconWallet />}>
-      <p className={`mb-3 text-2xl font-bold ${tone}`} dir="ltr">
+      <p className={`figure mb-3 ${tone}`} dir="ltr">
         {positive ? "+" : ""}
         {fmtNum(total)}{" "}
         <span className="text-sm font-normal text-ink-muted">{m.common.currency}</span>

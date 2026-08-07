@@ -131,7 +131,7 @@ export default function OrdersBoard() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h1 className="flex items-center gap-2 text-xl font-bold">
+          <h1 className="heading-section flex items-center gap-2">
             <IconOrder className="text-primary" />
             {m.merchant.nav.orders}
           </h1>
@@ -456,7 +456,7 @@ function AcceptModal({
           autoFocus
           value={minutes}
           onChange={(e) => setMinutes(e.target.value)}
-          className="text-center text-lg font-bold"
+          className="figure text-center"
         />
         <div className="flex flex-wrap gap-2">
           {["10", "15", "20", "30", "45"].map((v) => (

@@ -87,7 +87,7 @@ export default function WalletModal({
           <IconWallet size={18} />
           {m.admin.users.balance}
         </span>
-        <span className="text-2xl font-bold text-primary-dark">
+        <span className="figure text-primary-dark">
           {balance === null ? "…" : `${fmtNum(balance)} ${m.common.currency}`}
         </span>
       </div>

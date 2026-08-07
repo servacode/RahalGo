@@ -89,7 +89,7 @@ export function Sheet({
         />
 
         <div className="flex shrink-0 items-start gap-2 px-5 pt-3 pb-2">
-          <h2 id={id} className="min-w-0 flex-1 text-lg font-bold">
+          <h2 id={id} className="heading-card min-w-0 flex-1">
             {title}
           </h2>
           <button

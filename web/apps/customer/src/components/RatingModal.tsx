@@ -64,7 +64,7 @@ export default function RatingModal({
         className="w-full max-w-sm surface p-5 elev-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-1 text-lg font-bold">{R.title}</h2>
+        <h2 className="heading-card mb-1">{R.title}</h2>
         <p className="mb-4 text-sm text-ink-muted">
           #{order.number} — {order.items_preview}
         </p>

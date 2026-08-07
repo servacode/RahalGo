@@ -47,7 +47,7 @@ export default function AdminMenuPage() {
   return (
     <PageContainer>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-xl font-bold">
+        <h1 className="heading-section flex items-center gap-2">
           <IconStore className="text-primary" />
           {m.terms.menu}
           {name && <span className="font-normal text-ink-muted">— {name}</span>}

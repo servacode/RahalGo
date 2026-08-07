@@ -374,7 +374,7 @@ function CashBoxModal({
             <IconWallet size={18} />
             {m.admin.drivers.cashHeld}
           </span>
-          <span className="text-2xl font-bold text-primary-dark">
+          <span className="figure text-primary-dark">
             {held === null ? "…" : `${fmtNum(held)} ${m.common.currency}`}
           </span>
         </div>

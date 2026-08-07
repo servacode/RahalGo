@@ -353,7 +353,7 @@ export default function CartPage() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <section>
-        <h1 className="mb-1 text-xl font-bold">
+        <h1 className="heading-section mb-1">
           {m.site.cart.title}{" "}
           <span className="text-sm font-normal text-ink-muted">
             {withPlatform(m.site.cart.fromPlatform, platformName)}
@@ -457,7 +457,7 @@ export default function CartPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-xl font-bold">{m.site.cart.checkout}</h2>
+        <h2 className="heading-section mb-4">{m.site.cart.checkout}</h2>
 
         {!logged && !loading ? (
           <div className="surface p-6 text-center">

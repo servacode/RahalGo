@@ -597,7 +597,7 @@ function OrderCard({
       {/* ── الإجمالي ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between border-t border-line-soft pt-3">
         <span className="text-sm text-ink-muted">{m.site.orders.statTotal}</span>
-        <span dir="ltr" className="text-lg font-bold tabular-nums">
+        <span dir="ltr" className="figure">
           {fmtNum(o.total)}{" "}
           <span className="text-xs font-normal text-ink-muted">{m.common.currency}</span>
         </span>

@@ -80,7 +80,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">
+      <h1 className="heading-page">
         {m.admin.dashboard.welcome}
         {user?.full_name ? `${m.common.listSeparator}${user.full_name}` : ""}
       </h1>

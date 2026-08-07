@@ -281,7 +281,7 @@ export default function ShopPage() {
           {/* ٤ · **أصنافُ المختار** — واسمُه فوقها فلا يضيع ما يُنظر إليه. */}
           {active && (
             <div className="mt-5">
-              <h2 className="mb-3 text-lg font-bold">{active.name}</h2>
+              <h2 className="heading-card mb-3">{active.name}</h2>
               {itemsFailed ? (
                 <Alert tone="warning" title={m.errors.offline}>
                   {m.errors.offlineHint}

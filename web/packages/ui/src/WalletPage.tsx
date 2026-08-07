@@ -366,7 +366,7 @@ export function WalletPage({
           {/* **والشرحُ حُذف**: «المحفظة اختيارية…» جملةٌ تُقرأ مرّةً ثمّ تبقى
               تشغل بطاقةَ الرصيد كلَّ يوم. **وما يُقال مرّةً لا يُكتب دائماً.**
               (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بلاها».) */}
-          <p className="mt-0.5 text-2xl font-bold text-accent" dir="ltr">
+          <p className="figure mt-0.5 text-accent" dir="ltr">
             {fmtNum(balance)} <span className="text-sm font-normal">{m.common.currency}</span>
           </p>
         </div>
@@ -548,7 +548,7 @@ function PayoutModal({
             required
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="text-center text-lg font-bold"
+            className="figure text-center"
           />
           <button
             type="button"

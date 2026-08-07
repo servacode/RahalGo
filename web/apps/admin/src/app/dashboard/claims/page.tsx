@@ -193,7 +193,7 @@ export default function DisputesPage() {
                 </span>
               )}
 
-              <span dir="ltr" className="shrink-0 text-lg font-bold tabular-nums text-warning">
+              <span dir="ltr" className="figure shrink-0 text-warning">
                 {fmtNum(d.amount)}
               </span>
 

@@ -829,6 +829,57 @@ input[type="number"]::-webkit-inner-spin-button {
   backdrop-filter: blur(18px) saturate(1.1);
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   **سُلَّمُ العناوين — ثلاثُ درجاتٍ لا ثلاثةٌ وخمسون قراراً**
+   ══════════════════════════════════════════════════════════════════════
+
+   (طلبُ المالك ٢٠٢٦-٠٨-٠٧: مطاردةُ ما هو خارجَ المركز — والعناوينُ أكبرُ
+    ما بقي: ٥٣ موضعاً.)
+
+   **وكلُّ عنوانٍ كان قراراً في مكانه**: `text-lg font-bold` هنا و`text-xl`
+   هناك و`text-2xl` في ثالث — **ولا قاعدةَ تقول أيَّها لأيّ.**
+
+   **فتُفتح شاشتان جنباً إلى جنبٍ فيُقرأ عنوانُ إحداهما أهمَّ من الأخرى**،
+   وهما في المرتبة نفسِها.
+
+   | الصنف | متى |
+   |---|---|
+   | `heading-page` | عنوانُ الشاشة — واحدٌ في الصفحة |
+   | `heading-section` | عنوانُ قسمٍ داخلَها |
+   | `heading-card` | عنوانُ بطاقةٍ أو لوح |
+
+   **ولا لونَ فيها**: العنوانُ يرث لونَ ما حوله — **ومن أراد نبرةً أضافها،
+   ولا تُفرض على الجميع.** */
+@utility heading-page {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  font-weight: 700;
+}
+
+@utility heading-section {
+  font-size: var(--text-xl);
+  line-height: var(--text-xl--line-height);
+  font-weight: 700;
+}
+
+@utility heading-card {
+  font-size: var(--text-lg);
+  line-height: var(--text-lg--line-height);
+  font-weight: 700;
+}
+
+/* **والرقمُ الكبيرُ ليس عنواناً.**
+
+   **خمسةٌ وعشرون موضعاً كانت تكتبه بأصناف العناوين نفسِها** — رصيدٌ ومجموعٌ
+   وسعر. **وهو قيمةٌ تُقرأ لا رأسٌ يُتصفَّح**، ويحتاج ما لا يحتاجه العنوان:
+   **أرقاماً بعرضٍ واحد** (`tabular-nums`) فلا يرقص الرقمُ حين يتبدّل. */
+@utility figure {
+  font-size: var(--text-2xl);
+  line-height: var(--text-2xl--line-height);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 @utility surface {
   /* **والتضبيبُ من اللغة نفسِها.**
 

@@ -394,11 +394,7 @@ export function OtpInput({
             commit(pasted);
             refs.current[Math.min(pasted.length, length - 1)]?.focus();
           }}
-          className={`h-13 w-11 rounded-control border bg-field text-center font-mono text-xl font-bold text-ink outline-none transition-all sm:w-12 ${
-            d.trim()
-              ? "border-primary bg-primary-tint text-primary"
-              : "border-line hover:border-line-soft"
-          } focus:border-primary`}
+          className={`figure h-13 w-11 rounded-control border bg-field text-center font-mono text-ink outline-none transition-all sm:w-12 ${ d.trim() ? "border-primary bg-primary-tint text-primary" : "border-line hover:border-line-soft" } focus:border-primary`}
         />
       ))}
     </div>
@@ -551,7 +547,7 @@ export function Modal({
             **وزرٌّ يُرى يُغني عن ثلاثةٍ تُعرَف بالتجربة.**
             (قرارُ المالك ٢٠٢٦-٠٨-٠٣.) */}
         <div className="mb-4 flex items-start justify-between gap-3">
-          <h2 className="text-lg font-bold">{title}</h2>
+          <h2 className="heading-card">{title}</h2>
           <button
             type="button"
             onClick={onClose}

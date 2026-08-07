@@ -205,7 +205,7 @@ export default function AllAccountsTable() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{m.admin.users.title}</h1>
+        <h1 className="heading-page">{m.admin.users.title}</h1>
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -230,7 +230,7 @@ export default function AllAccountsTable() {
             onClick={() => setRole("")}
             className={`rounded-card border p-2.5 text-center transition-colors ${role === "" ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
           >
-            <p className="text-lg font-bold">{roleCounts.total}</p>
+            <p className="figure">{roleCounts.total}</p>
             <p className="text-xs text-ink-muted">{m.admin.users.allRoles}</p>
           </button>
           {([
@@ -245,7 +245,7 @@ export default function AllAccountsTable() {
               onClick={() => { setRole(role === key ? "" : key); setPage(1); }}
               className={`rounded-card border p-2.5 text-center transition-colors ${role === key ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
             >
-              <p className={`inline-flex items-center gap-1 text-lg font-bold ${style ? style.cls.split(" ").filter((c) => c.startsWith("text-")).join(" ") : ""}`}>
+              <p className={`figure inline-flex items-center gap-1 ${style ? style.cls.split(" ").filter((c) => c.startsWith("text-")).join(" ") : ""}`}>
                 {style && <style.Icon size={15} />}
                 {roleCounts.roles[key] ?? 0}
               </p>
@@ -256,7 +256,7 @@ export default function AllAccountsTable() {
             onClick={() => { setOnlineOnly(!onlineOnly); setPage(1); }}
             className={`rounded-card border p-2.5 text-center transition-colors ${onlineOnly ? "border-success bg-success-tint" : "border-line bg-surface hover:border-success-edge"}`}
           >
-            <p className="inline-flex items-center gap-1.5 text-lg font-bold text-success">
+            <p className="figure inline-flex items-center gap-1.5 text-success">
               <span className="h-2 w-2 animate-pulse rounded-badge bg-success" />
               {roleCounts.roles.online ?? 0}
             </p>

@@ -155,7 +155,7 @@ export default function ItemCard({
           ) : (
             /* **وحرفُ الاسم لا رمزٌ رماديّ** — الرمزُ الواحدُ لعشرة أصنافٍ
                يجعلها شيئاً واحداً، **والحرفُ يفرّق بينها ويبقى لها.** */
-            <span className="text-3xl font-bold text-primary-dark">{item.name.charAt(0)}</span>
+            <span className="figure text-primary-dark">{item.name.charAt(0)}</span>
           )}
           {/* **«نفد» و«نائم» خبران مختلفان** — الأوّلُ لا موعدَ له والثاني له
               موعد. **وموضعُهما فوق الصورة** كشارة القسم: تُقرأ قبل الاسم. */}

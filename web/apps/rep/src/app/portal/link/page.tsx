@@ -52,7 +52,7 @@ export default function LinkPage() {
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-badge bg-warning-tint text-warning">
           <IconLock size={26} />
         </span>
-        <h1 className="mb-2 text-lg font-bold">{m.rep.lockedTitle}</h1>
+        <h1 className="heading-card mb-2">{m.rep.lockedTitle}</h1>
         <p className="mb-5 text-sm leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
         /* **وزرٌّ مركزيّ** — كان مبنيّاً باليد بتعبئةٍ صلبة. (قرارُ المالك ٢٠٢٦-٠٨-٠٧.) */
         <Link href="/portal/account" className="inline-block">
@@ -71,7 +71,7 @@ export default function LinkPage() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div className="text-center">
-        <h1 className="flex items-center justify-center gap-2 text-lg font-bold">
+        <h1 className="heading-card flex items-center justify-center gap-2">
           <IconQr size={20} className="text-primary" />
           {m.rep.linkTitle}
         </h1>

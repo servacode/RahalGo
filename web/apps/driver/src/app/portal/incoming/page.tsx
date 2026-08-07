@@ -96,7 +96,7 @@ export default function IncomingPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">{D.queue.title}</h1>
+      <h1 className="heading-section">{D.queue.title}</h1>
 
       {error && (
         <Alert>{error}</Alert>

@@ -184,7 +184,7 @@ export function Invoice({
             {order.discount > 0 && (
               <Row label={V.discount} value={-order.discount} tone="success" />
             )}
-            <div className="flex items-center justify-between border-t-2 border-line-soft pt-2 text-lg font-bold">
+            <div className="figure flex items-center justify-between border-t-2 border-line-soft pt-2">
               <dt>{V.total}</dt>
               <dd dir="ltr" className="tabular-nums">
                 {fmtNum(order.total)}{" "}

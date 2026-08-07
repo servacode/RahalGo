@@ -149,7 +149,7 @@ export default function MerchantProfilePage() {
           <IconStore size={26} className="text-primary-dark" />
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold">{mr.name}</h1>
+          <h1 className="heading-page">{mr.name}</h1>
           <p className="text-sm text-ink-muted">
             {mr.category_name} · <span dir="ltr">{mr.phone}</span>
           </p>

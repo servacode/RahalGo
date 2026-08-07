@@ -107,7 +107,7 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
         <img src={img} alt="" loading="lazy" className="mb-4 h-56 w-full rounded-card object-cover" />
       )}
 
-      <h1 className="text-2xl font-bold">{item.name}</h1>
+      <h1 className="heading-page">{item.name}</h1>
       {item.description && <p className="mt-1 text-ink-muted">{item.description}</p>}
       {/* **والخصمُ يُرى هنا كما يُرى في البطاقة.**
 
@@ -117,7 +117,7 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
 
           **والمشطوبُ يُحسب من `price_before` لا يُقدَّر**: الخيارات تُضاف
           إلى الاثنين بالمقدار نفسِه، **فالفرقُ بينهما يبقى هو الخصم.** */}
-      <p className="mt-2 flex items-baseline gap-2 text-xl font-bold text-primary-dark">
+      <p className="figure mt-2 flex items-baseline gap-2 text-primary-dark">
         <span>
           {fmtNum(unit)} {m.common.currency}
         </span>

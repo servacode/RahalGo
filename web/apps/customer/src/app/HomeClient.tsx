@@ -114,7 +114,7 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
 
           **ولا يُحذف**: هو ما يقول للزائر الجديد أين وقع. **إنّما يُقاس
           بالشاشة لا بالذوق.** */}
-      <h1 className="mb-3 text-xl font-bold sm:mb-4 sm:text-2xl">{m.site.hero}</h1>
+      <h1 className="heading-section mb-3 sm:mb-4 sm:heading-page">{m.site.hero}</h1>
 
       {/* **سلايدرٌ لا شريطٌ يُسحب.**
 
@@ -183,7 +183,7 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
         )
       ) : (
         <>
-          <h2 className="mb-3 text-lg font-bold">{m.site.sections.title}</h2>
+          <h2 className="heading-card mb-3">{m.site.sections.title}</h2>
           <p className="mb-4 text-sm text-ink-muted">{m.site.sections.hint}</p>
           {/* **صورةُ القسم هويّتُه — لا رمزٌ رماديّ.**
 

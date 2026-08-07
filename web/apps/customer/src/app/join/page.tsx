@@ -123,7 +123,7 @@ function JoinForm() {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
         <IconSuccess size={56} className="mx-auto mb-4 text-success" />
-        <p className="text-lg font-bold">{J.done}</p>
+        <p className="figure">{J.done}</p>
       </div>
     );
   }
@@ -137,7 +137,7 @@ function JoinForm() {
       <div className="mb-5 text-center">
         {/* علامةُ المنصة من الإعدادات — شعارٌ إن رُفع وإلّا أوّلُ حرفٍ من الاسم */}
         <BrandMark size={56} rounded="card" className="mx-auto mb-3" />
-        <h1 className="text-2xl font-bold">{J.title}</h1>
+        <h1 className="heading-page">{J.title}</h1>
         <p className="mt-1 text-sm text-ink-muted">{J.subtitle}</p>
       </div>
 

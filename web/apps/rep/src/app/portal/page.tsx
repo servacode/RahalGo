@@ -89,7 +89,7 @@ export default function OverviewPage() {
             <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-warning-tint text-warning">
               <IconLock size={22} />
             </span>
-            <p className="text-lg font-bold">{m.rep.lockedTitle}</p>
+            <p className="figure">{m.rep.lockedTitle}</p>
             <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
             {/* **وزرٌّ مركزيّ** — كان مبنيّاً باليد بتعبئةٍ بيضاء. */}
             <Link href="/portal/account" className="mt-4 inline-block">
@@ -140,7 +140,7 @@ export default function OverviewPage() {
       {/* هدف الشهر — الرقم الذي يقيس عمل المندوب فعلاً (PLAN §7) */}
       <Card title={G.title} icon={IconTrendUp}>
         <div className="flex flex-wrap items-end justify-between gap-2">
-          <p className="text-2xl font-bold">
+          <p className="figure">
             <span className={reached ? "text-success" : "text-primary-dark"}>{fmtNum(done)}</span>
             <span className="text-base font-normal text-ink-muted">
               {" / "}
@@ -165,11 +165,11 @@ export default function OverviewPage() {
 
         <div className="mt-4 grid grid-cols-1 gap-3 border-t border-line-soft pt-4 sm:grid-cols-3">
           <div>
-            <p className="text-lg font-bold">{fmtNum(me.month_delivered)}</p>
+            <p className="figure">{fmtNum(me.month_delivered)}</p>
             <p className="text-xs text-ink-muted">{G.monthDelivered}</p>
           </div>
           <div>
-            <p className="text-lg font-bold" dir="ltr">
+            <p className="figure" dir="ltr">
               {fmtNum(me.month_commissions)}
             </p>
             <p className="text-xs text-ink-muted">
@@ -177,7 +177,7 @@ export default function OverviewPage() {
             </p>
           </div>
           <div>
-            <p className={`text-lg font-bold ${me.pending_leads ? "text-warning" : ""}`}>
+            <p className={`figure ${me.pending_leads ? "text-warning" : ""}`}>
               {fmtNum(me.pending_leads)}
             </p>
             <p className="text-xs text-ink-muted">{G.pendingLeads}</p>

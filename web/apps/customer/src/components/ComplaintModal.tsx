@@ -79,7 +79,7 @@ export default function ComplaintModal({
         className="w-full max-w-sm surface p-5 elev-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-1 text-lg font-bold">{C.title}</h2>
+        <h2 className="heading-card mb-1">{C.title}</h2>
         <p className="mb-4 text-sm text-ink-muted">#{orderNumber}</p>
         <form onSubmit={submit} className="space-y-4">
           {/* **الاختيارُ من العُدّة لا مرتجَلاً.**

@@ -62,7 +62,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
             <IconWarning size={22} />
           </span>
           <div>
-            <h1 className="text-lg font-bold text-ink">{G.title}</h1>
+            <h1 className="heading-card text-ink">{G.title}</h1>
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">{G.hint}</p>
           </div>
         </div>

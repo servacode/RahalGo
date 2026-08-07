@@ -347,7 +347,7 @@ export function Confirm({
         onClick={(e) => e.stopPropagation()}
         className="surface-sheet w-full max-w-sm p-5"
       >
-        <h2 id="cf-t" className="text-lg font-bold">
+        <h2 id="cf-t" className="heading-card">
           {title}
         </h2>
         {body && <div className="mt-1.5 text-sm text-ink-muted">{body}</div>}

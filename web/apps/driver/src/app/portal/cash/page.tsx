@@ -148,7 +148,7 @@ export default function CashPage() {
           عملُه ولا يعرف لماذا.** */}
       <section className="surface p-5">
         <p className="text-sm text-ink-muted">{C.held}</p>
-        <p dir="ltr" className="mt-1 text-3xl font-bold tabular-nums text-warning">
+        <p dir="ltr" className="figure mt-1 text-warning">
           {fmtNum(me.cash_held)}{" "}
           <span className="text-sm font-normal text-ink-muted">{m.common.currency}</span>
         </p>

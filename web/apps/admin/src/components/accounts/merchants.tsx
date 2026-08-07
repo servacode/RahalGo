@@ -325,7 +325,7 @@ export default function MerchantsTable() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">{m.admin.merchants.title}</h1>
+        <h1 className="heading-page">{m.admin.merchants.title}</h1>
         {isAdmin && (
           <div className="flex gap-2">
             <Button

@@ -45,7 +45,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
       <Link href="/" className="mb-3 inline-block text-sm text-ink-muted hover:text-primary-dark">
         ← {m.site.backHome}
       </Link>
-      <h1 className="mb-4 text-2xl font-bold">{title || m.site.sections.title}</h1>
+      <h1 className="heading-page mb-4">{title || m.site.sections.title}</h1>
 
       {!reached ? (
         <Alert tone="warning" title={m.errors.offline}>

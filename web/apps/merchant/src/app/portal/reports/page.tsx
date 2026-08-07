@@ -106,7 +106,7 @@ export default function MerchantReportsPage() {
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-xl font-bold">
+        <h1 className="heading-section flex items-center gap-2">
           <IconStatus className="text-primary" />
           {m.merchant.reports.title}
         </h1>
@@ -130,7 +130,7 @@ export default function MerchantReportsPage() {
         {cards.map((c) => (
           <div key={c.label} className="surface p-4">
             <div className="mb-1 flex items-center gap-2 text-ink-muted">{c.icon}</div>
-            <p className="text-xl font-bold">{c.value}</p>
+            <p className="figure">{c.value}</p>
             <p className="text-xs text-ink-muted">{c.label}</p>
           </div>
         ))}

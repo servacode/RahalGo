@@ -740,7 +740,7 @@ export function LoginCard({
                   حرفٍ من الاسم المضبوط. */}
               <BrandMark size={76} rounded="card" className="mx-auto mb-5" />
               {head.title && (
-                <h1 className="text-xl font-bold tracking-tight text-ink">{head.title}</h1>
+                <h1 className="heading-section tracking-tight text-ink">{head.title}</h1>
               )}
               {/* **ولا سطرَ وصفٍ في شاشة الدخول** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦:
                   «أدخل رقمك — وسننقلك إلى مكانك حسب دورك: احذف هذه العبارة»).

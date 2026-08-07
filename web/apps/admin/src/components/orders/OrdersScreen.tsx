@@ -913,7 +913,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
+        <h1 className="heading-page flex items-center gap-2">
           <IconOrder className="text-primary" />
           {live ? m.admin.ordersPage.title : m.admin.ordersPage.historyTitle}
           <span
@@ -1994,7 +1994,7 @@ function InvoiceList({ o }: { o: OrderRow }) {
         <span className="font-medium">{m.admin.ordersPage.total}</span>
         <span
           dir="ltr"
-          className="text-lg font-bold tabular-nums text-primary-dark"
+          className="figure text-primary-dark"
         >
           {fmtNum(o.total)}{" "}
           <span className="text-xs font-normal text-ink-muted">

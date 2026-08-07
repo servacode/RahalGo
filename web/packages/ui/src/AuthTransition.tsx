@@ -76,7 +76,7 @@ export function AuthTransition({
       <BrandMark size={64} rounded="card" />
 
       <div className="px-6 text-center">
-        <p className="text-lg font-bold text-ink">{title}</p>
+        <p className="figure text-ink">{title}</p>
         <p className="mt-1 text-sm text-ink-muted">{hint}</p>
       </div>
 

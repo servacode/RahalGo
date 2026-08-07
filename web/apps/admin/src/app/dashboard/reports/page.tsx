@@ -146,7 +146,7 @@ function Stat({
         <Icon size={18} className="text-primary-dark" />
       </div>
       <div className="min-w-0">
-        <p className="text-lg font-bold leading-tight">{value}</p>
+        <p className="figure leading-tight">{value}</p>
         <p className="truncate text-xs text-ink-muted">
           {label}
           {sub && ` · ${sub}`}

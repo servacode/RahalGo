@@ -45,7 +45,7 @@ function Sso({ loginPath }: { loginPath: string }) {
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
       {failed ? (
         <>
-          <p className="text-lg font-bold text-danger">{m.shared.sso.failed}</p>
+          <p className="figure text-danger">{m.shared.sso.failed}</p>
           <Button onClick={() => window.location.replace(loginPath)}>{m.auth.login}</Button>
         </>
       ) : (
