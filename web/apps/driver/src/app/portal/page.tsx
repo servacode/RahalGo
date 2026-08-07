@@ -40,6 +40,7 @@ import {
   IconDriver,
   IconWarning,
   IconCamera,
+  Radio,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -481,25 +482,21 @@ export default function TasksPage() {
           ) : (
             <div className="space-y-1.5">
               {stageReasons.map((x) => (
-                <label
+                <Radio
                   key={x.code}
-                  className={`flex cursor-pointer items-center gap-2.5 rounded-control border px-3 py-2 text-sm transition-colors ${
+                  id={`df-${x.code}`}
+                  name="fail-reason"
+                  checked={reason === x.code}
+                  onChange={() => setReason(x.code)}
+                  /* **ورمزٌ بلا ترجمةٍ يُعرض كما هو** — لا فارغاً. فمن أضاف
+                     سبباً في الخادم ونسي القاموسَ يرى نقصَه في الشاشة. */
+                  label={m.common.failReasons[x.code as keyof typeof m.common.failReasons] ?? x.code}
+                  className={`rounded-control border px-3 py-2 transition-colors ${
                     reason === x.code
                       ? "border-accent bg-accent-tint font-medium"
                       : "border-line hover:border-accent-edge"
                   }`}
-                >
-                  <input
-                    type="radio"
-                    name="fail-reason"
-                    className="accent-accent"
-                    checked={reason === x.code}
-                    onChange={() => setReason(x.code)}
-                  />
-                  {/* **ورمزٌ بلا ترجمةٍ يُعرض كما هو** — لا فارغاً. فمن أضاف
-                      سبباً في الخادم ونسي القاموسَ يرى نقصَه في الشاشة. */}
-                  {m.common.failReasons[x.code as keyof typeof m.common.failReasons] ?? x.code}
-                </label>
+                />
               ))}
             </div>
           )}

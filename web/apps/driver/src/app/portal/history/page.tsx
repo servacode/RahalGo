@@ -34,6 +34,7 @@ import {
   IconSupport,
   IconStar,
   PageHeader,
+  Radio,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -283,27 +284,25 @@ export default function DriverHistoryPage() {
           ) : (
             <div className="space-y-1.5">
               {reasons.map((x) => (
-                <label
+                <Radio
                   key={x.code}
-                  className={`flex cursor-pointer items-center gap-2.5 rounded-control border px-3 py-2 text-sm transition-colors ${
+                  id={`dr-${x.code}`}
+                  name="report-reason"
+                  checked={reason === x.code}
+                  onChange={() => setReason(x.code)}
+                  /* **ورمزٌ بلا ترجمةٍ يُعرض كما هو** — فمن أضاف سبباً في
+                     الخادم ونسي القاموسَ يرى نقصَه في الشاشة. */
+                  label={
+                    D.history.reportReasons[
+                      x.code as keyof typeof D.history.reportReasons
+                    ] ?? x.code
+                  }
+                  className={`rounded-control border px-3 py-2 transition-colors ${
                     reason === x.code
                       ? "border-accent bg-accent-tint font-medium"
                       : "border-line hover:border-accent-edge"
                   }`}
-                >
-                  <input
-                    type="radio"
-                    name="report-reason"
-                    className="accent-accent"
-                    checked={reason === x.code}
-                    onChange={() => setReason(x.code)}
-                  />
-                  {/* **ورمزٌ بلا ترجمةٍ يُعرض كما هو** — فمن أضاف سبباً في
-                      الخادم ونسي القاموسَ يرى نقصَه في الشاشة. */}
-                  {D.history.reportReasons[
-                    x.code as keyof typeof D.history.reportReasons
-                  ] ?? x.code}
-                </label>
+                />
               ))}
             </div>
           )}

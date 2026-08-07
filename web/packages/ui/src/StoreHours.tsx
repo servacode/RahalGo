@@ -26,7 +26,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button } from "./components";
+import { Button, Checkbox } from "./components";
 import { Alert } from "./feedback";
 import { IconPrev } from "./icons";
 
@@ -100,21 +100,22 @@ export function StoreHours({
   return (
     <div>
       {emergency && (
-        <label className="mb-4 flex cursor-pointer items-center justify-between rounded-control border border-danger-edge bg-danger-tint px-3 py-2.5">
-          <span>
-            <span className="block text-sm font-medium text-danger">{H.emergencyClose}</span>
-            <span className="text-xs text-ink-muted">{H.emergencyHint}</span>
-          </span>
-          <input
-            type="checkbox"
-            checked={closed}
-            onChange={(e) => {
-              setClosed(e.target.checked);
-              setSaved(false);
-            }}
-            className="h-5 w-5 accent-danger"
-          />
-        </label>
+        <Checkbox
+          id="hours-emergency"
+          checked={closed}
+          onChange={(e) => {
+            setClosed(e.target.checked);
+            setSaved(false);
+          }}
+          /* **والتنبيهُ سطران**: عنوانٌ أحمرُ وشرحٌ تحته — لا نصٌّ واحد. */
+          label={
+            <span className="block">
+              <span className="block text-sm font-medium text-danger">{H.emergencyClose}</span>
+              <span className="text-xs text-ink-muted">{H.emergencyHint}</span>
+            </span>
+          }
+          className="mb-4 rounded-control border border-danger-edge bg-danger-tint px-3 py-2.5"
+        />
       )}
 
       {!days ? (
@@ -124,15 +125,13 @@ export function StoreHours({
           {days.map((d, i) => (
             <div key={d.day_of_week} className="flex flex-wrap items-center gap-3 text-sm">
               <span className="w-16 shrink-0 font-medium">{H.days[i]}</span>
-              <label className="flex cursor-pointer items-center gap-1.5 text-ink-muted">
-                <input
-                  type="checkbox"
-                  checked={d.closed}
-                  onChange={(e) => updateDay(i, { closed: e.target.checked })}
-                  className="h-4 w-4 accent-danger"
-                />
-                {H.closedDay}
-              </label>
+              <Checkbox
+                id={`hours-closed-${d.day_of_week}`}
+                checked={d.closed}
+                onChange={(e) => updateDay(i, { closed: e.target.checked })}
+                label={H.closedDay}
+                className="gap-1.5 text-ink-muted"
+              />
               <input
                 type="time"
                 disabled={d.closed}

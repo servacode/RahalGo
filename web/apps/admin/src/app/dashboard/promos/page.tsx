@@ -22,6 +22,7 @@ import {
   IconDate,
   IconDelete,
   IconEdit,
+  Checkbox,
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import ImageUpload from "@/components/ImageUpload";
@@ -349,24 +350,18 @@ function PromoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
           onChange={(e) => setExpiresAt(e.target.value)}
         />
         <div className="flex gap-4">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={firstOnly}
-              onChange={(e) => setFirstOnly(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            {m.admin.promos.firstOrderOnly}
-          </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={oncePerUser}
-              onChange={(e) => setOncePerUser(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            {m.admin.promos.oncePerUser}
-          </label>
+          <Checkbox
+            id="promo-first-only"
+            checked={firstOnly}
+            onChange={(e) => setFirstOnly(e.target.checked)}
+            label={m.admin.promos.firstOrderOnly}
+          />
+          <Checkbox
+            id="promo-once-per-user"
+            checked={oncePerUser}
+            onChange={(e) => setOncePerUser(e.target.checked)}
+            label={m.admin.promos.oncePerUser}
+          />
         </div>
         {error && (
           <Alert>{error}</Alert>

@@ -35,6 +35,7 @@ import {
   IconSettings,
   IconOrder as IconMenu,
   IconDate,
+  Checkbox,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -555,20 +556,20 @@ function HoursModal({
 
   return (
     <Modal open onClose={onClose} title={`${m.admin.hours.title}: ${merchant.name}`}>
-      <label className="mb-4 flex cursor-pointer items-center justify-between rounded-control border border-danger-edge bg-danger-tint px-3 py-2.5">
-        <span>
-          <span className="block text-sm font-medium text-danger">
-            {m.admin.hours.emergencyClose}
+      <Checkbox
+        id="mr-hours-emergency"
+        checked={emergency}
+        onChange={(e) => setEmergency(e.target.checked)}
+        label={
+          <span className="block">
+            <span className="block text-sm font-medium text-danger">
+              {m.admin.hours.emergencyClose}
+            </span>
+            <span className="text-xs text-ink-muted">{m.admin.hours.emergencyHint}</span>
           </span>
-          <span className="text-xs text-ink-muted">{m.admin.hours.emergencyHint}</span>
-        </span>
-        <input
-          type="checkbox"
-          checked={emergency}
-          onChange={(e) => setEmergency(e.target.checked)}
-          className="h-5 w-5 accent-danger"
-        />
-      </label>
+        }
+        className="mb-4 rounded-control border border-danger-edge bg-danger-tint px-3 py-2.5"
+      />
 
       {!days ? (
         <p className="p-4 text-center text-ink-muted">{m.common.loading}</p>
@@ -577,15 +578,13 @@ function HoursModal({
           {days.map((d, i) => (
             <div key={d.day_of_week} className="flex items-center gap-3 text-sm">
               <span className="w-16 shrink-0 font-medium">{m.admin.hours.days[i]}</span>
-              <label className="flex cursor-pointer items-center gap-1.5 text-ink-muted">
-                <input
-                  type="checkbox"
-                  checked={d.closed}
-                  onChange={(e) => updateDay(i, { closed: e.target.checked })}
-                  className="h-4 w-4 accent-danger"
-                />
-                {m.admin.hours.closedDay}
-              </label>
+              <Checkbox
+                id={`mr-hours-closed-${d.day_of_week}`}
+                checked={d.closed}
+                onChange={(e) => updateDay(i, { closed: e.target.checked })}
+                label={m.admin.hours.closedDay}
+                className="gap-1.5 text-ink-muted"
+              />
               <input
                 type="time"
                 disabled={d.closed}

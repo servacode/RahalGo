@@ -143,7 +143,7 @@ export function OrderTrack({
           **فصار الاسمُ يقف حيث تقف عُقدتُه** بالنسبة نفسِها، ويتوسّط نفسَه.
 
           **وعرضُه محجوز**: اسمٌ يتّسع بطوله يزحف على جارِه. **وسطران على الأكثر** — و`leading-tight` يُبقي الارتفاعَ مضبوطاً. */}
-      <div className="relative mt-1.5 h-8 text-[10px] leading-tight">
+      <div className="relative mt-1.5 h-8 text-2xs leading-tight">
         {stages.map((s, i) => (
           <span
             key={s.id}

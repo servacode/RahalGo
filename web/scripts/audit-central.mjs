@@ -35,7 +35,10 @@ const CATS = [
   ["عنوان", /className="[^"]*\btext-(?:lg|xl|2xl|3xl)\b[^"]*\bfont-(?:bold|semibold)\b/g],
   ["زرّ", /<button[^>]*className="[^"]*\b(?:bg-(?:primary|accent|danger|success)|border-line)\b/g],
   ["حقل", /<(?:input|textarea|select)[^>]*className="/g],
-  ["حلقة", /\bring-(?:[0-9]|[a-z])/g],
+  // **والحلقةُ موضعٌ لا صنف**: `ring-2 ring-accent ring-offset-2
+  // ring-offset-shell` **أربعةٌ في مكانٍ واحد** — فكان الجردُ يقول تسعاً وهي
+  // ثلاثة. **وعددٌ منتفخٌ يوجّه العملَ إلى غير موضعه.**
+  ["حلقة", /ring-(?:[0-9]|[a-z])[a-z0-9-]*(?:\s+ring-[a-z0-9-]+)*/g],
   ["مقاسٌ حرفيّ", /text-\[[0-9.]+(?:px|rem)\]/g],
   ["ظلّ", /\bshadow-(?:sm|md|lg|xl|2xl|inner)\b/g],
   ["حشوةٌ عجيبة", /\b[pm][xytblrse]?-\[[^\]]+\]/g],
@@ -45,12 +48,39 @@ const CATS = [
 const files = walk(ROOT).map((p) => relative(ROOT, p).split(sep).join("/"));
 const bySection = new Map();
 const byCat = new Map();
+/** **التعليقاتُ بالعربية أسلوبُ المشروع** — والمقصودُ نصٌّ يبلغ الشاشة. */
+function stripComments(src) {
+  let out = "";
+  for (let i = 0; i < src.length; ) {
+    if (src.startsWith("/*", i)) {
+      const j = src.indexOf("*/", i + 2);
+      const end = j < 0 ? src.length : j + 2;
+      // **الأسطرُ تبقى ويُمحى ما فيها.**
+      //
+      // **وحذفُها يُزيح كلَّ رقمٍ بعده**: يشير الحارسُ إلى سطرٍ بريء، **فيُقرأ
+      // كاذباً ويُطفأ** — وحارسٌ لا يُصدَّق أسوأُ من لا حارس.
+      out += src.slice(i, end).replace(/[^\n]/g, " ");
+      i = end;
+    } else if (src.startsWith("//", i)) {
+      const j = src.indexOf("\n", i);
+      const end = j < 0 ? src.length : j;
+      out += " ".repeat(end - i);
+      i = end;
+    } else {
+      out += src[i++];
+    }
+  }
+  return out;
+}
+
 const samples = new Map();
 const worst = new Map();
 
 for (const f of files) {
   if (CENTER.includes(f)) continue;
-  const src = readFileSync(join(ROOT, f), "utf8");
+  // **ولا يُعدّ ما في تعليق** — كان الجردُ يعدّ شرحاً يقول «كانت
+  // `focus:ring-2`» **فيُحصي ما حُذف.**
+  const src = stripComments(readFileSync(join(ROOT, f), "utf8"));
   const sec = f.startsWith("apps/") ? f.split("/")[1] : "packages/" + f.split("/")[1];
   let n = 0;
   for (const [name, re] of CATS) {

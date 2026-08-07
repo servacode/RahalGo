@@ -5,7 +5,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
-  Alert, Button, Input, Select, Modal, IconWallet } from "@rahalgo/ui";
+  Alert, Button, Input, Select, Modal, IconWallet,
+  Checkbox,
+} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -117,15 +119,12 @@ export default function WalletModal({
             </Select>
           </div>
           {kind === "adjustment" && (
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={debit}
-                onChange={(e) => setDebit(e.target.checked)}
-                className="h-4 w-4 accent-danger"
-              />
-              {m.admin.users.isDebit}
-            </label>
+            <Checkbox
+              id="wallet-debit"
+              checked={debit}
+              onChange={(e) => setDebit(e.target.checked)}
+              label={m.admin.users.isDebit}
+            />
           )}
           <Input
             id="w-note"
