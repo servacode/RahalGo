@@ -67,6 +67,32 @@ export function Button({
   );
 }
 
+/**
+ * **زرٌّ يذهب بك — لا زرٌّ داخل رابط.**
+ *
+ * كان المشروع يكتب `<Link className="inline-block"><Button/></Link>` — **وهو
+ * `<button>` داخل `<a>`**: تعشيشٌ يرفضه المعيار، **وقارئُ الشاشة يقرؤه
+ * عنصرين متداخلين** فلا يعرف أهو رابطٌ أم زرّ.
+ *
+ * **والنغماتُ والمقاساتُ هي هي** — لا خريطةَ ثانيةٌ تشيخ وحدَها.
+ */
+export function ButtonLink({
+  variant = "primary",
+  size = "md",
+  className = "",
+  ...props
+}: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+  variant?: keyof typeof buttonVariants;
+  size?: keyof typeof buttonSizes;
+}) {
+  return (
+    <a
+      {...props}
+      className={`inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
+    />
+  );
+}
+
 // ---------- Input ----------
 
 /* ══════════════════════════════════════════════════════════════════════

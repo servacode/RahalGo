@@ -82,6 +82,9 @@ export {
   UserPlus as IconSignup,
   BadgeCheck as IconVerified,
   Printer as IconPrint,
+  // **وتحميلُ التطبيق سهمٌ إلى هاتف** — لا سهمَ تنزيلٍ عامّاً: الزرُّ
+  // بجانب زرِّ الدخول، **والسهمُ وحدَه يُقرأ «نزِّل ملفّاً» لا «خذ التطبيق».**
+  Smartphone as IconApp,
   // تصنيفات المتاجر — أيقونة لكل نشاط بدل الإيموجي
   UtensilsCrossed as IconCatFood,
   ShoppingBag as IconCatGrocery,

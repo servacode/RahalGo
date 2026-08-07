@@ -66,6 +66,16 @@ export interface Platform {
    */
   otpLogin: boolean;
   /**
+   * **رابطُ تطبيق أندرويد** (`platform.app_url` في الإعدادات).
+   *
+   * (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «زرُّ تحميل التطبيق بجانب تسجيل الدخول،
+   *  وحقلُ الرابط بلوحة التحكّم».)
+   *
+   * **وفارغٌ يُخفي الزرَّ كلَّه** — زرُّ تحميلٍ لا ينزّل شيئاً يُقرأ عطباً
+   * في المنصة لا ميزةً ناقصة.
+   */
+  appUrl: string;
+  /**
    * **خلفيّةُ شاشات الدخول** (`auth.background` في الإعدادات) — **وفارغٌ
    * يُبقي اللونَ وحدَه.**
    *
@@ -87,7 +97,7 @@ export interface Platform {
   siteBgDim: number;
 }
 
-const EMPTY: Platform = { name: "", logo: null, otpLogin: true, authBg: null, authBgDim: 70, siteBg: null, siteBgDim: 55 };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true, appUrl: "", authBg: null, authBgDim: 70, siteBg: null, siteBgDim: 55 };
 
 /**
  * **مسارُ الوسيط يصير رابطاً هنا — لا في كلّ تطبيق.**
@@ -164,6 +174,7 @@ export function PlatformProvider({
             name: j.data.name ?? "",
             logo: j.data.logo ?? null,
             otpLogin: j.data.otp_login !== false,
+            appUrl: typeof j.data.app_url === "string" ? j.data.app_url : "",
             authBg: j.data.auth_bg ?? null,
             authBgDim: typeof j.data.auth_bg_dim === "number" ? j.data.auth_bg_dim : 70,
             siteBg: j.data.site_bg ?? null,

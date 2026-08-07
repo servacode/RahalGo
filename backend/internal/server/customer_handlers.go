@@ -71,7 +71,10 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		// **وما تحتاجه الشاشةُ قبل أن يكون هناك حساب** — لا الهويّةَ وحدَها.
 		// **وشاشةُ الدخول لا تعرف أيَّ أبوابٍ تعرض حتّى تسأل**، ونداءٌ ثانٍ
 		// لسطرٍ واحدٍ رحلةٌ زائدةٌ في أوّل ما يُفتح.
-		"otp_login":   s.settings.GetBool(r.Context(), "auth.otp_login"),
+		"otp_login": s.settings.GetBool(r.Context(), "auth.otp_login"),
+		// **ورابطُ التطبيق هنا لا في نداءٍ ثانٍ** — زرُّه بجانب زرِّ الدخول،
+		// **فيُقرأ مع ما تُقرأ به الشاشةُ أوّلَ مرّة.**
+		"app_url":     s.settings.GetString(r.Context(), "platform.app_url"),
 		"auth_bg":     s.settingMedia(r, "auth.background"),
 		"site_bg":     s.settingMedia(r, "platform.background"),
 		"site_bg_dim": s.settings.GetInt(r.Context(), "platform.background_dim"),

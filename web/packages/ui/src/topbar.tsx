@@ -73,7 +73,7 @@ export function TopBar({
       اختصارٍ كامل.
     */
     <header
-      className={`surface-lit flex items-center gap-2 bg-surface px-3 py-3 sm:gap-3 ${
+      className={`surface-lit flex items-center gap-2 bg-surface px-3 py-4 sm:gap-3 ${
         shape === "card"
           ? /* **لوحٌ كلوح المحتوى تحته** — `surface-lit` لا حدٌّ: الأرضُ
                والبطاقةُ لونٌ واحدٌ منذ ٢٠٢٦-٠٨-٠٦، **وخيطُ الضوء أعلى اللوح
@@ -140,7 +140,10 @@ export function TopBar({
 // بمشقّة — والرموز بلا تسميات لا تُفهم إلا بالنظر إليها. والزيادةُ هنا
 // مركزيةٌ فيرثها الخمسة معاً؛ ولو كُبّر في الموقع وحده لانفصل شكلُه عن اللوحات
 // وهي منصّةٌ واحدة.
-export const TOPBAR_ICON = 20;
+/* **والأيقونةُ تتبع الحرف**: كبُر حرفُ الحبّة من ١٤ إلى ١٦ **فأيقونةٌ
+   بعشرين تُقرأ ضامرةً بجانبه.** (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «كبّر التوب بار
+   قليلاً وكلمةَ التسوّق مع الأيقونة لتكون واضحة».) */
+export const TOPBAR_ICON = 22;
 export const TOPBAR_AVATAR = 36;
 
 /** ارتفاع وحواف موحّدة لكل عناصر الشريط — لا يقرّر كل عنصر مقاسه بنفسه.
@@ -151,7 +154,7 @@ export const TOPBAR_AVATAR = 36;
  * **وحشوةٌ أضيقُ على الجوّال** (`px-2`) — ثمانيةُ اختصاراتٍ × ثمانية بكسلات
  * تكسب اختصاراً كاملاً في العرض. */
 const chipBase =
-  "flex shrink-0 items-center gap-2 rounded-control px-2 py-2 text-sm transition-colors sm:gap-2 sm:px-3";
+  "flex shrink-0 items-center gap-2 rounded-control px-2 py-2 text-base transition-colors sm:gap-2 sm:px-3";
 
 /**
  * **لا صندوقَ خلف الأيقونات.**

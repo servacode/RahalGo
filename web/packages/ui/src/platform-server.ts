@@ -31,6 +31,7 @@ interface Wire {
   name?: string;
   logo?: string | null;
   otp_login?: boolean;
+  app_url?: string;
   auth_bg?: string | null;
   auth_bg_dim?: number;
   site_bg?: string | null;
@@ -49,6 +50,7 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
     name: "",
     logo: null,
     otpLogin: true,
+    appUrl: "",
     authBg: null,
     authBgDim: 70,
     siteBg: null,
@@ -65,6 +67,7 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
       name: d.name || "",
       logo: d.logo ?? null,
       otpLogin: d.otp_login !== false,
+      appUrl: typeof d.app_url === "string" ? d.app_url : "",
       authBg: d.auth_bg ?? null,
       authBgDim: typeof d.auth_bg_dim === "number" ? d.auth_bg_dim : 70,
       siteBg: d.site_bg ?? null,
