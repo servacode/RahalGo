@@ -57,7 +57,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const res = await api<{ stores: Store[]; self_manage_orders: boolean } | Store[]>(
       "/api/v1/merchant/stores",
     );
-    const list = Array.isArray(res) ? res : res.stores;
+    /* **وردٌّ بلا الحقل ليس ردّاً بمصفوفةٍ فارغة — لكنّه ليس سقوطاً.**
+
+       (كُشف ٢٠٢٦-٠٨-٠٧ بمسبار كروت البلاغات: بوّابةُ المتجر كلُّها تسقط
+       بـ`Cannot read properties of undefined (reading 'some')`.)
+
+       **كان `res.stores` يُقرأ بلا حارس** — فأيُّ ردٍّ لا يحمل الحقلَ
+       (نداءٌ رُدّ بجسمٍ ناقص، أو نسخةُ خادمٍ أقدم) **يرمي في `‎.some` فتبيضّ
+       الشاشةُ كلُّها**: لا طلباتٍ ولا قائمةٍ ولا محفظة.
+
+       **وسطرٌ واحدٌ في مزوّدٍ يعلو الشجرةَ يُسقط ما تحته كلَّه.**
+
+       @empty-ok — الفراغُ هنا قرارٌ: صاحبُ المطعم يرى «لا متاجر» ويبقى
+       باقي اللوحة يعمل، **وهو أهونُ من شاشةٍ بيضاء.** */
+    const list = Array.isArray(res) ? res : (res?.stores ?? []);
     if (!Array.isArray(res)) setSelfManage(res.self_manage_orders !== false);
     setStores(list);
     setSelected((cur) => {

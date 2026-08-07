@@ -12,6 +12,7 @@
 import { useCallback } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i18n";
 import { Badge } from "./components";
+import { ComplaintCard, ComplaintGrid, type ComplaintTicket } from "./ComplaintCard";
 import { useLiveData } from "./Notifications";
 import { PageHeader, PageContainer, EmptyState, LoadingState, ListRow, StatGrid, StatCard, Stars } from "./layout";
 import { IconStar, IconSupport, IconUser } from "./icons";
@@ -31,6 +32,8 @@ export interface ReputationLabels {
   complaintsTitle?: string;
   complaintsHint?: string;
   complaintsEmpty?: string;
+  /** **سطرٌ يقول ما هذه الشكوى بالنسبة إلى من يقرؤها** — ويختلف بالدور. */
+  complaintsNote?: string;
 }
 
 interface Review {
@@ -167,26 +170,20 @@ export function ReputationComplaints({ api, labels = {} }: { api: ApiFn; labels?
       {data.complaints.length === 0 ? (
         <EmptyState icon={IconSupport} title={labels.complaintsEmpty ?? R.complaintsEmpty} tone="success" />
       ) : (
-        <ul className="space-y-2">
+        /* **والكرتُ مركزيّ** — كان هنا سطراً عارياً: رقمٌ وموضوعٌ وتاريخٌ في
+           صفٍّ واحد، **بينما شاشةُ الزبون كرتٌ بحقولٍ مُعنوَنة.** ومن رفع
+           شكوى وهو زبونٌ ثمّ صار سائقاً رأى شاشتين لا يجمعهما شيء —
+           **والبياناتُ هي هي.** (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «طبّقوه على كلّ
+           صفحات البلاغات بكلّ اللوحات».) */
+        <ComplaintGrid>
           {(data.complaints ?? []).map((c) => (
-            <li
+            <ComplaintCard
               key={c.number}
-              className="flex flex-wrap items-center gap-3 surface p-4"
-            >
-              <span className="font-bold">#{fmtRef(c.number)}</span>
-              <span className="min-w-0 flex-1 text-sm">{c.subject}</span>
-              {c.order_number != null && (
-                <span className="text-xs text-ink-muted">
-                  {T.order} #{fmtRef(c.order_number)}
-                </span>
-              )}
-              <Badge variant={CVARIANT[c.status]}>{T.ticketStatus[c.status]}</Badge>
-              <span className="text-xs text-ink-muted" dir="ltr">
-                {fmtDate(c.created_at)}
-              </span>
-            </li>
+              ticket={c as ComplaintTicket}
+              note={labels.complaintsNote ?? R.complaintsOne}
+            />
           ))}
-        </ul>
+        </ComplaintGrid>
       )}
     </PageContainer>
   );

@@ -40,6 +40,8 @@ export {
 } from "./components";
 export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } from "./dataview";
 export { AccountSettings } from "./AccountSettings";
+/** **كرتُ الشكوى والبلاغ — واحدٌ في الخمس.** (قرارُ المالك ٢٠٢٦-٠٨-٠٧.) */
+export { ComplaintCard, ComplaintGrid, type ComplaintTicket } from "./ComplaintCard";
 export { NotificationsPage } from "./NotificationsPage";
 export { WalletPage } from "./WalletPage";
 export { AddressBook, type SavedAddress } from "./AddressBook";

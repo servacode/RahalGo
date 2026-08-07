@@ -15,6 +15,8 @@
 
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
+  ComplaintCard,
+  ComplaintGrid,
   Badge,
   Card,
   PageContainer,
@@ -68,88 +70,14 @@ export default function ComplaintsPage() {
       {rows.length === 0 ? (
         <EmptyState icon={IconSupport} title={C.noneTitle} />
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        /* **والكرتُ من المركز** — كان مبنيّاً هنا، **وصياغتُه الثالثةُ في
+           المشروع**: سطرٌ عارٍ عند السائق والمتجر وجدولٌ في الإدارة. (قرارُ
+           المالك ٢٠٢٦-٠٨-٠٧: «طبّقوه على كلّ صفحات البلاغات بكلّ اللوحات».) */
+        <ComplaintGrid>
           {rows.map((t) => (
-            /**
-             * **كلُّ عنصرٍ في حقلٍ مستقلّ يُقرأ وحدَه.**
-             *
-             * كانت أسطراً متتابعةً بلا حدود: **العينُ لا تعرف أين ينتهي خبرٌ
-             * ويبدأ آخر** — فيُقرأ التاريخُ جزءاً من السبب، والتعويضُ جزءاً من
-             * الردّ. **وشكوى تُقرأ خطأً تُعاد.**
-             */
-            <Card key={t.id} className="flex flex-col gap-4">
-              {/* ── الترويسة: السببُ · الرقمُ · الحالة ─────────────────── */}
-              <div className="flex items-start gap-3">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary-tint text-primary">
-                  <IconSupport size={20} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold leading-tight">
-                    {(m.site.complaint.reasons as Record<string, string>)[t.reason] || t.subject}
-                  </p>
-                  <p className="mt-0.5 text-xs text-ink-muted">{C.mineOne}</p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  {/* **الرقمُ بحقلٍ خاصّ** — هو ما يقوله حين يتّصل يسأل. */}
-                  <span
-                    dir="ltr"
-                    className="rounded-control bg-primary-tint px-2.5 py-1 text-sm font-bold tabular-nums text-primary-dark"
-                  >
-                    #{fmtRef(t.number)}
-                  </span>
-                  <Badge variant={TONE[t.status] ?? "neutral"}>
-                    {(m.admin.tickets.status as Record<string, string>)[t.status] ?? t.status}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* ── حقلان مستقلّان: متى · وعلى أيّ طلب ─────────────────── */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-control bg-field px-3 py-2">
-                  <p className="text-2xs text-ink-muted">{C.fieldWhen}</p>
-                  <p className="mt-0.5 text-sm font-medium tabular-nums" dir="ltr">
-                    {fmtDateTime(t.created_at)}
-                  </p>
-                </div>
-                <div className="rounded-control bg-field px-3 py-2">
-                  <p className="text-2xs text-ink-muted">{C.fieldOrder}</p>
-                  <p className="mt-0.5 text-sm font-medium tabular-nums" dir="ltr">
-                    {t.order_number !== null ? `#${fmtRef(t.order_number)}` : "—"}
-                  </p>
-                </div>
-              </div>
-
-              {/* ── ردُّ المنصة — **حقلٌ مُعنوَنٌ لا سطرٌ عائم** ──────────── */}
-              <div className="flex-1 surface-inset p-3">
-                <p className="mb-1 flex items-center gap-1.5 text-2xs font-bold text-ink-muted">
-                  <IconReply size={13} />
-                  {C.fieldReply}
-                </p>
-                {t.resolution ? (
-                  <p className="text-sm">{t.resolution}</p>
-                ) : (
-                  /* **ومفتوحةٌ بلا ردٍّ تقول ذلك** — الصمتُ في الشاشة يُقرأ
-                     إهمالاً، **وجملةٌ واحدةٌ تحوّل الانتظارَ من قلقٍ إلى مهلة.** */
-                  <p className="text-sm text-ink-muted">{C.waiting}</p>
-                )}
-              </div>
-
-              {/* ── التعويضُ حقلٌ قائمٌ بذاته — **وهو ماله** ─────────────── */}
-              {t.compensation > 0 && (
-                <div className="flex items-center justify-between rounded-control border border-success-edge bg-success-tint px-3 py-2.5">
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-success">
-                    <IconCheck size={15} strokeWidth={3} />
-                    {C.compensated}
-                  </span>
-                  <span dir="ltr" className="text-base font-bold tabular-nums text-success">
-                    {fmtNum(t.compensation)}{" "}
-                    <span className="text-xs font-normal">{m.common.currency}</span>
-                  </span>
-                </div>
-              )}
-            </Card>
+            <ComplaintCard key={t.id} ticket={t} note={C.mineOne} />
           ))}
-        </div>
+        </ComplaintGrid>
       )}
     
       {/* **ولا قسمَ ثانٍ لِما رُفع عليه.**
