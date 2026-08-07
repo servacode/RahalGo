@@ -22,6 +22,7 @@ import {
   LoadingState,
 } from "@rahalgo/ui";
 import ImageUpload from "@/components/ImageUpload";
+import { FileUpload } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import ZonesPanel from "@/components/settings/zones";
@@ -31,7 +32,7 @@ const m = getMessages(defaultLocale);
 const S = m.admin.settings;
 
 /** **يطابق أنواعَ الكتالوج في المحرّك** — ونوعٌ يُضاف هناك ولا يُضاف هنا يسقط إلى الحقل النصّيّ. */
-type Kind = "int" | "money" | "bool" | "choice" | "text" | "media" | "percent";
+type Kind = "int" | "money" | "bool" | "choice" | "text" | "media" | "percent" | "file";
 
 interface Setting {
   key: string;
@@ -467,6 +468,24 @@ function SettingRow({
                 {draft === "" ? 0 : Number(draft)}%
               </span>
             </div>
+          ) : s.kind === "file" ? (
+            /* **وملفٌّ يُرفع لا اسمٌ يُكتب.**
+
+               (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «رفع التطبيق بشكلٍ مباشر من خيار
+                رفع أيضاً».)
+
+               **والقيمةُ اسمُ الملفّ المخزَّن** يكتبه الخادمُ عند الرفع —
+               **واسمٌ يُكتب خطأً يعني زرَّ تنزيلٍ يقود إلى لا شيء.** */
+            <FileUpload
+              label={label(s.key)}
+              hint={hint(s.key)}
+              accept=".apk"
+              present={typeof s.value === "string" && s.value !== ""}
+              path="/api/v1/admin/app-file"
+              api={api}
+              errorText={(e) => (e instanceof ApiError ? e.message : m.errors.internal)}
+              onChange={onSaved}
+            />
           ) : s.kind === "media" ? (
             /* **وصورةٌ تُرفع لا معرّفٌ يُكتب.**
 

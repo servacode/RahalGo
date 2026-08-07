@@ -74,7 +74,7 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		"otp_login": s.settings.GetBool(r.Context(), "auth.otp_login"),
 		// **ورابطُ التطبيق هنا لا في نداءٍ ثانٍ** — زرُّه بجانب زرِّ الدخول،
 		// **فيُقرأ مع ما تُقرأ به الشاشةُ أوّلَ مرّة.**
-		"app_url":     s.settings.GetString(r.Context(), "platform.app_url"),
+		"app_url":     s.appHref(r),
 		"auth_bg":     s.settingMedia(r, "auth.background"),
 		"site_bg":     s.settingMedia(r, "platform.background"),
 		"site_bg_dim": s.settings.GetInt(r.Context(), "platform.background_dim"),
@@ -331,4 +331,25 @@ func (s *Server) handleCustomerCancelOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	httpx.JSON(w, http.StatusOK, updated)
+}
+
+// appHref وجهةُ زرّ «حمّل التطبيق» — رابطٌ أو ملفٌّ أو لا شيء.
+//
+// (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «إذا كان الموجودُ رابطاً يذهب إلى غوغل بلاي،
+//
+//	وإذا ملفّاً ينزل بشكلٍ مباشر».)
+//
+// **والرابطُ يسبق**: من رفع تطبيقَه إلى المتجر فالمتجرُ أولى — يُحدِّث
+// نفسَه ويُطمئن من ينزّله. **والملفُّ لمن لم يُقبل بعد.**
+//
+// **ويُحلّ هنا لا في الواجهة**: خمسُ بوّاباتٍ تعرض الزرّ، **وقاعدةُ
+// أولويّةٍ تُكتب خمسَ مرّاتٍ تفترق في الرابعة.**
+func (s *Server) appHref(r *http.Request) string {
+	if link := s.settings.GetString(r.Context(), "platform.app_url"); link != "" {
+		return link
+	}
+	if s.settings.GetString(r.Context(), appFileSetting) != "" {
+		return "/api/v1/public/app"
+	}
+	return ""
 }

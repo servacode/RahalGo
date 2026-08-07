@@ -104,6 +104,8 @@ const RAW_PAGES = ["/dashboard/audit"];
 /**
  * **رموزٌ لاتينيّةٌ لا تُترجَم — ولو وقعت داخلَ جملةٍ عربيّة.**
  *
+ * **«ارفع ملفَّ apk» عربيّةٌ سليمة** كـ«تصدير CSV**
+ *
  * **«تصدير CSV» عربيّةٌ سليمة**: `CSV` اسمُ صيغةٍ يُكتب هكذا في كلّ لغة،
  * **وترجمتُه تُفقده معناه.** وكذلك `JPG` و`PNG` و`WhatsApp`.
  *
@@ -119,7 +121,7 @@ const RAW_PAGES = ["/dashboard/audit"];
  * **وترجمتُه تكسر الميزة** — كما تكسر ترجمةُ `CSV` معناها. فما بين قوسين
  * معقوفين يُنزع كما تُنزع أسماءُ الصيغ.
  */
-const TOKENS = /\{[a-z_]+\}|(?:^|[^A-Za-z])(?:CSV|JPG|JPEG|PNG|WebP|GIF|PDF|SVG|MB|KB|GB|QR|SMS|OTP|API|URL|ID|GPS|KM|AM|PM|WhatsApp|RahalGo|SYP|SYR)(?![A-Za-z])/gi;
+const TOKENS = /\{[a-z_]+\}|(?:^|[^A-Za-z])(?:CSV|JPG|JPEG|PNG|WebP|GIF|PDF|SVG|MB|KB|GB|QR|SMS|OTP|API|URL|ID|GPS|KM|AM|PM|WhatsApp|RahalGo|SYP|SYR|APK)(?![A-Za-z])/gi;
 
 const b = await chromium.launch({ executablePath: CHROME, headless: true });
 let bad = 0;

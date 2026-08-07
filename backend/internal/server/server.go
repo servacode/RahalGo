@@ -170,6 +170,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/home", s.handlePublicHome)
 		// **هويّةُ المنصة** — خفيفةٌ ومفتوحة، تناديها الخمسةُ وشاشةُ الدخول.
 		r.Get("/public/platform", s.handlePublicPlatform)
+		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.
+		r.Get("/public/app", s.handleDownloadApp)
 		r.Get("/public/zone", s.handlePublicZone)
 		// **هويّةُ المنصة للشروط والخصوصية** — عامّةٌ لأنّ من يقرؤها قد لا
 		// يكون دخل بعد، **ومن سُئل أن يوافق قبل أن يقرأ لم يوافق.**
@@ -474,6 +476,10 @@ func (s *Server) Router() http.Handler {
 				Post("/menu/items/{itemID}/review", s.handleReviewMenuItem)
 			r.Get("/broadcast/count", s.handleBroadcastCount)
 			r.With(s.RequireRoles("admin")).Post("/broadcast", s.handleBroadcast)
+
+			// **وملفُّ التطبيق قرارُ هويّةٍ لا قرارُ مال** — للإدارة وحدَها.
+			r.With(s.RequireRoles("admin")).Post("/app-file", s.handleUploadAppFile)
+			r.With(s.RequireRoles("admin")).Delete("/app-file", s.handleDeleteAppFile)
 			r.Get("/disputes", s.handleListDisputes)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/disputes", s.handleCreateDispute)

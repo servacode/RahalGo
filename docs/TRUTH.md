@@ -398,6 +398,7 @@
 | `platform.support_phone` | المنصة | text | `` |
 | `platform.address` | المنصة | text | `` |
 | `platform.app_url` | المنصة | text | `` |
+| `platform.app_file` | المنصة | file | `` |
 | `platform.name` | المنصة | text | `` |
 | `platform.logo` | المنصة | media | `` |
 | `platform.background` | المنصة | media | `` |
