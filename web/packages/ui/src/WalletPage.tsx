@@ -14,8 +14,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
 import { Badge, Button, Input, Modal } from "./components";
+import { Tabs } from "./navigation";
 import { Alert } from "./feedback";
-import { PageContainer, PageHeader, Card, EmptyState, LoadingState, ListRow, TabCards } from "./layout";
+import { PageContainer, PageHeader, Card, EmptyState, LoadingState, ListRow } from "./layout";
 import { DataView, ViewToggle, useViewMode, type DataColumn } from "./dataview";
 import type { TabItem } from "./layout";
 import { StatementSheet, currentMonthRange, type StatementData } from "./Statement";
@@ -131,8 +132,23 @@ export function WalletPage({
     reloadPayouts();
   }, [reload, reloadPayouts]);
 
-  const txs = useMemo(() => statement?.transactions ?? [], [statement]);
-  const reqs = useMemo(() => requests ?? [], [requests]);
+  /* ══════════════════════════════════════════════════════════════════
+     **وشكلٌ غيرُ متوقَّعٍ لا يُبيّض شاشةَ مال**
+     ══════════════════════════════════════════════════════════════════
+
+     (كُشف ٢٠٢٦-٠٨-٠٧ بمسبار المحفظة: `reqs.some is not a function` أسقط
+     محفظةَ المندوب كلَّها.)
+
+     **و`??` تحرس العدمَ ولا تحرس النوع**: ردٌّ بجسمٍ بدل مصفوفةٍ يمرّ منها
+     سالماً ثمّ يرمي عند أوّلِ `some` أو `map`.
+
+     **وهي ثالثةُ مواضعها اليوم**: مزوّدُ متاجر المتجر، وقائمةُ المحرّر،
+     وهذه. **والقاسمُ واحد**: قراءةُ مصفوفةٍ بلا سؤالٍ أهي مصفوفة.
+
+     @empty-ok — الفراغُ قرارٌ: «لا حركاتٍ» تُقرأ وتُعاد، **وشاشةٌ بيضاءُ
+     في المال تُقرأ ضياعَ رصيد.** */
+  const txs = useMemo(() => (Array.isArray(statement?.transactions) ? statement.transactions : []), [statement]);
+  const reqs = useMemo(() => (Array.isArray(requests) ? requests : []), [requests]);
 
   /** **وتفضيلُ العرضِ محفوظٌ لصاحبه** — جدولاً أو بطاقات. */
   const [view, setView] = useViewMode("wallet-tx");
@@ -359,10 +375,29 @@ export function WalletPage({
         {/* **وما بقي من التبويب يملأ ما بعد الرصيد** — «طلبات السحب» وحدَها
             لمن له سحب. **ولا شيءَ هنا عند الزبون والإدارة**، فيقع الجدولُ
             مباشرةً تحت الرصيد. */}
+        {/* ══════════════════════════════════════════════════════════
+            **ولا بطاقاتٍ ذكيّةً هنا — رصيدٌ وجدول**
+            ══════════════════════════════════════════════════════════
+
+            (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «أصلاً برأيي الكروتُ الذكيّة ما لها
+             لازمة، فقط المحفظة والجدول للحركات».)
+
+            **وكانت `TabCards` — بطاقتين بحدودٍ وأرقام** فوق جدولٍ يقول ما
+            تقولانه. **ولوحةُ إحصاءٍ فوق جدولِ إحصاءٍ تُقرأ مرّتين.**
+
+            **ولم يُحذف البابُ مع البطاقة**: «طلباتُ السحب» محتوًى قائمٌ
+            بذاته، **وحذفُ مبدّلِه يدفنه.** فصار شريطَ تبويبٍ — وهو المكوّنُ
+            المركزيُّ لهذا بعينه، **يقول «أنت هنا» بلا أن يدّعيَ رقماً.**
+
+            **ولا يظهر لمن لا سحبَ له** (الزبونُ والإدارة): فيقع الجدولُ
+            مباشرةً تحت الرصيد. */}
         {current !== STATEMENT && tabs.length > 0 && (
-          <div className="min-w-0 flex-1">
-            <TabCards items={tabs} active={current} onChange={setTab} />
-          </div>
+          <Tabs
+            items={tabs.map((t) => ({ key: t.key, label: t.label, count: t.count }))}
+            value={current}
+            onChange={setTab}
+            className="min-w-0 flex-1"
+          />
         )}
       </div>
 

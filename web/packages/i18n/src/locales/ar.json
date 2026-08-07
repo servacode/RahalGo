@@ -241,10 +241,6 @@
     "menuEditor": {
       "title": "الأصناف",
       "empty": "القائمة فارغة — أضف قسماً ثم أصنافاً",
-      "sectionName": "اسم القسم",
-      "addSection": "قسم جديد",
-      "editSection": "تعديلُ القسم",
-      "sectionImage": "صورةُ القسم",
       "addItem": "صنف جديد",
       "editItem": "تعديل الصنف",
       "noItems": "لا أصناف في هذا القسم بعد",
