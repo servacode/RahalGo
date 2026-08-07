@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Alert, Button, Input, PasswordMeter, IconLock, IconWarning, IconCheck } from "@rahalgo/ui";
+import { Alert, Button, Input, PasswordMeter, IconTile, IconLock, IconWarning, IconCheck } from "@rahalgo/ui";
 import { useAuth } from "./provider";
 import { api, authApi } from "./client";
 import { errText } from "./LoginCard";
@@ -58,9 +58,9 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
           **وطبقةٌ فوقها تحجبها وتُقرأ شاشةً غريبةً عن أخواتها.** */}
       <div className="w-full max-w-md surface p-7 elev-1">
         <div className="mb-5 flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card bg-warning-tint text-warning">
+          <IconTile tone="warning">
             <IconWarning size={22} />
-          </span>
+          </IconTile>
           <div>
             <h1 className="heading-card text-ink">{G.title}</h1>
             <p className="mt-1 text-sm leading-relaxed text-ink-muted">{G.hint}</p>

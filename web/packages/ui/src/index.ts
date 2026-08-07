@@ -32,6 +32,8 @@ export {
   Radio,
   Select,
   Badge,
+  CountBadge,
+  IconTile,
   Modal,
   FormSection,
   OtpInput,
@@ -107,7 +109,6 @@ export {
   TOPBAR_ICON,
   TOPBAR_AVATAR,
   Avatar,
-  CountBadge,
   type ChipTone,
 } from "./topbar";
 export {

@@ -130,9 +130,9 @@ function Forfeitable({
         <span dir="ltr" className="text-ink-muted line-through decoration-danger/70">
           {fmtNum(lost)}
         </span>
-        <span className="rounded-badge bg-danger-tint px-1.5 py-0.5 text-2xs font-medium text-danger">
+        <Badge variant="danger" className="px-1.5 text-2xs">
           {D.forfeited}
-        </span>
+        </Badge>
       </span>
     );
   }

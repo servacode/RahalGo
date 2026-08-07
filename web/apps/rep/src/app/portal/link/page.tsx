@@ -8,6 +8,7 @@ import QRCode from "qrcode";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { Button, LoadingState, IconLink, IconQr, IconLock,
   usePlatform,
+  IconTile,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -49,9 +50,9 @@ export default function LinkPage() {
   if (!me.whatsapp_verified) {
     return (
       <div className="mx-auto max-w-md surface p-8 text-center">
-        <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-badge bg-warning-tint text-warning">
+        <IconTile tone="warning" size="lg" className="mx-auto mb-4 flex">
           <IconLock size={26} />
-        </span>
+        </IconTile>
         <h1 className="heading-card mb-2">{m.rep.lockedTitle}</h1>
         <p className="mb-5 text-sm leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
         /* **وزرٌّ مركزيّ** — كان مبنيّاً باليد بتعبئةٍ صلبة. (قرارُ المالك ٢٠٢٦-٠٨-٠٧.) */

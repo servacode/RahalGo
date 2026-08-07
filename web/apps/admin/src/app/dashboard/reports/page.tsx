@@ -14,6 +14,8 @@ import {
   IconUser,
   IconStatus,
   IconDate,
+  Badge,
+  IconTile,
 } from "@rahalgo/ui";
 import { api, ApiError, tokenStore } from "@/lib/api";
 
@@ -142,9 +144,9 @@ function Stat({
 }) {
   return (
     <div className="flex items-center gap-3 surface p-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-primary-tint">
+      <IconTile>
         <Icon size={18} className="text-primary-dark" />
-      </div>
+      </IconTile>
       <div className="min-w-0">
         <p className="figure leading-tight">{value}</p>
         <p className="truncate text-xs text-ink-muted">
@@ -314,9 +316,9 @@ export default function ReportsPage() {
                   {report.top_merchants.map((t, i) => (
                     <li key={t.name} className="flex items-center justify-between text-sm">
                       <span>
-                        <span className="me-2 inline-flex h-5 w-5 items-center justify-center rounded-badge bg-primary-tint text-xs font-bold text-primary">
+                        <Badge variant="primary" className="me-2 h-5 w-5 justify-center px-0 font-bold">
                           {i + 1}
-                        </span>
+                        </Badge>
                         {t.name}
                         <span className="text-xs text-ink-muted"> · {fmtNum(t.delivered)} {r.deliveries}</span>
                       </span>
@@ -341,9 +343,9 @@ export default function ReportsPage() {
                   {report.top_drivers.map((t, i) => (
                     <li key={t.phone} className="flex items-center justify-between text-sm">
                       <span>
-                        <span className="me-2 inline-flex h-5 w-5 items-center justify-center rounded-badge bg-primary-tint text-xs font-bold text-primary">
+                        <Badge variant="primary" className="me-2 h-5 w-5 justify-center px-0 font-bold">
                           {i + 1}
-                        </span>
+                        </Badge>
                         {t.name || <span dir="ltr">{t.phone}</span>}
                       </span>
                       <span>

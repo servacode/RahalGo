@@ -20,6 +20,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { CountBadge } from "./components";
 import { IconPrev, IconNext } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -89,14 +90,7 @@ export function Tabs<K extends string>({
             {Icon && <Icon size={16} />}
             {t.label}
             {t.count != null && (
-              <span
-                dir="ltr"
-                className={`rounded-badge px-1.5 text-2xs font-bold tabular-nums ${
-                  on ? "bg-accent text-on-bright" : "bg-ink-faint text-ink-muted"
-                }`}
-              >
-                {fmtNum(t.count)}
-              </span>
+              <CountBadge count={t.count} on={on} />
             )}
           </button>
         );

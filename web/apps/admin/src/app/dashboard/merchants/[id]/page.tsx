@@ -40,6 +40,7 @@ import {
   IconOrder,
   IconBalance,
   IconDate,
+  IconTile,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import ViolationsModal from "@/components/ViolationsModal";
@@ -145,9 +146,9 @@ export default function MerchantProfilePage() {
       </button>
 
       <div className="mb-4 flex flex-wrap items-start gap-3">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-card bg-primary-tint">
+        <IconTile size="lg">
           <IconStore size={26} className="text-primary-dark" />
-        </span>
+        </IconTile>
         <div className="min-w-0 flex-1">
           <h1 className="heading-page">{mr.name}</h1>
           <p className="text-sm text-ink-muted">

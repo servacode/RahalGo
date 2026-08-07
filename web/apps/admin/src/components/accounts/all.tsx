@@ -245,7 +245,7 @@ export default function AllAccountsTable() {
               onClick={() => { setRole(role === key ? "" : key); setPage(1); }}
               className={`rounded-card border p-2.5 text-center transition-colors ${role === key ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
             >
-              <p className={`figure inline-flex items-center gap-1 ${style ? style.cls.split(" ").filter((c) => c.startsWith("text-")).join(" ") : ""}`}>
+              <p className={`figure inline-flex items-center gap-1 ${style ? style.text : ""}`}>
                 {style && <style.Icon size={15} />}
                 {roleCounts.roles[key] ?? 0}
               </p>

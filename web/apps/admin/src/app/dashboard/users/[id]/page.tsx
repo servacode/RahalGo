@@ -271,9 +271,9 @@ export default function UserProfilePage() {
                   {fmtDate(p.created_at)}
                 </span>
                 {p.invite_code && (
-                  <span dir="ltr" className="rounded-badge bg-accent-tint px-1.5 font-mono text-accent-dark">
+                  <Badge variant="accent" dir="ltr" className="px-1.5 font-mono">
                     {p.invite_code}
-                  </span>
+                  </Badge>
                 )}
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-1">

@@ -31,6 +31,7 @@
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import { Card } from "./layout";
 import { Badge } from "./components";
+import { IconTile } from "./components";
 import { IconSupport, IconReply, IconCheck } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -78,9 +79,9 @@ export function ComplaintCard({
     <Card className={`flex flex-col gap-4 ${className}`}>
       {/* ── الترويسة: السببُ · الرقمُ · الحالة ─────────────────────── */}
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-primary-tint text-primary">
+        <IconTile>
           <IconSupport size={20} />
-        </span>
+        </IconTile>
         <div className="min-w-0 flex-1">
           {/* **السببُ مُترجَمٌ إن عُرف، وإلّا فالموضوع** — ورمزٌ إنكليزيٌّ
               لا يُعرض على أحد. */}

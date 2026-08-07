@@ -916,12 +916,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         <h1 className="heading-page flex items-center gap-2">
           <IconOrder className="text-primary" />
           {live ? m.admin.ordersPage.title : m.admin.ordersPage.historyTitle}
-          <span
-            className={`flex items-center gap-1.5 rounded-badge px-2.5 py-1 text-xs font-medium ${
-              liveConnected
-                ? "bg-success-tint text-success"
-                : "bg-danger-tint text-danger"
-            }`}
+          <Badge
+            variant={liveConnected ? "success" : "danger"}
+            className="gap-1.5 py-1"
           >
             <span
               className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`}
@@ -929,7 +926,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             {liveConnected
               ? m.admin.ordersPage.live
               : m.admin.ordersPage.liveOff}
-          </span>
+          </Badge>
         </h1>
       </div>
 

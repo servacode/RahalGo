@@ -8,6 +8,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
+import { CountBadge } from "./components";
 import { SkeletonList, SkeletonStats } from "./feedback";
 import { IconStar } from "./icons";
 import { BrandMark } from "./platform";
@@ -429,13 +430,7 @@ export function TabCards({
                 {t.label}
               </span>
               {!!t.count && (
-                <span
-                  className={`shrink-0 rounded-badge px-1.5 py-0.5 text-2xs font-bold ${
-                    on ? "bg-primary-tint text-primary" : "bg-ink-faint text-ink-muted"
-                  }`}
-                >
-                  {fmtNum(t.count)}
-                </span>
+                <CountBadge count={t.count} on={on} />
               )}
             </span>
             {v !== undefined && (

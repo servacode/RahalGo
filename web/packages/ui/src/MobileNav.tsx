@@ -29,6 +29,7 @@
  */
 
 import type { ComponentType, ReactNode } from "react";
+import { CountBadge } from "./components";
 
 export interface NavItem {
   href: string;
@@ -93,12 +94,7 @@ export function MobileNav({
             <span className="relative">
               <Icon size={21} />
               {it.count != null && it.count > 0 && (
-                <span
-                  dir="ltr"
-                  className="absolute -top-1.5 -end-2 flex h-4 min-w-4 items-center justify-center rounded-badge bg-danger-solid px-1 text-2xs font-bold text-on-solid"
-                >
-                  {it.count > 9 ? "9+" : it.count}
-                </span>
+                <CountBadge count={it.count} tone="danger" float max={9} />
               )}
             </span>
             {it.label}

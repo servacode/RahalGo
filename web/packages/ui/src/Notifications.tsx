@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { CountBadge } from "./components";
 import { IconBell, IconClose } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -371,11 +372,7 @@ export function NotificationBell({
           واحدة يُثقل كلَّ من يستعمله. */}
       <span className="sr-only">{N.title}</span>
       <IconBell size={19} />
-      {unread > 0 && (
-        <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-badge bg-accent px-1 text-2xs font-bold text-on-bright">
-          {unread > 9 ? "9+" : unread}
-        </span>
-      )}
+      {unread > 0 && <CountBadge count={unread} float max={9} />}
     </>
   );
 

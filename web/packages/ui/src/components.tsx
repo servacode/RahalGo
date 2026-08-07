@@ -477,22 +477,122 @@ const badgeVariants = {
   warning: "bg-warning-tint text-warning",
   danger: "bg-danger-tint text-danger",
   info: "bg-info-tint text-info",
+  violet: "bg-violet-tint text-violet",
 } as const;
 
 export function Badge({
   variant = "neutral",
   children,
   className = "",
+  dir,
 }: {
   variant?: keyof typeof badgeVariants;
+  children: ReactNode;
+  className?: string;
+  /** للرموز اللاتينيّة (كودُ مندوبٍ مثلاً) — **تُقلب في سياقٍ عربيٍّ بدونه.** */
+  dir?: "ltr" | "rtl";
+}) {
+  return (
+    <span
+      dir={dir}
+      className={`inline-flex items-center rounded-badge px-2.5 py-0.5 text-xs font-medium ${badgeVariants[variant]} ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+// ---------- IconTile ----------
+
+/* **وقرصُ الأيقونة شكلٌ ثالثٌ لا شارةٌ ولا فقّاعة**: مربّعٌ ملوّنٌ يجلس فيه
+   رمزٌ وحدَه — رأسُ بطاقةِ متجر، وقفلُ شاشةٍ مقفلة، ورمزُ نوعِ تقرير.
+
+   **وكان عشرةَ مواضعَ بستّةِ مقاساتٍ وثلاثةِ أنصافِ أقطار**: `h-9` و`h-10`
+   و`h-11` و`h-12` و`h-14`، و`rounded-badge` و`rounded-card` و`rounded-control`
+   — **للشيء نفسِه.** فتُفتح شاشتان فيُقرأ قرصاهما شيئين.
+   (طلبُ المالك ٢٠٢٦-٠٨-٠٧: مطاردةُ ما هو خارجَ المركز.) */
+const tileTones = {
+  primary: "bg-primary-tint text-primary",
+  accent: "bg-accent-tint text-accent",
+  success: "bg-success-tint text-success",
+  warning: "bg-warning-tint text-warning",
+  danger: "bg-danger-tint text-danger",
+  info: "bg-info-tint text-info",
+  violet: "bg-violet-tint text-violet",
+} as const;
+
+const tileSizes = { sm: "h-9 w-9", md: "h-11 w-11", lg: "h-14 w-14" } as const;
+
+export function IconTile({
+  tone = "primary",
+  size = "md",
+  children,
+  className = "",
+}: {
+  tone?: keyof typeof tileTones;
+  size?: keyof typeof tileSizes;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-badge px-2.5 py-0.5 text-xs font-medium ${badgeVariants[variant]} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-card ${tileSizes[size]} ${tileTones[tone]} ${className}`}
     >
       {children}
+    </span>
+  );
+}
+
+// ---------- CountBadge ----------
+
+/* **وفقّاعةُ العدد ليست شارةَ نصّ.** الشارةُ تحمل كلمةً فتتّسع لها، والفقّاعةُ
+   تحمل رقماً فتبقى دائرةً مهما كان.
+
+   **وكانت خمساً تفرّقت**: ثلاثةُ مقاساتٍ (`h-4` · `h-5` · بلا ارتفاع)
+   وثلاثُ إزاحاتٍ **وجهتان متعاكستان** — `-start` فوق الجرس في الشريط
+   و`-end` فوق أيقونة الجوّال. **وهما الفكرةُ نفسُها.**
+   (طلبُ المالك ٢٠٢٦-٠٨-٠٧: مطاردةُ ما هو خارجَ المركز.)
+
+   **والنشطُ نبرةٌ مصمتةٌ لا صبغة**: كانت فقّاعةُ البطاقة النشطة
+   `bg-primary-tint` **فوق بطاقةٍ نشطةٍ `bg-primary-tint`** — أي فقّاعةٌ
+   لا تُرى أصلاً. */
+/* **والعدّادُ بالنبرة بنصٍّ داكن** — لا أبيض: الأبيضُ على النبرة ١٫٣٠
+   **يذوب**، والداكنُ ١٣٫٩٢. **والجرسُ يبقى أبيضَ كما هو.**
+   (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «العدّاد فقط وليس الجرس».) */
+const countTones = {
+  accent: "bg-accent text-on-bright",
+  danger: "bg-danger-solid text-on-solid",
+} as const;
+
+export function CountBadge({
+  count,
+  tone = "accent",
+  float = false,
+  on = true,
+  max = 99,
+  className = "",
+}: {
+  count: number;
+  tone?: keyof typeof countTones;
+  /** تطفو فوق أيقونة — والأبُ يحتاج `relative`. */
+  float?: boolean;
+  /** حين تسكن صفّاً قابلاً للاختيار: الخامدةُ رماديّةٌ والنشطةُ بالنبرة. */
+  on?: boolean;
+  max?: number;
+  className?: string;
+}) {
+  const paint = on ? countTones[tone] : "bg-ink-faint text-ink-muted";
+  return (
+    <span
+      dir="ltr"
+      className={
+        (float
+          ? "absolute -top-1.5 -end-1.5 flex h-5 min-w-5 items-center justify-center px-1"
+          : "inline-flex shrink-0 items-center px-1.5 py-0.5") +
+        ` rounded-badge text-2xs font-bold tabular-nums ${paint} ${className}`
+      }
+    >
+      {count > max ? `${fmtNum(max)}+` : fmtNum(count)}
     </span>
   );
 }

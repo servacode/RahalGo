@@ -22,6 +22,7 @@ import {
   LoadingState,
   useLiveData,
   usePlatform,
+  IconTile,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -86,9 +87,9 @@ export default function OverviewPage() {
       <section className="surface p-6 text-center">
         {!me.whatsapp_verified ? (
           <>
-            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-badge bg-warning-tint text-warning">
+            <IconTile tone="warning" className="mx-auto mb-3 flex">
               <IconLock size={22} />
-            </span>
+            </IconTile>
             <p className="figure">{m.rep.lockedTitle}</p>
             <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
             {/* **وزرٌّ مركزيّ** — كان مبنيّاً باليد بتعبئةٍ بيضاء. */}
