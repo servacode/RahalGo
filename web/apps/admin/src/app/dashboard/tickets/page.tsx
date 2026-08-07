@@ -15,6 +15,7 @@ import {
   Modal,
   FormSection,
   DataView,
+  ComplaintCard,
   ViewToggle,
   useViewMode,
   type DataColumn,
@@ -235,12 +236,34 @@ export default function TicketsPage() {
         <Alert className="mb-4">{error}</Alert>
       )}
 
+      {/* **والكرتُ هو كرتُ البلاغ نفسُه** الذي تعرضه لوحاتُ المتجر والسائق
+          والمندوب والزبون — **لا كرتٌ سادسٌ تبنيه الإدارةُ من أعمدتها.**
+          (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «كروت وجداول مثل باقي المشروع».)
+
+          **والجدولُ يبقى من الأعمدة**: الإدارةُ تمسح مئةَ بلاغٍ بالعين،
+          والكرتُ لمن يقرأ واحداً. */}
       <DataView
         items={data?.tickets ?? []}
         getKey={(t) => t.id}
         columns={columns}
         view={view}
         empty={m.admin.tickets.empty}
+        card={(t) => (
+          <ComplaintCard
+            ticket={t}
+            note={[t.customer_name, t.customer_phone].filter(Boolean).join(" · ")}
+            action={
+              <Button
+                variant="secondary"
+                onClick={() => setDetailID(t.id)}
+                className="flex w-full items-center justify-center gap-1.5"
+              >
+                <IconReply size={15} />
+                {m.admin.ordersPage.details}
+              </Button>
+            }
+          />
+        )}
         actions={(t) => (
           <Button
             variant="secondary"

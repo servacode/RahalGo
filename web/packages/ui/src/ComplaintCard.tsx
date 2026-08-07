@@ -28,6 +28,7 @@
  * لا يختلف يُقرأ من المعجم هنا مرّةً واحدة.
  */
 
+import { type ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import { Card } from "./layout";
 import { Badge } from "./components";
@@ -67,10 +68,20 @@ export function ComplaintCard({
    * لمن رُفع عليه. **وفارغٌ يعني لا سطرَ أصلاً** — لا سطرٌ فارغٌ يُسأل عنه.
    */
   note = "",
+  action,
   className = "",
 }: {
   ticket: ComplaintTicket;
   note?: string;
+  /**
+   * **زرٌّ أسفلَ الكرت — لمن يملك فعلاً عليه.**
+   *
+   * (طلبُ المالك ٢٠٢٦-٠٨-٠٨: البلاغات في لوحة الإدارة كروتٌ وجداول.)
+   *
+   * **والزبونُ يقرأ بلاغَه ولا يفعل به شيئاً**، والإدارةُ تفتحه وتردّ.
+   * فالكرتُ واحدٌ والفعلُ يأتي من صاحبه — **لا كرتان يفترقان بمرور الوقت.**
+   */
+  action?: ReactNode;
   className?: string;
 }) {
   const reasons = m.site.complaint.reasons as Record<string, string>;
@@ -144,6 +155,8 @@ export function ComplaintCard({
           </span>
         </div>
       )}
+
+      {action && <div className="mt-auto">{action}</div>}
     </Card>
   );
 }

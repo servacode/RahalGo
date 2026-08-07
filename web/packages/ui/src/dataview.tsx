@@ -188,6 +188,7 @@ export function DataView<T>({
   empty,
   view,
   onRowClick,
+  card,
 }: {
   items: T[];
   getKey: (item: T) => string;
@@ -196,11 +197,35 @@ export function DataView<T>({
   empty: string;
   view: ViewMode;
   onRowClick?: (item: T) => void;
+  /**
+   * **كرتٌ خاصٌّ بدل الكرت المبنيّ من الأعمدة.**
+   *
+   * (طلبُ المالك ٢٠٢٦-٠٨-٠٨: البلاغات كروتٌ وجداول «مثل باقي المشروع».)
+   *
+   * الكرتُ العامُّ يُبنى من الأعمدة — وهو الصحيح لجدولِ حساباتٍ أو طلبات.
+   * **والبلاغُ له كرتُه المعروف** (`ComplaintCard`) تستعمله لوحاتُ المتجر
+   * والسائق والمندوب والزبون. **فلو بنته الإدارةُ من أعمدتها لَقُرئ شيئاً
+   * آخر** — وهو الشيءُ نفسُه.
+   *
+   * **والجدولُ يبقى من الأعمدة**: الإدارةُ تمسح مئةَ بلاغٍ بالعين، والكرتُ
+   * لمن يقرأ واحداً.
+   */
+  card?: (item: T) => ReactNode;
 }) {
   if (items.length === 0) {
     return (
       <div className="surface p-10 text-center text-ink-muted">
         {empty}
+      </div>
+    );
+  }
+
+  if (view === "cards" && card) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {items.map((item) => (
+          <div key={getKey(item)}>{card(item)}</div>
+        ))}
       </div>
     );
   }
