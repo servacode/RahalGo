@@ -9,11 +9,13 @@ package testdb
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/migrate"
@@ -88,15 +90,37 @@ func NewUser(t *testing.T, pool *pgxpool.Pool, role string) string {
 	//
 	// **والتسلسلُ يقطع الشكّ**: القاعدةُ نفسُها تعطي الرقمَ التالي، فلا
 	// اثنان يتفقان **ولو تشاركت حزمتان القاعدةَ في اللحظة نفسِها.**
+	//
+	// # وتسلسلٌ وحدَه لا يكفي
+	//
+	// (وقع ٢٠٢٦-٠٨-٠٧ في دفعة المال: سقط `TestRotation` بـ`users_phone_key`
+	//  وهو لا يمسّ الأرقام.)
+	//
+	// **التسلسلُ يضمن ألّا يتكرّر ما يولّده هو** — ولا يعلم بمن سبقه.
+	// وقاعدةُ الاختبار لا تُنظَّف: **خمسةٌ وأربعون ألفَ مستخدمٍ متراكمين**
+	// وُلد كثيرٌ منهم قبل التسلسل بأرقامٍ عشوائيّةٍ في المدى نفسِه. فحين
+	// يبلغ التسلسلُ منطقةً مأهولةً **يتصادم — ويسقط اختبارٌ بريء.**
+	//
+	// **فيُقفَز فوق المشغول**: التصادمُ يُدفع بالتقدّم لا بالفشل.
 	if _, err := pool.Exec(ctx,
 		`CREATE SEQUENCE IF NOT EXISTS test_phone_seq START 1`); err != nil {
 		t.Fatalf("تعذّر تهيئةُ تسلسل الأرقام: %v", err)
 	}
 	var id string
-	err := pool.QueryRow(ctx, `
-		INSERT INTO users (phone, full_name)
-		VALUES ('+9639' || lpad((nextval('test_phone_seq') % 100000000)::text, 8, '0'), $1)
-		RETURNING id`, "اختبار "+role).Scan(&id)
+	var err error
+	for attempt := 0; attempt < 50; attempt++ {
+		err = pool.QueryRow(ctx, `
+			INSERT INTO users (phone, full_name)
+			VALUES ('+9639' || lpad((nextval('test_phone_seq') % 100000000)::text, 8, '0'), $1)
+			RETURNING id`, "اختبار "+role).Scan(&id)
+		if err == nil {
+			break
+		}
+		var pgErr *pgconn.PgError
+		if !errors.As(err, &pgErr) || pgErr.Code != "23505" {
+			break
+		}
+	}
 	if err != nil {
 		t.Fatalf("تعذّر إنشاء مستخدم: %v", err)
 	}

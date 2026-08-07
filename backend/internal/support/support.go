@@ -229,10 +229,37 @@ func (s *Service) Reply(ctx context.Context, actorID, ticketID, body string) (*T
 
 // Resolve يحل التذكرة — والتعويض (إن وُجد) يُقيَّد لمحفظة الزبون فوراً.
 func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution string, compensation int64, ip string) (*Ticket, error) {
+	/* ══════════════════════════════════════════════════════════════════
+	   **الحلُّ خطوةٌ واحدةٌ — لا أربع**
+	   ══════════════════════════════════════════════════════════════════
+
+	   (كشفه فحصُ المشروع ٢٠٢٦-٠٨-٠٧، وأُصلح بقرار المالك: «نبدأ إذاً».)
+
+	   كان أربعَ خطواتٍ على البِركة مباشرةً: قراءةُ الحالة، ثمّ فحصُها، ثمّ
+	   كتابةُ «محلولة» بالتعويض، ثمّ قيدُ المال في معاملةٍ منفصلة.
+
+	   **والترتيبُ مقلوب**: الحالةُ قبل المال. فإن سقط القيدُ **بقيت التذكرةُ
+	   تقول «عُوِّض خمسةَ آلاف» ولا خمسةَ آلافٍ في محفظته** — خسارةٌ صامتةٌ
+	   للزبون لا يكشفها سجلّ.
+
+	   **والمتزامنان يُعوّضان مرّتين.** قِيس بعشرين جولةً × ثمانية نداءات:
+	   **دُفع التعويضُ ثماني مرّاتٍ في جولةٍ واحدة** — والرصيدُ ثمانيةُ
+	   أضعافه. خمسُ تشغيلاتٍ من خمس.
+
+	   **والقفلُ هو الحلّ**: `FOR UPDATE` يجعل الثانيةَ تنتظر، **فتقرأ
+	   الحالةَ بعد أن كُتبت** فتراها `resolved` وترفض. ومعاملةٌ واحدةٌ تلفّ
+	   الثلاثة، **فإن سقط شيءٌ رجع كلُّه.**
+	   ══════════════════════════════════════════════════════════════════ */
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
 	var status, customerID string
 	var number int64
-	err := s.db.QueryRow(ctx,
-		`SELECT status, customer_id, number FROM tickets WHERE id = $1`, ticketID).
+	err = tx.QueryRow(ctx,
+		`SELECT status, customer_id, number FROM tickets WHERE id = $1 FOR UPDATE`, ticketID).
 		Scan(&status, &customerID, &number)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
@@ -244,18 +271,22 @@ func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution str
 		return nil, ErrTicketClosed
 	}
 
-	if _, err := s.db.Exec(ctx, `
+	// **والمالُ قبل الحالة** — فلو سقط لم يبقَ سطرٌ يقول «عُوِّض» بلا تعويض.
+	if compensation > 0 {
+		if _, err := s.wallet.ApplyTx(ctx, tx, customerID, compensation, "compensation",
+			ticketID, fmt.Sprintf("تعويض تذكرة #%d", number), &actorID); err != nil {
+			return nil, err
+		}
+	}
+
+	if _, err := tx.Exec(ctx, `
 		UPDATE tickets SET status = 'resolved', resolution = $2, compensation = $3,
 			resolved_at = now(), updated_at = now()
 		WHERE id = $1`, ticketID, resolution, compensation); err != nil {
 		return nil, err
 	}
-
-	if compensation > 0 {
-		if _, err := s.wallet.Apply(ctx, customerID, compensation, "compensation",
-			ticketID, fmt.Sprintf("تعويض تذكرة #%d", number), &actorID); err != nil {
-			return nil, err
-		}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
 	return s.Get(ctx, ticketID)
 }

@@ -193,11 +193,41 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	/* ══════════════════════════════════════════════════════════════════
+	   **القرارُ خطوةٌ واحدةٌ — لا ثلاث**
+	   ══════════════════════════════════════════════════════════════════
+
+	   (كشفه فحصُ المشروع ٢٠٢٦-٠٨-٠٧، وأُصلح بقرار المالك: «نبدأ إذاً».)
+
+	   كان ثلاثَ خطواتٍ على البِركة مباشرةً: قراءةُ الحالة، ثمّ خصمٌ في
+	   معاملتِه، ثمّ تحديثُ الحالة في ثالثة.
+
+	   **فموافقتان متزامنتان تقرآن «معلّق» كلتاهما وتمرّان الفحصَ كلتاهما**
+	   — فيُخصَم الرصيدُ مرّتين ويُصرف السحبُ مرّتين. **وقيدُ `balance >= 0`
+	   لا يوقفه إن كان الرصيدُ كافياً.**
+
+	   قِيس بثمانية نداءاتٍ متزامنة: **صُرف مرّتين وخُصم ضعفُ المبلغ، في
+	   سبعِ تشغيلاتٍ من عشر.**
+
+	   **ولا يظهر في أيّ سجلّ**: كلا النداءين يردّ ٢٠٠، وكلا القيدين صالح.
+
+	   **والقفلُ هو الحلّ لا قيدُ التفرّد**: `FOR UPDATE` يجعل الثانيةَ
+	   تنتظر، **فتقرأ الحالةَ بعد أن كُتبت** فتراها `paid` وترفض. ومعاملةٌ
+	   واحدةٌ تلفّ الثلاثة، **فإن سقط التحديثُ رجع الخصمُ معه** ولا يبقى مالٌ
+	   خرج وطلبٌ معلّق.
+	   ══════════════════════════════════════════════════════════════════ */
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(r.Context()) }()
+
 	var userID string
 	var amount int64
 	var status string
-	if err := s.pg.QueryRow(r.Context(),
-		`SELECT user_id, amount, status FROM payout_requests WHERE id = $1`, id).
+	if err := tx.QueryRow(r.Context(),
+		`SELECT user_id, amount, status FROM payout_requests WHERE id = $1 FOR UPDATE`, id).
 		Scan(&userID, &amount, &status); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
@@ -210,15 +240,19 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 	actor := userIDFrom(r)
 	if req.Status == "paid" {
 		// الخصم أولاً: إن لم يكفِ الرصيد يُرفض القرار ولا يُقفل الطلب
-		if _, err := s.wallet.Apply(r.Context(), userID, -amount, "payout",
+		if _, err := s.wallet.ApplyTx(r.Context(), tx, userID, -amount, "payout",
 			id, clip(req.Decision, 300), &actor); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 	}
-	if _, err := s.pg.Exec(r.Context(), `
+	if _, err := tx.Exec(r.Context(), `
 		UPDATE payout_requests SET status = $2, decision = $3, decided_by = $4, decided_at = now()
 		WHERE id = $1`, id, req.Status, clip(req.Decision, 300), actor); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
 	}
