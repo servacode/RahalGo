@@ -6,7 +6,7 @@
 import { Suspense, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import {
   Alert,
   Button,
@@ -20,6 +20,7 @@ import {
   IconSuccess,
   BrandMark,
   IconPromos,
+  usePlatform,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -35,6 +36,7 @@ interface Category {
 }
 
 export default function JoinPage() {
+
   return (
     <Suspense>
       <JoinForm />
@@ -43,6 +45,8 @@ export default function JoinPage() {
 }
 
 function JoinForm() {
+  /** **واسمُ المنصة من الإعدادات** — لا يُكتب في نصّ. (٢٠٢٦-٠٨-٠٧.) */
+  const { name: platformName } = usePlatform();
   const ref = useSearchParams().get("ref") ?? "";
   const [inviteCode, setInviteCode] = useState<string>("");
   const [checking, setChecking] = useState(true);
@@ -146,7 +150,7 @@ function JoinForm() {
         <div className="mb-4 rounded-card border border-accent-edge bg-accent-tint p-4">
           <p className="flex items-center gap-2 font-medium text-accent-dark">
             <IconUser size={17} />
-            {J.invitedBy.replace("{name}", repName)}
+            {withPlatform(J.invitedBy, platformName).replace("{name}", repName)}
           </p>
           <p className="mt-1 text-xs text-ink-muted">{J.invitedByHint}</p>
         </div>

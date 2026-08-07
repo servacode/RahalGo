@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getMessages, getDir, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, getDir, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { PlatformProvider, fetchPlatform } from "@rahalgo/ui";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
@@ -15,18 +15,29 @@ const m = getMessages(defaultLocale);
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE),
-  title: { default: m.site.appTitle, template: `%s | ${m.common.appName}` },
-  description: m.site.appDescription,
-  openGraph: {
-    title: m.site.appTitle,
-    description: m.site.appDescription,
-    siteName: m.common.appName,
-    locale: "ar_SY",
-    type: "website",
-  },
-};
+/**
+ * **وعنوانُ الصفحة من الإعدادات لا من المعجم.**
+ *
+ * (قاعدةُ المالك: «لا أريد أن تكتب اسمَ المنصة بأيّ مكانٍ أبداً».)
+ *
+ * **وكان مكتوباً في المعجم** — فمن بدّل الاسمَ من اللوحة بدّل الشريطَ
+ * والشعار، **وبقي عنوانُ التبويب يقول الاسمَ القديم.**
+ *
+ * **و`generateMetadata` لا ثابتٌ**: الأوّلُ يُنادى لكلّ طلبٍ فيقرأ الإعدادَ
+ * الحيّ، **والثابتُ يُحسب مرّةً عند البناء فيتجمّد.**
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const brand = await fetchPlatform(API);
+  const name = brand.name || m.common.appName;
+  const title = withPlatform(m.site.appTitle, name);
+  const description = withPlatform(m.site.appDescription, name);
+  return {
+    metadataBase: new URL(SITE),
+    title: { default: title, template: `%s | ${name}` },
+    description,
+    openGraph: { title, description, siteName: name, locale: "ar_SY", type: "website" },
+  };
+}
 
 /**
  * **هويّةُ المنصة تُقرأ في الخادم مرّةً لكلّ صفحة.**

@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, withPlatform } from "@rahalgo/i18n";
 import {
   Button,
   Card,
@@ -21,6 +21,7 @@ import {
   StatCard,
   LoadingState,
   useLiveData,
+  usePlatform,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -50,13 +51,16 @@ function daysLeftInMonth(): number {
 }
 
 export default function OverviewPage() {
+
+  /** **واسمُ المنصة من الإعدادات** — لا يُكتب في نصّ. (٢٠٢٦-٠٨-٠٧.) */
+  const { name: platformName } = usePlatform();
   const [copied, setCopied] = useState(false);
   const { data: me } = useLiveData<Me>(() => api("/api/v1/rep/me"), ["lead", "order", "wallet"]);
 
   if (!me) return <LoadingState />;
 
   const code = me.invite_code ?? "—";
-  const shareText = encodeURIComponent(m.rep.shareText.replace("{code}", code));
+  const shareText = encodeURIComponent(withPlatform(m.rep.shareText, platformName).replace("{code}", code));
 
   const target = Math.max(1, me.monthly_target);
   const done = me.month_merchants;

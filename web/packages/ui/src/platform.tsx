@@ -41,6 +41,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
+
+/** **والاسمُ الافتراضيُّ في المعجم** — يُقرأ حين لا تُضبط الإعدادات. */
+const m = getMessages(defaultLocale);
 
 export interface Platform {
   /** اسمُ المنصة من الإعدادات — **وفارغٌ يعني «لم يُضبط بعد»، لا اسماً بديلاً.** */
@@ -254,6 +258,7 @@ export function brandLetter(name: string): string {
  * **وشريطٌ بلا علامةٍ يُقرأ صفحةً لم تُحمَّل.** فيبقى المربّعُ بلونه ويُملأ
  * حين يُضبط الاسم.
  */
+
 export function BrandMark({
   size = 36,
   rounded = "control",

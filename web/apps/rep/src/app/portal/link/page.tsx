@@ -5,8 +5,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, LoadingState, IconLink, IconQr, IconLock } from "@rahalgo/ui";
+import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
+import { Button, LoadingState, IconLink, IconQr, IconLock,
+  usePlatform,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -18,6 +20,9 @@ interface Me {
 }
 
 export default function LinkPage() {
+
+  /** **واسمُ المنصة من الإعدادات** — لا يُكتب في نصّ. (٢٠٢٦-٠٨-٠٧.) */
+  const { name: platformName } = usePlatform();
   const [me, setMe] = useState<Me | null>(null);
   const [qr, setQr] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -61,7 +66,7 @@ export default function LinkPage() {
     return <p className="py-12 text-center text-ink-muted">{m.common.loading}</p>;
   }
 
-  const shareText = encodeURIComponent(`${m.rep.shareText.replace("{code}", code)}\n${link}`);
+  const shareText = encodeURIComponent(`${withPlatform(m.rep.shareText, platformName).replace("{code}", code)}\n${link}`);
 
   return (
     <div className="mx-auto max-w-lg space-y-6">

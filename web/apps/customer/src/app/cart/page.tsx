@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, withPlatform } from "@rahalgo/i18n";
 import {
   Alert,
   IconEdit,
@@ -18,6 +18,7 @@ import {
   Select,
   AddressBook,
   type SavedAddress,
+  usePlatform,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
@@ -63,6 +64,9 @@ interface Quote {
 }
 
 export default function CartPage() {
+
+  /** **واسمُ المنصة من الإعدادات** — لا يُكتب في نصّ. (٢٠٢٦-٠٨-٠٧.) */
+  const { name: platformName } = usePlatform();
   const { user, loading } = useAuth();
   const { cart, setQty, clear } = useCart();
   const router = useRouter();
@@ -352,7 +356,7 @@ export default function CartPage() {
         <h1 className="mb-1 text-xl font-bold">
           {m.site.cart.title}{" "}
           <span className="text-sm font-normal text-ink-muted">
-            {m.site.cart.fromPlatform}
+            {withPlatform(m.site.cart.fromPlatform, platformName)}
           </span>
         </h1>
         {/* حُذف سطرُ «طلبٌ واحد مهما تعدّدت أصنافه»: صار الكرتُ الجامع يقوله

@@ -35,3 +35,25 @@ export function fmtClock(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+
+/**
+ * **حاقنُ اسم المنصة في نصٍّ من المعجم.**
+ *
+ * (قاعدةُ المالك: «لا أريد أن تكتب اسمَ المنصة بأيّ مكانٍ أبداً».)
+ *
+ * **كان الاسمُ مكتوباً في واحدٍ وعشرين مفتاحاً**: «فاتورة صادرة آلياً عن
+ * منصة رحّال» · «من رحّال غو» · وعناوينُ الخمسة. **ومن بدّل الاسمَ من
+ * الإعدادات بدّل الشريطَ والشعارَ وبقيت فاتورتُه تحمل اسماً آخر.**
+ *
+ * # ولماذا هنا لا في `platform.tsx`
+ *
+ * **ذاك ملفُّ عميلٍ** (`"use client"`) — **وعنوانُ الصفحة يُحسب في الخادم.**
+ * وأوّلُ موضعٍ وضعتُها فيه رمى: «Attempted to call withPlatform() from the
+ * server but withPlatform is on the client».
+ *
+ * **وهي دالّةُ نصٍّ لا حالةَ لها** — فموطنُها حزمةُ النصوص، **يقرؤها
+ * الطرفان.** (وهو الدرسُ نفسُه الذي وُلد منه `platform-server.ts`.)
+ */
+export function withPlatform(text: string, name: string): string {
+  return text.replace(/\{platform\}/g, name || ar.common.appName);
+}

@@ -32,7 +32,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, withPlatform } from "@rahalgo/i18n";
 import {
   Alert,
   Button,
@@ -44,6 +44,7 @@ import {
   IconLink,
   IconUser,
   IconWallet,
+  usePlatform,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -65,6 +66,9 @@ interface Referral {
 }
 
 export default function InvitePage() {
+
+  /** **واسمُ المنصة من الإعدادات** — لا يُكتب في نصّ. (٢٠٢٦-٠٨-٠٧.) */
+  const { name: platformName } = usePlatform();
   const [data, setData] = useState<Referral | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
@@ -91,7 +95,7 @@ export default function InvitePage() {
 
   /** **وواتسابُ أوّلاً** — هو حيث يعيش الناسُ هنا، لا البريد. */
   const waHref = data
-    ? `https://wa.me/?text=${encodeURIComponent(`${V.shareText}\n${data.link}`)}`
+    ? `https://wa.me/?text=${encodeURIComponent(`${withPlatform(V.shareText, platformName)}\n${data.link}`)}`
     : "";
 
   // **والخطأُ لافتةٌ لا سطرٌ أحمرُ في وسط الفراغ.**

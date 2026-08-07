@@ -10,7 +10,8 @@
  */
 
 import { useCallback } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, withPlatform } from "@rahalgo/i18n";
+import { usePlatform } from "./platform";
 import { Badge } from "./components";
 import { ComplaintCard, ComplaintGrid, type ComplaintTicket } from "./ComplaintCard";
 import { useLiveData } from "./Notifications";
@@ -70,6 +71,9 @@ function useReputation(api: ApiFn) {
 }
 
 export function ReputationReviews({ api, labels = {} }: { api: ApiFn; labels?: ReputationLabels }) {
+
+  /** **واسمُ المنصة من الإعدادات** — لا يُكتب في نصّ. (٢٠٢٦-٠٨-٠٧.) */
+  const { name: platformName } = usePlatform();
   const data = useReputation(api);
   if (!data) return <LoadingState />;
 
@@ -91,7 +95,7 @@ export function ReputationReviews({ api, labels = {} }: { api: ApiFn; labels?: R
         <PageHeader
           icon={IconStar}
           title={labels.reviewsTitle ?? T.ratings}
-          subtitle={R.notRatedHint}
+          subtitle={withPlatform(R.notRatedHint, platformName)}
         />
         <EmptyState icon={IconStar} title={R.notRated} />
       </PageContainer>
