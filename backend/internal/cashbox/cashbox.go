@@ -151,7 +151,7 @@ func (s *Service) Collect(ctx context.Context, driverID string, amount int64, or
 	if amount <= 0 {
 		return nil
 	}
-	_, err := s.apply(ctx, driverID, amount, "order_collection", orderID, "تحصيل طلب", actorID)
+	_, err := s.apply(ctx, driverID, amount, "order_collection", orderID, "", actorID)
 	return err
 }
 
@@ -160,7 +160,7 @@ func (s *Service) CollectTx(ctx context.Context, q Querier, driverID string, amo
 	if amount <= 0 {
 		return nil
 	}
-	_, err := s.applyTx(ctx, q, driverID, amount, "order_collection", orderID, "تحصيل طلب", actorID)
+	_, err := s.applyTx(ctx, q, driverID, amount, "order_collection", orderID, "", actorID)
 	return err
 }
 
