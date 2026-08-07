@@ -5,7 +5,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button } from "@rahalgo/ui";
+import { Button,
+  LoadingState,
+} from "@rahalgo/ui";
 import { authApi, tokenStore } from "./client";
 import { safeNext } from "./routing";
 
@@ -49,7 +51,7 @@ function Sso({ loginPath }: { loginPath: string }) {
           <Button onClick={() => window.location.replace(loginPath)}>{m.auth.login}</Button>
         </>
       ) : (
-        <p className="text-ink-muted">{m.shared.sso.loading}</p>
+        <LoadingState variant="inline" label={m.shared.sso.loading} />
       )}
     </div>
   );

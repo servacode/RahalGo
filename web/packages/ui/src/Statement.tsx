@@ -17,7 +17,7 @@ import { useMemo } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { Alert } from "./feedback";
-import { SheetHeader } from "./layout";
+import { SheetHeader, LoadingState } from "./layout";
 import { IconPrint, IconPrev } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -184,7 +184,7 @@ export function StatementSheet({
         </div>
 
         {loading ? (
-          <p className="py-8 text-center text-ink-muted">{m.common.loading}</p>
+          <LoadingState variant="text" />
         ) : !rows.length ? (
           <p className="py-8 text-center text-ink-muted">{S.empty}</p>
         ) : (

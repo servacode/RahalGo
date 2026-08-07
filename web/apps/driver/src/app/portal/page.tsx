@@ -41,6 +41,7 @@ import {
   IconWarning,
   IconCamera,
   Radio,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -260,7 +261,7 @@ export default function TasksPage() {
     }
   }
 
-  if (!me) return <p className="p-6 text-center text-ink-muted">{m.common.loading}</p>;
+  if (!me) return <LoadingState variant="text" />;
 
   const cashRatio = me.cash_limit > 0 ? me.cash_held / me.cash_limit : 0;
 
@@ -476,7 +477,7 @@ export default function TasksPage() {
               </Button>
             </div>
           ) : !stageReasons ? (
-            <p className="text-sm text-ink-muted">{m.common.loading}</p>
+            <LoadingState variant="inline" />
           ) : stageReasons.length === 0 ? (
             <p className="text-sm text-ink-muted">{D.act.failedNoReasons}</p>
           ) : (

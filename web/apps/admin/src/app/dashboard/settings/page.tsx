@@ -19,6 +19,7 @@ import {
   Alert,
   PageHeader, Button, Input, Select, Checkbox, Badge, Card, EmptyState,
   IconSettings, IconWarning, IconCheck,
+  LoadingState,
 } from "@rahalgo/ui";
 import ImageUpload from "@/components/ImageUpload";
 import { api, ApiError } from "@/lib/api";
@@ -169,7 +170,7 @@ export default function SettingsPage() {
     }));
   }, [list, order, visible]);
 
-  if (!list) return <p className="p-6 text-center text-ink-muted">{m.common.loading}</p>;
+  if (!list) return <LoadingState variant="text" />;
 
   /**
    * **التبويباتُ نوعان في شريطٍ واحد.**

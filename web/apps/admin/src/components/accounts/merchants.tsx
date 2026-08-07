@@ -36,6 +36,7 @@ import {
   IconOrder as IconMenu,
   IconDate,
   Checkbox,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -572,7 +573,7 @@ function HoursModal({
       />
 
       {!days ? (
-        <p className="p-4 text-center text-ink-muted">{m.common.loading}</p>
+        <LoadingState variant="inline" />
       ) : (
         <div className="space-y-2">
           {days.map((d, i) => (

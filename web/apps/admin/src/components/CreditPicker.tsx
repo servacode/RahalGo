@@ -13,7 +13,9 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Modal, Input, IconSearch, IconUser } from "@rahalgo/ui";
+import { Modal, Input, IconSearch, IconUser,
+  LoadingState,
+} from "@rahalgo/ui";
 import { api, type AuthUser } from "@/lib/api";
 import RoleBadge from "@/components/RoleBadge";
 
@@ -55,7 +57,7 @@ export default function CreditPicker({
         onChange={(e) => setQuery(e.target.value)}
       />
       <div className="mt-3 max-h-80 overflow-y-auto">
-        {loading && <p className="py-6 text-center text-sm text-ink-muted">{m.common.loading}</p>}
+        {loading && <LoadingState variant="inline" />}
         {!loading && rows.length === 0 && (
           <p className="py-6 text-center text-sm text-ink-muted">{P.creditNoResults}</p>
         )}

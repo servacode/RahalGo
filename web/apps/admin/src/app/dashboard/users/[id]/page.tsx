@@ -32,6 +32,7 @@ import {
   IconUnblock,
   IconBalance,
   IconLocation,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import {
@@ -184,7 +185,7 @@ export default function UserProfilePage() {
   }, [load]);
 
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
-  if (!p) return <p className="py-10 text-center text-ink-muted">{m.common.loading}</p>;
+  if (!p) return <LoadingState variant="text" />;
 
   const has = (r: string) => p.roles.includes(r);
 

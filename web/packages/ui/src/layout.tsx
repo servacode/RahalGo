@@ -177,6 +177,55 @@ export function EmptyState({
 
 /** حالة التحميل الموحّدة. */
 /**
+ * **شاشةُ الإقلاع — أوّلُ ما يُرى، وكانت كلمةً رماديّةً وحدَها.**
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «شاشةُ جاري التحميل يجب أن تكون أيضاً مركزيّةً
+ *  واحترافيّة».)
+ *
+ * # ما كانت
+ *
+ * عشرةُ مواضعَ تكتب هذا بأيديها:
+ *
+ * ```tsx
+ * <main className="flex flex-1 items-center justify-center text-ink-muted">
+ *   {m.common.loading}
+ * </main>
+ * ```
+ *
+ * **وهي أوّلُ ما يراه الداخل** — قبل أن يُعرف من هو وإلى أيّ بوّابةٍ يذهب.
+ * **وكلمةٌ رماديّةٌ وحدَها في شاشةٍ فارغةٍ لا تقول لمن هي**، ومن أبطأت شبكتُه
+ * قرأها «معطّلٌ» لا «يجري».
+ *
+ * # ولماذا هذه الهيئة بعينها
+ *
+ * **هي لغةُ `AuthTransition` نفسُها**: علامةٌ ثمّ سطرٌ ثمّ شريطٌ يمشي.
+ * **والداخلُ يرى الشاشتين في ثوانٍ متتالية** — إقلاعاً ثمّ انتقالاً — فلو
+ * اختلفتا لَقُرئتا منصّتين.
+ *
+ * **والعلامةُ من الإعدادات لا من المعجم**: شعارٌ إن رُفع وإلّا أوّلُ حرفٍ من
+ * الاسم المضبوط — **فتقول المنصةُ اسمَها قبل أن يُكتب حرف.**
+ *
+ * **والشريطُ بلا نسبة**: زمنُ الإقلاع مجهول، **ورقمٌ يُعرض وهو لا يُعرف
+ * كذبة.**
+ */
+export function BootScreen({ label }: { label?: string }) {
+  return (
+    <main
+      className="flex flex-1 flex-col items-center justify-center gap-5 p-6"
+      role="status"
+      aria-live="polite"
+      aria-label={label ?? m.common.loading}
+    >
+      <BrandMark size={64} rounded="card" />
+      <p className="text-sm text-ink-muted">{label ?? m.common.loading}</p>
+      <span className="h-1 w-40 overflow-hidden rounded-badge bg-field">
+        <span className="block h-full w-1/3 rounded-badge bg-accent motion-safe:animate-[rahalgo-sweep_1.1s_ease-in-out_infinite]" />
+      </span>
+    </main>
+  );
+}
+
+/**
  * **حالةُ التحميل تحجز المساحةَ ولا تعِدُ بها.**
  *
  * كانت سطرَ نصٍّ واحداً (`جارٍ التحميل`) **محلَّ صفحةٍ كاملة** — وثلاثون
@@ -203,9 +252,24 @@ export function LoadingState({
   rows = 4,
 }: {
   label?: string;
-  variant?: "list" | "stats" | "text";
+  variant?: "list" | "stats" | "text" | "inline";
   rows?: number;
 }) {
+  /* **وسطرٌ داخل بطاقةٍ لا لوحٌ فوق لوح.**
+
+     تسعةُ مواضعَ كانت تنتظر داخلَ نافذةٍ أو بطاقةٍ مفتوحة — **ولوحُ
+     `text` يضع سطحاً فوق سطحٍ هناك**، وهو ما يطارده حارسُ المركزيّة نفسُه.
+
+     **وكانت خمسَ هيئات**: `text-sm` و`text-xs` و`p-4 text-center` و`py-6`
+     و`py-6 text-sm`. */
+  if (variant === "inline") {
+    return (
+      <p role="status" aria-live="polite" className="py-6 text-center text-sm text-ink-muted">
+        {label ?? m.common.loading}
+      </p>
+    );
+  }
+
   if (variant === "text") {
     /* **وسطرُ الانتظار على لوحٍ لا على الخلفيّة.**
 

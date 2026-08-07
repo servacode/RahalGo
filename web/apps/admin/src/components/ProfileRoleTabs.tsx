@@ -132,7 +132,7 @@ export function OrdersTab({ userID, roles }: { userID: string; roles: string[] }
     void load();
   }, [load]);
 
-  if (loading) return <p className="py-8 text-center text-ink-muted">{m.common.loading}</p>;
+  if (loading) return <LoadingState variant="text" />;
 
   return (
     <div className="space-y-4">

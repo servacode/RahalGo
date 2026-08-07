@@ -483,7 +483,7 @@ function AddItemModal({
             عطباً، **وغيابُه يقول «اختر المتجر أوّلاً» بلا كلمة.** */}
         {merchantID &&
           (menuSections === null ? (
-            <p className="text-sm text-ink-muted">{m.common.loading}</p>
+            <LoadingState variant="inline" />
           ) : menuSections.length === 0 ? (
             <p className="text-sm text-danger">{S.merchantHasNoSections}</p>
           ) : (

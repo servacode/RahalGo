@@ -20,6 +20,7 @@ import {
   IconSettings,
   IconWallet,
   IconWarning,
+  BootScreen,
 } from "@rahalgo/ui";
 import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS } from "@rahalgo/auth";
 import { useAuth, canAccessPortal } from "@/lib/auth";
@@ -53,9 +54,7 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
 
   if (loading || storesLoading || !canAccessPortal(user)) {
     return (
-      <main className="flex flex-1 items-center justify-center text-ink-muted">
-        {m.common.loading}
-      </main>
+      <BootScreen />
     );
   }
 

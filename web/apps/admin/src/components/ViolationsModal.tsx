@@ -35,6 +35,7 @@ import {
   IconWarning,
   IconOrder,
   IconAdd,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -132,7 +133,7 @@ export default function ViolationsModal({
       </p>
 
       {!rows ? (
-        <p className="py-6 text-center text-ink-muted">{m.common.loading}</p>
+        <LoadingState variant="inline" />
       ) : rows.length === 0 ? (
         <EmptyState icon={IconWarning} title={V.empty} />
       ) : (

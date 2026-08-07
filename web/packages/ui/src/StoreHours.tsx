@@ -29,6 +29,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Checkbox } from "./components";
 import { Alert } from "./feedback";
 import { IconPrev } from "./icons";
+import { LoadingState } from "./layout";
 
 const m = getMessages(defaultLocale);
 const H = m.admin.hours;
@@ -119,7 +120,7 @@ export function StoreHours({
       )}
 
       {!days ? (
-        <p className="p-4 text-center text-ink-muted">{m.common.loading}</p>
+        <LoadingState variant="inline" />
       ) : (
         <div className="space-y-2">
           {days.map((d, i) => (

@@ -26,6 +26,7 @@ import {
   IconLink,
   IconBalance,
   IconWallet,
+  BootScreen,
 } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -161,9 +162,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading || !canAccessPanel(user)) {
     return (
-      <main className="flex flex-1 items-center justify-center text-ink-muted">
-        {m.common.loading}
-      </main>
+      <BootScreen />
     );
   }
 

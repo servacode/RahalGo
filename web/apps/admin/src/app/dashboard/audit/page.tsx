@@ -16,6 +16,7 @@ import {
   Alert,
   PageHeader, TabCards, EmptyState, Badge,
   IconStatus, IconUser,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -117,7 +118,7 @@ export default function AuditPage() {
       />
 
       {list === null ? (
-        <p className="p-6 text-center text-ink-muted">{m.common.loading}</p>
+        <LoadingState variant="text" />
       ) : list.length === 0 ? (
         <EmptyState icon={IconStatus} title={A.empty} />
       ) : (

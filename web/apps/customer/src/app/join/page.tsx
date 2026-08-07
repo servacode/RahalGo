@@ -21,6 +21,7 @@ import {
   BrandMark,
   IconPromos,
   usePlatform,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -129,7 +130,7 @@ function JoinForm() {
   }
 
   if (checking) {
-    return <div className="py-20 text-center text-ink-muted">{m.common.loading}</div>;
+    return <LoadingState variant="text" />;
   }
 
   return (

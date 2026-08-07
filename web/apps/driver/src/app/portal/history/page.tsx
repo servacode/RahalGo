@@ -280,7 +280,7 @@ export default function DriverHistoryPage() {
               </Button>
             </div>
           ) : !reasons ? (
-            <p className="text-sm text-ink-muted">{m.common.loading}</p>
+            <LoadingState variant="inline" />
           ) : (
             <div className="space-y-1.5">
               {reasons.map((x) => (

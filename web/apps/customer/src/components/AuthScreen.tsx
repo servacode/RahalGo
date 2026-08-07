@@ -32,6 +32,7 @@
 import { Suspense, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { BootScreen } from "@rahalgo/ui";
 import { LoginCard, routeByRole, safeNext, useAuth } from "@rahalgo/auth";
 
 const m = getMessages(defaultLocale);
@@ -84,9 +85,7 @@ function Screen({ mode }: { mode: AuthMode }) {
 
   if (loading || user) {
     return (
-      <main className="flex flex-1 items-center justify-center text-ink-muted">
-        {m.common.loading}
-      </main>
+      <BootScreen />
     );
   }
 

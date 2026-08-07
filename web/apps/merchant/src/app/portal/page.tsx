@@ -23,6 +23,7 @@ import {
   IconBell,
   IconBellOff,
   IconEdit,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -364,7 +365,7 @@ function OrderCard({
       {expanded && (
         <div className="mt-2 border-t border-line-soft pt-2">
           {items.length === 0 ? (
-            <p className="text-xs text-ink-muted">{m.common.loading}</p>
+            <LoadingState variant="inline" />
           ) : (
             <ul className="space-y-1 text-sm">
               {items.map((it, i) => (

@@ -34,7 +34,9 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button } from "@rahalgo/ui";
+import { Button,
+  BootScreen,
+} from "@rahalgo/ui";
 import { LoginCard } from "./LoginCard";
 import { useAuth } from "./provider";
 import type { AuthUser } from "./client";
@@ -80,9 +82,7 @@ export function PanelLogin({
 
   if (loading) {
     return (
-      <main className="flex flex-1 items-center justify-center text-ink-muted">
-        {m.common.loading}
-      </main>
+      <BootScreen />
     );
   }
 
@@ -111,9 +111,7 @@ export function PanelLogin({
 
   if (user) {
     return (
-      <main className="flex flex-1 items-center justify-center text-ink-muted">
-        {m.common.loading}
-      </main>
+      <BootScreen />
     );
   }
 

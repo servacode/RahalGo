@@ -19,6 +19,7 @@ import {
   IconLocation,
   IconStar,
   IconSupport,
+  BootScreen,
 } from "@rahalgo/ui";
 import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -69,9 +70,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   if (loading || !isDriver(user)) {
     return (
-      <main className="flex flex-1 items-center justify-center text-ink-muted">
-        {m.common.loading}
-      </main>
+      <BootScreen />
     );
   }
 

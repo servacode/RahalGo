@@ -64,7 +64,7 @@ export default function LinkPage() {
   }
 
   if (!code) {
-    return <p className="py-12 text-center text-ink-muted">{m.common.loading}</p>;
+    return <LoadingState variant="text" />;
   }
 
   const shareText = encodeURIComponent(`${withPlatform(m.rep.shareText, platformName).replace("{code}", code)}\n${link}`);

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, isDriver } from "@/lib/auth";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { BootScreen } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
 
@@ -15,8 +16,6 @@ export default function Home() {
     router.replace(isDriver(user) ? "/portal" : "/login");
   }, [user, loading, router]);
   return (
-    <main className="flex flex-1 items-center justify-center text-ink-muted">
-      {m.common.loading}
-    </main>
+    <BootScreen />
   );
 }
