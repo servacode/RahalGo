@@ -83,18 +83,6 @@ export default function MerchantMenuPage() {
             errorText={errText}
           />
         )}
-        sectionImageUpload={(initialUrl, onChange) => (
-          <ImageUpload
-            kind="menu_section"
-            label={m.shared.menuEditor.sectionImage}
-            initialUrl={initialUrl}
-            onChange={(id) => onChange(id || null)}
-            api={api}
-            mediaUrl={mediaUrl}
-            path={MEDIA}
-            errorText={errText}
-          />
-        )}
         thumb={(url, alt) => <MediaThumb url={url} alt={alt} fallback={alt} size={44} mediaUrl={mediaUrl} />}
       />
     </PageContainer>

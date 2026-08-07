@@ -12,6 +12,7 @@ package catalog
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -100,12 +101,24 @@ func TestCreateItem_KeepsPlatformSection(t *testing.T) {
 	}
 }
 
-// TestCreateItem_NoPlatformSectionStaysNull **ومن لم يختر لا يُختار له.**
+// TestCreateItem_RequiresPlatformSection **ولا صنفَ خارجَ السوق.**
 //
-// **والفراغُ يبقى فراغاً**: صنفٌ يُدسّ في أوّل قسمٍ لأنّ الحقلَ فارغٌ يظهر
-// للزبون في غير بابه، **وخطأُ التصنيف أسوأ من غيابه** — الغائبُ يُبحث عنه
-// والمُصنَّفُ خطأً يُصدَّق.
-func TestCreateItem_NoPlatformSectionStaysNull(t *testing.T) {
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «الأدمنُ هو من يزرع الأقسام، والمتجرُ يجد
+//
+//	أقساماً جاهزة… وكلُّ الأصناف ستذهب إلى السوق بلوحة الأدمن مباشرة».)
+//
+// # وكان هذا الاختبارُ يحرس عكسَه
+//
+// **كان يقول: «ومن لم يختر لا يُختار له»** — والفراغُ يبقى فراغاً. وكان
+// صحيحاً يومَ كان للمتجر أقسامُه الخاصّة: **الصنفُ يُعرض في قائمة متجره
+// بقسمه المحلّيّ، وقسمُ السوق زيادةٌ للتصفّح.**
+//
+// **وبعد أن ذهبت طبقةُ أقسام المتجر** (هجرة ٠٠٨٤) صار قسمُ السوق **هو**
+// انتماءَ الصنف — **فصنفٌ بلا قسمٍ لا يظهر في قائمة صاحبه ولا في السوق**:
+// يُكتب في الجدول ولا يراه أحد.
+//
+// **فانقلب الحارسُ مع القاعدة**: يرفض ما كان يقبل.
+func TestCreateItem_RequiresPlatformSection(t *testing.T) {
 	f := newMenuFixture(t)
 	ctx := context.Background()
 
@@ -117,22 +130,13 @@ func TestCreateItem_NoPlatformSectionStaysNull(t *testing.T) {
 		{"مُرسَلٌ فارغاً", ptr("")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			id, err := f.svc.CreateItem(ctx, f.actorID, f.merchantID, MenuItemInput{
-				SectionID:         ptr(f.sectionID),
+			_, err := f.svc.CreateItem(ctx, f.actorID, f.merchantID, MenuItemInput{
 				Name:              ptr("صنفٌ بلا قسم — " + tc.name),
 				Price:             ptr(int64(1000)),
 				PlatformSectionID: tc.in,
 			}, "127.0.0.1")
-			if err != nil {
-				t.Fatalf("تعذّر إنشاء الصنف: %v", err)
-			}
-			var got *string
-			if err := f.pool.QueryRow(ctx,
-				`SELECT platform_section_id::text FROM menu_items WHERE id = $1`, id).Scan(&got); err != nil {
-				t.Fatalf("تعذّرت القراءة: %v", err)
-			}
-			if got != nil {
-				t.Fatalf("صُنّف الصنفُ ولم يُطلب تصنيفُه: %s", *got)
+			if !errors.Is(err, ErrSectionRequired) {
+				t.Fatalf("قُبل صنفٌ بلا قسمِ سوق (الخطأ: %v) — وهو لا يُعرض لأحد", err)
 			}
 		})
 	}

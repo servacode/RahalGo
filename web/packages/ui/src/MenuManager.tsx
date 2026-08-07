@@ -21,7 +21,7 @@ import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { Button, Input, Select, Badge, Modal } from "./components";
 import { Confirm, Alert } from "./feedback";
 import { EmptyState } from "./layout";
-import { IconAdd, IconEdit, IconDelete, IconStore } from "./icons";
+import { IconAdd, IconEdit, IconDelete, IconStore, IconPrev } from "./icons";
 
 const m = getMessages(defaultLocale);
 const L = m.shared.menuEditor;
@@ -118,7 +118,6 @@ export function MenuManager({
   merchantID,
   title,
   imageUpload,
-  sectionImageUpload,
   thumb,
 }: {
   api: ApiFn;
@@ -127,14 +126,7 @@ export function MenuManager({
   title?: ReactNode;
   /** رافع الصور — يبقى محقوناً لأنه يعتمد على عميل الرفع الخاص بكل تطبيق */
   imageUpload?: (initialUrl: string | null | undefined, onChange: (id: string | null) => void) => ReactNode;
-  /**
-   * **رافعُ صورةِ القسم** — نوعُ وسائطه غيرُ نوع الصنف.
-   *
-   * **ونوعان في نداءٍ واحدٍ لا يجتمعان**: حارسُ المحرّك يفحص النوعَ، **وصورةُ
-   * قسمٍ تُرفع باسم صنفٍ تُحسب صنفاً حين تُنظَّف الوسائطُ غيرُ المستعملة.**
-   */
-  sectionImageUpload?: (initialUrl: string | null | undefined, onChange: (id: string | null) => void) => ReactNode;
-  thumb?: (url: string | null, alt: string) => ReactNode;
+    thumb?: (url: string | null, alt: string) => ReactNode;
 }) {
   const [sections, setSections] = useState<MenuSection[]>([]);
   /**
@@ -148,12 +140,9 @@ export function MenuManager({
   /** الصنفُ الذي يُسأل عن حذفه — **وفارغُه يعني لا سؤال.** */
   const [pendingDelete, setPendingDelete] = useState<MenuItem | null>(null);
   const [busy, setBusy] = useState(false);
-  const [sectionName, setSectionName] = useState("");
-  /* **وصورةُ القسم الجديد** — تُرفع قبل أن يُنشأ، فتُحفظ هنا حتّى يُرسَل. */
-  const [sectionImage, setSectionImage] = useState<string | null>(null);
-  /** القسمُ الذي تُبدَّل صورتُه الآن — **وفارغٌ يعني لا نافذةَ مفتوحة.** */
-  const [editSection, setEditSection] = useState<MenuSection | null>(null);
-  const [editing, setEditing] = useState<{ item: MenuItem | null; sectionId: string } | null>(null);
+  /** **القسمُ المفتوح** — وفارغٌ يعني شبكةَ الأقسام. (٢٠٢٦-٠٨-٠٧.) */
+  const [openID, setOpenID] = useState<string | null>(null);
+      const [editing, setEditing] = useState<{ item: MenuItem | null; sectionId: string } | null>(null);
 
   useEffect(() => {
     api<{ sections: PlatformSection[] }>(paths.platformSections())
@@ -185,53 +174,6 @@ export function MenuManager({
   useEffect(() => {
     void load();
   }, [load]);
-
-  async function addSection(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      await api(paths.sections(merchantID), {
-        method: "POST",
-        /* **والصورةُ تُرسَل مع الاسم** — لا في نداءٍ ثانٍ يفشل نصفُه
-           فيبقى قسمٌ بلا وجهٍ ولا يعلم صاحبُه لماذا. */
-        body: JSON.stringify({ name: sectionName, image_media_id: sectionImage ?? "" }),
-      });
-      setSectionName("");
-      setSectionImage(null);
-      await load();
-    } catch (err) {
-      setError(errText(err));
-    }
-  }
-
-  /**
-   * **تعديلُ القسم** — اسماً أو صورة.
-   *
-   * **وكان القسمُ يُنشأ ويُحذف لا غير**: من أخطأ حرفاً في اسمه لم يملك
-   * تصحيحَه، **وأصنافُه تمنع حذفَه** — فيبقى الخطأُ معروضاً على زبائنه.
-   */
-  async function saveSection(sec: MenuSection, name: string, imageID: string | null) {
-    try {
-      await api(paths.section(sec.id), {
-        method: "PATCH",
-        /* **والغائبُ لا يمسّ الصورة** — `null` يعني «اتركها»، والفارغُ
-           «أزِلها»، والقيمةُ «هذه». */
-        body: JSON.stringify(imageID === null ? { name } : { name, image_media_id: imageID }),
-      });
-      setEditSection(null);
-      await load();
-    } catch (err) {
-      setError(errText(err));
-    }
-  }
-
-  async function deleteSection(sectionID: string) {
-    try {
-      await api(paths.section(sectionID), { method: "DELETE" });
-      await load();
-    } catch (err) {
-      setError(errText(err));
-    }
-  }
 
   async function toggleAvailable(item: MenuItem) {
     try {
@@ -269,75 +211,100 @@ export function MenuManager({
     }
   }
 
+  /**
+   * **والمفتوحُ يُشتقّ لا يُخزَّن** — قسمٌ خرج آخرُ أصنافه يختفي وحدَه،
+   * **ونسخةٌ محفوظةٌ منه تبقى تعرض أصنافاً لم تعد فيه.**
+   *
+   * **والاسمُ `openSec` لا `open`**: الأخيرةُ دالّةٌ عامّةٌ في المتصفّح
+   * (`window.open`)، **فمتغيّرٌ باسمها يُقرأ هي حين يُخطئ الاستدلال.**
+   */
+  const openSec = openID ? (sections.find((x) => x.id === openID) ?? null) : null;
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        {title}
-        {/* إضافة قسم في الرأس: أول ما يحتاجه متجرٌ فارغ، وآخر ما يحتاجه متجرٌ ممتلئ */}
-        <form onSubmit={addSection} className="flex flex-wrap items-end gap-2">
-          <Input
-            id="sec-name"
-            label={L.sectionName}
-            required
-            value={sectionName}
-            onChange={(e) => setSectionName(e.target.value)}
-          />
-          {/* **وصورةُ القسم عند إنشائه** — لا بعده في نافذةٍ يُبحث عنها.
-              (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «القسم لازم يكون له صورةٌ واسم».) */}
-          {sectionImageUpload?.(null, setSectionImage)}
-          <Button type="submit" className="flex shrink-0 items-center gap-1.5">
-            <IconAdd size={16} />
-            {L.addSection}
-          </Button>
-        </form>
-      </div>
+      <div className="flex flex-wrap items-end justify-between gap-3">{title}</div>
 
       {error && (
         <Alert>{error}</Alert>
       )}
 
-      {sections.length === 0 ? (
-        <EmptyState icon={IconStore} title={L.empty} />
-      ) : (
-        <div className="space-y-5">
-          {sections.map((sec) => (
-            <section key={sec.id} className="surface">
-              <div className="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3">
-                {/* **ووجهُ القسم قبل اسمه** — العينُ تمسح عموداً من الصور
-                    أسرعَ ممّا تقرأ عموداً من الأسماء. */}
-                <h2 className="flex min-w-0 items-center gap-2.5 font-bold">
-                  {thumb?.(sec.image_thumb_url ?? null, sec.name)}
-                  <span className="truncate">{sec.name}</span>
-                </h2>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setEditing({ item: null, sectionId: sec.id })}
-                    className="flex items-center gap-1.5"
-                  >
-                    <IconAdd size={15} />
-                    {L.addItem}
-                  </Button>
-                  {/* **وتعديلُ القسم** — اسماً أو وجهاً. **وكان يُنشأ ويُحذف
-                      لا غير**: من أخطأ حرفاً في اسمه لم يملك تصحيحَه،
-                      **وأصنافُه تمنع حذفَه**، فيبقى الخطأُ على زبائنه. */}
-                  <Button variant="ghost" onClick={() => setEditSection(sec)} aria-label={L.editSection}>
-                    <IconEdit size={15} />
-                  </Button>
-                  {/* الحذف لقسمٍ فارغ وحده: حذفُ قسمٍ فيه أصناف يمحوها معه بلا قصد */}
-                  {sec.items.length === 0 && (
-                    <Button variant="ghost" onClick={() => deleteSection(sec.id)}>
-                      <IconDelete size={15} className="text-danger" />
-                    </Button>
-                  )}
-                </div>
-              </div>
+      {/* ══════════════════════════════════════════════════════════════
+          **بابان لا قائمةٌ واحدة**
+          ══════════════════════════════════════════════════════════════
 
-              {sec.items.length === 0 ? (
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «كلُّ صنفٍ تفوت عليه تضيف المنتجاتِ
+           بداخله… وتكون نظامَ كروتٍ مثل ما هي بالسوق بلوحة الأدمن».)
+
+          **والأقسامُ من المنصة لا من المتجر**: الأدمنُ يزرعها باسمها وصورتها،
+          **وصاحبُ المطعم يجدها جاهزة** فيفتح ما يخصّه ويضيف فيه.
+
+          **ولا يُصنع قسمٌ هنا ولا يُحذف** — وإلّا كتب كلُّ متجرٍ اسماً لِما
+          له اسمٌ عند المنصة، **فصار للسوق عشرون اسماً لقسمٍ واحد.**
+
+          **والقسمُ يظهر لأنّ فيه صنفاً** — لا لأنّ أحداً اختاره: فمطعمٌ لا
+          يبيع بقالةً لا يرى «بقالة» بلا أن يقول ذلك لأحد. */}
+      {!openSec ? (
+        sections.length === 0 ? (
+          <EmptyState icon={IconStore} title={L.empty} />
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {sections.map((sec) => (
+              <button
+                key={sec.id}
+                type="button"
+                onClick={() => setOpenID(sec.id)}
+                className="flex flex-col overflow-hidden surface text-start transition-shadow hover:elev-2"
+              >
+                {/* **الصورةُ أوّلاً — وهي هويّةُ القسم لا زينتُه.**
+                    والشبكةُ نفسُها التي في سوق الإدارة، **فمن رآها هناك
+                    يعرفها هنا.** */}
+                <span className="relative flex aspect-[4/3] items-center justify-center bg-field">
+                  {sec.image_url || sec.image_thumb_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={(sec.image_url ?? sec.image_thumb_url) as string}
+                      alt={sec.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <IconStore size={22} className="text-ink-muted" />
+                  )}
+                </span>
+                <span className="flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-2.5">
+                  <span className="min-w-0 truncate text-sm font-bold">{sec.name}</span>
+                  {/* **والعددُ يقول أفيه شيءٌ أم لا** — قبل أن يُفتح. */}
+                  <Badge variant="neutral">{fmtNum(sec.items.length)}</Badge>
+                </span>
+              </button>
+            ))}
+          </div>
+        )
+      ) : (
+        <section className="surface">
+          {/* **ورأسُ القسم بابُ الرجوع** — ومن دخل باباً يخرج منه. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft px-4 py-3">
+            <h2 className="flex min-w-0 items-center gap-2.5 font-bold">
+              <Button variant="ghost" onClick={() => setOpenID(null)} aria-label={m.common.back}>
+                <IconPrev size={16} />
+              </Button>
+              {thumb?.(openSec.image_thumb_url ?? null, openSec.name)}
+              <span className="truncate">{openSec.name}</span>
+            </h2>
+            <Button
+              variant="secondary"
+              onClick={() => setEditing({ item: null, sectionId: openSec.id })}
+              className="flex items-center gap-1.5"
+            >
+              <IconAdd size={15} />
+              {L.addItem}
+            </Button>
+          </div>
+
+              {openSec.items.length === 0 ? (
                 <p className="p-6 text-center text-sm text-ink-muted">{L.noItems}</p>
               ) : (
                 <ul className="divide-y divide-line">
-                  {sec.items.map((item) => (
+                  {openSec.items.map((item) => (
                     <li key={item.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                       {thumb?.(item.image_thumb_url, item.name)}
                       <div className="min-w-48 flex-1">
@@ -398,7 +365,7 @@ export function MenuManager({
                         </Button>
                         <Button
                           variant="ghost"
-                          onClick={() => setEditing({ item, sectionId: sec.id })}
+                          onClick={() => setEditing({ item, sectionId: openSec.id })}
                         >
                           <IconEdit size={15} />
                         </Button>
@@ -410,20 +377,9 @@ export function MenuManager({
                   ))}
                 </ul>
               )}
-            </section>
-          ))}
-        </div>
+        </section>
       )}
 
-      {/* **نافذةُ القسم — اسمٌ ووجه.** */}
-      {editSection && (
-        <SectionDialog
-          section={editSection}
-          imageUpload={sectionImageUpload}
-          onClose={() => setEditSection(null)}
-          onSave={saveSection}
-        />
-      )}
       {editing && (
         <ItemModal
           api={api}
@@ -744,52 +700,3 @@ function ItemModal({
   );
 }
 
-/**
- * **نافذةُ القسم** — اسمُه ووجهُه.
- *
- * (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «أساساً القسم لازم يكون له صورةٌ واسم».)
- *
- * **وحالتُها محلّيّةٌ لا في المحرّر**: من فتح النافذةَ وكتب ثمّ أغلقها بلا
- * حفظٍ **لا يترك أثراً في القائمة تحته.**
- */
-function SectionDialog({
-  section,
-  imageUpload,
-  onClose,
-  onSave,
-}: {
-  section: MenuSection;
-  imageUpload?: (initialUrl: string | null | undefined, onChange: (id: string | null) => void) => ReactNode;
-  onClose: () => void;
-  onSave: (sec: MenuSection, name: string, imageID: string | null) => void | Promise<void>;
-}) {
-  const [name, setName] = useState(section.name);
-  /** **و`null` يعني «لم تُمسّ»** — فتبديلُ الاسم وحدَه لا يمحو الصورة. */
-  const [imageID, setImageID] = useState<string | null>(null);
-  return (
-    <Modal open onClose={onClose} title={L.editSection}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void onSave(section, name.trim(), imageID);
-        }}
-        className="space-y-4"
-      >
-        <Input
-          id="sec-edit-name"
-          label={L.sectionName}
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        {imageUpload?.(section.image_url, setImageID)}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit">{m.common.save}</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}

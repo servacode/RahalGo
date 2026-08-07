@@ -18,6 +18,9 @@ import (
 
 var ErrSectionNotEmpty = httpx.NewError(http.StatusConflict, "section_not_empty", "errors.section_not_empty")
 
+// ErrSectionRequired صنفٌ بلا قسمِ سوق — **ولا يراه زبونٌ فلا يُقبل.**
+var ErrSectionRequired = httpx.NewError(http.StatusBadRequest, "section_required", "errors.section_required")
+
 type ModifierOption struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
@@ -119,11 +122,29 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 
 	sections := []MenuSection{}
 	secIdx := map[string]int{}
+	// ══════════════════════════════════════════════════════════════════
+	// **الأقسامُ تُشتقّ من الأصناف — لا من جدولٍ يملكه المتجر**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «الأدمنُ هو من يزرع الأقسام، والمتجرُ يجد
+	//  أقساماً جاهزة… لأنّ بكرا كلّ متجرٍ رح ينزّل اسمَ قسمٍ مختلفٍ وصورةً
+	//  مختلفة».)
+	//
+	// **فلا جدولَ يُصان ولا شاشةَ تُفتح ولا اختيارَ يُخزَّن**: القسمُ يظهر
+	// لأنّ فيه صنفاً، **ويختفي حين يخرج آخرُ صنفٍ منه.** ومطعمٌ لا يبيع
+	// بقالةً لا يرى «بقالة» — بلا أن يقول ذلك لأحد.
+	//
+	// **والاسمُ والصورةُ والترتيبُ من المنصة** — فما يكتبه الأدمنُ مرّةً
+	// يراه المتاجرُ كلُّهم والزبونُ سواءً.
 	rows, err := s.db.Query(ctx, `
-		SELECT ms.id, ms.name, sm.path, sm.thumb_path, ms.sort_order
-		FROM menu_sections ms
-		LEFT JOIN media sm ON sm.id = ms.image_media_id
-		WHERE ms.merchant_id = $1 ORDER BY ms.sort_order, ms.created_at`, merchantID)
+		SELECT ps.id, ps.name, sm.path, sm.thumb_path, ps.sort_order
+		FROM platform_sections ps
+		LEFT JOIN media sm ON sm.id = ps.image_media_id
+		WHERE EXISTS (
+			SELECT 1 FROM menu_items i
+			WHERE i.merchant_id = $1 AND i.platform_section_id = ps.id
+		)
+		ORDER BY ps.sort_order, ps.name`, merchantID)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +214,14 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		it.ImageURL = media.URLForPtr(it.ImageURL)
 		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
 		it.Modifiers = []ModifierGroup{}
-		si, ok := secIdx[it.SectionID]
+		// **والانتماءُ بقسم السوق** — و`section_id` القديمُ يبقى في الصفّ
+		// ولا يُقرأ. **وصنفٌ بلا قسمِ سوقٍ لا يظهر في القائمة**: هو حالةٌ
+		// لا تقع اليومَ (صفرٌ من ١٩٤)، **وإظهارُه بلا رأسٍ يُقرأ عطباً.**
+		key := ""
+		if it.PlatformSectionID != nil {
+			key = *it.PlatformSectionID
+		}
+		si, ok := secIdx[key]
 		if !ok {
 			continue
 		}
@@ -390,8 +418,18 @@ type MenuItemInput struct {
 }
 
 func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in MenuItemInput, ip string) (string, error) {
-	if in.Name == nil || *in.Name == "" || in.SectionID == nil || in.Price == nil || *in.Price < 0 {
+	// **وقسمُ السوق شرطٌ لا اختيار.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «كلُّ الأصناف ستذهب إلى السوق بلوحة الأدمن
+	//  بشكلٍ مباشر».)
+	//
+	// **كان `section_id` هو الشرط** — قسمُ المتجر الذي يكتبه بيده. **وصنفٌ
+	// بلا قسمِ سوقٍ لا يراه زبون**، فيبقى في القائمة ولا يُباع.
+	if in.Name == nil || *in.Name == "" || in.Price == nil || *in.Price < 0 {
 		return "", ErrNameRequired
+	}
+	if in.PlatformSectionID == nil || *in.PlatformSectionID == "" {
+		return "", ErrSectionRequired
 	}
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -406,18 +444,25 @@ func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in
 	// ثانيةً بلا تغيير** — فالتعديلُ وحدَه كان يكتبه.
 	//
 	// **وهي عائلةُ الخلل نفسُها**: قاعدةٌ مكتوبةٌ في موضعين افترقت بلا صوت.
+	// **ولا `section_id` يُكتب** — العمودُ يبقى في الجدول للصفوف القديمة،
+	// **ولا يُملأ لصفٍّ جديد.** (هجرة ٠٠٨٤ رفعت عنه شرطَ الامتلاء.)
+	//
+	// **والحارسُ صار على قسم السوق**: يوجد وفعّال. وكان على قسم المتجر —
+	// **أي أنّ صاحبَ متجرٍ لا يستطيع أن يدسّ صنفاً في قسمِ متجرٍ آخر**،
+	// وهذا يبقى محروساً بـ`merchant_id` في الصفّ نفسِه.
 	var id string
 	err = tx.QueryRow(ctx, `
-		INSERT INTO menu_items (merchant_id, section_id, name, description,
+		INSERT INTO menu_items (merchant_id, name, description,
 		                        merchant_price, price, image_media_id, sort_order,
 		                        platform_section_id)
-		SELECT $1, $2, $3, COALESCE($4,''), $5, $5, NULLIF(COALESCE($6, ''), '')::uuid,
-		       COALESCE((SELECT max(sort_order)+1 FROM menu_items WHERE section_id=$2), 1),
-		       NULLIF(COALESCE($7, ''), '')::uuid
-		WHERE EXISTS (SELECT 1 FROM menu_sections WHERE id = $2 AND merchant_id = $1)
+		SELECT $1, $2, COALESCE($3,''), $4, $4, NULLIF(COALESCE($5, ''), '')::uuid,
+		       COALESCE((SELECT max(sort_order)+1 FROM menu_items
+		                 WHERE merchant_id=$1 AND platform_section_id=$6::uuid), 1),
+		       $6::uuid
+		WHERE EXISTS (SELECT 1 FROM platform_sections WHERE id = $6::uuid AND active)
 		RETURNING id`,
-		merchantID, *in.SectionID, *in.Name, in.Description, *in.Price, in.ImageMediaID,
-		in.PlatformSectionID).Scan(&id)
+		merchantID, *in.Name, in.Description, *in.Price, in.ImageMediaID,
+		*in.PlatformSectionID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", httpx.ErrNotFound
 	}
@@ -445,7 +490,8 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 
 	tag, err := tx.Exec(ctx, `
 		UPDATE menu_items SET
-			section_id  = COALESCE($2, section_id),
+			-- **ولا عمودُ قسمِ المتجر يُبدَّل** — طبقتُه ذهبت (هجرة ٠٠٨٤)،
+			-- **والانتماءُ صار بقسم السوق وحدَه.** والعمودُ يبقى للصفوف القديمة.
 			name        = COALESCE($3, name),
 			description = COALESCE($4, description),
 			-- **السعرُ المُرسَل سعرُ شراء** — وعمودُ price يتبعه كي لا يبقى
