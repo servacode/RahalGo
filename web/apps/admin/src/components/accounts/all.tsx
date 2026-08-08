@@ -463,13 +463,31 @@ function CreateUserModal({
 
   return (
     <Modal open={open} onClose={onClose} title={m.admin.users.createTitle}>
-      <form onSubmit={submit} className="space-y-4">
+      {/* ══════════════════════════════════════════════════════════════
+          **ولا تعبئةَ تلقائيّةً في نموذجٍ يُنشئ حسابَ غيرك**
+          ══════════════════════════════════════════════════════════════
+
+          (شهده المالك ٢٠٢٦-٠٨-٠٨: فتح النافذةَ فوجد **رقمَه هو في حقل
+           الاسم الكامل** ورقمُ الهاتف فارغ.)
+
+          **كروم يرى نموذجاً فيه كلمتا مرورٍ فيَعُدّه تسجيلَ دخول**، فيبحث
+          عن حقل «اسم المستخدم» — **ويقع على أوّل حقلٍ نصّيٍّ يجده**، وهو
+          هنا الاسمُ لا الهاتف. فيحشو فيه ما حفظه لهذا الموقع.
+
+          **والحسابُ المُنشَأ حسابُ غيره**: فلا شيءَ محفوظٌ يصلح له —
+          **وكلُّ ما يُحشى خطأٌ يُحفظ في القاعدة إن لم يُنتبَه.**
+
+          `off` على النصوص، **و`new-password` على الكلمتين**: هي التي تقول
+          لكروم «هذه كلمةٌ تُنشأ لا تُستعاد»، فلا يعرض المحفوظةَ ولا يعرض
+          الحفظ. */}
+      <form onSubmit={submit} className="space-y-4" autoComplete="off">
         <Input
           id="new-phone"
           label={m.auth.phone}
           icon={<IconPhone />}
           dir="ltr"
           required
+          autoComplete="off"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="09xxxxxxxx"
@@ -479,6 +497,7 @@ function CreateUserModal({
           id="new-name"
           label={m.admin.users.fullName}
           icon={<IconUser />}
+          autoComplete="off"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
@@ -486,10 +505,13 @@ function CreateUserModal({
           <span className="mb-1 block text-sm font-medium">{m.admin.users.rolesLabel}</span>
           {/* **والحبّاتُ مركزيّة** — كانت هنا بـ`px-3 py-1` وفي نافذة الأدوار
               بـ`px-3 py-1.5` وفي صفحة الصنف بثالث. (طلبُ المالك ٢٠٢٦-٠٨-٠٧.) */}
+          {/* **وسبعةُ أدوارٍ تلتفّ ولا تنزلق** — من لم يرَ «مدير المنصة»
+              لأنّها خارج الإطار لا يعرف أنّها موجودة. (٢٠٢٦-٠٨-٠٨.) */}
           <Chips
             items={ALL_ROLES.map((r) => ({ id: r, label: ROLE_LABELS[r] ?? r }))}
             value={roles}
             onChange={toggleRole}
+            wrap
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -499,6 +521,7 @@ function CreateUserModal({
             icon={<IconLock />}
             type="password"
             required
+            autoComplete="new-password"
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -509,6 +532,7 @@ function CreateUserModal({
             icon={<IconLock />}
             type="password"
             required
+            autoComplete="new-password"
             minLength={8}
             value={password2}
             onChange={(e) => setPassword2(e.target.value)}

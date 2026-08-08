@@ -140,12 +140,28 @@ export function Chips<K extends string>({
   items,
   value,
   onChange,
+  wrap = false,
   className = "",
 }: {
   items: readonly ChipDef<K>[];
   /** واحدةٌ أو عدّة — **والنوعُ نفسُه يقرّر السلوك** فلا عَلَمَ يُنسى. */
   value: K | readonly K[];
   onChange: (id: K) => void;
+  /**
+   * **تلتفُّ في أسطرٍ بدل أن تنزلق.**
+   *
+   * (كشفه المالكُ ٢٠٢٦-٠٨-٠٨ في نافذة «مستخدم جديد»: «شكلُ الفورم مزعجٌ
+   *  مع السكرول الأفقيّ».)
+   *
+   * **والانزلاقُ يصلح للترشيح لا للاختيار**: مرشِّحاتُ السوق عشرون قسماً
+   * لا تسع سطراً، **ومن لم يرَ «حلويات» يمرّر.** أمّا الأدوارُ سبعةٌ
+   * **يُختار منها واحد** — ومن لم يرَ «مدير المنصة» لأنّها خارج الإطار
+   * **لا يعرف أنّها موجودة.**
+   *
+   * **وصفٌّ ينزلق في نافذةٍ ضيّقةٍ أسوأ**: لا مكانَ للفأرة أن تسحبه،
+   * والحبّةُ الأخيرةُ مقطوعةٌ نصفَين.
+   */
+  wrap?: boolean;
   className?: string;
 }) {
   const many = Array.isArray(value);
@@ -155,7 +171,11 @@ export function Chips<K extends string>({
        بعد حذف حشوة الغلاف، **فظهر تمريرٌ أفقيٌّ للصفحة كلِّها.** */
     <div
       role={many ? "group" : "radiogroup"}
-      className={`flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+      className={`flex gap-1.5 pb-1 ${
+        wrap
+          ? "flex-wrap"
+          : "overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      } ${className}`}
     >
       {items.map((c) => {
         const sel = on(c.id);
