@@ -910,13 +910,31 @@ function ProofModal({
       fd.append("lng", String(point.lng));
     }
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-      const res = await fetch(`${base}/api/v1/driver/orders/${order.id}/proof`, {
+      /* ══════════════════════════════════════════════════════════════
+         **ويُرفع بعميل المنصة لا بـ`fetch` خامّ**
+         ══════════════════════════════════════════════════════════════
+
+         (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨: `401 POST /driver/orders/{id}/proof`
+          والسائقُ داخلٌ وكلُّ نداءاته الأخرى تنجح.)
+
+         كان `fetch` مباشراً بـ`credentials: "include"` **ولا ترويسةَ
+         استيثاق**. والمنصّةُ تستوثق برمزٍ في `Authorization` لا بكعكة —
+         **فكلُّ رفعِ إثباتٍ يُردّ ٤٠١، لكلّ سائقٍ في كلّ تسليم.**
+
+         **وصورةُ التسليم إلزاميّةٌ افتراضاً** (`drivers.require_delivery_photo`)
+         — فالطلبُ يقف عند «وصلتُ إلى الزبون» **ولا يصير مسلَّماً أبداً**،
+         ولا مخرجَ إلّا «تعذّر عليّ» التي تُسجَّل تعذّراً وهي لم تتعذّر.
+
+         **ولا يظهر في تطوير**: الخطأُ يُبتلع ويُعرض «حدث خطأ» عامّاً،
+         **والمسارُ الآخر (`/proof/skip`) يمرّ بـ`api` فيعمل** — فيبدو
+         العطبُ في الكاميرا لا في الاستيثاق.
+
+         و`api` تعرف `FormData` فتترك ترويسةَ النوع للمتصفّح (حدُّ الأجزاء)
+         وتُلحق الرمز — `packages/auth/src/client.ts`. */
+      await api(`/api/v1/driver/orders/${order.id}/proof`, {
         method: "POST",
-        credentials: "include",
         body: fd,
       });
-      if (!res.ok) throw new Error(String(res.status));
       onDone();
     } catch {
       setError(m.errors.internal);
