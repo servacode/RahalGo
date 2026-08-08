@@ -101,6 +101,7 @@ export function DashboardChrome({
   shopUrl,
   shopLabel,
   showRating = false,
+  showBrand = true,
   ratingLabel,
   topbarStart,
   wsUrl,
@@ -123,6 +124,8 @@ export function DashboardChrome({
   shopUrl?: string;
   shopLabel?: string;
   showRating?: boolean;
+  /** **علامةُ المنصة في رأس السايدبار** — تُطفأ حيث لا تُفيد. (٢٠٢٦-٠٨-٠٨.) */
+  showBrand?: boolean;
   /** تسمية شارة التقييم — تختلف بالدور (تقييمي للمتجر، تقييم متاجري للمندوب) */
   ratingLabel?: string;
   topbarStart?: ReactNode;
@@ -185,13 +188,8 @@ export function DashboardChrome({
 
           **وزرُّ الإغلاق مطلقٌ لا شريكٌ في الصفّ** — وإلّا أزاح العلامةَ عن
           الوسط على الجوّال وحدَه، **فتُرى الشاشتان مختلفتين.** */}
-      <div className="relative flex items-center justify-center p-4">
+      <div className={`relative flex items-center justify-center ${showBrand ? "p-4" : "p-2 lg:p-0"}`}>
         <div className="flex items-center gap-2">
-          {/* **علامةُ المنصة من الإعدادات** — شعارٌ إن رُفع وإلّا أوّلُ حرفٍ
-              من الاسم. **والاسمُ بجانبها اسمُ المنصة لا اسمُ اللوحة**: كانت
-              الأربعُ تكتب أربعةَ أسماءٍ مختلفةً في شيفرتها — «رحّال غو»
-              و«بوّابة المتجر» وعنوانَي دخولِ السائق والمندوب.
-              (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «يجب أن يأتي من الإعدادات فقط».) */}
           {/* ══════════════════════════════════════════════════════
               **اللوغو وحدَه — لا اسمٌ ولا تسميةُ بوّابة**
               ══════════════════════════════════════════════════════
@@ -203,12 +201,17 @@ export function DashboardChrome({
               **وكانت الأربعُ تكتب أربعةَ أسماءٍ مختلفةً في شيفرتها**، ثمّ
               صارت تكتب اسمَ المنصة من الإعدادات — **والاثنان زائدان**:
               من فتح بوّابتَه يعرف أيَّها فتح، **والسايدبارُ تحتها يقول
-              دورَه بتسعةَ عشرَ بنداً.** */}
-          <BrandMark size={52} rounded="card" />
+              دورَه بتسعةَ عشرَ بنداً.**
+
+              **ويُطفأ في لوحة الإدارة** (قرارُ المالك ٢٠٢٦-٠٨-٠٨): من يفتحها
+              يفتحها عشرَ مرّاتٍ في اليوم، **والعلامةُ تقول له ما يعرف** —
+              وتأخذ سطراً من قائمةٍ طويلة. **ويبقى في البوّابات الأربع**:
+              يفتحها صاحبُها مرّةً في اليوم فتقول له أين هو. */}
+          {showBrand && <BrandMark size={52} rounded="card" />}
         </div>
         <button
           onClick={() => setMenuOpen(false)}
-          className="absolute end-4 text-ink-muted hover:text-ink lg:hidden"
+          className="absolute end-4 top-4 text-ink-muted hover:text-ink lg:hidden"
           aria-label={m.common.cancel}
         >
           <IconClose size={20} />
