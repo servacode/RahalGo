@@ -245,7 +245,33 @@ export function MenuManager({
           يبيع بقالةً لا يرى «بقالة» بلا أن يقول ذلك لأحد. */}
       {!openSec ? (
         sections.length === 0 ? (
-          <EmptyState icon={IconStore} title={L.empty} />
+          /* ══════════════════════════════════════════════════════════
+             **وأوّلُ صنفٍ يُضاف من الفراغ نفسِه**
+             ══════════════════════════════════════════════════════════
+
+             (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨ على متجرٍ جديدٍ في قاعدةٍ نظيفة.)
+
+             **القسمُ يظهر لأنّ فيه صنفاً، وزرُّ «أضف صنفاً» داخل القسم.**
+             فمتجرٌ بلا أصناف لا يرى قسماً، ولا يرى زرّاً، **ولا يستطيع أن
+             يضيف أوّلَ صنفٍ أبداً** — والشاشةُ تقول له «أضف قسماً ثم
+             أصنافاً» ولا تعطيه باباً.
+
+             **ولا مخرجَ من اللوحتين**: الإدارةُ ترى الشاشةَ نفسَها بالمكوّن
+             نفسِه. **فمتجرٌ جديدٌ لا يُباع منه شيءٌ إلى الأبد.**
+
+             **و`section_id` لا يكتبه الخادمُ أصلاً** (`CreateItem`: «ولا
+             `section_id` يُكتب») — الشرطُ قسمُ السوق، ويُختار في النافذة.
+             فالفراغُ هنا صحيحٌ لا حيلة. */
+          <EmptyState
+            icon={IconStore}
+            title={L.empty}
+            action={
+              <Button onClick={() => setEditing({ item: null, sectionId: "" })} className="flex items-center gap-1.5">
+                <IconAdd size={15} />
+                {L.addItem}
+              </Button>
+            }
+          />
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {sections.map((sec) => (
@@ -385,7 +411,6 @@ export function MenuManager({
           api={api}
           paths={paths}
           merchantID={merchantID}
-          sections={sections}
           platformSections={platformSections}
           editing={editing}
           imageUpload={imageUpload}
@@ -415,7 +440,6 @@ function ItemModal({
   api,
   paths,
   merchantID,
-  sections,
   platformSections,
   editing,
   imageUpload,
@@ -425,7 +449,6 @@ function ItemModal({
   api: ApiFn;
   paths: MenuPaths;
   merchantID: string;
-  sections: MenuSection[];
   platformSections: PlatformSection[];
   editing: { item: MenuItem | null; sectionId: string };
   imageUpload?: (
@@ -444,8 +467,25 @@ function ItemModal({
   // فيرى ١٢٬٠٠٠ (وسعرُه ١٠٬٠٠٠)، **فيحفظ فيصير سعرُ شرائه اثني عشر** ويُضاف
   // عليه الهامشُ من جديد — **ورقمٌ يرتفع بكلّ فتحةٍ للنافذة.**
   const [price, setPrice] = useState(item ? String(item.merchant_price || item.price) : "");
-  const [psID, setPsID] = useState(item?.platform_section_id ?? "");
-  const [sectionId, setSectionId] = useState(editing.sectionId);
+  /* ══════════════════════════════════════════════════════════════════
+     **قسمٌ واحدٌ لا اثنان — والثاني كان يردّ ٤٠٣**
+     ══════════════════════════════════════════════════════════════════
+
+     (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨: أُضيف صنفٌ أوّلُ فنجح، **وثانٍ من داخل
+      القسم فرُدّ** — `403 POST /menu/items`.)
+
+     هجرةُ ٠٠٨٤ جعلت `sections` أقسامَ السوق، **فصار حقلا «القسم» و«قسم
+     المنصة» يعرضان القائمةَ نفسَها.** والأوّلُ يُرسَل في `section_id`،
+     **والخادمُ يفحص ملكيّتَه في جدول أقسام المتاجر** (`ownsSection`) —
+     ومعرّفُ قسمِ سوقٍ ليس فيه، **فيُردّ الصنفُ كلُّه.**
+
+     **ولا يقع إلّا من داخل قسم**: الإضافةُ من الفراغ تمرّر فراغاً فتنجح.
+     فمتجرٌ يضيف أوّلَ صنفٍ ثمّ **لا يستطيع أن يضيف ثانياً أبداً.**
+
+     **و`section_id` لا يكتبه الخادمُ أصلاً** — فحذفُ الحقل حذفٌ لما لا
+     أثرَ له، **والقسمُ الذي فُتحت منه النافذةُ يصير اختياراً مسبقاً لقسم
+     السوق** فلا يعيد المتجرُ اختيارَ ما هو فيه. */
+  const [psID, setPsID] = useState(item?.platform_section_id ?? editing.sectionId ?? "");
   const [groups, setGroups] = useState<ModifierGroup[]>(
     item?.modifiers.map((g) => ({ ...g, options: [...g.options] })) ?? [],
   );
@@ -472,7 +512,6 @@ function ItemModal({
     setBusy(true);
     setError("");
     const body = {
-      section_id: sectionId,
       name,
       description,
       price: Number(price) || 0,
@@ -523,18 +562,6 @@ function ItemModal({
           />
           <p className="mt-1 text-2xs text-ink-muted">{L.priceHint}</p>
           </div>
-          <Select
-            id="i-section"
-            label={L.section}
-            value={sectionId}
-            onChange={(e) => setSectionId(e.target.value)}
-          >
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </Select>
         </div>
 
         {/* **وبلا قسمِ منصةٍ لا يظهر الصنفُ في التصفّح.**

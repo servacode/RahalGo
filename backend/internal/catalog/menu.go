@@ -184,8 +184,17 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		FROM merchants m WHERE m.id = $1`,
 		merchantID).Scan(&open, &opensAt)
 
+	// **والعمودُ الميّتُ يُقرأ فارغاً لا يُسقط الصفحة.**
+	//
+	// (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨ على قاعدةٍ نظيفة — انظر `menu_read_test.go`.)
+	//
+	// هجرةُ ٠٠٨٤ رفعت طبقةَ أقسام المتجر و`CreateItem` لم تعد تكتب
+	// `section_id`، **وهذه بقيت تقرؤه في حقلٍ لا يقبل الفراغ** — فأوّلُ صنفٍ
+	// يُنشئه متجرٌ اليومَ يجعل قائمتَه كلَّها ٥٠٠.
+	//
+	// **والصفوفُ القديمةُ كلُّها مملوءة** فلم يسقط قطّ على قاعدةٍ مبذورة.
 	rows, err = s.db.Query(ctx, `
-		SELECT i.id, i.section_id, i.name, i.description,
+		SELECT i.id, COALESCE(i.section_id::text, ''), i.name, i.description,
 		       i.merchant_price, i.margin_override, ps.margin_override,
 		       i.platform_section_id, COALESCE(ps.name, ''),
 		       im.path, im.thumb_path, i.available, i.approved, i.review_note, i.sort_order

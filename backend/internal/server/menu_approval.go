@@ -89,13 +89,19 @@ type pendingItem struct {
 }
 
 // handlePendingMenuItems طابورُ المراجعة — **بالأقدم أوّلاً.**
+//
+// **والقسمُ قسمُ السوق** — لا الجدولَ الذي رفعته هجرةُ ٠٠٨٤.
+//
+// كان يضمّ menu_sections على i.section_id، **وهو عمودٌ لا يُملأ منذ الهجرة**
+// — فاسمُ القسم يخرج فارغاً لكلّ صنفٍ جديد، **وطابورُ المراجعة يعرض صفّاً
+// بلا قسم** فلا يعرف المراجعُ ما يراجع.
 func (s *Server) handlePendingMenuItems(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT i.id::text, i.name, i.description, i.merchant_price,
-		       m.id::text, m.name, COALESCE(sec.name, ''), im.thumb_path, i.updated_at
+		       m.id::text, m.name, COALESCE(ps.name, ''), im.thumb_path, i.updated_at
 		FROM menu_items i
 		JOIN merchants m ON m.id = i.merchant_id
-		LEFT JOIN menu_sections sec ON sec.id = i.section_id
+		LEFT JOIN platform_sections ps ON ps.id = i.platform_section_id
 		LEFT JOIN media im ON im.id = i.image_media_id
 		WHERE NOT i.approved
 		ORDER BY i.updated_at
