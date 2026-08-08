@@ -719,7 +719,7 @@
       "compensateTitle": "تعويض السائق عن مشوارٍ لم يُثمر",
       "compensateAmount": "المبلغ",
       "compensateReason": "السبب — يُسجَّل",
-      "splitButton": "توزيع المبلغ",
+      "splitButton": "أين ذهب المبلغ",
       "splitTitle": "كيف وُزّع مبلغ الطلب",
       "splitPaid": "ما دفعه الزبون",
       "splitUnaccounted": "فارقٌ بلا طرف",
@@ -756,13 +756,14 @@
       "proofNoGps": "بلا موقع",
       "proofSkipped": "تعذّر التصوير:",
       "historyTitle": "سجلّ الطلبات",
-      "recompute": "أعد حساب التسوية",
+      "recompute": "صحّح الفرق",
       "recomputeHint": "يقرأ الدفتر ويضع الفرقَ قيداً مقابلاً — ولا يُعدَّل قيدٌ قديم",
       "recomputeDone": "صُحِّح بمقدار {n}",
       "recomputeNone": "لا فرق — التسويةُ صحيحة",
       "invoice": "الفاتورة",
       "noDriverYet": "لم يُسنَد بعد",
-      "driverWasAway": "كان على بُعد"
+      "driverWasAway": "كان على بُعد",
+      "splitBalanced": "المبلغُ موزَّعٌ بلا فرق"
     },
     "customers": {
       "title": "الزبائن",

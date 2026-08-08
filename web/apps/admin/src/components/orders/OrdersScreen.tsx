@@ -42,6 +42,7 @@ import {
   IconWhatsApp,
   IconSwap,
   fmtDistance,
+  Invoice,
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -831,7 +832,17 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // فاتورةٌ من عشرة سطورٍ تُفسد صفَّ جدول: **ترتفع الصفوفُ وتتباين
       // أطوالُها فيُقرأ الجدولُ عشوائياً.** والزرُّ يفتحها حين تُطلب.
       tableCell: (o) => <InvoiceButton order={o} />,
-      cell: (o) => <InvoiceList o={o} />,
+      /* **والبطاقةُ تجمع الاثنين**: القائمةُ تُقرأ بلا ضغطة، **وبابُ الورقة
+         تحتها لمن يطبع.** فمن قرأ لا يضغط، ومن أراد ورقةً وجد بابَها حيث
+         نظر — **لا في شاشةٍ أخرى.** */
+      cell: (o) => (
+        <span className="flex w-full flex-col gap-2">
+          <InvoiceList o={o} />
+          <span className="flex justify-end">
+            <InvoiceButton order={o} />
+          </span>
+        </span>
+      ),
     },
     {
       // **السائق وأجرُه — أو أجرةُ التوصيل قبل أن يُسنَد أحد.**
@@ -1428,6 +1439,8 @@ function OrderActions({
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
   if (split !== null) {
     const OP = m.admin.ordersPage;
+    /** **ما تحرّك بلا طرفٍ معروف** — وصفرٌ يعني أنّ الحسبة مقفلة. */
+    const gap = split.total - split.to_parties - split.platform;
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
         <p className="text-xs font-medium">{OP.splitTitle}</p>
@@ -1444,14 +1457,45 @@ function OrderActions({
             ))}
           {/* **الفارقُ يُعرض ولا يُخفى.** لو ظهر رقمٌ هنا فمالٌ تحرّك بلا طرفٍ
               معروف — وهو أوّلُ ما يُسأل عنه، لا آخرُ ما يُكتشف. */}
-          {split.total - split.to_parties - split.platform !== 0 && (
-            <Row
-              label={OP.splitUnaccounted}
-              value={split.total - split.to_parties - split.platform}
-              danger
-            />
+          {gap !== 0 && (
+            <Row label={OP.splitUnaccounted} value={gap} danger />
           )}
         </div>
+        {/* ══════════════════════════════════════════════════════════════
+            **والتصحيحُ حيث يُرى الخلل — لا على كلّ طلبٍ مسلَّم**
+            ══════════════════════════════════════════════════════════════
+
+            (سأل المالك ٢٠٢٦-٠٨-٠٨: «أعد حساب التسوية لم أفهمها — طلبٌ تمّ
+             تسليمه، ما الفائدة من هذه الأمور؟»)
+
+            **كان زرّاً قائماً بذاته على كلّ طلبٍ مسلَّمٍ أو فاشل**، وهو
+            **أداةُ تصليحٍ لعطبٍ وقع مرّةً** في `#1003`: حسبةُ الخزينة كانت
+            غلطاً فبقي القيدُ الخاطئ في الدفتر بعد إصلاح الشيفرة.
+
+            **وعلى طلبٍ سليمٍ لا يفعل شيئاً** — يردّ «لا فرق». **وزرٌّ لا
+            يفعل شيئاً في تسعةٍ وتسعين من مئةٍ يُقرأ إجراءً واجباً** فيُضغط
+            بلا سبب، **أو يُتجاهَل فلا يُضغط يومَ يلزم.**
+
+            **فصار يظهر حيث يُقاس الخلل**: الفارقُ معروضٌ فوقَه بالأحمر،
+            **ومن رآه عرف لماذا يضغط.** ولا فارقَ فلا زرّ. */}
+        {isAdmin && gap !== 0 && (
+          <Button
+            variant="danger"
+            disabled={busy !== ""}
+            title={OP.recomputeHint}
+            onClick={() => void recompute()}
+          >
+            {OP.recompute}
+          </Button>
+        )}
+        {gap === 0 && (
+          <p className="text-xs text-success">{OP.splitBalanced}</p>
+        )}
+        {notice && (
+          <span className="rounded-control bg-success-tint px-2.5 py-1 text-xs text-success">
+            {notice}
+          </span>
+        )}
         {err && <p className="text-xs text-danger">{err}</p>}
         <Button variant="secondary" onClick={() => setSplit(null)}>
           {m.common.back}
@@ -1658,32 +1702,13 @@ function OrderActions({
 
           لا يُعرض قبل الإغلاق: طلبٌ في الطريق لم تُقيَّد أنصبتُه بعد، **وشاشةٌ
           تعرض أصفاراً تُقرأ خطأً لا نقصاً.** */}
-      {(o.status === "delivered" ||
-        o.status === "failed" ||
-        o.status === "refunded") && (
+      {SETTLED_STATUSES.has(o.status) && (
         <Button
           variant="secondary"
           disabled={busy !== ""}
           onClick={() => void openSplit()}
         >
           {m.admin.ordersPage.splitButton}
-        </Button>
-      )}
-      {/* **وتصحيحُ تسويةٍ قديمة — بقيدٍ مقابلٍ لا بتصفير.**
-
-          حسبةُ الخزينة تُصحّح نفسَها بمجرّد أن تُنادى، **ولا شيءَ ينادِيها على
-          طلبٍ أُغلق.** فإن كُشف خللٌ في المعادلة — كما وقع في `#1003` — بقي
-          القيدُ الخاطئ ولو أُصلح الكود، **ولم يبقَ إلّا تصفيرُ البيانات كلِّها.**
-
-          **والأدمنُ وحدَه**: قيدٌ ماليٌّ يُنشأ بيد. */}
-      {isAdmin && SETTLED_STATUSES.has(o.status) && (
-        <Button
-          variant="ghost"
-          disabled={busy !== ""}
-          title={m.admin.ordersPage.recomputeHint}
-          onClick={() => void recompute()}
-        >
-          {m.admin.ordersPage.recompute}
         </Button>
       )}
       {notice && (
@@ -2028,7 +2053,29 @@ function InvoiceButton({ order }: { order: OrderRow }) {
             onClose={() => setOpen(false)}
             title={`${m.admin.ordersPage.invoice} · #${order.number}`}
           >
-            <InvoiceList o={order} />
+            {/* ══════════════════════════════════════════════════════
+                **ورقةٌ تُطبع وحدَها — لا لوحةٌ كاملةٌ على الورق**
+                ══════════════════════════════════════════════════════
+
+                (شكوى المالك ٢٠٢٦-٠٨-٠٨: «الملفُّ الذي يفتح عند الطباعة ما
+                 له علاقةٌ بالمحتوى المطلوب أبداً».)
+
+                **وقيس بمحاكاة وسيط الطباعة**: الضغطُ على «طباعة» في لوحة
+                الإدارة كان يُخرج القائمةَ الجانبيّةَ والشريطَ وجدولَ الطلبات
+                — **٥٠١ حرفاً لا حرفَ منها من الفاتورة.**
+
+                **والسببُ أنّ اللوحةَ لا ورقةَ فيها أصلاً**: قاعدةُ الطباعة
+                تُخفي كلَّ شيءٍ إلّا ما وُسم `data-print="sheet"`، **وشرطُها
+                وجودُ موسومٍ في الصفحة.** فحيث لا ورقة لا إخفاء — وتُطبع
+                الصفحةُ كما كانت.
+
+                **وكانت هنا قائمةُ أصنافٍ لا ورقة.** والورقةُ موجودةٌ في
+                لوحة الزبون منذ يوم — **فتُستعمل هي بعينها**، لا تُبنى ثانيةٌ
+                تفترق عنها بعد شهر.
+
+                **و`showSource` للعمليات**: اسمُ المتجر يُعرض للإدارة ولا
+                يُعرض في نسخة الزبون. */}
+            <Invoice order={order} showSource />
           </Modal>
         </span>
       )}
