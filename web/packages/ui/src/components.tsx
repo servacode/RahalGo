@@ -469,20 +469,28 @@ export function Select({
   children,
   ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { label?: string }) {
+  /* **وبلا تسميةٍ لا غلاف** — كان يُغلَّف دائماً بـ`div`، **فالقائمةُ في
+     شريطٍ علويٍّ تكسر صفَّه**: كتلةٌ تأخذ سطرَها بين حبّاتٍ متجاورة.
+
+     **فبقيت قائمةٌ واحدةٌ في المشروع خارجَ المكوّن** (شريطُ بوّابة المتجر)
+     تبني نفسَها بيدها — **ومن لم يجد المركزَ يصلح لموضعه بنى بجانبه.**
+     (٢٠٢٦-٠٨-٠٨.) */
+  const field = (
+    <select
+      id={id}
+      {...props}
+      className={`w-full rounded-control border border-line bg-field px-3 py-2 text-sm outline-none focus:border-primary ${className}`}
+    >
+      {children}
+    </select>
+  );
+  if (!label) return field;
   return (
     <div>
-      {label && (
-        <label htmlFor={id} className="mb-1 block text-sm font-medium">
-          {label}
-        </label>
-      )}
-      <select
-        id={id}
-        {...props}
-        className={`w-full rounded-control border border-line bg-field px-3 py-2 text-sm outline-none focus:border-primary ${className}`}
-      >
-        {children}
-      </select>
+      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+        {label}
+      </label>
+      {field}
     </div>
   );
 }

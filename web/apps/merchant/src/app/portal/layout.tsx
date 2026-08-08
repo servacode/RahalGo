@@ -10,6 +10,7 @@ import {
   Badge,
   Button,
   CategoryIcon,
+  Select,
   DashboardChrome,
   type ChromeNavItem,
   IconOrder,
@@ -79,17 +80,20 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
   const storeControls = (
     <div className="flex flex-wrap items-center gap-2">
       {stores.length > 1 ? (
-        <select
+        /* **ومن العُدّة لا بيدٍ** — كانت تبني حقلَها بحشوةٍ ولونٍ خاصّين
+           بها، **فتفترق عن كلّ قائمةٍ في المنصة.** (٢٠٢٦-٠٨-٠٨.) */
+        <Select
           value={store.id}
           onChange={(e) => select(e.target.value)}
-          className="max-w-40 surface-inset px-2 py-1 text-sm font-bold"
+          aria-label={m.merchant.header.pickStore}
+          className="max-w-40 !py-1 font-bold"
         >
           {stores.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>
           ))}
-        </select>
+        </Select>
       ) : (
         <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-bold">
           {/* **والأيقونةُ تُرسم لا تُطبع.**
