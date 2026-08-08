@@ -27,6 +27,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import ZonesPanel from "@/components/settings/zones";
 import WhatsAppPanel from "@/components/settings/whatsapp";
+import BroadcastPanel from "@/components/BroadcastPanel";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.settings;
@@ -196,9 +197,19 @@ export default function SettingsPage() {
    * **وحين تعود مفاتيحُ المال يُقرَّر عندها**: أتُجمع في شاشةٍ أم تكفيها
    * مجموعتُها؟ — **والجوابُ يتبع أين وقعت، لا ما كان.**
    */
+  /* **وأقسامٌ ليست مفاتيحَ** — محرّرٌ للمناطق، وضبطٌ لبوت واتساب، **وإعلانُ
+     المنصة.** (قرارُ المالك ٢٠٢٦-٠٨-٠٨: «إعلان المنصة انقله على الإعدادات
+     قسمٌ لوحده».)
+
+     **وموضعُه كان مبدئيّاً بنصّه**: نُقل إلى بابٍ مستقلٍّ ٢٠٢٦-٠٨-٠٧
+     «مبدئيّاً لبين ما ننتقل إلى لوحة الأدمن ونرتّبها» — وهذا أوانُه.
+
+     **والإرسالُ للمالك وحدَه**: كان البابُ محجوزاً بـ`roles: ["admin"]`،
+     **فيبقى محجوزاً تبويباً** — لا يُرسَم لغيره أصلاً. */
   const extra = [
     { key: "zones", label: m.terms.zones },
     { key: "whatsapp", label: m.admin.nav.whatsapp },
+    ...(isAdmin ? [{ key: "broadcast", label: m.admin.broadcast.title }] : []),
   ];
   const extraKeys = extra.map((x) => x.key);
   // **وأوّلُ تبويبٍ مفتوحٍ أوّلُ ما يُعرض فعلاً.**
@@ -254,6 +265,14 @@ export default function SettingsPage() {
         ))}
       {active === "zones" && <ZonesPanel />}
       {active === "whatsapp" && <WhatsAppPanel />}
+      {/* **والإعلانُ فعلٌ لا إعداد** — فيُقال ما هو قبل نموذجه: رسالةٌ تُرسل
+          ولا تُسحب. واللوحُ نفسُه يسأل قبل الإرسال ويقول كم حساباً ستصل. */}
+      {active === "broadcast" && isAdmin && (
+        <div className="space-y-3">
+          <p className="text-sm text-ink-muted">{m.admin.broadcast.hint}</p>
+          <BroadcastPanel />
+        </div>
+      )}
     </div>
   );
 }

@@ -18,7 +18,6 @@ import {
   IconStore,
   IconZones,
   IconPromos,
-  IconWhatsApp,
   IconStatus,
   IconSupport,
   IconStar,
@@ -105,10 +104,6 @@ const ALL_NAV: NavItem[] = [
   // صاروا تبويباتٍ فيه — **بجداولهم كما هي، لا بجدولٍ واحدٍ يُفقد أعمدتَهم.**
   { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers, roles: ["admin"],
     group: m.admin.nav.groupBuild },
-  // **وإعلانُ المنصة قسمٌ لحاله** — كان في صفحة الإشعارات، **وصفحةُ القراءة
-  // غيرُ نموذج الإرسال.** (قرارُ المالك ٢٠٢٦-٠٨-٠٧.)
-  { href: "/dashboard/broadcast", label: m.admin.broadcast.title, icon: IconWhatsApp,
-    roles: ["admin"] },
   // **الأهدافُ والمكافآت** — الشاشةُ تقول من بلغ، **والمكافأةُ بيدٍ لا بمعادلة.**
   { href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconStar,
     roles: ["admin", "finance"] },
