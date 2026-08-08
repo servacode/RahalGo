@@ -13,7 +13,7 @@ import {
   IconStore,
   type MenuPaths,
 } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { api, mediaUrl } from "@/lib/api";
 import ImageUpload, { MediaThumb } from "@/components/ImageUpload";
 
 const m = getMessages(defaultLocale);
@@ -77,6 +77,7 @@ export default function AdminMenuPage() {
           />
         )}
         thumb={(url, alt) => <MediaThumb url={url} alt={alt} fallback={alt} size={48} />}
+        mediaUrl={mediaUrl}
       />
     </PageContainer>
   );

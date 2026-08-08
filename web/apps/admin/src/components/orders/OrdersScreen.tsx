@@ -43,7 +43,7 @@ import {
   IconSwap,
   fmtDistance,
 } from "@rahalgo/ui";
-import { api, ApiError, type AuthUser } from "@/lib/api";
+import { api, ApiError, mediaUrl, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
@@ -870,10 +870,14 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         const away = Math.round(o.proof_meters ?? 0);
         return (
           <span className="flex flex-wrap items-center gap-2">
-            <a href={o.proof_url} target="_blank" rel="noreferrer">
+            {/* **ومسارُ الوسائط يُحوَّل إلى رابطٍ كامل.**
+                كان يُوضع كما جاء — `/media/…` — **فيطلبه المتصفّح من منفذ
+                اللوحة (3001) لا من المحرّك (8080)** فيردّ 404. **وصورةٌ
+                مكسورةٌ في إثبات تسليمٍ تعني أنّ الإثباتَ غيرُ موجود.** */}
+            <a href={mediaUrl(o.proof_url) ?? undefined} target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={o.proof_url}
+                src={mediaUrl(o.proof_url) ?? ""}
                 alt="" loading="lazy"
                 className="h-16 w-16 rounded-control border border-line object-cover"
               />

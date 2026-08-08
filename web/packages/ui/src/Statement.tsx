@@ -14,10 +14,11 @@
  */
 
 import { useMemo } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, withPlatform } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { Alert } from "./feedback";
 import { SheetHeader, LoadingState } from "./layout";
+import { usePlatform } from "./platform";
 import { IconPrint, IconPrev } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -85,6 +86,8 @@ export function StatementSheet({
    */
   onBack?: () => void;
 }) {
+  /* **واسمُ المنصة من الإعدادات** — كالفاتورة، والكشفُ يُسلَّم كذلك. */
+  const { name: platformName } = usePlatform();
   const rows = data?.transactions ?? [];
 
   // من الأقدم إلى الأحدث: الكشف يُقرأ تصاعدياً كي يتراكم الرصيد الجاري أمام
@@ -287,7 +290,7 @@ export function StatementSheet({
             </div>
 
             <p className="mt-4 border-t border-line-soft pt-3 text-xs leading-relaxed text-ink-muted">
-              {S.footer}
+              {withPlatform(S.footer, platformName)}
             </p>
           </>
         )}

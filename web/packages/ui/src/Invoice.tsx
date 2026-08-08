@@ -11,9 +11,10 @@
  * عقدٌ بين المتجر والمنصة لا شأن للزبون به — ولا يُخفى عن المتجر لأنه طرفه.
  */
 
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, withPlatform } from "@rahalgo/i18n";
 import { Button } from "./components";
 import { SheetHeader } from "./layout";
+import { usePlatform } from "./platform";
 import { IconPrint } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -65,6 +66,9 @@ export function Invoice({
   showMerchantSettlement?: boolean;
   showSource?: boolean;
 }) {
+  /* **واسمُ المنصة من الإعدادات لا من نصٍّ مكتوب** — الفاتورةُ تُطبع وتُسلَّم
+     للزبون، **وكانت تخرج بـ`{platform}` حرفاً حرفاً.** */
+  const { name: platformName } = usePlatform();
   const items = order.items ?? [];
   const commission = order.platform_commission ?? 0;
   const net = order.subtotal - commission;
@@ -206,7 +210,7 @@ export function Invoice({
             في يد الزبون** — فتقول كلمةً قبل أن تُطوى. وهي في المعجم لا في
             الشيفرة: يبدّلها المالكُ متى شاء بلا نشر. */}
         <p className="mt-5 border-t border-line-soft pt-4 text-center text-sm font-medium text-primary">
-          {V.thanks}
+          {withPlatform(V.thanks, platformName)}
         </p>
 
         {showMerchantSettlement && (
@@ -224,7 +228,7 @@ export function Invoice({
         )}
 
         <p className="mt-4 border-t border-line-soft pt-3 text-xs leading-relaxed text-ink-muted">
-          {V.footer}
+          {withPlatform(V.footer, platformName)}
         </p>
       </div>
     </div>

@@ -154,6 +154,16 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 			rows.Close()
 			return nil, err
 		}
+		// **ومسارُ الصورة يُبادَأ بـ/media/ كما تُبادَأ مساراتُ الأصناف.**
+		//
+		// (كشفه المالك 2026-08-08 بلقطةِ لوحة: صورةٌ مكسورةٌ في القائمة.)
+		//
+		// **كان يخرج مفتاحَ تخزينٍ عارياً** — 2026/08/x.png — **فلا هو رابطٌ
+		// ولا مسارُ خادم**: يُطلب من منفذ اللوحة فيردّ 404، وحتى لو حُوّل
+		// بـmediaUrl خرج http://…:8080/2026/08/… وردّ 404 كذلك. **والأصنافُ
+		// في هذه الدالّة نفسِها تُبادَأ** — فالسطران فاتا لا القاعدة.
+		sec.ImageURL = media.URLForPtr(sec.ImageURL)
+		sec.ImageThumbURL = media.URLForPtr(sec.ImageThumbURL)
 		sec.Items = []MenuItem{}
 		secIdx[sec.ID] = len(sections)
 		sections = append(sections, sec)
@@ -323,6 +333,8 @@ func (s *Service) CreateSection(ctx context.Context, actorID, merchantID string,
 	if err != nil {
 		return nil, err
 	}
+	sec.ImageURL = media.URLForPtr(sec.ImageURL)
+	sec.ImageThumbURL = media.URLForPtr(sec.ImageThumbURL)
 	sec.Items = []MenuItem{}
 	s.audit(ctx, actorID, "menu.section_create", "menu_section", sec.ID, ip)
 	return &sec, nil
@@ -359,6 +371,8 @@ func (s *Service) UpdateSection(ctx context.Context, actorID, sectionID string, 
 	if err != nil {
 		return nil, err
 	}
+	sec.ImageURL = media.URLForPtr(sec.ImageURL)
+	sec.ImageThumbURL = media.URLForPtr(sec.ImageThumbURL)
 	sec.Items = []MenuItem{}
 	s.audit(ctx, actorID, "menu.section_update", "menu_section", sec.ID, ip)
 	return &sec, nil

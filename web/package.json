@@ -10,9 +10,10 @@
     "dev:rep": "pnpm --filter rep dev",
     "dev:driver": "pnpm --filter driver dev",
     "build": "turbo build",
-    "lint": "node scripts/check-central.mjs && turbo lint",
+    "lint": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && turbo lint",
     "typecheck": "turbo typecheck",
-    "check:central": "node scripts/check-central.mjs"
+    "check:central": "node scripts/check-central.mjs",
+    "check:guards": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

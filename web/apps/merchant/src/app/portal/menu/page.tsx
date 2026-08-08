@@ -84,6 +84,7 @@ export default function MerchantMenuPage() {
           />
         )}
         thumb={(url, alt) => <MediaThumb url={url} alt={alt} fallback={alt} size={44} mediaUrl={mediaUrl} />}
+        mediaUrl={mediaUrl}
       />
     </PageContainer>
   );

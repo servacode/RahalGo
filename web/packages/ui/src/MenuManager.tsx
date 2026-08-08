@@ -119,6 +119,7 @@ export function MenuManager({
   title,
   imageUpload,
   thumb,
+  mediaUrl,
 }: {
   api: ApiFn;
   paths: MenuPaths;
@@ -127,6 +128,16 @@ export function MenuManager({
   /** رافع الصور — يبقى محقوناً لأنه يعتمد على عميل الرفع الخاص بكل تطبيق */
   imageUpload?: (initialUrl: string | null | undefined, onChange: (id: string | null) => void) => ReactNode;
     thumb?: (url: string | null, alt: string) => ReactNode;
+  /**
+   * **محوّلُ مسار الوسائط إلى رابطٍ كامل** — محقونٌ كأخواته.
+   *
+   * (كشفه المالك ٢٠٢٦-٠٨-٠٨: صورةُ القسم مكسورةٌ في القائمة.)
+   *
+   * **كان مسارُ القسم يُوضع كما جاء** — `/media/…` — **فيطلبه المتصفّح من
+   * منفذ البوّابة (3002) لا من المحرّك (8080)** فيردّ 404. **وصورةُ الصنف
+   * تمرّ على `thumb` فتسلم، والقسمُ لا يمرّ بشيء.**
+   */
+  mediaUrl?: (p: string | null | undefined) => string | null;
 }) {
   const [sections, setSections] = useState<MenuSection[]>([]);
   /**
@@ -288,7 +299,11 @@ export function MenuManager({
                   {sec.image_url || sec.image_thumb_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={(sec.image_url ?? sec.image_thumb_url) as string}
+                      src={
+                        (mediaUrl
+                          ? mediaUrl(sec.image_url ?? sec.image_thumb_url)
+                          : (sec.image_url ?? sec.image_thumb_url)) as string
+                      }
                       alt={sec.name}
                       className="h-full w-full object-cover"
                     />

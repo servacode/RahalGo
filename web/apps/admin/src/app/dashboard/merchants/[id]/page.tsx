@@ -42,7 +42,7 @@ import {
   IconDate,
   IconTile,
 } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { api, mediaUrl } from "@/lib/api";
 import ViolationsModal from "@/components/ViolationsModal";
 
 const m = getMessages(defaultLocale);
@@ -232,7 +232,7 @@ export default function MerchantProfilePage() {
           </div>
         </dl>
       )}
-      {tab === "menu" && <MenuManager api={api} paths={PATHS} merchantID={mr.id} />}
+      {tab === "menu" && <MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} />}
       {tab === "hours" && (
         <div className="surface p-4">
           <StoreHours
