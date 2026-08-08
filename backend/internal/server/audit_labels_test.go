@@ -29,26 +29,38 @@ import (
 //
 // **قائمةٌ تُكتب بيدٍ تشيخ يومَ يُضاف فعلٌ ولا يُذكر فيها** — وهو بعينه
 // العطبُ الذي نحرسه.
+//
+// # وعَمِيَ الحارسُ عن نصف النداءات
+//
+// (كشفه المالك ٢٠٢٦-٠٨-٠٨ بلقطةٍ من سجلّ نشاط حساب — «شوف سجلّ النشاط شلون مو
+// مفهوم شي» وفيها `menu.item_create` خامّاً.)
+//
+// **وحرفان كانا سببَ العمى**: `audit(` بحرفٍ صغيرٍ لا غير — **و`repo.Audit(`
+// بحرفٍ كبيرٍ هو ما تكتب به حزمةُ الهويّة كلُّها.** فأربعةُ أفعالٍ حقيقيّةٍ
+// (`admin.logout_all` · `auth.password_reset` · `auth.phone_change` ·
+// `user.self_delete`) مرّت بلا اسمٍ عربيٍّ والحارسُ يقول «سليم».
+//
+// **وقائمةُ الجذور المكتوبةُ بيدٍ هي القائمةُ التي حذّر منها التعليقُ نفسُه**
+// — خمسةُ مجلّداتٍ تُسمّى، **ومن أنشأ حزمةً سادسةً لا يعلم أنّ عليه ذكرَها.**
+// فيُمشى على `internal/` كلِّها.
 func TestAuditActionsHaveArabicLabels(t *testing.T) {
 	actions := map[string]bool{}
-	// **والفعلُ يُسجَّل من الخادم ومن حزم المجال** — فيُمشى على الاثنين.
-	for _, root := range []string{".", "../catalog", "../orders", "../identity", "../settings"} {
-		_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-				return nil
-			}
-			src, err := os.ReadFile(path)
-			if err != nil {
-				return nil
-			}
-			// audit(...) بأيّ ترتيبٍ للوسائط — الفعلُ نصٌّ فيه نقطة.
-			for _, m := range regexp.MustCompile(`\baudit\([^)]*?"([a-z_]+\.[a-z_]+)"`).FindAllStringSubmatch(string(src), -1) {
-				actions[m[1]] = true
-			}
+	// **بحرفٍ كبيرٍ وصغير** — `s.audit(` و`repo.Audit(` كلاهما يسجّل.
+	call := regexp.MustCompile(`\b[Aa]udit\([^)]*?"([a-z_]+\.[a-z_]+)"`)
+	_ = filepath.Walk("..", func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
-		})
-	}
-	if len(actions) < 5 {
+		}
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		for _, m := range call.FindAllStringSubmatch(string(src), -1) {
+			actions[m[1]] = true
+		}
+		return nil
+	})
+	if len(actions) < 40 {
 		t.Fatalf("لم أجد إلّا %d فعلاً — تبدّل شكلُ النداء والحارسُ صار أعمى", len(actions))
 	}
 
@@ -78,4 +90,39 @@ func TestAuditActionsHaveArabicLabels(t *testing.T) {
 			t.Errorf("اسمُ الفعل %q هو %q وفيه حرفٌ لاتينيّ", a, s)
 		}
 	}
+
+	// **ولا خريطةَ ثانيةٍ لنفس الأفعال.**
+	//
+	// **كانت `admin.users.auditActions` بأربعةَ عشرَ اسماً** تقرؤها شاشةُ
+	// «سجلّ النشاط» في ملفّ الحساب، **وهذه المحروسةُ بأربعةٍ وسبعين** يقرؤها
+	// سجلُّ التدقيق. **وثمانيةٌ فقط تتطابق** — فالشاشةُ الأولى تطبع الخامَّ
+	// والحارسُ يشهد للثانية أنّها تامّة.
+	//
+	// **ونصفُ الأسماء في الميتة لا يكتبها المحرّك أصلاً** (`auth.register`
+	// والمحرّكُ يكتب `user.register`) — **اسمٌ لفعلٍ لا يقع.**
+	//
+	// فما يُحرَس واحد، **ومن نسخ خريطةً ثانيةً أسقط البناء** لا انتظر شكوى.
+	var stray func(path string, node map[string]any)
+	stray = func(path string, node map[string]any) {
+		hits := 0
+		for k := range node {
+			if actions[k] {
+				hits++
+			}
+		}
+		if hits >= 3 && path != "admin.audit.actions" {
+			t.Errorf("خريطةُ أفعالٍ ثانيةٌ في %s (%d فعلاً) — تشيخ صامتةً فتُطبع المفاتيحُ خامّةً؛ والمحروسةُ admin.audit.actions", path, hits)
+			return
+		}
+		for k, v := range node {
+			if child, ok := v.(map[string]any); ok {
+				if path == "" {
+					stray(k, child)
+				} else {
+					stray(path+"."+k, child)
+				}
+			}
+		}
+	}
+	stray("", dict)
 }

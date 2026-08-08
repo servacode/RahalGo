@@ -49,7 +49,7 @@ import RoleBadge from "@/components/RoleBadge";
 const m = getMessages(defaultLocale);
 const P = m.admin.users.profile;
 const KINDS: Record<string, string> = m.admin.users.txKinds;
-const ACTIONS: Record<string, string> = m.admin.users.auditActions;
+const ACTIONS: Record<string, string> = m.admin.audit.actions;
 
 interface FinEntry {
   ref: string;

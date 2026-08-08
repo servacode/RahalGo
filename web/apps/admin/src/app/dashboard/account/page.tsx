@@ -18,11 +18,10 @@ interface Login {
   ip: string;
   created_at: string;
 }
-const LOGIN_LABELS: Record<string, string> = {
-  "auth.otp_login": m.admin.users.auditActions["auth.otp_login"],
-  "auth.password_login": m.admin.users.auditActions["auth.password_login"],
-  "auth.password_failed": m.admin.users.auditActions["auth.password_failed"],
-};
+/* **أسماءُ الأفعال من مَعْجمٍ واحد.**
+   كان هنا انتقاءُ ثلاثةٍ من خريطةٍ ثانيةٍ صغيرة — **ومن انتقى ثلاثةً قَبِل
+   أن يُطبع الرابعُ خامّاً.** */
+const ACTIONS: Record<string, string> = m.admin.audit.actions;
 
 export default function MyAccountPage() {
   const { user, logout } = useAuth();
@@ -81,7 +80,7 @@ export default function MyAccountPage() {
                   className="flex items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
                 >
                   <span className={`font-medium ${l.action === "auth.password_failed" ? "text-danger" : ""}`}>
-                    {LOGIN_LABELS[l.action] ?? l.action}
+                    {ACTIONS[l.action] ?? l.action}
                   </span>
                   <span className="flex items-center gap-3 text-xs text-ink-muted" dir="ltr">
                     <span>{l.ip}</span>
