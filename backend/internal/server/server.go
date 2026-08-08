@@ -194,6 +194,8 @@ func (s *Server) Router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.RequireAuth)
 			r.Post("/orders", s.handleCustomerCreateOrder)
+			// **أثرُ كود الخصم قبل الطلب** — والقواعدُ نفسُها لا نسخةٌ منها.
+			r.Post("/promo/preview", s.handlePromoPreview)
 			r.Post("/orders/{id}/rating", s.handleRateOrder)
 			// إلغاء الزبون — كان حقّاً في خارطة الحالات بلا باب يوصله
 			r.Post("/orders/{id}/cancel", s.handleCustomerCancelOrder)

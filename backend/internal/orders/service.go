@@ -684,6 +684,57 @@ func min64(a, b int64) int64 {
 	return b
 }
 
+// PromoPreview أثرُ الكود قبل الطلب — **ليُرى قبل أن يُضغط الزرّ.**
+type PromoPreview struct {
+	Valid       bool  `json:"valid"`
+	Discount    int64 `json:"discount"`
+	DeliveryFee int64 `json:"delivery_fee"`
+}
+
+// PreviewPromo يقول ما يفعله الكودُ بلا أن يفعله.
+//
+// # ما كان
+//
+// (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨.) السلّةُ تحمل حقلَ كودٍ **وترسله مع الطلب
+// فقط**. فيكتب الزبونُ كودَه فلا يتحرّك رقمٌ ولا تظهر كلمة — **لا خصمٌ ولا
+// «هذا الكود لا يصلح»** — حتّى يضغط «تأكيد الطلب» ويرى النتيجةَ بعد فوات
+// اللحظة التي كان يملك فيها أن يبدّل.
+//
+// **ومن كتب كوداً منتهياً ظنّ أنّه نال خصماً** حتّى تصله الفاتورة.
+//
+// # ولماذا تُنادي `validatePromo` لا تعيد كتابتها
+//
+// القواعدُ سبعٌ: فعّالٌ · لم ينتهِ · لم يبلغ سقفَه · الحدُّ الأدنى · مرّةً
+// لكلّ مستخدم · لأوّل طلبٍ فقط · ونوعُ الخصم. **وقاعدةٌ مكتوبةٌ في موضعين
+// تفترق** — فتَعِد الشاشةُ بخصمٍ يرفضه الخادمُ عند الطلب، **وهو أسوأُ من
+// ألّا تَعِد بشيء.**
+//
+// **والمعاينةُ تجري في معاملةٍ تُلغى**: `validatePromo` تقفل الصفَّ
+// بـ`FOR UPDATE` لأنّها تُستعمل عند الطلب، **والإلغاءُ يحرّره فوراً** ولا
+// يترك أثراً — لا عدّادَ يزيد ولا قيدَ يُكتب.
+func (s *Service) PreviewPromo(ctx context.Context, code, customerID string, subtotal, deliveryFee int64) (PromoPreview, error) {
+	out := PromoPreview{DeliveryFee: deliveryFee}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return out, err
+	}
+	// **ولا `Commit` أبداً** — المعاينةُ تقرأ ولا تكتب.
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	fee := deliveryFee
+	_, discount, err := s.validatePromo(ctx, tx, code, customerID, subtotal, &fee)
+	if err != nil {
+		if errors.Is(err, ErrInvalidPromo) {
+			return out, nil // **غيرُ صالحٍ ليس خطأً** — جوابٌ يُعرض.
+		}
+		return out, err
+	}
+	out.Valid = true
+	out.Discount = discount
+	out.DeliveryFee = fee
+	return out, nil
+}
+
 // sourceOf مصدرُ الأصناف — **ويلزم أن يكون واحداً.**
 //
 // # لماذا واحدٌ اليوم

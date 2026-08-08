@@ -43,3 +43,31 @@ func (s *Server) handleQuote(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, q)
 }
+
+// handlePromoPreview أثرُ كود الخصم قبل الطلب.
+//
+// **والزبونُ يُسأل عنه لا الزائر**: القواعدُ فيها «مرّةً لكلّ مستخدم»
+// و«لأوّل طلبٍ فقط» — **ومعاينةٌ بلا صاحبٍ تَعِد بما لا يقع.**
+//
+// **ولا تُنشئ شيئاً**: معاملةٌ تُلغى، فمن جرّب عشرةَ أكوادٍ لم يستهلك واحداً.
+func (s *Server) handlePromoPreview(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Code        string `json:"code"`
+		Subtotal    int64  `json:"subtotal"`
+		DeliveryFee int64  `json:"delivery_fee"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if req.Code == "" || req.Subtotal <= 0 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	out, err := s.orders.PreviewPromo(r.Context(), req.Code, userIDFrom(r), req.Subtotal, req.DeliveryFee)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}

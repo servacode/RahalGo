@@ -102,6 +102,23 @@ export default function CartPage() {
   const [zoneErr, setZoneErr] = useState("");
   const [payment, setPayment] = useState("cash");
   const [promo, setPromo] = useState("");
+  /**
+   * **أثرُ الكود يُرى قبل أن يُضغط الزرّ.**
+   *
+   * (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨.)
+   *
+   * كان الحقلُ يُكتب ويُرسل مع الطلب **ولا يقول شيئاً**: لا خصماً يظهر ولا
+   * «هذا الكود لا يصلح». **فمن كتب كوداً منتهياً ظنّ أنّه نال خصماً** حتّى
+   * تصله الفاتورة، ومن كتبه صحيحاً لم يطمئنّ.
+   *
+   * **والخادمُ يُسأل لا الشاشة**: القواعدُ سبعٌ (فعّالٌ · لم ينتهِ · لم يبلغ
+   * سقفَه · حدٌّ أدنى · مرّةً لكلّ مستخدم · لأوّل طلبٍ · ونوعُ الخصم)،
+   * **وقاعدةٌ مكتوبةٌ في موضعين تفترق** — فتَعِد الشاشةُ بما يرفضه الخادم.
+   *
+   * `null` = لم يُسأل بعد · `valid:false` = سُئل ورُدّ.
+   */
+  const [promoInfo, setPromoInfo] = useState<{ valid: boolean; discount: number; delivery_fee: number } | null>(null);
+  const [promoBusy, setPromoBusy] = useState(false);
   const [notes, setNotes] = useState("");
   const [balance, setBalance] = useState<number | null>(null);
 
@@ -347,8 +364,34 @@ export default function CartPage() {
    * **التنقّلُ يبقى**: من اكتشف أنّه نسي صنفاً يعود، **وحبسُه في السلّة
    * يجعله يُلغي بدل أن يُكمل.**
    */
+  /** يسأل الخادمَ عن الكود — ولا يستهلكه. */
+  async function checkPromo() {
+    const code = promo.trim();
+    if (!code || !zone) { setPromoInfo(null); return; }
+    setPromoBusy(true);
+    try {
+      const r = await api<{ valid: boolean; discount: number; delivery_fee: number }>(
+        "/api/v1/promo/preview",
+        {
+          method: "POST",
+          body: JSON.stringify({ code, subtotal, delivery_fee: zone.delivery_fee }),
+        },
+      );
+      setPromoInfo(r);
+    } catch {
+      // **وتعذّرُ السؤال ليس «الكودُ خطأ»** — يُترك بلا جواب ويُقرَّر عند الطلب.
+      setPromoInfo(null);
+    } finally {
+      setPromoBusy(false);
+    }
+  }
+
   const canPlace = !busy && !!address && !!zone && waVerified !== false;
-  const stickyTotal = zone ? subtotal + zone.delivery_fee : subtotal;
+  /* **والخصمُ يدخل الحسبةَ حيث دخلها الخادم** — على الفاتورة، وقد يصفّر
+     التوصيل. فما يُقرأ في الشريط هو ما سيُخصم. */
+  const okPromo = promoInfo?.valid ? promoInfo : null;
+  const shownFee = okPromo ? okPromo.delivery_fee : (zone?.delivery_fee ?? 0);
+  const stickyTotal = zone ? subtotal - (okPromo?.discount ?? 0) + shownFee : subtotal;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -446,11 +489,20 @@ export default function CartPage() {
               {m.site.cart.tooManySources.replace("{n}", fmtNum(zone.max_sources))}
             </Alert>
           )}
+          {/* **والخصمُ سطرٌ يُرى لا رقمٌ يهبط بلا سبب** — من رأى الإجماليَّ
+              نقص ولم يعرف لماذا يعيد الحساب. (٢٠٢٦-٠٨-٠٨.) */}
+          {okPromo && okPromo.discount > 0 && (
+            <div className="flex justify-between text-sm">
+              <dt className="text-success">{m.site.cart.discount}</dt>
+              <dd className="font-medium text-success">
+                −{fmtNum(okPromo.discount)} {m.common.currency}
+              </dd>
+            </div>
+          )}
           <div className="flex justify-between border-t border-line-soft pt-1 text-base">
             <dt className="font-bold">{m.site.cart.total}</dt>
             <dd className="font-bold text-primary-dark">
-              {zone ? fmtNum(subtotal + zone.delivery_fee) : fmtNum(subtotal)}{" "}
-              {m.common.currency}
+              {fmtNum(stickyTotal)} {m.common.currency}
             </dd>
           </div>
         </dl>
@@ -555,10 +607,32 @@ export default function CartPage() {
                 label={m.site.cart.promo}
                 dir="ltr"
                 value={promo}
-                onChange={(e) => setPromo(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setPromo(e.target.value.toUpperCase());
+                  // **وكلُّ حرفٍ يُبطل جوابَ ما قبله** — وجوابٌ عن كودٍ آخر كذب.
+                  setPromoInfo(null);
+                }}
+                onBlur={() => void checkPromo()}
                 className="text-center font-mono uppercase"
               />
-              <p className="mt-1 text-xs text-ink-muted">{m.site.cart.promoHint}</p>
+              {/* **والجوابُ عند الحقل لا في مكانٍ آخر** — من كتب الكودَ يقرأ
+                  أثرَه في اللحظة التي يملك فيها أن يبدّله. */}
+              {promoBusy ? (
+                <p className="mt-1 text-xs text-ink-muted">{m.site.cart.promoChecking}</p>
+              ) : promoInfo?.valid ? (
+                <p className="mt-1 text-xs font-medium text-success">
+                  {promoInfo.discount > 0
+                    ? m.site.cart.promoApplied.replace(
+                      "{v}",
+                      `${fmtNum(promoInfo.discount)} ${m.common.currency}`,
+                    )
+                    : m.site.cart.promoFreeDelivery}
+                </p>
+              ) : promoInfo ? (
+                <p className="mt-1 text-xs text-danger">{m.site.cart.promoInvalid}</p>
+              ) : (
+                <p className="mt-1 text-xs text-ink-muted">{m.site.cart.promoHint}</p>
+              )}
             </div>
             {error && (
               <Alert>{error}</Alert>
