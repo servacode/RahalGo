@@ -696,13 +696,32 @@ function MerchantModal({
     <Modal
       open
       onClose={onClose}
-      size="xl"
+      size="2xl"
       title={merchant ? m.admin.merchants.editTitle : m.admin.merchants.createTitle}
     >
+      {/* ══════════════════════════════════════════════════════════════
+          **عمودان لا عمود** — والنموذجُ يُرى كلُّه بلا سكرول
+          ══════════════════════════════════════════════════════════════
+
+          (شكوى المالك ٢٠٢٦-٠٨-٠٨: «تعديل المتجر فورم طول بسكرول مزعج».)
+
+          **وقيس فوجد أنّه يَسكرُل في كلّ مقاس** لا في نافذته وحدها: يحتاج
+          ١١٦٤ بكسلاً، **والمتاح ٧٣٥ في نافذته و٩٧٠ في شاشة 1080p كاملة.**
+
+          **والسببُ أنّ الأقسامَ الثلاثةَ تتراصّ طولاً** بينما نصفُ الشاشة
+          فارغٌ عرضاً — النافذةُ كانت ٨٩٦ بكسلاً على شاشةٍ ضعفَ ذلك.
+
+          **فالبياناتُ والحساباتُ في عمود، والموقعُ في عمود** — والخريطةُ
+          هي أطولُ ما في النموذج فتقف وحدها بدل أن تُضاف إلى الطول. */}
       <form onSubmit={submit} className="space-y-6">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[3fr_2fr]">
+        <div className="space-y-5">
         {/* القسم 1: بيانات المتجر */}
         <FormSection title={m.admin.merchants.sectionInfo} icon={<IconStore />}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* **وثلاثةُ أعمدةٍ على الشاشة الواسعة** — ستّةُ حقولٍ في صفّين لا
+              ثلاثة. **وحقلُ الشعار هو أطولُ صفٍّ** فبقاؤه في صفٍّ ثالثٍ وحده
+              كان يضيف ١١٠ بكسلاً إلى الطول بلا حاجة. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Input
               id="m-name"
               label={m.admin.merchants.name}
@@ -756,38 +775,7 @@ function MerchantModal({
           </div>
         </FormSection>
 
-        {/* القسم 2: الموقع — العنوان والخريطة جنباً إلى جنب */}
-        <FormSection title={m.admin.merchants.sectionLocation} icon={<IconLocation />}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-3">
-              <Input
-                id="m-address"
-                label={m.admin.merchants.address}
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder={m.admin.merchants.addressPlaceholder}
-              />
-              <div className="rounded-control bg-field p-3 text-xs leading-relaxed text-ink-muted">
-                {m.admin.merchants.locationHint}
-              </div>
-              <Badge variant={lat != null ? "success" : "warning"}>
-                {lat != null ? m.admin.merchants.locationSet : m.admin.merchants.locationUnset}
-              </Badge>
-            </div>
-            <div className="overflow-hidden rounded-control border border-line">
-              <PickMap
-                lat={lat}
-                lng={lng}
-                onPick={(la, ln) => {
-                  setLat(la);
-                  setLng(ln);
-                }}
-              />
-            </div>
-          </div>
-        </FormSection>
-
-        {/* القسم 3: الحسابات المرتبطة */}
+        {/* القسم 2: الحسابات المرتبطة */}
         <FormSection title={m.admin.merchants.sectionAccounts} icon={<IconUser />}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
@@ -816,6 +804,46 @@ function MerchantModal({
             </div>
           </div>
         </FormSection>
+        </div>
+
+        {/* القسم 3: الموقع — عمودٌ قائمٌ بذاته لأنّ الخريطةَ أطولُ ما فيه */}
+        <FormSection title={m.admin.merchants.sectionLocation} icon={<IconLocation />}>
+          <div className="space-y-3">
+            <Input
+              id="m-address"
+              label={m.admin.merchants.address}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder={m.admin.merchants.addressPlaceholder}
+            />
+            {/* **وارتفاعُ الخريطة قُصَّ إلى ٢٠٨** — صارت أطولَ الأعمدة بعد
+                أن قصُر عمودُ البيانات، **وهي وحدَها ما بقي يُطيل النموذج.**
+                والنقرُ على مربّعٍ بهذا الحجم كافٍ لتحديد نقطةٍ في مدينة. */}
+            <div className="overflow-hidden rounded-control border border-line">
+              <PickMap
+                lat={lat}
+                lng={lng}
+                height="h-52"
+                onPick={(la, ln) => {
+                  setLat(la);
+                  setLng(ln);
+                }}
+              />
+            </div>
+            {/* **والتنبيهُ تحت الخريطة لا فوقها** — من رآها عرف أنّها تُنقر،
+                ومن لم يعرف قرأ السطرَ تحتها. **وصندوقٌ ملوّنٌ فوق الخريطة
+                يأخذ مكانَها ويؤخّرها.** */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs leading-relaxed text-ink-muted">
+                {m.admin.merchants.locationHint}
+              </p>
+              <Badge variant={lat != null ? "success" : "warning"}>
+                {lat != null ? m.admin.merchants.locationSet : m.admin.merchants.locationUnset}
+              </Badge>
+            </div>
+          </div>
+        </FormSection>
+        </div>
 
         {error && (
           <Alert>{error}</Alert>
