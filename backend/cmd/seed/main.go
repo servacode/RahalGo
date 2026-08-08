@@ -60,6 +60,7 @@ func main() {
 	staffOnly := flag.Bool("staff", false, "زراعة طاقم المنصة وحده (أدمن/عمليات/مالية) بلا بيانات تجريبية")
 	storeOnly := flag.Bool("store", false, "زراعة متجرٍ واحد كامل وصاحبه ومندوبه — ولا شيء غيره")
 	driversOnly := flag.Bool("drivers", false, "زراعة ثلاثة سائقين خارج الدوام — ولا شيء غيرهم")
+	ordersOnly := flag.Bool("orders", false, "زراعة طلباتٍ في كلّ الحالات — يحتاج حساباتٍ ومتجراً موجودَين")
 	customerOnly := flag.Bool("customer", false, "زراعة زبونٍ بعنوانَين ورصيدِ محفظةٍ مُقيَّد — ولا شيء غيره")
 	flag.Parse()
 
@@ -91,7 +92,7 @@ func main() {
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	// أوضاعٌ مركَّزة: كلٌّ يزرع ما يخصّه ولا يمرّ ببقية الزراعة
-	if *storeOnly || *driversOnly || *customerOnly {
+	if *storeOnly || *driversOnly || *customerOnly || *ordersOnly {
 		if *storeOnly {
 			seedStore(ctx, tx)
 		}
@@ -100,6 +101,9 @@ func main() {
 		}
 		if *customerOnly {
 			seedCustomer(ctx, tx)
+		}
+		if *ordersOnly {
+			seedOrders(ctx, tx)
 		}
 		if err := tx.Commit(ctx); err != nil {
 			log.Fatal(err)
