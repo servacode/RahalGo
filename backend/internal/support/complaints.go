@@ -83,6 +83,37 @@ func ReasonsFor(status string) []ComplaintReason {
 	return out
 }
 
+// ReasonAr اسمُ سبب الشكوى بالعربيّة — **لِما يُعرض على إنسان.**
+//
+// (كشفه فحصٌ شاملٌ ٢٠٢٦-٠٨-٠٨: إشعارُ الإدارة يقول «شكوى على طلب — late».)
+//
+// **والرمزُ لغةُ الآلة**: يُخزَّن ويُقارن ويُفهرس. **واسمُه لغةُ الناس** —
+// ومن قرأ الإشعارَ في لوحته قرأ كلمةً إنكليزيّةً وسطَ جملةٍ عربيّة.
+//
+// **ولا يُترجَم في الواجهة**: الإشعارُ يُخزَّن نصّاً في القاعدة ويُقرأ كما
+// خُزّن — **فترجمتُه هناك تأتي بعد فوات الأوان.**
+func ReasonAr(code string) string {
+	switch code {
+	case "not_received":
+		return "لم يصلني الطلب"
+	case "missing_items":
+		return "أصنافٌ ناقصة"
+	case "wrong_items":
+		return "أصنافٌ خاطئة"
+	case "quality":
+		return "جودةٌ سيّئة"
+	case "late":
+		return "تأخّرٌ في التوصيل"
+	case "driver_conduct":
+		return "تعاملُ السائق"
+	case "money":
+		return "مبلغٌ غيرُ صحيح"
+	case "other":
+		return "سببٌ آخر"
+	}
+	return code
+}
+
 func validReason(code, status string) bool {
 	for _, r := range ReasonsFor(status) {
 		if r.Code == code {

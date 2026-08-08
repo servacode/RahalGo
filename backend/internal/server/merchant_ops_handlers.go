@@ -66,6 +66,29 @@ func (s *Server) handleMerchantReady(w http.ResponseWriter, r *http.Request) {
 //
 // هو من يعرف متى يفتح في رمضان ومتى يقصّر يوم الجمعة. وجعلُه يتّصل بالمنصة
 // لتغيير ساعة احتكاكٌ بلا مقابل.
+// handleMerchantGetHours ساعاتُ عمل متجره — يقرؤها ليعدّلها.
+//
+// (كشفه فحصٌ شاملٌ ٢٠٢٦-٠٨-٠٨: شاشةُ الإعدادات تردّ ٤٠٥.)
+//
+// **كانت الكتابةُ وحدَها موجودة**: الشاشةُ تقرأ بـGET ثمّ تكتب بـPUT على
+// المسار نفسِه — **والمسارُ لا يقبل إلّا الكتابة.**
+//
+// **فيُفتح الجدولُ فارغاً** ويكتب صاحبُ المتجر فوقَ ساعاته وهو لا يراها:
+// **من أراد تعديلَ يومٍ واحدٍ محا الأسبوعَ كلَّه.**
+func (s *Server) handleMerchantGetHours(w http.ResponseWriter, r *http.Request) {
+	merchantID := chi.URLParam(r, "id")
+	if !s.ownsMerchant(r, merchantID) {
+		s.respondErr(w, errForbidden)
+		return
+	}
+	hours, err := s.catalog.GetHours(r.Context(), merchantID)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, hours)
+}
+
 func (s *Server) handleMerchantSetHours(w http.ResponseWriter, r *http.Request) {
 	merchantID := chi.URLParam(r, "id")
 	if !s.ownsMerchant(r, merchantID) {

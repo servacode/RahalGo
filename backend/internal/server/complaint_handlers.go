@@ -61,7 +61,7 @@ func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
 	// ساعةٌ يبتعد فيها من يُسأل.**
 	s.notify.NotifyOps(r.Context(), notifications.Input{
 		Kind: notifications.KindTicket, Title: notifTitles.ticketNewOps,
-		Body:   t.Subject + " — " + req.Reason,
+		Body:   t.Subject + " — " + support.ReasonAr(req.Reason),
 		Entity: "ticket", EntityID: t.ID, Href: "/dashboard/tickets",
 	})
 	s.audit(r, "customer.complaint_opened", "ticket", t.ID, map[string]any{
