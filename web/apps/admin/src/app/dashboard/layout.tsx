@@ -67,10 +67,10 @@ const ALL_NAV: NavItem[] = [
   // (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «انقل السوق تحت سجلّ الطلبات، لأنّه أكثرُ شيءٍ
   // يهمّنا بعد الطلبات».)
   { href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore, roles: ["admin"] },
-  { href: "/dashboard/tickets", label: m.terms.complaints, icon: IconSupport },
-  // **وما يقوله الناس مجموعاً** — «أيُّ سائقٍ يشكو منه الناس؟» سؤالٌ لا جوابَ
-  // له إلّا بفتح عشرين ملفّاً، فلا يُفتح فلا يُعرف.
-  { href: "/dashboard/ratings", label: m.admin.nav.ratings, icon: IconStar },
+  // **الشكاوى والتقييماتُ بابٌ واحد** — جوابان لسؤالٍ واحد: «ما رأيُ الناس
+  // بنا؟». ومن رأى سائقاً هبط تقييمُه يقرأ شكاواه في المكان نفسِه.
+  // (قرارُ المالك ٢٠٢٦-٠٨-٠٨.)
+  { href: "/dashboard/tickets", label: m.admin.nav.support, icon: IconSupport },
   // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
   { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning },
   { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink },
@@ -85,12 +85,14 @@ const ALL_NAV: NavItem[] = [
   // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
   { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
     roles: ["admin", "finance", "ops"] },
-  // **ما دفعناه بسبب متجر** — والسائقُ عُوّض فوراً، والحسمُ هنا.
-  { href: "/dashboard/claims", label: m.admin.nav.claims, icon: IconStore,
+  // **الخسارةُ والمطالبةُ وجها واقعةٍ واحدة** — طلبٌ يفشل فيُعوَّض السائقُ
+  // (خسارة) ثمّ يُفتح نزاعٌ مع المتجر (مطالبة). (قرارُ المالك ٢٠٢٦-٠٨-٠٨:
+  // «النزاعات تكون مع الخسائر لأنّها هي بسبب الخسائر».)
+  //
+  // **والصلاحيّةُ أوسعُهما** — وتبويبُ الخسائر لا يُرسَم إلّا لمن يملكه،
+  // فلا يوسّع البابُ على أحدٍ ما كان يراه.
+  { href: "/dashboard/losses", label: m.admin.nav.moneyLost, icon: IconBalance,
     roles: ["admin", "finance", "ops"] },
-  // **الخسارةُ الفعلية** — لا الافتراضية التي لم تُدفع.
-  { href: "/dashboard/losses", label: m.admin.nav.losses, icon: IconBalance,
-    roles: ["admin", "finance"] },
   { href: "/dashboard/payouts", label: m.shared.payout.title, icon: IconWallet,
     roles: ["admin", "finance"] },
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconStatus,

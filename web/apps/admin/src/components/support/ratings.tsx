@@ -73,7 +73,7 @@ interface Data {
   comments: Comment[];
 }
 
-export default function RatingsPage() {
+export function RatingsView() {
   const router = useRouter();
   const [min, setMin] = useState("3");
   const [data, setData] = useState<Data | null>(null);

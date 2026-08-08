@@ -96,7 +96,7 @@ const PARTY_TABS: { key: Party; label: string }[] = [
   { key: "customer", label: C.parties.customer },
 ];
 
-export default function DisputesPage() {
+export function DisputesView() {
   const { user } = useAuth();
   const canSettle = hasRole(user, "admin", "finance");
   const [party, setParty] = useState<Party>("");

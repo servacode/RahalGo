@@ -1,164 +1,57 @@
 "use client";
 
 /**
- * **خسائرُ المنصة** — من الدفتر لا من تقدير.
+ * **ما خسرناه وما نطالب به — في بابٍ واحد.**
  *
- * قاعدةُ المالك: «نحسب الخسارة الفعلية فقط وليس الخسارة الافتراضية».
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٨: «النزاعات تكون مع الخسائر لأنّها هي بسبب
+ *  الخسائر».)
  *
- * **والفرقُ ليس لفظياً**: طلبٌ أُلغي قبل التحضير خسارتُه صفر — لم يُطبخ طعامٌ
- * ولم يقد سائق. **وشاشةٌ تعدّه خسارةً تجعل المنصةَ تبدو خاسرةً وهي لم تدفع
- * شيئاً**، فيُتّخذ قرارٌ على رقمٍ لا وجود له.
+ * # وهو صحيح
  *
- * فما يُعرض هنا **قيودُ مصروفٍ خرجت من الخزينة فعلاً**: بضاعةٌ لم يستردّها
- * متجر، وتعويضُ سائقٍ عن طلبٍ فشل.
+ * **الواقعةُ واحدةٌ ووجهاها اثنان**: طلبٌ يفشل، فتعوّض المنصّةُ السائقَ
+ * **لحظتَها** — وذاك قيدُ خسارة — **ثمّ تفتح نزاعاً مع المتجر لتسترجع**.
+ * فمن قرأ الخسارةَ وحدَها رأى مالاً خرج ولم يعرف أيُطالَب به أحد، **ومن قرأ
+ * النزاعَ وحدَه رأى مطالبةً لا يعرف من أين جاءت.**
  *
- * **والرصيدُ بجانبها** — خسارةٌ بلا ما يقابلها رقمٌ يُفزع بلا معنى.
+ * # والصلاحيّتان مختلفتان — فيُحفظ الفرق
+ *
+ * **الخسائرُ لـ`admin` و`finance`، والنزاعاتُ لهما ولـ`ops` معهما.** وجمعُهما
+ * في بابٍ واحدٍ لا يوسّع صلاحيّةَ أحد: **الصفحةُ تُفتح لمن كان يفتح النزاعات،
+ * وتبويبُ الخسائر لا يُرسَم إلّا لمن كان يراها.**
+ *
+ * **فموظّفُ العمليات يرى تبويباً واحداً** — وهو ما يراه اليومَ بعينه، لا
+ * أقلَّ ولا أكثر. **ولا يُخفى عنه ما كان يراه، ولا يُكشف له ما لم يكن.**
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
-import {
-  PageContainer,
-  PageHeader,
-  EmptyState,
-  LoadingState,
-  StatGrid,
-  StatCard,
-  Input,
-  DataView,
-  ViewToggle,
-  useViewMode,
-  type DataColumn,
-  useLiveData,
-  IconWallet,
-  IconDate,
-  IconStatus,
-  IconOrder,
-} from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { TabCards } from "@rahalgo/ui";
+import { useAuth, hasRole } from "@/lib/auth";
+import { LossesView } from "@/components/money/losses";
+import { DisputesView } from "@/components/money/disputes";
 
 const m = getMessages(defaultLocale);
-const L = m.admin.losses;
 
-interface Loss {
-  order_number: number | null;
-  amount: number;
-  note: string;
-  created_at: string;
-}
-
-/** تاريخُ اليوم بصيغة الاستعلام — بلا مناطق زمنية تُزحزح اليوم. */
-function isoDay(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-export default function LossesPage() {
-  const today = new Date();
-  const [to, setTo] = useState(isoDay(today));
-  const [from, setFrom] = useState(
-    isoDay(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 29)),
-  );
-  const [view, setView] = useViewMode("losses");
-
-  const { data } = useLiveData<{
-    losses: Loss[];
-    total: number;
-    treasury_balance: number;
-  }>(() => api(`/api/v1/admin/reports/losses?from=${from}&to=${to}`), ["wallet", "order"]);
-
-  const columns: DataColumn<Loss>[] = [
-    {
-      id: "amount",
-      header: L.amount,
-      icon: <IconWallet />,
-      cell: (x) => (
-        <span dir="ltr" className="font-bold text-danger">
-          {fmtNum(x.amount)}
-        </span>
-      ),
-    },
-    {
-      id: "reason",
-      header: L.reason,
-      icon: <IconStatus />,
-      cell: (x) => <span className="line-clamp-2">{x.note}</span>,
-    },
-    {
-      id: "order",
-      header: m.terms.order,
-      icon: <IconOrder />,
-      cell: (x) => (x.order_number === null ? "—" : <span dir="ltr">#{fmtRef(x.order_number)}</span>),
-    },
-    {
-      id: "date",
-      header: L.date,
-      icon: <IconDate />,
-      cell: (x) => (
-        <span dir="ltr" className="text-xs text-ink-muted">
-          {fmtDateTime(x.created_at)}
-        </span>
-      ),
-    },
+export default function MoneyLostPage() {
+  const { user } = useAuth();
+  /* **ومن لا يملك الخسائرَ لا يُرسَم له تبويبُها** — لا يُعطَّل ولا يُخفى
+     بعد ظهور: **لا يوجد أصلاً.** */
+  const canSeeLosses = hasRole(user, "admin") || hasRole(user, "finance");
+  const tabs = [
+    ...(canSeeLosses ? [{ key: "losses", label: m.admin.nav.losses }] : []),
+    { key: "disputes", label: m.admin.nav.claims },
   ];
+  const [tab, setTab] = useState<string>(canSeeLosses ? "losses" : "disputes");
+  /* **والصلاحيّةُ تصل بعد أوّل رسم** (`useAuth` تُحمّل): فتبويبٌ اختِيرَ قبل
+     وصولها قد لا يوجد بعده — **فيُصحَّح إلى الموجود لا يُترك معلّقاً.** */
+  const active = tabs.some((t) => t.key === tab) ? tab : "disputes";
 
   return (
-    <PageContainer>
-      <PageHeader icon={IconWallet} title={L.title} subtitle={L.hint} />
-
-      <div className="mb-4 flex flex-wrap items-end gap-2">
-        <Input
-          label={m.shared.statement.from}
-          type="date"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-        />
-        <Input label={m.shared.statement.to} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-      </div>
-
-      {!data ? (
-        <LoadingState />
-      ) : (
-        <>
-          <StatGrid>
-            <StatCard
-              label={L.total}
-              value={fmtNum(data.total)}
-              icon={IconWallet}
-              tone={data.total > 0 ? "danger" : "default"}
-            />
-            {/* **رصيدُ الخزينة لا مجموعُ قيود**: هو الصافي بعد كلّ ما دخل
-                وخرج، **ولا يحتاج جمعاً ثانياً يُخطئ.** */}
-            <StatCard
-              label={L.treasury}
-              value={fmtNum(data.treasury_balance)}
-              icon={IconWallet}
-              tone={data.treasury_balance < 0 ? "danger" : "success"}
-            />
-          </StatGrid>
-
-          {data.losses.length === 0 ? (
-            <EmptyState icon={IconStatus} title={L.empty} />
-          ) : (
-            <>
-              <div className="mb-2 flex justify-end">
-                <ViewToggle
-                  view={view}
-                  onChange={setView}
-                  tableLabel={m.common.viewTable}
-                  cardsLabel={m.common.viewCards}
-                />
-              </div>
-              <DataView
-                items={data.losses}
-                getKey={(x) => x.created_at + String(x.amount)}
-                columns={columns}
-                view={view}
-                empty={L.empty}
-              />
-            </>
-          )}
-        </>
-      )}
-    </PageContainer>
+    <div className="space-y-5">
+      {/* **وتبويبٌ واحدٌ ليس تبويباً** — من لا خيارَ له لا يُعرض عليه صفٌّ
+          فيه زرٌّ واحدٌ مضغوطٌ أبداً. */}
+      {tabs.length > 1 && <TabCards items={tabs} active={active} onChange={setTab} />}
+      {active === "losses" ? <LossesView /> : <DisputesView />}
+    </div>
   );
 }
