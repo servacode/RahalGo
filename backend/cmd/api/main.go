@@ -112,6 +112,15 @@ func run(logger *slog.Logger) error {
 	}
 	catalogSvc := catalog.NewService(pg, identitySvc)
 	walletSvc := wallet.NewService(pg)
+
+	// **ولا تعمل المنصةُ بلا خزينة** — انظر الشرحَ عند `EnsureTreasury`.
+	//
+	// **ويُقال في السجلّ**: من عيّنها آليّاً يحقّ له أن يعرف لمن.
+	if tid, err := wallet.EnsureTreasury(ctx, pg); err != nil {
+		return err
+	} else if tid == "" {
+		logger.Warn("لا خزينةَ للمنصة ولا إداريَّ بعد — مصروفُ المنصة لن يُقيَّد")
+	}
 	cashboxSvc := cashbox.NewService(pg, settingsStore)
 	hub := realtime.NewHub(logger)
 	ordersSvc := orders.NewService(pg, identitySvc, walletSvc, cashboxSvc, hub, logger)

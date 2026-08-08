@@ -228,3 +228,57 @@ func isCheckViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23514"
 }
+
+// EnsureTreasury يضمن وجودَ خزينةٍ للمنصة — واحدةٌ لا غير.
+//
+// (كشفه فحصٌ شاملٌ ٢٠٢٦-٠٨-٠٨: القاعدةُ بلا خزينةٍ بعد تنظيف البيانات.)
+//
+// # لماذا يجب أن تُضمن
+//
+// **مصروفُ المنصة يُتجاهَل بصمت حين لا خزينةَ لها**: `DebitTreasury` تردّ
+// بلا خطأ، **فيُدفع تعويضُ السائق ولا يُقيَّد على أحد** — وتقريرُ الخسائر
+// يبقى فارغاً أبداً، وربحُ المنصة لا يُحسب.
+//
+// **ولا خطأ في أيّ سجلّ**: الطلبُ يمشي والمالُ يصل صاحبَه، **والناقصُ
+// وحدَه هو الطرفُ الآخر من القيد.**
+//
+// # ولماذا لم تُضمن قبل
+//
+// كانت تُعيَّن بترحيلةٍ تكتب رقمَ هاتفٍ ثابتاً — **وأيُّ تنظيفٍ للبيانات
+// يمحوها**، ولا شيءَ يعيدها ولا شاشةَ تعيّنها.
+//
+// **وتُعيَّن لأقدم إداريّ**: هو من يملك المنصة عملياً. ومن أراد غيرَه
+// بدّلها بيده — **والمهمُّ ألّا تكون بلا خزينة.**
+func EnsureTreasury(ctx context.Context, db Querier) (string, error) {
+	var id string
+	err := db.QueryRow(ctx,
+		`SELECT user_id::text FROM wallets WHERE is_treasury LIMIT 1`).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return "", err
+	}
+
+	// أقدمُ إداريّ — ومحفظتُه تُنشأ إن لم تكن.
+	var admin string
+	if err := db.QueryRow(ctx, `
+		SELECT u.id::text FROM users u
+		JOIN user_roles r ON r.user_id = u.id AND r.role_code = 'admin'
+		WHERE u.status <> 'deleted'
+		ORDER BY u.created_at LIMIT 1`).Scan(&admin); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil // لا إداريَّ بعد — تُعيَّن حين يوجد
+		}
+		return "", err
+	}
+	if _, err := db.Exec(ctx,
+		`INSERT INTO wallets (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, admin); err != nil {
+		return "", err
+	}
+	if _, err := db.Exec(ctx,
+		`UPDATE wallets SET is_treasury = true WHERE user_id = $1`, admin); err != nil {
+		return "", err
+	}
+	return admin, nil
+}
