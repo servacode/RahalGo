@@ -40,6 +40,40 @@ const FILTERS = ["", "finance", "ops", "admin", "auth", "menu"] as const;
 const actionText = (a: string) =>
   (A.actions as Record<string, string>)[a] ?? a;
 
+/**
+ * **اسمُ الحالة بالعربيّة — من أيّ معجمٍ كانت.**
+ *
+ * السجلُّ يجمع أحداثَ الطلبات والسحوبات والشكاوى، **ولكلٍّ معجمُ حالاتٍ
+ * خاصّ**: `pending` في الطلب «بانتظار التأكيد» وفي السحب «بانتظار المالية».
+ * فيُسأل الأقربُ فالأقرب، **ويبقى الرمزُ آخرَ ملاذٍ لا أوّلَ عرض.**
+ */
+const statusText = (s: string) =>
+  (m.orders.status as Record<string, string>)[s] ??
+  (m.shared.payout.status as Record<string, string>)[s] ??
+  (m.admin.tickets.status as Record<string, string>)[s] ??
+  s;
+
+/** نوعُ حركةِ المحفظة بالعربيّة — `topup` تُقرأ «شحن رصيد». */
+const kindText = (k: string) =>
+  (m.shared.txKinds as Record<string, string>)[k] ?? k;
+
+/**
+ * **قيمةُ الإعداد كما يقرؤها إنسان.**
+ *
+ * (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨: «تغيير إعداد null ← 8».)
+ *
+ * كانت `JSON.stringify` — **فتُظهر `null` للقيمة التي لم تُخزَّن بعد**
+ * (والإعدادُ يعمل بافتراضيّه)، **وتضع علامتَي اقتباسٍ حول كلّ نصّ**:
+ * `"RAHALGO"`. وكلاهما لغةُ برمجةٍ لا لغةُ سجلّ.
+ */
+const settingValue = (v: unknown): string => {
+  if (v === null || v === undefined) return A.defaultValue;
+  if (typeof v === "boolean") return v ? A.boolOn : A.boolOff;
+  if (typeof v === "number") return fmtNum(v);
+  if (typeof v === "string") return v === "" ? A.emptyValue : v;
+  return JSON.stringify(v);
+};
+
 /** الأفعال المالية تُبرَز: هي ما يُبحث عنه حين يُبحث في هذا السجلّ. */
 const toneOf = (action: string): "danger" | "warning" | "neutral" =>
   action.startsWith("finance.") ? "danger"
@@ -59,15 +93,21 @@ function DetailLine({ e }: { e: Entry }) {
   if (typeof d.amount === "number") bits.push(`${fmtNum(d.amount)} ${m.common.currency}`);
   if (typeof d.compensation === "number" && d.compensation > 0)
     bits.push(`${fmtNum(d.compensation)} ${m.common.currency}`);
-  if (typeof d.status === "string") bits.push(d.status);
-  if (typeof d.to === "string")
-    bits.push(m.orders.status[d.to as keyof typeof m.orders.status] ?? d.to);
-  if (typeof d.kind === "string") bits.push(d.kind);
+  /* **والحالةُ والنوعُ يُترجمان كما تُترجم الوجهة.**
+
+     (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨.)
+
+     `d.to` كانت وحدَها تمرّ بالمعجم، **و`status` و`kind` تُدفعان خامّتين** —
+     فيقرأ الموظّفُ «paid» و«topup» وسطَ سطرٍ عربيّ. **وهي لغةُ قاعدةِ
+     بياناتٍ لا لغةُ قارئ.** */
+  if (typeof d.status === "string") bits.push(statusText(d.status));
+  if (typeof d.to === "string") bits.push(statusText(d.to));
+  if (typeof d.kind === "string") bits.push(kindText(d.kind));
   if (typeof d.note === "string" && d.note) bits.push(d.note);
   if (typeof d.resolution === "string" && d.resolution) bits.push(d.resolution);
   // تغيير الإعداد: الفرق لا النتيجة — «صار ٧٠» بلا «كان ٥٠» يُثبت الفعل ولا يُظهر أثره
   if (d.before !== undefined || d.after !== undefined)
-    bits.push(`${JSON.stringify(d.before ?? null)} ← ${JSON.stringify(d.after ?? null)}`);
+    bits.push(`${settingValue(d.before)} ← ${settingValue(d.after)}`);
 
   if (bits.length === 0) return null;
   return (

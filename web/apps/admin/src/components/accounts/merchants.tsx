@@ -216,7 +216,9 @@ export default function MerchantsTable() {
         <span className="inline-flex items-center gap-2">
           <MediaThumb url={mr.logo_thumb_url} alt={mr.name} fallback={mr.name} size={34} />
           <span className="inline-flex items-center gap-1.5">
-            <span>{mr.category_icon}</span>
+            {/* **والأيقونةُ تُرسم لا تُطبع** — والمكوّنُ مستوردٌ في هذا
+                الملفّ نفسِه ويُستعمل في نافذة التصنيفات. (٢٠٢٦-٠٨-٠٨.) */}
+            <CategoryIcon name={mr.category_icon} size={15} />
             {mr.name}
           </span>
         </span>

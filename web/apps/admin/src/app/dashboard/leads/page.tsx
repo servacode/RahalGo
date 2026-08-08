@@ -9,6 +9,7 @@ import {
   PageHeader,
   Button,
   Badge,
+  CategoryIcon,
   DataView,
   ViewToggle,
   useViewMode,
@@ -135,8 +136,12 @@ export default function LeadsPage() {
       icon: <IconStore />,
       cell: (l) =>
         l.category_name ? (
-          <span className="inline-flex items-center gap-1">
-            <span>{l.category_icon}</span>
+          <span className="inline-flex items-center gap-1.5">
+            {/* **والأيقونةُ تُرسم لا تُطبع** — `category_icon` مفتاحٌ قيمتُه
+                `food` و`grocery`. **وطبعُه يضع كلمةً إنكليزيّةً وسطَ عربيّة**،
+                وقد وقع هنا: «التصنيف food مطاعم». (كُشف ٢٠٢٦-٠٨-٠٨؛ وهو
+                العطبُ نفسُه الذي أُصلح في بوّابة المتجر ٢٠٢٦-٠٨-٠٧.) */}
+            <CategoryIcon name={l.category_icon} size={15} />
             {l.category_name}
           </span>
         ) : (
