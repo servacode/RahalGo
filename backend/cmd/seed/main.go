@@ -105,6 +105,7 @@ func main() {
 		if *ordersOnly {
 			seedOrders(ctx, tx)
 		}
+		verifyWhatsAppForSeeded(ctx, tx)
 		if err := tx.Commit(ctx); err != nil {
 			log.Fatal(err)
 		}
@@ -384,5 +385,22 @@ func seedMerchant(ctx context.Context, tx pgx.Tx, m merchantSeed) {
 				log.Fatal(err)
 			}
 		}
+	}
+}
+
+// verifyWhatsAppForSeeded يوثّق واتساب لكلّ من لم يُوثَّق.
+//
+// (كشفه فحصُ المشروع ٢٠٢٦-٠٨-٠٨: زبونٌ مزروعٌ لا يستطيع الطلب —
+//
+//	يردّ الخادمُ `whatsapp_required`.)
+//
+// الإعدادُ `customers.require_whatsapp` مفعَّلٌ افتراضاً، **والبذرةُ
+// الأساسيّةُ توثّق ولا توثّق البذراتُ الأخرى** — فحسابٌ منها يقف عند أوّل
+// طلب. **وبذرةٌ تصنع حساباً لا يعمل ليست بذرة.**
+func verifyWhatsAppForSeeded(ctx context.Context, tx pgx.Tx) {
+	if _, err := tx.Exec(ctx, `
+		UPDATE users SET whatsapp_phone = phone, whatsapp_verified_at = now()
+		WHERE whatsapp_verified_at IS NULL AND status <> 'deleted'`); err != nil {
+		log.Fatalf("توثيق واتساب: %v", err)
 	}
 }

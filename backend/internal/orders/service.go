@@ -4,6 +4,7 @@ package orders
 import (
 	"context"
 	"errors"
+	"github.com/google/uuid"
 	"log/slog"
 	"strings"
 	"time"
@@ -189,6 +190,10 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		}
 	}
 	if len(in.Items) == 0 || in.AddressText == "" || in.MerchantID == "" {
+		return nil, ErrBadItems
+	}
+	// **ومعرّفُ المتجر يُتحقَّق منه قبل القاعدة** — انظر الشرحَ في sources.go.
+	if _, err := uuid.Parse(in.MerchantID); err != nil {
 		return nil, ErrBadItems
 	}
 	// طريقتان لا ثلاث: نقداً عند الاستلام، أو من المحفظة كاملاً.

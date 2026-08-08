@@ -15,6 +15,7 @@ package orders
 import (
 	"context"
 	"errors"
+	"github.com/google/uuid"
 
 	"github.com/jackc/pgx/v5"
 
@@ -44,8 +45,18 @@ func (s *Service) SourcesOf(ctx context.Context, items []ItemInput) (*Sources, e
 	if len(items) == 0 {
 		return nil, ErrBadItems
 	}
+	// **ومعرّفٌ ليس معرّفاً يُردّ هنا لا في القاعدة.**
+	//
+	// (كشفه فحصٌ شاملٌ ٢٠٢٦-٠٨-٠٨: نصٌّ مكانَ معرّفٍ يردّ ٥٠٠ لا ٤٠٠.)
+	//
+	// **وبوستغرس يرفضه بخطأٍ داخليّ** (22P02) فيصل المستعملَ «حدث خطأٌ غيرُ
+	// متوقّع» — **وهو متوقّعٌ تماماً**، ويُسجَّل في سجلّ الأخطاء كأنّه عطبُ
+	// خادمٍ فيُطارَد.
 	ids := make([]string, 0, len(items))
 	for _, it := range items {
+		if _, err := uuid.Parse(it.MenuItemID); err != nil {
+			return nil, ErrBadItems
+		}
 		ids = append(ids, it.MenuItemID)
 	}
 

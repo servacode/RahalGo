@@ -47,10 +47,17 @@ func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 
 	// **قيودُ المصروف تُعرض موجبةً** — تُقرأ «خسرنا كذا» لا «−كذا»،
 	// والإشارةُ في الدفتر لا في الشاشة.
+	// **والمحفظةُ تُربط بصاحبها لا بمعرّفٍ لها.**
+	//
+	// (كشفه فحصُ المشروع ٢٠٢٦-٠٨-٠٨: صفحةُ الخسائر تردّ ٥٠٠ دائماً.)
+	//
+	// كان الوصلُ على عمودين لا وجودَ لهما: جدولُ المحافظ مفتاحُه صاحبُها،
+	// وجدولُ الحركات يحمل صاحبَها كذلك — **ولا معرّفَ محفظةٍ في أيٍّ منهما.**
+	// **فالاستعلامُ يسقط قبل أن يقرأ صفّاً**، والصفحةُ لم تعمل قطّ.
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT o.number, -t.amount, t.note, t.created_at
 		FROM wallet_transactions t
-		JOIN wallets w ON w.id = t.wallet_id
+		JOIN wallets w ON w.user_id = t.user_id
 		LEFT JOIN orders o ON o.id::text = t.ref
 		WHERE w.is_treasury AND t.kind = 'platform_expense'
 		  AND t.created_at >= $1 AND t.created_at < $2

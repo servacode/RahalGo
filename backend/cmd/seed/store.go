@@ -65,8 +65,14 @@ type storeSeed struct {
 }
 
 type storeSection struct {
-	Name  string
-	Items []storeItem
+	Name string
+	// Platform اسمُ قسم السوق الذي تظهر تحته أصنافُ هذا القسم.
+	//
+	// **والزبونُ يتصفّح أقسامَ السوق لا أقسامَ المتجر**: صنفٌ بلا
+	// `platform_section_id` **لا يظهر لأحد** — لا في القسم ولا في البحث.
+	// (كشفه فحصُ المشروع ٢٠٢٦-٠٨-٠٨: ٣٩ صنفاً وصفرٌ مربوط.)
+	Platform string
+	Items    []storeItem
 }
 
 type storeItem struct {
@@ -116,7 +122,7 @@ var restaurant = storeSeed{
 
 	Sections: []storeSection{
 		// ── ١. المقبلات ──────────────────────────────────────────────────
-		{Name: "المقبلات والسلطات", Items: []storeItem{
+		{Name: "المقبلات والسلطات", Platform: "وجبات شعبية", Items: []storeItem{
 			{Name: "حمص بالطحينة", Desc: "حمص مطحون بالطحينة وزيت الزيتون", Price: 12000},
 			{Name: "متبل باذنجان", Desc: "باذنجان مشوي على الفحم مع اللبن والثوم", Price: 13000},
 			{Name: "تبولة", Desc: "برغل ناعم وبقدونس وبندورة وليمون", Price: 15000},
@@ -127,7 +133,7 @@ var restaurant = storeSeed{
 		}},
 
 		// ── ٢. المشاوي — القسم الذي تُختبر فيه الخيارات ──────────────────
-		{Name: "المشاوي على الفحم", Items: []storeItem{
+		{Name: "المشاوي على الفحم", Platform: "مشاوي", Items: []storeItem{
 			{
 				Name: "شيش طاووق", Desc: "صدر دجاج متبّل، مع الخبز والثوم والمخلل",
 				Price: 55000,
@@ -211,7 +217,7 @@ var restaurant = storeSeed{
 		}},
 
 		// ── ٣. الوجبات والصواني ──────────────────────────────────────────
-		{Name: "الوجبات والصواني", Items: []storeItem{
+		{Name: "الوجبات والصواني", Platform: "وجبات شعبية", Items: []storeItem{
 			{Name: "فتة حمص باللحمة", Desc: "خبز محمّص وحمص ولبن ولحمة مفرومة وصنوبر", Price: 48000},
 			{Name: "كبة مقلية", Desc: "ستّ حبات كبة برغل محشوّة", Price: 42000},
 			{Name: "مقلوبة دجاج", Desc: "أرز وباذنجان ودجاج مع اللبن", Price: 65000},
@@ -227,7 +233,7 @@ var restaurant = storeSeed{
 		}},
 
 		// ── ٤. الساندويشات ───────────────────────────────────────────────
-		{Name: "الساندويشات", Items: []storeItem{
+		{Name: "الساندويشات", Platform: "شاورما", Items: []storeItem{
 			{
 				Name: "ساندويش شاورما دجاج", Desc: "بخبز الصاج مع الثومية والمخلل",
 				Price: 26000,
@@ -263,7 +269,7 @@ var restaurant = storeSeed{
 		}},
 
 		// ── ٥. المشروبات ─────────────────────────────────────────────────
-		{Name: "المشروبات", Items: []storeItem{
+		{Name: "المشروبات", Platform: "مشروبات", Items: []storeItem{
 			{Name: "عيران", Desc: "لبن مخفوق بالنعناع", Price: 7000},
 			{Name: "عصير ليمون بالنعناع", Desc: "طازج", Price: 13000},
 			{Name: "مشروب غازي", Desc: "عبوة ٣٣٠ مل", Price: 6000,
@@ -280,7 +286,7 @@ var restaurant = storeSeed{
 		}},
 
 		// ── ٦. الحلويات ──────────────────────────────────────────────────
-		{Name: "الحلويات", Items: []storeItem{
+		{Name: "الحلويات", Platform: "حلويات", Items: []storeItem{
 			{Name: "كنافة نابلسية", Desc: "بالجبنة والقطر — تُحضَّر عند الطلب", Price: 32000},
 			{Name: "بقلاوة", Desc: "أربع قطع مشكّلة", Price: 26000},
 			{Name: "مهلبية", Desc: "بالحليب والفستق", Price: 15000},
@@ -413,6 +419,18 @@ func seedStore(ctx context.Context, tx pgx.Tx) {
 			log.Fatalf("section %s: %v", sec.Name, err)
 		}
 
+		// **وقسمُ السوق هو ما يتصفّحه الزبون** — لا قسمُ المتجر.
+		// **وصنفٌ بلا قسمِ سوقٍ لا يظهر لأحد.**
+		var platID *string
+		if sec.Platform != "" {
+			var id string
+			if err := tx.QueryRow(ctx,
+				`SELECT id FROM platform_sections WHERE name = $1`, sec.Platform).Scan(&id); err != nil {
+				log.Fatalf("قسمُ سوقٍ «%s» غيرُ موجود: %v", sec.Platform, err)
+			}
+			platID = &id
+		}
+
 		for ii, it := range sec.Items {
 			var itemID string
 			err := tx.QueryRow(ctx,
@@ -425,10 +443,10 @@ func seedStore(ctx context.Context, tx pgx.Tx) {
 				continue // موجودٌ سلفاً — لا نُكرّر خياراته
 			}
 			if err := tx.QueryRow(ctx, `
-				INSERT INTO menu_items (merchant_id, section_id, name, description,
+				INSERT INTO menu_items (merchant_id, section_id, platform_section_id, name, description,
 				                        merchant_price, price, available, sort_order)
-				VALUES ($1, $2, $3, $4, $5, $5, $6, $7) RETURNING id`,
-				mid, secID, it.Name, it.Desc, it.Price, !it.Unavailable, ii+1).Scan(&itemID); err != nil {
+				VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8) RETURNING id`,
+				mid, secID, platID, it.Name, it.Desc, it.Price, !it.Unavailable, ii+1).Scan(&itemID); err != nil {
 				log.Fatalf("item %s: %v", it.Name, err)
 			}
 			items++
