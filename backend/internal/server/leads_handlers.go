@@ -2,12 +2,14 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
@@ -17,6 +19,10 @@ import (
 )
 
 // طلبات انضمام المتاجر عبر رابط المندوب.
+
+// **وما حُوِّل لا يُردّ** — والرسالةُ تقول السبب لا «غير موجود».
+var errLeadConverted = httpx.NewError(http.StatusConflict,
+	"lead_already_converted", "errors.lead_already_converted")
 
 // نصوص إشعارات هذا القسم — مجمّعة كي لا تتناثر في الكود.
 var m = struct{ leadNew, leadNewOps, leadApproved string }{
@@ -422,14 +428,47 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 		return
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وما حُوِّل لا يُردّ — المتجرُ قائمٌ يبيع.**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شهده المالك ٢٠٢٦-٠٨-٠٨: «لا يجوز أن يبقى زرُّ الرفض بعد قبول».)
+	//
+	// **كان الشرطُ `WHERE id = $1` وحدَه** — بلا ذكرٍ لحالتها السابقة. فطلبٌ
+	// حُوِّل، وصاحبُ المتجر يدخل بوّابتَه ويستقبل طلبات، **يُوسَم «مرفوضاً»
+	// بضغطة.**
+	//
+	// **والأثرُ يخرج من الشاشة**: يصل المندوبَ إشعارٌ «رُدّ طلبُ الانضمام»
+	// بسببٍ كتبه أحد — **فيقرأ أنّ فرصتَه ضاعت وهي لم تضِع**: المتجرُ يعمل
+	// والنسبةُ له. **ويُخصَم من عدّ «سُجّل» في لوحته** فيظنّ نفسَه أقلَّ
+	// إنجازاً ممّا هو.
+	//
+	// **وإخفاءُ الزرّ لا يكفي**: الشاشةُ تمنع اليدَ والخادمُ يمنع الفعل —
+	// ومن فتح لوحتين وضغط في القديمة قبل أن تُحدَّث مرّ.
+	//
+	// **والاستئنافُ يبقى**: `new` مسموحةٌ من `rejected` — من رُدَّ خطأً
+	// يُعاد. **والممنوعُ الخروجُ من `converted` وحدَه.**
 	var repID *string
 	var storeName string
-	if err := s.pg.QueryRow(r.Context(),
+	err = s.pg.QueryRow(r.Context(),
 		`UPDATE merchant_leads SET status = $2, decision_note = $3, updated_at = now()
-		 WHERE id = $1
+		 WHERE id = $1 AND status <> 'converted'
 		 RETURNING sales_rep_user_id, store_name`,
-		id, req.Status, note).Scan(&repID, &storeName); err != nil {
-		s.respondErr(w, httpx.ErrNotFound)
+		id, req.Status, note).Scan(&repID, &storeName)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// **وصفٌّ لم يتبدّل إمّا غائبٌ أو محوَّل** — ويُفرَّق بينهما، فرسالةُ
+		// «غير موجود» على متجرٍ يعمل تُقرأ عطباً.
+		var cur string
+		if e := s.pg.QueryRow(r.Context(),
+			`SELECT status FROM merchant_leads WHERE id = $1`, id).Scan(&cur); e != nil {
+			s.respondErr(w, httpx.ErrNotFound)
+			return
+		}
+		s.respondErr(w, errLeadConverted)
+		return
+	}
+	if err != nil {
+		s.respondErr(w, err)
 		return
 	}
 	// الرفض يخصّ المندوب بقدر ما تخصّه الموافقة — وإلا بقي يلاحق عميلاً ميتاً.
