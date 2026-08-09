@@ -398,15 +398,20 @@ export default function MyOrdersPage() {
           ألغاه.
 
           **والتبويبُ يقول «هذه موجودةٌ وفارغة»** — وهو خبرٌ، وأن تختفي ليس
-          خبراً. **والعددُ بجانب الاسم يُغني عن الفتح.**
+          خبراً.
+
+          **ولا عددَ بجانب الاسم** (قرارُ المالك ٢٠٢٦-٠٨-١٠: «ليش عم تحطّ
+          الأرقام؟ لا داعيَ لها»). **والعددُ يفيد حيث يُنتظَر عملٌ** — شكوى
+          لم تُقرأ، طلبٌ ينتظر قبولاً. **وطلباتي ليست عملاً ينتظرني**، وثلاثةُ
+          أصفارٍ فوق شاشةٍ فارغةٍ تُقرأ ضجيجاً لا خبراً.
 
           **ودردشاتي السابقة معها**: هي وجهُ الطلب الآخر — **من يبحث عن
           حجّةٍ يبحث عنها حيث الطلب**، لا في قائمةٍ جانبيّة. */}
       <Tabs
         items={[
-          { key: "live", label: m.site.orders.tabActive, count: groups.live.length },
-          { key: "past", label: m.site.orders.tabPast, count: groups.past.length },
-          { key: "cancelled", label: m.site.orders.tabCancelled, count: groups.cancelled.length },
+          { key: "live", label: m.site.orders.tabActive },
+          { key: "past", label: m.site.orders.tabPast },
+          { key: "cancelled", label: m.site.orders.tabCancelled },
           { key: "chats", label: m.chat.archiveTitle, icon: IconChat },
         ]}
         value={tab}

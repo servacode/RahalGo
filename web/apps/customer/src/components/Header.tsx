@@ -39,9 +39,9 @@ import {
   IconLink,
   IconSupport,
   IconChat,
+  IconReply,
   IconWallet,
   IconUser,
-  IconNote,
   IconStore,
   IconOverview,
 } from "@rahalgo/ui";
@@ -316,7 +316,18 @@ export default function Header({
                 aria-label={m.site.custom.button}
                 tone={pathname.startsWith("/custom") ? "active" : "plain"}
               >
-                <IconNote size={TOPBAR_ICON} />
+                {/* **فقّاعةُ حديثٍ لا ورقة** (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+
+                    **وكانت ورقةً بجانب لوحِ الطلبات** — شكلان متشابهان
+                    متجاوران، **فلا يُعرف أيُّهما أيّ** إلّا بالضغط.
+
+                    **والطلبُ الخاصُّ حديثٌ في أصله**: تقول ما تريد بلفظك
+                    ويردّ عليك سائقٌ بسعرٍ وأجرة.
+
+                    **ومربّعةٌ لا دائريّة** — والدائريّةُ (`IconChat`)
+                    محجوزةٌ للمحادثة نفسِها. **وشكلٌ واحدٌ لمعنيين هو العيبُ
+                    الذي أُصلح.** */}
+                <IconReply size={TOPBAR_ICON} />
               </TopBarLink>
               {/* ══════════════════════════════════════════════════════
                   **وزرُّ التطبيق للداخل كما هو للزائر**
