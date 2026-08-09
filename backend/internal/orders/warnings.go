@@ -13,6 +13,9 @@ package orders
 
 import (
 	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -36,10 +39,13 @@ func (s *Service) warnMerchantOnFault(ctx context.Context, orderID, fault, reaso
 		return
 	}
 	// **والفهرسُ الفريد يمنع التكرار** — لا فحصٌ قبله.
+	//
+	// **وصار إلى الجدول الموحَّد** (٢٠٢٦-٠٨-٠٩): إنذارٌ واحدٌ لكلّ الأدوار.
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO merchant_warnings (merchant_id, reason, order_id)
-		VALUES ($1, $2, $3) ON CONFLICT (order_id) WHERE order_id IS NOT NULL DO NOTHING`,
-		merchantID, reason, orderID); err != nil {
+		INSERT INTO warnings (user_id, merchant_id, role_code, reason, order_id)
+		VALUES ($1, $2, 'merchant', $3, $4)
+		ON CONFLICT (order_id) WHERE order_id IS NOT NULL DO NOTHING`,
+		ownerID, merchantID, reason, orderID); err != nil {
 		s.logger.Error("الإنذارات: تعذّر التسجيل", "merchant", merchantID, "error", err)
 		return
 	}
@@ -90,8 +96,8 @@ func (s *Service) UncountedWarnings(ctx context.Context, q wallet.Querier, merch
 	var n int
 	err := q.QueryRow(ctx, `
 		SELECT count(*)
-		FROM merchant_warnings w
-		JOIN merchants m ON m.id = w.merchant_id
+		FROM warnings w
+		JOIN merchants m ON m.id = $1
 		`+warningsWhere("$1", "$2", "m"),
 		merchantID, days).Scan(&n)
 	return n, err
@@ -123,14 +129,25 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 	// **والمبلغُ لم يعد يُكتب هنا** (هجرة `0063`): الإنذارُ سلوكٌ يُعدّ ولا
 	// يُسوّى، **والنزاعُ مالٌ يُسوّى ويُغلق** — وهما واقعتان لا واحدة. وبقاءُ
 	// المال في صفّ الإنذار **هو ما منع أن يكون للسائق أو الزبون نزاعٌ أصلاً.**
-	var warningID string
-	if err := q.QueryRow(ctx, `
-		INSERT INTO merchant_warnings (merchant_id, reason, order_id)
-		SELECT o.merchant_id, COALESCE(o.fail_reason, 'merchant_refused'), o.id
-		FROM orders o WHERE o.id = $1
+	// **وصار إلى الجدول الموحَّد** (٢٠٢٦-٠٨-٠٩) — وينسب إلى صاحب المتجر.
+	//
+	// **ومتجرٌ بلا صاحبٍ لا يُنذَر ولا يُسقط المطالبة**: لا حسابَ يقرأ الإنذار،
+	// **والمالُ خرج فعلاً فالمطالبةُ قائمةٌ بذاتها.** (ويقع قبل أن يُسنِد
+	// المندوبُ صاحباً للمتجر.)
+	//
+	// **و`nil` لا نصٌّ فارغ**: `warning_id` مفتاحٌ أجنبيّ، **ونصٌّ فارغٌ ليس
+	// معرّفاً** فيُردّ القيدُ كلُّه.
+	var warningID *string
+	err := q.QueryRow(ctx, `
+		INSERT INTO warnings (user_id, merchant_id, role_code, reason, order_id)
+		SELECT m.owner_user_id, m.id, 'merchant',
+		       COALESCE(o.fail_reason, 'merchant_refused'), o.id
+		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1
 		ON CONFLICT (order_id) WHERE order_id IS NOT NULL
-		DO UPDATE SET reason = merchant_warnings.reason
-		RETURNING id::text`, orderID).Scan(&warningID); err != nil {
+		DO UPDATE SET reason = warnings.reason
+		RETURNING id::text`, orderID).Scan(&warningID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
 
@@ -139,7 +156,7 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 	// `ON CONFLICT` على (الطلب · الطرف) يحرس التكرار: **التعويضُ قد يُنادى
 	// مرّتين لطلبٍ واحد** (طارئٌ ثمّ فشل)، فيُطالَب المتجرُ مرّتين بالواقعة
 	// نفسِها. **ويُجمع لا يُستبدل** — كلفتان وقعتا فعلاً.
-	_, err := q.Exec(ctx, `
+	_, err = q.Exec(ctx, `
 		INSERT INTO disputes (party_role, merchant_id, order_id, warning_id, reason, amount)
 		SELECT 'merchant', o.merchant_id, o.id, $3,
 		       COALESCE(o.fail_reason, 'merchant_refused'), $2

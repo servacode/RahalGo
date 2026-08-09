@@ -99,7 +99,7 @@ func ViolationsCountSQL(merchantExpr, daysExpr string) string {
 	            AND o.closed_at > now() - make_interval(days => ` + daysExpr + `::int)
 	            AND (mv.violations_cleared_at IS NULL
 	                 OR o.closed_at > mv.violations_cleared_at))
-	        + (SELECT count(*) FROM merchant_warnings w
+	        + (SELECT count(*) FROM warnings w
 	           JOIN merchants mw ON mw.id = w.merchant_id
 	           ` + warningsWhere(merchantExpr, daysExpr, "mw") + `))`
 }
@@ -139,6 +139,14 @@ func violationPredicate(a string) string {
 //
 // **والشرطُ الآن يقول ما يعنيه**: يُعدّ الإنذارُ إن لم يكن طلبُه معدوداً —
 // **بالشرط نفسِه لا بشرطٍ يشبهه.**
+//
+// # ومن الجدول الموحَّد
+//
+// **حُوّل من `merchant_warnings` إلى `warnings`** (٢٠٢٦-٠٨-٠٩): جدولٌ واحدٌ
+// لكلّ الأدوار.
+//
+// **والعدُّ بمعرّف المتجر لا بحساب صاحبه**: المخالفةُ سلوكُ المحلّ، **والحظرُ
+// يقع عليه** — ومتجرٌ بلا حسابِ صاحبٍ يُعدّ عليه كما يُعدّ على غيره.
 func warningsWhere(merchantExpr, daysExpr, mAlias string) string {
 	return `WHERE w.merchant_id = ` + merchantExpr + `
 		  AND (w.order_id IS NULL OR NOT EXISTS (
@@ -174,7 +182,7 @@ func (s *Service) MerchantViolationList(ctx context.Context, q wallet.Querier, m
 		-- **و«يدويّ» تُقال عن اليدويّ وحدَه**: صفٌّ عن بابٍ مغلقٍ يُعرض «إنذاراً
 		-- يدويّاً» يجعل المتجرَ يحتجّ على شيءٍ لم يفعله أحد.
 		SELECT NULL, 'warning', w.reason, w.note, w.order_id IS NULL, w.created_at
-		FROM merchant_warnings w
+		FROM warnings w
 		JOIN merchants m2 ON m2.id = w.merchant_id
 		`+warningsWhere("$1", "$2", "m2")+`
 		ORDER BY 6 DESC

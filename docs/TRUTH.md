@@ -452,6 +452,7 @@
 | `customers.require_whatsapp` |  | bool | `true` |
 | `drivers.assignment_mode` | السائقون | choice | `rotation` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
+| `drivers.assigned_silence_sec` | السائقون | int | `180` |
 | `drivers.location_ping_sec` | السائقون | int | `60` |
 | `drivers.avg_speed_kmh` | السائقون | int | `20` |
 | `drivers.direct_assign` | السائقون | bool | `false` |

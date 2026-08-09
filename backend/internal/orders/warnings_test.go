@@ -47,7 +47,7 @@ func TestFaultFailureCountsAsViolation(t *testing.T) {
 	// **والإنذارُ سجلٌّ لا إشعار.**
 	var n int
 	if err := f.pool.QueryRow(ctx,
-		`SELECT count(*) FROM merchant_warnings WHERE order_id = $1`, f.orderID).
+		`SELECT count(*) FROM warnings WHERE order_id = $1`, f.orderID).
 		Scan(&n); err != nil {
 		t.Fatalf("تعذّرت قراءة الإنذارات: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestFaultFailureCountsAsViolation(t *testing.T) {
 
 	var reason string
 	if err := f.pool.QueryRow(ctx,
-		`SELECT reason FROM merchant_warnings WHERE order_id = $1`, f.orderID).
+		`SELECT reason FROM warnings WHERE order_id = $1`, f.orderID).
 		Scan(&reason); err != nil {
 		t.Fatalf("تعذّرت قراءة السبب: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestCustomerFaultDoesNotWarnMerchant(t *testing.T) {
 	}
 	var n int
 	_ = f.pool.QueryRow(ctx,
-		`SELECT count(*) FROM merchant_warnings WHERE order_id = $1`, f.orderID).Scan(&n)
+		`SELECT count(*) FROM warnings WHERE order_id = $1`, f.orderID).Scan(&n)
 	if n != 0 {
 		t.Errorf("أُنذر المتجرُ بذنب الزبون: %d", n)
 	}

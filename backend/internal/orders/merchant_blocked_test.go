@@ -155,7 +155,7 @@ func TestMerchantBlocked_StillCountsAgainstTheMerchant(t *testing.T) {
 
 	var n int
 	if err := f.pool.QueryRow(ctx,
-		`SELECT count(*) FROM merchant_warnings WHERE order_id = $1`, f.orderID).Scan(&n); err != nil {
+		`SELECT count(*) FROM warnings WHERE order_id = $1`, f.orderID).Scan(&n); err != nil {
 		t.Fatalf("تعذّرت قراءةُ الإنذارات: %v", err)
 	}
 	if n != 1 {

@@ -54,6 +54,31 @@ func (s *Service) offerTimeout(ctx context.Context) time.Duration {
 	return time.Duration(s.settingInt(ctx, "drivers.offer_timeout_sec")) * time.Second
 }
 
+// silenceTimeout **مهلةُ الصمت بعد الإسناد المباشر — لا مهلةَ الردّ.**
+//
+// (كشفه جردُ ٢٠٢٦-٠٨-٠٩ بحسابات حقيقيّة: الطلبُ يُسنَد ثمّ يُسترجَع بعد
+//
+//	خمسٍ وأربعين ثانيةً فيرتدّ إلى الإسناد اليدويّ.)
+//
+// # ولماذا رقمٌ ثانٍ لا رفعُ الأوّل
+//
+// **المفتاحُ الواحدُ كان يخدم معنيين**:
+//
+//   - **في العرض**: «كم يُنتظر ردُّه» — والسائقُ ينظر إلى شاشةٍ ترنّ،
+//     **وخمسٌ وأربعون ثانيةً كافية.**
+//   - **وفي الإسناد المباشر**: «كم يُحتمل صمتُه» — **والطلبُ وقع في يده وهو
+//     على درّاجته لا ينظر.** وقد لا يلمس هاتفه دقيقتين، **فيُسترجَع منه ما
+//     هو ذاهبٌ إليه.**
+//
+// **ورفعُ الأوّل لأجل الثاني يُفسد الأوّل**: عرضٌ ينتظر ثلاث دقائق يجمّد
+// الطلبَ عند نائمٍ بينما غيرُه يعمل.
+//
+// **ورقمان لمعنيين خيرٌ من رقمٍ يخدم أحدَهما ويُساء به إلى الآخر** — وهي
+// القاعدةُ التي تكرّرت في هذا المشروع: **معنيان في مفتاحٍ واحدٍ يفترقان.**
+func (s *Service) silenceTimeout(ctx context.Context) time.Duration {
+	return time.Duration(s.settingInt(ctx, "drivers.assigned_silence_sec")) * time.Second
+}
+
 // directAssign أيصير الطلبُ مهمّتَه بلا سؤال.
 //
 // **ولا معنى له خارج «بالتساوي»** — هناك لا سائقَ مختاراً يُسنَد إليه. والشرطُ
@@ -246,7 +271,7 @@ func (s *Service) assignDirectly(ctx context.Context, orderID, driverID, note st
 		SET offered_driver_id = $2, driver_id = $2, updated_at = now(),
 		    offer_expires_at = now() + make_interval(secs => $3)
 		WHERE id = $1 AND status = 'dispatching' AND driver_id IS NULL`,
-		orderID, driverID, s.offerTimeout(ctx).Seconds())
+		orderID, driverID, s.silenceTimeout(ctx).Seconds())
 	if err != nil {
 		return err
 	}

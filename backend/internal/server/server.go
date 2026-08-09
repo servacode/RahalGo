@@ -540,7 +540,7 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
 				// **الحظرُ والعفو** — merchant_violations.go
 				r.Get("/merchants/{id}/violations", s.handleMerchantViolations)
-				r.Post("/merchants/{id}/warnings", s.handleIssueWarning)
+				r.Post("/merchants/{id}/warnings", s.handleIssueMerchantWarning)
 				// **والإنذارُ على حسابٍ** — سائقاً كان أو زبوناً أو مندوباً.
 				r.Post("/users/{id}/warnings", s.handleIssueUserWarning)
 				r.Post("/merchants/{id}/suspend", s.handleSuspendMerchant)

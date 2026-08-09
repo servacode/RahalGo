@@ -85,6 +85,53 @@ func (s *Server) handleAdminUserWarnings(w http.ResponseWriter, r *http.Request)
 		WHERE w.user_id = $1 ORDER BY w.created_at DESC LIMIT 100`, chi.URLParam(r, "id"))
 }
 
+// issueWarning **القيدُ نفسُه — بابان يناديانه ولا يفترقان.**
+//
+// **العنوانان اثنان بقصد**: `‎/users/{id}/warnings` يخاطب حساباً،
+// و`‎/merchants/{id}/warnings` يخاطب متجراً — **وشاشةُ المتاجر تعرف متجرَها
+// لا صاحبَه.**
+//
+// **والتنفيذُ واحد**: لو كُتب مرّتين لَافترقا — **يُضاف إشعارٌ في أحدهما
+// ويُنسى في الآخر**، فيُنذَر سائقٌ فيعلم ويُنذَر متجرٌ فلا يعلم.
+func (s *Server) issueWarning(w http.ResponseWriter, r *http.Request,
+	userID, reason, note string, orderID, ticketID *string) {
+	// **ودورُه وقتَ الإنذار يُثبَّت** — لا يُشتقّ عند القراءة.
+	//
+	// **فمن كان سائقاً ثمّ صار مندوباً** تُقرأ إنذاراتُه القديمةُ باسم دوره
+	// الجديد، **ويبدو المندوبُ سيّئَ السجلّ في عملٍ لم يعمله.**
+	var role string
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT COALESCE((SELECT role_code FROM user_roles WHERE user_id = $1
+		                 ORDER BY granted_at LIMIT 1), 'customer')`, userID).
+		Scan(&role); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	var id string
+	if err := s.pg.QueryRow(r.Context(), `
+		INSERT INTO warnings (user_id, role_code, reason, note, order_id, ticket_id, issued_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id::text`,
+		userID, role, reason, clip(note, 500), orderID, ticketID,
+		userIDFrom(r)).Scan(&id); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	// **ويصل صاحبَه — وهو ما لم يكن.**
+	//
+	// **إنذارٌ لا يبلغ من أُنذر ليس إنذاراً**: هو سطرٌ في دفترٍ يُقرأ يومَ
+	// الحظر، **ولا فرصةَ لصاحبه أن يُصلح.** (وهي شكوى المالك بعينها.)
+	s.notify.Notify(r.Context(), notifications.Input{
+		UserID: userID, Kind: notifications.KindOrder,
+		Title: notifTitles.warningOnYou, Body: clip(note, 200),
+		Entity: "user", EntityID: userID, Href: "/portal/complaints",
+	})
+	s.audit(r, "ops.warning_issued", "user", userID, map[string]any{"reason": reason})
+	s.touch("user", "ops")
+	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id})
+}
+
 // handleIssueUserWarning **إنذارٌ على حسابٍ — أيَّ دورٍ كان.**
 func (s *Server) handleIssueUserWarning(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
@@ -103,41 +150,37 @@ func (s *Server) handleIssueUserWarning(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, errValidation)
 		return
 	}
-	userID := chi.URLParam(r, "id")
+	s.issueWarning(w, r, chi.URLParam(r, "id"), reason, req.Note, req.OrderID, req.TicketID)
+}
 
-	// **ودورُه وقتَ الإنذار يُثبَّت** — لا يُشتقّ عند القراءة.
-	//
-	// **فمن كان سائقاً ثمّ صار مندوباً** تُقرأ إنذاراتُه القديمةُ باسم دوره
-	// الجديد، **ويبدو المندوبُ سيّئَ السجلّ في عملٍ لم يعمله.**
-	var role string
-	if err := s.pg.QueryRow(r.Context(), `
-		SELECT COALESCE((SELECT role_code FROM user_roles WHERE user_id = $1
-		                 ORDER BY granted_at LIMIT 1), 'customer')`, userID).
-		Scan(&role); err != nil {
+// handleIssueMerchantWarning **إنذارٌ على متجرٍ — يُقيَّد على صاحبه.**
+//
+// **والمتجرُ كيانٌ وصاحبُه شخص**: الحسابُ هو ما يُحظَر ويُشعَر، **لا اللافتة.**
+func (s *Server) handleIssueMerchantWarning(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Reason string `json:"reason"`
+		Note   string `json:"note"`
+	}](r)
+	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-
-	var id string
-	if err := s.pg.QueryRow(r.Context(), `
-		INSERT INTO warnings (user_id, role_code, reason, note, order_id, ticket_id, issued_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id::text`,
-		userID, role, reason, clip(req.Note, 500), req.OrderID, req.TicketID,
-		userIDFrom(r)).Scan(&id); err != nil {
-		s.respondErr(w, err)
+	reason := strings.TrimSpace(req.Reason)
+	if reason == "" {
+		s.respondErr(w, errValidation)
 		return
 	}
-
-	// **ويصل صاحبَه — وهو ما لم يكن.**
-	//
-	// **إنذارٌ لا يبلغ من أُنذر ليس إنذاراً**: هو سطرٌ في دفترٍ يُقرأ يومَ
-	// الحظر، **ولا فرصةَ لصاحبه أن يُصلح.** (وهي شكوى المالك بعينها.)
-	s.notify.Notify(r.Context(), notifications.Input{
-		UserID: userID, Kind: notifications.KindOrder,
-		Title: notifTitles.warningOnYou, Body: clip(req.Note, 200),
-		Entity: "user", EntityID: userID, Href: "/portal/complaints",
-	})
-	s.audit(r, "ops.warning_issued", "user", userID, map[string]any{"reason": reason})
-	s.touch("user", "ops")
-	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id})
+	var owner *string
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT owner_user_id::text FROM merchants WHERE id = $1`,
+		chi.URLParam(r, "id")).Scan(&owner); err != nil {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	// **ومتجرٌ بلا صاحبٍ لا يُنذَر** — لا حسابَ يقرأ ولا حسابَ يُحظَر.
+	if owner == nil {
+		s.respondErr(w, errValidation)
+		return
+	}
+	s.issueWarning(w, r, *owner, reason, req.Note, nil, nil)
 }
