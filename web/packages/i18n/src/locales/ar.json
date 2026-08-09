@@ -765,7 +765,12 @@
       "historyTitle": "سجلّ الطلبات",
       "invoice": "الفاتورة",
       "noDriverYet": "لم يُسنَد بعد",
-      "driverWasAway": "كان على بُعد"
+      "driverWasAway": "كان على بُعد",
+      "customGoods": "ثمن البضاعة",
+      "customFee": "أجرة التوصيل",
+      "customTotal": "الإجمالي",
+      "customPending": "لم يوثّق السائق المبلغ بعد",
+      "customNote": "موثّق للاطّلاع — لا يدخل حساب المنصّة، والسائق يقبضه من الزبون."
     },
     "customers": {
       "title": "الزبائن",

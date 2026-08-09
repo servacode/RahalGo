@@ -108,6 +108,11 @@ interface OrderRow {
   driver_phone: string | null;
   /** **نوعُ الطلب** — `custom` طلبٌ خاصٌّ بلا متجر. */
   kind?: string;
+  /** ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه. */
+  custom_request?: string;
+  /** **ما وُثّق ولم يُحاسَب** — تهمّ الإدارةَ وإن لم تأخذ منها شيئاً. */
+  custom_goods_amount?: number | null;
+  custom_fee?: number | null;
   driver_name: string | null;
   /** من عُرض عليه الطلبُ ولم يقبل بعد — **يُعرض ما دام العرضُ حيّاً.** */
   offered_driver_name: string | null;
@@ -1809,6 +1814,49 @@ function OrderActions({
  * **ونسختان تفترقان يوماً** — فتقول البطاقةُ رقماً وتقول النافذةُ غيرَه.
  */
 function InvoiceList({ o }: { o: OrderRow }) {
+  const OP = m.admin.ordersPage;
+  // **والطلبُ الخاصُّ لا بنودَ له** — سطرٌ كتبه الزبون، ومبلغٌ اتّفق عليه
+  // الطرفان. **وفاتورةٌ فارغةٌ تُقرأ عطباً** لا «لا شيءَ هنا».
+  //
+  // (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «يجب أن يظهر السعر وسعر التوصيل — هي بيانات
+  //  تهمّ الإدارة حتّى ولو ما تأخذ شيئاً».)
+  //
+  // **وهي حجّةٌ عند الخلاف**: من ادّعى أنّه دفع أكثر، أو أنّ الأجرة كانت
+  // أقلّ، **يُرجَع إلى ما وُثّق.** ولولاه لبقيت كلمةٌ ضدّ كلمة.
+  if (o.kind === "custom") {
+    const goods = o.custom_goods_amount;
+    const fee = o.custom_fee ?? 0;
+    return (
+      <div className="space-y-2">
+        <p className="whitespace-pre-wrap rounded-control bg-field px-3 py-2 text-sm">
+          {o.custom_request || "—"}
+        </p>
+        {goods == null ? (
+          <p className="text-xs text-ink-muted">{OP.customPending}</p>
+        ) : (
+          <ul className="space-y-1.5 text-sm">
+            <li className="flex items-center justify-between gap-2">
+              <span className="text-ink-muted">{OP.customGoods}</span>
+              <span className="tabular-nums" dir="ltr">{fmtNum(goods)}</span>
+            </li>
+            <li className="flex items-center justify-between gap-2">
+              <span className="text-ink-muted">{OP.customFee}</span>
+              <span className="tabular-nums" dir="ltr">{fmtNum(fee)}</span>
+            </li>
+            <li className="flex items-center justify-between gap-2 border-t border-line-soft pt-1.5 font-bold">
+              <span>{OP.customTotal}</span>
+              <span className="tabular-nums" dir="ltr">
+                {fmtNum(goods + fee)} {m.common.currency}
+              </span>
+            </li>
+            {/* **ويُقال إنّه لا يدخل حسابَ المنصّة** — وإلّا قُرئ دخلاً. */}
+            <li className="pt-1 text-2xs text-ink-muted">{OP.customNote}</li>
+          </ul>
+        )}
+      </div>
+    );
+  }
+
   return (
     <ul className="space-y-1.5">
       {(o.items ?? []).map((it) => {
