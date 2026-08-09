@@ -53,28 +53,6 @@ const UNITS = m.admin.settings.units;
 
 // ---------- الأنواع ----------
 
-/**
- * تفصيلُ توزيع مال الطلب — **مقروءاً من الدفتر لا محسوباً هنا.**
- *
- * لو حُسبت الأنصبةُ في الواجهة بالمعادلات لظهرت طلباتُ الأمس بأجرٍ لم يُقبض
- * حين تتغيّر نسبةُ السائق اليوم. **وشاشةٌ تقرأ الدفتر لا تكذب عليه.**
- */
-type Breakdown = {
-  total: number;
-  subtotal: number;
-  delivery_fee: number;
-  discount: number;
-  to_parties: number;
-  platform: number;
-  lines: {
-    party: "merchant" | "driver" | "sales" | "platform" | "customer" | "other";
-    name: string;
-    kind: string;
-    amount: number;
-    note: string;
-  }[];
-};
-
 /** سطرٌ في تفصيل التوزيع — عنوانٌ يميناً ومبلغٌ يساراً بخانةٍ ثابتة. */
 function Row({
   label,
@@ -261,14 +239,6 @@ const CLOSED_STATUSES = new Set([
 ]);
 
 /**
- * **الحالاتُ التي جرت فيها تسويةٌ ماليّة** — وهي وحدَها تُعاد حسبتُها.
- *
- * الملغى والمرفوض **لا أنصبةَ لهما**: لم تخرج بضاعةٌ ولم يُقبض مال. **وزرُّ
- * تصحيحٍ على طلبٍ لا شيءَ فيه يُضغط فلا يقع شيء** — فيُظنّ أنّه معطوب.
- */
-const SETTLED_STATUSES = new Set(["delivered", "failed", "refunded"]);
-
-/**
  * **الحالاتُ التي يكون فيها لإثبات التسليم معنى.**
  *
  * الإثباتُ لا يوجد إلّا بعد أن يسلّم السائقُ أو يتعذّر عليه. **وسطرٌ فارغٌ في
@@ -392,7 +362,18 @@ const OPS_NEXT: Record<string, string[]> = {
   picked_up: ["on_the_way"],
   on_the_way: ["at_dropoff"],
   at_dropoff: ["delivered", "failed"],
-  delivered: ["refunded"],
+  /* **ولا استرجاعَ بعد التسليم من هنا.**
+
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٩، وقد قاله قبلَها: «ما فائدة الاسترجاع بعد
+      تسليم الطلب… لا داعي له أصلاً وذكرنا ذلك سابقاً».)
+
+     **وردُّ المال بابُه الشكوى**: يشكو الزبونُ فتُقرأ شكواه وتُحلّ بتعويضٍ
+     يُقيَّد باسمها (`support.Resolve`). **وزرٌّ في بطاقة الطلب بابٌ ثانٍ
+     للشيء نفسِه — وأسوأُ**: بلا شكوى تُقرأ، ولا سببٍ يُكتب، ولا مهلةٍ تحكمه.
+
+     **والحالةُ تبقى معرَّفةً** لطلباتٍ قديمةٍ حملتها — يُقرأ تاريخُها ولا
+     يُصنع منها جديد. */
+  delivered: [],
 };
 
 /** مراحلُ الطريق — لا يملكها إلّا من يسير فيها (مرآةُ `driverOnly`). */
@@ -1138,7 +1119,6 @@ function OrderActions({
   const [assigning, setAssigning] = useState(false);
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   /** تفصيلُ توزيع المال — يُجلب عند الطلب لا مع كل بطاقة */
-  const [split, setSplit] = useState<Breakdown | null>(null);
   /** نموذجُ تعويض السائق عن طلبٍ فشل */
   const [compensating, setCompensating] = useState(false);
   const [amount, setAmount] = useState("");
@@ -1256,51 +1236,8 @@ function OrderActions({
     }
   }
 
-  /**
-   * إعادةُ حساب التسوية — **وتقول كم صُحِّح.**
-   *
-   * **ولا تقول «تمّ» عن نداءٍ لم يُغيّر شيئاً**: من ضغط ورأى «تمّ» ظنّ أنّ خللاً
-   * صُلح وهو لم يكن. **وصفرٌ يُقال صراحةً أصدقُ من نجاحٍ مبهم.**
-   */
-  async function recompute() {
-    setBusy("recompute");
-    setErr("");
-    try {
-      const res = await api<{ delta: number }>(
-        `/api/v1/admin/orders/${o.id}/recompute`,
-        {
-          method: "POST",
-        },
-      );
-      setNotice(
-        res.delta === 0
-          ? m.admin.ordersPage.recomputeNone
-          : m.admin.ordersPage.recomputeDone.replace("{n}", fmtNum(res.delta)),
-      );
-      onChanged();
-    } catch (e) {
-      setErr(
-        e instanceof ApiError
-          ? translateKey(e.body.message_key)
-          : m.errors.internal,
-      );
-    } finally {
-      setBusy("");
-    }
-  }
 
-  async function openSplit() {
-    setErr("");
-    try {
-      setSplit(await api<Breakdown>(`/api/v1/admin/orders/${o.id}/breakdown`));
-    } catch (e) {
-      setErr(
-        e instanceof ApiError
-          ? translateKey(e.body.message_key)
-          : m.errors.internal,
-      );
-    }
-  }
+
 
   // **مصيرُ البضاعة** — من يحمل ثمنَ طعامٍ طُبخ ولم يُسلَّم.
   async function settleGoods(to: "merchant" | "platform") {
@@ -1437,72 +1374,6 @@ function OrderActions({
   // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
   // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
-  if (split !== null) {
-    const OP = m.admin.ordersPage;
-    /** **ما تحرّك بلا طرفٍ معروف** — وصفرٌ يعني أنّ الحسبة مقفلة. */
-    const gap = split.total - split.to_parties - split.platform;
-    return (
-      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium">{OP.splitTitle}</p>
-        <div className="space-y-1 rounded-control bg-field p-3 text-xs">
-          <Row label={OP.splitPaid} value={split.total} strong />
-          {split.lines
-            .filter((l) => l.party !== "customer")
-            .map((l, i) => (
-              <Row
-                key={i}
-                label={`${OP.party[l.party]} — ${l.name}`}
-                value={l.amount}
-              />
-            ))}
-          {/* **الفارقُ يُعرض ولا يُخفى.** لو ظهر رقمٌ هنا فمالٌ تحرّك بلا طرفٍ
-              معروف — وهو أوّلُ ما يُسأل عنه، لا آخرُ ما يُكتشف. */}
-          {gap !== 0 && (
-            <Row label={OP.splitUnaccounted} value={gap} danger />
-          )}
-        </div>
-        {/* ══════════════════════════════════════════════════════════════
-            **والتصحيحُ حيث يُرى الخلل — لا على كلّ طلبٍ مسلَّم**
-            ══════════════════════════════════════════════════════════════
-
-            (سأل المالك ٢٠٢٦-٠٨-٠٨: «أعد حساب التسوية لم أفهمها — طلبٌ تمّ
-             تسليمه، ما الفائدة من هذه الأمور؟»)
-
-            **كان زرّاً قائماً بذاته على كلّ طلبٍ مسلَّمٍ أو فاشل**، وهو
-            **أداةُ تصليحٍ لعطبٍ وقع مرّةً** في `#1003`: حسبةُ الخزينة كانت
-            غلطاً فبقي القيدُ الخاطئ في الدفتر بعد إصلاح الشيفرة.
-
-            **وعلى طلبٍ سليمٍ لا يفعل شيئاً** — يردّ «لا فرق». **وزرٌّ لا
-            يفعل شيئاً في تسعةٍ وتسعين من مئةٍ يُقرأ إجراءً واجباً** فيُضغط
-            بلا سبب، **أو يُتجاهَل فلا يُضغط يومَ يلزم.**
-
-            **فصار يظهر حيث يُقاس الخلل**: الفارقُ معروضٌ فوقَه بالأحمر،
-            **ومن رآه عرف لماذا يضغط.** ولا فارقَ فلا زرّ. */}
-        {isAdmin && gap !== 0 && (
-          <Button
-            variant="danger"
-            disabled={busy !== ""}
-            title={OP.recomputeHint}
-            onClick={() => void recompute()}
-          >
-            {OP.recompute}
-          </Button>
-        )}
-        {gap === 0 && (
-          <p className="text-xs text-success">{OP.splitBalanced}</p>
-        )}
-        {notice && (
-          <span className="rounded-control bg-success-tint px-2.5 py-1 text-xs text-success">
-            {notice}
-          </span>
-        )}
-        {err && <p className="text-xs text-danger">{err}</p>}
-        <Button variant="secondary" onClick={() => setSplit(null)}>
-          {m.common.back}
-        </Button>
-      </div>
-    );
-  }
 
   if (compensating) {
     return (
@@ -1698,19 +1569,6 @@ function OrderActions({
           </Button>
         );
       })}
-      {/* **توزيعُ المال — لمن أُغلق أمرُه.**
-
-          لا يُعرض قبل الإغلاق: طلبٌ في الطريق لم تُقيَّد أنصبتُه بعد، **وشاشةٌ
-          تعرض أصفاراً تُقرأ خطأً لا نقصاً.** */}
-      {SETTLED_STATUSES.has(o.status) && (
-        <Button
-          variant="secondary"
-          disabled={busy !== ""}
-          onClick={() => void openSplit()}
-        >
-          {m.admin.ordersPage.splitButton}
-        </Button>
-      )}
       {notice && (
         <span className="rounded-control bg-success-tint px-2.5 py-1 text-xs text-success">
           {notice}

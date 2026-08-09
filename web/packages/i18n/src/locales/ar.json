@@ -728,10 +728,6 @@
       "compensateTitle": "تعويض السائق عن مشوارٍ لم يُثمر",
       "compensateAmount": "المبلغ",
       "compensateReason": "السبب — يُسجَّل",
-      "splitButton": "أين ذهب المبلغ",
-      "splitTitle": "كيف وُزّع مبلغ الطلب",
-      "splitPaid": "ما دفعه الزبون",
-      "splitUnaccounted": "فارقٌ بلا طرف",
       "party": {
         "merchant": "المتجر",
         "driver": "السائق",
@@ -765,14 +761,9 @@
       "proofNoGps": "بلا موقع",
       "proofSkipped": "تعذّر التصوير:",
       "historyTitle": "سجلّ الطلبات",
-      "recompute": "صحّح الفرق",
-      "recomputeHint": "يقرأ الدفتر ويضع الفرقَ قيداً مقابلاً — ولا يُعدَّل قيدٌ قديم",
-      "recomputeDone": "صُحِّح بمقدار {n}",
-      "recomputeNone": "لا فرق — التسويةُ صحيحة",
       "invoice": "الفاتورة",
       "noDriverYet": "لم يُسنَد بعد",
-      "driverWasAway": "كان على بُعد",
-      "splitBalanced": "المبلغُ موزَّعٌ بلا فرق"
+      "driverWasAway": "كان على بُعد"
     },
     "customers": {
       "title": "الزبائن",
@@ -1733,6 +1724,10 @@
         "sales.target_reward": {
           "label": "مكافأة بلوغ الهدف",
           "hint": "تُدفع آلياً عند إتمام الهدف. وصفر يعني بلا مكافأة آلية."
+        },
+        "drivers.assigned_silence_sec": {
+          "label": "مهلة الصمت بعد الإسناد",
+          "hint": "كم يُحتمل صمت السائق بعد أن يقع الطلب في يده قبل أن يُسترجَع منه. وهي غير مهلة الردّ على العرض — هناك ينظر إلى شاشة، وهنا على درّاجته."
         }
       },
       "treasuryNone": "— لم تُختَر بعد —",
