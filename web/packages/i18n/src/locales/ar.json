@@ -2382,7 +2382,14 @@
       "tabCancelled": "ملغاة",
       "emptyLive": "لا طلبَ جارياً الآن.",
       "emptyPast": "لا طلبَ منتهياً بعد.",
-      "emptyCancelled": "لا طلبَ ملغًى — وهذا خبرٌ طيّب."
+      "emptyCancelled": "لا طلبَ ملغًى — وهذا خبرٌ طيّب.",
+      "trackCustom": {
+        "pending": "بانتظار الموافقة",
+        "driver": "إسنادُ سائق",
+        "bought": "تمّ الشراء",
+        "onway": "في الطريق",
+        "delivered": "تمّ التسليم"
+      }
     },
     "wallet": {
       "title": "محفظتي",

@@ -538,6 +538,64 @@ export default function MyOrdersPage() {
  */
 const TRACK = ["pending", "accepted", "preparing", "onway", "delivered"] as const;
 
+/**
+ * **ومسارُ الطلب الخاصّ غيرُه — لا متجرَ فيه.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٠: «بالطلب الخاصّ ما في شيءٌ اسمه قيد التحضير…
+ *  تمّ الشراء برأيي» · «بس تطلع بعدما يضغط السائق اشتريتُ الطلب».)
+ *
+ * **«قُبل» تعني قَبِله المتجر و«قيد التحضير» تعني يطبخه** — **ولا مطبخَ
+ * هنا.** وكان الطلبُ في طابور السائقين تُضيء له «قيد التحضير» **فيطمئنّ
+ * صاحبُه أنّ أحداً يعمل، ولا أحدَ أخذه بعد.** **وخبرٌ كاذبٌ أسوأُ من لا
+ * خبر**: من ينتظر ولا يعلم يسأل، ومن اطمأنّ كاذباً ينتظر.
+ *
+ * **و«تمّ الشراء» موضعُها بعد ضغطة السائق «اشتريتُ الطلب»** — لا قبلها:
+ * **هي إقرارٌ بأنّ مالَه خرج من جيبه**، وعلامةٌ تسبقه تَعِد الزبونَ بما لم
+ * يقع.
+ */
+const TRACK_CUSTOM = ["pending", "driver", "bought", "onway", "delivered"] as const;
+
+/** **مساراهما وموضعُ كلٍّ منه** — بحسب نوع الطلب. */
+function trackOf(o: Order) {
+  if (o.kind === "custom") {
+    return {
+      stages: TRACK_CUSTOM.map((id) => ({ id, label: m.site.orders.trackCustom[id] })),
+      at: trackIndexCustom(o.status),
+    };
+  }
+  return {
+    stages: TRACK.map((id) => ({ id, label: m.site.orders.track[id] })),
+    at: trackIndex(o.status),
+  };
+}
+
+/**
+ * **الحالةُ الخام ← موضعُها في مسار الطلب الخاصّ.**
+ *
+ * **ولا `at_pickup` فيه** — لا بابَ متجرٍ يقف عنده. (`customTransitions`
+ * في المحرّك: أُسند ← اشترى.)
+ */
+function trackIndexCustom(status: string): number {
+  switch (status) {
+    case "pending":
+      return 0;
+    // **والطابورُ والإسنادُ عقدةٌ واحدة** — كلاهما «يُبحث له عن سائق»،
+    // **والزبونُ يقرأ حالتَه بالتفصيل في الشارة فوق البطاقة.**
+    case "dispatching":
+    case "assigned":
+      return 1;
+    case "picked_up":
+      return 2;
+    case "on_the_way":
+    case "at_dropoff":
+      return 3;
+    case "delivered":
+      return 4;
+    default:
+      return -1; // ملغى · مرفوض · مُخفق — **لا مسارَ لهم**
+  }
+}
+
 /** الحالةُ الخام ← موضعُها على المسار. */
 /**
  * **لماذا انتهى — بأوّل ما يُقال، لا بأدقّه.**
@@ -632,7 +690,7 @@ function OrderCard({
     return () => clearInterval(id);
   }, [o.cancel_seconds_left]);
   const [ticketNo, setTicketNo] = useState(0);
-  const at = trackIndex(o.status);
+  const { stages: trackStages, at } = trackOf(o);
   const closed = at < 0;
   const live = !closed && o.status !== "delivered";
   const canRate = o.status === "delivered" && rate && !rate.rated;
@@ -843,7 +901,7 @@ function OrderCard({
       ) : (
         <div className="space-y-2">
           <OrderTrack
-            stages={TRACK.map((id) => ({ id, label: m.site.orders.track[id] }))}
+            stages={trackStages}
             current={at}
             vehicle={IconMoto}
             live={live}
