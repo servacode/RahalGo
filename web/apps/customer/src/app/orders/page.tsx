@@ -16,6 +16,8 @@ import {
   Invoice,
   OrderTrack,
   OrderChat,
+  ChatArchive,
+  Tabs,
   Select,
   PageContainer,
   PageHeader,
@@ -29,6 +31,7 @@ import {
   IconMoto,
   IconLocation,
   IconSupport,
+  IconChat,
   IconCheck,
   BrandMark,
 } from "@rahalgo/ui";
@@ -223,6 +226,22 @@ export default function MyOrdersPage() {
    */
   const [againPay, setAgainPay] = useState("cash");
   const [busy, setBusy] = useState(false);
+  /** التبويبُ المفتوح — **والجاري افتراضاً**: من يفتح طلباتِه يتتبّع طلبَه. */
+  const [tab, setTab] = useState<"live" | "past" | "cancelled" | "chats">("live");
+
+  /**
+   * **ثلاثُ سلالٍ — والملغاةُ لا تُخلَط بالمنتهية.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «طلبات جارية، طلبات سابقة، طلبات ملغاة».)
+   *
+   * **وهما نهايتان مختلفتان**: واحدةٌ وصلت، وأخرى لم تقع — **ومن يبحث عن
+   * طلبٍ سُلّم لا يمرّ على كلّ ما أُلغي.**
+   */
+  const groups = {
+    live: (orders ?? []).filter((o) => !o.closed_at),
+    past: (orders ?? []).filter((o) => o.closed_at && o.status === "delivered"),
+    cancelled: (orders ?? []).filter((o) => o.closed_at && o.status !== "delivered"),
+  };
 
   /**
    * **إعادةُ الطلب: طلبٌ مباشرٌ لا سلّة.**
@@ -366,53 +385,57 @@ export default function MyOrdersPage() {
         <Alert tone="warning" className="mb-3">{notice}</Alert>
       )}
 
-      {orders.length === 0 ? (
-        <EmptyState icon={IconOrder} title={m.site.orders.empty} />
+      {/* ══════════════════════════════════════════════════════════════
+          **أربعةُ تبويبات — لا أقسامٌ فوق بعضها**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٠: «يجب أن يكون هناك أزرارُ تبويب: الجاري
+           والسابقة والملغاة ودردشاتي السابقة».)
+
+          **كانت ثلاثةَ أقسامٍ مكدَّسةً بعناوين** — تُخفى الفارغةُ منها.
+          **فلا يعرف صاحبُ الشاشة ما لا يراه**: من لا طلبَ ملغًى له لا يرى
+          للملغاة أثراً، **فيظنّها غيرَ موجودة** ويسأل أين ذهب طلبُه الذي
+          ألغاه.
+
+          **والتبويبُ يقول «هذه موجودةٌ وفارغة»** — وهو خبرٌ، وأن تختفي ليس
+          خبراً. **والعددُ بجانب الاسم يُغني عن الفتح.**
+
+          **ودردشاتي السابقة معها**: هي وجهُ الطلب الآخر — **من يبحث عن
+          حجّةٍ يبحث عنها حيث الطلب**، لا في قائمةٍ جانبيّة. */}
+      <Tabs
+        items={[
+          { key: "live", label: m.site.orders.tabActive, count: groups.live.length },
+          { key: "past", label: m.site.orders.tabPast, count: groups.past.length },
+          { key: "cancelled", label: m.site.orders.tabCancelled, count: groups.cancelled.length },
+          { key: "chats", label: m.chat.archiveTitle, icon: IconChat },
+        ]}
+        value={tab}
+        onChange={setTab}
+        className="mb-4"
+      />
+
+      {tab === "chats" ? (
+        <ChatArchive api={api} bare />
+      ) : groups[tab].length === 0 ? (
+        /* **وفراغُ التبويب يُقال بلفظه** — **ونصٌّ واحدٌ للثلاثة يكذب في
+           اثنين**: «جرّب أوّل طلبٍ لك» تحت «الملغاة» تُقال لمن له عشرون
+           طلباً. **ولكلّ تبويبٍ فراغُه.** */
+        <EmptyState
+          icon={IconOrder}
+          title={
+            orders.length === 0
+              ? m.site.orders.empty
+              : tab === "live"
+                ? m.site.orders.emptyLive
+                : tab === "past"
+                  ? m.site.orders.emptyPast
+                  : m.site.orders.emptyCancelled
+          }
+          tone={tab === "cancelled" ? "success" : "muted"}
+        />
       ) : (
-        <>
-        {/* **الجاري أوّلاً وبعنوانه — والمنتهي تحته.**
-
-            كانت القائمةُ واحدةً مرتّبةً بالتاريخ. **ومن له طلبٌ في الطريق
-            يفتح الشاشةَ ليتتبّعه** — لا ليقرأ سجلَّه، **وطلبٌ من الشهر
-            الماضي في الصفّ الأوّل يجعله يبحث عن طلبه بين طلباته.**
-
-            **والفصلُ بعنوانين لا بترتيبٍ وحدَه**: ترتيبٌ بلا عنوانٍ يُقرأ
-            صدفةً، **وعنوانٌ يقول «هذا يجري الآن».**
-
-            **ولا يُعرض العنوانان على فراغ**: من لا طلبَ جارياً له لا يرى
-            «الجاري» فارغةً — وقسمٌ فارغٌ يُقرأ عطباً. */}
-        {/* **وثلاثةُ أقسامٍ لا اثنان** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «طلبات
-            جارية، طلبات سابقة، طلبات ملغاة»).
-
-            **والملغاةُ لا تُخلَط بالمنتهية**: من يبحث عن طلبٍ سُلّم يمرّ على
-            كلّ ما أُلغي. **وهما نهايتان مختلفتان**: واحدةٌ وصلت، وأخرى لم تقع. */}
-        {[
-          { key: "live", rows: orders.filter((o) => !o.closed_at), title: m.site.orders.tabActive },
-          {
-            key: "past",
-            rows: orders.filter((o) => o.closed_at && o.status === "delivered"),
-            title: m.site.orders.tabPast,
-          },
-          {
-            key: "cancelled",
-            rows: orders.filter((o) => o.closed_at && o.status !== "delivered"),
-            title: m.site.orders.tabCancelled,
-          },
-        ]
-          .filter((g) => g.rows.length > 0)
-          .map((g) => (
-        <section key={g.key} className="mb-6 last:mb-0">
-          {/* **ولا عنوانَ للجاري.** (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «احذف كلمة
-              يجري الآن».)
-
-              **الجاري في الأعلى فلا يحتاج من يقول إنّه الجاري** — وبطاقتُه
-              تقول حالَها بشارتها وشريطها. **والسابقُ يبقى عنوانُه** لأنّه
-              يقع بعد فاصلٍ فيُسأل: ما هذا الذي تحت؟ */}
-          {g.key !== "live" && (
-            <h2 className="mb-3 text-sm font-bold text-ink-muted">{g.title}</h2>
-          )}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {g.rows.map((o) => (
+          {groups[tab].map((o) => (
             <OrderCard
               key={o.id}
               o={o}
@@ -427,9 +450,6 @@ export default function MyOrdersPage() {
             />
           ))}
         </div>
-        </section>
-          ))}
-        </>
       )}
 
       {again && (

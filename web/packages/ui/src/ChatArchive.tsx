@@ -44,7 +44,19 @@ interface Thread {
   last_at: string | null;
 }
 
-export function ChatArchive({ api }: { api: ApiFn }) {
+export function ChatArchive({
+  api,
+  /**
+   * **عارياً — بلا حاويةٍ ولا عنوان.**
+   *
+   * **حين يسكن تبويباً** لصفحةٍ لها عنوانُها: **عنوانان فوق بعضهما يُقرآن
+   * عطباً**، وحاويةٌ داخل حاويةٍ تضاعف الحشوة.
+   */
+  bare = false,
+}: {
+  api: ApiFn;
+  bare?: boolean;
+}) {
   const [rows, setRows] = useState<Thread[] | null>(null);
   const [picked, setPicked] = useState<string>("");
 
@@ -59,10 +71,8 @@ export function ChatArchive({ api }: { api: ApiFn }) {
 
   if (rows === null) return <LoadingState />;
 
-  return (
-    <PageContainer>
-      <PageHeader icon={IconChat} title={C.archiveTitle} subtitle={C.archiveHint} />
-
+  const body = (
+    <>
       {rows.length === 0 ? (
         <EmptyState icon={IconChat} title={C.archiveEmpty} />
       ) : (
@@ -97,6 +107,14 @@ export function ChatArchive({ api }: { api: ApiFn }) {
           ))}
         </ul>
       )}
+    </>
+  );
+
+  if (bare) return body;
+  return (
+    <PageContainer>
+      <PageHeader icon={IconChat} title={C.archiveTitle} subtitle={C.archiveHint} />
+      {body}
     </PageContainer>
   );
 }

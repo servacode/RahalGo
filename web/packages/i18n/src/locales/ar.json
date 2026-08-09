@@ -2379,7 +2379,10 @@
       "past": "طلباتٌ سابقة",
       "tabActive": "جارية",
       "tabPast": "سابقة",
-      "tabCancelled": "ملغاة"
+      "tabCancelled": "ملغاة",
+      "emptyLive": "لا طلبَ جارياً الآن.",
+      "emptyPast": "لا طلبَ منتهياً بعد.",
+      "emptyCancelled": "لا طلبَ ملغًى — وهذا خبرٌ طيّب."
     },
     "wallet": {
       "title": "محفظتي",
