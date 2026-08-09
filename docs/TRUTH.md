@@ -406,6 +406,7 @@
 | `referral.reward_rest` | المنصة | money | `0` |
 | `orders.delivery_estimate_min` | المنصة | int | `15` |
 | `orders.extra_source_fee` | المنصة | int | `0` |
+| `orders.source_proximity_m` | المنصة | int | `1000` |
 | `payouts.min_amount` | المنصة | int | `50000` |
 | `support.complaint_window_hours` | المنصة | int | `24` |
 | `security.password_min_length` | المنصة | int | `8` |
