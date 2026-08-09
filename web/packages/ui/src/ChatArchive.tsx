@@ -62,7 +62,13 @@ export function ChatArchive({
 
   const load = useCallback(() => {
     api<{ threads: Thread[] }>("/api/v1/my/chats")
-      .then((r) => setRows(r?.threads ?? []))
+      // **والمنتهيةُ وحدَها هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٠: «الدردشةُ
+      // عندما تُغلق فقط تظهر بالدردشات السابقة، وليس عندما تكون مفتوحة»).
+      //
+      // **وحديثٌ يجري في «السابقة» تناقضٌ في الاسم**: يُفتح من موضعين
+      // فيُقرأ مرّتين، **وشارةُ ما لم يُقرأ تنطفئ في أحدهما** فيظنّ صاحبُها
+      // أنّه ردّ وهو لم يفعل.
+      .then((r) => setRows((r?.threads ?? []).filter((t) => !t.open)))
       // @empty-ok **قائمةٌ فارغةٌ حالٌ لا خطأ** — من لم يُحادث أحداً بعد.
       .catch(() => setRows([]));
   }, [api]);
@@ -88,9 +94,6 @@ export function ChatArchive({
                 <span className="min-w-0 flex-1 truncate text-sm text-ink-muted">
                   {t.peer} — {t.last_body}
                 </span>
-                {/* **والمفتوحةُ تُميَّز** — من يبحث عن حديثٍ يجري لا يقرأ عشرةً
-                    انتهت. */}
-                {t.open && <Badge variant="success">{C.openNow}</Badge>}
                 {t.unread > 0 && <Badge variant="danger">{fmtNum(t.unread)}</Badge>}
                 {t.last_at && (
                   <span className="shrink-0 text-2xs text-ink-muted">

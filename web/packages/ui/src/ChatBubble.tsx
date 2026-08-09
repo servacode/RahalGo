@@ -131,7 +131,23 @@ export function ChatBubble({
       )}
 
       {open && (
-        <div className="fixed inset-x-3 bottom-20 z-40 max-w-md rounded-card bg-paper p-3 elev-2 sm:inset-x-auto sm:start-4 sm:w-96">
+        /* ══════════════════════════════════════════════════════════════
+           **ولوحُ الحديث من لغة الأسطح**
+           ══════════════════════════════════════════════════════════════
+
+           (شكوى المالك ٢٠٢٦-٠٨-١٠: «شكلُ شاشة الدردشة مختلفٌ عن الثيم».)
+
+           **كان `bg-paper` — وهو الأبيضُ الصريح** (‎#ffffff): لوحُ الطباعة
+           والفواتير. **في منصّةٍ داكنةٍ يُقرأ ورقةً من عالمٍ آخرَ تطفو
+           فوقها**، لا سطحاً منها.
+
+           **و`surface-sheet` هو أخوه في اللغة**: قشرةٌ معتمةٌ لِما يقف
+           **فوق** محتوًى لا على خلفيّة صفحة — **وهو ما تفعله هذه الفقّاعة
+           بالضبط.**
+
+           **وارتفاعٌ محدودٌ لا مفتوح**: حديثٌ بعشرين سطراً كان يمدّ اللوحَ
+           حتّى يخرج رأسُه من الشاشة، **فيختفي زرُّ الإغلاق ولا تُغلق.** */
+        <div className="fixed inset-x-3 bottom-20 z-40 flex max-h-[70vh] max-w-md flex-col surface-sheet p-3 sm:inset-x-auto sm:start-4 sm:w-96">
           <div className="mb-2 flex items-center justify-between gap-2">
             {/* **وتبويبُ الطلبات إن كانت أكثرَ من واحد** — ولا يظهر لواحد. */}
             {threads.length > 1 ? (
@@ -157,7 +173,7 @@ export function ChatBubble({
               <IconClose size={18} />
             </Button>
           </div>
-          {picked && <OrderChat api={api} orderId={picked} />}
+          {picked && <OrderChat api={api} orderId={picked} bare streamClass="min-h-40" />}
         </div>
       )}
     </>
