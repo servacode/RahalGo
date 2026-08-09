@@ -105,10 +105,19 @@ Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" |
 ```
 go test -count=1 -p 1 ./...          # إلزاميّ قبل كلّ التزام
 gofmt -l internal/ cmd/              # لا ملفَّ خارجَ التنسيق
-node web/scripts/check-central.mjs   # حارسُ المركزيّة
+pnpm check:guards                    # حرّاسُ الويب الأربعة
 pnpm typecheck                       # ثمانيةُ تحقّقات
+go run ./cmd/moneycheck              # الدفتر — ١٣ فحصاً
+go run ./cmd/mediacheck              # كلُّ صفِّ وسيطٍ له ملفّه
 ```
 
 `TEST_DATABASE_URL=postgres://rahalgo:rahalgo_dev@localhost:5434/rahalgo_test?sslmode=disable`
+
+**ومجلّدُ الوسائط يُثبَّت مطلقاً** — `UPLOADS_DIR` افتراضُه `./uploads`
+**نسبيٌّ إلى مجلّد التشغيل لا إلى المشروع.** ومن أقلع المحرّكَ من مجلّدٍ آخرَ
+كتب صورَه في مكانٍ ثانٍ، **والقاعدةُ تشير إليها كلِّها فتردّ 404 بلا خطأٍ في
+سجلّ.** (وقع ٢٠٢٦-٠٨-٠٩: نصفُ الملفّات في `backend/uploads` ونصفُها في
+`web/uploads`.) **والمسارُ المحلولُ يُطبع عند الإقلاع** — فمن رآه في غير موضعه
+عرف قبل أن يرفع صورة.
 
 **ولا يُمسّ دفترُ المال** (`ledger`) إلّا بقرارٍ صريحٍ من المالك.

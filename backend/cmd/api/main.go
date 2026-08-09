@@ -155,7 +155,14 @@ func run(logger *slog.Logger) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		logger.Info("http server started", "addr", cfg.HTTPAddr, "env", cfg.Env)
+		// **ومجلّدُ الوسائط يُذكر في السجلّ.**
+		//
+		// (كشفه جردُ 2026-08-09: مجلّدا رفعٍ لا واحد — انظر `config.go`.)
+		//
+		// **ومن رآه في غير موضعه عرف قبل أن يرفع صورةً واحدة** — ولا يُكتشف
+		// الخطأُ بعد شهرٍ بصورةٍ مكسورةٍ لا يُعرف سببُها.
+		logger.Info("http server started",
+			"addr", cfg.HTTPAddr, "env", cfg.Env, "uploads", cfg.UploadsDir)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
