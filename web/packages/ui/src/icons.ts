@@ -72,6 +72,10 @@ export {
   Heart as IconHeart,
   MessageSquare as IconReply,
   StickyNote as IconNote,
+  // **حديثُ الطلب** — فقّاعةٌ مستديرةٌ لا مربّعة، **ليُفرَّق عن الردّ الإداريّ**
+  // (`IconReply`): ذاك سطرٌ في تذكرة، وهذا حديثٌ بين طرفين.
+  MessageCircle as IconChat,
+  Send as IconSend,
   Copy as IconCopy,
   BellOff as IconBellOff,
   TrendingUp as IconTrendUp,

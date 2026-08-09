@@ -131,6 +131,8 @@ export {
 export * from "./timeline";
 export * from "./ordertrack";
 export * from "./MyAddresses";
+// **حديثُ الطلب** — مكوّنٌ واحدٌ لطرفيه، بلا رقمٍ بينهما.
+export * from "./OrderChat";
 export { StoreHours, type DayHours } from "./StoreHours";
 export * from "./icons";
 /** علاماتُ منصّات التواصل — ما نزعته `lucide`. */

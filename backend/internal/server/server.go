@@ -16,6 +16,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
+	"github.com/servacode/rahalgo/backend/internal/comms"
 	"github.com/servacode/rahalgo/backend/internal/config"
 	"github.com/servacode/rahalgo/backend/internal/geo"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -34,14 +35,16 @@ import (
 )
 
 type Server struct {
-	cfg        *config.Config
-	logger     *slog.Logger
-	pg         *pgxpool.Pool
-	rdb        *redis.Client
-	tokens     *auth.TokenIssuer
-	identity   *identity.Service
-	catalog    *catalog.Service
-	settings   *settings.Store
+	cfg      *config.Config
+	logger   *slog.Logger
+	pg       *pgxpool.Pool
+	rdb      *redis.Client
+	tokens   *auth.TokenIssuer
+	identity *identity.Service
+	catalog  *catalog.Service
+	settings *settings.Store
+	// comms **حديثُ الطلب** — قناةٌ واحدةٌ لطرفيه بلا رقمٍ بينهما.
+	comms      *comms.Service
 	wallet     *wallet.Service
 	orders     *orders.Service
 	cashbox    *cashbox.Service
@@ -77,6 +80,7 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	catalogSvc.SetSettings(settingsStore)
 	srv := &Server{cfg: cfg, logger: logger, pg: pg, rdb: rdb, tokens: tokens,
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
+		comms:  comms.New(pg),
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
 		media: mediaSvc, hub: hub, otpStatus: otpStatus, notify: notify, geo: geoSvc}
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
@@ -200,6 +204,19 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/rating", s.handleRateOrder)
 			// إلغاء الزبون — كان حقّاً في خارطة الحالات بلا باب يوصله
 			r.Post("/orders/{id}/cancel", s.handleCustomerCancelOrder)
+
+			// ── حديثُ الطلب — بابٌ واحدٌ لطرفيه ──────────────────────
+			//
+			// **وهو هنا لا في مجموعة السائق ولا مجموعة الزبون**: المسارُ
+			// واحدٌ يناديه الاثنان، **والخادمُ يعرف أيَّهما من جلسته.**
+			//
+			// **ومساران متطابقان يفترقان**: يُصلَح شرطٌ في أحدهما ويُنسى
+			// الآخر، **فيقرأ السائقُ ما لا يقرؤه الزبونُ من الحديث نفسِه.**
+			//
+			// **ولا دورَ يُشترَط هنا** — `Permit` تردّ ٤٠٤ لمن ليس طرفاً،
+			// **وحارسُ الدور يمنع سائقاً أن يقرأ حديثَ طلبه** لو وُضع.
+			r.Get("/orders/{id}/messages", s.handleOrderMessages)
+			r.Post("/orders/{id}/messages", s.handleSendOrderMessage)
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/wallet", s.handleMyWallet)

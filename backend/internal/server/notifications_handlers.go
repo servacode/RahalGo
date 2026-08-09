@@ -53,31 +53,38 @@ var notifTitles = struct {
 	leadRejected, commissionEarned, passwordReset, sessionsRevoked           string
 	payoutRequested, payoutPaid, payoutRejected                              string
 	warningIssued, driverEmergency                                           string
+	// **رسالةٌ في حديث الطلب — والعنوانُ يقول من كتب لا ماذا كتب.**
+	//
+	// **ولا رقمَ ولا اسمَ شخصٍ في العنوان**: يُقرأ الإشعارُ على شاشةٍ مقفلة،
+	// **واسمٌ يظهر هناك يُعرّف بمن لا يُراد تعريفُه.**
+	messageFromDriver, messageFromCustomer string
 }{
-	warningIssued:    "إنذارٌ على متجرك",
-	driverEmergency:  "طارئٌ لدى سائق",
-	walletCredit:     "إيداع في محفظتك",
-	walletDebit:      "خصم من محفظتك",
-	ratingNew:        "تقييم جديد على خدمتك",
-	accountSuspended: "تم إيقاف حسابك مؤقتاً",
-	accountActivated: "تم تفعيل حسابك",
-	ticketOpened:     "فُتحت شكواك",
-	ticketNewOps:     "شكوى جديدة",
-	ticketReply:      "رد جديد على شكواك",
-	ticketResolved:   "تم حل شكواك",
-	driverAssigned:   "أُسند إليك طلب جديد",
-	storeClosed:      "إغلاق طارئ لمتجر",
-	storeReopened:    "عاد متجر للعمل",
-	cashSettled:      "سُلّم صندوقك النقدي",
-	roleGranted:      "أُضيفت صلاحية إلى حسابك",
-	roleRevoked:      "سُحبت صلاحية من حسابك",
-	leadRejected:     "رُفض طلب انضمام عبر رابطك",
-	commissionEarned: "عمولة جديدة في محفظتك",
-	passwordReset:    "غُيّرت كلمة مرور حسابك",
-	sessionsRevoked:  "أُنهيت جلساتك — سجّل الدخول من جديد",
-	payoutRequested:  "طلب سحب رصيد جديد",
-	payoutPaid:       "صُرف طلب السحب",
-	payoutRejected:   "رُفض طلب السحب",
+	messageFromDriver:   "رسالة من السائق",
+	messageFromCustomer: "رسالة من الزبون",
+	warningIssued:       "إنذارٌ على متجرك",
+	driverEmergency:     "طارئٌ لدى سائق",
+	walletCredit:        "إيداع في محفظتك",
+	walletDebit:         "خصم من محفظتك",
+	ratingNew:           "تقييم جديد على خدمتك",
+	accountSuspended:    "تم إيقاف حسابك مؤقتاً",
+	accountActivated:    "تم تفعيل حسابك",
+	ticketOpened:        "فُتحت شكواك",
+	ticketNewOps:        "شكوى جديدة",
+	ticketReply:         "رد جديد على شكواك",
+	ticketResolved:      "تم حل شكواك",
+	driverAssigned:      "أُسند إليك طلب جديد",
+	storeClosed:         "إغلاق طارئ لمتجر",
+	storeReopened:       "عاد متجر للعمل",
+	cashSettled:         "سُلّم صندوقك النقدي",
+	roleGranted:         "أُضيفت صلاحية إلى حسابك",
+	roleRevoked:         "سُحبت صلاحية من حسابك",
+	leadRejected:        "رُفض طلب انضمام عبر رابطك",
+	commissionEarned:    "عمولة جديدة في محفظتك",
+	passwordReset:       "غُيّرت كلمة مرور حسابك",
+	sessionsRevoked:     "أُنهيت جلساتك — سجّل الدخول من جديد",
+	payoutRequested:     "طلب سحب رصيد جديد",
+	payoutPaid:          "صُرف طلب السحب",
+	payoutRejected:      "رُفض طلب السحب",
 }
 
 // صندوق إشعارات المستخدم — لأي دور، فلا أحد يحتاج تحديث الصفحة ليعرف ما استجدّ.

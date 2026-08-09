@@ -155,23 +155,32 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 }
 
 type driverOrder struct {
-	ID            string     `json:"id"`
-	Number        int64      `json:"number"`
-	Status        string     `json:"status"`
-	MerchantName  string     `json:"merchant_name"`
-	MerchantPhone *string    `json:"merchant_phone"`
-	AddressText   string     `json:"address_text"`
-	Lat           float64    `json:"lat"`
-	Lng           float64    `json:"lng"`
-	CustomerName  string     `json:"customer_name"`
-	CustomerPhone string     `json:"customer_phone"`
-	Total         int64      `json:"total"`
-	CashDue       int64      `json:"cash_due"`
-	ItemsCount    int        `json:"items_count"`
-	ReadyAt       *time.Time `json:"ready_at"`
-	PrepMinutes   *int       `json:"prep_minutes"`
-	AcceptedAt    *time.Time `json:"accepted_at"`
-	CreatedAt     time.Time  `json:"created_at"`
+	ID            string  `json:"id"`
+	Number        int64   `json:"number"`
+	Status        string  `json:"status"`
+	MerchantName  string  `json:"merchant_name"`
+	MerchantPhone *string `json:"merchant_phone"`
+	AddressText   string  `json:"address_text"`
+	Lat           float64 `json:"lat"`
+	Lng           float64 `json:"lng"`
+	CustomerName  string  `json:"customer_name"`
+	// **ولا رقمَ للزبون هنا — ولا في أيّ حمولةٍ تبلغ سائقاً.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «لازم الاثنان لا يقدران يوصلان لبعض إلّا
+	//  عن طريق المنصّة فقط».)
+	//
+	// **وحُذف من الخادم لا من الشاشة**: رقمٌ يُرسَل ثمّ يُخفى في الواجهة
+	// **موجودٌ لمن فتح أدوات المتصفّح** — والإخفاءُ في الشاشة ستارةٌ لا قفل.
+	//
+	// **والتواصلُ من `/orders/{id}/messages`** — قناةٌ مربوطةٌ بالطلب تنتهي
+	// بانتهائه.
+	Total       int64      `json:"total"`
+	CashDue     int64      `json:"cash_due"`
+	ItemsCount  int        `json:"items_count"`
+	ReadyAt     *time.Time `json:"ready_at"`
+	PrepMinutes *int       `json:"prep_minutes"`
+	AcceptedAt  *time.Time `json:"accepted_at"`
+	CreatedAt   time.Time  `json:"created_at"`
 	// PickupLat نقطةُ الاستلام البديلة — تُملأ حين تكون البضاعةُ ليست في
 	// المتجر: **طارئٌ وقع لسائقٍ سابقٍ وهي في يده حيث وقف.**
 	//
@@ -208,7 +217,7 @@ const driverOrderSelect = `
 	SELECT o.id, o.number, o.status, m.name,
 	       NULLIF(COALESCE(mo.whatsapp_phone::text, mo.phone::text), ''),
 	       o.address_text, ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
-	       cu.full_name, cu.phone::text, o.total, o.cash_due,
+	       cu.full_name, o.total, o.cash_due,
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
 	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at,
 	       ST_Y(o.pickup_override::geometry), ST_X(o.pickup_override::geometry),
@@ -250,7 +259,7 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 	for rows.Next() {
 		var o driverOrder
 		if err := rows.Scan(&o.ID, &o.Number, &o.Status, &o.MerchantName, &o.MerchantPhone,
-			&o.AddressText, &o.Lat, &o.Lng, &o.CustomerName, &o.CustomerPhone,
+			&o.AddressText, &o.Lat, &o.Lng, &o.CustomerName,
 			&o.Total, &o.CashDue, &o.ItemsCount, &o.ReadyAt, &o.PrepMinutes,
 			&o.AcceptedAt, &o.CreatedAt,
 			&o.PickupLat, &o.PickupLng, &o.PickupNote,

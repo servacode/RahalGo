@@ -40,10 +40,12 @@ import {
   IconDriver,
   IconWarning,
   IconCamera,
+  IconChat,
   Radio,
   LoadingState,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
+import Link from "next/link";
 
 const m = getMessages(defaultLocale);
 const D = m.driver;
@@ -82,7 +84,12 @@ interface DriverOrder {
   lat: number;
   lng: number;
   customer_name: string;
-  customer_phone: string;
+  /**
+   * **ولا رقمَ للزبون** — حُذف من الخادم لا من الشاشة.
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) **والتواصلُ من `OrderChat`** — قناةٌ مربوطةٌ
+   * بالطلب تنتهي بانتهائه، **ولا يعرف أحدُهما رقمَ الآخر.**
+   */
   total: number;
   cash_due: number;
   /** نقطةُ استلامٍ بديلة — البضاعةُ مع سائقٍ سابقٍ وقع له طارئ، لا في المتجر. */
@@ -653,8 +660,8 @@ function TaskCard({
         label={D.order.dropoff}
         name={o.customer_name}
         detail={o.address_text}
-        phone={o.customer_phone}
-        callLabel={D.order.callCustomer}
+        chatHref={`/portal/orders/${o.id}`}
+        chatLabel={m.chat.openChat}
         href={mapsHref(o.lat, o.lng)}
         hrefLabel={D.order.navigate}
         dim={heading}
@@ -767,16 +774,27 @@ function Leg({
   callLabel,
   href,
   hrefLabel,
+  chatHref,
+  chatLabel,
   dim,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   name: string;
   detail: string;
-  phone: string | null;
-  callLabel: string;
+  /**
+   * **رقمٌ يُتّصل به — للمتجر وحدَه.**
+   *
+   * **ولا رقمَ للزبون** (قرارُ المالك ٢٠٢٦-٠٨-٠٩): المتجرُ طرفُ عملٍ ورقمُه
+   * على لافتته، **والزبونُ طرفُ خصوصيّة** — يُبلَغ بالمحادثة لا بالهاتف.
+   */
+  phone?: string | null;
+  callLabel?: string;
   href?: string;
   hrefLabel?: string;
+  /** بابُ المحادثة — بديلُ الهاتف حيث لا هاتف. */
+  chatHref?: string;
+  chatLabel?: string;
   dim: boolean;
 }) {
   return (
@@ -802,7 +820,17 @@ function Leg({
             <IconLocation size={17} />
           </a>
         )}
-        {phone && (
+        {chatHref && (
+          <Link
+            href={chatHref}
+            title={chatLabel}
+            aria-label={chatLabel}
+            className="flex h-9 w-9 items-center justify-center rounded-control bg-field text-ink-muted"
+          >
+            <IconChat size={17} />
+          </Link>
+        )}
+        {phone && callLabel && (
           <a
             href={`tel:${phone}`}
             title={callLabel}
