@@ -101,6 +101,12 @@ interface Order {
   status: string;
   /** **أُسند سائق؟** — وبه وحدَه تُفتح قناةُ الحديث. */
   driver_id?: string | null;
+  /** **نوعُ الطلب** — `custom` طلبٌ خاصٌّ يصفه صاحبُه بلفظه. */
+  kind?: string;
+  custom_request?: string;
+  /** ما اتّفق عليه مع السائق — يراه كما يراه هو. */
+  custom_goods_amount?: number | null;
+  custom_fee?: number | null;
   total: number;
   /**
    * **تفصيلُ الإجمالي — يرسله الخادمُ وكان النوعُ يتجاهله.**
@@ -675,8 +681,44 @@ function OrderCard({
             </li>
           ))}
         </ul>
+      ) : o.kind === "custom" ? (
+        /* **والطلبُ الخاصُّ يُعرَض بلفظه لا «بلا أصنافٍ مسجّلة».**
+
+           (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «الطلب نفسه يظهر بدل أصناف غير مسجّلة».)
+
+           **ولا أصنافَ له تُسجَّل** — هو سطرٌ كتبه صاحبُه. **وجملةُ «بلا
+           أصناف» تُقرأ نقصاً في الطلب** لا وصفاً لنوعه. */
+        <p className="whitespace-pre-wrap rounded-control bg-field px-3 py-2 text-sm">
+          {o.custom_request || "—"}
+        </p>
       ) : (
         <p className="text-sm text-ink-muted">{o.items_preview || m.site.orders.noItems}</p>
+      )}
+
+      {/* **وما اتُّفق عليه يراه الزبونُ كما يراه السائق.**
+
+          (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «وبكرت الزبون لا يظهر السعر وأجرة
+           التوصيل كما اتّفقنا».)
+
+          **وهو طرفُ الاتّفاق** — قيل له في المحادثة، **ويبقى مكتوباً حيث
+          يراه**: فمن نسي رجع إليه، ومن خولف احتجّ به. */}
+      {o.kind === "custom" && o.custom_goods_amount != null && (
+        <div className="mt-2 space-y-1 rounded-control bg-field px-3 py-2 text-sm">
+          <p className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{m.site.custom.goods}</span>
+            <span className="tabular-nums" dir="ltr">{fmtNum(o.custom_goods_amount)}</span>
+          </p>
+          <p className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{m.site.custom.fee}</span>
+            <span className="tabular-nums" dir="ltr">{fmtNum(o.custom_fee ?? 0)}</span>
+          </p>
+          <p className="flex items-center justify-between gap-2 border-t border-line-soft pt-1 font-bold">
+            <span>{m.site.custom.total}</span>
+            <span className="tabular-nums" dir="ltr">
+              {fmtNum((o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0))} {m.common.currency}
+            </span>
+          </p>
+        </div>
       )}
 
       {/* ══════════════════════════════════════════════════════════════

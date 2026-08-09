@@ -19,6 +19,7 @@ import {
   IconLocation,
   IconStar,
   IconSupport,
+  IconChat,
   BootScreen,
 } from "@rahalgo/ui";
 import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS } from "@rahalgo/auth";
@@ -56,6 +57,8 @@ const NAV: ChromeNavItem[] = [
   { href: "/portal/incentives", label: m.driver.nav.incentives, icon: IconStar },
   { href: "/portal/reviews", label: m.terms.ratings, icon: IconStar },
   { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
+  // **وسجلُّ محادثاته** — كالزبون: تُغلق بالتسليم، **والحجّةُ تُطلب بعده.**
+  { href: "/portal/chats", label: m.chat.archiveTitle, icon: IconChat },
   { href: "/portal/account", label: m.driver.nav.account, icon: IconUser },
 ];
 

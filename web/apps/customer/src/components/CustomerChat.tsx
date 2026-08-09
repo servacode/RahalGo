@@ -22,13 +22,13 @@ import { ChatBubble, type ChatThread, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-interface MyOrder {
-  id: string;
+/** محادثةٌ كما يردّها الخادم — **مع عدّ ما لم يُقرأ.** */
+interface Thread {
+  order_id: string;
   number: number;
-  status: string;
-  closed_at: string | null;
-  driver_id?: string | null;
-  driver_name?: string | null;
+  peer: string;
+  open: boolean;
+  unread: number;
 }
 
 export function CustomerChat() {
@@ -40,18 +40,24 @@ export function CustomerChat() {
       setThreads([]);
       return;
     }
-    api<MyOrder[]>("/api/v1/my/orders")
-      .then((list) => {
+    // **والردُّ كائنٌ لا مصفوفة** — `{orders, page, per_page, total}`.
+    //
+    // **وقرأتُه مصفوفةً فكان الفلترُ يردّ فراغاً دائماً** — فلم تظهر الفقّاعةُ
+    // للزبون قطّ. **ولا خطأ ولا سجلّ**: `Array.isArray` تردّ `false` بهدوء،
+    // **والمكوّنُ يُخفي نفسَه عند الفراغ فبدا كأنّه يعمل.**
+    // **ومن سجلّ المحادثات لا من الطلبات** — **العدُّ يأتي معه**، وبلاه
+    // كانت الشارةُ صفراً أبداً **فلا تُفتح الفقّاعةُ ولا يرنّ تنبيه.**
+    api<{ threads: Thread[] }>("/api/v1/my/chats")
+      .then((res) => {
         setThreads(
-          (Array.isArray(list) ? list : [])
-            // **وما دام في يد سائق** — القناةُ تُغلق بانتهاء الطلب،
-            // **وتبويبٌ لطلبٍ مغلقٍ يفتح شاشةً لا تُكتب.**
-            .filter((o) => !o.closed_at && o.driver_id)
-            .map((o) => ({
-              id: o.id,
-              number: o.number,
-              peer: o.driver_name ?? "",
-              unread: 0,
+          (res?.threads ?? [])
+            // **والمفتوحةُ وحدَها في الفقّاعة** — والمنتهيةُ في السجلّ.
+            .filter((t) => t.open)
+            .map((t) => ({
+              id: t.order_id,
+              number: t.number,
+              peer: t.peer,
+              unread: t.unread,
             })),
         );
       })

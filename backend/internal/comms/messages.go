@@ -121,3 +121,90 @@ func (s *Service) Unread(ctx context.Context, orderID string, me Role) (int, err
 		orderID, string(me)).Scan(&n)
 	return n, err
 }
+
+// Thread **محادثةٌ كما تُعرض في القائمة.**
+type Thread struct {
+	OrderID   string     `json:"order_id"`
+	Number    int64      `json:"number"`
+	Peer      string     `json:"peer"`
+	Open      bool       `json:"open"`
+	Unread    int        `json:"unread"`
+	LastBody  string     `json:"last_body"`
+	LastAt    *time.Time `json:"last_at"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+// Threads **كلُّ محادثاتِ هذا الحساب — المفتوحةُ والمنتهية.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «يجب أن يكون هناك دردشاتي السابقة… مشان إثبات».)
+//
+// # ولماذا المنتهيةُ معها
+//
+// **الحديثُ حجّةٌ عند الخلاف** — ومن اتُّفق معه على سعرٍ ثمّ أُنكر يرجع إليه.
+// **ومحادثةٌ تختفي بانتهاء الطلب تمحو الدليلَ في اللحظة التي يُحتاج فيها**:
+// لا يُختلَف أثناء الطلب، **إنّما بعده.**
+//
+// # ونداءٌ واحدٌ يخدم الفقّاعةَ والسجلّ
+//
+// **والفقّاعةُ تأخذ المفتوحَ وحدَه، والسجلُّ يأخذ الكلّ** — ونداءان لقائمةٍ
+// واحدةٍ يفترقان: **يُصلَح عدُّ غيرِ المقروء في أحدهما ويبقى الآخرُ يكذب.**
+func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT o.id::text, o.number, o.status, o.delivered_at, o.closed_at,
+		       -- **والطرفُ الآخر بحسب من يسأل** — كلٌّ يرى الآخر.
+		       --
+		       -- **ومن سُحب الطلبُ من يده لا اسمَ له في الصفّ** — فيقرأ
+		       -- الزبونُ سطراً بلا قائل. **فيُسأل عمّن كتب لا عمّن يحمل
+		       -- الطلبَ الآن.**
+		       COALESCE(CASE WHEN o.customer_id = $1 THEN dr.full_name
+		                     ELSE cu.full_name END,
+		                (SELECT u.full_name FROM order_messages x
+		                 JOIN users u ON u.id = x.sender_id
+		                 WHERE x.order_id = o.id AND x.sender_id <> $1
+		                 ORDER BY x.created_at LIMIT 1),
+		                ''),
+		       (SELECT count(*) FROM order_messages x
+		        WHERE x.order_id = o.id AND x.read_at IS NULL
+		          AND x.sender_id <> $1),
+		       COALESCE((SELECT x.body FROM order_messages x
+		                 WHERE x.order_id = o.id ORDER BY x.created_at DESC LIMIT 1), ''),
+		       (SELECT max(x.created_at) FROM order_messages x WHERE x.order_id = o.id),
+		       o.created_at
+		FROM orders o
+		JOIN users cu ON cu.id = o.customer_id
+		LEFT JOIN users dr ON dr.id = o.driver_id
+		-- **ولا تُعرض إلّا محادثةٌ وقعت** — طلبٌ بلا كلمةٍ ليس محادثة،
+		-- **وسجلٌّ فيه عشرون صفّاً فارغاً لا يُقرأ.**
+		-- **ومن كتب في الحديث يراه ولو خرج من الطلب.**
+		--
+		-- **السائقُ يُسحب منه الطلبُ فيُعاد إلى الطابور** — وكان الصفُّ
+		-- يُقاس بمن يحمل الطلبَ الآن، **فتختفي كلماتُه هو من سجلّه هو**
+		-- ويراها الزبونُ وحدَه. **وسجلٌّ يراه طرفٌ ولا يراه الآخرُ ليس
+		-- إثباتاً** — إنّما حجّةٌ في يدٍ واحدة.
+		WHERE EXISTS (SELECT 1 FROM order_messages x WHERE x.order_id = o.id)
+		  AND (o.customer_id = $1 OR o.driver_id = $1
+		       OR EXISTS (SELECT 1 FROM order_messages x
+		                  WHERE x.order_id = o.id AND x.sender_id = $1))
+		ORDER BY (SELECT max(x.created_at) FROM order_messages x
+		          WHERE x.order_id = o.id) DESC
+		LIMIT 50`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []Thread{}
+	for rows.Next() {
+		var t Thread
+		var status string
+		var deliveredAt, closedAt *time.Time
+		if err := rows.Scan(&t.OrderID, &t.Number, &status, &deliveredAt, &closedAt,
+			&t.Peer, &t.Unread, &t.LastBody, &t.LastAt, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+		// **والحكمُ من `channelOpen` نفسِها** — لا شرطٌ يشبهه.
+		t.Open, _ = channelOpen(status, deliveredAt, closedAt)
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}

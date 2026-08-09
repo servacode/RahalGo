@@ -135,6 +135,7 @@ export * from "./MyAddresses";
 export * from "./OrderChat";
 // **فقّاعةُ المحادثة** — تطفو ولا تسكن بطاقة.
 export * from "./ChatBubble";
+export * from "./ChatArchive";
 // **توثيقُ واتساب** — صندوقٌ واحدٌ يُنادى حيث يُحتاج.
 export * from "./WhatsAppVerify";
 // **وقتُ السائق** — حسابٌ واحدٌ لبطاقتيه.

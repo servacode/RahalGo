@@ -20,11 +20,12 @@
  * **ومحادثةٌ لا تُعلِم بجديدها لا تُفتح** — يكتب أحدُهما ويظنّ أنّ الآخر يقرأ.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button } from "./components";
 import { IconChat, IconClose } from "./icons";
 import { useLiveRefresh } from "./Notifications";
+import { useChime } from "./chime";
 import { OrderChat } from "./OrderChat";
 
 const m = getMessages(defaultLocale);
@@ -66,6 +67,34 @@ export function ChatBubble({
 
   const refresh = useCallback(() => onRead?.(), [onRead]);
   useLiveRefresh(["order"], refresh);
+
+  /**
+   * **وتُفتح وحدَها عند أوّل رسالةٍ ويُنبَّه بصوت.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «وفتح الدردشة بشكلٍ تلقائيٍّ مع صوتٍ للتنبيه».)
+   *
+   * **ورسالةٌ تصل ولا تُرى لا تُجيب**: السائقُ على درّاجته والزبونُ في شغله،
+   * **وفقّاعةٌ صامتةٌ في زاويةٍ تُقرأ بعد أن يمضي وقتُها.**
+   *
+   * **ولا تُفتح إلّا على جديدٍ حقيقيّ**: تُقارَن بما كان لا بما هو —
+   * **ونافذةٌ تفتح نفسَها كلَّ تحديثٍ تُغلَق بغضبٍ ثمّ لا تُفتح.**
+   */
+  const seen = useRef<number | null>(null);
+  const chime = useChime();
+  useEffect(() => {
+    const total = threads.reduce((n, t) => n + t.unread, 0);
+    // **وأوّلُ قراءةٍ تُسجَّل ولا تُنبّه** — من فتح شاشتَه لا يُفاجَأ برنّةٍ
+    // عن رسالةٍ قرأها أمس.
+    if (seen.current === null) {
+      seen.current = total;
+      return;
+    }
+    if (total > seen.current) {
+      setOpen(true);
+      chime();
+    }
+    seen.current = total;
+  }, [threads, chime]);
 
   if (threads.length === 0) return null;
   const unread = threads.reduce((n, t) => n + t.unread, 0);

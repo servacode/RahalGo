@@ -98,3 +98,15 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 	s.touch("order", p.PeerID)
 	httpx.JSON(w, http.StatusCreated, msg)
 }
+
+// handleMyChats **سجلُّ محادثاتي — المفتوحةُ والمنتهية.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «دردشاتي السابقة… مشان إثبات».)
+func (s *Server) handleMyChats(w http.ResponseWriter, r *http.Request) {
+	list, err := s.comms.Threads(r.Context(), userIDFrom(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"threads": list})
+}

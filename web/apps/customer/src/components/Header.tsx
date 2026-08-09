@@ -38,6 +38,7 @@ import {
   IconHeart,
   IconLink,
   IconSupport,
+  IconChat,
   IconWallet,
   IconUser,
   IconNote,
@@ -83,6 +84,10 @@ const MENU = [
      (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «لازم بدل شكاوي تكون شكاوى وبلاغات، مثل باقي
      اللوحات».) */
   { href: "/complaints", label: m.terms.complaints, icon: IconSupport },
+  /* **وسجلُّ المحادثات** — تُغلق بانتهاء الطلب **فتختفي من الفقّاعة**،
+     ولا بابَ إليها بعدها. **ومن اتُّفق معه على سعرٍ ثمّ أُنكر لا حجّةَ له.**
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «دردشاتي السابقة… مشان إثبات».) */
+  { href: "/chats", label: m.chat.archiveTitle, icon: IconChat },
 ] as const;
 
 export default function Header({

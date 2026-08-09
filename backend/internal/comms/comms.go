@@ -179,8 +179,19 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 	case userID == customerID:
 		p.Me = RoleCustomer
 		if driverID == nil {
-			// **ولا سائقَ بعد** — القناةُ قائمةٌ ولا طرفَ لها.
-			return p, ErrNoDriverYet
+			// **ولا سائقَ الآن** — وقد يكون سائقٌ كتب ثمّ سُحب منه الطلب.
+			// **فحديثٌ وقع فعلاً يبقى مقروءاً** — و«لا سائقَ بعد» تُقال
+			// لمن لا حديثَ له لا لمن يقرأ ما كُتب له.
+			peerID, peerName, err := s.formerPeer(ctx, orderID, userID)
+			if err != nil {
+				return nil, err
+			}
+			if peerID == "" {
+				// **ولا سائقَ بعد** — القناةُ قائمةٌ ولا طرفَ لها.
+				return p, ErrNoDriverYet
+			}
+			p.PeerID, p.PeerName = peerID, peerName
+			return p, nil // **مقفلةٌ للكتابة** — `Send` يردّ عند `Open` كاذبة.
 		}
 		p.PeerID, p.PeerName = *driverID, driverName
 	case driverID != nil && userID == *driverID:
@@ -188,11 +199,61 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 		p.PeerID, p.PeerName = customerID, customerName
 	default:
 		// **ولا الإدارةُ طرف** — ترى السجلَّ من بابها لا من هذا.
-		return nil, ErrNotParty
+		//
+		// **ومن كتب في هذا الحديث يقرؤه ولو خرج من الطلب**: السائقُ يُسحب
+		// منه الطلبُ فيُعاد إلى الطابور، **فتصير كلماتُه هو حجّةً على
+		// الزبون وحدَه** — يراها ولا يراها قائلُها. **ولا يكتب**: القناةُ
+		// مقفلةٌ في وجهه، **إنّما يُحتجّ بها.**
+		wrote, err := s.wroteHere(ctx, orderID, userID)
+		if err != nil {
+			return nil, err
+		}
+		if !wrote {
+			return nil, ErrNotParty
+		}
+		p.Me = RoleDriver
+		p.PeerID, p.PeerName = customerID, customerName
+		return p, nil
 	}
 
 	p.Open, p.ClosesAt = channelOpen(status, deliveredAt, closedAt)
 	return p, nil
+}
+
+// formerPeer **من كتب في هذا الحديث غيري** — واسمُه.
+//
+// **يُسأل حين لا يكون للطلب سائقٌ الآن**: الصفُّ يحمل من يحمل الطلبَ، **والحديثُ
+// يحمل من قاله.** ويردّ فراغاً إن لم يكتب أحدٌ سواي — **وهو «لا سائقَ بعد»
+// حقّاً.**
+func (s *Service) formerPeer(ctx context.Context, orderID, userID string) (string, string, error) {
+	var id, name string
+	err := s.db.QueryRow(ctx, `
+		SELECT x.sender_id::text, COALESCE(u.full_name, '')
+		FROM order_messages x
+		JOIN users u ON u.id = x.sender_id
+		WHERE x.order_id = $1 AND x.sender_id <> $2
+		ORDER BY x.created_at
+		LIMIT 1`, orderID, userID).Scan(&id, &name)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", nil
+	}
+	if err != nil {
+		return "", "", err
+	}
+	return id, name, nil
+}
+
+// wroteHere **هل كتبتُ في هذا الحديث؟**
+//
+// **والكتابةُ لا تقع إلّا من طرف** — يمنعها `Permit` نفسُها ساعتَها. **فمن كتب
+// كان طرفاً يوماً**، ويبقى له أن يقرأ ما قال.
+func (s *Service) wroteHere(ctx context.Context, orderID, userID string) (bool, error) {
+	var yes bool
+	err := s.db.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM order_messages
+		               WHERE order_id = $1 AND sender_id = $2)`,
+		orderID, userID).Scan(&yes)
+	return yes, err
 }
 
 // channelOpen **الحكمُ وحدَه — مفصولاً عن القاعدة ليُختبر.**

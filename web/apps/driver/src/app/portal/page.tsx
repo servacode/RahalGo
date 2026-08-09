@@ -42,13 +42,11 @@ import {
   IconDriver,
   IconWarning,
   IconCamera,
-  IconChat,
   ChatBubble,
   Radio,
   LoadingState,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
-import Link from "next/link";
 
 const m = getMessages(defaultLocale);
 const D = m.driver;
@@ -195,6 +193,10 @@ export default function TasksPage() {
   const [proving, setProving] = useState<DriverOrder | null>(null);
   /** **الطلبُ الخاصُّ الذي يُوثَّق مبلغُه** — بعد أن يتّفق مع الزبون. */
   const [agreeing, setAgreeing] = useState<DriverOrder | null>(null);
+  /** **محادثاتي المفتوحة** — من سجلّ المحادثات، **وفيه عدُّ ما لم يُقرأ.** */
+  const [chats, setChats] = useState<
+    { id: string; number: number; peer: string; unread: number }[]
+  >([]);
   /** **رمزُ** السبب المختار — لا نصُّه. */
   const [reason, setReason] = useState("");
   /** التفصيلُ الحرّ بجانبه — اختياريّ. */
@@ -216,6 +218,17 @@ export default function TasksPage() {
   const load = useCallback(() => {
     api<Me>("/api/v1/driver/me").then(setMe).catch(() => undefined);
     api<DriverOrder[]>("/api/v1/driver/orders").then(setMine).catch(() => undefined);
+    api<{ threads: { order_id: string; number: number; peer: string; open: boolean; unread: number }[] }>(
+      "/api/v1/my/chats",
+    )
+      .then((r) =>
+        setChats(
+          (r?.threads ?? [])
+            .filter((t) => t.open)
+            .map((t) => ({ id: t.order_id, number: t.number, peer: t.peer, unread: t.unread })),
+        ),
+      )
+      .catch(() => undefined);
   }, []);
 
   useEffect(load, [load]);
@@ -505,13 +518,7 @@ export default function TasksPage() {
           ثمّ يعود. **والحديثُ يجري والعملُ يجري.**
 
           **وواحدةٌ لكلّ المفتوح**: تبويبٌ بالأرقام إن كانت أكثرَ من طلب. */}
-      <ChatBubble
-        api={api}
-        threads={mine
-          .filter((o) => o.status !== "delivered" && o.status !== "failed")
-          .map((o) => ({ id: o.id, number: o.number, peer: o.customer_name, unread: 0 }))}
-        onRead={load}
-      />
+      <ChatBubble api={api} threads={chats} onRead={load} />
 
       {agreeing && (
         <AgreeModal
@@ -961,8 +968,6 @@ function Leg({
   callLabel,
   href,
   hrefLabel,
-  chatHref,
-  chatLabel,
   dim,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -979,9 +984,6 @@ function Leg({
   callLabel?: string;
   href?: string;
   hrefLabel?: string;
-  /** بابُ المحادثة — بديلُ الهاتف حيث لا هاتف. */
-  chatHref?: string;
-  chatLabel?: string;
   dim: boolean;
 }) {
   return (
@@ -1006,16 +1008,6 @@ function Leg({
           >
             <IconLocation size={17} />
           </a>
-        )}
-        {chatHref && (
-          <Link
-            href={chatHref}
-            title={chatLabel}
-            aria-label={chatLabel}
-            className="flex h-9 w-9 items-center justify-center rounded-control bg-field text-ink-muted"
-          >
-            <IconChat size={17} />
-          </Link>
         )}
         {phone && callLabel && (
           <a

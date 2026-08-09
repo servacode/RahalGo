@@ -222,6 +222,8 @@ func (s *Server) Router() http.Handler {
 			// **وحارسُ الدور يمنع سائقاً أن يقرأ حديثَ طلبه** لو وُضع.
 			// **وإنذاراتي — يراها صاحبُها أيَّ دورٍ كان.**
 			r.Get("/my/warnings", s.handleMyWarnings)
+			// **وسجلُّ المحادثات** — المفتوحةُ والمنتهية، حجّةً عند الخلاف.
+			r.Get("/my/chats", s.handleMyChats)
 			r.Get("/orders/{id}/messages", s.handleOrderMessages)
 			r.Post("/orders/{id}/messages", s.handleSendOrderMessage)
 			r.Get("/my/orders", s.handleMyOrders)
