@@ -96,17 +96,21 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("unknown OTP_PROVIDER %q (expected dev or whatsapp)", cfg.OTPProvider)
 	}
 
-	identitySvc := identity.NewService(identity.NewRepo(pg), rdb, tokens, otpSender, cfg.JWTSecret, logger)
-	// طول كلمة المرور وسقف محاولات الدخول من اللوحة — قرارا أمانٍ يتّخذهما
-	// المالك لا قرارا نشرٍ ينتظران مبرمجاً. (يُربط هنا كي لا تعتمد حزمةُ
-	// الهوية على حزمة الإعدادات.)
-	identitySvc.SetSettingReader(func(ctx context.Context, key string, fallback int64) int64 {
+	// readSetting **جسرٌ إلى اللوحة تعبره الحزمُ الدنيا.**
+	//
+	// قرارات الأمان والحدود يتّخذها المالك لا مبرمجٌ في نصّ. **ويُربط هنا كي
+	// لا تعتمد حزمةُ الهوية ولا حزمةُ الوسائط على حزمة الإعدادات** — وكلتاهما
+	// أدنى منها في الترتيب.
+	readSetting := func(ctx context.Context, key string, fallback int64) int64 {
 		var v float64
 		if err := settingsStore.Get(ctx, key, &v); err != nil {
 			return fallback
 		}
 		return int64(v)
-	})
+	}
+
+	identitySvc := identity.NewService(identity.NewRepo(pg), rdb, tokens, otpSender, cfg.JWTSecret, logger)
+	identitySvc.SetSettingReader(readSetting)
 	if err := identitySvc.BootstrapAdmin(ctx, cfg.AdminPhone); err != nil {
 		return err
 	}
@@ -131,6 +135,7 @@ func run(logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	mediaSvc.SetSettingReader(readSetting)
 
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,

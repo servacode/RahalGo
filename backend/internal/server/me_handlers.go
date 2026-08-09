@@ -87,8 +87,9 @@ func (s *Server) handleSetMyName(w http.ResponseWriter, r *http.Request) {
 
 // handleMyAvatar يرفع صورة المستخدم لنفسه (نوع avatar) ويضبطها، ويعيد رابط المصغّرة.
 func (s *Server) handleMyAvatar(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, media.MaxUploadBytes+64<<10)
-	if err := r.ParseMultipartForm(media.MaxUploadBytes); err != nil {
+	lim := s.media.MaxBytes(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, lim+64<<10)
+	if err := r.ParseMultipartForm(lim); err != nil {
 		s.respondErr(w, media.ErrTooLarge)
 		return
 	}

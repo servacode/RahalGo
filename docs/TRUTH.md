@@ -411,6 +411,10 @@
 | `support.complaint_window_hours` | المنصة | int | `24` |
 | `security.password_min_length` | المنصة | int | `8` |
 | `security.login_max_attempts` | المنصة | int | `5` |
+| `security.session_days` | المنصة | int | `30` |
+| `security.otp_ttl_min` | المنصة | int | `5` |
+| `security.otp_max_per_phone` | المنصة | int | `3` |
+| `media.max_upload_mb` | المنصة | int | `5` |
 | `platform.invite_code` | المنصة | text | `RAHALGO` |
 | `whatsapp.otp_template` | المنصة | text | `رمز التحقق: {code}` |
 | `platform.support_phone` |  | text | `` |
@@ -439,6 +443,7 @@
 | `shop.rail_seconds` |  | int | `5` |
 | `platform.app_url` |  | text | `` |
 | `platform.app_file` |  | file | `` |
+| `app.max_file_mb` |  | int | `100` |
 | `orders.max_sources` |  | int | `2` |
 | `orders.max_open_per_customer` |  | int | `3` |
 | `orders.customer_cancel_window_sec` |  | int | `120` |

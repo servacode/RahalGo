@@ -11,8 +11,9 @@ import (
 // ويعيد سجل الوسائط بمساريه — يُربط لاحقاً بالكيان عبر معرفه.
 func (s *Server) handleUploadMedia(w http.ResponseWriter, r *http.Request) {
 	// الحد أعلى قليلاً من حد الصورة لاستيعاب غلاف multipart
-	r.Body = http.MaxBytesReader(w, r.Body, media.MaxUploadBytes+64<<10)
-	if err := r.ParseMultipartForm(media.MaxUploadBytes); err != nil {
+	lim := s.media.MaxBytes(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, lim+64<<10)
+	if err := r.ParseMultipartForm(lim); err != nil {
 		s.respondErr(w, media.ErrTooLarge)
 		return
 	}
@@ -48,8 +49,9 @@ var merchantKinds = map[string]bool{"menu_item": true, "menu_section": true, "me
 //
 // **والنوعُ يُفحص قبل أن يُمرَّر** — لا بعد أن تُكتب الصورةُ على القرص.
 func (s *Server) handleMerchantUploadMedia(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, media.MaxUploadBytes+64<<10)
-	if err := r.ParseMultipartForm(media.MaxUploadBytes); err != nil {
+	lim := s.media.MaxBytes(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, lim+64<<10)
+	if err := r.ParseMultipartForm(lim); err != nil {
 		s.respondErr(w, media.ErrTooLarge)
 		return
 	}

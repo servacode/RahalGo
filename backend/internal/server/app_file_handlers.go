@@ -14,8 +14,8 @@ package server
 
 # وما يُفحص
 
-  - **الحجم**: مئةُ ميغابايت سقفاً — أكبرُ من أيّ تطبيقِ توصيلٍ معقول،
-    **وأصغرُ من أن يملأ القرصَ برفعةٍ واحدة.**
+  - **الحجم**: من `app.max_file_mb` — مئةُ ميغابايت افتراضاً، أكبرُ من أيّ
+    تطبيقِ توصيلٍ معقول **وأصغرُ من أن يملأ القرصَ برفعةٍ واحدة.**
   - **البصمة**: ملفُّ أندرويد أرشيفُ ZIP — أوّلُ أربعةِ بايتاتٍ `PK\x03\x04`.
     **ومن رفع صورةً باسم `.apk` يُردّ**، فلا يُعرض على الناس زرُّ تنزيلٍ
     يعطيهم ملفّاً لا يُثبَّت.
@@ -45,7 +45,8 @@ import (
 )
 
 const (
-	// maxAppBytes سقفُ ملفّ التطبيق.
+	// maxAppBytes **احتياطيٌّ لا حدّ** — والحدُّ الفعليُّ في `app.max_file_mb`.
+	// (نُقل إلى اللوحة 2026-08-09 بقرار المالك.)
 	maxAppBytes = 100 << 20
 
 	// appFileSetting مفتاحُ الإعداد الذي يحمل اسمَ الملفّ المخزَّن.
@@ -69,7 +70,11 @@ var zipMagic = []byte{'P', 'K', 3, 4}
 
 // handleUploadAppFile يستقبل ملفَّ التطبيق من الإدارة ويحفظه.
 func (s *Server) handleUploadAppFile(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxAppBytes+64<<10)
+	lim := s.settings.GetInt(r.Context(), "app.max_file_mb") << 20
+	if lim <= 0 {
+		lim = maxAppBytes
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, lim+64<<10)
 	if err := r.ParseMultipartForm(8 << 20); err != nil {
 		s.respondErr(w, errAppTooLarge)
 		return
@@ -86,12 +91,12 @@ func (s *Server) handleUploadAppFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	raw, err := io.ReadAll(io.LimitReader(file, maxAppBytes+1))
+	raw, err := io.ReadAll(io.LimitReader(file, lim+1))
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	if len(raw) > maxAppBytes {
+	if int64(len(raw)) > lim {
 		s.respondErr(w, errAppTooLarge)
 		return
 	}

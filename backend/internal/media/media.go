@@ -30,6 +30,11 @@ import (
 )
 
 const (
+	// MaxUploadBytes **احتياطيٌّ لا حدّ** — والحدُّ الفعليُّ في
+	// `media.max_upload_mb`. (نُقل إلى اللوحة 2026-08-09 بقرار المالك.)
+	//
+	// **ويبقى مصدّراً**: النداءاتُ قبل الربط تعمل به، **واختبارُ الوسائط لا
+	// يحتاج مخزنَ إعدادات.**
 	MaxUploadBytes = 5 << 20 // 5MB
 	maxDim         = 1600    // البعد الأقصى للنسخة الكاملة
 	thumbDim       = 400     // البعد الأقصى للمصغرة
@@ -76,6 +81,11 @@ type Media struct {
 type Service struct {
 	db  *pgxpool.Pool
 	dir string // مجلد التخزين الجذري
+	// setting يقرأ إعداداً عددياً من اللوحة، أو يعيد الاحتياطي.
+	//
+	// **دالّة لا مخزن** — كما في حزمة الهوية: لو حُقن `*settings.Store`
+	// لاعتمدت حزمةُ الوسائط على حزمة الإعدادات وهي أدنى منها في الترتيب.
+	setting func(ctx context.Context, key string, fallback int64) int64
 }
 
 func NewService(db *pgxpool.Pool, dir string) (*Service, error) {
@@ -83,6 +93,23 @@ func NewService(db *pgxpool.Pool, dir string) (*Service, error) {
 		return nil, fmt.Errorf("media: create uploads dir: %w", err)
 	}
 	return &Service{db: db, dir: dir}, nil
+}
+
+// SetSettingReader يربط الخدمة بإعدادات اللوحة (تُنادى مرّة عند الإقلاع).
+func (s *Service) SetSettingReader(f func(ctx context.Context, key string, fallback int64) int64) {
+	s.setting = f
+}
+
+// MaxBytes سقفُ الرفع بالبايت — من اللوحة أو الاحتياطيّ.
+//
+// **ويُنادى في الخادم أيضاً**: `MaxBytesReader` يقطع الجسدَ قبل قراءته،
+// **وسقفان مختلفان يجعلان الرفضَ يقع بلا رسالةٍ مفهومة** — يُقطع الاتّصال
+// بدل أن يُقال «الصورة كبيرة».
+func (s *Service) MaxBytes(ctx context.Context) int64 {
+	if s.setting == nil {
+		return MaxUploadBytes
+	}
+	return s.setting(ctx, "media.max_upload_mb", MaxUploadBytes>>20) << 20
 }
 
 // Dir يعيد مجلد التخزين الجذري (لخدمة الملفات الساكنة).
@@ -107,11 +134,12 @@ func (s *Service) Save(ctx context.Context, actorID, kind string, r io.Reader) (
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
 
-	raw, err := io.ReadAll(io.LimitReader(r, MaxUploadBytes+1))
+	limit := s.MaxBytes(ctx)
+	raw, err := io.ReadAll(io.LimitReader(r, limit+1))
 	if err != nil {
 		return nil, err
 	}
-	if len(raw) > MaxUploadBytes {
+	if int64(len(raw)) > limit {
 		return nil, ErrTooLarge
 	}
 	if !looksLikeImage(raw) {

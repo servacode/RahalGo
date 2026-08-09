@@ -39,13 +39,15 @@ var (
 )
 
 const (
-	otpTTL       = 5 * time.Minute
-	otpMaxPer15m = 3
-	refreshTTL   = 30 * 24 * time.Hour
+	// احتياطيّاتٌ تعمل بها الخدمة إن لم تُربط باللوحة. **والقيمُ الفعليّةُ في
+	// الإعدادات** — قراراتُ أمانٍ يتّخذها المالك لا قراراتِ نشرٍ تنتظر مبرمجاً.
+	//
+	// (نُقلت الثلاثةُ الأولى إلى اللوحة 2026-08-09 بقرار المالك بعد جردِ
+	//  الثوابت: «نطبّقها كلَّها».)
+	otpTTL       = 5 * time.Minute     // security.otp_ttl_min
+	otpMaxPer15m = 3                   // security.otp_max_per_phone
+	refreshTTL   = 30 * 24 * time.Hour // security.session_days
 
-	// احتياطيّاتٌ تعمل بها الخدمة إن لم تُربط باللوحة. والقيم الفعلية في
-	// `security.password_min_length` و`security.login_max_attempts` — قرارا
-	// أمانٍ يتّخذهما المالك لا قرارا نشرٍ ينتظران مبرمجاً.
 	minPasswordLn = 8
 
 	// حدّ محاولات الدخول بكلمة المرور. رموز التحقق كانت محمية والكلمة مفتوحة —
@@ -103,6 +105,26 @@ func (s *Service) intSetting(ctx context.Context, key string, fallback int64) in
 	return s.setting(ctx, key, fallback)
 }
 
+// otpLifetime مهلةُ الرمز — من اللوحة أو الاحتياطيّ.
+func (s *Service) otpLifetime(ctx context.Context) time.Duration {
+	return time.Duration(s.intSetting(ctx, "security.otp_ttl_min",
+		int64(otpTTL/time.Minute))) * time.Minute
+}
+
+// otpQuota سقفُ الرموز للرقم الواحد في النافذة.
+func (s *Service) otpQuota(ctx context.Context) int64 {
+	return s.intSetting(ctx, "security.otp_max_per_phone", otpMaxPer15m)
+}
+
+// sessionLife طولُ الجلسة قبل أن يُطلب الدخولُ من جديد.
+//
+// **ولا يُقصّر جلسةً قائمة**: مهلةُ الرمز تُكتب في الصفّ يومَ يُنشأ،
+// **فمن كان داخلاً بمهلةٍ قديمةٍ يُكملها** ويأخذ الجديدةَ في تجديده التالي.
+func (s *Service) sessionLife(ctx context.Context) time.Duration {
+	return time.Duration(s.intSetting(ctx, "security.session_days",
+		int64(refreshTTL/(24*time.Hour)))) * 24 * time.Hour
+}
+
 func (s *Service) hashOTP(phone, code string) string {
 	mac := hmac.New(sha256.New, []byte(s.secret))
 	mac.Write([]byte(phone + ":" + code))
@@ -127,7 +149,7 @@ func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) error {
 	if n == 1 {
 		s.rdb.Expire(ctx, key, 15*time.Minute)
 	}
-	if n > otpMaxPer15m {
+	if n > s.otpQuota(ctx) {
 		return ErrOTPRateLimited
 	}
 
@@ -135,7 +157,7 @@ func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) error {
 	if err != nil {
 		return err
 	}
-	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "login", otpTTL); err != nil {
+	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "login", s.otpLifetime(ctx)); err != nil {
 		return err
 	}
 	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
@@ -166,14 +188,14 @@ func (s *Service) RequestPhoneChange(ctx context.Context, userID, rawPhone, ip s
 	if n == 1 {
 		s.rdb.Expire(ctx, key, 15*time.Minute)
 	}
-	if n > otpMaxPer15m {
+	if n > s.otpQuota(ctx) {
 		return ErrOTPRateLimited
 	}
 	code, err := randomDigits(6)
 	if err != nil {
 		return err
 	}
-	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "phone_change", otpTTL); err != nil {
+	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), "phone_change", s.otpLifetime(ctx)); err != nil {
 		return err
 	}
 	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
@@ -272,14 +294,14 @@ func (s *Service) sendOTPFor(ctx context.Context, phone, purpose, rateKey, ip st
 	if n == 1 {
 		s.rdb.Expire(ctx, key, 15*time.Minute)
 	}
-	if n > otpMaxPer15m {
+	if n > s.otpQuota(ctx) {
 		return ErrOTPRateLimited
 	}
 	code, err := randomDigits(6)
 	if err != nil {
 		return err
 	}
-	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), purpose, otpTTL); err != nil {
+	if err := s.repo.CreateOTP(ctx, phone, s.hashOTP(phone, code), purpose, s.otpLifetime(ctx)); err != nil {
 		return err
 	}
 	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
@@ -550,7 +572,7 @@ func (s *Service) issueSession(ctx context.Context, user *User, userAgent, ip, a
 		}
 	}
 	// نخزّن التجديد أولاً لنعرف عائلة الجلسة، ثم نضعها في توكن الوصول
-	sid, err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, refreshTTL, userAgent, ip, sessionID)
+	sid, err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, s.sessionLife(ctx), userAgent, ip, sessionID)
 	if err != nil {
 		return nil, err
 	}
