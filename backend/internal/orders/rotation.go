@@ -33,6 +33,8 @@ package orders
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -453,6 +455,39 @@ func (s *Service) offerWaiting(ctx context.Context) {
 	}
 }
 
+// groupDigits رقمٌ بفواصلِ ألوف — **٢٠٦١٠٠٠ لا تُقرأ، و٢٬٠٦١٬٠٠٠ تُقرأ.**
+//
+// **والفاصلةُ عربيّةٌ** (U+066C) لأنّ النصَّ عربيّ. ولا `golang.org/x/text`
+// لسطرٍ واحد.
+func groupDigits(n int64) string {
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	d := strconv.FormatInt(n, 10)
+	var b strings.Builder
+	if neg {
+		b.WriteByte('-')
+	}
+	for i, c := range d {
+		if i > 0 && (len(d)-i)%3 == 0 {
+			b.WriteRune('٬')
+		}
+		b.WriteRune(c)
+	}
+	return b.String()
+}
+
+// cashOverLimitMessage **الرسالةُ وحدَها — مفصولةً عن القاعدة لتُختبر.**
+//
+// **و`NoEligibleReason` تفتح قاعدةً فلا يبلغها اختبار** — ولو كُتبت الرسالةُ
+// داخلَها لَبقيت بلا حارس. **وهي بالضبط ما شكا منه الجرد**: نصٌّ يَعِد بشيءٍ
+// ولا يفعله، **ولا شيءَ يمسك ذلك.**
+func cashOverLimitMessage(cashDue, limit int64) string {
+	return "نقدُ الطلب " + groupDigits(cashDue) +
+		" وسقفُ السائقين " + groupDigits(limit) + " — لن يلتقطه أحد"
+}
+
 // NoEligibleReason لماذا لا يلتقط الطلبَ أحد — **حين لا يلتقطه أحد.**
 //
 // # المسألة
@@ -480,7 +515,11 @@ func (s *Service) NoEligibleReason(ctx context.Context, orderID string) string {
 	if cashDue > limit {
 		// **ويُقال بالرقمين لا بالحكم**: «فوق السقف» تُغلق الباب، **و«٢٬٠٦١٬٠٠٠
 		// والسقفُ ٥٠٠٬٠٠٠» تقول أين المخرج** — يُرفع السقفُ أو يُقسَّم الطلب.
-		return "نقدُ الطلب فوق سقف السائقين — لن يلتقطه أحد"
+		//
+		// **وكان يقول الحكمَ وحدَه ستّةَ أيّام** — والتعليقُ فوقه يَعِد بالرقمين.
+		// (جردُ ٢٠٢٦-٠٨-٠٩.) **وتعليقٌ يَعِد بما لا تفعله شيفرتُه أسوأُ من لا
+		// تعليق**: من قرأه صدّقه ولم يفتح السطر.
+		return cashOverLimitMessage(cashDue, limit)
 	}
 
 	// **ثمّ: أعلى الدوامَ أحدٌ أصلاً؟**

@@ -450,8 +450,9 @@
 | `orders.customer_cancel_window_sec` |  | int | `120` |
 | `customers.max_addresses` |  | int | `10` |
 | `customers.require_whatsapp` |  | bool | `true` |
-| `drivers.assignment_mode` | السائقون | choice | `queue` |
+| `drivers.assignment_mode` | السائقون | choice | `rotation` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
+| `drivers.location_ping_sec` | السائقون | int | `60` |
 | `drivers.direct_assign` | السائقون | bool | `false` |
 | `delivery.fee` | السائقون | money | `0` |
 | `drivers.cash_limit` | السائقون | money | `500000` |

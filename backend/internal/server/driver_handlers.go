@@ -55,6 +55,29 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// عليه**، ويُعرض وحدَه ليُعرف أنّ فيه مالاً لم يأتِ من تسليم.
 		TodayCompensated int64 `json:"today_compensated"`
 		ActiveOrders     int   `json:"active_orders"`
+
+		// ── قواعدُ تحكم شاشتَه — تُرسَل إليها ولا تُخمَّن ───────────────
+		//
+		// (جردُ لوحة السائق ٢٠٢٦-٠٨-٠٩ · قرارُ المالك: «نفّذها كلَّها».)
+
+		// MaxActiveOrders **سقفُ ما بيده معاً.**
+		//
+		// **كان يعرفه بالرفض وحدَه**: يضغط «خذ» فيُردّ — ولا شيءَ قبل ذلك
+		// يقول له إنّه بلغ حدَّه. **وحدٌّ لا يُرى يُقرأ عطباً في التطبيق.**
+		MaxActiveOrders int64 `json:"max_active_orders"`
+
+		// RequirePhoto **أتُطلب صورةُ التسليم؟**
+		//
+		// **كان المحرّكُ يحترم الإعدادَ والشاشةُ لا تقرؤه**: كلُّ ضغطةٍ على
+		// «سُلّم» تفتح نافذةَ الصورة، مُطفأً كان أو مُشغَّلاً. **فيُطفئه
+		// المالكُ ولا ينطفئ** — خطوةٌ ألغاها تبقى في يد السائق.
+		RequirePhoto bool `json:"require_photo"`
+
+		// LocationPingSec **كم بين نبضةِ موضعٍ وأخرى.**
+		//
+		// **كان ستّين ثانيةً مكتوبةً في الشيفرة** — ومقايضةُ البطّاريّة بدقّة
+		// التوزيع قرارُ مالكٍ لا قرارُ مبرمج.
+		LocationPingSec int64 `json:"location_ping_sec"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -89,6 +112,10 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والقواعدُ تُقرأ من المخزن لا من الاستعلام** — ليست صفوفاً في `users`.
+	out.MaxActiveOrders = s.settings.GetInt(r.Context(), "drivers.max_active_orders")
+	out.RequirePhoto = s.settings.GetBool(r.Context(), "drivers.require_delivery_photo")
+	out.LocationPingSec = s.settings.GetInt(r.Context(), "drivers.location_ping_sec")
 	httpx.JSON(w, http.StatusOK, out)
 }
 
@@ -170,6 +197,11 @@ type driverOrder struct {
 	ToPickupM float64 `json:"to_pickup_m"`
 	// LegM طولُ المشوار: من نقطة الاستلام إلى باب الزبون.
 	LegM float64 `json:"leg_m"`
+	// OfferExpiresAt متى ينقضي دورُه على هذا الطلب — **و`null` تعني بلا مهلة.**
+	//
+	// **في «الأسرع» لا مهلةَ أصلاً**: الطلبُ معروضٌ على الجميع حتّى يأخذه أحد.
+	// **وفي «بالدور» هي كلُّ ما يملك** — وبلا عرضِها يفاجئه اختفاءُ البطاقة.
+	OfferExpiresAt *time.Time `json:"offer_expires_at"`
 }
 
 const driverOrderSelect = `
@@ -194,7 +226,14 @@ const driverOrderSelect = `
 	              AND du.last_location_at > now() - make_interval(mins => $2::int)),
 	           COALESCE(o.pickup_override, m.location)), -1),
 	       -- **وطولُ المشوار** — من الاستلام إلى الباب.
-	       COALESCE(ST_Distance(COALESCE(o.pickup_override, m.location), o.dropoff), -1)
+	       COALESCE(ST_Distance(COALESCE(o.pickup_override, m.location), o.dropoff), -1),
+	       -- **ومهلةُ دورِه — يراها ولا تنقضي عليه صامتة.**
+	       --
+	       -- (جردُ ٢٠٢٦-٠٨-٠٩.) **كان العمودُ مكتوباً في القاعدة ولا يُرسَل**:
+	       -- للسائق خمسٌ وأربعون ثانيةً في «بالدور» ثمّ ينتقل الدور، **والبطاقةُ
+	       -- تختفي من شاشته فجأةً بلا عدٍّ ولا إنذار.** فيظنّ عطباً في التطبيق،
+	       -- **ولا يعرف أنّه كان يسابق وقتاً.**
+	       o.offer_expires_at
 	FROM orders o
 	JOIN merchants m ON m.id = o.merchant_id
 	JOIN users cu ON cu.id = o.customer_id
@@ -215,7 +254,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.Total, &o.CashDue, &o.ItemsCount, &o.ReadyAt, &o.PrepMinutes,
 			&o.AcceptedAt, &o.CreatedAt,
 			&o.PickupLat, &o.PickupLng, &o.PickupNote,
-			&o.AcceptsReturns, &o.FailReason, &o.ToPickupM, &o.LegM); err != nil {
+			&o.AcceptsReturns, &o.FailReason, &o.ToPickupM, &o.LegM,
+			&o.OfferExpiresAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}

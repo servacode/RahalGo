@@ -118,6 +118,21 @@ interface Me {
   /** جزءٌ من `today_earned` لا زيادةٌ عليه — يُعرض ليُعرف مصدرُه. */
   today_compensated: number;
   active_orders: number;
+  /**
+   * **سقفُ ما بيده معاً** — يُعرض بجانب المفتوح فيُقرأ «٢ من ٢».
+   *
+   * (جردُ ٢٠٢٦-٠٨-٠٩.) **كان يعرفه بالرفض وحدَه**: يضغط «خذ» فيُردّ،
+   * **وحدٌّ لا يُرى يُقرأ عطباً في التطبيق.**
+   */
+  max_active_orders: number;
+  /**
+   * **أتُطلب صورةُ التسليم؟** (`drivers.require_delivery_photo`.)
+   *
+   * **كان المحرّكُ يحترمه والشاشةُ لا تقرؤه** — فيُطفئه المالكُ ولا ينطفئ.
+   */
+  require_photo: boolean;
+  /** كم بين نبضةِ موضعٍ وأخرى — كان ستّين ثانيةً مكتوبةً في الشيفرة. */
+  location_ping_sec: number;
 }
 
 function errText(e: unknown): string {
@@ -219,7 +234,13 @@ export default function TasksPage() {
 
   // **ونبضةُ موضعه مع دوامه** — منها تُقاس المسافةُ إلى المتجر. **ومن أُغلق
   // دوامُه أُغلقت نبضتُه**: تعقّبٌ بلا سبب واستنزافُ بطّارية.
-  useLocationBeacon(api, me?.on_shift === true);
+  useLocationBeacon(
+    api,
+    me?.on_shift === true,
+    // **ومهلتُها من اللوحة** — ومقايضةُ البطّاريّة بدقّة التوزيع قرارُ مالك.
+    // **وقبلَ وصولِ `me` تُستعمل الافتراضيّة** لا صفرٌ يجعلها نبضةً بلا توقّف.
+    me?.location_ping_sec ? me.location_ping_sec * 1000 : undefined,
+  );
 
   // **حيٌّ**: حالةُ المهمّة تتغيّر بفعل العمليات أيضاً — إلغاءٌ أو إسنادٌ يدويّ
   // — **فشاشةٌ لا تتحدّث تجعل السائقَ يضغط على ما لم يعد قائماً.**
@@ -379,6 +400,19 @@ export default function TasksPage() {
         <h2 className="mb-2 flex items-center gap-2 font-bold">
           <IconOrder size={18} className="text-ink-muted" />
           {D.tasks.title}
+          {/* **وسقفُه بجانب عددِه** — (جردُ ٢٠٢٦-٠٨-٠٩).
+
+              **كان يعرف حدَّه بالرفض وحدَه**: يضغط «خذ» فيُردّ بلا سابق
+              إنذار، **وحدٌّ لا يُرى يُقرأ عطباً في التطبيق** لا قاعدةً.
+
+              **ولا يظهر إلّا وهو يحمل شيئاً**: صفرٌ من اثنين خبرٌ لا يفيد. */}
+          {me.active_orders > 0 && me.max_active_orders > 0 && (
+            <Badge variant={me.active_orders >= me.max_active_orders ? "warning" : "neutral"}>
+              {D.tasks.ofMax
+                .replace("{n}", fmtNum(me.active_orders))
+                .replace("{max}", fmtNum(me.max_active_orders))}
+            </Badge>
+          )}
         </h2>
         {mine.length === 0 ? (
           <EmptyState icon={IconOrder} title={D.tasks.empty} action={<span className="text-sm text-ink-muted">{D.tasks.emptyHint}</span>} />
@@ -396,7 +430,11 @@ export default function TasksPage() {
                   //
                   // بعد الإغلاق يصير الطلبُ تاريخاً، **وصورةٌ تُضاف إلى تاريخٍ
                   // مغلقٍ تُقرأ إضافةً متأخّرة** — وهي أضعفُ ما يُحتجّ به.
-                  if (to === "delivered") setProving(o);
+                  // **والصورةُ تُطلب حين تُطلب** — (جردُ ٢٠٢٦-٠٨-٠٩).
+                  // **كانت تُفتح دائماً**: المحرّكُ يحترم
+                  // `drivers.require_delivery_photo` والشاشةُ لا تقرؤه،
+                  // **فيُطفئه المالكُ وتبقى الخطوةُ في يد السائق.**
+                  if (to === "delivered" && me.require_photo) setProving(o);
                   else act(o, to);
                 }}
                 onFail={() => {

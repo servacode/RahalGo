@@ -21,6 +21,7 @@
  * فلا يظهر طلبٌ في القسمين معاً، **ولا يختفي من أحدهما بلا أن يظهر في الآخر.**
  */
 
+import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef } from "@rahalgo/i18n";
 import {
   Alert,
@@ -66,6 +67,39 @@ export interface DriverOrder {
   to_pickup_m: number;
   /** طولُ المشوار: من الاستلام إلى باب الزبون. */
   leg_m: number;
+  /**
+   * **متى ينقضي دورُه على هذا الطلب** — و`null` تعني بلا مهلة.
+   *
+   * (جردُ ٢٠٢٦-٠٨-٠٩.) **في «بالدور» له خمسٌ وأربعون ثانيةً ثمّ ينتقل**،
+   * **والبطاقةُ كانت تختفي فجأةً بلا عدٍّ ولا إنذار** — فيظنّ عطباً في
+   * التطبيق ولا يعرف أنّه كان يسابق وقتاً.
+   */
+  offer_expires_at?: string | null;
+}
+
+/**
+ * **العدُّ التنازليُّ لمهلة الدور.**
+ *
+ * **ويُحسب في الشاشة لا في الخادم**: الموعدُ يصل مرّةً، **والثانيةُ تمضي هنا**
+ * — ونداءٌ كلَّ ثانيةٍ ليُعرف ما تعرفه الساعةُ عبثٌ في شبكةٍ ضعيفة.
+ *
+ * **ويردّ `null` لِما لا مهلةَ له**: في «الأسرع» الطلبُ معروضٌ حتّى يُؤخذ،
+ * **وعدٌّ تنازليٌّ حيث لا انقضاء يكذب.**
+ */
+function useOfferCountdown(iso?: string | null): number | null {
+  const [left, setLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (!iso) {
+      setLeft(null);
+      return;
+    }
+    const end = new Date(iso).getTime();
+    const tick = () => setLeft(Math.max(0, Math.round((end - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [iso]);
+  return left;
 }
 
 /** بطاقةُ الطلب القادم — أقلّ ممّا في المهمّة: قرارُ الأخذ لا يحتاج رقمَ هاتف. */
@@ -78,6 +112,8 @@ export function IncomingCard({
   busy: boolean;
   onAccept: () => void;
 }) {
+  // **ومهلةُ الدور فوق كلِّ شيء** — هي ما ينقضي، والباقي يبقى.
+  const offerLeft = useOfferCountdown(o.offer_expires_at);
   const readyLeft = o.ready_at
     ? 0
     : o.accepted_at && o.prep_minutes
@@ -93,6 +129,13 @@ export function IncomingCard({
     <Card>
       <div className="mb-2 flex items-center gap-2">
         <Badge variant="primary">#{fmtRef(o.number)}</Badge>
+        {/* **والمهلةُ أوّلُ ما يُقرأ** — قرارُ الأخذ يُتّخذ في ثوانٍ،
+            **ورقمٌ ينزل يقول كم بقي منها.** وتحت العشر يحمرّ. */}
+        {offerLeft !== null && (
+          <Badge variant={offerLeft <= 10 ? "danger" : "warning"}>
+            {D.queue.offerLeft.replace("{n}", fmtNum(offerLeft))}
+          </Badge>
+        )}
         {readyLeft !== null && (
           <Badge variant={readyLeft === 0 ? "success" : "warning"}>
             {readyLeft === 0 ? D.queue.readyNow : D.queue.readyIn.replace("{n}", fmtNum(readyLeft))}
