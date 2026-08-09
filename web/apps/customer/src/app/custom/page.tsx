@@ -124,10 +124,19 @@ export default function CustomOrderPage() {
       <PageHeader icon={IconOrder} title={C.title} subtitle={C.subtitle} />
 
       <form onSubmit={submit} className="surface space-y-4 p-5">
+        {/* **شريطُ نصٍّ ينمو بما يُكتب** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+
+            **وخمسةُ أسطرٍ محجوزةٍ سلفاً تكذب على صاحبها**: تقول «أنا أنتظر
+            منك فقرة»، **فيتردّد من أراد أن يكتب «ربطة خبز»** — وأكثرُ
+            الطلبات سطر. **ومن احتاج خمسةً ناله وهو يكتب.**
+
+            **والسقفُ ثمانيةُ أسطرٍ** — ثمّ ينزلق داخلَ نفسِه: حقلٌ يبلغ طولَ
+            الشاشة يدفع زرَّ الإرسال خارجَها. */}
         <Textarea
           id="custom-request"
           label={C.what}
-          rows={5}
+          autoGrow
+          className="max-h-48"
           required
           maxLength={600}
           placeholder={C.placeholder}

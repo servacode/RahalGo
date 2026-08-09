@@ -244,12 +244,41 @@ export function Textarea({
   error,
   id,
   className = "",
+  /**
+   * **ينمو بما فيه ثمّ يقف.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٠: «ما يلزم كلُّ هذا النصّ — شريطُ نصٍّ يكفي».)
+   *
+   * **وحقلٌ يحجز خمسةَ أسطرٍ لمن يكتب سطراً يكذب على صاحبه**: يقول «أنا
+   * أنتظر منك فقرة»، **فيتردّد من أراد أن يكتب «ربطة خبز».** والفراغُ
+   * المحجوز يدفع ما تحته خارجَ الشاشة.
+   *
+   * **ولا يُقصّ ما يُكتب**: من احتاج خمسةَ أسطرٍ ناله — **يأخذها وهو يكتب
+   * لا قبل أن يبدأ.**
+   *
+   * **واختياريٌّ لا افتراض**: حقولُ الملاحظات في اللوحات تُملأ بفقراتٍ
+   * وارتفاعُها الثابتُ صوابٌ لها، **وتبديلُ سلوكِ سبعةَ عشرَ حقلاً لأجل
+   * واحدٍ يكسر ما لم يُشتكَ منه.**
+   */
+  autoGrow = false,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label?: string;
   error?: string;
+  autoGrow?: boolean;
 }) {
   const used = String(props.value ?? "").length;
+  const boxRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // **ويُقاس بعد كلّ تبدّل** — ولو جاء النصُّ من غير لوحة المفاتيح
+  // (تعبئةٌ من عنوانٍ محفوظ، أو مسحٌ بعد إرسال).
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!autoGrow || !el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [autoGrow, props.value]);
+
   return (
     <div>
       {label && (
@@ -259,11 +288,12 @@ export function Textarea({
       )}
       <textarea
         id={id}
-        rows={props.rows ?? 3}
+        ref={boxRef}
+        rows={props.rows ?? (autoGrow ? 1 : 3)}
         {...props}
         className={`w-full rounded-control border bg-field px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-primary ${
           error ? "border-danger" : "border-line hover:border-line-soft"
-        } ${className}`}
+        } ${autoGrow ? "resize-none overflow-y-auto" : ""} ${className}`}
       />
       <div className="mt-1 flex items-start justify-between gap-2">
         {error ? <p className="text-xs text-danger">{error}</p> : <span />}
