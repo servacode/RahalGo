@@ -36,6 +36,7 @@ import {
   usePlatform,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
+import { WarningsSection } from "@/components/accounts/WarningsSection";
 import {
   OrdersTab,
   AddressesTab,
@@ -464,6 +465,13 @@ export default function UserProfilePage() {
           </div>
         </div>
       )}
+
+      {/* **والإنذاراتُ في ملفّه** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «اجعله لكلّ
+          الأدوار حتّى الزبون»).
+
+          **ومن يقرّر أن يُنذر يسأل أوّلاً: كم مرّةً سبق؟** — والجوابُ هنا، مع
+          رصيده وطلباته وتقييماته. */}
+      <WarningsSection userID={p.id} />
 
       <FormSection title={P.notes} icon={<IconEdit />}>
         <NotesEditor
@@ -1017,9 +1025,13 @@ function FinBucket({
   const tone = positive ? "text-success" : "text-danger";
   return (
     <FormSection title={title} icon={<IconWallet />}>
-      <p className={`figure mb-3 ${tone}`} dir="ltr">
-        {positive ? "+" : ""}
-        {fmtNum(total)}{" "}
+      {/* **و`dir` على الرقم لا على الفقرة** — وإلّا انزاحت الكتلةُ إلى اليسار
+          وبقي عنوانُها يميناً، **فيُقرأ كلٌّ في اتجاه.** (شهده المالك ٢٠٢٦-٠٨-٠٩.) */}
+      <p className={`figure mb-3 ${tone}`}>
+        <span dir="ltr" className="inline-block">
+          {positive ? "+" : ""}
+          {fmtNum(total)}
+        </span>{" "}
         <span className="text-sm font-normal text-ink-muted">{m.common.currency}</span>
       </p>
       {items.length === 0 ? (

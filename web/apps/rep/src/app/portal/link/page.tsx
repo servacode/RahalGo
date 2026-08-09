@@ -9,6 +9,7 @@ import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { Button, LoadingState, IconLink, IconQr, IconLock,
   usePlatform,
   IconTile,
+  WhatsAppVerify,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -18,6 +19,8 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
 interface Me {
   invite_code: string | null;
   whatsapp_verified: boolean;
+  /** رقمُ حسابه — يُقترَح في حقل التوثيق ويملك تبديلَه. */
+  phone?: string;
 }
 
 export default function LinkPage() {
@@ -54,11 +57,18 @@ export default function LinkPage() {
           <IconLock size={26} />
         </IconTile>
         <h1 className="heading-card mb-2">{m.rep.lockedTitle}</h1>
-        <p className="mb-5 text-sm leading-relaxed text-ink-muted">{m.rep.lockedHint}</p>
-        /* **وزرٌّ مركزيّ** — كان مبنيّاً باليد بتعبئةٍ صلبة. (قرارُ المالك ٢٠٢٦-٠٨-٠٧.) */
-        <Link href="/portal/account" className="inline-block">
-          <Button>{m.rep.lockedCta}</Button>
-        </Link>
+        <p className="mb-5 text-sm text-ink-muted">{m.rep.lockedHint}</p>
+        {/* **ويوثّق حيث وقف** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «زرّ وثّق حسابك
+            بشكلٍ مباشر»).
+
+            **وكان يُقال له «اذهب إلى حسابك»** — فيجد صفحةً فيها عشرةُ حقولٍ
+            فيبحث. **وخطوةٌ بين من يريد أن يوثّق وبين التوثيق خطوةٌ يسقط فيها
+            بعضُهم.** */}
+        <WhatsAppVerify
+          api={api}
+          phone={me.phone ?? ""}
+          onVerified={() => setMe({ ...me, whatsapp_verified: true })}
+        />
       </div>
     );
   }

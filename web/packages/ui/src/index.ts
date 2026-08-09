@@ -133,6 +133,8 @@ export * from "./ordertrack";
 export * from "./MyAddresses";
 // **حديثُ الطلب** — مكوّنٌ واحدٌ لطرفيه، بلا رقمٍ بينهما.
 export * from "./OrderChat";
+// **توثيقُ واتساب** — صندوقٌ واحدٌ يُنادى حيث يُحتاج.
+export * from "./WhatsAppVerify";
 // **وقتُ السائق** — حسابٌ واحدٌ لبطاقتيه.
 export * from "./drivereta";
 export { StoreHours, type DayHours } from "./StoreHours";

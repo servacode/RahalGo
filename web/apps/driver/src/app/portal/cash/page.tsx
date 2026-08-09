@@ -148,8 +148,8 @@ export default function CashPage() {
           عملُه ولا يعرف لماذا.** */}
       <section className="surface p-5">
         <p className="text-sm text-ink-muted">{C.held}</p>
-        <p dir="ltr" className="figure mt-1 text-warning">
-          {fmtNum(me.cash_held)}{" "}
+        <p className="figure mt-1 text-warning">
+          <span dir="ltr" className="inline-block">{fmtNum(me.cash_held)}</span>{" "}
           <span className="text-sm font-normal text-ink-muted">{m.common.currency}</span>
         </p>
 

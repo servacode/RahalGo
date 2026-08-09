@@ -141,11 +141,28 @@ export default function OverviewPage() {
       {/* هدف الشهر — الرقم الذي يقيس عمل المندوب فعلاً (PLAN §7) */}
       <Card title={G.title} icon={IconTrendUp}>
         <div className="flex flex-wrap items-end justify-between gap-2">
+          {/* **والكسرُ يُقرأ كما كُتب — لا معكوساً.**
+
+              (شهده المالك ٢٠٢٦-٠٨-٠٩: «المحاذاة مو مزبوطة… كلّ واحد باتجاه
+               مختلف».)
+
+              **الشرطةُ محرفٌ محايد**، فيرتّبها سياقُ الفقرة. وفي فقرةٍ عربيّةٍ
+              يصير «١ / ١٠» على الشاشة **«١٠ / ١»** — فيقرأ المندوبُ أنّه
+              أنجز عشرةً من واحد.
+
+              **و`dir` على `span` داخليٍّ يرتّب أرقامَه ولا يزيح كتلتَه**:
+              الفقرةُ تبقى محاذاةً لليمين كأخواتها، **والرقمُ يُقرأ صحيحاً.**
+              (و`dir` على الفقرة نفسِها يدفعها إلى اليسار — وهو ما وقع في
+              العمولات أدناه.) */}
           <p className="figure">
-            <span className={reached ? "text-success" : "text-primary-dark"}>{fmtNum(done)}</span>
-            <span className="text-base font-normal text-ink-muted">
-              {" / "}
-              {fmtNum(target)}
+            <span dir="ltr" className="inline-block">
+              <span className={reached ? "text-success" : "text-primary-dark"}>
+                {fmtNum(done)}
+              </span>
+              <span className="text-base font-normal text-ink-muted">
+                {" / "}
+                {fmtNum(target)}
+              </span>
             </span>
           </p>
           <p className="text-sm text-ink-muted">
@@ -170,8 +187,10 @@ export default function OverviewPage() {
             <p className="text-xs text-ink-muted">{G.monthDelivered}</p>
           </div>
           <div>
-            <p className="figure" dir="ltr">
-              {fmtNum(me.month_commissions)}
+            {/* **و`dir` على الفقرة يدفعها إلى اليسار** — فيلتصق رقمُها بعمودٍ
+                ثانٍ وتبدو خانةُ العمولات بلا رقم. **والداخليُّ يكفي.** */}
+            <p className="figure">
+              <span dir="ltr" className="inline-block">{fmtNum(me.month_commissions)}</span>
             </p>
             <p className="text-xs text-ink-muted">
               {G.monthCommissions} ({m.common.currency})
