@@ -45,10 +45,16 @@ export default function IncomingPage() {
   const known = useRef<Set<string>>(new Set());
   const first = useRef(true);
   const chime = useChime();
+  const [speed, setSpeed] = useState(20);
 
   const load = useCallback(() => {
-    api<{ on_shift: boolean }>("/api/v1/driver/me")
-      .then((me) => setOnShift(me.on_shift))
+    api<{ on_shift: boolean; avg_speed_kmh: number }>("/api/v1/driver/me")
+      .then((me) => {
+        setOnShift(me.on_shift);
+        // **والسرعةُ منها يُحسب الوقتُ** — تُقرأ مع الدوام في النداء نفسِه،
+        // **ونداءٌ ثانٍ لرقمٍ واحدٍ رحلةٌ زائدةٌ على شبكةِ درّاجة.**
+        setSpeed(me.avg_speed_kmh || 20);
+      })
       .catch(() => undefined);
     api<DriverOrder[]>("/api/v1/driver/queue")
       .then((list) => {
@@ -109,7 +115,13 @@ export default function IncomingPage() {
       ) : (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {rows.map((o) => (
-            <IncomingCard key={o.id} o={o} busy={busy === o.id} onAccept={() => void accept(o)} />
+            <IncomingCard
+              key={o.id}
+              o={o}
+              busy={busy === o.id}
+              onAccept={() => void accept(o)}
+              speedKmh={speed}
+            />
           ))}
         </div>
       )}

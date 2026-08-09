@@ -133,6 +133,8 @@ export * from "./ordertrack";
 export * from "./MyAddresses";
 // **حديثُ الطلب** — مكوّنٌ واحدٌ لطرفيه، بلا رقمٍ بينهما.
 export * from "./OrderChat";
+// **وقتُ السائق** — حسابٌ واحدٌ لبطاقتيه.
+export * from "./drivereta";
 export { StoreHours, type DayHours } from "./StoreHours";
 export * from "./icons";
 /** علاماتُ منصّات التواصل — ما نزعته `lucide`. */

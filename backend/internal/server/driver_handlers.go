@@ -78,6 +78,12 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// **كان ستّين ثانيةً مكتوبةً في الشيفرة** — ومقايضةُ البطّاريّة بدقّة
 		// التوزيع قرارُ مالكٍ لا قرارُ مبرمج.
 		LocationPingSec int64 `json:"location_ping_sec"`
+
+		// AvgSpeedKmh **منه يُحسب الوقتُ المتوقَّع من المسافة.**
+		//
+		// **والحسابُ في الشاشة لا في الخادم**: المسافةُ تتبدّل مع كلّ نبضةِ
+		// موضع، **ونداءٌ لكلّ متر عبثٌ** — والسرعةُ ثابتةٌ تُقرأ مرّة.
+		AvgSpeedKmh int64 `json:"avg_speed_kmh"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -116,6 +122,7 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 	out.MaxActiveOrders = s.settings.GetInt(r.Context(), "drivers.max_active_orders")
 	out.RequirePhoto = s.settings.GetBool(r.Context(), "drivers.require_delivery_photo")
 	out.LocationPingSec = s.settings.GetInt(r.Context(), "drivers.location_ping_sec")
+	out.AvgSpeedKmh = s.settings.GetInt(r.Context(), "drivers.avg_speed_kmh")
 	httpx.JSON(w, http.StatusOK, out)
 }
 
@@ -211,6 +218,13 @@ type driverOrder struct {
 	// **في «الأسرع» لا مهلةَ أصلاً**: الطلبُ معروضٌ على الجميع حتّى يأخذه أحد.
 	// **وفي «بالدور» هي كلُّ ما يملك** — وبلا عرضِها يفاجئه اختفاءُ البطاقة.
 	OfferExpiresAt *time.Time `json:"offer_expires_at"`
+	// NavLat نقطةُ الاستلام التي يمشي إليها — **البديلةُ إن وُجدت وإلّا المتجر.**
+	//
+	// **وتُفصَل عن `PickupLat`** التي تعني «البضاعةُ ليست في المتجر»: تلك
+	// إشارةٌ وهذه وجهة، **وخلطُهما جعل زرَّ الملاحة يظهر في الحالة النادرة
+	// ويغيب في الشائعة.**
+	NavLat *float64 `json:"nav_lat"`
+	NavLng *float64 `json:"nav_lng"`
 }
 
 const driverOrderSelect = `
@@ -242,7 +256,18 @@ const driverOrderSelect = `
 	       -- للسائق خمسٌ وأربعون ثانيةً في «بالدور» ثمّ ينتقل الدور، **والبطاقةُ
 	       -- تختفي من شاشته فجأةً بلا عدٍّ ولا إنذار.** فيظنّ عطباً في التطبيق،
 	       -- **ولا يعرف أنّه كان يسابق وقتاً.**
-	       o.offer_expires_at
+	       o.offer_expires_at,
+	       -- **ونقطةُ الاستلام الفعليّة — إليها يمشي.**
+	       --
+	       -- (جردُ ٢٠٢٦-٠٨-٠٩.) **كانت المسافةُ تُحسب في القاعدة وتُرسَل رقماً،
+	       -- والنقطةُ تبقى هناك** — فيعرف السائقُ «٤٠٠ متر» ولا يستطيع أن يضغط
+	       -- ليمشي إليها. **وزرُّ الملاحة كان للزبون وحدَه**، وللمتجر لا يظهر
+	       -- إلّا في حالةٍ نادرة: بضاعةٌ مع سائقٍ وقع له طارئ.
+	       --
+	       -- **وهي البديلةُ إن وُجدت وإلّا فالمتجر** — نقطةٌ واحدةٌ يمشي إليها
+	       -- مهما كان سببُها.
+	       ST_Y(COALESCE(o.pickup_override, m.location)::geometry),
+	       ST_X(COALESCE(o.pickup_override, m.location)::geometry)
 	FROM orders o
 	JOIN merchants m ON m.id = o.merchant_id
 	JOIN users cu ON cu.id = o.customer_id
@@ -264,7 +289,7 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.AcceptedAt, &o.CreatedAt,
 			&o.PickupLat, &o.PickupLng, &o.PickupNote,
 			&o.AcceptsReturns, &o.FailReason, &o.ToPickupM, &o.LegM,
-			&o.OfferExpiresAt); err != nil {
+			&o.OfferExpiresAt, &o.NavLat, &o.NavLng); err != nil {
 			s.respondErr(w, err)
 			return
 		}

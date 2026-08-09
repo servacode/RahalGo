@@ -33,6 +33,7 @@ import {
   IconWarning,
   IconSupport,
   IconStar,
+  Stars,
   PageHeader,
   Radio,
 } from "@rahalgo/ui";
@@ -336,6 +337,12 @@ export default function DriverHistoryPage() {
         title={`${D.history.rateTitle} — ${rating?.merchant_name ?? ""}`}
       >
         <div className="space-y-3">
+          {/* **ونجومُ المركز لا نسخةٌ محلّية** — (شكوى المالك ٢٠٢٦-٠٨-٠٩:
+              «شكل التقييم مختلف بلوحة السائق وقت بدو يقيم المتجر»).
+
+              **كان في هذه الصفحة `StarRow` مكتوبةٌ بيدها** بمقاسٍ وسلوكٍ
+              غيرِ اللذين يراهما الزبون، **فيبدو التقييمُ شيئين في منصّةٍ
+              واحدة.** */}
           <StarRow label={D.history.rateSpeed} value={speed} onPick={setSpeed} />
           <StarRow label={D.history.rateConduct} value={conduct} onPick={setConduct} />
           <Input
@@ -362,6 +369,18 @@ export default function DriverHistoryPage() {
 }
 
 /** صفُّ نجومٍ يُضغط — **وخمسٌ لا عشر**: مقياسٌ يعرفه الناسُ بلا شرح. */
+/**
+ * **صفُّ نجومٍ بعنوانه — ويلفّ `Stars` المركزيّ.**
+ *
+ * (شكوى المالك ٢٠٢٦-٠٨-٠٩: «شكل التقييم مختلف بلوحة السائق».)
+ *
+ * **كان يرسم أزرارَه بيده** — خمسةُ أزرارٍ بمقاسٍ وألوانٍ من عنده، **بينما
+ * الزبونُ يرى `Stars` المركزيّ.** فالنجمةُ نفسُها بحجمين وسلوكين في منصّةٍ
+ * واحدة.
+ *
+ * **ولا يبقى إلّا العنوانُ إلى جانبها** — وهو ما يخصّ هذه الشاشة: السائقُ
+ * يقيّم شيئين لا شيئاً واحداً.
+ */
 function StarRow({
   label,
   value,
@@ -374,19 +393,7 @@ function StarRow({
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-sm font-medium">{label}</span>
-      <span className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            aria-label={`${label} ${n}`}
-            onClick={() => onPick(n)}
-            className={n <= value ? "text-accent-text" : "text-line"}
-          >
-            <IconStar size={22} />
-          </button>
-        ))}
-      </span>
+      <Stars value={value} onChange={onPick} size="lg" />
     </div>
   );
 }

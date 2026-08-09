@@ -30,6 +30,8 @@ import {
   useRepeatingChime,
   useLocationBeacon,
   fmtDistance,
+  driveMinutes,
+  readyInMinutes,
   IconOrder,
   IconStore,
   IconLocation,
@@ -109,6 +111,9 @@ interface DriverOrder {
   to_pickup_m: number;
   /** طولُ المشوار: من الاستلام إلى باب الزبون. */
   leg_m: number;
+  /** **نقطةُ الاستلام التي يمشي إليها** — البديلةُ إن وُجدت وإلّا المتجر. */
+  nav_lat?: number | null;
+  nav_lng?: number | null;
 }
 
 interface Me {
@@ -140,6 +145,8 @@ interface Me {
   require_photo: boolean;
   /** كم بين نبضةِ موضعٍ وأخرى — كان ستّين ثانيةً مكتوبةً في الشيفرة. */
   location_ping_sec: number;
+  /** **متوسّطُ السرعة** — منه يُحسب الوقتُ المتوقَّع من المسافة. */
+  avg_speed_kmh: number;
 }
 
 function errText(e: unknown): string {
@@ -454,6 +461,7 @@ export default function TasksPage() {
                 }}
                 onRelease={() => act(o, "dispatching")}
                 onEmergency={() => setEmergency(o)}
+                speedKmh={me.avg_speed_kmh}
               />
             ))}
           </div>
@@ -586,6 +594,7 @@ function TaskCard({
   onFail,
   onRelease,
   onEmergency,
+  speedKmh,
 }: {
   o: DriverOrder;
   busy: boolean;
@@ -593,8 +602,19 @@ function TaskCard({
   onFail: () => void;
   onRelease: () => void;
   onEmergency: () => void;
+  /** متوسّطُ السرعة — منه يُحسب الوقتُ من المسافة. */
+  speedKmh: number;
 }) {
   const next = NEXT[o.status];
+  // **والوقتُ بجانب المسافة** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
+  //
+  // **«٣٫٢ كم» تعني عشر دقائقَ في شارعٍ مفتوحٍ وعشرين في سوق** — والسائقُ
+  // يوازن بالوقت لا بالمتر.
+  const toPickupMin = driveMinutes(o.to_pickup_m, speedKmh);
+  const legMin = driveMinutes(o.leg_m, speedKmh);
+  // **وكم بقي على جهوز الطلب** — ظهر في «طلبات قادمة» واختفى بعد القبول،
+  // **وهو أهمُّ ما يقرّر: أينطلق الآن أم ينتظر؟**
+  const readyLeft = readyInMinutes(o);
   // قبل الاستلام وجهتُه المتجر، وبعده وجهتُه الزبون — الملاحة تتبع الرحلة
   const heading = o.status === "assigned" || o.status === "at_pickup";
   const cash = o.cash_due > 0;
@@ -604,6 +624,12 @@ function TaskCard({
       <div className="mb-3 flex items-center gap-2">
         <Badge variant="primary">#{fmtRef(o.number)}</Badge>
         <Badge variant="neutral">{m.orders.status[o.status as keyof typeof m.orders.status]}</Badge>
+        {/* **ومتى يجهز** — يبقى ما دام لم يستلم. **وبعد الاستلام لا معنى له.** */}
+        {readyLeft !== null && (o.status === "assigned" || o.status === "at_pickup") && (
+          <Badge variant={readyLeft === 0 ? "success" : "warning"}>
+            {readyLeft === 0 ? D.queue.readyNow : D.queue.readyIn.replace("{n}", fmtNum(readyLeft))}
+          </Badge>
+        )}
         <span className="ms-auto text-sm font-bold" dir="ltr">
           {fmtNum(o.total)} {m.common.currency}
         </span>
@@ -624,6 +650,11 @@ function TaskCard({
           </span>
           <span className="font-bold tabular-nums" dir="ltr">
             {o.to_pickup_m >= 0 ? fmtDistance(o.to_pickup_m, UNITS.meter, UNITS.km) : "—"}
+            {toPickupMin !== null && (
+              <span className="ms-1.5 font-normal text-ink-muted">
+                · {D.distance.minutes.replace("{n}", fmtNum(toPickupMin))}
+              </span>
+            )}
           </span>
         </p>
         <p className="flex items-center justify-between gap-2">
@@ -633,6 +664,11 @@ function TaskCard({
           </span>
           <span className="font-bold tabular-nums" dir="ltr">
             {o.leg_m >= 0 ? fmtDistance(o.leg_m, UNITS.meter, UNITS.km) : "—"}
+            {legMin !== null && (
+              <span className="ms-1.5 font-normal text-ink-muted">
+                · {D.distance.minutes.replace("{n}", fmtNum(legMin))}
+              </span>
+            )}
           </span>
         </p>
         {o.to_pickup_m < 0 && (
@@ -640,6 +676,13 @@ function TaskCard({
         )}
       </div>
 
+      {/* **والملاحةُ إلى نقطة الاستلام دائماً** — (جردُ ٢٠٢٦-٠٨-٠٩).
+
+          **كان الزرُّ لا يظهر إلّا في الحالة النادرة**: بضاعةٌ مع سائقٍ وقع له
+          طارئ. **أمّا الذهابُ إلى المطعم — وهو الحالةُ العاديّة — فبلا زرّ**،
+          لأنّ إحداثيّاتِ المتجر لم تكن تُرسَل أصلاً.
+
+          **فيعرف السائقُ «٤٠٠ متر» ولا يستطيع أن يضغط ليمشي إليها.** */}
       <Leg
         icon={IconStore}
         label={o.pickup_lat != null ? D.order.pickupOverride : D.order.pickup}
@@ -649,8 +692,8 @@ function TaskCard({
             ? o.pickup_note || D.order.pickupOverrideHint
             : D.order.items.replace("{n}", fmtNum(o.items_count))
         }
-        href={o.pickup_lat != null ? mapsHref(o.pickup_lat, o.pickup_lng ?? 0) : undefined}
-        hrefLabel={o.pickup_lat != null ? D.order.navigate : undefined}
+        href={o.nav_lat != null ? mapsHref(o.nav_lat, o.nav_lng ?? 0) : undefined}
+        hrefLabel={o.nav_lat != null ? D.order.navigate : undefined}
         phone={o.merchant_phone}
         callLabel={D.order.callMerchant}
         dim={!heading}

@@ -453,6 +453,7 @@
 | `drivers.assignment_mode` | السائقون | choice | `rotation` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
 | `drivers.location_ping_sec` | السائقون | int | `60` |
+| `drivers.avg_speed_kmh` | السائقون | int | `20` |
 | `drivers.direct_assign` | السائقون | bool | `false` |
 | `delivery.fee` | السائقون | money | `0` |
 | `drivers.cash_limit` | السائقون | money | `500000` |

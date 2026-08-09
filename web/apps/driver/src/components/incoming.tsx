@@ -33,6 +33,8 @@ import {
   IconBalance,
   IconDriver,
   fmtDistance,
+  readyInMinutes,
+  driveMinutes,
 } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
@@ -107,23 +109,24 @@ export function IncomingCard({
   o,
   busy,
   onAccept,
+  speedKmh,
 }: {
   o: DriverOrder;
   busy: boolean;
   onAccept: () => void;
+  /** متوسّطُ السرعة — منه يُحسب الوقتُ من المسافة. */
+  speedKmh: number;
 }) {
   // **ومهلةُ الدور فوق كلِّ شيء** — هي ما ينقضي، والباقي يبقى.
   const offerLeft = useOfferCountdown(o.offer_expires_at);
-  const readyLeft = o.ready_at
-    ? 0
-    : o.accepted_at && o.prep_minutes
-      ? Math.max(
-          0,
-          Math.round(
-            (new Date(o.accepted_at).getTime() + o.prep_minutes * 60_000 - Date.now()) / 60_000,
-          ),
-        )
-      : null;
+  // **والحسابُ مشتركٌ مع بطاقة المهمّة** (`readyInMinutes`) — كان مكتوباً
+  // هنا بيده، **ونسختان تفترقان**: تقول إحداهما ثمانياً والأخرى اثنتي عشرة
+  // عن الطلب نفسِه.
+  const readyLeft = readyInMinutes(o);
+  // **والوقتُ بجانب المسافة هنا أهمُّ منه في المهمّة** — هذا موضعُ القرار:
+  // يرى ثلاثةَ طلباتٍ ويأخذ واحداً. **والمترُ لا يقول كم يأخذ.**
+  const toPickupMin = driveMinutes(o.to_pickup_m, speedKmh);
+  const legMin = driveMinutes(o.leg_m, speedKmh);
 
   return (
     <Card>
@@ -182,6 +185,11 @@ export function IncomingCard({
             {o.to_pickup_m >= 0
               ? fmtDistance(o.to_pickup_m, UNITS.meter, UNITS.km)
               : "—"}
+            {toPickupMin !== null && (
+              <span className="ms-1.5 font-normal text-ink-muted">
+                · {D.distance.minutes.replace("{n}", fmtNum(toPickupMin))}
+              </span>
+            )}
           </span>
         </p>
         <p className="flex items-center justify-between gap-2">
@@ -191,6 +199,11 @@ export function IncomingCard({
           </span>
           <span className="font-bold tabular-nums" dir="ltr">
             {o.leg_m >= 0 ? fmtDistance(o.leg_m, UNITS.meter, UNITS.km) : "—"}
+            {legMin !== null && (
+              <span className="ms-1.5 font-normal text-ink-muted">
+                · {D.distance.minutes.replace("{n}", fmtNum(legMin))}
+              </span>
+            )}
           </span>
         </p>
         {/* **وشرطةٌ تُسأل عنها** — فيُقال سببُها تحتها مرّةً واحدة. */}
