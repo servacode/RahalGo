@@ -17,7 +17,7 @@ import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   Tabs,
   Alert,
-  PageHeader, Button, Input, Select, Checkbox, Badge, Card, EmptyState,
+  PageHeader, Button, Input, Textarea, Select, Checkbox, Badge, Card, EmptyState, FormSection,
   IconSettings, IconWarning, IconCheck,
   LoadingState,
 } from "@rahalgo/ui";
@@ -25,15 +25,89 @@ import ImageUpload from "@/components/ImageUpload";
 import { FileUpload } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import dynamic from "next/dynamic";
 import ZonesPanel from "@/components/settings/zones";
+import SitePagesPanel from "@/components/settings/site-pages";
+import BannersPanel from "@/components/settings/banners";
 import WhatsAppPanel from "@/components/settings/whatsapp";
 import BroadcastPanel from "@/components/BroadcastPanel";
 
+/** **«عرض,طول» ← رقمان** — وفارغٌ أو مشوَّهٌ يعني «لا موقع». */
+function geoOf(v: string): [number, number] | null {
+  const p = v.split(",");
+  if (p.length !== 2) return null;
+  const la = Number(p[0]);
+  const ln = Number(p[1]);
+  return Number.isFinite(la) && Number.isFinite(ln) ? [la, ln] : null;
+}
+
 const m = getMessages(defaultLocale);
+
+
+/* **والخريطةُ لا تُصيَّر في الخادم** — `leaflet` يقرأ `window` عند التحميل. */
+const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), {
+  ssr: false,
+});
 const S = m.admin.settings;
 
+/**
+ * **يقسّم مفاتيحَ المجموعة إلى صناديق.**
+ *
+ * **وموضعُ الصندوق أوّلُ ظهورٍ لاسمه** — فترتيبُ الفهرس هو ما يُرى، **ولا
+ * فرزَ بالاسم** يقلب ما قصده من كتبه.
+ *
+ * **ويُجمع المتفرّقُ تحت اسمه.**
+ *
+ * (عطبٌ ظهر ٢٠٢٦-٠٨-٠٩ بعد نقل مفاتيحَ إلى «إعدادات الموقع»: كان الجمعُ
+ *  بالتجاور — **فمفاتيحُ الهويّة جاءت في دفعتين بينهما مفاتيحُ التواصل،
+ *  فظهر صندوقُ «الهويّة البصريّة» مرّتين.**)
+ *
+ * **وترتيبُ الفهرس لا يُملي أن يكون كلُّ قسمٍ متلاصقاً** — ومن أضاف مفتاحاً
+ * في موضعه المنطقيّ لا يجب أن يشقّ صندوقاً بلا أن يدري.
+ */
+function sectionsOf(items: Setting[]): { name: string; items: Setting[] }[] {
+  const out: { name: string; items: Setting[] }[] = [];
+  const at = new Map<string, number>();
+  for (const it of items) {
+    const name = it.section ?? "";
+    const i = at.get(name);
+    if (i === undefined) {
+      at.set(name, out.length);
+      out.push({ name, items: [it] });
+    } else {
+      out[i]!.items.push(it);
+    }
+  }
+  return out;
+}
+
+/** **كم مفتاحاً في كلّ صفحة** — ليُرى الممتلئُ من الفارغ قبل الفتح. */
+function pageCounts(items: Setting[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const it of items) {
+    if (it.section?.startsWith("page.")) out[it.section] = (out[it.section] ?? 0) + 1;
+  }
+  return out;
+}
+
+/** **واسمُ الصندوق من المعجم** — وغيابُه يُظهر مفتاحَه لا فراغاً. */
+function sectionLabel(name: string): string {
+  return (S.sections as Record<string, string>)?.[name] ?? name;
+}
+
+
 /** **يطابق أنواعَ الكتالوج في المحرّك** — ونوعٌ يُضاف هناك ولا يُضاف هنا يسقط إلى الحقل النصّيّ. */
-type Kind = "int" | "money" | "bool" | "choice" | "text" | "media" | "percent" | "file";
+type Kind =
+  | "int"
+  | "money"
+  | "bool"
+  | "choice"
+  | "text"
+  | "media"
+  | "percent"
+  | "file"
+  | "geo"
+  | "longtext";
 
 interface Setting {
   key: string;
@@ -41,6 +115,8 @@ interface Setting {
   media_url?: string | null;
   group: string;
   kind: Kind;
+  /** **صندوقٌ داخل المجموعة** — وفارغٌ يعني «في المجرى». */
+  section?: string;
   min?: number;
   max?: number;
   options?: string[];
@@ -61,10 +137,11 @@ interface Setting {
   show_when?: { key: string; equals: string[] | null; not_empty?: boolean };
 }
 
+/* **والتلميحُ اختياريّ**: مفتاحٌ يُفهم من عنوانه لا يُشرح. */
 const label = (k: string) =>
-  (S.keys as Record<string, { label: string; hint: string }>)[k]?.label ?? k;
+  (S.keys as Record<string, { label?: string; hint?: string }>)[k]?.label ?? k;
 const hint = (k: string) =>
-  (S.keys as Record<string, { label: string; hint: string }>)[k]?.hint ?? "";
+  (S.keys as Record<string, { label?: string; hint?: string }>)[k]?.hint ?? "";
 const unitText = (u?: string) => (u ? (S.units as Record<string, string>)[u] ?? "" : "");
 const choiceText = (c: string) => (S.choices as Record<string, string>)[c] ?? c;
 /**
@@ -109,6 +186,8 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
   /** التبويبُ المفتوح — وفراغُه يعني «أوّلَ مجموعةٍ يرسلها الخادم». */
   const [tab, setTab] = useState("");
+  /** **القسمُ المفتوح داخلَ المجموعة** — وفارغٌ يعني «أوّلُه». */
+  const [sec, setSec] = useState("");
   /** **ترتيبُ الأقسام من الخادم** — فيه القسمُ الفارغُ الذي لا مفتاحَ فيه بعد. */
   const [order, setOrder] = useState<string[]>([]);
 
@@ -235,7 +314,13 @@ export default function SettingsPage() {
           ...extra,
         ]}
         value={active}
-        onChange={setTab}
+        /* **وتبديلُ المجموعة يُصفّر القسمَ المفتوح** — وإلّا حُمل اسمُ
+           قسمٍ من مجموعةٍ إلى أخرى لا وجودَ له فيها، **فيسقط الاختيارُ إلى
+           أوّلها بلا سبب يُرى.** */
+        onChange={(k) => {
+          setTab(k);
+          setSec("");
+        }}
       />
 
       {activeGroup &&
@@ -251,16 +336,122 @@ export default function SettingsPage() {
             action={<p className="text-xs text-ink-muted">{S.emptyGroupHint}</p>}
           />
         ) : (
+          /* ══════════════════════════════════════════════════════════
+             **وأقسامُ المجموعة تبويباتٌ متجاورةٌ لا صناديقُ متراكمة**
+             ══════════════════════════════════════════════════════════
+
+             (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «صفحات الموقع يجب أن تكون جانب الهويّة
+              البصريّة لا تحتها — لأنّ هيك بدنا نظلّ ننزل لتحت كلّ ما بدنا
+              تعديل، مو معقولة. نخلّي التبويبات الرئيسيّة بجانب بعض، وإذا في
+              داخل التبويب تبويبات فرعيّة».)
+
+             **وصندوقان متراكمان يعني تمريراً في كلّ تعديل** — ومن أراد
+             الثاني مرّ بالأوّل كلِّه. **والتبويبُ يُظهر واحداً ويُخفي ما
+             سواه**، فيبقى ما تضبطه في أعلى الشاشة أبداً.
+
+             **ولا تظهر التبويباتُ إلّا حين تُغني**: قسمٌ واحدٌ لا يُبوَّب —
+             **شريطُ تبويبٍ فيه واحدٌ زينةٌ تأخذ سطراً.** والمجموعاتُ القديمةُ
+             بلا أقسامٍ تبقى كما كانت: مفاتيحُ في مجرًى واحد.
+
+             **وما لا قسمَ له يعلو التبويبات** — لا يُدفن في أحدها ولا
+             يُخترع له بيت. */
           <div className="space-y-3">
-            {activeGroup.items.map((s) => (
-              <SettingRow
-                key={s.key}
-                s={s}
-                editable={isAdmin}
-                onSaved={load}
-                marginMode={marginMode}
-              />
-            ))}
+            {(() => {
+              const secs = sectionsOf(activeGroup.items);
+              const loose = secs.find((x) => !x.name);
+              /* ══════════════════════════════════════════════════════
+                 **وأقسامُ الصفحات لا تصعد إلى الشريط الأعلى**
+                 ══════════════════════════════════════════════════════
+
+                 (شكوى المالك ٢٠٢٦-٠٨-٠٩: «خلفيّة شاشة الدخول وخلفيّة الموقع
+                  ضفتهنّ بمكانين — بتبويبٍ لحالهنّ وبنفس الوقت بإعدادات
+                  الموقع، وهذا غلط».)
+
+                 **وسببُه أنّي جمعتُ كلَّ اسمِ قسمٍ في الشريط** — وأقسامُ
+                 الصفحات أسماءٌ كغيرها (`page.auth`)، **فصعدت مرّةً بنفسها
+                 ومرّةً داخلَ «صفحات الموقع».** وظهرت بمفاتيحها خامّةً لأنّه
+                 لا اسمَ لها في المعجم: **اسمُ الصفحة هناك لا اسمُ القسم.**
+
+                 **فما بدأ بـ`page.` بيتُه واحد**: لوحُ الصفحات. */
+              const names = [
+                ...secs.filter((x) => x.name && !x.name.startsWith("page.")).map((x) => x.name),
+                ...(active === "site" ? ["pages"] : []),
+              ];
+              const at = names.includes(sec) ? sec : (names[0] ?? "");
+
+              return (
+                <>
+                  {loose?.items.map((s) => (
+                    <SettingRow
+                      key={s.key}
+                      s={s}
+                      editable={isAdmin}
+                      onSaved={load}
+                      marginMode={marginMode}
+                    />
+                  ))}
+
+                  {names.length > 1 && (
+                    <Tabs
+                      items={names.map((n) => ({ key: n, label: sectionLabel(n) }))}
+                      value={at}
+                      onChange={setSec}
+                    />
+                  )}
+
+                  {names.length === 1 && (
+                    <h2 className="heading-card">{sectionLabel(at)}</h2>
+                  )}
+
+                  {at === "pages" ? (
+                    <SitePagesPanel
+                      counts={pageCounts(activeGroup.items)}
+                      render={(section) => {
+                        const rows = activeGroup.items.filter((s) => s.section === section);
+                        /* **ولافتاتُ التسوّق فوق مفاتيحها.**
+
+                           (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «نضيف السلايدر بالإعدادات
+                            لصفحة التسوّق مع العمل التلقائيّ حسب الثواني».)
+
+                           **واللافتاتُ ليست مفاتيحَ إعدادات** — صفوفٌ تُضاف
+                           وتُحذف. **والمهلةُ تحتها**: من بدّل لافتةً يبدّل
+                           مهلتَها في الشاشة نفسِها. */
+                        const shop = section === "page.shop";
+                        if (!shop && rows.length === 0) return null;
+                        return (
+                          <div className="space-y-4">
+                            {shop && <BannersPanel isAdmin={isAdmin} />}
+                            <div className="space-y-3">
+                            {rows.map((s) => (
+                              <SettingRow
+                                key={s.key}
+                                s={s}
+                                editable={isAdmin}
+                                onSaved={load}
+                                marginMode={marginMode}
+                              />
+                            ))}
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      {(secs.find((x) => x.name === at)?.items ?? []).map((s) => (
+                        <SettingRow
+                          key={s.key}
+                          s={s}
+                          editable={isAdmin}
+                          onSaved={load}
+                          marginMode={marginMode}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         ))}
       {active === "zones" && <ZonesPanel />}
@@ -528,6 +719,69 @@ function SettingRow({
               initialUrl={typeof s.value === "string" && s.value ? s.media_url : null}
               onChange={(id) => void save(id)}
             />
+          ) : s.kind === "longtext" ? (
+            /* ══════════════════════════════════════════════════════════
+                **ونصُّ صفحةٍ يُكتب في صندوقٍ لا في سطر**
+                ══════════════════════════════════════════════════════════
+
+               (طلبُ المالك ٢٠٢٦-٠٨-٠٩: «جهّز الصفحات لتكون ديناميكيّةً
+                أتحكّم بها من لوحة التحكّم، أعدّل النصوص الموجودة».)
+
+               **والاتّفاقُ بسيط**: سطرٌ فارغٌ يفصل كرتاً عن كرت، **وأوّلُ
+               سطرٍ في الكرت عنوانُه** وما بعده فقراتُه.
+
+               **وفارغُه يعرض النصَّ الأصليّ** — فمن لم يمسّه لا ينكسر عنده
+               شيء، **ومن أفرغه بعد أن كتب يعود إلى الأصل** لا إلى صفحةٍ
+               بيضاء. */
+            <div className="space-y-2">
+              <span className="block text-sm font-medium text-ink">{label(s.key)}</span>
+              <Textarea
+                id={s.key}
+                rows={12}
+                value={draft}
+                disabled={!editable || busy}
+                onChange={(e) => {
+                  setDraft(e.target.value);
+                  setError("");
+                }}
+                placeholder={S.longTextHint}
+              />
+              <p className="text-xs leading-relaxed text-ink-muted">{S.longTextHint}</p>
+            </div>
+          ) : s.kind === "geo" ? (
+            /* ══════════════════════════════════════════════════════════
+                **وموقعٌ يُنقر لا رقمان يُكتبان**
+                ══════════════════════════════════════════════════════════
+
+               (طلبُ المالك ٢٠٢٦-٠٨-٠٩: «صفحة تواصل معنا لازم صفحة خاصّة
+                فيها خريطة المكتب».)
+
+               **من يضبط موقعَ مكتبٍ لا يحفظ إحداثيّاته** — ومن كتبها بيده
+               وضع فاصلةً في غير موضعها **فوقع المكتبُ في بحر**، ولا يُقال
+               له لماذا لا تظهر الخريطة.
+
+               **والقيمةُ تُبنى من النقرة** بستّ منازلَ عشريّة — نحو عشرة
+               سنتيمترات، **وهو أدقُّ ممّا يحتاجه بابُ مكتب.** */
+            <div className="space-y-2">
+              <span className="block text-sm font-medium text-ink">{label(s.key)}</span>
+              <div className="overflow-hidden rounded-control border border-line">
+                <PickMap
+                  lat={geoOf(draft)?.[0] ?? null}
+                  lng={geoOf(draft)?.[1] ?? null}
+                  height="h-56"
+                  onPick={(la, ln) => {
+                    if (!editable || busy) return;
+                    void save(`${la.toFixed(6)},${ln.toFixed(6)}`);
+                  }}
+                />
+              </div>
+              <p className="text-xs leading-relaxed text-ink-muted">{hint(s.key)}</p>
+              {draft ? (
+                <p className="text-xs text-ink-muted" dir="ltr">
+                  {draft}
+                </p>
+              ) : null}
+            </div>
           ) : (
             <>
               <Input

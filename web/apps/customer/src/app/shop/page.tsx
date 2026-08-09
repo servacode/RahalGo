@@ -89,6 +89,8 @@ export default function ShopPage() {
    * — **فما يُرى قبل وصول الردّ هو ما سيُرى بعده.**
    */
   const [rail, setRail] = useState({ auto: true, everyMs: 5000 });
+  /** **مهلةُ تبديل اللافتات بالملّي** — **وصفرٌ يوقفها.** */
+  const [bannerMs, setBannerMs] = useState(5000);
   const [sections, setSections] = useState<Section[] | null>(null);
   const [homeFailed, setHomeFailed] = useState(false);
 
@@ -116,6 +118,16 @@ export default function ShopPage() {
           auto: j.data?.rail_auto ?? true,
           everyMs: j.data?.rail_every_ms || 5000,
         });
+        /* **ومهلةُ السلايدر من الإعدادات لا من المكوّن.**
+
+           (طلبُ المالك ٢٠٢٦-٠٨-٠٩: «نضيف السلايدر بالإعدادات لصفحة التسوّق
+            مع العمل التلقائيّ حسب الثواني».)
+
+           **والإيقافُ صفرٌ في المهلة**: المكوّنُ يقرؤه «لا تبديل» — **ومفتاحُ
+           الإعداد هو ما يقوله المالك، والصفرُ ترجمتُه إلى لغة المكوّن.** */
+        setBannerMs(
+          (j.data?.banner_auto ?? true) ? j.data?.banner_every_ms || 5000 : 0,
+        );
         const list: Section[] = j.data?.sections ?? [];
         setSections(list);
         // **وأوّلُ قسمٍ عامرٍ يُفتح** — ولا يُفتح فارغٌ فيُرى السوقُ ميّتاً.
@@ -200,7 +212,8 @@ export default function ShopPage() {
              **وزينةٌ بينه وبين ما طلبه تُقرأ عائقاً.** */}
       {!typing && banners.length > 0 && (
         <BannerSlider
-          className="mb-5"
+          className="mb-4 -mt-1"
+          everyMs={bannerMs}
           Link={Link}
           items={banners.map((b) => ({
             id: b.id,

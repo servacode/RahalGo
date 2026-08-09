@@ -23,9 +23,10 @@
  */
 
 import { useCallback, useState } from "react";
-import { Modal, LoadingState, FavoriteButton } from "@rahalgo/ui";
+import { Modal, LoadingState, FavoriteButton, IconAdd, IconCheck } from "@rahalgo/ui";
 import ItemClient, { type Group } from "@/app/i/[id]/ItemClient";
 import { api } from "@/lib/api";
+import { useCart } from "@/lib/cart";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
 import { Badge } from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
@@ -90,6 +91,54 @@ export default function ItemCard({
    * هنا تكون نافذة منبثقة».)
    */
   const [openItem, setOpenItem] = useState<{ item: BrowseItem; modifiers: Group[] } | null>(null);
+  const { add } = useCart();
+  const [adding, setAdding] = useState(false);
+  /** **علامةُ «أُضيف»** — تعود إلى الجمع بعد ثانيتين. */
+  const [added, setAdded] = useState(false);
+
+  /**
+   * **إضافةٌ بضغطةٍ — وفتحٌ لمن له خيارات.**
+   *
+   * **والخياراتُ لا تُعرف من البطاقة**: تأتي مع تفصيل الصنف. **فيُسأل
+   * الخادمُ ثمّ يُقرَّر** — نداءٌ واحدٌ هو نفسُه الذي كانت تفتح به النافذة،
+   * **فلا رحلةَ زائدة.**
+   *
+   * **وما له خيارٌ واحدٌ اختياريٌّ يُضاف بلا سؤال؟** لا — **من صمّم قائمتَه
+   * بخياراتٍ يريد أن تُرى**، والسكوتُ عنها يضيف صنفاً بلا ما يميّزه.
+   */
+  async function quickAdd(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (adding) return;
+    setAdding(true);
+    try {
+      const d = await api<{ item?: BrowseItem; modifiers?: Group[] }>(
+        `/api/v1/public/items/${item.id}`,
+      );
+      const groups = d.modifiers ?? [];
+      if (groups.length > 0) {
+        if (d.item) setOpenItem({ item: d.item, modifiers: groups });
+        return;
+      }
+      add({
+        menu_item_id: item.id,
+        name: item.name,
+        price: item.price,
+        qty: 1,
+        note: "",
+        option_ids: [],
+        option_names: [],
+        options_delta: 0,
+      });
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+    } catch {
+      /* **وفشلُ النداء يفتح النافذة** — لا رسالةَ خطأٍ على بطاقةٍ في شبكة:
+         **من أراد الصنفَ يجده مفتوحاً أمامه** ويضيفه من هناك. */
+      open();
+    } finally {
+      setAdding(false);
+    }
+  }
   const [loading, setLoading] = useState(false);
 
   const open = useCallback(async () => {
@@ -212,6 +261,53 @@ export default function ItemCard({
         </span>
       </button>
 
+      {/* ══════════════════════════════════════════════════════════════
+          **وصفٌّ أسفلَ البطاقة: القلبُ والإضافةُ — بعيداً عن الصورة**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «نضيف أيقونةً تضيف المنتجَ مباشرةً بدون
+           الضغط عليه — أسرع. وأيقونة المفضّلة نزّلها للأسفل بعيداً عن
+           الصورة: لاحقاً رح يحصل تشوّشٌ وقت نضيف صورَ المنتجات».)
+
+          **والقلبُ كان في زاوية الصورة** — والأصنافُ اليومَ بلا صور، **فبدا
+          على أرضٍ خالية.** ويومَ تُرفع الصورُ يقع على وجهِ صحنٍ أو على
+          حرفٍ في تصميم، **ولا سبيلَ إلى تحريكه يومَها إلّا بإعادة البناء.**
+
+          **والإضافةُ المباشرةُ توفّر ضغطتين ونافذة**: من رأى الصنفَ وسعرَه
+          قرّر — **ونافذةٌ بينه وبين سلّته تُفقد نصفَ من قرّر.**
+
+          # وما له خياراتٌ لا يُضاف مباشرةً
+
+          **صنفٌ يُسأل عن حجمه أو إضافاته لا يُضاف بضغطة** — يُفتح كما كان.
+          **ولا يُعرف ذلك من البطاقة**: الخياراتُ تأتي مع تفصيل الصنف.
+          **فيُفتح لمن له خيارات، ويُضاف لمن لا خياراتِ له** — والضغطةُ
+          واحدةٌ في الحالين. */}
+      <span className="flex items-center justify-between gap-1 border-t border-line-soft px-2 py-1.5">
+        {(onFavorite || onRequireLogin) && (
+          <FavoriteButton
+            size="sm"
+            itemID={item.id}
+            on={favorite}
+            onToggle={onFavorite ?? (() => undefined)}
+            onRequireLogin={onRequireLogin}
+          />
+        )}
+
+        {/* **ولا يُضاف ما لا يُباع** — نافدٌ أو مصدرُه مغلق. */}
+        {item.available && !item.source_closed && (
+          <button
+            type="button"
+            onClick={quickAdd}
+            disabled={adding}
+            aria-label={m.site.menu.addToCart}
+            title={m.site.menu.addToCart}
+            className="taparea ms-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-accent text-on-bright transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {added ? <IconCheck size={17} /> : <IconAdd size={17} />}
+          </button>
+        )}
+      </span>
+
       {/* **والقلبُ فوق الصورة في زاويتها.**
 
           **وكان غائباً عن هذه البطاقة كلَّها** — وهي شكلُ الأصناف في السوق
@@ -225,18 +321,6 @@ export default function ItemCard({
 
           **والزائرُ يراه ويُساق إلى الدخول**: أوّلُ صياغةٍ أخفته عنه لأنّ
           `onFavorite` تغيب، **فيفوته أنّ الميزةَ له إن دخل.** */}
-      {(onFavorite || onRequireLogin) && (
-      <span className="absolute start-1.5 top-1.5">
-        <FavoriteButton
-          size="sm"
-          itemID={item.id}
-          on={favorite}
-          onToggle={onFavorite ?? (() => undefined)}
-          onRequireLogin={onRequireLogin}
-          className="surface"
-        />
-      </span>
-      )}
       </div>
 
       <Modal

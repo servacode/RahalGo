@@ -28,7 +28,21 @@ import (
 func (s *Server) handlePublicContact(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"legal_name":    s.settings.GetString(ctx, "platform.legal_name"),
+		// **والاسمُ واحدٌ لا اثنان.**
+		//
+		// (سأل المالك 2026-08-09: «لا أفهم الفرق بين الاثنين أصلاً».)
+		//
+		// **كان «الاسمُ القانونيّ» حقلاً ثانياً** يُحقن في الوثيقتين — وقيمتُه
+		// عنده اسمُ المنصة نفسُه. **وحقلان بقيمةٍ واحدةٍ يفترقان يوماً** فتقول
+		// الشروطُ اسماً ويقول الشريطُ غيرَه.
+		//
+		// **ويعود إن سُجّلت شركةٌ باسمٍ آخر** — سطرٌ واحدٌ يومَها.
+		"legal_name": s.settings.GetString(ctx, "platform.name"),
+		// **ونصوصُ الصفحات الثلاث** — وفارغُها يعني «خذ من المعجم».
+		// (طلبُ المالك 2026-08-09: صفحاتٌ ديناميّةٌ تُحرَّر من اللوحة.)
+		"help_text":     s.settings.GetString(ctx, "page.help_text"),
+		"terms_text":    s.settings.GetString(ctx, "page.terms_text"),
+		"privacy_text":  s.settings.GetString(ctx, "page.privacy_text"),
 		"support_phone": s.settings.GetString(ctx, "platform.support_phone"),
 		"address":       s.settings.GetString(ctx, "platform.address"),
 	})

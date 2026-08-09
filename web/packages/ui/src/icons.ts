@@ -10,7 +10,6 @@ export {
   Store as IconStore,
   Map as IconZones,
   TicketPercent as IconPromos,
-  MessageCircle as IconWhatsApp,
   // **تبديلُ المتجر — سهمان متبادلان.**
   //
   // **والصورةُ تسبق اللفظ**: من يرى سهمين متبادلين يعرف أنّ شيئاً يحلّ محلَّ

@@ -176,8 +176,18 @@ type BannerInput struct {
 }
 
 func (s *Service) CreateBanner(ctx context.Context, actorID string, in BannerInput, ip string) (*Banner, error) {
-	if in.Title == nil || *in.Title == "" {
-		return nil, ErrNameRequired
+	// **ولا عنوانَ يُشترط.**
+	//
+	// (قرارُ المالك 2026-08-09: «لا يوجد داعٍ لعنوان البانر ولا للزرّ أيضاً».)
+	//
+	// **واللافتةُ صورةٌ تُعرض** — تصميمٌ فيه كلامُه ودعوتُه. **وشرطٌ على حقلٍ
+	// لا يُعرض يمنع الحفظَ بلا أن يفهم أحدٌ لماذا.**
+	//
+	// **والعمودُ يبقى**: صفوفٌ قديمةٌ فيها عناوين، **وحذفُ عمودٍ فيه بياناتٌ
+	// قرارٌ آخر.** ويُقرأ في `alt` لمن لا يرى.
+	if in.Title == nil {
+		empty := ""
+		in.Title = &empty
 	}
 	var id string
 	err := s.db.QueryRow(ctx, `

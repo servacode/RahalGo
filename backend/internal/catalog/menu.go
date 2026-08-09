@@ -511,34 +511,54 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	// ══════════════════════════════════════════════════════════════════
+	// **ووسيطٌ يُمرَّر ولا يُذكر يُسقط الاستعلام كلَّه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شكوى المالك 2026-08-09: «عند إضافة صورة لصنف يظهر خطأ غير متوقّع».)
+	//
+	// **وليست الصورةُ سببَه**: أيُّ تعديلِ صنفٍ كان يسقط —
+	// `could not determine data type of parameter $2` (SQLSTATE 42P18).
+	//
+	// **كان `in.SectionID` يُمرَّر ثانيَ الوسائط** من يومَ كان العمودُ
+	// `section_id` يُبدَّل. **ثمّ رُفع السطرُ من `SET`** (هجرة 0084: الانتماءُ
+	// صار بقسم السوق) **وبقي الوسيطُ في النداء** — فلم يعد `$2` مذكوراً في
+	// النصّ، **وبوستغرس يستنبط أنواعَ الوسائط من مواضع ذكرها**: ما لا يُذكر
+	// لا يُعرف نوعُه، فيرفض الاستعلامَ قبل أن ينفّذه.
+	//
+	// **ولا يكشفه بناءٌ ولا مترجِم**: الوسائطُ `...any` — **يسقط في التشغيل
+	// وحدَه**، وعند كلّ تعديلِ صنفٍ بلا استثناء.
+	//
+	// **والترقيمُ أُنقص واحداً** بعد نزعه: الفجوةُ في الترقيم عطبٌ آخرُ من
+	// العائلة نفسِها.
 	tag, err := tx.Exec(ctx, `
 		UPDATE menu_items SET
 			-- **ولا عمودُ قسمِ المتجر يُبدَّل** — طبقتُه ذهبت (هجرة ٠٠٨٤)،
 			-- **والانتماءُ صار بقسم السوق وحدَه.** والعمودُ يبقى للصفوف القديمة.
-			name        = COALESCE($3, name),
-			description = COALESCE($4, description),
+			name        = COALESCE($2, name),
+			description = COALESCE($3, description),
 			-- **السعرُ المُرسَل سعرُ شراء** — وعمودُ price يتبعه كي لا يبقى
 			-- القديمُ يحمل رقماً لا معنى له. **وسعرُ البيع يُحسب عند العرض**
 			-- (حزمة pricing) فلا يُقرأ هذا العمودُ في مسارٍ يراه زبون.
-			merchant_price = COALESCE($5, merchant_price),
-			price          = COALESCE($5, price),
+			merchant_price = COALESCE($4, merchant_price),
+			price          = COALESCE($4, price),
 			-- **التجاوزُ يُمحى صراحةً بسالبِ واحد.**
 			--
 			-- COALESCE وحدَه لا يفرّق بين «لم يُرسَل» و«أُرسل فارغاً» — وكلاهما
 			-- NULL. **فمن أراد أن يعيد صنفاً إلى وراثة تصنيفه لم يملك سبيلاً**:
 			-- كلُّ إرسالٍ يُقرأ «بلا تغيير».
-			margin_override = CASE WHEN $8::bigint IS NULL THEN margin_override
-			                       WHEN $8 < 0 THEN NULL
-			                       ELSE $8 END,
-			available   = COALESCE($6, available),
-			image_media_id = CASE WHEN $7::text IS NULL THEN image_media_id
-			                      ELSE NULLIF($7, '')::uuid END,
+			margin_override = CASE WHEN $7::bigint IS NULL THEN margin_override
+			                       WHEN $7 < 0 THEN NULL
+			                       ELSE $7 END,
+			available   = COALESCE($5, available),
+			image_media_id = CASE WHEN $6::text IS NULL THEN image_media_id
+			                      ELSE NULLIF($6, '')::uuid END,
 			-- **والفراغُ الصريح يرفع التصنيف** — لا يُقرأ «بلا تغيير».
-			platform_section_id = CASE WHEN $9::text IS NULL THEN platform_section_id
-			                           ELSE NULLIF($9, '')::uuid END,
+			platform_section_id = CASE WHEN $8::text IS NULL THEN platform_section_id
+			                           ELSE NULLIF($8, '')::uuid END,
 			updated_at  = now()
 		WHERE id = $1`,
-		itemID, in.SectionID, in.Name, in.Description, in.Price, in.Available,
+		itemID, in.Name, in.Description, in.Price, in.Available,
 		in.ImageMediaID, in.MarginOverride, in.PlatformSectionID)
 	if err != nil {
 		return err

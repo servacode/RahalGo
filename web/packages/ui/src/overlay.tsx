@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { IconClose } from "./icons";
@@ -68,9 +69,12 @@ export function Sheet({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  /* **وتُرسم في جذر المستند** — كالنافذة: `fixed` داخلَ بطاقةٍ عليها
+     `backdrop-filter` تُقاس بالبطاقة لا بالشاشة، **فتقع تحت ما فوقها في
+     الشجرة مهما رُفع `z`.** (شكوى المالك ٢٠٢٦-٠٨-٠٩.) */
+  return createPortal(
     <div
       className="fixed inset-0 z-[65] flex items-end justify-center scrim sm:items-center sm:p-4"
       onClick={onClose}
@@ -111,7 +115,8 @@ export function Sheet({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

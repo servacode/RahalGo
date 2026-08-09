@@ -6,6 +6,7 @@ import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { FloatingCart } from "@/components/FloatingCart";
+import RatingWatcher from "@/components/RatingWatcher";
 import { BottomNav, BottomNavSpacer } from "@/components/BottomNav";
 // خط المنصة — مصدر مركزي واحد (packages/ui/src/fonts.css)
 import "@rahalgo/ui/fonts.css";
@@ -116,14 +117,32 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   تُضيّق الصفحةَ وتمنع المحتوى من ملء الشاشة. **وهذه اثنا عشرَ
                   بكسلاً تُبعد الحرفَ عن الحافّة** ولا تحصر شيئاً.
                   ══════════════════════════════════════════════════════ */}
-              <main className="flex min-w-0 flex-1 flex-col px-3 py-4 sm:px-4">
+              {/* **وفسحةٌ علويّةٌ بمقدار ما يتدلّى من الشعار.**
+
+                  (كشفه المالك ٢٠٢٦-٠٨-٠٩ بلقطتين: الشعارُ يلامس بطاقةَ
+                   الدخول ثمّ لافتةَ التسوّق.)
+
+                  **ونصفُ الشعار ينزل تحت الشريط** (٥٦ بكسلاً) — **وما تحته
+                  يبدأ حيث ينتهي الشريطُ لا حيث ينتهي المتدلّي**، فيقع عليه.
+
+                  **والفسحةُ هنا لا في كلّ صفحة**: خمسُ صفحاتٍ تُصلَح واحدةً
+                  واحدةً تُنسى السادسة.
+
+                  **ومقدارُها المتدلّي وحشوةُ الصفحة، ويتبع مقاسَ الشعار**:
+                  على الجوّال ٣٢+١٦=٤٨، وفوقه ٥٦+١٦=٧٢. **وثلاثةُ أرقامٍ
+                  مرتبطة** — الشعارُ ونصفُه والفسحة، **ومن بدّل واحداً بدّل
+                  الثلاثة.** */}
+              <main className="flex min-w-0 flex-1 flex-col px-3 pb-4 pt-12 sm:px-4 sm:pt-[4.5rem]">
                 {children}
               </main>
               {/* **والشروطُ والمساعدةُ أسفلَ الصفحة** — حيث يُبحث عنها،
                   والشريطُ العلويُّ لما يُضغط كلَّ يوم. */}
-              <Footer name={brand.name} />
+              <Footer name={brand.name} social={brand.social} />
               {/* السلّة العائمة خارج الكرت: تُرافق التصفّح ولا تختفي بالتمرير */}
               <FloatingCart />
+              {/* **ونافذةُ التقييم تُسأل حيث كان الزبون** — لا في صفحة
+                  الطلبات وحدَها. (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) */}
+              <RatingWatcher />
               {/* **وفراغٌ بارتفاع الشريط السفليّ** — وبلاه يختفي آخرُ سطرٍ
                   خلفه، وهو غالباً زرُّ الحسم. */}
               <BottomNavSpacer />

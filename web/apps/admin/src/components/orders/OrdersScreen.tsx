@@ -2051,6 +2051,9 @@ function InvoiceButton({ order }: { order: OrderRow }) {
           <Modal
             open
             onClose={() => setOpen(false)}
+            /* **والفاتورةُ جدولُ أربعةِ أعمدة** — بعرض `md` (٤٤٨ بكسلاً)
+               تُحشر أسماءُ الأصناف والمبالغُ في خانةٍ ضيّقة. */
+            size="lg"
             title={`${m.admin.ordersPage.invoice} · #${order.number}`}
           >
             {/* ══════════════════════════════════════════════════════

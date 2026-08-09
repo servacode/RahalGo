@@ -74,11 +74,56 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		"otp_login": s.settings.GetBool(r.Context(), "auth.otp_login"),
 		// **ورابطُ التطبيق هنا لا في نداءٍ ثانٍ** — زرُّه بجانب زرِّ الدخول،
 		// **فيُقرأ مع ما تُقرأ به الشاشةُ أوّلَ مرّة.**
-		"app_url":     s.appHref(r),
-		"auth_bg":     s.settingMedia(r, "auth.background"),
-		"site_bg":     s.settingMedia(r, "platform.background"),
-		"site_bg_dim": s.settings.GetInt(r.Context(), "platform.background_dim"),
-		"auth_bg_dim": s.settings.GetInt(r.Context(), "auth.background_dim"),
+		"app_url": s.appHref(r),
+		// **ورقمُ الدعم مع الهويّة لا في نداءٍ ثالث.**
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «بالفاتورة لازم نضيف رقم هاتف الدعم
+		//  للشكاوى».)
+		//
+		// **الفاتورةُ تُطبع وتُسلَّم ثمّ تُقرأ بعيداً عن التطبيق** — ومن وجد
+		// فيها خطأً لا يجد أين يشتكي. **ورقمٌ على الورق هو البابُ الوحيد
+		// حينَها.**
+		//
+		// وكان في `/public/contact` وحدَه — **نداءٌ لا تعرفه الورقة**، فيُضمّ
+		// إلى ما تقرؤه كلُّ لوحةٍ أوّلَ مرّة.
+		"support_phone": s.settings.GetString(r.Context(), "platform.support_phone"),
+		// **وحساباتُ التواصل مع الهويّة** — التذييلُ يُرسم في كلّ صفحة،
+		// **ونداءٌ ثانٍ له رحلةٌ في كلّ فتحة.**
+		// **وعنوانُ المكتب وموقعُه** — صفحةُ التواصل ترسمهما.
+		"address":  s.settings.GetString(r.Context(), "platform.address"),
+		"location": s.settings.GetString(r.Context(), "platform.location"),
+		"social": map[string]string{
+			"facebook":  s.settings.GetString(r.Context(), "platform.facebook"),
+			"instagram": s.settings.GetString(r.Context(), "platform.instagram"),
+			"telegram":  s.settings.GetString(r.Context(), "platform.telegram"),
+			"whatsapp":  s.settings.GetString(r.Context(), "platform.whatsapp"),
+		},
+		// **وصورتان لكلّ خلفيّة** — عريضةٌ للشاشة وطوليّةٌ للجوّال.
+		// (قرارُ المالك 2026-08-09.) **وفارغةُ الجوّال تسقط إلى العريضة.**
+		"auth_bg":        s.settingMedia(r, "auth.background"),
+		"auth_bg_mobile": s.settingMedia(r, "auth.background_mobile"),
+		"site_bg":        s.settingMedia(r, "platform.background"),
+		"site_bg_mobile": s.settingMedia(r, "platform.background_mobile"),
+		"site_bg_dim":    s.settings.GetInt(r.Context(), "platform.background_dim"),
+		"auth_bg_dim":    s.settings.GetInt(r.Context(), "auth.background_dim"),
+	})
+}
+
+// handlePublicHero **عرضُ الصفحة الرئيسيّة** — صورةٌ ونصٌّ وزرّ.
+//
+// (تصحيحُ المالك 2026-08-09: «الصفحة الرئيسيّة مو بانر، هو صورةٌ كاملةٌ
+//
+//	للصفحة».)
+//
+// **من الإعدادات لا من جدول اللافتات**: شيءٌ واحدٌ يملأ الصفحةَ لا قائمةٌ
+// تتبدّل. **ونقطةٌ خفيفةٌ لا `/public/home`**: تلك تجلب التصنيفاتِ والأقسامَ
+// بعدد أصنافها — ثلاثةُ استعلاماتٍ لصفحةٍ لا تعرض إلّا صورة.
+//
+// **ومفتوحةٌ بلا توثيق**: الرئيسيّةُ أوّلُ ما يُفتح، وقبل أن يكون حساب.
+func (s *Server) handlePublicHero(w http.ResponseWriter, r *http.Request) {
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"image":        s.settingMedia(r, "home.image"),
+		"image_mobile": s.settingMedia(r, "home.image_mobile"),
 	})
 }
 
@@ -149,8 +194,11 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 		// **والثواني تُحوَّل إلى ملّي هنا لا في الشاشة**: الإعدادُ يُقرأ
 		// بالثانية لأنّ من يضبطه إنسان، **والمؤقّتُ يعمل بالملّي** — والتحويلُ
 		// في موضعٍ واحدٍ لا في كلّ من يقرؤه.
-		"rail_auto":     s.settings.GetBool(r.Context(), "shop.rail_auto"),
-		"rail_every_ms": s.settings.GetInt(r.Context(), "shop.rail_seconds") * 1000,
+		// **ومهلةُ السلايدر كمهلة الجولة** — تصل مع الصفحة لا بنداءٍ ثانٍ.
+		"banner_auto":     s.settings.GetBool(r.Context(), "shop.banner_auto"),
+		"banner_every_ms": s.settings.GetInt(r.Context(), "shop.banner_seconds") * 1000,
+		"rail_auto":       s.settings.GetBool(r.Context(), "shop.rail_auto"),
+		"rail_every_ms":   s.settings.GetInt(r.Context(), "shop.rail_seconds") * 1000,
 
 		// **وهويّةُ المنصة تصل مع الصفحة الأولى.**
 		//

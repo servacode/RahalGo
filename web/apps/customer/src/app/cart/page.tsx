@@ -465,8 +465,24 @@ export default function CartPage() {
           </div>
           <div className="flex justify-between">
             <dt className="text-ink-muted">{m.site.cart.delivery}</dt>
-            <dd className="font-medium">
-              {zone ? `${fmtNum(zone.delivery_fee)} ${m.common.currency}` : "—"}
+            {/* ══════════════════════════════════════════════════════════
+                **وصفرُ الأجرة تُقال «مجاني» — هنا أيضاً**
+                ══════════════════════════════════════════════════════════
+
+                (شكوى المالك ٢٠٢٦-٠٨-٠٩: «بالجوّال ما زال يقول توصيل ٠».)
+
+                **أُصلحت في بطاقة الطلب والفاتورة** يومَها **وفاتت السلّة** —
+                وهي أوّلُ موضعٍ يراه الزبون: **يقرأ صفراً قبل أن يطلب فيظنّ
+                الحسبةَ لم تكتمل**، لا أنّها هديّة.
+
+                **والشرطة «—» تبقى لِما لم يُحسب بعد**: بلا عنوانٍ لا منطقةَ
+                ولا رسم. **وفرقٌ بين «لا رسمَ عليك» و«لم نعرف بعدُ كم».** */}
+            <dd className={zone && zone.delivery_fee === 0 ? "font-medium text-success" : "font-medium"}>
+              {!zone
+                ? "—"
+                : zone.delivery_fee === 0
+                  ? m.shared.invoice.deliveryFree
+                  : `${fmtNum(zone.delivery_fee)} ${m.common.currency}`}
             </dd>
           </div>
           {/* **ورقمان يقولان سببَ الزيادة.**

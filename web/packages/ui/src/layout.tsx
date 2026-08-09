@@ -216,7 +216,7 @@ export function BootScreen({ label }: { label?: string }) {
       aria-live="polite"
       aria-label={label ?? m.common.loading}
     >
-      <BrandMark size={64} rounded="card" />
+      <BrandMark size={112} rounded="card" />
       <p className="text-sm text-ink-muted">{label ?? m.common.loading}</p>
       <span className="h-1 w-40 overflow-hidden rounded-badge bg-field">
         <span className="block h-full w-1/3 rounded-badge bg-accent motion-safe:animate-[rahalgo-sweep_1.1s_ease-in-out_infinite]" />
@@ -666,9 +666,15 @@ export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | str
       {/* **والعلامةُ من الإعدادات** — شعارٌ إن رُفع وإلّا أوّلُ حرفٍ من الاسم.
           (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «بنماذج الطباعة كما اتّفقنا».)
           **والطريقُ تحته بالنبرة** — اختصارُ اللوغو حين لا شعارَ مرفوع. */}
-      <div data-print-mark className="relative shrink-0 overflow-hidden rounded-control">
-        <BrandMark size={44} />
-        <span aria-hidden className="absolute inset-x-0 bottom-0 h-1.5 bg-accent" />
+      {/* **والعلامةُ عاريةٌ بلا إطار.**
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «الدائرة التي حول اللوغو ألغِها، خلّي
+           اللوغو يظهر بدون أيّ حدود».)
+
+          كان حولَها صندوقٌ مستديرٌ وشريطٌ بالنبرة تحتها، **وفي الطباعة إطارٌ
+          أسودُ بسمكِ اثنين** — وشعارٌ مرفوعٌ لا يحتاج صندوقاً يحمله. */}
+      <div data-print-mark className="shrink-0">
+        <BrandMark size={72} rounded="none" />
       </div>
 
       <div className="min-w-0 flex-1 text-center">

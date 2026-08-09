@@ -108,6 +108,15 @@ export function PickMap({
   radiusM,
   /** يُستدعى بعد تحديد الموقع من الجهاز — لتعبئة العنوان مثلاً */
   onLocated,
+  /**
+   * **إخفاءُ زرّ «تحديد موقعي»** — لخريطةٍ تُعرض ولا تُختار منها.
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «ولا يوجد تحديد الموقع بالعرض».)
+   *
+   * **وخريطةُ المكتب تُقرأ لا تُضبط** — وزرٌّ يطلب موقعَ الزائر فيها **يسأل
+   * إذناً بلا سبب**، ومن أعطاه لم يقع شيء.
+   */
+  hideLocate = false,
 }: {
   lat: number | null;
   lng: number | null;
@@ -115,6 +124,7 @@ export function PickMap({
   height?: string;
   radiusM?: number;
   onLocated?: (lat: number, lng: number) => void;
+  hideLocate?: boolean;
 }) {
   const mapRef = useRef<LeafletMap | null>(null);
   const [locating, setLocating] = useState(false);
@@ -149,15 +159,17 @@ export function PickMap({
           الجهاز لا الإصبع**، ودقّتُه هي ما يُبلغ السائقَ البابَ.
 
           ولونٌ بارزٌ ممتلئ: زرٌّ محايدٌ في مشهدٍ مزدحم لا يُطلَب منه أن يُلحَظ. */}
-      <button
-        type="button"
-        onClick={locateMe}
-        disabled={locating}
-        className="mb-2 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-on-bright elev-1 transition-colors hover:bg-accent-dark disabled:opacity-60"
-      >
-        <IconLocateMe size={17} className={locating ? "animate-pulse" : ""} />
-        {locating ? m.common.loading : m.common.locateMe}
-      </button>
+      {!hideLocate && (
+        <button
+          type="button"
+          onClick={locateMe}
+          disabled={locating}
+          className="mb-2 flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-on-bright elev-1 transition-colors hover:bg-accent-dark disabled:opacity-60"
+        >
+          <IconLocateMe size={17} className={locating ? "animate-pulse" : ""} />
+          {locating ? m.common.loading : m.common.locateMe}
+        </button>
+      )}
 
     <div className="relative overflow-hidden rounded-card border border-line">
       <MapContainer

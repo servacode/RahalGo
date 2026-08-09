@@ -21,6 +21,8 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -51,6 +53,36 @@ const (
 
 	KindMedia Kind = "media"
 
+	// KindGeo موقعٌ على خريطة — **وقيمتُه `"lat,lng"` نصّاً.**
+	//
+	// (طلبُ المالك 2026-08-09: «صفحة تواصل معنا لازم صفحة خاصّة فيها خريطة
+	//  المكتب وعنوان ووسائل سوشيال ميديا — مو مجرّد رقم وخلص».)
+	//
+	// **ولا حقلا رقمٍ يُكتبان باليد**: من يضبط موقعَ مكتبٍ لا يحفظ إحداثيّاته،
+	// **ويكتب رقماً بفاصلةٍ في غير موضعها فيقع المكتبُ في بحر.** فالشاشةُ
+	// تعرض خريطةً يُنقر عليها، **والقيمةُ تُبنى من النقرة.**
+	//
+	// **ونصٌّ واحدٌ لا مفتاحان**: `lat` و`lng` في مفتاحين يفترقان — يُحفظ
+	// أحدُهما ويسقط الآخر، **فيبقى نصفُ موقعٍ لا أحدَ يعرف أنّه نصف.**
+	//
+	// **والفراغُ مقبول**: منصّةٌ بلا مكتبٍ معلومٍ بعدُ لا تُظهر خريطة.
+	KindGeo Kind = "geo"
+
+	// KindLongText نصٌّ طويلٌ متعدّدُ الأسطر — **تُعرضه اللوحةُ صندوقاً لا سطراً.**
+	//
+	// (طلبُ المالك 2026-08-09: «جهّز الصفحات لتكون ديناميكيّةً أتحكّم بها من
+	//  لوحة التحكّم، أعدّل النصوص الموجودة إذا أردتُ ذلك».)
+	//
+	// **وصفحاتُ المساعدة والشروط والخصوصيّة نصوصٌ في المعجم** — تُبدَّل بنشر.
+	// **وهي أكثرُ ما يتبدّل**: سياسةٌ تُراجَع، وسؤالٌ يُضاف، وجملةٌ تُصحَّح.
+	//
+	// **وشكلُها اتّفاقٌ بسيط**: سطرٌ فارغٌ يفصل بين كرتٍ وكرت، **وأوّلُ سطرٍ
+	// في الكرت عنوانُه** وما بعده فقراتُه. **ولا مُحرّرٌ غنيٌّ ولا Markdown** —
+	// من يكتب سياسةَ خصوصيّةٍ يكتب فقرات، **ومحرّرٌ بأزرارٍ عشرةٍ يُخطئ فيه.**
+	//
+	// **وفارغُه يعني «خذ من المعجم»** — فمن لم يمسّها يرى نصَّها الأصليّ.
+	KindLongText Kind = "longtext"
+
 	// KindFile ملفٌّ يُرفع — **وقيمتُه اسمُه المخزَّن لا مساره.**
 	//
 	// (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «حقلٌ لإدخال الرابط من غوغل بلاي أو رفع
@@ -80,6 +112,20 @@ const (
 	GroupDrivers   Group = "drivers"
 	GroupMerchants Group = "merchants"
 	GroupSales     Group = "sales"
+
+	// GroupSite **قسمٌ يُجهَّز فارغاً ليُملأ نقلاً.**
+	//
+	// (قرارُ المالك 2026-08-09: «لازم يكون بإعدادات الأدمن قسم اسمه إعدادات
+	//  الموقع، جهّزه فارغاً بداية للنقل إليه قسماً قسماً — أنا سأخبرك بها،
+	//  انتظر منه الأمر».)
+	//
+	// **وهو نقضٌ مقصودٌ للقاعدة المكتوبة أسفلَه**: «تُكتب المجموعةُ حين يُكتب
+	// أوّلُ مفتاحٍ فيها — لا قبله». **والقاعدةُ وُضعت لمنع تبويبٍ يُفتح مرّةً
+	// ويُتعلَّم تجاهلُه** — وذاك حين لا أحدَ ينوي ملأه.
+	//
+	// **وهنا صاحبُ المنصة هو من يملأه**، ويريد المكانَ قبل المحتوى ليقول
+	// «انقل هذا إليه». **ففراغُه مرحلةٌ معلومةُ الأجل لا إهمال.**
+	GroupSite Group = "site"
 )
 
 // Groups **ترتيبُ الأقسام في اللوحة — ومصدرُه الواحد.**
@@ -99,7 +145,7 @@ const (
 //
 // **وتُكتب المجموعةُ حين يُكتب أوّلُ مفتاحٍ فيها** — لا قبله.
 var Groups = []Group{
-	GroupPlatform, GroupDrivers, GroupMerchants, GroupSales,
+	GroupPlatform, GroupSite, GroupDrivers, GroupMerchants, GroupSales,
 }
 
 // Default افتراضُ مفتاحٍ رقميّ — **لمن لا مخزنَ لديه.**
@@ -143,6 +189,20 @@ type Def struct {
 	// **والشرطُ في الفهرس لا في الشاشة**: الشاشةُ تُخفي والمحرّكُ يقرأ —
 	// **ولو كُتب الشرطُ في الواجهة لَافترق عمّا يعمل به الخادم.**
 	ShowWhen *Condition `json:"show_when,omitempty"`
+
+	// Section **صندوقٌ داخل المجموعة يجمع ما يُضبط معاً.**
+	//
+	// (قرارُ المالك 2026-08-09: «بإعدادات الموقع نضيف تبويباً اسمه الهويّة
+	//  البصريّة — رح يكون فيها مربّع يضمّ رفع اللوغو واسم المنصة».)
+	//
+	// **والمجموعةُ صارت طويلةً فبعُد ما يُضبط معاً**: الشعارُ والاسمُ يُضبطان
+	// في دقيقةٍ واحدة، **وبينهما في الشاشة سبعةُ مفاتيحَ لا تخصّهما.**
+	//
+	// **وفارغُه يعني «بلا صندوق»** — يُعرض في مجرى المجموعة كما كان، فلا
+	// يُجبَر كلُّ مفتاحٍ قديمٍ على بيتٍ يُخترع له.
+	//
+	// **والاسمُ في المعجم لا هنا** — كالمجموعات: `admin.settings.sections.*`.
+	Section string `json:"section,omitempty"`
 }
 
 // Condition شرطُ ظهورِ مفتاحٍ — مفتاحٌ آخرُ بإحدى قيمٍ بعينها.
@@ -218,12 +278,33 @@ var Catalog = []Def{
 	// معروضاً شهراً، **ومن اتّصل به لم يجد أحداً.**
 	//
 	// **وفارغُها لا يُعرض**: سطرٌ يقول «الهاتف: —» أسوأُ من غيابه.
-	{Key: "platform.legal_name", Group: GroupPlatform, Kind: KindText,
-		Max: 120, Default: ""},
-	{Key: "platform.support_phone", Group: GroupPlatform, Kind: KindText,
+	{Key: "platform.support_phone", Group: GroupSite, Section: "page.contact", Kind: KindText,
 		Max: 32, Default: ""},
-	{Key: "platform.address", Group: GroupPlatform, Kind: KindText,
+	{Key: "platform.address", Group: GroupSite, Section: "page.contact", Kind: KindText,
 		Max: 200, Default: ""},
+	{Key: "platform.location", Group: GroupSite, Section: "page.contact", Kind: KindGeo,
+		Default: ""},
+
+	// ── حساباتُ التواصل ────────────────────────────────
+	//
+	// (طلبُ المالك 2026-08-09: «تواصل معنا وحسابات السوشيال ميديا مو موجودة
+	//  بإعدادات لوحة الأدمن».)
+	//
+	// **وروابطُ لا معرّفات**: «@rahalgo» يحتاج من يعرف إلى أيّ موقعٍ ينتمي،
+	// **والرابطُ يُفتح بضغطة.** ومن نسخ رابطَ صفحته من المتصفّح لا يخطئ.
+	//
+	// **وواتساب رقمٌ لا صفحة** — فله مفتاحُه: يُبنى منه `wa.me`.
+	//
+	// **وكلُّ فارغٍ لا يُعرض**: أيقونةٌ تقود إلى لا شيءٍ أسوأُ من غيابها،
+	// **ومنصّةٌ لا تُويتر لها لا يجب أن تُظهر أيقونةً ميّتة.**
+	{Key: "platform.facebook", Group: GroupSite, Section: "page.contact", Kind: KindText,
+		Max: 200, Default: ""},
+	{Key: "platform.instagram", Group: GroupSite, Section: "page.contact", Kind: KindText,
+		Max: 200, Default: ""},
+	{Key: "platform.telegram", Group: GroupSite, Section: "page.contact", Kind: KindText,
+		Max: 200, Default: ""},
+	{Key: "platform.whatsapp", Group: GroupSite, Section: "page.contact", Kind: KindText,
+		Max: 32, Default: ""},
 
 	// ── رابطُ تطبيق أندرويد ────────────────────────────
 	//
@@ -271,14 +352,14 @@ var Catalog = []Def{
 	//
 	// **ولا يُفرض على المالك أن يملأه ليعمل الموقع** — الفارغُ يسقط إلى
 	// `common.appName`، **فمن لم يمسّ الإعداداتِ لا ينكسر عنده شيء.**
-	{Key: "platform.name", Group: GroupPlatform, Kind: KindText,
+	{Key: "platform.name", Group: GroupSite, Section: "identity", Kind: KindText,
 		Max: 60, Default: ""},
 
 	// **والشعارُ صورةٌ تحلّ محلّ الحرف** — وفارغٌ يعني أنّ الحرفَ يبقى.
 	//
 	// **ولا تُحذف آلةُ الحرف**: منصّةٌ بلا شعارٍ مرفوعٍ يجب أن تبقى تعمل،
 	// **وشريطٌ علويٌّ بمربّعٍ فارغٍ أسوأُ من حرف.**
-	{Key: "platform.logo", Group: GroupPlatform, Kind: KindMedia, Default: ""},
+	{Key: "platform.logo", Group: GroupSite, Section: "identity", Kind: KindMedia, Default: ""},
 
 	// ── خلفيّةُ شاشات الدخول ────────────────────────────────────────────
 	//
@@ -299,16 +380,44 @@ var Catalog = []Def{
 	//
 	// **والتدرّجُ المرسومُ يبقى تحتها**: من لم يرفع صورةً يرى اللوحةَ كما هي،
 	// **ومن رفعها ثمّ حُذفت لا تسقط شاشتُه إلى بياض.**
-	{Key: "platform.background", Group: GroupPlatform, Kind: KindMedia, Default: ""},
+	// **وخلفيّةُ الموقع مدخلٌ قائمٌ بذاته.**
+	//
+	// (قرارُ المالك 2026-08-09: «ضِف صفحةً سمّها خلفيّة الموقع، هي اللي نتحكّم
+	//  فيها بصورة خلفيّة الموقع — نضيف صورة، نعدّل صورة، نغيّر صورة».)
+	//
+	// **وليست صفحةً في الموقع** — هي ما تحت كلّ صفحة. **وموضعُها أوّلَ الشريط**
+	// لأنّها تعمّ ما بعدَها.
+	// **وصورتان لكلّ خلفيّة: عريضةٌ وطوليّة.**
+	//
+	// (قرارُ المالك 2026-08-09: «نقوم برفع صورتين أفضل — لا أريد أن يبدو الموقع
+	//  مختلفاً عن الجوّال والهويّة البصريّة مختلفة».)
+	//
+	// **وعُرض عليه القصُّ بنقطة تركيزٍ فرفضه**: القصُّ يُري الجوّالَ جزءاً من
+	// صورةٍ صُمّمت لشاشةٍ عريضة — **فيبدو موقعان لا موقعاً واحداً.**
+	//
+	// **ومن يصمّم النسختين يضبط هويّتَه في الاثنين** — وهو ما لا تفعله خوارزميّةُ
+	// قصٍّ مهما دقّت: **هي تختار ما تُبقيه، لا ما يُقال.**
+	//
+	// **وفارغةُ الجوّال تسقط إلى العريضة** — فمن رفع واحدةً يبقى موقعُه عاملاً.
+	{Key: "platform.background", Group: GroupSite, Section: "page.background", Kind: KindMedia, Default: ""},
+	{Key: "platform.background_mobile", Group: GroupSite, Section: "page.background", Kind: KindMedia, Default: ""},
 
 	// **وحجابُها** — صورةٌ فوتوغرافيّةٌ فيها تفاصيلُ تُنافس النصَّ فوقها.
 	//
 	// **والتوكنزُ محسوبةٌ على تدرّجٍ يُعرف أفتحُ بقعةٍ فيه** — وصورةٌ فيها
 	// بياضٌ ساطعٌ تكسر ذلك القياس، **والحجابُ هو ما يُعيده.**
-	{Key: "platform.background_dim", Group: GroupPlatform, Kind: KindPercent, Default: 55,
+	{Key: "platform.background_dim", Group: GroupSite, Section: "page.background", Kind: KindPercent, Default: 55,
 		ShowWhen: &Condition{Key: "platform.background", NotEmpty: true}},
 
-	{Key: "auth.background", Group: GroupPlatform, Kind: KindMedia, Default: ""},
+	// **وثلاثُ شاشاتٍ صفحةٌ واحدةٌ في الضبط.**
+	//
+	// (قرارُ المالك 2026-08-09: «صفحة الدخول وإنشاء حساب واستعادة كلمة
+	//  المرور صفحةٌ واحدة تكون، مشان نتحكّم بصورة الخلفيّة تبعهنّ».)
+	//
+	// **وهي شاشةٌ واحدةٌ في عين الزائر**: يدخل منها أو يسجّل أو ينسى — **وخلفيّةٌ
+	// تختلف بين الثلاث تُقرأ موقعين لا موقعاً.**
+	{Key: "auth.background", Group: GroupSite, Section: "page.auth", Kind: KindMedia, Default: ""},
+	{Key: "auth.background_mobile", Group: GroupSite, Section: "page.auth", Kind: KindMedia, Default: ""},
 
 	// **وشفافيّةُ الطبقة فوق الخلفيّة** — (قرارُ المالك ٢٠٢٦-٠٨-٠٦).
 	//
@@ -319,7 +428,7 @@ var Catalog = []Def{
 	// عشرون، وأخرى بيضاءُ تحتاج ثمانين. **فصار شريطاً يُسحب ويُرى أثرُه.**
 	//
 	// **وصفرٌ يعني بلا طبقة** — وهو حقُّ من رفع صورةً مهيّأةً أصلاً.
-	{Key: "auth.background_dim", Group: GroupPlatform, Kind: KindPercent, Default: 70,
+	{Key: "auth.background_dim", Group: GroupSite, Section: "page.auth", Kind: KindPercent, Default: 70,
 		ShowWhen: &Condition{Key: "auth.background", NotEmpty: true}},
 
 	// ══════════════════════════════════════════════════════════════════════
@@ -355,7 +464,69 @@ var Catalog = []Def{
 	// **وافتراضُه التشغيل**: هو أسهلُ بابٍ لمن لا يحفظ كلمةَ مرور.
 	{Key: "auth.otp_login", Group: GroupPlatform, Kind: KindBool, Default: true},
 
-	{Key: "shop.rail_auto", Group: GroupPlatform, Kind: KindBool, Default: true},
+	// ── عرضُ الصفحة الرئيسيّة ───────────────────────────────────────────
+	//
+	// (تصحيحُ المالك 2026-08-09: «الصفحة الرئيسيّة مو بانر، هو صورةٌ كاملةٌ
+	//  للصفحة… ما بدّي البانر بالصفحة الرئيسيّة».)
+	//
+	// **الرئيسيّةُ صورةٌ تملأ الشاشة** — لا شريطَ لافتاتٍ يتبدّل. فضبطُها
+	// إعدادٌ لا صفٌّ في جدول: **شيءٌ واحدٌ لا قائمة.**
+	//
+	// **ولا نصَّ فوقها ولا زرّ.**
+	//
+	// (قرارُ المالك 2026-08-09: «هذول احذفهم، ما بدّي ياهم» — عن العنوان
+	//  والنصّ وكلمة الزرّ ووجهته.)
+	//
+	// **وكان أربعةَ حقولٍ بحجّة أنّ الحرفَ الحقيقيَّ أوضحُ من المطبوع** —
+	// **وهو صحيحٌ حيث تكون الصورةُ مشهداً.** وصورةُ المالك تصميمٌ كاملٌ فيه
+	// عنوانُه وزرُّه، **فنصٌّ فوقها يزاحم نصَّها.**
+	//
+	// **وفارغُها لا يُعرض**: رئيسيّةٌ لم تُضبط بعدُ تبقى فارغةً كما كانت.
+	// **وصورتان لا واحدة.**
+	//
+	// (سأل المالك 2026-08-09: «الصورة معطيها تمدّد كثير… أو تعطيني القياسات
+	//  الصحيحة لأصمّم الصورة بها».)
+	//
+	// **وقيست المساحةُ فتبيّن أنّه سؤالٌ بلا جوابٍ واحد**: ما بين الشريط
+	// والتذييل نسبتُه **2.12:1 على لابتوب** و**0.57:1 على هاتف** — أي أنّ
+	// العريضةَ تصير طوليّةً بأربعة أضعاف. **وصورةٌ واحدةٌ تملأ الاثنين تُقصّ
+	// في أحدهما حتماً**، ولا مقاسَ «صحيح» يُعطى.
+	//
+	// **فالجوابُ صورتان**: عريضةٌ للشاشة وطوليّةٌ للهاتف — وهو ما تفعله كلُّ
+	// واجهةٍ فيها عرضٌ يملأ الشاشة.
+	//
+	// **وفارغةُ الهاتف تسقط إلى العريضة** — فمن رفع واحدةً يبقى موقعُه عاملاً.
+	{Key: "home.image", Group: GroupSite, Section: "page.home", Kind: KindMedia, Default: ""},
+	{Key: "home.image_mobile", Group: GroupSite, Section: "page.home", Kind: KindMedia, Default: ""},
+
+	// ── سلايدر لافتات التسوّق ──────────────────────────────────────────
+	//
+	// (طلبُ المالك 2026-08-09: «نضيف السلايدر بالإعدادات لصفحة التسوّق مع
+	//  العمل التلقائيّ حسب الثواني».)
+	//
+	// **وكانت خمسُ ثوانٍ مكتوبةً في المكوّن** — لا أحدَ يبدّلها إلّا بنشر.
+	// **ومهلةُ اللافتة قرارُ تسويقٍ لا قرارُ برمجة**: لافتةٌ فيها جملةٌ تُقرأ
+	// في ثانيتين، وأخرى فيها عرضٌ يحتاج ستّاً.
+	//
+	// **والإيقافُ مفتاحٌ لا صفرٌ في الثواني**: من أراد أن تقف يقول ذلك
+	// صراحةً، **ولا يكتب صفراً في حقلِ مدّةٍ فيُقرأ خطأً.**
+	// ── نصوصُ الصفحات ──────────────────────────────────────────────────
+	//
+	// **تُبدَّل من اللوحة بلا نشر** — وفارغُها يعرض نصَّ المعجم.
+	{Key: "page.help_text", Group: GroupSite, Section: "page.help", Kind: KindLongText,
+		Default: ""},
+	{Key: "page.terms_text", Group: GroupSite, Section: "page.terms", Kind: KindLongText,
+		Default: ""},
+	{Key: "page.privacy_text", Group: GroupSite, Section: "page.privacy", Kind: KindLongText,
+		Default: ""},
+
+	{Key: "shop.banner_auto", Group: GroupSite, Section: "page.shop", Kind: KindBool,
+		Default: true},
+	{Key: "shop.banner_seconds", Group: GroupSite, Section: "page.shop", Kind: KindInt,
+		Min: 2, Max: 30, Default: 5, Unit: "seconds",
+		ShowWhen: &Condition{Key: "shop.banner_auto", Equals: []string{"true"}}},
+
+	{Key: "shop.rail_auto", Group: GroupSite, Section: "page.shop", Kind: KindBool, Default: true},
 
 	// **المهلةُ بالثواني لا بالملّي** — الإعدادُ يُقرأ بعينٍ بشريّة، **و٤٥٠٠
 	// تُقرأ رقماً و٤٫٥ تُقرأ ثانيةً.**
@@ -364,7 +535,7 @@ var Catalog = []Def{
 	// أسوأُ من ألّا تتحرّك.** والأقصى ثلاثون: ما فوقها لا يُقرأ حركةً أصلاً.
 	//
 	// **ويُخفى حين تُطفأ الجولة** — إعدادٌ لا أثرَ له يُقرأ عطباً.
-	{Key: "shop.rail_seconds", Group: GroupPlatform, Kind: KindInt,
+	{Key: "shop.rail_seconds", Group: GroupSite, Section: "page.shop", Kind: KindInt,
 		Min: 2, Max: 30, Unit: "second", Default: 5,
 		ShowWhen: &Condition{Key: "shop.rail_auto", Equals: []string{"true"}}},
 
@@ -943,6 +1114,44 @@ func Validate(key string, v any) (any, error) {
 			return nil, ErrInvalidValue{Key: key, Reason: "خارج المدى [0..100]"}
 		}
 		return int64(n), nil
+
+	case KindLongText:
+		// **ولا حدَّ محارفَ إلّا سقفاً يمنع الإغراق** — سياسةُ خصوصيّةٍ كاملةٌ
+		// تبلغ آلافاً، **وحقلٌ يُرفض عند خمسمئةٍ لا يصلح لها.**
+		t, ok := v.(string)
+		if !ok {
+			return nil, ErrInvalidValue{Key: key, Reason: "ليست نصاً"}
+		}
+		if len([]rune(t)) > 20000 {
+			return nil, ErrInvalidValue{Key: key, Reason: "أطول من ٢٠٠٠٠ محرف"}
+		}
+		return t, nil
+
+	case KindGeo:
+		// **ويُفحص أنّه نقطةٌ على الأرض لا نصٌّ فيه فاصلة.**
+		//
+		// **والمدى يُفحص**: خطُّ عرضٍ فوق ٩٠ لا وجودَ له، **ومن كتب `90,200`
+		// وقع مكتبُه خارج الكوكب** فلا تُظهره الخريطةُ ولا يُقال له لماذا.
+		g, ok := v.(string)
+		if !ok {
+			return nil, ErrInvalidValue{Key: key, Reason: "ليست موقعاً"}
+		}
+		if g == "" {
+			return "", nil
+		}
+		parts := strings.Split(g, ",")
+		if len(parts) != 2 {
+			return nil, ErrInvalidValue{Key: key, Reason: "الموقع يُكتب «عرض,طول»"}
+		}
+		lat, err1 := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+		lng, err2 := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+		if err1 != nil || err2 != nil {
+			return nil, ErrInvalidValue{Key: key, Reason: "الموقع ليس رقمين"}
+		}
+		if lat < -90 || lat > 90 || lng < -180 || lng > 180 {
+			return nil, ErrInvalidValue{Key: key, Reason: "الموقع خارج حدود الأرض"}
+		}
+		return fmt.Sprintf("%.6f,%.6f", lat, lng), nil
 
 	case KindMedia:
 		// **ومعرّفُ الوسيط يُفحص أنّه معرّفٌ لا نصٌّ حرّ.**

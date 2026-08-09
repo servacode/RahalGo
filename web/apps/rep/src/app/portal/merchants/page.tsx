@@ -206,7 +206,7 @@ export default function ClientsPage() {
                 media={
                   logo ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logo} alt="" loading="lazy" className="h-12 w-12 rounded-control object-cover" />
+                    <img src={logo} alt="" loading="lazy" className="h-12 w-12 rounded-control object-contain" />
                   ) : (
                     <span className="flex h-12 w-12 items-center justify-center rounded-control bg-primary-tint">
                       <CategoryIcon name={mr.category_icon} size={20} />

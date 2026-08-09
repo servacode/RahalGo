@@ -207,7 +207,7 @@ export function DashboardChrome({
               يفتحها عشرَ مرّاتٍ في اليوم، **والعلامةُ تقول له ما يعرف** —
               وتأخذ سطراً من قائمةٍ طويلة. **ويبقى في البوّابات الأربع**:
               يفتحها صاحبُها مرّةً في اليوم فتقول له أين هو. */}
-          {showBrand && <BrandMark size={52} rounded="card" />}
+          {showBrand && <BrandMark size={92} rounded="card" />}
         </div>
         <button
           onClick={() => setMenuOpen(false)}

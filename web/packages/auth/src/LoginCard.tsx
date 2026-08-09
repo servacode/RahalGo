@@ -121,7 +121,7 @@ export function LoginCard({
 
      **ومن مرّر `otp` وحدَها ثمّ أُطفئ الرمزُ يسقط إلى كلمة المرور** — وإلّا
      بقيت بوّابتُه بلا بابٍ يعمل. */
-  const { otpLogin, authBg, authBgDim } = usePlatform();
+  const { otpLogin, authBg, authBgMobile, authBgDim } = usePlatform();
   const allow: "both" | "password" | "otp" = otpLogin ? methods : "password";
   const [mode, setMode] = useState<Mode>(initialMode);
 
@@ -684,7 +684,7 @@ export function LoginCard({
 
           **و`fixed` لا `absolute`**: البطاقةُ تطول في وضع التسجيل، **وخلفيّةٌ
           تتبع الطولَ تنقطع عند حافّة المحتوى.** */}
-      {authBg && (
+      {(authBg || authBgMobile) && (
         <>
           {/* @single-child — بقيت الشظيّةُ لأنّ التعليقَ ولدٌ ثانٍ في JSX.
               **والرسمُ كلُّه في `theme.css`** (`auth-bg-image`) — **الصورةُ
@@ -697,7 +697,10 @@ export function LoginCard({
             className="auth-bg-image"
             style={
               {
-                "--auth-bg": `url(${authBg})`,
+                ...(authBg ? { "--auth-bg": `url(${authBg})` } : {}),
+                /* **ونسخةُ الجوّال** — يقرؤها الثيمُ تحت ٦٤٠ بكسلاً وحدَها.
+                   (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «نرفع صورتين أفضل».) */
+                ...(authBgMobile ? { "--auth-bg-mobile": `url(${authBgMobile})` } : {}),
                 "--auth-bg-dim": authBgDim / 100,
               } as React.CSSProperties
             }
@@ -744,7 +747,7 @@ export function LoginCard({
 
                   **ومن الإعدادات لا من المعجم**: شعارٌ إن رُفع وإلّا أوّلُ
                   حرفٍ من الاسم المضبوط. */}
-              <BrandMark size={76} rounded="card" className="mx-auto mb-5" />
+              <BrandMark size={128} rounded="card" className="mx-auto mb-5" />
               {head.title && (
                 <h1 className="heading-section tracking-tight text-ink">{head.title}</h1>
               )}

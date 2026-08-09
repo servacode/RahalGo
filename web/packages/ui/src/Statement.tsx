@@ -87,7 +87,7 @@ export function StatementSheet({
   onBack?: () => void;
 }) {
   /* **واسمُ المنصة من الإعدادات** — كالفاتورة، والكشفُ يُسلَّم كذلك. */
-  const { name: platformName } = usePlatform();
+  const { name: platformName, supportPhone: platformSupport } = usePlatform();
   const rows = data?.transactions ?? [];
 
   // من الأقدم إلى الأحدث: الكشف يُقرأ تصاعدياً كي يتراكم الرصيد الجاري أمام
@@ -218,8 +218,12 @@ export function StatementSheet({
                       {S.opening}
                     </td>
                     <td className="py-2" />
-                    <td className="py-2 text-end tabular-nums" dir="ltr">
-                      {fmtNum(data?.opening ?? 0)}
+                    {/* **و`dir` على الرقم لا على الخانة** — «النهاية» تتبع
+                        الاتّجاه، فخانةٌ `ltr` تحاذي يميناً ورأسُها يحاذي
+                        يساراً. (شكوى المالك ٢٠٢٦-٠٨-٠٩ على الفاتورة، وهذا
+                        الجدولُ أخوها.) */}
+                    <td className="py-2 text-end tabular-nums">
+                      <span dir="ltr">{fmtNum(data?.opening ?? 0)}</span>
                     </td>
                   </tr>
 
@@ -241,13 +245,14 @@ export function StatementSheet({
                         className={`py-2 text-end align-top font-bold tabular-nums ${
                           t.amount >= 0 ? "text-success" : "text-danger"
                         }`}
-                        dir="ltr"
                       >
-                        {t.amount >= 0 ? "+" : ""}
-                        {fmtNum(t.amount)}
+                        <span dir="ltr">
+                          {t.amount >= 0 ? "+" : ""}
+                          {fmtNum(t.amount)}
+                        </span>
                       </td>
-                      <td className="py-2 text-end align-top tabular-nums text-ink-muted" dir="ltr">
-                        {fmtNum(running[i] ?? 0)}
+                      <td className="py-2 text-end align-top tabular-nums text-ink-muted">
+                        <span dir="ltr">{fmtNum(running[i] ?? 0)}</span>
                       </td>
                     </tr>
                   ))}
@@ -260,8 +265,8 @@ export function StatementSheet({
                       {S.closing}
                     </td>
                     <td className="py-2" />
-                    <td className="py-2 text-end tabular-nums" dir="ltr">
-                      {fmtNum(data?.closing ?? 0)}
+                    <td className="py-2 text-end tabular-nums">
+                      <span dir="ltr">{fmtNum(data?.closing ?? 0)}</span>
                     </td>
                   </tr>
                 </tbody>
@@ -288,6 +293,17 @@ export function StatementSheet({
                 </span>
               </span>
             </div>
+
+            {/* **وبابُ الاستفسار على الورق** — كالفاتورة، **والكشفُ يُطوى
+                ويُراجَع بعد أيّام.** وفارغٌ يُخفي السطر. */}
+            {platformSupport && (
+              <p className="mt-3 text-center text-xs font-medium">
+                {S.support}{" "}
+                <span dir="ltr" className="tabular-nums">
+                  {platformSupport}
+                </span>
+              </p>
+            )}
 
             <p className="mt-4 border-t border-line-soft pt-3 text-xs leading-relaxed text-ink-muted">
               {withPlatform(S.footer, platformName)}

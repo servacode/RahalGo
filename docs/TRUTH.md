@@ -394,20 +394,9 @@
 | المفتاح | المجموعة | النوع | الافتراضيّ |
 |---|---|---|---|
 | `platform.orders_mode` | المنصة | choice | `platform` |
-| `platform.legal_name` | المنصة | text | `` |
-| `platform.support_phone` | المنصة | text | `` |
-| `platform.address` | المنصة | text | `` |
 | `platform.app_url` | المنصة | text | `` |
 | `platform.app_file` | المنصة | file | `` |
-| `platform.name` | المنصة | text | `` |
-| `platform.logo` | المنصة | media | `` |
-| `platform.background` | المنصة | media | `` |
-| `platform.background_dim` | المنصة | percent | `55` |
-| `auth.background` | المنصة | media | `` |
-| `auth.background_dim` | المنصة | percent | `70` |
 | `auth.otp_login` | المنصة | bool | `true` |
-| `shop.rail_auto` | المنصة | bool | `true` |
-| `shop.rail_seconds` | المنصة | int | `5` |
 | `orders.max_sources` | المنصة | int | `2` |
 | `orders.max_open_per_customer` | المنصة | int | `3` |
 | `orders.delivery_timeout_min` | المنصة | int | `60` |
@@ -429,6 +418,30 @@
 | `support.complaint_window_hours` | المنصة | int | `24` |
 | `platform.invite_code` | المنصة | text | `RAHALGO` |
 | `whatsapp.otp_template` | المنصة | text | `رمز التحقق: {code}` |
+| `platform.support_phone` |  | text | `` |
+| `platform.address` |  | text | `` |
+| `platform.location` |  | geo | `` |
+| `platform.facebook` |  | text | `` |
+| `platform.instagram` |  | text | `` |
+| `platform.telegram` |  | text | `` |
+| `platform.whatsapp` |  | text | `` |
+| `platform.name` |  | text | `` |
+| `platform.logo` |  | media | `` |
+| `platform.background` |  | media | `` |
+| `platform.background_mobile` |  | media | `` |
+| `platform.background_dim` |  | percent | `55` |
+| `auth.background` |  | media | `` |
+| `auth.background_mobile` |  | media | `` |
+| `auth.background_dim` |  | percent | `70` |
+| `home.image` |  | media | `` |
+| `home.image_mobile` |  | media | `` |
+| `page.help_text` |  | longtext | `` |
+| `page.terms_text` |  | longtext | `` |
+| `page.privacy_text` |  | longtext | `` |
+| `shop.banner_auto` |  | bool | `true` |
+| `shop.banner_seconds` |  | int | `5` |
+| `shop.rail_auto` |  | bool | `true` |
+| `shop.rail_seconds` |  | int | `5` |
 | `drivers.assignment_mode` | السائقون | choice | `queue` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
 | `drivers.direct_assign` | السائقون | bool | `false` |

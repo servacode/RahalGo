@@ -33,9 +33,15 @@ interface Wire {
   otp_login?: boolean;
   app_url?: string;
   auth_bg?: string | null;
+  auth_bg_mobile?: string | null;
   auth_bg_dim?: number;
   site_bg?: string | null;
+  site_bg_mobile?: string | null;
   site_bg_dim?: number;
+  support_phone?: string;
+  social?: Record<string, unknown>;
+  address?: string;
+  location?: string;
 }
 
 /**
@@ -45,6 +51,28 @@ interface Wire {
  * **و`no-store` لأنّ الهويّةَ تُبدَّل من اللوحة** — وصفحةٌ مخزَّنةٌ تعرض
  * شعاراً حُذف.
  */
+/**
+ * **قارئُ حسابات التواصل** — واحدٌ للخادم والمتصفّح.
+ *
+ * **وما ليس نصّاً يُقرأ فراغاً**: إعدادٌ حُذف أو خادمٌ قديمٌ لا يرسله
+ * **يجب ألّا يكسر التذييل** — يُخفي أيقونةً لا غير.
+ */
+export function readSocial(v: unknown): {
+  facebook: string;
+  instagram: string;
+  telegram: string;
+  whatsapp: string;
+} {
+  const o = (v ?? {}) as Record<string, unknown>;
+  const at = (k: string) => (typeof o[k] === "string" ? (o[k] as string) : "");
+  return {
+    facebook: at("facebook"),
+    instagram: at("instagram"),
+    telegram: at("telegram"),
+    whatsapp: at("whatsapp"),
+  };
+}
+
 export async function fetchPlatform(apiBase: string): Promise<Platform> {
   const empty: Platform = {
     name: "",
@@ -52,9 +80,15 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
     otpLogin: true,
     appUrl: "",
     authBg: null,
+    authBgMobile: null,
     authBgDim: 70,
     siteBg: null,
+    siteBgMobile: null,
     siteBgDim: 55,
+    supportPhone: "",
+    social: { facebook: "", instagram: "", telegram: "", whatsapp: "" },
+    address: "",
+    location: "",
   };
   try {
     const res = await fetch(`${apiBase}/api/v1/public/platform`, { cache: "no-store" });
@@ -69,9 +103,15 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
       otpLogin: d.otp_login !== false,
       appUrl: typeof d.app_url === "string" ? d.app_url : "",
       authBg: d.auth_bg ?? null,
+      authBgMobile: d.auth_bg_mobile ?? null,
       authBgDim: typeof d.auth_bg_dim === "number" ? d.auth_bg_dim : 70,
       siteBg: d.site_bg ?? null,
+      siteBgMobile: d.site_bg_mobile ?? null,
       siteBgDim: typeof d.site_bg_dim === "number" ? d.site_bg_dim : 55,
+      supportPhone: typeof d.support_phone === "string" ? d.support_phone : "",
+      social: readSocial(d.social),
+      address: typeof d.address === "string" ? d.address : "",
+      location: typeof d.location === "string" ? d.location : "",
     };
   } catch {
     // @empty-ok — انظر أعلاه: الفراغُ قرارٌ لا صمت.

@@ -42,6 +42,7 @@ import {
   type ReactNode,
 } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { readSocial } from "./platform-server";
 
 /** **والاسمُ الافتراضيُّ في المعجم** — يُقرأ حين لا تُضبط الإعدادات. */
 const m = getMessages(defaultLocale);
@@ -82,6 +83,8 @@ export interface Platform {
    * (قرارُ المالك ٢٠٢٦-٠٨-٠٦.)
    */
   authBg: string | null;
+  /** **نسختُها الطوليّة للجوّال** — وفارغُها يسقط إلى العريضة. */
+  authBgMobile: string | null;
   /**
    * **شفافيّةُ الطبقة فوق الخلفيّة** (٠..١٠٠) — **وصفرٌ يعني بلا طبقة.**
    *
@@ -93,11 +96,35 @@ export interface Platform {
    * المرسوم.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦.)
    */
   siteBg: string | null;
+  /** **نسختُها الطوليّة للجوّال.** */
+  siteBgMobile: string | null;
   /** حجابُها (٠..١٠٠) — **وصورةٌ فوتوغرافيّةٌ تحتاج غالباً ٥٠–٧٠.** */
   siteBgDim: number;
+  /**
+   * **رقمُ الدعم** (`platform.support_phone`) — **وفارغٌ يُخفي السطر.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «بالفاتورة لازم نضيف رقم هاتف الدعم للشكاوى».)
+   *
+   * **الورقةُ تُقرأ بعيداً عن التطبيق** — تُطبع وتُسلَّم، ومن وجد فيها خطأً
+   * لا يجد أين يشتكي. **ورقمٌ على الورق هو البابُ الوحيد حينَها.**
+   */
+  supportPhone: string;
+  /**
+   * **حساباتُ التواصل** — روابطُ من الإعدادات، **وفارغُها لا يُعرض.**
+   *
+   * (طلبُ المالك ٢٠٢٦-٠٨-٠٩: «تواصل معنا وحسابات السوشيال ميديا».)
+   *
+   * **وأيقونةٌ تقود إلى لا شيءٍ أسوأُ من غيابها** — فمنصّةٌ لا تلغرامَ لها
+   * لا تُظهر أيقونتَه.
+   */
+  social: { facebook: string; instagram: string; telegram: string; whatsapp: string };
+  /** **عنوانُ المكتب** (`platform.address`) — وفارغٌ لا يُعرض. */
+  address: string;
+  /** **موقعُه على الخريطة** `"lat,lng"` — وفارغٌ يعني «لا خريطة». */
+  location: string;
 }
 
-const EMPTY: Platform = { name: "", logo: null, otpLogin: true, appUrl: "", authBg: null, authBgDim: 70, siteBg: null, siteBgDim: 55 };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true, appUrl: "", authBg: null, authBgMobile: null, authBgDim: 70, siteBg: null, siteBgMobile: null, siteBgDim: 55, supportPhone: "", social: { facebook: "", instagram: "", telegram: "", whatsapp: "" }, address: "", location: "" };
 
 /**
  * **مسارُ الوسيط يصير رابطاً هنا — لا في كلّ تطبيق.**
@@ -153,7 +180,9 @@ export function PlatformProvider({
       ...pl,
       logo: absolute(pl.logo, apiBase),
       authBg: absolute(pl.authBg, apiBase),
+      authBgMobile: absolute(pl.authBgMobile, apiBase),
       siteBg: absolute(pl.siteBg, apiBase),
+      siteBgMobile: absolute(pl.siteBgMobile, apiBase),
     }),
     [apiBase],
   );
@@ -175,9 +204,15 @@ export function PlatformProvider({
             logo: j.data.logo ?? null,
             otpLogin: j.data.otp_login !== false,
             appUrl: typeof j.data.app_url === "string" ? j.data.app_url : "",
+            supportPhone: typeof j.data.support_phone === "string" ? j.data.support_phone : "",
+            social: readSocial(j.data.social),
+            address: typeof j.data.address === "string" ? j.data.address : "",
+            location: typeof j.data.location === "string" ? j.data.location : "",
             authBg: j.data.auth_bg ?? null,
+            authBgMobile: j.data.auth_bg_mobile ?? null,
             authBgDim: typeof j.data.auth_bg_dim === "number" ? j.data.auth_bg_dim : 70,
             siteBg: j.data.site_bg ?? null,
+            siteBgMobile: j.data.site_bg_mobile ?? null,
             siteBgDim: typeof j.data.site_bg_dim === "number" ? j.data.site_bg_dim : 55,
             }),
           );
@@ -223,7 +258,13 @@ export function PlatformProvider({
        **والافتراضُ صفرٌ حتّى يثبت النجاح** — لا العكس: **الطُّرقُ تُفتح على
        السلامة لا على الأمل.** */
     root.style.setProperty("--site-bg", "none");
+    root.style.setProperty("--site-bg-mobile", "none");
     root.style.setProperty("--site-bg-dim", "0");
+    /* **ونسخةُ الجوّال تُرفع بلا انتظارِ تحميل**: الثيمُ يقرؤها تحت ٦٤٠
+       بكسلاً وحدَها، **والفحصُ الصامتُ للعريضة يكفي شاهداً أنّ الإعدادَ حيّ.** */
+    if (platform.siteBgMobile) {
+      root.style.setProperty("--site-bg-mobile", `url("${platform.siteBgMobile}")`);
+    }
     if (!platform.siteBg) return;
     let alive = true;
     const img = new Image();
@@ -273,41 +314,89 @@ export function brandLetter(name: string): string {
 export function BrandMark({
   size = 36,
   rounded = "control",
+  heightClass,
   className = "",
 }: {
   size?: number;
-  /** `control` للشريط والسايدبار · `card` للطبقات الكبيرة */
-  rounded?: "control" | "card" | "badge";
+  /** `control` للشريط والسايدبار · `card` للطبقات الكبيرة · `none` للأوراق */
+  rounded?: "control" | "card" | "badge" | "none";
+  /**
+   * **ارتفاعٌ بالأصناف بدل الرقم** — لمن يحتاجه يتبدّل بمقاس الشاشة.
+   *
+   * (كشفه المالك ٢٠٢٦-٠٨-٠٩ بلقطةٍ من الجوّال: شعارُ الشريط يلامس بطاقةَ
+   *  الدخول.)
+   *
+   * **والرقمُ يُكتب في `style` فيغلب كلَّ صنف** — فلا سبيل إلى `sm:` معه.
+   * **وشعارٌ يصلح لشاشةٍ عريضةٍ يخنق شريطَ هاتف.**
+   *
+   * **ويبقى `size` مطلوباً**: منه يُحسب سقفُ العرض.
+   */
+  heightClass?: string;
   className?: string;
 }) {
   const { name, logo } = usePlatform();
-  const box = { width: size, height: size };
-  const shape = rounded === "card" ? "rounded-card" : rounded === "badge" ? "rounded-badge" : "rounded-control";
+  /* **و`rounded` تُقبل ولا تُستعمل.**
 
-  if (logo) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={logo}
-        alt={name}
-        style={box}
-        className={`shrink-0 object-cover ${shape} ${className}`}
-      />
-    );
-  }
-  // **ولا مربّعَ ملوّنٌ فارغ**: منصّةٌ لم تَرفع شعاراً ولم تُسمِّ نفسَها
-  // بعدُ **يبقى مكانُ علامتها محجوزاً بهدوء** — فلا ينزلق ما بجانبه حين
-  // تصل، **ولا يُقرأ مربّعٌ صارخٌ فارغٌ عطباً.**
-  const letter = brandLetter(name);
+     كانت تُستدير بها **بطاقةُ الحرف البديل** — وقد ذهبت. **والشعارُ المرفوع
+     لا يُستدار**: صورةٌ صمّمها صاحبُها بحدودها، ومن قصَّ زواياها فرض عليها
+     شكلاً لم تُرسَم له.
+
+     **وتبقى في الواجهة لأنّ ستّةَ مواضعَ تمرّرها** — ونزعُها يكسرها كلَّها
+     لأجل سطرٍ واحد. */
+  void rounded;
+
+  /* ══════════════════════════════════════════════════════════════════
+     **ولا شيءَ حيث لا شعار**
+     ══════════════════════════════════════════════════════════════════
+
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «مربّع اللوغو ألغِه — إذا لم يُرفع لوغو نتركه
+      فارغاً، بدون حرف، بدون شي».)
+
+     **وكان مربّعاً يحمل أوّلَ حرفٍ من الاسم**، وحُجّتُه أنّ مكانَ العلامة
+     يبقى محجوزاً فلا ينزلق ما بجانبه حين تصل. **وثمنُ الحجز أن يُقرأ المربّعُ
+     الفارغُ عطباً** — وهو ما رآه المالك: لوحٌ رماديٌّ لا معنى له.
+
+     **والانزلاقُ يقع مرّةً عند رفع الشعار**، والمربّعُ يُرى في كلّ فتحة.
+
+     **و`brandLetter` تبقى مصدَّرة**: تستعملها شاشاتٌ أخرى لصورةٍ رمزيّةٍ
+     لحسابٍ بلا صورة — **وحذفُ دالّةٍ لأنّ مستعمِلاً واحداً استغنى عنها يكسر
+     الباقين.** */
+  if (!logo) return null;
+
+  /* ══════════════════════════════════════════════════════════════════
+     **الشعارُ عارياً — بلا قرصٍ ولا إطار**
+     ══════════════════════════════════════════════════════════════════
+
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٩ على ثلاث خطوات: «ضِف دائرةً بخلفيّةٍ بيضاء…»
+      ثمّ «صغّر حجم اللوغو والدائرة قليلاً» ثمّ «ألغِ الدائرة البيضاء أيضاً».)
+
+     **فلم يبقَ إلّا المقاس**: أكبرُ ممّا كان بمرّتين وربع، **بلا قرصٍ ولا
+     استدارةٍ ولا إطار.**
+
+     **والارتفاعُ هو المقياس** ويُترك العرضُ على نسبة الصورة، **فيظهر الشعارُ
+     كما صُمِّم** ولا يُقصّ. وسقفٌ للعرض (أربعةُ أضعاف الارتفاع) يمنع شعاراً
+     شريطيّاً من دفع ما بجانبه.
+
+     **ولا ضربَ في المكوّن.**
+
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «كبّر اللوغو فقط بالتوب بار».)
+
+     **كان يُضرب هنا بمرّتين وربع** فكبُر في الشريط والسايدبار وشاشةِ الدخول
+     والورقةِ المطبوعة معاً — **وأُريد الشريطُ وحدَه.**
+
+     **فالمقاسُ ما يُمرَّر لا غير**، ومن أراد أكبرَ مرّر أكبر: **قرارُ الحجم
+     عند من يعرف شاشتَه.** */
+  const h = size;
   return (
-    <span
-      style={{ ...box, fontSize: Math.round(size * 0.44) }}
-      aria-hidden
-      className={`flex shrink-0 items-center justify-center font-bold ${
-        letter ? "bg-primary text-on-bright" : "bg-ink-faint"
-      } ${shape} ${className}`}
-    >
-      {letter}
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logo}
+      alt={name}
+      style={heightClass ? { maxWidth: h * 4 } : { height: h, maxWidth: h * 4 }}
+      className={`w-auto shrink-0 object-contain ${heightClass ?? ""} ${className}`}
+    />
   );
 }
+
+
+

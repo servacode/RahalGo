@@ -111,7 +111,9 @@ export function TopBar({
       {/* **وفجوةٌ لما يجاور العلامة.** كانت الحاويةُ بلا `gap` لأنّها لم
           تحمل إلّا الشعار. **ومن وضع رابطاً بجانبه لَالتصق به** — والتطبيقاتُ
           التي تمرّر شعاراً وحدَه لا يتغيّر شكلُها. */}
-      <div className="flex min-w-0 items-center gap-1 sm:gap-2">{start}</div>
+      {/* **ولا يُقصّ ما يتدلّى منها** — شعارُ الزبون ينزل نصفُه تحت الشريط
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٩)، **و`overflow-hidden` كانت ستبتره.** */}
+      <div className="flex min-w-0 items-center gap-1 overflow-visible sm:gap-2">{start}</div>
 
       {/*
         **وصفُّ الأدوات ينزلق وحدَه إن ضاق.**
@@ -144,7 +146,17 @@ export function TopBar({
 /* **والأيقونةُ تتبع الحرف**: كبُر حرفُ الحبّة من ١٤ إلى ١٦ **فأيقونةٌ
    بعشرين تُقرأ ضامرةً بجانبه.** (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «كبّر التوب بار
    قليلاً وكلمةَ التسوّق مع الأيقونة لتكون واضحة».) */
-export const TOPBAR_ICON = 22;
+/* **ومقاسُ أيقونات الشريط أكبرُ ممّا كان.**
+
+   (طلبُ المالك ٢٠٢٦-٠٨-٠٩: «كبّر أيقونة التسوّق لتكون مناسبةً مع البقية».)
+
+   **وأيقونةُ التسوّق ليست أصغرَ من أخواتها** — كلُّها اثنان وعشرون. **إنّما
+   كبُر ما حولَها**: الشعارُ صار مئةً واثنَي عشرَ، **فبدت الحبّاتُ إلى جانبه
+   صغيرة.**
+
+   **فيُرفع المقاسُ للجميع لا للواحدة** — أيقونةٌ تكبر وحدَها في صفٍّ تُقرأ
+   خطأً في التنضيد لا تمييزاً لها. */
+export const TOPBAR_ICON = 26;
 export const TOPBAR_AVATAR = 36;
 
 /** ارتفاع وحواف موحّدة لكل عناصر الشريط — لا يقرّر كل عنصر مقاسه بنفسه.
@@ -320,6 +332,13 @@ export function AppDownloadChip({ label }: { label: string }) {
       rel="noopener noreferrer"
       title={label}
       aria-label={label}
+      /* **وتبقى في الشريط على كلّ مقاس.**
+
+         (جُرّبت عائمةً على الجوّال بطلب المالك ٢٠٢٦-٠٨-٠٩ ثمّ ردّها: «نرجع
+          الأيقونة للتوب بار».)
+
+         **واسمُها وحدَه يُخفى على الضيّق** والأيقونةُ تبقى: **صفٌّ من
+         أيقوناتٍ يسع، وصفٌّ من أسماءٍ لا يسع.** */
       className={`${chipBase} ${chipTones.plain} border border-line`}
     >
       <IconApp size={TOPBAR_ICON} />
@@ -533,14 +552,31 @@ export function AccountMenu({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={name}
+        title={name}
         className={`taparea flex shrink-0 items-center gap-2 rounded-control p-1 transition-colors ${
           open || inMenu ? "bg-row-hover text-ink" : "text-ink-muted hover:bg-row-hover hover:text-ink"
         }`}
       >
         <Avatar url={avatarUrl} name={name} size={TOPBAR_AVATAR} />
-        {/* **والاسمُ يُقصّ ولا يمدّ الشريط**: أسماءٌ ثلاثيّةٌ تدفع ما بعدها
-            خارجَ الشاشة. */}
-        <span className="max-w-20 truncate text-sm font-medium sm:max-w-28">{name}</span>
+        {/* ══════════════════════════════════════════════════════════
+            **والاسمُ يُخفى على الجوّال ولا يُبتر**
+            ══════════════════════════════════════════════════════════
+
+            (شكوى المالك ٢٠٢٦-٠٨-٠٩ بلقطةٍ من الهاتف: «اسم المستخدم مو
+             واضح — بدنا نحلّها بطريقةٍ احترافيّة».)
+
+            **كان يُقصّ عند ثمانين بكسلاً** فيخرج «ليث الز» — **واسمٌ مبتورٌ
+            أسوأُ من لا اسم**: يُقرأ عطباً في الشاشة، **ومن رآه ظنّ أنّ
+            حسابَه مسجَّلٌ باسمٍ ناقص.**
+
+            **والصورةُ الرمزيّةُ تكفي هويّةً**: حرفُ الاسم فيها، **والاسمُ
+            كاملاً في القائمة حين تُفتح** (`{name}` في رأسها).
+
+            **ومن `sm` فصاعداً يظهر** — هناك عرضٌ يسعه بلا قصّ.
+
+            **ويبقى للقارئ الصوتيّ** في `aria-label` الزرّ. */}
+        <span className="hidden max-w-28 truncate text-sm font-medium sm:inline">{name}</span>
         <IconChevronDown
           size={15}
           className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}

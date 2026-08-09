@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Radio, Textarea } from "@rahalgo/ui";
+import { Button, Modal, Radio, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -71,17 +71,26 @@ export default function ComplaintModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center scrim p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-sm surface p-5 elev-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="heading-card mb-1">{C.title}</h2>
-        <p className="mb-4 text-sm text-ink-muted">#{orderNumber}</p>
-        <form onSubmit={submit} className="space-y-4">
+    /* ══════════════════════════════════════════════════════════════════
+       **والنافذةُ من العُدّة لا مبنيّةً بيدها**
+       ══════════════════════════════════════════════════════════════════
+
+       (شكوى المالك ٢٠٢٦-٠٨-٠٩ بلقطة: «شوف الشكوى كيف تظهر وقت نضغط على
+        شكوى» — والنافذةُ مقصوصةٌ من أعلى وأسفل.)
+
+       **كانت طبقةً وصندوقاً مكتوبين هنا**: `fixed inset-0` و`max-w-sm`
+       **بلا سقفِ ارتفاعٍ ولا تمرير.** وفيها ثمانيةُ أسبابٍ وصندوقُ نصٍّ
+       وزرّان — **أطولُ من شاشة هاتف**، فيخرج رأسُها وذيلُها عن الشاشة
+       **ولا سبيلَ إلى تمريرها.**
+
+       **و`Modal` المركزيّ يحمل ما نقص**: سقفُ `90vh` وتمريرٌ عند الفيض،
+       وزرُّ إغلاقٍ يُرى، و`Esc`، والإغلاقُ بالنقر خارجَها. **ومن بنى
+       نافذةً بيده أعاد بناءَ أربعةٍ منها ونسي واحدة.**
+
+       **والعنوانُ يحمل رقمَ الطلب** — كان سطراً تحته، **وسطرٌ يُقصّ مع
+       الرأس حين تفيض.** */
+    <Modal open onClose={onClose} title={`${C.title} · #${orderNumber}`}>
+      <form onSubmit={submit} className="space-y-4">
           {/* **الاختيارُ من العُدّة لا مرتجَلاً.**
 
               كان `<input type="radio" className="accent-primary">` — **والرسمُ
@@ -122,8 +131,7 @@ export default function ComplaintModal({
               {m.common.cancel}
             </Button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }

@@ -19,6 +19,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { IconWarning, IconError, IconSuccess, IconNote, IconClose } from "./icons";
@@ -332,8 +333,12 @@ export function Confirm({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onCancel]);
 
-  if (!open) return null;
-  return (
+  if (!open || typeof document === "undefined") return null;
+
+  /* **وتُرسم في جذر المستند** — كالنافذة: `fixed` داخلَ بطاقةٍ عليها
+     `backdrop-filter` تُقاس بالبطاقة لا بالشاشة، **فتقع تحت ما فوقها في
+     الشجرة مهما رُفع `z`.** (شكوى المالك ٢٠٢٦-٠٨-٠٩.) */
+  return createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center scrim p-0 sm:items-center sm:p-4"
       onClick={onCancel}
@@ -368,6 +373,7 @@ export function Confirm({
           </span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

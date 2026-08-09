@@ -11,7 +11,8 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { Alert } from "./feedback";
 import { emitLocal } from "./Notifications";
-import { IconUser, IconLock, IconPhone, IconWarning, IconCheck, IconWhatsApp, IconVerified } from "./icons";
+import { IconUser, IconLock, IconPhone, IconWarning, IconCheck, IconVerified } from "./icons";
+import { IconWhatsApp } from "./brand-icons";
 
 const m = getMessages(defaultLocale);
 const A = m.shared.account;

@@ -59,15 +59,11 @@ export default function RatingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center scrim p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-sm surface p-5 elev-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="heading-card mb-1">{R.title}</h2>
-        <p className="mb-4 text-sm text-ink-muted">
-          #{order.number} — {order.items_preview}
-        </p>
+    /* **ومن العُدّة لا مبنيّةً بيدها** — كنافذة الشكوى: طبقةٌ وصندوقٌ
+       مكتوبان هنا **بلا سقفِ ارتفاعٍ ولا تمرير**، فتُقصّ على شاشةٍ قصيرة.
+       (شكوى المالك ٢٠٢٦-٠٨-٠٩ على أختِها، **والعلّةُ نسخةٌ منها**.) */
+    <Modal open onClose={onClose} title={`${R.title} · #${order.number}`}>
+      <p className="mb-4 text-sm text-ink-muted">{order.items_preview}</p>
         <form onSubmit={submit} className="space-y-4">
           <div>
             <p className="mb-1.5 text-sm font-medium">{R.platform}</p>
@@ -104,8 +100,7 @@ export default function RatingModal({
               {busy ? m.common.loading : R.submit}
             </Button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }

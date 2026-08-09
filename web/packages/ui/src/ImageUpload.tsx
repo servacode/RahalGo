@@ -121,8 +121,14 @@ export function ImageUpload({
             <IconAdd size={24} />
           )}
         </button>
+        {/* **ولا سطرَ يعدّد الصيغَ والحجم.**
+
+            (شكوى المالك ٢٠٢٦-٠٨-٠٩: «هي النصوص كلها ما تلزم».)
+
+            **منتقي الملفّات يفلتر بنفسه** (`accept`)، **والخطأُ يُقال حين
+            يقع** لا قبله: «الملف ليس صورة» · «أكبر من الحدّ». **وسطرٌ يشرح
+            ما لن يحدث يزاحم ما يحدث.** */}
         <div className="space-y-1.5">
-          <p className="text-xs text-ink-muted">{m.common.media.hint}</p>
           {preview && !busy && (
             <Button
               type="button"

@@ -68,7 +68,7 @@ export function Invoice({
 }) {
   /* **واسمُ المنصة من الإعدادات لا من نصٍّ مكتوب** — الفاتورةُ تُطبع وتُسلَّم
      للزبون، **وكانت تخرج بـ`{platform}` حرفاً حرفاً.** */
-  const { name: platformName } = usePlatform();
+  const { name: platformName, supportPhone: platformSupport } = usePlatform();
   const items = order.items ?? [];
   const commission = order.platform_commission ?? 0;
   const net = order.subtotal - commission;
@@ -159,14 +159,26 @@ export function Invoice({
                       )}
                       {it.note && <span className="block text-xs text-ink-muted">{it.note}</span>}
                     </td>
-                    <td className="py-2 text-end align-top tabular-nums" dir="ltr">
-                      {fmtNum(it.qty)}
+                    {/* **و`dir` على المحتوى لا على الخانة.**
+
+                        (شكوى المالك ٢٠٢٦-٠٨-٠٩ بلقطةِ فاتورة: «المحاذاة مو
+                         مضبوطة» — الرؤوسُ في جهةٍ والأرقامُ في أخرى.)
+
+                        **الخانةُ كانت `dir="ltr"` و`text-end` معاً** — و«النهاية»
+                        تتبع الاتّجاه: **في الرأس (RTL) هي اليسار، وفي الخانة
+                        (LTR) هي اليمين.** فصفٌّ واحدٌ بمحاذاتين.
+
+                        **والاتّجاهُ إنّما أُريد للرقم نفسِه** — ليُقرأ
+                        `30,000` لا معكوساً. **فيُلفّ الرقمُ وحدَه**، وتبقى
+                        الخانةُ على اتّجاه الجدول فتحاذي رأسَها. */}
+                    <td className="py-2 text-end align-top tabular-nums">
+                      <span dir="ltr">{fmtNum(it.qty)}</span>
                     </td>
-                    <td className="py-2 text-end align-top tabular-nums text-ink-muted" dir="ltr">
-                      {fmtNum(it.unit_price)}
+                    <td className="py-2 text-end align-top tabular-nums text-ink-muted">
+                      <span dir="ltr">{fmtNum(it.unit_price)}</span>
                     </td>
-                    <td className="py-2 text-end align-top font-bold tabular-nums" dir="ltr">
-                      {fmtNum(it.unit_price * it.qty)}
+                    <td className="py-2 text-end align-top font-bold tabular-nums">
+                      <span dir="ltr">{fmtNum(it.unit_price * it.qty)}</span>
                     </td>
                   </tr>
                 ))}
@@ -184,7 +196,24 @@ export function Invoice({
         <div className="mt-5 flex justify-end" data-print-keep>
           <dl className="w-full max-w-xs space-y-1.5 text-sm">
             <Row label={V.subtotal} value={order.subtotal} />
-            <Row label={V.deliveryFee} value={order.delivery_fee} />
+            {/* ══════════════════════════════════════════════════════
+                **وصفرُ الأجرة تُقال «مجاني»**
+                ══════════════════════════════════════════════════════
+
+                (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «وقت تكون الرسوم صفر، طلب مجاني،
+                 لازم يُكتب الرسوم مجاني مو ٠».)
+
+                **والصفرُ رقمٌ يُقرأ حساباً، و«مجّاني» خبرٌ يُقرأ هديّة.**
+                والفرقُ بينهما ليس تجميلاً: **من رأى صفراً ظنّ الحقلَ لم
+                يُحسب بعد** — ومن قرأ «مجّاني» علم أنّه رُبح. */}
+            {order.delivery_fee === 0 ? (
+              <div className="flex items-center justify-between">
+                <dt className="text-ink-muted">{V.deliveryFee}</dt>
+                <dd className="font-medium text-success">{V.deliveryFree}</dd>
+              </div>
+            ) : (
+              <Row label={V.deliveryFee} value={order.delivery_fee} />
+            )}
             {order.discount > 0 && (
               <Row label={V.discount} value={-order.discount} tone="success" />
             )}
@@ -225,6 +254,31 @@ export function Invoice({
             </div>
             <p className="pt-1 text-2xs leading-relaxed text-ink-muted">{V.settlementHint}</p>
           </dl>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════
+            **وبابُ الشكوى على الورق**
+            ══════════════════════════════════════════════════════════
+
+            (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «بالفاتورة لازم نضيف رقم هاتف الدعم
+             للشكاوى».)
+
+            **الورقةُ تُقرأ بعيداً عن التطبيق** — تُطوى في جيبٍ وتُخرَج بعد
+            يومين. **ومن وجد فيها خطأً لا يفتح التطبيقَ ليبحث عن بابِ
+            الشكاوى** — يريد رقماً يتّصل به الآن.
+
+            **ورقمُه من الإعدادات لا من نصٍّ مكتوب**: يُبدَّل من اللوحة
+            فتتبعه الأوراقُ كلُّها. **وفارغٌ يُخفي السطرَ** — سطرُ دعمٍ بلا
+            رقمٍ وعدٌ لا يُنفَّذ.
+
+            **و`ltr` على الرقم وحدَه** ليُقرأ كما يُطلَب. */}
+        {platformSupport && (
+          <p className="mt-3 text-center text-xs font-medium">
+            {V.support}{" "}
+            <span dir="ltr" className="tabular-nums">
+              {platformSupport}
+            </span>
+          </p>
         )}
 
         <p className="mt-4 border-t border-line-soft pt-3 text-xs leading-relaxed text-ink-muted">

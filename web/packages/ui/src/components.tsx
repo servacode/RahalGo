@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { IconView, IconViewOff, IconCheck, IconClose } from "./icons";
 
@@ -644,6 +645,38 @@ const modalSizes = {
   "2xl": "max-w-6xl",
 } as const;
 
+/**
+ * **والطبقةُ تُرسم في جذر المستند لا حيث كُتبت.**
+ *
+ * (شكوى المالك ٢٠٢٦-٠٨-٠٩: «رسائل الشكوى لساتها تحت الكروت والعناصر، لازم
+ *  تكون فوقهن».)
+ *
+ * # لماذا لم يكفِ `z-50`
+ *
+ * **`z-index` لا يُقارَن إلّا بين إخوةٍ في سياقِ تكديسٍ واحد.** ونافذةُ
+ * الشكوى مكتوبةٌ **داخل بطاقة الطلب** — والبطاقةُ عليها `surface`، **وفيه
+ * `backdrop-filter`.**
+ *
+ * **وكلُّ عنصرٍ له `backdrop-filter` أو `transform` أو `filter` يُنشئ سياقَ
+ * تكديسٍ جديداً** — بل ويصير **الكتلةَ الحاوية لأحفاده `fixed`.** فالنافذةُ
+ * لا تُقاس بالشاشة بل بالبطاقة، **و`z-50` فيها يزاحم إخوتَها داخلَ البطاقة
+ * لا شريطَ الصفحة ولا البطاقاتِ الأخرى.**
+ *
+ * **فتظهر تحت ما هو فوقها في الشجرة** مهما رُفع رقمُها — وهو ما رآه المالك:
+ * لوحٌ معتمٌ تقطعه عناصرُ من فوقُ ومن تحت.
+ *
+ * # ورفعُ الرقم ليس علاجاً
+ *
+ * **`z-[9999]` داخلَ سياقٍ محبوسٍ يبقى محبوساً** — يعلو على إخوته فقط.
+ * **والعلاجُ أن تخرج من الشجرة**: تُرسم في `document.body` فتصير أختاً لكلّ
+ * شيءٍ في الصفحة، **وعندها وحدَها يعني `z-50` ما يقوله.**
+ *
+ * **والحالةُ تبقى حيث كُتبت**: البوّابةُ تنقل الرسمَ لا الشجرةَ المنطقيّة —
+ * فالأحداثُ والسياقاتُ تصعد كما كانت، **ولا يتغيّر شيءٌ في الشيفرة التي
+ * تستعملها.**
+ *
+ * **وبعد التركيب لا قبله**: `document` لا وجودَ له في الخادم.
+ */
 export function Modal({
   open,
   onClose,
@@ -657,6 +690,8 @@ export function Modal({
   size?: keyof typeof modalSizes;
   children: ReactNode;
 }) {
+  const mounted = useMounted();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -664,8 +699,8 @@ export function Modal({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
-  return (
+  if (!open || !mounted) return null;
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center scrim p-4"
       onClick={onClose}
@@ -673,7 +708,7 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={`max-h-[90vh] w-full overflow-y-auto surface p-6 elev-3 ${modalSizes[size]}`}
+        className={`max-h-[90vh] w-full overflow-y-auto surface-modal p-6 ${modalSizes[size]}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* **العنوانُ وزرُّ الإغلاق في سطرٍ واحد.**
@@ -699,8 +734,16 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
+}
+
+/** **مركّبٌ بعد؟** — `document` لا وجودَ له في الخادم، والبوّابةُ تحتاجه. */
+function useMounted() {
+  const [on, setOn] = useState(false);
+  useEffect(() => setOn(true), []);
+  return on;
 }
 
 /** قسم مسمّى داخل النماذج الطويلة — لتنظيم الحقول في مجموعات واضحة */

@@ -96,6 +96,15 @@ interface Order {
   }[];
   status: string;
   total: number;
+  /**
+   * **تفصيلُ الإجمالي — يرسله الخادمُ وكان النوعُ يتجاهله.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «بالكرت ما هو مذكورٌ التوصيل، وهذا غلط —
+   *  الزبون لازم يعرف قدّ إيش أجرة التوصيل وليش صار المبلغ هيك».)
+   */
+  subtotal: number;
+  delivery_fee: number;
+  discount: number;
   created_at: string;
   /** حقولُ الوقت المتوقَّع — **يرسلها الخادمُ أصلاً وكان النوعُ يتجاهلها.** */
   accepted_at?: string | null;
@@ -249,6 +258,9 @@ export default function MyOrdersPage() {
     }
   }
 
+  /* **ولا تُفتح من هنا تلقائيّاً** — لها حارسٌ في التخطيط يسأل في أيّ
+     صفحةٍ كان الزبون. **ونافذتان تُفتحان معاً تُقرآن عطباً.**
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) وزرُّ البطاقة يبقى لمن أراد أن يقيّم قديماً. */
   const loadRatings = useCallback(() => {
     api<RateInfo[]>("/api/v1/my/ratings")
       .then((rs) => setRateMap(Object.fromEntries(rs.map((r) => [r.order_id, r]))))
@@ -544,7 +556,7 @@ function OrderCard({
           ومتى. **وكان بجانبها فيزاحم الرقمَ على العرض نفسِه.** */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex shrink-0 flex-col items-start gap-1.5">
-          <BrandMark size={44} rounded="card" />
+          <BrandMark size={72} rounded="card" />
           <span className="text-2xs tabular-nums text-ink-muted" dir="ltr">
             {fmtDateTime(o.created_at)}
           </span>
@@ -594,13 +606,58 @@ function OrderCard({
         <p className="text-sm text-ink-muted">{o.items_preview || m.site.orders.noItems}</p>
       )}
 
-      {/* ── الإجمالي ──────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between border-t border-line-soft pt-3">
-        <span className="text-sm text-ink-muted">{m.site.orders.statTotal}</span>
-        <span dir="ltr" className="figure">
-          {fmtNum(o.total)}{" "}
-          <span className="text-xs font-normal text-ink-muted">{m.common.currency}</span>
-        </span>
+      {/* ══════════════════════════════════════════════════════════════
+          **ومن أين جاء الإجمالي — لا الإجمالي وحدَه**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «بالكرت ما هو مذكورٌ التوصيل، وهذا غلط
+           — الزبون لازم يعرف قدّ إيش أجرة التوصيل وليش صار المبلغ هيك».)
+
+          **كانت البطاقةُ تعرض صنفاً بثلاثين ألفاً ثمّ إجمالياً بأربعين** —
+          وبينهما عشرةٌ لا يقول أحدٌ من أين. **ومن لا يفهم فرقاً في حسابه
+          يظنّه زيادةً مسروقة**، ولا يسأل: يسكت ولا يعود.
+
+          **ورسمُ التوصيل ليس زيادةً تُخفى** — هو خدمةٌ تُؤدّى ويُدفع أجرُها،
+          **وذِكرُه صراحةً يبني الثقةَ لا يهدمها.**
+
+          **والسطرُ يظهر ولو كان صفراً** إن كان هناك أصنافٌ تُحسب: توصيلٌ
+          مجّانيٌّ خبرٌ سارٌّ لا يُكتم. **والخصمُ لا يظهر إلّا إن وقع.** */}
+      <div className="space-y-1.5 border-t border-line-soft pt-3">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-ink-muted">{m.shared.invoice.subtotal}</span>
+          <span dir="ltr" className="tabular-nums text-ink-muted">
+            {fmtNum(o.subtotal ?? 0)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-ink-muted">{m.shared.invoice.deliveryFee}</span>
+          {/* **وصفرُ الأجرة تُقال «مجاني»** — والصفرُ يُقرأ حساباً لم يكتمل.
+              (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) */}
+          {(o.delivery_fee ?? 0) === 0 ? (
+            <span className="font-medium text-success">
+              {m.shared.invoice.deliveryFree}
+            </span>
+          ) : (
+            <span dir="ltr" className="tabular-nums text-ink-muted">
+              {fmtNum(o.delivery_fee)}
+            </span>
+          )}
+        </div>
+        {o.discount > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-ink-muted">{m.shared.invoice.discount}</span>
+            <span dir="ltr" className="tabular-nums text-success">
+              {fmtNum(-o.discount)}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center justify-between border-t border-line-soft pt-2">
+          <span className="text-sm text-ink-muted">{m.site.orders.statTotal}</span>
+          <span dir="ltr" className="figure">
+            {fmtNum(o.total)}{" "}
+            <span className="text-xs font-normal text-ink-muted">{m.common.currency}</span>
+          </span>
+        </div>
       </div>
 
       {/* ── أين هو الآن ───────────────────────────────────────────────── */}
