@@ -42,6 +42,7 @@ import {
   IconWarning,
   IconWhatsApp,
   IconView,
+  usePlatform,
 } from "@rahalgo/ui";
 import { api, mediaUrl, ApiError } from "@/lib/api";
 
@@ -316,6 +317,8 @@ export default function ClientsPage() {
  */
 function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const { data: categories } = useLiveData<Category[]>(() => api("/api/v1/rep/categories"));
+  // **والطولُ من الإعدادات** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «موحّدةً بكلّ البرنامج»).
+  const { passwordMinLength: minLen } = usePlatform();
 
   const [storeName, setStoreName] = useState("");
   const [ownerName, setOwnerName] = useState("");
@@ -371,7 +374,7 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
     e.preventDefault();
     setError("");
     if (!categoryId) return setError(m.site.join.pickCategory);
-    if (password.length < 8) return setError(m.errors.weak_password);
+    if (password.length < minLen) return setError(m.errors.weak_password);
     if (password !== confirm) return setError(m.errors.password_mismatch);
     setBusy(true);
     try {

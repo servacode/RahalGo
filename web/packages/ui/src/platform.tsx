@@ -67,6 +67,18 @@ export interface Platform {
    */
   otpLogin: boolean;
   /**
+   * **أقلُّ طولٍ مقبولٍ لكلمة المرور** (`security.password_min_length`).
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «طولُ كلمة المرور يجب أن تكون موحّدةً بكلّ
+   *  البرنامج» — وكان مكتوباً ستَّ مرّاتٍ في الويب ومرّتين في المحرّك.)
+   *
+   * **ولا شرطَ تعقيدٍ معه**: لا حرفاً ولا رقماً يُلزَم بهما أحد (قرارُ
+   * المالك: «هو حرٌّ في الاختيار») — **والطولُ وحدَه شرط.**
+   *
+   * **والافتراضُ ثمانية** — فلو تأخّر الردُّ لا تُقبل كلمةٌ يردّها المحرّك.
+   */
+  passwordMinLength: number;
+  /**
    * **رابطُ تطبيق أندرويد** (`platform.app_url` في الإعدادات).
    *
    * (طلبُ المالك ٢٠٢٦-٠٨-٠٧: «زرُّ تحميل التطبيق بجانب تسجيل الدخول،
@@ -124,7 +136,7 @@ export interface Platform {
   location: string;
 }
 
-const EMPTY: Platform = { name: "", logo: null, otpLogin: true, appUrl: "", authBg: null, authBgMobile: null, authBgDim: 70, siteBg: null, siteBgMobile: null, siteBgDim: 55, supportPhone: "", social: { facebook: "", instagram: "", telegram: "", whatsapp: "" }, address: "", location: "" };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true, passwordMinLength: 8, appUrl: "", authBg: null, authBgMobile: null, authBgDim: 70, siteBg: null, siteBgMobile: null, siteBgDim: 55, supportPhone: "", social: { facebook: "", instagram: "", telegram: "", whatsapp: "" }, address: "", location: "" };
 
 /**
  * **مسارُ الوسيط يصير رابطاً هنا — لا في كلّ تطبيق.**
@@ -203,6 +215,10 @@ export function PlatformProvider({
             name: j.data.name ?? "",
             logo: j.data.logo ?? null,
             otpLogin: j.data.otp_login !== false,
+            passwordMinLength:
+              typeof j.data.password_min_length === "number" && j.data.password_min_length > 0
+                ? j.data.password_min_length
+                : 8,
             appUrl: typeof j.data.app_url === "string" ? j.data.app_url : "",
             supportPhone: typeof j.data.support_phone === "string" ? j.data.support_phone : "",
             social: readSocial(j.data.social),

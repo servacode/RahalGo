@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getMessages, getDir, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { PlatformProvider, fetchPlatform } from "@rahalgo/ui";
+import { PasswordGate } from "@rahalgo/auth";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
@@ -66,6 +67,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <PlatformProvider apiBase={API} initial={brand}>
         <AuthProvider>
           <CartProvider>
+            {/* ══════════════════════════════════════════════════════════
+                **وبوّابةُ الكلمة المؤقّتة — كأخواتِها الأربع**
+                ══════════════════════════════════════════════════════════
+
+                كانت في الإدارة والمتجر والسائق والمندوب، **ولم تكن هنا.**
+                **فمن أعادت الإدارةُ تعيينَ كلمته وهو زبونٌ لم يُطلب منه
+                تبديلُها قطّ** — يدخل بها ويبقى، **وهي كلمةٌ يعرفها غيرُه.**
+                والشيفرةُ تَعِد بالعكس: «يُجبَر صاحبُ الحساب على تبديلها».
+
+                **ولا تمسّ زائراً**: من لا حسابَ له يمرّ، ومن لا علَمَ عليه
+                يمرّ — **والمحرّكُ يُقنّع العلَمَ حين يكون الخيارُ مُطفأً**
+                (`security.force_password_change`، مُطفأٌ افتراضاً بقرار
+                المالك)، فلا سطرَ هنا يقرأ إعداداً. */}
+            <PasswordGate>
             {/* **ولا حشوةَ يميناً ويساراً** — (قاعدةُ المالك، قالها أربعَ
                 مرّات): الصفحةُ تأخذ العرضَ كاملاً. **والعموديُّ في `main`
                 وحدَه** لأنّ الشريطَ والفوترَ شريطان يبلغان الحافّة. */}
@@ -150,6 +165,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {/* **أقسامُ الزبون حيث يصل الإبهام** — على الجوّال وحدَه.
                 (خارجَ غلاف الحشوة لأنّه يلتصق بحافّة الشاشة.) */}
             <BottomNav />
+            </PasswordGate>
           </CartProvider>
         </AuthProvider>
         </PlatformProvider>

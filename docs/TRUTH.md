@@ -411,6 +411,7 @@
 | `support.complaint_window_hours` | المنصة | int | `24` |
 | `security.password_min_length` | المنصة | int | `8` |
 | `security.login_max_attempts` | المنصة | int | `5` |
+| `security.force_password_change` | المنصة | bool | `false` |
 | `security.session_days` | المنصة | int | `30` |
 | `security.otp_ttl_min` | المنصة | int | `5` |
 | `security.otp_max_per_phone` | المنصة | int | `3` |

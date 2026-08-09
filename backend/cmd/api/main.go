@@ -101,13 +101,9 @@ func run(logger *slog.Logger) error {
 	// قرارات الأمان والحدود يتّخذها المالك لا مبرمجٌ في نصّ. **ويُربط هنا كي
 	// لا تعتمد حزمةُ الهوية ولا حزمةُ الوسائط على حزمة الإعدادات** — وكلتاهما
 	// أدنى منها في الترتيب.
-	readSetting := func(ctx context.Context, key string, fallback int64) int64 {
-		var v float64
-		if err := settingsStore.Get(ctx, key, &v); err != nil {
-			return fallback
-		}
-		return int64(v)
-	}
+	// **والترجمةُ في `settings.GetNum` لا هنا** — تقبل العدديَّ والمنطقيَّ
+	// معاً، **ودالّةٌ مجهولةٌ داخلَ دالّةِ إقلاعٍ لا يبلغها اختبار.**
+	readSetting := settingsStore.GetNum
 
 	identitySvc := identity.NewService(identity.NewRepo(pg), rdb, tokens, otpSender, cfg.JWTSecret, logger)
 	identitySvc.SetSettingReader(readSetting)

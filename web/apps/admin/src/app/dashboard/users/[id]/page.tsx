@@ -33,6 +33,7 @@ import {
   IconBalance,
   IconLocation,
   LoadingState,
+  usePlatform,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import {
@@ -782,6 +783,8 @@ export default function UserProfilePage() {
 }
 
 function ResetPasswordModal({ userID, onClose }: { userID: string; onClose: () => void }) {
+  // **والطولُ من الإعدادات** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «موحّدةً بكلّ البرنامج»).
+  const { passwordMinLength: minLen } = usePlatform();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -818,7 +821,7 @@ function ResetPasswordModal({ userID, onClose }: { userID: string; onClose: () =
             label={P.newPassword}
             dir="ltr"
             required
-            minLength={8}
+            minLength={minLen}
             autoFocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}

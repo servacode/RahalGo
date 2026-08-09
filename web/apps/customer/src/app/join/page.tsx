@@ -47,7 +47,7 @@ export default function JoinPage() {
 
 function JoinForm() {
   /** **واسمُ المنصة من الإعدادات** — لا يُكتب في نصّ. (٢٠٢٦-٠٨-٠٧.) */
-  const { name: platformName } = usePlatform();
+  const { name: platformName, passwordMinLength: minLen } = usePlatform();
   const ref = useSearchParams().get("ref") ?? "";
   const [inviteCode, setInviteCode] = useState<string>("");
   const [checking, setChecking] = useState(true);
@@ -90,7 +90,7 @@ function JoinForm() {
     e.preventDefault();
     setError("");
     if (!categoryId) return setError(J.pickCategory);
-    if (password.length < 8) return setError(J.weakPassword);
+    if (password.length < minLen) return setError(J.weakPassword);
     if (password !== confirm) return setError(J.passwordMismatch);
     setBusy(true);
     try {

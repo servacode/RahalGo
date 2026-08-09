@@ -94,8 +94,8 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, identity.ErrInvalidPhone)
 		return
 	}
-	// كلمة المرور إلزامية (يدخل بها صاحب المتجر بعد الموافقة) — 8 محارف فأكثر.
-	if len(req.Password) < 8 {
+	// كلمة المرور إلزامية — يدخل بها صاحب المتجر بعد الموافقة.
+	if len(req.Password) < s.minPasswordLen(r.Context()) {
 		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password"))
 		return
 	}
@@ -325,7 +325,7 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if len(req.Password) < 8 {
+	if len(req.Password) < s.minPasswordLen(r.Context()) {
 		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password"))
 		return
 	}

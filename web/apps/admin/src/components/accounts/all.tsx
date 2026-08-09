@@ -28,6 +28,7 @@ import {
   IconLock,
   IconWallet,
   IconView,
+  usePlatform,
 } from "@rahalgo/ui";
 import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -424,6 +425,8 @@ function CreateUserModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  // **والطولُ من الإعدادات** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «موحّدةً بكلّ البرنامج»).
+  const { passwordMinLength: minLen } = usePlatform();
   const [phone, setPhone] = useState("");
   const [fullName, setFullName] = useState("");
   const [roles, setRoles] = useState<string[]>(["driver"]);
@@ -522,7 +525,7 @@ function CreateUserModal({
             type="password"
             required
             autoComplete="new-password"
-            minLength={8}
+            minLength={minLen}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -533,7 +536,7 @@ function CreateUserModal({
             type="password"
             required
             autoComplete="new-password"
-            minLength={8}
+            minLength={minLen}
             value={password2}
             onChange={(e) => setPassword2(e.target.value)}
           />

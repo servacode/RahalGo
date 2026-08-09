@@ -12,7 +12,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Alert, Button, Input, PasswordMeter, IconTile, IconLock, IconWarning, IconCheck } from "@rahalgo/ui";
+import { Alert, Button, Input, PasswordMeter, IconTile, IconLock, IconWarning, IconCheck, usePlatform } from "@rahalgo/ui";
 import { useAuth } from "./provider";
 import { api, authApi } from "./client";
 import { errText } from "./LoginCard";
@@ -23,6 +23,10 @@ const G = A.mustChange;
 
 export function PasswordGate({ children }: { children: React.ReactNode }) {
   const { user, loading, setUser } = useAuth();
+  // **والطولُ من الإعدادات لا من رقمٍ مكتوب** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩:
+  // «موحّدةً بكلّ البرنامج»). **ورقمٌ هنا أقصرُ ممّا يقبله المحرّك يُمرّر
+  // كلمةً تُرَدّ**، وأطولُ يمنع كلمةً كان يقبلها.
+  const { passwordMinLength: minLen } = usePlatform();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -34,7 +38,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (next.length < 8) return setError(m.errors.weak_password);
+    if (next.length < minLen) return setError(m.errors.weak_password);
     if (next !== confirm) return setError(m.errors.password_mismatch);
     setBusy(true);
     try {

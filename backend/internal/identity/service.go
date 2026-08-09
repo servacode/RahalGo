@@ -116,6 +116,27 @@ func (s *Service) otpQuota(ctx context.Context) int64 {
 	return s.intSetting(ctx, "security.otp_max_per_phone", otpMaxPer15m)
 }
 
+// applyForcePolicy **يُقنّع علَمَ الإجبار حين يكون الخيارُ مُطفأً.**
+//
+// (قرارُ المالك 2026-08-09: «الحالةُ الافتراضيّةُ غيرُ مفعّل» — خطوةٌ زائدةٌ
+//
+//	تجعل من يملّ يغلق التطبيقَ قبل أن يُكمل.)
+//
+// **ولا يُمسّ العلَمُ في القاعدة**: هو واقعةٌ لا رأي — هذه الكلمةُ وضعها طرفٌ
+// ثالث. **والتقنيعُ يخفي البوّابةَ ولا يمحو الخبر**، فمن شغّل الخيارَ بعد
+// شهرٍ التقط كلَّ من وُضعت كلمتُه ولم يبدّلها.
+//
+// **وهنا لا في الويب**: خمسُ بوّاباتٍ تقرأ الحقلَ — **ولو قرأ كلٌّ منها
+// الإعدادَ بنفسه لَاختلفت واحدةٌ يوماً.**
+func (s *Service) applyForcePolicy(ctx context.Context, u *User) {
+	if u == nil || !u.MustChangePassword {
+		return
+	}
+	if s.intSetting(ctx, "security.force_password_change", 0) == 0 {
+		u.MustChangePassword = false
+	}
+}
+
 // sessionLife طولُ الجلسة قبل أن يُطلب الدخولُ من جديد.
 //
 // **ولا يُقصّر جلسةً قائمة**: مهلةُ الرمز تُكتب في الصفّ يومَ يُنشأ،
@@ -581,6 +602,9 @@ func (s *Service) issueSession(ctx context.Context, user *User, userAgent, ip, a
 		return nil, err
 	}
 	s.repo.Audit(ctx, &user.ID, action, "user", user.ID, ip, nil)
+	// **والمخرجُ الثاني للحقل** — `Me` هو الأوّل. **ولو قُنّع في أحدهما فقط
+	// لَظهرت البوّابةُ بعد الدخول ثمّ اختفت عند أوّل تحديث** (أو العكس).
+	s.applyForcePolicy(ctx, user)
 	return &AuthResult{
 		User: *user,
 		Tokens: TokenPair{
@@ -672,6 +696,7 @@ func (s *Service) Me(ctx context.Context, userID string) (*User, error) {
 	if errors.Is(err, ErrNotFound) {
 		return nil, httpx.ErrNotFound
 	}
+	s.applyForcePolicy(ctx, user)
 	return user, err
 }
 

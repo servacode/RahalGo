@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/csv"
 	"net/http"
 	"strconv"
@@ -205,7 +206,7 @@ func (s *Server) handleAdminResetPassword(w http.ResponseWriter, r *http.Request
 	req, err := decode[struct {
 		Password string `json:"password"`
 	}](r)
-	if err != nil || len(req.Password) < 8 {
+	if err != nil || len(req.Password) < s.minPasswordLen(r.Context()) {
 		s.respondErr(w, httpx.NewError(http.StatusBadRequest, "weak_password", "errors.weak_password"))
 		return
 	}
@@ -416,4 +417,23 @@ func derefOr(p *string, fallback string) string {
 		return fallback
 	}
 	return *p
+}
+
+// minPasswordLen **طولُ كلمة المرور من اللوحة — مصدرٌ واحدٌ لكلّ المداخل.**
+//
+// (قرارُ المالك 2026-08-09: «طولُ كلمة المرور يجب أن تكون موحّدةً بكلّ
+//
+//	البرنامج» — وكانت أربعةُ مداخلَ تقرأ الإعدادَ وثلاثةٌ تكتب ٨ بيدها.)
+//
+// **ورقمٌ مكتوبٌ في مدخلٍ يتجاهل ما ضبطه المالك**: يرفع الحدَّ إلى اثني عشر
+// **فتقبل إعادةُ التعيين ثمانيةً** — ولا يظهر الفرقُ إلّا لمن جرّب المدخلين.
+//
+// **ولا تُلزم حرفاً ولا رقماً** (قرارُ المالك: «هو حرٌّ في الاختيار») —
+// والطولُ وحدَه شرط.
+func (s *Server) minPasswordLen(ctx context.Context) int {
+	n := s.settings.GetInt(ctx, "security.password_min_length")
+	if n <= 0 {
+		return 8
+	}
+	return int(n)
 }
