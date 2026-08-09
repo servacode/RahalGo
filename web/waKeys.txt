@@ -1,8 +1,0 @@
-whatsapp = رقم واتساب
-whatsappHint = رقم واتساب الذي يصلك عليه الزبائن والإشعارات. قد يختلف عن رقم دخولك.
-whatsappVerified = رقمك موثَّق
-whatsappUnverified = غير موثَّق
-whatsappVerify = وثّق حسابك
-whatsappCodeSent = أرسلنا رمزاً إلى واتساب هذا الرقم. أدخله لتوثيق حسابك.
-whatsappDone = تمّ توثيق رقمك بنجاح.
-whatsappChange = تغيير الرقم

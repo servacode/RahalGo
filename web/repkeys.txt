@@ -1,2 +1,0 @@
-appDescription = لوحة مندوب مبيعات {platform}: كودك، متاجرك، عمولاتك
-walletTitle = كشف العمولات
