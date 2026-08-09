@@ -54,6 +54,9 @@ const orderSelect = `
 	                -- بلا متجر** — فيسقط مسحُ الصفّ كلِّه لا هذا الحقلَ وحدَه.
 	                false),
 	       o.prep_minutes, o.ready_at, o.accepted_at, o.picked_up_at, o.delivered_at,
+	       -- **ومتى أُقفل** — يُكتب في القاعدة عند كلّ نهاية ولم يكن يُقرأ.
+	       -- (انظر Order.ClosedAt.)
+	       o.closed_at,
 	       lm.thumb_path,
 	       -- ملخّص الأصناف في القائمة نفسها: «ماذا طلبتُ؟» أول سؤال يسأله صاحب
 	       -- الطلب، وكان يلزمه فتح الطلب ليعرف. العدد بالكمّيات لا بالأسطر
@@ -103,7 +106,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.EndedBy, &o.Fault, &o.FailReason, &o.ReturnedAt, &o.GoodsSettledTo,
 		&o.LegM, &o.DriverToPickupM,
 		&o.AcceptsReturns,
-		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.PickedUpAt, &o.DeliveredAt,
+		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.PickedUpAt, &o.DeliveredAt, &o.ClosedAt,
 		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items)
 	if err != nil {
 		return nil, err

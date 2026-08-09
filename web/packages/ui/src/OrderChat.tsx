@@ -42,7 +42,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, fmtTime } from "@rahalgo/i18n";
 import { Alert } from "./feedback";
-import { IconChat, IconSend } from "./icons";
+import { IconChat, IconSend, IconCheck, IconCheckAll } from "./icons";
 import { useLiveRefresh } from "./Notifications";
 
 const m = getMessages(defaultLocale);
@@ -187,10 +187,32 @@ export function OrderChat({
             </div>
             {/* **والوقتُ تحت الفقّاعة لا فيها** — **رمادِيٌّ داخلَ لونٍ
                 مصمتٍ يسقط تباينُه**، ويُقرأ الوقتُ جزءاً من الكلام. */}
-            <p className="mt-1 px-1 text-2xs text-ink-muted">
+            <p className="mt-1 flex items-center gap-1 px-1 text-2xs text-ink-muted">
               <span dir="ltr">{fmtTime(x.created_at)}</span>
-              {/* **و«قُرئت» لمن أرسل وحدَه** — ولا معنى لها عند المتلقّي. */}
-              {x.mine && x.read_at ? ` · ${C.seen}` : ""}
+              {/* ══════════════════════════════════════════════════════
+                  **وعلامتان لا كلمة**
+                  ══════════════════════════════════════════════════════
+
+                  (قرارُ المالك ٢٠٢٦-٠٨-١٠: «إشارتين صح زرقاء مثل الواتساب».)
+
+                  **كانت كلمةَ «قُرئت»** — تُقرأ فتُشغل موضعَ كلمة، **ومن
+                  ينظر إلى عشرين سطراً لا يقرأ عشرين كلمة.** والعلامةُ
+                  تُدرَك بلا قراءة.
+
+                  **وحالتان لا ثلاث**: صحٌّ واحدٌ «وصلت الخادمَ»، وصحّان
+                  زرقاوان «قرأها». **ولا حالةَ وسطى** — لا نعرف متى بلغت
+                  جهازَه ولم يفتحها بعد، **وعلامةٌ نضعها بلا أن نعرف كذبٌ
+                  يُبنى عليه**: من رآها ظنّ أنّ الرسالةَ في يده وهي في
+                  الشبكة.
+
+                  **ولمن أرسل وحدَه** — ولا معنى لها عند المتلقّي: يعرف
+                  أنّه قرأ. */}
+              {x.mine &&
+                (x.read_at ? (
+                  <IconCheckAll size={14} className="text-info" aria-label={C.seen} />
+                ) : (
+                  <IconCheck size={14} className="text-ink-muted" aria-label={C.sent} />
+                ))}
             </p>
           </div>
         ))

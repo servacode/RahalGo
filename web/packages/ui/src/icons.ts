@@ -117,6 +117,8 @@ export {
   ChevronLeft as IconNext,
   X as IconClose,
   Check as IconCheck,
+  // **صحّان — «قُرئت».** (قرارُ المالك ٢٠٢٦-٠٨-١٠.)
+  CheckCheck as IconCheckAll,
   // الحالات
   CircleCheck as IconSuccess,
   CircleAlert as IconWarning,
