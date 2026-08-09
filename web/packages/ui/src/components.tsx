@@ -118,6 +118,7 @@ export function Input({
   icon,
   id,
   className = "",
+  wrapperClassName = "",
   type,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & {
@@ -125,6 +126,15 @@ export function Input({
   error?: string;
   /** أيقونة معبرة تظهر داخل الحقل (جهة البداية) */
   icon?: ReactNode;
+  /**
+   * **صنفٌ للغلاف لا للحقل** — لمن يضعه في صفّ `flex`.
+   *
+   * (شكوى المالك ٢٠٢٦-٠٨-٠٩: «حقلُ عنوان المكتب صغير».)
+   *
+   * **و`className` يصل الحقلَ لا غلافَه** — و`w-full` على حقلٍ داخلَ غلافٍ
+   * لا ينمو يملأ الغلافَ وحدَه. **فيُعطى الغلافُ `flex-1` من هنا.**
+   */
+  wrapperClassName?: string;
 }) {
   // حقول كلمات المرور تحصل تلقائياً على زر إظهار/إخفاء (جهة النهاية).
   const [reveal, setReveal] = useState(false);
@@ -150,7 +160,7 @@ export function Input({
   const padStart = icon ? "ps-10" : "ps-3";
   const padEnd = isPassword ? "pe-10" : "pe-3";
   return (
-    <div>
+    <div className={wrapperClassName}>
       {label && (
         <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-ink">
           {label}

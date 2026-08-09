@@ -61,19 +61,19 @@ const pageLabel = (p: string) => (S.pages as Record<string, string>)[p] ?? p;
 export default function SitePagesPanel({
   /** **ما يُرسم في التبويب** — من ينادي يمرّر مفاتيحَ القسم وحدَها. */
   render,
-  /** كم مفتاحاً في كلّ صفحة — **لِيُرى الممتلئُ من الفارغ قبل الفتح.** */
-  counts = {},
 }: {
   render?: (section: string) => React.ReactNode;
-  counts?: Record<string, number>;
 }) {
   const [page, setPage] = useState<Page>("home");
 
-  const items: TabDef<Page>[] = PAGES.map((p) => ({
-    key: p,
-    label: pageLabel(p),
-    ...(counts[`page.${p}`] ? { count: counts[`page.${p}`] } : {}),
-  }));
+  /* **ولا عدّادَ على التبويب.**
+
+     (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «ألغِ الأرقام، هي أوّلُ شيءٍ مزعجة».)
+
+     **ووُضع ليُرى الممتلئُ من الفارغ قبل الفتح** — **ورقمٌ بجانب كلّ تبويبٍ
+     في صفٍّ من ثمانيةٍ يُقرأ ضجيجاً لا خبراً**: من يضبط صفحةً يفتحها، ولا
+     يقارن عددَ مفاتيحها بعدد أختها. */
+  const items: TabDef<Page>[] = PAGES.map((p) => ({ key: p, label: pageLabel(p) }));
 
   const body = render?.(`page.${page}`);
 

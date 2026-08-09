@@ -126,6 +126,28 @@ const (
 	// **وهنا صاحبُ المنصة هو من يملأه**، ويريد المكانَ قبل المحتوى ليقول
 	// «انقل هذا إليه». **ففراغُه مرحلةٌ معلومةُ الأجل لا إهمال.**
 	GroupSite Group = "site"
+
+	// GroupApp **تطبيقُ الجوّال — رابطُه أو ملفُّه.**
+	//
+	// (قرارُ المالك 2026-08-09: «تبويبٌ جديدٌ بعد إعدادات الموقع وهو التطبيق:
+	//  هنا سيكون رابطُ التطبيق في حال تمّ رفعُه على غوغل بلاي، أو رفعُ
+	//  التطبيق لتحميله بشكلٍ يدويٍّ في حال لم يُرفع».)
+	//
+	// **وكانا في «المنصة» بين عشرين مفتاحاً** — ومن أراد أن ينشر تطبيقَه
+	// يبحث عنهما بين مهلةِ القبول ورسمِ التوصيل. **وقسمٌ باسم ما فيه يُفتح
+	// مرّةً ويُعرَف.**
+	GroupApp Group = "app"
+
+	// GroupCustomers **قسمٌ يُجهَّز فارغاً ليُملأ نقلاً** — كأخيه `GroupSite`.
+	//
+	// (قرارُ المالك 2026-08-09: «نضيف قسماً جديداً فارغاً للزبائن».)
+	//
+	// **وثلاثةُ أدوارٍ لها أقسامُها** — السائقون والمتاجر والمندوبون —
+	// **والزبونُ أكثرُهم عدداً ولا قسمَ له**: ما يخصّه مبعثرٌ في «المنصة».
+	//
+	// **وفراغُه مرحلةٌ معلومةُ الأجل لا إهمال** — يملؤه صاحبُ المنصة مفتاحاً
+	// مفتاحاً كما فعل بإعدادات الموقع.
+	GroupCustomers Group = "customers"
 )
 
 // Groups **ترتيبُ الأقسام في اللوحة — ومصدرُه الواحد.**
@@ -145,7 +167,7 @@ const (
 //
 // **وتُكتب المجموعةُ حين يُكتب أوّلُ مفتاحٍ فيها** — لا قبله.
 var Groups = []Group{
-	GroupPlatform, GroupSite, GroupDrivers, GroupMerchants, GroupSales,
+	GroupPlatform, GroupSite, GroupApp, GroupCustomers, GroupDrivers, GroupMerchants, GroupSales,
 }
 
 // Default افتراضُ مفتاحٍ رقميّ — **لمن لا مخزنَ لديه.**
@@ -317,7 +339,7 @@ var Catalog = []Def{
 	//
 	// **وفارغُه يُخفي الزرَّ كلَّه**: زرُّ تحميلٍ لا ينزّل شيئاً **يُقرأ
 	// عطباً في المنصة** لا ميزةً ناقصة.
-	{Key: "platform.app_url", Group: GroupPlatform, Kind: KindText,
+	{Key: "platform.app_url", Group: GroupApp, Kind: KindText,
 		Max: 300, Default: ""},
 
 	// **وملفُّ التطبيق بديلُ الرابط لا رفيقُه.**
@@ -329,7 +351,7 @@ var Catalog = []Def{
 	// نفسَه ويُطمئن من ينزّله. **والملفُّ لمن لم يُقبل بعد.**
 	//
 	// **وقيمتُه اسمُ الملفّ المخزَّن** — يكتبه الخادمُ عند الرفع.
-	{Key: "platform.app_file", Group: GroupPlatform, Kind: KindFile, Default: ""},
+	{Key: "platform.app_file", Group: GroupApp, Kind: KindFile, Default: ""},
 
 	// ══════════════════════════════════════════════════════════════════════
 	// **هويّةُ المنصة — الاسمُ والشعار**
@@ -549,7 +571,7 @@ var Catalog = []Def{
 	// مطبخٍ واحدٍ طلبٌ عاديّ — **والسقفُ على المطابخ لا على الصحون.**
 	//
 	// **وواحدٌ يعني «من متجرٍ واحدٍ لا غير»** — وهو حدٌّ مشروعٌ لا خطأ.
-	{Key: "orders.max_sources", Group: GroupPlatform, Kind: KindInt,
+	{Key: "orders.max_sources", Group: GroupCustomers, Kind: KindInt,
 		Min: 1, Max: 10, Unit: "merchant", Default: 2},
 
 	// **سقفُ ما بيد الزبون من طلباتٍ مفتوحة.**
@@ -577,7 +599,7 @@ var Catalog = []Def{
 	// **وأربعةٌ معلّقةٌ في وقتٍ واحدٍ ليست كذلك.** ويرفعه المالكُ متى شاء.
 	//
 	// **وصفرٌ يُلغي الحدّ** — لمن أراد.
-	{Key: "orders.max_open_per_customer", Group: GroupPlatform, Kind: KindInt,
+	{Key: "orders.max_open_per_customer", Group: GroupCustomers, Kind: KindInt,
 		Min: 0, Max: 50, Unit: "order", Default: 3},
 
 	// **هامشُ ربح المنصة — رقمٌ ثابتٌ يُضاف على كلّ صنف.**
@@ -615,7 +637,7 @@ var Catalog = []Def{
 	// **وصفرُها يمنع الإلغاءَ إطلاقاً** — لا يفتح الباب، يغلقه: «مضى أكثرُ
 	// من صفرِ ثانية» صحيحٌ دائماً، **فكلُّ محاولةٍ تُردّ بأنّ النافذةَ
 	// انقضت.** ومن ضغط زرّاً خطأً لا يجد له تراجعاً.
-	{Key: "orders.customer_cancel_window_sec", Group: GroupPlatform, Kind: KindInt,
+	{Key: "orders.customer_cancel_window_sec", Group: GroupCustomers, Kind: KindInt,
 		Min: 0, Max: 1800, Unit: "second", Default: 120},
 
 	{Key: "pricing.margin_fixed", Group: GroupPlatform, Kind: KindMoney,
@@ -919,12 +941,12 @@ var Catalog = []Def{
 	//
 	// **وحدٌّ للعناوين لأنّ الشاشةَ تعرضها كلَّها**: مئةُ عنوانٍ تجعل اختيارَ
 	// عنوانِ التوصيل أطولَ من الطلب نفسِه.
-	{Key: "customers.max_addresses", Group: GroupPlatform, Kind: KindInt,
+	{Key: "customers.max_addresses", Group: GroupCustomers, Kind: KindInt,
 		Min: 1, Max: 50, Default: 10},
 
 	// **وتوثيقُ واتساب قناةُ الوصول** — ومن لا رقمَ موثَّقاً له لا يبلغه
 	// إشعارُ طلبه. **وإلزامُه قرارُ تشغيلٍ لا قرارُ نشر.**
-	{Key: "customers.require_whatsapp", Group: GroupPlatform, Kind: KindBool,
+	{Key: "customers.require_whatsapp", Group: GroupCustomers, Kind: KindBool,
 		Default: true},
 
 	// ── السائقون ──────────────────────────────────────
@@ -957,7 +979,18 @@ var Catalog = []Def{
 	// ── الطلبات ───────────────────────────────────────
 	//
 	// **والإرسالُ الآليُّ يوزّع بلا يد** — وإطفاؤه يجعل كلَّ طلبٍ ينتظر مُرسِلاً.
-	{Key: "orders.auto_dispatch", Group: GroupPlatform, Kind: KindBool,
+	// **وموضعُه مع السائقين لا مع المنصة.**
+	//
+	// (سأل المالك 2026-08-09: «كأنّه مكرّرٌ أيضاً — بصفحة السائقين موجودون،
+	//  أو أنّهما مختلفان؟».)
+	//
+	// **وليسا مكرّرين**: هذا يقول **متى** ينزل الطلبُ إلى طابور السائقين،
+	// و`drivers.assignment_mode` يقول **إلى مَن** يذهب بعد أن ينزل. **الأوّلُ
+	// بابٌ والثاني قسمة.**
+	//
+	// **لكنّهما موضوعٌ واحد**، ومن ضبط أحدَهما يسأل عن الآخر — **وقسمان
+	// يحملان نصفَ قرارٍ لكلٍّ منهما يجعلان الضابطَ يتنقّل بينهما.**
+	{Key: "orders.auto_dispatch", Group: GroupDrivers, Kind: KindBool,
 		Default: true},
 
 	// **والوقتُ المتوقَّعُ يُعرض للزبون** — ورقمٌ متفائلٌ يصنع شكوى.
@@ -990,6 +1023,27 @@ var Catalog = []Def{
 	// ── الهويّة والرسائل ──────────────────────────────
 	//
 	// **ورمزُ دعوة المنصة** — يُعطى لمن يسجّل متجراً بلا مندوب.
+	// ── الأمان ────────────────────────────────────────
+	//
+	// **والمحرّكُ يقرأ هذا المفتاحَ منذ يومٍ ولا وجودَ له في الفهرس** —
+	// فيسقط إلى احتياطيٍّ في الشيفرة أبداً. (كشفه حارسُ الأسماء 2026-08-09:
+	// اسمٌ في المعجم لمفتاحٍ لا يوجد.)
+	//
+	// **وتعليقُ الشيفرة يقول صراحةً**: «قرارا أمانٍ يتّخذهما المالك لا قرارا
+	// نشرٍ ينتظران مبرمجاً» — **فبقي القرارُ عند المبرمج ثلاثةَ أشهر.**
+	//
+	// **والحدُّ الأدنى ثمانية** — وأقلُّ منه يُخمَّن، **وأكثرُ من ستّةَ عشرَ
+	// يجعل الناسَ يكتبونها على ورق.**
+	{Key: "security.password_min_length", Group: GroupPlatform, Kind: KindInt,
+		Min: 6, Max: 24, Unit: "char", Default: 8},
+
+	// **وسقفُ محاولات الدخول الخاطئة لكلّ رقم** — والمحرّكُ يقرؤه كذلك.
+	//
+	// **وخمسٌ توازن بين اثنين**: أقلُّ منها يحبس من نسي كلمتَه ثلاثَ مرّات،
+	// **وأكثرُ يفتح البابَ للتخمين** — وأرقامُ المتاجر ظاهرةٌ في واجهة الزبون.
+	{Key: "security.login_max_attempts", Group: GroupPlatform, Kind: KindInt,
+		Min: 3, Max: 20, Unit: "attempt", Default: 5},
+
 	{Key: "platform.invite_code", Group: GroupPlatform, Kind: KindText,
 		Max: 32, Default: "RAHALGO"},
 

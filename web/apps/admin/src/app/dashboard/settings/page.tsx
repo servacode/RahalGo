@@ -17,7 +17,7 @@ import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   Tabs,
   Alert,
-  PageHeader, Button, Input, Textarea, Select, Checkbox, Badge, Card, EmptyState, FormSection,
+  PageHeader, Button, Input, Textarea, Select, Switch, Badge, Card, EmptyState, FormSection,
   IconSettings, IconWarning, IconCheck,
   LoadingState,
 } from "@rahalgo/ui";
@@ -81,14 +81,6 @@ function sectionsOf(items: Setting[]): { name: string; items: Setting[] }[] {
   return out;
 }
 
-/** **كم مفتاحاً في كلّ صفحة** — ليُرى الممتلئُ من الفارغ قبل الفتح. */
-function pageCounts(items: Setting[]): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const it of items) {
-    if (it.section?.startsWith("page.")) out[it.section] = (out[it.section] ?? 0) + 1;
-  }
-  return out;
-}
 
 /** **واسمُ الصندوق من المعجم** — وغيابُه يُظهر مفتاحَه لا فراغاً. */
 function sectionLabel(name: string): string {
@@ -176,7 +168,18 @@ const boolText = (k: string, side: "on" | "off") =>
 const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_background"> = {
   "platform.logo": "platform_logo",
   "auth.background": "auth_background",
+  "auth.background_mobile": "auth_background",
   "platform.background": "site_background",
+  /* **والنسخُ الجوّالةُ من نوع أخواتها.**
+
+     (كُشف ٢٠٢٦-٠٨-٠٩ عند مراجعة الشاشة: أربعةُ مفاتيحَ جديدةٍ تسقط إلى
+      `platform_logo` — **فتُرفع خلفيّةُ صفحةٍ بحدودِ شعارٍ ومصغَّرتِه.**)
+
+     **والنوعُ يحكم الحدَّ والمصغَّرة**: شعارٌ يُصغَّر إلى مئتين، وخلفيّةٌ
+     تحتاج ألفين. **ولا يظهر الخطأُ إلّا صورةً باهتةً ممطوطة.** */
+  "platform.background_mobile": "site_background",
+  "home.image": "site_background",
+  "home.image_mobile": "site_background",
 };
 
 export default function SettingsPage() {
@@ -405,7 +408,6 @@ export default function SettingsPage() {
 
                   {at === "pages" ? (
                     <SitePagesPanel
-                      counts={pageCounts(activeGroup.items)}
                       render={(section) => {
                         const rows = activeGroup.items.filter((s) => s.section === section);
                         /* **ولافتاتُ التسوّق فوق مفاتيحها.**
@@ -438,7 +440,18 @@ export default function SettingsPage() {
                     />
                   ) : (
                     <div className="space-y-3">
-                      {(secs.find((x) => x.name === at)?.items ?? []).map((s) => (
+                      {/* **وما لا قسمَ له لا يُرسم مرّتين.**
+
+                          (شكوى المالك ٢٠٢٦-٠٨-٠٩ على قسم «التطبيق»: «ليش
+                           مكرّرٌ مرّتين».)
+
+                          **مجموعةٌ بلا أقسامٍ اسمُ قسمها فارغ** — فتُرسم
+                          مرّةً بوصفها «سائبة» فوق التبويبات، **ومرّةً لأنّ
+                          القسمَ المفتوح فارغٌ هو أيضاً** فيطابقها.
+
+                          **فيُشترط اسمٌ غيرُ فارغ** — والسائبةُ لها موضعُها
+                          أعلاه. */}
+                      {(at ? (secs.find((x) => x.name === at)?.items ?? []) : []).map((s) => (
                         <SettingRow
                           key={s.key}
                           s={s}
@@ -588,31 +601,28 @@ function SettingRow({
 
         <div className="flex flex-wrap items-end gap-2">
           {s.kind === "bool" ? (
-            /* **زرٌّ ذكيٌّ يقول الحال لا الفعل.**
+            /* ══════════════════════════════════════════════════════════
+               **ومفتاحٌ واحدٌ يقول الحالَ بشكله**
+               ══════════════════════════════════════════════════════════
 
-               مربّعُ اختيارٍ باسم المفتاح يسأل من ينظر: **أهذا وصفُ ما هو
-               قائمٌ الآن أم وصفُ ما سيصير إن ضغطتُ؟** — والفرقُ في إعدادٍ
-               يحكم من يدير الطلبات فرقُ يومٍ كامل.
+               (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «سوِّهنّ أزراراً ذكيّة — زرٌّ ذكيّ:
+                مفعَّل، معطَّل، وخلص. ما بدّها كلّ هالشي».)
 
-               **فيُقال الحالُ صراحةً** فوق المربّع: «الآن: …».
+               **كان ثلاثةَ أسطرٍ لمعنًى واحد**: اسمُ الإعداد في رأس الصفّ،
+               ثمّ سطرُ «الآن: مُفعَّل»، ثمّ مربّعُ اختيارٍ يحمل الاسمَ ثانية.
 
-               (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «زرٌّ ذكيٌّ للتبديل بين المنصة تدير
-               المتاجر أو المتاجر تدير نفسها».) */
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-medium text-ink-muted">
-                {S.nowIs.replace(
-                  "{v}",
-                  s.value === true ? boolText(s.key, "on") : boolText(s.key, "off"),
-                )}
-              </span>
-              <Checkbox
-                id={s.key}
-                label={label(s.key)}
-                checked={s.value === true}
-                disabled={!editable || busy}
-                onChange={(e) => void save(e.target.checked)}
-              />
-            </div>
+               **والسطرُ الأوسطُ وُضع بحقٍّ يومَها** (قرارُ المالك ٢٠٢٦-٠٨-٠٤):
+               **مربّعُ اختيارٍ لا يقول أهو وصفُ الحال أم وصفُ ما سيصير.**
+               **والمفتاحُ يقوله بموضعه ولونه** — فلا يحتاج سطراً يترجمه.
+
+               **والاسمُ في رأس الصفّ وحدَه** — فيُمرَّر فارغاً هنا. */
+            <Switch
+              id={s.key}
+              label=""
+              checked={s.value === true}
+              disabled={!editable || busy}
+              onChange={(next) => void save(next)}
+            />
           ) : s.kind === "choice" ? (
             /* **أزرارٌ متجاورةٌ لا قائمةٌ منسدلة — والبدائلُ تُرى كلُّها.**
 
@@ -687,8 +697,10 @@ function SettingRow({
                **والقيمةُ اسمُ الملفّ المخزَّن** يكتبه الخادمُ عند الرفع —
                **واسمٌ يُكتب خطأً يعني زرَّ تنزيلٍ يقود إلى لا شيء.** */
             <FileUpload
-              label={label(s.key)}
-              hint={hint(s.key)}
+              /* **ولا اسمَ ولا تلميحَ هنا** — رأسُ الصفّ كتبهما.
+                 (شكوى المالك ٢٠٢٦-٠٨-٠٩.) */
+              label=""
+              hint=""
               accept=".apk"
               present={typeof s.value === "string" && s.value !== ""}
               path="/api/v1/admin/app-file"
@@ -715,7 +727,11 @@ function SettingRow({
                  **كانت سترفع صورتَها باسم «شعار المنصة»** — فتُخزَّن بنوعٍ
                  ليس نوعَها، **ولا يظهر الخطأُ إلّا لمن يقرأ القاعدة.** */
               kind={MEDIA_KIND[s.key] ?? "platform_logo"}
-              label={label(s.key)}
+              /* **ولا اسمَ هنا** — رأسُ الصفّ كتبه.
+                 (شكوى المالك ٢٠٢٦-٠٨-٠٩: «هون مكرّرٌ الاسمُ مرّتين بدون
+                  سبب».) **والرافعُ مكوّنٌ عامٌّ يُستعمل في نماذجَ لا رأسَ
+                 لها**، فيحمل اسمَه — **وفي صفِّ إعدادٍ يصير الثاني.** */
+              label=""
               initialUrl={typeof s.value === "string" && s.value ? s.media_url : null}
               onChange={(id) => void save(id)}
             />
@@ -734,7 +750,6 @@ function SettingRow({
                شيء، **ومن أفرغه بعد أن كتب يعود إلى الأصل** لا إلى صفحةٍ
                بيضاء. */
             <div className="space-y-2">
-              <span className="block text-sm font-medium text-ink">{label(s.key)}</span>
               <Textarea
                 id={s.key}
                 rows={12}
@@ -763,7 +778,6 @@ function SettingRow({
                **والقيمةُ تُبنى من النقرة** بستّ منازلَ عشريّة — نحو عشرة
                سنتيمترات، **وهو أدقُّ ممّا يحتاجه بابُ مكتب.** */
             <div className="space-y-2">
-              <span className="block text-sm font-medium text-ink">{label(s.key)}</span>
               <div className="overflow-hidden rounded-control border border-line">
                 <PickMap
                   lat={geoOf(draft)?.[0] ?? null}
@@ -784,6 +798,14 @@ function SettingRow({
             </div>
           ) : (
             <>
+              {/* **وحقلُ النصّ يملأ السطر.**
+
+                  (شكوى المالك ٢٠٢٦-٠٨-٠٩: «حقلُ عنوان المكتب صغير».)
+
+                  **الصفُّ `flex`** — وحقلُ النصّ فيه لا ينمو إلّا إن قيل له،
+                  **فيبقى بعرضه الطبيعيّ** ويترك نصفَ الصفّ فارغاً.
+                  **والرقمُ يبقى ضيّقاً**: حقلٌ لثلاثةِ أرقامٍ بعرض الشاشة
+                  يُقرأ حقلَ نصّ. */}
               <Input
                 id={s.key}
                 type={numeric ? "number" : "text"}
@@ -797,6 +819,7 @@ function SettingRow({
                   setError("");
                 }}
                 className={numeric ? "w-40" : "w-full"}
+                wrapperClassName={numeric ? "" : "min-w-0 flex-1"}
               />
               {/* **ولافتةُ الهامش تتبع نمطَه.**
 

@@ -394,13 +394,8 @@
 | المفتاح | المجموعة | النوع | الافتراضيّ |
 |---|---|---|---|
 | `platform.orders_mode` | المنصة | choice | `platform` |
-| `platform.app_url` | المنصة | text | `` |
-| `platform.app_file` | المنصة | file | `` |
 | `auth.otp_login` | المنصة | bool | `true` |
-| `orders.max_sources` | المنصة | int | `2` |
-| `orders.max_open_per_customer` | المنصة | int | `3` |
 | `orders.delivery_timeout_min` | المنصة | int | `60` |
-| `orders.customer_cancel_window_sec` | المنصة | int | `120` |
 | `pricing.margin_fixed` | المنصة | money | `0` |
 | `orders.auto_transfer_min_total` | المنصة | money | `0` |
 | `orders.auto_transfer_min_items` | المنصة | int | `0` |
@@ -409,13 +404,12 @@
 | `referral.reward_2` | المنصة | money | `0` |
 | `referral.reward_3` | المنصة | money | `0` |
 | `referral.reward_rest` | المنصة | money | `0` |
-| `customers.max_addresses` | المنصة | int | `10` |
-| `customers.require_whatsapp` | المنصة | bool | `true` |
-| `orders.auto_dispatch` | المنصة | bool | `true` |
 | `orders.delivery_estimate_min` | المنصة | int | `15` |
 | `orders.extra_source_fee` | المنصة | int | `0` |
 | `payouts.min_amount` | المنصة | int | `50000` |
 | `support.complaint_window_hours` | المنصة | int | `24` |
+| `security.password_min_length` | المنصة | int | `8` |
+| `security.login_max_attempts` | المنصة | int | `5` |
 | `platform.invite_code` | المنصة | text | `RAHALGO` |
 | `whatsapp.otp_template` | المنصة | text | `رمز التحقق: {code}` |
 | `platform.support_phone` |  | text | `` |
@@ -442,6 +436,13 @@
 | `shop.banner_seconds` |  | int | `5` |
 | `shop.rail_auto` |  | bool | `true` |
 | `shop.rail_seconds` |  | int | `5` |
+| `platform.app_url` |  | text | `` |
+| `platform.app_file` |  | file | `` |
+| `orders.max_sources` |  | int | `2` |
+| `orders.max_open_per_customer` |  | int | `3` |
+| `orders.customer_cancel_window_sec` |  | int | `120` |
+| `customers.max_addresses` |  | int | `10` |
+| `customers.require_whatsapp` |  | bool | `true` |
 | `drivers.assignment_mode` | السائقون | choice | `queue` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
 | `drivers.direct_assign` | السائقون | bool | `false` |
@@ -452,6 +453,7 @@
 | `drivers.monthly_target` | السائقون | int | `0` |
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |
 | `drivers.require_delivery_photo` | السائقون | bool | `true` |
+| `orders.auto_dispatch` | السائقون | bool | `true` |
 | `merchants.commission_percent` | المتاجر | int | `0` |
 | `orders.accept_timeout_min` | المتاجر | int | `5` |
 | `merchants.return_support_percent` | المتاجر | int | `0` |
