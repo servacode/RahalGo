@@ -32,6 +32,20 @@ export interface InvoiceItem {
 export interface InvoiceOrder {
   number: number;
   status: string;
+  /**
+   * **نوعُ الطلب** — و`custom` طلبٌ خاصّ.
+   *
+   * (شهده المالك ٢٠٢٦-٠٨-١٠: «فاتورةُ الطلبات الخاصّة فارغة».)
+   *
+   * **وأعمدةُ المحاسبة فيه أصفارٌ بقصد** — المنصّةُ توثّق ولا تحاسب —
+   * **فقرأتها الفاتورةُ ثمناً**: بضاعةٌ صفر، ورسمٌ «مجّانيّ»، وإجماليٌّ
+   * مطلوبٌ صفر. **وهي ورقةٌ تُطبع وتُسلَّم لمن دفع أربعين ألفاً.**
+   */
+  kind?: string;
+  custom_request?: string;
+  /** ما وثّقه السائقُ بعد الاتّفاق — **وهما مالُ الطلب الحقيقيّ.** */
+  custom_goods_amount?: number | null;
+  custom_fee?: number | null;
   merchant_name?: string;
   customer_name?: string;
   customer_phone?: string;
@@ -72,6 +86,17 @@ export function Invoice({
   const items = order.items ?? [];
   const commission = order.platform_commission ?? 0;
   const net = order.subtotal - commission;
+
+  /**
+   * **مالُ الطلب الخاصّ في عموده لا في عمود المحاسبة.**
+   *
+   * **`subtotal` و`total` يقرؤهما الدفترُ والخزينةُ وعمولةُ المندوب** —
+   * **ورقمٌ يُوثَّق فيهما يصير مالاً للمنصّة بلا أن يقرّر ذلك أحد.** فبقيا
+   * صفرين، **وصار على الفاتورة أن تعرف من أين تقرأ.**
+   */
+  const custom = order.kind === "custom";
+  const goods = order.custom_goods_amount ?? null;
+  const fee = order.custom_fee ?? 0;
 
   return (
     <div className="space-y-4">
@@ -134,6 +159,18 @@ export function Invoice({
           )}
         </div>
 
+        {/* **ونصُّ الطلب مكانَ جدولِ الأصناف** — (شهده المالك ٢٠٢٦-٠٨-١٠).
+
+            **الطلبُ الخاصُّ لا بنودَ له**: سطرٌ كتبه صاحبُه. **وفاتورةٌ بلا
+            سطرٍ واحدٍ يقول ما اشتُري ليست فاتورةً** — هي ورقةٌ فيها رقمُ طلبٍ
+            ومبلغ. **ومن راجعها بعد شهرٍ لا يعرف علامَ دفع.** */}
+        {custom && order.custom_request && (
+          <div className="surface-inset px-3 py-2 text-sm" data-print-keep>
+            <p className="mb-1 text-2xs text-ink-muted">{V.customRequest}</p>
+            <p className="whitespace-pre-wrap break-words">{order.custom_request}</p>
+          </div>
+        )}
+
         {items.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
@@ -195,7 +232,7 @@ export function Invoice({
             يجعل كلَّ لفظٍ ملاصقاً لمبلغه. */}
         <div className="mt-5 flex justify-end" data-print-keep>
           <dl className="w-full max-w-xs space-y-1.5 text-sm">
-            <Row label={V.subtotal} value={order.subtotal} />
+            <Row label={custom ? V.customGoods : V.subtotal} value={custom ? (goods ?? 0) : order.subtotal} />
             {/* ══════════════════════════════════════════════════════
                 **وصفرُ الأجرة تُقال «مجاني»**
                 ══════════════════════════════════════════════════════
@@ -206,7 +243,13 @@ export function Invoice({
                 **والصفرُ رقمٌ يُقرأ حساباً، و«مجّاني» خبرٌ يُقرأ هديّة.**
                 والفرقُ بينهما ليس تجميلاً: **من رأى صفراً ظنّ الحقلَ لم
                 يُحسب بعد** — ومن قرأ «مجّاني» علم أنّه رُبح. */}
-            {order.delivery_fee === 0 ? (
+            {custom ? (
+              /* **وأجرةُ الطلب الخاصّ ليست «مجّانيّة» حين تكون صفراً** —
+                 **هي لم تُتّفق بعد.** ومن قرأ «مجّانيّ» على ورقةٍ مطبوعةٍ
+                 احتجّ بها عند الباب، **وطلب السائقُ أجرتَه فوقع الخلافُ
+                 الذي بُني التوثيقُ ليمنعه.** */
+              <Row label={V.customFee} value={fee} />
+            ) : order.delivery_fee === 0 ? (
               <div className="flex items-center justify-between">
                 <dt className="text-ink-muted">{V.deliveryFee}</dt>
                 <dd className="font-medium text-success">{V.deliveryFree}</dd>
@@ -220,17 +263,30 @@ export function Invoice({
             <div className="figure flex items-center justify-between border-t-2 border-line-soft pt-2">
               <dt>{V.total}</dt>
               <dd dir="ltr" className="tabular-nums">
-                {fmtNum(order.total)}{" "}
+                {fmtNum(custom ? (goods ?? 0) + fee : order.total)}{" "}
                 <span className="text-sm font-normal">{m.common.currency}</span>
               </dd>
             </div>
           </dl>
         </div>
 
+        {/* **وسطرُ الدفع في الخاصّ من عموده أيضاً** — `cash_due` صفرٌ فيه
+            بقصد، **فكانت الورقةُ تقول «يُدفع نقداً عند الاستلام: ٠»** لمن
+            عليه أربعون ألفاً.
+
+            **ولا يُقال «لم يُتّفق» بعد التسليم**: إن سُلّم بلا توثيقٍ فالمالُ
+            وقع بينهما ولم يُكتب — **وهذا ما يجب أن تقوله الورقة**، لا أن
+            تسكت. */}
         <p className="mt-3 rounded-control bg-field px-3 py-2 text-xs text-ink-muted">
-          {order.wallet_paid > 0 && order.cash_due === 0
-            ? V.paidWallet
-            : V.paidCash.replace("{n}", fmtNum(order.cash_due))}
+          {custom
+            ? goods == null
+              ? V.customPending
+              : order.wallet_paid > 0
+                ? V.paidWallet
+                : V.paidCash.replace("{n}", fmtNum(goods + fee))
+            : order.wallet_paid > 0 && order.cash_due === 0
+              ? V.paidWallet
+              : V.paidCash.replace("{n}", fmtNum(order.cash_due))}
         </p>
 
         {/* **آخرُ ما تقع عليه العين.**

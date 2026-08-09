@@ -301,7 +301,11 @@
       "customer": "الزبون",
       "thanks": "شكراً لثقتك بـ{platform} — نسعد بخدمتك في كل مرّة",
       "support": "لأي شكوى أو استفسار عن هذه الفاتورة اتصل بنا:",
-      "deliveryFree": "مجاني"
+      "deliveryFree": "مجاني",
+      "customRequest": "الطلب",
+      "customGoods": "ثمن البضاعة",
+      "customFee": "أجرة التوصيل",
+      "customPending": "لم يوثّق السائقُ المبلغ — يُرجَع إلى المحادثة."
     },
     "merchantOps": {
       "ready": "الطلب جاهز",
