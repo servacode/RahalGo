@@ -24,6 +24,7 @@ package incentives
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -61,7 +62,13 @@ type Service struct {
 	wallet   *wallet.Service
 	settings Settings
 	treasury func(ctx context.Context) string
+	// logger **لِما يقع في الخلفية** — مكافأةُ الهدف تُدفع بلا فاعلٍ بشريّ،
+	// **وإخفاقُها لا يُسقط تسليماً** فلا يبقى له أثرٌ إلّا هنا.
+	logger *slog.Logger
 }
+
+// SetLogger يُحقن مرّةً عند الإقلاع — **وبلاه تصمت الحزمة ولا تنهار.**
+func (s *Service) SetLogger(l *slog.Logger) { s.logger = l }
 
 // Settings ما يلزم من الإعدادات — **واجهةٌ ضيّقة**: هذه الحزمةُ تقرأ رقمين.
 type Settings interface {

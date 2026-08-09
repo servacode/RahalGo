@@ -460,6 +460,7 @@
 | `drivers.max_active_orders` | السائقون | int | `2` |
 | `orders.driver_timeout_min` | السائقون | int | `10` |
 | `drivers.monthly_target` | السائقون | int | `0` |
+| `drivers.target_reward` | السائقون | money | `0` |
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |
 | `drivers.require_delivery_photo` | السائقون | bool | `true` |
 | `orders.auto_dispatch` | السائقون | bool | `true` |
@@ -473,6 +474,7 @@
 | `merchants.menu_requires_approval` | المتاجر | bool | `false` |
 | `sales.commission_percent` | المندوبون | int | `0` |
 | `sales.monthly_target` | المندوبون | int | `0` |
+| `sales.target_reward` | المندوبون | money | `0` |
 | `sales.activation_orders` | المندوبون | int | `5` |
 <!-- /gen:settings -->
 

@@ -14,6 +14,7 @@ import {
   Invoice,
   OrderTrack,
   OrderChat,
+  Select,
   PageContainer,
   PageHeader,
   EmptyState,
@@ -202,6 +203,17 @@ export default function MyOrdersPage() {
   const [notice, setNotice] = useState("");
   /** الطلبُ الذي يُسأل عن تكراره — **سؤالٌ واحدٌ لا خطوات.** */
   const [again, setAgain] = useState<Order | null>(null);
+  /**
+   * **طريقةُ الدفع في الطلب المعاد — تُسأل ولا تُورَّث.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «عند تكرار طلب الزبون مرّة ثانية يجب أن نذكر
+   *  طريقة الدفع — ممكن أوّل مرّة دفع نقديّ والثانية بدّو بالكرت أو العكس».)
+   *
+   * **وكانت تُورَّث بصمت** (`o.payment_method ?? "cash"`): من دفع بالمحفظة
+   * مرّةً يُنشأ له طلبُ محفظةٍ **حتّى لو كان رصيدُه لا يكفي** — فيُرفض ولا
+   * يفهم لماذا.
+   */
+  const [againPay, setAgainPay] = useState("cash");
   const [busy, setBusy] = useState(false);
 
   /**
@@ -242,7 +254,7 @@ export default function MyOrdersPage() {
           address_text: o.address_text ?? "",
           lat: o.lat ?? 0,
           lng: o.lng ?? 0,
-          payment_method: o.payment_method ?? "cash",
+          payment_method: againPay,
         }),
       });
       setAgain(null);
@@ -359,7 +371,10 @@ export default function MyOrdersPage() {
               key={o.id}
               o={o}
               rate={rateMap[o.id]}
-              onReorder={() => setAgain(o)}
+              onReorder={() => {
+                setAgainPay(o.payment_method ?? "cash");
+                setAgain(o);
+              }}
               onRate={() => setRating(rateMap[o.id] ?? null)}
               onInvoice={() => setInvoice(o)}
               onChanged={load}
@@ -395,6 +410,21 @@ export default function MyOrdersPage() {
               <span className="min-w-0 flex-1">{again.address_text}</span>
             </p>
           )}
+          {/* **وطريقةُ الدفع تُسأل** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
+
+              **وتبدأ بطريقة الطلب السابق اقتراحاً لا فرضاً**: أكثرُ الناس
+              يعيدون كما دفعوا، **ومن أراد غيرَها يبدّلها بضغطة.** */}
+          <Select
+            id="again-payment"
+            label={m.site.cart.payment}
+            className="mb-4"
+            value={againPay}
+            onChange={(e) => setAgainPay(e.target.value)}
+          >
+            <option value="cash">{m.orders.payment.cash}</option>
+            <option value="wallet">{m.orders.payment.wallet}</option>
+          </Select>
+
           <div className="flex gap-2">
             <Button variant="secondary" onClick={() => setAgain(null)}>
               {m.common.cancel}

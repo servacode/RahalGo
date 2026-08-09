@@ -869,6 +869,19 @@ var Catalog = []Def{
 	{Key: "drivers.monthly_target", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 5000, Unit: "order", Default: 0},
 
+	// **ومكافأةُ بلوغه — تُدفع آليّاً.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «يجب أن تكون واضحة وتُدفع بشكل آليّ عند إتمام
+	//  الهدف».)
+	//
+	// **وتُعرض على شاشته قبل أن يبلغ** — **ومن يركض خلف هدفٍ يجب أن يعرف
+	// الجائزة**، وشاشةٌ تقول «٣ من ٥٠» ولا تقول ماذا بعدها تطلب جهداً بلا وعد.
+	//
+	// **وصفرٌ يعني بلا مكافأةٍ آليّة** — يبقى الهدفُ عدّاداً والمكافأةُ بيد
+	// المالك كما كانت. **فمن لم يضبط رقماً لا يتبدّل عنده شيء.**
+	{Key: "drivers.target_reward", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+
 	{Key: "drivers.failed_compensation_percent", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 100, Unit: "percent", Default: 0, Sensitive: true},
 
@@ -953,6 +966,10 @@ var Catalog = []Def{
 	// **وصفرُه لا هدف.**
 	{Key: "sales.monthly_target", Group: GroupSales, Kind: KindInt,
 		Min: 0, Max: 5000, Unit: "order", Default: 0},
+
+	// **ومكافأةُ بلوغه للمندوب** — كأخيها في السائقين.
+	{Key: "sales.target_reward", Group: GroupSales, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
 
 	// ══════════════════════════════════════════════════════════════════
 	// **ستّةَ عشرَ مقبضاً كان في المحرّك ولا يُدار**

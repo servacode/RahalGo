@@ -86,6 +86,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
 	// **ولا تُقرأ مرّتين بطريقتين.**
 	srv.incentives = incentives.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID)
+	srv.incentives.SetLogger(logger)
+	// **ومكافأةُ الهدف تُدفع عند التسليم** — محرّكُ الطلبات يناديها.
+	ordersSvc.SetTargetGranter(srv.incentives)
 	// **والخصمُ يُقرأ لحظةَ بناء الطلب** — لا من ذاكرةٍ محمّلة.
 	srv.offers = offers.New(pg)
 	ordersSvc.SetOffers(srv.offers)

@@ -56,6 +56,11 @@ type Service struct {
 	offers DiscountReader
 	// referrals مكافأةُ من دعا الزبونَ — **تُصرف عند أوّل طلبٍ يُسلَّم له.**
 	referrals ReferralSettler
+	// targets **مكافأةُ هدف الشهر** — تُدفع آليّاً عند بلوغه.
+	//
+	// **وواجهةٌ ضيّقةٌ لا حزمة**: محرّكُ الطلبات لا يعرف الحوافزَ ولا يحتاج،
+	// **ودالّةٌ واحدةٌ تكسر الاتجاه بلا اعتمادٍ متبادل.**
+	targets TargetGranter
 	// settings قواعدُ العمل التي يملك المالك ضبطها من اللوحة.
 	//
 	// **اختيارية**: بلا حقنٍ يعمل المحرّك بسلوكه الافتراضي، فاختبارات التسويات
@@ -85,6 +90,14 @@ type ReferralSettler interface {
 
 // SetReferrals يحقن مُصرِّفَ مكافآت الدعوة.
 func (s *Service) SetReferrals(r ReferralSettler) { s.referrals = r }
+
+// TargetGranter مَن يدفع مكافأةَ الهدف — **يردّ ما دُفع، وصفراً إن لم يُدفع.**
+type TargetGranter interface {
+	GrantTargetIfReached(ctx context.Context, userID, role string) int64
+}
+
+// SetTargetGranter يُحقن مرّةً عند الإقلاع — **وبلاه لا تُدفع مكافأةٌ آليّة.**
+func (s *Service) SetTargetGranter(g TargetGranter) { s.targets = g }
 
 func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
 

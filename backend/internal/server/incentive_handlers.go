@@ -96,9 +96,23 @@ func (s *Server) handleMyIncentives(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **ومكافأةُ الهدف تُقال قبل أن يُبلَغ.**
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-٠٩: «هون بالهدف لازم يعرف شو المكافأة الي رح
+	//  يحصل عليها وقت يحقق هدفه».)
+	//
+	// **وشاشةٌ تقول «٣ من ٥٠» ولا تقول ماذا بعدها تطلب جهداً بلا وعد** — ومن
+	// يركض خلف هدفٍ يجب أن يعرف الجائزة.
+	//
+	// **وصفرٌ يُخفيها** — لا يُعرَض وعدٌ بلا مبلغ.
+	key := "drivers.target_reward"
+	if role == "sales" {
+		key = "sales.target_reward"
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"standing": st,
-		"entries":  list,
-		"kinds":    []string{incentives.KindReward, incentives.KindPenalty},
+		"standing":      st,
+		"entries":       list,
+		"target_reward": s.settings.GetInt(r.Context(), key),
+		"kinds":         []string{incentives.KindReward, incentives.KindPenalty},
 	})
 }
