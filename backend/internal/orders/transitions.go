@@ -259,6 +259,16 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	if err != nil {
 		return updated, err
 	}
+	// **وحديثُ الطلب الخاصّ يبدأ بنفسه لحظةَ الإسناد** — (قرارُ المالك
+	// ٢٠٢٦-٠٨-١٠). **وقناةٌ تُفتح ولا يقول فيها أحدٌ شيئاً تُبقي الطرفين
+	// ينتظر كلٌّ منهما الآخر.**
+	//
+	// **وقبل النشر** — فالفقّاعةُ تُحدَّث بحدث الطلب، **ولو كُتب الحديثُ بعده
+	// لَبقيت الشارةُ صفراً حتّى الحدث التالي.**
+	if kind == KindCustom && to == StAssigned && driverID != nil {
+		s.openCustomChat(ctx, orderID, customerID, *driverID)
+	}
+
 	s.publishOrder(updated)
 	// **وكلُّ من تحرّكت محفظتُه يُبلَّغ** — بعد الإيداع لا داخلَه.
 	s.publishWalletsOf(ctx, orderID)
