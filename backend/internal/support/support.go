@@ -43,6 +43,15 @@ type Ticket struct {
 	// الآن، **وكان قبلَه بحثاً في نصوصٍ حرّة.**
 	Reason string `json:"reason"`
 	// OpenedByCustomer فتحها صاحبُها بنفسه لا موظّفٌ عنه.
+	// AgainstUserID **ضدّ مَن هي** — `nil` تعني «على المنصّة».
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-٠٩: «مين ضد مين وكلّ شخص ياخذ حقّه».)
+	//
+	// **ولا يُرسَل إلى الزبون**: هو يعرف ما وقع لا مَن يُنذَر، **ومن رأى اسمَ
+	// من اشتُكي عليه قد يقصده خارجَ المنصّة.** (يُقرأ في الخادم للإشعار،
+	// ولا يُسمّى في الردّ.)
+	AgainstUserID *string `json:"-"`
+
 	OpenedByCustomer bool       `json:"opened_by_customer"`
 	Status           string     `json:"status"`
 	Compensation     int64      `json:"compensation"`
@@ -76,7 +85,8 @@ func (s *Service) SetSettings(st *settings.Store) { s.settings = st }
 
 const ticketSelect = `
 	SELECT t.id, t.number, t.customer_id, cu.phone, cu.full_name,
-	       t.order_id, o.number, t.subject, COALESCE(t.reason,''), t.opened_by_customer,
+	       t.order_id, o.number, t.subject, COALESCE(t.reason,''), t.against_user_id::text,
+	       t.opened_by_customer,
 	       t.status, t.compensation, t.resolution,
 	       t.created_at, t.resolved_at
 	FROM tickets t
@@ -86,7 +96,8 @@ const ticketSelect = `
 func scanTicket(row pgx.Row) (*Ticket, error) {
 	var t Ticket
 	err := row.Scan(&t.ID, &t.Number, &t.CustomerID, &t.CustomerPhone, &t.CustomerName,
-		&t.OrderID, &t.OrderNumber, &t.Subject, &t.Reason, &t.OpenedByCustomer,
+		&t.OrderID, &t.OrderNumber, &t.Subject, &t.Reason, &t.AgainstUserID,
+		&t.OpenedByCustomer,
 		&t.Status, &t.Compensation, &t.Resolution,
 		&t.CreatedAt, &t.ResolvedAt)
 	if err != nil {

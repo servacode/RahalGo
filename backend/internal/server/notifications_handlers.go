@@ -58,7 +58,16 @@ var notifTitles = struct {
 	// **ولا رقمَ ولا اسمَ شخصٍ في العنوان**: يُقرأ الإشعارُ على شاشةٍ مقفلة،
 	// **واسمٌ يظهر هناك يُعرّف بمن لا يُراد تعريفُه.**
 	messageFromDriver, messageFromCustomer string
+	// **إنذارٌ عليك** — لأيّ دور.
+	//
+	// **و`warningIssued` القديمُ للمتاجر وحدَه** ونصُّه «إنذارٌ على متجرك»
+	// — **ولا يصلح لسائقٍ ولا لزبون.**
+	warningOnYou string
+	// **وشكوى فُتحت عليك** — يعرفها من هي عليه لا من فتحها وحدَه.
+	complaintOnYou string
 }{
+	warningOnYou:        "إنذار على حسابك",
+	complaintOnYou:      "شكوى على خدمتك",
 	messageFromDriver:   "رسالة من السائق",
 	messageFromCustomer: "رسالة من الزبون",
 	warningIssued:       "إنذارٌ على متجرك",

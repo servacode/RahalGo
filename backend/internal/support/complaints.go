@@ -47,6 +47,21 @@ type ComplaintReason struct {
 	// **«لم يصلني طلبي» على طلبٍ لم يُسلَّم لغو**: حالتُه تقول ذلك أصلاً،
 	// **وسؤالُ المستخدم عمّا نعرفه يجعله يشكّ فيما نعرف.**
 	Delivered bool `json:"delivered_only"`
+
+	// Against **مَن يعنيه هذا السبب** — `driver` أو `merchant` أو فراغٌ للمنصّة.
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-٠٩: «مين ضد مين وكلّ شخص ياخذ حقّه».)
+	//
+	// **ولا يُسأل الزبونُ عن شخص**: هو يعرف ما وقع لا مَن المسؤول. **ومن
+	// سُئل «على مَن تشكو؟» اختار من رآه** — والسائقُ هو من يراه، فيُتَّهم
+	// بنقصٍ في كيسٍ ختمه المطبخ.
+	//
+	// **والسببُ يقولها وحدَه**: «لم يصلني» فعلُ من سلّم، **و«نواقص» فعلُ من
+	// عبّأ.** فيُشتقّ ولا يُطلَب.
+	//
+	// **وفراغُه ليس نقصاً**: «مال» و«أخرى» شكاوى على المنصّة نفسِها — تأخّرٌ
+	// في التوزيع أو خطأٌ في تسعير، **ولا شخصَ فيها يُنذَر.**
+	Against string `json:"against"`
 }
 
 // ComplaintReasons ما يملك الزبونُ اختيارَه.
@@ -59,14 +74,17 @@ var ComplaintReasons = []ComplaintReason{
 	// طلبٌ حالتُه «مُسلَّم» ولم يصل يعني أحدَ أمرين: **سائقٌ ضغط الزرّ ولم
 	// يسلّم، أو تسليمٌ إلى غير صاحبه.** وكلاهما مالٌ خرج من الزبون بلا مقابل،
 	// **ولا يُكتشف إلّا إن قاله هو** — لا قيدَ في دفترنا يشي به.
-	{Code: "not_received", Delivered: true},
-	{Code: "missing_items", Delivered: true},
-	{Code: "wrong_items", Delivered: true},
-	{Code: "quality", Delivered: true},
+	{Code: "not_received", Delivered: true, Against: "driver"},
+	{Code: "missing_items", Delivered: true, Against: "merchant"},
+	{Code: "wrong_items", Delivered: true, Against: "merchant"},
+	{Code: "quality", Delivered: true, Against: "merchant"},
+	// **والتأخّرُ لا يُنسب لأحدٍ بعينه** — مطبخٌ تأخّر أو سائقٌ تأخّر أو
+	// توزيعٌ تأخّر، **ولا يُعرف أيُّها من شكوى الزبون.** فتذهب إلى العمليات
+	// وهي تقرأ الأوقاتَ وتنسب.
 	{Code: "late", Delivered: true},
 	// **يُعرض على غير المسلَّم أيضاً**: من أُلغي طلبُه بلا سببٍ يفهمه يشكو،
 	// ومن تعذّر تسليمُه وهو في بيته يشكو.
-	{Code: "driver_conduct"},
+	{Code: "driver_conduct", Against: "driver"},
 	{Code: "money", Delivered: false},
 	{Code: "other"},
 }
@@ -123,6 +141,35 @@ func validReason(code, status string) bool {
 	return false
 }
 
+// againstFor **مَن تعنيه الشكوى — يُشتقّ من سببها.**
+//
+// **ويردّ فراغاً لِما يخصّ المنصّة** — وهي حالةٌ حقيقيّةٌ لا نقصُ بيانات.
+//
+// **ويردّ فراغاً كذلك إن لم يكن للطلب سائقٌ بعد** أو لا مالكَ للمتجر:
+// **شكوى على من لا وجودَ له تُنسَب إلى المنصّة**، ولا تُعلَّق بلا صاحب.
+func (s *Service) againstFor(ctx context.Context, orderID, reason string) *string {
+	var target string
+	for _, r := range ComplaintReasons {
+		if r.Code == reason {
+			target = r.Against
+			break
+		}
+	}
+	if target == "" {
+		return nil
+	}
+	var id *string
+	q := `SELECT o.driver_id::text FROM orders o WHERE o.id = $1`
+	if target == "merchant" {
+		q = `SELECT m.owner_user_id::text FROM orders o
+		     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1`
+	}
+	if err := s.db.QueryRow(ctx, q, orderID).Scan(&id); err != nil {
+		return nil
+	}
+	return id
+}
+
 // Complaint شكوى الزبون على طلبه — تُفتح تذكرةً كسائر التذاكر.
 //
 // **تذكرةٌ لا نوعٌ ثانٍ من السجلّات**: للدعم مكانٌ واحدٌ ينظر فيه، **ومكتبٌ
@@ -176,10 +223,18 @@ func (s *Service) Complaint(ctx context.Context, customerID, orderID, reason, no
 	// الشاشة. **فيُكتب ما لا يوجد في خانةٍ أخرى، ولا يُكرَّر ما يوجد.**
 	subject = "شكوى على طلب"
 	var ticketID string
+	// **وضدّ مَن هي — يُشتقّ من سببها لا يُسأل عنه الزبون.**
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-٠٩: «مين ضد مين وكلّ شخص ياخذ حقّه».)
+	//
+	// **وبلاها كانت الشكوى تُعرض على كلّ من على الطلب**: يقرؤها السائقُ
+	// وصاحبُ المتجر كلاهما وكأنّها عليه.
+	against := s.againstFor(ctx, orderID, reason)
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO tickets (customer_id, order_id, subject, reason, created_by, opened_by_customer)
-		VALUES ($1, $2, $3, $4, $1, true) RETURNING id`,
-		customerID, orderID, subject, reason).Scan(&ticketID)
+		INSERT INTO tickets (customer_id, order_id, subject, reason, created_by,
+		                     opened_by_customer, against_user_id)
+		VALUES ($1, $2, $3, $4, $1, true, $5) RETURNING id`,
+		customerID, orderID, subject, reason, against).Scan(&ticketID)
 	// **الفهرسُ الفريدُ هو من يمنع التكرار لا فحصٌ قبله.**
 	//
 	// فحصٌ ثمّ إدراجٌ يترك بينهما ثغرةً: ضغطتان متزامنتان تمرّان كلتاهما.

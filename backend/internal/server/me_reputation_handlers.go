@@ -128,13 +128,26 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 	}
 	out.Rating.Trend = trendOf(out.Rating.Count, out.Rating.Avg, out.Rating.RecentAvg)
 
-	// الشكاوى/البلاغات بحقّه (تذاكر على طلباته).
+	// ── الشكاوى بحقّه — **بحقّه هو لا بحقّ الطلب** ─────────────────────
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-٠٩: «مين ضد مين وكلّ شخص ياخذ حقّه».)
+	//
+	// **كان الشرطُ «تذكرةٌ على طلبٍ قاده» أو «على طلبٍ من متجره»** — فشكوى
+	// على السائق يقرؤها صاحبُ المتجر وكأنّها عليه، **والعكس.** ويعدّ نفسَه
+	// متّهماً بما لا شأنَ له به، ولا يجد ما يصحّحه.
+	//
+	// **وصار الشرطُ المشتكى عليه نفسَه** — يُشتقّ من سبب الشكوى عند فتحها.
+	//
+	// **والقديمةُ بلا مشتكًى عليه تبقى للجميع**: صفوفٌ سبقت الهجرة، **وإخفاؤها
+	// عن الطرفين يمحو تاريخاً** بدل أن يوزّعه. (`against_user_id IS NULL`
+	// تعني «على المنصّة» أو «قبل أن يُعرف».)
 	crows, err := s.pg.Query(ctx, `
 		SELECT t.number, o.number, t.subject, t.status, t.created_at
 		FROM tickets t
 		JOIN orders o ON o.id = t.order_id
 		`+ownerJoin+`
 		WHERE `+ownerCond+complaintCond+`
+		  AND (t.against_user_id IS NULL OR t.against_user_id = $1)
 		ORDER BY t.created_at DESC LIMIT 50`, uid)
 	if err == nil {
 		for crows.Next() {

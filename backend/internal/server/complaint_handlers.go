@@ -55,6 +55,25 @@ func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
 		// **إلى صفحة الشكاوى لا إلى صفحةِ طلبٍ محذوفة** — وهناك يرى حالَها.
 		Entity: "ticket", EntityID: t.ID, Href: "/complaints",
 	})
+	// **ومن هي عليه يُخبَر — وهو ما لم يكن.**
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-٠٩: «لازم يكون في تنبيه بخصوص الشكوى بشكل مباشر
+	//  مين ضد مين وكلّ شخص ياخذ حقّه».)
+	//
+	// **كانت الشكوى تظهر في صفحةٍ يجب أن يفتحها بنفسه** — ولا شيءَ يقول له
+	// إنّ عليه شكوى. **ومن اشتُكي عليه ولا يعلم لا يُصلح شيئاً**: يُخصم منه
+	// يوماً فيُفاجأ، ويظنّ الظلمَ حيث كان خبر.
+	//
+	// **ولا يُذكر اسمُ الشاكي**: ما يخصّه ما وقع لا من قاله — **ومن عرف من
+	// اشتكى عليه قد يقصده خارجَ المنصّة.**
+	if t.AgainstUserID != nil {
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: *t.AgainstUserID, Kind: notifications.KindTicket,
+			Title: notifTitles.complaintOnYou, Body: t.Subject,
+			Entity: "ticket", EntityID: t.ID, Href: "/portal/complaints",
+		})
+	}
+
 	// **والعملياتُ تُخبَر فوراً لا حين تفتح اللوحة.**
 	//
 	// «لم يصلني طلبي» خبرُ مالٍ خرج بلا مقابل، **وساعةُ تأخيرٍ في قراءته

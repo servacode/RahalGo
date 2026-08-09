@@ -215,6 +215,8 @@ func (s *Server) Router() http.Handler {
 			//
 			// **ولا دورَ يُشترَط هنا** — `Permit` تردّ ٤٠٤ لمن ليس طرفاً،
 			// **وحارسُ الدور يمنع سائقاً أن يقرأ حديثَ طلبه** لو وُضع.
+			// **وإنذاراتي — يراها صاحبُها أيَّ دورٍ كان.**
+			r.Get("/my/warnings", s.handleMyWarnings)
 			r.Get("/orders/{id}/messages", s.handleOrderMessages)
 			r.Post("/orders/{id}/messages", s.handleSendOrderMessage)
 			r.Get("/my/orders", s.handleMyOrders)
@@ -369,6 +371,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/users/{id}/activity", s.handleAdminUserActivity)
 			r.Get("/users/{id}/feedback", s.handleAdminUserFeedback)
 			r.Get("/users/{id}/financials", s.handleAdminUserFinancials)
+			// **وإنذاراتُ الحساب — لأيّ دورٍ كان.**
+			//
+			// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «اجعله لكلّ الأدوار حتّى الزبون».)
+			r.Get("/users/{id}/warnings", s.handleAdminUserWarnings)
 			r.Get("/categories", s.handleListCategories)
 			// **أقسامُ المنصة** — ما نبيعه، لا من نشتري منه.
 			r.Get("/sections", s.handleListPlatformSections)
@@ -532,6 +538,8 @@ func (s *Server) Router() http.Handler {
 				// **الحظرُ والعفو** — merchant_violations.go
 				r.Get("/merchants/{id}/violations", s.handleMerchantViolations)
 				r.Post("/merchants/{id}/warnings", s.handleIssueWarning)
+				// **والإنذارُ على حسابٍ** — سائقاً كان أو زبوناً أو مندوباً.
+				r.Post("/users/{id}/warnings", s.handleIssueUserWarning)
 				r.Post("/merchants/{id}/suspend", s.handleSuspendMerchant)
 				r.Post("/merchants/{id}/clear-violations", s.handleClearViolations)
 				r.Post("/merchants/{id}/menu/sections", s.handleCreateSection)

@@ -1838,7 +1838,8 @@
         "platform.app_upload": "رفعُ ملفّ التطبيق",
         "user.register": "إنشاء حساب زبون",
         "user.rename_self": "تغييرُ صاحبِ الحساب اسمَه",
-        "user.self_delete": "حذف الحساب بطلب صاحبه"
+        "user.self_delete": "حذف الحساب بطلب صاحبه",
+        "ops.warning_issued": "توجيه إنذار على حساب"
       }
     },
     "dash": {
