@@ -11,27 +11,49 @@
  * **هو يطلب ما لا نعرف سعرَه** — والسائقُ يشتريه ويتّفق معه في المحادثة بعد
  * الإسناد. **وسؤالٌ لا جوابَ له يُوقف من يملأ نموذجاً.**
  *
- * # والعنوانُ يُملأ من دفتره
+ * # والعنوانُ يُكتب ويُؤشَّر — كما في السلّة حرفاً بحرف
  *
- * **ومن له عنوانٌ واحد لا يُسأل عنه** — القاعدةُ نفسُها في السلّة.
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٠: «الخريطةُ والعنوانُ غيرُ موجودين مثل ما طلبت
+ *  لتحديد المكان والعنوان».)
+ *
+ * **كانت قائمةَ عناوينَ محفوظةٍ وحدَها** — **ومن لا عنوانَ محفوظاً له يقف
+ * أمام إنذارٍ يقول «أضف عنواناً في حسابك أوّلاً»** فيخرج من الصفحة ليعود
+ * إليها. **وأوّلُ طلبٍ لزبونٍ جديدٍ هو بالضبط الحالُ التي لا عنوانَ فيها.**
+ *
+ * **والدبّوسُ ليس زينةً**: السائقُ يمشي إليه — **ونصُّ العنوان يُقرأ ولا
+ * يُلاحَق**، «خلف الجامع» تكفي من يعرف الحيّ ولا تكفي من لا يعرفه.
+ *
+ * **والمكوّناتُ نفسُها التي في السلّة** — `AddressBook` و`PickMap`:
+ * **وشاشتان تسألان العنوانَ بطريقتين تُربكان من ملأ إحداهما.**
  */
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Alert,
   Button,
+  Input,
   Select,
   Textarea,
+  AddressBook,
   PageContainer,
   PageHeader,
   IconOrder,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
+/** **الخريطةُ ثقيلةٌ ولا تعمل على الخادم** — تُحمَّل عند الحاجة كما في السلّة. */
+const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), {
+  ssr: false,
+});
+
 const m = getMessages(defaultLocale);
 const C = m.site.custom;
+
+/** **مركزُ الرقّة** — نقطةُ البدء لمن لا عنوانَ محفوظاً له. */
+const RAQQA = { lat: 35.9528, lng: 39.0079 };
 
 interface SavedAddress {
   id: string;
@@ -44,7 +66,11 @@ interface SavedAddress {
 export default function CustomOrderPage() {
   const router = useRouter();
   const [saved, setSaved] = useState<SavedAddress[]>([]);
+  /** **العنوانُ المحفوظُ المختار** — ويُفرَّغ متى عُدّل النصُّ بيده. */
   const [pickedID, setPickedID] = useState("");
+  const [address, setAddress] = useState("");
+  const [lat, setLat] = useState(RAQQA.lat);
+  const [lng, setLng] = useState(RAQQA.lng);
   const [request, setRequest] = useState("");
   const [payment, setPayment] = useState("cash");
   const [busy, setBusy] = useState(false);
@@ -54,23 +80,23 @@ export default function CustomOrderPage() {
     api<SavedAddress[]>("/api/v1/my/addresses")
       .then((a) => {
         setSaved(a);
+        // **ومن له عنوانٌ محفوظٌ لا يُسأل عنه** — يُملأ النصُّ والدبّوسُ معاً،
+        // **ونصٌّ بلا دبّوسٍ يرسل السائقَ إلى مركز المدينة.**
         const def = a.find((x) => x.is_default) ?? a[0];
-        if (def) setPickedID(def.id);
+        if (def) {
+          setPickedID(def.id);
+          setAddress(def.address_text);
+          setLat(def.lat);
+          setLng(def.lng);
+        }
       })
+      // @empty-ok **ولا عنوانَ محفوظ** — يكتبه الآن ويؤشّر على الخريطة.
       .catch(() => undefined);
   }, []);
 
-  /** **وعنوانٌ يُكتب الآن** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «ربّما يريد عنواناً
-      مختلفاً»). **ومن يطلب لغيره أو من مكانٍ طارئٍ لا يجد عنوانَه في دفتره.** */
-  const [freeText, setFreeText] = useState("");
-  const useFree = pickedID === "__new";
-  const picked = useFree
-    ? { address_text: freeText.trim(), lat: saved[0]?.lat ?? 0, lng: saved[0]?.lng ?? 0 }
-    : saved.find((a) => a.id === pickedID);
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!request.trim() || !picked?.address_text || busy) return;
+    if (!request.trim() || !address.trim() || busy) return;
     setBusy(true);
     setError("");
     try {
@@ -78,9 +104,9 @@ export default function CustomOrderPage() {
         method: "POST",
         body: JSON.stringify({
           request: request.trim(),
-          address_text: picked.address_text,
-          lat: picked.lat,
-          lng: picked.lng,
+          address_text: address.trim(),
+          lat,
+          lng,
           payment_method: payment,
         }),
       });
@@ -109,36 +135,54 @@ export default function CustomOrderPage() {
           onChange={(e) => setRequest(e.target.value)}
         />
 
-        {/* **والعنوانُ من دفتره** — ومن لا عنوانَ له يُرسَل ليضيف واحداً،
-            **لا يُترك أمام قائمةٍ فارغةٍ لا يفهم لماذا هي فارغة.** */}
-        {saved.length === 0 ? (
-          <Alert tone="warning">{C.noAddress}</Alert>
-        ) : (
-          <Select
-            id="custom-address"
-            label={C.address}
-            value={pickedID}
-            onChange={(e) => setPickedID(e.target.value)}
-          >
-            {saved.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.address_text}
-              </option>
-            ))}
-            <option value="__new">{C.newAddress}</option>
-          </Select>
+        {/* **ودفترُ عناوينه أوّلاً** — من حفظ عنوانَه لا يُطلب منه رسمُ
+            دبّوسه ثانيةً، **والاختيارُ يملأ النصَّ والدبّوسَ معاً.** */}
+        {saved.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-medium">{m.site.addresses.title}</p>
+            <AddressBook
+              api={api}
+              selectedID={pickedID}
+              onPick={(a) => {
+                setPickedID(a.id);
+                setAddress(a.address_text);
+                setLat(a.lat);
+                setLng(a.lng);
+              }}
+            />
+          </div>
         )}
 
-        {useFree && (
-          <Textarea
-            id="custom-free-address"
-            label={C.newAddressText}
-            rows={2}
-            required
-            value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
-          />
-        )}
+        <Input
+          id="custom-address"
+          label={m.site.cart.address}
+          required
+          value={address}
+          /* **وتعديلُ النصّ يُلغي علامةَ المحفوظ** — علامةٌ على عنوانٍ لم يعد
+             هو المستعمَل **تقول غيرَ الواقع.** */
+          onChange={(e) => {
+            setAddress(e.target.value);
+            setPickedID("");
+          }}
+          placeholder={m.site.cart.addressPlaceholder}
+        />
+
+        {/* **والدبّوسُ يُحرَّك** — السائقُ يمشي إليه، **ونصُّ العنوان يُقرأ
+            ولا يُلاحَق.** */}
+        <div>
+          <p className="mb-1.5 text-xs text-ink-muted">{m.site.cart.pinHint}</p>
+          <div className="overflow-hidden rounded-control border border-line">
+            <PickMap
+              lat={lat}
+              lng={lng}
+              onPick={(la, ln) => {
+                setLat(la);
+                setLng(ln);
+                setPickedID("");
+              }}
+            />
+          </div>
+        </div>
 
         {/* **وطريقةُ الدفع** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
 
@@ -162,7 +206,7 @@ export default function CustomOrderPage() {
 
         {error && <Alert>{error}</Alert>}
 
-        <Button type="submit" disabled={busy || !request.trim() || !picked?.address_text} className="w-full">
+        <Button type="submit" disabled={busy || !request.trim() || !address.trim()} className="w-full">
           {busy ? m.common.loading : C.send}
         </Button>
       </form>
