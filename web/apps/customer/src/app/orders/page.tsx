@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 /** طلباتي: السجل الكامل مع حالة كل طلب. */
 
 import { useCallback, useEffect, useState } from "react";
@@ -315,7 +317,19 @@ export default function MyOrdersPage() {
   if (failed) {
     return (
       <PageContainer>
-        <PageHeader icon={IconOrder} title={m.terms.orders} />
+        <PageHeader
+        icon={IconOrder}
+        title={m.terms.orders}
+        actions={
+          /* **وطلبٌ خاصٌّ من هنا** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
+
+             **وموضعُه صفحةُ الطلبات لا الشريطُ السفليّ**: فيه خمسةُ أقسامٍ
+             والإبهامُ لا يتّسع لسادس. **ومن يريد أن يطلب شيئاً يفتح طلباتِه.** */
+          <Link href="/custom">
+            <Button variant="secondary">{m.site.custom.button}</Button>
+          </Link>
+        }
+      />
         <Alert tone="warning" title={m.errors.offline}>
           {m.errors.offlineHint}
         </Alert>
@@ -329,7 +343,19 @@ export default function MyOrdersPage() {
 
   return (
     <PageContainer>
-      <PageHeader icon={IconOrder} title={m.terms.orders} />
+      <PageHeader
+        icon={IconOrder}
+        title={m.terms.orders}
+        actions={
+          /* **وطلبٌ خاصٌّ من هنا** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
+
+             **وموضعُه صفحةُ الطلبات لا الشريطُ السفليّ**: فيه خمسةُ أقسامٍ
+             والإبهامُ لا يتّسع لسادس. **ومن يريد أن يطلب شيئاً يفتح طلباتِه.** */
+          <Link href="/custom">
+            <Button variant="secondary">{m.site.custom.button}</Button>
+          </Link>
+        }
+      />
       {notice && (
         <Alert tone="warning" className="mb-3">{notice}</Alert>
       )}
@@ -349,9 +375,23 @@ export default function MyOrdersPage() {
 
             **ولا يُعرض العنوانان على فراغ**: من لا طلبَ جارياً له لا يرى
             «الجاري» فارغةً — وقسمٌ فارغٌ يُقرأ عطباً. */}
+        {/* **وثلاثةُ أقسامٍ لا اثنان** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «طلبات
+            جارية، طلبات سابقة، طلبات ملغاة»).
+
+            **والملغاةُ لا تُخلَط بالمنتهية**: من يبحث عن طلبٍ سُلّم يمرّ على
+            كلّ ما أُلغي. **وهما نهايتان مختلفتان**: واحدةٌ وصلت، وأخرى لم تقع. */}
         {[
-          { key: "live", rows: orders.filter((o) => !o.closed_at), title: m.site.orders.live },
-          { key: "past", rows: orders.filter((o) => o.closed_at), title: m.site.orders.past },
+          { key: "live", rows: orders.filter((o) => !o.closed_at), title: m.site.orders.tabActive },
+          {
+            key: "past",
+            rows: orders.filter((o) => o.closed_at && o.status === "delivered"),
+            title: m.site.orders.tabPast,
+          },
+          {
+            key: "cancelled",
+            rows: orders.filter((o) => o.closed_at && o.status !== "delivered"),
+            title: m.site.orders.tabCancelled,
+          },
         ]
           .filter((g) => g.rows.length > 0)
           .map((g) => (

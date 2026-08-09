@@ -133,6 +133,8 @@ export * from "./ordertrack";
 export * from "./MyAddresses";
 // **حديثُ الطلب** — مكوّنٌ واحدٌ لطرفيه، بلا رقمٍ بينهما.
 export * from "./OrderChat";
+// **فقّاعةُ المحادثة** — تطفو ولا تسكن بطاقة.
+export * from "./ChatBubble";
 // **توثيقُ واتساب** — صندوقٌ واحدٌ يُنادى حيث يُحتاج.
 export * from "./WhatsAppVerify";
 // **وقتُ السائق** — حسابٌ واحدٌ لبطاقتيه.

@@ -43,6 +43,7 @@ import {
   IconWarning,
   IconCamera,
   IconChat,
+  ChatBubble,
   Radio,
   LoadingState,
 } from "@rahalgo/ui";
@@ -71,6 +72,22 @@ const FAIL_AT = ["at_pickup", "at_dropoff"] as const;
 const NEXT: Record<string, string> = {
   assigned: "at_pickup",
   at_pickup: "picked_up",
+  picked_up: "on_the_way",
+  on_the_way: "at_dropoff",
+  at_dropoff: "delivered",
+};
+
+/**
+ * **وخارطةُ الطلب الخاصّ — بلا «وصلتُ إلى المتجر».**
+ *
+ * (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «ما في شيء اسمه وصلتُ للمتجر — لازم فتح دردشة
+ *  مع الزبون لمعرفة التفاصيل… وبعد الاتّفاق وتوثيق البيانات يبدأ السائق».)
+ *
+ * **لا متجرَ يقف عنده** — يتّفق ثمّ يشتري. **ومرآةُ `customTransitions` في
+ * المحرّك**: هو يحكم وهذه تعرض.
+ */
+const CUSTOM_NEXT: Record<string, string> = {
+  assigned: "picked_up",
   picked_up: "on_the_way",
   on_the_way: "at_dropoff",
   at_dropoff: "delivered",
@@ -114,6 +131,13 @@ interface DriverOrder {
   /** **نقطةُ الاستلام التي يمشي إليها** — البديلةُ إن وُجدت وإلّا المتجر. */
   nav_lat?: number | null;
   nav_lng?: number | null;
+  /** **نوعُ الطلب** — `custom` طلبٌ خاصٌّ يشتريه السائقُ بنفسه. */
+  kind?: string;
+  /** **ما طلبه الزبونُ بلفظه** — في الخاصّ وحدَه. */
+  custom_request?: string;
+  /** ما وُثّق من اتّفاق — `null` قبل أن يُوثَّق. */
+  custom_goods_amount?: number | null;
+  custom_fee?: number | null;
 }
 
 interface Me {
@@ -169,6 +193,8 @@ export default function TasksPage() {
   const [emergency, setEmergency] = useState<DriverOrder | null>(null);
   /** الطلبُ الذي يُطلب إثباتُ تسليمه — **قبل «سُلّم» لا بعده**. */
   const [proving, setProving] = useState<DriverOrder | null>(null);
+  /** **الطلبُ الخاصُّ الذي يُوثَّق مبلغُه** — بعد أن يتّفق مع الزبون. */
+  const [agreeing, setAgreeing] = useState<DriverOrder | null>(null);
   /** **رمزُ** السبب المختار — لا نصُّه. */
   const [reason, setReason] = useState("");
   /** التفصيلُ الحرّ بجانبه — اختياريّ. */
@@ -461,6 +487,7 @@ export default function TasksPage() {
                 }}
                 onRelease={() => act(o, "dispatching")}
                 onEmergency={() => setEmergency(o)}
+                onAgree={() => setAgreeing(o)}
                 speedKmh={me.avg_speed_kmh}
               />
             ))}
@@ -471,6 +498,31 @@ export default function TasksPage() {
       {/* **و«طلبات قادمة» صارت قسماً قائماً بذاته** — `/portal/incoming`.
           كانت هنا ذيلاً لمهامّي، **فيقرؤها السائقُ بعد أن يمرّ على مهامّه**،
           وهي أوّلُ ما يحتاجه لا آخرُه. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
+
+      {/* **والمحادثةُ فقّاعةٌ تطفو** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
+
+          **كانت أيقونةً في البطاقة تفتح صفحةً** — فيخرج من مهامّه ليكتب سطراً
+          ثمّ يعود. **والحديثُ يجري والعملُ يجري.**
+
+          **وواحدةٌ لكلّ المفتوح**: تبويبٌ بالأرقام إن كانت أكثرَ من طلب. */}
+      <ChatBubble
+        api={api}
+        threads={mine
+          .filter((o) => o.status !== "delivered" && o.status !== "failed")
+          .map((o) => ({ id: o.id, number: o.number, peer: o.customer_name, unread: 0 }))}
+        onRead={load}
+      />
+
+      {agreeing && (
+        <AgreeModal
+          order={agreeing}
+          onClose={() => setAgreeing(null)}
+          onDone={() => {
+            setAgreeing(null);
+            load();
+          }}
+        />
+      )}
 
       {proving && (
         <ProofModal
@@ -594,6 +646,7 @@ function TaskCard({
   onFail,
   onRelease,
   onEmergency,
+  onAgree,
   speedKmh,
 }: {
   o: DriverOrder;
@@ -602,10 +655,16 @@ function TaskCard({
   onFail: () => void;
   onRelease: () => void;
   onEmergency: () => void;
+  /** يفتح توثيقَ ما اتُّفق عليه — للطلب الخاصّ وحدَه. */
+  onAgree: () => void;
   /** متوسّطُ السرعة — منه يُحسب الوقتُ من المسافة. */
   speedKmh: number;
 }) {
-  const next = NEXT[o.status];
+  const custom = o.kind === "custom";
+  const next = (custom ? CUSTOM_NEXT : NEXT)[o.status];
+  // **ولا يبدأ الخاصُّ قبل أن يُوثَّق** — والمحرّكُ يفرضها، **والشاشةُ تُخفي
+  // ما يرفضه الخادم** فلا زرَّ يَعِد بما يُعتذر عنه.
+  const blocked = custom && next === "picked_up" && o.custom_goods_amount == null;
   // **والوقتُ بجانب المسافة** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
   //
   // **«٣٫٢ كم» تعني عشر دقائقَ في شارعٍ مفتوحٍ وعشرين في سوق** — والسائقُ
@@ -683,14 +742,55 @@ function TaskCard({
           لأنّ إحداثيّاتِ المتجر لم تكن تُرسَل أصلاً.
 
           **فيعرف السائقُ «٤٠٠ متر» ولا يستطيع أن يضغط ليمشي إليها.** */}
+      {/* **والطلبُ الخاصُّ يقول ما يريده الزبونُ بلفظه.**
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) **ولا متجرَ ولا أصنافَ ولا سعر** — السائقُ
+          يقرأ الطلب، ويتّفق في المحادثة، ثمّ يشتري بماله ويستردّ عند التسليم. */}
+      {custom && o.custom_request && (
+        <div className="mb-2 rounded-control bg-warning-tint px-3 py-2">
+          <p className="text-2xs font-medium text-warning">{D.custom.label}</p>
+          <p className="mt-0.5 whitespace-pre-wrap text-sm text-ink">{o.custom_request}</p>
+        </div>
+      )}
+
+      {/* **وتفصيلُ المبلغ بعد التوثيق** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «بالبطاقة
+          لازم يطلع ثمن البضاعة والأجور والإجمالي»).
+
+          **ورقمٌ واحدٌ لا يُراجَع**: من قبض ٥٣ ألفاً لا يعرف أين ذهبت —
+          **والزبونُ يسأل «كم الأجرة؟» فلا يجد جواباً في يد أحدهما.** */}
+      {custom && o.custom_goods_amount != null && (
+        <div className="mb-2 space-y-1 rounded-control bg-field px-3 py-2 text-xs">
+          <p className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{D.custom.goods}</span>
+            <span className="tabular-nums" dir="ltr">{fmtNum(o.custom_goods_amount)}</span>
+          </p>
+          <p className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{D.custom.fee}</span>
+            <span className="tabular-nums" dir="ltr">{fmtNum(o.custom_fee ?? 0)}</span>
+          </p>
+          <p className="flex items-center justify-between gap-2 border-t border-line-soft pt-1 font-bold">
+            <span>{D.custom.total}</span>
+            <span className="tabular-nums" dir="ltr">
+              {fmtNum((o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0))} {m.common.currency}
+            </span>
+          </p>
+        </div>
+      )}
+
       <Leg
         icon={IconStore}
         label={o.pickup_lat != null ? D.order.pickupOverride : D.order.pickup}
         name={o.pickup_lat != null ? D.order.pickupFromDriver : o.merchant_name}
         detail={
-          o.pickup_lat != null
-            ? o.pickup_note || D.order.pickupOverrideHint
-            : D.order.items.replace("{n}", fmtNum(o.items_count))
+          /* **وفي الخاصّ يُكتب الطلبُ لا عددُ أصناف** — (قرارُ المالك
+             ٢٠٢٦-٠٨-٠٩: «بدل بلا أصناف اكتب الطلب»).
+
+             **ولا أصنافَ له تُعدّ** — هو سطرٌ كتبه الزبون. */
+          custom
+            ? o.custom_request || ""
+            : o.pickup_lat != null
+              ? o.pickup_note || D.order.pickupOverrideHint
+              : D.order.items.replace("{n}", fmtNum(o.items_count))
         }
         href={o.nav_lat != null ? mapsHref(o.nav_lat, o.nav_lng ?? 0) : undefined}
         hrefLabel={o.nav_lat != null ? D.order.navigate : undefined}
@@ -703,8 +803,6 @@ function TaskCard({
         label={D.order.dropoff}
         name={o.customer_name}
         detail={o.address_text}
-        chatHref={`/portal/orders/${o.id}`}
-        chatLabel={m.chat.openChat}
         href={mapsHref(o.lat, o.lng)}
         hrefLabel={D.order.navigate}
         dim={heading}
@@ -717,7 +815,26 @@ function TaskCard({
         }`}
       >
         <IconBalance size={16} />
-        {cash ? (
+        {/* **والطلبُ الخاصُّ يُقبض فيه ما اتُّفق عليه — لا ما في العمود.**
+
+            (شهده المالك ٢٠٢٦-٠٨-٠٩.) **`cash_due` صفرٌ فيه بقصد** — المنصّةُ
+            لا تحاسب. **والبطاقةُ كانت تقرأ الصفرَ «مدفوعٌ من المحفظة، لا تقبض
+            شيئاً»** — وهو نقيضُ الحقّ: **السائقُ دفع من جيبه وعليه أن يستردّ.**
+
+            **وخبرٌ كاذبٌ في المال أخطرُ من غيابه**: من صدّقه سلّم ومضى. */}
+        {o.kind === "custom" ? (
+          o.custom_goods_amount == null ? (
+            D.custom.collectPending
+          ) : (
+            <>
+              {D.custom.collect}:{" "}
+              <span dir="ltr">
+                {fmtNum((o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0))}{" "}
+                {m.common.currency}
+              </span>
+            </>
+          )
+        ) : cash ? (
           <>
             {D.order.cashCollect}:{" "}
             <span dir="ltr">
@@ -739,14 +856,41 @@ function TaskCard({
           بالمهام لدى السائق — خلص، تُعتبر مغلقةً منتهية».)
 
           **والقائمةُ لم تعد تحمله أصلاً** (`handleDriverOrders`). */}
+      {/* **وتوثيقُ ما اتُّفق عليه — قبل الزرّ الكبير.**
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «يجب على السائق إرسال طلبٍ بالسعر والأجرة
+           لتوثيق ذلك لدى الإدارة».)
+
+          **وموضعُه قبلَه لا بعده**: التوثيقُ يسبق التسليم، **ومن رأى الزرَّ
+          الكبيرَ أوّلاً ضغطه ومضى** — ثمّ لا حجّةَ له عند خلاف.
+
+          **ويُقال إن كان وُثّق** — فلا يُعاد بلا حاجة، ويُعدَّل إن تبدّل. */}
+      {o.kind === "custom" && (
+        <Button
+          variant="secondary"
+          className="mt-3 w-full"
+          disabled={busy}
+          onClick={onAgree}
+        >
+          {o.custom_goods_amount == null
+            ? D.custom.agree
+            : D.custom.agreed
+                .replace("{a}", fmtNum(o.custom_goods_amount))
+                .replace("{f}", fmtNum(o.custom_fee ?? 0))}
+        </Button>
+      )}
+
       {next && (
         <Button
           size="lg"
           className="mt-3 w-full"
-          disabled={busy}
+          disabled={busy || blocked}
+          title={blocked ? D.custom.startHint : undefined}
           onClick={() => onAct(next)}
         >
-          {D.act[next as keyof typeof D.act]}
+          {custom && next === "picked_up"
+            ? D.custom.bought
+            : D.act[next as keyof typeof D.act]}
         </Button>
       )}
 
@@ -1123,6 +1267,93 @@ function ProofModal({
           </>
         )}
       </div>
+    </Modal>
+  );
+}
+
+/**
+ * **توثيقُ ما اتُّفق عليه في الطلب الخاصّ.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «يقول له السعر كذا يوافق الزبون، يقول له أجرة
+ *  التوصيل كذا يوافق الزبون… يجب على السائق إرسال طلبٍ بالسعر والأجرة لتوثيق
+ *  ذلك لدى الإدارة».)
+ *
+ * # ولا يدخل حسابَ المنصّة
+ *
+ * **السائقُ يدفع من جيبه ويستردّ عند التسليم** — والمنصّةُ توثّق ولا تحاسب.
+ * **وهو مكتوبٌ في الشاشة صراحةً** فلا يظنّ السائقُ أنّ المنصّة ستقبض أو تدفع.
+ *
+ * # ويُعدَّل
+ *
+ * **الاتّفاقُ قد يتبدّل**: يجد الصنفَ أغلى فيعود إلى الزبون. **فيُعاد التوثيق
+ * ووقتُه معه** — والوقتُ هو ما يُقرأ عند الخلاف: متى قال ماذا.
+ */
+function AgreeModal({
+  order,
+  onClose,
+  onDone,
+}: {
+  order: DriverOrder;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [goods, setGoods] = useState(String(order.custom_goods_amount ?? ""));
+  const [fee, setFee] = useState(String(order.custom_fee ?? ""));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/driver/orders/${order.id}/agree`, {
+        method: "POST",
+        body: JSON.stringify({
+          goods_amount: Number(goods) || 0,
+          fee: Number(fee) || 0,
+        }),
+      });
+      onDone();
+    } catch (e2) {
+      setError(errText(e2));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={D.custom.agreeTitle} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-sm text-ink-muted">{D.custom.agreeHint}</p>
+        <Input
+          id="agree-goods"
+          label={D.custom.goods}
+          dir="ltr"
+          inputMode="numeric"
+          required
+          value={goods}
+          onChange={(e) => setGoods(e.target.value)}
+        />
+        <Input
+          id="agree-fee"
+          label={D.custom.fee}
+          dir="ltr"
+          inputMode="numeric"
+          required
+          value={fee}
+          onChange={(e) => setFee(e.target.value)}
+        />
+        {error && <Alert>{error}</Alert>}
+        <div className="flex gap-2">
+          <Button variant="secondary" type="button" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+          <Button type="submit" disabled={busy} className="flex-1">
+            {busy ? m.common.loading : D.custom.send}
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }

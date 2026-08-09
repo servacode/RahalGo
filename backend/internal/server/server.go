@@ -202,6 +202,8 @@ func (s *Server) Router() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.RequireAuth)
 			r.Post("/orders", s.handleCustomerCreateOrder)
+			// **والطلبُ الخاصّ** — ما ليس في المنصّة. (قرارُ المالك ٢٠٢٦-٠٨-٠٩.)
+			r.Post("/orders/custom", s.handleCreateCustomOrder)
 			// **أثرُ كود الخصم قبل الطلب** — والقواعدُ نفسُها لا نسخةٌ منها.
 			r.Post("/promo/preview", s.handlePromoPreview)
 			r.Post("/orders/{id}/rating", s.handleRateOrder)
@@ -300,6 +302,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/proof/skip", s.handleSkipDeliveryProof)
 			// **إرجاعُ البضاعة** — لمتاجرِ الاسترداد وحدها
 			r.Post("/orders/{id}/return", s.handleDriverReturn)
+			// **وتوثيقُ ما اتُّفق عليه في الطلب الخاصّ** — بعد المحادثة.
+			r.Post("/orders/{id}/agree", s.handleAgreeCustom)
 			r.Get("/orders", s.handleDriverOrders)
 			// **سجلُّه** — ما نفّذه نجح أم فشل. **وما انتهى كان يختفي**، فلا
 			// يجد طلباً يتذكّره ليُبلّغ عنه. (انظر `driver_history.go`)

@@ -70,8 +70,13 @@ type orderParties struct {
 func (s *Service) parties(ctx context.Context, orderID string) (orderParties, error) {
 	var p orderParties
 	err := s.db.QueryRow(ctx, `
-		SELECT o.number, o.customer_id, mm.owner_user_id, mm.name, mm.sales_rep_user_id
-		FROM orders o JOIN merchants mm ON mm.id = o.merchant_id
+		SELECT o.number, o.customer_id, mm.owner_user_id,
+		       -- **واسمُ المتجر فارغٌ في الطلب الخاصّ** — لا متجرَ له.
+		       COALESCE(mm.name, ''), mm.sales_rep_user_id
+		-- **ويُضمّ يساراً** — (٢٠٢٦-٠٨-٠٩): **وضمٌّ صلبٌ يُسكت إشعاراتِ الطلب
+		-- الخاصّ كلَّها** — لا الزبونُ يُخبَر ولا العملياتُ، **ولا خطأ يظهر**:
+		-- الدالّةُ تردّ «لا صفوف» فيُبتلع.
+		FROM orders o LEFT JOIN merchants mm ON mm.id = o.merchant_id
 		WHERE o.id = $1`, orderID).
 		Scan(&p.number, &p.customerID, &p.merchantOwner, &p.merchantName, &p.repID)
 	return p, err

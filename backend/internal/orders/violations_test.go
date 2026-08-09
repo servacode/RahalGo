@@ -31,7 +31,7 @@ func TestAuthorizingRole(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := authorizingRole(c.from, c.to, c.roles); got != c.want {
+			if got := authorizingRole(KindStandard, c.from, c.to, c.roles); got != c.want {
 				t.Errorf("النتيجة %q والمتوقّع %q", got, c.want)
 			}
 		})

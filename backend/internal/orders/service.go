@@ -295,16 +295,8 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		//
 		// **ولا يُطبَّق على من يطلب بالنيابة** (`ops` والمتجر): المكتبُ يفتح
 		// طلبات الهاتف لزبائنَ شتّى، **وسقفُ زبونٍ لا يُقاس بحسابِ من كتبه.**
-		if cap := s.settingInt(ctx, "orders.max_open_per_customer"); cap > 0 {
-			var open int64
-			if err := s.db.QueryRow(ctx, `
-				SELECT count(*) FROM orders
-				WHERE customer_id = $1 AND closed_at IS NULL`, customerID).Scan(&open); err != nil {
-				return nil, err
-			}
-			if open >= cap {
-				return nil, ErrTooManyOpen
-			}
+		if err := s.checkOpenLimit(ctx, customerID); err != nil {
+			return nil, err
 		}
 	}
 
@@ -830,4 +822,29 @@ func (s *Service) publishWalletsOf(ctx context.Context, orderID string) {
 		// البابُ الذي لا يبقى أحدٌ خارجَه.
 		s.pub.Publish("user:"+id, map[string]any{"type": "wallet"})
 	}
+}
+
+// checkOpenLimit **سقفُ الطلبات المفتوحة للزبون — قاعدةٌ واحدةٌ لنوعَي الطلب.**
+//
+// **كانت مكتوبةً داخلَ `Create`**، فلمّا جاء الطلبُ الخاصّ كان أمامي أن أنسخها
+// — **ونسختان تفترقان**: يُرفع السقفُ للعاديّ ويبقى الخاصُّ على القديم، **أو
+// يصير الخاصُّ باباً يلتفّ به على السقف** فيفتح ما شاء.
+//
+// **ولا تُطبَّق على من يطلب بالنيابة** — المكتبُ يفتح طلبات الهاتف لزبائنَ شتّى،
+// **وسقفُ زبونٍ لا يُقاس بحسابِ من كتبه.** (والمنادي هو من يقرّر ذلك.)
+func (s *Service) checkOpenLimit(ctx context.Context, customerID string) error {
+	cap := s.settingInt(ctx, "orders.max_open_per_customer")
+	if cap <= 0 {
+		return nil
+	}
+	var open int64
+	if err := s.db.QueryRow(ctx, `
+		SELECT count(*) FROM orders
+		WHERE customer_id = $1 AND closed_at IS NULL`, customerID).Scan(&open); err != nil {
+		return err
+	}
+	if open >= cap {
+		return ErrTooManyOpen
+	}
+	return nil
 }

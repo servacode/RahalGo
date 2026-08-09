@@ -13,7 +13,13 @@ import (
 
 const orderSelect = `
 	SELECT o.id, o.number, o.customer_id, cu.phone, cu.full_name,
-	       o.merchant_id, mr.name, o.driver_id, dr.phone, NULLIF(dr.full_name, ''),
+	       -- **ونوعُ الطلب** — الشاشاتُ تعرض به، والخارطةُ تختلف عليه.
+	       o.kind, COALESCE(o.custom_request, ''),
+	       o.custom_goods_amount, o.custom_fee,
+	       -- **وفراغٌ لا NULL** — (الطلبُ الخاصّ ٢٠٢٦-٠٨-٠٩): الحقلان نصّان
+	       -- في البنية، **وNULL فيهما يُسقط المسحَ كلَّه** لا هذا الحقلَ وحدَه.
+	       COALESCE(o.merchant_id::text, ''), COALESCE(mr.name, ''),
+	       o.driver_id, dr.phone, NULLIF(dr.full_name, ''),
 	       o.status, o.address_text,
 	       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       o.zone_id, z.name,
@@ -41,7 +47,12 @@ const orderSelect = `
 	       COALESCE((SELECT bool_and(m2.accepts_returns) FROM merchants m2
 	                 WHERE m2.id IN (SELECT COALESCE(oi.merchant_id, o.merchant_id)
 	                                 FROM order_items oi WHERE oi.order_id = o.id
-	                                 UNION SELECT o.merchant_id)), mr.accepts_returns),
+	                                 UNION SELECT o.merchant_id)), mr.accepts_returns,
+	                -- **والطلبُ الخاصُّ لا متجرَ له فلا استرجاع** — (٢٠٢٦-٠٨-٠٩).
+	                --
+	                -- **وكانت الطبقةُ الأخيرةُ تنتهي إلى عمود المتجر وهو NULL
+	                -- بلا متجر** — فيسقط مسحُ الصفّ كلِّه لا هذا الحقلَ وحدَه.
+	                false),
 	       o.prep_minutes, o.ready_at, o.accepted_at, o.picked_up_at, o.delivered_at,
 	       lm.thumb_path,
 	       -- ملخّص الأصناف في القائمة نفسها: «ماذا طلبتُ؟» أول سؤال يسأله صاحب
@@ -66,7 +77,12 @@ const orderSelect = `
 	                 FROM order_items oi WHERE oi.order_id = o.id), '[]'::json)
 	FROM orders o
 	JOIN users cu ON cu.id = o.customer_id
-	JOIN merchants mr ON mr.id = o.merchant_id
+	-- **والمتجرُ يُضمّ يساراً** — (الطلبُ الخاصّ ٢٠٢٦-٠٨-٠٩): لا متجرَ له.
+	--
+	-- **وضمٌّ صلبٌ يُسقطه من كلّ قراءة** — لا يُخطئ ولا يُنذر، **إنّما يختفي
+	-- الطلبُ كأنّه لم يكن.** (ووقع: أوّلُ طلبٍ خاصٍّ أُنشئ ثمّ ردّ الخادمُ
+	-- «غير موجود» — وهو مكتوبٌ في القاعدة.)
+	LEFT JOIN merchants mr ON mr.id = o.merchant_id
 	LEFT JOIN media lm ON lm.id = mr.logo_media_id
 	LEFT JOIN users dr ON dr.id = o.driver_id
 	LEFT JOIN users od ON od.id = o.offered_driver_id
@@ -77,6 +93,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	var o Order
 	var items []byte
 	err := row.Scan(&o.ID, &o.Number, &o.CustomerID, &o.CustomerPhone, &o.CustomerName,
+		&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee,
 		&o.MerchantID, &o.MerchantName, &o.DriverID, &o.DriverPhone, &o.DriverName,
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.Discount, &o.Total,

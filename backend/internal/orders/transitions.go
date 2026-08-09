@@ -36,12 +36,13 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	var from string
 	var driverID *string
 	var walletPaid, cashDue, deliveryFee int64
-	var customerID, promoCode string
+	var customerID, promoCode, kind string
 	err = tx.QueryRow(ctx, `
 		SELECT status, driver_id, wallet_paid, cash_due, delivery_fee, customer_id,
-		       COALESCE(promo_code,'')
+		       COALESCE(promo_code,''), kind
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
-		Scan(&from, &driverID, &walletPaid, &cashDue, &deliveryFee, &customerID, &promoCode)
+		Scan(&from, &driverID, &walletPaid, &cashDue, &deliveryFee, &customerID, &promoCode,
+			&kind)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -56,13 +57,34 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	// الجهل يجب أن يكون أقلَّ الوضعين تدخّلاً من المنصة**.
 	selfManage := s.MerchantsSelfManage(ctx)
 	effRoles := rolesUnderMode(selfManage, from, to, actorRoles, driverID != nil)
-	if !canTransition(from, to, effRoles) {
+	if !canTransition(kind, from, to, effRoles) {
 		return nil, ErrBadTransition
 	}
-	endedBy := authorizingRole(from, to, effRoles)
+	endedBy := authorizingRole(kind, from, to, effRoles)
 	// لا استلام بلا سائق مسند
 	if (to == StAtPickup || to == StPickedUp) && driverID == nil {
 		return nil, ErrNeedsDriver
+	}
+
+	// **ولا يبدأ الخاصُّ قبل أن يُوثَّق ما اتُّفق عليه.**
+	//
+	// (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «لازم فتح دردشة مع الزبون لمعرفة التفاصيل…
+	//  وبعد الاتّفاق وتوثيق البيانات يبدأ السائق».)
+	//
+	// **والتوثيقُ هو الحجّة**: من اشترى بلا اتّفاقٍ مكتوبٍ يقف عند الباب
+	// **بكلمةٍ ضدّ كلمة** — لا العملياتُ تحكم ولا هو يستردّ.
+	//
+	// **وفي المحرّك لا في الشاشة**: زرٌّ يُخفى يُلتفّ عليه.
+	if kind == KindCustom && to == StPickedUp {
+		var agreed *time.Time
+		if err := tx.QueryRow(ctx,
+			`SELECT custom_agreed_at FROM orders WHERE id = $1`, orderID).
+			Scan(&agreed); err != nil {
+			return nil, err
+		}
+		if agreed == nil {
+			return nil, ErrCustomNotAgreed
+		}
 	}
 
 	// **وتعذّرٌ عند باب المتجر ليس فشلَ تسليم.**
@@ -224,6 +246,7 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 		orderID: orderID, from: from, to: to, actorID: actorID,
 		customerID: customerID, driverID: driverID,
 		walletPaid: walletPaid, cashDue: cashDue, deliveryFee: deliveryFee,
+		custom: kind == KindCustom,
 	}, &done); err != nil {
 		return nil, err
 	}
@@ -448,6 +471,11 @@ type settlement struct {
 	orderID, from, to, actorID, customerID string
 	driverID                               *string
 	walletPaid, cashDue, deliveryFee       int64
+	// custom **طلبٌ خاصّ — لا أثرَ ماليَّ له في المنصّة.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «السعر والأجرة لن تدخل بالحسابات، لأنّها
+	//  خدمة للسائق فقط».)
+	custom bool
 }
 
 // settle ينفّذ كل الأثر المالي لانتقال الحالة داخل معاملة المستدعي.
@@ -460,6 +488,29 @@ type settlement struct {
 //     صندوق السائق يبقى كما هو عن قصد: النقد الذي قبضه ما زال بحوزته ويدين به
 //     للمنصة، والمنصة هي من ردّت للزبون. هكذا يتوازن الطرفان بلا رصيد سالب.
 func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
+	// (0) **والطلبُ الخاصّ لا يمرّ من هنا.**
+	//
+	// **السائقُ يدفع من جيبه ويستردّ عند التسليم** — والمنصّةُ توثّق ولا
+	// تقبض: لا مستحقَّ متجرٍ ولا عمولةَ ولا أجرَ توصيلٍ ولا قيدَ صندوق.
+	//
+	// **وخروجٌ صريحٌ لا اعتمادٌ على أنّ الأعمدةَ أصفار**: هي أصفارٌ اليوم،
+	// **وعمودٌ يُملأ غداً بسهوٍ يجعل مالاً يتحرّك بلا قرار.** والصمتُ في المال
+	// أخطرُ منه في غيره.
+
+	if in.custom {
+		// **إلّا نقلَ المحفظة عند التسليم** — إن اختار الزبونُ الدفعَ منها.
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «إذا تمّ الدفع من المحفظة يُحوَّل المبلغ
+		//  بشكلٍ تلقائيٍّ إلى السائق».)
+		//
+		// **ونقلٌ لا كسب**: يُخصم من الزبون ما اتّفقا عليه ويُودَع للسائق —
+		// **والمنصّةُ تعبر بلا أن تأخذ.**
+		if in.to == StDelivered {
+			return s.settleCustomWallet(ctx, q, in)
+		}
+		return nil
+	}
+
 	// (1) نهاية غير التسليم قبل التسليم — استرجاع ما دُفع من المحفظة
 	if refundOnEnter(in.to) && in.from != StDelivered && in.walletPaid > 0 {
 		if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, in.walletPaid, "refund",

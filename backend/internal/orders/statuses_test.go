@@ -32,8 +32,8 @@ func TestCanTransition(t *testing.T) {
 		{StCancelled, StAccepted, []string{"admin"}, false}, // لا عودة من نهائية
 	}
 	for _, c := range cases {
-		if got := canTransition(c.from, c.to, c.roles); got != c.want {
-			t.Errorf("canTransition(%s→%s, %v) = %v, want %v", c.from, c.to, c.roles, got, c.want)
+		if got := canTransition(KindStandard, c.from, c.to, c.roles); got != c.want {
+			t.Errorf("canTransition(KindStandard, %s→%s, %v) = %v, want %v", c.from, c.to, c.roles, got, c.want)
 		}
 	}
 }
@@ -78,7 +78,7 @@ func TestTerminal(t *testing.T) {
 // تحويل للمتجر أو تحويل لمتجر آخر» — **وقد صُحّحت هذه البطاقةُ مرّاتٍ قبله
 // وارتدّت**، فيحرسها اختبارٌ لا انتباه.)
 func TestAcceptedGoesStraightToDispatching(t *testing.T) {
-	if !canTransition(StAccepted, StDispatching, opsRoles) {
+	if !canTransition(KindStandard, StAccepted, StDispatching, opsRoles) {
 		t.Fatal("العملياتُ لا تملك تحويلَ طلبٍ مقبولٍ إلى الطابور — فيبقى عالقاً بلا باب")
 	}
 }
@@ -99,7 +99,7 @@ func TestPlatformDoesNotCancelAfterAccept(t *testing.T) {
 		{"customer", true},
 		{"merchant", true},
 	} {
-		if got := canTransition(StAccepted, StCancelled, []string{who.role}); got != who.may {
+		if got := canTransition(KindStandard, StAccepted, StCancelled, []string{who.role}); got != who.may {
 			t.Errorf("%s إلغاءُ طلبٍ مقبول = %v، والمنتظَر %v", who.role, got, who.may)
 		}
 	}

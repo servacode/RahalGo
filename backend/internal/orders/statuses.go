@@ -191,9 +191,9 @@ var allowedTransitions = map[string][]transition{
 // **الأدوارُ تتغيّر والماضي لا يتغيّر.**
 //
 // والترتيبُ يتبع ترتيبَ الفاعل نفسه: أوّلُ دورٍ يخوّله هو الذي عمل به.
-func authorizingRole(from, to string, roles []string) string {
+func authorizingRole(kind, from, to string, roles []string) string {
 	for _, r := range roles {
-		if canTransition(from, to, []string{r}) {
+		if canTransition(kind, from, to, []string{r}) {
 			return r
 		}
 	}
@@ -219,11 +219,79 @@ func refundOnEnter(status string) bool {
 }
 
 // canTransition يتحقق من شرعية الانتقال لهذه الأدوار.
-func canTransition(from, to string, roles []string) bool {
+// customTransitions **خارطةُ الطلب الخاصّ — بلا «مقبول» ولا «تحضير».**
+//
+// (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «لا يوجد تحويل للمتجر، هذا خطأ — لأنّه بالأساس
+//
+//	الطلبُ ليس من متجر».)
+//
+// # ولماذا خارطةٌ ثانية
+//
+// **«مقبول» تعني قَبِله المتجر، و«تحضير» تعني يطبخه** — **ولا متجرَ في الطلب
+// الخاصّ.** فحالتان لا معنى لهما، **وضغطتان على الإدارة بلا سبب**: تقبل نيابةً
+// عن لا أحد، ثمّ تحوّل.
+//
+// **وحالةٌ بلا معنًى ليست زائدةً فقط** — تُقرأ خبراً كاذباً: من رأى «قيد
+// التحضير» ظنّ أنّ مطبخاً يعمل، **ولا مطبخَ ولا سائقَ بعد.**
+//
+// **فيمضي من «معلَّق» إلى الطابور رأساً** بموافقة الإدارة وحدَها.
+var customTransitions = map[string][]transition{
+	StPending: {
+		// **موافقةُ الإدارة تُنزله الطابور** — خطوةٌ واحدةٌ لا اثنتان.
+		{StDispatching, opsRoles},
+		{StRejected, opsRoles},
+		{StCancelled, []string{"customer", "ops"}},
+	},
+	// **ولا «وصلتُ إلى المتجر»** — (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «ما في شيء
+	// اسمه وصلتُ للمتجر»).
+	//
+	// **لا متجرَ يقف عنده.** والمرحلةُ بعد الإسناد محادثةٌ واتّفاق، **ثمّ
+	// يشتري** — فيمضي من «أُسند» إلى «اشتريتُ» رأساً.
+	StAssigned: {
+		{StPickedUp, []string{"driver"}},
+		{StDispatching, []string{"driver", "ops"}},
+		{StCancelled, opsRoles},
+	},
+}
+
+// merchantOnlyStates **حالاتٌ لا وجودَ لها في الطلب الخاصّ.**
+//
+// **«مقبول» فعلُ متجرٍ و«تحضير» فعلُ مطبخ** — ولا واحدَ منهما هنا.
+//
+// **ولا يبلغهما الخاصُّ أصلاً** (خارطتُه تمضي من «معلَّق» إلى الطابور)،
+// **لكنّ خارطةً تقول «نعم» عن حالةٍ لا تُبلَغ فخٌّ**: يُضاف بابٌ يوماً فيمرّ
+// منه ما لا يجب، **ولا يُنتبَه لأنّ الشرطَ كان مكتوباً «نعم» منذ البداية.**
+var merchantOnlyStates = map[string]bool{StAccepted: true, StPreparing: true}
+
+// transitionsFor **خارطةُ هذا الطلب** — بحسب نوعه.
+//
+// **وما لم تُعرَّف له حالةٌ خاصّةٌ يرث العامّة**: مراحلُ الطريق واحدةٌ في
+// النوعين — يستلم ويمضي ويسلّم. **والفرقُ في أوّله لا في طريقه.**
+func transitionsFor(kind, from string) []transition {
+	if kind == KindCustom {
+		if ts, ok := customTransitions[from]; ok {
+			return ts
+		}
+		// **ولا يُسمح بما لا معنى له فيه.**
+		if merchantOnlyStates[from] {
+			return nil
+		}
+		var out []transition
+		for _, t := range allowedTransitions[from] {
+			if !merchantOnlyStates[t.To] {
+				out = append(out, t)
+			}
+		}
+		return out
+	}
+	return allowedTransitions[from]
+}
+
+func canTransition(kind, from, to string, roles []string) bool {
 	for _, r := range roles {
 		if r == "admin" {
 			// الأدمن مخول بكل الانتقالات المعرفة في الخارطة
-			for _, t := range allowedTransitions[from] {
+			for _, t := range transitionsFor(kind, from) {
 				if t.To == to {
 					return true
 				}
@@ -231,7 +299,7 @@ func canTransition(from, to string, roles []string) bool {
 			return false
 		}
 	}
-	for _, t := range allowedTransitions[from] {
+	for _, t := range transitionsFor(kind, from) {
 		if t.To != to {
 			continue
 		}
@@ -245,3 +313,15 @@ func canTransition(from, to string, roles []string) bool {
 	}
 	return false
 }
+
+// أنواعُ الطلب.
+//
+// **والخاصُّ خدمةٌ للسائق لا بيعٌ للمنصّة** (قرارُ المالك ٢٠٢٦-٠٨-٠٩): يدفع
+// من جيبه ويستردّ عند التسليم، **والمنصّةُ توثّق ولا تحاسب.**
+const (
+	// KindStandard طلبٌ من متجرٍ في المنصّة — له أصنافٌ وأسعارٌ وعمولة.
+	KindStandard = "standard"
+	// KindCustom طلبٌ خاصّ — يصفه الزبونُ بلفظه، ولا متجرَ له ولا سعرَ عند
+	// إنشائه. **ولا أثرَ ماليَّ له في دفتر المنصّة.**
+	KindCustom = "custom"
+)

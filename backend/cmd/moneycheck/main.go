@@ -81,10 +81,16 @@ var checks = []check{
 	{
 		name: "كلُّ طلبٍ مسلَّمٍ له مستحقُّ متجر",
 		hint: "طلبٌ سُلّم ولم يُقيَّد مستحقُّ متجره — فالمتجرُ لم يُدفع له",
+		// **والطلبُ الخاصُّ مستثنًى** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩): لا متجرَ له
+		// ولا مالَ للمنصّة فيه. **السائقُ يدفع من جيبه ويستردّ عند التسليم**،
+		// والمنصّةُ توثّق ولا تحاسب.
+		//
+		// **ولولا الاستثناء لأنذر الدفترُ على كلّ طلبٍ خاصٍّ يُسلَّم** — فيُقرأ
+		// خللاً وهو الصواب، **وأداةٌ تُنذر كذباً تُهمَل ثمّ لا تُقرأ يوم تصدق.**
 		query: `
 			SELECT o.number, o.total, o.status
 			FROM orders o
-			WHERE o.status = 'delivered'
+			WHERE o.status = 'delivered' AND o.kind <> 'custom'
 			  AND NOT EXISTS (
 				SELECT 1 FROM wallet_transactions t
 				WHERE t.ref = o.id::text AND t.kind = 'merchant_earning')`,

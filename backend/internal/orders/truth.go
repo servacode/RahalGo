@@ -80,7 +80,7 @@ func TruthTable(selfManage bool) string {
 				// **السائقُ المُسنَد يغيّر الجواب** في بعض الانتقالات، فيُسأل
 				// عن الحالين ويُذكر القيدُ إن اختلفا.
 				eff := rolesUnderMode(selfManage, from, tr.To, []string{role.Code}, true)
-				if canTransition(from, tr.To, eff) {
+				if canTransition(KindStandard, from, tr.To, eff) {
 					owners = append(owners, role.Label)
 				}
 			}

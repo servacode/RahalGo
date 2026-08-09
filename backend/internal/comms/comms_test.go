@@ -20,9 +20,7 @@ import (
 )
 
 func TestChannelOpensOnlyWhileTheDriverIsCarrying(t *testing.T) {
-	now := time.Now()
-	fresh := now.Add(-1 * time.Minute)
-	stale := now.Add(-GraceAfterDelivery - time.Minute)
+	fresh := time.Now().Add(-1 * time.Minute)
 
 	cases := []struct {
 		name      string
@@ -42,9 +40,12 @@ func TestChannelOpensOnlyWhileTheDriverIsCarrying(t *testing.T) {
 		{"قبله المتجر", "accepted", nil, false},
 		{"يُوزَّع", "dispatching", nil, false},
 
-		// **والمسلَّمُ يُقاس بوقته لا بحالته.**
-		{"سُلّم قبل دقيقة", "delivered", &fresh, true},
-		{"سُلّم قبل ساعة", "delivered", &stale, false},
+		// **والمسلَّمُ يُغلق لحظتَه** — (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «مجرّد
+		// تسليم الطلب أو انتهاء الطلب تُغلق الدردشة»).
+		//
+		// **وكانت ربعُ ساعةٍ مهلةً** — فبقيت القناةُ مفتوحةً بعد أن انتهى
+		// الطلب. **وما بعد التسليم بابُه الشكوى.**
+		{"سُلّم قبل دقيقة", "delivered", &fresh, false},
 		{"سُلّم بلا وقت", "delivered", nil, false},
 
 		// **وما انتهى بغير تسليمٍ مغلق.**
@@ -64,19 +65,17 @@ func TestChannelOpensOnlyWhileTheDriverIsCarrying(t *testing.T) {
 	}
 }
 
-// TestGraceIsReportedSoTheUserSeesIt **وقتُ الإغلاق يُقال لا يُفاجئ.**
+// TestNoChannelSurvivesTheOrder **ولا نهايةَ تُبقي القناةَ مفتوحة.**
 //
-// **ومن كتب رسالةً فرُدّت بلا سببٍ يعيدها** — ثمّ يظنّ التطبيقَ معطوباً.
-func TestGraceIsReportedSoTheUserSeesIt(t *testing.T) {
-	at := time.Now().Add(-2 * time.Minute)
-	open, closes := channelOpen("delivered", &at, nil)
-	if !open {
-		t.Fatal("قناةُ طلبٍ سُلّم قبل دقيقتين يجب أن تبقى مفتوحة")
-	}
-	if closes == nil {
-		t.Fatal("لا وقتَ إغلاقٍ يُعرض — فيُفاجأ من كان يكتب")
-	}
-	if want := at.Add(GraceAfterDelivery); !closes.Equal(want) {
-		t.Errorf("الإغلاق %v، والمنتظَر %v", closes, want)
+// (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «لا تبقى أيُّ دردشةٍ مفتوحة».)
+//
+// **والنهاياتُ خمس** — والتسليمُ أخطرُها أن يُنسى: **هو النهايةُ الطبيعيّةُ
+// وحدَه**، وكلُّ ما عداه استثناءٌ يُنتبَه له.
+func TestNoChannelSurvivesTheOrder(t *testing.T) {
+	at := time.Now()
+	for _, st := range []string{"delivered", "cancelled", "rejected", "failed", "refunded"} {
+		if open, _ := channelOpen(st, &at, &at); open {
+			t.Errorf("قناةُ %q بقيت مفتوحةً بعد انتهاء الطلب", st)
+		}
 	}
 }

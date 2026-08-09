@@ -92,7 +92,7 @@ func TestRolesUnderMode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			eff := rolesUnderMode(c.selfManage, c.from, c.to, c.roles, c.driverHolds)
-			got := canTransition(c.from, c.to, eff)
+			got := canTransition(KindStandard, c.from, c.to, eff)
 			if got != c.allowed {
 				t.Errorf("النتيجة %v والمتوقّع %v (الأدوار بعد التنقية: %v)",
 					got, c.allowed, eff)
@@ -113,7 +113,7 @@ func TestRolesUnderMode_KeepsOtherRoles(t *testing.T) {
 	if slices.Contains(eff, "merchant") {
 		t.Errorf("دورُ المتجر بقي: %v", eff)
 	}
-	if !canTransition(StPending, StAccepted, eff) {
+	if !canTransition(KindStandard, StPending, StAccepted, eff) {
 		t.Errorf("دورُ العمليات سقط معه: %v", eff)
 	}
 }
@@ -132,13 +132,13 @@ func TestAdminIsAboveAuthorityNotAboveKnowledge(t *testing.T) {
 	admin := []string{"admin", "ops"}
 
 	// ── ما لا يملكه أحدٌ: عِلمٌ لا سلطة ──────────────────────────────────
-	if canTransition(StAccepted, StPreparing,
+	if canTransition(KindStandard, StAccepted, StPreparing,
 		rolesUnderMode(false, StAccepted, StPreparing, admin, false)) {
 		t.Error("المالكُ يُعلن بدءَ تحضيرٍ في مطبخٍ لا يراه")
 	}
 	for _, to := range []string{StAtPickup, StPickedUp, StOnTheWay, StAtDropoff, StDelivered} {
 		eff := rolesUnderMode(false, StAssigned, to, admin, true)
-		if canTransition(StAssigned, to, eff) {
+		if canTransition(KindStandard, StAssigned, to, eff) {
 			t.Errorf("المالكُ يُعلن %q بلا توقيع — **ومراحلُ الطريق مقروءةٌ لا ملموسة**", to)
 		}
 	}
@@ -151,24 +151,24 @@ func TestAdminIsAboveAuthorityNotAboveKnowledge(t *testing.T) {
 	//
 	// **ومخرجُ الطلب العالق التحريرُ لا الإعلان** — يُفحص أدناه.
 	for _, to := range []string{StAtPickup, StPickedUp, StOnTheWay, StAtDropoff, StDelivered, StFailed} {
-		if canTransition(StAssigned, to, rolesUnderMode(false, StAssigned, to, admin, true)) {
+		if canTransition(KindStandard, StAssigned, to, rolesUnderMode(false, StAssigned, to, admin, true)) {
 			t.Errorf("المنصةُ أعلنت %q — ومراحلُ الطريق لمن يسير فيها", to)
 		}
 	}
 
 	// ── وما هو سلطةٌ يبقى له ────────────────────────────────────────────
-	if !canTransition(StDispatching, StCancelled,
+	if !canTransition(KindStandard, StDispatching, StCancelled,
 		rolesUnderMode(false, StDispatching, StCancelled, admin, false)) {
 		t.Error("المالكُ فقد الإلغاءَ بعد التحويل — **وهو سلطتُه لا عِلمُه**")
 	}
-	if !canTransition(StPending, StAccepted,
+	if !canTransition(KindStandard, StPending, StAccepted,
 		rolesUnderMode(true, StPending, StAccepted, admin, false)) {
 		t.Error("المالكُ فقد القبولَ نيابةً عن متجرٍ لا يستجيب")
 	}
 
 	// ── والعملياتُ تبقى ممنوعةً حيث كانت ────────────────────────────────
 	ops := []string{"ops"}
-	if canTransition(StDispatching, StCancelled,
+	if canTransition(KindStandard, StDispatching, StCancelled,
 		rolesUnderMode(false, StDispatching, StCancelled, ops, false)) {
 		t.Error("العملياتُ تُلغي بعد التحويل")
 	}
@@ -200,7 +200,7 @@ func TestPlatformWatchesAfterPickup(t *testing.T) {
 		{StAtDropoff, StFailed},
 	}
 	for _, c := range after {
-		if canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, admin, true)) {
+		if canTransition(KindStandard, c.from, c.to, rolesUnderMode(false, c.from, c.to, admin, true)) {
 			t.Errorf("المنصةُ تحكّمت في %q←%q بعد أن صارت البضاعةُ بيد السائق", c.from, c.to)
 		}
 	}
@@ -214,7 +214,7 @@ func TestPlatformWatchesAfterPickup(t *testing.T) {
 	//	«تمّ التسليم»  ←  إعلانُ واقعةٍ لا يعلمها من في المكتب — يُمنع
 	//	«حرّر الطلب»   ←  التخلّي عن إسنادٍ لم يُثمر — يبقى
 	for _, from := range []string{StPickedUp, StOnTheWay, StAtDropoff} {
-		if !canTransition(from, StDispatching,
+		if !canTransition(KindStandard, from, StDispatching,
 			rolesUnderMode(false, from, StDispatching, []string{"ops"}, true)) {
 			t.Errorf("العملياتُ فقدت تحريرَ طلبٍ عالقٍ من %q — والزبونُ ينتظر من لن يأتي", from)
 		}
@@ -229,7 +229,7 @@ func TestPlatformWatchesAfterPickup(t *testing.T) {
 		{StAssigned, StAtPickup},
 		{StAtPickup, StPickedUp},
 	} {
-		if canTransition(c.from, c.to, rolesUnderMode(false, c.from, c.to, admin, true)) {
+		if canTransition(KindStandard, c.from, c.to, rolesUnderMode(false, c.from, c.to, admin, true)) {
 			t.Errorf("المنصةُ أعلنت %q←%q — وهي مرحلةُ طريق", c.from, c.to)
 		}
 	}

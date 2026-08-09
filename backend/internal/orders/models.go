@@ -80,8 +80,15 @@ type Order struct {
 	CustomerID    string `json:"customer_id"`
 	CustomerPhone string `json:"customer_phone"`
 	CustomerName  string `json:"customer_name"`
-	MerchantID    string `json:"merchant_id"`
-	MerchantName  string `json:"merchant_name"`
+	// Kind **نوعُ الطلب** — `standard` من متجر، و`custom` طلبٌ خاصٌّ بلا متجر.
+	Kind string `json:"kind"`
+	// CustomRequest ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه.
+	CustomRequest string `json:"custom_request"`
+	// CustomGoodsAmount وCustomFee **ما وُثّق ولم يُحاسَب** — خدمةُ السائق.
+	CustomGoodsAmount *int64 `json:"custom_goods_amount"`
+	CustomFee         *int64 `json:"custom_fee"`
+	MerchantID        string `json:"merchant_id"`
+	MerchantName      string `json:"merchant_name"`
 	// حلقة المطبخ: كم دقيقة قال المتجر، ومتى أعلن الجاهزية فعلاً
 	PrepMinutes *int `json:"prep_minutes"`
 	// DeliveryEstimateMin تقديرُ زمن الطريق بالدقائق — **من الإعدادات لا من

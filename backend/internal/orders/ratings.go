@@ -47,7 +47,11 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 	err := s.db.QueryRow(ctx, `
 		SELECT o.status, o.customer_id, o.driver_id,
 		       COALESCE(m.sales_rep_user_id = o.customer_id, false)
-		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		-- **ويُضمّ المتجرُ يساراً** — (الطلبُ الخاصّ ٢٠٢٦-٠٨-٠٩): لا متجرَ له.
+		--
+		-- **وضمٌّ صلبٌ يجعل تقييمَه يردّ «الطلب غير موجود»** — وهو مكتوبٌ في
+		-- القاعدة وسُلّم للتوّ. (شهده المالك.)
+		FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.id = $1`, orderID).
 		Scan(&status, &customerID, &driverID, &repIsBuyer)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -225,17 +225,29 @@ type driverOrder struct {
 	// ويغيب في الشائعة.**
 	NavLat *float64 `json:"nav_lat"`
 	NavLng *float64 `json:"nav_lng"`
+	// Kind **نوعُ الطلب** — `custom` يشتريه السائقُ بنفسه ويستردّ عند التسليم.
+	Kind string `json:"kind"`
+	// CustomRequest ما طلبه الزبونُ بلفظه — **وهو كلُّ ما يعرفه السائقُ قبل
+	// أن يتّفقا في المحادثة.**
+	CustomRequest string `json:"custom_request"`
+	// CustomGoodsAmount وCustomFee ما وُثّق — **و`nil` تعني «لم يُوثَّق بعد».**
+	CustomGoodsAmount *int64 `json:"custom_goods_amount"`
+	CustomFee         *int64 `json:"custom_fee"`
 }
 
 const driverOrderSelect = `
-	SELECT o.id, o.number, o.status, m.name,
+	SELECT o.id, o.number, o.status,
+	       -- **واسمُ المتجر فارغٌ في الطلب الخاصّ** — لا متجرَ له.
+	       -- **وNULL في حقلٍ نصّيٍّ يُسقط مسحَ الصفّ كلِّه** لا هذا الحقل.
+	       COALESCE(m.name, ''),
 	       NULLIF(COALESCE(mo.whatsapp_phone::text, mo.phone::text), ''),
 	       o.address_text, ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       cu.full_name, o.total, o.cash_due,
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
 	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at,
 	       ST_Y(o.pickup_override::geometry), ST_X(o.pickup_override::geometry),
-	       o.pickup_override_note, m.accepts_returns, COALESCE(o.fail_reason, ''),
+	       o.pickup_override_note, COALESCE(m.accepts_returns, false),
+	       COALESCE(o.fail_reason, ''),
 	       -- **من السائق إلى نقطة الاستلام** — ونقطةُ الاستلام قد تكون بديلةً
 	       -- (بضاعةٌ مع سائقٍ وقع له طارئ)، فتُقاس إليها لا إلى المتجر.
 	       --
@@ -267,9 +279,13 @@ const driverOrderSelect = `
 	       -- **وهي البديلةُ إن وُجدت وإلّا فالمتجر** — نقطةٌ واحدةٌ يمشي إليها
 	       -- مهما كان سببُها.
 	       ST_Y(COALESCE(o.pickup_override, m.location)::geometry),
-	       ST_X(COALESCE(o.pickup_override, m.location)::geometry)
+	       ST_X(COALESCE(o.pickup_override, m.location)::geometry),
+	       -- **والطلبُ الخاصّ يُعرَف من نوعه** — لا متجرَ له ولا أصناف،
+	       -- **وبطاقتُه تقول «اشترِ ثمّ سلّم» لا «استلم ثمّ سلّم».**
+	       o.kind, COALESCE(o.custom_request, ''),
+	       o.custom_goods_amount, o.custom_fee
 	FROM orders o
-	JOIN merchants m ON m.id = o.merchant_id
+	LEFT JOIN merchants m ON m.id = o.merchant_id
 	JOIN users cu ON cu.id = o.customer_id
 	LEFT JOIN users mo ON mo.id = m.owner_user_id`
 
@@ -289,7 +305,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.AcceptedAt, &o.CreatedAt,
 			&o.PickupLat, &o.PickupLng, &o.PickupNote,
 			&o.AcceptsReturns, &o.FailReason, &o.ToPickupM, &o.LegM,
-			&o.OfferExpiresAt, &o.NavLat, &o.NavLng); err != nil {
+			&o.OfferExpiresAt, &o.NavLat, &o.NavLng,
+			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee); err != nil {
 			s.respondErr(w, err)
 			return
 		}

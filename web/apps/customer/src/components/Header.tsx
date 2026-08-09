@@ -40,6 +40,7 @@ import {
   IconSupport,
   IconWallet,
   IconUser,
+  IconNote,
   IconStore,
   IconOverview,
 } from "@rahalgo/ui";
@@ -298,6 +299,19 @@ export default function Header({
                 className="hidden md:flex"
               >
                 <IconOrder size={TOPBAR_ICON} />
+              </TopBarLink>
+              {/* **وأيقونةُ الطلب الخاصّ في الشريط** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
+
+                  **وهو بابٌ لا يُعثَر عليه بالتصفّح**: من يريد ما ليس في
+                  المنصّة لا يبحث عنه في صفحات المتاجر. **فيُوضع حيث يُرى.** */}
+              <TopBarLink
+                Link={Link}
+                href="/custom"
+                title={m.site.custom.button}
+                aria-label={m.site.custom.button}
+                tone={pathname.startsWith("/custom") ? "active" : "plain"}
+              >
+                <IconNote size={TOPBAR_ICON} />
               </TopBarLink>
               {/* ══════════════════════════════════════════════════════
                   **وزرُّ التطبيق للداخل كما هو للزائر**

@@ -106,6 +106,8 @@ interface OrderRow {
   merchant_name: string;
   merchant_id: string;
   driver_phone: string | null;
+  /** **نوعُ الطلب** — `custom` طلبٌ خاصٌّ بلا متجر. */
+  kind?: string;
   driver_name: string | null;
   /** من عُرض عليه الطلبُ ولم يقبل بعد — **يُعرض ما دام العرضُ حيّاً.** */
   offered_driver_name: string | null;
@@ -376,6 +378,21 @@ const OPS_NEXT: Record<string, string[]> = {
   delivered: [],
 };
 
+/**
+ * **وخارطةُ الطلب الخاصّ — بلا «مقبول» ولا «تحضير».**
+ *
+ * (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «لا يوجد تحويل للمتجر، هذا خطأ — لأنّه بالأساس
+ *  الطلبُ ليس من متجر».)
+ *
+ * **«مقبول» تعني قَبِله المتجر** — ولا متجرَ هنا. **فكانت الإدارةُ تضغط
+ * مرّتين**: تقبل نيابةً عن لا أحد، ثمّ تحوّل.
+ *
+ * **ومرآةُ `customTransitions` في المحرّك** — والمحرّكُ يحكم، وهذه تعرض.
+ */
+const CUSTOM_NEXT: Record<string, string[]> = {
+  pending: ["dispatching", "rejected"],
+};
+
 /** مراحلُ الطريق — لا يملكها إلّا من يسير فيها (مرآةُ `driverOnly`). */
 /**
  * **ولا تدخّلَ يدويٌّ في مراحل الطريق — لا في شيءٍ منها.**
@@ -469,7 +486,13 @@ function opsNext(
   selfManage: boolean,
   hasDriver: boolean,
   isAdmin: boolean,
+  kind?: string,
 ): string[] {
+  // **والطلبُ الخاصُّ خارطتُه أقصر** — (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩): موافقةٌ
+  // واحدةٌ تُنزله الطابور. **ولا «مقبول» ولا «تحضير»** — لا متجرَ يقبل ولا
+  // مطبخَ يحضّر.
+  if (kind === "custom") return CUSTOM_NEXT[status] ?? [];
+
   let next = OPS_NEXT[status] ?? [];
 
   // **ولا تُعلن العملياتُ ولا المالكُ بدءَ تحضيرٍ لم يبدأه أحدٌ منهما.**
@@ -1126,7 +1149,7 @@ function OrderActions({
   const [err, setErr] = useState("");
 
   // **ما تملكه العملياتُ بعد حساب الوضع** — لا الخريطةُ الخام.
-  const next = opsNext(o.status, selfManage, o.driver_name !== null, isAdmin);
+  const next = opsNext(o.status, selfManage, o.driver_name !== null, isAdmin, o.kind);
 
   /**
    * أمضت المهلةُ في الطابور بلا التقاط؟

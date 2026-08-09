@@ -65,6 +65,8 @@ var notifTitles = struct {
 	warningOnYou string
 	// **وشكوى فُتحت عليك** — يعرفها من هي عليه لا من فتحها وحدَه.
 	complaintOnYou string
+	// **وما اتُّفق عليه في الطلب الخاصّ** — يبقى مكتوباً حيث يراه صاحبُه.
+	customAgreed string
 }{
 	warningOnYou:        "إنذار على حسابك",
 	complaintOnYou:      "شكوى على خدمتك",
