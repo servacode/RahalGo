@@ -47,7 +47,6 @@ const S = m.merchant.storeSettings;
 export default function MerchantSettingsPage() {
   const { store, refresh } = useStore();
   const [prep, setPrep] = useState("");
-  const [minOrder, setMinOrder] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -55,7 +54,6 @@ export default function MerchantSettingsPage() {
   useEffect(() => {
     if (!store) return;
     setPrep(String(store.default_prep_minutes ?? ""));
-    setMinOrder(String(store.min_order ?? 0));
   }, [store]);
 
   if (!store) return <LoadingState />;
@@ -70,7 +68,6 @@ export default function MerchantSettingsPage() {
         method: "PATCH",
         body: JSON.stringify({
           default_prep_minutes: Number(prep) || 0,
-          min_order: Number(minOrder) || 0,
         }),
       });
       setSaved(true);
@@ -120,19 +117,25 @@ export default function MerchantSettingsPage() {
             />
             <p className="mt-1 text-xs text-ink-muted">{S.prepHint}</p>
           </div>
-          <div>
-            <Input
-              id="min-order"
-              label={`${S.minOrder} (${m.common.currency})`}
-              type="number"
-              value={minOrder}
-              onChange={(e) => {
-                setMinOrder(e.target.value);
-                setSaved(false);
-              }}
-            />
-            <p className="mt-1 text-xs text-ink-muted">{S.minOrderHint}</p>
-          </div>
+          {/* ══════════════════════════════════════════════════════════
+              **ولا حدَّ أدنى للطلب في هذه المنصّة**
+              ══════════════════════════════════════════════════════════
+
+              (قرارُ المالك ٢٠٢٦-٠٨-٠١، وأعاده ٢٠٢٦-٠٨-١٠: «اتّفقنا سابقاً
+               لا يوجد حدّ — لأنّ الطلبات مدفوعة ونحن نقبض ثمنَ التوصيل بغضّ
+               النظر عن سعر الطلب».)
+
+              **والمحرّكُ ينفّذه منذ ذلك اليوم** — `service.go` يقرأ الحدَّ
+              ثمّ يُهمله صراحةً (`_ = minOrder`) بتعليقٍ يشرح لماذا.
+
+              **وبقي الحقلُ في هذه الشاشة وحدَه**: يُكتب ويُحفظ **ولا يُقرأ
+              عند الطلب أبداً.** **وحقلٌ يُملأ ولا يفعل شيئاً أسوأُ من حقلٍ
+              غائب**: من وضع فيه ٢٠٬٠٠٠ ظنّ أنّه حمى نفسَه من الطلبات
+              الصغيرة، **ثمّ يشكو أنّ المنصّة لا تحترم إعداداتِه** — وهو لم
+              يكن يعمل يوماً.
+
+              **والعمودُ يبقى في القاعدة** — لا يُحذف لأجل شاشة، **ويُعاد
+              إحياؤه بسطرين إن قرّر المالكُ غيرَ ذلك.** */}
           {error && <p className="text-sm text-danger">{error}</p>}
           {saved && <p className="text-sm text-success">{S.saved}</p>}
           <div className="flex justify-end">
