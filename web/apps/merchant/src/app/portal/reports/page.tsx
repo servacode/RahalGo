@@ -25,7 +25,8 @@ interface Report {
   };
   days: { date: string; orders: number; delivered: number; sales: number }[];
   /** تفصيلُ الأصناف — **«ماذا بعتُ؟» لا «كم بعتُ؟»**. */
-  items: { name: string; qty: number; revenue: number }[];
+  /** **ثلاثةُ أرقامٍ لكلّ صنف** — الأساسيُّ والعمولةُ وما بعدها. */
+  items: { name: string; qty: number; revenue: number; commission: number; net: number }[];
 }
 
 function isoDaysAgo(n: number): string {
@@ -177,8 +178,27 @@ export default function MerchantReportsPage() {
                 <tr className="border-b border-line-soft text-xs text-ink-muted">
                   <th className="py-2 text-start font-medium">{m.merchant.reports.itemName}</th>
                   <th className="py-2 text-center font-medium">{m.merchant.reports.itemQty}</th>
+                  {/* ══════════════════════════════════════════════════
+                      **وثلاثةُ أعمدةٍ لا واحد**
+                      ══════════════════════════════════════════════════
+
+                      (قرارُ المالك ٢٠٢٦-٠٨-١٠: «يجب أن يكون الجدولُ السعرَ
+                       الأساسيَّ والعمولةَ والسعرَ بعد العمولة، ليكون كلُّ
+                       شيءٍ واضحاً».)
+
+                      **ورقمٌ واحدٌ يترك الحسابَ لصاحبه**: يرى ١٨٬٠٠٠ ويقرأ
+                      «عمولة» في مكانٍ آخر، **فيطرح بيده ويُخطئ** — أو لا
+                      يطرح فيظنّ أنّه يقبضها كلَّها.
+
+                      **ولا هامشَ المنصّة في شيءٍ منها** — لا علاقةَ له به. */}
                   <th className="py-2 text-end font-medium">
                     {m.merchant.reports.itemRevenue} ({m.common.currency})
+                  </th>
+                  <th className="py-2 text-end font-medium">
+                    {m.merchant.reports.itemCommission}
+                  </th>
+                  <th className="py-2 text-end font-medium">
+                    {m.merchant.reports.itemNet}
                   </th>
                 </tr>
               </thead>
@@ -189,9 +209,17 @@ export default function MerchantReportsPage() {
                     <td className="py-2 text-center tabular-nums" dir="ltr">
                       {fmtNum(it.qty)}
                     </td>
-                    {/* **وهو ما يقبضه هو** — قبل العمولة ودون هامش المنصة. */}
-                    <td className="py-2 text-end font-medium tabular-nums" dir="ltr">
+                    {/* **السعرُ الأساسيُّ** — سعرُه هو، دون هامش المنصّة. */}
+                    <td className="py-2 text-end tabular-nums text-ink-muted" dir="ltr">
                       {fmtNum(it.revenue)}
+                    </td>
+                    {/* **والعمولةُ تُقرأ خصماً** — بإشارتها ونبرتها. */}
+                    <td className="py-2 text-end tabular-nums text-danger" dir="ltr">
+                      −{fmtNum(it.commission)}
+                    </td>
+                    {/* **وما يقبضه فعلاً** — وهو الرقمُ الذي يهمّه. */}
+                    <td className="py-2 text-end font-bold tabular-nums" dir="ltr">
+                      {fmtNum(it.net)}
                     </td>
                   </tr>
                 ))}

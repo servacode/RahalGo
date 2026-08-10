@@ -13,6 +13,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // بوابة المتجر — كل نقطة تتحقق أن الكيان مملوك لصاحب الحساب الفاعل:
@@ -390,11 +391,30 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		       count(*) FILTER (WHERE status IN ('cancelled','rejected','failed')),
 		       count(*) FILTER (WHERE picked_up_at IS NOT NULL AND returned_at IS NULL),
 		       count(*) FILTER (WHERE returned_at IS NOT NULL),
-		       COALESCE(sum(subtotal) FILTER (WHERE picked_up_at IS NOT NULL
-		                                        AND returned_at IS NULL), 0),
+		       -- ══════════════════════════════════════════════════════
+		       -- **ومبيعاتُه بسعره هو لا بما دفعه الزبون**
+		       -- ══════════════════════════════════════════════════════
+		       --
+		       -- (قرارُ المالك ٢٠٢٦-٠٨-١٠: «المتجرُ لا علاقةَ له بالهامش
+		       --  الذي تضعه المنصّة».)
+		       --
+		       -- **كان يُجمَع من subtotal** — وهو ما دفعه الزبون، **وفيه هامشُ
+		       -- المنصّة.** فمتجرٌ باع بـ١٨٬٠٠٠ يقرأ «مبيعاتي ٣٨٬٠٠٠»،
+		       -- **ويقرأ صافيَه ٣٧٬٤٦٠ وهو لن يقبض إلّا ١٧٬٤٦٠.**
+		       --
+		       -- **والقاعدةُ مكتوبةٌ في هذا الملفّ نفسِه** عند تفصيل
+		       -- الأصناف: «تقريرٌ يعرض ما لا يقبضه يجعله يحسب أرباحاً ليست
+		       -- له». **طُبّقت هناك ونُسيت هنا** — وهي عائلةُ الانحراف
+		       -- نفسُها: قاعدةٌ في موضعين افترقت بلا صوت.
+		       -- **والشرطُ يدخل الجمعَ نفسَه** — FILTER لا تصحّ إلّا بعد
+		       -- دالّة تجميع، والفرعيُّ ليس كذلك.
+		       COALESCE(sum(CASE WHEN picked_up_at IS NOT NULL AND returned_at IS NULL
+		                         THEN (SELECT COALESCE(sum(oi.merchant_price * oi.qty), 0)
+		                               FROM order_items oi WHERE oi.order_id = o.id)
+		                         ELSE 0 END), 0),
 		       COALESCE(sum(platform_commission) FILTER (WHERE picked_up_at IS NOT NULL
 		                                                  AND returned_at IS NULL), 0)
-		FROM orders
+		FROM orders o
 		WHERE merchant_id = $1 AND created_at >= $2 AND created_at < $3`,
 		merchantID, from, toEnd).
 		Scan(&summary.Orders, &summary.Delivered, &summary.Cancelled,
@@ -418,9 +438,14 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN (
 			SELECT created_at::date AS day, count(*) AS orders,
 			       count(*) FILTER (WHERE status = 'delivered') AS delivered,
-			       COALESCE(sum(subtotal) FILTER (WHERE picked_up_at IS NOT NULL
-			                                        AND returned_at IS NULL), 0) AS sales
-			FROM orders WHERE merchant_id = $1 AND created_at >= $2 AND created_at < $4
+			       -- **وبسعر المتجر كما في المجاميع** — ولا رقمان لمعنًى واحد.
+			       COALESCE(sum(CASE WHEN picked_up_at IS NOT NULL AND returned_at IS NULL
+			                         THEN (SELECT COALESCE(sum(oi.merchant_price * oi.qty), 0)
+			                               FROM order_items oi WHERE oi.order_id = ord.id)
+			                         ELSE 0 END), 0) AS sales
+			-- **واسمٌ مستعارٌ للداخليّ** — والحرفُ o اسمُ الجدول الفرعيّ الخارجيّ،
+			-- فبلاه يُقرأ الشرطُ على نفسه.
+			FROM orders ord WHERE merchant_id = $1 AND created_at >= $2 AND created_at < $4
 			GROUP BY 1
 		) o ON o.day = d::date`,
 		merchantID, from.Format("2006-01-02"), to.Format("2006-01-02"), toEnd)
@@ -452,11 +477,25 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والسعرُ سعرُه هو** (`merchant_price`) لا ما دفعه الزبون: بينهما هامشُ
 	// المنصة، **وتقريرٌ يعرض ما لا يقبضه يجعله يحسب أرباحاً ليست له.**
+	// **وثلاثةُ أرقامٍ لكلّ صنفٍ لا واحد** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
+	// «يجب أن يكون الجدول: السعرُ الأساسيّ والعمولة والسعرُ بعد العمولة،
+	//  ليكون كلُّ شيءٍ واضحاً»).
+	//
+	// **ورقمٌ واحدٌ يترك الحسابَ لصاحبه**: يرى ١٨٬٠٠٠ ويقرأ في مكانٍ آخرَ
+	// «عمولة ٥٤٠»، **فيطرح بيده ويُخطئ** — أو لا يطرح فيظنّ أنّه يقبضها
+	// كلَّها.
+	//
+	// **والحسابُ في الخادم لا في الشاشة**: نسبةُ العمولة تُقرأ من المتجر أو
+	// من الإعدادات، **ورقمان يُحسبان في موضعين يفترقان.**
 	type soldItem struct {
 		Name string `json:"name"`
 		Qty  int    `json:"qty"`
-		// Revenue ما استحقّه عن هذا الصنف قبل العمولة.
+		// Revenue **السعرُ الأساسيّ** — ما استحقّه عن هذا الصنف قبل العمولة.
 		Revenue int64 `json:"revenue"`
+		// Commission **عمولةُ المنصّة على هذا الصنف.**
+		Commission int64 `json:"commission"`
+		// Net **السعرُ بعد العمولة** — ما يقبضه فعلاً.
+		Net int64 `json:"net"`
 	}
 	irows, err := s.pg.Query(r.Context(), `
 		SELECT oi.name, sum(oi.qty)::int, sum(oi.merchant_price * oi.qty)::bigint
@@ -473,6 +512,14 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer irows.Close()
+	// **ونسبةُ العمولة من مصدرها الواحد** — تجاوزُ المتجر إن وُجد، وإلّا
+	// إعدادُ المنصّة. **وهي الدالّةُ نفسُها التي تحسب التسوية**، فلا يفترق
+	// ما يُعرض عمّا يُقيَّد.
+	var override *int64
+	_ = s.pg.QueryRow(r.Context(),
+		`SELECT commission_percent FROM merchants WHERE id = $1`, merchantID).Scan(&override)
+	rate := pricing.MerchantCommission(r.Context(), s.settings, override)
+
 	items := []soldItem{}
 	for irows.Next() {
 		var it soldItem
@@ -480,6 +527,10 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 			s.respondErr(w, err)
 			return
 		}
+		// **وبالدالّة نفسِها التي تحسب التسوية** (`Of`) — **وضربٌ بيدٍ هنا
+		// يفترق عن التقريب هناك بليرةٍ ثمّ بألف.**
+		it.Commission = rate.Of(it.Revenue)
+		it.Net = it.Revenue - it.Commission
 		items = append(items, it)
 	}
 
