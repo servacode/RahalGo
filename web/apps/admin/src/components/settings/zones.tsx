@@ -45,7 +45,6 @@ interface Draft {
   lat: number | null;
   lng: number | null;
   radiusM: number;
-  minOrder: string;
 }
 
 export default function ZonesPanel() {
@@ -73,7 +72,7 @@ export default function ZonesPanel() {
 
   function startCreate() {
     setSelectedID(null);
-    setDraft({ id: null, name: "", lat: null, lng: null, radiusM: 2000, minOrder: "0" });
+    setDraft({ id: null, name: "", lat: null, lng: null, radiusM: 2000 });
   }
 
   function startEdit(z: Zone) {
@@ -84,7 +83,6 @@ export default function ZonesPanel() {
       lat: z.lat,
       lng: z.lng,
       radiusM: z.radius_m,
-      minOrder: String(z.min_order),
     });
   }
 
@@ -100,7 +98,6 @@ export default function ZonesPanel() {
       // **والعمودُ يُكتب صفراً ولا يُقرأ** — بقي في القاعدة لتاريخٍ مضى،
       // **ولا يُحذف بترحيلٍ لأنّ حذفَ عمودٍ لا يُتراجع عنه.**
       delivery_fee: 0,
-      min_order: Number(draft.minOrder) || 0,
     };
     try {
       if (draft.id) {
