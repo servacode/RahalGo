@@ -38,6 +38,7 @@ import {
   Modal,
   PageContainer,
   PageHeader,
+  Pagination,
   EmptyState,
   StatGrid,
   StatCard,
@@ -75,7 +76,12 @@ interface Dispute {
 
 interface DisputePage {
   disputes: Dispute[];
+  /** **مجموعُ مال المفتوح** — لا عددُ الصفوف. */
   total: number;
+  /** **عددُ الصفوف بالترشيح الحاليّ** — للترقيم. */
+  count: number;
+  page: number;
+  per_page: number;
   open_counts: Record<string, number>;
 }
 
@@ -103,12 +109,22 @@ export function DisputesView() {
   const [status, setStatus] = useState("open");
   const [acting, setActing] = useState<{ d: Dispute; charge: boolean } | null>(null);
   const [openNew, setOpenNew] = useState(false);
+  /** **الصفحةُ المعروضة** — (قرارُ المالك ٢٠٢٦-٠٨-١٠). */
+  const [page, setPage] = useState(1);
 
   const { data, reload } = useLiveData<DisputePage>(
-    () => api(`/api/v1/admin/disputes?party=${party}&status=${status}`),
+    () => api(`/api/v1/admin/disputes?party=${party}&status=${status}&page=${page}`),
     ["dispute", "wallet"],
-    [party, status],
+    [party, status, page],
   );
+
+  /* **وتبديلُ الترشيح يعود إلى الأولى** — **ومن كان في الصفحة الرابعة ثمّ
+     بدّل التبويبَ يقع على صفحةٍ رابعةٍ قد لا توجد**، فيرى فراغاً ويظنّ
+     التبويبَ خالياً. */
+  function pick(next: () => void) {
+    setPage(1);
+    next();
+  }
 
   const rows = data?.disputes ?? [];
   const counts = data?.open_counts ?? {};
@@ -150,11 +166,11 @@ export function DisputesView() {
           count: t.key ? (counts[t.key] ?? 0) : totalOpen,
         }))}
         value={party}
-        onChange={setParty}
+        onChange={(k) => pick(() => setParty(k))}
       />
 
       <div className="mb-4 w-44">
-        <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+        <Select value={status} onChange={(e) => pick(() => setStatus(e.target.value))}>
           <option value="open">{C.statuses.open}</option>
           <option value="settled">{C.statuses.settled}</option>
           <option value="waived">{C.statuses.waived}</option>
@@ -214,6 +230,13 @@ export function DisputesView() {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
+      {data && data.count > data.per_page && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={data.count} perPage={data.per_page} onChange={setPage} />
+        </div>
       )}
 
       {acting && (

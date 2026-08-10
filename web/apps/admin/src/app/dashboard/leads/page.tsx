@@ -11,6 +11,7 @@ import {
   Badge,
   CategoryIcon,
   DataView,
+  Pagination,
   ViewToggle,
   useViewMode,
   type DataColumn,
@@ -84,10 +85,21 @@ export default function LeadsPage() {
   const [rejecting, setRejecting] = useState<Lead | null>(null);
   const [note, setNote] = useState("");
 
+  /** **الصفحةُ المعروضة وعددُ الكلّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠). */
+  const [page, setPage] = useState(1);
+  const [count, setCount] = useState(0);
+  const [perPage, setPerPage] = useState(20);
+
   const load = useCallback(async () => {
-    const q = filter ? `?status=${filter}` : "";
-    setLeads(await api<Lead[]>(`/api/v1/admin/leads${q}`));
-  }, [filter]);
+    // **والردُّ صار كائناً بعدَده** — **ومئتان بلا كلمةٍ تُقرأ «هذا كلُّ من
+    // طلب الانضمام»**، فيُظنّ أنّ الطلباتِ نضبت وهي في الصفحة الثانية.
+    const res = await api<{ leads: Lead[]; total: number; per_page: number }>(
+      `/api/v1/admin/leads?status=${filter}&page=${page}`,
+    );
+    setLeads(res?.leads ?? []);
+    setCount(res?.total ?? 0);
+    setPerPage(res?.per_page || 20);
+  }, [filter, page]);
 
   useEffect(() => {
     void load();
@@ -221,7 +233,12 @@ export default function LeadsPage() {
         {FILTERS.map((f) => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => {
+              /* **ومن كان في الصفحة الرابعة ثمّ بدّل الترشيح يقع على رابعةٍ
+                 قد لا توجد** — فيرى فراغاً ويظنّ القسمَ خالياً. */
+              setPage(1);
+              setFilter(f.key);
+            }}
             className={`rounded-control px-3 py-1.5 text-sm transition-colors ${
               filter === f.key
                 ? "bg-primary font-medium text-on-bright"
@@ -334,6 +351,12 @@ export default function LeadsPage() {
             </div>
           </div>
         </Modal>
+      )}
+      {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
+      {count > perPage && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={count} perPage={perPage} onChange={setPage} />
+        </div>
       )}
     </div>
   );

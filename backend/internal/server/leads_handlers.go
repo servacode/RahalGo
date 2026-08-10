@@ -268,8 +268,21 @@ const leadSelect = `
 // handleAdminLeads كل طلبات الانضمام (ترشيح بالحالة اختياري).
 func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
+	// **وصفحةٌ محدودةٌ بعدٍّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	//
+	// **ومئتان بلا كلمةٍ تُقرأ «هذا كلُّ من طلب الانضمام»** — فيُظنّ أنّ
+	// الطلباتِ نضبت وهي في الصفحة الثانية.
+	pg := pagingOf(r, 20)
+	var count int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM merchant_leads l WHERE ($1 = '' OR l.status = $1)`,
+		status).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	rows, err := s.pg.Query(r.Context(),
-		leadSelect+` WHERE ($1 = '' OR l.status = $1) ORDER BY l.created_at DESC LIMIT 200`, status)
+		leadSelect+` WHERE ($1 = '' OR l.status = $1)
+		ORDER BY l.created_at DESC LIMIT $2 OFFSET $3`, status, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -280,7 +293,7 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	httpx.JSON(w, http.StatusOK, paged("leads", out, count, pg))
 }
 
 // handleRepCreateLead تسجيل عميل جديد من بوابة المندوب مباشرة.

@@ -92,10 +92,32 @@ func (s *Server) handleListDisputes(w http.ResponseWriter, r *http.Request) {
 		status = ""
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وصفحةٌ محدودةٌ بعدٍّ — لا مئتان بلا كلمة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «لا تنسَ إضافة الباجينيشن».)
+	//
+	// **كان `LIMIT 200` صامتاً**: من راجع نزاعاتِ الشهر فرأى مئتين ظنّها
+	// مئتين — **وبنى على النقص قراراً.**
+	pg := pagingOf(r, 20)
+
+	// **والعدُّ باستعلامٍ ثانٍ لا بطول الصفحة** — طولُ الصفحة يقول كم عُرض،
+	// **والعدُّ يقول كم هناك.** ولا يُشتقّ أحدُهما من الآخر.
+	var count int
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*) FROM disputes d
+		WHERE ($1 = '' OR d.party_role = $1)
+		  AND ($2 = '' OR d.status = $2)`, party, status).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
 	rows, err := s.pg.Query(r.Context(), disputeSelect+`
 		WHERE ($1 = '' OR d.party_role = $1)
 		  AND ($2 = '' OR d.status = $2)
-		ORDER BY d.created_at DESC LIMIT 200`, party, status)
+		ORDER BY d.created_at DESC LIMIT $3 OFFSET $4`,
+		party, status, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -105,7 +127,17 @@ func (s *Server) handleListDisputes(w http.ResponseWriter, r *http.Request) {
 	out := []disputeRow{}
 	// **والمجموعُ للمفتوح وحدَه** — «كم لنا عند الناس» سؤالٌ عن الدَّين لا عن
 	// التاريخ، **وجمعُ المحسومِ معه يضخّمه بما استُرِدّ فعلاً.**
+	//
+	// **ويُحسب على كلّ المفتوح لا على الصفحة المعروضة** — (وإلّا نقص الدَّينُ
+	// كلّما قُلّب الترقيم، **فيُقرأ رقمٌ مختلفٌ في كلّ صفحةٍ لسؤالٍ واحد**).
 	var total int64
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT COALESCE(sum(d.amount), 0) FROM disputes d
+		WHERE ($1 = '' OR d.party_role = $1) AND d.status = 'open'`,
+		party).Scan(&total); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	for rows.Next() {
 		var x disputeRow
 		if err := rows.Scan(&x.ID, &x.PartyRole, &x.PartyID, &x.PartyName, &x.PartyPhone,
@@ -113,9 +145,6 @@ func (s *Server) handleListDisputes(w http.ResponseWriter, r *http.Request) {
 			&x.OrderNo, &x.CreatedAt); err != nil {
 			s.respondErr(w, err)
 			return
-		}
-		if x.Status == "open" {
-			total += x.Amount
 		}
 		out = append(out, x)
 	}
@@ -138,6 +167,10 @@ func (s *Server) handleListDisputes(w http.ResponseWriter, r *http.Request) {
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"disputes": out, "total": total, "open_counts": counts,
+		// **و`count` عددُ الصفوف و`total` مجموعُ المال** — **اسمان لا يجتمعان
+		// في مفتاحٍ واحد**، ولو سُمّي العددُ `total` لَقرأت الشاشةُ الدَّينَ
+		// عدداً والعددَ ديناً.
+		"count": count, "page": pg.Page, "per_page": pg.PerPage,
 	})
 }
 

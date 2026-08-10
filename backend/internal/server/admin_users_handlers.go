@@ -238,6 +238,21 @@ func (s *Server) handleAdminResetPassword(w http.ResponseWriter, r *http.Request
 // handleAdminUserActivity سجل نشاط الحساب: ما فعله وما فُعل به (من سجل التدقيق).
 func (s *Server) handleAdminUserActivity(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	// **وسجلُّ النشاط يُرقَّم** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	//
+	// **وهو أسرعُ ما ينمو في الحساب**: كلُّ دخولٍ وكلُّ تعديلٍ سطر. **ومئةٌ
+	// صامتةٌ تعني أنّ ما قبل الأسبوع الماضي محجوبٌ عمّن يراجع** — وهو ما
+	// يُبحث عنه بالضبط حين يُشتكى على حساب.
+	pg := pagingOf(r, 25)
+	var count int
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*) FROM audit_log a
+		CROSS JOIN (SELECT id FROM users WHERE id = $1) u
+		WHERE a.actor_user_id = u.id OR (a.entity = 'user' AND a.entity_id = u.id::text)`,
+		id).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT a.action, a.entity, COALESCE(a.entity_id, ''), COALESCE(a.ip, ''),
 		       COALESCE(a.details::text, ''), a.created_at,
@@ -247,7 +262,7 @@ func (s *Server) handleAdminUserActivity(w http.ResponseWriter, r *http.Request)
 		CROSS JOIN (SELECT id FROM users WHERE id = $1) u
 		LEFT JOIN users au ON au.id = a.actor_user_id
 		WHERE a.actor_user_id = u.id OR (a.entity = 'user' AND a.entity_id = u.id::text)
-		ORDER BY a.id DESC LIMIT 100`, id)
+		ORDER BY a.id DESC LIMIT $2 OFFSET $3`, id, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -273,7 +288,7 @@ func (s *Server) handleAdminUserActivity(w http.ResponseWriter, r *http.Request)
 		}
 		out = append(out, e)
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	httpx.JSON(w, http.StatusOK, paged("activity", out, count, pg))
 }
 
 // handleAdminLogoutAll إنهاء كل جلسات الحساب فوراً.

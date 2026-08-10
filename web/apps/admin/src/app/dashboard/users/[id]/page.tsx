@@ -13,6 +13,7 @@ import {
   Button,
   Input,
   Modal,
+  Pagination,
   FormSection,
   IconUser,
   IconPhone,
@@ -140,6 +141,14 @@ export default function UserProfilePage() {
   const [p, setP] = useState<Profile | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
+  /** **سجلُّ النشاط مُرقَّم** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+
+      **وهو أسرعُ ما ينمو في الحساب**: كلُّ دخولٍ وكلُّ تعديلٍ سطر. **ومئةٌ
+      صامتةٌ تحجب ما قبل الأسبوع الماضي عمّن يراجع** — وهو ما يُبحث عنه
+      بالضبط حين يُشتكى على حساب. */
+  const [actPage, setActPage] = useState(1);
+  const [actCount, setActCount] = useState(0);
+  const [actPer, setActPer] = useState(25);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<string | null>(null);
@@ -174,7 +183,6 @@ export default function UserProfilePage() {
       setP(await api<Profile>(`/api/v1/admin/users/${id}`));
       const st = await api<{ transactions: Tx[] }>(`/api/v1/admin/users/${id}/wallet`);
       setTxs(st.transactions);
-      setActivity(await api<Activity[]>(`/api/v1/admin/users/${id}/activity`));
       setFeedback(await api<Feedback>(`/api/v1/admin/users/${id}/feedback`));
       setFin(await api<FinData>(`/api/v1/admin/users/${id}/financials`));
       setError("");
@@ -186,6 +194,29 @@ export default function UserProfilePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * **وسجلُّ النشاط يُجلَب وحدَه — بصفحته.**
+   *
+   * **ولو بقي في `load` لَما تحرّك بتقليب الصفحة**: تابعُ `useCallback`
+   * معلّقٌ بـ`[id]` وحدَه، **فيُرسم الترقيمُ ويُضغط ولا يقع شيء** — وهي
+   * عائلةُ العطب نفسِها التي أوقفت زرَّي الحظر والإيقاف.
+   *
+   * **وجلبُه وحدَه أخفُّ أيضاً**: تقليبُ صفحةٍ لا يُعيد جلبَ الحساب
+   * والمحفظةِ والتقييماتِ والماليّات معه.
+   */
+  useEffect(() => {
+    api<{ activity: Activity[]; total: number; per_page: number }>(
+      `/api/v1/admin/users/${id}/activity?page=${actPage}`,
+    )
+      .then((act) => {
+        setActivity(act?.activity ?? []);
+        setActCount(act?.total ?? 0);
+        setActPer(act?.per_page || 25);
+      })
+      // @empty-ok **وسجلٌّ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
+      .catch(() => setActivity([]));
+  }, [id, actPage]);
 
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!p) return <LoadingState variant="text" />;
@@ -751,6 +782,17 @@ export default function UserProfilePage() {
                 </li>
               ))}
             </ul>
+          )}
+          {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
+          {actCount > actPer && (
+            <div className="mt-3 flex justify-center">
+              <Pagination
+                page={actPage}
+                total={actCount}
+                perPage={actPer}
+                onChange={setActPage}
+              />
+            </div>
           )}
         </FormSection>
       </div>
