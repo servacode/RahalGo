@@ -23,7 +23,7 @@ importers:
         specifier: ^2.5.0
         version: 2.10.7
 
-  apps/admin:
+  apps/rahalgo:
     dependencies:
       '@rahalgo/auth':
         specifier: workspace:*
@@ -34,6 +34,9 @@ importers:
       '@rahalgo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       leaflet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -62,58 +65,6 @@ importers:
       '@types/leaflet':
         specifier: ^1.9.21
         version: 1.9.21
-      '@types/node':
-        specifier: ^24.10.1
-        version: 24.13.3
-      '@types/qrcode':
-        specifier: ^1.5.6
-        version: 1.5.6
-      '@types/react':
-        specifier: ^19.2.6
-        version: 19.2.17
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.17)
-      tailwindcss:
-        specifier: ^4.1.16
-        version: 4.3.3
-      typescript:
-        specifier: ^5.9.2
-        version: 5.9.3
-
-  apps/rahalgo:
-    dependencies:
-      '@rahalgo/auth':
-        specifier: workspace:*
-        version: link:../../packages/auth
-      '@rahalgo/i18n':
-        specifier: workspace:*
-        version: link:../../packages/i18n
-      '@rahalgo/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@types/qrcode':
-        specifier: ^1.5.6
-        version: 1.5.6
-      next:
-        specifier: ^15.5.6
-        version: 15.5.22(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      qrcode:
-        specifier: ^1.5.4
-        version: 1.5.4
-      react:
-        specifier: ^19.2.0
-        version: 19.2.8
-      react-dom:
-        specifier: ^19.2.0
-        version: 19.2.8(react@19.2.8)
-    devDependencies:
-      '@rahalgo/tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/tsconfig
-      '@tailwindcss/postcss':
-        specifier: ^4.1.16
-        version: 4.3.3
       '@types/node':
         specifier: ^24.10.1
         version: 24.13.3
