@@ -60,6 +60,8 @@ type Server struct {
 	otpStatus  func() map[string]any
 	// otpUnpair **فكُّ اقتران البوت** — وفارغةٌ لمزوّدٍ لا اقترانَ له.
 	otpUnpair func(context.Context) error
+	// otpPair **طلبُ رمزِ ربطٍ صريح** — ولا رمزَ بغيره.
+	otpPair func()
 	// textSender مُرسِلُ الرسائل إلى المتاجر — رسالةٌ نصّية اليوم، وواتسابٌ
 	// رسميّ لاحقاً من الواجهة نفسها.
 	textSender *notify.SMSSender
@@ -73,7 +75,7 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
 	cashboxSvc *cashbox.Service, supportSvc *support.Service, mediaSvc *media.Service,
 	hub *realtime.Hub, otpStatus func() map[string]any,
-	otpUnpair func(context.Context) error) *Server {
+	otpUnpair func(context.Context) error, otpPair func()) *Server {
 	notify := notifications.New(pg, hub, logger)
 	geoSvc := geo.New(cfg.GeocoderURL, rdb, logger)
 	// محرك الطلبات يحتاج الإشعارات (عمولة المندوب) وقد بُني قبلها — نحقنها الآن.
@@ -86,7 +88,7 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
 		comms:  comms.New(pg),
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
-		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair,
+		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair, otpPair: otpPair,
 		notify: notify, geo: geoSvc}
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
 	// **ولا تُقرأ مرّتين بطريقتين.**
@@ -394,6 +396,28 @@ func (s *Server) Router() http.Handler {
 					}
 					s.audit(r, "admin.whatsapp_unpair", "platform", "", map[string]any{})
 					httpx.JSON(w, http.StatusOK, map[string]any{"unpaired": true})
+				})
+			// ══════════════════════════════════════════════════════════
+			// **وطلبُ الرمز صريحٌ — ولا يُولَّد وحدَه**
+			// ══════════════════════════════════════════════════════════
+			//
+			// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «الكودُ لا يجب أن يظهر تلقائيّاً —
+			//  يظهر حين أطلبه بزرّ ربطِ جهاز، هيك الأصول».)
+			//
+			// **ورمزٌ يُولَّد بلا طلبٍ ينتهي بلا مسح** — فيُسجَّل «انتهت
+			// المهلة» كلَّ دقيقتين، **ويقرؤه صاحبُ المنصّة عطباً دائماً.**
+			//
+			// **وهو بابٌ يُفتح لا مجرّدَ زرّ**: من مسح رمزاً معروضاً على
+			// شاشةٍ منسيّةٍ ربط هاتفَه هو ببوت المنصّة.
+			r.With(s.RequireRoles("admin")).
+				Post("/whatsapp/pair", func(w http.ResponseWriter, r *http.Request) {
+					if s.otpPair == nil {
+						s.respondErr(w, httpx.ErrNotFound)
+						return
+					}
+					s.otpPair()
+					s.audit(r, "admin.whatsapp_pair", "platform", "", map[string]any{})
+					httpx.JSON(w, http.StatusOK, map[string]any{"pairing": true})
 				})
 
 			r.Post("/media", s.handleUploadMedia)

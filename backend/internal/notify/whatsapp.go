@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // مشغّل database/sql لمخزن whatsmeow
@@ -61,6 +62,26 @@ type WhatsAppSender struct {
 
 	// wake **يوقظ الحلقةَ الآن** — ولا تنتظر بقيّةَ مهلتها.
 	wake chan struct{}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **pairWanted — ولا رمزَ إلّا بطلب**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «الكودُ لا يجب أن يظهر تلقائيّاً — هذا سببُ
+	//  رسائل الخطأ. يظهر حين أطلبه بزرّ ربطِ جهاز».)
+	//
+	// **وكان يُولَّد وحدَه أبداً**: تعرض المكتبةُ ستّةَ رموزٍ في دقيقتين ثمّ
+	// تقول `timeout` لمن لم يمسح، **فتعيد الحلقةُ الكرّةَ فوراً** — رمزٌ
+	// ينتهي كلَّ دقيقتين وخطأٌ يُسجَّل معه، **ليلاً ونهاراً ولا أحدَ طلبه.**
+	//
+	// **وذاك أصلُ «pairing ended: timeout»** الذي سأل عنه المالك مرّتين:
+	// **لم يكن عطباً، كان أثرَ رمزٍ لم يطلبه أحد.**
+	//
+	// **ورمزٌ يُعرض بلا طلبٍ خطرٌ أيضاً** — يبقى على شاشةٍ مفتوحةٍ فيمسحه
+	// من مرّ بها فيربط هاتفَه هو بالمنصّة.
+	pairWanted atomic.Bool
+	// qrExpired **انتهى آخرُ رمزٍ ولم يُمسح** — تُعرض دعوةٌ لا إنذار.
+	qrExpired atomic.Bool
 
 	logger   *slog.Logger
 	template TemplateFunc
@@ -179,6 +200,19 @@ func (s *WhatsAppSender) adopt(device *store.Device) {
 	s.nudge()
 }
 
+// Pair **يطلب رمزاً — وهو البابُ الوحيدُ إليه.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «أضغط ربطَ الجهاز ليظهر الكود — هيك الأصول».)
+//
+// **ولا ينتظر شيئاً**: يرفع الرايةَ ويوقظ الحلقة، **والرمزُ يظهر في اللوحة
+// بعد ثانيتين** — ومعالِجُ HTTP لا يُحبَس على شبكةِ واتساب.
+func (s *WhatsAppSender) Pair() {
+	s.pairWanted.Store(true)
+	s.qrExpired.Store(false)
+	s.setErr("")
+	s.nudge()
+}
+
 // nudge **يوقظ الحلقةَ الآن** — ولا تُترك تُكمل مهلةَ تراجعٍ بلغت دقيقتين.
 //
 // **والقناةُ بسعةِ واحد**: إيقاظان متتاليان إيقاظٌ واحد، **ولا يُحبس مَن
@@ -230,11 +264,38 @@ func (s *WhatsAppSender) connectLoop(ctx context.Context) {
 			continue
 		}
 
+		// ══════════════════════════════════════════════════════════════
+		// **وجهازٌ بلا هويّةٍ ينتظر طلبَ صاحبه — لا يبادر**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **ولا اتّصالَ أصلاً قبل الطلب**: الوصلُ بخوادم واتساب لجهازٍ بلا
+		// هويّةٍ لا يفعل شيئاً إلّا أن يجلب رموزاً تنتهي. **فتقول اللوحةُ
+		// «غير متّصل · غير مقترن»** — وهو الصدقُ بعينه، **وقد سأل المالكُ
+		// عن تناقض «متّصلٌ وغيرُ مقترن» فكان هذا نصفَ جوابه.**
+		if c.Store.ID == nil && !s.pairWanted.Load() {
+			if c.IsConnected() {
+				c.Disconnect()
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-s.wake:
+			case <-time.After(30 * time.Second):
+			}
+			continue
+		}
+
 		if err := s.connectOnce(); err != nil {
 			// **وإلغاءُ الجيل ليس عطباً** — فكَّ المالكُ الاقترانَ فأُغلقت
 			// قناةُ الجهاز القديم. **وخطأٌ يُعرض على أنّه عطبٌ في لوحةٍ
 			// يُقلق صاحبَه بلا سبب** — وقد سأل عن واحدٍ منها بالفعل.
-			if ctx.Err() == nil && !errors.Is(err, context.Canceled) {
+			if errors.Is(err, errQRExpired) {
+				// **ولا يُخلَف رمزٌ انتهى إلّا بطلبٍ جديد** — تُطفأ الرايةُ
+				// **فتعود الحلقةُ إلى انتظارها.**
+				s.pairWanted.Store(false)
+				s.qrExpired.Store(true)
+				backoff = 5 * time.Second
+			} else if ctx.Err() == nil && !errors.Is(err, context.Canceled) {
 				s.setErr(err.Error())
 				s.logger.Warn("whatsapp connect failed, retrying", "error", err, "backoff", backoff)
 			}
@@ -254,6 +315,12 @@ func (s *WhatsAppSender) connectLoop(ctx context.Context) {
 		}
 	}
 }
+
+// errQRExpired **رمزٌ انتهت صلاحيّتُه ولم يُمسح** — حالٌ لا عطب.
+//
+// **ويُميَّز بقيمةٍ لا بنصّ**: الحلقةُ تقرّر أتعرضه أم تبتلعه، **ومقارنةُ
+// نصوصٍ تنكسر بأوّل تبديلِ صياغة.**
+var errQRExpired = errors.New("whatsapp: qr expired unscanned")
 
 // connectOnce **محاولةٌ واحدة — تعود دائماً ولا تحبس نفسَها.**
 //
@@ -302,16 +369,51 @@ func (s *WhatsAppSender) connectOnce() error {
 			switch evt.Event {
 			case "code":
 				s.setQR(evt.Code)
+				// **ورمزٌ جديدٌ يمحو خطأ ما قبله.**
+				//
+				// (سؤالُ المالك ٢٠٢٦-٠٨-١٠: «ما زال يظهر آخرُ خطأ، لماذا؟»)
+				//
+				// **الحقلُ كان يُمحى في موضعين فقط**: نجاحُ الاقتران وفكُّه.
+				// **فيبقى خطأُ محاولةٍ ماتت معروضاً فوق رمزٍ حيٍّ صالح** —
+				// ومن رآه ظنّ الرمزَ عاطلاً فلم يمسحه، **فانتهى هو أيضاً
+				// فظهر خطؤه**، وهكذا.
+				//
+				// **والحقلُ اسمُه «آخر خطأ» ويُقرأ «الخطأ الآن»** — ولا أحدَ
+				// يقرأ صفةً في اسمِ حقل.
+				s.setErr("")
 				s.logger.Info("whatsapp pairing: scan this QR from the bot phone (WhatsApp > Linked Devices)")
 				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
 			case "success":
 				s.setQR("")
+				// **والرايةُ تُطفأ بالنجاح** — وإلّا طلبت الحلقةُ رمزاً
+				// لجهازٍ صار له هويّة.
+				s.pairWanted.Store(false)
 				s.logger.Info("whatsapp paired successfully", "as", c.Store.ID.User)
 				// **ولا تُنهي الحلقةَ هنا** — الاقترانُ ليس اتّصالاً:
 				// **تعود فتفحص الحالَ وتُكمل ما نقص.**
 				return nil
-			default:
+			case "timeout":
+				// ══════════════════════════════════════════════════════
+				// **وانتهاءُ صلاحيّةِ رمزٍ ليس عطباً**
+				// ══════════════════════════════════════════════════════
+				//
+				// **الرموزُ تنتهي بطبعها**: تعرض المكتبةُ ستّةً يتعاقبون في
+				// نحوِ دقيقتين، **ثمّ تقول `timeout` لمن لم يمسح.** وهذا هو
+				// حالُ كلِّ من فتح اللوحةَ وتركها.
+				//
+				// **وعرضُه «آخر خطأ» يقول للمالك إنّ في منصّته عطباً وليس
+				// فيها عطب** — سأل عنه مرّتين.
+				//
+				// **فيُقال في السجلّ ولا يُعرض**: الحلقةُ تطلب رمزاً جديداً
+				// في ثوانٍ، **وما يُصلح نفسَه لا يُنذَر به.**
 				s.setQR("")
+				s.logger.Info("whatsapp qr expired unscanned — requesting a new one")
+				return errQRExpired
+			default:
+				// **وكلُّ نهايةٍ تُطفئ الراية** — **ومحاولةٌ تُعاد بلا طلبٍ
+				// تُعيد الخطأَ نفسَه إلى الأبد** فيُقرأ عطباً مستمرّاً.
+				s.setQR("")
+				s.pairWanted.Store(false)
 				return fmt.Errorf("whatsapp pairing ended: %s", evt.Event)
 			}
 		}
@@ -375,12 +477,16 @@ func (s *WhatsAppSender) Status() map[string]any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return map[string]any{
-		"provider":   "whatsapp",
-		"connected":  c.IsConnected(),
-		"logged_in":  c.IsLoggedIn(),
-		"paired_as":  s.pairedAs,
-		"qr":         s.qr,
-		"last_error": s.lastErr,
+		"provider":  "whatsapp",
+		"connected": c.IsConnected(),
+		"logged_in": c.IsLoggedIn(),
+		// **وحالُ الربط تُقال للوحة**: أطُلب رمزٌ الآن؟ وهل انتهى آخرُه؟
+		// **وزرٌّ لا يعرف حالَه يُضغط مرّتين** — والثانيةُ تُبطل الأولى.
+		"pair_wanted": s.pairWanted.Load(),
+		"qr_expired":  s.qrExpired.Load(),
+		"paired_as":   s.pairedAs,
+		"qr":          s.qr,
+		"last_error":  s.lastErr,
 	}
 }
 
@@ -472,6 +578,9 @@ func (s *WhatsAppSender) Unpair(ctx context.Context) error {
 		}
 	}
 	s.adopt(s.container.NewDevice())
+	// **ولا رمزَ بعد الفكّ حتّى يُطلب** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	s.pairWanted.Store(false)
+	s.qrExpired.Store(false)
 	s.setPaired("")
 	s.setQR("")
 	s.setErr("")

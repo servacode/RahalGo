@@ -75,6 +75,7 @@ func run(logger *slog.Logger) error {
 	otpStatus := func() map[string]any { return map[string]any{"provider": "dev"} }
 	// **وفكُّ الاقتران لا وجودَ له في مزوّد التطوير** — ولا يُخترع زرٌّ لا يفعل.
 	var otpUnpair func(context.Context) error
+	var otpPair func()
 	switch cfg.OTPProvider {
 	case "dev":
 		otpSender = &notify.DevSender{Logger: logger}
@@ -99,6 +100,7 @@ func run(logger *slog.Logger) error {
 		otpSender = wa
 		otpStatus = wa.Status
 		otpUnpair = wa.Unpair
+		otpPair = wa.Pair
 		// **والتمهّلُ من الإعدادات ويُقرأ عند كلّ إرسال** — رقمٌ يُبدَّل في
 		// اللوحة يعمل بلا إعادة تشغيل.
 		wa.SetDelay(func(ctx context.Context) time.Duration {
@@ -149,7 +151,7 @@ func run(logger *slog.Logger) error {
 		Addr: cfg.HTTPAddr,
 		Handler: func() http.Handler {
 			srv := server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc,
-				settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub, otpStatus, otpUnpair)
+				settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub, otpStatus, otpUnpair, otpPair)
 			// **إبلاغُ المتاجر برسالةٍ نصّية لا ببوت واتساب**: البوت غيرُ رسميّ
 			// ويُحظَر إن أكثر من الإرسال الآليّ. وواتساب الرسميّ لاحقاً — يدخل
 			// من الواجهة نفسها (`notify.TextSender`) بلا تغييرٍ فيمن يستعملها.
