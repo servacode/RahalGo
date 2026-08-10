@@ -27,7 +27,7 @@ import {
   IconWallet,
   BootScreen,
 } from "@rahalgo/ui";
-import { PasswordGate } from "@rahalgo/auth";
+import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 
@@ -189,6 +189,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       token={tokenStore.access}
       notificationsHref="/dashboard/notifications"
       phone={user?.phone}
+      /* **وزرُّ «تسوّق» في لوحة الإدارة أيضاً** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
+         «وصاحبُ المنصّة أيضاً، والموظّفون أيضاً»).
+
+         **كان في الثلاث ولم يكن هنا** — والسائقُ والمتجرُ والمندوبُ يتسوّقون
+         وصاحبُ المنصّة لا. **ومن لا يستطيع أن يطلب من منصّته لا يرى ما يراه
+         زبائنُه** — وهو أوّلُ من يجب أن يراه.
+
+         **ويتبع دورَ الزبون**: بلا الدور يصل صاحبُه فيتصفّح ولا يستطيع أن
+         يطلب — **وزرٌّ يقود إلى بابٍ لا يُفتح أسوأ من غيابه.** */
+      shopUrl={
+        FIELD_ROLES_ARE_CUSTOMERS
+          ? (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003")
+          : undefined
+      }
+      shopLabel={m.shared.shopAsCustomer}
       onLogout={() => {
         logout();
         router.replace("/login");

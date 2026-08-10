@@ -354,6 +354,17 @@ export interface AccountMenuItem {
   href: string;
   label: string;
   icon: ComponentType<{ size?: number; className?: string }>;
+  /**
+   * **فعلٌ بدل انتقال** — لبندٍ يعبر إلى تطبيقٍ آخر.
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٠: «لوحتي تظهر بالقائمة المنسدلة أيضاً فوق تسجيل
+   *  الخروج».)
+   *
+   * **والعبورُ بين الأصول يحتاج تسليمَ جلسةٍ لمرّة** (SSO) — **ورابطٌ مباشرٌ
+   * إلى لوحةٍ في أصلٍ آخرَ يصل صاحبَه إليها مسجَّلاً خارجَها**، فيُردّ إلى
+   * شاشة الدخول وقد كان داخلاً.
+   */
+  onClick?: () => void;
 }
 
 /**
@@ -511,14 +522,21 @@ export function AccountMenu({
           {items.map((it) => {
             const on = active.startsWith(it.href);
             const Icon = it.icon;
+            const cls = `flex w-full items-center gap-2.5 px-3 py-2.5 text-start text-sm transition-colors ${
+              on ? "bg-primary-tint font-medium text-ink" : "text-ink-muted hover:bg-row-hover hover:text-ink"
+            }`;
+            /* **وبندٌ بفعلٍ زرٌّ لا رابط** — **ورابطٌ لا يذهب إلى عنوانه
+               يكسر فتحَه في لسانٍ جديد** ويُقرأ للقارئ الصوتيّ رابطاً. */
+            if (it.onClick) {
+              return (
+                <button key={it.href} type="button" onClick={it.onClick} className={cls}>
+                  <Icon size={17} />
+                  {it.label}
+                </button>
+              );
+            }
             return (
-              <Link
-                key={it.href}
-                href={it.href}
-                className={`flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
-                  on ? "bg-primary-tint font-medium text-ink" : "text-ink-muted hover:bg-row-hover hover:text-ink"
-                }`}
-              >
+              <Link key={it.href} href={it.href} className={cls}>
                 <Icon size={17} />
                 {it.label}
               </Link>
