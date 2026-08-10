@@ -938,7 +938,20 @@ function OrderCard({
           بين بطاقات. **والبطاقةُ تبقى للطلب: حالتُه ومبلغُه وطريقُه.** */}
 
       {/* ── الإلغاء: نافذةٌ تُرى وهي تنقضي ───────────────────────────── */}
-      {(o.status === "pending" || (o.status === "accepted" && left > 0)) && (
+      {/* **ومتى يُعرض بابُ الإلغاء** — (شهده المالك ٢٠٢٦-٠٨-١٠: «الإلغاءُ
+          لم يُطبَّق على الطلبات الخاصّة بنفس الأسلوب»).
+
+          **العاديُّ**: قبل قبول المتجر متى شاء، وبعده ضمن مهلة.
+
+          **والخاصُّ إلى أن يُشترى** — ولا مهلةَ فيه: **حدُّه حدثٌ لا ساعة**،
+          خروجُ المال من جيب السائق. **ولا يبلغ `accepted` أصلاً**، فكان
+          الشرطُ لا يصدق عليه بعد موافقة الإدارة أبداً.
+
+          **والشاشةُ تعرض ما يقبله المحرّك** — `customTransitions` هي الحكم،
+          **وشرطان يفترقان يجعلان زرّاً يُضغط فيُردّ.** */}
+      {(o.kind === "custom"
+        ? ["pending", "dispatching", "assigned"].includes(o.status)
+        : o.status === "pending" || (o.status === "accepted" && left > 0)) && (
         <div>
           <Button
             variant="danger"
@@ -951,6 +964,13 @@ function OrderCard({
           {o.status === "accepted" && (
             <p className="mt-1 text-center text-xs text-ink-muted">
               {m.site.orders.cancelWindow.replace("{t}", fmtClock(left))}
+            </p>
+          )}
+          {/* **ويُقال متى يُقفل البابُ** — **زرٌّ يختفي بلا سابق إنذارٍ
+              يُقرأ عطباً**، ومن عرف الحدَّ قرّر قبل أن يبلغه. */}
+          {o.kind === "custom" && (
+            <p className="mt-1 text-center text-xs text-ink-muted">
+              {m.site.orders.cancelUntilBought}
             </p>
           )}
           {cancelErr && <p className="mt-1 text-sm text-danger">{cancelErr}</p>}

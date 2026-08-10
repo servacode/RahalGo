@@ -1146,6 +1146,18 @@ func (s *Service) cancelWindowSec(ctx context.Context) int64 {
 // بدقائق، **فموعدٌ مطلقٌ يُقرأ عند المستخدم منقضياً وهو حيّ** أو حيّاً وهو
 // منقضٍ. والنسبيُّ لا يعرف الساعتين.
 func (s *Service) CancelSecondsLeft(ctx context.Context, o *Order) int {
+	// **والطلبُ الخاصُّ بلا مهلةٍ إلى أن يُشترى** — (٢٠٢٦-٠٨-١٠).
+	//
+	// **حدُّه حدثٌ لا ساعة**: خروجُ المال من جيب السائق. **ورقمٌ ينقص
+	// على الشاشة يستعجل صاحبَه بلا سبب** — لا مطبخَ بدأ يطبخ.
+	if o.Kind == KindCustom {
+		switch o.Status {
+		case StPending, StDispatching, StAssigned:
+			return -1
+		default:
+			return 0
+		}
+	}
 	if o.Status != StAccepted || o.AcceptedAt == nil {
 		if o.Status == StPending {
 			// **قبل قبول المتجر لا مهلة أصلاً** — يُلغي متى شاء.
