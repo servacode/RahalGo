@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, getDir } from "@rahalgo/i18n";
 import { IconView, IconViewOff, IconCheck, IconClose } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -156,9 +156,33 @@ export function Input({
      يساراً. **والنصُّ `text-end` جاء فوقها** — رقمٌ يُقرأ نصفُه.
 
      **والقاعدةُ بعد القياس واحدة**: الزخرفةُ والحشوةُ التي تُخلي لها مكاناً
-     **تُكتبان بالمنطق نفسِه**، فلا يُفترض انعكاسٌ لا يقع. */
-  const padStart = icon ? "ps-10" : "ps-3";
-  const padEnd = isPassword ? "pe-10" : "pe-3";
+     **تُكتبان بالمنطق نفسِه**، فلا يُفترض انعكاسٌ لا يقع.
+
+     ══════════════════════════════════════════════════════════════════
+     **وعاد العطبُ لأنّ الحقلَ وحدَه قد يخالف اتّجاهَ الصفحة**
+     ══════════════════════════════════════════════════════════════════
+
+     (شهده المالك ثانيةً ٢٠٢٦-٠٨-١٠ في أوّل شاشةٍ على الاستضافة: «الرقمُ
+      والأيقونةُ فايتين ببعض».)
+
+     **حقلُ الهاتف عليه `dir="ltr"`** — ورقمٌ دوليٌّ يُقرأ هكذا. **والحشوةُ
+     المنطقيّةُ تُحلّ باتّجاه العنصر الذي كُتبت عليه**: `ps-10` على حقلٍ
+     لاتينيٍّ تعني **يساراً**.
+
+     **والأيقونةُ في الغلاف — واتّجاهُه اتّجاهُ الصفحة (يمين)**. فتقع
+     الأيقونةُ يميناً والحشوةُ يساراً، **والرقمُ `text-end` يرتدّ إلى اليمين
+     فيدخل تحتها.**
+
+     **والإصلاحُ الأوّلُ صحيحٌ ولم يكن كافياً**: وحّد المنطقَ بين الاثنين،
+     **لكنّه افترض أنّهما في اتّجاهٍ واحد** — وهما ليسا كذلك متى خالف الحقلُ
+     صفحتَه.
+
+     **فتُقلب الحشوةُ حين يُخالف** — لتقع في الجهة التي فيها الأيقونة فعلاً. */
+  // **ويُقاس بالمقارنة لا بالافتراض**: `dir="rtl"` على صفحةٍ عربيّةٍ لا
+  // يخالف شيئاً، **والقلبُ له يكسر ما كان سليماً.**
+  const flipped = !!props.dir && props.dir !== getDir(defaultLocale);
+  const padStart = icon ? (flipped ? "pe-10" : "ps-10") : flipped ? "pe-3" : "ps-3";
+  const padEnd = isPassword ? (flipped ? "ps-10" : "pe-10") : flipped ? "ps-3" : "pe-3";
   return (
     <div className={wrapperClassName}>
       {label && (
