@@ -19,6 +19,7 @@ import { useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   PageContainer,
+  Pagination,
   PageHeader,
   EmptyState,
   LoadingState,
@@ -60,11 +61,21 @@ export function LossesView() {
   );
   const [view, setView] = useViewMode("losses");
 
+  /** **صفحةُ الكشف** — (قرارُ المالك ٢٠٢٦-٠٨-١٠). */
+  const [page, setPage] = useState(1);
+
   const { data } = useLiveData<{
     losses: Loss[];
+    /** **مجموعُ خسائر المدّة كلِّها** — لا مجموعُ الصفحة. */
     total: number;
+    count: number;
+    per_page: number;
     treasury_balance: number;
-  }>(() => api(`/api/v1/admin/reports/losses?from=${from}&to=${to}`), ["wallet", "order"]);
+  }>(
+    () => api(`/api/v1/admin/reports/losses?from=${from}&to=${to}&page=${page}`),
+    ["wallet", "order"],
+    [from, to, page],
+  );
 
   const columns: DataColumn<Loss>[] = [
     {
@@ -158,6 +169,14 @@ export function LossesView() {
             </>
           )}
         </>
+      )}
+
+      {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة.
+          **والمجموعُ فوقه لا يتبدّل بتقليبه** — هو عن المدّة لا عن الصفحة. */}
+      {data && data.count > data.per_page && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={data.count} perPage={data.per_page} onChange={setPage} />
+        </div>
       )}
     </PageContainer>
   );

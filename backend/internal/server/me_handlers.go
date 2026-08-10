@@ -127,18 +127,34 @@ func (s *Server) handleDeleteMyAvatar(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMyRatings(w http.ResponseWriter, r *http.Request) {
 	// **ولا اسمَ متجرٍ هنا** — الزبونُ يعرف طلبَه بما طلب لا بمن طبخه، **وصفحةُ
 	// تقييماتٍ تسمّي المطعم تهدم ما تحرسه صفحةُ الطلب.** (انظر `customer_privacy.go`)
+	// **وصفحةٌ محدودةٌ بعدٍّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	//
+	// **وزبونٌ يطلب مرّتين في الأسبوع يبلغ المئةَ في سنة** — **فيختفي أوّلُ
+	// طلبٍ له من صفحةٍ اسمُها «تقييماتي»** ولا يعرف لماذا.
+	pg := pagingOf(r, 20)
+	var count int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM orders WHERE customer_id = $1 AND status = 'delivered'`,
+		userIDFrom(r)).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT o.id::text, o.number,
-		       COALESCE((SELECT string_agg(x.name, '، ' ORDER BY x.rn)
+		       -- **ونصُّ الطلب الخاصّ مكانَ الأصناف** — **لا بنودَ له**،
+		       -- **وسطرٌ فارغٌ في صفحة التقييم لا يُذكّر صاحبَه بما يقيّم.**
+		       COALESCE(NULLIF((SELECT string_agg(x.name, '، ' ORDER BY x.rn)
 		                 FROM (SELECT oi.name, row_number() OVER (ORDER BY oi.name) AS rn
 		                       FROM order_items oi WHERE oi.order_id = o.id LIMIT 3) x), ''),
+		                NULLIF(o.custom_request, ''), ''),
 		       (o.driver_id IS NOT NULL),
 		       COALESCE(rt.platform_stars, 0), rt.driver_stars, COALESCE(rt.comment, ''),
 		       (rt.order_id IS NOT NULL), o.created_at
 		FROM orders o
 		LEFT JOIN order_ratings rt ON rt.order_id = o.id
 		WHERE o.customer_id = $1 AND o.status = 'delivered'
-		ORDER BY o.created_at DESC LIMIT 100`, userIDFrom(r))
+		ORDER BY o.created_at DESC LIMIT $2 OFFSET $3`,
+		userIDFrom(r), pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -166,5 +182,5 @@ func (s *Server) handleMyRatings(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, o)
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	httpx.JSON(w, http.StatusOK, paged("ratings", out, count, pg))
 }

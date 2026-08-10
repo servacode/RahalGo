@@ -54,6 +54,35 @@ func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 	// كان الوصلُ على عمودين لا وجودَ لهما: جدولُ المحافظ مفتاحُه صاحبُها،
 	// وجدولُ الحركات يحمل صاحبَها كذلك — **ولا معرّفَ محفظةٍ في أيٍّ منهما.**
 	// **فالاستعلامُ يسقط قبل أن يقرأ صفّاً**، والصفحةُ لم تعمل قطّ.
+	// ══════════════════════════════════════════════════════════════════
+	// **وصفحةٌ محدودةٌ — والمجموعُ على المدّة كلِّها لا على الصفحة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «لا تنسَ إضافة الباجينيشن».)
+	//
+	// **والمجموعُ كان يُجمَع من الأسطر المعروضة** — وكان صحيحاً حين تُعرض
+	// كلُّها. **ومع الترقيم يصير مجموعَ عشرين سطراً لا خسائرَ الشهر**:
+	// يُقلَّب إلى الصفحة الثانية **فينقص ما خسرته المنصّةُ أمام عين من
+	// يقرأ**، ثمّ يُبنى عليه قرارُ تسعير.
+	//
+	// **وهي عائلةُ العطب نفسِها في النزاعات وتقييمات الحساب**: **رقمٌ يُشتقّ
+	// من صفحةٍ وهو عن الكلّ.**
+	pg := pagingOf(r, 25)
+	const lossFilter = `
+		FROM wallet_transactions t
+		JOIN wallets w ON w.user_id = t.user_id
+		WHERE w.is_treasury AND t.kind = 'platform_expense'
+		  AND t.created_at >= $1 AND t.created_at < $2`
+
+	var count int
+	var total int64
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*), COALESCE(sum(-t.amount), 0)`+lossFilter, from, toEnd).
+		Scan(&count, &total); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT o.number, -t.amount, t.note, t.created_at
 		FROM wallet_transactions t
@@ -61,7 +90,7 @@ func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN orders o ON o.id::text = t.ref
 		WHERE w.is_treasury AND t.kind = 'platform_expense'
 		  AND t.created_at >= $1 AND t.created_at < $2
-		ORDER BY t.created_at DESC LIMIT 500`, from, toEnd)
+		ORDER BY t.created_at DESC LIMIT $3 OFFSET $4`, from, toEnd, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -69,14 +98,12 @@ func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	out := []lossRow{}
-	var total int64
 	for rows.Next() {
 		var x lossRow
 		if err := rows.Scan(&x.OrderNumber, &x.Amount, &x.Note, &x.CreatedAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		total += x.Amount
 		out = append(out, x)
 	}
 
@@ -89,7 +116,11 @@ func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 		`SELECT COALESCE(balance, 0) FROM wallets WHERE is_treasury LIMIT 1`).Scan(&treasury)
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"losses": out, "total": total, "treasury_balance": treasury,
-		"from": from.Format("2006-01-02"), "to": to.Format("2006-01-02"),
+		// **و`total` مجموعُ المال و`count` عددُ الصفوف** — **اسمان لا
+		// يجتمعان في مفتاحٍ واحد.**
+		"losses": out, "total": total, "count": count,
+		"page": pg.Page, "per_page": pg.PerPage,
+		"treasury_balance": treasury,
+		"from":             from.Format("2006-01-02"), "to": to.Format("2006-01-02"),
 	})
 }

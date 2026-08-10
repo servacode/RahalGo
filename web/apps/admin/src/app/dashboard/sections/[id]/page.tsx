@@ -40,6 +40,7 @@ import {
   Select,
   Modal,
   PageContainer,
+  Pagination,
   PageHeader,
   EmptyState,
   LoadingState,
@@ -115,6 +116,14 @@ export default function SectionPage() {
   const router = useRouter();
   const [sec, setSec] = useState<Section | null>(null);
   const [rows, setRows] = useState<SectionItem[] | null>(null);
+  /** **صفحةُ أصناف القسم** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+
+      **والقسمُ يجمع أصنافَ كلّ المتاجر** — ينمو بعدد المتاجر لا بعدد
+      الأقسام. **وخمسُمئةٍ صامتةٌ تعني أنّ صنفاً لا يُوافَق عليه لأنّ أحداً
+      لم يره.** */
+  const [page, setPage] = useState(1);
+  const [count, setCount] = useState(0);
+  const [perPage, setPerPage] = useState(50);
   const [q, setQ] = useState("");
   const [state, setState] = useState("");
   const [adding, setAdding] = useState(false);
@@ -127,13 +136,17 @@ export default function SectionPage() {
       // **ونقطةٌ ثانيةٌ لصفٍّ واحدٍ سطحٌ يُصان بلا حاجة.**
       const list = await api<{ sections: Section[] }>("/api/v1/admin/sections");
       setSec((list.sections ?? []).find((x) => x.id === id) ?? null);
-      const res = await api<{ items: SectionItem[] }>(`/api/v1/admin/sections/${id}/items`);
+      const res = await api<{ items: SectionItem[]; count: number; per_page: number }>(
+        `/api/v1/admin/sections/${id}/items?page=${page}`,
+      );
       setRows(res.items ?? []);
+      setCount(res.count ?? 0);
+      setPerPage(res.per_page || 50);
       setError("");
     } catch {
       setError(m.errors.internal);
     }
-  }, [id]);
+  }, [id, page]);
 
   /**
    * **قلبُ الإتاحة — زرٌّ واحدٌ يقول الحال.**
@@ -345,6 +358,12 @@ export default function SectionPage() {
             void load();
           }}
         />
+      )}
+      {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
+      {count > perPage && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={count} perPage={perPage} onChange={setPage} />
+        </div>
       )}
     </PageContainer>
   );

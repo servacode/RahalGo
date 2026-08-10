@@ -84,19 +84,30 @@ export default function CashPage() {
    * مال.**
    */
   const [failed, setFailed] = useState(false);
+  /** **صفحةُ كشف الصندوق** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+
+      **وكشفُ صندوقه دفترُ ذمّةٍ لا قائمةَ عرض**: **ومئةٌ صامتةٌ تعني أنّ
+      سائقاً يراجع ما عليه فلا يجد نصفَه** — ويحتجّ بما رأى. */
+  const [page, setPage] = useState(1);
+  const [count, setCount] = useState(0);
+  const [perPage, setPerPage] = useState(25);
 
   const load = useCallback(() => {
     setFailed(false);
     Promise.all([
       api<Me>("/api/v1/driver/me"),
-      api<Entry[] | { entries: Entry[] }>("/api/v1/driver/cash"),
+      api<Entry[] | { entries: Entry[] }>(`/api/v1/driver/cash?page=${page}`),
     ])
       .then(([m2, r]) => {
         setMe(m2);
         setRows(Array.isArray(r) ? r : (r?.entries ?? []));
+        if (!Array.isArray(r)) {
+          setCount((r as { total?: number })?.total ?? 0);
+          setPerPage((r as { per_page?: number })?.per_page || 25);
+        }
       })
       .catch(() => setFailed(true));
-  }, []);
+  }, [page]);
 
   useEffect(load, [load]);
   // **وتسويةُ المالية تصل بلا تحديثِ صفحة** — من سلّم صندوقَه يريد أن يراه صفراً.

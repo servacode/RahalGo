@@ -587,12 +587,25 @@ func (s *Server) driverOwnsOrder(r *http.Request, orderID string) bool {
 
 // handleDriverCash كشف صندوقه: ما حصّله وما سلّمه.
 func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
+	// **وصفحةٌ محدودةٌ بعدٍّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	//
+	// **وكشفُ صندوقه دفترُ ذمّةٍ لا قائمةَ عرض**: يُقيَّد فيه كلُّ تحصيلٍ
+	// وكلُّ تسليم. **ومئةٌ صامتةٌ تعني أنّ سائقاً يراجع ما عليه فلا يجد
+	// نصفَه** — ويحتجّ بما رأى.
+	pg := pagingOf(r, 25)
+	var count int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM driver_cash_entries WHERE driver_id = $1`,
+		userIDFrom(r)).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT e.kind, e.amount, e.note, o.number, e.created_at
 		FROM driver_cash_entries e
 		LEFT JOIN orders o ON o.id::text = e.ref
 		WHERE e.driver_id = $1
-		ORDER BY e.id DESC LIMIT 100`, userIDFrom(r))
+		ORDER BY e.id DESC LIMIT $2 OFFSET $3`, userIDFrom(r), pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -615,5 +628,5 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, e)
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	httpx.JSON(w, http.StatusOK, paged("entries", out, count, pg))
 }

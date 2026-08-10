@@ -172,12 +172,25 @@ func clientIP(r *http.Request) string {
 
 // handleMyLogins آخر دخولات الحساب — للمستخدم نفسه (شفافية أمان "هل كان هذا أنت؟").
 func (s *Server) handleMyLogins(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.pg.Query(r.Context(), `
-		SELECT action, COALESCE(ip, ''), created_at
+	// **وصفحةٌ محدودةٌ بعدٍّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	//
+	// **وهذه الشاشةُ تسأل «هل كان هذا أنت؟»** — **ومن سُرق حسابُه يبحث عن
+	// دخولٍ غريبٍ قد يكون قبل عشرين محاولة.** وعشرون صامتةٌ تُخفيه عنه
+	// **في الشاشة التي بُنيت ليجده فيها.**
+	pg := pagingOf(r, 20)
+	const loginFilter = `
 		FROM audit_log
 		WHERE actor_user_id = $1
-		  AND action IN ('auth.otp_login', 'auth.password_login', 'auth.password_failed')
-		ORDER BY id DESC LIMIT 20`, userIDFrom(r))
+		  AND action IN ('auth.otp_login', 'auth.password_login', 'auth.password_failed')`
+	var count int
+	if err := s.pg.QueryRow(r.Context(), `SELECT count(*)`+loginFilter,
+		userIDFrom(r)).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT action, COALESCE(ip, ''), created_at`+loginFilter+`
+		ORDER BY id DESC LIMIT $2 OFFSET $3`, userIDFrom(r), pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -197,7 +210,7 @@ func (s *Server) handleMyLogins(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, l)
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	httpx.JSON(w, http.StatusOK, paged("logins", out, count, pg))
 }
 
 // --- استعادة كلمة المرور: رمز على الهاتف ثم كلمة مرور جديدة ---

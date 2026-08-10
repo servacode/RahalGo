@@ -188,6 +188,20 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
+	// **وصفحةٌ محدودةٌ بعدٍّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	//
+	// **وقسمُ السوق يجمع أصنافَ كلّ المتاجر** — ينمو بعدد المتاجر لا بعدد
+	// الأقسام. **وخمسُمئةٍ صامتةٌ تعني أنّ صنفاً لا يُوافَق عليه لأنّ أحداً
+	// لم يره.**
+	pg := pagingOf(r, 50)
+	var count int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM menu_items i
+		 JOIN merchants m ON m.id = i.merchant_id
+		 WHERE i.platform_section_id = $1`, id).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT i.id::text, i.name, i.merchant_price, i.available, i.approved,
 		       m.name, m.status, im.thumb_path, im.path,
@@ -198,7 +212,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN media im ON im.id = i.image_media_id
 		WHERE i.platform_section_id = $1
 		ORDER BY m.name, i.name
-		LIMIT 500`, id)
+		LIMIT $2 OFFSET $3`, id, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -281,5 +295,10 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		out = append(out, x)
 	}
 	// **والهامشُ ثابتٌ دائماً** — لا نمطَ يُرسَل. (قرارُ المالك ٢٠٢٦-٠٨-٠٤.)
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": out, "count": len(out)})
+	// **و`count` عددُ الكلّ لا طولُ الصفحة** — **كان `len(out)` وكان صادقاً
+	// حين تُعرض كلُّها**، ويصير مع الترقيم عددَ ما في الشاشة. **ورقمٌ يقول
+	// «٥٠ صنفاً في القسم» وفيه أربعُمئةٍ يُبنى عليه قرارُ عرض.**
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"items": out, "count": count, "page": pg.Page, "per_page": pg.PerPage,
+	})
 }

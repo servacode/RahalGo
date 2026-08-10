@@ -84,8 +84,9 @@ export default function RatingWatcher() {
 
   const check = useCallback(() => {
     if (!isLoggedIn(user)) return;
-    api<RateInfo[]>("/api/v1/my/ratings")
-      .then((rs) => {
+    api<{ ratings: RateInfo[] }>("/api/v1/my/ratings")
+      .then((res) => {
+        const rs = res?.ratings ?? [];
         /* **والقائمةُ مرتّبةٌ بالأحدث من الخادم** — فأوّلُ غيرِ مقيَّمٍ هو
            ما يذكره الزبون. **ولا ثلاثُ نوافذَ لثلاثة طلبات.** */
         const next = rs.find((r) => !r.rated && !dismissed(r.order_id));

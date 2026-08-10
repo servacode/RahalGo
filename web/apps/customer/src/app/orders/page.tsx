@@ -303,8 +303,12 @@ export default function MyOrdersPage() {
      صفحةٍ كان الزبون. **ونافذتان تُفتحان معاً تُقرآن عطباً.**
      (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) وزرُّ البطاقة يبقى لمن أراد أن يقيّم قديماً. */
   const loadRatings = useCallback(() => {
-    api<RateInfo[]>("/api/v1/my/ratings")
-      .then((rs) => setRateMap(Object.fromEntries(rs.map((r) => [r.order_id, r]))))
+    // **والردُّ صار كائناً بصفحته** — **ومصفوفةٌ تُقرأ من كائنٍ تردّ فراغاً
+    // بهدوء**، فتختفي نجومُ التقييم عن كلّ بطاقة بلا خطأ.
+    api<{ ratings: RateInfo[] }>("/api/v1/my/ratings")
+      .then((res) =>
+        setRateMap(Object.fromEntries((res?.ratings ?? []).map((r) => [r.order_id, r]))),
+      )
       .catch(() => undefined);
   }, []);
 
