@@ -218,11 +218,28 @@ export function DashboardChrome({
         </button>
       </div>
 
+      {/* ══════════════════════════════════════════════════════════════
+          **وبابُ التسوّق بندٌ عاديّ — لا صندوقٌ ممتلئ**
+          ══════════════════════════════════════════════════════════════
+
+          (شكوى المالك ٢٠٢٦-٠٨-١٠: «خلّي كلَّ الأزرار عاديّ، بس القسمُ الذي
+           نقف عليه يكون واضحاً — مو مثل الصور».)
+
+          **كان `bg-accent-tint` مصمتاً** — وصندوقُ القسم الحاليّ
+          `bg-primary-tint`. **صندوقان ممتلئان في قائمةٍ واحدةٍ بوزنٍ
+          متقارب**، فيُقرآن اثنين مفتوحين.
+
+          **ومن نظر لا يعرف أين هو** — يبحث عن القسم الذي يقف عليه فيجد
+          اثنين يشبهانه. **وأمارةُ «أنت هنا» لا تُقرأ إلّا إن كانت وحدَها.**
+
+          **وهو ليس قسماً أصلاً**: رابطٌ يخرج من اللوحة إلى الموقع —
+          **فيأخذ شكلَ البنود الساكنة**، ويبقى تمييزُه في أيقونته وموضعه
+          فوق القائمة. */}
       {shopUrl && (
         <div className="p-3 pb-0">
           <button
             onClick={shopAsCustomer}
-            className="flex w-full items-center gap-2.5 rounded-control bg-accent-tint px-3 py-2 text-sm font-medium text-accent-dark transition-colors hover:bg-accent-tint"
+            className="flex w-full items-center gap-2.5 rounded-control border-s-2 border-transparent px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
           >
             <IconStore size={17} />
             {shopLabel}
@@ -246,15 +263,31 @@ export function DashboardChrome({
                   {item.group}
                 </p>
               )}
+              {/* ══════════════════════════════════════════════════════
+                  **وأمارةُ «أنت هنا» ثلاثُ إشاراتٍ لا واحدة**
+                  ══════════════════════════════════════════════════════
+
+                  **صبغةٌ وحدَها لا تكفي في قائمةٍ طويلة**: العينُ تمرّ على
+                  خمسةَ عشرَ بنداً، **ودرجةُ لونٍ خفيفةٌ تُقرأ ظلّاً لا
+                  علامة.**
+
+                  **فشريطٌ في جهة البداية** يقطع الصفَّ فيُرى قبل أن يُقرأ،
+                  **وخطٌّ عريضٌ وحرفٌ كامل** — ثلاثتُها معاً لا تلتبس ببندٍ
+                  ساكن.
+
+                  **والشريطُ محجوزٌ للجميع** (`border-transparent` للساكن)
+                  — **وبدونه يقفز الصفُّ بكسلين كلّما بُدّل القسم**، وهي
+                  العلّةُ نفسُها التي حُرست في شريط التبويب. */}
               <Link
                 href={item.href}
-                className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors ${
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-2.5 rounded-control border-s-2 px-3 py-2 text-sm transition-colors ${
                   active
-                    ? "bg-primary-tint font-medium text-primary-strong"
-                    : "text-ink-muted hover:bg-row-hover hover:text-ink"
+                    ? "border-primary bg-primary-tint font-bold text-ink"
+                    : "border-transparent text-ink-muted hover:bg-row-hover hover:text-ink"
                 }`}
               >
-                <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
+                <Icon size={17} strokeWidth={active ? 2.4 : 1.8} />
                 {item.label}
               </Link>
             </div>
