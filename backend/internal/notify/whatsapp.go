@@ -33,6 +33,12 @@ type WhatsAppSender struct {
 	logger   *slog.Logger
 	template TemplateFunc
 
+	// delay **تمهّلٌ قبل كلّ رسالة** — يُقرأ من الإعدادات عند الإقلاع.
+	delay func(context.Context) time.Duration
+	// last **وقتُ آخر رسالةٍ خرجت** — التمهّلُ بينها وبين التالية.
+	sendMu sync.Mutex
+	last   time.Time
+
 	mu       sync.RWMutex
 	qr       string
 	lastErr  string
@@ -195,6 +201,7 @@ func (s *WhatsAppSender) SendOTP(ctx context.Context, phone, code string) error 
 	if !s.client.IsLoggedIn() {
 		return errWANotReady
 	}
+	s.pace(ctx)
 	jid := types.NewJID(strings.TrimPrefix(phone, "+"), types.DefaultUserServer)
 	text := s.template(ctx, code)
 	_, err := s.client.SendMessage(ctx, jid, &waE2E.Message{
@@ -215,6 +222,7 @@ func (s *WhatsAppSender) SendText(ctx context.Context, phone, text string) error
 	if !s.client.IsLoggedIn() {
 		return errWANotReady
 	}
+	s.pace(ctx)
 	jid := types.NewJID(strings.TrimPrefix(phone, "+"), types.DefaultUserServer)
 	if _, err := s.client.SendMessage(ctx, jid, &waE2E.Message{
 		Conversation: proto.String(text),
@@ -271,6 +279,25 @@ func (s *WhatsAppSender) setPaired(v string) {
 // **فبابان يُفتحان**: هذا — يضغطه المالكُ متى شاء — **وحدثُ الخروج** الذي
 // يفكّه آليّاً حين يفصله واتساب.
 func (s *WhatsAppSender) Unpair(ctx context.Context) error {
+	// ══════════════════════════════════════════════════════════════════
+	// **والخروجُ من المنصّة خروجٌ من الهاتف أيضاً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «عند تسجيل الخروج من الهاتف يجب تسجيلُ
+	//  الخروج من المنصّة، وإذا تمّ تسجيلُ الخروج من المنصّة يجب أن يتمّ
+	//  تسجيلُ الخروج من الهاتف أيضاً».)
+	//
+	// **وفصلٌ محلّيٌّ وحدَه يترك الجهازَ معلَّقاً في هاتفه** — يراه في
+	// «الأجهزة المرتبطة» ويظنّه يعمل، **ويتراكم واحدٌ في كلّ مرّة.**
+	//
+	// **و`Logout` تُبلّغ واتساب فيُزال الجهازُ من القائمة** — ثمّ تُمحى
+	// الهويّةُ محليّاً. **وإن تعذّر الإبلاغُ (لا شبكة) يمضي الفكُّ محليّاً**:
+	// **مالكٌ لا يستطيع أن يفكّ اقترانَه لأنّ الشبكةَ انقطعت عالقٌ.**
+	if s.client.IsLoggedIn() {
+		if err := s.client.Logout(ctx); err != nil {
+			s.logger.Warn("whatsapp: remote logout failed — unpairing locally", "error", err)
+		}
+	}
 	if s.client.IsConnected() {
 		s.client.Disconnect()
 	}
@@ -309,3 +336,39 @@ func (s *WhatsAppSender) watchLogout(ctx context.Context) {
 		}
 	})
 }
+
+// pace **يُمهل بين رسالةٍ وأخرى — لأنّ الرقمَ يُحظر لا الخادم.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «جهّز رسائلَ بشريّةً بحيث تخفّف عمليّةَ الحظر».)
+//
+// **ورقمٌ يُرسل عشرين رسالةً في الدقيقة بلا توقّفٍ يُقرأ آلة** — والإنسانُ
+// يكتب ثمّ يتوقّف.
+//
+// **ولا أَعِدُ أنّ هذا يمنع الحظر**: لا أحدَ يعرف ما يفحصه واتساب، **ومن
+// وعد بذلك خمّن.** إنّما يُقلّل النمطَ الآليَّ الظاهر.
+//
+// **والتمهّلُ بين الرسائل لا قبل كلّ واحدة**: من أرسل رسالةً وحيدةً بعد ساعةٍ
+// لا ينتظر شيئاً — **وتأخيرُ رمزِ تحقّقٍ بلا سببٍ يجعل صاحبَه يطلبه ثانيةً**،
+// فتصير رسالتان مكان واحدة.
+func (s *WhatsAppSender) pace(ctx context.Context) {
+	if s.delay == nil {
+		return
+	}
+	d := s.delay(ctx)
+	if d <= 0 {
+		return
+	}
+	s.sendMu.Lock()
+	defer s.sendMu.Unlock()
+	if wait := d - time.Since(s.last); wait > 0 && !s.last.IsZero() {
+		select {
+		case <-ctx.Done():
+		case <-time.After(wait):
+		}
+	}
+	s.last = time.Now()
+}
+
+// SetDelay **يربط التمهّلَ بالإعدادات** — ويُقرأ عند كلّ إرسالٍ لا مرّةً
+// عند الإقلاع: **رقمٌ يُبدَّل في اللوحة يجب أن يعمل بلا إعادة تشغيل.**
+func (s *WhatsAppSender) SetDelay(f func(context.Context) time.Duration) { s.delay = f }

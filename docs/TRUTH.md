@@ -417,6 +417,10 @@
 | `media.max_upload_mb` | المنصة | int | `5` |
 | `platform.invite_code` | المنصة | text | `RAHALGO` |
 | `whatsapp.otp_template` | المنصة | text | `رمز التحقق: {code}` |
+| `whatsapp.verified_template` | المنصة | text | `تمّ توثيق رقمك في {platform} ✅` |
+| `whatsapp.order_template` | المنصة | text | `طلب جديد #{number}
+{items}` |
+| `whatsapp.send_delay_ms` | المنصة | int | `1500` |
 | `platform.support_phone` |  | text | `` |
 | `platform.address` |  | text | `` |
 | `platform.location` |  | geo | `` |

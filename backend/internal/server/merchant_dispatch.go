@@ -57,10 +57,18 @@ var (
 //
 // **ولو بُني في الواجهة لاختلف عمّا يُرسَل**: يرى الموظّف نصّاً ويصل المتجرَ
 // غيرُه، ولا يكتشف ذلك أحدٌ حتى يشتكي متجر.
-func buildMerchantMessage(o *orderMessage) string {
+// **والقالبُ من اللوحة لا من الشيفرة** — (قرارُ المالك ٢٠٢٦-٠٨-١٠: «رسالةُ
+// الطلبات كيف رح يكون القالبُ تبعها — لازم تكون موجودة بلوحة الأدمن»).
+//
+// **ونصٌّ يصل متجراً ويُصحَّح بنشرٍ ليس نصّاً — هو إصدار.**
+//
+// **والبنودُ تُحقن في {items}**: عددُها يتبدّل بكلّ طلب، **فلا تُكتب بيد.**
+// و{number} رقمُ الطلب.
+//
+// **وقالبٌ فارغٌ يعود إلى الافتراض** — **ورسالةٌ فارغةٌ تصل متجراً أسوأُ من
+// قالبٍ لم يُعدَّل.**
+func buildMerchantMessage(tpl string, o *orderMessage) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "طلب جديد #%d\n", o.Number)
-	b.WriteString("——————————————\n")
 	for _, it := range o.Items {
 		fmt.Fprintf(&b, "• %s ×%d\n", it.Name, it.Qty)
 		if len(it.Options) > 0 {
@@ -71,10 +79,14 @@ func buildMerchantMessage(o *orderMessage) string {
 		}
 	}
 	if o.Notes != "" {
-		b.WriteString("——————————————\n")
 		fmt.Fprintf(&b, "ملاحظة الزبون: %s\n", o.Notes)
 	}
-	return strings.TrimRight(b.String(), "\n")
+	items := strings.TrimRight(b.String(), "\n")
+	if strings.TrimSpace(tpl) == "" {
+		tpl = "طلب جديد #{number}\n{items}"
+	}
+	out := strings.ReplaceAll(tpl, "{number}", fmt.Sprintf("%d", o.Number))
+	return strings.ReplaceAll(out, "{items}", items)
 }
 
 type orderMessageItem struct {
@@ -172,7 +184,7 @@ func (s *Server) handleOrderMessagePreview(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	text := buildMerchantMessage(msg)
+	text := buildMerchantMessage(s.settings.GetString(r.Context(), "whatsapp.order_template"), msg)
 
 	// **وكم سائقاً في الدوام الآن.**
 	//
@@ -259,7 +271,7 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 			s.respondErr(w, errSMSNotConfigured)
 			return
 		}
-		text := buildMerchantMessage(msg)
+		text := buildMerchantMessage(s.settings.GetString(r.Context(), "whatsapp.order_template"), msg)
 		if err := s.textSender.SendText(r.Context(), ph.SMS, text); err != nil {
 			// **السببُ في السجلّ والرسالةُ العامّة للشاشة**: ردُّ المزوّد قد
 			// يحمل مفتاحاً أو تفصيلَ حسابٍ لا يُعرض لموظّف.

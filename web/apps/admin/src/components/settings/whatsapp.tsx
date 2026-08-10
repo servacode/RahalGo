@@ -67,12 +67,22 @@ export default function WhatsAppPanel() {
               سبيلَ إلى الاقتران.**
 
               **ولا يظهر لمزوّد التطوير** — لا اقترانَ فيه أصلاً. */}
+          {/* **والزرُّ يقول الحالَ لا الفعلَ المجرَّد** — (قرارُ المالك
+              ٢٠٢٦-٠٨-١٠: «إذا كان متّصلاً الزرُّ يجب أن يكون تسجيلَ الخروج،
+              وإذا منفصلٌ ربطَ الجهاز — ليكون كلُّ شيءٍ واضحاً»).
+
+              **وزرٌّ اسمُه واحدٌ في حالين يجعل صاحبَه يخمّن**: أيفكّ ما هو
+              مربوطٌ أم يربط ما هو مفكوك؟
+
+              **والفعلُ واحدٌ في الحالين**: فكُّ الاقتران — لأنّ **الرمزَ لا
+              يُولَّد إلّا لجهازٍ بلا هويّة.** فمن ضغط «ربط الجهاز» وهو
+              مفصولٌ يُنظَّف ما بقي فيظهر الرمز. */}
           {status?.provider === "whatsapp" && (
             <Button
-              variant="danger"
+              variant={status?.logged_in ? "danger" : "primary"}
               disabled={busy}
               onClick={async () => {
-                if (!confirm(m.admin.whatsappPage.unpairConfirm)) return;
+                if (status?.logged_in && !confirm(m.admin.whatsappPage.unpairConfirm)) return;
                 setBusy(true);
                 try {
                   await api("/api/v1/admin/whatsapp/unpair", { method: "POST" });
@@ -83,7 +93,9 @@ export default function WhatsAppPanel() {
                 }
               }}
             >
-              {m.admin.whatsappPage.unpair}
+              {status?.logged_in
+                ? m.admin.whatsappPage.logout
+                : m.admin.whatsappPage.unpair}
             </Button>
           )}
         </div>

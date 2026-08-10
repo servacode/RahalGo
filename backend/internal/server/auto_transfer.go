@@ -81,7 +81,7 @@ func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
 				"order", orderID)
 			return
 		}
-		if err := s.textSender.SendText(ctx, ph.SMS, buildMerchantMessage(msg)); err != nil {
+		if err := s.textSender.SendText(ctx, ph.SMS, buildMerchantMessage(s.settings.GetString(ctx, "whatsapp.order_template"), msg)); err != nil {
 			s.logger.Error("التحويلُ التلقائيّ: تعذّر الإبلاغ", "order", orderID, "error", err)
 			return
 		}

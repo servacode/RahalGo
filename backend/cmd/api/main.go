@@ -99,6 +99,11 @@ func run(logger *slog.Logger) error {
 		otpSender = wa
 		otpStatus = wa.Status
 		otpUnpair = wa.Unpair
+		// **والتمهّلُ من الإعدادات ويُقرأ عند كلّ إرسال** — رقمٌ يُبدَّل في
+		// اللوحة يعمل بلا إعادة تشغيل.
+		wa.SetDelay(func(ctx context.Context) time.Duration {
+			return time.Duration(settingsStore.GetInt(ctx, "whatsapp.send_delay_ms")) * time.Millisecond
+		})
 	default:
 		return fmt.Errorf("unknown OTP_PROVIDER %q (expected dev or whatsapp)", cfg.OTPProvider)
 	}
