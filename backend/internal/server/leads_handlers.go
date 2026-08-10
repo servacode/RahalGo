@@ -119,6 +119,27 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 	if rep, err := s.identity.SalesRepByInviteCode(r.Context(), req.Ref); err == nil && rep.Status == "active" {
 		repID = &rep.ID
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وكودٌ قُدّم ولم يُعرَف يُكتب — لا يُبتلع**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الطلبُ يمضي بلا نسبةٍ ولا يُرفض** — وهو القرارُ الصحيحُ أعلاه:
+	// **حرمانُ المتجر من التسجيل عقوبةٌ على المندوب لا عليه.**
+	//
+	// **لكنّ الصمتَ يُضيع الحقّ**: المندوبُ التقى صاحبَ المتجر في السوق
+	// وأرسل رابطَه، **والحرفُ الناقصُ في الكود يجعل الفرصةَ للمنصّة** —
+	// فلا هو يعلم ولا الإدارةُ تعلم، **ويقرأ في لوحته «صفرُ فرص» فيظنّ
+	// أنّ الرجل لم يسجّل.**
+	//
+	// **فيُقيَّد الكودُ كما كُتب** في ملاحظة الفرصة — **والإدارةُ تقرؤه
+	// فتعرف أنّ أحداً جلبه** وتنسبه بيدها. **وسطرٌ يُقرأ خيرٌ من حقٍّ
+	// يضيع بلا أثر.**
+	//
+	// **ولا يُكتب حين لا كودَ أصلاً** — من دخل من رابط المنصّة لم يُخطئ.
+	note := ""
+	if repID == nil && strings.TrimSpace(req.Ref) != "" {
+		note = "كودُ دعوةٍ لم يُعرَف: " + clip(strings.TrimSpace(req.Ref), 40)
+	}
 	// **لا نسبة لمتجرٍ على المنصة أصلاً**.
 	//
 	// المندوب يُكافأ على **جلب** متجر، ومتجرٌ يعمل عندنا لم يُجلَب. وبلا هذا
@@ -140,10 +161,11 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err := s.pg.Exec(r.Context(), `
 		INSERT INTO merchant_leads
-			(store_name, owner_name, phone, area, category_id, lat, lng, owner_password_hash, sales_rep_user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			(store_name, owner_name, phone, area, category_id, lat, lng, owner_password_hash,
+			 sales_rep_user_id, note)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		req.StoreName, req.OwnerName, phone, req.Area,
-		categoryID, req.Lat, req.Lng, pwHash, repID); err != nil {
+		categoryID, req.Lat, req.Lng, pwHash, repID, note); err != nil {
 		s.respondErr(w, err)
 		return
 	}
