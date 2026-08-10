@@ -4,9 +4,11 @@
 package config
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Config struct {
@@ -40,7 +42,62 @@ type Config struct {
 	GeocoderURL string
 }
 
+// loadDotEnv **يقرأ `.env` من مجلّد التشغيل — إن وُجد.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا صار لازماً**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كلُّ إعدادٍ يُمرَّر في سطر الأوامر يضيع مع النافذة.** ومن شغّل بـ
+// `make run` أو ضغط زرّاً في محرّره **يعود إلى الافتراضات صامتاً**:
+// `OTP_PROVIDER=dev` فتُطبع رموزُ الدخول في السجلّ بدل أن تصل بواتساب،
+// **والمنصّةُ تعمل فلا شيءَ يقول إنّ شيئاً تبدّل.**
+//
+// **وقِيس ٢٠٢٦-٠٨-١٠**: البوتُ مقترنٌ ويعمل، **وأوّلُ إعادة تشغيلٍ من
+// طريق المالك تعيده إلى `dev`.**
+//
+// # وما يُقرأ لا يطغى على ما كُتب
+//
+// **المتغيّرُ المضبوطُ في البيئة أقوى من الملفّ** — فمن مرّر شيئاً في سطر
+// الأوامر أراده لهذه المرّة. **والملفُّ افتراضٌ لا أمر.**
+//
+// # ولا يُشترط وجودُه
+//
+// **ملفٌّ مفقودٌ ليس خطأً** — الافتراضاتُ في الشيفرة تكفي للتطوير، **وحرّاسُ
+// الإنتاج تحت تمنع الإقلاع بها.**
+func loadDotEnv(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, val, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		val = strings.TrimSpace(val)
+		// **وعلامتا الاقتباس تُنزعان** — من كتب `X="ي"` أراد `ي` لا `"ي"`.
+		if len(val) >= 2 && (val[0] == '"' && val[len(val)-1] == '"' ||
+			val[0] == '\'' && val[len(val)-1] == '\'') {
+			val = val[1 : len(val)-1]
+		}
+		if key == "" || os.Getenv(key) != "" {
+			continue
+		}
+		_ = os.Setenv(key, val)
+	}
+}
+
 func Load() (*Config, error) {
+	// **ويُقرأ قبل أوّل `getEnv`** — وإلّا قُرئت الافتراضاتُ ثمّ جاء الملفّ.
+	loadDotEnv(".env")
 	cfg := &Config{
 		Env:      getEnv("APP_ENV", "development"),
 		HTTPAddr: getEnv("HTTP_ADDR", ":8080"),
