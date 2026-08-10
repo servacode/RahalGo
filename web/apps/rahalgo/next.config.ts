@@ -56,11 +56,42 @@ const SITE = asURL(
  */
 const API = asURL(process.env.NEXT_PUBLIC_API_URL, "http://localhost:8080");
 
-if (process.env.NODE_ENV === "production" && !String(process.env.NEXT_PUBLIC_API_URL ?? "").trim()) {
-  throw new Error(
-    "NEXT_PUBLIC_API_URL فارغ — الواجهة ستنادي نفسَها بدل المحرّك ولن يعمل شيء. " +
-      "اضبطه في الاستضافة (اسم مضيف أو رابط كامل) ثمّ أعد البناء.",
-  );
+if (process.env.NODE_ENV === "production") {
+  const raw = String(process.env.NEXT_PUBLIC_API_URL ?? "").trim();
+  if (!raw) {
+    throw new Error(
+      "NEXT_PUBLIC_API_URL فارغ — الواجهة ستنادي نفسَها بدل المحرّك ولن يعمل شيء. " +
+        "اضبطه في الاستضافة (رابط كامل) ثمّ أعد البناء.",
+    );
+  }
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **واسمٌ بلا نقطةٍ ليس عنواناً يعرفه متصفّح**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * **قِيس على النسخة المرفوعة (٢٠٢٦-٠٨-١١)**: خُبز `https://rahalgo-api`
+   * — **الاسمُ الداخليُّ للخدمة** الذي تتنادى به خدماتُ الاستضافة بينها.
+   * **ولا يعرفه جهازُ الزبون**، فيسقط كلُّ نداءٍ برسالةٍ عامّة.
+   *
+   * **ومصدرُه أنّ `property: host` في المخطّطة تعطي الداخليَّ لا العامّ**
+   * — وهو فرقٌ لا يظهر إلّا في متصفّحٍ حقيقيّ، **بعد أن يكون البناءُ
+   * والنشرُ قد نجحا.**
+   *
+   * **فيُشترط مضيفٌ فيه نقطة** — وهو أضعفُ ما يميّز عنواناً عامّاً من اسمٍ
+   * داخليّ. **و`localhost` يُستثنى** لبناءٍ محلّيٍّ للتجربة.
+   */
+  let host = "";
+  try {
+    host = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`).hostname;
+  } catch {
+    throw new Error(`NEXT_PUBLIC_API_URL ليس عنواناً صالحاً: ${raw}`);
+  }
+  if (!host.includes(".") && host !== "localhost") {
+    throw new Error(
+      `NEXT_PUBLIC_API_URL يشير إلى اسمٍ داخليٍّ لا يعرفه المتصفّح: ${raw} — ` +
+        "اكتب العنوانَ العامَّ كاملاً (مثل https://rahalgo-api.onrender.com).",
+    );
+  }
 }
 
 const nextConfig: NextConfig = {
