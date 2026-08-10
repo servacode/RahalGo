@@ -40,6 +40,14 @@ type Config struct {
 	UploadsDir     string // مجلد تخزين الوسائط المرفوعة (خارج الحاوية في الإنتاج)
 	// خدمة العنونة (Nominatim) — تُستبدل بنسخة ذاتية الاستضافة عند النشر
 	GeocoderURL string
+
+	// WebOrigins **نطاقاتُ الواجهة المسموح لها بمناداة المحرّك.**
+	//
+	// **تُفصَل بفاصلة** (`https://a.com,https://b.com`)، **ويُقبل النجم في
+	// النطاق الفرعيّ** (`https://*.rahalgo.com`).
+	//
+	// **وفراغُها في الإنتاج يُغلق الباب** — لا يفتحه للكلّ.
+	WebOrigins []string
 }
 
 // loadDotEnv **يقرأ `.env` من مجلّد التشغيل — إن وُجد.**
@@ -123,6 +131,7 @@ func Load() (*Config, error) {
 		AdminPhone:     getEnv("ADMIN_PHONE", ""),
 		UploadsDir:     getEnv("UPLOADS_DIR", "./uploads"),
 		GeocoderURL:    getEnv("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
+		WebOrigins:     splitList(getEnv("WEB_ORIGINS", "")),
 	}
 
 	// ══════════════════════════════════════════════════════════════════
@@ -174,6 +183,19 @@ func Load() (*Config, error) {
 		}
 	}
 	return cfg, nil
+}
+
+// splitList **قائمةٌ بفاصلة** — والفراغاتُ تُقصّ والخالي يُسقَط.
+//
+// **ومن كتب فاصلةً زائدةً لا يُعاقَب بعنصرٍ فارغٍ يفتح البابَ أو يكسره.**
+func splitList(raw string) []string {
+	out := []string{}
+	for _, p := range strings.Split(raw, ",") {
+		if v := strings.TrimSpace(p); v != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 func getEnv(key, fallback string) string {
