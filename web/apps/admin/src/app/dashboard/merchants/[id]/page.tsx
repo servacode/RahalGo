@@ -232,7 +232,7 @@ export default function MerchantProfilePage() {
           </div>
         </dl>
       )}
-      {tab === "menu" && <MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} />}
+      {tab === "menu" && <MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice />}
       {tab === "hours" && (
         <div className="surface p-4">
           <StoreHours

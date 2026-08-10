@@ -65,6 +65,7 @@ export default function AdminMenuPage() {
       </div>
 
       <MenuManager
+        showSalePrice
         api={api}
         paths={PATHS}
         merchantID={id}
