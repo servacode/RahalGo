@@ -37,7 +37,17 @@ const m = getMessages(defaultLocale);
 const A = m.auth;
 
 /** أوضاع البطاقة — تبديل داخلي بلا انتقال بين صفحات. */
-type Mode = "password" | "otp" | "reset" | "signup";
+/** **الأوضاعُ التي تُقصَد بعنوان** — لكلٍّ منها مسارُها في الموقع. */
+type NavMode = "password" | "otp" | "reset" | "signup";
+
+/**
+ * **وخامسُها خطوةٌ لا بابٌ** — «pin» لا تُقصَد بعنوان ولا تُبدَّل من الشريط:
+ * **تُبلَغ بعد الكلمة وتُغادَر إليها**، فبقيت خارجَ `NavMode`.
+ *
+ * **ولو دخلت فيه لَظهرت في مبدّل الأوضاع** — تبويبٌ يُضغط فيطلب رمزاً بلا
+ * تحدٍّ، **فيُقرأ عطباً.**
+ */
+type Mode = NavMode | "pin";
 
 /** ترجمة مفتاح الخطأ القادم من الخادم — منطق واحد لكل اللوحات. */
 export function errText(err: unknown): string {
@@ -106,7 +116,7 @@ export function LoginCard({
    * **والتبديلُ داخلَ البطاقة يبقى كما هو** — لا انتقالَ صفحةٍ ولا فقدَ لما
    * كُتب، **إنّما يصير لكلّ شاشةٍ عنوانٌ يُشارَك ويُحدَّث ويُقاس.**
    */
-  onModeChange?: (m: Mode) => void;
+  onModeChange?: (m: NavMode) => void;
 }) {
   /* ══════════════════════════════════════════════════════════════════
      **وبابُ رمز التحقّق يُطفأ من الإعدادات — لا من شيفرة كلّ تطبيق**
@@ -124,6 +134,14 @@ export function LoginCard({
   const { otpLogin, authBg, authBgMobile, authBgDim } = usePlatform();
   const allow: "both" | "password" | "otp" = otpLogin ? methods : "password";
   const [mode, setMode] = useState<Mode>(initialMode);
+  /** **تحدّي الرمز** — يعرف صاحبَه، ويعيش خمسَ دقائق. */
+  const [challenge, setChallenge] = useState("");
+  /** **أوّلُ ضبطٍ** — يُطلب مرّتين لا مرّة. */
+  const [pinSetup, setPinSetup] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
+  /** **ما يُكتب الآن في الخانات** — يُفرَّغ بين خطوتَي الضبط. */
+  const [pinDraft, setPinDraft] = useState("");
 
   /* **والوضعُ يتبع ما هو مسموح**: من فُتح على `otp` ثمّ أُطفئ البابُ بعد أن
      وصل الردُّ **يبقى في شاشةٍ لا تعمل.** */
@@ -158,8 +176,39 @@ export function LoginCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  /** الوصول للحساب: تخزين التوكن ثم تسليم القرار للتطبيق. */
-  async function enter(result: { user: AuthUser; tokens: never }) {
+  /**
+   * الوصول للحساب: تخزين التوكن ثم تسليم القرار للتطبيق.
+   *
+   * ══════════════════════════════════════════════════════════════════
+   * **ورمزُ الأدمن يقف هنا — قبل أن يُخزَّن شيء**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٠: «رمزُ دخولٍ ثانٍ من ٤ أرقام… فقط للأدمن،
+   *  لأنّه بنفس اللوحة تحسّباً للاختراق».)
+   *
+   * **وموضعُه هنا لأنّ كلَّ دخولٍ يمرّ به**: كلمةٌ ورمزٌ مؤقّتٌ واستعادةٌ
+   * وتسجيل. **وأربعةُ مواضعَ يُنسى أحدُها**، فيُخزَّن توكنٌ لا وجودَ له.
+   *
+   * **والخادمُ لا يُرسل توكناً أصلاً حين يلزم الرمز** — فلا شيءَ يُخزَّن
+   * ولو نُسي الشرطُ هنا. **وهذه الشاشةُ راحةٌ لا حارس.**
+   */
+  async function enter(result: {
+    user: AuthUser;
+    tokens: never;
+    pin_required?: boolean;
+    pin_setup?: boolean;
+    challenge?: string;
+  }) {
+    if (result.pin_required) {
+      setChallenge(result.challenge ?? "");
+      setPinSetup(!!result.pin_setup);
+      setPin("");
+      setPin2("");
+      setPinDraft("");
+      setMode("pin");
+      setBusy(false);
+      return;
+    }
     tokenStore.set(result.tokens, remember);
     try {
       await onSuccess(result.user);
@@ -183,7 +232,7 @@ export function LoginCard({
     };
   }
 
-  function go(next: Mode) {
+  function go(next: NavMode) {
     setMode(next);
     onModeChange?.(next);
     setError("");
@@ -384,6 +433,74 @@ export function LoginCard({
             </form>
           )}
         </>
+      );
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  **رمزُ الأدمن — خطوةٌ بعد الكلمة**
+    // ══════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٠: «رمزُ دخولٍ ثانٍ من ٤ أرقام… فقط للأدمن،
+    //  لأنّه بنفس اللوحة تحسّباً للاختراق».)
+    //
+    // **ولا رقمَ هاتفٍ هنا ولا كلمة** — عبرهما قبل قليل. **وحقلٌ واحدٌ
+    // بأربع خاناتٍ** يُرسَل فور اكتماله، فلا زرَّ يُضغط.
+    //
+    // **وأوّلُ مرّةٍ يُطلب مرّتين** — رمزٌ يُضبط بخطأِ إصبعٍ يُقفل صاحبَه
+    // خارجَ لوحته، **ولا أحدَ فوقه يفتحها له.**
+    if (mode === "pin") {
+      const done = (v: string) => {
+        if (!pinSetup) {
+          void run(async () => enter((await authApi.verifyPin(challenge, v)) as never))();
+          return;
+        }
+        if (!pin) {
+          setPin(v);
+          setPinDraft("");
+          return;
+        }
+        setPin2(v);
+        if (v !== pin) {
+          setError(A.pinMismatch);
+          setPin("");
+          setPin2("");
+          setPinDraft("");
+          return;
+        }
+        void run(async () => enter((await authApi.setupPin(challenge, v)) as never))();
+      };
+      return (
+        <div className="space-y-4">
+          <p className="text-center text-sm text-ink-muted">
+            {pinSetup ? (pin ? A.pinRepeat : A.pinCreate) : A.pinEnter}
+          </p>
+          {/* **والمفتاحُ يُعاد بناؤه عند كلّ خطوة** — وإلّا بقيت الخاناتُ
+              ممتلئةً بالرقم السابق فيُرسَل مرّتين. */}
+          <OtpInput
+            value={pinDraft}
+            onChange={setPinDraft}
+            length={4}
+            autoFocus
+            boxLabel={A.otpBoxLabel}
+            onComplete={done}
+          />
+          {errorBox}
+          {/* **وبابُ الرجوع مفتوح** — من فتح الشاشةَ بالخطأ لا يُحبَس فيها. */}
+          <button
+            type="button"
+            onClick={() => {
+              setMode("password");
+              setChallenge("");
+              setPin("");
+              setPin2("");
+              setPinDraft("");
+              setError("");
+            }}
+            className="w-full text-center text-sm text-ink-muted hover:text-ink"
+          >
+            {A.pinBack}
+          </button>
+        </div>
       );
     }
 
@@ -624,6 +741,8 @@ export function LoginCard({
     // **والاستعادةُ وحدَها تُبقيه**: «أدخل رقمك ليصلك رمزٌ ثمّ اختر كلمةً
     // جديدة» **خطوتان غيرُ بديهيّتين** — والباقي حقلٌ وزرّ.
     signup: { title: A.signupTitle },
+    // **ولا عنوانَ فوق الرمز** — النصُّ تحته يقول ما يُطلب.
+    pin: {},
   };
   const head = heads[mode];
   const isAuxMode = mode === "reset" || mode === "signup";

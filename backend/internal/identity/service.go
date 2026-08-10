@@ -568,7 +568,38 @@ func (s *Service) ActiveSessionID(ctx context.Context, userID string) string {
 }
 
 // issueFor يبدأ جلسة جديدة: يبطل كل ما سبق (قاعدة الجلسة الواحدة).
+//
+// ══════════════════════════════════════════════════════════════════════
+// **وبابُ الأدمن لا يُفتح هنا — يقف عند الرمز**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «رمزُ دخولٍ ثانٍ من ٤ أرقام… فقط للأدمن».)
+//
+// **وموضعُه هنا لا في المعالِجات**: `issueFor` هي ما ينادي كلَّ دخولٍ يبدأ
+// **من صفر** — كلمةٌ أو رمزٌ مؤقّتٌ أو استعادةُ كلمة. **وما لا يمرّ بها
+// امتدادُ جلسةٍ تحقّقت** (تجديدُ توكن، وتسليمُ SSO بين أقسام اللوحة)،
+// **ولا معنى لأن يُسأل الرمزَ مرّةً أخرى من هو داخلٌ أصلاً.**
+//
+// **وثلاثةُ معالِجاتٍ يُنسى أحدُها** — والحارسُ في المنبع لا يُنسى.
 func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, action string) (*AuthResult, error) {
+	// **والتسجيلُ الجديد لا يُنشئ أدمن** — لكنّ الشرطَ يُقرأ من الأدوار لا
+	// من الفعل، **فلو صار للأدمن مسارُ دخولٍ رابعٌ يوماً وقف عند الرمز أيضاً.**
+	if NeedsPin(user.Roles) {
+		challenge, err := s.PinChallenge(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		hash, err := s.repo.AdminPinHash(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		// **ولا توكنَ في الردّ** — خطوةٌ ناقصةٌ لا جلسةٌ ناقصة.
+		return &AuthResult{
+			PinRequired: true,
+			PinSetup:    hash == "",
+			Challenge:   challenge,
+		}, nil
+	}
 	return s.issueSession(ctx, user, userAgent, ip, action, "")
 }
 

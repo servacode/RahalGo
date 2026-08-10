@@ -159,8 +159,27 @@ func (s *Server) Router() http.Handler {
 			r.Post("/signup/verify", s.handleSignupVerify)
 			r.Post("/signup/confirm", s.handleSignupConfirm)
 
+			// ══════════════════════════════════════════════════════════
+			// **رمزُ الأدمن — خطوةٌ ثانيةٌ عامّةٌ لأنّها قبل الجلسة**
+			// ══════════════════════════════════════════════════════════
+			//
+			// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «رمزُ دخولٍ ثانٍ من ٤ أرقام… فقط
+			//  للأدمن، لأنّه بنفس اللوحة تحسّباً للاختراق».)
+			//
+			// **ولا حارسَ جلسةٍ عليها** — من يبلغها لم تُصدَر له جلسةٌ بعد.
+			// **وحارسُها التحدّي**: رمزٌ عشوائيٌّ يعرف صاحبَه، يعيش خمسَ
+			// دقائقَ ويُستهلك مرّة، **ولا يُمنَح إلّا لمن عرف كلمةَ المرور.**
+			r.Post("/pin", s.handlePinVerify)
+			r.Post("/pin/setup", s.handlePinSetup)
+
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireAuth)
+				// **وتبديلُ الرمز واستعادتُه من داخل الجلسة** — يبدّله صاحبُه
+				// وهو داخل، **ولا يُبدَّل بلا القديم.**
+				r.Get("/pin/state", s.handlePinState)
+				r.Post("/pin/change", s.handlePinChange)
+				r.Post("/pin/reset/request", s.handlePinResetRequest)
+				r.Post("/pin/reset/confirm", s.handlePinResetConfirm)
 				r.Get("/me", s.handleMe)
 				r.Post("/password", s.handleSetPassword)
 				r.Get("/my-logins", s.handleMyLogins)

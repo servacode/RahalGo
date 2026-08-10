@@ -458,3 +458,71 @@ func (r *Repo) RevokeAllTokens(ctx context.Context, userID string) (int, error) 
 		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()`, userID)
 	return int(tag.RowsAffected()), err
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  رمزُ الأدمن — قراءةٌ وكتابةٌ في عمودٍ واحد
+// ══════════════════════════════════════════════════════════════════════
+
+// AdminPinHash **تعميةُ الرمز — أو فراغٌ إن لم يُضبط بعد.**
+func (r *Repo) AdminPinHash(ctx context.Context, userID string) (string, error) {
+	var h *string
+	err := r.db.QueryRow(ctx,
+		`SELECT admin_pin_hash FROM users WHERE id = $1`, userID).Scan(&h)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	if h == nil {
+		return "", nil
+	}
+	return *h, nil
+}
+
+// SetAdminPin **يكتب التعميةَ ووقتَها.**
+func (r *Repo) SetAdminPin(ctx context.Context, userID, hash string) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE users SET admin_pin_hash = $2, admin_pin_set_at = now(), updated_at = now()
+		WHERE id = $1`, userID, hash)
+	return err
+}
+
+// AdminPinState **أمضبوطٌ هو ومتى؟** — تقرؤها شاشةُ «حسابي».
+//
+// **ولا تُعيد التعميةَ نفسَها** — لا حاجةَ للواجهة بها، **وما لا يُرسَل لا
+// يُسرَّب.**
+func (r *Repo) AdminPinState(ctx context.Context, userID string) (bool, *time.Time, error) {
+	var h *string
+	var at *time.Time
+	err := r.db.QueryRow(ctx,
+		`SELECT admin_pin_hash, admin_pin_set_at FROM users WHERE id = $1`, userID).Scan(&h, &at)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil, ErrNotFound
+	}
+	if err != nil {
+		return false, nil, err
+	}
+	return h != nil && *h != "", at, nil
+}
+
+// VerifiedWhatsApp **رقمُ الواتساب المُوثَّق — أو فراغ.**
+//
+// **وغيرُ الموثَّق لا يُعتدّ به**: من كتب رقماً ولم يُثبت أنّه له **لا يُرسَل
+// إليه ما يفتح لوحةً.**
+func (r *Repo) VerifiedWhatsApp(ctx context.Context, userID string) (string, error) {
+	var p *string
+	err := r.db.QueryRow(ctx, `
+		SELECT whatsapp_phone FROM users
+		WHERE id = $1 AND whatsapp_verified_at IS NOT NULL`, userID).Scan(&p)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	if p == nil {
+		return "", nil
+	}
+	return *p, nil
+}

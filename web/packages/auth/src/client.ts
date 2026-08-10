@@ -163,6 +163,28 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ phone, code }),
     }),
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **رمزُ الأدمن — الخطوةُ الثانية**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٠.)
+   *
+   * **ولا رقمَ هاتفٍ في الطلب** — التحدّي يعرف صاحبَه. **ولو مُرّر الرقمُ
+   * لَأمكن تخطّي الكلمة**: يرسل المهاجمُ رقمَ المالك ورمزاً يخمّنه.
+   */
+  verifyPin: (challenge: string, pin: string) =>
+    rawRequest<AuthResult>("/api/v1/auth/pin", {
+      method: "POST",
+      body: JSON.stringify({ challenge, pin }),
+    }),
+  /** **أوّلُ ضبطٍ للرمز** — بالتحدّي نفسِه، ويُصدر الجلسة. */
+  setupPin: (challenge: string, pin: string) =>
+    rawRequest<AuthResult>("/api/v1/auth/pin/setup", {
+      method: "POST",
+      body: JSON.stringify({ challenge, pin }),
+    }),
+
   /** إنشاء حساب زبون — لا يُنشئ أي دور آخر. */
   requestSignup: (phone: string) =>
     rawRequest<{ sent: boolean }>("/api/v1/auth/signup/request", {
