@@ -3,6 +3,7 @@
 package server
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"time"
@@ -57,6 +58,8 @@ type Server struct {
 	geo        *geo.Service
 	notify     *notifications.Service
 	otpStatus  func() map[string]any
+	// otpUnpair **فكُّ اقتران البوت** — وفارغةٌ لمزوّدٍ لا اقترانَ له.
+	otpUnpair func(context.Context) error
 	// textSender مُرسِلُ الرسائل إلى المتاجر — رسالةٌ نصّية اليوم، وواتسابٌ
 	// رسميّ لاحقاً من الواجهة نفسها.
 	textSender *notify.SMSSender
@@ -69,7 +72,8 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
 	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
 	cashboxSvc *cashbox.Service, supportSvc *support.Service, mediaSvc *media.Service,
-	hub *realtime.Hub, otpStatus func() map[string]any) *Server {
+	hub *realtime.Hub, otpStatus func() map[string]any,
+	otpUnpair func(context.Context) error) *Server {
 	notify := notifications.New(pg, hub, logger)
 	geoSvc := geo.New(cfg.GeocoderURL, rdb, logger)
 	// محرك الطلبات يحتاج الإشعارات (عمولة المندوب) وقد بُني قبلها — نحقنها الآن.
@@ -82,7 +86,8 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		identity: identitySvc, catalog: catalogSvc, settings: settingsStore,
 		comms:  comms.New(pg),
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
-		media: mediaSvc, hub: hub, otpStatus: otpStatus, notify: notify, geo: geoSvc}
+		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair,
+		notify: notify, geo: geoSvc}
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
 	// **ولا تُقرأ مرّتين بطريقتين.**
 	srv.incentives = incentives.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID)
@@ -371,6 +376,25 @@ func (s *Server) Router() http.Handler {
 			r.Get("/whatsapp", func(w http.ResponseWriter, _ *http.Request) {
 				httpx.JSON(w, http.StatusOK, s.otpStatus())
 			})
+			// **وفكُّ الاقتران بابُ إعادة الربط** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
+			// «إذا تمّ فصلُ الاقتران لا يوجد زرٌّ لإعادة ربط الجهاز»).
+			//
+			// **والرمزُ لا يُولَّد إلّا لجهازٍ بلا هويّة** — فمن أراد ربطاً
+			// جديداً يفكّ القديمَ أوّلاً. **وللأدمن وحدَه**: فكُّه يوقف كلَّ
+			// رموز التحقّق حتّى يُمسح رمزٌ جديد.
+			r.With(s.RequireRoles("admin")).
+				Post("/whatsapp/unpair", func(w http.ResponseWriter, r *http.Request) {
+					if s.otpUnpair == nil {
+						s.respondErr(w, httpx.ErrNotFound)
+						return
+					}
+					if err := s.otpUnpair(r.Context()); err != nil {
+						s.respondErr(w, err)
+						return
+					}
+					s.audit(r, "admin.whatsapp_unpair", "platform", "", map[string]any{})
+					httpx.JSON(w, http.StatusOK, map[string]any{"unpaired": true})
+				})
 
 			r.Post("/media", s.handleUploadMedia)
 			r.Get("/users", s.handleAdminListUsers)

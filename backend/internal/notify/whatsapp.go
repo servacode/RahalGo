@@ -14,8 +14,10 @@ import (
 	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
 	waE2E "go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/store"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
+	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/protobuf/proto"
 )
@@ -37,7 +39,32 @@ type WhatsAppSender struct {
 	pairedAs string
 }
 
-func NewWhatsAppSender(ctx context.Context, databaseURL string, logger *slog.Logger, template TemplateFunc) (*WhatsAppSender, error) {
+// NewWhatsAppSender **يُنشئ البوتَ باسم المنصّة لا باسم المكتبة.**
+//
+// # ولماذا الاسمُ يُضبط
+//
+// (سؤالُ المالك ٢٠٢٦-٠٨-١٠ بلقطةٍ من «الأجهزة المرتبطة»: ظهرت الجلسةُ باسم
+//
+//	`whatsmeow`.)
+//
+// **المكتبةُ تُعرّف نفسَها باسمها إن لم يُعطَ اسم** — فتظهر جلسةُ المنصّة في
+// هاتف صاحبها بين جلسات المتصفّح باسمٍ لا يقول شيئاً.
+//
+// **وأنفعُ ما فيه أن يعرف أيَّ جلسةٍ لا يُغلق**: بعد شهرٍ تصير القائمةُ
+// ثلاثاً، **واسمٌ غامضٌ يجعله يُسجّل خروجَ البوت بيده** — فتتوقّف الرموزُ
+// عن الوصول ولا يعرف لماذا.
+//
+// # والاسمُ من الإعدادات لا من الشيفرة
+//
+// **قاعدةُ المالك: لا يُكتب اسمُ المنصّة في أيّ موضع** — وله حارسٌ في الويب.
+// **وبيعُ النسخ يجعلها ألزم**: نسخةُ الشام تُظهر اسمَها هي، **ولو كُتب هنا
+// لَظهر «رحال غو» في هاتف مشترٍ آخر.**
+//
+// **وفارغٌ يعود إلى اسم المكتبة** — ولا تُخترع تسميةٌ لمنصّةٍ لم تُسمِّ نفسَها.
+func NewWhatsAppSender(ctx context.Context, databaseURL string, logger *slog.Logger, template TemplateFunc, deviceName string) (*WhatsAppSender, error) {
+	if n := strings.TrimSpace(deviceName); n != "" {
+		store.DeviceProps.Os = proto.String(n)
+	}
 	db, err := sql.Open("pgx", databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("whatsapp: open store db: %w", err)
@@ -60,18 +87,50 @@ func NewWhatsAppSender(ctx context.Context, databaseURL string, logger *slog.Log
 
 	// الاتصال بالخلفية مع إعادة محاولة — انقطاع واتساب لا يمنع إقلاع الخادم؛
 	// طلبات OTP تفشل بخطأ واضح حتى يعود الاتصال (PLAN.md §6.8).
+	s.watchLogout(ctx)
 	go s.connectLoop(ctx)
 	return s, nil
 }
 
+// connectLoop **يصل ويبقى موصولاً — ولا يقف عند أوّل نجاح.**
+//
+// # عطبان كشفهما أوّلُ اقترانٍ حقيقيّ (٢٠٢٦-٠٨-١٠)
+//
+// **الأوّل: نجاحُ الاقتران كان نهايةَ المطاف.** تعود الدالّةُ عند «success»،
+// ثمّ تُنادى ثانيةً فتجد `IsConnected()` صادقةً **فتقف عند `<-ctx.Done()`
+// إلى الأبد.** **فإن سقط الاتصالُ بعدها لا يُعاد وصلُه** — ويبقى البوتُ
+// ميّتاً حتّى يُعاد تشغيلُ الخادم كلِّه.
+//
+// **والثاني: الاقترانُ نجح والحالةُ تقول `logged_in: false`** — الرمزُ مُسح
+// من الهاتف والجلسةُ لم تكتمل، **فيُردّ كلُّ رمزِ تحقّقٍ بـ«البوت غير
+// مقترن».**
+//
+// # فصارت الحلقةُ تسأل لا تفترض
+//
+// **تفحص الحالَ كلَّ حين**: موصولٌ ومسجَّلٌ فتنام، وإلّا تصل من جديد.
+// **ولا تقف عند حالٍ ظنّتها دائمة** — والشبكةُ في الرقّة تنقطع، وهذا ما
+// سيقع لا ما قد يقع.
 func (s *WhatsAppSender) connectLoop(ctx context.Context) {
 	backoff := 5 * time.Second
 	for {
-		err := s.connectOnce(ctx)
 		if ctx.Err() != nil {
 			return
 		}
-		if err != nil {
+		if s.client.IsConnected() && s.client.IsLoggedIn() {
+			// **موصولٌ ومسجَّل** — يُفحص كلَّ نصف دقيقة، **والفحصُ أرخصُ من
+			// بوتٍ صامتٍ لا يعلم أحدٌ أنّه سقط.**
+			s.setPaired(s.client.Store.ID.User)
+			s.setErr("")
+			backoff = 5 * time.Second
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(30 * time.Second):
+			}
+			continue
+		}
+
+		if err := s.connectOnce(ctx); err != nil {
 			s.setErr(err.Error())
 			s.logger.Warn("whatsapp connect failed, retrying", "error", err, "backoff", backoff)
 		}
@@ -86,14 +145,10 @@ func (s *WhatsAppSender) connectLoop(ctx context.Context) {
 	}
 }
 
+// connectOnce **محاولةٌ واحدة — تعود دائماً ولا تحبس نفسَها.**
 func (s *WhatsAppSender) connectOnce(ctx context.Context) error {
-	if s.client.IsConnected() {
-		<-ctx.Done()
-		return nil
-	}
-
+	// **وجهازٌ بلا هويّةٍ يحتاج اقتراناً** — والقناةُ تُطلب قبل الاتصال.
 	if s.client.Store.ID == nil {
-		// جهاز غير مقترن بعد — مسار QR (يجب طلب القناة قبل الاتصال)
 		qrChan, err := s.client.GetQRChannel(ctx)
 		if err != nil {
 			return err
@@ -109,8 +164,9 @@ func (s *WhatsAppSender) connectOnce(ctx context.Context) error {
 				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
 			case "success":
 				s.setQR("")
-				s.setPaired(s.client.Store.ID.User)
 				s.logger.Info("whatsapp paired successfully", "as", s.client.Store.ID.User)
+				// **ولا تُنهي الحلقةَ هنا** — الاقترانُ ليس اتّصالاً:
+				// **تعود فتفحص الحالَ وتُكمل ما نقص.**
 				return nil
 			default:
 				s.setQR("")
@@ -120,13 +176,16 @@ func (s *WhatsAppSender) connectOnce(ctx context.Context) error {
 		return fmt.Errorf("whatsapp qr channel closed")
 	}
 
-	if err := s.client.Connect(); err != nil {
-		return err
+	// **ومقترنٌ غيرُ موصولٍ يُوصَل** — ولا ينتظر شيئاً بعدها.
+	if !s.client.IsConnected() {
+		if err := s.client.Connect(); err != nil {
+			return err
+		}
 	}
-	s.setPaired(s.client.Store.ID.User)
-	s.setErr("")
-	s.logger.Info("whatsapp connected", "as", s.client.Store.ID.User)
-	<-ctx.Done()
+	if s.client.Store.ID != nil {
+		s.setPaired(s.client.Store.ID.User)
+		s.logger.Info("whatsapp connected", "as", s.client.Store.ID.User)
+	}
 	return nil
 }
 
@@ -195,4 +254,58 @@ func (s *WhatsAppSender) setPaired(v string) {
 	s.mu.Lock()
 	s.pairedAs = v
 	s.mu.Unlock()
+}
+
+// Unpair **يفكّ الاقتران فيعود رمزُ الربط.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «إذا تمّ فصلُ الاقتران لا يوجد زرٌّ لإعادة ربط
+//
+//	الجهاز».)
+//
+// # ولماذا لم يكن يعود من تلقاء نفسه
+//
+// **الرمزُ لا يُولَّد إلّا لجهازٍ بلا هويّة.** ومن فُصل من هاتفه تبقى هويّتُه
+// مخزَّنةً في القاعدة — **فتحاول الحلقةُ الاتّصالَ بها إلى الأبد ولا تعرض
+// رمزاً**، ولوحةُ الإدارة تقول «غير مقترن» بلا سبيلٍ إلى الاقتران.
+//
+// **فبابان يُفتحان**: هذا — يضغطه المالكُ متى شاء — **وحدثُ الخروج** الذي
+// يفكّه آليّاً حين يفصله واتساب.
+func (s *WhatsAppSender) Unpair(ctx context.Context) error {
+	if s.client.IsConnected() {
+		s.client.Disconnect()
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وتُمحى من القاعدة ومن الذاكرة معاً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ومحوُها من القاعدة وحدَها لا يكفي**: العميلُ في الذاكرة يبقى يحمل
+	// هويّتَه، **فتقول الحلقةُ «مقترنٌ» وتحاول الاتّصالَ إلى الأبد ولا تعرض
+	// رمزاً** — والزرُّ يردّ «تمّ» ولا يتبدّل شيء.
+	//
+	// **وقِيس فعلاً** (٢٠٢٦-٠٨-١٠): بعد الفكّ صار الصفُّ صفراً في القاعدة
+	// **و`logged_in` ما زالت صادقةً ولا رمز.**
+	if s.client.Store.ID != nil {
+		if err := s.client.Store.Delete(ctx); err != nil {
+			return err
+		}
+		s.client.Store.ID = nil
+	}
+	s.setPaired("")
+	s.setQR("")
+	s.setErr("")
+	s.logger.Info("whatsapp unpaired — awaiting a new QR scan")
+	return nil
+}
+
+// watchLogout **يفكّ الاقتران حين يفصله واتساب.**
+//
+// **ومن فُصل من هاتفه لا يعرف أنّ عليه أن يضغط زرّاً** — يفتح اللوحةَ فيجد
+// «غير مقترن» ولا رمز. **فيُفكّ آليّاً فيظهر الرمزُ وحدَه.**
+func (s *WhatsAppSender) watchLogout(ctx context.Context) {
+	s.client.AddEventHandler(func(evt any) {
+		if _, ok := evt.(*events.LoggedOut); ok {
+			s.logger.Warn("whatsapp logged out from the phone — re-pairing needed")
+			_ = s.Unpair(ctx)
+		}
+	})
 }

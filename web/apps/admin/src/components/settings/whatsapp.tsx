@@ -23,6 +23,9 @@ interface WAStatus {
 export default function WhatsAppPanel() {
   const [status, setStatus] = useState<WAStatus | null>(null);
   const [qrDataURL, setQrDataURL] = useState("");
+  const [busy, setBusy] = useState(false);
+  /** **وما وقع يُقال** — وزرٌّ يُضغط بلا أثرٍ ظاهرٍ يُضغط مرّتين. */
+  const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -48,10 +51,45 @@ export default function WhatsAppPanel() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <PageHeader icon={IconWhatsApp} title={m.admin.whatsappPage.title} />
-        <Button variant="secondary" onClick={load}>
-          {m.admin.whatsappPage.refresh}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={load}>
+            {m.admin.whatsappPage.refresh}
+          </Button>
+          {/* ══════════════════════════════════════════════════════════
+              **وزرُّ إعادة الربط — ولا رمزَ بلا فكّ**
+              ══════════════════════════════════════════════════════════
+
+              (قرارُ المالك ٢٠٢٦-٠٨-١٠: «إذا تمّ فصلُ الاقتران لا يوجد زرٌّ
+               لإعادة ربط الجهاز».)
+
+              **ورمزُ الربط لا يُولَّد إلّا لجهازٍ بلا هويّة** — ومن فُصل من
+              هاتفه تبقى هويّتُه مخزَّنة، **فتقول اللوحةُ «غير مقترن» ولا
+              سبيلَ إلى الاقتران.**
+
+              **ولا يظهر لمزوّد التطوير** — لا اقترانَ فيه أصلاً. */}
+          {status?.provider === "whatsapp" && (
+            <Button
+              variant="danger"
+              disabled={busy}
+              onClick={async () => {
+                if (!confirm(m.admin.whatsappPage.unpairConfirm)) return;
+                setBusy(true);
+                try {
+                  await api("/api/v1/admin/whatsapp/unpair", { method: "POST" });
+                  setNotice(m.admin.whatsappPage.unpairDone);
+                  await load();
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {m.admin.whatsappPage.unpair}
+            </Button>
+          )}
+        </div>
       </div>
+
+      {notice && <Alert tone="success" className="mb-4">{notice}</Alert>}
 
       {status?.provider === "dev" ? (
         <div className="surface p-6 text-ink-muted">

@@ -73,6 +73,8 @@ func run(logger *slog.Logger) error {
 
 	var otpSender notify.OTPSender
 	otpStatus := func() map[string]any { return map[string]any{"provider": "dev"} }
+	// **وفكُّ الاقتران لا وجودَ له في مزوّد التطوير** — ولا يُخترع زرٌّ لا يفعل.
+	var otpUnpair func(context.Context) error
 	switch cfg.OTPProvider {
 	case "dev":
 		otpSender = &notify.DevSender{Logger: logger}
@@ -86,12 +88,17 @@ func run(logger *slog.Logger) error {
 			func(ctx context.Context, code string) string {
 				tpl := settingsStore.GetString(ctx, "whatsapp.otp_template")
 				return strings.ReplaceAll(tpl, "{code}", code)
-			})
+			},
+			// **واسمُ الجهاز اسمُ المنصّة** — يظهر في «الأجهزة المرتبطة»
+			// بهاتف البوت. **ومن الإعدادات لا من الشيفرة**: نسخةُ كلّ مشترٍ
+			// تُظهر اسمَها هي.
+			settingsStore.GetString(ctx, "platform.name"))
 		if err != nil {
 			return err
 		}
 		otpSender = wa
 		otpStatus = wa.Status
+		otpUnpair = wa.Unpair
 	default:
 		return fmt.Errorf("unknown OTP_PROVIDER %q (expected dev or whatsapp)", cfg.OTPProvider)
 	}
@@ -137,7 +144,7 @@ func run(logger *slog.Logger) error {
 		Addr: cfg.HTTPAddr,
 		Handler: func() http.Handler {
 			srv := server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc,
-				settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub, otpStatus)
+				settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub, otpStatus, otpUnpair)
 			// **إبلاغُ المتاجر برسالةٍ نصّية لا ببوت واتساب**: البوت غيرُ رسميّ
 			// ويُحظَر إن أكثر من الإرسال الآليّ. وواتساب الرسميّ لاحقاً — يدخل
 			// من الواجهة نفسها (`notify.TextSender`) بلا تغييرٍ فيمن يستعملها.
