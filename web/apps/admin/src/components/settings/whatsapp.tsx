@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Alert,
+  Confirm,
   PageHeader, Button, Badge, IconWhatsApp,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
@@ -26,6 +27,20 @@ export default function WhatsAppPanel() {
   const [busy, setBusy] = useState(false);
   /** **وما وقع يُقال** — وزرٌّ يُضغط بلا أثرٍ ظاهرٍ يُضغط مرّتين. */
   const [notice, setNotice] = useState("");
+  /** **وسؤالُ الخروج بنافذة المنصّة** — لا بنافذة النظام. */
+  const [asking, setAsking] = useState(false);
+
+  async function unpair() {
+    setAsking(false);
+    setBusy(true);
+    try {
+      await api("/api/v1/admin/whatsapp/unpair", { method: "POST" });
+      setNotice(m.admin.whatsappPage.unpairDone);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -81,16 +96,25 @@ export default function WhatsAppPanel() {
             <Button
               variant={status?.logged_in ? "danger" : "primary"}
               disabled={busy}
-              onClick={async () => {
-                if (status?.logged_in && !confirm(m.admin.whatsappPage.unpairConfirm)) return;
-                setBusy(true);
-                try {
-                  await api("/api/v1/admin/whatsapp/unpair", { method: "POST" });
-                  setNotice(m.admin.whatsappPage.unpairDone);
-                  await load();
-                } finally {
-                  setBusy(false);
-                }
+              /* ══════════════════════════════════════════════════════
+                 **والسؤالُ من المنصّة لا من المتصفّح**
+                 ══════════════════════════════════════════════════════
+
+                 (شكوى المالك ٢٠٢٦-٠٨-١٠: «لم تُطبّق رسالةَ التأكيد بشكلٍ
+                  مركزيّ».)
+
+                 **`confirm()` الأصليّةُ نافذةُ نظام**: بخطّه ولغته، تُلصق
+                 «localhost:3001 يعرض» فوق النصّ، **وأزرارُها «موافق/إلغاء»
+                 لا تقول ماذا سيقع.** وقد خرج المستخدمُ من المنصّة بصريّاً
+                 في أخطر ضغطةٍ فيها.
+
+                 **و`Confirm` المركزيّةُ موجودةٌ ومُصدَّرة** — فتجاوزُها هنا
+                 كان سهواً لا قراراً. */
+              onClick={() => {
+                /* **وما لا يُفكّ لا يُسأل عنه** — من كان مفصولاً أصلاً
+                   يضغط «ربط الجهاز»، **وسؤالُه «أتُسجّل الخروج؟» يُربكه.** */
+                if (status?.logged_in) setAsking(true);
+                else void unpair();
               }}
             >
               {status?.logged_in
@@ -100,6 +124,16 @@ export default function WhatsAppPanel() {
           )}
         </div>
       </div>
+
+      <Confirm
+        open={asking}
+        title={m.admin.whatsappPage.logout}
+        body={m.admin.whatsappPage.unpairConfirm}
+        confirmLabel={m.admin.whatsappPage.logout}
+        busy={busy}
+        onConfirm={() => void unpair()}
+        onCancel={() => setAsking(false)}
+      />
 
       {notice && <Alert tone="success" className="mb-4">{notice}</Alert>}
 

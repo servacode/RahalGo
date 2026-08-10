@@ -13,6 +13,7 @@ import {
   IconDelete,
   IconZones,
   IconClose,
+  Confirm,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -56,6 +57,8 @@ export default function ZonesPanel() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [selectedID, setSelectedID] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** **المنطقةُ المرشَّحةُ للحذف** — تنتظر تأكيداً من نافذة المنصّة. */
+  const [pendingDelete, setPendingDelete] = useState<Zone | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -127,8 +130,11 @@ export default function ZonesPanel() {
     }
   }
 
+  /* **وحذفُ منطقةٍ يُسأل عنه بنافذة المنصّة** — و`confirm()` الأصليّةُ نافذةُ
+     نظامٍ بخطّه ولغته وأزرارِها التي لا تقول فعلَها. (شكوى المالك
+     ٢٠٢٦-٠٨-١٠.) */
   async function deleteZone(z: Zone) {
-    if (!confirm(m.admin.zones.deleteConfirm)) return;
+    setPendingDelete(null);
     try {
       await api(`/api/v1/admin/zones/${z.id}`, { method: "DELETE" });
       setSelectedID(null);
@@ -281,7 +287,7 @@ export default function ZonesPanel() {
                     variant="ghost"
                     onClick={(e) => {
                       e.stopPropagation();
-                      void deleteZone(z);
+                      setPendingDelete(z);
                     }}
                   >
                     <IconDelete size={15} className="text-danger" />
@@ -292,6 +298,15 @@ export default function ZonesPanel() {
           ))}
         </aside>
       </div>
+
+      <Confirm
+        open={!!pendingDelete}
+        title={m.admin.zones.deleteConfirm}
+        body={pendingDelete?.name}
+        confirmLabel={m.common.delete}
+        onConfirm={() => pendingDelete && void deleteZone(pendingDelete)}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
