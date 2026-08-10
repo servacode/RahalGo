@@ -24,7 +24,7 @@
 
 import { useCallback, useState } from "react";
 import { Modal, LoadingState, FavoriteButton, IconAdd, IconCheck } from "@rahalgo/ui";
-import ItemClient, { type Group } from "@/app/i/[id]/ItemClient";
+import ItemClient, { type Group } from "@/app/(site)/i/[id]/ItemClient";
 import { api } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
