@@ -1,0 +1,1351 @@
+"use client";
+
+/**
+ * قائمة مهامّ السائق — لا لوحة تحكّم.
+ *
+ * اللوحات لمن يجلس إلى مكتب فيمسح بعينه شبكة أرقام. والسائق واقفٌ عند درّاجته
+ * يمسك هاتفه بيدٍ واحدة، وربّما تحت الشمس: فما يحتاجه سطرٌ واحد يقول **ماذا
+ * الآن**، وزرٌّ واحد كبير يُنهيه. ولذلك:
+ *
+ * - لا صفحة تفاصيل منفصلة: البطاقة **هي** التفصيل، وكلُّ ضغطةٍ زائدة على درّاجة
+ *   ضغطةٌ لن تُضغط.
+ * - الزرّ الكبير واحدٌ في كل بطاقة، ونصُّه **الفعل التالي** لا اسم الحالة:
+ *   «استلمتُ الطلب» لا «picked_up».
+ * - «تعذّر التسليم» زرٌّ ثانويّ صغير تحته: هو مخرجٌ حقيقي لكنه ليس الطريق.
+ */
+
+import { useCallback, useEffect, useState } from "react";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime } from "@rahalgo/i18n";
+import {
+  Alert,
+  Button,
+  Badge,
+  Modal,
+  Input,
+  Card,
+  EmptyState,
+  StatGrid,
+  StatCard,
+  useLiveRefresh,
+  useRepeatingChime,
+  useLocationBeacon,
+  fmtDistance,
+  driveMinutes,
+  readyInMinutes,
+  IconOrder,
+  IconStore,
+  IconLocation,
+  IconPhone,
+  IconCheck,
+  IconBalance,
+  IconWallet,
+  IconDriver,
+  IconWarning,
+  IconCamera,
+  ChatBubble,
+  Radio,
+  LoadingState,
+} from "@rahalgo/ui";
+import { api, ApiError } from "@/lib/api";
+
+const m = getMessages(defaultLocale);
+const D = m.driver;
+/** وحداتُ المسافة — من القاموس لا من نصٍّ مكتوبٍ في كلّ شاشة. */
+const UNITS = m.admin.settings.units;
+
+/** سببٌ مصنَّفٌ وذنبُه — **والذنبُ يقرّر التعويض** (`failreasons.go`). */
+type FailReason = { code: string; fault: string };
+
+/**
+ * المرحلتان اللتان يملك السائقُ فيهما إعلانَ التعذّر — **وهو من هناك فهو من
+ * يقول**: عند باب المتجر «المطعم لم يسلّمني»، وعند باب الزبون «لم يستلم».
+ *
+ * **ومصدرٌ واحدٌ للاثنتين**: الزرُّ يظهر بها والأسبابُ تُجلَب بها. وكانتا
+ * مكتوبتين في موضعٍ واحدٍ فقط، **فلو أُضيفت ثالثةٌ في الزرّ وحدَه لظهر زرٌّ
+ * بلا أسباب.**
+ */
+const FAIL_AT = ["at_pickup", "at_dropoff"] as const;
+
+/** الفعل التالي لكل حالة — مصدرٌ واحد يقابل خارطة الحالات في الخادم. */
+const NEXT: Record<string, string> = {
+  assigned: "at_pickup",
+  at_pickup: "picked_up",
+  picked_up: "on_the_way",
+  on_the_way: "at_dropoff",
+  at_dropoff: "delivered",
+};
+
+/**
+ * **وخارطةُ الطلب الخاصّ — بلا «وصلتُ إلى المتجر».**
+ *
+ * (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «ما في شيء اسمه وصلتُ للمتجر — لازم فتح دردشة
+ *  مع الزبون لمعرفة التفاصيل… وبعد الاتّفاق وتوثيق البيانات يبدأ السائق».)
+ *
+ * **لا متجرَ يقف عنده** — يتّفق ثمّ يشتري. **ومرآةُ `customTransitions` في
+ * المحرّك**: هو يحكم وهذه تعرض.
+ */
+const CUSTOM_NEXT: Record<string, string> = {
+  assigned: "picked_up",
+  picked_up: "on_the_way",
+  on_the_way: "at_dropoff",
+  at_dropoff: "delivered",
+};
+
+interface DriverOrder {
+  id: string;
+  number: number;
+  status: string;
+  merchant_name: string;
+  merchant_phone: string | null;
+  address_text: string;
+  lat: number;
+  lng: number;
+  customer_name: string;
+  /**
+   * **ولا رقمَ للزبون** — حُذف من الخادم لا من الشاشة.
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) **والتواصلُ من `OrderChat`** — قناةٌ مربوطةٌ
+   * بالطلب تنتهي بانتهائه، **ولا يعرف أحدُهما رقمَ الآخر.**
+   */
+  total: number;
+  cash_due: number;
+  /** نقطةُ استلامٍ بديلة — البضاعةُ مع سائقٍ سابقٍ وقع له طارئ، لا في المتجر. */
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  pickup_note?: string;
+  items_count: number;
+  ready_at: string | null;
+  prep_minutes: number | null;
+  accepted_at: string | null;
+  created_at: string;
+  /** **سياسةُ هذا المتجر في الاسترجاع** — وهي ما يقرّر وجهةَ البضاعة بعد التعذّر. */
+  merchant_accepts_returns: boolean;
+  /** رمزُ التعذّر — يُعرَض مترجَماً على البطاقة التي بقيت بيده. */
+  fail_reason: string;
+  /** كم بينه وبين نقطة الاستلام — **بالمتر، وسالبٌ يعني «لا يُعرف»**. */
+  to_pickup_m: number;
+  /** طولُ المشوار: من الاستلام إلى باب الزبون. */
+  leg_m: number;
+  /** **نقطةُ الاستلام التي يمشي إليها** — البديلةُ إن وُجدت وإلّا المتجر. */
+  nav_lat?: number | null;
+  nav_lng?: number | null;
+  /** **نوعُ الطلب** — `custom` طلبٌ خاصٌّ يشتريه السائقُ بنفسه. */
+  kind?: string;
+  /** **ما طلبه الزبونُ بلفظه** — في الخاصّ وحدَه. */
+  custom_request?: string;
+  /** ما وُثّق من اتّفاق — `null` قبل أن يُوثَّق. */
+  custom_goods_amount?: number | null;
+  custom_fee?: number | null;
+}
+
+interface Me {
+  full_name: string;
+  on_shift: boolean;
+  shift_started_at: string | null;
+  cash_held: number;
+  cash_limit: number;
+  balance: number;
+  today_delivered: number;
+  /** ما لم يُسلَّم اليوم — **ولا يُخفى**: يومٌ فيه تعذّرٌ ليس يومَ تسليماتٍ فقط. */
+  today_failed: number;
+  today_earned: number;
+  /** جزءٌ من `today_earned` لا زيادةٌ عليه — يُعرض ليُعرف مصدرُه. */
+  today_compensated: number;
+  active_orders: number;
+  /**
+   * **سقفُ ما بيده معاً** — يُعرض بجانب المفتوح فيُقرأ «٢ من ٢».
+   *
+   * (جردُ ٢٠٢٦-٠٨-٠٩.) **كان يعرفه بالرفض وحدَه**: يضغط «خذ» فيُردّ،
+   * **وحدٌّ لا يُرى يُقرأ عطباً في التطبيق.**
+   */
+  max_active_orders: number;
+  /**
+   * **أتُطلب صورةُ التسليم؟** (`drivers.require_delivery_photo`.)
+   *
+   * **كان المحرّكُ يحترمه والشاشةُ لا تقرؤه** — فيُطفئه المالكُ ولا ينطفئ.
+   */
+  require_photo: boolean;
+  /** كم بين نبضةِ موضعٍ وأخرى — كان ستّين ثانيةً مكتوبةً في الشيفرة. */
+  location_ping_sec: number;
+  /** **متوسّطُ السرعة** — منه يُحسب الوقتُ المتوقَّع من المسافة. */
+  avg_speed_kmh: number;
+}
+
+function errText(e: unknown): string {
+  const key =
+    e instanceof ApiError ? (e.body.message_key ?? "").split(".").pop() ?? "" : "";
+  return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
+}
+
+/** رابط الملاحة — يفتحه تطبيق الخرائط في الهاتف مباشرةً. */
+function mapsHref(lat: number, lng: number): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+}
+
+export default function TasksPage() {
+  const [me, setMe] = useState<Me | null>(null);
+  const [mine, setMine] = useState<DriverOrder[]>([]);
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [failing, setFailing] = useState<DriverOrder | null>(null);
+  const [emergency, setEmergency] = useState<DriverOrder | null>(null);
+  /** الطلبُ الذي يُطلب إثباتُ تسليمه — **قبل «سُلّم» لا بعده**. */
+  const [proving, setProving] = useState<DriverOrder | null>(null);
+  /** **الطلبُ الخاصُّ الذي يُوثَّق مبلغُه** — بعد أن يتّفق مع الزبون. */
+  const [agreeing, setAgreeing] = useState<DriverOrder | null>(null);
+  /** **محادثاتي المفتوحة** — من سجلّ المحادثات، **وفيه عدُّ ما لم يُقرأ.** */
+  const [chats, setChats] = useState<
+    { id: string; number: number; peer: string; unread: number }[]
+  >([]);
+  /** **رمزُ** السبب المختار — لا نصُّه. */
+  const [reason, setReason] = useState("");
+  /** التفصيلُ الحرّ بجانبه — اختياريّ. */
+  const [detail, setDetail] = useState("");
+  /**
+   * أسبابُ التعذّر لكلّ مرحلة — **مفتاحُها الحالة**.
+   *
+   * `FailReasonsAt` تُرجع ما يخصّ المرحلة وحدَها: **أسبابُ باب المتجر ليست
+   * أسبابَ باب الزبون**، ومن رأى «المتجر مغلق» وهو واقفٌ أمام بيت الزبون
+   * يختار أقربَ لفظٍ إليه فيكذب السجلّ.
+   *
+   * **ومرحلةٌ غائبةٌ من الخريطة ليست مرحلةً بلا أسباب** — هي مرحلةٌ لم
+   * تصل بعد. والفرقُ بينهما هو كلُّ ما في الأمر (انظر النافذة).
+   */
+  const [reasonsBy, setReasonsBy] = useState<Record<string, FailReason[]>>({});
+  /** **وتعذّرُ الجلب يُقال** — لا يُعرض سكوتاً يشبه «لا أسباب». */
+  const [reasonsErr, setReasonsErr] = useState(false);
+
+  const load = useCallback(() => {
+    api<Me>("/api/v1/driver/me").then(setMe).catch(() => undefined);
+    api<DriverOrder[]>("/api/v1/driver/orders").then(setMine).catch(() => undefined);
+    api<{ threads: { order_id: string; number: number; peer: string; open: boolean; unread: number }[] }>(
+      "/api/v1/my/chats",
+    )
+      .then((r) =>
+        setChats(
+          (r?.threads ?? [])
+            .filter((t) => t.open)
+            .map((t) => ({ id: t.order_id, number: t.number, peer: t.peer, unread: t.unread })),
+        ),
+      )
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(load, [load]);
+
+  /**
+   * **تُجلَب مع الشاشة لا مع الضغطة.**
+   *
+   * كانت تُطلب في `onFail` ثمّ تُفتح النافذةُ في السطر التالي بلا انتظار،
+   * **فتُعرض «لا أسبابَ معرَّفة» بينما الطلبُ في الطريق** — جملةٌ تحكم على
+   * الإعدادات، والحقيقةُ أنّها لم تُسأل بعد. وأيُّ إخفاقٍ — شبكةٌ منقطعةٌ
+   * على درّاجة، خادمٌ يُعاد تشغيله، جلسةٌ انتهت — **كان يسقط في `catch`
+   * فيصير القائمةَ الفارغةَ نفسَها.**
+   *
+   * **وثلاثُ حالاتٍ مختلفةٍ تُعرض بجملةٍ واحدة لا يُشخَّص منها شيء**: يقف
+   * السائقُ أمام زرٍّ مُطفأ ولا يعرف أيرجع أم يعيد المحاولة أم يتّصل.
+   *
+   * والمرحلتان معروفتان سلفاً، فتُجلبان مرّةً واحدة: **حين يضغط تكون
+   * القائمةُ عنده.**
+   */
+  const loadReasons = useCallback(async () => {
+    setReasonsErr(false);
+    try {
+      const pairs = await Promise.all(
+        FAIL_AT.map(
+          async (at) =>
+            [
+              at,
+              (await api<{ reasons: FailReason[] }>(`/api/v1/driver/fail-reasons?at=${at}`))
+                .reasons ?? [],
+            ] as const,
+        ),
+      );
+      setReasonsBy(Object.fromEntries(pairs));
+    } catch {
+      setReasonsErr(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadReasons();
+  }, [loadReasons]);
+
+  /**
+   * **مهمّةٌ وقعت في يده بلا أن يطلبها — فتُنبّه حتى يتحرّك.**
+   *
+   * في العرض يضغط «خذ الطلب» **فهو ينظر أصلاً**. وفي الإسناد المباشر يقع
+   * الطلبُ في مهامّه وهو على درّاجته لا ينظر، **ورنّةٌ واحدةٌ تضيع تحت
+   * الخوذة.** (قرارُ المالك: تنبيهٌ متكرّرٌ لمدّة ٢٠ ثانية.)
+   *
+   * **ويصمت بمجرّد أن يتحرّك**: `assigned` تعني «لم يمضِ بعد»، وأوّلُ خطوةٍ
+   * نحو المتجر تُخرجه منها. **والصوتُ الذي لا يتوقّف عند الفعل يُكتم الجهازُ
+   * من أجله** — فلا يُسمع التنبيهُ التالي.
+   */
+  const waiting = mine.some((o) => o.status === "assigned");
+  useRepeatingChime(waiting);
+
+  // **ونبضةُ موضعه مع دوامه** — منها تُقاس المسافةُ إلى المتجر. **ومن أُغلق
+  // دوامُه أُغلقت نبضتُه**: تعقّبٌ بلا سبب واستنزافُ بطّارية.
+  useLocationBeacon(
+    api,
+    me?.on_shift === true,
+    // **ومهلتُها من اللوحة** — ومقايضةُ البطّاريّة بدقّة التوزيع قرارُ مالك.
+    // **وقبلَ وصولِ `me` تُستعمل الافتراضيّة** لا صفرٌ يجعلها نبضةً بلا توقّف.
+    me?.location_ping_sec ? me.location_ping_sec * 1000 : undefined,
+  );
+
+  // **حيٌّ**: حالةُ المهمّة تتغيّر بفعل العمليات أيضاً — إلغاءٌ أو إسنادٌ يدويّ
+  // — **فشاشةٌ لا تتحدّث تجعل السائقَ يضغط على ما لم يعد قائماً.**
+  useLiveRefresh(["order", "wallet"], load);
+
+  async function act(o: DriverOrder, to: string, note = "", failReason = "") {
+    setBusy(o.id);
+    setError("");
+    try {
+      await api(`/api/v1/driver/orders/${o.id}/transition`, {
+        method: "POST",
+        // **والرمزُ يُرسل** — كان يُغفَل، فيردّ الخادمُ `bad_fail_reason`
+        // على كلّ محاولةٍ ويبقى الطلبُ قائماً بيد سائقٍ لا يفهم لماذا.
+        body: JSON.stringify({ to, note, reason: failReason }),
+      });
+      load();
+    } catch (e) {
+      setError(errText(e));
+      load();
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function toggleShift() {
+    if (!me) return;
+    setBusy("shift");
+    setError("");
+    try {
+      await api("/api/v1/driver/shift", {
+        method: "POST",
+        body: JSON.stringify({ on: !me.on_shift }),
+      });
+      load();
+    } catch (e) {
+      setError(errText(e));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  if (!me) return <LoadingState variant="text" />;
+
+  const cashRatio = me.cash_limit > 0 ? me.cash_held / me.cash_limit : 0;
+
+  /**
+   * أسبابُ مرحلةِ الطلبِ المفتوحةِ نافذتُه — **و`undefined` ليست فارغة**:
+   * الأولى «لم تصل»، والثانية «وصلت ولا شيء فيها».
+   */
+  const stageReasons = failing ? reasonsBy[failing.status] : undefined;
+
+  return (
+    /* **تتمدّد بعرض اللوحة** — كان سقفُها `max-w-2xl`: عمودٌ ضيّقٌ في وسط
+       شاشةٍ واسعة **ونصفُ العرض فارغ**، والسائقُ على حاسوبٍ يرى بطاقاتٍ
+       مقصوصةً بلا سبب. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */
+    <div className="space-y-4">
+      {error && (
+        <Alert>{error}</Alert>
+      )}
+
+      {/* الدوام: العلَم الذي يرفعه هو — لا يُستنتج عنه من آخر ظهور */}
+      <Card>
+        <div className="flex items-center gap-3">
+          <span
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-badge ${
+              me.on_shift ? "bg-success-tint text-success" : "bg-ink-faint text-ink-muted"
+            }`}
+          >
+            <IconDriver size={20} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">{me.on_shift ? D.shift.on : D.shift.off}</p>
+            <p className="text-xs text-ink-muted">
+              {me.on_shift && me.shift_started_at
+                ? D.shift.since.replace("{t}", fmtTime(me.shift_started_at))
+                : D.shift.offHint}
+            </p>
+          </div>
+          <Button
+            variant={me.on_shift ? "secondary" : "primary"}
+            disabled={busy === "shift"}
+            onClick={toggleShift}
+          >
+            {me.on_shift ? D.shift.end : D.shift.start}
+          </Button>
+        </div>
+      </Card>
+
+      {/* النقد بذمّته — يُعرض دائماً لا عند الامتلاء: الرقم الذي يُرى يُسلَّم */}
+      <Card>
+        <div className="mb-2 flex items-center justify-between text-sm">
+          <span className="flex items-center gap-2 font-medium">
+            <IconBalance size={17} className="text-ink-muted" />
+            {D.cash.title}
+          </span>
+          {/* **ما بذمّته يُكتب سالباً — لا رصيداً يملكه.**
+
+              كان يُعرض رقماً موجباً بجانب سقفه، **فيُقرأ كأنّه له**: سائقٌ
+              يرى «٥٠٠٠٠» في شاشته لا يقرؤها ديناً عليه إلّا إن قيل له.
+              **والمالُ الذي في جيبه ليس ماله** — هو مال المنصة يحمله حتى
+              يورّده، **وإشارةُ السالب هي كلُّ الفرق بين الأمرين.** */}
+          <span dir="ltr" className={`font-bold ${me.cash_held > 0 ? "text-warning" : ""}`}>
+            {me.cash_held > 0 ? "−" : ""}
+            {fmtNum(me.cash_held)} / {fmtNum(me.cash_limit)}
+          </span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-badge bg-field">
+          <div
+            className={`h-full rounded-badge ${
+              cashRatio >= 1 ? "bg-danger" : cashRatio >= 0.8 ? "bg-warning" : "bg-success"
+            }`}
+            style={{ width: `${Math.min(100, cashRatio * 100)}%` }}
+          />
+        </div>
+        <p
+          className={`mt-1.5 text-xs ${
+            cashRatio >= 1 ? "text-danger" : cashRatio >= 0.8 ? "text-warning" : "text-ink-muted"
+          }`}
+        >
+          {cashRatio >= 1 ? D.cash.full : cashRatio >= 0.8 ? D.cash.near : D.cash.hint}
+        </p>
+      </Card>
+
+      {/* **ويومُه ما وقع فيه لا ما نجح منه.**
+
+          كانت البطاقتان «مُسلَّمة» و«أجرُك» وحدَهما، **فيومٌ فيه ثلاثُ
+          تسليماتٍ وتعذّرٌ واحدٌ يُقرأ ثلاثَ تسليمات** — والسائقُ يعرف أنّه
+          وقف عند بابٍ ولم يُسلّم، **فشاشةٌ لا تذكره تُقرأ إخفاءً.**
+
+          **والتعويضُ كان في رصيده ولا في أجر يومه** — رقمان يختلفان عن اليوم
+          نفسِه ولا سطرَ يفسّر الفرق. */}
+      <StatGrid>
+        <StatCard
+          icon={IconCheck}
+          label={D.today.delivered}
+          value={fmtNum(me.today_delivered)}
+        />
+        <StatCard
+          icon={IconWarning}
+          label={D.today.failed}
+          value={fmtNum(me.today_failed)}
+        />
+        <StatCard
+          icon={IconWallet}
+          label={D.today.earned}
+          value={`${fmtNum(me.today_earned)} ${m.common.currency}`}
+          sub={
+            me.today_compensated > 0
+              ? `${D.today.ofWhichCompensation}: ${fmtNum(me.today_compensated)}`
+              : undefined
+          }
+        />
+      </StatGrid>
+
+      {/* مهامّي */}
+      <section>
+        <h2 className="mb-2 flex items-center gap-2 font-bold">
+          <IconOrder size={18} className="text-ink-muted" />
+          {D.tasks.title}
+          {/* **وسقفُه بجانب عددِه** — (جردُ ٢٠٢٦-٠٨-٠٩).
+
+              **كان يعرف حدَّه بالرفض وحدَه**: يضغط «خذ» فيُردّ بلا سابق
+              إنذار، **وحدٌّ لا يُرى يُقرأ عطباً في التطبيق** لا قاعدةً.
+
+              **ولا يظهر إلّا وهو يحمل شيئاً**: صفرٌ من اثنين خبرٌ لا يفيد. */}
+          {me.active_orders > 0 && me.max_active_orders > 0 && (
+            <Badge variant={me.active_orders >= me.max_active_orders ? "warning" : "neutral"}>
+              {D.tasks.ofMax
+                .replace("{n}", fmtNum(me.active_orders))
+                .replace("{max}", fmtNum(me.max_active_orders))}
+            </Badge>
+          )}
+        </h2>
+        {mine.length === 0 ? (
+          <EmptyState icon={IconOrder} title={D.tasks.empty} action={<span className="text-sm text-ink-muted">{D.tasks.emptyHint}</span>} />
+        ) : (
+          /* **شبكةٌ لا عمود** — بطاقةُ مهمّةٍ بعرض شاشةٍ كاملةٍ تُبعثر العينَ
+             بين طرفيها، **واثنتان في السطر تُقرآن معاً.** */
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+            {mine.map((o) => (
+              <TaskCard
+                key={o.id}
+                o={o}
+                busy={busy === o.id}
+                onAct={(to) => {
+                  // **الإثباتُ قبل الإغلاق لا بعده.**
+                  //
+                  // بعد الإغلاق يصير الطلبُ تاريخاً، **وصورةٌ تُضاف إلى تاريخٍ
+                  // مغلقٍ تُقرأ إضافةً متأخّرة** — وهي أضعفُ ما يُحتجّ به.
+                  // **والصورةُ تُطلب حين تُطلب** — (جردُ ٢٠٢٦-٠٨-٠٩).
+                  // **كانت تُفتح دائماً**: المحرّكُ يحترم
+                  // `drivers.require_delivery_photo` والشاشةُ لا تقرؤه،
+                  // **فيُطفئه المالكُ وتبقى الخطوةُ في يد السائق.**
+                  if (to === "delivered" && me.require_photo) setProving(o);
+                  else act(o, to);
+                }}
+                onFail={() => {
+                  setReason("");
+                  setDetail("");
+                  // **والقائمةُ حاضرةٌ سلفاً** — جُلبت مع الشاشة (`loadReasons`).
+                  // وإن كان جلبُها قد أخفق تُعاد المحاولةُ من داخل النافذة.
+                  if (reasonsErr) void loadReasons();
+                  setFailing(o);
+                }}
+                onRelease={() => act(o, "dispatching")}
+                onEmergency={() => setEmergency(o)}
+                onAgree={() => setAgreeing(o)}
+                speedKmh={me.avg_speed_kmh}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* **و«طلبات قادمة» صارت قسماً قائماً بذاته** — `/driver/incoming`.
+          كانت هنا ذيلاً لمهامّي، **فيقرؤها السائقُ بعد أن يمرّ على مهامّه**،
+          وهي أوّلُ ما يحتاجه لا آخرُه. (قرارُ المالك ٢٠٢٦-٠٨-٠٣) */}
+
+      {/* **والمحادثةُ فقّاعةٌ تطفو** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
+
+          **كانت أيقونةً في البطاقة تفتح صفحةً** — فيخرج من مهامّه ليكتب سطراً
+          ثمّ يعود. **والحديثُ يجري والعملُ يجري.**
+
+          **وواحدةٌ لكلّ المفتوح**: تبويبٌ بالأرقام إن كانت أكثرَ من طلب. */}
+      <ChatBubble api={api} threads={chats} onRead={load} />
+
+      {agreeing && (
+        <AgreeModal
+          order={agreeing}
+          onClose={() => setAgreeing(null)}
+          onDone={() => {
+            setAgreeing(null);
+            load();
+          }}
+        />
+      )}
+
+      {proving && (
+        <ProofModal
+          order={proving}
+          onClose={() => setProving(null)}
+          onDone={() => {
+            const o = proving;
+            setProving(null);
+            if (o) void act(o, "delivered");
+          }}
+        />
+      )}
+
+      {emergency && (
+        <EmergencyModal
+          order={emergency}
+          onClose={() => setEmergency(null)}
+          onDone={() => {
+            setEmergency(null);
+            load();
+          }}
+        />
+      )}
+
+      {/* تعذّر التسليم — **سببٌ مصنَّفٌ يُختار، لا نصٌّ حرٌّ يُكتب.**
+
+          كان الحقلُ نصّاً حرّاً **والخادمُ يرفض كلَّ ما ليس رمزاً من قائمته**
+          (`FaultOf(reason) == ""`) — **فكلُّ ضغطةٍ تعود بخطأ والطلبُ لا يتحرّك.**
+          وشهده المالكُ في شاشته (٢٠٢٦-٠٨-٠٣): «رغم أنني قلت تعذّر التسليم ما
+          زال زرّ سلّمت الطلب يظهر والطلب قائم».
+
+          **والرموزُ تُجلَب من الخادم لا تُكتب هنا**: قائمةٌ في مكانين تفترق
+          حين يُضاف سببٌ في أحدهما — **وهي عائلةُ الخلل نفسُها التي تكرّرت في
+          أنواع الوسائط وسقف النقد وشرط الساعات.**
+
+          **والذنبُ يُشتقّ من الرمز لا من تقدير أحد** — وهو ما يقرّر التعويض. */}
+      <Modal
+        open={failing !== null}
+        onClose={() => setFailing(null)}
+        title={D.act.failedTitle}
+      >
+        <div className="space-y-3">
+          <p className="text-sm font-medium">{D.act.failedReason}</p>
+          {/* **أربعُ حالاتٍ لا واحدة.**
+
+              «لم تصل بعد» و«تعذّر الوصولُ إليها» و«وصلت فارغة» ثلاثةُ أشياء،
+              **وكانت تُعرض جميعاً بجملةٍ واحدةٍ تقول إنّ الإعدادات خاليةٌ من
+              أسبابٍ لهذه المرحلة** — وهي أشدُّها بُعداً عن الحقيقة.
+
+              **والزرُّ مُطفأٌ في الثلاث**، فمن لم يُخبَر أيُّها وقع لم يعرف
+              أيرجع أم يعيد المحاولة. */}
+          {reasonsErr && !stageReasons ? (
+            <div className="space-y-2 rounded-control border border-danger-edge bg-danger-tint px-3 py-2">
+              <Alert>{D.act.failedReasonsError}</Alert>
+              <Button variant="secondary" onClick={() => void loadReasons()}>
+                {m.common.retry}
+              </Button>
+            </div>
+          ) : !stageReasons ? (
+            <LoadingState variant="inline" />
+          ) : stageReasons.length === 0 ? (
+            <p className="text-sm text-ink-muted">{D.act.failedNoReasons}</p>
+          ) : (
+            <div className="space-y-1.5">
+              {stageReasons.map((x) => (
+                <Radio
+                  key={x.code}
+                  id={`df-${x.code}`}
+                  name="fail-reason"
+                  checked={reason === x.code}
+                  onChange={() => setReason(x.code)}
+                  /* **ورمزٌ بلا ترجمةٍ يُعرض كما هو** — لا فارغاً. فمن أضاف
+                     سبباً في الخادم ونسي القاموسَ يرى نقصَه في الشاشة. */
+                  label={m.common.failReasons[x.code as keyof typeof m.common.failReasons] ?? x.code}
+                  className={`rounded-control border px-3 py-2 transition-colors ${
+                    reason === x.code
+                      ? "border-accent bg-accent-tint font-medium"
+                      : "border-line hover:border-accent-edge"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+          {/* **والتفصيلُ اختياريّ**: «القائمةُ تُصنّف والنصُّ يشرح»
+              (`failreasons.go`). ومن أُلزم بالكتابة على درّاجةٍ تحت الشمس
+              كتب حرفاً ليمرّ. */}
+          <Input
+            id="fail-detail"
+            label={D.act.failedDetail}
+            value={detail}
+            onChange={(e) => setDetail(e.target.value)}
+          />
+          <p className="text-xs text-ink-muted">{D.act.failedHint}</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setFailing(null)}>
+              {m.common.cancel}
+            </Button>
+            <Button
+              variant="danger"
+              disabled={!reason || busy !== ""}
+              onClick={() => {
+                const o = failing;
+                setFailing(null);
+                if (o) act(o, "failed", detail.trim(), reason);
+              }}
+            >
+              {D.act.failed}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/** بطاقة المهمّة — كلُّ ما يحتاجه في مكانٍ واحد، والزرّ الكبير آخرها. */
+function TaskCard({
+  o,
+  busy,
+  onAct,
+  onFail,
+  onRelease,
+  onEmergency,
+  onAgree,
+  speedKmh,
+}: {
+  o: DriverOrder;
+  busy: boolean;
+  onAct: (to: string) => void;
+  onFail: () => void;
+  onRelease: () => void;
+  onEmergency: () => void;
+  /** يفتح توثيقَ ما اتُّفق عليه — للطلب الخاصّ وحدَه. */
+  onAgree: () => void;
+  /** متوسّطُ السرعة — منه يُحسب الوقتُ من المسافة. */
+  speedKmh: number;
+}) {
+  const custom = o.kind === "custom";
+  const next = (custom ? CUSTOM_NEXT : NEXT)[o.status];
+  // **ولا يبدأ الخاصُّ قبل أن يُوثَّق** — والمحرّكُ يفرضها، **والشاشةُ تُخفي
+  // ما يرفضه الخادم** فلا زرَّ يَعِد بما يُعتذر عنه.
+  const blocked = custom && next === "picked_up" && o.custom_goods_amount == null;
+  // **والوقتُ بجانب المسافة** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩).
+  //
+  // **«٣٫٢ كم» تعني عشر دقائقَ في شارعٍ مفتوحٍ وعشرين في سوق** — والسائقُ
+  // يوازن بالوقت لا بالمتر.
+  const toPickupMin = driveMinutes(o.to_pickup_m, speedKmh);
+  const legMin = driveMinutes(o.leg_m, speedKmh);
+  // **وكم بقي على جهوز الطلب** — ظهر في «طلبات قادمة» واختفى بعد القبول،
+  // **وهو أهمُّ ما يقرّر: أينطلق الآن أم ينتظر؟**
+  const readyLeft = readyInMinutes(o);
+  // قبل الاستلام وجهتُه المتجر، وبعده وجهتُه الزبون — الملاحة تتبع الرحلة
+  const heading = o.status === "assigned" || o.status === "at_pickup";
+  const cash = o.cash_due > 0;
+
+  return (
+    <Card>
+      <div className="mb-3 flex items-center gap-2">
+        <Badge variant="primary">#{fmtRef(o.number)}</Badge>
+        <Badge variant="neutral">{m.orders.status[o.status as keyof typeof m.orders.status]}</Badge>
+        {/* **ومتى يجهز** — يبقى ما دام لم يستلم. **وبعد الاستلام لا معنى له.** */}
+        {readyLeft !== null && (o.status === "assigned" || o.status === "at_pickup") && (
+          <Badge variant={readyLeft === 0 ? "success" : "warning"}>
+            {readyLeft === 0 ? D.queue.readyNow : D.queue.readyIn.replace("{n}", fmtNum(readyLeft))}
+          </Badge>
+        )}
+        <span className="ms-auto text-sm font-bold" dir="ltr">
+          {fmtNum(o.total)} {m.common.currency}
+        </span>
+      </div>
+
+      {/* **المسافتان — ورقمٌ يُقرأ قراراً.**
+
+          بلاهما يفتح الخريطةَ لكلّ بطاقةٍ ليعرف أيُّها أقرب. **و«إليك ٤٠٠ م»
+          يقول له بأيّها يبدأ**، و«المشوار ٣٫٢ كم» يقول كم سيأخذ.
+
+          **وسالبٌ يعني «لا تُعرف» لا «صفر»**: الجهلُ ليس قرباً — ومن أطفأ
+          الموقعَ يُقال له ذلك بدل أن يُعرض عليه رقمٌ كاذب. */}
+      <div className="mb-2 space-y-1 rounded-control bg-field px-2.5 py-2 text-xs">
+        <p className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-ink-muted">
+            <IconDriver size={13} />
+            {D.distance.toPickup}
+          </span>
+          <span className="font-bold tabular-nums" dir="ltr">
+            {o.to_pickup_m >= 0 ? fmtDistance(o.to_pickup_m, UNITS.meter, UNITS.km) : "—"}
+            {toPickupMin !== null && (
+              <span className="ms-1.5 font-normal text-ink-muted">
+                · {D.distance.minutes.replace("{n}", fmtNum(toPickupMin))}
+              </span>
+            )}
+          </span>
+        </p>
+        <p className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-1.5 text-ink-muted">
+            <IconLocation size={13} />
+            {D.distance.leg}
+          </span>
+          <span className="font-bold tabular-nums" dir="ltr">
+            {o.leg_m >= 0 ? fmtDistance(o.leg_m, UNITS.meter, UNITS.km) : "—"}
+            {legMin !== null && (
+              <span className="ms-1.5 font-normal text-ink-muted">
+                · {D.distance.minutes.replace("{n}", fmtNum(legMin))}
+              </span>
+            )}
+          </span>
+        </p>
+        {o.to_pickup_m < 0 && (
+          <p className="pt-0.5 text-2xs text-warning">{D.distance.unknown}</p>
+        )}
+      </div>
+
+      {/* **والملاحةُ إلى نقطة الاستلام دائماً** — (جردُ ٢٠٢٦-٠٨-٠٩).
+
+          **كان الزرُّ لا يظهر إلّا في الحالة النادرة**: بضاعةٌ مع سائقٍ وقع له
+          طارئ. **أمّا الذهابُ إلى المطعم — وهو الحالةُ العاديّة — فبلا زرّ**،
+          لأنّ إحداثيّاتِ المتجر لم تكن تُرسَل أصلاً.
+
+          **فيعرف السائقُ «٤٠٠ متر» ولا يستطيع أن يضغط ليمشي إليها.** */}
+      {/* **والطلبُ الخاصُّ يقول ما يريده الزبونُ بلفظه.**
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) **ولا متجرَ ولا أصنافَ ولا سعر** — السائقُ
+          يقرأ الطلب، ويتّفق في المحادثة، ثمّ يشتري بماله ويستردّ عند التسليم. */}
+      {custom && o.custom_request && (
+        <div className="mb-2 rounded-control bg-warning-tint px-3 py-2">
+          <p className="text-2xs font-medium text-warning">{D.custom.label}</p>
+          <p className="mt-0.5 whitespace-pre-wrap text-sm text-ink">{o.custom_request}</p>
+        </div>
+      )}
+
+      {/* **وتفصيلُ المبلغ بعد التوثيق** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «بالبطاقة
+          لازم يطلع ثمن البضاعة والأجور والإجمالي»).
+
+          **ورقمٌ واحدٌ لا يُراجَع**: من قبض ٥٣ ألفاً لا يعرف أين ذهبت —
+          **والزبونُ يسأل «كم الأجرة؟» فلا يجد جواباً في يد أحدهما.** */}
+      {custom && o.custom_goods_amount != null && (
+        <div className="mb-2 space-y-1 rounded-control bg-field px-3 py-2 text-xs">
+          <p className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{D.custom.goods}</span>
+            <span className="tabular-nums" dir="ltr">{fmtNum(o.custom_goods_amount)}</span>
+          </p>
+          <p className="flex items-center justify-between gap-2">
+            <span className="text-ink-muted">{D.custom.fee}</span>
+            <span className="tabular-nums" dir="ltr">{fmtNum(o.custom_fee ?? 0)}</span>
+          </p>
+          <p className="flex items-center justify-between gap-2 border-t border-line-soft pt-1 font-bold">
+            <span>{D.custom.total}</span>
+            <span className="tabular-nums" dir="ltr">
+              {fmtNum((o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0))} {m.common.currency}
+            </span>
+          </p>
+        </div>
+      )}
+
+      <Leg
+        icon={IconStore}
+        label={o.pickup_lat != null ? D.order.pickupOverride : D.order.pickup}
+        name={o.pickup_lat != null ? D.order.pickupFromDriver : o.merchant_name}
+        detail={
+          /* **وفي الخاصّ يُكتب الطلبُ لا عددُ أصناف** — (قرارُ المالك
+             ٢٠٢٦-٠٨-٠٩: «بدل بلا أصناف اكتب الطلب»).
+
+             **ولا أصنافَ له تُعدّ** — هو سطرٌ كتبه الزبون. */
+          custom
+            ? o.custom_request || ""
+            : o.pickup_lat != null
+              ? o.pickup_note || D.order.pickupOverrideHint
+              : D.order.items.replace("{n}", fmtNum(o.items_count))
+        }
+        href={o.nav_lat != null ? mapsHref(o.nav_lat, o.nav_lng ?? 0) : undefined}
+        hrefLabel={o.nav_lat != null ? D.order.navigate : undefined}
+        phone={o.merchant_phone}
+        callLabel={D.order.callMerchant}
+        dim={!heading}
+      />
+      <Leg
+        icon={IconLocation}
+        label={D.order.dropoff}
+        name={o.customer_name}
+        detail={o.address_text}
+        href={mapsHref(o.lat, o.lng)}
+        hrefLabel={D.order.navigate}
+        dim={heading}
+      />
+
+      {/* ما يقبضه: يُقال قبل التسليم لا بعده */}
+      <p
+        className={`mt-3 flex items-center gap-2 rounded-control px-3 py-2 text-sm ${
+          cash ? "bg-warning-tint font-bold text-warning" : "bg-ink-faint text-ink-muted"
+        }`}
+      >
+        <IconBalance size={16} />
+        {/* **والطلبُ الخاصُّ يُقبض فيه ما اتُّفق عليه — لا ما في العمود.**
+
+            (شهده المالك ٢٠٢٦-٠٨-٠٩.) **`cash_due` صفرٌ فيه بقصد** — المنصّةُ
+            لا تحاسب. **والبطاقةُ كانت تقرأ الصفرَ «مدفوعٌ من المحفظة، لا تقبض
+            شيئاً»** — وهو نقيضُ الحقّ: **السائقُ دفع من جيبه وعليه أن يستردّ.**
+
+            **وخبرٌ كاذبٌ في المال أخطرُ من غيابه**: من صدّقه سلّم ومضى. */}
+        {o.kind === "custom" ? (
+          o.custom_goods_amount == null ? (
+            D.custom.collectPending
+          ) : (
+            <>
+              {D.custom.collect}:{" "}
+              <span dir="ltr">
+                {fmtNum((o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0))}{" "}
+                {m.common.currency}
+              </span>
+            </>
+          )
+        ) : cash ? (
+          <>
+            {D.order.cashCollect}:{" "}
+            <span dir="ltr">
+              {fmtNum(o.cash_due)} {m.common.currency}
+            </span>
+          </>
+        ) : (
+          D.order.walletPaid
+        )}
+      </p>
+
+      {/* **ولا بطاقةَ لطلبٍ مُغلَق.**
+
+          كانت بطاقةُ `failed` تبقى حتى تُحسم بضاعتُها، **فتزاحم البطاقاتِ
+          التي فيها فعلٌ ولا فعلَ فيها هي**: متجرٌ لا يستردّ يترك بطاقةً لا
+          تُغلق أبداً — أوّلُ ما يراه كلَّ صباح.
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «مهمّاتٌ تفشل التسليم لا يجب أن تبقى
+          بالمهام لدى السائق — خلص، تُعتبر مغلقةً منتهية».)
+
+          **والقائمةُ لم تعد تحمله أصلاً** (`handleDriverOrders`). */}
+      {/* **وتوثيقُ ما اتُّفق عليه — قبل الزرّ الكبير.**
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «يجب على السائق إرسال طلبٍ بالسعر والأجرة
+           لتوثيق ذلك لدى الإدارة».)
+
+          **وموضعُه قبلَه لا بعده**: التوثيقُ يسبق التسليم، **ومن رأى الزرَّ
+          الكبيرَ أوّلاً ضغطه ومضى** — ثمّ لا حجّةَ له عند خلاف.
+
+          **ويُقال إن كان وُثّق** — فلا يُعاد بلا حاجة، ويُعدَّل إن تبدّل. */}
+      {o.kind === "custom" && (
+        <Button
+          variant="secondary"
+          className="mt-3 w-full"
+          disabled={busy}
+          onClick={onAgree}
+        >
+          {o.custom_goods_amount == null
+            ? D.custom.agree
+            : D.custom.agreed
+                .replace("{a}", fmtNum(o.custom_goods_amount))
+                .replace("{f}", fmtNum(o.custom_fee ?? 0))}
+        </Button>
+      )}
+
+      {next && (
+        <Button
+          size="lg"
+          className="mt-3 w-full"
+          disabled={busy || blocked}
+          title={blocked ? D.custom.startHint : undefined}
+          onClick={() => onAct(next)}
+        >
+          {custom && next === "picked_up"
+            ? D.custom.bought
+            : D.act[next as keyof typeof D.act]}
+        </Button>
+      )}
+
+      <div className="mt-2 flex items-center justify-between">
+        {/* **الإعادةُ للطابور متاحةٌ حتى الاستلام — لا حتى الوصول.**
+
+            كانت تختفي بمجرّد أن يقول «وصلتُ المتجر»، **فمن عرض له عارضٌ وهو
+            عند الباب لم يبقَ له إلّا زرُّ «تعذّر التسليم»**: يُقفل طلباً
+            بضاعتُه لم تخرج بعد، ويُحسب ذنبٌ لم يقع، **ويُحرم زبونٌ من طلبٍ
+            كان سائقٌ آخر يوصله في دقائق.**
+
+            **وحدُّها الاستلام**: بعد أن تصير البضاعةُ في يده لا يُترك الطلبُ
+            لغيره. */}
+        {o.status === "assigned" || o.status === "at_pickup" ? (
+          <Button variant="ghost" disabled={busy} onClick={onRelease} title={D.order.releaseHint}>
+            {D.order.release}
+          </Button>
+        ) : (
+          <span />
+        )}
+        {/* **المخرجُ عند الطرفين — لا عند الزبون وحده.**
+
+            كان الإفشالُ متاحاً عند باب الزبون فقط. فلو وصل السائقُ إلى المطعم
+            ووجده **مغلقاً**، أو لم تصله الرسالةُ أصلاً، أو رفض التحضير —
+            **بقي الطلبُ معلّقاً بلا نهاية ممكنة**: مالُ الزبون محجوز، والسائقُ
+            مربوطٌ بطلبٍ لا يُقفل وسقفُه النقديّ مشغولٌ به.
+
+            **وهو من هناك، فهو من يقول.** واللفظُ يختلف بالموضع: عند المطعم
+            «المطعم لم يسلّمني»، وعند الزبون «الزبون لم يستلم». و«فشل» وحدها
+            تُخفي ثلاثة أخطاءٍ في ثلاث جهات. */}
+        <span className="flex items-center gap-1">
+          {(FAIL_AT as readonly string[]).includes(o.status) && (
+            <Button variant="ghost" disabled={busy} onClick={onFail} className="text-danger">
+              <span className="flex items-center gap-1.5">
+                <IconWarning size={15} />
+                {o.status === "at_pickup" ? D.act.failedAtPickup : D.act.failed}
+              </span>
+            </Button>
+          )}
+          {/* **الطارئ — لما لا يحتمل شاشة.**
+
+              من وقع له حادثٌ وهو حاملٌ الطعام لم يكن يملك إلّا «تعذّر
+              التسليم»: **يُقفل طلبٌ كان يمكن أن يصل**، ويُحسب ذنبٌ لم يقع،
+              **ويبقى هو مشغولاً بشاشةٍ وهو في حالٍ لا تحتمل الشاشات.**
+
+              **وضغطةٌ واحدة لا ثلاث**: موقعُه يُلتقط، والعملياتُ تُنبَّه،
+              والطلبُ يعود إلى الطابور، ودوامُه يُغلق. **وكلُّ حقلٍ نطلبه منه
+              في تلك اللحظة حقلٌ لن يُملأ** — فيُترك الزرُّ ولا يُضغط. */}
+          <Button variant="ghost" disabled={busy} onClick={onEmergency} className="text-danger">
+            <span className="flex items-center gap-1.5">
+              <IconWarning size={15} />
+              {D.act.emergency}
+            </span>
+          </Button>
+        </span>
+      </div>
+    </Card>
+  );
+}
+
+/** طرفُ الرحلة — المتجر أو الزبون. الطرف الذي ليس وجهتَه الآن يبهت. */
+function Leg({
+  icon: Icon,
+  label,
+  name,
+  detail,
+  phone,
+  callLabel,
+  href,
+  hrefLabel,
+  dim,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  name: string;
+  detail: string;
+  /**
+   * **رقمٌ يُتّصل به — للمتجر وحدَه.**
+   *
+   * **ولا رقمَ للزبون** (قرارُ المالك ٢٠٢٦-٠٨-٠٩): المتجرُ طرفُ عملٍ ورقمُه
+   * على لافتته، **والزبونُ طرفُ خصوصيّة** — يُبلَغ بالمحادثة لا بالهاتف.
+   */
+  phone?: string | null;
+  callLabel?: string;
+  href?: string;
+  hrefLabel?: string;
+  dim: boolean;
+}) {
+  return (
+    <div className={`flex items-start gap-3 py-1.5 ${dim ? "opacity-50" : ""}`}>
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-field">
+        <Icon size={16} className="text-ink-muted" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-ink-muted">{label}</p>
+        <p className="truncate font-medium">{name}</p>
+        <p className="truncate text-xs text-ink-muted">{detail}</p>
+      </div>
+      <div className="flex shrink-0 gap-1">
+        {href && (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            title={hrefLabel}
+            aria-label={hrefLabel}
+            className="flex h-9 w-9 items-center justify-center rounded-control bg-primary-tint text-primary"
+          >
+            <IconLocation size={17} />
+          </a>
+        )}
+        {phone && callLabel && (
+          <a
+            href={`tel:${phone}`}
+            title={callLabel}
+            aria-label={callLabel}
+            className="flex h-9 w-9 items-center justify-center rounded-control bg-field text-ink-muted"
+          >
+            <IconPhone size={17} />
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * **الطارئ** — ضغطةٌ واحدة لا ثلاث.
+ *
+ * من كُسرت يدُه لا يملأ نموذجاً. **وكلُّ حقلٍ نطلبه منه في تلك اللحظة حقلٌ لن
+ * يُملأ** — فيُترك الزرُّ ولا يُضغط، **ويبقى الطلبُ معه ولا نعلم.**
+ *
+ * فالملاحظةُ اختيارية، **والموقعُ يُلتقط بلا أن يُطلب**، وتعذّرُه لا يوقف
+ * شيئاً: جهازٌ مرفوضُ الإذن أو داخلَ بناءٍ لا إشارةَ فيه — **وطارئٌ يُردّ لأن
+ * الموقعَ لم يُقرأ طارئٌ ضاع.** والعملياتُ تتّصل به فتعرف أين هو.
+ */
+function EmergencyModal({
+  order,
+  onClose,
+  onDone,
+}: {
+  order: DriverOrder;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit() {
+    setBusy(true);
+    setError("");
+    // **الموقعُ بمهلة**: انتظارٌ بلا حدٍّ يجعل الزرَّ يبدو معطّلاً في اللحظة
+    // التي يجب أن يعمل فيها أسرعَ ما يكون.
+    const point = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () => resolve(null),
+        { timeout: 6000, enableHighAccuracy: true },
+      );
+    });
+    try {
+      await api(`/api/v1/driver/orders/${order.id}/emergency`, {
+        method: "POST",
+        body: JSON.stringify({ lat: point?.lat ?? null, lng: point?.lng ?? null, note: note.trim() }),
+      });
+      onDone();
+    } catch (e) {
+      setError(errText(e));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={D.emergency.title} onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-sm text-ink-muted">{D.emergency.hint}</p>
+        <Input
+          label={D.emergency.note}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder={D.emergency.notePlaceholder}
+        />
+        {error && <Alert>{error}</Alert>}
+        <div className="flex gap-2">
+          <Button variant="danger" disabled={busy} onClick={submit}>
+            {busy ? D.emergency.sending : D.emergency.confirm}
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * **إثباتُ التسليم** — صورةٌ وإحداثياتٌ ووقت.
+ *
+ * # لماذا
+ *
+ * قاعدتُنا أنّ **الزبونَ يُصدَّق أوّلَ مرّة** — والمنصةُ تتحمّل. **وقاعدةٌ بلا
+ * دليلٍ تكلفةٌ بلا سقف**: من عرف أنّ كلمتَه تكفي قالها مرّةً بعد مرّة، **ولا
+ * يبقى للسائق الصادق ما يدفع به عن نفسه.**
+ *
+ * # والمعيارُ العالميّ ثلاثةٌ لا واحد
+ *
+ * الصورةُ تُظهر **موضعَ التسليم** لا الطردَ وحدَه · **والإحداثياتُ تُلتقط
+ * آلياً** فتثبت أنّه كان هناك · والوقتُ آليٌّ كذلك.
+ *
+ * **وأهمُّها الإحداثيات**: صورةُ بابٍ قد تكون لأيّ باب.
+ *
+ * # ولا يقف التسليمُ على كاميرا
+ *
+ * هاتفٌ لا يعمل، أو إذنٌ مرفوض، أو ليلٌ لا يُرى فيه شيء — **وسائقٌ لا يستطيع
+ * إنهاء طلبٍ سلّمه فعلاً يقف في الشارع.** فالتخطّي متاحٌ **بكلمةٍ تُقرأ يومَ
+ * النزاع.**
+ */
+function ProofModal({
+  order,
+  onClose,
+  onDone,
+}: {
+  order: DriverOrder;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [skipping, setSkipping] = useState(false);
+  const [reason, setReason] = useState("");
+
+  /** الموقعُ بمهلة — انتظارٌ بلا حدٍّ يجعل الزرَّ يبدو معطّلاً. */
+  async function where(): Promise<{ lat: number; lng: number } | null> {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () => resolve(null),
+        { timeout: 6000, enableHighAccuracy: true },
+      );
+    });
+  }
+
+  async function upload(file: File) {
+    setBusy(true);
+    setError("");
+    const point = await where();
+    const fd = new FormData();
+    fd.append("file", file);
+    if (point) {
+      fd.append("lat", String(point.lat));
+      fd.append("lng", String(point.lng));
+    }
+    try {
+      /* ══════════════════════════════════════════════════════════════
+         **ويُرفع بعميل المنصة لا بـ`fetch` خامّ**
+         ══════════════════════════════════════════════════════════════
+
+         (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨: `401 POST /driver/orders/{id}/proof`
+          والسائقُ داخلٌ وكلُّ نداءاته الأخرى تنجح.)
+
+         كان `fetch` مباشراً بـ`credentials: "include"` **ولا ترويسةَ
+         استيثاق**. والمنصّةُ تستوثق برمزٍ في `Authorization` لا بكعكة —
+         **فكلُّ رفعِ إثباتٍ يُردّ ٤٠١، لكلّ سائقٍ في كلّ تسليم.**
+
+         **وصورةُ التسليم إلزاميّةٌ افتراضاً** (`drivers.require_delivery_photo`)
+         — فالطلبُ يقف عند «وصلتُ إلى الزبون» **ولا يصير مسلَّماً أبداً**،
+         ولا مخرجَ إلّا «تعذّر عليّ» التي تُسجَّل تعذّراً وهي لم تتعذّر.
+
+         **ولا يظهر في تطوير**: الخطأُ يُبتلع ويُعرض «حدث خطأ» عامّاً،
+         **والمسارُ الآخر (`/proof/skip`) يمرّ بـ`api` فيعمل** — فيبدو
+         العطبُ في الكاميرا لا في الاستيثاق.
+
+         و`api` تعرف `FormData` فتترك ترويسةَ النوع للمتصفّح (حدُّ الأجزاء)
+         وتُلحق الرمز — `packages/auth/src/client.ts`. */
+      await api(`/api/v1/driver/orders/${order.id}/proof`, {
+        method: "POST",
+        body: fd,
+      });
+      onDone();
+    } catch {
+      setError(m.errors.internal);
+      setBusy(false);
+    }
+  }
+
+  async function skip() {
+    if (!reason.trim()) return setError(D.proof.reasonRequired);
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/driver/orders/${order.id}/proof/skip`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      onDone();
+    } catch (e) {
+      setError(errText(e));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={D.proof.title} onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-sm text-ink-muted">{D.proof.hint}</p>
+
+        {!skipping ? (
+          <>
+            {/* **الكاميرا مباشرةً لا معرضُ الصور.**
+
+                `capture` تفتح آلةَ التصوير — **وصورةٌ تُختار من المعرض قد تكون
+                لأيّ يومٍ ولأيّ باب**، فتسقط حجّتُها في أوّل نزاع. */}
+            <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-control border-2 border-dashed border-primary-edge py-6 text-primary-dark">
+              <IconCamera size={20} />
+              <span className="font-medium">{busy ? D.proof.sending : D.proof.take}</span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                disabled={busy}
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void upload(f);
+                }}
+              />
+            </label>
+            {error && <Alert>{error}</Alert>}
+            <button
+              type="button"
+              onClick={() => setSkipping(true)}
+              className="w-full text-xs text-ink-muted underline"
+            >
+              {D.proof.cannot}
+            </button>
+          </>
+        ) : (
+          <>
+            <Input
+              id="pod-reason"
+              label={D.proof.reason}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={D.proof.reasonHint}
+            />
+            {error && <Alert>{error}</Alert>}
+            <div className="flex gap-2">
+              <Button variant="secondary" disabled={busy} onClick={skip}>
+                {D.proof.skipConfirm}
+              </Button>
+              <Button variant="ghost" onClick={() => setSkipping(false)}>
+                {m.common.cancel}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * **توثيقُ ما اتُّفق عليه في الطلب الخاصّ.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «يقول له السعر كذا يوافق الزبون، يقول له أجرة
+ *  التوصيل كذا يوافق الزبون… يجب على السائق إرسال طلبٍ بالسعر والأجرة لتوثيق
+ *  ذلك لدى الإدارة».)
+ *
+ * # ولا يدخل حسابَ المنصّة
+ *
+ * **السائقُ يدفع من جيبه ويستردّ عند التسليم** — والمنصّةُ توثّق ولا تحاسب.
+ * **وهو مكتوبٌ في الشاشة صراحةً** فلا يظنّ السائقُ أنّ المنصّة ستقبض أو تدفع.
+ *
+ * # ويُعدَّل
+ *
+ * **الاتّفاقُ قد يتبدّل**: يجد الصنفَ أغلى فيعود إلى الزبون. **فيُعاد التوثيق
+ * ووقتُه معه** — والوقتُ هو ما يُقرأ عند الخلاف: متى قال ماذا.
+ */
+function AgreeModal({
+  order,
+  onClose,
+  onDone,
+}: {
+  order: DriverOrder;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [goods, setGoods] = useState(String(order.custom_goods_amount ?? ""));
+  const [fee, setFee] = useState(String(order.custom_fee ?? ""));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/driver/orders/${order.id}/agree`, {
+        method: "POST",
+        body: JSON.stringify({
+          goods_amount: Number(goods) || 0,
+          fee: Number(fee) || 0,
+        }),
+      });
+      onDone();
+    } catch (e2) {
+      setError(errText(e2));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={D.custom.agreeTitle} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-sm text-ink-muted">{D.custom.agreeHint}</p>
+        <Input
+          id="agree-goods"
+          label={D.custom.goods}
+          dir="ltr"
+          inputMode="numeric"
+          required
+          value={goods}
+          onChange={(e) => setGoods(e.target.value)}
+        />
+        <Input
+          id="agree-fee"
+          label={D.custom.fee}
+          dir="ltr"
+          inputMode="numeric"
+          required
+          value={fee}
+          onChange={(e) => setFee(e.target.value)}
+        />
+        {error && <Alert>{error}</Alert>}
+        <div className="flex gap-2">
+          <Button variant="secondary" type="button" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+          <Button type="submit" disabled={busy} className="flex-1">
+            {busy ? m.common.loading : D.custom.send}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}

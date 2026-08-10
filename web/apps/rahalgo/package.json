@@ -11,6 +11,8 @@
   "dependencies": {
     "@rahalgo/i18n": "workspace:*",
     "@rahalgo/ui": "workspace:*",
+    "@types/qrcode": "^1.5.6",
+    "qrcode": "^1.5.4",
     "next": "^15.5.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
