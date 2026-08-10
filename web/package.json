@@ -13,7 +13,8 @@
     "lint": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && turbo lint",
     "typecheck": "turbo typecheck",
     "check:central": "node scripts/check-central.mjs",
-    "check:guards": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && node scripts/check-jsx-comments.mjs"
+    "check:guards": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && node scripts/check-jsx-comments.mjs && node scripts/check-render.mjs",
+    "check:render": "node scripts/check-render.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",
