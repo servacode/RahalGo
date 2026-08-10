@@ -107,3 +107,34 @@ var FieldRoleSet = []string{"merchant", "driver", "sales"}
 
 // isField **أدورٌ ميدانيّ؟**
 func isField(role string) bool { return slices.Contains(FieldRoleSet, role) }
+
+// ErrMerchantNeedsStore **دورُ المتجر لا يُمنح بيد.**
+var ErrMerchantNeedsStore = httpx.NewError(http.StatusConflict,
+	"merchant_needs_store", "errors.merchant_needs_store")
+
+// checkGrantable **يمنع منحَ دورٍ لا معنى له وحدَه.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «أصلاً لا يمكن إنشاءُ حسابٍ بدون متجر».)
+//
+// # ولماذا يُمنع بدل أن تُجمَّل شاشتُه
+//
+// **صاحبُ متجرٍ بلا متجرٍ يقع على شاشةٍ ميّتة**: رسالةٌ وحدَها بلا شريطٍ ولا
+// زرِّ خروج — **لا يخرج ولا يذهب إلى حسابه.**
+//
+// **والحالُ تُبلَغ بضغطةٍ واحدة**: يُمنح أحدٌ دورَ «متجر» من لوحة الحسابات
+// فيدخل ويعلق. **وإصلاحُ الشاشة يُجمّل حالاً لا ينبغي أن تقع.**
+//
+// # والمسارُ الشرعيُّ لا يمرّ من هنا
+//
+// **دورُ المتجر يُمنح مع إنشاء المتجر نفسِه** (`EnsureUserWithRole` في
+// `catalog`) عند تحويل طلب اشتراك. **فالمنعُ هنا يغلق البابَ اليدويَّ
+// وحدَه** — ولا يمسّ التحويل.
+func checkGrantable(role string) error {
+	if role == RoleMerchant {
+		return ErrMerchantNeedsStore
+	}
+	return nil
+}
+
+// RoleMerchant **دورُ صاحب المتجر.**
+const RoleMerchant = "merchant"

@@ -449,7 +449,7 @@
 | `orders.max_open_per_customer` |  | int | `3` |
 | `orders.customer_cancel_window_sec` |  | int | `120` |
 | `customers.max_addresses` |  | int | `10` |
-| `customers.require_whatsapp` |  | bool | `true` |
+| `customers.require_whatsapp` |  | bool | `false` |
 | `drivers.assignment_mode` | السائقون | choice | `rotation` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
 | `drivers.assigned_silence_sec` | السائقون | int | `180` |

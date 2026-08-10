@@ -68,6 +68,12 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 	if err := checkOnePrimary(in.Roles); err != nil {
 		return nil, err
 	}
+	// **ولا حسابَ متجرٍ بلا متجر** — يُنشأ مع متجره أو لا يُنشأ.
+	for _, r := range in.Roles {
+		if err := checkGrantable(r); err != nil {
+			return nil, err
+		}
+	}
 	if int64(len(in.Password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) { // إلزامية — لا حساب موظف بلا كلمة مرور
 		return nil, ErrWeakPassword
 	}
@@ -165,6 +171,10 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 func (s *Service) AdminGrantRole(ctx context.Context, actorID, userID, role, reason, ip string) error {
 	if !slices.Contains(AllRoles, role) {
 		return ErrInvalidRole
+	}
+	// **ولا يُمنح دورُ المتجر بيد** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	if err := checkGrantable(role); err != nil {
+		return err
 	}
 	// **ولا دورين أساسيّين لحسابٍ واحد** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
 	//

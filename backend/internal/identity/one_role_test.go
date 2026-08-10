@@ -112,3 +112,25 @@ func TestOneRole_EveryRoleBringsCustomer(t *testing.T) {
 		})
 	}
 }
+
+// TestMerchantRole_NotGrantableByHand **ولا حسابَ متجرٍ بلا متجر.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «أصلاً لا يمكن إنشاءُ حسابٍ بدون متجر».)
+//
+// **وصاحبُ متجرٍ بلا متجرٍ يقع على شاشةٍ ميّتة** — رسالةٌ بلا شريطٍ ولا
+// خروج. **والحالُ تُبلَغ بضغطةٍ واحدةٍ من لوحة الحسابات.**
+//
+// **والمسارُ الشرعيُّ لا يمرّ من هنا**: `catalog.CreateMerchant` ينشئ
+// المتجرَ وصاحبَه معاً بـ`EnsureUserWithRole` — **فالمنعُ يغلق البابَ
+// اليدويَّ وحدَه.**
+func TestMerchantRole_NotGrantableByHand(t *testing.T) {
+	if err := checkGrantable(RoleMerchant); err == nil {
+		t.Fatalf("دورُ المتجر يُمنح بيد — **وصاحبُه يقع على شاشةٍ لا يخرج منها**")
+	}
+	// **وبقيّةُ الأدوار تُمنح** — المنعُ لهذا وحدَه.
+	for _, r := range []string{"driver", "sales", "ops", "finance", "admin", RoleCustomer} {
+		if err := checkGrantable(r); err != nil {
+			t.Fatalf("دورُ %s مُنع بلا سبب: %v", r, err)
+		}
+	}
+}

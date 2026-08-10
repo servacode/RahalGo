@@ -60,9 +60,31 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
   }
 
   if (!store) {
+    /* ══════════════════════════════════════════════════════════════════
+       **وشاشةٌ بلا مخرجٍ ليست شاشة**
+       ══════════════════════════════════════════════════════════════════
+
+       (كشفه جردُ لوحة المتجر ٢٠٢٦-٠٨-١٠.)
+
+       **كانت رسالةً وحدَها في فراغ** — بلا شريطٍ علويٍّ ولا زرِّ خروج.
+       **فمن وقع فيها لا يخرج ولا يذهب إلى حسابه** — يمسح بياناتِ المتصفّح
+       أو يترك.
+
+       **والحالُ صارت ممنوعةً عند المنح** (`merchant_needs_store`) — **لكنّها
+       تبقى ممكنةً بغيره**: متجرٌ يُعطَّل أو يُحذف، وصاحبُه داخلٌ الآن.
+       **وبابٌ يُغلق لا يُغني عن مخرجٍ في الغرفة.** */
     return (
-      <main className="flex flex-1 items-center justify-center p-6 text-center text-ink-muted">
-        {m.merchant.noStores}
+      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+        <p className="text-ink-muted">{m.merchant.noStores}</p>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            logout();
+            router.replace("/login");
+          }}
+        >
+          {m.auth.logout}
+        </Button>
       </main>
     );
   }
