@@ -26,7 +26,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   Badge,
-  Select,
+  Chips,
   Pagination,
   PageContainer,
   PageHeader,
@@ -73,6 +73,8 @@ export default function MerchantHistoryPage() {
   const [page, setPage] = useState(1);
   const [count, setCount] = useState(0);
   const [perPage, setPerPage] = useState(20);
+  /** **عددُ كلّ حالٍ في السجلّ كلِّه** — لا في الصفحة المعروضة. */
+  const [counts, setCounts] = useState<Record<string, number>>({});
 
   const load = useCallback(() => {
     if (!store) return;
@@ -80,13 +82,17 @@ export default function MerchantHistoryPage() {
     // السجلُّ على من يدير الطلبات.**
     const q = new URLSearchParams({ closed_only: "true", page: String(page) });
     if (status) q.set("status", status);
-    api<{ orders: Row[]; total: number; per_page: number }>(
-      `/api/v1/merchant/stores/${store.id}/orders?${q}`,
-    )
+    api<{
+      orders: Row[];
+      total: number;
+      per_page: number;
+      status_counts: Record<string, number>;
+    }>(`/api/v1/merchant/stores/${store.id}/orders?${q}`)
       .then((r) => {
         setRows(r?.orders ?? []);
         setCount(r?.total ?? 0);
         setPerPage(r?.per_page || 20);
+        setCounts(r?.status_counts ?? {});
       })
       // @empty-ok **وسجلٌّ لا يُجلب يُقرأ فارغاً** — لا إنذارَ فوق شاشةِ تاريخ.
       .catch(() => setRows([]));
@@ -103,25 +109,61 @@ export default function MerchantHistoryPage() {
         icon={IconCheck}
         title={m.merchant.historyTitle}
         subtitle={m.merchant.historySubtitle}
-        actions={
-          <Select
-            id="h-status"
-            value={status}
-            onChange={(e) => {
-              /* **وتبديلُ الترشيح يعود إلى الأولى** — **ومن كان في الرابعة
-                 يقع على رابعةٍ قد لا توجد**، فيرى فراغاً ويظنّ القسمَ خالياً. */
-              setPage(1);
-              setStatus(e.target.value);
-            }}
-          >
-            <option value="">{m.merchant.historyAll}</option>
-            {CLOSED.map((s) => (
-              <option key={s} value={s}>
+      />
+
+      {/* ══════════════════════════════════════════════════════════════
+          **وكروتٌ تحمل عددَها — لا قائمةٌ منسدلة**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٠: «خلّي الحالات كروتاً ذكيّة — أفضلُ من
+           القائمة المنسدلة».)
+
+          **والمنسدلةُ تُخفي خياراتِها خلف ضغطة**: من لا يعرف أنّ «متعذّر»
+          موجودةٌ لا يفتحها ليبحث عنها. **وستُّ حالاتٍ تسع سطراً** فتُقرأ
+          كلُّها بلمحة.
+
+          **والكرتُ الذكيُّ يقول عددَه** — وإلّا فهو زرٌّ لا كرت. **ومن رأى
+          «ملغاة» بلا رقمٍ لا يعرف أيضغطها أم يمرّ**، فيضغط كلَّ واحدةٍ ليرى.
+
+          **والعددُ عن السجلّ كلِّه لا عن الصفحة** — يأتي من الخادم
+          باستعلامٍ مستقلّ، **ولا يتبدّل بتقليب الترقيم.**
+
+          **وحالٌ بلا طلبٍ واحدٍ لا تُعرض**: كرتٌ بصفرٍ يشغل مكاناً ويُضغط
+          فيُفتح على فراغ. */}
+      <Chips
+        wrap
+        className="mb-3"
+        value={status}
+        onChange={(id) => {
+          /* **وتبديلُ الترشيح يعود إلى الأولى** — **ومن كان في الرابعة يقع
+             على رابعةٍ قد لا توجد**، فيرى فراغاً ويظنّ القسمَ خالياً. */
+          setPage(1);
+          setStatus(id);
+        }}
+        items={[
+          {
+            id: "",
+            label: (
+              <span className="flex items-center gap-1.5">
+                {m.merchant.historyAll}
+                <span className="tabular-nums opacity-70" dir="ltr">
+                  {fmtNum(Object.values(counts).reduce((a, b) => a + b, 0))}
+                </span>
+              </span>
+            ),
+          },
+          ...CLOSED.filter((s) => (counts[s] ?? 0) > 0).map((s) => ({
+            id: s as string,
+            label: (
+              <span className="flex items-center gap-1.5">
                 {STATUS_LABELS[s] ?? s}
-              </option>
-            ))}
-          </Select>
-        }
+                <span className="tabular-nums opacity-70" dir="ltr">
+                  {fmtNum(counts[s] ?? 0)}
+                </span>
+              </span>
+            ),
+          })),
+        ]}
       />
 
       {rows.length === 0 ? (

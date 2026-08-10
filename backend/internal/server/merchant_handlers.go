@@ -131,7 +131,43 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 	for i := range res.Orders {
 		redactForMerchant(&res.Orders[i])
 	}
-	httpx.JSON(w, http.StatusOK, res)
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وعددُ كلّ حالٍ مع السجلّ — لا بنداءٍ لكلّ حال**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «خلّي الحالات كروتاً ذكيّةً — أفضلُ من
+	//  القائمة المنسدلة».)
+	//
+	// **والكرتُ الذكيُّ يقول عددَه** — وإلّا فهو زرٌّ لا كرت. **ومن رأى
+	// «ملغاة» بلا رقمٍ لا يعرف أيضغطها أم يمرّ**، فيضغط كلَّ واحدةٍ ليرى.
+	//
+	// **وستّةُ نداءاتٍ لستّة كروتٍ عبثٌ**: استعلامٌ واحدٌ يجمعها كلَّها،
+	// **ولا يتبدّل بالترشيح** — العددُ عن كلّ ما في السجلّ لا عمّا يُعرض.
+	//
+	// **ولا يُحسب من الصفحة المعروضة**: **رقمٌ يُشتقّ من صفحةٍ وهو عن الكلّ**
+	// — وهي عائلةُ العطب التي أمسكتها النزاعاتُ والتقييماتُ والخسائر.
+	counts := map[string]int{}
+	crows, err := s.pg.Query(r.Context(), `
+		SELECT status, count(*) FROM orders
+		WHERE merchant_id = $1 AND closed_at IS NOT NULL
+		GROUP BY status`, merchantID)
+	if err == nil {
+		defer crows.Close()
+		for crows.Next() {
+			var k string
+			var n int
+			if crows.Scan(&k, &n) == nil {
+				counts[k] = n
+			}
+		}
+	}
+
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"orders": res.Orders, "total": res.Total,
+		"page": res.Page, "per_page": res.PerPage,
+		"status_counts": counts,
+	})
 }
 
 // merchantOwnsOrder يتحقق أن الطلب يتبع متجراً مملوكاً للمستخدم.
