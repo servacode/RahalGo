@@ -173,6 +173,18 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 
 // handleOpenEmergencies الطوارئُ المفتوحة — لتراها العملياتُ مجموعةً.
 func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
+	// **وصفحةٌ محدودةٌ بعدٍّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	//
+	// **والمفتوحُ منها لا يُقفل نفسَه**: يتراكم حتّى تعالجه العملياتُ سطراً
+	// سطراً. **ومئةٌ صامتةٌ تعني أنّ سائقاً في ضائقةٍ لا يراه أحد** — وهو
+	// آخرُ ما يُحتمل صمتُه في هذه المنصّة.
+	pg := pagingOf(r, 20)
+	var count int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM driver_emergencies WHERE status = 'open'`).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT e.id, u.full_name, u.phone, o.number, e.note,
 		       ST_Y(e.at::geometry), ST_X(e.at::geometry), e.created_at
@@ -180,7 +192,7 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 		JOIN users u ON u.id = e.driver_id
 		LEFT JOIN orders o ON o.id = e.order_id
 		WHERE e.status = 'open'
-		ORDER BY e.created_at DESC LIMIT 100`)
+		ORDER BY e.created_at DESC LIMIT $1 OFFSET $2`, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -213,7 +225,7 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 		x.CreatedAt = at
 		out = append(out, x)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"emergencies": out})
+	httpx.JSON(w, http.StatusOK, paged("emergencies", out, count, pg))
 }
 
 // handleResolveEmergency تُغلقها العملياتُ بعد أن تطمئنّ.

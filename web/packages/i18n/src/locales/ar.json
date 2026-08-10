@@ -1002,7 +1002,8 @@
             "rejected": "مرفوض",
             "failed": "فاشل",
             "refunded": "مسترجع"
-          }
+          },
+          "showingLatest": "المعروضُ أحدثُ {n} من {all}"
         },
         "passwordBtn": "كلمة المرور",
         "logoutAllShort": "إنهاء الجلسات",

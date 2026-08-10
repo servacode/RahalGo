@@ -305,16 +305,34 @@ func (s *Server) handleAdminLogoutAll(w http.ResponseWriter, r *http.Request) {
 // تذاكره كزبون، تقييماته الممنوحة، والواردة عليه (كسائق أو صاحب متاجر).
 func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	// **وثلاثُ قوائمَ في ردٍّ واحدٍ لا تُرقَّم برقمٍ واحد** — (٢٠٢٦-٠٨-١٠).
+	//
+	// **فلكلٍّ صفحتُها**: `t_page` للتذاكر، و`g_page` للممنوحة، و`r_page`
+	// للواردة. **ورقمٌ واحدٌ لثلاثتها يقلّب ما لم يُطلب** — يبحث في تذاكره
+	// فتقفز تقييماتُه معها.
+	q := r.URL.Query()
+	tp := pagingFrom(q.Get("t_page"), 10)
+	gp := pagingFrom(q.Get("g_page"), 10)
+	rp := pagingFrom(q.Get("r_page"), 10)
+
 	out := struct {
 		Tickets []map[string]any `json:"tickets"`
 		Given   []map[string]any `json:"ratings_given"`
 		Recv    []map[string]any `json:"ratings_received"`
 		AvgRecv *float64         `json:"avg_received"`
-	}{Tickets: []map[string]any{}, Given: []map[string]any{}, Recv: []map[string]any{}}
+		// **وعددُ كلٍّ منها** — والمعروضُ صفحةٌ منه.
+		TicketsCount int `json:"tickets_count"`
+		GivenCount   int `json:"ratings_given_count"`
+		RecvCount    int `json:"ratings_received_count"`
+		PerPage      int `json:"per_page"`
+	}{Tickets: []map[string]any{}, Given: []map[string]any{}, Recv: []map[string]any{}, PerPage: tp.PerPage}
 
+	_ = s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM tickets WHERE customer_id = $1`, id).Scan(&out.TicketsCount)
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT t.number, t.subject, t.status, t.compensation, t.created_at
-		FROM tickets t WHERE t.customer_id = $1 ORDER BY t.number DESC LIMIT 20`, id)
+		FROM tickets t WHERE t.customer_id = $1
+		ORDER BY t.number DESC LIMIT $2 OFFSET $3`, id, tp.PerPage, tp.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -348,13 +366,16 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	// استعلامٍ بيده.
 	//
 	// **واسمُ المتجر فارغٌ فيه** — والشاشةُ تعرض نصَّ الطلب مكانَه.
+	_ = s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM order_ratings WHERE customer_id = $1`, id).Scan(&out.GivenCount)
 	rows, err = s.pg.Query(r.Context(), `
 		SELECT o.number, COALESCE(m.name, ''), rt.platform_stars, rt.driver_stars,
 		       rt.comment, rt.created_at
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
 		LEFT JOIN merchants m ON m.id = o.merchant_id
-		WHERE rt.customer_id = $1 ORDER BY rt.created_at DESC LIMIT 20`, id)
+		WHERE rt.customer_id = $1
+		ORDER BY rt.created_at DESC LIMIT $2 OFFSET $3`, id, gp.PerPage, gp.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -388,12 +409,39 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 		JOIN orders o ON o.id = rt.order_id
 		JOIN merchants m ON m.id = o.merchant_id
 		WHERE m.owner_user_id = $1
-		ORDER BY 5 DESC LIMIT 20`, id)
+		ORDER BY 5 DESC LIMIT $2 OFFSET $3`, id, rp.PerPage, rp.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	sum, n := 0, 0
+	// ══════════════════════════════════════════════════════════════════
+	// **والمتوسّطُ على كلّ التقييمات لا على الصفحة المعروضة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان يُجمَع من الأسطر المعروضة** — وكان صحيحاً حين تُعرض كلُّها.
+	// **ومع الترقيم يصير متوسّطَ عشرةٍ لا متوسّطَ سائق**: يُقلَّب إلى الصفحة
+	// الثانية **فيتبدّل تقييمُه أمام عين من يقرأ.**
+	//
+	// **وهي عائلةُ العطب نفسِها التي أمسكتها النزاعات**: رقمٌ يُشتقّ من صفحةٍ
+	// وهو عن الكلّ.
+	const recvAgg = `
+		SELECT count(*), COALESCE(avg(s), 0) FROM (
+			SELECT rt.driver_stars AS s
+			FROM order_ratings rt JOIN orders o ON o.id = rt.order_id
+			WHERE o.driver_id = $1 AND rt.driver_stars IS NOT NULL
+			UNION ALL
+			SELECT rt.platform_stars
+			FROM order_ratings rt
+			JOIN orders o ON o.id = rt.order_id
+			JOIN merchants m ON m.id = o.merchant_id
+			WHERE m.owner_user_id = $1
+		) x`
+	var recvAvg float64
+	if err := s.pg.QueryRow(r.Context(), recvAgg, id).Scan(&out.RecvCount, &recvAvg); err == nil &&
+		out.RecvCount > 0 {
+		out.AvgRecv = &recvAvg
+	}
+
 	for rows.Next() {
 		var num int64
 		var mName, comment, as string
@@ -403,15 +451,9 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 			out.Recv = append(out.Recv, map[string]any{
 				"order_number": num, "merchant_name": mName, "stars": stars,
 				"comment": comment, "created_at": at, "as": as})
-			sum += stars
-			n++
 		}
 	}
 	rows.Close()
-	if n > 0 {
-		avg := float64(sum) / float64(n)
-		out.AvgRecv = &avg
-	}
 	httpx.JSON(w, http.StatusOK, out)
 }
 

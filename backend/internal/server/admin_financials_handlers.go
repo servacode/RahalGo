@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -28,9 +29,23 @@ type finEntry struct {
 }
 
 type finBucket struct {
-	Total int64      `json:"total"`
+	// Total **مجموعُ المال — على كلّ الصفوف لا على المعروض.**
+	Total int64 `json:"total"`
+	// Count **عددُ الصفوف كلِّها.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «لا تنسَ إضافة الباجينيشن».)
+	//
+	// **والقائمةُ هنا عيّنةٌ لا جردٌ**: المجموعُ يُحسب على الكلّ باستعلامٍ
+	// مستقلّ، **والأسطرُ أحدثُ خمسين.** فيُقال العددُ صراحةً — **وسقفٌ صامتٌ
+	// يُقرأ «هذا كلُّ ما عليه»**، فيُصالَح المتجرُ على نصف دينه.
+	Count int        `json:"count"`
 	Items []finEntry `json:"items"`
 }
+
+// finLimit **أحدثُ ما يُعرض من كلّ سلّة.**
+//
+// **والمجاميعُ لا تتعلّق به** — تُحسب باستعلامٍ مستقلٍّ على كلّ الصفوف.
+const finLimit = 50
 
 func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -62,7 +77,12 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 		OwedTo  finBucket  `json:"owed_to"`
 		OwedBy  finBucket  `json:"owed_by"`
 		Returns []finEntry `json:"returns"`
-	}{Roles: roles, Rates: []finRate{}, OwedTo: finBucket{Items: []finEntry{}}, OwedBy: finBucket{Items: []finEntry{}}, Returns: []finEntry{}}
+		// **وعددُ المرتجعات كلِّها** — والمعروضُ أحدثُ خمسين.
+		ReturnsCount int `json:"returns_count"`
+		// **وسقفُ العرض يُرسَل** — فتقول الشاشةُ «أحدثُ ٥٠ من ٢١٣» بلا رقمٍ
+		// مكتوبٍ فيها **يفترق عن رقم الخادم يوماً.**
+		Limit int `json:"limit"`
+	}{Limit: finLimit, Roles: roles, Rates: []finRate{}, OwedTo: finBucket{Items: []finEntry{}}, OwedBy: finBucket{Items: []finEntry{}}, Returns: []finEntry{}}
 
 	// ---- النِسَب المطبّقة حسب الدور ----
 	// **والنسبةُ المعروضة هي النافذةُ لا رقمٌ يُقرأ من عمود.**
@@ -98,11 +118,16 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 			`SELECT COALESCE(sum(amount), 0) FROM wallet_transactions WHERE user_id = $1 AND kind = 'commission'`,
 			id).Scan(&sum)
 		out.OwedTo.Total += sum
+		var n int
+		_ = s.pg.QueryRow(ctx,
+			`SELECT count(*) FROM wallet_transactions WHERE user_id = $1 AND kind = 'commission'`,
+			id).Scan(&n)
+		out.OwedTo.Count += n
 		rows, err := s.pg.Query(ctx, `
 			SELECT t.ref, COALESCE(NULLIF(t.note, ''), 'عمولة'), t.amount, t.created_at
 			FROM wallet_transactions t
 			WHERE t.user_id = $1 AND t.kind = 'commission'
-			ORDER BY t.created_at DESC LIMIT 50`, id)
+			ORDER BY t.created_at DESC LIMIT `+strconv.Itoa(finLimit), id)
 		if err == nil {
 			for rows.Next() {
 				var e finEntry
@@ -121,11 +146,18 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 			SELECT COALESCE(sum(delivery_fee), 0) FROM orders
 			WHERE driver_id = $1 AND status = 'delivered'`, id).Scan(&fees)
 		out.OwedTo.Total += fees
+		var n int
+		_ = s.pg.QueryRow(ctx, `
+			SELECT count(*) FROM orders
+			WHERE driver_id = $1 AND status = 'delivered' AND delivery_fee > 0`, id).Scan(&n)
+		out.OwedTo.Count += n
+		// **والمتجرُ يُضمّ يساراً** — **والطلبُ الخاصُّ لا متجرَ له**، وضمٌّ
+		// صلبٌ يُسقطه من كشف السائق بلا خطأ.
 		rows, err := s.pg.Query(ctx, `
-			SELECT o.id::text, m.name, o.delivery_fee, o.created_at
-			FROM orders o JOIN merchants m ON m.id = o.merchant_id
+			SELECT o.id::text, COALESCE(m.name, ''), o.delivery_fee, o.created_at
+			FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 			WHERE o.driver_id = $1 AND o.status = 'delivered' AND o.delivery_fee > 0
-			ORDER BY o.created_at DESC LIMIT 50`, id)
+			ORDER BY o.created_at DESC LIMIT `+strconv.Itoa(finLimit), id)
 		if err == nil {
 			for rows.Next() {
 				var e finEntry
@@ -144,11 +176,15 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 			SELECT COALESCE(sum(o.platform_commission), 0)
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
 			WHERE m.owner_user_id = $1 AND o.status = 'delivered'`, id).Scan(&out.OwedBy.Total)
+		_ = s.pg.QueryRow(ctx, `
+			SELECT count(*) FROM orders o JOIN merchants m ON m.id = o.merchant_id
+			WHERE m.owner_user_id = $1 AND o.status = 'delivered'
+			  AND o.platform_commission > 0`, id).Scan(&out.OwedBy.Count)
 		rows, err := s.pg.Query(ctx, `
 			SELECT o.id::text, m.name, o.platform_commission, o.created_at
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
 			WHERE m.owner_user_id = $1 AND o.status = 'delivered' AND o.platform_commission > 0
-			ORDER BY o.created_at DESC LIMIT 50`, id)
+			ORDER BY o.created_at DESC LIMIT `+strconv.Itoa(finLimit), id)
 		if err == nil {
 			for rows.Next() {
 				var e finEntry
@@ -171,12 +207,20 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 	}
 
 	// ---- الطلبات المرتجعة/الملغاة وأسبابها (تخص المستخدم كمتجر/سائق/زبون) ----
+	// **والمتجرُ يُضمّ يساراً هنا أيضاً** — **وطلبٌ خاصٌّ أُلغي كان يختفي من
+	// كشف صاحبه**، وهو أوّلُ ما يُسأل عنه عند شكوى.
+	_ = s.pg.QueryRow(ctx, `
+		SELECT count(*) FROM orders o
+		LEFT JOIN merchants m ON m.id = o.merchant_id
+		WHERE (m.owner_user_id = $1 OR o.driver_id = $1 OR o.customer_id = $1)
+		  AND o.status IN ('cancelled', 'rejected', 'failed', 'refunded')`,
+		id).Scan(&out.ReturnsCount)
 	rows, err := s.pg.Query(ctx, `
-		SELECT o.id::text, m.name, o.subtotal, o.status, o.cancel_reason, o.created_at
-		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		SELECT o.id::text, COALESCE(m.name, ''), o.subtotal, o.status, o.cancel_reason, o.created_at
+		FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 		WHERE (m.owner_user_id = $1 OR o.driver_id = $1 OR o.customer_id = $1)
 		  AND o.status IN ('cancelled', 'rejected', 'failed', 'refunded')
-		ORDER BY o.created_at DESC LIMIT 50`, id)
+		ORDER BY o.created_at DESC LIMIT `+strconv.Itoa(finLimit), id)
 	if err == nil {
 		for rows.Next() {
 			var e finEntry

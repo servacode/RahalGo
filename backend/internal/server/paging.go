@@ -73,3 +73,15 @@ func paged(key string, items any, total int, p Paging) map[string]any {
 		"per_page": p.PerPage,
 	}
 }
+
+// pagingFrom **صفحةٌ من قيمةٍ مفردة** — لردٍّ فيه أكثرُ من قائمة.
+//
+// **ورقمٌ واحدٌ لثلاث قوائمَ يقلّب ما لم يُطلب**: يبحث في تذاكره فتقفز
+// تقييماتُه معها.
+func pagingFrom(raw string, def int) Paging {
+	page, _ := strconv.Atoi(raw)
+	if page < 1 {
+		page = 1
+	}
+	return Paging{Page: page, PerPage: def, Offset: (page - 1) * def}
+}

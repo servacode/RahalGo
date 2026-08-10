@@ -66,9 +66,12 @@ interface FinEntry {
 interface FinData {
   roles: string[];
   rates: { label: string; percent: number }[];
-  owed_to: { total: number; items: FinEntry[] };
-  owed_by: { total: number; items: FinEntry[] };
+  owed_to: { total: number; count: number; items: FinEntry[] };
+  owed_by: { total: number; count: number; items: FinEntry[] };
   returns: FinEntry[];
+  /** **عددُ المرتجعات كلِّها وسقفُ العرض** — (٢٠٢٦-٠٨-١٠). */
+  returns_count: number;
+  limit: number;
 }
 
 interface Profile {
@@ -107,6 +110,11 @@ interface Activity {
 interface Feedback {
   tickets: { number: number; subject: string; status: string; compensation: number; created_at: string }[];
   ratings_given: { order_number: number; merchant_name: string; platform_stars: number; driver_stars: number | null; comment: string; created_at: string }[];
+  /** **أعدادُ الكلّ** — والمعروضُ صفحةٌ منه. (٢٠٢٦-٠٨-١٠.) */
+  tickets_count: number;
+  ratings_given_count: number;
+  ratings_received_count: number;
+  per_page: number;
   ratings_received: { order_number: number; merchant_name: string; stars: number; comment: string; created_at: string; as: string }[];
   avg_received: number | null;
 }
@@ -147,6 +155,11 @@ export default function UserProfilePage() {
       صامتةٌ تحجب ما قبل الأسبوع الماضي عمّن يراجع** — وهو ما يُبحث عنه
       بالضبط حين يُشتكى على حساب. */
   const [actPage, setActPage] = useState(1);
+  /** **ولكلّ قائمةٍ صفحتُها** — **ورقمٌ واحدٌ لثلاثتها يقلّب ما لم يُطلب**:
+      يبحث في تذاكره فتقفز تقييماتُه معها. */
+  const [tPage, setTPage] = useState(1);
+  const [gPage, setGPage] = useState(1);
+  const [rPage, setRPage] = useState(1);
   const [actCount, setActCount] = useState(0);
   const [actPer, setActPer] = useState(25);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -183,13 +196,17 @@ export default function UserProfilePage() {
       setP(await api<Profile>(`/api/v1/admin/users/${id}`));
       const st = await api<{ transactions: Tx[] }>(`/api/v1/admin/users/${id}/wallet`);
       setTxs(st.transactions);
-      setFeedback(await api<Feedback>(`/api/v1/admin/users/${id}/feedback`));
+      setFeedback(
+        await api<Feedback>(
+          `/api/v1/admin/users/${id}/feedback?t_page=${tPage}&g_page=${gPage}&r_page=${rPage}`,
+        ),
+      );
       setFin(await api<FinData>(`/api/v1/admin/users/${id}/financials`));
       setError("");
     } catch (err) {
       setError(errText(err));
     }
-  }, [id]);
+  }, [id, tPage, gPage, rPage]);
 
   useEffect(() => {
     void load();
@@ -593,6 +610,8 @@ export default function UserProfilePage() {
             <FinBucket
               title={P.fin.owedTo}
               total={fin.owed_to.total}
+              count={fin.owed_to.count}
+              limit={fin.limit}
               items={fin.owed_to.items}
               positive
               onOrder={(n) => router.push(`/dashboard/orders?q=${n}`)}
@@ -600,6 +619,8 @@ export default function UserProfilePage() {
             <FinBucket
               title={P.fin.owedBy}
               total={fin.owed_by.total}
+              count={fin.owed_by.count}
+              limit={fin.limit}
               items={fin.owed_by.items}
               positive={false}
               onOrder={(n) => router.push(`/dashboard/orders?q=${n}`)}
@@ -634,6 +655,15 @@ export default function UserProfilePage() {
                   </li>
                 ))}
               </ul>
+            )}
+            {/* **والحدُّ يُقال هنا أيضاً** — **ومن راجع مرتجعاتِ متجرٍ فرأى
+                خمسين ظنّها خمسين**، وبنى عليها حكماً على أدائه. */}
+            {fin.returns_count > fin.returns.length && (
+              <p className="mt-2 text-center text-xs text-ink-muted">
+                {P.fin.showingLatest
+                  .replace("{n}", fmtNum(fin.returns.length))
+                  .replace("{all}", fmtNum(fin.returns_count))}
+              </p>
             )}
           </FormSection>
         </div>
@@ -675,6 +705,16 @@ export default function UserProfilePage() {
                 ))}
               </ul>
             )}
+          {feedback.tickets_count > feedback.per_page && (
+            <div className="mt-3 flex justify-center">
+              <Pagination
+                page={tPage}
+                total={feedback.tickets_count}
+                perPage={feedback.per_page}
+                onChange={setTPage}
+              />
+            </div>
+          )}
           </FormSection>
 
           <FormSection title={P.ratingsGiven} icon={<IconStar />}>
@@ -713,6 +753,16 @@ export default function UserProfilePage() {
                 ))}
               </ul>
             )}
+          {feedback.ratings_given_count > feedback.per_page && (
+            <div className="mt-3 flex justify-center">
+              <Pagination
+                page={gPage}
+                total={feedback.ratings_given_count}
+                perPage={feedback.per_page}
+                onChange={setGPage}
+              />
+            </div>
+          )}
           </FormSection>
 
           <FormSection title={P.ratingsRecv} icon={<IconStar />}>
@@ -749,6 +799,16 @@ export default function UserProfilePage() {
                 ))}
               </ul>
             )}
+          {feedback.ratings_received_count > feedback.per_page && (
+            <div className="mt-3 flex justify-center">
+              <Pagination
+                page={rPage}
+                total={feedback.ratings_received_count}
+                perPage={feedback.per_page}
+                onChange={setRPage}
+              />
+            </div>
+          )}
           </FormSection>
         </div>
       )}
@@ -1015,12 +1075,17 @@ function NotesEditor({
 function FinBucket({
   title,
   total,
+  count,
+  limit,
   items,
   positive,
   onOrder,
 }: {
   title: string;
   total: number;
+  /** **عددُ الصفوف كلِّها** — والمعروضُ أحدثُها. */
+  count: number;
+  limit: number;
   items: FinEntry[];
   positive: boolean;
   onOrder: (ref: string) => void;
@@ -1065,6 +1130,26 @@ function FinBucket({
             </li>
           ))}
         </ul>
+      )}
+      {/* ══════════════════════════════════════════════════════════════
+          **والحدُّ يُقال — والمجموعُ فوقه على الكلّ**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٠: «لا تنسَ إضافة الباجينيشن».)
+
+          **والقائمةُ هنا عيّنةٌ لا جرد**: المجموعُ المعروضُ فوقها يُحسب في
+          الخادم على كلّ الصفوف باستعلامٍ مستقلّ، **والأسطرُ أحدثُ خمسين.**
+
+          **وسقفٌ صامتٌ يُقرأ «هذا كلُّ ما عليه»** — فيُصالَح المتجرُ على نصف
+          دينه وهو يظنّ أنّه رأى الكشفَ كلَّه. **فيُقال العددُ صراحة.**
+
+          **والرقمُ من الخادم لا مكتوبٌ هنا** — ورقمان لمعنًى واحدٍ يفترقان. */}
+      {count > items.length && (
+        <p className="mt-2 text-center text-xs text-ink-muted">
+          {P.fin.showingLatest
+            .replace("{n}", fmtNum(Math.min(limit, items.length)))
+            .replace("{all}", fmtNum(count))}
+        </p>
       )}
     </FormSection>
   );

@@ -13,10 +13,12 @@
  * يطمئنّ على أحد.
  */
 
+import { useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
   Button,
   PageContainer,
+  Pagination,
   PageHeader,
   EmptyState,
   LoadingState,
@@ -44,9 +46,20 @@ interface Emergency {
 }
 
 export default function EmergenciesPage() {
-  const { data, reload } = useLiveData<{ emergencies: Emergency[] }>(
-    () => api("/api/v1/admin/emergencies"),
+  /** **الصفحةُ المعروضة** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+
+      **والمفتوحُ منها لا يُقفل نفسَه**: يتراكم حتّى تعالجه العملياتُ سطراً
+      سطراً. **ومئةٌ صامتةٌ تعني أنّ سائقاً في ضائقةٍ لا يراه أحد** — وهو
+      آخرُ ما يُحتمل صمتُه في هذه المنصّة. */
+  const [page, setPage] = useState(1);
+  const { data, reload } = useLiveData<{
+    emergencies: Emergency[];
+    total: number;
+    per_page: number;
+  }>(
+    () => api(`/api/v1/admin/emergencies?page=${page}`),
     ["driver", "order"],
+    [page],
   );
   if (!data) return <LoadingState />;
   const list = data.emergencies ?? [];
@@ -108,6 +121,13 @@ export default function EmergenciesPage() {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
+      {data.total > data.per_page && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </div>
       )}
     </PageContainer>
