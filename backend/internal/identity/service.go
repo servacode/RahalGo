@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -847,18 +848,65 @@ func (s *Service) BootstrapAdmin(ctx context.Context, rawPhone string) error {
 	if !ok {
 		return fmt.Errorf("identity: invalid ADMIN_PHONE %q", rawPhone)
 	}
-	user, _, err := s.repo.UserByPhone(ctx, phone)
+	user, hash, err := s.repo.UserByPhone(ctx, phone)
 	if errors.Is(err, ErrNotFound) {
 		user, err = s.repo.CreateUserWithRole(ctx, phone, "", "admin")
-		if err == nil {
-			s.logger.Info("bootstrap admin created", "phone", phone)
+		if err != nil {
+			return err
 		}
+		s.logger.Info("bootstrap admin created", "phone", phone)
+		hash = ""
+	} else if err != nil {
+		return err
+	} else if err := s.repo.GrantRole(ctx, user.ID, "admin", nil); err != nil {
 		return err
 	}
+	return s.bootstrapPassword(ctx, user.ID, hash)
+}
+
+// bootstrapPassword **كلمةُ المرور الأولى — وإلّا لا يدخل أحدٌ أصلاً.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **الحلقةُ المفرغةُ التي كشفها المالك (٢٠٢٦-٠٨-١٠)**
+// ══════════════════════════════════════════════════════════════════════
+//
+// «كيف رح يجي رمز وأساساً المنصّة لسّا مو مربوطة بواتساب؟»
+//
+// **وهو محقّ**: الحسابُ يُنشأ بلا كلمة مرور، **فلا سبيلَ للدخول إلّا برمز
+// واتساب** — والبوتُ لا يُقترن إلّا من لوحةٍ لا تُفتح إلّا بدخول.
+// **ثلاثةٌ يمسك بعضُها برقاب بعض، والنسخةُ الجديدةُ مقفلةٌ على صاحبها.**
+//
+// **فتُقبل كلمةٌ أولى من البيئة** (`ADMIN_PASSWORD`) — تُكسر بها الحلقة.
+//
+// # وهي مؤقّتةٌ بحكم الشيفرة لا بالنصيحة
+//
+// **تُكتب بـ`SetTempPassword`** فيُرفع علَمُ «بدّلها» — **فأوّلُ دخولٍ يفرض
+// كلمةً يختارها هو.** وبعدها تصير القيمةُ في لوحة الاستضافة بلا قيمة.
+//
+// **ونصيحةٌ «بدّلها لاحقاً» تُنسى** — والعلَمُ لا يُنسى.
+//
+// # ولا تُدهَس كلمةٌ قائمة
+//
+// **تُضبط لمن لا كلمةَ له فقط.** ولولا هذا الشرطُ **لأعادت كلُّ نشرةٍ
+// كلمةَ البيئة** — فيبدّلها المالكُ ثمّ تعود من ورائه، **ويبقى ما في
+// الاستضافة مفتاحاً حيّاً إلى الأبد.**
+func (s *Service) bootstrapPassword(ctx context.Context, userID, existingHash string) error {
+	raw := strings.TrimSpace(os.Getenv("ADMIN_PASSWORD"))
+	if raw == "" || existingHash != "" {
+		return nil
+	}
+	if int64(len(raw)) < minPasswordLn {
+		return fmt.Errorf("identity: ADMIN_PASSWORD أقصر من %d محارف", minPasswordLn)
+	}
+	enc, err := auth.HashPassword(raw)
 	if err != nil {
 		return err
 	}
-	return s.repo.GrantRole(ctx, user.ID, "admin", nil)
+	if err := s.repo.SetTempPassword(ctx, userID, enc); err != nil {
+		return err
+	}
+	s.logger.Info("bootstrap admin password set — يُطلب تبديلُها عند أوّل دخول")
+	return nil
 }
 
 func randomDigits(n int) (string, error) {
