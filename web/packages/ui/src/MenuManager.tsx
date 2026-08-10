@@ -579,16 +579,31 @@ function ItemModal({
   }
 
   return (
-    <Modal open onClose={onClose} title={item ? L.editItem : L.addItem}>
-      <form onSubmit={submit} className="max-h-[70vh] space-y-4 overflow-y-auto p-0.5">
-        <Input
-          id="i-name"
-          label={L.itemName}
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <div className="grid grid-cols-2 gap-3">
+    /* ══════════════════════════════════════════════════════════════════
+       **ونموذجٌ عريضٌ لا طويلٌ بسكرول**
+       ══════════════════════════════════════════════════════════════════
+
+       (قرارُ المالك ٢٠٢٦-٠٨-١٠: «الفورم يجب أن يكون عريضاً بدون سكرول».
+        وهي السابقةُ نفسُها التي حُسمت في نموذج المتجر ٢٠٢٦-٠٨-٠٨: «فورم طول
+        بسكرول مزعج».)
+
+       **الطولُ يُسكرَل والعرضُ لا** — فالشاشةُ عريضةٌ وكان النموذجُ يضيّق
+       نفسَه إلى ٤٤٨ بكسلاً ثمّ يمتدّ طولاً حتّى يخرج زرُّ الحفظ.
+
+       **ومن سكرل ليصل إلى «حفظ» لا يرى ما كتبه** — يحفظ على غير يقين. */
+    <Modal open onClose={onClose} title={item ? L.editItem : L.addItem} size="lg">
+      <form onSubmit={submit} className="space-y-4 p-0.5">
+        {/* **والاسمُ والسعرُ والقسمُ في صفٍّ واحد** — ثلاثةُ حقولٍ قصيرةٍ
+            تملأ العرضَ بدل أن تُطيل النموذج. **وتنهار إلى عمودٍ على
+            الجوّال**: صفٌّ من ثلاثةٍ في شاشةٍ ضيّقةٍ يُقصّ لا يُقرأ. */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Input
+            id="i-name"
+            label={L.itemName}
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
           <div>
           {/* **اللفظُ يقول أيَّ سعرٍ هو.**
 
@@ -606,7 +621,6 @@ function ItemModal({
           />
           <p className="mt-1 text-2xs text-ink-muted">{L.priceHint}</p>
           </div>
-        </div>
 
         {/* **وبلا قسمِ منصةٍ لا يظهر الصنفُ في التصفّح.**
 
@@ -636,6 +650,7 @@ function ItemModal({
             )}
           </div>
         )}
+        </div>
         <Input
           id="i-desc"
           label={L.itemDescription}

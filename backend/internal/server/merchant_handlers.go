@@ -104,7 +104,21 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 		Page:       page,
 		PerPage:    perPage,
 	}
-	if !s.orders.MerchantsSelfManage(r.Context()) {
+	// ══════════════════════════════════════════════════════════════════
+	// **وسجلُّ الطلبات يُطلب صراحةً — ويُجاب في الوضعين**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «أضِف سجلَّ الطلبات بالحالتين — قسمٌ خاصٌّ
+	//  بكلّ الطلبات من هذا المتجر… ليعرف المتجرُ ماذا سلّم وماذا أُلغي
+	//  منه».)
+	//
+	// **وصاحبُ المطعم يسأل «ماذا بعتُ وماذا ضاع منّي؟»** — وذاك حقُّه في
+	// كلّ الأوضاع. **والجاريةُ وحدَها هي المحجوبةُ في وضع «المنصّة تدير»**،
+	// لأنّه لا يملك فيها زرّاً.
+	if q.Get("closed_only") == "true" {
+		f.ClosedOnly = true
+		f.OpenOnly = false
+	} else if !s.orders.MerchantsSelfManage(r.Context()) {
 		f.ClosedOnly = true
 		f.OpenOnly = false
 	}

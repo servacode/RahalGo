@@ -14,6 +14,7 @@ import {
   DashboardChrome,
   type ChromeNavItem,
   IconOrder,
+  IconCheck,
   IconStore,
   IconStatus,
   IconSupport,
@@ -30,22 +31,39 @@ import { api, mediaUrl, tokenStore } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 
-const NAV: ChromeNavItem[] = [
-  { href: "/portal", label: m.terms.orders, icon: IconOrder },
-  { href: "/portal/menu", label: m.terms.menu, icon: IconStore },
-  { href: "/portal/reports", label: m.terms.reports, icon: IconStatus },
-  // **الصفحةُ صارت إنذارات لا تقييمات** — والمتجرُ لم يعد له نجوم.
-  { href: "/portal/reviews", label: m.terms.warnings, icon: IconWarning },
-  { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
-  { href: "/portal/wallet", label: m.terms.wallet, icon: IconWallet },
-  // **وضبطُ المتجر بيد صاحبه** — الدوامُ ومدّةُ التحضير والحدُّ الأدنى.
-  { href: "/portal/settings", label: m.terms.settings, icon: IconSettings },
-  { href: "/portal/account", label: m.terms.account, icon: IconUser },
-];
+/**
+ * **قائمةُ المتجر — والطلباتُ الجاريةُ وحدَها تتبع الوضع.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٠: «عندما تكون المنصّةُ هي من تدير، أخفِ قسمَ
+ *  الطلبات من المتجر لأنّه لا يهمّه بهذا الوضع. وأضِف سجلَّ الطلبات
+ *  بالحالتين».)
+ *
+ * **وكان القسمُ يبقى ويُفرَّغ**: في وضع «المنصّة تدير» يفتحه صاحبُه فيجده
+ * خالياً — **وقسمٌ فارغٌ يُقرأ عطباً لا قراراً**، فيسأل «أين طلباتي؟»
+ * ويظنّ المنصّةَ لا تحوّل إليه.
+ *
+ * **وسجلُّه يبقى في الوضعين**: «ماذا بعتُ وماذا ضاع منّي؟» سؤالٌ لا علاقةَ
+ * له بمن يضغط الأزرار.
+ */
+function navFor(selfManage: boolean): ChromeNavItem[] {
+  return [
+    ...(selfManage ? [{ href: "/portal", label: m.terms.orders, icon: IconOrder }] : []),
+    { href: "/portal/history", label: m.terms.ordersHistory, icon: IconCheck },
+    { href: "/portal/menu", label: m.terms.menu, icon: IconStore },
+    { href: "/portal/reports", label: m.terms.reports, icon: IconStatus },
+    // **الصفحةُ صارت إنذارات لا تقييمات** — والمتجرُ لم يعد له نجوم.
+    { href: "/portal/reviews", label: m.terms.warnings, icon: IconWarning },
+    { href: "/portal/complaints", label: m.terms.complaints, icon: IconSupport },
+    { href: "/portal/wallet", label: m.terms.wallet, icon: IconWallet },
+    // **وضبطُ المتجر بيد صاحبه** — الدوامُ ومدّةُ التحضير والحدُّ الأدنى.
+    { href: "/portal/settings", label: m.terms.settings, icon: IconSettings },
+    { href: "/portal/account", label: m.terms.account, icon: IconUser },
+  ];
+}
 
 function PortalChrome({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
-  const { stores, store, loading: storesLoading, select, refresh } = useStore();
+  const { stores, store, loading: storesLoading, select, refresh, selfManage } = useStore();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -148,7 +166,7 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
   return (
     <DashboardChrome
       brand={m.merchant.brand}
-      nav={NAV}
+      nav={navFor(selfManage)}
       pathname={pathname}
       homeHref="/portal"
       accountHref="/portal/account"
