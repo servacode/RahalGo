@@ -479,7 +479,7 @@
 | `sales.commission_percent` | المندوبون | int | `0` |
 | `sales.monthly_target` | المندوبون | int | `0` |
 | `sales.target_reward` | المندوبون | money | `0` |
-| `sales.activation_orders` | المندوبون | int | `5` |
+| `sales.activation_orders` | المندوبون | int | `1` |
 <!-- /gen:settings -->
 
 ---
