@@ -52,7 +52,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
           {m.errors.offlineHint}
         </Alert>
       ) : items.length === 0 ? (
-        <EmptyState icon={IconStore} title={m.site.sections.empty} />
+        <EmptyState icon={<IconStore size={28} />} title={m.site.sections.empty} />
       ) : (
         /* **بعددِ أعمدةِ الأقسام نفسِه** — من فتح قسماً لا يجد الشبكةَ تغيّرت
            تحته. (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «شكلُ العرض للأصناف يجب أن يكون

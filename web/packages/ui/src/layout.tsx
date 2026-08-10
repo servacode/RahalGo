@@ -154,21 +154,45 @@ export function Card({
 
 // ---------- حالات الفراغ والتحميل ----------
 
-/** حالة "لا بيانات" الموحّدة. */
+/**
+ * حالة "لا بيانات" الموحّدة.
+ *
+ * ══════════════════════════════════════════════════════════════════════
+ * **وأيقونتُها تُقبل رسماً كما تُقبل نوعاً**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **مكوّنُ خادمٍ لا يمرّر دالّةً إلى مكوّن عميل** — وهذا الملفُّ `use client`،
+ * **فـ`icon={IconStore}` من صفحةِ خادمٍ ترمي عند حدّ التسلسل** ويردّ الخادمُ
+ * خمسَمئة.
+ *
+ * **وقِيس ٢٠٢٦-٠٨-١٠**: صفحةُ `/s/[id]` عند الزبون **تسقط كلَّما كان القسمُ
+ * فارغاً** — وهي الحالُ الغالبةُ يومَ الإطلاق. **ومن فتح قسماً لم يُملأ بعد
+ * رأى شاشةَ عطبٍ مكانَ «لا أصنافَ في هذا القسم».**
+ *
+ * **ولم تُكشف قبلاً لأنّ الفرعَ لا يُرسم إلّا فارغاً** — والقسمُ الممتلئُ
+ * يمرّ سليماً. **وهي عائلةُ «ما لا يُختبر فارغاً» نفسُها.**
+ *
+ * **فيُقبل الاثنان**: نوعٌ من مكوّن عميل (`IconStore`)، **ورسمٌ من مكوّن
+ * خادم** (`<IconStore />`) — وهو ما يمرّ عبر الحدّ.
+ */
 export function EmptyState({
   icon: Icon,
   title,
   tone = "muted",
   action,
 }: {
-  icon?: IconType;
+  icon?: IconType | ReactNode;
   title: string;
   tone?: "muted" | "success";
   action?: ReactNode;
 }) {
   return (
     <div className="surface-lit surface p-10 text-center">
-      {Icon && <Icon size={28} className="mx-auto mb-2 text-ink-muted" />}
+      {typeof Icon === "function" ? (
+        <Icon size={28} className="mx-auto mb-2 text-ink-muted" />
+      ) : (
+        Icon && <span className="mx-auto mb-2 block w-fit text-ink-muted">{Icon}</span>
+      )}
       <p className={`text-sm ${tone === "success" ? "text-success" : "text-ink-muted"}`}>{title}</p>
       {action && <div className="mt-3 flex justify-center">{action}</div>}
     </div>

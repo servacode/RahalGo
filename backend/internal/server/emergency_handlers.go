@@ -29,6 +29,7 @@ package server
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -199,30 +200,43 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
+	// ══════════════════════════════════════════════════════════════════
+	// **والوقتُ يُقرأ وقتاً — لا نصّاً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كان `created_at` يُقرأ في `string`، **فتردّ الشاشةُ خمسَمئة كلَّما
+	// وُجد بلاغٌ واحد**: `cannot scan timestamptz into *string`.
+	//
+	// **والفارغُ كان يمرّ** — لا صفَّ فلا مسحَ فلا خطأ. **فبقي العطبُ خفيّاً
+	// إلى أن يقع أوّلُ طارئ**، وهو آخرُ ما يُحتمل سقوطُه في هذه المنصّة:
+	// **سائقٌ في ضائقةٍ يضغط الزرَّ ولا يراه أحدٌ في اللوحة.**
+	//
+	// (قِيس ٢٠٢٦-٠٨-١٠ في اختبارٍ شامل: بلاغٌ واحدٌ من سائقٍ حيٍّ فسقطت
+	//  الشاشةُ كلُّها.)
+	//
+	// **وعائلتُه: ما لا يُختبر إلّا فارغاً يُقرأ سليماً وهو معطوب.**
 	type row struct {
-		ID          string   `json:"id"`
-		DriverName  string   `json:"driver_name"`
-		DriverPhone string   `json:"driver_phone"`
-		OrderNumber *int64   `json:"order_number"`
-		Note        string   `json:"note"`
-		Lat         *float64 `json:"lat"`
-		Lng         *float64 `json:"lng"`
-		CreatedAt   string   `json:"created_at"`
+		ID          string    `json:"id"`
+		DriverName  string    `json:"driver_name"`
+		DriverPhone string    `json:"driver_phone"`
+		OrderNumber *int64    `json:"order_number"`
+		Note        string    `json:"note"`
+		Lat         *float64  `json:"lat"`
+		Lng         *float64  `json:"lng"`
+		CreatedAt   time.Time `json:"created_at"`
 	}
 	out := []row{}
 	for rows.Next() {
 		var x row
 		var name *string
-		var at string
 		if err := rows.Scan(&x.ID, &name, &x.DriverPhone, &x.OrderNumber,
-			&x.Note, &x.Lat, &x.Lng, &at); err != nil {
+			&x.Note, &x.Lat, &x.Lng, &x.CreatedAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		if name != nil {
 			x.DriverName = *name
 		}
-		x.CreatedAt = at
 		out = append(out, x)
 	}
 	httpx.JSON(w, http.StatusOK, paged("emergencies", out, count, pg))

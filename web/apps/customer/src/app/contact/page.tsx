@@ -92,7 +92,7 @@ export default async function Page() {
 
       {bare ? (
         /* **وفراغٌ يُقال ولا يُترك** — صفحةٌ بيضاءُ تُقرأ عطباً. */
-        <EmptyState icon={IconLink} title={L.contactNoWay} />
+        <EmptyState icon={<IconLink size={28} />} title={L.contactNoWay} />
       ) : (
         <div className="space-y-4">
           {WAYS.length > 0 && (

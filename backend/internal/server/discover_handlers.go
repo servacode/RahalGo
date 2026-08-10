@@ -1,10 +1,12 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
@@ -114,6 +116,16 @@ func (s *Server) handleToggleFavorite(w http.ResponseWriter, r *http.Request) {
 			SELECT $1, $2 WHERE NOT EXISTS (SELECT 1 FROM removed) RETURNING 1
 		)
 		SELECT EXISTS (SELECT 1 FROM added)`, uid, itemID).Scan(&added); err != nil {
+		// **وصنفٌ لا وجودَ له «غير موجود»** — لا «عطبٌ في الخادم».
+		//
+		// **القيدُ الأجنبيُّ يرمي `23503`** فيُقرأ خمسَمئة، **وشاشةٌ تقول
+		// «خطأٌ داخليّ» على صنفٍ حُذف من القائمة تُخيف صاحبَها بلا سبب.**
+		// (قِيس ٢٠٢٦-٠٨-١٠.)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			s.respondErr(w, httpx.ErrNotFound)
+			return
+		}
 		s.respondErr(w, err)
 		return
 	}
