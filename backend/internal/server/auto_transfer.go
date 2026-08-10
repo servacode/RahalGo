@@ -37,27 +37,21 @@ import (
 // **ولا تُرجع خطأً**: طلبٌ أُنشئ نجح، **وتعثّرُ التحويل لا يُبطل إنشاءً وقع**
 // — يبقى بيد المكتب.
 func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
-	minTotal := s.settings.GetInt(ctx, "orders.auto_transfer_min_total")
-	minItems := s.settings.GetInt(ctx, "orders.auto_transfer_min_items")
-	// **وصفرُهما لا تحويل** — لا «صفرٌ يعني كلَّ طلب».
-	if minTotal <= 0 && minItems <= 0 {
+	// **مفتاحٌ واحد: كلُّ الطلبات أو لا شيء** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	//
+	// **وذهبت العتبتان**: كانتا حلّاً ليدٍ بشريّةٍ تعمل ببطء، **ولمّا صار
+	// البوتُ يُبلّغ في ثانيةٍ لم يبقَ سببٌ لتمييز طلبٍ عن طلب.**
+	if !s.settings.GetBool(ctx, "orders.auto_transfer") {
 		return
 	}
 
-	var total, items int64
 	var status string
-	if err := s.pg.QueryRow(ctx, `
-		SELECT o.total, o.status,
-		       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0)
-		FROM orders o WHERE o.id = $1`, orderID).Scan(&total, &status, &items); err != nil {
+	if err := s.pg.QueryRow(ctx,
+		`SELECT status FROM orders WHERE id = $1`, orderID).Scan(&status); err != nil {
 		return
 	}
+	// **ولا يُحوَّل إلّا المعلَّق** — ومن قبله المكتبُ بيده لا يُقبل مرّتين.
 	if status != "pending" {
-		return
-	}
-	// **وأيُّهما بلغ يكفي** — عائلةٌ تطلب عشرين صحناً رخيصاً طلبٌ كبيرٌ أيضاً،
-	// **والمبلغُ وحدَه يُغفلها.**
-	if !(minTotal > 0 && total >= minTotal) && !(minItems > 0 && items >= int64(minItems)) {
 		return
 	}
 
