@@ -27,7 +27,7 @@ import {
   IconWallet,
   BootScreen,
 } from "@rahalgo/ui";
-import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS } from "@rahalgo/auth";
+import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS, PANEL_PATHS } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 
@@ -199,9 +199,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
          **ويتبع دورَ الزبون**: بلا الدور يصل صاحبُه فيتصفّح ولا يستطيع أن
          يطلب — **وزرٌّ يقود إلى بابٍ لا يُفتح أسوأ من غيابه.** */
       shopUrl={
-        FIELD_ROLES_ARE_CUSTOMERS
-          ? (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003")
-          : undefined
+        /* **والسوقُ في البيت نفسِه** — مسارٌ لا عنوان. */
+        FIELD_ROLES_ARE_CUSTOMERS ? PANEL_PATHS.customer : undefined
       }
       shopLabel={m.shared.shopAsCustomer}
       onLogout={() => {

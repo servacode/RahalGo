@@ -161,8 +161,26 @@ export function DashboardChrome({
   // ولا يسقط إلى تسمية البوّابة (قرارُ المالك ٢٠٢٦-٠٨-٠٦).
   const activeLabel = nav.find((i) => isActive(i.href))?.label ?? "";
 
+  /**
+   * **بابُ التسوّق — وصار تنقّلاً لا عبوراً.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٠: «بابٌ واحدٌ للجميع».)
+   *
+   * **كان يسلّم الجلسةَ برمزٍ لمرّة واحدة** لأنّ السوقَ كان أصلاً آخر
+   * (منفذاً آخر)، **والتخزينُ المحلّيُّ لا يُشارَك بين أصلين.**
+   *
+   * **وصار السوقُ ولوحتُه في بيتٍ واحد** — فالجلسةُ نفسُها، **ونداءُ
+   * تسليمٍ لا لزومَ له يضيف تأخّراً ونقطةَ فشلٍ في زرٍّ يُضغط كلَّ يوم.**
+   *
+   * **ويبقى التسليمُ لعنوانٍ خارجيّ** — يحتاجه تطبيقُ أندرويد.
+   */
   async function shopAsCustomer() {
     if (!shopUrl) return;
+    const here = typeof window !== "undefined" ? window.location.origin : "";
+    if (shopUrl.startsWith("/") || shopUrl === here) {
+      window.location.href = shopUrl.startsWith("/") ? shopUrl : "/";
+      return;
+    }
     try {
       const { code } = await api<{ code: string }>("/api/v1/auth/handoff", { method: "POST" });
       window.location.href = `${shopUrl}/sso?code=${encodeURIComponent(code)}`;

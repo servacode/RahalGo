@@ -18,7 +18,7 @@ export {
   PANEL_ROLES,
   type Role,
 } from "./provider";
-export { homeFor, portalFor, goTo, routeByRole, safeNext, APP_URLS, FIELD_ROLES_ARE_CUSTOMERS, type Destination } from "./routing";
+export { homeFor, portalFor, goTo, routeByRole, safeNext, PANEL_PATHS, FIELD_ROLES_ARE_CUSTOMERS, type Destination } from "./routing";
 export { LoginCard, errText } from "./LoginCard";
 export { PanelLogin } from "./PanelLogin";
 export { SsoPage } from "./SsoPage";

@@ -24,7 +24,7 @@ import {
   IconWarning,
   BootScreen,
 } from "@rahalgo/ui";
-import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS } from "@rahalgo/auth";
+import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS, PANEL_PATHS } from "@rahalgo/auth";
 import { useAuth, canAccessPortal } from "@/lib/auth";
 import { StoreProvider, useStore } from "@/lib/store";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -182,9 +182,8 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
       phone={user?.phone}
       // زرّ «تسوّق» يتبع دورَ الزبون: بلا الدور لا يستطيع صاحبه أن يطلب
       shopUrl={
-        FIELD_ROLES_ARE_CUSTOMERS
-          ? (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003")
-          : undefined
+        /* **والسوقُ في البيت نفسِه** — مسارٌ لا عنوان. */
+        FIELD_ROLES_ARE_CUSTOMERS ? PANEL_PATHS.customer : undefined
       }
       shopLabel={m.shared.shopAsCustomer}
       topbarStart={storeControls}

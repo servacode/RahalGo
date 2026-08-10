@@ -26,13 +26,28 @@ import { api, type AuthUser } from "./client";
  */
 export const FIELD_ROLES_ARE_CUSTOMERS = true;
 
-export const APP_URLS = {
-  admin: () => process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3001",
-  merchant: () => process.env.NEXT_PUBLIC_MERCHANT_URL ?? "http://localhost:3002",
-  customer: () => process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003",
-  rep: () => process.env.NEXT_PUBLIC_REP_URL ?? "http://localhost:3004",
-  driver: () => process.env.NEXT_PUBLIC_DRIVER_URL ?? "http://localhost:3005",
-};
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **بيتٌ واحدٌ — فالوجهاتُ مساراتٌ لا عناوين**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٠: «بابٌ واحدٌ للجميع وشاشةُ تسجيلٍ واحدةٌ
+ *  للجميع بدون استثناء».)
+ *
+ * **كانت خمسةَ عناوينَ لخمسة تطبيقات** — ولكلٍّ منفذُه ومتغيّرُ بيئته.
+ * **وصارت اللوحاتُ أقساماً في تطبيقٍ واحد**، فالانتقالُ بينها تنقّلٌ داخليّ.
+ *
+ * **والأصلُ يبقى حقلاً في `Destination`** ولا يُحذف: **تطبيقُ أندرويد
+ * سيفتح لوحاتِه من أصلٍ آخر**، ونقطتا `handoff`/`sso` في المحرّك تنتظرانه.
+ * **وحقلٌ فارغٌ يعني «هنا»** — فتقصر `goTo` الطريقَ بلا تسليمِ جلسة.
+ */
+export const PANEL_PATHS = {
+  admin: "/dashboard",
+  merchant: "/store",
+  rep: "/rep",
+  driver: "/driver",
+  customer: "/",
+} as const;
 
 export interface Destination {
   /** أصل التطبيق الهدف (فارغ = التطبيق الحالي) */
@@ -50,18 +65,24 @@ export interface Destination {
  */
 export function homeFor(roles: string[]): Destination {
   const has = (r: string) => roles.includes(r);
+  // **والأصلُ فارغٌ — أي «هنا»**: اللوحاتُ أقسامٌ في التطبيق نفسِه.
   if (has("admin") || has("ops") || has("finance"))
-    return { origin: APP_URLS.admin(), path: "/dashboard" };
-  if (has("merchant")) return { origin: APP_URLS.merchant(), path: "/portal" };
-  if (has("sales")) return { origin: APP_URLS.rep(), path: "/portal" };
-  if (has("driver")) return { origin: APP_URLS.driver(), path: "/portal" };
-  return { origin: APP_URLS.customer(), path: "/" };
+    return { origin: "", path: PANEL_PATHS.admin };
+  if (has("merchant")) return { origin: "", path: PANEL_PATHS.merchant };
+  if (has("sales")) return { origin: "", path: PANEL_PATHS.rep };
+  if (has("driver")) return { origin: "", path: PANEL_PATHS.driver };
+  return { origin: "", path: PANEL_PATHS.customer };
 }
 
-/** هل للمستخدم لوحة تحكم خاصة (غير واجهة الزبون)؟ */
+/**
+ * portalFor **مسارُ لوحةِ صاحبِ الحساب — أو لا شيءَ إن كان زبوناً وحدَه.**
+ *
+ * **وكانت تعيد أصلاً (عنواناً كاملاً)** حين كانت اللوحاتُ تطبيقاتٍ منفصلة.
+ * **وصارت مساراً** — ومن قرأها شرطاً («أله لوحة؟») لا يتبدّل عنده شيء.
+ */
 export function portalFor(roles: string[]): string | null {
-  const dest = homeFor(roles);
-  return dest.origin === APP_URLS.customer() ? null : dest.origin;
+  const path = homeFor(roles).path;
+  return path === PANEL_PATHS.customer ? null : path;
 }
 
 /**
