@@ -207,15 +207,26 @@ func (r *Repo) RevokeRole(ctx context.Context, userID, role string) error {
 //
 // وموضعُ الإطفاء هنا وحده: `GrantRole` و`CreateUserWithRole` وزراعةُ البيانات
 // كلُّها تمرّ به. **فالعودة سطرٌ واحد** — لا مطاردةَ مواضع.
-const FieldRolesAreCustomers = false
+// **وأُعيدت بقرار المالك ٢٠٢٦-٠٨-١٠**: «السائقُ يمكن أن يكون زبوناً، وكذلك
+// المتجرُ والمندوبُ وصاحبُ المنصّة والموظّفون… يعني دورين فقط».
+//
+// **والخلطُ الذي أُطفئت لأجله لم يعد ممكناً**: الطلبُ لا يُعرض على سائقه
+// (`offered_driver_id` بالدور)، **والتجربةُ التي كُتبت لها انتهت.**
+const FieldRolesAreCustomers = true
 
 // grantsCustomer يحدد الأدوار الميدانية التي يُمنح صاحبها دور الزبون تلقائياً
 // (المندوب/المتجر/السائق) — لا الأدوار الداخلية (أدمن/عمليات/مالية).
+// **وكلُّ دورٍ يجلب الزبونَ معه لا الميدانيَّةُ وحدَها.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «وصاحبُ المنصّة أيضاً، والموظّفون أيضاً».)
+//
+// **وصاحبُ المنصّة يطلب عشاءه كما يطلبه غيرُه** — ومن لا يستطيع أن يطلب من
+// منصّته لا يرى ما يراه زبائنُه. **وهو أوّلُ من يجب أن يراه.**
 func grantsCustomer(role string) bool {
 	if !FieldRolesAreCustomers {
 		return false
 	}
-	return role == "merchant" || role == "driver" || role == "sales"
+	return role != RoleCustomer
 }
 
 func (r *Repo) GrantRole(ctx context.Context, userID, role string, grantedBy *string) error {

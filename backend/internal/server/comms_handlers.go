@@ -110,3 +110,21 @@ func (s *Server) handleMyChats(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"threads": list})
 }
+
+// handleAdminOrderChat **حديثُ الطلب للمراجعة — يُقرأ ولا يُكتب.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «يجب أن نضيف دردشات الزبائن والسائقين — في حال
+//
+//	حصول أيّ تجاوزٍ يمكننا الرجوع إليه».)
+//
+// **وشكوى «قال لي كذا» كانت كلمةً ضدّ كلمة** — والحديثُ مكتوبٌ في القاعدة
+// **ولا بابَ إليه من لوحة الإدارة.** فتحكم العملياتُ بين اثنين لا تملك عن
+// أيّهما شيئاً.
+func (s *Server) handleAdminOrderChat(w http.ResponseWriter, r *http.Request) {
+	th, err := s.comms.Audit(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, th)
+}

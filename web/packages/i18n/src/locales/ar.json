@@ -615,7 +615,8 @@
     "comms_closed": "انتهت المحادثة مع انتهاء الطلب.",
     "comms_no_driver": "لم يُسنَد سائق بعد.",
     "not_custom_order": "هذا ليس طلباً خاصاً.",
-    "custom_not_assigned": "لم يُسنَد سائق بعد."
+    "custom_not_assigned": "لم يُسنَد سائق بعد.",
+    "role_conflict": "لهذا الحساب دورٌ أساسيٌّ بالفعل — الدورُ الواحد ومعه الزبون، ولا ثالث."
   },
   "admin": {
     "appTitle": "{platform} — لوحة التحكم",

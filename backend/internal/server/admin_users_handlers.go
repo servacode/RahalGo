@@ -316,11 +316,29 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	}
 	rows.Close()
 
+	// ══════════════════════════════════════════════════════════════════
+	// **والمتجرُ يُضمّ يساراً — ثلاثَ مرّاتٍ في هذا المعالِج**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شهده المالك ٢٠٢٦-٠٨-١٠: «في صفحة المستخدمين التقييماتُ والشكاوى لا
+	//  تظهر».)
+	//
+	// **الطلبُ الخاصُّ لا متجرَ له** — و`JOIN merchants` صلبٌ **يُسقط الصفَّ
+	// كلَّه بلا خطأ ولا سطرٍ في سجلّ.** فأربعةُ تقييماتٍ في القاعدة تُقرأ
+	// صفراً في الشاشة، **وتُقرأ «لم يقيّمه أحد» لا «الاستعلامُ يكذب».**
+	//
+	// **وهي العائلةُ نفسُها التي أمسكها المشيُ الحيُّ خمسَ مرّاتٍ من قبل**:
+	// `GetByID` ومهامُّ السائق والتقييمُ والإشعاراتُ وبطاقةُ الإدارة.
+	// **وكلُّ مرّةٍ تُصلَح واحدةً ويبقى الباقي** — لأنّها تُكتب في كلّ
+	// استعلامٍ بيده.
+	//
+	// **واسمُ المتجر فارغٌ فيه** — والشاشةُ تعرض نصَّ الطلب مكانَه.
 	rows, err = s.pg.Query(r.Context(), `
-		SELECT o.number, m.name, rt.platform_stars, rt.driver_stars, rt.comment, rt.created_at
+		SELECT o.number, COALESCE(m.name, ''), rt.platform_stars, rt.driver_stars,
+		       rt.comment, rt.created_at
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
-		JOIN merchants m ON m.id = o.merchant_id
+		LEFT JOIN merchants m ON m.id = o.merchant_id
 		WHERE rt.customer_id = $1 ORDER BY rt.created_at DESC LIMIT 20`, id)
 	if err != nil {
 		s.respondErr(w, err)
@@ -342,12 +360,14 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 
 	// الواردة: كسائق (نجوم السائق على طلباته) + كصاحب متاجر (نجوم متاجره)
 	rows, err = s.pg.Query(r.Context(), `
-		SELECT o.number, m.name, rt.driver_stars, rt.comment, rt.created_at, 'driver'
+		SELECT o.number, COALESCE(m.name, ''), rt.driver_stars, rt.comment, rt.created_at, 'driver'
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
-		JOIN merchants m ON m.id = o.merchant_id
+		LEFT JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.driver_id = $1 AND rt.driver_stars IS NOT NULL
 		UNION ALL
+		-- **وهذا الضمُّ صلبٌ بحقّ** — شرطُه `+"`m.owner_user_id`"+` نفسُه،
+		-- **فلا صفَّ بلا متجرٍ يُطلب هنا أصلاً.**
 		SELECT o.number, m.name, rt.platform_stars, rt.comment, rt.created_at, 'platform'
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id

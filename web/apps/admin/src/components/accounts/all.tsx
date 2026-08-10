@@ -33,6 +33,7 @@ import {
 import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
+import StatusReasonModal from "@/components/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/RoleBadge";
 import { MediaThumb } from "@/components/ImageUpload";
 
@@ -412,6 +413,21 @@ export default function AllAccountsTable() {
       />
       <ManageRolesModal user={rolesUser} onClose={() => setRolesUser(null)} onChanged={load} />
       {walletUser && <WalletModal user={walletUser} onClose={() => setWalletUser(null)} isAdmin={isAdmin || !!me?.roles.includes("finance")} />}
+
+      {/* **ونافذةُ السبب تُرسَم** — (شهده المالك ٢٠٢٦-٠٨-١٠: «زرُّ إيقاف
+          حساب لا يعمل… وزرُّ الحظر لا يعمل»).
+
+          **كانت مكتوبةً في هذا الملفّ كاملةً ولا تُنادى**: الزرُّ يضع
+          الاختيارَ في `statusModal` **ولا يقرؤه أحد.** فيضغط الموظّفُ فلا يقع
+          شيء — **ولا خطأ ولا سطرٌ في سجلّ** — فيضغط ثانيةً وثالثة، **ثمّ
+          يظنّ الحسابَ محظوراً وهو يعمل.** */}
+      {statusModal && (
+        <StatusReasonModal
+          status={statusModal.status}
+          onSubmit={(reason) => void setStatus(statusModal.user, statusModal.status, reason)}
+          onClose={() => setStatusModal(null)}
+        />
+      )}
     </div>
   );
 }
@@ -673,44 +689,3 @@ function PresenceCell({ lastSeen }: { lastSeen: string | null }) {
   return <span className="text-xs text-ink-muted">{label}</span>;
 }
 
-function StatusReasonModal({
-  target,
-  onSubmit,
-  onClose,
-}: {
-  target: { user: AuthUser; status: string };
-  onSubmit: (reason: string) => void;
-  onClose: () => void;
-}) {
-  const [reason, setReason] = useState("");
-  const actionLabel =
-    target.status === "suspended" ? m.admin.users.suspend : m.admin.users.block;
-  return (
-    <Modal open onClose={onClose} title={m.admin.users.statusReasonTitle.replace("{action}", actionLabel)}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit(reason);
-        }}
-        className="space-y-4"
-      >
-        <Input
-          id="status-reason"
-          label={m.admin.users.statusReasonLabel}
-          required
-          autoFocus
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" variant={target.status === "blocked" ? "danger" : "primary"}>
-            {actionLabel}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}

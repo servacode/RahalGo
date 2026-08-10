@@ -422,6 +422,12 @@ func (s *Server) Router() http.Handler {
 			r.Get("/orders", s.handleListOrders)
 			r.Get("/orders/alerts", s.handleOrderAlerts)
 			r.Get("/orders/{id}", s.handleGetOrder)
+			// **وحديثُ طرفيه — يُقرأ ولا يُكتب.** (قرارُ المالك ٢٠٢٦-٠٨-١٠:
+			// «في حال حصول أيّ تجاوزٍ يمكننا الرجوع إليه».)
+			//
+			// **ومسارٌ ثانٍ لا توسعةُ صلاحية الطرفين**: لو صارت الإدارةُ طرفاً
+			// لَاستطاعت أن تكتب، **فيقرأ الزبونُ سطراً باسم سائقه لم يقله.**
+			r.Get("/orders/{id}/chat", s.handleAdminOrderChat)
 			// إرسال الطلب إلى المتجر على واتساب — في وضع «المنصة تدير»
 			r.Get("/orders/{id}/message", s.handleOrderMessagePreview)
 			r.Post("/orders/{id}/whatsapp", s.handleSendOrderToMerchant)

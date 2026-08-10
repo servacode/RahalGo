@@ -30,6 +30,7 @@ import {
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
+import StatusReasonModal from "@/components/StatusReasonModal";
 
 const m = getMessages(defaultLocale);
 
@@ -256,60 +257,13 @@ export default function SalesTable() {
         <WalletModal user={walletFor} onClose={() => setWalletFor(null)} isAdmin={canWallet} />
       )}
       {statusFor && (
-        <Modal
-          open
+        <StatusReasonModal
+          status={statusFor.status}
+          onSubmit={(reason) => void setStatus(statusFor.rep, statusFor.status, reason)}
           onClose={() => setStatusFor(null)}
-          title={m.admin.users.statusReasonTitle.replace(
-            "{action}",
-            statusFor.status === "suspended" ? m.admin.users.suspend : m.admin.users.block
-          )}
-        >
-          <StatusReasonForm
-            status={statusFor.status}
-            onSubmit={(reason) => setStatus(statusFor.rep, statusFor.status, reason)}
-            onClose={() => setStatusFor(null)}
-          />
-        </Modal>
+        />
       )}
     </div>
   );
 }
 
-function StatusReasonForm({
-  status,
-  onSubmit,
-  onClose,
-}: {
-  status: string;
-  onSubmit: (reason: string) => void;
-  onClose: () => void;
-}) {
-  const [reason, setReason] = useState("");
-  const label = status === "suspended" ? m.admin.users.suspend : m.admin.users.block;
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(reason);
-      }}
-      className="space-y-4"
-    >
-      <Input
-        id="rep-status-reason"
-        label={m.admin.users.statusReasonLabel}
-        required
-        autoFocus
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-      />
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={onClose}>
-          {m.common.cancel}
-        </Button>
-        <Button type="submit" variant={status === "blocked" ? "danger" : "primary"}>
-          {label}
-        </Button>
-      </div>
-    </form>
-  );
-}

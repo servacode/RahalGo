@@ -64,6 +64,10 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 			return nil, ErrInvalidRole
 		}
 	}
+	// **ودورٌ واحدٌ ومعه الزبون** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	if err := checkOnePrimary(in.Roles); err != nil {
+		return nil, err
+	}
 	if int64(len(in.Password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) { // إلزامية — لا حساب موظف بلا كلمة مرور
 		return nil, ErrWeakPassword
 	}
@@ -161,6 +165,13 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 func (s *Service) AdminGrantRole(ctx context.Context, actorID, userID, role, reason, ip string) error {
 	if !slices.Contains(AllRoles, role) {
 		return ErrInvalidRole
+	}
+	// **ولا دورين أساسيّين لحسابٍ واحد** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+	//
+	// **والفحصُ قبل الكتابة لا بعدها**: منحٌ يقع ثمّ يُسحب يترك سطراً في
+	// سجلّ التدقيق وإشعاراً وصل صاحبَه.
+	if err := s.repo.ensureOnePrimary(ctx, userID, role); err != nil {
+		return err
 	}
 	if err := s.repo.GrantRole(ctx, userID, role, &actorID); err != nil {
 		return err

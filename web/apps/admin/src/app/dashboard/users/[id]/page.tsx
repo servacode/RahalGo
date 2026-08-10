@@ -45,6 +45,7 @@ import {
 } from "@/components/ProfileRoleTabs";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/WalletModal";
+import StatusReasonModal from "@/components/StatusReasonModal";
 import { MediaThumb } from "@/components/ImageUpload";
 import RoleBadge from "@/components/RoleBadge";
 
@@ -968,46 +969,6 @@ function NotesEditor({
   );
 }
 
-function StatusReasonModal({
-  status,
-  onSubmit,
-  onClose,
-}: {
-  status: string;
-  onSubmit: (reason: string) => void;
-  onClose: () => void;
-}) {
-  const [reason, setReason] = useState("");
-  const label = status === "suspended" ? m.admin.users.suspend : m.admin.users.block;
-  return (
-    <Modal open onClose={onClose} title={m.admin.users.statusReasonTitle.replace("{action}", label)}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit(reason);
-        }}
-        className="space-y-4"
-      >
-        <Input
-          id="status-reason"
-          label={m.admin.users.statusReasonLabel}
-          required
-          autoFocus
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" variant={status === "blocked" ? "danger" : "primary"}>
-            {label}
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 
 function FinBucket({
   title,
