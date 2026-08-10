@@ -6,7 +6,7 @@
  * فيبقى المشروع بروح واحدة ويكفي تعديل واحد ليطال كل اللوحات (GROUND-RULES §1.2).
  */
 
-import type { ComponentType, ReactNode } from "react";
+import { isValidElement, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
 import { CountBadge } from "./components";
 import { SkeletonList, SkeletonStats } from "./feedback";
@@ -154,6 +154,11 @@ export function Card({
 
 // ---------- حالات الفراغ والتحميل ----------
 
+/** IconAs **يرسم نوعَ أيقونةٍ أيّاً كان شكلُه** — دالّةً أو `forwardRef`. */
+function IconAs({ as: Icon }: { as: IconType }) {
+  return <Icon size={28} className="mx-auto mb-2 text-ink-muted" />;
+}
+
 /**
  * حالة "لا بيانات" الموحّدة.
  *
@@ -188,11 +193,32 @@ export function EmptyState({
 }) {
   return (
     <div className="surface-lit surface p-10 text-center">
-      {typeof Icon === "function" ? (
-        <Icon size={28} className="mx-auto mb-2 text-ink-muted" />
-      ) : (
-        Icon && <span className="mx-auto mb-2 block w-fit text-ink-muted">{Icon}</span>
-      )}
+      {/* ══════════════════════════════════════════════════════════════
+          **والفرقُ بين «رسمٍ» و«نوعٍ» يُقاس بـ`isValidElement` لا بـ`typeof`**
+          ══════════════════════════════════════════════════════════════
+
+          (شهده المالك ٢٠٢٦-٠٨-١١ على النسخة المرفوعة: صفحةٌ بيضاءُ وفيها
+           «Application error: a client-side exception».)
+
+          **كتبتُ `typeof Icon === "function"`** — وهو صحيحٌ لمكوّنٍ عاديّ،
+          **وكاذبٌ لأيقونات lucide**: تُصنع بـ`forwardRef` **فهي كائنٌ لا
+          دالّة** (`{$$typeof, render, displayName}`).
+
+          **فتسقط إلى فرع «الرسم» فيُرسَم الكائنُ ولداً** — وهو ما ترفضه
+          React برقم ٣١، **فتنهار الصفحةُ كلُّها لا الأيقونةُ وحدَها.**
+
+          **و٤٢ ملفّاً يستعمل هذا المكوّن** — فالعطبُ يضرب نصفَ المنصّة،
+          **ولا يظهر إلّا حين يُرسَم الفراغُ فعلاً.**
+
+          **و`isValidElement` تسأل السؤالَ الصحيح**: أهذا شيءٌ مرسومٌ
+          (`<IconStore />`) أم نوعٌ يُرسَم؟ **وتصدق على الاثنين معاً** —
+          دالّةً كان النوعُ أو `forwardRef` أو `memo`. */}
+      {Icon &&
+        (isValidElement(Icon) ? (
+          <span className="mx-auto mb-2 block w-fit text-ink-muted">{Icon}</span>
+        ) : (
+          <IconAs as={Icon as IconType} />
+        ))}
       <p className={`text-sm ${tone === "success" ? "text-success" : "text-ink-muted"}`}>{title}</p>
       {action && <div className="mt-3 flex justify-center">{action}</div>}
     </div>
