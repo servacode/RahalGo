@@ -41,7 +41,7 @@ import {
   IconOverview,
   type NavItem,
 } from "@rahalgo/ui";
-import { homeFor, portalFor } from "@rahalgo/auth";
+import { portalFor } from "@rahalgo/auth";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
@@ -95,10 +95,14 @@ export function BottomNav() {
      والمحفظةُ والتطبيق. **وهي أكثرُ ما يُضغط عندهم.**
 
      **والزبونُ لا لوحةَ له** — فتبقى رئيسيّتُه كما هي. */
+  /* **و`portalFor` تعيد المسارَ جاهزاً** — و`homeFor` تعيد كائناً فيه
+     أصلٌ ومسار. **وكتبتُ `String(homeFor(...))` فصار الرابطُ
+     `[object Object]`** — زرٌّ يقود إلى صفحةٍ غيرِ موجودة. (كشفه المالك
+     ٢٠٢٦-٠٨-١١ حين سأل: «تحقّق إذا كان زرُّ لوحتي يعمل بشكلٍ صحيح».) */
   const portal = portalFor(user.roles);
   const items: readonly NavItem[] = portal
     ? [
-        { href: String(homeFor(user.roles)), label: m.site.nav.backToDashboard, icon: IconOverview },
+        { href: portal, label: m.site.nav.backToDashboard, icon: IconOverview },
         ...ITEMS.slice(1),
       ]
     : ITEMS;

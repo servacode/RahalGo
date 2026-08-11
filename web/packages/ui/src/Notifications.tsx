@@ -29,7 +29,6 @@ export interface AppNotification {
   body: string;
   entity: string;
   entity_id: string;
-  href: string;
   read: boolean;
   created_at: string;
 }

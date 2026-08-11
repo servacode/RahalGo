@@ -38,6 +38,26 @@ func New(db *pgxpool.Pool, hub Publisher, logger *slog.Logger) *Service {
 }
 
 // Notification إشعار واحد كما يُعاد للواجهة.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولا وجهةَ في الإشعار — يُخبِر ولا ينقل**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١١: «الإشعاراتُ عند الضغط تفتح صفحاتٍ غيرَ موجودة،
+//
+//	لذلك يكفي أن تكون مقروءةً وغيرَ مقروءة وتوصل لنا الخبرَ بماذا حدث».)
+//
+// **وقد صدق: `Href` كانت تُملأ بمساراتٍ لا وجودَ لها** — «‎/portal» في
+// معالِج السائقين مثلاً، **وهو مسارٌ من زمنِ التطبيقات الخمسة** قبل أن
+// تصير اللوحاتُ أقساماً في بيتٍ واحد. **ولا حارسَ يمنع كتابةَ مسارٍ ميّت
+// في نصٍّ حرّ.**
+//
+// **والشاشةُ توقّفت عن استعمالها** (٢٠٢٦-٠٨-١١)، **لكنّها بقيت تُرسَل** —
+// **وحقلٌ يصل الواجهةَ يُستعمَل يوماً**، ولو بعد سنة، ويعود العطبُ نفسُه.
+//
+// **فلا تُرسَل أصلاً.** ويبقى العمودُ في القاعدة و`Input.Href` في أربعةٍ
+// وأربعين موضعاً — **تاريخٌ مكتوبٌ لا يبلغ شاشة**، وتنظيفُه دفعةٌ ميكانيكيّةٌ
+// وحدَها.
 type Notification struct {
 	ID        string `json:"id"`
 	Kind      string `json:"kind"`
@@ -45,7 +65,6 @@ type Notification struct {
 	Body      string `json:"body"`
 	Entity    string `json:"entity"`
 	EntityID  string `json:"entity_id"`
-	Href      string `json:"href"`
 	Read      bool   `json:"read"`
 	CreatedAt string `json:"created_at"`
 }
@@ -87,7 +106,7 @@ func (s *Service) Notify(ctx context.Context, in Input) {
 		"type": "notification",
 		"notification": Notification{
 			ID: id, Kind: in.Kind, Title: in.Title, Body: in.Body,
-			Entity: in.Entity, EntityID: in.EntityID, Href: in.Href,
+			Entity: in.Entity, EntityID: in.EntityID,
 			Read: false, CreatedAt: createdAt,
 		},
 	})
@@ -157,7 +176,7 @@ func (s *Service) List(ctx context.Context, userID string, limit int, kind strin
 		limit = 30
 	}
 	rows, err := s.db.Query(ctx, `
-		SELECT id, kind, title, body, entity, entity_id, href,
+		SELECT id, kind, title, body, entity, entity_id,
 		       (read_at IS NOT NULL), created_at::text
 		FROM notifications WHERE user_id = $1 AND ($3 = '' OR kind = $3)
 		ORDER BY created_at DESC LIMIT $2`, userID, limit, kind)
@@ -169,7 +188,7 @@ func (s *Service) List(ctx context.Context, userID string, limit int, kind strin
 	for rows.Next() {
 		var n Notification
 		if err := rows.Scan(&n.ID, &n.Kind, &n.Title, &n.Body, &n.Entity,
-			&n.EntityID, &n.Href, &n.Read, &n.CreatedAt); err != nil {
+			&n.EntityID, &n.Read, &n.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, n)
