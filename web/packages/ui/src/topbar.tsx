@@ -518,11 +518,30 @@ export function AccountMenu({
     >
       {/* **ورأسُها بابُ الحساب** — كانت الصورةُ رابطاً إليه، فلمّا صارت
           زرَّ قائمةٍ **فقد «حسابي» بابَه في الشريط.** */}
+      {/* ══════════════════════════════════════════════════════════════
+          **ورأسُها أنحفُ — والبنودُ لا تُمسّ**
+          ══════════════════════════════════════════════════════════════
+
+          (سؤالُ المالك ٢٠٢٦-٠٨-١١: «برأيك حجمُ القائمة هيك مناسبٌ للجوّال
+           ولا لازم يكون أصغر؟».)
+
+          **وقِيس بمتصفّحٍ على هاتفين**: القائمةُ ٣٤٢ بكسلاً — **أربعون
+          بالمئة من آيفون، وثلاثةٌ وخمسون من أندرويدَ صغير.**
+
+          **والبنودُ ٤٤ بكسلاً بالضبط** — **وهو أدنى مقاسٍ يُصيبه الإبهامُ
+          في المعايير.** فتصغيرُها يكسب أربعين بكسلاً **ويجعل ستّةَ بنودٍ
+          تُخطَأ عند الضغط**، وأسوؤها «تسجيل الخروج» بجوار «لوحتي».
+
+          **والرأسُ ثمانيةٌ وستّون** — سطران وصورةٌ بحشوةٍ أوسعَ ممّا حولَها،
+          **وهو الفائضُ الوحيدُ فيها.** فيَنزل إلى ستّةٍ وخمسين.
+
+          **والباقي عددُ البنود لا مقاسُها** — وذاك قرارُ مالكٍ لا قرارُ
+          تنضيد. */}
       <Link
         href={accountHref}
-        className="flex items-center gap-2 border-b border-line-soft px-3 py-3 text-sm transition-colors hover:bg-row-hover"
+        className="flex items-center gap-2 border-b border-line-soft px-3 py-2 text-sm transition-colors hover:bg-row-hover"
       >
-        <Avatar url={avatarUrl} name={name} size={32} />
+        <Avatar url={avatarUrl} name={name} size={28} />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold text-ink">{name}</span>
           <span className="block text-xs text-ink-muted">{accountLabel}</span>
