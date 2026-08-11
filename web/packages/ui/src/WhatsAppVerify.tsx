@@ -21,7 +21,7 @@
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { Alert } from "./feedback";
 
@@ -56,8 +56,20 @@ export function WhatsAppVerify({
         body: JSON.stringify({ phone: wa }),
       });
       setSent(true);
-    } catch {
-      setError(m.errors.internal);
+    } catch (err) {
+      /* ══════════════════════════════════════════════════════════════
+         **وسببُ الخادم يُعرض — لا يُرمى ويُستبدَل برسالةٍ عامّة**
+         ══════════════════════════════════════════════════════════════
+
+         (شهده المالك ٢٠٢٦-٠٨-١١: رقمٌ بلا واتساب يقول «ضغطٌ على خادم
+          الرسائل — حاول بعد قليل».)
+
+         **كان `catch { setError(m.errors.internal) }`** — يمسك الخطأَ
+         ويرميه ويكتب مكانَه رسالةً واحدةً لكلّ العلل. **فيقرأ صاحبُه
+         «الخطأُ عندنا» ويعيد المحاولةَ عشراً** والعلّةُ في رقمه.
+
+         **والخادمُ يعرف ويقول** — والشاشةُ كانت تُسكته. */
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -73,8 +85,10 @@ export function WhatsAppVerify({
         body: JSON.stringify({ phone: wa, code }),
       });
       onVerified?.();
-    } catch {
-      setError(m.errors.validation);
+    } catch (err) {
+      /* **ورمزٌ خاطئٌ غيرُ رمزٍ منتهٍ غيرِ محاولاتٍ نفدت** — والخادمُ
+         يفرّقها، **فتُعرض كما قالها.** */
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }

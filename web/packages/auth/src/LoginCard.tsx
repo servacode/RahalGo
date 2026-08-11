@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Button,
@@ -49,15 +49,15 @@ type NavMode = "password" | "otp" | "reset" | "signup";
  */
 type Mode = NavMode | "pin";
 
-/** ترجمة مفتاح الخطأ القادم من الخادم — منطق واحد لكل اللوحات. */
+/**
+ * ترجمة مفتاح الخطأ القادم من الخادم — منطق واحد لكل اللوحات.
+ *
+ * **وانتقل المنطقُ إلى `@rahalgo/i18n`** (٢٠٢٦-٠٨-١١): شاشاتُ `ui` تحتاجه
+ * أيضاً، **و`ui` لا تستطيع استيرادَ `auth`** لأنّ الاعتماد بالعكس. فبقي
+ * الاسمُ هنا غلافاً لمن يستورده، **والمنطقُ في موضعٍ واحد.**
+ */
 export function errText(err: unknown): string {
-  if (!(err instanceof ApiError)) return m.errors.internal;
-  const key = err.body.message_key;
-  const last = key.split(".").pop() ?? "";
-  const known = (m.errors as Record<string, string>)[last];
-  if (known) return known;
-  if (key === "auth.otpInvalid") return m.auth.otpInvalid;
-  return m.errors.internal;
+  return errorText(err, m);
 }
 
 /* **وذهبت `HERO_POINTS` مع الجانب الترويجيّ** — ثلاثُ ميزاتٍ تُبنى ولا

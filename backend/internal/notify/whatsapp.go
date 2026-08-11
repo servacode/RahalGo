@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -22,6 +23,8 @@ import (
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
 // TemplateFunc تعيد نص رسالة OTP (القالب ديناميكي من app_settings).
@@ -434,13 +437,44 @@ func (s *WhatsAppSender) connectOnce() error {
 
 var errWANotReady = fmt.Errorf("whatsapp: bot not connected/paired yet")
 
+// ErrNoWhatsApp **الرقمُ ليس على واتساب** — علّةٌ في الرقم لا في الخدمة.
+//
+// **وتُميَّز عن فشل الإرسال عمداً**: الأولى يُصلحها صاحبُها بتبديل الرقم،
+// **والثانيةُ يُصلحها الانتظار.** ورسالةٌ واحدةٌ للاثنين تجعله ينتظر ما لا
+// يأتي.
+var ErrNoWhatsApp = httpx.NewError(http.StatusBadRequest, "no_whatsapp", "errors.no_whatsapp")
+
 func (s *WhatsAppSender) SendOTP(ctx context.Context, phone, code string) error {
 	c, _ := s.cli()
 	if !c.IsLoggedIn() {
 		return errWANotReady
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ورقمٌ بلا واتساب يُقال له ذلك — لا «ضغطٌ على الخادم»**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شهده المالك ٢٠٢٦-٠٨-١١: جرّب رقماً وهميّاً فقيل له «ضغطٌ على خادم
+	//  الرسائل — يرجى المحاولة بعد قليل».)
+	//
+	// **والرسالةُ كاذبةٌ ومُضرّة**: تقول «الخطأُ عندنا، أعد المحاولة» —
+	// **فيعيد المحاولةَ عشراً ولا شيءَ يتبدّل**، والعلّةُ أنّ الرقمَ ليس على
+	// واتساب أصلاً. **وكلُّ محاولةٍ تستهلك من حدّه** حتّى يُقفل عليه.
+	//
+	// **وواتساب يعرف الجواب قبل الإرسال** — `IsOnWhatsApp` سؤالٌ واحد.
+	//
+	// **وفشلُ السؤال لا يمنع الإرسال**: شبكةٌ تعثّرت لا تعني رقماً غيرَ
+	// مسجَّل، **ومن رفض على الشكّ حرم صاحبَ رقمٍ صحيحٍ من الدخول.**
+	num := strings.TrimPrefix(phone, "+")
+	if res, err := c.IsOnWhatsApp(ctx, []string{"+" + num}); err == nil {
+		for _, r := range res {
+			if !r.IsIn {
+				return ErrNoWhatsApp
+			}
+		}
+	}
+
 	s.pace(ctx)
-	jid := types.NewJID(strings.TrimPrefix(phone, "+"), types.DefaultUserServer)
+	jid := types.NewJID(num, types.DefaultUserServer)
 	text := s.template(ctx, code)
 	_, err := c.SendMessage(ctx, jid, &waE2E.Message{
 		Conversation: proto.String(text),

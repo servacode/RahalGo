@@ -183,8 +183,7 @@ func (s *Service) RequestOTP(ctx context.Context, rawPhone, ip string) error {
 		return err
 	}
 	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
-		s.logger.Error("otp send failed", "error", err)
-		return ErrOTPSendFailed
+		return s.otpSendError(err)
 	}
 	return nil
 }
@@ -221,8 +220,7 @@ func (s *Service) RequestPhoneChange(ctx context.Context, userID, rawPhone, ip s
 		return err
 	}
 	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
-		s.logger.Error("otp send failed", "error", err)
-		return ErrOTPSendFailed
+		return s.otpSendError(err)
 	}
 	return nil
 }
@@ -327,8 +325,7 @@ func (s *Service) sendOTPFor(ctx context.Context, phone, purpose, rateKey, ip st
 		return err
 	}
 	if err := s.sender.SendOTP(ctx, phone, code); err != nil {
-		s.logger.Error("otp send failed", "error", err)
-		return ErrOTPSendFailed
+		return s.otpSendError(err)
 	}
 	return nil
 }
@@ -940,4 +937,29 @@ func (s *Service) ActiveStatus(ctx context.Context, userID string) string {
 
 func (s *Service) invalidateStatusCache(ctx context.Context, userID string) {
 	s.rdb.Del(ctx, "ustatus:"+userID)
+}
+
+// otpSendError **يُمرّر سببَ الفشل حين يكون معروفاً — ولا يبتلعه.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ورسالةٌ واحدةٌ لعلَّتين تجعل صاحبَها ينتظر ما لا يأتي**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (شهده المالك ٢٠٢٦-٠٨-١١: جرّب رقماً بلا واتساب فقيل له «ضغطٌ على خادم
+//  الرسائل — يرجى المحاولة بعد قليل».)
+//
+// **«أعد المحاولة» جوابٌ صحيحٌ لانقطاعِ شبكة، وكاذبٌ لرقمٍ ليس على واتساب**
+// — الأوّلُ يُصلحه الانتظار، **والثاني لا يُصلحه إلّا تبديلُ الرقم.**
+//
+// **وكلُّ محاولةٍ تستهلك من حدّه** — فينتهي به المطاف مقفولاً على خطأٍ
+// لم يكن خطأه.
+//
+// **وما لا يُعرف سببُه يبقى عامّاً** — ولا تُخترع له علّة.
+func (s *Service) otpSendError(err error) error {
+	var known *httpx.AppError
+	if errors.As(err, &known) {
+		return known
+	}
+	s.logger.Error("otp send failed", "error", err)
+	return ErrOTPSendFailed
 }

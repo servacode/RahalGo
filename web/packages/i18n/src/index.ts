@@ -57,3 +57,38 @@ export function fmtClock(totalSeconds: number): string {
 export function withPlatform(text: string, name: string): string {
   return text.replace(/\{platform\}/g, name || ar.common.appName);
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **ترجمةُ خطأِ الخادم — بيتُها المعجم**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (شهده المالك ٢٠٢٦-٠٨-١١: شاشةُ توثيق الواتساب تعرض رسالةً عامّةً وتُخفي
+ *  سببَ الخادم الحقيقيّ.)
+ *
+ * **كانت في `@rahalgo/auth`** — وهي تعتمد `@rahalgo/ui`. **فشاشةٌ في `ui`
+ * لا تستطيع استعمالَها** إلّا بدورةِ اعتماد. فكانت تكتب رسالةً عامّةً بيدها،
+ * **وتُسكت الخادمَ وهو يقول السبب.**
+ *
+ * **وموضعُها الصحيحُ هنا**: تحويلُ مفتاحٍ إلى نصٍّ عربيٍّ شأنُ المعجم،
+ * **والحزمتان كلتاهما تعتمدانه** فلا دورة.
+ *
+ * # ولا تعرف نوعَ الخطأ
+ *
+ * **تقرأ الشكلَ لا الصنف** (`body.message_key`) — **ولو اشترطت `ApiError`
+ * لَاحتاجت حزمةَ العميل**، وعادت الدورةُ من بابٍ آخر.
+ */
+export function errorText(err: unknown, messages: Messages = locales[defaultLocale].messages): string {
+  const errs = messages.errors as unknown as Record<string, string>;
+  const key = (err as { body?: { message_key?: string } })?.body?.message_key;
+  if (typeof key !== "string" || !key) return errs.internal ?? "";
+  // **والمفتاحُ يُقرأ كاملاً ثمّ بآخر جزئه** — الخادمُ يرسل `errors.x`
+  // و`auth.otpInvalid`، **والمعجمُ يعرف الاثنين في موضعين.**
+  const direct = key.split(".").reduce<unknown>(
+    (node, part) => (node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined),
+    messages as unknown,
+  );
+  if (typeof direct === "string" && direct) return direct;
+  const last = key.split(".").pop() ?? "";
+  return errs[last] || errs.internal || "";
+}
