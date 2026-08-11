@@ -127,10 +127,16 @@ func (s *Server) Router() http.Handler {
 	// الوسيطُ يحاول كتابة 504 على اتصالٍ خطفه WebSocket. **رسالةٌ قيلت ولم
 	// تُقرأ.**
 	r.Use(exceptPaths(middleware.Timeout(30*time.Second), "/api/v1/ws"))
+	// **ونوعُ العميل يُقرأ مرّةً هنا** — فتراه كلُّ نقطةٍ تُصدر جلسة
+	// بلا أن تسأل عنه. (انظر `identity/client_kind.go`.)
+	r.Use(clientKind)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   s.allowedOrigins(),
-		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"},
+		AllowedOrigins: s.allowedOrigins(),
+		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		// **و`X-RahalGo-Client` في المسموح** — ترويسةٌ غيرُ معلَنةٍ يرفضها
+		// المتصفّحُ في الفحص المبدئيّ، **فيسقط النداءُ قبل أن يصل.**
+		// (والتطبيقُ لا يمرّ بـCORS، لكنّ الويبَ قد يُصرّح بنفسه يوماً.)
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-RahalGo-Client"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))

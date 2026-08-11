@@ -1,0 +1,61 @@
+package identity
+
+import (
+	"context"
+	"testing"
+)
+
+// ══════════════════════════════════════════════════════════════════════
+// **حارسُ نوع العميل — والقيدُ يُضيَّق ولا يُلغى**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ما يُحرَس هنا شيئان متعاكسان**، وسقوطُ أيّهما يكسر شيئاً حقيقيّاً:
+//
+// **الأوّل** أن يبقى المتصفّحُ والتطبيقُ منفصلين — **وإلّا عادت الحلقةُ
+// المقفلة**: السائقُ يفتح التطبيقَ فيخرج من الويب.
+//
+// **والثاني** أن تبقى القائمةُ مغلقة — **وإلّا سقط القيدُ كلُّه وهو يبدو
+// قائماً**: من يستطيع أن يخترع نوعاً بترويسةٍ من عنده يفتح مئةَ جلسةٍ
+// بمئة كلمة، **فيتشارك سائقان حساباً واحداً ولا تعرف المنصّةُ من سلّم.**
+
+// TestClientKind_UnknownFallsBackToWeb **والمجهولُ متصفّحٌ لا نوعٌ جديد.**
+func TestClientKind_UnknownFallsBackToWeb(t *testing.T) {
+	for _, raw := range []string{
+		"", "  ", "WEB", "Android", "android-v2", "desktop", "ios ",
+		"'; DROP TABLE refresh_tokens; --", "android\x00",
+	} {
+		if got := normalizeClient(raw); got != ClientWeb {
+			t.Fatalf("نوعٌ مجهولٌ %q صار %q — **فيفتح جلسةً مستقلّةً بكلمةٍ يخترعها**، "+
+				"ويسقط المنعُ من مشاركة الحسابات وهو يبدو قائماً", raw, got)
+		}
+	}
+}
+
+// TestClientKind_KnownKindsSurvive **والمعروفُ يمرّ كما هو** — وبلا ذلك
+// يصير كلُّ شيءٍ متصفّحاً، **فيعود التطبيقُ يقتل جلسةَ الويب.**
+func TestClientKind_KnownKindsSurvive(t *testing.T) {
+	for _, k := range []string{ClientWeb, ClientAndroid, ClientIOS} {
+		if got := normalizeClient(k); got != k {
+			t.Fatalf("نوعٌ معروفٌ %q صار %q — **فيتصادم التطبيقُ مع المتصفّح**", k, got)
+		}
+	}
+}
+
+// TestClientKind_ContextRoundTrip **والسياقُ يحمله سليماً** — وهو الطريقُ
+// الوحيدُ بين الوسيط و`issueSession`.
+func TestClientKind_ContextRoundTrip(t *testing.T) {
+	if got := ClientFrom(context.Background()); got != ClientWeb {
+		t.Fatalf("سياقٌ بلا نوعٍ أعطى %q — **والافتراضُ متصفّحٌ**: كلُّ نداءٍ من الويب "+
+			"لا يحمل الترويسةَ ولن يحملها", got)
+	}
+	ctx := WithClient(context.Background(), ClientAndroid)
+	if got := ClientFrom(ctx); got != ClientAndroid {
+		t.Fatalf("النوعُ ضاع في السياق: %q — **فيُسجَّل التطبيقُ متصفّحاً "+
+			"ويُبطل جلسةَ صاحبه على الويب**", got)
+	}
+	// **والتطبيعُ يقع عند الوضع لا عند القراءة** — فلا يصل إلى القاعدة
+	// نصٌّ لم يُفحص.
+	if got := ClientFrom(WithClient(context.Background(), "hack")); got != ClientWeb {
+		t.Fatalf("نصٌّ غيرُ مفحوصٍ عبر إلى السياق: %q", got)
+	}
+}

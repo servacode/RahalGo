@@ -601,9 +601,29 @@ func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, actio
 	return s.issueSession(ctx, user, userAgent, ip, action, "")
 }
 
-// issueSession يصدر زوج توكنات. sessionID فارغ = دخول جديد يُبطل كل الجلسات
-// السابقة. sessionID موجود = امتداد لنفس الجلسة (تسليم بين لوحات المنصة أو تدوير
-// توكن)، فلا يُبطل إخوته — الحساب يبقى بجلسة واحدة موزّعة على تطبيقاتنا الأربعة.
+// issueSession يصدر زوج توكنات.
+//
+// **sessionID فارغ = دخولٌ جديد** يُبطل جلساتِ هذا الحساب **من نوع العميل
+// نفسِه**. **وموجود = امتدادٌ لنفس الجلسة** (تسليمٌ بين اللوحات أو تدويرُ
+// توكن) فلا يُبطل إخوته.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا صار الإبطالُ بالنوع لا بالحساب**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١١، في خطّة تطبيق أندرويد.)
+//
+// **كان دخولٌ جديدٌ يُبطل كلَّ الجلسات** — وهو صحيحٌ حين كانت المنصّةُ
+// متصفّحاً وحدَه. **ومع الهاتف يصير حلقةً مقفلة**: السائقُ يفتح التطبيقَ
+// فيخرج من الويب، ويفتح الويبَ فيخرج من التطبيق.
+//
+// **والقيدُ لا يُلغى بل يُضيَّق**: هو ما يمنع مشاركةَ الحسابات — سائقٌ
+// يعطي رقمَه ورمزَه لآخرَ فيعملان معاً **فيقبضان على اسمٍ واحدٍ ولا تعرف
+// المنصّةُ من سلّم.** **وسائقٌ بهاتفين لا يزال ممنوعاً**، لأنّ الثاني
+// يُبطل الأوّل — وذاك ما كان يُحرَس فعلاً.
+//
+// **والسقفُ مغلقٌ بـ`normalizeClient`** — ثلاثُ قيمٍ لا رابعَ لها، **فلا
+// يفتح أحدٌ جلساتٍ بلا حدٍّ بترويسةٍ يخترعها.**
 func (s *Service) issueSession(ctx context.Context, user *User, userAgent, ip, action, sessionID string) (*AuthResult, error) {
 	if user.Status == "suspended" {
 		return nil, ErrUserSuspended
@@ -615,14 +635,16 @@ func (s *Service) issueSession(ctx context.Context, user *User, userAgent, ip, a
 	if err != nil {
 		return nil, err
 	}
-	// دخول جديد يُبطل ما سبق — والإبطال يشمل قائمة Redis كي يسري فوراً
+	client := ClientFrom(ctx)
+	// **دخولٌ جديدٌ يُبطل ما سبق من نوعه** — والإبطال يشمل قائمة Redis
+	// كي يسري فوراً على توكنات الوصول القائمة.
 	if sessionID == "" {
-		if err := s.revokeAllSessions(ctx, user.ID); err != nil {
+		if err := s.revokeClientSessions(ctx, user.ID, client); err != nil {
 			return nil, err
 		}
 	}
 	// نخزّن التجديد أولاً لنعرف عائلة الجلسة، ثم نضعها في توكن الوصول
-	sid, err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, s.sessionLife(ctx), userAgent, ip, sessionID)
+	sid, err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, s.sessionLife(ctx), userAgent, ip, sessionID, client)
 	if err != nil {
 		return nil, err
 	}
@@ -688,6 +710,25 @@ func (s *Service) revokeSession(ctx context.Context, userID, sid string) error {
 }
 
 // revokeAllSessions يُبطل كل جلسات الحساب — يستعمله الدخول الجديد وخروج الإدارة.
+// revokeClientSessions يُبطل جلساتِ حسابٍ **من نوعِ عميلٍ واحد.**
+//
+// **وRedis شرطٌ لا زينة**: القاعدةُ تُبطل توكنَ التجديد، **وتوكنُ الوصول
+// القائمُ يبقى صالحاً حتّى تنتهي مهلتُه** — والوسيطُ يسأل Redis في كلّ
+// طلبٍ ليعرف أنّ الجلسةَ ماتت.
+func (s *Service) revokeClientSessions(ctx context.Context, userID, client string) error {
+	sids, err := s.repo.ClientSessionIDs(ctx, userID, client)
+	if err != nil {
+		return err
+	}
+	if _, err := s.repo.RevokeClientTokens(ctx, userID, client); err != nil {
+		return err
+	}
+	for _, sid := range sids {
+		s.rdb.Set(ctx, sessionRevokedKey(sid), "1", s.tokens.AccessTTL()+time.Minute)
+	}
+	return nil
+}
+
 func (s *Service) revokeAllSessions(ctx context.Context, userID string) error {
 	sids, err := s.repo.ActiveSessionIDs(ctx, userID)
 	if err != nil {

@@ -370,21 +370,24 @@ func (r *Repo) CheckOTP(ctx context.Context, phone, codeHash, purpose string) (b
 // StoreRefresh يخزّن توكن تجديد داخل عائلة جلسة ويعيد معرّفها.
 // sessionID فارغ = عائلة جديدة تولّدها القاعدة — ونحتاج معرّفها لنضعه في توكن
 // الوصول، فبه وحده يصير إبطال الجلسة فورياً.
-func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl time.Duration, userAgent, ip, sessionID string) (string, error) {
+func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl time.Duration, userAgent, ip, sessionID, client string) (string, error) {
 	var sid any
 	if sessionID != "" {
 		sid = sessionID
 	}
 	var out string
 	err := r.db.QueryRow(ctx, `
-		INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip, session_id)
-		VALUES ($1, $2, now() + $3, $4, $5, COALESCE($6::uuid, gen_random_uuid()))
+		INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip, session_id, client)
+		VALUES ($1, $2, now() + $3, $4, $5, COALESCE($6::uuid, gen_random_uuid()), $7)
 		RETURNING session_id::text`,
-		userID, tokenHash, ttl, userAgent, ip, sid).Scan(&out)
+		userID, tokenHash, ttl, userAgent, ip, sid, client).Scan(&out)
 	return out, err
 }
 
 // ActiveSessionIDs كل عائلات الجلسات الفعّالة لحساب — لإبطالها دفعة واحدة.
+//
+// **وتبقى شاملةً**: تُنادى من «إنهاء الجلسات» في الإدارة، **وهناك المقصودُ
+// إخراجُ الحساب من كلّ مكانٍ فعلاً** — من الهاتف كما من المتصفّح.
 func (r *Repo) ActiveSessionIDs(ctx context.Context, userID string) ([]string, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT DISTINCT session_id::text FROM refresh_tokens
@@ -452,10 +455,45 @@ func (r *Repo) RevokeSession(ctx context.Context, userID, sessionID string) erro
 }
 
 // RevokeAllTokens يُبطل كل توكنات التجديد الفعالة لحساب — يعيد عددها.
+//
+// **ويبقى شاملاً بلا نوع**: يُنادى من الإدارة («إنهاء الجلسات») ومن تغيير
+// كلمة المرور — **وهناك المقصودُ إخراجُ الحساب من كلّ مكانٍ فعلاً.**
 func (r *Repo) RevokeAllTokens(ctx context.Context, userID string) (int, error) {
 	tag, err := r.db.Exec(ctx, `
 		UPDATE refresh_tokens SET revoked_at = now()
 		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()`, userID)
+	return int(tag.RowsAffected()), err
+}
+
+// ClientSessionIDs عائلاتُ الجلسات الفعّالة لحسابٍ **من نوعِ عميلٍ بعينه**.
+//
+// **والنوعُ شرطٌ لا زينة** (هجرة `0099`): دخولُ السائق من هاتفه يجب ألّا
+// يُخرجه من متصفّحه، **وإلّا صارت حلقةً لا مخرجَ منها.**
+func (r *Repo) ClientSessionIDs(ctx context.Context, userID, client string) ([]string, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT DISTINCT session_id::text FROM refresh_tokens
+		WHERE user_id = $1 AND client = $2 AND revoked_at IS NULL AND expires_at > now()`,
+		userID, client)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var sid string
+		if rows.Scan(&sid) == nil {
+			out = append(out, sid)
+		}
+	}
+	return out, rows.Err()
+}
+
+// RevokeClientTokens يُبطل توكناتِ حسابٍ **من نوعِ عميلٍ واحد** — يعيد عددها.
+func (r *Repo) RevokeClientTokens(ctx context.Context, userID, client string) (int, error) {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE refresh_tokens SET revoked_at = now()
+		WHERE user_id = $1 AND client = $2 AND revoked_at IS NULL AND expires_at > now()`,
+		userID, client)
 	return int(tag.RowsAffected()), err
 }
 
