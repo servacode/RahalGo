@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- مولَّد بـ mobile/tools/make-intro-assets.py — لا يُحرَّر باليد. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="1024dp"
+    android:height="1024dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <path
+        android:fillColor="#02678F"
+        android:pathData="M 447 308 L 435 311 L 424 316 L 413 324 L 405 333 L 396 350 L 393 362 L 393 379 L 397 395 L 406 412 L 449 466 L 455 472 L 459 472 L 496 428 L 510 408 L 515 398 L 520 381 L 520 360 L 517 349 L 511 337 L 506 330 L 494 319 L 479 311 L 467 308 Z M 449 344 L 461 343 L 471 347 L 478 353 L 484 365 L 484 375 L 481 383 L 472 393 L 463 397 L 451 397 L 445 395 L 436 388 L 430 377 L 430 371 L 429 370 L 432 358 L 441 348 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 456 344 L 455 345 L 449 345 L 441 349 L 433 358 L 430 370 L 431 371 L 431 377 L 435 385 L 444 393 L 456 396 L 457 395 L 463 395 L 471 391 L 479 382 L 482 370 L 481 369 L 481 363 L 477 355 L 468 347 Z" />
+</vector>

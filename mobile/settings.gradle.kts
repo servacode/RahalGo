@@ -9,7 +9,7 @@
 // لاحقا:
 //
 //   shared/        القلب — لا يعرف أندرويد (يُضاف مع أول نداء شبكة)
-//   design/        التوكنز والمكوّنات (يُضاف مع الثيم — الخطوة ٢)
+//   design/        التوكنز والمكوّنات ✓
 //   core-android/  ما يلمس النظام (يُضاف مع الموقع والإشعارات)
 //   app-*/         شاشات فقط
 
@@ -32,4 +32,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "rahalgo"
+include(":design")
 include(":app-driver")

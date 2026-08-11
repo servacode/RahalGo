@@ -1,6 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- **سمة نظام فارغة** — Compose يرسم كل شيء بنفسه، وهذه فقط لتمنع
-         شريط عنوان النظام القديم من الظهور فوق شاشتنا. -->
-    <style name="Theme.RahalGo" parent="android:Theme.Material.NoActionBar" />
+    <!-- ══════════════════════════════════════════════════════════════
+         **سمة الإقلاع — شاشة النظام**
+         ══════════════════════════════════════════════════════════════
+
+         (طلب المالك ٢٠٢٦-٠٨-١١: احترام `SplashScreen API` الحديث.)
+
+         **وهذه ليست شاشة الحركة** — تلك في Compose. هذه ما يرسمه النظامُ
+         نفسُه في اللحظة التي تُفتح فيها العمليةُ وقبل أن يعمل أيُّ سطرٍ من
+         شيفرتنا.
+
+         **ولا يُوضع فيها انتظارٌ ولا حركةٌ طويلة**: النظامُ يقصّها متى
+         شاء، **ومن حاول أن يُطيلها بشيفرةٍ خالف سلوكَ أندرويد** فظهرت
+         عنده على جهازٍ واختفت على آخر.
+
+         **ووظيفتُها الوحيدةُ هنا: أن تكون بلون شاشتنا التالية** — فلا
+         ومضةٌ بيضاءُ ولا سوداءُ بين الاثنتين. -->
+    <style name="Theme.RahalGo.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/brand_canvas</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <!-- **وتُسلَّم إلى سمتنا فورَ أن تبدأ شيفرتُنا** — وبلا هذا
+             السطر يبقى النظامُ على سمة الإقلاع فتظهر بلا محتوى. -->
+        <item name="postSplashScreenTheme">@style/Theme.RahalGo</item>
+    </style>
+
+    <!-- **سمة التطبيق** — Compose يرسم كل شيء بنفسه، وهذه تمنع شريطَ
+         العنوان القديم، **وتضبط أرضَ النافذة بلون شاشتنا** فلا تظهر
+         ومضةٌ بيضاءُ بين شاشةٍ وأخرى. -->
+    <style name="Theme.RahalGo" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/brand_canvas</item>
+    </style>
 </resources>

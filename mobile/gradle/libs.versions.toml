@@ -35,6 +35,7 @@ androidxCore = "1.19.0"
 androidxActivity = "1.13.0"
 composeBom = "2026.06.01"
 lifecycle = "2.11.0"
+splashscreen = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -50,8 +51,14 @@ compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
 
+# **شاشةُ النظام عند الإقلاع** — الطريقةُ الرسميّةُ منذ أندرويد ١٢،
+# وهذه المكتبةُ تُرجعها إلى ٨ بالسلوك نفسِه. **وبلاها يُرسم إقلاعُنا
+# على أجهزةٍ ويُترك للنظام على أخرى.**
+androidx-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 # **ولا إضافة `kotlin-android`** — AGP 9 فيها دعم Kotlin مدمج،
 # وتطبيقها يُسقط البناء برسالة صريحة.
 # **مُصرّف Compose صار جزءا من Kotlin منذ 2.0** — لا إصدار مستقلا له.
