@@ -108,6 +108,7 @@ gofmt -l internal/ cmd/              # لا ملفَّ خارجَ التنسيق
 pnpm check:guards                    # حرّاسُ الويب الأربعة
 pnpm typecheck                       # ثمانيةُ تحقّقات
 go run ./cmd/moneycheck              # الدفتر — ١٣ فحصاً
+go run ./cmd/apidoc                  # عقدُ الـAPI — يُولَّد بعد كلّ تغييرِ مسارٍ أو حقل
 go run ./cmd/mediacheck              # كلُّ صفِّ وسيطٍ له ملفّه
 ```
 

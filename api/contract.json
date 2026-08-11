@@ -1,0 +1,5481 @@
+{
+  "_note": "مولَّد من الشيفرة بـ`go run ./cmd/apidoc` — لا يُحرَّر باليد. وحارسُ `TestContractIsCurrent` يُسقط البناءَ إن شاخ.",
+  "endpoints": [
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/app-file",
+      "handler": "handleDeleteAppFile",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "removed",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/app-file",
+      "handler": "handleUploadAppFile",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "bytes",
+          "type": "unknown"
+        },
+        {
+          "name": "name",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit",
+      "handler": "handleAdminAudit",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/banners",
+      "handler": "handleListBanners",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@banners",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/banners",
+      "handler": "handleCreateBanner",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@b",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/banners/{id}",
+      "handler": "handleDeleteBanner",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/banners/{id}",
+      "handler": "handleUpdateBanner",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@b",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/broadcast",
+      "handler": "handleBroadcast",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "roles",
+          "type": "[]string"
+        },
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "type": "string"
+        },
+        {
+          "name": "href",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "sent",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/broadcast/count",
+      "handler": "handleBroadcastCount",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/cash/outstanding",
+      "handler": "handleCashOutstanding",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "holders",
+          "type": "unknown"
+        },
+        {
+          "name": "limit",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/categories",
+      "handler": "handleListCategories",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@cats",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/categories",
+      "handler": "handleCreateCategory",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@c",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/categories/{id}",
+      "handler": "handleUpdateCategory",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@c",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/customers",
+      "handler": "handleListCustomers",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "customers",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/disputes",
+      "handler": "handleListDisputes",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        },
+        {
+          "name": "disputes",
+          "type": "unknown"
+        },
+        {
+          "name": "open_counts",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/disputes",
+      "handler": "handleCreateDispute",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "request": [
+        {
+          "name": "party_role",
+          "type": "string"
+        },
+        {
+          "name": "party_id",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/disputes/{id}/settle",
+      "handler": "handleSettleDispute",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "request": [
+        {
+          "name": "settlement",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "settled",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/drivers",
+      "handler": "handleListDrivers",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "cash_limit",
+          "type": "unknown"
+        },
+        {
+          "name": "drivers",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/drivers/{id}/cash",
+      "handler": "handleDriverCashStatement",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@st",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/drivers/{id}/end-shift",
+      "handler": "handleAdminEndShift",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "on_shift",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/drivers/{id}/settle",
+      "handler": "handleDriverSettle",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "idempotent": true,
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "held",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/emergencies",
+      "handler": "handleOpenEmergencies",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/emergencies/{id}/resolve",
+      "handler": "handleResolveEmergency",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "resolved",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/incentives/{role}",
+      "handler": "handleIncentiveStandings",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "standings",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/leads",
+      "handler": "handleAdminLeads",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/leads/{id}/status",
+      "handler": "handleAdminLeadStatus",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "request": [
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ledger/export",
+      "handler": "handleLedgerExport",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/media",
+      "handler": "handleUploadMedia",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/menu/items/{itemID}",
+      "handler": "handleDeleteItem",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/menu/items/{itemID}",
+      "handler": "handleUpdateItem",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/menu/items/{itemID}/review",
+      "handler": "handleReviewMenuItem",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "approve",
+          "type": "bool"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "approved",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/menu/pending",
+      "handler": "handlePendingMenuItems",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        },
+        {
+          "name": "items",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/menu/sections/{sectionID}",
+      "handler": "handleDeleteSection",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/menu/sections/{sectionID}",
+      "handler": "handleUpdateSection",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@sec",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants",
+      "handler": "handleListMerchants",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/merchants",
+      "handler": "handleCreateMerchant",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}",
+      "handler": "handleAdminGetMerchant",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@mr",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/merchants/{id}",
+      "handler": "handleUpdateMerchant",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/merchants/{id}/clear-violations",
+      "handler": "handleClearViolations",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "cleared",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/hours",
+      "handler": "handleGetHours",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@hours",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/merchants/{id}/hours",
+      "handler": "handleSetHours",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "days",
+          "type": "[]catalog.DayHours"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/menu",
+      "handler": "handleGetMenu",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@menu",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/merchants/{id}/menu/items",
+      "handler": "handleCreateItem",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/merchants/{id}/menu/sections",
+      "handler": "handleCreateSection",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@sec",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/merchants/{id}/suspend",
+      "handler": "handleSuspendMerchant",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "suspended",
+          "type": "bool"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/violations",
+      "handler": "handleMerchantViolations",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "days",
+          "type": "unknown"
+        },
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "limit",
+          "type": "unknown"
+        },
+        {
+          "name": "mode",
+          "type": "unknown"
+        },
+        {
+          "name": "violations",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/warnings",
+      "handler": "handleAdminMerchantWarnings",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/merchants/{id}/warnings",
+      "handler": "handleIssueMerchantWarning",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/offers",
+      "handler": "handleAdminOffers",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "offers",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/offers",
+      "handler": "handleCreateOffer",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/offers/{id}/active",
+      "handler": "handleSetOfferActive",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "active",
+          "type": "bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders",
+      "handler": "handleListOrders",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/alerts",
+      "handler": "handleOrderAlerts",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@alerts",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/export",
+      "handler": "handleOrdersExport",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}",
+      "handler": "handleGetOrder",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/assign",
+      "handler": "handleOrderAssign",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "request": [
+        {
+          "name": "driver_id",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}/breakdown",
+      "handler": "handleOrderBreakdown",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "response": [
+        {
+          "name": "cash_due",
+          "type": "unknown"
+        },
+        {
+          "name": "delivery_fee",
+          "type": "unknown"
+        },
+        {
+          "name": "discount",
+          "type": "unknown"
+        },
+        {
+          "name": "lines",
+          "type": "unknown"
+        },
+        {
+          "name": "platform",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        },
+        {
+          "name": "subtotal",
+          "type": "unknown"
+        },
+        {
+          "name": "to_parties",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        },
+        {
+          "name": "wallet_paid",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}/chat",
+      "handler": "handleAdminOrderChat",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@th",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/compensate-driver",
+      "handler": "handleCompensateDriver",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "compensated",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/goods",
+      "handler": "handleGoods",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "request": [
+        {
+          "name": "to",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "settled_to",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}/message",
+      "handler": "handleOrderMessagePreview",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "drivers_on_shift",
+          "type": "unknown"
+        },
+        {
+          "name": "phone",
+          "type": "unknown"
+        },
+        {
+          "name": "sms_ready",
+          "type": "unknown"
+        },
+        {
+          "name": "text",
+          "type": "unknown"
+        },
+        {
+          "name": "wa_link",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/recompute",
+      "handler": "handleRecomputeSettlement",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "after",
+          "type": "unknown"
+        },
+        {
+          "name": "before",
+          "type": "unknown"
+        },
+        {
+          "name": "delta",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/settle-goods",
+      "handler": "handleSettleGoods",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/transfer",
+      "handler": "handleTransferOrder",
+      "auth": true,
+      "roles": [
+        "admin",
+        "ops"
+      ],
+      "request": [
+        {
+          "name": "merchant_id",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "error",
+          "type": "object"
+        },
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        },
+        {
+          "name": "transferred",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusConflict",
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/transition",
+      "handler": "handleOrderTransition",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "request": [
+        {
+          "name": "to",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/whatsapp",
+      "handler": "handleSendOrderToMerchant",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "request": [
+        {
+          "name": "channel",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "channel",
+          "type": "unknown"
+        },
+        {
+          "name": "phone",
+          "type": "unknown"
+        },
+        {
+          "name": "sent",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/payouts",
+      "handler": "handleAdminPayouts",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/payouts/{id}/decide",
+      "handler": "handleDecidePayout",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "idempotent": true,
+      "request": [
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "decision",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/promos",
+      "handler": "handleListPromos",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@promos",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/promos",
+      "handler": "handleCreatePromo",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@p",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/promos/{id}",
+      "handler": "handleUpdatePromo",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@p",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ratings",
+      "handler": "handleAdminRatings",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "average",
+          "type": "unknown"
+        },
+        {
+          "name": "comments",
+          "type": "unknown"
+        },
+        {
+          "name": "drivers",
+          "type": "unknown"
+        },
+        {
+          "name": "has_average",
+          "type": "unknown"
+        },
+        {
+          "name": "low",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/reports",
+      "handler": "handleReports",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "daily",
+          "type": "unknown"
+        },
+        {
+          "name": "from",
+          "type": "unknown"
+        },
+        {
+          "name": "summary",
+          "type": "unknown"
+        },
+        {
+          "name": "to",
+          "type": "unknown"
+        },
+        {
+          "name": "top_drivers",
+          "type": "unknown"
+        },
+        {
+          "name": "top_merchants",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/reports/losses",
+      "handler": "handlePlatformLosses",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        },
+        {
+          "name": "from",
+          "type": "unknown"
+        },
+        {
+          "name": "losses",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "to",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        },
+        {
+          "name": "treasury_balance",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/salesreps",
+      "handler": "handleListSalesReps",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sections",
+      "handler": "handleListPlatformSections",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "sections",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/sections",
+      "handler": "handleCreatePlatformSection",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/sections/{id}",
+      "handler": "handleDeletePlatformSection",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/sections/{id}",
+      "handler": "handleUpdatePlatformSection",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sections/{id}/items",
+      "handler": "handleSectionItems",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "count",
+          "type": "unknown"
+        },
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/settings",
+      "handler": "handleListSettings",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "groups",
+          "type": "unknown"
+        },
+        {
+          "name": "settings",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/settings/{key}",
+      "handler": "handleSetSetting",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "value",
+          "type": "json.RawMessage"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/stats",
+      "handler": "handleAdminStats",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@st",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/tickets",
+      "handler": "handleListTickets",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/tickets",
+      "handler": "handleCreateTicket",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@t",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/tickets/{id}",
+      "handler": "handleGetTicket",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@t",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/tickets/{id}/replies",
+      "handler": "handleTicketReply",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "request": [
+        {
+          "name": "body",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@t",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/tickets/{id}/resolve",
+      "handler": "handleTicketResolve",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "request": [
+        {
+          "name": "resolution",
+          "type": "string"
+        },
+        {
+          "name": "compensation",
+          "type": "int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "@t",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/treasury-candidates",
+      "handler": "handleTreasuryCandidates",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "users",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users",
+      "handler": "handleAdminListUsers",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users",
+      "handler": "handleAdminCreateUser",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@user",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/export",
+      "handler": "handleAdminUsersExport",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/stats",
+      "handler": "handleAdminUserRoleCounts",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "roles",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}",
+      "handler": "handleAdminGetUser",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/users/{id}",
+      "handler": "handleAdminUpdateUser",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@user",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}/activity",
+      "handler": "handleAdminUserActivity",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}/addresses",
+      "handler": "handleAdminUserAddresses",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}/feedback",
+      "handler": "handleAdminUserFeedback",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}/financials",
+      "handler": "handleAdminUserFinancials",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/incentive",
+      "handler": "handleIncentiveGrant",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "idempotent": true,
+      "request": [
+        {
+          "name": "kind",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "for_target",
+          "type": "bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "@e",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}/incentives",
+      "handler": "handleIncentiveList",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "entries",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/logout-all",
+      "handler": "handleAdminLogoutAll",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "revoked_sessions",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/password",
+      "handler": "handleAdminResetPassword",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "password",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/roles",
+      "handler": "handleAdminGrantRole",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "role",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "granted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/users/{id}/roles/{role}",
+      "handler": "handleAdminRevokeRole",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "revoked",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}/wallet",
+      "handler": "handleAdminWalletStatement",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@st",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/wallet",
+      "handler": "handleAdminWalletApply",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "idempotent": true,
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "kind",
+          "type": "string"
+        },
+        {
+          "name": "debit",
+          "type": "bool"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "balance",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users/{id}/warnings",
+      "handler": "handleAdminUserWarnings",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/{id}/warnings",
+      "handler": "handleIssueUserWarning",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "order_id",
+          "type": "?string"
+        },
+        {
+          "name": "ticket_id",
+          "type": "?string"
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/whatsapp",
+      "handler": "inline",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/whatsapp/pair",
+      "handler": "inline",
+      "auth": true,
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/whatsapp/unpair",
+      "handler": "inline",
+      "auth": true,
+      "roles": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/zones",
+      "handler": "handleListZones",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@zones",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/zones",
+      "handler": "handleCreateZone",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@z",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/zones/{id}",
+      "handler": "handleDeleteZone",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/zones/{id}",
+      "handler": "handleUpdateZone",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "@z",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/account/delete/confirm",
+      "handler": "handleDeleteAccountConfirm",
+      "auth": true,
+      "request": [
+        {
+          "name": "code",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/account/delete/request",
+      "handler": "handleDeleteAccountRequest",
+      "auth": true,
+      "response": [
+        {
+          "name": "sent",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/handoff",
+      "handler": "handleHandoff",
+      "auth": true,
+      "response": [
+        {
+          "name": "code",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "handler": "handlePasswordLogin",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "password",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "handler": "handleLogout",
+      "auth": false,
+      "request": [
+        {
+          "name": "refresh_token",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "logged_out",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "handler": "handleMe",
+      "auth": true,
+      "response": [
+        {
+          "name": "@user",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/my-logins",
+      "handler": "handleMyLogins",
+      "auth": true,
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/otp/request",
+      "handler": "handleOTPRequest",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "sent",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/otp/verify",
+      "handler": "handleOTPVerify",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/password",
+      "handler": "handleSetPassword",
+      "auth": true,
+      "request": [
+        {
+          "name": "password",
+          "type": "string"
+        },
+        {
+          "name": "current_password",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/password/reset/confirm",
+      "handler": "handleResetConfirm",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "string"
+        },
+        {
+          "name": "password",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/password/reset/request",
+      "handler": "handleResetRequest",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "sent",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/password/reset/verify",
+      "handler": "handleResetVerify",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "verified",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/phone/confirm",
+      "handler": "handlePhoneChangeConfirm",
+      "auth": true,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/phone/request",
+      "handler": "handlePhoneChangeRequest",
+      "auth": true,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "sent",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/pin",
+      "handler": "handlePinVerify",
+      "auth": false,
+      "request": [
+        {
+          "name": "challenge",
+          "type": "string"
+        },
+        {
+          "name": "pin",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/pin/change",
+      "handler": "handlePinChange",
+      "auth": true,
+      "request": [
+        {
+          "name": "current",
+          "type": "string"
+        },
+        {
+          "name": "pin",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "changed",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/pin/reset/confirm",
+      "handler": "handlePinResetConfirm",
+      "auth": true,
+      "request": [
+        {
+          "name": "code",
+          "type": "string"
+        },
+        {
+          "name": "pin",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "reset",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/pin/reset/request",
+      "handler": "handlePinResetRequest",
+      "auth": true,
+      "response": [
+        {
+          "name": "sent",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/pin/setup",
+      "handler": "handlePinSetup",
+      "auth": false,
+      "request": [
+        {
+          "name": "challenge",
+          "type": "string"
+        },
+        {
+          "name": "pin",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/pin/state",
+      "handler": "handlePinState",
+      "auth": true,
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/referral",
+      "handler": "handleMyReferral",
+      "auth": true,
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "handler": "handleRefresh",
+      "auth": false,
+      "request": [
+        {
+          "name": "refresh_token",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/signup/confirm",
+      "handler": "handleSignupConfirm",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "string"
+        },
+        {
+          "name": "full_name",
+          "type": "string"
+        },
+        {
+          "name": "password",
+          "type": "string"
+        },
+        {
+          "name": "ref",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/signup/request",
+      "handler": "handleSignupRequest",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "sent",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/signup/verify",
+      "handler": "handleSignupVerify",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "verified",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/sso",
+      "handler": "handleSSO",
+      "auth": false,
+      "request": [
+        {
+          "name": "code",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/whatsapp/confirm",
+      "handler": "handleWhatsAppVerifyConfirm",
+      "auth": true,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "verified",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/whatsapp/request",
+      "handler": "handleWhatsAppVerifyRequest",
+      "auth": true,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "sent",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/cash",
+      "handler": "handleDriverCash",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/fail-reasons",
+      "handler": "handleFailReasons",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "reasons",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/incentives",
+      "handler": "handleMyIncentives",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "entries",
+          "type": "unknown"
+        },
+        {
+          "name": "kinds",
+          "type": "array"
+        },
+        {
+          "name": "standing",
+          "type": "unknown"
+        },
+        {
+          "name": "target_reward",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/location",
+      "handler": "handleDriverLocation",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        },
+        {
+          "name": "speed_mps",
+          "type": "?float64"
+        },
+        {
+          "name": "accuracy_m",
+          "type": "?float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "saved",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/location/batch",
+      "handler": "handleDriverLocationBatch",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "points",
+          "type": "[]trackPoint"
+        }
+      ],
+      "response": [
+        {
+          "name": "accepted",
+          "type": "int"
+        },
+        {
+          "name": "rejected",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/me",
+      "handler": "handleDriverMe",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/orders",
+      "handler": "handleDriverOrders",
+      "auth": true,
+      "roles": [
+        "driver"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/orders/history",
+      "handler": "handleDriverHistory",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "orders",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/orders/report-reasons",
+      "handler": "handleDriverReportReasons",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "reasons",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/accept",
+      "handler": "handleDriverAccept",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/agree",
+      "handler": "handleAgreeCustom",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "goods_amount",
+          "type": "int64"
+        },
+        {
+          "name": "fee",
+          "type": "int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "agreed",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/emergency",
+      "handler": "handleDriverEmergency",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "lat",
+          "type": "?float64"
+        },
+        {
+          "name": "lng",
+          "type": "?float64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "emergency_id",
+          "type": "unknown"
+        },
+        {
+          "name": "released",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/proof",
+      "handler": "handleDeliveryProof",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "located",
+          "type": "unknown"
+        },
+        {
+          "name": "media_id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/proof/skip",
+      "handler": "handleSkipDeliveryProof",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "skipped",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/rate-merchant",
+      "handler": "handleDriverRateMerchant",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "speed_stars",
+          "type": "int"
+        },
+        {
+          "name": "conduct_stars",
+          "type": "int"
+        },
+        {
+          "name": "comment",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "rated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/release",
+      "handler": "handleDriverRelease",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "released",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/report",
+      "handler": "handleDriverReport",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@t",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/return",
+      "handler": "handleDriverReturn",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "returned",
+          "type": "bool"
+        },
+        {
+          "name": "reversed",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/transition",
+      "handler": "handleDriverTransition",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "to",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/queue",
+      "handler": "handleDriverQueue",
+      "auth": true,
+      "roles": [
+        "driver"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/shift",
+      "handler": "handleDriverShift",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "on",
+          "type": "bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "on_shift",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/geo/reverse",
+      "handler": "handleGeoReverse",
+      "auth": true,
+      "response": [
+        {
+          "name": "@Reverse",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/geo/search",
+      "handler": "handleGeoSearch",
+      "auth": true,
+      "response": [
+        {
+          "name": "@Search",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/me/avatar",
+      "handler": "handleDeleteMyAvatar",
+      "auth": true,
+      "response": [
+        {
+          "name": "removed",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/me/avatar",
+      "handler": "handleMyAvatar",
+      "auth": true,
+      "response": [
+        {
+          "name": "avatar_thumb_url",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/me/devices",
+      "handler": "handleDeviceUnregister",
+      "auth": true,
+      "request": [
+        {
+          "name": "token",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "removed",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/me/devices",
+      "handler": "handleDeviceRegister",
+      "auth": true,
+      "request": [
+        {
+          "name": "token",
+          "type": "string"
+        },
+        {
+          "name": "platform",
+          "type": "string"
+        },
+        {
+          "name": "app_version",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "registered",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/me/name",
+      "handler": "handleSetMyName",
+      "auth": true,
+      "request": [
+        {
+          "name": "full_name",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "full_name",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me/notifications",
+      "handler": "handleMyNotifications",
+      "auth": true,
+      "response": [
+        {
+          "name": "counts",
+          "type": "unknown"
+        },
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "unread",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/me/notifications/read",
+      "handler": "handleMarkNotificationRead",
+      "auth": true,
+      "request": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me/payouts",
+      "handler": "handleMyPayouts",
+      "auth": true,
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/me/payouts",
+      "handler": "handleCreatePayout",
+      "auth": true,
+      "request": [
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me/reputation",
+      "handler": "handleMeReputation",
+      "auth": true,
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me/summary",
+      "handler": "handleMeSummary",
+      "auth": true,
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/media",
+      "handler": "handleMerchantUploadMedia",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/merchant/menu/items/{itemID}",
+      "handler": "handleMerchantDeleteItem",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/merchant/menu/items/{itemID}",
+      "handler": "handleMerchantUpdateItem",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "pending_review",
+          "type": "unknown"
+        },
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/merchant/menu/items/{itemID}/availability",
+      "handler": "handleMerchantItemAvailability",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "available",
+          "type": "?bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "available",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/merchant/menu/sections/{sectionID}",
+      "handler": "handleMerchantDeleteSection",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/merchant/menu/sections/{sectionID}",
+      "handler": "handleMerchantUpdateSection",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@sec",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/orders/{id}",
+      "handler": "handleMerchantGetOrder",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/orders/{id}/ready",
+      "handler": "handleMerchantReady",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "ready",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/orders/{id}/transition",
+      "handler": "handleMerchantTransition",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "to",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "prep_minutes",
+          "type": "?int"
+        }
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/platform-sections",
+      "handler": "handleMerchantPlatformSections",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "sections",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores",
+      "handler": "handleMerchantStores",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "self_manage_orders",
+          "type": "unknown"
+        },
+        {
+          "name": "stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/emergency",
+      "handler": "handleMerchantEmergency",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "closed",
+          "type": "?bool"
+        }
+      ],
+      "response": [
+        {
+          "name": "emergency_closed",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/hours",
+      "handler": "handleMerchantGetHours",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@hours",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/merchant/stores/{id}/hours",
+      "handler": "handleMerchantSetHours",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "days",
+          "type": "[]catalog.DayHours"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/menu",
+      "handler": "handleMerchantMenu",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@menu",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/menu/items",
+      "handler": "handleMerchantCreateItem",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "pending_review",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/menu/sections",
+      "handler": "handleMerchantCreateSection",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@sec",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/orders",
+      "handler": "handleMerchantOrders",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "orders",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "status_counts",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/reports",
+      "handler": "handleMerchantReports",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "days",
+          "type": "unknown"
+        },
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "summary",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/merchant/stores/{id}/settings",
+      "handler": "handleMerchantSettings",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "default_prep_minutes",
+          "type": "?int"
+        },
+        {
+          "name": "min_order",
+          "type": "?int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/warnings",
+      "handler": "handleMerchantWarnings",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/addresses",
+      "handler": "handleMyAddresses",
+      "auth": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/addresses",
+      "handler": "handleCreateAddress",
+      "auth": true,
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/my/addresses/{id}",
+      "handler": "handleDeleteAddress",
+      "auth": true,
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/addresses/{id}/default",
+      "handler": "handleSetDefaultAddress",
+      "auth": true,
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/chats",
+      "handler": "handleMyChats",
+      "auth": true,
+      "response": [
+        {
+          "name": "threads",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/favorites",
+      "handler": "handleMyFavorites",
+      "auth": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/favorites/{id}",
+      "handler": "handleToggleFavorite",
+      "auth": true,
+      "response": [
+        {
+          "name": "favorite",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/orders",
+      "handler": "handleMyOrders",
+      "auth": true,
+      "response": [
+        {
+          "name": "orders",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/orders/{id}",
+      "handler": "handleMyOrder",
+      "auth": true,
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/orders/{id}/complaint",
+      "handler": "handleMyComplaint",
+      "auth": true,
+      "response": [
+        {
+          "name": "ticket",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/orders/{id}/complaint",
+      "handler": "handleOpenComplaint",
+      "auth": true,
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@t",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/orders/{id}/complaint-reasons",
+      "handler": "handleComplaintReasons",
+      "auth": true,
+      "response": [
+        {
+          "name": "reasons",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/ratings",
+      "handler": "handleMyRatings",
+      "auth": true,
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/tickets",
+      "handler": "handleMyTickets",
+      "auth": true,
+      "response": [
+        {
+          "name": "tickets",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/wallet",
+      "handler": "handleMyWallet",
+      "auth": true,
+      "response": [
+        {
+          "name": "@st",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/warnings",
+      "handler": "handleMyWarnings",
+      "auth": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders",
+      "handler": "handleCustomerCreateOrder",
+      "auth": true,
+      "idempotent": true,
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders/custom",
+      "handler": "handleCreateCustomOrder",
+      "auth": true,
+      "request": [
+        {
+          "name": "request",
+          "type": "string"
+        },
+        {
+          "name": "address_text",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        },
+        {
+          "name": "payment_method",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders/{id}/cancel",
+      "handler": "handleCustomerCancelOrder",
+      "auth": true,
+      "request": [
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@updated",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/orders/{id}/messages",
+      "handler": "handleOrderMessages",
+      "auth": true,
+      "response": [
+        {
+          "name": "closes_at",
+          "type": "unknown"
+        },
+        {
+          "name": "messages",
+          "type": "unknown"
+        },
+        {
+          "name": "open",
+          "type": "unknown"
+        },
+        {
+          "name": "peer_name",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders/{id}/messages",
+      "handler": "handleSendOrderMessage",
+      "auth": true,
+      "request": [
+        {
+          "name": "body",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@msg",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders/{id}/rating",
+      "handler": "handleRateOrder",
+      "auth": true,
+      "request": [
+        {
+          "name": "platform_stars",
+          "type": "int"
+        },
+        {
+          "name": "driver_stars",
+          "type": "?int"
+        },
+        {
+          "name": "comment",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "rated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/promo/preview",
+      "handler": "handlePromoPreview",
+      "auth": true,
+      "request": [
+        {
+          "name": "code",
+          "type": "string"
+        },
+        {
+          "name": "subtotal",
+          "type": "int64"
+        },
+        {
+          "name": "delivery_fee",
+          "type": "int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/app",
+      "handler": "handleDownloadApp",
+      "auth": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/contact",
+      "handler": "handlePublicContact",
+      "auth": false,
+      "response": [
+        {
+          "name": "address",
+          "type": "unknown"
+        },
+        {
+          "name": "help_text",
+          "type": "unknown"
+        },
+        {
+          "name": "legal_name",
+          "type": "unknown"
+        },
+        {
+          "name": "privacy_text",
+          "type": "unknown"
+        },
+        {
+          "name": "support_phone",
+          "type": "unknown"
+        },
+        {
+          "name": "terms_text",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/hero",
+      "handler": "handlePublicHero",
+      "auth": false,
+      "response": [
+        {
+          "name": "image",
+          "type": "unknown"
+        },
+        {
+          "name": "image_mobile",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/home",
+      "handler": "handlePublicHome",
+      "auth": false,
+      "response": [
+        {
+          "name": "banner_auto",
+          "type": "unknown"
+        },
+        {
+          "name": "banner_every_ms",
+          "type": "unknown"
+        },
+        {
+          "name": "banners",
+          "type": "unknown"
+        },
+        {
+          "name": "categories",
+          "type": "unknown"
+        },
+        {
+          "name": "rail_auto",
+          "type": "unknown"
+        },
+        {
+          "name": "rail_every_ms",
+          "type": "unknown"
+        },
+        {
+          "name": "sections",
+          "type": "unknown"
+        },
+        {
+          "name": "support_phone",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/invite",
+      "handler": "handlePublicInvite",
+      "auth": false,
+      "response": [
+        {
+          "name": "by",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "type": "unknown"
+        },
+        {
+          "name": "rep_name",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/items/{id}",
+      "handler": "handlePublicItem",
+      "auth": false,
+      "response": [
+        {
+          "name": "item",
+          "type": "unknown"
+        },
+        {
+          "name": "modifiers",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/join",
+      "handler": "handlePublicJoin",
+      "auth": false,
+      "request": [
+        {
+          "name": "ref",
+          "type": "string"
+        },
+        {
+          "name": "store_name",
+          "type": "string"
+        },
+        {
+          "name": "owner_name",
+          "type": "string"
+        },
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "area",
+          "type": "string"
+        },
+        {
+          "name": "category_id",
+          "type": "string"
+        },
+        {
+          "name": "password",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "?float64"
+        },
+        {
+          "name": "lng",
+          "type": "?float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "received",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/offers",
+      "handler": "handlePublicOffers",
+      "auth": false,
+      "response": [
+        {
+          "name": "offers",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/platform",
+      "handler": "handlePublicPlatform",
+      "auth": false,
+      "response": [
+        {
+          "name": "address",
+          "type": "unknown"
+        },
+        {
+          "name": "app_url",
+          "type": "unknown"
+        },
+        {
+          "name": "auth_bg",
+          "type": "unknown"
+        },
+        {
+          "name": "auth_bg_dim",
+          "type": "unknown"
+        },
+        {
+          "name": "auth_bg_mobile",
+          "type": "unknown"
+        },
+        {
+          "name": "location",
+          "type": "unknown"
+        },
+        {
+          "name": "logo",
+          "type": "unknown"
+        },
+        {
+          "name": "name",
+          "type": "unknown"
+        },
+        {
+          "name": "otp_login",
+          "type": "unknown"
+        },
+        {
+          "name": "password_min_length",
+          "type": "unknown"
+        },
+        {
+          "name": "site_bg",
+          "type": "unknown"
+        },
+        {
+          "name": "site_bg_dim",
+          "type": "unknown"
+        },
+        {
+          "name": "site_bg_mobile",
+          "type": "unknown"
+        },
+        {
+          "name": "social",
+          "type": "object"
+        },
+        {
+          "name": "support_phone",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/quote",
+      "handler": "handleQuote",
+      "auth": false,
+      "request": [
+        {
+          "name": "items",
+          "type": "[]orders.ItemInput"
+        },
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "@q",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/search",
+      "handler": "handlePublicSearch",
+      "auth": false,
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/search/items",
+      "handler": "handleSearchItems",
+      "auth": false,
+      "response": [
+        {
+          "name": "items",
+          "type": "array"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/sections",
+      "handler": "handlePublicSections",
+      "auth": false,
+      "response": [
+        {
+          "name": "sections",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/sections/{id}/items",
+      "handler": "handlePublicSectionItems",
+      "auth": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/zone",
+      "handler": "handlePublicZone",
+      "auth": false,
+      "response": [
+        {
+          "name": "delivery_fee",
+          "type": "unknown"
+        },
+        {
+          "name": "min_order",
+          "type": "unknown"
+        },
+        {
+          "name": "name",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/categories",
+      "handler": "handleListCategories",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@cats",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/incentives",
+      "handler": "handleMyIncentives",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "entries",
+          "type": "unknown"
+        },
+        {
+          "name": "kinds",
+          "type": "array"
+        },
+        {
+          "name": "standing",
+          "type": "unknown"
+        },
+        {
+          "name": "target_reward",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/leads",
+      "handler": "handleRepLeads",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rep/leads",
+      "handler": "handleRepCreateLead",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "request": [
+        {
+          "name": "store_name",
+          "type": "string"
+        },
+        {
+          "name": "owner_name",
+          "type": "string"
+        },
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "area",
+          "type": "string"
+        },
+        {
+          "name": "category_id",
+          "type": "string"
+        },
+        {
+          "name": "password",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "?float64"
+        },
+        {
+          "name": "lng",
+          "type": "?float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/me",
+      "handler": "handleRepMe",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/merchants",
+      "handler": "handleRepMerchants",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/merchants/{id}",
+      "handler": "handleRepMerchantDetail",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "merchant",
+          "type": "unknown"
+        },
+        {
+          "name": "orders",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "summary",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/wallet",
+      "handler": "handleRepWallet",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@st",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ws",
+      "handler": "handleWS",
+      "auth": false
+    },
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "handler": "handleHealth",
+      "auth": false,
+      "response": [
+        {
+          "name": "@st",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "code"
+      ]
+    }
+  ]
+}
