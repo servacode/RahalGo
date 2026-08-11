@@ -1,0 +1,15 @@
+# مخرجاتُ البناء — تُولَّد ولا تُودَع
+build/
+.gradle/
+.kotlin/
+local.properties
+
+# ملفّاتُ Android Studio الخاصّة بالجهاز
+.idea/
+*.iml
+captures/
+
+# مفاتيحُ التوقيع — **لا تُرفع أبداً**
+*.jks
+*.keystore
+keystore.properties
