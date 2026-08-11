@@ -71,6 +71,41 @@ export default function OverviewPage() {
 
   return (
     <PageContainer>
+      {/* ══════════════════════════════════════════════════════════════
+          **وأرقامُه أوّلَ ما يرى**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١١: «هذول بالدعوة يجب أن يكونوا بالأعلى».)
+
+          **كانت في ذيل الصفحة تحت الرمز وشريطِ الهدف** — **ومن فتح لوحتَه
+          على الجوّال لا يراها إلّا بعد تمريرتين.**
+
+          **والرمزُ يُنسخ مرّةً ويُرسَل** — يُفتح لأجله مرّةً في الشهر.
+          **والأرقامُ هي ما يُفتح لأجله كلَّ يوم**: كم متجراً، وكم طلباً
+          سُلّم، وكم صار له. **فما يُسأل عنه يوميّاً يسبق ما يُسأل عنه
+          مرّة.** */}
+      {/* الإجمالي التراكمي */}
+      <StatGrid>
+        <StatCard icon={IconStore} label={m.rep.stats.merchants} value={me.merchants} />
+        <StatCard
+          icon={IconSuccess}
+          label={m.rep.stats.delivered}
+          value={me.delivered_orders}
+          tone="success"
+        />
+        <StatCard
+          icon={IconOrder}
+          label={`${m.rep.stats.commissions} (${m.common.currency})`}
+          value={me.total_commissions}
+        />
+        <StatCard
+          icon={IconWallet}
+          label={`${m.terms.walletBalance} (${m.common.currency})`}
+          value={me.balance}
+          tone="accent"
+        />
+      </StatGrid>
+
       {/* الكود — قلب اللوحة، ومقفل حتى يوثّق المندوب قناة تواصله */}
       {/* ══════════════════════════════════════════════════════════════
           **وقلبُ اللوحة زجاجٌ كبقيّتها**
@@ -205,27 +240,6 @@ export default function OverviewPage() {
         </div>
       </Card>
 
-      {/* الإجمالي التراكمي */}
-      <StatGrid>
-        <StatCard icon={IconStore} label={m.rep.stats.merchants} value={me.merchants} />
-        <StatCard
-          icon={IconSuccess}
-          label={m.rep.stats.delivered}
-          value={me.delivered_orders}
-          tone="success"
-        />
-        <StatCard
-          icon={IconOrder}
-          label={`${m.rep.stats.commissions} (${m.common.currency})`}
-          value={me.total_commissions}
-        />
-        <StatCard
-          icon={IconWallet}
-          label={`${m.terms.walletBalance} (${m.common.currency})`}
-          value={me.balance}
-          tone="accent"
-        />
-      </StatGrid>
     </PageContainer>
   );
 }

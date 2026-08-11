@@ -38,8 +38,10 @@ import {
   IconOrder,
   IconChat,
   IconUser,
+  IconOverview,
   type NavItem,
 } from "@rahalgo/ui";
+import { homeFor, portalFor } from "@rahalgo/auth";
 import { useAuth, isLoggedIn } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
@@ -75,8 +77,32 @@ const ITEMS: readonly NavItem[] = [
 export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
-  if (!isLoggedIn(user)) return null;
-  return <MobileNav items={ITEMS} active={pathname} Link={Link} />;
+  if (!user || !isLoggedIn(user)) return null;
+  /* ══════════════════════════════════════════════════════════════════
+     **و«الرئيسيّة» للزبون، و«لوحتي» لمن له لوحة**
+     ══════════════════════════════════════════════════════════════════
+
+     (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرئيسيّةُ تظهر فقط للزبون، أمّا الباقي
+      يظهر مكانَها لوحتي — وتختفي من التوب بار. لأنّ الصفحةَ الرئيسيّةَ
+      أوّلاً لا تفيد بشيءٍ ولا يوجد بها شيء، والثانية أنّه بالضغط على
+      الأيقونة يمكنه الوصولُ إلى الصفحة الرئيسيّة».)
+
+     **وخمسةُ مواضعَ لا سادسَ لها** — عرضُ الهاتف يحكم. **وموضعٌ يذهب إلى
+     صفحةٍ يصلها بضغطة على الشعار موضعٌ ضائع.**
+
+     **والسائقُ والمتجرُ والمندوبُ يدخلون السوقَ زبائنَ ويعودون إلى
+     عملهم** — **والعودةُ كانت حبّةً في الشريط العلويّ** يزاحمها الجرسُ
+     والمحفظةُ والتطبيق. **وهي أكثرُ ما يُضغط عندهم.**
+
+     **والزبونُ لا لوحةَ له** — فتبقى رئيسيّتُه كما هي. */
+  const portal = portalFor(user.roles);
+  const items: readonly NavItem[] = portal
+    ? [
+        { href: String(homeFor(user.roles)), label: m.site.nav.backToDashboard, icon: IconOverview },
+        ...ITEMS.slice(1),
+      ]
+    : ITEMS;
+  return <MobileNav items={items} active={pathname} Link={Link} />;
 }
 
 /** الفراغُ تحت المحتوى — **بلاه يختفي آخرُ سطرٍ خلف الشريط.** */

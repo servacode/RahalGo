@@ -395,8 +395,12 @@ export default function Header({
                   ولا يظهر إن لم يُضبط رابطٌ ولا رُفع ملفّ — يخفي نفسَه. */}
               <AppDownloadChip label={m.auth.getApp} />
               {/* لوحتي لمن له لوحة فقط — الزبون لا لوحة له وعناصره كلها هنا */}
+              {/* **وتختفي من الشريط على الجوّال** — (قرارُ المالك
+                  ٢٠٢٦-٠٨-١١): **نزلت إلى الشريط السفليّ مكانَ «الرئيسيّة»**،
+                  **وبابان لشيءٍ واحدٍ في ثلاثمئةٍ وستّين يزاحمان ما لا
+                  بديلَ له.** وتبقى فوق الحاسوب — لا شريطَ سفليَّ هناك. */}
               {portal && (
-                <TopBarChip tone="accent" onClick={backToDashboard} title={m.shared.backToDashboard}>
+                <TopBarChip tone="accent" onClick={backToDashboard} title={m.shared.backToDashboard} className="hidden md:flex">
                   <IconOverview size={TOPBAR_ICON} />
                   <span className="hidden md:inline">{m.shared.backToDashboard}</span>
                 </TopBarChip>

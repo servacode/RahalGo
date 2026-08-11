@@ -323,13 +323,35 @@ export function NotificationToast({
 
   if (!notification) return null;
   return (
-    <div className="fixed bottom-4 end-4 z-[100] w-80 max-w-[90vw] surface p-4 elev-3">
+    /* ══════════════════════════════════════════════════════════════════
+       **والتنبيهُ العابر فوق الشريط السفليّ لا تحته**
+       ══════════════════════════════════════════════════════════════════
+
+       (شهده المالك ٢٠٢٦-٠٨-١١: «انظر كيف ظهر الإشعارُ على الجوّال —
+        مقصوصٌ وكبيرٌ وغيرُ مناسب».)
+
+       **ثلاثةٌ مجتمعة:**
+
+       **الأوّل** أنّه يجلس على `bottom-4` — **وشريطُ أقسام الزبون ثابتٌ
+       هناك بارتفاع ٦٠ بكسلاً**، فيقع التنبيهُ خلفه أو عليه.
+
+       **والثاني** أنّ `truncate` تقطع العنوانَ والنصَّ سطراً واحداً —
+       **فيصل الخبرُ نصفَه**: «طلبُك رقم…». وهو تنبيهٌ يعيش ستَّ ثوانٍ،
+       **ومن لم يقرأه فيها لم يقرأه.**
+
+       **والثالث** أنّ `w-80` تُقاس بالحاسوب، **و`max-w-[90vw]` تجعله
+       لوحاً يغطّي عرضَ الهاتف** وتترك خمسةَ بالمئة من كلّ جهةٍ فيُقرأ
+       زحفاً لا بطاقة.
+
+       **فيرتفع عن الشريط ويمتدّ من حافّةٍ إلى حافّةٍ بهامشٍ متساوٍ**،
+       **ويلتفُّ نصُّه سطرين.** وعلى الحاسوب يعود بطاقةً في الزاوية. */
+    <div className="fixed inset-x-3 bottom-[4.5rem] z-[100] surface p-3 elev-3 sm:inset-x-auto sm:bottom-4 sm:end-4 sm:w-80 sm:p-4 md:bottom-4">
       <div className="flex items-start gap-2">
         <IconBell size={18} className="mt-0.5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-bold">{notification.title}</p>
+          <p className="line-clamp-2 font-bold">{notification.title}</p>
           {notification.body && (
-            <p className="mt-0.5 truncate text-sm text-ink-muted">{notification.body}</p>
+            <p className="mt-0.5 line-clamp-2 text-sm text-ink-muted">{notification.body}</p>
           )}
         </div>
         <button onClick={onDismiss} className="text-ink-muted hover:text-ink" aria-label={m.common.cancel}>

@@ -202,7 +202,10 @@ export function Chips<K extends string>({
             aria-checked={sel}
             disabled={c.disabled}
             onClick={() => onChange(c.id)}
-            className={`flex shrink-0 items-center gap-1.5 rounded-badge border px-3.5 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+            /* **وأصغرُ على الجوّال** — (٢٠٢٦-٠٨-١١، مع إلغاء الانزلاق في
+               صفحة الإشعارات): **حبّةٌ بحشوةِ حاسوبٍ تأخذ من عرضٍ ضيّقٍ
+               أضعافَ ما تحمل**، وصفٌّ يلتفّ بها يصير ثلاثةَ أسطر. */
+            className={`flex shrink-0 items-center gap-1.5 rounded-badge border px-2.5 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:px-3.5 sm:py-2 sm:text-sm ${
               sel
                 ? "border-primary bg-primary font-bold text-on-bright"
                 : "border-line bg-surface text-ink-muted hover:border-primary-edge hover:text-ink"
