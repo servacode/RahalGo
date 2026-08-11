@@ -101,6 +101,7 @@ private fun DriverApp() {
             ) {
                 BrandIntro(
                     tagline = stringResource(R.string.intro_tagline),
+                    brandWord = stringResource(R.string.intro_tagline_brand),
                     reduceMotion = reduceMotion,
                     onFinished = {
                         MainActivity.introShown = true

@@ -98,11 +98,18 @@ private val RahalGoTypography = Typography().run {
     )
 }
 
-/** نمطُ شعار الافتتاح — **متوسّطُ الوزن لا عريض**: العبارةُ تُقرأ ولا تصيح. */
+/**
+ * نمطُ عبارة الافتتاح.
+ *
+ * **وكبُرت من ١٧ إلى ٢٢** (طلب المالك ٢٠٢٦-٠٨-١١) — **وبقيت ثانويّةً
+ * أمام الشعار**: الشعارُ نحو ٤٦٪ من عرض الشاشة، والعبارةُ سطرٌ تحته.
+ *
+ * **ووزنُها متوسّطٌ لا عريض**: عبارةٌ عريضةٌ بجانب شعارٍ كبيرٍ تُزاحمه.
+ */
 val TaglineStyle = TextStyle(
     fontFamily = Tajawal,
     fontWeight = FontWeight.Medium,
-    fontSize = 17.sp,
+    fontSize = 22.sp,
     letterSpacing = 0.2.sp,
 )
 
