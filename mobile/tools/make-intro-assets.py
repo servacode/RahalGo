@@ -215,6 +215,24 @@ def main() -> None:
         put(OUT / f"{res_name}.xml", vector_xml(read_svg(src)))
         print(f"  {src_name} → drawable/{res_name}.xml")
 
+    # ══════════════════════════════════════════════════════════════════
+    # **والشعارُ كاملاً في ملفٍّ واحدٍ أيضاً**
+    # ══════════════════════════════════════════════════════════════════
+    #
+    # (شرطُ المالك ٢٠٢٦-٠٨-١١: «اللوغو صورةٌ واحدةٌ مقفولة، لا يُفكَّك ولا
+    #  يُعاد رسمُه».)
+    #
+    # **والترتيبُ ترتيبُ أرقام الملفّات**: الحرفُ خلفَ الكلّ، ثمّ العلامةُ
+    # في جوفه، ثمّ الطريقُ أمامَه، ثمّ الدرّاجةُ فوق الجميع.
+    #
+    # **ومتّجهٌ لا صورة**: يبقى حادّاً في أيّ حجمٍ وعلى أيّ شاشة، **وصورةٌ
+    # نقطيّةٌ تُكبَّر تُهبّب حوافَّها.**
+    merged = []
+    for src_name in LAYERS:
+        merged += read_svg(SRC / src_name)
+    put(OUT / "intro_logo.xml", vector_xml(merged))
+    print(f"  الشعارُ كاملاً → drawable/intro_logo.xml ({len(merged)} مساراً)")
+
     line = thin(centerline(read_svg(SRC / ROUTE)))
     put(GEN / "RoutePoints.kt", kotlin_path(line))
     print(f"  خطّ المنتصف: {len(line)} نقطة  "

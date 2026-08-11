@@ -18,9 +18,16 @@
          ومضةٌ بيضاءُ ولا سوداءُ بين الاثنتين. -->
     <style name="Theme.RahalGo.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/brand_canvas</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <!-- **ولا أيقونة في شاشة النظام** — (طلب المالك ٢٠٢٦-٠٨-١١:
+             «لازم الأنيميشن يبدأ من أول ما يفتح البرنامج، مو تطلع أيقونة
+              ثابتة ثم بعدها يطلع الأنيميشن»).
+
+             **وأندرويد يعرض شاشة إقلاع لا محالة** — لا يملك التطبيق
+             منعها. **لكنه يملك أن تكون بيضاء فارغة بلون شاشتنا**، فلا
+             يرى المستخدم إلا بياضا ثم تبدأ الحركة عليه. -->
         <!-- **وتُسلَّم إلى سمتنا فورَ أن تبدأ شيفرتُنا** — وبلا هذا
              السطر يبقى النظامُ على سمة الإقلاع فتظهر بلا محتوى. -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_empty</item>
         <item name="postSplashScreenTheme">@style/Theme.RahalGo</item>
     </style>
 
