@@ -11,6 +11,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
@@ -280,6 +281,12 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	// بعد الإيداع: فشل الإشعار لا يُبطل تسليماً وقع فعلاً
 	s.notifyTransition(ctx, orderID, to, note, endedBy)
 	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
+	// **وكلُّ من تحرّكت محفظتُه يعرف عمّاذا** — (قرارُ المالك ٢٠٢٦-٠٨-١١:
+	// «الرصيد يتغيّر وما حدا بيعرف ليش»).
+	//
+	// **بعد الإيداع لا داخلَه**: معاملةٌ تُرجَع بعد أن أُرسل إشعارُها
+	// **تُخبر صاحبَها بمالٍ لم يصله.**
+	s.notifyCredits(ctx, orderID, done.credits)
 
 	// **ومكافأةُ من دعا هذا الزبون** — عند أوّل طلبٍ يُسلَّم له.
 	//
@@ -413,7 +420,7 @@ func (s *Service) AutoDispatch(ctx context.Context, actorID, orderID string) err
 // # ويخرج من الخزينة في القيد نفسه
 //
 // **تعويضٌ يُقيَّد للسائق وحده يجعل المنصةَ تظهر رابحةً وهي تدفع.**
-func (s *Service) compensateDriverOnFail(ctx context.Context, q wallet.Querier, in settlement) error {
+func (s *Service) compensateDriverOnFail(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
 	if in.driverID == nil || in.deliveryFee <= 0 || s.settings == nil {
 		return nil
 	}
@@ -454,6 +461,7 @@ func (s *Service) compensateDriverOnFail(ctx context.Context, q wallet.Querier, 
 		in.orderID, "تعويضٌ عن تعذّر التسليم — "+who, &in.actorID); err != nil {
 		return err
 	}
+	out.credit(*in.driverID, amount, t.compensated, notifications.AppDriver)
 	if err := s.DebitTreasury(ctx, q, amount, in.orderID,
 		"تعويضُ سائقٍ عن تعذّر تسليم", in.actorID); err != nil {
 		return err
@@ -479,6 +487,40 @@ var pastPickup = map[string]bool{
 type settled struct {
 	repID          string
 	commissionPaid int64
+	// ══════════════════════════════════════════════════════════════════
+	// **credits ما تحرّكت به محفظةُ كلّ طرفٍ في هذه المعاملة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد يتغيّر وما حدا بيعرف ليش».)
+	//
+	// **الأجرُ والمستحقُّ والاسترجاعُ والتعويض كانت تُقيَّد بلا إشعار.**
+	// السائقُ يوصّل ويقبض، **فيرى الرقمَ في شريطه يزيد ولا يعرف عمّاذا**
+	// — إلّا إن فتح المحفظةَ وقرأ السطر.
+	//
+	// **وتُجمَع هنا ولا تُرسَل في موضعها**: كلُّ هذه القيود داخلَ معاملةِ
+	// الانتقال، **ومعاملةٌ تُرجَع بعد أن أُرسل إشعارُها تُخبر صاحبَها
+	// بمالٍ لم يصله.** فتُجمَع، ثمّ تُرسَل بعد الإيداع.
+	//
+	// **وهو النمطُ نفسُه الذي تسير عليه `repID` منذ زمن.**
+	credits []walletCredit
+}
+
+// walletCredit حركةُ محفظةٍ واحدةٌ تستحقّ أن يُخبَر بها صاحبُها.
+type walletCredit struct {
+	userID string
+	amount int64
+	// title العنوانُ كما يُقرأ — لا اسمُ النوع في القاعدة.
+	title string
+	// app التطبيقُ الذي يخصّه — فصاحبُ المتجر يحمل تطبيقين.
+	app string
+}
+
+// credit يُسجّل حركةً للإخبار بها بعد الإيداع — **والصفرُ لا يُسجَّل.**
+func (d *settled) credit(userID string, amount int64, title, app string) {
+	if userID == "" || amount == 0 {
+		return
+	}
+	d.credits = append(d.credits, walletCredit{userID: userID, amount: amount, title: title, app: app})
 }
 
 // settlement مدخلات التسوية المالية لانتقال واحد.
@@ -532,6 +574,7 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 			in.orderID, fmt.Sprintf("استرجاع طلب %s", statusAr(in.to)), &in.actorID); err != nil {
 			return err
 		}
+		out.credit(in.customerID, in.walletPaid, t.refunded2, notifications.AppCustomer)
 	}
 
 	// (2) **الاستلامُ من المتجر — وهنا يقبض المتجر.**
@@ -548,7 +591,7 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	// المنصة؟» — فالمنصةُ **اشترت** الطعامَ لحظةَ خروجه، **وهو ملكُها**،
 	// والخسارةُ تقع تلقائياً حيث يجب بلا قرارٍ من أحد.
 	if in.to == StPickedUp {
-		if err := s.settleMerchant(ctx, q, in.orderID, in.actorID); err != nil {
+		if err := s.settleMerchant(ctx, q, in.orderID, in.actorID, out); err != nil {
 			return err
 		}
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
@@ -565,10 +608,10 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 		}
 		// **احتياطٌ لا تكرار**: تُهمل إن قُيّد المتجرُ عند الاستلام، وتُدرك
 		// ما فات إن قُفز فوقه.
-		if err := s.settleMerchant(ctx, q, in.orderID, in.actorID); err != nil {
+		if err := s.settleMerchant(ctx, q, in.orderID, in.actorID, out); err != nil {
 			return err
 		}
-		if err := s.payDriver(ctx, q, in); err != nil {
+		if err := s.payDriver(ctx, q, in, out); err != nil {
 			return err
 		}
 		if err := s.settleRep(ctx, q, in.orderID, in.actorID, out); err != nil {
@@ -587,7 +630,7 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	// **وذنبُ السائق لا تعويضَ فيه**، وذنبُ المتجر كذلك: المنصةُ تتحمّل
 	// بضاعتَه وتعوّض سائقَها، **ولا تجمع عليها الاثنين بلا سبب**.
 	if in.to == StFailed {
-		if err := s.compensateDriverOnFail(ctx, q, in); err != nil {
+		if err := s.compensateDriverOnFail(ctx, q, in, out); err != nil {
 			return err
 		}
 	}
@@ -611,6 +654,7 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 				in.orderID, "استرجاع طلب مُسلَّم", &in.actorID); err != nil {
 				return err
 			}
+			out.credit(in.customerID, total, t.refunded2, notifications.AppCustomer)
 		}
 		if err := s.reverseCommissions(ctx, q, in.orderID, in.actorID); err != nil {
 			return err
@@ -628,7 +672,7 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 // البضاعة من يده، **وما يجري بعدها لا يخصّه** — لا فشلُ تسليمٍ ولا رفضُ زبون.
 //
 // **والعمولةُ معه**: هي تكلفةُ بيعته، والبيعةُ وقعت. (السياسة §٣-١)
-func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
+func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID, actorID string, out *settled) error {
 	// **لا يُقيَّد مرّتين.**
 	//
 	// تُنادى عند الاستلام، **وتُنادى ثانيةً عند التسليم احتياطاً**: الخريطةُ
@@ -743,6 +787,7 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		if sh.ownerID == nil || sh.due <= 0 {
 			continue
 		}
+		out.credit(*sh.ownerID, sh.due, t.merchantEarned, notifications.AppMerchant)
 		if _, err := s.wallet.ApplyTx(ctx, q, *sh.ownerID, sh.due, "merchant_earning",
 			orderID, "مستحقّ عن بضاعةٍ سُلّمت للسائق", &actorID); err != nil {
 			return err
@@ -1094,16 +1139,19 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 //
 // **والمنصةُ لا تربح من مشوارٍ لم تقده.**
 
-func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement) error {
+func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
 	if in.driverID == nil {
 		return nil
 	}
 	if in.deliveryFee <= 0 {
 		return nil
 	}
-	_, err := s.wallet.ApplyTx(ctx, q, *in.driverID, in.deliveryFee, "driver_earning",
-		in.orderID, "أجر توصيل طلب مُسلَّم", &in.actorID)
-	return err
+	if _, err := s.wallet.ApplyTx(ctx, q, *in.driverID, in.deliveryFee, "driver_earning",
+		in.orderID, "أجر توصيل طلب مُسلَّم", &in.actorID); err != nil {
+		return err
+	}
+	out.credit(*in.driverID, in.deliveryFee, t.driverEarned, notifications.AppDriver)
+	return nil
 }
 
 // merchantActivated هل بلغ عميلُ هذا الطلب عتبةَ التفعيل؟

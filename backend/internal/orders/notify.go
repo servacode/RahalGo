@@ -25,6 +25,9 @@ var t = struct {
 	merchantDelivered, commission            string
 	violationsWarn, violationsBanned         string
 	endedOps, warningIssued                  string
+	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
+	// يتغيّر وما حدا بيعرف ليش»).
+	driverEarned, merchantEarned, refunded2, compensated string
 }{
 	newOrderMerchant:  "طلب جديد وصلك",
 	newOrderOps:       "طلب جديد في المنصة",
@@ -42,6 +45,10 @@ var t = struct {
 	violationsBanned:  "حُظر متجرٌ لكثرة الإلغاء",
 	endedOps:          "انتهى طلبٌ قبل تسليمه",
 	warningIssued:     "إنذارٌ على متجرك",
+	driverEarned:      "أجر توصيل في محفظتك",
+	merchantEarned:    "مستحق مبيعاتك في محفظتك",
+	refunded2:         "أُعيد المبلغ إلى محفظتك",
+	compensated:       "تعويض في محفظتك",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.
@@ -210,4 +217,46 @@ func (s *Service) notifyCommission(ctx context.Context, repID, orderID string, a
 		// **عمولةُ المندوب تخصّ تطبيقَه** — وهو يحمل تطبيقَ الزبون أيضاً.
 		Apps: []string{notifications.AppRep},
 	})
+}
+
+// notifyCredits يُخبر كلَّ من تحرّكت محفظتُه — **بعد الإيداع لا داخلَه.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا لم تكن موجودة**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد يتغيّر وما حدا بيعرف ليش».)
+//
+// **السائقُ يوصّل ويقبض أجرَه فلا يصله شيء** — يرى الرقمَ في شريطه يزيد
+// **ولا يعرف عمّاذا** إلّا إن فتح المحفظةَ وقرأ السطر. **وهو غالباً لا
+// يفتحها**، فيتراكم عنده شكٌّ في الحساب لا سببَ له.
+//
+// **والمبلغُ في العنوان لا في النصّ وحدَه**: إشعارٌ يُقرأ من شاشةٍ مقفلةٍ
+// في سطرٍ ونصف، **ومن أراد التفصيل فتح المحفظة.**
+func (s *Service) notifyCredits(ctx context.Context, orderID string, credits []walletCredit) {
+	if s.notify == nil || len(credits) == 0 {
+		return
+	}
+	var ref string
+	if p, err := s.parties(ctx, orderID); err == nil {
+		ref = fmt.Sprintf("#%d", p.number)
+	}
+	for _, c := range credits {
+		sign := "+"
+		amount := c.amount
+		if amount < 0 {
+			sign = "−"
+			amount = -amount
+		}
+		body := fmt.Sprintf("%s%d ل.س", sign, amount)
+		if ref != "" {
+			body += " — طلب " + ref
+		}
+		s.notify.Notify(ctx, notifications.Input{
+			UserID: c.userID, Kind: notifications.KindWallet,
+			Title: c.title, Body: body,
+			Entity: "wallet", EntityID: orderID, Href: "/wallet",
+			Apps: []string{c.app},
+		})
+	}
 }

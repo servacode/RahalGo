@@ -75,10 +75,13 @@ func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
 	}
 
 	// **ويُعوَّض السائق** — بالمعادلة نفسِها، ومن الخزينة كما دائماً.
+	// **ولا إشعارَ محفظةٍ هنا**: هذا مسارُ حظرِ متجرٍ يُنهي طلباتِه جملةً،
+	// **والتعويضاتُ تُقيَّد ويُخبَر بها من مسار الانتقال العاديّ.**
+	var noNotice settled
 	if err := s.compensateDriverOnFail(ctx, tx, settlement{
 		orderID: orderID, actorID: actorID, driverID: driverID,
 		deliveryFee: deliveryFee,
-	}); err != nil {
+	}, &noNotice); err != nil {
 		return nil, err
 	}
 	// **والخزينةُ تُعيد الحساب** — تعويضٌ خرج منها يُقرأ في ربح الطلب.
