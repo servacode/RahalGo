@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   EmptyState,
@@ -627,8 +627,8 @@ function CancelModal({
         body: JSON.stringify({ to: "cancelled", note: reason }),
       });
       onDone();
-    } catch {
-      setError(m.errors.internal);
+    } catch (err) {
+      setError(errorText(err));
       setBusy(false);
     }
   }

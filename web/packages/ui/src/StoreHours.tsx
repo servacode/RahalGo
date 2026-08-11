@@ -25,7 +25,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import { Button, Checkbox } from "./components";
 import { Alert } from "./feedback";
 import { IconPrev } from "./icons";
@@ -91,8 +91,8 @@ export function StoreHours({
       }
       setSaved(true);
       onSaved?.();
-    } catch {
-      setError(m.errors.internal);
+    } catch (err) {
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }

@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Button,
@@ -1181,8 +1181,8 @@ function ProofModal({
         body: fd,
       });
       onDone();
-    } catch {
-      setError(m.errors.internal);
+    } catch (err) {
+      setError(errorText(err));
       setBusy(false);
     }
   }

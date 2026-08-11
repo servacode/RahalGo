@@ -245,13 +245,31 @@ func (s *Server) handlePublicZone(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	z, err := s.catalog.ZoneForPoint(r.Context(), lat, lng)
+	// ══════════════════════════════════════════════════════════════════
+	// **والأجرةُ من الإعدادات — لا من عمود المنطقة الميّت**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شهده المالك ٢٠٢٦-٠٨-١١: «يقول التوصيلُ مجّانيٌّ وأنا حاطط أجور ١٠
+	//  آلاف».)
+	//
+	// **`delivery_zones.delivery_fee` عمودٌ لم يعد يُقرأ** — بقي في القاعدة
+	// بعد أن صارت الأجرةُ رقماً مقطوعاً واحداً في الإعدادات (قرارُ المالك
+	// ٢٠٢٦-٠٨-٠٤: «قيمُ التوصيل يجب أن تأتي من مكانٍ واحدٍ بكلّ المشروع»).
+	//
+	// **وهذه النقطةُ وحدَها بقيت تقرؤه** — فتردّ صفراً أبداً، **وشاشةُ السلّة
+	// تكتب «مجّاني» فوق أجرةٍ مضبوطة.** ومن رآها ظنّ الإعدادَ لا يعمل.
+	//
+	// **وأخطرُ ما فيه أنّ الطلبَ يُحاسَب بالصحيح**: الزبونُ يقرأ «مجّاني»
+	// ويُخصم منه، **وهو أسوأُ ما يقع في شاشة دفع.**
+	//
+	// **و`DeliveryAt` هي مصدرُ الحقيقة** — تناديها التسعيرةُ والإنشاء معاً.
+	d, err := s.orders.DeliveryAt(r.Context(), lat, lng)
 	if err != nil {
 		s.respondErr(w, orders.ErrOutOfZone)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"name": z.Name, "delivery_fee": z.DeliveryFee, "min_order": z.MinOrder,
+		"name": d.Name, "delivery_fee": d.Fee, "min_order": d.MinOrder,
 	})
 }
 

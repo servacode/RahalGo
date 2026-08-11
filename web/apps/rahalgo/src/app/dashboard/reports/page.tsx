@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   PageHeader,
@@ -191,8 +191,8 @@ export default function ReportsPage() {
         a.download = `${kind}-${from}_${to}.csv`;
         a.click();
         URL.revokeObjectURL(url);
-      } catch {
-        setError(m.errors.internal);
+      } catch (err) {
+        setError(errorText(err));
       }
     })();
   }

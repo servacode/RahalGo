@@ -32,7 +32,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
@@ -143,8 +143,8 @@ export default function SectionPage() {
       setCount(res.count ?? 0);
       setPerPage(res.per_page || 50);
       setError("");
-    } catch {
-      setError(m.errors.internal);
+    } catch (err) {
+      setError(errorText(err));
     }
   }, [id, page]);
 

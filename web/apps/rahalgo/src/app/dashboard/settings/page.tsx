@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   Tabs,
   Alert,
@@ -200,8 +200,8 @@ export default function SettingsPage() {
       setList(res.settings ?? []);
       setOrder(res.groups ?? []);
       setError("");
-    } catch {
-      setError(m.errors.internal);
+    } catch (err) {
+      setError(errorText(err));
     }
   }, []);
 

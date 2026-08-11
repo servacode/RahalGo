@@ -25,7 +25,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   PageContainer,
   PageHeader,
@@ -72,8 +72,8 @@ export default function MerchantSettingsPage() {
       });
       setSaved(true);
       await refresh();
-    } catch {
-      setError(m.errors.internal);
+    } catch (err) {
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }

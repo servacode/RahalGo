@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, errorText } from "@rahalgo/i18n";
 import {
   Tabs,
   type TabDef,
@@ -97,8 +97,8 @@ export default function MerchantProfilePage() {
     try {
       setMr(await api<Merchant>(`/api/v1/admin/merchants/${id}`));
       setError("");
-    } catch {
-      setError(m.errors.internal);
+    } catch (err) {
+      setError(errorText(err));
     }
   }, [id]);
 
@@ -112,8 +112,8 @@ export default function MerchantProfilePage() {
           body: JSON.stringify({ accepts_returns: v }),
         });
         await load();
-      } catch {
-        setError(m.errors.internal);
+      } catch (err) {
+        setError(errorText(err));
       } finally {
         setSavingReturns(false);
       }

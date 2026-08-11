@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
   PageContainer,
   PageHeader,
@@ -83,8 +83,8 @@ export function RatingsView() {
     try {
       setData(await api<Data>(`/api/v1/admin/ratings?min=${min}`));
       setError("");
-    } catch {
-      setError(m.errors.internal);
+    } catch (err) {
+      setError(errorText(err));
     }
   }, [min]);
 
