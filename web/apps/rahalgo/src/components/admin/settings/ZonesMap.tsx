@@ -93,10 +93,24 @@ export default function ZonesMap({
           key={z.id}
           center={[z.lat, z.lng]}
           radius={z.radius_m}
+          /* ══════════════════════════════════════════════════════════
+             **والدائرةُ تُرى على خريطةٍ مزدحمة — لا تُخمَّن**
+             ══════════════════════════════════════════════════════════
+
+             (شهده المالك ٢٠٢٦-٠٨-١١: «الدائرةُ الخاصّةُ بالمناطق شفّافةٌ
+              جدّاً، لا أستطيع رؤيتَها جيّداً».)
+
+             **كانت تعبئتُها ٠٫١٥** — وخريطةُ الشوارع تحتها ملوّنةٌ مزدحمة:
+             مبانٍ ونهرٌ وطرقٌ صفراء. **وخمسةَ عشرَ بالمئة فوق ذلك لا تُقرأ
+             حدّاً**، فيُخمَّن مدى التغطية بدل أن يُرى.
+
+             **وحدُّ الدائرة هو ما يقول أين تنتهي التغطية** — فغُلّظ،
+             **والتعبئةُ تكفي لتُميَّز الداخلَ من الخارج بلا أن تُخفي الشارع
+             الذي يُنظر إليه.** */
           pathOptions={{
             color: z.id === selectedID ? c.accent : z.active ? c.primary : c.muted,
-            fillOpacity: z.id === selectedID ? 0.3 : 0.15,
-            weight: z.id === selectedID ? 3 : 2,
+            fillOpacity: z.id === selectedID ? 0.42 : 0.28,
+            weight: z.id === selectedID ? 5 : 4,
           }}
           eventHandlers={{ click: () => onZoneClick(z.id) }}
         />
@@ -107,7 +121,8 @@ export default function ZonesMap({
           <Circle
             center={[draft.lat, draft.lng]}
             radius={draft.radiusM}
-            pathOptions={{ color: c.accentDark, fillColor: c.accent, fillOpacity: 0.2, dashArray: "8" }}
+            /* **والمسوّدةُ تُرى كأختِها** — وهي ما يُرسم الآن. */
+            pathOptions={{ color: c.accentDark, fillColor: c.accent, fillOpacity: 0.35, weight: 4, dashArray: "8" }}
           />
           <CircleMarker
             center={[draft.lat, draft.lng]}

@@ -265,8 +265,13 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	//
 	// **وقبل النشر** — فالفقّاعةُ تُحدَّث بحدث الطلب، **ولو كُتب الحديثُ بعده
 	// لَبقيت الشارةُ صفراً حتّى الحدث التالي.**
-	if kind == KindCustom && to == StAssigned && driverID != nil {
-		s.openCustomChat(ctx, orderID, customerID, *driverID)
+	if to == StAssigned && driverID != nil {
+		if kind == KindCustom {
+			s.openCustomChat(ctx, orderID, customerID, *driverID)
+		} else {
+			// **والعاديُّ يُفتح كذلك** — (قرارُ المالك ٢٠٢٦-٠٨-١١).
+			s.openPlainChat(ctx, orderID, *driverID)
+		}
 	}
 
 	s.publishOrder(updated)

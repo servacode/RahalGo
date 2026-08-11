@@ -371,24 +371,31 @@ export function NotificationsPage({
                     </div>
                   );
                   return (
+                    /* ══════════════════════════════════════════════════
+                       **والإشعارُ يُخبِر ولا ينقل**
+                       ══════════════════════════════════════════════════
+
+                       (قرارُ المالك ٢٠٢٦-٠٨-١١: «الإشعاراتُ لا يجب أن تكون
+                        ذكيّةً بحيث تضغط عليها وتأخذك إلى المكان — خلص هو
+                        مجرّدُ إشعارٍ يُبلّغ بأمرٍ ما».)
+
+                       **وكان نصفُها رابطاً ونصفُها زرّاً** — بحسب ما إن
+                       كان للحدث وجهةٌ محفوظة. **فصفٌّ ينقلك وصفٌّ لا ينقل
+                       في القائمة نفسِها**، ولا شيءَ يميّزهما قبل الضغط.
+
+                       **ومن ضغط ليُعلّمه مقروءاً وجد نفسَه في شاشةٍ أخرى**
+                       — فيفقد موضعَه في القائمة ويعود ليبحث عمّا كان يقرأ.
+
+                       **فصار الكلُّ زرّاً واحداً**: يُعلّم المقروءَ ولا
+                       يبرح المكان. **وسلوكٌ واحدٌ لا يحتاج أن يُتعلَّم.** */
                     <li key={n.id} className="min-w-0">
-                      {n.href ? (
-                        <Link
-                          href={n.href}
-                          onClick={() => !n.read && void markOne(n.id)}
-                          className="block h-full"
-                        >
-                          {inner}
-                        </Link>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => markOne(n.id)}
-                          className="block w-full text-start transition-colors hover:bg-row-hover"
-                        >
-                          {inner}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => !n.read && void markOne(n.id)}
+                        className="block w-full text-start transition-colors hover:bg-row-hover"
+                      >
+                        {inner}
+                      </button>
                     </li>
                   );
                 })}

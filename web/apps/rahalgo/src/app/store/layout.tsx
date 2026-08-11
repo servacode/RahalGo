@@ -168,7 +168,10 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
       brand={m.merchant.brand}
       nav={navFor(selfManage)}
       pathname={pathname}
-      homeHref="/store"
+      /* **وبيتُ البوّابة يتبع من يدير**: ضغطُ الشعار يعيد إلى `/store`،
+         **وهي شاشةُ طلباتٍ لا يملكها في وضع المنصّة** — فيعود إليها من
+         حيث خرج. (قرارُ المالك ٢٠٢٦-٠٨-١١.) */
+      homeHref={selfManage ? "/store" : "/store/history"}
       accountHref="/store/account"
       walletHref="/store/wallet"
       ratingHref="/store/reviews"

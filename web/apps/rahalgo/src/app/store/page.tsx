@@ -5,6 +5,7 @@
  * والباقي أعمدة متابعة حية عبر WebSocket (والتحديث الدوري احتياط).
  */
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime, errorText } from "@rahalgo/i18n";
 import {
@@ -75,6 +76,27 @@ const WITH_DRIVER = ["dispatching", "assigned", "at_pickup", "picked_up", "on_th
 
 export default function OrdersBoard() {
   const { store, selfManage } = useStore();
+  const router = useRouter();
+
+  /* ══════════════════════════════════════════════════════════════════
+     **وشاشةُ الطلبات لا تُفتح لمن لا يديرها**
+     ══════════════════════════════════════════════════════════════════
+
+     (قرارُ المالك ٢٠٢٦-٠٨-١١: «قسمُ الطلبات لازم ما يطلع» في وضع إدارة
+      المنصّة. **وزرُّ الإغلاق الطارئ يبقى** — «مجبورٌ فيه المتجر».)
+
+     **ورابطُها كان يُخفى من الشريط وحدَه** — وهي بيتُ البوّابة (`/store`).
+     **فمن دخل لوحتَه وجدها أوّلَ ما يرى**: أربعةُ أعمدةٍ لطلباتٍ لا يملك
+     فيها زرّاً، **وشاشةٌ تُشاهَد ولا تُلمَس تُربك أكثرَ ممّا تفيد.**
+
+     **وإخفاءُ الأزرار وحدَها لا يكفي** — بقيت الشاشةُ تسأل الخادمَ كلَّ
+     حين وتعرض ما لا يعنيه.
+
+     **فيُنقل إلى السجلّ** — وهو ما يهمّه في هذا الوضع: ماذا سلّم وماذا
+     أُلغي منه. **ولا يُترك في فراغٍ بلا وجهة.** */
+  useEffect(() => {
+    if (store && !selfManage) router.replace("/store/history");
+  }, [store, selfManage, router]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [doneToday, setDoneToday] = useState(0);
   const [accepting, setAccepting] = useState<Order | null>(null);
