@@ -47,10 +47,10 @@ func TestPush_TokenMovesToNewOwner(t *testing.T) {
 	second := testdb.NewUser(t, pool, "driver")
 	const token = "tok-shared-phone"
 
-	if err := svc.Register(ctx, first, token, PlatformAndroid, "1.0"); err != nil {
+	if err := svc.Register(ctx, first, token, PlatformAndroid, "driver", "1.0"); err != nil {
 		t.Fatalf("تسجيلُ الأوّل: %v", err)
 	}
-	if err := svc.Register(ctx, second, token, PlatformAndroid, "1.0"); err != nil {
+	if err := svc.Register(ctx, second, token, PlatformAndroid, "driver", "1.0"); err != nil {
 		t.Fatalf("تسجيلُ الثاني: %v", err)
 	}
 
@@ -82,7 +82,7 @@ func TestPush_UnregisterBoundToOwner(t *testing.T) {
 	other := testdb.NewUser(t, pool, "driver")
 	const token = "tok-mine"
 
-	if err := svc.Register(ctx, owner, token, PlatformAndroid, "1.0"); err != nil {
+	if err := svc.Register(ctx, owner, token, PlatformAndroid, "driver", "1.0"); err != nil {
 		t.Fatalf("تسجيل: %v", err)
 	}
 	if err := svc.Unregister(ctx, other, token); err != nil {
@@ -111,10 +111,10 @@ func TestPush_DeadTokensDropped(t *testing.T) {
 
 	tr := &fakeTransport{dead: []string{"tok-dead"}}
 	svc := New(pool, quietLogger(), tr)
-	if err := svc.Register(ctx, uid, "tok-dead", PlatformAndroid, "1.0"); err != nil {
+	if err := svc.Register(ctx, uid, "tok-dead", PlatformAndroid, "driver", "1.0"); err != nil {
 		t.Fatalf("تسجيل: %v", err)
 	}
-	if err := svc.Register(ctx, uid, "tok-live", PlatformAndroid, "1.0"); err != nil {
+	if err := svc.Register(ctx, uid, "tok-live", PlatformAndroid, "driver", "1.0"); err != nil {
 		t.Fatalf("تسجيل: %v", err)
 	}
 
@@ -158,7 +158,7 @@ func TestPush_NilServiceIsSafe(t *testing.T) {
 	var svc *Service
 	ctx := context.Background()
 	svc.SendToUser(ctx, "u", Message{Title: "x"})
-	if err := svc.Register(ctx, "u", "t", PlatformAndroid, ""); err != nil {
+	if err := svc.Register(ctx, "u", "t", PlatformAndroid, "customer", ""); err != nil {
 		t.Fatalf("تسجيلٌ على خدمةٍ فارغة: %v", err)
 	}
 	if svc.Enabled() {
@@ -177,5 +177,80 @@ func TestPush_PlatformClosedList(t *testing.T) {
 	}
 	if normalizePlatform(PlatformIOS) != PlatformIOS {
 		t.Fatal("آيفون صار أندرويد — **فيُرسَل إلى ناقلٍ لا يعرفه**")
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **الإشعارُ يرنّ في التطبيق الذي يخصّه وحدَه**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١١.)
+//
+// **صاحبُ المتجر يحمل تطبيقين** — تطبيقَ متجرِه وتطبيقَ الزبون ليطلب
+// عشاءه. **و«طلبٌ جديد» يخصّ متجرَه**، ولو رنّ في تطبيق الزبون لَقرأه
+// صاحبُه خطأً في المنصّة.
+func TestPush_RoutesToTargetAppOnly(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	tr := &fakeTransport{}
+	svc := New(pool, quietLogger(), tr)
+	uid := testdb.NewUser(t, pool, "merchant")
+
+	must := func(token, app string) {
+		t.Helper()
+		if err := svc.Register(ctx, uid, token, PlatformAndroid, app, "1.0"); err != nil {
+			t.Fatalf("تسجيلُ %s: %v", app, err)
+		}
+	}
+	must("tok-merchant", "merchant")
+	must("tok-customer", "customer")
+	// **وجهازٌ لا يُصرّح بتطبيقه** — نسخةٌ قديمةٌ أو متصفّح.
+	must("tok-unknown", "")
+
+	svc.SendToUser(ctx, uid, Message{Title: "طلبٌ جديد", Apps: []string{"merchant"}})
+
+	got := map[string]bool{}
+	for _, tok := range tr.sent {
+		got[tok] = true
+	}
+	if !got["tok-merchant"] {
+		t.Fatal("لم يصل تطبيقَ المتجر إشعارٌ يخصّه — **فلا يعرف صاحبُه بطلبٍ ينتظره**")
+	}
+	if got["tok-customer"] {
+		t.Fatal("رنّ الإشعارُ في تطبيق الزبون — **وهو لا علاقةَ له بطلبٍ جاء لمتجره**، " +
+			"فيُقرأ خطأً في المنصّة")
+	}
+	if !got["tok-unknown"] {
+		t.Fatal("صمت الجهازُ الذي لا يُصرّح بتطبيقه — **إشعارٌ زائدٌ أهونُ من إشعارٍ مفقود**، " +
+			"ونسخةٌ قديمةٌ لا يجوز أن تفقد إشعاراتِها بالصمت")
+	}
+}
+
+// TestPush_NoAppsMeansAll **وفارغةٌ تعني كلَّ التطبيقات لا لا شيء.**
+//
+// **وأكثرُ الإشعارات لا تُصرّح بجمهورها** — فلو قُرئت الفارغةُ «لا أحد»
+// **لَاختفت كلُّها دفعةً واحدةً بلا أثرٍ في سجلّ.**
+func TestPush_NoAppsMeansAll(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	tr := &fakeTransport{}
+	svc := New(pool, quietLogger(), tr)
+	uid := testdb.NewUser(t, pool, "driver")
+
+	_ = svc.Register(ctx, uid, "a", PlatformAndroid, "driver", "1.0")
+	_ = svc.Register(ctx, uid, "b", PlatformAndroid, "customer", "1.0")
+
+	// **وحالتان تعنيان «بلا جمهور»**: `nil` و`[]string{}`.
+	//
+	// **والثانيةُ هي الخطرة**: `= ANY('{}')` لا تطابق شيئاً في postgres،
+	// **فتصمت كلُّ الإشعارات** — ولا يظهر شيءٌ في سجلّ. (كُشفت بتخريبٍ
+	// متعمَّدٍ ٢٠٢٦-٠٨-١١: أُزيلت الحمايةُ فمرّ الاختبار.)
+	for i, apps := range [][]string{nil, {}} {
+		tr.sent = nil
+		svc.SendToUser(ctx, uid, Message{Title: "تسويةٌ إداريّة", Apps: apps})
+		if len(tr.sent) != 2 {
+			t.Fatalf("الحالةُ %d: وصل %d جهازاً من ٢ — "+
+				"**وإشعارٌ بلا جمهورٍ محدَّدٍ يذهب إلى الكلّ**", i, len(tr.sent))
+		}
 	}
 }

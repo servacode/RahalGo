@@ -99,3 +99,21 @@ func normalizeClient(client string) string {
 	}
 	return platform + "-" + app
 }
+
+// SplitClient يفكّ نوعَ العميل إلى منصّةٍ وتطبيق.
+//
+// **و`web` يعطي فراغين** — لا منصّةَ له ولا تطبيقَ يُسجَّل جهازُه.
+//
+// **ويُستعمل في تسجيل أجهزة الدفع**: التطبيقُ يُصرّح بنفسه مرّةً في
+// الترويسة، **فلا يُطلب منه حقلٌ ثانٍ في جسم الطلب** — حقلٌ يُنسى،
+// وترويسةٌ لا تُنسى لأنّ الجلسةَ تعتمد عليها.
+func SplitClient(client string) (platform, app string) {
+	if client == ClientWeb || client == "" {
+		return "", ""
+	}
+	p, a, ok := strings.Cut(client, "-")
+	if !ok {
+		return "", ""
+	}
+	return p, a
+}

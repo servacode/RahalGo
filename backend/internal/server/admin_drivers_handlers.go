@@ -114,6 +114,8 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 		UserID: driverID, Kind: notifications.KindWallet,
 		Title: notifTitles.cashSettled, Body: body,
 		Entity: "cashbox", Href: "/",
+		// **تسويةُ نقدِ السائق تخصّ تطبيقَه** — وهو يحمل تطبيقَ الزبون أيضاً.
+		Apps: []string{notifications.AppDriver},
 	})
 	s.touch("wallet", "ops")
 	s.touchUser(driverID, "wallet")

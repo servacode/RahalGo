@@ -74,6 +74,21 @@ type Message struct {
 	// **ولا تُرفع لكلّ شيء**: جوجل تخفض حصّةَ من يُسيء استعمالها،
 	// **فتتأخّر رسائلُه كلُّها** — بما فيها العاجل.
 	Urgent bool
+	// ══════════════════════════════════════════════════════════════════
+	// **Apps التطبيقاتُ التي يخصّها هذا الإشعار — وفارغةٌ تعني كلَّها**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١١: «لازم يكون هناك فصلٌ بين العمليات
+	//  والإشعارات».)
+	//
+	// **صاحبُ المتجر يحمل تطبيقين** — تطبيقَ متجرِه وتطبيقَ الزبون.
+	// **و«طلبٌ جديد» يخصّ متجرَه وحدَه**، ولو ذهب إلى الاثنين لَرنّ في
+	// تطبيقٍ لا علاقةَ له به.
+	//
+	// **والفارغةُ تعني كلَّ التطبيقات لا لا شيء**: أكثرُ الإشعارات لا
+	// تُصرّح، **وافتراضُ الصمت يجعلها تختفي كلَّها دفعةً واحدةً بلا أن
+	// يظهر شيءٌ في سجلّ.**
+	Apps []string
 }
 
 // Service **الوجهُ الوحيدُ للمنصّة** — تسجيلٌ وإرسالٌ وتنظيف.
@@ -116,19 +131,20 @@ func normalizePlatform(p string) string {
 // **والرمزُ ينتقل إلى آخرِ من سجّله**: هاتفٌ يُسلَّم لسائقٍ آخرَ يجب ألّا
 // يبقى يستقبل إشعاراتِ الأوّل. **و`ON CONFLICT (token)` تفعل ذلك بنداءٍ
 // واحدٍ بلا سباق.**
-func (s *Service) Register(ctx context.Context, userID, token, platform, appVersion string) error {
+func (s *Service) Register(ctx context.Context, userID, token, platform, app, appVersion string) error {
 	if s == nil || token == "" || userID == "" {
 		return nil
 	}
 	_, err := s.db.Exec(ctx, `
-		INSERT INTO device_tokens (token, user_id, platform, app_version)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO device_tokens (token, user_id, platform, app, app_version)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (token) DO UPDATE
 		SET user_id = EXCLUDED.user_id,
 		    platform = EXCLUDED.platform,
+		    app = EXCLUDED.app,
 		    app_version = EXCLUDED.app_version,
 		    last_seen_at = now()`,
-		token, userID, normalizePlatform(platform), appVersion)
+		token, userID, normalizePlatform(platform), app, appVersion)
 	return err
 }
 
@@ -159,7 +175,7 @@ func (s *Service) SendToUser(ctx context.Context, userID string, msg Message) {
 		return
 	}
 
-	byPlatform, err := s.tokensOf(ctx, userID)
+	byPlatform, err := s.tokensOf(ctx, userID, msg.Apps)
 	if err != nil {
 		s.logger.Error("الدفع: تعذّرت قراءةُ الأجهزة", "user", userID, "error", err)
 		return
@@ -179,11 +195,16 @@ func (s *Service) SendToUser(ctx context.Context, userID string, msg Message) {
 }
 
 // tokensOf أجهزةُ الحساب مجموعةً بمنصّتها — **والميّتُ بالزمن لا يُقرأ.**
-func (s *Service) tokensOf(ctx context.Context, userID string) (map[string][]string, error) {
+//
+// **و`apps` فارغةٌ تعني كلَّ الأجهزة.** وإن حُدّدت، **يبقى الجهازُ المجهولُ
+// تطبيقُه (`app = ”`) داخلاً في كلّ حال**: جهازٌ سُجّل من نسخةٍ قديمةٍ لا
+// تُصرّح **يجب أن يستقبل لا أن يصمت** — إشعارٌ زائدٌ أهونُ من إشعارٍ مفقود.
+func (s *Service) tokensOf(ctx context.Context, userID string, apps []string) (map[string][]string, error) {
 	rows, err := s.db.Query(ctx, `
 		SELECT platform, token FROM device_tokens
-		WHERE user_id = $1 AND last_seen_at > now() - $2::interval`,
-		userID, staleAfter.String())
+		WHERE user_id = $1 AND last_seen_at > now() - $2::interval
+		  AND ($3::text[] IS NULL OR app = '' OR app = ANY($3::text[]))`,
+		userID, staleAfter.String(), nilIfEmpty(apps))
 	if err != nil {
 		return nil, err
 	}
@@ -212,4 +233,15 @@ func (s *Service) dropDead(ctx context.Context, dead []string) {
 		return
 	}
 	s.logger.Info("الدفع: حُذفت رموزٌ ميّتة", "count", len(dead))
+}
+
+// nilIfEmpty **قائمةٌ فارغةٌ تصير `NULL`** — لتقرأها الجملةُ «بلا ترشيح».
+//
+// **ومصفوفةٌ فارغةٌ في `= ANY` لا تطابق شيئاً** — فلو مُرّرت كما هي
+// **لَصمتت كلُّ الإشعارات التي لا تُصرّح بتطبيقها**، وهي أكثرُها.
+func nilIfEmpty(v []string) []string {
+	if len(v) == 0 {
+		return nil
+	}
+	return v
 }

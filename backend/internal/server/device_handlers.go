@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -24,7 +25,8 @@ const maxDeviceToken = 4096
 func (s *Server) handleDeviceRegister(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Token string `json:"token"`
-		// android · ios — **والمجهولُ أندرويد** (انظر `push.normalizePlatform`).
+		// android · ios — **ويُقرأ من الترويسة أوّلاً** (انظر أدناه)،
+		// **وهذا احتياطٌ لمن لا يرسلها.**
 		Platform string `json:"platform"`
 		// **إصدارُ التطبيق** — يُقرأ حين يشكو صاحبُه، **ويُعرف من أيّ
 		// نسخةٍ يشكو قبل أن يُسأل.**
@@ -41,7 +43,24 @@ func (s *Server) handleDeviceRegister(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	if err := s.push.Register(r.Context(), userIDFrom(r), token, req.Platform, req.AppVersion); err != nil {
+	// ══════════════════════════════════════════════════════════════════
+	// **والتطبيقُ يُقرأ من ترويسة العميل لا من جسم الطلب**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١١: فصلُ الإشعارات بين التطبيقات.)
+	//
+	// **التطبيقُ يرسل `X-RahalGo-Client: android-merchant` مع كلّ نداء**
+	// — وهي الترويسةُ التي تفصل الجلسات. **فلو طُلب منه حقلٌ ثانٍ في
+	// جسم الطلب لَنُسي يوماً** وسُجّل الجهازُ بلا تطبيق، **فرنّ فيه كلُّ
+	// شيء** — ولا شيءَ يكشف ذلك إلّا شكوى صاحبه.
+	//
+	// **والمنصّةُ من الترويسة أيضاً**، ومن جسم الطلب احتياطاً لمن لا
+	// يرسلها.
+	platform, app := identity.SplitClient(identity.ClientFrom(r.Context()))
+	if platform == "" {
+		platform = req.Platform
+	}
+	if err := s.push.Register(r.Context(), userIDFrom(r), token, platform, app, req.AppVersion); err != nil {
 		s.respondErr(w, err)
 		return
 	}

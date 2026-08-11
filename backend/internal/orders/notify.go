@@ -97,6 +97,8 @@ func (s *Service) notifyCreated(ctx context.Context, o *Order) {
 			UserID: *p.merchantOwner, Kind: notifications.KindOrder,
 			Title: t.newOrderMerchant, Body: ref,
 			Entity: "order", EntityID: o.ID, Href: "/portal",
+			// **يخصّ متجرَه لا حسابَه كزبون** — وهو يحمل التطبيقين.
+			Apps: []string{notifications.AppMerchant},
 		})
 	}
 	s.notify.NotifyRoles(ctx, notifications.OpsDesk, notifications.Input{
@@ -153,6 +155,8 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 		UserID: p.customerID, Kind: notifications.KindOrder,
 		Title: title, Body: body,
 		Entity: "order", EntityID: orderID, Href: "/orders",
+		// **«طلبُك في الطريق» يخصّ تطبيقَ الزبون** — ولو كان صاحبُه سائقاً.
+		Apps: []string{notifications.AppCustomer},
 	})
 
 	// **والعملياتُ تُخبَر بمن أنهى** — لا بأنّ الطلب انتهى.
@@ -184,6 +188,7 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 			UserID: *p.merchantOwner, Kind: notifications.KindOrder,
 			Title: t.merchantDelivered, Body: ref,
 			Entity: "order", EntityID: orderID, Href: "/portal",
+			Apps: []string{notifications.AppMerchant},
 		})
 	}
 }
@@ -202,5 +207,7 @@ func (s *Service) notifyCommission(ctx context.Context, repID, orderID string, a
 		Title:  t.commission,
 		Body:   fmt.Sprintf("#%d — %s", p.number, p.merchantName),
 		Entity: "wallet", EntityID: orderID, Href: "/portal/wallet",
+		// **عمولةُ المندوب تخصّ تطبيقَه** — وهو يحمل تطبيقَ الزبون أيضاً.
+		Apps: []string{notifications.AppRep},
 	})
 }

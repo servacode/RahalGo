@@ -22,5 +22,6 @@ func (a pushAdapter) SendToUser(ctx context.Context, userID string, m notificati
 		Body:   m.Body,
 		Data:   m.Data,
 		Urgent: m.Urgent,
+		Apps:   m.Apps,
 	})
 }
