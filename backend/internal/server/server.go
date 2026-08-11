@@ -252,7 +252,9 @@ func (s *Server) Router() http.Handler {
 		// نقاط الزبون — الطلب حصراً من هنا (قرار 18)
 		r.Group(func(r chi.Router) {
 			r.Use(s.RequireAuth)
-			r.Post("/orders", s.handleCustomerCreateOrder)
+			// **ومحميٌّ من الإعادة** — انظر `idempotency.go`. **أهمُّ فعلٍ
+			// في تطبيق الزبون**: ضغطةٌ على شبكةٍ سيّئة تُنشئ طلبين وخصمين.
+			r.Post("/orders", s.idempotent(s.handleCustomerCreateOrder))
 			// **والطلبُ الخاصّ** — ما ليس في المنصّة. (قرارُ المالك ٢٠٢٦-٠٨-٠٩.)
 			r.Post("/orders/custom", s.handleCreateCustomOrder)
 			// **أثرُ كود الخصم قبل الطلب** — والقواعدُ نفسُها لا نسخةٌ منها.
@@ -513,7 +515,7 @@ func (s *Server) Router() http.Handler {
 				Get("/treasury-candidates", s.handleTreasuryCandidates)
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
 			r.With(s.RequireRoles("admin", "finance")).
-				Post("/users/{id}/wallet", s.handleAdminWalletApply)
+				Post("/users/{id}/wallet", s.idempotent(s.handleAdminWalletApply))
 			// **وعناوينُه في ملفّه** — من يتابع شكوى «لم يصلني» يحتاج أن يرى
 			// أين يسكن قبل أن يسأل.
 			r.Get("/users/{id}/addresses", s.handleAdminUserAddresses)
@@ -558,7 +560,7 @@ func (s *Server) Router() http.Handler {
 			// **وموظّفُ العمليات ليس طرفاً في المال**: الحارسُ نفسُه الذي
 			// على تعويض السائق.
 			r.With(s.RequireRoles("admin", "finance")).
-				Post("/users/{id}/incentive", s.handleIncentiveGrant)
+				Post("/users/{id}/incentive", s.idempotent(s.handleIncentiveGrant))
 			// ومصيرُ البضاعة تحسمه العملياتُ: **هي من يستلمها في المكتب**
 			// وتعرف أاستردّها المتجرُ أم رفض. والقيدُ المالي يتبع قرارَها.
 			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods) // مهجورة — 410
@@ -580,7 +582,7 @@ func (s *Server) Router() http.Handler {
 			// طلبات سحب الرصيد: القراءة لمكتب المنصة، والصرف للأدمن والمالية
 			r.Get("/payouts", s.handleAdminPayouts)
 			r.With(s.RequireRoles("admin", "finance")).
-				Post("/payouts/{id}/decide", s.handleDecidePayout)
+				Post("/payouts/{id}/decide", s.idempotent(s.handleDecidePayout))
 
 			// التذاكر والتعويضات — الحل المالي للأدمن/المالية حصراً
 			r.Get("/tickets", s.handleListTickets)
@@ -635,7 +637,7 @@ func (s *Server) Router() http.Handler {
 			// **الخسارةُ الفعلية من الدفتر** — لا من إعادة حسابٍ لما حُسب.
 			r.Get("/reports/losses", s.handlePlatformLosses)
 			r.With(s.RequireRoles("admin", "finance")).
-				Post("/drivers/{id}/settle", s.handleDriverSettle)
+				Post("/drivers/{id}/settle", s.idempotent(s.handleDriverSettle))
 			r.Group(func(r chi.Router) {
 				r.Use(s.RequireRoles("admin"))
 				r.Post("/sections", s.handleCreatePlatformSection)
