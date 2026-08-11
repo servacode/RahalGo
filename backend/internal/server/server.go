@@ -28,6 +28,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/notify"
 	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/push"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/referrals"
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -57,6 +58,7 @@ type Server struct {
 	hub        *realtime.Hub
 	geo        *geo.Service
 	notify     *notifications.Service
+	push       *push.Service
 	otpStatus  func() map[string]any
 	// otpUnpair **فكُّ اقتران البوت** — وفارغةٌ لمزوّدٍ لا اقترانَ له.
 	otpUnpair func(context.Context) error
@@ -77,6 +79,23 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	hub *realtime.Hub, otpStatus func() map[string]any,
 	otpUnpair func(context.Context) error, otpPair func()) *Server {
 	notify := notifications.New(pg, hub, logger)
+	// ══════════════════════════════════════════════════════════════════
+	// **والدفعُ يُربط إن كان مهيّأً — وإلّا صمتت المنصّةُ ولم تسقط**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **مفتاحٌ غائبٌ حالةٌ عاديّة**: جهازُ المطوّر، والمنصّةُ نفسُها حتّى
+	// ٢٠٢٦-٠٨-١١. **ومفتاحٌ موجودٌ ومعطوبٌ ليس عاديّاً** — يُصرَّح به،
+	// **وسكوتٌ عليه يعني منصّةً تظنّ أنّها تُرسل وهي لا تفعل.**
+	//
+	// **ولا يُسقط الإقلاعَ أيضاً**: محرّكٌ لا يقلع بسبب إشعاراتٍ أسوأُ من
+	// إشعاراتٍ لا تصل. **إنّما يُسجَّل خطأً لا معلومة.**
+	pushSvc := push.New(pg, logger)
+	if fcm, err := push.NewFCM(logger); err != nil {
+		logger.Error("الدفع: تعذّرت التهيئة — الإشعاراتُ لن تصل إلى الأجهزة", "error", err)
+	} else if fcm != nil {
+		pushSvc = push.New(pg, logger, fcm)
+	}
+	notify.SetPusher(pushAdapter{pushSvc})
 	geoSvc := geo.New(cfg.GeocoderURL, rdb, logger)
 	// محرك الطلبات يحتاج الإشعارات (عمولة المندوب) وقد بُني قبلها — نحقنها الآن.
 	ordersSvc.SetNotifier(notify)
@@ -89,7 +108,7 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		comms:  comms.New(pg),
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
 		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair, otpPair: otpPair,
-		notify: notify, geo: geoSvc}
+		notify: notify, push: pushSvc, geo: geoSvc}
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
 	// **ولا تُقرأ مرّتين بطريقتين.**
 	srv.incentives = incentives.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID)
@@ -288,6 +307,12 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/tickets", s.handleMyTickets)
 			r.Get("/me/reputation", s.handleMeReputation)
 			r.Get("/me/notifications", s.handleMyNotifications)
+			// **أجهزةُ الدفع — لكلّ دورٍ لا للسائق وحدَه.**
+			//
+			// **الزبونُ ينتظر «طلبُك في الطريق»، والمتجرُ ينتظر طلباً**،
+			// **والسائقُ ينتظر عرضاً.** وثلاثتُهم يغلقون الشاشة.
+			r.Post("/me/devices", s.handleDeviceRegister)
+			r.Delete("/me/devices", s.handleDeviceUnregister)
 			// العنونة: مساعدة لتحديد المواقع — لأي مستخدم مسجّل
 			r.Get("/geo/reverse", s.handleGeoReverse)
 			r.Get("/geo/search", s.handleGeoSearch)
