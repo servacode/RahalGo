@@ -22,6 +22,18 @@ import (
 func TestClientKind_UnknownFallsBackToWeb(t *testing.T) {
 	for _, raw := range []string{
 		"", "  ", "WEB", "Android", "android-v2", "desktop", "ios ",
+		// ══════════════════════════════════════════════════════════════
+		// **ومنصّةٌ بلا تطبيقٍ ليست نوعاً**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **`android` كانت نوعاً حتّى ٢٠٢٦-٠٨-١١** — وهو صحيحٌ لتطبيقٍ
+		// واحد. **ومع أربعةِ تطبيقاتٍ يجمعها كلَّها في جلسةٍ واحدةٍ
+		// يقتل بعضُها بعضاً**: المتجرُ يفتح تطبيقَ الزبون ليطلب عشاءه
+		// فيخرج من تطبيق متجره.
+		"android", "ios", "android-", "-customer", "-",
+		// **وتطبيقٌ مجهولٌ على منصّةٍ معروفةٍ يُردّ** — وإلّا فتح كلُّ
+		// نصٍّ يُخترَع جلسةً مستقلّة.
+		"android-hacker", "windows-customer", "android-customer-x",
 		"'; DROP TABLE refresh_tokens; --", "android\x00",
 	} {
 		if got := normalizeClient(raw); got != ClientWeb {
@@ -34,7 +46,18 @@ func TestClientKind_UnknownFallsBackToWeb(t *testing.T) {
 // TestClientKind_KnownKindsSurvive **والمعروفُ يمرّ كما هو** — وبلا ذلك
 // يصير كلُّ شيءٍ متصفّحاً، **فيعود التطبيقُ يقتل جلسةَ الويب.**
 func TestClientKind_KnownKindsSurvive(t *testing.T) {
-	for _, k := range []string{ClientWeb, ClientAndroid, ClientIOS} {
+	known := []string{ClientWeb}
+	for platform := range clientPlatforms {
+		for app := range clientApps {
+			known = append(known, platform+"-"+app)
+		}
+	}
+	// **وتسعةٌ لا أقلّ**: متصفّحٌ ومنصّتان × أربعةُ تطبيقات. **ونقصانُ
+	// واحدٍ يعني تطبيقاً يُقرأ متصفّحاً فيُخرج صاحبَه من لوحته.**
+	if len(known) != 9 {
+		t.Fatalf("الأنواعُ المعروفةُ %d لا ٩", len(known))
+	}
+	for _, k := range known {
 		if got := normalizeClient(k); got != k {
 			t.Fatalf("نوعٌ معروفٌ %q صار %q — **فيتصادم التطبيقُ مع المتصفّح**", k, got)
 		}
@@ -48,8 +71,8 @@ func TestClientKind_ContextRoundTrip(t *testing.T) {
 		t.Fatalf("سياقٌ بلا نوعٍ أعطى %q — **والافتراضُ متصفّحٌ**: كلُّ نداءٍ من الويب "+
 			"لا يحمل الترويسةَ ولن يحملها", got)
 	}
-	ctx := WithClient(context.Background(), ClientAndroid)
-	if got := ClientFrom(ctx); got != ClientAndroid {
+	ctx := WithClient(context.Background(), "android-driver")
+	if got := ClientFrom(ctx); got != "android-driver" {
 		t.Fatalf("النوعُ ضاع في السياق: %q — **فيُسجَّل التطبيقُ متصفّحاً "+
 			"ويُبطل جلسةَ صاحبه على الويب**", got)
 	}

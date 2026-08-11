@@ -42,7 +42,7 @@ func TestSessionClient_AppDoesNotKillWeb(t *testing.T) {
 	if err != nil {
 		t.Fatalf("جلسةُ المتصفّح لم تُخزَّن: %v", err)
 	}
-	app, err := repo.StoreRefresh(ctx, uid, "hash-app", testSessionTTL, "ua-app", "2.2.2.2", "", ClientAndroid)
+	app, err := repo.StoreRefresh(ctx, uid, "hash-app", testSessionTTL, "ua-app", "2.2.2.2", "", "android-driver")
 	if err != nil {
 		t.Fatalf("جلسةُ التطبيق لم تُخزَّن: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestSessionClient_AppDoesNotKillWeb(t *testing.T) {
 
 	// **دخولٌ من التطبيق يُبطل جلساتِ التطبيق وحدَها** — وهو ما يفعله
 	// `issueSession` عند دخولٍ جديد.
-	if _, err := repo.RevokeClientTokens(ctx, uid, ClientAndroid); err != nil {
+	if _, err := repo.RevokeClientTokens(ctx, uid, "android-driver"); err != nil {
 		t.Fatalf("إبطالُ نوعٍ واحد: %v", err)
 	}
 
@@ -72,15 +72,15 @@ func TestSessionClient_SecondPhoneKillsFirst(t *testing.T) {
 	ctx := context.Background()
 	uid := testdb.NewUser(t, pool, "driver")
 
-	first, err := repo.StoreRefresh(ctx, uid, "hash-p1", testSessionTTL, "هاتف-١", "2.2.2.2", "", ClientAndroid)
+	first, err := repo.StoreRefresh(ctx, uid, "hash-p1", testSessionTTL, "هاتف-١", "2.2.2.2", "", "android-driver")
 	if err != nil {
 		t.Fatalf("الهاتفُ الأوّل: %v", err)
 	}
 	// **والثاني يُبطل ما سبق من نوعه** — القيدُ يُضيَّق ولا يُلغى.
-	if _, err := repo.RevokeClientTokens(ctx, uid, ClientAndroid); err != nil {
+	if _, err := repo.RevokeClientTokens(ctx, uid, "android-driver"); err != nil {
 		t.Fatalf("إبطال: %v", err)
 	}
-	second, err := repo.StoreRefresh(ctx, uid, "hash-p2", testSessionTTL, "هاتف-٢", "3.3.3.3", "", ClientAndroid)
+	second, err := repo.StoreRefresh(ctx, uid, "hash-p2", testSessionTTL, "هاتف-٢", "3.3.3.3", "", "android-driver")
 	if err != nil {
 		t.Fatalf("الهاتفُ الثاني: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestSessionClient_AdminLogoutAllStillGlobal(t *testing.T) {
 	if _, err := repo.StoreRefresh(ctx, uid, "g-web", testSessionTTL, "ua-web", "1.1.1.1", "", ClientWeb); err != nil {
 		t.Fatalf("جلسةُ المتصفّح: %v", err)
 	}
-	if _, err := repo.StoreRefresh(ctx, uid, "g-app", testSessionTTL, "ua-app", "2.2.2.2", "", ClientAndroid); err != nil {
+	if _, err := repo.StoreRefresh(ctx, uid, "g-app", testSessionTTL, "ua-app", "2.2.2.2", "", "android-driver"); err != nil {
 		t.Fatalf("جلسةُ التطبيق: %v", err)
 	}
 
