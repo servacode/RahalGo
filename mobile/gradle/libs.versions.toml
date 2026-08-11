@@ -1,0 +1,58 @@
+# ══════════════════════════════════════════════════════════════════════
+#  **كتالوج الإصدارات — مصدر واحد لكل تبعية**
+# ══════════════════════════════════════════════════════════════════════
+#
+# (قاعدة المركزية، `GROUND-RULES.md` §1 و§7.)
+#
+# **ولماذا ملف واحد لا رقم في كل وحدة**
+#
+# أربعة تطبيقات وثلاث وحدات مشتركة. **ورقم إصدار يُكتب في كل واحدة يفترق
+# يوما**: تطبيق السائق على Compose 1.9 وتطبيق الزبون على 1.8، **فيسقط
+# البناء بخطأ لا علاقة له بما كُتب.**
+#
+# **وهذا بالضبط ما وقع في الويب**: خمسة `package.json` بإصدارات متفرقة.
+
+# **والأرقام تُقرأ من المستودع لا تُخمَّن** — كتبتُ `core-ktx 1.20.0`
+# تقديرا فسقط البناء بست دقائق: لا وجود لها. (٢٠٢٦-٠٨-١١.)
+#
+#   curl -sL https://dl.google.com/dl/android/maven2/<المسار>/maven-metadata.xml
+
+[versions]
+# **AGP و Kotlin يتقيدان ببعضهما** — لا يُرفع أحدهما وحده.
+agp = "9.3.1"
+kotlin = "2.4.10"
+# **أدنى إصدار أندرويد ندعمه: 8.0 (API 26).**
+#
+# **ولماذا 26 لا 24**: الخدمات الأمامية بشكلها الحديث وقنوات الإشعارات
+# دخلت في 26. **ودعم ما قبلها يعني مسارين في أخطر شيفرة في المشروع** —
+# مسار السائق. وتغطية 26 فما فوق تتجاوز 95% من الأجهزة العاملة.
+minSdk = "26"
+# **والهدف أحدث ما هو مستقر** — متجر جوجل يشترط هدفا حديثا لقبول التحديث.
+targetSdk = "37"
+compileSdk = "37"
+
+androidxCore = "1.19.0"
+androidxActivity = "1.13.0"
+composeBom = "2026.06.01"
+lifecycle = "2.11.0"
+
+[libraries]
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+
+# **قائمة مواد Compose** — تضبط إصدارات مكتبات Compose كلها من رقم واحد،
+# **فلا تتصادم نسخة `ui` مع نسخة `material3`.**
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+# **ولا إضافة `kotlin-android`** — AGP 9 فيها دعم Kotlin مدمج،
+# وتطبيقها يُسقط البناء برسالة صريحة.
+# **مُصرّف Compose صار جزءا من Kotlin منذ 2.0** — لا إصدار مستقلا له.
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

@@ -1,0 +1,8 @@
+com.rahalgo.driver.app-driver-pngs-0 D:\RahalGo\mobile\app-driver\build\generated\res\pngs\debug
+com.rahalgo.driver.app-driver-updated_navigation_xml-1 D:\RahalGo\mobile\app-driver\build\generated\updated_navigation_xml\debug
+com.rahalgo.driver.app-driver-packageDebugResources-2 D:\RahalGo\mobile\app-driver\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.rahalgo.driver.app-driver-packageDebugResources-3 D:\RahalGo\mobile\app-driver\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.rahalgo.driver.app-driver-debug-4 D:\RahalGo\mobile\app-driver\build\intermediates\merged_res\debug\mergeDebugResources
+com.rahalgo.driver.app-driver-debug-5 D:\RahalGo\mobile\app-driver\src\debug\res
+com.rahalgo.driver.app-driver-main-6 D:\RahalGo\mobile\app-driver\src\main\res
+gradleHome-0 C:\Users\adzor\.gradle

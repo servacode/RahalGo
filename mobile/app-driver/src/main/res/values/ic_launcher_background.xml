@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- مولَّد بـ mobile/tools/make-icon.py — لا يُحرَّر باليد. -->
+<resources>
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>

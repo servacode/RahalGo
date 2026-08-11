@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- **سمة نظام فارغة** — Compose يرسم كل شيء بنفسه، وهذه فقط لتمنع
+         شريط عنوان النظام القديم من الظهور فوق شاشتنا. -->
+    <style name="Theme.RahalGo" parent="android:Theme.Material.NoActionBar" />
+</resources>

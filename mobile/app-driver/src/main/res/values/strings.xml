@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- **اسم التطبيق وحده هنا** — النظام يقرأه ليكتبه تحت الأيقونة،
+         ولا يمر بشيفرتنا. وكل نص آخر في `shared/i18n` (القاعدة ١.١). -->
+    <string name="app_name">رحّال غو — السائق</string>
+</resources>
