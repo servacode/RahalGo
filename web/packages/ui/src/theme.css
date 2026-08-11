@@ -1970,3 +1970,70 @@ select:-webkit-autofill:focus {
     transform: translateX(50%) translateY(-2px);
   }
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   **جدولٌ يصير بطاقاتٍ على الجوّال — `.table-stack`**
+   ══════════════════════════════════════════════════════════════════════
+
+   (شهده المالك ٢٠٢٦-٠٨-١١ بصورةٍ لصفحة المكافآت: خمسةُ أعمدةٍ في شاشةِ
+    ٣٦٠ بكسلاً، **وزرُّ «مكافأة / عقوبة» مقصوصٌ عند حافّة البطاقة.**)
+
+   **والجدولُ بنيةُ صفوفٍ وأعمدةٍ لا شكل**: خمسةُ أعمدةٍ تحتاج ٦٠٠ بكسلاً،
+   **فإمّا فاضت وقُصّت، وإمّا انضغطت فصار كلُّ خليّةٍ حرفين.**
+
+   **و`overflow-x-auto` ليست حلّاً**: تُخفي عمودَ الفعل خلف سحبٍ أفقيٍّ
+   **لا يظنّه أحدٌ موجوداً** — ومن لم يسحب لم يعرف أنّ ثمّةَ زرّاً.
+
+   **فتُقلب البنيةُ على الضيّق**: كلُّ صفٍّ بطاقة، وكلُّ خليّةٍ سطرٌ فيه
+   **اسمُه يميناً وقيمتُه يساراً** — والاسمُ يُؤخذ من `data-label`.
+
+   **ورأسُ الجدول يُخفى ولا يُحذف**: `display: none` تُسقطه من شجرة
+   الوصول، **فقارئُ الشاشة يفقد أسماءَ الأعمدة.** فيُزوى بعيداً عن العين
+   ويبقى في الشجرة.
+
+   **ولا تُطبَّق إلّا على من وُضعت عليه** — تسعةُ جداولَ في المنصّة،
+   **وقلبُ بنيةِ ما لم يُقس عيبٌ لا إصلاح.** */
+@media (max-width: 639px) {
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .table-stack tr {
+    display: block;
+    padding: 0.25rem 0;
+  }
+
+  .table-stack td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    text-align: start;
+  }
+
+  /* **واسمُ العمود قبل قيمته** — وبلاه صارت الأرقامُ ثلاثةَ أسطرٍ بلا معنى. */
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    color: var(--color-ink-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  /* **وخليّةُ الفعل تأخذ السطرَ كلَّه** — لا تُزاحم اسماً فارغاً. */
+  .table-stack td:not([data-label]) {
+    justify-content: stretch;
+    padding-top: 0.25rem;
+  }
+  .table-stack td:not([data-label]) > * {
+    width: 100%;
+  }
+}

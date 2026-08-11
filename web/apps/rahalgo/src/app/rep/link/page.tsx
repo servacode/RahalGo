@@ -66,7 +66,7 @@ export default function LinkPage() {
             بعضُهم.** */}
         <WhatsAppVerify
           api={api}
-          phone={me.phone ?? ""}
+          phone={me.phone}
           onVerified={() => setMe({ ...me, whatsapp_verified: true })}
         />
       </div>

@@ -28,6 +28,16 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		PendingLeads     int   `json:"pending_leads"`
 		// أدوات الدعوة مقفلة حتى يوثّق المندوب قناة تواصله
 		WhatsAppVerified bool `json:"whatsapp_verified"`
+		// **ورقمُ حسابه يُرسَل** — لتوثّقَه الشاشةُ بلا أن تسأله عنه.
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-١١: «كيف المندوبُ يرجع يكتب رقمَه وهو
+		//  موجود؟ ما يصير — خلص، بس وثّق حسابَك بدون ما يرجع يكتب رقم».)
+		//
+		// **وشاشةُ التوثيق كانت تطلب الرقمَ في حقلٍ فارغ** — تمرّر
+		// `me.phone` وهو غيرُ موجودٍ في هذه الاستجابة أصلاً، **فيُقرأ
+		// `undefined` ويصير الحقلُ خالياً.** ومن يكتب رقمَه بيده يُخطئ
+		// فيه، **فيصله الرمزُ على رقمٍ ليس رقمَه — أو لا يصل.**
+		Phone string `json:"phone"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.invite_code, u.full_name,
@@ -64,12 +74,12 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		       $2::int,
 		       (SELECT count(*) FROM merchant_leads l
 		        WHERE l.sales_rep_user_id = u.id AND l.status = 'new'),
-		       u.whatsapp_verified_at IS NOT NULL
+		       u.whatsapp_verified_at IS NOT NULL, u.phone
 		FROM users u WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "sales.monthly_target")).
 		Scan(&out.InviteCode, &out.FullName, &out.Merchants, &out.DeliveredOrders,
 			&out.TotalCommissions, &out.Balance,
 			&out.MonthMerchants, &out.MonthDelivered, &out.MonthCommissions,
-			&out.MonthlyTarget, &out.PendingLeads, &out.WhatsAppVerified)
+			&out.MonthlyTarget, &out.PendingLeads, &out.WhatsAppVerified, &out.Phone)
 	if err != nil {
 		s.respondErr(w, err)
 		return

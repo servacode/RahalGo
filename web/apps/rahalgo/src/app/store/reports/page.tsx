@@ -172,8 +172,12 @@ export default function MerchantReportsPage() {
       {report && report.items.length > 0 && (
         <section className="mt-6 surface p-4">
           <h2 className="mb-3 font-bold">{m.merchant.reports.itemsTitle}</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          {/* **وعلى الجوّال بطاقاتٌ لا أعمدة** — انظر `.table-stack`.
+              (شهده المالك ٢٠٢٦-٠٨-١١: «فايت ببعضه جدولُ الطلبات بالمتجر».)
+              **خمسةُ أعمدةٍ عناوينُها جملٌ** — «مبيعاتك – قبل العمولة
+              (ل.س)» — **في ٣٦٠ بكسلاً تتراكب حروفُها.** */}
+          <div className="sm:overflow-x-auto">
+            <table className="table-stack w-full text-sm">
               <thead>
                 <tr className="border-b border-line-soft text-xs text-ink-muted">
                   <th className="py-2 text-start font-medium">{m.merchant.reports.itemName}</th>
@@ -205,20 +209,20 @@ export default function MerchantReportsPage() {
               <tbody>
                 {report.items.map((it) => (
                   <tr key={it.name} className="border-b border-line-soft last:border-0">
-                    <td className="py-2">{it.name}</td>
-                    <td className="py-2 text-center tabular-nums" dir="ltr">
+                    <td className="py-2" data-label={m.merchant.reports.itemName}>{it.name}</td>
+                    <td className="py-2 text-center tabular-nums" dir="ltr" data-label={m.merchant.reports.itemQty}>
                       {fmtNum(it.qty)}
                     </td>
                     {/* **السعرُ الأساسيُّ** — سعرُه هو، دون هامش المنصّة. */}
-                    <td className="py-2 text-end tabular-nums text-ink-muted" dir="ltr">
+                    <td className="py-2 text-end tabular-nums text-ink-muted" dir="ltr" data-label={`${m.merchant.reports.itemRevenue} (${m.common.currency})`}>
                       {fmtNum(it.revenue)}
                     </td>
                     {/* **والعمولةُ تُقرأ خصماً** — بإشارتها ونبرتها. */}
-                    <td className="py-2 text-end tabular-nums text-danger" dir="ltr">
+                    <td className="py-2 text-end tabular-nums text-danger" dir="ltr" data-label={m.merchant.reports.itemCommission}>
                       −{fmtNum(it.commission)}
                     </td>
                     {/* **وما يقبضه فعلاً** — وهو الرقمُ الذي يهمّه. */}
-                    <td className="py-2 text-end font-bold tabular-nums" dir="ltr">
+                    <td className="py-2 text-end font-bold tabular-nums" dir="ltr" data-label={m.merchant.reports.itemNet}>
                       {fmtNum(it.net)}
                     </td>
                   </tr>

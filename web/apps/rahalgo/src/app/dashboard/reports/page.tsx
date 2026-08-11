@@ -217,8 +217,26 @@ export default function ReportsPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <PageHeader icon={IconStatus} title={r.title} />
-        <div className="flex items-end gap-2">
-          <div className="w-40">
+        {/* ══════════════════════════════════════════════════════════════
+            **ورأسُ التقارير يلتفّ — وإلّا أزاح الصفحةَ كلَّها**
+            ══════════════════════════════════════════════════════════════
+
+            (شهده المالك ٢٠٢٦-٠٨-١١ بصورة: الصفحةُ منزاحةٌ والشريطُ العلويُّ
+             مقصوصٌ ونصفُ البطاقات خارجَ الشاشة.)
+
+            **كان الغلافُ الخارجيُّ يلتفّ والداخليُّ لا** — أربعةُ عناصرَ
+            في صفٍّ واحد: حقلا تاريخٍ عرضُ كلٍّ ١٦٠ بكسلاً وزرّا تصدير،
+            **مجموعُها فوق ٥٠٠ بكسل على شاشةٍ عرضُها ٣٦٠.**
+
+            **وفيضٌ أفقيٌّ لا يقتصر على صاحبه**: يوسّع المستندَ كلَّه،
+            **فينزاح الشريطُ العلويُّ ويُقصّ ما فيه** — وهو ثابتٌ يتبع
+            عرضَ المستند لا عرضَ الشاشة. **فتُقرأ الصفحةُ كلُّها منهارة
+            بسبب صفٍّ واحدٍ فيها.**
+
+            **والحقولُ تتقاسم السطرَ ولا تُثبَّت**: أدنى عرضٍ ١٤٠ ثمّ تنمو،
+            **والأزرارُ تنزل سطراً حين لا يتّسع.** */}
+        <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
+          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
             <Input
               id="r-from"
               label={r.from}
@@ -228,7 +246,7 @@ export default function ReportsPage() {
               onChange={(e) => setFrom(e.target.value)}
             />
           </div>
-          <div className="w-40">
+          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
             <Input
               id="r-to"
               label={r.to}

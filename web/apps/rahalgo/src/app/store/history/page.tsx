@@ -141,27 +141,17 @@ export default function MerchantHistoryPage() {
           setStatus(id);
         }}
         items={[
+          /* **والعددُ بـ`count` لا مبنيّاً في الاسم** — انظر `ChipDef.count`.
+             (شهده المالك ٢٠٢٦-٠٨-١١: «مشكلةُ الأرقام».) */
           {
             id: "",
-            label: (
-              <span className="flex items-center gap-1.5">
-                {m.merchant.historyAll}
-                <span className="tabular-nums opacity-70" dir="ltr">
-                  {fmtNum(Object.values(counts).reduce((a, b) => a + b, 0))}
-                </span>
-              </span>
-            ),
+            label: m.merchant.historyAll,
+            count: Object.values(counts).reduce((a, b) => a + b, 0),
           },
           ...CLOSED.filter((s) => (counts[s] ?? 0) > 0).map((s) => ({
             id: s as string,
-            label: (
-              <span className="flex items-center gap-1.5">
-                {STATUS_LABELS[s] ?? s}
-                <span className="tabular-nums opacity-70" dir="ltr">
-                  {fmtNum(counts[s] ?? 0)}
-                </span>
-              </span>
-            ),
+            label: STATUS_LABELS[s] ?? s,
+            count: counts[s] ?? 0,
           })),
         ]}
       />

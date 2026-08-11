@@ -124,37 +124,68 @@ export function StoreHours({
       ) : (
         <div className="space-y-2">
           {days.map((d, i) => (
-            <div key={d.day_of_week} className="flex flex-wrap items-center gap-3 text-sm">
-              <span className="w-16 shrink-0 font-medium">{H.days[i]}</span>
-              <Checkbox
-                id={`hours-closed-${d.day_of_week}`}
-                checked={d.closed}
-                onChange={(e) => updateDay(i, { closed: e.target.checked })}
-                label={H.closedDay}
-                className="gap-1.5 text-ink-muted"
-              />
-              <input
-                type="time"
-                disabled={d.closed}
-                value={d.open_time}
-                onChange={(e) => updateDay(i, { open_time: e.target.value })}
-                className="surface-inset px-2 py-1 disabled:opacity-40"
-              />
-              <IconPrev size={14} className="text-ink-muted" />
-              <input
-                type="time"
-                disabled={d.closed}
-                value={d.close_time}
-                onChange={(e) => updateDay(i, { close_time: e.target.value })}
-                className="surface-inset px-2 py-1 disabled:opacity-40"
-              />
+            /* ══════════════════════════════════════════════════════════
+               **واليومُ صندوقٌ على الجوّال لا صفٌّ يلتفّ**
+               ══════════════════════════════════════════════════════════
+
+               (شهده المالك ٢٠٢٦-٠٨-١١: «أوقاتُ الدوام أيضاً غيرُ مفهومةٍ
+                بهذا الشكل».)
+
+               **كان `flex-wrap` يقطع اليومَ حيث ضاق لا حيث يُفهم**: اسمُ
+               اليومِ و«مغلق» وساعةُ الفتح في سطر، **ثمّ سهمٌ وساعةُ إغلاقٍ
+               في سطرٍ وحدَهما بلا اسمِ يومٍ فوقهما.** فتُقرأ سبعةُ أيّامٍ
+               أربعةَ عشرَ سطراً متشابهاً، **ولا يُعرف أيُّ ساعةٍ لأيّ يوم.**
+
+               **والالتفافُ لا يُصلَح بترتيبٍ آخر** — يقطع حيث لا يتّسع،
+               **وحيث لا يتّسع ليس حيث ينتهي المعنى.**
+
+               **فيُبنى صندوقاً**: سطرٌ فيه اليومُ و«مغلق»، **وتحته
+               الساعتان جنباً إلى جنبٍ تملآن العرض.**
+
+               **والساعتان تُخفَيان في اليوم المغلق لا تُعتَّمان**: حقلٌ
+               باهتٌ يبقى يُسأل عنه، **ويومٌ مغلقٌ لا ساعاتِ له أصلاً.**
+
+               **ويعود صفّاً واحداً حيث يتّسع** — الحاسوبُ كان سليماً. */
+            <div
+              key={d.day_of_week}
+              className="rounded-control border border-line-soft p-2.5 text-sm sm:flex sm:items-center sm:gap-3 sm:border-0 sm:p-0"
+            >
+              <div className="flex items-center justify-between gap-3 sm:flex-none sm:justify-start">
+                <span className="w-16 shrink-0 font-medium">{H.days[i]}</span>
+                <Checkbox
+                  id={`hours-closed-${d.day_of_week}`}
+                  checked={d.closed}
+                  onChange={(e) => updateDay(i, { closed: e.target.checked })}
+                  label={H.closedDay}
+                  className="gap-1.5 text-ink-muted"
+                />
+              </div>
+              {!d.closed && (
+                <div className="mt-2 flex items-center gap-2 sm:mt-0 sm:flex-none">
+                  <input
+                    type="time"
+                    value={d.open_time}
+                    onChange={(e) => updateDay(i, { open_time: e.target.value })}
+                    className="surface-inset min-w-0 flex-1 px-2 py-1 sm:flex-none"
+                  />
+                  <IconPrev size={14} className="shrink-0 text-ink-muted" />
+                  <input
+                    type="time"
+                    value={d.close_time}
+                    onChange={(e) => updateDay(i, { close_time: e.target.value })}
+                    className="surface-inset min-w-0 flex-1 px-2 py-1 sm:flex-none"
+                  />
+                </div>
+              )}
               {/* **دوامٌ يعبر منتصفَ الليل مقبولٌ ومُعلَن.**
 
                   ساعةُ إغلاقٍ أصغرُ من ساعة الفتح تعني «إلى ما بعد منتصف
                   الليل» — **ومطاعمُ الشاورما في الرقّة تعمل هكذا.** وبلا هذه
                   الكلمة يظنّها من يضبطها خطأً فيتراجع. */}
               {!d.closed && d.close_time <= d.open_time && (
-                <span className="text-2xs text-ink-muted">{H.overnight}</span>
+                <span className="mt-1 block text-2xs text-ink-muted sm:mt-0 sm:inline">
+                  {H.overnight}
+                </span>
               )}
             </div>
           ))}

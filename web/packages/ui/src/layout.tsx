@@ -665,11 +665,29 @@ export function EntityCard({
               >
                 {st.value}
               </p>
-              <p className="mt-0.5 flex items-center justify-center gap-1 text-2xs text-ink-muted">
+              {/* ══════════════════════════════════════════════════════
+                  **واسمُ الرقم يلتفّ ولا يُبتر**
+                  ══════════════════════════════════════════════════════
+
+                  (شهده المالك ٢٠٢٦-٠٨-١١: «شوف صافي عمولتي مو واضحة» —
+                   وفي الصورة «صافي عمو…».)
+
+                  **وثلاثةُ أرقامٍ تتقاسم عرضَ بطاقةٍ على الجوّال**: لكلٍّ
+                  نحوُ خمسين بكسلاً. **و«مُسلَّم» و«ملغي» تسعان، و«صافي
+                  عمولتي» لا** — **فبُترت عند «عمو».**
+
+                  **واسمٌ مبتورٌ أسوأُ من اسمٍ صغير**: الرقمُ يبقى بلا
+                  معنى، **ومن قرأ «صافي عمو» لا يدري أعمولتُه هي أم
+                  عمولةُ المنصّة.**
+
+                  **فيلتفّ في سطرين ويتحاذى أعلى** — والبطاقاتُ في الصفّ
+                  متساويةُ الارتفاع أصلاً (`grid`)، **فسطرٌ زائدٌ في
+                  واحدةٍ لا يُخلّ بصفّها.** */}
+              <p className="mt-0.5 flex items-start justify-center gap-1 text-2xs leading-tight text-ink-muted">
                 {st.icon && (
-                  <span className="shrink-0 [&>svg]:h-3.5 [&>svg]:w-3.5">{st.icon}</span>
+                  <span className="mt-px shrink-0 [&>svg]:h-3.5 [&>svg]:w-3.5">{st.icon}</span>
                 )}
-                <span className="truncate">{st.label}</span>
+                <span className="line-clamp-2 min-w-0">{st.label}</span>
               </p>
             </div>
           ))}

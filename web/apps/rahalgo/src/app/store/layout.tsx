@@ -9,7 +9,6 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   Badge,
   Button,
-  CategoryIcon,
   Select,
   DashboardChrome,
   type ChromeNavItem,
@@ -134,28 +133,46 @@ function PortalChrome({ children }: { children: React.ReactNode }) {
             </option>
           ))}
         </Select>
-      ) : (
-        <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-bold">
-          {/* **والأيقونةُ تُرسم لا تُطبع.**
+      ) : null}
+      {/* ══════════════════════════════════════════════════════════════
+          **ولا اسمَ متجرٍ في الشريط لمن يملك واحداً**
+          ══════════════════════════════════════════════════════════════
 
-              (شهده المالك ٢٠٢٦-٠٨-٠٧: «نصوصٌ إنكليزيّة بكلّ اللوحات».)
+          (قرارُ المالك ٢٠٢٦-٠٨-١١: «ليس من الضروريّ كتابةُ اسم المتجر
+           أيضاً» — تِلوَ حذف اسم المنصّة واسمِ القسم.)
 
-              **`category_icon` مفتاحٌ لا نصّ** — قيمتُه `food` و`grocery`،
-              **فكانت تُطبع حرفيّاً بجانب اسم المتجر** في كلّ صفحةٍ من
-              بوّابته. والمكوّنُ المركزيُّ يحوّلها إلى رسمٍ منذ زمن. */}
-          <CategoryIcon name={store.category_icon} size={15} />
-          <span className="truncate">{store.name}</span>
-        </span>
-      )}
+          **وصاحبُ متجرٍ واحدٍ يعرف متجرَه** — لا يفتح لوحتَه ليقرأ اسمَه.
+          **والاسمُ يخبره بما يعلم ويأخذ من عرضٍ ضيّق** يتنازعه في الجوّال
+          شريطُ الحالة وزرُّ الطوارئ والجرسُ والمحفظة.
+
+          **والقائمةُ تبقى لمن يملك أكثرَ من متجر** — هناك الاسمُ ليس
+          خبراً بل أداةُ تبديل، **ومن غيرها لا يعرف في أيِّ متجرٍ يعمل.** */}
       <Badge variant={store.emergency_closed ? "danger" : "success"}>
         {store.emergency_closed ? m.merchant.header.emergencyClosed : m.merchant.header.open}
       </Badge>
+      {/* ══════════════════════════════════════════════════════════════
+          **وزرُّ الطوارئ مربّعٌ على الجوّال لا حبّةٌ فارغة**
+          ══════════════════════════════════════════════════════════════
+
+          (شهده المالك ٢٠٢٦-٠٨-١١: «أيقونةُ الإغلاق الطارئ مو مزبوطة».)
+
+          **كان النصُّ يُخفى على الجوّال وتبقى حشوتُه**: `px-4` يمنةً
+          ويسرةً حول أيقونةٍ بخمسةَ عشرَ بكسلاً — **فيصير الزرُّ مستطيلاً
+          أحمرَ عرضُه ضِعفُ ما فيه، ورسمُه نقطةٌ في وسطه.** فيُقرأ لطخةً
+          لا زرّاً.
+
+          **فتُقلَّم الحشوةُ حيث يُخفى النصُّ وتكبر الأيقونة** — مربّعٌ
+          فيه رسمٌ يملؤه، **ويعود إلى شكله الكامل حيث يتّسع للنصّ.**
+
+          **واسمٌ مقروءٌ للقارئ الصوتيّ**: زرٌّ بلا نصٍّ ظاهرٍ اسمُه صمت،
+          **وهذا أخطرُ زرٍّ في اللوحة.** */}
       <Button
         variant={store.emergency_closed ? "primary" : "danger"}
         onClick={toggleEmergency}
-        className="flex items-center gap-1.5"
+        aria-label={store.emergency_closed ? m.merchant.header.reopen : m.merchant.header.closeNow}
+        className="flex items-center justify-center gap-1.5 !px-2 sm:!px-4"
       >
-        <IconWarning size={15} />
+        <IconWarning size={18} className="shrink-0" />
         <span className="hidden sm:inline">
           {store.emergency_closed ? m.merchant.header.reopen : m.merchant.header.closeNow}
         </span>

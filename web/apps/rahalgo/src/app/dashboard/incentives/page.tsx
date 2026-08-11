@@ -130,8 +130,11 @@ export default function IncentivesPage() {
       ) : rows.length === 0 ? (
         <EmptyState icon={IconUser} title={P.empty} />
       ) : (
-        <div className="overflow-x-auto surface">
-          <table className="w-full text-sm">
+        <div className="surface sm:overflow-x-auto">
+          {/* **وعلى الجوّال بطاقاتٌ لا أعمدة** — انظر `.table-stack` في
+              `theme.css`. (شهده المالك ٢٠٢٦-٠٨-١١: الزرُّ مقصوصٌ خارجَ
+              البطاقة، وخمسةُ أعمدةٍ لا تتّسع في ٣٦٠ بكسلاً.) */}
+          <table className="table-stack w-full text-sm">
             <thead className="border-b border-line-soft text-ink-muted">
               <tr>
                 <th className="p-3 text-start font-medium">{P.person}</th>
@@ -144,7 +147,7 @@ export default function IncentivesPage() {
             <tbody>
               {rows.map((x) => (
                 <tr key={x.user_id} className="border-b border-line-soft last:border-0">
-                  <td className="p-3">
+                  <td className="p-3" data-label={P.person}>
                     <span className="font-medium">{x.name || x.phone}</span>
                     {x.reached && (
                       <Badge variant="success" className="ms-2">
@@ -153,17 +156,17 @@ export default function IncentivesPage() {
                     )}
                   </td>
                   {/* **وبلا هدفٍ يُقال ذلك** — لا يُعرض «٣ / ٠» فيُقرأ لغزاً. */}
-                  <td className="p-3 tabular-nums" dir="ltr">
+                  <td className="p-3 tabular-nums" dir="ltr" data-label={P.progress}>
                     {x.target > 0 ? (
                       `${fmtNum(x.done)} / ${fmtNum(x.target)}`
                     ) : (
                       <span className="text-xs text-ink-muted">{P.noTarget}</span>
                     )}
                   </td>
-                  <td className="p-3 tabular-nums text-success" dir="ltr">
+                  <td className="p-3 tabular-nums text-success" dir="ltr" data-label={P.rewarded}>
                     {fmtNum(x.rewarded)}
                   </td>
-                  <td className="p-3 tabular-nums text-danger" dir="ltr">
+                  <td className="p-3 tabular-nums text-danger" dir="ltr" data-label={P.penalized}>
                     {fmtNum(x.penalized)}
                   </td>
                   <td className="p-3 text-end">
