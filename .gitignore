@@ -2,6 +2,11 @@
 .env
 .env.*
 !.env.example
+# مفتاحُ حساب خدمة Firebase — **يعطي حاملَه حقَّ الإرسال باسم المشروع.**
+# (يُوضع في `FCM_CREDENTIALS_JSON` على الاستضافة، وملفّاً على جهاز المطوّر.)
+firebase-key.json
+*service-account*.json
+*serviceAccountKey*.json
 
 # Go
 backend/bin/
