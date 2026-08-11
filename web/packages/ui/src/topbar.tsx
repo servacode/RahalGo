@@ -124,7 +124,22 @@ export function TopBar({
         `[scrollbar-width:none]` — **شريطُ تمريرٍ داخل الشريط يُقرأ عطباً**،
         والانزلاقُ بالإصبع لا يحتاج مقبضاً يُرى.
       */}
-      <div className="ms-auto flex min-w-0 items-center gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
+      {/* ══════════════════════════════════════════════════════════════
+          **وحشوةٌ علويّةٌ تُخلي مكانَ ما يخرج من الأيقونات**
+          ══════════════════════════════════════════════════════════════
+
+          (شهده المالك ٢٠٢٦-٠٨-١١: «الجرسُ يبين مقصوص بنسخة الجوّال».)
+
+          **`overflow-x: auto` تجعل `overflow-y: auto` بحكم المواصفة** —
+          وقِيس فعلاً. **فكلُّ ما يخرج علوّاً يُقصّ**: عدّادُ الإشعارات
+          يجلس فوق حافّة الجرس، **فيُقطع نصفُه.**
+
+          **ولا يُحذف الانزلاقُ الأفقيّ** — هو ما يمنع الشريطَ أن يجرّ
+          الصفحةَ كلَّها على الجوّال، **وذاك عطبٌ أسوأُ.**
+
+          **فيُعطى الصفُّ حشوةً علويّةً بقدر ما يخرج** — فيصير المتدلّي
+          داخلَ الصندوق، **ولا يُقصّ شيء.** */}
+      <div className="ms-auto flex min-w-0 items-center gap-1.5 overflow-x-auto pt-1.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
         {children}
       </div>
     </header>
