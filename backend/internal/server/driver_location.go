@@ -76,8 +76,9 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	// **وتعثّرُه لا يُسقط حفظَ الموضع**: الموضعُ هو ما يُسأل عنه كلَّ لحظة،
 	// **والأثرُ ترفٌ يُقرأ عند الإسناد وحدَه.**
 	if _, err := s.pg.Exec(r.Context(), `
-		INSERT INTO driver_track (driver_id, at, speed_mps, accuracy_m)
-		VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4, $5)`,
+		INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m)
+		VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, now(), $4, $5)
+		ON CONFLICT (driver_id, recorded_at) DO NOTHING`,
 		uid, req.Lng, req.Lat, req.SpeedMps, req.AccuracyM); err != nil {
 		s.logger.Warn("التعقّب: تعذّر كتابةُ الأثر", "driver", uid, "error", err)
 	}
@@ -89,7 +90,7 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	// الجدولُ بصمت**، والتقليمُ مع الكتابة يبقى ما دامت الكتابةُ باقية.
 	if _, err := s.pg.Exec(r.Context(), `
 		DELETE FROM driver_track
-		WHERE driver_id = $1 AND created_at < now() - interval '2 hours'`, uid); err != nil {
+		WHERE driver_id = $1 AND recorded_at < now() - interval '2 hours'`, uid); err != nil {
 		s.logger.Warn("التعقّب: تعذّر التقليم", "driver", uid, "error", err)
 	}
 

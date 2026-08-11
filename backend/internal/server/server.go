@@ -348,6 +348,9 @@ func (s *Server) Router() http.Handler {
 			// **موضعُه — يُرسله هو ولا يُخمَّن.** ومنه تُقاس المسافةُ إلى
 			// المتجر، **والترتيبُ بالدور عدلٌ في الوقت أعمى في المكان.**
 			r.Post("/location", s.handleDriverLocation)
+			// **ودفعةٌ لِما جُمع بلا شبكة** — انظر `driver_location_batch.go`.
+			// **والمفردةُ تبقى للمتصفّح**: نبضةٌ في ثانيتها لا تحتاج طابوراً.
+			r.Post("/location/batch", s.handleDriverLocationBatch)
 			r.Get("/queue", s.handleDriverQueue)
 			// **أسبابُ التعذّر من الخادم** — قائمةٌ تُكرَّر في مكانين تفترق
 			// حين يُضاف سببٌ في أحدهما (driver_return.go)

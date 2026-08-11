@@ -53,6 +53,20 @@ type Movement struct {
 }
 
 // MovementOf يقرأ حركةَ سائقٍ في النافذة الأخيرة.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **والترتيبُ بزمن الجهاز لا بزمن الوصول**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (هجرة `0101`، مع نقطة الموقع بالجملة.)
+//
+// **كان `created_at` — أي لحظةَ وصول النقطة.** وهو صحيحٌ حين تصل النقاطُ
+// واحدةً واحدةً في ثانيتها، **ويكذب على كلّ دفعةٍ تصل من هاتفٍ عاد من
+// انقطاع**: عشرون نقطةً بزمنِ وصولٍ واحد، **فيبدو من وقف عشرين دقيقةً
+// كأنّه قطع المدينةَ في لحظة.**
+//
+// **وهذه الدالّةُ تقرّر أيقترب السائقُ أم يبتعد** — والإسنادُ يُبنى عليها.
+// **فترتيبٌ خاطئٌ هنا طلبٌ يذهب إلى الأبعد وهو يبدو الأقرب.**
 func (s *Service) MovementOf(ctx context.Context, driverID string) Movement {
 	var m Movement
 	// **والانتشارُ يُحسب في القاعدة لا في Go** — جلبُ مئة نقطةٍ لحساب مسافةٍ
@@ -60,8 +74,8 @@ func (s *Service) MovementOf(ctx context.Context, driverID string) Movement {
 	err := s.db.QueryRow(ctx, `
 		WITH pts AS (
 			SELECT at FROM driver_track
-			WHERE driver_id = $1 AND created_at > now() - make_interval(secs => $2)
-			ORDER BY created_at DESC
+			WHERE driver_id = $1 AND recorded_at > now() - make_interval(secs => $2)
+			ORDER BY recorded_at DESC
 			LIMIT 200
 		)
 		SELECT count(*),
@@ -94,18 +108,18 @@ func (s *Service) ApproachTo(ctx context.Context, driverID string, lat, lng floa
 	var a Approach
 	err := s.db.QueryRow(ctx, `
 		WITH pts AS (
-			SELECT at, created_at FROM driver_track
-			WHERE driver_id = $1 AND created_at > now() - make_interval(secs => $2)
-			ORDER BY created_at DESC
+			SELECT at, recorded_at FROM driver_track
+			WHERE driver_id = $1 AND recorded_at > now() - make_interval(secs => $2)
+			ORDER BY recorded_at DESC
 			LIMIT 200
 		), target AS (
 			SELECT ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography AS g
 		)
 		SELECT
 			(SELECT ST_Distance(p.at, t.g) FROM pts p, target t
-			 ORDER BY p.created_at DESC LIMIT 1),
+			 ORDER BY p.recorded_at DESC LIMIT 1),
 			(SELECT ST_Distance(p.at, t.g) FROM pts p, target t
-			 ORDER BY p.created_at ASC LIMIT 1)
+			 ORDER BY p.recorded_at ASC LIMIT 1)
 		FROM pts LIMIT 1`, driverID, TrackWindow.Seconds(), lat, lng).
 		Scan(&a.NowM, &a.ThenM)
 	if err != nil {
