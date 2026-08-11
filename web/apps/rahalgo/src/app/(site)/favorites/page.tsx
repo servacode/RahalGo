@@ -62,7 +62,17 @@ export default function Page() {
         <EmptyState
           icon={IconHeart}
           title={F.empty}
-          action={<Button onClick={() => router.push("/")}>{F.browse}</Button>}
+          /* **والزرُّ يقول وجهتَه ويذهب إليها.**
+
+             (قرارُ المالك ٢٠٢٦-٠٨-١١: «هون لازم تسوّق بدل تصفّح المتاجر،
+              وياخذك ع تسوّق».)
+
+             **كان يقول «تصفّح المتاجر» ويذهب إلى الرئيسيّة** — اسمٌ لا
+             يطابق وجهةً، **ومن ضغطه بحثاً عن الأصناف وجد صفحةً تعريفيّة.**
+
+             **واسمُ الوجهة من المعجم لا نصٌّ جديد** — هو نفسُه المكتوبُ في
+             الشريطين، **فيُقرأ الزرُّ والقسمُ شيئاً واحداً.** */
+          action={<Button onClick={() => router.push("/shop")}>{m.site.nav.shop}</Button>}
         />
       ) : (
         <ItemGrid items={rows} next="/favorites" favorites={fav} />
