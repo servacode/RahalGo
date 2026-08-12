@@ -31,6 +31,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/push"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/referrals"
+	"github.com/servacode/rahalgo/backend/internal/routing"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/support"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -57,9 +58,11 @@ type Server struct {
 	media      *media.Service
 	hub        *realtime.Hub
 	geo        *geo.Service
-	notify     *notifications.Service
-	push       *push.Service
-	otpStatus  func() map[string]any
+	// route **محرّكُ المسارات** — وفارغٌ يعني الخطَّ المستقيم.
+	route     *routing.Client
+	notify    *notifications.Service
+	push      *push.Service
+	otpStatus func() map[string]any
 	// otpUnpair **فكُّ اقتران البوت** — وفارغةٌ لمزوّدٍ لا اقترانَ له.
 	otpUnpair func(context.Context) error
 	// otpPair **طلبُ رمزِ ربطٍ صريح** — ولا رمزَ بغيره.
@@ -97,6 +100,10 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	}
 	notify.SetPusher(pushAdapter{pushSvc})
 	geoSvc := geo.New(cfg.GeocoderURL, rdb, logger)
+	routeClient := routing.New(cfg.OSRMURL)
+	if !routeClient.Enabled() {
+		logger.Warn("المسارات: لا محرّك — المسافةُ بخطٍّ مستقيم")
+	}
 	// محرك الطلبات يحتاج الإشعارات (عمولة المندوب) وقد بُني قبلها — نحقنها الآن.
 	ordersSvc.SetNotifier(notify)
 	// وقواعدَ العمل من اللوحة: اشتراطُ توثيق واتساب قبل الطلب وما يليه.
@@ -108,7 +115,7 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		comms:  comms.New(pg),
 		wallet: walletSvc, orders: ordersSvc, cashbox: cashboxSvc, support: supportSvc,
 		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair, otpPair: otpPair,
-		notify: notify, push: pushSvc, geo: geoSvc}
+		notify: notify, push: pushSvc, geo: geoSvc, route: routeClient}
 	// **والحوافزُ تعرف الخزينةَ من محرّك الطلبات** — مصدرٌ واحدٌ لمن هي،
 	// **ولا تُقرأ مرّتين بطريقتين.**
 	srv.incentives = incentives.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID)

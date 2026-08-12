@@ -40,6 +40,11 @@ type Config struct {
 	UploadsDir     string // مجلد تخزين الوسائط المرفوعة (خارج الحاوية في الإنتاج)
 	// خدمة العنونة (Nominatim) — تُستبدل بنسخة ذاتية الاستضافة عند النشر
 	GeocoderURL string
+	// OSRMURL محرّكُ المسارات — **وفارغٌ يعني الخطَّ المستقيمَ كما كان.**
+	//
+	// **ولا يُسقط الإقلاع**: رقمٌ يُحسّن الشاشة لا يصنعها، **ومنصّةٌ تقف
+	// لأنّ خدمةَ مساراتٍ نامت** أسوأُ من مسافةٍ تقريبيّة.
+	OSRMURL string
 
 	// WebOrigins **نطاقاتُ الواجهة المسموح لها بمناداة المحرّك.**
 	//
@@ -131,6 +136,7 @@ func Load() (*Config, error) {
 		AdminPhone:     getEnv("ADMIN_PHONE", ""),
 		UploadsDir:     getEnv("UPLOADS_DIR", "./uploads"),
 		GeocoderURL:    getEnv("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
+		OSRMURL:        getEnv("OSRM_URL", ""),
 		WebOrigins:     splitList(getEnv("WEB_ORIGINS", "")),
 	}
 
