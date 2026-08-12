@@ -30,6 +30,7 @@
 import { useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Money,
   Tabs,
   Badge,
   Button,
@@ -308,9 +309,7 @@ function SettleModal({
         <p className="text-sm text-ink-muted">{charge ? C.chargeHint : C.waiveHint}</p>
         <p className="rounded-control bg-field px-3 py-2 text-sm">
           {dispute.party_name} —{" "}
-          <span dir="ltr" className="font-bold tabular-nums">
-            {fmtNum(dispute.amount)} {m.common.currency}
-          </span>
+          <Money value={dispute.amount} className="font-bold tabular-nums" />
         </p>
         <Input
           id="settle-note"

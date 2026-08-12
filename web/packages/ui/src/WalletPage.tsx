@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Money } from "./money";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
 import { Badge, Button, Input, Modal } from "./components";
 import { Tabs } from "./navigation";
@@ -437,9 +438,7 @@ export function WalletPage({
               <ListRow
                 key={p.id}
                 title={
-                  <span dir="ltr">
-                    {fmtNum(p.amount)} {m.common.currency}
-                  </span>
+                  <Money value={p.amount} />
                 }
                 subtitle={p.decision || p.note || undefined}
                 trailing={

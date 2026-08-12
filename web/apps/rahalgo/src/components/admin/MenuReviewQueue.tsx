@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Money,
   Alert,
   Badge,
   Button,
@@ -116,9 +117,7 @@ export default function MenuReviewQueue() {
                 </span>
               </span>
               <Badge variant="neutral">
-                <span dir="ltr">
-                  {fmtNum(it.merchant_price)} {m.common.currency}
-                </span>
+                <Money value={it.merchant_price} />
               </Badge>
               {rejecting !== it.id && (
                 <span className="flex shrink-0 gap-2">

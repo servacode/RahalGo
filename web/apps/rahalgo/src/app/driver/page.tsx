@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime, errorText } from "@rahalgo/i18n";
 import {
+  Money,
   Alert,
   Button,
   Badge,
@@ -844,9 +845,7 @@ function TaskCard({
         ) : cash ? (
           <>
             {D.order.cashCollect}:{" "}
-            <span dir="ltr">
-              {fmtNum(o.cash_due)} {m.common.currency}
-            </span>
+            <Money value={o.cash_due} />
           </>
         ) : (
           D.order.walletPaid

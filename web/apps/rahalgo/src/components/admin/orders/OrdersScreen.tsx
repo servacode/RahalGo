@@ -10,6 +10,7 @@ import {
   fmtDateTime,
 } from "@rahalgo/i18n";
 import {
+  Money,
   Pagination,
   Alert,
   IconNote,
@@ -73,9 +74,7 @@ function Row({
       } ${danger ? "text-danger" : ""}`}
     >
       <span className="truncate">{label}</span>
-      <span dir="ltr" className="shrink-0 tabular-nums">
-        {fmtNum(value)} {m.common.currency}
-      </span>
+      <Money value={value} className="shrink-0 tabular-nums" />
     </div>
   );
 }

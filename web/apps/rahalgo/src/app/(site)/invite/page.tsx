@@ -34,6 +34,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, withPlatform } from "@rahalgo/i18n";
 import {
+  Money,
   Alert,
   Button,
   LoadingState,
@@ -170,11 +171,12 @@ export default function InvitePage() {
                     {V.tierNow}
                   </Badge>
                 )}
+                {/* **ولا لفّةَ اتّجاهٍ على الزوج** — تقلبه فيُقرأ «ل.س
+                    ٥٠». (قرارُ المالك ٢٠٢٦-٠٨-١٢.) */}
                 <span
-                  dir="ltr"
-                  className={`ms-auto tabular-nums ${t.amount > 0 ? "font-bold text-success" : "text-ink-muted"}`}
+                  className={`ms-auto ${t.amount > 0 ? "font-bold text-success" : "text-ink-muted"}`}
                 >
-                  {t.amount > 0 ? `${fmtNum(t.amount)} ${m.common.currency}` : V.tierNone}
+                  {t.amount > 0 ? <Money value={t.amount} /> : V.tierNone}
                 </span>
               </li>
             ))}
