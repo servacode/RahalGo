@@ -9,6 +9,8 @@ import com.rahalgo.shared.model.TrackPoint
 import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.buildJsonObject
 
 /**
  * **أبواب السائق — كما هي في عقد الـAPI.**
@@ -27,6 +29,23 @@ class DriverApi(private val api: ApiClient) {
     suspend fun queue(): List<DriverOrder> = api.call("/api/v1/driver/queue")
 
     /** طلباته التي في يده — **ما لم يُغلق بعد.** */
+    /**
+     * **الطارئ** — ضغطةٌ واحدة: موضعُه يُلتقط، والعملياتُ تُنبَّه.
+     *
+     * **ولا نافذةَ يملؤها**: من كُسرت يدُه أو أُوقف في الطريق لا يكتب
+     * شرحا، **وحقلٌ إلزاميٌّ في لحظةٍ كهذه** يجعله يترك الزرَّ ويتّصل.
+     */
+    suspend fun emergency(orderId: String, lat: Double?, lng: Double?): Ack =
+        api.call(
+            "/api/v1/driver/orders/" + orderId + "/emergency",
+            HttpMethod.Post,
+            buildJsonObject {
+                if (lat != null) put("lat", lat)
+                if (lng != null) put("lng", lng)
+                put("note", "")
+            },
+        )
+
     /** **مسارُ الطرف الحاليّ** — خطُّ الشوارع ومسافتُه ومدّتُه. */
     suspend fun route(orderId: String): OrderRoute =
         api.call("/api/v1/driver/orders/" + orderId + "/route")

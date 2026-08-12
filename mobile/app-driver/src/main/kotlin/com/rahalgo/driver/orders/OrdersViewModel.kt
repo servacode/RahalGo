@@ -257,12 +257,18 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     /** يسأل المحرّك أيّ الأسباب تصلح في هذا الحال. */
     fun askFail() {
-        val order = detail.order
+        val order = state.mine.firstOrNull { it.id == openId }
+            ?: state.mine.firstOrNull()
+            ?: detail.order
         viewModelScope.launch {
-            detail = try {
-                detail.copy(failReasons = backend.driver.failReasons(order.status))
-            } catch (e: Exception) {
-                detail.copy(error = describe(e))
+            val reasons = runCatching { backend.driver.failReasons(order.status) }
+                .getOrDefault(emptyList())
+            // **وقائمةٌ فارغةٌ ليست «لا شيء»** — هي «لا سببَ يُختار هنا»،
+            // **وبابُها الطارئ** لا نافذةٌ فارغةٌ تُغلق فورا.
+            if (reasons.isEmpty()) {
+                emergencyOpen = true
+            } else {
+                detail = detail.copy(order = order, failReasons = reasons)
             }
         }
     }
@@ -339,6 +345,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             avgSpeedKmh = state.me?.avgSpeedKmh ?: 0,
             requirePhoto = state.me?.requirePhoto ?: false,
             agreeOpen = agreeOpen,
+            emergencyOpen = emergencyOpen,
             stops = state.mine.map { Stop(it.id, it.number) },
             // **وأوّل عرضٍ معروضٍ عليه وهو في رحلة** — وما رُفض لا يعود.
             onRouteOffer = state.offers.firstOrNull { it.id !in dismissedOffers },
@@ -516,6 +523,35 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         } catch (e: Exception) {
             Log.w("RahalGo/chat", "تعذّرت قراءة الحديث", e)
             chat?.copy(busy = false) ?: ChatState(busy = false)
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **«لدي مشكلة» — وليس لكلّ حالٍ سببٌ يُختار**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢.)
+    //
+    // **والمحرّك يقبل أسبابَ تعذّرٍ عند بابين فقط**: عند المتجر وعند
+    // باب الزبون — **وهو صواب**: «الزبون غائب» لا تُقال وأنت في الطريق.
+    //
+    // **وما بينهما ليس بلا مشاكل**: عطلٌ في الدرّاجة، أو إيقافٌ في
+    // الطريق. **فيُفتح بابُ الطارئ** — تُنبَّه العمليات ويُقرأ موضعُه.
+    var emergencyOpen by mutableStateOf(false)
+        private set
+
+    fun dismissEmergency() {
+        emergencyOpen = false
+    }
+
+    /** **يبلّغ العمليات** — ثمّ يُغلق النافذة ويعيد القراءة. */
+    fun emergency(point: LastPoint.Point?) {
+        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        emergencyOpen = false
+        viewModelScope.launch {
+            runCatching { backend.driver.emergency(id, point?.lat, point?.lng) }
+                .onFailure { Log.w("RahalGo/طارئ", "تعذّر البلاغ", it) }
+            load()
         }
     }
 

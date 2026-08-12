@@ -438,6 +438,8 @@ private fun SignedIn(onLogout: () -> Unit) {
                         askFail = orders::askFail,
                         fail = orders::fail,
                         dismissFail = orders::dismissFail,
+                        emergency = { orders.emergency(LastPoint.value) },
+                        dismissEmergency = orders::dismissEmergency,
                         navigate = { openMaps(context, orders.trip(LastPoint.value)) },
                         toOrders = { tab = 1 },
                     ),

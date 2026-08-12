@@ -235,6 +235,10 @@ fun TripScreen(
         AgreeDialog(onConfirm = actions.agree, onDismiss = actions.dismissAgree)
     }
 
+    if (state.emergencyOpen) {
+        EmergencyDialog(onConfirm = actions.emergency, onDismiss = actions.dismissEmergency)
+    }
+
     if (state.failReasons != null) {
         FailDialog(
             reasons = state.failReasons,
@@ -294,6 +298,34 @@ private fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) 
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
+        },
+    )
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **بلاغُ الطارئ — ضغطةٌ واحدةٌ وتأكيد**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **ولا حقلَ يملؤه**: من عطلت درّاجتُه أو أُوقف في الطريق لا يكتب شرحا،
+ * **وحقلٌ إلزاميٌّ في لحظةٍ كهذه** يجعله يترك الزرَّ ويتّصل بالمكتب.
+ *
+ * **وتأكيدٌ واحدٌ يسبقه**: بلاغٌ يُوقظ المكتبَ ويحرّر الطلب، **وضغطةٌ
+ * بالخطأ في جيبٍ** تفعل ذلك كلَّه.
+ */
+@Composable
+private fun EmergencyDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.emg_title)) },
+        text = { Text(stringResource(R.string.emg_body), color = InkMuted) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.emg_send), color = StateRed)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_back)) }
         },
     )
 }
@@ -697,17 +729,33 @@ private fun TripCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                // **والعنوان يقول الوجهة الحاليّة** — لا اسم الطلب:
-                // **من قرأ «طيف» وهو في طريقه للزبون** قرأ ما مضى.
-                text = if (state.step >= TripStep.PICKED_UP) {
-                    order.customerName.ifBlank { stringResource(R.string.detail_customer) }
-                } else {
-                    order.merchantName
-                },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
+            // **وأيقونةٌ بجانب الاسم** — (قرار المالك ٢٠٢٦-٠٨-١٢).
+            //
+            // **وهي تقول أيَّ طورٍ أنت فيه بلا قراءة**: متجرٌ فأنت
+            // ذاهبٌ إليه، **ودبّوسٌ فالبضاعةُ معك وأنت إلى الزبون.**
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val toCustomer = state.step >= TripStep.PICKED_UP
+                Icon(
+                    painter = painterResource(
+                        if (toCustomer) R.drawable.ic_pin else R.drawable.ic_store,
+                    ),
+                    contentDescription = null,
+                    tint = if (toCustomer) BrandTeal else BrandOrange,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    // **والعنوان يقول الوجهة الحاليّة** — لا اسم الطلب:
+                    // **من قرأ «طيف» وهو في طريقه للزبون** قرأ ما مضى.
+                    text = if (toCustomer) {
+                        order.customerName.ifBlank { stringResource(R.string.detail_customer) }
+                    } else {
+                        order.merchantName
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
             Text("#${order.number}", color = InkMuted)
         }
 
@@ -720,6 +768,19 @@ private fun TripCard(
         // **وما بقي صعد إلى لوح الطور** — ولا يُكتب هنا ثانية:
         // **رقمان لشيءٍ واحدٍ في شاشةٍ واحدة** يُقرأ أحدهما شيئا آخر.
 
+        // ══════════════════════════════════════════════════════════════
+        // **ولا مالَ في الطريق إلى المتجر**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرار المالك ٢٠٢٦-٠٨-١٢: «بالنسبة إلى تقبض نقداً والسعر لا
+        //  داعي له، لأنّ السائق لن يدفع ولن يقبض من المتجر أساسا».)
+        //
+        // **والمبلغُ يُقبض عند باب الزبون** — وذكرُه وهو في طريقه إلى
+        // المتجر **سطرٌ لا فعلَ عليه الآن**، ويزاحم ما عليه أن يفعله.
+        //
+        // **ويظهر حين يصير له معنى**: بعد الاستلام، وهو ماضٍ إلى من
+        // يقبض منه.
+        if (state.step >= TripStep.PICKED_UP) {
         Spacer(Modifier.height(10.dp))
         Row(
             Modifier.fillMaxWidth(),
@@ -735,6 +796,7 @@ private fun TripCard(
                 fontWeight = FontWeight.Bold,
                 color = if (order.cashDue > 0) BrandTeal else InkMuted,
             )
+        }
         }
 
         if (state.error.isNotEmpty()) {
@@ -795,13 +857,20 @@ private fun TripCard(
                     Text(stringResource(R.string.agree_button), color = BrandOrange)
                 }
             }
-            // **والتعذّر حيث يقبله المحرّك وحدَه** — عند المتجر أو عند
-            // باب الزبون. **وزرّ يظهر دائما** يُضغط في غير موضعه فيُردّ
-            // برفضٍ لا يفهمه صاحبه.
-            if (order.status == "at_pickup" || order.status == "at_dropoff") {
-                TextButton(onClick = actions.askFail, enabled = !state.busy) {
-                    Text(stringResource(R.string.detail_failed), color = BrandOrange)
-                }
+            // ══════════════════════════════════════════════════════════
+            // **«لدي مشكلة» — في كلّ طورٍ لا عند بابين**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢.)
+            //
+            // **وأسبابُ التعذّر عند بابين وحدَهما** — وهو صواب: «الزبون
+            // غائب» لا تُقال وأنت في الطريق. **لكنّ ما بينهما ليس بلا
+            // مشاكل**: عطلٌ في الدرّاجة أو إيقافٌ في الطريق.
+            //
+            // **فزرٌّ واحدٌ يفتح ما يصلح**: أسباباً عند الباب، **وبلاغَ
+            // طارئٍ في الطريق** — ولا يُطلب من صاحبه أن يعرف الفرق.
+            TextButton(onClick = actions.askFail, enabled = !state.busy) {
+                Text(stringResource(R.string.trip_problem), color = BrandOrange)
             }
         }
 
@@ -935,6 +1004,8 @@ data class TripState(
     val agreeOpen: Boolean = false,
     /** محطّاته كلّها — **وواحدةٌ منها هي المعروضة.** */
     val stops: List<Stop> = emptyList(),
+    /** **أنافذة الطارئ مفتوحة؟** — تُفتح حين لا سببَ يُختار. */
+    val emergencyOpen: Boolean = false,
     /** عرضٌ نزل وهو في رحلة — **وفارغ يعني لا عرض.** */
     val onRouteOffer: DriverOrder? = null,
     val failReasons: List<FailReasonItem>? = null,
@@ -961,6 +1032,9 @@ data class TripActions(
     val askFail: () -> Unit,
     val fail: (String) -> Unit,
     val dismissFail: () -> Unit,
+    /** **بلاغُ الطارئ** — العملياتُ تُنبَّه وموضعُه يُقرأ. */
+    val emergency: () -> Unit,
+    val dismissEmergency: () -> Unit,
     val navigate: () -> Unit,
     val toOrders: () -> Unit,
 )

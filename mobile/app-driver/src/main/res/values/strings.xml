@@ -197,6 +197,10 @@
     <string name="offline_map_resume">أكمل التنزيل</string>
     <string name="trip_near_pickup">يبدو أنّك وصلت المتجر</string>
     <string name="trip_near_dropoff">يبدو أنّك وصلت الزبون</string>
+    <string name="trip_problem">لدي مشكلة</string>
+    <string name="emg_title">تبليغ العمليات</string>
+    <string name="emg_body">سيصل بلاغٌ فوريٌّ إلى المكتب بموقعك ورقم الطلب. استعمله عند عطلٍ أو خطرٍ أو أيّ ما يمنعك من إكمال الطلب.</string>
+    <string name="emg_send">بلّغ الآن</string>
     <string name="trip_chat">حديث الزبون</string>
     <string name="chat_hint">اكتب رسالة…</string>
     <string name="chat_today">اليوم</string>
