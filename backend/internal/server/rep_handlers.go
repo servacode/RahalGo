@@ -106,7 +106,7 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT m.id, m.name, c.icon, c.name, lm.thumb_path, m.status,
 		       m.created_at::date::text,
-		       NULLIF(COALESCE(ou.whatsapp_phone::text, ou.phone::text), ''),
+		       NULLIF(ou.phone::text, ''),
 		       (SELECT count(*) FROM orders o WHERE o.merchant_id = m.id AND o.status = 'delivered'),
 		       -- «الملغية» تجمع كل نهاية غير التسليم: رفضٌ من المتجر، وإلغاءٌ من
 		       -- الزبون، وفشلُ توصيل، واسترجاعٌ بعد التسليم. تفريقها في بطاقة

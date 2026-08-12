@@ -98,12 +98,6 @@ export function AccountSettings({
   const [phoneCode, setPhoneCode] = useState("");
   const [phoneBusy, setPhoneBusy] = useState(false);
 
-  const [wa, setWa] = useState("");
-  const [waVerified, setWaVerified] = useState(false);
-  const [waSent, setWaSent] = useState(false);
-  const [waCode, setWaCode] = useState("");
-  const [waBusy, setWaBusy] = useState(false);
-  const [waEditing, setWaEditing] = useState(false);
 
   const [delSent, setDelSent] = useState(false);
   const [delCode, setDelCode] = useState("");
@@ -135,9 +129,6 @@ export function AccountSettings({
            (وقع في فحصٍ بمتصفّحٍ حقيقيّ ٢٠٢٦-٠٨-٠٦.) */
         setName(s.full_name ?? "");
         setNameDraft(s.full_name ?? "");
-        setWaVerified(s.whatsapp_verified);
-        // رقم الدخول اقتراحٌ مبدئي: أغلب الناس واتسابهم عليه، فلا نطلب كتابته
-        setWa(s.whatsapp_phone ?? phone ?? "");
       })
       .catch(() => undefined);
   }, [api, phone]);
@@ -266,42 +257,7 @@ export function AccountSettings({
     }
   }
 
-  async function reqWhatsApp(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setMsg("");
-    setWaBusy(true);
-    try {
-      await api("/api/v1/auth/whatsapp/request", { method: "POST", body: JSON.stringify({ phone: wa }) });
-      setWaSent(true);
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setWaBusy(false);
-    }
-  }
 
-  async function confirmWhatsApp(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setWaBusy(true);
-    try {
-      await api("/api/v1/auth/whatsapp/confirm", {
-        method: "POST",
-        body: JSON.stringify({ phone: wa, code: waCode }),
-      });
-      setWaVerified(true);
-      setWaSent(false);
-      setWaEditing(false);
-      setWaCode("");
-      setMsg(A.whatsappDone);
-      onVerified?.();
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setWaBusy(false);
-    }
-  }
 
   async function reqDelete() {
     setError("");
@@ -443,7 +399,23 @@ export function AccountSettings({
         </form>
       </Section>
 
-      <Section title={A.contact} icon={<IconPhone />}>
+      {/* ══════════════════════════════════════════════════════════════
+          **ورقمٌ واحدٌ لا رقمان — وعليه واتساب**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ما يصير رقم الهاتف مختلف عن واتساب،
+           هيك تخرب الدنيا… رقم الهاتف حصراً عليه واتساب، هيك متّفقين».)
+
+          **وكان رقمان**: رقمُ الدخول ورقمُ واتساب «قد يختلف عن رقم
+          دخولك». **ورقمان لشخصٍ واحدٍ يفترقان**: يبدّل أحدَهما وينسى
+          الآخر، **فيصله رمزُ الدخول على رقمٍ ولا يصله إشعارُ طلبه.**
+
+          **والرمزُ نفسُه يمشي على واتساب** — فمن لا واتسابَ على رقمه لا
+          يدخل أصلاً. **فالشرطُ قائمٌ في التسجيل**، وحقلٌ ثانٍ بعده
+          يفتح باباً لتناقضٍ لا فائدةَ فيه.
+
+          **والتبديلُ يبقى بابَه**: رمزٌ يصل على الرقم الجديد ويُؤكَّد. */}
+      <Section title={A.whatsapp} icon={<IconWhatsApp />}>
         {!otpSent ? (
           <form onSubmit={reqPhone} className="space-y-3">
             <div>
@@ -466,95 +438,6 @@ export function AccountSettings({
           </form>
         )}
       
-        <div className="mt-4 border-t border-line-soft pt-4">
-          <p className="mb-2 flex items-center gap-2 text-xs font-bold text-ink-muted">
-            <IconWhatsApp className="h-4 w-4 text-primary" />
-            {A.whatsapp}
-          </p>
-        {waVerified && !waEditing ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 rounded-control border border-success-edge bg-success-tint px-3 py-2.5">
-              <span dir="ltr" className="min-w-0 truncate font-medium text-ink">
-                {wa}
-              </span>
-              <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-success">
-                <IconVerified size={16} />
-                {A.whatsappVerified}
-              </span>
-            </div>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setWaEditing(true);
-                setWaSent(false);
-              }}
-            >
-              {A.whatsappChange}
-            </Button>
-          </div>
-        ) : !waSent ? (
-          <form onSubmit={reqWhatsApp} className="space-y-3">
-            <div>
-              <Input
-                id="wa-phone"
-                label={A.whatsapp}
-                icon={<IconWhatsApp />}
-                dir="ltr"
-                inputMode="tel"
-                required
-                value={wa}
-                onChange={(e) => setWa(e.target.value)}
-                className="text-end"
-                placeholder="09xxxxxxxx"
-              />
-              <p className="mt-1 text-xs text-ink-muted">{A.whatsappHint}</p>
-            </div>
-            {!waVerified && (
-              <p className="flex items-center gap-1.5 text-xs font-medium text-warning">
-                <IconWarning size={14} />
-                {A.whatsappUnverified}
-              </p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={waBusy} className="flex-1 py-2.5">
-                {waBusy ? m.common.loading : A.whatsappVerify}
-              </Button>
-              {waEditing && (
-                <Button type="button" variant="secondary" onClick={() => setWaEditing(false)}>
-                  {m.common.cancel}
-                </Button>
-              )}
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={confirmWhatsApp} className="space-y-3">
-            <p className="rounded-control bg-primary-tint px-3 py-2 text-sm text-primary">
-              {A.whatsappCodeSent}
-            </p>
-            <Input
-              id="wa-code"
-              label={A.code}
-              dir="ltr"
-              inputMode="numeric"
-              required
-              autoFocus
-              value={waCode}
-              onChange={(e) => setWaCode(e.target.value)}
-              className="text-center font-mono text-lg tracking-[0.4em]"
-              placeholder="••••••"
-              maxLength={6}
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={waBusy} className="flex-1 py-2.5">
-                {waBusy ? m.common.loading : A.whatsappVerify}
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => setWaSent(false)}>
-                {m.common.cancel}
-              </Button>
-            </div>
-          </form>
-        )}
-      </div>
       </Section>
 
       <section className="surface-lit surface !border-danger-edge p-4 sm:col-span-2 lg:col-span-3">

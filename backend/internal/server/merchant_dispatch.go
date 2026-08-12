@@ -124,9 +124,9 @@ func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMe
 	if err := s.pg.QueryRow(ctx, `
 		SELECT o.number, o.notes,
 		       COALESCE(NULLIF(m.phone::text, ''),
-		                NULLIF(ou.whatsapp_phone::text, ''),
+		                NULLIF(ou.phone::text, ''),
 		                NULLIF(ou.phone::text, ''), ''),
-		       COALESCE(NULLIF(ou.whatsapp_phone::text, ''),
+		       COALESCE(NULLIF(ou.phone::text, ''),
 		                NULLIF(ou.phone::text, ''),
 		                NULLIF(m.phone::text, ''), '')
 		FROM orders o

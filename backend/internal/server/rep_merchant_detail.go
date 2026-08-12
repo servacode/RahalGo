@@ -44,7 +44,7 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	err := s.pg.QueryRow(ctx, `
 		SELECT m.name, c.icon, c.name, lm.thumb_path, m.status,
 		       m.created_at::date::text,
-		       NULLIF(COALESCE(ou.whatsapp_phone::text, ou.phone::text), '')
+		       NULLIF(ou.phone::text, '')
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
