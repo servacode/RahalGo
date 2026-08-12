@@ -2425,7 +2425,6 @@
       "againTitle": "اطلبه ثانيةً",
       "againBody": "سنرسل الطلب نفسه إلى العنوان نفسه وبطريقة الدفع نفسها.",
       "againConfirm": "أرسل الطلب",
-      "againDone": "أُرسل طلبك برقم {n}",
       "trackClosed": "انتهى هذا الطلب — {s}",
       "endedReason": "السبب",
       "cancelConfirmTitle": "إلغاء الطلب؟",

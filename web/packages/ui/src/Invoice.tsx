@@ -125,7 +125,16 @@ export function Invoice({
           </p>
           {order.customer_name && (
             <p>
-              <span className="text-ink-muted">{V.customer} </span>
+              {/* ══════════════════════════════════════════════════════
+                  **والاسمُ وحدَه — لا كلمةَ «الزبون» قبله**
+                  ══════════════════════════════════════════════════════
+
+                  (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ما يصير نكتب الزبون
+                   بالفاتورة، اسم الزبون بس».)
+
+                  **وسطرٌ فيه اسمٌ ورقمُ هاتفٍ لا يُسأل عمّن هو**: من
+                  يقرأ الفاتورة يعرف أنّ هذا صاحبُ الطلب. **والكلمةُ
+                  تشغل موضعاً وتقول ما هو ظاهر.** */}
               <span className="font-medium">{order.customer_name}</span>
               {/* ══════════════════════════════════════════════════════
                   **والهاتفُ ينفصل عن الاسم**
@@ -276,7 +285,11 @@ export function Invoice({
             )}
             <div className="figure flex items-center justify-between border-t-2 border-line-soft pt-2">
               <dt>{V.total}</dt>
-              <dd dir="ltr" className="tabular-nums">
+              {/* **ولا لفّةَ على الأب أيضا** — `Money` تلفّ رقمَها
+                  بنفسها، **ولفّةٌ فوقها تقلب الزوجَ من جديد.**
+                  (بقيت هنا فانقلب «٣٠٠ ل.س» رغم التصحيح — قيس
+                  ٢٠٢٦-٠٨-١٢.) */}
+              <dd>
                 <Money value={custom ? (goods ?? 0) + fee : order.total} />
               </dd>
             </div>
