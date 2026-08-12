@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -55,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.rahalgo.design.InkMuted
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.rahalgo.driver.home.HomeActions
 import com.rahalgo.driver.home.HomeScreen
 import com.rahalgo.driver.home.HomeViewModel
@@ -107,6 +109,24 @@ class MainActivity : ComponentActivity() {
         // يُنشئ النظامُ محتواها.
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        // ══════════════════════════════════════════════════════════════
+        // **والنافذة تمتدّ تحت شريط النظام**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرار المالك ٢٠٢٦-٠٨-١٢: «يوجد شريط أبيض أعلى الشاشة أزله».)
+        //
+        // **وكان النظامُ يحجز أعلى الشاشة ويصبغه بلون النافذة** — شريطٌ
+        // أبيضُ فوق الخريطة لا شيءَ فيه. **والخريطةُ تريد الشاشةَ
+        // كلَّها.**
+        //
+        // **وما يجب ألّا يُغطّى يدفع نفسَه**: الشريطُ العلويّ والمحطّاتُ
+        // فيهما `statusBarsPadding`، **و`Scaffold` يمرّر الحواشيَ إلى
+        // شريطَيه** — فلا يقع زرٌّ تحت ساعة النظام.
+        enableEdgeToEdge()
+        // **وأيقوناتُ النظام داكنة** — أرضُنا فاتحةٌ وخريطتُنا فاتحة،
+        // **وأيقونةٌ بيضاءُ على بلاطةٍ بيضاءَ تختفي.**
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightStatusBars = true
         setContent { DriverApp() }
     }
 
@@ -378,7 +398,14 @@ private fun SignedIn(onLogout: () -> Unit) {
             }
         },
     ) { padding ->
-        Box(Modifier.padding(padding)) {
+        // **والرحلةُ بلا حاشيةٍ عليا** — الخريطةُ تمتدّ تحت شريط النظام،
+        // **وما فوقها يدفع نفسَه بنفسه.** وسائرُ الشاشات تُحاذي شريطَها.
+        Box(
+            Modifier.padding(
+                top = if (tab == 0) 0.dp else padding.calculateTopPadding(),
+                bottom = padding.calculateBottomPadding(),
+            ),
+        ) {
             // **وصندوق الإشعارات يغطّي** — يُقرأ ثمّ يُغلق.
             val notices = home.inbox
             if (notices != null) {
