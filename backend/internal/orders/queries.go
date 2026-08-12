@@ -332,5 +332,45 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	// أطلبها أصلاً»).
 	//
 	// **وموضعُه دفترُه**: محفظةُ السائق وكشفُ حسابه — حيث يُقرأ مجموعاً.
-	return &OrderPage{Orders: orders, Total: total, Page: f.Page, PerPage: f.PerPage}, nil
+	page := &OrderPage{Orders: orders, Total: total, Page: f.Page, PerPage: f.PerPage}
+	// ══════════════════════════════════════════════════════════════════
+	// **والأعدادُ بالشرط نفسِه — بحالٍ فارغ**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ولا شرطَ ثانٍ يُكتب هنا**: نصُّ `where` واحدٌ للقائمة وللعدّ،
+	// **ومن أضاف مُرشِّحاً غداً أضافه لهما معاً.** ونصّان يفترقان يوماً
+	// **فتقول البطاقةُ اثنين وتعرض القائمةُ ثلاثة** — ولا أحدَ يعرف
+	// أيُّهما الصواب.
+	//
+	// **والحالُ يُمرَّر فارغاً** فيسقط شرطُه وحدَه (`$1 = ''`) — وهو
+	// بالضبط ما نريد: **عدٌّ لا يراه الترشيح.**
+	//
+	// **وللمنتهية وحدَها**: شاشةُ العمل لا حالَ منتهيةً فيها،
+	// **واستعلامٌ يردّ أصفاراً كلَّها نداءٌ بلا جواب.**
+	if f.ClosedOnly {
+		cRows, err := s.db.Query(ctx, `
+			SELECT o.status, count(*) FROM orders o
+			JOIN users cu ON cu.id = o.customer_id`+where+`
+			GROUP BY o.status`,
+			"", f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
+			f.ClosedOnly)
+		if err != nil {
+			return nil, err
+		}
+		defer cRows.Close()
+		counts := map[string]int{}
+		for cRows.Next() {
+			var st string
+			var n int
+			if err := cRows.Scan(&st, &n); err != nil {
+				return nil, err
+			}
+			counts[st] = n
+		}
+		if err := cRows.Err(); err != nil {
+			return nil, err
+		}
+		page.Counts = counts
+	}
+	return page, nil
 }

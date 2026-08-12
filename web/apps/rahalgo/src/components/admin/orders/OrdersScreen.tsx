@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   getMessages,
@@ -159,6 +159,13 @@ interface OrderRow {
 
 interface OrderPage {
   orders: OrderRow[];
+  /**
+   * **كم طلباً في كلّ حال** — لبطاقات السجلّ، وغائبٌ في شاشة العمل.
+   *
+   * **ولا يتبع مُرشِّحَ الحال** — وإلّا صارت البقيّةُ أصفاراً بعد أوّل
+   * ضغطة، **وصفرٌ يكذب أسوأُ من رقمٍ غائب.**
+   */
+  counts?: Record<string, number>;
   total: number;
   page: number;
   per_page: number;
@@ -555,6 +562,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const params = useSearchParams();
   const initialQ = params.get("q") ?? "";
   const [data, setData] = useState<OrderPage | null>(null);
+  /** آخرُ أعدادٍ وصلت — **تُعرض ريثما تصل الجديدة.** */
+  const lastCounts = useRef<Record<string, number> | undefined>(undefined);
   const [status, setStatus] = useState("");
   const [query, setQuery] = useState(initialQ);
   /**
@@ -677,6 +686,16 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       .then(setAlerts)
       .catch(() => undefined);
   }, []);
+
+  // ══════════════════════════════════════════════════════════════════
+  // **والأعدادُ تُحفَظ بين الجلبات**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كلُّ ضغطةِ حرفٍ في البحث تُعيد الجلب**، و`data` تصير `null`
+  // لحظتَها. **فلو قُرئت الأعدادُ منها لَاختفت البطاقاتُ وعادت مع كلّ
+  // حرف** — وشريطٌ يومض ويزيح ما تحته يُتعب العين أكثرَ ممّا يفيد.
+  const counts = data?.counts ?? lastCounts.current;
+  if (data?.counts) lastCounts.current = data.counts;
 
   const totalPages = data
     ? Math.max(1, Math.ceil(data.total / data.per_page))
@@ -1006,6 +1025,56 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </div>
       )}
 
+      {/* ══════════════════════════════════════════════════════════
+          **وبطاقاتٌ تُرشِّح مكانَ قائمةٍ تُخفي**
+          ══════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٢: «بطاقاتٌ ذكيّةٌ أعلى صفحة سجلّ
+           الطلبات، ونُلغي القائمة المنسدلة ونترك خانة البحث».)
+
+          **والمنسدلةُ تُخفي الأرقام حتّى تُفتح**: تفتحها وتختار «فشل
+          التوصيل» **لتكتشف أنّه سبعة** — ضغطتان لتعرف أنّه لا يستحقّ
+          الضغطة. **والبطاقةُ تقول الرقمَ قبلها.**
+
+          **وفي السجلّ وحدَه**: شاشةُ العمل حالاتُها جاريةٌ كلُّها
+          معروضة — **ولا حالَ منتهيةً فيها تُعَدّ.** */}
+      {!live && counts && (
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {[...CLOSED_STATUSES].map((k) => {
+            const on = status === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={on}
+                /* **والضغطةُ الثانيةُ تُطفئ** — مُرشِّحٌ يُشعَل ولا
+                   يُطفَأ إلّا بزرٍّ ثالثٍ اسمُه «الكلّ» **يزيد زرّاً
+                   ليُلغي زرّا.** */
+                onClick={() => {
+                  setStatus(on ? "" : k);
+                  setPage(1);
+                }}
+                className={`rounded-card border p-3 text-start transition-colors ${
+                  on
+                    ? "border-accent bg-accent-tint"
+                    : "border-line-soft bg-surface hover:bg-field"
+                }`}
+              >
+                <span className="block text-xs text-ink-muted">
+                  {STATUS_LABELS[k] ?? k}
+                </span>
+                {/* **والرقمُ هو الخبر** — فيقع أكبرَ ممّا يسمّيه. */}
+                <span
+                  className={`figure block ${on ? "text-accent-text" : "text-ink"}`}
+                >
+                  {fmtNum(counts[k] ?? 0)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-64">
           <Input
@@ -1018,30 +1087,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             }}
           />
         </div>
-        {/* **وقائمةُ الحالة في السجلّ وحدَه.**
 
-            في شاشة العمل لا معنى لها: الحالاتُ الجاريةُ كلُّها معروضةٌ أصلاً،
-            **واختيارُ «مُسلَّم» فيها يُخرج فراغاً** — وهو التناقضُ الذي كان
-            يقع بين المربّع والقائمة. **وشاشةٌ بغرضٍ واحدٍ لا تحتاج مُرشِّحاً
-            يناقضها.** */}
-        {!live && (
-          <div className="w-44">
-            <Select
-              value={status}
-              onChange={(e) => {
-                setStatus(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">{m.admin.ordersPage.allStatuses}</option>
-              {[...CLOSED_STATUSES].map((k) => (
-                <option key={k} value={k}>
-                  {STATUS_LABELS[k] ?? k}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
         {/* ══════════════════════════════════════════════════════════
             **ولا عرضَ جدولٍ في الطلبات**
             ══════════════════════════════════════════════════════════
