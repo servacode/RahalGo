@@ -86,8 +86,17 @@ fun TripScreen(state: TripState, actions: TripActions) {
             modifier = Modifier.fillMaxSize(),
         )
 
+        // ══════════════════════════════════════════════════════════════
+        // **ولا شريطَ خطواتٍ فوق الخريطة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرار المالك ٢٠٢٦-٠٨-١٢: «بالرحلة الشريط العلويّ تبع الرحلة
+        //  ألغه».)
+        //
+        // **وسبعُ خطواتٍ تُقرأ في كلّ نظرة** وهو لا يحتاج منها إلّا
+        // واحدة: **ما الذي أفعله الآن** — وهي مكتوبةٌ في الزرّ أسفل
+        // الشاشة بلفظها. **والباقي تاريخٌ ومستقبلٌ يزاحمان الخريطة.**
         Column(Modifier.align(Alignment.TopCenter).statusBarsPadding()) {
-            StepStrip(step = state.step)
             // ══════════════════════════════════════════════════════════
             // **ومن يحمل أكثر من طلب يرى محطّاته**
             // ══════════════════════════════════════════════════════════
@@ -276,39 +285,6 @@ private fun eta(meters: Double, avgSpeedKmh: Long): String {
  * **والخطوة الحاليّة وحدَها ملوّنة** — وما مضى باهت وما بقي أبهت.
  * **ومن لوّن الكلّ** جعل السائق يبحث عن موضعه في سبعة متشابهة.
  */
-@Composable
-private fun StepStrip(step: TripStep, modifier: Modifier = Modifier) {
-    Row(
-        modifier
-            .fillMaxWidth()
-            .background(Color.White.copy(alpha = 0.94f))
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        for (s in TripStep.entries) {
-            val done = s.ordinal < step.ordinal
-            val now = s == step
-            Text(
-                text = stringResource(s.label),
-                color = when {
-                    now -> BrandTeal
-                    done -> InkMuted
-                    else -> InkMuted.copy(alpha = 0.45f)
-                },
-                fontWeight = if (now) FontWeight.Bold else FontWeight.Normal,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            if (s != TripStep.entries.last()) {
-                Text(
-                    text = " ← ",
-                    color = InkMuted.copy(alpha = 0.4f),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-    }
-}
 
 /**
  * **لافتة «طلب على طريقك».**
