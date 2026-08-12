@@ -179,6 +179,8 @@ func (s *Service) GetByID(ctx context.Context, id string) (*Order, error) {
 		return nil, err
 	}
 	o.Rating = s.ratingFor(ctx, id)
+	// **ومرحلتُه تُحسب هنا لا في الشاشة** — موضعٌ واحدٌ لثلاثِ شاشات.
+	o.SetStage()
 	return o, nil
 }
 
@@ -237,6 +239,9 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		if err != nil {
 			return nil, err
 		}
+		// **ومرحلتُه معه في القائمة** — البطاقةُ ترسم شريطَها منها،
+		// **ولا تطوي الحالاتِ بجدولٍ عندها.**
+		o.SetStage()
 		orders = append(orders, *o)
 	}
 	if err := rows.Err(); err != nil {

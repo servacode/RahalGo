@@ -211,6 +211,32 @@ type Order struct {
 	Events         []Event     `json:"events,omitempty"`
 	Rating         *Rating     `json:"rating,omitempty"`
 	CreatedAt      time.Time   `json:"created_at"`
+
+	// ══════════════════════════════════════════════════════════════════
+	// **مرحلتُه على المسار — يحسبها المحرّكُ لا الشاشة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الأفضل يكون بشكلٍ مركزيّ، مو كلّ صفحةٍ
+	//  تاخذ من مكانٍ مختلف».)
+	//
+	// **وأربعَ عشرةَ حالاً تُطوى في ستّ مراحل** — والطيُّ هو ما يفترق بين
+	// الشاشات إن كُتب في كلٍّ منها. **والاسمُ المكتوب يبقى في المعجم**:
+	// المحرّكُ لا يعرف لغةَ من يقرأ.
+	//
+	// **و`StageAt = -1` تعني لا مسارَ له** — انتهى قبل أن يصل.
+	Stage   Stage   `json:"stage"`
+	Stages  []Stage `json:"stages"`
+	StageAt int     `json:"stage_at"`
+}
+
+// SetStage يملأ مرحلتَه — **يُنادى بعد كلّ قراءةٍ تُعرض لإنسان.**
+func (o *Order) SetStage() {
+	o.Stages, o.StageAt = StagesFor(o.Kind, o.Status)
+	if o.Kind == "custom" {
+		o.Stage = CustomStageOf(o.Status)
+	} else {
+		o.Stage = StageOf(o.Status)
+	}
 }
 
 type OrderPage struct {
