@@ -162,20 +162,29 @@ private fun Identity(vm: AccountViewModel, s: AccountState) {
     ) { Text(stringResource(R.string.acc_save)) }
 
     Spacer(Modifier.height(14.dp))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(stringResource(R.string.acc_phone), color = InkMuted)
-        Text(me.phone, style = MaterialTheme.typography.bodyMedium)
-    }
-    Text(
-        text = stringResource(
-            if (me.whatsappVerified) R.string.acc_wa_verified else R.string.acc_wa_unverified,
-        ),
-        color = if (me.whatsappVerified) StateGreen else InkMuted,
-        style = MaterialTheme.typography.bodySmall,
+    // ══════════════════════════════════════════════════════════════════
+    // **ورقمُه حقلٌ يقرؤه لا سطرٌ رماديّ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «يجب أن يكون هناك حقلٌ مكتوبٌ فيه رقمُه
+    //  ليعرف الرقمَ الموجودَ بحسابه، وتبديلُ الرقم يجب أن يكون زرّاً
+    //  واضحاً».)
+    //
+    // **وسطرٌ بين سطرين يُمسَح بالعين ولا يُقرأ** — والرقمُ هو ما يدخل
+    // به، **ومن بدّل هاتفَه يسأل: أيُّ رقمٍ في حسابي الآن؟**
+    //
+    // **ومقفلٌ عمداً**: تبديلُه ليس كتابةً في حقل — **رمزٌ يصل الرقمَ
+    // الجديد ثمّ تأكيد.** وحقلٌ يُكتب فيه ولا يُحفظ يُقرأ عطبا.
+    OutlinedTextField(
+        value = me.phone,
+        onValueChange = {},
+        readOnly = true,
+        label = { Text(stringResource(R.string.acc_phone_current)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(8.dp))
     PhoneChange(vm, s)
-    WhatsAppVerify(vm, s, me.whatsappVerified)
 }
 
 /**
@@ -202,19 +211,16 @@ private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
     val waiting = s.phonePending.isNotEmpty()
 
     if (!open && !waiting) {
-        TextButton(onClick = { open = true }, enabled = !s.busy) {
-            Text(stringResource(R.string.acc_phone_change))
-        }
+        // **وزرٌّ بعرض الشاشة لا نصٌّ يُبحث عنه** — بأمر المالك.
+        OutlinedButton(
+            onClick = { open = true },
+            enabled = !s.busy,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.acc_phone_change)) }
         return
     }
 
     if (!waiting) {
-        Text(
-            stringResource(R.string.acc_phone_wa_warn),
-            color = InkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = phone,
             onValueChange = { phone = it },
@@ -264,50 +270,6 @@ private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
     }
 }
 
-/**
- * **توثيقُ واتساب — على رقم الحساب نفسِه لا على رقمٍ ثانٍ.**
- *
- * (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ما يصير رقم الهاتف مختلف عن واتساب، هيك
- *  تخرب الدنيا».)
- *
- * **ولا يُعرض لمن وثّق** — زرٌّ يدعو إلى فعلٍ تمّ يُقرأ عطبا.
- */
-@Composable
-private fun WhatsAppVerify(vm: AccountViewModel, s: AccountState, verified: Boolean) {
-    var code by remember { mutableStateOf("") }
-    val waiting = s.waPending.isNotEmpty()
-    if (verified && !waiting) return
-
-    if (!waiting) {
-        TextButton(onClick = vm::askWhatsApp, enabled = !s.busy) {
-            Text(stringResource(R.string.acc_wa_send), color = StateGreen)
-        }
-        return
-    }
-
-    OutlinedTextField(
-        value = code,
-        onValueChange = { code = it },
-        label = { Text(stringResource(R.string.acc_wa_code)) },
-        singleLine = true,
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Spacer(Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
-            onClick = { vm.confirmWhatsApp(code); code = "" },
-            enabled = !s.busy && code.isNotBlank(),
-            modifier = Modifier.weight(1f),
-        ) { Text(stringResource(R.string.acc_wa_confirm)) }
-        OutlinedButton(
-            onClick = { vm.cancelWhatsApp(); code = "" },
-            modifier = Modifier.weight(1f),
-        ) { Text(stringResource(R.string.acc_delete_cancel)) }
-    }
-}
 
 // ــ كلمة المرور ــ
 
@@ -419,7 +381,9 @@ private fun AddressRow(a: Address, vm: AccountViewModel, s: AccountState) {
 private fun AddAddress(vm: AccountViewModel, s: AccountState, onDone: () -> Unit) {
     var label by rememberSaveable { mutableStateOf("") }
     var text by rememberSaveable { mutableStateOf("") }
-    val point = LastPoint.value
+    // **والنقطةُ تُلتقط بضغطةٍ وتبقى** — لا تُقرأ لحظةَ الحفظ.
+    var pinned by rememberSaveable { mutableStateOf<Pair<Double, Double>?>(null) }
+    val live = LastPoint.value
 
     OutlinedTextField(
         value = label,
@@ -435,22 +399,67 @@ private fun AddAddress(vm: AccountViewModel, s: AccountState, onDone: () -> Unit
         label = { Text(stringResource(R.string.acc_addr_text)) },
         modifier = Modifier.fillMaxWidth(),
     )
-    Spacer(Modifier.height(6.dp))
-    Text(
-        text = stringResource(
-            if (point == null) R.string.acc_addr_need_point else R.string.acc_addr_here,
-        ),
-        color = if (point == null) StateRed else InkMuted,
-        style = MaterialTheme.typography.bodySmall,
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والموقعُ يُلتقط بضغطةٍ يراها — لا خُفيةً ولا بخريطةٍ تُفتح**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «مو ضروريّ تفتح خريطة، يكفي زرّ «تحديد
+    //  موقعي على الخريطة» ليجلب عنوانَه بحقلٍ يمتلئ تلقائيّاً بمعلومات
+    //  موقعه… ليعرف أنّه تمّ تحديد عنوانه على الخريطة — بصريّاً أقوى من
+    //  أن يُحدَّد موقعُه بشكلٍ تلقائيٍّ مخفيٍّ دون أن يعرف».)
+    //
+    // **وكان يُقرأ في الخفاء لحظةَ الحفظ** — فيحفظ عنوانَه وهو لا يدري
+    // أيَّ نقطةٍ حُفظت، **ولا يعرف أوقعت أصلاً أم لا.**
+    //
+    // **وخريطةٌ تُفتح ثقيلةٌ هنا**: منتقي نقطةٍ كاملٌ لشيءٍ يعرفه هاتفُه
+    // — **وهو واقفٌ في المكان الذي يريد حفظَه.**
+    //
+    // **والحقلُ يمتلئ أمام عينه** فيرى أنّ شيئاً وقع.
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = pinned?.let { fmtPoint(it.first, it.second) } ?: "",
+        onValueChange = {},
+        readOnly = true,
+        label = { Text(stringResource(R.string.acc_addr_point)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
     )
+    Spacer(Modifier.height(6.dp))
+    if (pinned != null) {
+        Text(
+            stringResource(R.string.acc_addr_pinned),
+            color = StateGreen,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    } else if (live == null) {
+        Text(
+            stringResource(R.string.acc_addr_need_point),
+            color = StateRed,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+    Spacer(Modifier.height(6.dp))
+    OutlinedButton(
+        onClick = { live?.let { pinned = it.lat to it.lng } },
+        enabled = live != null,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            stringResource(
+                if (pinned == null) R.string.acc_addr_pin else R.string.acc_addr_repin,
+            ),
+        )
+    }
+
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(
             onClick = {
-                point?.let { vm.addAddress(label, text, it.lat, it.lng) }
+                pinned?.let { vm.addAddress(label, text, it.first, it.second) }
                 onDone()
             },
-            enabled = !s.busy && point != null && label.isNotBlank() && text.isNotBlank(),
+            enabled = !s.busy && pinned != null && label.isNotBlank() && text.isNotBlank(),
             modifier = Modifier.weight(1f),
         ) { Text(stringResource(R.string.acc_save)) }
         OutlinedButton(onClick = onDone, modifier = Modifier.weight(1f)) {
@@ -458,6 +467,15 @@ private fun AddAddress(vm: AccountViewModel, s: AccountState, onDone: () -> Unit
         }
     }
 }
+
+/**
+ * **الإحداثيُّ كما يُقرأ** — ستُّ منازلَ نحوَ عشرةِ سنتيمترات.
+ *
+ * **ولا يُعرض خاماً بخمسَ عشرةَ منزلة**: سطرٌ لا يُقرأ **يُخيف أكثرَ
+ * ممّا يطمئن**، ودقّةٌ زائدةٌ لا يملكها الجهازُ أصلاً.
+ */
+private fun fmtPoint(lat: Double, lng: Double): String =
+    String.format(java.util.Locale.US, "%.6f, %.6f", lat, lng)
 
 // ــ الحذف ــ
 

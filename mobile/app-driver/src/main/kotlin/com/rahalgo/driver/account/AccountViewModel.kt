@@ -50,8 +50,6 @@ data class AccountState(
      * بعد الإرسال فأكّد رقماً لم يصله رمز.**
      */
     val phonePending: String = "",
-    /** **ورقمُ توثيق واتساب المنتظِر** — والفارغُ لم يُطلب. */
-    val waPending: String = "",
 )
 
 class AccountViewModel(app: Application) : AndroidViewModel(app) {
@@ -222,50 +220,21 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
         state = state.copy(phonePending = "", error = "")
     }
 
-    /**
-     * **يطلب رمزَ توثيق واتساب** — على رقم الحساب نفسِه.
-     *
-     * (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ما يصير رقم الهاتف مختلف عن واتساب،
-     *  هيك تخرب الدنيا».) **فلا يُسأل عن رقمٍ ثانٍ** — يُوثَّق ما هو
-     * مسجَّلٌ في الحساب.
-     */
-    fun askWhatsApp() {
-        val phone = state.me?.phone.orEmpty()
-        if (phone.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
-        viewModelScope.launch {
-            state = try {
-                backend.account.whatsappRequest(phone)
-                state.copy(busy = false, waPending = phone)
-            } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
-            }
-        }
-    }
-
-    fun confirmWhatsApp(code: String) {
-        val phone = state.waPending
-        if (phone.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
-        viewModelScope.launch {
-            state = try {
-                backend.account.whatsappConfirm(phone, code.trim())
-                val me = backend.account.summary()
-                state.copy(
-                    me = me,
-                    busy = false,
-                    waPending = "",
-                    done = getApplication<Application>().getString(R.string.acc_wa_done),
-                )
-            } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
-            }
-        }
-    }
-
-    fun cancelWhatsApp() {
-        state = state.copy(waPending = "", error = "")
-    }
+    // ══════════════════════════════════════════════════════════════════
+    // **ولا توثيقَ واتساب في شاشة السائق**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (سأل المالك ٢٠٢٦-٠٨-١٣: «وأرسل رمزاً على الواتساب — أيضاً لم أفهم
+    //  دوره».)
+    //
+    // **وقِيس فلم يُوجد له دور**: التوثيقُ يُقرأ في موضعين اثنين —
+    // **استعادةُ رمز الأدمن** (للأدمن وحدَه)، **ومنعُ الزبون من الطلب**
+    // بإعدادٍ مُطفأ. **ولا شيءَ منهما يخصّ السائق.**
+    //
+    // **وزرٌّ لا يفعل شيئاً يُتعب من يقرؤه** ويجعله يظنّ حسابَه ناقصا.
+    //
+    // **والنداءان باقيان في `AccountApi`** — فإن صار التوثيقُ شرطاً على
+    // السائق يوماً، يُعاد الزرُّ ولا يُعاد بناءُ الطريق.
 
     fun cancelDelete() {
         state = state.copy(deleteAsked = false, error = "")
