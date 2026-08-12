@@ -178,7 +178,8 @@
     <string name="trip_s_at_customer">وصلت الزبون</string>
     <string name="trip_s_delivered">سلّمت</string>
     <string name="trip_remaining">ما بقي</string>
-    <string name="trip_due_from">المبلغ المطلوب من %1$s</string>
+    <string name="trip_due_from">إجمالي المبلغ المطلوب من %1$s</string>
+    <string name="trip_sheet_toggle">اسحب للتفاصيل</string>
     <string name="trip_prepaid_note">مدفوع مسبقاً — لا تقبض شيئاً</string>
     <string name="leg_picked">استلمت الطلب</string>
     <string name="leg_way">في الطريق</string>

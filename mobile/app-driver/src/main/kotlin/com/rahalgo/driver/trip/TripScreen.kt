@@ -1,8 +1,10 @@
 package com.rahalgo.driver.trip
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,11 +40,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -964,13 +968,57 @@ private fun TripCard(
     actions: TripActions,
     modifier: Modifier = Modifier,
 ) {
+    // ══════════════════════════════════════════════════════════════════
+    // **والبطاقةُ تُطوى وتُسحب**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢: «الكرت السفليّ لازم يكون قابل للطيّ —
+    //  السائق يسحبه وقت يلزمه، لأنّه ما في شي يلزم غير وقت بدّو يسلّم
+    //  الزبون».)
+    //
+    // **وهو يقود**: العنوانُ والمبلغُ خبرٌ لا فعلَ عليه الآن، **والخريطةُ
+    // هي ما يقرّر بها.** فتُطوى البطاقةُ إلى سطرٍ واحد.
+    //
+    // # وتنفتح بنفسها عند الوقوف
+    //
+    // **وحين يصل يحتاجها كلَّها في اللحظة نفسِها**: العنوانُ ليجد الباب،
+    // والمبلغُ ليقبض، والأزرارُ ليُنهي. **ومن طُلب منه أن يسحبها وهو
+    // واقفٌ أمام الزبون** يسحبها بيدٍ ويحمل الكيسَ بالأخرى.
+    //
+    // **ويبقى السحبُ بيده**: من أراد العنوانَ وهو في الطريق سحبها،
+    // **وآليّةٌ لا يملك أحدٌ تجاوزَها** تُقرأ عنادا.
+    var expanded by rememberSaveable(order.id) { mutableStateOf(false) }
+    LaunchedEffect(order.status) {
+        expanded = order.status == "at_pickup" || order.status == "at_dropoff"
+    }
+
     Column(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
             .background(Color.White)
-            .padding(20.dp),
+            // **والسحبُ على البطاقة كلِّها لا على المقبض وحدَه** —
+            // **ومقبضٌ بعرض إصبعين** يُخطئه من يقود.
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { _, dy ->
+                    if (dy > 6f) expanded = false
+                    if (dy < -6f) expanded = true
+                }
+            }
+            .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
+        // **ومقبضٌ يُرى** — شريطٌ رماديٌّ يقول «هذه تُسحب»، **وبطاقةٌ
+        // تُسحب ولا تقول** لا يعرف أحدٌ أنّها تُسحب.
+        Box(
+            Modifier
+                .align(Alignment.CenterHorizontally)
+                .clip(RoundedCornerShape(3.dp))
+                .background(InkMuted.copy(alpha = 0.35f))
+                .size(width = 44.dp, height = 5.dp)
+                .clickable { expanded = !expanded },
+        )
+        Spacer(Modifier.height(10.dp))
+
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1006,11 +1054,14 @@ private fun TripCard(
             Text("#${order.number}", color = InkMuted)
         }
 
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = if (state.step >= TripStep.PICKED_UP) order.addressText else "",
-            color = InkMuted,
-        )
+        // **والعنوانُ والمبلغُ وما بعدهما يُطوى** — سطرُ الوجهة يبقى.
+        AnimatedVisibility(visible = expanded) {
+            Column {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (state.step >= TripStep.PICKED_UP) order.addressText else "",
+                    color = InkMuted,
+                )
 
         // **وما بقي صعد إلى لوح الطور** — ولا يُكتب هنا ثانية:
         // **رقمان لشيءٍ واحدٍ في شاشةٍ واحدة** يُقرأ أحدهما شيئا آخر.
@@ -1086,6 +1137,9 @@ private fun TripCard(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
