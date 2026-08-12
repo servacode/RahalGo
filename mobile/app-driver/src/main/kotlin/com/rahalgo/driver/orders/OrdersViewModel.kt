@@ -42,6 +42,31 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var state by mutableStateOf(OrdersState())
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وما يقرؤه `init` يُعلَن قبله**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وخصائصُ `by mutableStateOf` تُهيَّأ بترتيب كتابتها**: و`init`
+    // ينادي `refresh()` **فيقرأ خاصّيّةً لم تُهيَّأ بعد** — ويسقط
+    // التطبيق عند الإقلاع بـ`NullPointerException`، **لا عند الاستعمال
+    // فيُعرف سببُه.** (وقع ٢٠٢٦-٠٨-١٢ حين صار `load()` يقرأ `openId`.)
+    //
+    // **والمترجم لا يمسكها**: النوعُ غيرُ فارغٍ في التوقيع، **والفراغ
+    // يقع في الزمن لا في النوع.**
+
+    /**
+     * **الطلب المفتوح** — وفارغ يعني القائمة معروضة.
+     *
+     * **ويُحدَّث من القائمة نفسها** بعد كلّ خطوة — فلا نسختان لطلب
+     * واحد تفترقان.
+     */
+    var openId by mutableStateOf<String?>(null)
+        private set
+
+    /** **كم رسالةً تنتظره في حديث طلبه** — وصفرٌ يعني لا شارة. */
+    var chatUnread by mutableStateOf(0)
+        private set
+
     private val backend = Backend.of(getApplication())
 
     init {
@@ -182,8 +207,6 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     // **وفارغ يعني القائمة معروضة.** ولماذا هنا: بعد كلّ خطوة تُعاد
     // قراءة القائمتين، **والطلب المفتوح يُحدَّث من القائمة نفسها** —
     // فلا نسختان لطلب واحد تفترقان.
-    var openId by mutableStateOf<String?>(null)
-        private set
 
     var detail by mutableStateOf(DetailState(order = com.rahalgo.shared.model.DriverOrder()))
         private set
@@ -396,8 +419,6 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     //
     // **ورسالةٌ تصل ولا شيء يقولها** تُقرأ بعد ساعة — والزبون ينتظر
     // جوابا عن «الباب الثاني أم الأوّل؟»
-    var chatUnread by mutableStateOf(0)
-        private set
 
     /** **يقرأ ما ينتظره في طلبه الحاليّ** — وفشلُه صامت. */
     private suspend fun loadChatBadge() {
