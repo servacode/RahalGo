@@ -2,7 +2,6 @@ package comms
 
 import (
 	"context"
-	"strings"
 	"time"
 )
 
@@ -28,6 +27,11 @@ type Message struct {
 	Mine      bool       `json:"mine"`
 	CreatedAt time.Time  `json:"created_at"`
 	ReadAt    *time.Time `json:"read_at"`
+	// Flagged **أفيها لفظٌ لا يُقال؟** — تُعرض للمكتب ولا تُمنع.
+	Flagged bool `json:"flagged,omitempty"`
+	// FlagWord **أيُّ لفظٍ أوقعها** — للمراجعة، **ولمراجعة الحارس نفسِه**
+	// حين يَسِم بريئا. **وللإدارة وحدَها.**
+	FlagWord string `json:"flag_word,omitempty"`
 }
 
 // List **حديثُ الطلب كما يراه أحدُ طرفيه.**
@@ -62,13 +66,18 @@ func (s *Service) Send(ctx context.Context, p *Permission, body string) (*Messag
 	if !p.Open {
 		return nil, ErrChannelClosed
 	}
-	body = strings.TrimSpace(body)
+	// **والتنقيةُ قبل كلّ شيء** — محارفُ تخدع العين تُسقط، **وما بعدها
+	// يُقاس على النصّ الذي سيُخزَّن فعلا** لا على ما وصل.
+	body = sanitize(body)
 	if body == "" {
 		return nil, ErrEmptyBody
 	}
 	if len([]rune(body)) > MaxBody {
 		body = string([]rune(body)[:MaxBody])
 	}
+	// **والشتيمةُ تُوسَم ولا تُمنع** — تصل كما كُتبت، **والشكوى تُحسم
+	// بنصٍّ مكتوبٍ لا بكلمةٍ ضدّ كلمة.**
+	word := Offense(body)
 
 	// **وحدُّ المعدّل يُفحص في القاعدة لا في الذاكرة** — خادمان يعملان معاً
 	// **وذاكرةٌ في أحدهما لا يراها الآخر.**
@@ -86,14 +95,15 @@ func (s *Service) Send(ctx context.Context, p *Permission, body string) (*Messag
 
 	var x Message
 	if err := s.db.QueryRow(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, flagged, flag_word)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''))
 		RETURNING id::text, body, sender_role, created_at`,
-		p.OrderID, p.SelfID, string(p.Me), body).
+		p.OrderID, p.SelfID, string(p.Me), body, word != "", word).
 		Scan(&x.ID, &x.Body, &x.Role, &x.CreatedAt); err != nil {
 		return nil, err
 	}
 	x.Mine = true
+	x.Flagged = word != ""
 	return &x, nil
 }
 

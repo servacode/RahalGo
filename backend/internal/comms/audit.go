@@ -39,6 +39,12 @@ type AuditLine struct {
 	Sender    string     `json:"sender"`
 	CreatedAt time.Time  `json:"created_at"`
 	ReadAt    *time.Time `json:"read_at"`
+	// Flagged **أفيها لفظٌ لا يُقال؟** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+	//
+	// **وهي أوّلُ ما يُبحث عنه عند شكوى**: «قال لي كذا» كانت كلمةً ضدّ
+	// كلمة، **والسطرُ الموسومُ يحسمها في ثانية.**
+	Flagged  bool   `json:"flagged"`
+	FlagWord string `json:"flag_word,omitempty"`
 }
 
 // AuditThread **حديثُ طلبٍ كاملاً — للمراجعة عند الخلاف.**
@@ -65,7 +71,7 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 
 	rows, err := s.db.Query(ctx, `
 		SELECT x.id::text, x.body, x.sender_role, COALESCE(u.full_name, ''),
-		       x.created_at, x.read_at
+		       x.created_at, x.read_at, x.flagged, COALESCE(x.flag_word, '')
 		FROM order_messages x
 		LEFT JOIN users u ON u.id = x.sender_id
 		WHERE x.order_id = $1
@@ -76,7 +82,8 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 	defer rows.Close()
 	for rows.Next() {
 		var l AuditLine
-		if err := rows.Scan(&l.ID, &l.Body, &l.Role, &l.Sender, &l.CreatedAt, &l.ReadAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.Body, &l.Role, &l.Sender, &l.CreatedAt, &l.ReadAt,
+			&l.Flagged, &l.FlagWord); err != nil {
 			return nil, err
 		}
 		out.Lines = append(out.Lines, l)
