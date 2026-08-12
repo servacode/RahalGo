@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -302,6 +303,44 @@ private fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) 
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
         },
     )
+}
+
+/**
+ * **فعلٌ ثانويٌّ ملوّن** — أيقونةٌ وكلمةٌ على أرضٍ صلبة.
+ *
+ * **ولا حشوةَ عريضة**: ثلاثةُ أزرارٍ في صفٍّ واحدٍ على شاشةِ هاتف،
+ * **وكلُّ نقطةٍ زائدةٍ تدفع الأوّلَ إلى سطرين.**
+ */
+@Composable
+private fun SmallAction(
+    icon: Int,
+    label: Int,
+    ground: Color,
+    onClick: () -> Unit,
+    enabled: Boolean,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = ground,
+            contentColor = Color.White,
+        ),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.size(4.dp))
+        Text(
+            text = stringResource(label),
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+        )
+    }
 }
 
 /**
@@ -857,26 +896,50 @@ private fun TripCard(
                     if (state.busy) {
                         CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     } else {
-                        Text(stringResource(next.label))
+                        Text(
+                            text = stringResource(next.label),
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 }
             }
 
-            // **ولونُه لونُ الحال لا لونُ الفعل** — أحمرُ باهتٌ يُقرأ
-            // «شيءٌ لم يمشِ» قبل أن تُقرأ كلمتُه.
-            OutlinedButton(
+            // ══════════════════════════════════════════════════════════
+            // **ولونُ الزرّ يقول ما يفعل قبل أن تُقرأ كلمتُه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢: «خلّي خلفية الزرّ أحمر ولون الخطّ
+            //  أبيض، وأعِد للطابور خلّيه برتقالي بنفس الصفّ مع أيقونة
+            //  إعادة».)
+            //
+            // **أحمرُ صلبٌ يُلمح ولا يُقرأ** — والسائقُ ينظر لحظةً وهو
+            // واقف. **وحرفٌ ملوّنٌ على أرضٍ بيضاءَ** يحتاج قراءةً.
+            //
+            // **والبرتقاليُّ ليس أحمر**: إعادةُ الطلب ليست عطبا — هي
+            // خيارٌ مشروع، **ولونُ الخطر عليها** يجعل صاحبَها يتردّد
+            // فيمسك طلباً لا يقدر عليه.
+            SmallAction(
+                icon = R.drawable.ic_warning,
+                label = R.string.trip_problem,
+                ground = StateRed,
                 onClick = actions.askFail,
                 enabled = !state.busy,
-                contentPadding = PaddingValues(horizontal = 12.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_warning),
-                    contentDescription = null,
-                    tint = StateRed,
-                    modifier = Modifier.size(18.dp),
+            )
+
+            // **وإعادةُ الطلب قبل أن يستلم البضاعة فقط** — بعدها هي في
+            // يده، **والبضاعة لا تُعاد بضغطة زرّ.**
+            if (order.status == "assigned" || order.status == "at_pickup") {
+                SmallAction(
+                    icon = R.drawable.ic_undo,
+                    // **واللفظُ قصيرٌ هنا** — ثلاثةُ أزرارٍ في صفٍّ
+                    // على شاشةِ هاتف، **و«أعد الطلب للطابور» تدفع
+                    // الأوّلَ إلى سطرين.** والأيقونةُ تقول «إعادة».
+                    label = R.string.trip_release_short,
+                    ground = BrandOrange,
+                    onClick = actions.release,
+                    enabled = !state.busy,
                 )
-                Spacer(Modifier.size(6.dp))
-                Text(stringResource(R.string.trip_problem), color = StateRed)
             }
         }
 
@@ -899,17 +962,9 @@ private fun TripCard(
             // ولا يُطلب من صاحبه أن يعرف الفرق.
         }
 
-        // **وإعادة الطلب قبل أن يستلم البضاعة فقط** — بعدها هي في يده،
-        // **والبضاعة لا تُعاد بضغطة زرّ.**
-        if (order.status == "assigned" || order.status == "at_pickup") {
-            TextButton(
-                onClick = actions.release,
-                enabled = !state.busy,
-                contentPadding = PaddingValues(vertical = 2.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.detail_release), color = InkMuted)
-            }
+        if (state.error.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(state.error, color = StateRed)
         }
     }
 }
