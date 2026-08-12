@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import {
+  getMessages,
+  defaultLocale,
+  fmtNum,
+  fmtDateTime,
+  fmtTime,
+  fmtSpan,
+} from "@rahalgo/i18n";
 import {
   usePlatform,
   BrandMark,
@@ -65,6 +72,16 @@ interface OrderRow {
   /** **مسارُ المكتب** — يحسبه المحرّك، **ولا يُطوى كما يُطوى للزبون.** */
   ops_stages?: string[];
   ops_stage_at?: number;
+  /** **متى دخل كلَّ مرحلة** — بترتيب `ops_stages`، والفارغُ لم يُبلَغ. */
+  ops_stage_times?: (string | null)[];
+  /**
+   * **أتجاوز الانتقالُ إلى كلّ مرحلةٍ مهلتَه** — والفارغُ «لا حكم».
+   *
+   * **والحكمُ من المحرّك لا من الشاشة** — المهلُ إعداداتٌ يضبطها المالك،
+   * **وشاشةٌ تقارنُ بأرقامٍ عندها تخالف شاشةً أخرى** فيقرأ اثنان حكمين
+   * على طلبٍ واحد.
+   */
+  ops_stage_late?: (boolean | null)[];
   closed_at?: string | null;
   merchant_name: string;
   merchant_id: string;
@@ -179,6 +196,21 @@ const PAYMENT_LABELS: Record<string, string> = m.orders.payment;
  * ومن يُسأل عنه.**
  */
 const STAGE_LABELS: Record<string, string> = m.admin.ordersPage.stage;
+
+/**
+ * **ما استُهلك في الوصول إلى هذه المرحلة** — منسّقاً، و`null` لا يُعرف.
+ *
+ * **والمرحلةُ الأولى بلا مدّة** — لا خطَّ فوقها يُقاس.
+ */
+function spanOf(
+  times: (string | null)[] | undefined,
+  i: number,
+): string | null {
+  const to = times?.[i];
+  const from = i > 0 ? times?.[i - 1] : null;
+  if (!to || !from) return null;
+  return fmtSpan((Date.parse(to) - Date.parse(from)) / 1000);
+}
 
 /**
  * الأفعالُ الهدّامة — تُطلب لها ضغطةٌ ثانية على البطاقة.
@@ -1018,9 +1050,36 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         rail={(o) =>
           o.ops_stages?.length ? (
             <OrderTrackV
-              stages={o.ops_stages.map((id) => ({
+              stages={o.ops_stages.map((id, i) => ({
                 id,
                 label: STAGE_LABELS[id] ?? id,
+                // **والساعةُ تُنسَّق في المعجم** — منطقةُ دمشق وصيغتُها
+                // **موضعٌ واحدٌ في المنصّة كلِّها.**
+                at: o.ops_stage_times?.[i]
+                  ? fmtTime(o.ops_stage_times[i]!)
+                  : null,
+                // ══════════════════════════════════════════════════
+                // **والمدّةُ تُطرح هنا لا في المحرّك**
+                // ══════════════════════════════════════════════════
+                //
+                // **الطرحُ لا رأيَ فيه** — فرقُ طابعَي وقتٍ واحدٌ أينما
+                // حُسب. **والذي يُحسب مركزيّاً هو ما فيه قاعدة**:
+                // الحكمُ بالتأخير (مهلٌ يضبطها المالك) والطيُّ إلى
+                // مراحل. **وإرسالُ رقمٍ يُشتقّ من رقمين مرسلَين** يزيد
+                // الرسالةَ ولا يزيد يقينا.
+                span: spanOf(o.ops_stage_times, i),
+                late: o.ops_stage_late?.[i] ?? null,
+                // ══════════════════════════════════════════════════
+                // **واسمُ السائق على خطّ إسناده**
+                // ══════════════════════════════════════════════════
+                //
+                // (قرارُ المالك ٢٠٢٦-٠٨-١٢: «تحت بانتظار سائق نضع اسم
+                //  السائق الذي أخذ الطلب».)
+                //
+                // **والمركّبةُ تكتب وصفَ المرحلة على الخطّ فوقها** —
+                // والخطُّ فوق «السائق إلى المتجر» هو لحظةُ الإسناد
+                // بعينها، **فالاسمُ عليه يجيب «من أنهى الانتظار».**
+                note: id === "to_store" ? o.driver_name : null,
               }))}
               current={o.ops_stage_at ?? -1}
             />

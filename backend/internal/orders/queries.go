@@ -181,6 +181,8 @@ func (s *Service) GetByID(ctx context.Context, id string) (*Order, error) {
 	o.Rating = s.ratingFor(ctx, id)
 	// **ومرحلتُه تُحسب هنا لا في الشاشة** — موضعٌ واحدٌ لثلاثِ شاشات.
 	o.SetStage()
+	// **وأحداثُه محمّلةٌ فوق** — فلا استعلامَ ثانٍ لأوقاته.
+	o.SetStageTimes(o.Events, s.stageLimits(ctx))
 	return o, nil
 }
 
@@ -199,6 +201,77 @@ type ListFilter struct {
 	ClosedOnly bool
 	Page       int
 	PerPage    int
+}
+
+// fillStageTimes يملأ أوقاتَ المراحل لصفحةِ طلباتٍ كاملة.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **واستعلامٌ واحدٌ للصفحة لا استعلامٌ لكلّ صفّ**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **خمسون طلباً في الصفحة**، ونداءُ أحداثِ كلٍّ على حدة **خمسون رحلةً
+// إلى القاعدة** لبطاقاتٍ تُعرض معاً. وهي عائلةُ العطب التي تُسمّى
+// «N+1»: **لا تُرى في التطوير حيث الصفّان صفّان**، وتُرى في ذروةٍ فيها
+// مئة.
+//
+// **فمعرّفاتُ الصفحة تُمرَّر دفعةً** (`= ANY`) — رحلةٌ واحدة.
+//
+// **والترتيبُ بالمعرّف لا بالوقت**: طابعُ الوقت قد يتساوى في حدثين وقعا
+// في الثانية نفسِها — **واستلامُ السائق وانطلاقُه يقعان بضغطةٍ واحدة**
+// فيتساويان. **والمعرّفُ متسلسلٌ لا يتساوى**، فيحفظ ترتيبَ الوقوع.
+func (s *Service) fillStageTimes(ctx context.Context, orders []Order) error {
+	if len(orders) == 0 {
+		return nil
+	}
+	ids := make([]string, len(orders))
+	for i := range orders {
+		ids[i] = orders[i].ID
+	}
+	rows, err := s.db.Query(ctx, `
+		SELECT order_id::text, to_status, created_at
+		FROM order_events WHERE order_id = ANY($1) ORDER BY id`, ids)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	byOrder := map[string][]Event{}
+	for rows.Next() {
+		var id string
+		var e Event
+		if err := rows.Scan(&id, &e.ToStatus, &e.CreatedAt); err != nil {
+			return err
+		}
+		byOrder[id] = append(byOrder[id], e)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	// **والمهلُ تُقرأ مرّةً للصفحة كلِّها** — قيمةٌ واحدةٌ لخمسين صفّا،
+	// **وقراءتُها في الحلقة خمسون نداءً لمخزنٍ لا يتبدّل بينها.**
+	lim := s.stageLimits(ctx)
+	for i := range orders {
+		orders[i].SetStageTimes(byOrder[orders[i].ID], lim)
+	}
+	return nil
+}
+
+// stageLimits المهلُ كما ضبطها المالك من لوحته.
+//
+// **ولا رقمَ مكتوبٌ هنا** — الافتراضاتُ في فهرس الإعدادات، **وموضعان
+// يحملان رقماً واحداً يفترقان يوماً.**
+//
+// **وبلا مخزنٍ لا حكم**: مهلٌ أصفارٌ تعني «لا علامةَ على أيّ خطّ» —
+// **وهو الصمتُ الصحيح** حين لا تُعرف القواعد، لا اتّهامٌ ولا تبرئة.
+func (s *Service) stageLimits(ctx context.Context) StageLimits {
+	if s.settings == nil {
+		return StageLimits{}
+	}
+	return StageLimits{
+		Accept:   int(s.settings.GetInt(ctx, "orders.accept_timeout_min")),
+		Prep:     0, // **يُملأ من `prep_minutes` لكلّ طلبٍ على حدة.**
+		Driver:   int(s.settings.GetInt(ctx, "orders.driver_timeout_min")),
+		Handover: int(s.settings.GetInt(ctx, "orders.handover_timeout_min")),
+	}
 }
 
 func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
@@ -245,6 +318,10 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		orders = append(orders, *o)
 	}
 	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if err := s.fillStageTimes(ctx, orders); err != nil {
 		return nil, err
 	}
 

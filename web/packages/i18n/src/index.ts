@@ -11,7 +11,10 @@ export type Locale = keyof typeof locales;
 
 export const locales = {
   ar: { messages: ar, dir: "rtl", label: "العربية" },
-} as const satisfies Record<string, { messages: Messages; dir: "rtl" | "ltr"; label: string }>;
+} as const satisfies Record<
+  string,
+  { messages: Messages; dir: "rtl" | "ltr"; label: string }
+>;
 
 export const defaultLocale: Locale = "ar";
 
@@ -23,7 +26,15 @@ export function getDir(locale: Locale): "rtl" | "ltr" {
   return locales[locale].dir;
 }
 
-export { fmtNum, fmtRef, fmtDate, fmtDateTime, fmtTime, fmtLongDate } from "./format";
+export {
+  fmtNum,
+  fmtRef,
+  fmtDate,
+  fmtDateTime,
+  fmtTime,
+  fmtLongDate,
+} from "./format";
+import { fmtNum } from "./format";
 
 /**
  * ثوانٍ إلى «م:ث» — لعدّادٍ تنازليّ.
@@ -34,6 +45,35 @@ export { fmtNum, fmtRef, fmtDate, fmtDateTime, fmtTime, fmtLongDate } from "./fo
 export function fmtClock(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **مدّةٌ منقضية — «٣ د» و«١ س ٥ د»**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٢: «نكتب الوقت المستهلك… لنعرف أين حصل
+ *  التأخير».)
+ *
+ * **وهي غيرُ `fmtClock`**: تلك عدّادٌ ينقضي بخانتَي ثوانٍ («١:٠٥»)،
+ * **وهذه خبرٌ عن ماضٍ يُقرأ بالكلمة** — والثواني فيه ضجيج: من يسأل عن
+ * تأخيرِ مطبخٍ لا يعنيه أنّها خمسٌ وأربعون ثانية.
+ *
+ * **وأقلُّ من دقيقةٍ «لحظة» لا «٠ د»** — صفرٌ يُقرأ «لم يقع» وقد وقع.
+ *
+ * **والساعاتُ تُفصَل عن الدقائق**: «٩٥ د» تحتاج قسمةً في الرأس،
+ * **و«١ س ٣٥ د» تُقرأ كما هي.**
+ */
+export function fmtSpan(seconds: number): string {
+  const m = getMessages(defaultLocale).common;
+  const total = Math.max(0, Math.round(seconds / 60));
+  if (total < 1) return m.spanNow;
+  const h = Math.floor(total / 60);
+  const min = total % 60;
+  const hour = m.spanHour.replace("{n}", fmtNum(h));
+  const minute = m.spanMin.replace("{n}", fmtNum(min));
+  if (!h) return minute;
+  return min ? `${hour} ${minute}` : hour;
 }
 
 /**
@@ -78,16 +118,24 @@ export function withPlatform(text: string, name: string): string {
  * **تقرأ الشكلَ لا الصنف** (`body.message_key`) — **ولو اشترطت `ApiError`
  * لَاحتاجت حزمةَ العميل**، وعادت الدورةُ من بابٍ آخر.
  */
-export function errorText(err: unknown, messages: Messages = locales[defaultLocale].messages): string {
+export function errorText(
+  err: unknown,
+  messages: Messages = locales[defaultLocale].messages,
+): string {
   const errs = messages.errors as unknown as Record<string, string>;
   const key = (err as { body?: { message_key?: string } })?.body?.message_key;
   if (typeof key !== "string" || !key) return errs.internal ?? "";
   // **والمفتاحُ يُقرأ كاملاً ثمّ بآخر جزئه** — الخادمُ يرسل `errors.x`
   // و`auth.otpInvalid`، **والمعجمُ يعرف الاثنين في موضعين.**
-  const direct = key.split(".").reduce<unknown>(
-    (node, part) => (node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined),
-    messages as unknown,
-  );
+  const direct = key
+    .split(".")
+    .reduce<unknown>(
+      (node, part) =>
+        node && typeof node === "object"
+          ? (node as Record<string, unknown>)[part]
+          : undefined,
+      messages as unknown,
+    );
   if (typeof direct === "string" && direct) return direct;
   const last = key.split(".").pop() ?? "";
   return errs[last] || errs.internal || "";

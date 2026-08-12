@@ -231,9 +231,31 @@ type Order struct {
 	// **وهما تحت اسمٍ واحدٍ عند الزبون.**
 	OpsStages  []Stage `json:"ops_stages"`
 	OpsStageAt int     `json:"ops_stage_at"`
+	// OpsStageTimes **متى دخل كلَّ مرحلة** — والفارغُ مرحلةٌ لم تُبلَغ.
+	//
+	// **والوقتُ يُكتب على الخطّ بين نقطتين** (قرارُ المالك ٢٠٢٦-٠٨-١٢):
+	// عبورُ الخطّ هو الانتقال، **فالساعةُ عليه تقول متى وقع.**
+	OpsStageTimes StageTimes `json:"ops_stage_times"`
+	// OpsStageLate **أتجاوز الانتقالُ إلى كلّ مرحلةٍ مهلتَه** — والفارغُ
+	// «لا حكم»، وهو غيرُ `false` التي تقول «قُيس فكان سليما».
+	OpsStageLate []*bool `json:"ops_stage_late"`
 }
 
 // SetStage يملأ مرحلتَه — **يُنادى بعد كلّ قراءةٍ تُعرض لإنسان.**
+// SetStageTimes **يملأ أوقاتَ المراحل من أحداث الطلب.**
+//
+// **ومنفصلةٌ عن `SetStage`** — تلك تُحسب من الحال وحدَه فتصلح لكلّ صفٍّ
+// يُقرأ، **وهذه تحتاج أحداثاً** لا تُجلب إلّا حين تُطلب.
+func (o *Order) SetStageTimes(evs []Event, lim StageLimits) {
+	o.OpsStageTimes = OpsStageTimes(evs)
+	// **ومهلةُ المطبخ لهذا الطلب لا لكلّ الطلبات** — كلُّ متجرٍ يُعلن
+	// مدّةَ تحضيره، **ومهلةٌ واحدةٌ لمشويٍّ وسندويشة** تظلم أحدَهما.
+	if o.PrepMinutes != nil && *o.PrepMinutes > 0 {
+		lim.Prep = *o.PrepMinutes
+	}
+	o.OpsStageLate = OpsStageLate(o.OpsStageTimes, lim)
+}
+
 func (o *Order) SetStage() {
 	o.Stages, o.StageAt = StagesFor(o.Kind, o.Status)
 	o.OpsStages, o.OpsStageAt = OpsStages(), OpsStageIndex(o.Status)
