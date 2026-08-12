@@ -3706,6 +3706,40 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/driver/orders/{id}/route",
+      "handler": "handleDriverOrderRoute",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "available",
+          "type": "bool"
+        },
+        {
+          "name": "distance_m",
+          "type": "unknown"
+        },
+        {
+          "name": "duration_s",
+          "type": "unknown"
+        },
+        {
+          "name": "engine_duration_s",
+          "type": "unknown"
+        },
+        {
+          "name": "points",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/driver/orders/{id}/transition",
       "handler": "handleDriverTransition",

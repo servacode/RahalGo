@@ -26,6 +26,13 @@ func TestNoBacktickInsideRawStrings(t *testing.T) {
 		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") {
 			return nil
 		}
+		// **وملفّاتُ الاختبار تُستثنى** — الحارسُ نفسُه يكتب العلامةَ
+		// ليختبرها (`internal/server/raw_string_test.go`)، **فيُبلَّغ عن
+		// نفسه.** والمترجمُ يمسك نصّاً خاماً لم يُغلق في اختبارٍ كما
+		// يمسكه في شيفرة — **وفائدةُ هذا الحارس الرسالةُ لا الكشف.**
+		if strings.HasSuffix(p, "_test.go") {
+			return nil
+		}
 		b, err := os.ReadFile(p)
 		if err != nil {
 			return nil
