@@ -104,6 +104,10 @@ interface OrderRow {
   number: number;
   customer_phone: string;
   customer_name: string;
+  /** **مسارُ المكتب** — يحسبه المحرّك، **ولا يُطوى كما يُطوى للزبون.** */
+  ops_stages?: string[];
+  ops_stage_at?: number;
+  closed_at?: string | null;
   merchant_name: string;
   merchant_id: string;
   driver_phone: string | null;
@@ -706,17 +710,36 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **والحالةُ تسبقه في السطر** — أوّلُ الصفّ يمينا، **وهي ما يُمسح
       // به عمودُ الطلبات**: أيُّها ينتظر فعلا.
       cell: (o) => (
-        <span className="flex items-start justify-between gap-2">
-          <span className="inline-flex flex-wrap items-center gap-1">
-            <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>
-              {STATUS_LABELS[o.status]}
-            </Badge>
-            {/* **ومن أنهاه بجانب أنّه انتهى** — «ملغي» بلا فاعلٍ ثلاثةُ أخبار. */}
-            {o.ended_by && ENDED_BY[o.ended_by] && (
-              <Badge variant="neutral">{ENDED_BY[o.ended_by]}</Badge>
-            )}
+        <span className="block">
+          <span className="flex items-start justify-between gap-2">
+            {/* ══════════════════════════════════════════════════════
+                **ولا شارةَ حالٍ — المسارُ يقولها**
+                ══════════════════════════════════════════════════════
+
+                (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الحالة ألغِها من الكرت
+                 أيضاً كما اتّفقنا».)
+
+                **وشارةٌ تقول كلمةً والمسارُ يقول أين هي من الرحلة** —
+                والثاني يُقرأ بنظرةٍ ويقول ما مضى وما بقي.
+
+                **وما انتهى قبل أن يصل يبقى شارةً**: لا مسارَ له —
+                **وشريطٌ يقف في منتصفه يُقرأ «عالق» لا «انتهى».** */}
+            <span className="inline-flex flex-wrap items-center gap-1">
+              {o.ended_by && ENDED_BY[o.ended_by] && (
+                <Badge variant="danger">{ENDED_BY[o.ended_by]}</Badge>
+              )}
+            </span>
+            <OrderRef number={o.number} at={o.created_at} />
           </span>
-          <OrderRef number={o.number} at={o.created_at} />
+          {/* **وموضعُ شريط الرحلة لم يُقرَّر بعد** — (قرارُ المالك
+              ٢٠٢٦-٠٨-١٢: «ألغِها من هنا لنشوف وين نضيف شريط الرحلة»).
+
+              **والمحرّكُ يرسله جاهزا** (`ops_stages` و`ops_stage_at`) —
+              **ومسارُ المكتب أطولُ من مسار الزبون**: يفرّق بين «في
+              المطبخ» و«بانتظار سائق»، وهما تحت اسمٍ واحدٍ عنده.
+
+              **و«بانتظار سائق» أهمُّ حالٍ هنا**: هي وحدَها التي تُوجب
+              فعلاً من المكتب الآن. */}
         </span>
       ),
       // **وفي الجدول الرقمُ وحدَه** — الحالةُ عمودٌ له رأسُه.

@@ -2455,7 +2455,9 @@
         "bought": "تمّ الشراء",
         "on_the_way": "في الطريق إليك",
         "arrived": "وصل إليك",
-        "delivered": "تم التسليم"
+        "delivered": "تم التسليم",
+        "seeking_driver": "بانتظار سائق",
+        "to_store": "السائق إلى المتجر"
       }
     },
     "wallet": {

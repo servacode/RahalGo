@@ -177,3 +177,70 @@ func StagesFor(kind, status string) ([]Stage, int) {
 	}
 	return list, -1
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **ومسارُ المكتب أطولُ — هو الذي يعرف أين ضاع الوقت**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الكلّ معنيّ بالرحلة، مو طرفٌ واحد».)
+//
+// **والزبونُ يطوي أربعَ حالاتٍ في «قيد التجهيز»** لأنّه لا يفرّق بينها
+// ولا يملك حيالها شيئا. **والمكتبُ يفرّق**: طلبٌ واقفٌ في المطبخ يُتّصل
+// فيه بالمتجر، **وطلبٌ واقفٌ بلا سائقٍ يُسنَد بيد** — **وهما تحت اسمٍ
+// واحدٍ عند الزبون.**
+//
+// **و«بانتظار سائق» أهمُّ حالٍ في لوحة العمليات**: هي وحدَها التي تُوجب
+// فعلاً منهم الآن.
+
+const (
+	// StageSeekingDriver **بانتظار سائق** — لا أحدَ أخذه بعد.
+	StageSeekingDriver Stage = "seeking_driver"
+	// StageToStore **السائقُ في طريقه إلى المتجر** أو عنده.
+	StageToStore Stage = "to_store"
+)
+
+// OpsStages مسارُ الطلب كما يراه المكتب.
+func OpsStages() []Stage {
+	return []Stage{
+		StageWaiting, StagePreparing, StageSeekingDriver,
+		StageToStore, StageOnTheWay, StageArrived, StageDelivered,
+	}
+}
+
+// OpsStageOf مرحلةُ الطلب في لوحة العمليات.
+func OpsStageOf(status string) Stage {
+	switch status {
+	case StPending:
+		return StageWaiting
+	// **والقبولُ والتحضيرُ واحدٌ عند المكتب**: كلاهما «عند المتجر
+	// الآن» — **والفرقُ بينهما ضغطةُ زرٍّ من المتجر لا حالُ الطلب.**
+	case StAccepted, StPreparing:
+		return StagePreparing
+	case StDispatching:
+		return StageSeekingDriver
+	case StAssigned, StAtPickup:
+		return StageToStore
+	case StPickedUp, StOnTheWay:
+		return StageOnTheWay
+	case StAtDropoff:
+		return StageArrived
+	case StDelivered:
+		return StageDelivered
+	default:
+		return StageEnded
+	}
+}
+
+// OpsStageIndex موضعُه على مسار المكتب — **و`-1` لما انتهى قبل أن يصل.**
+func OpsStageIndex(status string) int {
+	at := OpsStageOf(status)
+	if at == StageEnded {
+		return -1
+	}
+	for i, s := range OpsStages() {
+		if s == at {
+			return i
+		}
+	}
+	return -1
+}

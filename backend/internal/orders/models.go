@@ -227,11 +227,16 @@ type Order struct {
 	Stage   Stage   `json:"stage"`
 	Stages  []Stage `json:"stages"`
 	StageAt int     `json:"stage_at"`
+	// **ومسارُ المكتب أطول** — يفرّق بين «في المطبخ» و«بلا سائق»،
+	// **وهما تحت اسمٍ واحدٍ عند الزبون.**
+	OpsStages  []Stage `json:"ops_stages"`
+	OpsStageAt int     `json:"ops_stage_at"`
 }
 
 // SetStage يملأ مرحلتَه — **يُنادى بعد كلّ قراءةٍ تُعرض لإنسان.**
 func (o *Order) SetStage() {
 	o.Stages, o.StageAt = StagesFor(o.Kind, o.Status)
+	o.OpsStages, o.OpsStageAt = OpsStages(), OpsStageIndex(o.Status)
 	if o.Kind == "custom" {
 		o.Stage = CustomStageOf(o.Status)
 	} else {
