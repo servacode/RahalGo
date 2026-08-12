@@ -40,7 +40,6 @@ import {
   IconLocation,
   IconStar,
   IconBalance,
-  IconPhone,
   IconWhatsApp,
   IconSwap,
   fmtDistance,
@@ -815,10 +814,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **وأيقونةُ هاتفٍ عليه** — فيُعرف أنّه رقمُ اتّصالٍ لا رقمُ طلب.
       cell: (o) => (
         <span className="flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate">{o.customer_name || "—"}</span>
-          <span className="flex shrink-0 items-center gap-1 text-xs text-ink-muted">
-            <IconPhone size={12} className="shrink-0" />
-            <span dir="ltr">{o.customer_phone}</span>
+          {/* **وأيقونةُ شخصٍ على الاسم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+              **ورُفعت التسميةُ ومعها أيقونتُها**، فبقي السطرُ بلا ما
+              يقول ما هو. **والشكلُ يقوله بلا كلمة.** */}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <IconUser size={13} className="shrink-0 text-ink-dim" />
+            <span className="truncate">{o.customer_name || "—"}</span>
+          </span>
+          {/* **ولا أيقونةَ على الرقم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+              **ورقمٌ بهذا الشكل لا يُقرأ إلّا هاتفا**: أربعةَ عشرَ رقماً
+              تبدأ بعلامة زائد، **ورقمُ الطلب في مربّعه فوق.** */}
+          <span dir="ltr" className="shrink-0 text-xs text-ink-muted">
+            {o.customer_phone}
           </span>
         </span>
       ),

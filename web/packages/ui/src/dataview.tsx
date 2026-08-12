@@ -309,7 +309,13 @@ export function DataView<T>({
             {blocks
               .filter((c) => !c.hide?.(item))
               .map((c) => (
-                <div key={c.id} className="mt-3 border-t border-line-soft pt-3">
+                // **وحاشيةٌ أضيق بين الحقول والكتل** — (سأل المالك
+                // ٢٠٢٦-٠٨-١٢: «شو سبب الفراغ والبادينغ هذا؟»).
+                //
+                // **وثلاثةُ فواصلَ تتراكم**: حاشيةُ آخر صفٍّ، ثمّ فراغٌ
+                // فوق الكتلة، ثمّ فراغٌ تحت خطِّها — **فيبدو بين
+                // «المتجر» و«الفاتورة» بياضٌ لا شيءَ فيه.**
+                <div key={c.id} className="mt-2 border-t border-line-soft pt-2">
                   <p className="mb-1 text-xs text-ink-muted">
                     <FieldLabel icon={c.icon} text={c.header} />
                   </p>
