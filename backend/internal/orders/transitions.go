@@ -278,7 +278,7 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	// **وسطرٌ في الحديث عند كلّ خطوةٍ تهمّ الزبون** — (قرارُ المالك
 	// ٢٠٢٦-٠٨-١٢). **والإشعارُ يمرّ ويُمحى، والحديثُ يبقى.**
 	if driverID != nil {
-		s.stepLine(ctx, orderID, *driverID, to)
+		s.stepLine(ctx, orderID, *driverID, kind, to)
 	}
 
 	// ══════════════════════════════════════════════════════════════════
