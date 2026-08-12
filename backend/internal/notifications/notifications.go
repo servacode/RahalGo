@@ -8,6 +8,7 @@ package notifications
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -123,6 +124,9 @@ type Notification struct {
 	EntityID  string `json:"entity_id"`
 	Read      bool   `json:"read"`
 	CreatedAt string `json:"created_at"`
+	// Transient **يرنّ ولا يُحفَظ** — تعرضه الشاشةُ لحظةً ولا تُضيفه
+	// إلى صندوقها. **وغيابُ الحقل في المحفوظ صمتٌ صحيح**: `omitempty`.
+	Transient bool `json:"transient,omitempty"`
 }
 
 // Input بيانات إنشاء إشعار.
@@ -143,6 +147,34 @@ type Input struct {
 	// **ولا تمسّ الصندوقَ ولا البثَّ الحيّ** — هي للدفع وحدَه: الخبرُ
 	// يُحفظ لصاحبه كاملاً، **والتوجيهُ إنّما يقرّر أيُّ تطبيقٍ يرنّ.**
 	Apps []string
+
+	// ══════════════════════════════════════════════════════════════════
+	// **Transient — يرنّ ولا يُحفَظ**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «تقدّمُ حالات الطلب لا تلزمنا في
+	//  الإشعارات، تظهر كإشعاراتٍ ثمّ تختفي… الزبونُ يصله إشعارٌ «طلبك في
+	//  الطريق إليك» بلا أن ينزعج من كثرة الإشعارات ويفوت على صفحةٍ فيها
+	//  الكثير بلا فائدة».)
+	//
+	// # والضجيجُ كلُّه من أربعة
+	//
+	// **أربعةُ إشعاراتٍ تتكرّر مع كلّ طلب** — قُبل، يُجهَّز، في الطريق،
+	// سُلّم. **وعشرون طلباً في الشهر تعني ثمانين سطراً في صندوقه**،
+	// **وما عداها يقع مرّةً أو مرّتين.** فصفحةُ الإشعارات تصير كومةً لا
+	// تُقرأ، **ومن كفّ عن قراءتها لا يقرأ ما يهمّ.**
+	//
+	// # والقاعدةُ التي تفصل
+	//
+	// **أيرجع إليه بعد يومين؟** «خُصم من محفظتك خمسمئة» نعم — سجلٌّ
+	// ماليٌّ يُراجَع. **و«طلبك في الطريق» لا** — بعد ساعةٍ لا معنى لها،
+	// **والبطاقةُ تقول حالَ الطلب أصدقَ من خبرٍ قديم.**
+	//
+	// # ولا تُسكَت الرنّة
+	//
+	// **الخبرُ يصل كما كان**: بثٌّ حيٌّ إلى الشاشة المفتوحة، **ودفعٌ إلى
+	// الهاتف المقفل.** والذي يسقط هو الصفُّ في القاعدة وحدَه.
+	Transient bool
 }
 
 // Notify يحفظ الإشعار ويبثّه لصاحبه فوراً. لا يُفشل العملية الأصلية أبداً —
@@ -157,15 +189,22 @@ func (s *Service) Notify(ctx context.Context, in Input) {
 		return
 	}
 	var id, createdAt string
-	err := s.db.QueryRow(ctx, `
-		INSERT INTO notifications (user_id, kind, title, body, entity, entity_id, href)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, created_at::text`,
-		in.UserID, in.Kind, in.Title, in.Body, in.Entity, in.EntityID, in.Href).
-		Scan(&id, &createdAt)
-	if err != nil {
-		s.logger.Error("notify: insert", "error", err, "user", in.UserID)
-		return
+	if in.Transient {
+		// **ولا صفَّ له** — يرنّ ويمضي. **والمعرّفُ يبقى فارغاً**: شاشةٌ
+		// تحاول أن تعلّمه مقروءاً تنادي على ما لا وجودَ له، **فتُردّ
+		// بأربعمئةٍ على فعلٍ لا يعني شيئا.**
+		createdAt = time.Now().UTC().Format(time.RFC3339)
+	} else {
+		err := s.db.QueryRow(ctx, `
+			INSERT INTO notifications (user_id, kind, title, body, entity, entity_id, href)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			RETURNING id, created_at::text`,
+			in.UserID, in.Kind, in.Title, in.Body, in.Entity, in.EntityID, in.Href).
+			Scan(&id, &createdAt)
+		if err != nil {
+			s.logger.Error("notify: insert", "error", err, "user", in.UserID)
+			return
+		}
 	}
 	s.hub.Publish("user:"+in.UserID, map[string]any{
 		"type": "notification",
@@ -173,6 +212,9 @@ func (s *Service) Notify(ctx context.Context, in Input) {
 			ID: id, Kind: in.Kind, Title: in.Title, Body: in.Body,
 			Entity: in.Entity, EntityID: in.EntityID,
 			Read: false, CreatedAt: createdAt,
+			// **وتُوسَم عابرةً في البثّ** — الشاشةُ ترفعها لحظةً ولا
+			// تضيفها إلى صندوقها، **ولا تزيد عدّادَ غير المقروء.**
+			Transient: in.Transient,
 		},
 	})
 
