@@ -85,10 +85,15 @@ type Order struct {
 	// CustomRequest ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه.
 	CustomRequest string `json:"custom_request"`
 	// CustomGoodsAmount وCustomFee **ما وُثّق ولم يُحاسَب** — خدمةُ السائق.
-	CustomGoodsAmount *int64 `json:"custom_goods_amount"`
-	CustomFee         *int64 `json:"custom_fee"`
-	MerchantID        string `json:"merchant_id"`
-	MerchantName      string `json:"merchant_name"`
+	// CustomAgreedAt **متى وثّق السائقُ المبلغَ والأجرة.**
+	//
+	// **وهو ما يفصل «التوثيق» عن «الشراء»** في مسار المكتب — والحالُ
+	// يبقى `assigned` قبله وبعده، **فلا يُعرف موضعُه من الحال وحدَه.**
+	CustomAgreedAt    *time.Time `json:"custom_agreed_at"`
+	CustomGoodsAmount *int64     `json:"custom_goods_amount"`
+	CustomFee         *int64     `json:"custom_fee"`
+	MerchantID        string     `json:"merchant_id"`
+	MerchantName      string     `json:"merchant_name"`
 	// حلقة المطبخ: كم دقيقة قال المتجر، ومتى أعلن الجاهزية فعلاً
 	PrepMinutes *int `json:"prep_minutes"`
 	// DeliveryEstimateMin تقديرُ زمن الطريق بالدقائق — **من الإعدادات لا من
@@ -254,7 +259,11 @@ type Order struct {
 // **ومنفصلةٌ عن `SetStage`** — تلك تُحسب من الحال وحدَه فتصلح لكلّ صفٍّ
 // يُقرأ، **وهذه تحتاج أحداثاً** لا تُجلب إلّا حين تُطلب.
 func (o *Order) SetStageTimes(evs []Event, lim StageLimits) {
-	o.OpsStageTimes = OpsStageTimes(evs)
+	if o.Kind == KindCustom {
+		o.OpsStageTimes = OpsCustomStageTimes(evs, o.CustomAgreedAt)
+	} else {
+		o.OpsStageTimes = OpsStageTimes(evs)
+	}
 	// **ومهلةُ المطبخ لهذا الطلب لا لكلّ الطلبات** — كلُّ متجرٍ يُعلن
 	// مدّةَ تحضيره، **ومهلةٌ واحدةٌ لمشويٍّ وسندويشة** تظلم أحدَهما.
 	if o.PrepMinutes != nil && *o.PrepMinutes > 0 {
@@ -263,12 +272,14 @@ func (o *Order) SetStageTimes(evs []Event, lim StageLimits) {
 	// **ومهلتا الطريق من خريطة هذا الطلب** — كلُّ طريقٍ بطوله.
 	lim.ToStore = routeLimit(o.ToStoreETASec, lim.RouteMarginPct)
 	lim.ToDoor = routeLimit(o.ToDoorETASec, lim.RouteMarginPct)
-	o.OpsStageLate = OpsStageLate(o.OpsStageTimes, lim)
+	o.OpsStageLate = opsStageLate(o.OpsStages, o.OpsStageTimes, lim)
 }
 
 func (o *Order) SetStage() {
 	o.Stages, o.StageAt = StagesFor(o.Kind, o.Status)
-	o.OpsStages, o.OpsStageAt = OpsStages(), OpsStageIndex(o.Status)
+	// **ومسارُ المكتب يفترق بنوع الطلب** — (قرارُ المالك ٢٠٢٦-٠٨-١٣).
+	// **ولا متجرَ في الخاصّ**، فثلاثُ مراحلَ كانت تتحدّث عمّا لا وجودَ له.
+	o.OpsStages, o.OpsStageAt = OpsStagesFor(o.Kind, o.Status, o.CustomAgreedAt != nil)
 	if o.Kind == "custom" {
 		o.Stage = CustomStageOf(o.Status)
 	} else {

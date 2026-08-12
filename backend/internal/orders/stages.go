@@ -366,6 +366,17 @@ func limitFor(st Stage, lim StageLimits) time.Duration {
 		return lim.ToDoor
 	case StageDelivered:
 		return min(lim.Handover)
+	// ══════════════════════════════════════════════════════════════════
+	// **وللطلب الخاصّ مهلتان فقط**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **«بانتظار سائق» تأخذ مهلةَ السائقين نفسَها** — الطابورُ واحدٌ
+	// للنوعين، وهي مذكورةٌ فوق.
+	//
+	// **وأمّا «التوثيق» و«الشراء» فبلا مهلة**: الاتّفاقُ حديثٌ بين
+	// اثنين قد يطول بسؤالٍ وجواب، **والشراءُ يمرّ بسوقٍ لا نعرف
+	// طريقَه** — والمنصّةُ لا تعرف من أين يشتري. **ومهلةٌ نضعها
+	// تخميناً تُحمّر بطاقاتٍ بلا معنى.**
 	default:
 		return 0
 	}
@@ -386,13 +397,65 @@ func routeLimit(etaSec *int, marginPct int) time.Duration {
 		time.Duration(100+marginPct) / 100
 }
 
+// OpsCustomStageTimes أوقاتُ مراحل الطلب الخاصّ في لوحة العمليات.
+//
+// **ولا تُطوى من الأحداث وحدَها**: «توثيق» و«شراء» كلتاهما تحت الحال
+// `assigned` — **والذي يفصلهما طابعُ `custom_agreed_at` لا حدثٌ في
+// السجلّ.**
+//
+// **فوقتُ «الشراء» هو لحظةُ التوثيق** — لأنّها اللحظةُ التي صار فيها
+// الشراءُ مسموحاً وبدأ.
+func OpsCustomStageTimes(evs []Event, agreedAt *time.Time) StageTimes {
+	list := OpsCustomStages()
+	out := make(StageTimes, len(list))
+	// **وموضعُ كلّ مرحلةٍ يُبحث عنه بالمفتاح** — فإن أُعيد ترتيبُ المسار
+	// **لم ينتقل وقتٌ إلى غير صاحبه.**
+	idx := map[Stage]int{}
+	for i, st := range list {
+		idx[st] = i
+	}
+	put := func(st Stage, t time.Time) {
+		i, ok := idx[st]
+		if !ok || out[i] != nil {
+			return
+		}
+		v := t
+		out[i] = &v
+	}
+	for i := range evs {
+		switch evs[i].ToStatus {
+		case StPending:
+			put(StageWaitingPlatform, evs[i].CreatedAt)
+		case StDispatching:
+			put(StageSeekingDriver, evs[i].CreatedAt)
+		case StAssigned:
+			put(StageAgreeing, evs[i].CreatedAt)
+		case StPickedUp:
+			put(StageOnTheWay, evs[i].CreatedAt)
+		case StAtDropoff:
+			put(StageArrived, evs[i].CreatedAt)
+		case StDelivered:
+			put(StageDelivered, evs[i].CreatedAt)
+		}
+	}
+	if agreedAt != nil {
+		put(StageBuying, *agreedAt)
+	}
+	return out
+}
+
 // OpsStageLate أتجاوز الانتقالُ إلى كلّ مرحلةٍ مهلتَه.
 //
 // **والفارغُ «لا حكم»** — إمّا لأنّ المرحلةَ لم تُبلَغ، أو لأنّ خطَّها بلا
 // مهلة. **وهو غيرُ `false`**: تلك تقول «قُيس فكان سليما».
 func OpsStageLate(times StageTimes, lim StageLimits) []*bool {
-	out := make([]*bool, len(OpsStages()))
-	for i, st := range OpsStages() {
+	return opsStageLate(OpsStages(), times, lim)
+}
+
+// opsStageLate الحكمُ على مسارٍ بعينه — **ولا يفترض مساراً واحدا.**
+func opsStageLate(list []Stage, times StageTimes, lim StageLimits) []*bool {
+	out := make([]*bool, len(list))
+	for i, st := range list {
 		max := limitFor(st, lim)
 		// **والأوّلُ بلا خطٍّ فوقه** — لا انتقالَ إليه يُقاس.
 		if i == 0 || max <= 0 || i >= len(times) {
@@ -406,6 +469,103 @@ func OpsStageLate(times StageTimes, lim StageLimits) []*bool {
 		out[i] = &v
 	}
 	return out
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **وللطلب الخاصّ مسارُ مكتبٍ آخرُ — لا متجرَ فيه أصلا**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٣، بعد أن جرّب طلباً خاصّاً ورأى بطاقتَه:
+//  «شوف في قيد التجهيز بالمتجر غلط — لأنّ أوّل شي لازم الطلب ياخذه
+//  سائق، بعدين يوثّق السعر وأجرة التوصيل، بعدين السائق يجيب الطلب،
+//  بعدها بالطريق إلى الزبون، بعدها وصل الزبون، بعدها يسلّم الطلب».)
+//
+// # وثلاثُ مراحلَ كانت تتحدّث عن متجرٍ لا وجود له
+//
+// **`OpsStages()` كان مساراً واحداً للجميع**، فبطاقةُ الطلب الخاصّ تقول
+// «بانتظار قبول المتجر» و«قيد التجهيز في المتجر» و«السائق إلى المتجر»
+// — **ولا متجرَ في الطلب الخاصّ**: السائقُ يشتريه بنفسه من حيث وجده.
+//
+// **وخبرٌ كاذبٌ في سجلٍّ يُحتجّ به أخطرُ من سجلٍّ ناقص.**
+//
+// # ولماذا «التوثيق» و«الشراء» نقطتان
+//
+// **بينهما ضغطةٌ حقيقيّة**: السائقُ يتّفق مع الزبون ويوثّق المبلغ
+// والأجرة، **والمحرّكُ يمنع الشراء قبلها** (`ErrCustomNotAgreed`).
+//
+// **ولو جُمعتا لَما عُرف أين هو الآن**: أيتّفق أم يشتري بماله. **وهما
+// سؤالان مختلفان حين يتأخّر طلب.**
+//
+// # والتوثيقُ طابعُ وقتٍ لا حال
+//
+// **`custom_agreed_at` ليس حالاً في المحرّك** — فطيُّ هذا المسار يقرأ
+// الحالَ والطابعَ معاً. **وهو الموضعُ الوحيدُ الذي لا يكفي فيه الحال.**
+
+const (
+	// StageWaitingPlatform **بانتظار موافقة المنصّة** — لم يُرسَل للسائقين.
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٣: «يجب أن توافق المنصّة بالطبع».)
+	//
+	// **وهي مرحلةٌ حقيقيّةٌ لا فراغ**: الطلبُ يُنشأ `pending` ولا ينزل
+	// الطابورَ وحدَه. **وطلبٌ واقفٌ فيها ساعةً يُسأل عنه المكتب لا
+	// السائق.**
+	StageWaitingPlatform Stage = "waiting_platform"
+	// StageAgreeing **توثيق السعر والأجرة** — أخذه سائقٌ ويتّفق الآن.
+	StageAgreeing Stage = "agreeing"
+	// StageBuying **شراء الطلب** — وثّق ويشتري بماله.
+	StageBuying Stage = "buying"
+)
+
+// OpsCustomStages مسارُ الطلب الخاصّ كما يراه المكتب.
+func OpsCustomStages() []Stage {
+	return []Stage{
+		StageWaitingPlatform, StageSeekingDriver, StageAgreeing,
+		StageBuying, StageOnTheWay, StageArrived, StageDelivered,
+	}
+}
+
+// OpsCustomStageOf مرحلةُ الطلب الخاصّ في لوحة العمليات.
+//
+// **و`agreed` لا يُشتقّ من الحال** — هو طابعُ وقتٍ يضعه السائق، **والحالُ
+// يبقى `assigned` قبله وبعده.**
+func OpsCustomStageOf(status string, agreed bool) Stage {
+	switch status {
+	case StPending:
+		return StageWaitingPlatform
+	case StDispatching:
+		return StageSeekingDriver
+	// **وأخذه سائقٌ فهو يتّفق** — حتّى يوثّق، فيصير يشتري.
+	case StAccepted, StPreparing, StAssigned, StAtPickup:
+		if agreed {
+			return StageBuying
+		}
+		return StageAgreeing
+	case StPickedUp, StOnTheWay:
+		return StageOnTheWay
+	case StAtDropoff:
+		return StageArrived
+	case StDelivered:
+		return StageDelivered
+	default:
+		return StageEnded
+	}
+}
+
+// OpsStagesFor مسارُ المكتب ومفتاحُ الموضع — **بحسب نوع الطلب.**
+func OpsStagesFor(kind, status string, agreed bool) ([]Stage, int) {
+	list, at := OpsStages(), OpsStageOf(status)
+	if kind == KindCustom {
+		list, at = OpsCustomStages(), OpsCustomStageOf(status, agreed)
+	}
+	if at == StageEnded {
+		return list, -1
+	}
+	for i, st := range list {
+		if st == at {
+			return list, i
+		}
+	}
+	return list, -1
 }
 
 // OpsStageIndex موضعُه على مسار المكتب — **و`-1` لما انتهى قبل أن يصل.**
