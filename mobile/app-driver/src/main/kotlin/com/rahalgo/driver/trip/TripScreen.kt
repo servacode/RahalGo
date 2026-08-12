@@ -567,7 +567,9 @@ private fun phaseLabel(step: TripStep): Int = when (step) {
 /** المسافة بالمتر أو بالكيلومتر — **لا «1400 م».** */
 private fun distanceText(meters: Double): String {
     val m = meters.toLong()
-    return if (m < 1000) "$m م" else "%.1f كم".format(m / 1000.0)
+    // **وبأرقام غربيّة** — `format` بلا لغة يكتب «١٫٠ كم» في جهاز
+    // عربيّ، **فيقع رقمان بخطّين في السطر نفسه.**
+    return if (m < 1000) "$m م" else "%.1f كم".format(java.util.Locale.US, m / 1000.0)
 }
 
 /**

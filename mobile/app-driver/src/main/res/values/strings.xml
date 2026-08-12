@@ -199,6 +199,8 @@
     <string name="trip_near_dropoff">يبدو أنّك وصلت الزبون</string>
     <string name="trip_chat">حديث الزبون</string>
     <string name="chat_hint">اكتب رسالة…</string>
+    <string name="chat_today">اليوم</string>
+    <string name="chat_yesterday">أمس</string>
     <string name="chat_send">أرسل</string>
     <string name="chat_closed">انتهى الطلب — أُغلق الحديث</string>
     <!-- الطلب الخاصّ -->

@@ -779,7 +779,9 @@ private fun eta(toPickupM: Double, legM: Double, avgSpeedKmh: Long): Long {
  */
 private fun distance(meters: Double): String {
     val m = meters.toLong()
-    return if (m < 1000) "$m م" else "${"%.1f".format(m / 1000.0)} كم"
+    // **وبأرقام غربيّة** — `format` بلا لغة يكتب «١٫٠ كم» في جهاز
+    // عربيّ، **فيقع رقمان بخطّين في السطر نفسه.**
+    return if (m < 1000) "$m م" else "${"%.1f".format(java.util.Locale.US, m / 1000.0)} كم"
 }
 
 /**
