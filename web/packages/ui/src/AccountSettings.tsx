@@ -11,7 +11,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { Alert } from "./feedback";
 import { emitLocal } from "./Notifications";
-import { IconUser, IconLock, IconWarning, IconCheck, IconVerified } from "./icons";
+import { IconUser, IconLock, IconPhone, IconWarning, IconCheck, IconVerified } from "./icons";
 import { IconWhatsApp } from "./brand-icons";
 
 const m = getMessages(defaultLocale);
@@ -93,7 +93,17 @@ export function AccountSettings({
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const [newPhone, setNewPhone] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [phoneCode, setPhoneCode] = useState("");
+  const [phoneBusy, setPhoneBusy] = useState(false);
 
+  const [wa, setWa] = useState("");
+  const [waVerified, setWaVerified] = useState(false);
+  const [waSent, setWaSent] = useState(false);
+  const [waCode, setWaCode] = useState("");
+  const [waBusy, setWaBusy] = useState(false);
+  const [waEditing, setWaEditing] = useState(false);
 
   const [delSent, setDelSent] = useState(false);
   const [delCode, setDelCode] = useState("");
@@ -125,6 +135,9 @@ export function AccountSettings({
            (وقع في فحصٍ بمتصفّحٍ حقيقيّ ٢٠٢٦-٠٨-٠٦.) */
         setName(s.full_name ?? "");
         setNameDraft(s.full_name ?? "");
+        setWaVerified(s.whatsapp_verified);
+        // رقم الدخول اقتراحٌ مبدئي: أغلب الناس واتسابهم عليه، فلا نطلب كتابته
+        setWa(s.whatsapp_phone ?? phone ?? "");
       })
       .catch(() => undefined);
   }, [api, phone]);
@@ -216,9 +229,79 @@ export function AccountSettings({
     }
   }
 
+  async function reqPhone(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMsg("");
+    setPhoneBusy(true);
+    try {
+      await api("/api/v1/auth/phone/request", { method: "POST", body: JSON.stringify({ phone: newPhone }) });
+      setOtpSent(true);
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setPhoneBusy(false);
+    }
+  }
 
+  async function confirmPhone(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMsg("");
+    setPhoneBusy(true);
+    try {
+      await api("/api/v1/auth/phone/confirm", {
+        method: "POST",
+        body: JSON.stringify({ phone: newPhone, code: phoneCode }),
+      });
+      setMsg(A.phoneSaved);
+      emitLocal("profile");
+      setOtpSent(false);
+      setNewPhone("");
+      setPhoneCode("");
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setPhoneBusy(false);
+    }
+  }
 
+  async function reqWhatsApp(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMsg("");
+    setWaBusy(true);
+    try {
+      await api("/api/v1/auth/whatsapp/request", { method: "POST", body: JSON.stringify({ phone: wa }) });
+      setWaSent(true);
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setWaBusy(false);
+    }
+  }
 
+  async function confirmWhatsApp(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setWaBusy(true);
+    try {
+      await api("/api/v1/auth/whatsapp/confirm", {
+        method: "POST",
+        body: JSON.stringify({ phone: wa, code: waCode }),
+      });
+      setWaVerified(true);
+      setWaSent(false);
+      setWaEditing(false);
+      setWaCode("");
+      setMsg(A.whatsappDone);
+      onVerified?.();
+    } catch (err) {
+      setError(errText(err));
+    } finally {
+      setWaBusy(false);
+    }
+  }
 
   async function reqDelete() {
     setError("");
@@ -360,51 +443,120 @@ export function AccountSettings({
         </form>
       </Section>
 
-      {/* ══════════════════════════════════════════════════════════════
-          **ورقمٌ واحدٌ لا رقمان — وعليه واتساب**
-          ══════════════════════════════════════════════════════════════
+      <Section title={A.contact} icon={<IconPhone />}>
+        {!otpSent ? (
+          <form onSubmit={reqPhone} className="space-y-3">
+            <div>
+              <Input id="new-phone" label={A.newPhone} icon={<IconPhone />} dir="ltr" inputMode="tel" required value={newPhone} onChange={(e) => setNewPhone(e.target.value)} className="text-end" placeholder="09xxxxxxxx" />
+              <p className="mt-1 text-xs text-ink-muted">{A.phoneHint}</p>
+            </div>
+            <Button type="submit" disabled={phoneBusy} className="w-full py-2.5">
+              {phoneBusy ? m.common.loading : A.sendCode}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={confirmPhone} className="space-y-3">
+            <p className="rounded-control bg-primary-tint px-3 py-2 text-sm text-primary">{A.codeSent}</p>
+            <div>
+              <Input id="phone-code" label={A.code} dir="ltr" inputMode="numeric" required autoFocus value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="text-center font-mono text-lg tracking-[0.4em]" placeholder="••••••" maxLength={6} />
+            </div>
+            <Button type="submit" disabled={phoneBusy} className="w-full py-2.5">
+              {phoneBusy ? m.common.loading : A.confirmChange}
+            </Button>
+          </form>
+        )}
+      
+        <div className="mt-4 border-t border-line-soft pt-4">
+          <p className="mb-2 flex items-center gap-2 text-xs font-bold text-ink-muted">
+            <IconWhatsApp className="h-4 w-4 text-primary" />
+            {A.whatsapp}
+          </p>
+        {waVerified && !waEditing ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 rounded-control border border-success-edge bg-success-tint px-3 py-2.5">
+              <span dir="ltr" className="min-w-0 truncate font-medium text-ink">
+                {wa}
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-success">
+                <IconVerified size={16} />
+                {A.whatsappVerified}
+              </span>
+            </div>
+            {/* ══════════════════════════════════════════════════════
+                **ولا زرَّ تبديلٍ ثانٍ**
+                ══════════════════════════════════════════════════════
 
-          (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ما يصير رقم الهاتف مختلف عن واتساب،
-           هيك تخرب الدنيا… رقم الهاتف حصراً عليه واتساب، هيك متّفقين».)
+                (قرارُ المالك ٢٠٢٦-٠٨-١٢: «كان في زرّ تغيير الرقم يعمل
+                 نفسَ العمل بالخيار الذي فوق هذا الزرّ — بلاه».)
 
-          **وكان رقمان**: رقمُ الدخول ورقمُ واتساب «قد يختلف عن رقم
-          دخولك». **ورقمان لشخصٍ واحدٍ يفترقان**: يبدّل أحدَهما وينسى
-          الآخر، **فيصله رمزُ الدخول على رقمٍ ولا يصله إشعارُ طلبه.**
-
-          **والرمزُ نفسُه يمشي على واتساب** — فمن لا واتسابَ على رقمه لا
-          يدخل أصلاً. **فالشرطُ قائمٌ في التسجيل**، وحقلٌ ثانٍ بعده
-          يفتح باباً لتناقضٍ لا فائدةَ فيه.
-
-          **والتبديلُ يبقى بابَه**: رمزٌ يصل على الرقم الجديد ويُؤكَّد. */}
-      <Section title={A.whatsapp} icon={<IconWhatsApp />}>
-        {/* ══════════════════════════════════════════════════════════════
-            **والرقمُ يُعرض ولا يُبدَّل من هنا**
-            ══════════════════════════════════════════════════════════════
-
-            (تصحيحُ المالك ٢٠٢٦-٠٨-١٢: «رقم الواتساب حذفتَه من حسابي،
-             والرقمُ المسجَّل به لازم يظلّ بالحساب مشان التوثيق، ما لازم
-             ينحذف… بس زرّ تغيير الرقم نلغيه».)
-
-            **ورقمٌ لا يُرى لا يُوثَّق**: من فتح حسابَه ليتأكّد أيَّ رقمٍ
-            سجّل به — قبل أن يشتكي أو يسأل المكتب — **يجد فراغا.** وهو
-            أوّلُ ما يُسأل عنه في كلّ خلاف.
-
-            **والتبديلُ يُغلق بابُه**: الرقمُ هو الحساب — به يدخل، وعليه
-            يصل رمزُه، وبه يعرفه المكتبُ والسائق. **وتبديلُه بضغطتين في
-            صفحةٍ يجعل حساباً كاملاً — بمحفظته وتاريخه — ينتقل إلى رقمٍ
-            آخرَ بلا أثر.**
-
-            **ومن أراد التبديل يمرّ بالمكتب** — يُوثَّق من يطلب ولماذا. */}
-        <div className="flex items-center justify-between gap-3 rounded-control border border-success-edge bg-success-tint px-3 py-2.5">
-          <span dir="ltr" className="min-w-0 truncate font-medium text-ink">
-            {phone}
-          </span>
-          <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-success">
-            <IconVerified size={16} />
-            {A.whatsappVerified}
-          </span>
-        </div>
-        <p className="mt-2 text-xs text-ink-muted">{A.whatsappHint}</p>
+                **والحقلُ فوقه يفعل هذا بعينه**: يكتب رقمَه الجديد،
+                فيصله رمزٌ على واتساب، فيتبدّل. **وبابان إلى الفعل
+                نفسِه في شاشةٍ واحدة** يجعلان صاحبَهما يسأل: أيُّهما؟
+                **ويجرّب أحدَهما فيصله رمزٌ ثمّ يجرّب الآخر.** */}
+          </div>
+        ) : !waSent ? (
+          <form onSubmit={reqWhatsApp} className="space-y-3">
+            <div>
+              <Input
+                id="wa-phone"
+                label={A.whatsapp}
+                icon={<IconWhatsApp />}
+                dir="ltr"
+                inputMode="tel"
+                required
+                value={wa}
+                onChange={(e) => setWa(e.target.value)}
+                className="text-end"
+                placeholder="09xxxxxxxx"
+              />
+              <p className="mt-1 text-xs text-ink-muted">{A.whatsappHint}</p>
+            </div>
+            {!waVerified && (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-warning">
+                <IconWarning size={14} />
+                {A.whatsappUnverified}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={waBusy} className="flex-1 py-2.5">
+                {waBusy ? m.common.loading : A.whatsappVerify}
+              </Button>
+              {waEditing && (
+                <Button type="button" variant="secondary" onClick={() => setWaEditing(false)}>
+                  {m.common.cancel}
+                </Button>
+              )}
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={confirmWhatsApp} className="space-y-3">
+            <p className="rounded-control bg-primary-tint px-3 py-2 text-sm text-primary">
+              {A.whatsappCodeSent}
+            </p>
+            <Input
+              id="wa-code"
+              label={A.code}
+              dir="ltr"
+              inputMode="numeric"
+              required
+              autoFocus
+              value={waCode}
+              onChange={(e) => setWaCode(e.target.value)}
+              className="text-center font-mono text-lg tracking-[0.4em]"
+              placeholder="••••••"
+              maxLength={6}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={waBusy} className="flex-1 py-2.5">
+                {waBusy ? m.common.loading : A.whatsappVerify}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setWaSent(false)}>
+                {m.common.cancel}
+              </Button>
+            </div>
+          </form>
+        )}
+      </div>
       </Section>
 
       <section className="surface-lit surface !border-danger-edge p-4 sm:col-span-2 lg:col-span-3">
