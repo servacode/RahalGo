@@ -77,7 +77,13 @@ import org.maplibre.android.geometry.LatLng
  * المالك: «هون بشكل تلقائي الرحلة تتحوّل إلى الزبون».)
  */
 @Composable
-fun TripScreen(state: TripState, actions: TripActions) {
+fun TripScreen(
+    state: TripState,
+    actions: TripActions,
+    /** **الحديث المفتوح** — وفارغٌ يعني لوحا مطويّا. */
+    chat: ChatState? = null,
+    chatActions: ChatActions = ChatActions(send = {}, close = {}),
+) {
     val order = state.order
     if (order == null) {
         NoTrip(onOrders = actions.toOrders)
@@ -105,7 +111,17 @@ fun TripScreen(state: TripState, actions: TripActions) {
             // **وقبل الاستلام تُعرض النقطتان** — بعده تُطفأ نقطة المتجر:
             // **انتهى شأنه منها**، وخريطة فيها ما لم يعد يلزم تشوّش.
             pickup = if (state.step >= TripStep.PICKED_UP) null else state.pickup,
-            dropoff = state.dropoff,
+            // ══════════════════════════════════════════════════════════
+            // **وموضعُ الزبون لا يُرسم قبل الاستلام**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢: «موقع الزبون ما يلزمنا بالرحلة
+            //  القسم الأوّل».)
+            //
+            // **والرحلةُ طوران، ولكلّ طورٍ وجهةٌ واحدة**: نقطتان على
+            // الشاشة تجعلان الكاميرا تتّسع لتضمّهما، **فيصغر الشارعُ
+            // الذي يسير فيه الآن** ليُرى مكانٌ لا شأنَ له به بعد.
+            dropoff = if (state.step >= TripStep.PICKED_UP) state.dropoff else null,
             follow = follow,
             recenter = recenter,
             modifier = Modifier.fillMaxSize(),
@@ -186,9 +202,27 @@ fun TripScreen(state: TripState, actions: TripActions) {
                 onRecenter = { recenter++ },
                 onFollow = { follow = !follow },
                 onChat = actions.chat,
+                chatting = chat != null,
                 onNavigate = actions.navigate,
             )
-            TripCard(order = order, state = state, actions = actions)
+            // ══════════════════════════════════════════════════════════
+            // **والحديث يحلّ محلّ البطاقة ولا يغطّي الشاشة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢: «الدردشة ما تفتح صفحة لحالها،
+            //  تكون عائمة مشان ما تغطّي الخريطة — تضغط الأيقونة تفتح،
+            //  تضغط ترجع تختفي».)
+            //
+            // **وشاشةٌ كاملةٌ تسرق الطريق**: يفتحها وهو على إشارةٍ فلا
+            // يرى أين هو، **ويبحث عن باب الرجوع** بيدٍ واحدةٍ على مقود.
+            //
+            // **والأزرارُ فوقه تبقى** — أيقونةُ الحديث هي البابُ نفسُه:
+            // **تُضغط فيُفتح وتُضغط فيُطوى.**
+            if (chat != null) {
+                ChatSheet(state = chat, actions = chatActions)
+            } else {
+                TripCard(order = order, state = state, actions = actions)
+            }
         }
     }
 
@@ -325,6 +359,7 @@ private fun MapButtons(
     onRecenter: () -> Unit,
     onFollow: () -> Unit,
     onChat: () -> Unit,
+    chatting: Boolean,
     onNavigate: () -> Unit,
 ) {
     Row(
@@ -353,7 +388,7 @@ private fun MapButtons(
             // **وهو ما يُفتح فجأةً**: يتّصل الزبونُ ليقول «الباب الثاني»
             // — **فيكون في مرمى الإبهام دائما** لا يُبحث عنه في بطاقةٍ
             // قد تكون مطويّةً تحت.
-            MapButton(R.drawable.ic_chat, R.string.trip_chat, onChat)
+            MapButton(R.drawable.ic_chat, R.string.trip_chat, onChat, on = chatting)
             Spacer(Modifier.height(10.dp))
             NavigateButton(onNavigate)
         }

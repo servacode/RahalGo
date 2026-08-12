@@ -72,7 +72,6 @@ import com.rahalgo.driver.orders.OrdersScreen
 import com.rahalgo.driver.orders.OrdersViewModel
 import com.rahalgo.driver.trip.Proof
 import com.rahalgo.driver.trip.ChatActions
-import com.rahalgo.driver.trip.ChatSheet
 import com.rahalgo.driver.trip.TripActions
 import com.rahalgo.driver.trip.TripScreen
 import com.rahalgo.driver.trip.TripState
@@ -408,19 +407,6 @@ private fun SignedIn(onLogout: () -> Unit) {
                 return@Box
             }
 
-            // **والحديث يغطّي الشاشة** — يُقرأ ويُكتب فيه ثمّ يُغلق.
-            val chat = orders.chat
-            if (chat != null) {
-                ChatSheet(
-                    state = chat,
-                    actions = ChatActions(
-                        send = orders::sendMessage,
-                        close = orders::closeChat,
-                    ),
-                )
-                return@Box
-            }
-
             when {
                 tab == 0 -> TripScreen(
                     state = orders.trip(LastPoint.value),
@@ -440,7 +426,9 @@ private fun SignedIn(onLogout: () -> Unit) {
                             }
                         },
                         release = orders::releaseCurrent,
-                        chat = orders::openChat,
+                        chat = {
+                            if (orders.chat != null) orders.closeChat() else orders.openChat()
+                        },
                         askAgree = orders::askAgree,
                         agree = orders::agree,
                         dismissAgree = orders::dismissAgree,
@@ -452,6 +440,11 @@ private fun SignedIn(onLogout: () -> Unit) {
                         dismissFail = orders::dismissFail,
                         navigate = { openMaps(context, orders.trip(LastPoint.value)) },
                         toOrders = { tab = 1 },
+                    ),
+                    chat = orders.chat,
+                    chatActions = ChatActions(
+                        send = orders::sendMessage,
+                        close = orders::closeChat,
                     ),
                 )
 
