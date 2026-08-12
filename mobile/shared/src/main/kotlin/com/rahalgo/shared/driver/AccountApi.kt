@@ -74,6 +74,52 @@ class AccountApi(private val api: ApiClient) {
         )
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وتبديلُ الرقم بخطوتين — والتوثيقُ معه لا بعده بيوم**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «تغيير رقم الهاتف يجب أن يكون موجوداً
+    //  أيضاً كما طلبتُ منك… الويب لا ينفع السائق مثل التطبيق».)
+    //
+    // **والرمزُ يصل الرقمَ الجديد لا القديم** — وهو ما يُثبت أنّه له:
+    // من كتب رقمَ غيره لا يصله شيء.
+    //
+    // **وتبديلُ الرقم يُسقط توثيقَ واتساب** (أُصلح ٢٠٢٦-٠٨-١٣) — **فلو
+    // أُعطي التبديلُ بلا التوثيق لَفقد صاحبُه بابَ استعادة حسابه ولا
+    // سبيلَ لإعادته من التطبيق.** فهما معاً أو لا واحدَ منهما.
+
+    suspend fun phoneChangeRequest(phone: String) {
+        api.call<Ack>(
+            "/api/v1/auth/phone/request",
+            HttpMethod.Post,
+            mapOf("phone" to phone),
+        )
+    }
+
+    suspend fun phoneChangeConfirm(phone: String, code: String) {
+        api.call<Ack>(
+            "/api/v1/auth/phone/confirm",
+            HttpMethod.Post,
+            mapOf("phone" to phone, "code" to code),
+        )
+    }
+
+    suspend fun whatsappRequest(phone: String) {
+        api.call<Ack>(
+            "/api/v1/auth/whatsapp/request",
+            HttpMethod.Post,
+            mapOf("phone" to phone),
+        )
+    }
+
+    suspend fun whatsappConfirm(phone: String, code: String) {
+        api.call<Ack>(
+            "/api/v1/auth/whatsapp/confirm",
+            HttpMethod.Post,
+            mapOf("phone" to phone, "code" to code),
+        )
+    }
+
     suspend fun addresses(): List<Address> = api.call("/api/v1/my/addresses")
 
     /**

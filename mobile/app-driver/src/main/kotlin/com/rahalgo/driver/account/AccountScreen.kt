@@ -16,7 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -173,11 +173,140 @@ private fun Identity(vm: AccountViewModel, s: AccountState) {
         color = if (me.whatsappVerified) StateGreen else InkMuted,
         style = MaterialTheme.typography.bodySmall,
     )
-    Text(
-        text = stringResource(R.string.acc_phone_hint),
-        color = InkMuted,
-        style = MaterialTheme.typography.bodySmall,
+    Spacer(Modifier.height(8.dp))
+    PhoneChange(vm, s)
+    WhatsAppVerify(vm, s, me.whatsappVerified)
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **تبديلُ الرقم — خطوتان في مكانه لا في متصفّح**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٣: «تغيير رقم الهاتف يجب أن يكون موجوداً
+ *  أيضاً… التطبيق يجب أن يكون تطبيقاً كاملاً، لا حاجةَ للمستخدم من
+ *  الدخول إلى مكانٍ ثانٍ».)
+ *
+ * **والرمزُ يصل الرقمَ الجديد لا القديم** — وهو ما يُثبت أنّه له: **من
+ * كتب رقمَ غيره لا يصله شيء.**
+ *
+ * **والتحذيرُ يُقال قبل الإرسال لا بعده**: تبديلُ الرقم يُسقط توثيقَ
+ * واتساب، **وبه يستعيد حسابَه إن نسي رمزَه.** ومن عرف قبل أن يضغط عاد
+ * فوثّق.
+ */
+@Composable
+private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    var phone by rememberSaveable { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    val waiting = s.phonePending.isNotEmpty()
+
+    if (!open && !waiting) {
+        TextButton(onClick = { open = true }, enabled = !s.busy) {
+            Text(stringResource(R.string.acc_phone_change))
+        }
+        return
+    }
+
+    if (!waiting) {
+        Text(
+            stringResource(R.string.acc_phone_wa_warn),
+            color = InkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = { Text(stringResource(R.string.acc_phone_new)) },
+            singleLine = true,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { vm.askPhone(phone) },
+                enabled = !s.busy && phone.isNotBlank(),
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.acc_phone_send)) }
+            OutlinedButton(
+                onClick = { open = false; phone = "" },
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.acc_delete_cancel)) }
+        }
+        return
+    }
+
+    OutlinedTextField(
+        value = code,
+        onValueChange = { code = it },
+        label = { Text(stringResource(R.string.acc_phone_code)) },
+        singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
+        ),
+        modifier = Modifier.fillMaxWidth(),
     )
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            onClick = { vm.confirmPhone(code); code = ""; open = false; phone = "" },
+            enabled = !s.busy && code.isNotBlank(),
+            modifier = Modifier.weight(1f),
+        ) { Text(stringResource(R.string.acc_phone_confirm)) }
+        OutlinedButton(
+            onClick = { vm.cancelPhone(); code = "" },
+            modifier = Modifier.weight(1f),
+        ) { Text(stringResource(R.string.acc_delete_cancel)) }
+    }
+}
+
+/**
+ * **توثيقُ واتساب — على رقم الحساب نفسِه لا على رقمٍ ثانٍ.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ما يصير رقم الهاتف مختلف عن واتساب، هيك
+ *  تخرب الدنيا».)
+ *
+ * **ولا يُعرض لمن وثّق** — زرٌّ يدعو إلى فعلٍ تمّ يُقرأ عطبا.
+ */
+@Composable
+private fun WhatsAppVerify(vm: AccountViewModel, s: AccountState, verified: Boolean) {
+    var code by remember { mutableStateOf("") }
+    val waiting = s.waPending.isNotEmpty()
+    if (verified && !waiting) return
+
+    if (!waiting) {
+        TextButton(onClick = vm::askWhatsApp, enabled = !s.busy) {
+            Text(stringResource(R.string.acc_wa_send), color = StateGreen)
+        }
+        return
+    }
+
+    OutlinedTextField(
+        value = code,
+        onValueChange = { code = it },
+        label = { Text(stringResource(R.string.acc_wa_code)) },
+        singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            onClick = { vm.confirmWhatsApp(code); code = "" },
+            enabled = !s.busy && code.isNotBlank(),
+            modifier = Modifier.weight(1f),
+        ) { Text(stringResource(R.string.acc_wa_confirm)) }
+        OutlinedButton(
+            onClick = { vm.cancelWhatsApp(); code = "" },
+            modifier = Modifier.weight(1f),
+        ) { Text(stringResource(R.string.acc_delete_cancel)) }
+    }
 }
 
 // ــ كلمة المرور ــ
@@ -272,7 +401,7 @@ private fun AddressRow(a: Address, vm: AccountViewModel, s: AccountState) {
                 Text(stringResource(R.string.acc_addr_delete), color = StateRed)
             }
         }
-        Divider()
+        HorizontalDivider()
     }
 }
 
@@ -388,7 +517,7 @@ private fun SectionTitle(text: String, color: androidx.compose.ui.graphics.Color
 @Composable
 private fun Gap() {
     Spacer(Modifier.height(24.dp))
-    Divider()
+    HorizontalDivider()
     Spacer(Modifier.height(16.dp))
 }
 
