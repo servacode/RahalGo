@@ -10,6 +10,7 @@ import {
   fmtDateTime,
 } from "@rahalgo/i18n";
 import {
+  usePlatform,
   BrandMark,
   OrderRef,
   Money,
@@ -630,6 +631,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   }, []);
   // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
   const view = "cards" as const;
+  // **واسمُ المنصة من الإعدادات** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «حطّ على
+  // اليمين اسم المنصة»). **ولا يُكتب في شيفرةٍ ولا في معجم**: يبدّله
+  // المالكُ من لوحته فيتبدّل حيثما وقع.
+  const { name: platformName } = usePlatform();
 
   const load = useCallback(async () => {
     try {
@@ -724,7 +729,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
                 **والعلامةُ هي ما يملأ الطرفَ الآخر** — كما في بطاقة
                 الزبون سواءً بسواء، **فالبطاقتان تُقرآن بشكلٍ واحد.** */}
-            <BrandMark size={40} rounded="none" />
+            <span className="flex min-w-0 items-center gap-2">
+              <BrandMark size={32} rounded="none" />
+              <span className="truncate text-sm font-bold text-ink">{platformName}</span>
+            </span>
             {/* ══════════════════════════════════════════════════════
                 **ولا شارةَ حالٍ — المسارُ يقولها**
                 ══════════════════════════════════════════════════════
