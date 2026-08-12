@@ -1984,12 +1984,25 @@ function InvoiceList({ o }: { o: OrderRow }) {
             **ورقمٌ بلا عملةٍ يُقرأ في لوحةٍ فيها ليراتٌ ونسبٌ وأعداد**:
             «١٠٠» أهي مئةُ ليرةٍ أم مئةُ طلب؟ **والفاتورةُ أولى ما
             يُقرأ منها المال.** */}
-        <span className="flex items-center gap-2">
-          <Money value={o.total} className="figure text-primary-dark" />
-          <span className="text-xs font-normal text-ink-muted">
-            {PAYMENT_LABELS[o.payment_method]}
-          </span>
-        </span>
+        <Money value={o.total} className="figure text-primary-dark" />
+      </li>
+      {/* ══════════════════════════════════════════════════════════════
+          **وطريقةُ الدفع سطرٌ تحت الإجمالي — لا لصقٌ بجانبه**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٢: «تحت الإجمالي حطّ طريقة الدفع، وتصير
+           المحفظة أو الدفع عند الاستلام».)
+
+          **وكانت ملتصقةً بالرقم**: «نقداً عند الاستلام ٥٠٠ ل.س» تُقرأ
+          جملةً واحدةً — **فيلتبس أيُّ الكلمتين وصفٌ للرقم وأيُّهما طريقة.**
+          **والعينُ تمسح عموداً من الإجماليّات في بطاقاتٍ متجاورة**، ونصٌّ
+          قبل الرقم يكسر استقامتَه.
+
+          **وهي خبرٌ عن الطلب لا عن المبلغ**: أمقبوضٌ هو أم يُقبض عند
+          الباب — **وسؤالٌ يُسأل وحدَه يُجاب في سطرٍ وحدَه.** */}
+      <li className="flex items-center justify-between text-xs text-ink-muted">
+        <span>{m.admin.ordersPage.payment}</span>
+        <span>{PAYMENT_LABELS[o.payment_method]}</span>
       </li>
     </ul>
   );
