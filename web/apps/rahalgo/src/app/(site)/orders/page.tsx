@@ -14,6 +14,7 @@ import {
   Card,
   Modal,
   Invoice,
+  Money,
   OrderTrack,
   ChatArchive,
   Tabs,
@@ -734,6 +735,21 @@ function OrderCard({
   }, [o.cancel_seconds_left]);
   const [ticketNo, setTicketNo] = useState(0);
   const { stages: trackStages, at } = trackOf(o);
+  /**
+   * **متى يُعرض بابُ الإلغاء** — (شهده المالك ٢٠٢٦-٠٨-١٠).
+   *
+   * **العاديُّ**: قبل قبول المتجر متى شاء، وبعده ضمن مهلة.
+   * **والخاصُّ إلى أن يُشترى** — حدُّه حدثٌ لا ساعة: خروجُ المال من جيب
+   * السائق. **ولا يبلغ `accepted` أصلاً.**
+   *
+   * **والشرطُ يُسمّى مرّةً ويُقرأ في موضعين**: الزرُّ في صفّ الأفعال
+   * وخبرُ المهلة فوقه — **وشرطان يفترقان يجعلان زرّاً بلا خبرٍ أو خبراً
+   * بلا زرّ.**
+   */
+  const canCancel =
+    o.kind === "custom"
+      ? ["pending", "dispatching", "assigned"].includes(o.status)
+      : o.status === "pending" || (o.status === "accepted" && left > 0);
   const closed = at < 0;
   const live = !closed && o.status !== "delivered";
   const canRate = o.status === "delivered" && rate && !rate.rated;
@@ -762,6 +778,26 @@ function OrderCard({
         <div className="flex shrink-0 flex-col items-start gap-1.5">
           <BrandMark size={72} rounded="card" />
         </div>
+
+        {/* ══════════════════════════════════════════════════════════
+            **والوصولُ المتوقَّع في الترويسة — لا تحت المسار**
+            ══════════════════════════════════════════════════════════
+
+            (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الوصول المتوقّع مكانه قاتل جدّا،
+             يجب أن يكون بالأعلى بالوسط بين رقم الطلب واللوغو ليكون
+             واضحاً أساسا».)
+
+            **وهو الجوابُ عن السؤال الذي فُتحت الصفحةُ من أجله**: «متى
+            يصل؟» — **وكان في ذيل البطاقة تحت المسار**، يُقرأ بعد
+            الأصناف والأسعار والمراحل، **أو لا يُقرأ.**
+
+            **والوسطُ بين العلامة والرقم** — أوّلُ ما تقع عليه العين. */}
+        {hasEta(o, o.status, closed) && (
+          <p className="flex min-w-0 flex-1 items-center justify-center gap-1.5 pt-1 text-center text-xs font-bold text-accent-text">
+            <IconCheck size={13} strokeWidth={3} className="shrink-0" />
+            <span className="truncate">{etaText(o)}</span>
+          </p>
+        )}
 
         <div className="flex min-w-0 flex-col items-end gap-1.5">
           {/* **الرقمُ بالنبرة** — هو ما يُقال في الهاتف حين يُسأل عن طلب. */}
@@ -936,10 +972,20 @@ function OrderCard({
         )}
         <div className="flex items-center justify-between border-t border-line-soft pt-2">
           <span className="text-sm text-ink-muted">{m.site.orders.statTotal}</span>
-          <span dir="ltr" className="figure">
-            {fmtNum(o.total)}{" "}
-            <span className="text-xs font-normal text-ink-muted">{m.common.currency}</span>
-          </span>
+          {/* ══════════════════════════════════════════════════════════
+              **والرمزُ بعد الرقم لا قبله**
+              ══════════════════════════════════════════════════════════
+
+              (قرارُ المالك ٢٠٢٦-٠٨-١٢: «مكتوب ل.س ٣٠٠ وهذا غلط، لازم
+               ٣٠٠ ل.س».)
+
+              **وكانت اللفّةُ `dir="ltr"` تشمل الاثنين** — فيقعان من
+              اليسار: الرقمُ ثمّ الرمز. **وعينُ القارئ تمشي من اليمين**،
+              فتقع على «ل.س» قبل «٣٠٠».
+
+              **و`Money` تلفّ الرقمَ وحدَه** — فيبقى سليماً داخلها،
+              ويبقى ترتيبُه مع الرمز عربيّاً خارجَها. */}
+          <Money value={o.total} small className="figure" />
         </div>
       </div>
       )}
@@ -976,19 +1022,7 @@ function OrderCard({
             vehicle={IconMoto}
             live={live}
           />
-          {/* **الوقتُ المتوقَّع تحت المسار مباشرةً.**
 
-              «قيد التحضير» وحدَها لا تقول عشرَ دقائقَ أم ساعة. **والمسارُ يقول
-              أين، والوقتُ يقول متى** — ولا يُقرأ أحدُهما بلا الآخر.
-
-              وحسابُه مشتركٌ مع صفحة التتبّع (`lib/eta.ts`) — **ولو نُسخ لَافترقا
-              يوماً، فتقول البطاقةُ عشرين وتقول الصفحةُ خمساً.** */}
-          {hasEta(o, o.status, closed) && (
-            <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-primary-dark">
-              <IconCheck size={13} strokeWidth={3} />
-              {m.site.orders.eta}: {etaText(o)}
-            </p>
-          )}
         </div>
       )}
 
@@ -1019,18 +1053,8 @@ function OrderCard({
 
           **والشاشةُ تعرض ما يقبله المحرّك** — `customTransitions` هي الحكم،
           **وشرطان يفترقان يجعلان زرّاً يُضغط فيُردّ.** */}
-      {(o.kind === "custom"
-        ? ["pending", "dispatching", "assigned"].includes(o.status)
-        : o.status === "pending" || (o.status === "accepted" && left > 0)) && (
+      {canCancel && (
         <div>
-          <Button
-            variant="danger"
-            disabled={cancelBusy}
-            onClick={() => setConfirming(true)}
-            className="w-full !py-2"
-          >
-            {m.site.orders.cancel}
-          </Button>
           {o.status === "accepted" && (
             <p className="mt-1 text-center text-xs text-ink-muted">
               {m.site.orders.cancelWindow.replace("{t}", fmtClock(left))}
@@ -1087,6 +1111,28 @@ function OrderCard({
 
       {/* ── الأفعال ───────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
+        {/* ══════════════════════════════════════════════════════════
+            **والإلغاءُ في صفّ الأفعال لا فوقه**
+            ══════════════════════════════════════════════════════════
+
+            (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ليش الزرّان فوق بعض؟ خلص لازم جنب
+             بعض، وانتهت القصّة — بسطرٍ واحدٍ زرّان».)
+
+            **وصندوقان متتاليان يُخرجان زرّين في سطرين** — وكلُّ سطرٍ
+            يدفع ما تحته خارجَ الشاشة، **وعشرُ بطاقاتٍ تعني عشرةَ أسطرٍ
+            زائدة.**
+
+            **ونافذةُ التأكيد ومهلتُه تبقيان فوق** — هما خبرٌ لا فعل. */}
+        {canCancel && (
+          <Button
+            variant="danger"
+            disabled={cancelBusy}
+            onClick={() => setConfirming(true)}
+            className="flex-1 !py-1.5"
+          >
+            {m.site.orders.cancel}
+          </Button>
+        )}
         {items.length > 0 && (
           /* **الفعلُ الأكثرُ تكراراً يلبس لونَ العلامة** — ومن طلب مرّةً
              يطلب ثانية، **وزرٌّ باهتٌ لأكثر ما يُضغط يُبطئ ما يجب أن يسرع.** */
