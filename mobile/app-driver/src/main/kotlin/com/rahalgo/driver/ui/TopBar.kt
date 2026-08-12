@@ -54,6 +54,8 @@ import com.rahalgo.driver.R
  */
 @Composable
 fun TopBar(
+    name: String,
+    avatarUrl: String?,
     balance: Long,
     rating: Double,
     ratingCount: Int,
@@ -159,7 +161,30 @@ fun TopBar(
                 )
             }
 
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(10.dp))
+
+            // ══════════════════════════════════════════════════════════
+            // **وصورته واسمه قبل محفظته**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢.)
+            //
+            // **وهي تقول: هذا حسابك أنت** — والسائق قد يفتح تطبيقا على
+            // هاتف زميله، **أو يُسلَّم هاتف الشركة لسائق الوردية
+            // التالية**، فيبقى الحساب الأوّل مفتوحا ولا شيء يقول ذلك.
+            //
+            // **والاسم الأوّل وحده** — الشريط فيه أربعة أشياء، **واسم
+            // ثلاثيّ يزيحها كلّها.**
+            Avatar(url = avatarUrl, name = name)
+            Spacer(Modifier.size(6.dp))
+            Text(
+                text = firstName(name),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+            )
+
+            Spacer(Modifier.size(10.dp))
 
             // **والرصيد رقم لا أيقونة وحدها** — «محفظتك» بلا رقم لا تقول
             // شيئا.

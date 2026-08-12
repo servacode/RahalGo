@@ -59,6 +59,7 @@ import com.rahalgo.driver.home.HomeActions
 import com.rahalgo.driver.home.HomeScreen
 import com.rahalgo.driver.home.HomeViewModel
 import com.rahalgo.driver.location.LastPoint
+import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.ui.InboxSheet
 import com.rahalgo.driver.ui.TopBar
@@ -319,6 +320,10 @@ private fun SignedIn(onLogout: () -> Unit) {
     Scaffold(
         topBar = {
             TopBar(
+                name = home.state.me?.fullName.orEmpty(),
+                // **والمسار النسبيّ يصير عنوانا هنا** — المحرّك يرسل
+                // `/media/...`، **وهو نفسه في المحلّيّ والإنتاج.**
+                avatarUrl = home.state.me?.avatarUrl?.let { Backend.BASE_URL + it },
                 balance = home.state.me?.balance ?: 0,
                 rating = home.state.me?.rating ?: 0.0,
                 ratingCount = home.state.me?.ratingCount ?: 0,

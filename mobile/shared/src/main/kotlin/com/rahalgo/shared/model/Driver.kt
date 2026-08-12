@@ -58,6 +58,9 @@ data class DriverMe(
     val rating: Double = 0.0,
     /** **كم قيّمه** — به يُفرَّق «لا تقييم» عن «تقييم منخفض». */
     @SerialName("rating_count") val ratingCount: Int = 0,
+
+    /** **صورته** — ومسار نسبيّ (`/media/...`) لا عنوان كامل. */
+    @SerialName("avatar_url") val avatarUrl: String? = null,
 )
 
 /**

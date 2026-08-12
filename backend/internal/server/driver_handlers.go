@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
@@ -99,6 +100,15 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// خمسة)، **لكنّ من رأى «٠٫٠» بلا عددٍ ظنّها حكماً عليه.**
 		Rating      float64 `json:"rating"`
 		RatingCount int     `json:"rating_count"`
+
+		// AvatarURL صورتُه — **وفارغةٌ تعني حرفَ اسمه في دائرة.**
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «قبل أيقونة المحفظة لازم نحطّ صورة
+		//  البروفايل واسم المستخدم».)
+		//
+		// **والمصغَّرةُ لا الأصل**: دائرةٌ بعرض ثمانيةٍ وعشرين نقطة،
+		// **وصورةُ هاتفٍ كاملةٌ لملئها** ميغابايتٌ يُحمَّل في كلّ إقلاع.
+		AvatarURL *string `json:"avatar_url"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -134,11 +144,15 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		                 FROM order_ratings rt JOIN orders o ON o.id = rt.order_id
 		                 WHERE o.driver_id = u.id AND rt.driver_stars IS NOT NULL), 0),
 		       (SELECT count(*) FROM order_ratings rt JOIN orders o ON o.id = rt.order_id
-		        WHERE o.driver_id = u.id AND rt.driver_stars IS NOT NULL)
-		FROM users u WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "drivers.cash_limit")).
+		        WHERE o.driver_id = u.id AND rt.driver_stars IS NOT NULL),
+		       am.thumb_path
+		FROM users u
+		LEFT JOIN media am ON am.id = u.avatar_media_id
+		WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "drivers.cash_limit")).
 		Scan(&out.FullName, &out.OnShift, &out.ShiftStartedAt, &out.CashHeld, &out.CashLimit,
 			&out.Balance, &out.TodayDelivered, &out.TodayFailed, &out.TodayEarned,
-			&out.TodayCompensated, &out.ActiveOrders, &out.Rating, &out.RatingCount)
+			&out.TodayCompensated, &out.ActiveOrders, &out.Rating, &out.RatingCount,
+			&out.AvatarURL)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -148,6 +162,8 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 	out.RequirePhoto = s.settings.GetBool(r.Context(), "drivers.require_delivery_photo")
 	out.LocationPingSec = s.settings.GetInt(r.Context(), "drivers.location_ping_sec")
 	out.AvgSpeedKmh = s.settings.GetInt(r.Context(), "drivers.avg_speed_kmh")
+	// **والمسارُ يصير عنوانا** — كما في كلّ صورةٍ في المنصة.
+	out.AvatarURL = media.URLForPtr(out.AvatarURL)
 	httpx.JSON(w, http.StatusOK, out)
 }
 
