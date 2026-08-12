@@ -21,6 +21,23 @@ import (
 var (
 	ErrCategoryInvalid = httpx.NewError(http.StatusBadRequest, "invalid_category", "errors.invalid_category")
 	ErrNameRequired    = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا متجرَ بلا موضعٍ على الأرض**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «نسوي دبّوس المتجر إلزامي مو اختياري عند
+	//  فتح الحساب».)
+	//
+	// **وكان العمودُ يقبل الفراغ** — فيُفتح متجرٌ ويستقبل طلباتٍ **وهو
+	// بلا نقطةٍ على الخريطة.** ووقع فعلاً: طلبٌ حقيقيٌّ (#1003) لم تظهر
+	// للسائق مسافتُه **لأنّ متجرَه بلا دبّوس**، والمحرّكُ يردّ `-1` أي
+	// «لا يُعرف».
+	//
+	// **وعليه يقوم كلُّ شيء**: المسافةُ التي يقرّر بها السائق · الخريطةُ
+	// التي يمشي عليها · وتوزيعُ «الأقرب» نفسُه.
+	ErrLocationRequired = httpx.NewError(http.StatusBadRequest,
+		"merchant_location_required", "errors.merchant_location_required")
 )
 
 type Category struct {
@@ -285,9 +302,32 @@ type MerchantInput struct {
 	LogoMediaID *string `json:"logo_media_id"`
 }
 
+// requirePoint **يتحقّق أنّ الدبّوس موجودٌ وفي حدود الأرض.**
+//
+// **والصفرُ نقطةٌ صالحةٌ في البحر قرب غانا** — فلا يُقبل ضمناً على أنّه
+// «فارغ»: من أرسل `0,0` أرسل موضعاً، **وهو ليس موضعَ متجرٍ في الرقّة.**
+func requirePoint(lat, lng *float64) error {
+	if lat == nil || lng == nil {
+		return ErrLocationRequired
+	}
+	if *lat < -90 || *lat > 90 || *lng < -180 || *lng > 180 {
+		return ErrLocationRequired
+	}
+	if *lat == 0 && *lng == 0 {
+		return ErrLocationRequired
+	}
+	return nil
+}
+
 func (s *Service) CreateMerchant(ctx context.Context, actorID string, in MerchantInput, ip string) (*Merchant, error) {
 	if in.Name == nil || *in.Name == "" || in.CategoryID == nil {
 		return nil, ErrNameRequired
+	}
+	// **ويُفحص هنا لا في الواجهة** — الإنشاءُ يقع من لوحة الإدارة ومن
+	// شاشة المندوب معاً، **وحارسٌ في واجهةٍ واحدةٍ يُلتفّ عليه من
+	// الأخرى.**
+	if err := requirePoint(in.Lat, in.Lng); err != nil {
+		return nil, err
 	}
 	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, ip)
 	if err != nil {

@@ -36,11 +36,17 @@ androidxActivity = "1.13.0"
 composeBom = "2026.06.01"
 lifecycle = "2.11.0"
 splashscreen = "1.2.0"
+# **أرقام مقروءة من المستودع لا مخمَّنة** — انظر التعليق أعلى الملفّ.
+ktor = "3.5.2"
+serialization = "1.11.0"
+securityCrypto = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+# **الحالة تبقى عبر دوران الجهاز** — ومن كتب رقمه ودار جهازه لا يعيده.
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 
 # **قائمة مواد Compose** — تضبط إصدارات مكتبات Compose كلها من رقم واحد،
 # **فلا تتصادم نسخة `ui` مع نسخة `material3`.**
@@ -56,6 +62,26 @@ compose-material3 = { module = "androidx.compose.material3:material3" }
 # على أجهزةٍ ويُترك للنظام على أخرى.**
 androidx-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
 
+# ══════════════════════════════════════════════════════════════════════
+#  **الشبكة والتحويل — قلب `shared`**
+# ══════════════════════════════════════════════════════════════════════
+#
+# **Ktor لا OkHttp مباشرة**: `shared` لا تعرف أندرويد (القاعدة ٧.٢)،
+# **وOkHttp حزمة أندرويد/JVM**. وKtor واجهة واحدة فوق محرّكات متعدّدة —
+# على أندرويد OkHttp، وعلى آيفون Darwin، **والشيفرة فوقها واحدة.**
+#
+# **و`kotlinx.serialization` رسميّة من JetBrains** — تولّد المحوّلات في
+# زمن الترجمة لا بالانعكاس، **فلا تكسر مع التشويش في بناء الإصدار.**
+ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+
+# **حفظ التوكن مشفّرا بمفتاح في عتاد الجهاز** — انظر `AndroidSession`.
+# **وتوكن التجديد مفتاح الحساب**: من ملكه دخل باسم صاحبه حتى يُبطَل.
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -63,3 +89,5 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 # وتطبيقها يُسقط البناء برسالة صريحة.
 # **مُصرّف Compose صار جزءا من Kotlin منذ 2.0** — لا إصدار مستقلا له.
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# **مولّد محوّلات JSON** — يعمل في زمن الترجمة.
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

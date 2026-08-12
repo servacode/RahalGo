@@ -4429,6 +4429,18 @@
         {
           "name": "min_order",
           "type": "?int64"
+        },
+        {
+          "name": "address_text",
+          "type": "?string"
+        },
+        {
+          "name": "lat",
+          "type": "?float64"
+        },
+        {
+          "name": "lng",
+          "type": "?float64"
         }
       ],
       "response": [
@@ -5056,6 +5068,12 @@
       "statuses": [
         "StatusCreated"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/map-style.json",
+      "handler": "handleMapStyle",
+      "auth": false
     },
     {
       "method": "GET",

@@ -19,6 +19,7 @@ import (
 
 // نصوص إشعارات الطلبات — مجمّعة كي لا تتناثر (كنمط notifTitles في الخادم).
 var t = struct {
+	offerDriver, assignedDriver              string
 	newOrderMerchant, newOrderOps            string
 	accepted, preparing, onTheWay, delivered string
 	rejected, cancelled, failed, refunded    string
@@ -29,6 +30,8 @@ var t = struct {
 	// يتغيّر وما حدا بيعرف ليش»).
 	driverEarned, merchantEarned, refunded2, compensated string
 }{
+	offerDriver:       "طلب جديد بانتظارك",
+	assignedDriver:    "طلب أُسند إليك",
 	newOrderMerchant:  "طلب جديد وصلك",
 	newOrderOps:       "طلب جديد في المنصة",
 	accepted:          "قبل المتجر طلبك",
@@ -257,6 +260,88 @@ func (s *Service) notifyCredits(ctx context.Context, orderID string, credits []w
 			Title: c.title, Body: body,
 			Entity: "wallet", EntityID: orderID, Href: "/wallet",
 			Apps: []string{c.app},
+		})
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **إشعارُ السائق بطلبٍ معروض — وبلاه لا يعمل التطبيقُ أصلاً**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (البندُ الأوّل في قائمة المالك ٢٠٢٦-٠٨-١٢.)
+//
+// # ولماذا لا يكفي البثُّ الحيّ
+//
+// **`drivers:queue` تعمل والتطبيقُ مفتوحٌ وحدَه** — وأكثرُ وقت السائق
+// شاشتُه مطفأةٌ والجوّالُ في جيبه. **فبلا دفعٍ يفتح تطبيقَه كلَّ دقيقتين**،
+// **والطلبُ يفوت لمن رآه أوّلاً.**
+//
+// # ومن يُشعَر
+//
+// **في «بالدور» واحدٌ**: الطلبُ معروضٌ عليه هو وله مهلة — **وإشعارُ
+// الجميع بطلبٍ لا يستطيعونه إزعاجٌ محض.**
+//
+// **وفي «للجميع» كلُّ من على وردية**: هو معروضٌ عليهم فعلاً، **ومن سبق
+// أخذ.**
+//
+// # ولا يُشعَر من ليس على وردية
+//
+// **ورديّةٌ مغلقةٌ تعني «لست في العمل»** — وإشعارٌ يرنّ في بيته ليلاً
+// يجعله يُطفئ الإشعاراتِ كلَّها، **فيفقد الطلبَ يومَ يعمل.**
+func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
+	if s.notify == nil {
+		return
+	}
+
+	var merchant string
+	var number int64
+	var cash int64
+	if err := s.db.QueryRow(ctx, `
+		SELECT COALESCE(m.name, ''), o.number, o.cash_due
+		FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1`, orderID).Scan(&merchant, &number, &cash); err != nil {
+		return
+	}
+
+	targets := []string{}
+	if driverID != "" {
+		targets = append(targets, driverID)
+	} else {
+		rows, err := s.db.Query(ctx, `
+			SELECT u.id::text FROM users u
+			JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
+			WHERE u.on_shift AND u.status = 'active'`)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err == nil {
+				targets = append(targets, id)
+			}
+		}
+	}
+
+	title := t.offerDriver
+	if driverID != "" && s.directAssign(ctx) {
+		title = t.assignedDriver
+	}
+	body := merchant
+	if cash > 0 {
+		body = fmt.Sprintf("%s · تقبض %d", merchant, cash)
+	}
+
+	for _, id := range targets {
+		s.notify.Notify(ctx, notifications.Input{
+			UserID: id, Kind: notifications.KindOrder,
+			Title: title, Body: body,
+			Entity: "order", EntityID: orderID,
+			Href: "/driver",
+			// **وتطبيقُ السائق وحدَه يرنّ** — الحسابُ نفسُه قد يكون
+			// زبوناً، **وطلبُ عملٍ يرنّ في تطبيق الزبون** خبرٌ في غير
+			// مكانه.
+			Apps: []string{"driver"},
 		})
 	}
 }

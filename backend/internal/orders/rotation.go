@@ -251,6 +251,8 @@ func (s *Service) OfferNext(ctx context.Context, orderID string, skip []string) 
 		// وتحكم نقطةُ الطابور ما يراه كلُّ سائق.
 		s.pub.Publish(topicDriverQueue, map[string]any{"type": "order"})
 		s.pub.Publish("driver:"+driverID, map[string]any{"type": "order"})
+		// **والبثُّ يصل شاشةً مفتوحة، والدفعُ يصل جيباً مغلقاً.**
+		s.notifyOffer(ctx, orderID, driverID)
 	}
 	return err
 }
@@ -311,6 +313,9 @@ func (s *Service) assignDirectly(ctx context.Context, orderID, driverID, note st
 		return err
 	}
 	s.pub.Publish(topicDriverQueue, map[string]any{"type": "order"})
+	// **والمُسنَدُ إليه يُنبَّه** — الطلبُ صار مهمّتَه بلا أن يطلبه،
+	// **ومن لم يُنبَّه لم يتحرّك** حتّى تنقضي مهلةُ الصمت فيُنزع منه.
+	s.notifyOffer(ctx, orderID, driverID)
 	return nil
 }
 

@@ -122,6 +122,21 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 	req, err := decode[struct {
 		DefaultPrepMinutes *int   `json:"default_prep_minutes"`
 		MinOrder           *int64 `json:"min_order"`
+		// ══════════════════════════════════════════════════════════════
+		// **وعنوانُه ودبّوسُه بيده هو**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «يجب إضافة عنوان المتجر بالإعدادات
+		//  لأنّه غير موجود بالويب».)
+		//
+		// **وكانا يُضبطان من لوحة الإدارة وحدَها** — فصاحبُ المتجر ينتقل
+		// أو يجد دبّوسَه في الشارع المجاور **ولا يملك أن يصلحه**، وينتظر
+		// من يفتح له اللوحة.
+		//
+		// **والسائقُ هو من يدفع الثمن**: يقف على بابٍ ليس بابَ المتجر.
+		AddressText *string  `json:"address_text"`
+		Lat         *float64 `json:"lat"`
+		Lng         *float64 `json:"lng"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -135,12 +150,34 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, errValidation)
 		return
 	}
+	// **والنقطةُ تُرسَل كاملةً أو لا تُرسَل** — نصفُها يكتب موضعاً على
+	// خطِّ الاستواء: **من أرسل `lat` وحدَه نقل متجرَه إلى البحر.**
+	if (req.Lat == nil) != (req.Lng == nil) {
+		s.respondErr(w, errValidation)
+		return
+	}
+	if req.Lat != nil {
+		if *req.Lat < -90 || *req.Lat > 90 || *req.Lng < -180 || *req.Lng > 180 ||
+			(*req.Lat == 0 && *req.Lng == 0) {
+			s.respondErr(w, errValidation)
+			return
+		}
+	}
 	if _, err := s.pg.Exec(r.Context(), `
 		UPDATE merchants SET
 			default_prep_minutes = COALESCE($2, default_prep_minutes),
 			min_order            = COALESCE($3, min_order),
+			address_text         = COALESCE($4, address_text),
+			-- **ولا يُمحى الدبّوسُ حين لا يُرسَل** — الشاشةُ قد تحفظ
+			-- مدّةَ التحضير وحدَها، **ومن كتب نقطةً من قيمٍ فارغة
+			-- أضاع موضعَ المتجر بحفظِ حقلٍ آخر.**
+			location = CASE
+				WHEN $5::float8 IS NOT NULL
+				THEN ST_SetSRID(ST_MakePoint($6::float8, $5::float8), 4326)::geography
+				ELSE location END,
 			updated_at           = now()
-		WHERE id = $1`, merchantID, req.DefaultPrepMinutes, req.MinOrder); err != nil {
+		WHERE id = $1`, merchantID, req.DefaultPrepMinutes, req.MinOrder,
+		req.AddressText, req.Lat, req.Lng); err != nil {
 		s.respondErr(w, err)
 		return
 	}

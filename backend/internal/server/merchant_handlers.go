@@ -39,13 +39,22 @@ type merchantStore struct {
 	// **فصفحةُ إعداداتٍ تفتح بحقولٍ فارغةٍ ثمّ يكتب المالكُ فيها ما يظنّه.**
 	PrepMinutes int   `json:"default_prep_minutes"`
 	MinOrder    int64 `json:"min_order"`
+	// **الموضعُ على الأرض** — ودبّوسٌ فارغٌ يعني متجراً لا يعرف السائقُ
+	// أين يقف عنده. (والحقولُ فارغةٌ لمتجرٍ قديمٍ لم يُضبط بعد.)
+	AddressText string   `json:"address_text"`
+	Lat         *float64 `json:"lat"`
+	Lng         *float64 `json:"lng"`
 }
 
 // handleMerchantStores متاجر صاحب الحساب.
 func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT m.id, m.name, c.icon, lm.thumb_path, m.status, m.emergency_closed,
-		       m.default_prep_minutes, m.min_order
+		       m.default_prep_minutes, m.min_order,
+		       -- **وعنوانُه ودبّوسُه تقرؤهما شاشةُ إعداداته** — ولا تُضبط
+		       -- من لوحة الإدارة وحدَها بعد اليوم (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+		       m.address_text,
+		       ST_Y(m.location::geometry), ST_X(m.location::geometry)
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
@@ -59,7 +68,8 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m merchantStore
 		if err := rows.Scan(&m.ID, &m.Name, &m.CategoryIcon, &m.LogoThumbURL,
-			&m.Status, &m.EmergencyClosed, &m.PrepMinutes, &m.MinOrder); err != nil {
+			&m.Status, &m.EmergencyClosed, &m.PrepMinutes, &m.MinOrder,
+			&m.AddressText, &m.Lat, &m.Lng); err != nil {
 			s.respondErr(w, err)
 			return
 		}

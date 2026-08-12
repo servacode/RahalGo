@@ -11,10 +11,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +30,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.rahalgo.design.BrandCanvas
 import com.rahalgo.design.RahalGoTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rahalgo.design.intro.BrandIntro
+import com.rahalgo.driver.login.LoginActions
+import com.rahalgo.driver.login.LoginScreen
+import com.rahalgo.driver.login.LoginViewModel
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -114,17 +121,56 @@ private fun DriverApp() {
 }
 
 /**
- * **الوجهةُ بعد الافتتاح.**
+ * ══════════════════════════════════════════════════════════════════════
+ * **الوجهة — تُقرَّر هنا لا في شاشة الافتتاح**
+ * ══════════════════════════════════════════════════════════════════════
  *
- * (طلب المالك: «يجب ألا تقرر Splash بنفسها أين يذهب المستخدم».)
+ * (شرط المالك: «يجب ألّا تقرّر Splash بنفسها أين يذهب المستخدم».)
  *
- * **وهي اليوم شاشةُ انتظارٍ فارغة** — طبقةُ التوجيه تُبنى مع الدخول
- * (الخطوة التالية)، وهناك تُقرَّر الوجهة: داخلٌ فلوحتُه، وخارجٌ فالدخول،
- * ونسخةٌ قديمةٌ فالتحديث.
+ * **وثلاث حالات**: يُفحص التوكن المحفوظ · فإن صحّ فلوحته · وإلّا فالدخول.
+ *
+ * **وشاشة انتظار أثناء الفحص لا شاشة دخول**: من له جلسة حيّة **لا يُرى
+ * شاشة دخول لحظة** ثمّ تُبدَّل — وهو وميض يُقرأ عطبا.
  */
 @Composable
 private fun Destination() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("رحّال غو", style = MaterialTheme.typography.headlineLarge)
+    val vm: LoginViewModel = viewModel()
+
+    when {
+        vm.restoring -> Box(Modifier.fillMaxSize())
+
+        vm.user != null -> DriverHome(
+            name = vm.user!!.fullName.ifBlank { vm.user!!.phone },
+            onLogout = vm::logout,
+        )
+
+        else -> LoginScreen(
+            state = vm.state,
+            actions = LoginActions(
+                login = vm::login,
+                useOtp = { /* الباب الثاني — الخطوة التالية */ },
+            ),
+        )
+    }
+}
+
+/**
+ * **لوحة السائق — شاشة إثبات لا أكثر.**
+ *
+ * **وغرضها اليوم واحد**: أن يرى المالك اسمه فيعلم أنّ الدخول وصل
+ * المحرّك الحقيقي. **وتُبنى شاشته الحقيقية في الخطوة التالية.**
+ */
+@Composable
+private fun DriverHome(name: String, onLogout: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.login_welcome, name),
+            style = MaterialTheme.typography.headlineSmall,
+        )
+        TextButton(onClick = onLogout) { Text("خروج") }
     }
 }

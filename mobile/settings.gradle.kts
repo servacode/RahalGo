@@ -8,7 +8,7 @@
 // الأول. **والبنية النهائية مقررة ومكتوبة** في القواعد، فلا يُنقل شيء
 // لاحقا:
 //
-//   shared/        القلب — لا يعرف أندرويد (يُضاف مع أول نداء شبكة)
+//   shared/        القلب — لا يعرف أندرويد ✓
 //   design/        التوكنز والمكوّنات ✓
 //   core-android/  ما يلمس النظام (يُضاف مع الموقع والإشعارات)
 //   app-*/         شاشات فقط
@@ -32,5 +32,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "rahalgo"
+include(":shared")
 include(":design")
 include(":app-driver")

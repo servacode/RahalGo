@@ -229,6 +229,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/hero", s.handlePublicHero)
 		// **هويّةُ المنصة** — خفيفةٌ ومفتوحة، تناديها الخمسةُ وشاشةُ الدخول.
 		r.Get("/public/platform", s.handlePublicPlatform)
+		// **وأسلوبُ الخريطة** — يقرؤه العارضُ والمنزِّلُ معاً.
+		r.Get("/public/map-style.json", s.handleMapStyle)
 		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.
 		r.Get("/public/app", s.handleDownloadApp)
 		r.Get("/public/zone", s.handlePublicZone)

@@ -49,11 +49,14 @@ kotlin {
 dependencies {
     // **وحدةُ التصميم — الثيمُ والحركةُ لأربعة تطبيقات.**
     implementation(project(":design"))
+    implementation(project(":shared"))
+    implementation(libs.androidx.security.crypto)
     // **شاشةُ النظام عند الإقلاع** — الطريقةُ الرسميّة، انظر `themes.xml`.
     implementation(libs.androidx.splashscreen)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

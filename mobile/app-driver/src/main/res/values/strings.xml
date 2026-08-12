@@ -16,4 +16,32 @@
          **ويُكتب مفتاحاً لا يُقتطع بالحساب**: اقتطاعُ آخرِ كلمتين من
          النصّ يكسر مع أوّل تبديلٍ للعبارة، **ولا شيءَ يُنبّه.** */ -->
     <string name="intro_tagline_brand">رحّال غو</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **نصوص شاشة الدخول**
+         ══════════════════════════════════════════════════════════════
+
+         **وهنا مؤقّتا لا في `shared/i18n`** (القاعدة ١.١): معجم القلب
+         المشترك يُبنى مع أوّل شاشة يشترك فيها تطبيقان. **وشاشة الدخول
+         أوّل ما يُبنى**، فتُنقل إليه حين يُنشأ.
+
+         **والنصوص من معجم الويب حرفا بحرف** — فلا تقول المنصّة شيئا
+         في المتصفّح وغيره في الهاتف. -->
+    <string name="login_title">دخول السائق</string>
+    <string name="login_phone">رقم الهاتف</string>
+    <string name="login_password">كلمة المرور</string>
+    <string name="login_submit">دخول</string>
+    <string name="login_use_otp">الدخول برمز بدل كلمة المرور</string>
+    <string name="login_welcome">أهلا %1$s</string>
+
+    <!-- **رسائل الخطأ بمفاتيح المحرّك** — يرسل `message_key` لا نصا
+         (`GROUND-RULES.md` §1.1)، **والواجهة تترجمه.** ومفتاح لا ترجمة
+         له يُعرض رمزه، **فيُعرف ويُضاف** بدل أن يُبتلع في رسالة عامّة. -->
+    <string name="err_unauthorized">رقم الهاتف أو كلمة المرور غير صحيحة</string>
+    <string name="err_validation">تحقّق من البيانات المُدخلة</string>
+    <string name="err_internal">تعذّر الاتّصال — حاول بعد قليل</string>
+    <string name="err_user_blocked">هذا الحساب محظور</string>
+    <string name="err_user_suspended">هذا الحساب موقوف</string>
+    <string name="err_rate_limited">محاولات كثيرة — انتظر قليلا</string>
+    <string name="err_network">لا اتّصال بالإنترنت</string>
 </resources>
