@@ -23,6 +23,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -248,6 +249,9 @@ fun TripScreen(
             reasons = state.failReasons,
             onPick = actions.fail,
             onDismiss = actions.dismissFail,
+            // **وبابُ «المشكلة عندي» قبل الاستلام وحدَه** — بعده
+            // البضاعةُ في يده، **ولا تُعاد بضغطة زرّ.**
+            onRelease = if (order.status == "at_pickup") actions.release else null,
         )
     }
 }
@@ -398,6 +402,7 @@ private fun FailDialog(
     reasons: List<FailReasonItem>,
     onPick: (String) -> Unit,
     onDismiss: () -> Unit,
+    onRelease: (() -> Unit)? = null,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -410,6 +415,30 @@ private fun FailDialog(
                 for (r in reasons) {
                     TextButton(onClick = { onPick(r.code) }, modifier = Modifier.fillMaxWidth()) {
                         Text(reasonLabel(r.code), modifier = Modifier.fillMaxWidth())
+                    }
+                }
+                // ══════════════════════════════════════════════════════
+                // **والمشكلةُ قد تكون عنده هو — فيمضي ويأتي غيرُه**
+                // ══════════════════════════════════════════════════════
+                //
+                // (قرار المالك ٢٠٢٦-٠٨-١٢: «المنصّة هي ترسل سائقاً
+                //  ثانياً في حال حصلت مشكلة للسائق عند المتجر».)
+                //
+                // **وأسبابُ المتجر كلُّها ذنبُ متجر** — ومن عطلت
+                // درّاجتُه فاختار «المتجر مغلق» ليمضي **حمّل متجراً
+                // بريئاً ذنباً وتعويضا.**
+                //
+                // **والطلبُ لا يُلغى بل يعود للطابور**: الزبونُ ينتظر
+                // طعامه، **وسائقٌ ثانٍ يأخذه في دقيقة** — وإلغاؤه
+                // لعطلٍ في درّاجةٍ عقوبةٌ على من لا ذنب له.
+                if (onRelease != null) {
+                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
+                    TextButton(onClick = onRelease, modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = stringResource(R.string.fail_mine_release),
+                            color = BrandOrange,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }
@@ -938,9 +967,20 @@ private fun TripCard(
                 modifier = Modifier.weight(1f),
             )
 
-            // **وإعادةُ الطلب قبل أن يستلم البضاعة فقط** — بعدها هي في
-            // يده، **والبضاعة لا تُعاد بضغطة زرّ.**
-            if (order.status == "assigned" || order.status == "at_pickup") {
+            // ══════════════════════════════════════════════════════════
+            // **والإعادةُ في الطريق وحدَه — لا عند باب المتجر**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢: «بما أنّ السائق وصل للمتجر لا
+            //  يوجد داعٍ لزرّ أعِد للطابور».)
+            //
+            // **ومن وصل صار خبرُه خبرا**: المتجرُ مغلقٌ أو الطلبُ غيرُ
+            // جاهزٍ أو مشكلةٌ عنده هو — **وكلُّها تُقال بسببها في «لدي
+            // مشكلة»**، لا بزرٍّ صامتٍ يُعيد الطلبَ ولا يقول لماذا.
+            //
+            // **وسببٌ مكتوبٌ فرقُه في المال**: «المتجر مغلق» ذنبُ متجرٍ
+            // يُعوَّض عليه السائق، **وإعادةٌ بلا سبب** تُقرأ تردّداً منه.
+            if (order.status == "assigned") {
                 SmallAction(
                     icon = R.drawable.ic_undo,
                     // **واللفظُ قصيرٌ هنا** — ثلاثةُ أزرارٍ في صفٍّ

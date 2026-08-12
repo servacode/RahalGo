@@ -198,6 +198,7 @@
     <string name="trip_near_pickup">يبدو أنّك وصلت المتجر</string>
     <string name="trip_near_dropoff">يبدو أنّك وصلت الزبون</string>
     <string name="trip_problem">لدي مشكلة</string>
+    <string name="fail_mine_release">المشكلة عندي — أعِد الطلب لسائق آخر</string>
     <string name="trip_release_short">إعادة للطابور</string>
     <string name="emg_title">تبليغ العمليات</string>
     <string name="emg_body">سيصل بلاغٌ فوريٌّ إلى المكتب بموقعك ورقم الطلب. استعمله عند عطلٍ أو خطرٍ أو أيّ ما يمنعك من إكمال الطلب.</string>
