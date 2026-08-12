@@ -185,6 +185,80 @@ private fun Identity(vm: AccountViewModel, s: AccountState) {
     )
     Spacer(Modifier.height(8.dp))
     PhoneChange(vm, s)
+    Spacer(Modifier.height(12.dp))
+    WhatsAppVerify(vm, s, me.whatsappVerified)
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **توثيقُ واتساب — شرطٌ لفتح الدوام**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نعم بالطبع السائق يجب أن يوثّق حسابَه على
+ *  واتساب… لا يمكنه استقبال الطلبات بدون توثيق حسابه، اعتبره شرطاً
+ *  للسائق».)
+ *
+ * **وعلى رقم الحساب نفسِه لا على رقمٍ ثانٍ** (قرارُ المالك ٢٠٢٦-٠٨-١٢:
+ * «ما يصير رقم الهاتف مختلف عن واتساب، هيك تخرب الدنيا») — **فلا يُسأل
+ * عن رقم**: يُوثَّق ما هو مسجَّلٌ في حسابه.
+ *
+ * **وحالُه يُقال قبل الزرّ لا بعده**: من رأى «غير موثَّق» عرف لماذا لا
+ * يفتح دوامُه، **ومن مُنع بلا أن يعرف يظنّ التطبيقَ معطّلا.**
+ */
+@Composable
+private fun WhatsAppVerify(vm: AccountViewModel, s: AccountState, verified: Boolean) {
+    var code by remember { mutableStateOf("") }
+    val waiting = s.waPending.isNotEmpty()
+
+    Text(
+        text = stringResource(
+            if (verified) R.string.acc_wa_verified else R.string.acc_wa_unverified,
+        ),
+        color = if (verified) StateGreen else StateRed,
+        style = MaterialTheme.typography.bodySmall,
+    )
+    // **والموثَّقُ لا يُدعى إلى فعلٍ تمّ** — زرٌّ باقٍ بعد نجاحه يُقرأ
+    // «لم ينجح».
+    if (verified && !waiting) return
+
+    Spacer(Modifier.height(6.dp))
+    if (!waiting) {
+        Text(
+            stringResource(R.string.acc_wa_hint),
+            color = InkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = vm::askWhatsApp,
+            enabled = !s.busy,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.acc_wa_verify)) }
+        return
+    }
+
+    OutlinedTextField(
+        value = code,
+        onValueChange = { code = it },
+        label = { Text(stringResource(R.string.acc_wa_code)) },
+        singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            onClick = { vm.confirmWhatsApp(code); code = "" },
+            enabled = !s.busy && code.isNotBlank(),
+            modifier = Modifier.weight(1f),
+        ) { Text(stringResource(R.string.acc_wa_confirm)) }
+        OutlinedButton(
+            onClick = { vm.cancelWhatsApp(); code = "" },
+            modifier = Modifier.weight(1f),
+        ) { Text(stringResource(R.string.acc_delete_cancel)) }
+    }
 }
 
 /**

@@ -274,6 +274,14 @@
     <string name="acc_phone_saved">بُدِّل رقمك</string>
     <string name="acc_phone_taken">الرقم مستعمَل في حساب آخر</string>
     <string name="acc_phone_bad">رقم غير صحيح</string>
+    <string name="acc_wa_verified">حسابك موثَّق على واتساب</string>
+    <string name="acc_wa_unverified">حسابك غير موثَّق — لا تفتح دوامك قبل التوثيق</string>
+    <string name="acc_wa_verify">وثّق حسابك</string>
+    <string name="acc_wa_code">الرمز الذي وصلك على واتساب</string>
+    <string name="acc_wa_confirm">تأكيد التوثيق</string>
+    <string name="acc_wa_done">وُثّق حسابك</string>
+    <string name="acc_wa_hint">يصلك رمز على واتساب على الرقم نفسه. والتوثيق شرط لفتح الدوام واستقبال الطلبات.</string>
+    <string name="err_whatsapp_required">وثّق رقمك على واتساب قبل فتح الدوام</string>
     <string name="acc_save">حفظ</string>
     <string name="acc_saved">حُفظ</string>
 

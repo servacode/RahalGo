@@ -29,6 +29,8 @@ var (
 	errBadFailReason = httpx.NewError(http.StatusBadRequest, "bad_fail_reason", "errors.bad_fail_reason")
 	errNotOnShift    = httpx.NewError(http.StatusConflict, "not_on_shift", "errors.not_on_shift")
 	errTooManyActive = httpx.NewError(http.StatusConflict, "too_many_active_orders", "errors.too_many_active_orders")
+	// errWhatsAppRequired **لا دوامَ قبل توثيق الرقم** — بقرار المالك.
+	errWhatsAppRequired = httpx.NewError(http.StatusConflict, "whatsapp_required", "errors.whatsapp_required")
 )
 
 // handleDriverMe حالته: دوامه، ونقدٌ بحوزته، وأجرٌ له، وحصيلة يومه.
@@ -192,6 +194,36 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا يفتح دوامَه من لم يوثّق رقمَه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٣: «لا يمكنه استقبال الطلبات بدون توثيق
+	//  حسابه — اعتبره شرطاً للسائق».)
+	//
+	// **والبابُ هنا لا عند القبول**: من مُنع عند أوّل ضغطةٍ يكون قد فتح
+	// تطبيقَه وانتظر الطلبات، **ثمّ يُردّ فلا يفهم لماذا** — وطلبٌ عُرض
+	// عليه ورُدّ عنه يضيع وقتَ زبونٍ ينتظر.
+	//
+	// **والخروجُ من الدوام لا يُمنع**: من وُثّق ثمّ بدّل رقمَه يسقط
+	// توثيقُه — **ولو مُنع الخروجُ لَبقي في دوامٍ لا يستطيع تركَه.**
+	//
+	// **والتحقّقُ في الخادم لا في الشاشة**: الشاشةُ تُخفي الزرّ، **ومن
+	// ينادي النقطةَ مباشرةً لا يوقفه إخفاءُ زرّ.**
+	if req.On && s.settings.GetBool(r.Context(), "drivers.require_whatsapp") {
+		var verified bool
+		if err := s.pg.QueryRow(r.Context(),
+			`SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`,
+			userIDFrom(r)).Scan(&verified); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if !verified {
+			s.respondErr(w, errWhatsAppRequired)
+			return
+		}
+	}
+
 	if _, err := s.pg.Exec(r.Context(), `
 		UPDATE users SET on_shift = $2,
 			shift_started_at = CASE WHEN $2 THEN now() ELSE NULL END,

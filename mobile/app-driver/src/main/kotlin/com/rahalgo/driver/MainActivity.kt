@@ -373,8 +373,25 @@ private fun SignedIn(onLogout: () -> Unit) {
             NavigationBar {
                 if (hasTrip) {
                     NavigationBarItem(
-                        selected = tab == 0,
-                        onClick = { tab = 0; orders.refresh() },
+                        // ══════════════════════════════════════════════
+                        // **والتبويبُ يخرج من الحساب — كما في الويب**
+                        // ══════════════════════════════════════════════
+                        //
+                        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «إذا كنتُ داخل حسابي
+                        //  وضغطتُ الشاشة الرئيسيّة يجب أن يذهب إلى
+                        //  الشاشة الرئيسيّة أو أيّ قسمٍ آخر… انظر كيف
+                        //  هي على الويب، يجب أيضاً أن تكون كذلك على
+                        //  التطبيق».)
+                        //
+                        // **وكان الحسابُ يغطّي فوق التبويبات**، فيضغط
+                        // «الرئيسيّة» فيتبدّل التبويبُ تحته **ولا يتغيّر
+                        // ما يراه** — فيظنّ الزرَّ معطّلا.
+                        //
+                        // **وشريطٌ يُضغط ولا يستجيب أسوأُ من شريطٍ
+                        // مخفيّ**: المخفيُّ يقول «لا مخرجَ هنا»،
+                        // **والصامتُ يقول «معطّل».**
+                        selected = tab == 0 && !account,
+                        onClick = { account = false; tab = 0; orders.refresh() },
                         icon = {
                             Icon(painterResource(R.drawable.ic_trip), contentDescription = null)
                         },
@@ -382,16 +399,16 @@ private fun SignedIn(onLogout: () -> Unit) {
                     )
                 }
                 NavigationBarItem(
-                    selected = tab == 1,
-                    onClick = { tab = 1; orders.refresh() },
+                    selected = tab == 1 && !account,
+                    onClick = { account = false; tab = 1; orders.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_orders), contentDescription = null)
                     },
                     label = { Text(stringResource(R.string.nav_orders)) },
                 )
                 NavigationBarItem(
-                    selected = tab == 2,
-                    onClick = { tab = 2; home.refresh() },
+                    selected = tab == 2 && !account,
+                    onClick = { account = false; tab = 2; home.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_home), contentDescription = null)
                     },

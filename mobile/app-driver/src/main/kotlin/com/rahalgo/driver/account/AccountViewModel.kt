@@ -50,6 +50,8 @@ data class AccountState(
      * بعد الإرسال فأكّد رقماً لم يصله رمز.**
      */
     val phonePending: String = "",
+    /** **ورقمُ توثيق واتساب المنتظِر** — والفارغُ لم يُطلب. */
+    val waPending: String = "",
 )
 
 class AccountViewModel(app: Application) : AndroidViewModel(app) {
@@ -221,20 +223,57 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ══════════════════════════════════════════════════════════════════
-    // **ولا توثيقَ واتساب في شاشة السائق**
+    // **وتوثيقُ واتساب صار شرطاً على السائق**
     // ══════════════════════════════════════════════════════════════════
     //
-    // (سأل المالك ٢٠٢٦-٠٨-١٣: «وأرسل رمزاً على الواتساب — أيضاً لم أفهم
-    //  دوره».)
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نعم بالطبع السائق يجب أن يوثّق حسابَه
+    //  على واتساب… لا يمكنه استقبال الطلبات بدون توثيق حسابه، اعتبره
+    //  شرطاً للسائق».)
     //
-    // **وقِيس فلم يُوجد له دور**: التوثيقُ يُقرأ في موضعين اثنين —
-    // **استعادةُ رمز الأدمن** (للأدمن وحدَه)، **ومنعُ الزبون من الطلب**
-    // بإعدادٍ مُطفأ. **ولا شيءَ منهما يخصّ السائق.**
+    // **وقد سألتُ عن دوره أمسِ فلم يكن له دور** — فقرّره المالكُ دورا.
+    // **والمنعُ في المحرّك لا في الشاشة**: من لم يوثّق **لا يفتح دوامه**
+    // (`drivers.require_whatsapp`)، فلا يُعرض عليه طلبٌ أصلا.
     //
-    // **وزرٌّ لا يفعل شيئاً يُتعب من يقرؤه** ويجعله يظنّ حسابَه ناقصا.
-    //
-    // **والنداءان باقيان في `AccountApi`** — فإن صار التوثيقُ شرطاً على
-    // السائق يوماً، يُعاد الزرُّ ولا يُعاد بناءُ الطريق.
+    // **وعلى رقم الحساب نفسِه لا على رقمٍ ثانٍ** (قرارُ المالك
+    // ٢٠٢٦-٠٨-١٢: «ما يصير رقم الهاتف مختلف عن واتساب»).
+
+    fun askWhatsApp() {
+        val phone = state.me?.phone.orEmpty()
+        if (phone.isEmpty() || state.busy) return
+        state = state.copy(busy = true, error = "", done = "")
+        viewModelScope.launch {
+            state = try {
+                backend.account.whatsappRequest(phone)
+                state.copy(busy = false, waPending = phone)
+            } catch (e: Exception) {
+                state.copy(busy = false, error = describe(e))
+            }
+        }
+    }
+
+    fun confirmWhatsApp(code: String) {
+        val phone = state.waPending
+        if (phone.isEmpty() || state.busy) return
+        state = state.copy(busy = true, error = "", done = "")
+        viewModelScope.launch {
+            state = try {
+                backend.account.whatsappConfirm(phone, code.trim())
+                val me = backend.account.summary()
+                state.copy(
+                    me = me,
+                    busy = false,
+                    waPending = "",
+                    done = getApplication<Application>().getString(R.string.acc_wa_done),
+                )
+            } catch (e: Exception) {
+                state.copy(busy = false, error = describe(e))
+            }
+        }
+    }
+
+    fun cancelWhatsApp() {
+        state = state.copy(waPending = "", error = "")
+    }
 
     fun cancelDelete() {
         state = state.copy(deleteAsked = false, error = "")
@@ -252,6 +291,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
                 "otp_invalid", "invalid_code" -> app.getString(R.string.acc_bad_code)
                 "phone_taken", "phone_exists" -> app.getString(R.string.acc_phone_taken)
                 "invalid_phone", "bad_phone" -> app.getString(R.string.acc_phone_bad)
+                "whatsapp_required" -> app.getString(R.string.err_whatsapp_required)
                 "has_active_orders" -> app.getString(R.string.err_has_active_orders)
                 "" -> app.getString(R.string.err_internal)
                 else -> e.body.code
