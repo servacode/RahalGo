@@ -96,11 +96,35 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 	for _, p := range route.Geometry {
 		pts = append(pts, [2]float64{p.Lat, p.Lng})
 	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **والمسافةُ من المحرّك — والمدّةُ من إعداد المالك**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ومدّةُ OSRM محسوبةٌ من وسم `maxspeed` في الخريطة** — وهو نادرٌ في
+	// شوارع الرقّة، **فيرجع المحرّكُ إلى سرعاتٍ افتراضيّةٍ بحسب نوع
+	// الشارع.** وقيس (٢٠٢٦-٠٨-١٢): ١٥١٨ متراً في ٢٫٣ دقيقة — **أربعون
+	// كيلومتراً في الساعة لدرّاجةٍ في سوق.**
+	//
+	// **والمالكُ ضبط عشرين** (`drivers.avg_speed_kmh`) لمدينةٍ بازدحامها
+	// ووقفاتها، **وتقديرٌ متفائلٌ يصنع شكوى.**
+	//
+	// **فالمسافةُ صارت حقيقيّةً — وهي ما كان يكذب**، والسرعةُ تبقى رقماً
+	// واحداً يفهمه المالكُ ويضبطه بعينه. **ومدّةُ المحرّك تُرسَل معها**
+	// لتُقارَن بالواقع يوماً وتُبدَّل إن صحّت.
+	speed := s.settings.GetInt(r.Context(), "drivers.avg_speed_kmh")
+	duration := route.DurationS
+	if speed > 0 {
+		duration = route.DistanceM / (float64(speed) * 1000 / 3600)
+	}
+
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"available":  true,
 		"distance_m": math.Round(route.DistanceM),
-		"duration_s": math.Round(route.DurationS),
-		"points":     pts,
+		"duration_s": math.Round(duration),
+		// engine_duration_s **ما قاله المحرّك نفسُه** — يُقارَن ولا يُعرض.
+		"engine_duration_s": math.Round(route.DurationS),
+		"points":            pts,
 	})
 }
 
