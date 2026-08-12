@@ -1,6 +1,9 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import androidx.activity.compose.BackHandler
+import com.rahalgo.driver.account.AccountViewModel
+import com.rahalgo.driver.account.AccountScreen
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -253,8 +256,12 @@ private fun Destination() {
 @Composable
 private fun SignedIn(onLogout: () -> Unit) {
     var tab by rememberSaveable { mutableStateOf(0) }
+    // **وحسابُه يبقى مفتوحاً بعد دوران الشاشة** — من كتب اسمَه نصفاً ثمّ
+    // أمال هاتفَه **لا يجد نفسَه في شاشةٍ أخرى.**
+    var account by rememberSaveable { mutableStateOf(false) }
     val home: HomeViewModel = viewModel()
     val orders: OrdersViewModel = viewModel()
+    val accountVm: AccountViewModel = viewModel()
     val context = LocalContext.current
 
     // ══════════════════════════════════════════════════════════════════
@@ -353,6 +360,7 @@ private fun SignedIn(onLogout: () -> Unit) {
                 unread = home.unread,
                 onWallet = { tab = 2 },
                 onNotifications = home::openInbox,
+                onProfile = { account = true },
             )
         },
         bottomBar = {
@@ -404,6 +412,26 @@ private fun SignedIn(onLogout: () -> Unit) {
             val notices = home.inbox
             if (notices != null) {
                 InboxSheet(items = notices, onClose = home::closeInbox)
+                return@Box
+            }
+
+            // ══════════════════════════════════════════════════════════
+            // **وحسابُه يغطّي التبويبَ ولا يصير تبويبا**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «بالطبع تفتح صفحةً كاملة».)
+            //
+            // **وتبويبٌ رابعٌ يزاحم ثلاثةً تُستعمل كلَّ دقيقة** — والحسابُ
+            // يُفتح مرّةً في الشهر. **ويُدخَل من صورته حيث يتوقّعه**، لا
+            // من شريطٍ سفليٍّ يتعلّمه.
+            //
+            // **والرجوعُ من زرّ النظام أيضاً** — إبهامٌ يعود بما تعوّد.
+            if (account) {
+                BackHandler { account = false }
+                AccountScreen(
+                    vm = accountVm,
+                    onLoggedOut = onLogout,
+                )
                 return@Box
             }
 

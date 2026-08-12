@@ -256,4 +256,48 @@
     <string name="inbox_title">الإشعارات</string>
     <string name="card_dist_to">المسافة إلى (%1$s)</string>
     <string name="card_invoice_total">إجمالي الفاتورة</string>
+
+    <!-- ══ شاشةُ الحساب ══ -->
+    <string name="acc_title">حسابي</string>
+    <string name="acc_identity">هويّتي</string>
+    <string name="acc_photo">الصورة</string>
+    <string name="acc_photo_pick">اختر صورة</string>
+    <string name="acc_photo_remove">إزالة الصورة</string>
+    <string name="acc_name">الاسم الكامل</string>
+    <string name="acc_phone">رقم الهاتف</string>
+    <string name="acc_phone_hint">لتبديل الرقم افتح حسابك على الموقع — يصلك رمز تأكيد.</string>
+    <string name="acc_wa_verified">واتساب موثَّق</string>
+    <string name="acc_wa_unverified">واتساب غير موثَّق</string>
+    <string name="acc_save">حفظ</string>
+    <string name="acc_saved">حُفظ</string>
+
+    <string name="acc_password">كلمة المرور</string>
+    <string name="acc_pw_current">كلمة المرور الحاليّة</string>
+    <string name="acc_pw_new">الجديدة</string>
+    <string name="acc_pw_confirm">تأكيد الجديدة</string>
+    <string name="acc_pw_change">تبديل كلمة المرور</string>
+    <string name="acc_pw_changed">بُدِّلت كلمة المرور</string>
+    <string name="acc_pw_mismatch">الجديدتان غير متطابقتين</string>
+    <string name="acc_wrong_password">كلمة المرور الحاليّة غير صحيحة</string>
+    <string name="acc_weak_password">كلمة المرور قصيرة — ثمانية أحرف على الأقلّ</string>
+
+    <string name="acc_addresses">عناويني</string>
+    <string name="acc_addr_empty">لا عناوين محفوظة</string>
+    <string name="acc_addr_add">إضافة عنوان</string>
+    <string name="acc_addr_label">التسمية (البيت · العمل)</string>
+    <string name="acc_addr_text">وصف العنوان</string>
+    <string name="acc_addr_here">موقعي الحاليّ</string>
+    <string name="acc_addr_need_point">لا موقع بعد — شغّل الموقع ثمّ أعد المحاولة</string>
+    <string name="acc_addr_default">الافتراضيّ</string>
+    <string name="acc_addr_make_default">اجعله الافتراضيّ</string>
+    <string name="acc_addr_delete">حذف</string>
+
+    <string name="acc_danger">حذف الحساب</string>
+    <string name="acc_delete_hint">يُحذف حسابك ولا يمكن استرجاعه. يصلك رمز تأكيد على رقمك.</string>
+    <string name="acc_delete_ask">أرسل رمز الحذف</string>
+    <string name="acc_delete_code">رمز التأكيد</string>
+    <string name="acc_delete_confirm">احذف حسابي نهائيّاً</string>
+    <string name="acc_delete_cancel">تراجع</string>
+    <string name="acc_deleted">حُذف حسابك</string>
+    <string name="acc_bad_code">الرمز غير صحيح أو انتهى</string>
 </resources>

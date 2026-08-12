@@ -2,6 +2,7 @@ package com.rahalgo.driver.data
 
 import android.content.Context
 import com.rahalgo.shared.auth.AuthApi
+import com.rahalgo.shared.driver.AccountApi
 import com.rahalgo.shared.driver.ChatApi
 import com.rahalgo.shared.driver.DriverApi
 import com.rahalgo.shared.driver.MeApi
@@ -57,6 +58,9 @@ object Backend {
         val driver = DriverApi(api)
     val chat = ChatApi(api)
     val me = MeApi(api)
+
+    /** **إدارةُ الحساب** — الاسمُ والصورةُ وكلمةُ المرور والعناوين. */
+    val account = AccountApi(api)
     val devices = DevicesApi(api)
 
     /** **عنوان أسلوب الخريطة** — يقرؤه العارض والمنزّل معا. */

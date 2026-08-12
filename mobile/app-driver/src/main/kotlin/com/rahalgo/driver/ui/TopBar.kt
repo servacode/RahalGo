@@ -64,6 +64,7 @@ fun TopBar(
     unread: Int,
     onWallet: () -> Unit,
     onNotifications: () -> Unit,
+    onProfile: () -> Unit,
 ) {
     Row(
         Modifier
@@ -216,16 +217,38 @@ fun TopBar(
             // **واختصارٌ صامتٌ أسوأُ من طول**: من رأى نصفَ اسمه ظنّ أنّ
             // شيئا لم يُحفظ. **والطويلُ يُقصّ بثلاث نقاطٍ تُرى** فيعرف
             // صاحبُه أنّ البقيّة موجودة.
-            Avatar(url = avatarUrl, name = name)
-            Spacer(Modifier.size(6.dp))
-            Text(
-                text = name,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 130.dp),
-            )
+            // ══════════════════════════════════════════════════════════
+            // **وضغطُهما يفتح حسابَه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «عندما أضغط على اسم السائق أو
+            //  المستخدم يجب أن يفتح ملفَّه الشخصيّ، كما هي بالويب».)
+            //
+            // **وكانا نصّاً لا يُضغَط** — فيفتح السائقُ متصفّحاً ليبدّل
+            // صورتَه أو كلمةَ سرّه. **وتطبيقٌ يُخرجك منه لتدير حسابك
+            // يُقرأ ناقصا.**
+            //
+            // **والصورةُ والاسمُ صندوقٌ واحدٌ يُضغط** — لا الاسمُ وحدَه:
+            // **إبهامٌ يقع على الصورة يقصد الشيءَ نفسَه**، وهدفُ ضغطٍ
+            // بعرض كلمةٍ يُخطئه من يمشي.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .clickable(onClick = onProfile)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+            ) {
+                Avatar(url = avatarUrl, name = name)
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    text = name,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 130.dp),
+                )
+            }
         }
     }
 }
