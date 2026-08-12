@@ -438,11 +438,14 @@ private fun NavigateButton(onClick: () -> Unit) {
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // **وسهمٌ إلى أعلى لا سهمُ إرسال** — (تصحيح المالك ٢٠٢٦-٠٨-١٢:
+        // «والسهم للأعلى مو ع طرف»). **وهو ما تعرفه العينُ ملاحةً**
+        // في كلّ تطبيقٍ يقودها.
         Icon(
-            painter = painterResource(R.drawable.ic_arrow_send),
+            painter = painterResource(R.drawable.ic_arrow_up),
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(24.dp),
         )
         Spacer(Modifier.height(2.dp))
         Text(

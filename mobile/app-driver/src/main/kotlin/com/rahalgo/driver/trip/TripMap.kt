@@ -129,11 +129,11 @@ fun TripMap(
             val style = libre.style
             if (style == null) {
                 libre.setStyle(Style.Builder().fromUri(STYLE_ASSET)) {
-                    Markers.draw(it, driver, pickup, dropoff)
+                    Markers.draw(context, it, driver, pickup, dropoff)
                     fitAll(libre, driver, pickup, dropoff)
                 }
             } else {
-                Markers.draw(style, driver, pickup, dropoff)
+                Markers.draw(context, style, driver, pickup, dropoff)
             }
 
             // **وردُّه إلى موضعه أوّلا** — ضغطةٌ صريحةٌ تسبق كلَّ سلوكٍ
