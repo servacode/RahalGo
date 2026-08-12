@@ -249,9 +249,7 @@ fun TripScreen(
             reasons = state.failReasons,
             onPick = actions.fail,
             onDismiss = actions.dismissFail,
-            // **وبابُ «المشكلة عندي» قبل الاستلام وحدَه** — بعده
-            // البضاعةُ في يده، **ولا تُعاد بضغطة زرّ.**
-            onRelease = if (order.status == "at_pickup") actions.release else null,
+            onMine = actions.problem,
         )
     }
 }
@@ -392,6 +390,18 @@ private fun EmergencyDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 }
 
 /**
+ * **ما قد يقع للسائق نفسِه** — ثلاثةٌ تغطّي ما يقع فعلا.
+ *
+ * **ولا حقلَ حرّ**: من كتب «مشكلة» بيده لم يقل شيئا يُقاس، **ولا يُعدّ
+ * ولا يُقارن شهرا بشهر.** وثلاثةُ ألفاظٍ تُختار في ثانيةٍ وهو واقف.
+ */
+private val MINE = listOf(
+    R.string.problem_bike,
+    R.string.problem_crash,
+    R.string.problem_force,
+)
+
+/**
  * **أسباب التعذّر — تُختار ولا تُكتب.**
  *
  * **والسبب يقرّر من يتحمّل**: «المتجر مغلق» ذنب متجر يستوجب تعويض
@@ -402,16 +412,16 @@ private fun FailDialog(
     reasons: List<FailReasonItem>,
     onPick: (String) -> Unit,
     onDismiss: () -> Unit,
-    onRelease: (() -> Unit)? = null,
+    onMine: (String) -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.detail_fail_title)) },
+        // **والعنوان سؤالٌ لا حكم** — (تصحيح المالك ٢٠٢٦-٠٨-١٢):
+        // **«لماذا تعذّر» تفترض أنّ الطلب سقط**، والزرُّ يقول «لدي
+        // مشكلة» — وأكثرُ المشاكل تُحلّ بسائقٍ ثانٍ لا بإلغاء.
+        title = { Text(stringResource(R.string.problem_title)) },
         text = {
             Column {
-                if (reasons.isEmpty()) {
-                    Text(stringResource(R.string.detail_no_reasons), color = InkMuted)
-                }
                 for (r in reasons) {
                     TextButton(onClick = { onPick(r.code) }, modifier = Modifier.fillMaxWidth()) {
                         Text(reasonLabel(r.code), modifier = Modifier.fillMaxWidth())
@@ -431,14 +441,22 @@ private fun FailDialog(
                 // **والطلبُ لا يُلغى بل يعود للطابور**: الزبونُ ينتظر
                 // طعامه، **وسائقٌ ثانٍ يأخذه في دقيقة** — وإلغاؤه
                 // لعطلٍ في درّاجةٍ عقوبةٌ على من لا ذنب له.
-                if (onRelease != null) {
+                if (reasons.isNotEmpty()) {
                     HorizontalDivider(Modifier.padding(vertical = 6.dp))
-                    TextButton(onClick = onRelease, modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = stringResource(R.string.fail_mine_release),
-                            color = BrandOrange,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                }
+                Text(
+                    text = stringResource(R.string.problem_mine),
+                    color = InkMuted,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(bottom = 2.dp),
+                )
+                for (id in MINE) {
+                    val label = stringResource(id)
+                    TextButton(
+                        onClick = { onMine(label) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(label, color = BrandOrange, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -1165,6 +1183,9 @@ data class TripActions(
     val askFail: () -> Unit,
     val fail: (String) -> Unit,
     val dismissFail: () -> Unit,
+    /** **مشكلةٌ عند السائق نفسِه** — يُكتب سببُها ويُعاد الطلبُ أو
+     *  تُنبَّه العمليات، بحسب موضعه من الرحلة. */
+    val problem: (String) -> Unit,
     /** **بلاغُ الطارئ** — العملياتُ تُنبَّه وموضعُه يُقرأ. */
     val emergency: () -> Unit,
     val dismissEmergency: () -> Unit,

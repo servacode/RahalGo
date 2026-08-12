@@ -793,6 +793,10 @@ private fun distance(meters: Double): String {
 @Composable
 private fun statusText(status: String): String = when (status) {
     "assigned" -> stringResource(R.string.status_assigned)
+    // **وحالان كان المحرّك يقولهما والشاشةُ لا تعرفهما** — فيُعرض
+    // الرمزُ خاما: «at_pickup» في بطاقةِ سائقٍ عربيّ. (قيس ٢٠٢٦-٠٨-١٢.)
+    "at_pickup" -> stringResource(R.string.status_at_pickup)
+    "at_dropoff" -> stringResource(R.string.status_at_dropoff)
     "picked_up" -> stringResource(R.string.status_picked_up)
     "on_the_way" -> stringResource(R.string.status_on_the_way)
     "arrived" -> stringResource(R.string.status_arrived)

@@ -35,14 +35,19 @@ class DriverApi(private val api: ApiClient) {
      * **ولا نافذةَ يملؤها**: من كُسرت يدُه أو أُوقف في الطريق لا يكتب
      * شرحا، **وحقلٌ إلزاميٌّ في لحظةٍ كهذه** يجعله يترك الزرَّ ويتّصل.
      */
-    suspend fun emergency(orderId: String, lat: Double?, lng: Double?): Ack =
+    suspend fun emergency(
+        orderId: String,
+        lat: Double?,
+        lng: Double?,
+        note: String = "",
+    ): Ack =
         api.call(
             "/api/v1/driver/orders/" + orderId + "/emergency",
             HttpMethod.Post,
             buildJsonObject {
                 if (lat != null) put("lat", lat)
                 if (lng != null) put("lng", lng)
-                put("note", "")
+                put("note", note)
             },
         )
 

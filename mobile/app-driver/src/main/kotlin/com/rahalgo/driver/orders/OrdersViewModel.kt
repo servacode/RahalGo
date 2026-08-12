@@ -1,6 +1,7 @@
 package com.rahalgo.driver.orders
 
 import android.app.Application
+import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +22,7 @@ import org.maplibre.android.geometry.LatLng
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import java.io.IOException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -37,6 +39,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         /** **حدّ «وصلت»** — بالمتر. */
         const val ARRIVAL_M = 80f
+
+        /** **كم بين نظرةٍ وأخرى** — والوقوفُ يُقاس بالثواني لا بالنبضات. */
+        const val ARRIVAL_TICK_MS = 5_000L
+
+        /** **كم يقف حتّى يُعدّ واصلا** — (قرار المالك: بين ٣٠ و٦٠ ثانية). */
+        const val ARRIVAL_HOLD_MS = 30_000L
     }
 
 
@@ -92,6 +100,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         //
         // **والإشارة بلا حمولة**: يقول المحرّك «تغيّر شيء»، **وما يراه
         // هذا السائق تقرّره نقطة الطابور** بحسب ورديّته ونمط التوزيع.
+        watchArrival()
         backend.live.start(
             scope = viewModelScope,
             onState = { up -> Log.i("RahalGo/live", if (up) "الوصلة قامت" else "الوصلة انقطعت") },
@@ -103,6 +112,60 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 if (chat != null) reloadChat()
             },
         )
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والوصولُ يُعلن نفسَه — لا يُضغط**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢: «يكون ذكيّاً بمجرّد أن الموقع أصبح عند
+    //  المتجر… في حال السائق توقّف بين الـ٣٠ والـ٦٠ ثانية».)
+    //
+    // **و«وصلت» حقيقةٌ يعرفها الجهازُ أدقَّ من ذاكرة سائقٍ يقود** —
+    // وكلُّ ضغطةٍ تُرفع عنه ربحٌ خالص.
+    //
+    // # ولماذا وقوفٌ لا لمسةُ دائرة
+    //
+    // **الموضعُ ينطّ**: يمرّ بجانب المتجر وهو ذاهبٌ إلى غيره فيُسجَّل
+    // «وصل» ولم يصل. **ووقتُ الوصول يدخل في حساب التأخّر والشكاوى** —
+    // فلا يُكتب بقراءةٍ عابرة.
+    //
+    // **فثلاثون ثانيةً داخل الدائرة** — من وقف عندها وقف حقّا.
+    //
+    // # ولماذا هذه الخطوة وحدَها
+    //
+    // **«وصلت» لا مالَ فيها ولا إثبات** — أسوأُ ما يقع أن تتقدّم دقيقة.
+    // **و«استلمت» و«سلّمت» فيهما مالٌ وذمّة** — فتبقيان بيده وحدَه.
+    //
+    // **والزرُّ باقٍ**: سوقٌ مسقوفٌ يُضعف الموضع، **ومن انتظر آليّةً لا
+    // تأتي** وقف عند الباب لا يعرف ماذا يفعل.
+    private var nearSince: Long = 0L
+
+    private fun watchArrival() {
+        viewModelScope.launch {
+            while (true) {
+                delay(ARRIVAL_TICK_MS)
+                val order = state.mine.firstOrNull { it.id == openId }
+                    ?: state.mine.firstOrNull()
+                val to = when (order?.status) {
+                    "assigned" -> "at_pickup"
+                    "on_the_way" -> "at_dropoff"
+                    else -> null
+                }
+                if (order == null || to == null || !near(LastPoint.value, order)) {
+                    nearSince = 0L
+                    continue
+                }
+                val now = SystemClock.elapsedRealtime()
+                if (nearSince == 0L) {
+                    nearSince = now
+                } else if (now - nearSince >= ARRIVAL_HOLD_MS) {
+                    nearSince = 0L
+                    Log.i("RahalGo/وصول", "وقوفٌ عند الوجهة — تُعلَن " + to)
+                    step(to)
+                }
+            }
+        }
     }
 
     override fun onCleared() {
@@ -561,13 +624,52 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **يبلّغ العمليات** — ثمّ يُغلق النافذة ويعيد القراءة. */
-    fun emergency(point: LastPoint.Point?) {
+    fun emergency(point: LastPoint.Point?, note: String = "") {
         val id = currentId() ?: return
         emergencyOpen = false
         viewModelScope.launch {
-            runCatching { backend.driver.emergency(id, point?.lat, point?.lng) }
+            runCatching { backend.driver.emergency(id, point?.lat, point?.lng, note) }
                 .onFailure { Log.w("RahalGo/طارئ", "تعذّر البلاغ", it) }
             load()
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ومشكلةُ السائق فعلٌ يختلف بحسب موضعه من الرحلة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢.)
+    //
+    //	قبل الاستلام  ←  يعود الطلبُ للطابور، ويأخذه سائقٌ ثانٍ في دقيقة
+    //	بعد الاستلام  ←  البضاعةُ في يده، **فتُنبَّه العملياتُ ولا تُترك**
+    //
+    // **والسببُ يُكتب في الحالين**: «تعطّلت درّاجتي» تُقرأ في المكتب
+    // ويُعرف بها لماذا تأخّر الطلب، **وإعادةٌ بلا سبب تُقرأ تردّدا.**
+    fun reportProblem(reason: String, point: LastPoint.Point?) {
+        val order = state.mine.firstOrNull { it.id == openId }
+            ?: state.mine.firstOrNull()
+            ?: return
+        detail = detail.copy(failReasons = null)
+        if (order.status == "assigned" || order.status == "at_pickup") {
+            releaseWith(reason)
+        } else {
+            emergency(point, reason)
+        }
+    }
+
+    private fun releaseWith(note: String) {
+        val id = currentId() ?: return
+        detail = detail.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                backend.driver.release(id, note)
+                openId = null
+            } catch (e: Exception) {
+                detail = detail.copy(busy = false, error = describe(e))
+                return@launch
+            }
+            detail = detail.copy(busy = false)
+            reload()
         }
     }
 
