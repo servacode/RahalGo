@@ -72,7 +72,19 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, o)
+	// ══════════════════════════════════════════════════════════════════
+	// **ومسارُه كاملاً بأوقاته ومن فعله**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الإدارة تشوف المسار … وكلُّ شيءٍ واضح
+	//  التوقيت والساعة والدقيقة».)
+	//
+	// **والبياناتُ محفوظةٌ منذ اليوم الأوّل** في `order_events` — **ولا
+	// أحدَ يعرضها**: فلا يُعرف أين ضاع الوقتُ في طلبٍ تأخّر.
+	httpx.JSON(w, http.StatusOK, struct {
+		*orders.Order
+		Timeline []TimelineStep `json:"timeline"`
+	}{o, s.timeline(r.Context(), o.ID, true)})
 }
 
 // requiresReason الانتقالاتُ التي لا تُقبل بلا تعليل.

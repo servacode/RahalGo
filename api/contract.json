@@ -1188,12 +1188,6 @@
         "finance",
         "ops"
       ],
-      "response": [
-        {
-          "name": "@o",
-          "type": "unknown"
-        }
-      ],
       "statuses": [
         "StatusOK"
       ]

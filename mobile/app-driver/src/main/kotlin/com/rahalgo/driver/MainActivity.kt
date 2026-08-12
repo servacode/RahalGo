@@ -53,6 +53,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.rahalgo.design.InkMuted
+import androidx.core.content.ContextCompat
 import com.rahalgo.driver.home.HomeActions
 import com.rahalgo.driver.home.HomeScreen
 import com.rahalgo.driver.home.HomeViewModel
@@ -64,6 +65,9 @@ import com.rahalgo.driver.orders.OrderDetailScreen
 import com.rahalgo.driver.orders.OrdersActions
 import com.rahalgo.driver.orders.OrdersScreen
 import com.rahalgo.driver.orders.OrdersViewModel
+import com.rahalgo.driver.trip.Proof
+import com.rahalgo.driver.trip.ChatActions
+import com.rahalgo.driver.trip.ChatSheet
 import com.rahalgo.driver.trip.TripActions
 import com.rahalgo.driver.trip.TripScreen
 import com.rahalgo.driver.trip.TripState
@@ -244,6 +248,24 @@ private fun SignedIn(onLogout: () -> Unit) {
     // نافذة له أصلا.**
     //
     // **ومن طلبهما معا رُدّ طلبه كلّه** بلا أن يُعرض على صاحبه شيء.
+    // ══════════════════════════════════════════════════════════════════
+    // **الكاميرا — صورةٌ مصغّرة لا ملفّ كامل**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **و`TakePicturePreview` تعيد صورةً صغيرةً في الذاكرة** — لا تحتاج
+    // مزوّد ملفّات ولا إذن تخزين، **وهي كلّ ما يلزم لإثبات باب.**
+    val camera = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicturePreview(),
+    ) { bitmap ->
+        if (bitmap != null) {
+            orders.sendProof(Proof.shrink(bitmap), LastPoint.value)
+        }
+    }
+
+    val askCamera = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) camera.launch(null) }
+
     val askBackground = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { home.recheckLocation() }
@@ -304,11 +326,45 @@ private fun SignedIn(onLogout: () -> Unit) {
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {
+            // **والحديث يغطّي الشاشة** — يُقرأ ويُكتب فيه ثمّ يُغلق.
+            val chat = orders.chat
+            if (chat != null) {
+                ChatSheet(
+                    state = chat,
+                    actions = ChatActions(
+                        send = orders::sendMessage,
+                        close = orders::closeChat,
+                    ),
+                )
+                return@Box
+            }
+
             when {
                 tab == 0 -> TripScreen(
                     state = orders.trip(LastPoint.value),
                     actions = TripActions(
                         step = orders::step,
+                        capture = {
+                            // **والإذن يُطلب عند الحاجة لا عند الدخول** —
+                            // **كاميرا تُطلب في أوّل فتحة** تُرفض.
+                            if (ContextCompat.checkSelfPermission(
+                                    context,
+                                    android.Manifest.permission.CAMERA,
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
+                                camera.launch(null)
+                            } else {
+                                askCamera.launch(android.Manifest.permission.CAMERA)
+                            }
+                        },
+                        release = orders::releaseCurrent,
+                        chat = orders::openChat,
+                        askAgree = orders::askAgree,
+                        agree = orders::agree,
+                        dismissAgree = orders::dismissAgree,
+                        pickStop = orders::open,
+                        takeOffer = orders::accept,
+                        dismissOffer = orders::dismissOffer,
                         askFail = orders::askFail,
                         fail = orders::fail,
                         dismissFail = orders::dismissFail,

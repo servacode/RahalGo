@@ -188,4 +188,19 @@
     <string name="offline_map_button">نزّل الآن</string>
     <string name="offline_map_progress">جارٍ التنزيل %1$d%%</string>
     <string name="offline_map_resume">أكمل التنزيل</string>
+    <string name="trip_near_pickup">يبدو أنّك وصلت المتجر</string>
+    <string name="trip_near_dropoff">يبدو أنّك وصلت الزبون</string>
+    <string name="trip_chat">حديث الزبون</string>
+    <string name="chat_hint">اكتب رسالة…</string>
+    <string name="chat_send">أرسل</string>
+    <string name="chat_closed">انتهى الطلب — أُغلق الحديث</string>
+    <!-- الطلب الخاصّ -->
+    <string name="agree_button">وثّق الاتّفاق</string>
+    <string name="agree_title">الاتّفاق مع الزبون</string>
+    <string name="agree_hint">ثمن البضاعة اختياريّ — اتركه فارغاً إن كانت أمانة بلا ثمن</string>
+    <string name="agree_goods">ثمن البضاعة</string>
+    <string name="agree_fee">أجرة التوصيل</string>
+    <string name="agree_confirm">وثّق</string>
+    <string name="trip_on_route">طلب على طريقك</string>
+    <string name="trip_leave_offer">اتركه</string>
 </resources>

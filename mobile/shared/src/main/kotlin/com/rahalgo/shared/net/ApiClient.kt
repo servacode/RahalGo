@@ -6,6 +6,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.header
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
@@ -131,6 +132,50 @@ class ApiClient(
             throw ApiException(res.status.value, err ?: ApiErrorBody(code = "internal"))
         }
         return env.data
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **رفع ملفّ — نموذج متعدّد الأجزاء**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **والمحرّك يقرأ الصورة من `file` والحقول من جانبها** — لا JSON:
+     * صورة في JSON تُرسَل مرمَّزةً بستّة وستّين، **فتكبر الثلث** وتُقرأ
+     * كلُّها في الذاكرة مرّتين.
+     *
+     * **ولا يُجدَّد التوكن هنا**: الرفع يقع في لحظة التسليم، **وإعادة
+     * إرسال صورة بعد تجديد** تكلّف السائق حزمته مرّتين. **ويكفي أنّ
+     * الشاشة تنادي `me` قبله بثوانٍ.**
+     */
+    suspend fun upload(
+        path: String,
+        fileName: String,
+        bytes: ByteArray,
+        fields: Map<String, String> = emptyMap(),
+    ) {
+        val res: HttpResponse = http.submitFormWithBinaryData(
+            url = baseUrl + path,
+            formData = io.ktor.client.request.forms.formData {
+                for ((k, v) in fields) append(k, v)
+                append(
+                    "file",
+                    bytes,
+                    io.ktor.http.Headers.build {
+                        append(io.ktor.http.HttpHeaders.ContentType, "image/jpeg")
+                        append(
+                            io.ktor.http.HttpHeaders.ContentDisposition,
+                            "filename=\"" + fileName + "\"",
+                        )
+                    },
+                )
+            },
+        ) {
+            header(CLIENT_HEADER, client)
+            header("Authorization", "Bearer " + session.accessToken())
+        }
+        if (res.status.value >= 400) {
+            throw ApiException(res.status.value, ApiErrorBody(code = "upload_failed"))
+        }
     }
 
     /** يدوّر التوكن ويحفظ الجديد. */

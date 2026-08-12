@@ -1,6 +1,7 @@
 package com.rahalgo.driver.trip
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,12 +16,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.BrandOrange
@@ -78,10 +86,46 @@ fun TripScreen(state: TripState, actions: TripActions) {
             modifier = Modifier.fillMaxSize(),
         )
 
-        StepStrip(
-            step = state.step,
-            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding(),
-        )
+        Column(Modifier.align(Alignment.TopCenter).statusBarsPadding()) {
+            StepStrip(step = state.step)
+            // ══════════════════════════════════════════════════════════
+            // **ومن يحمل أكثر من طلب يرى محطّاته**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (البند العاشر في قائمة المالك ٢٠٢٦-٠٨-١٢.)
+            //
+            // **والمعروض هو «التالي»** — والباقي يُضغط فيصير هو التالي:
+            // **من حمل ثلاثة ولا يعرف أيّها أوّلا** يقرّر بالحدس، ويقف
+            // في الشارع يقلّب.
+            if (state.stops.size > 1) {
+                StopsRow(stops = state.stops, current = order.id, onPick = actions.pickStop)
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **طلبٌ على طريقك — وأنت ماشٍ**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (البند الحادي عشر في قائمة المالك ٢٠٢٦-٠٨-١٢.)
+        //
+        // **والمحرّك يحسبه أصلا** (`orders/sameroute.go`): المتجران خلال
+        // ٨٠٠ متر والزبونان خلال ٢٠٠٠ — **فما يصل الطابور وأنت في رحلة
+        // هو على طريقك فعلا.**
+        //
+        // **ولافتةٌ لا شاشة**: يقرؤها بطرف عينه وهو يقود، **ويأخذها أو
+        // يتركها — وهو حرّ.**
+        if (state.onRouteOffer != null) {
+            OnRouteBanner(
+                offer = state.onRouteOffer,
+                busy = state.busy,
+                onTake = { actions.takeOffer(state.onRouteOffer.id) },
+                onDismiss = actions.dismissOffer,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 96.dp),
+            )
+        }
 
         TripCard(
             order = order,
@@ -91,6 +135,10 @@ fun TripScreen(state: TripState, actions: TripActions) {
         )
     }
 
+    if (state.agreeOpen) {
+        AgreeDialog(onConfirm = actions.agree, onDismiss = actions.dismissAgree)
+    }
+
     if (state.failReasons != null) {
         FailDialog(
             reasons = state.failReasons,
@@ -98,6 +146,60 @@ fun TripScreen(state: TripState, actions: TripActions) {
             onDismiss = actions.dismissFail,
         )
     }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **الاتّفاق على الطلب الخاصّ**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **وثمن البضاعة اختياريّ** — قد تكون أمانةً لا ثمن لها، **فيُترك فارغا
+ * ويُقرأ صفرا.** **ومن ألزم برقم في كلّ طلب** جعل السائق يكتب ما ليس
+ * صحيحا ليمضي.
+ *
+ * **وأجرة التوصيل لا تُترك**: هي حقّه، **وطلبٌ بلا أجرة اتّفاقٌ ناقص.**
+ */
+@Composable
+private fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) {
+    var goods by remember { mutableStateOf("") }
+    var fee by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.agree_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.agree_hint), color = InkMuted)
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = goods,
+                    onValueChange = { goods = it.filter { c -> c.isDigit() } },
+                    label = { Text(stringResource(R.string.agree_goods)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = fee,
+                    onValueChange = { fee = it.filter { c -> c.isDigit() } },
+                    label = { Text(stringResource(R.string.agree_fee)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(goods.toLongOrNull() ?: 0L, fee.toLongOrNull() ?: 0L) },
+                enabled = fee.isNotBlank(),
+            ) {
+                Text(stringResource(R.string.agree_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
+        },
+    )
 }
 
 /**
@@ -209,6 +311,84 @@ private fun StepStrip(step: TripStep, modifier: Modifier = Modifier) {
 }
 
 /**
+ * **لافتة «طلب على طريقك».**
+ *
+ * **ولا تحجب الخريطة** — سطران وزرّان، **ومن ملأ الشاشة بعرضٍ وسائقُه
+ * يقود** أجبره على قرارٍ في غير وقته.
+ */
+@Composable
+private fun OnRouteBanner(
+    offer: DriverOrder,
+    busy: Boolean,
+    onTake: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(BrandTeal)
+            .padding(14.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.trip_on_route),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = offer.merchantName + " · " + money(offer.cashDue),
+            color = Color.White.copy(alpha = 0.9f),
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(onClick = onTake, enabled = !busy) {
+                Text(stringResource(R.string.order_accept))
+            }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.trip_leave_offer), color = Color.White)
+            }
+        }
+    }
+}
+
+/**
+ * **محطّاته حين يحمل أكثر من طلب.**
+ *
+ * **والحاليّة معلّمة** — وما عداها يُضغط فينتقل إليه.
+ */
+@Composable
+private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(Color.White.copy(alpha = 0.94f))
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        for (stop in stops) {
+            val now = stop.id == current
+            Text(
+                text = "#" + stop.number,
+                color = if (now) Color.White else InkMuted,
+                fontWeight = if (now) FontWeight.Bold else FontWeight.Normal,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (now) BrandTeal else Color(0xFFEFF2F4))
+                    .clickable { onPick(stop.id) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
+    }
+}
+
+/** محطّة في قائمة من يحمل أكثر من طلب. */
+data class Stop(val id: String, val number: Long)
+
+/**
  * **البطاقة السفليّة.**
  *
  * **وما يقرّر به السائق أوّلا**: إلى أين يذهب الآن، وكم يقبض.
@@ -296,11 +476,34 @@ private fun TripCard(
             Text(state.error, color = BrandOrange)
         }
 
+        // **واقتراحٌ لا فعل** — الزرّ نفسه تحته، **وهو من يضغطه.**
+        if (state.nearDestination) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(
+                    if (order.status == "assigned") R.string.trip_near_pickup
+                    else R.string.trip_near_dropoff,
+                ),
+                color = BrandTeal,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
         Spacer(Modifier.height(14.dp))
         val next = nextAction(order.status)
         if (next != null) {
             Button(
-                onClick = { actions.step(next.status) },
+                // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
+                // ردّ «يلزم إثبات» بعد أن ظنّ صاحبه أنّه أنهى.
+                onClick = {
+                    if (next.status == "delivered" && state.requirePhoto) {
+                        actions.capture()
+                    } else {
+                        actions.step(next.status)
+                    }
+                },
                 enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -318,6 +521,17 @@ private fun TripCard(
             TextButton(onClick = actions.navigate, enabled = !state.busy) {
                 Text(stringResource(R.string.trip_navigate), color = BrandTeal)
             }
+            // **وحديث الزبون من هنا** — لا رقم هاتف في الطرفين.
+            TextButton(onClick = actions.chat, enabled = !state.busy) {
+                Text(stringResource(R.string.trip_chat), color = BrandTeal)
+            }
+            // **والاتّفاق للطلب الخاصّ وحدَه** — العاديّ سعرُه معروف
+            // سلفا، **وزرٌّ يظهر فيه يسأل عمّا لا يُسأل عنه.**
+            if (order.kind == "custom") {
+                TextButton(onClick = actions.askAgree, enabled = !state.busy) {
+                    Text(stringResource(R.string.agree_button), color = BrandOrange)
+                }
+            }
             // **والتعذّر حيث يقبله المحرّك وحدَه** — عند المتجر أو عند
             // باب الزبون. **وزرّ يظهر دائما** يُضغط في غير موضعه فيُردّ
             // برفضٍ لا يفهمه صاحبه.
@@ -325,6 +539,18 @@ private fun TripCard(
                 TextButton(onClick = actions.askFail, enabled = !state.busy) {
                     Text(stringResource(R.string.detail_failed), color = BrandOrange)
                 }
+            }
+        }
+
+        // **وإعادة الطلب قبل أن يستلم البضاعة فقط** — بعدها هي في يده،
+        // **والبضاعة لا تُعاد بضغطة زرّ.**
+        if (order.status == "assigned" || order.status == "at_pickup") {
+            TextButton(
+                onClick = actions.release,
+                enabled = !state.busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.detail_release), color = InkMuted)
             }
         }
     }
@@ -424,6 +650,16 @@ data class TripState(
     val remainingM: Double = -1.0,
     /** سرعة السائق الوسطى من المحرّك — **وصفر يعني لا تُحسب مدّة.** */
     val avgSpeedKmh: Long = 0,
+    /** **هل هو على بُعد خطوات من وجهته؟** — يُقترح ولا يُنفَّذ. */
+    val nearDestination: Boolean = false,
+    /** أتلزم صورة تسليم؟ — **يقرّره المحرّك** (`drivers.require_delivery_photo`). */
+    val requirePhoto: Boolean = false,
+    /** أنافذة الاتّفاق مفتوحة؟ — **للطلب الخاصّ وحدَه.** */
+    val agreeOpen: Boolean = false,
+    /** محطّاته كلّها — **وواحدةٌ منها هي المعروضة.** */
+    val stops: List<Stop> = emptyList(),
+    /** عرضٌ نزل وهو في رحلة — **وفارغ يعني لا عرض.** */
+    val onRouteOffer: DriverOrder? = null,
     val failReasons: List<FailReasonItem>? = null,
     val step: TripStep = TripStep.ACCEPTED,
     val driver: LatLng? = null,
@@ -435,6 +671,16 @@ data class TripState(
 
 data class TripActions(
     val step: (String) -> Unit,
+    /** يفتح الكاميرا لصورة التسليم. */
+    val capture: () -> Unit,
+    val release: () -> Unit,
+    val chat: () -> Unit,
+    val askAgree: () -> Unit,
+    val agree: (Long, Long) -> Unit,
+    val dismissAgree: () -> Unit,
+    val pickStop: (String) -> Unit,
+    val takeOffer: (String) -> Unit,
+    val dismissOffer: () -> Unit,
     val askFail: () -> Unit,
     val fail: (String) -> Unit,
     val dismissFail: () -> Unit,

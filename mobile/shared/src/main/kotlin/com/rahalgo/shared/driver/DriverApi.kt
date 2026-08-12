@@ -115,6 +115,63 @@ class DriverApi(private val api: ApiClient) {
     }
 
     /**
+     * ══════════════════════════════════════════════════════════════════
+     * **صورة التسليم — بضغطتين لا أكثر**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **وأهمّها الإحداثيات لا الصورة**: صورة بابٍ قد تكون لأيّ باب،
+     * **والنقطة تقول أين وقف حين صوّر.**
+     *
+     * **والمحرّك يمنع «سُلّم» بلا إثبات** حين يُفعَّل الإعداد
+     * (`drivers.require_delivery_photo`) — **والحارس فيه لا في الشاشة**:
+     * زرّ يُخفى يُلتفّ عليه.
+     */
+    suspend fun sendProof(orderId: String, jpeg: ByteArray, lat: Double?, lng: Double?) {
+        api.upload(
+            "/api/v1/driver/orders/" + orderId + "/proof",
+            fileName = "proof.jpg",
+            bytes = jpeg,
+            fields = buildMap {
+                if (lat != null && lng != null) {
+                    put("lat", lat.toString())
+                    put("lng", lng.toString())
+                }
+            },
+        )
+    }
+
+    /** **يتخطّى الصورة بسبب** — ولا يُقبل تخطٍّ بلا سبب. */
+    suspend fun skipProof(orderId: String, reason: String) {
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/proof/skip",
+            HttpMethod.Post,
+            mapOf("reason" to reason),
+        )
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **توثيق ما اتُّفق عليه في الطلب الخاصّ**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (البند التاسع في قائمة المالك ٢٠٢٦-٠٨-١٢.)
+     *
+     * **وثمن البضاعة اختياريّ**: قد تكون أمانةً لا ثمن لها — **فأجرة
+     * التوصيل وحدَها.** ومن ألزم بثمنٍ في كلّ طلب **جعل السائق يكتب
+     * رقما من رأسه** ليمضي.
+     *
+     * **والمنصّة توثّق ولا تحاسب**: السائق يدفع من جيبه ويستردّ عند
+     * التسليم. **والتوثيق هو ما يُرجع إليه** يوم يختلفان.
+     */
+    suspend fun agree(orderId: String, goodsAmount: Long, fee: Long) {
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/agree",
+            HttpMethod.Post,
+            mapOf("goods_amount" to goodsAmount, "fee" to fee),
+        )
+    }
+
+    /**
      * يفتح الوردية أو يغلقها.
      *
      * **والنتيجة تُقرأ من المحرّك لا تُفترض**: قد يرفض الفتح (نقد فوق

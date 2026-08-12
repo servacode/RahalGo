@@ -141,6 +141,7 @@ object OfflineMap {
         val region = existing
         if (region != null) {
             val sameStyle = region.definition.styleURL == Backend.of(context).styleUrl
+            Log.i(TAG, "منطقة قائمة — أسلوبها ${region.definition.styleURL} · مطابق=$sameStyle")
             if (sameStyle) {
                 region.setObserver(observer(region))
                 region.setDownloadState(OfflineRegion.STATE_ACTIVE)
@@ -149,6 +150,7 @@ object OfflineMap {
             region.delete(
                 object : OfflineRegion.OfflineRegionDeleteCallback {
                     override fun onDelete() {
+                        Log.i(TAG, "حُذفت المنطقة القديمة")
                         existing = null
                         downloading = false
                         download(context)
@@ -177,6 +179,7 @@ object OfflineMap {
             "الرقّة".toByteArray(),
             object : OfflineManager.CreateOfflineRegionCallback {
                 override fun onCreate(region: OfflineRegion) {
+                    Log.i(TAG, "أُنشئت المنطقة — يبدأ التنزيل")
                     existing = region
                     region.setObserver(observer(region))
                     region.setDownloadState(OfflineRegion.STATE_ACTIVE)
@@ -192,6 +195,11 @@ object OfflineMap {
 
     private fun observer(region: OfflineRegion) = object : OfflineRegion.OfflineRegionObserver {
         override fun onStatusChanged(status: OfflineRegionStatus) {
+            Log.i(
+                TAG,
+                "حال: ${status.completedResourceCount}/${status.requiredResourceCount} " +
+                    "مكتمل=${status.isComplete}",
+            )
             val total = status.requiredResourceCount
             progress = if (total > 0) {
                 (status.completedResourceCount * 100 / total).toInt().coerceIn(0, 100)
@@ -226,5 +234,21 @@ object OfflineMap {
     }
 
     private fun manager(context: Context): OfflineManager =
-        OfflineManager.getInstance(context.applicationContext)
+        OfflineManager.getInstance(context.applicationContext).also {
+            // ══════════════════════════════════════════════════════════
+            // **ورفعُ السقف — والرقّة تجاوزته**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **سقف MapLibre الافتراضي ستّة آلاف مورد**، **والرقّة من
+            // التقريب ١٠ إلى ١٦ تحتاج ٦٨٨٠** (قيس على الجهاز
+            // ٢٠٢٦-٠٨-١٢). **فيقف التنزيل قبل أن يكتمل** ويبقى صاحبه
+            // يظنّ الخريطة معه.
+            //
+            // **والسقف حارسٌ لا حدّ تقنيّ** — غرضه ألّا ينزّل تطبيقٌ
+            // نصفَ الكوكب بلا انتباه. **ومدينةٌ واحدةٌ ليست ذاك.**
+            it.setOfflineMapboxTileCountLimit(MAX_TILES)
+        }
+
+    /** **ضعف ما تحتاجه المدينة** — يتّسع لتوسيع الحدود لاحقا. */
+    private const val MAX_TILES = 15_000L
 }

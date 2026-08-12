@@ -359,7 +359,14 @@ func (s *Server) handleMyOrder(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, struct {
 		*orders.Order
 		CancelSecondsLeft int `json:"cancel_seconds_left"`
-	}{o, s.orders.CancelSecondsLeft(r.Context(), o)})
+		// **ومسارُه بأوقاته** — (قرارُ المالك ٢٠٢٦-٠٨-١٢): يعرف متى
+		// قُبل ومتى استلمه سائقُه ومتى وصل، **بلا أن يسأل أحداً.**
+		Timeline []TimelineStep `json:"timeline"`
+	}{
+		o,
+		s.orders.CancelSecondsLeft(r.Context(), o),
+		s.timeline(r.Context(), o.ID, false),
+	})
 }
 
 // handleMyWallet رصيد الزبون وكشف حركاته.

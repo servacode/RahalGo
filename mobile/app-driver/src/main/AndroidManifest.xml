@@ -29,6 +29,11 @@
          بلا أن يراها صاحبها، وهو ما يمنعه النظام. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- **الكاميرا — لإثبات التسليم وحدَه.** ويُطلب إذنُها عند أوّل
+         تسليمٍ لا عند الدخول: **إذنٌ يُطلب بلا سببٍ ظاهرٍ يُرفض.** -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"

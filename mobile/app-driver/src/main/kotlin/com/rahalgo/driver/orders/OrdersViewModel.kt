@@ -11,7 +11,10 @@ import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.location.LastPoint
 import com.rahalgo.driver.location.LocationPermission
+import com.rahalgo.driver.trip.ChatState
+import com.rahalgo.driver.trip.Stop
 import com.rahalgo.driver.trip.TripState
+import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.driver.trip.TripStep
 import org.maplibre.android.geometry.LatLng
 import com.rahalgo.shared.net.ApiClient
@@ -29,6 +32,12 @@ import kotlinx.coroutines.launch
  * **راكد، أو مغلق على نفسه.**
  */
 class OrdersViewModel(app: Application) : AndroidViewModel(app) {
+
+    private companion object {
+        /** **حدّ «وصلت»** — بالمتر. */
+        const val ARRIVAL_M = 80f
+    }
+
 
     var state by mutableStateOf(OrdersState())
         private set
@@ -221,6 +230,21 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             },
             // **والسرعة من المحرّك لا من الشيفرة** — تُضبط للمدينة كلّها.
             avgSpeedKmh = state.me?.avgSpeedKmh ?: 0,
+            requirePhoto = state.me?.requirePhoto ?: false,
+            agreeOpen = agreeOpen,
+            stops = state.mine.map { Stop(it.id, it.number) },
+            // **وأوّل عرضٍ معروضٍ عليه وهو في رحلة** — وما رُفض لا يعود.
+            onRouteOffer = state.offers.firstOrNull { it.id !in dismissedOffers },
+            // ══════════════════════════════════════════════════════════
+            // **يعرف بنفسه أنّك وصلت**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (البند الخامس في قائمة المالك ٢٠٢٦-٠٨-١٢.)
+            //
+            // **ولا يُحرّك الطلب بنفسه**: قربٌ ليس وصولا — قد يمرّ من
+            // الشارع، **وطلبٌ يمشي خطوةً بلا أن يضغطها صاحبه** يُفقده
+            // الثقة بالتطبيق كلِّه. **فيُقترح ويُضغط.**
+            nearDestination = near(driver, order),
             failReasons = detail.failReasons,
             driver = driver?.let { LatLng(it.lat, it.lng) },
             // **ونقطة المتجر قد تغيب** — متجرٌ قديمٌ بلا دبّوس:
@@ -230,6 +254,154 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             busy = detail.busy,
             error = detail.error,
         )
+    }
+
+    /**
+     * **أهو على بُعد خطواتٍ من وجهته؟**
+     *
+     * **وثمانون مترا لا عشرة**: دقّة القمر في المدينة بين خمسة وعشرين
+     * مترا، **ومن ضيّق الحدّ** لم يقترح شيئا على من يقف عند الباب.
+     *
+     * **والمسافة من دالّة النظام** — لا حساب مثلّثات بأيدينا: **خطأ في
+     * سطر منه يزيح الوصول مئات الأمتار.**
+     */
+    private fun near(driver: LastPoint.Point?, order: DriverOrder): Boolean {
+        if (driver == null) return false
+        val lat: Double
+        val lng: Double
+        when (order.status) {
+            "assigned" -> {
+                lat = order.navLat ?: return false
+                lng = order.navLng ?: return false
+            }
+
+            "on_the_way" -> {
+                lat = order.lat
+                lng = order.lng
+            }
+
+            else -> return false
+        }
+        val out = FloatArray(1)
+        android.location.Location.distanceBetween(driver.lat, driver.lng, lat, lng, out)
+        return out[0] <= ARRIVAL_M
+    }
+
+    /**
+     * **يرسل صورة التسليم** — ثمّ يحرّك الطلب إلى «سُلّم».
+     *
+     * **والخطوة بعدها لا قبلها**: المحرّك يرفض «سُلّم» بلا إثبات حين
+     * يُفعَّل الإعداد، **ومن حرّك أوّلا** ردّه بخطأ وهو يحمل الصورة.
+     */
+    fun sendProof(jpeg: ByteArray, point: LastPoint.Point?) {
+        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        if (detail.busy) return
+        detail = detail.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                backend.driver.sendProof(id, jpeg, point?.lat, point?.lng)
+                backend.driver.transition(id, "delivered")
+                openId = null
+            } catch (e: Exception) {
+                detail = detail.copy(busy = false, error = describe(e))
+                return@launch
+            }
+            detail = detail.copy(busy = false)
+            reload()
+        }
+    }
+
+    /** **يعيد الطلب إلى الطابور** — قبل أن يستلم البضاعة. */
+    fun releaseCurrent() {
+        openId = openId ?: state.mine.firstOrNull()?.id
+        release()
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **حديث الطلب**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وفارغ يعني أنّه غير مفتوح** — لا حديث بلا طلب.
+    var chat by mutableStateOf<ChatState?>(null)
+        private set
+
+    fun openChat() {
+        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        chat = ChatState(busy = true)
+        viewModelScope.launch { loadChat(id) }
+    }
+
+    fun closeChat() {
+        chat = null
+    }
+
+    fun sendMessage(body: String) {
+        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        if (body.isBlank()) return
+        viewModelScope.launch {
+            try {
+                backend.chat.send(id, body)
+            } catch (e: Exception) {
+                Log.w("RahalGo/chat", "تعذّر إرسال الرسالة", e)
+            }
+            loadChat(id)
+        }
+    }
+
+    private suspend fun loadChat(id: String) {
+        chat = try {
+            val thread = backend.chat.thread(id)
+            ChatState(
+                messages = thread.messages,
+                peerName = thread.peerName,
+                open = thread.open,
+            )
+        } catch (e: Exception) {
+            Log.w("RahalGo/chat", "تعذّرت قراءة الحديث", e)
+            chat?.copy(busy = false) ?: ChatState(busy = false)
+        }
+    }
+
+    var agreeOpen by mutableStateOf(false)
+        private set
+
+    fun askAgree() {
+        agreeOpen = true
+    }
+
+    fun dismissAgree() {
+        agreeOpen = false
+    }
+
+    /** **يوثّق ما اتُّفق عليه** — ثمّ يعيد قراءة الطلب بسعره الجديد. */
+    fun agree(goods: Long, fee: Long) {
+        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        agreeOpen = false
+        detail = detail.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                backend.driver.agree(id, goods, fee)
+            } catch (e: Exception) {
+                detail = detail.copy(busy = false, error = describe(e))
+                return@launch
+            }
+            detail = detail.copy(busy = false)
+            reload()
+        }
+    }
+
+    /**
+     * **عروضٌ تركها وهو في رحلة** — فلا تعود لافتتُها.
+     *
+     * **وفي الذاكرة لا على القرص**: العرض يفوت خلال دقائق، **وقائمةٌ
+     * تعيش بعد إقلاعٍ جديدٍ تخفي عرضاً جديدا.**
+     */
+    private val dismissedOffers = mutableSetOf<String>()
+
+    fun dismissOffer() {
+        state.offers.firstOrNull { it.id !in dismissedOffers }?.let { dismissedOffers += it.id }
+        // **ولمسةٌ للحالة** — لتُعاد قراءة الشاشة.
+        state = state.copy()
     }
 
     /** يعيد القراءة **ويحدّث الطلب المفتوح من القائمة نفسها.** */

@@ -24,6 +24,13 @@ data class DriverOrder(
     /** **رقمه المنطوق** — يُقال على الهاتف ويُكتب في الشكوى. */
     val number: Long = 0,
     val status: String = "",
+    /**
+     * **نوعه** — `standard` أو `custom`.
+     *
+     * **والخاصّ لا سعر له حتّى يتّفقا** (قرار المالك): السائق يدفع من
+     * جيبه ويستردّ عند التسليم، **والمنصّة توثّق ولا تحاسب.**
+     */
+    val kind: String = "standard",
 
     @SerialName("merchant_name") val merchantName: String = "",
     @SerialName("merchant_phone") val merchantPhone: String? = null,

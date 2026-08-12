@@ -2,6 +2,7 @@ package com.rahalgo.driver.data
 
 import android.content.Context
 import com.rahalgo.shared.auth.AuthApi
+import com.rahalgo.shared.driver.ChatApi
 import com.rahalgo.shared.driver.DriverApi
 import com.rahalgo.shared.net.LiveSocket
 import com.rahalgo.shared.push.DevicesApi
@@ -53,6 +54,7 @@ object Backend {
         val api = ApiClient(BASE_URL, CLIENT, session)
         val auth = AuthApi(api)
         val driver = DriverApi(api)
+    val chat = ChatApi(api)
     val devices = DevicesApi(api)
 
     /** **عنوان أسلوب الخريطة** — يقرؤه العارض والمنزّل معا. */
