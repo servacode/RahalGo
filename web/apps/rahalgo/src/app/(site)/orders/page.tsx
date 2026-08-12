@@ -761,9 +761,6 @@ function OrderCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex shrink-0 flex-col items-start gap-1.5">
           <BrandMark size={72} rounded="card" />
-          <span className="text-2xs tabular-nums text-ink-muted" dir="ltr">
-            {fmtDateTime(o.created_at)}
-          </span>
         </div>
 
         <div className="flex min-w-0 flex-col items-end gap-1.5">
@@ -773,6 +770,22 @@ function OrderCard({
             className="rounded-control bg-accent px-2.5 py-1 text-sm font-bold tabular-nums text-on-bright"
           >
             #{fmtRef(o.number)}
+          </span>
+          {/* ══════════════════════════════════════════════════════════
+              **والتاريخُ تحت الرقم — لا تحت العلامة**
+              ══════════════════════════════════════════════════════════
+
+              (تصحيحُ المالك ٢٠٢٦-٠٨-١٢: «التاريخ تحت اللوغو وهذا غلط،
+               لازم تحت رقم الطلب — طلبٌ تحته تاريخٌ ووقت».)
+
+              **وكان تحت العلامة** (قرارُ ٢٠٢٦-٠٨-٠٧) — **والعلامةُ لا
+              تاريخَ لها**: هي هي في كلّ بطاقة. **والتاريخُ خبرٌ عن هذا
+              الطلب وحدَه**، فيقع تحت ما يخصّه.
+
+              **ورقمٌ ثمّ تاريخُه** يُقرآن معاً حين يُسأل: «أيّ طلب؟» —
+              «الألف والثامن، أمس السادسة». */}
+          <span className="text-2xs tabular-nums text-ink-muted" dir="ltr">
+            {fmtDateTime(o.created_at)}
           </span>
           {/* ══════════════════════════════════════════════════════════
               **ولا شارةَ حالٍ هنا — الشريطُ يقولها**
