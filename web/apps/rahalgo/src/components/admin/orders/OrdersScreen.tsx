@@ -10,6 +10,7 @@ import {
   fmtDateTime,
 } from "@rahalgo/i18n";
 import {
+  OrderRef,
   Money,
   Pagination,
   Alert,
@@ -691,9 +692,21 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       header: m.admin.ordersPage.number,
       icon: <IconOrder />,
       primary: true,
+      // ══════════════════════════════════════════════════════════════
+      // **والرقمُ يسارا بشكله الواحد — وتحته تاريخُه**
+      // ══════════════════════════════════════════════════════════════
+      //
+      // (قرارُ المالك ٢٠٢٦-٠٨-١٢: «رقم الطلب على اليسار كما اتّفقنا،
+      //  بنفس المربّع الصغير وبنفس اللون، وتحته التاريخ والوقت».)
+      //
+      // **وكان نصّاً غليظاً يمينا** — والزبونُ يراه مربّعاً بالنبرة
+      // يسارا. **وشكلان لشيءٍ واحدٍ في لوحتين** يجعلان من يعمل عليهما
+      // يقرأ رقمين مختلفَي الشكل لطلبٍ واحد.
+      //
+      // **والحالةُ تسبقه في السطر** — أوّلُ الصفّ يمينا، **وهي ما يُمسح
+      // به عمودُ الطلبات**: أيُّها ينتظر فعلا.
       cell: (o) => (
-        <span className="flex items-center justify-between gap-2">
-          <span className="font-bold">#{o.number}</span>
+        <span className="flex items-start justify-between gap-2">
           <span className="inline-flex flex-wrap items-center gap-1">
             <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>
               {STATUS_LABELS[o.status]}
@@ -703,6 +716,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               <Badge variant="neutral">{ENDED_BY[o.ended_by]}</Badge>
             )}
           </span>
+          <OrderRef number={o.number} at={o.created_at} />
         </span>
       ),
       // **وفي الجدول الرقمُ وحدَه** — الحالةُ عمودٌ له رأسُه.
@@ -759,6 +773,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       id: "time",
       header: m.admin.ordersPage.time,
       primary: true,
+      // **وفي الجدول وحدَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «وتحته التاريخ
+      // والوقت»). **والبطاقةُ صارت تحمله تحت الرقم** في `OrderRef`،
+      // **وخبرٌ يُكتب مرّتين في بطاقةٍ واحدة** يُقرأ خبرين: أهذا وقتُ
+      // الطلب وذاك وقتُ شيءٍ آخر؟
+      //
+      // **والجدولُ يبقيه عموداً** — له رأسٌ ويُرتَّب به.
+      only: "table",
       cell: (o) => (
         <span dir="ltr" className="block">
           {fmtDateTime(o.created_at)}
