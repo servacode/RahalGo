@@ -33,6 +33,23 @@ object Markers {
     private const val PICKUP = "#02678F"
     private const val DROPOFF = "#FE9501"
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **تُبنى مرّةً ثمّ تُحدَّث — ولا تُبنى مرّتين**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **و`addSource` بمعرّفٍ موجودٍ تُسقط التطبيق** — لا تردّ خطأً
+     * يُعالَج: `CannotAddSourceException`.
+     *
+     * **وكانت لا تقع لأنّ الأسلوب كان يُعاد بناؤه مع كلّ رسم**: أسلوبٌ
+     * جديدٌ لا مصادرَ فيه، **فالإضافة أوّلُ إضافة دائما.** فلمّا صار
+     * الأسلوب يُحمَّل مرّةً (وهو الصواب) **صار الرسمُ الثاني يسقط** —
+     * وأوّلُ ما يُوقعه ضغطةُ زرٍّ على الخريطة. (أمسكه المالك
+     * ٢٠٢٦-٠٨-١٢: «لا يعملان ويغلقان التطبيق عند الضغط عليهما».)
+     *
+     * **فتُقرأ المصادر أوّلا**: موجودةٌ تُبدَّل حمولتُها، **وغيرُ
+     * موجودةٍ تُنشأ بطبقتها.**
+     */
     fun draw(style: Style, driver: LatLng?, pickup: LatLng?, dropoff: LatLng?) {
         // **والخطّ أوّلا ثمّ النقاط** — الترتيب هو ترتيب الرسم:
         // **من رسم الخطّ فوق النقاط** شطبها بخطّ يمرّ في وسطها.
@@ -46,7 +63,13 @@ object Markers {
             pickup?.let { add(feature(it, "pickup")) }
             dropoff?.let { add(feature(it, "dropoff")) }
         }
-        style.addSource(GeoJsonSource(SRC_POINTS, FeatureCollection.fromFeatures(features)))
+        val collection = FeatureCollection.fromFeatures(features)
+        val existing = style.getSourceAs<GeoJsonSource>(SRC_POINTS)
+        if (existing != null) {
+            existing.setGeoJson(collection)
+            return
+        }
+        style.addSource(GeoJsonSource(SRC_POINTS, collection))
         style.addLayer(
             CircleLayer("trip-points-layer", SRC_POINTS).withProperties(
                 PropertyFactory.circleRadius(9f),
@@ -79,11 +102,23 @@ object Markers {
     }
 
     private fun line(style: Style, points: List<LatLng>) {
-        if (points.size < 2) return
+        // **وخطٌّ من نقطةٍ واحدةٍ لا يُرسم** — وإن كان مرسوما يُفرَّغ:
+        // **خطٌّ إلى وجهةٍ لم تعد تُعرض** يبقى ممدودا إلى لا شيء.
         val coords = points.map { Point.fromLngLat(it.longitude, it.latitude) }
-        style.addSource(
-            GeoJsonSource(SRC_LINE, Feature.fromGeometry(LineString.fromLngLats(coords))),
-        )
+        val geometry = if (coords.size < 2) {
+            FeatureCollection.fromFeatures(emptyList())
+        } else {
+            FeatureCollection.fromFeature(
+                Feature.fromGeometry(LineString.fromLngLats(coords)),
+            )
+        }
+        val existing = style.getSourceAs<GeoJsonSource>(SRC_LINE)
+        if (existing != null) {
+            existing.setGeoJson(geometry)
+            return
+        }
+        if (coords.size < 2) return
+        style.addSource(GeoJsonSource(SRC_LINE, geometry))
         style.addLayer(
             LineLayer("trip-line-layer", SRC_LINE).withProperties(
                 PropertyFactory.lineColor(PICKUP),
