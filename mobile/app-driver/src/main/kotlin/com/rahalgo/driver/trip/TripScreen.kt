@@ -185,6 +185,7 @@ fun TripScreen(state: TripState, actions: TripActions) {
                 follow = follow,
                 onRecenter = { recenter++ },
                 onFollow = { follow = !follow },
+                onChat = actions.chat,
                 onNavigate = actions.navigate,
             )
             TripCard(order = order, state = state, actions = actions)
@@ -307,24 +308,28 @@ private fun reasonLabel(code: String): String = when (code) {
 }
 
 /**
- * **أزرارُ الخريطة الثلاثة** — فوق البطاقة وفي جهة الإبهام.
+ * **أزرارُ الخريطة** — فوق البطاقة وفي جهة اليمين.
  *
- * **ولا تُترك عائمةً في وسط الخريطة**: يدُه على المقود، **وما يُضغط وهو
- * واقفٌ على إشارةٍ يكون في مرمى إبهامه** لا في منتصف الشاشة.
+ * (تصحيح المالك ٢٠٢٦-٠٨-١٢: «الأزرار بالعربيّ يجب أن تكون على اليمين».)
  *
- * **والملاحة برتقاليّةٌ مسمّاة**: هي الوحيدةُ التي تُخرجه من التطبيق،
- * **وخروجٌ لا يُنتظر** — فلا تشبه أختيها اللتين تحرّكان كاميرا.
+ * **واليمينُ جهةُ الإبهام في شاشةٍ عربيّة** — كما تقع كلُّ أزرار
+ * التطبيق: **ومن وضعها يسارا** جعل صاحبَها يعبر الشاشةَ بيده وهو يقود.
+ *
+ * **والملاحةُ مكتوبةٌ لا أيقونةً وحدَها**: هي الوحيدةُ التي تُخرجه من
+ * التطبيق، **وبابٌ يَخرج منه بلا اسم** يُضغط بالخطأ فيجد نفسَه في
+ * تطبيقٍ آخر ولا يعرف لماذا.
  */
 @Composable
 private fun MapButtons(
     follow: Boolean,
     onRecenter: () -> Unit,
     onFollow: () -> Unit,
+    onChat: () -> Unit,
     onNavigate: () -> Unit,
 ) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.End,
+        horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.Bottom,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -339,12 +344,18 @@ private fun MapButtons(
                 on = follow,
             )
             Spacer(Modifier.height(10.dp))
-            MapButton(
-                icon = R.drawable.ic_arrow_send,
-                label = R.string.map_navigate,
-                onClick = onNavigate,
-                accent = true,
-            )
+            // ══════════════════════════════════════════════════════════
+            // **وحديثُ الزبون قرصٌ عائمٌ لا سطرٌ في البطاقة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢.)
+            //
+            // **وهو ما يُفتح فجأةً**: يتّصل الزبونُ ليقول «الباب الثاني»
+            // — **فيكون في مرمى الإبهام دائما** لا يُبحث عنه في بطاقةٍ
+            // قد تكون مطويّةً تحت.
+            MapButton(R.drawable.ic_chat, R.string.trip_chat, onChat)
+            Spacer(Modifier.height(10.dp))
+            NavigateButton(onNavigate)
         }
     }
 }
@@ -356,27 +367,54 @@ private fun MapButton(
     label: Int,
     onClick: () -> Unit,
     on: Boolean = false,
-    accent: Boolean = false,
 ) {
-    val ground = when {
-        accent -> BrandOrange
-        on -> BrandTeal
-        else -> BrandCanvas
-    }
     Box(
         Modifier
             .size(52.dp)
             .shadow(6.dp, CircleShape)
             .clip(CircleShape)
-            .background(ground)
+            .background(if (on) BrandTeal else BrandCanvas)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(icon),
             contentDescription = stringResource(label),
-            tint = if (accent || on) Color.White else InkDeep,
+            tint = if (on) Color.White else InkDeep,
             modifier = Modifier.size(24.dp),
+        )
+    }
+}
+
+/**
+ * **بابُ الخروج — مكتوبٌ باسمه.**
+ *
+ * **ولونُه غيرُ لون أختيه**: هاتان تحرّكان كاميرا وتبقيان في المكان،
+ * **وهذا يترك التطبيق** — واختلافُ الفعل يُقال باللون قبل أن يُقرأ.
+ */
+@Composable
+private fun NavigateButton(onClick: () -> Unit) {
+    Column(
+        Modifier
+            .shadow(6.dp, RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .background(BrandOrange)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_arrow_send),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = stringResource(R.string.trip_navigate),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelSmall,
         )
     }
 }
@@ -667,10 +705,8 @@ private fun TripCard(
             // «ردّني» و«تابعني». **وزرّان يفعلان الشيءَ نفسَه في شاشةٍ
             // واحدة** يجعلان صاحبَهما يسأل: أيّهما؟ وهو يقود.
             //
-            // **وحديث الزبون من هنا** — لا رقم هاتف في الطرفين.
-            TextButton(onClick = actions.chat, enabled = !state.busy) {
-                Text(stringResource(R.string.trip_chat), color = BrandTeal)
-            }
+            // **وحديث الزبون صار قرصا عائما على الخريطة** — لا رقم
+            // هاتف في الطرفين، **وما يُفتح فجأةً يكون في مرمى الإبهام.**
             // **والاتّفاق للطلب الخاصّ وحدَه** — العاديّ سعرُه معروف
             // سلفا، **وزرٌّ يظهر فيه يسأل عمّا لا يُسأل عنه.**
             if (order.kind == "custom") {

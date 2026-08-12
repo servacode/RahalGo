@@ -166,10 +166,9 @@
     <string name="nav_trip">الرحلة</string>
     <string name="trip_none">لا رحلة الآن</string>
     <string name="trip_none_hint">خذ طلباً من الطلبات وتبدأ رحلتك</string>
-    <string name="trip_navigate">افتح بالملاحة</string>
+    <string name="trip_navigate">افتح الملاحة</string>
     <string name="map_recenter">ردّني إلى موقعي</string>
     <string name="map_follow">تابعني على الخريطة</string>
-    <string name="map_navigate">الملاحة</string>
     <string name="trip_continue">متابعة الرحلة</string>
     <string name="trip_s_accepted">قبلت الطلب</string>
     <string name="trip_s_to_pickup">إلى المتجر</string>
