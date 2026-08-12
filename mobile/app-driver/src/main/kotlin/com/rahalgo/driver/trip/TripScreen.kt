@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -26,13 +27,16 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -40,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.rahalgo.design.BrandCanvas
 import com.rahalgo.design.BrandOrange
 import com.rahalgo.design.BrandTeal
 import com.rahalgo.design.InkDeep
@@ -79,6 +84,21 @@ fun TripScreen(state: TripState, actions: TripActions) {
         return
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **ثلاثة أزرارٍ على الخريطة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (مواصفة المالك ٢٠٢٦-٠٨-١٢ بصورة.)
+    //
+    //	ردَّني    ←  الكاميرا تعود إلى موضعي بعد أن قلّبتُ الخريطة بيدي
+    //	اتبعني   ←  تلاحقني وأنا أسير، فلا أمسّها كلَّ دقيقة
+    //	الملاحة  ←  أخرج إلى تطبيق الملاحة — الطريق والصوت ليسا عندنا
+    //
+    // **والملاحقة مُطفأةٌ حتّى تُطلب**: الفتحةُ الأولى تُظهر النقاط
+    // كلَّها — **من رأى نفسَه ولم ير وجهتَه** لا يعرف أيّ جهةٍ يمضي.
+    var follow by rememberSaveable { mutableStateOf(false) }
+    var recenter by rememberSaveable { mutableIntStateOf(0) }
+
     Box(Modifier.fillMaxSize()) {
         TripMap(
             driver = state.driver,
@@ -86,6 +106,8 @@ fun TripScreen(state: TripState, actions: TripActions) {
             // **انتهى شأنه منها**، وخريطة فيها ما لم يعد يلزم تشوّش.
             pickup = if (state.step >= TripStep.PICKED_UP) null else state.pickup,
             dropoff = state.dropoff,
+            follow = follow,
+            recenter = recenter,
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -158,12 +180,15 @@ fun TripScreen(state: TripState, actions: TripActions) {
             )
         }
 
-        TripCard(
-            order = order,
-            state = state,
-            actions = actions,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+        Column(Modifier.align(Alignment.BottomCenter)) {
+            MapButtons(
+                follow = follow,
+                onRecenter = { recenter++ },
+                onFollow = { follow = !follow },
+                onNavigate = actions.navigate,
+            )
+            TripCard(order = order, state = state, actions = actions)
+        }
     }
 
     if (state.agreeOpen) {
@@ -279,6 +304,81 @@ private fun reasonLabel(code: String): String = when (code) {
     "merchant_not_ready" -> stringResource(R.string.reason_merchant_not_ready)
     "order_unknown" -> stringResource(R.string.reason_order_unknown)
     else -> code
+}
+
+/**
+ * **أزرارُ الخريطة الثلاثة** — فوق البطاقة وفي جهة الإبهام.
+ *
+ * **ولا تُترك عائمةً في وسط الخريطة**: يدُه على المقود، **وما يُضغط وهو
+ * واقفٌ على إشارةٍ يكون في مرمى إبهامه** لا في منتصف الشاشة.
+ *
+ * **والملاحة برتقاليّةٌ مسمّاة**: هي الوحيدةُ التي تُخرجه من التطبيق،
+ * **وخروجٌ لا يُنتظر** — فلا تشبه أختيها اللتين تحرّكان كاميرا.
+ */
+@Composable
+private fun MapButtons(
+    follow: Boolean,
+    onRecenter: () -> Unit,
+    onFollow: () -> Unit,
+    onNavigate: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            MapButton(R.drawable.ic_my_location, R.string.map_recenter, onRecenter)
+            Spacer(Modifier.height(10.dp))
+            // **والملاحقةُ تُضاء حين تعمل** — زرٌّ يفعل شيئا مستمرّا
+            // **ولا يقول إنّه يعمل** يُضغط مرّتين فيُطفأ وهو يُظنّ مشتعلا.
+            MapButton(
+                icon = R.drawable.ic_navigation,
+                label = R.string.map_follow,
+                onClick = onFollow,
+                on = follow,
+            )
+            Spacer(Modifier.height(10.dp))
+            MapButton(
+                icon = R.drawable.ic_arrow_send,
+                label = R.string.map_navigate,
+                onClick = onNavigate,
+                accent = true,
+            )
+        }
+    }
+}
+
+/** **قرصٌ واحد** — أيقونةٌ في دائرةٍ ترتفع عن الخريطة بظلّها. */
+@Composable
+private fun MapButton(
+    icon: Int,
+    label: Int,
+    onClick: () -> Unit,
+    on: Boolean = false,
+    accent: Boolean = false,
+) {
+    val ground = when {
+        accent -> BrandOrange
+        on -> BrandTeal
+        else -> BrandCanvas
+    }
+    Box(
+        Modifier
+            .size(52.dp)
+            .shadow(6.dp, CircleShape)
+            .clip(CircleShape)
+            .background(ground)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = stringResource(label),
+            tint = if (accent || on) Color.White else InkDeep,
+            modifier = Modifier.size(24.dp),
+        )
+    }
 }
 
 /**
@@ -563,11 +663,10 @@ private fun TripCard(
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            // **والملاحة تُسلَّم لتطبيق الخرائط** — لا تُبنى هنا:
-            // **السائق يعرف تطبيقه ويثق بصوته.**
-            TextButton(onClick = actions.navigate, enabled = !state.busy) {
-                Text(stringResource(R.string.trip_navigate), color = BrandTeal)
-            }
+            // **والملاحة صعدت إلى الخريطة** — قرصٌ برتقاليٌّ بجانب
+            // «ردّني» و«تابعني». **وزرّان يفعلان الشيءَ نفسَه في شاشةٍ
+            // واحدة** يجعلان صاحبَهما يسأل: أيّهما؟ وهو يقود.
+            //
             // **وحديث الزبون من هنا** — لا رقم هاتف في الطرفين.
             TextButton(onClick = actions.chat, enabled = !state.busy) {
                 Text(stringResource(R.string.trip_chat), color = BrandTeal)

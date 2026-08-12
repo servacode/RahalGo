@@ -91,10 +91,22 @@ fun TripMap(
     driver: LatLng?,
     pickup: LatLng?,
     dropoff: LatLng?,
+    /** **أتلاحق الكاميرا صاحبَها؟** — زرّ السير على الخريطة. */
+    follow: Boolean = false,
+    /**
+     * **عدّاد «ردّني إلى موضعي»** — يزيد مع كلّ ضغطة.
+     *
+     * **ولماذا عدّاد لا دالّة**: `AndroidView` لا تُنادى إلّا حين
+     * يتبدّل شيءٌ مُمرَّرٌ إليها، **ورقمٌ يزيد أصدقُ إشارةٍ على ضغطة**
+     * من رايةٍ تُرفع وتُنزَّل فتضيع إن ضُغط مرّتين.
+     */
+    recenter: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val view = remember { createMapView(context) }
+    // **وما عولج لا يُعاد** — الدالّة تُنادى مع كلّ رسمٍ جديد.
+    val handled = remember { intArrayOf(-1) }
 
     DisposableEffect(Unit) {
         view.onStart()
@@ -108,28 +120,59 @@ fun TripMap(
 
     AndroidView(factory = { view }, modifier = modifier) { map ->
         map.getMapAsync { libre ->
-            libre.setStyle(Style.Builder().fromUri(STYLE_ASSET)) {
-                Markers.draw(it, driver, pickup, dropoff)
-                // **والكاميرا تُظهر النقاط كلَّها** — لا تلاحق السائق
-                // وحدَه: **من رأى نفسَه ولم ير المتجر** لا يعرف أيّ جهة
-                // يمضي.
-                val points = listOfNotNull(driver, pickup, dropoff)
-                when {
-                    points.size >= 2 -> libre.easeCamera(
-                        CameraUpdateFactory.newLatLngBounds(
-                            LatLngBounds.fromLatLngs(points),
-                            120,
-                        ),
-                    )
-
-                    points.size == 1 -> libre.easeCamera(
-                        CameraUpdateFactory.newLatLngZoom(points[0], 15.0),
-                    )
-
-                    else -> libre.easeCamera(CameraUpdateFactory.newLatLngZoom(RAQQA, 13.0))
+            // ══════════════════════════════════════════════════════════
+            // **والأسلوب يُحمَّل مرّة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كان يُعاد ضبطُه مع كلّ نبضة موقع** — و`setStyle` تهدم
+            // الطبقات وتبنيها، **فترتجف الخريطة كلَّ عشرين ثانية.**
+            val style = libre.style
+            if (style == null) {
+                libre.setStyle(Style.Builder().fromUri(STYLE_ASSET)) {
+                    Markers.draw(it, driver, pickup, dropoff)
+                    fitAll(libre, driver, pickup, dropoff)
                 }
+            } else {
+                Markers.draw(style, driver, pickup, dropoff)
+            }
+
+            // **وردُّه إلى موضعه أوّلا** — ضغطةٌ صريحةٌ تسبق كلَّ سلوكٍ
+            // تلقائيّ.
+            if (recenter != handled[0]) {
+                handled[0] = recenter
+                if (driver != null) {
+                    libre.easeCamera(CameraUpdateFactory.newLatLngZoom(driver, 16.5))
+                } else {
+                    fitAll(libre, driver, pickup, dropoff)
+                }
+            } else if (follow && driver != null) {
+                // **والملاحقة تُقرّب** — من يسير يريد الشارع الذي تحته
+                // لا المدينة كلَّها.
+                libre.easeCamera(CameraUpdateFactory.newLatLngZoom(driver, 17.0))
             }
         }
+    }
+}
+
+/**
+ * **تُظهر النقاط كلَّها** — لا تلاحق السائق وحدَه.
+ *
+ * **ومن رأى نفسَه ولم ير المتجر** لا يعرف أيّ جهةٍ يمضي.
+ */
+private fun fitAll(
+    libre: org.maplibre.android.maps.MapLibreMap,
+    driver: LatLng?,
+    pickup: LatLng?,
+    dropoff: LatLng?,
+) {
+    val points = listOfNotNull(driver, pickup, dropoff)
+    when {
+        points.size >= 2 -> libre.easeCamera(
+            CameraUpdateFactory.newLatLngBounds(LatLngBounds.fromLatLngs(points), 120),
+        )
+
+        points.size == 1 -> libre.easeCamera(CameraUpdateFactory.newLatLngZoom(points[0], 15.0))
+        else -> libre.easeCamera(CameraUpdateFactory.newLatLngZoom(RAQQA, 13.0))
     }
 }
 
