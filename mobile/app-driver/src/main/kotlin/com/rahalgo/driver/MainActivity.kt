@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -110,21 +109,17 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         // ══════════════════════════════════════════════════════════════
-        // **والنافذة تمتدّ تحت شريط النظام**
+        // **وشريطُ النظام يبقى** — الساعةُ والشبكةُ والبطّاريّة
         // ══════════════════════════════════════════════════════════════
         //
-        // (قرار المالك ٢٠٢٦-٠٨-١٢: «يوجد شريط أبيض أعلى الشاشة أزله».)
+        // **جُرّب مدُّ النافذة تحته فرُفض** (المالك ٢٠٢٦-٠٨-١٢: «أنت شلت
+        // الشريط الخاصّ بالبطارية وهذا غلط، ما هيك طلبي أبدا»).
         //
-        // **وكان النظامُ يحجز أعلى الشاشة ويصبغه بلون النافذة** — شريطٌ
-        // أبيضُ فوق الخريطة لا شيءَ فيه. **والخريطةُ تريد الشاشةَ
-        // كلَّها.**
+        // **والذي كان يُطلب رفعُه شريطٌ آخرُ تحته** — فراغٌ أبيضُ من
+        // صنعنا لا من صنع النظام.
         //
-        // **وما يجب ألّا يُغطّى يدفع نفسَه**: الشريطُ العلويّ والمحطّاتُ
-        // فيهما `statusBarsPadding`، **و`Scaffold` يمرّر الحواشيَ إلى
-        // شريطَيه** — فلا يقع زرٌّ تحت ساعة النظام.
-        enableEdgeToEdge()
-        // **وأيقوناتُ النظام داكنة** — أرضُنا فاتحةٌ وخريطتُنا فاتحة،
-        // **وأيقونةٌ بيضاءُ على بلاطةٍ بيضاءَ تختفي.**
+        // **وأيقوناتُ النظام داكنة** — أرضُ شريطه فاتحة، **وأيقونةٌ
+        // بيضاءُ عليها تختفي.**
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
         setContent { DriverApp() }
