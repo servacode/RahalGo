@@ -99,3 +99,24 @@ data class FailReasons(val reasons: List<FailReasonItem> = emptyList())
 
 @Serializable
 data class FailReasonItem(val code: String = "", val fault: String = "")
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **مسارُ الطلب — بالشوارع لا بالهواء**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرار المالك ٢٠٢٦-٠٨-١٢.)
+ *
+ * **و`available = false` ليست خطأ**: محرّكُ المسارات قد ينام أو لا يجد
+ * طريقا، **والشاشة ترسم خطَّها المستقيم كما كانت** ولا تقف.
+ *
+ * **والنقاط عرضٌ ثمّ طول** — كما تكتبها الشاشة والقاعدة، **والمحرّك
+ * يقلبها عن OSRM قبل أن يرسلها** فلا يُقلَب في مكانين.
+ */
+@Serializable
+data class OrderRoute(
+    val available: Boolean = false,
+    @SerialName("distance_m") val distanceM: Double = -1.0,
+    @SerialName("duration_s") val durationS: Double = -1.0,
+    val points: List<List<Double>> = emptyList(),
+)

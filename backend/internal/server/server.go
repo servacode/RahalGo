@@ -378,6 +378,10 @@ func (s *Server) Router() http.Handler {
 			// **وتوثيقُ ما اتُّفق عليه في الطلب الخاصّ** — بعد المحادثة.
 			r.Post("/orders/{id}/agree", s.handleAgreeCustom)
 			r.Get("/orders", s.handleDriverOrders)
+			// **مسارُ الطرف الحاليّ** — خطُّ الشوارع ومسافتُه ومدّتُه.
+			// **ونداءٌ وحدَه لا حقلٌ في القائمة**: القائمةُ خمسةُ طلبات
+			// تُقرأ كلَّ ثوان، **والمسارُ يلزم لواحدٍ في يده.**
+			r.Get("/orders/{id}/route", s.handleDriverOrderRoute)
 			// **سجلُّه** — ما نفّذه نجح أم فشل. **وما انتهى كان يختفي**، فلا
 			// يجد طلباً يتذكّره ليُبلّغ عنه. (انظر `driver_history.go`)
 			r.Get("/orders/history", s.handleDriverHistory)

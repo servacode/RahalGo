@@ -91,6 +91,8 @@ fun TripMap(
     driver: LatLng?,
     pickup: LatLng?,
     dropoff: LatLng?,
+    /** **خطّ الشوارع** — وفارغٌ يعني المستقيم بين النقاط. */
+    route: List<LatLng> = emptyList(),
     /** **أتلاحق الكاميرا صاحبَها؟** — زرّ السير على الخريطة. */
     follow: Boolean = false,
     /**
@@ -129,11 +131,11 @@ fun TripMap(
             val style = libre.style
             if (style == null) {
                 libre.setStyle(Style.Builder().fromUri(STYLE_ASSET)) {
-                    Markers.draw(context, it, driver, pickup, dropoff)
+                    Markers.draw(context, it, driver, pickup, dropoff, route)
                     fitAll(libre, driver, pickup, dropoff)
                 }
             } else {
-                Markers.draw(context, style, driver, pickup, dropoff)
+                Markers.draw(context, style, driver, pickup, dropoff, route)
             }
 
             // **وردُّه إلى موضعه أوّلا** — ضغطةٌ صريحةٌ تسبق كلَّ سلوكٍ

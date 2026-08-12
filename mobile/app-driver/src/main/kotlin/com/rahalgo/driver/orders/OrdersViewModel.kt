@@ -15,6 +15,7 @@ import com.rahalgo.driver.trip.ChatState
 import com.rahalgo.driver.trip.Stop
 import com.rahalgo.driver.trip.TripState
 import com.rahalgo.shared.model.DriverOrder
+import com.rahalgo.shared.model.OrderRoute
 import com.rahalgo.driver.trip.TripStep
 import org.maplibre.android.geometry.LatLng
 import com.rahalgo.shared.net.ApiClient
@@ -67,6 +68,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var chatUnread by mutableStateOf(0)
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **مسارُ الطرف الحاليّ** — بالشوارع لا بالهواء
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢.)
+    //
+    // **وفارغٌ يعني «لا مسار»**: محرّكُ المسارات قد ينام، **والخريطة
+    // ترسم خطَّها المستقيم كما كانت** ولا تقف.
+    var route by mutableStateOf<OrderRoute?>(null)
+        private set
+
     private val backend = Backend.of(getApplication())
 
     init {
@@ -113,6 +125,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         // **وشارةُ الحديث تُقرأ مع كلّ تحديث** — والوصلةُ الحيّة تنادي
         // التحديث، **فما يصل يُرى في ثانيته لا في فتحةٍ تالية.**
         loadChatBadge()
+        loadRoute()
         state = try {
             state.copy(
                 offers = backend.driver.queue(),
@@ -304,8 +317,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     fun trip(driver: LastPoint.Point?): TripState {
         val order = state.mine.firstOrNull { it.id == openId } ?: state.mine.firstOrNull()
             ?: return TripState()
+        val line = route?.points.orEmpty().mapNotNull {
+            if (it.size >= 2) LatLng(it[0], it[1]) else null
+        }
         return TripState(
             order = order,
+            // **والمسار يُفضَّل على الخطّ المستقيم** — وفارغٌ يعني أنّ
+            // المحرّك لم يردّ، **فيُرسم المستقيمُ ولا تبقى الخريطةُ
+            // بلا خطّ.**
+            routeLine = line,
+            routeM = route?.takeIf { it.available }?.distanceM ?: -1.0,
+            routeSec = route?.takeIf { it.available }?.durationS ?: -1.0,
             step = TripStep.of(order.status),
             // **وما بقي يتبدّل بتبدّل الوجهة**: قبل الاستلام المسافةُ إلى
             // المتجر، وبعده طولُ المشوار إلى الزبون.
@@ -419,6 +441,22 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     //
     // **ورسالةٌ تصل ولا شيء يقولها** تُقرأ بعد ساعة — والزبون ينتظر
     // جوابا عن «الباب الثاني أم الأوّل؟»
+
+    /**
+     * **يقرأ مسارَ الطلب الذي في يده** — وفشلُه صامت.
+     *
+     * **والمحرّك يخزّنه عشرَ دقائق بمفتاح نقطتين مقرّبتين**، فنداءٌ مع
+     * كلّ تحديثٍ لا يثقل عليه: **من مشى خطوةً قرأ الجوابَ المخزّن.**
+     */
+    private suspend fun loadRoute() {
+        val id = openId ?: state.mine.firstOrNull()?.id
+        if (id == null) {
+            route = null
+            return
+        }
+        runCatching { backend.driver.route(id) }
+            .onSuccess { route = if (it.available) it else null }
+    }
 
     /** **يقرأ ما ينتظره في طلبه الحاليّ** — وفشلُه صامت. */
     private suspend fun loadChatBadge() {

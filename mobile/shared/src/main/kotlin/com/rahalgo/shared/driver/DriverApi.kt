@@ -3,8 +3,9 @@ package com.rahalgo.shared.driver
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.FailReasonItem
-import com.rahalgo.shared.model.TrackPoint
 import com.rahalgo.shared.model.FailReasons
+import com.rahalgo.shared.model.OrderRoute
+import com.rahalgo.shared.model.TrackPoint
 import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
@@ -26,6 +27,10 @@ class DriverApi(private val api: ApiClient) {
     suspend fun queue(): List<DriverOrder> = api.call("/api/v1/driver/queue")
 
     /** طلباته التي في يده — **ما لم يُغلق بعد.** */
+    /** **مسارُ الطرف الحاليّ** — خطُّ الشوارع ومسافتُه ومدّتُه. */
+    suspend fun route(orderId: String): OrderRoute =
+        api.call("/api/v1/driver/orders/" + orderId + "/route")
+
     suspend fun orders(): List<DriverOrder> = api.call("/api/v1/driver/orders")
 
     /**

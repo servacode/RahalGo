@@ -125,6 +125,7 @@ fun TripScreen(
             // الشاشة تجعلان الكاميرا تتّسع لتضمّهما، **فيصغر الشارعُ
             // الذي يسير فيه الآن** ليُرى مكانٌ لا شأنَ له به بعد.
             dropoff = if (state.step >= TripStep.PICKED_UP) state.dropoff else null,
+            route = state.routeLine,
             follow = follow,
             recenter = recenter,
             modifier = Modifier.fillMaxSize(),
@@ -500,7 +501,9 @@ private fun NavigateButton(onClick: () -> Unit) {
  */
 @Composable
 private fun PhaseRibbon(state: TripState) {
-    val meters = state.remainingM
+    // **ورقمُ المحرّك يسبق الهوائيّ** — «٩٨٢ م ودقيقتان» كانت تعني في
+    // الواقع «١٫١ كم وسبعَ دقائق». (قيس ٢٠٢٦-٠٨-١٢.)
+    val meters = if (state.routeM >= 0) state.routeM else state.remainingM
     Column(
         Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -519,7 +522,13 @@ private fun PhaseRibbon(state: TripState) {
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Chip(R.drawable.ic_pin, distanceText(meters))
-                val minutes = eta(meters, state.avgSpeedKmh)
+                // **والمدّة من المحرّك إن وُجدت** — محسوبةً بسرعات
+                // الشوارع نفسِها، **لا بسرعةٍ واحدةٍ في الإعدادات.**
+                val minutes = if (state.routeSec >= 0) {
+                    "~" + ((state.routeSec / 60).toLong().coerceAtLeast(1)) + " د"
+                } else {
+                    eta(meters, state.avgSpeedKmh)
+                }
                 if (minutes.isNotEmpty()) {
                     Spacer(Modifier.size(14.dp))
                     Chip(R.drawable.ic_time, minutes.substringAfter("~"))
@@ -902,6 +911,20 @@ data class TripState(
     val order: DriverOrder? = null,
     /** ما بقي من الطريق بالمتر — **وسالبٌ يعني لا يُعرف.** */
     val remainingM: Double = -1.0,
+    // ══════════════════════════════════════════════════════════════════
+    // **والمسارُ الحقيقيُّ يسبق المستقيم**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢.)
+    //
+    // **وفارغٌ يعني أنّ محرّك المسارات لم يردّ** — فيُرسم الخطُّ المستقيمُ
+    // وتُقرأ المسافةُ الهوائيّة، **ولا تبقى الخريطةُ بلا خطّ.**
+    /** نقاطُ خطّ الشوارع — **وفارغةٌ تعني المستقيم.** */
+    val routeLine: List<LatLng> = emptyList(),
+    /** طولُ الطريق بالشوارع — **وسالبٌ يعني لا يُعرف.** */
+    val routeM: Double = -1.0,
+    /** مدّتُه بالثواني كما يحسبها المحرّك بسرعات الشوارع. */
+    val routeSec: Double = -1.0,
     /** سرعة السائق الوسطى من المحرّك — **وصفر يعني لا تُحسب مدّة.** */
     val avgSpeedKmh: Long = 0,
     /** **هل هو على بُعد خطوات من وجهته؟** — يُقترح ولا يُنفَّذ. */
