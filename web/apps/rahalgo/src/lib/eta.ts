@@ -19,6 +19,8 @@ export interface EtaSource {
   ready_at?: string | null;
   prep_minutes?: number | null;
   delivery_estimate_min?: number;
+  /** **متى خرج الطلبُ من المتجر** — منه وحدَه يُحسب الوقت. */
+  picked_up_at?: string | null;
 }
 
 /**
@@ -30,19 +32,40 @@ export interface EtaSource {
  */
 const FALLBACK_MIN = 15;
 
-/** أللطلبِ وقتٌ متوقَّعٌ يُعرض؟ — **لا يُعرض لمن لم يُقبل بعد ولا لمن انتهى.** */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **ولا وقتَ قبل أن يخرج الطلبُ من المتجر**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الوقت المتوقّع لازم يُحسب فقط من وقت استلام
+ *  الطلب من المتجر، لأنّه ممكن يتأخّر الطلب بالمتجر أكثر من الوقت
+ *  المتوقّع — ازدحام وغيره».)
+ *
+ * # ما كان يقع
+ *
+ * **كان يُحسب من «متى يجهز» + مدّة الطريق** — ومدّةُ التحضير رقمٌ يكتبه
+ * المتجرُ تقديرا. **فإن ازدحم عليه المطعمُ تأخّر عشرين دقيقةً زيادة**،
+ * والعدّادُ يقول «خلال دقيقة» ثمّ «خلال دقيقة» **ولا شيء يتحرّك.**
+ *
+ * **ووعدٌ يُخلَف كلَّ دقيقةٍ أسوأُ من لا وعد**: من لا يعرف ينتظر، **ومن
+ * وُعد ثمّ خُلف يتّصل.**
+ *
+ * # ولماذا لحظةُ الخروج بالذات
+ *
+ * **هي أوّلُ لحظةٍ يصير فيها الباقي معلوما**: الطريقُ محسوبٌ بمحرّك
+ * المسارات وسرعةِ السائق، **ولا مجهولَ بعدها إلّا الإشارات.**
+ *
+ * **وقبلها لا يُعرض شيء** — والمرحلةُ تقول «قيد التجهيز» وهي الحقيقة.
+ */
 export function hasEta(o: EtaSource, status: string, closed: boolean): boolean {
-  return !closed && status !== "delivered" && !!o.accepted_at && !!o.prep_minutes;
+  return !closed && status !== "delivered" && !!o.picked_up_at;
 }
 
 /** الوقتُ المتبقّي نصّاً — «خلال ١٢ دقيقة». */
 export function etaText(o: EtaSource): string {
-  const accepted = new Date(o.accepted_at!).getTime();
-  const prepDone = o.ready_at
-    ? new Date(o.ready_at).getTime()
-    : accepted + (o.prep_minutes ?? 0) * 60_000;
+  const out = new Date(o.picked_up_at!).getTime();
   const est = o.delivery_estimate_min || FALLBACK_MIN;
-  const left = Math.round((prepDone + est * 60_000 - Date.now()) / 60_000);
+  const left = Math.round((out + est * 60_000 - Date.now()) / 60_000);
   // **ولا يُعرض صفرٌ ولا سالب**: طلبٌ تأخّر يقول «دقيقة» لا «‎−٣ دقائق» —
   // **والرقمُ السالب يُقرأ عطباً في المنصة لا تأخّراً في الطريق.**
   return m.site.orders.etaValue.replace("{n}", fmtNum(Math.max(1, left)));

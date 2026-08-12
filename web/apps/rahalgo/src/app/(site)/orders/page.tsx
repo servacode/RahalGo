@@ -141,6 +141,8 @@ interface Order {
   created_at: string;
   /** حقولُ الوقت المتوقَّع — **يرسلها الخادمُ أصلاً وكان النوعُ يتجاهلها.** */
   accepted_at?: string | null;
+  /** **متى خرج من المتجر** — منه يُحسب الوقتُ المتوقَّع. */
+  picked_up_at?: string | null;
   ready_at?: string | null;
   prep_minutes?: number | null;
   delivery_estimate_min?: number;

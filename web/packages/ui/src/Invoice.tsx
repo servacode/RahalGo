@@ -12,6 +12,7 @@
  */
 
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, withPlatform } from "@rahalgo/i18n";
+import { Money } from "./money";
 import { Button } from "./components";
 import { SheetHeader } from "./layout";
 import { usePlatform } from "./platform";
@@ -126,9 +127,22 @@ export function Invoice({
             <p>
               <span className="text-ink-muted">{V.customer} </span>
               <span className="font-medium">{order.customer_name}</span>
+              {/* ══════════════════════════════════════════════════════
+                  **والهاتفُ ينفصل عن الاسم**
+                  ══════════════════════════════════════════════════════
+
+                  (قرارُ المالك ٢٠٢٦-٠٨-١٢: «شوف شلون رقم الهاتف ملتصق
+                   باسم الزبون وهذا غلط كبير».)
+
+                  **و`ms-2` تُقاس باتّجاه العنصر نفسِه لا باتّجاه
+                  الصفحة**: العنصرُ `dir="ltr"` فصارت الحاشيةُ يساراً —
+                  **أي في الجهة البعيدة عن الاسم**، والاسمُ يلتصق به.
+
+                  **وهي عائلةُ العطب نفسِها التي قلبت «٣٠٠ ل.س»**: لفّةُ
+                  الاتّجاه تُوضع على الرقم وحدَه، **والتنسيقُ خارجَها.** */}
               {order.customer_phone && (
-                <span dir="ltr" className="ms-2 text-ink-muted">
-                  {order.customer_phone}
+                <span className="ms-2 text-ink-muted">
+                  <span dir="ltr">{order.customer_phone}</span>
                 </span>
               )}
             </p>
@@ -263,8 +277,7 @@ export function Invoice({
             <div className="figure flex items-center justify-between border-t-2 border-line-soft pt-2">
               <dt>{V.total}</dt>
               <dd dir="ltr" className="tabular-nums">
-                {fmtNum(custom ? (goods ?? 0) + fee : order.total)}{" "}
-                <span className="text-sm font-normal">{m.common.currency}</span>
+                <Money value={custom ? (goods ?? 0) + fee : order.total} />
               </dd>
             </div>
           </dl>
