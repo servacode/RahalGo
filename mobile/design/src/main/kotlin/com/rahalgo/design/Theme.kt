@@ -74,6 +74,17 @@ val InkMuted = Color(0xFF5A6B75)
 val StateRed = Color(0xFFD64545)
 val StateGreen = Color(0xFF1E9E5A)
 
+/**
+ * **أرضٌ داكنةٌ فوق الخريطة** — كحليُّ العلامة مطفأً.
+ *
+ * **ولوحُ الرحلة يقع على بلاطات المدينة**: بيضاءَ في الشمس ورماديّةً في
+ * الظلّ، **وأرضٌ فاتحةٌ عليها تذوب.** والداكنُ يُقرأ على كلّ بلاطة.
+ *
+ * **وهو مشتقٌّ من `BrandTeal` لا لونٌ ثالث** — لوحةٌ واحدةٌ في التطبيقات
+ * الأربعة، **ولونٌ يُكتب في شاشةٍ يفترق عن أخواته يوما.**
+ */
+val InkDeep = Color(0xFF07283A)
+
 private val RahalGoColors = lightColorScheme(
     primary = BrandTeal,
     onPrimary = Color.White,

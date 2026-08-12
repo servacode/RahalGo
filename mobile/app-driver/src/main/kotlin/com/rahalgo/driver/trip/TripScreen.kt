@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.BrandOrange
 import com.rahalgo.design.BrandTeal
+import com.rahalgo.design.InkDeep
 import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.money
@@ -96,7 +99,26 @@ fun TripScreen(state: TripState, actions: TripActions) {
         // **وسبعُ خطواتٍ تُقرأ في كلّ نظرة** وهو لا يحتاج منها إلّا
         // واحدة: **ما الذي أفعله الآن** — وهي مكتوبةٌ في الزرّ أسفل
         // الشاشة بلفظها. **والباقي تاريخٌ ومستقبلٌ يزاحمان الخريطة.**
-        Column(Modifier.align(Alignment.TopCenter).statusBarsPadding()) {
+        Column(
+            Modifier.align(Alignment.TopCenter).statusBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // ══════════════════════════════════════════════════════════
+            // **لوحُ الطور — إلى أين وكم بقي**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (مواصفة المالك ٢٠٢٦-٠٨-١٢ بصورة: لوحٌ داكنٌ فوق الخريطة
+            //  يقول «في الطريق إلى المتجر» وتحته المسافة والدقائق.)
+            //
+            // **والرحلة طوران**: إلى المتجر ثمّ — بعد الاستلام — إلى
+            // الزبون. **ومن لا يعرف في أيّهما هو** يقرأ المسافة ولا
+            // يعرف إلى أين هي.
+            //
+            // **وهو فوق الخريطة لا تحتها**: عينُه على الطريق، **وما
+            // يُقرأ في نظرةٍ خاطفةٍ يكون في أعلى الشاشة** حيث لا يحجبه
+            // إبهامٌ ولا يُطلب منه أن ينزل بعينه إلى أسفلها.
+            PhaseRibbon(state)
+
             // ══════════════════════════════════════════════════════════
             // **ومن يحمل أكثر من طلب يرى محطّاته**
             // ══════════════════════════════════════════════════════════
@@ -259,6 +281,81 @@ private fun reasonLabel(code: String): String = when (code) {
     else -> code
 }
 
+/**
+ * **لوحُ الطور** — إلى أين يمشي الآن، وكم بقي مسافةً ووقتا.
+ *
+ * **وهو الجواب عن سؤالٍ واحد**: ما الذي أفعله الآن؟ — ولذلك سطرٌ واحدٌ
+ * كبيرٌ فوق، **ورقمان صغيران تحته.**
+ *
+ * **والوقتُ يُحسب من سرعةٍ في المخزن** (`drivers.avg_speed_kmh`) لا من
+ * رقمٍ في الشيفرة: **درّاجةٌ في الرقّة غيرُ سيّارةٍ في مدينةٍ أخرى.**
+ */
+@Composable
+private fun PhaseRibbon(state: TripState) {
+    val meters = state.remainingM
+    Column(
+        Modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(InkDeep)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(phaseLabel(state.step)),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        if (meters >= 0) {
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Chip(R.drawable.ic_pin, distanceText(meters))
+                val minutes = eta(meters, state.avgSpeedKmh)
+                if (minutes.isNotEmpty()) {
+                    Spacer(Modifier.size(14.dp))
+                    Chip(R.drawable.ic_time, minutes.substringAfter("~"))
+                }
+            }
+        }
+    }
+}
+
+/** **أيقونةٌ ورقم** — على الأرض الداكنة. */
+@Composable
+private fun Chip(icon: Int, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = BrandOrange,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.size(5.dp))
+        Text(
+            text = text,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+/**
+ * **اسمُ الطور** — والرحلةُ طوران لا سبعة.
+ *
+ * **وما قبل الاستلام كلُّه «إلى المتجر»**، وما بعده كلُّه «إلى الزبون»
+ * — **والوقوفُ عند أحدهما طورٌ ثالثٌ قصير** يُقال لأنّ الفعل التالي
+ * يختلف.
+ */
+private fun phaseLabel(step: TripStep): Int = when (step) {
+    TripStep.AT_PICKUP -> R.string.trip_p_at_store
+    TripStep.PICKED_UP, TripStep.TO_CUSTOMER -> R.string.trip_p_to_customer
+    TripStep.AT_CUSTOMER -> R.string.trip_p_at_customer
+    TripStep.DELIVERED -> R.string.trip_p_delivered
+    else -> R.string.trip_p_to_store
+}
+
 /** المسافة بالمتر أو بالكيلومتر — **لا «1400 م».** */
 private fun distanceText(meters: Double): String {
     val m = meters.toLong()
@@ -278,13 +375,6 @@ private fun eta(meters: Double, avgSpeedKmh: Long): String {
     val minutes = ((meters / 1000.0) / avgSpeedKmh * 60).toLong().coerceAtLeast(1)
     return " · ~$minutes د"
 }
-
-/**
- * **شريط خطّة السير.**
- *
- * **والخطوة الحاليّة وحدَها ملوّنة** — وما مضى باهت وما بقي أبهت.
- * **ومن لوّن الكلّ** جعل السائق يبحث عن موضعه في سبعة متشابهة.
- */
 
 /**
  * **لافتة «طلب على طريقك».**
@@ -408,27 +498,8 @@ private fun TripCard(
             color = InkMuted,
         )
 
-        // ══════════════════════════════════════════════════════════════
-        // **كم بقي — مسافةً ووقتا**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (مواصفة المالك ٢٠٢٦-٠٨-١٢: «يجب أن يكون واضحا ما المسافة …
-        //  وكم الوقت المتوقّع حسب سرعة السائق».)
-        //
-        // **والسرعة من المحرّك لا من الشيفرة** (`drivers.avg_speed_kmh`)
-        // — تُضبط للمدينة من لوحة الإدارة: **دراجةٌ في الرقّة غيرُ سيّارة
-        // في مدينةٍ أخرى.**
-        val meters = state.remainingM
-        if (meters >= 0) {
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.trip_remaining), color = InkMuted)
-                Text(
-                    text = distanceText(meters) + eta(meters, state.avgSpeedKmh),
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
+        // **وما بقي صعد إلى لوح الطور** — ولا يُكتب هنا ثانية:
+        // **رقمان لشيءٍ واحدٍ في شاشةٍ واحدة** يُقرأ أحدهما شيئا آخر.
 
         Spacer(Modifier.height(10.dp))
         Row(

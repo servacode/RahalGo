@@ -176,6 +176,11 @@
     <string name="trip_s_at_customer">وصلت الزبون</string>
     <string name="trip_s_delivered">سلّمت</string>
     <string name="trip_remaining">ما بقي</string>
+    <string name="trip_p_to_store">في الطريق إلى المتجر</string>
+    <string name="trip_p_at_store">وصلت المتجر</string>
+    <string name="trip_p_to_customer">في الطريق إلى الزبون</string>
+    <string name="trip_p_at_customer">وصلت الزبون</string>
+    <string name="trip_p_delivered">سلّمت الطلب</string>
     <!-- الإشعارات -->
     <string name="push_ch_offer">طلب جديد</string>
     <string name="push_ch_news">أخبار الحساب</string>
