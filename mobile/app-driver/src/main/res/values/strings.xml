@@ -106,7 +106,7 @@
     <string name="order_accept">خذ الطلب</string>
     <string name="status_dispatching">بانتظار سائق</string>
     <string name="status_assigned">بذمّتك — اذهب للمتجر</string>
-    <string name="status_picked_up">استلمت البضاعة</string>
+    <string name="status_picked_up">استلمت الطلب</string>
     <string name="status_on_the_way">في الطريق للزبون</string>
     <string name="status_arrived">وصلت للزبون</string>
     <string name="err_order_taken">سبقك غيرك إلى هذا الطلب</string>
