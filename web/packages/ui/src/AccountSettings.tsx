@@ -11,7 +11,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { Alert } from "./feedback";
 import { emitLocal } from "./Notifications";
-import { IconUser, IconLock, IconPhone, IconWarning, IconCheck, IconVerified } from "./icons";
+import { IconUser, IconLock, IconWarning, IconCheck, IconVerified } from "./icons";
 import { IconWhatsApp } from "./brand-icons";
 
 const m = getMessages(defaultLocale);
@@ -93,10 +93,6 @@ export function AccountSettings({
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const [newPhone, setNewPhone] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [phoneCode, setPhoneCode] = useState("");
-  const [phoneBusy, setPhoneBusy] = useState(false);
 
 
   const [delSent, setDelSent] = useState(false);
@@ -220,42 +216,7 @@ export function AccountSettings({
     }
   }
 
-  async function reqPhone(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setMsg("");
-    setPhoneBusy(true);
-    try {
-      await api("/api/v1/auth/phone/request", { method: "POST", body: JSON.stringify({ phone: newPhone }) });
-      setOtpSent(true);
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setPhoneBusy(false);
-    }
-  }
 
-  async function confirmPhone(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setMsg("");
-    setPhoneBusy(true);
-    try {
-      await api("/api/v1/auth/phone/confirm", {
-        method: "POST",
-        body: JSON.stringify({ phone: newPhone, code: phoneCode }),
-      });
-      setMsg(A.phoneSaved);
-      emitLocal("profile");
-      setOtpSent(false);
-      setNewPhone("");
-      setPhoneCode("");
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setPhoneBusy(false);
-    }
-  }
 
 
 
@@ -416,28 +377,34 @@ export function AccountSettings({
 
           **والتبديلُ يبقى بابَه**: رمزٌ يصل على الرقم الجديد ويُؤكَّد. */}
       <Section title={A.whatsapp} icon={<IconWhatsApp />}>
-        {!otpSent ? (
-          <form onSubmit={reqPhone} className="space-y-3">
-            <div>
-              <Input id="new-phone" label={A.newPhone} icon={<IconPhone />} dir="ltr" inputMode="tel" required value={newPhone} onChange={(e) => setNewPhone(e.target.value)} className="text-end" placeholder="09xxxxxxxx" />
-              <p className="mt-1 text-xs text-ink-muted">{A.phoneHint}</p>
-            </div>
-            <Button type="submit" disabled={phoneBusy} className="w-full py-2.5">
-              {phoneBusy ? m.common.loading : A.sendCode}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={confirmPhone} className="space-y-3">
-            <p className="rounded-control bg-primary-tint px-3 py-2 text-sm text-primary">{A.codeSent}</p>
-            <div>
-              <Input id="phone-code" label={A.code} dir="ltr" inputMode="numeric" required autoFocus value={phoneCode} onChange={(e) => setPhoneCode(e.target.value)} className="text-center font-mono text-lg tracking-[0.4em]" placeholder="••••••" maxLength={6} />
-            </div>
-            <Button type="submit" disabled={phoneBusy} className="w-full py-2.5">
-              {phoneBusy ? m.common.loading : A.confirmChange}
-            </Button>
-          </form>
-        )}
-      
+        {/* ══════════════════════════════════════════════════════════════
+            **والرقمُ يُعرض ولا يُبدَّل من هنا**
+            ══════════════════════════════════════════════════════════════
+
+            (تصحيحُ المالك ٢٠٢٦-٠٨-١٢: «رقم الواتساب حذفتَه من حسابي،
+             والرقمُ المسجَّل به لازم يظلّ بالحساب مشان التوثيق، ما لازم
+             ينحذف… بس زرّ تغيير الرقم نلغيه».)
+
+            **ورقمٌ لا يُرى لا يُوثَّق**: من فتح حسابَه ليتأكّد أيَّ رقمٍ
+            سجّل به — قبل أن يشتكي أو يسأل المكتب — **يجد فراغا.** وهو
+            أوّلُ ما يُسأل عنه في كلّ خلاف.
+
+            **والتبديلُ يُغلق بابُه**: الرقمُ هو الحساب — به يدخل، وعليه
+            يصل رمزُه، وبه يعرفه المكتبُ والسائق. **وتبديلُه بضغطتين في
+            صفحةٍ يجعل حساباً كاملاً — بمحفظته وتاريخه — ينتقل إلى رقمٍ
+            آخرَ بلا أثر.**
+
+            **ومن أراد التبديل يمرّ بالمكتب** — يُوثَّق من يطلب ولماذا. */}
+        <div className="flex items-center justify-between gap-3 rounded-control border border-success-edge bg-success-tint px-3 py-2.5">
+          <span dir="ltr" className="min-w-0 truncate font-medium text-ink">
+            {phone}
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold text-success">
+            <IconVerified size={16} />
+            {A.whatsappVerified}
+          </span>
+        </div>
+        <p className="mt-2 text-xs text-ink-muted">{A.whatsappHint}</p>
       </Section>
 
       <section className="surface-lit surface !border-danger-edge p-4 sm:col-span-2 lg:col-span-3">
