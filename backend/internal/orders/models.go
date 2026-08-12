@@ -191,6 +191,13 @@ type Order struct {
 	// GoodsSettledTo مصيرُ بضاعة طلبٍ فشل: merchant استردّها · platform
 	// تحمّلتها المنصةُ ودفعت للمتجر · فارغٌ يعني **لم يُحسم بعد**.
 	GoodsSettledTo *string `json:"goods_settled_to"`
+	// ToStoreETASec كم قالت الخريطةُ إنّ طريقَ السائق إلى المتجر يستغرق.
+	//
+	// **يُلتقط لحظةَ الإسناد ويُجمَّد** — وفارغٌ يعني «لم يُقَس»، **فيبقى
+	// الخطُّ بلا علامة**: لا يُوسَم أحدٌ بتأخيرٍ لم يُقَس.
+	ToStoreETASec *int `json:"to_store_eta_sec"`
+	// ToDoorETASec وكم من المتجر إلى باب الزبون — يُلتقط لحظةَ الاستلام.
+	ToDoorETASec *int `json:"to_door_eta_sec"`
 	// LegM طولُ المشوار من المتجر إلى باب الزبون — **بالمتر، وسالبٌ لا يُعرف.**
 	//
 	// **ومنه يُقرأ لماذا تأخّر طلب**: ثلاثةُ كيلومتراتٍ في الرقّة ليست
@@ -253,6 +260,9 @@ func (o *Order) SetStageTimes(evs []Event, lim StageLimits) {
 	if o.PrepMinutes != nil && *o.PrepMinutes > 0 {
 		lim.Prep = *o.PrepMinutes
 	}
+	// **ومهلتا الطريق من خريطة هذا الطلب** — كلُّ طريقٍ بطوله.
+	lim.ToStore = routeLimit(o.ToStoreETASec, lim.RouteMarginPct)
+	lim.ToDoor = routeLimit(o.ToDoorETASec, lim.RouteMarginPct)
 	o.OpsStageLate = OpsStageLate(o.OpsStageTimes, lim)
 }
 

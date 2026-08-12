@@ -125,6 +125,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **والخصمُ يُقرأ لحظةَ بناء الطلب** — لا من ذاكرةٍ محمّلة.
 	srv.offers = offers.New(pg)
 	ordersSvc.SetOffers(srv.offers)
+	// **والخريطةُ تُسأل عن زمن الطريق لحظةَ الإسناد والاستلام** — تُلتقط
+	// إجابتُها وتُجمَّد، **فلا تُعاد سؤالاً بعد أن يتحرّك السائق.**
+	ordersSvc.SetRouter(orderRouter{srv})
 	// **ومكافأةُ من دعا** — تُصرف عند أوّل طلبٍ يُسلَّم للمدعوّ.
 	srv.referrals = referrals.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID, notify)
 	ordersSvc.SetReferrals(srv.referrals)

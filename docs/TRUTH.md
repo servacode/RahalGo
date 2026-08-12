@@ -463,6 +463,7 @@
 | `drivers.max_active_orders` | السائقون | int | `2` |
 | `orders.driver_timeout_min` | السائقون | int | `10` |
 | `orders.handover_timeout_min` | السائقون | int | `5` |
+| `orders.route_margin_pct` | السائقون | int | `50` |
 | `drivers.monthly_target` | السائقون | int | `0` |
 | `drivers.target_reward` | السائقون | money | `0` |
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |

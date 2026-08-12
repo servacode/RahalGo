@@ -322,25 +322,68 @@ type StageLimits struct {
 	Driver int
 	// Handover **من وقوف السائق عند الباب إلى التسليم.**
 	Handover int
+	// ══════════════════════════════════════════════════════════════════
+	// **ومهلتا الطريق مُدَّتان لا دقائق — لكلّ طلبٍ مهلتُه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **رقمٌ واحدٌ لكلّ الطلبات لا يصلح هنا**: طريقٌ من ثلاثمئة متر
+	// وآخرُ من أربعة كيلومترات **تحت مهلةٍ واحدة** يسامح الأوّلَ ويظلم
+	// الثاني.
+	//
+	// **فمهلةُ كلّ طلبٍ من زمن خريطته** — يُلتقط عند الإسناد وعند
+	// الاستلام — **مضروباً بهامشٍ يضبطه المالك.**
+	//
+	// **وصفرُهما «لا حكم»**: خريطةٌ لم تُسأل أو نقطةٌ بلا إحداثيّ —
+	// **ولا يُوسَم أحدٌ بتأخيرٍ لم يُقَس.**
+	ToStore time.Duration
+	ToDoor  time.Duration
+	// RouteMarginPct **كم يُسمح للطريق أن يزيد على تقدير الخريطة** — ٪.
+	//
+	// **والخريطةُ لا تعرف ازدحاماً ولا حاجزاً ولا شارعاً مقطوعا**، وتحسب
+	// على سرعاتٍ مفترضةٍ للشوارع. **فتقديرُها أرضيّةٌ لا سقف.**
+	RouteMarginPct int
 }
 
 // limitFor مهلةُ الدخول إلى هذه المرحلة — **وصفرٌ يعني لا حكم.**
 //
 // **وبالمفتاح لا بالرقم**: من أعاد ترتيبَ المراحل يوماً **لا ينقل مهلةَ
 // المطبخ إلى الطابور** بلا أن ينتبه.
-func limitFor(st Stage, lim StageLimits) int {
+func limitFor(st Stage, lim StageLimits) time.Duration {
+	min := func(n int) time.Duration { return time.Duration(n) * time.Minute }
 	switch st {
 	case StagePreparing:
-		return lim.Accept
+		return min(lim.Accept)
 	case StageSeekingDriver:
-		return lim.Prep
+		return min(lim.Prep)
 	case StageToStore:
-		return lim.Driver
+		return min(lim.Driver)
+	// **والخطُّ إلى «في الطريق» هو مشوارُ السائق إلى المتجر** — يبدأ
+	// بإسناده وينتهي باستلامه، **وفيه وقوفُه عند الباب أيضاً.**
+	case StageOnTheWay:
+		return lim.ToStore
+	// **والخطُّ إلى «وصل» هو مشوارُ التوصيل نفسُه.**
+	case StageArrived:
+		return lim.ToDoor
 	case StageDelivered:
-		return lim.Handover
+		return min(lim.Handover)
 	default:
 		return 0
 	}
+}
+
+// routeLimit مهلةُ طريقٍ من زمن الخريطة وهامشِ المالك.
+//
+// **والهامشُ نسبةٌ لا دقائق**: طريقٌ من دقيقتين وآخرُ من عشرين —
+// **وخمسُ دقائقَ زيادةً تسامح الأوّلَ أضعافاً وتضيّق على الثاني.**
+// والنسبةُ تكبر بكبر الطريق كما يكبر احتمالُ ما يعطّله.
+//
+// **وصفرٌ يعني «لم تُقَس»** — فلا حكم.
+func routeLimit(etaSec *int, marginPct int) time.Duration {
+	if etaSec == nil || *etaSec <= 0 {
+		return 0
+	}
+	return time.Duration(*etaSec) * time.Second *
+		time.Duration(100+marginPct) / 100
 }
 
 // OpsStageLate أتجاوز الانتقالُ إلى كلّ مرحلةٍ مهلتَه.
@@ -359,7 +402,7 @@ func OpsStageLate(times StageTimes, lim StageLimits) []*bool {
 		if to == nil || from == nil {
 			continue
 		}
-		v := to.Sub(*from) > time.Duration(max)*time.Minute
+		v := to.Sub(*from) > max
 		out[i] = &v
 	}
 	return out

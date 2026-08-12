@@ -281,6 +281,22 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 		s.stepLine(ctx, orderID, *driverID, to)
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وزمنُ الطريق يُسأل عنه هنا لأنّ هنا وقعت اللحظة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **موضعُ السائق يتحرّك** — فمن سأل الخريطةَ بعد يومين قاس من بيته.
+	//
+	// **وبعد أن يتمّ كلُّ شيء، في خيطٍ مستقلّ**: نداءٌ خارجيٌّ في طريق
+	// الإسناد يجعل تعطّلَ الخريطة تعطّلاً في المنصّة — **سائقٌ يضغط
+	// «أقبل» فينتظر مهلةَ اتّصالٍ ثمّ يُردّ بخطأ.**
+	switch to {
+	case StAssigned:
+		s.captureToStoreETA(orderID)
+	case StPickedUp:
+		s.captureToDoorETA(orderID)
+	}
+
 	s.publishOrder(updated)
 	// **وكلُّ من تحرّكت محفظتُه يُبلَّغ** — بعد الإيداع لا داخلَه.
 	s.publishWalletsOf(ctx, orderID)

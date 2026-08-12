@@ -226,3 +226,28 @@ func (s *Server) speedOf(ctx context.Context, where, driverID string) int64 {
 
 // cell يقرّب الإحداثيَّ إلى أربع منازل — **نحوَ أحدَ عشرَ مترا.**
 func cell(v float64) string { return strconv.FormatFloat(v, 'f', 4, 64) }
+
+// ══════════════════════════════════════════════════════════════════════
+// **ومحرّكُ الطلبات يسأل الخريطةَ من هنا**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **الواجهةُ ضيّقةٌ عمدا** (`orders.RouteReader`): سؤالٌ واحدٌ عن ثوانٍ
+// — **ولا رسمَ طريقٍ ولا خطواتٍ ولا بدائل.** ومحرّكُ الطلبات لا يحتاج
+// حزمةَ التوجيه كلَّها ليعرف كم يستغرق مشوار.
+//
+// **ويمرّ بالمخبأ نفسِه** (`routeCached`) — سائقان يُسندان إلى المتجر
+// نفسِه من الحيّ نفسِه **لا يسألان الخريطةَ مرّتين.**
+
+// orderRouter يصل محرّكَ الطلبات بمحرّك الخرائط.
+type orderRouter struct{ s *Server }
+
+// Seconds كم ثانيةً بين نقطتين على الشارع — **وصفرٌ «لا يُعرف».**
+func (r orderRouter) Seconds(ctx context.Context, fromLat, fromLng, toLat, toLng float64) int {
+	route, err := r.s.routeCached(ctx,
+		routing.Point{Lat: fromLat, Lng: fromLng},
+		routing.Point{Lat: toLat, Lng: toLng})
+	if err != nil || route == nil || route.DurationS <= 0 {
+		return 0
+	}
+	return int(route.DurationS)
+}

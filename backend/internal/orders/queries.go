@@ -34,6 +34,10 @@ const orderSelect = `
 	       o.pod_skip_reason,
 	       COALESCE(o.ended_by,''), COALESCE(o.fault,''), COALESCE(o.fail_reason,''),
 	       o.returned_at, o.goods_settled_to,
+	       -- **وزمنا الطريق كما قالتهما الخريطةُ في لحظتيهما** — ومنهما
+	       -- تُقاس مهلةُ الخطّين، **ولا يُقاسان من خطٍّ مستقيمٍ يقصّر
+	       -- الطريقَ نصفَه فيتّهم سائقاً سار صحيحا.**
+	       o.to_store_eta_sec, o.to_door_eta_sec,
 	       -- **طولُ المشوار وبُعدُ السائق** — جوابُ «لماذا تأخّر» و«لماذا هو».
 	       -- وسالبٌ يعني «لا يُعرف»: **الجهلُ ليس قرباً.**
 	       COALESCE(ST_Distance(COALESCE(o.pickup_override, mr.location), o.dropoff), -1),
@@ -104,6 +108,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.SentToMerchantAt, &o.DispatchedAt, &o.OfferedDriverName,
 		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason,
 		&o.EndedBy, &o.Fault, &o.FailReason, &o.ReturnedAt, &o.GoodsSettledTo,
+		&o.ToStoreETASec, &o.ToDoorETASec,
 		&o.LegM, &o.DriverToPickupM,
 		&o.AcceptsReturns,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.PickedUpAt, &o.DeliveredAt, &o.ClosedAt,
@@ -271,6 +276,8 @@ func (s *Service) stageLimits(ctx context.Context) StageLimits {
 		Prep:     0, // **يُملأ من `prep_minutes` لكلّ طلبٍ على حدة.**
 		Driver:   int(s.settings.GetInt(ctx, "orders.driver_timeout_min")),
 		Handover: int(s.settings.GetInt(ctx, "orders.handover_timeout_min")),
+		// **ومهلتا الطريق تُبنيان لكلّ طلبٍ من خريطته** — وهذا هامشُهما.
+		RouteMarginPct: int(s.settings.GetInt(ctx, "orders.route_margin_pct")),
 	}
 }
 
