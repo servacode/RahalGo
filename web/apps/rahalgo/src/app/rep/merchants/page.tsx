@@ -567,7 +567,11 @@ function AddClientModal({ onClose, onDone }: { onClose: () => void; onDone: () =
             <Button type="button" variant="secondary" onClick={onClose}>
               {m.common.cancel}
             </Button>
-            <Button type="submit" disabled={busy}>
+            {/* **ولا يُرسَل متجرٌ بلا دبّوس** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+                **والمندوبُ واقفٌ في المتجر وهو يملؤه**، فالدبّوسُ عنده
+                أسهلُ ما يكون: زرُّ «موقعي» فوق الخريطة. **ومن حفظ بلا
+                موضعٍ ترك السائقَ يبحث عن بابٍ لا يعرفه.** */}
+            <Button type="submit" disabled={busy || !coords}>
               {busy ? C.sending : C.submit}
             </Button>
           </div>

@@ -15,6 +15,15 @@ export interface Store {
   /** **ضبطُ المتجر الذي يملكه بيده** — يُقرأ في صفحة إعداداته. */
   default_prep_minutes: number;
   min_order: number;
+  /**
+   * **عنوانُه ودبّوسُه** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+   *
+   * **وكانا يُضبطان من لوحة الإدارة وحدَها**، فصاحبُ المتجر ينتقل ولا يملك
+   * أن يصلح موضعَه. **والسائقُ هو من يقف على بابٍ ليس بابَه.**
+   */
+  address_text: string;
+  lat: number | null;
+  lng: number | null;
 }
 
 interface StoreState {

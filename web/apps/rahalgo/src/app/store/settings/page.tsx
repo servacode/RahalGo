@@ -24,6 +24,7 @@
  * هنا أيضاً: **من يفتح إعداداتِ دوامه هو من يفكّر في إغلاقه.**
  */
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
@@ -37,9 +38,18 @@ import {
   IconSettings,
   IconDate,
   IconBalance,
+  IconLocation,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
+
+/**
+ * **الخريطةُ لا تُرسم على الخادم** — `leaflet` يلمس `window` عند التحميل،
+ * **ومن رسمها في التوليد المسبق أسقط الصفحة كلَّها.**
+ */
+const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), {
+  ssr: false,
+});
 
 const m = getMessages(defaultLocale);
 const S = m.merchant.storeSettings;
@@ -47,6 +57,8 @@ const S = m.merchant.storeSettings;
 export default function MerchantSettingsPage() {
   const { store, refresh } = useStore();
   const [prep, setPrep] = useState("");
+  const [address, setAddress] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +66,10 @@ export default function MerchantSettingsPage() {
   useEffect(() => {
     if (!store) return;
     setPrep(String(store.default_prep_minutes ?? ""));
+    setAddress(store.address_text ?? "");
+    setCoords(
+      store.lat != null && store.lng != null ? { lat: store.lat, lng: store.lng } : null,
+    );
   }, [store]);
 
   if (!store) return <LoadingState />;
@@ -68,6 +84,10 @@ export default function MerchantSettingsPage() {
         method: "PATCH",
         body: JSON.stringify({
           default_prep_minutes: Number(prep) || 0,
+          address_text: address,
+          // **والنقطةُ تُرسَل كاملةً أو لا تُرسَل** — نصفُها ينقل المتجرَ
+          // إلى خطِّ الاستواء، والمحرّكُ يرفض النصفَ صراحةً.
+          ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
         }),
       });
       setSaved(true);
@@ -99,6 +119,44 @@ export default function MerchantSettingsPage() {
             },
           }}
         />
+      </FormSection>
+
+      {/* ══════════════════════════════════════════════════════════════
+          **موضعُ المتجر — وعليه يقوم كلُّ شيء**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٢: «يجب إضافة عنوان المتجر بالإعدادات لأنّه
+           غير موجود بالويب»، و«نسوي دبّوس المتجر إلزامي».)
+
+          **والدبّوسُ ليس زينةً على خريطة**: منه تُحسب المسافةُ التي يقرّر بها
+          السائقُ أيَّ طلبٍ يأخذ، **وعليه يقوم توزيعُ «الأقرب»**، وبه يعرف أين
+          يقف. **ومتجرٌ بلا دبّوس ظهر للسائق بلا مسافة** — ووقع فعلاً في طلبٍ
+          حقيقيّ (٢٠٢٦-٠٨-١٢).
+
+          **والعنوانُ نصّاً معه لا بدلاً منه**: الدبّوسُ يوصله إلى الشارع،
+          **والنصُّ يقول له أيُّ بابٍ من أبوابه** — «جانب مغسلة أبو الهيف». */}
+      <FormSection title={S.location} icon={<IconLocation />}>
+        <div className="space-y-3">
+          <Input
+            id="address"
+            label={S.addressText}
+            value={address}
+            onChange={(e) => {
+              setAddress(e.target.value);
+              setSaved(false);
+            }}
+          />
+          <p className="text-xs text-ink-muted">{S.locationHint}</p>
+          <PickMap
+            lat={coords?.lat ?? null}
+            lng={coords?.lng ?? null}
+            onPick={(lat, lng) => {
+              setCoords({ lat, lng });
+              setSaved(false);
+            }}
+          />
+          {!coords && <p className="text-sm text-danger">{S.locationMissing}</p>}
+        </div>
       </FormSection>
 
       <FormSection title={S.operations} icon={<IconBalance />}>
