@@ -829,57 +829,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       hide: (o: OrderRow) => o.kind === "custom",
       cell: (o) => o.merchant_name,
     },
-    {
-      // **السائقُ وأجرُه قبل الفاتورة** — قرارُ المالك (٢٠٢٦-٠٨-٠٤): «اسمُ
-      // المتجر · أجرةُ توصيل السائق · ثمّ الفاتورة».
-      id: "driver",
-      header: m.admin.ordersPage.driver,
-      icon: <IconDriver />,
-      // **ولا يُعرض قبل أن يبلغ الطلبُ السائقين** — ولا حتى فارغاً.
-      // **ومن أُسند له سائقٌ ثمّ انتهى الطلبُ يبقى اسمُه مقروءاً**: من يراجع
-      // شكوى يسأل «من أوصله؟» بعد أن أُغلق.
-      hide: (o: OrderRow) => !DRIVER_STATUSES.has(o.status),
-      cell: (o) =>
-        o.driver_name || o.driver_phone ? (
-          <span>
-            {o.driver_name || o.driver_phone}
-            {/* **جوابُ «لماذا هذا السائق؟»** — سؤالٌ يُسأل حين يتأخّر طلبٌ
-                ولم يكن له جوابٌ في أيّ شاشة. **ورقمٌ يقول «كان على بُعد
-                ٤٠٠ متر» يُنهي النقاش**، ورقمٌ يقول «٦ كم» يُنهيه أيضاً. */}
-            {typeof o.driver_to_pickup_m === "number" && o.driver_to_pickup_m >= 0 && (
-              <span className="block text-xs text-ink-muted">
-                {m.admin.ordersPage.driverWasAway}:{" "}
-                {fmtDistance(o.driver_to_pickup_m, UNITS.meter, UNITS.km)}
-              </span>
-            )}
-            {/* **ولا أجرَ سائقٍ في بطاقة الطلب.**
+    /* **ولا سطرَ للسائق في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢:
+       «السائق — لم يُسنَد بعد: احذفها، هي كمان رح تكون بشريط الرحلة»).
 
-                لم يُطلب قطّ — أُضيف من تلقائه ثمّ عُلّق عليه شرحٌ حين
-                التبس. **وسطرٌ يحتاج شرحاً ليُفهَم سطرٌ لم يكن مكانُه هنا.**
-                (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «هذه احذفها، أنا لم أطلبها أصلاً».)
-
-                **وموضعُ أجر السائق دفترُه**: محفظتُه وكشفُ حسابه — **حيث
-                يُقرأ مجموعاً لا رقماً في بطاقةِ طلبٍ واحد.** */}
-          </span>
-        ) : o.offered_driver_name ? (
-          /* **«جارٍ إسناد سائق» وحدَها لا تقول شيئاً.**
-
-             العملياتُ ترى الطلبَ يتأخّر **ولا تعرف على من عُرض** — فلا تعرف
-             من يتأخّر، **ولا تستطيع أن تتّصل بمن بيده القرارُ الآن.** */
-          <span>
-            {o.offered_driver_name}
-            <span className="block text-xs text-warning">
-              {m.admin.ordersPage.awaitingAccept}
-            </span>
-          </span>
-        ) : (
-          /* **ولا يُكرَّر التوصيلُ هنا** — صار في ذيل الفاتورة حيث يُجمع.
-           **ورقمٌ يظهر مرّتين يُقرأ مرّتين**، فيُظنّ أنّ ثمّة أجرين. */
-          <span className="text-ink-muted">
-            {m.admin.ordersPage.noDriverYet}
-          </span>
-        ),
-    },
+       **و«لم يُسنَد بعد» سطرٌ يقول لا شيء**: هو حالُ الطلب لا خبرَ عن
+       سائق — **وشريطُ الرحلة يقوله في موضعه** («بانتظار سائق»)، ومعه
+       ما قبله وما بعده. */
     {
       // **الفاتورة — أصنافٌ بأسعارها ثمّ إجماليٌّ يشمل التوصيل.**
       //
@@ -1905,16 +1860,16 @@ function InvoiceList({ o }: { o: OrderRow }) {
           <ul className="space-y-1.5 text-sm">
             <li className="flex items-center justify-between gap-2">
               <span className="text-ink-muted">{OP.customGoods}</span>
-              <span className="tabular-nums" dir="ltr">{fmtNum(goods)}</span>
+              <Money value={goods} small />
             </li>
             <li className="flex items-center justify-between gap-2">
               <span className="text-ink-muted">{OP.customFee}</span>
-              <span className="tabular-nums" dir="ltr">{fmtNum(fee)}</span>
+              <Money value={fee} small />
             </li>
             <li className="flex items-center justify-between gap-2 border-t border-line-soft pt-1.5 font-bold">
               <span>{OP.customTotal}</span>
               <span className="tabular-nums" dir="ltr">
-                {fmtNum(goods + fee)} {m.common.currency}
+                <Money value={goods + fee} />
               </span>
             </li>
             {/* **ويُقال إنّه لا يدخل حسابَ المنصّة** — وإلّا قُرئ دخلاً. */}
@@ -1958,9 +1913,7 @@ function InvoiceList({ o }: { o: OrderRow }) {
               </span>
               {/* **سعرُ الصنف عارياً × الكمّية** — والإضافاتُ تحته بأسعارها،
                **فمجموعُ السطور يبلغ قيمةَ الطلب بلا نقصٍ ولا فائض.** */}
-              <span dir="ltr" className="shrink-0 tabular-nums">
-                {fmtNum(basePrice(it) * it.qty)}
-              </span>
+              <Money value={basePrice(it) * it.qty} small className="shrink-0" />
             </span>
 
             {/* **وكلُّ إضافةٍ بسطرها وسعرها** — قرارُ المالك (٢٠٢٦-٠٨-٠٤). */}
@@ -1969,12 +1922,7 @@ function InvoiceList({ o }: { o: OrderRow }) {
                 <span className="min-w-0 flex-1 text-ink-muted">
                   + {x.name}
                 </span>
-                <span
-                  dir="ltr"
-                  className="shrink-0 tabular-nums text-accent-dark"
-                >
-                  {fmtNum(x.price_delta * it.qty)}
-                </span>
+                <Money value={x.price_delta * it.qty} small className="shrink-0 text-accent-dark" />
               </span>
             ))}
           </li>
@@ -1995,31 +1943,30 @@ function InvoiceList({ o }: { o: OrderRow }) {
               **ورقمٌ لا يُرى ما جُمع فيه يُصدَّق أو يُشكّ فيه بلا سبيل.** */}
       <li className="mt-2 flex items-center justify-between border-t border-line-soft pt-2 text-sm">
         <span className="text-ink-muted">{m.admin.ordersPage.goodsValue}</span>
-        <span dir="ltr" className="tabular-nums">
-          {fmtNum(o.subtotal)}
-        </span>
+        <Money value={o.subtotal} small />
       </li>
       <li className="flex items-center justify-between text-sm">
         <span className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</span>
-        <span dir="ltr" className="tabular-nums">
-          {fmtNum(o.delivery_fee)}
-        </span>
+        <Money value={o.delivery_fee} small />
       </li>
       {o.discount > 0 && (
         <li className="flex items-center justify-between text-sm text-success">
           <span>{m.admin.ordersPage.discount}</span>
-          <span dir="ltr" className="tabular-nums">
-            −{fmtNum(o.discount)}
+          <span className="flex items-center gap-1">
+            −<Money value={o.discount} small />
           </span>
         </li>
       )}
       <li className="flex items-center justify-between border-t border-line-soft pt-2">
         <span className="font-medium">{m.admin.ordersPage.total}</span>
-        <span
-          dir="ltr"
-          className="figure text-primary-dark"
-        >
-          {fmtNum(o.total)}{" "}
+        {/* **والعملةُ خلف كلّ رقم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢:
+            «العملة مو موجودة، ل.س خلف أيّ رقم — هذا غلط»).
+
+            **ورقمٌ بلا عملةٍ يُقرأ في لوحةٍ فيها ليراتٌ ونسبٌ وأعداد**:
+            «١٠٠» أهي مئةُ ليرةٍ أم مئةُ طلب؟ **والفاتورةُ أولى ما
+            يُقرأ منها المال.** */}
+        <span className="flex items-center gap-2">
+          <Money value={o.total} className="figure text-primary-dark" />
           <span className="text-xs font-normal text-ink-muted">
             {PAYMENT_LABELS[o.payment_method]}
           </span>
