@@ -30,6 +30,7 @@ import {
   type DataColumn,
   OrderTrackV,
   IconOrder,
+  IconInvoice,
   IconSearch,
   IconUser,
   IconStore,
@@ -220,6 +221,21 @@ function spanOf(
  * لضغطةٍ واحدة.**
  */
 const DESTRUCTIVE = new Set(["rejected", "cancelled", "failed", "refunded"]);
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **وما انتهى قبل أن يصل لا فاتورةَ له**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٢: «طبعاً الطلبُ الملغى ما فيه فاتورة».)
+ *
+ * **الفاتورةُ ورقةُ ما وقع** — بضاعةٌ خرجت ومالٌ قُبض. **وطلبٌ أُلغي أو
+ * رُفض أو تعذّر لم يخرج منه شيء**، فورقتُه تُثبت ما لم يحدث.
+ *
+ * **والاسترجاعُ يبقى له فاتورة**: وقع التسليمُ فعلاً ثمّ رُدّ المال —
+ * **والورقةُ حجّةٌ في خلافٍ لاحق** لا إعلانُ بيع.
+ */
+const NO_INVOICE = new Set(["rejected", "cancelled", "failed"]);
 
 /**
  * **الحالاتُ المنتهية** — مرآةُ `terminal()` في المحرّك.
@@ -731,10 +747,26 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 <Badge variant="danger">{ENDED_BY[o.ended_by]}</Badge>
               )}
             </span>
-            {/* **والرقمُ يسارا دائما** — `ms-auto` تدفعه إلى طرف السطر
-                مهما كان ما قبله، **وشارةٌ تغيب تجعل `justify-between`
-                تردّه إلى اليمين.** */}
-            <OrderRef number={o.number} at={o.created_at} className="ms-auto" />
+            {/* ══════════════════════════════════════════════════════
+                **وبابُ الفاتورة أيقونةٌ ملاصقةٌ للرقم**
+                ══════════════════════════════════════════════════════
+
+                (قرارُ المالك ٢٠٢٦-٠٨-١٢: «بالأعلى نحطّ أيقونة الفاتورة
+                 بين رقم الطلب والحالة».)
+
+                **وهي عن الطلب كلِّه لا عن حقلٍ فيه** — فموضعُها
+                الترويسةُ حيث رقمُه، **لا سطرٌ بين الأصناف والإجمالي.**
+
+                **وأيقونةٌ لا زرّاً بنصّ**: صفُّ الترويسة فيه العلامةُ
+                والشارةُ والرقم، **وكلمةٌ رابعةٌ تزاحمها فيلتفّ السطر.**
+
+                **وملاصقةٌ للرقم في صندوقٍ واحد** — `ms-auto` تدفع
+                الصندوقَ كلَّه إلى طرف السطر، **فلو وقعت خارجَه لَبقيت
+                عند الشارة وبينهما فراغُ السطر كلِّه.** */}
+            <span className="ms-auto flex items-center gap-2">
+              {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} />}
+              <OrderRef number={o.number} at={o.created_at} />
+            </span>
           </span>
         </span>
       ),
@@ -2008,20 +2040,32 @@ function InvoiceList({ o }: { o: OrderRow }) {
   );
 }
 
-/** زرُّ الفاتورة في الجدول — **يفتحها حين تُطلب ولا يُثقل الصفّ.** */
+/**
+ * **بابُ الفاتورة — أيقونةٌ في ترويسة البطاقة.**
+ *
+ * **والقائمةُ في البطاقة تقول ما في الطلب** (`InvoiceList`) — فهذا
+ * البابُ لمن يريد **ورقةً تُطبع**: خصمٌ وضريبةٌ وترويسةٌ وتوقيع.
+ *
+ * **واسمُها في `title` لا بجانبها** — صفُّ الترويسة مزدحمٌ بالعلامة
+ * والشارة والرقم، **وكلمةٌ رابعةٌ تُلوي السطر.** ومن لم يعرف الأيقونةَ
+ * وقف عليها فقرأ.
+ */
 function InvoiceButton({ order }: { order: OrderRow }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button
-        variant="secondary"
+      <button
+        type="button"
+        title={m.admin.ordersPage.invoice}
+        aria-label={m.admin.ordersPage.invoice}
+        className="rounded-control p-1.5 text-ink-muted transition-colors hover:bg-field hover:text-ink"
         onClick={(e) => {
           e.stopPropagation();
           setOpen(true);
         }}
       >
-        {m.admin.ordersPage.invoice}
-      </Button>
+        <IconInvoice size={18} />
+      </button>
       {open && (
         <span onClick={(e) => e.stopPropagation()}>
           <Modal
