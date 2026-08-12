@@ -2,13 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  getMessages,
-  defaultLocale,
-  fmtNum,
-  fmtTime,
-  fmtDateTime,
-} from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import {
   usePlatform,
   BrandMark,
@@ -18,7 +12,6 @@ import {
   Alert,
   IconNote,
   IconEdit,
-  Stars,
   useLiveEvent,
   useLiveStatus,
   Button,
@@ -26,57 +19,24 @@ import {
   Select,
   Badge,
   Modal,
-  FormSection,
   DataView,
   type DataColumn,
+  OrderTrackV,
   IconOrder,
   IconSearch,
   IconUser,
   IconStore,
-  IconWallet,
-  IconDriver,
   IconCamera,
-  IconStatus,
-  IconLocation,
-  IconStar,
-  IconBalance,
   IconWhatsApp,
   IconSwap,
-  fmtDistance,
   Invoice,
 } from "@rahalgo/ui";
-import { api, ApiError, mediaUrl, type AuthUser } from "@/lib/api";
+import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
-/** وحداتُ المسافة — من القاموس لا من نصٍّ مكتوبٍ في كلّ شاشة. */
-const UNITS = m.admin.settings.units;
 
 // ---------- الأنواع ----------
-
-/** سطرٌ في تفصيل التوزيع — عنوانٌ يميناً ومبلغٌ يساراً بخانةٍ ثابتة. */
-function Row({
-  label,
-  value,
-  strong,
-  danger,
-}: {
-  label: string;
-  value: number;
-  strong?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-3 ${
-        strong ? "font-bold" : ""
-      } ${danger ? "text-danger" : ""}`}
-    >
-      <span className="truncate">{label}</span>
-      <Money value={value} className="shrink-0 tabular-nums" />
-    </div>
-  );
-}
 
 /** رسالةُ المتجر كما يبنيها الخادم — نصّاً ورابطاً معاً، فلا يفترقان. */
 type MerchantMessage = {
@@ -201,25 +161,24 @@ const ENDED_BY: Record<string, string> = m.admin.ordersPage.endedBy;
 const ACTION_LABELS: Record<string, string> = m.admin.ordersPage.actions;
 const PAYMENT_LABELS: Record<string, string> = m.orders.payment;
 
-const STATUS_VARIANT: Record<
-  string,
-  "warning" | "primary" | "success" | "danger" | "neutral"
-> = {
-  pending: "warning",
-  accepted: "primary",
-  preparing: "primary",
-  dispatching: "warning",
-  assigned: "primary",
-  at_pickup: "primary",
-  picked_up: "primary",
-  on_the_way: "primary",
-  at_dropoff: "primary",
-  delivered: "success",
-  rejected: "danger",
-  cancelled: "danger",
-  failed: "danger",
-  refunded: "neutral",
-};
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **أسماءُ مراحل المكتب — بصيغةِ من يقرؤها**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **المفاتيحُ من المحرّك** (`ops_stages`) — واحدةٌ لثلاث شاشات، **ولا
+ * جدولَ طيٍّ هنا.** والذي يخصّ هذه الشاشة هو النصُّ وحدَه.
+ *
+ * **وصيغةُ الزبون لا تصلح للمكتب**: عنده «في الطريق **إليك**» و«وصل
+ * **إليك**» — **وموظّفُ المكتب ليس الزبون**، فيُقرأ الضميرُ خطأً على من
+ * ليس صاحبَه.
+ *
+ * **وأسماءُ المكتب أشملُ عمدا** (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الأسماء لازم
+ * تكون أشمل، لأنّ المكتب يجب أن يعرف كلّ المراحل»): «قيد التجهيز **في
+ * المتجر**» لا «قيد التجهيز» — **فمن قرأها عرف أين الطلبُ واقفٌ الآن
+ * ومن يُسأل عنه.**
+ */
+const STAGE_LABELS: Record<string, string> = m.admin.ordersPage.stage;
 
 /**
  * الأفعالُ الهدّامة — تُطلب لها ضغطةٌ ثانية على البطاقة.
@@ -285,17 +244,6 @@ const PROOF_STATUSES = new Set(["delivered", "refunded"]);
  * **وهي القاعدةُ نفسُها التي أخفت إثباتَ التسليم**: حقلٌ يظهر فارغاً قبل أوانه
  * **يُتعلَّم تجاهلُه، ثمّ يمتلئ يوماً فلا يُنظر إليه.**
  */
-const DRIVER_STATUSES = new Set([
-  "dispatching",
-  "assigned",
-  "at_pickup",
-  "picked_up",
-  "on_the_way",
-  "at_dropoff",
-  "delivered",
-  "failed",
-  "refunded",
-]);
 
 /**
  * **سعرُ الصنف عارياً من إضافاته.**
@@ -608,7 +556,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const isAdmin = !!me?.roles.includes("admin");
 
   useEffect(() => {
-    api<{ settings: { key: string; value: unknown }[] }>("/api/v1/admin/settings")
+    api<{ settings: { key: string; value: unknown }[] }>(
+      "/api/v1/admin/settings",
+    )
       .then(({ settings: all }) => {
         const delay = all.find(
           (x) => x.key === "orders.manual_assign_after_min",
@@ -628,8 +578,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       })
       .catch(() => setSelfManage(false));
   }, []);
-  // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
-  const view = "cards" as const;
   // **واسمُ المنصة من الإعدادات** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «حطّ على
   // اليمين اسم المنصة»). **ولا يُكتب في شيفرةٍ ولا في معجم**: يبدّله
   // المالكُ من لوحته فيتبدّل حيثما وقع.
@@ -730,7 +678,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 الزبون سواءً بسواء، **فالبطاقتان تُقرآن بشكلٍ واحد.** */}
             <span className="flex min-w-0 items-center gap-2">
               <BrandMark size={32} rounded="none" />
-              <span className="truncate text-sm font-bold text-ink">{platformName}</span>
+              <span className="truncate text-sm font-bold text-ink">
+                {platformName}
+              </span>
             </span>
             {/* ══════════════════════════════════════════════════════
                 **ولا شارةَ حالٍ — المسارُ يقولها**
@@ -754,37 +704,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 تردّه إلى اليمين.** */}
             <OrderRef number={o.number} at={o.created_at} className="ms-auto" />
           </span>
-          {/* **وموضعُ شريط الرحلة لم يُقرَّر بعد** — (قرارُ المالك
-              ٢٠٢٦-٠٨-١٢: «ألغِها من هنا لنشوف وين نضيف شريط الرحلة»).
-
-              **والمحرّكُ يرسله جاهزا** (`ops_stages` و`ops_stage_at`) —
-              **ومسارُ المكتب أطولُ من مسار الزبون**: يفرّق بين «في
-              المطبخ» و«بانتظار سائق»، وهما تحت اسمٍ واحدٍ عنده.
-
-              **و«بانتظار سائق» أهمُّ حالٍ هنا**: هي وحدَها التي تُوجب
-              فعلاً من المكتب الآن. */}
-        </span>
-      ),
-      // **وفي الجدول الرقمُ وحدَه** — الحالةُ عمودٌ له رأسُه.
-      tableCell: (o) => <span className="font-bold">#{o.number}</span>,
-    },
-    {
-      // **الحالةُ عمودٌ في الجدول وشارةٌ في ترويسة البطاقة.**
-      //
-      // ولو عُرضت في الوضعين بالتعريف نفسِه **لَظهرت مرّتين في البطاقة**، أو
-      // **غاب رأسُها في الجدول فيُقرأ العمودُ بلا اسم.**
-      id: "status",
-      header: m.admin.ordersPage.statusCol,
-      icon: <IconStatus />,
-      only: "table",
-      cell: (o) => (
-        <span className="inline-flex flex-wrap items-center justify-center gap-1">
-          <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>
-            {STATUS_LABELS[o.status]}
-          </Badge>
-          {o.ended_by && ENDED_BY[o.ended_by] && (
-            <Badge variant="neutral">{ENDED_BY[o.ended_by]}</Badge>
-          )}
         </span>
       ),
     },
@@ -831,27 +750,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       ),
     },
     {
-      // **التاريخُ والوقتُ في الترويسة تحت الحالة** — لا حقلاً مُعنوَناً بينها.
-      //
-      // **والتاريخُ معه لا الوقتُ وحدَه**: سجلُّ الطلبات يمتدّ أياماً، **و«٣:١١»
-      // بلا يومٍ لا تقول شيئاً** لمن يراجع شكوى الأسبوع الماضي.
-      id: "time",
-      header: m.admin.ordersPage.time,
-      primary: true,
-      // **وفي الجدول وحدَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «وتحته التاريخ
-      // والوقت»). **والبطاقةُ صارت تحمله تحت الرقم** في `OrderRef`،
-      // **وخبرٌ يُكتب مرّتين في بطاقةٍ واحدة** يُقرأ خبرين: أهذا وقتُ
-      // الطلب وذاك وقتُ شيءٍ آخر؟
-      //
-      // **والجدولُ يبقيه عموداً** — له رأسٌ ويُرتَّب به.
-      only: "table",
-      cell: (o) => (
-        <span dir="ltr" className="block">
-          {fmtDateTime(o.created_at)}
-        </span>
-      ),
-    },
-    {
       id: "merchant",
       header: m.admin.ordersPage.merchant,
       icon: <IconStore />,
@@ -883,17 +781,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       icon: <IconOrder />,
       // بعرض البطاقة: قائمةٌ تُقرأ سطراً سطراً لا تُحشَر في خانةٍ ضيّقة
       block: true,
-      // **وفي الجدول زرٌّ لا قائمة.**
-      //
-      // فاتورةٌ من عشرة سطورٍ تُفسد صفَّ جدول: **ترتفع الصفوفُ وتتباين
-      // أطوالُها فيُقرأ الجدولُ عشوائياً.** والزرُّ يفتحها حين تُطلب.
-      tableCell: (o) => <InvoiceButton order={o} />,
-      /* **والبطاقةُ تجمع الاثنين**: القائمةُ تُقرأ بلا ضغطة، **وبابُ الورقة
-         تحتها لمن يطبع.** فمن قرأ لا يضغط، ومن أراد ورقةً وجد بابَها حيث
-         نظر — **لا في شاشةٍ أخرى.** */
-      // **ولا زرَّ فاتورةٍ في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
-      // **والقائمةُ فوقه تقول ما فيه**، والزرُّ يبقى في الجدول حيث لا
-      // تُعرض القائمة.
+      // **ولا زرَّ فاتورةٍ** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الفاتورة ألغِها
+      // من الكرت الخاصّ بالطلبات»). **والقائمةُ تحته تقول ما فيه**،
+      // **وزرٌّ يفتح ما هو مفتوحٌ فوقه** ضغطةٌ بلا خبرٍ جديد.
       cell: (o) => <InvoiceList o={o} />,
     },
     {
@@ -937,11 +827,16 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 كان يُوضع كما جاء — `/media/…` — **فيطلبه المتصفّح من منفذ
                 اللوحة (3001) لا من المحرّك (8080)** فيردّ 404. **وصورةٌ
                 مكسورةٌ في إثبات تسليمٍ تعني أنّ الإثباتَ غيرُ موجود.** */}
-            <a href={mediaUrl(o.proof_url) ?? undefined} target="_blank" rel="noreferrer">
+            <a
+              href={mediaUrl(o.proof_url) ?? undefined}
+              target="_blank"
+              rel="noreferrer"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={mediaUrl(o.proof_url) ?? ""}
-                alt="" loading="lazy"
+                alt=""
+                loading="lazy"
                 className="h-16 w-16 rounded-control border border-line object-cover"
               />
             </a>
@@ -1098,17 +993,39 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             القسمُ كلُّه في هذه الجولة. */}
       </div>
 
-      {error && (
-        <Alert className="mb-4">
-          {error}
-        </Alert>
-      )}
+      {error && <Alert className="mb-4">{error}</Alert>}
 
       <DataView
         items={data?.orders ?? []}
         getKey={(o) => o.id}
         columns={columns}
-        view={view}
+        // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ألغِ عرضَ
+        // الجدول من قسم الطلبات وسجلّه»).
+        view="cards"
+        // ══════════════════════════════════════════════════════════
+        // **ومسارُ الطلب عمودٌ في طرف البطاقة**
+        // ══════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٢: «شو رأيك نسوّيها بشكلٍ طوليّ… بدل ما
+        //  يكون شريط الرحلة أفقيّاً يصير عاموديّاً».)
+        //
+        // **والمراحلُ من المحرّك لا من هنا** — `ops_stages` يبنيه
+        // `stages.go`، **فما يُضاف من حالٍ جديدٍ يظهر في الشاشة بلا
+        // تعديلٍ فيها.**
+        //
+        // **وطلبٌ قديمٌ لا مسارَ معه لا يُرسم له عمودٌ فارغ** — بطاقةٌ
+        // بعمودٍ لا شيءَ فيه تُقرأ عطبا.
+        rail={(o) =>
+          o.ops_stages?.length ? (
+            <OrderTrackV
+              stages={o.ops_stages.map((id) => ({
+                id,
+                label: STAGE_LABELS[id] ?? id,
+              }))}
+              current={o.ops_stage_at ?? -1}
+            />
+          ) : null
+        }
         empty={m.admin.ordersPage.empty}
         actions={(o) => (
           <OrderActions
@@ -1129,19 +1046,19 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
       {data && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted">
-              <span>
-                {m.admin.users.totalCount.replace("{count}", fmtNum(data.total))}
-              </span>
-              {/* **والترقيمُ من المكوّن المشترك** — وكان مكتوباً هنا وفي أربعة
+          <span>
+            {m.admin.users.totalCount.replace("{count}", fmtNum(data.total))}
+          </span>
+          {/* **والترقيمُ من المكوّن المشترك** — وكان مكتوباً هنا وفي أربعة
                   ملفّاتٍ أخرى بالشكل نفسِه، **وأرقامُه لاتينيّةٌ في واجهةٍ
                   عربية.** */}
-              <Pagination
-                page={page}
-                total={data.total}
-                perPage={data.per_page}
-                onChange={setPage}
-              />
-            </div>
+          <Pagination
+            page={page}
+            total={data.total}
+            perPage={data.per_page}
+            onChange={setPage}
+          />
+        </div>
       )}
     </div>
   );
@@ -1205,7 +1122,13 @@ function OrderActions({
   const [err, setErr] = useState("");
 
   // **ما تملكه العملياتُ بعد حساب الوضع** — لا الخريطةُ الخام.
-  const next = opsNext(o.status, selfManage, o.driver_name !== null, isAdmin, o.kind);
+  const next = opsNext(
+    o.status,
+    selfManage,
+    o.driver_name !== null,
+    isAdmin,
+    o.kind,
+  );
 
   /**
    * أمضت المهلةُ في الطابور بلا التقاط؟
@@ -1314,9 +1237,6 @@ function OrderActions({
       setBusy("");
     }
   }
-
-
-
 
   // **مصيرُ البضاعة** — من يحمل ثمنَ طعامٍ طُبخ ولم يُسلَّم.
   async function settleGoods(to: "merchant" | "platform") {
@@ -1608,7 +1528,9 @@ function OrderActions({
           }}
           placeholder={m.admin.ordersPage.reasonPlaceholder}
         />
-        <p className="text-xs text-ink-muted">{m.admin.ordersPage.reasonHint}</p>
+        <p className="text-xs text-ink-muted">
+          {m.admin.ordersPage.reasonHint}
+        </p>
         {err && <p className="text-xs text-danger">{err}</p>}
         <div className="flex gap-2">
           <Button
@@ -1770,11 +1692,7 @@ function OrderActions({
           طلبٌ فوق سقف النقد لا يظهر لسائقٍ أبداً، **والعملياتُ ترى «جارٍ إسناد
           سائق» وتنتظر من لن يأتي.** والصمتُ أسوأُ من الرفض: الرفضُ يُقرأ
           ويُعالَج، **والصمتُ يُنتظَر.** */}
-      {o.blocked_reason && (
-        <Alert tone="warning">
-          {o.blocked_reason}
-        </Alert>
-      )}
+      {o.blocked_reason && <Alert tone="warning">{o.blocked_reason}</Alert>}
 
       {/* **التحويلُ إلى متجرٍ آخر — قاعدةٌ احتياطية.**
 
@@ -1834,7 +1752,7 @@ function OrderActions({
                   ),
                 )
                 // @empty-ok — **قائمةُ متاجرِ التحويل تُفتح بطلب**: من فتحها فوجدها
-                  // فارغةً يُغلق ويُعيد، **ولا قرارَ يُبنى على فراغها.**
+                // فارغةً يُغلق ويُعيد، **ولا قرارَ يُبنى على فراغها.**
                 .catch(() => setStores([]));
             }
           }}
@@ -1902,9 +1820,9 @@ function InvoiceList({ o }: { o: OrderRow }) {
             </li>
             <li className="flex items-center justify-between gap-2 border-t border-line-soft pt-1.5 font-bold">
               <span>{OP.customTotal}</span>
-              <span className="tabular-nums" dir="ltr">
-                <Money value={goods + fee} />
-              </span>
+              {/* **ولا لفّةَ هنا** — `Money` تلفّ الرقمَ وحدَه، **ولفّةٌ
+                  فوقها تقلب الرمزَ إلى يمينه**: «ل.س ٣٠٠». */}
+              <Money value={goods + fee} />
             </li>
             {/* **ويُقال إنّه لا يدخل حسابَ المنصّة** — وإلّا قُرئ دخلاً. */}
             <li className="pt-1 text-2xs text-ink-muted">{OP.customNote}</li>
@@ -1947,7 +1865,11 @@ function InvoiceList({ o }: { o: OrderRow }) {
               </span>
               {/* **سعرُ الصنف عارياً × الكمّية** — والإضافاتُ تحته بأسعارها،
                **فمجموعُ السطور يبلغ قيمةَ الطلب بلا نقصٍ ولا فائض.** */}
-              <Money value={basePrice(it) * it.qty} small className="shrink-0" />
+              <Money
+                value={basePrice(it) * it.qty}
+                small
+                className="shrink-0"
+              />
             </span>
 
             {/* **وكلُّ إضافةٍ بسطرها وسعرها** — قرارُ المالك (٢٠٢٦-٠٨-٠٤). */}
@@ -1956,7 +1878,11 @@ function InvoiceList({ o }: { o: OrderRow }) {
                 <span className="min-w-0 flex-1 text-ink-muted">
                   + {x.name}
                 </span>
-                <Money value={x.price_delta * it.qty} small className="shrink-0 text-accent-dark" />
+                <Money
+                  value={x.price_delta * it.qty}
+                  small
+                  className="shrink-0 text-accent-dark"
+                />
               </span>
             ))}
           </li>
@@ -2076,4 +2002,3 @@ function InvoiceButton({ order }: { order: OrderRow }) {
     </>
   );
 }
-

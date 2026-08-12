@@ -182,9 +182,7 @@ function FieldLabel({ icon, text }: { icon?: ReactNode; text: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
       {icon && (
-        <span className="text-ink-dim [&>svg]:h-4 [&>svg]:w-4">
-          {icon}
-        </span>
+        <span className="text-ink-dim [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
       )}
       {text}
     </span>
@@ -200,6 +198,7 @@ export function DataView<T>({
   view,
   onRowClick,
   card,
+  rail,
 }: {
   items: T[];
   getKey: (item: T) => string;
@@ -222,12 +221,33 @@ export function DataView<T>({
    * لمن يقرأ واحداً.
    */
   card?: (item: T) => ReactNode;
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **عمودٌ في طرف البطاقة — لا حقلٌ بين حقولها**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٢: «البطاقة تُقسم إلى قسمين، والقسمُ الأوّل
+   *  لا علاقة له بالقسم الثاني».)
+   *
+   * **وما يُعرض هنا ليس خبراً عن الطلب بل عن سيره** — والحقولُ أخبارٌ
+   * (اسمٌ · متجرٌ · مبلغ) **تُقرأ سطراً سطرا**. أمّا المسارُ فيُقرأ
+   * دفعةً واحدة: **أين هو الآن وكم بقي.**
+   *
+   * **ولو وقع حقلاً بينها لَقُطع بخطوطٍ فاصلةٍ** وصار سبعةَ أسطرٍ بين
+   * «المتجر» و«الفاتورة» — **فتُقرأ البطاقةُ مرّتين لا مرّة.**
+   *
+   * **وهي اختياريّةٌ**: من لم يمرّرها بقيت بطاقتُه عموداً واحداً كما
+   * كانت حرفيّا — **ولا تتغيّر شبكةُ المتاجر ولا السائقين ولا
+   * المحافظ.**
+   *
+   * **ويقف عند الأزرار** — صفُّ الأفعال بعرض البطاقة تحت القسمين:
+   * **زرٌّ يخصّ الطلبَ كلَّه لا نصفَه.**
+   */
+  rail?: (item: T) => ReactNode;
 }) {
   if (items.length === 0) {
     return (
-      <div className="surface p-10 text-center text-ink-muted">
-        {empty}
-      </div>
+      <div className="surface p-10 text-center text-ink-muted">{empty}</div>
     );
   }
 
@@ -248,13 +268,43 @@ export function DataView<T>({
     const blocks = forCards.filter((c) => !c.primary && c.block);
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {items.map((item) => (
-          <div
-            key={getKey(item)}
-            onClick={onRowClick ? () => onRowClick(item) : undefined}
-            className={`flex flex-col surface p-4 transition-shadow hover:elev-2 ${onRowClick ? "cursor-pointer" : ""}`}
-          >
-            {/* ══════════════════════════════════════════════════════
+        {items.map((item) => {
+          // **ويُسأل عن العمود قبل أن يُحجز مكانُه.**
+          //
+          // **دالّةٌ موجودةٌ لا تعني عموداً موجودا**: صفٌّ قديمٌ بلا مسارٍ
+          // محفوظٍ تردّ عنه فارغا. **فلو حُجز له عرضُه لَبقي في البطاقة
+          // بياضٌ بعرض أربعةٍ وعشرين** لا شيءَ فيه — **وهو أسوأُ من ألّا
+          // يكون**: يُقرأ خبراً غاب لا خبراً لا وجودَ له.
+          const side = rail?.(item);
+          return (
+            <div
+              key={getKey(item)}
+              onClick={onRowClick ? () => onRowClick(item) : undefined}
+              className={`flex flex-col surface p-4 transition-shadow hover:elev-2 ${onRowClick ? "cursor-pointer" : ""}`}
+            >
+              {/* ══════════════════════════════════════════════════════
+                **وقسمانِ لا عمودٌ واحد**
+                ══════════════════════════════════════════════════════
+
+                (قرارُ المالك ٢٠٢٦-٠٨-١٢.)
+
+                **والمحتوى أوّلاً في الترتيب** — فيقع يمينا في واجهةٍ
+                عربيّة، **والعمودُ الجانبيّ يسارا حيث طُلب.**
+
+                **و`flex-1` على المحتوى** تجعله يأخذ ما بقي مهما كان
+                عرضُ العمود، **و`min-w-0` تسمح لما فيه أن يُقصّ** —
+                وبدونها يفرض أطولُ نصٍّ عرضَه فيفيض القسمان.
+
+                **والصفُّ ينمو** (`flex-1`) ليبلغ قاعَ البطاقة —
+                **فالعمودُ الجانبيُّ يمتدّ إلى الأزرار** لا إلى آخر
+                حقلٍ فيه. */}
+              <div
+                className={
+                  side ? "flex flex-1 items-stretch gap-3" : "contents"
+                }
+              >
+                <div className={side ? "min-w-0 flex-1" : "contents"}>
+                  {/* ══════════════════════════════════════════════════════
                 **والترويسةُ صفٌّ لا عمود**
                 ══════════════════════════════════════════════════════
 
@@ -270,8 +320,8 @@ export function DataView<T>({
                 لأنّها كلَّها على استقامةٍ واحدة.**
 
                 **وما زاد على اثنتين يلتفّ** ولا يزاحم. */}
-            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line-soft pb-3">
-              {/* ══════════════════════════════════════════════════════
+                  <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-line-soft pb-3">
+                    {/* ══════════════════════════════════════════════════════
                   **والأوّليّةُ الوحيدةُ تأخذ السطرَ كلَّه**
                   ══════════════════════════════════════════════════════
 
@@ -288,20 +338,22 @@ export function DataView<T>({
                   **فالواحدةُ تُمدَّد**: تأخذ السطرَ فتوزّع ما فيها
                   بنفسها. **والأكثرُ من واحدةٍ تبقى كما كانت** — لكلٍّ
                   طرفُها. */}
-              {primaries.map((c, i) => (
-                <div
-                  key={c.id}
-                  className={`min-w-0 ${primaries.length === 1 ? "w-full" : ""} ${
-                    i === 0 ? "text-base font-bold" : "text-sm text-ink-muted"
-                  }`}
-                >
-                  {c.cell(item)}
-                </div>
-              ))}
-            </div>
-            {/* كل حقل سطرٌ مفصول بخطّ خفيف: بلا فاصل تسيح الحقول في كتلة واحدة
+                    {primaries.map((c, i) => (
+                      <div
+                        key={c.id}
+                        className={`min-w-0 ${primaries.length === 1 ? "w-full" : ""} ${
+                          i === 0
+                            ? "text-base font-bold"
+                            : "text-sm text-ink-muted"
+                        }`}
+                      >
+                        {c.cell(item)}
+                      </div>
+                    ))}
+                  </div>
+                  {/* كل حقل سطرٌ مفصول بخطّ خفيف: بلا فاصل تسيح الحقول في كتلة واحدة
                 فيُقرأ عنوانٌ مع قيمة جارِه — والبطاقة تُمسح بالعين لا تُدرَس. */}
-            {/* ══════════════════════════════════════════════════════════
+                  {/* ══════════════════════════════════════════════════════════
                 **والفراغُ يقع تحت البطاقة لا في وسطها**
                 ══════════════════════════════════════════════════════════
 
@@ -320,62 +372,78 @@ export function DataView<T>({
                 **والفراغُ إن كان لا بدّ منه فتحت الكلّ**: `mt-auto` على
                 صفّ الأزرار يدفعها إلى القاع، **والحقولُ تبقى ملتصقةً
                 بترتيبها.** */}
-            <dl className="text-sm">
-              {/* **ويُرشَّح لكلّ بطاقةٍ على حدة** — حقلٌ لا معنى له في هذا الصفّ
+                  <dl className="text-sm">
+                    {/* **ويُرشَّح لكلّ بطاقةٍ على حدة** — حقلٌ لا معنى له في هذا الصفّ
                   لا يُعرض فارغاً فيه. */}
-              {rest
-                .filter((c) => !c.hide?.(item))
-                .map((c, i, shown) => (
-                  <div
-                    key={c.id}
-                    className={`flex items-start justify-between gap-3 py-2 ${
-                      i < shown.length - 1 ? "border-b border-line-soft" : ""
-                    }`}
-                  >
-                    {!c.noLabel && (
-                      <dt className="shrink-0 text-ink-muted">
-                        <FieldLabel icon={c.icon} text={c.header} />
-                      </dt>
-                    )}
-                    {/* **وبلا تسميةٍ يأخذ السطرَ كلَّه** — فيوزّع ما فيه
+                    {rest
+                      .filter((c) => !c.hide?.(item))
+                      .map((c, i, shown) => (
+                        <div
+                          key={c.id}
+                          className={`flex items-start justify-between gap-3 py-2 ${
+                            i < shown.length - 1
+                              ? "border-b border-line-soft"
+                              : ""
+                          }`}
+                        >
+                          {!c.noLabel && (
+                            <dt className="shrink-0 text-ink-muted">
+                              <FieldLabel icon={c.icon} text={c.header} />
+                            </dt>
+                          )}
+                          {/* **وبلا تسميةٍ يأخذ السطرَ كلَّه** — فيوزّع ما فيه
                         يمينا ويسارا كما يوزّعه الحقلُ المُسمّى. */}
-                    <dd className={c.noLabel ? "w-full" : "min-w-0 text-end"}>
-                      {c.cell(item)}
-                    </dd>
-                  </div>
-                ))}
-            </dl>
+                          <dd
+                            className={
+                              c.noLabel ? "w-full" : "min-w-0 text-end"
+                            }
+                          >
+                            {c.cell(item)}
+                          </dd>
+                        </div>
+                      ))}
+                  </dl>
 
-            {/* الحقول الطويلة بعرض البطاقة: تسميةٌ فوق ومحتوىً تحتها */}
-            {blocks
-              .filter((c) => !c.hide?.(item))
-              .map((c) => (
-                // **وحاشيةٌ أضيق بين الحقول والكتل** — (سأل المالك
-                // ٢٠٢٦-٠٨-١٢: «شو سبب الفراغ والبادينغ هذا؟»).
-                //
-                // **وثلاثةُ فواصلَ تتراكم**: حاشيةُ آخر صفٍّ، ثمّ فراغٌ
-                // فوق الكتلة، ثمّ فراغٌ تحت خطِّها — **فيبدو بين
-                // «المتجر» و«الفاتورة» بياضٌ لا شيءَ فيه.**
-                <div key={c.id} className="mt-2 border-t border-line-soft pt-2">
-                  <p className="mb-1 text-xs text-ink-muted">
-                    <FieldLabel icon={c.icon} text={c.header} />
-                  </p>
-                  <div className="text-sm">{c.cell(item)}</div>
+                  {/* الحقول الطويلة بعرض البطاقة: تسميةٌ فوق ومحتوىً تحتها */}
+                  {blocks
+                    .filter((c) => !c.hide?.(item))
+                    .map((c) => (
+                      // **وحاشيةٌ أضيق بين الحقول والكتل** — (سأل المالك
+                      // ٢٠٢٦-٠٨-١٢: «شو سبب الفراغ والبادينغ هذا؟»).
+                      //
+                      // **وثلاثةُ فواصلَ تتراكم**: حاشيةُ آخر صفٍّ، ثمّ فراغٌ
+                      // فوق الكتلة، ثمّ فراغٌ تحت خطِّها — **فيبدو بين
+                      // «المتجر» و«الفاتورة» بياضٌ لا شيءَ فيه.**
+                      <div
+                        key={c.id}
+                        className="mt-2 border-t border-line-soft pt-2"
+                      >
+                        <p className="mb-1 text-xs text-ink-muted">
+                          <FieldLabel icon={c.icon} text={c.header} />
+                        </p>
+                        <div className="text-sm">{c.cell(item)}</div>
+                      </div>
+                    ))}
                 </div>
-              ))}
-
-            {actions && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                /* الأزرار تتقاسم السطر ما دامت تتسع، وتنزل سطراً جديداً بدل أن
-                   تفيض خارج البطاقة — النصوص العربية تطول ولا تُقصّ. */
-                className="mt-auto flex flex-wrap gap-1.5 border-t border-line-soft pt-3 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:!px-2 [&_button]:text-center"
-              >
-                {actions(item)}
+                {/* **وعرضُه ثابت** (`w-24`) — عمودٌ يتّسع بأطول اسمٍ فيه
+                  يختلف من بطاقةٍ إلى جارتها، **فتفترق حوافُّ المحتوى في
+                  الصفّ الواحد** وهو ما تراه العينُ قبل أن تقرأ. */}
+                {side && <div className="w-24 shrink-0">{side}</div>}
               </div>
-            )}
-          </div>
-        ))}
+
+              {actions && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  /* الأزرار تتقاسم السطر ما دامت تتسع، وتنزل سطراً جديداً بدل أن
+                   تفيض خارج البطاقة — النصوص العربية تطول ولا تُقصّ. */
+                  className="mt-auto flex flex-wrap gap-1.5 border-t border-line-soft pt-3 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:!px-2 [&_button]:text-center"
+                >
+                  {actions(item)}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -444,7 +512,10 @@ export function DataView<T>({
                 </td>
               ))}
               {actions && (
-                <td className="p-3 align-middle" onClick={(e) => e.stopPropagation()}>
+                <td
+                  className="p-3 align-middle"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex flex-nowrap justify-center gap-1.5 whitespace-nowrap">
                     {actions(item)}
                   </div>
