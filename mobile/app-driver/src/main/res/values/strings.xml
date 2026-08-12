@@ -125,10 +125,10 @@
     <string name="detail_fail_title">لماذا تعذّر؟</string>
     <string name="detail_no_reasons">لا سبب متاح في هذه الحالة</string>
     <string name="detail_cancel">إلغاء</string>
-    <string name="step_at_pickup">وصلت إلى المتجر</string>
+    <string name="step_at_pickup">وصلت المتجر</string>
     <string name="step_picked_up">استلمت البضاعة</string>
     <string name="step_on_the_way">انطلقت إلى الزبون</string>
-    <string name="step_at_dropoff">وصلت إلى الزبون</string>
+    <string name="step_at_dropoff">وصلت الزبون</string>
     <string name="step_delivered">سلّمت الطلب</string>
     <string name="status_at_pickup">عند المتجر</string>
     <string name="status_at_dropoff">عند الزبون</string>
@@ -178,9 +178,9 @@
     <string name="trip_s_at_customer">وصلت الزبون</string>
     <string name="trip_s_delivered">سلّمت</string>
     <string name="trip_remaining">ما بقي</string>
-    <string name="trip_p_to_store">في الطريق إلى المتجر</string>
+    <string name="trip_p_to_store">الطريق إلى المتجر</string>
     <string name="trip_p_at_store">وصلت المتجر</string>
-    <string name="trip_p_to_customer">في الطريق إلى الزبون</string>
+    <string name="trip_p_to_customer">الطريق إلى الزبون</string>
     <string name="trip_p_at_customer">وصلت الزبون</string>
     <string name="trip_p_delivered">سلّمت الطلب</string>
     <!-- الإشعارات -->
@@ -198,7 +198,7 @@
     <string name="trip_near_pickup">يبدو أنّك وصلت المتجر</string>
     <string name="trip_near_dropoff">يبدو أنّك وصلت الزبون</string>
     <string name="trip_problem">لدي مشكلة</string>
-    <string name="trip_release_short">أعد للطابور</string>
+    <string name="trip_release_short">إعادة للطابور</string>
     <string name="emg_title">تبليغ العمليات</string>
     <string name="emg_body">سيصل بلاغٌ فوريٌّ إلى المكتب بموقعك ورقم الطلب. استعمله عند عطلٍ أو خطرٍ أو أيّ ما يمنعك من إكمال الطلب.</string>
     <string name="emg_send">بلّغ الآن</string>

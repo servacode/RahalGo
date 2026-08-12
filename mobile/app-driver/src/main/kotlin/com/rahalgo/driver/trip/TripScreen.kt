@@ -46,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.BrandCanvas
 import com.rahalgo.design.BrandOrange
@@ -318,6 +319,8 @@ private fun SmallAction(
     ground: Color,
     onClick: () -> Unit,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
+    busy: Boolean = false,
 ) {
     Button(
         onClick = onClick,
@@ -326,8 +329,17 @@ private fun SmallAction(
             containerColor = ground,
             contentColor = Color.White,
         ),
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp),
+        modifier = modifier,
     ) {
+        if (busy) {
+            CircularProgressIndicator(
+                Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = Color.White,
+            )
+            return@Button
+        }
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
@@ -337,8 +349,12 @@ private fun SmallAction(
         Spacer(Modifier.size(4.dp))
         Text(
             text = stringResource(label),
-            style = MaterialTheme.typography.labelLarge,
+            // **وحجمٌ واحدٌ للثلاثة** — (طلب المالك ٢٠٢٦-٠٨-١٢: «لازم
+            // تكون بنفس الشكل»). **وزرٌّ أكبرُ من جاره** يُقرأ أهمَّ
+            // منه، وهي ثلاثةُ أفعالٍ لا فعلٌ وحاشيتان.
+            style = MaterialTheme.typography.labelMedium,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -880,7 +896,10 @@ private fun TripCard(
         ) {
             val next = nextAction(order.status)
             if (next != null) {
-                Button(
+                SmallAction(
+                    icon = R.drawable.ic_check_circle,
+                    label = next.label,
+                    ground = BrandTeal,
                     // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
                     // ردّ «يلزم إثبات» بعد أن ظنّ صاحبه أنّه أنهى.
                     onClick = {
@@ -891,18 +910,9 @@ private fun TripCard(
                         }
                     },
                     enabled = !state.busy,
+                    busy = state.busy,
                     modifier = Modifier.weight(1f),
-                ) {
-                    if (state.busy) {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    } else {
-                        Text(
-                            text = stringResource(next.label),
-                            maxLines = 1,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                }
+                )
             }
 
             // ══════════════════════════════════════════════════════════
@@ -925,6 +935,7 @@ private fun TripCard(
                 ground = StateRed,
                 onClick = actions.askFail,
                 enabled = !state.busy,
+                modifier = Modifier.weight(1f),
             )
 
             // **وإعادةُ الطلب قبل أن يستلم البضاعة فقط** — بعدها هي في
@@ -939,6 +950,7 @@ private fun TripCard(
                     ground = BrandOrange,
                     onClick = actions.release,
                     enabled = !state.busy,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
