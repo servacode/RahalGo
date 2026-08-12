@@ -88,6 +88,3 @@ fun Avatar(url: String?, name: String, size: Int = 28) {
         }
     }
 }
-
-/** **الاسم الأوّل وحده** — الشريط ضيّق، و«محمّد أحمد العلي» يزيحه كلّه. */
-fun firstName(full: String): String = full.trim().split(' ').firstOrNull().orEmpty()

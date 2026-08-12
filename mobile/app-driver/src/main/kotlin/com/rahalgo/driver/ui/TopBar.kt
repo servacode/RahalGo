@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.BrandOrange
 import com.rahalgo.design.BrandTeal
@@ -161,28 +163,6 @@ fun TopBar(
                 )
             }
 
-            Spacer(Modifier.size(10.dp))
-
-            // ══════════════════════════════════════════════════════════
-            // **وصورته واسمه قبل محفظته**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (قرار المالك ٢٠٢٦-٠٨-١٢.)
-            //
-            // **وهي تقول: هذا حسابك أنت** — والسائق قد يفتح تطبيقا على
-            // هاتف زميله، **أو يُسلَّم هاتف الشركة لسائق الوردية
-            // التالية**، فيبقى الحساب الأوّل مفتوحا ولا شيء يقول ذلك.
-            //
-            // **والاسم الأوّل وحده** — الشريط فيه أربعة أشياء، **واسم
-            // ثلاثيّ يزيحها كلّها.**
-            Avatar(url = avatarUrl, name = name)
-            Spacer(Modifier.size(6.dp))
-            Text(
-                text = firstName(name),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-            )
 
             Spacer(Modifier.size(10.dp))
 
@@ -210,6 +190,42 @@ fun TopBar(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
+            Spacer(Modifier.size(10.dp))
+
+            // ══════════════════════════════════════════════════════════
+            // **وصورته واسمه بعد محفظته**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢: «مكان البروفايل واسم المستخدم
+            //  غلط — لازم يكون على اليسار بعد المحفظة وليس قبلها».)
+            //
+            // **وهي تقول: هذا حسابك أنت** — والسائق قد يفتح تطبيقا على
+            // هاتف زميله، **أو يُسلَّم هاتف الشركة لسائق الوردية
+            // التالية**، فيبقى الحساب الأوّل مفتوحا ولا شيء يقول ذلك.
+            //
+            // ══════════════════════════════════════════════════════════
+            // **والاسم كما كتبه صاحبه — لا أوّل كلمة منه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كان يُعرض أوّلَ كلمةٍ وحدَها** حرصا على عرض الشريط —
+            // **فبدا التعديلُ كأنّه لم يقع**: غيّر المالكُ الاسمَ إلى
+            // «خليل العلي» في الويب، وقرأته الإدارةُ كذلك، **والشريطُ
+            // يقول «خليل»** — فطُلب العطبُ في الحفظ وهو في العرض.
+            // (٢٠٢٦-٠٨-١٢.)
+            //
+            // **واختصارٌ صامتٌ أسوأُ من طول**: من رأى نصفَ اسمه ظنّ أنّ
+            // شيئا لم يُحفظ. **والطويلُ يُقصّ بثلاث نقاطٍ تُرى** فيعرف
+            // صاحبُه أنّ البقيّة موجودة.
+            Avatar(url = avatarUrl, name = name)
+            Spacer(Modifier.size(6.dp))
+            Text(
+                text = name,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 130.dp),
+            )
         }
     }
 }
