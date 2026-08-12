@@ -203,4 +203,20 @@
     <string name="agree_confirm">وثّق</string>
     <string name="trip_on_route">طلب على طريقك</string>
     <string name="trip_leave_offer">اتركه</string>
+    <string name="order_agree">موافق</string>
+    <string name="order_decline">رفض</string>
+    <string name="err_offer_not_yours">هذا العرض لم يعد لك</string>
+    <!-- بطاقة الطلب -->
+    <string name="card_new_order">طلب جديد</string>
+    <string name="card_custom">طلب خاصّ</string>
+    <string name="card_from_store">من المتجر</string>
+    <string name="card_to_customer">إلى الزبون</string>
+    <string name="card_to_you">إليك</string>
+    <string name="card_fee">أجرة التوصيل</string>
+    <string name="card_payment">الدفع</string>
+    <string name="card_cash">نقدي</string>
+    <string name="card_wallet">مدفوع</string>
+    <string name="card_eta">المدّة</string>
+    <string name="card_minutes">%1$d دقيقة</string>
+    <string name="card_waiting">طلب توصيل جديد بانتظار قبولك</string>
 </resources>

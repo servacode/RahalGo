@@ -58,6 +58,11 @@ data class DriverOrder(
     /** **ما يقبضه نقدا من الزبون** — وصفر يعني مدفوع سلفا. */
     @SerialName("cash_due") val cashDue: Long = 0,
     @SerialName("items_count") val itemsCount: Int = 0,
+    /** **ما يكسبه هو** — لا ما يقبضه للمتجر. */
+    @SerialName("delivery_fee") val deliveryFee: Long = 0,
+    /** **اسم الحيّ لا الإحداثيات** — «حي الروضة» يعرفه في لحظة. */
+    @SerialName("pickup_area") val pickupArea: String = "",
+    @SerialName("dropoff_area") val dropoffArea: String = "",
 
     /** **كم بينه وبين المتجر بالمتر** — **وسالب يعني «لا يُعرف»**، لا قريب. */
     @SerialName("to_pickup_m") val toPickupM: Double = -1.0,

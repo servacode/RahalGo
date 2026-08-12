@@ -19,7 +19,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -122,6 +125,7 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
                 OrderCard(
                     order = order,
                     offer = true,
+                    avgSpeedKmh = state.me?.avgSpeedKmh ?: 0,
                     busy = state.acceptingId == order.id,
                     // **ولا يُقبل طلبان معا** — الضغطة الثانية أثناء الأولى
                     // تفتح نداءين، **وقد يعود الأوّل بالرفض والثاني بالقبول**
@@ -129,7 +133,15 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
                     enabled = state.acceptingId == null,
                     onAccept = { actions.accept(order.id) },
                     onOpen = null,
-                    actionLabel = R.string.order_accept,
+                    actionLabel = R.string.order_agree,
+                    // ══════════════════════════════════════════════════
+                    // **والرفض في الحالين** — (قرار المالك ٢٠٢٦-٠٨-١٢)
+                    // ══════════════════════════════════════════════════
+                    //
+                    // **ومعناه يختلف**: في «بالدور» ينقل الدور فورا إلى
+                    // من بعده، **وفي «للجميع» يخفيه عن شاشته ويبقى
+                    // لغيره** — فلا يقرأ في كلّ تحديث طلبا لا يريده.
+                    onDecline = { actions.decline(order.id) },
                     // **وانقضاء المهلة يعيد القراءة** — البطاقة لم تعد
                     // له، **ومن أبقاها** جعله يضغطها فيُردّ «سبقك غيرك».
                     onExpired = actions.refresh,
@@ -151,6 +163,7 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
                 OrderCard(
                     order = order,
                     offer = false,
+                    avgSpeedKmh = state.me?.avgSpeedKmh ?: 0,
                     busy = false,
                     enabled = true,
                     // **وزرّ «ابدأ الرحلة» هو الفعل الوحيد هنا** — لا
@@ -235,10 +248,28 @@ private fun Empty(text: String) {
 }
 
 /**
- * **بطاقة الطلب.**
+ * ══════════════════════════════════════════════════════════════════════
+ * **بطاقة الطلب — كما رسمها المالك ٢٠٢٦-٠٨-١٢**
+ * ══════════════════════════════════════════════════════════════════════
  *
- * **وما يقرّر به السائق أوّلا**: كم يبعد المتجر · كم النقد الذي سيقبضه ·
- * أين يوصّله. **والباقي تفصيل** يُقرأ بعد أن يأخذه.
+ * **ستّة أسطر يقرؤها في ثانيتين وهو واقف**:
+ *
+ * ١ · **رأس**: «طلب جديد» · عدّاد المهلة · رقمه.
+ * ٢ · **المتجر** باسمه.
+ * ٣ · **من أين وإلى أين** بأسماء الأحياء — لا إحداثيات.
+ * ٤ · **كم يبعد عنك** و**كم المشوار**.
+ * ٥ · **أجرتك** و**كيف يُدفع** و**كم يستغرق**.
+ * ٦ · **موافق** و**رفض**.
+ *
+ * # ولماذا اسم الحيّ لا العنوان الكامل
+ *
+ * **«حي الروضة» يعرفه السائق في لحظة** — والعنوان الكامل سطران يقرؤهما
+ * بعد أن يقبل. **والقرار يحتاج الجهة لا الباب.**
+ *
+ * # وأجرتك غير إجماليّ الطلب
+ *
+ * **الأولى ما يكسبه، والثاني ما يقبضه للمتجر** — وكان يرى الثاني وحدَه
+ * فيظنّه كسبه.
  */
 @Composable
 private fun OrderCard(
@@ -246,21 +277,21 @@ private fun OrderCard(
     offer: Boolean,
     busy: Boolean,
     enabled: Boolean,
+    avgSpeedKmh: Long,
     onAccept: () -> Unit,
-    // **وبطاقة العرض لا تُفتح** — لا شيء وراءها حتّى يأخذها، **وضغطة
-    // لا تفعل شيئا تُقرأ عطبا.**
     onOpen: (() -> Unit)?,
     actionLabel: Int,
+    onDecline: (() -> Unit)? = null,
     onExpired: () -> Unit = {},
 ) {
     Column(
         Modifier
             .fillMaxWidth()
             .padding(top = 10.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier)
-            .border(1.dp, Color(0xFFE3E8EB), RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(18.dp))
+            .border(1.dp, Color(0xFFE3E8EB), RoundedCornerShape(18.dp))
             .background(Color.White)
+            .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier)
             .padding(16.dp),
     ) {
         Row(
@@ -268,82 +299,154 @@ private fun OrderCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = order.merchantName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            // **ورقم الطلب بلا فاصلة آلاف** — اسم يُقال ويُبحث به لا مبلغ.
-            // (قرار المالك ٢٠٢٦-٠٨-٠٤: رآها «طلب #1,002».)
-            Text("#${order.number}", color = InkMuted)
+            if (offer) {
+                Chip(R.drawable.ic_bell, stringResource(R.string.card_new_order))
+            } else {
+                Text(statusText(order.status), color = BrandTeal, fontWeight = FontWeight.Bold)
+            }
+            Text("#" + order.number, color = InkMuted, style = MaterialTheme.typography.bodySmall)
         }
 
-        Spacer(Modifier.height(6.dp))
-        Text(order.addressText, color = InkMuted)
-
-        // ══════════════════════════════════════════════════════════════
-        // **عدّاد المهلة — وبلاه تختفي البطاقة فجأة**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (البند الثاني في قائمة المالك ٢٠٢٦-٠٨-١٢.)
-        //
-        // **في نمط «بالدور» للعرض مهلة** (`drivers.offer_timeout_sec`):
-        // تنقضي فينتقل الطلب إلى غيره. **ومن لم يرها** رأى البطاقة تختفي
-        // من تحت إصبعه ولا يعرف لماذا — **فيظنّ التطبيق معطوبا.**
-        //
-        // **وفي «للجميع» لا مهلة أصلا** — الطلب معروض حتّى يأخذه أحد،
-        // **والحقل فارغ** فلا يُعرض شيء.
-        // **والقيمة تُلتقط في متغيّر** — الترقية الذكيّة لا تعمل على
-        // خاصّيّة من وحدة أخرى: **قد تتبدّل بين الفحص والاستعمال.**
         val expiresAt = order.offerExpiresAt
         if (offer && expiresAt != null) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Countdown(expiresAt, onExpired = onExpired)
         }
 
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            // **والمسافة سالبة تعني «لا يُعرف»** — فلا تُكتب صفرا،
-            // **والجهل ليس قربا.**
-            if (order.toPickupM >= 0) {
-                Fact(stringResource(R.string.order_to_pickup), distance(order.toPickupM))
-            }
-            if (order.legM >= 0) {
-                Fact(stringResource(R.string.order_leg), distance(order.legM))
-            }
-        }
-
-        Spacer(Modifier.height(10.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(stringResource(R.string.order_cash_due), color = InkMuted)
-            Text(
-                text = if (order.cashDue > 0) {
-                    money(order.cashDue)
-                } else {
-                    stringResource(R.string.order_prepaid)
-                },
-                fontWeight = FontWeight.Bold,
-                color = if (order.cashDue > 0) BrandTeal else InkMuted,
-            )
-        }
-
-        if (!offer) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = statusText(order.status),
-                color = BrandTeal,
-                fontWeight = FontWeight.Bold,
-            )
-        }
         Spacer(Modifier.height(12.dp))
-        Button(onClick = onAccept, enabled = enabled && !busy, modifier = Modifier.fillMaxWidth()) {
-            if (busy) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            } else {
-                Text(stringResource(actionLabel))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(R.drawable.ic_store),
+                contentDescription = null,
+                tint = BrandOrange,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.size(8.dp))
+            Text(
+                text = order.merchantName.ifBlank { stringResource(R.string.card_custom) },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            if (onOpen != null) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron),
+                    contentDescription = null,
+                    tint = InkMuted,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Leg(
+            label = stringResource(R.string.card_from_store),
+            value = order.pickupArea.ifBlank { order.merchantName },
+            tint = BrandTeal,
+        )
+        Leg(
+            label = stringResource(R.string.card_to_customer),
+            value = order.dropoffArea.ifBlank { order.addressText },
+            tint = BrandOrange,
+        )
+
+        if (order.toPickupM >= 0 || order.legM >= 0) {
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (order.toPickupM >= 0) {
+                    Metric(
+                        icon = R.drawable.ic_arrow_send,
+                        label = stringResource(R.string.card_to_you),
+                        value = distance(order.toPickupM),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                if (order.legM >= 0) {
+                    Metric(
+                        icon = R.drawable.ic_arrow_send,
+                        label = stringResource(R.string.order_leg),
+                        value = distance(order.legM),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Metric(
+                icon = R.drawable.ic_money,
+                label = stringResource(R.string.card_fee),
+                value = money(order.deliveryFee),
+                strong = true,
+                modifier = Modifier.weight(1f),
+            )
+            Metric(
+                icon = R.drawable.ic_money,
+                label = stringResource(R.string.card_payment),
+                value = stringResource(
+                    if (order.cashDue > 0) R.string.card_cash else R.string.card_wallet,
+                ),
+                modifier = Modifier.weight(1f),
+            )
+            // **والمدّة تُحسب ولا تُترك فارغة** — إلّا إن لم تُضبط السرعة:
+            // **رقم مبنيّ على صفر يقول «الآن»** وهو وعد كاذب.
+            val minutes = eta(order.toPickupM, order.legM, avgSpeedKmh)
+            if (minutes > 0) {
+                Metric(
+                    icon = R.drawable.ic_time,
+                    label = stringResource(R.string.card_eta),
+                    value = stringResource(R.string.card_minutes, minutes),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+
+        if (offer) {
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_info),
+                    contentDescription = null,
+                    tint = InkMuted,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    text = stringResource(R.string.card_waiting),
+                    color = InkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = onAccept,
+                enabled = enabled && !busy,
+                modifier = Modifier.weight(if (onDecline != null) 2f else 1f),
+            ) {
+                if (busy) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_check_circle),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.size(6.dp))
+                    Text(stringResource(actionLabel))
+                }
+            }
+            if (onDecline != null) {
+                OutlinedButton(
+                    onClick = onDecline,
+                    enabled = enabled && !busy,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(stringResource(R.string.order_decline), color = BrandOrange)
+                }
             }
         }
     }
@@ -364,9 +467,7 @@ private fun Countdown(expiresAt: String, onExpired: () -> Unit) {
         runCatching { java.time.Instant.parse(expiresAt).toEpochMilli() }.getOrNull()
     } ?: return
 
-    var left by remember(expiresAt) {
-        mutableStateOf(end - System.currentTimeMillis())
-    }
+    var left by remember(expiresAt) { mutableStateOf(end - System.currentTimeMillis()) }
     LaunchedEffect(expiresAt) {
         while (left > 0) {
             kotlinx.coroutines.delay(1000)
@@ -381,19 +482,116 @@ private fun Countdown(expiresAt: String, onExpired: () -> Unit) {
     }
 
     val seconds = (left / 1000).toInt()
-    Text(
-        text = stringResource(R.string.offer_left, "%d:%02d".format(seconds / 60, seconds % 60)),
-        color = if (seconds <= 10) BrandOrange else BrandTeal,
-        fontWeight = FontWeight.Bold,
-    )
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painter = painterResource(R.drawable.ic_time),
+            contentDescription = null,
+            tint = if (seconds <= 10) BrandOrange else BrandTeal,
+            modifier = Modifier.size(14.dp),
+        )
+        Spacer(Modifier.size(5.dp))
+        Text(
+            text = stringResource(R.string.offer_left, "%d:%02d".format(seconds / 60, seconds % 60)),
+            color = if (seconds <= 10) BrandOrange else BrandTeal,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 }
 
+/** **شارة صغيرة** — أيقونة وكلمة. */
 @Composable
-private fun Fact(label: String, value: String) {
-    Column {
-        Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
-        Text(value, fontWeight = FontWeight.Bold)
+private fun Chip(icon: Int, text: String) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(BrandTeal)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(14.dp),
+        )
+        Spacer(Modifier.size(5.dp))
+        Text(
+            text = text,
+            color = Color.White,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold,
+        )
     }
+}
+
+/** **طرف الرحلة** — دبّوس واسم حيّ. */
+@Composable
+private fun Leg(label: String, value: String, tint: Color) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_pin),
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.size(8.dp))
+        Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.size(8.dp))
+        Text(value, fontWeight = FontWeight.Bold, maxLines = 1)
+    }
+}
+
+/** **رقم بعنوانه** — في صندوق صغير. */
+@Composable
+private fun Metric(
+    icon: Int,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    strong: Boolean = false,
+) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFF5F7F8))
+            .padding(vertical = 10.dp, horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                tint = if (strong) BrandTeal else InkMuted,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(Modifier.size(4.dp))
+            Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+        }
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = value,
+            fontWeight = FontWeight.Bold,
+            color = if (strong) BrandTeal else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * **المدّة المتوقّعة للرحلة كلّها** — إليه ثمّ إلى الزبون.
+ *
+ * **وصفر يعني لا تُعرض**: سرعة غير مضبوطة أو مسافة مجهولة، **ورقم مبنيّ
+ * على صفر وعد كاذب.**
+ */
+private fun eta(toPickupM: Double, legM: Double, avgSpeedKmh: Long): Long {
+    if (avgSpeedKmh <= 0) return 0
+    val meters = (if (toPickupM > 0) toPickupM else 0.0) + (if (legM > 0) legM else 0.0)
+    if (meters <= 0) return 0
+    return ((meters / 1000.0) / avgSpeedKmh * 60).toLong().coerceAtLeast(1)
 }
 
 /**
@@ -437,6 +635,7 @@ data class OrdersState(
 
 data class OrdersActions(
     val accept: (String) -> Unit,
+    val decline: (String) -> Unit,
     /** **يفتح رحلته** — يختار الطلب وينتقل إلى الخريطة. */
     val startTrip: (String) -> Unit,
     val refresh: () -> Unit,

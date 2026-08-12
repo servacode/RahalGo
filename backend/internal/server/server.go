@@ -380,6 +380,8 @@ func (s *Server) Router() http.Handler {
 			// المطبخ. (`merchant_rating_handlers.go`)
 			r.Post("/orders/{id}/rate-merchant", s.handleDriverRateMerchant)
 			r.Post("/orders/{id}/accept", s.handleDriverAccept)
+			// **والرفضُ ينقل الدورَ فوراً** — بدل انتظار انقضاء المهلة.
+			r.Post("/orders/{id}/decline", s.handleDriverDecline)
 			r.Post("/orders/{id}/transition", s.handleDriverTransition)
 			r.Post("/orders/{id}/release", s.handleDriverRelease)
 			r.Get("/cash", s.handleDriverCash)

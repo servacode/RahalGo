@@ -113,6 +113,28 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **يرفض العرض** — وينتقل الدور فورا إلى من بعده.
+     *
+     * **والقائمة تُعاد قراءتها بعده**: البطاقة لم تعد له، **ومن أبقاها**
+     * جعله يضغطها فيُردّ «ليس عرضك».
+     */
+    fun decline(orderId: String) {
+        if (state.acceptingId != null) return
+        state = state.copy(acceptingId = orderId, error = "")
+        viewModelScope.launch {
+            try {
+                backend.driver.decline(orderId)
+            } catch (e: Exception) {
+                state = state.copy(acceptingId = null, error = describe(e))
+                refresh()
+                return@launch
+            }
+            state = state.copy(acceptingId = null)
+            refresh()
+        }
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // **الطلب المفتوح — في النموذج لا في الشاشة**
     // ══════════════════════════════════════════════════════════════════
@@ -441,6 +463,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         return when {
             e is ApiClient.ApiException -> when (e.body.code) {
                 "order_taken" -> app.getString(R.string.err_order_taken)
+                "offer_not_yours" -> app.getString(R.string.err_offer_not_yours)
                 "not_on_shift" -> app.getString(R.string.err_not_on_shift)
                 "cash_limit_reached" -> app.getString(R.string.err_cash_limit)
                 "too_many_active_orders" -> app.getString(R.string.err_too_many_active)

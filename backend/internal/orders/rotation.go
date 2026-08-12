@@ -33,16 +33,22 @@ package orders
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
 // AssignmentMode نمطُ التوزيع الحاليّ.
+// ErrOfferNotYours **عرضٌ لم يعد له** — أخذه غيرُه أو انقضت مهلتُه.
+var ErrOfferNotYours = httpx.NewError(http.StatusConflict,
+	"offer_not_yours", "errors.offer_not_yours")
+
 func (s *Service) AssignmentMode(ctx context.Context) string {
 	if s.settings == nil {
 		return "queue"
@@ -572,4 +578,72 @@ func (s *Service) NoEligibleReason(ctx context.Context, orderID string) string {
 		return "لا سائقَ على الدوام الآن"
 	}
 	return ""
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **الرفضُ — ينقل الدورَ فوراً بدل أن يُنتظر انقضاؤه**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «بدل خذ الطلب: موافق ورفض — مشان إذا ما بدّه
+//
+//	يتحوّل لغيره».)
+//
+// # ولماذا لم يكن
+//
+// **كان الرفضُ صمتاً**: يترك السائقُ العرضَ حتّى تنقضي مهلتُه فينتقل.
+// **والمهلةُ دقيقةٌ أو دقيقتان يقفها الطلبُ بلا سبب** — والزبونُ ينتظر،
+// **والسائقُ الذي لا يريده يعرف ذلك في الثانية الأولى.**
+//
+// # وهو المسارُ نفسُه لا مسارٌ ثانٍ
+//
+// **يُوسَم مرورُ دوره** (`offer_passed`) **ثمّ يُعرض على من بعده** — وهو
+// حرفيّاً ما تفعله `SweepExpiredOffers` حين تنقضي المهلة. **ومسارٌ ثانٍ
+// للرفض** يفترق عنها يومَ يتغيّر أحدُهما.
+//
+// # ولا يُرفض ما ليس معروضاً عليه
+//
+// **الشرطُ في جملة التحديث نفسِها**: من رفض طلباً معروضاً على غيره
+// **لم يمسّ شيئاً** — ولا يُنقل دورُ سائقٍ آخر بضغطةٍ من هذا.
+func (s *Service) DeclineOffer(ctx context.Context, orderID, driverID string) error {
+	rotation := s.AssignmentMode(ctx) == "rotation"
+
+	// ══════════════════════════════════════════════════════════════════
+	// **والرفضُ في «للجميع» إخفاءٌ لا نقل**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «زرُّ الرفض غير موجود كما اتّفقنا».)
+	//
+	// **ولا دورَ في «للجميع» ينتقل** — الطلبُ معروضٌ على الكلّ. **لكنّ
+	// الرفضَ فيه معنىً آخر**: من رآه ولا يريده **يريده أن يختفي عن
+	// شاشته**، لا أن يبقى يقرؤه كلَّ مرّة.
+	//
+	// **وهو يبقى لغيره** — لا يُنزع من الطابور.
+	//
+	// **والوسمُ واحدٌ في الحالين** (`offer_passed`): في «بالدور» يُعرض
+	// على من بعده، **وفي «للجميع» يُحجب عن قائمة من رفضه** — ونقطةُ
+	// الطابور تقرؤه.
+	where := "id = $1 AND status = 'dispatching' AND driver_id IS NULL"
+	if rotation {
+		// **ولا يُنقل دورُ سائقٍ آخر بضغطةٍ من هذا.**
+		where += " AND offered_driver_id = $2"
+	}
+
+	var skip []string
+	err := s.db.QueryRow(ctx, `
+		UPDATE orders
+		SET offer_passed = offer_passed || $2::uuid,
+		    offered_driver_id = CASE WHEN offered_driver_id = $2 THEN NULL ELSE offered_driver_id END,
+		    offer_expires_at = CASE WHEN offered_driver_id = $2 THEN NULL ELSE offer_expires_at END
+		WHERE `+where+`
+		RETURNING array(SELECT unnest(offer_passed)::text)`,
+		orderID, driverID).Scan(&skip)
+	if err != nil {
+		// **ولا صفَّ يُصيبه**: العرضُ ليس له، أو أخذه غيرُه، أو انقضى.
+		// **وهو ردٌّ طبيعيٌّ لا عطب** — والبطاقةُ اختفت عنه أصلاً.
+		return ErrOfferNotYours
+	}
+	if !rotation {
+		return nil
+	}
+	return s.OfferNext(ctx, orderID, skip)
 }

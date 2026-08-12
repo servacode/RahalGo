@@ -399,6 +399,7 @@ private fun SignedIn(onLogout: () -> Unit) {
                     state = orders.state,
                     actions = OrdersActions(
                         accept = orders::accept,
+                        decline = orders::decline,
                         startTrip = { id ->
                             orders.open(id)
                             tab = 0

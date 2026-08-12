@@ -181,8 +181,13 @@ type driverOrder struct {
 	//
 	// **والتواصلُ من `/orders/{id}/messages`** — قناةٌ مربوطةٌ بالطلب تنتهي
 	// بانتهائه.
-	Total       int64      `json:"total"`
-	CashDue     int64      `json:"cash_due"`
+	Total   int64 `json:"total"`
+	CashDue int64 `json:"cash_due"`
+	// DeliveryFee **ما يكسبه هو** — لا ما يقبضه للمتجر.
+	DeliveryFee int64 `json:"delivery_fee"`
+	// PickupArea و DropoffArea **اسمُ الحيّ لا الإحداثيات.**
+	PickupArea  string     `json:"pickup_area"`
+	DropoffArea string     `json:"dropoff_area"`
 	ItemsCount  int        `json:"items_count"`
 	ReadyAt     *time.Time `json:"ready_at"`
 	PrepMinutes *int       `json:"prep_minutes"`
@@ -283,7 +288,28 @@ const driverOrderSelect = `
 	       -- **والطلبُ الخاصّ يُعرَف من نوعه** — لا متجرَ له ولا أصناف،
 	       -- **وبطاقتُه تقول «اشترِ ثمّ سلّم» لا «استلم ثمّ سلّم».**
 	       o.kind, COALESCE(o.custom_request, ''),
-	       o.custom_goods_amount, o.custom_fee
+	       o.custom_goods_amount, o.custom_fee,
+	       -- ══════════════════════════════════════════════════════════
+	       -- **ما تقوله البطاقةُ قبل أن يقرّر**
+	       -- ══════════════════════════════════════════════════════════
+	       --
+	       -- (تصميمُ المالك للبطاقة ٢٠٢٦-٠٨-١٢.)
+	       --
+	       -- **وأجرةُ التوصيل غيرُ إجماليّ الطلب**: هي ما يكسبه هو،
+	       -- **والإجماليُّ ما يقبضه للمتجر.** وكان يرى الثاني ويظنّه
+	       -- الأوّل.
+	       o.delivery_fee,
+	       -- **واسمُ الحيّ لا الإحداثيات**: «حي الروضة» يعرفه السائقُ
+	       -- في لحظة، **و«35.95, 39.00» لا يقول له شيئاً.**
+	       --
+	       -- **وحيُّ المتجر يُقرأ من موضعه داخل المناطق** — لا عمودَ له،
+	       -- **والمناطقُ مرسومةٌ أصلاً** بمضلّعاتها في جدول المناطق.
+	       COALESCE((SELECT z.name FROM delivery_zones z
+	                 WHERE z.active AND m.location IS NOT NULL
+	                   AND ST_Contains(z.polygon::geometry, m.location::geometry)
+	                 LIMIT 1), ''),
+	       -- **وحيُّ الزبون من منطقة الطلب** — هي التي حُسبت عليها أجرتُه.
+	       COALESCE((SELECT z.name FROM delivery_zones z WHERE z.id = o.zone_id), '')
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	JOIN users cu ON cu.id = o.customer_id
@@ -306,7 +332,8 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.PickupLat, &o.PickupLng, &o.PickupNote,
 			&o.AcceptsReturns, &o.FailReason, &o.ToPickupM, &o.LegM,
 			&o.OfferExpiresAt, &o.NavLat, &o.NavLng,
-			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee); err != nil {
+			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee,
+			&o.DeliveryFee, &o.PickupArea, &o.DropoffArea); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -340,7 +367,10 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	// **في «بالترتيب» لا يرى السائقُ إلّا ما عُرض عليه باسمه.**
 	mine := `AND o.offered_driver_id = $1`
 	if s.orders.AssignmentMode(r.Context()) != "rotation" {
-		mine = `AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)`
+		// **وما رفضه لا يعود إليه** — (قرارُ المالك ٢٠٢٦-٠٨-١٢):
+		// **الرفضُ في «للجميع» إخفاءٌ لا نقل**، والطلبُ يبقى لغيره.
+		mine = `AND (o.offered_driver_id IS NULL OR o.offered_driver_id = $1)
+		        AND NOT ($1::uuid = ANY(o.offer_passed))`
 	}
 	// **ومعرّفُ السائق يُمرَّر.**
 	//
@@ -549,6 +579,28 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 //
 // حقٌّ يملكه في الخارطة (`assigned → dispatching`): تعطّلت درّاجته أو أخطأ
 // التقدير. وتركُ الطلب معلّقاً بلا سائق أسوأ من إعادته إلى الطابور.
+// ══════════════════════════════════════════════════════════════════════
+// **رفضُ العرض — «موافق» و«رفض» لا «خذ الطلب» وحدَها**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٢.)
+//
+// **وكان الرفضُ صمتاً** — يترك العرضَ حتّى تنقضي مهلتُه. **والزبونُ يقف
+// دقيقةً بلا سبب**، والسائقُ يعرف في الثانية الأولى أنّه لا يريده.
+//
+// **ومعناه يختلف بالنمط**: في «بالدور» ينقل الدورَ فوراً، **وفي
+// «للجميع» يخفي الطلبَ عن شاشته ويبقى لغيره** — ومن رآه ولا يريده لا
+// يريد أن يقرأه في كلّ تحديث.
+func (s *Server) handleDriverDecline(w http.ResponseWriter, r *http.Request) {
+	if err := s.orders.DeclineOffer(r.Context(), chi.URLParam(r, "id"), userIDFrom(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.audit(r, "driver.offer_declined", "order", chi.URLParam(r, "id"), nil)
+	s.touch("order", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"declined": true})
+}
+
 func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	if !s.driverOwnsOrder(r, orderID) {
