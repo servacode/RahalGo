@@ -327,6 +327,60 @@ private fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) 
 }
 
 /**
+ * **شريطُ المراحل الأربع** — ما مضى وما هو فيه وما بقي.
+ *
+ * **والحاليّةُ وحدَها ملوّنة**: ما مضى باهتٌ لأنّه انتهى، **وما بقي
+ * أبهت** — ومن لوّن الكلَّ جعل صاحبَه يبحث عن موضعه بين أربعةٍ متشابهة.
+ */
+@Composable
+private fun LegStrip(status: String) {
+    val at = legOf(status)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        for ((i, label) in LEGS.withIndex()) {
+            if (i > 0) {
+                Text(
+                    text = " ← ",
+                    color = InkMuted.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            Text(
+                text = stringResource(label),
+                color = when {
+                    i == at -> BrandTeal
+                    i < at -> InkMuted
+                    else -> InkMuted.copy(alpha = 0.35f)
+                },
+                fontWeight = if (i == at) FontWeight.Bold else FontWeight.Normal,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private val LEGS = listOf(
+    R.string.leg_picked,
+    R.string.leg_way,
+    R.string.leg_arrived,
+    R.string.leg_done,
+)
+
+/**
+ * **أيُّ مرحلةٍ هو فيها الآن.**
+ *
+ * **وما قبل الاستلام كلُّه المرحلةُ الأولى**: `assigned` و`at_pickup`
+ * طريقُه إلى المتجر — **وهي عندنا مرحلةٌ واحدة** لأنّ الزبون لا يفرّق
+ * بينهما، **والسائقُ يقرأ ما عليه في الزرّ لا في الشريط.**
+ */
+private fun legOf(status: String): Int = when (status) {
+    "picked_up", "on_the_way" -> 1
+    "at_dropoff" -> 2
+    "delivered" -> 3
+    else -> 0
+}
+
+/**
  * **فعلٌ ثانويٌّ ملوّن** — أيقونةٌ وكلمةٌ على أرضٍ صلبة.
  *
  * **ولا حشوةَ عريضة**: ثلاثةُ أزرارٍ في صفٍّ واحدٍ على شاشةِ هاتف،
@@ -864,6 +918,23 @@ private fun TripCard(
             .background(Color.White)
             .padding(20.dp),
     ) {
+        // ══════════════════════════════════════════════════════════════
+        // **مسارُ الرحلة — أربعُ مراحلَ لا أربعَ عشرة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرار المالك ٢٠٢٦-٠٨-١٢: «عندنا ٤ مراحل: نستلم من المتجر،
+        //  الطريق إليك، وصلتك، سلّمتك».)
+        //
+        // **وسبعُ خطواتٍ كانت تُزاحم الخريطة** فرُفعت — **والأربعُ لا
+        // تزاحم**: سطرٌ واحدٌ في أعلى البطاقة، **يُقرأ بنظرةٍ ويقول أين
+        // صار من الرحلة** لا ما عليه أن يفعله (ذاك في الزرّ).
+        //
+        // **والرحلةُ تُتابَع من ثلاث جهات**: السائقُ هنا، **والزبونُ في
+        // طلبه، والمكتبُ في لوحته** — (قرار المالك: «الكلّ معنيّ
+        // بالرحلة مو طرف واحد»).
+        LegStrip(order.status)
+
+        Spacer(Modifier.height(12.dp))
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
