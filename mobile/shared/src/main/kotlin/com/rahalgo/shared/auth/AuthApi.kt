@@ -1,7 +1,9 @@
 package com.rahalgo.shared.auth
 
 import com.rahalgo.shared.model.AuthResult
+import com.rahalgo.shared.model.Platform
 import com.rahalgo.shared.model.User
+import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
 
@@ -30,7 +32,7 @@ class AuthApi(private val api: ApiClient) {
 
     /** طلب رمز لمرّة واحدة. */
     suspend fun requestOtp(phone: String): Unit =
-        api.raw<Map<String, Boolean>>(
+        api.raw<Ack>(
             "/api/v1/auth/otp/request",
             HttpMethod.Post,
             mapOf("phone" to phone),
@@ -44,6 +46,42 @@ class AuthApi(private val api: ApiClient) {
             mapOf("phone" to phone, "code" to code),
         )
 
+    // ══════════════════════════════════════════════════════════════════
+    // **استعادة كلمة المرور — ثلاث خطوات لا واحدة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والفصل مقصود**: الرمز يُتحقّق منه **قبل** نموذج الكلمة الجديدة
+    // (`auth/password/reset/verify`)، **فلا يكتب صاحبه كلمة جديدة ثمّ
+    // يُقال له إن رمزه خطأ** فيعيد كل شيء.
+    //
+    // **والتأكيد يفتح جلسة مباشرة** (`ConfirmPasswordReset` يعيد
+    // `AuthResult`) — فلا يُطلب منه أن يدخل بما ضبطه للتوّ.
+
+    /** يطلب رمز استعادة. **ورقم غير مسجّل يردّ نجاحا صامتا** — لئلّا
+     *  يُعرف من هذا الباب أيّ الأرقام لها حسابات. */
+    suspend fun resetRequest(phone: String): Unit =
+        api.raw<Ack>(
+            "/api/v1/auth/password/reset/request",
+            HttpMethod.Post,
+            mapOf("phone" to phone),
+        ).let { }
+
+    /** يتحقّق من الرمز **ولا يستهلكه** — الخطوة التالية تعيده. */
+    suspend fun resetVerify(phone: String, code: String): Unit =
+        api.raw<Ack>(
+            "/api/v1/auth/password/reset/verify",
+            HttpMethod.Post,
+            mapOf("phone" to phone, "code" to code),
+        ).let { }
+
+    /** يضبط الكلمة الجديدة **ويفتح الجلسة.** */
+    suspend fun resetConfirm(phone: String, code: String, password: String): AuthResult =
+        api.raw(
+            "/api/v1/auth/password/reset/confirm",
+            HttpMethod.Post,
+            mapOf("phone" to phone, "code" to code, "password" to password),
+        )
+
     /**
      * **من أنا؟** — يُنادى عند الإقلاع لاستعادة الجلسة.
      *
@@ -53,9 +91,12 @@ class AuthApi(private val api: ApiClient) {
      */
     suspend fun me(): User = api.call("/api/v1/auth/me")
 
+    /** حال المنصّة — **يُنادى قبل رسم شاشة الدخول.** */
+    suspend fun platform(): Platform = api.raw("/api/v1/public/platform")
+
     /** خروج — **يُبطل الجلسة في المحرّك لا في الجهاز وحده.** */
     suspend fun logout(refreshToken: String) {
-        api.raw<Map<String, Boolean>>(
+        api.raw<Ack>(
             "/api/v1/auth/logout",
             HttpMethod.Post,
             mapOf("refresh_token" to refreshToken),

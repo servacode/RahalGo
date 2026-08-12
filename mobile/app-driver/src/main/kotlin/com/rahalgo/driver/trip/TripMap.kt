@@ -1,0 +1,144 @@
+package com.rahalgo.driver.trip
+
+import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import com.rahalgo.driver.data.Backend
+import org.maplibre.android.MapLibre
+import org.maplibre.android.WellKnownTileServer
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **خريطة الرحلة**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (المرحلة ٢ من `docs/DRIVER-APP-PLAN.md`.)
+ *
+ * # لماذا بلاطات نقطيّة لا متجهيّة
+ *
+ * **الويب يرسم بها** (`web/packages/ui/map.tsx`: `tile.openstreetmap.org`
+ * ثمّ بدائل) — **فالمدينة تبدو واحدة في الشاشتين**، ولا يرى السائق شارعا
+ * بشكل والمكتب يراه بشكل آخر.
+ *
+ * **ولا مفتاح ولا فاتورة** — بخلاف خرائط غوغل.
+ *
+ * # وأسلوب الرسم يُكتب هنا لا يُجلب من خادم
+ *
+ * **ملفّ الأسلوب في MapLibre يُنزَّل عادةً من مزوّد** — ونحن لا مزوّد
+ * لنا، **فيُكتب المصدر والطبقة بأيدينا**: مصدر نقطيّ واحد وطبقة فوقه.
+ * **ولا نداء ثالث لخادم أسلوب** قد يسقط فتبقى الشاشة رماديّة.
+ *
+ * # والعلامات بطبقات لا بإضافة
+ *
+ * **إضافة العلامات في MapLibre مكتبة ثانية** — وثلاث نقاط وخطّ لا
+ * تستحقّها. **فتُرسم دوائر وخطّ من `GeoJSON`** مباشرة.
+ */
+
+/** مركز الرقّة — **يُفتح عليه حتّى تُعرف النقاط.** */
+private val RAQQA = LatLng(35.9528, 39.0079)
+
+/**
+ * **أسلوب الخريطة — في ملفّ لا في نصّ داخل الشيفرة.**
+ *
+ * **والبلاطات من `openstreetmap.org`** كما في الويب. **وسياستهم تمنع
+ * الاستعمال الثقيل** — فيوم يكبر عدد السائقين يُبدَّل العنوان بخادمنا،
+ * **وهو سطر واحد في الملفّ.**
+ *
+ * # ولماذا ملفّ
+ *
+ * **تنزيل منطقة غير متّصلة يحتاج عنوان أسلوب** (`asset://`) لا نصّا:
+ * **المنزِّل يقرأ الأسلوب ليعرف أيّ بلاطات يجلب.** ونصٌّ داخل الشيفرة لا
+ * عنوان له.
+ *
+ * **وأرضيّة تحت البلاطات** — والخريطة سوداء حتّى تصل أوّل بلاطة، **وسوادٌ
+ * يملأ الشاشة يُقرأ عطبا** لا انتظارا. (رآه المالك ٢٠٢٦-٠٨-١٢.)
+ */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **عنوانان للأسلوب — واحدٌ للعرض وآخرُ للتنزيل**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **والعارض يقرأ الأصول** (`asset://`) — **فيرسم بلا شبكة أصلا**، وهو
+ * ما نريده: خريطة تعمل والإنترنت مقطوع.
+ *
+ * **والمنزّل يقرأ عنوانا شبكيّا وحدَه**: جُرّب `asset://` فردّ «تعذّر
+ * تحليل العنوان»، وجُرّب `file://` فردّ مثلها (قيسا على الجهاز
+ * ٢٠٢٦-٠٨-١٢) — **فبقي التنزيل على صفر بلا سبب ظاهر.** فيقرأ أسلوبه من
+ * المحرّك.
+ *
+ * **والبلاطات واحدة في الاثنين** — وهي ما يُخزَّن ويُقرأ، **لا ملفّ
+ * الأسلوب.** فما نزّله المنزّل يرسمه العارض.
+ */
+const val STYLE_ASSET = "asset://map-style.json"
+
+/**
+ * خريطة تعرض ثلاث نقاط وخطّ الرحلة.
+ *
+ * **وتُبنى مرّة واحدة** (`remember`) — ومن أعاد بناء `MapView` مع كلّ
+ * تحديث موقع **أعاد تحميل البلاطات كلّها كلّ عشرين ثانية.**
+ */
+@Composable
+fun TripMap(
+    driver: LatLng?,
+    pickup: LatLng?,
+    dropoff: LatLng?,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val view = remember { createMapView(context) }
+
+    DisposableEffect(Unit) {
+        view.onStart()
+        view.onResume()
+        onDispose {
+            view.onPause()
+            view.onStop()
+            view.onDestroy()
+        }
+    }
+
+    AndroidView(factory = { view }, modifier = modifier) { map ->
+        map.getMapAsync { libre ->
+            libre.setStyle(Style.Builder().fromUri(STYLE_ASSET)) {
+                Markers.draw(it, driver, pickup, dropoff)
+                // **والكاميرا تُظهر النقاط كلَّها** — لا تلاحق السائق
+                // وحدَه: **من رأى نفسَه ولم ير المتجر** لا يعرف أيّ جهة
+                // يمضي.
+                val points = listOfNotNull(driver, pickup, dropoff)
+                when {
+                    points.size >= 2 -> libre.easeCamera(
+                        CameraUpdateFactory.newLatLngBounds(
+                            LatLngBounds.fromLatLngs(points),
+                            120,
+                        ),
+                    )
+
+                    points.size == 1 -> libre.easeCamera(
+                        CameraUpdateFactory.newLatLngZoom(points[0], 15.0),
+                    )
+
+                    else -> libre.easeCamera(CameraUpdateFactory.newLatLngZoom(RAQQA, 13.0))
+                }
+            }
+        }
+    }
+}
+
+private fun createMapView(context: Context): MapView {
+    // **ولا مفتاح** — المفتاح `null` لأنّ MapLibre لا يطلب حسابا.
+    //
+    // **أمّا نوع خادم البلاطات فلا يقبل الفراغ**: مرّرتُه `null` فسقط
+    // التطبيق عند أوّل فتح للخريطة (٢٠٢٦-٠٨-١٢،
+    // `WellKnownTileServer.ordinal()` على مرجع فارغ).
+    MapLibre.getInstance(context, null, WellKnownTileServer.MapLibre)
+    return MapView(context)
+}

@@ -70,3 +70,20 @@ data class AuthResult(
     @SerialName("pin_setup") val pinSetup: Boolean = false,
     val challenge: String = "",
 )
+
+/**
+ * ما تقوله المنصّة عن نفسها **قبل أن يكون هناك حساب.**
+ *
+ * (`GET /api/v1/public/platform` — مفتوح بلا توثيق لأن شاشة الدخول
+ * تحتاجه وهي أوّل ما يُرى.)
+ *
+ * **وباب الرمز يُطفأ من الإعدادات لا من شيفرة كلّ تطبيق**
+ * (`auth.otp_login`): **فتطبيق يعرض تبويب الرمز والمنصّة أطفأته** يرسل
+ * صاحبه إلى باب مغلق.
+ */
+@Serializable
+data class Platform(
+    @SerialName("otp_login") val otpLogin: Boolean = true,
+    @SerialName("password_min_length") val passwordMinLength: Int = 8,
+    @SerialName("support_phone") val supportPhone: String = "",
+)

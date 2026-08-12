@@ -4,6 +4,7 @@ import com.rahalgo.shared.model.ApiErrorBody
 import com.rahalgo.shared.model.Envelope
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.header
 import io.ktor.client.request.request
@@ -60,6 +61,21 @@ class ApiClient(
 
     @PublishedApi internal val http = HttpClient {
         install(ContentNegotiation) { json(json) }
+        // ══════════════════════════════════════════════════════════════
+        // **مهل واسعة — لأن الخادم ينام**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **الخطة المجّانية في Render تُنيم الخدمة بعد ربع ساعة سكون**،
+        // وأول نداء بعدها يوقظها: **ثلاثون إلى ستّين ثانية.**
+        //
+        // **ومهلة OkHttp الافتراضية عشر ثوان** — فيسقط النداء قبل أن
+        // يستيقظ الخادم، **ويقرأها صاحبه «لا اتصال بالإنترنت»** وهو
+        // متّصل والخادم حيّ.
+        install(HttpTimeout) {
+            connectTimeoutMillis = 20_000
+            socketTimeoutMillis = 90_000
+            requestTimeoutMillis = 90_000
+        }
     }
 
     /** خطأ من المحرّك — **يحمل رمزه ومفتاح رسالته كما قالهما.** */
@@ -145,3 +161,20 @@ interface SessionStore {
     fun save(access: String, refresh: String)
     fun clear()
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **ردّ لا يُقرأ محتواه — ويقبل أيّ شكل**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **وقع ٢٠٢٦-٠٨-١٢**: كُتب نوع ردّ إرسال الموقع `Map<String, String>`
+ * من الذاكرة، **والمحرّك يردّ `{"saved": true}`** — قيمة منطقيّة لا نصّ.
+ * **فسقط كلّ إرسال موقع** برسالة فكّ JSON، والخدمة تعمل ولا شيء يصل.
+ *
+ * **وأسوأ منه**: `accept` و`transition` **يردّان الطلب كاملا** لا
+ * إقرارا — وكانا مكتوبين `Map<String, String>` كذلك.
+ *
+ * **فما لا يُقرأ محتواه يُفكّ إلى `JsonObject`** — يقبل النصّ والرقم
+ * والمنطقيّ والكائن، **ولا يكسره حقل يُضاف في المحرّك.**
+ */
+typealias Ack = kotlinx.serialization.json.JsonObject

@@ -1,6 +1,9 @@
 package com.rahalgo.design
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -115,9 +118,25 @@ val TaglineStyle = TextStyle(
 
 @Composable
 fun RahalGoTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = RahalGoColors,
-        typography = RahalGoTypography,
-        content = content,
-    )
+    // ══════════════════════════════════════════════════════════════════
+    // **الاتّجاه من اليمين — ولو كان الجهاز إنجليزيّا**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **أندرويد يأخذ الاتّجاه من لغة الجهاز لا من لغة التطبيق.** وجوّال
+    // السائق قد يكون إنجليزيّا، **فيُرسم تطبيقٌ عربيٌّ كلُّه من اليسار**:
+    // أوّلُ تبويبٍ في أقصى اليسار، وشريطُ خطّةِ السير يمشي عكسَ القراءة.
+    //
+    // **وقع وقيس ٢٠٢٦-٠٨-١٢**: «الرحلة» في اليسار وهي أوّلُ الأقسام،
+    // والشريطُ من اليسار إلى اليمين — ورآهما المالك.
+    //
+    // **و`supportsRtl` في البيان لا يكفي**: هو يسمح ولا يفرض. **وهذا
+    // تطبيقٌ عربيٌّ وحدَه**، فاتّجاهه من صفته لا من إعدادات جهازٍ لا
+    // يملكه.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        MaterialTheme(
+            colorScheme = RahalGoColors,
+            typography = RahalGoTypography,
+            content = content,
+        )
+    }
 }

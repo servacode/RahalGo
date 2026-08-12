@@ -47,6 +47,34 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 # **الحالة تبقى عبر دوران الجهاز** — ومن كتب رقمه ودار جهازه لا يعيده.
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+# **موقع مدمج من القمر والشبكة والحسّاسات** — أدقّ وأرحم للبطارية من
+# `LocationManager` الخام، وهو ما تستعمله تطبيقات التوصيل كلّها.
+play-services-location = { module = "com.google.android.gms:play-services-location", version = "21.4.0" }
+# ══════════════════════════════════════════════════════════════════════
+# **الخريطة — MapLibre على بلاطات OSM نفسِها التي في الويب**
+# ══════════════════════════════════════════════════════════════════════
+#
+# **ولا مفتاحَ ولا فاتورة** (بخلاف خرائط غوغل)، **ونفس المصدر الذي يرسم
+# به الويب** (`web/packages/ui/map.tsx`) — فالمدينة تبدو واحدة في
+# الشاشتين.
+#
+# **وهي التي تدعم المناطق غير المتّصلة** — وعليها يقوم بند «الخريطة تعمل
+# بلا إنترنت» في `docs/DRIVER-APP-PLAN.md`.
+maplibre = { module = "org.maplibre.gl:android-sdk", version = "13.4.1" }
+# ══════════════════════════════════════════════════════════════════════
+# **الإشعار — وهو ما يجعل التطبيق يعمل والسائق لا ينظر إليه**
+# ══════════════════════════════════════════════════════════════════════
+#
+# **وبلاه يفتح السائق تطبيقه كلّ دقيقتين ليرى إن نزل طلب** — والطلب
+# يفوت لمن فتحه أوّلا. **والبثّ الحيّ لا يكفي**: يعمل والتطبيق مفتوح
+# وحدَه، **وأكثر وقت السائق شاشتُه مطفأة.**
+#
+# **والحزمة الجامعة (BoM) تختار النسخ المتوافقة** — فلا يُكتب لكلّ
+# مكتبةٍ رقمُها ويفترقان.
+firebase-bom = { module = "com.google.firebase:firebase-bom", version = "34.17.0" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+# **جسرٌ بين مهامّ غوغل ومعلّقات كوتلن** — `token.await()` بدل ردّ نداء.
+coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version = "1.11.0" }
 
 # **قائمة مواد Compose** — تضبط إصدارات مكتبات Compose كلها من رقم واحد،
 # **فلا تتصادم نسخة `ui` مع نسخة `material3`.**
@@ -75,6 +103,8 @@ androidx-splashscreen = { module = "androidx.core:core-splashscreen", version.re
 ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+# **البثّ الحيّ** — الشاشة تتحدّث بنفسها والتطبيق مفتوح.
+ktor-websockets = { module = "io.ktor:ktor-client-websockets", version.ref = "ktor" }
 ktor-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 
@@ -83,6 +113,7 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 
 [plugins]
+google-services = { id = "com.google.gms.google-services", version = "4.5.0" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 # **ولا إضافة `kotlin-android`** — AGP 9 فيها دعم Kotlin مدمج،

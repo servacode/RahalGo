@@ -13,3 +13,7 @@ captures/
 *.jks
 *.keystore
 keystore.properties
+
+# **ملفّ Firebase** — ليس سرّاً (يُوزَّع داخل كلّ نسخة من التطبيق)،
+# **لكنّه يخصّ مشروعَ المالك** ولا يلزم من يقرأ الشيفرة.
+google-services.json

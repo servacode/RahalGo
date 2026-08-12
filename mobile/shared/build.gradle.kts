@@ -32,5 +32,6 @@ dependencies {
     api(libs.kotlinx.serialization.json)
     implementation(libs.ktor.okhttp)
     implementation(libs.ktor.content.negotiation)
+    implementation(libs.ktor.websockets)
     implementation(libs.ktor.json)
 }
