@@ -134,7 +134,10 @@ fun TopBar(
                     Text(
                         // **ومنزلة واحدة تكفي** — «٤٫٧» يقرؤها بنظرة،
                         // **و«4.6666» رقم حاسبة لا تقييم.**
-                        text = "%.1f".format(rating),
+                        // **وبأرقام غربيّة كالرصيد بجانبه** — `format`
+                        // بلا لغة يكتب «٥٫٠» في جهاز عربيّ، **فيقع
+                        // رقمان بخطّين في شريط واحد.**
+                        text = "%.1f".format(java.util.Locale.US, rating),
                         color = BrandOrange,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium,

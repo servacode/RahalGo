@@ -69,22 +69,50 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refresh() {
-        viewModelScope.launch {
-            state = try {
-                state.copy(
-                    offers = backend.driver.queue(),
-                    mine = backend.driver.orders(),
-                    // **والحال كاملا لا الوردية وحدها** — شاشة «لماذا
-                    // لا تصلني طلبات» تُبنى منه.
-                    me = backend.driver.me(),
-                    locationOn = LocationPermission.granted(getApplication()),
-                    loading = false,
-                    error = "",
-                )
-            } catch (e: Exception) {
-                state.copy(loading = false, error = describe(e))
-            }
+        viewModelScope.launch { load() }
+    }
+
+    /**
+     * **القراءة نفسها — وتُنتظَر.**
+     *
+     * **ومن قبِل طلبا يُنقل إلى رحلته فورا**، ولو نُقل قبل أن تصل
+     * القائمة **لرأى شاشة رحلة فارغة لحظة** ثمّ امتلأت أمامه.
+     */
+    private suspend fun load() {
+        state = try {
+            state.copy(
+                offers = backend.driver.queue(),
+                mine = backend.driver.orders(),
+                // **والحال كاملا لا الوردية وحدها** — شاشة «لماذا
+                // لا تصلني طلبات» تُبنى منه.
+                me = backend.driver.me(),
+                locationOn = LocationPermission.granted(getApplication()),
+                loading = false,
+                error = "",
+            )
+        } catch (e: Exception) {
+            state.copy(loading = false, error = describe(e))
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والرحلة تبدأ بنفسها — لا بضغطة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢: «برنامج ذكيّ، ما في داعي السائق يظلّ
+    //  يضغط على الشاشة وألف كبسة — مجرّد ما وافق على طلب تبدأ الرحلة
+    //  بشكل تلقائيّ».)
+    //
+    // **والقبول نفسه هو البدء**: من ضغط «موافق» لا ينتظر شيئا آخر —
+    // **وضغطةٌ ثانية تقول ما قالته الأولى** خطوةٌ زائدة في يد رجل يقود.
+    //
+    // **ورايةٌ لا حالٌ محفوظ**: تُرفع مرّة وتُنزَل حين يُنقل، **ولو
+    // بقيت مرفوعة** لأعادته إلى الرحلة كلّما فتح الطلبات.
+    var startTrip by mutableStateOf(false)
+        private set
+
+    fun tripOpened() {
+        startTrip = false
     }
 
     /**
@@ -109,7 +137,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             state = state.copy(acceptingId = null)
-            refresh()
+            // **والقائمة أوّلا ثمّ النقل** — لا شاشةَ رحلةٍ فارغة.
+            load()
+            openId = orderId
+            startTrip = true
         }
     }
 

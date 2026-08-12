@@ -306,7 +306,14 @@ private fun SignedIn(onLogout: () -> Unit) {
     // **ومن انتهت رحلته يُعاد إلى الطلبات** — لا يبقى في تبويب اختفى.
     LaunchedEffect(hasTrip) {
         if (!hasTrip && tab == 0) tab = 1
-        if (hasTrip && tab == 1 && orders.openId != null) tab = 0
+    }
+
+    // **ومن قبِل طلبا فُتحت رحلته** — (قرار المالك ٢٠٢٦-٠٨-١٢).
+    LaunchedEffect(orders.startTrip) {
+        if (orders.startTrip) {
+            tab = 0
+            orders.tripOpened()
+        }
     }
 
     Scaffold(
