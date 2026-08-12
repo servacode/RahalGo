@@ -6,6 +6,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -819,27 +821,62 @@ private fun TripCard(
             )
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **صفٌّ واحدٌ لا ثلاثة — والبطاقةُ تقصر**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (تصحيح المالك ٢٠٢٦-٠٨-١٢: «أحسّ الكرت عريض أكثر من اللازم،
+        //  ليش الأزرار ما حاطهن بشكل أفقي بجانب وصلت للمتجر؟».)
+        //
+        // **وكلُّ سطرٍ في البطاقة يقضم الخريطة**: هي ما يقود عليه،
+        // **والبطاقةُ حاشيةٌ عليها لا العكس.**
+        //
+        // **والفعلُ الأوّل يأخذ العرض** — هو ما يُضغط في تسعٍ من عشر،
+        // **و«لدي مشكلة» قرصٌ بجانبه**: يُعرف بشكله لا بعرضه.
         Spacer(Modifier.height(14.dp))
-        val next = nextAction(order.status)
-        if (next != null) {
-            Button(
-                // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
-                // ردّ «يلزم إثبات» بعد أن ظنّ صاحبه أنّه أنهى.
-                onClick = {
-                    if (next.status == "delivered" && state.requirePhoto) {
-                        actions.capture()
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val next = nextAction(order.status)
+            if (next != null) {
+                Button(
+                    // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
+                    // ردّ «يلزم إثبات» بعد أن ظنّ صاحبه أنّه أنهى.
+                    onClick = {
+                        if (next.status == "delivered" && state.requirePhoto) {
+                            actions.capture()
+                        } else {
+                            actions.step(next.status)
+                        }
+                    },
+                    enabled = !state.busy,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    if (state.busy) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     } else {
-                        actions.step(next.status)
+                        Text(stringResource(next.label))
                     }
-                },
-                enabled = !state.busy,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (state.busy) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Text(stringResource(next.label))
                 }
+            }
+
+            // **ولونُه لونُ الحال لا لونُ الفعل** — أحمرُ باهتٌ يُقرأ
+            // «شيءٌ لم يمشِ» قبل أن تُقرأ كلمتُه.
+            OutlinedButton(
+                onClick = actions.askFail,
+                enabled = !state.busy,
+                contentPadding = PaddingValues(horizontal = 12.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_warning),
+                    contentDescription = null,
+                    tint = StateRed,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(R.string.trip_problem), color = StateRed)
             }
         }
 
@@ -857,21 +894,9 @@ private fun TripCard(
                     Text(stringResource(R.string.agree_button), color = BrandOrange)
                 }
             }
-            // ══════════════════════════════════════════════════════════
-            // **«لدي مشكلة» — في كلّ طورٍ لا عند بابين**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (قرار المالك ٢٠٢٦-٠٨-١٢.)
-            //
-            // **وأسبابُ التعذّر عند بابين وحدَهما** — وهو صواب: «الزبون
-            // غائب» لا تُقال وأنت في الطريق. **لكنّ ما بينهما ليس بلا
-            // مشاكل**: عطلٌ في الدرّاجة أو إيقافٌ في الطريق.
-            //
-            // **فزرٌّ واحدٌ يفتح ما يصلح**: أسباباً عند الباب، **وبلاغَ
-            // طارئٍ في الطريق** — ولا يُطلب من صاحبه أن يعرف الفرق.
-            TextButton(onClick = actions.askFail, enabled = !state.busy) {
-                Text(stringResource(R.string.trip_problem), color = BrandOrange)
-            }
+            // **وزرُّ «لدي مشكلة» صعد إلى صفّ الفعل** — بجانب ما يُضغط
+            // كلَّ مرّة. **وأسبابُه عند الباب وبلاغُ طارئٍ في الطريق**،
+            // ولا يُطلب من صاحبه أن يعرف الفرق.
         }
 
         // **وإعادة الطلب قبل أن يستلم البضاعة فقط** — بعدها هي في يده،
@@ -880,6 +905,7 @@ private fun TripCard(
             TextButton(
                 onClick = actions.release,
                 enabled = !state.busy,
+                contentPadding = PaddingValues(vertical = 2.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.detail_release), color = InkMuted)
