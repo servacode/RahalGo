@@ -161,6 +161,17 @@ export interface DataColumn<T> {
    * البطاقة، **أو غاب رأسُها في الجدول فيُقرأ العمودُ بلا اسم.**
    */
   only?: "table" | "cards";
+  /**
+   * **حقلٌ بلا تسمية في البطاقة** — محتواه يقول ما هو.
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٢: «بدل الزبون فوراً نحطّ اسم الزبون، لا داعي
+   *  لكلمة الزبون».)
+   *
+   * **واسمٌ ورقمُ هاتفٍ لا يُسأل عمّن هما**: التسميةُ تشغل نصفَ السطر
+   * **وتقول ما هو ظاهر.** ويبقى رأسُ العمود في الجدول — **هناك لا يقول
+   * المحتوى ما هو**: عمودٌ بلا رأسٍ يُقرأ بالتخمين.
+   */
+  noLabel?: boolean;
   /** primary: يظهر كعنوان البطاقة في وضع البطاقات */
   primary?: boolean;
   /** أيقونة معبرة للحقل — تظهر برأس العمود وفي تسمية حقل البطاقة */
@@ -280,10 +291,16 @@ export function DataView<T>({
                       i < shown.length - 1 ? "border-b border-line-soft" : ""
                     }`}
                   >
-                    <dt className="shrink-0 text-ink-muted">
-                      <FieldLabel icon={c.icon} text={c.header} />
-                    </dt>
-                    <dd className="min-w-0 text-end">{c.cell(item)}</dd>
+                    {!c.noLabel && (
+                      <dt className="shrink-0 text-ink-muted">
+                        <FieldLabel icon={c.icon} text={c.header} />
+                      </dt>
+                    )}
+                    {/* **وبلا تسميةٍ يأخذ السطرَ كلَّه** — فيوزّع ما فيه
+                        يمينا ويسارا كما يوزّعه الحقلُ المُسمّى. */}
+                    <dd className={c.noLabel ? "w-full" : "min-w-0 text-end"}>
+                      {c.cell(item)}
+                    </dd>
                   </div>
                 ))}
             </dl>

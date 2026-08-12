@@ -26,8 +26,6 @@ import {
   Modal,
   FormSection,
   DataView,
-  ViewToggle,
-  useViewMode,
   type DataColumn,
   IconOrder,
   IconSearch,
@@ -629,7 +627,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       })
       .catch(() => setSelfManage(false));
   }, []);
-  const [view, setView] = useViewMode("orders");
+  // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+  const view = "cards" as const;
 
   const load = useCallback(async () => {
     try {
@@ -728,7 +727,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 <Badge variant="danger">{ENDED_BY[o.ended_by]}</Badge>
               )}
             </span>
-            <OrderRef number={o.number} at={o.created_at} />
+            {/* **والرقمُ يسارا دائما** — `ms-auto` تدفعه إلى طرف السطر
+                مهما كان ما قبله، **وشارةٌ تغيب تجعل `justify-between`
+                تردّه إلى اليمين.** */}
+            <OrderRef number={o.number} at={o.created_at} className="ms-auto" />
           </span>
           {/* **وموضعُ شريط الرحلة لم يُقرَّر بعد** — (قرارُ المالك
               ٢٠٢٦-٠٨-١٢: «ألغِها من هنا لنشوف وين نضيف شريط الرحلة»).
@@ -1092,14 +1094,19 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             </Select>
           </div>
         )}
-        <div className="ms-auto">
-          <ViewToggle
-            view={view}
-            onChange={setView}
-            tableLabel={m.common.viewTable}
-            cardsLabel={m.common.viewCards}
-          />
-        </div>
+        {/* ══════════════════════════════════════════════════════════
+            **ولا عرضَ جدولٍ في الطلبات**
+            ══════════════════════════════════════════════════════════
+
+            (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ألغِ عرض الجدول من قسم الطلبات
+             وسجلّ الطلبات».)
+
+            **والطلبُ ليس صفّاً**: فيه فاتورةٌ من عشرة سطورٍ وعنوانٌ
+            وملاحظةٌ وأزرارُ فعل — **وصفٌّ يحملها يرتفع ويتباين طولُه**،
+            فيُقرأ الجدولُ عشوائيّا.
+
+            **والبطاقةُ تحمل الكلّ بلا ضغطة** — وهي ما بُني عليه هذا
+            القسمُ كلُّه في هذه الجولة. */}
       </div>
 
       {error && (
