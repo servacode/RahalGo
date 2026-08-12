@@ -330,8 +330,8 @@ export function Invoice({
             <Row label={V.commission} value={-commission} tone="danger" />
             <div className="flex items-center justify-between border-t border-line-soft pt-2 font-bold">
               <dt>{V.netDue}</dt>
-              <dd className="text-success" dir="ltr">
-                {fmtNum(net)} {m.common.currency}
+              <dd className="text-success">
+                <Money value={net} />
               </dd>
             </div>
             <p className="pt-1 text-2xs leading-relaxed text-ink-muted">{V.settlementHint}</p>

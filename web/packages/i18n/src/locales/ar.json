@@ -354,8 +354,8 @@
       "reward": "مكافأة",
       "penalty": "عقوبة",
       "empty": "لا مكافآتٍ ولا عقوباتٍ بعد",
-      "rewardPromise": "ابلغ هدفك وتنال {a} {c}",
-      "rewardEarned": "نلتَ مكافأة {a} {c}",
+      "rewardPromise": "ابلغ هدفك وتنال {m}",
+      "rewardEarned": "نلتَ مكافأة {m}",
       "partyTitle": "بلغتَ هدفك 🎉",
       "partyBody": "أنجزتَ {n} طلباً هذا الشهر. المكافأة في محفظتك."
     }

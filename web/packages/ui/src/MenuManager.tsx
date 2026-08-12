@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Money } from "./money";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import { Button, Input, Select, Badge, Modal } from "./components";
 import { Confirm, Alert } from "./feedback";
@@ -405,7 +406,7 @@ export function MenuManager({
 
                             **والأدمن يراهما** — وهو من يضع الهامش، **ومن
                             يضع رقماً لا يرى أثرَه يضعه أعمى.** */}
-                        {fmtNum(item.merchant_price || item.price)} {m.common.currency}
+                        <Money value={item.merchant_price || item.price} />
                         {showSalePrice && item.merchant_price > 0 && item.price > item.merchant_price && (
                           <span className="ms-1.5 text-2xs text-success">
                             ← {fmtNum(item.price)}

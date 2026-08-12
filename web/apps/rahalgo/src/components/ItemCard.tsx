@@ -23,7 +23,9 @@
  */
 
 import { useCallback, useState } from "react";
-import { Modal, LoadingState, FavoriteButton, IconAdd, IconCheck } from "@rahalgo/ui";
+import { Modal, LoadingState, FavoriteButton, IconAdd, IconCheck,
+  Money,
+} from "@rahalgo/ui";
 import ItemClient, { type Group } from "@/app/(site)/i/[id]/ItemClient";
 import { api } from "@/lib/api";
 import { useCart } from "@/lib/cart";
@@ -254,7 +256,7 @@ export default function ItemCard({
                 </span>
               )}
               <span className={`font-bold ${discounted ? "text-success" : "text-primary-strong"}`}>
-                {fmtNum(item.price)} {m.common.currency}
+                <Money value={item.price} />
               </span>
             </span>
           </span>

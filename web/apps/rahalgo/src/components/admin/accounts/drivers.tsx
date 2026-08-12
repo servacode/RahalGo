@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtTime, fmtMoney } from "@rahalgo/i18n";
 import {
   Alert,
   useLiveRefresh,
@@ -20,6 +20,7 @@ import {
   IconWallet,
   IconOrder,
   IconStatus,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -96,7 +97,7 @@ export default function DriversTable() {
     return (
       <span className="flex flex-col items-end gap-0.5 sm:items-start">
         <Badge variant={variant}>
-          {fmtNum(d.cash_held)} {m.common.currency}
+          <Money value={d.cash_held} />
         </Badge>
         {ratio >= 1 && <span className="text-xs text-danger">{m.admin.drivers.overLimit}</span>}
         {ratio >= 0.7 && ratio < 1 && (
@@ -176,7 +177,7 @@ export default function DriversTable() {
         <PageHeader icon={IconDriver} title={m.admin.drivers.title} />
         <div className="flex items-center gap-3">
           <Badge variant="neutral">
-            {m.admin.drivers.cashLimit}: {fmtNum(cashLimit)} {m.common.currency}
+            {m.admin.drivers.cashLimit}: <Money value={cashLimit} />
           </Badge>
           <ViewToggle
             view={view}
@@ -375,7 +376,7 @@ function CashBoxModal({
             {m.admin.drivers.cashHeld}
           </span>
           <span className="figure text-primary-dark">
-            {held === null ? "…" : `${fmtNum(held)} ${m.common.currency}`}
+            {held === null ? "…" : fmtMoney(held)}
           </span>
         </div>
         {/* شريط السقف */}

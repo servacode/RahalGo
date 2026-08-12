@@ -32,7 +32,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, withPlatform } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, withPlatform, fmtMoney } from "@rahalgo/i18n";
 import {
   Money,
   Alert,
@@ -195,7 +195,7 @@ export default function InvitePage() {
         <StatCard
           icon={IconWallet}
           label={V.earned}
-          value={`${fmtNum(data.earned)} ${m.common.currency}`}
+          value={fmtMoney(data.earned)}
           tone="accent"
         />
       </StatGrid>

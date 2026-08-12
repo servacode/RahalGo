@@ -22,6 +22,7 @@ import {
   IconWallet,
   IconStatus,
   IconDate,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -121,7 +122,7 @@ export default function CustomersTable() {
       icon: <IconWallet />,
       cell: (c) => (
         <span className="font-bold text-primary-dark">
-          {fmtNum(c.total_spent)} {m.common.currency}
+          <Money value={c.total_spent} />
         </span>
       ),
     },

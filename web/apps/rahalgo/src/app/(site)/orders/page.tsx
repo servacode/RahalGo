@@ -895,8 +895,8 @@ function OrderCard({
           </p>
           <p className="flex items-center justify-between gap-2 border-t border-line-soft pt-1 font-bold">
             <span>{m.site.custom.total}</span>
-            <span className="tabular-nums" dir="ltr">
-              {fmtNum((o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0))} {m.common.currency}
+            <span className="tabular-nums">
+              <Money value={(o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0)} />
             </span>
           </p>
         </div>

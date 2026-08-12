@@ -39,6 +39,7 @@ import {
   IconBalance,
   IconStore,
   IconCheck,
+  Money,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -289,7 +290,7 @@ export function CashboxTab({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-control bg-field px-3 py-2">
         <span className="text-sm text-ink-muted">{R.cashHeld}</span>
         <span dir="ltr" className={`figure ${held > 0 ? "text-warning" : ""}`}>
-          {fmtNum(held)} <span className="text-xs font-normal">{m.common.currency}</span>
+          <Money value={held} small />
         </span>
         {canSettle && held > 0 && (
           <Button disabled={busy} onClick={() => void settle()}>

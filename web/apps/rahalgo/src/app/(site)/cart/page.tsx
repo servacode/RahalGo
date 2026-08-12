@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, withPlatform } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, withPlatform, fmtMoney } from "@rahalgo/i18n";
 import {
   Alert,
   IconEdit,
@@ -19,6 +19,7 @@ import {
   AddressBook,
   type SavedAddress,
   usePlatform,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, isLoggedIn } from "@/lib/auth";
@@ -460,7 +461,7 @@ export default function CartPage() {
           <div className="flex justify-between">
             <dt className="text-ink-muted">{m.site.cart.subtotal}</dt>
             <dd className="font-medium">
-              {fmtNum(subtotal)} {m.common.currency}
+              <Money value={subtotal} />
             </dd>
           </div>
           <div className="flex justify-between">
@@ -482,7 +483,7 @@ export default function CartPage() {
                 ? "—"
                 : zone.delivery_fee === 0
                   ? m.shared.invoice.deliveryFree
-                  : `${fmtNum(zone.delivery_fee)} ${m.common.currency}`}
+                  : fmtMoney(zone.delivery_fee)}
             </dd>
           </div>
           {/* **ورقمان يقولان سببَ الزيادة.**
@@ -495,7 +496,7 @@ export default function CartPage() {
             <div className="flex justify-between text-xs">
               <dt className="text-ink-muted">{m.site.cart.extraSource}</dt>
               <dd className="text-ink-muted">
-                {fmtNum(zone.sources_fee)} {m.common.currency}
+                <Money value={zone.sources_fee} />
               </dd>
             </div>
           )}
@@ -511,14 +512,14 @@ export default function CartPage() {
             <div className="flex justify-between text-sm">
               <dt className="text-success">{m.site.cart.discount}</dt>
               <dd className="font-medium text-success">
-                −{fmtNum(okPromo.discount)} {m.common.currency}
+                −<Money value={okPromo.discount} />
               </dd>
             </div>
           )}
           <div className="flex justify-between border-t border-line-soft pt-1 text-base">
             <dt className="font-bold">{m.site.cart.total}</dt>
             <dd className="font-bold text-primary-dark">
-              {fmtNum(stickyTotal)} {m.common.currency}
+              <Money value={stickyTotal} />
             </dd>
           </div>
         </dl>
@@ -587,7 +588,7 @@ export default function CartPage() {
                       يقارنه برسم جاره فيجده أعلى ولا يعرف لماذا.** */}
                   {m.site.cart.feeLine.replace(
                     "{fee}",
-                    `${fmtNum(zone.delivery_fee)} ${m.common.currency}`,
+                    fmtMoney(zone.delivery_fee),
                   )}
                   {/* لا حدّ أدنى في هذه المنصة — رسم التوصيل كاملٌ من الزبون
                       مهما كانت قيمة طلبه، فلا شأن للمنصة بها. */}
@@ -612,7 +613,7 @@ export default function CartPage() {
               <p className="text-xs text-ink-muted">
                 {m.site.cart.walletBalance.replace(
                   "{v}",
-                  `${fmtNum(balance)} ${m.common.currency}`
+                  fmtMoney(balance)
                 )}
               </p>
             )}
@@ -640,7 +641,7 @@ export default function CartPage() {
                   {promoInfo.discount > 0
                     ? m.site.cart.promoApplied.replace(
                       "{v}",
-                      `${fmtNum(promoInfo.discount)} ${m.common.currency}`,
+                      fmtMoney(promoInfo.discount),
                     )
                     : m.site.cart.promoFreeDelivery}
                 </p>
@@ -695,8 +696,8 @@ export default function CartPage() {
         >
           <div className="min-w-0">
             <p className="text-2xs text-ink-muted">{m.site.cart.total}</p>
-            <p dir="ltr" className="font-bold tabular-nums text-primary-strong">
-              {fmtNum(stickyTotal)} {m.common.currency}
+            <p className="font-bold tabular-nums text-primary-strong">
+              <Money value={stickyTotal} />
             </p>
           </div>
           {/* **والزرُّ يُعطَّل بالسبب نفسِه** — ولو اختلفا لَظهر زرٌّ يُضغط

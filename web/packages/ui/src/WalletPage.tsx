@@ -193,7 +193,7 @@ export function WalletPage({
             className={`font-bold tabular-nums ${tx.amount >= 0 ? "text-success" : "text-danger"}`}
           >
             {tx.amount >= 0 ? "+" : "−"}
-            {fmtNum(Math.abs(tx.amount))} <span className="text-2xs font-normal opacity-70">{m.common.currency}</span>
+            <Money value={Math.abs(tx.amount)} small />
           </span>
         ),
       },
@@ -368,7 +368,7 @@ export function WalletPage({
               تشغل بطاقةَ الرصيد كلَّ يوم. **وما يُقال مرّةً لا يُكتب دائماً.**
               (قرارُ المالك ٢٠٢٦-٠٨-٠٣: «بلاها».) */}
           <p className="figure mt-0.5 text-accent" dir="ltr">
-            {fmtNum(balance)} <span className="text-sm font-normal">{m.common.currency}</span>
+            <Money value={balance} small />
           </p>
         </div>
 
@@ -554,7 +554,7 @@ function PayoutModal({
             onClick={() => setAmount(String(balance))}
             className="mt-1.5 text-sm font-medium text-primary hover:underline"
           >
-            {P.all} ({fmtNum(balance)} {m.common.currency})
+            {P.all} (<Money value={balance} />)
           </button>
         </div>
 

@@ -27,6 +27,7 @@ import {
   LoadingState,
   IconPromos,
   IconStore,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -182,8 +183,8 @@ export default function DiscountsTab() {
                   <p className="text-xs text-ink-muted line-through" dir="ltr">
                     {fmtNum(o.price_before)}
                   </p>
-                  <p className="font-bold text-success" dir="ltr">
-                    {fmtNum(o.price_after)} {m.common.currency}
+                  <p className="font-bold text-success">
+                    <Money value={o.price_after} />
                   </p>
                   <p className="text-xs text-ink-muted">
                     −{o.discount_percent}% ·{" "}

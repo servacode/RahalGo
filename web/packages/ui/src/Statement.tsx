@@ -14,6 +14,7 @@
  */
 
 import { useMemo } from "react";
+import { Money } from "./money";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, withPlatform } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { Alert } from "./feedback";
@@ -289,7 +290,7 @@ export function StatementSheet({
               <span>
                 {S.net}{" "}
                 <span className="font-bold" dir="ltr">
-                  {fmtNum(credits + debits)} {m.common.currency}
+                  <Money value={credits + debits} />
                 </span>
               </span>
             </div>

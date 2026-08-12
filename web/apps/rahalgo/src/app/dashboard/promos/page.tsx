@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, fmtMoney } from "@rahalgo/i18n";
 import {
   Tabs,
   Alert,
@@ -165,7 +165,7 @@ function CodesTab({ isAdmin }: { isAdmin: boolean }) {
       id: "min",
       header: m.admin.promos.minOrder,
       icon: <IconWallet />,
-      cell: (p) => `${fmtNum(p.min_order)} ${m.common.currency}`,
+      cell: (p) => fmtMoney(p.min_order),
     },
     {
       id: "uses",

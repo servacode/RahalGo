@@ -29,6 +29,7 @@
  */
 
 import { type ReactNode } from "react";
+import { Money } from "./money";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import { Card } from "./layout";
 import { Badge } from "./components";
@@ -150,8 +151,7 @@ export function ComplaintCard({
             {C.compensated}
           </span>
           <span dir="ltr" className="text-base font-bold tabular-nums text-success">
-            {fmtNum(t.compensation ?? 0)}{" "}
-            <span className="text-xs font-normal">{m.common.currency}</span>
+            <Money value={t.compensation ?? 0} small />
           </span>
         </div>
       )}

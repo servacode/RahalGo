@@ -18,7 +18,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum, fmtTime } from "@rahalgo/i18n";
-import { Badge, Button, Chips, Input } from "@rahalgo/ui";
+import { Badge, Button, Chips, Input,
+  Money,
+} from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
 import { useCart, type CartLine } from "@/lib/cart";
 import type { BrowseItem } from "@/components/ItemCard";
@@ -119,7 +121,7 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
           إلى الاثنين بالمقدار نفسِه، **فالفرقُ بينهما يبقى هو الخصم.** */}
       <p className="figure mt-2 flex items-baseline gap-2 text-primary-dark">
         <span>
-          {fmtNum(unit)} {m.common.currency}
+          <Money value={unit} />
         </span>
         {discounted && (
           <>
@@ -196,7 +198,7 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
             </button>
           </div>
           <Button disabled={off} onClick={submit}>
-            {m.site.menu.add} — {fmtNum(unit * qty)} {m.common.currency}
+            {m.site.menu.add} — <Money value={unit * qty} />
           </Button>
         </div>
 

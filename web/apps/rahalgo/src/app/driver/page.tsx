@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtTime, errorText, fmtMoney } from "@rahalgo/i18n";
 import {
   Money,
   Alert,
@@ -440,7 +440,7 @@ export default function TasksPage() {
         <StatCard
           icon={IconWallet}
           label={D.today.earned}
-          value={`${fmtNum(me.today_earned)} ${m.common.currency}`}
+          value={fmtMoney(me.today_earned)}
           sub={
             me.today_compensated > 0
               ? `${D.today.ofWhichCompensation}: ${fmtNum(me.today_compensated)}`
@@ -697,8 +697,8 @@ function TaskCard({
             {readyLeft === 0 ? D.queue.readyNow : D.queue.readyIn.replace("{n}", fmtNum(readyLeft))}
           </Badge>
         )}
-        <span className="ms-auto text-sm font-bold" dir="ltr">
-          {fmtNum(o.total)} {m.common.currency}
+        <span className="ms-auto text-sm font-bold">
+          <Money value={o.total} />
         </span>
       </div>
 
@@ -778,8 +778,8 @@ function TaskCard({
           </p>
           <p className="flex items-center justify-between gap-2 border-t border-line-soft pt-1 font-bold">
             <span>{D.custom.total}</span>
-            <span className="tabular-nums" dir="ltr">
-              {fmtNum((o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0))} {m.common.currency}
+            <span className="tabular-nums">
+              <Money value={(o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0)} />
             </span>
           </p>
         </div>
@@ -836,10 +836,7 @@ function TaskCard({
           ) : (
             <>
               {D.custom.collect}:{" "}
-              <span dir="ltr">
-                {fmtNum((o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0))}{" "}
-                {m.common.currency}
-              </span>
+              <Money value={(o.custom_goods_amount ?? 0) + (o.custom_fee ?? 0)} />
             </>
           )
         ) : cash ? (

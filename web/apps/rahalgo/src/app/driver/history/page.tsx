@@ -36,6 +36,7 @@ import {
   Stars,
   PageHeader,
   Radio,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -203,8 +204,8 @@ export default function DriverHistoryPage() {
                     </p>
                   </div>
                   <div className="shrink-0 text-end">
-                    <p className="font-bold" dir="ltr">
-                      {fmtNum(o.total)} {m.common.currency}
+                    <p className="font-bold">
+                      <Money value={o.total} />
                     </p>
                     <p className="text-xs text-ink-muted">{fmtDateTime(o.created_at)}</p>
                   </div>

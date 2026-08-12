@@ -25,6 +25,7 @@ import {
   IconDate,
   IconWarning,
   IconAdd,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth, hasRole } from "@/lib/auth";
@@ -290,8 +291,8 @@ function DecideModal({
       <form onSubmit={submit} className="space-y-4">
         <div className="rounded-control border border-line bg-field px-3 py-2 text-sm">
           <p className="font-bold">{payout.user_name}</p>
-          <p className="text-ink-muted" dir="ltr">
-            {fmtNum(payout.amount)} {m.common.currency}
+          <p className="text-ink-muted">
+            <Money value={payout.amount} />
           </p>
         </div>
         <Input

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtMoney } from "@rahalgo/i18n";
 import {
   Alert,
   IconCheck,
@@ -26,6 +26,7 @@ import {
   IconUnblock,
   Modal,
   Input,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -159,14 +160,14 @@ export default function SalesTable() {
       icon: <IconWallet />,
       cell: (p) => (
         <span className="font-bold text-success">
-          {fmtNum(p.total_commissions)} {m.common.currency}
+          <Money value={p.total_commissions} />
         </span>
       ),
     },
     {
       id: "balance",
       header: m.admin.sales.balance,
-      cell: (p) => `${fmtNum(p.balance)} ${m.common.currency}`,
+      cell: (p) => fmtMoney(p.balance),
     },
     {
       id: "status",

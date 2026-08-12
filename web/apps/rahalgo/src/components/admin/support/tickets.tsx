@@ -29,6 +29,7 @@ import {
   IconDate,
   IconReply,
   IconCheck,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -176,7 +177,7 @@ export function TicketsView() {
       cell: (t) =>
         t.compensation > 0 ? (
           <Badge variant="primary">
-            {fmtNum(t.compensation)} {m.common.currency}
+            <Money value={t.compensation} />
           </Badge>
         ) : (
           <span className="text-ink-muted">{m.admin.tickets.noCompensation}</span>
@@ -552,7 +553,7 @@ function TicketDetailModal({
                   {m.admin.tickets.table.compensation}:{" "}
                   {ticket.compensation > 0 ? (
                     <Badge variant="primary">
-                      {fmtNum(ticket.compensation)} {m.common.currency}
+                      <Money value={ticket.compensation} />
                     </Badge>
                   ) : (
                     <span className="text-ink-muted">{m.admin.tickets.noCompensation}</span>

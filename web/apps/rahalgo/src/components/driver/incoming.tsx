@@ -35,6 +35,7 @@ import {
   fmtDistance,
   readyInMinutes,
   driveMinutes,
+  Money,
 } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
@@ -144,8 +145,8 @@ export function IncomingCard({
             {readyLeft === 0 ? D.queue.readyNow : D.queue.readyIn.replace("{n}", fmtNum(readyLeft))}
           </Badge>
         )}
-        <span className="ms-auto text-sm font-bold" dir="ltr">
-          {fmtNum(o.total)} {m.common.currency}
+        <span className="ms-auto text-sm font-bold">
+          <Money value={o.total} />
         </span>
       </div>
       <p className="flex items-center gap-2 text-sm font-medium">

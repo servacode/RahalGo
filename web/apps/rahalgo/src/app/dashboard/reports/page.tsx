@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText, fmtMoney } from "@rahalgo/i18n";
 import {
   Alert,
   PageHeader,
@@ -16,6 +16,7 @@ import {
   IconDate,
   Badge,
   IconTile,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError, tokenStore } from "@/lib/api";
 
@@ -290,12 +291,12 @@ export default function ReportsPage() {
             <Stat
               icon={IconWallet}
               label={r.summary.grossSales}
-              value={`${fmtNum(s.gross_sales)} ${m.common.currency}`}
+              value={fmtMoney(s.gross_sales)}
             />
             <Stat
               icon={IconWallet}
               label={r.summary.commissions}
-              value={`${fmtNum(s.commissions)} ${m.common.currency}`}
+              value={fmtMoney(s.commissions)}
               sub={`${r.summary.deliveryFees}: ${fmtNum(s.delivery_fees)}`}
             />
             <Stat
@@ -317,7 +318,7 @@ export default function ReportsPage() {
               title={r.dailySales}
               data={report.daily}
               value={(d) => d.sales}
-              format={(v) => `${fmtNum(v)} ${m.common.currency}`}
+              format={(v) => fmtMoney(v)}
             />
           </div>
 
@@ -341,7 +342,7 @@ export default function ReportsPage() {
                         <span className="text-xs text-ink-muted"> · {fmtNum(t.delivered)} {r.deliveries}</span>
                       </span>
                       <span className="font-bold text-primary-dark">
-                        {fmtNum(t.sales)} {m.common.currency}
+                        <Money value={t.sales} />
                       </span>
                     </li>
                   ))}

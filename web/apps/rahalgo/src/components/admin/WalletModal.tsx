@@ -3,7 +3,7 @@
 /** نافذة المحفظة المشتركة — تُستخدم في أقسام المستخدمين والزبائن والمندوبين. */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtMoney } from "@rahalgo/i18n";
 import {
   Alert, Button, Input, Select, Modal, IconWallet,
   Checkbox,
@@ -90,7 +90,7 @@ export default function WalletModal({
           {m.admin.users.balance}
         </span>
         <span className="figure text-primary-dark">
-          {balance === null ? "…" : `${fmtNum(balance)} ${m.common.currency}`}
+          {balance === null ? "…" : fmtMoney(balance)}
         </span>
       </div>
 

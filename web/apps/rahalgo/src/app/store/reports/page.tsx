@@ -5,7 +5,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
-  Alert, IconStatus, IconOrder, IconSuccess, IconError, IconWallet, Input } from "@rahalgo/ui";
+  Alert, IconStatus, IconOrder, IconSuccess, IconError, IconWallet, Input,
+  Money,
+} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
@@ -148,7 +150,7 @@ export default function MerchantReportsPage() {
                   style={{ height: Math.max(3, (d.sales / maxSales) * 140) }}
                 />
                 <div className="pointer-events-none absolute bottom-full start-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap surface-raised rounded-control px-2 py-1 text-xs text-ink group-hover:block rtl:translate-x-1/2">
-                  {fmtNum(d.sales)} {m.common.currency} — {fmtNum(d.delivered)}/
+                  <Money value={d.sales} /> — {fmtNum(d.delivered)}/
                   {fmtNum(d.orders)}
                 </div>
               </div>

@@ -34,6 +34,7 @@ import {
   LoadingState,
   useLiveRefresh,
   IconCheck,
+  Money,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store";
@@ -174,10 +175,7 @@ export default function MerchantHistoryPage() {
                       أجرةُ التوصيل وهي للسائق. **ورقمٌ يقرؤه صاحبُ المتجر
                       دخلاً وهو ليس دخلَه يُبنى عليه حسابٌ خاطئ.** */}
                   <span className="figure text-sm" dir="ltr">
-                    {fmtNum(o.subtotal)}{" "}
-                    <span className="text-2xs font-normal text-ink-muted">
-                      {m.common.currency}
-                    </span>
+                    <Money value={o.subtotal} small />
                   </span>
                   <span className="text-2xs text-ink-muted" dir="ltr">
                     {fmtDateTime(o.closed_at || o.created_at)}

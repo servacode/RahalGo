@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtMoney } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   StatCard,
@@ -154,20 +154,20 @@ export default function DashboardPage() {
               <StatCard
                 icon={IconBalance}
                 label={D.salesToday}
-                value={`${fmtNum(stats.sales_today)} ${m.common.currency}`}
+                value={fmtMoney(stats.sales_today)}
               />
               {/* صافي المنصة: لا محفظة لها تُجمَع منها — هي الدفتر لا طرفٌ فيه */}
               <StatCard
                 icon={IconWallet}
                 label={D.netToday}
-                value={`${fmtNum(stats.net_today)} ${m.common.currency}`}
+                value={fmtMoney(stats.net_today)}
                 sub={D.netHint}
                 tone="accent"
               />
               <StatCard
                 icon={IconBalance}
                 label={D.cashHeld}
-                value={`${fmtNum(stats.cash_held_total)} ${m.common.currency}`}
+                value={fmtMoney(stats.cash_held_total)}
                 sub={D.cashHeldHint}
               />
             </StatGrid>

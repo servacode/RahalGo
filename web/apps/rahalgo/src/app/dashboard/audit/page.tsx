@@ -11,7 +11,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtDateTime, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDateTime, fmtNum, fmtMoney } from "@rahalgo/i18n";
 import {
   Alert,
   PageHeader, TabCards, EmptyState, Badge,
@@ -90,9 +90,9 @@ function DetailLine({ e }: { e: Entry }) {
   const d = e.details;
   if (!d) return null;
   const bits: string[] = [];
-  if (typeof d.amount === "number") bits.push(`${fmtNum(d.amount)} ${m.common.currency}`);
+  if (typeof d.amount === "number") bits.push(fmtMoney(d.amount));
   if (typeof d.compensation === "number" && d.compensation > 0)
-    bits.push(`${fmtNum(d.compensation)} ${m.common.currency}`);
+    bits.push(fmtMoney(d.compensation));
   /* **والحالةُ والنوعُ يُترجمان كما تُترجم الوجهة.**
 
      (كشفه فحصٌ يدويٌّ ٢٠٢٦-٠٨-٠٨.)

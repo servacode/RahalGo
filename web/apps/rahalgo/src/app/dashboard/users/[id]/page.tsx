@@ -35,6 +35,7 @@ import {
   IconLocation,
   LoadingState,
   usePlatform,
+  Money,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { WarningsSection } from "@/components/admin/accounts/WarningsSection";
@@ -708,7 +709,7 @@ export default function UserProfilePage() {
                     <span className="flex items-center gap-2">
                       {t.compensation > 0 && (
                         <span className="text-xs text-success">
-                          +{fmtNum(t.compensation)} {m.common.currency}
+                          +<Money value={t.compensation} />
                         </span>
                       )}
                       <Badge

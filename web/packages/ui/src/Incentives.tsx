@@ -18,7 +18,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { Money } from "./money";
+import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtMoney } from "@rahalgo/i18n";
 import { PageContainer, PageHeader, StatGrid, StatCard, EmptyState, LoadingState } from "./layout";
 import { Badge, Button } from "./components";
 import { IconStar, IconWallet, IconCheck, IconWarning } from "./icons";
@@ -156,8 +157,8 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
               }`}
             >
               {st.reached
-                ? T.rewardEarned.replace("{a}", fmtNum(reward)).replace("{c}", m.common.currency)
-                : T.rewardPromise.replace("{a}", fmtNum(reward)).replace("{c}", m.common.currency)}
+                ? T.rewardEarned.replace("{m}", fmtMoney(reward))
+                : T.rewardPromise.replace("{m}", fmtMoney(reward))}
             </p>
           )}
         </div>
@@ -194,13 +195,13 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
         <StatCard
           icon={IconWallet}
           label={T.rewardedThisMonth}
-          value={`${fmtNum(st.rewarded)} ${m.common.currency}`}
+          value={fmtMoney(st.rewarded)}
           tone="success"
         />
         <StatCard
           icon={IconWarning}
           label={T.penalizedThisMonth}
-          value={`${fmtNum(st.penalized)} ${m.common.currency}`}
+          value={fmtMoney(st.penalized)}
           tone={st.penalized > 0 ? "danger" : "default"}
         />
       </StatGrid>
@@ -220,7 +221,7 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
                   dir="ltr"
                 >
                   {e.kind === "reward" ? "+" : "−"}
-                  {fmtNum(e.amount)} {m.common.currency}
+                  <Money value={e.amount} />
                 </span>
               </div>
               {/* **والسببُ إلزاميّ في الخادم** — فلا سطرَ هنا بلا كلمة. */}
