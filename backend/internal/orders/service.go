@@ -636,7 +636,68 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 		subtotal += it.UnitPrice * int64(it.Qty)
 		items = append(items, it)
 	}
-	return items, subtotal, nil
+	return mergeSame(items), subtotal, nil
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **وسطران لصنفٍ واحدٍ يُدمجان**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «مكتوب برغر برغر، وهي لازم برغر ×٢ — نفس
+//
+//	النوع ما في داعي نكتبها بهيك طريقة».)
+//
+// **والسلّةُ ترسل سطرين حين يُضاف الصنفُ مرّتين** — فتُقرأ في أربع
+// شاشات: بطاقةُ الزبون، وورقةُ المتجر، والفاتورة، ولوحةُ الإدارة.
+//
+// **وورقةُ المطبخ أخطرُها**: «برغر» ثمّ «برغر» تُقرأ سطرين متشابهين
+// فيُظنّ أحدُهما مكرّراً بالخطأ، **فيُصنع واحدٌ ويُشكى نقصٌ.** و«برغر
+// ×٢» لا تُقرأ إلّا وجهاً واحدا.
+//
+// **والدمجُ هنا لا في العرض**: أربعُ شاشاتٍ تدمج كلٌّ بطريقتها **تفترق
+// يوما**، والقاعدةُ تبقى فيها سطران — **فيُحسب الصنفُ مرّتين في تقرير
+// «أكثرُ ما يُطلب».**
+//
+// # وما يُعدّ «نفسَه»
+//
+// **الصنفُ والإضافاتُ والملاحظة**: «برغر بلا بصل» غيرُ «برغر» — **ومن
+// دمجهما أسقط طلبَ صاحبه.** والسعرُ يتبع الإضافات، فلا يُقارَن وحدَه.
+func mergeSame(items []OrderItem) []OrderItem {
+	out := make([]OrderItem, 0, len(items))
+	for _, it := range items {
+		merged := false
+		for i := range out {
+			if sameLine(&out[i], &it) {
+				out[i].Qty += it.Qty
+				merged = true
+				break
+			}
+		}
+		if !merged {
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
+// sameLine **أهما سطرٌ واحدٌ كُتب مرّتين؟**
+func sameLine(a, b *OrderItem) bool {
+	if a.MenuItemID == nil || b.MenuItemID == nil {
+		// **وصنفٌ بلا معرّفٍ لا يُدمج** — لا يُعرف أهو هو.
+		return false
+	}
+	if *a.MenuItemID != *b.MenuItemID || a.Note != b.Note ||
+		a.UnitPrice != b.UnitPrice || len(a.Options) != len(b.Options) {
+		return false
+	}
+	// **والإضافاتُ تُقارَن بترتيبها** — هي كما أرسلتها السلّة، وسطرٌ
+	// أُضيف مرّتين من الشاشة نفسِها يحمل ترتيبَها نفسَه.
+	for i := range a.Options {
+		if a.Options[i].ID != b.Options[i].ID {
+			return false
+		}
+	}
+	return true
 }
 
 // validatePromo يتحقق من كل قواعد الكود ويعيد الخصم (وقد يصفّر رسم التوصيل).
