@@ -1033,16 +1033,38 @@ private fun TripCard(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(stringResource(R.string.order_cash_due), color = InkMuted)
+            // ══════════════════════════════════════════════════════════
+            // **والمبلغُ باسم من يُقبض منه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢: «بدل تقبض نقداً نخلّيها المبلغ
+            //  الإجماليّ المطلوب من اسم الزبون».)
+            //
+            // **و«تقبض نقدا» تصف طريقةَ الدفع** — والسائقُ لا يسأل عن
+            // الطريقة، **يسأل: كم آخذُ ومن مَن.** وباسمه يُقرأ الجواب
+            // كاملا في سطر.
+            //
+            // **ومن حمل ثلاثة طلبات** يقرأ ثلاثةَ أسطرٍ متشابهةٍ تقول
+            // كلُّها «تقبض نقدا» — **ولا يعرف أيُّها لهذا الباب.**
+            val due = order.cashDue > 0
             Text(
-                text = if (order.cashDue > 0) {
-                    money(order.cashDue)
+                text = if (due) {
+                    stringResource(
+                        R.string.trip_due_from,
+                        order.customerName.ifBlank { stringResource(R.string.detail_customer) },
+                    )
                 } else {
-                    stringResource(R.string.order_prepaid)
+                    stringResource(R.string.trip_prepaid_note)
                 },
-                fontWeight = FontWeight.Bold,
-                color = if (order.cashDue > 0) BrandTeal else InkMuted,
+                color = InkMuted,
             )
+            if (due) {
+                Text(
+                    text = money(order.cashDue),
+                    fontWeight = FontWeight.Bold,
+                    color = BrandTeal,
+                )
+            }
         }
         }
 
