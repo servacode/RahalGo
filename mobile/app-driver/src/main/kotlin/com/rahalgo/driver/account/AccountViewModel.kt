@@ -1,6 +1,8 @@
 package com.rahalgo.driver.account
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -15,6 +17,7 @@ import com.rahalgo.shared.model.AddressInput
 import com.rahalgo.shared.model.MeSummary
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import kotlinx.coroutines.launch
 
@@ -108,18 +111,56 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * **يرفع صورةً من معرض الجهاز.**
+     * ══════════════════════════════════════════════════════════════════
+     * **يرفع صورةً — مضغوطةً قبل أن تخرج من الهاتف**
+     * ══════════════════════════════════════════════════════════════════
      *
-     * **وتُقرأ بايتاتُها هنا لا في الشاشة**: قراءةُ ملفٍّ عملُ قرصٍ،
-     * **وفي خيط الرسم تُجمّد الواجهةَ** بقدر حجم الصورة.
+     * (شكوى المالك ٢٠٢٦-٠٨-١٣: «حاولتُ رفع صورةٍ ورفض، يقول خطأٌ
+     *  بالرفع».)
+     *
+     * **وحدُّ المحرّك خمسةُ ميغا** (`media.max_upload_mb`)، **وصورةُ
+     * كاميرا الهاتف بين أربعةٍ وتسعة** — فأكثرُها يُردّ.
+     *
+     * **ورفعُ الحدِّ ليس جوابا**: الصورةُ تُصغَّر في الخادم إلى ألفٍ
+     * وستّمئة بكسل على أيّ حال، **فما زاد يُرسَل ليُرمى** — يستهلك حزمةَ
+     * السائق ويُبطئ الرفعَ على شبكةٍ ضعيفة.
+     *
+     * **والضغطُ هنا لا هناك**: ما لا يُرسَل لا يُنتظَر.
+     *
+     * **وألفٌ وستّمئة على الضلع الأطول** — حدُّ الخادم نفسُه، فلا يخسر
+     * شيئاً ولا يحمل زائدا.
      */
     fun setAvatar(uri: Uri) {
         act(R.string.acc_saved) {
-            val bytes = getApplication<Application>().contentResolver
-                .openInputStream(uri)?.use { it.readBytes() }
-                ?: throw IOException("لا يُقرأ الملفّ")
-            backend.account.setAvatar("avatar.jpg", bytes)
+            backend.account.setAvatar("avatar.jpg", readScaled(uri))
         }
+    }
+
+    /**
+     * **يقرأ الصورةَ ويصغّرها ويضغطها.**
+     *
+     * **والأبعادُ تُقرأ أوّلاً بلا فكّ** (`inJustDecodeBounds`) — صورةٌ
+     * بأربعة آلاف بكسلٍ تُفكّ إلى أربعةٍ وستّين ميغا في ذاكرة الهاتف،
+     * **وهاتفٌ قديمٌ يسقط قبل أن يرفع.**
+     */
+    private fun readScaled(uri: Uri): ByteArray {
+        val cr = getApplication<Application>().contentResolver
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        var sample = 1
+        while (bounds.outWidth / sample > MAX_EDGE || bounds.outHeight / sample > MAX_EDGE) {
+            sample *= 2
+        }
+        val bmp = cr.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply {
+                inSampleSize = sample
+            })
+        } ?: throw IOException("لا تُقرأ الصورة")
+
+        val out = ByteArrayOutputStream()
+        bmp.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+        bmp.recycle()
+        return out.toByteArray()
     }
 
     fun removeAvatar() = act(R.string.acc_saved) { backend.account.removeAvatar() }
@@ -292,6 +333,10 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
                 "phone_taken", "phone_exists" -> app.getString(R.string.acc_phone_taken)
                 "invalid_phone", "bad_phone" -> app.getString(R.string.acc_phone_bad)
                 "whatsapp_required" -> app.getString(R.string.err_whatsapp_required)
+                "image_too_large", "image_dimensions" ->
+                    app.getString(R.string.acc_photo_too_large)
+                "invalid_image" -> app.getString(R.string.acc_photo_bad)
+                "upload_failed" -> app.getString(R.string.acc_photo_failed)
                 "has_active_orders" -> app.getString(R.string.err_has_active_orders)
                 "" -> app.getString(R.string.err_internal)
                 else -> e.body.code
@@ -300,5 +345,13 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
                 app.getString(R.string.err_network)
             else -> app.getString(R.string.err_internal)
         }
+    }
+
+    private companion object {
+        /** **الضلعُ الأطول** — حدُّ الخادم نفسُه، فلا يُرسَل ما يُرمى. */
+        const val MAX_EDGE = 1600
+
+        /** **وجودةُ الضغط** — خمسٌ وثمانون لا تُرى بالعين وتنصّف الحجم. */
+        const val JPEG_QUALITY = 85
     }
 }

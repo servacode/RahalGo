@@ -403,6 +403,7 @@
 | `referral.reward_2` | المنصة | money | `0` |
 | `referral.reward_3` | المنصة | money | `0` |
 | `referral.reward_rest` | المنصة | money | `0` |
+| `auth.require_whatsapp` | المنصة | bool | `true` |
 | `orders.delivery_estimate_min` | المنصة | int | `15` |
 | `orders.extra_source_fee` | المنصة | int | `0` |
 | `orders.source_proximity_m` | المنصة | int | `1000` |
@@ -478,6 +479,7 @@
 | `merchants.cancel_ban_days` | المتاجر | int | `30` |
 | `merchants.default_prep_minutes` | المتاجر | int | `20` |
 | `merchants.menu_requires_approval` | المتاجر | bool | `false` |
+| `sales.require_whatsapp` | المندوبون | bool | `true` |
 | `sales.commission_percent` | المندوبون | int | `0` |
 | `sales.monthly_target` | المندوبون | int | `0` |
 | `sales.target_reward` | المندوبون | money | `0` |

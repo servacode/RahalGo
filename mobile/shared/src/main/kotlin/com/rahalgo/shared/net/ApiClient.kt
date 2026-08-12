@@ -174,7 +174,25 @@ class ApiClient(
             header("Authorization", "Bearer " + session.accessToken())
         }
         if (res.status.value >= 400) {
-            throw ApiException(res.status.value, ApiErrorBody(code = "upload_failed"))
+            // ══════════════════════════════════════════════════════════
+            // **والسببُ يُقرأ من الردّ لا يُخترع**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (شكوى المالك ٢٠٢٦-٠٨-١٣: «حاولتُ رفع صورةٍ ورفض، يقول خطأٌ
+            //  بالرفع».)
+            //
+            // **كان يردّ `upload_failed` لكلّ شيء** — فيقرأ صاحبُه
+            // كلمةً واحدةً سواءٌ كانت الصورةُ أكبرَ من الحدّ، أو جلستُه
+            // انتهت، أو الملفُّ ليس صورة. **وثلاثةُ أسبابٍ باسمٍ واحدٍ
+            // لا يُصلَح أحدُها**: لا يعرف أيَّها وقع.
+            //
+            // **والمحرّكُ يقولها في جسم الردّ** (`errors.too_large`
+            // و`errors.bad_image`) — **وكان يُرمى.**
+            val body = runCatching { res.body<Envelope<Unit>>().error }.getOrNull()
+            throw ApiException(
+                res.status.value,
+                body ?: ApiErrorBody(code = "upload_failed"),
+            )
         }
     }
 

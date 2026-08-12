@@ -263,6 +263,9 @@
     <string name="acc_photo">الصورة</string>
     <string name="acc_photo_pick">اختر صورة</string>
     <string name="acc_photo_remove">إزالة الصورة</string>
+    <string name="acc_photo_too_large">الصورة كبيرة — اختر صورة أصغر</string>
+    <string name="acc_photo_bad">الملفّ ليس صورة</string>
+    <string name="acc_photo_failed">تعذّر رفع الصورة — حاول بعد قليل</string>
     <string name="acc_name">الاسم الكامل</string>
     <string name="acc_phone">رقم الهاتف</string>
     <string name="acc_phone_current">الرقم المسجَّل في حسابك</string>

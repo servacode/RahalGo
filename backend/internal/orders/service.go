@@ -298,7 +298,8 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	//
 	// **والتحقق هنا لا في الواجهة وحدها**: الواجهة تُخفي الزرّ، والخادم يمنع
 	// الفعل. ومن يستطيع أن ينادي النقطة مباشرةً لا يوقفه إخفاءُ زرّ.
-	if s.settings != nil && s.settings.GetBool(ctx, "customers.require_whatsapp") {
+	// **والمفتاحُ العامُّ يعلو مفتاحَ الدور** — (قرارُ المالك ٢٠٢٦-٠٨-١٣).
+	if s.settings != nil && s.settings.RequireWhatsApp(ctx, "customers.require_whatsapp") {
 		var verified bool
 		if err := s.db.QueryRow(ctx,
 			`SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`,

@@ -46,12 +46,21 @@ fun PhoneField(
     value: String,
     onChange: (String) -> Unit,
     enabled: Boolean,
+    /**
+     * **تسميةُ الحقل** — و«رقم الهاتف» في شاشة الدخول.
+     *
+     * **وشاشةُ الحساب تطلب «الرقم الجديد»** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
+     * «لا تنسَ أيقونة الهاتف لأرقام الهواتف»). **ولو نُسخ الحقلُ هناك
+     * ليأخذ تسميةً أخرى** لَفقد أيقونتَه ومثالَه، **وهو عينُ ما تمنعه
+     * هذه الملفّة.**
+     */
+    label: Int = R.string.login_phone,
     modifier: Modifier = Modifier,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(stringResource(R.string.login_phone)) },
+        label = { Text(stringResource(label)) },
         // **وقالب لا رقم كامل** (`09xxxxxxxx`، طلب المالك ٢٠٢٦-٠٨-١١):
         // **رقم كامل معروض يُقرأ رقما حقيقيّا** — ومن رآه سأل: أهذا رقمي
         // أم رقم الشركة؟ **والقالب يقول الشكل ولا يدّعي أنّه أحد.**

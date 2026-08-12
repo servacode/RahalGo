@@ -41,6 +41,8 @@ import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 import com.rahalgo.driver.location.LastPoint
 import com.rahalgo.driver.ui.Avatar
+import com.rahalgo.driver.ui.PasswordField
+import com.rahalgo.driver.ui.PhoneField
 import com.rahalgo.shared.model.Address
 
 /**
@@ -295,15 +297,14 @@ private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
     }
 
     if (!waiting) {
-        OutlinedTextField(
+        // **وحقلُ الهاتف من المركز** — بأيقونته ومثالِ كتابته
+        // (`09xxxxxxxx`) — (قرارُ المالك ٢٠٢٦-٠٨-١٣: «الرقم الجديد يجب
+        // أن يكون بداخله طريقةُ كتابة الرقم… ولا تنسَ أيقونة الهاتف»).
+        PhoneField(
             value = phone,
-            onValueChange = { phone = it },
-            label = { Text(stringResource(R.string.acc_phone_new)) },
-            singleLine = true,
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
-            ),
-            modifier = Modifier.fillMaxWidth(),
+            onChange = { phone = it },
+            enabled = !s.busy,
+            label = R.string.acc_phone_new,
         )
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -355,11 +356,12 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
     val mismatch = next.isNotEmpty() && confirm.isNotEmpty() && next != confirm
 
     SectionTitle(stringResource(R.string.acc_password))
-    PwField(current, { current = it }, R.string.acc_pw_current)
+    // **وحقلُ كلمة المرور من المركز — بأيقونة العين.**
+    PasswordField(current, { current = it }, !s.busy, R.string.acc_pw_current)
     Spacer(Modifier.height(8.dp))
-    PwField(next, { next = it }, R.string.acc_pw_new)
+    PasswordField(next, { next = it }, !s.busy, R.string.acc_pw_new)
     Spacer(Modifier.height(8.dp))
-    PwField(confirm, { confirm = it }, R.string.acc_pw_confirm)
+    PasswordField(confirm, { confirm = it }, !s.busy, R.string.acc_pw_confirm)
 
     // **والتطابقُ يُقال قبل الإرسال لا بعده** — نداءٌ يذهب ليعود بخطأٍ
     // يعرفه الجهازُ نفسُه **يُضيّع ثانيتين ويستهلك حزمة.**
@@ -378,20 +380,7 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
     ) { Text(stringResource(R.string.acc_pw_change)) }
 }
 
-@Composable
-private fun PwField(value: String, onChange: (String) -> Unit, label: Int) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onChange,
-        label = { Text(stringResource(label)) },
-        singleLine = true,
-        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-            keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
-}
+
 
 // ــ العناوين ــ
 
@@ -566,11 +555,18 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
     Spacer(Modifier.height(10.dp))
 
     if (!s.deleteAsked) {
-        OutlinedButton(
+        // **وأحمرُ ممتلئٌ لا إطارٌ بنصٍّ أحمر** — (قرارُ المالك
+        // ٢٠٢٦-٠٨-١٣: «وأرسل رمزاً للحذف يجب أن يكون الزرُّ أحمرَ ليكون
+        // زرَّ الخطر»).
+        //
+        // **والإطارُ يُقرأ اختيارا** بين أزرارٍ كثيرةٍ إطارُها واحد،
+        // **والممتلئُ يقول: قف.**
+        Button(
             onClick = vm::askDelete,
             enabled = !s.busy,
+            colors = ButtonDefaults.buttonColors(containerColor = StateRed),
             modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.acc_delete_ask), color = StateRed) }
+        ) { Text(stringResource(R.string.acc_delete_ask)) }
         return
     }
 

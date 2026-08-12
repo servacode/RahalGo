@@ -336,6 +336,23 @@ const repLeadsPerHour = 30
 func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 	// التحديد **بالمندوب لا بعنوانه**: المناديب يعملون من شبكات مشتركة (مقهى،
 	// مكتب) فحدُّ العنوان يوقف زملاءه معه، وهو مصادَق أصلاً فهويّته معروفة.
+	// **ولا يسجّل متجراً من لم يوثّق رقمَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٣).
+	//
+	// **والمفتاحُ العامُّ يعلوه**: مطفأً لا يُسأل أحد.
+	if s.settings.RequireWhatsApp(r.Context(), "sales.require_whatsapp") {
+		var verified bool
+		if err := s.pg.QueryRow(r.Context(),
+			`SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`,
+			userIDFrom(r)).Scan(&verified); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if !verified {
+			s.respondErr(w, errWhatsAppRequired)
+			return
+		}
+	}
+
 	key := "rep:lead:" + userIDFrom(r)
 	if n, err := s.rdb.Incr(r.Context(), key).Result(); err == nil {
 		if n == 1 {

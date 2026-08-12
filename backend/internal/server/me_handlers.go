@@ -14,7 +14,13 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 	var out struct {
 		FullName    string  `json:"full_name"`
 		AvatarThumb *string `json:"avatar_thumb_url"`
-		Balance     int64   `json:"balance"`
+		// Phone **رقمُ الحساب** — يقرؤه صاحبُه ليعرف بأيّ رقمٍ يدخل.
+		//
+		// (شكوى المالك ٢٠٢٦-٠٨-١٣: «الرقم يجب أن يتمّ جلبُه بشكلٍ
+		//  تلقائيٍّ بالحقل».) **وكان الملخّصُ يرسل رقمَ الواتساب ولا
+		//  يرسل رقمَ الحساب** — فيبقى الحقلُ فارغاً في التطبيق.
+		Phone   string `json:"phone"`
+		Balance int64  `json:"balance"`
 		// قناة التواصل الموثّقة — تُعرض في «حسابي» وتفتح أدوات المندوب
 		WhatsAppPhone    *string `json:"whatsapp_phone"`
 		WhatsAppVerified bool    `json:"whatsapp_verified"`
@@ -39,6 +45,7 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name,
 		       (SELECT m.thumb_path FROM media m WHERE m.id = u.avatar_media_id),
+		       u.phone,
 		       COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = u.id), 0),
 		       u.whatsapp_phone, u.whatsapp_verified_at IS NOT NULL,
 		       (SELECT count(*) FROM tickets t
@@ -52,7 +59,7 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 		          AND (o.ends_at IS NULL OR o.ends_at > now())
 		          AND (o.kind <> 'discount' OR (mi.id IS NOT NULL AND mi.available)))
 		FROM users u WHERE u.id = $1`, uid).
-		Scan(&out.FullName, &out.AvatarThumb, &out.Balance,
+		Scan(&out.FullName, &out.AvatarThumb, &out.Phone, &out.Balance,
 			&out.WhatsAppPhone, &out.WhatsAppVerified, &out.OpenTickets, &out.LiveOffers)
 	if err != nil {
 		s.respondErr(w, err)

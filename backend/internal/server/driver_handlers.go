@@ -210,7 +210,7 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والتحقّقُ في الخادم لا في الشاشة**: الشاشةُ تُخفي الزرّ، **ومن
 	// ينادي النقطةَ مباشرةً لا يوقفه إخفاءُ زرّ.**
-	if req.On && s.settings.GetBool(r.Context(), "drivers.require_whatsapp") {
+	if req.On && s.settings.RequireWhatsApp(r.Context(), "drivers.require_whatsapp") {
 		var verified bool
 		if err := s.pg.QueryRow(r.Context(),
 			`SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`,
