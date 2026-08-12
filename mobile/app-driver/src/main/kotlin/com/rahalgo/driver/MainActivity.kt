@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +60,8 @@ import com.rahalgo.driver.home.HomeScreen
 import com.rahalgo.driver.home.HomeViewModel
 import com.rahalgo.driver.location.LastPoint
 import com.rahalgo.driver.location.LocationPermission
+import com.rahalgo.driver.ui.InboxSheet
+import com.rahalgo.driver.ui.TopBar
 import com.rahalgo.driver.login.LoginViewModel
 import com.rahalgo.driver.orders.DetailActions
 import com.rahalgo.driver.orders.OrderDetailScreen
@@ -289,7 +292,34 @@ private fun SignedIn(onLogout: () -> Unit) {
         onPauseOrDispose { }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وتبويب الرحلة يظهر حين تكون ثمّة رحلة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢: «قسم الرحلة يجب أن يكون مخفيّا أساسا،
+    //  يظهر فقط عند بدء الرحلة».)
+    //
+    // **وتبويب فارغ ثلثَ اليوم يُقرأ عطبا** — يفتحه صاحبه فيجد «لا رحلة
+    // الآن»، **ثمّ يكفّ عن فتحه** فلا يراه يوم تكون فيه رحلة.
+    val hasTrip = orders.state.mine.isNotEmpty()
+
+    // **ومن انتهت رحلته يُعاد إلى الطلبات** — لا يبقى في تبويب اختفى.
+    LaunchedEffect(hasTrip) {
+        if (!hasTrip && tab == 0) tab = 1
+        if (hasTrip && tab == 1 && orders.openId != null) tab = 0
+    }
+
     Scaffold(
+        topBar = {
+            TopBar(
+                balance = home.state.me?.balance ?: 0,
+                rating = home.state.me?.rating ?: 0.0,
+                ratingCount = home.state.me?.ratingCount ?: 0,
+                unread = home.unread,
+                onWallet = { tab = 2 },
+                onNotifications = home::openInbox,
+            )
+        },
         bottomBar = {
             // ══════════════════════════════════════════════════════════
             // **الرحلة أوّلا — وهي ما يفعله السائق**
@@ -298,14 +328,16 @@ private fun SignedIn(onLogout: () -> Unit) {
             // (مواصفة المالك ٢٠٢٦-٠٨-١٢: «أوّل قسم يكون الخريطة نسمّيها
             //  الرحلة، والقسم الثاني الطلبات».)
             NavigationBar {
-                NavigationBarItem(
-                    selected = tab == 0,
-                    onClick = { tab = 0; orders.refresh() },
-                    icon = {
-                        Icon(painterResource(R.drawable.ic_trip), contentDescription = null)
-                    },
-                    label = { Text(stringResource(R.string.nav_trip)) },
-                )
+                if (hasTrip) {
+                    NavigationBarItem(
+                        selected = tab == 0,
+                        onClick = { tab = 0; orders.refresh() },
+                        icon = {
+                            Icon(painterResource(R.drawable.ic_trip), contentDescription = null)
+                        },
+                        label = { Text(stringResource(R.string.nav_trip)) },
+                    )
+                }
                 NavigationBarItem(
                     selected = tab == 1,
                     onClick = { tab = 1; orders.refresh() },
@@ -326,6 +358,13 @@ private fun SignedIn(onLogout: () -> Unit) {
         },
     ) { padding ->
         Box(Modifier.padding(padding)) {
+            // **وصندوق الإشعارات يغطّي** — يُقرأ ثمّ يُغلق.
+            val notices = home.inbox
+            if (notices != null) {
+                InboxSheet(items = notices, onClose = home::closeInbox)
+                return@Box
+            }
+
             // **والحديث يغطّي الشاشة** — يُقرأ ويُكتب فيه ثمّ يُغلق.
             val chat = orders.chat
             if (chat != null) {

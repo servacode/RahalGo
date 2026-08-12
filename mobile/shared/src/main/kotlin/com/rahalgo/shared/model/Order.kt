@@ -60,9 +60,17 @@ data class DriverOrder(
     @SerialName("items_count") val itemsCount: Int = 0,
     /** **ما يكسبه هو** — لا ما يقبضه للمتجر. */
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
-    /** **اسم الحيّ لا الإحداثيات** — «حي الروضة» يعرفه في لحظة. */
-    @SerialName("pickup_area") val pickupArea: String = "",
-    @SerialName("dropoff_area") val dropoffArea: String = "",
+    /**
+     * **عنوان الاستلام كما كُتب** — لا اسم منطقة.
+     *
+     * (تصحيح المالك ٢٠٢٦-٠٨-١٢.) **والمنطقة وحدة تسعير قد تشمل المدينة
+     * كلّها**، فيقرأ السائق «مركز المدينة» في الطرفين ولا يعرف من أين
+     * ولا إلى أين.
+     *
+     * **وهو موضع الاستلام البديل إن وُجد** — البضاعة ليست في المتجر،
+     * **ومن قرأ عنوان المتجر ذهب إلى حيث لا شيء.**
+     */
+    @SerialName("pickup_address") val pickupAddress: String = "",
 
     /** **كم بينه وبين المتجر بالمتر** — **وسالب يعني «لا يُعرف»**، لا قريب. */
     @SerialName("to_pickup_m") val toPickupM: Double = -1.0,

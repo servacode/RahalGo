@@ -84,6 +84,21 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// **والحسابُ في الشاشة لا في الخادم**: المسافةُ تتبدّل مع كلّ نبضةِ
 		// موضع، **ونداءٌ لكلّ متر عبثٌ** — والسرعةُ ثابتةٌ تُقرأ مرّة.
 		AvgSpeedKmh int64 `json:"avg_speed_kmh"`
+
+		// ── تقييمُه — كما يراه زبائنُه ────────────────────────────────
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-١٢: «بالأعلى جانب المحفظة لازم يكون
+		//  موجود تقييم السائق».)
+		//
+		// **ورقمٌ يُعرض للسائق يجب أن يكون رقمَ الإدارة نفسَه** — وإلّا
+		// جادل من رأى في تطبيقه غيرَ ما يقرأ عليه المكتب. **فمتوسّطُ
+		// كلِّ نجومه** لا متوسّطُ شهرٍ ولا متوسّطُ صفحة.
+		//
+		// Rating صفرٌ يعني «لم يُقيَّم بعد» — RatingCount يفصل بينه وبين
+		// صفرٍ حقيقيّ، **ولا صفرَ حقيقيّ أصلاً** (النجوم من واحدٍ إلى
+		// خمسة)، **لكنّ من رأى «٠٫٠» بلا عددٍ ظنّها حكماً عليه.**
+		Rating      float64 `json:"rating"`
+		RatingCount int     `json:"rating_count"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -109,11 +124,21 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 WHERE t.user_id = u.id AND t.kind = 'compensation'
 		                   AND t.created_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')), 0),
-		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL)
+		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL),
+		       -- **ومتوسّطُ نجومه على كلّ ما قُيّم** — لا على آخر عشرة.
+		       --
+		       -- **والطلبُ بلا نجومٍ لا يُعدّ صفراً**: أكثرُ الزبائن لا
+		       -- يقيّمون، **ومن عدّ سكوتَهم صفراً** جعل سائقاً ممتازاً
+		       -- يقرأ على نفسه «١٫٢».
+		       COALESCE((SELECT avg(rt.driver_stars)::float8
+		                 FROM order_ratings rt JOIN orders o ON o.id = rt.order_id
+		                 WHERE o.driver_id = u.id AND rt.driver_stars IS NOT NULL), 0),
+		       (SELECT count(*) FROM order_ratings rt JOIN orders o ON o.id = rt.order_id
+		        WHERE o.driver_id = u.id AND rt.driver_stars IS NOT NULL)
 		FROM users u WHERE u.id = $1`, uid, s.settings.GetInt(r.Context(), "drivers.cash_limit")).
 		Scan(&out.FullName, &out.OnShift, &out.ShiftStartedAt, &out.CashHeld, &out.CashLimit,
 			&out.Balance, &out.TodayDelivered, &out.TodayFailed, &out.TodayEarned,
-			&out.TodayCompensated, &out.ActiveOrders)
+			&out.TodayCompensated, &out.ActiveOrders, &out.Rating, &out.RatingCount)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -185,14 +210,15 @@ type driverOrder struct {
 	CashDue int64 `json:"cash_due"`
 	// DeliveryFee **ما يكسبه هو** — لا ما يقبضه للمتجر.
 	DeliveryFee int64 `json:"delivery_fee"`
-	// PickupArea و DropoffArea **اسمُ الحيّ لا الإحداثيات.**
-	PickupArea  string     `json:"pickup_area"`
-	DropoffArea string     `json:"dropoff_area"`
-	ItemsCount  int        `json:"items_count"`
-	ReadyAt     *time.Time `json:"ready_at"`
-	PrepMinutes *int       `json:"prep_minutes"`
-	AcceptedAt  *time.Time `json:"accepted_at"`
-	CreatedAt   time.Time  `json:"created_at"`
+	// PickupAddress **عنوانُ الاستلام كما كُتب** — لا اسمُ منطقةٍ:
+	// **المنطقةُ وحدةُ تسعيرٍ قد تشمل المدينةَ كلَّها**، فيقرأ السائقُ
+	// «مركز المدينة» في الطرفين ولا يعرف من أين ولا إلى أين.
+	PickupAddress string     `json:"pickup_address"`
+	ItemsCount    int        `json:"items_count"`
+	ReadyAt       *time.Time `json:"ready_at"`
+	PrepMinutes   *int       `json:"prep_minutes"`
+	AcceptedAt    *time.Time `json:"accepted_at"`
+	CreatedAt     time.Time  `json:"created_at"`
 	// PickupLat نقطةُ الاستلام البديلة — تُملأ حين تكون البضاعةُ ليست في
 	// المتجر: **طارئٌ وقع لسائقٍ سابقٍ وهي في يده حيث وقف.**
 	//
@@ -299,24 +325,27 @@ const driverOrderSelect = `
 	       -- **والإجماليُّ ما يقبضه للمتجر.** وكان يرى الثاني ويظنّه
 	       -- الأوّل.
 	       o.delivery_fee,
-	       -- **واسمُ الحيّ لا الإحداثيات**: «حي الروضة» يعرفه السائقُ
-	       -- في لحظة، **و«35.95, 39.00» لا يقول له شيئاً.**
+	       -- ══════════════════════════════════════════════════════════
+	       -- **وعنوانُ المتجر كما كتبه صاحبُه — لا اسمُ منطقته**
+	       -- ══════════════════════════════════════════════════════════
 	       --
-	       -- **وحيُّ المتجر يُقرأ من موضعه داخل المناطق** — لا عمودَ له.
+	       -- (تصحيحُ المالك ٢٠٢٦-٠٨-١٢: «ليش حاطين عنواناً لصاحب المتجر
+	       --  وللزبون مشان تكتبلي مركز المدينة؟».)
 	       --
-	       -- **والمناطقُ دوائرُ لا مضلّعات**: مركزٌ ونصفُ قطر — والترحيلُ
-	       -- التاسعُ حذف عمودَ المضلّع. **وسؤالُها به يردّ خمسمئة**
-	       -- (وقع وقيس ٢٠٢٦-٠٨-١٢ على جهازٍ حقيقيّ).
+	       -- **والمنطقةُ وحدةُ تسعيرٍ لا عنوان**: مركزٌ ونصفُ قطرٍ تُحسب
+	       -- به الأجرة، **وكلُّ المدينة قد تقع في واحدة.** فيقرأ السائقُ
+	       -- «مركز المدينة» في الطرفين ولا يعرف من أين ولا إلى أين.
 	       --
-	       -- **وأقربُ مركزٍ يشمله** — فمن وقع في تداخلِ دائرتين نُسب
-	       -- إلى أقربهما إليه.
-	       COALESCE((SELECT z.name FROM delivery_zones z
-	                 WHERE z.active AND m.location IS NOT NULL
-	                   AND ST_DWithin(z.center, m.location, z.radius_m)
-	                 ORDER BY ST_Distance(z.center, m.location)
-	                 LIMIT 1), ''),
-	       -- **وحيُّ الزبون من منطقة الطلب** — هي التي حُسبت عليها أجرتُه.
-	       COALESCE((SELECT z.name FROM delivery_zones z WHERE z.id = o.zone_id), '')
+	       -- **والعنوانُ المكتوبُ هو ما يوصله**: «شارع الكهربا جانب مغسلة
+	       -- أبو الهيف» — كتبه صاحبُه لأنّه يعرف بابَه.
+	       --
+	       -- **وموضعُ الاستلام البديلُ يسبق عنوانَ المتجر**: البضاعةُ
+	       -- ليست فيه، **ومن قرأ عنوانَ المتجر ذهب إلى حيث لا شيء.**
+	       CASE
+	           WHEN o.pickup_override IS NOT NULL AND o.pickup_override_note <> ''
+	               THEN o.pickup_override_note
+	           ELSE COALESCE(m.address_text, '')
+	       END
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	JOIN users cu ON cu.id = o.customer_id
@@ -340,7 +369,7 @@ func (s *Server) scanDriverOrders(w http.ResponseWriter, r *http.Request, sql st
 			&o.AcceptsReturns, &o.FailReason, &o.ToPickupM, &o.LegM,
 			&o.OfferExpiresAt, &o.NavLat, &o.NavLng,
 			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee,
-			&o.DeliveryFee, &o.PickupArea, &o.DropoffArea); err != nil {
+			&o.DeliveryFee, &o.PickupAddress); err != nil {
 			s.respondErr(w, err)
 			return
 		}

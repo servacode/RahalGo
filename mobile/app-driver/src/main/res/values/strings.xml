@@ -214,9 +214,20 @@
     <string name="card_to_store">إلى المتجر</string>
     <string name="card_fee">أجرة التوصيل</string>
     <string name="card_payment">الدفع</string>
-    <string name="card_cash">نقدي</string>
+    <string name="card_cash">عند الاستلام</string>
     <string name="card_wallet">مدفوع</string>
+    <string name="card_customer">الزبون</string>
+    <string name="card_store_cd">متجر</string>
     <string name="card_eta">المدّة</string>
     <string name="card_minutes">%1$d دقيقة</string>
     <string name="card_waiting">طلب توصيل جديد بانتظار قبولك</string>
+    <!-- الشريط العلويّ -->
+    <string name="top_rating">تقييمك</string>
+    <string name="top_rating_none">لا تقييم بعد</string>
+    <string name="top_wallet">محفظتك</string>
+    <string name="top_notifications">الإشعارات</string>
+    <string name="inbox_empty">لا إشعارات بعد</string>
+    <string name="inbox_title">الإشعارات</string>
+    <string name="card_dist_to">المسافة إلى (%1$s)</string>
+    <string name="card_invoice_total">إجمالي الفاتورة</string>
 </resources>

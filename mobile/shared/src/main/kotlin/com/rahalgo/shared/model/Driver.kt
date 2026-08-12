@@ -52,6 +52,12 @@ data class DriverMe(
     /** **كلّ كم ثانية يُرسل الموقع** — رقم من الإعدادات لا من الشيفرة. */
     @SerialName("location_ping_sec") val locationPingSec: Long = 0,
     @SerialName("avg_speed_kmh") val avgSpeedKmh: Long = 0,
+
+    // ── تقييمه ──
+    /** **متوسّط نجومه** — وصفر يعني لم يُقيَّم بعد. */
+    val rating: Double = 0.0,
+    /** **كم قيّمه** — به يُفرَّق «لا تقييم» عن «تقييم منخفض». */
+    @SerialName("rating_count") val ratingCount: Int = 0,
 )
 
 /**

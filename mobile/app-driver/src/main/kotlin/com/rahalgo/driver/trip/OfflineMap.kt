@@ -233,8 +233,12 @@ object OfflineMap {
         }
     }
 
-    private fun manager(context: Context): OfflineManager =
-        OfflineManager.getInstance(context.applicationContext).also {
+    private fun manager(context: Context): OfflineManager {
+        // **والمكتبة تُهيَّأ أوّلا** — وإلّا سقط التطبيق بـ
+        // `MapLibreConfigurationException` (وقع على جهاز حقيقيّ
+        // ٢٠٢٦-٠٨-١٢ حين أُخفي تبويب الرحلة).
+        ensureMapLibre(context)
+        return OfflineManager.getInstance(context.applicationContext).also {
             // ══════════════════════════════════════════════════════════
             // **ورفعُ السقف — والرقّة تجاوزته**
             // ══════════════════════════════════════════════════════════
@@ -248,6 +252,7 @@ object OfflineMap {
             // نصفَ الكوكب بلا انتباه. **ومدينةٌ واحدةٌ ليست ذاك.**
             it.setOfflineMapboxTileCountLimit(MAX_TILES)
         }
+    }
 
     /** **ضعف ما تحتاجه المدينة** — يتّسع لتوسيع الحدود لاحقا. */
     private const val MAX_TILES = 15_000L

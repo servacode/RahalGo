@@ -12,6 +12,7 @@ import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.location.LocationService
 import com.rahalgo.shared.model.DriverMe
+import com.rahalgo.shared.model.Notice
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import java.io.IOException
@@ -44,6 +45,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             state = try {
                 val me = backend.driver.me()
                 syncService(me)
+                refreshUnread()
                 state.copy(me = me, busy = false, locationOn = hasLocation())
             } catch (e: Exception) {
                 state.copy(busy = false, error = describe(e))
@@ -103,6 +105,52 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 state = state.copy(busy = false, error = describe(e))
             }
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **الشريط العلويّ — رصيدُه وإشعاراته**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢.)
+    //
+    // **وهنا لا في نموذج ثالث**: يُقرآن مع كلّ تحديث للوحة، **ونموذج
+    // رابع لسطرين** يفتح نداءين ويعيش دورة حياة أخرى.
+    //
+    // ══════════════════════════════════════════════════════════════════
+    // **والرصيد من `driver/me` لا من نداءِ محفظةٍ ثانٍ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان يُقرأ بنداءٍ ثانٍ لا يُنادى قطّ**: كُتبت `refreshTop()` ولم
+    // تُوصل بـ`refresh()`، **فبقي الشريط يقول «٠ ل.س»** لسائقٍ في
+    // محفظته مال. (أمسكه المالك ٢٠٢٦-٠٨-١٢.)
+    //
+    // **و`driver/me` يحمل الرصيد أصلا** — ومعه التقييم. **فنداءٌ ثانٍ
+    // لرقمٍ وصل** فرصةُ خلافٍ بين رقمين لا فائدةَ فيها.
+    var unread by mutableStateOf(0)
+        private set
+
+    var inbox by mutableStateOf<List<Notice>?>(null)
+        private set
+
+    /** يقرأ عدد غير المقروء — **وفشله لا يُسقط اللوحة.** */
+    private fun refreshUnread() {
+        viewModelScope.launch {
+            runCatching { backend.me.inbox(1).unread }.onSuccess { unread = it }
+        }
+    }
+
+    fun openInbox() {
+        viewModelScope.launch {
+            inbox = runCatching { backend.me.inbox().items }.getOrDefault(emptyList())
+            // **ويُعلَّم المقروء عند الفتح** — الشارة تقول «فيه جديد»،
+            // **ومن أبقاها بعد أن قرأ** جعلها لا تعني شيئا.
+            runCatching { backend.me.markRead() }
+            unread = 0
+        }
+    }
+
+    fun closeInbox() {
+        inbox = null
     }
 
     fun logout() {

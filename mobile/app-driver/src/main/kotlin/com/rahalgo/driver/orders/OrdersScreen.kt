@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,10 +40,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.BrandOrange
 import com.rahalgo.design.BrandTeal
 import com.rahalgo.design.InkMuted
+import com.rahalgo.design.StateGreen
+import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.grouped
 import com.rahalgo.driver.ui.money
@@ -110,13 +115,15 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
         // **من ورديّته مغلقة لا يصله عرض أبدا** — فيرى قائمة فارغة
         // **ويظنّ أنّ العمل راكد.** والسبب في يده وهو لا يعرفه.
 
-        item {
-            SectionTitle(
-                stringResource(R.string.orders_offered),
-                state.offers.size,
-                Modifier.padding(top = 18.dp),
-            )
-        }
+        // ══════════════════════════════════════════════════════════════
+        // **ولا عنوانَ فوق العروض ولا عدد**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرار المالك ٢٠٢٦-٠٨-١٢: «ما في داعي لكلمة معروض عليك أساسا
+        //  وعدد الطلبات — نحن أساسا بصفحة الطلبات».)
+        //
+        // **والبطاقة تقول عن نفسها**: شارةُ «طلب جديد» تفصل المعروضَ عن
+        // المقبول، **فسطرٌ يعيد ما تقوله البطاقة حشو.**
         if (state.offers.isEmpty()) {
             // **والفراغ لا يُترك فراغا** — يُقال سببه.
             item { WhyNoOrders(state) }
@@ -150,11 +157,7 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
         }
 
         item {
-            SectionTitle(
-                stringResource(R.string.orders_mine),
-                state.mine.size,
-                Modifier.padding(top = 24.dp),
-            )
+            SectionTitle(stringResource(R.string.orders_mine), Modifier.padding(top = 24.dp))
         }
         if (state.mine.isEmpty()) {
             item { Empty(stringResource(R.string.orders_no_mine)) }
@@ -230,12 +233,13 @@ private fun WhyNoOrders(state: OrdersState) {
 }
 
 @Composable
-private fun SectionTitle(text: String, count: Int, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.size(8.dp))
-        Text("(${grouped(count.toLong())})", color = InkMuted)
-    }
+private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        modifier = modifier.fillMaxWidth(),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+    )
 }
 
 @Composable
@@ -294,105 +298,187 @@ private fun OrderCard(
             .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier)
             .padding(16.dp),
     ) {
+        // ══════════════════════════════════════════════════════════════
+        // **الرأس ثلاثة: المتجر · الشارة · الرقم**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (تصميم المالك ٢٠٢٦-٠٨-١٢: «يمين وسط يسار».)
+        //
+        // **واسم المتجر أوّل ما تقع عليه العين** — وهو أوّل ما يقرّر به:
+        // مطعم يعرفه أم لا. **وفي العربيّة أوّل الموضع اليمين.**
+        //
+        // **والعدّاد تحت الشارة**: «طلب جديد» تقول ماذا، **والعدّاد يقول
+        // كم بقي** — والاثنان خبر واحد فيبقيان معا.
+        //
+        // **والإجماليّ تحت الرقم**: هو ما يقبضه من الزبون، **وشامل أجرة
+        // التوصيل** (المحرّك يحسبه كذلك، فلا يُجمع هنا ثانية).
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
-            if (offer) {
-                Chip(R.drawable.ic_bell, stringResource(R.string.card_new_order))
-            } else {
-                Text(statusText(order.status), color = BrandTeal, fontWeight = FontWeight.Bold)
+            // ── يمين: الشارة والعدّاد ──
+            //
+            // **(تبديل المالك ٢٠٢٦-٠٨-١٢.)** والشارةُ تقول ما هذه
+            // البطاقة قبل أن يُقرأ ما فيها.
+            Column(horizontalAlignment = Alignment.Start) {
+                if (offer) {
+                    Chip(R.drawable.ic_bell, stringResource(R.string.card_new_order))
+                } else {
+                    Text(
+                        text = statusText(order.status),
+                        color = BrandTeal,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                val expiresAt = order.offerExpiresAt
+                if (offer && expiresAt != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Countdown(expiresAt, onExpired = onExpired)
+                }
             }
-            Text("#" + order.number, color = InkMuted, style = MaterialTheme.typography.bodySmall)
-        }
 
-        val expiresAt = order.offerExpiresAt
-        if (offer && expiresAt != null) {
-            Spacer(Modifier.height(8.dp))
-            Countdown(expiresAt, onExpired = onExpired)
+            // ── وسط: المتجر ──
+            //
+            // **والأيقونةُ يمينَ الاسم** — (تصحيح المالك ٢٠٢٦-٠٨-١٢).
+            // **وأوّلُ الصفّ في العربيّة يمينُه**، فتُكتب قبله.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_store),
+                    // **ويُسمّى للقارئ الصوتيّ** — ومن يقود ويسمع لا يرى.
+                    contentDescription = stringResource(R.string.card_store_cd),
+                    tint = BrandOrange,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.size(6.dp))
+                Text(
+                    text = order.merchantName.ifBlank { stringResource(R.string.card_custom) },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
+            // ── يسار ──
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "#" + order.number,
+                    color = InkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(2.dp))
+                // ══════════════════════════════════════════════════════
+                // **ورقم بلا اسمه يُقرأ خطأ**
+                // ══════════════════════════════════════════════════════
+                //
+                // (قرار المالك ٢٠٢٦-٠٨-١٢: «جنب السعر الإجماليّ يجب أن
+                //  نكتب إجماليّ الفاتورة».)
+                //
+                // **ثلاثة أرقام في البطاقة**: الإجماليّ وأجرتُه وما
+                // يقبضه. **ورقم عارٍ في زاوية** يُقرأ أجرةً — **فيفرح
+                // بمئتين وهي للمتجر**، أو يقبض مئةً والفاتورة ثلاثمئة.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.card_invoice_total),
+                        color = InkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        text = money(order.total),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        // **ولونه يقول أمقبوضٌ أم لا** — أحمر: اقبض،
+                        // أخضر: مدفوع بالمحفظة.
+                        color = if (order.cashDue > 0) StateRed else StateGreen,
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painter = painterResource(R.drawable.ic_store),
-                contentDescription = null,
-                tint = BrandOrange,
-                modifier = Modifier.size(22.dp),
-            )
-            Spacer(Modifier.size(8.dp))
-            Text(
-                text = order.merchantName.ifBlank { stringResource(R.string.card_custom) },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            if (onOpen != null) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron),
-                    contentDescription = null,
-                    tint = InkMuted,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
+        // ══════════════════════════════════════════════════════════════
+        // **والمسافة في سطر طرفها لا في صندوق تحته**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرار المالك ٢٠٢٦-٠٨-١٢: «لا داعي لكتابة المسافة تحته، بل
+        //  دعها بنفس السطر».)
+        //
+        // **والمسافتان من طرفين مختلفين**: الأولى من موضعك إلى المتجر،
+        // **والثانية من المتجر إلى باب الزبون** — لا من موضعك إليه.
+        //
+        // **والاسم في العنوان لا «المتجر» و«الزبون»**: (تصحيح المالك
+        // ٢٠٢٦-٠٨-١٢) — **«المسافة إلى الزبون» لا تقول لمن يحمل**،
+        // و«ابوطيف» يقول. **وثلاثة طلبات في يده لا يفرّق بينها** إن كان
+        // كلُّها «إلى الزبون».
+        //
+        // **والاسم في السطر لا كلمة «المتجر»** — (تصحيح المالك
+        // ٢٠٢٦-٠٨-١٢): **«المسافة إلى (طيف)» تقول كلَّ شيء**، وكلمةُ
+        // «المتجر» قبلها حشوٌ يعرفه من رأى الأيقونة.
+        //
+        // **ولا يُكرَّر الاسمُ تحته**: عنوانٌ فارغٌ لا يُملأ بالاسم —
+        // **سطرٌ يعيد ما فوقه يُقرأ عطبا**، ولا يُضيف شيئا.
         Leg(
-            label = stringResource(R.string.card_from_store),
-            value = order.pickupArea.ifBlank { order.merchantName },
+            label = stringResource(
+                R.string.card_dist_to,
+                order.merchantName.ifBlank { stringResource(R.string.card_custom) },
+            ),
+            value = order.pickupAddress,
+            far = if (order.toPickupM >= 0) distance(order.toPickupM) else "",
+            // **والزمن بجانب المسافة** — (قرار المالك ٢٠٢٦-٠٨-١٢).
+            //
+            // **والمسافة وحدها لا تقرّر**: «٣ كم» تعني ربع ساعة في زحمة
+            // ودقيقتين على طريق فارغ، **ومن يوازن بين طلبين يوازن
+            // بالوقت** لا بالمتر.
+            mins = legEta(order.toPickupM, avgSpeedKmh),
             tint = BrandTeal,
         )
         Leg(
-            label = stringResource(R.string.card_to_customer),
-            value = order.dropoffArea.ifBlank { order.addressText },
+            // **واسمُ الزبون بين القوسين** — (تصحيح المالك ٢٠٢٦-٠٨-١٢).
+            // **وطلبُ الزائر لا اسمَ له**، فيُكتب «الزبون» ولا يُترك
+            // قوسان فارغان يظنّهما صاحبُهما عطبا.
+            label = stringResource(
+                R.string.card_dist_to,
+                order.customerName.ifBlank { stringResource(R.string.card_customer) },
+            ),
+            value = order.addressText,
+            far = if (order.legM >= 0) distance(order.legM) else "",
+            mins = legEta(order.legM, avgSpeedKmh),
             tint = BrandOrange,
         )
 
-        if (order.toPickupM >= 0 || order.legM >= 0) {
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (order.toPickupM >= 0) {
-                    Metric(
-                        icon = R.drawable.ic_arrow_send,
-                        // **«إلى المتجر» لا «إليك»** — (تصحيح المالك
-                        // ٢٠٢٦-٠٨-١٢: «شفت مكتوب إليك ما فهمت المعنى»).
-                        //
-                        // **والمسافتان تُقاسان من طرفين مختلفين**: هذه
-                        // من موضعك إلى المتجر، **والثانية من المتجر إلى
-                        // باب الزبون** — لا من موضعك إليه.
-                        label = stringResource(R.string.card_to_store),
-                        value = distance(order.toPickupM),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                if (order.legM >= 0) {
-                    Metric(
-                        icon = R.drawable.ic_arrow_send,
-                        label = stringResource(R.string.card_to_customer),
-                        value = distance(order.legM),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(10.dp))
+        // **والصناديق متساوية الارتفاع** — `IntrinsicSize.Min` تقيسها
+        // بأطولها، **ولولاها لطال صندوقٌ سطراه** وقصر جاراه.
+        Row(
+            Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Metric(
-                icon = R.drawable.ic_money,
+                // **وأيقونةُ نقدٍ لا علامةُ دولار** — (تصحيح المالك
+                // ٢٠٢٦-٠٨-١٢): **رمز عملة أجنبيّة على مبلغ بالليرة**
+                // يقرؤه صاحبه لحظةً بغير ما هو.
+                icon = R.drawable.ic_cash,
                 label = stringResource(R.string.card_fee),
                 value = money(order.deliveryFee),
                 strong = true,
                 modifier = Modifier.weight(1f),
             )
+            // **ولون المربّع يقول حال المال بلا قراءة** — (قرار المالك
+            // ٢٠٢٦-٠٨-١٢): **أحمر يعني اقبض من الزبون**، وأخضر يعني
+            // مدفوع مسبقا فسلّم وامضِ.
+            //
+            // **ومن خلط بينهما** طالب زبونا دفع، **أو مشى بلا نقد فخسر
+            // ثمن الطلب من جيبه.**
+            val cash = order.cashDue > 0
             Metric(
-                icon = R.drawable.ic_money,
+                // **والأيقونة تقول ما يقوله اللون** — نقدٌ في اليد أو
+                // محفظة، **فمن أخطأ اللون لم يخطئ الشكل.**
+                icon = if (cash) R.drawable.ic_cash else R.drawable.ic_wallet,
                 label = stringResource(R.string.card_payment),
-                value = stringResource(
-                    if (order.cashDue > 0) R.string.card_cash else R.string.card_wallet,
-                ),
+                value = stringResource(if (cash) R.string.card_cash else R.string.card_wallet),
+                tone = if (cash) StateRed else StateGreen,
                 modifier = Modifier.weight(1f),
             )
             // **والمدّة تُحسب ولا تُترك فارغة** — إلّا إن لم تُضبط السرعة:
@@ -402,39 +488,35 @@ private fun OrderCard(
                 Metric(
                     icon = R.drawable.ic_time,
                     label = stringResource(R.string.card_eta),
-                    value = stringResource(R.string.card_minutes, minutes),
+                    value = minutesText(minutes),
                     modifier = Modifier.weight(1f),
                 )
             }
         }
 
-        if (offer) {
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_info),
-                    contentDescription = null,
-                    tint = InkMuted,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.size(6.dp))
-                Text(
-                    text = stringResource(R.string.card_waiting),
-                    color = InkMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-
+        // ══════════════════════════════════════════════════════════════
+        // **زرّان متساويان — أخضر وأحمر**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرار المالك ٢٠٢٦-٠٨-١٢: «موافق أخضر ورفض أحمر، وبنفس الحجم
+        //  والشكل، ورفض أيضا أيقونة بداخله».)
+        //
+        // **ومتساويان لأنّ القرارين متساويان**: زرّ أكبر يقول «اضغطني»،
+        // **ورفضٌ باهت يجعل من لا يريد الطلب يقبله** ليمضي.
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = onAccept,
                 enabled = enabled && !busy,
-                modifier = Modifier.weight(if (onDecline != null) 2f else 1f),
+                colors = ButtonDefaults.buttonColors(containerColor = StateGreen),
+                modifier = Modifier.weight(1f),
             ) {
                 if (busy) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White,
+                    )
                 } else {
                     Icon(
                         painter = painterResource(R.drawable.ic_check_circle),
@@ -446,12 +528,19 @@ private fun OrderCard(
                 }
             }
             if (onDecline != null) {
-                OutlinedButton(
+                Button(
                     onClick = onDecline,
                     enabled = enabled && !busy,
+                    colors = ButtonDefaults.buttonColors(containerColor = StateRed),
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(stringResource(R.string.order_decline), color = BrandOrange)
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close_circle),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.size(6.dp))
+                    Text(stringResource(R.string.order_decline))
                 }
             }
         }
@@ -531,12 +620,20 @@ private fun Chip(icon: Int, text: String) {
     }
 }
 
-/** **طرف الرحلة** — دبّوس واسم حيّ. */
+/**
+ * **طرف الرحلة** — دبّوس وعنوان.
+ *
+ * **والعنوان تحت عنوانه لا بجانبه**: «شارع الكهربا جانب مغسلة أبو
+ * الهيف» لا يسع سطرا فيه كلمة «إلى الزبون» قبله — **فينقطع بنقاط،
+ * وأهمّ ما فيه آخره.**
+ *
+ * **وسطران حدّه**: ثلاثة تجعل البطاقة تطول فلا يُرى زرّها بلا تمرير.
+ */
 @Composable
-private fun Leg(label: String, value: String, tint: Color) {
+private fun Leg(label: String, value: String, far: String, mins: Long, tint: Color) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_pin),
@@ -545,9 +642,45 @@ private fun Leg(label: String, value: String, tint: Color) {
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.size(8.dp))
-        Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
-        Spacer(Modifier.size(8.dp))
-        Text(value, fontWeight = FontWeight.Bold, maxLines = 1)
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+                if (far.isNotEmpty()) {
+                    Spacer(Modifier.size(8.dp))
+                    // **والمسافة في سطر عنوانها** — رقم قصير لا يزاحم
+                    // العنوان، **ويُقرأ معه لا بعد أن يبحث عنه.**
+                    Text(
+                        // **والرقم بين قوسين** — (طلب المالك): يُقرأ
+                        // رقما مستقلّا لا امتدادا للاسم قبله.
+                        text = "(" + far + ")",
+                        color = tint,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (mins > 0) {
+                    Spacer(Modifier.size(6.dp))
+                    // **والزمن باهت والمسافة ملوّنة** — خبران في سطر،
+                    // **ولو تساويا في الصياح** لم يُقرأ أحدهما أوّلا.
+                    Text(
+                        text = "(" + minutesText(mins) + ")",
+                        color = InkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            // **وسطرٌ فارغٌ لا يُرسم** — لا فراغَ تحت العنوان ولا اسمٌ
+            // مكرّر مكانه.
+            if (value.isNotBlank()) {
+                Text(
+                    text = value,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
     }
 }
 
@@ -559,11 +692,15 @@ private fun Metric(
     value: String,
     modifier: Modifier = Modifier,
     strong: Boolean = false,
+    /** **لون الحال** — وفارغ يعني صندوقا محايدا. */
+    tone: Color? = null,
 ) {
+    val ink = tone ?: if (strong) BrandTeal else MaterialTheme.colorScheme.onSurface
     Column(
         modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFF5F7F8))
+            // **وخلفيّة باهتة لا صمّاء** — اللون يُقرأ ولا يصرخ.
+            .background(tone?.copy(alpha = 0.10f) ?: Color(0xFFF5F7F8))
             .padding(vertical = 10.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -571,18 +708,27 @@ private fun Metric(
             Icon(
                 painter = painterResource(icon),
                 contentDescription = null,
-                tint = if (strong) BrandTeal else InkMuted,
+                tint = tone ?: if (strong) BrandTeal else InkMuted,
                 modifier = Modifier.size(14.dp),
             )
             Spacer(Modifier.size(4.dp))
             Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(2.dp))
+        // ══════════════════════════════════════════════════════════════
+        // **ولا تُبتر القيمة في سطر** — (تصحيح المالك ٢٠٢٦-٠٨-١٢:
+        // «كلمة عند الاستلام طلعت ناقصة، بس طلعت عند»)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **و«عند» وحدها أسوأ من لا شيء**: تقرأ نصف الجملة **فتظنّ أنّك
+        // قرأتها**، ولا شيء في الشاشة يقول إنّ بقيّتها سقطت.
         Text(
             text = value,
             fontWeight = FontWeight.Bold,
-            color = if (strong) BrandTeal else MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
+            color = ink,
+            maxLines = 2,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }
@@ -592,6 +738,22 @@ private fun Metric(
  *
  * **وصفر يعني لا تُعرض**: سرعة غير مضبوطة أو مسافة مجهولة، **ورقم مبنيّ
  * على صفر وعد كاذب.**
+ */
+private fun legEta(meters: Double, avgSpeedKmh: Long): Long {
+    if (avgSpeedKmh <= 0 || meters <= 0) return 0
+    return ((meters / 1000.0) / avgSpeedKmh * 60).toLong().coerceAtLeast(1)
+}
+
+/**
+ * **الدقائق بأرقام غربيّة** — كالمسافة والمبلغ.
+ *
+ * **و`%d` في ملفّ النصوص يُكتب بأرقام هنديّة** في لغة عربيّة، **فيقع
+ * «١ دقيقة» بجانب «56 م»** في السطر نفسه.
+ */
+private fun minutesText(mins: Long): String = "$mins دقيقة"
+
+/**
+ * **المدّة المتوقّعة للرحلة كلّها** — إليه ثمّ إلى الزبون.
  */
 private fun eta(toPickupM: Double, legM: Double, avgSpeedKmh: Long): Long {
     if (avgSpeedKmh <= 0) return 0
