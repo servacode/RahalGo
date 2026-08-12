@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -165,24 +166,18 @@ fun TripScreen(
             // يُقرأ في نظرةٍ خاطفةٍ يكون في أعلى الشاشة** حيث لا يحجبه
             // إبهامٌ ولا يُطلب منه أن ينزل بعينه إلى أسفلها.
             // ══════════════════════════════════════════════════════════
-            // **واللوحُ للسير — يغيب عند الوقوف**
+            // **لوحُ الرحلة — طورُها ومراحلُها في أرضٍ واحدة**
             // ══════════════════════════════════════════════════════════
             //
-            // (قرار المالك ٢٠٢٦-٠٨-١٢: «بس وصلت المتجر المفروض المربّع
-            //  بالأعلى يختفي — لا يظلّ الطريق إلى المتجر ولا زمن ولا
-            //  مسافة، نحن واقفين عند المتجر».)
+            // (مواصفة المالك ٢٠٢٦-٠٨-١٢ بصورة.)
             //
-            // **ووصلَ يعني أنّ اللوحَ لم يعد يقول شيئا**: «صفرُ متر»
-            // و«دقيقةٌ واحدة» **رقمان لا يقرآن**، و«الطريق إلى المتجر»
-            // وهو واقفٌ فيه **جملةٌ تكذب.**
+            // **والمراحلُ تبقى والطورُ يغيب**: من وقف عند الباب لا يقرأ
+            // «الطريق إلى ابوطيف» ولا مسافةً ولا زمنا — **وهو واقفٌ
+            // فيه** — **لكنّه يبقى يريد أن يعرف أين صار من الرحلة.**
             //
-            // **والخريطةُ تكسب ما تركه** — وهو واقفٌ ينظر إليها ليجد
-            // بابَ المتجر لا ليقرأ رقما.
-            if (state.step == TripStep.TO_PICKUP || state.step == TripStep.TO_CUSTOMER ||
-                state.step == TripStep.PICKED_UP
-            ) {
-                PhaseRibbon(state)
-            }
+            // **وأرضٌ واحدةٌ لهما لا لوحان**: لوحان فوق خريطةٍ يقضمان
+            // ثلثَها، **وأحدُهما يختفي فيترك فراغاً معلّقا.**
+            TripPanel(state)
 
             // ══════════════════════════════════════════════════════════
             // **ومن يحمل أكثر من طلب يرى محطّاته**
@@ -324,60 +319,6 @@ private fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) 
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
         },
     )
-}
-
-/**
- * **شريطُ المراحل الأربع** — ما مضى وما هو فيه وما بقي.
- *
- * **والحاليّةُ وحدَها ملوّنة**: ما مضى باهتٌ لأنّه انتهى، **وما بقي
- * أبهت** — ومن لوّن الكلَّ جعل صاحبَه يبحث عن موضعه بين أربعةٍ متشابهة.
- */
-@Composable
-private fun LegStrip(status: String) {
-    val at = legOf(status)
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        for ((i, label) in LEGS.withIndex()) {
-            if (i > 0) {
-                Text(
-                    text = " ← ",
-                    color = InkMuted.copy(alpha = 0.5f),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-            Text(
-                text = stringResource(label),
-                color = when {
-                    i == at -> BrandTeal
-                    i < at -> InkMuted
-                    else -> InkMuted.copy(alpha = 0.35f)
-                },
-                fontWeight = if (i == at) FontWeight.Bold else FontWeight.Normal,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-            )
-        }
-    }
-}
-
-private val LEGS = listOf(
-    R.string.leg_picked,
-    R.string.leg_way,
-    R.string.leg_arrived,
-    R.string.leg_done,
-)
-
-/**
- * **أيُّ مرحلةٍ هو فيها الآن.**
- *
- * **وما قبل الاستلام كلُّه المرحلةُ الأولى**: `assigned` و`at_pickup`
- * طريقُه إلى المتجر — **وهي عندنا مرحلةٌ واحدة** لأنّ الزبون لا يفرّق
- * بينهما، **والسائقُ يقرأ ما عليه في الزرّ لا في الشريط.**
- */
-private fun legOf(status: String): Int = when (status) {
-    "picked_up", "on_the_way" -> 1
-    "at_dropoff" -> 2
-    "delivered" -> 3
-    else -> 0
 }
 
 /**
@@ -699,80 +640,92 @@ private fun NavigateButton(onClick: () -> Unit) {
 }
 
 /**
- * **لوحُ الطور** — إلى أين يمشي الآن، وكم بقي مسافةً ووقتا.
+ * **لوحُ الرحلة** — إلى أين، وكم بقي، وأين صار من مراحلها.
  *
- * **وهو الجواب عن سؤالٍ واحد**: ما الذي أفعله الآن؟ — ولذلك سطرٌ واحدٌ
- * كبيرٌ فوق، **ورقمان صغيران تحته.**
+ * # ولماذا لوحٌ واحد
  *
- * **والوقتُ يُحسب من سرعةٍ في المخزن** (`drivers.avg_speed_kmh`) لا من
- * رقمٍ في الشيفرة: **درّاجةٌ في الرقّة غيرُ سيّارةٍ في مدينةٍ أخرى.**
+ * **لوحان فوق خريطةٍ يقضمان ثلثَها** — وهي ما يقود عليه. **وأحدُهما
+ * يختفي عند الوقوف فيترك فراغاً معلّقا** لا يُقرأ شيئا.
+ *
+ * # والطورُ يغيب والمراحلُ تبقى
+ *
+ * **من وقف عند الباب لا يقرأ «الطريق إلى فلان» ولا مسافةً ولا زمنا** —
+ * وهو واقفٌ فيه. **لكنّه يبقى يريد أن يعرف أين صار من الرحلة.**
  */
 @Composable
-private fun PhaseRibbon(state: TripState) {
-    // **ورقمُ المحرّك يسبق الهوائيّ** — «٩٨٢ م ودقيقتان» كانت تعني في
-    // الواقع «١٫١ كم وسبعَ دقائق». (قيس ٢٠٢٦-٠٨-١٢.)
-    val meters = if (state.routeM >= 0) state.routeM else state.remainingM
+private fun TripPanel(state: TripState) {
+    val order = state.order ?: return
+    val moving = state.step == TripStep.TO_PICKUP || state.step == TripStep.TO_CUSTOMER ||
+        state.step == TripStep.PICKED_UP
+
     Column(
         Modifier
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(InkDeep)
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // ══════════════════════════════════════════════════════════════
-        // **والوجهةُ باسمها لا بصفتها**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (وهو ما قرّره المالكُ في بطاقة الطلب ٢٠٢٦-٠٨-١٢: «ما في داعي
-        //  لكلمة المتجر» — واللوحُ أولى به: **هو ما يُقرأ وهو يقود.**)
-        //
-        // **و«الطريق إلى الزبون» لا تقول لمن يحمل ثلاثة طلبات أيَّها
-        // هذا** — و«ابوطيف» تقول.
-        val name = if (state.step >= TripStep.PICKED_UP) {
-            state.order?.customerName.orEmpty().ifBlank {
-                stringResource(R.string.detail_customer)
+        if (moving) {
+            // ══════════════════════════════════════════════════════════
+            // **والوجهةُ باسمها لا بصفتها**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (وهو ما قرّره المالكُ في بطاقة الطلب ٢٠٢٦-٠٨-١٢: «ما في
+            //  داعي لكلمة المتجر» — واللوحُ أولى به.)
+            //
+            // **و«الطريق إلى الزبون» لا تقول لمن يحمل ثلاثة طلبات
+            // أيَّها هذا** — و«ابوطيف» تقول.
+            val name = if (state.step >= TripStep.PICKED_UP) {
+                order.customerName.ifBlank { stringResource(R.string.detail_customer) }
+            } else {
+                order.merchantName.ifBlank { stringResource(R.string.card_custom) }
             }
-        } else {
-            state.order?.merchantName.orEmpty().ifBlank {
-                stringResource(R.string.card_custom)
-            }
-        }
-        Text(
-            text = stringResource(phaseLabel(state.step), name),
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
-        )
-        if (meters >= 0) {
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Chip(R.drawable.ic_pin, distanceText(meters))
-                // **والمدّة من المحرّك إن وُجدت** — محسوبةً بسرعات
-                // الشوارع نفسِها، **لا بسرعةٍ واحدةٍ في الإعدادات.**
-                val minutes = if (state.routeSec >= 0) {
-                    "~" + ((state.routeSec / 60).toLong().coerceAtLeast(1)) + " د"
-                } else {
-                    eta(meters, state.avgSpeedKmh)
+            Text(
+                text = stringResource(phaseLabel(state.step), name),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+            )
+
+            // **ورقمُ المحرّك يسبق الهوائيّ** — «٩٨٢ م ودقيقتان» كانت
+            // تعني في الواقع «١٫١ كم وسبعَ دقائق». (قيس ٢٠٢٦-٠٨-١٢.)
+            val meters = if (state.routeM >= 0) state.routeM else state.remainingM
+            if (meters >= 0) {
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // **والمدّة من المحرّك إن وُجدت** — محسوبةً بسرعات
+                    // الشوارع نفسِها لا بسرعةٍ واحدةٍ في الإعدادات.
+                    val minutes = if (state.routeSec >= 0) {
+                        ((state.routeSec / 60).toLong().coerceAtLeast(1)).toString() + " د"
+                    } else {
+                        eta(meters, state.avgSpeedKmh).substringAfter("~")
+                    }
+                    if (minutes.isNotEmpty()) {
+                        PanelChip(R.drawable.ic_time, minutes)
+                        Spacer(Modifier.size(14.dp))
+                    }
+                    PanelChip(R.drawable.ic_pin, distanceText(meters))
                 }
-                if (minutes.isNotEmpty()) {
-                    Spacer(Modifier.size(14.dp))
-                    Chip(R.drawable.ic_time, minutes.substringAfter("~"))
-                }
             }
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+            Spacer(Modifier.height(10.dp))
         }
+
+        LegStrip(order.status)
     }
 }
 
 /** **أيقونةٌ ورقم** — على الأرض الداكنة. */
 @Composable
-private fun Chip(icon: Int, text: String) {
+private fun PanelChip(icon: Int, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
             tint = BrandOrange,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(15.dp),
         )
         Spacer(Modifier.size(5.dp))
         Text(
@@ -782,6 +735,106 @@ private fun Chip(icon: Int, text: String) {
             style = MaterialTheme.typography.bodyMedium,
         )
     }
+}
+
+/**
+ * **شريطُ المراحل الأربع** — دوائرُ موصولةٌ بخطّ.
+ *
+ * **والخطُّ بينها ليس زينة**: هو ما يقول إنّها **رحلةٌ واحدةٌ تمشي**، لا
+ * أربعُ حالاتٍ متجاورة. **وما مضى منه ملوّنٌ وما بقي باهت** — فيُقرأ
+ * التقدّمُ بالعين قبل أن تُقرأ الكلمات.
+ *
+ * **والحاليّةُ وحدَها كبيرةٌ برتقاليّة**: من لوّن الكلَّ جعل صاحبَه
+ * يبحث عن موضعه بين أربعةٍ متشابهة.
+ */
+@Composable
+private fun LegStrip(status: String) {
+    val at = legOf(status)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        for (i in LEGS.indices) {
+            if (i > 0) {
+                // **والخطُّ في مستوى الدوائر** — لا تحتها ولا فوقها.
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .padding(top = 15.dp)
+                        .height(2.dp)
+                        .background(
+                            if (i <= at) BrandTeal else Color.White.copy(alpha = 0.18f),
+                        ),
+                )
+            }
+            LegDot(LEGS[i], LEG_ICONS[i], i, at)
+        }
+    }
+}
+
+@Composable
+private fun LegDot(label: Int, icon: Int, index: Int, at: Int) {
+    val done = index < at
+    val here = index == at
+    val ground = when {
+        here -> BrandOrange
+        done -> BrandTeal
+        else -> Color.White.copy(alpha = 0.12f)
+    }
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(76.dp),
+    ) {
+        Box(
+            Modifier.size(32.dp).clip(CircleShape).background(ground),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(if (done) R.drawable.ic_check_circle else icon),
+                contentDescription = null,
+                tint = if (here || done) Color.White else Color.White.copy(alpha = 0.45f),
+                modifier = Modifier.size(17.dp),
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(label),
+            color = when {
+                here -> Color.White
+                done -> Color.White.copy(alpha = 0.7f)
+                else -> Color.White.copy(alpha = 0.4f)
+            },
+            fontWeight = if (here) FontWeight.Bold else FontWeight.Normal,
+            style = MaterialTheme.typography.labelSmall,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+        )
+    }
+}
+
+private val LEGS = listOf(
+    R.string.leg_picked,
+    R.string.leg_way,
+    R.string.leg_arrived,
+    R.string.leg_done,
+)
+
+private val LEG_ICONS = listOf(
+    R.drawable.ic_store,
+    R.drawable.ic_moto,
+    R.drawable.ic_pin,
+    R.drawable.ic_check_circle,
+)
+
+/**
+ * **أيُّ مرحلةٍ هو فيها الآن.**
+ *
+ * **وما قبل الاستلام كلُّه المرحلةُ الأولى**: `assigned` و`at_pickup`
+ * طريقُه إلى المتجر — **وهي عندنا مرحلةٌ واحدة** لأنّ الزبون لا يفرّق
+ * بينهما، **والسائقُ يقرأ ما عليه في الزرّ لا في الشريط.**
+ */
+private fun legOf(status: String): Int = when (status) {
+    "picked_up", "on_the_way" -> 1
+    "at_dropoff" -> 2
+    "delivered" -> 3
+    else -> 0
 }
 
 /**
@@ -918,23 +971,6 @@ private fun TripCard(
             .background(Color.White)
             .padding(20.dp),
     ) {
-        // ══════════════════════════════════════════════════════════════
-        // **مسارُ الرحلة — أربعُ مراحلَ لا أربعَ عشرة**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (قرار المالك ٢٠٢٦-٠٨-١٢: «عندنا ٤ مراحل: نستلم من المتجر،
-        //  الطريق إليك، وصلتك، سلّمتك».)
-        //
-        // **وسبعُ خطواتٍ كانت تُزاحم الخريطة** فرُفعت — **والأربعُ لا
-        // تزاحم**: سطرٌ واحدٌ في أعلى البطاقة، **يُقرأ بنظرةٍ ويقول أين
-        // صار من الرحلة** لا ما عليه أن يفعله (ذاك في الزرّ).
-        //
-        // **والرحلةُ تُتابَع من ثلاث جهات**: السائقُ هنا، **والزبونُ في
-        // طلبه، والمكتبُ في لوحته** — (قرار المالك: «الكلّ معنيّ
-        // بالرحلة مو طرف واحد»).
-        LegStrip(order.status)
-
-        Spacer(Modifier.height(12.dp))
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

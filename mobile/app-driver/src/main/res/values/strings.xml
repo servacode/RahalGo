@@ -178,10 +178,10 @@
     <string name="trip_s_at_customer">وصلت الزبون</string>
     <string name="trip_s_delivered">سلّمت</string>
     <string name="trip_remaining">ما بقي</string>
-    <string name="leg_picked">استلمت</string>
-    <string name="leg_way">بالطريق</string>
-    <string name="leg_arrived">وصلت</string>
-    <string name="leg_done">سلّمت</string>
+    <string name="leg_picked">استلمت الطلب</string>
+    <string name="leg_way">في طريقك للزبون</string>
+    <string name="leg_arrived">وصلت الزبون</string>
+    <string name="leg_done">تم التسليم</string>
     <string name="trip_p_to_store">الطريق إلى %1$s</string>
     <string name="trip_p_at_store">وصلت المتجر</string>
     <string name="trip_p_to_customer">الطريق إلى %1$s</string>
