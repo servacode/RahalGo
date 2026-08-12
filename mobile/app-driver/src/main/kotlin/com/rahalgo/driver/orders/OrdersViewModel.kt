@@ -233,9 +233,25 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         openId = null
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **الطلبُ الذي يعمل عليه — موضعٌ واحدٌ يقرّره**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وشاشةُ الرحلة تعرض `mine.first()` إن لم يُفتح شيء** (`trip()`)،
+    // **وكانت الأفعالُ تشترط `openId`** — فتُقرأ البطاقةُ ويُضغط زرُّها
+    // **ولا يقع شيء ولا تُقال كلمة.**
+    //
+    // **ويقع بعد كلّ إقلاق للتطبيق**: `openId` رايةٌ في الذاكرة تُمحى مع
+    // العملية، **والطلبُ باقٍ في يده** — فيفتح تطبيقَه ويضغط «وصلت
+    // المتجر» فلا يستجيب. (أمسكه المالك ٢٠٢٦-٠٨-١٢.)
+    //
+    // **وأسوأُ ما فيه أنّه صامت**: لا خطأَ ولا دوّارة — **وزرٌّ لا يفعل
+    // ولا يقول** يُقرأ تطبيقاً معطوباً.
+    private fun currentId(): String? = openId ?: state.mine.firstOrNull()?.id
+
     /** يحرّك الطلب خطوة — **ثمّ يعيد قراءة كلّ شيء.** */
     fun step(to: String) {
-        val id = openId ?: return
+        val id = currentId() ?: return
         if (detail.busy) return
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
@@ -278,7 +294,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun fail(reason: String) {
-        val id = openId ?: return
+        val id = currentId() ?: return
         detail = detail.copy(failReasons = null, busy = true, error = "")
         viewModelScope.launch {
             try {
@@ -294,7 +310,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun release() {
-        val id = openId ?: return
+        val id = currentId() ?: return
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
@@ -408,7 +424,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * يُفعَّل الإعداد، **ومن حرّك أوّلا** ردّه بخطأ وهو يحمل الصورة.
      */
     fun sendProof(jpeg: ByteArray, point: LastPoint.Point?) {
-        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        val id = currentId() ?: return
         if (detail.busy) return
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
@@ -427,7 +443,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **يعيد الطلب إلى الطابور** — قبل أن يستلم البضاعة. */
     fun releaseCurrent() {
-        openId = openId ?: state.mine.firstOrNull()?.id
+        openId = currentId()
         release()
     }
 
@@ -456,7 +472,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * كلّ تحديثٍ لا يثقل عليه: **من مشى خطوةً قرأ الجوابَ المخزّن.**
      */
     private suspend fun loadRoute() {
-        val id = openId ?: state.mine.firstOrNull()?.id
+        val id = currentId()
         if (id == null) {
             route = null
             return
@@ -467,14 +483,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **يقرأ ما ينتظره في طلبه الحاليّ** — وفشلُه صامت. */
     private suspend fun loadChatBadge() {
-        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        val id = currentId() ?: return
         runCatching { backend.chat.threads().threads }
             .onSuccess { rows -> chatUnread = rows.firstOrNull { it.orderId == id }?.unread ?: 0 }
     }
 
     /** **يعيد قراءة الحديث المفتوح** — بلا وميضِ تحميلٍ ولا فقدِ ما كُتب. */
     private fun reloadChat() {
-        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        val id = currentId() ?: return
         viewModelScope.launch {
             runCatching { backend.chat.thread(id) }.onSuccess { th ->
                 chat = ChatState(
@@ -489,7 +505,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openChat() {
-        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        val id = currentId() ?: return
         chat = ChatState(busy = true)
         viewModelScope.launch { loadChat(id) }
     }
@@ -499,7 +515,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sendMessage(body: String) {
-        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        val id = currentId() ?: return
         if (body.isBlank()) return
         viewModelScope.launch {
             try {
@@ -546,7 +562,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **يبلّغ العمليات** — ثمّ يُغلق النافذة ويعيد القراءة. */
     fun emergency(point: LastPoint.Point?) {
-        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        val id = currentId() ?: return
         emergencyOpen = false
         viewModelScope.launch {
             runCatching { backend.driver.emergency(id, point?.lat, point?.lng) }
@@ -568,7 +584,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **يوثّق ما اتُّفق عليه** — ثمّ يعيد قراءة الطلب بسعره الجديد. */
     fun agree(goods: Long, fee: Long) {
-        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        val id = currentId() ?: return
         agreeOpen = false
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
