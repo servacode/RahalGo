@@ -777,9 +777,19 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
                 **وملاصقةٌ للرقم في صندوقٍ واحد** — `ms-auto` تدفع
                 الصندوقَ كلَّه إلى طرف السطر، **فلو وقعت خارجَه لَبقيت
-                عند الشارة وبينهما فراغُ السطر كلِّه.** */}
+                عند الشارة وبينهما فراغُ السطر كلِّه.**
+
+                **وفي السجلّ وحدَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
+                «أيقونة الطباعة فقط في السجلّ»).
+
+                **وشاشةُ العمل طلباتٌ لم تنتهِ**: ورقةٌ تُطبع لطلبٍ ما
+                زال في المطبخ **تُثبت ما لم يقع بعد**، وأرقامُها تتبدّل
+                قبل أن تبرد. **وبابٌ يُفتح في وقتٍ لا ينفع فيه** يزاحم
+                أزراراً تنفع الآن. */}
             <span className="ms-auto flex items-center gap-2">
-              {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} />}
+              {!live && !NO_INVOICE.has(o.status) && (
+                <InvoiceButton order={o} />
+              )}
               <OrderRef number={o.number} at={o.created_at} />
             </span>
           </span>
@@ -1035,19 +1045,33 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           **وفي السجلّ وحدَه**: شاشةُ العمل حالاتُها جاريةٌ كلُّها
           معروضة — **ولا حالَ منتهيةً فيها تُعَدّ.** */}
       {!live && counts && (
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-          {[...CLOSED_STATUSES].map((k) => {
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {/* ══════════════════════════════════════════════════════
+              **و«الكلّ» بطاقةٌ أولى لا ضغطةٌ ثانيةٌ تُطفئ**
+              ══════════════════════════════════════════════════════
+
+              (قرارُ المالك ٢٠٢٦-٠٨-١٣: «وهون نسيان كرت الكلّ».)
+
+              **كنتُ جعلتُ الضغطةَ الثانيةَ تُلغي الترشيح** ظنّاً أنّ
+              زرّاً أقلُّ أبسط. **والخفيُّ ليس أبسط**: من ضغط «مرفوض»
+              ثمّ أراد الكلَّ **لا شيءَ يقول له كيف يعود** — يبحث عن
+              زرٍّ لا يجده، أو يعيد تحميل الصفحة.
+
+              **والمجموعُ خبرٌ في نفسه**: كم طلباً في السجلّ أصلاً —
+              **ولا يقوله جمعُ خمسةِ أرقامٍ بالعين.**
+
+              **وأوّلاً في السطر** — يمينا في العربيّة: تُقرأ الجملةُ
+              «الكلّ ثمّ تفصيلُه» لا «تفصيلٌ ثمّ كلّ». */}
+          {[""].concat([...CLOSED_STATUSES]).map((k) => {
             const on = status === k;
+            const all = k === "";
             return (
               <button
-                key={k}
+                key={k || "all"}
                 type="button"
                 aria-pressed={on}
-                /* **والضغطةُ الثانيةُ تُطفئ** — مُرشِّحٌ يُشعَل ولا
-                   يُطفَأ إلّا بزرٍّ ثالثٍ اسمُه «الكلّ» **يزيد زرّاً
-                   ليُلغي زرّا.** */
                 onClick={() => {
-                  setStatus(on ? "" : k);
+                  setStatus(k);
                   setPage(1);
                 }}
                 className={`rounded-card border p-3 text-start transition-colors ${
@@ -1057,13 +1081,19 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 }`}
               >
                 <span className="block text-xs text-ink-muted">
-                  {STATUS_LABELS[k] ?? k}
+                  {all
+                    ? m.admin.ordersPage.allStatuses
+                    : (STATUS_LABELS[k] ?? k)}
                 </span>
                 {/* **والرقمُ هو الخبر** — فيقع أكبرَ ممّا يسمّيه. */}
                 <span
                   className={`figure block ${on ? "text-accent-text" : "text-ink"}`}
                 >
-                  {fmtNum(counts[k] ?? 0)}
+                  {fmtNum(
+                    all
+                      ? Object.values(counts).reduce((a, b) => a + b, 0)
+                      : (counts[k] ?? 0),
+                  )}
                 </span>
               </button>
             );
