@@ -33,7 +33,6 @@ import {
   IconSearch,
   IconUser,
   IconStore,
-  IconChat,
   IconWallet,
   IconDriver,
   IconCamera,
@@ -901,14 +900,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       /* **والبطاقةُ تجمع الاثنين**: القائمةُ تُقرأ بلا ضغطة، **وبابُ الورقة
          تحتها لمن يطبع.** فمن قرأ لا يضغط، ومن أراد ورقةً وجد بابَها حيث
          نظر — **لا في شاشةٍ أخرى.** */
-      cell: (o) => (
-        <span className="flex w-full flex-col gap-2">
-          <InvoiceList o={o} />
-          <span className="flex justify-end">
-            <InvoiceButton order={o} />
-          </span>
-        </span>
-      ),
+      // **ولا زرَّ فاتورةٍ في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+      // **والقائمةُ فوقه تقول ما فيه**، والزرُّ يبقى في الجدول حيث لا
+      // تُعرض القائمة.
+      cell: (o) => <InvoiceList o={o} />,
     },
     {
       // **السائق وأجرُه — أو أجرةُ التوصيل قبل أن يُسنَد أحد.**
@@ -977,29 +972,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         );
       },
     },
-    {
-      // ══════════════════════════════════════════════════════════════════
-      // **وحديثُ الطرفين — يُقرأ عند الخلاف**
-      // ══════════════════════════════════════════════════════════════════
-      //
-      // (قرارُ المالك ٢٠٢٦-٠٨-١٠: «يجب أن نضيف دردشات الزبائن والسائقين —
-      //  في حال حصول أيّ تجاوزٍ يمكننا الرجوع إليه».)
-      //
-      // **كانت شكوى «قال لي كذا» كلمةً ضدّ كلمة**: الحديثُ مكتوبٌ في
-      // القاعدة **ولا بابَ إليه من هنا** — فتحكم العملياتُ بين اثنين لا
-      // تملك عن أيّهما شيئاً.
-      //
-      // **ويُجلَب بطلبٍ لا مع كلّ صفّ**: عشرون طلباً في الشاشة تعني عشرين
-      // نداءً لحديثٍ لا يُقرأ منه واحد.
-      //
-      // **ولا يظهر لطلبٍ لا حديثَ له** — سائقٌ لم يُسند بعد.
-      id: "chat",
-      header: m.chat.archiveTitle,
-      icon: <IconChat />,
-      block: true,
-      hide: (o: OrderRow) => !DRIVER_STATUSES.has(o.status) && !o.driver_name,
-      cell: (o) => <OrderChatAudit orderID={o.id} />,
-    },
+    /* **ولا حديثَ في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «دردشاتي
+       السابقة احذفها من الكرت الخاصّ بالطلبات»). **والمحادثةُ تُراجَع حين
+       تُطلب**، ولا تُفتح مع كلّ صفٍّ يُقرأ. */
     {
       id: "note",
       header: m.admin.ordersPage.customerNote,
@@ -2101,61 +2076,3 @@ function InvoiceButton({ order }: { order: OrderRow }) {
   );
 }
 
-/**
- * **حديثُ الطلب في لوحة الإدارة — يُقرأ ولا يُكتب.**
- *
- * **ولا يُجلَب حتّى يُطلب**: زرٌّ يفتحه. **وعشرون طلباً في الشاشة تعني عشرين
- * نداءً لحديثٍ لا يُقرأ منه واحد.**
- *
- * **وبقائله لا بـ«لي/له»**: من ليس طرفاً لا معنى لـ«رسالتي» عنده — **فيُكتب
- * الاسمُ والدور**، وهو ما يُحتجّ به.
- */
-function OrderChatAudit({ orderID }: { orderID: string }) {
-  const [thread, setThread] = useState<{
-    customer: string;
-    driver: string;
-    lines: { id: string; body: string; role: string; sender: string; created_at: string }[];
-  } | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  if (!thread) {
-    return (
-      <Button
-        variant="secondary"
-        disabled={busy}
-        onClick={() => {
-          setBusy(true);
-          void api<typeof thread>(`/api/v1/admin/orders/${orderID}/chat`)
-            .then(setThread)
-            // @empty-ok **وحديثٌ لا يُجلب لا يُسقط البطاقة** — الطلبُ يُقرأ بلا حديثه.
-            .catch(() => setThread({ customer: "", driver: "", lines: [] }))
-            .finally(() => setBusy(false));
-        }}
-        className="flex items-center gap-1.5"
-      >
-        <IconChat size={15} />
-        {m.chat.archiveTitle}
-      </Button>
-    );
-  }
-
-  if (thread.lines.length === 0) {
-    return <span className="text-xs text-ink-muted">{m.chat.empty}</span>;
-  }
-
-  return (
-    <ul className="space-y-1.5">
-      {thread.lines.map((l) => (
-        <li key={l.id} className="surface-inset px-3 py-2 text-xs">
-          <span className="flex items-center justify-between gap-2 text-2xs text-ink-muted">
-            <span className="font-medium text-ink">
-              {l.sender || (l.role === "driver" ? thread.driver : thread.customer)}
-            </span>
-            <span dir="ltr">{fmtDateTime(l.created_at)}</span>
-          </span>
-          <p className="mt-1 whitespace-pre-wrap break-words text-ink">{l.body}</p>
-        </li>
-      ))}
-    </ul>
-  );
-}
