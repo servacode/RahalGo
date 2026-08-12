@@ -178,9 +178,9 @@
     <string name="trip_s_at_customer">وصلت الزبون</string>
     <string name="trip_s_delivered">سلّمت</string>
     <string name="trip_remaining">ما بقي</string>
-    <string name="trip_p_to_store">الطريق إلى المتجر</string>
+    <string name="trip_p_to_store">الطريق إلى %1$s</string>
     <string name="trip_p_at_store">وصلت المتجر</string>
-    <string name="trip_p_to_customer">الطريق إلى الزبون</string>
+    <string name="trip_p_to_customer">الطريق إلى %1$s</string>
     <string name="trip_p_at_customer">وصلت الزبون</string>
     <string name="trip_p_delivered">سلّمت الطلب</string>
     <!-- الإشعارات -->

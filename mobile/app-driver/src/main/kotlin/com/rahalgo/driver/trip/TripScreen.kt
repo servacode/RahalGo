@@ -666,8 +666,26 @@ private fun PhaseRibbon(state: TripState) {
             .padding(horizontal = 20.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // ══════════════════════════════════════════════════════════════
+        // **والوجهةُ باسمها لا بصفتها**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (وهو ما قرّره المالكُ في بطاقة الطلب ٢٠٢٦-٠٨-١٢: «ما في داعي
+        //  لكلمة المتجر» — واللوحُ أولى به: **هو ما يُقرأ وهو يقود.**)
+        //
+        // **و«الطريق إلى الزبون» لا تقول لمن يحمل ثلاثة طلبات أيَّها
+        // هذا** — و«ابوطيف» تقول.
+        val name = if (state.step >= TripStep.PICKED_UP) {
+            state.order?.customerName.orEmpty().ifBlank {
+                stringResource(R.string.detail_customer)
+            }
+        } else {
+            state.order?.merchantName.orEmpty().ifBlank {
+                stringResource(R.string.card_custom)
+            }
+        }
         Text(
-            text = stringResource(phaseLabel(state.step)),
+            text = stringResource(phaseLabel(state.step), name),
             color = Color.White,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
