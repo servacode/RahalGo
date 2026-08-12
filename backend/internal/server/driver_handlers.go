@@ -302,11 +302,18 @@ const driverOrderSelect = `
 	       -- **واسمُ الحيّ لا الإحداثيات**: «حي الروضة» يعرفه السائقُ
 	       -- في لحظة، **و«35.95, 39.00» لا يقول له شيئاً.**
 	       --
-	       -- **وحيُّ المتجر يُقرأ من موضعه داخل المناطق** — لا عمودَ له،
-	       -- **والمناطقُ مرسومةٌ أصلاً** بمضلّعاتها في جدول المناطق.
+	       -- **وحيُّ المتجر يُقرأ من موضعه داخل المناطق** — لا عمودَ له.
+	       --
+	       -- **والمناطقُ دوائرُ لا مضلّعات**: مركزٌ ونصفُ قطر — والترحيلُ
+	       -- التاسعُ حذف عمودَ المضلّع. **وسؤالُها به يردّ خمسمئة**
+	       -- (وقع وقيس ٢٠٢٦-٠٨-١٢ على جهازٍ حقيقيّ).
+	       --
+	       -- **وأقربُ مركزٍ يشمله** — فمن وقع في تداخلِ دائرتين نُسب
+	       -- إلى أقربهما إليه.
 	       COALESCE((SELECT z.name FROM delivery_zones z
 	                 WHERE z.active AND m.location IS NOT NULL
-	                   AND ST_Contains(z.polygon::geometry, m.location::geometry)
+	                   AND ST_DWithin(z.center, m.location, z.radius_m)
+	                 ORDER BY ST_Distance(z.center, m.location)
 	                 LIMIT 1), ''),
 	       -- **وحيُّ الزبون من منطقة الطلب** — هي التي حُسبت عليها أجرتُه.
 	       COALESCE((SELECT z.name FROM delivery_zones z WHERE z.id = o.zone_id), '')

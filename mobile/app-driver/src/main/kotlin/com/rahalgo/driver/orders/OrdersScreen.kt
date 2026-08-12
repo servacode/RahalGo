@@ -356,7 +356,13 @@ private fun OrderCard(
                 if (order.toPickupM >= 0) {
                     Metric(
                         icon = R.drawable.ic_arrow_send,
-                        label = stringResource(R.string.card_to_you),
+                        // **«إلى المتجر» لا «إليك»** — (تصحيح المالك
+                        // ٢٠٢٦-٠٨-١٢: «شفت مكتوب إليك ما فهمت المعنى»).
+                        //
+                        // **والمسافتان تُقاسان من طرفين مختلفين**: هذه
+                        // من موضعك إلى المتجر، **والثانية من المتجر إلى
+                        // باب الزبون** — لا من موضعك إليه.
+                        label = stringResource(R.string.card_to_store),
                         value = distance(order.toPickupM),
                         modifier = Modifier.weight(1f),
                     )
@@ -364,7 +370,7 @@ private fun OrderCard(
                 if (order.legM >= 0) {
                     Metric(
                         icon = R.drawable.ic_arrow_send,
-                        label = stringResource(R.string.order_leg),
+                        label = stringResource(R.string.card_to_customer),
                         value = distance(order.legM),
                         modifier = Modifier.weight(1f),
                     )

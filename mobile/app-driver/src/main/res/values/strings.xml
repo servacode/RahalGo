@@ -211,7 +211,7 @@
     <string name="card_custom">طلب خاصّ</string>
     <string name="card_from_store">من المتجر</string>
     <string name="card_to_customer">إلى الزبون</string>
-    <string name="card_to_you">إليك</string>
+    <string name="card_to_store">إلى المتجر</string>
     <string name="card_fee">أجرة التوصيل</string>
     <string name="card_payment">الدفع</string>
     <string name="card_cash">نقدي</string>
