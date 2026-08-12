@@ -446,6 +446,7 @@ private fun SignedIn(onLogout: () -> Unit) {
                         send = orders::sendMessage,
                         close = orders::closeChat,
                     ),
+                    chatUnread = orders.chatUnread,
                 )
 
                 tab == 2 -> HomeScreen(

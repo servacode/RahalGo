@@ -15,7 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.BrandTeal
 import com.rahalgo.design.InkMuted
@@ -115,28 +117,45 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
         }
 
         if (state.open) {
-            Row(
-                Modifier.fillMaxWidth().padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    placeholder = { Text(stringResource(R.string.chat_hint)) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                )
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        actions.send(draft.trim())
-                        draft = ""
-                    },
-                    enabled = draft.isNotBlank() && !state.busy,
-                ) {
-                    Text(stringResource(R.string.chat_send))
+            // ══════════════════════════════════════════════════════════
+            // **والإرسال أيقونةٌ في الحقل ومفتاحُ لوحةٍ معا**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢: «بدّل كلمة أرسل خلّيها أيقونة
+            //  داخل الحقل، وزرّ الإنتر يعطي إرسال أيضا للسهولة — وهو
+            //  فاتح الكيبورد يكتب ويرسل».)
+            //
+            // **ولوحةُ المفاتيح تغطّي نصف الشاشة**: زرٌّ خارج الحقل قد
+            // يقع تحتها، **فيكتب ولا يجد أين يضغط** — ويده على مقود.
+            //
+            // **ومفتاحُ اللوحة يقول «إرسال» لا «تمّ»**: صورةُ المفتاح
+            // نفسِها تقول ما يفعل قبل أن يُضغط.
+            val send = {
+                val body = draft.trim()
+                if (body.isNotEmpty()) {
+                    actions.send(body)
+                    draft = ""
                 }
             }
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                placeholder = { Text(stringResource(R.string.chat_hint)) },
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                singleLine = true,
+                shape = RoundedCornerShape(24.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { send() }),
+                trailingIcon = {
+                    IconButton(onClick = send, enabled = draft.isNotBlank() && !state.busy) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_arrow_send),
+                            contentDescription = stringResource(R.string.chat_send),
+                            tint = if (draft.isBlank()) InkMuted else BrandTeal,
+                        )
+                    }
+                },
+            )
         } else {
             // **وحديثٌ مغلقٌ يُقال إنّه مغلق** — لا حقلُ كتابةٍ لا يعمل.
             Text(
@@ -155,14 +174,36 @@ private fun Bubble(message: ChatMessage) {
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
-        Text(
-            text = message.body,
-            color = if (mine) Color.White else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier
+        Column(
+            Modifier
                 .clip(RoundedCornerShape(14.dp))
                 .background(if (mine) BrandTeal else Color(0xFFF0F3F5))
                 .padding(horizontal = 14.dp, vertical = 10.dp),
-        )
+            horizontalAlignment = Alignment.End,
+        ) {
+            Text(
+                text = message.body,
+                color = if (mine) Color.White else MaterialTheme.colorScheme.onSurface,
+            )
+            // ══════════════════════════════════════════════════════════
+            // **وعلامةُ القراءة على ما كتبتُه أنا وحدَه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرار المالك ٢٠٢٦-٠٨-١٢.)
+            //
+            // **ومن كتب ولا يدري أوصلت أم لا** يكتبها ثانيةً، أو يقف
+            // ينتظر جوابا **وصاحبُه لم يفتح الشاشة أصلا.**
+            //
+            // **وعلى رسائل الآخر لا معنى لها**: «قُرئت» على ما كتبه هو
+            // خبرٌ عنّي أنا، وأنا أراه الآن.
+            if (mine) {
+                Text(
+                    text = if (message.readAt != null) "✓✓" else "✓",
+                    color = Color.White.copy(alpha = if (message.readAt != null) 1f else 0.55f),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
     }
 }
 

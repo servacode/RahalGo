@@ -30,4 +30,21 @@ data class ChatMessage(
     /** **أهي منّي؟** — يقرّرها المحرّك لا الشاشة. */
     val mine: Boolean = false,
     @SerialName("created_at") val createdAt: String = "",
+    /**
+     * **متى قرأها الطرف الآخر** — وفارغٌ يعني لم تُقرأ بعد.
+     *
+     * **ولرسائلي وحدَها معنى**: من رأى «قُرئت» على ما كتبه الآخر قرأ
+     * خبرا عن نفسه.
+     */
+    @SerialName("read_at") val readAt: String? = null,
+)
+
+/** **قائمة محادثاتي** — ومنها تُقرأ الشارة. */
+@Serializable
+data class ChatThreads(val threads: List<ChatThreadRow> = emptyList())
+
+@Serializable
+data class ChatThreadRow(
+    @SerialName("order_id") val orderId: String = "",
+    val unread: Int = 0,
 )

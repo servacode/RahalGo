@@ -58,7 +58,13 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         backend.live.start(
             scope = viewModelScope,
             onState = { up -> Log.i("RahalGo/live", if (up) "الوصلة قامت" else "الوصلة انقطعت") },
-            onEvent = { refresh() },
+            onEvent = {
+                refresh()
+                // **والحديثُ المفتوح يُعاد قراءته** — الإشارةُ تقول
+                // «تغيّر شيء»، **ومن أعاد القائمة وحدَها** ترك صاحبَه
+                // ينظر إلى حديثٍ لا يتحرّك وقد وصلته رسالة.
+                if (chat != null) reloadChat()
+            },
         )
     }
 
@@ -79,6 +85,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * القائمة **لرأى شاشة رحلة فارغة لحظة** ثمّ امتلأت أمامه.
      */
     private suspend fun load() {
+        // **وشارةُ الحديث تُقرأ مع كلّ تحديث** — والوصلةُ الحيّة تنادي
+        // التحديث، **فما يصل يُرى في ثانيته لا في فتحةٍ تالية.**
+        loadChatBadge()
         state = try {
             state.copy(
                 offers = backend.driver.queue(),
@@ -378,6 +387,41 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var chat by mutableStateOf<ChatState?>(null)
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **شارةُ الحديث — كم ينتظرك فيه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرار المالك ٢٠٢٦-٠٨-١٢: «ولازم يطلع إشعار وعدّاد في حال وصلت
+    //  رسالة».)
+    //
+    // **ورسالةٌ تصل ولا شيء يقولها** تُقرأ بعد ساعة — والزبون ينتظر
+    // جوابا عن «الباب الثاني أم الأوّل؟»
+    var chatUnread by mutableStateOf(0)
+        private set
+
+    /** **يقرأ ما ينتظره في طلبه الحاليّ** — وفشلُه صامت. */
+    private suspend fun loadChatBadge() {
+        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        runCatching { backend.chat.threads().threads }
+            .onSuccess { rows -> chatUnread = rows.firstOrNull { it.orderId == id }?.unread ?: 0 }
+    }
+
+    /** **يعيد قراءة الحديث المفتوح** — بلا وميضِ تحميلٍ ولا فقدِ ما كُتب. */
+    private fun reloadChat() {
+        val id = openId ?: state.mine.firstOrNull()?.id ?: return
+        viewModelScope.launch {
+            runCatching { backend.chat.thread(id) }.onSuccess { th ->
+                chat = ChatState(
+                    messages = th.messages,
+                    peerName = th.peerName,
+                    open = th.open,
+                )
+                // **وما قُرئ لا يبقى في الشارة** — فتحُ الحديث يوسمه.
+                chatUnread = 0
+            }
+        }
+    }
+
     fun openChat() {
         val id = openId ?: state.mine.firstOrNull()?.id ?: return
         chat = ChatState(busy = true)
@@ -402,6 +446,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun loadChat(id: String) {
+        chatUnread = 0
         chat = try {
             val thread = backend.chat.thread(id)
             ChatState(

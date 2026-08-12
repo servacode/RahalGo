@@ -48,6 +48,7 @@ import com.rahalgo.design.BrandCanvas
 import com.rahalgo.design.BrandOrange
 import com.rahalgo.design.BrandTeal
 import com.rahalgo.design.InkDeep
+import com.rahalgo.design.StateRed
 import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.money
@@ -83,6 +84,8 @@ fun TripScreen(
     /** **الحديث المفتوح** — وفارغٌ يعني لوحا مطويّا. */
     chat: ChatState? = null,
     chatActions: ChatActions = ChatActions(send = {}, close = {}),
+    /** **كم رسالةً تنتظره** — وصفرٌ يعني لا شارة. */
+    chatUnread: Int = 0,
 ) {
     val order = state.order
     if (order == null) {
@@ -203,6 +206,7 @@ fun TripScreen(
                 onFollow = { follow = !follow },
                 onChat = actions.chat,
                 chatting = chat != null,
+                chatUnread = chatUnread,
                 onNavigate = actions.navigate,
             )
             // ══════════════════════════════════════════════════════════
@@ -360,6 +364,7 @@ private fun MapButtons(
     onFollow: () -> Unit,
     onChat: () -> Unit,
     chatting: Boolean,
+    chatUnread: Int,
     onNavigate: () -> Unit,
 ) {
     Row(
@@ -388,7 +393,13 @@ private fun MapButtons(
             // **وهو ما يُفتح فجأةً**: يتّصل الزبونُ ليقول «الباب الثاني»
             // — **فيكون في مرمى الإبهام دائما** لا يُبحث عنه في بطاقةٍ
             // قد تكون مطويّةً تحت.
-            MapButton(R.drawable.ic_chat, R.string.trip_chat, onChat, on = chatting)
+            MapButton(
+                icon = R.drawable.ic_chat,
+                label = R.string.trip_chat,
+                onClick = onChat,
+                on = chatting,
+                badge = chatUnread,
+            )
             Spacer(Modifier.height(10.dp))
             NavigateButton(onNavigate)
         }
@@ -402,22 +413,43 @@ private fun MapButton(
     label: Int,
     onClick: () -> Unit,
     on: Boolean = false,
+    /** **كم ينتظره خلف هذا الزرّ** — وصفرٌ يعني لا شارة. */
+    badge: Int = 0,
 ) {
-    Box(
-        Modifier
-            .size(52.dp)
-            .shadow(6.dp, CircleShape)
-            .clip(CircleShape)
-            .background(if (on) BrandTeal else BrandCanvas)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = stringResource(label),
-            tint = if (on) Color.White else InkDeep,
-            modifier = Modifier.size(24.dp),
-        )
+    Box(contentAlignment = Alignment.TopEnd) {
+        Box(
+            Modifier
+                .size(52.dp)
+                .shadow(6.dp, CircleShape)
+                .clip(CircleShape)
+                .background(if (on) BrandTeal else BrandCanvas)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = stringResource(label),
+                tint = if (on) Color.White else InkDeep,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        // **والشارةُ تطفو على حافّته** — كما في كلّ تطبيق: **ومن وضعها
+        // بجانبه** جعلها تُقرأ رقما آخر لا عدّ رسائل.
+        if (badge > 0) {
+            Box(
+                Modifier
+                    .clip(CircleShape)
+                    .background(StateRed)
+                    .padding(horizontal = 6.dp, vertical = 1.dp),
+            ) {
+                Text(
+                    text = if (badge > 9) "+9" else badge.toString(),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
     }
 }
 

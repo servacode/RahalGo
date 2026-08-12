@@ -2,6 +2,7 @@ package com.rahalgo.shared.driver
 
 import com.rahalgo.shared.model.ChatMessage
 import com.rahalgo.shared.model.ChatThread
+import com.rahalgo.shared.model.ChatThreads
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
 
@@ -15,6 +16,15 @@ class ChatApi(private val api: ApiClient) {
 
     suspend fun thread(orderId: String): ChatThread =
         api.call("/api/v1/orders/" + orderId + "/messages")
+
+    /**
+     * **محادثاتي وما ينتظرني في كلٍّ منها.**
+     *
+     * **ولماذا لا يُقرأ العددُ من الحديث نفسه**: فتحُ الحديث يوسمه
+     * مقروءا — **فالعددُ فيه صفرٌ دائما.** والشارةُ تُقرأ والحديثُ
+     * مطويّ.
+     */
+    suspend fun threads(): ChatThreads = api.call("/api/v1/my/chats")
 
     suspend fun send(orderId: String, body: String): ChatMessage =
         api.call(

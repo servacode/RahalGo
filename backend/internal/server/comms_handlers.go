@@ -49,7 +49,20 @@ func (s *Server) handleOrderMessages(w http.ResponseWriter, r *http.Request) {
 	}
 	if n, err := s.comms.MarkRead(r.Context(), p); err == nil && n > 0 {
 		// **والطرفُ الآخر يرى «قُرئت»** — فلا يعيد ما وصل.
-		s.touch("order", p.PeerID)
+		//
+		// ══════════════════════════════════════════════════════════════
+		// **والموضوعُ `user:` لا المعرّفُ عارياً**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **كان يُبثّ إلى موضوعٍ اسمُه معرّفُ المستخدم وحدَه** — ولا
+		// أحدَ يشترك فيه: الاشتراكُ في `user:<id>` و`driver:<id>`
+		// (`ws.go`). **فكانت إشارةُ الحديث تُرسَل إلى العدم**، ولا
+		// تتحدّث شاشةٌ إلّا حين يفتحها صاحبُها بيده.
+		//
+		// **وعطبٌ في اسم موضوعٍ لا يُرى في سجلّ**: النداءُ ينجح والبثُّ
+		// ينجح، **ولا مشترِكَ يسمع.** (أمسكه المالك ٢٠٢٦-٠٨-١٢:
+		// «ولا تنسَ التحديث اللحظيّ أيضا».)
+		s.touchUser(p.PeerID, "order")
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"messages": list,
@@ -95,7 +108,7 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 		Title: title, Body: clip(msg.Body, 120),
 		Entity: "order", EntityID: p.OrderID, Href: href,
 	})
-	s.touch("order", p.PeerID)
+	s.touchUser(p.PeerID, "order")
 	httpx.JSON(w, http.StatusCreated, msg)
 }
 
