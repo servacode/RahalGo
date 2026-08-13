@@ -1,6 +1,8 @@
 package com.rahalgo.driver.trip
 
 import androidx.compose.animation.AnimatedVisibility
+import com.rahalgo.driver.ui.Countdown
+import androidx.compose.foundation.layout.IntrinsicSize
 import com.rahalgo.design.Rahal
 import com.rahalgo.driver.ui.etaText
 import com.rahalgo.driver.ui.minutesShort
@@ -207,20 +209,28 @@ fun TripScreen(
         //
         // **ولافتةٌ لا شاشة**: يقرؤها بطرف عينه وهو يقود، **ويأخذها أو
         // يتركها — وهو حرّ.**
-        if (state.onRouteOffer != null) {
-            OnRouteBanner(
-                offer = state.onRouteOffer,
-                busy = state.busy,
-                onTake = { actions.takeOffer(state.onRouteOffer.id) },
-                onDismiss = actions.dismissOffer,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .statusBarsPadding()
-                    .padding(top = 96.dp),
-            )
-        }
-
         Column(Modifier.align(Alignment.BottomCenter)) {
+            // ══════════════════════════════════════════════════════════
+            // **وموضعُها فوق اللوح لا فوق شريط الخطوات**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (شكوى المالك ٢٠٢٦-٠٨-١٣ بلقطةٍ من جهازه: «الرسالةُ بمكانٍ
+            //  غير مناسب».)
+            //
+            // **كانت تحت الشريط العلويّ فتحجب خطواتِ رحلته** — الطورَ
+            // الذي هو فيه وما بقي منه. **ومن يقود يقرأ حالَه من هناك.**
+            //
+            // **والإبهامُ في أسفل الشاشة أصلاً** — على «اشتريتُ الطلب»
+            // و«لدي مشكلة». **وقرارٌ عاجلٌ يُطلب في أعلى الشاشة يحتاج
+            // يداً تترك المقود.**
+            if (state.onRouteOffer != null) {
+                OnRouteBanner(
+                    offer = state.onRouteOffer,
+                    busy = state.busy,
+                    onTake = { actions.takeOffer(state.onRouteOffer.id) },
+                    onDismiss = actions.dismissOffer,
+                )
+            }
             MapButtons(
                 follow = follow,
                 onRecenter = { recenter++ },
@@ -902,29 +912,77 @@ private fun OnRouteBanner(
     Column(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(Rahal.colors.brand)
             .padding(14.dp),
     ) {
-        Text(
-            text = stringResource(R.string.trip_on_route),
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.trip_on_route),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+            )
+            // ══════════════════════════════════════════════════════════
+            // **وعدّادُ المهلة كما في بطاقة الطلب**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «يقبل بشكلٍ سريع مع عدّاد وقت».)
+            //
+            // **والعرضُ ينقضي وإن لم تُعرض مهلتُه** — فمن قرأه ومضى ثمّ
+            // عاد ليضغط **وجد الطلبَ ذهب ولم يعرف أنّه كان يسابق.**
+            //
+            // **وهو العدّادُ نفسُه** (`ui/Countdown.kt`) — لا نسخةٌ
+            // ثانيةٌ تفترق في تنسيقها.
+            offer.offerExpiresAt?.let {
+                Countdown(it, onExpired = onDismiss, onColor = Color.White)
+            }
+        }
         Spacer(Modifier.height(2.dp))
         Text(
             text = offer.merchantName + " · " + money(offer.cashDue),
             color = Color.White.copy(alpha = 0.9f),
         )
         Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = onTake, enabled = !busy) {
-                Text(stringResource(R.string.order_accept))
-            }
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.trip_leave_offer), color = Color.White)
-            }
+        // ══════════════════════════════════════════════════════════════
+        // **والزرّان كزرّي البطاقة — «موافق» و«رفض»**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (تصحيحُ المالك ٢٠٢٦-٠٨-١٣: «زرُّ خذ واترك يجب أن يكون موافق
+        //  ورفض».)
+        //
+        // **وفعلٌ واحدٌ باسمين في شاشتين يُقرأ فعلين** — من تعلّم
+        // «موافق» في الطلبات يتردّد أمام «خذ الطلب» في الرحلة، **وهو
+        // يقود ومهلتُه تنقضي.**
+        //
+        // **ومتساويان في العرض** — لا زرٌّ كبيرٌ وآخرُ نصٌّ باهت:
+        // **الرفضُ قرارٌ كالقبول**، ومن ضيّق بابَه ضغط القبولَ ليمضي.
+        Row(
+            Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Button(
+                onClick = onTake,
+                enabled = !busy,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Rahal.colors.success,
+                    contentColor = Color.White,
+                ),
+            ) { Text(stringResource(R.string.order_agree)) }
+            Button(
+                onClick = onDismiss,
+                enabled = !busy,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Rahal.colors.danger,
+                    contentColor = Color.White,
+                ),
+            ) { Text(stringResource(R.string.order_decline)) }
         }
     }
 }

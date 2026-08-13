@@ -94,7 +94,6 @@
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
     <string name="order_cash_due">تقبض نقداً</string>
     <string name="order_prepaid">مدفوع سلفاً</string>
-    <string name="order_accept">خذ الطلب</string>
     <string name="status_dispatching">بانتظار سائق</string>
     <string name="status_assigned">بذمّتك — اذهب للمتجر</string>
     <string name="status_picked_up">استلمت الطلب</string>
@@ -216,7 +215,6 @@
     <string name="agree_fee">أجرة التوصيل</string>
     <string name="agree_confirm">وثّق</string>
     <string name="trip_on_route">طلب على طريقك</string>
-    <string name="trip_leave_offer">اتركه</string>
     <string name="order_agree">موافق</string>
     <string name="order_decline">رفض</string>
     <string name="err_offer_not_yours">هذا العرض لم يعد لك</string>

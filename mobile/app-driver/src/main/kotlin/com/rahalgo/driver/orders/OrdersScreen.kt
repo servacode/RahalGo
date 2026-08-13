@@ -1,6 +1,7 @@
 package com.rahalgo.driver.orders
 
 import androidx.compose.foundation.background
+import com.rahalgo.driver.ui.Countdown
 import com.rahalgo.design.Rahal
 import com.rahalgo.driver.ui.minutes
 import com.rahalgo.driver.ui.dist
@@ -647,52 +648,6 @@ private fun OrderCard(
     }
 }
 
-/**
- * **ما بقي من مهلة العرض** — يُعدّ كلّ ثانية.
- *
- * **ويحمرّ في آخر عشر ثوان** — القرار صار عاجلا، **ولون واحد طوال
- * المهلة لا يقول ذلك.**
- *
- * **وتاريخ لا يُقرأ لا يُعرض** — المحرّك يرسل `ISO-8601`، **ومن سقط
- * تحليله** يُترك السطر فارغا بدل «صفر ثانية» كاذبة.
- */
-@Composable
-private fun Countdown(expiresAt: String, onExpired: () -> Unit) {
-    val end = remember(expiresAt) {
-        runCatching { java.time.Instant.parse(expiresAt).toEpochMilli() }.getOrNull()
-    } ?: return
-
-    var left by remember(expiresAt) { mutableStateOf(end - System.currentTimeMillis()) }
-    LaunchedEffect(expiresAt) {
-        while (left > 0) {
-            kotlinx.coroutines.delay(1000)
-            left = end - System.currentTimeMillis()
-        }
-        onExpired()
-    }
-
-    if (left <= 0) {
-        Text(stringResource(R.string.offer_expired), color = Rahal.colors.inkMuted)
-        return
-    }
-
-    val seconds = (left / 1000).toInt()
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter = painterResource(R.drawable.ic_time),
-            contentDescription = null,
-            tint = if (seconds <= 10) Rahal.colors.accent else Rahal.colors.brand,
-            modifier = Modifier.size(14.dp),
-        )
-        Spacer(Modifier.size(5.dp))
-        Text(
-            text = stringResource(R.string.offer_left, "%d:%02d".format(seconds / 60, seconds % 60)),
-            color = if (seconds <= 10) Rahal.colors.accent else Rahal.colors.brand,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodySmall,
-        )
-    }
-}
 
 /** **شارة صغيرة** — أيقونة وكلمة. */
 @Composable
