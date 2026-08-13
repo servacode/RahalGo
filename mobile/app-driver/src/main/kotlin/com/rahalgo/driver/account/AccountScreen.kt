@@ -177,13 +177,19 @@ private fun Identity(vm: AccountViewModel, s: AccountState) {
     //
     // **ومقفلٌ عمداً**: تبديلُه ليس كتابةً في حقل — **رمزٌ يصل الرقمَ
     // الجديد ثمّ تأكيد.** وحقلٌ يُكتب فيه ولا يُحفظ يُقرأ عطبا.
-    OutlinedTextField(
+    // **وحقلُ الرقم المسجَّل من المركز أيضا** — بأيقونة الهاتف وشكلِ
+    // كتابته — (قرارُ المالك ٢٠٢٦-٠٨-١٣: «الرقم المسجَّل بحساب المستخدم
+    // يجب أن يُكتب بشكلٍ تلقائيٍّ بالحقل، وأيضاً طريقة كتابته والأيقونة
+    // الخاصّة بالهاتف»).
+    //
+    // **وحقلٌ مبنيٌّ باليد يفقد ما تحمله المركّبة** — أيقونتَه ومثالَه
+    // واتّجاهَ أرقامه، **فيفترق رقمٌ عن رقمٍ في التطبيق نفسِه.**
+    PhoneField(
         value = me.phone,
-        onValueChange = {},
+        onChange = {},
+        enabled = true,
+        label = R.string.acc_phone_current,
         readOnly = true,
-        label = { Text(stringResource(R.string.acc_phone_current)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(8.dp))
     PhoneChange(vm, s)

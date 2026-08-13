@@ -55,11 +55,20 @@ fun PhoneField(
      * هذه الملفّة.**
      */
     label: Int = R.string.login_phone,
+    /**
+     * **يُقرأ ولا يُكتب** — كحقل الرقم المسجَّل في شاشة الحساب.
+     *
+     * **وغيرُ `enabled = false`**: المعطَّلُ يبهت فيُقرأ «هذا الحقل
+     * لا يعنيك»، **والمقروءُ يبقى واضحاً كسائر الحقول** — إنّما لا
+     * تُكتب فيه. **وهو رقمُ صاحبه، يجب أن يراه بوضوح.**
+     */
+    readOnly: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
+        readOnly = readOnly,
         label = { Text(stringResource(label)) },
         // **وقالب لا رقم كامل** (`09xxxxxxxx`، طلب المالك ٢٠٢٦-٠٨-١١):
         // **رقم كامل معروض يُقرأ رقما حقيقيّا** — ومن رآه سأل: أهذا رقمي
