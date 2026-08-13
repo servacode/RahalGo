@@ -25,6 +25,20 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [
     { url: SITE, changeFrequency: "daily", priority: 1 },
+    // ══════════════════════════════════════════════════════════════════
+    // **وصفحاتُ المنصّة الثابتة — تُفهرَس وتُقرأ قبل التسجيل**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ووثيقةٌ قانونيةٌ لا يجدها محرّكُ البحث كأنّها غيرُ منشورة** — ومن
+    // بحث عن اسم المنصّة ليطمئنّ لم يجد شروطَها.
+    //
+    // **وغوغل بلاي يطلب رابطاً عامّاً لسياسة الخصوصيّة** — ورابطٌ لا
+    // يُفهرَس يُقبل، **لكنّ المراجعَ البشريَّ يفتحه.**
+    ...["terms", "privacy", "help", "about", "contact"].map((path) => ({
+      url: `${SITE}/${path}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    })),
   ];
   try {
     const res = await fetch(`${API}/api/v1/public/home`, { next: { revalidate: 3600 } });

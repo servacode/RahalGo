@@ -2751,7 +2751,10 @@
       "contactAddress": "عنوان المكتب",
       "contactMapHint": "موقع المكتب على الخريطة",
       "contactNoWay": "لم تُضبط وسائل التواصل بعد.",
-      "contactGo": "اذهب إلى العنوان"
+      "contactGo": "اذهب إلى العنوان",
+      "aboutTitle": "من نحن",
+      "aboutSubtitle": "من يقف خلف هذه المنصّة",
+      "driverHelpSubtitle": "دورةُ عملك خطوةً خطوة"
     },
     "custom": {
       "title": "طلب خاص",
@@ -2900,10 +2903,21 @@
     "nav": {
       "incoming": "طلبات قادمة",
       "tasks": "مهامّي",
-      "wallet": "المحفظة",
+      "wallet": "محفظتي",
       "account": "حسابي",
-      "history": "طلباتي السابقة",
-      "incentives": "هدفي ومكافآتي"
+      "history": "سجل الطلبات",
+      "incentives": "أهدافي والمكافآت",
+      "ratings": "تقييماتي",
+      "chats": "دردشاتي السابقة",
+      "complaints": "الشكاوى والبلاغات",
+      "help": "التعليمات",
+      "about": "من نحن",
+      "contact": "تواصل معنا",
+      "terms": "شروط الاستخدام",
+      "privacy": "سياسة الخصوصيّة",
+      "mine": "ما يخصّني",
+      "platform": "المنصّة",
+      "legal": "القانونيّة"
     },
     "shift": {
       "title": "الدوام",

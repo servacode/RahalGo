@@ -30,6 +30,10 @@ export interface Contact {
   help_text?: string;
   terms_text?: string;
   privacy_text?: string;
+  /** **من نحن** — صفحةٌ في الموقع والتطبيق معاً (٢٠٢٦-٠٨-١٣). */
+  about_text?: string;
+  /** **تعليماتُ السائق** — غيرُ تعليمات الزبون. */
+  driver_help_text?: string;
 }
 
 export async function getContact(): Promise<Contact | null> {

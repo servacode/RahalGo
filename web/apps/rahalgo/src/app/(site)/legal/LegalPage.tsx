@@ -33,7 +33,7 @@
  * مفتاحٌ نصيٌّ ويُختار المكوّنُ هنا**، والنصوصُ والهويّةُ بياناتٌ تعبر.
  */
 
-import { PageContainer, PageHeader, IconNote, IconLock, IconSupport, usePlatform } from "@rahalgo/ui";
+import { PageContainer, PageHeader, IconNote, IconLock, IconSupport, IconUsers, usePlatform } from "@rahalgo/ui";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import type { Contact } from "./contact";
 
@@ -70,7 +70,7 @@ function fill(text: string, c: Contact | null, platform: string): string {
 }
 
 /** أيقونةُ كلّ صفحة — **تُختار هنا لأنّ الدالّة لا تعبر إلى المتصفّح.** */
-const ICONS = { terms: IconNote, privacy: IconLock, help: IconSupport } as const;
+const ICONS = { terms: IconNote, privacy: IconLock, help: IconSupport, about: IconUsers } as const;
 
 export function LegalPage({
   kind,

@@ -20,6 +20,9 @@ import {
   IconStar,
   IconSupport,
   IconChat,
+  IconLock,
+  IconNote,
+  IconPhone,
   BootScreen,
 } from "@rahalgo/ui";
 import { PasswordGate, FIELD_ROLES_ARE_CUSTOMERS, PANEL_PATHS } from "@rahalgo/auth";
@@ -55,11 +58,29 @@ const NAV: ChromeNavItem[] = [
   // وحدَه، **ومن اشتُكي عليه ولا يعلم لا يُصلح شيئاً.**
   // **هدفُه ومكافآتُه** — وحافزٌ لا يُرى لا يحفّز.
   { href: "/driver/incentives", label: m.driver.nav.incentives, icon: IconStar },
-  { href: "/driver/reviews", label: m.terms.ratings, icon: IconStar },
-  { href: "/driver/complaints", label: m.terms.complaints, icon: IconSupport },
+  { href: "/driver/reviews", label: m.driver.nav.ratings, icon: IconStar },
+  { href: "/driver/complaints", label: m.driver.nav.complaints, icon: IconSupport },
   // **وسجلُّ محادثاته** — كالزبون: تُغلق بالتسليم، **والحجّةُ تُطلب بعده.**
-  { href: "/driver/chats", label: m.chat.archiveTitle, icon: IconChat },
+  { href: "/driver/chats", label: m.driver.nav.chats, icon: IconChat },
   { href: "/driver/account", label: m.driver.nav.account, icon: IconUser },
+  // ══════════════════════════════════════════════════════════════════════
+  // **وأبوابُ المنصّة — كما في قائمة التطبيق**
+  // ══════════════════════════════════════════════════════════════════════
+  //
+  // (أمرُ المالك ٢٠٢٦-٠٨-١٣: «يجب أن توحّد الويبَ بنفس الطريقة المتّبعة
+  //  بالتطبيق، ليكون التطبيقُ والويبُ متوافقين… نفس النموذج والتسميات
+  //  والشكل والأفعال والأسماء وكلّ شيء».)
+  //
+  // **وكانت لا بابَ لها في لوحته** — يقرؤها في التطبيق ولا يجدها في
+  // الموقع، **فيُقرآن منصّتين.**
+  //
+  // **والتعليماتُ تعليماتُ سائقٍ لا تعليماتُ زبون**: «كيف أطلب؟ اختر
+  // متجراً وأضِف إلى السلّة» تُقال لمن يشتري، **لا لمن يقود.**
+  { href: "/driver/help", label: m.driver.nav.help, icon: IconSupport },
+  { href: "/about", label: m.driver.nav.about, icon: IconUser },
+  { href: "/contact", label: m.driver.nav.contact, icon: IconPhone },
+  { href: "/terms", label: m.driver.nav.terms, icon: IconNote },
+  { href: "/privacy", label: m.driver.nav.privacy, icon: IconLock },
 ];
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
