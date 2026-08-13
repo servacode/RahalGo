@@ -52,6 +52,19 @@ sealed interface Overlay {
     /** **محفظتُه** — تُفتح من رقاقة رصيده. */
     data object Wallet : Overlay
 
+    /**
+     * **صندوقُ إشعاراته** — يُفتح من الجرس.
+     *
+     * (شكوى المالك ٢٠٢٦-٠٨-١٣: «والمشكلة نفسُها بالإشعارات، لقد
+     *  نسيتَها أيضاً».)
+     *
+     * **وكان يُعرض براية منفصلة** (`home.inbox != null`) خارج هذه
+     * الحال — **فيُضغط التبويبُ ولا يستجيب.** وهو عينُ العطب الذي
+     * وُجدت هذه الملفّة لتمنعه، **ونُسيت الإشعاراتُ لأنّها كانت
+     * مبنيّةً قبلها.**
+     */
+    data object Inbox : Overlay
+
     /** **بندٌ من القائمة الجانبيّة.** */
     data class Menu(val item: MenuItem) : Overlay
 }
@@ -101,6 +114,7 @@ private fun encode(o: Overlay): String = when (o) {
     Overlay.Account -> "account"
     Overlay.Rating -> "rating"
     Overlay.Wallet -> "wallet"
+    Overlay.Inbox -> "inbox"
     is Overlay.Menu -> "menu:" + o.item.name
 }
 
@@ -108,6 +122,7 @@ private fun decode(s: String): Overlay = when {
     s == "account" -> Overlay.Account
     s == "rating" -> Overlay.Rating
     s == "wallet" -> Overlay.Wallet
+    s == "inbox" -> Overlay.Inbox
     s.startsWith("menu:") -> {
         // **وبندٌ لم يعد موجوداً يعود إلى لا شيء** — لا يُسقط التطبيق:
         // **إصدارٌ يُحذف منه قسمٌ وهاتفٌ يحمل اسمَه محفوظا.**

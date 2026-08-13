@@ -435,7 +435,7 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // ٢٠٢٦-٠٨-١٣: «نبني المحفظة بنفس الويب»). **وكانت
                 // تنقله إلى اللوحة** حيث سطرُ رصيدٍ لا كشفُ حساب.
                 onWallet = { overlay.show(Overlay.Wallet) },
-                onNotifications = home::openInbox,
+                onNotifications = { overlay.show(Overlay.Inbox); home.openInbox() },
                 onProfile = { overlay.show(Overlay.Account) },
                 onMenu = { scope.launch { drawer.open() } },
                 onRating = { overlay.show(Overlay.Rating) },
@@ -501,27 +501,12 @@ private fun SignedIn(onLogout: () -> Unit) {
                     },
                     label = { Text(stringResource(R.string.nav_orders)) },
                 )
-                // ══════════════════════════════════════════════════════
-                // **وسجلُّه تبويبٌ بجانب لوحته**
-                // ══════════════════════════════════════════════════════
+                // **ولا تبويبَ للسجلّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
+                // «احذف أيقونة السجلّ ما ظلّ إلها داعٍ صح، لأنّها صارت
+                // بالقائمة»).
                 //
-                // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «اجعله قسماً له أيقونةٌ
-                //  جانب الرئيسيّة، ثمّ لاحقاً نرى أين نضعه».)
-                //
-                // **وأيقونتُه ساعةٌ راجعةٌ لا قائمة**: القائمةُ أيقونةُ
-                // «الطلبات» المجاور، **وأيقونتان متشابهتان في شريطٍ
-                // واحدٍ تُضغط إحداهما بدل الأخرى.**
-                //
-                // **ولا يختفي بانصرافه**: سجلُّه ماضٍ لا يتبدّل
-                // بورديّته — **ومن انصرف يبقى يسأل عمّا عمل.**
-                NavigationBarItem(
-                    selected = tab == 3 && overlay.isClear,
-                    onClick = { overlay.clear(); tab = 3 },
-                    icon = {
-                        Icon(painterResource(R.drawable.ic_history), contentDescription = null)
-                    },
-                    label = { Text(stringResource(R.string.nav_history)) },
-                )
+                // **وبابان لشاشةٍ واحدةٍ يزاحمان** — والشريطُ السفليُّ
+                // لما يُفتح كلَّ دقيقة، **والسجلُّ يُفتح بسؤال.**
                 NavigationBarItem(
                     selected = tab == 2 && overlay.isClear,
                     onClick = { overlay.clear(); tab = 2; home.refresh() },
@@ -541,12 +526,6 @@ private fun SignedIn(onLogout: () -> Unit) {
                 bottom = padding.calculateBottomPadding(),
             ),
         ) {
-            // **وصندوق الإشعارات يغطّي** — يُقرأ ثمّ يُغلق.
-            val notices = home.inbox
-            if (notices != null) {
-                InboxSheet(items = notices, onClose = home::closeInbox)
-                return@Box
-            }
 
             // ══════════════════════════════════════════════════════════
             // **وحسابُه يغطّي التبويبَ ولا يصير تبويبا**
@@ -567,12 +546,25 @@ private fun SignedIn(onLogout: () -> Unit) {
             // **والسجلُّ مبنيٌّ فعلاً** فيُفتح من القائمة ولا يُبنى
             // مرّتين، **وما لم يُملأ يقول ذلك** ولا يُوهم بعطب.
             val over = overlay.current
+            // **ومن غادر الإشعاراتِ بأيّ طريقٍ أغلقها** — تبويباً أو
+            // رجوعاً أو قائمة. **وحالٌ تبقى محمّلةً تُعرض قديمةً حين
+            // يعود**، فيقرأ خبراً مضى.
+            LaunchedEffect(over) {
+                if (over != Overlay.Inbox) home.closeInbox()
+            }
             if (over != Overlay.None) {
                 BackHandler { overlay.clear() }
                 when (over) {
                     Overlay.Account -> AccountScreen(vm = accountVm, onLoggedOut = onLogout)
                     Overlay.Rating -> RatingScreen(vm = ratingVm)
                     Overlay.Wallet -> WalletScreen(vm = walletVm)
+                    // **وصندوقُ الإشعارات يُقرأ ثمّ يُغلق** — وفارغٌ
+                    // حتّى يصل، **فلا تُعرض قائمةٌ فارغةٌ على أنّها
+                    // «لا إشعارات».**
+                    Overlay.Inbox -> InboxSheet(
+                        items = home.inbox.orEmpty(),
+                        onClose = { overlay.clear() },
+                    )
                     is Overlay.Menu ->
                         if (over.item == MenuItem.History) {
                             HistoryScreen(vm = historyVm)
@@ -628,8 +620,6 @@ private fun SignedIn(onLogout: () -> Unit) {
                     ),
                     chatUnread = orders.chatUnread,
                 )
-
-                tab == 3 -> HistoryScreen(vm = historyVm)
 
                 tab == 2 -> HomeScreen(
                     state = home.state,

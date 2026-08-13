@@ -377,7 +377,6 @@
     <string name="map_region">الرقّة</string>
 
     <!-- ══ سجلُّ الطلبات ══ -->
-    <string name="nav_history">السجلّ</string>
     <string name="hist_done">سُلِّم</string>
     <string name="hist_failed">تعذّر</string>
     <string name="hist_search">ابحث برقم الطلب أو المتجر</string>
