@@ -683,8 +683,25 @@ private fun TripPanel(state: TripState) {
             } else {
                 order.merchantName.ifBlank { stringResource(R.string.card_custom) }
             }
+            // ══════════════════════════════════════════════════════════
+            // **والخاصُّ قبل الشراء لا وجهةَ له**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نغلق الطلبَ الخاصَّ أوّلاً».)
+            //
+            // **كان يُكتب «الطريق إلى طلب خاصّ»** — واسمُ المتجر فيه
+            // هو الكلمةُ «طلب خاصّ» نفسُها. **فتُقرأ الجملةُ طريقاً إلى
+            // مكانٍ اسمُه «طلب خاصّ».**
+            //
+            // **وما يفعله في هذا الطور محادثةٌ واتّفاقٌ ثمّ شراء** —
+            // لا سيرٌ إلى موضع. **فيُقال له ذلك.**
+            val custom = order.kind == "custom"
             Text(
-                text = stringResource(phaseLabel(state.step), name),
+                text = if (custom && state.step < TripStep.PICKED_UP) {
+                    stringResource(R.string.trip_p_custom)
+                } else {
+                    stringResource(phaseLabel(state.step), name)
+                },
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
@@ -1147,7 +1164,7 @@ private fun TripCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val next = nextAction(order.status)
+                val next = nextAction(order.status, order.kind == "custom")
                 if (next != null) {
                     SmallAction(
                         icon = R.drawable.ic_check_circle,
@@ -1325,8 +1342,27 @@ data class NextAction(val status: String, val label: Int)
  * **والمحرّك يرفض أيّ قفزة** (`orders/statuses.go`) — فلو تأخّرت الشاشة
  * عن حاله الحقيقيّ ردّ خطأً ولم يقع شيء.
  */
-fun nextAction(status: String): NextAction? = when (status) {
-    "assigned" -> NextAction("at_pickup", R.string.step_at_pickup)
+fun nextAction(status: String, custom: Boolean = false): NextAction? = when (status) {
+    // ══════════════════════════════════════════════════════════════════
+    // **ولا «وصلتُ إلى المتجر» في الطلب الخاصّ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «ما في شيء اسمه وصلتُ للمتجر» —
+    //  وقرارُه ٢٠٢٦-٠٨-١٣: «نغلق الطلبَ الخاصَّ أوّلاً».)
+    //
+    // **لا متجرَ يقف عنده** — والمرحلةُ بعد الإسناد محادثةٌ واتّفاقٌ ثمّ
+    // شراء. **وخارطةُ المحرّك تقولها صراحة**: الخاصُّ يمضي من «أُسند»
+    // إلى «اشتريتُ» رأساً (`orders/statuses.go: customTransitions`).
+    //
+    // **وكان الزرُّ يرسل `at_pickup`** — وهو انتقالٌ لا تعرفه خارطةُ
+    // الخاصّ. **فيضغطه السائقُ فيُردّ ولا يفهم لماذا**: الشاشةُ تعرض
+    // خطوةً لا وجودَ لها في المحرّك.
+    "assigned" ->
+        if (custom) {
+            NextAction("picked_up", R.string.step_bought)
+        } else {
+            NextAction("at_pickup", R.string.step_at_pickup)
+        }
     "at_pickup" -> NextAction("picked_up", R.string.step_picked_up)
     "picked_up" -> NextAction("on_the_way", R.string.step_on_the_way)
     "on_the_way" -> NextAction("at_dropoff", R.string.step_at_dropoff)

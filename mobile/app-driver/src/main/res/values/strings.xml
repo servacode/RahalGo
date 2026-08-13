@@ -173,6 +173,8 @@
     <string name="leg_done">تم التسليم</string>
     <string name="trip_p_to_store">الطريق إلى %1$s</string>
     <string name="trip_p_at_store">وصلت المتجر</string>
+    <!-- **والخاصُّ قبل الشراء**: اتّفاقٌ ثمّ شراء، لا سيرٌ إلى متجر. -->
+    <string name="trip_p_custom">اتّفق مع الزبون ثمّ اشترِ</string>
     <string name="trip_p_to_customer">الطريق إلى %1$s</string>
     <string name="trip_p_at_customer">وصلت الزبون</string>
     <string name="trip_p_delivered">سلّمت الطلب</string>
@@ -503,6 +505,8 @@
     <string name="card_custom_price">السعر يُتّفق عليه</string>
     <string name="card_agreed_later">تُتّفق</string>
     <string name="card_custom_pay">تشتري وتستردّ</string>
+    <!-- **واسمُ الفعل كما في الويب** — «اشتريتُ الطلب» لا «استلمت». -->
+    <string name="step_bought">اشتريتُ الطلب</string>
 
     <!-- إرجاعُ البضاعة -->
     <string name="hist_return">سلّمتُ البضاعة للمتجر</string>

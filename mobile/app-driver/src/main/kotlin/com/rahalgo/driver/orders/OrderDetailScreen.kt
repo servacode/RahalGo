@@ -113,7 +113,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
         }
 
         Spacer(Modifier.height(22.dp))
-        val next = nextStep(order.status)
+        val next = nextStep(order.status, order.kind == "custom")
         if (next != null) {
             Button(
                 onClick = { actions.step(next.to) },
@@ -219,8 +219,11 @@ private fun Field(label: String, value: String, strong: Boolean = false) {
 }
 
 /** الخطوة التالية في السلسلة — **وفارغ يعني لا خطوة له.** */
-private fun nextStep(status: String): Step? = when (status) {
-    "assigned" -> Step("at_pickup", R.string.step_at_pickup)
+private fun nextStep(status: String, custom: Boolean = false): Step? = when (status) {
+    // **ولا «وصلتُ إلى المتجر» في الخاصّ** — انظر `TripScreen.nextAction`.
+    "assigned" ->
+        if (custom) Step("picked_up", R.string.step_bought)
+        else Step("at_pickup", R.string.step_at_pickup)
     "at_pickup" -> Step("picked_up", R.string.step_picked_up)
     "picked_up" -> Step("on_the_way", R.string.step_on_the_way)
     "on_the_way" -> Step("at_dropoff", R.string.step_at_dropoff)
