@@ -65,6 +65,7 @@ fun TopBar(
     onWallet: () -> Unit,
     onNotifications: () -> Unit,
     onProfile: () -> Unit,
+    onRating: () -> Unit,
 ) {
     Row(
         Modifier
@@ -126,6 +127,15 @@ fun TopBar(
                     Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(BrandOrange.copy(alpha = 0.10f))
+                        // **وضغطُه يفتح تقييماته** — (قرارُ المالك
+                        // ٢٠٢٦-٠٨-١٣: «عند النقر عليه يفتح صفحة التقييم
+                        // كما هي بالويب، فيعرف ما هي التقييمات التي
+                        // حصل عليها ومن أين»).
+                        //
+                        // **ورقمٌ بلا تفصيلٍ يُقلق ولا يُعلّم**: من نزل
+                        // تقييمُه من ٥ إلى ٤٫٢ **لا يعرف أيَّ بابٍ كان
+                        // ولا ماذا قيل**، فيسأل عمّا فعل ولا جواب.
+                        .clickable(onClick = onRating)
                         .padding(horizontal = 10.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -147,14 +157,12 @@ fun TopBar(
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    Spacer(Modifier.size(4.dp))
-                    // **والعدد بجانبه** — «٤٫٨ من تقييمين» غير «٤٫٨ من
-                    // مئتين»، **والأوّل يتبدّل بتقييم واحد.**
-                    Text(
-                        text = "(" + ratingCount + ")",
-                        color = InkMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    // **ولا عددَ بجانبه** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
+                    // «احذف عدد التقييمات من الأعلى، اترك التقييم
+                    // فقط»).
+                    //
+                    // **وموضعُه الصفحةُ التي تُفتح بضغطه** — هناك
+                    // يُقرأ مع ما يشرحه: من قيّم وكم ومتى.
                 }
             } else {
                 Text(

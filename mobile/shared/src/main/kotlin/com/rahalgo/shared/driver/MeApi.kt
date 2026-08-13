@@ -1,6 +1,7 @@
 package com.rahalgo.shared.driver
 
 import com.rahalgo.shared.model.Inbox
+import com.rahalgo.shared.model.Reputation
 import com.rahalgo.shared.model.WalletStatement
 import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
@@ -18,4 +19,12 @@ class MeApi(private val api: ApiClient) {
     }
 
     suspend fun wallet(): WalletStatement = api.call("/api/v1/my/wallet")
+
+    /**
+     * **سُمعتُه** — نجومُه ومن أعطاها وشكاواه.
+     *
+     * (`GET /api/v1/me/reputation` — والنداءُ نفسُه الذي تقرؤه شاشةُ
+     * الويب، **فلا يفترق ما يراه في الاثنتين.**)
+     */
+    suspend fun reputation(): Reputation = api.call("/api/v1/me/reputation")
 }

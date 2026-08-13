@@ -320,4 +320,13 @@
     <string name="acc_delete_cancel">تراجع</string>
     <string name="acc_deleted">حُذف حسابك</string>
     <string name="acc_bad_code">الرمز غير صحيح أو انتهى</string>
+
+    <!-- ══ شاشةُ التقييم ══ -->
+    <string name="rate_title">تقييماتي</string>
+    <string name="rate_count">من %1$d تقييماً</string>
+    <string name="rate_recent">آخر ثلاثين يوماً: %1$s</string>
+    <string name="rate_reviews">ما قاله الزبائن</string>
+    <string name="rate_no_reviews">لا تقييمات بعد</string>
+    <string name="rate_complaints">شكاوى عليك</string>
+    <string name="rate_none_yet">لم تُقيَّم بعد — أوّل تقييم يصلك بعد أوّل تسليم</string>
 </resources>

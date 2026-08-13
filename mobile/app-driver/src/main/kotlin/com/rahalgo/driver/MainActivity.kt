@@ -1,6 +1,8 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import com.rahalgo.driver.rating.RatingViewModel
+import com.rahalgo.driver.rating.RatingScreen
 import androidx.activity.compose.BackHandler
 import com.rahalgo.driver.account.AccountViewModel
 import com.rahalgo.driver.account.AccountScreen
@@ -259,9 +261,12 @@ private fun SignedIn(onLogout: () -> Unit) {
     // **وحسابُه يبقى مفتوحاً بعد دوران الشاشة** — من كتب اسمَه نصفاً ثمّ
     // أمال هاتفَه **لا يجد نفسَه في شاشةٍ أخرى.**
     var account by rememberSaveable { mutableStateOf(false) }
+    /** **وشاشةُ تقييماته** — تُفتح من نجمة الشريط. */
+    var rating by rememberSaveable { mutableStateOf(false) }
     val home: HomeViewModel = viewModel()
     val orders: OrdersViewModel = viewModel()
     val accountVm: AccountViewModel = viewModel()
+    val ratingVm: RatingViewModel = viewModel()
     val context = LocalContext.current
 
     // ══════════════════════════════════════════════════════════════════
@@ -360,7 +365,8 @@ private fun SignedIn(onLogout: () -> Unit) {
                 unread = home.unread,
                 onWallet = { tab = 2 },
                 onNotifications = home::openInbox,
-                onProfile = { account = true },
+                onProfile = { account = true; rating = false },
+                onRating = { rating = true; account = false },
             )
         },
         bottomBar = {
@@ -390,8 +396,8 @@ private fun SignedIn(onLogout: () -> Unit) {
                         // **وشريطٌ يُضغط ولا يستجيب أسوأُ من شريطٍ
                         // مخفيّ**: المخفيُّ يقول «لا مخرجَ هنا»،
                         // **والصامتُ يقول «معطّل».**
-                        selected = tab == 0 && !account,
-                        onClick = { account = false; tab = 0; orders.refresh() },
+                        selected = tab == 0 && !account && !rating,
+                        onClick = { account = false; rating = false; tab = 0; orders.refresh() },
                         icon = {
                             Icon(painterResource(R.drawable.ic_trip), contentDescription = null)
                         },
@@ -399,16 +405,16 @@ private fun SignedIn(onLogout: () -> Unit) {
                     )
                 }
                 NavigationBarItem(
-                    selected = tab == 1 && !account,
-                    onClick = { account = false; tab = 1; orders.refresh() },
+                    selected = tab == 1 && !account && !rating,
+                    onClick = { account = false; rating = false; tab = 1; orders.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_orders), contentDescription = null)
                     },
                     label = { Text(stringResource(R.string.nav_orders)) },
                 )
                 NavigationBarItem(
-                    selected = tab == 2 && !account,
-                    onClick = { account = false; tab = 2; home.refresh() },
+                    selected = tab == 2 && !account && !rating,
+                    onClick = { account = false; rating = false; tab = 2; home.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_home), contentDescription = null)
                     },
@@ -449,6 +455,13 @@ private fun SignedIn(onLogout: () -> Unit) {
                     vm = accountVm,
                     onLoggedOut = onLogout,
                 )
+                return@Box
+            }
+
+            // **وتقييماتُه تغطّي كذلك** — تُفتح من نجمته وتُغلق برجوعه.
+            if (rating) {
+                BackHandler { rating = false }
+                RatingScreen(vm = ratingVm)
                 return@Box
             }
 
