@@ -159,10 +159,27 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     fun openInbox() {
         viewModelScope.launch {
             inbox = runCatching { backend.me.inbox().items }.getOrDefault(emptyList())
-            // **ويُعلَّم المقروء عند الفتح** — الشارة تقول «فيه جديد»،
-            // **ومن أبقاها بعد أن قرأ** جعلها لا تعني شيئا.
-            runCatching { backend.me.markRead() }
-            unread = 0
+        }
+    }
+
+    /**
+     * **يُعلّم الكلَّ مقروءا** — بطلبه هو.
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-١٣: «لازم في تعليم الكلّ كمقروء صحّ».)
+     *
+     * **وكان يُعلَّم بمجرّد الفتح** — فمن فتح الصندوق ليرى العدد وخرج
+     * **ضاع عنه ما لم يقرأه.** والشارةُ تقول «فيه جديد»، **ومن مسحها
+     * قبل أن يُقرأ** جعلها لا تعني شيئا.
+     *
+     * **والمعرّفُ الفارغ يعني الكلَّ** في المحرّك — وهو ما ترسله صفحةُ
+     * الويب أيضا.
+     */
+    fun markAllRead() {
+        viewModelScope.launch {
+            runCatching { backend.me.markRead() }.onSuccess {
+                unread = 0
+                inbox = inbox?.map { if (it.read) it else it.copy(read = true) }
+            }
         }
     }
 

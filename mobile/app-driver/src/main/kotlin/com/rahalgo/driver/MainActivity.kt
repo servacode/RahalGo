@@ -607,7 +607,7 @@ private fun SignedIn(onLogout: () -> Unit) {
                     // «لا إشعارات».**
                     Overlay.Inbox -> InboxSheet(
                         items = home.inbox.orEmpty(),
-                        onClose = { overlay.clear() },
+                        onMarkAll = home::markAllRead,
                     )
                     is Overlay.Menu ->
                         if (over.item == MenuItem.History) {

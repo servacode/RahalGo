@@ -49,7 +49,7 @@ import com.rahalgo.shared.model.Notice
  * — يكفي أن تكون مقروءة وغير مقروءة وتوصل لنا الخبر».)
  */
 @Composable
-fun InboxSheet(items: List<Notice>, onClose: () -> Unit) {
+fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit) {
     Column(
         Modifier
             .fillMaxSize()
@@ -65,7 +65,23 @@ fun InboxSheet(items: List<Notice>, onClose: () -> Unit) {
                 text = stringResource(R.string.inbox_title),
                 style = MaterialTheme.typography.titleMedium,
             )
-            TextButton(onClick = onClose) { Text(stringResource(R.string.detail_back)) }
+            // ══════════════════════════════════════════════════════════
+            // **ولا زرَّ رجوعٍ هنا — الجرسُ يفتح ويُغلق**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «وألغِ زرَّ الرجوع، لازم في
+            //  تعليم الكلّ كمقروء صحّ».)
+            //
+            // **وموضعُ الزرِّ صار لفعلٍ يخصُّ الصندوق** — والخروجُ من
+            // حيث دخل: **الجرسُ نفسُه، ورجوعُ النظام.**
+            //
+            // **ولا يظهر إلّا إن كان فيه ما لم يُقرأ** — وزرٌّ يُضغط فلا
+            // يتغيّر شيءٌ يُقرأ عطبا. (وهو عينُ ما تفعله صفحةُ الويب.)
+            if (items.any { !it.read }) {
+                TextButton(onClick = onMarkAll) {
+                    Text(stringResource(R.string.inbox_mark_all))
+                }
+            }
         }
 
         if (items.isEmpty()) {
