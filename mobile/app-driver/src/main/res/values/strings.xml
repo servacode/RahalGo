@@ -349,8 +349,24 @@
     <string name="wal_this_month">هذا الشهر</string>
     <string name="wal_prev_month">الماضي</string>
     <string name="wal_print">طباعة</string>
-    <string name="wal_doc_title">كشف حساب</string>
-    <string name="wal_doc_for">%1$s · %2$s</string>
+    <string name="wal_doc_title">كشف حساب المحفظة</string>
+    <!-- **نصوصُ الورقة — من معجم الويب حرفيّاً** فلا تفترق ورقتان. -->
+    <string name="sheet_printed_at">تاريخ الطباعة</string>
+    <string name="sheet_period">عن المدة:</string>
+    <string name="sheet_opening">الرصيد الافتتاحي</string>
+    <string name="sheet_closing">الرصيد الختامي</string>
+    <string name="sheet_col_date">التاريخ</string>
+    <string name="sheet_col_kind">النوع</string>
+    <string name="sheet_col_note">البيان</string>
+    <string name="sheet_col_amount">الحركة</string>
+    <string name="sheet_col_running">الرصيد</string>
+    <string name="sheet_total_in">إجمالي الوارد:</string>
+    <string name="sheet_total_out">إجمالي الصادر:</string>
+    <string name="sheet_net">الصافي:</string>
+    <string name="sheet_empty">لا حركات في هذه المدة.</string>
+    <string name="sheet_truncated">بلغ الكشف حدّه الأقصى من الأسطر، فبعض حركات هذه المدة غير معروضة. اختر مدة أقصر ليكتمل.</string>
+    <string name="sheet_footer">كشف صادر آلياً عن منصة %1$s. المبالغ بالليرة السورية. الرصيد الافتتاحي والختامي محسوبان من الحركات المعروضة.</string>
+    <string name="sheet_support">لأي استفسار عن هذا الكشف اتصل بنا:</string>
     <string name="wal_print_failed">تعذّرت الطباعة على هذا الجهاز</string>
     <string name="wal_all">الكلّ</string>
     <string name="wal_back">رجوع</string>

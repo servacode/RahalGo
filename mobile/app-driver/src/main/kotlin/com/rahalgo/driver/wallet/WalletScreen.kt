@@ -76,8 +76,12 @@ import kotlinx.coroutines.launch
  */
 data class WalletState(
     val statement: WalletStatement? = null,
-    /** **اسمُ صاحب الكشف** — ورقةٌ بلا اسمٍ لا تُقدَّم حجّة. */
+    /** **اسمُ صاحب الكشف ورقمُه** — ورقةٌ بلا اسمٍ لا تُقدَّم حجّة. */
     val name: String = "",
+    val phone: String = "",
+    /** **اسمُ المنصّة ورقمُ دعمها** — لترويسة الورقة وذيلها. */
+    val platform: String = "",
+    val support: String = "",
     val payouts: List<Payout> = emptyList(),
     val busy: Boolean = false,
     val error: String = "",
@@ -111,8 +115,19 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             state = try {
                 val st = backend.me.wallet(rangeQuery())
                 val po = runCatching { backend.me.payouts() }.getOrDefault(state.payouts)
-                val who = runCatching { backend.driver.me().fullName }.getOrDefault(state.name)
-                state.copy(statement = st, payouts = po, name = who, error = "")
+                val me = runCatching { backend.account.summary() }.getOrNull()
+                // **واسمُ المنصّة من إعداداتها لا من الشيفرة** — يبدّله
+                // المالكُ من لوحته فتتبدّل الورقة.
+                val plat = runCatching { backend.auth.platform() }.getOrNull()
+                state.copy(
+                    statement = st,
+                    payouts = po,
+                    name = me?.fullName ?: state.name,
+                    phone = me?.phone ?: state.phone,
+                    platform = plat?.name ?: state.platform,
+                    support = plat?.supportPhone ?: state.support,
+                    error = "",
+                )
             } catch (e: Exception) {
                 state.copy(error = describe(e))
             }
@@ -508,8 +523,11 @@ private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -
                     StatementPrint.print(
                         context,
                         vm.state.name,
+                        vm.state.phone,
                         st,
                         period,
+                        vm.state.platform,
+                        vm.state.support,
                     )
                 }) { Text(stringResource(R.string.wal_print)) }
                 OutlinedButton(onClick = onBack) { Text(stringResource(R.string.wal_back)) }

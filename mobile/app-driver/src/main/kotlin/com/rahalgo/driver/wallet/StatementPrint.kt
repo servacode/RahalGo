@@ -11,42 +11,51 @@ import com.rahalgo.shared.model.WalletStatement
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **طباعةُ كشف الحساب — أو حفظُه ورقةً**
+ * **ورقةُ كشف الحساب — بقالب الويب نفسِه**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (سأل المالك ٢٠٢٦-٠٨-١٣: «وشو استفدنا من الكشف ما فيه طباعة؟».)
+ * (سأل المالك ٢٠٢٦-٠٨-١٣: «وشو استفدنا من الكشف ما فيه طباعة؟» ثمّ:
+ *  «قالبُ الطباعة المستخدم بالويب لازم يُطبَّق بالتطبيق، مشان الكشف
+ *  يكون رسميّاً للمنصّة — مو مجرّد كشفٍ عاديّ. يبني ثقةً كبيرةً مع
+ *  العملاء والموظّفين والناس وقت تشوفه».)
  *
- * # وكشفٌ لا يخرج من الشاشة ليس كشفا
+ * # وورقتان من دارٍ واحدة
  *
- * **كشفُ الحساب حجّةٌ تُقدَّم**: يُريه للمكتب حين يختلفان على رقم،
- * **أو يحفظه لنفسه.** وشاشةٌ تُقرأ ثمّ تُغلق **لا تصلح حجّة.**
+ * **الترويسةُ نفسُها التي تحملها فاتورةُ الويب وكشفُه** (`SheetHeader`):
+ * العلامةُ يساراً، وتاريخُ الطباعة يميناً، **وشريطُ العلامة تحتهما.**
  *
- * # ولماذا نظامُ الطباعة لا مشاركةُ نصّ
+ * **وكشفٌ يخرج بشكلٍ آخرَ من التطبيق يُقرأ ورقةً أخرى** — والسائقُ
+ * يُريه لمن يختلف معه، **فورقتان بشكلين تُضعفان الاثنتين.**
  *
- * **نظامُ أندرويد يعطي الاثنين بنداءٍ واحد**: طابعةً إن وُجدت،
- * **و«حفظ كـPDF» في كلّ جهاز** — ومن أراد إرسالَه على واتساب أرسل
- * الملفّ.
+ * # والاسمُ من الإعدادات لا من الشيفرة
  *
- * **ومشاركةُ نصٍّ خام تفقد الترتيب**: أعمدةُ المبالغ تنهار في محادثة،
- * **ورقمٌ تحت رقمٍ يصير سطراً واحدا.**
+ * (قاعدةُ المالك: «لا أريد أن تكتب اسم المنصة بأيّ مكانٍ أبدا».)
  *
- * # و`WebView` لأنّه الطريقُ القصير
+ * **يبدّله من لوحته فتتبدّل الورقةُ في الويب والتطبيق معا.**
  *
- * **بناءُ `PrintDocumentAdapter` بيدٍ يعني رسمَ كلِّ سطرٍ على `Canvas`**
- * وحسابَ فواصل الصفحات. **و`WebView` يعطيه جاهزاً من HTML** — وهي
- * صفحةٌ من عشرين سطراً.
+ * # والرصيدُ الجاري عمودٌ لا حاشية
  *
- * # ويُحتفظ به حتّى تنتهي الطباعة
+ * **كشفٌ يقول «‎+٣٠٠» ولا يقول «فصار ٩٠٠»** يُجبر قارئَه على الجمع
+ * بالورقة. **والعمودُ الجاري هو ما يجعله كشفَ حسابٍ لا قائمةَ حركات.**
+ *
+ * # ويُحتفظ بالعارض حتّى تنتهي الطباعة
  *
  * **`WebView` محلّيٌّ يُجمع بعد خروج الدالّة** — وأندرويد ينادي المحوّلَ
- * بعدها بلحظات، **فتُطبع صفحةٌ بيضاء.** فيُمسك في حقلٍ حتّى تُغلق
- * النافذة.
+ * بعدها بلحظات، **فتُطبع صفحةٌ بيضاء.**
  */
 object StatementPrint {
 
     private var keep: WebView? = null
 
-    fun print(context: Context, name: String, st: WalletStatement, period: String) {
+    fun print(
+        context: Context,
+        name: String,
+        phone: String,
+        st: WalletStatement,
+        period: String,
+        platform: String,
+        support: String,
+    ) {
         // **وجهازٌ بلا خدمة طباعةٍ يقول ذلك** — وضغطةٌ تُبتلَع بلا ردٍّ
         // **تُقرأ عطبا**، فيعيدها ثلاثاً ثمّ يترك.
         val manager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
@@ -74,49 +83,166 @@ object StatementPrint {
             }
         }
         keep = web
-        web.loadDataWithBaseURL(null, html(context, name, st, period), "text/html", "UTF-8", null)
+        web.loadDataWithBaseURL(
+            null,
+            html(context, name, phone, st, period, platform, support),
+            "text/html",
+            "UTF-8",
+            null,
+        )
     }
 
-    /**
-     * **ورقةُ الكشف** — عربيّةٌ من اليمين.
-     *
-     * **والنصُّ يُهرَّب قبل أن يوضع في HTML**: ملاحظةٌ كتبها موظّفٌ فيها
-     * `<` **تكسر الصفحة**، وأسوأُ منها ما يُحقن عمدا.
-     */
-    private fun html(context: Context, name: String, st: WalletStatement, period: String): String {
-        val rows = st.transactions.joinToString("") { t ->
+    private fun html(
+        c: Context,
+        name: String,
+        phone: String,
+        st: WalletStatement,
+        period: String,
+        platform: String,
+        support: String,
+    ): String {
+        // **والرصيدُ الجاري يُبنى من الافتتاحيّ صعودا** — والمحرّكُ يضمن
+        // أنّ الافتتاحيَّ زائدَ المعروض يساوي الختاميّ.
+        var running = st.opening
+        var totalIn = 0L
+        var totalOut = 0L
+        val rows = StringBuilder()
+        for (t in st.transactions.reversed()) {
+            running += t.amount
+            if (t.amount >= 0) totalIn += t.amount else totalOut += -t.amount
             val sign = if (t.amount >= 0) "+" else "−"
             val cls = if (t.amount >= 0) "in" else "out"
-            """<tr>
-                 <td>${esc(t.createdAt.take(10))}</td>
-                 <td>${esc(kindName(context, t.kind))}</td>
-                 <td>${t.orderNumber?.let { "#$it" } ?: ""}</td>
-                 <td class="$cls">$sign${esc(money(kotlin.math.abs(t.amount)))}</td>
-               </tr>"""
+            rows.append(
+                """<tr>
+                     <td class="num">${esc(t.createdAt.take(10))}</td>
+                     <td>${esc(kindName(c, t.kind))}</td>
+                     <td class="note">${esc(t.note.ifEmpty { t.orderNumber?.let { "#$it" } ?: "" })}</td>
+                     <td class="num $cls">$sign${esc(money(kotlin.math.abs(t.amount)))}</td>
+                     <td class="num">${esc(money(running))}</td>
+                   </tr>""",
+            )
         }
+
+        // **والعلامةُ حرفٌ في مربّعٍ حين لا شعار** — كما تفعل `BrandMark`.
+        val mark = platform.trim().take(1)
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+        val now = java.text.SimpleDateFormat("HH:mm", java.util.Locale.US)
+            .format(java.util.Date())
+
         return """
 <!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
 <style>
-  body { font-family: sans-serif; padding: 18px; color: #07283A; }
-  h1 { font-size: 18px; margin: 0 0 4px; }
-  .sub { color: #5A6B75; font-size: 12px; margin-bottom: 14px; }
-  .sum { display: flex; justify-content: space-between;
-         border: 1px solid #DDD; border-radius: 8px; padding: 10px; margin-bottom: 14px; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: sans-serif; padding: 20px; color: #07283A; }
+
+  /* **الترويسةُ كترويسة الويب** — علامةٌ وتاريخُ طباعة. */
+  .head { display: flex; align-items: center; justify-content: space-between; }
+  .mark { width: 62px; height: 62px; border: 2px solid #07283A; border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 30px; font-weight: bold; }
+  .when { text-align: left; font-size: 11px; color: #5A6B75; }
+  .when b { display: block; color: #07283A; }
+
+  /* **وشريطُ العلامة** — من الفيروزيّ إلى البرتقاليّ كما في `brand-rule`. */
+  .rule { height: 3px; border-radius: 3px; margin: 10px 0 14px;
+          background: linear-gradient(to left, #02678F 0%, #02678F 45%, #FE9501 100%); }
+
+  .title { font-size: 17px; font-weight: bold; margin: 0 0 2px; }
+  .meta { display: flex; justify-content: space-between; gap: 12px;
+          font-size: 12px; color: #5A6B75;
+          border-bottom: 1px solid #E4E9EC; padding-bottom: 10px; margin-bottom: 12px; }
+  .meta b { color: #07283A; }
+
+  .sum { display: flex; justify-content: space-between; gap: 10px;
+         border: 1px solid #E4E9EC; border-radius: 10px;
+         padding: 10px 12px; margin-bottom: 14px; font-size: 12px; }
+
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th, td { text-align: right; padding: 6px 4px; border-bottom: 1px solid #EEE; }
-  th { color: #5A6B75; font-weight: normal; }
+  th { text-align: right; padding: 7px 5px; font-weight: normal;
+       color: #5A6B75; border-bottom: 2px solid #E4E9EC; font-size: 11px; }
+  td { text-align: right; padding: 7px 5px; border-bottom: 1px solid #F0F3F5; }
+  .num { direction: ltr; text-align: left; white-space: nowrap; }
+  .note { color: #5A6B75; }
   .in { color: #1E9E5A; } .out { color: #D64545; }
+
+  tfoot td { border-top: 2px solid #E4E9EC; border-bottom: none;
+             padding-top: 9px; font-weight: bold; }
+  .foot { margin-top: 16px; font-size: 10px; color: #5A6B75; line-height: 1.7; }
+  .warn { border: 1px solid #FE9501; background: #FFF6E9; border-radius: 8px;
+          padding: 8px 10px; font-size: 11px; margin-bottom: 12px; }
 </style></head><body>
-<h1>${esc(context.getString(R.string.wal_doc_title))}</h1>
-<div class="sub">${esc(context.getString(R.string.wal_doc_for, name, period))}</div>
-<div class="sum">
-  <span>${esc(context.getString(R.string.wal_opening))}: ${esc(money(st.opening))}</span>
-  <span>${esc(context.getString(R.string.wal_closing))}: ${esc(money(st.closing))}</span>
+
+<div class="head">
+  <div class="mark">${esc(mark)}</div>
+  <div class="when">
+    ${esc(c.getString(R.string.sheet_printed_at))}
+    <b>${esc(today)}</b>${esc(now)}
+  </div>
 </div>
-<table>$rows</table>
+<div class="rule"></div>
+
+<p class="title">${esc(c.getString(R.string.wal_doc_title))}</p>
+<div class="meta">
+  <span><b>${esc(name)}</b> ${esc(phone)}</span>
+  <span>${esc(c.getString(R.string.sheet_period))} ${esc(period)}</span>
+</div>
+
+<div class="sum">
+  <span>${esc(c.getString(R.string.sheet_opening))}: <b>${esc(money(st.opening))}</b></span>
+  <span>${esc(c.getString(R.string.sheet_closing))}: <b>${esc(money(st.closing))}</b></span>
+</div>
+
+${if (st.truncated) """<div class="warn">${esc(c.getString(R.string.sheet_truncated))}</div>""" else ""}
+
+${
+            if (st.transactions.isEmpty()) {
+                """<p style="text-align:center;color:#5A6B75;padding:24px 0">""" +
+                    esc(c.getString(R.string.sheet_empty)) + "</p>"
+            } else {
+                """<table>
+  <thead><tr>
+    <th>${esc(c.getString(R.string.sheet_col_date))}</th>
+    <th>${esc(c.getString(R.string.sheet_col_kind))}</th>
+    <th>${esc(c.getString(R.string.sheet_col_note))}</th>
+    <th>${esc(c.getString(R.string.sheet_col_amount))}</th>
+    <th>${esc(c.getString(R.string.sheet_col_running))}</th>
+  </tr></thead>
+  <tbody>$rows</tbody>
+  <tfoot>
+    <tr>
+      <td colspan="3">${esc(c.getString(R.string.sheet_total_in))}</td>
+      <td class="num in">${esc(money(totalIn))}</td><td></td>
+    </tr>
+    <tr>
+      <td colspan="3">${esc(c.getString(R.string.sheet_total_out))}</td>
+      <td class="num out">${esc(money(totalOut))}</td><td></td>
+    </tr>
+    <tr>
+      <td colspan="3">${esc(c.getString(R.string.sheet_net))}</td>
+      <td class="num">${esc(money(totalIn - totalOut))}</td>
+      <td class="num">${esc(money(st.closing))}</td>
+    </tr>
+  </tfoot>
+</table>"""
+            }
+        }
+
+<div class="foot">
+  ${esc(c.getString(R.string.sheet_footer, platform))}
+  ${if (support.isNotEmpty()) {
+            esc(c.getString(R.string.sheet_support)) + " " + esc(support)
+        } else {
+            ""
+        }}
+</div>
 </body></html>"""
     }
 
+    /**
+     * **والنصُّ يُهرَّب قبل أن يوضع في HTML**: ملاحظةٌ كتبها موظّفٌ فيها
+     * `<` **تكسر الصفحة**، وأسوأُ منها ما يُحقن عمدا.
+     */
     private fun esc(s: String): String = s
         .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 

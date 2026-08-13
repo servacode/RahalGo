@@ -83,6 +83,17 @@ data class AuthResult(
  */
 @Serializable
 data class Platform(
+    /**
+     * **اسمُ المنصّة وشعارُها** — لترويسة الأوراق المطبوعة.
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-١٣: «قالبُ الطباعة المستخدم بالويب لازم
+     *  يُطبَّق بالتطبيق، مشان الكشف يكون رسميّاً للمنصّة».)
+     *
+     * **ولا يُكتب الاسمُ في الشيفرة** (قاعدةُ المالك: «لا أريد أن تكتب
+     * اسم المنصة بأيّ مكانٍ أبدا») — **يبدّله من لوحته فتتبدّل الورقة.**
+     */
+    val name: String = "",
+    val logo: String = "",
     @SerialName("otp_login") val otpLogin: Boolean = true,
     @SerialName("password_min_length") val passwordMinLength: Int = 8,
     @SerialName("support_phone") val supportPhone: String = "",
