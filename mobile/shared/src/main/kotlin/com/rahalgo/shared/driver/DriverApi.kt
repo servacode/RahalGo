@@ -67,6 +67,18 @@ class DriverApi(private val api: ApiClient) {
         )
 
     /** **أسبابُ البلاغ** — من الخادم لا من التطبيق. */
+    /**
+     * **أسبابُ البلاغ لهذا الطلب بعينه.**
+     *
+     * **والطلبُ الخاصُّ بلا متجر** — فأسبابُ المتجر فيه سؤالٌ عمّا لا
+     * وجودَ له، **ومن اختار واحداً منها فُتح بلاغٌ بلا مشتكًى عليه.**
+     *
+     * **والمحرّكُ هو من يصفّي** — لا الشاشة: قائمةٌ تُصفّى في العرض
+     * وحدَه لا تمنع من ينادي الواجهةَ مباشرة.
+     */
+    suspend fun reportReasons(orderId: String): ReportReasons =
+        api.call("/api/v1/driver/orders/report-reasons?order=" + orderId)
+
     suspend fun reportReasons(): ReportReasons =
         api.call("/api/v1/driver/orders/report-reasons")
 

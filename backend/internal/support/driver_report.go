@@ -78,6 +78,43 @@ func validDriverReason(code string) bool {
 	return false
 }
 
+// ReasonsForKind **ما يصلح لطلبٍ من هذا النوع.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٣: «أصلحها» — بعد أن قيس أنّ أسبابَ المتجر
+//
+//	تُعرض في طلبٍ بلا متجر.)
+//
+// **والطلبُ الخاصُّ بلا متجر** — و«المتجر أوقفني طويلاً» فيه سؤالٌ عمّا
+// لا وجودَ له. **ومن اختاره فُتح بلاغٌ بلا مشتكًى عليه**: تذكرةٌ تذهب
+// إلى العمليات ولا أحدَ فيها.
+//
+// **ودالّةٌ واحدةٌ تقرّر** — تقرؤها نقطةُ العرض ونقطةُ الفتح معاً:
+// **قائمةٌ تُصفّى في العرض وحدَه لا تمنع من ينادي الواجهةَ مباشرةً**،
+// وهي عائلةُ «قاعدةٌ تُطبَّق في الشاشة» التي تكرّرت في هذا المشروع.
+func ReasonsForKind(kind string) []DriverReportReason {
+	if kind != "custom" {
+		return DriverReportReasons
+	}
+	out := make([]DriverReportReason, 0, len(DriverReportReasons))
+	for _, r := range DriverReportReasons {
+		if r.Against == AgainstMerchant {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
+}
+
+// AllowedForKind **أيصلح هذا السببُ لطلبٍ من هذا النوع؟**
+func AllowedForKind(kind, code string) bool {
+	for _, r := range ReasonsForKind(kind) {
+		if r.Code == code {
+			return true
+		}
+	}
+	return false
+}
+
 // DriverReport يفتح بلاغَ سائقٍ على طلبٍ من طلباته.
 //
 // **وصاحبُ التذكرة زبونُ الطلب لا السائق** — عمودُ `customer_id` يقول «تذكرةُ
@@ -89,12 +126,12 @@ func (s *Service) DriverReport(ctx context.Context, driverID, orderID, reason, n
 	}
 
 	var number int64
-	var customerID string
+	var customerID, kind string
 	var closedAt *time.Time
 	err := s.db.QueryRow(ctx, `
-		SELECT o.number, o.customer_id::text, o.closed_at
+		SELECT o.number, o.customer_id::text, o.kind, o.closed_at
 		FROM orders o WHERE o.id = $1 AND o.driver_id = $2`, orderID, driverID).
-		Scan(&number, &customerID, &closedAt)
+		Scan(&number, &customerID, &kind, &closedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -103,6 +140,11 @@ func (s *Service) DriverReport(ctx context.Context, driverID, orderID, reason, n
 	}
 	if closedAt == nil {
 		return nil, ErrOrderNotClosed
+	}
+	// **ولا سببَ متجرٍ في طلبٍ بلا متجر** — والمنعُ هنا لا في الشاشة:
+	// **من نادى الواجهةَ مباشرةً لا يوقفه إخفاءُ خيار.**
+	if !AllowedForKind(kind, reason) {
+		return nil, ErrBadReason
 	}
 
 	// **والمهلةُ هي مهلةُ الزبون نفسُها** — لا رقمٌ ثانٍ لمعنًى واحد: الذاكرةُ

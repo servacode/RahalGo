@@ -113,8 +113,19 @@ func (s *Server) handleDriverHistory(w http.ResponseWriter, r *http.Request) {
 // **والقائمةُ من الخادم** — لا تُكتب في التطبيق: قائمةٌ في مكانين تفترق حين
 // يُضاف سببٌ في أحدهما، **فيرسل التطبيقُ رمزاً لا يعرفه الخادم** ويُردّ عليه
 // بلا أن يفهم لماذا.
+// **وتُصفّى بحسب الطلب إن قيل أيُّه** — (قرارُ المالك ٢٠٢٦-٠٨-١٣).
+//
+// **والطلبُ الخاصُّ بلا متجر**، فأسبابُ المتجر فيه سؤالٌ عمّا لا وجودَ
+// له. **وبلا معرّفٍ تُردّ كلُّها** — فلا ينكسر نداءٌ قديمٌ لا يرسله.
 func (s *Server) handleDriverReportReasons(w http.ResponseWriter, r *http.Request) {
-	httpx.JSON(w, http.StatusOK, map[string]any{"reasons": support.DriverReportReasons})
+	kind := ""
+	if id := r.URL.Query().Get("order"); id != "" {
+		// **وطلبُ غيره لا يُقرأ** — الشرطُ على السائق أيضاً.
+		_ = s.pg.QueryRow(r.Context(),
+			`SELECT o.kind FROM orders o WHERE o.id = $1 AND o.driver_id = $2`,
+			id, userIDFrom(r)).Scan(&kind)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"reasons": support.ReasonsForKind(kind)})
 }
 
 // handleDriverReport يفتح بلاغَ سائقٍ على متجرٍ أو زبون.

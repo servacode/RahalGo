@@ -109,11 +109,11 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **يجلب أسبابَ البلاغ** — مرّةً وتبقى. */
-    fun loadReasons() {
+    fun loadReasons(orderId: String) {
         if (state.reasons.isNotEmpty()) return
         viewModelScope.launch {
             state = try {
-                state.copy(reasons = backend.driver.reportReasons().reasons)
+                state.copy(reasons = backend.driver.reportReasons(orderId).reasons)
             } catch (e: Exception) {
                 Log.e("RahalGo/سجل", "فشل جلب الأسباب", e)
                 state.copy(
@@ -340,7 +340,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
         items(shown, key = { it.id }) { o ->
             Row(
                 o = o,
-                onReport = { reportFor = o; vm.loadReasons() },
+                onReport = { reportFor = o; vm.loadReasons(o.id) },
                 onRate = { rateFor = o },
                 onReturn = { vm.returnGoods(o.id) },
             )
