@@ -91,7 +91,7 @@
     <string name="shift_active_orders">معك %1$s من %2$s طلبات</string>
     <string name="err_not_driver">هذا الحساب ليس حساب سائق</string>
     <!-- الطلبات -->
-    <string name="nav_home">الرئيسية</string>
+    <string name="nav_home">لوحتي</string>
     <string name="nav_orders">الطلبات</string>
     <string name="nav_profile">حسابي</string>
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
@@ -147,7 +147,7 @@
     <string name="loc_permission_button">فعّل الآن</string>
     <string name="err_has_active_orders">لا يمكن إنهاء الوردية ومعك طلبات لم تُسلَّم</string>
     <!-- لماذا لا تصلني طلبات -->
-    <string name="why_shift_closed">ورديّتك مغلقة — افتحها من الرئيسية ليصلك أوّل طلب</string>
+    <string name="why_shift_closed">ورديّتك مغلقة — افتحها من «لوحتي» ليصلك أوّل طلب</string>
     <string name="why_location_off">الموقع مطفأ — بدونه لا يعرف المحرّك أين أنت فلا يعرض عليك أقرب طلب</string>
     <string name="why_cash_full">النقد الذي بذمّتك بلغ السقف — سلّم للمكتب ليعود الطلب النقدي</string>
     <string name="why_too_many">معك طلبات بعدد حدّك — سلّم واحداً ليصلك غيره</string>

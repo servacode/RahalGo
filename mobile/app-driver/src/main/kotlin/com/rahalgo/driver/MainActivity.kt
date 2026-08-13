@@ -429,7 +429,25 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // ٢٠٢٦-٠٨-١٣: «نبني المحفظة بنفس الويب»). **وكانت
                 // تنقله إلى اللوحة** حيث سطرُ رصيدٍ لا كشفُ حساب.
                 onWallet = { overlay.show(Overlay.Wallet) },
-                onNotifications = { overlay.show(Overlay.Inbox); home.openInbox() },
+                // ══════════════════════════════════════════════════════════
+                // **والجرسُ يفتح ويُغلق بلمسته هو**
+                // ══════════════════════════════════════════════════════
+                //
+                // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «لازم أوّل لمسةٍ للجرس يفتح
+                //  الإشعارات، وإذا لمسناه مرّةً ثانية يسكّر الإشعارات —
+                //  ما في داعٍ لزرّ الرجوع».)
+                //
+                // **والإبهامُ على الجرس أصلاً** حين يريد إغلاقَه —
+                // **وطلبُ رحلةٍ إلى زرٍّ آخرَ لإلغاء ما فتحه هنا**
+                // حركةٌ زائدة.
+                onNotifications = {
+                    if (overlay.current == Overlay.Inbox) {
+                        overlay.clear()
+                    } else {
+                        overlay.show(Overlay.Inbox)
+                        home.openInbox()
+                    }
+                },
                 onMenu = { scope.launch { drawer.open() } },
                 onRating = { overlay.show(Overlay.Rating) },
             )
@@ -501,7 +519,9 @@ private fun SignedIn(onLogout: () -> Unit) {
                     selected = tab == 2 && overlay.isClear,
                     onClick = { overlay.clear(); tab = 2; home.refresh() },
                     icon = {
-                        Icon(painterResource(R.drawable.ic_home), contentDescription = null)
+                        // **ومربّعاتُ لوحةٍ لا بيت** — البيتُ يقول
+                        // «الرئيسيّة»، وموضعُها ثالث.
+                        Icon(painterResource(R.drawable.ic_dashboard), contentDescription = null)
                     },
                     label = { Text(stringResource(R.string.nav_home)) },
                 )
