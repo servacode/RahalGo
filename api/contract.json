@@ -4930,7 +4930,15 @@
       "auth": false,
       "response": [
         {
+          "name": "about_text",
+          "type": "unknown"
+        },
+        {
           "name": "address",
+          "type": "unknown"
+        },
+        {
+          "name": "driver_help_text",
           "type": "unknown"
         },
         {
