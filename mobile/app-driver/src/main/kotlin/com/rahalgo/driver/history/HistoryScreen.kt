@@ -2,6 +2,14 @@ package com.rahalgo.driver.history
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.remember
+import androidx.compose.ui.res.painterResource
+import com.rahalgo.design.BrandOrange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,6 +49,7 @@ import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.data.Refresh
 import com.rahalgo.driver.ui.money
 import com.rahalgo.shared.model.HistoryOrder
+import com.rahalgo.shared.model.ReportReason
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -77,6 +86,15 @@ data class HistoryState(
     val orders: List<HistoryOrder> = emptyList(),
     val loading: Boolean = true,
     val error: String = "",
+    val done: String = "",
+    val busy: Boolean = false,
+    /**
+     * **أسبابُ البلاغ من الخادم** — تُجلب مرّةً عند فتح النافذة.
+     *
+     * **ولا تُكتب في التطبيق**: قائمةٌ في مكانين تفترق حين يُضاف سببٌ
+     * في أحدهما، **فيرسل التطبيقُ رمزاً لا يعرفه الخادم.**
+     */
+    val reasons: List<ReportReason> = emptyList(),
 )
 
 class HistoryViewModel(app: Application) : AndroidViewModel(app) {
@@ -89,6 +107,65 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
     init {
         load()
         viewModelScope.launch { Refresh.tick.drop(1).collect { load() } }
+    }
+
+    /** **يجلب أسبابَ البلاغ** — مرّةً وتبقى. */
+    fun loadReasons() {
+        if (state.reasons.isNotEmpty()) return
+        viewModelScope.launch {
+            state = try {
+                state.copy(reasons = backend.driver.reportReasons().reasons)
+            } catch (e: Exception) {
+                Log.e("RahalGo/سجل", "فشل جلب الأسباب", e)
+                state.copy(
+                    error = getApplication<Application>().getString(R.string.hist_reasons_error),
+                )
+            }
+        }
+    }
+
+    /** **يرفع بلاغاً** ثمّ يُنعش — البلاغُ لا يُعاد مرّتين. */
+    fun report(orderId: String, reason: String, note: String) {
+        if (state.busy) return
+        state = state.copy(busy = true, error = "", done = "")
+        viewModelScope.launch {
+            state = try {
+                backend.driver.report(orderId, reason, note.trim())
+                state.copy(
+                    busy = false,
+                    done = getApplication<Application>().getString(R.string.hist_report_sent),
+                )
+            } catch (e: Exception) {
+                Log.e("RahalGo/سجل", "فشل البلاغ", e)
+                state.copy(
+                    busy = false,
+                    error = getApplication<Application>().getString(R.string.err_internal),
+                )
+            }
+        }
+    }
+
+    /** **يقيّم المتجر** ثمّ يُنعش — فيختفي الزرُّ عن الطلب. */
+    fun rate(orderId: String, speed: Int, conduct: Int, comment: String) {
+        if (state.busy) return
+        state = state.copy(busy = true, error = "", done = "")
+        viewModelScope.launch {
+            try {
+                backend.driver.rateMerchant(orderId, speed, conduct, comment.trim())
+                val fresh = backend.driver.history().orders
+                state = state.copy(
+                    orders = fresh,
+                    busy = false,
+                    done = getApplication<Application>().getString(R.string.hist_rate_sent),
+                )
+            } catch (e: Exception) {
+                Log.e("RahalGo/سجل", "فشل التقييم", e)
+                state = state.copy(
+                    busy = false,
+                    error = getApplication<Application>().getString(R.string.err_internal),
+                )
+            }
+        }
     }
 
     fun load() {
@@ -119,6 +196,16 @@ fun HistoryScreen(vm: HistoryViewModel) {
     }
 
     var query by rememberSaveable { mutableStateOf("") }
+    // **والنافذةُ تحمل طلبَها** — لا رقماً يُبحث عنه في القائمة.
+    var reportFor by remember { mutableStateOf<HistoryOrder?>(null) }
+    var rateFor by remember { mutableStateOf<HistoryOrder?>(null) }
+
+    reportFor?.let { o ->
+        ReportDialog(vm, s, o, onClose = { reportFor = null })
+    }
+    rateFor?.let { o ->
+        RateDialog(vm, s, o, onClose = { rateFor = null })
+    }
     // **والبحثُ بالرقم واسم المتجر** — وهما ما يتذكّره: «طلب المطعم
     // الفلانيّ» أو رقمٌ قرأه في محفظته.
     val shown = if (query.isBlank()) {
@@ -183,7 +270,13 @@ fun HistoryScreen(vm: HistoryViewModel) {
             }
         }
 
-        items(shown, key = { it.id }) { o -> Row(o) }
+        items(shown, key = { it.id }) { o ->
+            Row(
+                o = o,
+                onReport = { reportFor = o; vm.loadReasons() },
+                onRate = { rateFor = o },
+            )
+        }
         item { Spacer(Modifier.height(24.dp)) }
     }
 }
@@ -209,7 +302,7 @@ private fun Tally(
 }
 
 @Composable
-private fun Row(o: HistoryOrder) {
+private fun Row(o: HistoryOrder, onReport: () -> Unit, onRate: () -> Unit) {
     val delivered = o.status == "delivered"
     Column(Modifier.fillMaxWidth().padding(vertical = 9.dp)) {
         androidx.compose.foundation.layout.Row(
@@ -251,7 +344,192 @@ private fun Row(o: HistoryOrder) {
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        Spacer(Modifier.height(9.dp))
+        // ══════════════════════════════════════════════════════════════
+        // **وزرّان تحت السطر — بلاغٌ وتقييم**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نعم يجب أن يكون هناك تقييمٌ للمتجر
+        //  من قِبل السائق وبلاغٌ على المتجر… الزبون لا يحتاج إلى
+        //  تقييم».)
+        //
+        // **ولا تقييمَ للزبون** — بأمر المالك. **والبلاغُ يبقى على
+        // الاثنين**: عنوانٌ وهميٌّ أو زبونٌ لا يردّ **هو ما بُني السجلُّ
+        // لأجله** (٢٠٢٦-٠٨-٠٥)، **والأسبابُ تجيء من الخادم** فلا يقرّر
+        // التطبيقُ على من يُشتكى.
+        //
+        // **والتقييمُ لمن وقف عند بابه فقط** (`can_rate_merchant`):
+        // **ومن لم يقف لا رأيَ له فيه.**
+        androidx.compose.foundation.layout.Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            TextButton(onClick = onReport) {
+                Text(stringResource(R.string.hist_report), color = StateRed)
+            }
+            if (o.canRateMerchant) {
+                if (o.merchantRated) {
+                    // **ومن قيّم لا يُعرض عليه الزرُّ ثانيةً** — نصٌّ
+                    // يقول إنّه فعل، **وزرٌّ يُضغط مرّتين يُقرأ عطبا.**
+                    Text(
+                        stringResource(R.string.hist_rated),
+                        color = StateGreen,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 14.dp),
+                    )
+                } else {
+                    TextButton(onClick = onRate) {
+                        Text(stringResource(R.string.hist_rate), color = BrandTeal)
+                    }
+                }
+            }
+        }
         HorizontalDivider()
     }
+}
+
+/**
+ * **نافذةُ البلاغ** — سببٌ من الخادم وتفصيلٌ اختياريّ.
+ *
+ * **ولا يُرسَل بلاغٌ بلا سبب**: «شيءٌ ما حدث» لا تُحقَّق، **والمكتبُ
+ * يفتحها ليجد نصّاً حرّاً لا يعرف على من هو.**
+ */
+@Composable
+private fun ReportDialog(
+    vm: HistoryViewModel,
+    s: HistoryState,
+    o: HistoryOrder,
+    onClose: () -> Unit,
+) {
+    var reason by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(stringResource(R.string.hist_report_title) + " #" + o.number) },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.hist_report_hint),
+                    color = InkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(10.dp))
+                for (r in s.reasons) {
+                    androidx.compose.foundation.layout.Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { reason = r.code }
+                            .padding(vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = reason == r.code, onClick = { reason = r.code })
+                        Spacer(Modifier.height(0.dp))
+                        Text(reasonLabel(r.code))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text(stringResource(R.string.hist_report_note)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { vm.report(o.id, reason, note); onClose() },
+                enabled = !s.busy && reason.isNotEmpty(),
+            ) { Text(stringResource(R.string.hist_report_send)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
+        },
+    )
+}
+
+/**
+ * **نافذةُ تقييم المتجر — محوران لا نجمةٌ واحدة.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٣.)
+ *
+ * **«المتجر سيّئ» لا تُصلح شيئا**: أبطيءٌ في التجهيز أم سيّئُ التعامل؟
+ * **والمكتبُ يعالج الاثنين بطريقتين** — يكلّم صاحبَه في الأولى ويُنذره
+ * في الثانية.
+ */
+@Composable
+private fun RateDialog(
+    vm: HistoryViewModel,
+    s: HistoryState,
+    o: HistoryOrder,
+    onClose: () -> Unit,
+) {
+    var speed by remember { mutableStateOf(0) }
+    var conduct by remember { mutableStateOf(0) }
+    var comment by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(stringResource(R.string.hist_rate_title)) },
+        text = {
+            Column {
+                Text(o.merchantName, style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(12.dp))
+                StarPick(stringResource(R.string.hist_rate_speed), speed) { speed = it }
+                Spacer(Modifier.height(10.dp))
+                StarPick(stringResource(R.string.hist_rate_conduct), conduct) { conduct = it }
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text(stringResource(R.string.hist_rate_comment)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { vm.rate(o.id, speed, conduct, comment); onClose() },
+                // **ولا يُرسَل نصفُ تقييم** — المحرّكُ يشترط الاثنين بين
+                // واحدٍ وخمسة، **ونداءٌ يُردّ بأربعمئة لا يُفهم سببُه.**
+                enabled = !s.busy && speed in 1..5 && conduct in 1..5,
+            ) { Text(stringResource(R.string.hist_rate_send)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
+        },
+    )
+}
+
+/** **صفُّ نجومٍ يُضغط** — والنجومُ تُلمس لا تُكتب. */
+@Composable
+private fun StarPick(label: String, value: Int, onPick: (Int) -> Unit) {
+    Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+    Spacer(Modifier.height(4.dp))
+    androidx.compose.foundation.layout.Row {
+        repeat(5) { i ->
+            Icon(
+                painter = painterResource(R.drawable.ic_star),
+                contentDescription = null,
+                tint = if (i < value) BrandOrange else InkMuted.copy(alpha = 0.30f),
+                modifier = Modifier
+                    .padding(end = 4.dp)
+                    .clickable { onPick(i + 1) },
+            )
+        }
+    }
+}
+
+/** **اسمُ السبب بالعربيّة** — والمجهولُ برمزه ليُبلَّغ عنه. */
+@Composable
+private fun reasonLabel(code: String): String = when (code) {
+    "merchant_slow" -> stringResource(R.string.reason_merchant_slow)
+    "merchant_refused" -> stringResource(R.string.reason_merchant_refused)
+    "merchant_wrong_goods" -> stringResource(R.string.reason_merchant_wrong_goods)
+    "merchant_conduct" -> stringResource(R.string.reason_merchant_conduct)
+    "customer_absent" -> stringResource(R.string.reason_customer_absent)
+    "customer_address" -> stringResource(R.string.reason_customer_address)
+    "customer_refused" -> stringResource(R.string.reason_customer_refused)
+    "customer_conduct" -> stringResource(R.string.reason_customer_conduct)
+    "other" -> stringResource(R.string.reason_other)
+    else -> code
 }

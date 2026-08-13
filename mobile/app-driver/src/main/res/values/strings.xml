@@ -386,4 +386,29 @@
     <string name="hist_no_match">لا طلب يطابق بحثك</string>
     <string name="hist_st_delivered">سُلِّم</string>
     <string name="hist_st_failed">تعذّر</string>
+
+    <!-- **البلاغُ والتقييم — بنصوص الويب نفسِها** فلا تفترق شاشتان. -->
+    <string name="hist_report">بلاغ</string>
+    <string name="hist_report_title">بلاغٌ على الطلب</string>
+    <string name="hist_report_note">تفصيلٌ إضافيّ (اختياريّ)</string>
+    <string name="hist_report_hint">يصل البلاغُ غرفةَ العمليات ويُتابَع</string>
+    <string name="hist_report_send">أرسل البلاغ</string>
+    <string name="hist_report_sent">وصل بلاغُك — ستتابعه العمليات</string>
+    <string name="hist_reasons_error">تعذّر جلبُ الأسباب — ولا يُرسَل بلاغٌ بلا سبب</string>
+    <string name="hist_rate">قيّم المتجر</string>
+    <string name="hist_rated">قيّمتَه</string>
+    <string name="hist_rate_title">تقييمُ المتجر</string>
+    <string name="hist_rate_speed">سرعةُ التجهيز</string>
+    <string name="hist_rate_conduct">التعامل</string>
+    <string name="hist_rate_comment">ملاحظةٌ (اختياريّة)</string>
+    <string name="hist_rate_send">أرسل التقييم</string>
+    <string name="hist_rate_sent">وصل تقييمُك — شكراً</string>
+    <string name="hist_cancel">إغلاق</string>
+
+    <string name="reason_merchant_slow">المتجر أوقفني طويلاً</string>
+    <string name="reason_merchant_wrong_goods">بضاعةٌ غيرُ مطابقة</string>
+    <string name="reason_merchant_conduct">سوءُ تعاملٍ من المتجر</string>
+    <string name="reason_customer_address">عنوانٌ خاطئ</string>
+    <string name="reason_customer_conduct">سوءُ تعاملٍ من الزبون</string>
+    <string name="reason_other">سببٌ آخر</string>
 </resources>

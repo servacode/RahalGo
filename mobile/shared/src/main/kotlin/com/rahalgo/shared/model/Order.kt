@@ -169,3 +169,36 @@ data class HistoryOrder(
     /** **وقف عند بابه فعلاً** — ومن لم يقف لا رأيَ له فيه. */
     @SerialName("can_rate_merchant") val canRateMerchant: Boolean = false,
 )
+
+/**
+ * **سببُ بلاغٍ كما يرسله المحرّك** — رمزٌ ومن هو عليه.
+ *
+ * **والرموزُ من الخادم لا تُكتب في التطبيق**: قائمةٌ في مكانين تفترق
+ * حين يُضاف سببٌ في أحدهما، **فيرسل التطبيقُ رمزاً لا يعرفه الخادم.**
+ */
+@Serializable
+data class ReportReason(
+    val code: String = "",
+    /** `merchant` · `customer` · فارغٌ لـ«سببٌ آخر». */
+    val against: String = "",
+)
+
+@Serializable
+data class ReportReasons(val reasons: List<ReportReason> = emptyList())
+
+/**
+ * **تقييمُ السائق للمتجر — محوران لا نجمةٌ واحدة.**
+ *
+ * **«المتجر سيّئ» لا تُصلح شيئا**: أبطيءٌ في التجهيز أم سيّئُ التعامل؟
+ * **والمكتبُ يعالج الاثنين بطريقتين** — فيُسأل عنهما منفصلين.
+ */
+@Serializable
+data class MerchantRatingInput(
+    @SerialName("speed_stars") val speedStars: Int,
+    @SerialName("conduct_stars") val conductStars: Int,
+    val comment: String = "",
+)
+
+/** **ما يُرسَل في البلاغ** — رمزُ السبب وتفصيلٌ اختياريّ. */
+@Serializable
+data class ReportInput(val reason: String, val note: String = "")

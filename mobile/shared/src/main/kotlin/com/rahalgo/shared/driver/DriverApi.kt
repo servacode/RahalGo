@@ -2,6 +2,9 @@ package com.rahalgo.shared.driver
 
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.HistoryPage
+import com.rahalgo.shared.model.MerchantRatingInput
+import com.rahalgo.shared.model.ReportInput
+import com.rahalgo.shared.model.ReportReasons
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.FailReasonItem
 import com.rahalgo.shared.model.FailReasons
@@ -33,6 +36,28 @@ class DriverApi(private val api: ApiClient) {
      * شاشةُ الويب.)
      */
     suspend fun history(): HistoryPage = api.call("/api/v1/driver/orders/history")
+
+    /** **أسبابُ البلاغ** — من الخادم لا من التطبيق. */
+    suspend fun reportReasons(): ReportReasons =
+        api.call("/api/v1/driver/orders/report-reasons")
+
+    /** **يرفع بلاغاً على طلبٍ نفّذه** — يصل غرفةَ العمليات ويُتابَع. */
+    suspend fun report(orderId: String, reason: String, note: String) {
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/report",
+            HttpMethod.Post,
+            ReportInput(reason, note),
+        )
+    }
+
+    /** **يقيّم متجرَ طلبٍ وقف عند بابه** — سرعةً وتعاملا. */
+    suspend fun rateMerchant(orderId: String, speed: Int, conduct: Int, comment: String) {
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/rate-merchant",
+            HttpMethod.Post,
+            MerchantRatingInput(speed, conduct, comment),
+        )
+    }
 
     /** ما هو معروض عليه الآن — **ولم يأخذه أحد بعد.** */
     suspend fun queue(): List<DriverOrder> = api.call("/api/v1/driver/queue")
