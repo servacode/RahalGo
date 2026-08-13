@@ -76,6 +76,8 @@ import kotlinx.coroutines.launch
  */
 data class WalletState(
     val statement: WalletStatement? = null,
+    /** **اسمُ صاحب الكشف** — ورقةٌ بلا اسمٍ لا تُقدَّم حجّة. */
+    val name: String = "",
     val payouts: List<Payout> = emptyList(),
     val busy: Boolean = false,
     val error: String = "",
@@ -109,7 +111,8 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             state = try {
                 val st = backend.me.wallet(rangeQuery())
                 val po = runCatching { backend.me.payouts() }.getOrDefault(state.payouts)
-                state.copy(statement = st, payouts = po, error = "")
+                val who = runCatching { backend.driver.me().fullName }.getOrDefault(state.name)
+                state.copy(statement = st, payouts = po, name = who, error = "")
             } catch (e: Exception) {
                 state.copy(error = describe(e))
             }
@@ -480,18 +483,37 @@ private fun fmtWhen(iso: String): String {
  */
 @Composable
 private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     Column(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 stringResource(R.string.wal_statement),
                 style = MaterialTheme.typography.titleMedium,
             )
-            OutlinedButton(onClick = onBack) { Text(stringResource(R.string.wal_back)) }
+            val period = periodLabel(vm.range)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // **والطباعةُ هي ما يجعل الكشفَ حجّة** — (سأل المالك
+                // ٢٠٢٦-٠٨-١٣: «شو استفدنا من الكشف ما فيه طباعة؟»).
+                // **ونظامُ أندرويد يعطي الطابعةَ و«حفظ كـPDF» معا.**
+                Button(onClick = {
+                    StatementPrint.print(
+                        context,
+                        vm.state.name,
+                        st,
+                        period,
+                    )
+                }) { Text(stringResource(R.string.wal_print)) }
+                OutlinedButton(onClick = onBack) { Text(stringResource(R.string.wal_back)) }
+            }
         }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -545,3 +567,7 @@ enum class Range(val label: Int) {
     Prev(R.string.wal_prev_month),
     All(R.string.wal_all),
 }
+
+/** **اسمُ المدى كما يُكتب في الورقة.** */
+@Composable
+private fun periodLabel(r: Range): String = stringResource(r.label)

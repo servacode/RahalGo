@@ -347,7 +347,11 @@
     <string name="wal_opening">رصيد أوّل المدّة</string>
     <string name="wal_closing">رصيد آخر المدّة</string>
     <string name="wal_this_month">هذا الشهر</string>
-    <string name="wal_prev_month">الشهر الماضي</string>
+    <string name="wal_prev_month">الماضي</string>
+    <string name="wal_print">طباعة</string>
+    <string name="wal_doc_title">كشف حساب</string>
+    <string name="wal_doc_for">%1$s · %2$s</string>
+    <string name="wal_print_failed">تعذّرت الطباعة على هذا الجهاز</string>
     <string name="wal_all">الكلّ</string>
     <string name="wal_back">رجوع</string>
 
