@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
+import com.rahalgo.driver.data.Refresh
 import com.rahalgo.driver.location.LastPoint
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.trip.ChatState
@@ -127,6 +128,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             onState = { up -> Log.i("RahalGo/live", if (up) "الوصلة قامت" else "الوصلة انقطعت") },
             onEvent = {
                 refresh()
+                // **وما وصل الوصلةَ يُبَثّ للجميع** — (شكوى المالك
+                // ٢٠٢٦-٠٨-١٣: «لا يحدث تحديثٌ لحظيٌّ تلقائيٌّ لكثيرٍ من
+                // الأمور بالتطبيق»).
+                //
+                // **والوصلةُ واحدةٌ ويبدؤها هذا المحرّك** — فكان
+                // يُنعش الطلباتِ وحدَها، **والرصيدُ والتقييمُ والورديّةُ
+                // تبقى قديمةً حتّى يخرج من التبويب ويعود.**
+                Refresh.bump()
                 // **والحديثُ المفتوح يُعاد قراءته** — الإشارةُ تقول
                 // «تغيّر شيء»، **ومن أعاد القائمة وحدَها** ترك صاحبَه
                 // ينظر إلى حديثٍ لا يتحرّك وقد وصلته رسالة.

@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
+import com.rahalgo.driver.data.Refresh
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.location.LocationService
 import com.rahalgo.shared.model.DriverMe
@@ -16,6 +17,7 @@ import com.rahalgo.shared.model.Notice
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import java.io.IOException
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -36,6 +38,21 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         refresh()
+        // ══════════════════════════════════════════════════════════════
+        // **وتسمع نبضةَ التحديث فتُنعش نفسَها**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (شكوى المالك ٢٠٢٦-٠٨-١٣.)
+        //
+        // **رصيدُه وتقييمُه وورديّتُه وصورتُه كلُّها هنا** — والشريطُ
+        // العلويُّ يقرأ منها. **فكانت تبقى كما فُتحت** حتّى يخرج من
+        // التبويب ويعود.
+        //
+        // **و`drop(1)` تتخطّى القيمةَ الحاليّة** — وإلّا جلبت مرّتين في
+        // أوّل فتحة.
+        viewModelScope.launch {
+            Refresh.tick.drop(1).collect { refresh() }
+        }
     }
 
     fun refresh() {

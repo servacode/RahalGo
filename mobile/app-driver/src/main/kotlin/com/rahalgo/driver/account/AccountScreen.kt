@@ -39,6 +39,7 @@ import com.rahalgo.design.InkMuted
 import com.rahalgo.design.StateGreen
 import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
+import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.location.LastPoint
 import com.rahalgo.driver.ui.Avatar
 import com.rahalgo.driver.ui.PasswordField
@@ -125,9 +126,12 @@ private fun Identity(vm: AccountViewModel, s: AccountState) {
         ActivityResultContracts.PickVisualMedia(),
     ) { uri -> uri?.let(vm::setAvatar) }
 
-    SectionTitle(stringResource(R.string.acc_identity))
+    // **ولا عنوانَ لأوّل قسم** — (قرارُ المالك ٢٠٢٦-٠٨-١٣: «مكتوب هويّتي
+    // من فوق، ألغِها ما يلزم»).
+    //
+    // **وصورتُه واسمُه يقولان ما هما** — وعنوانٌ فوقهما يسمّي المعروف.
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Avatar(url = me.avatarThumbUrl, name = me.fullName, size = 64)
+        Avatar(url = Backend.media(me.avatarThumbUrl), name = me.fullName, size = 64)
         Spacer(Modifier.size(12.dp))
         Column {
             TextButton(

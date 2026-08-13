@@ -12,6 +12,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
+import com.rahalgo.driver.data.Refresh
 import com.rahalgo.shared.model.Address
 import com.rahalgo.shared.model.AddressInput
 import com.rahalgo.shared.model.MeSummary
@@ -19,6 +20,7 @@ import com.rahalgo.shared.net.ApiClient
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -66,6 +68,11 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         refresh()
+        // **وتسمع النبضةَ كسائر الشاشات** — من بدّل اسمَه من الويب
+        // **يراه هنا بلا أن يخرج ويعود.**
+        viewModelScope.launch {
+            Refresh.tick.drop(1).collect { refresh() }
+        }
     }
 
     fun refresh() {
@@ -92,6 +99,17 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
                 block()
                 val me = backend.account.summary()
                 val list = runCatching { backend.account.addresses() }.getOrDefault(state.addresses)
+                // ══════════════════════════════════════════════════════
+                // **وما بدّله يُبَثّ ليراه في شريطه فورا**
+                // ══════════════════════════════════════════════════════
+                //
+                // (شكوى المالك ٢٠٢٦-٠٨-١٣: «الصورة ما زالت حرف خ».)
+                //
+                // **والخادمُ لا يبثّ خبراً عن فعلٍ فعله صاحبُ الحساب
+                // بنفسه** — فيبثّه من فعله. **وبدونه يبقى الشريطُ
+                // العلويُّ على الاسم القديم والصورة القديمة** حتّى
+                // يُقلع التطبيقُ من جديد.
+                Refresh.bump()
                 state.copy(
                     me = me,
                     addresses = list,

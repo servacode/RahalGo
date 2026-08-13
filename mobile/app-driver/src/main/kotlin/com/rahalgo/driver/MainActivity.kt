@@ -353,7 +353,7 @@ private fun SignedIn(onLogout: () -> Unit) {
                 name = home.state.me?.fullName.orEmpty(),
                 // **والمسار النسبيّ يصير عنوانا هنا** — المحرّك يرسل
                 // `/media/...`، **وهو نفسه في المحلّيّ والإنتاج.**
-                avatarUrl = home.state.me?.avatarUrl?.let { Backend.BASE_URL + it },
+                avatarUrl = Backend.media(home.state.me?.avatarUrl),
                 balance = home.state.me?.balance ?: 0,
                 rating = home.state.me?.rating ?: 0.0,
                 ratingCount = home.state.me?.ratingCount ?: 0,
