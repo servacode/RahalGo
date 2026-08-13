@@ -497,6 +497,14 @@ private fun SignedIn(onLogout: () -> Unit) {
                 //
                 // **وبابان لشاشةٍ واحدةٍ يزاحمان** — والشريطُ السفليُّ
                 // لما يُفتح كلَّ دقيقة، **والسجلُّ يُفتح بسؤال.**
+                NavigationBarItem(
+                    selected = tab == 2 && overlay.isClear,
+                    onClick = { overlay.clear(); tab = 2; home.refresh() },
+                    icon = {
+                        Icon(painterResource(R.drawable.ic_home), contentDescription = null)
+                    },
+                    label = { Text(stringResource(R.string.nav_home)) },
+                )
                 // ══════════════════════════════════════════════════════
                 // **و«ملفي» تبويبٌ دائمٌ بصورته هو**
                 // ══════════════════════════════════════════════════════
@@ -520,18 +528,16 @@ private fun SignedIn(onLogout: () -> Unit) {
                         Avatar(
                             url = Backend.media(home.state.me?.avatarUrl),
                             name = home.state.me?.fullName.orEmpty(),
-                            size = 24,
+                            // **وأكبرُ من أيقونة** — (قرارُ المالك
+                            // ٢٠٢٦-٠٨-١٣: «كبّر صورة البروفايل»).
+                            //
+                            // **وأربعةٌ وعشرون مقاسُ رسمٍ خطّيّ** —
+                            // والصورةُ دائرةٌ فيها وجه، **فتُقرأ نقطةً
+                            // لا وجها.**
+                            size = 30,
                         )
                     },
                     label = { Text(stringResource(R.string.nav_profile)) },
-                )
-                NavigationBarItem(
-                    selected = tab == 2 && overlay.isClear,
-                    onClick = { overlay.clear(); tab = 2; home.refresh() },
-                    icon = {
-                        Icon(painterResource(R.drawable.ic_home), contentDescription = null)
-                    },
-                    label = { Text(stringResource(R.string.nav_home)) },
                 )
             }
         },

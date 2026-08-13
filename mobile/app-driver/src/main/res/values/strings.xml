@@ -93,7 +93,7 @@
     <!-- الطلبات -->
     <string name="nav_home">الرئيسية</string>
     <string name="nav_orders">الطلبات</string>
-    <string name="nav_profile">ملفّي</string>
+    <string name="nav_profile">حسابي</string>
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
     <string name="order_cash_due">تقبض نقداً</string>
     <string name="order_prepaid">مدفوع سلفاً</string>
