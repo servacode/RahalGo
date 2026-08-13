@@ -78,7 +78,10 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = order.merchantName,
+                // **واسمٌ فارغٌ لا يُعرض** — الطلبُ الخاصُّ بلا متجر،
+                // **فكان العنوانُ يخرج خالياً** ويبقى الرقمُ وحدَه في
+                // زاويةٍ: **شاشةٌ تُفتح بلا عنوانٍ تُقرأ نصفَ محمَّلة.**
+                text = order.merchantName.ifBlank { stringResource(R.string.card_custom) },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -87,6 +90,12 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
 
         Spacer(Modifier.height(6.dp))
         Text(statusLabel(order.status), color = Rahal.colors.brand, fontWeight = FontWeight.Bold)
+
+        // **وما طلبه الزبونُ بلفظه** — أوّلُ ما يُقرأ في الخاصّ.
+        if (order.customRequest.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            Field(stringResource(R.string.card_custom_what), order.customRequest)
+        }
 
         Spacer(Modifier.height(18.dp))
         Field(stringResource(R.string.detail_customer), order.customerName)

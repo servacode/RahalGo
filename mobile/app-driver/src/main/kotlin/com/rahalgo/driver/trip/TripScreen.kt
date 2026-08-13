@@ -1001,7 +1001,9 @@ private fun OnRouteBanner(
         }
         Spacer(Modifier.height(2.dp))
         Text(
-            text = offer.merchantName + " · " + money(offer.cashDue),
+            // **واسمُ المصدر أو «طلب خاصّ»** — لا سطرٌ يبدأ بنقطة.
+            text = offer.merchantName.ifBlank { stringResource(R.string.card_custom) } +
+                " · " + money(offer.cashDue),
             color = Color.White.copy(alpha = 0.9f),
         )
         Spacer(Modifier.height(10.dp))
@@ -1167,7 +1169,8 @@ private fun TripCard(
                     text = if (toCustomer) {
                         order.customerName.ifBlank { stringResource(R.string.detail_customer) }
                     } else {
-                        order.merchantName
+                        // **ولا اسمَ متجرٍ في الخاصّ** — فيُقال ما هو.
+                        order.merchantName.ifBlank { stringResource(R.string.card_custom) }
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,

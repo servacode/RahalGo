@@ -511,6 +511,7 @@
     <string name="step_bought">اشتريتُ الطلب</string>
 
     <!-- إرجاعُ البضاعة -->
+    <string name="err_no_merchant">لا متجرَ في هذا الطلب — الخاصُّ تشتريه بنفسك</string>
     <string name="hist_return">سلّمتُ البضاعة للمتجر</string>
     <string name="hist_returned">أُعيدت البضاعة للمتجر</string>
     <string name="hist_returned_done">سُجّل إرجاعُ البضاعة</string>

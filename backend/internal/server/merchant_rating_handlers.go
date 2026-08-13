@@ -28,6 +28,9 @@ var (
 		"already_rated", "errors.already_rated")
 )
 
+// errNoMerchant **لا متجرَ في هذا الطلب** — الخاصُّ يشتريه السائقُ بنفسه.
+var errNoMerchant = httpx.NewError(http.StatusConflict, "no_merchant", "errors.no_merchant")
+
 // handleDriverRateMerchant يسجّل تقييمَ السائق لمتجر طلبٍ نفّذه.
 func (s *Server) handleDriverRateMerchant(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
@@ -50,15 +53,23 @@ func (s *Server) handleDriverRateMerchant(w http.ResponseWriter, r *http.Request
 	//
 	// **والشرطُ في الخادم لا في الشاشة**: شاشةٌ تُخفي الزرَّ لا تمنع من ينادي
 	// الواجهةَ مباشرةً — **وهي عائلةُ «قاعدةٌ تُطبَّق في العرض» التي تكرّرت.**
+	// **وفارغُه طلبٌ خاصّ** — وكان يُقرأ في نصٍّ غيرِ قابلٍ للفراغ
+	// **فيسقط الفحصُ ويُردّ «غير موجود»**: رسالةٌ تقول للسائق إنّ طلبَه
+	// ذهب، **وهو في يده.**
 	var merchantID string
 	var reached bool
 	if err := s.pg.QueryRow(r.Context(), `
-		SELECT o.merchant_id::text,
+		SELECT COALESCE(o.merchant_id::text, ''),
 		       (o.picked_up_at IS NOT NULL
 		        OR o.status = 'failed' AND o.fault = 'merchant')
 		FROM orders o WHERE o.id = $1 AND o.driver_id = $2`,
 		orderID, userIDFrom(r)).Scan(&merchantID, &reached); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	if merchantID == "" {
+		// **ولا متجرَ في الطلب الخاصّ** — فلا يُقيَّم.
+		s.respondErr(w, errNoMerchant)
 		return
 	}
 	if !reached {

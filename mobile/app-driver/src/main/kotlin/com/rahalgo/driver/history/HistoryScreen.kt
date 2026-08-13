@@ -392,9 +392,12 @@ private fun Row(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        if (o.merchantName.isNotEmpty()) {
-            Text(o.merchantName, style = MaterialTheme.typography.bodyMedium)
-        }
+        // **واسمٌ فارغٌ يعني طلباً خاصّاً** — وسطرٌ يُحذف يترك بطاقةً
+        // برقمٍ وحده: **من فتح سجلَّه ليتذكّر طلباً لا يتذكّره برقمه.**
+        Text(
+            text = o.merchantName.ifBlank { stringResource(R.string.card_custom) },
+            style = MaterialTheme.typography.bodyMedium,
+        )
         // **وسببُ التعذّر يُقال** — من فشل طلبُه يُسأل عنه بعد أيّام،
         // **وسجلٌّ يقول «تعذّر» بلا سببٍ لا يُدافَع به.**
         if (!delivered && o.failReason.isNotEmpty()) {
@@ -573,7 +576,10 @@ private fun RateDialog(
         title = { Text(stringResource(R.string.hist_rate_title)) },
         text = {
             Column {
-                Text(o.merchantName, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = o.merchantName.ifBlank { stringResource(R.string.card_custom) },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
                 Spacer(Modifier.height(12.dp))
                 StarPick(stringResource(R.string.hist_rate_speed), speed) { speed = it }
                 Spacer(Modifier.height(10.dp))
