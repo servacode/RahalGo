@@ -1,6 +1,10 @@
 package com.rahalgo.driver.home
 
 import androidx.compose.foundation.background
+import com.rahalgo.driver.ui.Bar
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Switch
+import com.rahalgo.shared.model.IncentivesPayload
 import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -167,34 +171,48 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             )
         }
 
-        Spacer(Modifier.height(20.dp))
-        Text(
-            text = stringResource(R.string.home_money),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Spacer(Modifier.height(10.dp))
-        MoneyRow(stringResource(R.string.home_balance), money(me.balance))
         // ══════════════════════════════════════════════════════════════
-        // **النقد وسقفه في سطر واحد**
+        // **ولا سطرَ مالٍ هنا — رصيدُه في الشريط فوقه**
         // ══════════════════════════════════════════════════════════════
         //
-        // **ومن بلغ سقفه لا يصله طلب نقدي** حتّى يسلّم للمكتب. **ورقم
-        // وحده لا يقول أين هو من الحدّ** — فيُعرض الاثنان معا، ويحمرّ
-        // حين يقترب.
-        MoneyRow(
-            label = stringResource(R.string.home_cash),
-            // **و«من» لا شرطة مائلة**: السطر عربيّ يُقرأ من اليمين
-            // وأرقامه لاتينيّة تُقرأ من اليسار، **والشرطة بينهما تنقلب
-            // في العين** فلا يُعرف أيّ الرقمين الحدّ.
-            value = if (me.cashLimit > 0) {
-                stringResource(R.string.cash_of, grouped(me.cashHeld), money(me.cashLimit))
-            } else {
-                money(me.cashHeld)
-            },
-            warn = me.cashLimit > 0 && me.cashHeld >= me.cashLimit,
-        )
-        if (me.todayCompensated != 0L) {
-            MoneyRow(stringResource(R.string.home_compensated), money(me.todayCompensated))
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «المالُ نحذفه، ما يلزم — موجودٌ فوق
+        //  أساساً».)
+        //
+        // **ورقمٌ يُعاد في شاشةٍ واحدةٍ مرّتين يُقرأ رقمين** — فيسأل
+        // صاحبُه أيُّهما الصحيح.
+
+        // ══════════════════════════════════════════════════════════════
+        // **وصندوقُه شريطٌ لا سطر**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نحطّ شريطَ صندوقي، شقد في ذمّة
+        //  السائق».)
+        //
+        // **والسقفُ ليس زينة**: من بلغه لا يُعرض عليه طلبٌ نقديّ، **فيقف
+        // عملُه ولا يعرف لماذا.** **وشريطٌ يُرى قبل أن يُقرأ رقم.**
+        if (me.cashLimit > 0) {
+            Spacer(Modifier.height(22.dp))
+            CashBar(held = me.cashHeld, limit = me.cashLimit)
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وهدفُه بعده — وجائزتُه معه**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «بعدها نحطّ شريطَ الهدف وقيمةَ
+        //  المكافأة عند تحقيق الهدف».)
+        //
+        // **وحافزٌ لا يُرى لا يحفّز** — ومن لا يعرف أنّه على بُعد ثلاثةِ
+        // طلباتٍ من مكافأةٍ لا يسعى إليها.
+        val st = state.goal?.standing
+        if (st != null && st.target > 0) {
+            Spacer(Modifier.height(18.dp))
+            GoalBar(
+                done = st.done,
+                target = st.target,
+                reached = st.reached,
+                reward = state.goal?.targetReward ?: 0,
+            )
         }
 
         // **والخروجُ انتقل إلى أسفل القائمة الجانبيّة** — (قرارُ المالك
@@ -295,36 +313,54 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = stringResource(if (on) R.string.shift_on else R.string.shift_off),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = if (on) Rahal.colors.onBrand else Rahal.colors.inkMuted,
-        )
-        Spacer(Modifier.height(4.dp))
+        // ══════════════════════════════════════════════════════════════
+        // **مفتاحٌ واحدٌ — حالٌ وفعلٌ معا**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نخلّيه زرّاً ذكيّاً بالعمل وخارج
+        //  العمل، وتحته يُكتب: الآن تستقبل الطلبات · لا يمكنك استقبال
+        //  الطلبات أنت خارج العمل».)
+        //
+        // **وكانت البطاقةُ تقول شيئين متضادّين**: أعلاها الحالُ «وردية
+        // مفتوحة» وأسفلها الفعلُ «أنهِ الوردية» — **ومن قرأ بسرعةٍ وهو
+        // يقود لا يعرف أيُّهما حالُه.**
+        //
+        // **والمفتاحُ يقول الحالَ بموضعه ويقبل الفعلَ بلمسته** — ولا
+        // كلمتين متضادّتين في بطاقةٍ واحدة.
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(if (on) R.string.shift_on else R.string.shift_off),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (on) Rahal.colors.onBrand else Rahal.colors.inkMuted,
+            )
+            if (busy) {
+                CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+            } else {
+                Switch(
+                    checked = on,
+                    onCheckedChange = onToggle,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Rahal.colors.onBrand,
+                        checkedTrackColor = Rahal.colors.success,
+                        uncheckedThumbColor = Rahal.colors.canvas,
+                        uncheckedTrackColor = Rahal.colors.inkMuted,
+                    ),
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        // **وما يترتّب عليه تحته** — لا يُترك ليُستنتج من كلمتين.
         Text(
             text = stringResource(
                 if (on) R.string.shift_on_hint else R.string.shift_off_hint,
             ),
             color = if (on) Rahal.colors.onBrand.copy(alpha = 0.85f) else Rahal.colors.inkMuted,
-            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = { onToggle(!on) },
-            enabled = !busy,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (on) Rahal.colors.onBrand else Rahal.colors.brand,
-                contentColor = if (on) Rahal.colors.brand else Rahal.colors.onBrand,
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (busy) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            } else {
-                Text(stringResource(if (on) R.string.shift_end else R.string.shift_start))
-            }
-        }
         if (me.activeOrders > 0) {
             Spacer(Modifier.height(10.dp))
             Text(
@@ -372,6 +408,14 @@ private fun MoneyRow(label: String, value: String, warn: Boolean = false) {
 /** ما تعرضه اللوحة — **ولا تملكه هي.** */
 data class HomeState(
     val me: DriverMe? = null,
+    /**
+     * **هدفُه ومكافأتُه** — (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نحطّ شريطَ الهدف
+     *  وقيمةَ المكافأة عند تحقيق الهدف»).
+     *
+     * **وفشلُ جلبه لا يُسقط اللوحة** — يُطوى الشريطُ ويبقى ما سواه:
+     * **مفتاحُ العمل أهمُّ ما فيها، ولا يُحجب لأجل رقمٍ لم يصل.**
+     */
+    val goal: IncentivesPayload? = null,
     /** هل إذن الموقع ممنوح؟ — **وبدونه لا مسافة ولا أقرب طلب.** */
     val locationOn: Boolean = true,
     val busy: Boolean = false,
@@ -384,3 +428,107 @@ data class HomeActions(
     val refresh: () -> Unit,
     val logout: () -> Unit,
 )
+
+/**
+ * **شريطُ الصندوق** — ما في ذمّته وكم بقي قبل سقفه.
+ *
+ * **ويُقال ما يبقى لا ما مضى**: «يبقى ٣٫١٠٠» جوابُ سؤاله، **و«١٬٩٠٠ من
+ * ٥٬٠٠٠» كسرٌ يُحسب في الرأس.**
+ */
+@Composable
+private fun CashBar(held: Long, limit: Long) {
+    val left = limit - held
+    val ratio = if (limit > 0) held.toFloat() / limit else 0f
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.home_cash_bar),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = money(held),
+            fontWeight = FontWeight.Bold,
+            color = if (ratio >= 1f) Rahal.colors.danger else Rahal.colors.accent,
+        )
+    }
+    Spacer(Modifier.height(8.dp))
+    Bar(
+        ratio = ratio,
+        color = when {
+            ratio >= 1f -> Rahal.colors.danger
+            ratio > 0.8f -> Rahal.colors.accent
+            else -> Rahal.colors.success
+        },
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        text = if (left > 0) {
+            stringResource(R.string.home_cash_left, money(left))
+        } else {
+            stringResource(R.string.home_cash_over)
+        },
+        color = if (left > 0) Rahal.colors.inkMuted else Rahal.colors.danger,
+        style = MaterialTheme.typography.bodySmall,
+    )
+}
+
+/**
+ * **شريطُ الهدف** — ما أنجزه من شهره، وما ينتظره إن بلغه.
+ *
+ * **والجائزةُ تُقال قبل أن تُنال** — وشاشةٌ تقول «٨ من ٥٠» ولا تقول ماذا
+ * بعدها **تطلب جهداً بلا وعد.** **وصفرٌ يُخفيها**: لا يُعرَض وعدٌ بلا
+ * مبلغ.
+ */
+@Composable
+private fun GoalBar(done: Int, target: Int, reached: Boolean, reward: Long) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.home_target),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Text(
+            text = grouped(done.toLong()) + " / " + grouped(target.toLong()),
+            fontWeight = FontWeight.Bold,
+            color = if (reached) Rahal.colors.success else Rahal.colors.brand,
+        )
+    }
+    Spacer(Modifier.height(8.dp))
+    Bar(
+        ratio = done.toFloat() / target,
+        color = if (reached) Rahal.colors.success else Rahal.colors.brand,
+    )
+    Spacer(Modifier.height(6.dp))
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        if (!reached) {
+            Text(
+                text = stringResource(
+                    R.string.home_target_left,
+                    grouped((target - done).toLong()),
+                ),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        if (reward > 0) {
+            Text(
+                text = stringResource(
+                    if (reached) R.string.home_target_got else R.string.home_target_reward,
+                    money(reward),
+                ),
+                color = if (reached) Rahal.colors.success else Rahal.colors.accent,
+                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}

@@ -64,7 +64,12 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 val me = backend.driver.me()
                 syncService(me)
                 refreshUnread()
-                state.copy(me = me, busy = false, locationOn = hasLocation())
+                // **وهدفُه يُجلب معه** — (قرارُ المالك ٢٠٢٦-٠٨-١٣).
+                //
+                // **وفشلُه لا يُسقط اللوحة**: `runCatching` يُبقي ما وصل،
+                // **ومفتاحُ العمل أهمُّ ما فيها.**
+                val goal = runCatching { backend.me.incentives() }.getOrNull() ?: state.goal
+                state.copy(me = me, goal = goal, busy = false, locationOn = hasLocation())
             } catch (e: Exception) {
                 state.copy(busy = false, error = describe(e))
             }

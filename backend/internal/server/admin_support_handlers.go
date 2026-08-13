@@ -41,6 +41,13 @@ func (s *Server) handleRateOrder(w http.ResponseWriter, r *http.Request) {
 				UserID: *uid, Kind: notifications.KindRating,
 				Title: notifTitles.ratingNew, Entity: "rating",
 				EntityID: chi.URLParam(r, "id"), Href: "/portal/reviews",
+				// **يُحفَظ ولا يرنّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٤: «لا
+				// نريد إشعاراتٍ كثيرةً بلا فائدة»).
+				//
+				// **ونجمةٌ تُعطى لا فعلَ فيها**: يقرؤها حين يفتح
+				// تقييماتِه، **ورنّةٌ تقطع عليه طريقَه لأجلها** تُنفق
+				// انتباهَه في غير موضعه.
+				Silent: true,
 			})
 		}
 	}

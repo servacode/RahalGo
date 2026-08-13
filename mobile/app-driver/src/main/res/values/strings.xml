@@ -74,17 +74,32 @@
     <string name="home_delivered">سلّمت</string>
     <string name="home_failed">تعذّر</string>
     <string name="home_earned">كسبت</string>
-    <string name="home_money">المال</string>
-    <string name="home_balance">رصيدك</string>
-    <string name="home_cash">نقد بذمّتك</string>
-    <string name="home_compensated">تعويضات اليوم</string>
+    <!-- **وشريطُ صندوقه وهدفه في لوحته** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
+         «المالُ نحذفه ما يلزم — موجودٌ فوق أساساً · نحطّ شريطَ صندوقي
+          شقد في ذمّة السائق · بعدها شريطَ الهدف وقيمةَ المكافأة»).
+
+         **ورقمٌ يُعاد في شاشةٍ واحدةٍ مرّتين يُقرأ رقمين** — فيسأل
+         صاحبُه أيُّهما الصحيح. -->
+    <string name="home_cash_bar">في ذمّتي</string>
+    <string name="home_cash_left">يبقى %1$s</string>
+    <string name="home_cash_over">تجاوزتَ السقف</string>
+    <string name="home_target">هدفُ الشهر</string>
+    <string name="home_target_left">يبقى %1$s طلباً</string>
+    <string name="home_target_reward">مكافأةُ البلوغ %1$s</string>
+    <string name="home_target_got">نلتَ المكافأة %1$s</string>
     <string name="home_retry">حاول مرّة ثانية</string>
-    <string name="shift_on">وردية مفتوحة</string>
-    <string name="shift_off">وردية مغلقة</string>
-    <string name="shift_on_hint">الطلبات تصلك الآن</string>
-    <string name="shift_off_hint">لن يصلك أيّ طلب حتّى تفتحها</string>
-    <string name="shift_start">ابدأ الوردية</string>
-    <string name="shift_end">أنهِ الوردية</string>
+    <!-- ══ مفتاحُ العمل — حالٌ وفعلٌ في شيءٍ واحد ══
+         (قرارُ المالك ٢٠٢٦-٠٨-١٣: «بدّل وردية مفتوحة/مغلقة، نخلّيه زرّاً
+          ذكيّاً بالعمل وخارج العمل، وتحته يُكتب: الآن تستقبل الطلبات ·
+          لا يمكنك استقبال الطلبات أنت خارج العمل».)
+
+         **وكانت البطاقةُ تقول شيئين متضادّين**: أعلاها الحال «وردية
+         مفتوحة» وأسفلها الفعل «أنهِ الوردية» — **ومن قرأ بسرعةٍ لا يعرف
+         أيُّهما حالُه.** -->
+    <string name="shift_on">بالعمل</string>
+    <string name="shift_off">خارج العمل</string>
+    <string name="shift_on_hint">الآن تستقبل الطلبات</string>
+    <string name="shift_off_hint">لا يمكنك استقبال الطلبات — أنت خارج العمل</string>
     <string name="shift_active_orders">معك %1$s من %2$s طلبات</string>
     <string name="err_not_driver">هذا الحساب ليس حساب سائق</string>
     <!-- الطلبات -->
@@ -375,7 +390,6 @@
     <string name="wal_all">الكلّ</string>
 
     <!-- ══ وحداتُ القياس — كانت مكتوبةً في الشيفرة ══ -->
-    <string name="cash_of">%1$s من %2$s</string>
     <string name="err_photo_unreadable">تعذّرت قراءة الصورة</string>
     <string name="map_region">الرقّة</string>
 
