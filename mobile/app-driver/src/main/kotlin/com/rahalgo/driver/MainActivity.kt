@@ -430,11 +430,11 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // **ورقاقةُ المحفظة تفتح المحفظة** — (قرارُ المالك
                 // ٢٠٢٦-٠٨-١٣: «نبني المحفظة بنفس الويب»). **وكانت
                 // تنقله إلى اللوحة** حيث سطرُ رصيدٍ لا كشفُ حساب.
-                onWallet = { wallet = true; account = false; rating = false },
+                onWallet = { wallet = true; account = false; rating = false; picked = null },
                 onNotifications = home::openInbox,
-                onProfile = { account = true; rating = false; wallet = false },
+                onProfile = { account = true; rating = false; wallet = false; picked = null },
                 onMenu = { scope.launch { drawer.open() } },
-                onRating = { rating = true; account = false; wallet = false },
+                onRating = { rating = true; account = false; wallet = false; picked = null },
             )
         },
         bottomBar = {
@@ -464,8 +464,8 @@ private fun SignedIn(onLogout: () -> Unit) {
                         // **وشريطٌ يُضغط ولا يستجيب أسوأُ من شريطٍ
                         // مخفيّ**: المخفيُّ يقول «لا مخرجَ هنا»،
                         // **والصامتُ يقول «معطّل».**
-                        selected = tab == 0 && !account && !rating && !wallet,
-                        onClick = { account = false; rating = false; wallet = false; tab = 0; orders.refresh() },
+                        selected = tab == 0 && !account && !rating && !wallet && picked == null,
+                        onClick = { account = false; rating = false; wallet = false; picked = null; tab = 0; orders.refresh() },
                         icon = {
                             Icon(painterResource(R.drawable.ic_trip), contentDescription = null)
                         },
@@ -490,8 +490,8 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // **والشريطُ لا يتبدّل تحت إبهامه** مع كلّ طلبٍ يجيء
                 // ويذهب — **فيضغط ما لم يقصد.**
                 if (onShift) NavigationBarItem(
-                    selected = tab == 1 && !account && !rating && !wallet,
-                    onClick = { account = false; rating = false; wallet = false; tab = 1; orders.refresh() },
+                    selected = tab == 1 && !account && !rating && !wallet && picked == null,
+                    onClick = { account = false; rating = false; wallet = false; picked = null; tab = 1; orders.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_orders), contentDescription = null)
                     },
@@ -511,16 +511,16 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // **ولا يختفي بانصرافه**: سجلُّه ماضٍ لا يتبدّل
                 // بورديّته — **ومن انصرف يبقى يسأل عمّا عمل.**
                 NavigationBarItem(
-                    selected = tab == 3 && !account && !rating && !wallet,
-                    onClick = { account = false; rating = false; wallet = false; tab = 3 },
+                    selected = tab == 3 && !account && !rating && !wallet && picked == null,
+                    onClick = { account = false; rating = false; wallet = false; picked = null; tab = 3 },
                     icon = {
                         Icon(painterResource(R.drawable.ic_history), contentDescription = null)
                     },
                     label = { Text(stringResource(R.string.nav_history)) },
                 )
                 NavigationBarItem(
-                    selected = tab == 2 && !account && !rating && !wallet,
-                    onClick = { account = false; rating = false; wallet = false; tab = 2; home.refresh() },
+                    selected = tab == 2 && !account && !rating && !wallet && picked == null,
+                    onClick = { account = false; rating = false; wallet = false; picked = null; tab = 2; home.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_home), contentDescription = null)
                     },
