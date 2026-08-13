@@ -1,6 +1,8 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import com.rahalgo.driver.wallet.WalletViewModel
+import com.rahalgo.driver.wallet.WalletScreen
 import com.rahalgo.driver.rating.RatingViewModel
 import com.rahalgo.driver.rating.RatingScreen
 import androidx.activity.compose.BackHandler
@@ -263,10 +265,13 @@ private fun SignedIn(onLogout: () -> Unit) {
     var account by rememberSaveable { mutableStateOf(false) }
     /** **وشاشةُ تقييماته** — تُفتح من نجمة الشريط. */
     var rating by rememberSaveable { mutableStateOf(false) }
+    /** **ومحفظتُه** — تُفتح من رقاقة الرصيد. */
+    var wallet by rememberSaveable { mutableStateOf(false) }
     val home: HomeViewModel = viewModel()
     val orders: OrdersViewModel = viewModel()
     val accountVm: AccountViewModel = viewModel()
     val ratingVm: RatingViewModel = viewModel()
+    val walletVm: WalletViewModel = viewModel()
     val context = LocalContext.current
 
     // ══════════════════════════════════════════════════════════════════
@@ -368,10 +373,13 @@ private fun SignedIn(onLogout: () -> Unit) {
                 rating = home.state.me?.rating ?: 0.0,
                 ratingCount = home.state.me?.ratingCount ?: 0,
                 unread = home.unread,
-                onWallet = { tab = 2 },
+                // **ورقاقةُ المحفظة تفتح المحفظة** — (قرارُ المالك
+                // ٢٠٢٦-٠٨-١٣: «نبني المحفظة بنفس الويب»). **وكانت
+                // تنقله إلى اللوحة** حيث سطرُ رصيدٍ لا كشفُ حساب.
+                onWallet = { wallet = true; account = false; rating = false },
                 onNotifications = home::openInbox,
-                onProfile = { account = true; rating = false },
-                onRating = { rating = true; account = false },
+                onProfile = { account = true; rating = false; wallet = false },
+                onRating = { rating = true; account = false; wallet = false },
             )
         },
         bottomBar = {
@@ -401,8 +409,8 @@ private fun SignedIn(onLogout: () -> Unit) {
                         // **وشريطٌ يُضغط ولا يستجيب أسوأُ من شريطٍ
                         // مخفيّ**: المخفيُّ يقول «لا مخرجَ هنا»،
                         // **والصامتُ يقول «معطّل».**
-                        selected = tab == 0 && !account && !rating,
-                        onClick = { account = false; rating = false; tab = 0; orders.refresh() },
+                        selected = tab == 0 && !account && !rating && !wallet,
+                        onClick = { account = false; rating = false; wallet = false; tab = 0; orders.refresh() },
                         icon = {
                             Icon(painterResource(R.drawable.ic_trip), contentDescription = null)
                         },
@@ -427,16 +435,16 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // **والشريطُ لا يتبدّل تحت إبهامه** مع كلّ طلبٍ يجيء
                 // ويذهب — **فيضغط ما لم يقصد.**
                 if (onShift) NavigationBarItem(
-                    selected = tab == 1 && !account && !rating,
-                    onClick = { account = false; rating = false; tab = 1; orders.refresh() },
+                    selected = tab == 1 && !account && !rating && !wallet,
+                    onClick = { account = false; rating = false; wallet = false; tab = 1; orders.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_orders), contentDescription = null)
                     },
                     label = { Text(stringResource(R.string.nav_orders)) },
                 )
                 NavigationBarItem(
-                    selected = tab == 2 && !account && !rating,
-                    onClick = { account = false; rating = false; tab = 2; home.refresh() },
+                    selected = tab == 2 && !account && !rating && !wallet,
+                    onClick = { account = false; rating = false; wallet = false; tab = 2; home.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_home), contentDescription = null)
                     },
@@ -484,6 +492,13 @@ private fun SignedIn(onLogout: () -> Unit) {
             if (rating) {
                 BackHandler { rating = false }
                 RatingScreen(vm = ratingVm)
+                return@Box
+            }
+
+            // **ومحفظتُه من رقاقة رصيده.**
+            if (wallet) {
+                BackHandler { wallet = false }
+                WalletScreen(vm = walletVm)
                 return@Box
             }
 

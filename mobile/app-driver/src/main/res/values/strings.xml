@@ -332,4 +332,25 @@
     <string name="rate_no_reviews">لا تقييمات بعد</string>
     <string name="rate_complaints">شكاوى عليك</string>
     <string name="rate_none_yet">لم تُقيَّم بعد — أوّل تقييم يصلك بعد أوّل تسليم</string>
+
+    <!-- ══ المحفظة ══ -->
+    <string name="wal_title">محفظتي</string>
+    <string name="wal_balance">الرصيد</string>
+    <string name="wal_txs">الحركات</string>
+    <string name="wal_no_txs">لا حركات بعد</string>
+    <string name="wal_truncated">الكشف مقصوص عند حدّ العرض — افتح مدى أضيق لترى الباقي</string>
+    <string name="wal_payouts">طلبات السحب</string>
+    <string name="wal_ask_payout">اطلب سحباً</string>
+    <string name="wal_amount">المبلغ</string>
+    <string name="wal_max">الحدّ الأعلى: %1$s</string>
+    <string name="wal_note">ملاحظة (اختياريّة)</string>
+    <string name="wal_send">أرسل الطلب</string>
+    <string name="wal_requested">أُرسل طلبك — تقرّره المالية</string>
+    <string name="wal_not_enough">رصيدك لا يكفي</string>
+    <string name="wal_pending_exists">لديك طلب سحب لم يُقرَّر بعد</string>
+    <string name="wal_bad_amount">مبلغ غير صحيح</string>
+    <string name="wal_st_pending">بانتظار القرار</string>
+    <string name="wal_st_approved">مقبول</string>
+    <string name="wal_st_paid">صُرف</string>
+    <string name="wal_st_rejected">مرفوض</string>
 </resources>
