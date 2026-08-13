@@ -461,7 +461,8 @@
 | `drivers.direct_assign` | السائقون | bool | `false` |
 | `delivery.fee` | السائقون | money | `0` |
 | `drivers.cash_limit` | السائقون | money | `500000` |
-| `drivers.max_active_orders` | السائقون | int | `2` |
+| `drivers.max_active_orders` | السائقون | int | `1` |
+| `drivers.same_route_extra` | السائقون | int | `1` |
 | `orders.driver_timeout_min` | السائقون | int | `10` |
 | `orders.handover_timeout_min` | السائقون | int | `5` |
 | `orders.route_margin_pct` | السائقون | int | `50` |

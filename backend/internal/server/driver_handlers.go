@@ -525,7 +525,7 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	uid := userIDFrom(r)
 	orderID := chi.URLParam(r, "id")
 
-	var onShift bool
+	var onShift, offeredToMe bool
 	var active int
 	var held, limit, cashDue int64
 	if err := s.pg.QueryRow(r.Context(), `
@@ -533,10 +533,13 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
 		       $3::bigint,
 		       COALESCE((SELECT cash_due FROM orders WHERE id = $2), 0),
-		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL)
+		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL),
+		       -- **أعُرض عليه هذا الطلبُ بعينه؟**
+		       COALESCE((SELECT o.offered_driver_id = u.id AND o.offer_expires_at > now()
+		                 FROM orders o WHERE o.id = $2), false)
 		FROM users u WHERE u.id = $1`, uid, orderID,
 		s.settings.GetInt(r.Context(), "drivers.cash_limit")).
-		Scan(&onShift, &held, &limit, &cashDue, &active); err != nil {
+		Scan(&onShift, &held, &limit, &cashDue, &active, &offeredToMe); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -547,7 +550,25 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 	// سقفُ ما بيده: كان يأخذ ما شاء ما دام السقف النقدي يتّسع — والسقف النقدي
 	// لا يمنع تكديس الطلبات الصغيرة. وخمسةُ طلبات بيد سائقٍ واحد تعني أربعة
 	// زبائن ينتظرون ساعة.
-	if int64(active) >= s.settings.GetInt(r.Context(), "drivers.max_active_orders") {
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **وما عُرض عليه بعينه يُقبَل ولو بلغ سقفَه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٣: «السقف ١… ولكن إذا أتى طلبٌ على نفس
+	//  مساره يُسنَد إليه بشكلٍ تلقائيّ».)
+	//
+	// **والعرضُ لا يقع إلّا بعد أن تُفحَص شروطُه** — طريقُ المسار يشترط
+	// متجراً على بعد ثمانمئة متر، وزبوناً في الجهة نفسِها، **وألّا يكون
+	// قد تجاوز المتجر.** فما عبر ذلك الباب **مسموحٌ بالتعريف.**
+	//
+	// **ولو مُنع هنا لَبقي العرضُ معروضاً ولا يُقبَل** — يرنّ في هاتفه
+	// ويُردّ عند الضغط، **فيقرأ العطبَ ولا يفهمه.**
+	//
+	// **والسقفُ يبقى على ما ينتزعه من الطابور بيده** — وهو الفرق:
+	// المعروضُ اختارته المنصّةُ له، والمنتزَعُ اختاره هو.
+	if !offeredToMe &&
+		int64(active) >= s.settings.GetInt(r.Context(), "drivers.max_active_orders") {
 		s.respondErr(w, errTooManyActive)
 		return
 	}
