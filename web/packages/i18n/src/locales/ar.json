@@ -3077,7 +3077,8 @@
       "colWhat": "الحركة",
       "colAmount": "المبلغ",
       "colOrder": "الطلب",
-      "colWhen": "الوقت"
+      "colWhen": "الوقت",
+      "fromCustomer": "قبضتُ من {n}"
     },
     "history": {
       "title": "طلباتي السابقة",

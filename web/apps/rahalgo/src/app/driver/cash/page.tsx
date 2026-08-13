@@ -54,6 +54,8 @@ interface Entry {
   amount: number;
   note: string;
   order_number: number | null;
+  /** **مِمَّن قبض** — وفارغٌ لقيدٍ بلا طلب. */
+  customer_name?: string;
   created_at: string;
 }
 
@@ -227,8 +229,15 @@ export default function CashPage() {
                     <span className="min-w-0 flex-1">
                       {/* **والاسمُ عربيٌّ دائماً** — ورمزٌ لا اسمَ له تقوله
                           ملاحظتُه، **ولا يُعرض رمزٌ إنكليزيٌّ على سائق.** */}
+                      {/* **ومِمَّن قبض باسمه لا بصفته** — (تصحيحُ المالك
+                          ٢٠٢٦-٠٨-١٣: «مكتوبٌ قبضتُ من زبون وهذا غلط،
+                          أساساً هو معروف»). **و«قبضتُ من زبون» ثلاثَ
+                          مرّاتٍ في يومٍ لا تُميّز واحدةً من أخرى.**
+                          **وقيدٌ بلا طلبٍ يبقى بصفته.** */}
                       <span className="block truncate text-sm font-medium">
-                        {label ?? e.note ?? ""}
+                        {(inbound && e.customer_name
+                          ? C.fromCustomer.replace("{n}", e.customer_name)
+                          : label) ?? e.note ?? ""}
                       </span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
                         {e.order_number != null && (

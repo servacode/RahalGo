@@ -795,10 +795,29 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ومِمَّن قبض — باسمه لا بصفته**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (تصحيحُ المالك ٢٠٢٦-٠٨-١٣: «مكتوبٌ قبضتُ من زبون، وهذا غلط —
+	//  لازم يُذكر اسمُ الزبون، أساساً هو معروف».)
+	//
+	// **وكشفُ الصندوق دفترُ ذمّةٍ يُراجَع بعد أيّام**: «قبضتُ من زبون»
+	// ثلاثَ مرّاتٍ في يومٍ لا تُميّز واحدةً من أخرى، **ومن اختلف على
+	// مبلغٍ لا يجد في كشفه ما يشير إلى أحد.**
+	//
+	// **والاسمُ معروفٌ في الصفّ نفسِه** — الطلبُ موصولٌ بالقيد، وصاحبُه
+	// موصولٌ بالطلب. **فقيدٌ يُخفيه يُخفي ما عنده لا ما لا يملك.**
+	//
+	// **وفارغُه يبقى فارغاً**: قيدٌ بلا طلبٍ (تسويةُ إدارة) لا اسمَ له،
+	// **والشاشةُ تقول صفتَه حينئذٍ.**
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT e.kind, e.amount, e.note, o.number, e.created_at
+		SELECT e.kind, e.amount, e.note, o.number,
+		       COALESCE(NULLIF(cu.full_name, ''), '') AS customer_name,
+		       e.created_at
 		FROM driver_cash_entries e
 		LEFT JOIN orders o ON o.id::text = e.ref
+		LEFT JOIN users cu ON cu.id = o.customer_id
 		WHERE e.driver_id = $1
 		ORDER BY e.id DESC LIMIT $2 OFFSET $3`, userIDFrom(r), pg.PerPage, pg.Offset)
 	if err != nil {
@@ -808,16 +827,19 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type entry struct {
-		Kind        string    `json:"kind"`
-		Amount      int64     `json:"amount"`
-		Note        string    `json:"note"`
-		OrderNumber *int64    `json:"order_number"`
-		CreatedAt   time.Time `json:"created_at"`
+		Kind   string `json:"kind"`
+		Amount int64  `json:"amount"`
+		Note   string `json:"note"`
+		// CustomerName **مِمَّن قبض** — وفارغٌ لقيدٍ بلا طلب.
+		OrderNumber  *int64    `json:"order_number"`
+		CustomerName string    `json:"customer_name"`
+		CreatedAt    time.Time `json:"created_at"`
 	}
 	out := []entry{}
 	for rows.Next() {
 		var e entry
-		if err := rows.Scan(&e.Kind, &e.Amount, &e.Note, &e.OrderNumber, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.Kind, &e.Amount, &e.Note, &e.OrderNumber,
+			&e.CustomerName, &e.CreatedAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}

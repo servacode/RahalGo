@@ -30,6 +30,18 @@ data class CashEntry(
     val amount: Long = 0,
     val note: String = "",
     @SerialName("order_number") val orderNumber: Long? = null,
+    /**
+     * **مِمَّن قبض** — باسمه لا بصفته.
+     *
+     * (تصحيحُ المالك ٢٠٢٦-٠٨-١٣: «مكتوبٌ قبضتُ من زبون، وهذا غلط —
+     *  أساساً هو معروف».)
+     *
+     * **و«قبضتُ من زبون» ثلاثَ مرّاتٍ في يومٍ لا تُميّز واحدةً من
+     * أخرى** — ومن اختلف على مبلغٍ لا يجد في كشفه ما يشير إلى أحد.
+     *
+     * **وفارغٌ لقيدٍ بلا طلب** — تسويةُ إدارةٍ لا صاحبَ لها.
+     */
+    @SerialName("customer_name") val customerName: String = "",
     @SerialName("created_at") val createdAt: String = "",
 )
 

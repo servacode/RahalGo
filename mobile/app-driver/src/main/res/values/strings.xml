@@ -441,6 +441,8 @@
     <string name="cash_empty">لا حركات بعد</string>
     <string name="cash_more">عُرض %1$s من %2$s حركة</string>
     <string name="cash_k_order_collection">قبضتُ من زبون</string>
+    <!-- **ومِمَّن قبض باسمه** — والصفةُ أعلاه تبقى لقيدٍ بلا طلب. -->
+    <string name="cash_from">قبضتُ من %1$s</string>
     <string name="cash_k_settlement">سلّمتُ للمنصّة</string>
 
     <!-- أهدافي والمكافآت -->

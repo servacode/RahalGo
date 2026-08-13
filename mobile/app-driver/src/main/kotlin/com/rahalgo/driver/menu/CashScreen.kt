@@ -187,7 +187,18 @@ private fun CashRow(e: CashEntry) {
         }
         // **والاسمُ عربيٌّ دائماً** — ورمزٌ لا اسمَ له تقوله ملاحظتُه،
         // **ولا يُعرض رمزٌ إنكليزيٌّ على سائق.**
-        val label = cashKind(e.kind)
+        //
+        // **ومِمَّن قبض باسمه** — (تصحيحُ المالك ٢٠٢٦-٠٨-١٣: «مكتوبٌ
+        // قبضتُ من زبون وهذا غلط، أساساً هو معروف»). **و«قبضتُ من
+        // زبون» ثلاثَ مرّاتٍ في يومٍ لا تُميّز واحدةً من أخرى.**
+        //
+        // **وقيدٌ بلا طلبٍ يبقى بصفته** — تسويةُ إدارةٍ لا صاحبَ لها،
+        // **واسمٌ يُخترع لها أسوأُ من صفة.**
+        val label = if (inbound && e.customerName.isNotEmpty()) {
+            stringResource(R.string.cash_from, e.customerName)
+        } else {
+            cashKind(e.kind)
+        }
         Text(label.ifEmpty { e.note }, style = MaterialTheme.typography.bodyMedium)
         // **والملاحظةُ لا تُكرّر الاسم** — تظهر إن قالت زيادة.
         if (e.note.isNotEmpty() && e.note != label) {
