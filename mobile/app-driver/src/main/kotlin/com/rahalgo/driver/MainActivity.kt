@@ -1,6 +1,8 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import com.rahalgo.driver.nav.rememberOverlay
+import com.rahalgo.driver.nav.Overlay
 import androidx.compose.foundation.layout.width
 import kotlinx.coroutines.launch
 import com.rahalgo.driver.menu.MenuStub
@@ -272,13 +274,15 @@ private fun Destination() {
 @Composable
 private fun SignedIn(onLogout: () -> Unit) {
     var tab by rememberSaveable { mutableStateOf(0) }
-    // **وحسابُه يبقى مفتوحاً بعد دوران الشاشة** — من كتب اسمَه نصفاً ثمّ
-    // أمال هاتفَه **لا يجد نفسَه في شاشةٍ أخرى.**
-    var account by rememberSaveable { mutableStateOf(false) }
-    /** **وشاشةُ تقييماته** — تُفتح من نجمة الشريط. */
-    var rating by rememberSaveable { mutableStateOf(false) }
-    /** **ومحفظتُه** — تُفتح من رقاقة الرصيد. */
-    var wallet by rememberSaveable { mutableStateOf(false) }
+    // ══════════════════════════════════════════════════════════════════
+    // **وما يغطّي التبويبات رايةٌ واحدة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «افعله الآن بشكلٍ مركزيّ».)
+    //
+    // **كانت أربعَ راياتٍ تُطفأ في سبعة مواضع** — فنُسيت ثلاثَ مرّات،
+    // **فيُضغط الشريطُ ولا يستجيب.** انظر `nav/Overlay.kt`.
+    val overlay = rememberOverlay()
     val home: HomeViewModel = viewModel()
     val orders: OrdersViewModel = viewModel()
     val accountVm: AccountViewModel = viewModel()
@@ -399,7 +403,7 @@ private fun SignedIn(onLogout: () -> Unit) {
             ModalDrawerSheet(Modifier.width(200.dp)) {
                 MenuDrawer(
                     onPick = { item ->
-                        picked = item
+                        overlay.show(Overlay.Menu(item))
                         scope.launch { drawer.close() }
                     },
                     onLogout = onLogout,
@@ -430,11 +434,11 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // **ورقاقةُ المحفظة تفتح المحفظة** — (قرارُ المالك
                 // ٢٠٢٦-٠٨-١٣: «نبني المحفظة بنفس الويب»). **وكانت
                 // تنقله إلى اللوحة** حيث سطرُ رصيدٍ لا كشفُ حساب.
-                onWallet = { wallet = true; account = false; rating = false; picked = null },
+                onWallet = { overlay.show(Overlay.Wallet) },
                 onNotifications = home::openInbox,
-                onProfile = { account = true; rating = false; wallet = false; picked = null },
+                onProfile = { overlay.show(Overlay.Account) },
                 onMenu = { scope.launch { drawer.open() } },
-                onRating = { rating = true; account = false; wallet = false; picked = null },
+                onRating = { overlay.show(Overlay.Rating) },
             )
         },
         bottomBar = {
@@ -464,8 +468,8 @@ private fun SignedIn(onLogout: () -> Unit) {
                         // **وشريطٌ يُضغط ولا يستجيب أسوأُ من شريطٍ
                         // مخفيّ**: المخفيُّ يقول «لا مخرجَ هنا»،
                         // **والصامتُ يقول «معطّل».**
-                        selected = tab == 0 && !account && !rating && !wallet && picked == null,
-                        onClick = { account = false; rating = false; wallet = false; picked = null; tab = 0; orders.refresh() },
+                        selected = tab == 0 && overlay.isClear,
+                        onClick = { overlay.clear(); tab = 0; orders.refresh() },
                         icon = {
                             Icon(painterResource(R.drawable.ic_trip), contentDescription = null)
                         },
@@ -490,8 +494,8 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // **والشريطُ لا يتبدّل تحت إبهامه** مع كلّ طلبٍ يجيء
                 // ويذهب — **فيضغط ما لم يقصد.**
                 if (onShift) NavigationBarItem(
-                    selected = tab == 1 && !account && !rating && !wallet && picked == null,
-                    onClick = { account = false; rating = false; wallet = false; picked = null; tab = 1; orders.refresh() },
+                    selected = tab == 1 && overlay.isClear,
+                    onClick = { overlay.clear(); tab = 1; orders.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_orders), contentDescription = null)
                     },
@@ -511,16 +515,16 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // **ولا يختفي بانصرافه**: سجلُّه ماضٍ لا يتبدّل
                 // بورديّته — **ومن انصرف يبقى يسأل عمّا عمل.**
                 NavigationBarItem(
-                    selected = tab == 3 && !account && !rating && !wallet && picked == null,
-                    onClick = { account = false; rating = false; wallet = false; picked = null; tab = 3 },
+                    selected = tab == 3 && overlay.isClear,
+                    onClick = { overlay.clear(); tab = 3 },
                     icon = {
                         Icon(painterResource(R.drawable.ic_history), contentDescription = null)
                     },
                     label = { Text(stringResource(R.string.nav_history)) },
                 )
                 NavigationBarItem(
-                    selected = tab == 2 && !account && !rating && !wallet && picked == null,
-                    onClick = { account = false; rating = false; wallet = false; picked = null; tab = 2; home.refresh() },
+                    selected = tab == 2 && overlay.isClear,
+                    onClick = { overlay.clear(); tab = 2; home.refresh() },
                     icon = {
                         Icon(painterResource(R.drawable.ic_home), contentDescription = null)
                     },
@@ -555,44 +559,27 @@ private fun SignedIn(onLogout: () -> Unit) {
             // من شريطٍ سفليٍّ يتعلّمه.
             //
             // **والرجوعُ من زرّ النظام أيضاً** — إبهامٌ يعود بما تعوّد.
-            if (account) {
-                BackHandler { account = false }
-                AccountScreen(
-                    vm = accountVm,
-                    onLoggedOut = onLogout,
-                )
-                return@Box
-            }
-
-            // **وتقييماتُه تغطّي كذلك** — تُفتح من نجمته وتُغلق برجوعه.
-            if (rating) {
-                BackHandler { rating = false }
-                RatingScreen(vm = ratingVm)
-                return@Box
-            }
-
-            // **ومحفظتُه من رقاقة رصيده.**
-            if (wallet) {
-                BackHandler { wallet = false }
-                WalletScreen(vm = walletVm)
-                return@Box
-            }
-
             // ══════════════════════════════════════════════════════════
-            // **وبندُ القائمة يغطّي حتّى يُملأ**
+            // **وما يغطّي يُعرض هنا — فرعٌ واحدٌ لا أربعة**
             // ══════════════════════════════════════════════════════════
             //
-            // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «ضع الأقسام فارغةً بدون أيّ
-            //  شيء، ثمّ إذا اتّفقنا عليها نملأ الأقسام».)
-            //
-            // **والسجلُّ وحدَه مملوءٌ اليوم** — وهو مبنيٌّ فعلاً،
-            // **فيُفتح من القائمة أيضاً** لا يُبنى مرّتين.
-            picked?.let { item ->
-                BackHandler { picked = null }
-                if (item == MenuItem.History) {
-                    HistoryScreen(vm = historyVm)
-                } else {
-                    MenuStub(item)
+            // **ورجوعُ النظام يُطفئ ما يغطّي** — لا يخرج من التطبيق.
+            // **والسجلُّ مبنيٌّ فعلاً** فيُفتح من القائمة ولا يُبنى
+            // مرّتين، **وما لم يُملأ يقول ذلك** ولا يُوهم بعطب.
+            val over = overlay.current
+            if (over != Overlay.None) {
+                BackHandler { overlay.clear() }
+                when (over) {
+                    Overlay.Account -> AccountScreen(vm = accountVm, onLoggedOut = onLogout)
+                    Overlay.Rating -> RatingScreen(vm = ratingVm)
+                    Overlay.Wallet -> WalletScreen(vm = walletVm)
+                    is Overlay.Menu ->
+                        if (over.item == MenuItem.History) {
+                            HistoryScreen(vm = historyVm)
+                        } else {
+                            MenuStub(over.item)
+                        }
+                    Overlay.None -> Unit
                 }
                 return@Box
             }

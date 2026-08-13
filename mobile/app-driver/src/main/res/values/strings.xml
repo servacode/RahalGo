@@ -420,7 +420,8 @@
     <string name="menu_legal">القانونيّة</string>
     <string name="menu_history">سجل الطلبات</string>
     <string name="menu_chats">دردشاتي السابقة</string>
-    <string name="menu_rewards">الهدايا والمكافآت</string>
+    <string name="menu_rewards">أهدافي والمكافآت</string>
+    <string name="menu_cash">صندوقي</string>
     <string name="menu_tickets">الشكاوى والبلاغات</string>
     <string name="menu_help">التعليمات</string>
     <string name="menu_about">من نحن</string>
