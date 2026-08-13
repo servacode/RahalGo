@@ -214,14 +214,56 @@ class ApiClient(
     }.getOrDefault(ByteArray(0))
 
     /** يدوّر التوكن ويحفظ الجديد. */
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **تجديدُ الجلسة — واحدٌ في المرّة، ومن انتظر يأخذ ما جُدِّد**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * # العطبُ الذي قِيس على المحاكي (٢٠٢٦-٠٨-١٣)
+     *
+     * **توكنُ التجديد يُستعمل مرّةً واحدة**: المحرّك يُبطله ويصدر غيرَه
+     * (`identity.Refresh`) — **وهي قاعدةٌ صحيحة**، بها لا يُعاد استعمالُ
+     * توكنٍ مسروق.
+     *
+     * **وكان التطبيقُ ينادي التجديدَ من كلّ نداءٍ يُردّ بـ٤٠١** — بلا
+     * قفل. **وثلاثةُ نداءاتٍ تنطلق معاً عند الإقلاع** (الجلسةُ ·
+     * الطلباتُ · تسجيلُ الجهاز): كلُّها تُردّ، **وكلُّها تجدّد بالتوكن
+     * نفسِه.**
+     *
+     * **فيفوز الأوّل، ويحمل الثاني توكناً أُبطل قبل جزءٍ من الثانية** —
+     * فيردّ المحرّكُ `invalid_refresh`، **والشاشةُ تقرؤها «جلسةٌ
+     * مرفوضة» فتمحو الحساب.**
+     *
+     * **وسائقٌ يُطرد وهو على الدرّاجة لا يعرف لماذا** — ولا أحدَ يعرف:
+     * **الطردُ صحيحُ المنطق، والسببُ سباقٌ في الجهاز لا في الخادم.**
+     *
+     * # والقفلُ لا يكفي وحدَه
+     *
+     * **من انتظر عند الباب يجد الرايةَ قد رُفعت** — فلا ينادي بتوكنٍ
+     * أُبطل: **يقرأ ما جُدِّد ويمضي.** ولولا هذا لَتحوّل السباقُ إلى
+     * طابورٍ ينتهي بالخطأ نفسِه.
+     */
     suspend fun refresh() {
-        val result: com.rahalgo.shared.model.AuthResult = raw(
-            "/api/v1/auth/refresh",
-            HttpMethod.Post,
-            mapOf("refresh_token" to session.refreshToken()),
-        )
-        session.save(result.tokens.accessToken, result.tokens.refreshToken)
+        val had = session.refreshToken()
+        refreshGate.lock()
+        try {
+            // **وقد جدّده غيري وأنا أنتظر** — فالتوكنُ الذي حملتُه لم
+            // يعد هو المحفوظ، **ونداءٌ به يُبطل جلسةً سليمة.**
+            if (session.refreshToken() != had) return
+            val result: com.rahalgo.shared.model.AuthResult = raw(
+                "/api/v1/auth/refresh",
+                HttpMethod.Post,
+                mapOf("refresh_token" to had),
+            )
+            session.save(result.tokens.accessToken, result.tokens.refreshToken)
+        } finally {
+            refreshGate.unlock()
+        }
     }
+
+    /** **بابُ التجديد** — لا يدخله اثنان معا. */
+    @PublishedApi
+    internal val refreshGate = kotlinx.coroutines.sync.Mutex()
 
     companion object {
         const val CLIENT_HEADER = "X-RahalGo-Client"
