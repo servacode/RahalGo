@@ -32,6 +32,20 @@ data class DriverOrder(
      */
     val kind: String = "standard",
 
+    /**
+     * **ما طلبه الزبونُ بلفظه** — وهو كلُّ ما يعرفه السائقُ قبل أن
+     * يتّفقا في المحادثة.
+     *
+     * (تصحيحُ المالك ٢٠٢٦-٠٨-١٣: «الطلبُ الخاصُّ يجب أن يُذكر به ما
+     *  نوعُ الطلب — يعني وصفٌ للطلب».)
+     *
+     * **والمحرّكُ يرسله منذ اليوم الأوّل** (`custom_request`) —
+     * **والتطبيقُ لم يكن يقرؤه.** فبطاقةٌ تقول «طلب خاصّ» وحدَها
+     * **تطلب من السائق أن يقبل ما لا يعرفه**: أدواءٌ من صيدليّة أم
+     * أسمنتٌ من مستودع؟ **والفرقُ بينهما درّاجةٌ ووقت.**
+     */
+    @SerialName("custom_request") val customRequest: String = "",
+
     @SerialName("merchant_name") val merchantName: String = "",
     @SerialName("merchant_phone") val merchantPhone: String? = null,
 

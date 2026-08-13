@@ -445,6 +445,41 @@ private fun OrderCard(
             }
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **وما طلبه الزبونُ بلفظه — قبل كلّ شيء**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (تصحيحُ المالك ٢٠٢٦-٠٨-١٣: «يجب أن يُذكر به ما نوعُ الطلب».)
+        //
+        // **وبطاقةٌ تقول «طلب خاصّ» وحدَها تطلب منه أن يقبل ما لا
+        // يعرفه**: أدواءٌ من صيدليّة أم أسمنتٌ من مستودع؟ **والفرقُ
+        // بينهما درّاجةٌ ووقت.**
+        //
+        // **وموضعُه فوق المسافة**: هو أوّلُ ما يقرّر به القبولَ من
+        // الرفض، **والمسافةُ بعده.**
+        if (custom && order.customRequest.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Rahal.colors.warnTint)
+                    .padding(12.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.card_custom_what),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = order.customRequest,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
         Spacer(Modifier.height(12.dp))
         // ══════════════════════════════════════════════════════════════
