@@ -1,6 +1,7 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import com.rahalgo.driver.ui.Avatar
 import com.rahalgo.driver.nav.rememberOverlay
 import com.rahalgo.driver.nav.Overlay
 import androidx.compose.foundation.layout.width
@@ -357,15 +358,12 @@ private fun SignedIn(onLogout: () -> Unit) {
     // **وتبويب فارغ ثلثَ اليوم يُقرأ عطبا** — يفتحه صاحبه فيجد «لا رحلة
     // الآن»، **ثمّ يكفّ عن فتحه** فلا يراه يوم تكون فيه رحلة.
     val hasTrip = orders.state.mine.isNotEmpty()
-    /** **أهو في الدوام** — وعليه يظهر تبويبُ الطلبات. */
-    val onShift = home.state.me?.onShift == true
-
     // **ومن انتهت رحلته يُعاد إلى الطلبات** — لا يبقى في تبويب اختفى.
-    LaunchedEffect(hasTrip, onShift) {
+    //
+    // **ولا شأنَ للورديّة بالشريط بعد اليوم** — «الطلبات» دائمةٌ تشرح
+    // الانصراف، **فماتت الحاجةُ إلى قراءتها هنا.**
+    LaunchedEffect(hasTrip) {
         if (!hasTrip && tab == 0) tab = 1
-        // **ومن انصرف وهو في الطلبات يُردّ إلى لوحته** — لا يبقى في
-        // شاشةٍ لم يعد لها تبويب.
-        if (!onShift && tab == 1) tab = 2
     }
 
     // **ومن قبِل طلبا فُتحت رحلته** — (قرار المالك ٢٠٢٦-٠٨-١٢).
@@ -423,10 +421,6 @@ private fun SignedIn(onLogout: () -> Unit) {
         // كلَّها. **وهي موجودةٌ في تبويبين آخرين** يفتحهما حين يقف.
         topBar = {
             if (tab != 0) TopBar(
-                name = home.state.me?.fullName.orEmpty(),
-                // **والمسار النسبيّ يصير عنوانا هنا** — المحرّك يرسل
-                // `/media/...`، **وهو نفسه في المحلّيّ والإنتاج.**
-                avatarUrl = Backend.media(home.state.me?.avatarUrl),
                 balance = home.state.me?.balance ?: 0,
                 rating = home.state.me?.rating ?: 0.0,
                 ratingCount = home.state.me?.ratingCount ?: 0,
@@ -436,7 +430,6 @@ private fun SignedIn(onLogout: () -> Unit) {
                 // تنقله إلى اللوحة** حيث سطرُ رصيدٍ لا كشفُ حساب.
                 onWallet = { overlay.show(Overlay.Wallet) },
                 onNotifications = { overlay.show(Overlay.Inbox); home.openInbox() },
-                onProfile = { overlay.show(Overlay.Account) },
                 onMenu = { scope.launch { drawer.open() } },
                 onRating = { overlay.show(Overlay.Rating) },
             )
@@ -477,23 +470,20 @@ private fun SignedIn(onLogout: () -> Unit) {
                     )
                 }
                 // ══════════════════════════════════════════════════════
-                // **وتبويبُ الطلبات يختفي بانصرافه**
+                // **وتبويبُ الطلبات دائمٌ — ويشرح الانصراف**
                 // ══════════════════════════════════════════════════════
                 //
-                // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «إذا كان الدوام معطّلاً…
-                //  الأفضل أن القسم يختفي ولا يظهر، مثل الرحلة».)
+                // **كان يختفي بانصرافه** (٢٠٢٦-٠٨-١٣)، فيهبط الشريطُ
+                // إلى أيقونةٍ واحدةٍ حين لا رحلةَ معه — **وشريطٌ
+                // بأيقونةٍ واحدةٍ يُقرأ عطبا.**
                 //
-                // **ومنصرفٌ لا يصله طلب** — فالشاشةُ فارغةٌ بيقين،
-                // **وتبويبٌ يُفتح ليُرى فارغاً يُتعب.**
+                // **والإخفاءُ كان يُضيّع الجواب**: المنصرفُ يفتح
+                // تطبيقَه فلا يرى الطلبات **ولا يعرف لماذا** — وشاشتُها
+                // مبنيّةٌ لتشرح ذلك بعينه.
                 //
-                // **ولا يختفي لأنّ الطابور فارغٌ وهو في الدوام**:
-                // **الطابورُ الفارغُ هو شاشةُ انتظاره** — ينظر إلى
-                // المكان الذي سيجيء منه العمل. **ولو أُخفي لَسأل: هل
-                // التطبيقُ يعمل أصلا؟**
-                //
-                // **والشريطُ لا يتبدّل تحت إبهامه** مع كلّ طلبٍ يجيء
-                // ويذهب — **فيضغط ما لم يقصد.**
-                if (onShift) NavigationBarItem(
+                // **والشريطُ لا يتبدّل تحت إبهامه** مع كلّ ورديّةٍ
+                // تُفتح وتُغلق — فيضغط ما لم يقصد.
+                NavigationBarItem(
                     selected = tab == 1 && overlay.isClear,
                     onClick = { overlay.clear(); tab = 1; orders.refresh() },
                     icon = {
@@ -507,6 +497,34 @@ private fun SignedIn(onLogout: () -> Unit) {
                 //
                 // **وبابان لشاشةٍ واحدةٍ يزاحمان** — والشريطُ السفليُّ
                 // لما يُفتح كلَّ دقيقة، **والسجلُّ يُفتح بسؤال.**
+                // ══════════════════════════════════════════════════════
+                // **و«ملفي» تبويبٌ دائمٌ بصورته هو**
+                // ══════════════════════════════════════════════════════
+                //
+                // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نعم ابدأ بإنزال ملفي
+                //  الشخصيّ».)
+                //
+                // **وأيقونتُه صورتُه لا رسمُ شخصٍ عامّ** — والسببُ
+                // كتبه المالكُ حين طلب وضعَها في الشريط العلويّ: «هذا
+                // حسابُك أنت، والسائقُ قد يفتح تطبيقاً على هاتف
+                // زميله، أو يُسلَّم هاتفُ الشركة لسائق الورديّة
+                // التالية». **فلو صارت رسماً عامّاً ضاع ذلك الخبر.**
+                //
+                // **وهو دائمٌ فيُثبّت الشريط**: كان يهبط إلى أيقونةٍ
+                // واحدةٍ حين ينصرف بلا رحلة — **وشريطٌ بأيقونةٍ واحدةٍ
+                // يُقرأ عطبا.**
+                NavigationBarItem(
+                    selected = overlay.current == Overlay.Account,
+                    onClick = { overlay.show(Overlay.Account) },
+                    icon = {
+                        Avatar(
+                            url = Backend.media(home.state.me?.avatarUrl),
+                            name = home.state.me?.fullName.orEmpty(),
+                            size = 24,
+                        )
+                    },
+                    label = { Text(stringResource(R.string.nav_profile)) },
+                )
                 NavigationBarItem(
                     selected = tab == 2 && overlay.isClear,
                     onClick = { overlay.clear(); tab = 2; home.refresh() },
