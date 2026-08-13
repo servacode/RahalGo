@@ -465,7 +465,6 @@ private fun RateDialog(
 ) {
     var speed by remember { mutableStateOf(0) }
     var conduct by remember { mutableStateOf(0) }
-    var comment by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onClose,
@@ -477,18 +476,24 @@ private fun RateDialog(
                 StarPick(stringResource(R.string.hist_rate_speed), speed) { speed = it }
                 Spacer(Modifier.height(10.dp))
                 StarPick(stringResource(R.string.hist_rate_conduct), conduct) { conduct = it }
-                Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
-                    value = comment,
-                    onValueChange = { comment = it },
-                    label = { Text(stringResource(R.string.hist_rate_comment)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { vm.rate(o.id, speed, conduct, comment); onClose() },
+                // ══════════════════════════════════════════════════════
+                // **ولا تعليقَ مع التقييم — نجومٌ وفقط**
+                // ══════════════════════════════════════════════════════
+                //
+                // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نحن اتّفقنا بلا تعليقٍ أو
+                //  ملاحظات، فقط تقييم».)
+                //
+                // **ومحوران بنجومٍ يقولان ما يلزم**: أبطأ أم أساء —
+                // **ونصٌّ حرٌّ يفتح خصومةً تُقرأ ولا تُحقَّق.**
+                //
+                // **والحقلُ باقٍ في النداء فارغا** — المحرّكُ يقبله
+                // اختياريّاً، **ونداءٌ يُبدَّل شكلُه لأجل حقلٍ لا يُملأ**
+                // يكسر شاشةَ الويب التي تملؤه.
+                onClick = { vm.rate(o.id, speed, conduct, ""); onClose() },
                 // **ولا يُرسَل نصفُ تقييم** — المحرّكُ يشترط الاثنين بين
                 // واحدٍ وخمسة، **ونداءٌ يُردّ بأربعمئة لا يُفهم سببُه.**
                 enabled = !s.busy && speed in 1..5 && conduct in 1..5,

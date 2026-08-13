@@ -400,7 +400,6 @@
     <string name="hist_rate_title">تقييمُ المتجر</string>
     <string name="hist_rate_speed">سرعةُ التجهيز</string>
     <string name="hist_rate_conduct">التعامل</string>
-    <string name="hist_rate_comment">ملاحظةٌ (اختياريّة)</string>
     <string name="hist_rate_send">أرسل التقييم</string>
     <string name="hist_rate_sent">وصل تقييمُك — شكراً</string>
     <string name="hist_cancel">إغلاق</string>
