@@ -1,6 +1,7 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import com.rahalgo.driver.data.Crash
 import com.rahalgo.design.LightPalette
 import com.rahalgo.design.DarkPalette
 import androidx.compose.ui.graphics.toArgb
@@ -134,6 +135,9 @@ class MainActivity : ComponentActivity() {
         // يُنشئ النظامُ محتواها.
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        // **وتقاريرُ الانهيار تبدأ قبل أوّل شاشة** — والسقوطُ في الإقلاع
+        // أكثرُ ما يقع، **ومن بدأ التقاريرَ بعده لا يراه.**
+        Crash.start()
         // ══════════════════════════════════════════════════════════════
         // **وشريطُ النظام يبقى** — الساعةُ والشبكةُ والبطّاريّة
         // ══════════════════════════════════════════════════════════════

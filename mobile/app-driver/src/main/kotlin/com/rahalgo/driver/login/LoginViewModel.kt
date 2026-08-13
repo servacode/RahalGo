@@ -1,6 +1,7 @@
 package com.rahalgo.driver.login
 
 import android.app.Application
+import com.rahalgo.driver.data.Crash
 import com.rahalgo.driver.data.apiError
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -30,7 +31,13 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
     var state by mutableStateOf(LoginState())
         private set
 
-    /** من دخل — **فارغ يعني لم يدخل بعد.** */
+    /**
+     * من دخل — **فارغ يعني لم يدخل بعد.**
+     *
+     * **ومن دخل يُعرَّف لتقارير الانهيار** — بمعرّفه لا باسمه ولا رقمه:
+     * **وتقريرٌ بلا صاحبٍ لا يُتابَع**، تعرف أنّ التطبيقَ سقط ثلاثاً
+     * **ولا تعرف أثلاثةُ سائقين أم واحدٌ ثلاث مرّات.**
+     */
     var user by mutableStateOf<User?>(null)
         private set
 
@@ -122,6 +129,7 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
                 user = result.user
+                user?.let { Crash.who(it.id) }
                 state = state.copy(busy = false)
             } catch (e: ApiClient.ApiException) {
                 state = state.copy(busy = false, error = message(e))
@@ -146,6 +154,7 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 user = backend.auth.me()
+                user?.let { Crash.who(it.id) }
                 // **والتسجيل بعد ثبوت الجلسة** — لا قبلها: النقطة
                 // تحتاج توكن حساب.
                 Push.register(getApplication())
@@ -202,6 +211,7 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
                 user = result.user
+                user?.let { Crash.who(it.id) }
                 state = state.copy(busy = false)
                 Push.register(getApplication())
             } catch (e: ApiClient.ApiException) {
@@ -294,6 +304,7 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                 )
                 backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
                 user = result.user
+                user?.let { Crash.who(it.id) }
                 reset = null
             } catch (e: ApiClient.ApiException) {
                 reset = current.copy(busy = false, error = message(e))

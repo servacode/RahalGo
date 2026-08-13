@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.crashlytics)
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -63,8 +64,27 @@ android {
             // مقروءا في تقارير الانهيار.
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // ══════════════════════════════════════════════════════════
+            // **وخريطةُ فكّ التشويش تُرفع مع كلّ إصدار**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **بلاها يصل التقريرُ بأسماءٍ من حرفين**: `a.b(c.java:12)` —
+            // **فيُعرف أنّ التطبيقَ سقط ولا يُعرف أين.** والانهيارُ الذي
+            // لا يُقرأ لا يُصلَح.
         }
         debug {
+            // ══════════════════════════════════════════════════════════
+            // **ولا تُرفع انهياراتُ البناء التجريبيّ**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **وهي انهياراتي أنا لا انهياراتُ سائق** — تُختلط بها
+            // فتُقرأ الأرقامُ كاذبة: **عشرةُ سقوطٍ في التطوير تُقرأ
+            // عشرةَ سائقين.**
+            //
+            // **ويُبدَّل بسطرٍ حين يُراد فحصُها** (`-PcrashDebug`).
+            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                mappingFileUploadEnabled = false
+            }
             // **ولاحقة على المعرّف** — فيجلس التجريبي والإصدار على الجهاز
             // نفسه، **ولا يُحذف أحدهما ليُثبَّت الآخر.**
             applicationIdSuffix = ".debug"
@@ -76,7 +96,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    buildFeatures { compose = true }
+    // **و`BuildConfig` يُولَّد** — منه تُعرف السمةُ التجريبيّةُ من
+    // الإصدار، **فلا تُرسَل انهياراتُ التطوير مع انهيارات السائقين.**
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }
 
 kotlin {
@@ -100,6 +125,7 @@ dependencies {
     implementation(libs.maplibre)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.coroutines.play.services)
 
     implementation(platform(libs.compose.bom))

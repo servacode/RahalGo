@@ -61,6 +61,18 @@ fun apiError(
         }
     }
     val code = e.body.code
+    // ══════════════════════════════════════════════════════════════════
+    // **وخطأُ الخادم يُسجَّل وإن لم يُسقط التطبيق**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **خمسمئةٌ تُعرض للسائق جملةً مهذّبةً وتمضي** — فيعيد الفعلَ ويعيد،
+    // **ولا يعلم أحدٌ أنّ باباً في الخادم مكسور.**
+    //
+    // **ورمزٌ لا ترجمةَ له كذلك**: يُعرض خامّاً على شاشةٍ عربيّة — **وقد
+    // وقع فعلاً** (`whatsapp_required`)، ولم يُكتشف إلّا بجردٍ يدويّ.
+    if (e.status >= 500 || (code !in CODES && code !in extra && code.isNotEmpty())) {
+        Crash.soft(e, "api " + e.status + " " + code)
+    }
     extra[code]?.let { return context.getString(it) }
     val res = CODES[code] ?: return if (code.isEmpty()) {
         context.getString(R.string.err_internal)

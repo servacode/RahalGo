@@ -73,6 +73,7 @@ maplibre = { module = "org.maplibre.gl:android-sdk", version = "13.4.1" }
 # مكتبةٍ رقمُها ويفترقان.
 firebase-bom = { module = "com.google.firebase:firebase-bom", version = "34.17.0" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 # **جسرٌ بين مهامّ غوغل ومعلّقات كوتلن** — `token.await()` بدل ردّ نداء.
 coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version = "1.11.0" }
 
@@ -114,6 +115,7 @@ androidx-security-crypto = { module = "androidx.security:security-crypto", versi
 
 [plugins]
 google-services = { id = "com.google.gms.google-services", version = "4.5.0" }
+crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.7" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 # **ولا إضافة `kotlin-android`** — AGP 9 فيها دعم Kotlin مدمج،
