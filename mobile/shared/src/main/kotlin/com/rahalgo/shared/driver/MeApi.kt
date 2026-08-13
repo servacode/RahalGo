@@ -20,7 +20,14 @@ class MeApi(private val api: ApiClient) {
         api.call<Ack>("/api/v1/me/notifications/read", HttpMethod.Post, mapOf<String, String>())
     }
 
-    suspend fun wallet(): WalletStatement = api.call("/api/v1/my/wallet")
+    /**
+     * **كشفُ المحفظة** — وبلا مدىً يردّ لمحةَ اللوحة (آخر خمسين).
+     *
+     * **والمدى نصٌّ جاهزٌ يبنيه من يسأل** (`?from=&to=`) — ولا يُبنى
+     * هنا: **حدود «هذا الشهر» تقويمُ الجهاز**، وحزمةُ الشبكة لا تعرفه.
+     */
+    suspend fun wallet(query: String = ""): WalletStatement =
+        api.call("/api/v1/my/wallet" + query)
 
     /**
      * **سُمعتُه** — نجومُه ومن أعطاها وشكاواه.

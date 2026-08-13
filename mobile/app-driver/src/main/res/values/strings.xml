@@ -353,4 +353,24 @@
     <string name="wal_st_approved">مقبول</string>
     <string name="wal_st_paid">صُرف</string>
     <string name="wal_st_rejected">مرفوض</string>
+
+    <!-- **أسماءُ الحركات** — و«payout» مفتاحُ آلةٍ لا يُعرض لعربيّ. -->
+    <string name="wal_k_payout">تمّ سحب الرصيد</string>
+    <string name="wal_k_driver_earning">أجرة توصيل</string>
+    <string name="wal_k_commission">عمولة</string>
+    <string name="wal_k_compensation">تعويض</string>
+    <string name="wal_k_penalty">خصم</string>
+    <string name="wal_k_refund">استرجاع</string>
+    <string name="wal_k_adjustment">تسوية من الإدارة</string>
+    <string name="wal_k_reward">مكافأة</string>
+    <string name="wal_k_settlement">تسليم نقد</string>
+
+    <string name="wal_statement">كشف حساب</string>
+    <string name="wal_period">من %1$s إلى %2$s</string>
+    <string name="wal_opening">رصيد أوّل المدّة</string>
+    <string name="wal_closing">رصيد آخر المدّة</string>
+    <string name="wal_this_month">هذا الشهر</string>
+    <string name="wal_prev_month">الشهر الماضي</string>
+    <string name="wal_all">الكلّ</string>
+    <string name="wal_back">رجوع</string>
 </resources>

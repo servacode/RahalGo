@@ -87,7 +87,17 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     var state by mutableStateOf(WalletState())
         private set
 
+    /** **مدى الكشف** — و«الكلّ» يعني بلا حدّين. */
+    var range by mutableStateOf(Range.Month)
+        private set
+
     private val backend = Backend.of(getApplication())
+
+    /** **يبدّل المدى ويُعيد الجلب** — واسمٌ لا يصطدم بواضع الخاصّيّة. */
+    fun pickRange(r: Range) {
+        range = r
+        load()
+    }
 
     init {
         load()
@@ -97,7 +107,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun load() {
         viewModelScope.launch {
             state = try {
-                val st = backend.me.wallet()
+                val st = backend.me.wallet(rangeQuery())
                 val po = runCatching { backend.me.payouts() }.getOrDefault(state.payouts)
                 state.copy(statement = st, payouts = po, error = "")
             } catch (e: Exception) {
@@ -119,7 +129,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             state = try {
                 backend.me.requestPayout(amount, note.trim(), key)
-                val st = backend.me.wallet()
+                val st = backend.me.wallet(rangeQuery())
                 val po = runCatching { backend.me.payouts() }.getOrDefault(state.payouts)
                 Refresh.bump()
                 state.copy(
@@ -132,6 +142,27 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                 state.copy(busy = false, error = describe(e))
             }
         }
+    }
+
+    /**
+     * **حدّا المدى كما يقرؤهما المحرّك** (`?from=&to=`).
+     *
+     * **و«الكلّ» بلا حدّين** — والمحرّكُ يفتحهما فيردّ ما عنده حتّى
+     * سقفه، **ويقول إن قصّ.**
+     *
+     * **والتقويمُ محلّيٌّ لا عالميّ**: من يسأل عن «هذا الشهر» يعني شهرَه
+     * هو، **وشهرٌ يُحسب بتوقيت غرينتش يبدأ عنده قبل منتصف الليل بساعتين
+     * أو بعده** — فتغيب حركةُ ليلةٍ أو تُزاد.
+     */
+    private fun rangeQuery(): String {
+        if (range == Range.All) return ""
+        val cal = java.util.Calendar.getInstance()
+        if (range == Range.Prev) cal.add(java.util.Calendar.MONTH, -1)
+        val f = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        cal.set(java.util.Calendar.DAY_OF_MONTH, 1)
+        val from = f.format(cal.time)
+        cal.set(java.util.Calendar.DAY_OF_MONTH, cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH))
+        return "?from=" + from + "&to=" + f.format(cal.time)
     }
 
     private fun describe(e: Exception): String {
@@ -171,6 +202,12 @@ fun WalletScreen(vm: WalletViewModel) {
     }
 
     var asking by rememberSaveable { mutableStateOf(false) }
+    var statement by rememberSaveable { mutableStateOf(false) }
+
+    if (statement) {
+        StatementView(vm, st, onBack = { statement = false })
+        return
+    }
 
     Column(
         Modifier
@@ -182,25 +219,48 @@ fun WalletScreen(vm: WalletViewModel) {
         if (s.done.isNotEmpty()) Notice(s.done, StateGreen)
 
         // ══════════════════════════════════════════════════════════════
-        // **الرصيدُ أوّلا — وهو ما يفتح الشاشةَ لأجله**
+        // **الرصيدُ كرتٌ في وسط الشاشة — وزرّان تحته**
         // ══════════════════════════════════════════════════════════════
-        Text(stringResource(R.string.wal_balance), color = InkMuted)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = money(st.balance),
-            color = BrandTeal,
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «المحفظة كرتٌ بنصّ الشاشة وتحتها
+        //  الزرّان — طلب سحبٍ وكشف حساب».)
+        //
+        // **والرقمُ وحدَه في سطرٍ يُقرأ سطراً بين سطور** — والكرتُ يعزله
+        // فيقع عليه البصرُ أوّلا، **وهو ما يفتح الشاشةَ لأجله.**
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(BrandTeal.copy(alpha = 0.08f))
+                .padding(vertical = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(stringResource(R.string.wal_balance), color = InkMuted)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = money(st.balance),
+                color = BrandTeal,
+                style = MaterialTheme.typography.headlineLarge,
+            )
+        }
 
-        Spacer(Modifier.height(16.dp))
-        if (!asking) {
-            OutlinedButton(
-                onClick = { asking = true },
-                enabled = !s.busy && st.balance > 0,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.wal_ask_payout)) }
-        } else {
+        Spacer(Modifier.height(14.dp))
+        if (asking) {
             PayoutForm(vm, s, max = st.balance, onDone = { asking = false })
+        } else {
+            // **والزرّان في صفٍّ متساويين** — لا واحدٌ فوق واحد: **فعلان
+            // متكافئان يُقرآن متكافئين.**
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = { asking = true },
+                    enabled = !s.busy && st.balance > 0,
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.wal_ask_payout)) }
+                OutlinedButton(
+                    onClick = { statement = true },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.wal_statement)) }
+            }
         }
 
         if (s.payouts.isNotEmpty()) {
@@ -331,11 +391,29 @@ private fun TxRow(t: WalletTx) {
                 Text("#$it", color = InkMuted, style = MaterialTheme.typography.bodySmall)
             }
         }
-        // **وسببُها** — «‎+٣٠٠» وحدَها لا تقول شيئا.
-        val why = t.note.ifEmpty { t.kind }
-        if (why.isNotEmpty()) {
-            Text(why, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+        // ══════════════════════════════════════════════════════════════
+        // **واسمُ الحركة بالعربيّة — لا مفتاحُ آلة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «والسحبُ يكون مكتوباً: تمّ سحب
+        //  الرصيد، والتاريخ أيضا».)
+        //
+        // **والمحرّكُ يرسل `payout` و`driver_earning`** — وهي مفاتيحُ
+        // آلةٍ لا تُعرض لعربيّ. **ومن قرأها ظنّ العطبَ في التطبيق.**
+        //
+        // **والملاحظةُ تحتها إن وُجدت** — الاسمُ يقول ما هي، **والملاحظةُ
+        // تقول لماذا**: «تسوية من الإدارة» ثمّ «تصحيح نقص يوم الثلاثاء».
+        Text(kindLabel(t.kind), style = MaterialTheme.typography.bodyMedium)
+        if (t.note.isNotEmpty()) {
+            Text(t.note, color = InkMuted, style = MaterialTheme.typography.bodySmall)
         }
+        // **والتاريخُ مع كلّ حركة** — بأمر المالك. **ومن رأى «‎−٥٠٠» لا
+        // يعرف أهي اليومَ أم الشهرَ الماضي.**
+        Text(
+            text = fmtWhen(t.createdAt),
+            color = InkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
         Spacer(Modifier.height(6.dp))
         HorizontalDivider()
     }
@@ -354,4 +432,116 @@ private fun Notice(text: String, color: androidx.compose.ui.graphics.Color) {
             .padding(10.dp),
     )
     Spacer(Modifier.height(10.dp))
+}
+
+/** **اسمُ نوع الحركة بالعربيّة** — والمجهولُ يُعرض بمفتاحه ليُعرف. */
+@Composable
+private fun kindLabel(kind: String): String = when (kind) {
+    "payout" -> stringResource(R.string.wal_k_payout)
+    "driver_earning" -> stringResource(R.string.wal_k_driver_earning)
+    "commission" -> stringResource(R.string.wal_k_commission)
+    "compensation" -> stringResource(R.string.wal_k_compensation)
+    "penalty" -> stringResource(R.string.wal_k_penalty)
+    "refund" -> stringResource(R.string.wal_k_refund)
+    "adjustment" -> stringResource(R.string.wal_k_adjustment)
+    "reward" -> stringResource(R.string.wal_k_reward)
+    "settlement" -> stringResource(R.string.wal_k_settlement)
+    // **ونوعٌ لم يُترجَم يُعرض بمفتاحه** — لا يُبتلع: **من رآه أبلغ
+    // عنه**، ومن ابتلعه ترك سطراً بلا اسمٍ في كشف مال.
+    else -> kind
+}
+
+/**
+ * **تاريخُ الحركة ووقتُها** — كما يقرؤه صاحبُها.
+ *
+ * **والمحرّكُ يرسله بصيغة ISO** (`2026-08-13T03:12:44+03:00`) — وهي
+ * صيغةُ آلةٍ لا تُعرض. **وتُقصّ بلا تحويل مناطق**: الطابعُ يحمل إزاحةَ
+ * دمشقَ أصلا، **وتحويلٌ ثانٍ يزيحها ساعتين.**
+ */
+private fun fmtWhen(iso: String): String {
+    if (iso.length < 16) return iso
+    val date = iso.substring(0, 10)
+    val time = iso.substring(11, 16)
+    return date + " · " + time
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **كشفُ الحساب — بمدىً ورصيدَي طرفيه**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٣: «طلب سحبٍ · كشف حساب».)
+ *
+ * **ولا معنى لكشفٍ بلا افتتاحيٍّ وختاميّ**: من يبدأ من منتصف التاريخ
+ * **يجمع الأسطر فلا تساوي رصيدَه** فيظنّ الخللَ في المنصّة.
+ *
+ * **والمدى ثلاثةُ أزرارٍ لا منتقي تاريخٍ** — سائقٌ يقف في الشارع لا
+ * يفتح تقويماً، **وأكثرُ ما يُسأل عنه شهرٌ مضى أو هذا الشهر.**
+ */
+@Composable
+private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                stringResource(R.string.wal_statement),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            OutlinedButton(onClick = onBack) { Text(stringResource(R.string.wal_back)) }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (r in Range.entries) {
+                val on = vm.range == r
+                OutlinedButton(
+                    onClick = { vm.pickRange(r) },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        stringResource(r.label),
+                        color = if (on) BrandTeal else InkMuted,
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(stringResource(R.string.wal_opening), color = InkMuted)
+            Text(money(st.opening))
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(stringResource(R.string.wal_closing), color = InkMuted)
+            Text(money(st.closing), color = BrandTeal)
+        }
+
+        Spacer(Modifier.height(14.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(10.dp))
+        if (st.transactions.isEmpty()) {
+            Text(stringResource(R.string.wal_no_txs), color = InkMuted)
+        }
+        st.transactions.forEach { TxRow(it) }
+        if (st.truncated) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                stringResource(R.string.wal_truncated),
+                color = InkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Spacer(Modifier.height(32.dp))
+    }
+}
+
+/** **مدياتُ الكشف** — ثلاثةٌ تكفي من يقف في الشارع. */
+enum class Range(val label: Int) {
+    Month(R.string.wal_this_month),
+    Prev(R.string.wal_prev_month),
+    All(R.string.wal_all),
 }
