@@ -199,16 +199,9 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             MoneyRow(stringResource(R.string.home_compensated), money(me.todayCompensated))
         }
 
-        Spacer(Modifier.height(24.dp))
-        TextButton(onClick = actions.logout, modifier = Modifier.fillMaxWidth()) {
-            Icon(
-                painter = painterResource(R.drawable.ic_logout),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.size(8.dp))
-            Text(stringResource(R.string.login_logout), color = InkMuted)
-        }
+        // **والخروجُ انتقل إلى أسفل القائمة الجانبيّة** — (قرارُ المالك
+        // ٢٠٢٦-٠٨-١٣). **وموضعان لفعلٍ واحدٍ يجعلان أحدَهما يُنسى**،
+        // ولوحةُ العمل ليست موضعَ فعلٍ يُنهي الجلسة.
         Spacer(Modifier.height(28.dp))
     }
 }

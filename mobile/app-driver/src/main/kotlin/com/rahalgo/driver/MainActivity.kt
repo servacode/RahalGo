@@ -392,10 +392,13 @@ private fun SignedIn(onLogout: () -> Unit) {
             // **ومئتان وثمانون تسع أطولَ أسمائه** («دردشاتي السابقة»)
             // بلا قصّ.
             ModalDrawerSheet(Modifier.width(280.dp)) {
-                MenuDrawer(onPick = { item ->
-                    picked = item
-                    scope.launch { drawer.close() }
-                })
+                MenuDrawer(
+                    onPick = { item ->
+                        picked = item
+                        scope.launch { drawer.close() }
+                    },
+                    onLogout = onLogout,
+                )
             }
         },
     ) {

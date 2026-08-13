@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.BrandOrange
 import com.rahalgo.design.InkMuted
+import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 
 /**
@@ -59,7 +60,7 @@ import com.rahalgo.driver.R
  * لا بناء.**
  */
 @Composable
-fun MenuDrawer(onPick: (MenuItem) -> Unit) {
+fun MenuDrawer(onPick: (MenuItem) -> Unit, onLogout: () -> Unit) {
     Column(
         Modifier
             .fillMaxSize()
@@ -85,7 +86,51 @@ fun MenuDrawer(onPick: (MenuItem) -> Unit) {
             }
             Line(item, onPick)
         }
-        Spacer(Modifier.height(24.dp))
+
+        // ══════════════════════════════════════════════════════════════
+        // **والخروجُ في القاع — بعيداً عن طريق الإبهام**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «برأيك زرُّ تسجيل الخروج وين مكانه
+        //  الصحيح؟ أيضاً بالقائمة الجانبيّة بالأسفل صحيح — هذا أفضل
+        //  مكانٍ له».)
+        //
+        // **وثلاثةُ أسبابٍ تجعله صحيحا:**
+        //
+        // **١ · القاعُ آخرُ ما يبلغه الإبهام** — وفعلٌ يُخرجه من حسابه
+        // لا يُوضع في طريق مرور. **ومن خرج سهواً يعود بكلمة مرورٍ قد
+        // لا يحفظها.**
+        //
+        // **٢ · وهو حيث يتوقّعه** — كلُّ تطبيقٍ يضعه هناك، **فيُوجَد
+        // بلا بحث.**
+        //
+        // **٣ · وموضعٌ واحدٌ لا موضعان** — كان في لوحة العمل، **ورُفع
+        // منها**: فعلٌ في مكانين يُنسى أحدُهما فيبقى قديماً حين يتبدّل.
+        //
+        // **وأحمرُ بحدٍّ فوقه** — لا يُخلط بما قبله من أسماء أقسام.
+        Spacer(Modifier.height(10.dp))
+        HorizontalDivider()
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onLogout)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_logout),
+                contentDescription = null,
+                tint = StateRed,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.size(12.dp))
+            Text(
+                stringResource(R.string.login_logout),
+                color = StateRed,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+        Spacer(Modifier.height(16.dp))
     }
 }
 
