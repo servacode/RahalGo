@@ -246,14 +246,28 @@ fun HistoryScreen(vm: HistoryViewModel) {
 
     var query by rememberSaveable { mutableStateOf("") }
     // **والنافذةُ تحمل طلبَها** — لا رقماً يُبحث عنه في القائمة.
-    var reportFor by remember { mutableStateOf<HistoryOrder?>(null) }
-    var rateFor by remember { mutableStateOf<HistoryOrder?>(null) }
+    // ══════════════════════════════════════════════════════════════════
+    // **والنافذةُ تبقى بعد دوران الجهاز**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (كشفه فحصٌ شاملٌ ٢٠٢٦-٠٨-١٣: أُديرت الشاشةُ ونافذةُ البلاغ مفتوحةٌ
+    //  **فانغلقت.**)
+    //
+    // **ومن كتب سببَ بلاغه ثمّ أمال هاتفَه فقد ما كتب** — والسائقُ
+    // يكتب واقفاً بيدٍ واحدة، **والإمالةُ تقع بلا قصد.**
+    //
+    // **ولا يُحفظ الطلبُ نفسُه إنّما رقمُه**: `HistoryOrder` صنفٌ لا
+    // يُسلسَل، **وحفظُ الكائن يحتاج مُسلسِلاً لا يستحقّه معرّف.**
+    var reportId by rememberSaveable { mutableStateOf("") }
+    var rateId by rememberSaveable { mutableStateOf("") }
+    val reportFor = s.orders.firstOrNull { it.id == reportId }
+    val rateFor = s.orders.firstOrNull { it.id == rateId }
 
     reportFor?.let { o ->
-        ReportDialog(vm, s, o, onClose = { reportFor = null })
+        ReportDialog(vm, s, o, onClose = { reportId = "" })
     }
     rateFor?.let { o ->
-        RateDialog(vm, s, o, onClose = { rateFor = null })
+        RateDialog(vm, s, o, onClose = { rateId = "" })
     }
     // **والبحثُ بالرقم واسم المتجر** — وهما ما يتذكّره: «طلب المطعم
     // الفلانيّ» أو رقمٌ قرأه في محفظته.
@@ -340,8 +354,8 @@ fun HistoryScreen(vm: HistoryViewModel) {
         items(shown, key = { it.id }) { o ->
             Row(
                 o = o,
-                onReport = { reportFor = o; vm.loadReasons(o.id) },
-                onRate = { rateFor = o },
+                onReport = { reportId = o.id; vm.loadReasons(o.id) },
+                onRate = { rateId = o.id },
                 onReturn = { vm.returnGoods(o.id) },
             )
         }
