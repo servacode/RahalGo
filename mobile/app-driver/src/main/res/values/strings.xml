@@ -491,6 +491,18 @@
     <string name="contact_telegram">تلغرام</string>
     <string name="err_complaint_window">مضت مهلةُ البلاغ على هذا الطلب</string>
     <string name="err_order_not_closed">الطلب لم يُغلق بعد — البلاغ بعد انتهائه</string>
+    <string name="hist_hint">ما نفّذتَه — سُلِّم أو تعذّر</string>
+
+    <!-- الطلبُ الخاصّ — بطاقتُه تقول حقيقته -->
+    <string name="card_custom_price">السعر يُتّفق عليه</string>
+    <string name="card_agreed_later">تُتّفق</string>
+    <string name="card_custom_pay">تشتري وتستردّ</string>
+
+    <!-- إرجاعُ البضاعة -->
+    <string name="hist_return">سلّمتُ البضاعة للمتجر</string>
+    <string name="hist_returned">أُعيدت البضاعة للمتجر</string>
+    <string name="hist_returned_done">سُجّل إرجاعُ البضاعة</string>
+
     <!-- ══ الإفصاحُ الصريح عن الموقع — شرطُ غوغل ══ -->
     <string name="disc_title">موقعك أثناء الورديّة</string>
     <string name="disc_what">يجمع رحّال غو موقع جهازك ما دامت ورديّتك مفتوحة.</string>

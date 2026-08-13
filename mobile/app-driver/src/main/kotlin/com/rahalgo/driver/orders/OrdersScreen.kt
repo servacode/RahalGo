@@ -301,6 +301,17 @@ private fun OrderCard(
             .padding(16.dp),
     ) {
         // ══════════════════════════════════════════════════════════════
+        // **والخاصُّ يُعرف مرّةً ويُقرأ في كلّ سطر**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **طلبٌ بلا متجرٍ ولا سعرٍ متّفقٍ عليه بعد** — وبطاقتُه تقول
+        // ذلك، لا تعرض أصفاراً.
+        //
+        // **و`kind` من المحرّك لا من الاسم**: متجرٌ يسمّي نفسَه «طلب
+        // خاصّ» يُقرأ خاصّاً لو قيس بالاسم.
+        val custom = order.kind == "custom"
+
+        // ══════════════════════════════════════════════════════════════
         // **الرأس ثلاثة: المتجر · الشارة · الرقم**
         // ══════════════════════════════════════════════════════════════
         //
@@ -347,9 +358,16 @@ private fun OrderCard(
             // **وأوّلُ الصفّ في العربيّة يمينُه**، فتُكتب قبله.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_store),
+                    // **ولا أيقونةَ متجرٍ لطلبٍ بلا متجر** — والصورةُ
+                    // تُقرأ قبل الحرف: **من رأى واجهةَ دكّانٍ انتظر
+                    // فاتورةً جاهزةً وبضاعةً تُستلم.**
+                    painter = painterResource(
+                        if (custom) R.drawable.ic_orders else R.drawable.ic_store,
+                    ),
                     // **ويُسمّى للقارئ الصوتيّ** — ومن يقود ويسمع لا يرى.
-                    contentDescription = stringResource(R.string.card_store_cd),
+                    contentDescription = stringResource(
+                        if (custom) R.string.card_custom else R.string.card_store_cd,
+                    ),
                     tint = Rahal.colors.accent,
                     modifier = Modifier.size(22.dp),
                 )
@@ -358,6 +376,9 @@ private fun OrderCard(
                     text = order.merchantName.ifBlank { stringResource(R.string.card_custom) },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    // **واسمُ الخاصّ بلون التنبيه** — ليس متجراً يُقرأ
+                    // كسائر المتاجر، **وطريقتُه في المال مختلفة.**
+                    color = if (custom) Rahal.colors.accent else Color.Unspecified,
                 )
             }
 
@@ -379,21 +400,47 @@ private fun OrderCard(
                 // **ثلاثة أرقام في البطاقة**: الإجماليّ وأجرتُه وما
                 // يقبضه. **ورقم عارٍ في زاوية** يُقرأ أجرةً — **فيفرح
                 // بمئتين وهي للمتجر**، أو يقبض مئةً والفاتورة ثلاثمئة.
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // ══════════════════════════════════════════════════════
+                // **والخاصُّ لا فاتورةَ له بعد**
+                // ══════════════════════════════════════════════════════
+                //
+                // (شهده المالك ٢٠٢٦-٠٨-١٣ في بطاقةٍ على جهازه.)
+                //
+                // **كان يُكتب «إجمالي الفاتورة ٠ ل.س» بالأخضر** — والأخضرُ
+                // في هذه البطاقة يعني «مدفوعٌ فسلّم وامضِ». **فيقرأ
+                // السائقُ طلباً لم يُتّفق على شيءٍ فيه بعدُ على أنّه
+                // مدفوع.**
+                //
+                // **والصفرُ هنا ليس رقماً، إنّما «لم يُعرف بعد»** —
+                // ورقمٌ يُعرض مكانَ «لا أعرف» يكذب.
+                if (custom) {
                     Text(
-                        text = stringResource(R.string.card_invoice_total),
-                        color = Rahal.colors.inkMuted,
+                        text = stringResource(R.string.card_custom_price),
+                        color = Rahal.colors.accent,
+                        fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    Spacer(Modifier.size(6.dp))
-                    Text(
-                        text = money(order.total),
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
-                        // **ولونه يقول أمقبوضٌ أم لا** — أحمر: اقبض،
-                        // أخضر: مدفوع بالمحفظة.
-                        color = if (order.cashDue > 0) Rahal.colors.danger else Rahal.colors.success,
-                    )
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.card_invoice_total),
+                            color = Rahal.colors.inkMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(Modifier.size(6.dp))
+                        Text(
+                            text = money(order.total),
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            // **ولونه يقول أمقبوضٌ أم لا** — أحمر: اقبض،
+                            // أخضر: مدفوع بالمحفظة.
+                            color = if (order.cashDue > 0) {
+                                Rahal.colors.danger
+                            } else {
+                                Rahal.colors.success
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -421,7 +468,10 @@ private fun OrderCard(
         //
         // **ولا يُكرَّر الاسمُ تحته**: عنوانٌ فارغٌ لا يُملأ بالاسم —
         // **سطرٌ يعيد ما فوقه يُقرأ عطبا**، ولا يُضيف شيئا.
-        Leg(
+        // **ولا سطرَ إلى متجرٍ لا وجودَ له** — الخاصُّ لا مصدرَ له حتّى
+        // يقوله الزبون. **وكان يُكتب «المسافة إلى (طلب خاصّ)» بلا مسافةٍ
+        // ولا عنوان** — سطرٌ يشغل مكاناً ولا يقول شيئا.
+        if (!custom) Leg(
             label = stringResource(
                 R.string.card_dist_to,
                 order.merchantName.ifBlank { stringResource(R.string.card_custom) },
@@ -463,7 +513,13 @@ private fun OrderCard(
                 // يقرؤه صاحبه لحظةً بغير ما هو.
                 icon = R.drawable.ic_cash,
                 label = stringResource(R.string.card_fee),
-                value = money(order.deliveryFee),
+                // **وأجرةُ الخاصّ تُتّفق ولا تُحسب** — وصفرٌ مكانَها
+                // يُقرأ «بلا أجرة»، **فيُرفض طلبٌ أجرتُه لم تُقَل بعد.**
+                value = if (custom) {
+                    stringResource(R.string.card_agreed_later)
+                } else {
+                    money(order.deliveryFee)
+                },
                 strong = true,
                 modifier = Modifier.weight(1f),
             )
@@ -477,10 +533,17 @@ private fun OrderCard(
             Metric(
                 // **والأيقونة تقول ما يقوله اللون** — نقدٌ في اليد أو
                 // محفظة، **فمن أخطأ اللون لم يخطئ الشكل.**
-                icon = if (cash) R.drawable.ic_cash else R.drawable.ic_wallet,
+                icon = if (cash || custom) R.drawable.ic_cash else R.drawable.ic_wallet,
                 label = stringResource(R.string.card_payment),
-                value = stringResource(if (cash) R.string.card_cash else R.string.card_wallet),
-                tone = if (cash) Rahal.colors.danger else Rahal.colors.success,
+                // **والخاصُّ يشتريه من جيبه ويستردّ عند التسليم** —
+                // وهو ما يقوله النموذجُ نفسُه. **و«مدفوع» عليه أخطرُ ما
+                // في البطاقة**: يمضي بلا أن يقبض ثمنَ ما اشتراه.
+                value = when {
+                    custom -> stringResource(R.string.card_custom_pay)
+                    cash -> stringResource(R.string.card_cash)
+                    else -> stringResource(R.string.card_wallet)
+                },
+                tone = if (cash || custom) Rahal.colors.danger else Rahal.colors.success,
                 modifier = Modifier.weight(1f),
             )
             // **والمدّة تُحسب ولا تُترك فارغة** — إلّا إن لم تُضبط السرعة:

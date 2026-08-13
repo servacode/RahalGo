@@ -1,12 +1,14 @@
 package com.rahalgo.driver.history
 
 import android.app.Application
+import com.rahalgo.driver.ui.ScreenTitle
 import com.rahalgo.design.Rahal
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.painterResource
@@ -172,6 +174,32 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
     // **والشاشةُ كانت تقول «تعذّر الاتّصال»** لأنّ كلَّ خطأٍ يُترجَم
     // ترجمةً واحدة. **ورسالةٌ تكذب أسوأُ من رسالةٍ غامضة**: ظنّ أنّ
     // شيئاً لم يصل، **وأعاد الإرسالَ مراراً وهو واصل.**
+    /**
+     * **يسجّل أنّه أعاد البضاعةَ إلى متجرها.**
+     *
+     * **وفعلٌ يمسّ المال لا يُعاد صامتاً**: يُقال إنّه تمّ، **ويُعاد
+     * جلبُ السجلّ** فيختفي الزرُّ من البطاقة — ولا يُضغط مرّتين.
+     */
+    fun returnGoods(orderId: String) {
+        if (state.busy) return
+        state = state.copy(busy = true, error = "", done = "")
+        viewModelScope.launch {
+            state = try {
+                backend.driver.returnGoods(orderId)
+                // **والمحفظةُ والصندوقُ يتبدّلان** — فتُبطَل نسخُهما.
+                Refresh.bump()
+                val page = backend.driver.history()
+                state.copy(
+                    orders = page.orders,
+                    busy = false,
+                    done = getApplication<Application>().getString(R.string.hist_returned_done),
+                )
+            } catch (e: Exception) {
+                state.copy(busy = false, error = describe(e))
+            }
+        }
+    }
+
     private fun describe(e: Exception): String {
         val app = getApplication<Application>()
         return when {
@@ -242,8 +270,26 @@ fun HistoryScreen(vm: HistoryViewModel) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         item {
             Spacer(Modifier.height(12.dp))
+            // ══════════════════════════════════════════════════════════
+            // **وللسجلّ عنوانٌ كسائر الأقسام**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (كشفته التجربةُ البشريّة ٢٠٢٦-٠٨-١٣: **تسعةُ أقسامٍ تقول
+            //  اسمَها حين تُفتح، وهذا وحدَه يفتح على أرقامٍ بلا اسم.**)
+            //
+            // **ومن فتحه من القائمة يعرف أين هو**، ومن فتحه بضغطةٍ
+            // خاطئةٍ **لا يعرف ما يقرأ.**
+            ScreenTitle(
+                stringResource(R.string.menu_history),
+                stringResource(R.string.hist_hint),
+            )
             if (s.error.isNotEmpty()) {
                 Text(s.error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(10.dp))
+            }
+            // **وما تمّ يُقال** — فعلٌ يمسّ المال لا يقع صامتاً.
+            if (s.done.isNotEmpty()) {
+                Text(s.done, color = Rahal.colors.success, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(10.dp))
             }
             // ══════════════════════════════════════════════════════════
@@ -296,6 +342,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
                 o = o,
                 onReport = { reportFor = o; vm.loadReasons() },
                 onRate = { rateFor = o },
+                onReturn = { vm.returnGoods(o.id) },
             )
         }
         item { Spacer(Modifier.height(24.dp)) }
@@ -323,7 +370,12 @@ private fun Tally(
 }
 
 @Composable
-private fun Row(o: HistoryOrder, onReport: () -> Unit, onRate: () -> Unit) {
+private fun Row(
+    o: HistoryOrder,
+    onReport: () -> Unit,
+    onRate: () -> Unit,
+    onReturn: () -> Unit,
+) {
     val delivered = o.status == "delivered"
     Column(Modifier.fillMaxWidth().padding(vertical = 9.dp)) {
         androidx.compose.foundation.layout.Row(
@@ -380,6 +432,35 @@ private fun Row(o: HistoryOrder, onReport: () -> Unit, onRate: () -> Unit) {
         //
         // **والتقييمُ لمن وقف عند بابه فقط** (`can_rate_merchant`):
         // **ومن لم يقف لا رأيَ له فيه.**
+        // ══════════════════════════════════════════════════════════════
+        // **وبضاعةٌ تعذّر تسليمُها تبقى في يده حتّى تُسجَّل إعادتُها**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «ابدأ بإرجاع البضاعة».)
+        //
+        // **والبابُ في المحرّك منذ زمنٍ بلا زرٍّ يفتحه** — لا في الويب
+        // ولا في التطبيق. **فمن تعذّر تسليمُه رجع بالبضاعة إلى المتجر
+        // ولا شيءَ يسجّل ذلك**، ويبقى مستحقُّ المتجر مدفوعاً على شيءٍ
+        // رجع إليه.
+        //
+        // **ولا يُعرض إلّا حيث يصحّ**: طلبٌ تعذّر · ومتجرٌ يقبل الإرجاع ·
+        // **ولم تُسجَّل إعادتُه بعد.** وزرٌّ يُعرض حيث لا يصحّ يُضغط
+        // فيُردّ، **ورفضٌ بعد ضغطةٍ يُقرأ عطباً لا قاعدة.**
+        if (!delivered && o.acceptsReturns && o.returnedAt == null) {
+            Spacer(Modifier.height(4.dp))
+            OutlinedButton(onClick = onReturn, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.hist_return))
+            }
+        }
+        // **ومن سجّلها يُقال له ذلك** — لا يختفي الزرُّ صامتاً فيظنّ
+        // أنّه لم يُضغط.
+        if (o.returnedAt != null) {
+            Text(
+                text = stringResource(R.string.hist_returned),
+                color = Rahal.colors.success,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         androidx.compose.foundation.layout.Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {

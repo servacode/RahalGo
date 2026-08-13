@@ -49,6 +49,23 @@ class DriverApi(private val api: ApiClient) {
     suspend fun cash(page: Int = 1): CashPage =
         api.call("/api/v1/driver/cash?page=" + page)
 
+    /**
+     * **إعادةُ بضاعةِ طلبٍ تعذّر تسليمُه إلى متجرها.**
+     *
+     * (`POST /api/v1/driver/orders/{id}/return` — بابٌ في المحرّك منذ
+     * زمنٍ **بلا زرٍّ يفتحه في الويب ولا في التطبيق.**)
+     *
+     * **وأثرُه مال**: يُعكَس مستحقُّ المتجر وتُعاد الخزينةُ إلى حسابها —
+     * **فما دام لم يُسجَّل، الدفترُ يقول إنّ المتجر يستحقّ ثمنَ بضاعةٍ
+     * رجعت إليه.**
+     */
+    suspend fun returnGoods(orderId: String): Ack =
+        api.call(
+            "/api/v1/driver/orders/" + orderId + "/return",
+            HttpMethod.Post,
+            mapOf<String, String>(),
+        )
+
     /** **أسبابُ البلاغ** — من الخادم لا من التطبيق. */
     suspend fun reportReasons(): ReportReasons =
         api.call("/api/v1/driver/orders/report-reasons")

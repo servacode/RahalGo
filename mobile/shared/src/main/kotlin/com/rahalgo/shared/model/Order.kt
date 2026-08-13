@@ -168,6 +168,19 @@ data class HistoryOrder(
     @SerialName("merchant_rated") val merchantRated: Boolean = false,
     /** **وقف عند بابه فعلاً** — ومن لم يقف لا رأيَ له فيه. */
     @SerialName("can_rate_merchant") val canRateMerchant: Boolean = false,
+    /**
+     * **أيقبل متجرُه الإرجاع** — ومن لا يقبله لا يُعرض على سائقه زرٌّ
+     * يُضغط فيُردّ.
+     */
+    @SerialName("merchant_accepts_returns") val acceptsReturns: Boolean = false,
+    /**
+     * **متى أُعيدت البضاعة** — وفارغٌ يعني في يده بعد.
+     *
+     * **والبضاعةُ التي تعذّر تسليمُها تبقى معه** — ومستحقُّ المتجر
+     * مدفوعٌ على شيءٍ رجع. **فحتّى تُسجَّل الإعادةُ يبقى الدفترُ يقول
+     * غيرَ الحقيقة.**
+     */
+    @SerialName("returned_at") val returnedAt: String? = null,
 )
 
 /**
