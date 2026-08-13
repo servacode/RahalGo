@@ -175,6 +175,12 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
                 // جلسة أُبطلت. **وما عداه انقطاع يمرّ.**
                 if (e.status == 401 || e.body.code == "invalid_refresh") {
                     Log.w("RahalGo/login", "الجلسة مرفوضة — تُمحى", e)
+                    // **وطردُ الجلسة يُبلَّغ عنه** — وقع اليومَ على جهاز
+                    // المالك (٢٠٢٦-٠٨-١٣) **ولم يُعرف سببُه من السجلّ.**
+                    //
+                    // **وسائقٌ يُطرد وهو على الدرّاجة لا يُبلّغ**: يدخل
+                    // من جديدٍ ويمضي، **فلا يعلم أحدٌ أنّها تتكرّر.**
+                    Crash.soft(e, "session rejected " + e.status + " " + e.body.code)
                     backend.session.clear()
                 } else {
                     Log.w("RahalGo/login", "المحرّك ردّ بخطأ — الجلسة تبقى", e)

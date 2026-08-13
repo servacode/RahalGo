@@ -1,6 +1,7 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import com.rahalgo.driver.location.LocationDisclosure
 import com.rahalgo.driver.data.Crash
 import com.rahalgo.design.LightPalette
 import com.rahalgo.design.DarkPalette
@@ -371,6 +372,31 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { home.recheckLocation() }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **والإفصاحُ يسبق نافذةَ النظام — شرطُ غوغل**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نبدأ بالإغلاق واحدةً تلو الأخرى».)
+    //
+    // **غوغل تشترط إفصاحاً ظاهراً داخل التطبيق قبل طلب الموقع في
+    // الخلفيّة** — لا سطراً في سياسة الخصوصيّة: **يُعرض وحدَه، ويُقبل
+    // بفعلٍ صريح، ويسبق نافذةَ النظام.** **والتطبيقُ الذي يطلبه بلا
+    // إفصاحٍ يُرفض في المراجعة**، وهو أكثرُ ما تُرَدّ به تطبيقاتُ
+    // التوصيل.
+    //
+    // **ولا يُحفظ قبولُه** — يُعرض كلَّما طُلب الإذن: **ومن رفض مرّةً ثمّ
+    // عاد يريد الطلبات يقرأ ما يوافق عليه من جديد.**
+    var disclose by rememberSaveable { mutableStateOf(false) }
+    if (disclose) {
+        LocationDisclosure(
+            onAgree = {
+                disclose = false
+                askBackground.launch(LocationPermission.BACKGROUND)
+            },
+            onDismiss = { disclose = false },
+        )
+    }
+
     val ask = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { granted ->
@@ -379,7 +405,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         // الخيار ظاهرا. **وبلاه يسكت الموقع بمجرّد أن تُطفأ الشاشة**،
         // فيبدو للمكتب واقفا وهو يسير.
         if (granted.values.any { it } && !LocationPermission.backgroundGranted(context)) {
-            askBackground.launch(LocationPermission.BACKGROUND)
+            disclose = true
         }
     }
 
@@ -725,7 +751,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                                     ask.launch(LocationPermission.FIRST_STEP)
 
                                 !LocationPermission.backgroundGranted(context) ->
-                                    askBackground.launch(LocationPermission.BACKGROUND)
+                                    disclose = true
 
                                 // **وآخر ملجأ الإعدادات** — لمن رفض
                                 // نهائيّا فلا يعرض النظام له نافذة بعدها.

@@ -491,4 +491,12 @@
     <string name="contact_telegram">تلغرام</string>
     <string name="err_complaint_window">مضت مهلةُ البلاغ على هذا الطلب</string>
     <string name="err_order_not_closed">الطلب لم يُغلق بعد — البلاغ بعد انتهائه</string>
+    <!-- ══ الإفصاحُ الصريح عن الموقع — شرطُ غوغل ══ -->
+    <string name="disc_title">موقعك أثناء الورديّة</string>
+    <string name="disc_what">يجمع رحّال غو موقع جهازك ما دامت ورديّتك مفتوحة.</string>
+    <string name="disc_background">ويُجمع أيضاً والتطبيق مغلق أو الشاشة مطفأة — لأنّك تقود والهاتف في جيبك.</string>
+    <string name="disc_why">ومنه يُسنَد إليك أقرب طلب، ويرى الزبون أين طلبه على الخريطة، وتُحسب المسافة وأجرتها.</string>
+    <string name="disc_stop">ويقف الجمع فور إغلاق ورديّتك. ولك أن ترفض، ويعمل التطبيق، ولا تصلك طلبات.</string>
+    <string name="disc_agree">أوافق</string>
+    <string name="disc_deny">ليس الآن</string>
 </resources>

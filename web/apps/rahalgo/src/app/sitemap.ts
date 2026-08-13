@@ -34,7 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     //
     // **وغوغل بلاي يطلب رابطاً عامّاً لسياسة الخصوصيّة** — ورابطٌ لا
     // يُفهرَس يُقبل، **لكنّ المراجعَ البشريَّ يفتحه.**
-    ...["terms", "privacy", "help", "about", "contact"].map((path) => ({
+    ...["terms", "privacy", "help", "about", "contact", "delete-account"].map((path) => ({
       url: `${SITE}/${path}`,
       changeFrequency: "monthly" as const,
       priority: 0.5,
