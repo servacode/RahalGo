@@ -1,6 +1,7 @@
 package com.rahalgo.driver.wallet
 
 import android.app.Application
+import com.rahalgo.design.Rahal
 import com.rahalgo.driver.data.apiError
 import android.util.Log
 import androidx.compose.foundation.background
@@ -36,10 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateGreen
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.data.Refresh
@@ -247,7 +244,7 @@ fun WalletScreen(vm: WalletViewModel) {
             if (s.error.isEmpty()) {
                 CircularProgressIndicator()
             } else {
-                Text(s.error, color = StateRed, textAlign = TextAlign.Center)
+                Text(s.error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
             }
         }
         return
@@ -267,8 +264,8 @@ fun WalletScreen(vm: WalletViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        if (s.error.isNotEmpty()) Notice(s.error, StateRed)
-        if (s.done.isNotEmpty()) Notice(s.done, StateGreen)
+        if (s.error.isNotEmpty()) Notice(s.error, Rahal.colors.danger)
+        if (s.done.isNotEmpty()) Notice(s.done, Rahal.colors.success)
 
         // ══════════════════════════════════════════════════════════════
         // **الرصيدُ كرتٌ في وسط الشاشة — وزرّان تحته**
@@ -283,15 +280,15 @@ fun WalletScreen(vm: WalletViewModel) {
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .background(BrandTeal.copy(alpha = 0.08f))
+                .background(Rahal.colors.brand.copy(alpha = 0.08f))
                 .padding(vertical = 22.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(stringResource(R.string.wal_balance), color = InkMuted)
+            Text(stringResource(R.string.wal_balance), color = Rahal.colors.inkMuted)
             Spacer(Modifier.height(6.dp))
             Text(
                 text = money(st.balance),
-                color = BrandTeal,
+                color = Rahal.colors.brand,
                 style = MaterialTheme.typography.headlineLarge,
             )
         }
@@ -333,7 +330,7 @@ fun WalletScreen(vm: WalletViewModel) {
         Text(stringResource(R.string.wal_txs), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         if (st.transactions.isEmpty()) {
-            Text(stringResource(R.string.wal_no_txs), color = InkMuted)
+            Text(stringResource(R.string.wal_no_txs), color = Rahal.colors.inkMuted)
         }
         st.transactions.forEach { TxRow(it) }
 
@@ -343,7 +340,7 @@ fun WalletScreen(vm: WalletViewModel) {
             Spacer(Modifier.height(10.dp))
             Text(
                 stringResource(R.string.wal_truncated),
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -372,7 +369,7 @@ private fun PayoutForm(vm: WalletViewModel, s: WalletState, max: Long, onDone: (
     // **يعرفه الجهازُ نفسُه** يُضيّع ثانيتين ويستهلك حزمة.
     Text(
         text = stringResource(R.string.wal_max, money(max)),
-        color = if (value > max) StateRed else InkMuted,
+        color = if (value > max) Rahal.colors.danger else Rahal.colors.inkMuted,
         style = MaterialTheme.typography.bodySmall,
     )
     Spacer(Modifier.height(8.dp))
@@ -398,9 +395,9 @@ private fun PayoutForm(vm: WalletViewModel, s: WalletState, max: Long, onDone: (
 @Composable
 private fun PayoutRow(p: Payout) {
     val color = when (p.status) {
-        "approved", "paid" -> StateGreen
-        "rejected" -> StateRed
-        else -> InkMuted
+        "approved", "paid" -> Rahal.colors.success
+        "rejected" -> Rahal.colors.danger
+        else -> Rahal.colors.inkMuted
     }
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -411,7 +408,7 @@ private fun PayoutRow(p: Payout) {
         // هنا يُرسله إلى المكتب ليسأل عمّا هو مكتوبٌ عندهم.**
         val why = p.decision.ifEmpty { p.note }
         if (why.isNotEmpty()) {
-            Text(why, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(why, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(6.dp))
         HorizontalDivider()
@@ -436,11 +433,11 @@ private fun TxRow(t: WalletTx) {
             // **والإشارةُ قبل الرقم** — «‎+٣٠٠» تُقرأ ربحاً بنظرة.
             Text(
                 text = (if (positive) "+" else "−") + money(kotlin.math.abs(t.amount)),
-                color = if (positive) StateGreen else StateRed,
+                color = if (positive) Rahal.colors.success else Rahal.colors.danger,
                 style = MaterialTheme.typography.titleSmall,
             )
             t.orderNumber?.let {
-                Text("#$it", color = InkMuted, style = MaterialTheme.typography.bodySmall)
+                Text("#$it", color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
             }
         }
         // ══════════════════════════════════════════════════════════════
@@ -457,13 +454,13 @@ private fun TxRow(t: WalletTx) {
         // تقول لماذا**: «تسوية من الإدارة» ثمّ «تصحيح نقص يوم الثلاثاء».
         Text(kindLabel(t.kind), style = MaterialTheme.typography.bodyMedium)
         if (t.note.isNotEmpty()) {
-            Text(t.note, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(t.note, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         }
         // **والتاريخُ مع كلّ حركة** — بأمر المالك. **ومن رأى «‎−٥٠٠» لا
         // يعرف أهي اليومَ أم الشهرَ الماضي.**
         Text(
             text = fmtWhen(t.createdAt),
-            color = InkMuted,
+            color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(6.dp))
@@ -591,7 +588,7 @@ private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -
                 ) {
                     Text(
                         stringResource(r.label),
-                        color = if (on) BrandTeal else InkMuted,
+                        color = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
                     )
                 }
             }
@@ -599,27 +596,27 @@ private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -
 
         Spacer(Modifier.height(14.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(stringResource(R.string.wal_opening), color = InkMuted)
+            Text(stringResource(R.string.wal_opening), color = Rahal.colors.inkMuted)
             Text(money(st.opening))
         }
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(stringResource(R.string.wal_closing), color = InkMuted)
-            Text(money(st.closing), color = BrandTeal)
+            Text(stringResource(R.string.wal_closing), color = Rahal.colors.inkMuted)
+            Text(money(st.closing), color = Rahal.colors.brand)
         }
 
         Spacer(Modifier.height(14.dp))
         HorizontalDivider()
         Spacer(Modifier.height(10.dp))
         if (st.transactions.isEmpty()) {
-            Text(stringResource(R.string.wal_no_txs), color = InkMuted)
+            Text(stringResource(R.string.wal_no_txs), color = Rahal.colors.inkMuted)
         }
         st.transactions.forEach { TxRow(it) }
         if (st.truncated) {
             Spacer(Modifier.height(10.dp))
             Text(
                 stringResource(R.string.wal_truncated),
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
         }

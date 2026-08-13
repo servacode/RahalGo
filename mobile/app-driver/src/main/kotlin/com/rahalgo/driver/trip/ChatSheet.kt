@@ -1,6 +1,7 @@
 package com.rahalgo.driver.trip
 
 import androidx.compose.foundation.background
+import com.rahalgo.design.Rahal
 import com.rahalgo.driver.ui.chatDay
 import com.rahalgo.driver.ui.ChatDayChip
 import com.rahalgo.driver.ui.ChatBubble
@@ -40,8 +41,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.shared.model.ChatMessage
 
@@ -84,7 +83,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             .heightIn(max = 340.dp)
             .shadow(10.dp, RoundedCornerShape(20.dp))
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.White)
+            .background(Rahal.colors.canvas)
             .imePadding(),
     ) {
         Row(
@@ -104,7 +103,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                 Icon(
                     painter = painterResource(R.drawable.ic_close_circle),
                     contentDescription = stringResource(R.string.detail_back),
-                    tint = InkMuted,
+                    tint = Rahal.colors.inkMuted,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -176,7 +175,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_send),
                             contentDescription = stringResource(R.string.chat_send),
-                            tint = if (draft.isBlank()) InkMuted else BrandTeal,
+                            tint = if (draft.isBlank()) Rahal.colors.inkMuted else Rahal.colors.brand,
                         )
                     }
                 },
@@ -185,7 +184,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             // **وحديثٌ مغلقٌ يُقال إنّه مغلق** — لا حقلُ كتابةٍ لا يعمل.
             Text(
                 text = stringResource(R.string.chat_closed),
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             )
         }

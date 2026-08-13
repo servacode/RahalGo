@@ -1,6 +1,7 @@
 package com.rahalgo.driver.ui
 
 import androidx.compose.foundation.background
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,8 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.shared.model.Notice
 
@@ -53,7 +52,7 @@ fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Rahal.colors.canvas)
             .statusBarsPadding(),
     ) {
         Row(
@@ -87,7 +86,7 @@ fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit) {
         if (items.isEmpty()) {
             Text(
                 text = stringResource(R.string.inbox_empty),
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
             )
             return@Column
@@ -102,14 +101,14 @@ fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit) {
                             .padding(top = 6.dp)
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(if (notice.read) Color.Transparent else BrandTeal),
+                            .background(if (notice.read) Color.Transparent else Rahal.colors.brand),
                     )
                     Spacer(Modifier.size(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(notice.title, fontWeight = FontWeight.Bold)
                         if (notice.body.isNotBlank()) {
                             Spacer(Modifier.height(2.dp))
-                            Text(notice.body, color = InkMuted)
+                            Text(notice.body, color = Rahal.colors.inkMuted)
                         }
                     }
                 }

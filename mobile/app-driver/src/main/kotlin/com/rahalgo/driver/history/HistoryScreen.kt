@@ -1,6 +1,7 @@
 package com.rahalgo.driver.history
 
 import android.app.Application
+import com.rahalgo.design.Rahal
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.AlertDialog
@@ -9,7 +10,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.painterResource
-import com.rahalgo.design.BrandOrange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,10 +40,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateGreen
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.data.Refresh
@@ -247,7 +243,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
         item {
             Spacer(Modifier.height(12.dp))
             if (s.error.isNotEmpty()) {
-                Text(s.error, color = StateRed, textAlign = TextAlign.Center)
+                Text(s.error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(10.dp))
             }
             // ══════════════════════════════════════════════════════════
@@ -260,13 +256,13 @@ fun HistoryScreen(vm: HistoryViewModel) {
                 Tally(
                     label = stringResource(R.string.hist_done),
                     value = done.toString(),
-                    color = StateGreen,
+                    color = Rahal.colors.success,
                     modifier = Modifier.weight(1f),
                 )
                 Tally(
                     label = stringResource(R.string.hist_failed),
                     value = failed.toString(),
-                    color = if (failed > 0) StateRed else InkMuted,
+                    color = if (failed > 0) Rahal.colors.danger else Rahal.colors.inkMuted,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -288,7 +284,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
                     stringResource(
                         if (s.orders.isEmpty()) R.string.hist_empty else R.string.hist_no_match,
                     ),
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -316,11 +312,11 @@ private fun Tally(
     Column(
         modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(InkMuted.copy(alpha = 0.07f))
+            .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+        Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(4.dp))
         Text(value, color = color, style = MaterialTheme.typography.headlineSmall)
     }
@@ -334,13 +330,13 @@ private fun Row(o: HistoryOrder, onReport: () -> Unit, onRate: () -> Unit) {
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text("#${o.number}", style = MaterialTheme.typography.titleSmall, color = BrandTeal)
+            Text("#${o.number}", style = MaterialTheme.typography.titleSmall, color = Rahal.colors.brand)
             // **والحالُ كلمةٌ ملوّنة** — تُقرأ قبل أن يُقرأ السطر.
             Text(
                 text = stringResource(
                     if (delivered) R.string.hist_st_delivered else R.string.hist_st_failed,
                 ),
-                color = if (delivered) StateGreen else StateRed,
+                color = if (delivered) Rahal.colors.success else Rahal.colors.danger,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -350,7 +346,7 @@ private fun Row(o: HistoryOrder, onReport: () -> Unit, onRate: () -> Unit) {
         // **وسببُ التعذّر يُقال** — من فشل طلبُه يُسأل عنه بعد أيّام،
         // **وسجلٌّ يقول «تعذّر» بلا سببٍ لا يُدافَع به.**
         if (!delivered && o.failReason.isNotEmpty()) {
-            Text(o.failReason, color = StateRed, style = MaterialTheme.typography.bodySmall)
+            Text(o.failReason, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
         }
         androidx.compose.foundation.layout.Row(
             Modifier.fillMaxWidth(),
@@ -358,14 +354,14 @@ private fun Row(o: HistoryOrder, onReport: () -> Unit, onRate: () -> Unit) {
         ) {
             Text(
                 text = o.createdAt.take(10),
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
             // **وقيمةُ الطلب لا أجرتُه** — الأجرةُ في المحفظة مجموعةً،
             // **وهذه تقول ما حمله** فيتذكّره.
             Text(
                 text = money(o.total),
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -388,7 +384,7 @@ private fun Row(o: HistoryOrder, onReport: () -> Unit, onRate: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             TextButton(onClick = onReport) {
-                Text(stringResource(R.string.hist_report), color = StateRed)
+                Text(stringResource(R.string.hist_report), color = Rahal.colors.danger)
             }
             if (o.canRateMerchant) {
                 if (o.merchantRated) {
@@ -396,13 +392,13 @@ private fun Row(o: HistoryOrder, onReport: () -> Unit, onRate: () -> Unit) {
                     // يقول إنّه فعل، **وزرٌّ يُضغط مرّتين يُقرأ عطبا.**
                     Text(
                         stringResource(R.string.hist_rated),
-                        color = StateGreen,
+                        color = Rahal.colors.success,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 14.dp),
                     )
                 } else {
                     TextButton(onClick = onRate) {
-                        Text(stringResource(R.string.hist_rate), color = BrandTeal)
+                        Text(stringResource(R.string.hist_rate), color = Rahal.colors.brand)
                     }
                 }
             }
@@ -434,7 +430,7 @@ private fun ReportDialog(
             Column {
                 Text(
                     stringResource(R.string.hist_report_hint),
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(10.dp))
@@ -533,14 +529,14 @@ private fun RateDialog(
 /** **صفُّ نجومٍ يُضغط** — والنجومُ تُلمس لا تُكتب. */
 @Composable
 private fun StarPick(label: String, value: Int, onPick: (Int) -> Unit) {
-    Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+    Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
     Spacer(Modifier.height(4.dp))
     androidx.compose.foundation.layout.Row {
         repeat(5) { i ->
             Icon(
                 painter = painterResource(R.drawable.ic_star),
                 contentDescription = null,
-                tint = if (i < value) BrandOrange else InkMuted.copy(alpha = 0.30f),
+                tint = if (i < value) Rahal.colors.accent else Rahal.colors.inkMuted.copy(alpha = 0.30f),
                 modifier = Modifier
                     .padding(end = 4.dp)
                     .clickable { onPick(i + 1) },

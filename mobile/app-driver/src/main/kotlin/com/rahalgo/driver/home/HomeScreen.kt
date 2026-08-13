@@ -1,6 +1,7 @@
 package com.rahalgo.driver.home
 
 import androidx.compose.foundation.background
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,9 +37,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.grouped
 import com.rahalgo.driver.ui.money
@@ -80,7 +78,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 // **وأوّل نداء قد يسقط والشاشة فارغة** — فلا يبقى صاحبها
                 // أمام بياض بلا سبب ولا زرّ.
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.error, color = BrandOrange, textAlign = TextAlign.Center)
+                    Text(state.error, color = Rahal.colors.accent, textAlign = TextAlign.Center)
                     TextButton(onClick = actions.refresh) {
                         Text(stringResource(R.string.home_retry))
                     }
@@ -142,7 +140,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
 
         if (state.error.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
-            Text(state.error, color = BrandOrange, modifier = Modifier.fillMaxWidth())
+            Text(state.error, color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
         }
 
         Spacer(Modifier.height(20.dp))
@@ -218,16 +216,16 @@ private fun OfflineCard(progress: Int, downloading: Boolean, onDownload: () -> U
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFEFF4F6))
+            .background(Rahal.colors.surface)
             .padding(16.dp),
     ) {
         Text(
             text = stringResource(R.string.offline_map_title),
             fontWeight = FontWeight.Bold,
-            color = BrandTeal,
+            color = Rahal.colors.brand,
         )
         Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.offline_map_text), color = InkMuted)
+        Text(stringResource(R.string.offline_map_text), color = Rahal.colors.inkMuted)
         Spacer(Modifier.height(10.dp))
         if (downloading) {
             LinearProgressIndicator(
@@ -235,7 +233,7 @@ private fun OfflineCard(progress: Int, downloading: Boolean, onDownload: () -> U
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(6.dp))
-            Text(stringResource(R.string.offline_map_progress, progress), color = InkMuted)
+            Text(stringResource(R.string.offline_map_progress, progress), color = Rahal.colors.inkMuted)
         } else {
             Button(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
                 // **ومن وقف في نصفه يُقال له «أكمل» لا «نزّل»** — الأوّل
@@ -263,16 +261,16 @@ private fun LocationCard(onEnable: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFFFF4E5))
+            .background(Rahal.colors.warnTint)
             .padding(16.dp),
     ) {
         Text(
             text = stringResource(R.string.loc_permission_title),
             fontWeight = FontWeight.Bold,
-            color = BrandOrange,
+            color = Rahal.colors.accent,
         )
         Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.loc_permission_text), color = InkMuted)
+        Text(stringResource(R.string.loc_permission_text), color = Rahal.colors.inkMuted)
         Spacer(Modifier.height(10.dp))
         Button(onClick = onEnable, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.loc_permission_button))
@@ -293,7 +291,7 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(if (on) BrandTeal else Color(0xFFEEF1F3))
+            .background(if (on) Rahal.colors.brand else Rahal.colors.field)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -301,14 +299,14 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
             text = stringResource(if (on) R.string.shift_on else R.string.shift_off),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = if (on) Color.White else InkMuted,
+            color = if (on) Rahal.colors.onBrand else Rahal.colors.inkMuted,
         )
         Spacer(Modifier.height(4.dp))
         Text(
             text = stringResource(
                 if (on) R.string.shift_on_hint else R.string.shift_off_hint,
             ),
-            color = if (on) Color.White.copy(alpha = 0.85f) else InkMuted,
+            color = if (on) Rahal.colors.onBrand.copy(alpha = 0.85f) else Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(16.dp))
@@ -316,8 +314,8 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
             onClick = { onToggle(!on) },
             enabled = !busy,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (on) Color.White else BrandTeal,
-                contentColor = if (on) BrandTeal else Color.White,
+                containerColor = if (on) Rahal.colors.onBrand else Rahal.colors.brand,
+                contentColor = if (on) Rahal.colors.brand else Rahal.colors.onBrand,
             ),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -335,7 +333,7 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
                     grouped(me.activeOrders.toLong()),
                     grouped(me.maxActiveOrders),
                 ),
-                color = if (on) Color.White else InkMuted,
+                color = if (on) Rahal.colors.onBrand else Rahal.colors.inkMuted,
             )
         }
     }
@@ -346,13 +344,13 @@ private fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
     Column(
         modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFFF5F7F8))
+            .background(Rahal.colors.surface)
             .padding(vertical = 14.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(2.dp))
-        Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+        Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -362,11 +360,11 @@ private fun MoneyRow(label: String, value: String, warn: Boolean = false) {
         Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = InkMuted)
+        Text(label, color = Rahal.colors.inkMuted)
         Text(
             text = value,
             fontWeight = FontWeight.Bold,
-            color = if (warn) BrandOrange else MaterialTheme.colorScheme.onSurface,
+            color = if (warn) Rahal.colors.accent else MaterialTheme.colorScheme.onSurface,
         )
     }
 }

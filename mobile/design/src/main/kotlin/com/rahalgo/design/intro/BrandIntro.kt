@@ -41,7 +41,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandCanvas
+import com.rahalgo.design.Rahal
 import com.rahalgo.design.BrandOrange
 import com.rahalgo.design.BrandTeal
 import com.rahalgo.design.InkMuted
@@ -185,7 +185,10 @@ fun BrandIntro(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(BrandCanvas),
+            // **وأرضُ الافتتاح أرضُ السمة** — وبياضٌ ثابتٌ يومض في وجه
+            // من فتح تطبيقَه ليلاً على سمةٍ غامقة، **فأوّلُ ما يراه
+            // ومضةٌ تُغمض العين.**
+            .background(Rahal.colors.canvas),
         contentAlignment = Alignment.Center,
     ) {
         val logoSize = maxWidth * LOGO_WIDTH_RATIO

@@ -237,6 +237,7 @@
     <string name="inbox_title">الإشعارات</string>
     <string name="inbox_mark_all">تعليم الكل كمقروء</string>
     <string name="top_theme">السمة الغامقة</string>
+    <string name="top_theme_light">السمة الفاتحة</string>
     <string name="card_dist_to">المسافة إلى (%1$s)</string>
     <string name="card_invoice_total">إجمالي الفاتورة</string>
 

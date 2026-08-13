@@ -1,6 +1,7 @@
 package com.rahalgo.driver.menu
 
 import android.content.Intent
+import com.rahalgo.design.Rahal
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,8 +18,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.Card
 import com.rahalgo.driver.ui.Empty
@@ -136,10 +135,10 @@ private fun Way(label: String, value: String, onClick: (() -> Unit)?) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, color = InkMuted, style = MaterialTheme.typography.bodyMedium)
+            Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = value,
-                color = if (onClick != null) BrandTeal else MaterialTheme.colorScheme.onSurface,
+                color = if (onClick != null) Rahal.colors.brand else MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium,
                 style = MaterialTheme.typography.bodyMedium,
             )

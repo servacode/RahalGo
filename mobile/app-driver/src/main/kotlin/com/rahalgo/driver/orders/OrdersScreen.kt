@@ -1,6 +1,7 @@
 package com.rahalgo.driver.orders
 
 import androidx.compose.foundation.background
+import com.rahalgo.design.Rahal
 import com.rahalgo.driver.ui.minutes
 import com.rahalgo.driver.ui.dist
 import androidx.compose.foundation.border
@@ -44,11 +45,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateGreen
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.grouped
 import com.rahalgo.driver.ui.money
@@ -102,7 +98,7 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
         if (state.error.isNotEmpty()) {
             item {
                 Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                    Text(state.error, color = BrandOrange)
+                    Text(state.error, color = Rahal.colors.accent)
                     TextButton(onClick = actions.refresh) {
                         Text(stringResource(R.string.home_retry))
                     }
@@ -224,12 +220,12 @@ private fun WhyNoOrders(state: OrdersState) {
             .fillMaxWidth()
             .padding(top = 12.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (blocking) Color(0xFFFFF4E5) else Color(0xFFF5F7F8))
+            .background(if (blocking) Rahal.colors.warnTint else Rahal.colors.surface)
             .padding(16.dp),
     ) {
         Text(
             text = stringResource(text),
-            color = if (blocking) BrandOrange else InkMuted,
+            color = if (blocking) Rahal.colors.accent else Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -250,7 +246,7 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 private fun Empty(text: String) {
     Text(
         text = text,
-        color = InkMuted,
+        color = Rahal.colors.inkMuted,
         modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
     )
 }
@@ -297,8 +293,10 @@ private fun OrderCard(
             .fillMaxWidth()
             .padding(top = 10.dp)
             .clip(RoundedCornerShape(18.dp))
-            .border(1.dp, Color(0xFFE3E8EB), RoundedCornerShape(18.dp))
-            .background(Color.White)
+            .border(1.dp, Rahal.colors.line, RoundedCornerShape(18.dp))
+            // **وأرضُ البطاقة أرضُ السمة** — وبياضٌ مكتوبٌ يبقى أبيضَ في
+            // الغامقة، **فتقع بطاقةٌ بيضاءُ في شاشةٍ كحليّة.**
+            .background(Rahal.colors.canvas)
             .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier)
             .padding(16.dp),
     ) {
@@ -331,7 +329,7 @@ private fun OrderCard(
                 } else {
                     Text(
                         text = statusText(order.status),
-                        color = BrandTeal,
+                        color = Rahal.colors.brand,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -352,7 +350,7 @@ private fun OrderCard(
                     painter = painterResource(R.drawable.ic_store),
                     // **ويُسمّى للقارئ الصوتيّ** — ومن يقود ويسمع لا يرى.
                     contentDescription = stringResource(R.string.card_store_cd),
-                    tint = BrandOrange,
+                    tint = Rahal.colors.accent,
                     modifier = Modifier.size(22.dp),
                 )
                 Spacer(Modifier.size(6.dp))
@@ -367,7 +365,7 @@ private fun OrderCard(
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = "#" + order.number,
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(2.dp))
@@ -384,7 +382,7 @@ private fun OrderCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = stringResource(R.string.card_invoice_total),
-                        color = InkMuted,
+                        color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Spacer(Modifier.size(6.dp))
@@ -394,7 +392,7 @@ private fun OrderCard(
                         style = MaterialTheme.typography.titleMedium,
                         // **ولونه يقول أمقبوضٌ أم لا** — أحمر: اقبض،
                         // أخضر: مدفوع بالمحفظة.
-                        color = if (order.cashDue > 0) StateRed else StateGreen,
+                        color = if (order.cashDue > 0) Rahal.colors.danger else Rahal.colors.success,
                     )
                 }
             }
@@ -436,7 +434,7 @@ private fun OrderCard(
             // ودقيقتين على طريق فارغ، **ومن يوازن بين طلبين يوازن
             // بالوقت** لا بالمتر.
             mins = legEta(order.toPickupM, avgSpeedKmh),
-            tint = BrandTeal,
+            tint = Rahal.colors.brand,
         )
         Leg(
             // **واسمُ الزبون بين القوسين** — (تصحيح المالك ٢٠٢٦-٠٨-١٢).
@@ -449,7 +447,7 @@ private fun OrderCard(
             value = order.addressText,
             far = if (order.legM >= 0) distance(order.legM) else "",
             mins = legEta(order.legM, avgSpeedKmh),
-            tint = BrandOrange,
+            tint = Rahal.colors.accent,
         )
 
         Spacer(Modifier.height(10.dp))
@@ -482,7 +480,7 @@ private fun OrderCard(
                 icon = if (cash) R.drawable.ic_cash else R.drawable.ic_wallet,
                 label = stringResource(R.string.card_payment),
                 value = stringResource(if (cash) R.string.card_cash else R.string.card_wallet),
-                tone = if (cash) StateRed else StateGreen,
+                tone = if (cash) Rahal.colors.danger else Rahal.colors.success,
                 modifier = Modifier.weight(1f),
             )
             // **والمدّة تُحسب ولا تُترك فارغة** — إلّا إن لم تُضبط السرعة:
@@ -512,7 +510,7 @@ private fun OrderCard(
             Button(
                 onClick = onAccept,
                 enabled = enabled && !busy,
-                colors = ButtonDefaults.buttonColors(containerColor = StateGreen),
+                colors = ButtonDefaults.buttonColors(containerColor = Rahal.colors.success),
                 modifier = Modifier.weight(1f),
             ) {
                 if (busy) {
@@ -535,7 +533,7 @@ private fun OrderCard(
                 Button(
                     onClick = onDecline,
                     enabled = enabled && !busy,
-                    colors = ButtonDefaults.buttonColors(containerColor = StateRed),
+                    colors = ButtonDefaults.buttonColors(containerColor = Rahal.colors.danger),
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(
@@ -576,7 +574,7 @@ private fun Countdown(expiresAt: String, onExpired: () -> Unit) {
     }
 
     if (left <= 0) {
-        Text(stringResource(R.string.offer_expired), color = InkMuted)
+        Text(stringResource(R.string.offer_expired), color = Rahal.colors.inkMuted)
         return
     }
 
@@ -585,13 +583,13 @@ private fun Countdown(expiresAt: String, onExpired: () -> Unit) {
         Icon(
             painter = painterResource(R.drawable.ic_time),
             contentDescription = null,
-            tint = if (seconds <= 10) BrandOrange else BrandTeal,
+            tint = if (seconds <= 10) Rahal.colors.accent else Rahal.colors.brand,
             modifier = Modifier.size(14.dp),
         )
         Spacer(Modifier.size(5.dp))
         Text(
             text = stringResource(R.string.offer_left, "%d:%02d".format(seconds / 60, seconds % 60)),
-            color = if (seconds <= 10) BrandOrange else BrandTeal,
+            color = if (seconds <= 10) Rahal.colors.accent else Rahal.colors.brand,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -604,7 +602,7 @@ private fun Chip(icon: Int, text: String) {
     Row(
         Modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(BrandTeal)
+            .background(Rahal.colors.brand)
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -648,7 +646,7 @@ private fun Leg(label: String, value: String, far: String, mins: Long, tint: Col
         Spacer(Modifier.size(8.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+                Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
                 if (far.isNotEmpty()) {
                     Spacer(Modifier.size(8.dp))
                     // **والمسافة في سطر عنوانها** — رقم قصير لا يزاحم
@@ -668,7 +666,7 @@ private fun Leg(label: String, value: String, far: String, mins: Long, tint: Col
                     // **ولو تساويا في الصياح** لم يُقرأ أحدهما أوّلا.
                     Text(
                         text = "(" + minutesText(mins) + ")",
-                        color = InkMuted,
+                        color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -699,12 +697,12 @@ private fun Metric(
     /** **لون الحال** — وفارغ يعني صندوقا محايدا. */
     tone: Color? = null,
 ) {
-    val ink = tone ?: if (strong) BrandTeal else MaterialTheme.colorScheme.onSurface
+    val ink = tone ?: if (strong) Rahal.colors.brand else MaterialTheme.colorScheme.onSurface
     Column(
         modifier
             .clip(RoundedCornerShape(12.dp))
             // **وخلفيّة باهتة لا صمّاء** — اللون يُقرأ ولا يصرخ.
-            .background(tone?.copy(alpha = 0.10f) ?: Color(0xFFF5F7F8))
+            .background(tone?.copy(alpha = 0.10f) ?: Rahal.colors.surface)
             .padding(vertical = 10.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -712,11 +710,11 @@ private fun Metric(
             Icon(
                 painter = painterResource(icon),
                 contentDescription = null,
-                tint = tone ?: if (strong) BrandTeal else InkMuted,
+                tint = tone ?: if (strong) Rahal.colors.brand else Rahal.colors.inkMuted,
                 modifier = Modifier.size(14.dp),
             )
             Spacer(Modifier.size(4.dp))
-            Text(label, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(2.dp))
         // ══════════════════════════════════════════════════════════════

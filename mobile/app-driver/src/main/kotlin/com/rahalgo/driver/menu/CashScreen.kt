@@ -1,6 +1,7 @@
 package com.rahalgo.driver.menu
 
 import androidx.compose.foundation.layout.Arrangement
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,10 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateGreen
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.Bar
 import com.rahalgo.driver.ui.Card
@@ -80,12 +77,12 @@ fun CashScreen(vm: SectionsViewModel) {
         val left = limit - held
         val ratio = if (limit > 0) held.toFloat() / limit else 0f
 
-        Card(tone = BrandOrange) {
-            Text(stringResource(R.string.cash_held), color = InkMuted)
+        Card(tone = Rahal.colors.accent) {
+            Text(stringResource(R.string.cash_held), color = Rahal.colors.inkMuted)
             Spacer(Modifier.height(4.dp))
             Text(
                 text = money(held),
-                color = BrandOrange,
+                color = Rahal.colors.accent,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -94,9 +91,9 @@ fun CashScreen(vm: SectionsViewModel) {
             Bar(
                 ratio = ratio,
                 color = when {
-                    ratio > 0.8f -> StateRed
-                    ratio > 0.5f -> BrandOrange
-                    else -> StateGreen
+                    ratio > 0.8f -> Rahal.colors.danger
+                    ratio > 0.5f -> Rahal.colors.accent
+                    else -> Rahal.colors.success
                 },
             )
             Spacer(Modifier.height(6.dp))
@@ -107,7 +104,7 @@ fun CashScreen(vm: SectionsViewModel) {
             ) {
                 Text(
                     text = stringResource(R.string.cash_limit) + " " + money(limit),
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
@@ -116,7 +113,7 @@ fun CashScreen(vm: SectionsViewModel) {
                     } else {
                         stringResource(R.string.cash_over) + " " + money(-left)
                     },
-                    color = if (left > 0) StateGreen else StateRed,
+                    color = if (left > 0) Rahal.colors.success else Rahal.colors.danger,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                 )
@@ -126,8 +123,8 @@ fun CashScreen(vm: SectionsViewModel) {
         // **والتحذيرُ عند الحدّ لا بعده** — من بلغ السقفَ وقف طابورُه.
         Spacer(Modifier.height(10.dp))
         when {
-            limit > 0 && ratio >= 1f -> Note(stringResource(R.string.cash_full), StateRed)
-            ratio > 0.8f -> Note(stringResource(R.string.cash_near), BrandOrange)
+            limit > 0 && ratio >= 1f -> Note(stringResource(R.string.cash_full), Rahal.colors.danger)
+            ratio > 0.8f -> Note(stringResource(R.string.cash_near), Rahal.colors.accent)
         }
 
         if (page.entries.isEmpty()) {
@@ -160,7 +157,7 @@ fun CashScreen(vm: SectionsViewModel) {
                     page.entries.size.toString(),
                     page.total.toString(),
                 ),
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -175,7 +172,7 @@ fun CashScreen(vm: SectionsViewModel) {
 @Composable
 private fun CashRow(e: CashEntry) {
     val inbound = e.amount > 0
-    val color = if (inbound) BrandOrange else StateGreen
+    val color = if (inbound) Rahal.colors.accent else Rahal.colors.success
     Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
@@ -185,7 +182,7 @@ private fun CashRow(e: CashEntry) {
                 fontWeight = FontWeight.Bold,
             )
             e.orderNumber?.let {
-                Text("#$it", color = InkMuted, style = MaterialTheme.typography.bodySmall)
+                Text("#$it", color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
             }
         }
         // **والاسمُ عربيٌّ دائماً** — ورمزٌ لا اسمَ له تقوله ملاحظتُه،
@@ -194,9 +191,9 @@ private fun CashRow(e: CashEntry) {
         Text(label.ifEmpty { e.note }, style = MaterialTheme.typography.bodyMedium)
         // **والملاحظةُ لا تُكرّر الاسم** — تظهر إن قالت زيادة.
         if (e.note.isNotEmpty() && e.note != label) {
-            Text(e.note, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(e.note, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         }
-        Text(timeText(e.createdAt), color = InkMuted, style = MaterialTheme.typography.bodySmall)
+        Text(timeText(e.createdAt), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(6.dp))
         HorizontalDivider()
     }

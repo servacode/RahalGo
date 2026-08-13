@@ -1,6 +1,7 @@
 package com.rahalgo.driver.ui
 
 import android.graphics.BitmapFactory
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -21,7 +22,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandTeal
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -73,7 +73,7 @@ fun Avatar(url: String?, name: String, size: Int = 28) {
         Modifier
             .size(size.dp)
             .clip(CircleShape)
-            .background(BrandTeal.copy(alpha = 0.15f)),
+            .background(Rahal.colors.brand.copy(alpha = 0.15f)),
         contentAlignment = Alignment.Center,
     ) {
         if (shot != null) {
@@ -88,7 +88,7 @@ fun Avatar(url: String?, name: String, size: Int = 28) {
                 // **وحرف واحد** — أوّل اسمه. **واسم فارغ يُعطي دائرة
                 // فارغة** لا حرفا غريبا.
                 text = name.trim().take(1),
-                color = BrandTeal,
+                color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.labelLarge,
             )

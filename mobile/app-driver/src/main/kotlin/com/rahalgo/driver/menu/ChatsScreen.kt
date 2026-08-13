@@ -1,6 +1,7 @@
 package com.rahalgo.driver.menu
 
 import androidx.compose.foundation.clickable
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +19,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.Card
 import com.rahalgo.driver.ui.ChatBubble
@@ -103,7 +103,7 @@ private fun ThreadCard(
             row.lastAt?.let {
                 Text(
                     text = whenText(it),
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -114,7 +114,7 @@ private fun ThreadCard(
         if (row.lastBody.isNotEmpty()) {
             Text(
                 text = row.lastBody,
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -132,7 +132,7 @@ private fun ThreadCard(
                 busy -> CircularProgressIndicator(Modifier.height(24.dp))
                 else -> Text(
                     stringResource(R.string.chat_empty),
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

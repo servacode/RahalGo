@@ -1,6 +1,7 @@
 package com.rahalgo.driver.login
 
 import androidx.compose.foundation.layout.Arrangement
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,8 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.CodeField
 import com.rahalgo.driver.ui.PasswordField
@@ -78,7 +77,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
                     ResetStep.PASSWORD -> R.string.reset_hint_password
                 },
             ),
-            color = InkMuted,
+            color = Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(24.dp))
@@ -114,7 +113,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
             Spacer(Modifier.height(14.dp))
             Text(
                 text = state.error,
-                color = BrandOrange,
+                color = Rahal.colors.accent,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -153,7 +152,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
 
         Spacer(Modifier.height(6.dp))
         TextButton(onClick = actions.cancel, enabled = !state.busy) {
-            Text(stringResource(R.string.reset_back), color = InkMuted)
+            Text(stringResource(R.string.reset_back), color = Rahal.colors.inkMuted)
         }
     }
 }

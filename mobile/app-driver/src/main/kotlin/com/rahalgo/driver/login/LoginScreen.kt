@@ -1,6 +1,7 @@
 package com.rahalgo.driver.login
 
 import androidx.compose.foundation.Image
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -30,8 +31,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.CodeField
 import com.rahalgo.driver.ui.PasswordField
@@ -145,7 +144,7 @@ fun LoginScreen(state: LoginState, actions: LoginActions) {
             Spacer(Modifier.height(12.dp))
             Text(
                 text = state.error,
-                color = BrandOrange,
+                color = Rahal.colors.accent,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -198,11 +197,11 @@ fun LoginScreen(state: LoginState, actions: LoginActions) {
         // **ولا يُعرض مع الرمز**: من دخل برمز لا يحتاج كلمة أصلا.
         if (state.mode == LoginMode.PASSWORD) {
             TextButton(onClick = actions.forgot, enabled = !state.busy) {
-                Text(stringResource(R.string.login_forgot), color = InkMuted)
+                Text(stringResource(R.string.login_forgot), color = Rahal.colors.inkMuted)
             }
         } else if (state.codeSent) {
             TextButton(onClick = actions.resetCode, enabled = !state.busy) {
-                Text(stringResource(R.string.login_change_number), color = InkMuted)
+                Text(stringResource(R.string.login_change_number), color = Rahal.colors.inkMuted)
             }
         }
         Spacer(Modifier.height(40.dp))

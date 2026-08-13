@@ -1,6 +1,7 @@
 package com.rahalgo.driver.rating
 
 import android.app.Application
+import com.rahalgo.design.Rahal
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,10 +34,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateGreen
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.data.Refresh
@@ -113,7 +110,7 @@ fun RatingScreen(vm: RatingViewModel) {
             if (vm.error.isEmpty()) {
                 CircularProgressIndicator()
             } else {
-                Text(vm.error, color = StateRed, textAlign = TextAlign.Center)
+                Text(vm.error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
             }
         }
         return
@@ -133,7 +130,7 @@ fun RatingScreen(vm: RatingViewModel) {
         Text(stringResource(R.string.rate_reviews), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(10.dp))
         if (rep.reviews.isEmpty()) {
-            Text(stringResource(R.string.rate_no_reviews), color = InkMuted)
+            Text(stringResource(R.string.rate_no_reviews), color = Rahal.colors.inkMuted)
         }
         rep.reviews.forEach { ReviewRow(it) }
 
@@ -157,7 +154,7 @@ private fun Summary(rep: Reputation) {
     // **ومن لا يُقيَّم دورُه لا تُعرض له بطاقةٌ صفريّة** — «٠٫٠ من ٥»
     // يُقرأ حكماً عليه، ولم يفعل شيئا.
     if (!rep.rated || rep.rating.count == 0) {
-        Text(stringResource(R.string.rate_none_yet), color = InkMuted)
+        Text(stringResource(R.string.rate_none_yet), color = Rahal.colors.inkMuted)
         return
     }
 
@@ -182,16 +179,16 @@ private fun Summary(rep: Reputation) {
         else -> R.string.rate_trend_flat
     }
     val trendColor = when (rep.rating.trend) {
-        "up" -> StateGreen
-        "down" -> StateRed
-        else -> InkMuted
+        "up" -> Rahal.colors.success
+        "down" -> Rahal.colors.danger
+        else -> Rahal.colors.inkMuted
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         StatBox(
             label = stringResource(R.string.rate_avg),
             value = "%.1f".format(java.util.Locale.US, rep.rating.avg),
-            color = BrandOrange,
+            color = Rahal.colors.accent,
             modifier = Modifier.weight(1f),
         )
         StatBox(
@@ -209,7 +206,7 @@ private fun Summary(rep: Reputation) {
     Spacer(Modifier.height(10.dp))
     Text(
         stringResource(R.string.rate_hint),
-        color = InkMuted,
+        color = Rahal.colors.inkMuted,
         style = MaterialTheme.typography.bodySmall,
     )
 }
@@ -228,18 +225,18 @@ private fun StatBox(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    color: androidx.compose.ui.graphics.Color = com.rahalgo.design.InkDeep,
+    color: androidx.compose.ui.graphics.Color = Rahal.colors.ink,
 ) {
     Column(
         modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(InkMuted.copy(alpha = 0.07f))
+            .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
             .padding(horizontal = 10.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = label,
-            color = InkMuted,
+            color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
         )
@@ -268,14 +265,14 @@ private fun ReviewRow(r: Review) {
                 Icon(
                     painter = painterResource(R.drawable.ic_star),
                     contentDescription = null,
-                    tint = if (i < r.stars) BrandOrange else InkMuted.copy(alpha = 0.30f),
+                    tint = if (i < r.stars) Rahal.colors.accent else Rahal.colors.inkMuted.copy(alpha = 0.30f),
                     modifier = Modifier.size(15.dp),
                 )
             }
             Spacer(Modifier.size(8.dp))
             Text(
                 text = "#" + r.orderNumber,
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -306,7 +303,7 @@ private fun ReviewRow(r: Review) {
         // نجمةً نقصت.**
         Text(
             text = r.customerName,
-            color = InkMuted,
+            color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(8.dp))
@@ -319,7 +316,7 @@ private fun ComplaintRow(c: ComplaintBrief) {
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("#" + c.number, style = MaterialTheme.typography.titleSmall)
-            Text(c.status, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(c.status, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         }
         Text(c.subject, style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(6.dp))

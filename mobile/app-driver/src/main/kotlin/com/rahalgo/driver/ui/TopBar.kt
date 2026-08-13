@@ -1,6 +1,7 @@
 package com.rahalgo.driver.ui
 
 import androidx.compose.foundation.background
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,10 +28,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 
 /**
@@ -64,6 +61,10 @@ fun TopBar(
     onNotifications: () -> Unit,
     onRating: () -> Unit,
     onMenu: () -> Unit,
+    /** **يقلب السمة** — والأيقونةُ تُظهر الوجهةَ لا الحال. */
+    onTheme: () -> Unit,
+    /** **أنحن في الغامقة الآن** — فيُرسم الهلالُ أو الشمس. */
+    dark: Boolean,
 ) {
     Row(
         Modifier
@@ -93,7 +94,7 @@ fun TopBar(
             Icon(
                 painter = painterResource(R.drawable.ic_menu),
                 contentDescription = stringResource(R.string.menu_open),
-                tint = InkMuted,
+                tint = Rahal.colors.inkMuted,
                 modifier = Modifier.size(22.dp),
             )
         }
@@ -109,7 +110,7 @@ fun TopBar(
             Icon(
                 painter = painterResource(R.drawable.ic_bell),
                 contentDescription = stringResource(R.string.top_notifications),
-                tint = InkMuted,
+                tint = Rahal.colors.inkMuted,
                 modifier = Modifier.size(24.dp),
             )
             if (unread > 0) {
@@ -118,7 +119,7 @@ fun TopBar(
                         .align(Alignment.TopEnd)
                         .offset(x = 4.dp, y = (-4).dp)
                         .clip(CircleShape)
-                        .background(StateRed)
+                        .background(Rahal.colors.danger)
                         .padding(horizontal = 5.dp, vertical = 1.dp),
                 ) {
                     Text(
@@ -145,13 +146,20 @@ fun TopBar(
         Box(
             Modifier
                 .clip(CircleShape)
-                .clickable(onClick = {})
+                .clickable(onClick = onTheme)
                 .padding(8.dp),
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_theme),
-                contentDescription = stringResource(R.string.top_theme),
-                tint = InkMuted,
+                // **والأيقونةُ تُظهر الوجهةَ لا الحال** — هلالٌ يقول
+                // «انتقل إلى الغامقة»، وشمسٌ تقول «عُد إلى الفاتحة».
+                // **ومن رسم حالَه الحاليَّ جعل اللمسةَ تفاجئ.**
+                painter = painterResource(
+                    if (dark) R.drawable.ic_theme_light else R.drawable.ic_theme,
+                ),
+                contentDescription = stringResource(
+                    if (dark) R.string.top_theme_light else R.string.top_theme,
+                ),
+                tint = Rahal.colors.inkMuted,
                 modifier = Modifier.size(22.dp),
             )
         }
@@ -173,7 +181,7 @@ fun TopBar(
                 Row(
                     Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(BrandOrange.copy(alpha = 0.10f))
+                        .background(Rahal.colors.accent.copy(alpha = 0.10f))
                         // **وضغطُه يفتح تقييماته** — (قرارُ المالك
                         // ٢٠٢٦-٠٨-١٣: «عند النقر عليه يفتح صفحة التقييم
                         // كما هي بالويب، فيعرف ما هي التقييمات التي
@@ -189,7 +197,7 @@ fun TopBar(
                     Icon(
                         painter = painterResource(R.drawable.ic_star),
                         contentDescription = stringResource(R.string.top_rating),
-                        tint = BrandOrange,
+                        tint = Rahal.colors.accent,
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(Modifier.size(5.dp))
@@ -200,7 +208,7 @@ fun TopBar(
                         // بلا لغة يكتب «٥٫٠» في جهاز عربيّ، **فيقع
                         // رقمان بخطّين في شريط واحد.**
                         text = "%.1f".format(java.util.Locale.US, rating),
-                        color = BrandOrange,
+                        color = Rahal.colors.accent,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -214,7 +222,7 @@ fun TopBar(
             } else {
                 Text(
                     text = stringResource(R.string.top_rating_none),
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -227,7 +235,7 @@ fun TopBar(
             Row(
                 Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(BrandTeal.copy(alpha = 0.08f))
+                    .background(Rahal.colors.brand.copy(alpha = 0.08f))
                     .clickable(onClick = onWallet)
                     .padding(horizontal = 12.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -235,13 +243,13 @@ fun TopBar(
                 Icon(
                     painter = painterResource(R.drawable.ic_wallet),
                     contentDescription = stringResource(R.string.top_wallet),
-                    tint = BrandTeal,
+                    tint = Rahal.colors.brand,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.size(6.dp))
                 Text(
                     text = money(balance),
-                    color = BrandTeal,
+                    color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyMedium,
                 )

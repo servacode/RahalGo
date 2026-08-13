@@ -1,6 +1,7 @@
 package com.rahalgo.driver.orders
 
 import androidx.compose.foundation.background
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,9 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.money
 import com.rahalgo.shared.model.DriverOrder
@@ -84,11 +82,11 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
-            Text("#${order.number}", color = InkMuted)
+            Text("#${order.number}", color = Rahal.colors.inkMuted)
         }
 
         Spacer(Modifier.height(6.dp))
-        Text(statusLabel(order.status), color = BrandTeal, fontWeight = FontWeight.Bold)
+        Text(statusLabel(order.status), color = Rahal.colors.brand, fontWeight = FontWeight.Bold)
 
         Spacer(Modifier.height(18.dp))
         Field(stringResource(R.string.detail_customer), order.customerName)
@@ -111,7 +109,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
 
         if (state.error.isNotEmpty()) {
             Spacer(Modifier.height(14.dp))
-            Text(state.error, color = BrandOrange)
+            Text(state.error, color = Rahal.colors.accent)
         }
 
         Spacer(Modifier.height(22.dp))
@@ -140,7 +138,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
                 enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.detail_failed), color = BrandOrange)
+                Text(stringResource(R.string.detail_failed), color = Rahal.colors.accent)
             }
         }
 
@@ -152,7 +150,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
                 enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.detail_release), color = InkMuted)
+                Text(stringResource(R.string.detail_release), color = Rahal.colors.inkMuted)
             }
         }
         Spacer(Modifier.height(28.dp))
@@ -185,7 +183,7 @@ private fun FailDialog(
         text = {
             Column {
                 if (reasons.isEmpty()) {
-                    Text(stringResource(R.string.detail_no_reasons), color = InkMuted)
+                    Text(stringResource(R.string.detail_no_reasons), color = Rahal.colors.inkMuted)
                 }
                 for (r in reasons) {
                     TextButton(
@@ -211,11 +209,11 @@ private fun Field(label: String, value: String, strong: Boolean = false) {
             .padding(vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = InkMuted)
+        Text(label, color = Rahal.colors.inkMuted)
         Text(
             text = value,
             fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
-            color = if (strong) BrandTeal else MaterialTheme.colorScheme.onSurface,
+            color = if (strong) Rahal.colors.brand else MaterialTheme.colorScheme.onSurface,
         )
     }
 }

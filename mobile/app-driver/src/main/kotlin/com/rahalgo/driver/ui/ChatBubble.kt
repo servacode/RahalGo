@@ -1,6 +1,7 @@
 package com.rahalgo.driver.ui
 
 import androidx.compose.foundation.background
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,8 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.shared.model.ChatMessage
 
@@ -35,9 +34,6 @@ import com.rahalgo.shared.model.ChatMessage
  * السابقة». **ونسخُها يعني حديثاً يُقرأ بشكلين**: أزرقُ في الرحلة
  * ورماديٌّ في السجلّ، **والرسالةُ هي هي.**
  */
-
-/** أرضُ فقاعة الطرف الآخر — **رماديٌّ خفيفٌ يُقرأ على الأبيض.** */
-private val PeerBubble = Color(0xFFF0F3F5)
 
 /**
  * **فقاعةُ رسالة** — لي في جهةٍ ولغيري في الأخرى.
@@ -55,26 +51,26 @@ fun ChatBubble(message: ChatMessage) {
         Column(
             Modifier
                 .clip(RoundedCornerShape(14.dp))
-                .background(if (mine) BrandTeal else PeerBubble)
+                .background(if (mine) Rahal.colors.brand else Rahal.colors.bubble)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.End,
         ) {
             Text(
                 text = message.body,
-                color = if (mine) Color.White else MaterialTheme.colorScheme.onSurface,
+                color = if (mine) Rahal.colors.onBrand else Rahal.colors.ink,
             )
             Spacer(Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = chatTime(message.createdAt),
-                    color = if (mine) Color.White.copy(alpha = 0.75f) else InkMuted,
+                    color = if (mine) Rahal.colors.onBrand.copy(alpha = 0.75f) else Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.labelSmall,
                 )
                 if (mine) {
                     Spacer(Modifier.size(5.dp))
                     Text(
                         text = if (message.readAt != null) "✓✓" else "✓",
-                        color = Color.White.copy(
+                        color = Rahal.colors.onBrand.copy(
                             alpha = if (message.readAt != null) 1f else 0.55f,
                         ),
                         style = MaterialTheme.typography.labelSmall,
@@ -91,11 +87,11 @@ fun ChatDayChip(day: String) {
     Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
         Text(
             text = day,
-            color = InkMuted,
+            color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier
                 .clip(RoundedCornerShape(10.dp))
-                .background(PeerBubble)
+                .background(Rahal.colors.bubble)
                 .padding(horizontal = 10.dp, vertical = 3.dp),
         )
     }

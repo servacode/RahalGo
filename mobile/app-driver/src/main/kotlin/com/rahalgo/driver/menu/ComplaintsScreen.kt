@@ -1,6 +1,7 @@
 package com.rahalgo.driver.menu
 
 import androidx.compose.foundation.layout.Arrangement
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,9 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateGreen
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.Card
 import com.rahalgo.driver.ui.Chip
@@ -68,7 +66,7 @@ fun ComplaintsScreen(vm: SectionsViewModel) {
             Spacer(Modifier.height(20.dp))
             Text(
                 stringResource(R.string.tik_none),
-                color = StateGreen,
+                color = Rahal.colors.success,
                 fontWeight = FontWeight.Bold,
             )
             Empty(stringResource(R.string.tik_none_hint))
@@ -81,7 +79,7 @@ fun ComplaintsScreen(vm: SectionsViewModel) {
 @Composable
 private fun ComplaintCard(c: ComplaintBrief) {
     Spacer(Modifier.height(10.dp))
-    Card(tone = if (c.status == "open") BrandOrange else InkMuted) {
+    Card(tone = if (c.status == "open") Rahal.colors.accent else Rahal.colors.inkMuted) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -101,13 +99,13 @@ private fun ComplaintCard(c: ComplaintBrief) {
             c.orderNumber?.let {
                 Text(
                     text = stringResource(R.string.tik_on_order, it.toString()),
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
             Text(
                 text = whenText(c.createdAt),
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -126,7 +124,8 @@ private fun ticketStatus(status: String): String = when (status) {
 /** **ولا حالَ رابعةً** — المحرّكُ يكتب ثلاثاً (`support`)، والمعجمُ
  *  يسمّي ثلاثاً. **ورابعةٌ تُخترع هنا اسمٌ ميّتٌ يوهم أنّ الحالةَ
  *  مغطّاة.** */
+@Composable
 private fun statusColor(status: String) = when (status) {
-    "resolved" -> StateGreen
-    else -> BrandOrange
+    "resolved" -> Rahal.colors.success
+    else -> Rahal.colors.accent
 }

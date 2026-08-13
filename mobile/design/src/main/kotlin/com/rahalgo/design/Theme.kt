@@ -1,6 +1,9 @@
 package com.rahalgo.design
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -85,16 +88,60 @@ val StateGreen = Color(0xFF1E9E5A)
  */
 val InkDeep = Color(0xFF07283A)
 
-private val RahalGoColors = lightColorScheme(
-    primary = BrandTeal,
-    onPrimary = Color.White,
-    secondary = BrandOrange,
-    onSecondary = Color.White,
-    background = BrandCanvas,
-    onBackground = BrandTeal,
-    surface = BrandCanvas,
-    onSurface = BrandTeal,
-)
+/**
+ * **طقمُ مادّة مبنيٌّ من اللوحة** — لا مكتوبٌ بجانبها.
+ *
+ * **وطقمان يُكتبان بأرقامٍ متوازيةٍ يفترقان**: يُصحَّح لونٌ في اللوحة
+ * **ويبقى قديماً في الأزرار** — والزرُّ من مادّة.
+ */
+private fun schemeOf(p: RahalPalette): ColorScheme {
+    val base = if (p.dark) darkColorScheme() else lightColorScheme()
+    // ══════════════════════════════════════════════════════════════════
+    // **وأدوارُ الأسطح تُملأ كلُّها — لا الأربعةُ المشهورة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **قِيس على الجهاز**: أرضُ الصفحة كحليّةٌ (`#07283A`) **والشريطُ
+    // السفليُّ أبيضُ فاتح** (`#F2F2F2`) — لأنّ `NavigationBar` في مادّة٣
+    // لا يقرأ `surface` **إنّما `surfaceContainer`**، وهو دورٌ لم يُملأ
+    // فبقي على افتراض المكتبة.
+    //
+    // **ودورٌ يُترك للمكتبة يخرج بلونٍ لا يعرفه أحد** — لا من اللوحة ولا
+    // من العلامة، **فتقع رقعةٌ غريبةٌ في شاشةٍ مضبوطة.**
+    return base.copy(
+        primary = p.brand,
+        onPrimary = p.onBrand,
+        primaryContainer = p.brand,
+        onPrimaryContainer = p.onBrand,
+        secondary = p.accent,
+        onSecondary = p.onBrand,
+        secondaryContainer = p.field,
+        onSecondaryContainer = p.ink,
+        background = p.canvas,
+        onBackground = p.ink,
+        surface = p.canvas,
+        onSurface = p.ink,
+        surfaceVariant = p.field,
+        onSurfaceVariant = p.inkMuted,
+        // **وحاويّاتُ السطح هي أرضُ الأشرطة والقوائم والحوارات.**
+        surfaceContainerLowest = p.canvas,
+        surfaceContainerLow = p.canvas,
+        surfaceContainer = p.canvas,
+        surfaceContainerHigh = p.surface,
+        surfaceContainerHighest = p.surface,
+        // **ولا صبغةَ ارتفاعٍ** — مادّة٣ تُلقي غلالةً من `surfaceTint` على
+        // ما ارتفع، **فتُزيح لونَ اللوحة درجاتٍ لا تُقصد.**
+        surfaceTint = androidx.compose.ui.graphics.Color.Transparent,
+        error = p.danger,
+        onError = p.onBrand,
+        errorContainer = p.danger.copy(alpha = 0.15f),
+        onErrorContainer = p.danger,
+        outline = p.line,
+        outlineVariant = p.line,
+        inverseSurface = p.ink,
+        inverseOnSurface = p.canvas,
+        scrim = androidx.compose.ui.graphics.Color.Black,
+    )
+}
 
 // ══════════════════════════════════════════════════════════════════════
 //  الخط
@@ -143,8 +190,25 @@ val TaglineStyle = TextStyle(
     letterSpacing = 0.2.sp,
 )
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **السمةُ — فاتحةٌ وغامقةٌ وقرارُ صاحبها**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (أمرُ المالك ٢٠٢٦-٠٨-١٣: «طبّق الثيم الفاتح والغامق بشكلٍ كاملٍ
+ *  للتطبيق، بحيث يكون التصميمان متوافقين».)
+ *
+ * **والافتراضُ إعدادُ النظام** — من جعل جهازَه غامقاً أراد ذلك في كلّ
+ * تطبيقاته، **وتطبيقٌ يبيّضُ الشاشةَ في يدِ من يقود ليلاً يُغلَق.**
+ *
+ * **وقرارُه هو يغلبه** — الجرسُ في الشريط يقول ما اختار، ويبقى بعد
+ * إغلاق التطبيق.
+ *
+ * @param dark أغامقةٌ هي؟ **وفارغُه يعني «اسأل النظام».**
+ */
 @Composable
-fun RahalGoTheme(content: @Composable () -> Unit) {
+fun RahalGoTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    val palette = if (dark) DarkPalette else LightPalette
     // ══════════════════════════════════════════════════════════════════
     // **الاتّجاه من اليمين — ولو كان الجهاز إنجليزيّا**
     // ══════════════════════════════════════════════════════════════════
@@ -159,9 +223,12 @@ fun RahalGoTheme(content: @Composable () -> Unit) {
     // **و`supportsRtl` في البيان لا يكفي**: هو يسمح ولا يفرض. **وهذا
     // تطبيقٌ عربيٌّ وحدَه**، فاتّجاهه من صفته لا من إعدادات جهازٍ لا
     // يملكه.
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(
+        LocalLayoutDirection provides LayoutDirection.Rtl,
+        LocalPalette provides palette,
+    ) {
         MaterialTheme(
-            colorScheme = RahalGoColors,
+            colorScheme = schemeOf(palette),
             typography = RahalGoTypography,
             content = content,
         )

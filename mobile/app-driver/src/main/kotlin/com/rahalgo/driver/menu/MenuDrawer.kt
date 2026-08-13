@@ -1,6 +1,7 @@
 package com.rahalgo.driver.menu
 
 import androidx.compose.foundation.background
+import com.rahalgo.design.Rahal
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,9 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 
 /**
@@ -78,7 +76,7 @@ fun MenuDrawer(onPick: (MenuItem) -> Unit, onLogout: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = stringResource(item.group),
-                    color = BrandOrange,
+                    color = Rahal.colors.accent,
                     style = MaterialTheme.typography.labelLarge,
                     modifier = Modifier.padding(horizontal = 14.dp),
                 )
@@ -121,13 +119,13 @@ fun MenuDrawer(onPick: (MenuItem) -> Unit, onLogout: () -> Unit) {
             Icon(
                 painter = painterResource(R.drawable.ic_logout),
                 contentDescription = null,
-                tint = StateRed,
+                tint = Rahal.colors.danger,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.size(12.dp))
             Text(
                 stringResource(R.string.login_logout),
-                color = StateRed,
+                color = Rahal.colors.danger,
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
@@ -147,7 +145,7 @@ private fun Line(item: MenuItem, onPick: (MenuItem) -> Unit) {
         Icon(
             painter = painterResource(item.icon),
             contentDescription = null,
-            tint = InkMuted,
+            tint = Rahal.colors.inkMuted,
             modifier = Modifier.size(20.dp),
         )
         Spacer(Modifier.size(10.dp))

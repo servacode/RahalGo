@@ -1,6 +1,7 @@
 package com.rahalgo.driver.ui
 
 import androidx.compose.foundation.background
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,9 +29,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 
 /**
@@ -90,7 +88,7 @@ fun ScreenTitle(title: String, hint: String = "") {
     Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
     if (hint.isNotEmpty()) {
         Spacer(Modifier.height(4.dp))
-        Text(hint, color = InkMuted, style = MaterialTheme.typography.bodyMedium)
+        Text(hint, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
     }
     Spacer(Modifier.height(14.dp))
 }
@@ -112,7 +110,7 @@ fun SectionTitle(text: String) {
 @Composable
 fun Card(
     modifier: Modifier = Modifier,
-    tone: Color = BrandTeal,
+    tone: Color = Rahal.colors.brand,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -136,7 +134,7 @@ fun KeyValue(label: String, value: String, valueColor: Color = Color.Unspecified
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = InkMuted, style = MaterialTheme.typography.bodyMedium)
+        Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
         Text(value, color = valueColor, style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -173,7 +171,7 @@ fun Empty(text: String) {
         Modifier.fillMaxWidth().padding(vertical = 40.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = InkMuted, textAlign = TextAlign.Center)
+        Text(text, color = Rahal.colors.inkMuted, textAlign = TextAlign.Center)
     }
 }
 
@@ -192,7 +190,7 @@ fun LoadState(loading: Boolean, error: String, onRetry: (() -> Unit)? = null) {
         verticalArrangement = Arrangement.Center,
     ) {
         if (error.isNotEmpty()) {
-            Text(error, color = StateRed, textAlign = TextAlign.Center)
+            Text(error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
             if (onRetry != null) {
                 Spacer(Modifier.height(12.dp))
                 OutlinedButton(onClick = onRetry) {
@@ -220,7 +218,7 @@ fun Bar(ratio: Float, color: Color) {
             .fillMaxWidth()
             .height(8.dp)
             .clip(RoundedCornerShape(4.dp))
-            .background(InkMuted.copy(alpha = 0.15f)),
+            .background(Rahal.colors.inkMuted.copy(alpha = 0.15f)),
     ) {
         Box(
             Modifier
@@ -253,7 +251,7 @@ fun DayHead(text: String) {
     Spacer(Modifier.height(14.dp))
     Text(
         text = text,
-        color = InkMuted,
+        color = Rahal.colors.inkMuted,
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Bold,
     )

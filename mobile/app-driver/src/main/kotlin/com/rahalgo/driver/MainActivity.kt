@@ -1,6 +1,12 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import com.rahalgo.design.LightPalette
+import com.rahalgo.design.DarkPalette
+import androidx.compose.ui.graphics.toArgb
+import com.rahalgo.driver.data.rememberTheme
+import com.rahalgo.driver.data.ThemeState
+import com.rahalgo.design.Rahal
 import com.rahalgo.driver.ui.Avatar
 import com.rahalgo.driver.nav.rememberOverlay
 import com.rahalgo.driver.nav.Overlay
@@ -62,7 +68,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandCanvas
 import com.rahalgo.design.RahalGoTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rahalgo.design.intro.BrandIntro
@@ -76,7 +81,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import com.rahalgo.design.InkMuted
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import com.rahalgo.driver.home.HomeActions
@@ -168,15 +172,46 @@ private fun DriverApp() {
     }
     var showIntro by remember { mutableStateOf(!MainActivity.introShown) }
 
-    RahalGoTheme {
+    // ══════════════════════════════════════════════════════════════════
+    // **والسمةُ قرارُه هو — وتبقى بعد إغلاق التطبيق**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (أمرُ المالك ٢٠٢٦-٠٨-١٣: «طبّق الثيم الفاتح والغامق بشكلٍ كاملٍ
+    //  للتطبيق، بحيث يكون التصميمان متوافقين».)
+    //
+    // **وافتراضُها إعدادُ النظام** — ومن لمس الهلالَ خرج إلى قرارٍ صريح.
+    val theme = rememberTheme(context)
+    val dark = theme.isDark()
+
+    // **وأيقوناتُ شريط النظام تتبع الأرضَ تحتها** — أيقونةٌ داكنةٌ على
+    // أرضٍ كحليّةٍ تختفي، **فتضيع الساعةُ والبطّاريّة.**
+    val activity = context as? android.app.Activity
+    // **واللوحةُ تُقرأ من القرار لا من الشجرة** — هذا السطرُ خارج
+    // `RahalGoTheme`، **فـ`Rahal.colors` فيه يردّ الفاتحةَ دائما**
+    // مهما كان الاختيار. (قِيس: الشريطان خرجا أبيضين في الغامقة.)
+    val canvas = (if (dark) DarkPalette else LightPalette).canvas
+    LaunchedEffect(dark, activity) {
+        val window = activity?.window ?: return@LaunchedEffect
+        // **وشريطا النظام يأخذان أرضَ الصفحة** — قِيس على الجهاز أنّهما
+        // بقيا فاتحين (`#F2F2F2`) فوق شاشةٍ كحليّة: **شريطان أبيضان
+        // يحدّان شاشةً داكنةً يُقرآن عطبا.**
+        window.statusBarColor = canvas.toArgb()
+        window.navigationBarColor = canvas.toArgb()
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
+        }
+    }
+
+    RahalGoTheme(dark = dark) {
         Box(
             Modifier
                 .fillMaxSize()
                 // **وأرضٌ صريحةٌ تحت الاثنتين** — فلا ومضةٌ بيضاءُ ولا
                 // سوداءُ في لحظة التبديل.
-                .background(BrandCanvas)
+                .background(Rahal.colors.canvas)
         ) {
-            Destination()
+            Destination(theme)
 
             AnimatedVisibility(
                 visible = showIntro,
@@ -212,7 +247,7 @@ private fun DriverApp() {
  * شاشة دخول لحظة** ثمّ تُبدَّل — وهو وميض يُقرأ عطبا.
  */
 @Composable
-private fun Destination() {
+private fun Destination(theme: ThemeState) {
     val vm: LoginViewModel = viewModel()
 
     when {
@@ -226,7 +261,7 @@ private fun Destination() {
         // **ومن دخل يُسلَّم للوحته** — ونموذجها مستقلّ عن نموذج الدخول:
         // **حال الوردية والمال لا يخصّ بابا دخل منه.**
         // **ومن دخل يُسلَّم للوحته.**
-        vm.user != null -> SignedIn(onLogout = vm::logout)
+        vm.user != null -> SignedIn(theme, onLogout = vm::logout)
 
         // **وجلسة محفوظة لم تُتحقَّق: شاشة اتّصال لا شاشة دخول.**
         vm.offline -> Offline(onRetry = vm::retryRestore)
@@ -274,7 +309,8 @@ private fun Destination() {
  * شاشة تُحمّل.
  */
 @Composable
-private fun SignedIn(onLogout: () -> Unit) {
+private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
+    val dark = theme.isDark()
     var tab by rememberSaveable { mutableStateOf(0) }
     // ══════════════════════════════════════════════════════════════════
     // **وما يغطّي التبويبات رايةٌ واحدة**
@@ -450,6 +486,13 @@ private fun SignedIn(onLogout: () -> Unit) {
                         home.openInbox()
                     }
                 },
+                // **والسمةُ تُقلب من الشريط** — (أمرُ المالك ٢٠٢٦-٠٨-١٣).
+                //
+                // **واللمسةُ تقلب المرئيَّ لا الحال**: من كان على «اتبع
+                // النظام» ونظامُه غامقٌ فلمس **أراد الفاتحة** — لا أن
+                // يقفز إلى الغامقة التي هو فيها.
+                onTheme = { theme.toggle(dark) },
+                dark = dark,
                 onMenu = { scope.launch { drawer.open() } },
                 onRating = { overlay.show(Overlay.Rating) },
             )
@@ -727,7 +770,7 @@ private fun Offline(onRetry: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.offline_text),
-            color = InkMuted,
+            color = Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(20.dp))

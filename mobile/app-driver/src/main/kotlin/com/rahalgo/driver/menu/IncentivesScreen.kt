@@ -1,6 +1,7 @@
 package com.rahalgo.driver.menu
 
 import androidx.compose.foundation.layout.Arrangement
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,11 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateGreen
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.Bar
 import com.rahalgo.driver.ui.Card
@@ -86,11 +82,11 @@ fun IncentivesScreen(vm: SectionsViewModel) {
                         fontWeight = FontWeight.Bold,
                     )
                     if (st.reached) {
-                        Chip(stringResource(R.string.inc_reached), StateGreen)
+                        Chip(stringResource(R.string.inc_reached), Rahal.colors.success)
                     } else {
                         Text(
                             text = stringResource(R.string.inc_left, (st.target - st.done).toString()),
-                            color = InkMuted,
+                            color = Rahal.colors.inkMuted,
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -98,12 +94,12 @@ fun IncentivesScreen(vm: SectionsViewModel) {
                 Spacer(Modifier.height(10.dp))
                 Bar(
                     ratio = st.done.toFloat() / st.target,
-                    color = if (st.reached) StateGreen else BrandTeal,
+                    color = if (st.reached) Rahal.colors.success else Rahal.colors.brand,
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = st.done.toString() + " / " + st.target.toString(),
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
 
@@ -121,7 +117,7 @@ fun IncentivesScreen(vm: SectionsViewModel) {
                         } else {
                             stringResource(R.string.inc_reward_promise, money(data.targetReward))
                         },
-                        color = if (st.reached) StateGreen else BrandOrange,
+                        color = if (st.reached) Rahal.colors.success else Rahal.colors.accent,
                         fontWeight = FontWeight.Medium,
                     )
                 }
@@ -129,17 +125,17 @@ fun IncentivesScreen(vm: SectionsViewModel) {
         }
 
         Spacer(Modifier.height(14.dp))
-        Card(tone = InkMuted) {
+        Card(tone = Rahal.colors.inkMuted) {
             KeyValue(stringResource(R.string.inc_done), st.done.toString())
             KeyValue(
                 stringResource(R.string.inc_rewarded),
                 money(st.rewarded),
-                valueColor = StateGreen,
+                valueColor = Rahal.colors.success,
             )
             KeyValue(
                 stringResource(R.string.inc_penalized),
                 money(st.penalized),
-                valueColor = if (st.penalized > 0) StateRed else InkMuted,
+                valueColor = if (st.penalized > 0) Rahal.colors.danger else Rahal.colors.inkMuted,
             )
         }
 
@@ -155,7 +151,7 @@ fun IncentivesScreen(vm: SectionsViewModel) {
 @Composable
 private fun EntryRow(e: IncentiveEntry) {
     val reward = e.kind == "reward"
-    val color = if (reward) StateGreen else StateRed
+    val color = if (reward) Rahal.colors.success else Rahal.colors.danger
     Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
         Row(
             Modifier.fillMaxWidth(),
@@ -178,7 +174,7 @@ private fun EntryRow(e: IncentiveEntry) {
             Spacer(Modifier.height(4.dp))
             Text(e.reason, style = MaterialTheme.typography.bodyMedium)
         }
-        Text(whenText(e.createdAt), color = InkMuted, style = MaterialTheme.typography.bodySmall)
+        Text(whenText(e.createdAt), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(6.dp))
         HorizontalDivider()
     }

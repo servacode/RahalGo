@@ -1,6 +1,7 @@
 package com.rahalgo.driver.account
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import com.rahalgo.design.Rahal
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,10 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.InkMuted
-import com.rahalgo.design.StateGreen
-import com.rahalgo.design.StateRed
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.location.LastPoint
@@ -96,8 +93,8 @@ fun AccountScreen(vm: AccountViewModel, onLoggedOut: () -> Unit) {
     ) {
         // **ورسالةٌ واحدةٌ في أعلى الشاشة** — لا رسالةٌ تحت كلّ قسم
         // فتُقرأ رسائلُ متناثرةٌ لا يُعرف أيُّها الأحدث.
-        if (s.error.isNotEmpty()) Notice(s.error, StateRed)
-        if (s.done.isNotEmpty()) Notice(s.done, StateGreen)
+        if (s.error.isNotEmpty()) Notice(s.error, Rahal.colors.danger)
+        if (s.done.isNotEmpty()) Notice(s.done, Rahal.colors.success)
 
         Identity(vm, s)
         Gap()
@@ -146,7 +143,7 @@ private fun Identity(vm: AccountViewModel, s: AccountState) {
             ) { Text(stringResource(R.string.acc_photo_pick)) }
             if (!me.avatarThumbUrl.isNullOrEmpty()) {
                 TextButton(onClick = vm::removeAvatar, enabled = !s.busy) {
-                    Text(stringResource(R.string.acc_photo_remove), color = InkMuted)
+                    Text(stringResource(R.string.acc_photo_remove), color = Rahal.colors.inkMuted)
                 }
             }
         }
@@ -226,7 +223,7 @@ private fun WhatsAppVerify(vm: AccountViewModel, s: AccountState, verified: Bool
         text = stringResource(
             if (verified) R.string.acc_wa_verified else R.string.acc_wa_unverified,
         ),
-        color = if (verified) StateGreen else StateRed,
+        color = if (verified) Rahal.colors.success else Rahal.colors.danger,
         style = MaterialTheme.typography.bodySmall,
     )
     // **والموثَّقُ لا يُدعى إلى فعلٍ تمّ** — زرٌّ باقٍ بعد نجاحه يُقرأ
@@ -237,7 +234,7 @@ private fun WhatsAppVerify(vm: AccountViewModel, s: AccountState, verified: Bool
     if (!waiting) {
         Text(
             stringResource(R.string.acc_wa_hint),
-            color = InkMuted,
+            color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(8.dp))
@@ -377,7 +374,7 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
     // يعرفه الجهازُ نفسُه **يُضيّع ثانيتين ويستهلك حزمة.**
     if (mismatch) {
         Spacer(Modifier.height(6.dp))
-        Text(stringResource(R.string.acc_pw_mismatch), color = StateRed)
+        Text(stringResource(R.string.acc_pw_mismatch), color = Rahal.colors.danger)
     }
     Spacer(Modifier.height(8.dp))
     Button(
@@ -400,7 +397,7 @@ private fun AddressesSection(vm: AccountViewModel, s: AccountState) {
 
     SectionTitle(stringResource(R.string.acc_addresses))
     if (s.addresses.isEmpty() && !adding) {
-        Text(stringResource(R.string.acc_addr_empty), color = InkMuted)
+        Text(stringResource(R.string.acc_addr_empty), color = Rahal.colors.inkMuted)
     }
     s.addresses.forEach { a -> AddressRow(a, vm, s) }
 
@@ -422,10 +419,10 @@ private fun AddressRow(a: Address, vm: AccountViewModel, s: AccountState) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(a.label, style = MaterialTheme.typography.titleSmall)
             if (a.isDefault) {
-                Text(stringResource(R.string.acc_addr_default), color = StateGreen)
+                Text(stringResource(R.string.acc_addr_default), color = Rahal.colors.success)
             }
         }
-        Text(a.text, color = InkMuted, style = MaterialTheme.typography.bodySmall)
+        Text(a.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         Row {
             if (!a.isDefault) {
                 TextButton(onClick = { vm.makeDefault(a.id) }, enabled = !s.busy) {
@@ -433,7 +430,7 @@ private fun AddressRow(a: Address, vm: AccountViewModel, s: AccountState) {
                 }
             }
             TextButton(onClick = { vm.deleteAddress(a.id) }, enabled = !s.busy) {
-                Text(stringResource(R.string.acc_addr_delete), color = StateRed)
+                Text(stringResource(R.string.acc_addr_delete), color = Rahal.colors.danger)
             }
         }
         HorizontalDivider()
@@ -502,13 +499,13 @@ private fun AddAddress(vm: AccountViewModel, s: AccountState, onDone: () -> Unit
     if (pinned != null) {
         Text(
             stringResource(R.string.acc_addr_pinned),
-            color = StateGreen,
+            color = Rahal.colors.success,
             style = MaterialTheme.typography.bodySmall,
         )
     } else if (live == null) {
         Text(
             stringResource(R.string.acc_addr_need_point),
-            color = StateRed,
+            color = Rahal.colors.danger,
             style = MaterialTheme.typography.bodySmall,
         )
     }
@@ -556,10 +553,10 @@ private fun fmtPoint(lat: Double, lng: Double): String =
 private fun DangerSection(vm: AccountViewModel, s: AccountState) {
     var code by remember { mutableStateOf("") }
 
-    SectionTitle(stringResource(R.string.acc_danger), StateRed)
+    SectionTitle(stringResource(R.string.acc_danger), Rahal.colors.danger)
     Text(
         stringResource(R.string.acc_delete_hint),
-        color = InkMuted,
+        color = Rahal.colors.inkMuted,
         style = MaterialTheme.typography.bodySmall,
     )
     Spacer(Modifier.height(10.dp))
@@ -574,7 +571,7 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
         Button(
             onClick = vm::askDelete,
             enabled = !s.busy,
-            colors = ButtonDefaults.buttonColors(containerColor = StateRed),
+            colors = ButtonDefaults.buttonColors(containerColor = Rahal.colors.danger),
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.acc_delete_ask)) }
         return
@@ -595,7 +592,7 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
         Button(
             onClick = { vm.confirmDelete(code) },
             enabled = !s.busy && code.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = StateRed),
+            colors = ButtonDefaults.buttonColors(containerColor = Rahal.colors.danger),
             modifier = Modifier.weight(1f),
         ) { Text(stringResource(R.string.acc_delete_confirm)) }
         OutlinedButton(onClick = vm::cancelDelete, modifier = Modifier.weight(1f)) {
@@ -607,7 +604,7 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
 // ــ قطعٌ صغيرة ــ
 
 @Composable
-private fun SectionTitle(text: String, color: androidx.compose.ui.graphics.Color = BrandOrange) {
+private fun SectionTitle(text: String, color: androidx.compose.ui.graphics.Color = Rahal.colors.accent) {
     Text(text, style = MaterialTheme.typography.titleMedium, color = color)
     Spacer(Modifier.height(10.dp))
 }

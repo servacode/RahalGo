@@ -1,6 +1,7 @@
 package com.rahalgo.driver.trip
 
 import androidx.compose.animation.AnimatedVisibility
+import com.rahalgo.design.Rahal
 import com.rahalgo.driver.ui.etaText
 import com.rahalgo.driver.ui.minutesShort
 import com.rahalgo.driver.ui.dist
@@ -57,12 +58,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.BrandCanvas
-import com.rahalgo.design.BrandOrange
-import com.rahalgo.design.BrandTeal
-import com.rahalgo.design.InkDeep
-import com.rahalgo.design.StateRed
-import com.rahalgo.design.InkMuted
 import com.rahalgo.driver.R
 import com.rahalgo.driver.ui.money
 import com.rahalgo.shared.model.DriverOrder
@@ -295,7 +290,7 @@ private fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) 
         title = { Text(stringResource(R.string.agree_title)) },
         text = {
             Column {
-                Text(stringResource(R.string.agree_hint), color = InkMuted)
+                Text(stringResource(R.string.agree_hint), color = Rahal.colors.inkMuted)
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = goods,
@@ -397,10 +392,10 @@ private fun EmergencyDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.emg_title)) },
-        text = { Text(stringResource(R.string.emg_body), color = InkMuted) },
+        text = { Text(stringResource(R.string.emg_body), color = Rahal.colors.inkMuted) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.emg_send), color = StateRed)
+                Text(stringResource(R.string.emg_send), color = Rahal.colors.danger)
             }
         },
         dismissButton = {
@@ -466,7 +461,7 @@ private fun FailDialog(
                 }
                 Text(
                     text = stringResource(R.string.problem_mine),
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(bottom = 2.dp),
                 )
@@ -476,7 +471,7 @@ private fun FailDialog(
                         onClick = { onMine(label) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(label, color = BrandOrange, modifier = Modifier.fillMaxWidth())
+                        Text(label, color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -579,14 +574,14 @@ private fun MapButton(
                 .size(52.dp)
                 .shadow(6.dp, CircleShape)
                 .clip(CircleShape)
-                .background(if (on) BrandTeal else BrandCanvas)
+                .background(if (on) Rahal.colors.brand else Rahal.colors.canvas)
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(icon),
                 contentDescription = stringResource(label),
-                tint = if (on) Color.White else InkDeep,
+                tint = if (on) Color.White else Rahal.colors.panel,
                 modifier = Modifier.size(24.dp),
             )
         }
@@ -596,7 +591,7 @@ private fun MapButton(
             Box(
                 Modifier
                     .clip(CircleShape)
-                    .background(StateRed)
+                    .background(Rahal.colors.danger)
                     .padding(horizontal = 6.dp, vertical = 1.dp),
             ) {
                 Text(
@@ -622,7 +617,7 @@ private fun NavigateButton(onClick: () -> Unit) {
         Modifier
             .shadow(6.dp, RoundedCornerShape(18.dp))
             .clip(RoundedCornerShape(18.dp))
-            .background(BrandOrange)
+            .background(Rahal.colors.accent)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -669,7 +664,7 @@ private fun TripPanel(state: TripState) {
         Modifier
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(InkDeep)
+            .background(Rahal.colors.panel)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -731,7 +726,7 @@ private fun PanelChip(icon: Int, text: String) {
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
-            tint = BrandOrange,
+            tint = Rahal.colors.accent,
             modifier = Modifier.size(15.dp),
         )
         Spacer(Modifier.size(5.dp))
@@ -767,7 +762,7 @@ private fun LegStrip(status: String) {
                         .padding(top = 15.dp)
                         .height(2.dp)
                         .background(
-                            if (i <= at) BrandTeal else Color.White.copy(alpha = 0.18f),
+                            if (i <= at) Rahal.colors.brand else Color.White.copy(alpha = 0.18f),
                         ),
                 )
             }
@@ -781,8 +776,8 @@ private fun LegDot(label: Int, icon: Int, index: Int, at: Int) {
     val done = index < at
     val here = index == at
     val ground = when {
-        here -> BrandOrange
-        done -> BrandTeal
+        here -> Rahal.colors.accent
+        done -> Rahal.colors.brand
         else -> Color.White.copy(alpha = 0.12f)
     }
     Column(
@@ -892,7 +887,7 @@ private fun OnRouteBanner(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(BrandTeal)
+            .background(Rahal.colors.brand)
             .padding(14.dp),
     ) {
         Text(
@@ -927,7 +922,7 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
     Row(
         Modifier
             .fillMaxWidth()
-            .background(Color.White.copy(alpha = 0.94f))
+            .background(Rahal.colors.canvas.copy(alpha = 0.94f))
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -936,11 +931,11 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
             val now = stop.id == current
             Text(
                 text = "#" + stop.number,
-                color = if (now) Color.White else InkMuted,
+                color = if (now) Rahal.colors.onBrand else Rahal.colors.inkMuted,
                 fontWeight = if (now) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (now) BrandTeal else Color(0xFFEFF2F4))
+                    .background(if (now) Rahal.colors.brand else Rahal.colors.field)
                     .clickable { onPick(stop.id) }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
             )
@@ -991,7 +986,7 @@ private fun TripCard(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-            .background(Color.White)
+            .background(Rahal.colors.canvas)
             // **والسحبُ على البطاقة كلِّها لا على المقبض وحدَه** —
             // **ومقبضٌ بعرض إصبعين** يُخطئه من يقود.
             .pointerInput(Unit) {
@@ -1008,7 +1003,7 @@ private fun TripCard(
             Modifier
                 .align(Alignment.CenterHorizontally)
                 .clip(RoundedCornerShape(3.dp))
-                .background(InkMuted.copy(alpha = 0.35f))
+                .background(Rahal.colors.inkMuted.copy(alpha = 0.35f))
                 .size(width = 44.dp, height = 5.dp)
                 .clickable { expanded = !expanded },
         )
@@ -1030,7 +1025,7 @@ private fun TripCard(
                         if (toCustomer) R.drawable.ic_pin else R.drawable.ic_store,
                     ),
                     contentDescription = null,
-                    tint = if (toCustomer) BrandTeal else BrandOrange,
+                    tint = if (toCustomer) Rahal.colors.brand else Rahal.colors.accent,
                     modifier = Modifier.size(22.dp),
                 )
                 Spacer(Modifier.size(6.dp))
@@ -1046,7 +1041,7 @@ private fun TripCard(
                     fontWeight = FontWeight.Bold,
                 )
             }
-            Text("#${order.number}", color = InkMuted)
+            Text("#${order.number}", color = Rahal.colors.inkMuted)
         }
 
         // **والعنوانُ والمبلغُ وما بعدهما يُطوى** — سطرُ الوجهة يبقى.
@@ -1055,7 +1050,7 @@ private fun TripCard(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = if (state.step >= TripStep.PICKED_UP) order.addressText else "",
-                    color = InkMuted,
+                    color = Rahal.colors.inkMuted,
                 )
 
         // **وما بقي صعد إلى لوح الطور** — ولا يُكتب هنا ثانية:
@@ -1102,13 +1097,13 @@ private fun TripCard(
                 } else {
                     stringResource(R.string.trip_prepaid_note)
                 },
-                color = InkMuted,
+                color = Rahal.colors.inkMuted,
             )
             if (due) {
                 Text(
                     text = money(order.cashDue),
                     fontWeight = FontWeight.Bold,
-                    color = BrandTeal,
+                    color = Rahal.colors.brand,
                 )
             }
         }
@@ -1116,7 +1111,7 @@ private fun TripCard(
 
         if (state.error.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
-            Text(state.error, color = BrandOrange)
+            Text(state.error, color = Rahal.colors.accent)
         }
 
         // **واقتراحٌ لا فعل** — الزرّ نفسه تحته، **وهو من يضغطه.**
@@ -1127,7 +1122,7 @@ private fun TripCard(
                     if (order.status == "assigned") R.string.trip_near_pickup
                     else R.string.trip_near_dropoff,
                 ),
-                color = BrandTeal,
+                color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
@@ -1157,7 +1152,7 @@ private fun TripCard(
                     SmallAction(
                         icon = R.drawable.ic_check_circle,
                         label = next.label,
-                        ground = BrandTeal,
+                        ground = Rahal.colors.brand,
                         // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
                         // ردّ «يلزم إثبات» بعد أن ظنّ صاحبه أنّه أنهى.
                         onClick = {
@@ -1190,7 +1185,7 @@ private fun TripCard(
                 SmallAction(
                     icon = R.drawable.ic_warning,
                     label = R.string.trip_problem,
-                    ground = StateRed,
+                    ground = Rahal.colors.danger,
                     onClick = actions.askFail,
                     enabled = !state.busy,
                     modifier = Modifier.weight(1f),
@@ -1216,7 +1211,7 @@ private fun TripCard(
                         // على شاشةِ هاتف، **و«أعد الطلب للطابور» تدفع
                         // الأوّلَ إلى سطرين.** والأيقونةُ تقول «إعادة».
                         label = R.string.trip_release_short,
-                        ground = BrandOrange,
+                        ground = Rahal.colors.accent,
                         onClick = actions.release,
                         enabled = !state.busy,
                         modifier = Modifier.weight(1f),
@@ -1235,7 +1230,7 @@ private fun TripCard(
             // سلفا، **وزرٌّ يظهر فيه يسأل عمّا لا يُسأل عنه.**
             if (order.kind == "custom") {
                 TextButton(onClick = actions.askAgree, enabled = !state.busy) {
-                    Text(stringResource(R.string.agree_button), color = BrandOrange)
+                    Text(stringResource(R.string.agree_button), color = Rahal.colors.accent)
                 }
             }
             // **وزرُّ «لدي مشكلة» صعد إلى صفّ الفعل** — بجانب ما يُضغط
@@ -1245,7 +1240,7 @@ private fun TripCard(
 
         if (state.error.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            Text(state.error, color = StateRed)
+            Text(state.error, color = Rahal.colors.danger)
         }
             }
         }
@@ -1266,7 +1261,7 @@ private fun NoTrip(onOrders: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         Text(
             text = stringResource(R.string.trip_none_hint),
-            color = InkMuted,
+            color = Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(18.dp))
