@@ -46,6 +46,18 @@ data class DriverOrder(
      */
     @SerialName("custom_request") val customRequest: String = "",
 
+    /**
+     * **ما وُثّق من ثمنٍ وأجرة** — و`null` تعني **«لم يُوثَّق بعد»**.
+     *
+     * **وهي علامةُ الطور في الطلب الخاصّ**: قبلها يتّفق، **وبعدها
+     * يشتري.** (والمحرّك يقولها هكذا في `driver_handlers.go`.)
+     *
+     * **ولا حالَ ثانيةً في المحرّك تفرّق بينهما** — الحالُ يبقى
+     * `assigned` قبل التوثيق وبعده، **والفارقُ طابعُ وقتٍ لا حال.**
+     */
+    @SerialName("custom_goods_amount") val customGoods: Long? = null,
+    @SerialName("custom_fee") val customFee: Long? = null,
+
     @SerialName("merchant_name") val merchantName: String = "",
     @SerialName("merchant_phone") val merchantPhone: String? = null,
 

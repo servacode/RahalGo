@@ -742,7 +742,13 @@ private fun TripPanel(state: TripState) {
             Spacer(Modifier.height(10.dp))
         }
 
-        LegStrip(order.status)
+        LegStrip(
+            status = order.status,
+            custom = order.kind == "custom",
+            // **وعلامةُ الطور أنّ الثمنَ وُثّق** — لا حالٌ ثانيةٌ في
+            // المحرّك: يبقى `assigned` قبل التوثيق وبعده.
+            agreed = order.customFee != null,
+        )
     }
 }
 
@@ -777,10 +783,26 @@ private fun PanelChip(icon: Int, text: String) {
  * يبحث عن موضعه بين أربعةٍ متشابهة.
  */
 @Composable
-private fun LegStrip(status: String) {
-    val at = legOf(status)
+private fun LegStrip(status: String, custom: Boolean = false, agreed: Boolean = false) {
+    // ══════════════════════════════════════════════════════════════════
+    // **ومراحلُ الخاصّ غيرُ مراحل العاديّ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (شكوى المالك ٢٠٢٦-٠٨-١٣ بلقطةٍ من جهازه: «برأيي الخطواتُ هنا مو
+    //  مزبوطة — بالطلب الخاصّ».)
+    //
+    // **كان يُعرض شريطُ العاديّ**: أوّلُ مرحلةٍ فيه «استلمت الطلب» —
+    // **فيقرأ صاحبُ طلبٍ خاصٍّ أنّه في طور الاستلام** وهو لم يتّفق
+    // على شيءٍ بعد. **والزرُّ تحته يقول «اشتريتُ الطلب».**
+    //
+    // **والمحرّكُ يعرف مراحلَ الخاصّ وحدَها** (`OpsCustomStages`):
+    // توثيقٌ ثمّ شراءٌ ثمّ طريقٌ ثمّ وصولٌ ثمّ تسليم. **فتُقرأ منه لا
+    // تُخترع هنا.**
+    val legs = if (custom) CUSTOM_LEGS else LEGS
+    val icons = if (custom) CUSTOM_LEG_ICONS else LEG_ICONS
+    val at = if (custom) customLegOf(status, agreed) else legOf(status)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        for (i in LEGS.indices) {
+        for (i in legs.indices) {
             if (i > 0) {
                 // **والخطُّ في مستوى الدوائر** — لا تحتها ولا فوقها.
                 Box(
@@ -793,7 +815,7 @@ private fun LegStrip(status: String) {
                         ),
                 )
             }
-            LegDot(LEGS[i], LEG_ICONS[i], i, at)
+            LegDot(legs[i], icons[i], i, at)
         }
     }
 }
@@ -851,6 +873,41 @@ private val LEG_ICONS = listOf(
     R.drawable.ic_pin,
     R.drawable.ic_check_circle,
 )
+
+/**
+ * **مراحلُ الطلب الخاصّ** — كما يعرفها المحرّك (`OpsCustomStages`).
+ *
+ * **وخمسٌ لا أربع**: بين الإسناد والطريق طوران لا طور — **يتّفق ثمّ
+ * يشتري**، وكلاهما فعلٌ يقع في وقتٍ ويُسأل عنه في الشكوى.
+ */
+private val CUSTOM_LEGS = listOf(
+    R.string.leg_agree,
+    R.string.leg_buy,
+    R.string.leg_way,
+    R.string.leg_arrived,
+    R.string.leg_done,
+)
+
+private val CUSTOM_LEG_ICONS = listOf(
+    R.drawable.ic_chat,
+    R.drawable.ic_cash,
+    R.drawable.ic_moto,
+    R.drawable.ic_pin,
+    R.drawable.ic_check_circle,
+)
+
+/**
+ * **أيُّ مرحلةٍ من مراحل الخاصّ هو فيها.**
+ *
+ * **والحالُ لا يفرّق بين التوثيق والشراء** — يبقى `assigned` فيهما،
+ * **والفارقُ أنّ الثمنَ وُثّق.** (`custom_fee` غيرُ فارغ.)
+ */
+private fun customLegOf(status: String, agreed: Boolean): Int = when (status) {
+    "picked_up", "on_the_way" -> 2
+    "at_dropoff" -> 3
+    "delivered" -> 4
+    else -> if (agreed) 1 else 0
+}
 
 /**
  * **أيُّ مرحلةٍ هو فيها الآن.**
