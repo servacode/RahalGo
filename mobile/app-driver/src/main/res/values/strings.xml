@@ -95,9 +95,7 @@
     <string name="nav_home">الرئيسية</string>
     <string name="nav_orders">الطلبات</string>
     <string name="orders_offered">معروض عليك</string>
-    <string name="orders_mine">طلباتك الآن</string>
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
-    <string name="orders_no_mine">ما معك أيّ طلب</string>
     <string name="orders_shift_closed">ورديّتك مغلقة — لن يصلك أيّ طلب حتّى تفتحها</string>
     <string name="order_to_pickup">إلى المتجر</string>
     <string name="order_leg">المشوار</string>
@@ -169,7 +167,6 @@
     <string name="trip_navigate">الملاحة</string>
     <string name="map_recenter">ردّني إلى موقعي</string>
     <string name="map_follow">تابعني على الخريطة</string>
-    <string name="trip_continue">متابعة الرحلة</string>
     <string name="trip_s_accepted">قبلت الطلب</string>
     <string name="trip_s_to_pickup">إلى المتجر</string>
     <string name="trip_s_at_pickup">وصلت المتجر</string>

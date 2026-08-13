@@ -39,7 +39,6 @@ export interface ReputationLabels {
 
 interface Review {
   order_number: number;
-  merchant_name: string;
   /** من قيّم — **وهو من فتح البابَ له**؛ ونجومٌ بلا اسمٍ لا تُنسَب إلى واقعة. */
   customer_name: string;
   stars: number;
@@ -133,8 +132,20 @@ export function ReputationReviews({ api, labels = {} }: { api: ApiFn; labels?: R
                   {fmtDate(rv.created_at)}
                 </span>
               </div>
+              {/* ══════════════════════════════════════════════════════
+                  **ولا اسمَ متجرٍ مع التقييم**
+                  ══════════════════════════════════════════════════════
+
+                  (قرارُ المالك ٢٠٢٦-٠٨-١٣: «لا يوجد داعٍ لذكر اسم
+                   المتجر، لأنّ العلاقة بالتقييم للزبون ورقم الطلب فقط —
+                   فاسم المتجر زائدٌ لا معنى له أصلاً، لا في التطبيق ولا
+                   في الويب».)
+
+                  **والمتجرُ لم يُقيَّم هنا ولم يُقيِّم**: الزبونُ قيّم
+                  من وقف أمامه، **ومن أين اشترى الطعامَ لا يفسّر نجمةً
+                  نقصت.** */}
               <p className="mt-1 text-sm text-ink-muted">
-                {rv.merchant_name} — {T.order} #{fmtRef(rv.order_number)}
+                {T.order} #{fmtRef(rv.order_number)}
               </p>
               {/* **ومن قيّم** — كان التقييمُ نجوماً ورقمَ طلبٍ بلا وجه، **فمن
                   نال ثلاثاً لا يعرف أيَّ بابٍ كان** فلا يتعلّم منها شيئاً. */}
