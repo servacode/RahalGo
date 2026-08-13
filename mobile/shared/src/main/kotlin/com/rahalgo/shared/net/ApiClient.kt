@@ -7,6 +7,7 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.forms.submitFormWithBinaryData
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
@@ -195,6 +196,22 @@ class ApiClient(
             )
         }
     }
+
+    /**
+     * **يجلب ملفّاً خاماً** — شعارَ المنصّة للورقة المطبوعة.
+     *
+     * (شكوى المالك ٢٠٢٦-٠٨-١٣: «بس كأنّه ما جاب لوغو المنصّة، جاب لوغو
+     *  فيه حرف ر؟».)
+     *
+     * **ولا يُترك للعارض أن يُنزّله**: `WebView` يبدأ الطباعةَ حين تنتهي
+     * الصفحة، **والصورةُ قد تصل بعدها** — فتُطبع ورقةٌ بلا علامة.
+     * **فتُجلَب بايتاتُها وتُدسّ في الصفحة** فتكون حاضرةً قبل أن تُرسم.
+     *
+     * **وفارغٌ عند أيّ تعثّر** — ورقةٌ بلا شعارٍ خيرٌ من ورقةٍ لا تُطبع.
+     */
+    suspend fun bytes(url: String): ByteArray = runCatching {
+        http.get(url).body<ByteArray>()
+    }.getOrDefault(ByteArray(0))
 
     /** يدوّر التوكن ويحفظ الجديد. */
     suspend fun refresh() {

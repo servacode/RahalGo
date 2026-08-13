@@ -366,7 +366,8 @@
     <string name="sheet_empty">لا حركات في هذه المدة.</string>
     <string name="sheet_truncated">بلغ الكشف حدّه الأقصى من الأسطر، فبعض حركات هذه المدة غير معروضة. اختر مدة أقصر ليكتمل.</string>
     <string name="sheet_footer">كشف صادر آلياً عن منصة %1$s. المبالغ بالليرة السورية. الرصيد الافتتاحي والختامي محسوبان من الحركات المعروضة.</string>
-    <string name="sheet_support">لأي استفسار عن هذا الكشف اتصل بنا:</string>
+    <string name="sheet_support">لأي شكوى أو استفسار عن هذا الكشف اتصل بنا:</string>
+    <string name="sheet_thanks">شكراً لثقتك بـ%1$s — نسعد بخدمتك في كل مرّة</string>
     <string name="wal_print_failed">تعذّرت الطباعة على هذا الجهاز</string>
     <string name="wal_all">الكلّ</string>
     <string name="wal_back">رجوع</string>

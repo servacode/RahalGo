@@ -82,6 +82,16 @@ data class WalletState(
     /** **اسمُ المنصّة ورقمُ دعمها** — لترويسة الورقة وذيلها. */
     val platform: String = "",
     val support: String = "",
+    /**
+     * **شعارُ المنصّة مدسوساً في الصفحة** (`data:` URI) — أو فارغ.
+     *
+     * (شكوى المالك ٢٠٢٦-٠٨-١٣: «كأنّه ما جاب لوغو المنصّة، جاب لوغو فيه
+     *  حرف ر».)
+     *
+     * **ولا يُترك للعارض أن يُنزّله**: الطباعةُ تبدأ حين تنتهي الصفحة،
+     * **والصورةُ قد تصل بعدها** فتُطبع ورقةٌ بلا علامة.
+     */
+    val logo: String = "",
     val payouts: List<Payout> = emptyList(),
     val busy: Boolean = false,
     val error: String = "",
@@ -119,6 +129,12 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                 // **واسمُ المنصّة من إعداداتها لا من الشيفرة** — يبدّله
                 // المالكُ من لوحته فتتبدّل الورقة.
                 val plat = runCatching { backend.auth.platform() }.getOrNull()
+                // **والشعارُ يُجلَب مرّةً ويبقى** — لا مع كلّ فتحة.
+                val logo = if (state.logo.isEmpty() && !plat?.logo.isNullOrEmpty()) {
+                    dataUri(Backend.media(plat.logo).orEmpty())
+                } else {
+                    state.logo
+                }
                 state.copy(
                     statement = st,
                     payouts = po,
@@ -126,6 +142,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                     phone = me?.phone ?: state.phone,
                     platform = plat?.name ?: state.platform,
                     support = plat?.supportPhone ?: state.support,
+                    logo = logo,
                     error = "",
                 )
             } catch (e: Exception) {
@@ -181,6 +198,26 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val from = f.format(cal.time)
         cal.set(java.util.Calendar.DAY_OF_MONTH, cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH))
         return "?from=" + from + "&to=" + f.format(cal.time)
+    }
+
+    /**
+     * **يجلب الشعارَ ويصيّره نصّاً يُدسّ في الصفحة.**
+     *
+     * **والنوعُ يُستنتَج من الامتداد** — `image/png` لصورةٍ شفّافةٍ
+     * و`svg+xml` لرسمٍ متّجه. **ونوعٌ خاطئٌ لا يُعرض** في `WebView`.
+     */
+    private suspend fun dataUri(url: String): String {
+        if (url.isEmpty()) return ""
+        val raw = backend.api.bytes(url)
+        if (raw.isEmpty()) return ""
+        val mime = when {
+            url.endsWith(".svg", true) -> "image/svg+xml"
+            url.endsWith(".png", true) -> "image/png"
+            url.endsWith(".webp", true) -> "image/webp"
+            else -> "image/jpeg"
+        }
+        val b64 = android.util.Base64.encodeToString(raw, android.util.Base64.NO_WRAP)
+        return "data:" + mime + ";base64," + b64
     }
 
     private fun describe(e: Exception): String {
@@ -528,6 +565,7 @@ private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -
                         period,
                         vm.state.platform,
                         vm.state.support,
+                        vm.state.logo,
                     )
                 }) { Text(stringResource(R.string.wal_print)) }
                 OutlinedButton(onClick = onBack) { Text(stringResource(R.string.wal_back)) }

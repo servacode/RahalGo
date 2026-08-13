@@ -55,6 +55,7 @@ object StatementPrint {
         period: String,
         platform: String,
         support: String,
+        logo: String,
     ) {
         // **وجهازٌ بلا خدمة طباعةٍ يقول ذلك** — وضغطةٌ تُبتلَع بلا ردٍّ
         // **تُقرأ عطبا**، فيعيدها ثلاثاً ثمّ يترك.
@@ -85,7 +86,7 @@ object StatementPrint {
         keep = web
         web.loadDataWithBaseURL(
             null,
-            html(context, name, phone, st, period, platform, support),
+            html(context, name, phone, st, period, platform, support, logo),
             "text/html",
             "UTF-8",
             null,
@@ -100,6 +101,7 @@ object StatementPrint {
         period: String,
         platform: String,
         support: String,
+        logo: String,
     ): String {
         // **والرصيدُ الجاري يُبنى من الافتتاحيّ صعودا** — والمحرّكُ يضمن
         // أنّ الافتتاحيَّ زائدَ المعروض يساوي الختاميّ.
@@ -123,8 +125,19 @@ object StatementPrint {
             )
         }
 
-        // **والعلامةُ حرفٌ في مربّعٍ حين لا شعار** — كما تفعل `BrandMark`.
-        val mark = platform.trim().take(1)
+        // ══════════════════════════════════════════════════════════════
+        // **والشعارُ صورةُ المنصّة — لا حرفاً في مربّع**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (شكوى المالك ٢٠٢٦-٠٨-١٣.)
+        //
+        // **والحرفُ احتياطٌ لا أصل**: من لم يرفع شعاراً بعدُ يرى أوّلَ
+        // حرفٍ من اسمه — **كما تفعل `BrandMark` في الويب.**
+        val markHtml = if (logo.isNotEmpty()) {
+            """<img class="logo" src="$logo" alt="">"""
+        } else {
+            """<div class="mark">${esc(platform.trim().take(1))}</div>"""
+        }
         val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
             .format(java.util.Date())
         val now = java.text.SimpleDateFormat("HH:mm", java.util.Locale.US)
@@ -141,6 +154,7 @@ object StatementPrint {
   .mark { width: 62px; height: 62px; border: 2px solid #07283A; border-radius: 12px;
           display: flex; align-items: center; justify-content: center;
           font-size: 30px; font-weight: bold; }
+  .logo { width: 72px; height: 72px; object-fit: contain; }
   .when { text-align: left; font-size: 11px; color: #5A6B75; }
   .when b { display: block; color: #07283A; }
 
@@ -168,13 +182,26 @@ object StatementPrint {
 
   tfoot td { border-top: 2px solid #E4E9EC; border-bottom: none;
              padding-top: 9px; font-weight: bold; }
-  .foot { margin-top: 16px; font-size: 10px; color: #5A6B75; line-height: 1.7; }
+  /* ══════════════════════════════════════════════════════════════
+     **وعبارةُ الثقة — لا حاشيةَ زينة**
+
+     (قرارُ المالك ٢٠٢٦-٠٨-١٣: «شوف ترتيبة الفاتورة بالطلب كيف مرتّبة
+      وأنيقة — لوغو وعباراتُ ثقةٍ وغيره».)
+
+     **والورقةُ تُقرأ من غير صاحبها**: يُريها للمكتب أو لمن يختلف
+     معه. **وسطرٌ يشكر ويعطي رقمَ الشكوى يقول إنّ خلفَها دارا** —
+     لا جدولاً خرج من هاتف. */
+  .thanks { margin-top: 18px; text-align: center; font-size: 12px;
+            font-weight: bold; color: #02678F; }
+  .support { text-align: center; font-size: 11px; color: #5A6B75; margin: 4px 0 0; }
+  .foot { margin-top: 14px; font-size: 10px; color: #5A6B75;
+          line-height: 1.7; text-align: center; }
   .warn { border: 1px solid #FE9501; background: #FFF6E9; border-radius: 8px;
           padding: 8px 10px; font-size: 11px; margin-bottom: 12px; }
 </style></head><body>
 
 <div class="head">
-  <div class="mark">${esc(mark)}</div>
+  $markHtml
   <div class="when">
     ${esc(c.getString(R.string.sheet_printed_at))}
     <b>${esc(today)}</b>${esc(now)}
@@ -228,14 +255,17 @@ ${
             }
         }
 
-<div class="foot">
-  ${esc(c.getString(R.string.sheet_footer, platform))}
-  ${if (support.isNotEmpty()) {
-            esc(c.getString(R.string.sheet_support)) + " " + esc(support)
-        } else {
-            ""
-        }}
-</div>
+<p class="thanks">${esc(c.getString(R.string.sheet_thanks, platform))}</p>
+${
+            if (support.isNotEmpty()) {
+                """<p class="support">""" +
+                    esc(c.getString(R.string.sheet_support)) +
+                    " <b dir=\"ltr\">" + esc(support) + "</b></p>"
+            } else {
+                ""
+            }
+        }
+<p class="foot">${esc(c.getString(R.string.sheet_footer, platform))}</p>
 </body></html>"""
     }
 
