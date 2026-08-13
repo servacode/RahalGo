@@ -376,4 +376,14 @@
     <string name="cash_of">%1$s من %2$s</string>
     <string name="err_photo_unreadable">تعذّرت قراءة الصورة</string>
     <string name="map_region">الرقّة</string>
+
+    <!-- ══ سجلُّ الطلبات ══ -->
+    <string name="nav_history">السجلّ</string>
+    <string name="hist_done">سُلِّم</string>
+    <string name="hist_failed">تعذّر</string>
+    <string name="hist_search">ابحث برقم الطلب أو المتجر</string>
+    <string name="hist_empty">لا طلبات في سجلّك بعد</string>
+    <string name="hist_no_match">لا طلب يطابق بحثك</string>
+    <string name="hist_st_delivered">سُلِّم</string>
+    <string name="hist_st_failed">تعذّر</string>
 </resources>

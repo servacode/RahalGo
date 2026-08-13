@@ -1,6 +1,7 @@
 package com.rahalgo.shared.driver
 
 import com.rahalgo.shared.model.DriverMe
+import com.rahalgo.shared.model.HistoryPage
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.FailReasonItem
 import com.rahalgo.shared.model.FailReasons
@@ -24,6 +25,14 @@ class DriverApi(private val api: ApiClient) {
 
     /** حال السائق — **الوردية والمال واليوم في نداء واحد.** */
     suspend fun me(): DriverMe = api.call("/api/v1/driver/me")
+
+    /**
+     * **سجلُّ ما نفّذه** — المغلقةُ وحدَها، الأحدثُ أوّلاً.
+     *
+     * (`GET /api/v1/driver/orders/history` — والنداءُ نفسُه الذي تقرؤه
+     * شاشةُ الويب.)
+     */
+    suspend fun history(): HistoryPage = api.call("/api/v1/driver/orders/history")
 
     /** ما هو معروض عليه الآن — **ولم يأخذه أحد بعد.** */
     suspend fun queue(): List<DriverOrder> = api.call("/api/v1/driver/queue")

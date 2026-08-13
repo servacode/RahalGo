@@ -120,3 +120,52 @@ data class OrderRoute(
     @SerialName("duration_s") val durationS: Double = -1.0,
     val points: List<List<Double>> = emptyList(),
 )
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **صفحةٌ من سجلّ السائق**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٣: «الآن يجب أن نبني سجلّ الطلبات… يجب أن يعرف
+ *  السائقُ ماذا عمل بالفترات السابقة» · «واسم سجلّ الطلبات أفضل».)
+ *
+ * **والاسمُ «سجلّ» لا «سابقة»**: «السابقة» نسبةٌ إلى الآن تُقرأ «ما مضى
+ * وانتهى ولا شأنَ لك به»، **و«السجلّ» يقول إنّه مرجعٌ يُعاد إليه** —
+ * وهو ما تسمّيه لوحةُ الإدارة، **فكلمةٌ واحدةٌ في المنصّة كلِّها.**
+ */
+@Serializable
+data class HistoryPage(
+    val orders: List<HistoryOrder> = emptyList(),
+    val total: Int = 0,
+)
+
+/**
+ * **طلبٌ منتهٍ** — بحاله وتاريخه وما جرى فيه.
+ *
+ * **ولا أجرةَ في هذا الردّ**: قِيس فوُجد أنّ المحرّك لا يرسل أجرَ
+ * السائق مع الطلب — **حُذف من البطاقة بقرار المالك ٢٠٢٦-٠٨-٠٤** («لم
+ * أطلبها أصلاً»)، **وموضعُه دفترُه**: المحفظةُ وكشفُ الحساب حيث يُقرأ
+ * مجموعا.
+ *
+ * **وحقلٌ يُخترع هنا يُقرأ صفراً دائما** — ورقمُ أجرٍ صفريٌّ في سجلٍّ
+ * أسوأُ من غيابه.
+ *
+ * **والحقولُ هي التي تقرؤها شاشةُ الويب حرفيّاً** — فلا يفترق سجلّان.
+ */
+@Serializable
+data class HistoryOrder(
+    val id: String = "",
+    val number: Long = 0,
+    val status: String = "",
+    @SerialName("merchant_name") val merchantName: String = "",
+    @SerialName("customer_name") val customerName: String = "",
+    @SerialName("address_text") val addressText: String = "",
+    val total: Long = 0,
+    @SerialName("cash_due") val cashDue: Long = 0,
+    @SerialName("fail_reason") val failReason: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+    /** **أقيّمتُ متجرَه** — ومن قيّم لا يُعرض عليه الزرُّ ثانيةً. */
+    @SerialName("merchant_rated") val merchantRated: Boolean = false,
+    /** **وقف عند بابه فعلاً** — ومن لم يقف لا رأيَ له فيه. */
+    @SerialName("can_rate_merchant") val canRateMerchant: Boolean = false,
+)

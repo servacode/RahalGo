@@ -1,6 +1,8 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import com.rahalgo.driver.history.HistoryViewModel
+import com.rahalgo.driver.history.HistoryScreen
 import com.rahalgo.driver.wallet.WalletViewModel
 import com.rahalgo.driver.wallet.WalletScreen
 import com.rahalgo.driver.rating.RatingViewModel
@@ -272,6 +274,7 @@ private fun SignedIn(onLogout: () -> Unit) {
     val accountVm: AccountViewModel = viewModel()
     val ratingVm: RatingViewModel = viewModel()
     val walletVm: WalletViewModel = viewModel()
+    val historyVm: HistoryViewModel = viewModel()
     val context = LocalContext.current
 
     // ══════════════════════════════════════════════════════════════════
@@ -442,6 +445,27 @@ private fun SignedIn(onLogout: () -> Unit) {
                     },
                     label = { Text(stringResource(R.string.nav_orders)) },
                 )
+                // ══════════════════════════════════════════════════════
+                // **وسجلُّه تبويبٌ بجانب لوحته**
+                // ══════════════════════════════════════════════════════
+                //
+                // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «اجعله قسماً له أيقونةٌ
+                //  جانب الرئيسيّة، ثمّ لاحقاً نرى أين نضعه».)
+                //
+                // **وأيقونتُه ساعةٌ راجعةٌ لا قائمة**: القائمةُ أيقونةُ
+                // «الطلبات» المجاور، **وأيقونتان متشابهتان في شريطٍ
+                // واحدٍ تُضغط إحداهما بدل الأخرى.**
+                //
+                // **ولا يختفي بانصرافه**: سجلُّه ماضٍ لا يتبدّل
+                // بورديّته — **ومن انصرف يبقى يسأل عمّا عمل.**
+                NavigationBarItem(
+                    selected = tab == 3 && !account && !rating && !wallet,
+                    onClick = { account = false; rating = false; wallet = false; tab = 3 },
+                    icon = {
+                        Icon(painterResource(R.drawable.ic_history), contentDescription = null)
+                    },
+                    label = { Text(stringResource(R.string.nav_history)) },
+                )
                 NavigationBarItem(
                     selected = tab == 2 && !account && !rating && !wallet,
                     onClick = { account = false; rating = false; wallet = false; tab = 2; home.refresh() },
@@ -546,6 +570,8 @@ private fun SignedIn(onLogout: () -> Unit) {
                     ),
                     chatUnread = orders.chatUnread,
                 )
+
+                tab == 3 -> HistoryScreen(vm = historyVm)
 
                 tab == 2 -> HomeScreen(
                     state = home.state,
