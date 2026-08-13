@@ -79,7 +79,7 @@ fun MenuDrawer(onPick: (MenuItem) -> Unit, onLogout: () -> Unit) {
                     text = stringResource(item.group),
                     color = BrandOrange,
                     style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(horizontal = 20.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp),
                 )
                 Spacer(Modifier.height(4.dp))
                 lastGroup = item.group
@@ -114,7 +114,7 @@ fun MenuDrawer(onPick: (MenuItem) -> Unit, onLogout: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onLogout)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 14.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -140,7 +140,7 @@ private fun Line(item: MenuItem, onPick: (MenuItem) -> Unit) {
         Modifier
             .fillMaxWidth()
             .clickable { onPick(item) }
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 14.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -149,8 +149,12 @@ private fun Line(item: MenuItem, onPick: (MenuItem) -> Unit) {
             tint = InkMuted,
             modifier = Modifier.size(20.dp),
         )
-        Spacer(Modifier.size(12.dp))
-        Text(stringResource(item.label), style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.size(10.dp))
+        Text(
+            text = stringResource(item.label),
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+        )
     }
 }
 
