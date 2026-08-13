@@ -181,7 +181,16 @@ func (s *Service) TrySameRoute(ctx context.Context, orderID string) bool {
 				Body:     merchant + " — على بُعد " + metersText(c.BetweenPickupsM) + " من وجهتك",
 				Entity:   "order",
 				EntityID: orderID,
-				Href:     "/portal",
+				// **ووجهتُه لوحةُ السائق** — كان "/portal" ولا مسارَ
+				// بهذا الاسم في الموقع أصلاً (الجذورُ: driver · store ·
+				// rep · dashboard). **ورابطٌ يفتح على لا شيءٍ يُقرأ
+				// عطبا.**
+				Href: "/driver",
+				// **وتطبيقُ السائق وحدَه يرنّ** — الحسابُ نفسُه قد يكون
+				// زبوناً، **وطلبُ عملٍ يرنّ في تطبيق الزبون خبرٌ في غير
+				// مكانه.** (وهي القاعدةُ المكتوبةُ في `notify.go`،
+				// **ونُسيت هنا** فرنَّ الطلبُ في كلّ تطبيقاته.)
+				Apps: []string{notifications.AppDriver},
 			})
 		}
 	}

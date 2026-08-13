@@ -167,7 +167,12 @@ func (s *Server) handleOrderAssign(w http.ResponseWriter, r *http.Request) {
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: req.DriverID, Kind: notifications.KindOrder,
 		Title: notifTitles.driverAssigned, Entity: "order",
-		EntityID: chi.URLParam(r, "id"), Href: "/orders",
+		EntityID: chi.URLParam(r, "id"),
+		// **ووجهتُه لوحتُه هو** — كان "/orders"، **وهي صفحةُ طلبات
+		// الزبون**: من أُسند إليه طلبٌ فضغط الخبرَ وجد مشترياته هو.
+		Href: "/driver",
+		// **وتطبيقُ السائق وحدَه يرنّ** — انظر `orders/notify.go`.
+		Apps: []string{notifications.AppDriver},
 	})
 	httpx.JSON(w, http.StatusOK, o)
 }

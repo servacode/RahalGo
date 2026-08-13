@@ -92,8 +92,23 @@ fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit) {
             return@Column
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **ومجموعةٌ بالأيّام — كما في صفحة الويب**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (أمرُ المالك ٢٠٢٦-٠٨-١٣: «اعمل جرداً للإشعارات» · «التطبيقُ
+        //  والويبُ نفسُ النموذج».)
+        //
+        // **وثلاثون خبراً في قائمةٍ متّصلةٍ تُقرأ كتلةً واحدة** — ومن فتح
+        // ليعرف ما جدّ اليومَ لا يعرف أين ينتهي اليومُ ويبدأ الأمس.
+        var day = ""
         LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             items(items) { notice ->
+                val d = dayText(notice.createdAt)
+                if (d != day) {
+                    day = d
+                    DayHead(d)
+                }
                 Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
                     // **ونقطة لغير المقروء** — تُرى ولا تصبغ السطر.
                     Box(
