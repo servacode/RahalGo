@@ -539,7 +539,7 @@ private fun MapButtons(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             MapButton(R.drawable.ic_my_location, R.string.map_recenter, onRecenter)
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
             // **والملاحقةُ تُضاء حين تعمل** — زرٌّ يفعل شيئا مستمرّا
             // **ولا يقول إنّه يعمل** يُضغط مرّتين فيُطفأ وهو يُظنّ مشتعلا.
             MapButton(
@@ -548,7 +548,7 @@ private fun MapButtons(
                 onClick = onFollow,
                 on = follow,
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
             // ══════════════════════════════════════════════════════════
             // **وحديثُ الزبون قرصٌ عائمٌ لا سطرٌ في البطاقة**
             // ══════════════════════════════════════════════════════════
@@ -565,7 +565,7 @@ private fun MapButtons(
                 on = chatting,
                 badge = chatUnread,
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
             NavigateButton(onNavigate)
         }
     }
@@ -582,20 +582,42 @@ private fun MapButton(
     badge: Int = 0,
 ) {
     Box(contentAlignment = Alignment.TopEnd) {
+        // ══════════════════════════════════════════════════════════════
+        // **وأرضُ القرص سطحٌ لا أرضُ الصفحة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (شكوى المالك ٢٠٢٦-٠٨-١٣ بلقطةٍ من جهازه: «وزنُ الأيقونات
+        //  مزعج».)
+        //
+        // **وقيس التباينُ في الغامقة: ١٫١١ إلى ١** — أرضُ القرص
+        // (`canvas`) والأيقونةُ (`panel`) كحليّان متجاوران، **فتبدو
+        // أقراصاً داكنةً صمّاءَ لا أزراراً.**
+        //
+        // **وسببُه أنّ اللونين كانا صحيحين في الفاتحة**: أبيضُ وكحليّ
+        // — **١٥٫٢٩ إلى ١.** ثمّ جاءت الغامقةُ فصارا واحدا.
+        //
+        // **والسطحُ يرتفع عن الأرض درجةً** فيُرى القرص، **والحبرُ يقع
+        // عليه**: ١١٫٧١ في الغامقة و٥٫٨٥ في الفاتحة.
+        //
+        // # وأخفُّ وزناً
+        //
+        // **أربعةُ أقراصٍ فوق بعضها على خريطةٍ ثقيلة** — فقُصّ قطرُها
+        // إلى ثمانيةٍ وأربعين (وهو أدنى ما يُلمس بإبهام)، **وخفّ ظلُّها
+        // من ستٍّ إلى ثلاث**، وضاق ما بينها.
         Box(
             Modifier
-                .size(52.dp)
-                .shadow(6.dp, CircleShape)
+                .size(48.dp)
+                .shadow(3.dp, CircleShape)
                 .clip(CircleShape)
-                .background(if (on) Rahal.colors.brand else Rahal.colors.canvas)
+                .background(if (on) Rahal.colors.brand else Rahal.colors.surface)
                 .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(icon),
                 contentDescription = stringResource(label),
-                tint = if (on) Color.White else Rahal.colors.panel,
-                modifier = Modifier.size(24.dp),
+                tint = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+                modifier = Modifier.size(22.dp),
             )
         }
         // **والشارةُ تطفو على حافّته** — كما في كلّ تطبيق: **ومن وضعها
