@@ -3915,6 +3915,21 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/me/devices/test",
+      "handler": "handlePushTest",
+      "auth": true,
+      "response": [
+        {
+          "name": "@Diagnose",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/me/name",
       "handler": "handleSetMyName",

@@ -102,6 +102,17 @@ fun AccountScreen(vm: AccountViewModel, onLoggedOut: () -> Unit) {
         Gap()
         AddressesSection(vm, s)
         Gap()
+        // ══════════════════════════════════════════════════════════════
+        // **وفحصُ الإشعارات — يسأله صاحبُه بنفسه**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (وقع ٢٠٢٦-٠٨-١٤: لم يرنّ الجهاز، **ولم يكن في المنصّة ما يقول
+        //  أين وقفت الرسالة** — فبقي التخمين.)
+        //
+        // **وموضعُه هنا لا في القائمة**: من لا تصله إشعاراتٌ يبحث في
+        // حسابه، **وهو أوّلُ ما يُفتح حين يُشكّ في الجهاز.**
+        PushSection(vm, s)
+        Gap()
         // **والخطرُ آخرا** — بأمر المالك.
         DangerSection(vm, s)
         Spacer(Modifier.height(32.dp))
@@ -624,4 +635,26 @@ private fun Notice(text: String, color: androidx.compose.ui.graphics.Color) {
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
     )
+}
+
+/**
+ * **فحصُ الإشعارات** — زرٌّ يرسل إشعارَ تجربةٍ إلى هذا الجهاز.
+ *
+ * **وجوابُه في مكان الخبر أعلى الشاشة** — أخضرَ إن وصل، **وأحمرَ بنصّ
+ * ما قالته غوغل إن رُفض.**
+ */
+@Composable
+private fun PushSection(vm: AccountViewModel, s: AccountState) {
+    SectionTitle(stringResource(R.string.push_check))
+    Text(
+        stringResource(R.string.push_check_hint),
+        color = Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.bodySmall,
+    )
+    Spacer(Modifier.height(8.dp))
+    OutlinedButton(
+        onClick = vm::checkPush,
+        enabled = !s.busy,
+        modifier = Modifier.fillMaxWidth(),
+    ) { Text(stringResource(R.string.push_check)) }
 }

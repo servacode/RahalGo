@@ -28,6 +28,19 @@ class DevicesApi(private val api: ApiClient) {
         )
     }
 
+    /**
+     * **فحصُ الإشعارات** — يرسل رسالةً إلى أجهزته ويقول ما وقع.
+     *
+     * (وقع ٢٠٢٦-٠٨-١٤: جُرّب على جهازٍ حقيقيٍّ فلم يرنّ، **والجهازُ
+     *  مسجَّلٌ والمفتاحُ مضبوطٌ والمشروعُ متطابق** — ولم يكن في المنصّة
+     *  ما يقول أين وقفت الرسالة.)
+     *
+     * **وإشعارٌ لا يصل لا يشتكي منه أحد**: السائقُ يظنّ أنّه لا طلبات،
+     * **والمكتبُ يظنّه كسولا.**
+     */
+    suspend fun test(): PushCheck =
+        api.call("/api/v1/me/devices/test", HttpMethod.Post, mapOf<String, String>())
+
     /** **يُلغى عند الخروج** — وإلّا وصلت طلباتُ حسابٍ خرج إلى جهازه. */
     suspend fun unregister(token: String) {
         api.call<Ack>(
@@ -37,3 +50,19 @@ class DevicesApi(private val api: ApiClient) {
         )
     }
 }
+
+/**
+ * **ما وجده فحصُ الإشعارات.**
+ *
+ * **ونصُّ الخطأ كما قالته غوغل** — لا يُترجَم ولا يُلطَّف:
+ * «SENDER_ID_MISMATCH» كلمةٌ تُبحث فتُوجد، **و«تعذّر الإرسال» لا تُوجد.**
+ */
+@kotlinx.serialization.Serializable
+data class PushCheck(
+    val configured: Boolean = false,
+    val devices: Int = 0,
+    val fresh: Int = 0,
+    val sent: Int = 0,
+    val dead: Int = 0,
+    val error: String = "",
+)

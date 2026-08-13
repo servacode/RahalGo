@@ -524,6 +524,17 @@
     <!-- **واسمُ الفعل كما في الويب** — «اشتريتُ الطلب» لا «استلمت». -->
     <string name="step_bought">اشتريتُ الطلب</string>
 
+    <!-- ══ فحصُ الإشعارات ══
+         (وقع ٢٠٢٦-٠٨-١٤: لم يرنّ الجهاز، ولم يكن في المنصّة ما يقول
+          أين وقفت الرسالة.) -->
+    <string name="push_check">افحص الإشعارات</string>
+    <string name="push_check_hint">يُرسل إشعارَ تجربةٍ إلى هذا الجهاز</string>
+    <string name="push_check_ok">وصلت — الإشعاراتُ تعمل</string>
+    <string name="push_check_off">الدفعُ غيرُ مهيّأ في الخادم — لا إشعارَ يصل أيَّ جهاز</string>
+    <string name="push_check_none">لا جهازَ مسجَّل — أغلق التطبيق وافتحه ثمّ أعد الفحص</string>
+    <string name="push_check_stale">جهازُك مسجَّلٌ منذ زمنٍ بعيد — أغلق التطبيق وافتحه</string>
+    <string name="push_check_failed">رفضت غوغل الرسالة: %1$s</string>
+
     <!-- إرجاعُ البضاعة -->
     <string name="err_no_merchant">لا متجرَ في هذا الطلب — الخاصُّ تشتريه بنفسك</string>
     <string name="hist_return">سلّمتُ البضاعة للمتجر</string>

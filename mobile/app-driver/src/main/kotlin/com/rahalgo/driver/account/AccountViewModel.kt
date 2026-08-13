@@ -343,6 +343,56 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **ولا مفتاحُ آلةٍ يُعرض** — إلّا ما لا ترجمةَ له، فيُعرض ليُعرف. */
     /** **الرمزُ بعربيّة** — من الخريطة المركزيّة (`data/ApiErrors.kt`). */
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **فحصُ الإشعارات — يقول لماذا لا يرنّ**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (وقع ٢٠٢٦-٠٨-١٤ على جهازٍ حقيقيّ: **لم يرنّ.** والجهازُ مسجَّلٌ
+     *  والمفتاحُ مضبوطٌ والمشروعُ متطابق — **ولا شيءَ في المنصّة يقول
+     *  أين وقفت الرسالة**، فبقي التخمينُ وحدَه.)
+     *
+     * **وإشعارٌ لا يصل لا يشتكي منه أحد**: السائقُ يظنّ أنّه لا طلبات،
+     * **والمكتبُ يظنّه كسولا.**
+     *
+     * **والجوابُ يُقرأ بترتيب**: أمُهيَّأٌ الخادم؟ ثمّ أثمّة جهازٌ
+     * مسجَّل؟ ثمّ أقبِلت الرسالة؟ — **وأوّلُ «لا» هو السبب.**
+     */
+    fun checkPush() {
+        if (state.busy) return
+        state = state.copy(busy = true, error = "", done = "")
+        viewModelScope.launch {
+            state = try {
+                val r = backend.devices.test()
+                val app = getApplication<Application>()
+                when {
+                    !r.configured -> state.copy(
+                        busy = false,
+                        error = app.getString(R.string.push_check_off),
+                    )
+                    r.devices == 0 -> state.copy(
+                        busy = false,
+                        error = app.getString(R.string.push_check_none),
+                    )
+                    r.fresh == 0 -> state.copy(
+                        busy = false,
+                        error = app.getString(R.string.push_check_stale),
+                    )
+                    r.error.isNotEmpty() -> state.copy(
+                        busy = false,
+                        error = app.getString(R.string.push_check_failed, r.error),
+                    )
+                    else -> state.copy(
+                        busy = false,
+                        done = app.getString(R.string.push_check_ok),
+                    )
+                }
+            } catch (e: Exception) {
+                state.copy(busy = false, error = describe(e))
+            }
+        }
+    }
+
     private fun describe(e: Exception): String = apiError(getApplication(), e)
 
     private companion object {
