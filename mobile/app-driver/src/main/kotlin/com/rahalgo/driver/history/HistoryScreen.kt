@@ -50,6 +50,7 @@ import com.rahalgo.driver.data.Refresh
 import com.rahalgo.driver.ui.money
 import com.rahalgo.shared.model.HistoryOrder
 import com.rahalgo.shared.model.ReportReason
+import com.rahalgo.shared.net.ApiClient
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -137,10 +138,7 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
                 )
             } catch (e: Exception) {
                 Log.e("RahalGo/سجل", "فشل البلاغ", e)
-                state.copy(
-                    busy = false,
-                    error = getApplication<Application>().getString(R.string.err_internal),
-                )
+                state.copy(busy = false, error = describe(e))
             }
         }
     }
@@ -160,11 +158,38 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
                 )
             } catch (e: Exception) {
                 Log.e("RahalGo/سجل", "فشل التقييم", e)
-                state = state.copy(
-                    busy = false,
-                    error = getApplication<Application>().getString(R.string.err_internal),
-                )
+                state = state.copy(busy = false, error = describe(e))
             }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والسببُ يُقال كما ردّه المحرّك**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (شكوى المالك ٢٠٢٦-٠٨-١٣: «البلاغات والتقييمات التي أرسلتُها لم
+    //  تصل للإدارة، ما هو السبب؟».)
+    //
+    // **وقد وصلت**: المحرّكُ ردّ `complaint_already_open` — أي أنّ
+    // بلاغَه الأوّلَ وصل، **والثاني رُدّ لأنّ الأوّلَ ما زال مفتوحا.**
+    //
+    // **والشاشةُ كانت تقول «تعذّر الاتّصال»** لأنّ كلَّ خطأٍ يُترجَم
+    // ترجمةً واحدة. **ورسالةٌ تكذب أسوأُ من رسالةٍ غامضة**: ظنّ أنّ
+    // شيئاً لم يصل، **وأعاد الإرسالَ مراراً وهو واصل.**
+    private fun describe(e: Exception): String {
+        val app = getApplication<Application>()
+        return when {
+            e is ApiClient.ApiException -> when (e.body.code) {
+                "complaint_already_open" -> app.getString(R.string.hist_already_open)
+                "already_rated" -> app.getString(R.string.hist_already_rated)
+                "not_your_order", "forbidden" -> app.getString(R.string.hist_not_yours)
+                "unauthorized", "invalid_refresh" -> app.getString(R.string.err_invalid_refresh)
+                "" -> app.getString(R.string.err_internal)
+                // **ورمزٌ لم يُترجَم يُعرض كما هو** — من رآه أبلغ عنه،
+                // **ومن ابتلعه ترك صاحبَه يظنّ العطبَ في يده.**
+                else -> e.body.code
+            }
+            else -> app.getString(R.string.err_network)
         }
     }
 

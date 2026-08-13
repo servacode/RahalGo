@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **ثلاثةُ خطوط** — من أيقونات Material (Apache 2.0).
+
+     (قرارُ المالك ٢٠٢٦-٠٨-١٣: «٣ خطوطٍ عائمة تفتح القائمة… أحسن من
+      «المزيد» ومن اسمٍ معيّن، فالكلّ يعرف أنّ لها معنىً واضحا».)
+
+     **ولا تحتاج اسماً**: من رآها في أيّ تطبيقٍ عرف ما تفتح — **وهي
+     أوضحُ من كلمةٍ تُقرأ.** -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M3,18h18v-2L3,16v2zM3,13h18v-2L3,11v2zM3,6v2h18L21,6L3,6z" />
+</vector>

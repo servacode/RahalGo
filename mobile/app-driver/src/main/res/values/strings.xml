@@ -395,6 +395,9 @@
     <string name="hist_report_send">أرسل البلاغ</string>
     <string name="hist_report_sent">وصل بلاغُك — ستتابعه العمليات</string>
     <string name="hist_reasons_error">تعذّر جلبُ الأسباب — ولا يُرسَل بلاغٌ بلا سبب</string>
+    <string name="hist_already_open">لك بلاغٌ مفتوحٌ على هذا الطلب — تتابعه العمليات</string>
+    <string name="hist_already_rated">قيّمتَ هذا المتجر عن هذا الطلب</string>
+    <string name="hist_not_yours">هذا الطلب ليس لك</string>
     <string name="hist_rate">قيّم المتجر</string>
     <string name="hist_rated">قيّمتَه</string>
     <string name="hist_rate_title">تقييمُ المتجر</string>
@@ -410,4 +413,20 @@
     <string name="reason_customer_address">عنوانٌ خاطئ</string>
     <string name="reason_customer_conduct">سوءُ تعاملٍ من الزبون</string>
     <string name="reason_other">سببٌ آخر</string>
+
+    <!-- ══ القائمة ══ -->
+    <string name="menu_open">القائمة</string>
+    <string name="menu_mine">ما يخصّني</string>
+    <string name="menu_platform">المنصّة</string>
+    <string name="menu_legal">القانونيّة</string>
+    <string name="menu_history">سجل الطلبات</string>
+    <string name="menu_chats">دردشاتي السابقة</string>
+    <string name="menu_rewards">الهدايا والمكافآت</string>
+    <string name="menu_tickets">الشكاوى والبلاغات</string>
+    <string name="menu_help">التعليمات</string>
+    <string name="menu_about">من نحن</string>
+    <string name="menu_contact">تواصل معنا</string>
+    <string name="menu_terms">شروط الاستخدام</string>
+    <string name="menu_privacy">سياسة الخصوصيّة</string>
+    <string name="menu_soon">هذا القسم لم يُملأ بعد</string>
 </resources>

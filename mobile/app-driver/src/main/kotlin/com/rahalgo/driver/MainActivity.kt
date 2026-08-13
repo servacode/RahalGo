@@ -1,6 +1,15 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import kotlinx.coroutines.launch
+import com.rahalgo.driver.menu.MenuStub
+import com.rahalgo.driver.menu.MenuItem
+import com.rahalgo.driver.menu.MenuDrawer
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import com.rahalgo.driver.history.HistoryViewModel
 import com.rahalgo.driver.history.HistoryScreen
 import com.rahalgo.driver.wallet.WalletViewModel
@@ -275,6 +284,12 @@ private fun SignedIn(onLogout: () -> Unit) {
     val ratingVm: RatingViewModel = viewModel()
     val walletVm: WalletViewModel = viewModel()
     val historyVm: HistoryViewModel = viewModel()
+    // **والقائمةُ درجٌ ينزلق** — لا شاشةٌ تغطّي: **من فتحها ليقرأ اسماً
+    // يرى ما تحتها فيعرف أنّه لم يغادر.**
+    val drawer = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    /** **البندُ المفتوحُ من القائمة** — وفارغٌ يعني لا شيء. */
+    var picked by rememberSaveable { mutableStateOf<MenuItem?>(null) }
     val context = LocalContext.current
 
     // ══════════════════════════════════════════════════════════════════
@@ -356,6 +371,17 @@ private fun SignedIn(onLogout: () -> Unit) {
         }
     }
 
+    ModalNavigationDrawer(
+        drawerState = drawer,
+        drawerContent = {
+            ModalDrawerSheet {
+                MenuDrawer(onPick = { item ->
+                    picked = item
+                    scope.launch { drawer.close() }
+                })
+            }
+        },
+    ) {
     Scaffold(
         // ══════════════════════════════════════════════════════════════
         // **ولا شريطَ علويًّا في الرحلة**
@@ -382,6 +408,7 @@ private fun SignedIn(onLogout: () -> Unit) {
                 onWallet = { wallet = true; account = false; rating = false },
                 onNotifications = home::openInbox,
                 onProfile = { account = true; rating = false; wallet = false },
+                onMenu = { scope.launch { drawer.open() } },
                 onRating = { rating = true; account = false; wallet = false },
             )
         },
@@ -526,6 +553,25 @@ private fun SignedIn(onLogout: () -> Unit) {
                 return@Box
             }
 
+            // ══════════════════════════════════════════════════════════
+            // **وبندُ القائمة يغطّي حتّى يُملأ**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «ضع الأقسام فارغةً بدون أيّ
+            //  شيء، ثمّ إذا اتّفقنا عليها نملأ الأقسام».)
+            //
+            // **والسجلُّ وحدَه مملوءٌ اليوم** — وهو مبنيٌّ فعلاً،
+            // **فيُفتح من القائمة أيضاً** لا يُبنى مرّتين.
+            picked?.let { item ->
+                BackHandler { picked = null }
+                if (item == MenuItem.History) {
+                    HistoryScreen(vm = historyVm)
+                } else {
+                    MenuStub(item)
+                }
+                return@Box
+            }
+
             when {
                 tab == 0 -> TripScreen(
                     state = orders.trip(LastPoint.value),
@@ -609,6 +655,7 @@ private fun SignedIn(onLogout: () -> Unit) {
                 )
             }
         }
+    }
     }
 }
 

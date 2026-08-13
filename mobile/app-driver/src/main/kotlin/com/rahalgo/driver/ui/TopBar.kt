@@ -66,6 +66,7 @@ fun TopBar(
     onNotifications: () -> Unit,
     onProfile: () -> Unit,
     onRating: () -> Unit,
+    onMenu: () -> Unit,
 ) {
     Row(
         Modifier
@@ -75,6 +76,32 @@ fun TopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // ══════════════════════════════════════════════════════════════
+        // **وثلاثةُ خطوطٍ تفتح القائمة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «٣ خطوطٍ عائمة تفتح القائمة… أحسن
+        //  من «المزيد» ومن اسمٍ معيّن، فالكلّ يعرف أنّ لها معنىً
+        //  واضحا».)
+        //
+        // **ولا تحتاج اسماً** — ومن رآها في أيّ تطبيقٍ عرف ما تفتح.
+        // **وهي أصوبُ من تبويبٍ خامس**: الشريطُ السفليُّ أربعةٌ الآن،
+        // وخامسٌ بأسماءٍ عربيّةٍ يضغطه حتّى تُقصّ الكلمات.
+        Box(
+            Modifier
+                .clip(CircleShape)
+                .clickable(onClick = onMenu)
+                .padding(6.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_menu),
+                contentDescription = stringResource(R.string.menu_open),
+                tint = InkMuted,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Spacer(Modifier.size(4.dp))
+
         // **والجرس أوّل ما يقع عليه الإبهام** — في جهة القراءة.
         Box(
             Modifier
