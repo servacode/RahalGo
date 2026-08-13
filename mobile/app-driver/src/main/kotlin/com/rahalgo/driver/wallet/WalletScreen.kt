@@ -536,6 +536,20 @@ private fun fmtWhen(iso: String): String {
 @Composable
 private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    // ══════════════════════════════════════════════════════════════════
+    // **ولا زرَّ رجوعٍ في القسم — زرُّ النظام يكفي**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «أيُّ قسمٍ نضغط عليه يجب أن يفتح هو،
+    //  ما يلزم كلَّ قسمٍ زرُّ رجوع».)
+    //
+    // **وإبهامُ من يستعمل أندرويد يعود بما تعوّد** — وزرٌّ في الشاشة
+    // يزاحم ما يلزم، **ويوهم أنّ للرجوع طريقاً واحدا.**
+    //
+    // **والمُلتقِطُ يبقى ضروريّا**: بلاه يُغلق زرُّ النظام المحفظةَ
+    // كلَّها **فيخرج من كشفه إلى تبويبٍ آخر** — والقصدُ أن يعود خطوةً
+    // لا خطوتين.
+    androidx.activity.compose.BackHandler(onBack = onBack)
     Column(
         Modifier
             .fillMaxSize()
@@ -568,7 +582,6 @@ private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -
                         vm.state.logo,
                     )
                 }) { Text(stringResource(R.string.wal_print)) }
-                OutlinedButton(onClick = onBack) { Text(stringResource(R.string.wal_back)) }
             }
         }
         Spacer(Modifier.height(12.dp))

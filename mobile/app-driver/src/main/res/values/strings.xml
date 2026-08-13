@@ -370,7 +370,6 @@
     <string name="sheet_thanks">شكراً لثقتك بـ%1$s — نسعد بخدمتك في كل مرّة</string>
     <string name="wal_print_failed">تعذّرت الطباعة على هذا الجهاز</string>
     <string name="wal_all">الكلّ</string>
-    <string name="wal_back">رجوع</string>
 
     <!-- ══ وحداتُ القياس — كانت مكتوبةً في الشيفرة ══ -->
     <string name="cash_of">%1$s من %2$s</string>

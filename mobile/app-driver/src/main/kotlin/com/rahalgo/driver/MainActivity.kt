@@ -1,6 +1,7 @@
 package com.rahalgo.driver
 
 import android.os.Bundle
+import androidx.compose.foundation.layout.width
 import kotlinx.coroutines.launch
 import com.rahalgo.driver.menu.MenuStub
 import com.rahalgo.driver.menu.MenuItem
@@ -374,7 +375,23 @@ private fun SignedIn(onLogout: () -> Unit) {
     ModalNavigationDrawer(
         drawerState = drawer,
         drawerContent = {
-            ModalDrawerSheet {
+            // ══════════════════════════════════════════════════════════
+            // **والدرجُ رفيعٌ لا عريض**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «وأنت مسوّيها عريضةً جدّاً،
+            //  خلّيها رفيعةً أفضل».)
+            //
+            // **وعرضُ `ModalDrawerSheet` الافتراضيُّ ٣٦٠** — وهو نحوُ
+            // ثلاثةِ أرباع شاشةِ الجهاز، **فيُغطّي ما تحته فيبدو
+            // شاشةً لا درجا.**
+            //
+            // **ودرجٌ يُرى ما خلفه يقول «أنت لم تغادر»** — فيُغلق
+            // بلمسةٍ على ما ظهر منه.
+            //
+            // **ومئتان وثمانون تسع أطولَ أسمائه** («دردشاتي السابقة»)
+            // بلا قصّ.
+            ModalDrawerSheet(Modifier.width(280.dp)) {
                 MenuDrawer(onPick = { item ->
                     picked = item
                     scope.launch { drawer.close() }
