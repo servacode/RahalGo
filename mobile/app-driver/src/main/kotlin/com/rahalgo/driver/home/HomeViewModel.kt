@@ -1,6 +1,7 @@
 package com.rahalgo.driver.home
 
 import android.app.Application
+import com.rahalgo.driver.data.apiError
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -201,26 +202,6 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
      * الشبكة تُسمّى شبكة وحدها، **وما عداها يُسمّى باسمه ويُكتب في
      * السجلّ.**
      */
-    private fun describe(e: Exception): String {
-        Log.e("RahalGo/home", "فشل نداء اللوحة", e)
-        val app = getApplication<Application>()
-        return when {
-            e is ApiClient.ApiException -> when (e.body.code) {
-                "unauthorized", "invalid_refresh" -> app.getString(R.string.err_invalid_refresh)
-                "user_blocked" -> app.getString(R.string.err_user_blocked)
-                "user_suspended" -> app.getString(R.string.err_user_suspended)
-                "forbidden" -> app.getString(R.string.err_not_driver)
-                // **ظهر خاما في التجربة ٢٠٢٦-٠٨-١٢** — والمفتاح بلا
-                // ترجمة يُعرض ليُعرف، لا ليُبتلع.
-                "has_active_orders" -> app.getString(R.string.err_has_active_orders)
-                "" -> app.getString(R.string.err_internal)
-                else -> e.body.code
-            }
-
-            e is IOException || e is HttpRequestTimeoutException ->
-                app.getString(R.string.err_network)
-
-            else -> app.getString(R.string.err_unexpected) + " (" + e.javaClass.simpleName + ")"
-        }
-    }
+    /** **الرمزُ بعربيّة** — من الخريطة المركزيّة (`data/ApiErrors.kt`). */
+    private fun describe(e: Exception): String = apiError(getApplication(), e)
 }

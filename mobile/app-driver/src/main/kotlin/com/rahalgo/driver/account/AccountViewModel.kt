@@ -1,6 +1,7 @@
 package com.rahalgo.driver.account
 
 import android.app.Application
+import com.rahalgo.driver.data.apiError
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -341,31 +342,8 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **ولا مفتاحُ آلةٍ يُعرض** — إلّا ما لا ترجمةَ له، فيُعرض ليُعرف. */
-    private fun describe(e: Exception): String {
-        Log.e("RahalGo/حساب", "فشل نداء الحساب", e)
-        val app = getApplication<Application>()
-        return when {
-            e is ApiClient.ApiException -> when (e.body.code) {
-                "unauthorized", "invalid_refresh" -> app.getString(R.string.err_invalid_refresh)
-                "wrong_password" -> app.getString(R.string.acc_wrong_password)
-                "weak_password" -> app.getString(R.string.acc_weak_password)
-                "otp_invalid", "invalid_code" -> app.getString(R.string.acc_bad_code)
-                "phone_taken", "phone_exists" -> app.getString(R.string.acc_phone_taken)
-                "invalid_phone", "bad_phone" -> app.getString(R.string.acc_phone_bad)
-                "whatsapp_required" -> app.getString(R.string.err_whatsapp_required)
-                "image_too_large", "image_dimensions" ->
-                    app.getString(R.string.acc_photo_too_large)
-                "invalid_image" -> app.getString(R.string.acc_photo_bad)
-                "upload_failed" -> app.getString(R.string.acc_photo_failed)
-                "has_active_orders" -> app.getString(R.string.err_has_active_orders)
-                "" -> app.getString(R.string.err_internal)
-                else -> e.body.code
-            }
-            e is HttpRequestTimeoutException || e is IOException ->
-                app.getString(R.string.err_network)
-            else -> app.getString(R.string.err_internal)
-        }
-    }
+    /** **الرمزُ بعربيّة** — من الخريطة المركزيّة (`data/ApiErrors.kt`). */
+    private fun describe(e: Exception): String = apiError(getApplication(), e)
 
     private companion object {
         /** **الضلعُ الأطول** — حدُّ الخادم نفسُه، فلا يُرسَل ما يُرمى. */

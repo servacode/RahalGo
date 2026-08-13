@@ -1,6 +1,7 @@
 package com.rahalgo.driver.login
 
 import android.app.Application
+import com.rahalgo.driver.data.apiError
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -345,22 +346,13 @@ class LoginViewModel(app: Application) : AndroidViewModel(app) {
      * **ومفتاح لا ترجمة له يُعرض رمزه** — فيُعرف ويُضاف، **بدل أن يُبتلع
      * في «حدث خطأ» فيبقى مجهولا.**
      */
-    private fun message(e: ApiClient.ApiException): String = when (e.body.code) {
-        "unauthorized", "invalid_credentials" -> str(R.string.err_unauthorized)
-        "validation" -> str(R.string.err_validation)
-        "user_blocked" -> str(R.string.err_user_blocked)
-        "user_suspended" -> str(R.string.err_user_suspended)
-        "rate_limited", "too_many_requests" -> str(R.string.err_rate_limited)
-        // **ورموز الاستعادة** — ظهرت خاما على الشاشة في أوّل تجربة حيّة
-        // (٢٠٢٦-٠٨-١١: `invalid_otp`)، **وهذا ما أراده التصميم**: مفتاح
-        // بلا ترجمة يُعرض ليُعرف ويُضاف، لا يُبتلع في «حدث خطأ».
-        "invalid_phone" -> str(R.string.err_invalid_phone)
-        "invalid_otp" -> str(R.string.err_invalid_otp)
-        "otp_send_failed" -> str(R.string.err_otp_send_failed)
-        "too_many_attempts" -> str(R.string.err_too_many_attempts)
-        "weak_password" -> str(R.string.err_weak_password)
-        "invalid_refresh" -> str(R.string.err_invalid_refresh)
-        "" -> str(R.string.err_internal)
-        else -> e.body.code
-    }
+    /**
+     * **الرمزُ بعربيّة** — من الخريطة المركزيّة (`data/ApiErrors.kt`).
+     *
+     * **وكانت هنا خريطةٌ ثانيةٌ بنصوصٍ ثانيةٍ للمعنى نفسِه**: «رقم
+     * الهاتف غير صحيح» هنا و«رقم غير صحيح» في الحساب، **ونصّان لمعنًى
+     * واحدٍ يفترقان يومَ يُصحَّح أحدُهما.**
+     */
+    private fun message(e: ApiClient.ApiException): String =
+        apiError(getApplication(), e)
 }

@@ -1,6 +1,7 @@
 package com.rahalgo.driver.wallet
 
 import android.app.Application
+import com.rahalgo.driver.data.apiError
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -220,21 +221,17 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         return "data:" + mime + ";base64," + b64
     }
 
-    private fun describe(e: Exception): String {
-        Log.e("RahalGo/محفظة", "فشل نداء المحفظة", e)
-        val app = getApplication<Application>()
-        return when {
-            e is ApiClient.ApiException -> when (e.body.code) {
-                "unauthorized", "invalid_refresh" -> app.getString(R.string.err_invalid_refresh)
-                "insufficient_balance" -> app.getString(R.string.wal_not_enough)
-                "payout_pending" -> app.getString(R.string.wal_pending_exists)
-                "validation" -> app.getString(R.string.wal_bad_amount)
-                "" -> app.getString(R.string.err_internal)
-                else -> e.body.code
-            }
-            else -> app.getString(R.string.err_network)
-        }
-    }
+    /**
+     * **الرمزُ بعربيّة** — من الخريطة المركزيّة.
+     *
+     * **و`validation` هنا «مبلغٌ غير صالح»** وفي غيرها «حقلٌ ناقص» —
+     * **رمزٌ عامٌّ يعني في شاشةٍ شيئاً وفي أخرى غيرَه**، فيُمرَّر وحدَه.
+     */
+    private fun describe(e: Exception): String = apiError(
+        getApplication(),
+        e,
+        mapOf("validation" to R.string.wal_bad_amount),
+    )
 }
 
 @Composable

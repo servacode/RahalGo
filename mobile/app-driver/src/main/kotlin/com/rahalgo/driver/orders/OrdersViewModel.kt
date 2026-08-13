@@ -1,6 +1,7 @@
 package com.rahalgo.driver.orders
 
 import android.app.Application
+import com.rahalgo.driver.data.apiError
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -793,30 +794,6 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * (رموز `driver_handlers.go`: `order_taken` · `not_on_shift` ·
      * `cash_limit_reached` · `too_many_active_orders`.)
      */
-    private fun describe(e: Exception): String {
-        Log.e("RahalGo/orders", "فشل نداء الطلبات", e)
-        val app = getApplication<Application>()
-        return when {
-            e is ApiClient.ApiException -> when (e.body.code) {
-                "order_taken" -> app.getString(R.string.err_order_taken)
-                "offer_not_yours" -> app.getString(R.string.err_offer_not_yours)
-                "not_on_shift" -> app.getString(R.string.err_not_on_shift)
-                "cash_limit_reached" -> app.getString(R.string.err_cash_limit)
-                "too_many_active_orders" -> app.getString(R.string.err_too_many_active)
-                "not_your_order" -> app.getString(R.string.err_not_your_order)
-                // **وصورة التسليم لم تُبنَ بعد** — والرسالة تقول ذلك
-                // صراحة، **لا «تعذّر»** يبحث صاحبه عن سببه في الشارع.
-                "delivery_proof_required" -> app.getString(R.string.err_proof_required)
-                "bad_fail_reason" -> app.getString(R.string.err_bad_fail_reason)
-                "unauthorized", "invalid_refresh" -> app.getString(R.string.err_invalid_refresh)
-                "" -> app.getString(R.string.err_internal)
-                else -> e.body.code
-            }
-
-            e is IOException || e is HttpRequestTimeoutException ->
-                app.getString(R.string.err_network)
-
-            else -> app.getString(R.string.err_unexpected) + " (" + e.javaClass.simpleName + ")"
-        }
-    }
+    /** **الرمزُ بعربيّة** — من الخريطة المركزيّة (`data/ApiErrors.kt`). */
+    private fun describe(e: Exception): String = apiError(getApplication(), e)
 }

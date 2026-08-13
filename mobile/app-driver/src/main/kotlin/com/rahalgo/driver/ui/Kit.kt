@@ -191,17 +191,19 @@ fun LoadState(loading: Boolean, error: String, onRetry: (() -> Unit)? = null) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        when {
-            error.isNotEmpty() -> {
-                Text(error, color = StateRed, textAlign = TextAlign.Center)
-                if (onRetry != null) {
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedButton(onClick = onRetry) {
-                        Text(stringResource(R.string.act_retry))
-                    }
+        if (error.isNotEmpty()) {
+            Text(error, color = StateRed, textAlign = TextAlign.Center)
+            if (onRetry != null) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = onRetry) {
+                    Text(stringResource(R.string.act_retry))
                 }
             }
-            loading -> CircularProgressIndicator()
+        } else {
+            // **ولا فراغَ بين الفتحة وبدء النداء** — كان يُشترط `loading`،
+            // **والرايةُ لا تُرفع إلّا بعد إطارٍ أو إطارين** فيرى فتّاحُ
+            // القسم بياضاً ثمّ دوّارة. **وومضةٌ بيضاءُ تُقرأ عطبا.**
+            CircularProgressIndicator()
         }
     }
 }

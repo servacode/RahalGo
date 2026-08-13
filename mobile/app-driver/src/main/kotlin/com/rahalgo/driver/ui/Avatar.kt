@@ -57,6 +57,13 @@ fun Avatar(url: String?, name: String, size: Int = 28) {
         bitmap = withContext(Dispatchers.IO) {
             runCatching {
                 URL(u).openStream().use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
+            }.onFailure {
+                // **وصورةٌ لا تصل تقول لماذا** — كانت تسقط إلى الحرف
+                // صامتةً، **فيُقرأ «لا صورةَ له» وهو قد رفعها.**
+                //
+                // **وفرقٌ بين حسابٍ بلا صورةٍ ورابطٍ لا يُفتح**: الأوّلُ
+                // حالٌ، **والثاني عطبٌ لا يُرى إلّا في سجلّ.**
+                android.util.Log.w("RahalGo/صورة", "تعذّر جلبُ الصورة: " + u, it)
             }.getOrNull()
         }
     }

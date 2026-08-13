@@ -1,6 +1,7 @@
 package com.rahalgo.driver.menu
 
 import android.app.Application
+import com.rahalgo.driver.data.apiError
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
+import com.rahalgo.driver.data.Refresh
 import com.rahalgo.shared.model.CashPage
 import com.rahalgo.shared.model.ChatThread
 import com.rahalgo.shared.model.ChatThreadRow
@@ -18,6 +20,7 @@ import com.rahalgo.shared.model.Platform
 import com.rahalgo.shared.model.Reputation
 import com.rahalgo.shared.model.SiteContact
 import com.rahalgo.shared.net.ApiClient
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -46,6 +49,30 @@ import kotlinx.coroutines.launch
 class SectionsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val backend = Backend.of(getApplication())
+
+    init {
+        // ══════════════════════════════════════════════════════════════
+        // **وما يتبدّل يُبطَل — لا يبقى محفوظاً إلى الأبد**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **من سلّم طلباً ثمّ فتح صندوقَه وجده كما كان** — والحركةُ وقعت.
+        // **ورقمٌ في المال يُعرض قديماً أسوأُ من رقمٍ لا يُعرض.**
+        //
+        // **ولا يُعاد الجلبُ هنا** — يُمحى المحفوظُ فحسب، **فيُجلب حين
+        // يُفتح القسم** لا وهو مطويّ: سائقٌ في رحلته لا يُنادى له سبعةُ
+        // نداءات.
+        //
+        // **ونصوصُ الصفحات تبقى** — شروطُ الاستخدام لا تتبدّل بتسليم طلب.
+        viewModelScope.launch {
+            Refresh.tick.drop(1).collect {
+                cash = null
+                me = null
+                incentives = null
+                reputation = null
+                chats = null
+            }
+        }
+    }
 
     /** **البندُ المعروضُ الآن** — ومنه يُعرف ما يُجلب. */
     var busy by mutableStateOf(false)
@@ -145,16 +172,6 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
      * **ومجهولُه يُعرض برمزه** لا يُبتلع: **من رآه أبلغ عنه**، ومن ابتلعه
      * ترك شاشةً صامتةً لا يُعرف سببُها.
      */
-    private fun describe(e: Exception): String {
-        Log.e("RahalGo/أقسام", "فشل نداء قسم", e)
-        val app = getApplication<Application>()
-        return when {
-            e is ApiClient.ApiException -> when (e.body.code) {
-                "unauthorized", "invalid_refresh" -> app.getString(R.string.err_invalid_refresh)
-                "", "internal" -> app.getString(R.string.err_internal)
-                else -> e.body.code
-            }
-            else -> app.getString(R.string.err_network)
-        }
-    }
+    /** **الرمزُ بعربيّة** — من الخريطة المركزيّة (`data/ApiErrors.kt`). */
+    private fun describe(e: Exception): String = apiError(getApplication(), e)
 }
