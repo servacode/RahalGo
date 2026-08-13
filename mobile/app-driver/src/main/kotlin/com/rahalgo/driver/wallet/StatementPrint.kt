@@ -47,8 +47,17 @@ object StatementPrint {
     private var keep: WebView? = null
 
     fun print(context: Context, name: String, st: WalletStatement, period: String) {
+        // **وجهازٌ بلا خدمة طباعةٍ يقول ذلك** — وضغطةٌ تُبتلَع بلا ردٍّ
+        // **تُقرأ عطبا**، فيعيدها ثلاثاً ثمّ يترك.
         val manager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
-            ?: return
+        if (manager == null) {
+            android.widget.Toast.makeText(
+                context,
+                context.getString(R.string.wal_print_failed),
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+            return
+        }
 
         val web = WebView(context)
         web.webViewClient = object : WebViewClient() {
