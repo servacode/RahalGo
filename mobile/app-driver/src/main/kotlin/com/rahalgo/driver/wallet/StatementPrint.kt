@@ -116,11 +116,11 @@ object StatementPrint {
             val cls = if (t.amount >= 0) "in" else "out"
             rows.append(
                 """<tr>
-                     <td class="num">${esc(t.createdAt.take(10))}</td>
+                     <td class="cell"><span class="n">${esc(t.createdAt.take(10))}</span></td>
                      <td>${esc(kindName(c, t.kind))}</td>
                      <td class="note">${esc(t.note.ifEmpty { t.orderNumber?.let { "#$it" } ?: "" })}</td>
-                     <td class="num $cls">$sign${esc(money(kotlin.math.abs(t.amount)))}</td>
-                     <td class="num">${esc(money(running))}</td>
+                     <td class="cell $cls">${amount(kotlin.math.abs(t.amount), sign)}</td>
+                     <td class="cell">${amount(running)}</td>
                    </tr>""",
             )
         }
@@ -172,11 +172,41 @@ object StatementPrint {
          border: 1px solid #E4E9EC; border-radius: 10px;
          padding: 10px 12px; margin-bottom: 14px; font-size: 12px; }
 
+  /* ══════════════════════════════════════════════════════════════
+     **ورأسُ العمود يحاذي ما تحته**
+     ══════════════════════════════════════════════════════════════
+
+     (شكوى المالك ٢٠٢٦-٠٨-١٣: «وفي عندك المحاذاة أيضاً مو مزبوطة
+      بالكشف والطباعة».)
+
+     **كانت الرؤوسُ كلُّها يميناً وخاناتُ المبالغ يسارا** — فيقع
+     «الحركة» فوق فراغٍ ورقمُه في الطرف الآخر، **والعينُ تمسح عموداً
+     فلا تجد رأسَه فوقه.**
+
+     **والويبُ يفعلها بـ`text-start` للنصّ و`text-end` للمبلغ** —
+     ورأسُ كلِّ عمودٍ بصنف عمودِه. */
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th { text-align: right; padding: 7px 5px; font-weight: normal;
+  th, td { padding: 7px 5px; }
+  th { text-align: right; font-weight: normal;
        color: #5A6B75; border-bottom: 2px solid #E4E9EC; font-size: 11px; }
-  td { text-align: right; padding: 7px 5px; border-bottom: 1px solid #F0F3F5; }
-  .num { direction: ltr; text-align: left; white-space: nowrap; }
+  td { text-align: right; border-bottom: 1px solid #F0F3F5; }
+  th.cell, td.cell { text-align: left; }
+  /* ══════════════════════════════════════════════════════════════
+     **واللفّةُ للرقم وحدَه — لا للمبلغ كلِّه**
+     ══════════════════════════════════════════════════════════════
+
+     (شكوى المالك ٢٠٢٦-٠٨-١٣: «في مشكلة ل.س ما إنك مصلّحها بالتطبيق
+      والكشف والطباعة».)
+
+     **وهي عائلةُ العطب نفسُها التي أُصلحت في الويب خمسَ مرّات**:
+     الرقمُ يُلَفّ بـ`ltr` لأنّ فاصلةَ الآلاف تقع بغير موضعها في نصٍّ
+     عربيّ، **فإذا وقع الرمزُ داخل اللفّة صار ترتيبُهما من اليسار** —
+     فتُقرأ «ل.س ٦٠٠».
+
+     **فالخانةُ تبقى عربيّةً** (`.cell`) **والرقمُ وحدَه يُلَفّ**
+     (`.n`). */
+  .cell { text-align: left; white-space: nowrap; }
+  .n { unicode-bidi: isolate; direction: ltr; }
   .note { color: #5A6B75; }
   .in { color: #1E9E5A; } .out { color: #D64545; }
 
@@ -216,8 +246,8 @@ object StatementPrint {
 </div>
 
 <div class="sum">
-  <span>${esc(c.getString(R.string.sheet_opening))}: <b>${esc(money(st.opening))}</b></span>
-  <span>${esc(c.getString(R.string.sheet_closing))}: <b>${esc(money(st.closing))}</b></span>
+  <span>${esc(c.getString(R.string.sheet_opening))}: <b>${amount(st.opening)}</b></span>
+  <span>${esc(c.getString(R.string.sheet_closing))}: <b>${amount(st.closing)}</b></span>
 </div>
 
 ${if (st.truncated) """<div class="warn">${esc(c.getString(R.string.sheet_truncated))}</div>""" else ""}
@@ -229,26 +259,26 @@ ${
             } else {
                 """<table>
   <thead><tr>
-    <th>${esc(c.getString(R.string.sheet_col_date))}</th>
+    <th class="cell">${esc(c.getString(R.string.sheet_col_date))}</th>
     <th>${esc(c.getString(R.string.sheet_col_kind))}</th>
     <th>${esc(c.getString(R.string.sheet_col_note))}</th>
-    <th>${esc(c.getString(R.string.sheet_col_amount))}</th>
-    <th>${esc(c.getString(R.string.sheet_col_running))}</th>
+    <th class="cell">${esc(c.getString(R.string.sheet_col_amount))}</th>
+    <th class="cell">${esc(c.getString(R.string.sheet_col_running))}</th>
   </tr></thead>
   <tbody>$rows</tbody>
   <tfoot>
     <tr>
       <td colspan="3">${esc(c.getString(R.string.sheet_total_in))}</td>
-      <td class="num in">${esc(money(totalIn))}</td><td></td>
+      <td class="cell in">${amount(totalIn)}</td><td></td>
     </tr>
     <tr>
       <td colspan="3">${esc(c.getString(R.string.sheet_total_out))}</td>
-      <td class="num out">${esc(money(totalOut))}</td><td></td>
+      <td class="cell out">${amount(totalOut)}</td><td></td>
     </tr>
     <tr>
       <td colspan="3">${esc(c.getString(R.string.sheet_net))}</td>
-      <td class="num">${esc(money(totalIn - totalOut))}</td>
-      <td class="num">${esc(money(st.closing))}</td>
+      <td class="cell">${amount(totalIn - totalOut)}</td>
+      <td class="cell">${amount(st.closing)}</td>
     </tr>
   </tfoot>
 </table>"""
@@ -275,6 +305,21 @@ ${
      */
     private fun esc(s: String): String = s
         .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    /**
+     * **مبلغٌ للورقة — الرقمُ ملفوفٌ والرمزُ خارجَه.**
+     *
+     * **ونظيرُ `Money` في الويب حرفيّا** (`money.tsx`): لفّةٌ للرقم
+     * وحدَه، **ويبقى ترتيبُه مع الرمز عربيّاً خارجَها.**
+     */
+    private fun amount(value: Long, sign: String = ""): String {
+        val text = money(value)
+        val i = text.lastIndexOf(' ')
+        if (i <= 0) return esc(text)
+        val digits = text.substring(0, i)
+        val symbol = text.substring(i + 1)
+        return """<span class="n">${esc(sign + digits)}</span> ${esc(symbol)}"""
+    }
 
     /** **اسمُ النوع بالعربيّة** — والمجهولُ بمفتاحه ليُعرف. */
     private fun kindName(c: Context, kind: String): String = when (kind) {
