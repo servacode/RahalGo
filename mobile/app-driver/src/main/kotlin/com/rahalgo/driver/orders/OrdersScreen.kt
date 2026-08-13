@@ -96,10 +96,13 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
             bottom = 28.dp,
         ),
     ) {
-        if (state.error.isNotEmpty()) {
+        // **وخطأُ الفعل يُقرأ كخطأ القراءة** — كلاهما يُقال في رأس
+        // الشاشة، **ولا يُمحى أحدُهما بنجاح الآخر.**
+        val shown = state.error.ifEmpty { state.actionError }
+        if (shown.isNotEmpty()) {
             item {
                 Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                    Text(state.error, color = Rahal.colors.accent)
+                    Text(shown, color = Rahal.colors.accent)
                     TextButton(onClick = actions.refresh) {
                         Text(stringResource(R.string.home_retry))
                     }
@@ -855,6 +858,26 @@ data class OrdersState(
     /** الطلب الذي يُقبل الآن — **وفارغ يعني لا شيء قيد القبول.** */
     val acceptingId: String? = null,
     val error: String = "",
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **خطأُ الفعل — لا يمحوه تحديثُ القائمة**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (كشفته دورةٌ حقيقيّةٌ على المحاكي ٢٠٢٦-٠٨-١٣.)
+     *
+     * **ضُغط «موافق» فرُدَّ بـ«معك طلبات بعدد حدّك» — ولم يظهر شيء.**
+     *
+     * **والسببُ أنّ القبولَ بعد فشله يُعيد قراءةَ القائمة** — عمداً:
+     * البطاقةُ قد تكون ذهبت لغيره. **والقراءةُ الناجحةُ تمسح `error`**،
+     * فيُكتب الخبرُ ويُمحى في أقلّ من ثانية.
+     *
+     * **وزرٌّ يُضغط فلا يقع شيءٌ ولا يُقال لماذا يُقرأ عطباً** — ثمّ
+     * يُعاد الضغطُ ويُعاد.
+     *
+     * **فحقلان لا واحد**: هذا لِما فشل من أفعاله، **وذاك لِما تعذّرت
+     * قراءتُه** — ولا يمحو أحدُهما الآخر.
+     */
+    val actionError: String = "",
 )
 
 data class OrdersActions(

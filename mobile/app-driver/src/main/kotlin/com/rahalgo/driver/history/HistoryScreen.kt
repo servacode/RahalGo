@@ -414,8 +414,16 @@ private fun Row(
             )
             // **وقيمةُ الطلب لا أجرتُه** — الأجرةُ في المحفظة مجموعةً،
             // **وهذه تقول ما حمله** فيتذكّره.
+            // **والخاصُّ قيمتُه ما اتُّفق عليه** — لا عمودُ المال:
+            // **المنصّةُ توثّق ولا تحاسب فيبقى صفراً**، وهو صحيحٌ في
+            // الدفتر **وكاذبٌ في عين صاحبه.**
+            val worth = if (o.total > 0) {
+                o.total
+            } else {
+                (o.customGoods ?: 0) + (o.customFee ?: 0)
+            }
             Text(
-                text = money(o.total),
+                text = money(worth),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )

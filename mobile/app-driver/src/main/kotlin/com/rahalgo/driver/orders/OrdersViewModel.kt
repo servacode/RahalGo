@@ -265,12 +265,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun accept(orderId: String) {
         if (state.acceptingId != null) return
-        state = state.copy(acceptingId = orderId, error = "")
+        state = state.copy(acceptingId = orderId, error = "", actionError = "")
         viewModelScope.launch {
             try {
                 backend.driver.accept(orderId)
             } catch (e: Exception) {
-                state = state.copy(acceptingId = null, error = describe(e))
+                state = state.copy(acceptingId = null, actionError = describe(e))
                 // **والقائمة تُعاد قراءتها حتّى بعد الرفض**: «سبقك غيره»
                 // يعني أنّ البطاقة لم تعد موجودة، **ومن أبقاها** جعله
                 // يضغطها ثانية.
@@ -293,7 +293,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun decline(orderId: String) {
         if (state.acceptingId != null) return
-        state = state.copy(acceptingId = orderId, error = "")
+        state = state.copy(acceptingId = orderId, error = "", actionError = "")
         viewModelScope.launch {
             try {
                 backend.driver.decline(orderId)
@@ -493,7 +493,23 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             pickup = order.navLat?.let { la -> order.navLng?.let { ln -> LatLng(la, ln) } },
             dropoff = LatLng(order.lat, order.lng),
             busy = detail.busy,
-            error = detail.error,
+            // ══════════════════════════════════════════════════════════
+            // **وخطأُ قبولِ العرض يصل الرحلةَ أيضاً**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (كشفته دورةٌ حقيقيّةٌ على المحاكي ٢٠٢٦-٠٨-١٣.)
+            //
+            // **ضُغط «موافق» في لافتة «طلبٌ على طريقك» فرُدَّ**
+            // بـ`too_many_active_orders` — **ولم يظهر شيء**: اللافتةُ
+            // تبقى، والزرُّ يُضغط ولا يقع فعلٌ ولا كلمة.
+            //
+            // **والسببُ أنّ القبولَ يكتب خطأه في حال القائمة**
+            // (`state.error`) **والرحلةُ تقرأ حال التفصيل وحدَه** —
+            // فيضيع بين حالين.
+            //
+            // **وزرٌّ يُضغط فلا يقع شيءٌ ولا يُقال لماذا يُقرأ عطباً في
+            // التطبيق** — ثمّ يُعاد الضغطُ ويُعاد.
+            error = detail.error.ifEmpty { state.actionError },
         )
     }
 

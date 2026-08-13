@@ -227,6 +227,9 @@ fun TripScreen(
                 OnRouteBanner(
                     offer = state.onRouteOffer,
                     busy = state.busy,
+                    // **وجوابُ الضغطة في اللافتة نفسِها** — لا في لوحٍ
+                    // مطويٍّ تحتها: **من ضغط ولم يقع شيءٌ يعيد الضغط.**
+                    error = state.error,
                     onTake = { actions.takeOffer(state.onRouteOffer.id) },
                     onDismiss = actions.dismissOffer,
                 )
@@ -962,6 +965,7 @@ private fun eta(meters: Double, avgSpeedKmh: Long): String =
 private fun OnRouteBanner(
     offer: DriverOrder,
     busy: Boolean,
+    error: String,
     onTake: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1042,6 +1046,24 @@ private fun OnRouteBanner(
                     contentColor = Color.White,
                 ),
             ) { Text(stringResource(R.string.order_decline)) }
+        }
+        // ══════════════════════════════════════════════════════════════
+        // **وجوابُ الضغطة تحتها مباشرة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (كشفته دورةٌ حقيقيّةٌ على المحاكي ٢٠٢٦-٠٨-١٣: ضُغط «موافق»
+        //  فرُدَّ بـ«معك طلبات بعدد حدّك» — **ولم يظهر شيء.**)
+        //
+        // **والخبرُ كان يُكتب في اللوح السفليّ وهو مطويّ** — فلا يُقرأ
+        // إلّا بسحبه. **وجوابٌ يحتاج بحثاً عنه ليس جوابا.**
+        if (error.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = error,
+                color = Color.White,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
