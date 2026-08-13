@@ -26,6 +26,8 @@ export default function DriverWalletPage() {
       payouts
       holderName={user?.full_name}
       holderPhone={user?.phone}
+      /* **بطاقاتٌ وحدَها** — لوحةُ السائق وتطبيقُه شيءٌ واحد. */
+      cardsOnly
     />
   );
 }

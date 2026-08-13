@@ -2037,3 +2037,130 @@ select:-webkit-autofill:focus {
     width: 100%;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   ١٠ · **جلدُ السائق — لوحةُ التطبيق نفسُها، لونًا بلون**
+   ══════════════════════════════════════════════════════════════════════
+
+   (قرارُ المالك ٢٠٢٦-٠٨-١٣: «يجب أن تكون نسخةُ الويب مطابقةً لنسخة
+    التطبيق بشكلٍ كامل، حتّى الثيمُ والستايلُ والألوان… بهذا نكون أغلقنا
+    قسمَ السائق على الويب والتطبيق معًا».)
+
+   # لماذا جلدٌ لا تبديلُ الأصل
+
+   **الموقعُ يخدم أربعةَ أدوار** — زبونٌ ومتجرٌ ومندوبٌ وإدارة. **وتبديلُ
+   التوكنز في جذرها يبدّل الأربعةَ معًا**، ولم يُطلب ذلك: **المطلوبُ أن
+   يجد السائقُ لوحتَه كتطبيقه.**
+
+   **فيُلبَس القسمُ جلدًا** — والتوكنز هي هي، **والقيمُ تحتها تتبدّل.**
+   فلا يُفتح مكوّنٌ واحدٌ ولا يُكتب لونٌ في شاشة.
+
+   # والقيمُ منقولةٌ من `design/Palette.kt` حرفًا بحرف
+
+   **ولا تُقارَب ولا تُخمَّن**: لونٌ يُقارَب هنا ويُقارَب هناك **يفترق في
+   الثالثة**، فيصير أزرقُ اللوحة غيرَ أزرق التطبيق بدرجة.
+
+   # وسمتان لا واحدة
+
+   **الفاتحةُ هي الأصل** — والغامقةُ حين يطلبها صاحبُها أو نظامُه.
+   ══════════════════════════════════════════════════════════════════════ */
+
+[data-skin="driver"] {
+  /* ── الفاتحة (LightPalette) ────────────────────────────────────── */
+  --color-page: #ffffff;
+  --color-paper: #ffffff;
+  --color-surface: #f5f7f8;
+  --color-raised: #f5f7f8;
+  --color-field: #eef1f3;
+  --color-line: #e3e8eb;
+  --color-shell: #ffffff;
+
+  --color-ink: #02678f;
+  --color-ink-muted: #5a6b75;
+  --color-disabled: #9db0ba;
+
+  --color-primary: #02678f;
+  --color-primary-dark: #01506f;
+  --color-primary-light: #e5f0f4;
+  --color-primary-strong: #01506f;
+  --color-primary-soft: #e5f0f4;
+  --color-on-solid: #ffffff;
+  --color-on-bright: #07283a;
+
+  --color-accent: #fe9501;
+  --color-accent-dark: #cc7700;
+  --color-accent-light: #fff4e5;
+  --color-accent-strong: #cc7700;
+  --color-accent-text: #a35f00;
+
+  --color-success: #1e9e5a;
+  --color-danger: #d64545;
+  --color-danger-solid: #d64545;
+  --color-warning: #fe9501;
+  --color-info: #02678f;
+  --color-violet: #02678f;
+  --color-pending: #fe9501;
+
+  /* **ولا تدرّجَ بنفسجيّ** — التطبيقُ لونان، وزرُّ الفعل فيه لونٌ واحد. */
+  --color-cta-start: #02678f;
+  --color-cta-end: #02678f;
+
+  --color-scrim: rgb(7 40 58 / 0.45);
+
+  /* **والظلُّ خفيفٌ على أرضٍ بيضاء** — ظلُّ الغامقة يُقرأ وسخًا عليها. */
+  --shadow-card: 0 1px 2px rgb(7 40 58 / 0.06), 0 2px 8px rgb(7 40 58 / 0.05);
+  --shadow-lift: 0 2px 4px rgb(7 40 58 / 0.08), 0 8px 20px rgb(7 40 58 / 0.10);
+  --drop-shadow-float: 0 4px 10px rgb(7 40 58 / 0.18);
+}
+
+/* ── الغامقة (DarkPalette) — بطلبِ صاحبها أو نظامِه ────────────────── */
+[data-skin="driver"][data-theme="dark"] {
+  --color-page: #07283a;
+  --color-paper: #0e3346;
+  --color-surface: #0e3346;
+  --color-raised: #154054;
+  --color-field: #154054;
+  --color-line: #1e5068;
+  --color-shell: #061f2d;
+
+  --color-ink: #e9f2f7;
+  --color-ink-muted: #9db4c0;
+  --color-disabled: #5b8ea3;
+
+  --color-primary: #4fb8e8;
+  --color-primary-dark: #7fcdf0;
+  --color-primary-light: #0e3346;
+  --color-primary-strong: #7fcdf0;
+  --color-primary-soft: #0e3346;
+  --color-on-solid: #04222f;
+  --color-on-bright: #04222f;
+
+  --color-accent: #ffa726;
+  --color-accent-dark: #ffc266;
+  --color-accent-light: #3a2a12;
+  --color-accent-strong: #ffc266;
+  --color-accent-text: #ffc266;
+
+  --color-success: #3ecb86;
+  --color-danger: #ff7070;
+  --color-danger-solid: #ff7070;
+  --color-warning: #ffa726;
+  --color-info: #4fb8e8;
+  --color-violet: #4fb8e8;
+  --color-pending: #ffa726;
+
+  --color-cta-start: #4fb8e8;
+  --color-cta-end: #4fb8e8;
+
+  --color-scrim: rgb(4 34 47 / 0.62);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.30), 0 2px 8px rgb(0 0 0 / 0.24);
+  --shadow-lift: 0 2px 6px rgb(0 0 0 / 0.34), 0 10px 24px rgb(0 0 0 / 0.30);
+  --drop-shadow-float: 0 4px 12px rgb(0 0 0 / 0.45);
+}
+
+/* **وأرضُ الصفحة تتبع الجلد** — والغلافُ يرسمها على `body`. */
+[data-skin="driver"] {
+  background: var(--color-page);
+  color: var(--color-ink);
+}

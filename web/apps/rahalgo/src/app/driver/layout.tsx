@@ -9,6 +9,8 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   DashboardChrome,
   MobileNav,
+  ThemeToggle,
+  useDriverSkin,
   MobileNavSpacer,
   type ChromeNavItem,
   IconOrder,
@@ -85,6 +87,16 @@ const NAV: ChromeNavItem[] = [
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
+  // ══════════════════════════════════════════════════════════════════
+  // **ولوحتُه كتطبيقه — لونًا بلون**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «يجب أن تكون نسخةُ الويب مطابقةً لنسخة
+  //  التطبيق بشكلٍ كامل، حتّى الثيمُ والستايلُ والألوان».)
+  //
+  // **والجلدُ على جذر الصفحة لا على حاويةٍ داخليّة** — النوافذُ تُرسم
+  // خارج الشجرة، **فجلدٌ داخليٌّ لا يصلها.**
+  const [theme, flipTheme] = useDriverSkin();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -115,6 +127,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         notificationsHref="/driver/notifications"
         phone={user?.phone}
         // التقييم يخصّ السائق مباشرةً — الزبون يقيّم توصيلته لا متجراً
+        topExtra={
+          <ThemeToggle theme={theme} onFlip={flipTheme} label={m.driver.themeToggle} />
+        }
         showRating
         ratingHref="/driver/reviews"
         ratingLabel={m.terms.myRating}

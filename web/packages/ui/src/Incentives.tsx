@@ -20,7 +20,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Money } from "./money";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtMoney } from "@rahalgo/i18n";
-import { PageContainer, PageHeader, StatGrid, StatCard, EmptyState, LoadingState } from "./layout";
+import { PageContainer, PageHeader, StatGrid, StatCard, EmptyState, LoadingState, ReloadState } from "./layout";
 import { Badge, Button } from "./components";
 import { IconStar, IconWallet, IconCheck, IconWarning } from "./icons";
 
@@ -96,7 +96,8 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
     }
   }, [data?.standing?.reached]);
 
-  if (error) return <p className="py-10 text-center text-danger">{error}</p>;
+  // **وخطأٌ بلا بابِ خروج يوقف صاحبَه** — فيُعرض معه زرُّ إعادة.
+  if (error) return <ReloadState onRetry={load} label={error} />;
   if (!data) return <LoadingState />;
 
   /* **وردٌّ ناقصُ `standing` يُبيّض الصفحة.**

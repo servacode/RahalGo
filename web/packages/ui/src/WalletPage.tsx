@@ -84,6 +84,7 @@ export function WalletPage({
   payouts = false,
   holderName,
   holderPhone,
+  cardsOnly = false,
 }: {
   api: ApiFn;
   /** نقطة كشف المحفظة — تختلف بالدور: `/api/v1/rep/wallet` أو `/api/v1/my/wallet` */
@@ -100,6 +101,23 @@ export function WalletPage({
   payouts?: boolean;
   holderName?: string;
   holderPhone?: string;
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **بطاقاتٌ وحدَها — بلا جدولٍ ولا مبدّل**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نلغي نظامَ الجداول من لوحة السائق
+   *  بشكلٍ كامل، نتركها تعمل بنظام الكروت».)
+   *
+   * # ولماذا للسائق وحدَه
+   *
+   * **لوحتُه وتطبيقُه شيءٌ واحد** — والتطبيقُ بطاقاتٌ لا جداول.
+   * **ومن فتح لوحتَه على الويب فوجد جدولاً ظنّه مكاناً آخر.**
+   *
+   * **والجدولُ يبقى للإدارة**: تقرأ مئةَ صفٍّ وتقارن أعمدةً،
+   * **والسائقُ يقرأ حركاتِه هو** — عشرين في الشهر.
+   */
+  cardsOnly?: boolean;
 }) {
   const [tab, setTab] = useState(ALL);
   const [asking, setAsking] = useState(false);
@@ -408,7 +426,7 @@ export function WalletPage({
         /* **ومبدّلُ العرض في ترويسة البطاقة.** بلاه يبقى الجدولُ بلا طريقٍ
            إلى البطاقات — **ومن يفتحها على جوّالٍ يقرأ جدولاً بأربعة أعمدةٍ في
            ثلاثمئةٍ وستّين.** (والتفضيلُ يُحفظ فلا يُعاد اختيارُه كلَّ زيارة.) */
-        actions={current !== STATEMENT ? <ViewToggle
+        actions={current !== STATEMENT && !cardsOnly ? <ViewToggle
               view={view}
               onChange={setView}
               tableLabel={m.common.viewTable}
@@ -474,7 +492,9 @@ export function WalletPage({
              الجدولَ مرّةً لا يُعيد اختيارَه كلَّ زيارة. */
           <DataView
             items={txs}
-            view={view}
+            // **وبطاقاتٌ حتماً لمن ألغى الجدول** — لا يُقرأ المحفوظ من
+            // زيارةٍ سابقة: **من فتح لوحتَه فوجد جدولاً ظنّه مكاناً آخر.**
+            view={cardsOnly ? "cards" : view}
             getKey={(tx) => String(tx.id)}
             empty={m.shared.txCard.empty}
             columns={txColumns}

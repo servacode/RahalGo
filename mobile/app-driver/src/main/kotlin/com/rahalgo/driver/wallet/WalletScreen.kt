@@ -1,6 +1,7 @@
 package com.rahalgo.driver.wallet
 
 import android.app.Application
+import com.rahalgo.driver.ui.LoadState
 import com.rahalgo.design.Rahal
 import com.rahalgo.driver.data.apiError
 import android.util.Log
@@ -236,17 +237,8 @@ fun WalletScreen(vm: WalletViewModel) {
     val s = vm.state
     val st = s.statement
     if (st == null) {
-        Column(
-            Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            if (s.error.isEmpty()) {
-                CircularProgressIndicator()
-            } else {
-                Text(s.error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
-            }
-        }
+        // **وإعادةُ التحميل بضغطة** — لا سطرٌ أحمرُ بلا مخرج.
+        LoadState(loading = s.error.isEmpty(), error = s.error, onRetry = vm::load)
         return
     }
 

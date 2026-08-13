@@ -1,6 +1,7 @@
 package com.rahalgo.driver.rating
 
 import android.app.Application
+import com.rahalgo.driver.ui.LoadState
 import com.rahalgo.design.Rahal
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
@@ -102,17 +103,13 @@ class RatingViewModel(app: Application) : AndroidViewModel(app) {
 fun RatingScreen(vm: RatingViewModel) {
     val rep = vm.state
     if (rep == null) {
-        Column(
-            Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            if (vm.error.isEmpty()) {
-                CircularProgressIndicator()
-            } else {
-                Text(vm.error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
-            }
-        }
+        // **وخطأٌ بلا بابِ خروج يوقف صاحبَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
+        // «ولا تنسَ صفحةَ إعادة التحميل بالتطبيق والويب للسائق»).
+        //
+        // **وكانت تقول الخطأَ وتصمت** — فيبقى ينظر إلى سطرٍ أحمرَ ولا
+        // يعرف أيُغلق التطبيقَ أم ينتظر. **والحالُ مركزيّةٌ الآن**
+        // (`ui/Kit.kt`) — نصٌّ واحدٌ وزرٌّ واحدٌ في كلّ شاشة.
+        LoadState(loading = vm.error.isEmpty(), error = vm.error, onRetry = vm::load)
         return
     }
 

@@ -8,7 +8,7 @@
 
 import { isValidElement, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
-import { CountBadge } from "./components";
+import { Button, CountBadge } from "./components";
 import { SkeletonList, SkeletonStats } from "./feedback";
 import { IconStar } from "./icons";
 import { BrandMark } from "./platform";
@@ -258,6 +258,44 @@ export function EmptyState({
  * **والشريطُ بلا نسبة**: زمنُ الإقلاع مجهول، **ورقمٌ يُعرض وهو لا يُعرف
  * كذبة.**
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **تعذّرت القراءة — وإعادةُ التحميل بضغطة**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٣: «ولا تنسَ صفحةَ إعادة التحميل بالتطبيق
+ *  والويب للسائق».)
+ *
+ * # ولماذا مركزيّة
+ *
+ * **كلُّ شاشةٍ كانت تتصرّف بمزاجها**: واحدةٌ تكتب سطرَ خطأٍ بلا زرّ،
+ * **وأخرى تبتلع الفشلَ وتعرض «لا محادثات»** — وهي أخطرُها: **من
+ * انقطعت شبكتُه يقرأ أنّه لا سجلَّ له.**
+ *
+ * **و«لم أصل» غيرُ «لا شيءَ هناك»** — والفرقُ بينهما ثقةُ صاحبها
+ * بالمنصّة.
+ *
+ * # وهي شقيقةُ `LoadState` في التطبيق
+ *
+ * **النصُّ نفسُه والزرُّ نفسُه** — فمن رآها في تطبيقه عرفها في لوحته.
+ */
+export function ReloadState({ onRetry, label }: { onRetry?: () => void; label?: string }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-3 py-16 text-center"
+      role="status"
+      aria-live="polite"
+    >
+      <p className="text-sm text-ink-muted">{label ?? m.errors.offline}</p>
+      {onRetry && (
+        <Button variant="secondary" onClick={onRetry}>
+          {m.common.retry}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function BootScreen({ label }: { label?: string }) {
   return (
     <main

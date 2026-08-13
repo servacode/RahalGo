@@ -27,6 +27,7 @@ import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
 import { Badge } from "./components";
 import { PageContainer, PageHeader, EmptyState, LoadingState } from "./layout";
 import { IconChat } from "./icons";
+import { ReloadState } from "./layout";
 import { OrderChat } from "./OrderChat";
 
 const m = getMessages(defaultLocale);
@@ -59,8 +60,18 @@ export function ChatArchive({
 }) {
   const [rows, setRows] = useState<Thread[] | null>(null);
   const [picked, setPicked] = useState<string>("");
+  /**
+   * **وفشلُ القراءة ليس «لا محادثاتِ لك».**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٣: «ولا تنسَ صفحةَ إعادة التحميل».)
+   *
+   * **كان الفشلُ يُبتلع فتُعرض قائمةٌ فارغة** — ومن انقطعت شبكتُه يقرأ
+   * أنّ أحاديثَه ذهبت. **وهي عائلةُ «لم أصل غيرُ لا شيء».**
+   */
+  const [failed, setFailed] = useState(false);
 
   const load = useCallback(() => {
+    setFailed(false);
     api<{ threads: Thread[] }>("/api/v1/my/chats")
       // **والمنتهيةُ وحدَها هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٠: «الدردشةُ
       // عندما تُغلق فقط تظهر بالدردشات السابقة، وليس عندما تكون مفتوحة»).
@@ -69,12 +80,12 @@ export function ChatArchive({
       // فيُقرأ مرّتين، **وشارةُ ما لم يُقرأ تنطفئ في أحدهما** فيظنّ صاحبُها
       // أنّه ردّ وهو لم يفعل.
       .then((r) => setRows((r?.threads ?? []).filter((t) => !t.open)))
-      // @empty-ok **قائمةٌ فارغةٌ حالٌ لا خطأ** — من لم يُحادث أحداً بعد.
-      .catch(() => setRows([]));
+      .catch(() => setFailed(true));
   }, [api]);
 
   useEffect(load, [load]);
 
+  if (failed) return <ReloadState onRetry={load} />;
   if (rows === null) return <LoadingState />;
 
   const body = (

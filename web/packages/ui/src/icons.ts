@@ -59,6 +59,11 @@ export {
   List as IconList,
   LayoutGrid as IconGrid,
   Bell as IconBell,
+  // **هلالٌ وشمس** — مبدّلُ سمة لوحة السائق، **والأيقونةُ تُظهر الوجهةَ
+  // لا الحال**: من رأى الهلالَ عرف أنّ الضغطةَ تُغمّق. (وهو نفسُ ما في
+  // التطبيق — `ic_theme.xml` و`ic_theme_light.xml`.)
+  Moon as IconMoon,
+  Sun as IconSun,
   ChevronDown as IconChevronDown,
   Link2 as IconLink,
   QrCode as IconQr,

@@ -101,6 +101,13 @@ export function DashboardChrome({
   shopUrl,
   shopLabel,
   showRating = false,
+  /**
+   * **زيادةٌ في الشريط العلويّ** — مبدّلُ السمة في لوحة السائق.
+   *
+   * **ولا يُبنى هنا**: الشريطُ مشتركٌ بين أربع لوحات، **وسمةٌ تُبدَّل
+   * في واحدةٍ منها شأنُها هي.**
+   */
+  topExtra,
   showBrand = true,
   ratingLabel,
   topbarStart,
@@ -124,6 +131,7 @@ export function DashboardChrome({
   shopUrl?: string;
   shopLabel?: string;
   showRating?: boolean;
+  topExtra?: ReactNode;
   /** **علامةُ المنصة في رأس السايدبار** — تُطفأ حيث لا تُفيد. (٢٠٢٦-٠٨-٠٨.) */
   showBrand?: boolean;
   /** تسمية شارة التقييم — تختلف بالدور (تقييمي للمتجر، تقييم متاجري للمندوب) */
@@ -424,7 +432,11 @@ export function DashboardChrome({
             onLogout={onLogout}
             logoutLabel={m.auth.logout}
             active={pathname}
+            /* **والزيادةُ قبل النجمة** — وهي أقربُ إلى طرف الشريط،
+               **حيث يقع إبهامُ من يمسك جوّالَه بيدٍ واحدة.** */
             extras={
+              <>
+                {topExtra}
               /* **والعضوُ يُحرَس كما يُحرَس الكائن.**
 
                  كان `rep && rep.rating.count` — **يسأل عن الكائن ويثق بعضوه.**
@@ -434,7 +446,7 @@ export function DashboardChrome({
                  (وقع فعلاً في فحصٍ بمتصفّح ٢٠٢٦-٠٨-٠٦.)
 
                  **وخسارةُ نجمةٍ في الشريط أهونُ من خسارة اللوحة.** */
-              showRating &&
+                {showRating &&
               rep?.rating &&
               rep.rating.count > 0 && (
                 <TopBarLink
@@ -448,7 +460,8 @@ export function DashboardChrome({
                   {rep.rating.trend === "up" && <IconTrendUp size={TOPBAR_ICON} className="text-success" />}
                   {rep.rating.trend === "down" && <IconTrendDown size={TOPBAR_ICON} className="text-danger" />}
                 </TopBarLink>
-              )
+              )}
+              </>
             }
           />
         </TopBar>

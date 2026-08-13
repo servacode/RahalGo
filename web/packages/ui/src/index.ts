@@ -78,6 +78,7 @@ export {
   EmptyState,
   LoadingState,
   BootScreen,
+  ReloadState,
   ListRow,
   StatGrid,
   StatCard,
@@ -164,3 +165,6 @@ export { BannerSlider, type SlideItem } from "./BannerSlider";
 /** شريطُ الأقسام — **صورٌ دائريّةٌ تمشي وحدَها وتُساق باليد.** */
 export { SectionRail, type RailItem } from "./SectionRail";
 export { FavoriteButton, useFavorites } from "./Favorites";
+
+// **جلدُ السائق وسمتُه** — لوحتُه كتطبيقه.
+export { useDriverSkin, ThemeToggle, type SkinTheme } from "./DriverSkin";
