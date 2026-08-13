@@ -163,7 +163,15 @@ var checks = []check{
 		query: `
 			SELECT number, total, wallet_paid, cash_due
 			FROM orders
-			WHERE status = 'delivered' AND wallet_paid + cash_due <> total`,
+			-- **والخاصُّ خارجَ السؤال** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
+			-- يُكتب إجماليُّه ليُقرأ).
+			--
+			-- **والمنصّةُ لا تحاسب فيه**: يدفع السائقُ من جيبه ويقبض
+			-- بيده، فلا مدفوعُ محفظةٍ ولا نقدٌ مستحقّ — وسؤالُ
+			-- «أيغطّي المدفوعُ المجموع؟» **يُسأل عن مالٍ مرَّ بالمنصّة**،
+			-- وهذا لم يمرّ بها.
+			WHERE status = 'delivered' AND kind <> 'custom'
+			  AND wallet_paid + cash_due <> total`,
 	},
 }
 
