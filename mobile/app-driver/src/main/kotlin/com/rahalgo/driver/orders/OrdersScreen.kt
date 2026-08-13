@@ -1,6 +1,8 @@
 package com.rahalgo.driver.orders
 
 import androidx.compose.foundation.background
+import com.rahalgo.driver.ui.minutes
+import com.rahalgo.driver.ui.dist
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -752,7 +754,7 @@ private fun legEta(meters: Double, avgSpeedKmh: Long): Long {
  * **و`%d` في ملفّ النصوص يُكتب بأرقام هنديّة** في لغة عربيّة، **فيقع
  * «١ دقيقة» بجانب «56 م»** في السطر نفسه.
  */
-private fun minutesText(mins: Long): String = "$mins دقيقة"
+private fun minutesText(mins: Long): String = minutes(mins)
 
 /**
  * **المدّة المتوقّعة للرحلة كلّها** — إليه ثمّ إلى الزبون.
@@ -769,12 +771,7 @@ private fun eta(toPickupM: Double, legM: Double, avgSpeedKmh: Long): Long {
  *
  * **والسائق يقدّر بالكيلومتر فوق الألف** — ورقم بأربع خانات يُقرأ مرّتين.
  */
-private fun distance(meters: Double): String {
-    val m = meters.toLong()
-    // **وبأرقام غربيّة** — `format` بلا لغة يكتب «١٫٠ كم» في جهاز
-    // عربيّ، **فيقع رقمان بخطّين في السطر نفسه.**
-    return if (m < 1000) "$m م" else "${"%.1f".format(java.util.Locale.US, m / 1000.0)} كم"
-}
+private fun distance(meters: Double): String = dist(meters)
 
 /**
  * **حال الطلب بالعربيّة.**

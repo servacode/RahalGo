@@ -31,7 +31,6 @@
     <string name="login_phone">رقم الهاتف</string>
     <string name="login_password">كلمة المرور</string>
     <string name="login_submit">دخول</string>
-    <string name="login_use_otp">الدخول برمز بدل كلمة المرور</string>
     <string name="login_welcome">أهلا %1$s</string>
 
     <!-- **رسائل الخطأ بمفاتيح المحرّك** — يرسل `message_key` لا نصا
@@ -94,11 +93,7 @@
     <!-- الطلبات -->
     <string name="nav_home">الرئيسية</string>
     <string name="nav_orders">الطلبات</string>
-    <string name="orders_offered">معروض عليك</string>
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
-    <string name="orders_shift_closed">ورديّتك مغلقة — لن يصلك أيّ طلب حتّى تفتحها</string>
-    <string name="order_to_pickup">إلى المتجر</string>
-    <string name="order_leg">المشوار</string>
     <string name="order_cash_due">تقبض نقداً</string>
     <string name="order_prepaid">مدفوع سلفاً</string>
     <string name="order_accept">خذ الطلب</string>
@@ -149,8 +144,6 @@
     <string name="loc_permission_title">فعّل الموقع</string>
     <string name="loc_permission_text">بدون الموقع لا تعرف كم يبعد المتجر، ولا يصلك أقرب طلب</string>
     <string name="loc_permission_button">فعّل الآن</string>
-    <string name="loc_background_hint">اختر «السماح طوال الوقت» ليبقى موقعك يُرسل والجوّال في جيبك</string>
-    <string name="loc_settings">افتح الإعدادات</string>
     <string name="err_has_active_orders">لا يمكن إنهاء الوردية ومعك طلبات لم تُسلَّم</string>
     <!-- لماذا لا تصلني طلبات -->
     <string name="why_shift_closed">ورديّتك مغلقة — افتحها من الرئيسية ليصلك أوّل طلب</string>
@@ -174,9 +167,7 @@
     <string name="trip_s_to_customer">إلى الزبون</string>
     <string name="trip_s_at_customer">وصلت الزبون</string>
     <string name="trip_s_delivered">سلّمت</string>
-    <string name="trip_remaining">ما بقي</string>
     <string name="trip_due_from">إجمالي المبلغ المطلوب من %1$s</string>
-    <string name="trip_sheet_toggle">اسحب للتفاصيل</string>
     <string name="trip_prepaid_note">مدفوع مسبقاً — لا تقبض شيئاً</string>
     <string name="leg_picked">استلمت الطلب</string>
     <string name="leg_way">في الطريق</string>
@@ -232,9 +223,6 @@
     <!-- بطاقة الطلب -->
     <string name="card_new_order">طلب جديد</string>
     <string name="card_custom">طلب خاصّ</string>
-    <string name="card_from_store">من المتجر</string>
-    <string name="card_to_customer">إلى الزبون</string>
-    <string name="card_to_store">إلى المتجر</string>
     <string name="card_fee">أجرة التوصيل</string>
     <string name="card_payment">الدفع</string>
     <string name="card_cash">عند التسليم</string>
@@ -242,8 +230,6 @@
     <string name="card_customer">الزبون</string>
     <string name="card_store_cd">متجر</string>
     <string name="card_eta">المدّة</string>
-    <string name="card_minutes">%1$d دقيقة</string>
-    <string name="card_waiting">طلب توصيل جديد بانتظار قبولك</string>
     <!-- الشريط العلويّ -->
     <string name="top_rating">تقييمك</string>
     <string name="top_rating_none">لا تقييم بعد</string>
@@ -255,16 +241,12 @@
     <string name="card_invoice_total">إجمالي الفاتورة</string>
 
     <!-- ══ شاشةُ الحساب ══ -->
-    <string name="acc_title">حسابي</string>
-    <string name="acc_identity">هويّتي</string>
-    <string name="acc_photo">الصورة</string>
     <string name="acc_photo_pick">اختر صورة</string>
     <string name="acc_photo_remove">إزالة الصورة</string>
     <string name="acc_photo_too_large">الصورة كبيرة — اختر صورة أصغر</string>
     <string name="acc_photo_bad">الملفّ ليس صورة</string>
     <string name="acc_photo_failed">تعذّر رفع الصورة — حاول بعد قليل</string>
     <string name="acc_name">الاسم الكامل</string>
-    <string name="acc_phone">رقم الهاتف</string>
     <string name="acc_phone_current">الرقم المسجَّل في حسابك</string>
     <string name="acc_phone_change">تبديل الرقم</string>
     <string name="acc_phone_new">الرقم الجديد</string>
@@ -315,11 +297,9 @@
     <string name="acc_delete_code">رمز التأكيد</string>
     <string name="acc_delete_confirm">احذف حسابي نهائيّاً</string>
     <string name="acc_delete_cancel">تراجع</string>
-    <string name="acc_deleted">حُذف حسابك</string>
     <string name="acc_bad_code">الرمز غير صحيح أو انتهى</string>
 
     <!-- ══ شاشةُ التقييم ══ -->
-    <string name="rate_title">تقييماتي</string>
     <string name="rate_avg">متوسط التقييم</string>
     <string name="rate_total">عدد التقييمات</string>
     <string name="rate_trend">الاتجاه</string>
@@ -327,14 +307,12 @@
     <string name="rate_trend_down">في انخفاض</string>
     <string name="rate_trend_flat">مستقرّ</string>
     <string name="rate_hint">ما قيّمه الزبائن وكتبوه عن خدمتك</string>
-    <string name="rate_recent">آخر ثلاثين يوماً: %1$s</string>
     <string name="rate_reviews">ما قاله الزبائن</string>
     <string name="rate_no_reviews">لا تقييمات بعد</string>
     <string name="rate_complaints">شكاوى عليك</string>
     <string name="rate_none_yet">لم تُقيَّم بعد — أوّل تقييم يصلك بعد أوّل تسليم</string>
 
     <!-- ══ المحفظة ══ -->
-    <string name="wal_title">محفظتي</string>
     <string name="wal_balance">الرصيد</string>
     <string name="wal_txs">الحركات</string>
     <string name="wal_no_txs">لا حركات بعد</string>
@@ -366,11 +344,15 @@
     <string name="wal_k_settlement">تسليم نقد</string>
 
     <string name="wal_statement">كشف حساب</string>
-    <string name="wal_period">من %1$s إلى %2$s</string>
     <string name="wal_opening">رصيد أوّل المدّة</string>
     <string name="wal_closing">رصيد آخر المدّة</string>
     <string name="wal_this_month">هذا الشهر</string>
     <string name="wal_prev_month">الشهر الماضي</string>
     <string name="wal_all">الكلّ</string>
     <string name="wal_back">رجوع</string>
+
+    <!-- ══ وحداتُ القياس — كانت مكتوبةً في الشيفرة ══ -->
+    <string name="cash_of">%1$s من %2$s</string>
+    <string name="err_photo_unreadable">تعذّرت قراءة الصورة</string>
+    <string name="map_region">الرقّة</string>
 </resources>

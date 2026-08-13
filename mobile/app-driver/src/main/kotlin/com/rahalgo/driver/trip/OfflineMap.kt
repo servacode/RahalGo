@@ -1,6 +1,7 @@
 package com.rahalgo.driver.trip
 
 import android.content.Context
+import com.rahalgo.driver.R
 import android.util.Log
 import com.rahalgo.driver.data.Backend
 import androidx.compose.runtime.getValue
@@ -176,7 +177,7 @@ object OfflineMap {
             definition,
             // **وبيانات المنطقة لا تُترك فارغة** — MapLibre يشترطها،
             // **ومنها يُعرف ما هذه المنطقة** يوم تصير مناطق.
-            "الرقّة".toByteArray(),
+            context.getString(R.string.map_region).toByteArray(),
             object : OfflineManager.CreateOfflineRegionCallback {
                 override fun onCreate(region: OfflineRegion) {
                     Log.i(TAG, "أُنشئت المنطقة — يبدأ التنزيل")

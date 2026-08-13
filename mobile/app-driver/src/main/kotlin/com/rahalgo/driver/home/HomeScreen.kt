@@ -189,7 +189,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             // وأرقامه لاتينيّة تُقرأ من اليسار، **والشرطة بينهما تنقلب
             // في العين** فلا يُعرف أيّ الرقمين الحدّ.
             value = if (me.cashLimit > 0) {
-                "${grouped(me.cashHeld)} من ${money(me.cashLimit)}"
+                stringResource(R.string.cash_of, grouped(me.cashHeld), money(me.cashLimit))
             } else {
                 money(me.cashHeld)
             },

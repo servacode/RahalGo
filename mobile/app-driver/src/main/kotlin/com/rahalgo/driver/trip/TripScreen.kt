@@ -1,6 +1,9 @@
 package com.rahalgo.driver.trip
 
 import androidx.compose.animation.AnimatedVisibility
+import com.rahalgo.driver.ui.etaText
+import com.rahalgo.driver.ui.minutesShort
+import com.rahalgo.driver.ui.dist
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -701,7 +704,7 @@ private fun TripPanel(state: TripState) {
                     // **والمدّة من المحرّك إن وُجدت** — محسوبةً بسرعات
                     // الشوارع نفسِها لا بسرعةٍ واحدةٍ في الإعدادات.
                     val minutes = if (state.routeSec >= 0) {
-                        ((state.routeSec / 60).toLong().coerceAtLeast(1)).toString() + " د"
+                        minutesShort((state.routeSec / 60).toLong().coerceAtLeast(1))
                     } else {
                         eta(meters, state.avgSpeedKmh).substringAfter("~")
                     }
@@ -857,12 +860,7 @@ private fun phaseLabel(step: TripStep): Int = when (step) {
 }
 
 /** المسافة بالمتر أو بالكيلومتر — **لا «1400 م».** */
-private fun distanceText(meters: Double): String {
-    val m = meters.toLong()
-    // **وبأرقام غربيّة** — `format` بلا لغة يكتب «١٫٠ كم» في جهاز
-    // عربيّ، **فيقع رقمان بخطّين في السطر نفسه.**
-    return if (m < 1000) "$m م" else "%.1f كم".format(java.util.Locale.US, m / 1000.0)
-}
+private fun distanceText(meters: Double): String = dist(meters)
 
 /**
  * **الوقت المتوقّع** — من المسافة وسرعة السائق.
@@ -872,11 +870,8 @@ private fun distanceText(meters: Double): String {
  *
  * **ودقيقة على الأقلّ** — «٠ دقيقة» لا تُقال لمن لم يصل بعد.
  */
-private fun eta(meters: Double, avgSpeedKmh: Long): String {
-    if (avgSpeedKmh <= 0 || meters < 0) return ""
-    val minutes = ((meters / 1000.0) / avgSpeedKmh * 60).toLong().coerceAtLeast(1)
-    return " · ~$minutes د"
-}
+private fun eta(meters: Double, avgSpeedKmh: Long): String =
+    etaText(meters, avgSpeedKmh)
 
 /**
  * **لافتة «طلب على طريقك».**

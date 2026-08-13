@@ -173,7 +173,9 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply {
                 inSampleSize = sample
             })
-        } ?: throw IOException("لا تُقرأ الصورة")
+        } ?: throw IOException(
+            getApplication<Application>().getString(R.string.err_photo_unreadable),
+        )
 
         val out = ByteArrayOutputStream()
         bmp.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
