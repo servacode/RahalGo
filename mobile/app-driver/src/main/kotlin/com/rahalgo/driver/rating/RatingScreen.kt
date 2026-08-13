@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -158,44 +161,99 @@ private fun Summary(rep: Reputation) {
         return
     }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter = painterResource(R.drawable.ic_star),
-            contentDescription = null,
-            tint = BrandOrange,
-            modifier = Modifier.size(28.dp),
-        )
-        Spacer(Modifier.size(8.dp))
-        Text(
-            text = "%.1f".format(java.util.Locale.US, rep.rating.avg),
-            color = BrandOrange,
-            style = MaterialTheme.typography.headlineMedium,
-        )
-        Spacer(Modifier.size(10.dp))
-        Text(
-            text = stringResource(R.string.rate_count, rep.rating.count),
-            color = InkMuted,
-        )
-    }
-
     // ══════════════════════════════════════════════════════════════════
-    // **ومتوسّطُ الشهر بجانب متوسّط الكلّ — والفرقُ هو الخبر**
+    // **ثلاثةُ مربّعاتٍ — كما في الويب حرفيّا**
     // ══════════════════════════════════════════════════════════════════
     //
-    // **من كان على ٤٫٨ في مئة تقييمٍ لا يُغيّره أسبوعٌ سيّئ** — فيبقى
-    // الرقمُ الكبيرُ ساكناً وهو ينزل فعلا. **ومتوسّطُ الثلاثين يوماً
-    // يقولها فورا.**
-    if (rep.rating.recentAvg > 0) {
-        Spacer(Modifier.height(8.dp))
-        val up = rep.rating.trend == "up"
-        val down = rep.rating.trend == "down"
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٣: «أنت ما كتبتَ مربّع عدد التقييمات
+    //  ومتوسّط التقييم وتقييمٌ مستقرٌّ أو ممتازٌ أو جيّدٌ أو منخفض —
+    //  لازم في حالاتٌ تلقائيّة».)
+    //
+    // **والأسماءُ من الويب نفسِها** — «متوسط التقييم» و«عدد التقييمات»
+    // و«الاتجاه»، **وثلاثُ حالاتٍ يحسبها المحرّك** بمقارنة متوسّط
+    // الثلاثين يوماً بمتوسّط الكلّ: في تحسّن · مستقرّ · في انخفاض.
+    //
+    // **والحسابُ في المحرّك لا هنا**: شاشتان تحسبان الاتّجاه بنفسيهما
+    // **تختلفان يومَ يتبدّل حدُّ المقارنة** — فيقرأ في هاتفه «مستقرّ»
+    // وفي لوحته «في انخفاض».
+    val trend = when (rep.rating.trend) {
+        "up" -> R.string.rate_trend_up
+        "down" -> R.string.rate_trend_down
+        else -> R.string.rate_trend_flat
+    }
+    val trendColor = when (rep.rating.trend) {
+        "up" -> StateGreen
+        "down" -> StateRed
+        else -> InkMuted
+    }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        StatBox(
+            label = stringResource(R.string.rate_avg),
+            value = "%.1f".format(java.util.Locale.US, rep.rating.avg),
+            color = BrandOrange,
+            modifier = Modifier.weight(1f),
+        )
+        StatBox(
+            label = stringResource(R.string.rate_total),
+            value = rep.rating.count.toString(),
+            modifier = Modifier.weight(1f),
+        )
+        StatBox(
+            label = stringResource(R.string.rate_trend),
+            value = stringResource(trend),
+            color = trendColor,
+            modifier = Modifier.weight(1f),
+        )
+    }
+    Spacer(Modifier.height(10.dp))
+    Text(
+        stringResource(R.string.rate_hint),
+        color = InkMuted,
+        style = MaterialTheme.typography.bodySmall,
+    )
+}
+
+/**
+ * **مربّعُ رقمٍ باسمه** — نظيرُ `StatCard` في الويب.
+ *
+ * **والاسمُ فوق الرقم لا تحته**: العينُ تمسح صفّاً من المربّعات
+ * **فتقرأ الأرقامَ على استقامةٍ واحدة**، والاسمُ يُقرأ حين يُسأل عنه.
+ *
+ * **والاتّجاهُ كلمةٌ لا رقم** — فيُصغَّر خطُّه ليقع في العرض نفسِه بلا
+ * أن يُقصّ.
+ */
+@Composable
+private fun StatBox(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    color: androidx.compose.ui.graphics.Color = com.rahalgo.design.InkDeep,
+) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(InkMuted.copy(alpha = 0.07f))
+            .padding(horizontal = 10.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
-            text = stringResource(
-                R.string.rate_recent,
-                "%.1f".format(java.util.Locale.US, rep.rating.recentAvg),
-            ),
-            color = if (up) StateGreen else if (down) StateRed else InkMuted,
-            style = MaterialTheme.typography.bodyMedium,
+            text = label,
+            color = InkMuted,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = value,
+            color = color,
+            style = if (value.length > 4) {
+                MaterialTheme.typography.titleSmall
+            } else {
+                MaterialTheme.typography.headlineSmall
+            },
+            textAlign = TextAlign.Center,
+            maxLines = 1,
         )
     }
 }

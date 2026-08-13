@@ -323,7 +323,13 @@
 
     <!-- ══ شاشةُ التقييم ══ -->
     <string name="rate_title">تقييماتي</string>
-    <string name="rate_count">من %1$d تقييماً</string>
+    <string name="rate_avg">متوسط التقييم</string>
+    <string name="rate_total">عدد التقييمات</string>
+    <string name="rate_trend">الاتجاه</string>
+    <string name="rate_trend_up">في تحسّن</string>
+    <string name="rate_trend_down">في انخفاض</string>
+    <string name="rate_trend_flat">مستقرّ</string>
+    <string name="rate_hint">ما قيّمه الزبائن وكتبوه عن خدمتك</string>
     <string name="rate_recent">آخر ثلاثين يوماً: %1$s</string>
     <string name="rate_reviews">ما قاله الزبائن</string>
     <string name="rate_no_reviews">لا تقييمات بعد</string>
