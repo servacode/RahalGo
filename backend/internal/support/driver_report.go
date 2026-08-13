@@ -126,10 +126,29 @@ func (s *Service) DriverReport(ctx context.Context, driverID, orderID, reason, n
 	// الشاشة. **فيُكتب ما لا يوجد في خانةٍ أخرى، ولا يُكرَّر ما يوجد.**
 	subject := "بلاغُ سائق"
 	var ticketID string
+	// ══════════════════════════════════════════════════════════════════
+	// **وعلى من هو — يُشتقّ من سببه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-١٣: «أنا كسائقٍ قمتُ بالإبلاغ على زبونٍ
+	//  ومتجر، ولكنّ البلاغَ تمّ فهمُه على أنّه ضدّي».)
+	//
+	// **وكان العمودُ يُترك فارغاً** — وفارغُه في `me/reputation` يعني
+	// «تُعرض للجميع»، **فيقرأ السائقُ بلاغَه هو في «الشكاوى عليك».**
+	//
+	// **ومن رفع بلاغاً فوجده شكوى عليه لا يرفع ثانياً** — وهو أسوأُ
+	// ما يقع بباب شكوى: **يُسكِت من فتحه ليتكلّم.**
+	//
+	// **والجهةُ معروفةٌ في الرمز نفسِه** (`DriverReportReasons`): أربعةٌ
+	// على المتجر وأربعةٌ على الزبون. **وكانت مكتوبةً ولا تُقرأ.**
+	//
+	// **و«سببٌ آخر» يبقى بلا جهة** — لا تُخمَّن على أحد.
+	against := s.againstDriverReport(ctx, orderID, reason)
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO tickets (customer_id, order_id, subject, reason, created_by, opened_by_customer)
-		VALUES ($1, $2, $3, $4, $5, false) RETURNING id`,
-		customerID, orderID, subject, reason, driverID).Scan(&ticketID)
+		INSERT INTO tickets (customer_id, order_id, subject, reason, created_by,
+		                     opened_by_customer, against_user_id)
+		VALUES ($1, $2, $3, $4, $5, false, $6) RETURNING id`,
+		customerID, orderID, subject, reason, driverID, against).Scan(&ticketID)
 	// **والفهرسُ الفريدُ هو من يمنع التكرار** — لا فحصٌ قبله يترك ثغرةً بينهما.
 	if err != nil && strings.Contains(err.Error(), "tickets_one_open_per_order") {
 		return nil, ErrComplaintOpen
@@ -159,4 +178,32 @@ func (s *Service) pastComplaintWindow(ctx context.Context, closedAt time.Time) (
 		}
 	}
 	return time.Since(closedAt) > time.Duration(hours)*time.Hour, nil
+}
+
+// againstDriverReport **على من هذا البلاغ** — من رمز سببه.
+//
+// **ونظيرُ `againstFor` للزبون** — وهما دالّتان لأنّ القائمتين مختلفتان:
+// **أسبابُ الزبون على السائق والمتجر، وأسبابُ السائق على المتجر
+// والزبون.**
+func (s *Service) againstDriverReport(ctx context.Context, orderID, reason string) *string {
+	var target string
+	for _, r := range DriverReportReasons {
+		if r.Code == reason {
+			target = r.Against
+			break
+		}
+	}
+	if target == "" {
+		return nil
+	}
+	q := `SELECT o.customer_id::text FROM orders o WHERE o.id = $1`
+	if target == AgainstMerchant {
+		q = `SELECT m.owner_user_id::text FROM orders o
+		     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1`
+	}
+	var id *string
+	if err := s.db.QueryRow(ctx, q, orderID).Scan(&id); err != nil {
+		return nil
+	}
+	return id
 }
