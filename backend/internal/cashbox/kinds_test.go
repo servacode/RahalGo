@@ -101,3 +101,50 @@ func dig(m map[string]any, path ...string) map[string]string {
 	}
 	return nil
 }
+
+// TestCashKindsHaveAppLabels **والتطبيقُ يسمّيها كما يسمّيها الموقع.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٣: «يجب أن توحّد الويبَ بنفس الطريقة المتّبعة
+//
+//	بالتطبيق… نفس النموذج والتسميات والشكل والأفعال والأسماء».)
+//
+// **وشاشةُ «صندوقي» بُنيت في التطبيق** فصار للنوع موضعان يُسمّى فيهما.
+// **والحارسُ الذي يحرس واحداً منهما يترك الآخر يشيخ** — فيُعرض
+// `order_collection` خامّاً على سائقٍ فتح التطبيق، **وهو عينُ ما وقع في
+// الموقع سنةَ ٢٠٢٦-٠٨-٠٧.**
+//
+// **والمفتاحُ في أندرويد `cash_k_<النوع>`** — اصطلاحٌ يُقرأ من الطرفين.
+func TestCashKindsHaveAppLabels(t *testing.T) {
+	src, err := os.ReadFile("cashbox.go")
+	if err != nil {
+		t.Fatalf("تعذّر قراءة cashbox.go: %v", err)
+	}
+	re := regexp.MustCompile(`apply\([^)]*?"([a-z_]+)"`)
+	found := map[string]bool{}
+	for _, mm := range re.FindAllStringSubmatch(string(src), -1) {
+		found[mm[1]] = true
+	}
+	if len(found) == 0 {
+		t.Fatal("لم أجد نوعاً واحداً في cashbox.go — تبدّل شكلُ النداء والحارسُ صار أعمى")
+	}
+
+	raw, err := os.ReadFile("../../../mobile/app-driver/src/main/res/values/strings.xml")
+	if err != nil {
+		t.Skipf("نصوصُ التطبيق غيرُ متاحة: %v", err)
+	}
+	text := string(raw)
+	for kind := range found {
+		key := "cash_k_" + kind
+		if !strings.Contains(text, `name="`+key+`"`) {
+			t.Errorf("النوع %q بلا نصٍّ في التطبيق (%s) — يُعرض خامّاً على السائق", kind, key)
+		}
+	}
+
+	// **والزائدُ يُقال كذلك** — مفتاحٌ لنوعٍ لا يكتبه المحرّك اسمٌ ميّت.
+	keyRe := regexp.MustCompile(`name="cash_k_([a-z_]+)"`)
+	for _, mm := range keyRe.FindAllStringSubmatch(text, -1) {
+		if !found[mm[1]] {
+			t.Errorf("التطبيقُ يسمّي %q ولا يكتبه المحرّك — اسمٌ ميّت", mm[1])
+		}
+	}
+}

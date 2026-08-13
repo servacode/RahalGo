@@ -1,6 +1,9 @@
 package com.rahalgo.driver.trip
 
 import androidx.compose.foundation.background
+import com.rahalgo.driver.ui.chatDay
+import com.rahalgo.driver.ui.ChatDayChip
+import com.rahalgo.driver.ui.ChatBubble
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -130,10 +133,10 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             itemsIndexed(ordered) { i, message ->
                 Column(Modifier.fillMaxWidth()) {
                     val older = ordered.getOrNull(i + 1)
-                    if (older == null || dayOf(older.createdAt) != dayOf(message.createdAt)) {
-                        DayChip(dayOf(message.createdAt))
+                    if (older == null || chatDay(older.createdAt) != chatDay(message.createdAt)) {
+                        ChatDayChip(chatDay(message.createdAt))
                     }
-                    Bubble(message)
+                    ChatBubble(message)
                 }
             }
         }
@@ -189,101 +192,12 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
     }
 }
 
-@Composable
-private fun Bubble(message: ChatMessage) {
-    val mine = message.mine
-    Box(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart,
-    ) {
-        Column(
-            Modifier
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (mine) BrandTeal else Color(0xFFF0F3F5))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.End,
-        ) {
-            Text(
-                text = message.body,
-                color = if (mine) Color.White else MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(2.dp))
-            // ══════════════════════════════════════════════════════════
-            // **وعلامةُ القراءة على ما كتبتُه أنا وحدَه**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (قرار المالك ٢٠٢٦-٠٨-١٢.)
-            //
-            // **ومن كتب ولا يدري أوصلت أم لا** يكتبها ثانيةً، أو يقف
-            // ينتظر جوابا **وصاحبُه لم يفتح الشاشة أصلا.**
-            //
-            // **وعلى رسائل الآخر لا معنى لها**: «قُرئت» على ما كتبه هو
-            // خبرٌ عنّي أنا، وأنا أراه الآن.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = timeOf(message.createdAt),
-                    color = if (mine) Color.White.copy(alpha = 0.75f) else InkMuted,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                if (mine) {
-                    Spacer(Modifier.size(5.dp))
-                    Text(
-                        text = if (message.readAt != null) "✓✓" else "✓",
-                        color = Color.White.copy(
-                            alpha = if (message.readAt != null) 1f else 0.55f,
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** **سطرُ اليوم** — يفصل ما كُتب أمس عمّا كُتب اليوم. */
-@Composable
-private fun DayChip(day: String) {
-    Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-        Text(
-            text = day,
-            color = InkMuted,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFFF0F3F5))
-                .padding(horizontal = 10.dp, vertical = 3.dp),
-        )
-    }
-}
-
-/**
- * **الساعة بتوقيت دمشق** — لا بتوقيت الجهاز.
- *
- * **وسائقٌ ضبط ساعتَه غلطا أو سافر** يقرأ أوقاتا لا تطابق ما تقرؤه
- * الإدارة، **وحُجّةٌ بساعتين مختلفتين ليست حجّة.**
- */
-private fun timeOf(iso: String): String = at(iso)?.format(HOUR).orEmpty()
-
-/** **اليوم** — «اليوم» و«أمس» ثمّ التاريخ. */
-@Composable
-private fun dayOf(iso: String): String {
-    val at = at(iso) ?: return ""
-    val today = java.time.LocalDate.now(DAMASCUS)
-    return when (at.toLocalDate()) {
-        today -> stringResource(R.string.chat_today)
-        today.minusDays(1) -> stringResource(R.string.chat_yesterday)
-        else -> at.format(DAY)
-    }
-}
-
-private val DAMASCUS: java.time.ZoneId = java.time.ZoneId.of("Asia/Damascus")
-private val HOUR = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
-private val DAY = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
-
-/** **ونصٌّ لا يُقرأ لا يُسقط الشاشة** — يُترك فارغا. */
-private fun at(iso: String): java.time.ZonedDateTime? = runCatching {
-    java.time.OffsetDateTime.parse(iso).atZoneSameInstant(DAMASCUS)
-}.getOrNull()
+// ══════════════════════════════════════════════════════════════════════
+// **والفقاعةُ وتاريخُها صارا مركزيّين** — `ui/ChatBubble.kt`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ولزمت «دردشاتي السابقة» الشكلَ نفسَه** — ونسخُها يعني حديثاً يُقرأ
+// بشكلين: **أزرقُ في الرحلة ورماديٌّ في السجلّ، والرسالةُ هي هي.**
 
 /** ما يعرضه الحديث — **ولا يملكه هو.** */
 data class ChatState(

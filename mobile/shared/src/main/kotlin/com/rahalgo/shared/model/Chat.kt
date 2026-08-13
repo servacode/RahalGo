@@ -43,8 +43,25 @@ data class ChatMessage(
 @Serializable
 data class ChatThreads(val threads: List<ChatThreadRow> = emptyList())
 
+/**
+ * **صفٌّ في قائمة محادثاتي.**
+ *
+ * **وكان يحمل حقلين** (المعرّفَ وعددَ ما لم يُقرأ) — يكفيان الشارةَ
+ * وحدَها. **وشاشةُ «دردشاتي السابقة» تعرض الصفَّ نفسَه** كما في الويب:
+ * رقمُ الطلب، ومن حادثتَه، وآخرُ ما قيل ومتى.
+ *
+ * **والمحرّكُ يرسلها كلَّها منذ اليوم الأوّل** — وكانت تُهمَل في القراءة.
+ */
 @Serializable
 data class ChatThreadRow(
     @SerialName("order_id") val orderId: String = "",
     val unread: Int = 0,
+    /** **رقمُ الطلب** — وهو ما يعرفه صاحبُه ويسأل به. */
+    val number: Long = 0,
+    /** **من حادثتَه** — اسمُ الطرف الآخر. */
+    val peer: String = "",
+    /** **أما زالت مفتوحة** — والمنتهيةُ وحدَها في «السابقة». */
+    val open: Boolean = true,
+    @SerialName("last_body") val lastBody: String = "",
+    @SerialName("last_at") val lastAt: String? = null,
 )

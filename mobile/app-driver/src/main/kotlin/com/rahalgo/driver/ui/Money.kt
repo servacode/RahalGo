@@ -82,3 +82,48 @@ fun etaText(meters: Double, avgSpeedKmh: Long): String {
     val mins = ((meters / 1000.0) / avgSpeedKmh * 60).toLong().coerceAtLeast(1)
     return " · ~" + minutesShort(mins)
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **والتاريخُ هنا أيضا — صيغةٌ واحدةٌ في كلّ كشف**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قاعدةُ المالك ٢٠٢٦-٠٨-١٣: «ركّز جيّداً على المركزيّة بكلّ شيء».)
+//
+// **وكانت `fmtWhen` مكتوبةً في المحفظة وحدَها** — ثمّ يحتاجها الصندوقُ
+// والمكافآتُ والدردشاتُ والشكاوى. **وخمسُ نسخٍ من قصِّ نصٍّ تفترق يومَ
+// يتبدّل شكلُ التاريخ في واحدةٍ منها.**
+
+/**
+ * **تاريخُ الحركة ووقتُها** — كما يقرؤها صاحبُها: «2026-08-13 · 03:12».
+ *
+ * **والمحرّكُ يرسله بصيغة ISO** — وهي صيغةُ آلةٍ لا تُعرض.
+ *
+ * **ويُقصّ بلا تحويل مناطق**: الطابعُ يحمل إزاحةَ دمشقَ أصلا، **وتحويلٌ
+ * ثانٍ يزيحها ساعتين** — فتُقرأ حركةُ الليل في اليوم التالي.
+ */
+fun whenText(iso: String): String {
+    if (iso.length < 16) return iso
+    return iso.substring(0, 10) + " · " + iso.substring(11, 16)
+}
+
+/** **الوقتُ وحدَه** — «03:12»، لِما يقع تحت عنوان يومٍ يقول تاريخَه. */
+fun timeText(iso: String): String =
+    if (iso.length < 16) iso else iso.substring(11, 16)
+
+/**
+ * **اسمُ اليوم** — «اليوم» و«أمس» ثمّ التاريخ.
+ *
+ * **ومن راجع ورديّتَه مساءً يريد أن يرى «اليوم» وحدَه** — وكشفٌ متّصلٌ
+ * من مئة سطرٍ لا يُراجَع. **وهو نصُّ شاشة الويب نفسُه.**
+ */
+fun dayText(iso: String): String {
+    val date = iso.take(10)
+    if (date.length < 10) return iso
+    val today = java.time.LocalDate.now()
+    val at = runCatching { java.time.LocalDate.parse(date) }.getOrNull() ?: return date
+    return when (java.time.temporal.ChronoUnit.DAYS.between(at, today)) {
+        in Long.MIN_VALUE..0L -> "اليوم"
+        1L -> "أمس"
+        else -> date
+    }
+}

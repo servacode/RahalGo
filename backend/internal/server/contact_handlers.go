@@ -38,12 +38,28 @@ func (s *Server) handlePublicContact(w http.ResponseWriter, r *http.Request) {
 		//
 		// **ويعود إن سُجّلت شركةٌ باسمٍ آخر** — سطرٌ واحدٌ يومَها.
 		"legal_name": s.settings.GetString(ctx, "platform.name"),
-		// **ونصوصُ الصفحات الثلاث** — وفارغُها يعني «خذ من المعجم».
-		// (طلبُ المالك 2026-08-09: صفحاتٌ ديناميّةٌ تُحرَّر من اللوحة.)
-		"help_text":     s.settings.GetString(ctx, "page.help_text"),
-		"terms_text":    s.settings.GetString(ctx, "page.terms_text"),
-		"privacy_text":  s.settings.GetString(ctx, "page.privacy_text"),
-		"support_phone": s.settings.GetString(ctx, "platform.support_phone"),
-		"address":       s.settings.GetString(ctx, "platform.address"),
+		// ══════════════════════════════════════════════════════════════
+		// **ونصوصُ الصفحات — كاملةً لا فارغةً**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// (طلبُ المالك 2026-08-09: صفحاتٌ ديناميّةٌ تُحرَّر من اللوحة ·
+		//  وقرارُه 2026-08-13: «التطبيقُ والويبُ نفسُ النموذج».)
+		//
+		// **كانت تُردّ فارغةً ما لم تُحرَّر، والويبُ يعوّضها من معجمه.**
+		// **وذلك تعويضٌ لا يصل إلى التطبيق** — فيقرأ سائقٌ شروطاً بيضاء.
+		//
+		// **والافتراضُ صار في المحرّك** (`settings/pagetext.go`)، فيردّ
+		// **النصَّ النافذ**: المحرَّرَ إن حُرِّر، **وإلّا الأصل.**
+		"help_text":    s.settings.GetString(ctx, "page.help_text"),
+		"terms_text":   s.settings.GetString(ctx, "page.terms_text"),
+		"privacy_text": s.settings.GetString(ctx, "page.privacy_text"),
+		// **ومن نحن** — لا صفحةَ لها في الويب بعد، **ولها بابٌ في
+		// التطبيق** (شرطُ غوغل بلاي: من يقف خلف التطبيق يُعرَف).
+		"about_text": s.settings.GetString(ctx, "page.about_text"),
+		// **وتعليماتُ السائق** — غيرُ تعليمات الزبون: تلك «كيف أطلب؟»،
+		// **وهذه «كيف أبدأ ورديّتي؟».**
+		"driver_help_text": s.settings.GetString(ctx, "page.driver_help_text"),
+		"support_phone":    s.settings.GetString(ctx, "platform.support_phone"),
+		"address":          s.settings.GetString(ctx, "platform.address"),
 	})
 }

@@ -535,12 +535,22 @@ var Catalog = []Def{
 	// ── نصوصُ الصفحات ──────────────────────────────────────────────────
 	//
 	// **تُبدَّل من اللوحة بلا نشر** — وفارغُها يعرض نصَّ المعجم.
+	// **والافتراضُ نصٌّ لا فراغ** — انظر `pagetext.go`.
+	//
+	// **وكان فارغاً والويبُ يعوّضه من معجمه** — يقرؤه المتصفّحُ ولا يصل
+	// إليه التطبيق. **فمن قرأ الشروطَ في التطبيق كان يقرأ فراغاً.**
 	{Key: "page.help_text", Group: GroupSite, Section: "page.help", Kind: KindLongText,
-		Default: ""},
+		Default: DefaultHelp},
 	{Key: "page.terms_text", Group: GroupSite, Section: "page.terms", Kind: KindLongText,
-		Default: ""},
+		Default: DefaultTerms},
 	{Key: "page.privacy_text", Group: GroupSite, Section: "page.privacy", Kind: KindLongText,
-		Default: ""},
+		Default: DefaultPrivacy},
+	// **ومن نحن** — (طلبُ المالك ٢٠٢٦-٠٨-١٣، لرفعه على غوغل بلاي).
+	{Key: "page.about_text", Group: GroupSite, Section: "page.about", Kind: KindLongText,
+		Default: DefaultAbout},
+	// **وتعليماتُ السائق غيرُ تعليمات الزبون** — وهذه دورتُه التشغيليّة.
+	{Key: "page.driver_help_text", Group: GroupSite, Section: "page.driver_help", Kind: KindLongText,
+		Default: DefaultDriverHelp},
 
 	{Key: "shop.banner_auto", Group: GroupSite, Section: "page.shop", Kind: KindBool,
 		Default: true},

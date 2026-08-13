@@ -6,7 +6,8 @@ import com.rahalgo.driver.nav.rememberOverlay
 import com.rahalgo.driver.nav.Overlay
 import androidx.compose.foundation.layout.width
 import kotlinx.coroutines.launch
-import com.rahalgo.driver.menu.MenuStub
+import com.rahalgo.driver.menu.MenuScreen
+import com.rahalgo.driver.menu.SectionsViewModel
 import com.rahalgo.driver.menu.MenuItem
 import com.rahalgo.driver.menu.MenuDrawer
 import androidx.compose.runtime.rememberCoroutineScope
@@ -290,6 +291,7 @@ private fun SignedIn(onLogout: () -> Unit) {
     val ratingVm: RatingViewModel = viewModel()
     val walletVm: WalletViewModel = viewModel()
     val historyVm: HistoryViewModel = viewModel()
+    val sectionsVm: SectionsViewModel = viewModel()
     // **والقائمةُ درجٌ ينزلق** — لا شاشةٌ تغطّي: **من فتحها ليقرأ اسماً
     // يرى ما تحتها فيعرف أنّه لم يغادر.**
     val drawer = rememberDrawerState(DrawerValue.Closed)
@@ -613,7 +615,7 @@ private fun SignedIn(onLogout: () -> Unit) {
                         if (over.item == MenuItem.History) {
                             HistoryScreen(vm = historyVm)
                         } else {
-                            MenuStub(over.item)
+                            MenuScreen(vm = sectionsVm, item = over.item)
                         }
                     Overlay.None -> Unit
                 }

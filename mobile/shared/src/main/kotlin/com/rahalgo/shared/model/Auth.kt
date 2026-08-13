@@ -97,4 +97,24 @@ data class Platform(
     @SerialName("otp_login") val otpLogin: Boolean = true,
     @SerialName("password_min_length") val passwordMinLength: Int = 8,
     @SerialName("support_phone") val supportPhone: String = "",
+    /**
+     * **عنوانُ المكتب وموقعُه وحساباتُه** — لشاشة «تواصل معنا».
+     *
+     * **والمحرّكُ يرسلها منذ اليوم الأوّل** (`public/platform`) — وكانت
+     * تُهمَل هنا. **ولا يُكتب رقمُ الدعم في الشيفرة** (قاعدةُ المالك):
+     * يبدّله من لوحته فتتبدّل الشاشة.
+     */
+    val address: String = "",
+    /** **إحداثيّاتُ المكتب** — نصّاً كما تُحفظ (`lat,lng`). */
+    val location: String = "",
+    val social: Social = Social(),
+)
+
+/** **حساباتُ المنصّة** — وفارغُها لا يُعرض: أيقونةٌ لا تفتح شيئاً عطب. */
+@Serializable
+data class Social(
+    val facebook: String = "",
+    val instagram: String = "",
+    val telegram: String = "",
+    val whatsapp: String = "",
 )

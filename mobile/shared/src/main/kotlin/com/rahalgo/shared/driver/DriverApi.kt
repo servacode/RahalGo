@@ -1,5 +1,6 @@
 package com.rahalgo.shared.driver
 
+import com.rahalgo.shared.model.CashPage
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.HistoryPage
 import com.rahalgo.shared.model.MerchantRatingInput
@@ -36,6 +37,17 @@ class DriverApi(private val api: ApiClient) {
      * شاشةُ الويب.)
      */
     suspend fun history(): HistoryPage = api.call("/api/v1/driver/orders/history")
+
+    /**
+     * **كشفُ صندوقه** — النقدُ الذي قبضه وما سلّمه.
+     *
+     * (`GET /api/v1/driver/cash` — نداءُ شاشة الويب نفسُه.)
+     *
+     * **ومالٌ في ذمّة إنسانٍ بلا كشفٍ يقرؤه خلافٌ ينتظر**: يقول
+     * «سلّمتُ» وتقول المنصّةُ «لم يصل»، **ولا ورقةَ بينهما.**
+     */
+    suspend fun cash(page: Int = 1): CashPage =
+        api.call("/api/v1/driver/cash?page=" + page)
 
     /** **أسبابُ البلاغ** — من الخادم لا من التطبيق. */
     suspend fun reportReasons(): ReportReasons =

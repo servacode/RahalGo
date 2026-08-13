@@ -1,6 +1,7 @@
 package com.rahalgo.driver.menu
 
 import androidx.compose.foundation.background
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -201,16 +202,32 @@ enum class MenuItem(val group: Int, val label: Int, val icon: Int) {
     Privacy(R.string.menu_legal, R.string.menu_privacy, R.drawable.ic_lock),
 }
 
-/** **شاشةُ بندٍ لم يُملأ بعد** — تقول ذلك ولا تُوهم بعطب. */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **شاشةُ البند — كلُّ بندٍ يفتح ما يخصّه**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (أمرُ المالك ٢٠٢٦-٠٨-١٣: «ابدأ بملء الأقسام من الويب».)
+ *
+ * **وكانت تقول «هذا القسم لم يُملأ بعد»** — وهو أصدقُ من شاشةٍ بيضاء،
+ * **ولا يبقى منه شيءٌ الآن.** فمن فتح بنداً وجد فيه ما وعده اسمُه.
+ *
+ * **والسجلُّ مبنيٌّ قبلها** فيُمرَّر كما هو — ولا يُبنى مرّتين.
+ */
 @Composable
-fun MenuStub(item: MenuItem) {
-    Column(
-        Modifier.fillMaxSize().background(Color.Transparent),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(stringResource(item.label), style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-        Text(stringResource(R.string.menu_soon), color = InkMuted)
+fun MenuScreen(vm: SectionsViewModel, item: MenuItem) {
+    // **ويُجلب ما يخصُّ هذا البندَ وحدَه** — عند فتحه لا عند إقلاع
+    // التطبيق. **وسبعةُ نداءاتٍ لسبعة أقسامٍ لا يُفتح منها واحد**
+    // تستنزف حزمةَ سائقٍ في الشارع.
+    LaunchedEffect(item) { vm.open(item) }
+    when (item) {
+        MenuItem.Cash -> CashScreen(vm)
+        MenuItem.Chats -> ChatsScreen(vm)
+        MenuItem.Rewards -> IncentivesScreen(vm)
+        MenuItem.Tickets -> ComplaintsScreen(vm)
+        MenuItem.Contact -> ContactScreen(vm)
+        MenuItem.Help, MenuItem.About, MenuItem.Terms, MenuItem.Privacy -> PageScreen(vm, item)
+        // **والسجلُّ يُعرَض من نموذجه هو** — تُمرّره الشاشةُ الأمّ.
+        MenuItem.History -> Unit
     }
 }

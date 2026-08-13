@@ -2,6 +2,7 @@ package com.rahalgo.shared.auth
 
 import com.rahalgo.shared.model.AuthResult
 import com.rahalgo.shared.model.Platform
+import com.rahalgo.shared.model.SiteContact
 import com.rahalgo.shared.model.User
 import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
@@ -93,6 +94,19 @@ class AuthApi(private val api: ApiClient) {
 
     /** حال المنصّة — **يُنادى قبل رسم شاشة الدخول.** */
     suspend fun platform(): Platform = api.raw("/api/v1/public/platform")
+
+    /**
+     * **هويّةُ المنصّة ونصوصُ صفحاتها** — التعليماتُ ومن نحن والشروطُ
+     * والخصوصيّة.
+     *
+     * (`GET /api/v1/public/contact` — النداءُ الذي تقرؤه صفحاتُ الويب
+     * القانونيّة.)
+     *
+     * **وعامّةٌ لا محميّة**: من يُسأل أن يوافق على الشروط يقرؤها قبل أن
+     * يدخل، **ووثيقةٌ لا تُقرأ إلّا بعد التسجيل يُوافَق عليها بلا
+     * قراءة.**
+     */
+    suspend fun contact(): SiteContact = api.raw("/api/v1/public/contact")
 
     /** خروج — **يُبطل الجلسة في المحرّك لا في الجهاز وحده.** */
     suspend fun logout(refreshToken: String) {

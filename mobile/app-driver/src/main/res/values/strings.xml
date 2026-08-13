@@ -430,5 +430,66 @@
     <string name="menu_contact">تواصل معنا</string>
     <string name="menu_terms">شروط الاستخدام</string>
     <string name="menu_privacy">سياسة الخصوصيّة</string>
-    <string name="menu_soon">هذا القسم لم يُملأ بعد</string>
+    <!-- ══ أقسامُ القائمة — نصوصُها ══ -->
+    <string name="act_retry">أعد المحاولة</string>
+
+    <!-- صندوقي — النصوصُ نفسُها التي في شاشة الويب -->
+    <string name="cash_hint">النقدُ الذي قبضتَه ولم تُسلّمه بعد</string>
+    <string name="cash_held">في ذمّتي الآن</string>
+    <string name="cash_limit">السقف</string>
+    <string name="cash_left">يبقى قبل السقف</string>
+    <string name="cash_over">تجاوزتَ السقف بـ</string>
+    <string name="cash_near">اقتربتَ من السقف — سلّم النقد قبل أن يتوقّف الطابور عنك</string>
+    <string name="cash_full">بلغتَ السقف — لا تُقبل طلباتٌ نقديّة حتّى تُسلّم</string>
+    <string name="cash_empty">لا حركات بعد</string>
+    <string name="cash_more">عُرض %1$s من %2$s حركة</string>
+    <string name="cash_k_order_collection">قبضتُ من زبون</string>
+    <string name="cash_k_settlement">سلّمتُ للمنصّة</string>
+
+    <!-- أهدافي والمكافآت -->
+    <string name="inc_hint">ما أنجزتَه هذا الشهر، وما نلتَه عليه</string>
+    <string name="inc_target">هدفُ الشهر</string>
+    <string name="inc_reached">بلغتَ الهدف</string>
+    <string name="inc_left">يبقى %1$s</string>
+    <string name="inc_reward_promise">مكافأةُ بلوغ الهدف: %1$s</string>
+    <string name="inc_reward_got">نلتَ مكافأة الهدف: %1$s</string>
+    <string name="inc_done">طلباتٌ سُلّمت هذا الشهر</string>
+    <string name="inc_rewarded">ما نلتَه هذا الشهر</string>
+    <string name="inc_penalized">ما خُصم منك هذا الشهر</string>
+    <string name="inc_entries">الحركات</string>
+    <string name="inc_reward">مكافأة</string>
+    <string name="inc_penalty">عقوبة</string>
+    <string name="inc_empty">لا مكافآت ولا عقوبات بعد</string>
+
+    <!-- الشكاوى والبلاغات -->
+    <string name="tik_hint">ما رُفع عليك — لتعرفه وتُصلح ما يُصلَح</string>
+    <string name="tik_none">لا شكوى عليك</string>
+    <string name="tik_none_hint">وهذا خبرٌ جيّد — أبقِه كذلك</string>
+    <string name="tik_open">مفتوحة</string>
+    <string name="tik_progress">قيد المعالجة</string>
+    <string name="tik_resolved">محلولة</string>
+    <string name="tik_on_order">على الطلب #%1$s</string>
+
+    <!-- دردشاتي السابقة -->
+    <string name="chats_hint">أحاديثُ الطلبات المنتهية — تُقرأ ولا يُكتب فيها</string>
+    <string name="chats_empty">لا أحاديثَ سابقة</string>
+    <string name="chat_empty">لا رسائل في هذا الحديث</string>
+
+    <!-- صفحاتُ المنصّة -->
+    <string name="page_empty">لم يُكتب نصُّ هذه الصفحة بعد</string>
+    <string name="page_help_hint">دورةُ عملك خطوةً خطوة</string>
+    <string name="page_about_hint">من يقف خلف هذه المنصّة</string>
+    <string name="page_terms_hint">ما نلتزم به تجاهك، وما نطلبه منك</string>
+    <string name="page_privacy_hint">ما نجمعه عنك، ولماذا، ومن يراه</string>
+
+    <!-- تواصل معنا -->
+    <string name="contact_hint">نحن هنا للإجابة — اتّصل بنا أو زرنا في المكتب</string>
+    <string name="contact_none">لم تُضبط وسائلُ التواصل بعد</string>
+    <string name="contact_phone">هاتف الدعم</string>
+    <string name="contact_whatsapp">واتساب</string>
+    <string name="contact_address">عنوان المكتب</string>
+    <string name="contact_follow">تابعنا</string>
+    <string name="contact_facebook">فيسبوك</string>
+    <string name="contact_instagram">إنستغرام</string>
+    <string name="contact_telegram">تلغرام</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.rahalgo.shared.driver
 
+import com.rahalgo.shared.model.IncentivesPayload
 import com.rahalgo.shared.model.Inbox
 import com.rahalgo.shared.model.Payout
 import com.rahalgo.shared.model.PayoutInput
@@ -35,6 +36,18 @@ class MeApi(private val api: ApiClient) {
      * (`GET /api/v1/me/reputation` — والنداءُ نفسُه الذي تقرؤه شاشةُ
      * الويب، **فلا يفترق ما يراه في الاثنتين.**)
      */
+    /**
+     * **هدفُه ومكافآتُه** — ما أنجزه هذا الشهر وما ناله وما خُصم منه.
+     *
+     * (`GET /api/v1/driver/incentives` — نداءُ شاشة الويب نفسُه.)
+     *
+     * **وحافزٌ لا يُرى لا يحفّز**: من لا يعرف أنّه على بُعد ثلاثةِ
+     * طلباتٍ من مكافأةٍ لا يسعى إليها. **والعقوبةُ تُعرض كما تُعرض
+     * المكافأة** — ومن عوقب ولا يعلم لا يُصلح شيئا.
+     */
+    suspend fun incentives(): IncentivesPayload =
+        api.call("/api/v1/driver/incentives")
+
     suspend fun reputation(): Reputation = api.call("/api/v1/me/reputation")
 
     /** **طلباتُ سحبه** — ما طلبه وما قرّرته المالية. */

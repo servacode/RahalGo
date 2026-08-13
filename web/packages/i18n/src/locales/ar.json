@@ -1795,12 +1795,23 @@
         "whatsapp.send_delay_ms": {
           "label": "تمهّل بين الرسائل",
           "hint": "بالمللي ثانية · يقلّل النمطَ الآليَّ الظاهر · وصفرٌ يعني بلا تمهّل"
+        },
+        "page.about_text": {
+          "label": "نصّ صفحة من نحن"
+        },
+        "page.driver_help_text": {
+          "label": "نصّ تعليمات السائق"
         }
       },
       "treasuryNone": "— لم تُختَر بعد —",
       "sections": {
         "identity": "الهوية البصرية",
-        "pages": "صفحات الموقع"
+        "pages": "صفحات الموقع",
+        "page.help": "تعليمات الزبون",
+        "page.terms": "شروط الاستخدام",
+        "page.privacy": "سياسة الخصوصية",
+        "page.about": "من نحن",
+        "page.driver_help": "تعليمات السائق"
       },
       "pages": {
         "background": "خلفية الموقع",
