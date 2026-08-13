@@ -468,6 +468,10 @@
     <string name="tik_progress">قيد المعالجة</string>
     <string name="tik_resolved">محلولة</string>
     <string name="tik_on_order">على الطلب #%1$s</string>
+    <string name="tik_on_me">ما رُفع عليك</string>
+    <string name="tik_mine">ما رفعتَه أنت</string>
+    <string name="tik_mine_empty">لم ترفع بلاغاً بعد — ولك أن تُبلّغ من «سجل الطلبات»</string>
+    <string name="tik_answer">جواب الإدارة</string>
 
     <!-- دردشاتي السابقة -->
     <string name="chats_hint">أحاديثُ الطلبات المنتهية — تُقرأ ولا يُكتب فيها</string>

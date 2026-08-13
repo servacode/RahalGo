@@ -20,6 +20,16 @@ data class Reputation(
     val reviews: List<Review> = emptyList(),
     val complaints: List<ComplaintBrief> = emptyList(),
     /**
+     * **ما رفعتُه أنا** — لا ما رُفع عليّ.
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-١٣، بعد أن قرأ بلاغَه شكوى عليه.)
+     *
+     * **ولم يكن له بابٌ قطّ**: بلاغُ السائق يُفتح باسم زبون الطلب،
+     * **فلا نداءَ يردّه له.** فمن أبلغ عن متجرٍ **لا يعلم أوصل أم
+     * ضاع، ولا يعرف ما قالت الإدارةُ فيه.**
+     */
+    val reports: List<MyReport> = emptyList(),
+    /**
      * **أيُقيَّم هذا الدورُ أصلاً** — و«٠٫٠ من ٥» لمن لا يُقيَّم يُقرأ
      * **حكماً عليه** فيسأل عمّا فعل، ولم يفعل شيئا.
      */
@@ -59,5 +69,23 @@ data class ComplaintBrief(
     @SerialName("order_number") val orderNumber: Long? = null,
     val subject: String = "",
     val status: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+/**
+ * **بلاغٌ رفعتُه أنا.**
+ *
+ * **والسببُ رمزٌ يُسمّى في الشاشة** — ونصٌّ يُبنى في الخادم لا تستطيع
+ * الشاشةُ تبديلَه، **وقائمةُ الأسباب عندها أصلاً.**
+ *
+ * **والحلُّ يُقرأ** — ومن أبلغ ولم يُقَل له ما وقع يظنّ بلاغَه أُهمل.
+ */
+@Serializable
+data class MyReport(
+    val number: Long = 0,
+    @SerialName("order_number") val orderNumber: Long? = null,
+    val reason: String = "",
+    val status: String = "",
+    val resolution: String = "",
     @SerialName("created_at") val createdAt: String = "",
 )

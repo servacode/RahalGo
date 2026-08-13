@@ -29,6 +29,34 @@ type repReview struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+// myReport **بلاغٌ رفعتُه أنا** — لا شكوى عليّ.
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٣: «نعم بالطبع ابنِه أيضاً».)
+//
+// # لماذا لم يكن له باب
+//
+// **بلاغُ السائق يُفتح باسم زبون الطلب** (`support/driver_report.go`):
+// عمودُ `customer_id` يقول «تذكرةُ أيّ طلبٍ هذه» لا «من كتبها».
+// **فـ`my/tickets` تردّ ما كان على طلباتي كزبون، لا ما رفعتُه كسائق.**
+//
+// **فمن أبلغ عن متجرٍ لم يجد بلاغَه في أيّ شاشة** — لا يعلم أوصل أم
+// ضاع، **ولا يعرف ما قالت الإدارةُ فيه.**
+//
+// # وما فيه غيرُ ما في الشكوى
+//
+// **السببُ يُردّ برمزه** — الشاشةُ تسمّيه بعربيّةٍ من معجمها،
+// **ونصٌّ يُبنى في الخادم لا تستطيع الشاشةُ تبديلَه.**
+//
+// **والحلُّ يُردّ** — ومن أبلغ ولم يُقَل له ما وقع **يظنّ بلاغَه أُهمل.**
+type myReport struct {
+	Number      int64     `json:"number"`
+	OrderNumber *int64    `json:"order_number"`
+	Reason      string    `json:"reason"`
+	Status      string    `json:"status"`
+	Resolution  string    `json:"resolution"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type repComplaint struct {
 	Number      int64     `json:"number"`
 	OrderNumber *int64    `json:"order_number"`
@@ -114,13 +142,20 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 			Trend     string  `json:"trend"` // up | down | flat
 		} `json:"rating"`
 		Complaints []repComplaint `json:"complaints"`
-		Reviews    []repReview    `json:"reviews"`
+		// Reports **ما رفعتُه أنا** — انظر `myReport`.
+		Reports []myReport  `json:"reports"`
+		Reviews []repReview `json:"reviews"`
 		// Rated هل لهذا الدور نجومٌ أصلاً — **فبطاقةٌ فارغةٌ تُقرأ صفراً.**
 		//
 		// «٠٫٠ من ٥» في شاشةِ من لا يُقيَّم أسوأُ من غياب البطاقة: **يقرؤها
 		// حكماً عليه** فيسأل عمّا فعل، ولم يفعل شيئاً.
 		Rated bool `json:"rated"`
-	}{Complaints: []repComplaint{}, Reviews: []repReview{}, Rated: starCol != ""}
+	}{
+		Complaints: []repComplaint{},
+		Reports:    []myReport{},
+		Reviews:    []repReview{},
+		Rated:      starCol != "",
+	}
 
 	// التقييم: المتوسط والعدد، ومتوسط آخر 30 يوماً لاستنتاج الاتجاه.
 	if starCol != "" {
@@ -172,6 +207,31 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		crows.Close()
+	}
+
+	// ── وما رفعتُه أنا ────────────────────────────────────────────────
+	//
+	// **ومن أبلغ عن متجرٍ لم يجد بلاغَه في أيّ شاشة** — لا يعلم أوصل أم
+	// ضاع. (وقد ظنّه المالكُ ضائعاً، وكان قد وصل.)
+	//
+	// **والشرطُ `created_by` لا `customer_id`** — الأوّلُ من كتبها،
+	// **والثاني صاحبُ الطلب**، وهما مختلفان في بلاغ السائق.
+	rrows, err := s.pg.Query(ctx, `
+		SELECT t.number, o.number, COALESCE(t.reason, ''), t.status,
+		       COALESCE(t.resolution, ''), t.created_at
+		FROM tickets t
+		LEFT JOIN orders o ON o.id = t.order_id
+		WHERE t.created_by = $1
+		ORDER BY t.created_at DESC LIMIT 50`, uid)
+	if err == nil {
+		for rrows.Next() {
+			var r myReport
+			if rrows.Scan(&r.Number, &r.OrderNumber, &r.Reason, &r.Status,
+				&r.Resolution, &r.CreatedAt) == nil {
+				out.Reports = append(out.Reports, r)
+			}
+		}
+		rrows.Close()
 	}
 
 	httpx.JSON(w, http.StatusOK, out)
