@@ -529,7 +529,10 @@
           أين وقفت الرسالة.) -->
     <string name="push_check">افحص الإشعارات</string>
     <string name="push_check_hint">يُرسل إشعارَ تجربةٍ إلى هذا الجهاز</string>
-    <string name="push_check_ok">وصلت — الإشعاراتُ تعمل</string>
+    <!-- **والأرقامُ تُعرض معها** — «وصلت» بلا عدد لا تقول إلى أيّ جهاز:
+         **حسابٌ فُتح على ثلاثة أجهزةٍ يقبل واحدٌ منها وترفض اثنان**،
+         والجوابُ «وصلت» في الحالين. -->
+    <string name="push_check_ok">وصلت — أُرسلت إلى %1$d من %2$d جهاز</string>
     <string name="push_check_off">الدفعُ غيرُ مهيّأ في الخادم — لا إشعارَ يصل أيَّ جهاز</string>
     <string name="push_check_none">لا جهازَ مسجَّل — أغلق التطبيق وافتحه ثمّ أعد الفحص</string>
     <string name="push_check_stale">جهازُك مسجَّلٌ منذ زمنٍ بعيد — أغلق التطبيق وافتحه</string>

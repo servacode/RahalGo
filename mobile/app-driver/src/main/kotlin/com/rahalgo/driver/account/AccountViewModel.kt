@@ -384,7 +384,10 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
                     )
                     else -> state.copy(
                         busy = false,
-                        done = app.getString(R.string.push_check_ok),
+                        // **والعددُ يُقال** — «وصلت» بلا عددٍ لا تقول إلى
+                        // أيّ جهاز: **حسابٌ على ثلاثة أجهزةٍ يقبل واحدٌ
+                        // منها**، والجوابُ «وصلت» في الحالين.
+                        done = app.getString(R.string.push_check_ok, r.sent, r.fresh),
                     )
                 }
             } catch (e: Exception) {
