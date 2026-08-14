@@ -364,6 +364,14 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             state = try {
                 val r = backend.devices.test()
+                // **ويُكتب في السجلّ أيضاً** — الشاشةُ تُقرأ بعين، **والسجلُّ
+                // يُقرأ من حاسوبٍ موصولٍ حين لا يكون صاحبُ الجهاز حاضرا.**
+                Log.i(
+                    "RahalGo/فحص",
+                    "مهيّأ=" + r.configured + " أجهزة=" + r.devices +
+                        " حديثة=" + r.fresh + " قُبل=" + r.sent +
+                        " مرفوض=" + r.dead + " خطأ=" + r.error,
+                )
                 val app = getApplication<Application>()
                 when {
                     !r.configured -> state.copy(
