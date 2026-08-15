@@ -39,7 +39,7 @@ import {
 import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/admin/WalletModal";
-import { CashBoxModal, EndShiftModal } from "@/components/admin/DriverActions";
+import { EndShiftModal } from "@/components/admin/DriverActions";
 import { MerchantModal, CategoriesModal } from "@/components/admin/accounts/merchants";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
@@ -86,7 +86,6 @@ export default function AllAccountsTable() {
   const [createOpen, setCreateOpen] = useState(false);
   const [walletUser, setWalletUser] = useState<AuthUser | null>(null);
   // **ونافذتا السائق** — نُقلتا من شاشتهم كما هما.
-  const [boxFor, setBoxFor] = useState<AuthUser | null>(null);
   const [endShiftFor, setEndShiftFor] = useState<AuthUser | null>(null);
   // **ونافذةُ المتجر** — صاحبُه أعلاها وبياناتُه أسفلَها.
   const [storeOpen, setStoreOpen] = useState(false);
@@ -504,22 +503,24 @@ export default function AllAccountsTable() {
                       ٢٠٢٦-٠٨-١٥). **و«إنهاءُ الورديّة» و«التسوية»
                       يُفعلان على عجل**: من فتح ملفَّه ليضغط زرّاً
                       واحداً دفع ثمنَ صفحةٍ كاملة. */}
-                  {u.roles.includes("driver") && (
-                    <>
-                      <Button
-                        variant="secondary"
-                        onClick={() => setBoxFor(u)}
-                        className="flex items-center gap-1.5"
-                      >
-                        <IconWallet size={15} />
-                        {m.admin.drivers.cashBox}
-                      </Button>
-                      {u.on_shift && (
-                        <Button variant="ghost" onClick={() => setEndShiftFor(u)}>
-                          {m.admin.drivers.endShift}
-                        </Button>
-                      )}
-                    </>
+                  {/* ══════════════════════════════════════════════════
+                      **ولا كشفَ صندوقٍ في البطاقة**
+                      ══════════════════════════════════════════════════
+
+                      (قرارُ المالك ٢٠٢٦-٠٨-١٥: «كشفُ الصندوق يجب أن
+                       يكون بالتفاصيل، وغيرُ موجودٍ بالكرت».)
+
+                      **وملفُّ السائق فيه تبويبُ صندوقٍ كاملٌ** —
+                      قيوده وحركاتُه وزرُّ تسويته. **وبابان للشيء
+                      الواحد يُصلَح أحدُهما ويبقى الآخرُ قديماً.**
+
+                      **وإنهاءُ الورديّة يبقى**: فعلٌ عاجلٌ لا كشفٌ
+                      يُقرأ — سائقٌ نسي ورديّتَه بعد منتصف الليل،
+                      **ولا يظهر إلّا لمن هو على الدوام فعلاً.** */}
+                  {u.roles.includes("driver") && u.on_shift && (
+                    <Button variant="ghost" onClick={() => setEndShiftFor(u)}>
+                      {m.admin.drivers.endShift}
+                    </Button>
                   )}
                   {u.id !== me?.id &&
                     (u.status === "active" ? (
@@ -596,14 +597,6 @@ export default function AllAccountsTable() {
             setStoreOpen(false);
             void load();
           }}
-        />
-      )}
-      {boxFor && (
-        <CashBoxModal
-          driver={boxFor}
-          canSettle={isAdmin || !!me?.roles.includes("finance")}
-          onClose={() => setBoxFor(null)}
-          onChanged={load}
         />
       )}
       {endShiftFor && (

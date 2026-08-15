@@ -21,16 +21,12 @@
  * إلّا حيث ذاك الصفّ.
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtTime, fmtMoney } from "@rahalgo/i18n";
+import { useState } from "react";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
-  Alert,
   Button,
   Input,
-  Badge,
   Modal,
-  Money,
-  IconWallet,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -42,14 +38,6 @@ export interface DriverRef {
   full_name: string;
   /** **ويُعرض حين لا اسمَ له** — حسابٌ بلا اسمٍ يُعرف برقمه. */
   phone?: string;
-}
-
-interface CashEntry {
-  id: string;
-  kind: string;
-  amount: number;
-  note: string;
-  created_at: string;
 }
 
 /** **ورسالةُ الخادم تُترجَم بمفتاحها** — نُقلت مع النوافذ كما هي. */
@@ -121,162 +109,6 @@ export function EndShiftModal({
           </Button>
         </div>
       </div>
-    </Modal>
-  );
-}
-
-export function CashBoxModal({
-  driver,
-  canSettle,
-  onClose,
-  onChanged,
-}: {
-  driver: DriverRef;
-  canSettle: boolean;
-  onClose: () => void;
-  onChanged: () => Promise<void> | void;
-}) {
-  const KINDS: Record<string, string> = m.admin.drivers.entryKinds;
-  const [held, setHeld] = useState<number | null>(null);
-  const [limit, setLimit] = useState(0);
-  const [entries, setEntries] = useState<CashEntry[]>([]);
-  const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const st = await api<{ held: number; limit: number; entries: CashEntry[] }>(
-        `/api/v1/admin/drivers/${driver.id}/cash`,
-      );
-      setHeld(st.held);
-      setLimit(st.limit);
-      setEntries(st.entries);
-      setError("");
-    } catch (err) {
-      setError(errText(err));
-    }
-  }, [driver.id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function settle(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/v1/admin/drivers/${driver.id}/settle`, {
-        method: "POST",
-        body: JSON.stringify({ amount: Number(amount) || 0, note }),
-      });
-      setAmount("");
-      setNote("");
-      await load();
-      await onChanged();
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const ratio = limit > 0 && held !== null ? Math.min(held / limit, 1) : 0;
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      size="lg"
-      title={`${m.admin.drivers.boxTitle}: ${driver.full_name || driver.phone}`}
-    >
-      <div className="mb-4 rounded-card bg-primary-tint p-4">
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2 font-medium text-primary-dark">
-            <IconWallet size={18} />
-            {m.admin.drivers.cashHeld}
-          </span>
-          <span className="figure text-primary-dark">
-            {held === null ? "…" : fmtMoney(held)}
-          </span>
-        </div>
-        {/* شريط السقف */}
-        <div className="mt-3 h-2 overflow-hidden rounded-badge bg-surface">
-          <div
-            className={`h-full transition-all ${ratio >= 1 ? "bg-danger" : ratio >= 0.7 ? "bg-warning" : "bg-success"}`}
-            style={{ width: `${ratio * 100}%` }}
-          />
-        </div>
-        <p className="mt-1 text-end text-xs text-ink-muted">
-          {m.admin.drivers.cashLimit}: {fmtNum(limit)}
-        </p>
-      </div>
-
-      {canSettle && (
-        <form onSubmit={settle} className="mb-4 flex items-end gap-2 rounded-card border border-line p-4">
-          <div className="flex-1">
-            <Input
-              id="s-amount"
-              label={`${m.admin.drivers.settleAmount} (${m.common.currency})`}
-              type="number"
-              min="1"
-              required
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setAmount(String(held ?? 0))}
-            disabled={!held}
-          >
-            {m.admin.drivers.settleAll}
-          </Button>
-          <div className="flex-1">
-            <Input
-              id="s-note"
-              label={m.admin.users.noteField}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
-          <Button type="submit" disabled={busy || !amount}>
-            {m.admin.drivers.settle}
-          </Button>
-        </form>
-      )}
-
-      {error && (
-        <Alert className="mb-3">{error}</Alert>
-      )}
-
-      <h3 className="mb-2 text-sm font-bold">{m.admin.drivers.entriesHistory}</h3>
-      {entries.length === 0 ? (
-        <p className="rounded-control bg-field p-4 text-center text-sm text-ink-muted">
-          {m.admin.drivers.noEntries}
-        </p>
-      ) : (
-        <ul className="max-h-60 space-y-1.5 overflow-y-auto">
-          {entries.map((e) => (
-            <li
-              key={e.id}
-              className="flex items-center justify-between rounded-control border border-line px-3 py-2 text-sm"
-            >
-              <span className="flex items-center gap-2">
-                <Badge variant={e.amount > 0 ? "primary" : "success"}>{KINDS[e.kind] ?? e.kind}</Badge>
-                {e.note && <span className="text-xs text-ink-muted">{e.note}</span>}
-              </span>
-              <span className={`font-bold ${e.amount > 0 ? "text-primary-dark" : "text-success"}`}>
-                {e.amount > 0 ? "+" : ""}
-                {fmtNum(e.amount)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
     </Modal>
   );
 }
