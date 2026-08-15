@@ -61,7 +61,10 @@ export default function ComplaintsPage() {
   );
 
   if (loading) return <LoadingState />;
-  const rows = data?.tickets ?? [];
+  // **والنوعُ يُكتب هنا صراحةً** — **وبناءٌ ينجح على الجهاز ويسقط في
+  // الحاوية** كان يُحلّ نوعَ الصفوف إلى `any` (قِيس ٢٠٢٦-٠٨-١٥):
+  // **واستنتاجٌ يتبدّل بتبدّل بيئة البناء ليس استنتاجاً يُعتمد عليه.**
+  const rows: Ticket[] = data?.tickets ?? [];
 
   return (
     <PageContainer>

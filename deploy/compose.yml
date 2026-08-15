@@ -53,7 +53,10 @@ services:
       # **ومحرّكُ المسارات في الشبكة الداخليّة** — لا يناديه أحدٌ سواه.
       OSRM_URL: http://osrm:5000
       GEOCODER_URL: https://nominatim.openstreetmap.org
-      OTP_PROVIDER: ${OTP_PROVIDER:-dev}
+      # **ورموزُ الدخول بواتساب** — و`dev` تطبعها في السجلّ،
+      # **والمحرّكُ يرفض الإقلاع بها في الإنتاج** ومحقٌّ: **سجلٌّ فيه
+      # رمزُ دخولٍ مفتاحٌ لكلّ حساب.**
+      OTP_PROVIDER: whatsapp
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -70,6 +73,11 @@ services:
         NEXT_PUBLIC_API_URL: https://api.rahalgo.com
         NEXT_PUBLIC_SITE_URL: https://rahalgo.com
     restart: unless-stopped
+    # **وتُكرَّر وقتَ التشغيل لا وقتَ البناء وحدَه** — **`next start`
+    # يقرأ الإعدادَ من جديدٍ عند الإقلاع**، فيسقط إن لم يجدها.
+    environment:
+      NEXT_PUBLIC_API_URL: https://api.rahalgo.com
+      NEXT_PUBLIC_SITE_URL: https://rahalgo.com
     depends_on:
       - api
 

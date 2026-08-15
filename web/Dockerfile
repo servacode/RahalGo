@@ -27,8 +27,21 @@ RUN pnpm install --frozen-lockfile
 FROM node:22-alpine AS build
 RUN corepack enable
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/rahalgo/node_modules ./apps/rahalgo/node_modules
+# ══════════════════════════════════════════════════════════════════════
+# **وتُنقل مساحةُ العمل كاملةً — لا `node_modules` التطبيق وحدَها**
+# ══════════════════════════════════════════════════════════════════════
+#
+# **وpnpm يضع لكلّ حزمةٍ `node_modules` خاصّاً بها** — وحزمُ المشروع
+# (`packages/*`) تحتاج `react` و`@rahalgo/i18n` لتُقرأ أنواعُها.
+#
+# **وكانت تُنقل حزمُ التطبيق وحدَها** — فيقول المترجمُ في كلّ ملفٍّ من
+# `packages`: **«لا أجد `react`»**، وتُحلُّ أنواعُه كلُّها إلى `any`.
+# **ثمّ يسقط البناءُ في التطبيق** برسالةٍ تقول «معاملٌ بلا نوع» —
+# **والعطبُ في حزمةٍ أخرى لا فيه.** (قِيس ٢٠٢٦-٠٨-١٥.)
+#
+# **والمصدرُ يُنسخ فوقها** — و`.dockerignore` يمنع `node_modules` من
+# الدخول، **فلا يُطمس ما رُكّب.**
+COPY --from=deps /app /app
 COPY . .
 
 ARG NEXT_PUBLIC_API_URL
