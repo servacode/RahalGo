@@ -24,6 +24,7 @@ import {
   IconDriver,
   IconLock,
   IconRoles,
+  IconLink,
   IconPrev,
   IconLogout,
   IconStatus,
@@ -89,6 +90,8 @@ interface Profile {
   active_sessions: number;
   roles: string[];
   created_at: string;
+  referrals_count: number;
+  referrals_earned: number;
   balance: number;
   orders_count: number;
   orders_spent: number;
@@ -254,6 +257,30 @@ export default function UserProfilePage() {
       icon: <IconWallet className="text-primary" />,
     },
   ];
+  // ══════════════════════════════════════════════════════════════════
+  // **وكم دعا وكم قبض** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **والمقبولةُ من رُوفئ عنه فعلاً** لا من سجّل برمزه: المكافأةُ
+  // تُقيَّد حين يُسلَّم أوّلُ طلبٍ للمدعوّ — **ومن عدّ المسجّلين وعد
+  // صاحبَه بمالٍ لم يستحقّه.**
+  //
+  // **ولا يُعرضان لمن لم يدعُ أحداً** — صفرٌ في ملفٍّ فيه عشرون رقماً
+  // يُمسح بالعين، **ويُتعلَّم تجاهلُه فلا يُنظر إليه يومَ يمتلئ.**
+  if (p.referrals_count > 0) {
+    stats.push(
+      {
+        label: P.referralsCount,
+        value: fmtNum(p.referrals_count),
+        icon: <IconLink />,
+      },
+      {
+        label: `${P.referralsEarned} (${m.common.currency})`,
+        value: fmtNum(p.referrals_earned),
+        icon: <IconWallet className="text-success" />,
+      }
+    );
+  }
   if (has("customer") || p.orders_count > 0) {
     stats.push(
       {

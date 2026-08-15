@@ -168,13 +168,20 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		CreatedAt    string   `json:"created_at"`
 		// LastSeenAt **آخرُ ظهور** — (قرارُ المالك ٢٠٢٦-٠٨-١٥: حُذف
 		// من بطاقة الحسابات، **فموضعُه ملفُّه**).
-		LastSeenAt  *string  `json:"last_seen_at"`
-		Balance     int64    `json:"balance"`
-		OrdersCount int      `json:"orders_count"` // كزبون
-		OrdersSpent int64    `json:"orders_spent"` // إنفاقه المُسلَّم
-		Merchants   []string `json:"merchants"`    // متاجر يملكها
-		RepStores   int      `json:"rep_stores"`   // متاجر جلبها كمندوب
-		Commissions int64    `json:"commissions"`  // عمولاته كمندوب
+		LastSeenAt *string `json:"last_seen_at"`
+		// Referrals **كم دعا وكم قبض** — (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+		//
+		// **والمقبولةُ من رُوفئ عنه فعلاً** (`rewarded_at`) — لا من
+		// سجّل برمزه: **المكافأةُ تُقيَّد حين يُسلَّم أوّلُ طلبٍ
+		// للمدعوّ**، ومن عدّ المسجّلين وعد صاحبَه بمالٍ لم يستحقّه.
+		ReferralsCount  int      `json:"referrals_count"`
+		ReferralsEarned int64    `json:"referrals_earned"`
+		Balance         int64    `json:"balance"`
+		OrdersCount     int      `json:"orders_count"` // كزبون
+		OrdersSpent     int64    `json:"orders_spent"` // إنفاقه المُسلَّم
+		Merchants       []string `json:"merchants"`    // متاجر يملكها
+		RepStores       int      `json:"rep_stores"`   // متاجر جلبها كمندوب
+		Commissions     int64    `json:"commissions"`  // عمولاته كمندوب
 		// OnShift **أعلى الدوام الآن؟** — (قرارُ المالك ٢٠٢٦-٠٨-١٥:
 		// حُذفت من بطاقة الحسابات، **فموضعُها ملفُّه**).
 		OnShift    bool  `json:"on_shift"`
@@ -191,6 +198,10 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		       (SELECT m.thumb_path FROM media m WHERE m.id = u.avatar_media_id), u.created_at::text,
 		       u.last_seen_at::text,
 		       COALESCE((SELECT array_agg(role_code ORDER BY role_code) FROM user_roles WHERE user_id = u.id), '{}'),
+		       COALESCE((SELECT count(*) FROM referrals rf
+		                 WHERE rf.inviter_id = u.id AND rf.rewarded_at IS NOT NULL), 0),
+		       COALESCE((SELECT sum(rf.reward_amount) FROM referrals rf
+		                 WHERE rf.inviter_id = u.id AND rf.rewarded_at IS NOT NULL), 0),
 		       COALESCE((SELECT balance FROM wallets WHERE user_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.customer_id = u.id),
 		       COALESCE((SELECT sum(o.total) FROM orders o WHERE o.customer_id = u.id AND o.status = 'delivered'), 0),
@@ -204,7 +215,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		         AND o.delivered_at >= date_trunc('day', now()))
 		FROM users u WHERE u.id = $1`, id).
 		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.StatusReason, &out.AdminNotes, &out.Sessions, &out.AvatarThumb, &out.CreatedAt, &out.LastSeenAt,
-			&out.Roles, &out.Balance, &out.OrdersCount, &out.OrdersSpent, &out.Merchants,
+			&out.Roles, &out.ReferralsCount, &out.ReferralsEarned, &out.Balance, &out.OrdersCount, &out.OrdersSpent, &out.Merchants,
 			&out.RepStores, &out.Commissions, &out.OnShift, &out.DriverCash, &out.Deliveries, &out.DeliveredToday)
 	if err != nil {
 		s.respondErr(w, httpx.ErrNotFound)

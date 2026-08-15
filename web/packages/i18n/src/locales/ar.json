@@ -1059,7 +1059,9 @@
           "storesOwned": "متاجرُ يملكها",
           "storesBrought": "متاجرُ جلبها",
           "storesEmpty": "لا متاجر"
-        }
+        },
+        "referralsCount": "دعوات مقبولة",
+        "referralsEarned": "مكتسبٌ من الدعوات"
       },
       "suspended": "موقوف",
       "suspend": "إيقاف",
