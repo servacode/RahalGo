@@ -20,7 +20,17 @@ type finRate struct {
 }
 
 type finEntry struct {
-	Ref    string    `json:"ref"`   // رقم الطلب أو المرجع
+	// Ref **رقمُ الطلب — لا معرّفُه.**
+	//
+	// (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٥.)
+	//
+	// **كان يُرسَل `o.id::text`** — والشاشةُ تبني منه
+	// `‎/dashboard/orders?q=<معرّف>`، **وبحثُ الطلبات يطابق الرقمَ أو
+	// الهاتفَ لا المعرّف.** فكلُّ سطرٍ في كشف سائقٍ أو متجرٍ يُضغط
+	// **فيردّ «لا نتائج»** — ولا خطأ ولا إنذار: شاشةٌ تعمل وتُجيب بالفراغ.
+	//
+	// **وفارغٌ يعني «لا طلبَ له»** — كسطر «نقدٌ بحوزته»، فلا يُرسم رابطا.
+	Ref    string    `json:"ref"`
 	Label  string    `json:"label"` // اسم المتجر / وصف الحركة
 	Amount int64     `json:"amount"`
 	Status string    `json:"status"` // للطلبات المرتجعة فقط
@@ -123,9 +133,13 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 			`SELECT count(*) FROM wallet_transactions WHERE user_id = $1 AND kind = 'commission'`,
 			id).Scan(&n)
 		out.OwedTo.Count += n
+		// **ومرجعُ الحركة معرّفُ طلبٍ** — يُترجَم إلى رقمه، **وهو ما يفتحه
+		// البحثُ في شاشة الطلبات.** وفارغٌ لحركةٍ لا طلبَ لها.
 		rows, err := s.pg.Query(ctx, `
-			SELECT t.ref, COALESCE(NULLIF(t.note, ''), 'عمولة'), t.amount, t.created_at
+			SELECT COALESCE(o.number::text, ''),
+			       COALESCE(NULLIF(t.note, ''), 'عمولة'), t.amount, t.created_at
 			FROM wallet_transactions t
+			LEFT JOIN orders o ON t.ref <> '' AND o.id::text = t.ref
 			WHERE t.user_id = $1 AND t.kind = 'commission'
 			ORDER BY t.created_at DESC LIMIT `+strconv.Itoa(finLimit), id)
 		if err == nil {
@@ -154,7 +168,7 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 		// **والمتجرُ يُضمّ يساراً** — **والطلبُ الخاصُّ لا متجرَ له**، وضمٌّ
 		// صلبٌ يُسقطه من كشف السائق بلا خطأ.
 		rows, err := s.pg.Query(ctx, `
-			SELECT o.id::text, COALESCE(m.name, ''), o.delivery_fee, o.created_at
+			SELECT o.number::text, COALESCE(m.name, ''), o.delivery_fee, o.created_at
 			FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 			WHERE o.driver_id = $1 AND o.status = 'delivered' AND o.delivery_fee > 0
 			ORDER BY o.created_at DESC LIMIT `+strconv.Itoa(finLimit), id)
@@ -181,7 +195,7 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 			WHERE m.owner_user_id = $1 AND o.status = 'delivered'
 			  AND o.platform_commission > 0`, id).Scan(&out.OwedBy.Count)
 		rows, err := s.pg.Query(ctx, `
-			SELECT o.id::text, m.name, o.platform_commission, o.created_at
+			SELECT o.number::text, m.name, o.platform_commission, o.created_at
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
 			WHERE m.owner_user_id = $1 AND o.status = 'delivered' AND o.platform_commission > 0
 			ORDER BY o.created_at DESC LIMIT `+strconv.Itoa(finLimit), id)
@@ -216,7 +230,7 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 		  AND o.status IN ('cancelled', 'rejected', 'failed', 'refunded')`,
 		id).Scan(&out.ReturnsCount)
 	rows, err := s.pg.Query(ctx, `
-		SELECT o.id::text, COALESCE(m.name, ''), o.subtotal, o.status, o.cancel_reason, o.created_at
+		SELECT o.number::text, COALESCE(m.name, ''), o.subtotal, o.status, o.cancel_reason, o.created_at
 		FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 		WHERE (m.owner_user_id = $1 OR o.driver_id = $1 OR o.customer_id = $1)
 		  AND o.status IN ('cancelled', 'rejected', 'failed', 'refunded')

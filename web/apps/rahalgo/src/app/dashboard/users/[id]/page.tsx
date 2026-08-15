@@ -227,7 +227,6 @@ export default function UserProfilePage() {
           `/api/v1/admin/users/${id}/feedback?t_page=${tPage}&g_page=${gPage}&r_page=${rPage}`,
         ),
       );
-      setFin(await api<FinData>(`/api/v1/admin/users/${id}/financials`));
       setError("");
     } catch (err) {
       setError(errText(err));
@@ -286,6 +285,20 @@ export default function UserProfilePage() {
       // @empty-ok **ودفترٌ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
       .catch(() => setTxs([]));
   }, [id, wPage, wReload]);
+
+  /**
+   * **والكشفُ الماليُّ يُجلَب حين يُفتح تبويبُه.**
+   *
+   * **وكان يُنادى مع كلّ فتحةِ ملفّ** — **ولزبونٍ يردّ أصفاراً حُسبت
+   * بأربعة نداءاتٍ للقاعدة**، وتبويبُه محجوبٌ عنه أصلاً فلا يراها أحد.
+   */
+  useEffect(() => {
+    if (tab !== "financials") return;
+    api<FinData>(`/api/v1/admin/users/${id}/financials`)
+      .then(setFin)
+      // @empty-ok **وكشفٌ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
+      .catch(() => setFin(null));
+  }, [id, tab]);
 
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!p) return <LoadingState variant="text" />;
@@ -608,7 +621,29 @@ export default function UserProfilePage() {
               show: has("merchant") || has("sales"),
             },
             { key: "wallet", label: P.tabs.wallet, icon: IconWallet, show: true },
-            { key: "financials", label: P.tabs.financials, icon: IconBalance, show: true },
+            {
+              key: "financials",
+              // ══════════════════════════════════════════════════════════
+              // **ولا ماليّةَ للزبون** — (قرارُ المالك ٢٠٢٦-٠٨-١٥)
+              // ══════════════════════════════════════════════════════════
+              //
+              // **الكشفُ يُبنى بشروطٍ على الدور**: النِسَبُ لمندوبٍ ومتجر،
+              // و«مستحقٌّ له» لمندوبٍ وسائق، و«مستحقٌّ عليه» لمتجرٍ وسائق.
+              // **ولا فرعَ يضيف للزبون شيئاً** — فيرى بطاقتَي صفرٍ لن
+              // تصيرا شيئاً أبداً.
+              //
+              // **وبطاقةُ صفرٍ ليست خبراً «لا شيءَ عليه»** — هي سؤالٌ
+              // يُطرح كلَّ مرّة: أحقٌّ هذا أم عطبٌ في القراءة؟
+              //
+              // **وما كان ينفرد به منقولٌ**: سببُ الإلغاء صار في سطر
+              // الطلب بتبويب «طلباته». **ومالُه محسوبٌ في مواضعه**: ما
+              // أنفق في النظرة العامّة، وما استُرجع في سجلّ المحفظة.
+              //
+              // **ومن حمل دورين يبقى له** — سائقٌ يطلب لنفسه يرى كشفَه.
+              label: P.tabs.financials,
+              icon: IconBalance,
+              show: has("driver") || has("merchant") || has("sales"),
+            },
             { key: "feedback", label: P.tabs.feedback, icon: IconStar, show: true },
             { key: "activity", label: P.tabs.activity, icon: IconStatus, show: true },
           ] as const)

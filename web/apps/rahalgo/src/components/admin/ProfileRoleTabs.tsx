@@ -82,6 +82,8 @@ interface OrderRow {
   kind?: string;
   /** ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه. */
   custom_request?: string;
+  /** **لماذا لم يصل** — في الملغى والمرفوض والمتعذّر. */
+  cancel_reason?: string;
 }
 
 interface AddressRow {
@@ -190,8 +192,9 @@ function OrderList({
             <li key={o.id}>
               <button
                 onClick={() => onOpen(o)}
-                className="flex w-full items-center gap-3 py-2 text-start hover:bg-row-hover"
+                className="flex w-full flex-col gap-0.5 py-2 text-start hover:bg-row-hover"
               >
+                <span className="flex w-full items-center gap-3">
                 <span dir="ltr" className="w-16 shrink-0 font-bold tabular-nums">
                   #{fmtRef(o.number)}
                 </span>
@@ -228,6 +231,25 @@ function OrderList({
                 <span dir="ltr" className="hidden shrink-0 text-xs text-ink-muted sm:inline">
                   {fmtDateTime(o.created_at)}
                 </span>
+                </span>
+                {/* ══════════════════════════════════════════════════════
+                    **ولماذا لم يصل — في سطره**
+                    ══════════════════════════════════════════════════════
+
+                    (قرارُ المالك ٢٠٢٦-٠٨-١٥: نُقل مع حذف «الماليّة» من
+                    ملفّ الزبون.)
+
+                    **كان السببُ في تبويب «الماليّة» وحدَه** — وهو تبويبٌ
+                    كلُّ ما فيه للزبون بطاقتا صفر، **فيُفتح لأجل سطرٍ
+                    واحدٍ ولا يُعرف أنّه فيه.**
+
+                    **وموضعُه سطرُ الطلب**: من رأى «ملغى» سأل «لماذا»
+                    في اللحظة نفسِها — **وجوابٌ في شاشةٍ أخرى لا يُقرأ.** */}
+                {o.cancel_reason && (
+                  <span className="w-full truncate ps-16 text-xs text-danger">
+                    {o.cancel_reason}
+                  </span>
+                )}
               </button>
             </li>
           ))}
