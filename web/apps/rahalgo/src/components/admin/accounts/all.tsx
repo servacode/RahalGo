@@ -197,6 +197,10 @@ export default function AllAccountsTable() {
     // (قرارُ المالك ٢٠٢٦-٠٨-١٥: «تبويبٌ منفصلٌ باسم الزبائن لا يلزم
     //  أساساً — كلُّ شيءٍ نريده موجودٌ بكلّ الحسابات».)
     //
+    // **ولا نقدَ ولا «سلّم اليوم» هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٥):
+    // **رقمان يخصّان يومَ السائق لا هُويّتَه**، وموضعُهما ملفُّه
+    // وشاشةُ الصندوق. **والبطاقةُ تقول من هو.**
+    //
     // **ولا تُعرض لمن لا طلبَ له**: موظّفٌ وسائقٌ ومتجرٌ أصفارُهم
     // صادقةٌ ولا تعني شيئاً — **وحقلٌ يظهر فارغاً دائماً يُتعلَّم
     // تجاهلُه، ثمّ يمتلئ يوماً فلا يُنظر إليه.**
@@ -259,25 +263,11 @@ export default function AllAccountsTable() {
     // (قرارُ المالك ٢٠٢٦-٠٨-١٥.) **وموضعُها ملفُّه** — ومن سأل «من
     // يعمل الآن؟» يسأله في شاشة الطلبات لا في جدول الحسابات.
     {
-      id: "driver_cash",
-      header: `${m.admin.drivers.cashHeld} (${m.common.currency})`,
-      icon: <IconWallet />,
-      hide: (u) => !u.roles.includes("driver"),
-      cell: (u) => fmtNum(u.driver_cash ?? 0),
-    },
-    {
       id: "open_orders",
       header: m.admin.drivers.openOrders,
       icon: <IconOrder />,
       hide: (u) => !u.open_orders,
       cell: (u) => <Badge variant="primary">{fmtNum(u.open_orders ?? 0)}</Badge>,
-    },
-    {
-      id: "delivered_today",
-      header: m.admin.drivers.deliveredToday,
-      icon: <IconOrder />,
-      hide: (u) => !u.roles.includes("driver"),
-      cell: (u) => fmtNum(u.delivered_today ?? 0),
     },
     // ══════════════════════════════════════════════════════════════
     // **ولا حالةٌ ولا آخرُ ظهورٍ في البطاقة**

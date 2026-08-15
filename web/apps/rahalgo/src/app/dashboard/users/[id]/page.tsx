@@ -99,6 +99,7 @@ interface Profile {
   on_shift: boolean;
   driver_cash: number;
   deliveries: number;
+  delivered_today: number;
 }
 
 interface Activity {
@@ -297,17 +298,23 @@ export default function UserProfilePage() {
   }
   if (has("driver")) {
     stats.push(
+      // **وسُلّم اليومَ غيرُ سُلّم كلَّه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥:
+      // حُذف من البطاقة). **ذاك يقول «كم عمل في عمره» وهذا يقول
+      // «أيعمل اليوم؟».**
+      {
+        label: m.admin.drivers.deliveredToday,
+        value: fmtNum(p.delivered_today),
+        icon: <IconOrder className="text-success" />,
+      },
       {
         label: P.deliveries,
         value: fmtNum(p.deliveries),
         icon: <IconDriver />,
-        onClick: () => router.push("/dashboard/drivers"),
       },
       {
         label: `${P.driverCash} (${m.common.currency})`,
         value: fmtNum(p.driver_cash),
         icon: <IconWallet className="text-accent-dark" />,
-        onClick: () => router.push("/dashboard/drivers"),
       }
     );
   }
