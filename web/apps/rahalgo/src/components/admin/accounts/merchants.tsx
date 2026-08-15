@@ -1029,19 +1029,36 @@ export function CategoriesModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={m.admin.merchants.categoriesTitle}>
+    // ══════════════════════════════════════════════════════════════════
+    // **وعريضةٌ لا طويلةٌ بمرّاح**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (شكوى المالك ٢٠٢٦-٠٨-١٥ — وهي شكواه في نموذج المتجر ٢٠٢٦-٠٨-٠٨:
+    //  «فورم طولٌ بسكرول مزعج».)
+    //
+    // **والطولُ يُسكرَل والعرضُ لا**: عشرون تصنيفاً في عمودٍ واحدٍ
+    // تعني مرّاحاً في كلّ فتحة، **وثلاثةُ أعمدةٍ تُريها كلَّها في
+    // نظرة.**
+    <Modal open={open} onClose={onClose} size="2xl" title={m.admin.merchants.categoriesTitle}>
       {/* **وفشلُ الجلب يُقال** — **وقائمةٌ فارغةٌ تُقرأ «لا تصنيفاتِ في
           المنصّة» وهي في الحقيقة نداءٌ سقط.** */}
       {loadErr && <Alert>{loadErr}</Alert>}
-      <ul className="mb-4 space-y-2">
+      <ul className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((c) => (
           <li
             key={c.id}
             className="flex items-center justify-between rounded-control border border-line px-3 py-2"
           >
-            <span className={c.active ? "" : "text-ink-muted line-through"}>
+            {/* **والأيقونةُ بجانب الاسم لا فوقه** — كانتا في `span`
+                بلا صفّ، **فنزل الاسمُ سطراً ثانياً** فارتفع الصفُّ
+                ضِعفاً بلا سبب. */}
+            <span
+              className={`flex min-w-0 items-center gap-2 ${
+                c.active ? "" : "text-ink-muted line-through"
+              }`}
+            >
               <CategoryIcon name={c.icon} size={15} />
-                {c.name}
+              <span className="truncate">{c.name}</span>
             </span>
             <Button variant={c.active ? "danger" : "secondary"} onClick={() => toggleActive(c)}>
               {c.active ? m.admin.merchants.deactivate : m.admin.merchants.activate}
@@ -1049,23 +1066,27 @@ export function CategoriesModal({
           </li>
         ))}
       </ul>
-      <form onSubmit={addCategory} className="space-y-3">
-        <Input
-          id="cat-name"
-          label={m.admin.merchants.categoryName}
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <CategoryIconPicker
-          label={m.admin.merchants.categoryIcon}
-          value={icon}
-          onChange={setIcon}
-        />
-        <Button type="submit" className="flex items-center gap-1">
-          <IconAdd size={15} />
-          {m.admin.merchants.addCategory}
-        </Button>
+      {/* **والإضافةُ صفٌّ في شاشةٍ عريضة** — الاسمُ والأيقونةُ والزرُّ
+          في سطرٍ واحد، **وعمودٌ منها يُطيل النافذةَ بلا داعٍ.** */}
+      <form onSubmit={addCategory} className="space-y-3 border-t border-line-soft pt-4">
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_2fr_auto]">
+          <Input
+            id="cat-name"
+            label={m.admin.merchants.categoryName}
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <CategoryIconPicker
+            label={m.admin.merchants.categoryIcon}
+            value={icon}
+            onChange={setIcon}
+          />
+          <Button type="submit" className="flex items-center gap-1 lg:mt-7">
+            <IconAdd size={15} />
+            {m.admin.merchants.addCategory}
+          </Button>
+        </div>
       </form>
       {error && (
         <Alert className="mt-3">{error}</Alert>
