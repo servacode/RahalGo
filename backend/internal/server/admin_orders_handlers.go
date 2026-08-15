@@ -27,8 +27,10 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 		MerchantID: q.Get("merchant_id"),
 		CustomerID: q.Get("customer_id"),
 		DriverID:   q.Get("driver_id"),
-		Query:      q.Get("query"),
-		OpenOnly:   q.Get("open") == "1",
+		// **وصاحبُ المتجر — طلباتُ متاجره كلِّها** (٢٠٢٦-٠٨-١٦).
+		OwnerID:  q.Get("owner_id"),
+		Query:    q.Get("query"),
+		OpenOnly: q.Get("open") == "1",
 		// **والمنتهيةُ وحدَها تُطلب صراحةً.**
 		//
 		// شاشةُ العمل وشاشةُ السجلّ سؤالان مختلفان: **الأولى «ما الذي يحتاجني

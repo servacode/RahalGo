@@ -143,6 +143,8 @@ interface StoreRow {
   name: string;
   status: string;
   commission_percent: number;
+  /** **مخالفاتُه داخلَ نافذة الحظر** — **وهو الرقمُ الذي يقرّر الحظر.** */
+  violations: number;
 }
 
 /**
@@ -165,6 +167,20 @@ export function OrdersTab({ userID, roles }: { userID: string; roles: string[] }
       )}
       {roles.includes("driver") && (
         <OrderList title={R.ordersAsDriver} filter={`driver_id=${userID}`} onOpen={open} />
+      )}
+      {/* ══════════════════════════════════════════════════════════════
+          **وطلباتُ متجره — وهي كلُّ عمله**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٦: «ابدأ بملفّ صاحب المتجر».)
+
+          **كان الملفُّ يعرض ما اشتراه لنفسه** ولا يعرض **طلباً واحداً
+          وصل متجرَه.** والمُرشِّحُ في المحرّك موجودٌ ولا يُنادى من هنا.
+
+          **و`owner_id` لا `merchant_id`**: الأوّلُ يجمع متاجرَه كلَّها،
+          **والثاني يخاطب متجراً بعينه** — والملفُّ يخاطب إنسانا. */}
+      {roles.includes("merchant") && (
+        <OrderList title={R.ordersAtStore} filter={`owner_id=${userID}`} onOpen={open} />
       )}
     </div>
   );
@@ -633,6 +649,16 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
                 <Badge variant={s.status === "active" ? "success" : "danger"}>
                   {MERCHANT_STATUS[s.status] ?? s.status}
                 </Badge>
+                {/* **وعدّادُ مخالفاته معه** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+
+                    **المحرّكُ يرسله والتبويبُ يُسقطه** — **وهو الرقمُ
+                    الذي يقرّر الحظر**، فمن راجع صاحبَه ليقرّر قرأ اسماً
+                    وحالاً وعمولةً ولم يقرأ ما يحكم. */}
+                {s.violations > 0 && (
+                  <Badge variant="danger">
+                    {R.violations.replace("{n}", fmtNum(s.violations))}
+                  </Badge>
+                )}
                 <span dir="ltr" className="shrink-0 text-sm tabular-nums text-ink-muted">
                   {fmtNum(s.commission_percent)}%
                 </span>

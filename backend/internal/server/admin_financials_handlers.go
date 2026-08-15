@@ -164,11 +164,20 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 	//
 	// **والدورُ محفوظٌ في النزاع لا يُشتقّ من أدواره اليوم** — **من كان
 	// سائقاً يومَ النزاع قد يصير غداً موظّفاً، والماضي لا يتغيّر.**
-	readLog(`SELECT count(*) FROM disputes WHERE party_user_id = $1`,
+	// **ونزاعُ متجره نزاعُه** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+	//
+	// **والنزاعُ مع متجرٍ يُكتب بـ`merchant_id` لا بشخص** — هكذا صُمّم
+	// قصداً: «المتجرُ كيانٌ لا شخص، وصاحبُه قد يتغيّر والنزاعُ على المتجر
+	// لا عليه». **فكانت قائمةُ نزاعاته في ملفّه فارغةً دائماً** — نقصٌ
+	// صامت.
+	const disputeScope = ` FROM disputes d
+		 LEFT JOIN orders o ON o.id = d.order_id
+		 WHERE d.party_user_id = $1
+		    OR d.merchant_id IN (SELECT id FROM merchants WHERE owner_user_id = $1)`
+	readLog(`SELECT count(*)`+disputeScope,
 		`SELECT COALESCE(o.number::text, ''), d.party_role, d.amount, d.status,
-		        COALESCE(NULLIF(d.note, ''), d.reason), d.created_at
-		 FROM disputes d LEFT JOIN orders o ON o.id = d.order_id
-		 WHERE d.party_user_id = $1 ORDER BY d.created_at DESC LIMIT `+strconv.Itoa(finLimit),
+		        COALESCE(NULLIF(d.note, ''), d.reason), d.created_at`+disputeScope+`
+		 ORDER BY d.created_at DESC LIMIT `+strconv.Itoa(finLimit),
 		&out.Disputes, &out.DisputesN)
 
 	// ---- بلاغاتُ طوارئه ----

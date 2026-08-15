@@ -194,6 +194,14 @@ func (s *Service) GetByID(ctx context.Context, id string) (*Order, error) {
 type ListFilter struct {
 	Status     string
 	MerchantID string
+	// OwnerID **صاحبُ المتجر** — طلباتُ متاجره كلِّها.
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٦: «ابدأ بملفّ صاحب المتجر».)
+	//
+	// **وكان الملفُّ يعرض ما اشتراه لنفسه ولا يعرض طلباً واحداً وصل
+	// متجرَه** — وهو كلُّ عمله. **و`MerchantID` يخاطب متجراً بعينه،
+	// والملفُّ يخاطب إنساناً قد يملك أكثرَ من متجر.**
+	OwnerID    string
 	CustomerID string
 	DriverID   string
 	Query      string // رقم طلب أو هاتف زبون
@@ -294,20 +302,28 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		AND ($4 = '' OR o.driver_id::text = $4)
 		AND ($5 = '' OR o.number::text = $5 OR cu.phone ILIKE '%'||$5||'%')
 		AND (NOT $6 OR o.closed_at IS NULL)
-		AND (NOT $7 OR o.closed_at IS NOT NULL)`
+		AND (NOT $7 OR o.closed_at IS NOT NULL)
+		-- **وصاحبُ المتجر يجمع متاجرَه كلَّها** — (٢٠٢٦-٠٨-١٦).
+		--
+		-- **والضمُّ يساريٌّ فوقه** فلا يُسقط الطلبَ الخاصَّ حين
+		-- لا يُطلب هذا الشرط. **وشرطٌ على عمودٍ من ضمٍّ يساريٍّ يُقصي
+		-- بلا متجرٍ بذاته** — وهو ما نريد هنا بالضبط.
+		AND ($8 = '' OR mr.owner_user_id::text = $8)`
 
 	var total int
 	if err := s.db.QueryRow(ctx, `
-		SELECT count(*) FROM orders o JOIN users cu ON cu.id = o.customer_id`+where,
+		SELECT count(*) FROM orders o
+		JOIN users cu ON cu.id = o.customer_id
+		LEFT JOIN merchants mr ON mr.id = o.merchant_id`+where,
 		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-		f.ClosedOnly).Scan(&total); err != nil {
+		f.ClosedOnly, f.OwnerID).Scan(&total); err != nil {
 		return nil, err
 	}
 
 	rows, err := s.db.Query(ctx, orderSelect+where+`
-		ORDER BY o.created_at DESC LIMIT $8 OFFSET $9`,
+		ORDER BY o.created_at DESC LIMIT $9 OFFSET $10`,
 		f.Status, f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-		f.ClosedOnly, f.PerPage, (f.Page-1)*f.PerPage)
+		f.ClosedOnly, f.OwnerID, f.PerPage, (f.Page-1)*f.PerPage)
 	if err != nil {
 		return nil, err
 	}
@@ -357,10 +373,11 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	if f.ClosedOnly {
 		cRows, err := s.db.Query(ctx, `
 			SELECT o.status, count(*) FROM orders o
-			JOIN users cu ON cu.id = o.customer_id`+where+`
+			JOIN users cu ON cu.id = o.customer_id
+			LEFT JOIN merchants mr ON mr.id = o.merchant_id`+where+`
 			GROUP BY o.status`,
 			"", f.MerchantID, f.CustomerID, f.DriverID, f.Query, f.OpenOnly,
-			f.ClosedOnly)
+			f.ClosedOnly, f.OwnerID)
 		if err != nil {
 			return nil, err
 		}

@@ -393,13 +393,32 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 		Given   []map[string]any `json:"ratings_given"`
 		Recv    []map[string]any `json:"ratings_received"`
 		AvgRecv *float64         `json:"avg_received"`
+		// ══════════════════════════════════════════════════════════════
+		// **وتقييمُ السائقين لمتجره — كان يُكتب ولا يُقرأ**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+		//
+		// **جدولُ `merchant_ratings` يُكتب فيه بعد كلّ تسليم** — السائقُ
+		// يقيّم المتجرَ بنجمتين: سرعةُ التجهيز وحُسنُ التعامل.
+		//
+		// **ولا شاشةَ في المنصّة كلِّها تقرؤه** — لا إدارةٌ ولا بوّابةُ
+		// متجرٍ ولا تقرير. **جدولٌ يُكتب فيه ولا يُقرأ منه أبداً.**
+		//
+		// **والسائقُ يُسأل بعد كلّ تسليم** — فيُنفَق وقتُه على رأيٍ لا
+		// يبلغ أحداً. **وهذا أسوأُ من غياب الميزة**: غيابُها يُعرف،
+		// **وهذه تبدو موجودةً وهي معطّلة.**
+		ByDrivers      []map[string]any `json:"by_drivers"`
+		ByDriversCount int              `json:"by_drivers_count"`
+		AvgSpeed       *float64         `json:"avg_speed"`
+		AvgConduct     *float64         `json:"avg_conduct"`
 		// **وعددُ كلٍّ منها** — والمعروضُ صفحةٌ منه.
 		TicketsCount int `json:"tickets_count"`
 		AgainstCount int `json:"tickets_against_count"`
 		GivenCount   int `json:"ratings_given_count"`
 		RecvCount    int `json:"ratings_received_count"`
 		PerPage      int `json:"per_page"`
-	}{Tickets: []map[string]any{}, Against: []map[string]any{}, Given: []map[string]any{}, Recv: []map[string]any{}, PerPage: tp.PerPage}
+	}{Tickets: []map[string]any{}, Against: []map[string]any{}, Given: []map[string]any{}, Recv: []map[string]any{}, ByDrivers: []map[string]any{}, PerPage: tp.PerPage}
 
 	// ══════════════════════════════════════════════════════════════════
 	// **وشكاواه وشكاوى عليه قائمتان لا قائمة**
@@ -557,7 +576,7 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 			JOIN merchants m ON m.id = o.merchant_id
 			WHERE m.owner_user_id = $1
 		) x`
-	var recvAvg float64
+	var recvAvg, avgSpeed, avgConduct float64
 	if err := s.pg.QueryRow(r.Context(), recvAgg, id).Scan(&out.RecvCount, &recvAvg); err == nil &&
 		out.RecvCount > 0 {
 		out.AvgRecv = &recvAvg
@@ -575,6 +594,49 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 		}
 	}
 	rows.Close()
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وما قاله السائقون عن متجره — يُقرأ لأوّل مرّة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **والمتوسّطان على الكلّ لا على المعروض** — **ومتوسّطُ عشرةٍ ليس
+	// متوسّطَ متجر**، ويتبدّل بتقليب الصفحة أمام عين من يقرأ.
+	_ = s.pg.QueryRow(r.Context(), `
+		SELECT count(*), COALESCE(avg(mr.speed_stars), 0), COALESCE(avg(mr.conduct_stars), 0)
+		FROM merchant_ratings mr
+		JOIN merchants m ON m.id = mr.merchant_id
+		WHERE m.owner_user_id = $1`, id).
+		Scan(&out.ByDriversCount, &avgSpeed, &avgConduct)
+	if out.ByDriversCount > 0 {
+		out.AvgSpeed, out.AvgConduct = &avgSpeed, &avgConduct
+	}
+	// **والسطورُ بأسماء قائليها** — **وتقييمٌ بلا قائلٍ لا يُراجَع ولا
+	// يُحتجّ به**، ولا يُعرف أسائقٌ واحدٌ كرّرها أم عشرة.
+	dRows, err := s.pg.Query(r.Context(), `
+		SELECT o.number, m.name,
+		       mr.speed_stars, mr.conduct_stars, mr.comment, mr.created_at,
+		       COALESCE(NULLIF(dr.full_name, ''), dr.phone::text, '')
+		FROM merchant_ratings mr
+		JOIN merchants m ON m.id = mr.merchant_id
+		JOIN orders o ON o.id = mr.order_id
+		LEFT JOIN users dr ON dr.id = mr.driver_id
+		WHERE m.owner_user_id = $1
+		ORDER BY mr.created_at DESC LIMIT $2 OFFSET $3`, id, rp.PerPage, rp.Offset)
+	if err == nil {
+		for dRows.Next() {
+			var num int64
+			var mName, comment, driver string
+			var speed, conduct int
+			var at time.Time
+			if dRows.Scan(&num, &mName, &speed, &conduct, &comment, &at, &driver) == nil {
+				out.ByDrivers = append(out.ByDrivers, map[string]any{
+					"order_number": num, "merchant_name": mName,
+					"speed_stars": speed, "conduct_stars": conduct,
+					"comment": comment, "created_at": at, "driver": driver})
+			}
+		}
+		dRows.Close()
+	}
 	httpx.JSON(w, http.StatusOK, out)
 }
 

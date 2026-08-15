@@ -82,8 +82,29 @@ func (s *Server) handleMyWarnings(w http.ResponseWriter, r *http.Request) {
 
 // handleAdminUserWarnings **ما على هذا الحساب** — كما تراه العمليات.
 func (s *Server) handleAdminUserWarnings(w http.ResponseWriter, r *http.Request) {
+	// ══════════════════════════════════════════════════════════════════
+	// **وإنذاراتُ متجره معها — بشارةٍ تفرّقها**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٦: «ابدأ بملفّ صاحب المتجر».)
+	//
+	// **جدولان لا واحد**: `warnings` على الحساب و`merchant_warnings` على
+	// المتجر — **ولكلٍّ أسبابُه ومنطقُه.** وكان الملفُّ يعرض الأوّلَ وحدَه.
+	//
+	// **ومتجرٌ يُحظر بعد أربع مخالفات** — **فمن راجع صاحبَه ليقرّر قرأ
+	// صفراً** وهو على ثلاثٍ من أربع.
+	//
+	// **والدورُ يقول أيَّهما هو** (`role_code`): حسابٌ أم متجر — **فلا
+	// يُخلط إنذارُ إنسانٍ بإنذارِ كيان.**
 	s.scanWarningItems(w, r, warningItemSelect+`
-		WHERE w.user_id = $1 ORDER BY w.created_at DESC LIMIT 100`, chi.URLParam(r, "id"))
+		WHERE w.user_id = $1
+		UNION ALL
+		SELECT mw.id::text, mw.reason, mw.note, 'store', o.number, mw.created_at
+		FROM merchant_warnings mw
+		JOIN merchants m ON m.id = mw.merchant_id
+		LEFT JOIN orders o ON o.id = mw.order_id
+		WHERE m.owner_user_id = $1
+		ORDER BY created_at DESC LIMIT 100`, chi.URLParam(r, "id"))
 }
 
 // issueWarning **القيدُ نفسُه — بابان يناديانه ولا يفترقان.**

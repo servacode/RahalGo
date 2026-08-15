@@ -22,6 +22,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
 import {
+  Badge,
   Button,
   Select,
   Textarea,
@@ -36,6 +37,8 @@ const m = getMessages(defaultLocale);
 const W = m.admin.warnings;
 /** **وأسماءُ الأسباب معجمٌ يُفهرس بالرمز** — والرمزُ يأتي من المحرّك. */
 const REASON_LABELS: Record<string, string> = W.reasons;
+/** **وأسبابُ إنذار المتجر معجمٌ آخر** — **ومعجمٌ واحدٌ يترك نصفَها بلا اسم.** */
+const STORE_REASONS: Record<string, string> = m.merchant.warnings.reasons;
 
 interface WarningItem {
   id: string;
@@ -129,8 +132,14 @@ export function WarningsSection({ userID }: { userID: string }) {
                     ٢٠٢٦-٠٨-١٥.)
                     **والقديمُ يُقرأ كما كُتب**: إنذاراتٌ سُجّلت نصّاً
                     حرّاً قبل القائمة لا رمزَ لها، **فتُعرض بنصّها.** */}
-                <p className="text-sm font-medium">
-                  {REASON_LABELS[x.reason] ?? x.reason}
+                <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                  {/* **وإنذارُ المتجر يُميَّز** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+
+                      **جدولان لا واحد**: على الحساب وعلى المتجر —
+                      **ولكلٍّ أسبابُه.** ومن خلطهما لم يعرف **أيَّ
+                      شيءٍ يُحظر**: الإنسانُ أم اللافتة. */}
+                  {x.role_code === "store" && <Badge variant="warning">{W.onStore}</Badge>}
+                  {REASON_LABELS[x.reason] ?? STORE_REASONS[x.reason] ?? x.reason}
                 </p>
                 {x.note && <p className="mt-0.5 text-xs text-ink-muted">{x.note}</p>}
               </div>

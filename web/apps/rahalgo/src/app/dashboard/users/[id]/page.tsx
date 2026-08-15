@@ -167,6 +167,11 @@ interface Feedback {
   per_page: number;
   ratings_received: { order_number: number; merchant_name: string; stars: number; comment: string; created_at: string; as: string }[];
   avg_received: number | null;
+  /** **ما قاله السائقون عن متجره** — (قرارُ المالك ٢٠٢٦-٠٨-١٦). */
+  by_drivers: { order_number: number; merchant_name: string; speed_stars: number; conduct_stars: number; comment: string; created_at: string; driver: string }[];
+  by_drivers_count: number;
+  avg_speed: number | null;
+  avg_conduct: number | null;
 }
 
 interface Tx {
@@ -1108,6 +1113,74 @@ export default function UserProfilePage() {
 
               **والقسمُ كان يُرسَم فارغاً دائماً** فيُقرأ «لم يقيّمه أحد»
               **لا «لا يُقيَّم أصلاً»** — وهو داءُ «الماليّة» نفسُه. */}
+          {/* ══════════════════════════════════════════════════════════
+              **وما قاله السائقون عن متجره — يُقرأ لأوّل مرّة**
+              ══════════════════════════════════════════════════════════
+
+              (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+
+              **جدولُ `merchant_ratings` يُكتب فيه بعد كلّ تسليم** —
+              السائقُ يقيّم المتجرَ بنجمتين: سرعةُ التجهيز وحُسنُ
+              التعامل. **ولا شاشةَ في المنصّة كلِّها تقرؤه.**
+
+              **والسائقُ يُسأل بعد كلّ تسليم** فيُنفَق وقتُه على رأيٍ لا
+              يبلغ أحداً — **وهذا أسوأُ من غياب الميزة**: غيابُها يُعرف،
+              **وهذه تبدو موجودةً وهي معطّلة.** */}
+          {has("merchant") && feedback.by_drivers_count > 0 && (
+            <FormSection
+              title={`${P.byDrivers} (${fmtNum(feedback.by_drivers_count)})`}
+              icon={<IconStar />}
+            >
+              <div className="mb-3 flex flex-wrap gap-4 text-sm">
+                <span className="text-ink-muted">
+                  {P.avgSpeed}:{" "}
+                  <span className="font-bold text-accent-dark" dir="ltr">
+                    {feedback.avg_speed?.toFixed(1)}
+                  </span>
+                </span>
+                <span className="text-ink-muted">
+                  {P.avgConduct}:{" "}
+                  <span className="font-bold text-accent-dark" dir="ltr">
+                    {feedback.avg_conduct?.toFixed(1)}
+                  </span>
+                </span>
+              </div>
+              <ul className="space-y-1.5">
+                {feedback.by_drivers.map((rt, i) => (
+                  <li
+                    key={i}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+                  >
+                    <span className="flex min-w-0 flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dashboard/orders?q=${rt.order_number}`)}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        #{fmtRef(rt.order_number)}
+                      </button>
+                      <span className="text-xs text-ink-muted">{rt.merchant_name}</span>
+                      <span className="text-xs text-ink-muted">
+                        {P.avgSpeed}: {rt.speed_stars} · {P.avgConduct}: {rt.conduct_stars}
+                      </span>
+                      {/* **وقائلُه باسمه** — **وتقييمٌ بلا قائلٍ لا يُراجَع**،
+                          ولا يُعرف أسائقٌ واحدٌ كرّرها أم عشرة. */}
+                      {rt.driver && (
+                        <span className="text-xs text-ink-muted">{P.by}: {rt.driver}</span>
+                      )}
+                      {rt.comment && (
+                        <span className="truncate text-xs text-ink-muted">&quot;{rt.comment}&quot;</span>
+                      )}
+                    </span>
+                    <span className="text-xs text-ink-muted" dir="ltr">
+                      {fmtDate(rt.created_at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </FormSection>
+          )}
+
           {(has("driver") || has("merchant")) && (
           <FormSection title={P.ratingsRecv} icon={<IconStar />}>
             {feedback.ratings_received.length === 0 ? (

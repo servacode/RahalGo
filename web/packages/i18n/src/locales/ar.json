@@ -1054,6 +1054,9 @@
         "ratingsGiven": "تقييمات منحها",
         "ratingsGivenEmpty": "لم يقيّم أي طلب بعد",
         "ratingsRecv": "تقييمات واردة عليه",
+        "byDrivers": "تقييم السائقين لمتجره",
+        "avgSpeed": "سرعة التجهيز",
+        "avgConduct": "حسن التعامل",
         "ratingsRecvEmpty": "لا تقييمات واردة",
         "avgRating": "متوسط تقييمه",
         "asDriver": "كسائق",
@@ -1067,6 +1070,7 @@
           "orders": "طلباته",
           "ordersAsCustomer": "طلباتٌ طلبها",
           "ordersAsDriver": "طلباتٌ أوصلها",
+          "ordersAtStore": "طلباتٌ وصلت متجره",
           "ordersEmpty": "لا طلبات",
           "orderCustom": "خاصّ",
           "chats": "أحاديثه مع الطرف الآخر",
@@ -1094,6 +1098,7 @@
           "storesBrought": "عملاؤه من المتاجر",
           "storesEmpty": "لا متاجر",
           "leads": "عملاء محتملون",
+          "violations": "{n} مخالفة",
           "leadSt": {
             "new": "جديد",
             "converted": "صار متجراً",
@@ -2254,6 +2259,7 @@
       "reason": "السبب",
       "note": "تفصيل (اختياري)",
       "pickReason": "اختر سبب الإنذار",
+      "onStore": "على المتجر",
       "reasons": {
         "abuse_driver": "إساءةٌ إلى سائق",
         "repeated_cancel": "إلغاءٌ متكرّرٌ للطلبات",
