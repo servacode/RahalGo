@@ -12,6 +12,8 @@ import {
   Badge,
   Button,
   Input,
+  Select,
+  Checkbox,
   Modal,
   Pagination,
   FormSection,
@@ -201,6 +203,16 @@ export default function UserProfilePage() {
   const [rPage, setRPage] = useState(1);
   const [actCount, setActCount] = useState(0);
   const [actPer, setActPer] = useState(25);
+  /** **وأفعالُه المتاحةُ للترشيح** — من المحرّك، **وما ليس عنده لا يُعرض عليه.** */
+  const [actKinds, setActKinds] = useState<{ action: string; count: number }[]>([]);
+  const [actFilter, setActFilter] = useState("");
+  /**
+   * **وتجديدُ الجلسة مخفيٌّ افتراضاً** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
+   *
+   * **تكتبه الساعةُ لا الإنسان**: هاتفٌ تُرك مفتوحاً يكتب سطراً كلَّ دورة
+   * تجديد، **فيدفع الأفعالَ الحقيقيّةَ خارجَ الصفحة الأولى.**
+   */
+  const [actRefresh, setActRefresh] = useState(false);
   // ══════════════════════════════════════════════════════════════════
   // **ودفترُ المحفظة يُقلَّب ولا يُقصّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٥)
   // ══════════════════════════════════════════════════════════════════
@@ -276,17 +288,24 @@ export default function UserProfilePage() {
    * والمحفظةِ والتقييماتِ والماليّات معه.
    */
   useEffect(() => {
-    api<{ activity: Activity[]; total: number; per_page: number }>(
-      `/api/v1/admin/users/${id}/activity?page=${actPage}`,
+    api<{
+      activity: Activity[];
+      total: number;
+      per_page: number;
+      kinds: { action: string; count: number }[];
+    }>(
+      `/api/v1/admin/users/${id}/activity?page=${actPage}` +
+        `&action=${actFilter}&refresh=${actRefresh}`,
     )
       .then((act) => {
         setActivity(act?.activity ?? []);
         setActCount(act?.total ?? 0);
         setActPer(act?.per_page || 25);
+        setActKinds(act?.kinds ?? []);
       })
       // @empty-ok **وسجلٌّ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
       .catch(() => setActivity([]));
-  }, [id, actPage]);
+  }, [id, actPage, actFilter, actRefresh]);
 
   /**
    * **ودفترُ المحفظة يُجلَب وحدَه — بصفحته.**
@@ -1056,18 +1075,87 @@ export default function UserProfilePage() {
 
       {tab === "activity" && (
       <div>
-        <FormSection title={P.activity} icon={<IconStatus />}>
+        <FormSection title={`${P.activity} (${fmtNum(actCount)})`} icon={<IconStatus />}>
+          {/* ══════════════════════════════════════════════════════════
+              **ومُرشِّحٌ بالفعل — وأفعالُه وحدَها في قائمته**
+              ══════════════════════════════════════════════════════════
+
+              (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+
+              **وهو أطولُ قائمةٍ في الملفّ وأسرعُها نموّاً، ويُفتح للبحث
+              عن واقعةٍ بعينها** — وكان يُقلَّب صفحةً صفحة.
+
+              **وقائمةٌ بثمانين فعلاً لحسابٍ فيه ثلاثةٌ تُبحث ولا تُقرأ**
+              — فتُبنى ممّا عنده فعلاً، ومعها عددُ كلٍّ. */}
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            <Select
+              id="act-filter"
+              label=""
+              value={actFilter}
+              onChange={(e) => {
+                setActFilter(e.target.value);
+                setActPage(1);
+              }}
+            >
+              <option value="">{P.activityAll}</option>
+              {actKinds.map((k) => (
+                <option key={k.action} value={k.action}>
+                  {(ACTIONS[k.action] ?? k.action) + ` (${fmtNum(k.count)})`}
+                </option>
+              ))}
+            </Select>
+            {/* **وتجديدُ الجلسة يُطلب ولا يُفرض** — أثرُ أمانٍ بعنوانٍ ووقت،
+                **يُخفى ولا يُحذف.** */}
+            <Checkbox
+              id="act-refresh"
+              label={P.activityRefresh}
+              checked={actRefresh}
+              onChange={(e) => {
+                setActRefresh(e.target.checked);
+                setActPage(1);
+              }}
+            />
+          </div>
           {activity.length === 0 ? (
             <p className="py-6 text-center text-sm text-ink-muted">{P.activityEmpty}</p>
           ) : (
             <ul className="space-y-1.5">
-              {activity.map((a, i) => (
+              {activity.map((a, i) => {
+                const pairs = detailPairs(a.details);
+                // **ويُربط بما يخصّه — حين تكون له وجهةٌ تُفتح.**
+                //
+                // **وحسابٌ آخرُ وحدَه** (`entity='user'`): ورابطُ الطلب
+                // يحتاج رقمَه، **والمحفوظُ معرّفُه** — **وبحثُ الطلبات
+                // يطابق الرقمَ لا المعرّف فيردّ «لا نتائج».** (وهو
+                // العطبُ الذي أُصلح في الكشف الماليّ ٢٠٢٦-٠٨-١٥.)
+                const to =
+                  a.entity === "user" && a.entity_id && a.entity_id !== id
+                    ? `/dashboard/users/${a.entity_id}`
+                    : null;
+                return (
                 <li
                   key={i}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
                 >
                   <span className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="font-medium">{ACTIONS[a.action] ?? a.action}</span>
+                    {to ? (
+                      <button
+                        type="button"
+                        onClick={() => router.push(to)}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {ACTIONS[a.action] ?? a.action}
+                      </button>
+                    ) : (
+                      <span className="font-medium">{ACTIONS[a.action] ?? a.action}</span>
+                    )}
+                    {/* **والتفاصيلُ تُقال** — كانت تصل وتُهمل. */}
+                    {pairs.map((d, j) => (
+                      <span key={j} className="truncate text-xs text-ink-muted">
+                        {d.k ? `${d.k}: ` : ""}
+                        {d.v}
+                      </span>
+                    ))}
                     <span className="text-xs text-ink-muted">
                       {P.by}: {a.by_self ? P.bySelf : (a.by_name ?? P.system)}
                     </span>
@@ -1081,7 +1169,8 @@ export default function UserProfilePage() {
                     {fmtDateTime(a.created_at)}
                   </span>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
           {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
@@ -1323,6 +1412,52 @@ function NotesEditor({
   );
 }
 
+
+const DETAIL_KEYS: Record<string, string> = P.detailKeys;
+const ROLE_NAMES: Record<string, string> = m.terms.roleNames;
+/** **وأسبابُ الإنذار معجمٌ ثانٍ** — يُقرأ منه ما لا تعرفه أسبابُ الشكوى. */
+const WARN_REASONS: Record<string, string> = m.admin.warnings.reasons;
+
+/**
+ * **تفاصيلُ السطر مقروءةً — لا `{"reason":"abuse_driver"}`.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+ *
+ * **كان المحرّكُ يرسلها والشاشةُ تُهملها** — فتقرأ «تعديل إعداد» ولا تعرف
+ * أيَّ إعدادٍ ولا من ماذا إلى ماذا، **والجوابُ وصل وسقط.** وتقرأ «توجيه
+ * إنذار» ولا تعرف سببَه **وهو محفوظٌ في السطر نفسِه.**
+ *
+ * **والقيمُ تُترجَم لا مفاتيحُها وحدَها**: `abuse_driver` رمزٌ للآلة —
+ * **ومن عرضه كما هو أرى المكتبَ إنكليزيّةً في لوحةٍ عربيّة.**
+ */
+function detailPairs(raw: string): { k: string; v: string }[] {
+  if (!raw) return [];
+  let obj: Record<string, unknown>;
+  try {
+    obj = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    // **ونصٌّ لا يُفكّ يُعرض كما هو** — **وإخفاؤه يخفي ما جاء لأجله.**
+    return [{ k: "", v: raw }];
+  }
+  const out: { k: string; v: string }[] = [];
+  for (const [k, val] of Object.entries(obj)) {
+    if (val === null || val === "" || (Array.isArray(val) && val.length === 0)) continue;
+    let v: string;
+    if (Array.isArray(val)) {
+      v = val.map((x) => ROLE_NAMES[String(x)] ?? String(x)).join(m.common.listSep);
+    } else if (k === "reason") {
+      v = REASONS[String(val)] ?? WARN_REASONS[String(val)] ?? String(val);
+    } else if (k === "role") {
+      v = ROLE_NAMES[String(val)] ?? String(val);
+    } else if (typeof val === "object") {
+      v = JSON.stringify(val);
+    } else {
+      v = String(val);
+    }
+    out.push({ k: DETAIL_KEYS[k] ?? k, v });
+  }
+  return out;
+}
 
 /**
  * **قائمةُ شكاوى — تقول من فتحها ولماذا.**

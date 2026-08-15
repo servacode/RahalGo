@@ -270,12 +270,56 @@ func (s *Server) handleAdminUserActivity(w http.ResponseWriter, r *http.Request)
 	// صامتةٌ تعني أنّ ما قبل الأسبوع الماضي محجوبٌ عمّن يراجع** — وهو ما
 	// يُبحث عنه بالضبط حين يُشتكى على حساب.
 	pg := pagingOf(r, 25)
-	var count int
-	if err := s.pg.QueryRow(r.Context(), `
-		SELECT count(*) FROM audit_log a
+	// ══════════════════════════════════════════════════════════════════
+	// **وتجديدُ الجلسة يُخفى — تكتبه الساعةُ لا الإنسان**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٥ بعد قياسٍ على الخادم: **ثلاثون من ثمانيةٍ
+	//  وخمسين سطراً `auth.refresh`** — أكثرُ من نصف السجلّ.)
+	//
+	// **وهاتفٌ تُرك مفتوحاً يكتب سطراً كلَّ دورة تجديدٍ إلى الأبد** —
+	// **فتُدفَع الأفعالُ الحقيقيّةُ خارجَ الصفحة الأولى** بعد يومٍ من
+	// الاستعمال، **وسجلٌّ يُفتح لتجد فيه شيئاً واحداً يملؤه المؤقّت.**
+	//
+	// **ولا يُحذف من القاعدة** — هو أثرُ أمانٍ بعنوانٍ ووقت: **يُخفى
+	// ويُطلب.** وشاشةُ «آخر دخولاتك» عند المستخدم تستثنيه هكذا من قبل،
+	// **والسابقةُ كانت موجودةً واللوحةُ لا تتبعها.**
+	q := r.URL.Query()
+	action := q.Get("action")
+	withRefresh := q.Get("refresh") == "true"
+
+	// **والشرطُ واحدٌ للعدّ وللقائمة ولجرد الأفعال** — ثلاثةُ نصوصٍ تفترق
+	// يوماً **فيقول العدّادُ رقماً وتعرض القائمةُ غيرَه.**
+	const scope = `
+		FROM audit_log a
 		CROSS JOIN (SELECT id FROM users WHERE id = $1) u
-		WHERE a.actor_user_id = u.id OR (a.entity = 'user' AND a.entity_id = u.id::text)`,
-		id).Scan(&count); err != nil {
+		LEFT JOIN users au ON au.id = a.actor_user_id
+		WHERE (a.actor_user_id = u.id OR (a.entity = 'user' AND a.entity_id = u.id::text))
+		  AND ($2 = '' OR a.action = $2)
+		  AND ($3 OR a.action <> 'auth.refresh')`
+
+	// **وجردُ أفعاله قبل الترشيح** — **وقائمةٌ تُبنى من المعروض تخسر
+	// خياراتِها كلَّما رُشِّحت**، فلا يُرجَع منها إلى ما قبلها.
+	//
+	// **وما ليس عنده لا يُعرض عليه**: قائمةٌ بثمانين فعلاً لحسابٍ فيه
+	// ثلاثة **تُبحث ولا تُقرأ.**
+	kinds := []map[string]any{}
+	if kRows, err := s.pg.Query(r.Context(), `
+		SELECT a.action, count(*)`+scope+`
+		GROUP BY a.action ORDER BY count(*) DESC`, id, "", true); err == nil {
+		for kRows.Next() {
+			var act string
+			var n int
+			if kRows.Scan(&act, &n) == nil {
+				kinds = append(kinds, map[string]any{"action": act, "count": n})
+			}
+		}
+		kRows.Close()
+	}
+
+	var count int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*)`+scope, id, action, withRefresh).Scan(&count); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -283,12 +327,9 @@ func (s *Server) handleAdminUserActivity(w http.ResponseWriter, r *http.Request)
 		SELECT a.action, a.entity, COALESCE(a.entity_id, ''), COALESCE(a.ip, ''),
 		       COALESCE(a.details::text, ''), a.created_at,
 		       NULLIF(COALESCE(au.full_name, au.phone::text), ''),
-		       (a.actor_user_id IS NOT DISTINCT FROM u.id) AS by_self
-		FROM audit_log a
-		CROSS JOIN (SELECT id FROM users WHERE id = $1) u
-		LEFT JOIN users au ON au.id = a.actor_user_id
-		WHERE a.actor_user_id = u.id OR (a.entity = 'user' AND a.entity_id = u.id::text)
-		ORDER BY a.id DESC LIMIT $2 OFFSET $3`, id, pg.PerPage, pg.Offset)
+		       (a.actor_user_id IS NOT DISTINCT FROM u.id) AS by_self`+scope+`
+		ORDER BY a.id DESC LIMIT $4 OFFSET $5`,
+		id, action, withRefresh, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -314,7 +355,10 @@ func (s *Server) handleAdminUserActivity(w http.ResponseWriter, r *http.Request)
 		}
 		out = append(out, e)
 	}
-	httpx.JSON(w, http.StatusOK, paged("activity", out, count, pg))
+	res := paged("activity", out, count, pg)
+	// **وأفعالُه المتاحةُ معه** — تُبنى منها قائمةُ الترشيح في الشاشة.
+	res["kinds"] = kinds
+	httpx.JSON(w, http.StatusOK, res)
 }
 
 // handleAdminLogoutAll إنهاء كل جلسات الحساب فوراً.

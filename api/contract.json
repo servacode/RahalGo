@@ -2215,7 +2215,7 @@
       ],
       "response": [
         {
-          "name": "@paged",
+          "name": "@res",
           "type": "unknown"
         }
       ],
