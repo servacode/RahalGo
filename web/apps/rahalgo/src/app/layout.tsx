@@ -29,7 +29,18 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = withPlatform(m.site.appDescription, name);
   return {
     metadataBase: new URL(SITE),
-    title: { default: title, template: `%s | ${name}` },
+    // ══════════════════════════════════════════════════════════════
+    // **وعنوانُ التبويب اسمُ المنصّة في كلّ صفحة**
+    // ══════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٥: «اتركها فقط رحّال غو بكلّ الصفحات».)
+    //
+    // **وكان قالباً يُلحق الاسمَ بعنوان الصفحة** (`تواصل معنا | رحّال
+    // غو`) — **وعنوانُ التبويب يُقرأ في شريطٍ ضيّقٍ فيه عشرُ تبويبات**:
+    // ما يزيد على كلمتين يُقصّ، **فيبقى الجزءُ الذي لا يدلّ.**
+    //
+    // **والاسمُ وحدَه يُعرف من حرفه الأوّل.**
+    title: { default: name, template: `${name}` },
     description,
     openGraph: { title, description, siteName: name, locale: "ar_SY", type: "website" },
   };

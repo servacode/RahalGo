@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/coder/websocket"
@@ -16,17 +17,35 @@ import (
 //
 // **الاستثناءُ صريحٌ في مكانٍ واحد** — لا مهلةٌ ثانية داخل المعالج ولا فرعٌ
 // مخفيّ فيه. ومن قرأ سطرَ الوسيط عرف من يُعفى منه قبل أن يبحث.
+//
+// **وما بدأ بنجمةٍ يُطابَق بذيله** (`*/media`) — **ونقاطُ الرفع فيها
+// معرّفٌ في وسط المسار** (`/orders/{id}/proof`)، فلا يُطابقها اسمٌ كامل.
 func exceptPaths(mw func(http.Handler) http.Handler, paths ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		wrapped := mw(next)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if slices.Contains(paths, r.URL.Path) {
+			if pathExcepted(paths, r.URL.Path) {
 				next.ServeHTTP(w, r)
 				return
 			}
 			wrapped.ServeHTTP(w, r)
 		})
 	}
+}
+
+func pathExcepted(pats []string, path string) bool {
+	for _, p := range pats {
+		if suffix, ok := strings.CutPrefix(p, "*"); ok {
+			if strings.HasSuffix(path, suffix) {
+				return true
+			}
+			continue
+		}
+		if p == path {
+			return true
+		}
+	}
+	return false
 }
 
 // handleWS اتصال البث الحي. المتصفح لا يرسل ترويسات مع WebSocket،

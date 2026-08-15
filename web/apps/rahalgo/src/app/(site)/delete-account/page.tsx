@@ -29,7 +29,6 @@
  * والمحرّكُ يمنعه. **ومن لم يُقَل له ذلك يظنّ العطبَ في الموقع.**
  */
 
-import type { Metadata } from "next";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LegalPage, type Block } from "../legal/LegalPage";
 import { getContact } from "../legal/contact";
@@ -37,7 +36,6 @@ import { getContact } from "../legal/contact";
 const m = getMessages(defaultLocale);
 const L = m.site.legal;
 
-export const metadata: Metadata = { title: L.deleteTitle };
 
 export default async function Page() {
   const contact = await getContact();

@@ -41,7 +41,6 @@ const L = m.site.legal;
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-export const metadata = { title: L.contactTitle };
 
 /** **«عرض,طول» ← رقمان** — وفارغٌ يعني «لا خريطة». */
 function geoOf(v: string): [number, number] | null {
