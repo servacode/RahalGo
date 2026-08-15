@@ -64,12 +64,23 @@ interface Comment {
   created_at: string;
 }
 
+/** **متجرٌ كما يراه السائقون** — نجمتان لا واحدة. */
+interface Store {
+  id: string;
+  name: string;
+  count: number;
+  speed: number;
+  conduct: number;
+  low: number;
+}
+
 interface Data {
   total: number;
   average: number;
   has_average: boolean;
   low: number;
   drivers: Party[];
+  stores: Store[];
   comments: Comment[];
 }
 
@@ -161,6 +172,71 @@ export function RatingsView() {
           </ul>
         )}
       </section>
+
+      {/* ══════════════════════════════════════════════════════════════
+          **والمتاجرُ كما يراها السائقون**
+          ══════════════════════════════════════════════════════════════
+
+          (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+
+          **والتبويبُ وُضع لسؤال «من يشكو منه الناس؟»** — وكان يجيبه عن
+          السائقين وحدَهم، **فيبقى السؤالُ عن المتاجر بلا جوابٍ إلّا بفتح
+          عشرين ملفّاً**، وهو ما بُني ليمنعه.
+
+          **ونجمتان لا متوسّط**: «بطيءٌ في التجهيز» و«سيّئُ التعامل»
+          عيبان لا يُعالجان بشيءٍ واحد — **ومتوسّطُهما يخفي أيَّهما هو.**
+
+          **ولا يُرسم فارغاً** — قسمٌ صفريٌّ يُقرأ عطباً، **وهو فارغٌ حتّى
+          يبدأ السائقون بالتقييم.** */}
+      {data.stores.length > 0 && (
+        <section>
+          <h2 className="mb-3 font-bold">{R.storesTitle}</h2>
+          <ul className="divide-y divide-line surface">
+            {data.stores.map((x) => (
+              <li key={x.id}>
+                <button
+                  onClick={() => router.push(`/dashboard/merchants/${x.id}`)}
+                  className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-start hover:bg-row-hover"
+                >
+                  <span className="min-w-0 flex-1 font-medium">{x.name}</span>
+                  <span className="shrink-0 text-xs text-ink-muted">
+                    {R.speed}:{" "}
+                    <span
+                      dir="ltr"
+                      className={`font-bold tabular-nums ${
+                        x.speed < 3 ? "text-danger" : x.speed < 4 ? "text-warning" : "text-success"
+                      }`}
+                    >
+                      {x.speed.toFixed(1)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-ink-muted">
+                    {R.conduct}:{" "}
+                    <span
+                      dir="ltr"
+                      className={`font-bold tabular-nums ${
+                        x.conduct < 3
+                          ? "text-danger"
+                          : x.conduct < 4
+                            ? "text-warning"
+                            : "text-success"
+                      }`}
+                    >
+                      {x.conduct.toFixed(1)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-ink-muted">
+                    {R.ofCount.replace("{n}", fmtNum(x.count))}
+                  </span>
+                  {x.low > 0 && (
+                    <Badge variant="danger">{R.lowBadge.replace("{n}", fmtNum(x.low))}</Badge>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-3 font-bold">{R.commentsTitle}</h2>

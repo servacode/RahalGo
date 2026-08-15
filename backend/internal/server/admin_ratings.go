@@ -38,6 +38,34 @@ type ratedParty struct {
 	Low     int     `json:"low"` // كم مرّةً نجمتان أو أقلّ
 }
 
+// ratedStore **متجرٌ كما يراه السائقون** — نجمتان لا واحدة.
+//
+// (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+//
+// **وجدولُ `merchant_ratings` كان يُكتب فيه ولا يُقرأ منه أبداً**: لا شاشةَ
+// إدارةٍ ولا بوّابةَ متجرٍ ولا تقرير. **والسائقُ يُسأل بعد كلّ تسليم**
+// فيُنفَق وقتُه على رأيٍ لا يبلغ أحداً — **وهذا أسوأُ من غياب الميزة**:
+// غيابُها يُعرف، **وهذه تبدو موجودةً وهي معطّلة.**
+//
+// **والتبويبُ وُضع لسؤال «من يشكو منه الناس؟»** — وكان يجيبه عن السائقين
+// وحدَهم، **فيبقى السؤالُ عن المتاجر بلا جوابٍ إلّا بفتح عشرين ملفّاً**،
+// وهو ما بُني ليمنعه.
+//
+// # ولماذا نجمتان لا متوسّطٌ واحد
+//
+// **«بطيءٌ في التجهيز» و«سيّئُ التعامل» عيبان لا يُعالجان بشيءٍ واحد** —
+// **ومتوسّطُهما يخفي أيَّهما هو**: متجرٌ سريعٌ فظٌّ ومتجرٌ لطيفٌ بطيءٌ
+// يخرجان برقمٍ واحد.
+type ratedStore struct {
+	ID      string  `json:"id"`
+	Name    string  `json:"name"`
+	Count   int     `json:"count"`
+	Speed   float64 `json:"speed"`
+	Conduct float64 `json:"conduct"`
+	// Low **كم مرّةً نزل أحدُ النجمين إلى اثنتين فأقلّ.**
+	Low int `json:"low"`
+}
+
 type ratingComment struct {
 	OrderNumber int64     `json:"order_number"`
 	Customer    string    `json:"customer"`
@@ -98,7 +126,43 @@ func (s *Server) handleAdminRatings(w http.ResponseWriter, r *http.Request) {
 	}
 	rows.Close()
 
-	// ٣ · آخرُ ما كُتب — **ورقمٌ بلا كلامٍ لا يُصلح شيئاً.**
+	// ══════════════════════════════════════════════════════════════════
+	// **٣ · والمتاجرُ كما يراها السائقون**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **بالأسوأ أوّلاً وبالحدّ الأدنى نفسِه** — **وشرطان مختلفان لقائمتين
+	// في شاشةٍ واحدةٍ يُقرآن رقماً واحداً**، فيُظنّ المتجرُ أسوأَ من سائقٍ
+	// وهو قُيّم مرّةً وذاك مئة.
+	//
+	// **والترتيبُ بأدنى النجمين** — **ومتوسّطُ المتوسّطين يخفي العيبَ
+	// الواحدَ الحادّ** خلف الآخر الحسن.
+	stores := []ratedStore{}
+	srows, err := s.pg.Query(r.Context(), `
+		SELECT m.id::text, m.name, count(*),
+		       avg(mr.speed_stars)::float8, avg(mr.conduct_stars)::float8,
+		       count(*) FILTER (WHERE mr.speed_stars <= 2 OR mr.conduct_stars <= 2)
+		FROM merchant_ratings mr
+		JOIN merchants m ON m.id = mr.merchant_id
+		GROUP BY m.id, m.name
+		HAVING count(*) >= $1
+		ORDER BY least(avg(mr.speed_stars), avg(mr.conduct_stars)), count(*) DESC
+		LIMIT 100`, minCount)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	for srows.Next() {
+		var x ratedStore
+		if err := srows.Scan(&x.ID, &x.Name, &x.Count, &x.Speed, &x.Conduct, &x.Low); err != nil {
+			srows.Close()
+			s.respondErr(w, err)
+			return
+		}
+		stores = append(stores, x)
+	}
+	srows.Close()
+
+	// ٤ · آخرُ ما كُتب — **ورقمٌ بلا كلامٍ لا يُصلح شيئاً.**
 	//
 	// **وما فيه تعليقٌ أو نجمتان فأقلّ** — والباقي رضاً صامتاً لا يحتاج قراءة.
 	comments := []ratingComment{}
@@ -136,6 +200,6 @@ func (s *Server) handleAdminRatings(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"total": total, "average": average, "has_average": avg != nil,
-		"low": lowCount, "drivers": drivers, "comments": comments,
+		"low": lowCount, "drivers": drivers, "stores": stores, "comments": comments,
 	})
 }
