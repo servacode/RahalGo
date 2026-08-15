@@ -951,17 +951,45 @@ export function MerchantModal({
   );
 }
 
-function CategoriesModal({
+export function CategoriesModal({
   open,
   categories,
   onClose,
   onChanged,
 }: {
   open: boolean;
-  categories: Category[];
+  /** **وفارغةٌ تعني «اجلبها بنفسك»** — فتُفتح من أيّ شاشة. */
+  categories?: Category[];
   onClose: () => void;
-  onChanged: () => Promise<void> | void;
+  onChanged?: () => Promise<void> | void;
 }) {
+  // ══════════════════════════════════════════════════════════════════
+  // **والقائمةُ تُجلب هنا إن لم تصل**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // (قرارُ المالك ٢٠٢٦-٠٨-١٥: زرُّ إدارة التصنيفات يصعد إلى أعلى
+  //  الحسابات — **وهو من شؤون المنصّة لا من شؤون متجر.**)
+  //
+  // **ونافذةٌ تعتمد على من ناداها تُفتح فارغةً من الباب الثاني.**
+  const [rows, setRows] = useState<Category[]>(categories ?? []);
+  const [loadErr, setLoadErr] = useState("");
+  const reload = useCallback(async () => {
+    try {
+      const r = await api<{ categories: Category[] }>("/api/v1/admin/categories");
+      setRows(r.categories ?? []);
+    } catch (e) {
+      setLoadErr(errText(e));
+    }
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    if ((categories?.length ?? 0) > 0) {
+      setRows(categories ?? []);
+      return;
+    }
+    void reload();
+  }, [open, categories, reload]);
+
   const [name, setName] = useState("");
   const [icon, setIcon] = useState<CategoryIconKey>("other");
   const [error, setError] = useState("");
@@ -972,11 +1000,12 @@ function CategoriesModal({
     try {
       await api("/api/v1/admin/categories", {
         method: "POST",
-        body: JSON.stringify({ name, icon, sort_order: categories.length + 1 }),
+        body: JSON.stringify({ name, icon, sort_order: rows.length + 1 }),
       });
       setName("");
       setIcon("other");
-      await onChanged();
+      await reload();
+      await onChanged?.();
     } catch (err) {
       setError(errText(err));
     }
@@ -989,7 +1018,8 @@ function CategoriesModal({
         method: "PATCH",
         body: JSON.stringify({ active: !c.active }),
       });
-      await onChanged();
+      await reload();
+      await onChanged?.();
     } catch (err) {
       setError(errText(err));
     }
@@ -997,8 +1027,11 @@ function CategoriesModal({
 
   return (
     <Modal open={open} onClose={onClose} title={m.admin.merchants.categoriesTitle}>
+      {/* **وفشلُ الجلب يُقال** — **وقائمةٌ فارغةٌ تُقرأ «لا تصنيفاتِ في
+          المنصّة» وهي في الحقيقة نداءٌ سقط.** */}
+      {loadErr && <Alert>{loadErr}</Alert>}
       <ul className="mb-4 space-y-2">
-        {categories.map((c) => (
+        {rows.map((c) => (
           <li
             key={c.id}
             className="flex items-center justify-between rounded-control border border-line px-3 py-2"

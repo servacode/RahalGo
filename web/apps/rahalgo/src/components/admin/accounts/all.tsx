@@ -31,6 +31,7 @@ import {
   IconLink,
   IconStore,
   IconDriver,
+  IconGrid,
   CopyCode,
   IconView,
   usePlatform,
@@ -39,7 +40,7 @@ import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/admin/WalletModal";
 import { CashBoxModal, EndShiftModal } from "@/components/admin/DriverActions";
-import { MerchantModal } from "@/components/admin/accounts/merchants";
+import { MerchantModal, CategoriesModal } from "@/components/admin/accounts/merchants";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
@@ -90,6 +91,7 @@ export default function AllAccountsTable() {
   const [endShiftFor, setEndShiftFor] = useState<AuthUser | null>(null);
   // **ونافذةُ المتجر** — صاحبُه أعلاها وبياناتُه أسفلَها.
   const [storeOpen, setStoreOpen] = useState(false);
+  const [catsOpen, setCatsOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<{ user: AuthUser; status: string } | null>(null);
   const [view, setView] = useViewMode("users");
 
@@ -366,6 +368,18 @@ export default function AllAccountsTable() {
                 <IconStore size={16} />
                 {m.admin.merchants.create}
               </Button>
+              {/* **وإدارةُ التصنيفات من شؤون المنصّة لا من شؤون متجر**
+                  — (قرارُ المالك ٢٠٢٦-٠٨-١٥). **وكانت مدفونةً في
+                  تبويب المتاجر**: من أراد تصنيفاً جديداً فتح المتاجر
+                  ليصل إلى ما لا يخصّها. */}
+              <Button
+                variant="secondary"
+                onClick={() => setCatsOpen(true)}
+                className="flex items-center gap-1.5"
+              >
+                <IconGrid size={16} />
+                {m.admin.merchants.categoriesTitle}
+              </Button>
             </>
           )}
         </div>
@@ -578,6 +592,7 @@ export default function AllAccountsTable() {
         }}
       />
       <ManageRolesModal user={rolesUser} onClose={() => setRolesUser(null)} onChanged={load} />
+      <CategoriesModal open={catsOpen} onClose={() => setCatsOpen(false)} />
       {storeOpen && (
         <MerchantModal
           merchant={null}
