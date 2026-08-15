@@ -295,16 +295,24 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 	// **ومئتان بلا كلمةٍ تُقرأ «هذا كلُّ من طلب الانضمام»** — فيُظنّ أنّ
 	// الطلباتِ نضبت وهي في الصفحة الثانية.
 	pg := pagingOf(r, 20)
+	// **ومندوبُه مُرشِّحٌ** — (قرارُ المالك ٢٠٢٦-٠٨-١٦): **عملاؤه المحتملون
+	// في ملفّه.**
+	//
+	// **وهي عملُ المندوب الأوّل**: الملفُّ كان يقول «كم متجراً جلب» **ولا
+	// يقول كم رشّح وكم رُفض له.**
+	repID := r.URL.Query().Get("rep_id")
+	const leadWhere = ` WHERE ($1 = '' OR l.status = $1)
+		AND ($2 = '' OR l.sales_rep_user_id::text = $2)`
 	var count int
 	if err := s.pg.QueryRow(r.Context(),
-		`SELECT count(*) FROM merchant_leads l WHERE ($1 = '' OR l.status = $1)`,
-		status).Scan(&count); err != nil {
+		`SELECT count(*) FROM merchant_leads l`+leadWhere,
+		status, repID).Scan(&count); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	rows, err := s.pg.Query(r.Context(),
-		leadSelect+` WHERE ($1 = '' OR l.status = $1)
-		ORDER BY l.created_at DESC LIMIT $2 OFFSET $3`, status, pg.PerPage, pg.Offset)
+		leadSelect+leadWhere+`
+		ORDER BY l.created_at DESC LIMIT $3 OFFSET $4`, status, repID, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return

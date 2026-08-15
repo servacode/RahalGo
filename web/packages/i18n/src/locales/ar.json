@@ -1089,9 +1089,16 @@
             "adjust": "تعديل"
           },
           "stores": "متاجره",
+          "clients": "عملاؤه",
           "storesOwned": "متاجرُ يملكها",
-          "storesBrought": "متاجرُ جلبها",
-          "storesEmpty": "لا متاجر"
+          "storesBrought": "عملاؤه من المتاجر",
+          "storesEmpty": "لا متاجر",
+          "leads": "عملاء محتملون",
+          "leadSt": {
+            "new": "جديد",
+            "converted": "صار متجراً",
+            "rejected": "مرفوض"
+          }
         },
         "referralsCount": "دعوات مقبولة",
         "referralsEarned": "مكتسبٌ من الدعوات"

@@ -237,27 +237,41 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 // في ملفّه لا في قائمةٍ عامّةٍ تُبحث بالاسم. **ونقطةٌ ثانيةٌ تُبنى لأجله كانت
 // ستُكرّر الاستعلامَ نفسَه بشرطٍ واحدٍ زائد** — وهي عائلةُ «قاعدةٌ مكتوبةٌ
 // مرّتين» التي أتعبتنا.
-func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status, repID string, page, perPage int) (*MerchantPage, error) {
+func (s *Service) ListMerchants(ctx context.Context, query, categoryID, status, repID, ownerID string, page, perPage int) (*MerchantPage, error) {
 	if page < 1 {
 		page = 1
 	}
 	if perPage < 1 || perPage > 100 {
 		perPage = 20
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ومالكُه مُرشِّحٌ كسائره**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+	//
+	// **كان الشرطُ يعرف الاسمَ والتصنيفَ والحالَ والمندوبَ ولا يعرف المالك**
+	// — **وتبويبُ «متاجره» في ملفّ صاحب المتجر ينادي بلا شرطٍ أصلاً**،
+	// فيعرض **متاجرَ المنصّة كلَّها** تحت عنوان «متاجرُ يملكها».
+	//
+	// **ولم يُرَ**: في القاعدة متجرٌ واحد، **فبدا صحيحاً.** وحين تصير
+	// عشرين **يرى كلُّ صاحبِ متجرٍ متاجرَ العشرين في ملفّه** — والنظرةُ
+	// العامّةُ فوقَه تقول الصحيح، **فرقمان متناقضان في صفحةٍ واحدة.**
 	where := ` WHERE ($1 = '' OR m.name ILIKE '%'||$1||'%' OR m.phone ILIKE '%'||$1||'%')
 	           AND ($2 = '' OR m.category_id::text = $2)
 	           AND ($3 = '' OR m.status = $3)
-	           AND ($4 = '' OR m.sales_rep_user_id::text = $4)`
+	           AND ($4 = '' OR m.sales_rep_user_id::text = $4)
+	           AND ($5 = '' OR m.owner_user_id::text = $5)`
 
 	var total int
 	if err := s.db.QueryRow(ctx, `SELECT count(*) FROM merchants m`+where,
-		query, categoryID, status, repID).Scan(&total); err != nil {
+		query, categoryID, status, repID, ownerID).Scan(&total); err != nil {
 		return nil, err
 	}
 
-	rows, err := s.db.Query(ctx, merchantSelect("$5")+where+`
-		ORDER BY m.created_at DESC LIMIT $6 OFFSET $7`,
-		query, categoryID, status, repID, s.banDays(ctx), perPage, (page-1)*perPage)
+	rows, err := s.db.Query(ctx, merchantSelect("$6")+where+`
+		ORDER BY m.created_at DESC LIMIT $7 OFFSET $8`,
+		query, categoryID, status, repID, ownerID, s.banDays(ctx), perPage, (page-1)*perPage)
 	if err != nil {
 		return nil, err
 	}

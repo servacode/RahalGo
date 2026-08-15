@@ -52,7 +52,7 @@ func (s *Server) handleListMerchants(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(q.Get("page"))
 	perPage, _ := strconv.Atoi(q.Get("per_page"))
 	res, err := s.catalog.ListMerchants(r.Context(),
-		q.Get("query"), q.Get("category_id"), q.Get("status"), q.Get("rep_id"), page, perPage)
+		q.Get("query"), q.Get("category_id"), q.Get("status"), q.Get("rep_id"), q.Get("owner_id"), page, perPage)
 	if err != nil {
 		s.respondErr(w, err)
 		return

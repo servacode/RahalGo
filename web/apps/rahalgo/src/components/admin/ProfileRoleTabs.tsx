@@ -129,6 +129,15 @@ interface CashEntry {
   created_at: string;
 }
 
+/** **عميلٌ محتملٌ رشّحه المندوب** — بحاله. */
+interface LeadRow {
+  id: string;
+  store_name: string;
+  phone: string;
+  area: string;
+  status: string;
+}
+
 interface StoreRow {
   id: string;
   name: string;
@@ -581,8 +590,22 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
   const [rows, setRows] = useState<StoreRow[] | null | "failed">(null);
   const isRep = roles.includes("sales");
 
+  // ══════════════════════════════════════════════════════════════════
+  // **ومالكُه في الشرط — لا قائمةٌ بلا شرط**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+  //
+  // **كان يُنادى `query=` لصاحب المتجر** — بلا مُرشِّحٍ أصلاً، **فيعرض
+  // متاجرَ المنصّة كلَّها** تحت عنوان «متاجرُ يملكها». **ولم يُرَ لأنّ في
+  // القاعدة متجراً واحداً** — وحين تصير عشرين يراها كلُّ صاحبِ متجرٍ في
+  // ملفّه.
+  //
+  // **والمحرّكُ لم يكن يعرف المالكَ أصلاً**: أربعةُ مُرشِّحاتٍ ولا واحدَ
+  // منها له. **فأُضيف هناك أوّلاً** — وشرطٌ في الشاشة بلا شرطٍ في المحرّك
+  // وعدٌ بحجب.
   useEffect(() => {
-    const q = isRep ? `rep_id=${userID}` : `query=`;
+    const q = isRep ? `rep_id=${userID}` : `owner_id=${userID}`;
     api<{ merchants: StoreRow[] }>(`/api/v1/admin/merchants?${q}&per_page=100`)
       .then((r) => setRows(r.merchants ?? []))
       .catch(() => setRows("failed"));
@@ -593,6 +616,7 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
   if (!rows) return <LoadingState variant="text" />;
 
   return (
+    <>
     <FormSection title={isRep ? R.storesBrought : R.storesOwned} icon={<IconStore />}>
       {rows.length === 0 ? (
         <EmptyState icon={IconStore} title={R.storesEmpty} />
@@ -618,5 +642,57 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
         </ul>
       )}
     </FormSection>
+    {/* **وعملاؤه المحتملون معهم** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+
+        **وهي عملُ المندوب الأوّل**: الملفُّ كان يقول «كم متجراً جلب»
+        **ولا يقول كم رشّح وكم رُفض له.** وشاشتُها منفصلة، **وهو داءُ
+        الأربعة الذي عولج أمس.** */}
+    {isRep && <LeadsList userID={userID} />}
+    </>
   );
 }
+
+/**
+ * **عملاؤه المحتملون** — ما رشّحه المندوبُ ولم يُفتح بعد.
+ *
+ * **وحالاتُه ثلاث**: جديدٌ · تحوّل إلى متجر · رُفض. **والمرفوضُ يُقال** —
+ * **وقائمةٌ تعرض ما نجح وحدَه تُري المندوبَ أفضلَ ممّا هو.**
+ */
+function LeadsList({ userID }: { userID: string }) {
+  const [rows, setRows] = useState<LeadRow[] | null | "failed">(null);
+
+  useEffect(() => {
+    api<{ leads: LeadRow[] }>(`/api/v1/admin/leads?rep_id=${userID}&per_page=50`)
+      .then((r) => setRows(r.leads ?? []))
+      .catch(() => setRows("failed"));
+  }, [userID]);
+
+  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (!rows) return <LoadingState variant="text" />;
+  // **ولا يُرسم فارغاً** — عنوانٌ صفريٌّ يُقرأ عطباً.
+  if (rows.length === 0) return null;
+
+  return (
+    <FormSection title={`${R.leads} (${fmtNum(rows.length)})`} icon={<IconStore />}>
+      <ul className="divide-y divide-line">
+        {rows.map((l) => (
+          <li key={l.id} className="flex items-center gap-3 py-2">
+            <Badge variant={LEAD_TONE[l.status] ?? "neutral"}>
+              {(R.leadSt as Record<string, string>)[l.status] ?? l.status}
+            </Badge>
+            <span className="min-w-0 flex-1 truncate font-medium">{l.store_name}</span>
+            {l.area && <span className="shrink-0 text-xs text-ink-muted">{l.area}</span>}
+            <span dir="ltr" className="shrink-0 text-xs text-ink-muted">{l.phone}</span>
+          </li>
+        ))}
+      </ul>
+    </FormSection>
+  );
+}
+
+/** **ولونُ الحال يُقرأ قبل حرفه.** */
+const LEAD_TONE: Record<string, "success" | "danger" | "warning"> = {
+  new: "warning",
+  converted: "success",
+  rejected: "danger",
+};
