@@ -34,6 +34,7 @@ import {
   Button,
   FormSection,
   EmptyState,
+  Pagination,
   IconOrder,
   IconLocation,
   IconBalance,
@@ -77,6 +78,10 @@ interface OrderRow {
   total: number;
   created_at: string;
   merchant_name: string;
+  /** **نوعُ الطلب** — `custom` طلبٌ خاصٌّ بلا متجر. */
+  kind?: string;
+  /** ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه. */
+  custom_request?: string;
 }
 
 interface AddressRow {
@@ -110,56 +115,73 @@ interface StoreRow {
  */
 export function OrdersTab({ userID, roles }: { userID: string; roles: string[] }) {
   const router = useRouter();
-  const [asCustomer, setAsCustomer] = useState<OrderRow[]>([]);
-  const [asDriver, setAsDriver] = useState<OrderRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    const get = (q: string) =>
-      api<{ orders: OrderRow[] }>(`/api/v1/admin/orders?${q}&per_page=50`)
-        .then((r) => r.orders ?? [])
-        .catch(() => []);
-    const [c, d] = await Promise.all([
-      roles.includes("customer") ? get(`customer_id=${userID}`) : Promise.resolve([]),
-      roles.includes("driver") ? get(`driver_id=${userID}`) : Promise.resolve([]),
-    ]);
-    setAsCustomer(c);
-    setAsDriver(d);
-    setLoading(false);
-  }, [userID, roles]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  if (loading) return <LoadingState variant="text" />;
-
+  const open = useCallback(
+    (o: OrderRow) => router.push(`/dashboard/orders?q=${o.number}`),
+    [router],
+  );
   return (
     <div className="space-y-4">
       {roles.includes("customer") && (
-        <OrderList title={R.ordersAsCustomer} rows={asCustomer} onOpen={(o) =>
-          router.push(`/dashboard/orders?q=${o.number}`)} />
+        <OrderList title={R.ordersAsCustomer} filter={`customer_id=${userID}`} onOpen={open} />
       )}
       {roles.includes("driver") && (
-        <OrderList title={R.ordersAsDriver} rows={asDriver} onOpen={(o) =>
-          router.push(`/dashboard/orders?q=${o.number}`)} />
+        <OrderList title={R.ordersAsDriver} filter={`driver_id=${userID}`} onOpen={open} />
       )}
     </div>
   );
 }
 
+/**
+ * **عشرون في الصفحة** — والباقي بالتنقّل.
+ *
+ * **وكانت خمسين بلا تنقّل** (قرارُ المالك ٢٠٢٦-٠٨-١٥: «اجعلها كاملةً وليس
+ * ٥٠ فقط، واجعل باجينيشن أيضاً»). **فمن طلب ستّين يُعرض له خمسون** —
+ * **والعشرةُ الباقيةُ لا بابَ إليها**، ولا شيءَ يقول إنّها حُجبت.
+ */
+const ORDERS_PER_PAGE = 20;
+
+/**
+ * **قائمةٌ تجلب صفحتَها بنفسها.**
+ *
+ * **ولكلٍّ صفحتُها**: من حمل الدورين له قائمتان — **وصفحةٌ واحدةٌ تحكمهما
+ * تُقلّب ما لم يُطلب تقليبُه.**
+ */
 function OrderList({
   title,
-  rows,
+  filter,
   onOpen,
 }: {
   title: string;
-  rows: OrderRow[];
+  filter: string;
   onOpen: (o: OrderRow) => void;
 }) {
+  const [rows, setRows] = useState<OrderRow[] | null | "failed">(null);
+  // **والمجموعُ من المحرّك لا من طول الصفحة** — طولُها عشرون دائماً،
+  // **ولو كُتب في العنوان لقال «طلباته (٢٠)» لمن طلب مئة.**
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    let alive = true;
+    api<{ orders: OrderRow[]; total: number }>(
+      `/api/v1/admin/orders?${filter}&page=${page}&per_page=${ORDERS_PER_PAGE}`,
+    )
+      .then((r) => {
+        if (!alive) return;
+        setRows(r.orders ?? []);
+        setTotal(r.total ?? 0);
+      })
+      .catch(() => alive && setRows("failed"));
+    return () => {
+      alive = false;
+    };
+  }, [filter, page]);
+
+  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (rows === null) return <LoadingState variant="text" />;
+
   return (
-    <FormSection title={`${title} (${fmtNum(rows.length)})`} icon={<IconOrder />}>
+    <FormSection title={`${title} (${fmtNum(total)})`} icon={<IconOrder />}>
       {rows.length === 0 ? (
         <EmptyState icon={IconOrder} title={R.ordersEmpty} />
       ) : (
@@ -176,9 +198,30 @@ function OrderList({
                 <Badge variant={STATUS_VARIANT[o.status] ?? "neutral"}>
                   {STATUS_LABELS[o.status] ?? o.status}
                 </Badge>
-                <span className="min-w-0 flex-1 truncate text-sm text-ink-muted">
-                  {o.merchant_name}
-                </span>
+                {/* ══════════════════════════════════════════════════════
+                    **والخاصُّ يقول ما هو — لا فراغاً مكانَ متجر**
+                    ══════════════════════════════════════════════════════
+
+                    (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+
+                    **الطلبُ الخاصُّ لا متجرَ له** — والعمودُ كان يُعرض
+                    فارغاً، **فيُقرأ عطباً في القراءة** لا «طلبٌ بلا
+                    متجر»: أضاع الاسمُ أم لم يكن؟
+
+                    **فتحلّ الشارةُ محلَّ الاسم ويتبعها نصُّ طلبه** —
+                    وهو ما يقوم مقام اسم المتجر في هذا النوع. */}
+                {o.kind === "custom" ? (
+                  <span className="flex min-w-0 flex-1 items-center gap-2">
+                    <Badge variant="warning">{R.orderCustom}</Badge>
+                    <span className="truncate text-sm text-ink-muted">
+                      {o.custom_request}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink-muted">
+                    {o.merchant_name}
+                  </span>
+                )}
                 <span dir="ltr" className="shrink-0 tabular-nums">
                   {fmtNum(o.total)}
                 </span>
@@ -190,6 +233,12 @@ function OrderList({
           ))}
         </ul>
       )}
+      <Pagination
+        page={page}
+        total={total}
+        perPage={ORDERS_PER_PAGE}
+        onChange={setPage}
+      />
     </FormSection>
   );
 }

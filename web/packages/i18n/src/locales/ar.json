@@ -1042,6 +1042,7 @@
           "ordersAsCustomer": "طلباتٌ طلبها",
           "ordersAsDriver": "طلباتٌ أوصلها",
           "ordersEmpty": "لا طلبات",
+          "orderCustom": "خاصّ",
           "addresses": "عناوينه",
           "addressesEmpty": "لا عناوين محفوظة",
           "defaultAddress": "الافتراضي",
