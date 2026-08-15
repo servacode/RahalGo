@@ -95,6 +95,7 @@ interface Profile {
   merchants: string[];
   rep_stores: number;
   commissions: number;
+  on_shift: boolean;
   driver_cash: number;
   deliveries: number;
 }
@@ -265,6 +266,16 @@ export default function UserProfilePage() {
         icon: <IconOrder className="text-success" />,
       }
     );
+  }
+  // **وورديّتُه هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٥: حُذفت من البطاقة).
+  // **ومن سأل «من يعمل الآن؟» يسأله في شاشة الطلبات**، ومن فتح ملفَّ
+  // سائقٍ بعينه يريد أن يعرف حالَه.
+  if (has("driver")) {
+    stats.push({
+      label: m.terms.onShift,
+      value: p.on_shift ? m.terms.onShift : m.terms.offShift,
+      icon: <IconDriver className={p.on_shift ? "text-success" : ""} />,
+    });
   }
   if (has("sales")) {
     stats.push(

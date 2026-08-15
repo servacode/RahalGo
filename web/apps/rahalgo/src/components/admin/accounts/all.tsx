@@ -39,7 +39,6 @@ import {
 import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/admin/WalletModal";
-import { EndShiftModal } from "@/components/admin/DriverActions";
 import { MerchantModal, CategoriesModal } from "@/components/admin/accounts/merchants";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
@@ -86,7 +85,6 @@ export default function AllAccountsTable() {
   const [createOpen, setCreateOpen] = useState(false);
   const [walletUser, setWalletUser] = useState<AuthUser | null>(null);
   // **ونافذتا السائق** — نُقلتا من شاشتهم كما هما.
-  const [endShiftFor, setEndShiftFor] = useState<AuthUser | null>(null);
   // **ونافذةُ المتجر** — صاحبُه أعلاها وبياناتُه أسفلَها.
   const [storeOpen, setStoreOpen] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
@@ -232,23 +230,14 @@ export default function AllAccountsTable() {
       cell: (u) => (u.last_order_at ? fmtDate(u.last_order_at) : "—"),
     },
     // ══════════════════════════════════════════════════════════════
-    // **وأرقامُه كمندوب — هنا لا في تبويبٍ ثانٍ**
+    // **وأرقامُه كمندوب — بلا رمز دعوته**
     // ══════════════════════════════════════════════════════════════
     //
-    // (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٥: «احذفه من كرت المندوب، لا يلزم أصلاً
+    //  أن يكون بالكرت».)
     //
-    // **ورمزُ الدعوة كان يصل ولا يُعرض** — والجدولُ **يبحث به** ولا
-    // يُريه: **حقلٌ يصل ولا يُقرأ ليس حقلاً، هو نيّة.**
-    //
-    // **ويُنسخ بضغطة** — يُملى على مندوبٍ في الهاتف، **ورمزٌ يُقرأ من
-    // شاشةٍ ويُكتب بيدٍ يُخطئ فيه حرف.**
-    {
-      id: "invite_code",
-      header: m.admin.sales.inviteCode,
-      icon: <IconLink />,
-      hide: (u) => !u.invite_code,
-      cell: (u) => (u.invite_code ? <CopyCode code={u.invite_code} title={m.admin.sales.copyCode} /> : "—"),
-    },
+    // **ورمزُه في ملفّه** — ومن أراد أن يمليه على أحدٍ يفتحه، **ولا
+    // يُملى رمزٌ من قائمةٍ يُمسح فيها بالعين.**
     {
       id: "rep_stores",
       header: m.admin.sales.merchantsCount,
@@ -264,25 +253,11 @@ export default function AllAccountsTable() {
       cell: (u) => fmtNum(u.commissions ?? 0),
     },
     // ══════════════════════════════════════════════════════════════
-    // **وحالُه كسائق — هنا لا في تبويبٍ ثانٍ**
+    // **وحالُه كسائق — بلا ورديّته**
     // ══════════════════════════════════════════════════════════════
     //
-    // (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
-    //
-    // **والورديّةُ والطلباتُ المفتوحةُ لم تكونا في أيّ مكانٍ آخر** —
-    // لا في الجدول ولا في ملفّه: **كانتا في شاشتهم وحدَها**، فلو
-    // حُذفت بلا نقلٍ لَضاعتا.
-    {
-      id: "on_shift",
-      header: m.terms.onShift,
-      icon: <IconDriver />,
-      hide: (u) => !u.roles.includes("driver"),
-      cell: (u) => (
-        <Badge variant={u.on_shift ? "success" : "neutral"}>
-          {u.on_shift ? m.terms.onShift : m.terms.offShift}
-        </Badge>
-      ),
-    },
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٥.) **وموضعُها ملفُّه** — ومن سأل «من
+    // يعمل الآن؟» يسأله في شاشة الطلبات لا في جدول الحسابات.
     {
       id: "driver_cash",
       header: `${m.admin.drivers.cashHeld} (${m.common.currency})`,
@@ -503,25 +478,10 @@ export default function AllAccountsTable() {
                       ٢٠٢٦-٠٨-١٥). **و«إنهاءُ الورديّة» و«التسوية»
                       يُفعلان على عجل**: من فتح ملفَّه ليضغط زرّاً
                       واحداً دفع ثمنَ صفحةٍ كاملة. */}
-                  {/* ══════════════════════════════════════════════════
-                      **ولا كشفَ صندوقٍ في البطاقة**
-                      ══════════════════════════════════════════════════
-
-                      (قرارُ المالك ٢٠٢٦-٠٨-١٥: «كشفُ الصندوق يجب أن
-                       يكون بالتفاصيل، وغيرُ موجودٍ بالكرت».)
-
-                      **وملفُّ السائق فيه تبويبُ صندوقٍ كاملٌ** —
-                      قيوده وحركاتُه وزرُّ تسويته. **وبابان للشيء
-                      الواحد يُصلَح أحدُهما ويبقى الآخرُ قديماً.**
-
-                      **وإنهاءُ الورديّة يبقى**: فعلٌ عاجلٌ لا كشفٌ
-                      يُقرأ — سائقٌ نسي ورديّتَه بعد منتصف الليل،
-                      **ولا يظهر إلّا لمن هو على الدوام فعلاً.** */}
-                  {u.roles.includes("driver") && u.on_shift && (
-                    <Button variant="ghost" onClick={() => setEndShiftFor(u)}>
-                      {m.admin.drivers.endShift}
-                    </Button>
-                  )}
+                  {/* **ولا أفعالَ سائقٍ في البطاقة** — (قرارُ المالك
+                      ٢٠٢٦-٠٨-١٥): كشفُ الصندوق وإنهاءُ الورديّة في
+                      ملفّه. **والبطاقةُ تقول من هو، والملفُّ يفعل
+                      به.** */}
                   {u.id !== me?.id &&
                     (u.status === "active" ? (
                       <>
@@ -595,16 +555,6 @@ export default function AllAccountsTable() {
           onClose={() => setStoreOpen(false)}
           onSaved={() => {
             setStoreOpen(false);
-            void load();
-          }}
-        />
-      )}
-      {endShiftFor && (
-        <EndShiftModal
-          driver={endShiftFor}
-          onClose={() => setEndShiftFor(null)}
-          onDone={() => {
-            setEndShiftFor(null);
             void load();
           }}
         />

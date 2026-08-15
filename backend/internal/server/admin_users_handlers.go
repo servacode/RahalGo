@@ -172,8 +172,11 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		Merchants    []string `json:"merchants"`    // متاجر يملكها
 		RepStores    int      `json:"rep_stores"`   // متاجر جلبها كمندوب
 		Commissions  int64    `json:"commissions"`  // عمولاته كمندوب
-		DriverCash   int64    `json:"driver_cash"`  // نقد بحوزته كسائق
-		Deliveries   int      `json:"deliveries"`   // توصيلاته المُسلَّمة
+		// OnShift **أعلى الدوام الآن؟** — (قرارُ المالك ٢٠٢٦-٠٨-١٥:
+		// حُذفت من بطاقة الحسابات، **فموضعُها ملفُّه**).
+		OnShift    bool  `json:"on_shift"`
+		DriverCash int64 `json:"driver_cash"` // نقد بحوزته كسائق
+		Deliveries int   `json:"deliveries"`  // توصيلاته المُسلَّمة
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.id, u.phone, u.full_name, u.status, u.invite_code, u.status_reason, u.admin_notes,
@@ -186,12 +189,13 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT array_agg(m.name ORDER BY m.created_at) FROM merchants m WHERE m.owner_user_id = u.id), '{}'),
 		       (SELECT count(*) FROM merchants m WHERE m.sales_rep_user_id = u.id),
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t WHERE t.user_id = u.id AND t.kind = 'commission'), 0),
+		       u.on_shift,
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered')
 		FROM users u WHERE u.id = $1`, id).
 		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.StatusReason, &out.AdminNotes, &out.Sessions, &out.AvatarThumb, &out.CreatedAt,
 			&out.Roles, &out.Balance, &out.OrdersCount, &out.OrdersSpent, &out.Merchants,
-			&out.RepStores, &out.Commissions, &out.DriverCash, &out.Deliveries)
+			&out.RepStores, &out.Commissions, &out.OnShift, &out.DriverCash, &out.Deliveries)
 	if err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
