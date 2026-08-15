@@ -23,6 +23,7 @@ import {
   IconStore,
   IconDriver,
   IconLock,
+  IconRoles,
   IconPrev,
   IconLogout,
   IconStatus,
@@ -37,7 +38,7 @@ import {
   usePlatform,
   Money,
 } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, type AuthUser } from "@/lib/api";
 import { WarningsSection } from "@/components/admin/accounts/WarningsSection";
 import {
   OrdersTab,
@@ -47,6 +48,7 @@ import {
 } from "@/components/admin/ProfileRoleTabs";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/admin/WalletModal";
+import { ManageRolesModal } from "@/components/admin/ManageRolesModal";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import { MediaThumb } from "@/components/admin/ImageUpload";
 import RoleBadge from "@/components/admin/RoleBadge";
@@ -180,6 +182,7 @@ export default function UserProfilePage() {
   >("overview");
   const [notice, setNotice] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
+  const [rolesOpen, setRolesOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [error, setError] = useState("");
 
@@ -377,6 +380,26 @@ export default function UserProfilePage() {
             )}
             {isAdmin && (
               <>
+                {/* ══════════════════════════════════════════════════
+                    **وبابُ الأدوار هنا لا في كلّ بطاقة**
+                    ══════════════════════════════════════════════════
+
+                    (قرارُ المالك ٢٠٢٦-٠٨-١٥: «زرُّ الأدوار بلا معنًى
+                     داخل الكرت — نحدّد دورَ المستخدم بداية تسجيل
+                     حسابٍ جديد فقط».)
+
+                    **ودورُ الزبون ممنوحٌ تلقائيّاً لكلّ عامل**، ودورٌ
+                    ميدانيٌّ ثانٍ يرفضه المحرّك، ودورُ التاجر لا يُمنح
+                    بيد — **فلا يبقى إلّا زبونٌ صار سائقاً أو مندوباً**،
+                    وتقع مرّةً في العمر. **فموضعُها ملفُّه لا بطاقتُه.** */}
+                <Button
+                  variant="secondary"
+                  onClick={() => setRolesOpen(true)}
+                  className="flex items-center gap-1.5 !px-2.5"
+                >
+                  <IconRoles size={15} />
+                  {m.admin.users.manageRoles}
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => setResetOpen(true)}
@@ -909,6 +932,15 @@ export default function UserProfilePage() {
       {resetOpen && (
         <ResetPasswordModal userID={p.id} onClose={() => setResetOpen(false)} />
       )}
+      <ManageRolesModal
+        user={
+          rolesOpen
+            ? ({ id: p.id, phone: p.phone, full_name: p.full_name, roles: p.roles } as AuthUser)
+            : null
+        }
+        onClose={() => setRolesOpen(false)}
+        onChanged={load}
+      />
     </div>
   );
 }

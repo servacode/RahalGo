@@ -84,7 +84,6 @@ export default function AllAccountsTable() {
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [rolesUser, setRolesUser] = useState<AuthUser | null>(null);
   const [walletUser, setWalletUser] = useState<AuthUser | null>(null);
   // **ونافذتا السائق** — نُقلتا من شاشتهم كما هما.
   const [boxFor, setBoxFor] = useState<AuthUser | null>(null);
@@ -522,14 +521,6 @@ export default function AllAccountsTable() {
                       )}
                     </>
                   )}
-                  <Button
-                    variant="secondary"
-                    onClick={() => setRolesUser(u)}
-                    className="flex items-center gap-1.5"
-                  >
-                    <IconRoles size={15} />
-                    {m.admin.users.manageRoles}
-                  </Button>
                   {u.id !== me?.id &&
                     (u.status === "active" ? (
                       <>
@@ -566,9 +557,13 @@ export default function AllAccountsTable() {
         }
       />
 
+      {/* **ولا «إجمالي» أسفلَ الجدول** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
+
+          **وبطاقاتُ الأعلى تقول العدَّ أصلاً**، وهذا يقول عددَ ما
+          طابق التصفية — **فيُقرأ رقمان مختلفان في شاشةٍ واحدة**
+          (`4` فوق و`1` تحت) فلا يُصدَّق أيُّهما. */}
       {data && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted">
-          <span>{m.admin.users.totalCount.replace("{count}", fmtNum(data.total))}</span>
+        <div className="mt-4 flex flex-wrap items-center justify-end gap-2 text-sm text-ink-muted">
           {/* **والترقيمُ من المكوّن المشترك.**
 
               كان مكتوباً هنا وفي ثلاثة ملفّاتٍ أخرى بالشكل نفسِه، **وأرقامُه
@@ -591,7 +586,6 @@ export default function AllAccountsTable() {
           void load();
         }}
       />
-      <ManageRolesModal user={rolesUser} onClose={() => setRolesUser(null)} onChanged={load} />
       <CategoriesModal open={catsOpen} onClose={() => setCatsOpen(false)} />
       {storeOpen && (
         <MerchantModal
@@ -783,100 +777,6 @@ function CreateUserModal({
   );
 }
 
-function ManageRolesModal({
-  user,
-  onClose,
-  onChanged,
-}: {
-  user: AuthUser | null;
-  onClose: () => void;
-  onChanged: () => Promise<void> | void;
-}) {
-  const [error, setError] = useState("");
-  const [current, setCurrent] = useState<string[]>([]);
-  const [pending, setPending] = useState<{ role: string; adding: boolean } | null>(null);
-  const [reason, setReason] = useState("");
-
-  useEffect(() => {
-    setCurrent(user?.roles ?? []);
-    setError("");
-    setPending(null);
-    setReason("");
-  }, [user]);
-
-  if (!user) return null;
-
-  async function apply() {
-    if (!user || !pending) return;
-    setError("");
-    try {
-      if (!pending.adding) {
-        await api(
-          `/api/v1/admin/users/${user.id}/roles/${pending.role}?reason=${encodeURIComponent(reason)}`,
-          { method: "DELETE" }
-        );
-        setCurrent((p) => p.filter((r) => r !== pending.role));
-      } else {
-        await api(`/api/v1/admin/users/${user.id}/roles`, {
-          method: "POST",
-          body: JSON.stringify({ role: pending.role, reason }),
-        });
-        setCurrent((p) => [...p, pending.role]);
-      }
-      setPending(null);
-      setReason("");
-      await onChanged();
-    } catch (err) {
-      setError(errText(err));
-    }
-  }
-  function toggle(role: string) {
-    setPending({ role, adding: !current.includes(role) });
-    setReason("");
-  }
-
-  return (
-    <Modal open onClose={onClose} title={`${m.admin.users.rolesFor}: ${user.full_name || user.phone}`}>
-      <Chips
-        items={ALL_ROLES.map((r) => ({ id: r, label: ROLE_LABELS[r] ?? r }))}
-        value={current}
-        onChange={toggle}
-      />
-      {pending && (
-        <div className="mt-4 rounded-control border border-primary-edge bg-primary-tint p-3">
-          <p className="mb-2 text-sm font-medium">
-            {m.admin.users.roleReasonTitle}: {ROLE_LABELS[pending.role]}
-          </p>
-          <Input
-            id="role-reason"
-            label={m.admin.users.roleReasonLabel}
-            required
-            autoFocus
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-          <div className="mt-3 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setPending(null)}>
-              {m.common.cancel}
-            </Button>
-            <Button disabled={!reason.trim()} onClick={apply}>
-              {m.common.confirm}
-            </Button>
-          </div>
-        </div>
-      )}
-      {error && (
-        <Alert className="mt-3">{error}</Alert>
-      )}
-      <div className="mt-5 flex justify-end">
-        <Button variant="secondary" onClick={onClose}>
-          {m.common.back}
-        </Button>
-      </div>
-    </Modal>
-  );
-}
-
 // خلية الحضور: نقطة خضراء نابضة إن كان نشطاً خلال دقيقتين، وإلا آخر ظهور نسبي.
 function PresenceCell({ lastSeen }: { lastSeen: string | null }) {
   if (!lastSeen) return <span className="text-xs text-ink-muted">{m.admin.users.neverSeen}</span>;
@@ -898,4 +798,3 @@ function PresenceCell({ lastSeen }: { lastSeen: string | null }) {
         : rtf.format(-Math.floor(diffMin / 1440), "day");
   return <span className="text-xs text-ink-muted">{label}</span>;
 }
-
