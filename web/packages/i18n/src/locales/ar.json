@@ -1023,7 +1023,8 @@
           "wallet": "سجل المحفظة",
           "financials": "المالية",
           "activity": "سجل النشاط",
-          "feedback": "الشكاوى والتقييمات"
+          "feedback": "الشكاوى والتقييمات",
+          "chats": "الدردشات"
         },
         "fin": {
           "rates": "نسب العمولة المطبّقة",
@@ -1064,6 +1065,12 @@
           "ordersAsDriver": "طلباتٌ أوصلها",
           "ordersEmpty": "لا طلبات",
           "orderCustom": "خاصّ",
+          "chats": "أحاديثه مع الطرف الآخر",
+          "chatsEmpty": "لا أحاديث",
+          "chatLines": "{n} رسالة",
+          "chatFlagged": "{n} موسومة",
+          "chatDriver": "السائق",
+          "chatCustomer": "الزبون",
           "addresses": "عناوينه",
           "addressesEmpty": "لا عناوين محفوظة",
           "defaultAddress": "الافتراضي",

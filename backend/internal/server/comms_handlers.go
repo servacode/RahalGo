@@ -148,6 +148,29 @@ func (s *Server) handleMyChats(w http.ResponseWriter, r *http.Request) {
 // **وشكوى «قال لي كذا» كانت كلمةً ضدّ كلمة** — والحديثُ مكتوبٌ في القاعدة
 // **ولا بابَ إليه من لوحة الإدارة.** فتحكم العملياتُ بين اثنين لا تملك عن
 // أيّهما شيئاً.
+// handleAdminUserChats **أحاديثُ هذا الحساب — في ملفّه.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٥: «نسينا سجلَّ الدردشات… مهمّةٌ في حال حدوث أيّ
+//
+//	مشكلةٍ أو نزاع».)
+//
+// **وكان الحديثُ يُقرأ من الطلب وحدَه** — ومن يحكم في نزاعٍ **لا يعرف رقمَ
+// الطلب بعد**: يعرف اسمَ الإنسان، **فيمشي طلباته واحداً واحداً.**
+func (s *Server) handleAdminUserChats(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	pg := pagingOf(r, 10)
+	threads, total, err := s.comms.UserThreads(r.Context(), id, pg.PerPage, pg.Offset)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, paged("threads", threads, total, pg))
+}
+
 func (s *Server) handleAdminOrderChat(w http.ResponseWriter, r *http.Request) {
 	th, err := s.comms.Audit(r.Context(), chi.URLParam(r, "id"))
 	if err != nil {

@@ -37,6 +37,7 @@ import {
   IconUnblock,
   IconBalance,
   IconLocation,
+  IconChat,
   LoadingState,
   usePlatform,
   Money,
@@ -45,6 +46,7 @@ import { api, ApiError, type AuthUser } from "@/lib/api";
 import { WarningsSection } from "@/components/admin/accounts/WarningsSection";
 import {
   OrdersTab,
+  ChatsTab,
   AddressesTab,
   CashboxTab,
   StoresTab,
@@ -242,6 +244,7 @@ export default function UserProfilePage() {
     | "wallet"
     | "financials"
     | "feedback"
+    | "chats"
     | "activity"
   >("overview");
   const [notice, setNotice] = useState("");
@@ -692,6 +695,19 @@ export default function UserProfilePage() {
               show: has("driver") || has("merchant") || has("sales"),
             },
             { key: "feedback", label: P.tabs.feedback, icon: IconStar, show: true },
+            {
+              key: "chats",
+              // **وأحاديثُه في ملفّه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
+              //
+              // **ومن يحكم في نزاعٍ يعرف اسمَ الإنسان لا رقمَ الطلب** —
+              // وكان الحديثُ يُقرأ من الطلب وحدَه، **فيمشي طلباته واحداً
+              // واحداً يفتح كلَّ حديثٍ يبحث عن سطر.**
+              //
+              // **والقناةُ بين الزبون والسائق** — فمن ليس أحدَهما لا حديثَ له.
+              label: P.tabs.chats,
+              icon: IconChat,
+              show: has("customer") || has("driver"),
+            },
             { key: "activity", label: P.tabs.activity, icon: IconStatus, show: true },
           ] as const)
           .filter((t) => t.show)
@@ -1072,6 +1088,8 @@ export default function UserProfilePage() {
           )}
         </div>
       )}
+
+      {tab === "chats" && <ChatsTab userID={id} />}
 
       {tab === "activity" && (
       <div>

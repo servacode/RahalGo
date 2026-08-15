@@ -2236,6 +2236,26 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/users/{id}/chats",
+      "handler": "handleAdminUserChats",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/users/{id}/feedback",
       "handler": "handleAdminUserFeedback",
       "auth": true,

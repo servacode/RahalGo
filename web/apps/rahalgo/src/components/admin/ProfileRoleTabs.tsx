@@ -36,6 +36,7 @@ import {
   EmptyState,
   Pagination,
   IconOrder,
+  IconChat,
   IconLocation,
   IconBalance,
   IconStore,
@@ -84,6 +85,33 @@ interface OrderRow {
   custom_request?: string;
   /** **لماذا لم يصل** — في الملغى والمرفوض والمتعذّر. */
   cancel_reason?: string;
+}
+
+/** **رأسُ حديثٍ في ملفّ صاحبه** — سطورُه تُطلب عند فتحه. */
+interface ChatThread {
+  order_id: string;
+  order_number: number;
+  peer: string;
+  peer_role: string;
+  count: number;
+  flagged: number;
+  last: string;
+  last_role: string;
+  last_at: string;
+}
+
+interface ChatAudit {
+  customer: string;
+  driver: string;
+  lines: {
+    id: string;
+    body: string;
+    role: string;
+    sender: string;
+    created_at: string;
+    flagged: boolean;
+    flag_word?: string;
+  }[];
 }
 
 interface AddressRow {
@@ -262,6 +290,142 @@ function OrderList({
         onChange={setPage}
       />
     </FormSection>
+  );
+}
+
+/**
+ * **أحاديثُه — كلُّها في ملفّه.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٥: «نسينا سجلَّ الدردشات… مهمّةٌ في حال حدوث أيّ
+ *  مشكلةٍ أو نزاع».)
+ *
+ * # ولماذا في ملفّه لا في الطلب
+ *
+ * **الحديثُ كان يُقرأ من الطلب وحدَه** — ومن يحكم في نزاعٍ **لا يعرف رقمَ
+ * الطلب بعد**: يعرف اسمَ الإنسان، **فيمشي طلباته واحداً واحداً يفتح كلَّ
+ * حديثٍ يبحث عن سطر.**
+ *
+ * **والسؤالُ عند الخلاف عن شخصٍ لا عن طلب**: «هل أساء هذا السائقُ من
+ * قبل؟» — وجوابُه في عشرين حديثاً متفرّقاً.
+ *
+ * # والسطورُ تُطلب بالطلب
+ *
+ * **رأسُ الحديث وحدَه يُجلب** — **ومئاتُ الأسطر مع كلّ فتحةِ ملفٍّ حملٌ
+ * لسؤالٍ لم يُسأل بعد.**
+ */
+export function ChatsTab({ userID }: { userID: string }) {
+  const [rows, setRows] = useState<ChatThread[] | null | "failed">(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [open, setOpen] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    api<{ threads: ChatThread[]; total: number }>(
+      `/api/v1/admin/users/${userID}/chats?page=${page}&per_page=${CHATS_PER_PAGE}`,
+    )
+      .then((r) => {
+        if (!alive) return;
+        setRows(r.threads ?? []);
+        setTotal(r.total ?? 0);
+      })
+      .catch(() => alive && setRows("failed"));
+    return () => {
+      alive = false;
+    };
+  }, [userID, page]);
+
+  if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (rows === null) return <LoadingState variant="text" />;
+
+  return (
+    <FormSection title={`${R.chats} (${fmtNum(total)})`} icon={<IconChat />}>
+      {rows.length === 0 ? (
+        <EmptyState icon={IconChat} title={R.chatsEmpty} />
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((t) => (
+            <li key={t.order_id} className="rounded-control border border-line p-3">
+              <button
+                type="button"
+                onClick={() => setOpen(open === t.order_id ? "" : t.order_id)}
+                className="flex w-full items-center gap-2 text-start"
+              >
+                <span dir="ltr" className="shrink-0 font-bold tabular-nums">
+                  #{fmtRef(t.order_number)}
+                </span>
+                {/* **والموسومُ يُعلَن في الرأس** — **وهو ما يُفتح الملفُّ
+                    لأجله**، ولا يُعرف بلا فتحِ كلِّ حديث. */}
+                {t.flagged > 0 && (
+                  <Badge variant="danger">
+                    {R.chatFlagged.replace("{n}", fmtNum(t.flagged))}
+                  </Badge>
+                )}
+                <span className="min-w-0 flex-1 truncate text-sm text-ink-muted">
+                  {t.peer} — {t.last}
+                </span>
+                <span className="shrink-0 text-2xs text-ink-muted">
+                  {R.chatLines.replace("{n}", fmtNum(t.count))}
+                </span>
+                <span dir="ltr" className="shrink-0 text-2xs text-ink-muted">
+                  {fmtDateTime(t.last_at)}
+                </span>
+              </button>
+              {open === t.order_id && <ChatLines orderID={t.order_id} />}
+            </li>
+          ))}
+        </ul>
+      )}
+      <Pagination page={page} total={total} perPage={CHATS_PER_PAGE} onChange={setPage} />
+    </FormSection>
+  );
+}
+
+const CHATS_PER_PAGE = 10;
+
+/**
+ * **سطورُ الحديث — بقائلها لا بـ«لي/له».**
+ *
+ * **والإدارةُ ليست طرفاً**، فلا `mine` لها. **ولا وسمَ قراءةٍ يُكتب**:
+ * علامةٌ زرقاءُ يضعها طرفٌ ثالثٌ كذبٌ يُحتجّ به.
+ */
+function ChatLines({ orderID }: { orderID: string }) {
+  const [th, setTh] = useState<ChatAudit | null | "failed">(null);
+
+  useEffect(() => {
+    let alive = true;
+    api<ChatAudit>(`/api/v1/admin/orders/${orderID}/chat`)
+      .then((r) => alive && setTh(r))
+      .catch(() => alive && setTh("failed"));
+    return () => {
+      alive = false;
+    };
+  }, [orderID]);
+
+  if (th === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
+  if (th === null) return <LoadingState variant="text" />;
+
+  return (
+    <ul className="mt-3 space-y-1.5 border-t border-line-soft pt-3">
+      {th.lines.map((l) => (
+        <li key={l.id} className="flex items-start gap-2 text-sm">
+          <Badge variant={l.role === "driver" ? "primary" : "neutral"}>
+            {l.sender || (l.role === "driver" ? R.chatDriver : R.chatCustomer)}
+          </Badge>
+          <span className="min-w-0 flex-1">
+            <span className={l.flagged ? "text-danger" : ""}>{l.body}</span>
+            {/* **واللفظُ الذي أوقعها يُقال** — **ولمراجعة الحارس نفسِه**
+                حين يَسِم بريئا. */}
+            {l.flagged && l.flag_word && (
+              <span className="ms-2 text-2xs text-danger">({l.flag_word})</span>
+            )}
+          </span>
+          <span dir="ltr" className="shrink-0 text-2xs text-ink-muted">
+            {fmtDateTime(l.created_at)}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
