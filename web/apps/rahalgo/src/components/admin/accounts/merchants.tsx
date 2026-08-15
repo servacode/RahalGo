@@ -39,9 +39,9 @@ import {
   LoadingState,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
+import { StoreActions } from "@/components/admin/StoreActions";
 import { useAuth } from "@/lib/auth";
 import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
-import ViolationsModal from "@/components/admin/ViolationsModal";
 
 const m = getMessages(defaultLocale);
 
@@ -53,7 +53,9 @@ interface Category {
   active: boolean;
 }
 
-interface Merchant {
+/** **صفُّ متجرٍ كما يرسله المحرّك** — **ويُقرأ من ملفّ صاحبه أيضاً**،
+ *  فصار مُصدَّراً: **نسختان من الشكل تفترقان يوماً.** */
+export interface Merchant {
   id: string;
   name: string;
   description: string;
@@ -75,13 +77,6 @@ interface Merchant {
   commission_percent: number;
   emergency_closed: boolean;
   created_at: string;
-}
-
-interface DayHours {
-  day_of_week: number;
-  closed: boolean;
-  open_time: string;
-  close_time: string;
 }
 
 interface MerchantPage {
@@ -118,9 +113,7 @@ export default function MerchantsTable() {
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<Merchant | null | "new">(null);
   const [catsOpen, setCatsOpen] = useState(false);
-  const [hoursFor, setHoursFor] = useState<Merchant | null>(null);
   /** **سجلُّ مخالفاتِ متجرٍ بعينه** — ومنه يُصدَر الإنذار. */
-  const [violationsFor, setViolationsFor] = useState<Merchant | null>(null);
   const [view, setView] = useViewMode("merchants", "cards");
 
   const loadCategories = useCallback(async () => {
@@ -157,54 +150,6 @@ export default function MerchantsTable() {
   }, [load]);
 
   useLiveRefresh(["lead", "account"], load);
-
-  async function toggleStatus(mr: Merchant) {
-    try {
-      await api(`/api/v1/admin/merchants/${mr.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: mr.status === "active" ? "inactive" : "active" }),
-      });
-      await load();
-    } catch (err) {
-      setError(errText(err));
-    }
-  }
-
-  /**
-   * الحظرُ ورفعُه.
-   *
-   * **`suspended` لا `inactive`**: الثانيةُ يملكها المتجر — إجازةٌ أو ترميم —
-   * ولو حُظر بها لرفع الحظرَ عن نفسه من بوابته.
-   */
-  async function suspend(mr: Merchant, on: boolean) {
-    try {
-      await api(`/api/v1/admin/merchants/${mr.id}/suspend`, {
-        method: "POST",
-        body: JSON.stringify({ suspended: on, note: "" }),
-      });
-      await load();
-    } catch (err) {
-      setError(errText(err));
-    }
-  }
-
-  /**
-   * العفو — يُصفَّر العدّاد ولا يُمحى الماضي.
-   *
-   * **وهو منفصلٌ عن رفع الحظر عمداً**: رفعُ الحظر وحده يُعيده يعمل وعدّادُه
-   * كما هو — «أعدناك على وعد». ودمجُهما يجعل كلَّ رفعِ حظرٍ عفواً، **فيتعلّم
-   * المتجرُ أن الإلغاء بلا ثمن.**
-   */
-  async function forgive(mr: Merchant) {
-    try {
-      await api(`/api/v1/admin/merchants/${mr.id}/clear-violations`, { method: "POST" });
-      await load();
-    } catch (err) {
-      setError(errText(err));
-    }
-  }
-
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.per_page)) : 1;
 
   const columns: DataColumn<Merchant>[] = [
     {
@@ -292,37 +237,6 @@ export default function MerchantsTable() {
           )}
         </div>
       ),
-    },
-    {
-      id: "ban",
-      header: m.admin.merchants.banActions,
-      cell: (mr) =>
-        isAdmin ? (
-          <div className="flex flex-wrap gap-1.5">
-            <Button
-              variant={mr.status === "suspended" ? "primary" : "secondary"}
-              onClick={() => void suspend(mr, mr.status !== "suspended")}
-            >
-              {mr.status === "suspended"
-                ? m.admin.merchants.unban
-                : m.admin.merchants.ban}
-            </Button>
-            {/* **السجلُّ قبل الحكم.**
-
-                كان زرُّ العفو وحدَه بجانب عدّادٍ مجرّد — **فيُعفى أو يُحظر بلا
-                أن يُرى ما وقع.** (الثغرة `G-01`.) */}
-            <Button variant="ghost" onClick={() => setViolationsFor(mr)}>
-              {m.admin.merchants.violationsLog.viewLog}
-            </Button>
-            {mr.violations > 0 && (
-              <Button variant="ghost" onClick={() => void forgive(mr)}>
-                {m.admin.merchants.forgive}
-              </Button>
-            )}
-          </div>
-        ) : (
-          <span className="text-ink-muted">—</span>
-        ),
     },
   ];
 
@@ -413,45 +327,16 @@ export default function MerchantsTable() {
         actions={
           isAdmin
             ? (mr) => (
-                <>
-                  {/* **الملفُّ قبل القائمة.**
+                /* ══════════════════════════════════════════════════════
+                   **والأزرارُ مكوّنٌ واحدٌ يُقرأ من موضعين**
+                   ══════════════════════════════════════════════════════
 
-                      كان الزرُّ يفتح القائمةَ مباشرةً، **وكلُّ ما سواها في
-                      نوافذَ منبثقة**: تُفتح واحدةً وتُغلق لتُفتح أخرى، ولا
-                      تُرى صورةُ المتجر مجتمعة. **والقائمةُ صارت تبويباً فيه.** */}
-                  <Button
-                    variant="secondary"
-                    onClick={() => router.push(`/dashboard/merchants/${mr.id}`)}
-                    className="flex items-center gap-1.5"
-                  >
-                    <IconMenu size={15} />
-                    {m.admin.merchants.openProfile}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setHoursFor(mr)}
-                    className="flex items-center gap-1.5"
-                  >
-                    <IconDate size={15} />
-                    {m.admin.hours.manageHours}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setEditing(mr)}
-                    className="flex items-center gap-1.5"
-                  >
-                    <IconEdit size={15} />
-                    {m.admin.merchants.edit}
-                  </Button>
-                  <Button
-                    variant={mr.status === "active" ? "danger" : "secondary"}
-                    onClick={() => toggleStatus(mr)}
-                  >
-                    {mr.status === "active"
-                      ? m.admin.merchants.deactivate
-                      : m.admin.merchants.activate}
-                  </Button>
-                </>
+                   (قرارُ المالك ٢٠٢٦-٠٨-١٦: تنتقل إلى ملفّ صاحب المتجر
+                    تمهيداً لحذف هذا التبويب.)
+
+                   **ونسختان تفترقان يوماً**: يُضاف فعلٌ هنا ويُنسى هناك،
+                   **فيُحذف التبويبُ وقد ضاع الفعل.** */
+                <StoreActions store={mr} onChanged={load} />
               )
             : undefined
         }
@@ -491,146 +376,10 @@ export default function MerchantsTable() {
         onClose={() => setCatsOpen(false)}
         onChanged={loadCategories}
       />
-      {hoursFor && (
-        <HoursModal
-          merchant={hoursFor}
-          onClose={() => setHoursFor(null)}
-          onChanged={load}
-        />
-      )}
-      {violationsFor && (
-        <ViolationsModal
-          merchant={violationsFor}
-          onClose={() => setViolationsFor(null)}
-          onChanged={load}
-        />
-      )}
     </div>
   );
 }
 
-function HoursModal({
-  merchant,
-  onClose,
-  onChanged,
-}: {
-  merchant: Merchant;
-  onClose: () => void;
-  onChanged: () => Promise<void> | void;
-}) {
-  const [days, setDays] = useState<DayHours[] | null>(null);
-  const [emergency, setEmergency] = useState(merchant.emergency_closed);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    api<DayHours[]>(`/api/v1/admin/merchants/${merchant.id}/hours`)
-      .then(setDays)
-      .catch((err) => setError(errText(err)));
-  }, [merchant.id]);
-
-  function updateDay(i: number, patch: Partial<DayHours>) {
-    setDays((ds) => ds && ds.map((d, di) => (di === i ? { ...d, ...patch } : d)));
-  }
-
-  async function save() {
-    if (!days) return;
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/v1/admin/merchants/${merchant.id}/hours`, {
-        method: "PUT",
-        body: JSON.stringify({ days }),
-      });
-      if (emergency !== merchant.emergency_closed) {
-        await api(`/api/v1/admin/merchants/${merchant.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ emergency_closed: emergency }),
-        });
-      }
-      await onChanged();
-      onClose();
-    } catch (err) {
-      setError(errText(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal open onClose={onClose} title={`${m.admin.hours.title}: ${merchant.name}`}>
-      <Checkbox
-        id="mr-hours-emergency"
-        checked={emergency}
-        onChange={(e) => setEmergency(e.target.checked)}
-        label={
-          <span className="block">
-            <span className="block text-sm font-medium text-danger">
-              {m.admin.hours.emergencyClose}
-            </span>
-            <span className="text-xs text-ink-muted">{m.admin.hours.emergencyHint}</span>
-          </span>
-        }
-        className="mb-4 rounded-control border border-danger-edge bg-danger-tint px-3 py-2.5"
-      />
-
-      {!days ? (
-        <LoadingState variant="inline" />
-      ) : (
-        <div className="space-y-2">
-          {days.map((d, i) => (
-            <div key={d.day_of_week} className="flex items-center gap-3 text-sm">
-              <span className="w-16 shrink-0 font-medium">{m.admin.hours.days[i]}</span>
-              <Checkbox
-                id={`mr-hours-closed-${d.day_of_week}`}
-                checked={d.closed}
-                onChange={(e) => updateDay(i, { closed: e.target.checked })}
-                label={m.admin.hours.closedDay}
-                className="gap-1.5 text-ink-muted"
-              />
-              <input
-                type="time"
-                disabled={d.closed}
-                value={d.open_time}
-                onChange={(e) => updateDay(i, { open_time: e.target.value })}
-                className="rounded-control border border-line px-2 py-1 disabled:opacity-40"
-              />
-              <IconPrev size={14} className="text-ink-muted" />
-              <input
-                type="time"
-                disabled={d.closed}
-                value={d.close_time}
-                onChange={(e) => updateDay(i, { close_time: e.target.value })}
-                className="rounded-control border border-line px-2 py-1 disabled:opacity-40"
-              />
-              {/* **دوامٌ يعبر منتصفَ الليل مقبولٌ ومُعلَن.**
-
-                  ساعةُ إغلاقٍ أصغرُ من ساعة الفتح تعني «إلى ما بعد منتصف
-                  الليل» — **ومطاعمُ الشاورما في الرقّة تعمل هكذا.** وبلا
-                  هذه الكلمة يظنّها من يضبطها خطأً فيتراجع، **أو يضبطها
-                  ولا يثق أنّها فُهمت.** */}
-              {!d.closed && d.close_time <= d.open_time && (
-                <span className="text-2xs text-ink-muted">{m.admin.hours.overnight}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {error && (
-        <Alert className="mt-3">{error}</Alert>
-      )}
-      <div className="mt-5 flex justify-end gap-2">
-        <Button variant="secondary" onClick={onClose}>
-          {m.common.cancel}
-        </Button>
-        <Button onClick={save} disabled={busy || !days}>
-          {m.common.save}
-        </Button>
-      </div>
-    </Modal>
-  );
-}
 
 export function MerchantModal({
   merchant,

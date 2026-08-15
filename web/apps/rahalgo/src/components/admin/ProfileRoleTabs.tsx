@@ -44,6 +44,7 @@ import {
   Money,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { StoreActions, type StoreTarget } from "@/components/admin/StoreActions";
 
 const m = getMessages(defaultLocale);
 const R = m.admin.users.profile.roleTabs;
@@ -138,14 +139,9 @@ interface LeadRow {
   status: string;
 }
 
-interface StoreRow {
-  id: string;
-  name: string;
-  status: string;
-  commission_percent: number;
-  /** **مخالفاتُه داخلَ نافذة الحظر** — **وهو الرقمُ الذي يقرّر الحظر.** */
-  violations: number;
-}
+/** **وصفُّ المتجر كاملاً** — **نافذةُ التعديل تحتاجه كلَّه**، ولأنّ
+ *  أزرارَه انتقلت إلى هنا (قرارُ المالك ٢٠٢٦-٠٨-١٦). */
+type StoreRow = StoreTarget;
 
 /**
  * **طلباتُه** — زبوناً كان أو سائقاً.
@@ -620,12 +616,17 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
   // **والمحرّكُ لم يكن يعرف المالكَ أصلاً**: أربعةُ مُرشِّحاتٍ ولا واحدَ
   // منها له. **فأُضيف هناك أوّلاً** — وشرطٌ في الشاشة بلا شرطٍ في المحرّك
   // وعدٌ بحجب.
-  useEffect(() => {
-    const q = isRep ? `rep_id=${userID}` : `owner_id=${userID}`;
-    api<{ merchants: StoreRow[] }>(`/api/v1/admin/merchants?${q}&per_page=100`)
+  // **ويُعاد الجلبُ بعد كلّ فعل** — وإلّا بقي السطرُ يقول ما بطل: يُحظر
+  // المتجرُ ويبقى «فعّال» أمام من حظره.
+  const reload = useCallback(() => {
+    api<{ merchants: StoreRow[] }>(
+      `/api/v1/admin/merchants?${isRep ? `rep_id=${userID}` : `owner_id=${userID}`}&per_page=100`,
+    )
       .then((r) => setRows(r.merchants ?? []))
       .catch(() => setRows("failed"));
   }, [userID, isRep]);
+
+  useEffect(reload, [reload]);
 
   // **والفشلُ يُقال** — كان يُعرض «لا شيء» فيُقرأ حكماً على المستخدم.
   if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
@@ -640,10 +641,7 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
         <ul className="divide-y divide-line">
           {rows.map((s) => (
             <li key={s.id}>
-              <button
-                onClick={() => router.push(`/dashboard/merchants?q=${encodeURIComponent(s.name)}`)}
-                className="flex w-full items-center gap-3 py-2 text-start hover:bg-row-hover"
-              >
+              <div className="flex w-full flex-wrap items-center gap-3 py-2">
                 <IconStore size={16} className="shrink-0 text-ink-muted" />
                 <span className="min-w-0 flex-1 truncate font-medium">{s.name}</span>
                 <Badge variant={s.status === "active" ? "success" : "danger"}>
@@ -662,7 +660,20 @@ export function StoresTab({ userID, roles }: { userID: string; roles: string[] }
                 <span dir="ltr" className="shrink-0 text-sm tabular-nums text-ink-muted">
                   {fmtNum(s.commission_percent)}%
                 </span>
-              </button>
+                {/* ══════════════════════════════════════════════════════
+                    **وأفعالُ المتجر معه — لا في شاشةٍ أخرى**
+                    ══════════════════════════════════════════════════════
+
+                    (قرارُ المالك ٢٠٢٦-٠٨-١٦.)
+
+                    **والشرطُ قبل حذف تبويب المتاجر**: أن يستوعب الملفُّ
+                    **كلَّ فعلٍ** كان فيه — «ولا نريد خسارةَ أيّ ميزة».
+
+                    **وهي في سطر المتجر لا أعلى الصفحة**: هناك زرّا
+                    إيقافٍ وحظرٍ **للحساب**، **وزرّان متشابهان لمعنيين
+                    يُخلطان** — فيُوقَف إنسانٌ وقُصد متجرُه. */}
+                <StoreActions store={s} onChanged={reload} />
+              </div>
             </li>
           ))}
         </ul>
