@@ -1153,7 +1153,11 @@
       "openProfile": "ملفّ المتجر",
       "ownerName": "اسم صاحب المتجر",
       "ownerSection": "حساب صاحب المتجر",
-      "storeSection": "بيانات المتجر"
+      "storeSection": "بيانات المتجر",
+      "ownerPassword": "كلمة مرور صاحب المتجر",
+      "ownerPasswordConfirm": "تأكيد كلمة المرور",
+      "ownerPasswordHint": "مؤقّتة — يُطلب منه تبديلها عند أوّل دخول",
+      "passwordMismatch": "كلمتا المرور غير متطابقتين"
     },
     "menu": {
       "title": "قائمة المتجر",

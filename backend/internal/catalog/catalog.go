@@ -307,6 +307,11 @@ type MerchantInput struct {
 	// **والعكسُ ممنوعٌ من قبل** (`checkGrantable`): دورُ التاجر لا
 	// يُمنح بيدٍ — **فلا تاجرَ بلا متجرٍ ولا متجرَ بلا تاجر.**
 	OwnerPhone *string `json:"owner_phone"`
+	// OwnerPassword **كلمةُ مرورٍ مؤقّتةٌ لحسابه الجديد.**
+	//
+	// **ولا تُلمس كلمةُ حسابٍ قائم** — ومن كان في المنصّة يدخل
+	// بكلمته التي يعرفها.
+	OwnerPassword *string `json:"owner_password"`
 	// OwnerName **اسمُه** — يُكتب في حسابه إن كان جديدا.
 	//
 	// **وكان يُنشأ باسمٍ فارغ**: فيصير في الحسابات صفٌّ برقمٍ بلا اسم،
@@ -350,7 +355,7 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 	if in.OwnerPhone == nil || strings.TrimSpace(*in.OwnerPhone) == "" {
 		return nil, ErrOwnerRequired
 	}
-	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, in.OwnerName, ip)
+	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, in.OwnerName, in.OwnerPassword, ip)
 	if err != nil {
 		return nil, err
 	}
@@ -400,7 +405,7 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 		*in.Status != "suspended" {
 		return nil, ErrNameRequired
 	}
-	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, in.OwnerName, ip)
+	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, in.OwnerName, in.OwnerPassword, ip)
 	if err != nil {
 		return nil, err
 	}
@@ -483,7 +488,7 @@ func (s *Service) resolveRep(ctx context.Context, repCode *string) (*string, err
 }
 
 // resolveOwner يجد/ينشئ حساب صاحب المتجر بدور merchant من رقم هاتفه.
-func (s *Service) resolveOwner(ctx context.Context, actorID string, ownerPhone, ownerName *string, ip string) (*string, error) {
+func (s *Service) resolveOwner(ctx context.Context, actorID string, ownerPhone, ownerName, ownerPassword *string, ip string) (*string, error) {
 	if ownerPhone == nil || strings.TrimSpace(*ownerPhone) == "" {
 		return nil, nil
 	}
@@ -491,7 +496,11 @@ func (s *Service) resolveOwner(ctx context.Context, actorID string, ownerPhone, 
 	if ownerName != nil {
 		name = strings.TrimSpace(*ownerName)
 	}
-	user, err := s.identity.EnsureUserWithRole(ctx, actorID, *ownerPhone, "merchant", name, ip)
+	pass := ""
+	if ownerPassword != nil {
+		pass = *ownerPassword
+	}
+	user, err := s.identity.EnsureUserWithRole(ctx, actorID, *ownerPhone, "merchant", name, pass, ip)
 	if err != nil {
 		return nil, err
 	}

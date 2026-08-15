@@ -670,6 +670,10 @@ export function MerchantModal({
   // **واسمُه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥): كان الحسابُ يُنشأ باسمٍ
   // فارغ، **فيصير في الحسابات صفٌّ برقمٍ بلا اسم.**
   const [ownerName, setOwnerName] = useState("");
+  // **وكلمتُه المؤقّتة** — (قرارُ المالك ٢٠٢٦-٠٨-١٥): يخرج من النموذج
+  // **حسابٌ جاهزٌ ومتجرٌ جاهز.**
+  const [ownerPass, setOwnerPass] = useState("");
+  const [ownerPass2, setOwnerPass2] = useState("");
   const [repCode, setRepCode] = useState(merchant?.sales_rep_code ?? "");
   const [lat, setLat] = useState<number | null>(merchant?.lat ?? null);
   const [lng, setLng] = useState<number | null>(merchant?.lng ?? null);
@@ -681,6 +685,12 @@ export function MerchantModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // **والتطابقُ يُفحص قبل النداء** — **ومن أخطأ في التأكيد يعرفها
+    // هنا لا بعد أن يُنشأ الحسابُ بكلمةٍ لا يعرفها.**
+    if (!merchant && ownerPass !== ownerPass2) {
+      setError(m.admin.merchants.passwordMismatch);
+      return;
+    }
     setBusy(true);
     setError("");
     const body = {
@@ -691,6 +701,7 @@ export function MerchantModal({
       address_text: address,
       owner_phone: ownerPhone,
       owner_name: ownerName,
+      owner_password: ownerPass,
       sales_rep_code: repCode,
       lat,
       lng,
@@ -767,6 +778,36 @@ export function MerchantModal({
                 onChange={(e) => setOwnerName(e.target.value)}
               />
             </div>
+            {/* **ولا كلمةَ لحسابٍ قائم** — من كان في المنصّة يدخل
+                بكلمته التي يعرفها، **وتبديلُها من نافذة متجرٍ يُوقفه
+                على بابه ولا يعرف لماذا.** */}
+            {!merchant && (
+              <>
+                <div>
+                  <Input
+                    id="m-owner-pass"
+                    label={m.admin.merchants.ownerPassword}
+                    type="password"
+                    required
+                    value={ownerPass}
+                    onChange={(e) => setOwnerPass(e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-ink-muted">
+                    {m.admin.merchants.ownerPasswordHint}
+                  </p>
+                </div>
+                <div>
+                  <Input
+                    id="m-owner-pass2"
+                    label={m.admin.merchants.ownerPasswordConfirm}
+                    type="password"
+                    required
+                    value={ownerPass2}
+                    onChange={(e) => setOwnerPass2(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
             <div>
               <Input
                 id="m-rep"

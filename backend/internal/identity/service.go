@@ -854,7 +854,7 @@ func (s *Service) SalesRepByInviteCode(ctx context.Context, code string) (*User,
 
 // EnsureUserWithRole يجد المستخدم برقم هاتفه (أو ينشئه) ويضمن حمله الدور المطلوب.
 // تستخدمه الوحدات الأخرى لربط الحسابات (صاحب متجر، سائق...) — مع تدقيق كامل.
-func (s *Service) EnsureUserWithRole(ctx context.Context, actorID, rawPhone, role, fullName, ip string) (*User, error) {
+func (s *Service) EnsureUserWithRole(ctx context.Context, actorID, rawPhone, role, fullName, password, ip string) (*User, error) {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return nil, ErrInvalidPhone
@@ -864,6 +864,32 @@ func (s *Service) EnsureUserWithRole(ctx context.Context, actorID, rawPhone, rol
 		// **وباسمه إن أُعطي** — **وحسابٌ برقمٍ بلا اسمٍ لا يُعرف
 		// صاحبُه في جدول الحسابات حتّى يُفتح متجرُه.**
 		user, err = s.repo.CreateUserWithRole(ctx, phone, fullName, role)
+		// ══════════════════════════════════════════════════════════
+		// **وكلمتُه تُوضع مؤقّتةً — للحساب الجديد وحدَه**
+		// ══════════════════════════════════════════════════════════
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-١٥: يخرج من النموذج **حسابٌ جاهزٌ
+		//  ومتجرٌ جاهز**.)
+		//
+		// **ومؤقّتةٌ لا دائمة** (`SetTempPassword`): وضعها الأدمنُ
+		// وأملاها على صاحبها، **وكلمةٌ يعرفها اثنان ليست كلمةَ سرّ**
+		// — فيُطلب تبديلُها عند أوّل دخول.
+		//
+		// **ولا تُلمس كلمةُ حسابٍ قائم**: من كان في المنصّة ثمّ فُتح
+		// له متجرٌ **لا تُبدَّل كلمتُه من نافذة متجر** — ولا يعرف هو
+		// أنّها بُدّلت فيقف على بابه.
+		if err == nil && password != "" {
+			if len(password) < int(s.intSetting(ctx, "security.password_min_length", minPasswordLn)) {
+				return nil, ErrWeakPassword
+			}
+			hash, herr := auth.HashPassword(password)
+			if herr != nil {
+				return nil, herr
+			}
+			if serr := s.repo.SetTempPassword(ctx, user.ID, hash); serr != nil {
+				return nil, serr
+			}
+		}
 		if err == nil {
 			s.repo.Audit(ctx, &actorID, "admin.user_create", "user", user.ID, ip,
 				map[string]any{"phone": phone, "roles": []string{role}})
