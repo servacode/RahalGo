@@ -94,20 +94,6 @@ func (s *Server) handleAdminUserWarnings(w http.ResponseWriter, r *http.Request)
 //
 // **والتنفيذُ واحد**: لو كُتب مرّتين لَافترقا — **يُضاف إشعارٌ في أحدهما
 // ويُنسى في الآخر**، فيُنذَر سائقٌ فيعلم ويُنذَر متجرٌ فلا يعلم.
-// warnHref **أين يقرأ إنذارَه** — بحسب دوره.
-//
-// **وبوّابةُ المتجر لا تُفتح لزبون** — وكانت الوجهةَ للجميع.
-func warnHref(role string) string {
-	switch role {
-	case "merchant":
-		return "/portal/complaints"
-	case "driver", "sales":
-		return "/portal/warnings"
-	default:
-		return "/complaints"
-	}
-}
-
 func (s *Server) issueWarning(w http.ResponseWriter, r *http.Request,
 	userID, reason, note string, orderID, ticketID *string) {
 	// **ودورُه وقتَ الإنذار يُثبَّت** — لا يُشتقّ عند القراءة.
@@ -172,12 +158,19 @@ func (s *Server) issueWarning(w http.ResponseWriter, r *http.Request,
 	// **ونوعُه `account` لا `order`** — لا طلبَ فيه، **ومن صنّفه
 	// طلباً خلطه بأخبارِ طلباته فضاع بينها.**
 	//
-	// **ووجهتُه صفحتُه لا بوّابةَ متجر** — كانت `/portal/complaints`،
-	// **فيضغطها الزبونُ فيصل إلى بابٍ ليس له.**
+	// **وبلا وجهة — لأنّه لا صفحةَ تعرض إنذاراتِ حساب.**
+	//
+	// **وكانت الوجهةُ `/portal/complaints` للجميع** — بوّابةَ متجرٍ
+	// يصلها الزبون فيقف على بابٍ ليس له. **ثمّ جعلتُها `/portal/warnings`
+	// فكانت أسوأ**: لا مسارَ بهذا الاسم عند سائقٍ ولا مندوب، **فتُفتح
+	// أربعمئةٌ وأربعة.** وصفحةُ الإنذارات موجودةٌ للمتجر وحدَه
+	// (`/store/reviews`) **وهي تقرأ إنذاراتِ المتجر لا إنذاراتِ صاحبه.**
+	//
+	// **وخبرٌ بلا رابطٍ أصدقُ من رابطٍ يكذب** — والنصُّ يقول كلَّ شيء.
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: userID, Kind: notifications.KindAccount,
 		Title: notifTitles.warningOnYou, Body: clip(body, 200),
-		Entity: "user", EntityID: userID, Href: warnHref(role),
+		Entity: "user", EntityID: userID,
 	})
 	s.audit(r, "ops.warning_issued", "user", userID, map[string]any{"reason": reason})
 	s.touch("user", "ops")
