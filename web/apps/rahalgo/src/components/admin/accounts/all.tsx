@@ -28,6 +28,9 @@ import {
   IconLock,
   IconWallet,
   IconOrder,
+  IconLink,
+  IconStore,
+  CopyCode,
   IconView,
   usePlatform,
 } from "@rahalgo/ui";
@@ -219,6 +222,38 @@ export default function AllAccountsTable() {
       icon: <IconStatus />,
       hide: (u) => !u.last_order_at,
       cell: (u) => (u.last_order_at ? fmtDate(u.last_order_at) : "—"),
+    },
+    // ══════════════════════════════════════════════════════════════
+    // **وأرقامُه كمندوب — هنا لا في تبويبٍ ثانٍ**
+    // ══════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+    //
+    // **ورمزُ الدعوة كان يصل ولا يُعرض** — والجدولُ **يبحث به** ولا
+    // يُريه: **حقلٌ يصل ولا يُقرأ ليس حقلاً، هو نيّة.**
+    //
+    // **ويُنسخ بضغطة** — يُملى على مندوبٍ في الهاتف، **ورمزٌ يُقرأ من
+    // شاشةٍ ويُكتب بيدٍ يُخطئ فيه حرف.**
+    {
+      id: "invite_code",
+      header: m.admin.sales.inviteCode,
+      icon: <IconLink />,
+      hide: (u) => !u.invite_code,
+      cell: (u) => (u.invite_code ? <CopyCode code={u.invite_code} title={m.admin.sales.copyCode} /> : "—"),
+    },
+    {
+      id: "rep_stores",
+      header: m.admin.sales.merchantsCount,
+      icon: <IconStore />,
+      hide: (u) => !u.rep_stores,
+      cell: (u) => fmtNum(u.rep_stores ?? 0),
+    },
+    {
+      id: "commissions",
+      header: `${m.admin.sales.totalCommissions} (${m.common.currency})`,
+      icon: <IconWallet />,
+      hide: (u) => !u.commissions,
+      cell: (u) => fmtNum(u.commissions ?? 0),
     },
     {
       id: "status",

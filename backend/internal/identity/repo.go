@@ -128,7 +128,9 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 		       -- سجلَّ المحادثات** (٢٠٢٦-٠٨-١٥). **والتجميعُ يمرّ على
 		       -- الطلبات مرّةً واحدةً مهما كثر الحساباتُ في الصفحة.**
 		       COALESCE(w.balance, 0),
-		       COALESCE(oc.cnt, 0), COALESCE(oc.spent, 0), oc.last_at
+		       COALESCE(oc.cnt, 0), COALESCE(oc.spent, 0), oc.last_at,
+		       -- **وأرقامُه كمندوب** — متاجرُ جلبها وعمولاتٌ نالها.
+		       COALESCE(rp.stores, 0), COALESCE(cm.total, 0)
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		LEFT JOIN media am ON am.id = u.avatar_media_id
@@ -143,8 +145,19 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 		           max(o.created_at) AS last_at
 		    FROM orders o GROUP BY o.customer_id
 		) oc ON oc.customer_id = u.id
+		LEFT JOIN (
+		    SELECT mr.sales_rep_user_id AS uid, count(*) AS stores
+		    FROM merchants mr WHERE mr.sales_rep_user_id IS NOT NULL
+		    GROUP BY mr.sales_rep_user_id
+		) rp ON rp.uid = u.id
+		LEFT JOIN (
+		    SELECT t.user_id AS uid, sum(t.amount) AS total
+		    FROM wallet_transactions t WHERE t.kind = 'commission'
+		    GROUP BY t.user_id
+		) cm ON cm.uid = u.id
 		`+where+`
-		GROUP BY u.id, am.thumb_path, w.balance, oc.cnt, oc.spent, oc.last_at
+		GROUP BY u.id, am.thumb_path, w.balance, oc.cnt, oc.spent, oc.last_at,
+		         rp.stores, cm.total
 		HAVING NOT bool_or(ur.role_code = 'admin')
 		ORDER BY u.created_at DESC
 		LIMIT $5 OFFSET $6`, query, role, onlineOnly, status, limit, offset)
@@ -157,7 +170,8 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 	for rows.Next() {
 		var u User
 		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles,
-			&u.Balance, &u.OrdersCount, &u.OrdersSpent, &u.LastOrderAt); err != nil {
+			&u.Balance, &u.OrdersCount, &u.OrdersSpent, &u.LastOrderAt,
+			&u.RepStores, &u.Commissions); err != nil {
 			return nil, 0, err
 		}
 		u.AvatarURL = media.URLForPtr(u.AvatarURL)

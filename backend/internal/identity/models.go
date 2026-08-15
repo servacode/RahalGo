@@ -34,6 +34,14 @@ type User struct {
 	OrdersCount int        `json:"orders_count"`
 	OrdersSpent int64      `json:"orders_spent"`
 	LastOrderAt *time.Time `json:"last_order_at"`
+
+	// **وأرقامُه كمندوب** — (قرارُ المالك ٢٠٢٦-٠٨-١٥: حُذف تبويبُهم
+	// ونزلت أرقامُهم إلى جدول الحسابات).
+	//
+	// **ورمزُ دعوته في `InviteCode` أعلاه** — كان يصل ولا يُعرض،
+	// **والجدولُ يبحث به ولا يُريه.**
+	RepStores   int   `json:"rep_stores"`
+	Commissions int64 `json:"commissions"`
 }
 
 type TokenPair struct {

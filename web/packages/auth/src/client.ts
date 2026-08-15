@@ -55,6 +55,9 @@ export interface AuthUser {
   orders_count?: number;
   orders_spent?: number;
   last_order_at?: string | null;
+  /** **وأرقامُه كمندوب** — ورمزُ دعوته في `invite_code` أعلاه. */
+  rep_stores?: number;
+  commissions?: number;
 }
 
 export interface TokenPair {
