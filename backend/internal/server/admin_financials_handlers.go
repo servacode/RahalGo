@@ -87,12 +87,100 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 		OwedTo  finBucket  `json:"owed_to"`
 		OwedBy  finBucket  `json:"owed_by"`
 		Returns []finEntry `json:"returns"`
+		// ══════════════════════════════════════════════════════════════
+		// **وأربعةُ سجلّاتٍ كانت خارجَ ملفّه**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-١٥ بعد فحصٍ طلبه: «ضمن الماليّة».)
+		//
+		// **لكلٍّ منها شاشةٌ مستقلّةٌ في اللوحة** — `/incentives`
+		// و`/payouts` و`/losses` و`/emergencies`. **فمن أراد أن يعرف
+		// سائقاً خرج من ملفّه وبحث عن اسمه في أربعة أماكن.**
+		//
+		// **وهذا بعينه ما بُني الملفُّ ليمنعه** (قرارُ المالك ٢٠٢٦-٠٨-٠٣:
+		// «ملفٌّ يجمع كلَّ شيءٍ يخصّه — **ولا نريد خسارةَ أيّ ميزة**»).
+		Incentives   []finEntry `json:"incentives"`
+		Payouts      []finEntry `json:"payouts"`
+		Disputes     []finEntry `json:"disputes"`
+		Emergencies  []finEntry `json:"emergencies"`
+		IncentivesN  int        `json:"incentives_count"`
+		PayoutsN     int        `json:"payouts_count"`
+		DisputesN    int        `json:"disputes_count"`
+		EmergenciesN int        `json:"emergencies_count"`
 		// **وعددُ المرتجعات كلِّها** — والمعروضُ أحدثُ خمسين.
 		ReturnsCount int `json:"returns_count"`
 		// **وسقفُ العرض يُرسَل** — فتقول الشاشةُ «أحدثُ ٥٠ من ٢١٣» بلا رقمٍ
 		// مكتوبٍ فيها **يفترق عن رقم الخادم يوماً.**
 		Limit int `json:"limit"`
-	}{Limit: finLimit, Roles: roles, Rates: []finRate{}, OwedTo: finBucket{Items: []finEntry{}}, OwedBy: finBucket{Items: []finEntry{}}, Returns: []finEntry{}}
+	}{Limit: finLimit, Roles: roles, Rates: []finRate{}, OwedTo: finBucket{Items: []finEntry{}}, OwedBy: finBucket{Items: []finEntry{}}, Returns: []finEntry{},
+		Incentives: []finEntry{}, Payouts: []finEntry{}, Disputes: []finEntry{}, Emergencies: []finEntry{}}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وأربعةُ سجلّاتٍ تُقرأ بنمطٍ واحد**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **العدُّ على الكلّ والأسطرُ أحدثُ خمسين** — كما في السلال قبلها،
+	// **وسقفٌ صامتٌ يُقرأ «هذا كلُّ ما عليه».**
+	//
+	// **والمرجعُ رقمُ طلبٍ لا معرّفُه** — والشاشةُ تبني منه بحثاً،
+	// **وبحثُ الطلبات يطابق الرقمَ لا المعرّف.** (٢٠٢٦-٠٨-١٥.)
+	readLog := func(countQ, listQ string, into *[]finEntry, n *int) {
+		_ = s.pg.QueryRow(ctx, countQ, id).Scan(n)
+		rows, err := s.pg.Query(ctx, listQ, id)
+		if err != nil {
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var e finEntry
+			if rows.Scan(&e.Ref, &e.Label, &e.Amount, &e.Status, &e.Reason, &e.Date) == nil {
+				*into = append(*into, e)
+			}
+		}
+	}
+
+	// ---- الحوافز والعقوبات — سائقاً كان أو مندوبا ----
+	//
+	// **والعقوبةُ تُقرأ سالبةً** — **وموجبان في عمودٍ واحدٍ يُجمعان خطأً**،
+	// فيبدو من عوقب كمن كوفئ.
+	readLog(`SELECT count(*) FROM incentives WHERE user_id = $1`,
+		`SELECT '', COALESCE(NULLIF(cb.full_name, ''), cb.phone::text, ''),
+		        CASE WHEN i.kind = 'penalty' THEN -i.amount ELSE i.amount END,
+		        i.kind, i.reason, i.created_at
+		 FROM incentives i
+		 LEFT JOIN users cb ON cb.id = i.created_by
+		 WHERE i.user_id = $1 ORDER BY i.created_at DESC LIMIT `+strconv.Itoa(finLimit),
+		&out.Incentives, &out.IncentivesN)
+
+	// ---- طلباتُ سحب رصيده ----
+	readLog(`SELECT count(*) FROM payout_requests WHERE user_id = $1`,
+		`SELECT '', COALESCE(NULLIF(p.note, ''), ''), p.amount, p.status,
+		        COALESCE(NULLIF(p.decision, ''), ''), p.created_at
+		 FROM payout_requests p
+		 WHERE p.user_id = $1 ORDER BY p.created_at DESC LIMIT `+strconv.Itoa(finLimit),
+		&out.Payouts, &out.PayoutsN)
+
+	// ---- نزاعاتُه ----
+	//
+	// **والدورُ محفوظٌ في النزاع لا يُشتقّ من أدواره اليوم** — **من كان
+	// سائقاً يومَ النزاع قد يصير غداً موظّفاً، والماضي لا يتغيّر.**
+	readLog(`SELECT count(*) FROM disputes WHERE party_user_id = $1`,
+		`SELECT COALESCE(o.number::text, ''), d.party_role, d.amount, d.status,
+		        COALESCE(NULLIF(d.note, ''), d.reason), d.created_at
+		 FROM disputes d LEFT JOIN orders o ON o.id = d.order_id
+		 WHERE d.party_user_id = $1 ORDER BY d.created_at DESC LIMIT `+strconv.Itoa(finLimit),
+		&out.Disputes, &out.DisputesN)
+
+	// ---- بلاغاتُ طوارئه ----
+	//
+	// **ولا مالَ فيها** — وموضعُها هنا بقرار المالك (٢٠٢٦-٠٨-١٥):
+	// **سجلٌّ عليه أو له يُقرأ مع سجلّاته، لا في شاشةٍ رابعة.**
+	readLog(`SELECT count(*) FROM driver_emergencies WHERE driver_id = $1`,
+		`SELECT COALESCE(o.number::text, ''), '', 0, e.status,
+		        COALESCE(NULLIF(e.note, ''), ''), e.created_at
+		 FROM driver_emergencies e LEFT JOIN orders o ON o.id = e.order_id
+		 WHERE e.driver_id = $1 ORDER BY e.created_at DESC LIMIT `+strconv.Itoa(finLimit),
+		&out.Emergencies, &out.EmergenciesN)
 
 	// ---- النِسَب المطبّقة حسب الدور ----
 	// **والنسبةُ المعروضة هي النافذةُ لا رقمٌ يُقرأ من عمود.**

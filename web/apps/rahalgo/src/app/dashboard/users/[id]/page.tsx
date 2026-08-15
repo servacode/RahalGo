@@ -92,6 +92,15 @@ interface FinData {
   returns: FinEntry[];
   /** **عددُ المرتجعات كلِّها وسقفُ العرض** — (٢٠٢٦-٠٨-١٠). */
   returns_count: number;
+  /** **أربعةُ سجلّاتٍ كانت خارجَ الملفّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٥). */
+  incentives: FinEntry[];
+  payouts: FinEntry[];
+  disputes: FinEntry[];
+  emergencies: FinEntry[];
+  incentives_count: number;
+  payouts_count: number;
+  disputes_count: number;
+  emergencies_count: number;
   limit: number;
 }
 
@@ -903,6 +912,54 @@ export default function UserProfilePage() {
             />
           </div>
 
+          {/* ══════════════════════════════════════════════════════════
+              **وأربعةُ سجلّاتٍ كانت خارجَ ملفّه**
+              ══════════════════════════════════════════════════════════
+
+              (قرارُ المالك ٢٠٢٦-٠٨-١٥ بعد فحصٍ طلبه: «نعم ضمن الماليّة».)
+
+              **لكلٍّ منها شاشةٌ مستقلّةٌ في اللوحة** — فمن أراد أن يعرف
+              سائقاً **خرج من ملفّه وبحث عن اسمه في أربعة أماكن.**
+
+              **وهذا ما بُني الملفُّ ليمنعه**: «يجمع كلَّ شيءٍ يخصّه —
+              ولا نريد خسارةَ أيّ ميزة» (٢٠٢٦-٠٨-٠٣).
+
+              **وتُعرض إن كان فيها شيء** — **وأربعةُ عناوينَ فارغةٍ
+              تُقرأ عطباً**، وهي تظهر لمن لا يكون له منها شيءٌ أبداً. */}
+          <FinLog
+            title={P.fin.incentives}
+            rows={fin.incentives}
+            count={fin.incentives_count}
+            limit={fin.limit}
+            icon={<IconStar />}
+            money
+          />
+          <FinLog
+            title={P.fin.payouts}
+            rows={fin.payouts}
+            count={fin.payouts_count}
+            limit={fin.limit}
+            icon={<IconWallet />}
+            money
+          />
+          <FinLog
+            title={P.fin.disputes}
+            rows={fin.disputes}
+            count={fin.disputes_count}
+            limit={fin.limit}
+            icon={<IconBalance />}
+            money
+            onOrder={(n) => router.push(`/dashboard/orders?q=${n}`)}
+          />
+          <FinLog
+            title={P.fin.emergencies}
+            rows={fin.emergencies}
+            count={fin.emergencies_count}
+            limit={fin.limit}
+            icon={<IconStatus />}
+            onOrder={(n) => router.push(`/dashboard/orders?q=${n}`)}
+          />
+
           {/* الطلبات المرتجعة وأسبابها */}
           <FormSection title={P.fin.returns} icon={<IconBlock />}>
             {fin.returns.length === 0 ? (
@@ -1564,6 +1621,106 @@ function TicketList({
     </FormSection>
   );
 }
+
+/**
+ * **سجلٌّ بسيطٌ في الكشف** — حوافزُ أو سحبٌ أو نزاعٌ أو بلاغُ طوارئ.
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+ *
+ * **ولا يُرسم إن كان فارغاً** — **وأربعةُ عناوينَ فارغةٍ تُقرأ عطباً**، وهي
+ * تظهر لمن لا يكون له منها شيءٌ أبداً. (وهو داءُ «الماليّة» عند الزبون
+ * الذي حُذف اليومَ نفسِه — **فلا يُعاد بأربع نسخ.**)
+ */
+function FinLog({
+  title,
+  rows,
+  count,
+  limit,
+  icon,
+  money = false,
+  onOrder,
+}: {
+  title: string;
+  rows: FinEntry[];
+  count: number;
+  limit: number;
+  icon: React.ReactNode;
+  /** **أفيه مبلغ؟** — بلاغُ الطوارئ لا مالَ فيه، **وصفرٌ معروضٌ يُقرأ مبلغا.** */
+  money?: boolean;
+  onOrder?: (ref: string) => void;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <FormSection title={`${title} (${fmtNum(count)})`} icon={icon}>
+      <ul className="space-y-1.5">
+        {rows.map((e, i) => (
+          <li
+            key={i}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+          >
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
+              {e.status && (
+                <Badge variant={FIN_TONE[e.status] ?? "neutral"}>
+                  {(P.fin.st as Record<string, string>)[e.status] ?? e.status}
+                </Badge>
+              )}
+              {/* **ورقمُ الطلب يُفتح** — والمرجعُ رقمٌ لا معرّف. */}
+              {e.ref && onOrder && (
+                <button
+                  type="button"
+                  onClick={() => onOrder(e.ref)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  #{fmtRef(Number(e.ref))}
+                </button>
+              )}
+              {e.reason && <span className="truncate">{e.reason}</span>}
+              {e.label && <span className="truncate text-xs text-ink-muted">{e.label}</span>}
+            </span>
+            <span className="flex shrink-0 items-center gap-3">
+              {/* **والعقوبةُ سالبةٌ بلونها** — **وموجبان في عمودٍ واحدٍ
+                  يُقرأ من عوقب كمن كوفئ.** */}
+              {money && e.amount !== 0 && (
+                <span
+                  className={`font-bold ${e.amount < 0 ? "text-danger" : "text-success"}`}
+                  dir="ltr"
+                >
+                  {fmtNum(e.amount)}
+                </span>
+              )}
+              <span className="text-xs text-ink-muted" dir="ltr">
+                {fmtDate(e.date)}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      {/* **والحدُّ يُقال** — **وسقفٌ صامتٌ يُقرأ «هذا كلُّ ما عليه».** */}
+      {count > rows.length && (
+        <p className="mt-2 text-center text-xs text-ink-muted">
+          {P.fin.showingLatest
+            .replace("{n}", fmtNum(rows.length))
+            .replace("{all}", fmtNum(count))}
+        </p>
+      )}
+      {limit > 0 && null}
+    </FormSection>
+  );
+}
+
+/** **ولونُ الحال يقول ما يقوله الاسم** — يُقرأ بلمحةٍ قبل أن يُقرأ حرفا. */
+const FIN_TONE: Record<string, "success" | "danger" | "warning" | "neutral"> = {
+  reward: "success",
+  penalty: "danger",
+  paid: "success",
+  approved: "success",
+  settled: "success",
+  resolved: "success",
+  rejected: "danger",
+  open: "warning",
+  pending: "warning",
+  waived: "neutral",
+};
 
 function FinBucket({
   title,
