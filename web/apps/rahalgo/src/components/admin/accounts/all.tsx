@@ -39,6 +39,7 @@ import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/admin/WalletModal";
 import { CashBoxModal, EndShiftModal } from "@/components/admin/DriverActions";
+import { MerchantModal } from "@/components/admin/accounts/merchants";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
@@ -87,6 +88,8 @@ export default function AllAccountsTable() {
   // **ونافذتا السائق** — نُقلتا من شاشتهم كما هما.
   const [boxFor, setBoxFor] = useState<AuthUser | null>(null);
   const [endShiftFor, setEndShiftFor] = useState<AuthUser | null>(null);
+  // **ونافذةُ المتجر** — صاحبُه أعلاها وبياناتُه أسفلَها.
+  const [storeOpen, setStoreOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<{ user: AuthUser; status: string } | null>(null);
   const [view, setView] = useViewMode("users");
 
@@ -339,10 +342,31 @@ export default function AllAccountsTable() {
             {m.admin.users.export}
           </Button>
           {isAdmin && (
-            <Button onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5">
-              <IconAdd size={16} />
-              {m.admin.users.create}
-            </Button>
+            <>
+              {/* ══════════════════════════════════════════════════════
+                  **زرّان لا واحد — والمتجرُ ليس حساباً**
+                  ══════════════════════════════════════════════════════
+
+                  (قرارُ المالك ٢٠٢٦-٠٨-١٥: «يصبح لدينا إضافةُ متجرٍ
+                   وإضافةُ مستخدم — المستخدمُ لباقي المستخدمين، أمّا
+                   المتجرُ فهو لحساب صاحب المتجر والمتجرِ نفسِه».)
+
+                  **و«مستخدم جديد» لا يمنح دورَ التاجر أصلاً**
+                  (`checkGrantable`) — **فمن أراد تاجراً وجد البابَ
+                  مغلقاً ولا يعرف أين يفتحه.** فصار البابُ هنا. */}
+              <Button onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5">
+                <IconAdd size={16} />
+                {m.admin.users.create}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setStoreOpen(true)}
+                className="flex items-center gap-1.5"
+              >
+                <IconStore size={16} />
+                {m.admin.merchants.create}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -554,6 +578,17 @@ export default function AllAccountsTable() {
         }}
       />
       <ManageRolesModal user={rolesUser} onClose={() => setRolesUser(null)} onChanged={load} />
+      {storeOpen && (
+        <MerchantModal
+          merchant={null}
+          categories={[]}
+          onClose={() => setStoreOpen(false)}
+          onSaved={() => {
+            setStoreOpen(false);
+            void load();
+          }}
+        />
+      )}
       {boxFor && (
         <CashBoxModal
           driver={boxFor}

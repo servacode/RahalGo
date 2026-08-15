@@ -254,7 +254,7 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		if in.CustomerPhone == "" {
 			return nil, ErrBadItems
 		}
-		u, err := s.identity.EnsureUserWithRole(ctx, actorID, in.CustomerPhone, "customer", ip)
+		u, err := s.identity.EnsureUserWithRole(ctx, actorID, in.CustomerPhone, "customer", "", ip)
 		if err != nil {
 			return nil, err
 		}

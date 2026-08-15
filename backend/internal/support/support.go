@@ -117,7 +117,7 @@ func (s *Service) Create(ctx context.Context, actorID string, in CreateInput, ip
 	if in.Subject == "" || in.CustomerPhone == "" {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
-	customer, err := s.identity.EnsureUserWithRole(ctx, actorID, in.CustomerPhone, "customer", ip)
+	customer, err := s.identity.EnsureUserWithRole(ctx, actorID, in.CustomerPhone, "customer", "", ip)
 	if err != nil {
 		return nil, err
 	}

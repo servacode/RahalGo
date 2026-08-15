@@ -16,8 +16,10 @@ package catalog
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
 
@@ -32,7 +34,15 @@ func newMerchantFixture(t *testing.T) *merchantFixture {
 	t.Helper()
 	pool := testdb.Pool(t)
 	ctx := context.Background()
-	f := &merchantFixture{svc: NewService(pool, nil)}
+	// **وخدمةُ الهويّة تلزم الآن** — **ولا متجرَ بلا صاحب**
+	// (٢٠٢٦-٠٨-١٥)، وإنشاءُ حسابه يمرّ بها.
+	//
+	// **وتُبنى بمستودعها وحدَه**: `EnsureUserWithRole` لا تقرأ ذاكرةً
+	// ولا تُصدر توكناً — **وحقنُ خدمةٍ كاملةٍ في اختبارٍ لا يحتاجها
+	// يجعله يسقط ليومَ تتبدّل تلك الخدمة.**
+	f := &merchantFixture{
+		svc: NewService(pool, identity.NewService(identity.NewRepo(pool), nil, nil, nil, "", slog.Default())),
+	}
 	f.actorID = testdb.NewUser(t, pool, "admin")
 
 	if err := pool.QueryRow(ctx, `
@@ -86,9 +96,11 @@ func TestCreateMerchant_AcceptsPin(t *testing.T) {
 	f := newMerchantFixture(t)
 	ctx := context.Background()
 
+	// **ولا متجرَ بلا صاحب** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
 	m, err := f.svc.CreateMerchant(ctx, f.actorID, MerchantInput{
 		Name:       ptr("متجرٌ بموضعٍ في الرقّة"),
 		CategoryID: ptr(f.catID),
+		OwnerPhone: ptr("+963900111222"),
 		Lat:        ptr(35.9594),
 		Lng:        ptr(39.0079),
 	}, "127.0.0.1")

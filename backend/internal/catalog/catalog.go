@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -293,11 +294,27 @@ type MerchantInput struct {
 	// إلى المتجر» في شاشة العمليات. **ومن يملك تغييرَه وحدَه يغلقه ساعةَ تُردّ
 	// إليه بضاعة**، ولذلك موضعُه بطاقةُ المتجر عند الإدارة (قرارُ المالك
 	// ٢٠٢٦-٠٨-٠٤).
-	AcceptsReturns *bool    `json:"accepts_returns"`
-	OwnerPhone     *string  `json:"owner_phone"`    // يربط/ينشئ حساب صاحب المتجر بدور merchant
-	SalesRepCode   *string  `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
-	Lat            *float64 `json:"lat"`            // دبوس الموقع على الخريطة
-	Lng            *float64 `json:"lng"`
+	AcceptsReturns *bool `json:"accepts_returns"`
+	// OwnerPhone **صاحبُ المتجر — ولا متجرَ بلاه.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٥: «فتحُ متجرٍ بدون صاحبِ متجرٍ غلطٌ كبير
+	//  — المفروض أن يكون الاثنان مرتبطين».)
+	//
+	// **ومتجرٌ بلا صاحبٍ لا يفتح بوّابتَه أحد**: لا يقبل طلباً ولا
+	// يحضّره، **وطلبٌ يُسنَد إليه يقف** — ولا يظهر في أيّ شاشةٍ أنّ
+	// السببَ حسابٌ ناقص.
+	//
+	// **والعكسُ ممنوعٌ من قبل** (`checkGrantable`): دورُ التاجر لا
+	// يُمنح بيدٍ — **فلا تاجرَ بلا متجرٍ ولا متجرَ بلا تاجر.**
+	OwnerPhone *string `json:"owner_phone"`
+	// OwnerName **اسمُه** — يُكتب في حسابه إن كان جديدا.
+	//
+	// **وكان يُنشأ باسمٍ فارغ**: فيصير في الحسابات صفٌّ برقمٍ بلا اسم،
+	// **ولا يُعرف من هو حتّى يُفتح متجرُه.**
+	OwnerName    *string  `json:"owner_name"`
+	SalesRepCode *string  `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
+	Lat          *float64 `json:"lat"`            // دبوس الموقع على الخريطة
+	Lng          *float64 `json:"lng"`
 	// معرف وسائط الشعار: غير مُرسل = بلا تغيير، "" = إزالة الشعار
 	LogoMediaID *string `json:"logo_media_id"`
 }
@@ -329,7 +346,11 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 	if err := requirePoint(in.Lat, in.Lng); err != nil {
 		return nil, err
 	}
-	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, ip)
+	// **ولا متجرَ بلا صاحب** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
+	if in.OwnerPhone == nil || strings.TrimSpace(*in.OwnerPhone) == "" {
+		return nil, ErrOwnerRequired
+	}
+	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, in.OwnerName, ip)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +400,7 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 		*in.Status != "suspended" {
 		return nil, ErrNameRequired
 	}
-	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, ip)
+	ownerID, err := s.resolveOwner(ctx, actorID, in.OwnerPhone, in.OwnerName, ip)
 	if err != nil {
 		return nil, err
 	}
@@ -462,11 +483,15 @@ func (s *Service) resolveRep(ctx context.Context, repCode *string) (*string, err
 }
 
 // resolveOwner يجد/ينشئ حساب صاحب المتجر بدور merchant من رقم هاتفه.
-func (s *Service) resolveOwner(ctx context.Context, actorID string, ownerPhone *string, ip string) (*string, error) {
-	if ownerPhone == nil || *ownerPhone == "" {
+func (s *Service) resolveOwner(ctx context.Context, actorID string, ownerPhone, ownerName *string, ip string) (*string, error) {
+	if ownerPhone == nil || strings.TrimSpace(*ownerPhone) == "" {
 		return nil, nil
 	}
-	user, err := s.identity.EnsureUserWithRole(ctx, actorID, *ownerPhone, "merchant", ip)
+	name := ""
+	if ownerName != nil {
+		name = strings.TrimSpace(*ownerName)
+	}
+	user, err := s.identity.EnsureUserWithRole(ctx, actorID, *ownerPhone, "merchant", name, ip)
 	if err != nil {
 		return nil, err
 	}
@@ -478,6 +503,13 @@ func (s *Service) audit(ctx context.Context, actorID, action, entity, entityID, 
 		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip)
 		VALUES ($1, $2, $3, $4, $5)`, actorID, action, entity, entityID, ip)
 }
+
+// ErrOwnerRequired **لا متجرَ بلا صاحب** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
+//
+// **ومتجرٌ يُنشأ بلا صاحبٍ يبدو سليماً في كلّ شاشة** — اسمُه وتصنيفُه
+// وعنوانُه كاملة، **ولا يُكتشف نقصُه إلّا حين يقف طلبٌ عنده.**
+var ErrOwnerRequired = httpx.NewError(http.StatusBadRequest,
+	"owner_required", "errors.owner_required")
 
 func isFKViolation(err error) bool {
 	var pgErr *pgconn.PgError

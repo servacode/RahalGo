@@ -854,14 +854,16 @@ func (s *Service) SalesRepByInviteCode(ctx context.Context, code string) (*User,
 
 // EnsureUserWithRole يجد المستخدم برقم هاتفه (أو ينشئه) ويضمن حمله الدور المطلوب.
 // تستخدمه الوحدات الأخرى لربط الحسابات (صاحب متجر، سائق...) — مع تدقيق كامل.
-func (s *Service) EnsureUserWithRole(ctx context.Context, actorID, rawPhone, role, ip string) (*User, error) {
+func (s *Service) EnsureUserWithRole(ctx context.Context, actorID, rawPhone, role, fullName, ip string) (*User, error) {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {
 		return nil, ErrInvalidPhone
 	}
 	user, _, err := s.repo.UserByPhone(ctx, phone)
 	if errors.Is(err, ErrNotFound) {
-		user, err = s.repo.CreateUserWithRole(ctx, phone, "", role)
+		// **وباسمه إن أُعطي** — **وحسابٌ برقمٍ بلا اسمٍ لا يُعرف
+		// صاحبُه في جدول الحسابات حتّى يُفتح متجرُه.**
+		user, err = s.repo.CreateUserWithRole(ctx, phone, fullName, role)
 		if err == nil {
 			s.repo.Audit(ctx, &actorID, "admin.user_create", "user", user.ID, ip,
 				map[string]any{"phone": phone, "roles": []string{role}})

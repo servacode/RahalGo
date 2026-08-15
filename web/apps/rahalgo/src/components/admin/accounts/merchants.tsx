@@ -632,23 +632,44 @@ function HoursModal({
   );
 }
 
-function MerchantModal({
+export function MerchantModal({
   merchant,
   categories,
   onClose,
   onSaved,
 }: {
   merchant: Merchant | null;
-  categories: Category[];
+  /** **وفارغةٌ تعني «اجلبها بنفسك»** — فتُفتح من أيّ شاشة. */
+  categories?: Category[];
   onClose: () => void;
   onSaved: () => void;
 }) {
+  // ══════════════════════════════════════════════════════════════════
+  // **والتصنيفاتُ تُجلب هنا إن لم تصل**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **ونافذةٌ تعتمد على من ناداها تُفتح ناقصةً من الباب الثاني** —
+  // فيرى فاتحُها قائمةَ تصنيفاتٍ فارغةً ولا يعرف لماذا.
+  const [cats, setCats] = useState<Category[]>(categories ?? []);
+  const [catsError, setCatsError] = useState("");
+  useEffect(() => {
+    if (cats.length > 0) return;
+    void api<{ categories: Category[] }>("/api/v1/admin/categories")
+      .then((r) => setCats(r.categories ?? []))
+      // **وفشلُ الجلب يُقال لا يُبتلع** — **وقائمةٌ فارغةٌ تُقرأ «لا
+      // تصنيفاتِ في المنصّة»** وهي في الحقيقة نداءٌ سقط.
+      .catch((e) => setCatsError(errText(e)));
+  }, [cats.length]);
+
   const [name, setName] = useState(merchant?.name ?? "");
   const [description, setDescription] = useState(merchant?.description ?? "");
-  const [categoryId, setCategoryId] = useState(merchant?.category_id ?? categories[0]?.id ?? "");
+  const [categoryId, setCategoryId] = useState(merchant?.category_id ?? cats[0]?.id ?? "");
   const [phone, setPhone] = useState(merchant?.phone ?? "");
   const [address, setAddress] = useState(merchant?.address_text ?? "");
   const [ownerPhone, setOwnerPhone] = useState(merchant?.owner_phone ?? "");
+  // **واسمُه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥): كان الحسابُ يُنشأ باسمٍ
+  // فارغ، **فيصير في الحسابات صفٌّ برقمٍ بلا اسم.**
+  const [ownerName, setOwnerName] = useState("");
   const [repCode, setRepCode] = useState(merchant?.sales_rep_code ?? "");
   const [lat, setLat] = useState<number | null>(merchant?.lat ?? null);
   const [lng, setLng] = useState<number | null>(merchant?.lng ?? null);
@@ -669,6 +690,7 @@ function MerchantModal({
       phone,
       address_text: address,
       owner_phone: ownerPhone,
+      owner_name: ownerName,
       sales_rep_code: repCode,
       lat,
       lng,
@@ -717,6 +739,51 @@ function MerchantModal({
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-5">
         {/* القسم 1: بيانات المتجر */}
+        <FormSection title={m.admin.merchants.sectionAccounts} icon={<IconUser />}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              {/* **ولا متجرَ بلا صاحب** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
+
+                  **ومتجرٌ بلا صاحبٍ لا يفتح بوّابتَه أحد**: لا يقبل
+                  طلباً ولا يحضّره، **وطلبٌ يُسنَد إليه يقف** — ولا
+                  يظهر في أيّ شاشةٍ أنّ السببَ حسابٌ ناقص. */}
+              <Input
+                id="m-owner"
+                label={m.admin.merchants.ownerPhone}
+                required
+                dir="ltr"
+                value={ownerPhone}
+                onChange={(e) => setOwnerPhone(e.target.value)}
+                className="text-end"
+                placeholder="09xxxxxxxx"
+              />
+              <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.ownerHint}</p>
+            </div>
+            <div>
+              <Input
+                id="m-owner-name"
+                label={m.admin.merchants.ownerName}
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Input
+                id="m-rep"
+                label={m.admin.merchants.repCode}
+                dir="ltr"
+                value={repCode}
+                onChange={(e) => setRepCode(e.target.value.toUpperCase())}
+                className="text-center font-mono uppercase tracking-widest"
+                placeholder="RH-XXXXX"
+              />
+              <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.repCodeHint}</p>
+            </div>
+          </div>
+        </FormSection>
+
+        {/* القسم 2: الحسابات المرتبطة */}
+        {/* القسم 1: بيانات المتجر */}
         <FormSection title={m.admin.merchants.sectionInfo} icon={<IconStore />}>
           {/* **وثلاثةُ أعمدةٍ على الشاشة الواسعة** — ستّةُ حقولٍ في صفّين لا
               ثلاثة. **وحقلُ الشعار هو أطولُ صفٍّ** فبقاؤه في صفٍّ ثالثٍ وحده
@@ -735,7 +802,7 @@ function MerchantModal({
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
             >
-              {categories.map((c) => (
+              {cats.map((c) => (
                 <option key={c.id} value={c.id}>
                   <CategoryIcon name={c.icon} size={15} />
                 {c.name}
@@ -772,36 +839,6 @@ function MerchantModal({
               initialUrl={merchant?.logo_thumb_url}
               onChange={setLogoID}
             />
-          </div>
-        </FormSection>
-
-        {/* القسم 2: الحسابات المرتبطة */}
-        <FormSection title={m.admin.merchants.sectionAccounts} icon={<IconUser />}>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <Input
-                id="m-owner"
-                label={m.admin.merchants.ownerPhone}
-                dir="ltr"
-                value={ownerPhone}
-                onChange={(e) => setOwnerPhone(e.target.value)}
-                className="text-end"
-                placeholder="09xxxxxxxx"
-              />
-              <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.ownerHint}</p>
-            </div>
-            <div>
-              <Input
-                id="m-rep"
-                label={m.admin.merchants.repCode}
-                dir="ltr"
-                value={repCode}
-                onChange={(e) => setRepCode(e.target.value.toUpperCase())}
-                className="text-center font-mono uppercase tracking-widest"
-                placeholder="RH-XXXXX"
-              />
-              <p className="mt-1 text-xs text-ink-muted">{m.admin.merchants.repCodeHint}</p>
-            </div>
           </div>
         </FormSection>
         </div>
