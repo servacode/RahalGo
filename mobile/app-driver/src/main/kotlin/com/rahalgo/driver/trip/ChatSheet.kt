@@ -2,9 +2,9 @@ package com.rahalgo.driver.trip
 
 import androidx.compose.foundation.background
 import com.rahalgo.design.Rahal
-import com.rahalgo.driver.ui.chatDay
-import com.rahalgo.driver.ui.ChatDayChip
-import com.rahalgo.driver.ui.ChatBubble
+import com.rahalgo.ui.chatDay
+import com.rahalgo.ui.ChatDayChip
+import com.rahalgo.ui.ChatBubble
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column

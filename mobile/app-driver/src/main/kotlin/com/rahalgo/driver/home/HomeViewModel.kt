@@ -1,7 +1,7 @@
 package com.rahalgo.driver.home
 
 import android.app.Application
-import com.rahalgo.driver.data.apiError
+import com.rahalgo.ui.apiError
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -10,7 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
-import com.rahalgo.driver.data.Refresh
+import com.rahalgo.ui.Refresh
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.location.LocationService
 import com.rahalgo.shared.model.DriverMe

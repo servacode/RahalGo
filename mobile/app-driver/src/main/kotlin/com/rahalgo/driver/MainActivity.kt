@@ -2,22 +2,31 @@ package com.rahalgo.driver
 
 import android.os.Bundle
 import com.rahalgo.driver.location.LocationDisclosure
-import com.rahalgo.driver.data.Crash
-import com.rahalgo.design.LightPalette
-import com.rahalgo.design.DarkPalette
-import androidx.compose.ui.graphics.toArgb
-import com.rahalgo.driver.data.rememberTheme
-import com.rahalgo.driver.data.ThemeState
+import com.rahalgo.ui.Crash
+import com.rahalgo.ui.AppFrame
+import com.rahalgo.ui.ThemeState
 import com.rahalgo.design.Rahal
-import com.rahalgo.driver.ui.Avatar
-import com.rahalgo.driver.nav.rememberOverlay
-import com.rahalgo.driver.nav.Overlay
+import com.rahalgo.ui.Avatar
+import com.rahalgo.ui.rememberOverlay
+import com.rahalgo.ui.Overlay
 import androidx.compose.foundation.layout.width
 import kotlinx.coroutines.launch
 import com.rahalgo.driver.menu.MenuScreen
 import com.rahalgo.driver.menu.SectionsViewModel
 import com.rahalgo.driver.menu.MenuItem
 import com.rahalgo.driver.menu.MenuDrawer
+import com.rahalgo.ui.PagesViewModel
+import com.rahalgo.ui.ChatsScreen
+import com.rahalgo.ui.ChatsViewModel
+import com.rahalgo.ui.IncentivesScreen
+import com.rahalgo.ui.IncentivesViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel as vmOf
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.rahalgo.ui.HelpRole
+import com.rahalgo.ui.PlatformPages
+import com.rahalgo.ui.PlatformScreen
+import com.rahalgo.ui.knowsKey
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.rememberDrawerState
@@ -25,13 +34,13 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import com.rahalgo.driver.history.HistoryViewModel
 import com.rahalgo.driver.history.HistoryScreen
-import com.rahalgo.driver.wallet.WalletViewModel
-import com.rahalgo.driver.wallet.WalletScreen
+import com.rahalgo.ui.WalletViewModel
+import com.rahalgo.ui.WalletScreen
 import com.rahalgo.driver.rating.RatingViewModel
 import com.rahalgo.driver.rating.RatingScreen
 import androidx.activity.compose.BackHandler
-import com.rahalgo.driver.account.AccountViewModel
-import com.rahalgo.driver.account.AccountScreen
+import com.rahalgo.ui.AccountViewModel
+import com.rahalgo.ui.AccountScreen
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -70,11 +79,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.rahalgo.design.RahalGoTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rahalgo.design.intro.BrandIntro
-import com.rahalgo.driver.login.LoginActions
-import com.rahalgo.driver.login.LoginScreen
+import com.rahalgo.ui.LoginActions
+import com.rahalgo.ui.AuthScreen
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -88,12 +96,12 @@ import androidx.core.view.WindowCompat
 import com.rahalgo.driver.home.HomeActions
 import com.rahalgo.driver.home.HomeScreen
 import com.rahalgo.driver.home.HomeViewModel
-import com.rahalgo.driver.location.LastPoint
+import com.rahalgo.ui.LastPoint
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.driver.location.LocationPermission
-import com.rahalgo.driver.ui.InboxSheet
-import com.rahalgo.driver.ui.TopBar
-import com.rahalgo.driver.login.LoginViewModel
+import com.rahalgo.ui.InboxSheet
+import com.rahalgo.ui.TopBar
+import com.rahalgo.ui.AuthViewModel
 import com.rahalgo.driver.orders.DetailActions
 import com.rahalgo.driver.orders.OrderDetailScreen
 import com.rahalgo.driver.orders.OrdersActions
@@ -104,8 +112,8 @@ import com.rahalgo.driver.trip.ChatActions
 import com.rahalgo.driver.trip.TripActions
 import com.rahalgo.driver.trip.TripScreen
 import com.rahalgo.driver.trip.TripState
-import com.rahalgo.driver.login.ResetActions
-import com.rahalgo.driver.login.ResetScreen
+import com.rahalgo.ui.ResetActions
+import com.rahalgo.ui.ResetScreen
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -138,7 +146,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // **وتقاريرُ الانهيار تبدأ قبل أوّل شاشة** — والسقوطُ في الإقلاع
         // أكثرُ ما يقع، **ومن بدأ التقاريرَ بعده لا يراه.**
-        Crash.start()
+        Crash.start(debug = BuildConfig.DEBUG)
+        // ══════════════════════════════════════════════════════════════
+        // **والنواةُ تُركَّب قبل أوّل شاشة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وأندرويدُ يصنع `AuthViewModel` لا نحن** — فلا تُمرَّر إليه
+        // النواةُ وسيطاً، **يقرؤها من المُسجَّل.** ومن رسم شاشةً قبل
+        // التركيب سقط تطبيقُه في أوّل إطار.
+        //
+        // **وقع اليومَ (٢٠٢٦-٠٨-١٤)** في أوّل بناءٍ بعد الرفع، **وكشفه
+        // الحارسُ باسمه** لا برسالةٍ مبهمة.
+        Backend.of(this)
         // ══════════════════════════════════════════════════════════════
         // **وشريطُ النظام يبقى** — الساعةُ والشبكةُ والبطّاريّة
         // ══════════════════════════════════════════════════════════════
@@ -177,38 +196,9 @@ private fun DriverApp() {
     }
     var showIntro by remember { mutableStateOf(!MainActivity.introShown) }
 
-    // ══════════════════════════════════════════════════════════════════
-    // **والسمةُ قرارُه هو — وتبقى بعد إغلاق التطبيق**
-    // ══════════════════════════════════════════════════════════════════
-    //
-    // (أمرُ المالك ٢٠٢٦-٠٨-١٣: «طبّق الثيم الفاتح والغامق بشكلٍ كاملٍ
-    //  للتطبيق، بحيث يكون التصميمان متوافقين».)
-    //
-    // **وافتراضُها إعدادُ النظام** — ومن لمس الهلالَ خرج إلى قرارٍ صريح.
-    val theme = rememberTheme(context)
-    val dark = theme.isDark()
-
-    // **وأيقوناتُ شريط النظام تتبع الأرضَ تحتها** — أيقونةٌ داكنةٌ على
-    // أرضٍ كحليّةٍ تختفي، **فتضيع الساعةُ والبطّاريّة.**
-    val activity = context as? android.app.Activity
-    // **واللوحةُ تُقرأ من القرار لا من الشجرة** — هذا السطرُ خارج
-    // `RahalGoTheme`، **فـ`Rahal.colors` فيه يردّ الفاتحةَ دائما**
-    // مهما كان الاختيار. (قِيس: الشريطان خرجا أبيضين في الغامقة.)
-    val canvas = (if (dark) DarkPalette else LightPalette).canvas
-    LaunchedEffect(dark, activity) {
-        val window = activity?.window ?: return@LaunchedEffect
-        // **وشريطا النظام يأخذان أرضَ الصفحة** — قِيس على الجهاز أنّهما
-        // بقيا فاتحين (`#F2F2F2`) فوق شاشةٍ كحليّة: **شريطان أبيضان
-        // يحدّان شاشةً داكنةً يُقرآن عطبا.**
-        window.statusBarColor = canvas.toArgb()
-        window.navigationBarColor = canvas.toArgb()
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = !dark
-            isAppearanceLightNavigationBars = !dark
-        }
-    }
-
-    RahalGoTheme(dark = dark) {
+    // **والإطارُ من الوحدة** — السمةُ وشريطا النظام: **قِيس أنّها
+    // متطابقةٌ في الثلاثة** (٢٠٢٦-٠٨-١٤).
+    AppFrame { theme, dark ->
         Box(
             Modifier
                 .fillMaxSize()
@@ -253,7 +243,7 @@ private fun DriverApp() {
  */
 @Composable
 private fun Destination(theme: ThemeState) {
-    val vm: LoginViewModel = viewModel()
+    val vm: AuthViewModel = viewModel()
 
     when {
         // **وانتظارٌ يُرى لا بياضٌ صامت** — الخادم النائم يستيقظ في
@@ -285,8 +275,9 @@ private fun Destination(theme: ThemeState) {
             ),
         )
 
-        else -> LoginScreen(
+        else -> AuthScreen(
             state = vm.state,
+            title = stringResource(R.string.login_title),
             actions = LoginActions(
                 login = vm::login,
                 setMode = vm::setMode,
@@ -325,7 +316,12 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     //
     // **كانت أربعَ راياتٍ تُطفأ في سبعة مواضع** — فنُسيت ثلاثَ مرّات،
     // **فيُضغط الشريطُ ولا يستجيب.** انظر `nav/Overlay.kt`.
-    val overlay = rememberOverlay()
+    // **ومعجمُ الأقسام يُعطى للوحدة** — هي لا تعرف أقسامَ السائق،
+    // **وبندٌ محفوظٌ حُذف من إصدارٍ لاحقٍ يُردّ إلى التبويبات.**
+    // **ومعجمُ التطبيق يُعطى للوحدة** — بنودُه هو، وبنودُ المنصّة معها.
+    val overlay = rememberOverlay { key ->
+        knowsKey(MenuItem.entries.map(MenuItem::asDrawerItem), key)
+    }
     val home: HomeViewModel = viewModel()
     val orders: OrdersViewModel = viewModel()
     val accountVm: AccountViewModel = viewModel()
@@ -333,6 +329,17 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     val walletVm: WalletViewModel = viewModel()
     val historyVm: HistoryViewModel = viewModel()
     val sectionsVm: SectionsViewModel = viewModel()
+    // **وصفحاتُ المنصّة عقلُها من الوحدة** — نداءان لا خمسة، ويبقيان.
+    val pagesVm: PagesViewModel = viewModel()
+    // **ودردشاتُه من الوحدة** — كلُّ دورٍ يدردش.
+    val chatsVm: ChatsViewModel = viewModel()
+    // **وهدفُه من الوحدة** — والبابُ يُعطى: `me/incentives`.
+    val app = LocalContext.current.applicationContext as android.app.Application
+    val goalsVm: IncentivesViewModel = vmOf(
+        factory = viewModelFactory {
+            initializer { IncentivesViewModel(app) { Backend.of(app).me.incentives() } }
+        },
+    )
     // **والقائمةُ درجٌ ينزلق** — لا شاشةٌ تغطّي: **من فتحها ليقرأ اسماً
     // يرى ما تحتها فيعرف أنّه لم يغادر.**
     val drawer = rememberDrawerState(DrawerValue.Closed)
@@ -442,8 +449,23 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **والرجوعُ من القائمة يغلقها — لا يُخرج من التطبيق**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كُشف بالقياس (٢٠٢٦-٠٨-١٤)**: تُفتح القائمةُ ويُضغط الرجوع
+    // **فيقف السائقُ على شاشة الهاتف الرئيسة** — لا على طلباته.
+    //
+    // **و`ModalNavigationDrawer` لا تلتقطه**: التقاطُها للرجوع ليس
+    // مضموناً في كلّ إصدار، **والحارسُ الذي في الأسفل (`overlay.clear`)
+    // لا يُركَّب إلّا وشاشةٌ تغطّي** — والقائمةُ ليست منها.
+    BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
+
     ModalNavigationDrawer(
         drawerState = drawer,
+        // **ولا تُسحب من الحافّة في الرحلة** — **ومن أمال يدَه على
+        // المقود سحبها بلا أن يقصد.**
+        gesturesEnabled = tab != 0,
         drawerContent = {
             // ══════════════════════════════════════════════════════════
             // **والدرجُ رفيعٌ لا عريض**
@@ -468,11 +490,15 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
             // اسمٌ يلامس الحافّة يُقرأ مقصوصاً وإن لم يُقصّ.
             ModalDrawerSheet(Modifier.width(200.dp)) {
                 MenuDrawer(
-                    onPick = { item ->
-                        overlay.show(Overlay.Menu(item))
+                    onPick = { key ->
+                        overlay.show(Overlay.Menu(key))
                         scope.launch { drawer.close() }
                     },
                     onLogout = onLogout,
+                    // **ومبدّلُ السمة هنا** — (قرارُ المالك
+                    // ٢٠٢٦-٠٨-١٥: «نخلّيها بالقائمة الجانبيّة»).
+                    dark = dark,
+                    onTheme = { theme.toggle(dark) },
                 )
             }
         },
@@ -509,21 +535,20 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 // **وطلبُ رحلةٍ إلى زرٍّ آخرَ لإلغاء ما فتحه هنا**
                 // حركةٌ زائدة.
                 onNotifications = {
-                    if (overlay.current == Overlay.Inbox) {
-                        overlay.clear()
-                    } else {
-                        overlay.show(Overlay.Inbox)
-                        home.openInbox()
-                    }
+                    overlay.toggle(Overlay.Inbox)
+                    if (overlay.current == Overlay.Inbox) home.openInbox()
                 },
                 // **والسمةُ تُقلب من الشريط** — (أمرُ المالك ٢٠٢٦-٠٨-١٣).
                 //
                 // **واللمسةُ تقلب المرئيَّ لا الحال**: من كان على «اتبع
                 // النظام» ونظامُه غامقٌ فلمس **أراد الفاتحة** — لا أن
                 // يقفز إلى الغامقة التي هو فيها.
-                onTheme = { theme.toggle(dark) },
-                dark = dark,
-                onMenu = { scope.launch { drawer.open() } },
+                // **ولا قائمةَ فوق الرحلة** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
+                //
+                // **وشاشةُ الرحلة خريطةٌ حيّةٌ وأزرارُ طورٍ يقودها بيدٍ
+                // واحدة** — **ودرجٌ يُفتح فوقها يطمسها ثمّ يُغلق**،
+                // وبينهما رسمتان كاملتان للخريطة.
+                onMenu = if (tab == 0) null else ({ scope.launch { drawer.open() } }),
                 onRating = { overlay.show(Overlay.Rating) },
             )
         },
@@ -685,10 +710,26 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         onMarkAll = home::markAllRead,
                     )
                     is Overlay.Menu ->
-                        if (over.item == MenuItem.History) {
-                            HistoryScreen(vm = historyVm)
+                        // **وبنودُ المنصّة أوّلا** — شاشتُها من الوحدة،
+                        // **ولا يعرفها تعدادُ السائق أصلا.**
+                        if (PlatformPages.has(over.key)) {
+                            PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Driver)
                         } else {
-                            MenuScreen(vm = sectionsVm, item = over.item)
+                            when (
+                                val item = MenuItem.entries.firstOrNull { it.name == over.key }
+                            ) {
+                                // **ولا شيءَ لاسمٍ لا يعرفه** — والحارسُ
+                                // فوق يمنع وقوعَها، **وهذه لأنّ `when`
+                                // يجب أن تُتمّ.**
+                                null -> Unit
+                                MenuItem.History -> HistoryScreen(vm = historyVm)
+                                MenuItem.Chats -> ChatsScreen(chatsVm)
+                                MenuItem.Rewards -> {
+                                    LaunchedEffect(Unit) { goalsVm.load() }
+                                    IncentivesScreen(goalsVm)
+                                }
+                                else -> MenuScreen(vm = sectionsVm, item = item)
+                            }
                         }
                     Overlay.None -> Unit
                 }
@@ -766,7 +807,6 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     state = orders.state,
                     actions = OrdersActions(
                         accept = orders::accept,
-                        decline = orders::decline,
                         startTrip = { id ->
                             orders.open(id)
                             tab = 0

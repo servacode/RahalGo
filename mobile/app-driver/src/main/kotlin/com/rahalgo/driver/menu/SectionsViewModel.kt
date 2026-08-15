@@ -1,7 +1,7 @@
 package com.rahalgo.driver.menu
 
 import android.app.Application
-import com.rahalgo.driver.data.apiError
+import com.rahalgo.ui.apiError
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -10,15 +10,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
-import com.rahalgo.driver.data.Refresh
+import com.rahalgo.ui.Refresh
 import com.rahalgo.shared.model.CashPage
-import com.rahalgo.shared.model.ChatThread
-import com.rahalgo.shared.model.ChatThreadRow
 import com.rahalgo.shared.model.DriverMe
-import com.rahalgo.shared.model.IncentivesPayload
-import com.rahalgo.shared.model.Platform
 import com.rahalgo.shared.model.Reputation
-import com.rahalgo.shared.model.SiteContact
 import com.rahalgo.shared.net.ApiClient
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -62,14 +57,12 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
         // يُفتح القسم** لا وهو مطويّ: سائقٌ في رحلته لا يُنادى له سبعةُ
         // نداءات.
         //
-        // **ونصوصُ الصفحات تبقى** — شروطُ الاستخدام لا تتبدّل بتسليم طلب.
+        // **ونصوصُ الصفحات تبقى** — في عقلها هي، ولا تتبدّل بتسليم طلب.
         viewModelScope.launch {
             Refresh.tick.drop(1).collect {
                 cash = null
                 me = null
-                incentives = null
                 reputation = null
-                chats = null
             }
         }
     }
@@ -89,26 +82,7 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
     var me by mutableStateOf<DriverMe?>(null)
         private set
 
-    var chats by mutableStateOf<List<ChatThreadRow>?>(null)
-        private set
-
-    /** **حديثٌ مفتوحٌ للقراءة** — ومفتاحُه معرّفُ الطلب. */
-    var thread by mutableStateOf<ChatThread?>(null)
-        private set
-
-    var openThread by mutableStateOf("")
-        private set
-
-    var incentives by mutableStateOf<IncentivesPayload?>(null)
-        private set
-
     var reputation by mutableStateOf<Reputation?>(null)
-        private set
-
-    var contact by mutableStateOf<SiteContact?>(null)
-        private set
-
-    var platform by mutableStateOf<Platform?>(null)
         private set
 
     /**
@@ -121,36 +95,14 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
         error = ""
         when (item) {
             MenuItem.Cash -> if (force || cash == null) load { cash = backend.driver.cash(); me = backend.driver.me() }
-            MenuItem.Chats -> if (force || chats == null) load {
-                // **والمنتهيةُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
-                // «الدردشةُ عندما تُغلق فقط تظهر بالدردشات السابقة»).
-                //
-                // **وحديثٌ يجري في «السابقة» تناقضٌ في الاسم**: يُفتح من
-                // موضعين فيُقرأ مرّتين، **وشارةُ ما لم يُقرأ تنطفئ في
-                // أحدهما** فيظنّ صاحبُها أنّه ردّ ولم يفعل.
-                chats = backend.chat.threads().threads.filter { !it.open }
-            }
-            MenuItem.Rewards -> if (force || incentives == null) load { incentives = backend.me.incentives() }
             MenuItem.Tickets -> if (force || reputation == null) load { reputation = backend.me.reputation() }
-            MenuItem.Help, MenuItem.About, MenuItem.Terms, MenuItem.Privacy, MenuItem.Contact ->
-                if (force || contact == null || platform == null) load {
-                    contact = backend.auth.contact()
-                    platform = backend.auth.platform()
-                }
-            MenuItem.History -> Unit
+            // **والدردشاتُ والسجلُّ لهما عقلُهما** — رُفعت الدردشاتُ
+            // إلى `:ui` (٢٠٢٦-٠٨-١٤) **لأنّ كلَّ دورٍ يدردش.**
+            // **والأهدافُ والدردشاتُ والسجلُّ لها عقولُها** — رُفعت
+            // الأهدافُ إلى `:ui` (٢٠٢٦-٠٨-١٤): **السائقُ له هدفٌ
+            // والمندوبُ له هدف**، والمقياسُ يختلف والمعنى واحد.
+            MenuItem.Rewards, MenuItem.Chats, MenuItem.History -> Unit
         }
-    }
-
-    /** **يفتح حديثاً مطويّاً** — والضغطةُ الثانية تطويه. */
-    fun pickThread(orderId: String) {
-        if (openThread == orderId) {
-            openThread = ""
-            thread = null
-            return
-        }
-        openThread = orderId
-        thread = null
-        load { thread = backend.chat.thread(orderId) }
     }
 
     private fun load(block: suspend () -> Unit) {

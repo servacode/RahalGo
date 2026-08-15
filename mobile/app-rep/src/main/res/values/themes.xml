@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- **سمةُ النافذة قبل أن يعمل Compose** — والسمةُ الحقيقيّةُ في
+         `RahalGoTheme`. **ووظيفتُها ألّا تومض أرضٌ بيضاءُ أو سوداءُ**
+         بين فتح النافذة وأوّل إطار. -->
+    <style name="Theme.RahalGoRep" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

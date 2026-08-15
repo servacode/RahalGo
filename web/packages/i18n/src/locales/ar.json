@@ -1802,6 +1802,9 @@
         },
         "page.driver_help_text": {
           "label": "نصّ تعليمات السائق"
+        },
+        "page.rep_help_text": {
+          "label": "نصّ تعليمات المندوب"
         }
       },
       "treasuryNone": "— لم تُختَر بعد —",
@@ -1812,7 +1815,8 @@
         "page.terms": "شروط الاستخدام",
         "page.privacy": "سياسة الخصوصية",
         "page.about": "من نحن",
-        "page.driver_help": "تعليمات السائق"
+        "page.driver_help": "تعليمات السائق",
+        "page.rep_help": "تعليمات المندوب"
       },
       "pages": {
         "background": "خلفية الموقع",

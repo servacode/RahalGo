@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- **الإنترنت** — التطبيقُ يكلّم المحرّكَ في كلّ شاشة.
+         **وبلا هذا السطر يسقط كلُّ نداءٍ برفضٍ أمنيّ** لا برسالة شبكة،
+         فيبحث القارئُ في العنوان والخادم والعلّةُ في ملفّ البيان. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **الموقعُ لحفظ عنوانٍ وحدَه — لا تتبّع**
+         ══════════════════════════════════════════════════════════════
+
+         **ولا `ACCESS_BACKGROUND_LOCATION`**: الزبونُ لا يُتتبَّع أبدا،
+         **وموقعُه يُقرأ مرّةً لحظةَ يحفظ عنوانَه.**
+
+         **وإذنٌ يُطلب بلا حاجةٍ ظاهرةٍ يُرفض** — من المستخدم ومن غوغل
+         معا. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- **وأيقونةُ المنصّة من الوحدة** — (قرارُ المالك ٢٠٢٦-٠٨-١٤:
+         «لوغو المنصّة لازم يكون الأيقونة الأساسيّة المركزيّة لكلّ
+         التطبيقات، ما ناخذ الافتراضي للأندرويد»).
+
+         **وأربعُ نسخٍ من أيقونةٍ واحدة تفترق** — تُصقل في تطبيقٍ وتشيخ
+         في ثلاثة، **فيرى الناسُ علامتين للمنصّة نفسِها.** -->
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RahalGoCustomer">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- ══════════════════════════════════════════════════════
+                 **ورابطُ الدعوة يفتح التطبيقَ لا المتصفّح**
+                 ══════════════════════════════════════════════════════
+
+                 (سؤالُ المالك ٢٠٢٦-٠٨-١٤: «رابطُ الدعوة… ثمّ الرابطُ
+                  يفتح تسجيلَ حسابٍ جديدٍ من التطبيق».)
+
+                 **و`autoVerify` يجعله يفتح بلا سؤال** — بشرطِ ملفٍّ
+                 على النطاق: `https://rahalgo.com/.well-known/assetlinks.json`
+                 **فيه بصمةُ مفتاح التوقيع.**
+
+                 **وبلا الملفّ يظهر خيارٌ «بأيّ تطبيق تفتح؟»** — يعمل،
+                 **لكنّه سؤالٌ يُربك من دُعي.**
+
+                 **ولا نطاقَ حيٌّ بعد** — يُرفع الملفُّ يومَ يُرفع
+                 الموقع (`DEPLOY.md`).
+
+                 **والمسارُ `/signup` وحدَه** — لا كلُّ الموقع: **من
+                 فتح صفحةَ شروطٍ لا يريد أن يُقذف إلى تطبيق.** -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="rahalgo.com"
+                    android:pathPrefix="/signup" />
+                <data android:scheme="https" android:host="www.rahalgo.com"
+                    android:pathPrefix="/signup" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

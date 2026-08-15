@@ -2,7 +2,7 @@ package com.rahalgo.driver.menu
 
 import androidx.compose.foundation.layout.Arrangement
 import com.rahalgo.shared.model.MyReport
-import com.rahalgo.driver.ui.SectionTitle
+import com.rahalgo.ui.SectionTitle
 import androidx.compose.foundation.layout.Column
 import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Row
@@ -18,13 +18,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
-import com.rahalgo.driver.ui.Card
-import com.rahalgo.driver.ui.Chip
-import com.rahalgo.driver.ui.Empty
-import com.rahalgo.driver.ui.LoadState
-import com.rahalgo.driver.ui.Screen
-import com.rahalgo.driver.ui.ScreenTitle
-import com.rahalgo.driver.ui.whenText
+import com.rahalgo.ui.Card
+import com.rahalgo.ui.ticketStatusColor
+import com.rahalgo.ui.ticketStatusText
+import com.rahalgo.ui.Chip
+import com.rahalgo.ui.Empty
+import com.rahalgo.ui.LoadState
+import com.rahalgo.ui.Screen
+import com.rahalgo.ui.ScreenTitle
+import com.rahalgo.ui.whenText
 import com.rahalgo.shared.model.ComplaintBrief
 
 /**
@@ -122,7 +124,7 @@ private fun ReportCard(r: MyReport) {
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleSmall,
             )
-            Chip(text = ticketStatus(r.status), color = statusColor(r.status))
+            Chip(text = ticketStatusText(r.status), color = ticketStatusColor(r.status))
         }
         Spacer(Modifier.height(6.dp))
         // **والسببُ بعربيّته** — والرمزُ يُعرض إن لم يُترجَم ليُبلَّغ عنه.
@@ -185,7 +187,7 @@ private fun ComplaintCard(c: ComplaintBrief) {
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleSmall,
             )
-            Chip(text = ticketStatus(c.status), color = statusColor(c.status))
+            Chip(text = ticketStatusText(c.status), color = ticketStatusColor(c.status))
         }
         Spacer(Modifier.height(6.dp))
         Text(c.subject, style = MaterialTheme.typography.bodyLarge)
@@ -208,19 +210,4 @@ private fun ComplaintCard(c: ComplaintBrief) {
 }
 
 /** **حالُ الشكوى بعربيّة** — والمجهولُ يُعرض برمزه ليُبلَّغ عنه. */
-@Composable
-private fun ticketStatus(status: String): String = when (status) {
-    "open" -> stringResource(R.string.tik_open)
-    "in_progress" -> stringResource(R.string.tik_progress)
-    "resolved" -> stringResource(R.string.tik_resolved)
-    else -> status
-}
 
-/** **ولا حالَ رابعةً** — المحرّكُ يكتب ثلاثاً (`support`)، والمعجمُ
- *  يسمّي ثلاثاً. **ورابعةٌ تُخترع هنا اسمٌ ميّتٌ يوهم أنّ الحالةَ
- *  مغطّاة.** */
-@Composable
-private fun statusColor(status: String) = when (status) {
-    "resolved" -> Rahal.colors.success
-    else -> Rahal.colors.accent
-}

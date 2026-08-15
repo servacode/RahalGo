@@ -1,7 +1,7 @@
 package com.rahalgo.driver.orders
 
 import android.app.Application
-import com.rahalgo.driver.data.apiError
+import com.rahalgo.ui.apiError
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -11,8 +11,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
-import com.rahalgo.driver.data.Refresh
-import com.rahalgo.driver.location.LastPoint
+import com.rahalgo.ui.Refresh
+import com.rahalgo.ui.LastPoint
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.trip.ChatState
 import com.rahalgo.driver.trip.Stop
@@ -254,6 +254,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     fun tripOpened() {
         startTrip = false
+        // **ورحلةٌ جديدةٌ أولويّةٌ جديدة** — من أخذ طلباً بدأ طريقاً
+        // آخر، **وما رفضه على الطريق الأوّل لا يُحسب عليه في الثاني.**
+        offerSpent = false
     }
 
     /**
@@ -282,28 +285,6 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             load()
             openId = orderId
             startTrip = true
-        }
-    }
-
-    /**
-     * **يرفض العرض** — وينتقل الدور فورا إلى من بعده.
-     *
-     * **والقائمة تُعاد قراءتها بعده**: البطاقة لم تعد له، **ومن أبقاها**
-     * جعله يضغطها فيُردّ «ليس عرضك».
-     */
-    fun decline(orderId: String) {
-        if (state.acceptingId != null) return
-        state = state.copy(acceptingId = orderId, error = "", actionError = "")
-        viewModelScope.launch {
-            try {
-                backend.driver.decline(orderId)
-            } catch (e: Exception) {
-                state = state.copy(acceptingId = null, error = describe(e))
-                refresh()
-                return@launch
-            }
-            state = state.copy(acceptingId = null)
-            refresh()
         }
     }
 
@@ -462,11 +443,50 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             routeM = route?.takeIf { it.available }?.distanceM ?: -1.0,
             routeSec = route?.takeIf { it.available }?.durationS ?: -1.0,
             step = TripStep.of(order.status),
-            // **وما بقي يتبدّل بتبدّل الوجهة**: قبل الاستلام المسافةُ إلى
-            // المتجر، وبعده طولُ المشوار إلى الزبون.
+            // ══════════════════════════════════════════════════════════
+            // **وما بقي يتبدّل بتبدّل الوجهة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **قبل الاستلام المسافةُ إلى المتجر، وبعده طولُ المشوار
+            // إلى الزبون.**
+            //
+            // **والأولى كانت تغيب دائماً** (شكوى المالك ٢٠٢٦-٠٨-١٥:
+            // «المسافةُ إلى المتجر لا تظهر أبداً، فقط المسافةُ إلى
+            // الزبون»).
+            //
+            // **وسببُها أنّ المحرّك يقيسها من موضعٍ مخزَّنٍ في القاعدة**
+            // (`to_pickup_m`) **يشترط ألّا يزيد عمرُه على ربع ساعة** —
+            // ومن لم تُرسل خدمتُه موضعَه بعدُ **يُردّ له `-1`.**
+            //
+            // **والثانيةُ لا تحتاج موضعَه أصلاً** — من المتجر إلى الباب،
+            // نقطتان ثابتتان. **فتظهر دائماً وتغيب الأولى دائما.**
+            //
+            // **والجهازُ يعرف موضعَه الآن** — أدقَّ ممّا في القاعدة
+            // وأحدث. **فيُحسب عليه**، ولا يبقى السائقُ بلا رقمٍ وهو
+            // يقود إلى المتجر.
+            //
+            // ══════════════════════════════════════════════════════════
+            // **والثانيةُ كانت تكذب — وهي أخطرُ من الغياب**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (شكوى المالك ٢٠٢٦-٠٨-١٥: «هناك خطأٌ فادحٌ بالمسافات».)
+            //
+            // **`leg_m` طولُ المشوار من المتجر إلى الباب** — **نقطتان
+            // ثابتتان لا تتبدّلان بحركة السائق.** فكانت الشاشةُ تقول
+            // «٢٫٩ كم» وهو ينطلق، **وتقول «٢٫٩ كم» وهو أمام الباب.**
+            //
+            // **ورقمٌ لا ينقص لا يُقرأ مسافةً باقية** — يُقرأ عطباً في
+            // التطبيق، **أو يُصدَّق فيُخطئ في وقتِ وصولٍ يقوله للزبون.**
+            //
+            // **وما بقي يُقاس من حيث هو الآن** — وهذا ما يعرفه الجهازُ
+            // وحدَه.
             remainingM = when (order.status) {
-                "assigned", "at_pickup" -> order.toPickupM
-                else -> order.legM
+                "assigned", "at_pickup" ->
+                    away(driver, order.navLat, order.navLng)
+                        .takeIf { it >= 0 } ?: order.toPickupM
+
+                else -> away(driver, order.lat, order.lng)
+                    .takeIf { it >= 0 } ?: order.legM
             },
             // **والسرعة من المحرّك لا من الشيفرة** — تُضبط للمدينة كلّها.
             avgSpeedKmh = state.me?.avgSpeedKmh ?: 0,
@@ -475,7 +495,27 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             emergencyOpen = emergencyOpen,
             stops = state.mine.map { Stop(it.id, it.number) },
             // **وأوّل عرضٍ معروضٍ عليه وهو في رحلة** — وما رُفض لا يعود.
-            onRouteOffer = state.offers.firstOrNull { it.id !in dismissedOffers },
+            // ══════════════════════════════════════════════════════════
+            // **وعرضٌ واحدٌ في الرحلة لا خمسة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرارُ المالك ٢٠٢٦-٠٨-١٥: «في خمسةُ طلباتٍ على نفس طريق
+            //  السائق — مسموحٌ يظهر له طلبٌ واحدٌ فقط يأخذه أو يتركه،
+            //  ما في داعٍ تظلّ تظهر له كلَّ الطلبات التي على طريقه».)
+            //
+            // **وكان يُعرض التالي كلّما رفض** — خمسةُ طلباتٍ على طريقه
+            // تعني خمسَ لافتاتٍ متتاليةً وهو يقود. **ورفضٌ يُجيب عنه
+            // سؤالٌ آخرُ ليس رفضا، هو مساومة.**
+            //
+            // **وأولويّتُه طلبٌ واحد**: يُعرض، فإن أخذه انتهى الأمر،
+            // **وإن تركه لم يُسأل ثانيةً حتّى تنتهي هذه الرحلة.**
+            //
+            // **والباقي في الطابور لغيره** — لا يضيع شيء.
+            onRouteOffer = if (offerSpent) {
+                null
+            } else {
+                state.offers.firstOrNull { it.id !in dismissedOffers }
+            },
             // ══════════════════════════════════════════════════════════
             // **يعرف بنفسه أنّك وصلت**
             // ══════════════════════════════════════════════════════════
@@ -522,6 +562,24 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **والمسافة من دالّة النظام** — لا حساب مثلّثات بأيدينا: **خطأ في
      * سطر منه يزيح الوصول مئات الأمتار.**
      */
+    /**
+     * **كم بينه وبين وجهته — من موضعه الآن.**
+     *
+     * **وهو خطٌّ مستقيمٌ لا طريق** — أقصرُ من الواقع، **ولا يُدّعى غيرَ
+     * ذلك**: الرقمُ الصحيحُ يأتي من محرّك المسارات حين يُضبط.
+     *
+     * **لكنّه ينقص وهو يقود** — **وهو ما يجعله مسافةً باقية.**
+     *
+     * **وسالبٌ يعني «لا يُعرف»** — لا صفر: **صفرٌ يقول «أنت هناك»،
+     * والجهلُ ليس قربا.**
+     */
+    private fun away(driver: LastPoint.Point?, lat: Double?, lng: Double?): Double {
+        if (driver == null || lat == null || lng == null) return -1.0
+        val out = FloatArray(1)
+        android.location.Location.distanceBetween(driver.lat, driver.lng, lat, lng, out)
+        return out[0].toDouble()
+    }
+
     private fun near(driver: LastPoint.Point?, order: DriverOrder): Boolean {
         if (driver == null) return false
         val lat: Double
@@ -773,8 +831,20 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      */
     private val dismissedOffers = mutableSetOf<String>()
 
+    /**
+     * **أاستُعملت أولويّتُه في هذه الرحلة؟**
+     *
+     * **وتُستهلك بالرفض كما تُستهلك بالقبول** — (قرارُ المالك
+     * ٢٠٢٦-٠٨-١٥): **عرضٌ واحدٌ لا خمسة.**
+     *
+     * **وتُصفَّر حين تبدأ رحلةٌ جديدة** — وهو ما يفعله `openTrip`.
+     */
+    private var offerSpent by mutableStateOf(false)
+
     fun dismissOffer() {
         state.offers.firstOrNull { it.id !in dismissedOffers }?.let { dismissedOffers += it.id }
+        // **ورفضةٌ واحدةٌ تُنهي عرضَ الرحلة** — لا تنقله إلى التالي.
+        offerSpent = true
         // **ولمسةٌ للحالة** — لتُعاد قراءة الشاشة.
         state = state.copy()
     }

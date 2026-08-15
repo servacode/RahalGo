@@ -1,7 +1,7 @@
 package com.rahalgo.driver.history
 
 import android.app.Application
-import com.rahalgo.driver.ui.ScreenTitle
+import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.design.Rahal
 import android.util.Log
 import androidx.compose.foundation.clickable
@@ -44,8 +44,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
-import com.rahalgo.driver.data.Refresh
-import com.rahalgo.driver.ui.money
+import com.rahalgo.ui.Refresh
+import com.rahalgo.ui.money
 import com.rahalgo.shared.model.HistoryOrder
 import com.rahalgo.shared.model.ReportReason
 import com.rahalgo.shared.net.ApiClient

@@ -34,4 +34,13 @@ dependencyResolutionManagement {
 rootProject.name = "rahalgo"
 include(":shared")
 include(":design")
+// **وحدةُ الواجهة** — قطعُ الشاشات لأربعة تطبيقات.
+include(":ui")
+// **وحدةُ الخرائط** — منتقي نقطةٍ لثلاثة تطبيقات،
+// **ومكتبتُها الأصليّةُ ثقيلةٌ فلا تُفرض على من لا يرسم.**
+include(":map")
 include(":app-driver")
+// **تطبيقُ الزبون** — يُبنى فوق الوحدات نفسِها.
+include(":app-customer")
+// **تطبيقُ المندوب** — فوق الوحدات نفسِها.
+include(":app-rep")

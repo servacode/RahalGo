@@ -83,6 +83,60 @@ class AuthApi(private val api: ApiClient) {
             mapOf("phone" to phone, "code" to code, "password" to password),
         )
 
+    // ══════════════════════════════════════════════════════════════════
+    // **إنشاء حساب — ثلاث خطوات، وللزبون وحدَه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ولا يُنشئ هذا البابُ سائقاً ولا متجراً** (`auth_handlers.go`:
+    // «إنشاء حساب زبون فقط»): حساباتُ العاملين من المنصّة،
+    // **ومن فتح بابَ التسجيل لكلّ دورٍ فتح بابَ من يُعطي نفسَه دورا.**
+    //
+    // **والخطوةُ الوسطى مقصودة** — تتحقّق من الرمز ولا تستهلكه: قرارُ
+    // المالك ٢٠٢٦-٠٨-٠٦ «لا تظهر المعلوماتُ إلّا بعد التحقّق من الرمز».
+    // **فلا يكتب اسمَه وكلمتَه ثمّ يُقال له إنّ رمزَه خطأ** فيعيد كلَّ
+    // شيء.
+
+    /** يطلب رمزَ تسجيل. */
+    suspend fun signupRequest(phone: String): Unit =
+        api.raw<Ack>(
+            "/api/v1/auth/signup/request",
+            HttpMethod.Post,
+            mapOf("phone" to phone),
+        ).let { }
+
+    /** يتحقّق من الرمز **ولا يستهلكه** — الخطوة التالية تعيده. */
+    suspend fun signupVerify(phone: String, code: String): Unit =
+        api.raw<Ack>(
+            "/api/v1/auth/signup/verify",
+            HttpMethod.Post,
+            mapOf("phone" to phone, "code" to code),
+        ).let { }
+
+    /**
+     * **يُنشئ الحسابَ ويفتح الجلسة** — فلا يدخل بما ضبطه للتوّ.
+     *
+     * @param ref رمزُ من دعاه — **اختياريّ**، ومن سجّل بلا دعوةٍ حسابُه
+     *  كامل. **ورمزٌ خاطئٌ لا يُسقط تسجيلا**: يُحرَم المكافأةَ وحدَها.
+     */
+    suspend fun signupConfirm(
+        phone: String,
+        code: String,
+        fullName: String,
+        password: String,
+        ref: String = "",
+    ): AuthResult =
+        api.raw(
+            "/api/v1/auth/signup/confirm",
+            HttpMethod.Post,
+            mapOf(
+                "phone" to phone,
+                "code" to code,
+                "full_name" to fullName,
+                "password" to password,
+                "ref" to ref,
+            ),
+        )
+
     /**
      * **من أنا؟** — يُنادى عند الإقلاع لاستعادة الجلسة.
      *

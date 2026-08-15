@@ -1,7 +1,7 @@
 package com.rahalgo.driver.rating
 
 import android.app.Application
-import com.rahalgo.driver.ui.LoadState
+import com.rahalgo.ui.LoadState
 import com.rahalgo.design.Rahal
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +37,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
-import com.rahalgo.driver.data.Refresh
+import com.rahalgo.ui.Refresh
 import com.rahalgo.shared.model.ComplaintBrief
 import com.rahalgo.shared.model.Reputation
 import com.rahalgo.shared.model.Review

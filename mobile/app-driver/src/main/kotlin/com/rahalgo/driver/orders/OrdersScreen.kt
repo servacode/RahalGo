@@ -1,10 +1,10 @@
 package com.rahalgo.driver.orders
 
 import androidx.compose.foundation.background
-import com.rahalgo.driver.ui.Countdown
+import com.rahalgo.ui.CountdownButton
 import com.rahalgo.design.Rahal
-import com.rahalgo.driver.ui.minutes
-import com.rahalgo.driver.ui.dist
+import com.rahalgo.ui.minutes
+import com.rahalgo.ui.dist
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,8 +47,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
-import com.rahalgo.driver.ui.grouped
-import com.rahalgo.driver.ui.money
+import com.rahalgo.ui.grouped
+import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.DriverOrder
 
@@ -150,7 +150,6 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
                     // **ومعناه يختلف**: في «بالدور» ينقل الدور فورا إلى
                     // من بعده، **وفي «للجميع» يخفيه عن شاشته ويبقى
                     // لغيره** — فلا يقرأ في كلّ تحديث طلبا لا يريده.
-                    onDecline = { actions.decline(order.id) },
                     // **وانقضاء المهلة يعيد القراءة** — البطاقة لم تعد
                     // له، **ومن أبقاها** جعله يضغطها فيُردّ «سبقك غيرك».
                     onExpired = actions.refresh,
@@ -289,7 +288,6 @@ private fun OrderCard(
     onAccept: () -> Unit,
     onOpen: (() -> Unit)?,
     actionLabel: Int,
-    onDecline: (() -> Unit)? = null,
     onExpired: () -> Unit = {},
 ) {
     Column(
@@ -348,11 +346,6 @@ private fun OrderCard(
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodySmall,
                     )
-                }
-                val expiresAt = order.offerExpiresAt
-                if (offer && expiresAt != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Countdown(expiresAt, onExpired = onExpired)
                 }
             }
 
@@ -599,55 +592,48 @@ private fun OrderCard(
         }
 
         // ══════════════════════════════════════════════════════════════
-        // **زرّان متساويان — أخضر وأحمر**
+        // **زرٌّ واحدٌ — يوافق أو يترك**
         // ══════════════════════════════════════════════════════════════
         //
-        // (قرار المالك ٢٠٢٦-٠٨-١٢: «موافق أخضر ورفض أحمر، وبنفس الحجم
-        //  والشكل، ورفض أيضا أيقونة بداخله».)
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٤: «زرُّ رفضٍ عند السائق — يجب أن يوافق
+        //  على الطلب فقط. الطابورُ كلُّ السائقين يشاهدونه وليس سائقاً
+        //  واحداً… السائقُ لا علاقة له بالرفض، هو إمّا يوافق أو يترك
+        //  الطلبَ لغيره».)
         //
-        // **ومتساويان لأنّ القرارين متساويان**: زرّ أكبر يقول «اضغطني»،
-        // **ورفضٌ باهت يجعل من لا يريد الطلب يقبله** ليمضي.
+        // # ولماذا الرفضُ لا معنى له
+        //
+        // **الطابورُ يراه الجميع** — ومن لا يريده يتركه، **فيأخذه أوّلُ
+        // من يريده.** والرفضُ لا يُحرّك شيئاً: **يُخفي البطاقةَ عن
+        // صاحبها وحدَه.**
+        //
+        // **والمُسنَدُ له عدّاد** — فإن انقضى **عاد إلى الطابور من نفسه**
+        // (`reclaimSilentAssignments`) موسوماً ألّا يعود إليه. **فالزمنُ
+        // يفعل ما كان الزرُّ يفعله**، بلا أن يُطلب من السائق قرارٌ سلبيّ.
+        //
+        // # وضررُه الذي قِيس
+        //
+        // **زرٌّ أحمرُ بحجم الأخضر يقول إنّ الرفضَ قرارٌ يُتّخذ** — فمن
+        // تردّد ضغطه ليُنهي البطاقة، **ثمّ ندم ولا يجدها.**
+        //
+        // **وبابُه في المحرّك يبقى** (`/decline`) — لا يُنادى من هنا،
+        // **ولوحةُ الإدارة قد تحتاجه.**
         Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(
-                onClick = onAccept,
-                enabled = enabled && !busy,
-                colors = ButtonDefaults.buttonColors(containerColor = Rahal.colors.success),
-                modifier = Modifier.weight(1f),
-            ) {
-                if (busy) {
-                    CircularProgressIndicator(
-                        Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White,
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_check_circle),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.size(6.dp))
-                    Text(stringResource(actionLabel))
-                }
-            }
-            if (onDecline != null) {
-                Button(
-                    onClick = onDecline,
-                    enabled = enabled && !busy,
-                    colors = ButtonDefaults.buttonColors(containerColor = Rahal.colors.danger),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_close_circle),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.size(6.dp))
-                    Text(stringResource(R.string.order_decline))
-                }
-            }
-        }
+        // **والعدّادُ في الزرّ لا في زاوية البطاقة** — (قرارُ المالك
+        // ٢٠٢٦-٠٨-١٤: «العدّادُ يكون داخل زرّ موافق بطريقةٍ احترافيّة،
+        // ليكون واضحاً أنّه بمجرّد انتهاء الزمن سيختفي الطلب»).
+        //
+        // **ورقمٌ في الزاوية يُقرأ ثمّ يُنسى** — والزرُّ في مكانٍ آخر،
+        // **فلا يربط الذهنُ بينهما.**
+        CountdownButton(
+            expiresAt = if (offer) order.offerExpiresAt else null,
+            onExpired = onExpired,
+            onClick = onAccept,
+            label = stringResource(actionLabel),
+            icon = R.drawable.ic_check_circle,
+            enabled = enabled,
+            busy = busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -882,7 +868,6 @@ data class OrdersState(
 
 data class OrdersActions(
     val accept: (String) -> Unit,
-    val decline: (String) -> Unit,
     /** **يفتح رحلته** — يختار الطلب وينتقل إلى الخريطة. */
     val startTrip: (String) -> Unit,
     val refresh: () -> Unit,

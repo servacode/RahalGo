@@ -1,5 +1,6 @@
 package com.rahalgo.driver.location
 
+import com.rahalgo.ui.LastPoint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager

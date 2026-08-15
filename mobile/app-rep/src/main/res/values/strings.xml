@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **نصوصُ تطبيق المندوب وحدَه** — وما اشترك مع غيره ففي `:ui`. -->
+<resources>
+    <string name="app_name">رحّال غو — المندوب</string>
+
+    <!-- **ويقول دورَه** — بخلاف الزبون: **العاملُ يفتح تطبيقين على
+         جهازٍ واحدٍ أحياناً**، فيفرّق بينهما بالعنوان. -->
+    <string name="login_title">دخول المندوب</string>
+
+    <!-- **تبويباتُه الثلاثة** — يمينٌ إلى يسار. -->
+    <string name="nav_board">لوحتي</string>
+    <string name="nav_add_client">إضافة عميل</string>
+    <string name="nav_clients">عملائي</string>
+    <string name="nav_profile">حسابي</string>
+
+    <string name="soon_board">أرقامُك وهدفُ الشهر</string>
+    <string name="soon_add_client">سجّل عميلاً من الميدان — بنقطته على الخريطة</string>
+    <string name="soon_clients">من سجّلتَهم وما نلتَه عنهم</string>
+    <string name="soon_profile">اسمُك وصورتُك ورقمُك وكلمةُ مرورك</string>
+
+    <!-- **بنودُ «ما يخصّني»** -->
+    <string name="menu_link">رابطُ الدعوة</string>
+    <string name="soon_link">رمزُك للمتاجر — ومن سجّل به يُنسب لك</string>
+    <string name="soon_rewards">هدفُ الشهر وما تناله عند بلوغه</string>
+
+    <!-- **عملائي** -->
+    <string name="cl_pending">ينتظرون البتّ (%1$s)</string>
+    <string name="cl_active">يعملون (%1$s)</string>
+    <string name="cl_none">لم تُسجّل عميلاً بعد — ابدأ من «إضافة عميل»</string>
+    <string name="cl_waiting">بانتظار موافقة الإدارة</string>
+    <string name="cl_rejected">رُفض</string>
+    <string name="cl_working">يعمل</string>
+    <string name="cl_stopped">متوقّف</string>
+    <string name="cl_delivered">طلباتٌ سُلّمت</string>
+    <string name="cl_commission">عمولتك عنه</string>
+    <!-- **والتفعيلُ بعددين لا بكلمة** — ومن لا يعرف كم بقي لا يعرف
+         أيلاحق صاحبَ المتجر أم ينتظر. -->
+    <string name="cl_activation">تُصرف عمولتك بعد %2$s طلبات — أُنجز %1$s</string>
+
+    <!-- **تفصيلُ العميل — شفافيّةُ العمولة** -->
+    <string name="cd_owner_phone">رقم صاحب المتجر</string>
+    <string name="cd_joined">انضمّ في</string>
+    <string name="cd_sum_orders">إجمالي الطلبات</string>
+    <string name="cd_sum_delivered">مُسلَّم</string>
+    <string name="cd_sum_cancelled">ملغى</string>
+    <string name="cd_sales">مبيعاتٌ سُلّمت</string>
+    <string name="cd_earnings">صافي عمولتي</string>
+    <string name="cd_orders">طلبات هذا العميل</string>
+    <string name="cd_no_orders">لا طلبات بعد من هذا العميل</string>
+    <string name="cd_col_total">قيمة الطلب</string>
+    <string name="cd_col_commission">عمولة المنصّة</string>
+    <string name="cd_col_share">عمولتي</string>
+    <string name="cd_forfeited">لا تُحتسب</string>
+    <string name="cd_no_reason">لم يُذكر سبب</string>
+    <string name="cd_st_delivered">تمّ التسليم</string>
+    <string name="cd_st_cancelled">ملغى</string>
+    <string name="cd_st_running">قيد التنفيذ</string>
+    <!-- **والقاعدةُ تُقال مرّةً** — ومن رأى رقماً مشطوباً بلا شرحٍ ظنّ
+         أنّ حقَّه ضاع. -->
+    <string name="cd_hint">عمولتك تُقيَّد لحظة تسليم الطلب، وإن رُجِّع سُحبت منك بقيدٍ معاكس. وأرقام الطلبات الملغية تظهر مشطوبةً — هي ما كان سيُحتسب لولا الإلغاء، ولا يدخل شيءٌ منها في مجاميعك. والسطر يبقى على كلّ حال: لا يُخفى طلبٌ ولا يُطمس قيد.</string>
+
+    <!-- **إضافةُ عميل** — وأكثرُ نصوصها من الويب حرفا. -->
+    <string name="ac_title_hint">يبقى معلّقاً حتّى موافقة الإدارة</string>
+    <string name="ac_store">اسم المتجر</string>
+    <string name="ac_owner">اسم صاحبه</string>
+    <string name="ac_area">المنطقة</string>
+    <string name="ac_category">التصنيف</string>
+    <string name="ac_point">نقطة المتجر</string>
+    <string name="ac_pick">حدّد نقطة المتجر على الخريطة</string>
+    <string name="ac_repick">بدّل النقطة</string>
+    <string name="ac_point_hint">التقط الموقع وأنت داخل المتجر ليصل السائق بدقّة</string>
+    <string name="ac_password">كلمة مرور صاحب المتجر</string>
+    <string name="ac_password_hint">سلّمها لصاحب المتجر — سيُطلب منه تبديلها عند أوّل دخول</string>
+    <string name="ac_send">أرسل للإدارة</string>
+    <string name="ac_need_point">حدّد نقطة المتجر قبل الإرسال</string>
+    <string name="ac_done">وصل الطلب للإدارة — سيظهر عميلاً فعّالاً فور الموافقة</string>
+
+    <!-- **لوحتي** — والشهريُّ يسبق التراكميّ. -->
+    <string name="bd_target">هدف الشهر</string>
+    <string name="bd_target_done">تحقّق الهدف — أحسنت</string>
+    <string name="bd_target_left">بقي %1$s عميلاً</string>
+    <string name="bd_this_month">هذا الشهر</string>
+    <string name="bd_month_clients">عملاءُ سجّلتَهم</string>
+    <string name="bd_month_delivered">طلباتٌ مُسلَّمة</string>
+    <string name="bd_month_commissions">عمولاتُ هذا الشهر</string>
+    <string name="bd_pending">بانتظار موافقة الإدارة</string>
+    <string name="bd_all_time">منذ بدأت</string>
+    <string name="bd_clients">عملاءُ جلبتَهم</string>
+    <string name="bd_delivered">طلباتٌ مُسلَّمة</string>
+    <string name="bd_commissions">إجمالي العمولات</string>
+    <string name="bd_balance">رصيد المحفظة</string>
+    <string name="bd_code">رمزك للمتاجر</string>
+    <!-- **ويُقفل حتّى يوثّق واتساب** — والمتجرُ الذي يُسجّل برمزه
+         يُنسب إليه، **ومن لا قناةَ تواصلٍ موثّقةً له لا يُتحقّق أنّه
+         هو.** -->
+    <string name="bd_code_locked">وثّق رقمك على واتساب من «حسابي» ليظهر رمزك</string>
+
+    <!-- **رابطُ الدعوة** -->
+    <string name="lk_link">الرابط</string>
+    <string name="lk_share">شارك الرابط</string>
+    <string name="lk_copy">انسخ الرابط</string>
+    <string name="lk_share_text">سجّل متجرك في رحّال غو من هنا: %1$s</string>
+    <string name="lk_hint">كلُّ متجرٍ يُسجّل من رابطك يُنسب إليك — وتجري عمولتُك عن طلباته بعد تفعيله.</string>
+</resources>

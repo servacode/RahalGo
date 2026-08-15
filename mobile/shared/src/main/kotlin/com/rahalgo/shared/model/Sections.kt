@@ -122,6 +122,8 @@ data class SiteContact(
     @SerialName("privacy_text") val privacyText: String = "",
     @SerialName("about_text") val aboutText: String = "",
     @SerialName("driver_help_text") val driverHelpText: String = "",
+    /** **وتعليماتُ المندوب ثالثة** — لا ورديّةَ له ولا سلّة. */
+    @SerialName("rep_help_text") val repHelpText: String = "",
 )
 
 /**

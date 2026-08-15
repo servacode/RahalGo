@@ -1,14 +1,14 @@
 package com.rahalgo.driver.data
 
 import android.content.Context
-import com.rahalgo.shared.auth.AuthApi
-import com.rahalgo.shared.driver.AccountApi
+import com.rahalgo.ui.AppCore
+import com.rahalgo.ui.Core
+import com.rahalgo.driver.push.Push
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.rahalgo.shared.driver.ChatApi
 import com.rahalgo.shared.driver.DriverApi
-import com.rahalgo.shared.driver.MeApi
-import com.rahalgo.shared.net.LiveSocket
-import com.rahalgo.shared.push.DevicesApi
-import com.rahalgo.shared.net.ApiClient
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -67,26 +67,47 @@ object Backend {
      * **وموضعان يُكملان عنواناً واحداً** يفترقان يوماً — **وقد افترقا
      * في أوّل يوم.**
      */
-    fun media(path: String?): String? =
-        path?.takeIf { it.isNotEmpty() }?.let { if (it.startsWith("http")) it else BASE_URL + it }
+    fun media(path: String?): String? = core.media(path)
 
-
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **ما يخصّ السائقَ وحدَه — وما سواه في النواة**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **الجلسةُ والدخولُ و`me` والحسابُ والأجهزةُ والبثُّ** رُفعت إلى
+     * `ui.Core` (٢٠٢٦-٠٨-١٤): **يحتاجها الزبونُ كما يحتاجها السائق.**
+     *
+     * **وما بقي هنا يعرف السائق**: طابورُه وطلباتُه ودردشتُه وخريطتُه.
+     *
+     * **وأسماءُ النواة تُمرَّر كما كانت** (`session` · `api` · `auth` …)
+     * — **فأربعةَ عشرَ ملفّاً تناديها**، ولا يُبدَّل نداءٌ لأجل نقل.
+     */
     class Wired(context: Context) {
-        val session = AndroidSession(context)
-        val api = ApiClient(BASE_URL, CLIENT, session)
-        val auth = AuthApi(api)
+        private val core: Core = AppCore.install(context, BASE_URL, CLIENT) {
+            // **ونقطةُ الإشعارات تُسجَّل بعد ثبوت الجلسة لا قبلها** —
+            // **تحتاج توكنَ حساب**، ومن سجّلها قبله سجّلها بلا صاحب:
+            // **فلا يصل إشعارٌ ولا يظهر خطأ.**
+            //
+            // **وهي تخصّ السائقَ فتبقى عنده** — والنواةُ تُنادي ولا تعرف
+            // ما تُنادي.
+            val app = context.applicationContext
+            CoroutineScope(Dispatchers.IO).launch { Push.register(app) }
+        }
+
+        val session get() = core.session
+        val api get() = core.api
+        val auth get() = core.auth
+        val me get() = core.me
+        val account get() = core.account
+        val devices get() = core.devices
+        val live get() = core.live
+
         val driver = DriverApi(api)
-    val chat = ChatApi(api)
-    val me = MeApi(api)
+        val chat = ChatApi(api)
 
-    /** **إدارةُ الحساب** — الاسمُ والصورةُ وكلمةُ المرور والعناوين. */
-    val account = AccountApi(api)
-    val devices = DevicesApi(api)
-
-    /** **عنوان أسلوب الخريطة** — يقرؤه العارض والمنزّل معا. */
-    val styleUrl = "$BASE_URL/api/v1/public/map-style.json"
-
-    /** **البثّ الحيّ** — واحدٌ للتطبيق كلّه، لا واحدٌ لكلّ شاشة. */
-    val live = LiveSocket(BASE_URL, session, CLIENT)
+        /** **عنوان أسلوب الخريطة** — يقرؤه العارض والمنزّل معا. */
+        val styleUrl = "$BASE_URL/api/v1/public/map-style.json"
     }
+
+    private val core: Core get() = AppCore.get()
 }

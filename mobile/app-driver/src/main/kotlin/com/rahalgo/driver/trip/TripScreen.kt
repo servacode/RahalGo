@@ -1,12 +1,12 @@
 package com.rahalgo.driver.trip
 
 import androidx.compose.animation.AnimatedVisibility
-import com.rahalgo.driver.ui.Countdown
+import com.rahalgo.ui.Countdown
 import androidx.compose.foundation.layout.IntrinsicSize
 import com.rahalgo.design.Rahal
-import com.rahalgo.driver.ui.etaText
-import com.rahalgo.driver.ui.minutesShort
-import com.rahalgo.driver.ui.dist
+import com.rahalgo.ui.etaText
+import com.rahalgo.ui.minutesShort
+import com.rahalgo.ui.dist
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -61,7 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
-import com.rahalgo.driver.ui.money
+import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.FailReasonItem
 import org.maplibre.android.geometry.LatLng
@@ -695,11 +695,38 @@ private fun TripPanel(state: TripState) {
     val moving = state.step == TripStep.TO_PICKUP || state.step == TripStep.TO_CUSTOMER ||
         state.step == TripStep.PICKED_UP
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وشريطُ المراحل يُسحب إلى الأعلى فيختفي**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٥: «شريطُ الحالات لازم يختفي من أمام
+    //  السائق — يعني يُسحب للأعلى أيضاً مثل الكرت السفليّ».)
+    //
+    // **والخريطةُ هي الشاشة**: لوحٌ فوقها وبطاقةٌ تحتها يقضمان ثلثيها،
+    // **ومن يقود يريد أن يرى الشارعَ الذي أمامه.**
+    //
+    // **والمراحلُ يُنظر إليها مرّةً في الطور** — لا كلَّ ثانية.
+    // **والوجهةُ والمسافةُ تبقيان**: هما ما يُقرأ في نظرةٍ خاطفة.
+    //
+    // **والحركةُ حركةُ البطاقة السفليّة نفسُها** — سحبٌ على اللوح
+    // كلِّه ولمسةٌ على المقبض: **إيماءتان مختلفتان في شاشةٍ واحدةٍ
+    // تُنسيان إحداهما.**
+    //
+    // **وتعود مع كلّ طلبٍ جديد** (`rememberSaveable(order.id)`) — من
+    // بدأ طوراً جديداً يريد أن يرى أين صار.
+    var stripOpen by rememberSaveable(order.id) { mutableStateOf(true) }
+
     Column(
         Modifier
             .padding(horizontal = 12.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Rahal.colors.panel)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { _, dy ->
+                    if (dy < -6f) stripOpen = false
+                    if (dy > 6f) stripOpen = true
+                }
+            }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -762,17 +789,35 @@ private fun TripPanel(state: TripState) {
                     PanelChip(R.drawable.ic_pin, distanceText(meters))
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
-            Spacer(Modifier.height(10.dp))
+            if (stripOpen) {
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+            }
         }
 
-        LegStrip(
-            status = order.status,
-            custom = order.kind == "custom",
-            // **وعلامةُ الطور أنّ الثمنَ وُثّق** — لا حالٌ ثانيةٌ في
-            // المحرّك: يبقى `assigned` قبل التوثيق وبعده.
-            agreed = order.customFee != null,
+        androidx.compose.animation.AnimatedVisibility(visible = stripOpen) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(10.dp))
+                LegStrip(
+                    status = order.status,
+                    custom = order.kind == "custom",
+                    // **وعلامةُ الطور أنّ الثمنَ وُثّق** — لا حالٌ ثانيةٌ
+                    // في المحرّك: يبقى `assigned` قبل التوثيق وبعده.
+                    agreed = order.customFee != null,
+                )
+            }
+        }
+
+        // **ومقبضٌ يُرى** — شريطٌ فاتحٌ يقول «هذا يُسحب»، **ولوحٌ يُسحب
+        // ولا يقول** لا يعرف أحدٌ أنّه يُسحب. **ومن أخفاه لا يجد ما
+        // يعيده به.**
+        Spacer(Modifier.height(8.dp))
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(3.dp))
+                .background(Color.White.copy(alpha = 0.30f))
+                .size(width = 44.dp, height = 5.dp)
+                .clickable { stripOpen = !stripOpen },
         )
     }
 }
@@ -1034,18 +1079,24 @@ private fun OnRouteBanner(
         )
         Spacer(Modifier.height(10.dp))
         // ══════════════════════════════════════════════════════════════
-        // **والزرّان كزرّي البطاقة — «موافق» و«رفض»**
+        // **«موافق» و«لاحقا» — لا «رفض»**
         // ══════════════════════════════════════════════════════════════
         //
         // (تصحيحُ المالك ٢٠٢٦-٠٨-١٣: «زرُّ خذ واترك يجب أن يكون موافق
-        //  ورفض».)
+        //  ورفض» — **ثمّ ٢٠٢٦-٠٨-١٤: «السائقُ لا علاقة له بالرفض، هو
+        //  إمّا يوافق أو يترك الطلبَ لغيره».)**
+        //
+        // # وهذا الزرُّ لم يكن رفضاً أصلا
+        //
+        // **`dismissOffer` إخفاءٌ محلّيٌّ لا نداءٌ للمحرّك** — الطلبُ
+        // يبقى في الطابور **وعدّادُه يجري.** فاسمُ «رفض» كذبٌ على
+        // صاحبه: **من ضغطه ظنّ أنّه ردّ الطلبَ وهو لم يفعل.**
+        //
+        // **و«لاحقاً» تقول ما يقع فعلا** — تُزيح الشريطَ عن الطريق وهو
+        // يقود، **والطلبُ لمن يأخذه.**
         //
         // **وفعلٌ واحدٌ باسمين في شاشتين يُقرأ فعلين** — من تعلّم
-        // «موافق» في الطلبات يتردّد أمام «خذ الطلب» في الرحلة، **وهو
-        // يقود ومهلتُه تنقضي.**
-        //
-        // **ومتساويان في العرض** — لا زرٌّ كبيرٌ وآخرُ نصٌّ باهت:
-        // **الرفضُ قرارٌ كالقبول**، ومن ضيّق بابَه ضغط القبولَ ليمضي.
+        // «موافق» في الطلبات يتردّد أمام «خذ الطلب» في الرحلة.
         Row(
             Modifier.fillMaxWidth().height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1067,7 +1118,7 @@ private fun OnRouteBanner(
                     containerColor = Rahal.colors.danger,
                     contentColor = Color.White,
                 ),
-            ) { Text(stringResource(R.string.order_decline)) }
+            ) { Text(stringResource(R.string.order_later)) }
         }
         // ══════════════════════════════════════════════════════════════
         // **وجوابُ الضغطة تحتها مباشرة**

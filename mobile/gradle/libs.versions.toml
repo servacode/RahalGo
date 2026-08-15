@@ -50,6 +50,11 @@ androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-
 # **موقع مدمج من القمر والشبكة والحسّاسات** — أدقّ وأرحم للبطارية من
 # `LocationManager` الخام، وهو ما تستعمله تطبيقات التوصيل كلّها.
 play-services-location = { module = "com.google.android.gms:play-services-location", version = "21.4.0" }
+# **صورُ السوق** — ذاكرةٌ وقرصٌ وإلغاءٌ عند الخروج من الشاشة.
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version = "3.3.0" }
+coil-network = { module = "io.coil-kt.coil3:coil-network-okhttp", version = "3.3.0" }
+# **رمزُ الدعوة يمشي مع رابط المتجر** — ويُقرأ بعد التثبيت.
+install-referrer = { module = "com.android.installreferrer:installreferrer", version = "2.2" }
 # ══════════════════════════════════════════════════════════════════════
 # **الخريطة — MapLibre على بلاطات OSM نفسِها التي في الويب**
 # ══════════════════════════════════════════════════════════════════════

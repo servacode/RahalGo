@@ -159,7 +159,46 @@ type Thread struct {
 // **والفقّاعةُ تأخذ المفتوحَ وحدَه، والسجلُّ يأخذ الكلّ** — ونداءان لقائمةٍ
 // واحدةٍ يفترقان: **يُصلَح عدُّ غيرِ المقروء في أحدهما ويبقى الآخرُ يكذب.**
 func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) {
+	// ══════════════════════════════════════════════════════════════════
+	// **ويُبدأ من الرسائل لا من الطلبات**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-١٥: «الدردشاتُ السابقةُ تتأخّر كثيراً لتفتح،
+	//  تبقى جاري التحميل».)
+	//
+	// **وكان الاستعلامُ يبدأ من `orders`** ويسأل عن كلّ طلبٍ في القاعدة
+	// **«أفيه رسالة؟»** — **ثمّ يرتّب بـ`max(created_at)` محسوباً في
+	// جملة الترتيب نفسِها**، فيُعاد حسابُه لكلّ صفّ.
+	//
+	// **وأربعُ جملٍ مرتبطةٍ لكلّ صفّ** — والصفوفُ كلُّ طلبات المنصّة.
+	// **فالكلفةُ تنمو بعدد الطلبات لا بعدد محادثاته هو**: من له
+	// محادثتان يدفع ثمنَ عشرة آلاف طلب.
+	//
+	// **والرسائلُ هي الجدولُ الصغير** — وفيها فهرسان (`order_id` و
+	// `sender_id`). **فتُجمَّع مرّةً واحدةً ثمّ تُضمّ الطلباتُ إليها.**
+	//
+	// **ولا يتبدّل ما تراه**: الشرطُ نفسُه — طرفٌ في الطلب **أو** كتب
+	// فيه بيده (سائقٌ سُحب منه الطلب). **وسجلٌّ يراه طرفٌ ولا يراه
+	// الآخرُ ليس إثباتاً** — إنّما حجّةٌ في يدٍ واحدة.
 	rows, err := s.db.Query(ctx, `
+		WITH ids AS (
+		    SELECT o.id FROM orders o
+		    WHERE o.customer_id = $1 OR o.driver_id = $1
+		    UNION
+		    SELECT om.order_id FROM order_messages om WHERE om.sender_id = $1
+		), t AS (
+		    SELECT om.order_id,
+		           max(om.created_at) AS last_at,
+		           count(*) FILTER (
+		               WHERE om.read_at IS NULL AND om.sender_id <> $1
+		           ) AS unread,
+		           -- **وآخرُ ما قيل** — يُلتقط في المرور نفسِه لا بجملةٍ
+		           -- ثانيةٍ لكلّ صفّ.
+		           (array_agg(om.body ORDER BY om.created_at DESC))[1] AS last_body
+		    FROM order_messages om
+		    JOIN ids ON ids.id = om.order_id
+		    GROUP BY om.order_id
+		)
 		SELECT o.id::text, o.number, o.status, o.delivered_at, o.closed_at,
 		       -- **والطرفُ الآخر بحسب من يسأل** — كلٌّ يرى الآخر.
 		       --
@@ -173,30 +212,12 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		                 WHERE x.order_id = o.id AND x.sender_id <> $1
 		                 ORDER BY x.created_at LIMIT 1),
 		                ''),
-		       (SELECT count(*) FROM order_messages x
-		        WHERE x.order_id = o.id AND x.read_at IS NULL
-		          AND x.sender_id <> $1),
-		       COALESCE((SELECT x.body FROM order_messages x
-		                 WHERE x.order_id = o.id ORDER BY x.created_at DESC LIMIT 1), ''),
-		       (SELECT max(x.created_at) FROM order_messages x WHERE x.order_id = o.id),
-		       o.created_at
-		FROM orders o
+		       t.unread, COALESCE(t.last_body, ''), t.last_at, o.created_at
+		FROM t
+		JOIN orders o ON o.id = t.order_id
 		JOIN users cu ON cu.id = o.customer_id
 		LEFT JOIN users dr ON dr.id = o.driver_id
-		-- **ولا تُعرض إلّا محادثةٌ وقعت** — طلبٌ بلا كلمةٍ ليس محادثة،
-		-- **وسجلٌّ فيه عشرون صفّاً فارغاً لا يُقرأ.**
-		-- **ومن كتب في الحديث يراه ولو خرج من الطلب.**
-		--
-		-- **السائقُ يُسحب منه الطلبُ فيُعاد إلى الطابور** — وكان الصفُّ
-		-- يُقاس بمن يحمل الطلبَ الآن، **فتختفي كلماتُه هو من سجلّه هو**
-		-- ويراها الزبونُ وحدَه. **وسجلٌّ يراه طرفٌ ولا يراه الآخرُ ليس
-		-- إثباتاً** — إنّما حجّةٌ في يدٍ واحدة.
-		WHERE EXISTS (SELECT 1 FROM order_messages x WHERE x.order_id = o.id)
-		  AND (o.customer_id = $1 OR o.driver_id = $1
-		       OR EXISTS (SELECT 1 FROM order_messages x
-		                  WHERE x.order_id = o.id AND x.sender_id = $1))
-		ORDER BY (SELECT max(x.created_at) FROM order_messages x
-		          WHERE x.order_id = o.id) DESC
+		ORDER BY t.last_at DESC
 		LIMIT 50`, userID)
 	if err != nil {
 		return nil, err

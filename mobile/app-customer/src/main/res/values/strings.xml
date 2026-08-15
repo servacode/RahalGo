@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **نصوصُ تطبيق الزبون وحدَه** — وما اشترك مع غيره ففي `:ui`. -->
+<resources>
+    <string name="app_name">رحّال غو</string>
+
+    <!-- **ولا تقول «دخول الزبون»** — هو لا يعرف أنّه «زبون»،
+         **وأسماءُ الأدوار لغتُنا نحن لا لغتُه.** -->
+    <string name="login_title">دخول</string>
+
+    <string name="signed_in">أهلاً بك</string>
+    <string name="logout">خروج</string>
+
+    <!-- **وتسوّق لا «الرئيسيّة»** — (قرارُ المالك ٢٠٢٦-٠٨-١٤).
+         **واسمُ الفعل أوضحُ من اسم المكان**: «الرئيسيّة» تقول أين هو،
+         **و«تسوّق» تقول ماذا يفعل.** -->
+    <string name="nav_shop">تسوّق</string>
+    <string name="nav_orders">طلباتي</string>
+    <string name="nav_custom">طلبٌ خاصّ</string>
+    <string name="nav_profile">حسابي</string>
+
+    <string name="soon_shop">المتاجرُ والأقسامُ تُبنى في خطوتها</string>
+    <string name="soon_orders">هنا تتابع طلباتك — أين وصل كلُّ واحدٍ منها</string>
+    <string name="soon_custom">اطلب أيَّ شيءٍ من داخل المدينة — ونحن نُحضره إليك</string>
+    <string name="soon_account">اسمُك وصورتُك وعناوينُك وكلمةُ مرورك</string>
+
+    <string name="soon_history">ما سُلّم وما تعذّر — بفواتيره</string>
+    <string name="soon_chats">ما دار بينك وبين السائق في طلباتٍ أُغلقت</string>
+    <string name="soon_offers">الحسومُ الجاريةُ وما يقرب انتهاؤه</string>
+    <string name="soon_invite">رمزُك — ومن سجّل به تأخذ عنه مكافأة</string>
+    <string name="soon_tickets">ما رفعتَه أنت، وما رُفع عليك</string>
+
+    <!-- **تسوّق** -->
+    <string name="shop_search">ابحث عن صنف</string>
+    <string name="shop_no_results">لا نتائج لبحثك</string>
+    <string name="shop_empty_section">لا أصناف في هذا القسم بعد</string>
+    <string name="shop_closed">مغلق الآن</string>
+    <string name="shop_unavailable">غير متوفّر</string>
+
+    <!-- **الطلبات** -->
+    <string name="ord_wanted">المطلوب:</string>
+    <string name="ord_driver">السائق</string>
+    <string name="ord_subtotal">المجموع</string>
+    <string name="ord_delivery">التوصيل</string>
+    <string name="ord_discount">الحسم</string>
+    <string name="ord_total">الإجماليّ</string>
+    <string name="ord_cancel">إلغاء الطلب</string>
+    <string name="ord_rate">تقييم</string>
+    <string name="ord_complain">شكوى</string>
+    <string name="ord_none_open">لا طلبات جارية — تصفّح السوق وابدأ</string>
+    <string name="ord_none_history">لا طلبات منتهية بعد</string>
+    <string name="ord_cancel_title">إلغاء الطلب؟</string>
+    <string name="ord_cancel_ask">سيُلغى الطلبُ نهائيّاً ولا يمكن التراجع.</string>
+    <string name="ord_cancel_yes">نعم، ألغِه</string>
+    <string name="ord_back">رجوع</string>
+    <string name="ord_rate_title">كيف كانت الخدمة؟</string>
+    <string name="ord_rate_service">تقييم الخدمة</string>
+    <string name="ord_rate_driver">تقييم السائق</string>
+    <string name="ord_rate_note">كلمةٌ إن أردت</string>
+    <string name="ord_send">إرسال</string>
+    <string name="ord_complain_title">ما المشكلة؟</string>
+    <!-- **أسبابُ الشكوى** — بألفاظ الويب حرفاً (`site.complaint.reasons`). -->
+    <string name="cr_not_received">لم أستلم طلبي</string>
+    <string name="cr_missing_items">نقصٌ في الطلب</string>
+    <string name="cr_wrong_items">الطلب غير مطابق</string>
+    <string name="cr_quality">جودةٌ سيّئة</string>
+    <string name="cr_late">تأخّر كثيراً</string>
+    <string name="cr_driver_conduct">سلوك السائق</string>
+    <string name="cr_money">مشكلةٌ في المبلغ</string>
+    <string name="cr_other">أخرى</string>
+    <string name="ord_complain_what">ما الذي حدث بالضبط؟</string>
+    <string name="ord_complain_note">تفاصيل (اختياري)</string>
+    <string name="ord_reasons_loading">تُجلب الأسباب…</string>
+    <string name="menu_history_title">سجل الطلبات</string>
+
+    <!-- **مراحلُ الطلب** — بأسماء الويب نفسها (`i18n/ar.json`). -->
+    <string name="st_pending">بانتظار القبول</string>
+    <string name="st_accepted">قُبل</string>
+    <string name="st_preparing">قيد التحضير</string>
+    <string name="st_driver">إسنادُ سائق</string>
+    <string name="st_bought">تمّ الشراء</string>
+    <string name="st_onway">في الطريق</string>
+    <string name="st_arrived">وصل إليك</string>
+    <string name="st_delivered">تمّ التسليم</string>
+
+    <!-- **وأسماءُ الحالات في الشارة.** -->
+    <string name="stt_pending">بانتظار القبول</string>
+    <string name="stt_accepted">قُبل</string>
+    <string name="stt_preparing">يُحضَّر</string>
+    <string name="stt_dispatching">بانتظار سائق</string>
+    <string name="stt_assigned">مع سائق</string>
+    <string name="stt_onway">في الطريق</string>
+    <string name="stt_delivered">سُلّم</string>
+    <string name="stt_cancelled">أُلغي</string>
+    <string name="stt_failed">تعذّر</string>
+
+    <!-- **الطلبُ الخاصّ** -->
+    <string name="cst_what">تفاصيل الطلب</string>
+    <!--
+      **المثالُ يُري ما يُطلب وما لا يُطلب** — ولا تعريفَ يُغني عنه.
+      (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+    -->
+    <string name="cst_what_hint">مثال: طلبٌ من مطعمٍ أو متجرٍ معيّن · أمانةٌ من أحدهم · أو أيُّ شيءٍ آخرَ ضمن مركز المدينة</string>
+    <string name="cst_address">العنوان</string>
+    <string name="cst_point">نقطتك على الخريطة</string>
+    <string name="cst_locate">حدّد موقعي</string>
+    <string name="cst_notes">ملاحظاتٌ للسائق</string>
+    <string name="cst_send">أرسل الطلب</string>
+    <string name="cst_need_point">حدّد موقعك ليعرف السائقُ أين يوصل</string>
+    <string name="cst_done">أُرسل طلبك #%1$s — تابعه في «طلباتي»</string>
+
+    <!-- **عناوينُ أقسام «ما يخصّني»** — والاسمُ في الشاشة كالاسم في القائمة. -->
+    <string name="menu_favorites_title">المفضّلة</string>
+    <string name="menu_offers_title">العروض</string>
+    <string name="menu_chats_title">دردشاتي السابقة</string>
+    <string name="menu_invite_title">ادعُ صديقاً</string>
+    <string name="menu_tickets_title">الشكاوى والبلاغات</string>
+
+    <string name="fav_none">لم تُضف أيُّ صنفٍ إلى المفضّلة</string>
+    <string name="off_none">لا عروض سارية الآن</string>
+    <string name="cht_none">لا دردشات منتهية</string>
+    <string name="tkt_none">لم تشتكِ من شيء — ونرجو أن يبقى كذلك</string>
+
+    <string name="inv_earn">ادعُ صديقاً واربح %1$s</string>
+    <string name="inv_on_signup">تُصرف المكافأة عند إتمام تسجيله</string>
+    <string name="inv_on_order">تُصرف المكافأة عند أوّل طلبٍ يُسلَّم له</string>
+    <string name="inv_code">رمزك</string>
+    <string name="inv_invited">من سجّلوا برمزك</string>
+    <string name="inv_rewarded">من طلبوا فعلاً</string>
+    <string name="inv_earned">ما ناله حسابك</string>
+    <string name="inv_share">شارك الرابط</string>
+
+    <string name="tkt_open">مفتوحة</string>
+    <string name="tkt_working">قيد المعالجة</string>
+    <string name="tkt_closed">أُغلقت</string>
+
+    <!-- **السلّة** -->
+    <string name="cart_title">سلّتي</string>
+    <string name="cart_hint">راجع ما اخترته ثمّ أرسل</string>
+    <string name="cart_empty">سلّتك فارغة — تصفّح السوق واضغط ما يعجبك</string>
+    <string name="cart_address">العنوان</string>
+    <string name="cart_promo">كود خصم (اختياريّ)</string>
+    <string name="cart_cash">نقداً عند التسليم</string>
+    <string name="cart_wallet">من محفظتي</string>
+    <string name="cart_need_point">حدّد موقعك ليُحسب التوصيل</string>
+    <string name="cart_out_of_zone">موقعك خارج نطاق التوصيل</string>
+    <string name="cart_send">أرسل الطلب</string>
+
+    <!-- **الضيف** -->
+    <string name="guest_title">هذا القسم يحتاج حساباً</string>
+    <string name="guest_hint">تصفّح السوق كما تشاء — وللطلب والمفضّلة وحسابك يلزم أن تدخل</string>
+    <string name="guest_enter">دخول أو إنشاء حساب</string>
+
+    <string name="shop_add">أضف إلى السلّة</string>
+    <string name="shop_like">احفظ في المفضّلة</string>
+    <string name="shop_unlike">احذف من المفضّلة</string>
+
+    <!--
+      **صيغُ المعدود الستّ** — والعربيّةُ لا تقول «١ أصناف».
+      (يختار أندرويدُ الصيغةَ بالعدد نفسِه.)
+    -->
+    <plurals name="ord_items_n">
+        <item quantity="zero">لا أصناف</item>
+        <item quantity="one">صنف واحد</item>
+        <item quantity="two">صنفان</item>
+        <item quantity="few">%d أصناف</item>
+        <item quantity="many">%d صنفاً</item>
+        <item quantity="other">%d صنف</item>
+    </plurals>
+</resources>

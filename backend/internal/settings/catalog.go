@@ -552,6 +552,11 @@ var Catalog = []Def{
 	{Key: "page.driver_help_text", Group: GroupSite, Section: "page.driver_help", Kind: KindLongText,
 		Default: DefaultDriverHelp},
 
+	// **وتعليماتُ المندوب ثالثة** — (قِيس ٢٠٢٦-٠٨-١٤: تطبيقُه كان يعرض
+	// تعليماتِ السائق، **و«كيف أبدأ ورديّتي؟» لمن لا ورديّةَ له**).
+	{Key: "page.rep_help_text", Group: GroupSite, Section: "page.rep_help", Kind: KindLongText,
+		Default: DefaultRepHelp},
+
 	{Key: "shop.banner_auto", Group: GroupSite, Section: "page.shop", Kind: KindBool,
 		Default: true},
 	{Key: "shop.banner_seconds", Group: GroupSite, Section: "page.shop", Kind: KindInt,

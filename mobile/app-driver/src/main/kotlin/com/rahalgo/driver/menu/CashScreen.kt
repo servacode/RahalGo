@@ -18,17 +18,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
-import com.rahalgo.driver.ui.Bar
-import com.rahalgo.driver.ui.Card
-import com.rahalgo.driver.ui.DayHead
-import com.rahalgo.driver.ui.Empty
-import com.rahalgo.driver.ui.LoadState
-import com.rahalgo.driver.ui.Note
-import com.rahalgo.driver.ui.Screen
-import com.rahalgo.driver.ui.ScreenTitle
-import com.rahalgo.driver.ui.dayText
-import com.rahalgo.driver.ui.money
-import com.rahalgo.driver.ui.timeText
+import com.rahalgo.ui.Bar
+import com.rahalgo.ui.Card
+import com.rahalgo.ui.DayHead
+import com.rahalgo.ui.Empty
+import com.rahalgo.ui.LoadState
+import com.rahalgo.ui.Note
+import com.rahalgo.ui.Screen
+import com.rahalgo.ui.ScreenTitle
+import com.rahalgo.ui.dayText
+import com.rahalgo.ui.money
+import com.rahalgo.ui.timeText
 import com.rahalgo.shared.model.CashEntry
 
 /**

@@ -1,7 +1,7 @@
 package com.rahalgo.driver.home
 
 import androidx.compose.foundation.background
-import com.rahalgo.driver.ui.Bar
+import com.rahalgo.ui.Bar
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Switch
 import com.rahalgo.shared.model.IncentivesPayload
@@ -42,8 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
-import com.rahalgo.driver.ui.grouped
-import com.rahalgo.driver.ui.money
+import com.rahalgo.ui.grouped
+import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverMe
 
 /**
