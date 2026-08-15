@@ -279,28 +279,21 @@ export default function AllAccountsTable() {
       hide: (u) => !u.roles.includes("driver"),
       cell: (u) => fmtNum(u.delivered_today ?? 0),
     },
-    {
-      id: "status",
-      header: m.admin.users.table.status,
-      icon: <IconStatus />,
-      cell: (u) => (
-        <Badge
-          variant={u.status === "active" ? "success" : u.status === "suspended" ? "warning" : "danger"}
-        >
-          {u.status === "active"
-            ? m.admin.users.active
-            : u.status === "suspended"
-              ? m.admin.users.suspended
-              : m.admin.users.blocked}
-        </Badge>
-      ),
-    },
-    {
-      id: "seen",
-      header: m.admin.users.lastSeen,
-      icon: <IconStatus />,
-      cell: (u) => <PresenceCell lastSeen={u.last_seen_at} />,
-    },
+    // ══════════════════════════════════════════════════════════════
+    // **ولا حالةٌ ولا آخرُ ظهورٍ في البطاقة**
+    // ══════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+    //
+    // **والحالةُ تقولها الأزرارُ نفسُها**: من كان فعّالاً ظهر له
+    // «إيقاف» و«حظر»، ومن أُوقف ظهر له «تفعيل». **ورقاقةٌ تقول ما
+    // يقوله الزرُّ تحتها زينةٌ لا خبر.**
+    //
+    // **و«آخرُ ظهور» يقولها ما فوق**: بطاقةُ «المتّصلون الآن»
+    // وتصفيةُ الاتّصال. **و«لم يظهر بعد» في كلّ صفٍّ عمودٌ من نصٍّ
+    // واحد.**
+    //
+    // **وكلتاهما في ملفّه** — والبطاقةُ تقول من هو، والملفُّ يفصّل.
   ];
 
   return (
@@ -718,26 +711,4 @@ function CreateUserModal({
       </form>
     </Modal>
   );
-}
-
-// خلية الحضور: نقطة خضراء نابضة إن كان نشطاً خلال دقيقتين، وإلا آخر ظهور نسبي.
-function PresenceCell({ lastSeen }: { lastSeen: string | null }) {
-  if (!lastSeen) return <span className="text-xs text-ink-muted">{m.admin.users.neverSeen}</span>;
-  const diffMin = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 60000);
-  if (diffMin < 2) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success">
-        <span className="h-2 w-2 animate-pulse rounded-badge bg-success" />
-        {m.admin.users.online}
-      </span>
-    );
-  }
-  const rtf = new Intl.RelativeTimeFormat("ar", { numeric: "auto" });
-  const label =
-    diffMin < 60
-      ? rtf.format(-diffMin, "minute")
-      : diffMin < 1440
-        ? rtf.format(-Math.floor(diffMin / 60), "hour")
-        : rtf.format(-Math.floor(diffMin / 1440), "day");
-  return <span className="text-xs text-ink-muted">{label}</span>;
 }

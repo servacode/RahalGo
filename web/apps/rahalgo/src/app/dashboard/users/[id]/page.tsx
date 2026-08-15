@@ -95,6 +95,7 @@ interface Profile {
   merchants: string[];
   rep_stores: number;
   commissions: number;
+  last_seen_at: string | null;
   on_shift: boolean;
   driver_cash: number;
   deliveries: number;
@@ -359,6 +360,13 @@ export default function UserProfilePage() {
                 {p.status !== "active" && p.status_reason && (
                   <span className="text-xs text-danger">{p.status_reason}</span>
                 )}
+                {/* **وآخرُ ظهوره هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٥:
+                    حُذف من البطاقة). **ومن فتح ملفَّ شخصٍ بعينه يسأل
+                    «متى كان هنا آخرَ مرّة؟».** */}
+                <span className="text-xs text-ink-muted">
+                  {m.admin.users.lastSeen}:{" "}
+                  {p.last_seen_at ? fmtDateTime(p.last_seen_at) : m.admin.users.neverSeen}
+                </span>
               </div>
             </div>
           </div>

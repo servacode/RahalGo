@@ -166,12 +166,15 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		Sessions     int      `json:"active_sessions"`
 		Roles        []string `json:"roles"`
 		CreatedAt    string   `json:"created_at"`
-		Balance      int64    `json:"balance"`
-		OrdersCount  int      `json:"orders_count"` // كزبون
-		OrdersSpent  int64    `json:"orders_spent"` // إنفاقه المُسلَّم
-		Merchants    []string `json:"merchants"`    // متاجر يملكها
-		RepStores    int      `json:"rep_stores"`   // متاجر جلبها كمندوب
-		Commissions  int64    `json:"commissions"`  // عمولاته كمندوب
+		// LastSeenAt **آخرُ ظهور** — (قرارُ المالك ٢٠٢٦-٠٨-١٥: حُذف
+		// من بطاقة الحسابات، **فموضعُه ملفُّه**).
+		LastSeenAt  *string  `json:"last_seen_at"`
+		Balance     int64    `json:"balance"`
+		OrdersCount int      `json:"orders_count"` // كزبون
+		OrdersSpent int64    `json:"orders_spent"` // إنفاقه المُسلَّم
+		Merchants   []string `json:"merchants"`    // متاجر يملكها
+		RepStores   int      `json:"rep_stores"`   // متاجر جلبها كمندوب
+		Commissions int64    `json:"commissions"`  // عمولاته كمندوب
 		// OnShift **أعلى الدوام الآن؟** — (قرارُ المالك ٢٠٢٦-٠٨-١٥:
 		// حُذفت من بطاقة الحسابات، **فموضعُها ملفُّه**).
 		OnShift    bool  `json:"on_shift"`
@@ -182,6 +185,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		SELECT u.id, u.phone, u.full_name, u.status, u.invite_code, u.status_reason, u.admin_notes,
 		       (SELECT count(*) FROM refresh_tokens rt WHERE rt.user_id = u.id AND rt.revoked_at IS NULL AND rt.expires_at > now()),
 		       (SELECT m.thumb_path FROM media m WHERE m.id = u.avatar_media_id), u.created_at::text,
+		       u.last_seen_at::text,
 		       COALESCE((SELECT array_agg(role_code ORDER BY role_code) FROM user_roles WHERE user_id = u.id), '{}'),
 		       COALESCE((SELECT balance FROM wallets WHERE user_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.customer_id = u.id),
@@ -193,7 +197,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered')
 		FROM users u WHERE u.id = $1`, id).
-		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.StatusReason, &out.AdminNotes, &out.Sessions, &out.AvatarThumb, &out.CreatedAt,
+		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.StatusReason, &out.AdminNotes, &out.Sessions, &out.AvatarThumb, &out.CreatedAt, &out.LastSeenAt,
 			&out.Roles, &out.Balance, &out.OrdersCount, &out.OrdersSpent, &out.Merchants,
 			&out.RepStores, &out.Commissions, &out.OnShift, &out.DriverCash, &out.Deliveries)
 	if err != nil {
