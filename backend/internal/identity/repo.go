@@ -115,12 +115,36 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 
 	rows, err := r.db.Query(ctx, `
 		SELECT u.id, u.phone, u.full_name, u.status, u.password_hash IS NOT NULL, u.invite_code, am.thumb_path, u.last_seen_at, u.created_at,
-		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}')
+		       COALESCE(array_agg(ur.role_code) FILTER (WHERE ur.role_code IS NOT NULL), '{}'),
+		       -- ══════════════════════════════════════════════════════
+		       -- **وأرقامُه كزبون — بضمٍّ واحدٍ مجمَّع**
+		       -- ══════════════════════════════════════════════════════
+		       --
+		       -- (قرارُ المالك ٢٠٢٦-٠٨-١٥: حُذف تبويبُ الزبائن ونزلت
+		       --  أرقامُه إلى هنا.)
+		       --
+		       -- **ولا جملةٌ مرتبطةٌ لكلّ صفّ**: تلك تُحسب مرّةً لكلّ
+		       -- سطرٍ فتنمو الكلفةُ بعدد الصفوف — **وهي التي أبطأت
+		       -- سجلَّ المحادثات** (٢٠٢٦-٠٨-١٥). **والتجميعُ يمرّ على
+		       -- الطلبات مرّةً واحدةً مهما كثر الحساباتُ في الصفحة.**
+		       COALESCE(w.balance, 0),
+		       COALESCE(oc.cnt, 0), COALESCE(oc.spent, 0), oc.last_at
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		LEFT JOIN media am ON am.id = u.avatar_media_id
+		LEFT JOIN wallets w ON w.user_id = u.id
+		LEFT JOIN (
+		    SELECT o.customer_id,
+		           count(*) AS cnt,
+		           -- **والإنفاقُ ما سُلّم وحدَه** — طلبٌ أُلغي لم يُنفَق
+		           -- فيه شيء، **ورقمٌ يعدّ الملغى يُقرأ زبوناً أنفق
+		           -- وهو لم يستلم.**
+		           COALESCE(sum(o.total) FILTER (WHERE o.status = 'delivered'), 0) AS spent,
+		           max(o.created_at) AS last_at
+		    FROM orders o GROUP BY o.customer_id
+		) oc ON oc.customer_id = u.id
 		`+where+`
-		GROUP BY u.id, am.thumb_path
+		GROUP BY u.id, am.thumb_path, w.balance, oc.cnt, oc.spent, oc.last_at
 		HAVING NOT bool_or(ur.role_code = 'admin')
 		ORDER BY u.created_at DESC
 		LIMIT $5 OFFSET $6`, query, role, onlineOnly, status, limit, offset)
@@ -132,7 +156,8 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 	users := []User{}
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles); err != nil {
+		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles,
+			&u.Balance, &u.OrdersCount, &u.OrdersSpent, &u.LastOrderAt); err != nil {
 			return nil, 0, err
 		}
 		u.AvatarURL = media.URLForPtr(u.AvatarURL)

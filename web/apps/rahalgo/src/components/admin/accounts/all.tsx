@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
 import {
   Pagination,
   Alert,
@@ -27,6 +27,7 @@ import {
   IconUnblock,
   IconLock,
   IconWallet,
+  IconOrder,
   IconView,
   usePlatform,
 } from "@rahalgo/ui";
@@ -179,6 +180,45 @@ export default function AllAccountsTable() {
           ))}
         </div>
       ),
+    },
+    // ══════════════════════════════════════════════════════════════
+    // **وأرقامُه كزبون — هنا لا في تبويبٍ ثانٍ**
+    // ══════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٥: «تبويبٌ منفصلٌ باسم الزبائن لا يلزم
+    //  أساساً — كلُّ شيءٍ نريده موجودٌ بكلّ الحسابات».)
+    //
+    // **ولا تُعرض لمن لا طلبَ له**: موظّفٌ وسائقٌ ومتجرٌ أصفارُهم
+    // صادقةٌ ولا تعني شيئاً — **وحقلٌ يظهر فارغاً دائماً يُتعلَّم
+    // تجاهلُه، ثمّ يمتلئ يوماً فلا يُنظر إليه.**
+    //
+    // **والرصيدُ للجميع** — كلُّ حسابٍ له محفظة.
+    {
+      id: "orders_count",
+      header: m.admin.customers.ordersCount,
+      icon: <IconOrder />,
+      hide: (u) => !u.orders_count,
+      cell: (u) => fmtNum(u.orders_count ?? 0),
+    },
+    {
+      id: "orders_spent",
+      header: `${m.admin.customers.totalSpent} (${m.common.currency})`,
+      icon: <IconOrder />,
+      hide: (u) => !u.orders_count,
+      cell: (u) => fmtNum(u.orders_spent ?? 0),
+    },
+    {
+      id: "balance",
+      header: `${m.admin.customers.balance} (${m.common.currency})`,
+      icon: <IconWallet />,
+      cell: (u) => fmtNum(u.balance ?? 0),
+    },
+    {
+      id: "last_order",
+      header: m.admin.customers.lastOrder,
+      icon: <IconStatus />,
+      hide: (u) => !u.last_order_at,
+      cell: (u) => (u.last_order_at ? fmtDate(u.last_order_at) : "—"),
     },
     {
       id: "status",

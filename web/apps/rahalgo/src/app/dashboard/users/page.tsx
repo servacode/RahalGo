@@ -40,7 +40,6 @@ import {
   Tabs,
   type TabDef, IconUsers, IconUser, IconStore, IconDriver, IconLink } from "@rahalgo/ui";
 import AllAccountsTable from "@/components/admin/accounts/all";
-import CustomersTable from "@/components/admin/accounts/customers";
 import DriversTable from "@/components/admin/accounts/drivers";
 import SalesTable from "@/components/admin/accounts/sales";
 import MerchantsTable from "@/components/admin/accounts/merchants";
@@ -48,13 +47,12 @@ import MerchantsTable from "@/components/admin/accounts/merchants";
 const m = getMessages(defaultLocale);
 const T = m.admin.users.groupTabs;
 
-type Tab = "all" | "customers" | "merchants" | "drivers" | "reps";
+type Tab = "all" | "merchants" | "drivers" | "reps";
 
 // **والأيقونةُ نوعٌ لا عنصرٌ مُنشأ** — فيقرّر `Tabs` مقاسَها، **ومقاسٌ
 // يُكتب في كلّ بندٍ يفترق يوماً.**
 const TABS: TabDef<Tab>[] = [
   { key: "all", label: T.all, icon: IconUsers },
-  { key: "customers", label: T.customers, icon: IconUser },
   { key: "merchants", label: T.merchants, icon: IconStore },
   { key: "drivers", label: T.drivers, icon: IconDriver },
   { key: "reps", label: T.reps, icon: IconLink },
@@ -70,7 +68,6 @@ export default function AccountsPage() {
       {/* **ولا يُحمَّل تبويبٌ لم يُفتح** — خمسةُ جداولَ تُنادى معاً حملٌ بلا حاجة،
           **ومن يريد قائمةَ الزبائن لا ينتظر قائمةَ المتاجر.** */}
       {tab === "all" && <AllAccountsTable />}
-      {tab === "customers" && <CustomersTable />}
       {tab === "merchants" && <MerchantsTable />}
       {tab === "drivers" && <DriversTable />}
       {tab === "reps" && <SalesTable />}

@@ -41,6 +41,20 @@ export interface AuthUser {
   avatar_thumb_url: string | null;
   last_seen_at: string | null;
   created_at: string;
+
+  /**
+   * **وأرقامُه كزبون — في جدول الحسابات لا في تبويبٍ ثانٍ.**
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٥: «تبويبٌ منفصلٌ باسم الزبائن لا يلزم
+   *  أساساً — كلُّ شيءٍ نريده موجودٌ بكلّ الحسابات».)
+   *
+   * **وتصل من نقطة الحسابات وحدَها** — فهي اختياريّةٌ في النوع:
+   * **شاشةُ الدخول تقرأ `AuthUser` نفسَه ولا تعرف هذه.**
+   */
+  balance?: number;
+  orders_count?: number;
+  orders_spent?: number;
+  last_order_at?: string | null;
 }
 
 export interface TokenPair {
