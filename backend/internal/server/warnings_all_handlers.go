@@ -27,6 +27,7 @@ package server
 */
 
 import (
+	"github.com/servacode/rahalgo/backend/internal/support"
 	"net/http"
 	"strings"
 	"time"
@@ -93,6 +94,20 @@ func (s *Server) handleAdminUserWarnings(w http.ResponseWriter, r *http.Request)
 //
 // **والتنفيذُ واحد**: لو كُتب مرّتين لَافترقا — **يُضاف إشعارٌ في أحدهما
 // ويُنسى في الآخر**، فيُنذَر سائقٌ فيعلم ويُنذَر متجرٌ فلا يعلم.
+// warnHref **أين يقرأ إنذارَه** — بحسب دوره.
+//
+// **وبوّابةُ المتجر لا تُفتح لزبون** — وكانت الوجهةَ للجميع.
+func warnHref(role string) string {
+	switch role {
+	case "merchant":
+		return "/portal/complaints"
+	case "driver", "sales":
+		return "/portal/warnings"
+	default:
+		return "/complaints"
+	}
+}
+
 func (s *Server) issueWarning(w http.ResponseWriter, r *http.Request,
 	userID, reason, note string, orderID, ticketID *string) {
 	// **ودورُه وقتَ الإنذار يُثبَّت** — لا يُشتقّ عند القراءة.
@@ -105,6 +120,21 @@ func (s *Server) issueWarning(w http.ResponseWriter, r *http.Request,
 		                 ORDER BY granted_at LIMIT 1), 'customer')`, userID).
 		Scan(&role); err != nil {
 		s.respondErr(w, err)
+		return
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **والسببُ من القائمة لا نصٌّ حرّ**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+	//
+	// **والحكمُ هنا لا في الشاشة** — من نادى الواجهةَ البرمجيّة
+	// مباشرةً تجاوز قائمةَ الاختيار.
+	//
+	// **والأسبابُ تتبع الدور**: «رفضُ الاستلام» لا يُنذَر به سائق.
+	if !support.ValidWarnReason(reason, role) {
+		s.respondErr(w, errValidation)
 		return
 	}
 
@@ -122,10 +152,32 @@ func (s *Server) issueWarning(w http.ResponseWriter, r *http.Request,
 	//
 	// **إنذارٌ لا يبلغ من أُنذر ليس إنذاراً**: هو سطرٌ في دفترٍ يُقرأ يومَ
 	// الحظر، **ولا فرصةَ لصاحبه أن يُصلح.** (وهي شكوى المالك بعينها.)
+	// ══════════════════════════════════════════════════════════════════
+	// **والإشعارُ يقول السببَ لا العنوانَ وحدَه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-١٥: «وصل الإنذارُ للزبون بس لم يعرف
+	//  سببَه».)
+	//
+	// **وكان الجسدُ «الملاحظة» وحدَها وهي اختياريّة** — فمن أنذر
+	// بسببٍ بلا ملاحظةٍ أرسل **عنواناً بلا جسد**: «إنذارٌ على حسابك»
+	// وكفى. **وإنذارٌ لا يُعرف سببُه لا يُصحَّح**، إنّما يُخيف.
+	//
+	// **والاسمُ عربيٌّ لا رمز**: الإشعارُ يُخزَّن نصّاً ويُقرأ كما
+	// خُزّن، **فترجمتُه في الشاشة تأتي بعد فوات الأوان.**
+	body := support.WarnReasonAr(reason)
+	if n := strings.TrimSpace(note); n != "" {
+		body += " — " + n
+	}
+	// **ونوعُه `account` لا `order`** — لا طلبَ فيه، **ومن صنّفه
+	// طلباً خلطه بأخبارِ طلباته فضاع بينها.**
+	//
+	// **ووجهتُه صفحتُه لا بوّابةَ متجر** — كانت `/portal/complaints`،
+	// **فيضغطها الزبونُ فيصل إلى بابٍ ليس له.**
 	s.notify.Notify(r.Context(), notifications.Input{
-		UserID: userID, Kind: notifications.KindOrder,
-		Title: notifTitles.warningOnYou, Body: clip(note, 200),
-		Entity: "user", EntityID: userID, Href: "/portal/complaints",
+		UserID: userID, Kind: notifications.KindAccount,
+		Title: notifTitles.warningOnYou, Body: clip(body, 200),
+		Entity: "user", EntityID: userID, Href: warnHref(role),
 	})
 	s.audit(r, "ops.warning_issued", "user", userID, map[string]any{"reason": reason})
 	s.touch("user", "ops")
@@ -183,4 +235,22 @@ func (s *Server) handleIssueMerchantWarning(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	s.issueWarning(w, r, *owner, reason, req.Note, nil, nil)
+}
+
+// handleWarnReasons **أسبابُ الإنذار لهذا الحساب — بدوره.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٥: «يجب أن يكون هناك أسبابٌ جاهزةٌ للإنذار».)
+//
+// **وتتبع الدورَ لا تُسرَد كلُّها**: «رفضُ الاستلام» لا يُنذَر به سائق،
+// **ومن رأى سبباً لا يخصّ من أمامه اختار أقربَه** فكُتب سببٌ لا يصف ما وقع.
+func (s *Server) handleWarnReasons(w http.ResponseWriter, r *http.Request) {
+	var role string
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT COALESCE((SELECT role_code FROM user_roles WHERE user_id = $1
+		                 ORDER BY granted_at LIMIT 1), 'customer')`,
+		chi.URLParam(r, "id")).Scan(&role); err != nil {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"reasons": support.WarnReasonsFor(role)})
 }

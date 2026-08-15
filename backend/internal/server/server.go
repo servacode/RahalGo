@@ -537,6 +537,7 @@ func (s *Server) Router() http.Handler {
 			//
 			// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «اجعله لكلّ الأدوار حتّى الزبون».)
 			r.Get("/users/{id}/warnings", s.handleAdminUserWarnings)
+			r.Get("/users/{id}/warn-reasons", s.handleWarnReasons)
 			r.Get("/categories", s.handleListCategories)
 			// **أقسامُ المنصة** — ما نبيعه، لا من نشتري منه.
 			r.Get("/sections", s.handleListPlatformSections)

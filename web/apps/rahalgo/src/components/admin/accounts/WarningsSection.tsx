@@ -24,6 +24,7 @@ import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
 import {
   Button,
   Input,
+  Select,
   Textarea,
   Alert,
   Modal,
@@ -34,6 +35,8 @@ import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const W = m.admin.warnings;
+/** **وأسماءُ الأسباب معجمٌ يُفهرس بالرمز** — والرمزُ يأتي من المحرّك. */
+const REASON_LABELS: Record<string, string> = W.reasons;
 
 interface WarningItem {
   id: string;
@@ -48,6 +51,16 @@ export function WarningsSection({ userID }: { userID: string }) {
   const [rows, setRows] = useState<WarningItem[]>([]);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
+  // ══════════════════════════════════════════════════════════════════
+  // **وأسبابُ الإنذار من المحرّك — بدور صاحب الحساب**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // (قرارُ المالك ٢٠٢٦-٠٨-١٥: «يجب أن يكون هناك أسبابٌ جاهزةٌ
+  //  للإنذار».)
+  //
+  // **ونصٌّ حرٌّ يُكتب السببُ الواحدُ به بعشرة ألفاظ** — **و«أُنذر
+  // ثلاثاً لنفس السبب» جملةٌ لا تُقال** إن كان كلُّ إنذارٍ بلفظ.
+  const [reasons, setReasons] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -67,6 +80,16 @@ export function WarningsSection({ userID }: { userID: string }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // **وتُجلب عند فتح النافذة** — لا مع كلّ فتحةِ ملفّ.
+  useEffect(() => {
+    if (!open || reasons.length > 0) return;
+    void api<{ reasons: { code: string }[] }>(
+      `/api/v1/admin/users/${userID}/warn-reasons`,
+    )
+      .then((r) => setReasons((r.reasons ?? []).map((x) => x.code)))
+      .catch((e) => setError(e instanceof ApiError ? m.errors.validation : m.errors.internal));
+  }, [open, reasons.length, userID]);
 
   async function issue() {
     // **والسببُ إلزاميّ** — إنذارٌ بلا سببٍ لا يُصحَّح ولا يُحتجّ به.
@@ -120,13 +143,23 @@ export function WarningsSection({ userID }: { userID: string }) {
         <div className="space-y-3">
           {/* **ويُقال ما يعنيه** — الإنذارُ يصل صاحبَه بنصّه. */}
           <p className="text-sm text-ink-muted">{W.hint}</p>
-          <Input
+          {/* **وسببٌ من قائمةٍ لا نصٌّ حرّ** — ومن السبب يُشتقّ
+              التكرارُ والحكم. **والأسبابُ تتبع دورَ صاحب الحساب**:
+              «رفضُ الاستلام» لا يُنذَر به سائق. */}
+          <Select
             id="warn-reason"
             label={W.reason}
             required
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-          />
+          >
+            <option value="">{W.pickReason}</option>
+            {reasons.map((c) => (
+              <option key={c} value={c}>
+                {REASON_LABELS[c] ?? c}
+              </option>
+            ))}
+          </Select>
           <Textarea
             id="warn-note"
             label={W.note}

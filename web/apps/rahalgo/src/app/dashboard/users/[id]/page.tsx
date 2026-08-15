@@ -286,10 +286,15 @@ export default function UserProfilePage() {
   if (has("customer") || p.orders_count > 0) {
     stats.push(
       {
+        // **ورقمٌ يُقرأ لا زرٌّ يُضغط** — (قرارُ المالك ٢٠٢٦-٠٨-١٥:
+        // «ألغِ الزرَّ الذكيّ، لا يأخذنا إلى أيّ مكان — فقط يجلب عددَ
+        // طلبات الشخص وفقط»).
+        //
+        // **وتبويبُ «طلباته» بجانبه** يعرضها كلَّها، **وضغطةٌ تُخرجه
+        // من الملفّ إلى شاشةٍ أخرى تُضيّع ما كان يقرؤه.**
         label: P.ordersCount,
         value: fmtNum(p.orders_count),
         icon: <IconOrder />,
-        onClick: () => router.push(`/dashboard/orders?q=${encodeURIComponent(p.phone)}`),
       },
       {
         label: `${P.spent} (${m.common.currency})`,

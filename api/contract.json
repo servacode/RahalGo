@@ -2480,6 +2480,26 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/users/{id}/warn-reasons",
+      "handler": "handleWarnReasons",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "reasons",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/users/{id}/warnings",
       "handler": "handleAdminUserWarnings",
       "auth": true,
