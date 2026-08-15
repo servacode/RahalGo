@@ -70,7 +70,20 @@ interface TicketPage {
 }
 
 const STATUS_LABELS: Record<string, string> = m.admin.tickets.status;
-const REASONS: Record<string, string> = m.site.complaint.reasons;
+/**
+ * **أسبابُ الشكوى — من المعجمين معاً.**
+ *
+ * (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+ *
+ * **الزبونُ يشتكي بأسبابه والسائقُ يبلّغ بأسبابه** — **ومعجمٌ واحدٌ يترك
+ * نصفَ الصفوف بلا شارة**: يُقرأ «بلاغُ سائق» ولا يُعرف **أعلى المتجر هو
+ * أم على الزبون** حتّى يُفتح السطر. **وهي عينُ العلّة التي أُصلحت في
+ * ملفّ الحساب ٢٠٢٦-٠٨-١٥** — وبقيت هنا.
+ */
+const REASONS: Record<string, string> = {
+  ...m.site.complaint.reasons,
+  ...m.driver.history.reportReasons,
+};
 const STATUS_VARIANT: Record<string, "warning" | "primary" | "success"> = {
   open: "warning",
   in_progress: "primary",
@@ -135,8 +148,6 @@ export function TicketsView() {
 
   useLiveRefresh(["ticket"], load);
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.per_page)) : 1;
-
   const columns: DataColumn<Ticket>[] = [
     {
       id: "number",
@@ -165,6 +176,20 @@ export function TicketsView() {
       icon: <IconReply />,
       cell: (t) => (
         <span className="flex flex-wrap items-center gap-1.5">
+          {/* ══════════════════════════════════════════════════════════
+              **وبلاغُ السائق يُميَّز عن شكوى الزبون**
+              ══════════════════════════════════════════════════════════
+
+              (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+
+              **وعمودُ «الزبون» يقول زبونَ الطلب لا كاتبَ الشكوى** —
+              فبلاغُ السائق على الزبون **يُقرأ شكوى الزبون نفسِه**،
+              والحكمان متناقضان.
+
+              **والمحرّكُ يرسل `opened_by_customer` ولا تقرؤه الشاشة.** */}
+          {!t.opened_by_customer && t.reason && (
+            <Badge variant="primary">{m.admin.tickets.byDriver}</Badge>
+          )}
           <span className="line-clamp-1">{t.subject}</span>
           {/* **السببُ المصنَّف بجانب النصّ.**
 
@@ -295,9 +320,13 @@ export function TicketsView() {
         )}
       />
 
+      {/* **ولا سطرَ للإجمالي** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+
+          **والترقيمُ يقوله بموضعه**: «٢ / ٧» تقول العددَ والموضعَ معاً،
+          **وسطرٌ ثانٍ يقول نصفَ ما تقوله** — و«الإجمالي: ٠» تحت قائمةٍ
+          فارغةٍ تقول ما تقوله القائمةُ نفسُها. */}
       {data && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-muted">
-          <span>{m.admin.users.totalCount.replace("{count}", fmtNum(data.total))}</span>
+        <div className="mt-4">
           {/* **والترقيمُ من المكوّن المشترك** — وأرقامُه كانت لاتينيّةً في
               واجهةٍ عربية لأنّها لم تمرّ بـ`fmtNum`. */}
           <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
