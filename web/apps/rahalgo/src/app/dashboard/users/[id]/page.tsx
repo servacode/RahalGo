@@ -57,6 +57,8 @@ import RoleBadge from "@/components/admin/RoleBadge";
 const m = getMessages(defaultLocale);
 const P = m.admin.users.profile;
 const KINDS: Record<string, string> = m.admin.users.txKinds;
+/** **والرصيدان اسمُهما واحدٌ في المنصّة** — معجمُ الكشف المشترك. */
+const ST = m.shared.statement;
 const ACTIONS: Record<string, string> = m.admin.audit.actions;
 
 interface FinEntry {
@@ -171,6 +173,22 @@ export default function UserProfilePage() {
   const [rPage, setRPage] = useState(1);
   const [actCount, setActCount] = useState(0);
   const [actPer, setActPer] = useState(25);
+  // ══════════════════════════════════════════════════════════════════
+  // **ودفترُ المحفظة يُقلَّب ولا يُقصّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٥)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كان يُطلب بلا حدٍّ فيقصّه المحرّكُ عند خمسين ويقول `truncated`** —
+  // **وهذه الشاشةُ لا تقرأ الحقل.** فمن راجع دفترَ زبونٍ اشتكى «رصيدي
+  // ناقص» رأى خمسين حركةً **وظنّها كلَّ ما وقع.**
+  const [wPage, setWPage] = useState(1);
+  const [txTotal, setTxTotal] = useState(0);
+  const [txPer, setTxPer] = useState(50);
+  // **والرصيدان يُقالان** — دفترٌ بلا افتتاحيٍّ وختاميّ لا يُراجَع: **من
+  // يجمع الأسطر لا تساوي رصيدَه فيظنّ الخللَ في المنصّة.**
+  const [txOpening, setTxOpening] = useState(0);
+  const [txClosing, setTxClosing] = useState(0);
+  /** **ويُعاد جلبُه بعد حركةٍ يدويّة** — وإلّا شُحن الرصيدُ ولم يظهر قيدُه. */
+  const [wReload, setWReload] = useState(0);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<string | null>(null);
@@ -204,8 +222,6 @@ export default function UserProfilePage() {
   const load = useCallback(async () => {
     try {
       setP(await api<Profile>(`/api/v1/admin/users/${id}`));
-      const st = await api<{ transactions: Tx[] }>(`/api/v1/admin/users/${id}/wallet`);
-      setTxs(st.transactions);
       setFeedback(
         await api<Feedback>(
           `/api/v1/admin/users/${id}/feedback?t_page=${tPage}&g_page=${gPage}&r_page=${rPage}`,
@@ -244,6 +260,32 @@ export default function UserProfilePage() {
       // @empty-ok **وسجلٌّ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
       .catch(() => setActivity([]));
   }, [id, actPage]);
+
+  /**
+   * **ودفترُ المحفظة يُجلَب وحدَه — بصفحته.**
+   *
+   * **ولو بقي في `load` لَما تحرّك بتقليب الصفحة**: تابعُه معلّقٌ بغير
+   * `wPage`، **فيُرسم الترقيمُ ويُضغط ولا يقع شيء** — وهي عائلةُ العطب
+   * نفسِها التي أوقفت سجلَّ النشاط.
+   */
+  useEffect(() => {
+    api<{
+      transactions: Tx[];
+      total: number;
+      per_page: number;
+      opening: number;
+      closing: number;
+    }>(`/api/v1/admin/users/${id}/wallet?page=${wPage}`)
+      .then((st) => {
+        setTxs(st?.transactions ?? []);
+        setTxTotal(st?.total ?? 0);
+        setTxPer(st?.per_page || 50);
+        setTxOpening(st?.opening ?? 0);
+        setTxClosing(st?.closing ?? 0);
+      })
+      // @empty-ok **ودفترٌ لا يُجلب لا يُسقط الصفحة** — بقيّةُ الحساب تُقرأ.
+      .catch(() => setTxs([]));
+  }, [id, wPage, wReload]);
 
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!p) return <LoadingState variant="text" />;
@@ -636,7 +678,10 @@ export default function UserProfilePage() {
       )}
 
       {tab === "wallet" && (
-      <FormSection title={P.statement} icon={<IconWallet />}>
+      <FormSection
+        title={`${P.statement} (${fmtNum(txTotal)})`}
+        icon={<IconWallet />}
+      >
         {txs.length === 0 ? (
           <p className="py-6 text-center text-sm text-ink-muted">{P.statementEmpty}</p>
         ) : (
@@ -684,6 +729,36 @@ export default function UserProfilePage() {
             ))}
           </ul>
         )}
+        {/* ══════════════════════════════════════════════════════════════
+            **والرصيدان يُقفلان الصفحة**
+            ══════════════════════════════════════════════════════════════
+
+            (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+
+            **والمحرّكُ يرسلهما ولم تكن تُعرض** — **ودفترٌ بلا افتتاحيٍّ
+            وختاميٍّ لا يُراجَع**: من يبدأ من منتصف التاريخ يجمع الأسطر
+            فلا تساوي رصيدَه، **فيظنّ الخللَ في المنصّة.**
+
+            **ومصانان ليتوازنا في كلّ صفحة**: الافتتاحيُّ + مجموعُ
+            المعروض = الختاميّ — **والصفحةُ الثانيةُ تُقفل برصيدها هي لا
+            برصيد اليوم.** */}
+        {txs.length > 0 && (
+          <div className="mt-2 flex items-center justify-between gap-3 rounded-control bg-field px-3 py-2 text-sm">
+            <span className="text-ink-muted">
+              {ST.opening}:{" "}
+              <span className="font-bold text-ink" dir="ltr">
+                {fmtNum(txOpening)}
+              </span>
+            </span>
+            <span className="text-ink-muted">
+              {ST.closing}:{" "}
+              <span className="font-bold text-ink" dir="ltr">
+                {fmtNum(txClosing)}
+              </span>
+            </span>
+          </div>
+        )}
+        <Pagination page={wPage} total={txTotal} perPage={txPer} onChange={setWPage} />
       </FormSection>
       )}
 
@@ -985,6 +1060,8 @@ export default function UserProfilePage() {
           isAdmin={canWallet}
           onClose={() => {
             setWalletOpen(false);
+            // **والدفترُ يُعاد جلبُه** — وإلّا شُحن الرصيدُ ولم يظهر قيدُه.
+            setWReload((n) => n + 1);
             void load();
           }}
         />

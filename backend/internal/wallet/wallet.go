@@ -42,8 +42,22 @@ type Statement struct {
 	// **مصانان ليتوازنا دائماً**: الافتتاحي + مجموع المعروض = الختامي.
 	Opening int64 `json:"opening"`
 	Closing int64 `json:"closing"`
-	// صحيحة إن قُصّت النتيجة عند السقف — كشف حساب ناقص يجب أن يقول إنه ناقص
+	// صحيحة إن بقي وراء المعروض المزيد — كشف حساب ناقص يجب أن يقول إنه ناقص
 	Truncated bool `json:"truncated"`
+	// ══════════════════════════════════════════════════════════════════
+	// **Total وPage — الدفترُ يُقلَّب ولا يُقصّ**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+	//
+	// **كان يُقصّ عند خمسين ويقول `truncated` — والشاشةُ لا تقرؤه**، فمن
+	// راجع دفترَ زبونٍ اشتكى «رصيدي ناقص» رأى خمسين حركةً وظنّها كلَّ ما
+	// وقع. **ونقصٌ لا يُعلَن يُقرأ كمالاً.**
+	//
+	// **والمجموعُ يُقال ولو عُرضت صفحةٌ واحدة** — منه يُعرف أبقيَ شيءٌ أم لا.
+	Total   int `json:"total"`
+	Page    int `json:"page"`
+	PerPage int `json:"per_page"`
 }
 
 // StatementRange مدى كشف الحساب. الحدّان اختياريان — يُترك أيّهما فارغاً فيُفتح.
@@ -51,6 +65,8 @@ type StatementRange struct {
 	From  *time.Time
 	To    *time.Time
 	Limit int
+	// Page **الصفحةُ المطلوبة** — تبدأ من واحد، والصفرُ يعني الأولى.
+	Page int
 }
 
 type Service struct {
@@ -95,9 +111,28 @@ func (s *Service) Statement(ctx context.Context, userID string, rng StatementRan
 		limit = 50
 	}
 
-	st := &Statement{Transactions: []Transaction{}}
+	page := rng.Page
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * limit
+
+	st := &Statement{Transactions: []Transaction{}, Page: page, PerPage: limit}
 	var err error
 	if st.Balance, err = s.Balance(ctx, userID); err != nil {
+		return nil, err
+	}
+
+	// **وكم حركةً في المدى كلِّه** — وهو ما يُبنى عليه الترقيمُ في الشاشة.
+	//
+	// **والشرطُ نفسُه للعدّ وللقائمة**: نصّان يفترقان يوماً **فيقول العنوانُ
+	// مئةً وتعرض القائمةُ تسعين** — ولا يُعرف أيُّهما الصواب.
+	if err := s.db.QueryRow(ctx, `
+		SELECT count(*) FROM wallet_transactions
+		WHERE user_id = $1
+		  AND ($2::timestamptz IS NULL OR created_at >= $2)
+		  AND ($3::timestamptz IS NULL OR created_at < $3)`,
+		userID, rng.From, rng.To).Scan(&st.Total); err != nil {
 		return nil, err
 	}
 
@@ -114,6 +149,31 @@ func (s *Service) Statement(ctx context.Context, userID string, rng StatementRan
 		st.Closing -= after
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وما هو أحدثُ من هذه الصفحة يُطرح أيضاً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **والصفحةُ الثانيةُ تُقفل برصيدها هي لا برصيد اليوم** — وإلّا لَخرقت
+	// المعادلةَ المصانة (الافتتاحيّ + المعروض = الختاميّ)، **فيجمع من
+	// يراجعها فلا تُطابق**، ويظنّ الخللَ في المنصة.
+	//
+	// **والأحدثُ هو أوّلُ `offset` صفٍّ من المدى** — الترتيبُ بالمعرّف
+	// نازلاً، فما قبل الصفحة أحدثُ منها بالضرورة.
+	if offset > 0 {
+		var newer int64
+		if err := s.db.QueryRow(ctx, `
+			SELECT COALESCE(sum(amount), 0) FROM (
+				SELECT amount FROM wallet_transactions
+				WHERE user_id = $1
+				  AND ($2::timestamptz IS NULL OR created_at >= $2)
+				  AND ($3::timestamptz IS NULL OR created_at < $3)
+				ORDER BY id DESC LIMIT $4
+			) x`, userID, rng.From, rng.To, offset).Scan(&newer); err != nil {
+			return nil, err
+		}
+		st.Closing -= newer
+	}
+
 	rows, err := s.db.Query(ctx, `
 		SELECT t.id, t.amount, t.kind, t.ref, t.note, t.created_by,
 		       NULLIF(COALESCE(cb.full_name, cb.phone::text), ''),
@@ -125,17 +185,12 @@ func (s *Service) Statement(ctx context.Context, userID string, rng StatementRan
 		WHERE t.user_id = $1
 		  AND ($2::timestamptz IS NULL OR t.created_at >= $2)
 		  AND ($3::timestamptz IS NULL OR t.created_at < $3)
-		ORDER BY t.id DESC LIMIT $4`, userID, rng.From, rng.To, limit+1)
+		ORDER BY t.id DESC LIMIT $4 OFFSET $5`, userID, rng.From, rng.To, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		// نطلب صفاً زائداً لنعرف أن هناك المزيد — بلا استعلام عدٍّ ثانٍ
-		if len(st.Transactions) == limit {
-			st.Truncated = true
-			break
-		}
 		var t Transaction
 		if err := rows.Scan(&t.ID, &t.Amount, &t.Kind, &t.Ref, &t.Note, &t.CreatedBy,
 			&t.ByName, &t.OrderNumber, &t.TicketNumber, &t.CreatedAt); err != nil {
@@ -153,6 +208,9 @@ func (s *Service) Statement(ctx context.Context, userID string, rng StatementRan
 		shown += t.Amount
 	}
 	st.Opening = st.Closing - shown
+	// **وبقيَ وراءها المزيد؟** — كان يُعرف بصفٍّ زائدٍ يُطلب، **وصار يُعرف
+	// من المجموع**: عدٌّ واحدٌ يخدم الترقيمَ والإعلانَ معاً.
+	st.Truncated = st.Total > offset+len(st.Transactions)
 	return st, nil
 }
 

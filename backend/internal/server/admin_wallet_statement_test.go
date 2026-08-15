@@ -24,7 +24,11 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // TestAdminWalletStatement_OwnRowsNewestFirstAndSaysWhenCut
@@ -62,6 +66,10 @@ func TestAdminWalletStatement_OwnRowsNewestFirstAndSaysWhenCut(t *testing.T) {
 		Data struct {
 			Balance      int64 `json:"balance"`
 			Truncated    bool  `json:"truncated"`
+			Total        int   `json:"total"`
+			Page         int   `json:"page"`
+			Opening      int64 `json:"opening"`
+			Closing      int64 `json:"closing"`
 			Transactions []struct {
 				ID   int64  `json:"id"`
 				Kind string `json:"kind"`
@@ -96,30 +104,119 @@ func TestAdminWalletStatement_OwnRowsNewestFirstAndSaysWhenCut(t *testing.T) {
 		t.Fatal("قال «قُصّ» وفيه ثلاثُ حركات — **وإنذارٌ كاذبٌ يُطفأ فيُفقد ما يحرسه**")
 	}
 
-	// ══════════════════════════════════════════════════════════════════
-	// **وفوق الخمسين يقول إنّه قُصّ**
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// **والشاشةُ لا تقرأ هذا الحقل اليوم** — فالدفترُ يَنقُص عندها صامتاً.
-	// **وهذا يثبّت أنّ المحرّك يقولها** كي يُبنى عليه.
-	for i := range 50 {
-		mk(owner, 1000, "topup", "حشوٌ للسقف")
-		_ = i
+	// **والمجموعُ ثلاثةٌ وصفحةٌ واحدة** — ولا شيءَ وراءها.
+	if env.Data.Total != 3 || env.Data.Page != 1 {
+		t.Fatalf("المجموعُ %d والصفحةُ %d — **والترقيمُ في الشاشة يُبنى عليهما**",
+			env.Data.Total, env.Data.Page)
 	}
-	w2 := asCustomer(f.srv.handleAdminWalletStatement, http.MethodGet, owner, owner)
-	var env2 struct {
+	// **والافتتاحيُّ + المعروضُ = الختاميّ** — دفترٌ لا يتوازن يُقرأ خللاً
+	// في المنصّة لا في القراءة.
+	if env.Data.Opening+41000 != env.Data.Closing {
+		t.Fatalf("لم يتوازن: افتتاحيٌّ %d وختاميٌّ %d ومعروضٌ 41000",
+			env.Data.Opening, env.Data.Closing)
+	}
+}
+
+// TestAdminWalletStatement_PagesInsteadOfCutting
+// **يُقلَّب ولا يُقصّ — وكلُّ صفحةٍ تتوازن برصيدها هي.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٥: «أصلحها».)
+//
+// **وكان يردّ خمسين ويقول `truncated`** — **والشاشةُ لا تقرأ الحقل**، فمن
+// راجع دفترَ زبونٍ اشتكى «رصيدي ناقص» رأى خمسين حركةً **وظنّها كلَّ ما وقع.**
+func TestAdminWalletStatement_PagesInsteadOfCutting(t *testing.T) {
+	f := newDriverFixture(t, 0)
+	ctx := context.Background()
+	owner, _, _ := twoCustomers(t, f)
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(),
+			`DELETE FROM wallet_transactions WHERE user_id = $1`, owner)
+	})
+
+	// **مئةٌ وعشرون حركةً** — ثلاثُ صفحاتٍ وكسر، **وسبعون منها كانت تُحجب.**
+	const n = 120
+	for range n {
+		if _, err := f.pool.Exec(ctx, `
+			INSERT INTO wallet_transactions (user_id, amount, kind)
+			VALUES ($1, 1000, 'topup')`, owner); err != nil {
+			t.Fatalf("تعذّرت الحركة: %v", err)
+		}
+	}
+
+	type page struct {
 		Data struct {
-			Truncated    bool       `json:"truncated"`
-			Transactions []struct{} `json:"transactions"`
+			Total     int   `json:"total"`
+			Page      int   `json:"page"`
+			PerPage   int   `json:"per_page"`
+			Opening   int64 `json:"opening"`
+			Closing   int64 `json:"closing"`
+			Truncated bool  `json:"truncated"`
+			Rows      []struct {
+				ID     int64 `json:"id"`
+				Amount int64 `json:"amount"`
+			} `json:"transactions"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(w2.Body.Bytes(), &env2); err != nil {
-		t.Fatalf("ردٌّ لا يُفكّ: %v", err)
+	get := func(p int) page {
+		req := httptest.NewRequest(http.MethodGet, "/x?page="+strconv.Itoa(p), nil)
+		rc := chi.NewRouteContext()
+		rc.URLParams.Add("id", owner)
+		c := context.WithValue(req.Context(), chi.RouteCtxKey, rc)
+		c = context.WithValue(c, ctxUserID, owner)
+		c = context.WithValue(c, ctxRoles, []string{"admin"})
+		w := httptest.NewRecorder()
+		f.srv.handleAdminWalletStatement(w, req.WithContext(c))
+		var out page
+		if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+			t.Fatalf("الصفحةُ %d لا تُفكّ: %v — %s", p, err, w.Body.String())
+		}
+		return out
 	}
-	if len(env2.Data.Transactions) != 50 {
-		t.Fatalf("عُرضت %d حركةً والسقفُ خمسون", len(env2.Data.Transactions))
+
+	seen := map[int64]bool{}
+	got := 0
+	for p := 1; p <= 3; p++ {
+		pg := get(p)
+		if pg.Data.Total != n {
+			t.Fatalf("الصفحةُ %d تقول المجموعَ %d لا %d", p, pg.Data.Total, n)
+		}
+		want := 50
+		if p == 3 {
+			want = 20
+		}
+		if len(pg.Data.Rows) != want {
+			t.Fatalf("الصفحةُ %d فيها %d حركةً لا %d — **والباقي بلا باب**",
+				p, len(pg.Data.Rows), want)
+		}
+		// **ولا حركةَ تُقرأ مرّتين** — صفحتان تتداخلان تُريان مالاً لم يقع.
+		for _, x := range pg.Data.Rows {
+			if seen[x.ID] {
+				t.Fatalf("الحركةُ %d قُرئت مرّتين — **ومالٌ يُعدّ مرّتين يُقرأ ضِعفَه**", x.ID)
+			}
+			seen[x.ID] = true
+			got++
+		}
+		// ══════════════════════════════════════════════════════════════
+		// **وكلُّ صفحةٍ تُقفل برصيدها هي**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **والصفحةُ الثانيةُ لا تُقفل برصيد اليوم** — ولو فعلت لَخُرقت
+		// المعادلة، **فيجمع من يراجعها فلا تُطابق** ويظنّ الخلل عندنا.
+		var shown int64
+		for _, x := range pg.Data.Rows {
+			shown += x.Amount
+		}
+		if pg.Data.Opening+shown != pg.Data.Closing {
+			t.Fatalf("الصفحةُ %d لم تتوازن: %d + %d ≠ %d",
+				p, pg.Data.Opening, shown, pg.Data.Closing)
+		}
+		// **وآخرُ صفحةٍ لا تقول «بقيَ المزيد».**
+		if pg.Data.Truncated != (p < 3) {
+			t.Fatalf("الصفحةُ %d تقول truncated=%v — **وإنذارٌ كاذبٌ يُطفأ**",
+				p, pg.Data.Truncated)
+		}
 	}
-	if !env2.Data.Truncated {
-		t.Fatal("قُصّ الدفترُ ولم يقل — **ونقصٌ لا يُعلَن يُقرأ كمالاً**")
+	if got != n {
+		t.Fatalf("قُرئ %d من %d — **والنقصُ صامت**", got, n)
 	}
 }
