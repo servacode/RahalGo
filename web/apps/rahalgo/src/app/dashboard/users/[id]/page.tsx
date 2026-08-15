@@ -59,6 +59,17 @@ const P = m.admin.users.profile;
 const KINDS: Record<string, string> = m.admin.users.txKinds;
 /** **والرصيدان اسمُهما واحدٌ في المنصّة** — معجمُ الكشف المشترك. */
 const ST = m.shared.statement;
+/**
+ * **أسبابُ الشكوى — من المعجمين معاً.**
+ *
+ * **الزبونُ يشتكي بأسبابه والسائقُ يبلّغ بأسبابه** — **ومعجمٌ واحدٌ يترك
+ * نصفَ الشكاوى بلا اسم**: تُعرض بعنوانها المحفوظ («بلاغُ سائق») ولا يُعرف
+ * أعلى المتجر هي أم على الزبون.
+ */
+const REASONS: Record<string, string> = {
+  ...m.site.complaint.reasons,
+  ...m.driver.history.reportReasons,
+};
 const ACTIONS: Record<string, string> = m.admin.audit.actions;
 
 interface FinEntry {
@@ -118,8 +129,23 @@ interface Activity {
   created_at: string;
 }
 
+/** **صفُّ شكوى** — ومعه من فتحها ولماذا، **والعنوانُ وحدَه لا يقولهما.** */
+interface TicketRow {
+  id: string;
+  number: number;
+  subject: string;
+  status: string;
+  compensation: number;
+  reason: string;
+  by_name: string;
+  created_at: string;
+}
+
 interface Feedback {
-  tickets: { number: number; subject: string; status: string; compensation: number; created_at: string }[];
+  tickets: TicketRow[];
+  /** **الشكاوى عليه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥). */
+  tickets_against: TicketRow[];
+  tickets_against_count: number;
   ratings_given: { order_number: number; merchant_name: string; platform_stars: number; driver_stars: number | null; comment: string; created_at: string }[];
   /** **أعدادُ الكلّ** — والمعروضُ صفحةٌ منه. (٢٠٢٦-٠٨-١٠.) */
   tickets_count: number;
@@ -169,6 +195,8 @@ export default function UserProfilePage() {
   /** **ولكلّ قائمةٍ صفحتُها** — **ورقمٌ واحدٌ لثلاثتها يقلّب ما لم يُطلب**:
       يبحث في تذاكره فتقفز تقييماتُه معها. */
   const [tPage, setTPage] = useState(1);
+  /** **وللشكاوى عليه صفحتُها** — قائمتان لا قائمة. */
+  const [aPage, setAPage] = useState(1);
   const [gPage, setGPage] = useState(1);
   const [rPage, setRPage] = useState(1);
   const [actCount, setActCount] = useState(0);
@@ -224,14 +252,14 @@ export default function UserProfilePage() {
       setP(await api<Profile>(`/api/v1/admin/users/${id}`));
       setFeedback(
         await api<Feedback>(
-          `/api/v1/admin/users/${id}/feedback?t_page=${tPage}&g_page=${gPage}&r_page=${rPage}`,
+          `/api/v1/admin/users/${id}/feedback?t_page=${tPage}&a_page=${aPage}&g_page=${gPage}&r_page=${rPage}`,
         ),
       );
       setError("");
     } catch (err) {
       setError(errText(err));
     }
-  }, [id, tPage, gPage, rPage]);
+  }, [id, tPage, aPage, gPage, rPage]);
 
   useEffect(() => {
     void load();
@@ -884,51 +912,37 @@ export default function UserProfilePage() {
 
       {tab === "feedback" && feedback && (
         <div className="space-y-4">
-          <FormSection title={P.ticketsSection} icon={<IconSupport />}>
-            {feedback.tickets.length === 0 ? (
-              <p className="py-4 text-center text-sm text-ink-muted">{P.ticketsEmpty}</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {feedback.tickets.map((t) => (
-                  <li
-                    key={t.number}
-                    onClick={() => router.push("/dashboard/tickets")}
-                    className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm hover:bg-row-hover"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="font-bold">#{fmtRef(t.number)}</span>
-                      <span className="truncate">{t.subject}</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      {t.compensation > 0 && (
-                        <span className="text-xs text-success">
-                          +<Money value={t.compensation} />
-                        </span>
-                      )}
-                      <Badge
-                        variant={t.status === "resolved" ? "success" : t.status === "open" ? "warning" : "primary"}
-                      >
-                        {(m.admin.tickets.status as Record<string, string>)[t.status] ?? t.status}
-                      </Badge>
-                      <span className="text-xs text-ink-muted" dir="ltr">
-                        {fmtDate(t.created_at)}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          {feedback.tickets_count > feedback.per_page && (
-            <div className="mt-3 flex justify-center">
-              <Pagination
-                page={tPage}
-                total={feedback.tickets_count}
-                perPage={feedback.per_page}
-                onChange={setTPage}
-              />
-            </div>
-          )}
-          </FormSection>
+          {/* ══════════════════════════════════════════════════════════
+              **وشكاواه وشكاوى عليه قائمتان لا قائمة**
+              ══════════════════════════════════════════════════════════
+
+              (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+
+              **كانتا مخلوطتين**: بلاغُ السائق على الزبون يقع جنبَ شكوى
+              الزبون، **ولا يفرّقهما إلّا نصُّ العنوان.** **والحكمان
+              متناقضان** — «عليه ثلاثُ شكاوى» و«اشتكى ثلاثاً» — **ومن
+              يقرأ هذه الشاشةَ هو من يقرّر الإنذارَ أو الحظر.** */}
+          <TicketList
+            title={P.ticketsSection}
+            rows={feedback.tickets}
+            total={feedback.tickets_count}
+            perPage={feedback.per_page}
+            page={tPage}
+            onPage={setTPage}
+            onOpen={(t) => router.push(`/dashboard/tickets?t=${t.id}`)}
+          />
+          {/* **وشكاوى عليه تُعرض ولو كانت صفراً** — **وغيابُ القسم يُقرأ
+              «لا شكاوى» تخميناً**، ووجودُه فارغاً يقوله يقينا. */}
+          <TicketList
+            title={P.ticketsAgainst}
+            rows={feedback.tickets_against}
+            total={feedback.tickets_against_count}
+            perPage={feedback.per_page}
+            page={aPage}
+            onPage={setAPage}
+            onOpen={(t) => router.push(`/dashboard/tickets?t=${t.id}`)}
+            danger
+          />
 
           <FormSection title={P.ratingsGiven} icon={<IconStar />}>
             {feedback.ratings_given.length === 0 ? (
@@ -978,6 +992,19 @@ export default function UserProfilePage() {
           )}
           </FormSection>
 
+          {/* ══════════════════════════════════════════════════════════
+              **ولا تقييمَ يرد على زبون**
+              ══════════════════════════════════════════════════════════
+
+              (قرارُ المالك ٢٠٢٦-٠٨-١٥: «الزبونُ يقيّم ولا يُقيَّم».)
+
+              **وجدولُ التقييمات فيه عمودان لا ثالثَ لهما**: نجومُ المنصّة
+              ونجومُ السائق — **ولا عمودَ يُقيّم الزبون**، ولا شاشةَ في
+              المنصّة تفعل.
+
+              **والقسمُ كان يُرسَم فارغاً دائماً** فيُقرأ «لم يقيّمه أحد»
+              **لا «لا يُقيَّم أصلاً»** — وهو داءُ «الماليّة» نفسُه. */}
+          {(has("driver") || has("merchant")) && (
           <FormSection title={P.ratingsRecv} icon={<IconStar />}>
             {feedback.ratings_received.length === 0 ? (
               <p className="py-4 text-center text-sm text-ink-muted">{P.ratingsRecvEmpty}</p>
@@ -1023,6 +1050,7 @@ export default function UserProfilePage() {
             </div>
           )}
           </FormSection>
+          )}
         </div>
       )}
 
@@ -1295,6 +1323,94 @@ function NotesEditor({
   );
 }
 
+
+/**
+ * **قائمةُ شكاوى — تقول من فتحها ولماذا.**
+ *
+ * **والعنوانُ نصٌّ محفوظٌ لا علامة** («شكوى على طلب» أو «بلاغُ سائق») —
+ * **ومن بنى عليه حكماً بنى على نصٍّ يُبدَّل يوماً.** فيُقال السببُ شارةً
+ * ويُقال فاتحُها باسمه.
+ */
+function TicketList({
+  title,
+  rows,
+  total,
+  perPage,
+  page,
+  onPage,
+  onOpen,
+  danger = false,
+}: {
+  title: string;
+  rows: TicketRow[];
+  total: number;
+  perPage: number;
+  page: number;
+  onPage: (p: number) => void;
+  onOpen: (t: TicketRow) => void;
+  /** **وشكاوى عليه تُقرأ بلونها** — سجلٌّ عليه لا خدمةٌ طلبها. */
+  danger?: boolean;
+}) {
+  return (
+    <FormSection title={`${title} (${fmtNum(total)})`} icon={<IconSupport />}>
+      {rows.length === 0 ? (
+        <p className="py-4 text-center text-sm text-ink-muted">{P.ticketsEmpty}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {rows.map((t) => (
+            <li
+              key={t.id}
+              onClick={() => onOpen(t)}
+              className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm hover:bg-row-hover"
+            >
+              <span className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="font-bold">#{fmtRef(t.number)}</span>
+                {/* **والسببُ شارةٌ — وهو ما تعرضه شاشةُ التذاكر أصلاً.**
+                    **وكان الملفُّ لا يجلبه**: تقرأ «شكوى على طلب» ولا
+                    تعرف أهي «لم أستلم طلبي» أم «سلوك السائق» **حتّى تفتح
+                    شاشةً أخرى.** */}
+                {t.reason && REASONS[t.reason] ? (
+                  <Badge variant={danger ? "danger" : "warning"}>{REASONS[t.reason]}</Badge>
+                ) : (
+                  <span className="truncate">{t.subject}</span>
+                )}
+                {/* **ومن فتحها** — **وبلاغُ سائقٍ في قائمة «شكاواه» يُقرأ
+                    شكواه** ما لم يُقل فاتحُه. */}
+                {t.by_name && (
+                  <span className="truncate text-xs text-ink-muted">
+                    {P.ticketBy}: {t.by_name}
+                  </span>
+                )}
+              </span>
+              <span className="flex items-center gap-2">
+                {t.compensation > 0 && (
+                  <span className="text-xs text-success">
+                    +<Money value={t.compensation} />
+                  </span>
+                )}
+                <Badge
+                  variant={
+                    t.status === "resolved" ? "success" : t.status === "open" ? "warning" : "primary"
+                  }
+                >
+                  {(m.admin.tickets.status as Record<string, string>)[t.status] ?? t.status}
+                </Badge>
+                <span className="text-xs text-ink-muted" dir="ltr">
+                  {fmtDate(t.created_at)}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {total > perPage && (
+        <div className="mt-3 flex justify-center">
+          <Pagination page={page} total={total} perPage={perPage} onChange={onPage} />
+        </div>
+      )}
+    </FormSection>
+  );
+}
 
 function FinBucket({
   title,

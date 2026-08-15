@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime } from "@rahalgo/i18n";
 import {
   Pagination,
@@ -100,6 +100,24 @@ export function TicketsView() {
   const [creating, setCreating] = useState(false);
   const [detailID, setDetailID] = useState<string | null>(null);
   const [view, setView] = useViewMode("tickets");
+
+  // ══════════════════════════════════════════════════════════════════
+  // **وتُفتح تذكرةٌ بعينها من رابط**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+  //
+  // **وكان ملفُّ الحساب يرمي إلى `/dashboard/tickets` بلا رقم** — فتقع
+  // في القائمة كلِّها **وتبحث بيدك عمّا كنتَ تنظر إليه.**
+  //
+  // **وتُقرأ مرّةً عند الإقلاع لا في كلّ رسم**: من أغلق النافذة لا
+  // تُعاد عليه، **وإلّا لَما استطاع إغلاقها.**
+  const params = useSearchParams();
+  useEffect(() => {
+    const t = params.get("t");
+    if (t) setDetailID(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const load = useCallback(async () => {
     try {

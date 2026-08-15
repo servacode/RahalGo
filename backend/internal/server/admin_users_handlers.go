@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -337,42 +338,93 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	// فتقفز تقييماتُه معها.
 	q := r.URL.Query()
 	tp := pagingFrom(q.Get("t_page"), 10)
+	ap := pagingFrom(q.Get("a_page"), 10)
 	gp := pagingFrom(q.Get("g_page"), 10)
 	rp := pagingFrom(q.Get("r_page"), 10)
 
 	out := struct {
 		Tickets []map[string]any `json:"tickets"`
+		// Against **الشكاوى عليه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
+		Against []map[string]any `json:"tickets_against"`
 		Given   []map[string]any `json:"ratings_given"`
 		Recv    []map[string]any `json:"ratings_received"`
 		AvgRecv *float64         `json:"avg_received"`
 		// **وعددُ كلٍّ منها** — والمعروضُ صفحةٌ منه.
 		TicketsCount int `json:"tickets_count"`
+		AgainstCount int `json:"tickets_against_count"`
 		GivenCount   int `json:"ratings_given_count"`
 		RecvCount    int `json:"ratings_received_count"`
 		PerPage      int `json:"per_page"`
-	}{Tickets: []map[string]any{}, Given: []map[string]any{}, Recv: []map[string]any{}, PerPage: tp.PerPage}
+	}{Tickets: []map[string]any{}, Against: []map[string]any{}, Given: []map[string]any{}, Recv: []map[string]any{}, PerPage: tp.PerPage}
 
-	_ = s.pg.QueryRow(r.Context(),
-		`SELECT count(*) FROM tickets WHERE customer_id = $1`, id).Scan(&out.TicketsCount)
-	rows, err := s.pg.Query(r.Context(), `
-		SELECT t.number, t.subject, t.status, t.compensation, t.created_at
-		FROM tickets t WHERE t.customer_id = $1
-		ORDER BY t.number DESC LIMIT $2 OFFSET $3`, id, tp.PerPage, tp.Offset)
-	if err != nil {
+	// ══════════════════════════════════════════════════════════════════
+	// **وشكاواه وشكاوى عليه قائمتان لا قائمة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+	//
+	// **كان الشرطُ `customer_id` وحدَه** — وهو يقول «تذكرةُ أيّ طلبٍ هذه»
+	// **لا «من كتبها»**. فبلاغُ السائق على الزبون يقع في القائمة نفسِها
+	// **جنبَ شكاوى الزبون** — ولا يفرّقهما إلّا نصُّ العنوان.
+	//
+	// **والحكمان متناقضان**: «عليه ثلاثُ شكاوى» و«اشتكى ثلاثاً». **ومن
+	// يقرأ هذه الشاشةَ هو من يقرّر الإنذارَ أو الحظر.**
+	//
+	// **وكان المحرّكُ يحفظ الفرقَ في ثلاثة أعمدة ولا يُقرأ منها واحد.**
+	//
+	// **وبلاغُ السائق يظهر في ملفّه أيضاً** (`created_by`) — وكان يسكن
+	// ملفَّ زبونٍ آخر، **فمن فتح ملفَّ سائقٍ رفع عشرةَ بلاغاتٍ قرأ «لا
+	// شكاوى».**
+	const ticketCols = `
+		SELECT t.id::text, t.number, t.subject, t.status, t.compensation,
+		       COALESCE(t.reason, ''),
+		       -- **ومن فتحها يُقال** — والعنوانُ وحدَه لا يقوله.
+		       COALESCE(NULLIF(cb.full_name, ''), cb.phone::text, ''),
+		       t.created_at
+		FROM tickets t
+		LEFT JOIN users cb ON cb.id = t.created_by`
+	// **وما يخصّ طلباته** — فتحها هو أو المكتبُ عنه أو سائقٌ على متجرٍ فيها.
+	// **وما كان عليه يُستثنى** فلا يُعدّ مرّتين.
+	const mineCond = `
+		WHERE (t.created_by = $1 OR t.customer_id = $1)
+		  AND t.against_user_id IS DISTINCT FROM $1`
+	const againstCond = ` WHERE t.against_user_id = $1`
+
+	readTickets := func(cond string, pg Paging, into *[]map[string]any, count *int) error {
+		if err := s.pg.QueryRow(r.Context(),
+			`SELECT count(*) FROM tickets t`+cond, id).Scan(count); err != nil {
+			return err
+		}
+		rows, err := s.pg.Query(r.Context(), ticketCols+cond+`
+			ORDER BY t.number DESC LIMIT $2 OFFSET $3`, id, pg.PerPage, pg.Offset)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var tid, subject, status, reason, byName string
+			var num, comp int64
+			var at time.Time
+			if err := rows.Scan(&tid, &num, &subject, &status, &comp,
+				&reason, &byName, &at); err == nil {
+				*into = append(*into, map[string]any{
+					"id": tid, "number": num, "subject": subject, "status": status,
+					"compensation": comp, "reason": reason, "by_name": byName,
+					"created_at": at})
+			}
+		}
+		return rows.Err()
+	}
+	if err := readTickets(mineCond, tp, &out.Tickets, &out.TicketsCount); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	for rows.Next() {
-		var num, comp int64
-		var subject, status string
-		var at time.Time
-		if err := rows.Scan(&num, &subject, &status, &comp, &at); err == nil {
-			out.Tickets = append(out.Tickets, map[string]any{
-				"number": num, "subject": subject, "status": status,
-				"compensation": comp, "created_at": at})
-		}
+	if err := readTickets(againstCond, ap, &out.Against, &out.AgainstCount); err != nil {
+		s.respondErr(w, err)
+		return
 	}
-	rows.Close()
+	var rows pgx.Rows
+	var err error
 
 	// ══════════════════════════════════════════════════════════════════
 	// **والمتجرُ يُضمّ يساراً — ثلاثَ مرّاتٍ في هذا المعالِج**
