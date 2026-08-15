@@ -42,6 +42,15 @@ type User struct {
 	// **والجدولُ يبحث به ولا يُريه.**
 	RepStores   int   `json:"rep_stores"`
 	Commissions int64 `json:"commissions"`
+
+	// **وحالُه كسائق** — (قرارُ المالك ٢٠٢٦-٠٨-١٥: حُذف تبويبُهم).
+	//
+	// **والورديّةُ والطلباتُ المفتوحةُ لم تكونا في أيّ مكانٍ آخر** —
+	// لا في الجدول ولا في ملفّه: **كانتا في شاشتهم وحدَها.**
+	OnShift        bool  `json:"on_shift"`
+	DriverCash     int64 `json:"driver_cash"`
+	OpenOrders     int   `json:"open_orders"`
+	DeliveredToday int   `json:"delivered_today"`
 }
 
 type TokenPair struct {

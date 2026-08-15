@@ -30,6 +30,7 @@ import {
   IconOrder,
   IconLink,
   IconStore,
+  IconDriver,
   CopyCode,
   IconView,
   usePlatform,
@@ -37,6 +38,7 @@ import {
 import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/admin/WalletModal";
+import { CashBoxModal, EndShiftModal } from "@/components/admin/DriverActions";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
@@ -82,6 +84,9 @@ export default function AllAccountsTable() {
   const [createOpen, setCreateOpen] = useState(false);
   const [rolesUser, setRolesUser] = useState<AuthUser | null>(null);
   const [walletUser, setWalletUser] = useState<AuthUser | null>(null);
+  // **ونافذتا السائق** — نُقلتا من شاشتهم كما هما.
+  const [boxFor, setBoxFor] = useState<AuthUser | null>(null);
+  const [endShiftFor, setEndShiftFor] = useState<AuthUser | null>(null);
   const [statusModal, setStatusModal] = useState<{ user: AuthUser; status: string } | null>(null);
   const [view, setView] = useViewMode("users");
 
@@ -255,6 +260,47 @@ export default function AllAccountsTable() {
       hide: (u) => !u.commissions,
       cell: (u) => fmtNum(u.commissions ?? 0),
     },
+    // ══════════════════════════════════════════════════════════════
+    // **وحالُه كسائق — هنا لا في تبويبٍ ثانٍ**
+    // ══════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
+    //
+    // **والورديّةُ والطلباتُ المفتوحةُ لم تكونا في أيّ مكانٍ آخر** —
+    // لا في الجدول ولا في ملفّه: **كانتا في شاشتهم وحدَها**، فلو
+    // حُذفت بلا نقلٍ لَضاعتا.
+    {
+      id: "on_shift",
+      header: m.terms.onShift,
+      icon: <IconDriver />,
+      hide: (u) => !u.roles.includes("driver"),
+      cell: (u) => (
+        <Badge variant={u.on_shift ? "success" : "neutral"}>
+          {u.on_shift ? m.terms.onShift : m.terms.offShift}
+        </Badge>
+      ),
+    },
+    {
+      id: "driver_cash",
+      header: `${m.admin.drivers.cashHeld} (${m.common.currency})`,
+      icon: <IconWallet />,
+      hide: (u) => !u.roles.includes("driver"),
+      cell: (u) => fmtNum(u.driver_cash ?? 0),
+    },
+    {
+      id: "open_orders",
+      header: m.admin.drivers.openOrders,
+      icon: <IconOrder />,
+      hide: (u) => !u.open_orders,
+      cell: (u) => <Badge variant="primary">{fmtNum(u.open_orders ?? 0)}</Badge>,
+    },
+    {
+      id: "delivered_today",
+      header: m.admin.drivers.deliveredToday,
+      icon: <IconOrder />,
+      hide: (u) => !u.roles.includes("driver"),
+      cell: (u) => fmtNum(u.delivered_today ?? 0),
+    },
     {
       id: "status",
       header: m.admin.users.table.status,
@@ -417,6 +463,27 @@ export default function AllAccountsTable() {
                     <IconWallet size={15} />
                     {m.admin.users.wallet}
                   </Button>
+                  {/* **وأفعالُ السائق مع سائقٍ وحدَه** — (قرارُ المالك
+                      ٢٠٢٦-٠٨-١٥). **و«إنهاءُ الورديّة» و«التسوية»
+                      يُفعلان على عجل**: من فتح ملفَّه ليضغط زرّاً
+                      واحداً دفع ثمنَ صفحةٍ كاملة. */}
+                  {u.roles.includes("driver") && (
+                    <>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setBoxFor(u)}
+                        className="flex items-center gap-1.5"
+                      >
+                        <IconWallet size={15} />
+                        {m.admin.drivers.cashBox}
+                      </Button>
+                      {u.on_shift && (
+                        <Button variant="ghost" onClick={() => setEndShiftFor(u)}>
+                          {m.admin.drivers.endShift}
+                        </Button>
+                      )}
+                    </>
+                  )}
                   <Button
                     variant="secondary"
                     onClick={() => setRolesUser(u)}
@@ -487,6 +554,24 @@ export default function AllAccountsTable() {
         }}
       />
       <ManageRolesModal user={rolesUser} onClose={() => setRolesUser(null)} onChanged={load} />
+      {boxFor && (
+        <CashBoxModal
+          driver={boxFor}
+          canSettle={isAdmin || !!me?.roles.includes("finance")}
+          onClose={() => setBoxFor(null)}
+          onChanged={load}
+        />
+      )}
+      {endShiftFor && (
+        <EndShiftModal
+          driver={endShiftFor}
+          onClose={() => setEndShiftFor(null)}
+          onDone={() => {
+            setEndShiftFor(null);
+            void load();
+          }}
+        />
+      )}
       {walletUser && <WalletModal user={walletUser} onClose={() => setWalletUser(null)} isAdmin={isAdmin || !!me?.roles.includes("finance")} />}
 
       {/* **ونافذةُ السبب تُرسَم** — (شهده المالك ٢٠٢٦-٠٨-١٠: «زرُّ إيقاف

@@ -1,53 +1,58 @@
 "use client";
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **أفعالُ السائق — صندوقُه وتسويتُه وإنهاءُ ورديّته**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (نُقلت من شاشة السائقين حين حُذفت ٢٠٢٦-٠٨-١٥ — **بنوافذها ونداءاتها
+ *  كما هي**: النقلُ لا يُضيّع شيئاً، **وحذفُ ملفٍّ وإعادةُ كتابته من
+ *  الذاكرة هو ما يُضيّع.**)
+ *
+ * # ولماذا في بطاقة الحساب لا في ملفّه
+ *
+ * **«إنهاءُ الورديّة» و«التسوية» يُفعلان على عجل**: سائقٌ نسي ورديّتَه
+ * بعد منتصف الليل، أو بيده مالٌ ينتظر. **ومن فتح ملفَّه ليضغط زرّاً
+ * واحداً دفع ثمنَ صفحةٍ كاملة.**
+ *
+ * # ولا تعرف هذه النوافذُ من السائق إلّا معرّفَه واسمَه
+ *
+ * **فتُنادى من أيّ شاشة** — ولو حملت نوعَ صفِّ السائق لَما استُعملت
+ * إلّا حيث ذاك الصفّ.
+ */
+
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtTime, fmtMoney } from "@rahalgo/i18n";
 import {
   Alert,
-  useLiveRefresh,
-  PageHeader,
   Button,
   Input,
   Badge,
   Modal,
-  DataView,
-  ViewToggle,
-  useViewMode,
-  type DataColumn,
-  IconDriver,
-  IconPhone,
-  IconUser,
-  IconWallet,
-  IconOrder,
-  IconStatus,
   Money,
+  IconWallet,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 
-interface Driver {
+/** **ومن تُفعل به** — معرّفٌ واسمٌ لا صفُّ جدول. */
+export interface DriverRef {
   id: string;
-  phone: string;
   full_name: string;
-  status: string;
-  on_shift: boolean;
-  shift_started_at: string | null;
-  cash_held: number;
-  open_orders: number;
-  delivered_today: number;
+  /** **ويُعرض حين لا اسمَ له** — حسابٌ بلا اسمٍ يُعرف برقمه. */
+  phone?: string;
 }
 
 interface CashEntry {
-  id: number;
-  amount: number;
+  id: string;
   kind: string;
-  ref: string;
+  amount: number;
   note: string;
   created_at: string;
 }
 
+/** **ورسالةُ الخادم تُترجَم بمفتاحها** — نُقلت مع النوافذ كما هي. */
 function translateKey(key: string): string {
   let node: unknown = m;
   for (const part of key.split(".")) {
@@ -56,191 +61,9 @@ function translateKey(key: string): string {
   }
   return typeof node === "string" ? node : m.errors.internal;
 }
+
 function errText(err: unknown): string {
   return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
-}
-
-export default function DriversTable() {
-  const { user: me } = useAuth();
-  const canSettle = !!me?.roles.some((r) => r === "admin" || r === "finance");
-
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [cashLimit, setCashLimit] = useState(0);
-  const [error, setError] = useState("");
-  const [boxFor, setBoxFor] = useState<Driver | null>(null);
-  /** **السائقُ الذي يُغلَق دوامُه** — بكلمةٍ تصله، لا بصمت. */
-  const [endShiftFor, setEndShiftFor] = useState<Driver | null>(null);
-  const [view, setView] = useViewMode("drivers");
-
-  const load = useCallback(async () => {
-    try {
-      const res = await api<{ drivers: Driver[]; cash_limit: number }>("/api/v1/admin/drivers");
-      setDrivers(res.drivers);
-      setCashLimit(res.cash_limit);
-      setError("");
-    } catch (err) {
-      setError(errText(err));
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useLiveRefresh(["wallet", "order"], load);
-
-  useLiveRefresh(["order", "account", "wallet"], load);
-
-  function cashBadge(d: Driver) {
-    const ratio = cashLimit > 0 ? d.cash_held / cashLimit : 0;
-    const variant = ratio >= 1 ? "danger" : ratio >= 0.7 ? "warning" : "success";
-    return (
-      <span className="flex flex-col items-end gap-0.5 sm:items-start">
-        <Badge variant={variant}>
-          <Money value={d.cash_held} />
-        </Badge>
-        {ratio >= 1 && <span className="text-xs text-danger">{m.admin.drivers.overLimit}</span>}
-        {ratio >= 0.7 && ratio < 1 && (
-          <span className="text-xs text-warning">{m.admin.drivers.nearLimit}</span>
-        )}
-      </span>
-    );
-  }
-
-  const columns: DataColumn<Driver>[] = [
-    {
-      id: "name",
-      header: m.admin.users.table.name,
-      icon: <IconUser />,
-      primary: true,
-      cell: (d) => d.full_name || "—",
-    },
-    {
-      id: "phone",
-      header: m.admin.users.table.phone,
-      icon: <IconPhone />,
-      primary: true,
-      cell: (d) => (
-        <span dir="ltr" className="font-medium">
-          {d.phone}
-        </span>
-      ),
-    },
-    {
-      // الدوام أوّل ما تسأل عنه العمليات: «من يعمل الآن؟». وكانت تسأله بالهاتف
-      // بينما الجواب في قاعدتها منذ أن بُني علَم السائق.
-      id: "shift",
-      header: m.terms.onShift,
-      icon: <IconDriver />,
-      primary: true,
-      cell: (d) =>
-        d.on_shift ? (
-          <Badge variant="success">
-            {d.shift_started_at ? fmtTime(d.shift_started_at) : m.terms.onShift}
-          </Badge>
-        ) : (
-          <Badge variant="neutral">{m.terms.offShift}</Badge>
-        ),
-    },
-    {
-      id: "cash",
-      header: m.admin.drivers.cashHeld,
-      icon: <IconWallet />,
-      cell: cashBadge,
-    },
-    {
-      id: "open",
-      header: m.admin.drivers.openOrders,
-      icon: <IconOrder />,
-      cell: (d) => (d.open_orders > 0 ? <Badge variant="primary">{d.open_orders}</Badge> : "—"),
-    },
-    {
-      id: "today",
-      header: m.admin.drivers.deliveredToday,
-      cell: (d) => fmtNum(d.delivered_today),
-    },
-    {
-      id: "status",
-      header: m.admin.users.table.status,
-      icon: <IconStatus />,
-      cell: (d) => (
-        <Badge variant={d.status === "active" ? "success" : "danger"}>
-          {d.status === "active" ? m.admin.users.active : m.admin.users.blocked}
-        </Badge>
-      ),
-    },
-  ];
-
-  return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader icon={IconDriver} title={m.admin.drivers.title} />
-        <div className="flex items-center gap-3">
-          <Badge variant="neutral">
-            {m.admin.drivers.cashLimit}: <Money value={cashLimit} />
-          </Badge>
-          <ViewToggle
-            view={view}
-            onChange={setView}
-            tableLabel={m.common.viewTable}
-            cardsLabel={m.common.viewCards}
-          />
-        </div>
-      </div>
-
-      {error && (
-        <Alert className="mb-4">{error}</Alert>
-      )}
-
-      <DataView
-        items={drivers}
-        getKey={(d) => d.id}
-        columns={columns}
-        view={view}
-        empty={m.admin.drivers.empty}
-        actions={(d) => (
-          <>
-            <Button variant="secondary" onClick={() => setBoxFor(d)} className="flex items-center gap-1.5">
-              <IconWallet size={15} />
-              {m.admin.drivers.cashBox}
-            </Button>
-            {/* **إغلاقُ دوامٍ نُسي.**
-
-                علَمُ الدوام بيد السائق وحدَه، **ومن ذهب إلى بيته ونسي أن
-                يُطفئه يبقى في الدور**: يُعرض عليه كلُّ طلبٍ خمساً وأربعين
-                ثانيةً ثمّ يمضي — **فكلُّ طلبٍ يتأخّر بمقدار غيابه.**
-
-                **ولا يُفتَح من هنا**: فتحُ الدوام إقرارٌ من إنسانٍ بأنّه جاهز،
-                والمنصةُ تعلم أنّه لا يستجيب ولا تعلم أنّه جاهز. */}
-            {d.on_shift && d.open_orders === 0 && (
-              <Button variant="ghost" onClick={() => setEndShiftFor(d)}>
-                {m.admin.drivers.endShift}
-              </Button>
-            )}
-          </>
-        )}
-      />
-
-      {boxFor && (
-        <CashBoxModal
-          driver={boxFor}
-          canSettle={canSettle}
-          onClose={() => setBoxFor(null)}
-          onChanged={load}
-        />
-      )}
-      {endShiftFor && (
-        <EndShiftModal
-          driver={endShiftFor}
-          onClose={() => setEndShiftFor(null)}
-          onDone={() => {
-            setEndShiftFor(null);
-            void load();
-          }}
-        />
-      )}
-    </div>
-  );
 }
 
 /**
@@ -250,12 +73,12 @@ export default function DriversTable() {
  * طلباتِ اليوم فيمضي إلى بيته. **والكلمةُ ليست تجميلاً: هي الفرقُ بين إجراءٍ
  * وبين عطبٍ يبدو عشوائياً.**
  */
-function EndShiftModal({
+export function EndShiftModal({
   driver,
   onClose,
   onDone,
 }: {
-  driver: Driver;
+  driver: DriverRef;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -302,13 +125,13 @@ function EndShiftModal({
   );
 }
 
-function CashBoxModal({
+export function CashBoxModal({
   driver,
   canSettle,
   onClose,
   onChanged,
 }: {
-  driver: Driver;
+  driver: DriverRef;
   canSettle: boolean;
   onClose: () => void;
   onChanged: () => Promise<void> | void;

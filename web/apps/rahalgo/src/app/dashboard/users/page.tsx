@@ -40,20 +40,18 @@ import {
   Tabs,
   type TabDef, IconUsers, IconUser, IconStore, IconDriver, IconLink } from "@rahalgo/ui";
 import AllAccountsTable from "@/components/admin/accounts/all";
-import DriversTable from "@/components/admin/accounts/drivers";
 import MerchantsTable from "@/components/admin/accounts/merchants";
 
 const m = getMessages(defaultLocale);
 const T = m.admin.users.groupTabs;
 
-type Tab = "all" | "merchants" | "drivers";
+type Tab = "all" | "merchants";
 
 // **والأيقونةُ نوعٌ لا عنصرٌ مُنشأ** — فيقرّر `Tabs` مقاسَها، **ومقاسٌ
 // يُكتب في كلّ بندٍ يفترق يوماً.**
 const TABS: TabDef<Tab>[] = [
   { key: "all", label: T.all, icon: IconUsers },
   { key: "merchants", label: T.merchants, icon: IconStore },
-  { key: "drivers", label: T.drivers, icon: IconDriver },
 ];
 
 export default function AccountsPage() {
@@ -67,7 +65,6 @@ export default function AccountsPage() {
           **ومن يريد قائمةَ الزبائن لا ينتظر قائمةَ المتاجر.** */}
       {tab === "all" && <AllAccountsTable />}
       {tab === "merchants" && <MerchantsTable />}
-      {tab === "drivers" && <DriversTable />}
     </div>
   );
 }

@@ -130,7 +130,10 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 		       COALESCE(w.balance, 0),
 		       COALESCE(oc.cnt, 0), COALESCE(oc.spent, 0), oc.last_at,
 		       -- **وأرقامُه كمندوب** — متاجرُ جلبها وعمولاتٌ نالها.
-		       COALESCE(rp.stores, 0), COALESCE(cm.total, 0)
+		       COALESCE(rp.stores, 0), COALESCE(cm.total, 0),
+		       -- **وحالُه كسائق** — ورديّتُه ونقدُه وما في يده وما سلّم اليوم.
+		       u.on_shift, COALESCE(cb.held, 0),
+		       COALESCE(dv.open_cnt, 0), COALESCE(dv.today_cnt, 0)
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id = u.id
 		LEFT JOIN media am ON am.id = u.avatar_media_id
@@ -155,9 +158,23 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 		    FROM wallet_transactions t WHERE t.kind = 'commission'
 		    GROUP BY t.user_id
 		) cm ON cm.uid = u.id
+		LEFT JOIN driver_cash_boxes cb ON cb.driver_id = u.id
+		LEFT JOIN (
+		    SELECT o.driver_id AS uid,
+		           count(*) FILTER (WHERE o.closed_at IS NULL) AS open_cnt,
+		           -- **وسُلّم اليومَ لا سُلّم كلَّه** — رقمُ اليوم يقول
+		           -- «أيعمل الآن؟»، **والكلُّ يقول «كم عمل في عمره»**
+		           -- وهو سؤالٌ آخرُ موضعُه ملفُّه.
+		           count(*) FILTER (
+		               WHERE o.status = 'delivered'
+		                 AND o.delivered_at >= date_trunc('day', now())
+		           ) AS today_cnt
+		    FROM orders o WHERE o.driver_id IS NOT NULL
+		    GROUP BY o.driver_id
+		) dv ON dv.uid = u.id
 		`+where+`
 		GROUP BY u.id, am.thumb_path, w.balance, oc.cnt, oc.spent, oc.last_at,
-		         rp.stores, cm.total
+		         rp.stores, cm.total, u.on_shift, cb.held, dv.open_cnt, dv.today_cnt
 		HAVING NOT bool_or(ur.role_code = 'admin')
 		ORDER BY u.created_at DESC
 		LIMIT $5 OFFSET $6`, query, role, onlineOnly, status, limit, offset)
@@ -171,7 +188,8 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 		var u User
 		if err := rows.Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &u.HasPassword, &u.InviteCode, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles,
 			&u.Balance, &u.OrdersCount, &u.OrdersSpent, &u.LastOrderAt,
-			&u.RepStores, &u.Commissions); err != nil {
+			&u.RepStores, &u.Commissions,
+			&u.OnShift, &u.DriverCash, &u.OpenOrders, &u.DeliveredToday); err != nil {
 			return nil, 0, err
 		}
 		u.AvatarURL = media.URLForPtr(u.AvatarURL)

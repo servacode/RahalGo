@@ -58,6 +58,11 @@ export interface AuthUser {
   /** **وأرقامُه كمندوب** — ورمزُ دعوته في `invite_code` أعلاه. */
   rep_stores?: number;
   commissions?: number;
+  /** **وحالُه كسائق** — ورديّتُه ونقدُه وما في يده وما سلّم اليوم. */
+  on_shift?: boolean;
+  driver_cash?: number;
+  open_orders?: number;
+  delivered_today?: number;
 }
 
 export interface TokenPair {
