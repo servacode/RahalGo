@@ -39,7 +39,7 @@ import {
 import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/admin/WalletModal";
-import { MerchantModal, CategoriesModal } from "@/components/admin/accounts/merchants";
+import { MerchantModal, CategoriesModal } from "@/components/admin/MerchantModal";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";

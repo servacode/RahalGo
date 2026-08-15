@@ -33,7 +33,7 @@ import { Button, Alert, IconEdit, IconDate, IconOrder as IconMenu } from "@rahal
 import { api, ApiError } from "@/lib/api";
 import { HoursModal } from "@/components/admin/HoursModal";
 import ViolationsModal from "@/components/admin/ViolationsModal";
-import { MerchantModal, type Merchant } from "@/components/admin/accounts/merchants";
+import { MerchantModal, type Merchant } from "@/components/admin/MerchantModal";
 
 const m = getMessages(defaultLocale);
 const M = m.admin.merchants;

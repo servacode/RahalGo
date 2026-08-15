@@ -1129,15 +1129,7 @@
       },
       "roleReasonTitle": "سبب تغيير الدور",
       "roleReasonLabel": "السبب (يُحفظ في السجل)",
-      "export": "تصدير CSV",
-      "groupTabs": {
-        "all": "كل الحسابات",
-        "customers": "الزبائن",
-        "merchants": "المتاجر",
-        "drivers": "السائقون",
-        "reps": "المندوبون"
-      }
-    },
+      "export": "تصدير CSV"    },
     "merchants": {
       "title": "المتاجر",
       "searchPlaceholder": "بحث باسم المتجر أو الهاتف…",
