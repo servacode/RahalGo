@@ -32,7 +32,7 @@ object Backend {
      * **ولو أُريد المحلّي يوما**: المحاكي يصل جهاز التطوير على
      * `10.0.2.2` لا `localhost` — الأخير هو المحاكي نفسه.
      */
-    const val BASE_URL = "https://rahalgo-api.onrender.com"
+    const val BASE_URL = "https://api.rahalgo.com"
 
     /**
      * **نوع العميل — كما تعرفه قائمة المحرّك المغلقة.**

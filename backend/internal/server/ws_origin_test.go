@@ -59,7 +59,7 @@ func TestWSOrigins_HandshakeReadsTheSharedSource(t *testing.T) {
 }
 
 func TestWSOrigins_FollowConfiguredWebOrigins(t *testing.T) {
-	want := []string{"https://rahalgo-web.onrender.com", "https://rahalgo.com"}
+	want := []string{"https://www.rahalgo.com", "https://rahalgo.com"}
 	srv := &Server{
 		cfg:    &config.Config{Env: "production", WebOrigins: want},
 		logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError + 1})),

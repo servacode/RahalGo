@@ -1,0 +1,113 @@
+# ══════════════════════════════════════════════════════════════════════
+#  رحّال غو — الإنتاج على خادمٍ واحد
+# ══════════════════════════════════════════════════════════════════════
+#
+# **وستُّ حاويات**: بوّابةٌ · محرّكٌ · ويبٌ · قاعدةٌ · ذاكرةٌ · مسارات.
+#
+# # وما تعلّمناه من Render
+#
+# **القاعدةُ تُحذف بعد ثلاثين يوما** — وهنا على قرصٍ يبقى.
+# **والصورُ تتبخّر مع كلّ نشرة** — وهنا في حجمٍ اسمُه `uploads`.
+# **والخدمةُ تنام بعد ربع ساعة** — وهنا لا تنام، **ولذلك سيظهر الطريقُ
+# على خريطة السائق**: كان OSRM ينام فينقضي انتظارُ المحرّك (أربعُ ثوانٍ)
+# قبل أن يستيقظ (إحدى وعشرون).
+#
+# # ولا منفذَ مكشوفٌ إلّا اثنان
+#
+# **٨٠ و٤٤٣ في البوّابة وحدَها** — والقاعدةُ والذاكرةُ وOSRM على شبكةٍ
+# داخليّة. **ومنفذُ قاعدةٍ مكشوفٌ للإنترنت يُمسح خلال ساعات.**
+
+name: rahalgo
+
+services:
+  # ── البوّابة ────────────────────────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+
+  # ── المحرّك ─────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ../backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      HTTP_ADDR: ":8080"
+      DATABASE_URL: postgres://rahalgo:${DB_PASSWORD}@postgres:5432/rahalgo?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_PHONE: ${ADMIN_PHONE}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      WEB_ORIGINS: https://rahalgo.com,https://www.rahalgo.com
+      UPLOADS_DIR: /app/uploads
+      # **ومحرّكُ المسارات في الشبكة الداخليّة** — لا يناديه أحدٌ سواه.
+      OSRM_URL: http://osrm:5000
+      GEOCODER_URL: https://nominatim.openstreetmap.org
+      OTP_PROVIDER: ${OTP_PROVIDER:-dev}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # ── الويب ───────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ../web
+      args:
+        NEXT_PUBLIC_API_URL: https://api.rahalgo.com
+        NEXT_PUBLIC_SITE_URL: https://rahalgo.com
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  # ── القاعدة ─────────────────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rahalgo
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: rahalgo
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rahalgo -d rahalgo"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ── الذاكرة ─────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+
+  # ── المسارات ────────────────────────────────────────────────────────
+  #
+  # **تحمل خريطةَ سوريا في ذاكرتها** — وبناؤها أوّلَ مرّةٍ يطول.
+  osrm:
+    build:
+      context: ../routing
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+  caddy_data:
+  caddy_config:

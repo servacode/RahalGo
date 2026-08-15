@@ -1,21 +1,15 @@
 import type { NextConfig } from "next";
 
 /**
- * ══════════════════════════════════════════════════════════════════════
- * **تطبيعُ العناوين — موضعٌ واحدٌ قبل أن تُخبَز**
- * ══════════════════════════════════════════════════════════════════════
+ * **إعدادُ الويب — وعنوانُ المحرّك يُستبدَل وقتَ البناء.**
  *
- * (قرارُ المالك ٢٠٢٦-٠٨-١٠: «نرفعه على Render للتجربة».)
+ * **و`NEXT_PUBLIC_*` تُستبدَل نصّاً وقتَ البناء لا وقتَ التشغيل** — فما
+ * يُكتب هنا هو ما يصل متصفّحَ الزائر. **ومن مرّرها بيئةً وقتَ التشغيل
+ * وجد المتصفّحَ ينادي `localhost:8080`** وهو على هاتفه.
  *
- * **ومنصّةُ الاستضافة تعطي اسمَ مضيفٍ لا رابطاً كاملاً**: مواصفةُ Render
- * تسمح بـ`host` (`rahalgo-api.onrender.com`) **ولا تعرف `url` أصلاً.**
- *
- * **وعنوانٌ بلا مخطّطٍ يُنادى `/rahalgo-api.onrender.com/api/v1/...`** —
- * مساراً نسبيّاً في الموقع نفسِه، **فيردّ ٤٠٤ ولا شيءَ يقول لماذا.**
- *
- * **فيُكمَّل هنا مرّةً واحدة.** ولا يُكتب هذا الشرطُ في كلّ قارئ:
- * `NEXT_PUBLIC_*` تُستبدَل نصّاً وقتَ البناء، **فما يُكتب هنا هو ما يصل
- * كلَّ ملفّ.**
+ * **ويُشترط رابطٌ كاملٌ بمخطّطه** — **وعنوانٌ بلا `https://` يُنادى
+ * مساراً في الموقع نفسِه** (`/api.rahalgo.com/api/v1/...`) فيردّ ٤٠٤،
+ * ولا يظهر في أيّ سجلّ أنّ العنوانَ هو العطب.
  */
 function asURL(raw: string | undefined, fallback: string): string {
   const v = (raw ?? "").trim();
@@ -30,7 +24,7 @@ function asURL(raw: string | undefined, fallback: string): string {
  * **ومن رفع على غير Render يضبط `NEXT_PUBLIC_SITE_URL`** — وهي الأسبق.
  */
 const SITE = asURL(
-  process.env.NEXT_PUBLIC_SITE_URL || process.env.RENDER_EXTERNAL_URL,
+  process.env.NEXT_PUBLIC_SITE_URL,
   "http://localhost:3003",
 );
 
@@ -89,7 +83,7 @@ if (process.env.NODE_ENV === "production") {
   if (!host.includes(".") && host !== "localhost") {
     throw new Error(
       `NEXT_PUBLIC_API_URL يشير إلى اسمٍ داخليٍّ لا يعرفه المتصفّح: ${raw} — ` +
-        "اكتب العنوانَ العامَّ كاملاً (مثل https://rahalgo-api.onrender.com).",
+        "اكتب العنوانَ العامَّ كاملاً (مثل https://api.rahalgo.com).",
     );
   }
 }

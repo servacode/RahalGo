@@ -20,7 +20,7 @@ object Backend {
      *
      * (قرار المالك ٢٠٢٦-٠٨-١١: «بحسابي الحقيقي، ما بدنا نرجع للمحلّي».)
      */
-    const val BASE_URL = "https://rahalgo-api.onrender.com"
+    const val BASE_URL = "https://api.rahalgo.com"
 
     /**
      * **نوعُ العميل — كما تعرفه قائمةُ المحرّك المغلقة.**
