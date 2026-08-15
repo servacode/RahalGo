@@ -654,8 +654,9 @@ export function MerchantModal({
   const [catsError, setCatsError] = useState("");
   useEffect(() => {
     if (cats.length > 0) return;
-    void api<{ categories: Category[] }>("/api/v1/admin/categories")
-      .then((r) => setCats(r.categories ?? []))
+    // **وهي مصفوفةٌ لا كائن** — انظر `CategoriesModal`.
+    void api<Category[]>("/api/v1/admin/categories")
+      .then((r) => setCats(r ?? []))
       // **وفشلُ الجلب يُقال لا يُبتلع** — **وقائمةٌ فارغةٌ تُقرأ «لا
       // تصنيفاتِ في المنصّة»** وهي في الحقيقة نداءٌ سقط.
       .catch((e) => setCatsError(errText(e)));
@@ -975,8 +976,10 @@ export function CategoriesModal({
   const [loadErr, setLoadErr] = useState("");
   const reload = useCallback(async () => {
     try {
-      const r = await api<{ categories: Category[] }>("/api/v1/admin/categories");
-      setRows(r.categories ?? []);
+      // **والنقطةُ تردّ مصفوفةً لا كائناً** — **وقراءتُها `r.categories`
+      // تُعطي `undefined` فتُقرأ قائمةً فارغةً بلا خطأ**، فيرى فاتحُها
+      // «لا تصنيفات» وهي في القاعدة. (قِيس ٢٠٢٦-٠٨-١٥.)
+      setRows(await api<Category[]>("/api/v1/admin/categories"));
     } catch (e) {
       setLoadErr(errText(e));
     }
