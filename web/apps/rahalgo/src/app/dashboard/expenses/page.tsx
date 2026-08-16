@@ -104,15 +104,24 @@ export default function ExpensesPage() {
   const [adding, setAdding] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
   const [error, setError] = useState("");
+  /** **وسببُ الخادم يُعرض كما قاله** — [ReloadState]. */
+  const [why, setWhy] = useState("");
 
   const load = useCallback(() => {
     api<Data>(
       `/api/v1/admin/expenses?from=${range.from}&to=${range.to}&page=${page}`,
     )
-      .then(setData)
-      // **والفشلُ ليس فراغاً** — **و«لا مصروفات» على قراءةٍ فشلت تُقرأ
-      // شهراً بلا نفقة.**
-      .catch(() => setData("failed"));
+      .then((d) => {
+        setWhy("");
+        setData(d);
+      })
+      // **والفشلُ ليس فراغاً — وسببُه يُقال.** **و«لا مصروفات» على قراءةٍ
+      // فشلت تُقرأ شهراً بلا نفقة**، **و«لا يوجد اتصال» على خطأٍ داخليٍّ
+      // يبعث صاحبَها يفتّش في شبكته.** (وقع ٢٠٢٦-٠٨-١٦.)
+      .catch((e) => {
+        setWhy(errorText(e));
+        setData("failed");
+      });
   }, [range, page]);
 
   const loadCats = useCallback(() => {
@@ -124,7 +133,7 @@ export default function ExpensesPage() {
   useEffect(load, [load]);
   useEffect(loadCats, [loadCats]);
 
-  if (data === "failed") return <ReloadState onRetry={load} />;
+  if (data === "failed") return <ReloadState onRetry={load} label={why || undefined} />;
   if (!data) return <LoadingState />;
 
   return (

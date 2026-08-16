@@ -146,9 +146,18 @@ func (s *Server) handleListExpenses(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والملغى يُقصى من الثلاثة** — **وقيدٌ أُلغيَ ويُعدّ في المجموع مالٌ
 	// يُحسب مرّتين.**
+	//
+	// **ومن سجّل القيدَ يُوصل هنا لا في القائمة وحدَها** — **وأوّلُ كتابةٍ
+	// تركته خارجَ الجسم المشترك فردَّ الخادمُ `missing FROM-clause entry
+	// for table "u"` عند كلّ فتحةٍ للقسم.** (كشفه المالكُ على شاشته
+	// ٢٠٢٦-٠٨-١٦.)
+	//
+	// **ووصلةٌ يساريّةٌ إلى واحدٍ لا تضاعف صفّاً** — فالعدُّ والمجموعُ لا
+	// يتبدّلان بها.
 	const scope = `
 		FROM expenses e
 		JOIN expense_categories c ON c.id = e.category_id
+		LEFT JOIN users u ON u.id = e.created_by
 		WHERE e.voided_at IS NULL
 		  AND ($1 = '' OR e.spent_at >= $1::date)
 		  AND ($2 = '' OR e.spent_at <= $2::date)`

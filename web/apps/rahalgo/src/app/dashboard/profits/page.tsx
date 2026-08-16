@@ -22,7 +22,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   Tabs,
   type TabDef,
@@ -85,16 +85,31 @@ export default function ProfitsPage() {
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const [data, setData] = useState<unknown | null | "failed">(null);
+  /** **وسببُ الخادم يُعرض كما قاله** — [ReloadState]. */
+  const [why, setWhy] = useState("");
 
   const load = useCallback(() => {
     const qs = new URLSearchParams({ tab, page: String(page) });
     if (from) qs.set("from", from);
     if (to) qs.set("to", to);
     api<unknown>(`/api/v1/admin/profits?${qs}`)
-      .then(setData)
-      // **والفشلُ ليس فراغاً** — **و«لا أرباح» على قراءةٍ فشلت تُقرأ شهراً
-      // بلا دخل.**
-      .catch(() => setData("failed"));
+      .then((d) => {
+        setWhy("");
+        setData(d);
+      })
+      // ══════════════════════════════════════════════════════════════
+      // **والفشلُ ليس فراغاً — وسببُه يُقال**
+      // ══════════════════════════════════════════════════════════════
+      //
+      // **و«لا أرباح» على قراءةٍ فشلت تُقرأ شهراً بلا دخل.**
+      //
+      // **وأوّلُ كتابةٍ ابتلعت السبب**: ردَّ الخادمُ خطأً داخليّاً
+      // **وقالت الشاشةُ «لا يوجد اتصال بالإنترنت»** — فبحث المالكُ في
+      // شبكته والعطبُ في استعلام. (٢٠٢٦-٠٨-١٦.)
+      .catch((e) => {
+        setWhy(errorText(e, m));
+        setData("failed");
+      });
   }, [tab, page, from, to]);
 
   useEffect(load, [load]);
@@ -152,7 +167,7 @@ export default function ProfitsPage() {
       </div>
 
       {data === "failed" ? (
-        <ReloadState onRetry={load} />
+        <ReloadState onRetry={load} label={why || undefined} />
       ) : data === null ? (
         <LoadingState />
       ) : tab === "platform" ? (

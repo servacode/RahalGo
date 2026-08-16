@@ -118,3 +118,48 @@ func TestProfits_NetMatchesTreasuryLedger(t *testing.T) {
 		t.Fatalf("الصافي %d لا 47000 (100000-20000-30000-5000+2000)", d.Net)
 	}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//
+//	**وكلُّ تبويبٍ يُنادى — لا الأوّلُ وحدَه**
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وهذا ما لم يكن**: فحصُ الصافي أعلاه ينادي `tab=platform` وحدَه، **وكانت
+// تبويباتُ الزبائن والمناديب والسائقين تردّ ٥٠٠** — استعلامُها يشير إلى
+// `earned` و`spent` ولم يكونا موصولين في الجسم:
+//
+//	missing FROM-clause entry for table "e" (SQLSTATE 42P01)
+//
+// **وكشفه المالكُ على شاشته بعد الرفع لا الفحص** (٢٠٢٦-٠٨-١٦).
+//
+// # ولماذا فحصٌ لا انتباه
+//
+// **خمسةُ استعلاماتٍ خلفَ خمس ضغطاتٍ لا يجمعها بناءٌ ولا تحقّقُ أنواع** —
+// **وخطأُ SQL لا يظهر إلّا وقتَ النداء.** فمن غيّر عموداً غداً يعرف هنا.
+func TestProfits_EveryTabAnswers(t *testing.T) {
+	f := newDriverFixture(t, 0)
+	actor, _, _ := twoCustomers(t, f)
+
+	for _, tab := range []string{"platform", "customers", "reps", "drivers", "merchants"} {
+		req := httptest.NewRequest(http.MethodGet,
+			"/x?tab="+tab+"&from=2026-08-01&to=2026-08-31", nil)
+		c := context.WithValue(req.Context(), ctxUserID, actor)
+		c = context.WithValue(c, ctxRoles, []string{"admin"})
+		w := httptest.NewRecorder()
+		f.srv.handleProfits(w, req.WithContext(c))
+		if w.Code != 200 {
+			t.Fatalf("تبويبُ %q ردَّ %d — %s", tab, w.Code, w.Body.String())
+		}
+		// **ومدًى مفتوحٌ يُجرَّب أيضاً** — **وشرطُ التاريخ يخفي خطأً في
+		// فرعٍ لا يُسلك.**
+		req2 := httptest.NewRequest(http.MethodGet, "/x?tab="+tab, nil)
+		c2 := context.WithValue(req2.Context(), ctxUserID, actor)
+		c2 = context.WithValue(c2, ctxRoles, []string{"admin"})
+		w2 := httptest.NewRecorder()
+		f.srv.handleProfits(w2, req2.WithContext(c2))
+		if w2.Code != 200 {
+			t.Fatalf("تبويبُ %q بمدًى مفتوحٍ ردَّ %d — %s", tab, w2.Code, w2.Body.String())
+		}
+	}
+}

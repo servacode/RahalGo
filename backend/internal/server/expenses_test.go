@@ -154,6 +154,18 @@ func TestExpenses_LeaveTreasuryAndStayOutOfLosses(t *testing.T) {
 	c := context.WithValue(req.Context(), ctxRoles, []string{"admin"})
 	lw := httptest.NewRecorder()
 	f.srv.handleListExpenses(lw, req.WithContext(c))
+	// ══════════════════════════════════════════════════════════════════
+	// **والحالةُ تُفحص قبل الأرقام**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وبدونها كان هذا الفحصُ أخضرَ والقسمُ معطوب**: ردَّ الخادمُ خطأً
+	// (`missing FROM-clause entry for table "u"`)، **فجاء `total` صفراً في
+	// غلاف الخطأ — وهو ما ينتظره الفحصُ تماماً.**
+	//
+	// **فمرَّ على ردٍّ ٥٠٠**، وكشفه المالكُ على شاشته لا الفحصُ (٢٠٢٦-٠٨-١٦).
+	if lw.Code != 200 {
+		t.Fatalf("القائمةُ ردَّت %d — %s", lw.Code, lw.Body.String())
+	}
 	var list struct {
 		Data struct {
 			Total       int   `json:"total"`

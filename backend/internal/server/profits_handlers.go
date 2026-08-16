@@ -177,24 +177,21 @@ func (s *Server) profitsParties(w http.ResponseWriter, r *http.Request, from, to
 		earnKinds, role = `'driver_earning','reward'`, "driver"
 	}
 
-	// **والشرطُ واحدٌ للعدّ وللقائمة.**
-	scope := `
-		FROM users u
-		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = '` + role + `'
-		WHERE u.deleted_at IS NULL`
-
-	var count int
-	if err := s.pg.QueryRow(r.Context(), `SELECT count(*)`+scope).Scan(&count); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-
-	// **ومن لم يكسب ولم ينفق لا يُعرض** — **وقائمةٌ فيها ألفُ صفرٍ لا
-	// تُقرأ**، ويضيع فيها من كسب.
-	rows, err := s.pg.Query(r.Context(), `
+	// ══════════════════════════════════════════════════════════════════
+	// **وجسمٌ واحدٌ يحمل الجداولَ والشرطَ معاً — للعدّ وللقائمة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وأوّلُ كتابةٍ فصلت الجداولَ عن الوصلات**: كان `scope` يحمل
+	// `FROM users u` وحدَه، **والقائمةُ تشير إلى `e` و`sp` وليسا فيه** —
+	// فردَّ الخادمُ `missing FROM-clause entry for table "e"` عند كلّ نداء.
+	// (كشفه المالكُ على شاشته ٢٠٢٦-٠٨-١٦.)
+	//
+	// **والعدُّ يحمل الشرطَ نفسَه** — **وعدٌّ يقول ألفاً وقائمةٌ تعرض
+	// ثلاثةً يجعل التنقّلَ يعد بصفحاتٍ فارغة.**
+	ctes := `
 		WITH earned AS (
 			SELECT t.user_id,
-			       COALESCE(sum(t.amount) FILTER (WHERE t.kind IN (`+earnKinds+`)), 0) AS got,
+			       COALESCE(sum(t.amount) FILTER (WHERE t.kind IN (` + earnKinds + `)), 0) AS got,
 			       COALESCE(sum(-t.amount) FILTER (WHERE t.kind = 'penalty'), 0) AS lost
 			FROM wallet_transactions t
 			WHERE ($1 = '' OR t.created_at >= $1::date)
@@ -209,11 +206,29 @@ func (s *Server) profitsParties(w http.ResponseWriter, r *http.Request, from, to
 			  AND ($1 = '' OR o.delivered_at >= $1::date)
 			  AND ($2 = '' OR o.delivered_at < ($2::date + 1))
 			GROUP BY o.customer_id
-		)
-		SELECT u.id::text, COALESCE(NULLIF(u.full_name, ''), ''), u.phone::text,
-		       COALESCE(e.got, 0), COALESCE(e.lost, 0), COALESCE(sp.paid, 0)`+scope+`
+		)`
+
+	// **ومن لم يكسب ولم ينفق لا يُعرض** — **وقائمةٌ فيها ألفُ صفرٍ لا
+	// تُقرأ**، ويضيع فيها من كسب.
+	body := `
+		FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = '` + role + `'
+		LEFT JOIN earned e ON e.user_id = u.id
+		LEFT JOIN spent sp ON sp.uid = u.id
+		WHERE u.deleted_at IS NULL
 		  AND (COALESCE(e.got, 0) <> 0 OR COALESCE(e.lost, 0) <> 0
-		       OR COALESCE(sp.paid, 0) <> 0)
+		       OR COALESCE(sp.paid, 0) <> 0)`
+
+	var count int
+	if err := s.pg.QueryRow(r.Context(),
+		ctes+` SELECT count(*)`+body, from, to).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	rows, err := s.pg.Query(r.Context(), ctes+`
+		SELECT u.id::text, COALESCE(NULLIF(u.full_name, ''), ''), u.phone::text,
+		       COALESCE(e.got, 0), COALESCE(e.lost, 0), COALESCE(sp.paid, 0)`+body+`
 		ORDER BY COALESCE(e.got, 0) DESC, COALESCE(sp.paid, 0) DESC
 		LIMIT $3 OFFSET $4`, from, to, pg.PerPage, pg.Offset)
 	if err != nil {
