@@ -455,6 +455,14 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/transition", s.handleMerchantTransition)
 			// حلقة المطبخ: الجاهزية علامةٌ يرفعها من يعرف، وساعاته وإعداداته بيده
 			r.Post("/orders/{id}/ready", s.handleMerchantReady)
+			// ══════════════════════════════════════════════════════════
+			// **وبابُ شكوى المتجر** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)
+			// ══════════════════════════════════════════════════════════
+			//
+			// **وكان يُشتكى عليه ولا يشتكي**: يُنذَر ويُحظَر بعدّاد
+			// مخالفات، **ولا يُسمع منه.**
+			r.Get("/report-reasons", s.handleMerchantReportReasons)
+			r.Post("/orders/{id}/report", s.handleMerchantReport)
 			r.Get("/stores/{id}/hours", s.handleMerchantGetHours)
 			r.Put("/stores/{id}/hours", s.handleMerchantSetHours)
 			r.Patch("/stores/{id}/settings", s.handleMerchantSettings)

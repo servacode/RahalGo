@@ -23,7 +23,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
   Badge,
   Chips,
@@ -33,6 +33,11 @@ import {
   EmptyState,
   LoadingState,
   useLiveRefresh,
+  Modal,
+  Select,
+  Textarea,
+  Button,
+  Alert,
   IconCheck,
   Money,
 } from "@rahalgo/ui";
@@ -60,9 +65,15 @@ interface Row {
   subtotal: number;
   total: number;
   cancel_reason?: string;
+  /** **أسُنِد سائق؟** — **ولا هويّةَ له عند المتجر**، وهذا يكفي للزرّ. */
+  driver_assigned?: boolean;
   created_at: string;
   closed_at?: string | null;
 }
+
+const R = m.merchant.report;
+/** **وأسماءُ الأسباب معجمٌ يُفهرس بالرمز** — والرمزُ من المحرّك. */
+const REPORT_REASONS: Record<string, string> = R.reasons;
 
 /** **الحالاتُ المنتهيةُ وحدَها** — والجاريةُ ليست تاريخاً. */
 const CLOSED = ["delivered", "cancelled", "rejected", "failed", "refunded"] as const;
@@ -76,6 +87,8 @@ export default function MerchantHistoryPage() {
   const [perPage, setPerPage] = useState(20);
   /** **عددُ كلّ حالٍ في السجلّ كلِّه** — لا في الصفحة المعروضة. */
   const [counts, setCounts] = useState<Record<string, number>>({});
+  /** **والبلاغُ على طلبٍ بعينه** — لا زرٌّ عامٌّ لا يعرف على ماذا هو. */
+  const [reportFor, setReportFor] = useState<Row | null>(null);
 
   const load = useCallback(() => {
     if (!store) return;
@@ -193,6 +206,27 @@ export default function MerchantHistoryPage() {
               {o.cancel_reason && (
                 <p className="mt-1 text-xs text-danger">{o.cancel_reason}</p>
               )}
+              {/* ══════════════════════════════════════════════════════════
+                  **وبابُ شكوى المتجر — على سائقه**
+                  ══════════════════════════════════════════════════════════
+
+                  (قرارُ المالك ٢٠٢٦-٠٨-١٦.)
+
+                  **وكان يُشتكى عليه ولا يشتكي**: يُنذَر ويُحظَر بعدّاد
+                  مخالفات، **ولا يُسمع منه.** **وطرفٌ يُشتكى عليه ولا
+                  يشتكي طرفٌ ناقص.**
+
+                  **ولا يُعرض بلا سائق** — **وزرٌّ يَعِد بما يُعتذر عنه
+                  أسوأُ من زرٍّ غائب.** */}
+              {o.driver_assigned && (
+                <button
+                  type="button"
+                  onClick={() => setReportFor(o)}
+                  className="mt-2 text-xs font-medium text-primary hover:underline"
+                >
+                  {m.merchant.report.open}
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -203,6 +237,107 @@ export default function MerchantHistoryPage() {
           <Pagination page={page} total={count} perPage={perPage} onChange={setPage} />
         </div>
       )}
+
+      {reportFor && (
+        <ReportModal
+          order={reportFor}
+          onClose={() => setReportFor(null)}
+          onDone={() => {
+            setReportFor(null);
+            load();
+          }}
+        />
+      )}
     </PageContainer>
+  );
+}
+
+/**
+ * **نافذةُ بلاغ المتجر — على سائق الطلب.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٦.)
+ *
+ * **والأسبابُ من المحرّك لا من الشاشة** — **وقائمةٌ تُكتب هنا تفترق عمّا
+ * يقبله الخادمُ يوماً**، فيُختار سببٌ يُردّ.
+ *
+ * **وسببٌ من قائمةٍ لا نصٌّ حرّ**: من السبب يُشتقّ التكرارُ والحكم —
+ * **و«أُبلغ عنه ثلاثاً لنفس السبب» جملةٌ لا تُقال** إن كان كلُّ بلاغٍ بلفظ.
+ */
+function ReportModal({
+  order,
+  onClose,
+  onDone,
+}: {
+  order: Row;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [reasons, setReasons] = useState<string[]>([]);
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api<{ reasons: string[] }>("/api/v1/merchant/report-reasons")
+      .then((r) => setReasons(r.reasons ?? []))
+      .catch((err) => setError(errorText(err)));
+  }, []);
+
+  async function submit() {
+    if (!reason || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/merchant/orders/${order.id}/report`, {
+        method: "POST",
+        body: JSON.stringify({ reason, note: note.trim() }),
+      });
+      onDone();
+    } catch (err) {
+      // **وسببُ الخادم يُقال** — «مرّت المهلة» غيرُ «بلاغٌ مفتوح»،
+      // **ورسالةٌ واحدةٌ لكلّ العلل تُسكت ما يُفيد.**
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`${R.title} #${fmtRef(order.number)}`}>
+      <div className="space-y-3">
+        <p className="text-sm text-ink-muted">{R.hint}</p>
+        <Select
+          id="report-reason"
+          label={R.reason}
+          required
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        >
+          <option value="">{R.pick}</option>
+          {reasons.map((c) => (
+            <option key={c} value={c}>
+              {REPORT_REASONS[c] ?? c}
+            </option>
+          ))}
+        </Select>
+        <Textarea
+          id="report-note"
+          label={R.note}
+          rows={3}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+        {error && <Alert>{error}</Alert>}
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+          <Button disabled={busy || !reason} onClick={() => void submit()}>
+            {busy ? m.common.loading : R.submit}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

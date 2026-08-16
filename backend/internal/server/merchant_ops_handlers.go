@@ -8,6 +8,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/support"
 )
 
 // إدارة المتجر لتشغيله: الجاهزية، وساعات العمل، وإعداداته.
@@ -182,4 +183,37 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+}
+
+// handleMerchantReportReasons **ما يملك المتجرُ الإبلاغَ عنه.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٦.)
+//
+// **وكلُّها على السائق** — فلا عمودَ جهةٍ كما في بلاغ السائق: **جهةٌ واحدةٌ
+// لا تُسأل عنها.**
+func (s *Server) handleMerchantReportReasons(w http.ResponseWriter, r *http.Request) {
+	httpx.JSON(w, http.StatusOK, map[string]any{"reasons": support.MerchantReportReasons})
+}
+
+// handleMerchantReport **بلاغُ متجرٍ على سائقِ طلبٍ من طلباته.**
+//
+// **وطرفٌ يُشتكى عليه ولا يشتكي طرفٌ ناقص**: المتجرُ يُنذَر ويُحظَر بعدّاد
+// مخالفات، **ولا يُسمع منه.**
+func (s *Server) handleMerchantReport(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Reason string `json:"reason"`
+		Note   string `json:"note"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	t, err := s.support.MerchantReport(r.Context(), userIDFrom(r),
+		chi.URLParam(r, "id"), req.Reason, req.Note)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touch("ticket", "ops")
+	httpx.JSON(w, http.StatusCreated, t)
 }

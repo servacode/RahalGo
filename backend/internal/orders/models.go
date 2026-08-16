@@ -126,8 +126,20 @@ type Order struct {
 	ItemsCount        int     `json:"items_count"`
 	ItemsPreview      string  `json:"items_preview"`
 	DriverID          *string `json:"driver_id"`
-	DriverPhone       *string `json:"driver_phone"`
-	DriverName        *string `json:"driver_name"`
+	// DriverAssigned **أسُنِد سائقٌ لهذا الطلب؟** — بلا قولِ مَن هو.
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٦: بابُ شكوى المتجر.)
+	//
+	// **وبوّابةُ المتجر تُمحى منها هويّةُ السائق** قصداً: «المتجرُ يسلّم
+	// لمن يأتي ولا شأنَ له بمن هو» — **ولا تُنقض تلك القاعدةُ لأجل زرّ.**
+	//
+	// **ولكنّه يعرف أنّ سائقاً جاء** — سلّمه الطلبَ بيده. **فهذه حقيقةٌ
+	// عنده لا تسريبٌ إليه**، وبها يُعرض زرُّ البلاغ أو يُخفى.
+	//
+	// **وزرٌّ يَعِد بما يُعتذر عنه أسوأُ من زرٍّ غائب.**
+	DriverAssigned bool    `json:"driver_assigned"`
+	DriverPhone    *string `json:"driver_phone"`
+	DriverName     *string `json:"driver_name"`
 	// OfferedDriverName **من عُرض عليه الطلبُ ولم يقبل بعد.**
 	//
 	// كانت العملياتُ ترى «جارٍ إسناد سائق» **ولا تعرف على من** — فلا تعرف من

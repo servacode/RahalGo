@@ -123,6 +123,9 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	o.MerchantLogoThumb = media.URLForPtr(o.MerchantLogoThumb)
 	// **ومسارُ صورة الإثبات يصير رابطاً** — كسائر الوسائط.
 	o.ProofURL = media.URLForPtr(o.ProofURL)
+	// **وأسُنِد سائق؟** — يُشتقّ هنا **قبل أن تُمحى هويّتُه لبوّابة المتجر**،
+	// فيبقى الجوابُ صحيحاً لكلّ قارئ.
+	o.DriverAssigned = o.DriverID != nil
 	return &o, nil
 }
 

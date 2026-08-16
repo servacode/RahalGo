@@ -4264,6 +4264,34 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/merchant/orders/{id}/report",
+      "handler": "handleMerchantReport",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@t",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/merchant/orders/{id}/transition",
       "handler": "handleMerchantTransition",
       "auth": true,
@@ -4305,6 +4333,24 @@
       "response": [
         {
           "name": "sections",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/report-reasons",
+      "handler": "handleMerchantReportReasons",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "reasons",
           "type": "unknown"
         }
       ],
