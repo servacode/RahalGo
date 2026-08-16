@@ -49,6 +49,19 @@ import { useAuth, isLoggedIn } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const N = m.site.nav;
+
+/**
+ * **أبوابُ التعريف** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+ *
+ * **و«ميزاتنا» قسمٌ في الرئيسيّة لا صفحة**: الموقعُ صفحةٌ واحدةٌ طويلة،
+ * **والرابطُ يمرّر إليها** (`#features`). ومن فتحه من صفحةٍ أخرى عاد إلى
+ * الرئيسيّة ثمّ نزل.
+ */
+const MARKETING = [
+  { href: "/#features", label: N.features },
+  { href: "/about", label: N.about },
+  { href: "/contact", label: N.contact },
+];
 const WS_URL =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws") +
   "/api/v1/ws";
@@ -269,6 +282,29 @@ export default function Header({
         <IconStore size={TOPBAR_ICON} />
         <span className="hidden sm:inline">{N.shop}</span>
       </TopBarLink>
+      {/* ══════════════════════════════════════════════════════════════
+          **وأبوابُ التعريف على الحاسوب وحدَه**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٦: موقعٌ فيه الرئيسيّة وتسوّق ومن نحن
+           وتواصل وميزاتنا.)
+
+          **ولا تُزاحم شريطَ الجوّال**: فيه السلّةُ والإشعاراتُ والحساب،
+          **وثلاثةُ أبوابٍ نصّيّةٍ فوقها تدفع ما لا بديلَ له خارجَ الشاشة.**
+          **وزائرُ الجوّال يجدها بالتمرير وفي التذييل** — وهي صفحةٌ واحدةٌ
+          طويلة. */}
+      {MARKETING.map((l) => (
+        <TopBarLink
+          key={l.href}
+          Link={Link}
+          href={l.href}
+          title={l.label}
+          tone={pathname === l.href ? "active" : "plain"}
+          className="ms-1 hidden lg:flex"
+        >
+          <span>{l.label}</span>
+        </TopBarLink>
+      ))}
     </>
   );
 

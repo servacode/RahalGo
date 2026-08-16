@@ -437,8 +437,6 @@
 | `auth.background` |  | media | `` |
 | `auth.background_mobile` |  | media | `` |
 | `auth.background_dim` |  | percent | `70` |
-| `home.image` |  | media | `` |
-| `home.image_mobile` |  | media | `` |
 | `page.help_text` |  | longtext | `كيف أطلب؟
 اختر متجراً من الرئيسية، وأضِف ما تريد إلى السلّة، ثمّ افتح السلّة وحدّد عنوانَ التسليم وطريقةَ الدفع وأرسِل. ويصلك إشعارٌ عند كلّ خطوة.
 

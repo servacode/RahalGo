@@ -5253,25 +5253,6 @@
     },
     {
       "method": "GET",
-      "path": "/api/v1/public/hero",
-      "handler": "handlePublicHero",
-      "auth": false,
-      "response": [
-        {
-          "name": "image",
-          "type": "unknown"
-        },
-        {
-          "name": "image_mobile",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
-    },
-    {
-      "method": "GET",
       "path": "/api/v1/public/home",
       "handler": "handlePublicHome",
       "auth": false,

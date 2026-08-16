@@ -178,8 +178,6 @@ const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_bac
      **والنوعُ يحكم الحدَّ والمصغَّرة**: شعارٌ يُصغَّر إلى مئتين، وخلفيّةٌ
      تحتاج ألفين. **ولا يظهر الخطأُ إلّا صورةً باهتةً ممطوطة.** */
   "platform.background_mobile": "site_background",
-  "home.image": "site_background",
-  "home.image_mobile": "site_background",
 };
 
 export default function SettingsPage() {

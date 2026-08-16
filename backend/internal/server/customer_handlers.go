@@ -119,24 +119,6 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handlePublicHero **عرضُ الصفحة الرئيسيّة** — صورةٌ ونصٌّ وزرّ.
-//
-// (تصحيحُ المالك 2026-08-09: «الصفحة الرئيسيّة مو بانر، هو صورةٌ كاملةٌ
-//
-//	للصفحة».)
-//
-// **من الإعدادات لا من جدول اللافتات**: شيءٌ واحدٌ يملأ الصفحةَ لا قائمةٌ
-// تتبدّل. **ونقطةٌ خفيفةٌ لا `/public/home`**: تلك تجلب التصنيفاتِ والأقسامَ
-// بعدد أصنافها — ثلاثةُ استعلاماتٍ لصفحةٍ لا تعرض إلّا صورة.
-//
-// **ومفتوحةٌ بلا توثيق**: الرئيسيّةُ أوّلُ ما يُفتح، وقبل أن يكون حساب.
-func (s *Server) handlePublicHero(w http.ResponseWriter, r *http.Request) {
-	httpx.JSON(w, http.StatusOK, map[string]any{
-		"image":        s.settingMedia(r, "home.image"),
-		"image_mobile": s.settingMedia(r, "home.image_mobile"),
-	})
-}
-
 // handlePublicHome بيانات الصفحة الأولى: لافتاتٌ وتصنيفاتٌ وأقسامُ سوق.
 //
 // **ولا متاجرَ فيها** — انظر الشرحَ عند الأقسام أدناه.

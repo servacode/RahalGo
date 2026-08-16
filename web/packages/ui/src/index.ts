@@ -149,7 +149,6 @@ export * from "./icons";
 /** علاماتُ منصّات التواصل — ما نزعته `lucide`. */
 export * from "./brand-icons";
 /** عرضُ الصفحة الرئيسيّة. */
-export { Hero, type HeroContent } from "./Hero";
 
 /** نغمةُ تنبيهٍ تُولَّد في المتصفّح — ومكرّرةٌ لمهمّةٍ وقعت بلا طلب. */
 export { useChime, useRepeatingChime } from "./chime";

@@ -518,8 +518,6 @@ var Catalog = []Def{
 	// واجهةٍ فيها عرضٌ يملأ الشاشة.
 	//
 	// **وفارغةُ الهاتف تسقط إلى العريضة** — فمن رفع واحدةً يبقى موقعُه عاملاً.
-	{Key: "home.image", Group: GroupSite, Section: "page.home", Kind: KindMedia, Default: ""},
-	{Key: "home.image_mobile", Group: GroupSite, Section: "page.home", Kind: KindMedia, Default: ""},
 
 	// ── سلايدر لافتات التسوّق ──────────────────────────────────────────
 	//
