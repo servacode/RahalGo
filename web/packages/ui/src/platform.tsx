@@ -354,9 +354,28 @@ export function BrandMark({
   size = 36,
   rounded = "control",
   heightClass,
+  disc = false,
   className = "",
 }: {
   size?: number;
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **قرصٌ أبيضُ خلفَ الشعار — في الموقع وحدَه**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «أضف لي دائرةً بيضاء حول لوغو المنصّة فقط
+   *  في الموقع».)
+   *
+   * **وقد طلبها قبلَها وألغاها** (٢٠٢٦-٠٨-٠٩، على ثلاث خطوات) —
+   * **والفرقُ أنّها كانت حينَها في كلّ مكان**: الشريطُ والسايدبارُ
+   * وشاشةُ الدخول والورقةُ المطبوعة. **وقرصٌ أبيضُ في سايدبارٍ داكنٍ
+   * لَطخةٌ**، وهو نفسُه فوق خلفيّةِ صورةٍ في الموقع يفصل الشعارَ عمّا
+   * تحته.
+   *
+   * **فصار خياراً يُطلب لا سلوكاً يُفرض** — والافتراضُ بلا قرص، فلا
+   * تتبدّل اللوحاتُ الخمسُ بسطرٍ كُتب للموقع.
+   */
+  disc?: boolean;
   /** `control` للشريط والسايدبار · `card` للطبقات الكبيرة · `none` للأوراق */
   rounded?: "control" | "card" | "badge" | "none";
   /**
@@ -432,7 +451,7 @@ export function BrandMark({
      **فالمقاسُ ما يُمرَّر لا غير**، ومن أراد أكبرَ مرّر أكبر: **قرارُ الحجم
      عند من يعرف شاشتَه.** */
   const h = size;
-  return (
+  const img = (
     /* ══════════════════════════════════════════════════════════════
        **وشعارٌ مكسورٌ لا يُظهر اسمَ المنصّة**
        ══════════════════════════════════════════════════════════════
@@ -459,9 +478,29 @@ export function BrandMark({
       src={logo}
       alt=""
       onError={() => setBroken(true)}
-      style={heightClass ? { maxWidth: h * 4 } : { height: h, maxWidth: h * 4 }}
-      className={`w-auto shrink-0 object-contain ${heightClass ?? ""} ${className}`}
+      style={disc ? undefined : heightClass ? { maxWidth: h * 4 } : { height: h, maxWidth: h * 4 }}
+      className={
+        disc
+          ? "h-full w-auto max-w-full shrink-0 object-contain"
+          : `w-auto shrink-0 object-contain ${heightClass ?? ""} ${className}`
+      }
     />
+  );
+
+  /* **والقرصُ مربّعٌ ليكون دائرة** — `rounded-full` على صندوقٍ مستطيلٍ
+     تعطي بيضةً لا دائرة، **وشعارُ المنصّة أعرضُ من ارتفاعه.**
+
+     **فالمربّعُ من الارتفاع** (`aspect-square`) والشعارُ يُحصر داخلَه
+     بحشوةٍ من كلّ جهة، **فيقع في مركزه مهما كانت نسبتُه.** */
+  return disc ? (
+    <span
+      className={`inline-flex aspect-square shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper p-[12%] ${heightClass ?? ""} ${className}`}
+      style={heightClass ? undefined : { height: h }}
+    >
+      {img}
+    </span>
+  ) : (
+    img
   );
 }
 

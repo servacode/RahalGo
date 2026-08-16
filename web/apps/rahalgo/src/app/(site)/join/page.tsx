@@ -137,7 +137,7 @@ function JoinForm() {
     <div className="mx-auto max-w-2xl">
       <div className="mb-5 text-center">
         {/* علامةُ المنصة من الإعدادات — شعارٌ إن رُفع وإلّا أوّلُ حرفٍ من الاسم */}
-        <BrandMark size={100} rounded="card" className="mx-auto mb-3" />
+        <BrandMark size={100} disc className="mx-auto mb-3" />
         <h1 className="heading-page">{J.title}</h1>
         <p className="mt-1 text-sm text-ink-muted">{J.subtitle}</p>
       </div>

@@ -791,7 +791,7 @@ function OrderCard({
           ومتى. **وكان بجانبها فيزاحم الرقمَ على العرض نفسِه.** */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex shrink-0 flex-col items-start gap-1.5">
-          <BrandMark size={72} rounded="card" />
+          <BrandMark size={72} disc />
         </div>
 
         {/* ══════════════════════════════════════════════════════════

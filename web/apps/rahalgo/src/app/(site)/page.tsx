@@ -137,7 +137,7 @@ export default async function HomePage() {
           النشر. */}
       <Band>
         <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-          <BrandMark size={96} rounded="card" className="mb-6" />
+          <BrandMark size={96} disc className="mb-6" />
           <h1 className="heading-hero">{H.heroTitle}</h1>
           <p className="hero-lead mt-5 max-w-prose text-ink-muted">{H.heroLead}</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
