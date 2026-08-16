@@ -194,11 +194,58 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	// الأقسام. **وخمسُمئةٍ صامتةٌ تعني أنّ صنفاً لا يُوافَق عليه لأنّ أحداً
 	// لم يره.**
 	pg := pagingOf(r, 50)
-	var count int
-	if err := s.pg.QueryRow(r.Context(),
-		`SELECT count(*) FROM menu_items i
-		 JOIN merchants m ON m.id = i.merchant_id
-		 WHERE i.platform_section_id = $1`, id).Scan(&count); err != nil {
+	// ══════════════════════════════════════════════════════════════════
+	// **والبحثُ والترشيحُ في المحرّك لا في الشاشة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+	//
+	// **كانا يعملان على الصفحة المعروضة وحدَها** — فمن بحث عن صنفٍ في
+	// الصفحة الثالثة **قرأ «لا أصناف»**. **وبحثٌ يقول «غيرُ موجود» عمّا
+	// هو موجودٌ أخطرُ من رقمٍ يكذب**: فيُضاف الصنفُ مرّتين.
+	//
+	// **وترشيحٌ في الشاشة فوق صفحةٍ وعدٌ بترشيح.**
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	// **والحالُ رمزٌ لا نصٌّ معروض** — **والشاشةُ كانت تُرشِّح بنصّ الشارة
+	// العربيّ**، فمن بدّل كلمةً في المعجم كسر الترشيح.
+	state := r.URL.Query().Get("state")
+
+	// **وترتيبُ الحال هو ترتيبُ الشاشة نفسُه** — يُقرأ أوّلُ سببٍ يمنع
+	// الظهور: **صنفٌ غيرُ مُقَرٍّ ومتجرُه مُطفأٌ لا يُقال عنه «متجرُه
+	// مُطفأ»**، فالمراجعةُ أوّلُ بابٍ يجب أن يُفتح.
+	const stateExpr = `CASE
+		WHEN NOT i.approved THEN 'pending'
+		WHEN m.status <> 'active' THEN 'store_off'
+		WHEN NOT i.available THEN 'out'
+		ELSE 'live' END`
+	const scope = `
+		FROM menu_items i
+		JOIN merchants m ON m.id = i.merchant_id
+		WHERE i.platform_section_id = $1
+		  AND ($2 = '' OR i.name ILIKE '%'||$2||'%' OR m.name ILIKE '%'||$2||'%')
+		  AND ($3 = '' OR ` + stateExpr + ` = $3)`
+
+	// ══════════════════════════════════════════════════════════════════
+	// **والبطاقاتُ تعدّ القسمَ لا الصفحة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كانت تُحسب من طول الصفحة** — فقسمٌ فيه ثلاثمئة يقول «الكلّ: ٥٠»،
+	// **والترقيمُ أسفلَه يقول «١ / ٦»**: رقمان متناقضان في شاشةٍ واحدة.
+	//
+	// **والمعروضُ فعلاً لا المسجَّل**: قسمٌ فيه اثنا عشر ويُعرض منه ثلاثةٌ
+	// **حالةٌ تُعالَج، ورقمٌ واحدٌ يخفيها.**
+	//
+	// **وتُحسب قبل الترشيح بالحال** — **وبطاقةٌ تتبع مُرشِّحَها تقول
+	// «المعروضُ صفر» لمن رشّح «ينتظر المراجعة»**، وهي لا تخصّه.
+	var count, all, live int
+	if err := s.pg.QueryRow(r.Context(), `SELECT count(*)`+scope, id, q, state).
+		Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*), count(*) FILTER (WHERE `+stateExpr+` = 'live')`+scope,
+		id, q, "").Scan(&all, &live); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -211,8 +258,10 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		JOIN platform_sections ps ON ps.id = i.platform_section_id
 		LEFT JOIN media im ON im.id = i.image_media_id
 		WHERE i.platform_section_id = $1
+		  AND ($2 = '' OR i.name ILIKE '%'||$2||'%' OR m.name ILIKE '%'||$2||'%')
+		  AND ($3 = '' OR `+stateExpr+` = $3)
 		ORDER BY m.name, i.name
-		LIMIT $2 OFFSET $3`, id, pg.PerPage, pg.Offset)
+		LIMIT $4 OFFSET $5`, id, q, state, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -300,5 +349,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	// «٥٠ صنفاً في القسم» وفيه أربعُمئةٍ يُبنى عليه قرارُ عرض.**
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"items": out, "count": count, "page": pg.Page, "per_page": pg.PerPage,
+		// **وعددا القسم كلِّه** — تقرؤهما البطاقات، **ولا تعدّ الصفحة.**
+		"all": all, "live": live,
 	})
 }

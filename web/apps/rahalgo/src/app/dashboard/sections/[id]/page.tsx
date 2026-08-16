@@ -126,6 +126,9 @@ export default function SectionPage() {
   const [perPage, setPerPage] = useState(50);
   const [q, setQ] = useState("");
   const [state, setState] = useState("");
+  /** **وعددا القسم كلِّه من المحرّك** — لا من طول الصفحة. */
+  const [all, setAll] = useState(0);
+  const [live, setLive] = useState(0);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<SectionItem | null>(null);
   const [error, setError] = useState("");
@@ -136,17 +139,34 @@ export default function SectionPage() {
       // **ونقطةٌ ثانيةٌ لصفٍّ واحدٍ سطحٌ يُصان بلا حاجة.**
       const list = await api<{ sections: Section[] }>("/api/v1/admin/sections");
       setSec((list.sections ?? []).find((x) => x.id === id) ?? null);
-      const res = await api<{ items: SectionItem[]; count: number; per_page: number }>(
-        `/api/v1/admin/sections/${id}/items?page=${page}`,
-      );
+      // ══════════════════════════════════════════════════════════════
+      // **والبحثُ والترشيحُ يُرسلان إلى المحرّك**
+      // ══════════════════════════════════════════════════════════════
+      //
+      // (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+      //
+      // **كانا يعملان على الصفحة المعروضة وحدَها** — فمن بحث عن صنفٍ في
+      // الصفحة الثالثة **قرأ «لا أصناف»**، فيُضيفه مرّتين.
+      const qs = new URLSearchParams({ page: String(page) });
+      if (q.trim()) qs.set("q", q.trim());
+      if (state) qs.set("state", state);
+      const res = await api<{
+        items: SectionItem[];
+        count: number;
+        per_page: number;
+        all: number;
+        live: number;
+      }>(`/api/v1/admin/sections/${id}/items?${qs}`);
       setRows(res.items ?? []);
       setCount(res.count ?? 0);
       setPerPage(res.per_page || 50);
+      setAll(res.all ?? 0);
+      setLive(res.live ?? 0);
       setError("");
     } catch (err) {
       setError(errorText(err));
     }
-  }, [id, page]);
+  }, [id, page, q, state]);
 
   /**
    * **قلبُ الإتاحة — زرٌّ واحدٌ يقول الحال.**
@@ -170,13 +190,9 @@ export default function SectionPage() {
   if (error) return <p className="py-10 text-center text-danger">{error}</p>;
   if (!rows || !sec) return <LoadingState />;
 
-  const term = q.trim();
-  const shown = rows.filter(
-    (it) =>
-      (term === "" || it.name.includes(term) || it.merchant_name.includes(term)) &&
-      (state === "" || itemState(it).label === state),
-  );
-  const live = rows.filter((it) => itemState(it).variant === "success").length;
+  // **ولا ترشيحَ هنا** — المحرّكُ رشّح وعدّ، **وترشيحٌ فوق ترشيحٍ يُنقص
+  // ما رُشِّح أصلاً.**
+  const shown = rows;
 
   return (
     <PageContainer width="full">
@@ -214,11 +230,11 @@ export default function SectionPage() {
       </div>
 
       <StatGrid>
-        <StatCard label={S.statAll} value={fmtNum(rows.length)} icon={IconOrder} />
+        <StatCard label={S.statAll} value={fmtNum(all)} icon={IconOrder} />
         {/* **والمعروضُ فعلاً لا المسجَّل** — قسمٌ فيه اثنا عشر ويُعرض منه ثلاثةٌ
             حالةٌ تُعالَج، **ورقمٌ واحدٌ يخفيها.** */}
         <StatCard label={S.statLive} value={fmtNum(live)} icon={IconStore} />
-        <StatCard label={S.statHidden} value={fmtNum(rows.length - live)} icon={IconWarning} />
+        <StatCard label={S.statHidden} value={fmtNum(all - live)} icon={IconWarning} />
       </StatGrid>
 
       <div className="mb-4 mt-4 flex flex-wrap items-end gap-3">
@@ -228,17 +244,28 @@ export default function SectionPage() {
             icon={<IconSearch />}
             placeholder={S.searchItems}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
         <div className="w-48">
-          <Select value={state} onChange={(e) => setState(e.target.value)}>
+          {/* **والقيمةُ رمزٌ لا نصٌّ معروض** — **وترشيحٌ بنصّ الشارة
+              العربيّ ينكسر بتبديل كلمةٍ في المعجم**، ولا يُكتشف حتّى
+              يُجرَّب. */}
+          <Select
+            value={state}
+            onChange={(e) => {
+              setState(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="">{S.allStates}</option>
-            {[S.itemLive, S.itemPending, S.itemOut, S.itemStoreOff].map((x) => (
-              <option key={x} value={x}>
-                {x}
-              </option>
-            ))}
+            <option value="live">{S.itemLive}</option>
+            <option value="pending">{S.itemPending}</option>
+            <option value="out">{S.itemOut}</option>
+            <option value="store_off">{S.itemStoreOff}</option>
           </Select>
         </div>
       </div>
@@ -434,7 +461,12 @@ function AddItemModal({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<{ merchants: MerchantRow[] }>("/api/v1/admin/merchants")
+    // **وقائمةُ الاختيار كاملةٌ** — (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦).
+    //
+    // **كانت تُنادى بلا حدٍّ فيردّ المحرّكُ عشرين** — **وهي قائمةُ اختيار**:
+    // فمن عنده خمسةٌ وعشرون متجراً **لا يستطيع أن يضيف صنفاً لخمسةٍ منها**،
+    // **ولا شيءَ يقول إنّها قُصّت** — إنّما لا يجد المتجرَ فيظنّه غيرَ مسجَّل.
+    api<{ merchants: MerchantRow[] }>("/api/v1/admin/merchants?per_page=100")
       .then((r) => setMerchants(r.merchants ?? []))
       .catch(() => setError(m.errors.internal));
   }, []);
