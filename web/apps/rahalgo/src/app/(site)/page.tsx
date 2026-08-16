@@ -37,6 +37,7 @@ import Link from "next/link";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import {
   fetchPlatform,
+  BannerSlider,
   ButtonLink,
   IconMoto,
   IconLocation,
@@ -102,8 +103,51 @@ function BandHead({ title, lead }: { title: string; lead?: string }) {
   );
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **لافتاتُ العرض الافتتاحيّ — من مكانها لا من مكانٍ ثانٍ**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «أوّلُ قسمٍ خلّيه سلايدر بالرئيسيّة، نعرض عليه
+ *  صوراً يطلع احترافيّ أكثر».)
+ *
+ * **ولا جدولَ جديدٌ ولا شاشةَ إدارةٍ ثانية**: اللافتاتُ موجودةٌ بجدولها
+ * وشاشتها وسلايدرها المكتوب بعناية — **ونظامٌ ثانٍ لصورٍ تُعرض يعني
+ * مكانين يرفع فيهما المالكُ صورَه فينسى أيَّهما يظهر أين.**
+ *
+ * **وفشلُ الجلب يُرجع فراغاً**: الرئيسيّةُ تبقى بعنوانها ودعوتها،
+ * **وشريطُ خطأٍ في أوّل ما يراه زائرٌ أسوأُ من سلايدرٍ غائب.**
+ */
+async function fetchBanners(): Promise<Slide[]> {
+  try {
+    const res = await fetch(`${API}/api/v1/public/home`, { next: { revalidate: 300 } });
+    if (!res.ok) return [];
+    const j = (await res.json()) as {
+      data?: { banners?: { id: string; title: string; image_url: string | null; target: string | null }[] };
+    };
+    return (j.data?.banners ?? [])
+      .filter((b) => b.image_url)
+      .map((b) => ({
+        id: b.id,
+        title: b.title,
+        imageUrl: API + b.image_url,
+        href: b.target || undefined,
+      }));
+  } catch {
+    // @empty-ok — انظر أعلاه: الفراغُ قرارٌ لا صمت.
+    return [];
+  }
+}
+
+interface Slide {
+  id: string;
+  title: string;
+  imageUrl: string;
+  href?: string;
+}
+
 export default async function HomePage() {
-  const brand = await fetchPlatform(API);
+  const [brand, slides] = await Promise.all([fetchPlatform(API), fetchBanners()]);
   const name = brand.name;
 
   const features: [Icon, string, string][] = [
@@ -135,6 +179,15 @@ export default async function HomePage() {
           **وزرٌّ يعد بما لا يوجد يُفقد الثقةَ في أوّل شاشة.** يُضاف يومَ
           النشر. */}
       <Band>
+        {/* **والصورةُ فوق الكلام** — **وعنوانٌ يُكتب فوق صورةٍ يرفعها
+            صاحبُها لا يُضمَن أن يُقرأ**: صورةٌ فاتحةٌ تبتلع الحرفَ الأبيضَ
+            وداكنةٌ تبتلع الأسود. **فالسلايدرُ يعلو والكلامُ تحته على أرضِ
+            الصفحة** — كلٌّ منهما يُقرأ على حدة.
+
+            **ولا يُرسم إن لم تُرفع لافتة** — إطارٌ فارغٌ يُقرأ عطباً. */}
+        {slides.length > 0 && (
+          <BannerSlider className="mb-10" items={slides} Link={Link} />
+        )}
         <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
           {/* **ولا شعارَ في العرض الافتتاحيّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٧:
               «اللوغو شيلو من هون»).
