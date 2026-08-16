@@ -417,10 +417,15 @@ export default function SettingsPage() {
                            وتُحذف. **والمهلةُ تحتها**: من بدّل لافتةً يبدّل
                            مهلتَها في الشاشة نفسِها. */
                         const shop = section === "page.shop";
-                        if (!shop && rows.length === 0) return null;
+                        /* **ولافتاتُ الرئيسيّة في قسمها** — (تصحيحُ المالك
+                           ٢٠٢٦-٠٨-١٧: «بانرات صفحة التسوّق مختلفة برأيي عن
+                           الرئيسيّة»). **والضبطُ يُطلب حيث يُرى أثرُه.** */
+                        const home = section === "page.home";
+                        if (!shop && !home && rows.length === 0) return null;
                         return (
                           <div className="space-y-4">
-                            {shop && <BannersPanel isAdmin={isAdmin} />}
+                            {shop && <BannersPanel isAdmin={isAdmin} placement="shop" />}
+                            {home && <BannersPanel isAdmin={isAdmin} placement="home" />}
                             <div className="space-y-3">
                             {rows.map((s) => (
                               <SettingRow

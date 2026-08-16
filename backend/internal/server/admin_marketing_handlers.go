@@ -56,7 +56,15 @@ func (s *Server) handleUpdatePromo(w http.ResponseWriter, r *http.Request) {
 // ---------- البانرات ----------
 
 func (s *Server) handleListBanners(w http.ResponseWriter, r *http.Request) {
-	banners, err := s.catalog.ListBanners(r.Context())
+	// **وتُطلب بموضعها** — (تصحيحُ المالك ٢٠٢٦-٠٨-١٧): شاشةُ التسوّق تطلب
+	// لافتاتِه وشاشةُ الرئيسيّة لافتاتِها، **وفارغٌ يعني الكلَّ لمن أراده.**
+	at := r.URL.Query().Get("at")
+	if at != "" && at != "shop" && at != "home" {
+		s.respondErr(w, httpx.NewError(http.StatusBadRequest,
+			"bad_placement", "errors.invalid_placement"))
+		return
+	}
+	banners, err := s.catalog.ListBanners(r.Context(), at)
 	if err != nil {
 		s.respondErr(w, err)
 		return

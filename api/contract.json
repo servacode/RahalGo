@@ -5206,6 +5206,21 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/public/banners",
+      "handler": "handlePublicBanners",
+      "auth": false,
+      "response": [
+        {
+          "name": "banners",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/public/contact",
       "handler": "handlePublicContact",
       "auth": false,

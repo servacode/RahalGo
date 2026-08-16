@@ -131,17 +131,23 @@ type Banner struct {
 	Target        string  `json:"target"`
 	SortOrder     int     `json:"sort_order"`
 	Active        bool    `json:"active"`
+	// Placement **أيُّ صفحةٍ تعرضها** — "shop" أو "home".
+	//
+	// (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «بانرات صفحة التسوّق مختلفة برأيي عن
+	//  الرئيسيّة».)
+	Placement string `json:"placement"`
 }
 
 const bannerSelect = `
-	SELECT b.id, b.title, bm.path, bm.thumb_path, b.target, b.sort_order, b.active
+	SELECT b.id, b.title, bm.path, bm.thumb_path, b.target, b.sort_order, b.active,
+	       b.placement
 	FROM banners b
 	LEFT JOIN media bm ON bm.id = b.image_media_id`
 
 func scanBanner(row pgx.Row) (*Banner, error) {
 	var b Banner
 	if err := row.Scan(&b.ID, &b.Title, &b.ImageURL, &b.ImageThumbURL,
-		&b.Target, &b.SortOrder, &b.Active); err != nil {
+		&b.Target, &b.SortOrder, &b.Active, &b.Placement); err != nil {
 		return nil, err
 	}
 	b.ImageURL = media.URLForPtr(b.ImageURL)
@@ -149,8 +155,14 @@ func scanBanner(row pgx.Row) (*Banner, error) {
 	return &b, nil
 }
 
-func (s *Service) ListBanners(ctx context.Context) ([]Banner, error) {
-	rows, err := s.db.Query(ctx, bannerSelect+` ORDER BY b.sort_order, b.created_at`)
+// ListBanners **لافتاتُ موضعٍ بعينه** — وفارغُ `placement` يعني الكلَّ.
+//
+// **ولا دالّتان**: الشاشةُ تطلب موضعاً والفحصُ يطلب الكلَّ، **ودالّتان
+// بجسمٍ واحدٍ تفترقان يومَ يُضاف عمود.**
+func (s *Service) ListBanners(ctx context.Context, placement string) ([]Banner, error) {
+	rows, err := s.db.Query(ctx, bannerSelect+`
+		WHERE ($1 = '' OR b.placement = $1)
+		ORDER BY b.sort_order, b.created_at`, placement)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +185,8 @@ type BannerInput struct {
 	Target       *string `json:"target"`
 	SortOrder    *int    `json:"sort_order"`
 	Active       *bool   `json:"active"`
+	// **وموضعُها يُختار عند الإنشاء** — وغيرُ المُرسل يبقى كما هو.
+	Placement *string `json:"placement"`
 }
 
 func (s *Service) CreateBanner(ctx context.Context, actorID string, in BannerInput, ip string) (*Banner, error) {
@@ -189,13 +203,20 @@ func (s *Service) CreateBanner(ctx context.Context, actorID string, in BannerInp
 		empty := ""
 		in.Title = &empty
 	}
+	// **والموضعُ يُقيَّد هنا لا في القاعدة وحدَها** — قيدُ القاعدة يردّ
+	// بخمسمئة، **ورسالةٌ تقول «موضعٌ لا أعرفه» تُقرأ.**
+	place := "shop"
+	if in.Placement != nil && *in.Placement == "home" {
+		place = "home"
+	}
 	var id string
 	err := s.db.QueryRow(ctx, `
-		INSERT INTO banners (title, image_media_id, target, sort_order)
+		INSERT INTO banners (title, image_media_id, target, sort_order, placement)
 		VALUES ($1, NULLIF(COALESCE($2,''), '')::uuid, COALESCE($3,''),
-		        COALESCE($4, (SELECT COALESCE(max(sort_order)+1,1) FROM banners)))
+		        COALESCE($4, (SELECT COALESCE(max(sort_order)+1,1)
+		                      FROM banners WHERE placement = $5)), $5)
 		RETURNING id`,
-		*in.Title, in.ImageMediaID, in.Target, in.SortOrder).Scan(&id)
+		*in.Title, in.ImageMediaID, in.Target, in.SortOrder, place).Scan(&id)
 	if err != nil {
 		return nil, err
 	}

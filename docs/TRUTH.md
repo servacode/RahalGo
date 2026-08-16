@@ -578,6 +578,8 @@
 يُكتب السببُ تحت اسمه في «عملائي». صحّح ما ذُكر وسجّله من جديد.
 
 ` |
+| `home.banner_auto` |  | bool | `true` |
+| `home.banner_seconds` |  | int | `6` |
 | `shop.banner_auto` |  | bool | `true` |
 | `shop.banner_seconds` |  | int | `5` |
 | `shop.rail_auto` |  | bool | `true` |

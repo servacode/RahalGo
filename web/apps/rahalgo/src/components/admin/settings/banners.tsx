@@ -53,19 +53,36 @@ function errText(err: unknown): string {
   return m.errors.internal;
 }
 
-export default function BannersPanel({ isAdmin = true }: { isAdmin?: boolean }) {
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **ولكلِّ صفحةٍ لافتاتُها**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «بانرات صفحة التسوّق مختلفة برأيي عن
+ *  الرئيسيّة».)
+ *
+ * **واللوحُ واحدٌ يُعطى موضعَه** — **ولوحان بجسمٍ واحدٍ يفترقان**: يُصلَح
+ * أحدُهما ويبقى الآخر، فترفع في شاشةٍ ما لا يظهر ولا تعرف لماذا.
+ */
+export default function BannersPanel({
+  isAdmin = true,
+  placement = "shop",
+}: {
+  isAdmin?: boolean;
+  placement?: "shop" | "home";
+}) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<Banner | null | "new">(null);
 
   const load = useCallback(async () => {
     try {
-      setBanners(await api<Banner[]>("/api/v1/admin/banners"));
+      setBanners(await api<Banner[]>(`/api/v1/admin/banners?at=${placement}`));
       setError("");
     } catch (err) {
       setError(errText(err));
     }
-  }, []);
+  }, [placement]);
 
   useEffect(() => {
     void load();
@@ -149,6 +166,7 @@ export default function BannersPanel({ isAdmin = true }: { isAdmin?: boolean }) 
       </div>
       {editing && (
         <BannerModal
+          placement={placement}
           banner={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
           onSaved={() => {
@@ -163,10 +181,12 @@ export default function BannersPanel({ isAdmin = true }: { isAdmin?: boolean }) 
 
 function BannerModal({
   banner,
+  placement,
   onClose,
   onSaved,
 }: {
   banner: Banner | null;
+  placement: "shop" | "home";
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -184,6 +204,8 @@ function BannerModal({
          **وحذفُ عمودٍ فيه بياناتٌ قرارٌ آخر.** */
       title: "",
       target: "",
+      // **والموضعُ يُرسل عند الإنشاء** — (تصحيحُ المالك ٢٠٢٦-٠٨-١٧).
+      placement,
       ...(imageID !== null ? { image_media_id: imageID } : {}),
     };
     try {

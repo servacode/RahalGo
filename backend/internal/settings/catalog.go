@@ -581,6 +581,21 @@ var Catalog = []Def{
 	{Key: "page.rep_help_text", Group: GroupSite, Section: "page.rep_help", Kind: KindLongText,
 		Default: DefaultRepHelp},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **ولافتاتُ الرئيسيّة غيرُ لافتات التسوّق**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «بانرات صفحة التسوّق مختلفة برأيي عن
+	//  الرئيسيّة».)
+	//
+	// **والمفتاحان يفتحان قسمَ «الصفحة الرئيسيّة» في الإعدادات** —
+	// **وقسمٌ بلا صفٍّ لا يُعرض أصلاً**، فلا يجد صاحبُه أين يرفع لافتتَه.
+	{Key: "home.banner_auto", Group: GroupSite, Section: "page.home", Kind: KindBool,
+		Default: true},
+	{Key: "home.banner_seconds", Group: GroupSite, Section: "page.home", Kind: KindInt,
+		Min: 2, Max: 30, Default: 6, Unit: "seconds",
+		ShowWhen: &Condition{Key: "home.banner_auto", Equals: []string{"true"}}},
+
 	{Key: "shop.banner_auto", Group: GroupSite, Section: "page.shop", Kind: KindBool,
 		Default: true},
 	{Key: "shop.banner_seconds", Group: GroupSite, Section: "page.shop", Kind: KindInt,

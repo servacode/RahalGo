@@ -126,11 +126,45 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handlePublicBanners **لافتاتُ موضعٍ بعينه — للرئيسيّة.**
+//
+// (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «بانرات صفحة التسوّق مختلفة برأيي عن
+//
+//	الرئيسيّة».)
+//
+// **ونقطةٌ خفيفةٌ لا `/public/home`**: تلك تجلب التصنيفاتِ والأقسامَ بعددِ
+// أصنافها — **ثلاثةُ استعلاماتٍ لصفحةٍ لا تريد إلّا صوراً.**
+//
+// **ومفتوحةٌ بلا توثيق** — الرئيسيّةُ تُفتح قبل أن يكون حساب.
+func (s *Server) handlePublicBanners(w http.ResponseWriter, r *http.Request) {
+	at := r.URL.Query().Get("at")
+	if at != "shop" && at != "home" {
+		at = "home"
+	}
+	banners, err := s.catalog.ListBanners(r.Context(), at)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والمطفأةُ وبلا صورةٍ لا تُرسل** — **ولافتةٌ بلا صورةٍ فراغٌ في
+	// سلايدر**، والزائرُ يسحب فلا يجد شيئاً.
+	active := banners[:0]
+	for _, b := range banners {
+		if b.Active && b.ImageURL != nil {
+			active = append(active, b)
+		}
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"banners": active})
+}
+
 // handlePublicHome بيانات الصفحة الأولى: لافتاتٌ وتصنيفاتٌ وأقسامُ سوق.
 //
 // **ولا متاجرَ فيها** — انظر الشرحَ عند الأقسام أدناه.
 func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
-	banners, err := s.catalog.ListBanners(r.Context())
+	// **ولافتاتُ التسوّق وحدَها** — (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «بانرات
+	// صفحة التسوّق مختلفة عن الرئيسيّة»). **وهذه نقطةُ صفحة التسوّق**،
+	// ولافتةُ الرئيسيّة تُطلب من `/public/banners`.
+	banners, err := s.catalog.ListBanners(r.Context(), "shop")
 	if err != nil {
 		s.respondErr(w, err)
 		return
