@@ -698,6 +698,28 @@ func (s *Server) Router() http.Handler {
 			r.Post("/emergencies/{id}/resolve", s.handleResolveEmergency)
 			// **الخسارةُ الفعلية من الدفتر** — لا من إعادة حسابٍ لما حُسب.
 			r.Get("/reports/losses", s.handlePlatformLosses)
+			// ══════════════════════════════════════════════════════════
+			// **ومصروفاتُ التشغيل** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)
+			// ══════════════════════════════════════════════════════════
+			//
+			// **إيجارُ المكتب والرواتبُ والكهرباء** — كلفةُ تشغيلٍ
+			// مخطَّطة، **لا خسارةَ عملٍ**. **وتخرج من الخزينة** بقرار
+			// المالك: «مصروفٌ تابعٌ للمنصّة».
+			//
+			// **وللمالك والماليّة** — كسائر ما يمسّ المال.
+			// **والقراءةُ محجوبةٌ عن العمليات كذلك** — **وموظّفُ
+			// العمليات ليس طرفاً في المال**، وهو الفصلُ نفسُه المطبَّق
+			// على الخزينة والخسائر وتعويض السائق.
+			r.With(s.RequireRoles("admin", "finance")).
+				Get("/expenses", s.handleListExpenses)
+			r.With(s.RequireRoles("admin", "finance")).
+				Get("/expenses/categories", s.handleExpenseCategories)
+			r.With(s.RequireRoles("admin", "finance")).
+				Post("/expenses", s.handleCreateExpense)
+			r.With(s.RequireRoles("admin", "finance")).
+				Post("/expenses/categories", s.handleSaveExpenseCategory)
+			r.With(s.RequireRoles("admin", "finance")).
+				Post("/expenses/{id}/void", s.handleVoidExpense)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/drivers/{id}/settle", s.idempotent(s.handleDriverSettle))
 			r.Group(func(r chi.Router) {

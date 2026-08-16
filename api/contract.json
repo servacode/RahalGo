@@ -576,6 +576,142 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/expenses",
+      "handler": "handleListExpenses",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expenses",
+      "handler": "handleCreateExpense",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "request": [
+        {
+          "name": "category_id",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "int64"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "spent_at",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/expenses/categories",
+      "handler": "handleExpenseCategories",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "response": [
+        {
+          "name": "categories",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expenses/categories",
+      "handler": "handleSaveExpenseCategory",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "request": [
+        {
+          "name": "id",
+          "type": "?string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "active",
+          "type": "?bool"
+        },
+        {
+          "name": "sort_order",
+          "type": "?int"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusCreated",
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/expenses/{id}/void",
+      "handler": "handleVoidExpense",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ],
+      "response": [
+        {
+          "name": "voided",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/incentives/{role}",
       "handler": "handleIncentiveStandings",
       "auth": true,

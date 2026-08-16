@@ -161,6 +161,7 @@
       "platform_expense": "نفقةُ المنصّة",
       "payout": "سحب رصيد",
       "adjustment": "تسوية إدارية",
+        "operating_expense": "مصروف تشغيل",
       "merchant_earning": "مستحقّ مبيعات",
       "driver_earning": "أجر توصيل",
       "reward": "مكافأة",
@@ -520,6 +521,7 @@
     }
   },
   "errors": {
+    "duplicate_name": "هذا الاسم موجود مسبقاً",
     "name_too_short": "الاسم قصير — حرفان على الأقل",
     "internal": "حدث خطأ غير متوقع، حاول مجدداً",
     "not_found": "المطلوب غير موجود",
@@ -652,6 +654,24 @@
     "owner_required": "لا متجرَ بلا صاحب — اكتب رقم صاحب المتجر"
   },
   "admin": {
+    "expenses": {
+      "title": "مصروفات التشغيل",
+      "hint": "إيجار المكتب والرواتب والكهرباء — تخرج من خزينة المنصة وتُسجَّل هنا.",
+      "add": "تسجيل مصروف",
+      "addHint": "المبلغ يخرج من خزينة المنصة فور التسجيل — وينقص رصيدها به.",
+      "manageCats": "أبواب المصروف",
+      "category": "الباب",
+      "amount": "المبلغ",
+      "spentAt": "تاريخ الصرف",
+      "note": "ملاحظة (اختياري)",
+      "total": "مجموع المصروف",
+      "count": "عدد البنود",
+      "empty": "لا مصروفات في هذه المدة",
+      "void": "إلغاء",
+      "catName": "اسم الباب",
+      "catActive": "مفعّل",
+      "usedCount": "{n} بند"
+    },
     "appTitle": "{platform} — لوحة التحكم",
     "appDescription": "لوحة إدارة منصة {platform} للتوصيل",
     "loginButton": "دخول",
@@ -674,6 +694,7 @@
       "reports": "التقارير",
       "settings": "الإعدادات",
       "treasury": "خزينة المنصة",
+      "expenses": "مصروفات التشغيل",
       "cash": "أموالٌ لم تُستلم",
       "losses": "الخسائر",
       "emergencies": "الطوارئ",
@@ -1956,6 +1977,9 @@
         "finance.settlement_recomputed": "إعادةُ حساب تسوية",
         "finance.ticket_resolve": "حلُّ شكوى",
         "finance.wallet_apply": "قيدٌ يدويّ في محفظة",
+        "finance.expense_added": "تسجيل مصروف تشغيل",
+        "finance.expense_voided": "إلغاء مصروف تشغيل",
+        "finance.expense_category": "تعديل باب مصروف",
         "menu.item_create": "إضافة صنف",
         "menu.item_delete": "حذف صنف",
         "menu.item_update": "تعديل صنف",
