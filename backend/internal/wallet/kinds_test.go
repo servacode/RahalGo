@@ -1,83 +1,68 @@
-package wallet
+package wallet_test
+
+// **كلُّ نوعٍ يكتبه المحرّكُ تقبله القاعدة.**
+//
+// (كشفه قياسٌ على خادم المالك ٢٠٢٦-٠٨-١٦: **`reward` و`penalty` يُكتبان في
+//  الشيفرة ويردّهما قيدُ `kind`** — فكلُّ مكافأةِ دعوةٍ أو هدفٍ تُردّ.)
+//
+// # لماذا حارسٌ لا انتباه
+//
+// **نوعٌ جديدٌ يُكتب في Go بسطر، وقبولُه في القاعدة يحتاج هجرة** — وبينهما
+// لا بناءٌ يشتكي ولا تحقّقُ أنواعٍ يمنع. **والخطأُ يظهر وقتَ التشغيل عند
+// أوّل نداء.**
+//
+// **ولم يظهر شهرين**: لم يُسلَّم طلبٌ لمدعوٍّ برمز، ولم تُمنح مكافأةُ هدف.
+// **وما لا يُجرَّب يُقرأ سليماً وهو معطوب.**
+//
+// **وأخطرُ من رسالة خطأ**: قيدُ الدعوة داخلَ معاملةِ تسليم الطلب —
+// **فإرجاعُها يعني أن يفشل تسليمُ طلبٍ لأنّ صاحبَه جاء بدعوة.**
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
-	"regexp"
+	"context"
 	"strings"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
 
-// TestLedgerKindsHaveArabicLabels **كلُّ نوعٍ يكتبه المحرّكُ في الدفتر له اسم.**
+// walletKinds **ما تكتبه الشيفرةُ فعلاً** — يُقرأ من مصادره لا من ذاكرتي.
 //
-// (شكوى المالك ٢٠٢٦-٠٨-٠٧: «يوجد الكثير من النصوص الإنكليزيّة بكلّ اللوحات».
-//
-//	وقِيس على الشاشة: `platform_profit` و`platform_expense` معروضتان خامّتين
-//	في خزنة الإدارة اثنتَي عشرةَ مرّةً في صفحةٍ واحدة.)
-//
-// # وهي ثالثةُ مواضع العائلة
-//
-// **سبقتها حالاتُ الطلب** («استرجاع طلب (cancelled)») **وأنواعُ صندوق
-// السائق** (`order_collection` و`settlement`). **والقاسمُ واحد**: اسمٌ
-// يُكتب في Go واسمٌ يُسمّى في المعجم، **ولا شيءَ يجمع بينهما.**
-//
-// **والشيفرةُ مكتوبةٌ لتسقط على الرمز الخام عند الفشل** — فلا خطأ ولا صمت،
-// **إنّما إنكليزيّةٌ في شاشة مال.**
-//
-// # فيُقرأ الطرفان ويُقارَنان
-//
-// **تُستخرج الأنواعُ من الشيفرة نفسِها** — كلُّ `ApplyTx` في الحزمة كلِّها،
-// لا من قائمةٍ تُصان بيدٍ فتشيخ.
-func TestLedgerKindsHaveArabicLabels(t *testing.T) {
-	kinds := map[string]bool{}
-	root := ".."
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
-		src, err := os.ReadFile(path)
-		if err != nil {
-			return nil
-		}
-		// ApplyTx(ctx, q, id, amount, "<النوع>", ...)
-		for _, m := range regexp.MustCompile(`ApplyTx\([^)]*?"([a-z_]+)"`).FindAllStringSubmatch(string(src), -1) {
-			kinds[m[1]] = true
-		}
-		return nil
+// **ومن أضاف نوعاً غداً يضيفه هنا** — والفحصُ يقول له إن نسي الهجرة.
+var walletKinds = []string{
+	"topup", "order_payment", "refund", "compensation", "commission",
+	"merchant_earning", "driver_earning", "payout", "adjustment",
+	"platform_profit", "platform_expense", "operating_expense",
+	// **وهذان هما اللذان كانا مرفوضين** (٢٠٢٦-٠٨-١٦).
+	"reward", "penalty",
+}
+
+func TestWalletKinds_AllAcceptedByTheDatabase(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	user := testdb.NewUser(t, pool, "customer")
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(),
+			`DELETE FROM wallet_transactions WHERE user_id = $1`, user)
 	})
-	if err != nil {
-		t.Fatalf("المشي على الشيفرة: %v", err)
-	}
-	if len(kinds) < 3 {
-		t.Fatalf("لم أجد إلّا %d نوعاً — تبدّل شكلُ النداء والحارسُ صار أعمى", len(kinds))
-	}
 
-	raw, err := os.ReadFile("../../../web/packages/i18n/src/locales/ar.json")
-	if err != nil {
-		t.Skipf("المعجمُ غيرُ متاح: %v", err)
-	}
-	var dict map[string]any
-	if err := json.Unmarshal(raw, &dict); err != nil {
-		t.Fatalf("المعجمُ غيرُ صالح: %v", err)
-	}
-	shared, _ := dict["shared"].(map[string]any)
-	node, _ := shared["txKinds"].(map[string]any)
-	if node == nil {
-		t.Fatal("لا shared.txKinds في المعجم")
-	}
-
-	for kind := range kinds {
-		v, ok := node[kind]
-		if !ok {
-			t.Errorf("النوع %q بلا اسمٍ في shared.txKinds — يُعرض خامّاً في شاشة مال", kind)
-			continue
+	var rejected []string
+	for _, kind := range walletKinds {
+		// **ويُجرَّب بالكتابة لا بقراءة نصّ القيد** — **ونصٌّ يُقرأ ويُقارَن
+		// يمرّ بفارقِ مسافةٍ أو ترتيب**، والكتابةُ تحكم كما يحكم التشغيل.
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO wallet_transactions (user_id, amount, kind)
+			VALUES ($1, 1, $2)`, user, kind); err != nil {
+			if strings.Contains(err.Error(), "wallet_transactions_kind_check") {
+				rejected = append(rejected, kind)
+				continue
+			}
+			t.Fatalf("تعذّر القيدُ %q لسببٍ آخر: %v", kind, err)
 		}
-		s, _ := v.(string)
-		// **ولا حرفَ لاتينيٍّ في الاسم** — «commission عمولة» يمرّ الوجودَ
-		// ويبقى غيرَ مفهوم.
-		if strings.ContainsAny(s, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-			t.Errorf("اسمُ النوع %q هو %q وفيه حرفٌ لاتينيّ", kind, s)
-		}
+	}
+	if len(rejected) > 0 {
+		t.Fatalf("أنواعٌ تكتبها الشيفرةُ وتردّها القاعدة: %s\n"+
+			"   **ولا بناءٌ يشتكي ولا تحقّقُ أنواعٍ يمنع** — والخطأُ يظهر عند "+
+			"أوّل نداءٍ حيّ. أضف هجرةً توسّع `wallet_transactions_kind_check`.",
+			strings.Join(rejected, "، "))
 	}
 }
