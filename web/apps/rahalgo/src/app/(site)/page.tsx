@@ -38,7 +38,6 @@ import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import {
   fetchPlatform,
   ButtonLink,
-  BrandMark,
   IconMoto,
   IconLocation,
   IconWallet,
@@ -137,7 +136,11 @@ export default async function HomePage() {
           النشر. */}
       <Band>
         <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
-          <BrandMark size={96} disc className="mb-6" />
+          {/* **ولا شعارَ في العرض الافتتاحيّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٧:
+              «اللوغو شيلو من هون»).
+
+              **وهو في الشريط فوقَه مباشرةً** — وشعارٌ مرّتين في شاشةٍ
+              واحدةٍ يزاحم العنوانَ الذي جاء الزائرُ ليقرأه. */}
           <h1 className="heading-hero">{H.heroTitle}</h1>
           <p className="hero-lead mt-5 max-w-prose text-ink-muted">{H.heroLead}</p>
           {/* **والدعوةُ إلى السوق تُخفى مع بابَيه الآخرَين** — (طلبُ

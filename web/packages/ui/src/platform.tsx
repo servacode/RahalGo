@@ -505,7 +505,22 @@ export function BrandMark({
       style={disc ? undefined : heightClass ? { maxWidth: h * 4 } : { height: h, maxWidth: h * 4 }}
       className={
         disc
-          ? "h-full w-auto max-w-full shrink-0 object-contain"
+          ? /* ══════════════════════════════════════════════════════
+               **وفرجةُ القرص بنسبةٍ من ارتفاعه لا بحشوةٍ مئويّة**
+               ══════════════════════════════════════════════════════
+
+               **وكانت `p-[12%]` على القرص — والحشوةُ المئويّةُ تُحسب من
+               عرض الأب لا من قطر الدائرة.** فقرصٌ قطرُه ٩٦ في عمودٍ عرضُه
+               ٥٤٤ أخذ حشوةً من خمسةٍ وستّين من كلّ جهة، **فصار صندوقُ
+               الصورة صفراً واختفى الشعارُ وبقيت دائرةٌ بيضاءُ فارغة.**
+               (كشفه المالك بلقطةٍ ٢٠٢٦-٠٨-١٧.)
+
+               **ولم يظهر في الشريط** لأنّ ارتفاعَه يأتي بصنفٍ لا برقم،
+               **فبدا سليماً في موضعٍ ومعطوباً في ثلاثة.**
+
+               **والارتفاعُ المئويُّ يُحسب من ارتفاع الأب** — وهو مضبوطٌ
+               في الحالين، فيُقرأ رقماً واحداً أينما وُضع. */
+            "h-[74%] w-auto max-w-[74%] shrink-0 object-contain"
           : `w-auto shrink-0 object-contain ${heightClass ?? ""} ${className}`
       }
     />
@@ -518,7 +533,7 @@ export function BrandMark({
      بحشوةٍ من كلّ جهة، **فيقع في مركزه مهما كانت نسبتُه.** */
   return disc ? (
     <span
-      className={`inline-flex aspect-square shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper p-[12%] ${heightClass ?? ""} ${className}`}
+      className={`inline-flex aspect-square shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper ${heightClass ?? ""} ${className}`}
       style={heightClass ? undefined : { height: h }}
     >
       {img}
