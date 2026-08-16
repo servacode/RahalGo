@@ -18,7 +18,7 @@ import {
   IconTile,
   Money,
 } from "@rahalgo/ui";
-import { api, ApiError, tokenStore } from "@/lib/api";
+import { api, apiFile, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 
@@ -174,17 +174,24 @@ export default function ReportsPage() {
    * تصديرَ ما يراه، **وحقلان ثانيان يجعلان الملفَّ يخالف الشاشة بلا أن يُلاحظ.**
    */
   function download(kind: "orders" | "ledger") {
-    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
     const path = kind === "orders" ? "orders/export" : "ledger/export";
     void (async () => {
       try {
-        const res = await fetch(`${base}/api/v1/admin/${path}?from=${from}&to=${to}`, {
-          headers: { Authorization: `Bearer ${tokenStore.access ?? ""}` },
-        });
-        if (!res.ok) {
-          setError(m.errors.internal);
-          return;
-        }
+        // ══════════════════════════════════════════════════════════════
+        // **والتنزيلُ يمرّ بالعميل — وكان يتجاوزه**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+        //
+        // **كان `fetch` خامّاً بيده** — **فتجاوز تجديدَ التوكن عند ٤٠١.**
+        // فتُفتح الشاشةُ وتُقرأ الأرقامُ دقائق، ثمّ يُضغط «تصدير»
+        // **فيردّ «حدث خطأ ما» والصفحةُ حولك تعمل** — لأنّ نداءاتِها
+        // جدّدت التوكنَ وهذا لم يفعل. **فيُظنّ التصديرُ معطّلاً وهو
+        // معطّلٌ بانتهاء توكن.**
+        //
+        // **والسببُ كان يُرمى معه** — فحتّى لو ردّ الخادمُ «لا صلاحية»
+        // لا يُقرأ.
+        const res = await apiFile(`/api/v1/admin/${path}?from=${from}&to=${to}`);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");

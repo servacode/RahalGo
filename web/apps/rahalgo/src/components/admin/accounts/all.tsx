@@ -36,7 +36,7 @@ import {
   IconView,
   usePlatform,
 } from "@rahalgo/ui";
-import { api, ApiError, tokenStore, type AuthUser } from "@/lib/api";
+import { api, apiFile, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import WalletModal from "@/components/admin/WalletModal";
 import { MerchantModal, CategoriesModal } from "@/components/admin/MerchantModal";
@@ -111,19 +111,36 @@ export default function AllAccountsTable() {
 
   useLiveRefresh(["account"], load);
 
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **والتنزيلُ يمرّ بالعميل — وكان يتجاوزه ولا يفحص النجاح**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+   *
+   * **كان `fetch` خامّاً بلا تجديدِ توكنٍ ولا فحصِ `res.ok`** — **فعند
+   * انتهاء الجلسة يُنزَّل ملفٌّ اسمُه `accounts.csv` وفيه رسالةُ خطأ**:
+   * يُفتح في جدولٍ فيُقرأ سطراً غريباً، **أو يُحفظ ويُرسَل وفيه ما ليس
+   * فيه.**
+   *
+   * **وملفٌّ يبدو تصديراً وهو خطأٌ أسوأُ من تنزيلٍ فشل** — الفشلُ يُرى
+   * والملفُّ يُصدَّق.
+   */
   async function exportCsv() {
     const params = new URLSearchParams({ query, role, status: statusFilter, online: onlineOnly ? "true" : "" });
-    const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-    const res = await fetch(`${base}/api/v1/admin/users/export?${params}`, {
-      headers: { Authorization: `Bearer ${tokenStore.access ?? ""}` },
-    });
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "accounts.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await apiFile(`/api/v1/admin/users/export?${params}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "accounts.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+      setError("");
+    } catch (err) {
+      setError(errText(err));
+    }
   }
 
   async function setStatus(u: AuthUser, status: string, reason = "") {

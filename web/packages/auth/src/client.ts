@@ -152,6 +152,63 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 }
 
+/**
+ * **تنزيلُ ملفٍّ مصادَقٍ — بالتجديد نفسِه.**
+ *
+ * (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦ في التقارير.)
+ *
+ * # المسألة
+ *
+ * **`api` تفكّ ظرفَ JSON وتردّ كائناً** — ولا تصلح لملفٍّ نصّيّ. **فكُتب
+ * في شاشة التقارير `fetch` خامٌّ بيده** — **وتجاوز التجديدَ عند ٤٠١.**
+ *
+ * **فالنتيجةُ حالةٌ تقع كثيراً**: تُفتح الشاشةُ وتُقرأ الأرقامُ دقائق،
+ * ثمّ يُضغط «تصدير» **فيردّ «حدث خطأ ما» والصفحةُ حولك تعمل** — لأنّ
+ * نداءاتِها جدّدت التوكنَ وهذا لم يفعل. **فيُظنّ التصديرُ معطّلاً وهو
+ * معطّلٌ بانتهاء توكن.**
+ *
+ * # ولماذا هنا لا هناك
+ *
+ * **التجديدُ منطقٌ واحدٌ في موضعٍ واحد** — ونسخةٌ ثانيةٌ منه في شاشةٍ
+ * تفترق يوماً: **يُضاف حارسٌ في إحداهما ويُنسى في الأخرى.**
+ *
+ * **ويردّ الاستجابةَ خاماً** — فمن أراد ملفّاً أخذ `blob`، ومن أراد نصّاً
+ * أخذ `text`. **ولا يُفترض شكلٌ على من يطلب.**
+ */
+export async function apiFile(path: string, init: RequestInit = {}): Promise<Response> {
+  const call = (token?: string | null) =>
+    fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: {
+        ...(init.headers ?? {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  let res = await call(tokenStore.access);
+  // **ومحاولةٌ واحدةٌ بعد التجديد** — **وحلقةٌ تعيد بلا حدٍّ تخنق الخادمَ
+  // بتوكنٍ ميّت.**
+  if (res.status === 401 && tokenStore.refresh) {
+    refreshing ??= refreshTokens().finally(() => {
+      refreshing = null;
+    });
+    await refreshing;
+    res = await call(tokenStore.access);
+  }
+  if (!res.ok) {
+    // **وسببُ الخادم يُقرأ ويُرمى إلى من يستطيع ترجمتَه** — **ورسالةٌ
+    // واحدةٌ لكلّ العلل تُسكت ما يُفيد.**
+    let body: ApiErrorBody | undefined;
+    try {
+      body = ((await res.json()) as { error?: ApiErrorBody }).error;
+    } catch {
+      body = undefined;
+    }
+    throw new ApiError(res.status,
+      body ?? { code: "internal", message_key: "errors.internal" });
+  }
+  return res;
+}
+
 export const authApi = {
   loginPassword: (phone: string, password: string) =>
     rawRequest<AuthResult>("/api/v1/auth/login", {
