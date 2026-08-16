@@ -67,7 +67,7 @@ export function StoreHours({
   useEffect(() => {
     api<DayHours[]>(path)
       .then(setDays)
-      .catch(() => setError(m.errors.internal));
+      .catch((err) => setError(errorText(err)));
   }, [api, path]);
 
   useEffect(() => {

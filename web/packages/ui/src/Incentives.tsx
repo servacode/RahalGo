@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Money } from "./money";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtMoney } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtMoney, errorText } from "@rahalgo/i18n";
 import { PageContainer, PageHeader, StatGrid, StatCard, EmptyState, LoadingState, ReloadState } from "./layout";
 import { Badge, Button } from "./components";
 import { IconStar, IconWallet, IconCheck, IconWarning } from "./icons";
@@ -69,7 +69,7 @@ export function MyIncentives({ api, path }: { api: ApiFn; path: string }) {
   const load = useCallback(() => {
     api<Payload>(path)
       .then(setData)
-      .catch(() => setError(m.errors.internal));
+      .catch((err) => setError(errorText(err)));
   }, [api, path]);
 
   useEffect(load, [load]);

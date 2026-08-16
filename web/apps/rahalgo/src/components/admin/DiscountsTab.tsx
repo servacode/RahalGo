@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, errorText } from "@rahalgo/i18n";
 import {
   Button,
   Badge,
@@ -72,9 +72,9 @@ export default function DiscountsTab() {
   const load = useCallback(() => {
     api<{ offers: Offer[] }>("/api/v1/admin/offers")
       .then((r) => setRows(r.offers ?? []))
-      .catch(() => {
+      .catch((err) => {
         setRows([]);
-        setError(m.errors.internal);
+        setError(errorText(err));
       });
   }, []);
 

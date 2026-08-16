@@ -37,6 +37,21 @@ function walk(dir, out = []) {
 /** **رسالةٌ عامّةٌ تُكتب مكانَ خطأ الخادم** — وهي ما نمنعه. */
 const GENERIC = /setError\(\s*m\.errors\.(internal|validation)\s*\)/;
 
+/* ══════════════════════════════════════════════════════════════════════
+   **والسهمُ يُمسَك كما تُمسَك الكتلة**
+   ══════════════════════════════════════════════════════════════════════
+
+   (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦ في «الأهداف والمكافآت».)
+
+   **كان الحارسُ يفحص `catch {` وحدَها** — **و`.catch(() => …)` سهمٌ يمرّ
+   منه سالماً.** فمرّت شاشةُ الأهداف بـ`setError(m.errors.internal)` في
+   سهمٍ ومعها `setRows([])`: **«لا أحدَ بلغ الهدفَ» تُقرأ على قراءةٍ
+   فشلت**، وهي استنتاجٌ يُبنى عليه قرارُ صرفِ مال.
+
+   **وحارسٌ يمسك شكلاً واحداً من شكلين يُطمئن ولا يحرس** — ومن قرأ
+   «سليم» ظنّ الشاشاتِ كلَّها تقول أسبابَها. */
+const ARROW_CATCH = /\.catch\(\s*\(\s*\)\s*=>/;
+
 const problems = [];
 for (const file of walk(ROOT)) {
   const rel = relative(ROOT, file).split("\\").join("/");
@@ -77,6 +92,10 @@ for (const file of walk(ROOT)) {
     } else if (/catch\s*\{/.test(line) && !/catch\s*\(/.test(line) && GENERIC.test(line)) {
       problems.push({ file: rel, line: i + 1 });
     }
+    // **والسهمُ بلا وسيطٍ يرمي الخطأ كذلك** — والرسالةُ في نافذته.
+    if (ARROW_CATCH.test(line) && GENERIC.test(lines.slice(i, i + 5).join("\n"))) {
+      problems.push({ file: rel, line: i + 1 });
+    }
   });
 }
 
@@ -88,5 +107,6 @@ console.log(`رسائلُ الخطأ: ${problems.length} موضعاً يرمي �
 for (const p of problems) {
   console.log(`   ${p.file}:${p.line}`);
   console.log("      الإصلاح: catch (err) { setError(errorText(err)) }  — من @rahalgo/i18n");
+  console.log("      وللسهم: .catch((err) => setError(errorText(err)))");
 }
 process.exit(1);

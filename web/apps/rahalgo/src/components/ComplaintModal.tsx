@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import { Button, Modal, Radio, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -47,7 +47,7 @@ export default function ComplaintModal({
   useEffect(() => {
     api<{ reasons: Reason[] }>(`/api/v1/my/orders/${orderId}/complaint-reasons`)
       .then((r) => setReasons(r.reasons ?? []))
-      .catch(() => setError(m.errors.internal));
+      .catch((err) => setError(errorText(err)));
   }, [orderId]);
 
   async function submit(e: React.FormEvent) {

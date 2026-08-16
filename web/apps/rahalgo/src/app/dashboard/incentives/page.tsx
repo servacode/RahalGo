@@ -18,7 +18,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   Tabs,
   type TabDef,
@@ -31,11 +31,12 @@ import {
   Input,
   EmptyState,
   LoadingState,
+  ReloadState,
   IconStar,
   IconDriver,
   IconUser,
 } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.incentives;
@@ -55,7 +56,21 @@ type Role = "driver" | "sales";
 
 export default function IncentivesPage() {
   const [role, setRole] = useState<Role>("driver");
-  const [rows, setRows] = useState<Standing[] | null>(null);
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **والفشلُ ليس فراغاً — والفراغُ ليس فشلاً**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+   *
+   * **كان `.catch(() => setRows([]))`** — **فيُقرأ «لا أحدَ بلغ الهدفَ
+   * هذا الشهر» حين تفشل القراءة.** وهو استنتاجٌ **يُبنى عليه قرارُ صرفِ
+   * مال.**
+   *
+   * **وشاشةُ الأحداث تحمل هذا الدرسَ مكتوباً**: «وسجلٌّ فارغٌ على خطأٍ
+   * شهادةُ زور».
+   */
+  const [rows, setRows] = useState<Standing[] | null | "failed">(null);
   const [error, setError] = useState("");
   const [granting, setGranting] = useState<Standing | null>(null);
   const [kind, setKind] = useState<"reward" | "penalty">("reward");
@@ -66,11 +81,14 @@ export default function IncentivesPage() {
 
   const load = useCallback(() => {
     setRows(null);
+    setError("");
     api<{ standings: Standing[] }>(`/api/v1/admin/incentives/${role}`)
       .then((r) => setRows(r.standings ?? []))
-      .catch(() => {
-        setRows([]);
-        setError(m.errors.internal);
+      .catch((err) => {
+        setRows("failed");
+        // **وسببُ الخادم بنصّه** — **ورسالةٌ واحدةٌ لكلّ العلل تُسكت ما
+        // يُفيد.**
+        setError(errorText(err));
       });
   }, [role]);
 
@@ -97,13 +115,9 @@ export default function IncentivesPage() {
       setNotice(P.sent);
       load();
     } catch (e) {
-      setError(
-        e instanceof ApiError
-          ? ((m.errors as Record<string, string>)[
-              (e.body.message_key ?? "").split(".").pop() ?? ""
-            ] ?? m.errors.internal)
-          : m.errors.internal,
-      );
+      // **ونسخةٌ ثانيةٌ من الترجمة تفترق عن المركزيّة يوماً** — يُضاف
+      // مفتاحٌ في إحداهما ويُنسى في الأخرى.
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -127,6 +141,10 @@ export default function IncentivesPage() {
 
       {rows === null ? (
         <LoadingState />
+      ) : rows === "failed" ? (
+        /* **وتعذّرُ القراءة يُقال ويُعاد** — **ولا يُقرأ «لا أحدَ بلغ»**،
+           وهو استنتاجٌ يُبنى عليه قرارُ صرفِ مال. */
+        <ReloadState onRetry={load} />
       ) : rows.length === 0 ? (
         <EmptyState icon={IconUser} title={P.empty} />
       ) : (

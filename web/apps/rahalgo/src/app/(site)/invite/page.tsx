@@ -32,7 +32,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, withPlatform, fmtMoney } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, withPlatform, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   Money,
   Alert,
@@ -78,7 +78,7 @@ export default function InvitePage() {
   const load = useCallback(() => {
     api<Referral>("/api/v1/auth/referral")
       .then(setData)
-      .catch(() => setError(m.errors.internal));
+      .catch((err) => setError(errorText(err)));
   }, []);
 
   useEffect(load, [load]);

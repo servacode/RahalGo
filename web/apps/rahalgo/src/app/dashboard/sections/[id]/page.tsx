@@ -468,7 +468,7 @@ function AddItemModal({
     // **ولا شيءَ يقول إنّها قُصّت** — إنّما لا يجد المتجرَ فيظنّه غيرَ مسجَّل.
     api<{ merchants: MerchantRow[] }>("/api/v1/admin/merchants?per_page=100")
       .then((r) => setMerchants(r.merchants ?? []))
-      .catch(() => setError(m.errors.internal));
+      .catch((err) => setError(errorText(err)));
   }, []);
 
   // **وقائمةُ المتجر تُقرأ حين يُختار** — لا قبله: أقسامُ متجرٍ لم يُختر
@@ -486,7 +486,7 @@ function AddItemModal({
         setMenuSections(list);
         setMenuSectionID(list[0]?.id ?? "");
       })
-      .catch(() => setError(m.errors.internal));
+      .catch((err) => setError(errorText(err)));
   }, [merchantID]);
 
   async function submit() {
