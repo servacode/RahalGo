@@ -14,9 +14,13 @@
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtRef, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
+  Alert,
   Button,
+  Modal,
+  Tabs,
+  Textarea,
   PageContainer,
   Pagination,
   PageHeader,
@@ -43,6 +47,10 @@ interface Emergency {
   lat: number | null;
   lng: number | null;
   created_at: string;
+  /** **وماذا جرى** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)، في المُعالَج وحدَه. */
+  resolution: string;
+  resolved_at: string | null;
+  resolved_by: string;
 }
 
 export default function EmergenciesPage() {
@@ -52,26 +60,50 @@ export default function EmergenciesPage() {
       سطراً. **ومئةٌ صامتةٌ تعني أنّ سائقاً في ضائقةٍ لا يراه أحد** — وهو
       آخرُ ما يُحتمل صمتُه في هذه المنصّة. */
   const [page, setPage] = useState(1);
+  /** ══════════════════════════════════════════════════════════════════
+   *  **والمُعالَجُ تبويبٌ — وهو ما وُعدت به الشاشةُ ولم تفِ**
+   *  ══════════════════════════════════════════════════════════════════
+   *
+   *  (قرارُ المالك ٢٠٢٦-٠٨-١٦.)
+   *
+   *  **مكتوبٌ في رأسها**: «من سأل عنه بعد يومين لم يجد من يقول ماذا
+   *  جرى». **وكانت تعرض المفتوحَ وحدَه** — فما إن يُغلق حتّى يختفي،
+   *  **وهو عينُ ما كُتبت لمنعه.**
+   */
+  const [tab, setTab] = useState<"open" | "resolved">("open");
+  /** **والبلاغُ يُغلق بكلمة** — لا بضغطةٍ صامتة. */
+  const [closing, setClosing] = useState<Emergency | null>(null);
+  const [error, setError] = useState("");
   const { data, reload } = useLiveData<{
     emergencies: Emergency[];
     total: number;
     per_page: number;
   }>(
-    () => api(`/api/v1/admin/emergencies?page=${page}`),
+    () => api(`/api/v1/admin/emergencies?page=${page}&status=${tab}`),
     ["driver", "order"],
-    [page],
+    [page, tab],
   );
   if (!data) return <LoadingState />;
   const list = data.emergencies ?? [];
 
-  async function resolve(id: string) {
-    await api(`/api/v1/admin/emergencies/${id}/resolve`, { method: "POST" });
-    reload();
-  }
-
   return (
     <PageContainer>
       <PageHeader icon={IconWarning} title={E.title} subtitle={E.hint} />
+
+      {/* **والمفتوحُ أوّلاً** — هو ما تُفتح الشاشةُ لأجله. */}
+      <Tabs
+        items={[
+          { key: "open" as const, label: E.tabOpen, icon: IconWarning },
+          { key: "resolved" as const, label: E.tabResolved, icon: IconStatus },
+        ]}
+        value={tab}
+        onChange={(k) => {
+          setTab(k);
+          setPage(1);
+        }}
+        className="mb-4"
+      />
+      {error && <Alert className="mb-3">{error}</Alert>}
 
       {list.length === 0 ? (
         <EmptyState icon={IconStatus} title={E.empty} />
@@ -93,6 +125,16 @@ export default function EmergenciesPage() {
                   <p className="mt-1 text-xs text-ink-muted" dir="ltr">
                     {fmtDateTime(x.created_at)}
                   </p>
+                  {/* **وماذا جرى** — **وبلاغٌ يُقال «أُغلق» ولا يُقال كيف
+                      يُنسى كما لو لم يُغلق.** */}
+                  {x.resolved_at && (
+                    <p className="mt-1 text-xs text-success">
+                      {x.resolution || E.noResolution}
+                      <span className="ms-2 text-ink-muted">
+                        {E.by}: {x.resolved_by || "—"} · {fmtDateTime(x.resolved_at)}
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {/* **الاتّصالُ أوّلاً** — قبل أيّ زرٍّ آخر في هذه الشاشة. */}
@@ -114,9 +156,11 @@ export default function EmergenciesPage() {
                       {E.where}
                     </a>
                   )}
-                  <Button variant="secondary" onClick={() => resolve(x.id)}>
-                    {E.resolve}
-                  </Button>
+                  {tab === "open" && (
+                    <Button variant="secondary" onClick={() => setClosing(x)}>
+                      {E.resolve}
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -130,6 +174,86 @@ export default function EmergenciesPage() {
           <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </div>
       )}
+      {closing && (
+        <ResolveModal
+          item={closing}
+          onClose={() => setClosing(null)}
+          onDone={() => {
+            setClosing(null);
+            setError("");
+            reload();
+          }}
+          onError={setError}
+        />
+      )}
     </PageContainer>
+  );
+}
+
+/**
+ * **إغلاقُ البلاغ — بكلمةٍ تقول ماذا جرى.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٦.)
+ *
+ * **والشاشةُ تسأل**: «أوصل الطلبَ غيرُه؟ أطمأنّ السائق؟ أدُفع له شيء؟» —
+ * **ولم يكن ثمّة موضعٌ للجواب.**
+ *
+ * **وفشلُ الإغلاق يُقال**: كان النداءُ بلا مِسكة — **فيضغط المكتبُ ولا يقع
+ * شيء، فيظنّ الزرَّ معطّلاً**، والبلاغُ مفتوحٌ وهو يحسبه مغلقاً.
+ */
+function ResolveModal({
+  item,
+  onClose,
+  onDone,
+  onError,
+}: {
+  item: Emergency;
+  onClose: () => void;
+  onDone: () => void;
+  onError: (msg: string) => void;
+}) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await api(`/api/v1/admin/emergencies/${item.id}/resolve`, {
+        method: "POST",
+        body: JSON.stringify({ resolution: text.trim() }),
+      });
+      onDone();
+    } catch (err) {
+      onError(errorText(err));
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={E.resolveTitle}>
+      <div className="space-y-3">
+        <p className="text-sm text-ink-muted">{E.resolveHint}</p>
+        <Textarea
+          id="emg-resolution"
+          label={E.resolution}
+          rows={3}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={onClose}>
+            {m.common.cancel}
+          </Button>
+          {/* **والكلمةُ مطلوبةٌ هنا** — **وإغلاقٌ بلا كلمةٍ يُعيد المسألةَ
+              إلى ما كانت.** */}
+          <Button disabled={busy || !text.trim()} onClick={() => void submit()}>
+            {busy ? m.common.loading : E.resolve}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

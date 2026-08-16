@@ -546,6 +546,12 @@
         "finance",
         "ops"
       ],
+      "request": [
+        {
+          "name": "resolution",
+          "type": "string"
+        }
+      ],
       "response": [
         {
           "name": "resolved",

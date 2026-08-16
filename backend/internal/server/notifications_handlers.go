@@ -63,12 +63,18 @@ var notifTitles = struct {
 	// **و`warningIssued` القديمُ للمتاجر وحدَه** ونصُّه «إنذارٌ على متجرك»
 	// — **ولا يصلح لسائقٍ ولا لزبون.**
 	warningOnYou string
+	// emergencyResolved **بلاغُ طوارئك عولج** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+	//
+	// **ومن ضغط الزرَّ ينتظر** — **وانتظارٌ بلا جوابٍ يُقرأ إهمالاً**،
+	// ومن قرأه لا يضغط ثانيةً.
+	emergencyResolved string
 	// **وشكوى فُتحت عليك** — يعرفها من هي عليه لا من فتحها وحدَه.
 	complaintOnYou string
 	// **وما اتُّفق عليه في الطلب الخاصّ** — يبقى مكتوباً حيث يراه صاحبُه.
 	customAgreed string
 }{
 	warningOnYou:        "إنذار على حسابك",
+	emergencyResolved:   "تابعنا بلاغَ الطوارئ الخاصّ بك",
 	complaintOnYou:      "شكوى على خدمتك",
 	messageFromDriver:   "رسالة من السائق",
 	messageFromCustomer: "رسالة من الزبون",

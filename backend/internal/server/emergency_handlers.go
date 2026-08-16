@@ -29,6 +29,7 @@ package server
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -180,20 +181,54 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 	// سطراً. **ومئةٌ صامتةٌ تعني أنّ سائقاً في ضائقةٍ لا يراه أحد** — وهو
 	// آخرُ ما يُحتمل صمتُه في هذه المنصّة.
 	pg := pagingOf(r, 20)
+	// ══════════════════════════════════════════════════════════════════
+	// **والمُعالَجُ يُقرأ أيضاً — وهو ما وُعدت به الشاشةُ ولم تفِ**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٦ بعد فحصٍ طلبه.)
+	//
+	// **مكتوبٌ في رأس الشاشة**: «من سأل عنه بعد يومين لم يجد من يقول ماذا
+	// جرى». **وكانت تعرض المفتوحَ وحدَه** — فما إن يُغلق حتّى يختفي،
+	// **وهو عينُ ما كُتبت لمنعه.**
+	status := r.URL.Query().Get("status")
+	if status != "resolved" {
+		status = "open"
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **والمفتوحُ بالأقدم أوّلاً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان بالأحدث** — فسائقٌ ضغط الزرَّ قبل أربعين دقيقةً **يهبط تحت
+	// من ضغطه الآن.**
+	//
+	// **وطابورُ مراجعة الأصناف يرتّب بالأقدم** — **وصنفٌ ينتظر أهونُ من
+	// إنسانٍ ينتظر**، والترتيبان كانا معكوسين.
+	//
+	// **والمُعالَجُ بالأحدث** — سؤالُه «ماذا جرى مؤخّراً؟» لا «من ينتظر».
+	order := "e.created_at"
+	if status == "resolved" {
+		order = "e.resolved_at DESC"
+	}
+
 	var count int
 	if err := s.pg.QueryRow(r.Context(),
-		`SELECT count(*) FROM driver_emergencies WHERE status = 'open'`).Scan(&count); err != nil {
+		`SELECT count(*) FROM driver_emergencies WHERE status = $1`, status).
+		Scan(&count); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT e.id, u.full_name, u.phone, o.number, e.note,
-		       ST_Y(e.at::geometry), ST_X(e.at::geometry), e.created_at
+		       ST_Y(e.at::geometry), ST_X(e.at::geometry), e.created_at,
+		       e.resolution, e.resolved_at,
+		       COALESCE(NULLIF(rb.full_name, ''), rb.phone::text, '')
 		FROM driver_emergencies e
 		JOIN users u ON u.id = e.driver_id
 		LEFT JOIN orders o ON o.id = e.order_id
-		WHERE e.status = 'open'
-		ORDER BY e.created_at DESC LIMIT $1 OFFSET $2`, pg.PerPage, pg.Offset)
+		LEFT JOIN users rb ON rb.id = e.resolved_by
+		WHERE e.status = $1
+		ORDER BY `+order+` LIMIT $2 OFFSET $3`, status, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -224,13 +259,21 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 		Lat         *float64  `json:"lat"`
 		Lng         *float64  `json:"lng"`
 		CreatedAt   time.Time `json:"created_at"`
+		// **وماذا جرى ومن أغلق ومتى** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+		//
+		// **والسجلُّ كان يحفظ من ومتى ولا يحفظ ماذا فعل** — فبعد يومين
+		// تجد «أُغلقت بيد فلان» **ولا تجد ماذا جرى.**
+		Resolution string     `json:"resolution"`
+		ResolvedAt *time.Time `json:"resolved_at"`
+		ResolvedBy string     `json:"resolved_by"`
 	}
 	out := []row{}
 	for rows.Next() {
 		var x row
 		var name *string
 		if err := rows.Scan(&x.ID, &name, &x.DriverPhone, &x.OrderNumber,
-			&x.Note, &x.Lat, &x.Lng, &x.CreatedAt); err != nil {
+			&x.Note, &x.Lat, &x.Lng, &x.CreatedAt,
+			&x.Resolution, &x.ResolvedAt, &x.ResolvedBy); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -248,10 +291,27 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 // بعد يومين لم يجد من يقول ماذا جرى.**
 func (s *Server) handleResolveEmergency(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	// **وماذا جرى يُكتب** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+	//
+	// **والشاشةُ تسأل صراحةً**: «أوصل الطلبَ غيرُه؟ أطمأنّ السائق؟ أدُفع
+	// له شيء؟» — **ولم يكن ثمّة حقلٌ يحمل الجواب.**
+	//
+	// **وهو اختياريٌّ في المحرّك ومطلوبٌ في الشاشة**: من نادى الواجهةَ
+	// مباشرةً لا يُردّ لأجل نصّ، **والحكمُ على المال والحقوق ليس هنا.**
+	req, _ := decode[struct {
+		Resolution string `json:"resolution"`
+	}](r)
+	resolution := ""
+	if req != nil {
+		resolution = clip(strings.TrimSpace(req.Resolution), 500)
+	}
+
+	// **ومن أُغلق بلاغُه يُعلَم** — يُقرأ اسمُ سائقه قبل التبديل.
+	var driverID string
 	tag, err := s.pg.Exec(r.Context(), `
 		UPDATE driver_emergencies
-		SET status = 'resolved', resolved_at = now(), resolved_by = $2
-		WHERE id = $1 AND status = 'open'`, id, userIDFrom(r))
+		SET status = 'resolved', resolved_at = now(), resolved_by = $2, resolution = $3
+		WHERE id = $1 AND status = 'open'`, id, userIDFrom(r), resolution)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -260,7 +320,23 @@ func (s *Server) handleResolveEmergency(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	s.audit(r, "ops.emergency_resolved", "emergency", id, nil)
+	// ══════════════════════════════════════════════════════════════════
+	// **ويصل السائقَ — وصمتُ المنصّة في الطارئ أسوأُ من صمتها في غيره**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **من ضغط زرَّ الطوارئ ينتظر** — ولا شيءَ كان يقول له «وصلنا».
+	// **وانتظارٌ بلا جوابٍ يُقرأ إهمالاً**، ومن قرأه لا يضغط ثانيةً.
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT driver_id::text FROM driver_emergencies WHERE id = $1`, id).
+		Scan(&driverID); err == nil {
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: driverID, Kind: notifications.KindAccount,
+			Title: notifTitles.emergencyResolved, Body: resolution,
+			Entity: "emergency", EntityID: id,
+		})
+	}
+	s.audit(r, "ops.emergency_resolved", "emergency", id,
+		map[string]any{"resolution": resolution})
 	s.touch("driver", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"resolved": true})
 }
