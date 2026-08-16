@@ -122,7 +122,28 @@ export function WalletPage({
   const [tab, setTab] = useState(ALL);
   const [asking, setAsking] = useState(false);
 
-  const { data: statement, loading, reload } = useLiveData<{ balance: number; transactions: Tx[] }>(
+  /* ══════════════════════════════════════════════════════════════════
+     **واللمحةُ تقول إنّها لمحة**
+     ══════════════════════════════════════════════════════════════════
+
+     (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦ في خزينة المنصّة.)
+
+     **المحرّكُ يقصّ عند خمسين ويقول `truncated`** — **والمكوّنُ لم يكن
+     يذكر الحقلَ في نوعه أصلاً.** وتبويبُ «كشف حساب» يقرؤه ويعرضه:
+     **فالمنصّةُ تعرف كيف تقول «قُصّ» وتقولها في موضعٍ وتصمت في آخر.**
+
+     **وموضعُه أخطرُ من غيره**: هذه الشاشةُ واحدةٌ لأربع محافظ —
+     **وخزينةُ المنصّة تمرّ بها كلُّ حركةِ مالٍ في المشروع**، فخمسون
+     حركةً ساعةُ عملٍ في يومٍ نشط. **ومن فتحها ليسأل «ماذا جرى اليوم؟»
+     قرأ آخرَ خمسين وظنّها كلَّ شيء.**
+
+     **واللمحةُ لمحةٌ بقصد** — والكشفُ يُجلب بمداه الخاصّ لمن أراد الجرد.
+     **والعيبُ كان أنّ اسمَها «الكل» ولا تقول إنّها لمحة.** */
+  const { data: statement, loading, reload } = useLiveData<{
+    balance: number;
+    transactions: Tx[];
+    truncated?: boolean;
+  }>(
     () => api(path),
     ["wallet"],
   );
@@ -286,7 +307,7 @@ export function WalletPage({
       reqs.length
         ? [
             // ولا عددَ على «الكلّ» ولا مجموع: **بطاقةُ رجوعٍ لا لوحةُ إحصاء.**
-            { key: ALL, label: W.all },
+            { key: ALL, label: W.recent },
             // طلبات السحب بلا مجموع عمداً: خلط المعلّق بالمدفوع بالمرفوض في رقم
             // واحد يعطي مبلغاً لا يعني شيئاً — العدد وحده هو الصادق هنا.
             { key: REQUESTS, label: W.requests, count: reqs.length },
@@ -499,6 +520,13 @@ export function WalletPage({
             empty={m.shared.txCard.empty}
             columns={txColumns}
           />
+        )}
+        {/* **والنقصُ يُعلَن** — **وسقفٌ صامتٌ يُقرأ «هذا كلُّ ما جرى»**،
+            ومن قرأه في خزينةٍ بنى عليه حكماً على يومٍ لم يره كلَّه. */}
+        {statement?.truncated && current === ALL && (
+          <p className="mt-3 text-center text-xs text-ink-muted">
+            {W.glanceHint}
+          </p>
         )}
       </Card>
 
