@@ -44,13 +44,32 @@ func (s *Server) handleCashOutstanding(w http.ResponseWriter, r *http.Request) {
 		           WHERE e.amount > 0
 		             AND e.created_at > COALESCE((SELECT max(s.created_at)
 		                 FROM driver_cash_entries s
-		                 WHERE s.driver_id = u.id AND s.kind = 'settlement'), '-infinity')),
+		                 WHERE s.driver_id = u.id AND s.kind = 'settlement'), '-infinity'))
+		           AS oldest_at,
 		       COALESCE(u.on_shift, false)
 		FROM users u
 		JOIN driver_cash_entries e ON e.driver_id = u.id
 		GROUP BY u.id, u.full_name, u.phone, u.on_shift
 		HAVING COALESCE(sum(e.amount), 0) > 0
-		ORDER BY held DESC`)
+		-- ══════════════════════════════════════════════════════════════
+		-- **والقِدَمُ أوّلاً — وهو الإشارة لا المقدار**
+		-- ══════════════════════════════════════════════════════════════
+		--
+		-- (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+		--
+		-- **كان الترتيبُ بالمقدار** — والصفحةُ تقول في رأسها: «خمسون ألفاً
+		-- قُبضت قبل ساعة عملٌ يجري، وخمسون ألفاً منذ أسبوعٍ مسألةٌ أخرى ·
+		-- **فالعمودُ الذي يُنظر إليه أوّلاً هو (منذ متى) لا (كم)**».
+		--
+		-- **فسائقٌ يحمل عشرين ألفاً منذ ثمانية أيام يهبط تحت من قبض مئتي
+		-- ألفٍ قبل ساعة** — والأوّلُ هو المسألة والثاني عملٌ يجري.
+		-- **والشاشةُ تلوّن قِدَمَه بالأحمر وتدفنه في الأسفل.**
+		--
+		-- **والمقدارُ يفصل بين المتساويين** — فلا يضيع.
+		--
+		-- **وبلا تاريخٍ يهبط** — من لا قبضَ له بعد آخر تسوية
+		-- **ليس أقدمَ الناس**، وفارغٌ يتصدّر في ترتيبٍ صاعدٍ بلا حارس.
+		ORDER BY oldest_at ASC NULLS LAST, held DESC`)
 	if err != nil {
 		s.respondErr(w, err)
 		return
