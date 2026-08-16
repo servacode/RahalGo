@@ -98,6 +98,10 @@ const ALL_NAV: NavItem[] = [
   // تشغيلٍ مخطَّطة** — وخلطُهما يضخّم تقريرَ الخسائر بالإيجار.
   { href: "/dashboard/expenses", label: m.admin.nav.expenses, icon: IconWallet,
     roles: ["admin", "finance"] },
+  // **والأرباحُ تُقرأ بعدهما** — (قرارُ المالك ٢٠٢٦-٠٨-١٦): **دخلُ الطلبات
+  // ناقصَ الخسائر والمصاريف والدعوات**، ولكلِّ إنسانٍ نصيبُه في تبويبه.
+  { href: "/dashboard/profits", label: m.admin.nav.profits, icon: IconWallet,
+    roles: ["admin", "finance"] },
   // **ما في الشارع مجموعاً** — مالٌ لا يُرى مجموعاً لا يُطالَب به.
   { href: "/dashboard/cash", label: m.admin.nav.cash, icon: IconWallet,
     roles: ["admin", "finance", "ops"] },

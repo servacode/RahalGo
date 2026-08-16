@@ -1741,6 +1741,16 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/profits",
+      "handler": "handleProfits",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/promos",
       "handler": "handleListPromos",
       "auth": true,
