@@ -338,7 +338,7 @@ export function DashboardChrome({
        تحته ولا تُرى. **ولوحةُ التحكّم أربعةُ تطبيقاتٍ من خمسة**، فتبقى
        الخلفيّةُ في الموقع وحدَه. */
     <div className="flex min-h-screen">
-      <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col surface-lit overflow-hidden surface lg:flex">
+      <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col surface-lit chrome overflow-hidden rounded-card border border-line lg:flex">
         {sidebar}
       </aside>
 
@@ -356,7 +356,7 @@ export function DashboardChrome({
 
            **و`raised` لا `surface`**: ما يعلو كلَّ شيءٍ يبقى أثقل — كالنوافذ
            والقوائم، **وقائمةُ تنقّلٍ لا تُقرأ ليست قائمة.** */
-        className={`surface-lit fixed inset-y-0 start-0 z-50 flex w-64 flex-col bg-raised elev-4 transition-transform duration-200 lg:hidden ${
+        className={`surface-lit chrome fixed inset-y-0 start-0 z-50 flex w-64 flex-col elev-4 transition-transform duration-200 lg:hidden ${
           menuOpen ? "translate-x-0" : "translate-x-full rtl:translate-x-full ltr:-translate-x-full"
         }`}
       >

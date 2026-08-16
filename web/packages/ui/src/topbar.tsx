@@ -74,7 +74,7 @@ export function TopBar({
       اختصارٍ كامل.
     */
     <header
-      className={`surface-lit flex items-center gap-2 bg-surface px-3 py-4 sm:gap-3 ${
+      className={`surface-lit chrome flex items-center gap-2 px-3 py-4 sm:gap-3 ${
         shape === "card"
           ? /* **لوحٌ كلوح المحتوى تحته** — `surface-lit` لا حدٌّ: الأرضُ
                والبطاقةُ لونٌ واحدٌ منذ ٢٠٢٦-٠٨-٠٦، **وخيطُ الضوء أعلى اللوح

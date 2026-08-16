@@ -82,7 +82,7 @@ export default function Footer({
        المنتصف.** والشبكةُ تُثبّته مهما طال ما حولَه.
 
        **وعلى الضيّق تتراصّ** — ثلاثةُ أقسامٍ في عرض هاتفٍ تُقرأ حرفاً حرفاً. */
-    <footer className="surface-lit grid grid-cols-1 items-center gap-2 bg-surface px-4 py-2.5 text-xs text-ink-muted sm:grid-cols-3">
+    <footer className="surface-lit chrome grid grid-cols-1 items-center gap-2 px-4 py-2.5 text-xs text-ink-muted sm:grid-cols-3">
       <div className="flex items-center justify-center gap-2 sm:justify-start">
         {ACCOUNTS.map(({ href, Icon, label }) => (
           <a
