@@ -1553,7 +1553,7 @@
       ],
       "response": [
         {
-          "name": "@out",
+          "name": "@res",
           "type": "unknown"
         }
       ],

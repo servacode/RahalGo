@@ -159,10 +159,55 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 
 // handleAdminPayouts كل طلبات السحب (ترشيح بالحالة) — للأدمن والمالية.
 func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
+	// ══════════════════════════════════════════════════════════════════
+	// **ومئتان صامتةٌ في المال**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+	//
+	// **كان `LIMIT 200` بلا عدٍّ ولا ترقيمٍ ولا كلمة** — والردُّ مصفوفةٌ
+	// مجرّدة، **لا حقلَ فيه يقول «هناك أكثر».**
+	//
+	// **والمعلَّقُ يتصدّر فيخفّ الأثر** — لكنّه يبقى في التاريخ: من رشّح
+	// «مدفوع» ليراجع ما صُرف **يرى آخرَ مئتين ويظنّها كلَّ ما دُفع**.
+	// **وهذا مالٌ خرج، ومراجعتُه ناقصةً أسوأُ من عدمها.**
+	status := r.URL.Query().Get("status")
+	pg := pagingOf(r, 25)
+
+	// **والعدُّ بشرط القائمة نفسِه** — نصّان يفترقان يوماً.
+	var count int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM payout_requests p WHERE ($1 = '' OR p.status = $1)`,
+		status).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **ومجموعُ ما يُنتظر صرفُه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكلُّ شاشةِ مالٍ في المنصّة تقول مجموعَها**: الخزينةُ رصيدَها،
+	// والخسائرُ مجموعَها، والنزاعاتُ «كم لنا عند الناس»، وأموالٌ لم
+	// تُستلم ما في الشارع. **وهذه وحدَها لا تقول كم عليها أن تدفع.**
+	//
+	// **ومالٌ لا يُرى مجموعاً لا يُخطَّط له.**
+	//
+	// **وللمعلَّق وحدَه ولا يتبع الترشيح**: سؤالُه «كم عليّ الآن؟» —
+	// **ومجموعٌ يتبع مُرشِّحاً يقول صفراً لمن يقرأ المرفوضَ**، وهو لا
+	// يخصّه.
+	var pending int64
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT COALESCE(sum(amount), 0) FROM payout_requests WHERE status = 'pending'`).
+		Scan(&pending); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
 	rows, err := s.pg.Query(r.Context(), payoutSelect+`
 		WHERE ($1 = '' OR p.status = $1)
-		ORDER BY (p.status = 'pending') DESC, p.created_at DESC LIMIT 200`,
-		r.URL.Query().Get("status"))
+		ORDER BY (p.status = 'pending') DESC, p.created_at DESC
+		LIMIT $2 OFFSET $3`, status, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -173,7 +218,9 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	res := paged("payouts", out, count, pg)
+	res["pending_total"] = pending
+	httpx.JSON(w, http.StatusOK, res)
 }
 
 // handleDecidePayout صرف الطلب أو رفضه — أدمن/مالية حصراً.

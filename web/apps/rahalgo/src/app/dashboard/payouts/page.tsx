@@ -15,6 +15,9 @@ import {
   EmptyState,
   LoadingState,
   DataView,
+  Pagination,
+  StatGrid,
+  StatCard,
   ViewToggle,
   useViewMode,
   type DataColumn,
@@ -71,17 +74,29 @@ export default function PayoutsPage() {
   const [creditOpen, setCreditOpen] = useState(false);
   const [creditUser, setCreditUser] = useState<AuthUser | null>(null);
   const [view, setView] = useViewMode("payouts");
+  /** **وصفحةٌ محدودةٌ بعدّ** — (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦).
 
-  const { data, loading, reload } = useLiveData<Payout[]>(
-    () => api(`/api/v1/admin/payouts${status ? `?status=${status}` : ""}`),
+      **كانت مئتين صامتةً**: من رشّح «مدفوع» ليراجع ما صُرف **يرى آخرَ
+      مئتين ويظنّها كلَّ ما دُفع** — **ومالٌ خرج ومراجعتُه ناقصةً أسوأُ
+      من عدمها.** */
+  const [page, setPage] = useState(1);
+
+  const { data, loading, reload } = useLiveData<{
+    payouts: Payout[];
+    total: number;
+    per_page: number;
+    /** **كم يُنتظر صرفُه الآن** — للمعلَّق وحدَه ولا يتبع الترشيح. */
+    pending_total: number;
+  }>(
+    () => api(`/api/v1/admin/payouts?page=${page}${status ? `&status=${status}` : ""}`),
     ["wallet"],
     // **والحالةُ تُعيد الجلب** — وكانت تُضيء ولا تُنادي الشبكة، **ولم يشتكِ
     // منه أحدٌ بعد**: من رأى القائمةَ لا تتغيّر ظنّ أن لا طلباتٍ في تلك الحالة.
-    [status],
+    [status, page],
   );
 
   if (loading) return <LoadingState />;
-  const rows = data ?? [];
+  const rows = data?.payouts ?? [];
 
   const columns: DataColumn<Payout>[] = [
     {
@@ -193,6 +208,29 @@ export default function PayoutsPage() {
         }
       />
 
+      {/* ══════════════════════════════════════════════════════════════
+          **وكم يُنتظر صرفُه الآن**
+          ══════════════════════════════════════════════════════════════
+
+          (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+
+          **وكلُّ شاشةِ مالٍ في المنصّة تقول مجموعَها**: الخزينةُ رصيدَها،
+          والخسائرُ مجموعَها، والنزاعاتُ «كم لنا عند الناس»، وأموالٌ لم
+          تُستلم ما في الشارع. **وهذه وحدَها لا تقول كم عليها أن تدفع.**
+
+          **ومالٌ لا يُرى مجموعاً لا يُخطَّط له.**
+
+          **ولا يتبع الترشيح** — سؤالُه «كم عليّ الآن؟»، **ومجموعٌ يتبع
+          مُرشِّحاً يقول صفراً لمن يقرأ المرفوض** وهو لا يخصّه. */}
+      <StatGrid>
+        <StatCard
+          label={`${P.pendingTotal} (${m.common.currency})`}
+          value={fmtNum(data?.pending_total ?? 0)}
+          icon={IconWallet}
+          tone={(data?.pending_total ?? 0) > 0 ? "accent" : "default"}
+        />
+      </StatGrid>
+
       {rows.length === 0 ? (
         <EmptyState icon={IconWallet} title={P.empty} />
       ) : (
@@ -238,6 +276,13 @@ export default function PayoutsPage() {
             reload();
           }}
         />
+      )}
+
+      {/* **ولا يظهر لصفحةٍ واحدة** — عنصرٌ لا يفعل شيئاً يزاحم ما يفعل. */}
+      {data && data.total > data.per_page && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
+        </div>
       )}
 
       {deciding && (
