@@ -49,6 +49,12 @@ interface Pending {
 
 export default function MenuReviewQueue() {
   const [rows, setRows] = useState<Pending[] | null>(null);
+  /** **وعددُ الطابور كلِّه وسقفُ العرض** — (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦).
+
+      **وكان العنوانُ يعدّ المعروضَ** — فطابورٌ فيه ثلاثمئةٌ وأربعةَ عشرَ
+      يقول «مئتان». **وسقفٌ صامتٌ في طابور مراجعةٍ أخطرُ من سواه**:
+      **صنفٌ لا يُوافَق عليه لأنّ أحداً لم يره.** */
+  const [count, setCount] = useState(0);
   const [rejecting, setRejecting] = useState<string>("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState("");
@@ -56,8 +62,11 @@ export default function MenuReviewQueue() {
 
   const load = useCallback(async () => {
     try {
-      const res = await api<{ items: Pending[] }>("/api/v1/admin/menu/pending");
+      const res = await api<{ items: Pending[]; count: number }>(
+        "/api/v1/admin/menu/pending",
+      );
       setRows(res.items ?? []);
+      setCount(res.count ?? 0);
     } catch {
       setRows([]);
     }
@@ -95,7 +104,16 @@ export default function MenuReviewQueue() {
   if (!rows || rows.length === 0) return null;
 
   return (
-    <FormSection title={`${Q.title} (${fmtNum(rows.length)})`} icon={<IconStore />}>
+    <FormSection title={`${Q.title} (${fmtNum(count)})`} icon={<IconStore />}>
+      {/* **والنقصُ يُعلَن** — **وسقفٌ صامتٌ يُقرأ «هذا كلُّ ما ينتظر»**،
+          فيُظنّ الطابورُ نضب وفيه مئة. */}
+      {count > rows.length && (
+        <p className="mb-2 text-center text-xs text-ink-muted">
+          {Q.showingLatest
+            .replace("{n}", fmtNum(rows.length))
+            .replace("{all}", fmtNum(count))}
+        </p>
+      )}
       <p className="mb-3 text-xs text-ink-muted">{Q.hint}</p>
       {error && (
         <Alert className="mb-3">{error}</Alert>

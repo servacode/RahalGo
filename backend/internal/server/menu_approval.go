@@ -27,6 +27,7 @@ package server
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -88,6 +89,12 @@ type pendingItem struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+// pendingLimit **سقفُ ما يُعرض من الطابور.**
+//
+// **وليس ترقيماً بل حاجزُ حمل** — والعددُ الكاملُ يُرسَل معه، **فالنقصُ
+// يُعلَن ولا يُصمت عنه.**
+const pendingLimit = 200
+
 // handlePendingMenuItems طابورُ المراجعة — **بالأقدم أوّلاً.**
 //
 // **والقسمُ قسمُ السوق** — لا الجدولَ الذي رفعته هجرةُ ٠٠٨٤.
@@ -96,6 +103,24 @@ type pendingItem struct {
 // — فاسمُ القسم يخرج فارغاً لكلّ صنفٍ جديد، **وطابورُ المراجعة يعرض صفّاً
 // بلا قسم** فلا يعرف المراجعُ ما يراجع.
 func (s *Server) handlePendingMenuItems(w http.ResponseWriter, r *http.Request) {
+	// ══════════════════════════════════════════════════════════════════
+	// **والعدُّ على الطابور كلِّه لا على المعروض**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+	//
+	// **كان `count` هو طولَ القائمة نفسِها** — فطابورٌ فيه ثلاثمئةٌ وأربعةَ
+	// عشرَ يقول «مئتان»، **والحقلُ يكذب مرّتين**: يُسمّى عدّاً وهو حدّ.
+	//
+	// **وسقفٌ صامتٌ في طابور مراجعةٍ أخطرُ من سواه**: **صنفٌ لا يُوافَق
+	// عليه لأنّ أحداً لم يره** — ولا يعرف المتجرُ لماذا لم يُقرّ، ولا
+	// يعرف المكتبُ أنّ وراء المعروض شيئاً.
+	var total int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM menu_items WHERE NOT approved`).Scan(&total); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT i.id::text, i.name, i.description, i.merchant_price,
 		       m.id::text, m.name, COALESCE(ps.name, ''), im.thumb_path, i.updated_at
@@ -105,7 +130,7 @@ func (s *Server) handlePendingMenuItems(w http.ResponseWriter, r *http.Request) 
 		LEFT JOIN media im ON im.id = i.image_media_id
 		WHERE NOT i.approved
 		ORDER BY i.updated_at
-		LIMIT 200`)
+		LIMIT `+strconv.Itoa(pendingLimit)+``)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -123,7 +148,11 @@ func (s *Server) handlePendingMenuItems(w http.ResponseWriter, r *http.Request) 
 		}
 		out = append(out, it)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"items": out, "count": len(out)})
+	// **والحدُّ يُرسَل ليُقال في الشاشة** — «المعروضُ ٢٠٠ من ٣١٤»،
+	// **ورقمٌ مكتوبٌ في الواجهة يفترق عن رقم الخادم يوماً.**
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"items": out, "count": total, "limit": pendingLimit,
+	})
 }
 
 // handleReviewMenuItem إقرارُ صنفٍ أو ردُّه.
