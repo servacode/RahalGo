@@ -43,14 +43,60 @@ func (s *Server) handleAdminAudit(w http.ResponseWriter, r *http.Request) {
 	// إلى ذهن من يراجع من «كل من صرف طلب سحب».
 	prefix := q.Get("prefix") // finance | ops | admin | auth | menu | user
 
-	rows, err := s.pg.Query(r.Context(), `
-		SELECT a.id, a.actor_user_id, u.full_name, a.action, a.entity, a.entity_id,
-		       a.details, a.ip, a.created_at
+	// ══════════════════════════════════════════════════════════════════
+	// **وتجديدُ الجلسة يُخفى — تكتبه الساعةُ لا الإنسان**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٦، وقياسٌ على خادمه: **أربعةٌ وأربعون من
+	//  ثمانين سطراً `auth.refresh`** — خمسةٌ وخمسون بالمئة.)
+	//
+	// **وأُصلح هذا بعينه في سجلّ نشاط الحساب أمس** — **والطاولةُ نفسُها**،
+	// فبقيَ هنا.
+	//
+	// **ومئتا سطرٍ فيها مئةٌ وعشرة تجديداتٍ لا يفعلها إنسان** — ويُدفَع
+	// الفعلُ الحقيقيُّ خارجَ الصفحة.
+	//
+	// **ومُرشِّحُ `auth` يجمع التجديدَ مع الدخول والخروج وتبديل كلمة
+	// السرّ** فلا يفصل. **ولا يُحذف من القاعدة**: أثرُ أمانٍ بعنوانٍ ووقت،
+	// يُخفى ويُطلب.
+	withRefresh := q.Get("refresh") == "true"
+
+	// ══════════════════════════════════════════════════════════════════
+	// **ومدًى بالتاريخ — وسجلٌّ بلا تاريخٍ يُقلَّب لا يُبحَث**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ومن سأل «ماذا جرى الأسبوع الماضي؟» لم يكن له بابٌ** إلّا أن يقلّب
+	// مئتين مئتين.
+	from, to := q.Get("from"), q.Get("to")
+
+	// **والشرطُ واحدٌ للعدّ وللقائمة** — نصّان يفترقان يوماً **فيقول
+	// العنوانُ ألفاً وتعرض القائمةُ تسعمئة.**
+	const scope = `
 		FROM audit_log a
 		LEFT JOIN users u ON u.id = a.actor_user_id
 		WHERE ($1 = '' OR a.action LIKE $1 || '.%')
+		  AND ($2 OR a.action <> 'auth.refresh')
+		  AND ($3 = '' OR a.created_at >= $3::date)
+		  AND ($4 = '' OR a.created_at < ($4::date + 1))`
+
+	// **وصفحةٌ محدودةٌ بعدّ** — **وهذا أسرعُ ما يُكتب في المنصّة**: كلُّ
+	// دخولٍ وتعديلِ إعدادٍ وإنذارٍ وقيدٍ يدويّ. **وسجلٌّ يُقرأ منه آخرُ
+	// مئتين ويصمت عن الباقي لمحةٌ باسم سجلّ.**
+	var count int
+	if err := s.pg.QueryRow(r.Context(), `SELECT count(*)`+scope,
+		prefix, withRefresh, from, to).Scan(&count); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	page, _ := strconv.Atoi(q.Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT a.id, a.actor_user_id, u.full_name, a.action, a.entity, a.entity_id,
+		       a.details, a.ip, a.created_at`+scope+`
 		ORDER BY a.id DESC
-		LIMIT $2`, prefix, limit)
+		LIMIT $5 OFFSET $6`, prefix, withRefresh, from, to, limit, (page-1)*limit)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -67,5 +113,9 @@ func (s *Server) handleAdminAudit(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, e)
 	}
-	httpx.JSON(w, http.StatusOK, out)
+	// **والعدُّ والصفحةُ معه** — **وردٌّ مصفوفةٌ مجرّدةٌ لا حقلَ فيه يقول
+	// «هناك أكثر».**
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"entries": out, "total": count, "page": page, "per_page": limit,
+	})
 }

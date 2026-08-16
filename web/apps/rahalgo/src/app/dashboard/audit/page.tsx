@@ -15,6 +15,7 @@ import { getMessages, defaultLocale, fmtDateTime, fmtNum, fmtMoney } from "@raha
 import {
   Alert,
   PageHeader, TabCards, EmptyState, Badge,
+  Input, Checkbox, Pagination,
   IconStatus, IconUser,
   LoadingState,
 } from "@rahalgo/ui";
@@ -22,6 +23,8 @@ import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const A = m.admin.audit;
+/** **واسما التاريخين من معجم الكشف** — لا يُترجَمان مرّتين. */
+const ST = m.shared.statement;
 
 interface Entry {
   id: number;
@@ -118,6 +121,20 @@ function DetailLine({ e }: { e: Entry }) {
 export default function AuditPage() {
   const [prefix, setPrefix] = useState<string>("");
   const [list, setList] = useState<Entry[] | null>(null);
+  /** **وصفحةٌ محدودةٌ بعدّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
+
+      **وهذا أسرعُ ما يُكتب في المنصّة**: كلُّ دخولٍ وتعديلِ إعدادٍ
+      وإنذارٍ وقيدٍ يدويّ. **وسجلٌّ يُقرأ منه آخرُ مئتين ويصمت عن الباقي
+      لمحةٌ باسم سجلّ.** */
+  const [page, setPage] = useState(1);
+  const [count, setCount] = useState(0);
+  const [perPage, setPerPage] = useState(50);
+  /** **والتجديدُ مخفيٌّ افتراضاً** — قِيس على الخادم: **أربعةٌ وأربعون من
+      ثمانين**. **وتكتبه الساعةُ لا الإنسان.** */
+  const [withRefresh, setWithRefresh] = useState(false);
+  /** **ومدًى بالتاريخ** — **وسجلٌّ بلا تاريخٍ يُقلَّب لا يُبحَث.** */
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
 
   const [failed, setFailed] = useState(false);
   /**
@@ -131,10 +148,21 @@ export default function AuditPage() {
    */
   const load = useCallback(() => {
     setFailed(false);
-    api<Entry[]>(`/api/v1/admin/audit?limit=200${prefix ? `&prefix=${prefix}` : ""}`)
-      .then(setList)
+    const qs = new URLSearchParams({ limit: "50", page: String(page) });
+    if (prefix) qs.set("prefix", prefix);
+    if (withRefresh) qs.set("refresh", "true");
+    if (from) qs.set("from", from);
+    if (to) qs.set("to", to);
+    api<{ entries: Entry[]; total: number; per_page: number }>(
+      `/api/v1/admin/audit?${qs}`,
+    )
+      .then((r) => {
+        setList(r?.entries ?? []);
+        setCount(r?.total ?? 0);
+        setPerPage(r?.per_page || 50);
+      })
       .catch(() => setFailed(true));
-  }, [prefix]);
+  }, [prefix, page, withRefresh, from, to]);
 
   useEffect(load, [load]);
 
@@ -154,8 +182,58 @@ export default function AuditPage() {
           label: f ? ((A.filters as Record<string, string>)[f] ?? f) : A.all,
         }))}
         active={prefix}
-        onChange={setPrefix}
+        onChange={(k) => {
+          setPrefix(k);
+          setPage(1);
+        }}
       />
+
+      {/* ══════════════════════════════════════════════════════════════
+          **ومدًى بالتاريخ وزرُّ التجديد**
+          ══════════════════════════════════════════════════════════════
+
+          (قرارُ المالك ٢٠٢٦-٠٨-١٦.)
+
+          **ومن سأل «ماذا جرى الأسبوع الماضي؟» لم يكن له بابٌ** إلّا أن
+          يقلّب مئتين مئتين.
+
+          **والتجديدُ يُطلب ولا يُفرض** — أثرُ أمانٍ بعنوانٍ ووقت،
+          **يُخفى ولا يُحذف.** */}
+      <div className="mb-4 mt-4 flex flex-wrap items-end gap-3">
+        <div className="w-40">
+          <Input
+            id="aud-from"
+            type="date"
+            label={ST.from}
+            value={from}
+            onChange={(e) => {
+              setFrom(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <div className="w-40">
+          <Input
+            id="aud-to"
+            type="date"
+            label={ST.to}
+            value={to}
+            onChange={(e) => {
+              setTo(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <Checkbox
+          id="aud-refresh"
+          label={A.showRefresh}
+          checked={withRefresh}
+          onChange={(e) => {
+            setWithRefresh(e.target.checked);
+            setPage(1);
+          }}
+        />
+      </div>
 
       {list === null ? (
         <LoadingState variant="text" />
@@ -186,6 +264,12 @@ export default function AuditPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {count > perPage && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={count} perPage={perPage} onChange={setPage} />
+        </div>
       )}
     </div>
   );

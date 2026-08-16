@@ -52,7 +52,19 @@
       ],
       "response": [
         {
-          "name": "@out",
+          "name": "entries",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
           "type": "unknown"
         }
       ],
