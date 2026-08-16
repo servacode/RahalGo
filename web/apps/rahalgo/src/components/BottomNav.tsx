@@ -33,6 +33,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   MobileNav,
   MobileNavSpacer,
+  usePlatform,
   IconGrid,
   IconStore,
   IconOrder,
@@ -77,6 +78,7 @@ const ITEMS: readonly NavItem[] = [
 export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { showShop } = usePlatform();
   if (!user || !isLoggedIn(user)) return null;
   /* ══════════════════════════════════════════════════════════════════
      **و«الرئيسيّة» للزبون، و«لوحتي» لمن له لوحة**
@@ -100,12 +102,22 @@ export function BottomNav() {
      `[object Object]`** — زرٌّ يقود إلى صفحةٍ غيرِ موجودة. (كشفه المالك
      ٢٠٢٦-٠٨-١١ حين سأل: «تحقّق إذا كان زرُّ لوحتي يعمل بشكلٍ صحيح».) */
   const portal = portalFor(user.roles);
-  const items: readonly NavItem[] = portal
+  const base: readonly NavItem[] = portal
     ? [
         { href: portal, label: m.site.nav.backToDashboard, icon: IconOverview },
         ...ITEMS.slice(1),
       ]
     : ITEMS;
+  /* ══════════════════════════════════════════════════════════════════
+     **وبابُ التسوّق يُخفى هنا أيضاً**
+     ══════════════════════════════════════════════════════════════════
+
+     (طلبُ المالك ٢٠٢٦-٠٨-١٧: «زرٌّ لإخفاء زرّ تسوّق».)
+
+     **وهو البابُ الأوسعُ لا الأضيق**: أكثرُ الناس يفتحون من الجوّال،
+     **وهذا شريطُهم.** **ومن أخفاه من الشريط العلويّ وحدَه لم يُخفِ
+     شيئاً** — يبقى في أسفل الشاشة حيث يصل الإبهامُ أوّلاً. */
+  const items = showShop ? base : base.filter((i) => i.href !== "/shop");
   return <MobileNav items={items} active={pathname} Link={Link} />;
 }
 

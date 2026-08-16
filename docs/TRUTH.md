@@ -433,6 +433,8 @@
 | `platform.logo` |  | media | `` |
 | `platform.background` |  | media | `` |
 | `platform.background_mobile` |  | media | `` |
+| `site.show_login` |  | bool | `true` |
+| `site.show_shop` |  | bool | `true` |
 | `platform.background_dim` |  | percent | `55` |
 | `auth.background` |  | media | `` |
 | `auth.background_mobile` |  | media | `` |

@@ -130,13 +130,34 @@ export interface Platform {
    * لا تُظهر أيقونتَه.
    */
   social: { facebook: string; instagram: string; telegram: string; whatsapp: string };
+  /**
+   * **هل يُعرض زرُّ الدخول في شريط الموقع؟** (`site.show_login`.)
+   *
+   * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «مفتاحٌ لإخفاء زرّ تسجيل الدخول — بحيث
+   *  أستطيع الدخول عن طريق الرابط المباشر».)
+   *
+   * **والمسارُ يبقى عاملاً**: `‎/login` يُفتح لمن كتبه، **والزرُّ وحدَه
+   * يغيب** — فمن أراد إغلاق الباب يُطفئ التسجيل لا يُخفي زرَّه.
+   *
+   * **والافتراضُ `true`** — فلو تأخّر الردُّ أو سقط **لا يُحرَم زائرٌ من
+   * بابه**: زرٌّ ظهر بلا داعٍ أهونُ من بابٍ اختفى بلا سبب.
+   */
+  showLogin: boolean;
+  /**
+   * **هل تُعرض أبوابُ التسوّق؟** (`site.show_shop`.)
+   *
+   * **وثلاثةٌ لا واحد**: زرُّ الشريط، وأيقونةُ الشريط السفليّ على
+   * الجوّال، ودعوةُ الرئيسيّة. **ومن أخفى واحداً وترك اثنين لم يُخفِ
+   * شيئاً.**
+   */
+  showShop: boolean;
   /** **عنوانُ المكتب** (`platform.address`) — وفارغٌ لا يُعرض. */
   address: string;
   /** **موقعُه على الخريطة** `"lat,lng"` — وفارغٌ يعني «لا خريطة». */
   location: string;
 }
 
-const EMPTY: Platform = { name: "", logo: null, otpLogin: true, passwordMinLength: 8, appUrl: "", authBg: null, authBgMobile: null, authBgDim: 70, siteBg: null, siteBgMobile: null, siteBgDim: 55, supportPhone: "", social: { facebook: "", instagram: "", telegram: "", whatsapp: "" }, address: "", location: "" };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true, passwordMinLength: 8, appUrl: "", authBg: null, authBgMobile: null, authBgDim: 70, siteBg: null, siteBgMobile: null, siteBgDim: 55, showLogin: true, showShop: true, supportPhone: "", social: { facebook: "", instagram: "", telegram: "", whatsapp: "" }, address: "", location: "" };
 
 /**
  * **مسارُ الوسيط يصير رابطاً هنا — لا في كلّ تطبيق.**
@@ -230,6 +251,9 @@ export function PlatformProvider({
             siteBg: j.data.site_bg ?? null,
             siteBgMobile: j.data.site_bg_mobile ?? null,
             siteBgDim: typeof j.data.site_bg_dim === "number" ? j.data.site_bg_dim : 55,
+            // **والافتراضُ الظهور** — انظر `showLogin`.
+            showLogin: j.data.show_login !== false,
+            showShop: j.data.show_shop !== false,
             }),
           );
       })

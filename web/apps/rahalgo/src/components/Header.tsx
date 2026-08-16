@@ -26,6 +26,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   TopBar,
   BrandMark,
+  usePlatform,
   TopBarLink,
   AppDownloadChip,
   TopBarChip,
@@ -125,6 +126,10 @@ export default function Header({
   logo?: string | null;
 } = {}) {
   const { user, logout } = useAuth();
+  /* **وبابا الموقع يُقرآن من الهويّة** — (طلبُ المالك ٢٠٢٦-٠٨-١٧).
+     **وهي مقروءةٌ في الخادم ومُمرَّرةٌ قيمةً مبدئيّة**، فلا يظهر الزرُّ
+     ثمّ يختفي أمام عين الزائر — **وومضةٌ كهذه أسوأُ من بقائه.** */
+  const { showLogin, showShop } = usePlatform();
   const router = useRouter();
   const pathname = usePathname();
   const logged = isLoggedIn(user);
@@ -267,6 +272,7 @@ export default function Header({
           ولا تكفي بين علامةٍ وباب.
 
           **والفرجةُ منطقيّةٌ لا يمينٌ ولا يسار** — تنقلب مع اللغة. */}
+      {showShop && (
       <TopBarLink
         Link={Link}
         href="/shop"
@@ -290,6 +296,7 @@ export default function Header({
         <IconStore size={TOPBAR_ICON} />
         <span className="hidden sm:inline">{N.shop}</span>
       </TopBarLink>
+      )}
       {/* ══════════════════════════════════════════════════════════════
           **وأبوابُ التعريف على الحاسوب وحدَه**
           ══════════════════════════════════════════════════════════════
@@ -461,6 +468,7 @@ export default function Header({
               ثلاثةَ أضعافِ عرضِها **في شريطٍ صار فيه بابُ التسوّق أيضاً.**
 
               **ويبقى للقارئ الصوتيّ** — `aria-label` يحمله. */}
+          {showLogin && (
           <TopBarLink
             Link={Link}
             href="/login"
@@ -471,6 +479,7 @@ export default function Header({
             <IconUser size={TOPBAR_ICON} />
             <span className="hidden sm:inline">{N.login}</span>
           </TopBarLink>
+          )}
           {/* **وبجانبه زرُّ التطبيق** — لمن لم يقرّر الدخولَ بعد.
               (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «لازم يكون بالتوب بار».) */}
           <AppDownloadChip label={m.auth.getApp} />

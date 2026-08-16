@@ -39,6 +39,8 @@ interface Wire {
   site_bg?: string | null;
   site_bg_mobile?: string | null;
   site_bg_dim?: number;
+  show_login?: boolean;
+  show_shop?: boolean;
   support_phone?: string;
   social?: Record<string, unknown>;
   address?: string;
@@ -87,6 +89,10 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
     siteBg: null,
     siteBgMobile: null,
     siteBgDim: 55,
+    // **والافتراضُ الظهور حتّى في الفراغ** — **بابٌ اختفى لأنّ نداءً سقط
+    // عطبٌ يُقرأ في وجه أوّل زائر.**
+    showLogin: true,
+    showShop: true,
     supportPhone: "",
     social: { facebook: "", instagram: "", telegram: "", whatsapp: "" },
     address: "",
@@ -114,6 +120,8 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
       siteBg: d.site_bg ?? null,
       siteBgMobile: d.site_bg_mobile ?? null,
       siteBgDim: typeof d.site_bg_dim === "number" ? d.site_bg_dim : 55,
+      showLogin: d.show_login !== false,
+      showShop: d.show_shop !== false,
       supportPhone: typeof d.support_phone === "string" ? d.support_phone : "",
       social: readSocial(d.social),
       address: typeof d.address === "string" ? d.address : "",

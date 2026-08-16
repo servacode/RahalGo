@@ -5457,6 +5457,14 @@
           "type": "unknown"
         },
         {
+          "name": "show_login",
+          "type": "unknown"
+        },
+        {
+          "name": "show_shop",
+          "type": "unknown"
+        },
+        {
           "name": "site_bg",
           "type": "unknown"
         },

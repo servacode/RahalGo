@@ -140,11 +140,23 @@ export default async function HomePage() {
           <BrandMark size={96} disc className="mb-6" />
           <h1 className="heading-hero">{H.heroTitle}</h1>
           <p className="hero-lead mt-5 max-w-prose text-ink-muted">{H.heroLead}</p>
+          {/* **والدعوةُ إلى السوق تُخفى مع بابَيه الآخرَين** — (طلبُ
+              المالك ٢٠٢٦-٠٨-١٧). **ودعوةٌ باقيةٌ بعد إخفاء الزرَّين
+              تنقض الإخفاءَ كلَّه**، وهي أظهرُ الثلاثة.
+
+              **و«من نحن» يصير الزرَّ الرئيسيَّ حينَها** — فلا تبقى
+              الواجهةُ بلا وجهةٍ تُضغط. */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <ButtonLink href="/shop" size="lg">
-              {H.ctaShop}
-            </ButtonLink>
-            <ButtonLink href="/about" variant="secondary" size="lg">
+            {brand.showShop && (
+              <ButtonLink href="/shop" size="lg">
+                {H.ctaShop}
+              </ButtonLink>
+            )}
+            <ButtonLink
+              href="/about"
+              variant={brand.showShop ? "secondary" : "primary"}
+              size="lg"
+            >
               {H.ctaAbout}
             </ButtonLink>
           </div>
