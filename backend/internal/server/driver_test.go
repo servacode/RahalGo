@@ -29,6 +29,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
+	"github.com/servacode/rahalgo/backend/internal/catalog"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -64,6 +66,11 @@ func newDriverFixture(t *testing.T, driverCount int) *driverFixture {
 			// **فأيُّ اختبارٍ يمسّ المال ينهار بمؤشّرٍ فارغ.**
 			wallet: walletSvc,
 			orders: orders.NewService(pool, nil, walletSvc, cashboxSvc, nil, quiet),
+			// **والفهرسُ مركَّبٌ أيضاً** — **وتحويلُ طلبِ الانضمام يمرّ به**
+			// (يُنشئ المتجرَ ويمنح صاحبَه دورَه)، **فأيُّ فحصٍ يمسّه ينهار
+			// بمؤشّرٍ فارغ** — وهي علّةُ المحفظة نفسُها قبله.
+			catalog: catalog.NewService(pool, identity.NewService(
+				identity.NewRepo(pool), nil, nil, nil, "", quiet)),
 		},
 	}
 

@@ -3,7 +3,7 @@
 /** طلبات انضمام المتاجر — واردة عبر روابط المندوبين؛ مراجعة ووسم الحالة. */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDate, errorText } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
   PageHeader,
@@ -27,6 +27,7 @@ import {
   IconUnblock,
   Modal,
   Input,
+  Alert,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -84,6 +85,24 @@ export default function LeadsPage() {
   /** الفرصةُ التي تُردّ الآن — **ولا تُردّ حتى تُكتب كلمة.** */
   const [rejecting, setRejecting] = useState<Lead | null>(null);
   const [note, setNote] = useState("");
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **وسببُ الفشل يُقال — والزرُّ كان يصمت**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
+   *
+   * **والتحويلُ يفشل لأسبابٍ حقيقيّة**: رقمُ صاحب المتجر لسائقٍ أو
+   * مندوب (`role_conflict`)، أو لا تصنيفَ للطلب، أو الرقمُ مسجَّلٌ
+   * بدورٍ آخر. **والمحرّكُ يقول كلَّ واحدٍ منها والمعجمُ يترجمه** — **ولا
+   * شاشةَ تعرضه.**
+   *
+   * **فيضغط المكتبُ «موافقة» ولا يقع شيء** — لا رسالةً ولا تبدُّلاً،
+   * **ولا حتّى إعادةَ تحميل**: `load()` بعد `await` الذي رمى لا تُنفَّذ.
+   * فيضغط ثانيةً وثالثة، ثمّ يظنّ الزرَّ معطّلاً.
+   */
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState("");
 
   /** **الصفحةُ المعروضة وعددُ الكلّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠). */
   const [page, setPage] = useState(1);
@@ -108,13 +127,25 @@ export default function LeadsPage() {
   useLiveRefresh(["lead"], load);
 
   async function setStatus(id: string, status: string, note = "") {
-    await api(`/api/v1/admin/leads/${id}/status`, {
-      method: "POST",
-      body: JSON.stringify({ status, note }),
-    });
-    setRejecting(null);
-    setNote("");
-    await load();
+    if (busy) return;
+    setBusy(id);
+    setError("");
+    try {
+      await api(`/api/v1/admin/leads/${id}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status, note }),
+      });
+      setRejecting(null);
+      setNote("");
+    } catch (err) {
+      setError(errorText(err));
+      setRejecting(null);
+    } finally {
+      setBusy("");
+      // **وتُعاد القراءةُ في الحالين** — **وقائمةٌ لا تُحدَّث بعد فشلٍ
+      // تُري حالاً قد تكون تبدّلت من جهةٍ أخرى.**
+      await load();
+    }
   }
 
   const columns: DataColumn<Lead>[] = [
@@ -229,6 +260,10 @@ export default function LeadsPage() {
       </div>
       <p className="mb-4 text-sm text-ink-muted">{m.admin.leads.subtitle}</p>
 
+      {/* **وسببُ الخادم يُعرض بنصّه** — «لهذا الحساب دورٌ أساسيٌّ بالفعل»
+          جوابٌ يُصلَح به، **و«حدث خطأ» جوابٌ يُعاد معه الضغطُ بلا فائدة.** */}
+      {error && <Alert className="mb-4">{error}</Alert>}
+
       <div className="mb-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
@@ -261,6 +296,7 @@ export default function LeadsPage() {
             {l.status !== "converted" && (
               <Button
                 variant="secondary"
+                disabled={busy === l.id}
                 onClick={() => void setStatus(l.id, "converted")}
                 className="flex items-center gap-1.5 !text-success"
               >
@@ -343,7 +379,7 @@ export default function LeadsPage() {
               </Button>
               <Button
                 variant="danger"
-                disabled={!note.trim()}
+                disabled={!note.trim() || busy === rejecting.id}
                 onClick={() => void setStatus(rejecting.id, "rejected", note.trim())}
               >
                 {m.admin.leads.markRejected}
