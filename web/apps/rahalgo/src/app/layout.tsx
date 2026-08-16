@@ -72,10 +72,62 @@ export async function generateMetadata(): Promise<Metadata> {
  *
  * **وما عداه ينزل إلى غلاف قسمِه**: `(site)` للسوق، ولكلّ لوحةٍ غلافُها.
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **ومسارُ الصورة يُنقّى قبل أن يُكتب في ورقةِ أنماط**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **نصٌّ من الإعدادات يُحقن في `<style>` يخرج من حدّه** بحرفٍ واحدٍ
+ * (`")}`) — **ولا يشفع أنّ الذي يرفعه هو المالك**: الإعدادُ يُقرأ من
+ * قاعدةٍ تُنسخ وتُستعاد وتُعدَّل بيدٍ خارج الشاشة.
+ *
+ * **فما ليس مسارَ وسيطٍ لا يُكتب أصلاً.**
+ */
+function mediaHref(path: string | null | undefined): string | null {
+  if (!path || !/^\/media\/[A-Za-z0-9/._-]+$/.test(path)) return null;
+  return API + path;
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const brand = await fetchPlatform(API);
+
+  // ══════════════════════════════════════════════════════════════════
+  // **والخلفيّةُ تبدأ في التحميل مع أوّل بايتٍ من الصفحة**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // (شكوى المالك ٢٠٢٦-٠٨-١٦: «يجب أن يتمّ تحميلها بسرعة رغم ضعف
+  //  الإنترنت — يعني ما تتأخّر بالتحميل».)
+  //
+  // **وكانت تنتظر أربعَ خطوات**: الورقةُ ثمّ حزمةُ الجافاسكربت ثمّ
+  // إحياءُ رياكت ثمّ نداءُ الإعدادات — **ثمّ** يبدأ تحميلُ الصورة.
+  // **وعلى شبكةٍ ضعيفةٍ ذلك ثوانٍ قبل أوّل بايتٍ منها.**
+  //
+  // **والخادمُ يعرف مسارَها أصلاً** — يقرأ الهويّةَ لكلّ صفحة. **فتُكتب
+  // في الورقة نفسِها**: المتصفّحُ يراها وهو يحلّل الترويسة، فيبدأ
+  // التحميلَ قبل أن يصل إلى الجسم.
+  //
+  // **و`preload` فوق الإعلان**: الإعلانُ في `<style>` لا يبدأ تحميلاً حتّى
+  // يُطابَق العنصرُ الذي يستعمله، **والوسمُ يبدأ فوراً.**
+  const bg = mediaHref(brand.siteBg);
+  const bgMobile = mediaHref(brand.siteBgMobile);
+  // **ونسخةُ الجوّال إن لم تُرفع لا تُكتب `none`** — **والثيمُ يسقط إلى
+  // العريضة بنفسه** (`var(--site-bg-mobile, var(--site-bg, none))`).
+  // **وكتابةُ `none` تمنع السقوطَ فيبقى الجوّالُ بلا خلفيّةٍ أصلاً** —
+  // وهي الشاشةُ التي يفتح منها أكثرُ الناس.
+  const bgCss = bg
+    ? `:root{--site-bg:url("${bg}");` +
+      (bgMobile ? `--site-bg-mobile:url("${bgMobile}");` : "") +
+      `--site-bg-dim:${brand.siteBgDim / 100}}`
+    : "";
+
   return (
     <html lang={defaultLocale} dir={getDir(defaultLocale)}>
+      {bg && (
+        <head>
+          <link rel="preload" as="image" href={bg} fetchPriority="high" />
+          <style dangerouslySetInnerHTML={{ __html: bgCss }} />
+        </head>
+      )}
       <body className="flex min-h-screen flex-col">
         <PlatformProvider apiBase={API} initial={brand}>
           <AuthProvider>

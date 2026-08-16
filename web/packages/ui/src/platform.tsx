@@ -272,28 +272,51 @@ export function PlatformProvider({
        **وإن سقط بقي التدرّجُ كما هو** — لا صورةَ ولا ظلام.
 
        **والافتراضُ صفرٌ حتّى يثبت النجاح** — لا العكس: **الطُّرقُ تُفتح على
-       السلامة لا على الأمل.** */
-    root.style.setProperty("--site-bg", "none");
-    root.style.setProperty("--site-bg-mobile", "none");
-    root.style.setProperty("--site-bg-dim", "0");
-    /* **ونسخةُ الجوّال تُرفع بلا انتظارِ تحميل**: الثيمُ يقرؤها تحت ٦٤٠
-       بكسلاً وحدَها، **والفحصُ الصامتُ للعريضة يكفي شاهداً أنّ الإعدادَ حيّ.** */
-    if (platform.siteBgMobile) {
-      root.style.setProperty("--site-bg-mobile", `url("${platform.siteBgMobile}")`);
+       السلامة لا على الأمل.**
+
+       ══════════════════════════════════════════════════════════════════
+       **ولا يُمحى ما رسمه الخادمُ ثمّ يُعاد**
+       ══════════════════════════════════════════════════════════════════
+
+       (شكوى المالك ٢٠٢٦-٠٨-١٦: «يجب أن يتمّ تحميلها بسرعة رغم ضعف
+        الإنترنت».)
+
+       **صار الغلافُ يكتب الخلفيّةَ في ورقة الصفحة نفسِها** فتبدأ مع أوّل
+       بايت. **وكان هذا الأثرُ يُطفئها أوّلَ ما يعمل** ثمّ يعيدها بعد
+       التحميل — **فترتدّ الشاشةُ إلى التدرّج ثمّ تعود**، وهي وميضٌ يراه
+       صاحبُها عطباً.
+
+       **فصار الإطفاءُ عند الفشل وحدَه**: `onerror` تمحو الصورةَ والحجابَ
+       معاً — **وهو ما حَرَس منه أوّلاً: ظلامٌ بلا صورةٍ تُبرّره.** */
+    const clear = () => {
+      root.style.setProperty("--site-bg", "none");
+      /* **وتُرفع لا تُصفَّر**: `none` تمنع الثيمَ من السقوط إلى العريضة —
+         **فيبقى الجوّالُ بلا خلفيّةٍ وإن كانت مرفوعة.** */
+      root.style.removeProperty("--site-bg-mobile");
+      root.style.setProperty("--site-bg-dim", "0");
+    };
+    if (!platform.siteBg) {
+      clear();
+      return;
     }
-    if (!platform.siteBg) return;
     let alive = true;
     const img = new Image();
     img.onload = () => {
       if (!alive) return;
       root.style.setProperty("--site-bg", `url("${platform.siteBg}")`);
+      if (platform.siteBgMobile) {
+        root.style.setProperty("--site-bg-mobile", `url("${platform.siteBgMobile}")`);
+      }
       root.style.setProperty("--site-bg-dim", String(platform.siteBgDim / 100));
+    };
+    img.onerror = () => {
+      if (alive) clear();
     };
     img.src = platform.siteBg;
     return () => {
       alive = false;
     };
-  }, [platform.siteBg, platform.siteBgDim]);
+  }, [platform.siteBg, platform.siteBgMobile, platform.siteBgDim]);
 
   return (
     <PlatformContext.Provider value={platform}>

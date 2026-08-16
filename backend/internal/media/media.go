@@ -51,7 +51,19 @@ const (
 	maxPixels   = 13_000_000
 	thumbDim    = 400 // البعد الأقصى للمصغرة
 	jpegQuality = 82
+
+	// backgroundQuality **جودةُ الخلفيّات وحدَها.**
+	//
+	// **وهي تُرسم تحت حجابٍ وخلفَ زجاج** — فلا عينَ تفحص تفاصيلَها،
+	// **وكلُّ نقطةٍ من الجودة ثمنُها بايتاتٌ ينتظرها زائرٌ على شبكةٍ ضعيفة.**
+	backgroundQuality = 62
 )
+
+// isBackground **الخلفيّاتُ صنفٌ له قواعدُه** — لا شفافيّةَ تحتها ولا تُفحص
+// تفاصيلُها، **ووزنُها وحدَه ما يُرى** لأنّها أوّلُ ما يُحمَّل وأكبرُه.
+func isBackground(kind string) bool {
+	return kind == "site_background" || kind == "auth_background"
+}
 
 var (
 	ErrBadImage = httpx.NewError(http.StatusBadRequest, "invalid_image", "errors.invalid_image")
@@ -200,9 +212,35 @@ func (s *Service) Save(ctx context.Context, actorID, kind string, r io.Reader) (
 	}
 
 	// PNG يبقى PNG للحفاظ على الشفافية (شعارات)، وكل ما عداه يُعاد ترميزه JPEG.
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **إلّا الخلفيّات — فلا شفافيّةَ تحتها أصلاً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-١٦: «يجب أن يتمّ تحميلها بسرعة رغم ضعف
+	//  الإنترنت — يعني ما تتأخّر بالتحميل».)
+	//
+	// **وخلفيّتُه كانت PNG بمليونٍ ومئةِ ألفِ بايت** — ١٦٠٠×٩٠٠، **قِيس
+	// تحميلُها من اتّصالٍ جيّدٍ فبلغ ثلاثَ عشرةَ ثانية.** والصورةُ نفسُها
+	// JPEG لا تبلغ عُشرَ ذلك.
+	//
+	// **والسببُ أنّ القاعدةَ فوقها كُتبت للشعارات**: شعارٌ بخلفيّةٍ شفّافةٍ
+	// يجب أن يبقى PNG، **وصورةٌ فوتوغرافيّةٌ تُرفع PNG تبقى PNG** — وهي
+	// أسوأُ صيغةٍ للصور الطبيعيّة على الإطلاق.
+	//
+	// **والخلفيّةُ تملأ الشاشةَ ولا شيءَ خلفَها** — فالشفافيّةُ فيها لا
+	// معنى لها، **وثمنُها ثوانٍ ينتظرها كلُّ زائر.**
 	ext, encode := ".jpg", encodeJPEG
-	if format == "png" {
+	if format == "png" && !isBackground(kind) {
 		ext, encode = ".png", encodePNG
+	}
+	// **وجودةٌ أخفضُ للخلفيّة وحدَها.**
+	//
+	// **وهي تُرسم تحت حجابٍ معتم** (`platform.background_dim`) **وخلفَ
+	// بطاقاتٍ زجاجيّة** — فما يُفقد من التفاصيل لا تراه عينٌ أصلاً،
+	// **والمكسبُ نحوُ الثلث من الحجم.**
+	if isBackground(kind) {
+		encode = encodeJPEGAt(backgroundQuality)
 	}
 
 	full := downscale(src, maxDim)
@@ -275,6 +313,13 @@ func downscale(src image.Image, max int) image.Image {
 
 func encodeJPEG(w io.Writer, img image.Image) error {
 	return jpeg.Encode(w, img, &jpeg.Options{Quality: jpegQuality})
+}
+
+// encodeJPEGAt **جودةٌ مختارةٌ لصنفٍ بعينه** — انظر `backgroundQuality`.
+func encodeJPEGAt(q int) func(io.Writer, image.Image) error {
+	return func(w io.Writer, img image.Image) error {
+		return jpeg.Encode(w, img, &jpeg.Options{Quality: q})
+	}
 }
 
 func encodePNG(w io.Writer, img image.Image) error {
