@@ -125,17 +125,54 @@ export function LegalPage({
 
           **ولا لوحَ يحوي الكروتَ**: سطحٌ فوق سطحٍ يُقرأ حدّين متوازيين
           **ويأكل من عرض النصّ مرّتين.** */}
-      <div className="space-y-3">
+      {/* ══════════════════════════════════════════════════════════════
+          **وشكلٌ يحتمل نصّاً طويلاً**
+          ══════════════════════════════════════════════════════════════
+
+          (طلبُ المالك ٢٠٢٦-٠٨-١٧: «نريد تغييرَ شكل التصميم» — مع نصوصٍ
+           جديدةٍ للشروط والخصوصيّة تبلغ عشرين قسماً وستّةً وعشرين.)
+
+          **وثلاثةُ فروقٍ عن الشكل السابق**:
+
+          **١ · رقمٌ لكلّ عنوان.** **ووثيقةٌ بستّةٍ وعشرين قسماً بلا أرقامٍ
+          لا يُحال إلى بندٍ فيها** — ومن سأل عن «بند الإلغاء» لا يجد ما
+          يقوله.
+
+          **٢ · وحرفٌ أكبر.** كان `text-sm` باهتاً — **ومن يقرأ ألفَ كلمةٍ
+          بحرفٍ صغيرٍ باهتٍ يترك القراءة**، وهذه صفحاتٌ تُقرأ لا تُمسح.
+
+          **٣ · والأسطرُ المعدودةُ تُرسم نقاطاً.** النصُّ يكتبها ببادئة
+          `•` — **وفقرةٌ فيها ثمانيةُ بنودٍ متلاصقةٍ تُقرأ كتلةً واحدة.** */}
+      <div className="flex flex-col gap-4">
         <PageHeader icon={icon} title={title} subtitle={subtitle} />
 
         {blocks.map((b, i) => (
-          <section key={i} className="surface p-4 leading-relaxed sm:p-5">
-            {b.h && <h2 className="mb-2 font-bold">{fill(b.h, contact, platform)}</h2>}
-            {b.p.map((line, j) => (
-              <p key={j} className="mb-2 text-sm text-ink-muted last:mb-0">
-                {fill(line, contact, platform)}
-              </p>
-            ))}
+          <section key={i} className="surface p-5 leading-relaxed sm:p-6">
+            {b.h && (
+              <h2 className="mb-3 flex items-baseline gap-2">
+                {/* **والرقمُ يُحسب ولا يُكتب في النصّ** — فمن أدرج بنداً
+                    في الوسط لا يُعيد ترقيمَ ما بعده بيده. */}
+                <span className="figure text-brandmark">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="heading-section text-accent-text">
+                  {fill(b.h, contact, platform)}
+                </span>
+              </h2>
+            )}
+            {b.p.map((line, j) => {
+              const bullet = line.startsWith("•");
+              return bullet ? (
+                <p key={j} className="mb-1.5 flex gap-2 text-base text-ink-muted last:mb-0">
+                  <span aria-hidden className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                  {fill(line.replace(/^•\s*/, ""), contact, platform)}
+                </p>
+              ) : (
+                <p key={j} className="mb-2.5 text-base text-ink-muted last:mb-0">
+                  {fill(line, contact, platform)}
+                </p>
+              );
+            })}
           </section>
         ))}
 
