@@ -80,15 +80,24 @@ function Tile({ Icon, title, body }: { Icon: Icon; title: string; body: string }
 function Band({
   children,
   tinted,
+  flush,
 }: {
   children: React.ReactNode;
   tinted?: boolean;
+  /**
+   * **بلا حشوةٍ ولا حدٍّ للعرض** — (قاعدةُ المالك، أعادها ٢٠٢٦-٠٨-١٧:
+   * «ما زال هناك بادينغ على اليمين»).
+   *
+   * **والافتتاحيّةُ وحدَها**: الأقسامُ تحتها بطاقاتٌ في شبكة، **وشبكةٌ
+   * تلامس الحافّةَ تُقرأ مقصوصة.**
+   */
+  flush?: boolean;
 }) {
   return (
     <section
-      className={`-mx-3 px-3 py-14 sm:-mx-4 sm:px-4 sm:py-20 ${tinted ? "bg-raised" : ""}`}
+      className={`-mx-3 py-14 sm:-mx-4 sm:py-20 ${flush ? "" : "px-3 sm:px-4"} ${tinted ? "bg-raised" : ""}`}
     >
-      <div className="mx-auto w-full max-w-6xl">{children}</div>
+      <div className={flush ? "w-full" : "mx-auto w-full max-w-6xl"}>{children}</div>
     </section>
   );
 }
@@ -183,7 +192,7 @@ export default async function HomePage() {
           **ولا زرَّ «حمّل التطبيق» بعد**: التطبيقاتُ لم تُنشر على غوغل بلاي
           **وزرٌّ يعد بما لا يوجد يُفقد الثقةَ في أوّل شاشة.** يُضاف يومَ
           النشر. */}
-      <Band>
+      <Band flush>
         {/* **والصورةُ فوق الكلام** — **وعنوانٌ يُكتب فوق صورةٍ يرفعها
             صاحبُها لا يُضمَن أن يُقرأ**: صورةٌ فاتحةٌ تبتلع الحرفَ الأبيضَ
             وداكنةٌ تبتلع الأسود. **فالسلايدرُ يعلو والكلامُ تحته على أرضِ
@@ -199,7 +208,7 @@ export default async function HomePage() {
             **و`items-start` لا `items-end`**: البدايةُ منطقيّةٌ تنقلب مع
             اللغة — **ومن كتب «يمين» بالحرف كسر صفحتَه يومَ تُقرأ
             بالإنجليزيّة.** */}
-        <div className="flex max-w-3xl flex-col items-start text-start">
+        <div className="flex flex-col items-start text-start">
           {/* **ولا شعارَ في العرض الافتتاحيّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٧:
               «اللوغو شيلو من هون»).
 
