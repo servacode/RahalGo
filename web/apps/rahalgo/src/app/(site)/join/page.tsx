@@ -22,6 +22,7 @@ import {
   IconPromos,
   usePlatform,
   LoadingState,
+  ButtonLink,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -131,6 +132,30 @@ function JoinForm() {
 
   if (checking) {
     return <LoadingState variant="text" />;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     **ولا نموذجَ لمن جاء بلا دعوة**
+     ══════════════════════════════════════════════════════════════════
+
+     (سياسةُ المالك ٢٠٢٦-٠٨-١٧: «فقط الإدارةُ والمندوبُ يستطيع الوصولَ
+      إليه… ما يصير شخصٌ يفتح الرابطَ بشكلٍ خارجيّ».)
+
+     **والقفلُ في المحرّك** — `/public/join` يردّ من لا كودَ معه.
+     **وهذا وجهُه في الشاشة**: من فتح العنوانَ بلا دعوةٍ يرى سبباً وباباً
+     إلى الدعم، **لا نموذجاً يملؤه ثمّ يُردّ بعد أن كتب كلمةَ مرورٍ
+     واسمَ متجرٍ وموقعاً.**
+
+     **و`repName` فارغٌ يعني «لا مندوبَ فعّالاً وراء هذا الكود»** — سواءٌ
+     لم يُرسل كودٌ أصلاً أو أُرسل مخترَعاً. */
+  if (!repName) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center">
+        <IconLock size={44} className="mx-auto mb-4 text-ink-muted" />
+        <p className="mb-4 text-base text-ink">{m.errors.invite_required}</p>
+        <ButtonLink href="/contact">{m.site.homePage.familySupport}</ButtonLink>
+      </div>
+    );
   }
 
   return (

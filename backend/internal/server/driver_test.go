@@ -54,6 +54,7 @@ func newDriverFixture(t *testing.T, driverCount int) *driverFixture {
 	walletSvc := wallet.NewService(pool)
 	settingsStore := settings.NewStore(pool)
 	cashboxSvc := cashbox.NewService(pool, settingsStore)
+	ident := identity.NewService(identity.NewRepo(pool), nil, nil, nil, "", quiet)
 	f := &driverFixture{
 		pool: pool,
 		srv: &Server{
@@ -69,8 +70,11 @@ func newDriverFixture(t *testing.T, driverCount int) *driverFixture {
 			// **والفهرسُ مركَّبٌ أيضاً** — **وتحويلُ طلبِ الانضمام يمرّ به**
 			// (يُنشئ المتجرَ ويمنح صاحبَه دورَه)، **فأيُّ فحصٍ يمسّه ينهار
 			// بمؤشّرٍ فارغ** — وهي علّةُ المحفظة نفسُها قبله.
-			catalog: catalog.NewService(pool, identity.NewService(
-				identity.NewRepo(pool), nil, nil, nil, "", quiet)),
+			// **والهويّةُ تُبنى مرّةً وتُمرَّر للاثنين** — **ونسختان
+			// منها في فحصٍ واحدٍ تُخفيان أنّ الخادمَ يحملها أصلاً**،
+			// فيسقط كلُّ مسارٍ يقرؤها بمؤشّرٍ فارغ.
+			identity: ident,
+			catalog:  catalog.NewService(pool, ident),
 		},
 	}
 

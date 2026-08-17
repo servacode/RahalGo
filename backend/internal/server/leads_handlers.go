@@ -47,6 +47,15 @@ func clip(v string, max int) string {
 	return v
 }
 
+// incr **يعدّ نداءً في ريدس** — **ويردّ صفراً حين لا ريدس** فلا يسقط
+// المسارُ في فحصٍ لا يشغّله. (والحدُّ أفضليّةٌ لا شرط.)
+func (s *Server) incr(ctx context.Context, key string) (int64, error) {
+	if s.rdb == nil {
+		return 0, nil
+	}
+	return s.rdb.Incr(ctx, key).Result()
+}
+
 // handlePublicJoin التقاط طلب انضمام متجر عبر رابط/باركود مندوب (عام، بلا حساب).
 func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 	// تحديد المعدل حسب العنوان — نقطة عامة قابلة للإغراق (نفس نمط طلب الرمز).
@@ -56,8 +65,11 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 		ip = host
 	}
 	key := "join:req:" + ip
-	if n, err := s.rdb.Incr(r.Context(), key).Result(); err == nil {
-		if n == 1 {
+	// **وحدُّ المعدّل يحتاج ريدس** — **وفحصٌ بلا ريدس كان يسقط بمؤشّرٍ
+	// فارغ**، والحدُّ أصلاً أفضليّةٌ لا شرط: أخطاؤه مُبتلَعةٌ أدناه.
+	// (وهو الحارسُ نفسُه في `driver_route.go`.)
+	if n, err := s.incr(r.Context(), key); err == nil {
+		if n == 1 && s.rdb != nil {
 			s.rdb.Expire(r.Context(), key, time.Hour)
 		}
 		if n > joinMaxPerIP {
@@ -113,6 +125,36 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 		}
 		categoryID = &req.CategoryID
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ولا يُسجَّل متجرٌ بلا كودِ مندوبٍ فعّال**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (سياسةُ المالك ٢٠٢٦-٠٨-١٧: «رابطُ المتجر وصاحب المتجر، فقط الإدارةُ
+	//  والمندوبُ يستطيع الوصولَ إليه. ما يصير شخصٌ يفتح الرابطَ بشكلٍ
+	//  خارجيّ — ربّما حدا استطاع الوصولَ إليه أو خمّن الرابطَ ويصير
+	//  يسجّل».)
+	//
+	// **وحجبُ الرابط في الشاشة ليس حجباً**: النقطةُ مفتوحةٌ لمن ناداها
+	// بأداةٍ سطريّة — **ومن عرف عنوانَها سجّل متجراً بلا أن يفتح صفحةً.**
+	// **والقفلُ في المحرّك أو لا قفل.**
+	//
+	// # وكودُ المندوب هو المفتاح
+	//
+	// **ولا يُخترع مفتاحٌ ثانٍ**: للمندوب كودٌ فريدٌ في `users` يُسجّل به
+	// متاجرَه أصلاً — **وهو الذي يفرّق من دُعي عمّن خمّن.**
+	//
+	// **والإدارةُ لا تحتاجه**: تُنشئ المتاجرَ من لوحتها بمسارٍ آخرَ
+	// موثَّق.
+	//
+	// **ورسالةٌ تقول «بدعوةٍ فقط» لا «خطأٌ في الطلب»** — **ومن جاء بكودٍ
+	// انتهت صلاحيّتُه يستحقّ أن يعرف السبب.**
+	repCheck, repErr := s.identity.SalesRepByInviteCode(r.Context(), strings.TrimSpace(req.Ref))
+	if repErr != nil || repCheck.Status != "active" {
+		s.respondErr(w, httpx.NewError(http.StatusForbidden,
+			"invite_required", "errors.invite_required"))
+		return
+	}
+
 	// الإسناد: كود مندوب صالح وفعّال → يُنسب له. غير ذلك (لا كود/كود المنصة/كود
 	// خاطئ) → تسجيل مباشر منسوب للمنصة (لا رفض) — الإنشاء الفعلي عند موافقة الإدارة.
 	var repID *string
@@ -203,8 +245,8 @@ func (s *Server) handlePublicInvite(w http.ResponseWriter, r *http.Request) {
 		ip = host
 	}
 	key := "invite:req:" + ip
-	if n, err := s.rdb.Incr(r.Context(), key).Result(); err == nil {
-		if n == 1 {
+	if n, err := s.incr(r.Context(), key); err == nil {
+		if n == 1 && s.rdb != nil {
 			s.rdb.Expire(r.Context(), key, time.Hour)
 		}
 		if n > 60 {
@@ -363,7 +405,7 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 
 	key := "rep:lead:" + userIDFrom(r)
 	if n, err := s.rdb.Incr(r.Context(), key).Result(); err == nil {
-		if n == 1 {
+		if n == 1 && s.rdb != nil {
 			s.rdb.Expire(r.Context(), key, time.Hour)
 		}
 		if n > repLeadsPerHour {
