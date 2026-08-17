@@ -299,11 +299,25 @@ function WhyCard({
 }) {
   return (
     <div className="site-card lift flex flex-col gap-3 p-6">
-      <span className="flex items-center gap-2 text-accent-text">
-        <Icon size={28} />
+      {/* ══════════════════════════════════════════════════════════════
+          **ورأسُ اللوح متوسّطٌ والأيقونةُ في قرص**
+          ══════════════════════════════════════════════════════════════
+
+          (طلبُ المالك ٢٠٢٦-٠٨-١٧: «الزبون والسائق والمتجر والمندوب
+           خلّيهم محاذاة وسط، مع إضافة دائرةٍ ليكون داخل الدائرة».)
+
+          **والقرصُ يُعرّف الدورَ قبل اسمه** — ومن مسح الألواحَ الأربعةَ
+          بنظرةٍ رأى أربعةَ رموزٍ لا أربعةَ عناوين.
+
+          **والبنودُ تبقى إلى اليمين**: **سطرٌ من عشرِ كلماتٍ متوسّطٌ
+          تتبدّل بدايتُه في كلّ سطرٍ فتضيع العينُ في رجوعها.** */}
+      <span className="flex flex-col items-center gap-2 text-center">
+        <span className="site-orb flex h-16 w-16 items-center justify-center border border-accent-edge bg-accent-tint text-accent-text">
+          <Icon size={30} />
+        </span>
         <h3 className="heading-page text-ink">{who}</h3>
+        <b className="text-base text-accent-text">{sub}</b>
       </span>
-      <b className="-mt-1 text-base text-accent-text">{sub}</b>
       <ul className="flex flex-col gap-2.5 text-base text-ink-muted">
         {lines.map((t) => (
           <li key={t} className="flex gap-2">
