@@ -313,21 +313,45 @@ export function BannerSlider({
     );
   };
 
-  /** سهمٌ على الحاسب — **ويُخفى على الجوّال حيث السحبُ أطوعُ من زرٍّ صغير.** */
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **والسهمُ خارجَ اللوح في الواجهة — داخلَه في التسوّق**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «الأسهم يجب أن تكون خارجَ السلايدر على
+   *  اليمين واليسار بشكلٍ أنيقٍ ضمن دائرةٍ شفّافة».)
+   *
+   * **وقرصان داكنان فوق تصميمٍ يملأ اللوحَ يغطّيان منه** — والخارجُ لا
+   * يغطّي شيئاً. **وفراغُه موجود**: اللوحُ متوسّطٌ بسقفِ ألفٍ ومئة،
+   * فيبقى على جانبيه ما يزيد على ثلاثمئة في الشاشة العريضة.
+   *
+   * **ويبقى داخلاً في التسوّق**: لافتتُه تبلغ حدَّ العمود الذي تحتها،
+   * **فلا فراغَ خارجَها يسع قرصاً.**
+   *
+   * **وتُخفى دون اللابتوب في الواجهة** — الفجوةُ هناك اثنا عشرَ بكسلاً،
+   * **وقرصٌ خارجَ اللوح يخرج عن الشاشة.** والسحبُ يكفي.
+   */
   const arrow = (dir: -1 | 1) => (
     <button
       type="button"
       onClick={() => go(dir)}
       aria-label={dir === 1 ? m.common.next : m.common.back}
-      /* **والسهمُ يخفت حتّى يُطلب** — قرصان داكنان دائمان على لافتةٍ ملوّنةٍ
-         يُقرآن أداةً غريبةً عنها. **ويظهران عند المرور على اللوح**
-         (`group-hover`)، **ويبقيان لمن ينتقل بالكيبورد** (`focus`). */
-      className={`taparea absolute inset-block-0 my-auto hidden h-9 w-9 items-center justify-center rounded-badge scrim text-on-solid opacity-0 backdrop-blur-sm transition-opacity focus-visible:opacity-100 group-hover:opacity-100 sm:flex ${
-        dir === 1 ? "start-3" : "end-3"
-      }`}
+      className={
+        hero
+          ? /* **دائرةٌ شفّافةٌ بحدٍّ رفيع** — تُرى ولا تُثقل، **وتسطع عند
+               المرور** وتبقى لمن ينتقل بالكيبورد. */
+            `taparea absolute inset-block-0 my-auto hidden h-11 w-11 items-center justify-center rounded-badge border border-line text-ink opacity-60 backdrop-blur-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 lg:flex ${
+              dir === 1 ? "start-[-3.25rem]" : "end-[-3.25rem]"
+            }`
+          : /* **والسهمُ يخفت حتّى يُطلب** — قرصان داكنان دائمان على لافتةٍ
+               ملوّنةٍ يُقرآن أداةً غريبةً عنها. */
+            `taparea absolute inset-block-0 my-auto hidden h-9 w-9 items-center justify-center rounded-badge scrim text-on-solid opacity-0 backdrop-blur-sm transition-opacity focus-visible:opacity-100 group-hover:opacity-100 sm:flex ${
+              dir === 1 ? "start-3" : "end-3"
+            }`
+      }
     >
-      {/* **والأيقونتان من المركز** (`IconNext`/`IconPrev`) — وهما تنقلبان مع
-          اتّجاه الصفحة كسائر أيقونات المنصة، **فلا يُقلَبان باليد هنا.** */}
+      {/* **والأيقونتان من المركز** — تنقلبان مع اتّجاه الصفحة كسائر
+          أيقونات المنصة، **فلا يُقلَبان باليد هنا.** */}
       {dir === 1 ? <IconNext size={18} /> : <IconPrev size={18} />}
     </button>
   );
@@ -351,13 +375,19 @@ export function BannerSlider({
         else if (e.key === "ArrowRight") go(-1);
       }}
     >
-      <div
-        className={`group ${frame}`}
-        aria-live={paused ? "polite" : "off"}
-      >
-        {items.map(slide)}
-        {many && arrow(1)}
-        {many && arrow(-1)}
+      {/* **وصندوقُ القصّ لا يحمل الأسهم في الواجهة** — `overflow:hidden`
+          عليه، **وما خرج عن حدّه يُقصّ.** فصارت أخواتٍ له في غلافٍ نسبيّ. */}
+      <div className="relative">
+        <div
+          className={`group ${frame}`}
+          aria-live={paused ? "polite" : "off"}
+        >
+          {items.map(slide)}
+          {!hero && many && arrow(1)}
+          {!hero && many && arrow(-1)}
+        </div>
+        {hero && many && arrow(1)}
+        {hero && many && arrow(-1)}
       </div>
 
       {/* **ونقاطٌ تُضغط لا تُرى فقط** — من رأى الثالثةَ وأراد العودةَ إلى
