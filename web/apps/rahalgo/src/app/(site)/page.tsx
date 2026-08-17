@@ -40,6 +40,7 @@ import {
   BannerSlider,
   ButtonLink,
   IconMoto,
+  IconRoles,
   IconLocation,
   IconWallet,
   IconChat,
@@ -272,7 +273,27 @@ export default async function HomePage() {
             </div>
             <p>{H.heroLine1}</p>
             <p>{H.heroLine2}</p>
-            <p>{H.heroLine3}</p>
+            {/* **والوعودُ الثلاثةُ مربّعاتٌ كالخطوات** — (طلبُ المالك
+                ٢٠٢٦-٠٨-١٧): درّاجةٌ للسرعة، ومحفظةٌ للدفع عند الاستلام،
+                ودرعٌ للحقّ المكفول. */}
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                [IconMoto, H.heroChip4],
+                [IconWallet, H.heroChip5],
+                [IconRoles, H.heroChip6],
+              ].map(([Ico, label]) => {
+                const I = Ico as Icon;
+                return (
+                  <span
+                    key={label as string}
+                    className="surface flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-ink"
+                  >
+                    <I size={18} className="text-accent-text" />
+                    {label as string}
+                  </span>
+                );
+              })}
+            </div>
           </div>
           {/* **والدعوةُ إلى السوق تُخفى مع بابَيه الآخرَين** — (طلبُ
               المالك ٢٠٢٦-٠٨-١٧). **ودعوةٌ باقيةٌ بعد إخفاء الزرَّين
