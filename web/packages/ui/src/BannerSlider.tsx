@@ -336,16 +336,31 @@ export function BannerSlider({
       type="button"
       onClick={() => go(dir)}
       aria-label={dir === 1 ? m.common.next : m.common.back}
+      /* ══════════════════════════════════════════════════════════════
+         **والتوسيطُ بنصفٍ وإزاحةٍ لا بـ`inset-block`**
+         ══════════════════════════════════════════════════════════════
+
+         (شكوى المالك ٢٠٢٦-٠٨-١٧: «الأسهم يجب أن تكون بمنتصف صورة
+          السلايدر وليس من الأسفل».)
+
+         **وكانت `inset-block-0 my-auto`** — **وتيلويند لا تولّد
+         `inset-block`** (قِيس: لا وجودَ للصنف في الورقة المنشورة).
+         **فلا علويٌّ ولا سفليّ**، والمُطلَقُ بلا إزاحةٍ يقف في موضعه
+         الطبيعيّ: **أسفلَ اللوح بعد أن خرج منه.**
+
+         **ولم يظهر العطبُ قبلَ اليوم** لأنّ السهمَ كان داخلَ اللوح
+         وشرائحُه مُطلَقةٌ كلُّها — **فموضعُه الطبيعيُّ كان أعلى اللوح
+         فبدا مقبولاً**، وهو خطأٌ ساكنٌ ورث إصلاحَه التسوّقُ أيضاً. */
       className={
         hero
           ? /* **دائرةٌ شفّافةٌ بحدٍّ رفيع** — تُرى ولا تُثقل، **وتسطع عند
                المرور** وتبقى لمن ينتقل بالكيبورد. */
-            `taparea absolute inset-block-0 my-auto hidden h-11 w-11 items-center justify-center rounded-badge border border-line text-ink opacity-60 backdrop-blur-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 lg:flex ${
+            `taparea absolute top-1/2 -translate-y-1/2 hidden h-11 w-11 items-center justify-center rounded-badge border border-line text-ink opacity-60 backdrop-blur-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 lg:flex ${
               dir === 1 ? "start-[-3.25rem]" : "end-[-3.25rem]"
             }`
           : /* **والسهمُ يخفت حتّى يُطلب** — قرصان داكنان دائمان على لافتةٍ
                ملوّنةٍ يُقرآن أداةً غريبةً عنها. */
-            `taparea absolute inset-block-0 my-auto hidden h-9 w-9 items-center justify-center rounded-badge scrim text-on-solid opacity-0 backdrop-blur-sm transition-opacity focus-visible:opacity-100 group-hover:opacity-100 sm:flex ${
+            `taparea absolute top-1/2 -translate-y-1/2 hidden h-9 w-9 items-center justify-center rounded-badge scrim text-on-solid opacity-0 backdrop-blur-sm transition-opacity focus-visible:opacity-100 group-hover:opacity-100 sm:flex ${
               dir === 1 ? "start-3" : "end-3"
             }`
       }
