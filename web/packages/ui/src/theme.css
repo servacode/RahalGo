@@ -1298,25 +1298,54 @@ select option:checked {
   }
 }
 
-/* **والنقطُ تزحف نحو الطرف.** */
-@keyframes pin-trail {
-  from {
-    background-position-x: 0;
+/* ══════════════════════════════════════════════════════════════════════
+   **والطريقُ يُرسم ويذهب — لا نقطٌ متناثرة**
+   ══════════════════════════════════════════════════════════════════════
+
+   (شكوى المالك ٢٠٢٦-٠٨-١٧: «شكلُ النقاط بشعٌ جدّاً… يجب أن يكون شكلاً
+    هندسيّاً احترافيّاً وليس عشوائيّاً، حركةً سلسةً جدّاً وكأنّه طريقٌ
+    يُرسم ويذهب».)
+
+   **وكان تدرّجاً منقّطاً يزحف** — **والنقطُ تُقصّ عند طرفَي الخطّ نصفَ
+   نقطةٍ فتبدو مكسورة**، وتظهر جميعُها في كلّ لحظةٍ فلا تُقرأ سيراً.
+
+   **فصارا اثنين**: **خطٌّ ثابتٌ خافتٌ هو الطريق**، **وشرارةٌ تمشي عليه**
+   من المركز إلى الدبوس ثمّ تختفي وتُعاد.
+
+   **وهي تظهر وتخفت عند طرفيها** — **وشرارةٌ تنبثق فجأةً وتنقطع فجأةً
+   تُقرأ ومضةَ عطبٍ لا حركة.** */
+@utility road-base {
+  background-color: var(--color-accent-edge);
+}
+
+@keyframes road-run {
+  0% {
+    inset-inline-start: -24%;
+    opacity: 0;
   }
-  to {
-    background-position-x: 14px;
+  14% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    inset-inline-start: 100%;
+    opacity: 0;
   }
 }
 
-@utility pin-trail {
-  background-image: repeating-linear-gradient(
+@utility road-run {
+  background-image: linear-gradient(
     to right,
-    var(--color-accent) 0 4px,
-    transparent 4px 14px
+    transparent,
+    var(--color-accent),
+    transparent
   );
-  animation: pin-trail 0.9s linear infinite;
+  animation: road-run 2.6s cubic-bezier(0.45, 0, 0.25, 1) infinite;
   @media (prefers-reduced-motion: reduce) {
     animation: none;
+    opacity: 0;
   }
 }
 

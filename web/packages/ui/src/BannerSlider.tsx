@@ -59,9 +59,12 @@ export function BannerSlider({
   items,
   Link,
   everyMs = 5000,
+  full = false,
   className = "",
 }: {
   items: SlideItem[];
+  /** **يملأ عرضَ الصفحة بلا حدٍّ ولا استدارة** — للواجهة لا للتسوّق. */
+  full?: boolean;
   Link?: React.ComponentType<{ href: string; className?: string; children: React.ReactNode }>;
   everyMs?: number;
   className?: string;
@@ -180,8 +183,21 @@ export function BannerSlider({
      أهونُ من قفزةِ ارتفاعٍ عند كلّ تبديل.
 
      **والسقفُ يبقى** (٢٨٠) — لافتةٌ مربّعةٌ تُرفع خطأً لا تأخذ الشاشة. */
-  const frame =
-    "relative mx-auto aspect-[16/5] w-full max-w-5xl overflow-hidden rounded-card";
+  /* ══════════════════════════════════════════════════════════════════
+     **وملءُ الشاشة خيارٌ — لا لافتةٌ وسطَ فراغ**
+     ══════════════════════════════════════════════════════════════════
+
+     (شكوى المالك ٢٠٢٦-٠٨-١٧: «يجب أن يكون حجمُ الصورة بحجم الصفحة من
+      اليمين إلى اليسار… وليس بانراً صغيراً يضيع في الشاشة».)
+
+     **وحدُّ العرض ١٠٢٤ بكسلاً** — وهو نصفُ شاشةٍ عريضة، **فتُقرأ اللافتةُ
+     صندوقاً في وسط الصفحة لا واجهةً لها.**
+
+     **وصفحةُ التسوّق تبقى محدودة**: هناك لافتةٌ فوق شبكةِ أصنافٍ محدودةِ
+     العرض، **ولافتةٌ تتجاوز ما تحتها تُقرأ غريبةً عنه.** */
+  const frame = full
+    ? "relative aspect-[16/6] w-full overflow-hidden"
+    : "relative mx-auto aspect-[16/5] w-full max-w-5xl overflow-hidden rounded-card";
 
   const slide = (it: SlideItem, i: number) => {
     const on = i === cur;

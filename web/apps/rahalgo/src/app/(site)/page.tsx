@@ -99,7 +99,7 @@ function Band({
           ? /* **والافتتاحيّةُ ترتفع** — (طلبُ المالك ٢٠٢٦-٠٨-١٧: «ارفع
                المحتوى للأعلى قليلاً»): **حشوةٌ علويّةٌ أقلُّ من
                السفليّة**، فتبدأ الشاشةُ بالكلام لا بالفراغ. */
-            "pb-14 pt-6 sm:pb-20 sm:pt-10"
+            "pb-14 pt-6 sm:pb-20 sm:pt-10 lg:min-h-[30rem]"
           : "py-14 sm:py-20"
       } ${flush ? "px-6 sm:px-12" : "px-3 sm:px-4"} ${tinted ? "bg-raised" : ""}`}
     >
@@ -149,7 +149,10 @@ function PinNetwork() {
     { x: 78, y: 86 },
   ];
   // **وضلعُ المربّع بالبكسل** — منه يُحسب طولُ الخطّ.
-  const side = 420;
+  // **وضلعُ المربّع بالبكسل** — **وأربعمئةٍ وعشرون كانت تفيض عن ارتفاع
+  // الشريط فتُقصّ الدبابيسُ العلويّةُ والسفليّة** (شكوى المالك
+  // ٢٠٢٦-٠٨-١٧). **والشريطُ يضمن ارتفاعاً يسعها، والضلعُ دونَه.**
+  const side = 380;
   // **وخمسُ موجاتٍ بتأخيرٍ متدرّج** — (طلبُ المالك ٢٠٢٦-٠٨-١٧):
   // **تُقرأ متلاحقةً لا خمسَ حلقاتٍ تنطلق معاً.**
   const waves = [0, 0.6, 1.2, 1.8, 2.4];
@@ -166,18 +169,23 @@ function PinNetwork() {
         const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
         return (
           <span key={`${p.x}-${p.y}`}>
-            {/* **والنقطُ تسير من المركز إلى الدبوس** — وتأخيرٌ لكلّ خطٍّ
-                فلا تنطلق الثمانيةُ في لحظةٍ واحدة. */}
+            {/* **والطريقُ خطٌّ ثابتٌ تمشي عليه شرارة** — (شكوى المالك
+                ٢٠٢٦-٠٨-١٧: «كأنّه طريقٌ يُرسم ويذهب»). **ولكلّ طريقٍ
+                تأخيرُه** فلا تنطلق الثمانيةُ في لحظةٍ واحدة. */}
             <span
-              className="pin-trail absolute block h-1 origin-left rounded-full"
+              className="road-base absolute block h-px origin-left overflow-hidden"
               style={{
                 left: "50%",
                 top: "50%",
                 width: len,
                 transform: `rotate(${deg}deg)`,
-                animationDelay: `${i * 0.11}s`,
               }}
-            />
+            >
+              <span
+                className="road-run absolute inset-y-0 block w-1/4"
+                style={{ animationDelay: `${i * 0.22}s` }}
+              />
+            </span>
             <span
               className="absolute -translate-x-1/2 -translate-y-1/2 text-accent-text opacity-70"
               style={{ left: `${p.x}%`, top: `${p.y}%` }}
@@ -272,8 +280,16 @@ export default async function HomePage() {
             الصفحة** — كلٌّ منهما يُقرأ على حدة.
 
             **ولا يُرسم إن لم تُرفع لافتة** — إطارٌ فارغٌ يُقرأ عطباً. */}
+        {/* **ويتخطّى حشوةَ الشريط ليبلغ الحافّتين** — (شكوى المالك
+            ٢٠٢٦-٠٨-١٧: «بحجم الصفحة من اليمين إلى اليسار»). **والحشوةُ
+            للنصّ لا للصورة.** */}
         {slides.length > 0 && (
-          <BannerSlider className="mb-10" items={slides} Link={Link} />
+          <BannerSlider
+            className="-mx-6 mb-10 sm:-mx-12"
+            items={slides}
+            Link={Link}
+            full
+          />
         )}
         {/* **والنصُّ إلى اليمين لا في الوسط** — (طلبُ المالك ٢٠٢٦-٠٨-١٧:
             «النصّ كامل يصبح محاذاة إلى اليمين»).
