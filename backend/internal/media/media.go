@@ -333,8 +333,7 @@ func (s *Service) Save(ctx context.Context, actorID, kind string, r io.Reader) (
 		if full.Bounds().Dx() <= w {
 			continue
 		}
-		vp := filepath.Join(s.dir, filepath.FromSlash(
-			VariantURL(relPath, w)))
+		vp := variantPath(filepath.Join(s.dir, filepath.FromSlash(relPath)), w)
 		if _, err := writeImage(vp, downscale(full, w), encode); err != nil {
 			// **وفشلُ نسخةٍ لا يُسقط الرفع** — الأصلُ موجودٌ ويُعرض،
 			// **والعلمُ يبقى كاذباً لو رُفع**، فيُطفأ أدناه.
@@ -371,9 +370,44 @@ func looksLikeImage(b []byte) bool {
 	case len(b) > 8 && bytes.HasPrefix(b, []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}):
 		return true // PNG
 	case len(b) > 12 && bytes.HasPrefix(b, []byte("RIFF")) && bytes.Equal(b[8:12], []byte("WEBP")):
-		return true // WebP
+		return true // WEBP
 	}
 	return false
+}
+
+// Derive **يشتقّ اللمحةَ والنسخَ من أصلٍ موجودٍ على القرص.**
+//
+// (طلبُ المالك ٢٠٢٦-٠٨-١٧ — وتستعملها أداةُ المعالجة اللاحقة.)
+//
+// **ولا تعيد ترميزَ الأصل** — **وإعادةُ ترميزِ JPEG تفقد جودةً في كلّ
+// مرّة**، ومن شغّل الأداةَ مرّتين أفسد صوره. تقرأ وتكتب ما ينقص.
+//
+// **والصيغةُ من امتداد الأصل** — نسخةٌ بامتدادٍ يخالف أصلَها لا يجدها
+// المتصفّح.
+func Derive(src image.Image, fullPath string) (blur string, sizes bool, err error) {
+	encode := encodeJPEG
+	if strings.EqualFold(filepath.Ext(fullPath), ".png") {
+		encode = encodePNG
+	}
+	for _, w := range VariantWidths {
+		if src.Bounds().Dx() <= w {
+			continue
+		}
+		if _, err := writeImage(variantPath(fullPath, w), downscale(src, w), encode); err != nil {
+			return blurData(src), false, nil
+		}
+		sizes = true
+	}
+	return blurData(src), sizes, nil
+}
+
+// variantPath **مسارُ نسخةٍ على القرص** — بالقاعدة نفسِها التي في `VariantURL`.
+//
+// **ونسختان من قاعدةٍ واحدةٍ تفترقان** — فالثانيةُ تنادي الأولى.
+func variantPath(fullPath string, w int) string {
+	dir, base := filepath.Split(fullPath)
+	ext := filepath.Ext(base)
+	return filepath.Join(dir, strings.TrimSuffix(base, ext)+"_"+strconv.Itoa(w)+ext)
 }
 
 // blurData **لمحةٌ صغيرةٌ جدّاً تُضمَّن نصّاً.**
