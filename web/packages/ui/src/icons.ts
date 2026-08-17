@@ -33,6 +33,8 @@ export {
   //
   // **ودرعٌ بعلامةٍ ودرعٌ بخطأ** — **والزوجُ من عائلةٍ واحدةٍ يُقرأ
   // مقابلةً، ومن عائلتين يُقرأ شيئين لا علاقةَ بينهما.**
+  // **وهدفٌ للمهمّة** — (طلبُ المالك ٢٠٢٦-٠٨-١٧).
+  Target as IconTarget,
   ShieldX as IconShieldX,
   ShieldCheck as IconShieldCheck,
   Receipt as IconReceipt,

@@ -60,6 +60,9 @@ import {
   IconHandshake,
   IconWallet,
   IconApp,
+  IconNote,
+  IconTarget,
+  IconView,
   ButtonLink,
   IconRoles,
 } from "@rahalgo/ui";
@@ -351,6 +354,40 @@ function FlowStep({
 }) {
   return (
     <li className="relative flex flex-1 flex-col items-center gap-2 text-center">
+      {/* ══════════════════════════════════════════════════════════════
+          **والطريقُ يصل الدائرتين ولا يمرّ خلفَهما**
+          ══════════════════════════════════════════════════════════════
+
+          (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «الطريق اجعله احترافيّاً، لا يمرّ من
+           منتصف الدائرة أو من خلفها… وكأنّه يصل الدوائرَ فقط».)
+
+          **وكان خيطاً واحداً يمتدّ تحت الخمس** — **فيُرى داخلَ كلّ دائرةٍ
+          لأنّها شفّافة**، ويُقرأ خطّاً مرسوماً عليها لا طريقاً بينها.
+
+          **فصار قطعةً لكلّ خطوةٍ بعد الأولى**، طرفاها حافّتا الدائرتين
+          بالضبط: **نصفُ عرض الخطوة ناقصَ نصفَ قطر الدائرة** من الجهتين —
+          **يُحسبان من المقاس نفسِه فلا ينكسران إذا تبدّل عددُ الخطوات.**
+
+          **ومنطقيّان لا يمينٌ ويسار** — ينقلبان مع اللغة بأنفسهما. */}
+      {n > 1 && (
+        <>
+          <span
+            aria-hidden
+            className="flow-path pointer-events-none absolute top-8 hidden h-px sm:block"
+            style={{
+              insetInlineStart: "calc(-50% + 0.5rem)",
+              insetInlineEnd: "calc(50% + 2rem)",
+            }}
+          />
+          {/* **وعلى الجوّالِ الفجوةُ وحدَها** — الخطواتُ عمودٌ، **والفجوةُ
+              بين دائرتين هي كلُّ ما يُوصَل.** */}
+          <span
+            aria-hidden
+            className="flow-path-y pointer-events-none absolute -top-6 h-6 w-px sm:hidden"
+            style={{ insetInlineStart: "calc(50% - 0.5px)" }}
+          />
+        </>
+      )}
       <span className="lift relative flex h-16 w-16 items-center justify-center rounded-full border border-accent-edge bg-accent-tint text-accent-text">
         <Icon size={26} />
         <span className="figure absolute -top-2 -end-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-2xs text-on-bright">
@@ -395,7 +432,17 @@ function NoteCard({
           : "site-card lift flex flex-col items-center gap-3 p-6 text-center"
       }
     >
-      {Icon && <Icon size={orb ? 30 : 32} className="text-accent-text" />}
+      {/* **والأيقونةُ في قرصٍ كألواح الأدوار** — (طلبُ المالك ٢٠٢٦-٠٨-١٧:
+          «طبّقها أيضاً على مهمّتنا وقصّتنا ورؤيتنا»). **وفي القرص لا
+          تُحاط**: هو قرصٌ بنفسه. */}
+      {Icon &&
+        (orb ? (
+          <Icon size={30} className="text-accent-text" />
+        ) : (
+          <span className="site-orb flex h-16 w-16 items-center justify-center border border-accent-edge bg-accent-tint text-accent-text">
+            <Icon size={30} />
+          </span>
+        ))}
       <h3 className={`${orb ? "heading-card" : "heading-page"} ${tone}`}>{title}</h3>
       {body && <p className="text-base text-ink-muted">{body}</p>}
     </div>
@@ -591,17 +638,6 @@ export default async function HomePage() {
           {/* **وتصير عموداً على الجوّال** — خمسُ خطواتٍ في صفٍّ على
               ثلاثمئةٍ وستّين تُقرأ حروفاً متراكمة. */}
           <ol className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-            {/* **والمسارُ خلفَ الدوائر لا بينها** — (طلبُ المالك
-                ٢٠٢٦-٠٨-١٧). **ويقف عند حافّتَي الأولى والأخيرة**: خيطٌ
-                يخرج عنهما يُقرأ طريقاً بلا بداية. */}
-            <span
-              aria-hidden
-              className="flow-path pointer-events-none absolute inset-x-[10%] top-8 hidden h-px sm:block"
-            />
-            <span
-              aria-hidden
-              className="flow-path-y pointer-events-none absolute inset-y-8 start-1/2 w-px sm:hidden"
-            />
             <FlowStep n={1} Icon={IconApp} label={H.f1} />
             <FlowStep n={2} Icon={IconSteps} label={H.f2} />
             <FlowStep n={3} Icon={IconMoto} label={H.f3} />
@@ -627,9 +663,9 @@ export default async function HomePage() {
       {/* **قصّتنا ومهمّتنا ورؤيتنا** — ثلاثةٌ في صفٍّ واحد. */}
       <Band>
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-3">
-          <NoteCard title={H.storyTitle} tone="text-accent" body={H.storyBody} />
-          <NoteCard title={H.missionTitle} tone="text-primary" body={H.missionBody} />
-          <NoteCard title={H.visionTitle} tone="text-violet" body={H.visionBody} />
+          <NoteCard Icon={IconNote} title={H.storyTitle} tone="text-accent" body={H.storyBody} />
+          <NoteCard Icon={IconTarget} title={H.missionTitle} tone="text-primary" body={H.missionBody} />
+          <NoteCard Icon={IconView} title={H.visionTitle} tone="text-violet" body={H.visionBody} />
         </div>
       </Band>
     </>
