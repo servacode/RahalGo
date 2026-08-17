@@ -1228,80 +1228,6 @@ select option:checked {
 
    **وموضعُهما الثيمُ لا الشاشة** — القاعدةُ المركزيّة: لا لونَ خارجَ هذا
    الملفّ. */
-/* **سهمٌ يتحرّك ليقول «وهذه نتيجتُها».**
-
-   (طلبُ المالك ٢٠٢٦-٠٨-١٧: «أضف سهماً متحرّكاً يدلّ عليها».)
-
-   **وحركتُه أربعةُ بكسلاتٍ ذهاباً وإياباً** — **وأكثرُ منها يُقرأ لهواً
-   لا إشارة**، ودورتُه بطيئةٌ فلا تسحب العينَ عن الحرف.
-
-   **ومن أطفأ الحركةَ في نظامه يسكن** — القاعدةُ داخلَ الأداة لا في ورقةٍ
-   أخرى، **فمن أخذ الصنفَ أخذ احترامَها معه.** */
-/* ══════════════════════════════════════════════════════════════════════
-   **شبكةُ الدبابيس — مركزٌ يكبر ويصغر، وموجاتٌ خمسٌ متلاحقة**
-   ══════════════════════════════════════════════════════════════════════
-
-   (طلبُ المالك ٢٠٢٦-٠٨-١٧: «الدبوسُ المركزيُّ مع النبض اجعله يكبر ويصغر
-    وأكبرَ حجماً… أضف ٥ موجاتٍ متلاحقةٍ متكرّرة… واجعل الخطَّ منقّطاً
-    وكأنّه يسير من الدبوس المركزيّ إلى باقي الدبابيس، بحيث تظهر نقطةٌ
-    وراء نقطةٍ إلى أن تصل الدبوسَ المقصود».)
-
-   # وثلاثُ حركاتٍ لا واحدة
-
-   **الموجةُ حلقةٌ تخرج وتخفت**، **والنبضةُ المركزُ نفسُه يكبر ويصغر**،
-   **والنقطُ تسير في الخطّ.** ولكلٍّ إيقاعُه.
-
-   # والموجاتُ الخمسُ حلقةٌ واحدةٌ بخمسِ تأخيرات
-
-   **دورةٌ من ثلاثِ ثوانٍ وتأخيرٌ ستُّ أعشارٍ بين كلّ حلقتين** — فتُقرأ
-   خمساً متلاحقةً لا خمسَ حلقاتٍ تنطلق معاً.
-
-   # والنقطُ تُرسم بتدرّجٍ مكرّرٍ لا بعناصر
-
-   **ثمانِ نقاطٍ في الخطّ الواحدِ تعني ثمانيةَ عناصرَ في كلّ خطّ** — وأربعةً
-   وستّين في الشبكة، **تُحسب مواضعُها في كلّ رسمة.** **والتدرّجُ المكرّرُ
-   عنصرٌ واحدٌ يزحف موضعُ خلفيّته**، فتسير النقطُ بلا حساب.
-
-   **واتّجاهُها من المركز إلى الطرف** — والخطُّ مُدارٌ من مركزه، فسيرُها
-   في محوره سيرٌ نحو الدبوس أينما وقع.
-
-   **ومن أطفأ الحركةَ في نظامه سكن الثلاثة** — وتبقى الشبكةُ مرسومة. */
-@keyframes pin-wave {
-  0% {
-    transform: scale(0.35);
-    opacity: 0.55;
-  }
-  100% {
-    transform: scale(2.6);
-    opacity: 0;
-  }
-}
-
-@utility pin-wave {
-  animation: pin-wave 3s ease-out infinite;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    opacity: 0;
-  }
-}
-
-@keyframes pin-beat {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.18);
-  }
-}
-
-@utility pin-beat {
-  animation: pin-beat 1.6s ease-in-out infinite;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-}
-
 /* ══════════════════════════════════════════════════════════════════════
    **والطريقُ يُرسم ويذهب — لا نقطٌ متناثرة**
    ══════════════════════════════════════════════════════════════════════
@@ -1318,6 +1244,330 @@ select option:checked {
 
    **وهي تظهر وتخفت عند طرفيها** — **وشرارةٌ تنبثق فجأةً وتنقطع فجأةً
    تُقرأ ومضةَ عطبٍ لا حركة.** */
+/* ══════════════════════════════════════════════════════════════════════
+   **لوحةُ الشبكة — دورةٌ واحدةٌ مدّتُها ستُّ ثوانٍ**
+   ══════════════════════════════════════════════════════════════════════
+
+   (مواصفةُ المالك ٢٠٢٦-٠٨-١٧ — ستُّ مراحلَ بتوقيتها.)
+
+   # ولماذا كلُّ عنصرٍ دورتُه ستٌّ
+
+   **الدورةُ الواحدةُ للجميع هي ما يُغلق الحلقة**: عنصرٌ دورتُه ثانيتان
+   وآخرُ ستٌّ **يلتقيان كلَّ ستٍّ ويفترقان بينها** — فتُرى وصلةٌ في موضعٍ
+   ما. **وستٌّ للجميع مع تأخيرٍ لكلٍّ** تُعيد الدورةَ كما هي.
+
+   **وأوّلُ إطارٍ هو آخرُه** في كلّ حركةٍ هنا — **وهو شرطُ اللقطة غير
+   الملحوظة**، لا تفصيلاً تحسينيّاً.
+
+   # والنسبُ محسوبةٌ من ستّ ثوانٍ
+
+	٠٫٥ث = ٨٫٣٪ · ١ث = ١٦٫٧٪ · ٢٫٦ث = ٤٣٫٣٪
+	٣٫٤ث = ٥٦٫٧٪ · ٤٫٥ث = ٧٥٪ · ٦ث = ١٠٠٪
+
+   # ولا يتحرّك غيرُ التحويل والشفافيّة
+
+   **إلّا رسمَ الخطّ** (`stroke-dashoffset`) — ثمانيةُ خطوطٍ قصيرةٍ في نصف
+   ثانية، **ولا بديلَ عنه في رسمٍ يُرسم.** */
+.netfx {
+  color: var(--color-accent);
+}
+
+/* **والإيقافُ خارج الشاشة يجمّد الإطارَ ولا يُعيد الدورة.** */
+.netfx[data-run="off"] * {
+  animation-play-state: paused;
+}
+
+.netfx-glow {
+  animation: netfx-glow 6s var(--ease-out) infinite;
+}
+
+.netfx-halo-in {
+  stop-color: var(--color-accent);
+  stop-opacity: 0.16;
+}
+
+.netfx-halo-out {
+  stop-color: var(--color-accent);
+  stop-opacity: 0;
+}
+
+/* **الوصلة** — تُرسم من المركز في نصف ثانيةٍ ثمّ تبقى. */
+.netfx-line {
+  stroke: currentColor;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-dasharray: var(--len);
+  stroke-dashoffset: var(--len);
+  opacity: 0;
+  animation: netfx-draw 6s var(--ease-out) infinite;
+  animation-delay: calc(0.5s + var(--i) * 0.21s);
+}
+
+/* **الإشارة** — نقطةٌ تنزلق في محور خطّها ثمّ تختفي عند طرفه. */
+.netfx-signal {
+  fill: currentColor;
+  opacity: 0;
+  animation: netfx-signal 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation-delay: calc(2.6s + var(--i) * 0.09s);
+}
+
+/* **الموقع** — يُضيء حين يصله خطُّه، ويبقى حتّى تهدأ الشبكة. */
+.netfx-node {
+  opacity: 0.4;
+  animation: netfx-node 6s var(--ease-out) infinite;
+  animation-delay: calc(1.05s + var(--i) * 0.21s);
+}
+
+.netfx-node-halo {
+  fill: currentColor;
+  opacity: 0;
+  animation: netfx-halo 6s var(--ease-out) infinite;
+  animation-delay: calc(1.05s + var(--i) * 0.21s);
+}
+
+.netfx-node-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.netfx-node-dot {
+  fill: currentColor;
+}
+
+/* **الحلقة** — تخرج من المركز وتخفت، ولا تعود. */
+.netfx-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: 0;
+  transform-origin: 300px 300px;
+  animation: netfx-ring 6s var(--ease-out) infinite;
+  animation-delay: calc(0.15s + var(--i) * 0.2s);
+}
+
+/* **والواسعةُ عند اكتمال الشبكة** — أضعفُ وأبطأ. */
+.netfx-ring-wide {
+  animation-name: netfx-ring-wide;
+  animation-delay: 3.4s;
+}
+
+.netfx-core {
+  animation: netfx-core 6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.netfx-core-halo {
+  fill: currentColor;
+  opacity: 0.12;
+}
+
+.netfx-core-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.netfx-core-dot {
+  fill: currentColor;
+}
+
+@keyframes netfx-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  8.3% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes netfx-draw {
+  0% {
+    stroke-dashoffset: var(--len);
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.5;
+  }
+  9.2% {
+    stroke-dashoffset: 0;
+    opacity: 0.5;
+  }
+  62% {
+    opacity: 0.5;
+  }
+  92% {
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: var(--len);
+    opacity: 0;
+  }
+}
+
+@keyframes netfx-signal {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  1% {
+    opacity: 0.95;
+  }
+  13.3% {
+    transform: translateX(var(--len));
+    opacity: 0.95;
+  }
+  15%,
+  100% {
+    transform: translateX(var(--len));
+    opacity: 0;
+  }
+}
+
+@keyframes netfx-node {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.96);
+  }
+  3% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  6% {
+    transform: scale(1);
+  }
+  28% {
+    transform: scale(1);
+  }
+  31% {
+    transform: scale(1.03);
+  }
+  34% {
+    transform: scale(1);
+  }
+  62% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes netfx-halo {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.18;
+  }
+  20% {
+    opacity: 0.07;
+  }
+  62% {
+    opacity: 0.07;
+  }
+  92% {
+    opacity: 0;
+  }
+}
+
+@keyframes netfx-ring {
+  0% {
+    transform: scale(0.22);
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.32;
+  }
+  26.7% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes netfx-ring-wide {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  4% {
+    opacity: 0.16;
+  }
+  25% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes netfx-core {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  4% {
+    transform: scale(1.03);
+  }
+  8.3% {
+    transform: scale(1);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  66% {
+    transform: scale(1);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   **ومن أطفأ الحركةَ يرى الشبكةَ كاملةً ساكنة**
+   ══════════════════════════════════════════════════════════════════════
+
+   **لا نصفَ رسمٍ ولا فراغ**: الخطوطُ مرسومةٌ والمواقعُ مضيئةٌ والمركزُ في
+   مكانه — **وهو المشهدُ الذي تنتهي إليه الحركةُ أصلاً.** */
+@media (prefers-reduced-motion: reduce) {
+  .netfx * {
+    animation: none !important;
+  }
+
+  .netfx-line {
+    stroke-dashoffset: 0;
+    opacity: 0.5;
+  }
+
+  .netfx-node {
+    opacity: 1;
+  }
+
+  .netfx-node-halo {
+    opacity: 0.07;
+  }
+
+  .netfx-glow {
+    opacity: 0.9;
+  }
+
+  .netfx-signal,
+  .netfx-ring {
+    opacity: 0;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    **حاويةُ لافتة الواجهة — لوحٌ في الصفحة لا لصاقٌ على حافّتها**
    ══════════════════════════════════════════════════════════════════════
@@ -1354,78 +1604,6 @@ select option:checked {
 @utility banner-frame {
   border-radius: clamp(14px, 1.6vw, 22px);
   box-shadow: var(--shadow-e2);
-}
-
-/* **والدبابيسُ تصل تباعاً — كطلباتٍ تتوالى.**
-
-   (طلبُ المالك ٢٠٢٦-٠٨-١٧: «اجعلها تظهر واحداً وراء الآخر وكأنّها
-    تعبّر عن طلباتٍ تأتي بشكلٍ متتالٍ».)
-
-   **وتنزل قليلاً وهي تظهر** — **وظهورٌ في مكانه بلا حركةٍ يُقرأ وميضاً
-   لا وصولاً.**
-
-   **وتبقى ظاهرةً معظمَ الدورة** ثمّ تُعاد — **ودبّوسٌ يومض ويغيب بسرعةٍ
-   يُقرأ عطباً في الرسم.** */
-@keyframes pin-arrive {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -80%) scale(0.5);
-  }
-  8% {
-    opacity: 0.75;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  92% {
-    opacity: 0.75;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1);
-  }
-}
-
-@utility pin-arrive {
-  animation: pin-arrive 7s ease-out infinite;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    opacity: 0.7;
-  }
-}
-
-@utility road-base {
-  background-color: var(--color-accent-edge);
-}
-
-@keyframes road-run {
-  0% {
-    inset-inline-start: -24%;
-    opacity: 0;
-  }
-  14% {
-    opacity: 1;
-  }
-  86% {
-    opacity: 1;
-  }
-  100% {
-    inset-inline-start: 100%;
-    opacity: 0;
-  }
-}
-
-@utility road-run {
-  background-image: linear-gradient(
-    to right,
-    transparent,
-    var(--color-accent),
-    transparent
-  );
-  animation: road-run 2.6s cubic-bezier(0.45, 0, 0.25, 1) infinite;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-    opacity: 0;
-  }
 }
 
 /* **ووميضُ العنوان بعد أن يكتمل** — (طلبُ المالك ٢٠٢٦-٠٨-١٧: «تنبض

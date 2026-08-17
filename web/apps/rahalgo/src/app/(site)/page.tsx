@@ -43,20 +43,9 @@ import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import {
   fetchPlatform,
   BannerSlider,
+  NetworkFx,
   ButtonLink,
-  IconMoto,
-  IconNext,
   IconRoles,
-  IconLocation,
-  IconWallet,
-  IconChat,
-  IconPromos,
-  IconSupport,
-  IconSearch,
-  IconCart,
-  IconDriver,
-  IconStore,
-  IconUsers,
 } from "@rahalgo/ui";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -108,113 +97,6 @@ function Band({
           وهي ما شكا منها. */}
       <div className={flush ? "w-full" : "mx-auto w-full max-w-6xl"}>{children}</div>
     </section>
-  );
-}
-
-/**
- * ══════════════════════════════════════════════════════════════════════
- * **شبكةُ التوصيل — دبوسٌ ينبض تخرج منه خطوطٌ إلى ثمانية**
- * ══════════════════════════════════════════════════════════════════════
- *
- * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «على يسار المحتوى أضف دبوساً نابضاً بالوسط،
- *  وفوقه ٣ دبابيس وتحته ٣، ويبقى على يمينه دبوسٌ وعلى يساره دبوس…
- *  ثمّ اجعل الدبوسَ المركزيَّ وكأنّه يرسل خطوطاً إلى تلك الدبابيس».)
- *
- * # ولماذا حسابٌ لا رسمٌ باليد
- *
- * **الخطُّ من المركز إلى كلّ دبوسٍ طولُه وزاويتُه يختلفان** — **ورسمُ
- * ثمانيةِ خطوطٍ بأرقامٍ مكتوبةٍ يعني ثمانيةَ أرقامٍ تُعاد كلَّما تبدّل
- * موضعُ دبوس.** فالموضعُ وحدَه يُكتب، **والطولُ والزاويةُ يُشتقّان منه.**
- *
- * # ولا SVG
- *
- * **حارسُ المركزيّة يمنع رسمَ الأشكال باليد في الشاشات** — والأيقوناتُ
- * من مصدرها. **فالدبابيسُ أيقوناتُ موقعٍ والخطوطُ صناديقُ مُدارة.**
- *
- * # وتُخفى على الجوّال
- *
- * **الافتتاحيّةُ هناك عمودٌ واحدٌ يملؤه الكلام** — **وزخرفةٌ تحته تدفع
- * ما يُقرأ خارجَ الشاشة.**
- */
-function PinNetwork() {
-  // **الموضعُ بالمئة من مربّع الشبكة** — والمركزُ (٥٠، ٥٠).
-  const pins = [
-    { x: 22, y: 14 },
-    { x: 50, y: 6 },
-    { x: 78, y: 14 },
-    { x: 8, y: 50 },
-    { x: 92, y: 50 },
-    { x: 22, y: 86 },
-    { x: 50, y: 94 },
-    { x: 78, y: 86 },
-  ];
-  // **وضلعُ المربّع بالبكسل** — منه يُحسب طولُ الخطّ.
-  // **وضلعُ المربّع بالبكسل** — **وأربعمئةٍ وعشرون كانت تفيض عن ارتفاع
-  // الشريط فتُقصّ الدبابيسُ العلويّةُ والسفليّة** (شكوى المالك
-  // ٢٠٢٦-٠٨-١٧). **والشريطُ يضمن ارتفاعاً يسعها، والضلعُ دونَه.**
-  const side = 380;
-  // **وخمسُ موجاتٍ بتأخيرٍ متدرّج** — (طلبُ المالك ٢٠٢٦-٠٨-١٧):
-  // **تُقرأ متلاحقةً لا خمسَ حلقاتٍ تنطلق معاً.**
-  const waves = [0, 0.6, 1.2, 1.8, 2.4];
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute top-1/2 hidden -translate-y-1/2 lg:block"
-      style={{ insetInlineEnd: "5%", width: side, height: side }}
-    >
-      {pins.map((p, i) => {
-        const dx = ((p.x - 50) / 100) * side;
-        const dy = ((p.y - 50) / 100) * side;
-        const len = Math.hypot(dx, dy);
-        const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
-        return (
-          <span key={`${p.x}-${p.y}`}>
-            {/* **والطريقُ خطٌّ ثابتٌ تمشي عليه شرارة** — (شكوى المالك
-                ٢٠٢٦-٠٨-١٧: «كأنّه طريقٌ يُرسم ويذهب»). **ولكلّ طريقٍ
-                تأخيرُه** فلا تنطلق الثمانيةُ في لحظةٍ واحدة. */}
-            <span
-              className="road-base absolute block h-px origin-left overflow-hidden"
-              style={{
-                left: "50%",
-                top: "50%",
-                width: len,
-                transform: `rotate(${deg}deg)`,
-              }}
-            >
-              <span
-                className="road-run absolute inset-y-0 block w-1/4"
-                style={{ animationDelay: `${i * 0.22}s` }}
-              />
-            </span>
-            {/* **وتصل واحداً بعد واحد** — (طلبُ المالك ٢٠٢٦-٠٨-١٧:
-                «كأنّها تعبّر عن طلباتٍ تأتي بشكلٍ متتالٍ»). **والتأخيرُ
-                نفسُه الذي يمشي به الطريقُ إليها** — فتصل الشرارةُ
-                فيظهر الدبوس. */}
-            <span
-              className="pin-arrive absolute -translate-x-1/2 -translate-y-1/2 text-accent-text"
-              style={{
-                left: `${p.x}%`,
-                top: `${p.y}%`,
-                animationDelay: `${i * 0.45}s`,
-              }}
-            >
-              <IconLocation size={38} />
-            </span>
-          </span>
-        );
-      })}
-      {/* **والمركزُ يكبر ويصغر، وحولَه خمسُ موجات.** */}
-      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        {waves.map((d) => (
-          <span
-            key={d}
-            className="pin-wave absolute left-1/2 top-1/2 block h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent"
-            style={{ animationDelay: `${d}s` }}
-          />
-        ))}
-        <IconLocation size={72} className="pin-beat relative block text-accent" />
-      </span>
-    </div>
   );
 }
 
@@ -327,8 +209,25 @@ export default async function HomePage() {
             **وكانت مُطلَقةً على الشريط** — والسلايدرُ جزءٌ منه، **فيقع
             نصفُها العلويُّ خلفَه** كلَّما رُفعت لافتة. **وتوسّطُها ما
             حولَها لا ما فوقَها** — فهي زخرفةُ الكلام لا زخرفةُ الصورة. */}
+        {/* ══════════════════════════════════════════════════════════
+            **ولوحةُ الشبكة يسارَ الكلام**
+            ══════════════════════════════════════════════════════════
+
+            (مواصفةُ المالك ٢٠٢٦-٠٨-١٧.)
+
+            **وعرضُها يتدرّج ولا يقفز** — والرسمُ داخلَها نسبيٌّ بـ
+            `viewBox`، **فيبقى على نسبته في كلّ شاشةٍ بلا كسر.**
+
+            **وتُخفى دون اللابتوب**: الافتتاحيّةُ هناك عمودٌ يملؤه
+            الكلام، **ولوحةٌ تحته تدفع ما يُقرأ خارجَ الشاشة.** */}
         <div className="relative">
-          <PinNetwork />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 hidden -translate-y-1/2 lg:block"
+            style={{ insetInlineEnd: "4%", width: "min(34vw, 30rem)" }}
+          >
+            <NetworkFx />
+          </div>
           <HeroStage name={name} />
         </div>
       </Band>

@@ -27,7 +27,21 @@ const SOURCES = {
   /** **مصدرُ لغة الأسطح** — الثيمُ يعرّفها و`layout.tsx` تبنيها مكوّناً. */
   surfaces: ["packages/ui/src/theme.css", "packages/ui/src/layout.tsx"],
   chips: ["packages/ui/src/navigation.tsx"],
-  icons: ["packages/ui/src/icons.ts"],
+  /* **ومعها لوحةُ الحركة.**
+
+     (مواصفةُ المالك ٢٠٢٦-٠٨-١٧: «Motion Graphic برمجيّ حقيقيّ… يجب أن
+      يكون العنصرُ برمجيّاً Vector-based».)
+
+     **والقاعدةُ قائمةٌ لسببها**: أيقونةٌ تُرسم باليد **تفترق سماكتُها عن
+     أخواتها** — وهي في شريطٍ إلى جانبهنّ فيُرى الفرق.
+
+     **ولوحةُ الشبكة ليست أيقونة**: رسمٌ واحدٌ في موضعٍ واحدٍ لا يجاور
+     أيقونةً ولا يُستعمل بديلاً عنها، **ولا تُرسم خطوطُ اتّصالٍ تُرسم
+     وتنبض بأيقونةٍ من مجموعة.**
+
+     **والاستثناءُ ملفٌّ بعينه لا نمطٌ عام** — فمن أراد رسمَ أيقونةٍ في
+     شاشةٍ يبقى الحارسُ يردّه. */
+  icons: ["packages/ui/src/icons.ts", "packages/ui/src/NetworkFx.tsx"],
   fonts: ["packages/ui/src/fonts.css"],
   /** **مصدرُ ترتيب المبلغ ورمزِه** — المركّبةُ والدالّة. */
   money: ["packages/ui/src/money.tsx", "packages/i18n/src/index.ts"],
