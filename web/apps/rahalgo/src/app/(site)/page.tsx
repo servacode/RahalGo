@@ -39,6 +39,7 @@
 
 import Link from "next/link";
 import HeroStage from "./HeroStage";
+import { pageMeta } from "@/lib/seo";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import {
   fetchPlatform,
@@ -69,6 +70,7 @@ import {
 } from "@rahalgo/ui";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3003";
 const m = getMessages(defaultLocale);
 const H = m.site.homePage;
 
@@ -553,13 +555,57 @@ function JoinCard({
   );
 }
 
+/** **بطاقةُ الرئيسيّة في البحث** — (طلبُ المالك ٢٠٢٦-٠٨-١٧). */
+export async function generateMetadata() {
+  return pageMeta("seoHome", "seoHomeDesc", "/");
+}
+
 export default async function HomePage() {
   const [brand, slides] = await Promise.all([fetchPlatform(API), fetchBanners()]);
   const name = brand.name;
 
 
+  /* ══════════════════════════════════════════════════════════════════
+     **وبياناتٌ منظّمةٌ تقول لغوغل ما نحن وأين**
+     ══════════════════════════════════════════════════════════════════
+
+     (طلبُ المالك ٢٠٢٦-٠٨-١٧: «أريد SEO قويّاً… وتصدّرها صفحاتِ النتائج
+      الأولى».)
+
+     **ومحرّكُ البحث يقرأ الحرفَ ولا يفهم العمل** — **وسطرٌ يقول «منصّةُ
+     توصيلٍ في الرقّة» نصٌّ عنده حتّى يُقال بلغته.** فتُكتب `LocalBusiness`
+     باسمها ومدينتها ورقمها وشعارها: **فيُعرض في النتيجة ببطاقةٍ لا
+     بسطر**، ويُربط بمن يبحث عن توصيلٍ في الرقّة.
+
+     **وما لا نملكه لا يُدّعى**: لا تقييماتٍ ولا عددَ فروعٍ ولا ساعاتِ
+     عملٍ مخترَعة — **وبياناتٌ منظّمةٌ كاذبةٌ عقوبتُها إسقاطُ البطاقة
+     كلِّها.**
+
+     **والعنوانُ والرقمُ من الإعدادات** — يتبدّلان معهما بلا نشر. */
+  const ld = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name,
+    url: SITE,
+    ...(brand.logo ? { logo: API + brand.logo, image: API + brand.logo } : {}),
+    ...(brand.supportPhone ? { telephone: brand.supportPhone } : {}),
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: H.cityName,
+      addressCountry: "SY",
+      ...(brand.address ? { streetAddress: brand.address } : {}),
+    },
+    areaServed: H.cityName,
+    inLanguage: "ar",
+  };
+
   return (
     <>
+      {/* **وتُكتب في الورقة نفسِها** — يقرؤها الزاحفُ بلا جافاسكربت. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+      />
       {/* ══════════════════════════════════════════════════════════════
           **العرضُ الافتتاحيّ — جملةٌ تقول ما نفعل وزرٌّ يبدأ**
           ══════════════════════════════════════════════════════════════
