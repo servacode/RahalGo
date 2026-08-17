@@ -237,18 +237,23 @@ function DiffRow({
       </span>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {/* **المعتادةُ باهتةٌ ولا تُشتم** — نصفُ القرّاء يعيشونها اليوم. */}
-        <div className="flex gap-3 rounded-card border border-line-soft px-4 py-4">
-          <Them size={22} className="mt-0.5 shrink-0 text-ink-muted" />
-          <div className="flex flex-col gap-1">
-            <b className="text-sm text-ink">{themTitle}</b>
-            <p className="text-2xs text-ink-muted">{themBody}</p>
+        {/* **والعمودان زجاجٌ كسائر ألواح المنصّة** — (طلبُ المالك
+            ٢٠٢٦-٠٨-١٧: «والكروت اجعلها شفّافة أيضاً»). **وسطحٌ مصمتٌ
+            بين ألواحٍ زجاجيّةٍ يُقرأ غريباً عنها.**
+
+            **والمعتادةُ تبقى أخفتَ حرفاً** — فيُعرف العمودان بلا رأس. */}
+        <div className="surface flex gap-4 p-6">
+          <Them size={28} className="mt-0.5 shrink-0 text-ink-muted" />
+          <div className="flex flex-col gap-1.5">
+            <b className="heading-card text-ink-muted">{themTitle}</b>
+            <p className="text-sm text-ink-muted">{themBody}</p>
           </div>
         </div>
-        <div className="flex gap-3 rounded-card bg-accent-tint px-4 py-4">
-          <Us size={22} className="mt-0.5 shrink-0 text-accent-text" />
-          <div className="flex flex-col gap-1">
-            <b className="text-sm text-accent-dark">{usTitle}</b>
-            <p className="text-2xs text-ink-muted">{usBody}</p>
+        <div className="surface flex gap-4 p-6">
+          <Us size={28} className="mt-0.5 shrink-0 text-accent-text" />
+          <div className="flex flex-col gap-1.5">
+            <b className="heading-card text-accent-text">{usTitle}</b>
+            <p className="text-sm text-ink">{usBody}</p>
           </div>
         </div>
       </div>
@@ -293,13 +298,13 @@ function WhyCard({
   lines: string[];
 }) {
   return (
-    <div className="surface flex flex-col gap-3 p-5">
+    <div className="surface flex flex-col gap-3 p-6">
       <span className="flex items-center gap-2 text-accent-text">
-        <Icon size={24} />
-        <h3 className="heading-card text-ink">{who}</h3>
+        <Icon size={28} />
+        <h3 className="heading-section text-ink">{who}</h3>
       </span>
-      <b className="-mt-1 text-sm text-accent-dark">{sub}</b>
-      <ul className="flex flex-col gap-2 text-sm text-ink-muted">
+      <b className="-mt-1 text-base text-accent-text">{sub}</b>
+      <ul className="flex flex-col gap-2.5 text-base text-ink-muted">
         {lines.map((t) => (
           <li key={t} className="flex gap-2">
             {/* **ونقطةٌ تفصل السطور** — **وأربعةُ أسطرٍ بلا فاصلٍ تُقرأ
@@ -347,17 +352,20 @@ function FlowStep({
 function NoteCard({
   Icon,
   title,
+  tone = "text-ink",
   body,
 }: {
   Icon?: React.ComponentType<{ size?: number; className?: string }>;
   title: string;
+  /** **ولكلّ عنوانٍ لونُه** — (طلبُ المالك ٢٠٢٦-٠٨-١٧). */
+  tone?: string;
   body?: string;
 }) {
   return (
-    <div className="surface flex flex-col items-center gap-2 p-5 text-center">
-      {Icon && <Icon size={26} className="text-accent-text" />}
-      <h3 className="heading-card text-ink">{title}</h3>
-      {body && <p className="text-sm text-ink-muted">{body}</p>}
+    <div className="surface flex flex-col items-center gap-3 p-6 text-center">
+      {Icon && <Icon size={32} className="text-accent-text" />}
+      <h3 className={`heading-section ${tone}`}>{title}</h3>
+      {body && <p className="text-base text-ink-muted">{body}</p>}
     </div>
   );
 }
@@ -456,7 +464,7 @@ export default async function HomePage() {
       <Band>
         <div className="mx-auto max-w-5xl">
           <div className="mb-8 text-center">
-            <h2 className="heading-page">{H.diffTitle}</h2>
+            <h2 className="heading-page text-accent">{H.diffTitle}</h2>
             <p className="mt-3 text-sm text-ink-muted">{H.diffLead}</p>
           </div>
           {/* **ورأسان يقولان أيُّ عمودٍ لمن** — على الحاسوب وحدَه:
@@ -533,7 +541,7 @@ export default async function HomePage() {
       <Band>
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 text-center">
-            <h2 className="heading-page">{H.whyTitle}</h2>
+            <h2 className="heading-page text-primary">{H.whyTitle}</h2>
             <p className="mt-2 text-sm text-ink-muted">{H.whyLead}</p>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -547,7 +555,7 @@ export default async function HomePage() {
       {/* **كيف تعمل المنظومة** — (مواصفةُ المالك ٢٠٢٦-٠٨-١٧). */}
       <Band>
         <div className="mx-auto max-w-5xl">
-          <h2 className="heading-page mb-8 text-center">{H.flowTitle}</h2>
+          <h2 className="heading-page mb-8 text-center text-violet">{H.flowTitle}</h2>
           {/* **وتصير عموداً على الجوّال** — خمسُ خطواتٍ في صفٍّ على
               ثلاثمئةٍ وستّين تُقرأ حروفاً متراكمة. */}
           <ol className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
@@ -563,7 +571,7 @@ export default async function HomePage() {
       {/* **قيمنا** — أربعُ كلماتٍ لا شرحَ لها: **الشرحُ يُضعفها.** */}
       <Band>
         <div className="mx-auto max-w-4xl">
-          <h2 className="heading-page mb-8 text-center">{H.valuesTitle}</h2>
+          <h2 className="heading-page mb-8 text-center text-info">{H.valuesTitle}</h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <NoteCard Icon={IconHandshake} title={H.v1} />
             <NoteCard Icon={IconMoto} title={H.v2} />
@@ -576,9 +584,9 @@ export default async function HomePage() {
       {/* **قصّتنا ومهمّتنا ورؤيتنا** — ثلاثةٌ في صفٍّ واحد. */}
       <Band>
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-3">
-          <NoteCard title={H.storyTitle} body={H.storyBody} />
-          <NoteCard title={H.missionTitle} body={H.missionBody} />
-          <NoteCard title={H.visionTitle} body={H.visionBody} />
+          <NoteCard title={H.storyTitle} tone="text-accent" body={H.storyBody} />
+          <NoteCard title={H.missionTitle} tone="text-primary" body={H.missionBody} />
+          <NoteCard title={H.visionTitle} tone="text-violet" body={H.visionBody} />
         </div>
       </Band>
     </>
