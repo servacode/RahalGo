@@ -14,6 +14,7 @@ import {
   IconSuccess,
   IconPromos,
   IconLink,
+  IconWhatsApp,
   IconLock,
   IconTrendUp,
   PageContainer,
@@ -157,8 +158,12 @@ export default function OverviewPage() {
                 href={`https://wa.me/?text=${shareText}`}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-control bg-on-solid px-4 py-2 text-sm font-medium text-primary-dark"
+                /* **تعبئةٌ بيضاءُ صلبةٌ وسطَ لافتةٍ ملوّنة تُقرأ فضّيّةً
+                   مزعجة** (قرارُ المالك ٢٠٢٦-٠٨-١٨) — **فالزرّان جاران
+                   ويجب أن يكونا أسرةً واحدة**، والأيقونةُ تميّزه لا اللون. */
+                className="flex items-center gap-1.5 rounded-control border border-on-solid-edge px-4 py-2 text-sm font-medium text-on-solid hover:bg-on-solid-tint"
               >
+                <IconWhatsApp size={15} />
                 {m.rep.share}
               </a>
               <Link
