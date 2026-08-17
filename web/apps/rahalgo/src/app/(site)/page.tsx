@@ -181,6 +181,47 @@ interface Slide {
   href?: string;
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **قسمُ الفرق — مقابلةٌ لا قائمةُ مزايا**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (سؤالُ المالك ٢٠٢٦-٠٨-١٧: «شو الفرقُ بينّا وبين غيرنا؟» ثمّ: «نفّذ
+ *  النقاطَ التي ذكرتَها».)
+ *
+ * # ولماذا مقابلةٌ لا بطاقاتٌ في شبكة
+ *
+ * **قسمُ «ميزاتنا» حُذف بأمره** قبل ساعات — **وستُّ بطاقاتٍ تقول «توصيلٌ
+ * سريعٌ · خدمةٌ آمنة» هي إيّاه بثوبٍ آخر**، وهو ما نصّ على ألّا يتكرّر.
+ *
+ * **والمقابلةُ تقول ما لا تقوله القائمة**: كلُّ منافسٍ يكتب «الأسرع»،
+ * **ولا أحدَ يكتب «ضاع طلبُك؟ اتّصل وكرّر واقنع»** — فيعرف القارئُ حالَه
+ * قبل أن يعرف وعدَنا.
+ *
+ * # وما فيها مقيسٌ من المحرّك لا مكتوبٌ للتسويق
+ *
+ *   **الطلبُ الخاصُّ** مسارٌ كاملٌ (`/custom`) — تسعيرٌ وموافقةٌ وتتبّع
+ *   **والتتبّعُ** خادمُ مساراتٍ يعمل وموقعُ سائقٍ حيّ
+ *   **والتعويضُ** تذكرةٌ وقيدٌ يخرج من خزينة المنصّة
+ *   **وحسابُ المتجر** دفترٌ ومستحقٌّ وسحبُ رصيدٍ بطلب
+ *
+ * **ولا سطرَ فيها لا يقابله شيءٌ في الشيفرة** — وموقعٌ يعد بما لا يفعله
+ * يُكتشف عند أوّل طلب.
+ */
+function DiffRow({ them, us }: { them: string; us: string }) {
+  return (
+    <li className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {/* **وحالُهم أوّلاً** — **ومن قرأ حالَه عرف الفرقَ بلا أن يُقال له.** */}
+      <div className="rounded-card border border-line-soft px-4 py-3 text-sm text-ink-muted">
+        {them}
+      </div>
+      <div className="rounded-card bg-accent-tint px-4 py-3 text-sm font-bold text-accent-dark">
+        {us}
+      </div>
+    </li>
+  );
+}
+
 export default async function HomePage() {
   const [brand, slides] = await Promise.all([fetchPlatform(API), fetchBanners()]);
   const name = brand.name;
@@ -270,6 +311,28 @@ export default async function HomePage() {
         </div>
       </Band>
 
+      {/* **وقسمُ الفرق بعد الافتتاحيّة** — (سؤالُ المالك ٢٠٢٦-٠٨-١٧). */}
+      <Band tinted>
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-8 text-center">
+            <h2 className="heading-page">{H.diffTitle}</h2>
+            <p className="mt-2 text-sm text-ink-muted">{H.diffLead}</p>
+          </div>
+          {/* **ورأسان يقولان أيُّ عمودٍ لمن** — على الحاسوب وحدَه:
+              **والعمودان يصيران صفّين على الجوّال فيُقرأ كلُّ زوجٍ معاً**
+              بلا حاجةٍ إلى رأس. */}
+          <div className="mb-3 hidden grid-cols-2 gap-3 text-2xs md:grid">
+            <span className="px-4 text-ink-muted">{H.diffThem}</span>
+            <span className="px-4 font-bold text-accent-text">{H.diffUs}</span>
+          </div>
+          <ul className="flex flex-col gap-3">
+            <DiffRow them={H.d1a} us={H.d1b} />
+            <DiffRow them={H.d2a} us={H.d2b} />
+            <DiffRow them={H.d3a} us={H.d3b} />
+            <DiffRow them={H.d4a} us={H.d4b} />
+          </ul>
+        </div>
+      </Band>
     </>
   );
 }
