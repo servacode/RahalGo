@@ -304,7 +304,7 @@ export function BootScreen({ label }: { label?: string }) {
       aria-live="polite"
       aria-label={label ?? m.common.loading}
     >
-      <BrandMark size={112} rounded="card" />
+      <BrandMark size={112} disc />
       <p className="text-sm text-ink-muted">{label ?? m.common.loading}</p>
       <span className="h-1 w-40 overflow-hidden rounded-badge bg-field">
         <span className="block h-full w-1/3 rounded-badge bg-accent motion-safe:animate-[rahalgo-sweep_1.1s_ease-in-out_infinite]" />

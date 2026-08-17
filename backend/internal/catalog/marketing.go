@@ -136,18 +136,23 @@ type Banner struct {
 	// (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «بانرات صفحة التسوّق مختلفة برأيي عن
 	//  الرئيسيّة».)
 	Placement string `json:"placement"`
+	// Blur **لمحةٌ فوريّةٌ تُرسل مع الورقة** — (طلبُ المالك ٢٠٢٦-٠٨-١٧):
+	// **تُرى في أوّل رسمةٍ فلا يُرى إطارٌ فارغٌ ينتظر.**
+	Blur string `json:"blur"`
+	// Sizes **هل للصورة نسخٌ أصغر؟** — فتُكتب `srcset` ولا تُخترع مسارات.
+	Sizes bool `json:"sizes"`
 }
 
 const bannerSelect = `
 	SELECT b.id, b.title, bm.path, bm.thumb_path, b.target, b.sort_order, b.active,
-	       b.placement
+	       b.placement, COALESCE(bm.blur, ''), COALESCE(bm.sizes, false)
 	FROM banners b
 	LEFT JOIN media bm ON bm.id = b.image_media_id`
 
 func scanBanner(row pgx.Row) (*Banner, error) {
 	var b Banner
 	if err := row.Scan(&b.ID, &b.Title, &b.ImageURL, &b.ImageThumbURL,
-		&b.Target, &b.SortOrder, &b.Active, &b.Placement); err != nil {
+		&b.Target, &b.SortOrder, &b.Active, &b.Placement, &b.Blur, &b.Sizes); err != nil {
 		return nil, err
 	}
 	b.ImageURL = media.URLForPtr(b.ImageURL)

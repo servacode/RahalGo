@@ -133,8 +133,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // العريضة بنفسه** (`var(--site-bg-mobile, var(--site-bg, none))`).
   // **وكتابةُ `none` تمنع السقوطَ فيبقى الجوّالُ بلا خلفيّةٍ أصلاً** —
   // وهي الشاشةُ التي يفتح منها أكثرُ الناس.
+  /* **واللمحةُ تُرسم تحت الصورة في أوّل رسمة** — (طلبُ المالك
+     ٢٠٢٦-٠٨-١٧): **وهي نصٌّ في الورقة نفسِها، فلا رحلةَ لها.**
+
+     **وترتيبُ الطبقتين: الصورةُ فوق اللمحة** — فإذا وصلت غطّتها بلا
+     وميض. */
+  const blur = brand.siteBgBlur && brand.siteBgBlur.startsWith("data:image/")
+    ? brand.siteBgBlur
+    : "";
   const bgCss = bg
-    ? `:root{--site-bg:url("${bg}");` +
+    ? `:root{--site-bg:${blur ? `url("${bg}"),url("${blur}")` : `url("${bg}")`};` +
       (bgMobile ? `--site-bg-mobile:url("${bgMobile}");` : "") +
       `--site-bg-dim:${brand.siteBgDim / 100}}`
     : "";

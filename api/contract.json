@@ -5488,6 +5488,10 @@
           "type": "unknown"
         },
         {
+          "name": "site_bg_blur",
+          "type": "unknown"
+        },
+        {
           "name": "site_bg_dim",
           "type": "unknown"
         },

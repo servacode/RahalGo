@@ -176,7 +176,16 @@ async function fetchBanners(): Promise<Slide[]> {
     });
     if (!res.ok) return [];
     const j = (await res.json()) as {
-      data?: { banners?: { id: string; title: string; image_url: string | null; target: string | null }[] };
+      data?: {
+        banners?: {
+          id: string;
+          title: string;
+          image_url: string | null;
+          target: string | null;
+          blur?: string;
+          sizes?: boolean;
+        }[];
+      };
     };
     return (j.data?.banners ?? [])
       .filter((b) => b.image_url)
@@ -185,6 +194,8 @@ async function fetchBanners(): Promise<Slide[]> {
         title: b.title,
         imageUrl: API + b.image_url,
         href: b.target || undefined,
+        blur: b.blur,
+        sizes: b.sizes,
       }));
   } catch {
     // @empty-ok — انظر أعلاه: الفراغُ قرارٌ لا صمت.
@@ -197,6 +208,8 @@ interface Slide {
   title: string;
   imageUrl: string;
   href?: string;
+  blur?: string;
+  sizes?: boolean;
 }
 
 /**

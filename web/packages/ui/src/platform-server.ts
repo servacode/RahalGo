@@ -39,6 +39,7 @@ interface Wire {
   site_bg?: string | null;
   site_bg_mobile?: string | null;
   site_bg_dim?: number;
+  site_bg_blur?: string;
   show_login?: boolean;
   show_shop?: boolean;
   join_open?: boolean;
@@ -90,6 +91,7 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
     siteBg: null,
     siteBgMobile: null,
     siteBgDim: 55,
+    siteBgBlur: "",
     // **والافتراضُ الظهور حتّى في الفراغ** — **بابٌ اختفى لأنّ نداءً سقط
     // عطبٌ يُقرأ في وجه أوّل زائر.**
     showLogin: true,
@@ -123,6 +125,7 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
       siteBg: d.site_bg ?? null,
       siteBgMobile: d.site_bg_mobile ?? null,
       siteBgDim: typeof d.site_bg_dim === "number" ? d.site_bg_dim : 55,
+      siteBgBlur: typeof d.site_bg_blur === "string" ? d.site_bg_blur : "",
       showLogin: d.show_login !== false,
       showShop: d.show_shop !== false,
       joinOpen: d.join_open === true,

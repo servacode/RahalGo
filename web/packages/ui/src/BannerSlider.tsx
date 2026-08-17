@@ -52,6 +52,21 @@ export interface SlideItem {
   title: string;
   imageUrl: string | null;
   href?: string;
+  /**
+   * **لمحةٌ فوريّةٌ تحت الصورة** — (طلبُ المالك ٢٠٢٦-٠٨-١٧).
+   *
+   * **تُرسم لوناً مضبَّباً في أوّل رسمة** ثمّ تحلّ الصورةُ محلَّها،
+   * **فلا يُرى إطارٌ فارغٌ ينتظر** مهما بطؤت الشبكة.
+   */
+  blur?: string;
+  /** **هل للصورة نسخٌ أصغر؟** — فتُكتب `srcset`. */
+  sizes?: boolean;
+}
+
+/** **مسارُ نسخةٍ بعرضٍ بعينه** — يُشتقّ كما يشتقّه المحرّك. */
+function variant(url: string, w: number): string {
+  const dot = url.lastIndexOf(".");
+  return dot < 0 ? url : `${url.slice(0, dot)}_${w}${url.slice(dot)}`;
 }
 
 /** @param Link رابطُ الإطار — يختلف بين `next/link` وغيره. */
@@ -246,6 +261,15 @@ export function BannerSlider({
 
             **والهدوءُ أن يُترك المشهدُ وحدَه** — لا ظلَّ له ولا هالةَ ولا
             قناعَ يذيب حوافَّه. */}
+        {/* **واللمحةُ خلفَ الصورة لا مكانَها** — **وتبديلُ المصدر عند
+            التحميل يومض**، والطبقةُ تحتها تختفي تحتها بلا حركة. */}
+        {it.imageUrl && it.blur && (
+          <span
+            aria-hidden
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url("${it.blur}")` }}
+          />
+        )}
         {it.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -255,6 +279,21 @@ export function BannerSlider({
             /* **والأولى تُحمَّل فوراً وما بعدها كسولاً**: الأولى هي ما يُرى في
                أوّل رسمٍ — **وتأجيلُها يترك فراغاً في أهمّ موضعٍ من الصفحة.** */
             loading={i === 0 ? "eager" : "lazy"}
+            /* **ونسخٌ ثلاثٌ يختار المتصفّحُ بينها** — (طلبُ المالك
+               ٢٠٢٦-٠٨-١٧): **صورةٌ بعرض ١٦٠٠ إلى هاتفٍ عرضُه ٣٩٠ تُحمِّله
+               أربعةَ أضعافِ ما يرى.**
+
+               **و`sizes` تقول للمتصفّح كم سيشغل الإطارُ** قبل أن يعرف
+               تخطيطَ الصفحة — **وبلاها يفترض العرضَ كلَّه فيأخذ الأكبر.** */
+            {...(it.sizes
+              ? {
+                  srcSet: `${variant(it.imageUrl, 480)} 480w, ${variant(
+                    it.imageUrl,
+                    960,
+                  )} 960w, ${it.imageUrl} 1600w`,
+                  sizes: hero ? "(max-width: 1100px) 100vw, 1100px" : "(max-width: 1024px) 100vw, 1024px",
+                }
+              : {})}
             /* **وتملأ الإطارَ لأنّ نسبتَه نسبتُها.**
 
                **كانت `contain` وقرارُ المالك ٢٠٢٦-٠٨-٠٦ ألّا تُقصّ** — وهو

@@ -113,6 +113,13 @@ export interface Platform {
   /** حجابُها (٠..١٠٠) — **وصورةٌ فوتوغرافيّةٌ تحتاج غالباً ٥٠–٧٠.** */
   siteBgDim: number;
   /**
+   * **لمحةُ الخلفيّة** — (طلبُ المالك ٢٠٢٦-٠٨-١٧).
+   *
+   * **تُرسم في أوّل رسمةٍ تحت الصورة** فلا يُرى تدرّجٌ عارٍ ثمّ تقفز
+   * الصورةُ فوقه. **وفارغٌ يعني صورةً رُفعت قبل أن تُولَّد اللمحات.**
+   */
+  siteBgBlur: string;
+  /**
    * **رقمُ الدعم** (`platform.support_phone`) — **وفارغٌ يُخفي السطر.**
    *
    * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «بالفاتورة لازم نضيف رقم هاتف الدعم للشكاوى».)
@@ -168,7 +175,7 @@ export interface Platform {
   location: string;
 }
 
-const EMPTY: Platform = { name: "", logo: null, otpLogin: true, passwordMinLength: 8, appUrl: "", authBg: null, authBgMobile: null, authBgDim: 70, siteBg: null, siteBgMobile: null, siteBgDim: 55, showLogin: true, showShop: true, joinOpen: false, supportPhone: "", social: { facebook: "", instagram: "", telegram: "", whatsapp: "" }, address: "", location: "" };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true, passwordMinLength: 8, appUrl: "", authBg: null, authBgMobile: null, authBgDim: 70, siteBg: null, siteBgMobile: null, siteBgDim: 55, siteBgBlur: "", showLogin: true, showShop: true, joinOpen: false, supportPhone: "", social: { facebook: "", instagram: "", telegram: "", whatsapp: "" }, address: "", location: "" };
 
 /**
  * **مسارُ الوسيط يصير رابطاً هنا — لا في كلّ تطبيق.**
@@ -262,6 +269,7 @@ export function PlatformProvider({
             siteBg: j.data.site_bg ?? null,
             siteBgMobile: j.data.site_bg_mobile ?? null,
             siteBgDim: typeof j.data.site_bg_dim === "number" ? j.data.site_bg_dim : 55,
+            siteBgBlur: typeof j.data.site_bg_blur === "string" ? j.data.site_bg_blur : "",
             // **والافتراضُ الظهور** — انظر `showLogin`.
             showLogin: j.data.show_login !== false,
             showShop: j.data.show_shop !== false,

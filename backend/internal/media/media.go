@@ -10,6 +10,7 @@ package media
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -18,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -57,12 +59,35 @@ const (
 	// **وهي تُرسم تحت حجابٍ وخلفَ زجاج** — فلا عينَ تفحص تفاصيلَها،
 	// **وكلُّ نقطةٍ من الجودة ثمنُها بايتاتٌ ينتظرها زائرٌ على شبكةٍ ضعيفة.**
 	backgroundQuality = 62
+
+	// **مقاسُ اللمحة وجودتُها** — انظر `blurData`.
+	blurDim     = 24
+	blurQuality = 30
 )
 
 // isBackground **الخلفيّاتُ صنفٌ له قواعدُه** — لا شفافيّةَ تحتها ولا تُفحص
 // تفاصيلُها، **ووزنُها وحدَه ما يُرى** لأنّها أوّلُ ما يُحمَّل وأكبرُه.
 func isBackground(kind string) bool {
 	return kind == "site_background" || kind == "auth_background"
+}
+
+// keepsAlpha **الشفافيّةُ معنًى في الشعارات وحدَها.**
+//
+// (طلبُ المالك ٢٠٢٦-٠٨-١٧: «أنا أرفع أيَّ نوعِ صورةٍ يجب أن يُعدَّل
+//
+//	برمجيّاً بحيث تُحلّ مشكلةُ بطء تحميل الصور».)
+//
+// **وقِيست لافتتُه فوُجدت أربعةً وثلاثين ألفَ... لا: أربعةَ ملايينَ
+// وثلاثمئةِ ألفِ بايت** — لأنّها رُفعت PNG وبقيت PNG. **وPNG أسوأُ صيغةٍ
+// للصور الطبيعيّة**، وكانت القاعدةُ تحوّل الخلفيّاتِ وحدَها.
+//
+// **والشعارُ يُوضع على ألوانٍ شتّى** — شريطٍ داكنٍ وورقةٍ بيضاءَ وقرصٍ
+// أبيض: **فشفافيّتُه معنًى، وتسطيحُها يضع حولَه مربّعاً.**
+//
+// **وما عداه صورةٌ تملأ إطارَها** — لافتةٌ أو صنفٌ أو صورةُ حسابٍ أو
+// إثباتُ تسليم: **لا شيءَ خلفَها يُرى.**
+func keepsAlpha(kind string) bool {
+	return kind == "platform_logo" || kind == "merchant_logo"
 }
 
 var (
@@ -106,6 +131,34 @@ type Media struct {
 	Width    int    `json:"width"`
 	Height   int    `json:"height"`
 	Bytes    int64  `json:"bytes"`
+	// Blur **لمحةٌ فوريّةٌ مضمَّنةٌ في الصفّ** — `data:` بنحو ستّمئة بايت.
+	//
+	// (طلبُ المالك ٢٠٢٦-٠٨-١٧: «بحيث لا يلاحظ المستخدمُ أنّ الصور
+	//  تتحمّل مهما كان الإنترنت بطيئاً».)
+	//
+	// **تُرسل مع الورقة فتُرى في أوّل رسمة** — **ولو كانت ملفّاً
+	// لَاحتاجت رحلةً ثانيةً**، وهي التي جاءت لتُلغي الانتظار.
+	Blur string `json:"blur"`
+	// Sizes **هل وُلّدت النسخُ الصغيرة؟** — الصفوفُ القديمةُ بلا نسخ،
+	// **ومن طلب مقاساً لم يُولَّد يأخذ ٤٠٤ في وسط الصفحة.**
+	Sizes bool `json:"sizes"`
+}
+
+// VariantWidths **مقاساتُ النسخ المولَّدة** — بترتيب تصاعديّ.
+//
+// **وأربعُمئةٍ وثمانون تكفي هاتفاً بكثافةٍ مضاعفة** (٢٤٠ نقطةً منطقيّة)،
+// **وتسعُمئةٍ وستّون لوحيّاً ولابتوب** — **والأصلُ لِما فوقهما.**
+var VariantWidths = []int{480, 960}
+
+// VariantURL **مسارُ نسخةٍ بعرضٍ بعينه** — يُشتقّ ولا يُخزَّن.
+//
+// **وأعمدةٌ لكلّ مقاسٍ تعني هجرةً كلَّما أُضيف مقاس.**
+func VariantURL(fullURL string, w int) string {
+	dot := strings.LastIndex(fullURL, ".")
+	if dot < 0 {
+		return fullURL
+	}
+	return fullURL[:dot] + "_" + strconv.Itoa(w) + fullURL[dot:]
 }
 
 type Service struct {
@@ -231,7 +284,7 @@ func (s *Service) Save(ctx context.Context, actorID, kind string, r io.Reader) (
 	// **والخلفيّةُ تملأ الشاشةَ ولا شيءَ خلفَها** — فالشفافيّةُ فيها لا
 	// معنى لها، **وثمنُها ثوانٍ ينتظرها كلُّ زائر.**
 	ext, encode := ".jpg", encodeJPEG
-	if format == "png" && !isBackground(kind) {
+	if format == "png" && keepsAlpha(kind) {
 		ext, encode = ".png", encodePNG
 	}
 	// **وجودةٌ أخفضُ للخلفيّة وحدَها.**
@@ -245,6 +298,7 @@ func (s *Service) Save(ctx context.Context, actorID, kind string, r io.Reader) (
 
 	full := downscale(src, maxDim)
 	thumb := downscale(src, thumbDim)
+	hasSizes := false
 
 	now := time.Now().UTC()
 	base := filepath.Join(now.Format("2006"), now.Format("01"))
@@ -264,13 +318,43 @@ func (s *Service) Save(ctx context.Context, actorID, kind string, r io.Reader) (
 		return nil, err
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **ونسختان أصغرُ يختار المتصفّحُ بينهما**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (طلبُ المالك ٢٠٢٦-٠٨-١٧.)
+	//
+	// **صورةٌ بعرض ١٦٠٠ تُرسل إلى هاتفٍ عرضُه ٣٩٠** — **فيُحمَّل أربعةُ
+	// أضعافِ ما يُرى**، وهو أكثرُ ما يبطئ الصفحةَ على شبكةٍ ضعيفة.
+	//
+	// **ولا تُكبَّر صورةٌ صغيرة**: من رفع عرضاً أقلَّ من المقاس لا يُولَّد
+	// له — **ونسخةٌ مكبَّرةٌ أثقلُ من أصلها وأسوأُ منه.**
+	for _, w := range VariantWidths {
+		if full.Bounds().Dx() <= w {
+			continue
+		}
+		vp := filepath.Join(s.dir, filepath.FromSlash(
+			VariantURL(relPath, w)))
+		if _, err := writeImage(vp, downscale(full, w), encode); err != nil {
+			// **وفشلُ نسخةٍ لا يُسقط الرفع** — الأصلُ موجودٌ ويُعرض،
+			// **والعلمُ يبقى كاذباً لو رُفع**، فيُطفأ أدناه.
+			hasSizes = false
+			break
+		}
+		hasSizes = true
+	}
+
+	// **واللمحةُ من الصورة نفسِها** — أربعةٌ وعشرون بكسلاً بجودةٍ منخفضة.
+	blur := blurData(src)
+
 	b := full.Bounds()
 	m := &Media{Kind: kind, Width: b.Dx(), Height: b.Dy(), Bytes: size,
-		URL: URLFor(relPath), ThumbURL: URLFor(relThumb)}
+		URL: URLFor(relPath), ThumbURL: URLFor(relThumb), Blur: blur, Sizes: hasSizes}
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO media (kind, path, thumb_path, width, height, bytes, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-		kind, relPath, relThumb, m.Width, m.Height, size, actorID).Scan(&m.ID)
+		INSERT INTO media (kind, path, thumb_path, width, height, bytes, created_by,
+		                   blur, sizes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+		kind, relPath, relThumb, m.Width, m.Height, size, actorID, blur, hasSizes).Scan(&m.ID)
 	if err != nil {
 		_ = os.Remove(filepath.Join(s.dir, relPath))
 		_ = os.Remove(filepath.Join(s.dir, relThumb))
@@ -290,6 +374,27 @@ func looksLikeImage(b []byte) bool {
 		return true // WebP
 	}
 	return false
+}
+
+// blurData **لمحةٌ صغيرةٌ جدّاً تُضمَّن نصّاً.**
+//
+// (طلبُ المالك ٢٠٢٦-٠٨-١٧: «لا يلاحظ المستخدمُ أنّ الصور تتحمّل».)
+//
+// **وأربعةٌ وعشرون بكسلاً بجودةِ ثلاثين** — نحوُ أربعمئةِ بايتٍ بعد
+// الترميز. **وأكبرُ منها يثقل كلَّ ورقةٍ تحملها**، وهي تُرسل مع كلّ صفحة.
+//
+// **والمتصفّحُ يمدّها فتصير ضبابيّةً** — لا تُقرأ تفصيلاً، **إنّما تقول
+// «هنا صورةٌ وهذه ألوانُها» فلا يُرى صندوقٌ فارغ.**
+//
+// **وفشلُها يُرجع فراغاً ولا يُسقط الرفع** — **وصورةٌ بلا لمحةٍ تعمل،
+// ورفعٌ يسقط لأجل لمحةٍ لا.**
+func blurData(src image.Image) string {
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, downscale(src, blurDim),
+		&jpeg.Options{Quality: blurQuality}); err != nil {
+		return ""
+	}
+	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
 // downscale يصغّر الصورة بحيث لا يتجاوز أطول أبعادها max — لا تكبير أبداً.

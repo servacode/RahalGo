@@ -45,6 +45,21 @@ func (s *Server) settingMedia(r *http.Request, key string) *string {
 	return media.URLForPtr(path)
 }
 
+// settingMediaBlur **لمحةُ وسيطٍ مخزَّنٍ في الإعدادات** — وفارغٌ يعني
+// «لا لمحة»: **صفوفٌ رُفعت قبل أن تُولَّد اللمحاتُ تبقى تعمل بلا واحدة.**
+func (s *Server) settingMediaBlur(r *http.Request, key string) string {
+	id := s.settings.GetString(r.Context(), key)
+	if id == "" {
+		return ""
+	}
+	var blur string
+	if s.pg.QueryRow(r.Context(),
+		`SELECT COALESCE(blur, '') FROM media WHERE id = $1`, id).Scan(&blur) != nil {
+		return ""
+	}
+	return blur
+}
+
 // handlePublicPlatform هويّةُ المنصة — **الاسمُ والشعارُ من الإعدادات وحدَها.**
 //
 // (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «لا أريد أيَّ مكانٍ يُكتب فيه اسم المنصة بشكلٍ
@@ -125,7 +140,11 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		"site_bg":        s.settingMedia(r, "platform.background"),
 		"site_bg_mobile": s.settingMedia(r, "platform.background_mobile"),
 		"site_bg_dim":    s.settings.GetInt(r.Context(), "platform.background_dim"),
-		"auth_bg_dim":    s.settings.GetInt(r.Context(), "auth.background_dim"),
+		// **ولمحةُ الخلفيّة معها** — (طلبُ المالك ٢٠٢٦-٠٨-١٧):
+		// **تُرسم لوناً في أوّل رسمةٍ ثمّ تحلّ الصورةُ محلَّها**، فلا
+		// يُرى تدرّجٌ عارٍ ثمّ تقفز الصورةُ فوقه.
+		"site_bg_blur": s.settingMediaBlur(r, "platform.background"),
+		"auth_bg_dim":  s.settings.GetInt(r.Context(), "auth.background_dim"),
 	})
 }
 

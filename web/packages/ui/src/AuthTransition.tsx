@@ -73,7 +73,7 @@ export function AuthTransition({
       {/* **العلامةُ أوّلاً** — وهي ما يقول «المنصةُ تعمل» قبل أن يُقرأ حرف.
           **ومن `BrandMark` لا من المعجم**: شعارُ الإعدادات إن رُفع، وإلّا
           أوّلُ حرفٍ من الاسم المضبوط. (قرارُ المالك ٢٠٢٦-٠٨-٠٦.) */}
-      <BrandMark size={112} rounded="card" />
+      <BrandMark size={112} disc />
 
       <div className="px-6 text-center">
         <p className="figure text-ink">{title}</p>
