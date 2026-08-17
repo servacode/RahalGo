@@ -88,7 +88,7 @@ function Band({
           ? /* **والافتتاحيّةُ ترتفع** — (طلبُ المالك ٢٠٢٦-٠٨-١٧: «ارفع
                المحتوى للأعلى قليلاً»): **حشوةٌ علويّةٌ أقلُّ من
                السفليّة**، فتبدأ الشاشةُ بالكلام لا بالفراغ. */
-            "pb-14 pt-6 sm:pb-20 sm:pt-10 lg:min-h-[30rem]"
+            "pb-14 pt-6 sm:pb-20 sm:pt-10 lg:min-h-[36rem]"
           : "py-14 sm:py-20"
       } ${flush ? "px-6 sm:px-12" : "px-3 sm:px-4"} ${tinted ? "bg-raised" : ""}`}
     >
@@ -247,7 +247,7 @@ export default async function HomePage() {
 
                **وبالنسبة لا بالبكسل**: المحتوى يطول ويقصر بمقاس الشاشة،
                **ورقمٌ ثابتٌ يصلح لواحدةٍ ويخرج عن الباقي.** */
-            className="pointer-events-none absolute top-[68%] hidden -translate-y-1/2 lg:block"
+            className="pointer-events-none absolute top-[82%] hidden -translate-y-1/2 lg:block"
             style={{ insetInlineEnd: "4%", width: "min(30vw, 26rem)" }}
           >
             <NetworkFx />
