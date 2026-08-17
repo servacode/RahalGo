@@ -242,14 +242,14 @@ function DiffRow({
             بين ألواحٍ زجاجيّةٍ يُقرأ غريباً عنها.**
 
             **والمعتادةُ تبقى أخفتَ حرفاً** — فيُعرف العمودان بلا رأس. */}
-        <div className="surface flex gap-4 p-6">
+        <div className="surface lift flex gap-4 p-6">
           <Them size={28} className="mt-0.5 shrink-0 text-ink-muted" />
           <div className="flex flex-col gap-1.5">
             <b className="heading-card text-ink-muted">{themTitle}</b>
             <p className="text-sm text-ink-muted">{themBody}</p>
           </div>
         </div>
-        <div className="surface flex gap-4 p-6">
+        <div className="surface lift flex gap-4 p-6">
           <Us size={28} className="mt-0.5 shrink-0 text-accent-text" />
           <div className="flex flex-col gap-1.5">
             <b className="heading-card text-accent-text">{usTitle}</b>
@@ -298,10 +298,10 @@ function WhyCard({
   lines: string[];
 }) {
   return (
-    <div className="surface flex flex-col gap-3 p-6">
+    <div className="surface lift flex flex-col gap-3 p-6">
       <span className="flex items-center gap-2 text-accent-text">
         <Icon size={28} />
-        <h3 className="heading-section text-ink">{who}</h3>
+        <h3 className="heading-page text-ink">{who}</h3>
       </span>
       <b className="-mt-1 text-base text-accent-text">{sub}</b>
       <ul className="flex flex-col gap-2.5 text-base text-ink-muted">
@@ -337,7 +337,7 @@ function FlowStep({
 }) {
   return (
     <li className="flex flex-1 flex-col items-center gap-2 text-center">
-      <span className="relative flex h-16 w-16 items-center justify-center rounded-full border border-accent-edge bg-accent-tint text-accent-text">
+      <span className="lift relative flex h-16 w-16 items-center justify-center rounded-full border border-accent-edge bg-accent-tint text-accent-text">
         <Icon size={26} />
         <span className="figure absolute -top-2 -end-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-2xs text-on-bright">
           {n}
@@ -362,9 +362,9 @@ function NoteCard({
   body?: string;
 }) {
   return (
-    <div className="surface flex flex-col items-center gap-3 p-6 text-center">
+    <div className="surface lift flex flex-col items-center gap-3 p-6 text-center">
       {Icon && <Icon size={32} className="text-accent-text" />}
-      <h3 className={`heading-section ${tone}`}>{title}</h3>
+      <h3 className={`heading-page ${tone}`}>{title}</h3>
       {body && <p className="text-base text-ink-muted">{body}</p>}
     </div>
   );
@@ -464,7 +464,7 @@ export default async function HomePage() {
       <Band>
         <div className="mx-auto max-w-5xl">
           <div className="mb-8 text-center">
-            <h2 className="heading-page text-accent">{H.diffTitle}</h2>
+            <h2 className="heading-display text-accent">{H.diffTitle}</h2>
             <p className="mt-3 text-sm text-ink-muted">{H.diffLead}</p>
           </div>
           {/* **ورأسان يقولان أيُّ عمودٍ لمن** — على الحاسوب وحدَه:
@@ -541,7 +541,7 @@ export default async function HomePage() {
       <Band>
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 text-center">
-            <h2 className="heading-page text-primary">{H.whyTitle}</h2>
+            <h2 className="heading-display text-primary">{H.whyTitle}</h2>
             <p className="mt-2 text-sm text-ink-muted">{H.whyLead}</p>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -555,7 +555,7 @@ export default async function HomePage() {
       {/* **كيف تعمل المنظومة** — (مواصفةُ المالك ٢٠٢٦-٠٨-١٧). */}
       <Band>
         <div className="mx-auto max-w-5xl">
-          <h2 className="heading-page mb-8 text-center text-violet">{H.flowTitle}</h2>
+          <h2 className="heading-display mb-8 text-center text-violet">{H.flowTitle}</h2>
           {/* **وتصير عموداً على الجوّال** — خمسُ خطواتٍ في صفٍّ على
               ثلاثمئةٍ وستّين تُقرأ حروفاً متراكمة. */}
           <ol className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
@@ -571,7 +571,7 @@ export default async function HomePage() {
       {/* **قيمنا** — أربعُ كلماتٍ لا شرحَ لها: **الشرحُ يُضعفها.** */}
       <Band>
         <div className="mx-auto max-w-4xl">
-          <h2 className="heading-page mb-8 text-center text-info">{H.valuesTitle}</h2>
+          <h2 className="heading-display mb-8 text-center text-info">{H.valuesTitle}</h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <NoteCard Icon={IconHandshake} title={H.v1} />
             <NoteCard Icon={IconMoto} title={H.v2} />

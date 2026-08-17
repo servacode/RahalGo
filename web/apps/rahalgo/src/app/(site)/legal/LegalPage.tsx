@@ -147,7 +147,7 @@ export function LegalPage({
         <PageHeader icon={icon} title={title} subtitle={subtitle} />
 
         {blocks.map((b, i) => (
-          <section key={i} className="surface p-5 leading-relaxed sm:p-6">
+          <section key={i} className="surface lift p-5 leading-relaxed sm:p-6">
             {b.h && (
               <h2 className="mb-3 flex items-baseline gap-2">
                 {/* **والرقمُ يُحسب ولا يُكتب في النصّ** — فمن أدرج بنداً
@@ -155,7 +155,7 @@ export function LegalPage({
                 <span className="figure text-brandmark">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="heading-section text-accent-text">
+                <span className="heading-page text-accent-text">
                   {fill(b.h, contact, platform)}
                 </span>
               </h2>
