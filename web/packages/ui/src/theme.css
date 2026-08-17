@@ -1234,45 +1234,130 @@ select option:checked {
    **ومن أطفأ الحركةَ في نظامه يسكن** — القاعدةُ داخلَ الأداة لا في ورقةٍ
    أخرى، **فمن أخذ الصنفَ أخذ احترامَها معه.** */
 /* ══════════════════════════════════════════════════════════════════════
-   **شبكةُ الدبابيس — دبوسٌ ينبض ويصل بمن حوله**
+   **شبكةُ الدبابيس — مركزٌ يكبر ويصغر، وموجاتٌ خمسٌ متلاحقة**
    ══════════════════════════════════════════════════════════════════════
 
-   (طلبُ المالك ٢٠٢٦-٠٨-١٧: «دبوسٌ نابضٌ في الوسط… ثمّ اجعل الدبوسَ
-    المركزيَّ وكأنّه يرسل خطوطاً إلى تلك الدبابيس التي حوله».)
+   (طلبُ المالك ٢٠٢٦-٠٨-١٧: «الدبوسُ المركزيُّ مع النبض اجعله يكبر ويصغر
+    وأكبرَ حجماً… أضف ٥ موجاتٍ متلاحقةٍ متكرّرة… واجعل الخطَّ منقّطاً
+    وكأنّه يسير من الدبوس المركزيّ إلى باقي الدبابيس، بحيث تظهر نقطةٌ
+    وراء نقطةٍ إلى أن تصل الدبوسَ المقصود».)
 
-   **وهي زخرفةٌ لا شكلَ يُقرأ** — فلا نصَّ فيها ولا يخاطبها قارئُ الشاشة.
+   # وثلاثُ حركاتٍ لا واحدة
 
-   **وثلاثةُ أصنافٍ لا واحد**: النبضةُ حلقةٌ تكبر وتخفت، **والخطُّ يبهت
-   كلّما ابتعد عن مركزه** فيُقرأ خارجاً منه لا واصلاً إليه، **والدبوسُ
-   الطرفيُّ أخفتُ من المركزيّ** فلا ينازعه.
+   **الموجةُ حلقةٌ تخرج وتخفت**، **والنبضةُ المركزُ نفسُه يكبر ويصغر**،
+   **والنقطُ تسير في الخطّ.** ولكلٍّ إيقاعُه.
 
-   **ومن أطفأ الحركةَ في نظامه تسكن الحلقة** — وتبقى الشبكةُ مرسومة. */
-@keyframes pin-pulse {
+   # والموجاتُ الخمسُ حلقةٌ واحدةٌ بخمسِ تأخيرات
+
+   **دورةٌ من ثلاثِ ثوانٍ وتأخيرٌ ستُّ أعشارٍ بين كلّ حلقتين** — فتُقرأ
+   خمساً متلاحقةً لا خمسَ حلقاتٍ تنطلق معاً.
+
+   # والنقطُ تُرسم بتدرّجٍ مكرّرٍ لا بعناصر
+
+   **ثمانِ نقاطٍ في الخطّ الواحدِ تعني ثمانيةَ عناصرَ في كلّ خطّ** — وأربعةً
+   وستّين في الشبكة، **تُحسب مواضعُها في كلّ رسمة.** **والتدرّجُ المكرّرُ
+   عنصرٌ واحدٌ يزحف موضعُ خلفيّته**، فتسير النقطُ بلا حساب.
+
+   **واتّجاهُها من المركز إلى الطرف** — والخطُّ مُدارٌ من مركزه، فسيرُها
+   في محوره سيرٌ نحو الدبوس أينما وقع.
+
+   **ومن أطفأ الحركةَ في نظامه سكن الثلاثة** — وتبقى الشبكةُ مرسومة. */
+@keyframes pin-wave {
   0% {
-    transform: scale(0.55);
-    opacity: 0.65;
+    transform: scale(0.35);
+    opacity: 0.55;
   }
   100% {
-    transform: scale(2.4);
+    transform: scale(2.6);
     opacity: 0;
   }
 }
 
-@utility pin-pulse {
-  animation: pin-pulse 2.4s ease-out infinite;
+@utility pin-wave {
+  animation: pin-wave 3s ease-out infinite;
   @media (prefers-reduced-motion: reduce) {
     animation: none;
-    opacity: 0.25;
+    opacity: 0;
   }
 }
 
-/* **والخطُّ يخرج من المركز** — أقواه عنده وأخفتُه عند طرفه. */
-@utility pin-link {
-  background-image: linear-gradient(
-    to left,
-    var(--color-accent-edge),
-    transparent
+@keyframes pin-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+@utility pin-beat {
+  animation: pin-beat 1.6s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* **والنقطُ تزحف نحو الطرف.** */
+@keyframes pin-trail {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: 14px;
+  }
+}
+
+@utility pin-trail {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--color-accent) 0 4px,
+    transparent 4px 14px
   );
+  animation: pin-trail 0.9s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* **ووميضُ العنوان بعد أن يكتمل** — (طلبُ المالك ٢٠٢٦-٠٨-١٧: «تنبض
+   تومض لثلاث ثوانٍ»). **وخفوتٌ لا انطفاء**: جملةٌ تختفي وتظهر تُقرأ
+   عطباً في التحميل. */
+@keyframes title-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@utility title-blink {
+  animation: title-blink 0.9s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* **ومؤشّرُ الكتابة** — يقول «لم تنتهِ الجملة». */
+@keyframes caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@utility caret {
+  animation: caret 0.7s steps(1) infinite;
+  color: var(--color-accent-text);
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
 @keyframes arrow-nudge {
