@@ -1332,6 +1332,43 @@ select option:checked {
   height: clamp(200px, 26vw, 420px);
 }
 
+/* **والدبابيسُ تصل تباعاً — كطلباتٍ تتوالى.**
+
+   (طلبُ المالك ٢٠٢٦-٠٨-١٧: «اجعلها تظهر واحداً وراء الآخر وكأنّها
+    تعبّر عن طلباتٍ تأتي بشكلٍ متتالٍ».)
+
+   **وتنزل قليلاً وهي تظهر** — **وظهورٌ في مكانه بلا حركةٍ يُقرأ وميضاً
+   لا وصولاً.**
+
+   **وتبقى ظاهرةً معظمَ الدورة** ثمّ تُعاد — **ودبّوسٌ يومض ويغيب بسرعةٍ
+   يُقرأ عطباً في الرسم.** */
+@keyframes pin-arrive {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -80%) scale(0.5);
+  }
+  8% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  92% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@utility pin-arrive {
+  animation: pin-arrive 7s ease-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
 @utility road-base {
   background-color: var(--color-accent-edge);
 }
