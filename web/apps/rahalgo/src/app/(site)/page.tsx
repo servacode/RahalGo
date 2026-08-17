@@ -102,7 +102,7 @@ function Band({
                الحافّة اليمنى واللافتةُ متوسّطةٌ بسقفِ ألفٍ ومئة، **فبينهما
                فراغٌ في كلّ شاشةٍ عريضة** — ولذلك السحبُ على الكبيرة
                وحدَها. */
-              "pb-14 pt-2 sm:pb-20 sm:pt-3 lg:-mt-10 lg:min-h-[36rem]"
+              "pb-14 pt-2 sm:pb-20 sm:pt-3 lg:-mt-8 lg:min-h-[36rem]"
           : "py-14 sm:py-20"
       } ${flush ? "px-6 sm:px-12" : "px-3 sm:px-4"} ${tinted ? "bg-raised" : ""}`}
     >

@@ -356,12 +356,18 @@ export function BannerSlider({
           ? /* **دائرةٌ شفّافةٌ بحدٍّ رفيع** — تُرى ولا تُثقل، **وتسطع عند
                المرور** وتبقى لمن ينتقل بالكيبورد. */
             `taparea absolute top-1/2 -translate-y-1/2 hidden h-11 w-11 items-center justify-center rounded-badge border border-line text-ink opacity-60 backdrop-blur-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 lg:flex ${
-              dir === 1 ? "start-[-3.25rem]" : "end-[-3.25rem]"
+              /* **والتالي على اليسار في العربيّة** — (تصحيحُ المالك
+                 ٢٠٢٦-٠٨-١٧: «الأسهم أنت حاطهنّ بشكلٍ معكوس»).
+
+                 **وكانا مقلوبين**: التالي على البداية — وهي اليمينُ في
+                 RTL — **فيقع سهمُ اليسار على الجهة اليمنى** فتُقرأ
+                 معكوسة. **والسيرُ إلى الأمام سيرٌ نحو النهاية.** */
+              dir === 1 ? "end-[-3.25rem]" : "start-[-3.25rem]"
             }`
           : /* **والسهمُ يخفت حتّى يُطلب** — قرصان داكنان دائمان على لافتةٍ
                ملوّنةٍ يُقرآن أداةً غريبةً عنها. */
             `taparea absolute top-1/2 -translate-y-1/2 hidden h-9 w-9 items-center justify-center rounded-badge scrim text-on-solid opacity-0 backdrop-blur-sm transition-opacity focus-visible:opacity-100 group-hover:opacity-100 sm:flex ${
-              dir === 1 ? "start-3" : "end-3"
+              dir === 1 ? "end-3" : "start-3"
             }`
       }
     >

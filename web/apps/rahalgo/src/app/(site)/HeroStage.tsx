@@ -77,12 +77,22 @@ const ROW2: [Icon, string][] = [
 ];
 
 /** **إيقاعُ المشهد بالملّي** — في مكانٍ واحدٍ يُضبط منه كلُّه. */
+/**
+ * **إيقاعُ المشهد بالملّي** — في مكانٍ واحدٍ يُضبط منه كلُّه.
+ *
+ * **وأسرعُ ممّا كان** — (طلبُ المالك ٢٠٢٦-٠٨-١٧: «زمنُ وميض الكتابة أحسّه
+ * كثيراً، خفّفه بحيث تكون الحركةُ أسرعَ وظهورُ العناصر أسرع، كي لا يضطرّ
+ * الزائرُ إلى الانتظار ليرى ماذا يُكتب أو يظهر»).
+ *
+ * **والحرفُ نصفُ ما كان والوميضُ ثلثُه** — **وزائرٌ ينتظر ثلاثَ ثوانٍ
+ * ليرى السطرَ الثاني يذهب قبلَه.**
+ */
 const MS = {
-  letter: 55,
-  letterLead: 32,
-  blink: 3000,
-  step: 260,
-  hold: 2600,
+  letter: 28,
+  letterLead: 16,
+  blink: 1000,
+  step: 150,
+  hold: 2000,
 };
 
 export default function HeroStage({ name }: { name: string }) {
@@ -112,6 +122,25 @@ export default function HeroStage({ name }: { name: string }) {
   const [l1, setL1] = useState(H.heroLine1);
   const [l2, setL2] = useState(H.heroLine2);
   const alive = useRef(true);
+  const tail = useRef<HTMLParagraphElement>(null);
+  /** **ومن مرّر بيده أُمسك** — انظر `reveal`. */
+  const touched = useRef(false);
+  /** **والنزولُ مرّةٌ واحدة** — انظر `reveal`. */
+  const done = useRef(false);
+
+  useEffect(() => {
+    const mine = () => {
+      touched.current = true;
+    };
+    window.addEventListener("wheel", mine, { passive: true });
+    window.addEventListener("touchmove", mine, { passive: true });
+    window.addEventListener("keydown", mine);
+    return () => {
+      window.removeEventListener("wheel", mine);
+      window.removeEventListener("touchmove", mine);
+      window.removeEventListener("keydown", mine);
+    };
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -133,6 +162,32 @@ export default function HeroStage({ name }: { name: string }) {
       return;
     }
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    /* ══════════════════════════════════════════════════════════════════
+       **والصفحةُ تنزل مع الكتابة — ولا تخطف عجلةَ أحد**
+       ══════════════════════════════════════════════════════════════════
+
+       (طلبُ المالك ٢٠٢٦-٠٨-١٧: «يجب أن يبدأ الموقعُ بالنزول أسفلَ مع
+        حركة الكتابة ليشاهد الزائرُ ماذا يُكتب، بدون أن يضطرّ إلى عمل
+        سكرول».)
+
+       **وثلاثةُ قيودٍ تمنعها أن تصير خطفاً**:
+
+       **١ · لا تنزل إلّا إن كان السطرُ تحت الطيّة** — ومن كانت شاشتُه
+       تسع المشهدَ كلَّه لا يتحرّك تحته شيء.
+
+       **٢ · وتتوقّف عند أوّل لمسةٍ منه** — **وصفحةٌ تنزل والمستخدمُ
+       يصعد تُقرأ عطباً لا خدمة.**
+
+       **٣ · ولا تُعاد في الدورة الثانية** — النزولُ مرّةٌ عند أوّل
+       فتحة، **وصفحةٌ تقفز كلَّ ستّ ثوانٍ لا تُحتمل.** */
+    const reveal = () => {
+      if (touched.current || done.current) return;
+      const el = tail.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.bottom <= window.innerHeight - 24) return;
+      el.scrollIntoView({ behavior: "smooth", block: "end" });
+    };
     const type = async (full: string, put: (s: string) => void, ms: number) => {
       for (let i = 0; i <= full.length; i++) {
         if (!alive.current) return;
@@ -163,13 +218,17 @@ export default function HeroStage({ name }: { name: string }) {
           setShown(n);
           await sleep(MS.step);
         }
+        reveal();
         await type(H.heroLine1, setL1, MS.letterLead);
         for (const n of [5, 6, 7]) {
           if (!alive.current) return;
           setShown(n);
           await sleep(MS.step);
         }
+        reveal();
         await type(H.heroLine2, setL2, MS.letterLead);
+        // **وأوّلُ دورةٍ وحدَها تنزل.**
+        done.current = true;
         await sleep(MS.hold);
       }
     })();
@@ -221,7 +280,21 @@ export default function HeroStage({ name }: { name: string }) {
           ))}
         </div>
 
-        <p>{l2}</p>
+        {/* ══════════════════════════════════════════════════════════
+            **وموضعُ السطر محجوزٌ قبل أن يُكتب**
+            ══════════════════════════════════════════════════════════
+
+            (طلبُ المالك ٢٠٢٦-٠٨-١٧: «ويبقى الفوترُ ثابتاً بمكانه لا
+             يتحرّك من الأسفل».)
+
+            **وسطرٌ يُكتب حرفاً حرفاً يبدأ فارغاً** — وارتفاعُ الفارغ
+            صفر، **فيرتفع كلُّ ما تحته ثمّ ينزل حين يُكتب أوّلُ حرف.**
+            **والفوترُ آخرُ ما تحته فيُرى يقفز.**
+
+            **والحجزُ سطرٌ واحدٌ من `hero-lead`** — لا رقمٌ يُكتب. */}
+        <p ref={tail} className="min-h-[1lh]">
+          {l2}
+        </p>
       </div>
     </div>
   );
