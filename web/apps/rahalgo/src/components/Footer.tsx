@@ -25,6 +25,10 @@ const m = getMessages(defaultLocale);
 const L = m.site.legal;
 
 const LINKS = [
+  /* **و«من نحن» هنا بعد أن رُفعت من الشريط** — (قرارُ المالك ٢٠٢٦-٠٨-١٧).
+     **وصفحةٌ لا يقود إليها رابطٌ تسقط من فهرسة غوغل**، وهي التي طُلبت
+     للنشر على غوغل بلاي. */
+  { href: "/about", label: L.aboutTitle },
   { href: "/help", label: L.helpTitle },
   { href: "/contact", label: L.contactTitle },
   { href: "/terms", label: L.termsTitle },
