@@ -96,32 +96,43 @@ export default async function Page() {
         <div className="space-y-4">
           {WAYS.length > 0 && (
             <FormSection title={L.contactTitle} icon={<IconPhone />}>
-              <ul className="space-y-2">
+              {/* ══════════════════════════════════════════════════════
+                  **ومربّعاتٌ صغيرةٌ متوسّطةٌ لا صفوفٌ ممتدّة**
+                  ══════════════════════════════════════════════════════
+
+                  (طلبُ المالك ٢٠٢٦-٠٨-١٧: «رقمُ الدعم والواتساب مربّعاتٌ
+                   صغيرةٌ أنيقة، وليست طويلةً مزعجة».)
+
+                  **وصفٌّ يمتدّ بعرض الشاشة لرقمٍ من عشرة أرقام** يترك
+                  خلفَه فراغاً بطولِ ذراع — **والعينُ تقطعه لتصل إلى ما
+                  يُقرأ.**
+
+                  **والمربّعُ يأخذ قدرَ ما فيه** ويقف مع أخيه في الوسط. */}
+              <ul className="flex flex-wrap justify-center gap-3">
                 {WAYS.map(({ Icon, label, value, href }) => (
                   <li key={label}>
                     {/* **وما يُتصل به رابطٌ وما يُقرأ نصّ** — العنوانُ لا
                         يُضغط، والهاتفُ يُضغط فيفتح المتّصل. */}
-                    <span className="flex items-start gap-3 rounded-control border border-line px-3 py-2.5">
-                      <span className="mt-0.5 shrink-0 text-ink-muted">
-                        <Icon size={17} />
+                    {href ? (
+                      <a
+                        href={href}
+                        target={href.startsWith("http") ? "_blank" : undefined}
+                        rel="noreferrer noopener"
+                        className="site-card lift flex min-w-[9rem] flex-col items-center gap-1.5 px-5 py-4 text-center"
+                      >
+                        <Icon size={22} className="text-accent-text" />
+                        <span className="text-2xs text-ink-muted">{label}</span>
+                        <span dir="ltr" className="text-sm font-bold text-accent-text">
+                          {value}
+                        </span>
+                      </a>
+                    ) : (
+                      <span className="site-card flex min-w-[9rem] flex-col items-center gap-1.5 px-5 py-4 text-center">
+                        <Icon size={22} className="text-ink-muted" />
+                        <span className="text-2xs text-ink-muted">{label}</span>
+                        <span className="text-sm font-bold text-ink">{value}</span>
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-xs text-ink-muted">{label}</span>
-                        {href ? (
-                          <a
-                            href={href}
-                            target={href.startsWith("http") ? "_blank" : undefined}
-                            rel="noreferrer noopener"
-                            dir="ltr"
-                            className="block text-sm font-medium text-accent-text"
-                          >
-                            {value}
-                          </a>
-                        ) : (
-                          <span className="block text-sm font-medium">{value}</span>
-                        )}
-                      </span>
-                    </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -130,7 +141,7 @@ export default async function Page() {
 
           {ACCOUNTS.length > 0 && (
             <FormSection title={L.followUs} icon={<IconLink />}>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 {ACCOUNTS.map(({ href, Icon, label }) => (
                   <a
                     key={label}
@@ -165,25 +176,33 @@ export default async function Page() {
 
               {/* **والخريطةُ تُصيَّر في المتصفّح وحدَه** — `leaflet` يقرأ
                   `window` عند تحميله، **ومكوّنُ خادمٍ يستورده يسقط.** */}
-              <ContactMap lat={at[0]} lng={at[1]} />
+              {/* ══════════════════════════════════════════════════════
+                  **والزرُّ في وسط الخريطة لا تحتها**
+                  ══════════════════════════════════════════════════════
 
-              {/* **وزرٌّ يفتح الملاحة لا خريطةً ثانية.**
+                  (طلبُ المالك ٢٠٢٦-٠٨-١٧: «بدل اذهب إلى العنوان، زرٌّ
+                   بوسط الخريطة يقول افتح الخريطة».)
 
-                  **وخريطتُنا تقول أين المكتب، وتطبيقُ الهاتف يقول كيف
-                  تصل** — ومن أراد الطريقَ لا يرسمها بيده.
+                  **وزرٌّ تحت الخريطة يُقرأ عنصراً ثالثاً في الصفحة** —
+                  **وفوقها يُقرأ فعلاً عليها.**
 
-                  **والوجهةُ إحداثيّاتٌ لا نصُّ عنوان**: بحثٌ باسم شارعٍ في
-                  مدينةٍ لا تُرقَّم شوارعُها يقع في غير موضعه، **والنقطةُ
-                  تقع حيث وُضعت.** */}
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${at[0]},${at[1]}`}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="mt-3 flex items-center justify-center gap-2 rounded-control border border-line px-3 py-2.5 text-sm font-medium transition-colors hover:border-primary-edge hover:text-accent-text"
-              >
-                <IconLocation size={16} />
-                {L.contactGo}
-              </a>
+                  **والخريطةُ تُصيَّر في المتصفّح وحدَه** — `leaflet` يقرأ
+                  `window` عند تحميله، ومكوّنُ خادمٍ يستورده يسقط. */}
+              <div className="relative">
+                <ContactMap lat={at[0]} lng={at[1]} />
+                {/* **والوجهةُ إحداثيّاتٌ لا نصُّ عنوان**: بحثٌ باسم شارعٍ
+                    في مدينةٍ لا تُرقَّم شوارعُها يقع في غير موضعه،
+                    **والنقطةُ تقع حيث وُضعت.** */}
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${at[0]},${at[1]}`}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="site-card lift absolute left-1/2 top-1/2 z-[400] flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 px-5 py-3 text-sm font-bold text-accent-text"
+                >
+                  <IconLocation size={18} />
+                  {L.contactGo}
+                </a>
+              </div>
             </FormSection>
           )}
         </div>

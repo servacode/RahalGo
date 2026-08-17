@@ -63,6 +63,7 @@ import {
   IconNote,
   IconTarget,
   IconView,
+  IconCompare,
   ButtonLink,
   IconRoles,
 } from "@rahalgo/ui";
@@ -119,7 +120,7 @@ function Band({
                الحافّة اليمنى واللافتةُ متوسّطةٌ بسقفِ ألفٍ ومئة، **فبينهما
                فراغٌ في كلّ شاشةٍ عريضة** — ولذلك السحبُ على الكبيرة
                وحدَها. */
-              "pb-14 pt-2 sm:pb-20 sm:pt-3 lg:-mt-8 lg:min-h-[36rem]"
+              "pb-14 pt-2 sm:pb-20 sm:pt-3 lg:min-h-[36rem]"
           : "py-14 sm:py-20"
       } ${flush ? "px-6 sm:px-12" : "px-3 sm:px-4"}`}
     >
@@ -218,6 +219,8 @@ function DiffRow({
   name,
   Them,
   Us,
+  them,
+  us,
   themTitle,
   themBody,
   usTitle,
@@ -225,6 +228,9 @@ function DiffRow({
 }: {
   n: string;
   name: string;
+  /** **وسمُ العمودين** — نزل داخلَ اللوح فلا يفارقه على الجوّال. */
+  them: string;
+  us: string;
   Them: React.ComponentType<{ size?: number; className?: string }>;
   Us: React.ComponentType<{ size?: number; className?: string }>;
   themTitle: string;
@@ -234,30 +240,48 @@ function DiffRow({
 }) {
   return (
     <li className="flex flex-col gap-3">
-      <span className="flex items-center gap-2">
+      {/* ══════════════════════════════════════════════════════════════
+          **ورأسُ الصفّ يقول على أيّ شيءٍ تُقارَن**
+          ══════════════════════════════════════════════════════════════
+
+          (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «الفكرةُ غير مفهومةٍ على الجوّال…
+           خلّي سهماً برأسين بين الكرت الأوّل والكرت في الطرف المقابل،
+           وفوق السهم يُكتب مرونة الطلب ليكون واضحاً المقارنةُ بناءً على
+           ماذا».)
+
+          **وكان الاسمُ في الطرف والرأسان في صفٍّ فوق العمودين** — **وعلى
+          الجوّال يصير العمودان صفّين فيبتعد الرأسُ عن عموده**، فيُقرأ
+          لوحان بلا علاقةٍ بينهما.
+
+          **فصار الاسمُ متوسّطاً بسهمٍ برأسين**: يقول «هذان طرفان يُقارَنان
+          على هذا» قبل أن يُقرأ شيء. **والتسميةُ نزلت داخلَ كلّ لوح** فلا
+          تفارقه أينما وقع. */}
+      <span className="flex items-center justify-center gap-2">
         <span className="figure text-brandmark">{n}</span>
+        <IconCompare size={20} className="text-accent-text" />
         <span className="heading-card text-ink">{name}</span>
       </span>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {/* **المعتادةُ باهتةٌ ولا تُشتم** — نصفُ القرّاء يعيشونها اليوم. */}
-        {/* **والعمودان زجاجٌ كسائر ألواح المنصّة** — (طلبُ المالك
-            ٢٠٢٦-٠٨-١٧: «والكروت اجعلها شفّافة أيضاً»). **وسطحٌ مصمتٌ
-            بين ألواحٍ زجاجيّةٍ يُقرأ غريباً عنها.**
-
-            **والمعتادةُ تبقى أخفتَ حرفاً** — فيُعرف العمودان بلا رأس. */}
-        <div className="site-card lift flex gap-4 p-6">
-          <Them size={28} className="mt-0.5 shrink-0 text-ink-muted" />
-          <div className="flex flex-col gap-1.5">
-            <b className="heading-card text-ink-muted">{themTitle}</b>
-            <p className="text-sm text-ink-muted">{themBody}</p>
-          </div>
+        <div className="site-card lift flex flex-col gap-3 p-6">
+          <b className="text-center text-2xs uppercase text-ink-muted">{them}</b>
+          <span className="flex gap-4">
+            <Them size={28} className="mt-0.5 shrink-0 text-ink-muted" />
+            <span className="flex flex-col gap-1.5">
+              <b className="heading-card text-ink-muted">{themTitle}</b>
+              <p className="text-sm text-ink-muted">{themBody}</p>
+            </span>
+          </span>
         </div>
-        <div className="site-card lift flex gap-4 p-6">
-          <Us size={28} className="mt-0.5 shrink-0 text-accent-text" />
-          <div className="flex flex-col gap-1.5">
-            <b className="heading-card text-accent-text">{usTitle}</b>
-            <p className="text-sm text-ink">{usBody}</p>
-          </div>
+        <div className="site-card lift flex flex-col gap-3 p-6">
+          <b className="text-center text-2xs uppercase text-accent-text">{us}</b>
+          <span className="flex gap-4">
+            <Us size={28} className="mt-0.5 shrink-0 text-accent-text" />
+            <span className="flex flex-col gap-1.5">
+              <b className="heading-card text-accent-text">{usTitle}</b>
+              <p className="text-sm text-ink">{usBody}</p>
+            </span>
+          </span>
         </div>
       </div>
     </li>
@@ -321,14 +345,12 @@ function WhyCard({
         <h3 className="heading-page text-ink">{who}</h3>
         <b className="text-base text-accent-text">{sub}</b>
       </span>
-      <ul className="flex flex-col gap-2.5 text-base text-ink-muted">
+      {/* **والبنودُ متوسّطةٌ بلا نقطةٍ ولا فاصلة** — (طلبُ المالك
+          ٢٠٢٦-٠٨-١٧). **والفراغُ بينها هو ما يفصلها**، وقد وُسّع
+          ليعوّض النقطةَ الذاهبة. */}
+      <ul className="flex flex-col gap-3 text-center text-base text-ink-muted">
         {lines.map((t) => (
-          <li key={t} className="flex gap-2">
-            {/* **ونقطةٌ تفصل السطور** — **وأربعةُ أسطرٍ بلا فاصلٍ تُقرأ
-                فقرةً واحدة.** */}
-            <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent" />
-            {t}
-          </li>
+          <li key={t}>{t}</li>
         ))}
       </ul>
     </div>
@@ -449,6 +471,43 @@ function NoteCard({
   );
 }
 
+/**
+ * **بطاقةُ انضمام** — قرصٌ واسمُ الدور وسطرٌ وزرّ.
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «أضف فقرةً جديدة… كن أحد أفراد عائلة رحّال
+ *  غو — سائق مندوبة زبون متجر».)
+ *
+ * **وهي تُضغط بخلاف ألواح الأدوار** — تلك تصف، **وهذه تدعو.** فلها
+ * زرُّها الظاهر: **دعوةٌ بلا بابٍ تُقرأ كلاماً.**
+ */
+function JoinCard({
+  Icon,
+  who,
+  sub,
+  href,
+  cta,
+}: {
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+  who: string;
+  sub: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="site-card lift flex flex-col items-center gap-3 p-6 text-center"
+    >
+      <span className="site-orb flex h-16 w-16 items-center justify-center border border-accent-edge bg-accent-tint text-accent-text">
+        <Icon size={30} />
+      </span>
+      <h3 className="heading-page text-ink">{who}</h3>
+      <p className="text-sm text-ink-muted">{sub}</p>
+      <span className="text-sm font-bold text-accent-text">{cta}</span>
+    </Link>
+  );
+}
+
 export default async function HomePage() {
   const [brand, slides] = await Promise.all([fetchPlatform(API), fetchBanners()]);
   const name = brand.name;
@@ -521,7 +580,22 @@ export default async function HomePage() {
 
             **وتُخفى دون اللابتوب**: الافتتاحيّةُ هناك عمودٌ يملؤه
             الكلام، **ولوحةٌ تحته تدفع ما يُقرأ خارجَ الشاشة.** */}
+        {/* ══════════════════════════════════════════════════════════
+            **واللوحةُ تُرى على الجوّال أيضاً**
+            ══════════════════════════════════════════════════════════
+
+            (شكوى المالك ٢٠٢٦-٠٨-١٧: «فقرةُ الدبابيس مفقودةٌ بالعرض على
+             الجوّال».)
+
+            **وكانت تُخفى دونَ اللابتوب** لأنّها مُطلَقةٌ إلى جانب الكلام،
+            **ولا جانبَ في عمودٍ واحد.**
+
+            **فصارت في التدفّق تحت الكلام على الجوّال** ومُطلَقةً إلى
+            جانبه فوقه: **موضعان لرسمٍ واحدٍ لا نسختان منه.** */}
         <div className="relative">
+          <div className="mx-auto mt-8 w-[min(78vw,20rem)] lg:hidden" aria-hidden>
+            <NetworkFx />
+          </div>
           <div
             aria-hidden
             /* **وتنزل عن منتصف الكلام** — (طلبُ المالك ٢٠٢٦-٠٨-١٧:
@@ -539,6 +613,28 @@ export default async function HomePage() {
       </Band>
 
       {/* **وقسمُ الفرق بعد الافتتاحيّة** — (سؤالُ المالك ٢٠٢٦-٠٨-١٧). */}
+      {/* **وبابُ الانضمام قبل المقابلة** — (طلبُ المالك ٢٠٢٦-٠٨-١٧:
+          «فوق فقرة ما الذي يجعل رحّال غو مختلفاً»).
+
+          **وموضعُه هناك مقصود**: من قرأ الافتتاحيّةَ وعرف ما نفعل **يُدعى
+          قبل أن يُقارَن بغيرنا** — والمقارنةُ لمن تردّد، لا لمن اقتنع. */}
+      <Band>
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-8 text-center">
+            <h2 className="heading-display text-accent-text">{H.familyTitle}</h2>
+            <p className="mt-3 text-sm text-ink-muted">{H.familyLead}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* **والزبونُ إلى التسجيل والباقون إلى الانضمام** — **وبابٌ
+                واحدٌ للأربعة يُرسل الزبونَ إلى نموذج متجر.** */}
+            <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/signup" cta={H.familyCta} />
+            <JoinCard Icon={IconStore} who={H.famStore} sub={H.famStoreSub} href="/join" cta={H.familyCta} />
+            <JoinCard Icon={IconMoto} who={H.famDriver} sub={H.famDriverSub} href="/join" cta={H.familyCta} />
+            <JoinCard Icon={IconUsers} who={H.famRep} sub={H.famRepSub} href="/join" cta={H.familyCta} />
+          </div>
+        </div>
+      </Band>
+
       {/* **وقسمُ المقابلة** — (مواصفةُ المالك ٢٠٢٦-٠٨-١٧). */}
       <Band>
         <div className="mx-auto max-w-5xl">
@@ -546,16 +642,12 @@ export default async function HomePage() {
             <h2 className="heading-display text-accent">{H.diffTitle}</h2>
             <p className="mt-3 text-sm text-ink-muted">{H.diffLead}</p>
           </div>
-          {/* **ورأسان يقولان أيُّ عمودٍ لمن** — على الحاسوب وحدَه:
-              **والعمودان يصيران صفّين على الجوّال فيُقرأ كلُّ زوجٍ معاً.** */}
-          <div className="mb-3 hidden grid-cols-2 gap-3 text-2xs md:grid">
-            <span className="px-4 text-ink-muted">{H.diffThem}</span>
-            <span className="px-4 font-bold text-accent-text">{H.diffUs}</span>
-          </div>
           <ul className="flex flex-col gap-6">
             <DiffRow
               n="01"
               name={H.r1n}
+              them={H.diffThem}
+              us={H.diffUs}
               Them={IconList}
               Us={IconBag}
               themTitle={H.r1at}
@@ -566,6 +658,8 @@ export default async function HomePage() {
             <DiffRow
               n="02"
               name={H.r2n}
+              them={H.diffThem}
+              us={H.diffUs}
               Them={IconSearch}
               Us={IconRoute}
               themTitle={H.r2at}
@@ -576,6 +670,8 @@ export default async function HomePage() {
             <DiffRow
               n="03"
               name={H.r3n}
+              them={H.diffThem}
+              us={H.diffUs}
               Them={IconShieldX}
               Us={IconShieldCheck}
               themTitle={H.r3at}
@@ -586,6 +682,8 @@ export default async function HomePage() {
             <DiffRow
               n="04"
               name={H.r4n}
+              them={H.diffThem}
+              us={H.diffUs}
               Them={IconReceipt}
               Us={IconWallet}
               themTitle={H.r4at}
@@ -596,6 +694,8 @@ export default async function HomePage() {
             <DiffRow
               n="05"
               name={H.r5n}
+              them={H.diffThem}
+              us={H.diffUs}
               Them={IconHourglass}
               Us={IconSteps}
               themTitle={H.r5at}
@@ -606,6 +706,8 @@ export default async function HomePage() {
             <DiffRow
               n="06"
               name={H.r6n}
+              them={H.diffThem}
+              us={H.diffUs}
               Them={IconUsers}
               Us={IconHandshake}
               themTitle={H.r6at}

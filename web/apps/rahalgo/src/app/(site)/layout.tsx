@@ -57,7 +57,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         {/* **والفسحةُ تتبع الشعار** — صغُر (٢٠٢٦-٠٨-١٧) من ٢٨ إلى ٢٠ فوق
             الحاسوب ومن ١٠ إلى ٨ على الجوّال، **والمتدلّي نصفُه**: ٤٠+١٦=٥٦
             بدل ٧٢، و١٦+١٦=٣٢ بدل ٣٦. */}
-        <main className="flex min-w-0 flex-1 flex-col px-3 pb-4 pt-8 sm:px-4 sm:pt-14">
+        <main className="flex min-w-0 flex-1 flex-col px-3 pb-4 pt-4 sm:px-4 sm:pt-6">
           {children}
         </main>
         {/* **والشروطُ والمساعدةُ أسفلَ الصفحة** — حيث يُبحث عنها،
