@@ -249,6 +249,27 @@ export default async function HomePage() {
               كلُّ سطرٍ وعدٌ قائمٌ بنفسه، **وجمعُها في فقرةٍ يجعلها تُقرأ
               كلاماً متّصلاً فيضيع الثالث.** */}
           <div className="hero-lead mt-5 flex max-w-prose flex-col gap-1 text-ink-muted">
+            {/* **وثلاثُ كلماتٍ في مربّعاتها** — (طلبُ المالك ٢٠٢٦-٠٨-١٧).
+                **والأيقونةُ تسبق الكلمةَ في القراءة**: من رأى متجراً
+                وعدسةً وسلّةً عرف الخطواتِ الثلاثَ قبل أن يقرأها. */}
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                [IconStore, H.heroChip1],
+                [IconSearch, H.heroChip2],
+                [IconCart, H.heroChip3],
+              ].map(([Ico, label]) => {
+                const I = Ico as Icon;
+                return (
+                  <span
+                    key={label as string}
+                    className="surface flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-ink"
+                  >
+                    <I size={18} className="text-accent-text" />
+                    {label as string}
+                  </span>
+                );
+              })}
+            </div>
             <p>{H.heroLine1}</p>
             <p>{H.heroLine2}</p>
             <p>{H.heroLine3}</p>
