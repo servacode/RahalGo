@@ -480,30 +480,44 @@ function NoteCard({
 }
 
 /**
- * **بطاقةُ انضمام** — قرصٌ واسمُ الدور وسطرٌ وزرّ.
+ * ══════════════════════════════════════════════════════════════════════
+ * **بطاقةُ انضمام — وبابُها يتبع حالَه**
+ * ══════════════════════════════════════════════════════════════════════
  *
- * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «أضف فقرةً جديدة… كن أحد أفراد عائلة رحّال
- *  غو — سائق مندوبة زبون متجر».)
+ * (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «ألغِ زرَّ انضمّ الآن، يجب أن يكون مراسلةَ
+ *  الدعم… والزبون قريباً كما اتّفقنا بتفعيل الزرّ».)
  *
- * **وهي تُضغط بخلاف ألواح الأدوار** — تلك تصف، **وهذه تدعو.** فلها
- * زرُّها الظاهر: **دعوةٌ بلا بابٍ تُقرأ كلاماً.**
+ * **وثلاثُ حالاتٍ لا حالتان**:
+ *
+ *   **البابُ مفتوح** → «انضمّ الآن» إلى نموذجه.
+ *   **مغلقٌ ومَن يُدعى شريك** (متجرٌ أو سائقٌ أو مندوب) → «مراسلة الدعم»:
+ *       **شراكةٌ تبدأ بحديثٍ لا بنموذج**، ومن أراد أن يعمل معنا اليومَ
+ *       يجد باباً يُطرق.
+ *   **مغلقٌ ومَن يُدعى زبون** → «قريباً» بلا باب: **لا شيءَ يقوله الدعمُ
+ *       لزبونٍ قبل أن يُفتح السوق.**
+ *
+ * **وما ليس باباً لا يُرسم باباً** — فالبطاقةُ حينَها ليست رابطاً أصلاً،
+ * **ورابطٌ يُعطَّل بالنقر شيءٌ يُضغط ولا يستجيب.**
  */
 function JoinCard({
   Icon,
   who,
   sub,
   href,
-  cta,
   open,
+  partner,
 }: {
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   who: string;
   sub: string;
   href: string;
-  cta: string;
-  /** **وبابٌ مغلقٌ لا يُضغط** — انظر `site.join_open`. */
+  /** **بابُ الانضمام** — `site.join_open` من الإعدادات. */
   open: boolean;
+  /** **شريكٌ لا زبون** — متجرٌ أو سائقٌ أو مندوب. */
+  partner?: boolean;
 }) {
+  const cta = open ? H.familyCta : partner ? H.familySupport : H.familySoon;
+  const to = open ? href : partner ? "/contact" : null;
   const body = (
     <>
       <span className="site-orb flex h-16 w-16 items-center justify-center border border-accent-edge bg-accent-tint text-accent-text">
@@ -511,23 +525,14 @@ function JoinCard({
       </span>
       <h3 className="heading-page text-ink">{who}</h3>
       <p className="text-sm text-ink-muted">{sub}</p>
-      <span className={`text-sm font-bold ${open ? "text-accent-text" : "text-ink-muted"}`}>
+      <span className={`text-sm font-bold ${to ? "text-accent-text" : "text-ink-muted"}`}>
         {cta}
       </span>
     </>
   );
   const shell = "site-card lift flex flex-col items-center gap-3 p-6 text-center";
-  /* ══════════════════════════════════════════════════════════════════
-     **وحين يكون البابُ مغلقاً لا يكون رابطاً أصلاً**
-     ══════════════════════════════════════════════════════════════════
-
-     (قرارُ المالك ٢٠٢٦-٠٨-١٧: «ما يفتح أيَّ فورم تسجيل، والزبون لازم نحط
-      قريباً».)
-
-     **ورابطٌ يُعطَّل بالنقر شيءٌ يُضغط ولا يستجيب** — والزائرُ يُعيد
-     الضغطَ ظانّاً أنّ صفحتَه معطوبة. **وما ليس باباً لا يُرسم باباً.** */
-  return open ? (
-    <Link href={href} className={shell}>
+  return to ? (
+    <Link href={to} className={shell}>
       {body}
     </Link>
   ) : (
@@ -654,10 +659,10 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* **والزبونُ إلى التسجيل والباقون إلى الانضمام** — **وبابٌ
                 واحدٌ للأربعة يُرسل الزبونَ إلى نموذج متجر.** */}
-            <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/signup" cta={brand.joinOpen ? H.familyCta : H.familySoon} open={brand.joinOpen} />
-            <JoinCard Icon={IconStore} who={H.famStore} sub={H.famStoreSub} href="/join" cta={brand.joinOpen ? H.familyCta : H.familySoon} open={brand.joinOpen} />
-            <JoinCard Icon={IconMoto} who={H.famDriver} sub={H.famDriverSub} href="/join" cta={brand.joinOpen ? H.familyCta : H.familySoon} open={brand.joinOpen} />
-            <JoinCard Icon={IconUsers} who={H.famRep} sub={H.famRepSub} href="/join" cta={brand.joinOpen ? H.familyCta : H.familySoon} open={brand.joinOpen} />
+            <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/signup" open={brand.joinOpen} />
+            <JoinCard Icon={IconStore} who={H.famStore} sub={H.famStoreSub} href="/join" open={brand.joinOpen} partner />
+            <JoinCard Icon={IconMoto} who={H.famDriver} sub={H.famDriverSub} href="/join" open={brand.joinOpen} partner />
+            <JoinCard Icon={IconUsers} who={H.famRep} sub={H.famRepSub} href="/join" open={brand.joinOpen} partner />
           </div>
         </div>
       </Band>
