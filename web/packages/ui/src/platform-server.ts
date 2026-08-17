@@ -41,6 +41,7 @@ interface Wire {
   site_bg_dim?: number;
   show_login?: boolean;
   show_shop?: boolean;
+  join_open?: boolean;
   support_phone?: string;
   social?: Record<string, unknown>;
   address?: string;
@@ -93,6 +94,8 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
     // عطبٌ يُقرأ في وجه أوّل زائر.**
     showLogin: true,
     showShop: true,
+    // **ومغلقٌ في الفراغ** — انظر `joinOpen`.
+    joinOpen: false,
     supportPhone: "",
     social: { facebook: "", instagram: "", telegram: "", whatsapp: "" },
     address: "",
@@ -122,6 +125,7 @@ export async function fetchPlatform(apiBase: string): Promise<Platform> {
       siteBgDim: typeof d.site_bg_dim === "number" ? d.site_bg_dim : 55,
       showLogin: d.show_login !== false,
       showShop: d.show_shop !== false,
+      joinOpen: d.join_open === true,
       supportPhone: typeof d.support_phone === "string" ? d.support_phone : "",
       social: readSocial(d.social),
       address: typeof d.address === "string" ? d.address : "",

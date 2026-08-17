@@ -151,13 +151,24 @@ export interface Platform {
    * شيئاً.**
    */
   showShop: boolean;
+  /**
+   * **هل بابُ الانضمام مفتوح؟** (`site.join_open`.)
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٨-١٧: «الانضمامُ كمتجرٍ وسائقٍ ومندوبٍ المفروض
+   *  ما يفتح أيَّ فورم تسجيل، والزبون لازم نحط قريباً».)
+   *
+   * **والافتراضُ مغلقٌ بخلاف أخوَيه** — **بابٌ يُفتح قبل أوانه يستقبل
+   * طلباتٍ لا أحدَ يراجعها**، وصاحبُها ينتظر جواباً لا يأتي. **فإن سقط
+   * النداءُ بقي مغلقاً**، وهو الأسلم.
+   */
+  joinOpen: boolean;
   /** **عنوانُ المكتب** (`platform.address`) — وفارغٌ لا يُعرض. */
   address: string;
   /** **موقعُه على الخريطة** `"lat,lng"` — وفارغٌ يعني «لا خريطة». */
   location: string;
 }
 
-const EMPTY: Platform = { name: "", logo: null, otpLogin: true, passwordMinLength: 8, appUrl: "", authBg: null, authBgMobile: null, authBgDim: 70, siteBg: null, siteBgMobile: null, siteBgDim: 55, showLogin: true, showShop: true, supportPhone: "", social: { facebook: "", instagram: "", telegram: "", whatsapp: "" }, address: "", location: "" };
+const EMPTY: Platform = { name: "", logo: null, otpLogin: true, passwordMinLength: 8, appUrl: "", authBg: null, authBgMobile: null, authBgDim: 70, siteBg: null, siteBgMobile: null, siteBgDim: 55, showLogin: true, showShop: true, joinOpen: false, supportPhone: "", social: { facebook: "", instagram: "", telegram: "", whatsapp: "" }, address: "", location: "" };
 
 /**
  * **مسارُ الوسيط يصير رابطاً هنا — لا في كلّ تطبيق.**
@@ -254,6 +265,7 @@ export function PlatformProvider({
             // **والافتراضُ الظهور** — انظر `showLogin`.
             showLogin: j.data.show_login !== false,
             showShop: j.data.show_shop !== false,
+            joinOpen: j.data.join_open === true,
             }),
           );
       })

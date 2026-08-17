@@ -5452,6 +5452,10 @@
           "type": "unknown"
         },
         {
+          "name": "join_open",
+          "type": "unknown"
+        },
+        {
           "name": "location",
           "type": "unknown"
         },

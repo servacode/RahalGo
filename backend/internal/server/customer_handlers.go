@@ -79,6 +79,9 @@ func (s *Server) handlePublicPlatform(w http.ResponseWriter, r *http.Request) {
 		// الزائر — وهو أسوأُ من ظهوره.
 		"show_login": s.settings.GetBool(r.Context(), "site.show_login"),
 		"show_shop":  s.settings.GetBool(r.Context(), "site.show_shop"),
+		// **وبابُ الانضمام** — (قرارُ المالك ٢٠٢٦-٠٨-١٧). **ومغلقٌ حتّى
+		// يُفتح**: بابٌ يستقبل طلباتٍ لا أحدَ يراجعها أسوأُ من بابٍ مغلق.
+		"join_open": s.settings.GetBool(r.Context(), "site.join_open"),
 		// **وطولُ كلمة المرور — رقمٌ واحدٌ تقرؤه كلُّ شاشةٍ تسأل عنها.**
 		//
 		// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «طولُ كلمة المرور يجب أن تكون موحّدةً

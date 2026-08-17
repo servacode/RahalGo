@@ -258,10 +258,15 @@ function DiffRow({
           تفارقه أينما وقع. */}
       <span className="flex items-center justify-center gap-2">
         <span className="figure text-brandmark">{n}</span>
-        <IconCompare size={20} className="text-accent-text" />
         <span className="heading-card text-ink">{name}</span>
       </span>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {/* **والسهمُ بينهما لا فوقهما** — (تصحيحُ المالك ٢٠٢٦-٠٨-١٧).
+
+          **وعمودٌ ثالثٌ بعرضِ ما فيه** لا موضعٌ مُطلَقٌ فوق اللوحين:
+          **المُطلَقُ يقع على أحدهما إذا اختلف ارتفاعُهما**، والعمودُ يبقى
+          بينهما مهما طالا. **وعلى الجوّال يصير صفّاً بينهما** فيُقرأ
+          الترتيبُ نفسُه. */}
+      <div className="grid grid-cols-1 items-center gap-3 md:grid-cols-[1fr_auto_1fr]">
         {/* **المعتادةُ باهتةٌ ولا تُشتم** — نصفُ القرّاء يعيشونها اليوم. */}
         <div className="site-card lift flex flex-col gap-3 p-6">
           <b className="text-center text-2xs uppercase text-ink-muted">{them}</b>
@@ -273,6 +278,9 @@ function DiffRow({
             </span>
           </span>
         </div>
+        <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-accent-edge bg-accent-tint text-accent-text">
+          <IconCompare size={20} />
+        </span>
         <div className="site-card lift flex flex-col gap-3 p-6">
           <b className="text-center text-2xs uppercase text-accent-text">{us}</b>
           <span className="flex gap-4">
@@ -486,25 +494,44 @@ function JoinCard({
   sub,
   href,
   cta,
+  open,
 }: {
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   who: string;
   sub: string;
   href: string;
   cta: string;
+  /** **وبابٌ مغلقٌ لا يُضغط** — انظر `site.join_open`. */
+  open: boolean;
 }) {
-  return (
-    <Link
-      href={href}
-      className="site-card lift flex flex-col items-center gap-3 p-6 text-center"
-    >
+  const body = (
+    <>
       <span className="site-orb flex h-16 w-16 items-center justify-center border border-accent-edge bg-accent-tint text-accent-text">
         <Icon size={30} />
       </span>
       <h3 className="heading-page text-ink">{who}</h3>
       <p className="text-sm text-ink-muted">{sub}</p>
-      <span className="text-sm font-bold text-accent-text">{cta}</span>
+      <span className={`text-sm font-bold ${open ? "text-accent-text" : "text-ink-muted"}`}>
+        {cta}
+      </span>
+    </>
+  );
+  const shell = "site-card lift flex flex-col items-center gap-3 p-6 text-center";
+  /* ══════════════════════════════════════════════════════════════════
+     **وحين يكون البابُ مغلقاً لا يكون رابطاً أصلاً**
+     ══════════════════════════════════════════════════════════════════
+
+     (قرارُ المالك ٢٠٢٦-٠٨-١٧: «ما يفتح أيَّ فورم تسجيل، والزبون لازم نحط
+      قريباً».)
+
+     **ورابطٌ يُعطَّل بالنقر شيءٌ يُضغط ولا يستجيب** — والزائرُ يُعيد
+     الضغطَ ظانّاً أنّ صفحتَه معطوبة. **وما ليس باباً لا يُرسم باباً.** */
+  return open ? (
+    <Link href={href} className={shell}>
+      {body}
     </Link>
+  ) : (
+    <div className={shell}>{body}</div>
   );
 }
 
@@ -627,10 +654,10 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* **والزبونُ إلى التسجيل والباقون إلى الانضمام** — **وبابٌ
                 واحدٌ للأربعة يُرسل الزبونَ إلى نموذج متجر.** */}
-            <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/signup" cta={H.familyCta} />
-            <JoinCard Icon={IconStore} who={H.famStore} sub={H.famStoreSub} href="/join" cta={H.familyCta} />
-            <JoinCard Icon={IconMoto} who={H.famDriver} sub={H.famDriverSub} href="/join" cta={H.familyCta} />
-            <JoinCard Icon={IconUsers} who={H.famRep} sub={H.famRepSub} href="/join" cta={H.familyCta} />
+            <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/signup" cta={brand.joinOpen ? H.familyCta : H.familySoon} open={brand.joinOpen} />
+            <JoinCard Icon={IconStore} who={H.famStore} sub={H.famStoreSub} href="/join" cta={brand.joinOpen ? H.familyCta : H.familySoon} open={brand.joinOpen} />
+            <JoinCard Icon={IconMoto} who={H.famDriver} sub={H.famDriverSub} href="/join" cta={brand.joinOpen ? H.familyCta : H.familySoon} open={brand.joinOpen} />
+            <JoinCard Icon={IconUsers} who={H.famRep} sub={H.famRepSub} href="/join" cta={brand.joinOpen ? H.familyCta : H.familySoon} open={brand.joinOpen} />
           </div>
         </div>
       </Band>
