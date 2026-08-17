@@ -40,6 +40,7 @@ import {
   BannerSlider,
   ButtonLink,
   IconMoto,
+  IconNext,
   IconRoles,
   IconLocation,
   IconWallet,
@@ -283,8 +284,19 @@ export default async function HomePage() {
               <Chip Icon={IconStore} label={H.heroChip1} />
               <Chip Icon={IconSearch} label={H.heroChip2} />
               <Chip Icon={IconCart} label={H.heroChip3} />
+              {/* ══════════════════════════════════════════════════════
+                  **وسهمٌ يقول: وهذه نتيجتُها**
+                  ══════════════════════════════════════════════════════
+
+                  (طلبُ المالك ٢٠٢٦-٠٨-١٧: «اجعلها بنفس صفّ الأزرار مع
+                   إضافة سهمٍ متحرّكٍ يدلّ عليها».)
+
+                  **ويشير إلى ما بعدَه في القراءة** — و`IconNext` سهمُ
+                  التالي في هذه المنصّة، **يميل حيث تسير اللغةُ لا حيث
+                  يسير الحرفُ اللاتينيّ.** */}
+              <IconNext size={26} className="arrow-nudge shrink-0 text-accent-text" />
+              <span className="text-base font-bold text-ink">{H.heroLine1}</span>
             </div>
-            <p>{H.heroLine1}</p>
             <p>{H.heroLine2}</p>
             {/* **والوعودُ الثلاثةُ مربّعاتٌ كالخطوات** — درّاجةٌ للسرعة، ومحفظةٌ
                 للدفع عند الاستلام، ودرعٌ للحقّ المكفول. */}
