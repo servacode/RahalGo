@@ -115,6 +115,32 @@ export function NetworkFx({ className = "" }: { className?: string }) {
           <stop offset="0%" className="netfx-halo-in" />
           <stop offset="100%" className="netfx-halo-out" />
         </radialGradient>
+        {/* ══════════════════════════════════════════════════════════
+            **ودبوسٌ يُعرف من شكله**
+            ══════════════════════════════════════════════════════════
+
+            (شكوى المالك ٢٠٢٦-٠٨-١٧: «أعِد أيقونةَ الدبوس، لأنّ هذه
+             الأشكالَ غيرُ مفهومةٍ ولا يُعرف ما المقصودُ بها».)
+
+            **وكانت دوائرَ متراكزة** — **وهي تقول «نقطة» ولا تقول
+            «موقع»**: الدائرةُ في الرسوم تُقرأ عقدةً أو محطّةً أو زرّاً،
+            **والدبوسُ لا يُقرأ إلّا موقعاً.**
+
+            **ورسمُه رسمُ أيقونةِ المنصّة نفسِها** (`MapPin`) — فلا يفترق
+            ما في اللوحة عمّا في الشاشات.
+
+            **وطرفُه السفليُّ هو الموضع**: في إحداثيّاته (١٢، ٢٢) —
+            **والدبوسُ يُغرَز بطرفه لا يُوضَع بمركزه.** */}
+        <g id="netfx-pin">
+          <path
+            d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinejoin="round"
+          />
+          <circle cx={12} cy={10} r={3} fill="currentColor" />
+        </g>
       </defs>
       <circle cx={C} cy={C} r={250} fill="url(#netfx-core)" className="netfx-glow" />
 
@@ -159,15 +185,20 @@ export function NetworkFx({ className = "" }: { className?: string }) {
         const rad = (n.a * Math.PI) / 180;
         const x = C + n.r * Math.cos(rad);
         const y = C + n.r * Math.sin(rad);
+        // **ومقاسُه ١٫٤ من الأصل** — يُقرأ من بعيدٍ ولا ينازع المركز.
+        const k = 1.4;
         return (
           <g
             key={`node-${i}`}
             className="netfx-node"
             style={{ "--i": i, transformOrigin: `${x}px ${y}px` } as React.CSSProperties}
           >
-            <circle cx={x} cy={y} r={13} className="netfx-node-halo" />
-            <circle cx={x} cy={y} r={7.5} className="netfx-node-ring" />
-            <circle cx={x} cy={y} r={2.6} className="netfx-node-dot" />
+            <circle cx={x} cy={y - 9} r={15} className="netfx-node-halo" />
+            {/* **ويُغرَز بطرفه**: (١٢، ٢٢) في إحداثيّاته هو الموضع. */}
+            <use
+              href="#netfx-pin"
+              transform={`translate(${x} ${y}) scale(${k}) translate(-12 -22)`}
+            />
           </g>
         );
       })}
@@ -187,13 +218,16 @@ export function NetworkFx({ className = "" }: { className?: string }) {
           style={{ "--i": i } as React.CSSProperties}
         />
       ))}
-      <circle cx={C} cy={C} r={78} className="netfx-ring netfx-ring-wide" />
 
       {/* **والمركزُ في مكانه دائماً** — يسطع ويهدأ ولا يتحرّك. */}
+      {/* **والمركزُ دبوسٌ أكبرُ بمرّتين وربع** — يسطع ويهدأ ولا يتحرّك. */}
       <g className="netfx-core" style={{ transformOrigin: `${C}px ${C}px` }}>
-        <circle cx={C} cy={C} r={34} className="netfx-core-halo" />
-        <circle cx={C} cy={C} r={21} className="netfx-core-ring" />
-        <circle cx={C} cy={C} r={7} className="netfx-core-dot" />
+        <circle cx={C} cy={C - 20} r={34} className="netfx-core-halo" />
+        <use
+          href="#netfx-pin"
+          transform={`translate(${C} ${C}) scale(2.25) translate(-12 -22)`}
+          className="netfx-core-pin"
+        />
       </g>
     </svg>
   );

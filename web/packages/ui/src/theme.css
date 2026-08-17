@@ -1325,31 +1325,32 @@ select option:checked {
   animation-delay: calc(1.05s + var(--i) * 0.21s);
 }
 
-.netfx-node-ring {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-}
-
 .netfx-node-dot {
   fill: currentColor;
 }
 
-/* **الحلقة** — تخرج من المركز وتخفت، ولا تعود. */
+/* ══════════════════════════════════════════════════════════════════════
+   **والنبضاتُ مستمرّةٌ لا مرّةً في الدورة**
+   ══════════════════════════════════════════════════════════════════════
+
+   (طلبُ المالك ٢٠٢٦-٠٨-١٧: «والنبضاتُ يجب أن تكون واضحةً مستمرّة».)
+
+   **وكانت تابعةً لدورة الستّ** — فتخرج ثلاثُ حلقاتٍ في أوّلها **ثمّ خمسُ
+   ثوانٍ سكون**، فتُقرأ حدثاً وقع لا نبضاً قائماً.
+
+   **فصارت دورتُها ثلاثاً مستقلّةً** بتأخيرٍ ثانيةً بين كلّ اثنتين —
+   **فما تنتهي واحدةٌ حتّى تكون الثانيةُ في منتصفها**، ولا فجوةَ تُرى.
+
+   **وأوضحُ ممّا كانت**: من اثنين وثلاثين بالمئة إلى خمسين — **وحلقةٌ
+   تُرى بصعوبةٍ لا تُقرأ نبضاً.** */
 .netfx-ring {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1;
+  stroke-width: 1.25;
   opacity: 0;
   transform-origin: 300px 300px;
-  animation: netfx-ring 6s var(--ease-out) infinite;
-  animation-delay: calc(0.15s + var(--i) * 0.2s);
-}
-
-/* **والواسعةُ عند اكتمال الشبكة** — أضعفُ وأبطأ. */
-.netfx-ring-wide {
-  animation-name: netfx-ring-wide;
-  animation-delay: 3.4s;
+  animation: netfx-ring 3s var(--ease-out) infinite;
+  animation-delay: calc(var(--i) * 1s);
 }
 
 .netfx-core {
@@ -1359,12 +1360,6 @@ select option:checked {
 .netfx-core-halo {
   fill: currentColor;
   opacity: 0.12;
-}
-
-.netfx-core-ring {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
 }
 
 .netfx-core-dot {
@@ -1481,36 +1476,14 @@ select option:checked {
 
 @keyframes netfx-ring {
   0% {
-    transform: scale(0.22);
+    transform: scale(0.24);
     opacity: 0;
   }
-  3% {
-    opacity: 0.32;
-  }
-  26.7% {
-    transform: scale(1);
-    opacity: 0;
+  10% {
+    opacity: 0.5;
   }
   100% {
     transform: scale(1);
-    opacity: 0;
-  }
-}
-
-@keyframes netfx-ring-wide {
-  0% {
-    transform: scale(0.3);
-    opacity: 0;
-  }
-  4% {
-    opacity: 0.16;
-  }
-  25% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1.5);
     opacity: 0;
   }
 }
@@ -1597,7 +1570,15 @@ select option:checked {
 }
 
 @utility banner-shell {
-  max-inline-size: 1600px;
+  /* **وألفٌ ومئةٌ لا ألفٌ وستُّمئة.**
+
+     (شكوى المالك ٢٠٢٦-٠٨-١٧: «الصورةُ عريضةٌ جدّاً وتأخذ الشاشةَ بشكلٍ
+      كامل… الطولُ مناسبٌ ولكنّ العرضَ كبيرٌ جدّاً».)
+
+     **والنسبةُ ٢:١ تربط العرضَ بالطول**: ألفٌ وسبعُمئةٍ عرضاً تعني
+     ثمانمئةٍ وخمسين طولاً — **وهي شاشةُ لابتوبٍ كاملةً**، فلا يبقى تحتها
+     شيء. **وضبطُ العرضِ وحدَه يضبط الاثنين.** */
+  max-inline-size: 1100px;
   margin-inline: auto;
 }
 

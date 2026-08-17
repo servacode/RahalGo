@@ -242,8 +242,13 @@ export default async function HomePage() {
         <div className="relative">
           <div
             aria-hidden
-            className="pointer-events-none absolute top-1/2 hidden -translate-y-1/2 lg:block"
-            style={{ insetInlineEnd: "4%", width: "min(34vw, 30rem)" }}
+            /* **وتنزل عن منتصف الكلام** — (طلبُ المالك ٢٠٢٦-٠٨-١٧:
+               «والشكلُ كاملاً أنزله إلى الأسفل بشكلٍ ملحوظ»).
+
+               **وبالنسبة لا بالبكسل**: المحتوى يطول ويقصر بمقاس الشاشة،
+               **ورقمٌ ثابتٌ يصلح لواحدةٍ ويخرج عن الباقي.** */
+            className="pointer-events-none absolute top-[68%] hidden -translate-y-1/2 lg:block"
+            style={{ insetInlineEnd: "4%", width: "min(30vw, 26rem)" }}
           >
             <NetworkFx />
           </div>
