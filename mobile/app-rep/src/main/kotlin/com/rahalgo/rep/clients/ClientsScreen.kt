@@ -62,12 +62,12 @@ import com.rahalgo.ui.money
  * **فرقمٌ ظاهرٌ خيرٌ من وعدٍ مبهم.**
  */
 @Composable
-fun ClientsScreen(vm: ClientsViewModel) {
+fun ClientsScreen(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit = { _, _ -> }) {
     // **والتفصيلُ يغطّي القائمةَ** — **ولا صفحةٌ ثانيةٌ يخرج إليها
     // فيعود فلا يجد موضعَه.**
     if (vm.openId.isNotEmpty()) {
         BackHandler { vm.closeDetail() }
-        ClientDetail(vm)
+        ClientDetail(vm, onOpenMenu)
         return
     }
 

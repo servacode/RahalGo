@@ -1,5 +1,6 @@
 package com.rahalgo.shared.rep
 
+import com.rahalgo.shared.model.Envelope
 import com.rahalgo.shared.model.IncentivesPayload
 import com.rahalgo.shared.model.WalletStatement
 import com.rahalgo.shared.net.ApiClient
@@ -49,7 +50,147 @@ class RepApi(private val api: ApiClient) {
 
     /** **هدفُه ومكافأتُه** — كهدف السائق: المقياسُ يختلف والمعنى واحد. */
     suspend fun incentives(): IncentivesPayload = api.call("/api/v1/rep/incentives")
+
+    // ══════════════════════════════════════════════════════════════════
+    // **أصنافُ عميله — يبنيها نيابةً عنه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «يقوم المندوبُ بإضافة أصناف المنتجات
+    //  الموجودة لدى المتجر بدلاً عنه… نفس الفورم الموجود عند مدير
+    //  المنصّة والموجود عند المتجر».)
+    //
+    // **ومتجرٌ ينضمّ ولا يفتح لوحتَه** — صاحبُه في متجره لا في حاسوب،
+    // **وسوقٌ فيه متاجرُ بلا أصنافٍ سوقٌ فارغ.**
+    //
+    // **والحارسُ في المحرّك لا هنا**: كلُّ نداءٍ يُسأل عنه «أهذا المتجرُ
+    // عميلُه؟» — **وإخفاءُ زرٍّ في شاشةٍ ليس حجبا.**
+
+    /** **قائمةُ عميله** — أقسامٌ وأصنافٌ كما يقرؤها الأدمن. */
+    suspend fun menu(merchantID: String): List<MenuSection> =
+        api.call("/api/v1/rep/stores/$merchantID/menu")
+
+    /**
+     * **أقسامُ السوق** — **وبلاها يبني أصنافاً لا تظهر في التصفّح.**
+     *
+     * **وردُّها كائنٌ لا لائحة** (`{"sections": […]}`) — كما تقرؤه لوحةُ
+     * الويب حرفا.
+     */
+    suspend fun platformSections(): List<PlatformSection> =
+        api.call<PlatformSections>("/api/v1/rep/platform-sections").sections
+
+    suspend fun createItem(merchantID: String, input: ItemInput): CreatedID =
+        api.call("/api/v1/rep/stores/$merchantID/menu/items", HttpMethod.Post, input)
+
+    suspend fun updateItem(itemID: String, input: ItemInput) {
+        api.call<Map<String, Boolean>>(
+            "/api/v1/rep/menu/items/$itemID", HttpMethod.Patch, input,
+        )
+    }
+
+    suspend fun deleteItem(itemID: String) {
+        api.call<Map<String, Boolean>>("/api/v1/rep/menu/items/$itemID", HttpMethod.Delete)
+    }
+
+    /**
+     * **يرفع صورةَ صنفٍ ويردّ معرّفَها.**
+     *
+     * **والمعرّفُ هو المقصود** — يُرسَل بعدُ مع الصنف. **ومن رفع صورةً
+     * ورمى ردَّها رفع ملفّاً لا يعرف اسمَه فلا يربطه بشيء.**
+     */
+    suspend fun uploadItemImage(fileName: String, bytes: ByteArray): String {
+        val raw = api.upload(
+            "/api/v1/rep/media", fileName, bytes, mapOf("kind" to "menu_item"),
+        )
+        return api.json.decodeFromString<Envelope<MediaRef>>(raw).data?.id.orEmpty()
+    }
 }
+
+/** **ما يردّه الإنشاء** — معرّفُ ما أُنشئ لا أكثر. */
+@Serializable
+data class CreatedID(val id: String = "")
+
+/** **ما يعني الشاشةَ من الوسيط المرفوع** — معرّفُه وعنوانُه. */
+@Serializable
+data class MediaRef(
+    val id: String = "",
+    @SerialName("thumb_url") val thumbUrl: String = "",
+)
+
+/**
+ * **قسمٌ في القائمة — وهو قسمُ السوق لا قسمٌ يملكه المتجر.**
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «الأدمنُ هو من يزرع الأقسام، والمتجرُ يجد
+ *  أقساماً جاهزة… لأنّ بكرا كلُّ متجرٍ رح ينزّل اسمَ قسمٍ مختلف».)
+ *
+ * **فلا يُنشأ ولا يُسمّى ولا يُحذف**: يظهر لأنّ فيه صنفاً، **ويختفي حين
+ * يخرج آخرُ صنفٍ منه.** ومطعمٌ لا يبيع بقالةً لا يرى «بقالة».
+ */
+@Serializable
+data class MenuSection(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
+    val items: List<MenuItem> = emptyList(),
+)
+
+/**
+ * **صنفٌ في القائمة.**
+ *
+ * **وسعران لا سعر**: `merchantPrice` ما يضعه المتجرُ، و`price` ما تبيع
+ * به المنصّةُ بعد هامشها. **والمندوبُ يحتاج الرقمين** — يبني نيابةً
+ * فيقول لصاحب المتجر «تقبض هذا» وللزبون «يُباع بهذا».
+ */
+@Serializable
+data class MenuItem(
+    val id: String = "",
+    @SerialName("section_id") val sectionID: String = "",
+    val name: String = "",
+    val description: String = "",
+    val price: Long = 0,
+    @SerialName("merchant_price") val merchantPrice: Long = 0,
+    @SerialName("platform_section_id") val platformSectionID: String? = null,
+    @SerialName("platform_section_name") val platformSectionName: String = "",
+    @SerialName("image_thumb_url") val imageThumbURL: String? = null,
+    /** **رفعه المتجرُ بيده** — «نفد الصنف» يُطفئه ولا يحذفه. */
+    val available: Boolean = true,
+    /** **مصدرُه خارجَ دوامه الآن** — يقوله الوقتُ لا صاحبُه. */
+    @SerialName("source_closed") val sourceClosed: Boolean = false,
+    /** **أنُشر للزبائن؟** — حين يُرفع مفتاحُ مراجعة القائمة. */
+    val approved: Boolean = true,
+    @SerialName("review_note") val reviewNote: String = "",
+)
+
+@Serializable
+data class PlatformSection(
+    val id: String = "",
+    val name: String = "",
+)
+
+/** **غلافُ ردّ أقسام السوق** — المحرّكُ يضعها تحت مفتاح. */
+@Serializable
+data class PlatformSections(val sections: List<PlatformSection> = emptyList())
+
+/**
+ * **ما يُرسَل للصنف.**
+ *
+ * **وكلُّ حقلٍ غائبٍ يعني «لا تمسّه»** — فالتعديلُ الجزئيُّ لا يمحو ما
+ * لم يُذكَر. **ومن أرسل الحقولَ كلَّها في كلّ تعديلٍ محا ما لا يعرفه.**
+ *
+ * **و`price` هو سعرُ المتجر** لا سعرُ البيع — اسمُه في العقد كذلك منذ
+ * أوّل شاشة، **وتغييرُ اسمِ حقلٍ يكسر كلَّ شاشةٍ لم تُحدَّث.**
+ *
+ * **ولا `section_id` هنا** — **قسمُ الصنف هو قسمُ السوق**، ولوحةُ الويب
+ * لا ترسله أصلاً.
+ */
+@Serializable
+data class ItemInput(
+    val name: String? = null,
+    val description: String? = null,
+    val price: Long? = null,
+    @SerialName("platform_section_id") val platformSectionID: String? = null,
+    val available: Boolean? = null,
+    @SerialName("image_media_id") val imageMediaID: String? = null,
+)
 
 /**
  * **حالُ المندوب.**

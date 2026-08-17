@@ -50,6 +50,8 @@ import com.rahalgo.rep.board.BoardViewModel
 import com.rahalgo.rep.add.AddClientScreen
 import com.rahalgo.rep.add.AddClientViewModel
 import com.rahalgo.rep.clients.ClientsScreen
+import com.rahalgo.rep.menu.MenuScreen
+import com.rahalgo.rep.menu.MenuViewModel
 import com.rahalgo.rep.clients.ClientsViewModel
 import com.rahalgo.ui.AccountScreen
 import com.rahalgo.ui.AccountViewModel
@@ -149,6 +151,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val clientsVm: ClientsViewModel = viewModel()
     val addVm: AddClientViewModel = viewModel()
     val boardVm: BoardViewModel = viewModel()
+    // **وأصنافُ العميل** — يبنيها المندوبُ نيابةً عنه.
+    val menuVm: MenuViewModel = viewModel()
     // **وهدفُه من الوحدة** — والبابُ `rep/incentives`.
     val app = context.applicationContext as android.app.Application
     val goalsVm: IncentivesViewModel = vmOf(
@@ -334,7 +338,20 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
 
                     tab == Tab.AddClient -> AddClientScreen(addVm) { picking = true }
 
-                    tab == Tab.Clients -> ClientsScreen(clientsVm)
+                    // ══════════════════════════════════════════════
+                    // **وأصنافُ العميل تغطّي تفصيلَه**
+                    // ══════════════════════════════════════════════
+                    //
+                    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لا يوجد بالتطبيق زرُّ
+                    //  إضافة منتجات العميل».)
+                    //
+                    // **وقبل تبويب العملاء في الترتيب** — **ولو جاءت
+                    // بعده لَغطّاه تبويبُ العملاء فلا تُرى أبدا.**
+                    menuVm.merchantID.isNotEmpty() -> MenuScreen(menuVm)
+
+                    tab == Tab.Clients -> ClientsScreen(clientsVm) { id, name ->
+                        menuVm.open(id, name)
+                    }
 
                     tab == Tab.Account -> AccountScreen(
                         vm = accountVm,

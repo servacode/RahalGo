@@ -94,7 +94,17 @@ private val CODES: Map<String, Int> = mapOf(
     // حسابا. (قِيس ٢٠٢٦-٠٨-١٤.)
     "not_signed_in" to R.string.err_not_signed_in,
     "invalid_refresh" to R.string.err_invalid_refresh,
-    "forbidden" to R.string.err_not_driver,
+    // ══════════════════════════════════════════════════════════════════
+    // **و«ممنوع» لا تعني «لستَ سائقا»**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كانت `forbidden` تُترجَم «هذا الحسابُ ليس حساب سائق»** — وهذا
+    // المعجمُ تقرؤه التطبيقاتُ الثلاثة. **فقرأها المندوبُ وهو يرفع صورةَ
+    // صنفٍ لعميله** (قِيس على الجهاز ٢٠٢٦-٠٨-١٨).
+    //
+    // **ورسالةٌ تقول شيئاً غيرَ ما وقع أسوأُ من رسالةٍ عامّة**: تُرسل
+    // صاحبَها يبحث في حسابه عن عطبٍ ليس فيه.
+    "forbidden" to R.string.err_forbidden,
     "user_blocked" to R.string.err_user_blocked,
     "user_suspended" to R.string.err_user_suspended,
     "internal" to R.string.err_internal,

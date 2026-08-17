@@ -29,6 +29,10 @@
     <string name="err_invalid_refresh">انتهت جلستك — ادخل من جديد</string>
     <string name="err_network">لا اتّصال بالإنترنت</string>
     <string name="err_no_merchant">لا متجرَ في هذا الطلب — الخاصُّ تشتريه بنفسك</string>
+    <!-- **و«ممنوع» عامّةٌ لأنّ المعجم مشترك** — يقرؤه السائق والزبون
+         والمندوب. ورسالةٌ تقول «لستَ سائقاً» لمن يرفع صورةَ صنفٍ تُرسله
+         يبحث في حسابه عن عطبٍ ليس فيه. -->
+    <string name="err_forbidden">لا تملك صلاحيّة هذا الإجراء</string>
     <string name="err_not_driver">هذا الحساب ليس حساب سائق</string>
     <string name="err_not_on_shift">ورديّتك مغلقة — افتحها أوّلاً</string>
     <string name="err_not_your_order">هذا الطلب ليس لك</string>

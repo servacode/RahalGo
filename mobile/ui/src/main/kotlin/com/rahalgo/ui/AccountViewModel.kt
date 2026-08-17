@@ -147,37 +147,11 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun setAvatar(uri: Uri) {
         act(R.string.acc_saved) {
-            backend.account.setAvatar("avatar.jpg", readScaled(uri))
+            // **والتصغيرُ في `ImagePick` لا هنا** — **صارت شاشةُ المندوب
+            // ترفع صورَ الأصناف أيضاً، ونسخةٌ ثانيةٌ من الحسبة تعني
+            // موضعين يُصلَح فيهما العيبُ ويُنسى ثانيهما.**
+            backend.account.setAvatar("avatar.jpg", readScaledImage(getApplication(), uri))
         }
-    }
-
-    /**
-     * **يقرأ الصورةَ ويصغّرها ويضغطها.**
-     *
-     * **والأبعادُ تُقرأ أوّلاً بلا فكّ** (`inJustDecodeBounds`) — صورةٌ
-     * بأربعة آلاف بكسلٍ تُفكّ إلى أربعةٍ وستّين ميغا في ذاكرة الهاتف،
-     * **وهاتفٌ قديمٌ يسقط قبل أن يرفع.**
-     */
-    private fun readScaled(uri: Uri): ByteArray {
-        val cr = getApplication<Application>().contentResolver
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-        var sample = 1
-        while (bounds.outWidth / sample > MAX_EDGE || bounds.outHeight / sample > MAX_EDGE) {
-            sample *= 2
-        }
-        val bmp = cr.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply {
-                inSampleSize = sample
-            })
-        } ?: throw IOException(
-            getApplication<Application>().getString(R.string.err_photo_unreadable),
-        )
-
-        val out = ByteArrayOutputStream()
-        bmp.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
-        bmp.recycle()
-        return out.toByteArray()
     }
 
     fun removeAvatar() = act(R.string.acc_saved) { backend.account.removeAvatar() }

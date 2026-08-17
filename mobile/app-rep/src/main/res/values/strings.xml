@@ -59,6 +59,39 @@
          أنّ حقَّه ضاع. -->
     <string name="cd_hint">عمولتك تُقيَّد لحظة تسليم الطلب، وإن رُجِّع سُحبت منك بقيدٍ معاكس. وأرقام الطلبات الملغية تظهر مشطوبةً — هي ما كان سيُحتسب لولا الإلغاء، ولا يدخل شيءٌ منها في مجاميعك. والسطر يبقى على كلّ حال: لا يُخفى طلبٌ ولا يُطمس قيد.</string>
 
+    <!-- ══════════════════════════════════════════════════════════════
+         **أصنافُ العميل — يبنيها المندوبُ نيابةً عنه**
+         ══════════════════════════════════════════════════════════════
+
+         (طلبُ المالك ٢٠٢٦-٠٨-١٨: «نفس الفورم الموجود عند مدير المنصّة
+          والموجود عند المتجر موجودٌ عند المندوب… باللوحة والتطبيق».) -->
+    <string name="cd_menu">أصناف المتجر</string>
+    <string name="mn_title">أصناف المتجر</string>
+    <string name="mn_empty">لا أصناف بعد — أضف أوّل صنف</string>
+    <string name="mn_add_item">إضافة صنف</string>
+    <string name="mn_add_here">إضافة صنف هنا</string>
+    <string name="mn_new_item">صنف جديد</string>
+    <string name="mn_edit_item">تعديل الصنف</string>
+    <string name="mn_item_name">اسم الصنف</string>
+    <!-- **والسعرُ المُدخَل سعرُ المتجر** — وسعرُ البيع تحسبه المنصّة. -->
+    <string name="mn_price">سعر المتجر</string>
+    <string name="mn_desc">وصف مختصر</string>
+    <string name="mn_two_prices">للمتجر %1$s · يُباع بـ %2$s</string>
+    <string name="mn_pick_image">صورة الصنف</string>
+    <string name="mn_remove_image">إزالة الصورة</string>
+    <string name="mn_market_section">قسم السوق</string>
+    <string name="mn_no_market_sections">لا أقسام سوقٍ بعد — تضعها الإدارة</string>
+    <string name="mn_chosen">مختار</string>
+    <string name="mn_available_label">متاح للطلب</string>
+    <string name="mn_available_hint">أطفئه إن نفد الصنف — ولا تحذفه</string>
+    <string name="mn_available">متاح</string>
+    <string name="mn_unavailable">غير متاح</string>
+    <string name="mn_closed_now">خارج الدوام الآن</string>
+    <string name="mn_pending">بانتظار المراجعة</string>
+    <string name="mn_save">حفظ</string>
+    <string name="mn_cancel">إلغاء</string>
+    <string name="mn_delete">حذف</string>
+
     <!-- **إضافةُ عميل** — وأكثرُ نصوصها من الويب حرفا. -->
     <string name="ac_title_hint">يبقى معلّقاً حتّى موافقة الإدارة</string>
     <string name="ac_store">اسم المتجر</string>

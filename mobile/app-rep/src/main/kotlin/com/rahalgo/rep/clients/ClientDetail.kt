@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -62,7 +63,7 @@ import com.rahalgo.ui.money
  * وحسبةٌ في الجهاز لا تعرف ذلك **فتُظهر للمندوب مالاً ليس له.**
  */
 @Composable
-fun ClientDetail(vm: ClientsViewModel) {
+fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
     val d = vm.detail
     if (d == null) {
         LoadState(vm.busy, vm.error) { vm.openDetail(vm.openId) }
@@ -118,6 +119,24 @@ fun ClientDetail(vm: ClientsViewModel) {
             if (head.joinedAt.isNotEmpty()) {
                 KeyValue(stringResource(R.string.cd_joined), head.joinedAt.take(10))
             }
+
+            // ══════════════════════════════════════════════════════════
+            // **وبابُ أصنافه — يبنيها نيابةً عنه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لا يوجد بالتطبيق زرُّ إضافة
+            //  منتجات العميل كما اتّفقنا سابقا».)
+            //
+            // **ومتجرٌ ينضمّ ولا يفتح لوحتَه** — صاحبُه في متجره لا في
+            // حاسوب، **وسوقٌ فيه متاجرُ بلا أصنافٍ سوقٌ فارغ.**
+            //
+            // **وهنا لا في القائمة**: المندوبُ يفتح العميلَ ليعمل عليه،
+            // **وزرٌّ في سطر القائمة يُضغط سهواً وهو يمرّر.**
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = { onOpenMenu(vm.openId, head.name) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.cd_menu)) }
         }
 
         // ══════════════════════════════════════════════════════════════
