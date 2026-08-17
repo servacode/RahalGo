@@ -97,8 +97,18 @@ function Band({
 }) {
   return (
     <section
-      className={`-mx-3 py-14 sm:-mx-4 sm:py-20 ${flush ? "" : "px-3 sm:px-4"} ${tinted ? "bg-raised" : ""}`}
+      className={`-mx-3 sm:-mx-4 ${
+        flush
+          ? /* **والافتتاحيّةُ ترتفع** — (طلبُ المالك ٢٠٢٦-٠٨-١٧: «ارفع
+               المحتوى للأعلى قليلاً»): **حشوةٌ علويّةٌ أقلُّ من
+               السفليّة**، فتبدأ الشاشةُ بالكلام لا بالفراغ. */
+            "pb-14 pt-6 sm:pb-20 sm:pt-10"
+          : "py-14 sm:py-20"
+      } ${flush ? "px-6 sm:px-12" : "px-3 sm:px-4"} ${tinted ? "bg-raised" : ""}`}
     >
+      {/* **وبلا حدٍّ للعرض في الافتتاحيّة** — الحشوةُ وحدَها تُبعده عن
+          الحافّة، **وحدُّ عرضٍ على شاشةٍ عريضةٍ يترك فجوةً يمينَ النصّ**
+          وهي ما شكا منها. */}
       <div className={flush ? "w-full" : "mx-auto w-full max-w-6xl"}>{children}</div>
     </section>
   );
@@ -276,7 +286,7 @@ export default async function HomePage() {
           {/* **وثلاثةُ أسطرٍ لا فقرةٌ واحدة** — (نصُّ المالك ٢٠٢٦-٠٨-١٧):
               كلُّ سطرٍ وعدٌ قائمٌ بنفسه، **وجمعُها في فقرةٍ يجعلها تُقرأ
               كلاماً متّصلاً فيضيع الثالث.** */}
-          <div className="hero-lead mt-5 flex max-w-prose flex-col gap-1 text-ink-muted">
+          <div className="hero-lead mt-7 flex max-w-prose flex-col gap-4 text-ink-muted">
             {/* **وثلاثُ كلماتٍ في مربّعاتها** — (طلبُ المالك ٢٠٢٦-٠٨-١٧).
                 **والأيقونةُ تسبق الكلمةَ في القراءة**: من رأى متجراً وعدسةً
                 وسلّةً عرف الخطواتِ الثلاثَ قبل أن يقرأها. */}
@@ -297,7 +307,6 @@ export default async function HomePage() {
               <IconNext size={26} className="arrow-nudge shrink-0 text-accent-text" />
               <span className="text-base font-bold text-ink">{H.heroLine1}</span>
             </div>
-            <p>{H.heroLine2}</p>
             {/* **والوعودُ الثلاثةُ مربّعاتٌ كالخطوات** — درّاجةٌ للسرعة، ومحفظةٌ
                 للدفع عند الاستلام، ودرعٌ للحقّ المكفول. */}
             <div className="flex flex-wrap items-center gap-2.5">
@@ -305,6 +314,10 @@ export default async function HomePage() {
               <Chip Icon={IconWallet} label={H.heroChip5} />
               <Chip Icon={IconRoles} label={H.heroChip6} />
             </div>
+            {/* **وسطرُ التطبيق تحت الصفّين** — (طلبُ المالك
+                ٢٠٢٦-٠٨-١٧: «اجعلها تحت الأزرار»): **الصفّان وعدٌ
+                والسطرُ تذييلٌ لهما**، ومن وضعه بينهما قطع الوعدَ نصفين. */}
+            <p>{H.heroLine2}</p>
           </div>
           {/* **والدعوةُ إلى السوق تُخفى مع بابَيه الآخرَين** — (طلبُ
               المالك ٢٠٢٦-٠٨-١٧). **ودعوةٌ باقيةٌ بعد إخفاء الزرَّين
