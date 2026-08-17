@@ -250,9 +250,18 @@ export default function MerchantDetailPage() {
         title={mr.name}
         subtitle={mr.category_name}
         actions={
-          <Button variant="secondary" onClick={() => router.push("/rep/merchants")}>
-            {D.back}
-          </Button>
+          <>
+            {/* **وبابُ أصنافه** — (طلبُ المالك ٢٠٢٦-٠٨-١٨).
+
+                **ومتجرٌ ينضمّ ولا يفتح لوحتَه** — صاحبُه في متجره لا في
+                حاسوب، **والمندوبُ هو من رآه وجهاً لوجه.** */}
+            <Button onClick={() => router.push(`/rep/merchants/${id}/menu`)}>
+              {m.terms.menu}
+            </Button>
+            <Button variant="secondary" onClick={() => router.push("/rep/merchants")}>
+              {D.back}
+            </Button>
+          </>
         }
       />
 

@@ -383,6 +383,37 @@ func (s *Server) Router() http.Handler {
 			r.Get("/categories", s.handleListCategories) // تصنيفات المتاجر للنموذج
 			// **وهدفُ المندوب كهدف السائق** — المقياسُ يختلف والمعنى واحد.
 			r.Get("/incentives", s.handleMyIncentives)
+
+			// ══════════════════════════════════════════════════════════
+			// **وقائمةُ عميله يبنيها نيابةً عنه**
+			// ══════════════════════════════════════════════════════════
+			//
+			// (طلبُ المالك ٢٠٢٦-٠٨-١٨: «نفس الفورم الموجود عند مدير
+			//  المنصّة والموجود عند المتجر موجودٌ عند المندوب».)
+			//
+			// **ومتجرٌ ينضمّ ولا يفتح لوحتَه** — صاحبُه في متجره لا في
+			// حاسوب، **وسوقٌ فيه متاجرُ بلا أصنافٍ سوقٌ فارغ.**
+			//
+			// **والمعالجاتُ هي معالجاتُ الإدارة نفسُها** — **ونسخةٌ
+			// ثالثةٌ من المنطق تعني ثلاثةَ أماكنَ يُصلَح فيها العيبُ
+			// ويُنسى ثالثُها.** ولا يُزاد إلّا حارسٌ يسأل: **أهذا
+			// المتجرُ عميلُه؟**
+			r.Group(func(r chi.Router) {
+				r.Use(s.repMenuGuard)
+				r.Get("/stores/{id}/menu", s.handleRepMenu)
+				r.Post("/stores/{id}/menu/sections", s.handleCreateSection)
+				r.Patch("/menu/sections/{sectionID}", s.handleUpdateSection)
+				r.Delete("/menu/sections/{sectionID}", s.handleDeleteSection)
+				r.Post("/stores/{id}/menu/items", s.handleCreateItem)
+				r.Patch("/menu/items/{itemID}", s.handleUpdateItem)
+				r.Delete("/menu/items/{itemID}", s.handleDeleteItem)
+				// **والرفعُ نوعُه `menu_item`** — كما ترفعه الإدارة.
+				r.Post("/media", s.handleUploadMedia)
+			})
+			// **وأقسامُ السوق يقرؤها كما يقرؤها المتجر** — **وبلاها يبني
+			// المندوبُ أصنافاً لا تظهر في التصفّح** حتّى يصنّفها الأدمن.
+			// **ولا حارسَ لها**: قائمةٌ عامّةٌ لا تخصّ متجراً.
+			r.Get("/platform-sections", s.handleMerchantPlatformSections)
 		})
 
 		// بوابة السائق — كان الطرف الوحيد بلا باب رغم أن الخارطة تخوّله سبعة انتقالات

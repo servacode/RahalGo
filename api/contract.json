@@ -5752,6 +5752,96 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/rep/media",
+      "handler": "handleUploadMedia",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@m",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/rep/menu/items/{itemID}",
+      "handler": "handleDeleteItem",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/rep/menu/items/{itemID}",
+      "handler": "handleUpdateItem",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/rep/menu/sections/{sectionID}",
+      "handler": "handleDeleteSection",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/rep/menu/sections/{sectionID}",
+      "handler": "handleUpdateSection",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@sec",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/rep/merchants",
       "handler": "handleRepMerchants",
@@ -5805,6 +5895,78 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/platform-sections",
+      "handler": "handleMerchantPlatformSections",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "sections",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/stores/{id}/menu",
+      "handler": "handleRepMenu",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@menu",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rep/stores/{id}/menu/items",
+      "handler": "handleCreateItem",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/rep/stores/{id}/menu/sections",
+      "handler": "handleCreateSection",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@sec",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
       ]
     },
     {
