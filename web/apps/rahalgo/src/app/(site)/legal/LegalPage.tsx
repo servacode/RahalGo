@@ -147,7 +147,7 @@ export function LegalPage({
         <PageHeader icon={icon} title={title} subtitle={subtitle} />
 
         {blocks.map((b, i) => (
-          <section key={i} className="surface lift p-5 leading-relaxed sm:p-6">
+          <section key={i} className="site-card lift p-5 leading-relaxed sm:p-6">
             {b.h && (
               <h2 className="mb-3 flex items-baseline gap-2">
                 {/* **والرقمُ يُحسب ولا يُكتب في النصّ** — فمن أدرج بنداً

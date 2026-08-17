@@ -242,14 +242,14 @@ function DiffRow({
             بين ألواحٍ زجاجيّةٍ يُقرأ غريباً عنها.**
 
             **والمعتادةُ تبقى أخفتَ حرفاً** — فيُعرف العمودان بلا رأس. */}
-        <div className="surface lift flex gap-4 p-6">
+        <div className="site-card lift flex gap-4 p-6">
           <Them size={28} className="mt-0.5 shrink-0 text-ink-muted" />
           <div className="flex flex-col gap-1.5">
             <b className="heading-card text-ink-muted">{themTitle}</b>
             <p className="text-sm text-ink-muted">{themBody}</p>
           </div>
         </div>
-        <div className="surface lift flex gap-4 p-6">
+        <div className="site-card lift flex gap-4 p-6">
           <Us size={28} className="mt-0.5 shrink-0 text-accent-text" />
           <div className="flex flex-col gap-1.5">
             <b className="heading-card text-accent-text">{usTitle}</b>
@@ -298,7 +298,7 @@ function WhyCard({
   lines: string[];
 }) {
   return (
-    <div className="surface lift flex flex-col gap-3 p-6">
+    <div className="site-card lift flex flex-col gap-3 p-6">
       <span className="flex items-center gap-2 text-accent-text">
         <Icon size={28} />
         <h3 className="heading-page text-ink">{who}</h3>
@@ -336,7 +336,7 @@ function FlowStep({
   label: string;
 }) {
   return (
-    <li className="flex flex-1 flex-col items-center gap-2 text-center">
+    <li className="relative flex flex-1 flex-col items-center gap-2 text-center">
       <span className="lift relative flex h-16 w-16 items-center justify-center rounded-full border border-accent-edge bg-accent-tint text-accent-text">
         <Icon size={26} />
         <span className="figure absolute -top-2 -end-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-2xs text-on-bright">
@@ -348,23 +348,41 @@ function FlowStep({
   );
 }
 
-/** **لوحُ قيمةٍ أو نصّ** — عنوانٌ وجسمٌ في سطح. */
+/**
+ * **لوحُ نصٍّ أو قرصُ قيمة.**
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «اجعلها دوائرَ بدل المربّعات».)
+ *
+ * **والقرصُ للكلمة الواحدة** — «الثقة» و«السرعة»: **دائرةٌ فيها كلمةٌ
+ * تُقرأ وسماً، ومربّعٌ فيه كلمةٌ يُقرأ بطاقةً ناقصة.**
+ *
+ * **واللوحُ للفقرة** — قصّةٌ في قرصٍ تخرج عن حدّه أو تصغّر حرفَها.
+ */
 function NoteCard({
   Icon,
   title,
   tone = "text-ink",
   body,
+  orb,
 }: {
   Icon?: React.ComponentType<{ size?: number; className?: string }>;
   title: string;
   /** **ولكلّ عنوانٍ لونُه** — (طلبُ المالك ٢٠٢٦-٠٨-١٧). */
   tone?: string;
   body?: string;
+  /** **قرصٌ لا لوح** — للكلمة الواحدة. */
+  orb?: boolean;
 }) {
   return (
-    <div className="surface lift flex flex-col items-center gap-3 p-6 text-center">
-      {Icon && <Icon size={32} className="text-accent-text" />}
-      <h3 className={`heading-page ${tone}`}>{title}</h3>
+    <div
+      className={
+        orb
+          ? "site-card site-orb lift mx-auto flex aspect-square w-full max-w-[11rem] flex-col items-center justify-center gap-2 p-4 text-center"
+          : "site-card lift flex flex-col items-center gap-3 p-6 text-center"
+      }
+    >
+      {Icon && <Icon size={orb ? 30 : 32} className="text-accent-text" />}
+      <h3 className={`${orb ? "heading-card" : "heading-page"} ${tone}`}>{title}</h3>
       {body && <p className="text-base text-ink-muted">{body}</p>}
     </div>
   );
@@ -558,7 +576,18 @@ export default async function HomePage() {
           <h2 className="heading-display mb-8 text-center text-violet">{H.flowTitle}</h2>
           {/* **وتصير عموداً على الجوّال** — خمسُ خطواتٍ في صفٍّ على
               ثلاثمئةٍ وستّين تُقرأ حروفاً متراكمة. */}
-          <ol className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+          <ol className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+            {/* **والمسارُ خلفَ الدوائر لا بينها** — (طلبُ المالك
+                ٢٠٢٦-٠٨-١٧). **ويقف عند حافّتَي الأولى والأخيرة**: خيطٌ
+                يخرج عنهما يُقرأ طريقاً بلا بداية. */}
+            <span
+              aria-hidden
+              className="flow-path pointer-events-none absolute inset-x-[10%] top-8 hidden h-px sm:block"
+            />
+            <span
+              aria-hidden
+              className="flow-path-y pointer-events-none absolute inset-y-8 start-1/2 w-px sm:hidden"
+            />
             <FlowStep n={1} Icon={IconApp} label={H.f1} />
             <FlowStep n={2} Icon={IconSteps} label={H.f2} />
             <FlowStep n={3} Icon={IconMoto} label={H.f3} />
@@ -573,10 +602,10 @@ export default async function HomePage() {
         <div className="mx-auto max-w-4xl">
           <h2 className="heading-display mb-8 text-center text-info">{H.valuesTitle}</h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <NoteCard Icon={IconHandshake} title={H.v1} />
-            <NoteCard Icon={IconMoto} title={H.v2} />
-            <NoteCard Icon={IconSearch} title={H.v3} />
-            <NoteCard Icon={IconShieldCheck} title={H.v4} />
+            <NoteCard Icon={IconHandshake} title={H.v1} orb />
+            <NoteCard Icon={IconMoto} title={H.v2} orb />
+            <NoteCard Icon={IconSearch} title={H.v3} orb />
+            <NoteCard Icon={IconShieldCheck} title={H.v4} orb />
           </div>
         </div>
       </Band>
