@@ -245,7 +245,9 @@ function BannerModal({
 
             الإطارُ عريضٌ ويقصّ ما زاد عن نسبته، **فصورةٌ طويلةٌ يضيع أعلاها
             وأسفلُها** — ومن رفعها لا يعرف لماذا خرجت ناقصة. */}
-        <p className="-mt-2 text-xs text-ink-muted">{m.admin.promos.bannerImageHint}</p>
+        <p className="-mt-2 text-xs text-ink-muted">{placement === "home"
+            ? m.admin.promos.bannerImageHintHome
+            : m.admin.promos.bannerImageHint}</p>
         {error && (
           <Alert>{error}</Alert>
         )}

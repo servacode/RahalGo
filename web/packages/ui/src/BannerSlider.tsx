@@ -59,12 +59,39 @@ export function BannerSlider({
   items,
   Link,
   everyMs = 5000,
-  full = false,
+  hero = false,
   className = "",
 }: {
   items: SlideItem[];
-  /** **يملأ عرضَ الصفحة بلا حدٍّ ولا استدارة** — للواجهة لا للتسوّق. */
-  full?: boolean;
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **هيئةُ الواجهة — لوحٌ بنسبة ٢:١ لا يُقصّ**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (مواصفةُ المالك ٢٠٢٦-٠٨-١٧: «نفس الصورة على جميع الأجهزة… تظهر
+   *  كاملةً قدرَ الإمكان دون قصّ… بشكل Card وليس صورةً مسطّحةً ملتصقةً
+   *  بالصفحة».)
+   *
+   * **وثلاثةُ فروقٍ عن لافتة التسوّق**: النسبةُ ٢:١ لا ١٦:٥، **والصورةُ
+   * تُحتوى لا تُقصّ**، والمهلةُ أطول.
+   *
+   * # ولماذا نسبةٌ مكتوبةٌ لا ارتفاعٌ تلقائيّ
+   *
+   * **المواصفةُ تقول `height: auto`** — وهي الصواب لصورةٍ وحيدة.
+   * **والسلايدرُ يكدّس صورَه بعضَها فوق بعض** (`absolute`) ليذوب بينها،
+   * **والمُطلَقُ لا يرفع أباه** — فلو تُرك الارتفاعُ تلقائيّاً لَانهار
+   * الإطارُ إلى صفر.
+   *
+   * **والنسبةُ المكتوبةُ تعطي ما تعطيه `height: auto`**: الارتفاعُ يتبع
+   * العرضَ بنسبةٍ ثابتة. **وتزيد عليها أنّها محجوزةٌ قبل وصول الصورة** —
+   * فلا تقفز الصفحةُ حين تصل.
+   *
+   * # و`contain` لا `cover`
+   *
+   * **`cover` تملأ الإطارَ بقصّ ما يفيض** — ولافتةٌ نسبتُها غيرُ نسبة
+   * الإطار يضيع منها ما ضاع. **و`contain` تُظهرها كاملةً** مهما رُفعت.
+   */
+  hero?: boolean;
   Link?: React.ComponentType<{ href: string; className?: string; children: React.ReactNode }>;
   everyMs?: number;
   className?: string;
@@ -195,8 +222,8 @@ export function BannerSlider({
 
      **وصفحةُ التسوّق تبقى محدودة**: هناك لافتةٌ فوق شبكةِ أصنافٍ محدودةِ
      العرض، **ولافتةٌ تتجاوز ما تحتها تُقرأ غريبةً عنه.** */
-  const frame = full
-    ? "banner-hero relative w-full overflow-hidden"
+  const frame = hero
+    ? "banner-frame relative aspect-[2/1] w-full overflow-hidden"
     : "relative mx-auto aspect-[16/5] w-full max-w-5xl overflow-hidden rounded-card";
 
   const slide = (it: SlideItem, i: number) => {
@@ -237,7 +264,9 @@ export function BannerSlider({
                **وقد وُحّد المقاسُ** (١٦:٥) بقرار المالك ٢٠٢٦-٠٨-٠٩ — **فما
                من فائضٍ يُقصّ**، ولا فراغَ يُملأ. **ومن رفع مقاساً آخرَ
                يُقصّ من أطرافه** وهو ما يقوله له التنبيهُ عند الرفع. */
-            className="relative h-full w-full select-none object-cover"
+            className={`relative h-full w-full select-none ${
+              hero ? "object-contain" : "object-cover"
+            }`}
           />
         ) : (
           <div className="h-full w-full bg-gradient-to-l from-primary-tint to-accent-tint" />
@@ -266,7 +295,11 @@ export function BannerSlider({
            حاجة. (شهد المالك «1 Issue» في شاشته ٢٠٢٦-٠٨-٠٦.) */
         inert={!on}
         className={`absolute inset-0 transition-opacity ease-[--ease-out] ${
-          still ? "duration-0" : "duration-[--duration-slow]"
+          still
+            ? "duration-0"
+            : hero
+              ? "duration-[--duration-banner]"
+              : "duration-[--duration-slow]"
         } ${on ? "opacity-100" : "pointer-events-none opacity-0"}`}
       >
         {it.href && Link ? (
