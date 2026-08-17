@@ -59,6 +59,7 @@ import {
   IconSteps,
   IconHandshake,
   IconWallet,
+  IconApp,
   ButtonLink,
   IconRoles,
 } from "@rahalgo/ui";
@@ -282,10 +283,13 @@ function DiffRow({
 function WhyCard({
   Icon,
   who,
+  sub,
   lines,
 }: {
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   who: string;
+  /** **وعدُ الدور في سطر** — (نصُّ المالك ٢٠٢٦-٠٨-١٧). */
+  sub: string;
   lines: string[];
 }) {
   return (
@@ -294,6 +298,7 @@ function WhyCard({
         <Icon size={24} />
         <h3 className="heading-card text-ink">{who}</h3>
       </span>
+      <b className="-mt-1 text-sm text-accent-dark">{sub}</b>
       <ul className="flex flex-col gap-2 text-sm text-ink-muted">
         {lines.map((t) => (
           <li key={t} className="flex gap-2">
@@ -304,6 +309,55 @@ function WhyCard({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * **خطوةٌ في مسار الطلب** — رقمٌ وأيقونةٌ واسم.
+ *
+ * (مواصفةُ المالك ٢٠٢٦-٠٨-١٧: «كيف تعمل المنظومة؟» بخمسِ خطوات.)
+ *
+ * **والرقمُ هنا معنًى لا زينة**: لا يُستلم قبل أن يُجهَّز، **ولا تُحتسب
+ * المستحقّاتُ قبل أن يصل.**
+ */
+function FlowStep({
+  n,
+  Icon,
+  label,
+}: {
+  n: number;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+}) {
+  return (
+    <li className="flex flex-1 flex-col items-center gap-2 text-center">
+      <span className="relative flex h-16 w-16 items-center justify-center rounded-full border border-accent-edge bg-accent-tint text-accent-text">
+        <Icon size={26} />
+        <span className="figure absolute -top-2 -end-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-2xs text-on-bright">
+          {n}
+        </span>
+      </span>
+      <span className="text-sm font-bold text-ink">{label}</span>
+    </li>
+  );
+}
+
+/** **لوحُ قيمةٍ أو نصّ** — عنوانٌ وجسمٌ في سطح. */
+function NoteCard({
+  Icon,
+  title,
+  body,
+}: {
+  Icon?: React.ComponentType<{ size?: number; className?: string }>;
+  title: string;
+  body?: string;
+}) {
+  return (
+    <div className="surface flex flex-col items-center gap-2 p-5 text-center">
+      {Icon && <Icon size={26} className="text-accent-text" />}
+      <h3 className="heading-card text-ink">{title}</h3>
+      {body && <p className="text-sm text-ink-muted">{body}</p>}
     </div>
   );
 }
@@ -483,11 +537,48 @@ export default async function HomePage() {
             <p className="mt-2 text-sm text-ink-muted">{H.whyLead}</p>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <WhyCard Icon={IconUser} who={H.whyCustomer} lines={[H.wc1, H.wc2, H.wc3, H.wc4]} />
-            <WhyCard Icon={IconStore} who={H.whyStore} lines={[H.ws1, H.ws2, H.ws3, H.ws4]} />
-            <WhyCard Icon={IconMoto} who={H.whyDriver} lines={[H.wd1, H.wd2, H.wd3, H.wd4]} />
-            <WhyCard Icon={IconUsers} who={H.whyRep} lines={[H.wr1, H.wr2, H.wr3, H.wr4]} />
+            <WhyCard Icon={IconUser} who={H.whyCustomer} sub={H.whyCustomerSub} lines={[H.wc1, H.wc2, H.wc3, H.wc4]} />
+            <WhyCard Icon={IconStore} who={H.whyStore} sub={H.whyStoreSub} lines={[H.ws1, H.ws2, H.ws3, H.ws4]} />
+            <WhyCard Icon={IconMoto} who={H.whyDriver} sub={H.whyDriverSub} lines={[H.wd1, H.wd2, H.wd3, H.wd4]} />
+            <WhyCard Icon={IconUsers} who={H.whyRep} sub={H.whyRepSub} lines={[H.wr1, H.wr2, H.wr3, H.wr4]} />
           </div>
+        </div>
+      </Band>
+      {/* **كيف تعمل المنظومة** — (مواصفةُ المالك ٢٠٢٦-٠٨-١٧). */}
+      <Band>
+        <div className="mx-auto max-w-5xl">
+          <h2 className="heading-page mb-8 text-center">{H.flowTitle}</h2>
+          {/* **وتصير عموداً على الجوّال** — خمسُ خطواتٍ في صفٍّ على
+              ثلاثمئةٍ وستّين تُقرأ حروفاً متراكمة. */}
+          <ol className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+            <FlowStep n={1} Icon={IconApp} label={H.f1} />
+            <FlowStep n={2} Icon={IconSteps} label={H.f2} />
+            <FlowStep n={3} Icon={IconMoto} label={H.f3} />
+            <FlowStep n={4} Icon={IconRoute} label={H.f4} />
+            <FlowStep n={5} Icon={IconWallet} label={H.f5} />
+          </ol>
+        </div>
+      </Band>
+
+      {/* **قيمنا** — أربعُ كلماتٍ لا شرحَ لها: **الشرحُ يُضعفها.** */}
+      <Band>
+        <div className="mx-auto max-w-4xl">
+          <h2 className="heading-page mb-8 text-center">{H.valuesTitle}</h2>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <NoteCard Icon={IconHandshake} title={H.v1} />
+            <NoteCard Icon={IconMoto} title={H.v2} />
+            <NoteCard Icon={IconSearch} title={H.v3} />
+            <NoteCard Icon={IconShieldCheck} title={H.v4} />
+          </div>
+        </div>
+      </Band>
+
+      {/* **قصّتنا ومهمّتنا ورؤيتنا** — ثلاثةٌ في صفٍّ واحد. */}
+      <Band>
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-3">
+          <NoteCard title={H.storyTitle} body={H.storyBody} />
+          <NoteCard title={H.missionTitle} body={H.missionBody} />
+          <NoteCard title={H.visionTitle} body={H.visionBody} />
         </div>
       </Band>
     </>
