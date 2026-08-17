@@ -199,8 +199,17 @@ export default async function HomePage() {
 
               **وهو في الشريط فوقَه مباشرةً** — وشعارٌ مرّتين في شاشةٍ
               واحدةٍ يزاحم العنوانَ الذي جاء الزائرُ ليقرأه. */}
-          <h1 className="heading-hero">{H.heroTitle}</h1>
-          <p className="hero-lead mt-5 max-w-prose text-ink-muted">{H.heroLead}</p>
+          {/* **واسمُ المنصّة يُحقن ولا يُكتب** — قاعدةُ المالك: من بدّله من
+              اللوحة بدّله في كلّ موضع. */}
+          <h1 className="heading-hero">{withPlatform(H.heroTitle, name)}</h1>
+          {/* **وثلاثةُ أسطرٍ لا فقرةٌ واحدة** — (نصُّ المالك ٢٠٢٦-٠٨-١٧):
+              كلُّ سطرٍ وعدٌ قائمٌ بنفسه، **وجمعُها في فقرةٍ يجعلها تُقرأ
+              كلاماً متّصلاً فيضيع الثالث.** */}
+          <div className="hero-lead mt-5 flex max-w-prose flex-col gap-1 text-ink-muted">
+            <p>{H.heroLine1}</p>
+            <p>{H.heroLine2}</p>
+            <p>{H.heroLine3}</p>
+          </div>
           {/* **والدعوةُ إلى السوق تُخفى مع بابَيه الآخرَين** — (طلبُ
               المالك ٢٠٢٦-٠٨-١٧). **ودعوةٌ باقيةٌ بعد إخفاء الزرَّين
               تنقض الإخفاءَ كلَّه**، وهي أظهرُ الثلاثة.
