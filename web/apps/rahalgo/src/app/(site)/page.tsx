@@ -44,6 +44,10 @@ import {
   fetchPlatform,
   BannerSlider,
   NetworkFx,
+  IconUser,
+  IconStore,
+  IconMoto,
+  IconUsers,
   ButtonLink,
   IconRoles,
 } from "@rahalgo/ui";
@@ -220,6 +224,59 @@ function DiffRow({ them, us }: { them: string; us: string }) {
   );
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **لماذا يختارنا كلُّ طرف — أربعةُ ألواحٍ لأربعة أدوار**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «لماذا الزبونُ يختار رحّال غو، ثمّ المندوب،
+ *  ثمّ السائق، ثمّ المتجر».)
+ *
+ * # ولا سطرَ فيها بلا ما يقابله في المحرّك
+ *
+ * **قِيس كلُّ ادّعاءٍ قبل أن يُكتب**: كودُ دعوة المندوب عمودٌ في `users`،
+ * وعمولتُه إعدادٌ (`sales.commission_percent`)، **وورديّةُ السائق حقلٌ
+ * يُقلَب** (`on_shift`)، وزرُّ طوارئه جدولٌ يُدرَج فيه، **ومستحقُّ المتجر
+ * وسحبُه طلبٌ في `payout_requests`**، ومواعيدُه `merchant_hours`،
+ * وبلاغُه عن سائقٍ مسارٌ في الدعم.
+ *
+ * **وموقعٌ يعد بما لا يفعله يُكتشف عند أوّل مستخدم** — ولا يُنسى.
+ *
+ * # وأربعتُها في شبكةٍ لا في أقسامٍ أربعة
+ *
+ * **أربعةُ أقسامٍ بعناوينَ متتاليةٍ تُقرأ صفحةً تُعيد نفسَها** — وهو ما
+ * رفضه. **والشبكةُ تجعلها مقارنةً تُمسح بنظرة**: كلٌّ يجد لوحَه ويقرأ
+ * أربعةَ أسطر.
+ */
+function WhyCard({
+  Icon,
+  who,
+  lines,
+}: {
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+  who: string;
+  lines: string[];
+}) {
+  return (
+    <div className="surface flex flex-col gap-3 p-5">
+      <span className="flex items-center gap-2 text-accent-text">
+        <Icon size={24} />
+        <h3 className="heading-card text-ink">{who}</h3>
+      </span>
+      <ul className="flex flex-col gap-2 text-sm text-ink-muted">
+        {lines.map((t) => (
+          <li key={t} className="flex gap-2">
+            {/* **ونقطةٌ تفصل السطور** — **وأربعةُ أسطرٍ بلا فاصلٍ تُقرأ
+                فقرةً واحدة.** */}
+            <span aria-hidden className="mt-2 h-1 w-1 shrink-0 rounded-full bg-accent" />
+            {t}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default async function HomePage() {
   const [brand, slides] = await Promise.all([fetchPlatform(API), fetchBanners()]);
   const name = brand.name;
@@ -335,6 +392,21 @@ export default async function HomePage() {
             <DiffRow them={H.d3a} us={H.d3b} />
             <DiffRow them={H.d4a} us={H.d4b} />
           </ul>
+        </div>
+      </Band>
+      {/* **ولماذا يختارنا كلُّ طرف** — (طلبُ المالك ٢٠٢٦-٠٨-١٧). */}
+      <Band>
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-8 text-center">
+            <h2 className="heading-page">{H.whyTitle}</h2>
+            <p className="mt-2 text-sm text-ink-muted">{H.whyLead}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <WhyCard Icon={IconUser} who={H.whyCustomer} lines={[H.wc1, H.wc2, H.wc3, H.wc4]} />
+            <WhyCard Icon={IconStore} who={H.whyStore} lines={[H.ws1, H.ws2, H.ws3, H.ws4]} />
+            <WhyCard Icon={IconMoto} who={H.whyDriver} lines={[H.wd1, H.wd2, H.wd3, H.wd4]} />
+            <WhyCard Icon={IconUsers} who={H.whyRep} lines={[H.wr1, H.wr2, H.wr3, H.wr4]} />
+          </div>
         </div>
       </Band>
     </>
