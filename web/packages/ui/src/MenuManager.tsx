@@ -620,7 +620,6 @@ function ItemModal({
             value={price}
             onChange={(e) => setPrice(e.target.value)}
           />
-          <p className="mt-1 text-2xs text-ink-muted">{L.priceHint}</p>
           </div>
 
         {/* **وبلا قسمِ منصةٍ لا يظهر الصنفُ في التصفّح.**

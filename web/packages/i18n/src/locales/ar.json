@@ -272,7 +272,6 @@
       "optionName": "اسم الخيار",
       "priceDelta": "فرق السعر",
       "addOption": "خيار",
-      "priceHint": "المنصة تضيف هامشها فوقه للزبون، وتخصم عمولتها منه — فمستحقّك هذا الرقم ناقص العمولة",
       "salePrice": "سعر البيع للزبون",
       "platformSection": "قسم المنصة",
       "noPlatformSection": "— بلا قسم —",
