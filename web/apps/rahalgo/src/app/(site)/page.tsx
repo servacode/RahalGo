@@ -48,6 +48,17 @@ import {
   IconStore,
   IconMoto,
   IconUsers,
+  IconList,
+  IconBag,
+  IconSearch,
+  IconRoute,
+  IconShieldX,
+  IconShieldCheck,
+  IconReceipt,
+  IconHourglass,
+  IconSteps,
+  IconHandshake,
+  IconWallet,
   ButtonLink,
   IconRoles,
 } from "@rahalgo/ui";
@@ -185,40 +196,60 @@ interface Slide {
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **قسمُ الفرق — مقابلةٌ لا قائمةُ مزايا**
+ * **صفُّ المقابلة — تجربتان متقابلتان بأيقونتين من عائلةٍ واحدة**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (سؤالُ المالك ٢٠٢٦-٠٨-١٧: «شو الفرقُ بينّا وبين غيرنا؟» ثمّ: «نفّذ
- *  النقاطَ التي ذكرتَها».)
+ * (مواصفةُ المالك ٢٠٢٦-٠٨-١٧ بستّة صفوفٍ ونصوصِها وأيقوناتها.)
  *
- * # ولماذا مقابلةٌ لا بطاقاتٌ في شبكة
+ * **والزوجُ من عائلةٍ واحدة**: درعٌ بخطأٍ ودرعٌ بعلامة، ساعةٌ رمليّةٌ
+ * وخطواتٌ مؤشَّرة — **فيُقرأ الفرقُ قبل قراءة النصّ**، ومن عائلتين يُقرأ
+ * شيئين لا علاقةَ بينهما.
  *
- * **قسمُ «ميزاتنا» حُذف بأمره** قبل ساعات — **وستُّ بطاقاتٍ تقول «توصيلٌ
- * سريعٌ · خدمةٌ آمنة» هي إيّاه بثوبٍ آخر**، وهو ما نصّ على ألّا يتكرّر.
- *
- * **والمقابلةُ تقول ما لا تقوله القائمة**: كلُّ منافسٍ يكتب «الأسرع»،
- * **ولا أحدَ يكتب «ضاع طلبُك؟ اتّصل وكرّر واقنع»** — فيعرف القارئُ حالَه
- * قبل أن يعرف وعدَنا.
- *
- * # وما فيها مقيسٌ من المحرّك لا مكتوبٌ للتسويق
- *
- *   **الطلبُ الخاصُّ** مسارٌ كاملٌ (`/custom`) — تسعيرٌ وموافقةٌ وتتبّع
- *   **والتتبّعُ** خادمُ مساراتٍ يعمل وموقعُ سائقٍ حيّ
- *   **والتعويضُ** تذكرةٌ وقيدٌ يخرج من خزينة المنصّة
- *   **وحسابُ المتجر** دفترٌ ومستحقٌّ وسحبُ رصيدٍ بطلب
- *
- * **ولا سطرَ فيها لا يقابله شيءٌ في الشيفرة** — وموقعٌ يعد بما لا يفعله
- * يُكتشف عند أوّل طلب.
+ * **واللونان يقولان أيُّهما أيّ**: المعتادةُ باهتةٌ بحدٍّ خفيف،
+ * **وتجربتُنا بنبرة المنصّة** — والرقمُ وحدَه برتقاليٌّ، وهي «اللمسةُ»
+ * التي طلبها لا لوناً ثالثاً يزاحم.
  */
-function DiffRow({ them, us }: { them: string; us: string }) {
+function DiffRow({
+  n,
+  name,
+  Them,
+  Us,
+  themTitle,
+  themBody,
+  usTitle,
+  usBody,
+}: {
+  n: string;
+  name: string;
+  Them: React.ComponentType<{ size?: number; className?: string }>;
+  Us: React.ComponentType<{ size?: number; className?: string }>;
+  themTitle: string;
+  themBody: string;
+  usTitle: string;
+  usBody: string;
+}) {
   return (
-    <li className="grid grid-cols-1 gap-3 md:grid-cols-2">
-      {/* **وحالُهم أوّلاً** — **ومن قرأ حالَه عرف الفرقَ بلا أن يُقال له.** */}
-      <div className="rounded-card border border-line-soft px-4 py-3 text-sm text-ink-muted">
-        {them}
-      </div>
-      <div className="rounded-card bg-accent-tint px-4 py-3 text-sm font-bold text-accent-dark">
-        {us}
+    <li className="flex flex-col gap-3">
+      <span className="flex items-center gap-2">
+        <span className="figure text-brandmark">{n}</span>
+        <span className="heading-card text-ink">{name}</span>
+      </span>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {/* **المعتادةُ باهتةٌ ولا تُشتم** — نصفُ القرّاء يعيشونها اليوم. */}
+        <div className="flex gap-3 rounded-card border border-line-soft px-4 py-4">
+          <Them size={22} className="mt-0.5 shrink-0 text-ink-muted" />
+          <div className="flex flex-col gap-1">
+            <b className="text-sm text-ink">{themTitle}</b>
+            <p className="text-2xs text-ink-muted">{themBody}</p>
+          </div>
+        </div>
+        <div className="flex gap-3 rounded-card bg-accent-tint px-4 py-4">
+          <Us size={22} className="mt-0.5 shrink-0 text-accent-text" />
+          <div className="flex flex-col gap-1">
+            <b className="text-sm text-accent-dark">{usTitle}</b>
+            <p className="text-2xs text-ink-muted">{usBody}</p>
+          </div>
+        </div>
       </div>
     </li>
   );
@@ -367,30 +398,80 @@ export default async function HomePage() {
       </Band>
 
       {/* **وقسمُ الفرق بعد الافتتاحيّة** — (سؤالُ المالك ٢٠٢٦-٠٨-١٧). */}
-      {/* **ولا طبقةَ ملوّنةَ خلفَه** — (طلبُ المالك ٢٠٢٦-٠٨-١٧: «أزل
-          الأوفرليه»).
-
-          **وكانت `bg-raised`**: لوحاً شفيفاً يمتدّ بعرض الشاشة **فوق
-          خلفيّته التي رفعها** — **وطبقةٌ تغطّي صورةً اختارها صاحبُها
-          تنقض اختيارَه.** والبطاقاتُ داخلَه تكفي لفصله عمّا حوله. */}
+      {/* **وقسمُ المقابلة** — (مواصفةُ المالك ٢٠٢٦-٠٨-١٧). */}
       <Band>
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-5xl">
           <div className="mb-8 text-center">
             <h2 className="heading-page">{H.diffTitle}</h2>
-            <p className="mt-2 text-sm text-ink-muted">{H.diffLead}</p>
+            <p className="mt-3 text-sm text-ink-muted">{H.diffLead}</p>
           </div>
           {/* **ورأسان يقولان أيُّ عمودٍ لمن** — على الحاسوب وحدَه:
-              **والعمودان يصيران صفّين على الجوّال فيُقرأ كلُّ زوجٍ معاً**
-              بلا حاجةٍ إلى رأس. */}
+              **والعمودان يصيران صفّين على الجوّال فيُقرأ كلُّ زوجٍ معاً.** */}
           <div className="mb-3 hidden grid-cols-2 gap-3 text-2xs md:grid">
             <span className="px-4 text-ink-muted">{H.diffThem}</span>
             <span className="px-4 font-bold text-accent-text">{H.diffUs}</span>
           </div>
-          <ul className="flex flex-col gap-3">
-            <DiffRow them={H.d1a} us={H.d1b} />
-            <DiffRow them={H.d2a} us={H.d2b} />
-            <DiffRow them={H.d3a} us={H.d3b} />
-            <DiffRow them={H.d4a} us={H.d4b} />
+          <ul className="flex flex-col gap-6">
+            <DiffRow
+              n="01"
+              name={H.r1n}
+              Them={IconList}
+              Us={IconBag}
+              themTitle={H.r1at}
+              themBody={H.r1ab}
+              usTitle={H.r1bt}
+              usBody={H.r1bb}
+            />
+            <DiffRow
+              n="02"
+              name={H.r2n}
+              Them={IconSearch}
+              Us={IconRoute}
+              themTitle={H.r2at}
+              themBody={H.r2ab}
+              usTitle={H.r2bt}
+              usBody={H.r2bb}
+            />
+            <DiffRow
+              n="03"
+              name={H.r3n}
+              Them={IconShieldX}
+              Us={IconShieldCheck}
+              themTitle={H.r3at}
+              themBody={H.r3ab}
+              usTitle={H.r3bt}
+              usBody={H.r3bb}
+            />
+            <DiffRow
+              n="04"
+              name={H.r4n}
+              Them={IconReceipt}
+              Us={IconWallet}
+              themTitle={H.r4at}
+              themBody={H.r4ab}
+              usTitle={H.r4bt}
+              usBody={H.r4bb}
+            />
+            <DiffRow
+              n="05"
+              name={H.r5n}
+              Them={IconHourglass}
+              Us={IconSteps}
+              themTitle={H.r5at}
+              themBody={H.r5ab}
+              usTitle={H.r5bt}
+              usBody={H.r5bb}
+            />
+            <DiffRow
+              n="06"
+              name={H.r6n}
+              Them={IconUsers}
+              Us={IconHandshake}
+              themTitle={H.r6at}
+              themBody={H.r6ab}
+              usTitle={H.r6bt}
+              usBody={H.r6bb}
+            />
           </ul>
         </div>
       </Band>

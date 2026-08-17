@@ -23,6 +23,24 @@ export {
   Shield as IconRoles,
   Activity as IconStatus,
   Calendar as IconDate,
+  // ══════════════════════════════════════════════════════════════════
+  // **أيقوناتُ المقابلة — زوجٌ لكلّ صفّ من عائلةٍ واحدة**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // (مواصفةُ المالك ٢٠٢٦-٠٨-١٧: «يُفضَّل أن يكون لكلّ صفٍّ أيقونتان
+  //  مختلفتان لكن من نفس العائلة البصريّة، بحيث يفهم المستخدمُ الفرقَ
+  //  حتّى قبل قراءة النصّ».)
+  //
+  // **ودرعٌ بعلامةٍ ودرعٌ بخطأ** — **والزوجُ من عائلةٍ واحدةٍ يُقرأ
+  // مقابلةً، ومن عائلتين يُقرأ شيئين لا علاقةَ بينهما.**
+  ShieldX as IconShieldX,
+  ShieldCheck as IconShieldCheck,
+  Receipt as IconReceipt,
+  Hourglass as IconHourglass,
+  ShoppingBag as IconBag,
+  Route as IconRoute,
+  ListChecks as IconSteps,
+  Handshake as IconHandshake,
   Search as IconSearch,
   MapPin as IconLocation,
   Wallet as IconWallet,
