@@ -64,12 +64,10 @@ type Icon = React.ComponentType<{ size?: number; className?: string }>;
  */
 function Band({
   children,
-  tinted,
   flush,
   relative,
 }: {
   children: React.ReactNode;
-  tinted?: boolean;
   /** **موضعٌ نسبيٌّ لِما يُطلق داخلَه** — شبكةُ الدبابيس تقع عليه. */
   relative?: boolean;
   /**
@@ -104,7 +102,7 @@ function Band({
                وحدَها. */
               "pb-14 pt-2 sm:pb-20 sm:pt-3 lg:-mt-8 lg:min-h-[36rem]"
           : "py-14 sm:py-20"
-      } ${flush ? "px-6 sm:px-12" : "px-3 sm:px-4"} ${tinted ? "bg-raised" : ""}`}
+      } ${flush ? "px-6 sm:px-12" : "px-3 sm:px-4"}`}
     >
       {/* **وبلا حدٍّ للعرض في الافتتاحيّة** — الحشوةُ وحدَها تُبعده عن
           الحافّة، **وحدُّ عرضٍ على شاشةٍ عريضةٍ يترك فجوةً يمينَ النصّ**
@@ -312,7 +310,13 @@ export default async function HomePage() {
       </Band>
 
       {/* **وقسمُ الفرق بعد الافتتاحيّة** — (سؤالُ المالك ٢٠٢٦-٠٨-١٧). */}
-      <Band tinted>
+      {/* **ولا طبقةَ ملوّنةَ خلفَه** — (طلبُ المالك ٢٠٢٦-٠٨-١٧: «أزل
+          الأوفرليه»).
+
+          **وكانت `bg-raised`**: لوحاً شفيفاً يمتدّ بعرض الشاشة **فوق
+          خلفيّته التي رفعها** — **وطبقةٌ تغطّي صورةً اختارها صاحبُها
+          تنقض اختيارَه.** والبطاقاتُ داخلَه تكفي لفصله عمّا حوله. */}
+      <Band>
         <div className="mx-auto max-w-4xl">
           <div className="mb-8 text-center">
             <h2 className="heading-page">{H.diffTitle}</h2>
