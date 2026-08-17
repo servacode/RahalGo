@@ -83,9 +83,12 @@ function Band({
   children,
   tinted,
   flush,
+  relative,
 }: {
   children: React.ReactNode;
   tinted?: boolean;
+  /** **موضعٌ نسبيٌّ لِما يُطلق داخلَه** — شبكةُ الدبابيس تقع عليه. */
+  relative?: boolean;
   /**
    * **بلا حشوةٍ ولا حدٍّ للعرض** — (قاعدةُ المالك، أعادها ٢٠٢٦-٠٨-١٧:
    * «ما زال هناك بادينغ على اليمين»).
@@ -97,7 +100,7 @@ function Band({
 }) {
   return (
     <section
-      className={`-mx-3 sm:-mx-4 ${
+      className={`-mx-3 sm:-mx-4 ${relative ? "relative overflow-hidden" : ""} ${
         flush
           ? /* **والافتتاحيّةُ ترتفع** — (طلبُ المالك ٢٠٢٦-٠٨-١٧: «ارفع
                المحتوى للأعلى قليلاً»): **حشوةٌ علويّةٌ أقلُّ من
@@ -137,6 +140,86 @@ function Chip({ Icon, label }: { Icon: Icon; label: string }) {
       <Icon size={26} className="shrink-0" />
       {label}
     </span>
+  );
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **شبكةُ التوصيل — دبوسٌ ينبض تخرج منه خطوطٌ إلى ثمانية**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٧: «على يسار المحتوى أضف دبوساً نابضاً بالوسط،
+ *  وفوقه ٣ دبابيس وتحته ٣، ويبقى على يمينه دبوسٌ وعلى يساره دبوس…
+ *  ثمّ اجعل الدبوسَ المركزيَّ وكأنّه يرسل خطوطاً إلى تلك الدبابيس».)
+ *
+ * # ولماذا حسابٌ لا رسمٌ باليد
+ *
+ * **الخطُّ من المركز إلى كلّ دبوسٍ طولُه وزاويتُه يختلفان** — **ورسمُ
+ * ثمانيةِ خطوطٍ بأرقامٍ مكتوبةٍ يعني ثمانيةَ أرقامٍ تُعاد كلَّما تبدّل
+ * موضعُ دبوس.** فالموضعُ وحدَه يُكتب، **والطولُ والزاويةُ يُشتقّان منه.**
+ *
+ * # ولا SVG
+ *
+ * **حارسُ المركزيّة يمنع رسمَ الأشكال باليد في الشاشات** — والأيقوناتُ
+ * من مصدرها. **فالدبابيسُ أيقوناتُ موقعٍ والخطوطُ صناديقُ مُدارة.**
+ *
+ * # وتُخفى على الجوّال
+ *
+ * **الافتتاحيّةُ هناك عمودٌ واحدٌ يملؤه الكلام** — **وزخرفةٌ تحته تدفع
+ * ما يُقرأ خارجَ الشاشة.**
+ */
+function PinNetwork() {
+  // **الموضعُ بالمئة من مربّع الشبكة** — والمركزُ (٥٠، ٥٠).
+  const pins = [
+    { x: 22, y: 14 },
+    { x: 50, y: 6 },
+    { x: 78, y: 14 },
+    { x: 8, y: 50 },
+    { x: 92, y: 50 },
+    { x: 22, y: 86 },
+    { x: 50, y: 94 },
+    { x: 78, y: 86 },
+  ];
+  // **وضلعُ المربّع بالبكسل** — منه يُحسب طولُ الخطّ.
+  const side = 340;
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute top-1/2 hidden -translate-y-1/2 lg:block"
+      style={{ insetInlineEnd: "6%", width: side, height: side }}
+    >
+      {pins.map((p) => {
+        const dx = ((p.x - 50) / 100) * side;
+        const dy = ((p.y - 50) / 100) * side;
+        const len = Math.hypot(dx, dy);
+        const deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+        return (
+          <span key={`${p.x}-${p.y}`}>
+            {/* **الخطُّ يبدأ من المركز ويدور نحو الدبوس.** */}
+            <span
+              className="pin-link absolute block h-px origin-left"
+              style={{
+                left: "50%",
+                top: "50%",
+                width: len,
+                transform: `rotate(${deg}deg)`,
+              }}
+            />
+            <span
+              className="absolute -translate-x-1/2 -translate-y-1/2 text-accent-text opacity-60"
+              style={{ left: `${p.x}%`, top: `${p.y}%` }}
+            >
+              <IconLocation size={22} />
+            </span>
+          </span>
+        );
+      })}
+      {/* **والمركزُ ينبض** — حلقةٌ تكبر وتخفت خلفَ الدبوس. */}
+      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <span className="pin-pulse absolute left-1/2 top-1/2 block h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent" />
+        <IconLocation size={40} className="relative text-accent" />
+      </span>
+    </div>
   );
 }
 
@@ -230,7 +313,8 @@ export default async function HomePage() {
           **ولا زرَّ «حمّل التطبيق» بعد**: التطبيقاتُ لم تُنشر على غوغل بلاي
           **وزرٌّ يعد بما لا يوجد يُفقد الثقةَ في أوّل شاشة.** يُضاف يومَ
           النشر. */}
-      <Band flush>
+      <Band flush relative>
+        <PinNetwork />
         {/* **والصورةُ فوق الكلام** — **وعنوانٌ يُكتب فوق صورةٍ يرفعها
             صاحبُها لا يُضمَن أن يُقرأ**: صورةٌ فاتحةٌ تبتلع الحرفَ الأبيضَ
             وداكنةٌ تبتلع الأسود. **فالسلايدرُ يعلو والكلامُ تحته على أرضِ
