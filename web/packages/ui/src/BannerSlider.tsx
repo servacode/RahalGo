@@ -196,7 +196,7 @@ export function BannerSlider({
      **وصفحةُ التسوّق تبقى محدودة**: هناك لافتةٌ فوق شبكةِ أصنافٍ محدودةِ
      العرض، **ولافتةٌ تتجاوز ما تحتها تُقرأ غريبةً عنه.** */
   const frame = full
-    ? "relative aspect-[16/6] w-full overflow-hidden"
+    ? "banner-hero relative w-full overflow-hidden"
     : "relative mx-auto aspect-[16/5] w-full max-w-5xl overflow-hidden rounded-card";
 
   const slide = (it: SlideItem, i: number) => {
