@@ -193,7 +193,13 @@ export default async function HomePage() {
         {slides.length > 0 && (
           <BannerSlider className="mb-10" items={slides} Link={Link} />
         )}
-        <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
+        {/* **والنصُّ إلى اليمين لا في الوسط** — (طلبُ المالك ٢٠٢٦-٠٨-١٧:
+            «النصّ كامل يصبح محاذاة إلى اليمين»).
+
+            **و`items-start` لا `items-end`**: البدايةُ منطقيّةٌ تنقلب مع
+            اللغة — **ومن كتب «يمين» بالحرف كسر صفحتَه يومَ تُقرأ
+            بالإنجليزيّة.** */}
+        <div className="flex max-w-3xl flex-col items-start text-start">
           {/* **ولا شعارَ في العرض الافتتاحيّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٧:
               «اللوغو شيلو من هون»).
 
@@ -201,7 +207,35 @@ export default async function HomePage() {
               واحدةٍ يزاحم العنوانَ الذي جاء الزائرُ ليقرأه. */}
           {/* **واسمُ المنصّة يُحقن ولا يُكتب** — قاعدةُ المالك: من بدّله من
               اللوحة بدّله في كلّ موضع. */}
-          <h1 className="heading-hero">{withPlatform(H.heroTitle, name)}</h1>
+          {/* ══════════════════════════════════════════════════════════
+              **وكلمتان في العنوان لهما لونُهما**
+              ══════════════════════════════════════════════════════════
+
+              (اختيارُ المالك ٢٠٢٦-٠٨-١٧: أخضرُ مزرقٌّ للمدينة وبرتقاليٌّ
+               للاسم.)
+
+              **والعنوانُ يبقى جملةً واحدةً في المعجم** بموضعَين يُملآن —
+              **وتقطيعُه ثلاثةَ مفاتيحَ يجعل من يبدّله يبدّل ثلاثةً
+              ويخطئ في الفراغات بينها.**
+
+              **والاسمُ يُحقن هنا في عنصرٍ ملوّنٍ مستقلّ**، فلا تصلح
+              `withPlatform` التي تردّ نصّاً واحداً. */}
+          <h1 className="heading-hero">
+            {(() => {
+              /* @platform-ok — يُحقن أدناه في عنصره الملوّن. */
+              const [head, rest = ""] = H.heroTitle.split("{city}");
+              const [mid, tail = ""] = rest.split("{platform}");
+              return (
+                <>
+                  {head}
+                  <span className="text-gradient-city">{H.cityName}</span>
+                  {mid}
+                  <span className="text-gradient-platform">{name}</span>
+                  {tail}
+                </>
+              );
+            })()}
+          </h1>
           {/* **وثلاثةُ أسطرٍ لا فقرةٌ واحدة** — (نصُّ المالك ٢٠٢٦-٠٨-١٧):
               كلُّ سطرٍ وعدٌ قائمٌ بنفسه، **وجمعُها في فقرةٍ يجعلها تُقرأ
               كلاماً متّصلاً فيضيع الثالث.** */}
@@ -216,19 +250,18 @@ export default async function HomePage() {
 
               **و«من نحن» يصير الزرَّ الرئيسيَّ حينَها** — فلا تبقى
               الواجهةُ بلا وجهةٍ تُضغط. */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-start gap-3">
+            {/* **ولا زرَّ «من نحن» هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٧:
+                «احذفها من الصفحة، لا أريدها»).
+
+                **وهو في الشريط العلويّ** — وبابان لصفحةٍ واحدةٍ في شاشةٍ
+                واحدة، **والافتتاحيّةُ موضعُ دعوةٍ واحدةٍ لا قائمةِ
+                أبواب.** */}
             {brand.showShop && (
               <ButtonLink href="/shop" size="lg">
                 {H.ctaShop}
               </ButtonLink>
             )}
-            <ButtonLink
-              href="/about"
-              variant={brand.showShop ? "secondary" : "primary"}
-              size="lg"
-            >
-              {H.ctaAbout}
-            </ButtonLink>
           </div>
         </div>
       </Band>
