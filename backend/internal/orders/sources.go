@@ -215,6 +215,13 @@ type ZoneCharge struct {
 	Name        string
 	DeliveryFee int64
 	MinOrder    int64
+
+	// DistanceM بعدُ الدبّوس عن مركز المنطقة بالمتر.
+	//
+	// **ويُقاس في الاستعلام نفسِه الذي اختار المنطقة** — لا في نداءٍ
+	// ثانٍ: **الترتيبُ يحسبه أصلاً**، وقياسُه مرّةً أخرى بعده قد يقع على
+	// منطقةٍ غيرِها لو تداخلت الدوائر.
+	DistanceM float64
 }
 
 // ZoneAt المنطقةُ التي يقع فيها هذا الدبوس — **وأقربُها مركزاً حين تتداخل.**
@@ -234,10 +241,12 @@ type ZoneCharge struct {
 func (s *Service) ZoneAt(ctx context.Context, lat, lng float64) (ZoneCharge, error) {
 	var z ZoneCharge
 	err := s.db.QueryRow(ctx, `
-		SELECT id::text, name, delivery_fee, min_order FROM delivery_zones
+		SELECT id::text, name, delivery_fee, min_order,
+		       ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
+		FROM delivery_zones
 		WHERE active AND ST_DWithin(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, radius_m)
 		ORDER BY ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
-		LIMIT 1`, lat, lng).Scan(&z.ID, &z.Name, &z.DeliveryFee, &z.MinOrder)
+		LIMIT 1`, lat, lng).Scan(&z.ID, &z.Name, &z.DeliveryFee, &z.MinOrder, &z.DistanceM)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return z, ErrOutOfZone
 	}
@@ -276,7 +285,7 @@ func (s *Service) DeliveryAt(ctx context.Context, lat, lng float64) (DeliveryCha
 		return out, err
 	}
 	out.ZoneCharge = z
-	out.Fee = pricing.DeliveryFee(ctx, s.settings)
+	out.Fee = pricing.DeliveryFeeAt(ctx, s.settings, z.DistanceM)
 	return out, nil
 }
 

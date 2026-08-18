@@ -31,7 +31,10 @@ package pricing
 // و١١٬٥٠٠ تقول **«هذا سعرُنا»**. وفي سوريا حيث الفئاتُ كبيرة **هو ما يجعل
 // الحسابَ ممكناً في الجيب.**
 
-import "context"
+import (
+	"context"
+	"math"
+)
 
 // MarginRule ما يلزم لحساب سعر بيعٍ من سعر شراء.
 type MarginRule struct {
@@ -50,6 +53,9 @@ type Store interface {
 	// موضعين. **ورقمان لمعنًى واحدٍ يفترقان.**
 	GetString(ctx context.Context, key string) string
 	GetInt(ctx context.Context, key string) int64
+
+	// GetBool **مفتاحٌ يُشعَل ويُطفأ** — يلزم لأجرة المسافة.
+	GetBool(ctx context.Context, key string) bool
 }
 
 // RuleFrom يقرأ مفتاحَ الهامش.
@@ -189,6 +195,46 @@ func DeliveryFee(ctx context.Context, st Store) int64 {
 	fee := st.GetInt(ctx, "delivery.fee")
 	if fee < 0 {
 		return 0
+	}
+	return fee
+}
+
+// DeliveryFeeAt أجرةُ التوصيل على مسافةٍ بالمتر — **والمفتاحُ يقرّر.**
+//
+// (طلبُ المالك ٢٠٢٦-٠٨-١٨: «إذا شغّال عن طريق المسافة نحن نحدّد الأجرةَ
+// حسب المسافة، وإذا موقّف يأخذ الأجورَ الموجودة بلوحة التحكّم».)
+//
+// # ولماذا دالّةٌ واحدةٌ للحالين
+//
+// **مطفأً تردّ ما كانت `DeliveryFee` تردّه** — فلا فرعٌ عند كلّ منادٍ.
+// **ودالّتان إحداهما للحال وأخرى للأخرى تفترقان يومَ يُصلَح إحداهما**، وهي
+// عائلةُ الخلل نفسُها التي وحّدت `DeliveryAt` من أجلها.
+//
+// # والأساسُ يبقى أساساً في الحالين
+//
+// `delivery.fee` هو ما يُضاف إليه لا ما يُستبدَل به. **ومن أطفأ المفتاحَ
+// رجع إلى رقمه بلا أن يُعيد ضبطَ شيء** — ولا يُترك حقلٌ يذكر رقماً لا
+// يُقرأ.
+//
+// # والسقفُ ليس تجميلاً
+//
+// **المسافةُ تُقاس بخطٍّ مستقيمٍ لا بالطريق** — وخطٌّ يعبر النهرَ يقول
+// كيلومترين والطريقُ سبعة. **والعكسُ أخطر**: طريقٌ ملتوٍ يُحسَب قصيراً.
+// فالسقفُ يقصّ الطرفَ الذي لا يقبله زبون، وصفرٌ يعني «بلا سقف».
+func DeliveryFeeAt(ctx context.Context, st Store, meters float64) int64 {
+	base := DeliveryFee(ctx, st)
+	if st == nil || !st.GetBool(ctx, "delivery.by_distance") {
+		return base
+	}
+	perKm := st.GetInt(ctx, "delivery.per_km")
+	if perKm <= 0 || meters <= 0 {
+		return base
+	}
+	// **والكيلومترُ يُقرَّب لأعلى** — **وكسرٌ يُهمَل يجعل من يبعد ١٫٩ كم
+	// يدفع أجرةَ كيلومترٍ واحد.**
+	fee := base + perKm*int64(math.Ceil(meters/1000))
+	if max := st.GetInt(ctx, "delivery.max_fee"); max > 0 && fee > max {
+		return max
 	}
 	return fee
 }

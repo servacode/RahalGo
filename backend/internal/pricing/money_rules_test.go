@@ -27,6 +27,65 @@ func (f fakeStore) GetInt(_ context.Context, key string) int64 {
 	}
 	return 0
 }
+func (f fakeStore) GetBool(_ context.Context, key string) bool {
+	v, _ := f[key].(bool)
+	return v
+}
+
+// TestDeliveryFeeAt **المسافةُ لا تُحسب إلّا حين يُشعَل مفتاحُها.**
+//
+// (طلبُ المالك ٢٠٢٦-٠٨-١٨.)
+//
+// **وأخطرُ سطرٍ فيه المطفأ**: مفتاحٌ مطفأٌ يحسب بالمسافة **يقلب أجرةَ كلّ
+// طلبٍ في المنصّة** بلا أن يمسّ أحدٌ إعداداً — والمالكُ يرى رقماً غيرَ
+// الذي كتبه في اللوحة.
+func TestDeliveryFeeAt(t *testing.T) {
+	ctx := context.Background()
+	cases := []struct {
+		name   string
+		st     fakeStore
+		meters float64
+		want   int64
+	}{
+		{"مطفأً يردّ الأساسَ مهما بعُد",
+			fakeStore{"delivery.fee": int64(110), "delivery.per_km": int64(500)},
+			9_000, 110},
+		{"مشعلاً يُضاف الكيلومترُ فوق الأساس",
+			fakeStore{"delivery.by_distance": true,
+				"delivery.fee": int64(1_000), "delivery.per_km": int64(500)},
+			2_500, 2_500}, // ١٬٠٠٠ + ٥٠٠×٣ (يُقرَّب لأعلى)
+		{"وكسرُ الكيلومترِ يُقرَّب لأعلى لا يُهمَل",
+			fakeStore{"delivery.by_distance": true,
+				"delivery.fee": int64(0), "delivery.per_km": int64(500)},
+			100, 500},
+		{"وأجرةُ كيلومترٍ صفرٌ ترجع بالأساس — لا توصيلَ مجّانيّ بالسهو",
+			fakeStore{"delivery.by_distance": true, "delivery.fee": int64(110)},
+			9_000, 110},
+		{"ومسافةٌ صفرٌ — أساسٌ لا أكثر",
+			fakeStore{"delivery.by_distance": true,
+				"delivery.fee": int64(110), "delivery.per_km": int64(500)},
+			0, 110},
+		{"والسقفُ يقصّ ما يجاوزه",
+			fakeStore{"delivery.by_distance": true, "delivery.fee": int64(1_000),
+				"delivery.per_km": int64(500), "delivery.max_fee": int64(3_000)},
+			20_000, 3_000},
+		{"وسقفُ صفرٍ يعني بلا سقف",
+			fakeStore{"delivery.by_distance": true, "delivery.fee": int64(1_000),
+				"delivery.per_km": int64(500), "delivery.max_fee": int64(0)},
+			20_000, 11_000},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := pricing.DeliveryFeeAt(ctx, c.st, c.meters); got != c.want {
+				t.Fatalf("على %.0f م: %d والمنتظَر %d", c.meters, got, c.want)
+			}
+		})
+	}
+	// **وبلا مخزنٍ صفر** — لا تُخترع أجرةٌ لم يقرّرها أحد.
+	if got := pricing.DeliveryFeeAt(ctx, nil, 9_000); got != 0 {
+		t.Fatalf("بلا مخزن: %d والمنتظَر 0", got)
+	}
+}
 
 // TestAmount_Of النسبةُ والمقطوع — **ولا يتجاوز أحدُهما الأساس.**
 //
