@@ -105,7 +105,7 @@
     <string name="cst_locate">حدد موقعي</string>
     <string name="cst_notes">ملاحظات للسائق</string>
     <string name="cst_send">أرسل الطلب</string>
-    <string name="cst_need_point">حدد موقعك ليعرف السائق أين يوصل</string>
+    <string name="cst_need_point">اختر عنوان التوصيل ليعرف السائق أين يوصل</string>
     <string name="cst_done">تم إرسال طلبك رقم %1$s — تابعه في «طلباتي»</string>
 
     <!-- **عناوينُ أقسام «ما يخصّني»** — والاسمُ في الشاشة كالاسم في القائمة. -->

@@ -1,6 +1,7 @@
 package com.rahalgo.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -261,4 +263,68 @@ fun AddAddressFlow(
     // **والوصفُ بعدها يحتاج حشوةً وتمريرا** — فيتولّاهما `AddressEditor`
     // بنفسه حين يكون قائماً بذاته (`standalone`).
     AddressEditor(vm, vm.state, picker, existing, onDone, standalone = true)
+}
+
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **بطاقةُ عنوان التوصيل — تُضغط فتفتح اللوحةَ نفسَها**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «نغيّر دورَ الزرّ أيضاً بالطلب الخاصّ بحيث
+ *  يظهر العنوانُ المحفوظ أو إضافةُ عنوان، ويعمل بنفس الدور — إمّا يختار
+ *  عنوانَه الافتراضيَّ أو يضيف عنواناً جديداً».)
+ *
+ * # ولماذا لا حقلُ نصٍّ ولا خريطةٌ هنا
+ *
+ * **الطلبُ الخاصُّ كان يسأل عنواناً نصّاً ونقطةً على خريطة** — **فيكتب
+ * الزبونُ عنوانَه في كلّ طلبٍ من جديد**، ويلتقط نقطتَه من جديد.
+ *
+ * **وعنوانُه محفوظٌ في حسابه** — **وسؤالُ ما هو معروفٌ يُقرأ عدمَ ثقةٍ
+ * لا حرصا.**
+ *
+ * # وبابٌ واحدٌ للاختيار وللإضافة
+ *
+ * **يُضغط فتُفتح لوحةُ العناوين**: إن كان له عنوانٌ اختاره، وإن لم يكن
+ * أضافه. **وبابان أحدُهما «اختر» والآخرُ «أضف» يجعلان من لا عنوانَ له
+ * يضغط الأوّلَ فيجد فراغا.**
+ */
+@Composable
+fun AddressCard(
+    /** **العنوانُ المختار** — أو فارغٌ فلا عنوانَ بعد. */
+    address: Address?,
+    onOpen: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, Rahal.colors.line, RoundedCornerShape(14.dp))
+            .clickable(onClick = onOpen)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_pin),
+            contentDescription = null,
+            tint = Rahal.colors.accent,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.size(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.top_deliver_to),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.labelSmall,
+            )
+            Text(
+                text = address?.text?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.addr_card_none),
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
 }

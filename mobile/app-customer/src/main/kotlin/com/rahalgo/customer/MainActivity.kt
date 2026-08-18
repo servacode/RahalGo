@@ -695,7 +695,11 @@ private fun SignedIn(
                     // وثالثةً فيخرج ثلاثةُ سائقين إلى بابٍ واحد.
                     tab == Tab.Custom -> CustomScreen(
                         customVm,
-                        picker = mapPicker,
+                        // **والعنوانُ من حسابه** — (طلبُ المالك
+                        // ٢٠٢٦-٠٨-١٨)، **وبابُ الاختيار هو بابُ الشريط
+                        // نفسُه**: لوحةٌ واحدةٌ لا اثنتان تفترقان.
+                        address = accountVm.state.addresses.firstOrNull { it.isDefault },
+                        onOpenAddresses = { addressSheet = true },
                         onSent = { tab = Tab.Orders },
                     )
 

@@ -27,11 +27,10 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.customer.NewCustom
 import com.rahalgo.ui.AppCore
-import com.rahalgo.ui.LastPoint
+import com.rahalgo.shared.model.Address
+import com.rahalgo.ui.AddressCard
 import com.rahalgo.ui.Flash
 import com.rahalgo.ui.Refresh
-import com.rahalgo.ui.PointField
-import com.rahalgo.ui.PointPicker
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.apiError
@@ -58,14 +57,23 @@ import kotlinx.coroutines.launch
 @Composable
 fun CustomScreen(
     vm: CustomViewModel,
-    picker: PointPicker? = null,
+    /**
+     * **عنوانُ التوصيل المختار** — الافتراضيُّ في حسابه.
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «يظهر العنوانُ المحفوظ أو إضافةُ
+     *  عنوان».)
+     *
+     * **وكان يُسأل عنه نصّاً وتُلتقط نقطتُه في كلّ طلب** — **وسؤالُ ما
+     * هو معروفٌ يُقرأ عدمَ ثقةٍ لا حرصا.**
+     */
+    address: Address?,
+    /** **يفتح لوحةَ العناوين** — يختار أو يضيف. */
+    onOpenAddresses: () -> Unit,
     /** **ما يُنادى بعد نجاح الطلب** — الانتقالُ إلى «طلباتي». */
     onSent: () -> Unit = {},
 ) {
     var request by rememberSaveable { mutableStateOf("") }
-    var address by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
-    val here = LastPoint.value
 
     // ══════════════════════════════════════════════════════════════════
     // **ونجاحُ الإرسال يُفرِّغ ما كُتب ثمّ ينتقل**
@@ -78,7 +86,6 @@ fun CustomScreen(
     LaunchedEffect(vm.sent) {
         if (vm.sent == 0) return@LaunchedEffect
         request = ""
-        address = ""
         notes = ""
         onSent()
     }
@@ -108,27 +115,21 @@ fun CustomScreen(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        Spacer(Modifier.height(10.dp))
-        OutlinedTextField(
-            value = address,
-            onValueChange = { address = it },
-            label = { Text(stringResource(R.string.cst_address)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-
         // ══════════════════════════════════════════════════════════════
-        // **والموضعُ يُختار على خريطةٍ لا يُقرأ رقمين**
+        // **والعنوانُ من حسابه لا من حقلٍ يُملأ كلَّ مرّة**
         // ══════════════════════════════════════════════════════════════
         //
-        // (قرارُ المالك ٢٠٢٦-٠٨-١٥ — ويَنسخ قراره في شاشة الحساب
-        //  ٢٠٢٦-٠٨-١٣: «مو ضروريّ تفتح خريطة». **وذاك كان في حفظ
-        //  عنوانٍ وهو في بيته، وهذا في طلبٍ إلى مكانٍ قد لا يكون
-        //  فيه.**)
+        // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «يعمل بنفس الدور لزرّ إضافة عنوان —
+        //  إمّا يختار عنوانَه الافتراضيَّ أو يضيف عنواناً جديداً».)
+        //
+        // **وكان حقلَ نصٍّ ونقطةً على خريطة** — يكتب عنوانَه في كلّ
+        // طلبٍ من جديد ويلتقط نقطتَه من جديد.
         //
         // **وبلا نقطةٍ لا يُرسَل الطلب**: عنوانٌ بإحداثيٍّ صفر نقطةٌ في
-        // المحيط الأطلسيّ، **تُرسل سائقاً إلى لا مكان.**
-        Spacer(Modifier.height(10.dp))
-        PointField(picker)
+        // المحيط الأطلسيّ، **تُرسل سائقاً إلى لا مكان.** والعنوانُ
+        // المحفوظُ يحمل نقطتَه معه.
+        Spacer(Modifier.height(12.dp))
+        AddressCard(address, onOpenAddresses)
 
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
@@ -141,9 +142,9 @@ fun CustomScreen(
         Spacer(Modifier.height(16.dp))
         Button(
             onClick = {
-                here?.let { vm.send(request.trim(), address.trim(), it.lat, it.lng, notes.trim()) }
+                address?.let { vm.send(request.trim(), it.text, it.lat, it.lng, notes.trim()) }
             },
-            enabled = !vm.busy && request.isNotBlank() && address.isNotBlank() && here != null,
+            enabled = !vm.busy && request.isNotBlank() && address != null,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (vm.busy) {
@@ -155,7 +156,7 @@ fun CustomScreen(
 
         // **ويُقال ما ينقص قبل أن يُضغط** — لا زرٌّ معطّلٌ بلا سبب:
         // **من رأى زرّاً لا يعمل ولا يعرف لماذا أغلق التطبيق.**
-        if (here == null) {
+        if (address == null) {
             Spacer(Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.cst_need_point),
