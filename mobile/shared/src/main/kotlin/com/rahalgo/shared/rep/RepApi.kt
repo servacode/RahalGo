@@ -158,6 +158,29 @@ data class MenuItem(
     /** **أنُشر للزبائن؟** — حين يُرفع مفتاحُ مراجعة القائمة. */
     val approved: Boolean = true,
     @SerialName("review_note") val reviewNote: String = "",
+    val modifiers: List<ModifierGroup> = emptyList(),
+)
+
+/**
+ * **مجموعةُ مُعدِّلات** — الحجمُ أو الإضافاتُ أو ما شابه.
+ *
+ * **و«إلزاميّة» تُشتقّ من الحدّ الأدنى ولا تُكتب**: `minSelect > 0` تعني
+ * إلزاميّة. **ورقمٌ واحدٌ لا حقلان يتناقضان** — راية «إلزاميّ» مرفوعةٌ
+ * وأدنى اختيارٍ صفرٌ حالٌ لا معنى لها، ولا يعرف المحرّكُ أيَّهما يصدّق.
+ */
+@Serializable
+data class ModifierGroup(
+    val name: String = "",
+    @SerialName("min_select") val minSelect: Int = 0,
+    @SerialName("max_select") val maxSelect: Int = 1,
+    val options: List<ModifierOption> = emptyList(),
+)
+
+/** **خيارٌ في مجموعة** — واسمُه وفرقُ سعره. */
+@Serializable
+data class ModifierOption(
+    val name: String = "",
+    @SerialName("price_delta") val priceDelta: Long = 0,
 )
 
 @Serializable
@@ -190,6 +213,14 @@ data class ItemInput(
     @SerialName("platform_section_id") val platformSectionID: String? = null,
     val available: Boolean? = null,
     @SerialName("image_media_id") val imageMediaID: String? = null,
+    /**
+     * **وإن أُرسلت — ولو فارغةً — استُبدلت الشجرةُ كلُّها.**
+     *
+     * **فلا تُرسَل إلّا من نموذجٍ يعرفها**: `toggleAvailable` تقلب راية
+     * التوفّر وحدَها، **ولو حملت `modifiers` فارغةً لَمحت مُعدِّلاتِ
+     * الصنف كلَّها بضغطةٍ على «إيقاف مؤقت».**
+     */
+    val modifiers: List<ModifierGroup>? = null,
 )
 
 /**

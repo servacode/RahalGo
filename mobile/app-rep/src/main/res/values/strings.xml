@@ -102,6 +102,17 @@
     <string name="mn_confirm_delete">حذف هذا الصنف نهائياً؟</string>
     <string name="mn_pending_review">بانتظار المراجعة</string>
     <string name="mn_rejected">رُدّ — عدّله ليُراجَع</string>
+    <!-- **والمُعدِّلاتُ عشرُ كلماتٍ من المعجم المشترك نفسِه.** -->
+    <string name="mn_modifiers">المُعدِّلات (الحجم، الإضافات…)</string>
+    <string name="mn_add_group">مجموعة مُعدِّلات</string>
+    <string name="mn_group_name">اسم المجموعة</string>
+    <string name="mn_min_select">أدنى اختيار</string>
+    <string name="mn_max_select">أقصى اختيار</string>
+    <string name="mn_required">إلزامي</string>
+    <string name="mn_optional">اختياري</string>
+    <string name="mn_option_name">اسم الخيار</string>
+    <string name="mn_price_delta">فرق السعر</string>
+    <string name="mn_add_option">خيار</string>
     <!-- **وهذه ليست في المعجم المشترك لأنّ الويب لا يحتاجها** — خارجَ
          الدوام حالٌ يقولها الوقت، والحفظُ والإلغاءُ أزرارُ نموذجٍ في
          التطبيق وحدَه. -->

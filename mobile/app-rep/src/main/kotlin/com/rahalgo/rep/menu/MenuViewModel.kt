@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.rep.ItemInput
 import com.rahalgo.shared.rep.MenuItem
 import com.rahalgo.shared.rep.MenuSection
+import com.rahalgo.shared.rep.ModifierGroup
+import com.rahalgo.shared.rep.ModifierOption
 import com.rahalgo.shared.rep.PlatformSection
 import com.rahalgo.shared.rep.RepApi
 import com.rahalgo.ui.AppCore
@@ -85,6 +87,8 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         val price: String = "",
         val description: String = "",
         val platformSectionID: String = "",
+        /** **مجموعاتُ المُعدِّلات** — تُستبدَل الشجرةُ كلُّها عند الحفظ. */
+        val groups: List<ModifierGroup> = emptyList(),
         /** **صورةٌ رُفعت للتوّ** — معرّفُها، **وفارغٌ يعني «أزِلها»**،
          *  **و`null` يعني «لا تمسّها»**. */
         val imageMediaID: String? = null,
@@ -143,12 +147,52 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             price = if (item.merchantPrice > 0) item.merchantPrice.toString() else "",
             description = item.description,
             platformSectionID = item.platformSectionID.orEmpty(),
+            groups = item.modifiers,
             imageThumb = item.imageThumbURL,
         )
     }
 
     fun editDraft(block: (Draft) -> Draft) {
         editing = editing?.let(block)
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **المُعدِّلات — الحجمُ والإضافاتُ وما شابه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «مجموعاتٌ ومعدّلاتٌ غيرُ موجودةٍ
+    //  بالتطبيق — لازم يكون كلُّ شيءٍ مطابقاً ١٠٠٪».)
+    //
+    // **والقيمُ الابتدائيّةُ كما في الويب حرفا**: مجموعةٌ جديدةٌ بأدنى
+    // صفرٍ وأقصى واحد. **ورقمان مختلفان بين الشاشتين يعنيان صنفاً
+    // يُبنى في الويب غيرَ الذي يُبنى في الجوّال.**
+
+    fun addGroup() = editDraft { d ->
+        d.copy(groups = d.groups + ModifierGroup(name = "", minSelect = 0, maxSelect = 1))
+    }
+
+    fun removeGroup(index: Int) = editDraft { d ->
+        d.copy(groups = d.groups.filterIndexed { i, _ -> i != index })
+    }
+
+    fun updateGroup(index: Int, block: (ModifierGroup) -> ModifierGroup) = editDraft { d ->
+        d.copy(groups = d.groups.mapIndexed { i, g -> if (i == index) block(g) else g })
+    }
+
+    fun addOption(groupIndex: Int) = updateGroup(groupIndex) { g ->
+        g.copy(options = g.options + ModifierOption(name = "", priceDelta = 0))
+    }
+
+    fun removeOption(groupIndex: Int, optionIndex: Int) = updateGroup(groupIndex) { g ->
+        g.copy(options = g.options.filterIndexed { i, _ -> i != optionIndex })
+    }
+
+    fun updateOption(
+        groupIndex: Int,
+        optionIndex: Int,
+        block: (ModifierOption) -> ModifierOption,
+    ) = updateGroup(groupIndex) { g ->
+        g.copy(options = g.options.mapIndexed { i, o -> if (i == optionIndex) block(o) else o })
     }
 
     fun cancelEdit() {
@@ -213,6 +257,16 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             // السطر وحدَه. **وحقلٌ يُكتب من موضعين يمحو أحدُهما ما فعله
             // الآخر**: من أوقف صنفاً ثمّ عدّل اسمَه أعاده متوفّرا.
             imageMediaID = d.imageMediaID,
+            // **وتُرسَل الشجرةُ كاملةً من هنا** — الويبُ يرسلها في كلّ
+            // حفظٍ كذلك، **والحذفُ لا باب له غير الاستبدال**: من أزال
+            // مجموعةً ولم تُرسَل الشجرةُ بقيت في القاعدة.
+            //
+            // **وتُنظَّف قبل الإرسال**: مجموعةٌ بلا اسمٍ أو بلا خيارٍ
+            // واحدٍ تُسقَط، **وخيارٌ بلا اسمٍ يُسقَط** — **وصنفٌ يُعرض
+            // للزبون بمجموعةٍ بلا اسمٍ يُوقفه عن الطلب.**
+            modifiers = d.groups
+                .map { g -> g.copy(options = g.options.filter { it.name.isNotBlank() }) }
+                .filter { it.name.isNotBlank() && it.options.isNotEmpty() },
         )
         write {
             if (d.isNew) api.createItem(merchantID, input) else api.updateItem(d.itemID, input)

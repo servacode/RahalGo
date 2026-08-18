@@ -70,6 +70,16 @@ const PAIRS = [
   [web.noPlatformSectionHint, "mn_no_platform_section_hint"],
   [web.pendingReview, "mn_pending_review"],
   [web.rejected, "mn_rejected"],
+  [web.modifiers, "mn_modifiers"],
+  [web.addGroup, "mn_add_group"],
+  [web.groupName, "mn_group_name"],
+  [web.minSelect, "mn_min_select"],
+  [web.maxSelect, "mn_max_select"],
+  [web.required, "mn_required"],
+  [web.optional, "mn_optional"],
+  [web.optionName, "mn_option_name"],
+  [web.priceDelta, "mn_price_delta"],
+  [web.addOption, "mn_add_option"],
   // **وعنوانُ الشاشة والبابُ إليها** — الويبُ يسمّيهما `terms.menu`.
   [terms.menu, "mn_title"],
   [terms.menu, "cd_menu"],
@@ -121,6 +131,35 @@ if (/أضف قسم|اسم القسم/.test(xml)) {
 //
 // **ونسختان من معجمٍ واحدٍ تفترقان حتماً** — والأولى تُصلَح وتُنسى
 // الثانية.
+// ══════════════════════════════════════════════════════════════════════
+// **وأسماءُ حقول المُعدِّلات تُقارَن أيضاً — لا الكلماتُ وحدَها**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **الكلماتُ يراها المستعمِلُ فيشتكي، وأسماءُ الحقول لا يراها أحد** —
+// **وحقلٌ باسمٍ مختلفٍ يُرسَل فيُتجاهَل بصمت**: يحفظ المندوبُ مجموعةً
+// فتُقبل ٢٠٠ ولا تُخزَّن، **فلا خطأَ ولا أثر.**
+//
+// **والويبُ هو العقدُ**: `ModifierGroup` و`ModifierOption` في
+// `MenuManager.tsx`. **وكوتلن يعلن اسمَه بـ`SerialName`.**
+const tsx = readFileSync(join(here, "..", "packages/ui/src/MenuManager.tsx"), "utf8");
+const kt = readFileSync(
+  join(repo, "mobile/shared/src/main/kotlin/com/rahalgo/shared/rep/RepApi.kt"),
+  "utf8",
+);
+for (const field of ["price_delta", "min_select", "max_select"]) {
+  if (!tsx.includes(field)) {
+    problems.push(`«${field}» لم يعد في عقد الويب — راجع الخريطة`);
+  } else if (!kt.includes(`SerialName("${field}")`)) {
+    problems.push(
+      `«${field}» في عقد الويب ولا يعلنه كوتلن بـSerialName — ` +
+        "**يُرسَل باسمٍ آخرَ فيُتجاهَل بصمت.**",
+    );
+  }
+}
+if (!/val modifiers: List<ModifierGroup>/.test(kt)) {
+  problems.push("كوتلن لا يحمل المُعدِّلات — والويبُ يرسلها في كلّ حفظ");
+}
+
 if (dict.admin && dict.admin.menu) {
   problems.push(
     "عاد «admin.menu» — **نسخةٌ ثانيةٌ من معجم محرّر الأصناف**، " +

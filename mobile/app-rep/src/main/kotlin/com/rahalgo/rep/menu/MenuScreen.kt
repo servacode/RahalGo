@@ -37,6 +37,7 @@ import com.rahalgo.rep.Backend
 import com.rahalgo.rep.R
 import com.rahalgo.shared.rep.MenuItem
 import com.rahalgo.shared.rep.MenuSection
+import com.rahalgo.shared.rep.ModifierGroup
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.Chip
 import com.rahalgo.ui.Empty
@@ -192,6 +193,17 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
+                }
+            }
+        }
+        // **ومجموعاتُ المُعدِّلات تُلمَح في السطر** — كما في الويب:
+        // اسمُها وعددُ خياراتها. **ومن لا يراها لا يعرف أنّ الصنفَ يُطلب
+        // بأحجامٍ أو بإضافات، فيبني ثانياً مثلَه بحجمٍ آخر.**
+        if (item.modifiers.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                item.modifiers.forEach { g ->
+                    Chip(g.name + " (" + g.options.size + ")", Rahal.colors.inkMuted)
                 }
             }
         }
@@ -369,6 +381,29 @@ private fun ItemForm(vm: MenuViewModel) {
             }
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **والمُعدِّلات** — الحجمُ والإضافاتُ وما شابه
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «مجموعاتٌ ومعدّلاتٌ غيرُ موجودةٍ
+        //  بالتطبيق».)
+        Spacer(Modifier.height(12.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.mn_modifiers),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(onClick = { vm.addGroup() }) {
+                Text(stringResource(R.string.mn_add_group))
+            }
+        }
+        d.groups.forEachIndexed { gi, g -> GroupCard(gi, g, vm) }
+
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
@@ -408,6 +443,107 @@ private fun ItemForm(vm: MenuViewModel) {
                 }
             },
         )
+    }
+}
+
+/**
+ * **مجموعةُ مُعدِّلاتٍ واحدة — باسمها وحدَّيها وخياراتها.**
+ *
+ * **و«إلزاميّ» تُشتقّ من أدنى اختيارٍ ولا تُكتب** — كما في الويب حرفا:
+ * **رقمٌ واحدٌ لا حقلان يتناقضان.** ومن رفع رايةَ الإلزام وترك الأدنى
+ * صفراً ترك حالاً لا يعرف المحرّكُ أيَّ طرفيها يصدّق.
+ *
+ * **والأرقامُ تُقرأ نصّاً ثمّ تُحوَّل** — **وحقلٌ رقميٌّ يُفرَّغ يصير
+ * صفراً في الحال، فلا يستطيع صاحبُه أن يمحو «١٠» ليكتب «٢».**
+ */
+@Composable
+private fun GroupCard(index: Int, g: ModifierGroup, vm: MenuViewModel) {
+    Spacer(Modifier.height(8.dp))
+    Card {
+        OutlinedTextField(
+            value = g.name,
+            onValueChange = { v -> vm.updateGroup(index) { it.copy(name = v) } },
+            label = { Text(stringResource(R.string.mn_group_name)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = if (g.minSelect == 0) "" else g.minSelect.toString(),
+                onValueChange = { v ->
+                    val n = v.filter { it.isDigit() }.toIntOrNull() ?: 0
+                    vm.updateGroup(index) { it.copy(minSelect = n) }
+                },
+                label = { Text(stringResource(R.string.mn_min_select)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = if (g.maxSelect == 0) "" else g.maxSelect.toString(),
+                onValueChange = { v ->
+                    val n = v.filter { it.isDigit() }.toIntOrNull() ?: 0
+                    vm.updateGroup(index) { it.copy(maxSelect = n) }
+                },
+                label = { Text(stringResource(R.string.mn_max_select)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Chip(
+                stringResource(
+                    if (g.minSelect > 0) R.string.mn_required else R.string.mn_optional,
+                ),
+                if (g.minSelect > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
+            )
+            TextButton(onClick = { vm.removeGroup(index) }) {
+                Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
+            }
+        }
+
+        g.options.forEachIndexed { oi, o ->
+            Spacer(Modifier.height(6.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = o.name,
+                    onValueChange = { v ->
+                        vm.updateOption(index, oi) { it.copy(name = v) }
+                    },
+                    label = { Text(stringResource(R.string.mn_option_name)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(1.4f),
+                )
+                OutlinedTextField(
+                    value = if (o.priceDelta == 0L) "" else o.priceDelta.toString(),
+                    onValueChange = { v ->
+                        val n = v.filter { it.isDigit() }.toLongOrNull() ?: 0L
+                        vm.updateOption(index, oi) { it.copy(priceDelta = n) }
+                    },
+                    label = { Text(stringResource(R.string.mn_price_delta)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { vm.removeOption(index, oi) }) {
+                    Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
+                }
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        TextButton(onClick = { vm.addOption(index) }) {
+            Text(stringResource(R.string.mn_add_option))
+        }
     }
 }
 
