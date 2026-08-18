@@ -76,6 +76,36 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
     var busy by mutableStateOf(false)
         private set
 
+    /**
+     * **رايةُ السحب وحدَه** — لا `busy` العامّة.
+     *
+     * **و`busy` تُرفع عند كلّ فتحِ قسم** — فلو قادت دوّارةَ السحب
+     * **لَظهرت في أعلى الشاشة كلَّما ضُغطت رقاقةُ قسم**، وهو ما لم
+     * يطلبه أحد.
+     */
+    var refreshing by mutableStateOf(false)
+        private set
+
+    /** **يُنعش كلَّ شيءٍ بسحبةٍ** — (طلبُ المالك ٢٠٢٦-٠٨-١٨). */
+    fun refresh() {
+        if (refreshing) return
+        refreshing = true
+        viewModelScope.launch {
+            runCatching {
+                val home = api.home()
+                sections = home.sections
+                banners = home.banners
+                bannerAuto = home.bannerAuto
+                bannerEveryMs = home.bannerEveryMs
+                // **والقسمُ المفتوحُ يُعاد جلبُه** — **وإنعاشٌ يُحدّث
+                // الشريطَ ويترك البضاعةَ قديمةً نصفُ إنعاش.**
+                pick?.let { items = api.sectionItems(it).items }
+                error = ""
+            }.onFailure { error = apiError(getApplication(), it as Exception) }
+            refreshing = false
+        }
+    }
+
     var error by mutableStateOf("")
         private set
 

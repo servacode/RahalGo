@@ -26,6 +26,7 @@ import com.rahalgo.ui.Note
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.RahalTextButton
+import com.rahalgo.ui.Refreshable
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -80,6 +81,10 @@ private fun OrdersList(
         return
     }
 
+    // **والسحبُ يُنعش هنا أيضاً** — انظر `Refreshable`: **حركةٌ
+    // يتعلّمها مرّةً ويتوقّعها في كلّ مكان، وشاشةٌ لا تُنعش تُقرأ
+    // عطبا.**
+    Refreshable(refreshing = vm.refreshing, onRefresh = vm::refresh) {
     Screen {
         ScreenTitle(title, hint)
 
@@ -153,6 +158,7 @@ private fun OrdersList(
             onConfirm = { reason, note -> vm.complain(id, reason, note); complainId = null },
             onDismiss = { complainId = null },
         )
+    }
     }
 }
 

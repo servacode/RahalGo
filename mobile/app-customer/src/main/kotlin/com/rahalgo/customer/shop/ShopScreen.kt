@@ -58,6 +58,7 @@ import com.rahalgo.ui.Chip
 import com.rahalgo.ui.CountBadge
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
+import com.rahalgo.ui.Refreshable
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.money
 import com.rahalgo.ui.BannerSlide
@@ -93,6 +94,16 @@ fun ShopScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val media = { path: String? -> Backend.of(context).media(path) }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **والسحبُ إلى الأسفل يُنعش** — انظر `Refreshable`.
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «تحسّباً لأمرِ تحديثٍ لحظيٍّ لم يصل أو
+    //  أيّ خللٍ آخر».)
+    //
+    // **والضيفُ لا وصلةَ حيّةَ له** (المقبسُ يحتاج توكناً) — **فهذه
+    // طريقتُه الوحيدةُ ليرى الجديد.**
+    Refreshable(refreshing = vm.refreshing, onRefresh = vm::refresh) {
     Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         // **والبحثُ فوق الأقسام** — لمن يعرف ما يريد، **ولا ينزل تحتها
@@ -321,6 +332,7 @@ fun ShopScreen(
         )
     }
     }
+    }
 }
 
 /**
@@ -395,6 +407,23 @@ private fun SectionRail(
                         .clip(CircleShape),
                 )
                 Spacer(Modifier.height(4.dp))
+                // ══════════════════════════════════════════════════════
+                // **واسمُ القسم يُكتب كاملاً — سطرين إن لزم**
+                // ══════════════════════════════════════════════════════
+                //
+                // (شكوى المالك ٢٠٢٦-٠٨-١٨: «أسماءُ الأقسام بعضُها ناقصٌ
+                //  بنقط، وهذا غلطٌ ما يصير».)
+                //
+                // **وسطرٌ واحدٌ في اثنتين وسبعين نقطةً لا يسع «بيتزا
+                // وفطائر»** — فيصير «بيتزا وف…». **واسمٌ مقصوصٌ يُقرأ
+                // قسماً آخرَ** أو يُقرأ عطباً في الرسم.
+                //
+                // **وسطران يكفيان أطولَ أقسامه** — والثالثُ يجعل
+                // الشريطَ يعلو على حساب البضاعة تحته.
+                //
+                // **والارتفاعُ يُحجز للسطرين** (`minLines`) — **وإلّا
+                // قفزت الدوائرُ صفّاً حين يطول اسمٌ ويقصر آخر**، فيبدو
+                // الشريطُ مضطربا.
                 Text(
                     text = s.name,
                     // **والمختارُ يُعرف بلونه وثقله** — لا بإطارٍ يزاحم
@@ -402,7 +431,8 @@ private fun SectionRail(
                     color = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
                     fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
                     style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
+                    minLines = 2,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )

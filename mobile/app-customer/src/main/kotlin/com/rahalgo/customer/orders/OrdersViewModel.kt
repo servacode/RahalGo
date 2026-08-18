@@ -78,6 +78,33 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         askRate = null
     }
 
+    /**
+     * **رايةُ السحب وحدَه** — لا `busy` العامّة.
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «عند سحب الشاشة إلى الأسفل يتحدّث
+     *  البرنامج، تحسّباً لأمرِ تحديثٍ لحظيٍّ لم يصل».)
+     *
+     * **و`busy` تُرفع في كلّ جلبٍ داخليّ** — فلو قادت الدوّارةَ
+     * **لَظهرت من تلقائها كلَّما وصلت نبضةُ تحديث.**
+     */
+    var refreshing by mutableStateOf(false)
+        private set
+
+    /** **يُنعش بسحبةٍ** — ويُطفئ رايتَه مهما وقع. */
+    fun refresh() {
+        if (refreshing) return
+        refreshing = true
+        viewModelScope.launch {
+            runCatching {
+                val all = api.orders(openOnly = false).orders
+                open = all.filterNot { it.status in ENDED }
+                history = all.filter { it.status in ENDED }
+                error = ""
+            }.onFailure { error = apiError(getApplication(), it as Exception) }
+            refreshing = false
+        }
+    }
+
     var busy by mutableStateOf(false)
         private set
 
