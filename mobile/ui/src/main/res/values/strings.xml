@@ -294,7 +294,10 @@
     <string name="acc_removed_photo">تمت إزالة الصورة</string>
     <string name="acc_saved_address">تم حفظ العنوان بنجاح</string>
     <string name="acc_deleted_address">تم حذف العنوان</string>
-    <string name="acc_default_address">صار هذا عنوانك الافتراضي</string>
+    <!-- **وتقول ما وقع لا ما صار** — (تصحيحُ المالك ٢٠٢٦-٠٨-١٨:
+         «صار الآن هذا عنوانك الافتراضي» غلط). **و«افتراضيّ» لفظُ
+         برمجةٍ لا لفظُ زبون** — يقرؤها فيسأل: افتراضيٌّ عن ماذا؟ -->
+    <string name="acc_default_address">تم تحديد عنوان التوصيل</string>
     <string name="acc_wa_code">الرمز الذي وصلك على واتساب</string>
     <string name="acc_wa_confirm">تأكيد التوثيق</string>
     <string name="acc_wa_done">تمّ توثيق حسابك بنجاح</string>
