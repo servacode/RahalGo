@@ -128,8 +128,8 @@ func TestAddress_IntruderCannotDelete(t *testing.T) {
 
 	var addrID string
 	if err := f.pool.QueryRow(ctx, `
-		INSERT INTO user_addresses (user_id, label, address_text, location)
-		VALUES ($1, 'بيتي', 'شارعُ صاحب الحقّ',
+		INSERT INTO user_addresses (user_id, label, area_building, address_text, location)
+		VALUES ($1, 'بيتي', 'شارعُ صاحب الحقّ', 'شارعُ صاحب الحقّ',
 		        ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography)
 		RETURNING id`, owner).Scan(&addrID); err != nil {
 		t.Skipf("تعذّر إنشاءُ عنوان (قد يختلف الجدول): %v", err)

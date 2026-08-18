@@ -33,8 +33,9 @@ func TestAdminAddresses_OnlyThisUsersAndAllOfThem(t *testing.T) {
 	// **ثلاثةٌ لصاحب الملفّ** — أحدُها الافتراضيّ، **وواحدٌ لجاره.**
 	mk := func(user, label, text string, def bool) {
 		if _, err := f.pool.Exec(ctx, `
-			INSERT INTO user_addresses (user_id, label, address_text, location, is_default)
-			VALUES ($1, $2, $3,
+			INSERT INTO user_addresses
+			    (user_id, label, area_building, address_text, location, is_default)
+			VALUES ($1, $2, $3, $3,
 			        ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography, $4)`,
 			user, label, text, def); err != nil {
 			t.Fatalf("تعذّر إنشاءُ العنوان %q: %v", label, err)

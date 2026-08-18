@@ -327,6 +327,10 @@ func (s *Server) Router() http.Handler {
 			// عناوينه المحفوظة — يكتبها مرّة ويستعملها دائماً
 			r.Get("/my/addresses", s.handleMyAddresses)
 			r.Post("/my/addresses", s.handleCreateAddress)
+			// **والتعديلُ باب** — (قرارُ المالك ٢٠٢٦-٠٨-١٨: «يمكن
+			// تعديلها أو حذفها»). **ومن أخطأ في طابقه كان يحذف
+			// وينشئ** فيفقد كونَه الافتراضيَّ ويعيد التقاطَ نقطته.
+			r.Patch("/my/addresses/{id}", s.handleUpdateAddress)
 			r.Delete("/my/addresses/{id}", s.handleDeleteAddress)
 			r.Post("/my/addresses/{id}/default", s.handleSetDefaultAddress)
 			// المفضّلة — زرٌّ واحد ينقلب، فنقطةٌ واحدة تقلبه

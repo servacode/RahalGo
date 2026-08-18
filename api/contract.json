@@ -4826,6 +4826,21 @@
       ]
     },
     {
+      "method": "PATCH",
+      "path": "/api/v1/my/addresses/{id}",
+      "handler": "handleUpdateAddress",
+      "auth": true,
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/my/addresses/{id}/default",
       "handler": "handleSetDefaultAddress",
