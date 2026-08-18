@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- **إذنُ الإشعارات** — انظر شرحَه في بيان الزبون.
+         **وأمسكه الحارسُ لحظةَ كتابته** (٢٠٢٦-٠٨-١٩): المندوبُ يسجّل
+         جهازَه وينتظر إشعاراتِ عملائه، **وتُبتلع كلُّها بصمت.** -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- ══════════════════════════════════════════════════════════════
          **الموقعُ لتسجيل متجرٍ وحدَه — لا تتبّع**
          ══════════════════════════════════════════════════════════════

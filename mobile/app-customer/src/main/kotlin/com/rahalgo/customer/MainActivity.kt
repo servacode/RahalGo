@@ -42,6 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rahalgo.design.Rahal
 import com.rahalgo.design.RahalGoTheme
 import com.rahalgo.ui.AppFrame
+import com.rahalgo.ui.AskNotifyPermission
 import com.rahalgo.ui.AuthGate
 import com.rahalgo.ui.AuthViewModel
 import com.rahalgo.ui.Crash
@@ -189,6 +190,16 @@ private fun Signed(theme: ThemeState, dark: Boolean) {
         if (code.isNotEmpty() && vm.signup == null) vm.openSignup(code)
     }
     LaunchedEffect(vm.user) { if (vm.user != null) Invited.clear(ctx) }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وإذنُ الإشعارات يُطلب بعد الدخول** — انظر `AskNotifyPermission`.
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (تدقيقُ الجاهزيّة ٢٠٢٦-٠٨-١٩.)
+    //
+    // **ولا يُطلب من ضيف**: لا طلباتِ له تُتابَع، **ونافذةٌ تظهر قبل
+    // أن يفهم التطبيقَ تُرفض** — والرفضُ لا يُعاد سؤالُه.
+    AskNotifyPermission(enabled = vm.user != null)
 
     // ══════════════════════════════════════════════════════════════════
     // **والرجوعُ يعود خطوةً — لا يُخرج من التطبيق**

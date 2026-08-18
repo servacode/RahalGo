@@ -150,6 +150,11 @@ private fun RepApp() {
 @Composable
 private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val context = LocalContext.current
+
+    // **وإذنُ الإشعارات هنا** — هذه الشاشةُ لا تُرسم إلّا لمن دخل.
+    // **وأمسك الحارسُ غيابَه** (٢٠٢٦-٠٨-١٩): المندوبُ ينتظر إشعاراتِ
+    // عملائه وعمولاته، **وتُبتلع كلُّها بصمتٍ من أندرويد ١٣.**
+    com.rahalgo.ui.AskNotifyPermission(enabled = true)
     val pagesVm: PagesViewModel = viewModel()
     val walletVm: WalletViewModel = viewModel()
     val accountVm: AccountViewModel = viewModel()
