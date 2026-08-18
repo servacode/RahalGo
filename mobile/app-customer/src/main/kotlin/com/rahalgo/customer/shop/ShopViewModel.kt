@@ -88,7 +88,12 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
         // فانتُزعت من تحته لأنّ موظّفاً غيّر بانراً **يقرأ التطبيقَ
         // معطوباً لا محدَّثاً.** فيُؤجَّل حتّى يخرج من البحث.
         viewModelScope.launch {
-            Refresh.tick.drop(1).collect { if (!searching) load() }
+            Refresh.tick.drop(1).collect {
+                // **ولا يُنعَش وهو يكتب** — `load()` تنتهي إلى
+                // `openSection` فتمحو الحقل: **كلمةٌ تُنتزع من
+                // تحت إصبعه لأنّ موظّفاً غيّر بانرا.**
+                if (!searching && query.isEmpty()) load()
+            }
         }
     }
 
@@ -109,11 +114,37 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **يفتح قسماً بأمرِ صاحبه** — ضغطةً على رقاقةٍ في الشريط.
+     *
+     * **ويمحو ما كُتب في البحث** — قصداً: من اختار قسماً ترك بحثَه.
+     *
+     * **ولا تُنادى من `type`** — انظرها: **الكتابةُ ليست اختيارَ قسم**،
+     * ومحوُ الحقل فيها يمحو ما يكتبه صاحبُه تحت إصبعه.
+     */
     fun openSection(id: String) {
         pick = id
         searching = false
         query = ""
         typing?.cancel()
+        loadSection(id)
+    }
+
+    /**
+     * **يجلب أصنافَ قسمٍ ولا يمسّ حقلَ البحث.**
+     *
+     * (شكوى المالك ٢٠٢٦-٠٨-١٨: «حقلُ البحث يفتح الكيبورد، أكتب ولكن لا
+     *  يظهر أيُّ حرفٍ بالكتابة».)
+     *
+     * **وكان `type` ينادي `openSection` وهي تمحو `query`** — فيُكتب
+     * الحرفُ الأوّلُ ثمّ يُمحى في النداء نفسِه. **وحرفٌ واحدٌ أقلُّ من
+     * الحدّ الأدنى دائماً، فلا يُبلَغ الحرفُ الثاني أبدا** — والحقلُ
+     * لا يمسك شيئا.
+     *
+     * **ولا خطأَ ولا رسالة**: لوحةُ المفاتيح تُفتح والحرفُ يُبتلع،
+     * **فيُقرأ عطباً في الجهاز لا في التطبيق.**
+     */
+    private fun loadSection(id: String) {
         busy = true
         error = ""
         viewModelScope.launch {
@@ -137,8 +168,13 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
         typing?.cancel()
         val q = text.trim()
         if (q.length < MIN_CHARS) {
-            searching = false
-            pick?.let { openSection(it) }
+            // **ولا يُعاد الجلبُ إلّا للعائد من نتائج بحث** — ومن يكتب
+            // حرفَه الأوّلَ لم يغادر قسمَه، **ونداءُ شبكةٍ عند كلّ ضغطةِ
+            // مفتاحٍ يستنزف حزمةَ من يتصفّح في الرقّة.**
+            if (searching) {
+                searching = false
+                pick?.let { loadSection(it) }
+            }
             return
         }
         typing = viewModelScope.launch {
