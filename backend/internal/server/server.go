@@ -497,6 +497,9 @@ func (s *Server) Router() http.Handler {
 		r.Route("/merchant", func(r chi.Router) {
 			r.Use(s.RequireAuth)
 			r.Use(s.RequireRoles("merchant"))
+			// **وما يكتبه صاحبُ المتجر يُسمَع في جيب الزبون** — انظر
+			// `announceWrites`.
+			r.Use(s.announceWrites)
 			// **وصورةُ الصنف تُرفع من بوّابته** — كان الرفعُ للإدارة وحدَها،
 			// **فصاحبُ المطعم لا يملك أن يضع صورةً لصنفه.** (طلبُ المالك
 			// ٢٠٢٦-٠٨-٠٧.) والأنواعُ محصورةٌ في `merchantKinds`.
@@ -546,6 +549,8 @@ func (s *Server) Router() http.Handler {
 			// (المحفظة، تسوية الصندوق، حلّ التذاكر، صرف السحوبات) غير قابلة للوصول
 			// لمن أُنشئت له. الحراسة الدقيقة تبقى على كل مسار حسّاس بذاته.
 			r.Use(s.RequireRoles("admin", "ops", "finance"))
+			// **وما تكتبه اللوحةُ يُسمَع في الجيب** — انظر `announceWrites`.
+			r.Use(s.announceWrites)
 			r.Get("/whatsapp", func(w http.ResponseWriter, _ *http.Request) {
 				httpx.JSON(w, http.StatusOK, s.otpStatus())
 			})

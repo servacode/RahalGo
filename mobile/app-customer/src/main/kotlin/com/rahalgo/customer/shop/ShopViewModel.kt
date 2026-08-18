@@ -10,9 +10,11 @@ import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.Section
 import com.rahalgo.ui.AppCore
+import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.apiError
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -66,6 +68,28 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         load()
+
+        // ══════════════════════════════════════════════════════════════
+        // **وما تكتبه لوحةُ الإدارة يظهر بلا إعادة تشغيل**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (شكوى المالك ٢٠٢٦-٠٨-١٨: «أيُّ تعديلٍ من لوحة الأدمن فوراً
+        //  يُطبَّق حتّى ولو الزبونُ فاتحٌ التطبيق، ما يلزم يحدّث أو يعيد
+        //  تشغيل التطبيق».)
+        //
+        // **وكانت هذه الشاشةُ الوحيدةَ التي لا تسمع النبضة** — تسمعها
+        // الطلباتُ والحسابُ والمحفظة، **والسوقُ — وهو ما تكتبه اللوحةُ
+        // فعلاً — يبقى على ما جلبه عند إقلاعه.** فيُغيَّر سعرٌ أو
+        // يُخفى صنفٌ **ويطلبه الزبونُ بسعرٍ لم يعد قائما.**
+        //
+        // # ولا يُقطع بحثٌ جارٍ
+        //
+        // **`load()` تُغلق البحثَ وتعود إلى القسم** — ومن كتب كلمةً
+        // فانتُزعت من تحته لأنّ موظّفاً غيّر بانراً **يقرأ التطبيقَ
+        // معطوباً لا محدَّثاً.** فيُؤجَّل حتّى يخرج من البحث.
+        viewModelScope.launch {
+            Refresh.tick.drop(1).collect { if (!searching) load() }
+        }
     }
 
     fun load() {

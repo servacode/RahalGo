@@ -13,7 +13,9 @@ import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.Offer
 import com.rahalgo.shared.model.Referral
 import com.rahalgo.ui.AppCore
+import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.apiError
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /**
@@ -73,6 +75,25 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { api.favorites().items }.onSuccess {
                 favorites = it
                 liked = it.map { item -> item.id }.toSet()
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **والعروضُ تتبع اللوحةَ لحظةً بلحظة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (شكوى المالك ٢٠٢٦-٠٨-١٨: «أيُّ تعديلٍ من لوحة الأدمن فوراً
+        //  يُطبَّق حتّى ولو الزبونُ فاتحٌ التطبيق».)
+        //
+        // **والعرضُ يُكتب في اللوحة وينتهي فيها** — **وعرضٌ منتهٍ يبقى
+        // معروضاً وعدٌ لا يُوفى**: يفتحه الزبونُ فيُردّ كودُه.
+        //
+        // **ولا يُجلب ما لم يُفتح بعد**: `null` تعني «لم تُطلَب»،
+        // **ونداءٌ هنا لكلّ نبضةٍ يجلب شاشةً لم يزرها صاحبُها.**
+        viewModelScope.launch {
+            Refresh.tick.drop(1).collect {
+                if (favorites != null) open(CustomerItems.FAVORITES, force = true)
+                if (offers != null) open(CustomerItems.OFFERS, force = true)
             }
         }
     }
