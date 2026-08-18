@@ -13,6 +13,9 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
+    // **والسلّةُ تُحفظ على القرص** — (تصحيحُ المالك ٢٠٢٦-٠٨-١٨).
+    // **وتُسلسَل بالمولّد لا بيد** — وكاتبُ JSON بيده ينسى حقلاً يُضاف.
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // **مفتاحُ الرفع — من ملفٍّ خارج المستودع** (كما في تطبيق السائق).
