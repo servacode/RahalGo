@@ -1,5 +1,6 @@
 package com.rahalgo.ui
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import com.rahalgo.design.Rahal
 import androidx.compose.foundation.clickable
@@ -174,12 +175,28 @@ fun TopBar(
         // **ويأخذ ما بقي من العرض** (`weight`) — **وعنوانٌ طويلٌ يُقصّ
         // بنقاطٍ خيرٌ من شريطٍ يدفع الجرسَ خارجَ الشاشة.**
         if (onAddress != null) {
+            // ══════════════════════════════════════════════════════════
+            // **ويُقرأ زرَّ اختيارٍ لا سطرَ خبر**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «التوصيل إلى أيضاً اجعله مميّزاً
+            //  ليكون واضحاً أنّه زرُّ اختيارٍ للعنوان».)
+            //
+            // **وكان نصّاً عارياً بجانب أيقونة** — **وسطرٌ بلا إطارٍ
+            // يُقرأ خبراً يُقرأ ولا يُضغط**، فيبقى عنوانُه الأوّلَ ولا
+            // يعرف أنّه يُبدَّل.
+            //
+            // **فأرضٌ خفيفةٌ وإطارٌ وسهمٌ نازل**: الأرضُ تفصله عن
+            // الشريط، **والسهمُ هو ما يقول «هنا خيارات»** — ومن رآه في
+            // أيّ تطبيقٍ عرفه.
             Row(
                 Modifier
                     .weight(1f)
-                    .clip(Rahal.shape.md)
+                    .clip(Rahal.shape.pill)
+                    .background(Rahal.colors.brand.copy(alpha = 0.08f))
+                    .border(1.dp, Rahal.colors.brand.copy(alpha = 0.35f), Rahal.shape.pill)
                     .clickable(onClick = onAddress)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
@@ -205,6 +222,14 @@ fun TopBar(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
+                // **والسهمُ آخرَ الزرّ** — **وأيقونتان في طرفٍ واحدٍ
+                // تُقرآن زخرفة.**
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_down),
+                    contentDescription = null,
+                    tint = Rahal.colors.brand,
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
 

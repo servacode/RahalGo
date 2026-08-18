@@ -1,5 +1,12 @@
 package com.rahalgo.customer.cart
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -186,18 +193,24 @@ fun CartScreen(
         //
         // **وخليطٌ يعني رقمين يُتابَعان في دفترين** — قرارُ المالك
         // بحذفه قائم.
+        // **وطريقةُ الدفع تُقرأ اختياراً** — (طلبُ المالك
+        // ٢٠٢٦-٠٨-١٨: «نقداً عند التسليم ومن محفظتي، اجعلها واضحةً
+        // أنّها أزرارُ اختيار»).
+        //
+        // **والرقاقةُ تُقرأ وسماً لا زرّا**: صغيرةٌ رماديّةٌ بلا دائرة،
+        // **فلا يُعرف أنّ فيها خياراً حتّى تُضغط بالصدفة.**
         Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = !vm.wallet,
-                onClick = { vm.wallet = false },
-                label = { Text(stringResource(R.string.cart_cash)) },
-            )
-            FilterChip(
-                selected = vm.wallet,
-                onClick = { vm.wallet = true },
-                label = { Text(stringResource(R.string.cart_wallet)) },
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PayChoice(
+                text = stringResource(R.string.cart_cash),
+                on = !vm.wallet,
+                modifier = Modifier.weight(1f),
+            ) { vm.wallet = false }
+            PayChoice(
+                text = stringResource(R.string.cart_wallet),
+                on = vm.wallet,
+                modifier = Modifier.weight(1f),
+            ) { vm.wallet = true }
         }
 
         Spacer(Modifier.height(14.dp))
@@ -370,5 +383,41 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
             }
             busy = false
         }
+    }
+}
+
+/**
+ * **خيارُ دفعٍ — دائرةٌ ونصٌّ في إطار.**
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «اجعلها واضحةً أنّها أزرارُ اختيار».)
+ *
+ * **والدائرةُ هي التي تقول «اختر واحدا»** — إطارٌ ملوّنٌ وحدَه يُقرأ
+ * زرَّ فعلٍ فيُضغط ظنّاً أنّه يدفع.
+ *
+ * **وكلاهما بعرضٍ واحد** — **وخيارٌ أعرضُ من أخيه يُقرأ الموصى به.**
+ */
+@Composable
+private fun PayChoice(
+    text: String,
+    on: Boolean,
+    modifier: Modifier = Modifier,
+    onPick: () -> Unit,
+) {
+    val tint = if (on) Rahal.colors.brand else Rahal.colors.line
+    Row(
+        modifier
+            .clip(Rahal.shape.md)
+            .border(if (on) 2.dp else 1.dp, tint, Rahal.shape.md)
+            .background(if (on) Rahal.colors.brand.copy(alpha = 0.06f) else Color.Transparent)
+            .clickable(onClick = onPick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = on, onClick = onPick)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+        )
     }
 }

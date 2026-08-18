@@ -546,37 +546,64 @@ private fun AddressRow(
     s: AccountState,
     onEdit: () -> Unit,
 ) {
-    Spacer(Modifier.height(8.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = stringResource(addressKindLabel(a.kind)),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        if (a.isDefault) {
-            Spacer(Modifier.size(8.dp))
+    // ══════════════════════════════════════════════════════════════
+    // **وكلُّ عنوانٍ في بطاقته — وأزرارُه تُقرأ أزرارا**
+    // ══════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «العناوينُ بحسابي أيضاً اجعل كلَّ
+    //  عنوانٍ بحقلٍ واضح، والأزرارَ تحته واضحةً أنّها أزرارٌ وليست
+    //  مجرّدَ كتابةٍ عاديّة».)
+    //
+    // **وكانت ثلاثةَ نصوصٍ فوق خطّ فاصل** — **ونصٌّ ملوّنٌ بلا إطارٍ
+    // يُقرأ وسماً**، فيُقرأ «حذف» حالاً لا فعلاً.
+    //
+    // **والحذفُ محدَّدٌ بالأحمر لا نصّاً أحمر**: **فعلٌ لا يُستدرَك
+    // خلفَ نصٍّ عارٍ يُضغط بالخطأ.**
+    Spacer(Modifier.height(10.dp))
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .border(1.dp, Rahal.colors.line, Rahal.shape.md)
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(R.string.acc_addr_default),
-                color = Rahal.colors.success,
-                style = MaterialTheme.typography.labelSmall,
+                text = stringResource(addressKindLabel(a.kind)),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyMedium,
             )
-        }
-    }
-    Text(a.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
-    Row {
-        if (!a.isDefault) {
-            RahalTextButton(onClick = { vm.makeDefault(a.id) }, enabled = !s.busy) {
-                Text(stringResource(R.string.acc_addr_make_default))
+            if (a.isDefault) {
+                Spacer(Modifier.size(8.dp))
+                Chip(stringResource(R.string.acc_addr_default), Rahal.colors.success)
             }
         }
-        RahalTextButton(onClick = onEdit, enabled = !s.busy) {
-            Text(stringResource(R.string.addr_edit))
-        }
-        RahalTextButton(onClick = { vm.deleteAddress(a.id) }, enabled = !s.busy) {
-            Text(stringResource(R.string.acc_addr_delete), color = Rahal.colors.danger)
+        Spacer(Modifier.height(4.dp))
+        Text(a.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (!a.isDefault) {
+                RahalOutlineButton(
+                    onClick = { vm.makeDefault(a.id) },
+                    enabled = !s.busy,
+                    tone = Tone.Success,
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.acc_addr_make_default), maxLines = 1) }
+            }
+            RahalOutlineButton(
+                onClick = onEdit,
+                enabled = !s.busy,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.addr_edit), maxLines = 1) }
+            RahalOutlineButton(
+                onClick = { vm.deleteAddress(a.id) },
+                enabled = !s.busy,
+                tone = Tone.Danger,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.acc_addr_delete), maxLines = 1) }
         }
     }
-    HorizontalDivider()
 }
 
 

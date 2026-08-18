@@ -2,6 +2,7 @@ package com.rahalgo.design
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
@@ -230,6 +231,28 @@ fun RahalGoTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () 
         MaterialTheme(
             colorScheme = schemeOf(palette),
             typography = RahalGoTypography,
+            // ══════════════════════════════════════════════════════════
+            // **وأشكالُنا تدخل السمةَ — لا تُكتب في كلّ حقل**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «والحقولَ خلّيها بزاويةٍ دائريّة،
+            //  أفضل واحترافيٌّ أكثر».)
+            //
+            // **وحقلُ Material افتراضُه `extraSmall` أي أربعُ نقاط** —
+            // زاويةٌ تكاد تكون قائمة. **ومن دوّرها في شاشةٍ نسيها في
+            // عشر** — وهو ما كان: حقولُ الدخول مربّعةٌ وحقولُ العنوان
+            // مربّعة.
+            //
+            // **وحقنُها في السمة يبلغ كلَّ ما يرسمه Material**: الحقولُ
+            // والقوائمُ المنسدلةُ والنوافذُ والألواحُ — **بلا أن تُلمس
+            // شاشةٌ واحدة.**
+            shapes = Shapes(
+                extraSmall = Rahal.shape.md,
+                small = Rahal.shape.md,
+                medium = Rahal.shape.md,
+                large = Rahal.shape.lg,
+                extraLarge = Rahal.shape.lg,
+            ),
             content = content,
         )
     }

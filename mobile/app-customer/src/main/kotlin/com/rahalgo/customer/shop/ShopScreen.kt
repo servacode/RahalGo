@@ -142,6 +142,9 @@ fun ShopScreen(
                 )
             },
             singleLine = true,
+            // **ودائريٌّ كاملاً** — (طلبُ المالك ٢٠٢٦-٠٨-١٨): **وحقلُ
+            // بحثٍ بزوايا حقلِ إدخالٍ يُقرأ حقلَ إدخال.**
+            shape = Rahal.shape.pill,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             modifier = Modifier
                 .fillMaxWidth()
