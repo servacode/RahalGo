@@ -24,6 +24,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -560,6 +571,7 @@ private fun AddressRow(
  * **ولا رقمَ هاتفٍ فيه** — (قرارُ المالك: «رقمُ الهاتف ما يلزم لأنّه
  * موجودٌ عندنا أساساً»). **وحقلٌ يُطلب مرّتين يُملأ مرّةً بخطأ.**
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AddressEditor(
     vm: AccountViewModel,
@@ -571,14 +583,16 @@ internal fun AddressEditor(
     /**
      * **أهو صفحةٌ قائمةٌ بذاتها؟**
      *
-     * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «تفتح صفحةُ الخريطة بشكلٍ كاملٍ ومنفصل،
-     *  وليس فوق صفحة الطلبات أو الإعدادات».)
+     * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «تفتح صفحةُ الخريطة بشكلٍ كاملٍ ومنفصل»
+     *  ثمّ «بعد اختيار العنوان يظهر بنافذةٍ فوق الخريطة… وليس بصفحةٍ
+     *  معزولةٍ كما هي الآن».)
      *
-     * **ومن الشريط صفحةٌ** — تملأ الشاشةَ وتحمل تمريرَها وحشوتَها،
-     * **ويغلقها الرجوع.**
+     * **ومن الشريط: خريطةٌ تملأ الشاشةَ ونافذةٌ تطفو فوقها** — **والخريطةُ
+     * تبقى مرئيّةً وهو يصف**: يقرأ ما تحت الدبّوس فيصحّح وصفَه، **ومن
+     * وُضع في صفحةٍ بيضاء نسي أين كانت نقطتُه.**
      *
-     * **ومن «حسابي» جزءٌ من شاشة** — **وعمودٌ يمرّر داخل عمودٍ يمرّر
-     * يُجمّد أحدَهما**، فتُترك الحشوةُ والتمريرُ لصاحب الشاشة.
+     * **ومن «حسابي»: جزءٌ من شاشة** — **وعمودٌ يمرّر داخل عمودٍ يمرّر
+     * يُجمّد أحدَهما.**
      */
     standalone: Boolean = false,
 ) {
@@ -591,19 +605,84 @@ internal fun AddressEditor(
     // **والجديدُ يفتح الخريطةَ أوّلاً** — الموضعُ قبل الوصف.
     var onMap by rememberSaveable(existing?.id) { mutableStateOf(existing == null) }
 
-    // **والرجوعُ يغلق الصفحةَ لا التطبيق** — حارسٌ واحدٌ للحالين:
-    // في الخريطة يعود إلى النموذج، وفي النموذج يُغلق.
+    val save: () -> Unit = {
+        if (existing == null) {
+            vm.addAddress(area, street, floor, kind, lat, lng)
+        } else {
+            vm.updateAddress(existing.id, area, street, floor, kind, lat, lng)
+        }
+        onDone()
+    }
+    // **والحفظُ لا يُتاح بلا نقطةٍ ولا بلا وصف** — نقطةٌ صفريّةٌ تُرسل
+    // سائقاً إلى لا مكان، **وعنوانٌ بلا منطقةٍ لا يُقرأ.**
+    val canSave = !s.busy && area.isNotBlank() && street.isNotBlank() &&
+        lat != null && lng != null
+
+    // ══════════════════════════════════════════════════════════════════
+    // **صفحةً كان أم جزءاً — الخريطةُ أوّلاً**
+    // ══════════════════════════════════════════════════════════════════
     if (standalone) {
-        BackHandler { if (onMap && existing == null) onDone() else onDone() }
+        BackHandler { if (onMap) onDone() else onMap = true }
+
+        Box(Modifier.fillMaxSize()) {
+            picker?.invoke(
+                { la, ln, name ->
+                    lat = la
+                    lng = ln
+                    // **واسمُ المكان يملأ المنطقةَ إن كانت فارغة** — ولا
+                    // يمحو ما كتبه بيده.
+                    if (area.isBlank() && name.isNotBlank()) area = name
+                    onMap = false
+                },
+                { onDone() },
+            )
+        }
+
+        // **والنافذةُ تطفو فوقها** — **وإغلاقُها يعيده إلى الخريطة لا
+        // يُخرجه**: من سحبها ليقرأ ما تحتها لا يريد أن يبدأ من جديد.
+        if (!onMap) {
+            ModalBottomSheet(
+                onDismissRequest = { onMap = true },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                containerColor = Rahal.colors.canvas,
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp),
+                ) {
+                    AddressFields(
+                        area, { area = it },
+                        street, { street = it },
+                        floor, { floor = it },
+                        kind, { kind = it },
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Button(
+                        onClick = save,
+                        enabled = canSave,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary,
+                            contentColor = MaterialTheme.colorScheme.onSecondary,
+                        ),
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                    ) { Text(stringResource(R.string.addr_save)) }
+                    Spacer(Modifier.height(24.dp))
+                }
+            }
+        }
+        return
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وجزءاً من «حسابي» — بلا نافذةٍ ولا تمرير**
+    // ══════════════════════════════════════════════════════════════════
     if (onMap && picker != null) {
         picker(
             { la, ln, name ->
                 lat = la
                 lng = ln
-                // **واسمُ المكان يملأ المنطقةَ إن كانت فارغة** — ولا
-                // يمحو ما كتبه بيده.
                 if (area.isBlank() && name.isNotBlank()) area = name
                 onMap = false
             },
@@ -612,85 +691,14 @@ internal fun AddressEditor(
         return
     }
 
-    // **وحين يكون صفحةً يحمل حشوتَه وتمريرَه** — انظر `standalone`.
-    val wrap: Modifier = if (standalone) {
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-    } else {
-        Modifier
-    }
-
-    Column(wrap) {
-    Text(
-        stringResource(R.string.addr_confirm_title),
-        fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.titleMedium,
-    )
-    Text(
-        stringResource(R.string.addr_confirm_hint),
-        color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodySmall,
+    AddressFields(
+        area, { area = it },
+        street, { street = it },
+        floor, { floor = it },
+        kind, { kind = it },
     )
 
-    Spacer(Modifier.height(12.dp))
-    OutlinedTextField(
-        value = area,
-        onValueChange = { area = it },
-        label = {
-            Text(
-                stringResource(R.string.addr_area) + " " +
-                    stringResource(R.string.addr_required),
-            )
-        },
-        placeholder = { Text(stringResource(R.string.addr_area_hint)) },
-        modifier = Modifier.fillMaxWidth(),
-    )
-
-    Spacer(Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = street,
-            onValueChange = { street = it },
-            label = { Text(stringResource(R.string.addr_street)) },
-            placeholder = { Text(stringResource(R.string.addr_street_hint)) },
-            singleLine = true,
-            modifier = Modifier.weight(2f),
-        )
-        OutlinedTextField(
-            value = floor,
-            onValueChange = { v -> floor = v.filter { c -> c.isDigit() } },
-            label = { Text(stringResource(R.string.addr_floor)) },
-            placeholder = { Text(stringResource(R.string.addr_floor_hint)) },
-            singleLine = true,
-            modifier = Modifier.weight(1f),
-        )
-    }
-
-    // ══════════════════════════════════════════════════════════════════
-    // **ونوعُ العنوان ثلاثُ بطاقاتٍ لا حقلُ نصّ**
-    // ══════════════════════════════════════════════════════════════════
-    //
-    // **وحقلٌ حرٌّ يجعل لكلّ زبونٍ تسميتَه** — «البيت» و«بيتي» و«المنزل»
-    // ثلاثةُ أسماءٍ لشيءٍ واحد، **ولا يُفرز ولا يُعرض بأيقونة.**
-    Spacer(Modifier.height(12.dp))
-    Text(stringResource(R.string.addr_kind), fontWeight = FontWeight.Medium)
-    Spacer(Modifier.height(6.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (k in listOf("home", "work", "other")) {
-            val on = kind == k
-            OutlinedButton(
-                onClick = { kind = k },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
-                ),
-            ) { Text(stringResource(addressKindLabel(k))) }
-        }
-    }
-
-    // **وتغييرُ الموضع بابٌ ظاهر** — انظر أعلى الدالّة.
+    // **وتغييرُ الموضع بابٌ ظاهرٌ في التعديل.**
     if (picker != null) {
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = { onMap = true }) {
@@ -700,24 +708,157 @@ internal fun AddressEditor(
 
     Spacer(Modifier.height(12.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
-            onClick = {
-                if (existing == null) {
-                    vm.addAddress(area, street, floor, kind, lat, lng)
-                } else {
-                    vm.updateAddress(existing.id, area, street, floor, kind, lat, lng)
-                }
-                onDone()
-            },
-            // **ولا يُحفظ عنوانٌ بلا نقطة** — نقطةٌ صفريّةٌ تُرسل سائقاً
-            // إلى لا مكان.
-            enabled = !s.busy && area.isNotBlank() && lat != null && lng != null,
-            modifier = Modifier.weight(1f),
-        ) { Text(stringResource(R.string.addr_save)) }
+        Button(onClick = save, enabled = canSave, modifier = Modifier.weight(1f)) {
+            Text(stringResource(R.string.addr_save))
+        }
         OutlinedButton(onClick = onDone, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.acc_delete_cancel))
         }
     }
+}
+
+/**
+ * **حقولُ العنوان — واحدةٌ للنافذة ولشاشة الحساب.**
+ *
+ * **ونسختان من نموذجٍ بأربعة حقولٍ تعنيان موضعين يُصلَح فيهما العيبُ
+ * ويُنسى ثانيهما.**
+ */
+@Composable
+private fun AddressFields(
+    area: String,
+    onArea: (String) -> Unit,
+    street: String,
+    onStreet: (String) -> Unit,
+    floor: String,
+    onFloor: (String) -> Unit,
+    kind: String,
+    onKind: (String) -> Unit,
+) {
+    Text(
+        stringResource(R.string.addr_confirm_title),
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.titleLarge,
+    )
+    Text(
+        stringResource(R.string.addr_confirm_hint),
+        color = Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.bodyMedium,
+    )
+
+    Spacer(Modifier.height(16.dp))
+    FieldLabel(R.string.addr_area, required = true)
+    OutlinedTextField(
+        value = area,
+        onValueChange = onArea,
+        placeholder = { Text(stringResource(R.string.addr_area_hint)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+
+    Spacer(Modifier.height(12.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.weight(2f)) {
+            FieldLabel(R.string.addr_street, required = true)
+            OutlinedTextField(
+                value = street,
+                onValueChange = onStreet,
+                placeholder = { Text(stringResource(R.string.addr_street_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        Column(Modifier.weight(1f)) {
+            FieldLabel(R.string.addr_floor, required = false)
+            OutlinedTextField(
+                value = floor,
+                onValueChange = { v -> onFloor(v.filter { c -> c.isDigit() }) },
+                placeholder = { Text(stringResource(R.string.addr_floor_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ونوعُ العنوان ثلاثُ بطاقاتٍ بأيقونات**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وحقلٌ حرٌّ يجعل لكلّ زبونٍ تسميتَه** — «البيت» و«بيتي» و«المنزل»
+    // ثلاثةُ أسماءٍ لشيءٍ واحد، **ولا يُفرز ولا يُعرض بأيقونة.**
+    Spacer(Modifier.height(16.dp))
+    Text(
+        stringResource(R.string.addr_kind),
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.bodyLarge,
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        KindCard("home", R.drawable.ic_home, kind == "home", Modifier.weight(1f)) { onKind("home") }
+        KindCard("work", R.drawable.ic_work, kind == "work", Modifier.weight(1f)) { onKind("work") }
+        KindCard("other", R.drawable.ic_star, kind == "other", Modifier.weight(1f)) { onKind("other") }
+    }
+}
+
+/** **اسمُ الحقل ونجمتُه** — والنجمةُ تقول ما لا يُترك. */
+@Composable
+private fun FieldLabel(text: Int, required: Boolean) {
+    Row {
+        Text(
+            stringResource(text),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        if (required) {
+            Text(
+                " " + stringResource(R.string.addr_required),
+                color = Rahal.colors.accent,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+    }
+    Spacer(Modifier.height(6.dp))
+}
+
+/**
+ * **بطاقةُ نوع** — أيقونةٌ فوق اسمها.
+ *
+ * **والمختارُ يُعرف بحدّه وأرضه ولونه** — **ولونٌ وحدَه لا يكفي**: من
+ * لا يفرّق الألوانَ لا يرى أيَّها اختير.
+ */
+@Composable
+private fun KindCard(
+    kind: String,
+    icon: Int,
+    on: Boolean,
+    modifier: Modifier = Modifier,
+    onPick: () -> Unit,
+) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (on) Rahal.colors.warnTint else Rahal.colors.canvas)
+            .border(
+                width = if (on) 2.dp else 1.dp,
+                color = if (on) Rahal.colors.accent else Rahal.colors.line,
+                shape = RoundedCornerShape(14.dp),
+            )
+            .clickable(onClick = onPick)
+            .padding(vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = if (on) Rahal.colors.accent else Rahal.colors.inkMuted,
+            modifier = Modifier.size(24.dp),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(addressKindLabel(kind)),
+            color = if (on) Rahal.colors.accent else Rahal.colors.inkMuted,
+            fontWeight = FontWeight.Medium,
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
