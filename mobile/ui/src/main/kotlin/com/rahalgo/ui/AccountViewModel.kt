@@ -34,6 +34,25 @@ import kotlinx.coroutines.launch
  * معلّقةً وصاحبُها يعمل في آخر. **فرسالةٌ واحدةٌ تُمحى مع كلّ فعلٍ
  * جديد** — يقرؤها حيث نظر.
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **موضعُ الرسالة — أيُّ قسمٍ أطلقها**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (شكوى المالك ٢٠٢٦-٠٨-١٨: «الرسالةُ ظهرت أعلى الصفحة، وبهذه الحالة
+ *  المستخدمُ لن يفهم ماذا حصل — الأفضلُ أن تكون تحت زرّ تبديل كلمة
+ *  المرور… دائماً رسالةُ النجاح أو الفشل تكون بمكان النجاح والفشل كي
+ *  يفهم المستخدمُ ولا يبحث عن مكان الرسالة».)
+ *
+ * **وكانت رسالةً واحدةً في أعلى الشاشة** — بحجّة ألّا تتناثر رسائلُ لا
+ * يُعرف أحدثُها. **والحجّةُ صحيحةٌ والدواءُ خطأ**: من ضغط زرّاً في أسفل
+ * شاشةٍ تمرّر لا يرى أعلاها، **فيظنّ أنّ الضغطةَ لم تقع.**
+ *
+ * **والدواءُ أن تُوسَم الرسالةُ بموضعها لا أن تُجمَع في مكانٍ واحد** —
+ * فتبقى واحدةً (لا تتناثر) وتُعرض حيث وقع الفعل.
+ */
+enum class AccountSpot { NONE, IDENTITY, PASSWORD, WHATSAPP, PHONE, ADDRESS, DANGER }
+
 data class AccountState(
     val me: MeSummary? = null,
     val addresses: List<Address> = emptyList(),
@@ -41,6 +60,8 @@ data class AccountState(
     val busy: Boolean = false,
     val error: String = "",
     val done: String = "",
+    /** **أين تُعرض الرسالة** — انظر `AccountSpot`. */
+    val spot: AccountSpot = AccountSpot.NONE,
     /** **مرحلةُ الحذف**: لم يُطلب · وصل الرمزُ وينتظر · تمّ. */
     val deleteAsked: Boolean = false,
     val deleted: Boolean = false,
@@ -88,9 +109,9 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **يجري فعلاً ثمّ يُنعش** — والرسالةُ تُمحى قبل أن يبدأ. */
-    private fun act(okMsg: Int, block: suspend () -> Unit) {
+    private fun act(okMsg: Int, spot: AccountSpot, block: suspend () -> Unit) {
         if (state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
+        state = state.copy(busy = true, error = "", done = "", spot = spot)
         viewModelScope.launch {
             state = try {
                 block()
@@ -122,7 +143,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun setName(name: String) {
         val clean = name.trim()
         if (clean.isEmpty()) return
-        act(R.string.acc_saved) { backend.account.setName(clean) }
+        act(R.string.acc_saved, AccountSpot.IDENTITY) { backend.account.setName(clean) }
     }
 
     /**
@@ -146,7 +167,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
      * شيئاً ولا يحمل زائدا.
      */
     fun setAvatar(uri: Uri) {
-        act(R.string.acc_saved) {
+        act(R.string.acc_saved, AccountSpot.IDENTITY) {
             // **والتصغيرُ في `ImagePick` لا هنا** — **صارت شاشةُ المندوب
             // ترفع صورَ الأصناف أيضاً، ونسخةٌ ثانيةٌ من الحسبة تعني
             // موضعين يُصلَح فيهما العيبُ ويُنسى ثانيهما.**
@@ -154,24 +175,26 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun removeAvatar() = act(R.string.acc_saved) { backend.account.removeAvatar() }
+    fun removeAvatar() = act(R.string.acc_saved, AccountSpot.IDENTITY) { backend.account.removeAvatar() }
 
     fun setPassword(current: String, next: String) =
-        act(R.string.acc_pw_changed) { backend.account.setPassword(current, next) }
+        act(R.string.acc_pw_changed, AccountSpot.PASSWORD) { backend.account.setPassword(current, next) }
 
     fun addAddress(label: String, text: String, lat: Double, lng: Double) =
-        act(R.string.acc_saved) {
+        act(R.string.acc_saved, AccountSpot.ADDRESS) {
             backend.account.addAddress(AddressInput(label.trim(), text.trim(), lat, lng))
         }
 
-    fun deleteAddress(id: String) = act(R.string.acc_saved) { backend.account.deleteAddress(id) }
+    fun deleteAddress(id: String) =
+        act(R.string.acc_saved, AccountSpot.ADDRESS) { backend.account.deleteAddress(id) }
 
-    fun makeDefault(id: String) = act(R.string.acc_saved) { backend.account.makeDefaultAddress(id) }
+    fun makeDefault(id: String) =
+        act(R.string.acc_saved, AccountSpot.ADDRESS) { backend.account.makeDefaultAddress(id) }
 
     /** **يطلب رمزَ الحذف** — ولا يحذف. */
     fun askDelete() {
         if (state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
+        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.DANGER)
         viewModelScope.launch {
             state = try {
                 backend.account.deleteRequest()
@@ -190,7 +213,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun confirmDelete(code: String) {
         if (state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
+        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.DANGER)
         viewModelScope.launch {
             state = try {
                 backend.account.deleteConfirm(code.trim())
@@ -212,7 +235,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun askPhone(phone: String) {
         val clean = phone.trim()
         if (clean.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
+        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.PHONE)
         viewModelScope.launch {
             state = try {
                 backend.account.phoneChangeRequest(clean)
@@ -233,7 +256,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun confirmPhone(code: String) {
         val phone = state.phonePending
         if (phone.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
+        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.PHONE)
         viewModelScope.launch {
             state = try {
                 backend.account.phoneChangeConfirm(phone, code.trim())
@@ -272,7 +295,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun askWhatsApp() {
         val phone = state.me?.phone.orEmpty()
         if (phone.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
+        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.WHATSAPP)
         viewModelScope.launch {
             state = try {
                 backend.account.whatsappRequest(phone)
@@ -286,7 +309,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun confirmWhatsApp(code: String) {
         val phone = state.waPending
         if (phone.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
+        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.WHATSAPP)
         viewModelScope.launch {
             state = try {
                 backend.account.whatsappConfirm(phone, code.trim())
@@ -330,7 +353,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun checkPush() {
         if (state.busy) return
-        state = state.copy(busy = true, error = "", done = "")
+        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.NONE)
         viewModelScope.launch {
             state = try {
                 val r = backend.devices.test()

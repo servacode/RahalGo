@@ -123,8 +123,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
                 backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
-                user = result.user
-                user?.let { Crash.who(it.id) }
+                onSignedIn(result.user)
                 state = state.copy(busy = false)
             } catch (e: ApiClient.ApiException) {
                 state = state.copy(busy = false, error = message(e))
@@ -211,10 +210,8 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
                 backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
-                user = result.user
-                user?.let { Crash.who(it.id) }
+                onSignedIn(result.user)
                 state = state.copy(busy = false)
-                AppCore.afterSignIn()
             } catch (e: ApiClient.ApiException) {
                 // **وسبب الخادم كما قاله** — لا رسالة عامّة تُسكته.
                 state = state.copy(busy = false, error = message(e))
@@ -304,8 +301,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     password,
                 )
                 backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
-                user = result.user
-                user?.let { Crash.who(it.id) }
+                onSignedIn(result.user)
                 reset = null
             } catch (e: ApiClient.ApiException) {
                 reset = current.copy(busy = false, error = message(e))
@@ -397,16 +393,51 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     current.referral,
                 )
                 backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
-                user = result.user
-                user?.let { Crash.who(it.id) }
+                onSignedIn(result.user)
                 signup = null
-                AppCore.afterSignIn()
             } catch (e: ApiClient.ApiException) {
                 signup = current.copy(busy = false, error = message(e))
             } catch (e: Exception) {
                 signup = current.copy(busy = false, error = describe(e))
             }
         }
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **ما يقع عند كلّ دخولٍ — في موضعٍ واحد**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (شكوى المالك ٢٠٢٦-٠٨-١٨: «يقول هذا يحتاج حساباً ادخل أوّلاً بالرغم
+     *  من أنّني مسجّلُ دخولٍ بالفعل — يجب أن يكون التطبيقُ ذكيّاً فيستطيع
+     *  التمييزَ بين الحساب والزائر».)
+     *
+     * # ما كان يقع
+     *
+     * **أربعةُ أبوابٍ للدخول** — كلمةُ مرور، ورمز، واستعادة، وتسجيل —
+     * **وكلٌّ يكتب ما يخصّه بيده.** فوقع ما يقع دائماً في نسخٍ أربع:
+     * `afterSignIn` تُنادى في اثنين وتُنسى في اثنين.
+     *
+     * # ولماذا كانت الشاشةُ تقول «ادخل أوّلا» لمن دخل
+     *
+     * **`ApiClient` يرفض النداءَ إن كان المخزنُ بلا توكن** — يمنع رحلةَ
+     * شبكةٍ تُردّ ٤٠١، **ويرمي `not_signed_in` من الجهاز لا من الخادم.**
+     *
+     * **ونموذجٌ حمّل وصاحبُه ضيفٌ يحتفظ بنصّ الخطأ في حاله** — والدخولُ
+     * لا يمحوه: **لا نبضةَ تُبَثّ ولا شاشةَ تُعيد جلبَها.** فتبقى الجملةُ
+     * معروضةً وصاحبُها داخلٌ فعلاً.
+     *
+     * **و`Refresh.bump()` موجودةٌ منذ ٢٠٢٦-٠٨-١٣** — تبثّها المحفظةُ
+     * والحسابُ وما بدّله صاحبُه، **ولا يبثّها الدخولُ نفسُه**، وهو
+     * أعظمُ ما يتبدّل: **كلُّ شاشةٍ في التطبيق تعني شيئاً آخرَ بعده.**
+     */
+    private fun onSignedIn(u: User?) {
+        user = u
+        u?.let { Crash.who(it.id) }
+        // **والنبضةُ قبل النداء الخاصّ** — فما يُسجَّل بعدها يجد شاشاتٍ
+        // أعادت جلبَها.
+        Refresh.bump()
+        AppCore.afterSignIn()
     }
 
     fun logout() {

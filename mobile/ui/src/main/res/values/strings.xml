@@ -10,7 +10,8 @@
      معجمين يُغلب أحدُهما صامتاً، **فيُصحَّح في واحدٍ ويبقى القديمُ
      معروضاً.** -->
 <resources>
-    <string name="acc_bad_code">الرمز غير صحيح أو انتهى</string>
+    <!-- **ويُسمّى بعينه** — كان يُعرض رمزُ الخطأ خاماً «invalid_otp». -->
+    <string name="acc_bad_code">رمز التوثيق غير صحيح</string>
     <string name="acc_phone_taken">الرقم مستعمَل في حساب آخر</string>
     <string name="acc_photo_bad">الملفّ ليس صورة</string>
     <string name="acc_photo_failed">تعذّر رفع الصورة — حاول بعد قليل</string>
@@ -221,7 +222,7 @@
     <string name="acc_saved">حُفظ</string>
     <string name="acc_wa_code">الرمز الذي وصلك على واتساب</string>
     <string name="acc_wa_confirm">تأكيد التوثيق</string>
-    <string name="acc_wa_done">وُثّق حسابك</string>
+    <string name="acc_wa_done">تمّ توثيق حسابك بنجاح</string>
     <string name="acc_wa_hint">يصلك رمز على واتساب على الرقم نفسه. والتوثيق شرط لفتح الدوام واستقبال الطلبات.</string>
     <string name="acc_wa_unverified">حسابك غير موثَّق — لا تفتح دوامك قبل التوثيق</string>
     <string name="acc_wa_verified">حسابك موثَّق على واتساب</string>

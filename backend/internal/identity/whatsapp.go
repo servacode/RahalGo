@@ -46,6 +46,32 @@ func (s *Service) ConfirmWhatsAppVerify(ctx context.Context, userID, rawPhone, c
 	return nil
 }
 
+// MarkWhatsAppFromSignup **يسم الحسابَ موثَّقَ واتساب لحظةَ التسجيل.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٨: «بما أنّ الزبون سجّل ووصله رمزٌ على الواتس
+//
+//	لإكمال عمليّة التسجيل، يُعتبر أنّه وثّق حسابَه».)
+//
+// **ولا رمزَ يُستهلك هنا** — الرمزُ استُهلك في `ConfirmSignup` قبل قليل،
+// **وهو الذي أثبت الملكيّة**: وصل واتساب على هذا الرقم فأدخله صاحبُه.
+//
+// **ولا تُنادى إلّا والمزوّدُ واتساب** — يفرضه المنادي، **وهي لا تعرف
+// بأيّ قناةٍ أُرسل الرمز.**
+func (s *Service) MarkWhatsAppFromSignup(ctx context.Context, userID, rawPhone, ip string) error {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return ErrInvalidPhone
+	}
+	if err := s.repo.SetWhatsApp(ctx, userID, phone); err != nil {
+		return err
+	}
+	// **ويُفرَّق في السجلّ عن التوثيق اليدويّ** — **ومن راجع حساباً
+	// بعد سنةٍ يحتاج أن يعرف أوثّقه صاحبُه بيده أم وُسم عند التسجيل.**
+	s.repo.Audit(ctx, &userID, "auth.whatsapp_verified_signup", "user", userID, ip,
+		map[string]any{"whatsapp": phone})
+	return nil
+}
+
 // SetWhatsApp يثبّت رقم واتساب موثَّقاً للحساب.
 func (r *Repo) SetWhatsApp(ctx context.Context, userID, phone string) error {
 	_, err := r.db.Exec(ctx, `

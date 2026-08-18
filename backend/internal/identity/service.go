@@ -37,6 +37,20 @@ var (
 	ErrOTPSendFailed      = httpx.NewError(http.StatusServiceUnavailable, "otp_send_failed", "errors.otp_send_failed")
 	ErrTooManyAttempts    = httpx.NewError(http.StatusTooManyRequests, "too_many_attempts", "errors.too_many_attempts")
 	ErrNameTooShort       = httpx.NewError(http.StatusBadRequest, "name_too_short", "errors.name_too_short")
+
+	// ErrWrongCurrentPassword **كلمةُ المرور الحاليّة خاطئة — لا غير.**
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-١٨: «وضعتُ كلمةَ سرٍّ غلط فظهرت رسالةٌ تقول
+	//  رقمُ الهاتف أو كلمةُ المرور غيرُ صحيحة، وهذا خطأ».)
+	//
+	// **كان يُردّ `invalid_credentials` — وهي رسالةُ شاشة الدخول**، تجمع
+	// الرقمَ والكلمةَ لأنّ الدخولَ يجمعهما ولا يُقال أيُّهما أخطأ.
+	//
+	// **وهنا لا رقمَ في النموذج أصلاً**: صاحبُ الحساب داخلٌ بجلسته،
+	// وحقلٌ واحدٌ أخطأ. **ورسالةٌ تذكر رقمَ هاتفٍ لا يُسأل عنه تُرسل
+	// صاحبَها يفحص رقمَه** — ويجدُه صحيحاً فلا يعرف ما العطب.
+	ErrWrongCurrentPassword = httpx.NewError(http.StatusUnauthorized,
+		"wrong_current_password", "errors.wrong_current_password")
 )
 
 const (
@@ -819,7 +833,8 @@ func (s *Service) SetPassword(ctx context.Context, userID, password, currentPass
 	if hash != "" {
 		ok, err := auth.VerifyPassword(currentPassword, hash)
 		if err != nil || !ok {
-			return ErrInvalidCredentials
+			// **والسببُ يُقال بعينه** — انظر `ErrWrongCurrentPassword`.
+			return ErrWrongCurrentPassword
 		}
 	}
 	newHash, err := auth.HashPassword(password)

@@ -131,7 +131,15 @@ private val CODES: Map<String, Int> = mapOf(
     "bad_fail_reason" to R.string.err_bad_fail_reason,
     // ── الحساب ────────────────────────────────────────────────────────
     "wrong_password" to R.string.acc_wrong_password,
+    // **وكلمةُ المرور الحاليّة بعينها** — كان المحرّكُ يردّ
+    // `invalid_credentials` فتُقرأ «رقمُ الهاتف أو كلمةُ المرور غير
+    // صحيحة»، **ولا رقمَ في نموذج التبديل أصلا.**
+    "wrong_current_password" to R.string.acc_wrong_password,
     "weak_password" to R.string.acc_weak_password,
+    // **ورمزُ المحرّك `invalid_otp` لا `otp_invalid`** — كان الاسمُ
+    // مقلوباً في الخريطة، **فيسقط إلى عرض الرمز الخام** ويقرأ صاحبُه
+    // إنجليزيّةً لا تعني له شيئاً. (شكوى المالك ٢٠٢٦-٠٨-١٨.)
+    "invalid_otp" to R.string.acc_bad_code,
     "otp_invalid" to R.string.acc_bad_code,
     "invalid_code" to R.string.acc_bad_code,
     "phone_taken" to R.string.acc_phone_taken,

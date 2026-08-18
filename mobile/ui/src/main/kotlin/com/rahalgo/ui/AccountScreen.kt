@@ -131,10 +131,24 @@ fun AccountScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        // **ورسالةٌ واحدةٌ في أعلى الشاشة** — لا رسالةٌ تحت كلّ قسم
-        // فتُقرأ رسائلُ متناثرةٌ لا يُعرف أيُّها الأحدث.
-        if (s.error.isNotEmpty()) Notice(s.error, Rahal.colors.danger)
-        if (s.done.isNotEmpty()) Notice(s.done, Rahal.colors.success)
+        // ══════════════════════════════════════════════════════════════
+        // **والرسالةُ عند موضع الفعل — لا في أعلى الشاشة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (شكوى المالك ٢٠٢٦-٠٨-١٨: «الرسالةُ ظهرت أعلى الصفحة… الأفضلُ
+        //  أن تكون تحت زرّ تبديل كلمة المرور… دائماً بمكان النجاح
+        //  والفشل كي يفهم المستخدمُ ولا يبحث عن مكان الرسالة».)
+        //
+        // **وكانت واحدةً هنا** بحجّة ألّا تتناثر رسائلُ لا يُعرف أحدثُها.
+        // **والحجّةُ صحيحةٌ والدواءُ خطأ**: من ضغط زرّاً في أسفل شاشةٍ
+        // تمرّر لا يرى أعلاها، **فيظنّ أنّ الضغطةَ لم تقع.**
+        //
+        // **فبقيت واحدةً وانتقلت** — تُوسَم بموضعها (`AccountSpot`)
+        // ويعرضها القسمُ الذي أطلقها.
+        //
+        // **ويبقى ما لا موضعَ له هنا** — خطأُ الجلب الأوّل مثلاً، وهو
+        // يخصّ الشاشةَ كلَّها لا قسماً فيها.
+        SpotNotice(s, AccountSpot.NONE)
 
         Identity(vm, s, worker)
         Gap()
@@ -162,6 +176,19 @@ fun AccountScreen(
         DangerSection(vm, s)
         Spacer(Modifier.height(32.dp))
     }
+}
+
+/**
+ * **رسالةُ قسمٍ واحد — إن كانت له.**
+ *
+ * **والمقارنةُ بالموضع لا بوجود النصّ** — **ورسالةٌ بلا موضعٍ تُعرض في
+ * كلّ قسمٍ مرّة**، فيقرأ صاحبُها خمسَ نسخٍ من خبرٍ واحد.
+ */
+@Composable
+private fun SpotNotice(s: AccountState, spot: AccountSpot) {
+    if (s.spot != spot) return
+    if (s.error.isNotEmpty()) Notice(s.error, Rahal.colors.danger)
+    if (s.done.isNotEmpty()) Notice(s.done, Rahal.colors.success)
 }
 
 // ــ الهويّة ــ
@@ -248,6 +275,8 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean) {
         label = R.string.acc_phone_current,
         readOnly = true,
     )
+    // **ورسالةُ الصورة والاسم عندهما** — فوق ما لا يخصّهما.
+    SpotNotice(s, AccountSpot.IDENTITY)
     Spacer(Modifier.height(8.dp))
     PhoneChange(vm, s)
     Spacer(Modifier.height(12.dp))
@@ -304,6 +333,7 @@ private fun WhatsAppVerify(
             enabled = !s.busy,
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.acc_wa_verify)) }
+        SpotNotice(s, AccountSpot.WHATSAPP)
         return
     }
 
@@ -329,6 +359,8 @@ private fun WhatsAppVerify(
             modifier = Modifier.weight(1f),
         ) { Text(stringResource(R.string.acc_delete_cancel)) }
     }
+    // **والرسالةُ تحت زرّ التوثيق** — نجاحاً كان أو فشلاً.
+    SpotNotice(s, AccountSpot.WHATSAPP)
 }
 
 /**
@@ -446,6 +478,9 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
         enabled = !s.busy && current.isNotEmpty() && next.isNotEmpty() && !mismatch,
         modifier = Modifier.fillMaxWidth(),
     ) { Text(stringResource(R.string.acc_pw_change)) }
+
+    // **والرسالةُ تحت الزرّ** — بأمر المالك ٢٠٢٦-٠٨-١٨.
+    SpotNotice(s, AccountSpot.PASSWORD)
 }
 
 
@@ -476,6 +511,8 @@ private fun AddressesSection(
     } else {
         AddAddress(vm, s, picker, onDone = { adding = false })
     }
+    // **ورسالةُ العناوين عندها** — حفظاً كان أو حذفاً.
+    SpotNotice(s, AccountSpot.ADDRESS)
 }
 
 @Composable
@@ -701,6 +738,8 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
             Text(stringResource(R.string.acc_delete_cancel))
         }
     }
+    // **ورسالةُ الحذف عنده** — وهو أخطرُ ما في الشاشة.
+    SpotNotice(s, AccountSpot.DANGER)
 }
 
 // ــ قطعٌ صغيرة ــ
