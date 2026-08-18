@@ -137,7 +137,9 @@ fun ShopScreen(
                 },
                 auto = vm.bannerAuto,
                 everyMs = vm.bannerEveryMs,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                // **ولا حشوةَ جانبيّةٌ هنا** — السلايدرُ يفسحها بنفسه
+                // ليُظهر حافّةَ التالية.
+                modifier = Modifier.padding(vertical = 10.dp),
             )
         }
 

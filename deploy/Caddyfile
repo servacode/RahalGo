@@ -43,6 +43,10 @@ rahalgo.com, www.rahalgo.com {
 	# **والنوعُ يجب أن يكون JSON** — أندرويد يرفضه نصّاً عاديّا.
 	handle /.well-known/assetlinks.json {
 		root * /srv/wellknown
+		# **والمسارُ يُعاد كتابتُه إلى اسم الملفّ** — `file_server` تبحث
+		# عن `/srv/wellknown/.well-known/assetlinks.json`، **فتردّ ٤٠٤**
+		# وقد قِيس ٢٠٢٦-٠٨-١٨.
+		rewrite * /assetlinks.json
 		header Content-Type application/json
 		file_server
 	}

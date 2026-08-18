@@ -4,10 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
@@ -61,10 +63,14 @@ data class BannerSlide(
  * (`/public/home`). **ورقمٌ مكتوبٌ هنا يجعل المالكَ يطلب تعديلَ
  * الشيفرةِ ليُبطئ لافتة.**
  *
- * # ونسبةُ ١٦:٥ كما في الويب
+ * # ونسبةُ ٢:١ — قِيست ولم تُخمَّن
  *
- * **ونسختان بنسبتين تجعلان اللافتةَ الواحدةَ تُقصّ في جهازٍ وتكتمل في
- * آخر** — والمالكُ يرفع صورةً واحدةً للاثنين.
+ * **كانت ١٦:٥ نقلاً عن الويب، ولافتاتُ المالك ١٦٠٠×٨٠٠ أي ٢:١** —
+ * قِيست على الخادم ٢٠٢٦-٠٨-١٨. **فكان الإطارُ الأعرضُ يقصّ نحو ثلث
+ * ارتفاع صورته** من فوق ومن تحت، **وهو لا يعرف لماذا خرجت ناقصة.**
+ *
+ * **ونسبةٌ تُنقَل عن الويب بلا قياسٍ تُقصّ ما رفعه** — والصوابُ أن
+ * تتبع الصورةَ لا الصفحةَ الأخرى.
  *
  * **والنسبةُ محجوزةٌ قبل وصول الصورة** — فلا تقفز الشاشةُ حين تصل.
  *
@@ -96,31 +102,60 @@ fun BannerSlider(
     }
 
     Column(modifier.fillMaxWidth()) {
-        HorizontalPager(
-            state = pager,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 5f)
-                .clip(Rahal.shape.md),
-        ) { page ->
-            val b = items[page]
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .then(
-                        if (b.target.isNotEmpty()) {
-                            Modifier.clickable { onOpen(b) }
-                        } else {
-                            Modifier
-                        },
-                    ),
-            ) {
-                RemoteImage(
-                    url = b.imageUrl,
-                    name = b.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
+        // ══════════════════════════════════════════════════════════════
+        // **والارتفاعُ يُحسب لا يُترك للإطار**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **الحافّةُ تأخذ من العرض** (`SIDE`) و`aspectRatio` على السلايدر
+        // كلِّه يقيس العرضَ الكامل — **فتخرج الصفحةُ أقصرَ ممّا أُريد.**
+        // فيُقاس عرضُ الصفحة أوّلاً ثمّ يُشتقّ الارتفاع.
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val pageWidth = maxWidth - SIDE * 2 - GAP
+            HorizontalPager(
+                state = pager,
+                // ══════════════════════════════════════════════════════
+                // **وحافّةُ التالية تُرى**
+                // ══════════════════════════════════════════════════════
+                //
+                // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لو جعلتَ السلايدر أكبرَ
+                //  قليلاً على التطبيق، لكن أفخم برأيي».)
+                //
+                // **ولافتةٌ تملأ العرضَ لا تقول إنّ خلفَها ثانية** —
+                // فتُقرأ صورةً تتبدّل بلا سبب. **وطرفُ التالية هو ما
+                // يقول «اسحب».**
+                contentPadding = PaddingValues(horizontal = SIDE),
+                pageSpacing = GAP,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // **٢:١ لا ١٦:٥** — وهي نسبةُ ما يرفعه المالكُ
+                    // فعلاً: قِيس ٢٠٢٦-٠٨-١٨ أنّ لافتاته ١٦٠٠×٨٠٠،
+                    // **والإطارُ الأعرضُ كان يقصّ ثلثَ ارتفاعها.**
+                    .height(pageWidth / 2f),
+            ) { page ->
+                val b = items[page]
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        // **وظلٌّ خفيفٌ يرفعها عن الورقة** — **ولافتةٌ
+                        // ملتصقةٌ بالأرض تُقرأ جزءاً منها لا بطاقةً
+                        // فوقها.**
+                        .shadow(6.dp, Rahal.shape.lg)
+                        .clip(Rahal.shape.lg)
+                        .then(
+                            if (b.target.isNotEmpty()) {
+                                Modifier.clickable { onOpen(b) }
+                            } else {
+                                Modifier
+                            },
+                        ),
+                ) {
+                    RemoteImage(
+                        url = b.imageUrl,
+                        name = b.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
 
@@ -156,3 +191,9 @@ fun BannerSlider(
         }
     }
 }
+
+/** **ما تُفسحه اللافتةُ يميناً ويساراً** — وفيه تُرى حافّةُ التالية. */
+private val SIDE = 22.dp
+
+/** **الفاصلُ بين لافتتين** — **وملتصقتان تُقرآن صورةً واحدةً مقطوعة.** */
+private val GAP = 10.dp
