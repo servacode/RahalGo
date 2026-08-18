@@ -611,12 +611,6 @@ var Catalog = []Def{
 		Min: 2, Max: 30, Default: 6, Unit: "seconds",
 		ShowWhen: &Condition{Key: "home.banner_auto", Equals: []string{"true"}}},
 
-	{Key: "shop.banner_auto", Group: GroupSite, Section: "page.shop", Kind: KindBool,
-		Default: true},
-	{Key: "shop.banner_seconds", Group: GroupSite, Section: "page.shop", Kind: KindInt,
-		Min: 2, Max: 30, Default: 5, Unit: "seconds",
-		ShowWhen: &Condition{Key: "shop.banner_auto", Equals: []string{"true"}}},
-
 	{Key: "shop.rail_auto", Group: GroupSite, Section: "page.shop", Kind: KindBool, Default: true},
 
 	// **المهلةُ بالثواني لا بالملّي** — الإعدادُ يُقرأ بعينٍ بشريّة، **و٤٥٠٠

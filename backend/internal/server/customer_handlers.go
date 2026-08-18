@@ -183,10 +183,20 @@ func (s *Server) handlePublicBanners(w http.ResponseWriter, r *http.Request) {
 //
 // **ولا متاجرَ فيها** — انظر الشرحَ عند الأقسام أدناه.
 func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
-	// **ولافتاتُ التسوّق وحدَها** — (تصحيحُ المالك ٢٠٢٦-٠٨-١٧: «بانرات
-	// صفحة التسوّق مختلفة عن الرئيسيّة»). **وهذه نقطةُ صفحة التسوّق**،
-	// ولافتةُ الرئيسيّة تُطلب من `/public/banners`.
-	banners, err := s.catalog.ListBanners(r.Context(), "shop")
+	// ══════════════════════════════════════════════════════════════════
+	// **وسلايدرٌ واحدٌ للمنصّة كلِّها**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-١٨: «أريد حذفَ سلايدر التسوّق وربطَ التطبيق
+	//  بسلايدر الرئيسيّة».)
+	//
+	// **فصلَهما ٢٠٢٦-٠٨-١٧ ثمّ قاسه بالعمل**: يرفع الصورةَ مرّتين
+	// ويحذفها مرّتين، **ولافتةٌ تُحدَّث في موضعٍ وتُنسى في آخرَ تُقرأ
+	// عرضاً منتهياً في نصف المنصّة.**
+	//
+	// **وهذه النقطةُ يقرؤها التطبيقُ وصفحتا التسوّق والعروض** — فصارت
+	// كلُّها ترى ما تراه الرئيسيّة.
+	banners, err := s.catalog.ListBanners(r.Context(), "home")
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -250,8 +260,10 @@ func (s *Server) handlePublicHome(w http.ResponseWriter, r *http.Request) {
 		// بالثانية لأنّ من يضبطه إنسان، **والمؤقّتُ يعمل بالملّي** — والتحويلُ
 		// في موضعٍ واحدٍ لا في كلّ من يقرؤه.
 		// **ومهلةُ السلايدر كمهلة الجولة** — تصل مع الصفحة لا بنداءٍ ثانٍ.
-		"banner_auto":     s.settings.GetBool(r.Context(), "shop.banner_auto"),
-		"banner_every_ms": s.settings.GetInt(r.Context(), "shop.banner_seconds") * 1000,
+		// **ومهلةُ الرئيسيّة هي المهلة** — سلايدرٌ واحدٌ ومفتاحٌ واحد:
+		// **مفتاحان لدورانٍ واحدٍ يفترقان فيدور في شاشةٍ ويسكن في مثلها.**
+		"banner_auto":     s.settings.GetBool(r.Context(), "home.banner_auto"),
+		"banner_every_ms": s.settings.GetInt(r.Context(), "home.banner_seconds") * 1000,
 		"rail_auto":       s.settings.GetBool(r.Context(), "shop.rail_auto"),
 		"rail_every_ms":   s.settings.GetInt(r.Context(), "shop.rail_seconds") * 1000,
 

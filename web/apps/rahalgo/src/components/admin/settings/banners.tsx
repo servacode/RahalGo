@@ -66,10 +66,10 @@ function errText(err: unknown): string {
  */
 export default function BannersPanel({
   isAdmin = true,
-  placement = "shop",
+  placement = "home",
 }: {
   isAdmin?: boolean;
-  placement?: "shop" | "home";
+  placement?: "home";
 }) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [error, setError] = useState("");
@@ -186,7 +186,7 @@ function BannerModal({
   onSaved,
 }: {
   banner: Banner | null;
-  placement: "shop" | "home";
+  placement: "home";
   onClose: () => void;
   onSaved: () => void;
 }) {

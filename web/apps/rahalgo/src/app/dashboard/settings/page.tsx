@@ -424,8 +424,14 @@ export default function SettingsPage() {
                         if (!shop && !home && rows.length === 0) return null;
                         return (
                           <div className="space-y-4">
-                            {shop && <BannersPanel isAdmin={isAdmin} placement="shop" />}
-                            {home && <BannersPanel isAdmin={isAdmin} placement="home" />}
+                            {/* **وبطاقةُ لافتات التسوّق حُذفت** — (قرارُ المالك
+                                ٢٠٢٦-٠٨-١٨: «أريد حذفَ سلايدر التسوّق وربطَ
+                                التطبيق بسلايدر الرئيسيّة»).
+
+                                **وبطاقةٌ تبقى لموضعٍ لا يقرؤه أحدٌ بابٌ يُفتح
+                                فتُرفع فيه صورةٌ لا تُرى** — وهي عائلةُ الخلل
+                                نفسُها التي نُظّفت في «أبوابٌ لا ينادِيها أحد». */}
+                            {(shop || home) && <BannersPanel isAdmin={isAdmin} placement="home" />}
                             <div className="space-y-3">
                             {rows.map((s) => (
                               <SettingRow

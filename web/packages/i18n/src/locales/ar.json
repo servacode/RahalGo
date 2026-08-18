@@ -1821,12 +1821,6 @@
         "home.banner_seconds": {
           "label": "مدة عرض لافتة الرئيسية"
         },
-        "shop.banner_auto": {
-          "label": "تبديل اللافتات تلقائيا"
-        },
-        "shop.banner_seconds": {
-          "label": "مدة عرض اللافتة"
-        },
         "page.help_text": {
           "label": "نص صفحة المساعدة"
         },
