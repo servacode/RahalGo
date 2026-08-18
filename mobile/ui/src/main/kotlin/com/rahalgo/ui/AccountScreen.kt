@@ -123,6 +123,23 @@ fun AccountScreen(
      * أمّه لا يستطيع** — يحفظ موضعَه هو.
      */
     picker: PointPicker? = null,
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **من يفتح محرّرَ العنوان — الشاشةُ أم التطبيق؟**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «الزرُّ الموجود بحسابي يجب أن يعمل بنفس
+     *  الطريقة التي عملنا بها — يفتح نفس الموقع بنفس الطريقة، والتعديل
+     *  أيضاً».)
+     *
+     * **وصفحةُ الخريطة تملأ الشاشةَ ولا تُرسم داخل عمودٍ يمرّر** —
+     * **وارتفاعٌ لا حدَّ له داخل تمريرٍ يُسقط الرسم.** فمن أراد صفحةً
+     * كاملةً يرفعها إلى مستوى التطبيق، **والشاشةُ تبلّغ ولا تفتح.**
+     *
+     * **وفارغٌ يعني افتحها في مكانك** — السائقُ والمندوبُ لا صفحةَ
+     * عنوانٍ لهما، **ولا يُغيَّر ما يعمل عندهما لطلبٍ يخصّ الزبون.**
+     */
+    onEditAddress: ((Address?) -> Unit)? = null,
 ) {
     val s = vm.state
 
@@ -149,7 +166,7 @@ fun AccountScreen(
         Gap()
         PasswordSection(vm, s)
         Gap()
-        AddressesSection(vm, s, picker)
+        AddressesSection(vm, s, picker, onEditAddress)
         // ══════════════════════════════════════════════════════════════
         // **ولا فحصَ إشعاراتٍ هنا**
         // ══════════════════════════════════════════════════════════════
@@ -486,6 +503,7 @@ private fun AddressesSection(
     vm: AccountViewModel,
     s: AccountState,
     picker: PointPicker?,
+    onEditAddress: ((Address?) -> Unit)?,
 ) {
     // **حالٌ واحدةٌ لا رايتان**: فارغٌ قائمة · «add» إضافة · معرّفٌ تعديل.
     // **ورايتان ترتفعان معاً حالٌ لا معنى لها.**
@@ -497,6 +515,8 @@ private fun AddressesSection(
         AddressEditor(vm, s, picker, null, onDone = { mode = "" })
         return
     }
+    // **ولا يقع هذا إن كان التطبيقُ يفتحها** — يُبلَّغ ويُترك له.
+
     if (mode.isNotEmpty()) {
         val a = s.addresses.firstOrNull { it.id == mode }
         if (a != null) {
@@ -509,11 +529,15 @@ private fun AddressesSection(
     if (s.addresses.isEmpty()) {
         Text(stringResource(R.string.acc_addr_empty), color = Rahal.colors.inkMuted)
     }
-    s.addresses.forEach { a -> AddressRow(a, vm, s) { mode = a.id } }
+    s.addresses.forEach { a ->
+        AddressRow(a, vm, s) {
+            if (onEditAddress != null) onEditAddress(a) else mode = a.id
+        }
+    }
 
     Spacer(Modifier.height(8.dp))
     OutlinedButton(
-        onClick = { mode = "add" },
+        onClick = { if (onEditAddress != null) onEditAddress(null) else mode = "add" },
         enabled = !s.busy,
         modifier = Modifier.fillMaxWidth(),
     ) { Text(stringResource(R.string.acc_addr_add)) }

@@ -304,7 +304,11 @@ private fun SignedIn(
     // وتفتح الخريطة** — ولو بقيت مفتوحةً خلفها لَعاد إليها بعد الحفظ
     // فوجد قائمةً لم تُنعش.
     var addressSheet by rememberSaveable { mutableStateOf(false) }
-    var addingAddress by rememberSaveable { mutableStateOf(false) }
+    // **ومعرّفُ ما يُحرَّر**: فارغٌ يعني «مغلق»، و«new» يعني جديداً،
+    // **وما عداهما معرّفُ عنوانٍ يُعدَّل.**
+    //
+    // **ورايتان (يُضاف · يُعدَّل) ترتفعان معاً حالٌ لا معنى لها.**
+    var addressEdit by rememberSaveable { mutableStateOf("") }
 
     // **والسلّةُ تُفتح فوق التبويب** — ويُرجع منها إليه.
     var cart by rememberSaveable { mutableStateOf(false) }
@@ -365,11 +369,12 @@ private fun SignedIn(
     // يُضغط تبويبٌ فتُترك نقطةٌ لم تُحفظ.
     //
     // **والرجوعُ يغلقها** — يفرضه `AddressEditor` بحارسٍ فيه.
-    if (addingAddress) {
+    if (addressEdit.isNotEmpty()) {
         AddAddressFlow(
             vm = accountVm,
             picker = mapPicker,
-            onDone = { addingAddress = false },
+            onDone = { addressEdit = "" },
+            existing = accountVm.state.addresses.firstOrNull { it.id == addressEdit },
         )
         return
     }
@@ -421,7 +426,7 @@ private fun SignedIn(
                 },
                 onAdd = {
                     addressSheet = false
-                    addingAddress = true
+                    addressEdit = "new"
                 },
                 onClose = { addressSheet = false },
             )
@@ -689,6 +694,10 @@ private fun SignedIn(
                         // عطبا.**
                         push = false,
                         picker = mapPicker,
+                        // **وزرُّ «حسابي» يفتح الصفحةَ نفسَها** — (طلبُ
+                        // المالك ٢٠٢٦-٠٨-١٨: «يفتح نفس الموقع بنفس
+                        // الطريقة، والتعديل أيضا»).
+                        onEditAddress = { a -> addressEdit = a?.id ?: "new" },
                     )
 
                     // **ولا حالَ رابعة** — التبويباتُ أربعةٌ كلُّها

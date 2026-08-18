@@ -252,11 +252,13 @@ fun AddAddressFlow(
     vm: AccountViewModel,
     picker: PointPicker,
     onDone: () -> Unit,
+    /** **عنوانٌ يُعدَّل** — أو فارغٌ لجديد. */
+    existing: Address? = null,
 ) {
     // **ولا حشوةَ ولا عمودٌ حولها** — **الخريطةُ تملأ ما يُعطى لها**،
     // وحشوةٌ بستّةَ عشرَ نقطةً تجعلها بطاقةً في صفحةٍ بيضاء.
     //
     // **والوصفُ بعدها يحتاج حشوةً وتمريرا** — فيتولّاهما `AddressEditor`
     // بنفسه حين يكون قائماً بذاته (`standalone`).
-    AddressEditor(vm, vm.state, picker, null, onDone, standalone = true)
+    AddressEditor(vm, vm.state, picker, existing, onDone, standalone = true)
 }
