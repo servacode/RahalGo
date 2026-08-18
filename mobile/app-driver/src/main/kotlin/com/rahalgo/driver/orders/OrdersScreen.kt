@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,6 +46,7 @@ import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.ui.RahalTextButton
+import com.rahalgo.ui.RahalLoader
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -74,7 +74,7 @@ import com.rahalgo.ui.RahalTextButton
 fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
     if (state.loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            RahalLoader()
         }
         return
     }

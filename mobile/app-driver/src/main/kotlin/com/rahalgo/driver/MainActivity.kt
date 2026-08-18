@@ -60,7 +60,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -113,6 +112,7 @@ import com.rahalgo.driver.trip.TripState
 import com.rahalgo.ui.ResetActions
 import com.rahalgo.ui.ResetScreen
 import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalLoader
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -143,6 +143,9 @@ class MainActivity : ComponentActivity() {
         // يُنشئ النظامُ محتواها.
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        // **ومراقبُ الشبكة يُسجَّل مرّةً** — انظر `Net`: **مراقبٌ لكلّ
+        // شاشةٍ يعني عشرةً يوقظهم النظامُ معاً.**
+        com.rahalgo.ui.Net.install(this)
         // **وتقاريرُ الانهيار تبدأ قبل أوّل شاشة** — والسقوطُ في الإقلاع
         // أكثرُ ما يقع، **ومن بدأ التقاريرَ بعده لا يراه.**
         Crash.start(debug = BuildConfig.DEBUG)
@@ -249,7 +252,7 @@ private fun Destination(theme: ThemeState) {
         // نصف دقيقة (قيس ٢٠٢٦-٠٨-١٢: أربعون ثانية)، **وشاشة بيضاء هذه
         // المدّة تُقرأ عطبا** فيُعاد فتح التطبيق مرّة بعد مرّة.
         vm.restoring -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            RahalLoader()
         }
 
         // **ومن دخل يُسلَّم للوحته** — ونموذجها مستقلّ عن نموذج الدخول:

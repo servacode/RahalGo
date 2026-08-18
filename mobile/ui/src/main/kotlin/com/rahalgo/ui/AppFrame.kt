@@ -2,7 +2,6 @@ package com.rahalgo.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -71,6 +70,21 @@ fun AppFrame(content: @Composable (theme: ThemeState, dark: Boolean) -> Unit) {
         // تُنسى في واحد.**
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
             content(theme, dark)
+
+            // ══════════════════════════════════════════════════════════
+            // **وشريطُ انقطاع الشبكة فوق كلّ شيء — ويُركَّب هنا مرّةً**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «شاشةُ عدم توفّر إنترنت… يجب أن
+            //  تكون مركزيّة».)
+            //
+            // **وشريطٌ لا شاشةٌ تحجب**: من انقطع عنه الإنترنتُ وهو يقرأ
+            // سلّتَه **لا يريد أن تُمحى الشاشةُ من أمامه** — ما جُلب
+            // لا يزال صالحاً للقراءة.
+            //
+            // **وتحت الرسالة الطافية**: تلك تنصرف بعد ثوانٍ وهذا يبقى،
+            // **فلو فوقه لَقفز الشريطُ حين تنصرف.**
+            NetBanner(Modifier.align(androidx.compose.ui.Alignment.TopCenter))
             FlashHost()
         }
     }
@@ -106,7 +120,7 @@ fun AuthGate(
 ) {
     when {
         vm.restoring -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            RahalLoader()
         }
 
         vm.signup != null -> SignupScreen(

@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -61,6 +60,7 @@ import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.money
+import com.rahalgo.ui.RahalLoader
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -158,7 +158,7 @@ fun ShopScreen(
         when {
             vm.busy && vm.items.isEmpty() ->
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    RahalLoader()
                 }
 
             vm.error.isNotEmpty() && vm.items.isEmpty() ->

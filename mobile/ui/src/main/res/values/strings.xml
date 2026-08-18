@@ -19,6 +19,9 @@
     <string name="acc_weak_password">كلمة المرور قصيرة — ثمانية أحرف على الأقل</string>
     <string name="acc_wrong_password">كلمة المرور الحالية غير صحيحة</string>
     <string name="act_retry">أعد المحاولة</string>
+    <string name="net_offline_banner">لا يوجد اتصال بالإنترنت</string>
+    <string name="net_offline_title">لا يوجد اتصال بالإنترنت</string>
+    <string name="net_offline_body">تحقق من الواي فاي أو بيانات الجوال، ثم أعد المحاولة</string>
     <string name="chat_today">اليوم</string>
     <string name="chat_yesterday">أمس</string>
     <string name="err_bad_fail_reason">اختر سببا من القائمة</string>

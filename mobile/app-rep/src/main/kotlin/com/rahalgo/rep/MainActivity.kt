@@ -109,6 +109,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // **ومراقبُ الشبكة يُسجَّل مرّةً** — انظر `Net`: **مراقبٌ لكلّ
+        // شاشةٍ يعني عشرةً يوقظهم النظامُ معاً.**
+        com.rahalgo.ui.Net.install(this)
         Crash.start(debug = BuildConfig.DEBUG)
         // **والنواةُ تُركَّب قبل أوّل شاشة** — `AuthViewModel` يصنعه
         // أندرويدُ لا نحن، **فيقرؤها من المُسجَّل.**

@@ -43,6 +43,7 @@ import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalTextButton
+import com.rahalgo.ui.RahalLoader
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -75,7 +76,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
     if (state.me == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (state.error.isEmpty()) {
-                CircularProgressIndicator()
+                RahalLoader()
             } else {
                 // **وأوّل نداء قد يسقط والشاشة فارغة** — فلا يبقى صاحبها
                 // أمام بياض بلا سبب ولا زرّ.

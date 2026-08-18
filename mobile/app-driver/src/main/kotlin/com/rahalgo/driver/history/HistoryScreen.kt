@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -48,6 +47,7 @@ import com.rahalgo.shared.model.ReportReason
 import com.rahalgo.shared.net.ApiClient
 import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.RahalTextButton
+import com.rahalgo.ui.RahalLoader
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -239,7 +239,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
             Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-        ) { CircularProgressIndicator() }
+        ) { RahalLoader() }
         return
     }
 
