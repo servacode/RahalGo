@@ -1,0 +1,115 @@
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **محرّرُ الأصناف: الويبُ والتطبيقُ يقولان الكلامَ نفسَه**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لا يجوز أن يشعر الشخصُ بالفرق بين الويب
+ *  والتطبيق أصلاً — أيَّهما يفتح يكون العملُ موحّدا».)
+ *
+ * # لماذا حارسٌ لا مراجعة
+ *
+ * **الفرقُ لا يقع دفعةً — يقع كلمةً كلمة.** الويبُ كان يقول «متوفر»
+ * والتطبيقُ «متاح»، والويبُ «الوصف» والتطبيقُ «وصف مختصر». **ولا أحدَ
+ * يقرأ المعجمين جنباً إلى جنبٍ في مراجعةٍ عادية**، فيمرّ.
+ *
+ * **ومن عدّل كلمةً في الويب اليومَ لن يفتح `strings.xml` غدا** — إلّا
+ * أن يُسقطه حارس.
+ *
+ * # وما يُقارَن
+ *
+ * **قيمُ `shared.menuEditor` في الويب مقابل نظائرها `mn_*` في تطبيق
+ * المندوب** — بالخريطة أدناه. **ونصٌّ يختلف حرفاً يُسقط الفحص.**
+ *
+ * **وما ليس له نظيرٌ لا يُقارَن**: «خارجَ الدوام» و«حفظ» و«إلغاء»
+ * أزرارُ شاشةٍ لا يحتاجها الويب.
+ */
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repo = join(here, "..", "..");
+
+const dict = JSON.parse(
+  readFileSync(join(here, "..", "packages/i18n/src/locales/ar.json"), "utf8"),
+);
+const web = dict.shared.menuEditor;
+const terms = dict.terms;
+const rep = dict.rep;
+
+const xml = readFileSync(
+  join(repo, "mobile/app-rep/src/main/res/values/strings.xml"),
+  "utf8",
+);
+
+/** **يقرأ قيمةَ مفتاحٍ من ملفّ النصوص** — بلا مكتبةِ XML. */
+function androidString(name) {
+  const re = new RegExp(`<string name="${name}">([\\s\\S]*?)</string>`);
+  const m = xml.match(re);
+  return m ? m[1] : null;
+}
+
+/** **نظيرُ كلّ مفتاح** — يسارُه الويب ويمينُه التطبيق. */
+const PAIRS = [
+  [web.empty, "mn_empty"],
+  [web.addItem, "mn_add_item"],
+  [web.editItem, "mn_edit_item"],
+  [web.noItems, "mn_no_items"],
+  [web.itemName, "mn_item_name"],
+  [web.itemDescription, "mn_desc"],
+  [web.itemImage, "mn_item_image"],
+  [web.price, "mn_price"],
+  [web.salePrice, "mn_sale_price"],
+  [web.available, "mn_available"],
+  [web.unavailable, "mn_unavailable"],
+  [web.markAvailable, "mn_mark_available"],
+  [web.markUnavailable, "mn_mark_unavailable"],
+  [web.confirmDeleteItem, "mn_confirm_delete"],
+  [web.platformSection, "mn_platform_section"],
+  [web.noPlatformSection, "mn_no_platform_section"],
+  [web.noPlatformSectionHint, "mn_no_platform_section_hint"],
+  [web.pendingReview, "mn_pending_review"],
+  [web.rejected, "mn_rejected"],
+  // **وعنوانُ الشاشة والبابُ إليها** — الويبُ يسمّيهما `terms.menu`.
+  [terms.menu, "mn_title"],
+  [terms.menu, "cd_menu"],
+  [rep.menuHint, "mn_hint"],
+];
+
+const problems = [];
+for (const [want, key] of PAIRS) {
+  const got = androidString(key);
+  if (got === null) {
+    problems.push(`«${key}» غيرُ موجودٍ في نصوص التطبيق — والويبُ يقول «${want}»`);
+  } else if (got !== want) {
+    problems.push(`«${key}»: التطبيقُ «${got}» والويبُ «${want}»`);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **ولا كلمةَ «قسم جديد» في أيّهما**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٨: «الأقسامُ الإدارةُ هي التي تضعها، والمتجرُ
+//  أو المندوبُ يختار منتجَه بأيّ قسمٍ سينزل — ما يصير كلُّ متجرٍ يعمل
+//  قسماً خاصّاً فيه».)
+//
+// **ونصٌّ يأمر بما لا زرَّ له أسوأُ من زرٍّ ناقص**: يقف صاحبُه يبحث عمّا
+// لا وجودَ له.
+for (const [key, val] of Object.entries(web)) {
+  if (typeof val === "string" && /أضف قسم|قسم جديد|اسم القسم|حذف القسم/.test(val)) {
+    problems.push(`«shared.menuEditor.${key}» يذكر إنشاءَ قسم: «${val}»`);
+  }
+}
+if (/أضف قسم|قسم جديد|اسم القسم/.test(xml)) {
+  problems.push("نصوصُ التطبيق تذكر إنشاءَ قسم — والأقسامُ تزرعها الإدارةُ وحدَها");
+}
+
+if (problems.length > 0) {
+  console.error("محرّرُ الأصناف يختلف بين الويب والتطبيق:");
+  for (const p of problems) console.error("  · " + p);
+  process.exit(1);
+}
+console.log(
+  `محرّرُ الأصناف موحَّد — ${PAIRS.length} كلمةً تُطابق بين الويب والتطبيق.`,
+);

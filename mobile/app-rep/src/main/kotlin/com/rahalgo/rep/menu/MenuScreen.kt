@@ -11,15 +11,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,27 +51,33 @@ import com.rahalgo.ui.rememberImagePicker
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **أصنافُ العميل — يبنيها المندوبُ نيابةً عنه**
+ * **الأصناف — يبنيها المندوبُ نيابةً عن عميله**
  * ══════════════════════════════════════════════════════════════════════
  *
  * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «نفس الفورم الموجود عند مدير المنصّة
  *  والموجود عند المتجر موجودٌ عند المندوب… باللوحة والتطبيق أيضا».)
  *
- * # والرقمان يُعرضان
+ * # وهي نسخةُ `MenuManager` في الويب — لا شاشةٌ تشبهها
  *
- * **بخلاف صاحب المتجر**: يضع سعرَه ويقبض عليه، **وما تبيع به المنصّةُ
- * ليس شأنَه.** **والمندوبُ يبني نيابةً فيحتاج الاثنين** — يقول لصاحب
- * المتجر «تقبض هذا» وللزبون «يُباع بهذا».
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لا يجوز أن يشعر الشخصُ بالفرق بين الويب
+ *  والتطبيق أصلاً — أيَّهما يفتح يكون العملُ موحّدا».)
+ *
+ * **فالكلماتُ من `shared.menuEditor` حرفا**، **وترتيبُ الحقول ترتيبَه**
+ * (الاسم · السعر · قسم المنصة · الوصف · الصورة)، **والإتاحةُ زرٌّ في
+ * السطر لا مفتاحاً في النموذج** — كما هي هناك.
+ *
+ * **ومن غيّر أحدَهما وحدَه أعاد الفرق.**
+ *
+ * # وقسمُ المنصة ليس شرطاً — إنّما يُحذَّر منه
+ *
+ * **الويبُ يحفظ بلا قسمٍ ويكتب تحذيراً**، **ومنعُ الحفظ يوقف المندوبَ
+ * في السوق أمام صاحب متجرٍ ينتظر** — والصنفُ يبقى قابلاً للطلب من صفحة
+ * متجره، ويراه الأدمنُ بلا قسمٍ فيصنّفه.
  *
  * # ولا زرَّ لإنشاء قسم
  *
- * **القسمُ هو قسمُ السوق تزرعه الإدارة** — يظهر لأنّ فيه صنفاً. **فلا
- * يُنشأ من هنا**، ويُختار داخل نموذج الصنف.
- *
- * # و«غيرُ متاح» تُقلب من القائمة
- *
- * **«نفد الصنف» تقع عشرَ مرّاتٍ في اليوم** — **ومن فتح لها نموذجاً
- * بثمانية حقولٍ لم يقلبها**، فيبقى الصنفُ يُطلب وهو ناقص.
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٨: «الأقسامُ الإدارةُ هي التي تضعها، والمتجرُ
+ *  أو المندوبُ يختار منتجَه بأيّ قسمٍ سينزل».)
  */
 @Composable
 fun MenuScreen(vm: MenuViewModel) {
@@ -85,7 +95,7 @@ fun MenuScreen(vm: MenuViewModel) {
     }
 
     Screen {
-        ScreenTitle(stringResource(R.string.mn_title), vm.merchantName)
+        ScreenTitle(stringResource(R.string.mn_title), stringResource(R.string.mn_hint))
 
         if (vm.error.isNotEmpty()) {
             Note(vm.error, Rahal.colors.danger)
@@ -119,10 +129,17 @@ fun MenuScreen(vm: MenuViewModel) {
 @Composable
 private fun SectionBlock(sec: MenuSection, vm: MenuViewModel) {
     SectionTitle(sec.name + "  (" + sec.items.size + ")")
-    // **والإضافةُ من داخل القسم تملأ اختيارَه سلفا** — **ومن أضاف من
-    // هنا لا يُسأل عن قسمٍ يقف فيه.**
+    // **وزرُّ القسم اسمُه اسمُ الزرّ الأعلى** — كما في الويب: `addItem`
+    // في الترويسة وفي كلّ قسم.
     TextButton(onClick = { vm.newItem(sec.id) }) {
-        Text(stringResource(R.string.mn_add_here))
+        Text(stringResource(R.string.mn_add_item))
+    }
+    if (sec.items.isEmpty()) {
+        Text(
+            text = stringResource(R.string.mn_no_items),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
     sec.items.forEach { ItemRow(it, vm) }
     Spacer(Modifier.height(10.dp))
@@ -131,10 +148,14 @@ private fun SectionBlock(sec: MenuSection, vm: MenuViewModel) {
 }
 
 /**
- * **سطرُ صنف — بصورته والرقمين وحاله.**
+ * **سطرُ صنف — بصورته وسعره وحاله.**
  *
- * **و«غيرُ متاح» تُقال بلونٍ لا بغياب**: صنفٌ يختفي حين يُطفأ يُضاف
- * ثانيةً وثالثة، **فتمتلئ القائمةُ نسخاً من الشيء الواحد.**
+ * **و«نافد» تُقال بلونٍ لا بغياب**: صنفٌ يختفي حين يُطفأ يُضاف ثانيةً
+ * وثالثة، **فتمتلئ القائمةُ نسخاً من الشيء الواحد.**
+ *
+ * **والسعرُ الثاني لا يُعرض إلّا إن كان أعلى** — كما في الويب حرفا:
+ * **ومساواةُ الرقمين تعني «لا هامش»، وعرضُهما متساويين يسأل صاحبَه عن
+ * فرقٍ لا وجودَ له.**
  */
 @Composable
 private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
@@ -157,39 +178,62 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                // **والرقمان في سطر** — ما يقبضه المتجرُ وما يُباع به.
-                Text(
-                    text = stringResource(
-                        R.string.mn_two_prices,
-                        money(item.merchantPrice),
-                        money(item.price),
-                    ),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = money(if (item.merchantPrice > 0) item.merchantPrice else item.price),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    if (item.merchantPrice > 0 && item.price > item.merchantPrice) {
+                        Spacer(Modifier.size(6.dp))
+                        Text(
+                            text = "← " + money(item.price),
+                            color = Rahal.colors.success,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
             }
-            // **وقلبُ «متاح» بضغطةٍ واحدة** — انظر أعلى الملفّ.
-            Switch(
-                checked = item.available,
-                onCheckedChange = { vm.toggleAvailable(item) },
-                enabled = !vm.busy,
-            )
         }
         Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Chip(
-                stringResource(
-                    if (item.available) R.string.mn_available else R.string.mn_unavailable,
-                ),
-                if (item.available) Rahal.colors.success else Rahal.colors.inkMuted,
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            // **والمعلَّقُ يحلّ محلّ حال التوفّر** — كما في الويب:
+            // **صنفٌ لم يُنشر بعدُ لا يعني الزبونَ أمتوفّرٌ هو أم نافد.**
+            if (!item.approved) {
+                Chip(
+                    stringResource(
+                        if (item.reviewNote.isNotEmpty()) R.string.mn_rejected
+                        else R.string.mn_pending_review,
+                    ),
+                    Rahal.colors.accent,
+                )
+            } else {
+                Chip(
+                    stringResource(
+                        if (item.available) R.string.mn_available else R.string.mn_unavailable,
+                    ),
+                    if (item.available) Rahal.colors.success else Rahal.colors.inkMuted,
+                )
+            }
             // **و«خارجَ الدوام» يقوله الوقتُ لا صاحبُ المتجر** — ومن
             // خلط بينهما جعله يطفئ أصنافَه كلَّ ليلةٍ ويشعلها كلَّ صباح.
             if (item.sourceClosed) {
                 Chip(stringResource(R.string.mn_closed_now), Rahal.colors.accent)
             }
-            if (!item.approved) {
-                Chip(stringResource(R.string.mn_pending), Rahal.colors.accent)
+            Spacer(Modifier.weight(1f))
+            // **والإتاحةُ زرٌّ لا مفتاح** — كما في الويب: **زرٌّ يقول ما
+            // سيقع، ومفتاحٌ يقول ما هو قائم**، والخلطُ بينهما يجعل من
+            // يقرأ «متوفر» على مفتاحٍ مرفوعٍ يظنّ أنّه يُطفئه بالرفع.
+            OutlinedButton(onClick = { vm.toggleAvailable(item) }, enabled = !vm.busy) {
+                Text(
+                    stringResource(
+                        if (item.available) R.string.mn_mark_unavailable
+                        else R.string.mn_mark_available,
+                    ),
+                )
             }
         }
         if (!item.approved && item.reviewNote.isNotEmpty()) {
@@ -204,24 +248,23 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
 }
 
 /**
- * **نموذجُ الصنف — نفسُ حقول الإدارة والمتجر.**
+ * **نموذجُ الصنف — بترتيب حقول الويب نفسِه.**
  *
- * **والسعرُ المُدخَل سعرُ المتجر** — ما يقبضه، **وسعرُ البيع تحسبه
- * المنصّةُ بهامشها فلا يُكتب هنا.**
+ * الاسم · السعر · قسم المنصة · الوصف · الصورة.
  *
- * **وقسمُ السوق شرطٌ لا اختيار**: **صنفٌ بلا قسمٍ لا يراه زبونٌ
- * يتصفّح** — والمحرّكُ يردّه، **فيُعطَّل الحفظُ حتّى يُختار** لا أن
- * يُضغط فيُردّ.
+ * **ولا حقلَ إتاحةٍ فيه** — الويبُ يقلبها من السطر لا من النموذج،
+ * **وحقلٌ في موضعين يفترق أحدُهما عن الآخر.**
  */
 @Composable
 private fun ItemForm(vm: MenuViewModel) {
     val d = vm.editing ?: return
     val context = LocalContext.current
     val pick = rememberImagePicker { bytes -> vm.pickImage(bytes) }
+    var confirmDelete by remember { mutableStateOf(false) }
 
     Screen {
         ScreenTitle(
-            stringResource(if (d.isNew) R.string.mn_new_item else R.string.mn_edit_item),
+            stringResource(if (d.isNew) R.string.mn_add_item else R.string.mn_edit_item),
             vm.merchantName,
         )
 
@@ -250,7 +293,40 @@ private fun ItemForm(vm: MenuViewModel) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(8.dp))
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وقسمُ المنصة** — يُختار ولا يُنشأ
+        // ══════════════════════════════════════════════════════════════
+        Spacer(Modifier.height(12.dp))
+        SectionTitle(stringResource(R.string.mn_platform_section))
+        Card {
+            // **و«بلا قسم» خيارٌ صريحٌ لا فراغ** — كما في الويب:
+            // **ومن لم يجد ما يختاره لا يعرف أنّ له أن يترك.**
+            SectionChoice(
+                label = stringResource(R.string.mn_no_platform_section),
+                chosen = d.platformSectionID.isEmpty(),
+                onPick = { vm.editDraft { it.copy(platformSectionID = "") } },
+            )
+            vm.platformSections.forEach { ps ->
+                SectionChoice(
+                    label = ps.name,
+                    chosen = d.platformSectionID == ps.id,
+                    onPick = { vm.editDraft { it.copy(platformSectionID = ps.id) } },
+                )
+            }
+            if (d.platformSectionID.isEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.mn_no_platform_section_hint),
+                    color = Rahal.colors.accent,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Card {
             OutlinedTextField(
                 value = d.description,
                 onValueChange = { v -> vm.editDraft { it.copy(description = v) } },
@@ -260,7 +336,7 @@ private fun ItemForm(vm: MenuViewModel) {
         }
 
         // ══════════════════════════════════════════════════════════════
-        // **وصورةٌ من الكاميرا أو المعرض**
+        // **والصورة**
         // ══════════════════════════════════════════════════════════════
         //
         // **والمندوبُ واقفٌ عند الصنف** — **فصورةٌ تُلتقط الآن خيرٌ من
@@ -276,7 +352,7 @@ private fun ItemForm(vm: MenuViewModel) {
                 Spacer(Modifier.size(10.dp))
                 Column {
                     OutlinedButton(onClick = pick, enabled = !vm.busy) {
-                        Text(stringResource(R.string.mn_pick_image))
+                        Text(stringResource(R.string.mn_item_image))
                     }
                     // **والإزالةُ صريحةٌ** — الفراغُ يعني «أزِلها»،
                     // **والغيابُ يعني «لا تمسّها»**، وخلطُهما يمحو صورةً
@@ -293,81 +369,66 @@ private fun ItemForm(vm: MenuViewModel) {
             }
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // **وقسمُ السوق** — **وبلاه لا يراه زبونٌ يتصفّح**
-        // ══════════════════════════════════════════════════════════════
-        Spacer(Modifier.height(12.dp))
-        SectionTitle(stringResource(R.string.mn_market_section))
-        Card {
-            if (vm.platformSections.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.mn_no_market_sections),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            vm.platformSections.forEach { ps ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { vm.editDraft { it.copy(platformSectionID = ps.id) } },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(ps.name, style = MaterialTheme.typography.bodyMedium)
-                    if (d.platformSectionID == ps.id) {
-                        Chip(stringResource(R.string.mn_chosen), Rahal.colors.brand)
-                    }
-                }
-                Spacer(Modifier.height(4.dp))
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **ومتاحٌ أو غيرُ متاح**
-        // ══════════════════════════════════════════════════════════════
-        Spacer(Modifier.height(12.dp))
-        Card {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.mn_available_label),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        stringResource(R.string.mn_available_hint),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                Switch(
-                    checked = d.available,
-                    onCheckedChange = { v -> vm.editDraft { it.copy(available = v) } },
-                )
-            }
-        }
-
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = { vm.saveItem() },
-                // **والقسمُ شرطٌ** — انظر أعلى الدالّة.
-                enabled = !vm.busy && d.name.isNotBlank() &&
-                    d.price.isNotBlank() && d.platformSectionID.isNotEmpty(),
+                enabled = !vm.busy && d.name.isNotBlank() && d.price.isNotBlank(),
             ) { Text(stringResource(R.string.mn_save)) }
             TextButton(onClick = { vm.cancelEdit() }) {
                 Text(stringResource(R.string.mn_cancel))
             }
             if (!d.isNew) {
-                TextButton(onClick = { vm.deleteItem(d.itemID); vm.cancelEdit() }) {
+                TextButton(onClick = { confirmDelete = true }) {
                     Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
                 }
             }
         }
         Spacer(Modifier.height(24.dp))
     }
+
+    // **والحذفُ يُستأذَن فيه** — كما في الويب: **ضغطةٌ واحدةٌ تمحو صنفاً
+    // بُني بصورته وسعره، ولا رجعةَ فيها.**
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(stringResource(R.string.mn_confirm_delete)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    vm.deleteItem(d.itemID)
+                    vm.cancelEdit()
+                }) {
+                    Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) {
+                    Text(stringResource(R.string.mn_cancel))
+                }
+            },
+        )
+    }
+}
+
+/**
+ * **خيارُ قسمٍ واحد.**
+ *
+ * **والمختارُ يُعرف بلونه وثقله لا بكلمةٍ بجانبه** — **ولفظٌ يُخترع هنا
+ * («مختار») ليس في معجم الويب فيعود الفرقُ من حيث أُغلق.**
+ */
+@Composable
+private fun SectionChoice(label: String, chosen: Boolean, onPick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onPick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal,
+            color = if (chosen) Rahal.colors.brand else Rahal.colors.ink,
+        )
+    }
+    Spacer(Modifier.height(6.dp))
 }

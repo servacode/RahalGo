@@ -85,7 +85,6 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         val price: String = "",
         val description: String = "",
         val platformSectionID: String = "",
-        val available: Boolean = true,
         /** **صورةٌ رُفعت للتوّ** — معرّفُها، **وفارغٌ يعني «أزِلها»**،
          *  **و`null` يعني «لا تمسّها»**. */
         val imageMediaID: String? = null,
@@ -144,7 +143,6 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             price = if (item.merchantPrice > 0) item.merchantPrice.toString() else "",
             description = item.description,
             platformSectionID = item.platformSectionID.orEmpty(),
-            available = item.available,
             imageThumb = item.imageThumbURL,
         )
     }
@@ -211,7 +209,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             // **والفراغُ الصريحُ يرفع التصنيف** — يقرؤه المحرّك «ارفع»
             // لا «بلا تغيير»، كما ترسله لوحةُ الويب حرفا.
             platformSectionID = d.platformSectionID,
-            available = d.available,
+            // **ولا تُرسَل الإتاحةُ من النموذج** — الويبُ يقلبها من
+            // السطر وحدَه. **وحقلٌ يُكتب من موضعين يمحو أحدُهما ما فعله
+            // الآخر**: من أوقف صنفاً ثمّ عدّل اسمَه أعاده متوفّرا.
             imageMediaID = d.imageMediaID,
         )
         write {
