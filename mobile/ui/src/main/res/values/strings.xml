@@ -12,46 +12,46 @@
 <resources>
     <!-- **ويُسمّى بعينه** — كان يُعرض رمزُ الخطأ خاماً «invalid_otp». -->
     <string name="acc_bad_code">رمز التوثيق غير صحيح</string>
-    <string name="acc_phone_taken">الرقم مستعمَل في حساب آخر</string>
-    <string name="acc_photo_bad">الملفّ ليس صورة</string>
-    <string name="acc_photo_failed">تعذّر رفع الصورة — حاول بعد قليل</string>
+    <string name="acc_phone_taken">الرقم مستعمل في حساب آخر</string>
+    <string name="acc_photo_bad">الملف ليس صورة</string>
+    <string name="acc_photo_failed">تعذر رفع الصورة — حاول بعد قليل</string>
     <string name="acc_photo_too_large">الصورة كبيرة — اختر صورة أصغر</string>
-    <string name="acc_weak_password">كلمة المرور قصيرة — ثمانية أحرف على الأقلّ</string>
+    <string name="acc_weak_password">كلمة المرور قصيرة — ثمانية أحرف على الأقل</string>
     <string name="acc_wrong_password">كلمة المرور الحالية غير صحيحة</string>
     <string name="act_retry">أعد المحاولة</string>
     <string name="chat_today">اليوم</string>
     <string name="chat_yesterday">أمس</string>
-    <string name="err_bad_fail_reason">اختر سبباً من القائمة</string>
-    <string name="err_cash_limit">النقد الذي بذمّتك بلغ السقف — سلّم للمكتب</string>
-    <string name="err_complaint_window">مضت مهلةُ البلاغ على هذا الطلب</string>
-    <string name="err_has_active_orders">لا يمكن إنهاء الوردية ومعك طلبات لم تُسلَّم</string>
-    <string name="err_internal">تعذّر الاتّصال — حاول بعد قليل</string>
+    <string name="err_bad_fail_reason">اختر سببا من القائمة</string>
+    <string name="err_cash_limit">النقد الذي بذمتك بلغ السقف — سلم للمكتب</string>
+    <string name="err_complaint_window">مضت مهلة البلاغ على هذا الطلب</string>
+    <string name="err_has_active_orders">لا يمكن إنهاء الوردية ومعك طلبات لم تسلم</string>
+    <string name="err_internal">تعذر الاتصال — حاول بعد قليل</string>
     <string name="err_invalid_phone">رقم الهاتف غير صحيح</string>
     <string name="err_invalid_refresh">انتهت جلستك — ادخل من جديد</string>
-    <string name="err_network">لا اتّصال بالإنترنت</string>
-    <string name="err_no_merchant">لا متجرَ في هذا الطلب — الخاصُّ تشتريه بنفسك</string>
+    <string name="err_network">لا اتصال بالإنترنت</string>
+    <string name="err_no_merchant">لا متجر في هذا الطلب — الخاص تشتريه بنفسك</string>
     <!-- **و«ممنوع» عامّةٌ لأنّ المعجم مشترك** — يقرؤه السائق والزبون
          والمندوب. ورسالةٌ تقول «لستَ سائقاً» لمن يرفع صورةَ صنفٍ تُرسله
          يبحث في حسابه عن عطبٍ ليس فيه. -->
-    <string name="err_forbidden">لا تملك صلاحيّة هذا الإجراء</string>
+    <string name="err_forbidden">لا تملك صلاحية هذا الإجراء</string>
     <string name="err_not_driver">هذا الحساب ليس حساب سائق</string>
-    <string name="err_not_on_shift">ورديّتك مغلقة — افتحها أوّلاً</string>
+    <string name="err_not_on_shift">ورديتك مغلقة — افتحها أولا</string>
     <string name="err_not_your_order">هذا الطلب ليس لك</string>
     <string name="err_offer_not_yours">هذا العرض لم يعد لك</string>
-    <string name="err_order_not_closed">الطلب لم يُغلق بعد — البلاغ بعد انتهائه</string>
+    <string name="err_order_not_closed">الطلب لم يغلق بعد — البلاغ بعد انتهائه</string>
     <string name="err_order_taken">سبقك غيرك إلى هذا الطلب</string>
-    <string name="err_otp_send_failed">تعذّر إرسال الرمز — جرّب بعد قليل</string>
-    <string name="err_proof_required">يلزم صورة تسليم — وهي لم تُبنَ بعد</string>
+    <string name="err_otp_send_failed">تعذر إرسال الرمز — جرب بعد قليل</string>
+    <string name="err_proof_required">يلزم صورة تسليم — وهي لم تبن بعد</string>
     <string name="err_rate_limited">محاولات كثيرة — انتظر قليلا</string>
-    <string name="err_too_many_active">معك طلبات بعدد حدّك</string>
+    <string name="err_too_many_active">معك طلبات بعدد حدك</string>
     <string name="err_unauthorized">رقم الهاتف أو كلمة المرور غير صحيحة</string>
-    <string name="err_unexpected">تعذّر إتمام الطلب</string>
+    <string name="err_unexpected">تعذر إتمام الطلب</string>
     <string name="err_user_blocked">هذا الحساب محظور</string>
     <string name="err_user_suspended">هذا الحساب موقوف</string>
-    <string name="err_validation">تحقّق من البيانات المُدخلة</string>
-    <string name="err_whatsapp_required">وثّق رقمك على واتساب قبل فتح الدوام</string>
-    <string name="hist_already_open">لك بلاغٌ مفتوحٌ على هذا الطلب — تتابعه العمليات</string>
-    <string name="hist_already_rated">قيّمتَ هذا المتجر عن هذا الطلب</string>
+    <string name="err_validation">تحقق من البيانات المدخلة</string>
+    <string name="err_whatsapp_required">وثق رقمك على واتساب قبل فتح الدوام</string>
+    <string name="hist_already_open">لك بلاغ مفتوح على هذا الطلب — تتابعه العمليات</string>
+    <string name="hist_already_rated">قيمت هذا المتجر عن هذا الطلب</string>
     <string name="inbox_empty">لا إشعارات بعد</string>
     <string name="inbox_mark_all">تعليم الكل كمقروء</string>
     <string name="inbox_title">الإشعارات</string>
@@ -64,13 +64,13 @@
     <string name="offer_left">بقي %1$s</string>
     <string name="reset_code">الرمز</string>
     <string name="wal_not_enough">رصيدك لا يكفي</string>
-    <string name="wal_pending_exists">لديك طلب سحب لم يُقرَّر بعد</string>
+    <string name="wal_pending_exists">لديك طلب سحب لم يقرر بعد</string>
     <string name="login_change_number">تعديل الرقم</string>
     <string name="login_forgot">نسيت كلمة المرور؟</string>
     <string name="login_submit">دخول</string>
-    <string name="login_tab_otp">رمز تحقّق</string>
+    <string name="login_tab_otp">رمز تحقق</string>
     <string name="login_tab_password">كلمة المرور</string>
-    <string name="login_verify_and_enter">تحقّق وادخل</string>
+    <string name="login_verify_and_enter">تحقق وادخل</string>
     <string name="reset_back">رجوع للدخول</string>
     <string name="reset_confirm">حفظ ودخول</string>
     <string name="reset_hint_code">اكتب الرمز الذي وصلك</string>
@@ -79,48 +79,48 @@
     <string name="reset_new_password">كلمة المرور الجديدة</string>
     <string name="reset_send">أرسل الرمز</string>
     <string name="reset_title">استعادة كلمة المرور</string>
-    <string name="reset_verify">تحقّق</string>
+    <string name="reset_verify">تحقق</string>
     <!-- **إنشاء حساب — للزبون وحدَه** -->
-    <string name="signup_title">حسابٌ جديد</string>
-    <string name="signup_open">ليس لديك حساب؟ أنشئ واحداً</string>
-    <string name="signup_hint_phone">اكتب رقمك — يصلك رمزُ تحقّق</string>
-    <string name="signup_hint_code">اكتب الرمزَ الذي وصلك</string>
-    <string name="signup_hint_details">اسمُك وكلمةُ مرورك — وبها تدخل بعد اليوم</string>
-    <string name="signup_name">الاسمُ الكامل</string>
-    <string name="signup_password">كلمةُ المرور</string>
+    <string name="signup_title">حساب جديد</string>
+    <string name="signup_open">ليس لديك حساب؟ أنشئ واحدا</string>
+    <string name="signup_hint_phone">اكتب رقمك — يصلك رمز تحقق</string>
+    <string name="signup_hint_code">اكتب الرمز الذي وصلك</string>
+    <string name="signup_hint_details">اسمك وكلمة مرورك — وبها تدخل بعد اليوم</string>
+    <string name="signup_name">الاسم الكامل</string>
+    <string name="signup_password">كلمة المرور</string>
     <string name="signup_create">أنشئ الحساب</string>
     <!-- **ونصُّه نصُّ الويب حرفاً بحرف** (`i18n/ar.json`) — **ونصّان
          لمعنًى واحدٍ يفترقان يومَ يُصحَّح أحدُهما.** -->
-    <string name="err_no_whatsapp">هذا الرقم غير مسجَّل في واتساب — استعمل رقماً عليه واتساب</string>
+    <string name="err_no_whatsapp">هذا الرقم غير مسجل في واتساب — استعمل رقما عليه واتساب</string>
     <string name="contact_address">عنوان المكتب</string>
     <string name="contact_facebook">فيسبوك</string>
     <string name="contact_follow">تابعنا</string>
-    <string name="contact_hint">نحن هنا للإجابة — اتّصل بنا أو زرنا في المكتب</string>
+    <string name="contact_hint">نحن هنا للإجابة — اتصل بنا أو زرنا في المكتب</string>
     <string name="contact_instagram">إنستغرام</string>
-    <string name="contact_none">لم تُضبط وسائلُ التواصل بعد</string>
+    <string name="contact_none">لم تضبط وسائل التواصل بعد</string>
     <string name="contact_phone">هاتف الدعم</string>
     <string name="contact_telegram">تلغرام</string>
     <string name="contact_whatsapp">واتساب</string>
-    <string name="page_about_hint">من يقف خلف هذه المنصّة</string>
-    <string name="page_empty">لم يُكتب نصُّ هذه الصفحة بعد</string>
-    <string name="page_help_hint">دورةُ عملك خطوةً خطوة</string>
+    <string name="page_about_hint">من يقف خلف هذه المنصة</string>
+    <string name="page_empty">لم يكتب نص هذه الصفحة بعد</string>
+    <string name="page_help_hint">دورة عملك خطوة خطوة</string>
     <string name="page_privacy_hint">ما نجمعه عنك، ولماذا، ومن يراه</string>
     <string name="page_terms_hint">ما نلتزم به تجاهك، وما نطلبه منك</string>
-    <string name="menu_mine">ما يخصّني</string>
-    <string name="menu_platform">المنصّة</string>
-    <string name="menu_legal">القانونيّة</string>
+    <string name="menu_mine">ما يخصني</string>
+    <string name="menu_platform">المنصة</string>
+    <string name="menu_legal">القانونية</string>
     <string name="menu_help">التعليمات</string>
     <string name="menu_about">من نحن</string>
     <string name="menu_contact">تواصل معنا</string>
     <string name="menu_terms">شروط الاستخدام</string>
-    <string name="menu_privacy">سياسة الخصوصيّة</string>
+    <string name="menu_privacy">سياسة الخصوصية</string>
     <string name="login_logout">خروج</string>
     <string name="menu_open">القائمة</string>
     <string name="top_notifications">الإشعارات</string>
     <!-- **عنوانُ التوصيل في الشريط** — (طلبُ المالك ٢٠٢٦-٠٨-١٨:
          «ضيف لي الزرَّ بالأعلى، البناءُ سيعتمد كلُّه على هذا»). -->
     <string name="top_deliver_to">التوصيل إلى</string>
-    <string name="top_pick_address">اختر عنواناً</string>
+    <string name="top_pick_address">اختر عنوانا</string>
     <!-- **نافذةُ «أين تريد التوصيل؟»** — (صورةُ المالك ٢٠٢٦-٠٨-١٨).
          **وسؤالٌ يُجاب، وعنوانٌ يصف ما تحته يُقرأ ولا يُجاب.** -->
     <string name="addr_sheet_title">أين تريد التوصيل؟</string>
@@ -137,9 +137,9 @@
     <string name="nav_profile">حسابي</string>
     <!-- **بنودُ «ما يخصّني» عند الزبون** — والسائقُ له غيرُها،
          **وأسماءُ ما يشترك فيه اثنان تُكتب مرّةً.** -->
-    <string name="menu_favorites">المفضّلة</string>
+    <string name="menu_favorites">المفضلة</string>
     <string name="menu_offers">العروض</string>
-    <string name="menu_invite">ادعُ صديقاً</string>
+    <string name="menu_invite">ادع صديقا</string>
     <string name="menu_tickets">الشكاوى والبلاغات</string>
     <string name="menu_history">سجل الطلبات</string>
     <string name="menu_chats">دردشاتي السابقة</string>
@@ -151,61 +151,61 @@
     <string name="sheet_col_note">البيان</string>
     <string name="sheet_col_running">الرصيد</string>
     <string name="sheet_empty">لا حركات في هذه المدة.</string>
-    <string name="sheet_footer">كشف صادر آلياً عن منصة %1$s. المبالغ بالليرة السورية. الرصيد الافتتاحي والختامي محسوبان من الحركات المعروضة.</string>
+    <string name="sheet_footer">كشف صادر آليا عن منصة %1$s. المبالغ بالليرة السورية. الرصيد الافتتاحي والختامي محسوبان من الحركات المعروضة.</string>
     <string name="sheet_net">الصافي:</string>
     <string name="sheet_opening">الرصيد الافتتاحي</string>
     <string name="sheet_period">عن المدة:</string>
     <string name="sheet_printed_at">تاريخ الطباعة</string>
     <string name="sheet_support">لأي شكوى أو استفسار عن هذا الكشف اتصل بنا:</string>
-    <string name="sheet_thanks">شكراً لثقتك بـ%1$s — نسعد بخدمتك في كل مرّة</string>
+    <string name="sheet_thanks">شكرا لثقتك ب%1$s — نسعد بخدمتك في كل مرة</string>
     <string name="sheet_total_in">إجمالي الوارد:</string>
     <string name="sheet_total_out">إجمالي الصادر:</string>
-    <string name="sheet_truncated">بلغ الكشف حدّه الأقصى من الأسطر، فبعض حركات هذه المدة غير معروضة. اختر مدة أقصر ليكتمل.</string>
-    <string name="wal_all">الكلّ</string>
+    <string name="sheet_truncated">بلغ الكشف حده الأقصى من الأسطر، فبعض حركات هذه المدة غير معروضة. اختر مدة أقصر ليكتمل.</string>
+    <string name="wal_all">الكل</string>
     <string name="wal_amount">المبلغ</string>
-    <string name="wal_ask_payout">اطلب سحباً</string>
+    <string name="wal_ask_payout">اطلب سحبا</string>
     <string name="wal_bad_amount">مبلغ غير صحيح</string>
     <string name="wal_balance">الرصيد</string>
-    <string name="wal_closing">رصيد آخر المدّة</string>
+    <string name="wal_closing">رصيد آخر المدة</string>
     <string name="wal_doc_title">كشف حساب المحفظة</string>
     <string name="wal_k_adjustment">تسوية من الإدارة</string>
     <string name="wal_k_commission">عمولة</string>
     <string name="wal_k_compensation">تعويض</string>
     <string name="wal_k_driver_earning">أجرة توصيل</string>
-    <string name="wal_k_payout">تمّ سحب الرصيد</string>
+    <string name="wal_k_payout">تم سحب الرصيد</string>
     <string name="wal_k_penalty">خصم</string>
     <string name="wal_k_refund">استرجاع</string>
     <string name="wal_k_reward">مكافأة</string>
     <string name="wal_k_settlement">تسليم نقد</string>
-    <string name="wal_max">الحدّ الأعلى: %1$s</string>
+    <string name="wal_max">الحد الأعلى: %1$s</string>
     <string name="wal_no_txs">لا حركات بعد</string>
-    <string name="wal_note">ملاحظة (اختياريّة)</string>
-    <string name="wal_opening">رصيد أوّل المدّة</string>
+    <string name="wal_note">ملاحظة (اختيارية)</string>
+    <string name="wal_opening">رصيد أول المدة</string>
     <string name="wal_payouts">طلبات السحب</string>
     <string name="wal_prev_month">الماضي</string>
     <string name="wal_print">طباعة</string>
-    <string name="wal_print_failed">تعذّرت الطباعة على هذا الجهاز</string>
-    <string name="wal_requested">أُرسل طلبك — تقرّره المالية</string>
+    <string name="wal_print_failed">تعذرت الطباعة على هذا الجهاز</string>
+    <string name="wal_requested">أرسل طلبك — تقرره المالية</string>
     <string name="wal_send">أرسل الطلب</string>
     <string name="wal_st_approved">مقبول</string>
-    <string name="wal_st_paid">صُرف</string>
+    <string name="wal_st_paid">تم الصرف</string>
     <string name="wal_st_pending">بانتظار القرار</string>
     <string name="wal_st_rejected">مرفوض</string>
     <string name="wal_statement">كشف حساب</string>
     <string name="wal_this_month">هذا الشهر</string>
-    <string name="wal_truncated">الكشف مقصوص عند حدّ العرض — افتح مدى أضيق لترى الباقي</string>
+    <string name="wal_truncated">الكشف مقصوص عند حد العرض — افتح مدى أضيق لترى الباقي</string>
     <string name="wal_txs">الحركات</string>
     <string name="acc_addr_add">إضافة عنوان</string>
-    <string name="acc_addr_default">الافتراضيّ</string>
+    <string name="acc_addr_default">الافتراضي</string>
     <string name="acc_addr_delete">حذف</string>
     <string name="acc_addr_empty">لا عناوين محفوظة</string>
     <string name="acc_addr_label">التسمية (البيت · العمل)</string>
-    <string name="acc_addr_make_default">اجعله الافتراضيّ</string>
+    <string name="acc_addr_make_default">اجعله الافتراضي</string>
     <string name="acc_addr_need_point">لم تحدد الموقع بعد — افتح الخريطة واضغط موقعي الحالي</string>
     <string name="acc_addr_pinned">تم تحديد الموقع</string>
     <string name="acc_addr_point">الموقع على الخريطة</string>
     <string name="acc_addr_repin">تغيير الموقع</string>
-    <string name="acc_addr_text">العنوان التفصيليّ</string>
+    <string name="acc_addr_text">العنوان التفصيلي</string>
     <!-- ══════════════════════════════════════════════════════════
          **ورقةُ العنوان — أجزاءٌ لا سطر**
          ══════════════════════════════════════════════════════════
@@ -217,7 +217,7 @@
     <string name="addr_confirm_title">تأكيد العنوان</string>
     <string name="addr_confirm_hint">يرجى التأكد من دقة موقعك على الخريطة</string>
     <string name="addr_area">المنطقة والمبنى</string>
-    <string name="addr_area_hint">مثلاً: المزة، بناء 14</string>
+    <string name="addr_area_hint">مثلا: المزة، بناء 14</string>
     <string name="addr_street">الشارع</string>
     <string name="addr_street_hint">اسم الشارع</string>
     <string name="addr_floor">الطابق</string>
@@ -236,7 +236,7 @@
     <string name="acc_danger">حذف الحساب</string>
     <string name="acc_delete_ask">أرسل رمز الحذف</string>
     <string name="acc_delete_code">رمز التأكيد</string>
-    <string name="acc_delete_confirm">احذف حسابي نهائيّاً</string>
+    <string name="acc_delete_confirm">احذف حسابي نهائيا</string>
     <!-- ══════════════════════════════════════════════════════════
          **موانعُ حذف الحساب — تُقال بلفظ الويب حرفا**
          ══════════════════════════════════════════════════════════
@@ -253,17 +253,17 @@
          **ونصُّها نصُّ الويب حرفاً** — **ونصّان لمعنًى واحدٍ يفترقان
          يومَ يُصحَّح أحدُهما.** -->
     <string name="err_wallet_not_empty">رصيد محفظتك غير صفري — اسحبه أو أنفقه قبل حذف الحساب</string>
-    <string name="err_cash_not_settled">بحوزتك نقد للمنصة — سلّمه للمالية قبل حذف الحساب</string>
-    <string name="err_owns_merchants">تملك متجراً فعّالاً — تواصل مع الإدارة لنقل ملكيته أو إيقافه أولاً</string>
-    <string name="err_open_orders">لديك طلب جارٍ — انتظر انتهاءه قبل حذف الحساب</string>
-    <string name="err_admin_cannot_delete">حساب مدير المنصة لا يُحذف ذاتياً</string>
-    <string name="acc_delete_hint">يُحذف حسابك ولا يمكن استرجاعه. يصلك رمز تأكيد على رقمك.</string>
+    <string name="err_cash_not_settled">بحوزتك نقد للمنصة — سلمه للمالية قبل حذف الحساب</string>
+    <string name="err_owns_merchants">تملك متجرا فعالا — تواصل مع الإدارة لنقل ملكيته أو إيقافه أولا</string>
+    <string name="err_open_orders">لديك طلب جار — انتظر انتهاءه قبل حذف الحساب</string>
+    <string name="err_admin_cannot_delete">حساب مدير المنصة لا يحذف ذاتيا</string>
+    <string name="acc_delete_hint">يحذف حسابك ولا يمكن استرجاعه. يصلك رمز تأكيد على رقمك.</string>
     <string name="acc_name">الاسم الكامل</string>
     <string name="acc_password">كلمة المرور</string>
     <string name="acc_phone_change">تغيير الرقم</string>
     <string name="acc_phone_code">الرمز الذي وصلك</string>
-    <string name="acc_phone_confirm">أكّد الرقم الجديد</string>
-    <string name="acc_phone_current">الرقم المسجَّل في حسابك</string>
+    <string name="acc_phone_confirm">أكد الرقم الجديد</string>
+    <string name="acc_phone_current">الرقم المسجل في حسابك</string>
     <string name="acc_phone_new">الرقم الجديد</string>
     <string name="acc_phone_saved">تم تغيير رقمك بنجاح</string>
     <string name="acc_phone_send">أرسل رمز التأكيد</string>
@@ -301,54 +301,54 @@
     <string name="acc_default_address">تم تحديد عنوان التوصيل</string>
     <string name="acc_wa_code">الرمز الذي وصلك على واتساب</string>
     <string name="acc_wa_confirm">تأكيد التوثيق</string>
-    <string name="acc_wa_done">تمّ توثيق حسابك بنجاح</string>
+    <string name="acc_wa_done">تم توثيق حسابك بنجاح</string>
     <string name="acc_wa_hint">يصلك رمز على واتساب على الرقم نفسه. والتوثيق شرط لفتح الدوام واستقبال الطلبات.</string>
-    <string name="acc_wa_unverified">حسابك غير موثَّق — لا تفتح دوامك قبل التوثيق</string>
-    <string name="acc_wa_verified">حسابك موثَّق على واتساب</string>
-    <string name="acc_wa_verify">وثّق حسابك</string>
-    <string name="err_photo_unreadable">تعذّرت قراءة الصورة</string>
+    <string name="acc_wa_unverified">حسابك غير موثق — لا تفتح دوامك قبل التوثيق</string>
+    <string name="acc_wa_verified">حسابك موثق على واتساب</string>
+    <string name="acc_wa_verify">وثق حسابك</string>
+    <string name="err_photo_unreadable">تعذرت قراءة الصورة</string>
     <string name="push_check">افحص الإشعارات</string>
     <string name="push_check_failed">رفضت غوغل الرسالة: %1$s</string>
-    <string name="push_check_hint">يُرسل إشعارَ تجربةٍ إلى هذا الجهاز</string>
-    <string name="push_check_none">لا جهازَ مسجَّل — أغلق التطبيق وافتحه ثمّ أعد الفحص</string>
-    <string name="push_check_off">الدفعُ غيرُ مهيّأ في الخادم — لا إشعارَ يصل أيَّ جهاز</string>
-    <string name="push_check_ok">وصلت — أُرسلت إلى %1$d من %2$d جهاز</string>
-    <string name="push_check_stale">جهازُك مسجَّلٌ منذ زمنٍ بعيد — أغلق التطبيق وافتحه</string>
+    <string name="push_check_hint">يرسل إشعار تجربة إلى هذا الجهاز</string>
+    <string name="push_check_none">لا جهاز مسجل — أغلق التطبيق وافتحه ثم أعد الفحص</string>
+    <string name="push_check_off">الدفع غير مهيأ في الخادم — لا إشعار يصل أي جهاز</string>
+    <string name="push_check_ok">وصلت — أرسلت إلى %1$d من %2$d جهاز</string>
+    <string name="push_check_stale">جهازك مسجل منذ زمن بعيد — أغلق التطبيق وافتحه</string>
     <!-- **وتوثيقُ واتساب سببُه غيرُ سببه** — السائقُ لا يفتح
          دوامَه بلاه، **والزبونُ يُستعاد به حسابُه ويُبلَّغ عن طلبه.** -->
     <string name="acc_wa_hint_user">يصلك رمز على واتساب على الرقم نفسه. وبه تستعيد حسابك وتصلك أخبار طلباتك.</string>
-    <string name="acc_wa_unverified_user">حسابك غير موثَّق — وثّقه ليُحفظ لك</string>
+    <string name="acc_wa_unverified_user">حسابك غير موثق — وثقه ليحفظ لك</string>
     <string name="tik_open">مفتوحة</string>
     <string name="tik_progress">قيد المعالجة</string>
     <string name="tik_resolved">محلولة</string>
-    <string name="err_not_signed_in">هذا يحتاج حساباً — ادخل أوّلاً</string>
-    <string name="chats_hint">أحاديثُ الطلبات المنتهية — تُقرأ ولا يُكتب فيها</string>
+    <string name="err_not_signed_in">هذا يحتاج حسابا — ادخل أولا</string>
+    <string name="chats_hint">أحاديث الطلبات المنتهية — تقرأ ولا يكتب فيها</string>
     <string name="chats_none">لا دردشات منتهية</string>
     <string name="chats_empty_thread">لا رسائل في هذا الحديث</string>
     <!-- **ولفظُ الزرّ هو لفظُ `PointField`** — شاشتان تسألان السؤالَ
          نفسَه فتقولانه بكلمةٍ واحدة. (طلبُ المالك ٢٠٢٦-٠٨-١٨.) -->
     <string name="acc_addr_on_map">حدد الموقع على الخريطة</string>
     <string name="menu_rewards">أهدافي والمكافآت</string>
-    <string name="inc_done">طلباتٌ سُلّمت هذا الشهر</string>
+    <string name="inc_done">طلبات سلمت هذا الشهر</string>
     <string name="inc_empty">لا مكافآت ولا عقوبات بعد</string>
     <string name="inc_entries">الحركات</string>
-    <string name="inc_hint">ما أنجزتَه هذا الشهر، وما نلتَه عليه</string>
+    <string name="inc_hint">ما أنجزته هذا الشهر، وما نلته عليه</string>
     <string name="inc_left">يبقى %1$s</string>
-    <string name="inc_penalized">ما خُصم منك هذا الشهر</string>
+    <string name="inc_penalized">ما تم خصمه منك هذا الشهر</string>
     <string name="inc_penalty">عقوبة</string>
-    <string name="inc_reached">بلغتَ الهدف</string>
+    <string name="inc_reached">بلغت الهدف</string>
     <string name="inc_reward">مكافأة</string>
-    <string name="inc_reward_got">نلتَ مكافأة الهدف: %1$s</string>
-    <string name="inc_reward_promise">مكافأةُ بلوغ الهدف: %1$s</string>
-    <string name="inc_rewarded">ما نلتَه هذا الشهر</string>
-    <string name="inc_target">هدفُ الشهر</string>
+    <string name="inc_reward_got">نلت مكافأة الهدف: %1$s</string>
+    <string name="inc_reward_promise">مكافأة بلوغ الهدف: %1$s</string>
+    <string name="inc_rewarded">ما نلته هذا الشهر</string>
+    <string name="inc_target">هدف الشهر</string>
 
     <!--
       **موضعُ التوصيل** — (قرارُ المالك ٢٠٢٦-٠٨-١٥: «لازم يفتح خريطةً واضحة»).
     -->
     <string name="point_label">موقع التوصيل</string>
-    <string name="point_none">لم تُحدَّد بعد</string>
-    <string name="point_pick">حدّد الموقع على الخريطة</string>
+    <string name="point_none">لم تحدد بعد</string>
+    <string name="point_pick">حدد الموقع على الخريطة</string>
     <string name="point_change">تغيير الموقع</string>
     <!-- ══════════════════════════════════════════════════════════
          **رموزُ المحرّك الباقية — بنصّ الويب حرفا**
@@ -371,40 +371,40 @@
     <string name="err_pin_invalid">الرمز غير صحيح</string>
     <string name="err_pin_locked">نفدت المحاولات — أعد المحاولة بعد عشر دقائق</string>
     <string name="err_pin_format">الرمز أربعة أرقام لا غير</string>
-    <string name="err_pin_challenge">انتهت مهلة الإدخال — سجّل الدخول من جديد</string>
+    <string name="err_pin_challenge">انتهت مهلة الإدخال — سجل الدخول من جديد</string>
     <string name="err_pin_not_set">لا يوجد رمز مضبوط لهذا الحساب</string>
-    <string name="err_whatsapp_unverified">لا يوجد رقم واتساب موثَّق لهذا الحساب</string>
-    <string name="err_role_conflict">لهذا الحساب دورٌ أساسيٌّ بالفعل — الدورُ الواحد ومعه الزبون، ولا ثالث.</string>
-    <string name="err_merchant_needs_store">دورُ المتجر يُمنح مع إنشاء متجره — حوِّل طلبَ اشتراكٍ بدل منحه بيد.</string>
+    <string name="err_whatsapp_unverified">لا يوجد رقم واتساب موثق لهذا الحساب</string>
+    <string name="err_role_conflict">لهذا الحساب دور أساسي بالفعل — الدور الواحد ومعه الزبون، ولا ثالث.</string>
+    <string name="err_merchant_needs_store">دور المتجر يمنح مع إنشاء متجره — حول طلب اشتراك بدل منحه بيد.</string>
     <string name="err_name_too_short">الاسم قصير — حرفان على الأقل</string>
     <string name="err_invalid_invite_code">كود الدعوة غير صحيح أو ليس لمندوب</string>
-    <string name="err_not_custom_order">هذا ليس طلباً خاصاً.</string>
-    <string name="err_custom_not_assigned">لم يُسنَد سائق بعد.</string>
-    <string name="err_custom_not_agreed">لم يُوثَّق المبلغ المتفق عليه بعد</string>
+    <string name="err_not_custom_order">هذا ليس طلبا خاصا.</string>
+    <string name="err_custom_not_assigned">لم يسند سائق بعد.</string>
+    <string name="err_custom_not_agreed">لم يوثق المبلغ المتفق عليه بعد</string>
     <string name="err_merchant_closed">هذا المتجر مغلق الآن</string>
-    <string name="err_multi_source_order">تعذّر تحديد مصدر بعض الأصناف</string>
-    <string name="err_too_many_sources">أصنافُ سلّتك من مصادر أكثر من المسموح</string>
-    <string name="err_item_unavailable">أحد الأصناف غير متوفر حالياً</string>
+    <string name="err_multi_source_order">تعذر تحديد مصدر بعض الأصناف</string>
+    <string name="err_too_many_sources">أصناف سلتك من مصادر أكثر من المسموح</string>
+    <string name="err_item_unavailable">أحد الأصناف غير متوفر حاليا</string>
     <string name="err_invalid_items">تحقق من البيانات المدخلة</string>
     <string name="err_out_of_zone">العنوان خارج مناطق التغطية الحالية</string>
     <string name="err_below_min_order">قيمة الطلب أقل من الحد الأدنى لهذه المنطقة</string>
-    <string name="err_too_many_open_orders">لديك طلباتٌ لم تُسلَّم بعد. أكمِلها أوّلاً ثمّ اطلب من جديد.</string>
-    <string name="err_invalid_promo">كود الخصم غير صالح أو مستخدم سابقاً</string>
+    <string name="err_too_many_open_orders">لديك طلبات لم تسلم بعد. أكملها أولا ثم اطلب من جديد.</string>
+    <string name="err_invalid_promo">كود الخصم غير صالح أو مستخدم سابقا</string>
     <string name="err_invalid_transition">لا يمكن نقل الطلب لهذه الحالة</string>
-    <string name="err_driver_required">يجب إسناد سائق أولاً</string>
-    <string name="err_cancel_window_passed">انقضت مهلةُ إلغاء الطلب. تواصل مع الدعم إن لزم.</string>
-    <string name="err_not_delivered">لا يمكن تقييم طلب لم يُسلَّم بعد</string>
+    <string name="err_driver_required">يجب إسناد سائق أولا</string>
+    <string name="err_cancel_window_passed">انقضت مهلة إلغاء الطلب. تواصل مع الدعم إن لزم.</string>
+    <string name="err_not_delivered">لا يمكن تقييم طلب لم يسلم بعد</string>
     <string name="err_invalid_stars">تحقق من البيانات المدخلة</string>
-    <string name="err_rate_own_client">لا يمكنك تقييم متجرٍ أنت مندوبه — التقييم شهادة زبونٍ مستقلّ.</string>
+    <string name="err_rate_own_client">لا يمكنك تقييم متجر أنت مندوبه — التقييم شهادة زبون مستقل.</string>
     <string name="err_invalid_amount">المبلغ غير صالح</string>
     <string name="err_invalid_category">التصنيف غير صالح</string>
-    <string name="err_merchant_location_required">حدّد موقعَ المتجر على الخريطة قبل الحفظ</string>
-    <string name="err_owner_required">لا متجرَ بلا صاحب — اكتب رقم صاحب المتجر</string>
-    <string name="err_invalid_hours">ساعات العمل غير صالحة — تأكد من وقتَي الفتح والإغلاق</string>
-    <string name="err_code_taken">هذا الكود مستعمل مسبقاً — اختر غيره</string>
-    <string name="err_section_not_empty">القسم يحتوي أصنافاً — انقلها أو احذفها أولاً</string>
+    <string name="err_merchant_location_required">حدد موقع المتجر على الخريطة قبل الحفظ</string>
+    <string name="err_owner_required">لا متجر بلا صاحب — اكتب رقم صاحب المتجر</string>
+    <string name="err_invalid_hours">ساعات العمل غير صالحة — تأكد من وقتي الفتح والإغلاق</string>
+    <string name="err_code_taken">هذا الكود مستعمل مسبقا — اختر غيره</string>
+    <string name="err_section_not_empty">القسم يحتوي أصنافا — انقلها أو احذفها أولا</string>
     <string name="err_section_required">اختر القسم</string>
     <string name="err_invalid_zone">بيانات المنطقة غير صالحة</string>
     <string name="err_over_settle">المبلغ يتجاوز ما بحوزة السائق</string>
-    <string name="err_cash_limit_exceeded">السائق تجاوز سقفه النقدي — يجب تسليم الصندوق أولاً</string>
+    <string name="err_cash_limit_exceeded">السائق تجاوز سقفه النقدي — يجب تسليم الصندوق أولا</string>
 </resources>

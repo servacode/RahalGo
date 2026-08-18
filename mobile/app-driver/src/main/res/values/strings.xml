@@ -2,20 +2,20 @@
 <resources>
     <!-- **اسم التطبيق وحده هنا** — النظام يقرأه ليكتبه تحت الأيقونة،
          ولا يمر بشيفرتنا. وكل نص آخر في `shared/i18n` (القاعدة ١.١). -->
-    <string name="app_name">رحّال غو — السائق</string>
+    <string name="app_name">رحال غو — السائق</string>
     <!-- **عبارةُ شاشة الافتتاح** — (اعتمدها المالك ٢٠٢٦-٠٨-١١).
 
          **وهنا لا في `shared/i18n`**: النظامُ لا يقرأ Kotlin، وهي نصٌّ
          يظهر قبل أن يعمل شيءٌ من طبقاتنا. **وبقيّةُ النصوص في القلب
          المشترك** (القاعدة ١.١). -->
-    <string name="intro_tagline">طلبك أسرع مع رحّال غو</string>
+    <string name="intro_tagline">طلبك أسرع مع رحال غو</string>
     <!-- **الجزءُ الذي يُلوَّن ببرتقاليّ العلامة** — اسمُ المنصّة وحدَه.
          (طلب المالك ٢٠٢٦-٠٨-١١: «تلوين الكتابة بالأزرق ورحّال غو
           بالبرتقالي».)
 
          **ويُكتب مفتاحاً لا يُقتطع بالحساب**: اقتطاعُ آخرِ كلمتين من
          النصّ يكسر مع أوّل تبديلٍ للعبارة، **ولا شيءَ يُنبّه.** */ -->
-    <string name="intro_tagline_brand">رحّال غو</string>
+    <string name="intro_tagline_brand">رحال غو</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **نصوص شاشة الدخول**
@@ -38,8 +38,8 @@
     <!-- بابا الدخول -->
     <!-- لوحة السائق -->
     <string name="home_today">اليوم</string>
-    <string name="home_delivered">سلّمت</string>
-    <string name="home_failed">تعذّر</string>
+    <string name="home_delivered">سلمت</string>
+    <string name="home_failed">تعذر</string>
     <string name="home_earned">كسبت</string>
     <!-- **وشريطُ صندوقه وهدفه في لوحته** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
          «المالُ نحذفه ما يلزم — موجودٌ فوق أساساً · نحطّ شريطَ صندوقي
@@ -47,14 +47,14 @@
 
          **ورقمٌ يُعاد في شاشةٍ واحدةٍ مرّتين يُقرأ رقمين** — فيسأل
          صاحبُه أيُّهما الصحيح. -->
-    <string name="home_cash_bar">في ذمّتي</string>
+    <string name="home_cash_bar">في ذمتي</string>
     <string name="home_cash_left">يبقى %1$s</string>
-    <string name="home_cash_over">تجاوزتَ السقف</string>
-    <string name="home_target">هدفُ الشهر</string>
-    <string name="home_target_left">يبقى %1$s طلباً</string>
-    <string name="home_target_reward">مكافأةُ البلوغ %1$s</string>
-    <string name="home_target_got">نلتَ المكافأة %1$s</string>
-    <string name="home_retry">حاول مرّة ثانية</string>
+    <string name="home_cash_over">تجاوزت السقف</string>
+    <string name="home_target">هدف الشهر</string>
+    <string name="home_target_left">يبقى %1$s طلبا</string>
+    <string name="home_target_reward">مكافأة البلوغ %1$s</string>
+    <string name="home_target_got">نلت المكافأة %1$s</string>
+    <string name="home_retry">حاول مرة ثانية</string>
     <!-- ══ مفتاحُ العمل — حالٌ وفعلٌ في شيءٍ واحد ══
          (قرارُ المالك ٢٠٢٦-٠٨-١٣: «بدّل وردية مفتوحة/مغلقة، نخلّيه زرّاً
           ذكيّاً بالعمل وخارج العمل، وتحته يُكتب: الآن تستقبل الطلبات ·
@@ -72,10 +72,10 @@
     <string name="nav_home">لوحتي</string>
     <string name="nav_orders">الطلبات</string>
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
-    <string name="order_cash_due">تقبض نقداً</string>
-    <string name="order_prepaid">مدفوع سلفاً</string>
+    <string name="order_cash_due">تقبض نقدا</string>
+    <string name="order_prepaid">مدفوع سلفا</string>
     <string name="status_dispatching">بانتظار سائق</string>
-    <string name="status_assigned">بذمّتك — اذهب للمتجر</string>
+    <string name="status_assigned">بذمتك — اذهب للمتجر</string>
     <string name="status_picked_up">استلمت الطلب</string>
     <string name="status_on_the_way">في الطريق للزبون</string>
     <string name="status_arrived">وصلت للزبون</string>
@@ -85,49 +85,49 @@
     <string name="detail_address">العنوان</string>
     <string name="detail_items">عدد الأصناف</string>
     <string name="detail_total">إجمالي الطلب</string>
-    <string name="detail_failed">تعذّر الطلب</string>
+    <string name="detail_failed">تعذر الطلب</string>
     <string name="detail_release">أعد الطلب للطابور</string>
-    <string name="detail_fail_title">لماذا تعذّر؟</string>
+    <string name="detail_fail_title">لماذا تعذر؟</string>
     <string name="detail_no_reasons">لا سبب متاح في هذه الحالة</string>
     <string name="detail_cancel">إلغاء</string>
     <string name="step_at_pickup">وصلت المتجر</string>
     <string name="step_picked_up">استلمت الطلب</string>
     <string name="step_on_the_way">انطلقت إلى الزبون</string>
     <string name="step_at_dropoff">وصلت الزبون</string>
-    <string name="step_delivered">سلّمت الطلب</string>
+    <string name="step_delivered">سلمت الطلب</string>
     <string name="status_at_pickup">عند المتجر</string>
     <string name="status_at_dropoff">عند الزبون</string>
-    <string name="status_delivered">سُلّم</string>
+    <string name="status_delivered">تم التسليم</string>
     <string name="reason_customer_absent">الزبون غير موجود</string>
     <string name="reason_customer_refused">الزبون رفض الاستلام</string>
-    <string name="reason_customer_unreachable">لا يردّ على الهاتف</string>
+    <string name="reason_customer_unreachable">لا يرد على الهاتف</string>
     <string name="reason_address_wrong">العنوان غير صحيح</string>
-    <string name="reason_driver_late">تأخّرت أنا</string>
+    <string name="reason_driver_late">تأخرت أنا</string>
     <string name="reason_merchant_closed">المتجر مغلق</string>
     <string name="reason_merchant_refused">المتجر رفض التسليم</string>
     <string name="reason_merchant_not_ready">الطلب غير جاهز</string>
     <string name="reason_order_unknown">المتجر لا يعرف الطلب</string>
     <!-- الموقع -->
     <string name="loc_channel">الوردية</string>
-    <string name="loc_title">ورديّتك مفتوحة</string>
-    <string name="loc_text">موقعك يُرسل ليصلك أقرب طلب</string>
-    <string name="loc_permission_title">فعّل الموقع</string>
+    <string name="loc_title">ورديتك مفتوحة</string>
+    <string name="loc_text">موقعك يرسل ليصلك أقرب طلب</string>
+    <string name="loc_permission_title">فعل الموقع</string>
     <string name="loc_permission_text">بدون الموقع لا تعرف كم يبعد المتجر، ولا يصلك أقرب طلب</string>
-    <string name="loc_permission_button">فعّل الآن</string>
+    <string name="loc_permission_button">فعل الآن</string>
     <!-- لماذا لا تصلني طلبات -->
-    <string name="why_shift_closed">ورديّتك مغلقة — افتحها من «لوحتي» ليصلك أوّل طلب</string>
-    <string name="why_location_off">الموقع مطفأ — بدونه لا يعرف المحرّك أين أنت فلا يعرض عليك أقرب طلب</string>
-    <string name="why_cash_full">النقد الذي بذمّتك بلغ السقف — سلّم للمكتب ليعود الطلب النقدي</string>
-    <string name="why_too_many">معك طلبات بعدد حدّك — سلّم واحداً ليصلك غيره</string>
-    <string name="why_all_good">كلّ شيء جاهز — لا يوجد طلب في هذه اللحظة</string>
-    <string name="offline_title">تعذّر الاتّصال</string>
-    <string name="offline_text">حسابك محفوظ — تحقّق من الشبكة وحاول مرّة ثانية</string>
+    <string name="why_shift_closed">ورديتك مغلقة — افتحها من «لوحتي» ليصلك أول طلب</string>
+    <string name="why_location_off">الموقع مطفأ — بدونه لا يعرف المحرك أين أنت فلا يعرض عليك أقرب طلب</string>
+    <string name="why_cash_full">النقد الذي بذمتك بلغ السقف — سلم للمكتب ليعود الطلب النقدي</string>
+    <string name="why_too_many">معك طلبات بعدد حدك — سلم واحدا ليصلك غيره</string>
+    <string name="why_all_good">كل شيء جاهز — لا يوجد طلب في هذه اللحظة</string>
+    <string name="offline_title">تعذر الاتصال</string>
+    <string name="offline_text">حسابك محفوظ — تحقق من الشبكة وحاول مرة ثانية</string>
     <!-- الرحلة -->
     <string name="nav_trip">الرحلة</string>
     <string name="trip_none">لا رحلة الآن</string>
-    <string name="trip_none_hint">خذ طلباً من الطلبات وتبدأ رحلتك</string>
+    <string name="trip_none_hint">خذ طلبا من الطلبات وتبدأ رحلتك</string>
     <string name="trip_navigate">الملاحة</string>
-    <string name="map_recenter">ردّني إلى موقعي</string>
+    <string name="map_recenter">ردني إلى موقعي</string>
     <string name="map_follow">تابعني على الخريطة</string>
     <string name="trip_s_accepted">قبلت الطلب</string>
     <string name="trip_s_to_pickup">إلى المتجر</string>
@@ -135,12 +135,12 @@
     <string name="trip_s_picked_up">استلمت الطلب</string>
     <string name="trip_s_to_customer">إلى الزبون</string>
     <string name="trip_s_at_customer">وصلت الزبون</string>
-    <string name="trip_s_delivered">سلّمت</string>
+    <string name="trip_s_delivered">سلمت</string>
     <string name="trip_due_from">إجمالي المبلغ المطلوب من %1$s</string>
-    <string name="trip_prepaid_note">مدفوع مسبقاً — لا تقبض شيئاً</string>
+    <string name="trip_prepaid_note">مدفوع مسبقا — لا تقبض شيئا</string>
     <string name="leg_picked">استلمت الطلب</string>
     <!-- **ومراحلُ الطلب الخاصّ** — توثيقٌ ثمّ شراء، لا استلامٌ من متجر. -->
-    <string name="leg_agree">الاتّفاق</string>
+    <string name="leg_agree">الاتفاق</string>
     <string name="leg_buy">الشراء</string>
     <string name="leg_way">في الطريق</string>
     <string name="leg_arrived">وصلت</string>
@@ -148,58 +148,58 @@
     <string name="trip_p_to_store">الطريق إلى %1$s</string>
     <string name="trip_p_at_store">وصلت المتجر</string>
     <!-- **والخاصُّ قبل الشراء**: اتّفاقٌ ثمّ شراء، لا سيرٌ إلى متجر. -->
-    <string name="trip_p_custom">اتّفق مع الزبون ثمّ اشترِ</string>
+    <string name="trip_p_custom">اتفق مع الزبون ثم اشتر</string>
     <string name="trip_p_to_customer">الطريق إلى %1$s</string>
     <string name="trip_p_at_customer">وصلت الزبون</string>
-    <string name="trip_p_delivered">سلّمت الطلب</string>
+    <string name="trip_p_delivered">سلمت الطلب</string>
     <!-- الإشعارات -->
     <string name="push_ch_offer">طلب جديد</string>
     <string name="push_ch_news">أخبار الحساب</string>
     <string name="push_offer_title">طلب جديد بانتظارك</string>
     <!-- خريطة المدينة في الجهاز -->
-    <string name="offline_map_title">نزّل خريطة الرقّة</string>
-    <string name="offline_map_text">تُنزَّل مرّة وتبقى — فتعمل الخريطة ولو انقطع الإنترنت في الطريق</string>
-    <string name="offline_map_button">نزّل الآن</string>
-    <string name="offline_map_progress">جارٍ التنزيل %1$d%%</string>
+    <string name="offline_map_title">نزل خريطة الرقة</string>
+    <string name="offline_map_text">تنزل مرة وتبقى — فتعمل الخريطة ولو انقطع الإنترنت في الطريق</string>
+    <string name="offline_map_button">نزل الآن</string>
+    <string name="offline_map_progress">جار التنزيل %1$d%%</string>
     <string name="offline_map_resume">أكمل التنزيل</string>
-    <string name="trip_near_pickup">يبدو أنّك وصلت المتجر</string>
-    <string name="trip_near_dropoff">يبدو أنّك وصلت الزبون</string>
+    <string name="trip_near_pickup">يبدو أنك وصلت المتجر</string>
+    <string name="trip_near_dropoff">يبدو أنك وصلت الزبون</string>
     <string name="trip_problem">لدي مشكلة</string>
         <string name="problem_title">ما هي المشكلة؟</string>
     <string name="problem_mine">المشكلة عندي</string>
-    <string name="problem_bike">تعطّلت درّاجتي</string>
-    <string name="problem_crash">تعرّضت لحادث سير</string>
+    <string name="problem_bike">تعطلت دراجتي</string>
+    <string name="problem_crash">تعرضت لحادث سير</string>
     <string name="problem_force">أوقفت العمل لظرف قاهر</string>
     <string name="trip_release_short">إعادة للطابور</string>
     <string name="emg_title">تبليغ العمليات</string>
-    <string name="emg_body">سيصل بلاغٌ فوريٌّ إلى المكتب بموقعك ورقم الطلب. استعمله عند عطلٍ أو خطرٍ أو أيّ ما يمنعك من إكمال الطلب.</string>
-    <string name="emg_send">بلّغ الآن</string>
+    <string name="emg_body">سيصل بلاغ فوري إلى المكتب بموقعك ورقم الطلب. استعمله عند عطل أو خطر أو أي ما يمنعك من إكمال الطلب.</string>
+    <string name="emg_send">بلغ الآن</string>
     <string name="trip_chat">حديث الزبون</string>
     <string name="chat_hint">اكتب رسالة…</string>
     <string name="chat_send">أرسل</string>
-    <string name="chat_closed">انتهى الطلب — أُغلق الحديث</string>
+    <string name="chat_closed">انتهى الطلب — أغلق الحديث</string>
     <!-- الطلب الخاصّ -->
-    <string name="agree_button">وثّق الاتّفاق</string>
-    <string name="agree_title">الاتّفاق مع الزبون</string>
-    <string name="agree_hint">ثمن البضاعة اختياريّ — اتركه فارغاً إن كانت أمانة بلا ثمن</string>
+    <string name="agree_button">وثق الاتفاق</string>
+    <string name="agree_title">الاتفاق مع الزبون</string>
+    <string name="agree_hint">ثمن البضاعة اختياري — اتركه فارغا إن كانت أمانة بلا ثمن</string>
     <string name="agree_goods">ثمن البضاعة</string>
     <string name="agree_fee">أجرة التوصيل</string>
-    <string name="agree_confirm">وثّق</string>
+    <string name="agree_confirm">وثق</string>
     <string name="trip_on_route">طلب على طريقك</string>
     <string name="order_agree">موافق</string>
     <!-- **ولا «رفض»** — (قرارُ المالك ٢٠٢٦-٠٨-١٤): يوافق أو يترك.
          **وهذا إخفاءٌ للشريط وهو يقود** — والطلبُ يبقى في الطابور. -->
-    <string name="order_later">لاحقاً</string>
+    <string name="order_later">لاحقا</string>
     <!-- بطاقة الطلب -->
     <string name="card_new_order">طلب جديد</string>
-    <string name="card_custom">طلب خاصّ</string>
+    <string name="card_custom">طلب خاص</string>
     <string name="card_fee">أجرة التوصيل</string>
     <string name="card_payment">الدفع</string>
     <string name="card_cash">عند التسليم</string>
     <string name="card_wallet">مدفوع</string>
     <string name="card_customer">الزبون</string>
     <string name="card_store_cd">متجر</string>
-    <string name="card_eta">المدّة</string>
+    <string name="card_eta">المدة</string>
     <!-- الشريط العلويّ -->
     <string name="card_dist_to">المسافة إلى (%1$s)</string>
     <string name="card_invoice_total">إجمالي الفاتورة</string>
@@ -213,14 +213,14 @@
     <string name="rate_avg">متوسط التقييم</string>
     <string name="rate_total">عدد التقييمات</string>
     <string name="rate_trend">الاتجاه</string>
-    <string name="rate_trend_up">في تحسّن</string>
+    <string name="rate_trend_up">في تحسن</string>
     <string name="rate_trend_down">في انخفاض</string>
-    <string name="rate_trend_flat">مستقرّ</string>
-    <string name="rate_hint">ما قيّمه الزبائن وكتبوه عن خدمتك</string>
+    <string name="rate_trend_flat">مستقر</string>
+    <string name="rate_hint">ما قيمه الزبائن وكتبوه عن خدمتك</string>
     <string name="rate_reviews">ما قاله الزبائن</string>
     <string name="rate_no_reviews">لا تقييمات بعد</string>
     <string name="rate_complaints">شكاوى عليك</string>
-    <string name="rate_none_yet">لم تُقيَّم بعد — أوّل تقييم يصلك بعد أوّل تسليم</string>
+    <string name="rate_none_yet">لم تقيم بعد — أول تقييم يصلك بعد أول تسليم</string>
 
     <!-- ══ المحفظة ══ -->
 
@@ -229,89 +229,89 @@
     <!-- **نصوصُ الورقة — من معجم الويب حرفيّاً** فلا تفترق ورقتان. -->
 
     <!-- ══ وحداتُ القياس — كانت مكتوبةً في الشيفرة ══ -->
-    <string name="map_region">الرقّة</string>
+    <string name="map_region">الرقة</string>
 
     <!-- ══ سجلُّ الطلبات ══ -->
-    <string name="hist_done">سُلِّم</string>
-    <string name="hist_failed">تعذّر</string>
+    <string name="hist_done">تم التسليم</string>
+    <string name="hist_failed">تعذر</string>
     <string name="hist_search">ابحث برقم الطلب أو المتجر</string>
-    <string name="hist_empty">لا طلبات في سجلّك بعد</string>
+    <string name="hist_empty">لا طلبات في سجلك بعد</string>
     <string name="hist_no_match">لا طلب يطابق بحثك</string>
-    <string name="hist_st_delivered">سُلِّم</string>
-    <string name="hist_st_failed">تعذّر</string>
+    <string name="hist_st_delivered">تم التسليم</string>
+    <string name="hist_st_failed">تعذر</string>
 
     <!-- **البلاغُ والتقييم — بنصوص الويب نفسِها** فلا تفترق شاشتان. -->
     <string name="hist_report">بلاغ</string>
-    <string name="hist_report_title">بلاغٌ على الطلب</string>
-    <string name="hist_report_note">تفصيلٌ إضافيّ (اختياريّ)</string>
-    <string name="hist_report_hint">يصل البلاغُ غرفةَ العمليات ويُتابَع</string>
+    <string name="hist_report_title">بلاغ على الطلب</string>
+    <string name="hist_report_note">تفصيل إضافي (اختياري)</string>
+    <string name="hist_report_hint">يصل البلاغ غرفة العمليات ويتابع</string>
     <string name="hist_report_send">أرسل البلاغ</string>
-    <string name="hist_report_sent">وصل بلاغُك — ستتابعه العمليات</string>
-    <string name="hist_reasons_error">تعذّر جلبُ الأسباب — ولا يُرسَل بلاغٌ بلا سبب</string>
+    <string name="hist_report_sent">وصل بلاغك — ستتابعه العمليات</string>
+    <string name="hist_reasons_error">تعذر جلب الأسباب — ولا يرسل بلاغ بلا سبب</string>
     <string name="hist_not_yours">هذا الطلب ليس لك</string>
-    <string name="hist_rate">قيّم المتجر</string>
-    <string name="hist_rated">قيّمتَه</string>
-    <string name="hist_rate_title">تقييمُ المتجر</string>
-    <string name="hist_rate_speed">سرعةُ التجهيز</string>
+    <string name="hist_rate">قيم المتجر</string>
+    <string name="hist_rated">قيمته</string>
+    <string name="hist_rate_title">تقييم المتجر</string>
+    <string name="hist_rate_speed">سرعة التجهيز</string>
     <string name="hist_rate_conduct">التعامل</string>
     <string name="hist_rate_send">أرسل التقييم</string>
-    <string name="hist_rate_sent">وصل تقييمُك — شكراً</string>
+    <string name="hist_rate_sent">وصل تقييمك — شكرا</string>
     <string name="hist_cancel">إغلاق</string>
 
-    <string name="reason_merchant_slow">المتجر أوقفني طويلاً</string>
-    <string name="reason_merchant_wrong_goods">بضاعةٌ غيرُ مطابقة</string>
-    <string name="reason_merchant_conduct">سوءُ تعاملٍ من المتجر</string>
-    <string name="reason_customer_address">عنوانٌ خاطئ</string>
-    <string name="reason_customer_conduct">سوءُ تعاملٍ من الزبون</string>
-    <string name="reason_other">سببٌ آخر</string>
+    <string name="reason_merchant_slow">المتجر أوقفني طويلا</string>
+    <string name="reason_merchant_wrong_goods">بضاعة غير مطابقة</string>
+    <string name="reason_merchant_conduct">سوء تعامل من المتجر</string>
+    <string name="reason_customer_address">عنوان خاطئ</string>
+    <string name="reason_customer_conduct">سوء تعامل من الزبون</string>
+    <string name="reason_other">سبب آخر</string>
 
     <!-- ══ القائمة ══ -->
     <string name="menu_cash">صندوقي</string>
     <!-- ══ أقسامُ القائمة — نصوصُها ══ -->
 
     <!-- صندوقي — النصوصُ نفسُها التي في شاشة الويب -->
-    <string name="cash_hint">النقدُ الذي قبضتَه ولم تُسلّمه بعد</string>
-    <string name="cash_held">في ذمّتي الآن</string>
+    <string name="cash_hint">النقد الذي قبضته ولم تسلمه بعد</string>
+    <string name="cash_held">في ذمتي الآن</string>
     <string name="cash_limit">السقف</string>
     <string name="cash_left">يبقى قبل السقف</string>
-    <string name="cash_over">تجاوزتَ السقف بـ</string>
-    <string name="cash_near">اقتربتَ من السقف — سلّم النقد قبل أن يتوقّف الطابور عنك</string>
-    <string name="cash_full">بلغتَ السقف — لا تُقبل طلباتٌ نقديّة حتّى تُسلّم</string>
+    <string name="cash_over">تجاوزت السقف ب</string>
+    <string name="cash_near">اقتربت من السقف — سلم النقد قبل أن يتوقف الطابور عنك</string>
+    <string name="cash_full">بلغت السقف — لا تقبل طلبات نقدية حتى تسلم</string>
     <string name="cash_empty">لا حركات بعد</string>
-    <string name="cash_more">عُرض %1$s من %2$s حركة</string>
-    <string name="cash_k_order_collection">قبضتُ من زبون</string>
+    <string name="cash_more">عرض %1$s من %2$s حركة</string>
+    <string name="cash_k_order_collection">قبضت من زبون</string>
     <!-- **ومِمَّن قبض باسمه** — والصفةُ أعلاه تبقى لقيدٍ بلا طلب. -->
-    <string name="cash_from">قبضتُ من %1$s</string>
-    <string name="cash_k_settlement">سلّمتُ للمنصّة</string>
+    <string name="cash_from">قبضت من %1$s</string>
+    <string name="cash_k_settlement">سلمت للمنصة</string>
 
     <!-- أهدافي والمكافآت -->
 
     <!-- الشكاوى والبلاغات -->
-    <string name="tik_hint">ما رُفع عليك — لتعرفه وتُصلح ما يُصلَح</string>
+    <string name="tik_hint">ما رفع عليك — لتعرفه وتصلح ما يصلح</string>
     <string name="tik_none">لا شكوى عليك</string>
-    <string name="tik_none_hint">وهذا خبرٌ جيّد — أبقِه كذلك</string>
+    <string name="tik_none_hint">وهذا خبر جيد — أبقه كذلك</string>
     <string name="tik_on_order">على الطلب #%1$s</string>
-    <string name="tik_on_me">ما رُفع عليك</string>
-    <string name="tik_mine">ما رفعتَه أنت</string>
-    <string name="tik_mine_empty">لم ترفع بلاغاً بعد — ولك أن تُبلّغ من «سجل الطلبات»</string>
+    <string name="tik_on_me">ما رفع عليك</string>
+    <string name="tik_mine">ما رفعته أنت</string>
+    <string name="tik_mine_empty">لم ترفع بلاغا بعد — ولك أن تبلغ من «سجل الطلبات»</string>
     <string name="tik_answer">جواب الإدارة</string>
 
     <!-- دردشاتي السابقة -->
-    <string name="chats_empty">لا أحاديثَ سابقة</string>
+    <string name="chats_empty">لا أحاديث سابقة</string>
     <string name="chat_empty">لا رسائل في هذا الحديث</string>
 
     <!-- صفحاتُ المنصّة -->
 
     <!-- تواصل معنا -->
-    <string name="hist_hint">ما نفّذتَه — سُلِّم أو تعذّر</string>
+    <string name="hist_hint">ما نفذته — تم التسليم أو تعذر</string>
 
     <!-- الطلبُ الخاصّ — بطاقتُه تقول حقيقته -->
-    <string name="card_custom_price">السعر يُتّفق عليه</string>
+    <string name="card_custom_price">السعر يتفق عليه</string>
     <string name="card_custom_what">المطلوب</string>
-    <string name="card_agreed_later">تُتّفق</string>
-    <string name="card_custom_pay">تشتري وتستردّ</string>
+    <string name="card_agreed_later">تتفق</string>
+    <string name="card_custom_pay">تشتري وتسترد</string>
     <!-- **واسمُ الفعل كما في الويب** — «اشتريتُ الطلب» لا «استلمت». -->
-    <string name="step_bought">اشتريتُ الطلب</string>
+    <string name="step_bought">اشتريت الطلب</string>
 
     <!-- ══ فحصُ الإشعارات ══
          (وقع ٢٠٢٦-٠٨-١٤: لم يرنّ الجهاز، ولم يكن في المنصّة ما يقول
@@ -321,16 +321,16 @@
          والجوابُ «وصلت» في الحالين. -->
 
     <!-- إرجاعُ البضاعة -->
-    <string name="hist_return">سلّمتُ البضاعة للمتجر</string>
-    <string name="hist_returned">أُعيدت البضاعة للمتجر</string>
-    <string name="hist_returned_done">سُجّل إرجاعُ البضاعة</string>
+    <string name="hist_return">سلمت البضاعة للمتجر</string>
+    <string name="hist_returned">أعيدت البضاعة للمتجر</string>
+    <string name="hist_returned_done">سجل إرجاع البضاعة</string>
 
     <!-- ══ الإفصاحُ الصريح عن الموقع — شرطُ غوغل ══ -->
-    <string name="disc_title">موقعك أثناء الورديّة</string>
-    <string name="disc_what">يجمع رحّال غو موقع جهازك ما دامت ورديّتك مفتوحة.</string>
-    <string name="disc_background">ويُجمع أيضاً والتطبيق مغلق أو الشاشة مطفأة — لأنّك تقود والهاتف في جيبك.</string>
-    <string name="disc_why">ومنه يُسنَد إليك أقرب طلب، ويرى الزبون أين طلبه على الخريطة، وتُحسب المسافة وأجرتها.</string>
-    <string name="disc_stop">ويقف الجمع فور إغلاق ورديّتك. ولك أن ترفض، ويعمل التطبيق، ولا تصلك طلبات.</string>
+    <string name="disc_title">موقعك أثناء الوردية</string>
+    <string name="disc_what">يجمع رحال غو موقع جهازك ما دامت ورديتك مفتوحة.</string>
+    <string name="disc_background">ويجمع أيضا والتطبيق مغلق أو الشاشة مطفأة — لأنك تقود والهاتف في جيبك.</string>
+    <string name="disc_why">ومنه يسند إليك أقرب طلب، ويرى الزبون أين طلبه على الخريطة، وتحسب المسافة وأجرتها.</string>
+    <string name="disc_stop">ويقف الجمع فور إغلاق ورديتك. ولك أن ترفض، ويعمل التطبيق، ولا تصلك طلبات.</string>
     <string name="disc_agree">أوافق</string>
     <string name="disc_deny">ليس الآن</string>
 </resources>

@@ -32,6 +32,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,10 +96,52 @@ fun ShopScreen(
     Column(Modifier.fillMaxSize()) {
         // **والبحثُ فوق الأقسام** — لمن يعرف ما يريد، **ولا ينزل تحتها
         // فيُبحث عنه.**
+        // ══════════════════════════════════════════════════════════════
+        // **وكلمةٌ تتبدّل في مربّع البحث**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «نخلّيه ابحث عن، وكلماتٌ تتغيّر —
+        //  مثال شاورما برغر والأصناف الموجودة… تظلّ تتبدّل الكلمةُ تلفت
+        //  الانتباه».)
+        //
+        // **ومن أقسام السوق لا من قائمةٍ تُكتب بيد** — **وقائمةٌ ثابتةٌ
+        // تعد بما ليس في السوق**: يقرأ «شاورما» فيبحث فلا يجد.
+        //
+        // **ولا تتبدّل وهو يكتب** — **ونصٌّ يتحرّك تحت إصبعه يُربكه**،
+        // ولا معنى للإغراء بعد أن بدأ.
+        val hints = vm.sections.map { it.name }
+        var hint by remember { mutableStateOf(0) }
+        LaunchedEffect(hints.size, vm.query.isEmpty()) {
+            if (hints.isEmpty() || vm.query.isNotEmpty()) return@LaunchedEffect
+            while (true) {
+                kotlinx.coroutines.delay(2_000)
+                hint = (hint + 1) % hints.size
+            }
+        }
+
         OutlinedTextField(
             value = vm.query,
             onValueChange = vm::type,
-            label = { Text(stringResource(R.string.shop_search)) },
+            // **ولا عنوانَ فوق الحقل** — **وعنوانٌ ثابتٌ يزاحم الكلمةَ
+            // المتبدّلةَ فيُقرآن سطرين لا سطرا.**
+            placeholder = {
+                Text(
+                    stringResource(
+                        R.string.shop_search,
+                        hints.getOrNull(hint).orEmpty(),
+                    ),
+                )
+            },
+            // **والعدسةُ في أوّل الحقل** — (طلبُ المالك)، **ومربّعٌ بلا
+            // عدسةٍ يُقرأ حقلَ كتابةٍ لا بحثا.**
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(com.rahalgo.ui.R.drawable.ic_search),
+                    contentDescription = null,
+                    tint = Rahal.colors.inkMuted,
+                    modifier = Modifier.size(20.dp),
+                )
+            },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             modifier = Modifier
