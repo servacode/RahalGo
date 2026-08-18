@@ -90,6 +90,7 @@ import com.rahalgo.ui.rememberOverlay
 import com.rahalgo.ui.rememberTheme
 import com.rahalgo.ui.RahalButton
 import kotlinx.coroutines.launch
+import com.rahalgo.ui.CountBadge
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -307,7 +308,6 @@ private fun SignedIn(
     }
 
     // **والسلّةُ تُفتح فوق التبويب** — ويُرجع منها إليه.
-    var cart by rememberSaveable { mutableStateOf(false) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val overlay = rememberOverlay { key -> knowsKey(CUSTOMER_ITEMS, key) }
@@ -347,7 +347,7 @@ private fun SignedIn(
     // **والرجوعُ من القائمة يغلقها — لا يُخرج من التطبيق.**
     // (كُشف بالقياس في تطبيق السائق ٢٠٢٦-٠٨-١٤، **فلا يُعاد هنا.**)
     BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
-    BackHandler(enabled = cart && !drawer.isOpen) { cart = false }
+    BackHandler(enabled = tab == Tab.Cart && !drawer.isOpen) { tab = Tab.Shop }
 
 
     // ══════════════════════════════════════════════════════════════════
@@ -482,10 +482,52 @@ private fun SignedIn(
                         // التبويبُ تحتها ولا يُرى. **وضغطةٌ لا يقع لها
                         // أثرٌ ظاهرٌ تُعاد وتُعاد** حتّى يُظنّ أنّ
                         // الزرَّ معطوب.
-                        onClick = { tab = Tab.Shop; overlay.clear(); cart = false },
+                        onClick = { tab = Tab.Shop; overlay.clear() },
                         icon = R.drawable.ic_store,
                         label = R.string.nav_shop,
                     )
+                    // ══════════════════════════════════════════════
+                    // **والسلّةُ بعد التسوّق مباشرةً**
+                    // ══════════════════════════════════════════════
+                    //
+                    // (قرارُ المالك ٢٠٢٦-٠٨-١٨: «السلّةُ خلّيها أيقونةً
+                    //  بالصفّ التحت، ألغِها من مكانها، لأنّ بعض
+                    //  المنتجات راح تبطّل تبيّن».)
+                    //
+                    // **وكانت طافيةً فوق الشبكة** — فتغطّي آخرَ صفٍّ من
+                    // الأصناف، **ومن نزل إلى آخرها لم يرَ ما تحتها.**
+                    //
+                    // **وتجاور التسوّقَ لأنّهما فعلٌ واحد**: يختار ثمّ
+                    // يراجع. **وبينهما «طلباتي» يفصل ما يُبنى عمّا
+                    // أُرسل.**
+                    //
+                    // **وتُعرض للضيف** — انظر `needsAccount`: من أضاف
+                    // ولم يجد أين يرى يقرأ التطبيقَ معطوبا.
+                    NavigationBarItem(
+                        selected = tab == Tab.Cart && over == Overlay.None,
+                        onClick = { tab = Tab.Cart; overlay.clear() },
+                        icon = {
+                            // **والعددُ يطفو على الأيقونة** — `CountBadge`
+                            // نفسُها التي في الجرس، **ونسختان تفترقان
+                            // يومَ يتبدّل شكلُ إحداهما.**
+                            Box {
+                                Icon(
+                                    painter = painterResource(
+                                        com.rahalgo.ui.R.drawable.ic_cart,
+                                    ),
+                                    contentDescription = null,
+                                )
+                                CountBadge(
+                                    count = com.rahalgo.customer.cart.Cart.count,
+                                    color = Rahal.colors.accent,
+                                    size = 16.dp,
+                                    modifier = Modifier.align(Alignment.TopEnd),
+                                )
+                            }
+                        },
+                        label = { Text(stringResource(R.string.cart_title)) },
+                    )
+
                     // **وطلباتي بينهما** — يُفتح كثيراً بعد الطلب
                     // (أين وصل؟)، **وأقلَّ من التسوّق وأكثرَ من الحساب.**
                     //
@@ -495,7 +537,7 @@ private fun SignedIn(
                     if (!guest) {
                         Tab(
                             selected = tab == Tab.Orders && over == Overlay.None,
-                            onClick = { tab = Tab.Orders; overlay.clear(); cart = false },
+                            onClick = { tab = Tab.Orders; overlay.clear() },
                             icon = R.drawable.ic_orders,
                             label = R.string.nav_orders,
                         )
@@ -513,7 +555,7 @@ private fun SignedIn(
                     // لا يُفتح** — ومن لم يفتحه لم يعرف أنّه موجود.
                     Tab(
                         selected = tab == Tab.Custom && over == Overlay.None,
-                        onClick = { tab = Tab.Custom; overlay.clear(); cart = false },
+                        onClick = { tab = Tab.Custom; overlay.clear() },
                         icon = R.drawable.ic_custom,
                         label = R.string.nav_custom,
                     )
@@ -540,7 +582,7 @@ private fun SignedIn(
                     // يدخل تسأل «حسابُ من؟».**
                     if (!guest) NavigationBarItem(
                         selected = tab == Tab.Account && over == Overlay.None,
-                        onClick = { tab = Tab.Account; overlay.clear(); cart = false },
+                        onClick = { tab = Tab.Account; overlay.clear() },
                         icon = {
                             val photo = Backend.of(context).media(shell.me?.avatarThumbUrl)
                             if (photo.isNullOrEmpty()) {
@@ -586,7 +628,7 @@ private fun SignedIn(
                     //
                     // **والسوقُ وصفحاتُ المنصّة ليست منه** — عامّةٌ في
                     // المحرّك، **فتُفتح كما تُفتح في الويب.**
-                    guest && needsAccount(tab, over, cart) ->
+                    guest && needsAccount(tab, over) ->
                         NeedAccount(onAskLogin)
 
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
@@ -647,18 +689,16 @@ private fun SignedIn(
                     // **والسلّةُ تغطّي السوق** — ومن أرسل طلبَه
                     // انتقل إلى «طلباتي» ليتابعه: **شاشةُ نجاحٍ تُغلق
                     // ثمّ يُسأل «وأين طلبي؟».**
-                    cart -> CartScreen(
+                    tab == Tab.Cart -> CartScreen(
                         cartVm,
                         address = selectedAddress(accountVm.state.addresses),
                     ) {
-                        cart = false
                         tab = Tab.Orders
                         ordersVm.load()
                     }
 
                     tab == Tab.Shop -> ShopScreen(
                         vm = shopVm,
-                        onOpenCart = { cart = true },
                         // **والإعجابُ يحتاج حساباً** — والضيفُ يُساق
                         // إلى الدخول لا يُردّ بصمت: **قلبٌ يُضغط فلا
                         // يقع شيءٌ يُقرأ عطبا.**
@@ -726,7 +766,7 @@ private fun SignedIn(
                 // «طلباتي» لا يُسأل أبدا.
                 //
                 // **ولا تُعرض لضيف** — ولا وهو في السلّة يدفع.
-                if (!guest && !cart) {
+                if (!guest && tab != Tab.Cart) {
                     ordersVm.askRate?.let { o ->
                         RateDialog(
                             hasDriver = !o.driverName.isNullOrEmpty(),
@@ -743,8 +783,17 @@ private fun SignedIn(
     }
 }
 
-/** **تبويباتُ الزبون الثلاثة** — بترتيبها في الشريط: يمينٌ إلى يسار. */
-private enum class Tab { Shop, Orders, Custom, Account }
+/**
+ * **تبويباتُ الزبون** — بترتيبها في الشريط: يمينٌ إلى يسار.
+ *
+ * **والسلّةُ منها منذ ٢٠٢٦-٠٨-١٨** — (قرارُ المالك: «السلّةُ خلّيها
+ * أيقونةً بالصفّ التحت، ألغِها من مكانها، لأنّ بعض المنتجات راح تبطّل
+ * تبيّن»).
+ *
+ * **وكانت أيقونةً عائمةً** (قرارُه ٢٠٢٦-٠٨-١٥) — **وطافيةٌ فوق شبكةٍ
+ * تغطّي آخرَ صفٍّ منها**، ومن نزل إلى آخر الأصناف لم يرَ ما تحتها.
+ */
+private enum class Tab { Shop, Cart, Orders, Custom, Account }
 
 /** **بندٌ برسمٍ واسم** — وثلاثةُ نسخٍ منه في شريطٍ واحدٍ حشوٌ يُنسخ. */
 @Composable
@@ -765,8 +814,20 @@ private fun RowScope.Tab(selected: Boolean, onClick: () -> Unit, icon: Int, labe
  * **والقاعدةُ من المحرّك لا من الذوق**: ما كان تحت `/my` أو `/me` يلزمه
  * توكن، **وما كان تحت `/public` لا.**
  */
-private fun needsAccount(tab: Tab, over: Overlay, cart: Boolean): Boolean = when {
-    cart -> true
+private fun needsAccount(tab: Tab, over: Overlay): Boolean = when {
+    // ══════════════════════════════════════════════════════════════════
+    // **والسلّةُ تُفتح بلا حساب**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٨: تنزل إلى الشريط السفليّ.)
+    //
+    // **ومن أضاف أصنافاً ثمّ لم يجد أين يراها يقرأ التطبيقَ معطوبا** —
+    // وقد زالت الأيقونةُ العائمةُ التي كانت بابَه إليها.
+    //
+    // **والتسعيرةُ عامّةٌ في المحرّك** (`/public/quote`) — فيرى مجموعَه
+    // وأجرتَه. **والحسابُ يُطلب عند الإرسال وحدَه**، وهناك موضعُه:
+    // **يبني سلّتَه ثمّ يسجّل ليرسلها**، لا يُردّ على الباب.
+    tab == Tab.Cart -> false
     // **والعروضُ عامّةٌ كالسوق** — `public/offers` بلا توكن، **وحجبُها
     // عن ضيفٍ يحجب أقوى ما يجذبه**: (قِيس ٢٠٢٦-٠٨-١٤).
     over is Overlay.Menu ->
