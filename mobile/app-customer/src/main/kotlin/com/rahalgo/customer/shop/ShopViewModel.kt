@@ -12,6 +12,7 @@ import com.rahalgo.shared.model.Section
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.apiError
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
@@ -184,6 +185,32 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 items = api.search(q).items
                 searching = true
+            } catch (e: CancellationException) {
+                // ══════════════════════════════════════════════════════
+                // **والإلغاءُ ليس خطأً — يُعاد رميُه**
+                // ══════════════════════════════════════════════════════
+                //
+                // (شكوى المالك ٢٠٢٦-٠٨-١٨ بصورةِ شاشة: «تعذّر إتمام
+                //  الطلب (gs1)» تحت حقل البحث.)
+                //
+                // **و`gs1` اسمُ `CancellationException` بعد تشويش R8.**
+                //
+                // # ولماذا وقع
+                //
+                // **كلُّ حرفٍ يُكتب يُلغي بحثَ سابقِه** (`typing?.cancel()`)
+                // — وهو مقصود. **فإن كان السابقُ قد تجاوز المهلةَ ودخل
+                // في النداء، خرج بـ`CancellationException`.**
+                //
+                // **و`catch (e: Exception)` تبتلعها** — فتُعرض على أنّها
+                // عطبُ خادم. **فيُقرأ التطبيقُ مكسوراً وهو يعمل كما
+                // صُمّم**، ويرى المالكُ رمزاً لا معنى له.
+                //
+                // # ولماذا تُعاد لا تُهمَل
+                //
+                // **الإلغاءُ يسري في شجرة المهامّ بالاستثناء نفسِه** —
+                // ومن ابتلعه قطع السريان: **يُلغى النطاقُ ويبقى ما فيه
+                // يعمل** حتّى يُتلف النموذج.
+                throw e
             } catch (e: Exception) {
                 error = apiError(getApplication(), e)
             }

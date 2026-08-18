@@ -23,6 +23,7 @@ import com.rahalgo.driver.MainActivity
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.shared.model.TrackPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -146,6 +147,11 @@ class LocationService : Service() {
             val api = Backend.of(applicationContext).driver
             try {
                 api.sendLocation(point.latitude, point.longitude, speed, accuracy)
+            } catch (e: CancellationException) {
+                // **وتوقّفُ الخدمة ليس فشلَ إرسال** — ولو صُفَّت النقطةُ
+                // هنا **لَتراكمت طوابيرُ ورديّةٍ انتهت**، وأُرسلت
+                // مواضعُ سائقٍ أغلق ورديّتَه.
+                throw e
             } catch (e: Exception) {
                 // **ووقت الالتقاط يُحفظ معها** — لا وقت الإرسال:
                 // **دفعة تصل بعد ربع ساعة بوقت الوصول** تجعل السائق
@@ -170,6 +176,9 @@ class LocationService : Service() {
                     api.sendBatch(waiting)
                     queue.clear()
                     Log.i(TAG, "أُرسلت دفعة: ${waiting.size} نقطة")
+                } catch (e: CancellationException) {
+                    // **والطابورُ يبقى كما هو** — يُرسَل حين تعود الورديّة.
+                    throw e
                 } catch (e: Exception) {
                     // **ولا تُمحى إن فشلت الدفعة** — تُترك للمحاولة
                     // التالية، **ومن مسحها قبل أن تصل فقدها.**

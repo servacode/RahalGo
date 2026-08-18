@@ -4,6 +4,7 @@ import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -83,6 +84,19 @@ class LiveSocket(
                             }
                         }
                     }
+                } catch (e: CancellationException) {
+                    // ══════════════════════════════════════════════════
+                    // **وإلغاءُ النطاق ليس انقطاعَ وصل**
+                    // ══════════════════════════════════════════════════
+                    //
+                    // **وهو أخطرُ من عرضه رسالةً**: لو ابتُلع هنا
+                    // **لَمضت الحلقةُ تنتظر ثمّ تعيد الوصل** بعد أن
+                    // أُغلقت الشاشةُ وأُتلف نموذجُها — **مقبسٌ حيٌّ بلا
+                    // صاحب** يستنزف البطّاريّةَ ويعدّه الخادمُ متّصلاً.
+                    //
+                    // (كشفه `check-cancellation.mjs` ٢٠٢٦-٠٨-١٨ لحظةَ
+                    //  كتابته، وهو موضعٌ لم يُشكَ منه بعد.)
+                    throw e
                 } catch (e: Exception) {
                     // **وانقطاع الوصل ليس عطبا** — يقع كلّ يوم عشرات
                     // المرّات، **ولا يُكتب في السجلّ كخطأ** فيغرقه.
