@@ -60,6 +60,8 @@ import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.money
+import com.rahalgo.ui.BannerSlide
+import com.rahalgo.ui.BannerSlider
 import com.rahalgo.ui.RahalLoader
 
 /**
@@ -108,6 +110,37 @@ fun ShopScreen(
         //
         // **ولا تتبدّل وهو يكتب** — **ونصٌّ يتحرّك تحت إصبعه يُربكه**،
         // ولا معنى للإغراء بعد أن بدأ.
+        // ══════════════════════════════════════════════════════════════
+        // **وسلايدرُ اللافتات فوق البحث — كما في الويب حرفا**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «سلايدر صفحة التسوّق مثل سلايدر
+        //  الصفحة الرئيسيّة، ولكن يجب أن تُطبَّق على الجوّال».)
+        //
+        // **والمحرّكُ يرسلها منذ زمنٍ ولا أحدَ يرسمها** — تُنشَر من
+        // اللوحة ولا تُرى في الجوّال.
+        //
+        // **وفوق البحث لا تحته**: ترتيبُ الويب نفسُه (`HomeClient`)،
+        // **وشاشتان بترتيبين تُحسّان تطبيقين.**
+        //
+        // **ولا تُرسم وهو يبحث** — نتائجُ بحثٍ تحتها لافتةُ عرضٍ
+        // **تدفعها إلى نصف الشاشة**، ومن بحث يريد ما بحث عنه.
+        if (!vm.searching && vm.banners.isNotEmpty()) {
+            BannerSlider(
+                items = vm.banners.map {
+                    BannerSlide(
+                        id = it.id,
+                        title = it.title,
+                        imageUrl = media(it.imageUrl),
+                        target = it.target,
+                    )
+                },
+                auto = vm.bannerAuto,
+                everyMs = vm.bannerEveryMs,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+        }
+
         val hints = vm.sections.map { it.name }
         var hint by remember { mutableStateOf(0) }
         LaunchedEffect(hints.size, vm.query.isEmpty()) {

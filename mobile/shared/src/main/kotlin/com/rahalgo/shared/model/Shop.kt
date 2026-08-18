@@ -28,12 +28,21 @@ data class HomePage(
     @SerialName("rail_every_ms") val railEveryMs: Int = 0,
 )
 
+/**
+ * **لافتةٌ كما يرسلها المحرّك** — `catalog.Banner`.
+ *
+ * **و`target` لا `link_url`**: كان الاسمُ مخترَعاً **فيُقرأ فارغاً
+ * دائماً** — وحقلٌ لا وجودَ له في الردّ يسقط إلى قيمته الافتراضيّة
+ * بلا خطأ (`ignoreUnknownKeys`)، **فتُقرأ اللافتةُ بلا وجهةٍ أبدا.**
+ */
 @Serializable
 data class Banner(
     val id: String = "",
     val title: String = "",
     @SerialName("image_url") val imageUrl: String? = null,
-    @SerialName("link_url") val linkUrl: String? = null,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
+    /** **وجهةُ الضغطة** — وفارغُها لافتةٌ تُرى ولا تُفتح. */
+    val target: String = "",
 )
 
 @Serializable

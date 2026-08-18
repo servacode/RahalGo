@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.customer.CustomerApi
+import com.rahalgo.shared.model.Banner
 import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.Section
 import com.rahalgo.ui.AppCore
@@ -44,6 +45,23 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
     private val api = CustomerApi(AppCore.get().api)
 
     var sections by mutableStateOf<List<Section>>(emptyList())
+        private set
+
+    /**
+     * **لافتاتُ صفحة التسوّق** — (طلبُ المالك ٢٠٢٦-٠٨-١٨).
+     *
+     * **والمحرّكُ يرسلها منذ زمنٍ ولا أحدَ يرسمها** — تصل في
+     * `/public/home` مع مهلتها وحالِ دورانها، **فتُنشَر من اللوحة ولا
+     * تُرى في الجوّال.**
+     */
+    var banners by mutableStateOf<List<Banner>>(emptyList())
+        private set
+
+    /** **دورانُها ومهلتُه من اللوحة لا من الشيفرة.** */
+    var bannerAuto by mutableStateOf(false)
+        private set
+
+    var bannerEveryMs by mutableStateOf(0)
         private set
 
     var pick by mutableStateOf<String?>(null)
@@ -105,6 +123,9 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val home = api.home()
                 sections = home.sections
+                banners = home.banners
+                bannerAuto = home.bannerAuto
+                bannerEveryMs = home.bannerEveryMs
                 // **وأوّلُ قسمٍ يُفتح** — إلّا أن يكون قد اختار قبل الدوران.
                 val first = pick ?: home.sections.firstOrNull()?.id
                 if (first != null) openSection(first) else busy = false
