@@ -210,6 +210,11 @@
     <string name="acc_phone_saved">تم تغيير رقمك بنجاح</string>
     <string name="acc_phone_send">أرسل رمز التأكيد</string>
     <string name="acc_photo_pick">اختر صورة</string>
+    <!-- **مصدرُ الصورة** — (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لازم نسمح
+         للكاميرا بتصويرٍ مباشرٍ أيضاً وليس فقط صورةً محفوظة»). -->
+    <string name="photo_source">من أين تريد الصورة؟</string>
+    <string name="photo_camera">التقط صورة</string>
+    <string name="photo_gallery">من المعرض</string>
     <string name="acc_photo_remove">إزالة الصورة</string>
     <string name="acc_pw_change">تغيير كلمة المرور</string>
     <string name="acc_pw_changed">تم تغيير كلمة المرور بنجاح</string>

@@ -4,6 +4,15 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import androidx.core.content.FileProvider
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -60,27 +69,95 @@ fun readScaledImage(context: Context, uri: Uri): ByteArray {
 }
 
 /**
- * **منتقي صورةٍ من النظام — يردّ بايتاتِها مصغَّرة.**
+ * ══════════════════════════════════════════════════════════════════════
+ * **منتقي صورة — من الكاميرا أو من المعرض**
+ * ══════════════════════════════════════════════════════════════════════
  *
- * **`PickVisualMedia` يعطي ملفّاً واحداً اختاره صاحبُه** — **والإذنُ
- * العامُّ يطلب أن يُفتح الألبومُ كلُّه لتطبيق عمل**، وهو ما يرفضه
- * أكثرُهم فيقف الرفع.
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «إضافةُ صورةٍ على التطبيق لازم نسمح للكاميرا
+ *  بتصويرٍ مباشرٍ أيضاً وليس فقط صورةً محفوظة».)
  *
- * **والقراءةُ هنا لا في نموذج الشاشة**: `Uri` صالحٌ لحظةَ اختياره،
- * **ومن مرّره ليُقرأ لاحقاً قرأ عنواناً انتهت صلاحيّتُه.**
+ * # ولماذا الكاميرا شرطٌ لا زينة
+ *
+ * **المندوبُ واقفٌ عند الصنف** — يصوّره ويرفعه في دقيقة. **ومن طُلب منه
+ * أن يصوّر أوّلاً ثمّ يفتح التطبيق ثمّ يبحث عن صورته في المعرض ترك
+ * الصنفَ بلا صورة.**
+ *
+ * **والزبونُ كذلك** حين يضع صورةَ حسابه.
+ *
+ * # ولماذا يُسأل ولا يُفترض
+ *
+ * **من يرفع صورةَ منتجٍ يصوّرها، ومن يرفع صورةَ حسابه يختارها غالبا** —
+ * **وفتحُ الكاميرا مباشرةً لمن أراد المعرضَ يُخرجه من التطبيق بلا سبب.**
+ *
+ * # و`TakePicture` لا `TakePicturePreview`
+ *
+ * **`TakePicturePreview` تعيد صورةً مصغَّرةً في الذاكرة** — تكفي بيّنةَ
+ * تسليمٍ عند السائق، **ولا تكفي صورةَ صنفٍ يراها الزبونُ في السوق.**
+ *
+ * **فتُكتب في ملفٍّ مؤقّتٍ ويُعطى تطبيقُ الكاميرا عنوانَ مزوّدٍ** —
+ * ومسارُ ملفٍّ خامٍّ يُسقط التطبيقَ منذ أندرويد السابع.
+ *
+ * # والقراءةُ هنا لا في نموذج الشاشة
+ *
+ * `Uri` صالحٌ لحظةَ اختياره، **ومن مرّره ليُقرأ لاحقاً قرأ عنواناً
+ * انتهت صلاحيّتُه.**
  */
 @Composable
 fun rememberImagePicker(onBytes: (ByteArray) -> Unit): () -> Unit {
     val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia(),
-    ) { uri ->
+    var asking by remember { mutableStateOf(false) }
+    // **وعنوانُ الصورة الملتقَطة يُحفظ** — الردُّ يقول «نجحت» ولا يقول
+    // أين، **فمن لم يحتفظ به فقد الصورةَ التي التُقطت للتوّ.**
+    var shot by remember { mutableStateOf<Uri?>(null) }
+
+    fun deliver(uri: Uri?) {
         // **وفشلُ القراءة لا يُسقط الشاشة** — يُترك بلا صورة.
         uri?.let { runCatching { readScaledImage(context, it) }.getOrNull()?.let(onBytes) }
     }
-    return {
-        launcher.launch(
-            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+
+    val gallery = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri -> deliver(uri) }
+
+    val camera = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture(),
+    ) { ok -> if (ok) deliver(shot) }
+
+    if (asking) {
+        AlertDialog(
+            onDismissRequest = { asking = false },
+            title = { Text(stringResource(R.string.photo_source)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    asking = false
+                    runCatching { newPhotoUri(context) }.getOrNull()?.let {
+                        shot = it
+                        camera.launch(it)
+                    }
+                }) { Text(stringResource(R.string.photo_camera)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    asking = false
+                    gallery.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                    )
+                }) { Text(stringResource(R.string.photo_gallery)) }
+            },
         )
     }
+
+    return { asking = true }
+}
+
+/**
+ * **ملفٌّ مؤقّتٌ تكتب فيه الكاميرا** — وعنوانُه من المزوّد.
+ *
+ * **واسمُه يحمل الوقتَ** — **ومن كتب باسمٍ ثابتٍ وجد صورةَ الأمس** إن
+ * أخفقت الكاميرا ولم تكتب شيئاً.
+ */
+private fun newPhotoUri(context: Context): Uri {
+    val dir = java.io.File(context.cacheDir, "photos").apply { mkdirs() }
+    val file = java.io.File(dir, "shot_" + System.currentTimeMillis() + ".jpg")
+    return FileProvider.getUriForFile(context, context.packageName + ".photos", file)
 }

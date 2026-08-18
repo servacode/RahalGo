@@ -166,12 +166,17 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
      * **وألفٌ وستّمئة على الضلع الأطول** — حدُّ الخادم نفسُه، فلا يخسر
      * شيئاً ولا يحمل زائدا.
      */
-    fun setAvatar(uri: Uri) {
+    /**
+     * **يرفع صورةً قُرئت وصُغّرت في `ImagePick`.**
+     *
+     * **والبايتاتُ لا `Uri`** — (طلبُ المالك ٢٠٢٦-٠٨-١٨: الكاميرا
+     * المباشرة). **وصورةُ الكاميرا تجيء من ملفٍّ مؤقّتٍ وصورةُ المعرض
+     * من مزوّد المعرض** — **ونموذجٌ يفرّق بينهما يعرف عن النظام ما لا
+     * يخصّه.** فيقرؤهما المنتقي ويردّ شيئاً واحدا.
+     */
+    fun setAvatarBytes(bytes: ByteArray) {
         act(R.string.acc_saved, AccountSpot.IDENTITY) {
-            // **والتصغيرُ في `ImagePick` لا هنا** — **صارت شاشةُ المندوب
-            // ترفع صورَ الأصناف أيضاً، ونسخةٌ ثانيةٌ من الحسبة تعني
-            // موضعين يُصلَح فيهما العيبُ ويُنسى ثانيهما.**
-            backend.account.setAvatar("avatar.jpg", readScaledImage(getApplication(), uri))
+            backend.account.setAvatar("avatar.jpg", bytes)
         }
     }
 

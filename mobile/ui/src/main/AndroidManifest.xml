@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ══════════════════════════════════════════════════════════════
+     **بيانُ الوحدة المشتركة — مزوّدُ صور الكاميرا وحدَه**
+     ══════════════════════════════════════════════════════════════
+
+     (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لازم نسمح للكاميرا بتصويرٍ مباشرٍ أيضاً
+      وليس فقط صورةً محفوظة».)
+
+     **ويُعلَن هنا لا في كلّ تطبيق** — ثلاثةُ بياناتٍ تحمل الإعلانَ نفسَه
+     يُنسى في أحدها، **فتسقط الكاميرا في تطبيقٍ واحدٍ ولا يُعرف لماذا.**
+
+     **والاسمُ يتبع معرّفَ التطبيق** (`${applicationId}`) — **ومزوّدان
+     بالاسم نفسِه على جهازٍ واحدٍ يمنعان تثبيتَ الثاني**، وأجهزتُنا
+     تحمل الثلاثة معا.
+
+     **ولا إذنَ كاميرا يُطلب**: `TakePicture` يفتح تطبيقَ الكاميرا
+     ويأخذ صورتَه — **والإذنُ إذنُ ذاك لا إذنُنا.** ومن طلبه بلا حاجةٍ
+     أخاف صاحبَه وسُئل عنه في المتجر. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.photos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/rahalgo_photo_paths" />
+        </provider>
+    </application>
+</manifest>

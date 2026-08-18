@@ -198,13 +198,19 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean) {
     val me = s.me ?: return
     var draft by rememberSaveable(me.fullName) { mutableStateOf(me.fullName) }
 
-    // **ومنتقي الصور من النظام** — لا إذنَ لقراءة المعرض كلِّه.
+    // ══════════════════════════════════════════════════════════════════
+    // **ومنتقي الصور واحدٌ للحساب وللأصناف**
+    // ══════════════════════════════════════════════════════════════════
     //
-    // **`PickVisualMedia` يعطي ملفّاً واحداً اختاره صاحبُه** — والإذنُ
-    // العامُّ يطلب من السائق أن يفتح ألبومَه كلَّه لتطبيق عمل.
-    val picker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia(),
-    ) { uri -> uri?.let(vm::setAvatar) }
+    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لازم نسمح للكاميرا بتصويرٍ مباشرٍ أيضاً
+    //  وليس فقط صورةً محفوظة».)
+    //
+    // **وكان هنا منتقٍ ثانٍ يفتح المعرضَ وحدَه** — **ومنتقيان لعملٍ واحدٍ
+    // يفترقان**: تُضاف الكاميرا في أحدهما وتُنسى في الآخر، وهو ما وقع.
+    //
+    // **ويردّ بايتاتٍ مصغَّرةً لا `Uri`** — القراءةُ والتصغيرُ في موضعٍ
+    // واحد.
+    val picker = rememberImagePicker { bytes -> vm.setAvatarBytes(bytes) }
 
     // **ولا عنوانَ لأوّل قسم** — (قرارُ المالك ٢٠٢٦-٠٨-١٣: «مكتوب هويّتي
     // من فوق، ألغِها ما يلزم»).
@@ -215,13 +221,7 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean) {
         Spacer(Modifier.size(12.dp))
         Column {
             TextButton(
-                onClick = {
-                    picker.launch(
-                        androidx.activity.result.PickVisualMediaRequest(
-                            ActivityResultContracts.PickVisualMedia.ImageOnly,
-                        ),
-                    )
-                },
+                onClick = picker,
                 enabled = !s.busy,
             ) { Text(stringResource(R.string.acc_photo_pick)) }
             if (!me.avatarThumbUrl.isNullOrEmpty()) {
