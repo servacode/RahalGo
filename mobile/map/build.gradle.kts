@@ -47,6 +47,10 @@ dependencies {
     api(libs.maplibre)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // **ورجوعُ النظام يُلتقط هنا** — حُذف زرُّ «إلغاء» من شاشة الخريطة
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٨)، **فلو لم يُلتقط الرجوعُ لَخرج صاحبُه
+    // من التطبيق كلِّه ليغلق خريطة.**
+    implementation(libs.androidx.activity.compose)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

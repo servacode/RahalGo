@@ -133,6 +133,16 @@ class AccountApi(private val api: ApiClient) {
         api.call<Ack>("/api/v1/my/addresses", HttpMethod.Post, input)
     }
 
+    /**
+     * **يعدّل عنواناً محفوظاً** — (قرارُ المالك ٢٠٢٦-٠٨-١٨).
+     *
+     * **ومن أخطأ في طابقه كان يحذف وينشئ** — فيفقد كونَه الافتراضيَّ
+     * ويعيد التقاطَ نقطته على الخريطة.
+     */
+    suspend fun updateAddress(id: String, input: AddressInput) {
+        api.call<Ack>("/api/v1/my/addresses/" + id, HttpMethod.Patch, input)
+    }
+
     suspend fun deleteAddress(id: String) {
         api.call<Ack>("/api/v1/my/addresses/" + id, HttpMethod.Delete, null)
     }

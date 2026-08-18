@@ -40,7 +40,18 @@ data class AvatarResult(
 @Serializable
 data class Address(
     val id: String = "",
-    val label: String = "",
+    /** **المنطقةُ والمبنى** — الإلزاميُّ الوحيد. */
+    @SerialName("area_building") val areaBuilding: String = "",
+    val street: String = "",
+    val floor: String = "",
+    /** **نوعُ العنوان** — `home` أو `work` أو `other`. */
+    val kind: String = "other",
+    /**
+     * **السطرُ المركَّب** — يقرؤه السائقُ ويُحفظ لقطةً في الطلب.
+     *
+     * **مشتقٌّ في المحرّك لا يُرسَل** — **ولو أُرسل لصار للعنوان مصدران
+     * يفترقان.**
+     */
     @SerialName("address_text") val text: String = "",
     val lat: Double = 0.0,
     val lng: Double = 0.0,
@@ -53,8 +64,11 @@ data class Address(
 /** **ما يُرسَل لإنشاء عنوان** — بأسماء حقول المحرّك. */
 @Serializable
 data class AddressInput(
-    val label: String,
-    @SerialName("address_text") val text: String,
-    val lat: Double,
-    val lng: Double,
+    @SerialName("area_building") val areaBuilding: String,
+    val street: String = "",
+    val floor: String = "",
+    val kind: String = "other",
+    /** **والنقطةُ اختياريّةٌ في التعديل** — تصحيحُ حرفٍ لا يفتح خريطة. */
+    val lat: Double? = null,
+    val lng: Double? = null,
 )

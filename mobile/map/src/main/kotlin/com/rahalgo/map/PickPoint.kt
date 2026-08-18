@@ -18,7 +18,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -91,6 +90,10 @@ fun PickPoint(
 ) {
     var query by remember { mutableStateOf("") }
 
+    // **والرجوعُ زرُّ النظام** — حُذف زرُّ «إلغاء» من الشاشة، **فلو لم
+    // يُربط الرجوعُ لَخرج صاحبُه من التطبيق كلِّه ليغلق خريطة.**
+    androidx.activity.compose.BackHandler { onCancel() }
+
     // **وحين يجيء الموضعُ تقفز الخريطةُ إليه** — ومن ضغط «موقعي» ثمّ لم
     // تتحرّك الخريطةُ ظنّ أنّ الزرَّ لا يعمل.
     val here = com.rahalgo.ui.LastPoint.value
@@ -109,6 +112,26 @@ fun PickPoint(
 
         // **والدبّوسُ في وسط الشاشة لا على الخريطة** — لا يتحرّك معها،
         // **فما تحته هو المختار.**
+        // ══════════════════════════════════════════════════════════════
+        // **وتلميحٌ فوق الدبّوس — عند ما يُفعل به**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (صورُ المالك المرجعيّة ٢٠٢٦-٠٨-١٨.)
+        //
+        // **وكان سطراً في أسفل الشاشة** — **ومن قرأه لا يربطه بالدبّوس
+        // في الوسط**، فيبقى ينتظر شيئاً يقع.
+        Text(
+            text = stringResource(R.string.pick_drag),
+            color = Rahal.colors.canvas,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = (-64).dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(Rahal.colors.ink)
+                .padding(horizontal = 18.dp, vertical = 10.dp),
+        )
+
         Icon(
             painter = painterResource(R.drawable.ic_pin_center),
             contentDescription = null,
@@ -203,32 +226,50 @@ fun PickPoint(
                 .background(Rahal.colors.canvas)
                 .padding(14.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (vm.reading) {
-                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.size(8.dp))
-                }
+            // **واسمُ ما تحت الدبّوس يُقرأ قبل التأكيد** — **ومن ثبّت
+            // نقطةً بلا أن يقرأ اسمَها لا يعرف ماذا اختار.**
+            if (vm.label.isNotEmpty()) {
                 Text(
-                    text = vm.label.ifEmpty { stringResource(R.string.pick_move_map) },
-                    color = if (vm.label.isEmpty()) Rahal.colors.inkMuted else Color.Unspecified,
+                    text = vm.label,
                     fontWeight = FontWeight.Medium,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(Modifier.height(10.dp))
             }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = { vm.point?.let { onPick(it, vm.label) } },
-                    // **ولا يُثبَّت قبل أن تُقرأ نقطة** — نقطةٌ صفريّةٌ
-                    // تُرسل سائقاً إلى لا مكان.
-                    enabled = vm.point != null,
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.pick_confirm)) }
-                OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.pick_cancel))
+            // ══════════════════════════════════════════════════════════
+            // **وزرٌّ واحدٌ عريضٌ يقول حالَه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (صورُ المالك: الزرُّ يُعطَّل ويقول «جاري تحديد الموقع…»
+            //  ريثما يُقرأ العنوان.)
+            //
+            // **وزرّان متجاوران أحدُهما «إلغاء» يجعلان القرارَ اثنين** —
+            // **والرجوعُ زرُّ النظام**، وهو ما يعرفه كلُّ من يستعمل هاتفا.
+            //
+            // **والتعطيلُ يُقال لا يُترك صامتا**: زرٌّ باهتٌ بلا سببٍ
+            // يُقرأ عطباً، **وزرٌّ يقول «جاري…» يُقرأ انتظارا.**
+            Button(
+                onClick = { vm.point?.let { onPick(it, vm.label) } },
+                // **ولا يُثبَّت قبل أن تُقرأ نقطة** — نقطةٌ صفريّةٌ
+                // تُرسل سائقاً إلى لا مكان.
+                enabled = vm.point != null && !vm.reading,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (vm.reading) {
+                    CircularProgressIndicator(
+                        Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Rahal.colors.onBrand,
+                    )
+                    Spacer(Modifier.size(8.dp))
                 }
+                Text(
+                    stringResource(
+                        if (vm.reading) R.string.pick_reading else R.string.pick_confirm,
+                    ),
+                )
             }
         }
     }

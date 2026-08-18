@@ -194,6 +194,32 @@
     <string name="acc_addr_point">الموقع على الخريطة</string>
     <string name="acc_addr_repin">تغيير الموقع</string>
     <string name="acc_addr_text">العنوان التفصيليّ</string>
+    <!-- ══════════════════════════════════════════════════════════
+         **ورقةُ العنوان — أجزاءٌ لا سطر**
+         ══════════════════════════════════════════════════════════
+
+         (قرارُ المالك ٢٠٢٦-٠٨-١٨ بصورِ مرجع.)
+
+         **ولا رقمَ هاتفٍ فيها** — **موجودٌ في الحساب أصلاً**، وحقلٌ
+         يُطلب مرّتين يُملأ مرّةً بخطأ. -->
+    <string name="addr_confirm_title">تأكيد العنوان</string>
+    <string name="addr_confirm_hint">يرجى التأكد من دقة موقعك على الخريطة</string>
+    <string name="addr_area">المنطقة والمبنى</string>
+    <string name="addr_area_hint">مثلاً: المزة، بناء 14</string>
+    <string name="addr_street">الشارع</string>
+    <string name="addr_street_hint">اسم الشارع</string>
+    <string name="addr_floor">الطابق</string>
+    <string name="addr_floor_hint">2</string>
+    <string name="addr_kind">نوع العنوان</string>
+    <string name="addr_kind_home">المنزل</string>
+    <string name="addr_kind_work">العمل</string>
+    <string name="addr_kind_other">أخرى</string>
+    <string name="addr_save">حفظ العنوان</string>
+    <!-- **والنجمةُ تقول ما لا يُترك** — ومن ترك حقلاً إلزاميّاً ثمّ رُدّ
+         يبحث عن أيِّها. -->
+    <string name="addr_required">*</string>
+    <string name="addr_edit">تعديل</string>
+    <string name="addr_change_point">تغيير الموقع على الخريطة</string>
     <string name="acc_addresses">عناويني</string>
     <string name="acc_danger">حذف الحساب</string>
     <string name="acc_delete_ask">أرسل رمز الحذف</string>

@@ -162,10 +162,47 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun setPassword(current: String, next: String) =
         act(R.string.acc_pw_changed) { backend.account.setPassword(current, next) }
 
-    fun addAddress(label: String, text: String, lat: Double, lng: Double) =
-        act(R.string.acc_saved_address) {
-            backend.account.addAddress(AddressInput(label.trim(), text.trim(), lat, lng))
-        }
+    /**
+     * **يحفظ عنواناً جديداً** — بأجزائه لا بسطر.
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-١٨.)
+     *
+     * **والسطرُ يُركَّب في المحرّك** — **ولو رُكّب هنا لَصار للعنوان
+     * مصدران يفترقان** يومَ يُبدَّل الفاصلُ بينهما.
+     */
+    fun addAddress(
+        area: String,
+        street: String,
+        floor: String,
+        kind: String,
+        lat: Double?,
+        lng: Double?,
+    ) = act(R.string.acc_saved_address) {
+        backend.account.addAddress(
+            AddressInput(area.trim(), street.trim(), floor.trim(), kind, lat, lng),
+        )
+    }
+
+    /**
+     * **يعدّل عنواناً محفوظاً.**
+     *
+     * **والنقطةُ تُرسَل كما هي** — إن لم يفتح الخريطةَ بقيت نقطتُه،
+     * **ومن أُلزم بإعادة التقاطها لتصحيح حرفٍ لا يصحّح.**
+     */
+    fun updateAddress(
+        id: String,
+        area: String,
+        street: String,
+        floor: String,
+        kind: String,
+        lat: Double?,
+        lng: Double?,
+    ) = act(R.string.acc_saved_address) {
+        backend.account.updateAddress(
+            id,
+            AddressInput(area.trim(), street.trim(), floor.trim(), kind, lat, lng),
+        )
+    }
 
     fun deleteAddress(id: String) =
         act(R.string.acc_deleted_address) { backend.account.deleteAddress(id) }

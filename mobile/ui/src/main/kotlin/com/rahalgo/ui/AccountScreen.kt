@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.rahalgo.shared.model.Address
@@ -449,203 +450,250 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
 
 // ــ العناوين ــ
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **العناوينُ المحفوظة — تُعرض وتُعدَّل وتُحذف**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-١٨: «قسمُ حسابي فقط يُظهر العناوينَ المحفوظة،
+ *  ويمكن تعديلها أو حذفها — هكذا يكون العملُ احترافيّاً أكثر».)
+ *
+ * # والإضافةُ تفتح الخريطةَ أوّلا
+ *
+ * **الموضعُ قبل الوصف** — (صورُ المالك المرجعيّة): يضع النقطةَ ثمّ
+ * يصفها. **ومن كتب عنوانَه ثمّ طُلبت منه نقطتُه كتب وصفاً لمكانٍ لم
+ * يحدّده بعد.**
+ *
+ * # والتعديلُ لا يفتح خريطةً إلّا إن أراد
+ *
+ * **أكثرُ التصحيح نصٌّ** — طابقٌ أو شارع. **ومن أُلزم بإعادة فتح
+ * الخريطة لتصحيح حرفٍ لا يصحّح.**
+ */
 @Composable
 private fun AddressesSection(
     vm: AccountViewModel,
     s: AccountState,
     picker: PointPicker?,
 ) {
-    var adding by rememberSaveable { mutableStateOf(false) }
+    // **حالٌ واحدةٌ لا رايتان**: فارغٌ قائمة · «add» إضافة · معرّفٌ تعديل.
+    // **ورايتان ترتفعان معاً حالٌ لا معنى لها.**
+    var mode by rememberSaveable { mutableStateOf("") }
 
     SectionTitle(stringResource(R.string.acc_addresses))
-    if (s.addresses.isEmpty() && !adding) {
+
+    if (mode == "add") {
+        AddressEditor(vm, s, picker, null) { mode = "" }
+        return
+    }
+    if (mode.isNotEmpty()) {
+        val a = s.addresses.firstOrNull { it.id == mode }
+        if (a != null) {
+            AddressEditor(vm, s, picker, a) { mode = "" }
+            return
+        }
+        mode = ""
+    }
+
+    if (s.addresses.isEmpty()) {
         Text(stringResource(R.string.acc_addr_empty), color = Rahal.colors.inkMuted)
     }
-    s.addresses.forEach { a -> AddressRow(a, vm, s) }
+    s.addresses.forEach { a -> AddressRow(a, vm, s) { mode = a.id } }
 
     Spacer(Modifier.height(8.dp))
-    if (!adding) {
-        OutlinedButton(
-            onClick = { adding = true },
-            enabled = !s.busy,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.acc_addr_add)) }
-    } else {
-        AddAddress(vm, s, picker, onDone = { adding = false })
-    }
+    OutlinedButton(
+        onClick = { mode = "add" },
+        enabled = !s.busy,
+        modifier = Modifier.fillMaxWidth(),
+    ) { Text(stringResource(R.string.acc_addr_add)) }
 }
 
+/** **سطرُ عنوانٍ محفوظ** — نوعُه وسطرُه وأفعالُه الثلاثة. */
 @Composable
-private fun AddressRow(a: Address, vm: AccountViewModel, s: AccountState) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(a.label, style = MaterialTheme.typography.titleSmall)
-            if (a.isDefault) {
-                Text(stringResource(R.string.acc_addr_default), color = Rahal.colors.success)
-            }
-        }
-        Text(a.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
-        Row {
-            if (!a.isDefault) {
-                TextButton(onClick = { vm.makeDefault(a.id) }, enabled = !s.busy) {
-                    Text(stringResource(R.string.acc_addr_make_default))
-                }
-            }
-            TextButton(onClick = { vm.deleteAddress(a.id) }, enabled = !s.busy) {
-                Text(stringResource(R.string.acc_addr_delete), color = Rahal.colors.danger)
-            }
-        }
-        HorizontalDivider()
-    }
-}
-
-/**
- * **وإضافةُ العنوان بالموقع الحاليّ لا بخريطة.**
- *
- * **السائقُ يقف حيث يريد أن يحفظه** — والخريطةُ في هذه الشاشة تعني
- * منتقيَ نقطةٍ كاملاً. **وموضعُه الآن أدقُّ ممّا يشير إليه بإصبعه** وهو
- * ماشٍ.
- *
- * **وبلا موقعٍ لا يُحفظ عنوانٌ بإحداثيٍّ صفر** — نقطةٌ في المحيط
- * الأطلسيّ **تُرسل سائقاً إلى لا مكان.**
- */
-@Composable
-private fun AddAddress(
+private fun AddressRow(
+    a: Address,
     vm: AccountViewModel,
     s: AccountState,
-    picker: PointPicker?,
-    onDone: () -> Unit,
+    onEdit: () -> Unit,
 ) {
-    var label by rememberSaveable { mutableStateOf("") }
-    var text by rememberSaveable { mutableStateOf("") }
-    // **والنقطةُ تُلتقط بضغطةٍ وتبقى** — لا تُقرأ لحظةَ الحفظ.
-    var pinned by rememberSaveable { mutableStateOf<Pair<Double, Double>?>(null) }
-    // **والخريطةُ مفتوحةٌ أو لا** — وتبقى بعد دوران الجهاز.
-    var onMap by rememberSaveable { mutableStateOf(false) }
-    OutlinedTextField(
-        value = label,
-        onValueChange = { label = it },
-        label = { Text(stringResource(R.string.acc_addr_label)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
     Spacer(Modifier.height(8.dp))
-    OutlinedTextField(
-        value = text,
-        onValueChange = { text = it },
-        label = { Text(stringResource(R.string.acc_addr_text)) },
-        modifier = Modifier.fillMaxWidth(),
-    )
-
-    // ══════════════════════════════════════════════════════════════════
-    // **وأسلوبٌ واحدٌ لالتقاط الموقع — خريطةٌ تُفتح ثمّ حفظ**
-    // ══════════════════════════════════════════════════════════════════
-    //
-    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «مسألةُ تحديد العنوان على الخريطة تستخدم
-    //  أكثرَ من أسلوبٍ وأكثرَ من طريقة وهذا غلط — المفروض تفتح الخريطةُ
-    //  وهناك أيقونةُ تحديد الموقع بدقّة ثمّ حفظ وانتهى الأمر، هذا الأمرُ
-    //  متعارَفٌ عليه».)
-    //
-    // # وكان هنا زرّان
-    //
-    // **«حدّد موقعي»** يثبّت النقطةَ بلا خريطة، **و«على الخريطة»** يفتح
-    // المنتقي. **وطريقتان لعملٍ واحدٍ تجعلان الشاشتين تبدوان تطبيقين.**
-    //
-    // # ولماذا سقط الأوّل الآن
-    //
-    // **قرارٌ سابقٌ (٢٠٢٦-٠٨-١٣) قال «مو ضروريّ تفتح خريطة»** — وكان
-    // صحيحاً يومَها: **المنتقي لم يكن فيه ما يعرف موضعَك**، فمن أراد
-    // موضعَه حرّك الخريطةَ بإصبعه حتّى يجده.
-    //
-    // **وقد صارت فيه أيقونةُ «موقعي»** (٢٠٢٦-٠٨-١٨) — **فالخريطةُ تفعل
-    // ما كان يفعله الزرُّ الأوّلُ وزيادة**: ضغطةٌ تجلب موضعَه، ثمّ يصحّحه
-    // إن أخطأ الجهاز، **ثمّ حفظ.**
-    //
-    // **وزرٌّ صار الآخرُ يُغني عنه يبقى ليُربك** — يقرأ صاحبُه اثنين
-    // فيسأل أيُّهما الصحيح.
-    //
-    // **والحقلُ يمتلئ أمام عينه** فيرى أنّ شيئاً وقع.
-    Spacer(Modifier.height(8.dp))
-    OutlinedTextField(
-        value = pinned?.let { fmtPoint(it.first, it.second) } ?: "",
-        onValueChange = {},
-        readOnly = true,
-        label = { Text(stringResource(R.string.acc_addr_point)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Spacer(Modifier.height(6.dp))
-    if (pinned != null) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            stringResource(R.string.acc_addr_pinned),
-            color = Rahal.colors.success,
-            style = MaterialTheme.typography.bodySmall,
+            text = stringResource(kindLabel(a.kind)),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium,
         )
-    } else {
-        // **والتحذيرُ يتبع النقطةَ لا جهازَ التموضع** — كان يُعرض حين
-        // يعجز الجهازُ عن قراءة الموضع، **وقد صار الموضعُ يُختار على
-        // الخريطة**: من لم يفتحها بعدُ لا نقطةَ له وإن عرف الجهازُ أين هو.
-        Text(
-            stringResource(R.string.acc_addr_need_point),
-            color = Rahal.colors.danger,
-            style = MaterialTheme.typography.bodySmall,
-        )
-    }
-    Spacer(Modifier.height(6.dp))
-    // **وزرٌّ واحدٌ يفتح الخريطة** — انظر أعلى الدالّة.
-    if (picker != null) {
-        OutlinedButton(
-            onClick = { onMap = true },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
+        if (a.isDefault) {
+            Spacer(Modifier.size(8.dp))
             Text(
-                stringResource(
-                    if (pinned == null) R.string.acc_addr_on_map else R.string.acc_addr_repin,
-                ),
+                stringResource(R.string.acc_addr_default),
+                color = Rahal.colors.success,
+                style = MaterialTheme.typography.labelSmall,
             )
         }
     }
+    Text(a.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+    Row {
+        if (!a.isDefault) {
+            TextButton(onClick = { vm.makeDefault(a.id) }, enabled = !s.busy) {
+                Text(stringResource(R.string.acc_addr_make_default))
+            }
+        }
+        TextButton(onClick = onEdit, enabled = !s.busy) {
+            Text(stringResource(R.string.addr_edit))
+        }
+        TextButton(onClick = { vm.deleteAddress(a.id) }, enabled = !s.busy) {
+            Text(stringResource(R.string.acc_addr_delete), color = Rahal.colors.danger)
+        }
+    }
+    HorizontalDivider()
+}
 
-    // **والخريطةُ تغطّي النموذجَ ثمّ تعود بنقطةٍ واسم** — **ولا تُفتح
-    // صفحةً ثانيةً يخرج إليها فيعود فلا يجد ما كتب.**
+/** **اسمُ النوع** — رمزٌ في القاعدة وكلمةٌ في الشاشة. */
+private fun kindLabel(kind: String): Int = when (kind) {
+    "home" -> R.string.addr_kind_home
+    "work" -> R.string.addr_kind_work
+    else -> R.string.addr_kind_other
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **محرّرُ عنوان — خريطةٌ ثمّ ورقةُ وصف**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (صورُ المالك المرجعيّة ٢٠٢٦-٠٨-١٨.)
+ *
+ * **ولا رقمَ هاتفٍ فيه** — (قرارُ المالك: «رقمُ الهاتف ما يلزم لأنّه
+ * موجودٌ عندنا أساساً»). **وحقلٌ يُطلب مرّتين يُملأ مرّةً بخطأ.**
+ */
+@Composable
+private fun AddressEditor(
+    vm: AccountViewModel,
+    s: AccountState,
+    picker: PointPicker?,
+    /** **عنوانٌ يُعدَّل** — أو فارغٌ لجديد. */
+    existing: Address?,
+    onDone: () -> Unit,
+) {
+    var area by rememberSaveable(existing?.id) { mutableStateOf(existing?.areaBuilding ?: "") }
+    var street by rememberSaveable(existing?.id) { mutableStateOf(existing?.street ?: "") }
+    var floor by rememberSaveable(existing?.id) { mutableStateOf(existing?.floor ?: "") }
+    var kind by rememberSaveable(existing?.id) { mutableStateOf(existing?.kind ?: "home") }
+    var lat by rememberSaveable(existing?.id) { mutableStateOf(existing?.lat) }
+    var lng by rememberSaveable(existing?.id) { mutableStateOf(existing?.lng) }
+    // **والجديدُ يفتح الخريطةَ أوّلاً** — الموضعُ قبل الوصف.
+    var onMap by rememberSaveable(existing?.id) { mutableStateOf(existing == null) }
+
     if (onMap && picker != null) {
         picker(
-            { lat, lng, name ->
-                pinned = lat to lng
-                // **واسمُ المكان يملأ العنوانَ إن كان فارغا** — ولا
+            { la, ln, name ->
+                lat = la
+                lng = ln
+                // **واسمُ المكان يملأ المنطقةَ إن كانت فارغة** — ولا
                 // يمحو ما كتبه بيده.
-                if (text.isBlank() && name.isNotBlank()) text = name
+                if (area.isBlank() && name.isNotBlank()) area = name
                 onMap = false
             },
-            { onMap = false },
+            { if (existing == null) onDone() else onMap = false },
         )
         return
     }
 
+    Text(
+        stringResource(R.string.addr_confirm_title),
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.titleMedium,
+    )
+    Text(
+        stringResource(R.string.addr_confirm_hint),
+        color = Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.bodySmall,
+    )
+
+    Spacer(Modifier.height(12.dp))
+    OutlinedTextField(
+        value = area,
+        onValueChange = { area = it },
+        label = {
+            Text(
+                stringResource(R.string.addr_area) + " " +
+                    stringResource(R.string.addr_required),
+            )
+        },
+        placeholder = { Text(stringResource(R.string.addr_area_hint)) },
+        modifier = Modifier.fillMaxWidth(),
+    )
+
     Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = street,
+            onValueChange = { street = it },
+            label = { Text(stringResource(R.string.addr_street)) },
+            placeholder = { Text(stringResource(R.string.addr_street_hint)) },
+            singleLine = true,
+            modifier = Modifier.weight(2f),
+        )
+        OutlinedTextField(
+            value = floor,
+            onValueChange = { v -> floor = v.filter { c -> c.isDigit() } },
+            label = { Text(stringResource(R.string.addr_floor)) },
+            placeholder = { Text(stringResource(R.string.addr_floor_hint)) },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ونوعُ العنوان ثلاثُ بطاقاتٍ لا حقلُ نصّ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وحقلٌ حرٌّ يجعل لكلّ زبونٍ تسميتَه** — «البيت» و«بيتي» و«المنزل»
+    // ثلاثةُ أسماءٍ لشيءٍ واحد، **ولا يُفرز ولا يُعرض بأيقونة.**
+    Spacer(Modifier.height(12.dp))
+    Text(stringResource(R.string.addr_kind), fontWeight = FontWeight.Medium)
+    Spacer(Modifier.height(6.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (k in listOf("home", "work", "other")) {
+            val on = kind == k
+            OutlinedButton(
+                onClick = { kind = k },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
+                ),
+            ) { Text(stringResource(kindLabel(k))) }
+        }
+    }
+
+    // **وتغييرُ الموضع بابٌ ظاهر** — انظر أعلى الدالّة.
+    if (picker != null) {
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = { onMap = true }) {
+            Text(stringResource(R.string.addr_change_point))
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(
             onClick = {
-                pinned?.let { vm.addAddress(label, text, it.first, it.second) }
+                if (existing == null) {
+                    vm.addAddress(area, street, floor, kind, lat, lng)
+                } else {
+                    vm.updateAddress(existing.id, area, street, floor, kind, lat, lng)
+                }
                 onDone()
             },
-            enabled = !s.busy && pinned != null && label.isNotBlank() && text.isNotBlank(),
+            // **ولا يُحفظ عنوانٌ بلا نقطة** — نقطةٌ صفريّةٌ تُرسل سائقاً
+            // إلى لا مكان.
+            enabled = !s.busy && area.isNotBlank() && lat != null && lng != null,
             modifier = Modifier.weight(1f),
-        ) { Text(stringResource(R.string.acc_save)) }
+        ) { Text(stringResource(R.string.addr_save)) }
         OutlinedButton(onClick = onDone, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.acc_delete_cancel))
         }
     }
 }
-
-/**
- * **الإحداثيُّ كما يُقرأ** — ستُّ منازلَ نحوَ عشرةِ سنتيمترات.
- *
- * **ولا يُعرض خاماً بخمسَ عشرةَ منزلة**: سطرٌ لا يُقرأ **يُخيف أكثرَ
- * ممّا يطمئن**، ودقّةٌ زائدةٌ لا يملكها الجهازُ أصلاً.
- */
-private fun fmtPoint(lat: Double, lng: Double): String =
-    String.format(java.util.Locale.US, "%.6f, %.6f", lat, lng)
 
 // ــ الحذف ــ
 
