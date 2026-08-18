@@ -66,8 +66,9 @@ import com.rahalgo.ui.WalletScreen
 import com.rahalgo.ui.WalletViewModel
 import com.rahalgo.ui.AccountScreen
 import com.rahalgo.ui.AccountViewModel
-import com.rahalgo.ui.AddAddressFlow
-import com.rahalgo.ui.AddressSheet
+import com.rahalgo.ui.selectedAddress
+import com.rahalgo.ui.DeliveryAddress
+import com.rahalgo.ui.AddressHost
 import com.rahalgo.ui.addressKindLabel
 import com.rahalgo.map.PickPoint
 import com.rahalgo.map.PickPointViewModel
@@ -294,23 +295,6 @@ private fun SignedIn(
         )
     }
 
-    // ══════════════════════════════════════════════════════════════════
-    // **ولوحةُ عنوان التوصيل تُفتح من الشريط**
-    // ══════════════════════════════════════════════════════════════════
-    //
-    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «ضيف لي الزرَّ بالأعلى، البناءُ سيعتمد
-    //  كلُّه على هذا».)
-    //
-    // **وحالان لا ثلاث**: اللوحةُ مفتوحةٌ أو لا، **والإضافةُ تغلقها
-    // وتفتح الخريطة** — ولو بقيت مفتوحةً خلفها لَعاد إليها بعد الحفظ
-    // فوجد قائمةً لم تُنعش.
-    var addressSheet by rememberSaveable { mutableStateOf(false) }
-    // **ومعرّفُ ما يُحرَّر**: فارغٌ يعني «مغلق»، و«new» يعني جديداً،
-    // **وما عداهما معرّفُ عنوانٍ يُعدَّل.**
-    //
-    // **ورايتان (يُضاف · يُعدَّل) ترتفعان معاً حالٌ لا معنى لها.**
-    var addressEdit by rememberSaveable { mutableStateOf("") }
-
     // **والسلّةُ تُفتح فوق التبويب** — ويُرجع منها إليه.
     var cart by rememberSaveable { mutableStateOf(false) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
@@ -354,31 +338,20 @@ private fun SignedIn(
     BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
     BackHandler(enabled = cart && !drawer.isOpen) { cart = false }
 
+
     // ══════════════════════════════════════════════════════════════════
-    // **وإضافةُ العنوان صفحةٌ قائمةٌ بذاتها — لا طبقةٌ فوق تبويب**
+    // **ومضيفُ العنوان يُركَّب مرّةً — والشاشاتُ تناديه ولا تبنيه**
     // ══════════════════════════════════════════════════════════════════
     //
-    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «تفتح صفحةُ الخريطة بشكلٍ كاملٍ ومنفصل،
-    //  وليس فوق صفحة الطلبات أو الإعدادات أو ما شابه — بل صفحةُ خريطةٍ
-    //  بنفس الشكل».)
+    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «المفروض تصير طريقةُ الخريطة مركزيّة مشان
+    //  ما نظلّ نبنيها بكلّ هالصفحات… مركزيّ ونستدعيها».)
     //
-    // **وكانت داخل الهيكل** — فوقها شريطٌ علويٌّ وتحتها تبويبات،
-    // **والخريطةُ تُقرأ بما يحيط بها**: من رأى شريطاً وتبويبات ظنّ أنّه
-    // ما زال في «حسابي» وأنّ الخريطةَ جزءٌ منها.
+    // **وأربعُ شاشاتٍ كانت تسأل السؤالَ نفسَه** — الشريطُ و«حسابي»
+    // والطلبُ الخاصُّ والسلّة، **وكلٌّ تحمل رايتَها وتفتح لوحتَها.**
     //
-    // **وهنا قبل الدرج والهيكل معاً** — فلا يُفتح درجٌ فوق خريطة، ولا
-    // يُضغط تبويبٌ فتُترك نقطةٌ لم تُحفظ.
-    //
-    // **والرجوعُ يغلقها** — يفرضه `AddressEditor` بحارسٍ فيه.
-    if (addressEdit.isNotEmpty()) {
-        AddAddressFlow(
-            vm = accountVm,
-            picker = mapPicker,
-            onDone = { addressEdit = "" },
-            existing = accountVm.state.addresses.firstOrNull { it.id == addressEdit },
-        )
-        return
-    }
+    // **وقبل الدرج والهيكل** — صفحةُ الخريطة تملأ الشاشة، **وشريطٌ
+    // علويٌّ فوقها يجعلها جزءاً من شاشةٍ أخرى.**
+    if (AddressHost(accountVm, mapPicker)) return
 
     ModalNavigationDrawer(
         drawerState = drawer,
@@ -406,32 +379,6 @@ private fun SignedIn(
     ) {
         val over = overlay.current
 
-        // ══════════════════════════════════════════════════════════════
-        // **ونافذةُ العنوان تطفو فوق الهيكل — لا تحلّ محلَّه**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (تصحيحُ المالك ٢٠٢٦-٠٨-١٨: «نافذةٌ منبثقة».)
-        //
-        // **وكانت تحلّ محلَّ المحتوى** — **فمن فتحها فقد ما كان يفعله**،
-        // ويعود فلا يجد موضعَه. **والمنبثقةُ تُغلق فيبقى حيث كان.**
-        //
-        // **وقبل الهيكل في الشيفرة وفوقه في الرسم** — النافذةُ المنبثقة
-        // ترسم في طبقةٍ فوق الجميع مهما كان موضعُها في الشيفرة.
-        if (addressSheet) {
-            AddressSheet(
-                addresses = accountVm.state.addresses,
-                busy = accountVm.state.busy,
-                onPick = {
-                    accountVm.makeDefault(it.id)
-                    addressSheet = false
-                },
-                onAdd = {
-                    addressSheet = false
-                    addressEdit = "new"
-                },
-                onClose = { addressSheet = false },
-            )
-        }
 
         Scaffold(
             topBar = {
@@ -470,7 +417,7 @@ private fun SignedIn(
                     onAddress = if (guest || (tab != Tab.Shop && tab != Tab.Custom)) {
                         null
                     } else {
-                        { addressSheet = true }
+                        { DeliveryAddress.open() }
                     },
                     // ══════════════════════════════════════════════
                     // **واسمُ العنوان لا سطرُه**
@@ -484,7 +431,7 @@ private fun SignedIn(
                     // شريطٍ ضيّق** — فيُقرأ نصفُه ولا يُعرف أيُّ عنوانٍ
                     // هو. **والاسمُ يُقرأ بنظرة.**
                     addressLabel = accountVm.state.addresses
-                        .firstOrNull { it.isDefault }
+                        .let { selectedAddress(it) }
                         ?.let { stringResource(addressKindLabel(it.kind)) }
                         .orEmpty(),
                 )
@@ -677,7 +624,10 @@ private fun SignedIn(
                     // **والسلّةُ تغطّي السوق** — ومن أرسل طلبَه
                     // انتقل إلى «طلباتي» ليتابعه: **شاشةُ نجاحٍ تُغلق
                     // ثمّ يُسأل «وأين طلبي؟».**
-                    cart -> CartScreen(cartVm, picker = mapPicker) {
+                    cart -> CartScreen(
+                        cartVm,
+                        address = selectedAddress(accountVm.state.addresses),
+                    ) {
                         cart = false
                         tab = Tab.Orders
                         ordersVm.load()
@@ -712,8 +662,8 @@ private fun SignedIn(
                         // **والعنوانُ من حسابه** — (طلبُ المالك
                         // ٢٠٢٦-٠٨-١٨)، **وبابُ الاختيار هو بابُ الشريط
                         // نفسُه**: لوحةٌ واحدةٌ لا اثنتان تفترقان.
-                        address = accountVm.state.addresses.firstOrNull { it.isDefault },
-                        onOpenAddresses = { addressSheet = true },
+                        address = selectedAddress(accountVm.state.addresses),
+                        onOpenAddresses = { DeliveryAddress.open() },
                         onSent = { tab = Tab.Orders },
                     )
 
@@ -732,7 +682,7 @@ private fun SignedIn(
                         // **وزرُّ «حسابي» يفتح الصفحةَ نفسَها** — (طلبُ
                         // المالك ٢٠٢٦-٠٨-١٨: «يفتح نفس الموقع بنفس
                         // الطريقة، والتعديل أيضا»).
-                        onEditAddress = { a -> addressEdit = a?.id ?: "new" },
+                        onEditAddress = { a -> DeliveryAddress.edit(a?.id) },
                     )
 
                     // **ولا حالَ رابعة** — التبويباتُ أربعةٌ كلُّها

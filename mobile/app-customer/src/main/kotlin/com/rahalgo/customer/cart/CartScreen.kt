@@ -40,10 +40,11 @@ import com.rahalgo.shared.model.Quote
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.KeyValue
+import com.rahalgo.shared.model.Address
+import com.rahalgo.ui.AddressCard
+import com.rahalgo.ui.DeliveryAddress
 import com.rahalgo.ui.LastPoint
 import com.rahalgo.ui.Note
-import com.rahalgo.ui.PointField
-import com.rahalgo.ui.PointPicker
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.apiError
@@ -62,8 +63,18 @@ import kotlinx.coroutines.launch
  * لا يُعرضان إلّا منها**: **رقمٌ مخمَّنٌ للتوصيل أسوأُ من لا رقم.**
  */
 @Composable
-fun CartScreen(vm: CartViewModel, picker: PointPicker? = null, onDone: () -> Unit) {
-    val here = LastPoint.value
+fun CartScreen(
+    vm: CartViewModel,
+    /**
+     * **عنوانُ التوصيل المختار** — الافتراضيُّ في حسابه.
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «نغيّر زرَّ العنوان أيضاً بصفحة سلّتي
+     *  بنفس الطريقة».)
+     */
+    address: Address?,
+    onDone: () -> Unit,
+) {
+    val here = address?.let { LastPoint.Point(it.lat, it.lng, it.text) }
 
     // **والتسعيرةُ تُطلب متى تبدّلت السلّةُ أو النقطة** — لا عند الضغط
     // وحدَه: **من رأى الإجماليَّ لحظةَ الدفع فوجده أكبرَ تردّد.**
@@ -117,16 +128,14 @@ fun CartScreen(vm: CartViewModel, picker: PointPicker? = null, onDone: () -> Uni
             }
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **والعنوانُ من حسابه لا من حقلٍ يُملأ كلَّ مرّة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٨-١٨.) **والبابُ هو بابُ الشريط نفسُه** —
+        // **ولوحتان تفترقان يومَ تُزاد فيهما ميزة.**
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = vm.address,
-            onValueChange = { vm.address = it },
-            label = { Text(stringResource(R.string.cart_address)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        // **والموضعُ يُختار على خريطة** — كما في الطلب الخاصّ حرفا.
-        Spacer(Modifier.height(8.dp))
-        PointField(picker)
+        AddressCard(address) { DeliveryAddress.open() }
 
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
@@ -187,11 +196,14 @@ fun CartScreen(vm: CartViewModel, picker: PointPicker? = null, onDone: () -> Uni
         Spacer(Modifier.height(14.dp))
         Button(
             onClick = {
-                here?.let {
-                    vm.send(vm.address.trim(), it.lat, it.lng, if (vm.wallet) "wallet" else "cash", vm.promo.trim(), onDone)
+                address?.let {
+                    vm.send(
+                        it.text, it.lat, it.lng,
+                        if (vm.wallet) "wallet" else "cash", vm.promo.trim(), onDone,
+                    )
                 }
             },
-            enabled = !vm.busy && vm.address.isNotBlank() && here != null &&
+            enabled = !vm.busy && address != null &&
                 vm.priced != null && vm.priced?.outOfZone != true,
             modifier = Modifier.fillMaxWidth(),
         ) {
