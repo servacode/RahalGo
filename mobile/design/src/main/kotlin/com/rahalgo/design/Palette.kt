@@ -143,8 +143,32 @@ val DarkPalette = RahalPalette(
  */
 val LocalPalette = staticCompositionLocalOf { LightPalette }
 
-/** **بابُ الألوان في الشاشات** — `Rahal.colors.inkMuted`. */
+/**
+ * **بابُ التصميم في الشاشات** — `Rahal.colors.inkMuted` و`Rahal.shape.md`.
+ *
+ * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «بدنا نوحّد ستايلَ التطبيقات… الألوانُ
+ *  والأزرارُ وشكلُها وكلُّ شيءٍ بيها يكون موحّد».)
+ *
+ * **والبابُ واحدٌ لكلّ ما يُرى** — ومن كتب `Rahal.` رأى ما عنده كلَّه.
+ * **وبابان (لونٌ هنا وشكلٌ هناك) يعني أن يُعرف أحدُهما ويُجهَل الآخر**،
+ * وهو ما وقع فعلاً: الألوانُ موحّدةٌ والأشكالُ مبعثرةٌ في ٥٢ موضعا.
+ */
 object Rahal {
     val colors: RahalPalette
         @Composable @ReadOnlyComposable get() = LocalPalette.current
+
+    /**
+     * **أنصافُ الأقطار** — `Rahal.shape.md`.
+     *
+     * **ولا `@Composable` عليها**: الشكلُ لا يتبدّل بالسمة، **وحقلٌ
+     * يُقرأ في `@Composable` وحدَه لا يُستعمَل في ثابتٍ ولا في دالّةٍ
+     * عاديّة** — فيُكتب الرقمُ بيدٍ هناك، وهو عينُ ما نُصلحه.
+     */
+    val shape: RahalShapes get() = RahalShapeTokens
+
+    /** **المسافات** — `Rahal.space.lg`. */
+    val space: RahalSpace get() = RahalSpaceTokens
+
+    /** **سماكاتُ الحدود** — `Rahal.stroke.hair`. */
+    val stroke: RahalStroke get() = RahalStrokeTokens
 }
