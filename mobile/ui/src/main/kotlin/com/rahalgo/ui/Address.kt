@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -415,8 +414,8 @@ fun AddressCard(
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .border(1.dp, Rahal.colors.line, RoundedCornerShape(14.dp))
+            .clip(Rahal.shape.md)
+            .border(1.dp, Rahal.colors.line, Rahal.shape.md)
             .clickable(onClick = onOpen)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -713,12 +712,12 @@ private fun KindCard(
 ) {
     Column(
         modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(Rahal.shape.md)
             .background(if (on) Rahal.colors.warnTint else Rahal.colors.canvas)
             .border(
                 width = if (on) 2.dp else 1.dp,
                 color = if (on) Rahal.colors.accent else Rahal.colors.line,
-                shape = RoundedCornerShape(14.dp),
+                shape = Rahal.shape.md,
             )
             .clickable(onClick = onPick)
             .padding(vertical = 14.dp),

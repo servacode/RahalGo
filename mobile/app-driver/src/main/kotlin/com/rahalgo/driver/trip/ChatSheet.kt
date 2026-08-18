@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
@@ -81,8 +80,8 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             // **وارتفاعٌ محدود** — النصف الأعلى يبقى خريطةً: **من فتح
             // الحديث لم يقف عن السير**، وهو يقرأ سطرا ويرفع عينه.
             .heightIn(max = 340.dp)
-            .shadow(10.dp, RoundedCornerShape(20.dp))
-            .clip(RoundedCornerShape(20.dp))
+            .shadow(10.dp, Rahal.shape.lg)
+            .clip(Rahal.shape.lg)
             .background(Rahal.colors.canvas)
             .imePadding(),
     ) {
@@ -167,7 +166,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                 placeholder = { Text(stringResource(R.string.chat_hint)) },
                 modifier = Modifier.fillMaxWidth().padding(10.dp),
                 singleLine = true,
-                shape = RoundedCornerShape(24.dp),
+                shape = Rahal.shape.lg,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { send() }),
                 trailingIcon = {

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -178,7 +177,7 @@ fun TopBar(
             Row(
                 Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(Rahal.shape.md)
                     .clickable(onClick = onAddress)
                     .padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -226,7 +225,7 @@ fun TopBar(
             if (onRating != null && ratingCount > 0) {
                 Row(
                     Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(Rahal.shape.lg)
                         .background(Rahal.colors.accent.copy(alpha = 0.10f))
                         // **وضغطُه يفتح تقييماته** — (قرارُ المالك
                         // ٢٠٢٦-٠٨-١٣: «عند النقر عليه يفتح صفحة التقييم
@@ -280,7 +279,7 @@ fun TopBar(
             // شيئا.
             Row(
                 Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(Rahal.shape.lg)
                     .background(Rahal.colors.brand.copy(alpha = 0.08f))
                     .clickable(onClick = onWallet)
                     .padding(horizontal = 12.dp, vertical = 7.dp),

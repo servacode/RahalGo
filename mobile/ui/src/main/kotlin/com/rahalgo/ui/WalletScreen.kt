@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -280,7 +279,7 @@ fun WalletScreen(
         Column(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
+                .clip(Rahal.shape.md)
                 .background(Rahal.colors.brand.copy(alpha = 0.08f))
                 .padding(vertical = 22.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -484,7 +483,7 @@ private fun Notice(text: String, color: androidx.compose.ui.graphics.Color) {
         textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(Rahal.shape.sm)
             .background(color.copy(alpha = 0.08f))
             .padding(10.dp),
     )

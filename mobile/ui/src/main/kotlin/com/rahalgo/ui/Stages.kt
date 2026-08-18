@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -138,7 +137,7 @@ fun Stages(
                 .padding(horizontal = Pad)
                 .fillMaxWidth()
                 .height(RailH)
-                .clip(RoundedCornerShape(RailH / 2))
+                .clip(Rahal.shape.pill)
                 .background(Rahal.colors.inkMuted.copy(alpha = 0.18f)),
         )
         Box(
@@ -148,7 +147,7 @@ fun Stages(
                 .padding(horizontal = Pad)
                 .fillMaxWidth(pct)
                 .height(RailH)
-                .clip(RoundedCornerShape(RailH / 2))
+                .clip(Rahal.shape.pill)
                 .background(Rahal.colors.accent),
         )
 

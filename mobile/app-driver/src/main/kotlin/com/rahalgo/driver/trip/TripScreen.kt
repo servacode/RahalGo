@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
@@ -651,8 +650,8 @@ private fun MapButton(
 private fun NavigateButton(onClick: () -> Unit) {
     Column(
         Modifier
-            .shadow(6.dp, RoundedCornerShape(18.dp))
-            .clip(RoundedCornerShape(18.dp))
+            .shadow(6.dp, Rahal.shape.md)
+            .clip(Rahal.shape.md)
             .background(Rahal.colors.accent)
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -720,7 +719,7 @@ private fun TripPanel(state: TripState) {
     Column(
         Modifier
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(Rahal.shape.lg)
             .background(Rahal.colors.panel)
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _, dy ->
@@ -815,7 +814,7 @@ private fun TripPanel(state: TripState) {
         Spacer(Modifier.height(8.dp))
         Box(
             Modifier
-                .clip(RoundedCornerShape(3.dp))
+                .clip(Rahal.shape.pill)
                 .background(Color.White.copy(alpha = 0.30f))
                 .size(width = 44.dp, height = 5.dp)
                 .clickable { stripOpen = !stripOpen },
@@ -1042,7 +1041,7 @@ private fun OnRouteBanner(
         modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(Rahal.shape.md)
             .background(Rahal.colors.brand)
             .padding(14.dp),
     ) {
@@ -1158,7 +1157,7 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
                 color = if (now) Rahal.colors.onBrand else Rahal.colors.inkMuted,
                 fontWeight = if (now) FontWeight.Bold else FontWeight.Normal,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(Rahal.shape.sm)
                     .background(if (now) Rahal.colors.brand else Rahal.colors.field)
                     .clickable { onPick(stop.id) }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -1209,7 +1208,7 @@ private fun TripCard(
     Column(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .clip(Rahal.shape.sheet)
             .background(Rahal.colors.canvas)
             // **والسحبُ على البطاقة كلِّها لا على المقبض وحدَه** —
             // **ومقبضٌ بعرض إصبعين** يُخطئه من يقود.
@@ -1226,7 +1225,7 @@ private fun TripCard(
         Box(
             Modifier
                 .align(Alignment.CenterHorizontally)
-                .clip(RoundedCornerShape(3.dp))
+                .clip(Rahal.shape.pill)
                 .background(Rahal.colors.inkMuted.copy(alpha = 0.35f))
                 .size(width = 44.dp, height = 5.dp)
                 .clickable { expanded = !expanded },

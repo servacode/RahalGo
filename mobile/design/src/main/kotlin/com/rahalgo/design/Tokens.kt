@@ -56,6 +56,14 @@ data class RahalShapes(
      * وقصيراً مربّعَ الزوايا.**
      */
     val pill: RoundedCornerShape = RoundedCornerShape(percent = 50),
+
+    /**
+     * **اللوحُ الصاعدُ من الأسفل** — أعلاه مستديرٌ وأسفلُه على الحافّة.
+     *
+     * **وأسفلٌ مستديرٌ يترك خطّاً من الشاشة تحته** يُقرأ فراغاً لا
+     * تصميما.
+     */
+    val sheet: RoundedCornerShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
 )
 
 /**

@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -372,7 +371,7 @@ private fun Tally(
 ) {
     Column(
         modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(Rahal.shape.md)
             .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

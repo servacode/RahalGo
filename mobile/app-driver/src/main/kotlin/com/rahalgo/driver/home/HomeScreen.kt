@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -232,7 +231,7 @@ private fun OfflineCard(progress: Int, downloading: Boolean, onDownload: () -> U
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(Rahal.shape.md)
             .background(Rahal.colors.surface)
             .padding(16.dp),
     ) {
@@ -277,7 +276,7 @@ private fun LocationCard(onEnable: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(Rahal.shape.md)
             .background(Rahal.colors.warnTint)
             .padding(16.dp),
     ) {
@@ -307,7 +306,7 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(Rahal.shape.md)
             .background(if (on) Rahal.colors.brand else Rahal.colors.field)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -378,7 +377,7 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
 private fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
     Column(
         modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(Rahal.shape.md)
             .background(Rahal.colors.surface)
             .padding(vertical = 14.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

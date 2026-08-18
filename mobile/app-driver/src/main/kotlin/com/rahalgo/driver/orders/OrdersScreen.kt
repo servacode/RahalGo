@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -219,7 +218,7 @@ private fun WhyNoOrders(state: OrdersState) {
         Modifier
             .fillMaxWidth()
             .padding(top = 12.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(Rahal.shape.md)
             .background(if (blocking) Rahal.colors.warnTint else Rahal.colors.surface)
             .padding(16.dp),
     ) {
@@ -291,8 +290,8 @@ private fun OrderCard(
         Modifier
             .fillMaxWidth()
             .padding(top = 10.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .border(1.dp, Rahal.colors.line, RoundedCornerShape(18.dp))
+            .clip(Rahal.shape.md)
+            .border(1.dp, Rahal.colors.line, Rahal.shape.md)
             // **وأرضُ البطاقة أرضُ السمة** — وبياضٌ مكتوبٌ يبقى أبيضَ في
             // الغامقة، **فتقع بطاقةٌ بيضاءُ في شاشةٍ كحليّة.**
             .background(Rahal.colors.canvas)
@@ -456,7 +455,7 @@ private fun OrderCard(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(Rahal.shape.sm)
                     .background(Rahal.colors.warnTint)
                     .padding(12.dp),
             ) {
@@ -640,7 +639,7 @@ private fun OrderCard(
 private fun Chip(icon: Int, text: String) {
     Row(
         Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(Rahal.shape.lg)
             .background(Rahal.colors.brand)
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -739,7 +738,7 @@ private fun Metric(
     val ink = tone ?: if (strong) Rahal.colors.brand else MaterialTheme.colorScheme.onSurface
     Column(
         modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(Rahal.shape.sm)
             // **وخلفيّة باهتة لا صمّاء** — اللون يُقرأ ولا يصرخ.
             .background(tone?.copy(alpha = 0.10f) ?: Rahal.colors.surface)
             .padding(vertical = 10.dp, horizontal = 8.dp),

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -128,7 +127,7 @@ fun FlashHost() {
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 12.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(Rahal.shape.md)
                     .background(if (m.ok) Rahal.colors.success else Rahal.colors.danger)
                     .clickable { Flash.clear() }
                     .padding(horizontal = 16.dp, vertical = 14.dp),

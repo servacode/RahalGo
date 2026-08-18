@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -167,7 +166,7 @@ fun Card(
     Column(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(Rahal.shape.md)
             .background(tone.copy(alpha = 0.06f))
             .padding(14.dp),
         content = content,
@@ -203,7 +202,7 @@ fun Note(text: String, color: Color) {
         textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(Rahal.shape.sm)
             .background(color.copy(alpha = 0.08f))
             .padding(10.dp),
     )
@@ -268,14 +267,14 @@ fun Bar(ratio: Float, color: Color) {
         Modifier
             .fillMaxWidth()
             .height(8.dp)
-            .clip(RoundedCornerShape(4.dp))
+            .clip(Rahal.shape.pill)
             .background(Rahal.colors.inkMuted.copy(alpha = 0.15f)),
     ) {
         Box(
             Modifier
                 .fillMaxWidth(ratio.coerceIn(0f, 1f))
                 .fillMaxSize()
-                .clip(RoundedCornerShape(4.dp))
+                .clip(Rahal.shape.pill)
                 .background(color),
         )
     }
@@ -290,7 +289,7 @@ fun Chip(text: String, color: Color) {
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(Rahal.shape.sm)
             .background(color.copy(alpha = 0.12f))
             .padding(horizontal = 8.dp, vertical = 3.dp),
     )

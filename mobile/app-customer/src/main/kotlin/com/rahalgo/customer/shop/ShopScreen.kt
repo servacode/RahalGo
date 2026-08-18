@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -389,7 +388,7 @@ private fun ItemCard(
     onLike: () -> Unit,
 ) {
     val closed = item.sourceClosed || !item.available
-    Column(Modifier.clip(RoundedCornerShape(14.dp))) {
+    Column(Modifier.clip(Rahal.shape.md)) {
         Box {
             RemoteImage(
                 url = media(item.imageUrl ?: item.imageThumbUrl),
@@ -397,7 +396,7 @@ private fun ItemCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(14.dp)),
+                    .clip(Rahal.shape.md),
             )
             // **ونسبةُ الحسم فوق الصورة** — تُقرأ بلمحةٍ قبل أن يُقارَن
             // الرقمان.

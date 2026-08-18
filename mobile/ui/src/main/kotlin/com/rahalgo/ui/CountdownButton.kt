@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -110,7 +109,7 @@ fun CountdownButton(
         label = "offer-countdown",
     )
 
-    val shape = RoundedCornerShape(20.dp)
+    val shape = Rahal.shape.lg
     Box(
         modifier
             .height(48.dp)
@@ -174,7 +173,7 @@ fun CountdownButton(
                 // الحدّ بينهما فيختفي نصفُه.**
                 Box(
                     Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(Rahal.shape.sm)
                         .background(Color.Black.copy(alpha = 0.22f))
                         .padding(horizontal = 8.dp, vertical = 2.dp),
                 ) {

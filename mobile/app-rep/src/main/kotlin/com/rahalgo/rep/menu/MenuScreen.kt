@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -164,7 +163,7 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
             RemoteImage(
                 url = Backend.of(context).media(item.imageThumbURL),
                 name = item.name,
-                modifier = Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier.size(46.dp).clip(Rahal.shape.sm),
             )
             Spacer(Modifier.size(10.dp))
             Column(Modifier.weight(1f)) {
@@ -348,7 +347,7 @@ private fun ItemForm(vm: MenuViewModel) {
                 RemoteImage(
                     url = Backend.of(context).media(d.imageThumb),
                     name = d.name.ifEmpty { "؟" },
-                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)),
+                    modifier = Modifier.size(64.dp).clip(Rahal.shape.sm),
                 )
                 Spacer(Modifier.size(10.dp))
                 Column {

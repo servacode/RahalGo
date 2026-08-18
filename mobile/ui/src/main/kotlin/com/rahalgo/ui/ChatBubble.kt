@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,7 +48,7 @@ fun ChatBubble(message: ChatMessage) {
     ) {
         Column(
             Modifier
-                .clip(RoundedCornerShape(14.dp))
+                .clip(Rahal.shape.md)
                 .background(if (mine) Rahal.colors.brand else Rahal.colors.bubble)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.End,
@@ -89,7 +88,7 @@ fun ChatDayChip(day: String) {
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
+                .clip(Rahal.shape.sm)
                 .background(Rahal.colors.bubble)
                 .padding(horizontal = 10.dp, vertical = 3.dp),
         )

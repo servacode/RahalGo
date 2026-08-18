@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -87,7 +86,7 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
                     name = head.name,
                     modifier = Modifier
                         .size(52.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .clip(Rahal.shape.sm),
                 )
                 Spacer(Modifier.size(10.dp))
                 Column {

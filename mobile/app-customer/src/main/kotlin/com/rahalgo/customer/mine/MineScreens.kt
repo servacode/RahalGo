@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -124,7 +123,7 @@ private fun Favorites(vm: MineViewModel) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1f)
-                                .clip(RoundedCornerShape(14.dp)),
+                                .clip(Rahal.shape.md),
                         )
                         // **والقلبُ يُرفع من شاشته هو** — ومن أراد أن
                         // يحذف لا يبحث عن الصنف في السوق.
@@ -188,7 +187,7 @@ private fun Offers(vm: MineViewModel) {
                         name = o.title.ifEmpty { o.itemName },
                         modifier = Modifier
                             .size(64.dp)
-                            .clip(RoundedCornerShape(12.dp)),
+                            .clip(Rahal.shape.sm),
                     )
                     Spacer(Modifier.size(10.dp))
                     Column(Modifier.fillMaxWidth()) {
