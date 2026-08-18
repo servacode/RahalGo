@@ -518,7 +518,7 @@ private fun AddressRow(
     Spacer(Modifier.height(8.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = stringResource(kindLabel(a.kind)),
+            text = stringResource(addressKindLabel(a.kind)),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -548,12 +548,6 @@ private fun AddressRow(
     HorizontalDivider()
 }
 
-/** **اسمُ النوع** — رمزٌ في القاعدة وكلمةٌ في الشاشة. */
-private fun kindLabel(kind: String): Int = when (kind) {
-    "home" -> R.string.addr_kind_home
-    "work" -> R.string.addr_kind_work
-    else -> R.string.addr_kind_other
-}
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -566,7 +560,7 @@ private fun kindLabel(kind: String): Int = when (kind) {
  * موجودٌ عندنا أساساً»). **وحقلٌ يُطلب مرّتين يُملأ مرّةً بخطأ.**
  */
 @Composable
-private fun AddressEditor(
+internal fun AddressEditor(
     vm: AccountViewModel,
     s: AccountState,
     picker: PointPicker?,
@@ -661,7 +655,7 @@ private fun AddressEditor(
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
                 ),
-            ) { Text(stringResource(kindLabel(k))) }
+            ) { Text(stringResource(addressKindLabel(k))) }
         }
     }
 

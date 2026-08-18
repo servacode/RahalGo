@@ -66,6 +66,8 @@ import com.rahalgo.ui.WalletScreen
 import com.rahalgo.ui.WalletViewModel
 import com.rahalgo.ui.AccountScreen
 import com.rahalgo.ui.AccountViewModel
+import com.rahalgo.ui.AddAddressFlow
+import com.rahalgo.ui.AddressPicker
 import com.rahalgo.map.PickPoint
 import com.rahalgo.map.PickPointViewModel
 import org.maplibre.android.geometry.LatLng
@@ -291,6 +293,19 @@ private fun SignedIn(
         )
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **ولوحةُ عنوان التوصيل تُفتح من الشريط**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «ضيف لي الزرَّ بالأعلى، البناءُ سيعتمد
+    //  كلُّه على هذا».)
+    //
+    // **وحالان لا ثلاث**: اللوحةُ مفتوحةٌ أو لا، **والإضافةُ تغلقها
+    // وتفتح الخريطة** — ولو بقيت مفتوحةً خلفها لَعاد إليها بعد الحفظ
+    // فوجد قائمةً لم تُنعش.
+    var addressSheet by rememberSaveable { mutableStateOf(false) }
+    var addingAddress by rememberSaveable { mutableStateOf(false) }
+
     // **والسلّةُ تُفتح فوق التبويب** — ويُرجع منها إليه.
     var cart by rememberSaveable { mutableStateOf(false) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
@@ -377,6 +392,13 @@ private fun SignedIn(
                     },
                     onWallet = { overlay.show(Overlay.Wallet) },
                     guest = guest,
+                    // **ولا عنوانَ لضيف** — (قرارُ المالك ٢٠٢٦-٠٨-١٤:
+                    // «لا يمكن أن يرى كلَّ المعلومات وهو لم يسجّل
+                    // دخولاً بعد»). **ومن لا حسابَ له لا عناوينَ له**،
+                    // وزرٌّ يفتح قائمةً فارغةً أبداً يُقرأ عطبا.
+                    onAddress = if (guest) null else ({ addressSheet = true }),
+                    addressLabel = accountVm.state.addresses
+                        .firstOrNull { it.isDefault }?.text.orEmpty(),
                 )
             },
             bottomBar = {
@@ -583,6 +605,31 @@ private fun SignedIn(
                             if (guest) onAskLogin() else mineVm.toggleFavorite(item.id)
                         },
                         liked = mineVm.liked,
+                    )
+
+                    // ══════════════════════════════════════════════
+                    // **ولوحةُ العنوان تغطّي ما تحتها**
+                    // ══════════════════════════════════════════════
+                    //
+                    // **وقبل التبويبات في الترتيب** — ولو جاءت بعدها
+                    // لَغطّاها التبويبُ فلا تُرى أبدا.
+                    addingAddress -> AddAddressFlow(
+                        vm = accountVm,
+                        picker = mapPicker,
+                        onDone = { addingAddress = false },
+                    )
+
+                    addressSheet -> AddressPicker(
+                        addresses = accountVm.state.addresses,
+                        busy = accountVm.state.busy,
+                        onPick = {
+                            accountVm.makeDefault(it.id)
+                            addressSheet = false
+                        },
+                        onAdd = {
+                            addressSheet = false
+                            addingAddress = true
+                        },
                     )
 
                     tab == Tab.Orders -> OrdersScreen(ordersVm)

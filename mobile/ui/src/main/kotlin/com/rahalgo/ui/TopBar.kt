@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +99,29 @@ fun TopBar(
      *  يسجّل دخولاً بعد».)
      */
     guest: Boolean = false,
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **بابُ عنوان التوصيل — أوّلُ ما يُقرأ في الشريط**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-١٨ بصورةِ مرجع: «ضيف لي الزرَّ بالأعلى،
+     *  البناءُ سيعتمد كلُّه على هذا».)
+     *
+     * **والزبونُ وحدَه له عنوانُ توصيل** — السائقُ يتحرّك والمندوبُ
+     * يزور، **فيبقى فارغاً عندهما فلا يُرسم.**
+     *
+     * # ولماذا في الشريط لا في السلّة
+     *
+     * **العنوانُ يقرّر ما يُعرض**: أيُّ متجرٍ يصل إليه وكم أجرتُه.
+     * **ومن اختاره عند الدفع بنى سلّةً من متاجرَ لا تصله**، فيُلغيها
+     * ويبدأ من جديد.
+     *
+     * **وهو أوّلُ ما يُقرأ**: «التوصيل إلى…» سطرٌ يجيب عن سؤالٍ يسأله
+     * كلُّ من يفتح تطبيقَ توصيل.
+     */
+    onAddress: (() -> Unit)? = null,
+    /** **العنوانُ المختار** — وفارغٌ يعني «اختر عنواناً». */
+    addressLabel: String = "",
 ) {
     Row(
         Modifier
@@ -138,6 +162,52 @@ fun TopBar(
             Spacer(Modifier.size(34.dp))
         }
         Spacer(Modifier.size(4.dp))
+
+        // ══════════════════════════════════════════════════════════════
+        // **وعنوانُ التوصيل — سطران يُضغطان**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (صورةُ المالك المرجعيّة ٢٠٢٦-٠٨-١٨.)
+        //
+        // **وسطرٌ فوق سطر**: «التوصيل إلى» يقول ما هو، **والثاني يقول
+        // ما اخترتَ** — **ورقاقةٌ بسطرٍ واحدٍ تُقرأ زرّاً لا جوابا.**
+        //
+        // **ويأخذ ما بقي من العرض** (`weight`) — **وعنوانٌ طويلٌ يُقصّ
+        // بنقاطٍ خيرٌ من شريطٍ يدفع الجرسَ خارجَ الشاشة.**
+        if (onAddress != null) {
+            Row(
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable(onClick = onAddress)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_pin),
+                    contentDescription = null,
+                    tint = Rahal.colors.brand,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.top_deliver_to),
+                        color = Rahal.colors.brand,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    Text(
+                        text = addressLabel.ifEmpty {
+                            stringResource(R.string.top_pick_address)
+                        },
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (guest) return@Row

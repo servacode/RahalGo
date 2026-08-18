@@ -117,6 +117,11 @@
     <string name="login_logout">خروج</string>
     <string name="menu_open">القائمة</string>
     <string name="top_notifications">الإشعارات</string>
+    <!-- **عنوانُ التوصيل في الشريط** — (طلبُ المالك ٢٠٢٦-٠٨-١٨:
+         «ضيف لي الزرَّ بالأعلى، البناءُ سيعتمد كلُّه على هذا»). -->
+    <string name="top_deliver_to">التوصيل إلى</string>
+    <string name="top_pick_address">اختر عنواناً</string>
+    <string name="top_addresses_title">عنوان التوصيل</string>
     <string name="top_rating">تقييمك</string>
     <string name="top_rating_none">لا تقييم بعد</string>
     <string name="top_theme">السمة الغامقة</string>
