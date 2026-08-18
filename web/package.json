@@ -13,7 +13,7 @@
     "lint": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && turbo lint",
     "typecheck": "turbo typecheck",
     "check:central": "node scripts/check-central.mjs",
-    "check:guards": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && node scripts/check-jsx-comments.mjs && node scripts/check-errors.mjs && node scripts/check-bell-badge.mjs && node scripts/check-menu-parity.mjs && node scripts/check-one-map-way.mjs && node scripts/check-app-error-codes.mjs && node scripts/check-live-refresh.mjs && node scripts/check-design-tokens.mjs && node scripts/check-search-field.mjs && node scripts/check-cancellation.mjs && node scripts/check-loader.mjs && node scripts/check-serial-names.mjs && node scripts/check-self-cancel.mjs",
+    "check:guards": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && node scripts/check-jsx-comments.mjs && node scripts/check-errors.mjs && node scripts/check-bell-badge.mjs && node scripts/check-menu-parity.mjs && node scripts/check-one-map-way.mjs && node scripts/check-app-error-codes.mjs && node scripts/check-live-refresh.mjs && node scripts/check-design-tokens.mjs && node scripts/check-search-field.mjs && node scripts/check-cancellation.mjs && node scripts/check-loader.mjs && node scripts/check-serial-names.mjs && node scripts/check-self-cancel.mjs && node scripts/check-image-loader.mjs",
     "test:smoke": "node scripts/smoke-pages.mjs"
   },
   "devDependencies": {

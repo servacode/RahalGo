@@ -120,6 +120,10 @@ class MainActivity : ComponentActivity() {
         // **ومراقبُ الشبكة يُسجَّل مرّةً** — انظر `Net`: **مراقبٌ لكلّ
         // شاشةٍ يعني عشرةً يوقظهم النظامُ معاً.**
         com.rahalgo.ui.Net.install(this)
+        // **وجالبُ الصور يُسجَّل بيدنا** — انظر `Images`: **R8 يحذف ما
+        // يُكتشَف بـ`ServiceLoader`**، فتفشل كلُّ صورةٍ بعيدةٍ في نسخة
+        // الإصدار وحدَها.
+        com.rahalgo.ui.Images.install(this)
         // **وتقاريرُ الانهيار تبدأ قبل أوّل شاشة** — والسقوطُ في الإقلاع
         // أكثرُ ما يقع، **ومن بدأ التقاريرَ بعده لا يراه.**
         Crash.start(debug = BuildConfig.DEBUG)
