@@ -1,7 +1,8 @@
 package com.rahalgo.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,40 +10,53 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.Icon
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.model.Address
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **اختيارُ عنوان التوصيل — ما يفتحه زرُّ الشريط**
+ * **أين تريد التوصيل؟ — نافذةٌ منبثقةٌ من الأسفل**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «ضيف لي الزرَّ بالأعلى… يصبح إضافةُ العنوان
- *  بسهولةٍ من الأعلى، وقسمُ حسابي فقط يُظهر العناوينَ المحفوظة».)
+ * (صورةُ المالك المرجعيّة ٢٠٢٦-٠٨-١٨، وتصحيحُه: «نافذةٌ منبثقة».)
  *
- * # والمختارُ هو الافتراضيّ
+ * # ولماذا منبثقةٌ لا شاشة
  *
- * **ولا رايةٌ ثانيةٌ في الجهاز** — **وعنوانٌ يُختار في الهاتف ولا يُحفظ
- * في الحساب يضيع يومَ يُقلع التطبيق**، ويختلف بين جهازين لصاحبٍ واحد.
+ * **اختيارُ العنوان قرارٌ لا رحلة** — **ومن خرج إلى شاشةٍ كاملةٍ ليختار
+ * سطراً فقد ما كان يفعله**، فيعود ولا يجد موضعَه. **والمنبثقةُ تُغلق
+ * فيبقى حيث كان.**
  *
- * **والمحرّكُ يعرف الافتراضيَّ منذ اليوم الأوّل** — يُسنده إلى الطلب من
- * لم يختر. **فاختيارُ عنوانٍ هنا يجعله الافتراضيّ**، ومصدرٌ واحدٌ يحكم
- * الشاشةَ والطلب.
+ * **وما خلفها يُعتَّم ولا يُمحى** — يرى أنّه لم يغادر.
  *
- * # ولا تعديلَ هنا ولا حذف
+ * # وألوانُها من لوحتنا لا من الصورة
+ *
+ * (قاعدةُ المالك ٢٠٢٦-٠٨-١٨: «الألوانُ نأخذها من تصميمنا ولا نضيف
+ *  ألواناً جديدة».)
+ *
+ * **والبرتقاليُّ عندنا `accent`** — وهو `secondary` في السمة و`onSecondary`
+ * مقابلُه: **زوجٌ معرَّفٌ منذ بنيت اللوحة، لا لونٌ يُخترع هنا.**
+ *
+ * # ولا تعديلَ فيها ولا حذف
  *
  * (قرارُ المالك: «قسمُ حسابي **فقط** يُظهر العناوينَ المحفوظة ويمكن
  *  تعديلها أو حذفها».)
@@ -50,82 +64,167 @@ import com.rahalgo.shared.model.Address
  * **وهذه لوحةُ اختيارٍ لا لوحةُ إدارة** — **ومن فتحها ليطلب فوجد أزرارَ
  * حذفٍ حذف بالخطأ وهو مستعجل.**
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddressPicker(
+fun AddressSheet(
     addresses: List<Address>,
     busy: Boolean,
     /** **يُختار عنوانٌ** — فيصير الافتراضيّ. */
     onPick: (Address) -> Unit,
     /** **ويُضاف جديدٌ** — يفتح الخريطةَ ثمّ ورقةَ الوصف. */
     onAdd: () -> Unit,
+    onClose: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(16.dp)) {
-        Text(
-            stringResource(R.string.top_addresses_title),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Spacer(Modifier.height(12.dp))
+    ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Rahal.colors.canvas,
+    ) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
 
-        if (addresses.isEmpty()) {
-            Text(
-                stringResource(R.string.acc_addr_empty),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Spacer(Modifier.height(10.dp))
-        }
-
-        addresses.forEach { a ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = !busy) { onPick(a) }
-                    .padding(vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_pin),
-                    contentDescription = null,
-                    // **والمختارُ يُعرف بلونه** — **ولا علامةٌ ثانيةٌ
-                    // بجانبه**: رمزان لمعنًى واحدٍ يفترقان.
-                    tint = if (a.isDefault) Rahal.colors.brand else Rahal.colors.inkMuted,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.size(10.dp))
+            // ══════════════════════════════════════════════════════════
+            // **ترويسةٌ تسأل ثمّ تشرح**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **«أين تريد التوصيل؟» سؤالٌ لا عنوانُ قسم** — **وعنوانٌ
+            // يصف ما تحته يُقرأ ولا يُجاب**، والسؤالُ يُجاب.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Rahal.colors.warnTint),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_pin),
+                        contentDescription = null,
+                        tint = Rahal.colors.accent,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+                Spacer(Modifier.size(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(addressKindLabel(a.kind)),
-                        fontWeight = FontWeight.Medium,
-                        style = MaterialTheme.typography.bodyMedium,
+                        stringResource(R.string.addr_sheet_title),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge,
                     )
                     Text(
-                        text = a.text,
+                        stringResource(R.string.addr_sheet_hint),
                         color = Rahal.colors.inkMuted,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
-            HorizontalDivider()
-        }
 
-        Spacer(Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = onAdd,
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Text(stringResource(R.string.acc_addr_add))
+            Spacer(Modifier.height(20.dp))
+
+            if (addresses.isEmpty()) {
+                EmptyAddresses()
+            } else {
+                addresses.forEach { a -> AddressChoice(a, busy, onPick) }
             }
+
+            // ══════════════════════════════════════════════════════════
+            // **وزرُّ الإضافة ممتلئٌ لا مفرَّغ**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **وهو الفعلُ الوحيدُ لمن لا عنوانَ له** — **وزرٌّ مفرَّغٌ
+            // يُقرأ خياراً ثانياً**، والممتلئُ يقول: هذا ما تفعله.
+            Spacer(Modifier.height(20.dp))
+            Button(
+                onClick = onAdd,
+                enabled = !busy,
+                colors = ButtonDefaults.buttonColors(
+                    // **و`accent` هو `secondary` في سمتنا** — انظر أعلى
+                    // الملفّ: لا لونَ يُخترع هنا.
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                ),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+            ) { Text(stringResource(R.string.addr_sheet_add)) }
+
+            Spacer(Modifier.height(24.dp))
         }
-        Spacer(Modifier.height(8.dp))
     }
+}
+
+/**
+ * **حالُ الفراغ — دبّوسٌ وسطران.**
+ *
+ * **وسطرٌ رماديٌّ وحدَه يُقرأ عطباً** — **ومن فتح لوحةً فوجدها فارغةً
+ * بلا كلمةٍ ظنّ أنّها لم تُحمَّل بعد.** والسطرُ الثاني يقول ماذا يفعل.
+ */
+@Composable
+private fun EmptyAddresses() {
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .size(96.dp)
+                .clip(CircleShape)
+                .background(Rahal.colors.field),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_pin),
+                contentDescription = null,
+                tint = Rahal.colors.inkMuted,
+                modifier = Modifier.size(44.dp),
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            stringResource(R.string.addr_sheet_empty),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.addr_sheet_empty_hint),
+            color = Rahal.colors.inkMuted,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+/** **عنوانٌ يُختار** — والمختارُ يُعرف بلونه لا بعلامةٍ ثانية. */
+@Composable
+private fun AddressChoice(a: Address, busy: Boolean, onPick: (Address) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !busy) { onPick(a) }
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_pin),
+            contentDescription = null,
+            tint = if (a.isDefault) Rahal.colors.accent else Rahal.colors.inkMuted,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.size(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(addressKindLabel(a.kind)),
+                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = a.text,
+                color = Rahal.colors.inkMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+    HorizontalDivider()
 }
 
 /**

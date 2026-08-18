@@ -67,7 +67,7 @@ import com.rahalgo.ui.WalletViewModel
 import com.rahalgo.ui.AccountScreen
 import com.rahalgo.ui.AccountViewModel
 import com.rahalgo.ui.AddAddressFlow
-import com.rahalgo.ui.AddressPicker
+import com.rahalgo.ui.AddressSheet
 import com.rahalgo.map.PickPoint
 import com.rahalgo.map.PickPointViewModel
 import org.maplibre.android.geometry.LatLng
@@ -375,6 +375,33 @@ private fun SignedIn(
     ) {
         val over = overlay.current
 
+        // ══════════════════════════════════════════════════════════════
+        // **ونافذةُ العنوان تطفو فوق الهيكل — لا تحلّ محلَّه**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (تصحيحُ المالك ٢٠٢٦-٠٨-١٨: «نافذةٌ منبثقة».)
+        //
+        // **وكانت تحلّ محلَّ المحتوى** — **فمن فتحها فقد ما كان يفعله**،
+        // ويعود فلا يجد موضعَه. **والمنبثقةُ تُغلق فيبقى حيث كان.**
+        //
+        // **وقبل الهيكل في الشيفرة وفوقه في الرسم** — النافذةُ المنبثقة
+        // ترسم في طبقةٍ فوق الجميع مهما كان موضعُها في الشيفرة.
+        if (addressSheet) {
+            AddressSheet(
+                addresses = accountVm.state.addresses,
+                busy = accountVm.state.busy,
+                onPick = {
+                    accountVm.makeDefault(it.id)
+                    addressSheet = false
+                },
+                onAdd = {
+                    addressSheet = false
+                    addingAddress = true
+                },
+                onClose = { addressSheet = false },
+            )
+        }
+
         Scaffold(
             topBar = {
                 // **والشريطُ العلويُّ من الوحدة** — الجرسُ والسمةُ
@@ -617,19 +644,6 @@ private fun SignedIn(
                         vm = accountVm,
                         picker = mapPicker,
                         onDone = { addingAddress = false },
-                    )
-
-                    addressSheet -> AddressPicker(
-                        addresses = accountVm.state.addresses,
-                        busy = accountVm.state.busy,
-                        onPick = {
-                            accountVm.makeDefault(it.id)
-                            addressSheet = false
-                        },
-                        onAdd = {
-                            addressSheet = false
-                            addingAddress = true
-                        },
                     )
 
                     tab == Tab.Orders -> OrdersScreen(ordersVm)

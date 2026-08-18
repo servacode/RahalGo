@@ -121,7 +121,13 @@
          «ضيف لي الزرَّ بالأعلى، البناءُ سيعتمد كلُّه على هذا»). -->
     <string name="top_deliver_to">التوصيل إلى</string>
     <string name="top_pick_address">اختر عنواناً</string>
-    <string name="top_addresses_title">عنوان التوصيل</string>
+    <!-- **نافذةُ «أين تريد التوصيل؟»** — (صورةُ المالك ٢٠٢٦-٠٨-١٨).
+         **وسؤالٌ يُجاب، وعنوانٌ يصف ما تحته يُقرأ ولا يُجاب.** -->
+    <string name="addr_sheet_title">أين تريد التوصيل؟</string>
+    <string name="addr_sheet_hint">اختر عنوان محفوظ أو أضف عنوان جديد</string>
+    <string name="addr_sheet_empty">لا يوجد عناوين محفوظة</string>
+    <string name="addr_sheet_empty_hint">ابدأ بإضافة عنوانك الأول لتتمكن من الطلب بسرعة وسهولة</string>
+    <string name="addr_sheet_add">+  إضافة عنوان جديد</string>
     <string name="top_rating">تقييمك</string>
     <string name="top_rating_none">لا تقييم بعد</string>
     <string name="top_theme">السمة الغامقة</string>
