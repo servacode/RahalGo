@@ -34,34 +34,12 @@ import kotlinx.coroutines.launch
  * معلّقةً وصاحبُها يعمل في آخر. **فرسالةٌ واحدةٌ تُمحى مع كلّ فعلٍ
  * جديد** — يقرؤها حيث نظر.
  */
-/**
- * ══════════════════════════════════════════════════════════════════════
- * **موضعُ الرسالة — أيُّ قسمٍ أطلقها**
- * ══════════════════════════════════════════════════════════════════════
- *
- * (شكوى المالك ٢٠٢٦-٠٨-١٨: «الرسالةُ ظهرت أعلى الصفحة، وبهذه الحالة
- *  المستخدمُ لن يفهم ماذا حصل — الأفضلُ أن تكون تحت زرّ تبديل كلمة
- *  المرور… دائماً رسالةُ النجاح أو الفشل تكون بمكان النجاح والفشل كي
- *  يفهم المستخدمُ ولا يبحث عن مكان الرسالة».)
- *
- * **وكانت رسالةً واحدةً في أعلى الشاشة** — بحجّة ألّا تتناثر رسائلُ لا
- * يُعرف أحدثُها. **والحجّةُ صحيحةٌ والدواءُ خطأ**: من ضغط زرّاً في أسفل
- * شاشةٍ تمرّر لا يرى أعلاها، **فيظنّ أنّ الضغطةَ لم تقع.**
- *
- * **والدواءُ أن تُوسَم الرسالةُ بموضعها لا أن تُجمَع في مكانٍ واحد** —
- * فتبقى واحدةً (لا تتناثر) وتُعرض حيث وقع الفعل.
- */
-enum class AccountSpot { NONE, IDENTITY, PASSWORD, WHATSAPP, PHONE, ADDRESS, DANGER }
-
 data class AccountState(
     val me: MeSummary? = null,
     val addresses: List<Address> = emptyList(),
     val loading: Boolean = true,
     val busy: Boolean = false,
     val error: String = "",
-    val done: String = "",
-    /** **أين تُعرض الرسالة** — انظر `AccountSpot`. */
-    val spot: AccountSpot = AccountSpot.NONE,
     /** **مرحلةُ الحذف**: لم يُطلب · وصل الرمزُ وينتظر · تمّ. */
     val deleteAsked: Boolean = false,
     val deleted: Boolean = false,
@@ -109,9 +87,9 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **يجري فعلاً ثمّ يُنعش** — والرسالةُ تُمحى قبل أن يبدأ. */
-    private fun act(okMsg: Int, spot: AccountSpot, block: suspend () -> Unit) {
+    private fun act(okMsg: Int, block: suspend () -> Unit) {
         if (state.busy) return
-        state = state.copy(busy = true, error = "", done = "", spot = spot)
+        state = state.copy(busy = true)
         viewModelScope.launch {
             state = try {
                 block()
@@ -128,14 +106,12 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
                 // العلويُّ على الاسم القديم والصورة القديمة** حتّى
                 // يُقلع التطبيقُ من جديد.
                 Refresh.bump()
-                state.copy(
-                    me = me,
-                    addresses = list,
-                    busy = false,
-                    done = getApplication<Application>().getString(okMsg),
-                )
+                // **والرسالةُ تُبَثّ ولا تُخزَّن** — انظر `Flash`.
+                Flash.ok(getApplication<Application>().getString(okMsg))
+                state.copy(me = me, addresses = list, busy = false)
             } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
+                Flash.fail(describe(e))
+                state.copy(busy = false)
             }
         }
     }
@@ -143,7 +119,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun setName(name: String) {
         val clean = name.trim()
         if (clean.isEmpty()) return
-        act(R.string.acc_saved, AccountSpot.IDENTITY) { backend.account.setName(clean) }
+        act(R.string.acc_saved_name) { backend.account.setName(clean) }
     }
 
     /**
@@ -175,37 +151,38 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
      * يخصّه.** فيقرؤهما المنتقي ويردّ شيئاً واحدا.
      */
     fun setAvatarBytes(bytes: ByteArray) {
-        act(R.string.acc_saved, AccountSpot.IDENTITY) {
+        act(R.string.acc_saved_photo) {
             backend.account.setAvatar("avatar.jpg", bytes)
         }
     }
 
-    fun removeAvatar() = act(R.string.acc_saved, AccountSpot.IDENTITY) { backend.account.removeAvatar() }
+    fun removeAvatar() =
+        act(R.string.acc_removed_photo) { backend.account.removeAvatar() }
 
     fun setPassword(current: String, next: String) =
-        act(R.string.acc_pw_changed, AccountSpot.PASSWORD) { backend.account.setPassword(current, next) }
+        act(R.string.acc_pw_changed) { backend.account.setPassword(current, next) }
 
     fun addAddress(label: String, text: String, lat: Double, lng: Double) =
-        act(R.string.acc_saved, AccountSpot.ADDRESS) {
+        act(R.string.acc_saved_address) {
             backend.account.addAddress(AddressInput(label.trim(), text.trim(), lat, lng))
         }
 
     fun deleteAddress(id: String) =
-        act(R.string.acc_saved, AccountSpot.ADDRESS) { backend.account.deleteAddress(id) }
+        act(R.string.acc_deleted_address) { backend.account.deleteAddress(id) }
 
     fun makeDefault(id: String) =
-        act(R.string.acc_saved, AccountSpot.ADDRESS) { backend.account.makeDefaultAddress(id) }
+        act(R.string.acc_default_address) { backend.account.makeDefaultAddress(id) }
 
     /** **يطلب رمزَ الحذف** — ولا يحذف. */
     fun askDelete() {
         if (state.busy) return
-        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.DANGER)
+        state = state.copy(busy = true)
         viewModelScope.launch {
             state = try {
                 backend.account.deleteRequest()
                 state.copy(busy = false, deleteAsked = true)
             } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
+                Flash.fail(describe(e)).let { state.copy(busy = false) }
             }
         }
     }
@@ -218,13 +195,13 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun confirmDelete(code: String) {
         if (state.busy) return
-        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.DANGER)
+        state = state.copy(busy = true)
         viewModelScope.launch {
             state = try {
                 backend.account.deleteConfirm(code.trim())
                 state.copy(busy = false, deleted = true)
             } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
+                Flash.fail(describe(e)).let { state.copy(busy = false) }
             }
         }
     }
@@ -240,13 +217,13 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun askPhone(phone: String) {
         val clean = phone.trim()
         if (clean.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.PHONE)
+        state = state.copy(busy = true)
         viewModelScope.launch {
             state = try {
                 backend.account.phoneChangeRequest(clean)
                 state.copy(busy = false, phonePending = clean)
             } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
+                Flash.fail(describe(e)).let { state.copy(busy = false) }
             }
         }
     }
@@ -261,25 +238,21 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun confirmPhone(code: String) {
         val phone = state.phonePending
         if (phone.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.PHONE)
+        state = state.copy(busy = true)
         viewModelScope.launch {
             state = try {
                 backend.account.phoneChangeConfirm(phone, code.trim())
                 val me = backend.account.summary()
-                state.copy(
-                    me = me,
-                    busy = false,
-                    phonePending = "",
-                    done = getApplication<Application>().getString(R.string.acc_phone_saved),
-                )
+                Flash.ok(getApplication<Application>().getString(R.string.acc_phone_saved))
+                state.copy(me = me, busy = false, phonePending = "")
             } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
+                Flash.fail(describe(e)).let { state.copy(busy = false) }
             }
         }
     }
 
     fun cancelPhone() {
-        state = state.copy(phonePending = "", error = "")
+        state = state.copy(phonePending = "")
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -300,13 +273,13 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun askWhatsApp() {
         val phone = state.me?.phone.orEmpty()
         if (phone.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.WHATSAPP)
+        state = state.copy(busy = true)
         viewModelScope.launch {
             state = try {
                 backend.account.whatsappRequest(phone)
                 state.copy(busy = false, waPending = phone)
             } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
+                Flash.fail(describe(e)).let { state.copy(busy = false) }
             }
         }
     }
@@ -314,7 +287,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     fun confirmWhatsApp(code: String) {
         val phone = state.waPending
         if (phone.isEmpty() || state.busy) return
-        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.WHATSAPP)
+        state = state.copy(busy = true)
         viewModelScope.launch {
             state = try {
                 backend.account.whatsappConfirm(phone, code.trim())
@@ -323,20 +296,21 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
                     me = me,
                     busy = false,
                     waPending = "",
-                    done = getApplication<Application>().getString(R.string.acc_wa_done),
-                )
+                ).also {
+                    Flash.ok(getApplication<Application>().getString(R.string.acc_wa_done))
+                }
             } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
+                Flash.fail(describe(e)).let { state.copy(busy = false) }
             }
         }
     }
 
     fun cancelWhatsApp() {
-        state = state.copy(waPending = "", error = "")
+        state = state.copy(waPending = "")
     }
 
     fun cancelDelete() {
-        state = state.copy(deleteAsked = false, error = "")
+        state = state.copy(deleteAsked = false)
     }
 
     /** **ولا مفتاحُ آلةٍ يُعرض** — إلّا ما لا ترجمةَ له، فيُعرض ليُعرف. */
@@ -358,7 +332,7 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun checkPush() {
         if (state.busy) return
-        state = state.copy(busy = true, error = "", done = "", spot = AccountSpot.NONE)
+        state = state.copy(busy = true)
         viewModelScope.launch {
             state = try {
                 val r = backend.devices.test()
@@ -372,32 +346,14 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
                 )
                 val app = getApplication<Application>()
                 when {
-                    !r.configured -> state.copy(
-                        busy = false,
-                        error = app.getString(R.string.push_check_off),
-                    )
-                    r.devices == 0 -> state.copy(
-                        busy = false,
-                        error = app.getString(R.string.push_check_none),
-                    )
-                    r.fresh == 0 -> state.copy(
-                        busy = false,
-                        error = app.getString(R.string.push_check_stale),
-                    )
-                    r.error.isNotEmpty() -> state.copy(
-                        busy = false,
-                        error = app.getString(R.string.push_check_failed, r.error),
-                    )
-                    else -> state.copy(
-                        busy = false,
-                        // **والعددُ يُقال** — «وصلت» بلا عددٍ لا تقول إلى
-                        // أيّ جهاز: **حسابٌ على ثلاثة أجهزةٍ يقبل واحدٌ
-                        // منها**، والجوابُ «وصلت» في الحالين.
-                        done = app.getString(R.string.push_check_ok, r.sent, r.fresh),
-                    )
+                    !r.configured -> Flash.fail(app.getString(R.string.push_check_off)).let { state.copy(busy = false) }
+                    r.devices == 0 -> Flash.fail(app.getString(R.string.push_check_none)).let { state.copy(busy = false) }
+                    r.fresh == 0 -> Flash.fail(app.getString(R.string.push_check_stale)).let { state.copy(busy = false) }
+                    r.error.isNotEmpty() -> Flash.fail(app.getString(R.string.push_check_failed, r.error)).let { state.copy(busy = false) }
+                    else -> Flash.ok(app.getString(R.string.push_check_ok, r.sent, r.fresh)).let { state.copy(busy = false) }
                 }
             } catch (e: Exception) {
-                state.copy(busy = false, error = describe(e))
+                Flash.fail(describe(e)).let { state.copy(busy = false) }
             }
         }
     }

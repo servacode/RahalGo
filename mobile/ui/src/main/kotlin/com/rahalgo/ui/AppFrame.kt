@@ -59,7 +59,21 @@ fun AppFrame(content: @Composable (theme: ThemeState, dark: Boolean) -> Unit) {
         }
     }
 
-    RahalGoTheme(dark = dark) { content(theme, dark) }
+    RahalGoTheme(dark = dark) {
+        // ══════════════════════════════════════════════════════════════
+        // **والرسالةُ تطفو فوق كلّ شاشة — تُركَّب هنا مرّةً**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-١٨: «رسالةً منبثقةً تطلع ع شاشة بكلّ
+        //  التطبيق… ما نلاحقها وين تروح ووين تجي».)
+        //
+        // **وهذا الإطارُ يلفّ التطبيقاتِ الثلاثة** — **وثلاثةُ تركيباتٍ
+        // تُنسى في واحد.**
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+            content(theme, dark)
+            FlashHost()
+        }
+    }
 }
 
 /**

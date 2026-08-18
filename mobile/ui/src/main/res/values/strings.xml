@@ -243,7 +243,21 @@
     <string name="acc_pw_mismatch">كلمتا المرور الجديدتان غير متطابقتين</string>
     <string name="acc_pw_new">كلمة المرور الجديدة</string>
     <string name="acc_save">حفظ</string>
-    <string name="acc_saved">حُفظ</string>
+    <!-- ══════════════════════════════════════════════════════════
+         **ولكلّ فعلٍ رسالتُه — لا «حُفظ» لكلّ شيء**
+         ══════════════════════════════════════════════════════════
+
+         (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لازم تكون: تم تحديث بيانات الاسم
+          بنجاح».)
+
+         **و«حُفظ» تصلح للاسم وللصورة وللعنوان** — **فلا تقول أيُّها
+         وقع.** ومن ضغط زرّين متقاربين لا يعرف أيَّهما استجاب. -->
+    <string name="acc_saved_name">تم تحديث الاسم بنجاح</string>
+    <string name="acc_saved_photo">تم تحديث الصورة بنجاح</string>
+    <string name="acc_removed_photo">تمت إزالة الصورة</string>
+    <string name="acc_saved_address">تم حفظ العنوان بنجاح</string>
+    <string name="acc_deleted_address">تم حذف العنوان</string>
+    <string name="acc_default_address">صار هذا عنوانك الافتراضي</string>
     <string name="acc_wa_code">الرمز الذي وصلك على واتساب</string>
     <string name="acc_wa_confirm">تأكيد التوثيق</string>
     <string name="acc_wa_done">تمّ توثيق حسابك بنجاح</string>

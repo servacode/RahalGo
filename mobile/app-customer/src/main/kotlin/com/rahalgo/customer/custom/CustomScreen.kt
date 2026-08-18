@@ -28,7 +28,7 @@ import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.customer.NewCustom
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.LastPoint
-import com.rahalgo.ui.Note
+import com.rahalgo.ui.Flash
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.PointField
 import com.rahalgo.ui.PointPicker
@@ -89,14 +89,6 @@ fun CustomScreen(
             stringResource(R.string.soon_custom),
         )
 
-        if (vm.done.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            Note(vm.done, Rahal.colors.success)
-        }
-        if (vm.error.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            Note(vm.error, Rahal.colors.danger)
-        }
 
         Spacer(Modifier.height(12.dp))
         // **وحقلُ الطلب واسعٌ** — من يكتب «كيلو لحمة من ملحمة أبو أحمد
@@ -229,13 +221,16 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val ref = api.createCustom(NewCustom(request, address, lat, lng, notes))
-                done = getApplication<Application>()
-                    .getString(R.string.cst_done, ref.number.toString())
+                // **والرسالةُ تطفو فوق الشاشة** — انظر `Flash`.
+                Flash.ok(
+                    getApplication<Application>()
+                        .getString(R.string.cst_done, ref.number.toString()),
+                )
                 // **والرقمُ نفسُه الذي يراه السائقُ والمكتبُ والمتجر.**
                 sent += 1
                 Refresh.bump()
             } catch (e: Exception) {
-                error = apiError(getApplication(), e)
+                Flash.fail(apiError(getApplication(), e))
             }
             busy = false
         }

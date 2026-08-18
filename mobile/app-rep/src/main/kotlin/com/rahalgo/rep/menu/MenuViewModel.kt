@@ -14,6 +14,7 @@ import com.rahalgo.shared.rep.ModifierOption
 import com.rahalgo.shared.rep.PlatformSection
 import com.rahalgo.shared.rep.RepApi
 import com.rahalgo.ui.AppCore
+import com.rahalgo.ui.Flash
 import com.rahalgo.ui.apiError
 import kotlinx.coroutines.launch
 
@@ -121,7 +122,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 sections = api.menu(merchantID)
                 error = ""
             } catch (e: Exception) {
-                error = apiError(getApplication(), e)
+                Flash.fail(apiError(getApplication(), e))
             }
             // **وأقسامُ السوق على حدة** — **سقوطُها لا يُخفي القائمة**،
             // ويبقى المندوبُ يقرأ ما هو قائمٌ ولو تعذّر عليه أن يضيف.
@@ -225,7 +226,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 editing = draft.copy(imageMediaID = id, imageThumb = null)
                 error = ""
             } catch (e: Exception) {
-                error = apiError(getApplication(), e)
+                Flash.fail(apiError(getApplication(), e))
             }
             busy = false
         }
@@ -291,7 +292,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 error = ""
                 sections = api.menu(merchantID)
             } catch (e: Exception) {
-                error = apiError(getApplication(), e)
+                Flash.fail(apiError(getApplication(), e))
             }
             busy = false
         }

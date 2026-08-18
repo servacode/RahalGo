@@ -42,7 +42,6 @@ import com.rahalgo.ui.Card
 import com.rahalgo.ui.Chip
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
-import com.rahalgo.ui.Note
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
@@ -97,11 +96,6 @@ fun MenuScreen(vm: MenuViewModel) {
 
     Screen {
         ScreenTitle(stringResource(R.string.mn_title), stringResource(R.string.mn_hint))
-
-        if (vm.error.isNotEmpty()) {
-            Note(vm.error, Rahal.colors.danger)
-            Spacer(Modifier.height(8.dp))
-        }
 
         Button(
             onClick = { vm.newItem() },
@@ -279,11 +273,6 @@ private fun ItemForm(vm: MenuViewModel) {
             stringResource(if (d.isNew) R.string.mn_add_item else R.string.mn_edit_item),
             vm.merchantName,
         )
-
-        if (vm.error.isNotEmpty()) {
-            Note(vm.error, Rahal.colors.danger)
-            Spacer(Modifier.height(8.dp))
-        }
 
         Card {
             OutlinedTextField(
