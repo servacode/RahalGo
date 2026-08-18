@@ -200,7 +200,7 @@
     <string name="acc_addr_delete">حذف</string>
     <string name="acc_addr_empty">لا عناوين محفوظة</string>
     <string name="acc_addr_label">التسمية (البيت · العمل)</string>
-    <string name="acc_addr_make_default">اجعله الافتراضي</string>
+    <string name="acc_addr_make_default">كافتراضي</string>
     <string name="acc_addr_need_point">لم تحدد الموقع بعد — افتح الخريطة واضغط موقعي الحالي</string>
     <string name="acc_addr_pinned">تم تحديد الموقع</string>
     <string name="acc_addr_point">الموقع على الخريطة</string>
