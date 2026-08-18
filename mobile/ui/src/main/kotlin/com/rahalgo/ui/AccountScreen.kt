@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -482,13 +483,13 @@ private fun AddressesSection(
     SectionTitle(stringResource(R.string.acc_addresses))
 
     if (mode == "add") {
-        AddressEditor(vm, s, picker, null) { mode = "" }
+        AddressEditor(vm, s, picker, null, onDone = { mode = "" })
         return
     }
     if (mode.isNotEmpty()) {
         val a = s.addresses.firstOrNull { it.id == mode }
         if (a != null) {
-            AddressEditor(vm, s, picker, a) { mode = "" }
+            AddressEditor(vm, s, picker, a, onDone = { mode = "" })
             return
         }
         mode = ""
@@ -567,6 +568,19 @@ internal fun AddressEditor(
     /** **عنوانٌ يُعدَّل** — أو فارغٌ لجديد. */
     existing: Address?,
     onDone: () -> Unit,
+    /**
+     * **أهو صفحةٌ قائمةٌ بذاتها؟**
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «تفتح صفحةُ الخريطة بشكلٍ كاملٍ ومنفصل،
+     *  وليس فوق صفحة الطلبات أو الإعدادات».)
+     *
+     * **ومن الشريط صفحةٌ** — تملأ الشاشةَ وتحمل تمريرَها وحشوتَها،
+     * **ويغلقها الرجوع.**
+     *
+     * **ومن «حسابي» جزءٌ من شاشة** — **وعمودٌ يمرّر داخل عمودٍ يمرّر
+     * يُجمّد أحدَهما**، فتُترك الحشوةُ والتمريرُ لصاحب الشاشة.
+     */
+    standalone: Boolean = false,
 ) {
     var area by rememberSaveable(existing?.id) { mutableStateOf(existing?.areaBuilding ?: "") }
     var street by rememberSaveable(existing?.id) { mutableStateOf(existing?.street ?: "") }
@@ -576,6 +590,12 @@ internal fun AddressEditor(
     var lng by rememberSaveable(existing?.id) { mutableStateOf(existing?.lng) }
     // **والجديدُ يفتح الخريطةَ أوّلاً** — الموضعُ قبل الوصف.
     var onMap by rememberSaveable(existing?.id) { mutableStateOf(existing == null) }
+
+    // **والرجوعُ يغلق الصفحةَ لا التطبيق** — حارسٌ واحدٌ للحالين:
+    // في الخريطة يعود إلى النموذج، وفي النموذج يُغلق.
+    if (standalone) {
+        BackHandler { if (onMap && existing == null) onDone() else onDone() }
+    }
 
     if (onMap && picker != null) {
         picker(
@@ -592,6 +612,17 @@ internal fun AddressEditor(
         return
     }
 
+    // **وحين يكون صفحةً يحمل حشوتَه وتمريرَه** — انظر `standalone`.
+    val wrap: Modifier = if (standalone) {
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    } else {
+        Modifier
+    }
+
+    Column(wrap) {
     Text(
         stringResource(R.string.addr_confirm_title),
         fontWeight = FontWeight.Bold,
@@ -686,6 +717,7 @@ internal fun AddressEditor(
         OutlinedButton(onClick = onDone, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.acc_delete_cancel))
         }
+    }
     }
 }
 

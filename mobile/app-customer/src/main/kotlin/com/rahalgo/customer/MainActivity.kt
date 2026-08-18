@@ -349,6 +349,31 @@ private fun SignedIn(
     BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
     BackHandler(enabled = cart && !drawer.isOpen) { cart = false }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وإضافةُ العنوان صفحةٌ قائمةٌ بذاتها — لا طبقةٌ فوق تبويب**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «تفتح صفحةُ الخريطة بشكلٍ كاملٍ ومنفصل،
+    //  وليس فوق صفحة الطلبات أو الإعدادات أو ما شابه — بل صفحةُ خريطةٍ
+    //  بنفس الشكل».)
+    //
+    // **وكانت داخل الهيكل** — فوقها شريطٌ علويٌّ وتحتها تبويبات،
+    // **والخريطةُ تُقرأ بما يحيط بها**: من رأى شريطاً وتبويبات ظنّ أنّه
+    // ما زال في «حسابي» وأنّ الخريطةَ جزءٌ منها.
+    //
+    // **وهنا قبل الدرج والهيكل معاً** — فلا يُفتح درجٌ فوق خريطة، ولا
+    // يُضغط تبويبٌ فتُترك نقطةٌ لم تُحفظ.
+    //
+    // **والرجوعُ يغلقها** — يفرضه `AddressEditor` بحارسٍ فيه.
+    if (addingAddress) {
+        AddAddressFlow(
+            vm = accountVm,
+            picker = mapPicker,
+            onDone = { addingAddress = false },
+        )
+        return
+    }
+
     ModalNavigationDrawer(
         drawerState = drawer,
         drawerContent = {
@@ -640,12 +665,6 @@ private fun SignedIn(
                     //
                     // **وقبل التبويبات في الترتيب** — ولو جاءت بعدها
                     // لَغطّاها التبويبُ فلا تُرى أبدا.
-                    addingAddress -> AddAddressFlow(
-                        vm = accountVm,
-                        picker = mapPicker,
-                        onDone = { addingAddress = false },
-                    )
-
                     tab == Tab.Orders -> OrdersScreen(ordersVm)
 
                     // **ونجاحُ الطلب الخاصّ ينقله إلى «طلباتي»** —

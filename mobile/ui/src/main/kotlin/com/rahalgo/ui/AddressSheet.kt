@@ -253,7 +253,10 @@ fun AddAddressFlow(
     picker: PointPicker,
     onDone: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(16.dp)) {
-        AddressEditor(vm, vm.state, picker, null, onDone)
-    }
+    // **ولا حشوةَ ولا عمودٌ حولها** — **الخريطةُ تملأ ما يُعطى لها**،
+    // وحشوةٌ بستّةَ عشرَ نقطةً تجعلها بطاقةً في صفحةٍ بيضاء.
+    //
+    // **والوصفُ بعدها يحتاج حشوةً وتمريرا** — فيتولّاهما `AddressEditor`
+    // بنفسه حين يكون قائماً بذاته (`standalone`).
+    AddressEditor(vm, vm.state, picker, null, onDone, standalone = true)
 }
