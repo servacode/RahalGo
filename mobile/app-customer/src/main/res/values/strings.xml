@@ -141,9 +141,15 @@
     <string name="cart_empty">سلتك فارغة — تصفح السوق واضغط ما يعجبك</string>
     <string name="cart_address">العنوان</string>
     <string name="cart_promo">كود خصم (اختياري)</string>
+    <string name="cart_promo_apply">تطبيق</string>
+    <string name="cart_promo_ok">تم تطبيق الكود — خصم %1$s</string>
+    <string name="cart_promo_bad">الكود غير صالح أو منتهي</string>
     <string name="cart_cash">نقدا عند التسليم</string>
     <string name="cart_wallet">من محفظتي</string>
-    <string name="cart_need_point">حدد موقعك ليحسب التوصيل</string>
+    <string name="cart_need_address">اختر عنوان التوصيل لتظهر الأجرة</string>
+    <!-- **والخاص قبل التوثيق يقول ما سيقع لا صفرا** — (شكوى المالك
+         ٢٠٢٦-٠٨-١٨): «٠ ل.س» تقرأ «توصيل مجاني» لا «لم يتفق بعد». -->
+    <string name="ord_delivery_on_deal">يحددها السائق عند الاتفاق</string>
     <string name="cart_out_of_zone">موقعك خارج نطاق التوصيل</string>
     <string name="cart_send">أرسل الطلب</string>
 

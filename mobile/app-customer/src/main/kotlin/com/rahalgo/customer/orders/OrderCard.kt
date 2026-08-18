@@ -121,7 +121,26 @@ fun OrderCard(
         HorizontalDivider()
         Spacer(Modifier.height(8.dp))
         if (order.subtotal > 0) KeyValue(stringResource(R.string.ord_subtotal), money(order.subtotal))
-        KeyValue(stringResource(R.string.ord_delivery), money(order.deliveryFee))
+        // ══════════════════════════════════════════════════════════════
+        // **والخاصُّ قبل التوثيق يقول ما سيقع لا صفرا**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (شكوى المالك ٢٠٢٦-٠٨-١٨: «أجرةُ توصيل السائق تظهر ٠ بالرغم من
+        //  أنّني عدّلتها من لوحة التحكّم» — وجوابُه: «أجرةُ التوصيل
+        //  بالطلب الخاصّ حسب التوثيق».)
+        //
+        // **والقاعدةُ صادقة**: الخاصُّ يُنشأ بصفرٍ ويكتب السائقُ الأجرةَ
+        // حين يوثّق ما اتّفقا عليه. **والشاشةُ كانت تعرض الصفرَ رقما** —
+        // **و«٠ ل.س» تُقرأ «توصيلٌ مجّانيّ» لا «لم يُتّفق بعد».**
+        val awaitingDeal = order.kind == "custom" && order.deliveryFee == 0L
+        if (awaitingDeal) {
+            KeyValue(
+                stringResource(R.string.ord_delivery),
+                stringResource(R.string.ord_delivery_on_deal),
+            )
+        } else {
+            KeyValue(stringResource(R.string.ord_delivery), money(order.deliveryFee))
+        }
         if (order.discount > 0) {
             KeyValue(stringResource(R.string.ord_discount), "-" + money(order.discount))
         }

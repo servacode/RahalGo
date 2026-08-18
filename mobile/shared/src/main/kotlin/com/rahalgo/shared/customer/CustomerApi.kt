@@ -69,6 +69,23 @@ class CustomerApi(private val api: ApiClient) {
             QuoteInput(items, lat, lng),
         )
 
+    /**
+     * **يقول ما يفعله كودُ الخصم بلا أن يفعله.**
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-١٨: «كودُ الخصم أضف إليه زرَّ تطبيق… بحيث
+     *  النتيجةُ تظهر بشكلٍ فوريٍّ للمستخدم أنّه تم خصمُ المبلغ حسب
+     *  الكود».)
+     *
+     * **وكان يُرسَل مع الطلب وحدَه** — **فيعرف أثرَه بعد أن يطلب**،
+     * ومن كتب كوداً منتهياً دفع ثمناً ظنّه أقلّ.
+     */
+    suspend fun previewPromo(code: String, subtotal: Long, deliveryFee: Long): PromoPreview =
+        api.call(
+            "/api/v1/promo/preview",
+            HttpMethod.Post,
+            PromoInput(code, subtotal, deliveryFee),
+        )
+
     /** **يُرسل الطلب** — ويردّ الطلبَ كما قُيّد. */
     suspend fun createOrder(input: NewOrder): OrderRef =
         api.call("/api/v1/orders", HttpMethod.Post, input)
@@ -379,3 +396,23 @@ data class MyOrder(
     @SerialName("stage_at") val stageAt: Int = -1,
 )
 
+/** **ما يُرسَل لمعاينة الخصم.** */
+@Serializable
+data class PromoInput(
+    val code: String,
+    val subtotal: Long,
+    @SerialName("delivery_fee") val deliveryFee: Long,
+)
+
+/**
+ * **أثرُ الكود** — أصالحٌ هو وكم يخصم.
+ *
+ * **و`deliveryFee` تعود فيه** — **وكودٌ يُلغي أجرةَ التوصيل يخصم صفراً
+ * من الإجماليّ ويُصفّر الأجرة**، فلو قُرئ الخصمُ وحدَه لَبدا بلا أثر.
+ */
+@Serializable
+data class PromoPreview(
+    val valid: Boolean = false,
+    val discount: Long = 0,
+    @SerialName("delivery_fee") val deliveryFee: Long = 0,
+)

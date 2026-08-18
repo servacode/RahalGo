@@ -41,6 +41,8 @@ import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.KeyValue
 import com.rahalgo.shared.model.Address
+import com.rahalgo.shared.customer.PromoPreview
+import com.rahalgo.ui.Flash
 import com.rahalgo.ui.AddressCard
 import com.rahalgo.ui.DeliveryAddress
 import com.rahalgo.ui.LastPoint
@@ -137,14 +139,47 @@ fun CartScreen(
         Spacer(Modifier.height(12.dp))
         AddressCard(address) { DeliveryAddress.open() }
 
+        // ══════════════════════════════════════════════════════════════
+        // **وكودُ الخصم يُطبَّق بزرٍّ ويُرى أثرُه فورا**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «كودُ الخصم أضف إليه زرَّ تطبيق…
+        //  بحيث النتيجةُ تظهر بشكلٍ فوريٍّ للمستخدم».)
+        //
+        // **وكان يُرسَل مع الطلب وحدَه** — **فيعرف أثرَه بعد أن يطلب**،
+        // ومن كتب كوداً منتهياً دفع ثمناً ظنّه أقلّ.
         Spacer(Modifier.height(10.dp))
-        OutlinedTextField(
-            value = vm.promo,
-            onValueChange = { vm.promo = it },
-            label = { Text(stringResource(R.string.cart_promo)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = vm.promo,
+                onValueChange = vm::typePromo,
+                label = { Text(stringResource(R.string.cart_promo)) },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            Button(
+                onClick = vm::applyPromo,
+                enabled = !vm.promoBusy && vm.promo.isNotBlank(),
+            ) { Text(stringResource(R.string.cart_promo_apply)) }
+        }
+
+        // **والنتيجةُ تحت الحقل** — **ورسالةٌ تطفو تنصرف بعد ثوانٍ**،
+        // وهذه تبقى ما دام الكودُ مكتوبا.
+        vm.promoResult?.let { r ->
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = if (r.valid) {
+                    stringResource(R.string.cart_promo_ok, money(r.discount))
+                } else {
+                    stringResource(R.string.cart_promo_bad)
+                },
+                color = if (r.valid) Rahal.colors.success else Rahal.colors.danger,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
 
         // ══════════════════════════════════════════════════════════════
         // **والدفعُ نقدٌ أو محفظة — ولا خليط**
@@ -172,8 +207,13 @@ fun CartScreen(
             val q = vm.priced
             if (q == null) {
                 // **ولا يُخمَّن التوصيل** — رقمٌ مخمَّنٌ أسوأُ من لا رقم.
+                //
+                // **والنصُّ يقول ما ينقص** — (شكوى المالك ٢٠٢٦-٠٨-١٨:
+                // «تفاجأتُ بشيءٍ يقول حدّد موقعك ليُحسب التوصيل»):
+                // **والموقعُ لم يعد يُلتقط هنا** — العنوانُ المحفوظ يحمل
+                // نقطتَه، **فالناقصُ عنوانٌ لا موقع.**
                 Text(
-                    text = stringResource(R.string.cart_need_point),
+                    text = stringResource(R.string.cart_need_address),
                     color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -239,6 +279,40 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
     // **وموضعُها النموذجُ لا الشاشة** — يعيش ما دام التطبيقُ حيّا.
     var address by mutableStateOf("")
     var promo by mutableStateOf("")
+
+    /**
+     * **أثرُ الكود بعد تطبيقه** — وفارغٌ يعني «لم يُطبَّق بعد».
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-١٨.)
+     *
+     * **ولا يُطبَّق مع كلّ حرفٍ يُكتب** — **ونداءٌ في كلّ ضغطةِ لوحةٍ
+     * يُغرق الخادمَ ويومض النتيجةَ**: يكتب أربعةَ أحرفٍ فيرى «غير صالح»
+     * أربعَ مرّات قبل أن يُتمّ.
+     */
+    var promoResult by mutableStateOf<PromoPreview?>(null)
+        private set
+
+    var promoBusy by mutableStateOf(false)
+        private set
+
+    /** **ويُنسى الأثرُ حين يُبدَّل الكود** — نتيجةُ كودٍ على كودٍ آخرَ كذب. */
+    fun typePromo(v: String) {
+        promo = v
+        promoResult = null
+    }
+
+    fun applyPromo() {
+        val code = promo.trim()
+        if (code.isEmpty() || promoBusy) return
+        promoBusy = true
+        viewModelScope.launch {
+            runCatching {
+                api.previewPromo(code, Cart.subtotal, priced?.deliveryFee ?: 0)
+            }.onSuccess { promoResult = it }
+                .onFailure { Flash.fail(apiError(getApplication(), it as Exception)) }
+            promoBusy = false
+        }
+    }
     var wallet by mutableStateOf(false)
 
     var priced by mutableStateOf<Quote?>(null)

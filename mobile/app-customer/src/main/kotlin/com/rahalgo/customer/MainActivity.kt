@@ -463,7 +463,19 @@ private fun SignedIn(
                     // **من فتحه جاء ليطلب.**
                     Tab(
                         selected = tab == Tab.Shop && over == Overlay.None,
-                        onClick = { tab = Tab.Shop; overlay.clear() },
+                        // ══════════════════════════════════════════
+                        // **والتبويبُ يُنزل رايةَ السلّة أيضا**
+                        // ══════════════════════════════════════════
+                        //
+                        // (شكوى المالك ٢٠٢٦-٠٨-١٨: «إذا كنتُ في سلّتي
+                        //  وضغطتُ على أيقونة قسمٍ آخر لا ينتقل إليها،
+                        //  يبقى في قسم سلّتي».)
+                        //
+                        // **والسلّةُ طبقةٌ تغطّي التبويب** — فيُبدَّل
+                        // التبويبُ تحتها ولا يُرى. **وضغطةٌ لا يقع لها
+                        // أثرٌ ظاهرٌ تُعاد وتُعاد** حتّى يُظنّ أنّ
+                        // الزرَّ معطوب.
+                        onClick = { tab = Tab.Shop; overlay.clear(); cart = false },
                         icon = R.drawable.ic_store,
                         label = R.string.nav_shop,
                     )
@@ -476,7 +488,7 @@ private fun SignedIn(
                     if (!guest) {
                         Tab(
                             selected = tab == Tab.Orders && over == Overlay.None,
-                            onClick = { tab = Tab.Orders; overlay.clear() },
+                            onClick = { tab = Tab.Orders; overlay.clear(); cart = false },
                             icon = R.drawable.ic_orders,
                             label = R.string.nav_orders,
                         )
@@ -494,7 +506,7 @@ private fun SignedIn(
                     // لا يُفتح** — ومن لم يفتحه لم يعرف أنّه موجود.
                     Tab(
                         selected = tab == Tab.Custom && over == Overlay.None,
-                        onClick = { tab = Tab.Custom; overlay.clear() },
+                        onClick = { tab = Tab.Custom; overlay.clear(); cart = false },
                         icon = R.drawable.ic_custom,
                         label = R.string.nav_custom,
                     )
@@ -521,7 +533,7 @@ private fun SignedIn(
                     // يدخل تسأل «حسابُ من؟».**
                     if (!guest) NavigationBarItem(
                         selected = tab == Tab.Account && over == Overlay.None,
-                        onClick = { tab = Tab.Account; overlay.clear() },
+                        onClick = { tab = Tab.Account; overlay.clear(); cart = false },
                         icon = {
                             val photo = Backend.of(context).media(shell.me?.avatarThumbUrl)
                             if (photo.isNullOrEmpty()) {
