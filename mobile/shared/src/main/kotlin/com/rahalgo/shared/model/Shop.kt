@@ -43,6 +43,13 @@ data class Banner(
     @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
     /** **وجهةُ الضغطة** — وفارغُها لافتةٌ تُرى ولا تُفتح. */
     val target: String = "",
+    /**
+     * **أوُلِّدت لها نسخٌ أصغر؟**
+     *
+     * **والصفوفُ القديمةُ بلا نسخ** — **ومن طلب مقاساً لم يُولَّد يأخذ
+     * ٤٠٤ في وسط الشاشة.** فيُسأل هذا الحقلُ قبل أن يُشتقّ مسار.
+     */
+    val sizes: Boolean = false,
 )
 
 @Serializable

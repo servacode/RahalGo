@@ -63,6 +63,37 @@ class Core(context: Context, val baseUrl: String, val client: String) {
      */
     fun media(path: String?): String? =
         path?.takeIf { it.isNotEmpty() }?.let { if (it.startsWith("http")) it else baseUrl + it }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **نسخةٌ بمقاسٍ أصغر — لا الأصلُ كاملا**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (شكوى المالك ٢٠٢٦-٠٨-١٨: «السلايدر وصور المنتجات تتأخّر
+     *  بالظهور… لا يجب أن يلاحظ المستخدمُ هذه المشاكل».)
+     *
+     * **وقِيس على الخادم الحيّ**: اللافتةُ الكاملةُ ١٤٥٤ ك.ب تصل في
+     * **٤٫٩ ثانية**، ونسخةُ ٩٦٠ تصل في ٣٫٤ — **وتسعُ لافتاتٍ تعني
+     * اثنتَي عشرةَ ميغا.**
+     *
+     * # والقاعدةُ من المحرّك لا مخترَعةٌ هنا
+     *
+     * `<الأصل>_<العرض>.<الامتداد>` بجانبه — كما تكتبها
+     * `media.VariantWidths` و`0112_media_variants.sql`. **ونسختان من
+     * قاعدةٍ واحدةٍ تفترقان يومَ يُضاف مقاس** — فالموضعُ هنا واحد.
+     *
+     * # ولا يُشتقّ لما لم يُولَّد
+     *
+     * **الصفوفُ القديمةُ بلا نسخ** (`sizes = false`) — **ومسارٌ يُشتقّ
+     * لها يردّ ٤٠٤ فتظهر بطاقةٌ فارغة.** فيُردّ الأصلُ كما هو.
+     */
+    fun mediaSized(path: String?, width: Int, hasSizes: Boolean): String? {
+        if (path.isNullOrEmpty()) return null
+        if (!hasSizes || path.startsWith("http")) return media(path)
+        val dot = path.lastIndexOf('.')
+        if (dot <= 0) return media(path)
+        return media(path.substring(0, dot) + "_" + width + path.substring(dot))
+    }
 }
 
 /**

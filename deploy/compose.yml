@@ -33,6 +33,8 @@ services:
       # نفسُها، **فلا يُمسّ تطبيقُ الويب** (قرارُ المالك ٢٠٢٦-٠٨-١٨).
       - ./invite:/srv/invite:ro
       - ./wellknown:/srv/wellknown:ro
+      # **وصفحتا الخصوصيّة وحذف الحساب** — شرطا بلاي، ملفّان ساكنان.
+      - ./legal:/srv/legal:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

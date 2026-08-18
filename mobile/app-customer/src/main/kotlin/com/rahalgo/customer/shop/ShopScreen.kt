@@ -142,7 +142,11 @@ fun ShopScreen(
                     BannerSlide(
                         id = it.id,
                         title = it.title,
-                        imageUrl = media(it.imageUrl),
+                        // **ونسخةُ ٩٦٠ لا الأصل** — انظر `mediaSized`:
+                        // **اللوحُ عرضُه نحو ثلاثِ مئةٍ وأربعين نقطةً**،
+                        // وألفٌ وستُّ مئةٍ فيه أربعةُ أضعافِ ما يُرى.
+                        imageUrl = Backend.of(context)
+                            .mediaSized(it.imageUrl, 960, it.sizes),
                         target = it.target,
                     )
                 },
