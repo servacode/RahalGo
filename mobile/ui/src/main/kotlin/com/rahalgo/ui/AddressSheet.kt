@@ -317,11 +317,14 @@ fun AddressCard(
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.labelSmall,
             )
+            // **واسمُ العنوان لا سطرُه** — (طلبُ المالك ٢٠٢٦-٠٨-١٨):
+            // **وسطرٌ فيه منطقةٌ وشارعٌ وطابقٌ يُقرأ نصفُه**، والاسمُ
+            // يُقرأ بنظرة.
             Text(
-                text = address?.text?.takeIf { it.isNotBlank() }
+                text = address?.let { stringResource(addressKindLabel(it.kind)) }
                     ?: stringResource(R.string.addr_card_none),
                 fontWeight = FontWeight.Bold,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.bodyMedium,
             )

@@ -68,6 +68,7 @@ import com.rahalgo.ui.AccountScreen
 import com.rahalgo.ui.AccountViewModel
 import com.rahalgo.ui.AddAddressFlow
 import com.rahalgo.ui.AddressSheet
+import com.rahalgo.ui.addressKindLabel
 import com.rahalgo.map.PickPoint
 import com.rahalgo.map.PickPointViewModel
 import org.maplibre.android.geometry.LatLng
@@ -471,8 +472,21 @@ private fun SignedIn(
                     } else {
                         { addressSheet = true }
                     },
+                    // ══════════════════════════════════════════════
+                    // **واسمُ العنوان لا سطرُه**
+                    // ══════════════════════════════════════════════
+                    //
+                    // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «بدل كتابة العنوان
+                    //  المفروض نكتب البيت أو العمل حسب اسم العنوان،
+                    //  هيك يصير احترافيّاً أكثر».)
+                    //
+                    // **وسطرٌ فيه منطقةٌ وشارعٌ وطابقٌ يُقصّ بنقاطٍ في
+                    // شريطٍ ضيّق** — فيُقرأ نصفُه ولا يُعرف أيُّ عنوانٍ
+                    // هو. **والاسمُ يُقرأ بنظرة.**
                     addressLabel = accountVm.state.addresses
-                        .firstOrNull { it.isDefault }?.text.orEmpty(),
+                        .firstOrNull { it.isDefault }
+                        ?.let { stringResource(addressKindLabel(it.kind)) }
+                        .orEmpty(),
                 )
             },
             bottomBar = {
