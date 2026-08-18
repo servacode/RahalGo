@@ -41,15 +41,10 @@ import com.rahalgo.driver.rating.RatingScreen
 import androidx.activity.compose.BackHandler
 import com.rahalgo.ui.AccountViewModel
 import com.rahalgo.ui.AccountScreen
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,7 +72,6 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.rahalgo.design.intro.BrandIntro
 import com.rahalgo.ui.LoginActions
 import com.rahalgo.ui.AuthScreen
 import androidx.compose.material3.NavigationBar
@@ -181,26 +175,11 @@ class MainActivity : ComponentActivity() {
         setContent { DriverApp() }
     }
 
-    companion object {
-        /** **أعُرضت الحركةُ في عمر هذه العمليّة؟** */
-        @Volatile
-        var introShown: Boolean = false
-    }
 }
 
 @Composable
 private fun DriverApp() {
     val context = LocalContext.current
-    // **وحركاتُ النظام تُقرأ من إعداداته** — من أطفأها أراد ذلك،
-    // **وتطبيقٌ يتجاهله يُقرأ معطوباً لا أنيقاً.**
-    val reduceMotion = remember {
-        Settings.Global.getFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            1f,
-        ) == 0f
-    }
-    var showIntro by remember { mutableStateOf(!MainActivity.introShown) }
 
     // **والإطارُ من الوحدة** — السمةُ وشريطا النظام: **قِيس أنّها
     // متطابقةٌ في الثلاثة** (٢٠٢٦-٠٨-١٤).
@@ -214,23 +193,8 @@ private fun DriverApp() {
         ) {
             Destination(theme)
 
-            AnimatedVisibility(
-                visible = showIntro,
-                enter = fadeIn(tween(0)),
-                // **وتخرج صاعدةً لا مختفيةً فجأةً** — فيبدو أنّ الشاشةَ
-                // التالية خرجت من الحركة نفسِها.
-                exit = fadeOut(tween(200)) + slideOutVertically(tween(220)) { -it / 12 },
-            ) {
-                BrandIntro(
-                    tagline = stringResource(R.string.intro_tagline),
-                    brandWord = stringResource(R.string.intro_tagline_brand),
-                    reduceMotion = reduceMotion,
-                    onFinished = {
-                        MainActivity.introShown = true
-                        showIntro = false
-                    },
-                )
-            }
+            // **والافتتاحُ صار في `AppFrame`** — انظره: نسخةٌ واحدةٌ
+            // للتطبيقات الثلاثة (ملاحظةُ المالك ٢٠٢٦-٠٨-١٩).
         }
     }
 }

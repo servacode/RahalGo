@@ -19,6 +19,8 @@
     <string name="acc_weak_password">كلمة المرور قصيرة — ثمانية أحرف على الأقل</string>
     <string name="acc_wrong_password">كلمة المرور الحالية غير صحيحة</string>
     <string name="act_retry">أعد المحاولة</string>
+    <string name="intro_tagline">طلبك أسرع مع رحال غو</string>
+    <string name="intro_tagline_brand">رحال غو</string>
     <string name="ord_chat">محادثة السائق</string>
     <string name="chat_empty">لا رسائل بعد — اكتب أول رسالة</string>
     <string name="chat_write">اكتب رسالتك</string>
