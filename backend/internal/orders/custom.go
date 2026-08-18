@@ -130,6 +130,22 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 //
 // **الاتّفاقُ قد يتبدّل**: يجد السائقُ الصنفَ أغلى فيعود إلى الزبون. **فيُحدَّث
 // ووقتُه معه** — والوقتُ هو ما يُقرأ عند الخلاف: **متى قال ماذا.**
+// # ولماذا يُكتب النوعُ في الجمع
+//
+// (شكوى المالك ٢٠٢٦-٠٨-١٨: «عند توثيق السعر بالطلب الخاصّ يعطي: تعذّر
+//
+//	الاتصال، حاول بعد قليل».)
+//
+// **وكان الجمعُ بلا نوع** — وسيطان مجهولان، **فتسأل بوستغرس: أيُّ «+»
+// هذا؟** فلا تجد واحداً بعينه ويسقط النداءُ بخمسمئة
+// (operator is not unique: unknown + unknown — رُئي في سجلّ الخادم).
+//
+// **والإسنادُ وحدَه يُعطي النوع** — والجمعُ لا: يُحسب قبل أن يُعرف
+// طرفاه.
+//
+// **ولا خطأَ يفهمه صاحبُ التطبيق**: تصل خمسُمئةٍ فتقول الشاشةُ «تعذّر
+// الاتصال» — **فيُتّهم الإنترنتُ وتُعاد المحاولةُ عشراً**، والعطبُ في
+// حرفين.
 func (s *Service) AgreeCustom(ctx context.Context, orderID, driverID string,
 	goods, fee int64) error {
 	if goods < 0 || fee < 0 {
@@ -186,7 +202,8 @@ func (s *Service) AgreeCustom(ctx context.Context, orderID, driverID string,
 	_, err = s.db.Exec(ctx, `
 		UPDATE orders
 		SET custom_goods_amount = $2, custom_fee = $3,
-		    subtotal = $2, delivery_fee = $3, total = $2 + $3,
+		    -- **والنوعُ يُقال صراحةً في الجمع** — انظر الشرحَ فوق الدالّة.
+		    subtotal = $2, delivery_fee = $3, total = $2::bigint + $3::bigint,
 		    custom_agreed_at = now(), updated_at = now()
 		WHERE id = $1`, orderID, goods, fee)
 	if err != nil {

@@ -27,6 +27,8 @@ import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.Refreshable
+import com.rahalgo.ui.OrderChatSheet
+import com.rahalgo.ui.OrderChatViewModel
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -75,6 +77,7 @@ private fun OrdersList(
     var cancelId by rememberSaveable { mutableStateOf<String?>(null) }
     var rateId by rememberSaveable { mutableStateOf<String?>(null) }
     var complainId by rememberSaveable { mutableStateOf<String?>(null) }
+    var chatId by rememberSaveable { mutableStateOf<String?>(null) }
 
     if (list.isEmpty() && vm.error.isNotEmpty()) {
         LoadState(loading = vm.busy, error = vm.error, onRetry = vm::load)
@@ -84,6 +87,12 @@ private fun OrdersList(
     // **والسحبُ يُنعش هنا أيضاً** — انظر `Refreshable`: **حركةٌ
     // يتعلّمها مرّةً ويتوقّعها في كلّ مكان، وشاشةٌ لا تُنعش تُقرأ
     // عطبا.**
+    // **ولوحُ الحديث فوق القائمة** — (شكوى المالك ٢٠٢٦-٠٨-١٨).
+    chatId?.let { id ->
+        val chatVm: OrderChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+        OrderChatSheet(vm = chatVm, orderId = id) { chatId = null }
+    }
+
     Refreshable(refreshing = vm.refreshing, onRefresh = vm::refresh) {
     Screen {
         ScreenTitle(title, hint)
@@ -121,6 +130,23 @@ private fun OrdersList(
                     null
                 },
                 onComplain = { complainId = o.id; vm.loadReasons(o.id) },
+                // ══════════════════════════════════════════════════════
+                // **وحديثُ السائق حيث يوجد سائق**
+                // ══════════════════════════════════════════════════════
+                //
+                // (شكوى المالك ٢٠٢٦-٠٨-١٨: «أيقونةُ الدردشة لم تظهر عند
+                //  الزبون».)
+                //
+                // **ولا يُعرض قبل أن يُسنَد أحد** — **زرُّ حديثٍ بلا
+                // مُحدَّثٍ يُضغط فيُفتح فراغ.**
+                //
+                // **ولا في السجلّ**: طلبٌ انتهى وسائقُه مضى، **وحديثٌ
+                // يُفتح فيه لا يقرؤه أحد.**
+                onChat = if (!history && !o.driverName.isNullOrEmpty()) {
+                    { chatId = o.id }
+                } else {
+                    null
+                },
                 // **ولا نجومَ لطلبٍ لم يُسلَّم ولا لطلبٍ قُيّم** — نجومٌ
                 // مرّتين تُقرأ أنّ الأولى لم تصل.
                 onRate = if (o.status == "delivered" && o.id !in vm.rated) {

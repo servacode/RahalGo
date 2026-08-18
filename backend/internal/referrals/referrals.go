@@ -31,6 +31,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -81,6 +82,9 @@ type Service struct {
 	settings Settings
 	treasury func(ctx context.Context) string
 	notify   Notifier
+
+	// logger **لأنّ الصمتَ أخفى عطباً شهراً** — انظر `logAndSkip`.
+	logger *slog.Logger
 }
 
 // Notifier ما يلزم لإبلاغ من نال — **ومكافأةٌ لا يراها صاحبُها لم تُصرف
@@ -90,8 +94,14 @@ type Notifier interface {
 }
 
 func New(db *pgxpool.Pool, w *wallet.Service, st Settings,
-	treasury func(context.Context) string, n Notifier) *Service {
-	return &Service{db: db, wallet: w, settings: st, treasury: treasury, notify: n}
+	treasury func(context.Context) string, n Notifier, logger *slog.Logger) *Service {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return &Service{
+		db: db, wallet: w, settings: st,
+		treasury: treasury, notify: n, logger: logger,
+	}
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -124,7 +134,7 @@ func (s *Service) claimPhoneOnce(ctx context.Context, q rowRunner, userID, kind 
 		INSERT INTO phone_claims (phone_hash, kind)
 		SELECT encode(sha256(((SELECT value FROM app_secrets WHERE key = 'phone_pepper')
 		                      || u.phone)::bytea), 'hex'), $2
-		FROM users u WHERE u.id = $1
+		FROM users u WHERE u.id = $1::uuid
 		ON CONFLICT DO NOTHING`, userID, kind)
 	if err != nil {
 		return false, err
@@ -380,8 +390,36 @@ func (s *Service) GrantSignupBonus(ctx context.Context, customerID, actorID stri
 	var already bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS(SELECT 1 FROM wallet_transactions
-		              WHERE user_id = $1 AND kind = 'reward' AND ref = $1)`,
-		customerID).Scan(&already); err != nil || already {
+		              WHERE user_id = $1::uuid AND kind = 'reward' AND ref = $2)`,
+		customerID, customerID).Scan(&already); err != nil {
+		// ══════════════════════════════════════════════════════════════
+		// **وخطأُ الفحص لا يُخلط بجوابه**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// (شكوى المالك ٢٠٢٦-٠٨-١٨: «مسحنا جميع الحسابات، وبالرغم من
+		//  ذلك عند تسجيل حسابٍ جديدٍ لنفس الرقم لم يحصل على المكافأة».)
+		//
+		// **وكان `err != nil || already` سطراً واحدا** — فيخرج صامتاً
+		// في الحالين: «صُرفت سلفاً» و«سقط الاستعلام». **وحالان لمعنيين
+		// لا يُقرأ أحدُهما.**
+		//
+		// # والاستعلامُ كان يسقط دائما
+		//
+		// **الوسيطُ نفسُه لعمودين من نوعين**: `user_id` من نوع uuid
+		// و`ref` نصّ — **فتردّ بوستغرس: لا مُعامِلَ بين نصٍّ وuuid**
+		// (operator does not exist: text = uuid — جُرّب على الخادم).
+		//
+		// **ولا يكفي أن يُصبّ أحدُهما** (`$1::uuid`): بوستغرس تستنتج
+		// نوعاً واحداً للوسيط من أوّل موضعٍ ثمّ يصطدم بالثاني —
+		// **فينقلب الخطأُ إلى الطرف الآخر ولا يزول.** فيُمرَّر المعرّفُ
+		// وسيطين: واحدٌ يُصبّ uuid وآخرُ يبقى نصّا.
+		//
+		// **فلم تُصرف الهديّةُ لأحدٍ منذ بُنيت** — ولا سطرَ في سجلٍّ
+		// يقول لماذا. **وصمتٌ يُقرأ نجاحاً أخفاها.**
+		s.logAndSkip("الهديّة: تعذّر فحصُ التكرار", customerID, err)
+		return
+	}
+	if already {
 		return
 	}
 
@@ -391,20 +429,30 @@ func (s *Service) GrantSignupBonus(ctx context.Context, customerID, actorID stri
 	//
 	// **وداخلَ المعاملة**: لو ثُبّت الحجزُ ثمّ فشل الصرفُ **لَحُرم
 	// صاحبُه هديّةً لم تصله.**
-	if ok, err := s.claimPhoneOnce(ctx, tx, customerID, "signup_bonus"); err != nil || !ok {
+	ok, err := s.claimPhoneOnce(ctx, tx, customerID, "signup_bonus")
+	if err != nil {
+		s.logAndSkip("الهديّة: تعذّر حجزُ الرقم", customerID, err)
+		return
+	}
+	if !ok {
 		return
 	}
 
+	// **وكلُّ خروجٍ صامتٍ يُنطَق** — انظر `logAndSkip`: **مضت الهديّةُ
+	// معطّلةً ولا سطرَ يشير إليها**، وهو ما جعلها تُظنّ عاملة.
 	if _, err := s.wallet.ApplyTx(ctx, tx, customerID, amount, "reward",
 		customerID, "هديّةُ حسابٍ جديد", &actorID); err != nil {
+		s.logAndSkip("الهديّة: تعذّر القيدُ للزبون", customerID, err)
 		return
 	}
 	// **والخزينةُ الطرفُ المقابل** — (قرارُ المالك: «المنصةُ تتحمّل التكاليف»).
 	if _, err := s.wallet.ApplyTx(ctx, tx, tid, -amount, "reward",
 		customerID, "هديّةُ حسابٍ جديدٍ صُرفت", &actorID); err != nil {
+		s.logAndSkip("الهديّة: تعذّر القيدُ على الخزينة", customerID, err)
 		return
 	}
 	if err := tx.Commit(ctx); err != nil {
+		s.logAndSkip("الهديّة: تعذّر ختمُ المعاملة", customerID, err)
 		return
 	}
 	if s.notify != nil {
@@ -469,4 +517,15 @@ func (s *Service) Standing(ctx context.Context, userID string) (*Standing, error
 	out.Rest = s.rewardFor(ctx, 4)
 	out.RewardOn = s.rewardOn(ctx)
 	return &out, nil
+}
+
+// logAndSkip **يقول لماذا لم تُصرف** — ولا يُسقط تسجيلاً.
+//
+// **وعطبٌ لا يُكتب لا يُصلَح**: مضت الهديّةُ شهراً معطّلةً ولا سطرَ
+// يشير إليها. **والصمتُ يُقرأ نجاحا.**
+func (s *Service) logAndSkip(what, userID string, err error) {
+	if s.logger == nil {
+		return
+	}
+	s.logger.Error(what, "user", userID, "error", err)
 }

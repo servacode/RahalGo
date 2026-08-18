@@ -19,6 +19,10 @@
     <string name="acc_weak_password">كلمة المرور قصيرة — ثمانية أحرف على الأقل</string>
     <string name="acc_wrong_password">كلمة المرور الحالية غير صحيحة</string>
     <string name="act_retry">أعد المحاولة</string>
+    <string name="ord_chat">محادثة السائق</string>
+    <string name="chat_empty">لا رسائل بعد — اكتب أول رسالة</string>
+    <string name="chat_write">اكتب رسالتك</string>
+    <string name="chat_send">إرسال</string>
     <string name="net_offline_banner">لا يوجد اتصال بالإنترنت</string>
     <string name="net_offline_title">لا يوجد اتصال بالإنترنت</string>
     <string name="net_offline_body">تحقق من الواي فاي أو بيانات الجوال، ثم أعد المحاولة</string>
@@ -205,7 +209,7 @@
     <string name="acc_addr_delete">حذف</string>
     <string name="acc_addr_empty">لا عناوين محفوظة</string>
     <string name="acc_addr_label">التسمية (البيت · العمل)</string>
-    <string name="acc_addr_make_default">كافتراضي</string>
+    <string name="acc_addr_make_default">اجعله العنوان الافتراضي</string>
     <string name="acc_addr_need_point">لم تحدد الموقع بعد — افتح الخريطة واضغط موقعي الحالي</string>
     <string name="acc_addr_pinned">تم تحديد الموقع</string>
     <string name="acc_addr_point">الموقع على الخريطة</string>

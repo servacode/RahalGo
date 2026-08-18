@@ -91,6 +91,19 @@ typealias PointPicker = @Composable (
 @Composable
 fun AccountScreen(
     vm: AccountViewModel,
+    /**
+     * **أيُعرض قسمُ العناوين؟**
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-١٨: «حساب السائق أصلاً لا يلزمه خيارُ
+     *  عناويني، لأنّه لا يضيف عناوينَه في حساب السائق».)
+     *
+     * **والعنوانُ حاجةُ من يُوصَّل إليه** — والسائقُ يُوصِّل. **وقسمٌ
+     * يُفتح فلا يُملأ أبداً يُقرأ نقصاً في الحساب** لا اختياراً.
+     *
+     * **وافتراضُه الإظهار**: الزبونُ هو الغالب، **وتطبيقٌ يُنسى فيه
+     * الوسيطُ يفقد عناوينَه صامتا.**
+     */
+    showAddresses: Boolean = true,
     onLoggedOut: () -> Unit,
     /**
      * **أهذا تطبيقُ عامل؟** — سائقٍ أو مندوبٍ أو متجر.
@@ -160,7 +173,8 @@ fun AccountScreen(
         Gap()
         PasswordSection(vm, s)
         Gap()
-        AddressesSection(vm, s, picker, onEditAddress)
+        // **ولا عناوينَ في حساب السائق** — انظر `showAddresses`.
+        if (showAddresses) AddressesSection(vm, s, picker, onEditAddress)
         // ══════════════════════════════════════════════════════════════
         // **ولا فحصَ إشعاراتٍ هنا**
         // ══════════════════════════════════════════════════════════════
@@ -580,16 +594,36 @@ private fun AddressRow(
         Spacer(Modifier.height(4.dp))
         Text(a.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
 
+        // ══════════════════════════════════════════════════════════════
+        // **وأزرارٌ ثلاثةٌ في صفٍّ تقصّ نصوصَها**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (شكوى المالك ٢٠٢٦-٠٨-١٨: «إعداد العناوين كافتراضي تطلع
+        //  مقصوصة، اجعلها غير مقصوصةٍ بطريقةٍ احترافيّة».)
+        //
+        // **وقُصِّر النصُّ قبلها إلى «كافتراضي» ولم يكفِ** — ثلاثةُ
+        // أزرارٍ بحشوةٍ عشرين نقطةً لكلٍّ منها **تأكل العرضَ قبل
+        // النصّ.**
+        //
+        // # فيُفصل الفعلُ الأوّلُ عن الاثنين
+        //
+        // **«كافتراضي» فعلٌ من نوعٍ آخر**: يقول «هذا عنواني» — والتعديلُ
+        // والحذفُ يدبّران البطاقة. **فيأخذ سطرَه كاملاً ويأخذان سطرَهما**،
+        // ولا يُقصّ واحدٌ منها.
+        //
+        // **ولا يظهر للافتراضيّ أصلا** — فمن كان افتراضيّاً فصفّان
+        // يصيران واحدا.
         Spacer(Modifier.height(12.dp))
+        if (!a.isDefault) {
+            RahalOutlineButton(
+                onClick = { vm.makeDefault(a.id) },
+                enabled = !s.busy,
+                tone = Tone.Success,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.acc_addr_make_default), maxLines = 1) }
+            Spacer(Modifier.height(8.dp))
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (!a.isDefault) {
-                RahalOutlineButton(
-                    onClick = { vm.makeDefault(a.id) },
-                    enabled = !s.busy,
-                    tone = Tone.Success,
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.acc_addr_make_default), maxLines = 1) }
-            }
             RahalOutlineButton(
                 onClick = onEdit,
                 enabled = !s.busy,

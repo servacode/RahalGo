@@ -129,7 +129,7 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// إجابتُها وتُجمَّد، **فلا تُعاد سؤالاً بعد أن يتحرّك السائق.**
 	ordersSvc.SetRouter(orderRouter{srv})
 	// **ومكافأةُ من دعا** — تُصرف عند أوّل طلبٍ يُسلَّم للمدعوّ.
-	srv.referrals = referrals.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID, notify)
+	srv.referrals = referrals.New(pg, walletSvc, settingsStore, ordersSvc.TreasuryID, notify, logger)
 	ordersSvc.SetReferrals(srv.referrals)
 	return srv
 }

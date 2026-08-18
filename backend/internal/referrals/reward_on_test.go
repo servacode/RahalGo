@@ -90,7 +90,7 @@ func arm(t *testing.T, mode string) *refFixture {
 
 	f.svc = referrals.New(pool, wallet.NewService(pool),
 		fakeSettings{mode: mode, reward: 5_000},
-		func(context.Context) string { return f.treasury }, f.notif)
+		func(context.Context) string { return f.treasury }, f.notif, nil)
 	return f
 }
 
@@ -185,7 +185,7 @@ func TestStanding_ShowsTheSameTiersItPays(t *testing.T) {
 			"referral.reward_3":    1_000,
 			"referral.reward_rest": 500,
 		}},
-		func(context.Context) string { return f.treasury }, f.notif)
+		func(context.Context) string { return f.treasury }, f.notif, nil)
 
 	st, err := f.svc.Standing(ctx, f.inviter)
 	if err != nil {

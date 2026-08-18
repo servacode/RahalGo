@@ -141,6 +141,8 @@
     <string name="cart_address">العنوان</string>
     <string name="cart_promo">كود خصم (اختياري)</string>
     <string name="cart_promo_apply">تطبيق</string>
+    <string name="cart_remove">حذف من السلة</string>
+    <string name="cart_clear">إفراغ السلة</string>
     <string name="cart_promo_ok">تم تطبيق الكود — خصم %1$s</string>
     <string name="cart_promo_bad">الكود غير صالح أو منتهي</string>
     <string name="cart_cash">نقدا عند التسليم</string>

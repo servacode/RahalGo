@@ -58,6 +58,11 @@ import com.rahalgo.ui.money
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalTextButton
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
+import com.rahalgo.ui.Tone
+import androidx.compose.foundation.layout.Box
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -129,6 +134,33 @@ fun CartScreen(
                         Text(line.qty.toString(), fontWeight = FontWeight.Bold)
                         RahalTextButton(onClick = { Cart.setQty(line.item.id, line.qty + 1) }) {
                             Text("+", style = MaterialTheme.typography.titleLarge)
+                        }
+
+                        // ══════════════════════════════════════════════
+                        // **وسلّةٌ يُحذف منها بضغطةٍ لا بالإنقاص**
+                        // ══════════════════════════════════════════════
+                        //
+                        // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «بسلّتي أضف أيقونةَ
+                        //  حذفٍ لحذف عناصر السلّة وإفراغها».)
+                        //
+                        // **وكان الحذفُ بالإنقاص حتّى الصفر** — ومن
+                        // أضاف خمسةً يضغط خمساً ليُلغيها، **وضغطةٌ
+                        // تُعاد خمساً تُقرأ عناداً في التطبيق.**
+                        Spacer(Modifier.size(4.dp))
+                        Box(
+                            Modifier
+                                .clip(CircleShape)
+                                .clickable { Cart.setQty(line.item.id, 0) }
+                                .padding(6.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    com.rahalgo.ui.R.drawable.ic_trash,
+                                ),
+                                contentDescription = stringResource(R.string.cart_remove),
+                                tint = Rahal.colors.danger,
+                                modifier = Modifier.size(18.dp),
+                            )
                         }
                     }
                 }
@@ -213,6 +245,17 @@ fun CartScreen(
             ) { vm.wallet = true }
         }
 
+        // **وإفراغُ السلّة كلِّها** — (طلبُ المالك ٢٠٢٦-٠٨-١٨).
+        //
+        // **ونصٌّ لا زرٌّ مملوء**: فعلٌ يُندَم عليه لا يُوضع في زرٍّ
+        // يلمع، **ومن أفرغها بالخطأ يعيد بناءها صنفاً صنفا.**
+        if (Cart.lines.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            RahalTextButton(onClick = { Cart.clear() }, tone = Tone.Danger) {
+                Text(stringResource(R.string.cart_clear))
+            }
+        }
+
         Spacer(Modifier.height(14.dp))
         Card {
             KeyValue(stringResource(R.string.ord_subtotal), money(Cart.subtotal))
@@ -230,10 +273,33 @@ fun CartScreen(
                     style = MaterialTheme.typography.bodySmall,
                 )
             } else {
-                KeyValue(stringResource(R.string.ord_delivery), money(q.deliveryFee))
+                // ══════════════════════════════════════════════════════
+                // **والحسمُ يُطرح من الإجماليّ فورَ تطبيقه**
+                // ══════════════════════════════════════════════════════
+                //
+                // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «الحسمُ وقتَ الكود يجب أن
+                //  يظهر مباشرةً على السعر بالسلّة أيضاً».)
+                //
+                // **وكان يُعرض سطراً تحت الحقل ولا يمسّ الإجماليّ** —
+                // **فيقرأ الزبونُ «خصم ٥٠٠» ثمّ يرى الإجماليَّ كما هو**،
+                // فلا يعرف أوقع الخصمُ أم لا.
+                //
+                // **والتوصيلُ يتبع الكودَ أيضاً**: كودٌ يُلغي الأجرة
+                // يردّها صفراً في `deliveryFee` — **وقراءةُ الخصم
+                // وحدَه تُخفي أثرَه.**
+                val cut = vm.promoResult?.takeIf { it.valid }
+                val fee = cut?.deliveryFee ?: q.deliveryFee
+                KeyValue(stringResource(R.string.ord_delivery), money(fee))
+                if (cut != null && cut.discount > 0) {
+                    KeyValue(
+                        stringResource(R.string.ord_discount),
+                        "− " + money(cut.discount),
+                        valueColor = Rahal.colors.success,
+                    )
+                }
                 KeyValue(
                     stringResource(R.string.ord_total),
-                    money(q.total),
+                    money(Cart.subtotal + fee - (cut?.discount ?: 0)),
                     valueColor = Rahal.colors.brand,
                 )
             }

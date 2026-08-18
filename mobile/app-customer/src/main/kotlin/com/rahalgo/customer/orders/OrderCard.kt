@@ -46,6 +46,20 @@ fun OrderCard(
     onCancel: (() -> Unit)?,
     onComplain: (() -> Unit)?,
     onRate: (() -> Unit)?,
+    /**
+     * **حديثُ الطلب مع السائق** — وفارغُه لا سائقَ بعد.
+     *
+     * (شكوى المالك ٢٠٢٦-٠٨-١٨: «أيقونةُ الدردشة لم تظهر عند الزبون،
+     *  تأكّد منها أنّ السائق والزبون يستطيعون التحدّث فيها».)
+     *
+     * **والمحرّكُ يسمح للطرفين منذ بُني** (`/orders/{id}/messages`)
+     * — **والزبونُ لم يكن له بابٌ إليه**: «دردشاتي السابقة» في القائمة
+     * **تُبنى من الرسائل**، فلا تعرض طلباً لم يُكتب فيه شيءٌ بعد.
+     *
+     * **فمن أراد أن يبدأ لا يجد من أين** — والسائقُ عنده الحديثُ داخل
+     * شاشة رحلته.
+     */
+    onChat: (() -> Unit)? = null,
 ) {
     Card {
         Row(
@@ -162,7 +176,7 @@ fun OrderCard(
             )
         }
 
-        val actions = listOfNotNull(onCancel, onComplain, onRate)
+        val actions = listOfNotNull(onCancel, onComplain, onRate, onChat)
         if (actions.isEmpty()) return@Card
 
         Spacer(Modifier.height(12.dp))
@@ -179,6 +193,15 @@ fun OrderCard(
                 RahalButton(onClick = it, modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.ord_rate))
                 }
+            }
+            // **وحديثُ السائق قبل الشكوى** — **ومن يستطيع أن يسأل لا
+            // يشكو**: أكثرُ الشكاوى سوءُ فهمٍ يحلّه سطر.
+            onChat?.let {
+                RahalOutlineButton(
+                    onClick = it,
+                    tone = Tone.Accent,
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.ord_chat), maxLines = 1) }
             }
             onComplain?.let {
                 RahalOutlineButton(onClick = it, modifier = Modifier.weight(1f)) {

@@ -705,7 +705,14 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
             if (over != Overlay.None) {
                 BackHandler { overlay.clear() }
                 when (over) {
-                    Overlay.Account -> AccountScreen(vm = accountVm, onLoggedOut = onLogout)
+                    Overlay.Account -> AccountScreen(
+                        vm = accountVm,
+                        onLoggedOut = onLogout,
+                        // **ولا عناوينَ للسائق** — (قرارُ المالك
+                        // ٢٠٢٦-٠٨-١٨): **العنوانُ حاجةُ من يُوصَّل
+                        // إليه، والسائقُ يُوصِّل.**
+                        showAddresses = false,
+                    )
                     Overlay.Rating -> RatingScreen(vm = ratingVm)
                     Overlay.Wallet -> WalletScreen(vm = walletVm)
                     // **وصندوقُ الإشعارات يُقرأ ثمّ يُغلق** — وفارغٌ
