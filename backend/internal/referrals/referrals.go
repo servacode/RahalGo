@@ -35,6 +35,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -91,6 +92,52 @@ type Notifier interface {
 func New(db *pgxpool.Pool, w *wallet.Service, st Settings,
 	treasury func(context.Context) string, n Notifier) *Service {
 	return &Service{db: db, wallet: w, settings: st, treasury: treasury, notify: n}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **مرّةً واحدةً للرقم — لا للحساب**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-١٨: «مرّةً واحدةً الهديّة، ولو حذف حسابَه
+//
+//	وأعاد تسجيلَ جديدٍ لا يكسب شيئاً. وأيضاً الدعوة نفسُ الشيء».)
+//
+// # الثغرةُ التي سُدَّت
+//
+// **الحذفُ يحرّر الرقمَ ليستطيع صاحبُه العودة** — وهو مقصود. **فحسابُه
+// الجديد بمعرّفٍ جديد**، والهديّةُ كانت تُفحص بالمعرّف فتُصرف من جديد.
+//
+// **واثنان متّفقان يدوران الحلقةَ**: يدعو فيسجّل فيقبضان، ثمّ يحذف
+// فيسجّل فيقبضان — **مالٌ يُطبع من خزينة المنصّة بلا سقف.**
+//
+// # ولماذا في القاعدة لا في الذاكرة
+//
+// **الحجزُ إدراجٌ في جدولٍ بمفتاحٍ أوّليّ** — فتسجيلان متزامنان بالرقم
+// نفسِه **يفشل ثانيهما في القاعدة**، ولا يُقرأ ثمّ يُكتب فيمرّان معا.
+//
+// # والبصمةُ تُحسب في القاعدة
+//
+// **فلا يمرّ الملحُ في الذاكرة ولا يُكتب في سجلّ** — والاستعلامُ نفسُه
+// يقرؤه ويهضمه.
+func (s *Service) claimPhoneOnce(ctx context.Context, q rowRunner, userID, kind string) (bool, error) {
+	tag, err := q.Exec(ctx, `
+		INSERT INTO phone_claims (phone_hash, kind)
+		SELECT encode(sha256(((SELECT value FROM app_secrets WHERE key = 'phone_pepper')
+		                      || u.phone)::bytea), 'hex'), $2
+		FROM users u WHERE u.id = $1
+		ON CONFLICT DO NOTHING`, userID, kind)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
+// rowRunner ما يكفي للحجز — **مسبحٌ أو معاملة.**
+//
+// **والحجزُ داخلَ معاملة الصرف حيثما وُجدت**: حجزٌ يُثبَّت ثمّ يفشل
+// الصرفُ **يحرم صاحبَه هديّةً لم تصله.**
+type rowRunner interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
 // rewardFor مكافأةُ الرتبة — **والرابعةُ فما فوقها بالثابت.**
@@ -171,6 +218,20 @@ func (s *Service) Attach(ctx context.Context, inviteeID, code string) error {
 	}
 	if inviterID == inviteeID {
 		return ErrSelfInvite
+	}
+
+	// **والرقمُ يُدعى مرّةً واحدةً في العمر** — (قرارُ المالك
+	// ٢٠٢٦-٠٨-١٨). **ومن حذف حسابَه وعاد لا يُنسب لأحدٍ ثانيةً**،
+	// فلا يُكافأ الداعي مرّتين على رقمٍ واحد.
+	//
+	// **ولا يُسقط التسجيل**: من مُنع نسبُه حسابُه كامل، **والدعوةُ
+	// زيادةٌ لا شرط.**
+	ok, err := s.claimPhoneOnce(ctx, s.db, inviteeID, "referral")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
 	}
 
 	// **والرتبةُ تُحسب داخل الإدراج** — لا تُقرأ ثمّ تُكتب: دعوتان متزامنتان
@@ -321,6 +382,16 @@ func (s *Service) GrantSignupBonus(ctx context.Context, customerID, actorID stri
 		SELECT EXISTS(SELECT 1 FROM wallet_transactions
 		              WHERE user_id = $1 AND kind = 'reward' AND ref = $1)`,
 		customerID).Scan(&already); err != nil || already {
+		return
+	}
+
+	// **ومرّةً واحدةً للرقم لا للحساب** — (قرارُ المالك ٢٠٢٦-٠٨-١٨):
+	// انظر `claimPhoneOnce`. **والفحصُ الذي فوقه يحرس المعرّفَ وهذا
+	// يحرس الرقم**، ومن حذف حسابَه وعاد يمرّ من الأوّل ويقف عند هذا.
+	//
+	// **وداخلَ المعاملة**: لو ثُبّت الحجزُ ثمّ فشل الصرفُ **لَحُرم
+	// صاحبُه هديّةً لم تصله.**
+	if ok, err := s.claimPhoneOnce(ctx, tx, customerID, "signup_bonus"); err != nil || !ok {
 		return
 	}
 

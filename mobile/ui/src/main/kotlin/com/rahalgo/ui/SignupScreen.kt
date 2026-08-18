@@ -61,6 +61,11 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
     var name by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    // **ويبدأ بما جاء من الرابط أو من المتجر** — ومن جاء بلا شيءٍ يكتبه
+    // بيده. **ومفتاحُه الرمزُ القادم**: لو وصل بعد أن رُسمت الشاشةُ
+    // لَبقي الحقلُ فارغاً وقد صار في الحالة.
+    var referral by remember(state.referral) { mutableStateOf(state.referral) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -122,6 +127,40 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                     enabled = !state.busy,
                     label = R.string.signup_password,
                 )
+
+                // ══════════════════════════════════════════════════════
+                // **ورمزُ الدعوة يُرى ويُكتب بيده**
+                // ══════════════════════════════════════════════════════
+                //
+                // (سؤالُ المالك ٢٠٢٦-٠٨-١٨: «لنفرض أنّني أرسلتُ الرابط
+                //  لصديقي ولكن لا يوجد تسجيلٌ عبر الويب… كيف نحلّ هذه
+                //  المشكلة؟».)
+                //
+                // **وكان يأتي من الرابط وحدَه** — فمن نزّل التطبيقَ
+                // بملفٍّ مباشرٍ أو من غير متجرٍ **لا يملك أيَّ طريقةٍ
+                // ينسب بها نفسَه لمن دعاه.** ولا حقلَ ولا خيار.
+                //
+                // **وهذا الحقلُ هو الأرضيّة**: يعمل بلا ويبٍ ولا متجرٍ
+                // ولا رابط — **يقرأ صديقُه الرمزَ ويكتبه.** وما سواه
+                // (الرابطُ والمتجر) تسهيلٌ يملؤه سلفاً.
+                //
+                // **ويُملأ تلقائيّاً إن جاء من رابط** — فلا يُطلب منه
+                // ما بيدِ التطبيق أصلا.
+                //
+                // **واختياريٌّ صراحةً في نصّه**: حقلٌ لا يُعرف أإلزاميٌّ
+                // هو **يوقف من لا رمزَ عنده** عند آخر خطوةٍ في التسجيل.
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = referral,
+                    onValueChange = { referral = it.trim().uppercase() },
+                    label = { Text(stringResource(R.string.signup_referral)) },
+                    supportingText = {
+                        Text(stringResource(R.string.signup_referral_hint))
+                    },
+                    singleLine = true,
+                    enabled = !state.busy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 
@@ -141,7 +180,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 when (state.step) {
                     SignupStep.PHONE -> actions.sendCode()
                     SignupStep.CODE -> actions.verifyCode(code.trim())
-                    SignupStep.DETAILS -> actions.confirm(name.trim(), password)
+                    SignupStep.DETAILS -> actions.confirm(name.trim(), password, referral.trim())
                 }
             },
             enabled = !state.busy && when (state.step) {
@@ -199,6 +238,6 @@ data class SignupActions(
     val setPhone: (String) -> Unit,
     val sendCode: () -> Unit,
     val verifyCode: (String) -> Unit,
-    val confirm: (name: String, password: String) -> Unit,
+    val confirm: (name: String, password: String, referral: String) -> Unit,
     val cancel: () -> Unit,
 )

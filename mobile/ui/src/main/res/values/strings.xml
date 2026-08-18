@@ -88,6 +88,8 @@
     <string name="signup_hint_details">اسمك وكلمة مرورك — وبها تدخل بعد اليوم</string>
     <string name="signup_name">الاسم الكامل</string>
     <string name="signup_password">كلمة المرور</string>
+    <string name="signup_referral">رمز الدعوة (اختياري)</string>
+    <string name="signup_referral_hint">إن دعاك صديق، اكتب رمزه هنا لتحصلا على المكافأة</string>
     <string name="signup_create">أنشئ الحساب</string>
     <!-- **ونصُّه نصُّ الويب حرفاً بحرف** (`i18n/ar.json`) — **ونصّان
          لمعنًى واحدٍ يفترقان يومَ يُصحَّح أحدُهما.** -->

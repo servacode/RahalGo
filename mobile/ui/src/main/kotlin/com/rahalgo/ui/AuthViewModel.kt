@@ -379,7 +379,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **ينتهي داخلا** — المحرّك يفتح الجلسة مع الإنشاء. */
-    fun confirmSignup(name: String, password: String) {
+    fun confirmSignup(name: String, password: String, referral: String = "") {
         val current = signup ?: return
         if (current.busy) return
         signup = current.copy(busy = true, error = "")
@@ -390,7 +390,10 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                     current.code,
                     name,
                     password,
-                    current.referral,
+                    // **وما كُتب في الحقل يغلب ما جاء في الرابط** —
+                    // **ومن صحّح رمزاً خاطئاً بيده يجب أن يُؤخَذ
+                    // تصحيحُه**، وإلّا أُرسل القديمُ وهو يرى الجديد.
+                    referral.ifBlank { current.referral },
                 )
                 backend.session.save(result.tokens.accessToken, result.tokens.refreshToken)
                 onSignedIn(result.user)

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.rahalgo.customer",
+      "sha256_cert_fingerprints": [
+        "23:EE:CD:F3:D9:13:F1:3A:B9:31:B9:DC:22:0A:1A:F8:AF:24:53:E7:3D:94:58:EC:8C:49:E5:FE:29:EB:DF:63"
+      ]
+    }
+  }
+]

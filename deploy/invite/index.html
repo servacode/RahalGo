@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>دعوة إلى رحال غو</title>
+<!--
+  ══════════════════════════════════════════════════════════════════════
+  **صفحةُ الدعوة — تنزيلٌ لا تسجيل**
+  ══════════════════════════════════════════════════════════════════════
+
+  (سؤالُ المالك ٢٠٢٦-٠٨-١٨: «لنفرض أنّني أرسلتُ الرابط لصديقي ولكن لا
+   يوجد تسجيلٌ عبر الويب، فقط عن طريق التطبيق — كيف نحلّ هذه المشكلة؟».)
+
+  **والتسجيلُ يبقى في التطبيق وحدَه** (قرارُه ٢٠٢٦-٠٨-١٨). وهذه صفحةُ
+  تنزيلٍ تعرض الرمزَ وتدلّ على التطبيق — **ورابطٌ يفتح «الصفحةُ غير
+  موجودة» دعوةٌ ضائعة**، وهو ما كان: `rahalgo.com/signup` تردّ ٤٠٤.
+
+  # ولماذا خارجَ تطبيق الويب
+
+  **قرارُ المالك: لا يُعدَّل تطبيقُ الويب** — يُلغى دخولُ الزبون منه.
+  **فتُخدَم هذه من البوّابة (Caddy) كملفٍّ ساكن**، ولا يُمسّ `web/`.
+
+  # وثلاثةُ طرق، والثالثُ لا يفشل
+
+  **١ · والتطبيقُ مثبَّت** — أندرويد يفتحه بالرابط نفسِه (App Links)،
+  ولا يرى هذه الصفحةَ أصلا.
+
+  **٢ · ومن المتجر** — الرمزُ يمشي في `referrer` فيقرؤه التطبيقُ في
+  أوّل إقلاع (`InstallReferrer`).
+
+  **٣ · ومن ملفٍّ مباشر** — لا متجرَ ولا `referrer`، **فالرمزُ مكتوبٌ
+  هنا بخطٍّ كبيرٍ ليُنسخ بيده.** وهذا هو الطريقُ الذي لا يفشل.
+-->
+<style>
+  :root{
+    --canvas:#ffffff; --ink:#07283a; --muted:#5a6b75;
+    --brand:#02678f; --accent:#fe9501; --line:#e3e8eb;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --canvas:#07283a; --ink:#eef3f6; --muted:#9fb0ba;
+           --line:#123648; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:24px;line-height:1.7}
+  main{width:100%;max-width:420px;text-align:center}
+  h1{font-size:1.5rem;margin:0 0 8px}
+  p{color:var(--muted);margin:0 0 24px}
+  .code{font-size:2.25rem;font-weight:700;letter-spacing:.15em;
+    color:var(--brand);background:color-mix(in srgb,var(--brand) 8%,transparent);
+    border:1px solid var(--line);border-radius:14px;
+    padding:16px;margin:0 0 8px;font-variant-numeric:tabular-nums;
+    overflow-wrap:anywhere}
+  .hint{font-size:.875rem;color:var(--muted);margin:0 0 24px}
+  a.btn{display:block;background:var(--brand);color:#fff;text-decoration:none;
+    border-radius:14px;padding:14px;font-weight:700;margin-bottom:10px}
+  a.alt{background:transparent;color:var(--brand);
+    border:1px solid var(--brand)}
+  .note{font-size:.8125rem;color:var(--muted);margin-top:20px}
+</style>
+</head>
+<body>
+<main>
+  <h1>صديقك دعاك إلى رحال غو</h1>
+  <p>حمل التطبيق واكتب الرمز عند إنشاء حسابك، لتحصلا على المكافأة</p>
+
+  <div class="code" id="code">—</div>
+  <p class="hint">هذا رمز الدعوة — انسخه</p>
+
+  <a class="btn" id="play" href="#">تحميل من غوغل بلاي</a>
+  <a class="btn alt" href="/app/rahalgo.apk">تحميل مباشر</a>
+
+  <p class="note">
+    التسجيل من التطبيق فقط. وإن كان التطبيق مثبتا عندك،
+    اضغط الرابط مرة أخرى ليفتح مباشرة.
+  </p>
+</main>
+<script>
+  // **والرمزُ من الرابط** — `?ref=CODE`.
+  //
+  // **ويُكتب نصّاً لا HTML** (`textContent`) — **ورمزٌ يُحقَن في
+  // الصفحة يفتح بابَ نصٍّ برمجيٍّ من رابطٍ يرسله غريب.**
+  var ref = new URLSearchParams(location.search).get('ref') || '';
+  ref = ref.replace(/[^A-Za-z0-9]/g, '').slice(0, 16).toUpperCase();
+  document.getElementById('code').textContent = ref || 'بلا رمز';
+
+  // **ورابطُ المتجر يحمل الرمزَ في `referrer`** — فيصل التطبيقَ بعد
+  // التثبيت بلا أن يكتبه أحد.
+  var play = 'https://play.google.com/store/apps/details?id=com.rahalgo.customer';
+  if (ref) play += '&referrer=' + encodeURIComponent('ref=' + ref);
+  document.getElementById('play').href = play;
+</script>
+</body>
+</html>
