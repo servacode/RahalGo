@@ -91,13 +91,37 @@ fun BannerSlider(
 
     val pager = rememberPagerState { items.size }
 
-    // **ولا مؤقّتَ للافتةٍ واحدة** — لا شيءَ ينتقل إليه، **ومؤقّتٌ يعمل
-    // بلا أثرٍ يستهلك ولا يُرى.**
+    // ══════════════════════════════════════════════════════════════════
+    // **والأثرُ لا يُفتَّح بما يُحرّكه هو**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (شكوى المالك ٢٠٢٦-٠٨-١٨: «لاحظتُ أنّ التبديل التلقائيّ لا يعمل
+    //  على الجوّال».)
+    //
+    // **كان مفتاحُه `pager.isScrollInProgress`** — فيقع هذا:
+    //
+    //	١ · يمضي الانتظارُ فيبدأ الانزلاق
+    //	٢ · فيصير `isScrollInProgress = true`
+    //	٣ · **وهو مفتاحُ الأثر — فيُلغى الأثرُ ومعه الانزلاقُ نفسُه**
+    //	٤ · فيعود إلى مكانه، ولا يتبدّل شيءٌ أبدا
+    //
+    // **وأثرٌ يُلغي نفسَه بما أحدثه لا يعمل مرّةً واحدة** — ولا خطأَ
+    // يظهر: يبدو ساكناً كأنّ الإعدادَ مطفأ.
+    //
+    // **فالمفاتيحُ ما لا يتحرّك**: عددُ اللافتات والمهلة. **والحلقةُ
+    // داخلَه** تحيا ما دام السلايدرُ على الشاشة.
+    //
+    // **وحالُ السحب يُقرأ في الجسد لا في المفتاح** — قراءةٌ في جسد
+    // الأثر لا تُعيد تشغيلَه: **لافتةٌ تنزلق من تحت إصبعه تُقرأ عطباً**،
+    // فتُترك حتّى يرفع يده.
     if (auto && items.size > 1 && everyMs > 0) {
-        LaunchedEffect(pager.currentPage, pager.isScrollInProgress, everyMs, items.size) {
-            if (pager.isScrollInProgress) return@LaunchedEffect
-            delay(everyMs.toLong())
-            pager.animateScrollToPage((pager.currentPage + 1) % items.size)
+        LaunchedEffect(items.size, everyMs) {
+            while (true) {
+                delay(everyMs.toLong())
+                if (!pager.isScrollInProgress) {
+                    pager.animateScrollToPage((pager.currentPage + 1) % items.size)
+                }
+            }
         }
     }
 
