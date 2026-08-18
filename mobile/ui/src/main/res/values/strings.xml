@@ -199,6 +199,26 @@
     <string name="acc_delete_ask">أرسل رمز الحذف</string>
     <string name="acc_delete_code">رمز التأكيد</string>
     <string name="acc_delete_confirm">احذف حسابي نهائيّاً</string>
+    <!-- ══════════════════════════════════════════════════════════
+         **موانعُ حذف الحساب — تُقال بلفظ الويب حرفا**
+         ══════════════════════════════════════════════════════════
+
+         (شكوى المالك ٢٠٢٦-٠٨-١٨: «أرسل رمزاً لحذف حسابي لا يعمل».)
+
+         **وكان يعمل**: المحرّكُ يردّ سبباً، **ولا ترجمةَ له في التطبيق
+         فيُعرض رمزاً لاتينيّاً** — ولو رُسم لَما فُهم.
+
+         **وخمسةُ موانعَ لا واحد**: رصيدٌ، ونقدٌ بحوزته، وسحبٌ معلّق،
+         ومتجرٌ يملكه، وطلبٌ جارٍ. **ورسالةٌ واحدةٌ عامّةٌ لخمسةِ أسبابٍ
+         لا تُصلِح أحدَها**: لا يعرف أيَّها وقع.
+
+         **ونصُّها نصُّ الويب حرفاً** — **ونصّان لمعنًى واحدٍ يفترقان
+         يومَ يُصحَّح أحدُهما.** -->
+    <string name="err_wallet_not_empty">رصيد محفظتك غير صفري — اسحبه أو أنفقه قبل حذف الحساب</string>
+    <string name="err_cash_not_settled">بحوزتك نقد للمنصة — سلّمه للمالية قبل حذف الحساب</string>
+    <string name="err_owns_merchants">تملك متجراً فعّالاً — تواصل مع الإدارة لنقل ملكيته أو إيقافه أولاً</string>
+    <string name="err_open_orders">لديك طلب جارٍ — انتظر انتهاءه قبل حذف الحساب</string>
+    <string name="err_admin_cannot_delete">حساب مدير المنصة لا يُحذف ذاتياً</string>
     <string name="acc_delete_hint">يُحذف حسابك ولا يمكن استرجاعه. يصلك رمز تأكيد على رقمك.</string>
     <string name="acc_name">الاسم الكامل</string>
     <string name="acc_password">كلمة المرور</string>
@@ -275,4 +295,61 @@
     <string name="point_none">لم تُحدَّد بعد</string>
     <string name="point_pick">حدّد الموقع على الخريطة</string>
     <string name="point_change">تغيير الموقع</string>
+    <!-- ══════════════════════════════════════════════════════════
+         **رموزُ المحرّك الباقية — بنصّ الويب حرفا**
+         ══════════════════════════════════════════════════════════
+
+         (كشفها حارسُ الرموز ٢٠٢٦-٠٨-١٨ بعد شكوى «أرسل رمزاً لحذف
+          حسابي لا يعمل».)
+
+         **اثنان وأربعون رمزاً يردّها المحرّكُ وتصل شاشةَ هاتف**،
+         **ولا ترجمةَ لها** — فتُعرض لاتينيّةً على شاشةٍ عربيّة:
+         «out_of_zone» لمن يطلب خارج النطاق، و«below_min_order» لمن
+         لم يبلغ الحدَّ الأدنى. **ويُقرأ ذلك عطباً في التطبيق لا
+         جواباً عن سؤال.**
+
+         **ونصُّها نصُّ الويب حرفاً** — **ونصّان لمعنًى واحدٍ
+         يفترقان يومَ يُصحَّح أحدُهما.** -->
+    <string name="err_invalid_role">الدور المحدد غير صالح</string>
+    <string name="err_self_action">لا يمكنك تنفيذ هذا الإجراء على حسابك</string>
+    <string name="err_pin_required">يلزم رمز الأدمن</string>
+    <string name="err_pin_invalid">الرمز غير صحيح</string>
+    <string name="err_pin_locked">نفدت المحاولات — أعد المحاولة بعد عشر دقائق</string>
+    <string name="err_pin_format">الرمز أربعة أرقام لا غير</string>
+    <string name="err_pin_challenge">انتهت مهلة الإدخال — سجّل الدخول من جديد</string>
+    <string name="err_pin_not_set">لا يوجد رمز مضبوط لهذا الحساب</string>
+    <string name="err_whatsapp_unverified">لا يوجد رقم واتساب موثَّق لهذا الحساب</string>
+    <string name="err_role_conflict">لهذا الحساب دورٌ أساسيٌّ بالفعل — الدورُ الواحد ومعه الزبون، ولا ثالث.</string>
+    <string name="err_merchant_needs_store">دورُ المتجر يُمنح مع إنشاء متجره — حوِّل طلبَ اشتراكٍ بدل منحه بيد.</string>
+    <string name="err_name_too_short">الاسم قصير — حرفان على الأقل</string>
+    <string name="err_invalid_invite_code">كود الدعوة غير صحيح أو ليس لمندوب</string>
+    <string name="err_not_custom_order">هذا ليس طلباً خاصاً.</string>
+    <string name="err_custom_not_assigned">لم يُسنَد سائق بعد.</string>
+    <string name="err_custom_not_agreed">لم يُوثَّق المبلغ المتفق عليه بعد</string>
+    <string name="err_merchant_closed">هذا المتجر مغلق الآن</string>
+    <string name="err_multi_source_order">تعذّر تحديد مصدر بعض الأصناف</string>
+    <string name="err_too_many_sources">أصنافُ سلّتك من مصادر أكثر من المسموح</string>
+    <string name="err_item_unavailable">أحد الأصناف غير متوفر حالياً</string>
+    <string name="err_invalid_items">تحقق من البيانات المدخلة</string>
+    <string name="err_out_of_zone">العنوان خارج مناطق التغطية الحالية</string>
+    <string name="err_below_min_order">قيمة الطلب أقل من الحد الأدنى لهذه المنطقة</string>
+    <string name="err_too_many_open_orders">لديك طلباتٌ لم تُسلَّم بعد. أكمِلها أوّلاً ثمّ اطلب من جديد.</string>
+    <string name="err_invalid_promo">كود الخصم غير صالح أو مستخدم سابقاً</string>
+    <string name="err_invalid_transition">لا يمكن نقل الطلب لهذه الحالة</string>
+    <string name="err_driver_required">يجب إسناد سائق أولاً</string>
+    <string name="err_cancel_window_passed">انقضت مهلةُ إلغاء الطلب. تواصل مع الدعم إن لزم.</string>
+    <string name="err_not_delivered">لا يمكن تقييم طلب لم يُسلَّم بعد</string>
+    <string name="err_invalid_stars">تحقق من البيانات المدخلة</string>
+    <string name="err_rate_own_client">لا يمكنك تقييم متجرٍ أنت مندوبه — التقييم شهادة زبونٍ مستقلّ.</string>
+    <string name="err_invalid_amount">المبلغ غير صالح</string>
+    <string name="err_invalid_category">التصنيف غير صالح</string>
+    <string name="err_merchant_location_required">حدّد موقعَ المتجر على الخريطة قبل الحفظ</string>
+    <string name="err_owner_required">لا متجرَ بلا صاحب — اكتب رقم صاحب المتجر</string>
+    <string name="err_invalid_hours">ساعات العمل غير صالحة — تأكد من وقتَي الفتح والإغلاق</string>
+    <string name="err_code_taken">هذا الكود مستعمل مسبقاً — اختر غيره</string>
+    <string name="err_section_not_empty">القسم يحتوي أصنافاً — انقلها أو احذفها أولاً</string>
+    <string name="err_section_required">اختر القسم</string>
+    <string name="err_invalid_zone">بيانات المنطقة غير صالحة</string>
+    <string name="err_over_settle">المبلغ يتجاوز ما بحوزة السائق</string>
+    <string name="err_cash_limit_exceeded">السائق تجاوز سقفه النقدي — يجب تسليم الصندوق أولاً</string>
 </resources>

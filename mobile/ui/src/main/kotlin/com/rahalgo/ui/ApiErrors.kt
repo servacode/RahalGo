@@ -136,6 +136,14 @@ private val CODES: Map<String, Int> = mapOf(
     // صحيحة»، **ولا رقمَ في نموذج التبديل أصلا.**
     "wrong_current_password" to R.string.acc_wrong_password,
     "weak_password" to R.string.acc_weak_password,
+    // ── موانعُ حذف الحساب ─────────────────────────────────────────────
+    //
+    // **خمسةٌ كانت تُعرض خامّةً** — والزرُّ يبدو معطَّلاً لصاحبه.
+    "wallet_not_empty" to R.string.err_wallet_not_empty,
+    "cash_not_settled" to R.string.err_cash_not_settled,
+    "owns_merchants" to R.string.err_owns_merchants,
+    "open_orders" to R.string.err_open_orders,
+    "admin_cannot_delete" to R.string.err_admin_cannot_delete,
     // **ورمزُ المحرّك `invalid_otp` لا `otp_invalid`** — كان الاسمُ
     // مقلوباً في الخريطة، **فيسقط إلى عرض الرمز الخام** ويقرأ صاحبُه
     // إنجليزيّةً لا تعني له شيئاً. (شكوى المالك ٢٠٢٦-٠٨-١٨.)
@@ -162,4 +170,49 @@ private val CODES: Map<String, Int> = mapOf(
     "complaint_window_passed" to R.string.err_complaint_window,
     "order_not_closed" to R.string.err_order_not_closed,
     "bad_complaint_reason" to R.string.err_bad_fail_reason,
+    // ── الباقي: كلُّ رمزٍ يردّه المحرّكُ ويصل هاتفا ──────────────────
+    //
+    // **كشفها `check-app-error-codes`** — وكانت تُعرض خامّة.
+    "invalid_role" to R.string.err_invalid_role,
+    "self_action" to R.string.err_self_action,
+    "pin_required" to R.string.err_pin_required,
+    "pin_invalid" to R.string.err_pin_invalid,
+    "pin_locked" to R.string.err_pin_locked,
+    "pin_format" to R.string.err_pin_format,
+    "pin_challenge" to R.string.err_pin_challenge,
+    "pin_not_set" to R.string.err_pin_not_set,
+    "whatsapp_unverified" to R.string.err_whatsapp_unverified,
+    "role_conflict" to R.string.err_role_conflict,
+    "merchant_needs_store" to R.string.err_merchant_needs_store,
+    "name_too_short" to R.string.err_name_too_short,
+    "invalid_invite_code" to R.string.err_invalid_invite_code,
+    "not_custom_order" to R.string.err_not_custom_order,
+    "custom_not_assigned" to R.string.err_custom_not_assigned,
+    "custom_not_agreed" to R.string.err_custom_not_agreed,
+    "merchant_closed" to R.string.err_merchant_closed,
+    "multi_source_order" to R.string.err_multi_source_order,
+    "too_many_sources" to R.string.err_too_many_sources,
+    "item_unavailable" to R.string.err_item_unavailable,
+    "invalid_items" to R.string.err_invalid_items,
+    "out_of_zone" to R.string.err_out_of_zone,
+    "below_min_order" to R.string.err_below_min_order,
+    "too_many_open_orders" to R.string.err_too_many_open_orders,
+    "invalid_promo" to R.string.err_invalid_promo,
+    "invalid_transition" to R.string.err_invalid_transition,
+    "driver_required" to R.string.err_driver_required,
+    "cancel_window_passed" to R.string.err_cancel_window_passed,
+    "not_delivered" to R.string.err_not_delivered,
+    "invalid_stars" to R.string.err_invalid_stars,
+    "rate_own_client" to R.string.err_rate_own_client,
+    "invalid_amount" to R.string.err_invalid_amount,
+    "invalid_category" to R.string.err_invalid_category,
+    "merchant_location_required" to R.string.err_merchant_location_required,
+    "owner_required" to R.string.err_owner_required,
+    "invalid_hours" to R.string.err_invalid_hours,
+    "code_taken" to R.string.err_code_taken,
+    "section_not_empty" to R.string.err_section_not_empty,
+    "section_required" to R.string.err_section_required,
+    "invalid_zone" to R.string.err_invalid_zone,
+    "over_settle" to R.string.err_over_settle,
+    "cash_limit_exceeded" to R.string.err_cash_limit_exceeded,
 )
