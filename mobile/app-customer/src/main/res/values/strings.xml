@@ -15,12 +15,12 @@
          **و«تسوّق» تقول ماذا يفعل.** -->
     <string name="nav_shop">تسوّق</string>
     <string name="nav_orders">طلباتي</string>
-    <string name="nav_custom">طلبٌ خاصّ</string>
+    <string name="nav_custom">طلب خاص</string>
     <string name="nav_profile">حسابي</string>
 
     <string name="soon_shop">المتاجرُ والأقسامُ تُبنى في خطوتها</string>
     <string name="soon_orders">هنا تتابع طلباتك — أين وصل كلُّ واحدٍ منها</string>
-    <string name="soon_custom">اطلب أيَّ شيءٍ من داخل المدينة — ونحن نُحضره إليك</string>
+    <string name="soon_custom">اطلب أي شيء من داخل المدينة — ونحن نحضره إليك</string>
     <string name="soon_account">اسمُك وصورتُك وعناوينُك وكلمةُ مرورك</string>
 
     <string name="soon_history">ما سُلّم وما تعذّر — بفواتيره</string>
@@ -99,14 +99,14 @@
       **المثالُ يُري ما يُطلب وما لا يُطلب** — ولا تعريفَ يُغني عنه.
       (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
     -->
-    <string name="cst_what_hint">مثال: طلبٌ من مطعمٍ أو متجرٍ معيّن · أمانةٌ من أحدهم · أو أيُّ شيءٍ آخرَ ضمن مركز المدينة</string>
-    <string name="cst_address">العنوان</string>
+    <string name="cst_what_hint">مثال: طلب من مطعم أو متجر معين · أمانة من أحدهم · أو أي شيء آخر ضمن مركز المدينة</string>
+    <string name="cst_address">العنوان التفصيلي</string>
     <string name="cst_point">نقطتك على الخريطة</string>
-    <string name="cst_locate">حدّد موقعي</string>
-    <string name="cst_notes">ملاحظاتٌ للسائق</string>
+    <string name="cst_locate">حدد موقعي</string>
+    <string name="cst_notes">ملاحظات للسائق</string>
     <string name="cst_send">أرسل الطلب</string>
-    <string name="cst_need_point">حدّد موقعك ليعرف السائقُ أين يوصل</string>
-    <string name="cst_done">أُرسل طلبك #%1$s — تابعه في «طلباتي»</string>
+    <string name="cst_need_point">حدد موقعك ليعرف السائق أين يوصل</string>
+    <string name="cst_done">تم إرسال طلبك رقم %1$s — تابعه في «طلباتي»</string>
 
     <!-- **عناوينُ أقسام «ما يخصّني»** — والاسمُ في الشاشة كالاسم في القائمة. -->
     <string name="menu_favorites_title">المفضّلة</string>

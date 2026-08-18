@@ -332,6 +332,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                             picking = false
                         },
                         onCancel = { picking = false },
+                        // **وأيقونةُ «موقعي»** — انظر تطبيقَ الزبون.
+                        onLocate = { Here.refresh(context) },
                     )
 
                     tab == Tab.Board -> BoardScreen(boardVm)

@@ -12,6 +12,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -28,6 +29,7 @@ import com.rahalgo.shared.customer.NewCustom
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.LastPoint
 import com.rahalgo.ui.Note
+import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.PointField
 import com.rahalgo.ui.PointPicker
 import com.rahalgo.ui.Screen
@@ -54,11 +56,32 @@ import kotlinx.coroutines.launch
  * عنواناً بلا نقطة، **فيُرسل السائقُ إلى لا مكان.**
  */
 @Composable
-fun CustomScreen(vm: CustomViewModel, picker: PointPicker? = null) {
+fun CustomScreen(
+    vm: CustomViewModel,
+    picker: PointPicker? = null,
+    /** **ما يُنادى بعد نجاح الطلب** — الانتقالُ إلى «طلباتي». */
+    onSent: () -> Unit = {},
+) {
     var request by rememberSaveable { mutableStateOf("") }
     var address by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
     val here = LastPoint.value
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ونجاحُ الإرسال يُفرِّغ ما كُتب ثمّ ينتقل**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (شكوى المالك ٢٠٢٦-٠٨-١٨ — انظر `CustomViewModel.send`.)
+    //
+    // **والتفريغُ هنا لا في النموذج**: الحقولُ حالُ شاشةٍ (`rememberSaveable`)
+    // **ولا يملكها النموذج** — يعرف أنّ الإرسال وقع ولا يعرف ماذا كُتب.
+    LaunchedEffect(vm.sent) {
+        if (vm.sent == 0) return@LaunchedEffect
+        request = ""
+        address = ""
+        notes = ""
+        onSent()
+    }
 
     Screen {
         ScreenTitle(
@@ -165,11 +188,39 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
     var done by mutableStateOf("")
         private set
 
+    /**
+     * **عدّادُ ما أُرسل** — **ترتفع قيمتُه مع كلّ نجاح.**
+     *
+     * **ولا رايةٌ تُرفع وتُخفَض**: من أرسل طلبين متتاليين لا تلتقط
+     * الشاشةُ الثانيَ لأنّ الرايةَ مرفوعةٌ أصلا. **ورقمٌ يتصاعد يُلتقط
+     * كلَّ مرّة.**
+     */
+    var sent by mutableStateOf(0)
+        private set
+
     /** **يُطلب موضعُه الآن** — لا يُقرأ في الخفاء لحظةَ الإرسال. */
     fun locate() {
         com.rahalgo.customer.Here.refresh(getApplication())
     }
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **ونجاحُ الطلب يُفرِّغ النموذجَ ويأخذ صاحبَه إلى «طلباتي»**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (شكوى المالك ٢٠٢٦-٠٨-١٨: «بعد نجاح الطلب الخاصّ يجب أن يتفرّغ
+     *  الفورمُ تلقائيّاً ثمّ ينتقل إلى قسم الطلبات ليعرف المستخدمُ أنّه
+     *  نجح — وليس أن يبقى الفورمُ مفتوحاً والمعلوماتُ السابقةُ موجودةً
+     *  فلا يفهم ماذا جرى».)
+     *
+     * **ونموذجٌ يبقى مملوءاً بعد الإرسال يُقرأ «لم يُرسَل»** — فيضغط
+     * صاحبُه ثانيةً وثالثة، **فيصير الطلبُ الواحدُ ثلاثةً** ويخرج ثلاثةُ
+     * سائقين إلى بابٍ واحد.
+     *
+     * **والنبضةُ تُبَثّ قبل الانتقال** — **و«طلباتي» تحمّل مرّةً في
+     * عمرها**: من انتقل إليها بلا نبضةٍ رأى قائمةً لا طلبَ فيها،
+     * **فأغلق التطبيقَ وفتحه ليرى طلبَه** (وهو ما وقع للمالك).
+     */
     fun send(request: String, address: String, lat: Double, lng: Double, notes: String) {
         if (busy) return
         busy = true
@@ -179,11 +230,19 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val ref = api.createCustom(NewCustom(request, address, lat, lng, notes))
                 done = getApplication<Application>()
-                    .getString(R.string.cst_done, ref.code.ifEmpty { ref.id.take(6) })
+                    .getString(R.string.cst_done, ref.number.toString())
+                // **والرقمُ نفسُه الذي يراه السائقُ والمكتبُ والمتجر.**
+                sent += 1
+                Refresh.bump()
             } catch (e: Exception) {
                 error = apiError(getApplication(), e)
             }
             busy = false
         }
+    }
+
+    /** **يُنسى ما مضى** — حين يعود إلى الشاشة بعد نجاح. */
+    fun clearDone() {
+        done = ""
     }
 }

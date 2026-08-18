@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -22,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,8 +81,22 @@ fun PickPoint(
     vm: PickPointViewModel,
     onPick: (LatLng, String) -> Unit,
     onCancel: () -> Unit,
+    /**
+     * **يطلب من التطبيق أن يقرأ موضعَ الجهاز** — ويكتبه في `LastPoint`.
+     *
+     * **ووحدةُ الخرائط لا تعرف جهازَ التموضع** — ولو عرفته لَحملته كلُّ
+     * شاشةٍ ترسم خريطة، **ولَاحتاجت إذنَ موقعٍ لا تستعمله.**
+     */
+    onLocate: () -> Unit = {},
 ) {
     var query by remember { mutableStateOf("") }
+
+    // **وحين يجيء الموضعُ تقفز الخريطةُ إليه** — ومن ضغط «موقعي» ثمّ لم
+    // تتحرّك الخريطةُ ظنّ أنّ الزرَّ لا يعمل.
+    val here = com.rahalgo.ui.LastPoint.value
+    LaunchedEffect(vm.wantingHere, here) {
+        if (vm.wantingHere && here != null) vm.jumpToPoint(here.lat, here.lng)
+    }
 
     Box(Modifier.fillMaxSize()) {
         MapCanvas(
@@ -143,6 +159,35 @@ fun PickPoint(
                     }
                 }
             }
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وأيقونةُ «موقعي» — كما يعرفها الناسُ من خرائط غوغل**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «تُفتح الخريطةُ وهناك أيقونةُ تحديد
+        //  الموقع بدقّة، يضغط عليها فيُحدَّد عنوانُه ثمّ حفظ وانتهى
+        //  الأمر — هذا الأمرُ متعارَفٌ عليه».)
+        //
+        // **وكان يُطلب منه أن يحرّك الخريطةَ بإصبعه حتّى يقع الدبّوس** —
+        // وهو في بيته يعرف موضعَه ولا يعرف أين هو على خريطةٍ بلا لافتات.
+        //
+        // **وموضعُها فوق الشريط السفليّ لا في زاويةٍ بعيدة** — الإبهامُ
+        // يبلغها وهو ممسكٌ بالهاتف بيدٍ واحدة.
+        FloatingActionButton(
+            onClick = { vm.wantHere(); onLocate() },
+            containerColor = Rahal.colors.canvas,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 148.dp)
+                .size(48.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_my_location),
+                contentDescription = stringResource(R.string.pick_my_location),
+                tint = Rahal.colors.accent,
+                modifier = Modifier.size(24.dp),
+            )
         }
 
         // ══════════════════════════════════════════════════════════════

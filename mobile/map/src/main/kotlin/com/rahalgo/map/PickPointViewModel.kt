@@ -90,6 +90,26 @@ class PickPointViewModel(app: Application) : AndroidViewModel(app) {
         jumpTo = LatLng(place.lat, place.lng)
     }
 
+    /**
+     * **يطلب القفزَ إلى موضعه الحاليّ** — ويرفع رايةَ الانتظار.
+     *
+     * **والموضعُ يأتي من التطبيق لا من هنا**: وحدةُ الخرائط لا تعرف
+     * جهازَ التموضع — **ولو عرفته لَحملته كلُّ شاشةٍ ترسم خريطة.**
+     */
+    fun wantHere() {
+        wantingHere = true
+    }
+
+    /** **ينتظر موضعاً** — يُطفأ حين يجيء أو حين يُلغى. */
+    var wantingHere by mutableStateOf(false)
+        private set
+
+    /** **يقفز إلى نقطةٍ صريحة** — الموضعُ الذي جاء من الجهاز. */
+    fun jumpToPoint(lat: Double, lng: Double) {
+        wantingHere = false
+        jumpTo = LatLng(lat, lng)
+    }
+
     fun jumped() {
         jumpTo = null
     }

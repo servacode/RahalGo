@@ -7,7 +7,12 @@
      **و«اختر موقعاً» تصف ولا تُعلّم.** -->
 <resources>
     <string name="pick_search">ابحث باسم المكان</string>
-    <string name="pick_move_map">حرّك الخريطة حتّى يقع الدبّوس على المكان</string>
-    <string name="pick_confirm">ثبّت هذه النقطة</string>
+    <string name="pick_move_map">حرك الخريطة حتى يقع الدبوس على المكان — أو اضغط موقعي الحالي</string>
+    <string name="pick_confirm">حفظ الموقع</string>
     <string name="pick_cancel">إلغاء</string>
+    <!-- **أيقونةُ «موقعي»** — (طلبُ المالك ٢٠٢٦-٠٨-١٨: «كما تعرف بغوغل
+         ماب يوجد أيقونةُ موقعي أو تحديد الموقع بدقّة يجب أن تكون
+         موجودة، يضغط عليها يتم تحديد عنوانه ثم زرّ حفظ»). -->
+    <string name="pick_my_location">موقعي الحالي</string>
+    <string name="pick_no_location">تعذّر تحديد موقعك — فعّل الموقع وحاول ثانية</string>
 </resources>

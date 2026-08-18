@@ -275,12 +275,19 @@ private fun SignedIn(
     //
     // **وثلاثُ شاشاتٍ تسأل عن موضع**: الحسابُ والسلّةُ والطلبُ الخاصّ.
     // **وثلاثُ نسخٍ من هذا اللمبدا تفترق يومَ تُزاد رايةٌ لإحداها.**
+    // **والسياقُ يُقرأ هنا لا داخلَ اللمبدا** — `context` في هذه الدالّة
+    // يُعرَّف بعدَه، **و`context(...)` في كوتلن كلمةٌ محجوزةٌ للمُعامِلات
+    // السياقيّة** فيُقرأ نداءَ دالّةٍ لا متغيّرا.
+    val ctx = LocalContext.current
     val mapPicker: PointPicker = { onPick, onCancel ->
         PickPoint(
             start = LastPoint.value?.let { LatLng(it.lat, it.lng) },
             vm = pickVm,
             onPick = { at, name -> onPick(at.latitude, at.longitude, name) },
             onCancel = onCancel,
+            // **وأيقونةُ «موقعي» تنادي جهازَ التموضع من هنا** — وحدةُ
+            // الخرائط لا تعرفه. (طلبُ المالك ٢٠٢٦-٠٨-١٨.)
+            onLocate = { Here.refresh(ctx) },
         )
     }
 
@@ -580,7 +587,15 @@ private fun SignedIn(
 
                     tab == Tab.Orders -> OrdersScreen(ordersVm)
 
-                    tab == Tab.Custom -> CustomScreen(customVm, picker = mapPicker)
+                    // **ونجاحُ الطلب الخاصّ ينقله إلى «طلباتي»** —
+                    // (شكوى المالك ٢٠٢٦-٠٨-١٨): **نموذجٌ يبقى مملوءاً
+                    // بعد الإرسال يُقرأ «لم يُرسَل»**، فيُضغط ثانيةً
+                    // وثالثةً فيخرج ثلاثةُ سائقين إلى بابٍ واحد.
+                    tab == Tab.Custom -> CustomScreen(
+                        customVm,
+                        picker = mapPicker,
+                        onSent = { tab = Tab.Orders },
+                    )
 
                     tab == Tab.Account -> AccountScreen(
                         vm = accountVm,
