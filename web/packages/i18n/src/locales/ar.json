@@ -46,7 +46,7 @@
     "active": "فعّال",
     "suspended": "موقوف",
     "blocked": "محظور",
-    "unavailable": "نافد",
+    "unavailable": "غير متوفر",
     "date": "التاريخ",
     "phone": "الهاتف",
     "name": "الاسم",
@@ -258,9 +258,9 @@
       "price": "سعر المتجر",
       "section": "القسم",
       "available": "متوفر",
-      "unavailable": "نافد",
-      "markAvailable": "إعادة توفير",
-      "markUnavailable": "إيقاف مؤقت",
+      "unavailable": "غير متوفر",
+      "markAvailable": "اجعله متوفراً",
+      "markUnavailable": "اجعله غير متوفر",
       "confirmDeleteItem": "حذف هذا الصنف نهائياً؟",
       "modifiers": "المُعدِّلات (الحجم، الإضافات…)",
       "addGroup": "مجموعة مُعدِّلات",
@@ -2120,10 +2120,10 @@
       "empty": "لا أقسام بعد — أضف أوّل قسم",
       "image": "صورة القسم",
       "view": "عرض القسم",
-      "available": "متاح",
-      "unavailable": "غير متاح",
-      "makeAvailable": "اجعله متاحاً",
-      "makeUnavailable": "اجعله غير متاح",
+      "available": "متوفر",
+      "unavailable": "غير متوفر",
+      "makeAvailable": "اجعله متوفراً",
+      "makeUnavailable": "اجعله غير متوفر",
       "noItems": "لا أصناف في هذا القسم",
       "itemPending": "بانتظار المراجعة",
       "itemOut": "نفد",
@@ -2361,14 +2361,6 @@
       "itemsCount": "{n} أصناف",
       "customerNote": "ملاحظة الزبون",
       "waitingDriver": "بانتظار سائق من المنصة"
-    },
-    "menu": {
-      "title": "قائمة المتجر — التوفر اليومي",
-      "hint": "توقيف الصنف يخفيه فوراً عن الزبائن — التعديلات الأخرى تديرها المنصة",
-      "available": "متوفر",
-      "unavailable": "نافد",
-      "markUnavailable": "إيقاف مؤقت",
-      "markAvailable": "إعادة توفير"
     },
     "reports": {
       "title": "تقارير المتجر",
@@ -2664,7 +2656,7 @@
     },
     "menu": {
       "addToCart": "أضف إلى السلة",
-      "unavailable": "نافد",
+      "unavailable": "غير متوفر",
       "options": "الخيارات",
       "required": "إلزامي",
       "chooseUpTo": "اختر حتى {n}",
@@ -3469,7 +3461,7 @@
       "remove": "أزِل من المفضّلة",
       "empty": "لا أصنافَ في مفضّلتك بعد",
       "browse": "تصفّح المتاجر",
-      "unavailable": "غيرُ متاحٍ الآن"
+      "unavailable": "غير متوفر الآن"
     },
     "myReputation": {
       "title": "بلاغاتٌ على طلباتي",
