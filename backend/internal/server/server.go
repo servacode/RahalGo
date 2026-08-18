@@ -401,9 +401,18 @@ func (s *Server) Router() http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Use(s.repMenuGuard)
 				r.Get("/stores/{id}/menu", s.handleRepMenu)
-				r.Post("/stores/{id}/menu/sections", s.handleCreateSection)
-				r.Patch("/menu/sections/{sectionID}", s.handleUpdateSection)
-				r.Delete("/menu/sections/{sectionID}", s.handleDeleteSection)
+				// ══════════════════════════════════════════════════
+				// **ولا أبوابَ لأقسام المتجر هنا**
+				// ══════════════════════════════════════════════════
+				//
+				// **فُتحت ٢٠٢٦-٠٨-١٨ ثمّ تبيّن أنّ الأقسامَ لا تُنشأ**:
+				// `GetMenu` تردّ أقسامَ السوق التي فيها أصناف، **ولا
+				// تقرأ جدولَ أقسام المتجر أصلاً.** (قرارُ المالك
+				// ٢٠٢٦-٠٨-٠٧: «الأدمنُ هو من يزرع الأقسام».)
+				//
+				// **فما نادَتها شاشةٌ قطّ** — **وبابٌ مفتوحٌ بلا حاجةٍ
+				// سطحُ هجومٍ بلا مقابل**، ويُقرأ غداً على أنّه ميزةٌ
+				// قائمةٌ فيُبنى عليه.
 				r.Post("/stores/{id}/menu/items", s.handleCreateItem)
 				r.Patch("/menu/items/{itemID}", s.handleUpdateItem)
 				r.Delete("/menu/items/{itemID}", s.handleDeleteItem)

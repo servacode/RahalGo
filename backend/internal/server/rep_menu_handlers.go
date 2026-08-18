@@ -65,22 +65,13 @@ func (s *Server) repOwnsItem(r *http.Request, itemID string) bool {
 	return err == nil && ok
 }
 
-// repOwnsSection **أقسمٌ في قائمة أحد عملائه؟**
-func (s *Server) repOwnsSection(r *http.Request, sectionID string) bool {
-	var ok bool
-	err := s.pg.QueryRow(r.Context(), `
-		SELECT EXISTS(SELECT 1 FROM menu_sections sc
-		              JOIN merchants m ON m.id = sc.merchant_id
-		              WHERE sc.id = $1 AND m.sales_rep_user_id = $2)`,
-		sectionID, userIDFrom(r)).Scan(&ok)
-	return err == nil && ok
-}
-
 // repMenuGuard **يحرس مسارات القائمة عند المندوب.**
 //
-// **ويقرأ المعرّفَ من المسار نفسِه** — `id` للمتجر، و`itemID` للصنف،
-// و`sectionID` للقسم: **فحارسٌ واحدٌ يكفي الثمانيةَ ولا يُنسى في
-// واحد.**
+// **ويقرأ المعرّفَ من المسار نفسِه** — `id` للمتجر و`itemID` للصنف:
+// **فحارسٌ واحدٌ يكفي الجميعَ ولا يُنسى في واحد.**
+//
+// **وكان له فرعٌ ثالثٌ للأقسام** — ذهب مع أبوابها (٢٠٢٦-٠٨-١٨):
+// **وفرعُ حارسٍ لا بابَ له يُقرأ على أنّ ثمّة باباً.**
 func (s *Server) repMenuGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -91,11 +82,6 @@ func (s *Server) repMenuGuard(next http.Handler) http.Handler {
 			}
 		case chi.URLParam(r, "itemID") != "":
 			if !s.repOwnsItem(r, chi.URLParam(r, "itemID")) {
-				s.respondErr(w, errForbidden)
-				return
-			}
-		case chi.URLParam(r, "sectionID") != "":
-			if !s.repOwnsSection(r, chi.URLParam(r, "sectionID")) {
 				s.respondErr(w, errForbidden)
 				return
 			}

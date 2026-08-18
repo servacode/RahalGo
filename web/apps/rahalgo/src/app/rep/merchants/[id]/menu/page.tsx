@@ -47,8 +47,6 @@ const m = getMessages(defaultLocale);
 /** **مساراتُ بوّابة المندوب** — والحارسُ في الخادم يتحقّق من العميل. */
 const PATHS: MenuPaths = {
   menu: (id) => `/api/v1/rep/stores/${id}/menu`,
-  sections: (id) => `/api/v1/rep/stores/${id}/menu/sections`,
-  section: (id) => `/api/v1/rep/menu/sections/${id}`,
   items: (id) => `/api/v1/rep/stores/${id}/menu/items`,
   item: (id) => `/api/v1/rep/menu/items/${id}`,
   platformSections: () => `/api/v1/rep/platform-sections`,

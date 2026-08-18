@@ -84,8 +84,17 @@ export interface MenuSection {
 export interface MenuPaths {
   /** قراءة القائمة: `/api/v1/admin/merchants/{id}/menu` أو `/api/v1/merchant/stores/{id}/menu` */
   menu: (merchantID: string) => string;
-  sections: (merchantID: string) => string;
-  section: (sectionID: string) => string;
+  /* ══════════════════════════════════════════════════════════════════
+     **ولا مسارَ لأقسام المتجر**
+     ══════════════════════════════════════════════════════════════════
+
+     **كانا معلَنين ومعرَّفين في أربع شاشات ولا ينادِيهما هذا المكوّن
+     قطّ** — لأنّ الأقسامَ لا تُنشأ: `GetMenu` تردّ أقسامَ السوق التي فيها
+     أصناف. (قرارُ المالك ٢٠٢٦-٠٨-٠٧: «الأدمنُ هو من يزرع الأقسام»،
+     وأكّده ٢٠٢٦-٠٨-١٨.)
+
+     **وعقدٌ يطلب ما لا يُستعمل يُملأ بلا فهم** — تُكتب أربعُ نسخٍ منه
+     ثمّ يُقرأ يوماً على أنّ ثمّة ميزةً فيُبنى عليها. */
   items: (merchantID: string) => string;
   item: (itemID: string) => string;
   /**

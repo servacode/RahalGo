@@ -34,8 +34,6 @@ const m = getMessages(defaultLocale);
 /** مسارات بوابة المتجر — الحارس في الخادم يتحقق من الملكية. */
 const PATHS: MenuPaths = {
   menu: (id) => `/api/v1/merchant/stores/${id}/menu`,
-  sections: (id) => `/api/v1/merchant/stores/${id}/menu/sections`,
-  section: (id) => `/api/v1/merchant/menu/sections/${id}`,
   items: (id) => `/api/v1/merchant/stores/${id}/menu/items`,
   item: (id) => `/api/v1/merchant/menu/items/${id}`,
   platformSections: () => `/api/v1/merchant/platform-sections`,
