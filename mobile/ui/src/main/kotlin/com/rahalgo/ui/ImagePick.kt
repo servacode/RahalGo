@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,7 +127,7 @@ fun rememberImagePicker(onBytes: (ByteArray) -> Unit): () -> Unit {
             onDismissRequest = { asking = false },
             title = { Text(stringResource(R.string.photo_source)) },
             confirmButton = {
-                TextButton(onClick = {
+                RahalTextButton(onClick = {
                     asking = false
                     runCatching { newPhotoUri(context) }.getOrNull()?.let {
                         shot = it
@@ -137,7 +136,7 @@ fun rememberImagePicker(onBytes: (ByteArray) -> Unit): () -> Unit {
                 }) { Text(stringResource(R.string.photo_camera)) }
             },
             dismissButton = {
-                TextButton(onClick = {
+                RahalTextButton(onClick = {
                     asking = false
                     gallery.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),

@@ -8,8 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
@@ -49,6 +47,8 @@ import com.rahalgo.ui.money
 import com.rahalgo.shared.model.HistoryOrder
 import com.rahalgo.shared.model.ReportReason
 import com.rahalgo.shared.net.ApiClient
+import com.rahalgo.ui.RahalOutlineButton
+import com.rahalgo.ui.RahalTextButton
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -473,7 +473,7 @@ private fun Row(
         // فيُردّ، **ورفضٌ بعد ضغطةٍ يُقرأ عطباً لا قاعدة.**
         if (!delivered && o.acceptsReturns && o.returnedAt == null) {
             Spacer(Modifier.height(4.dp))
-            OutlinedButton(onClick = onReturn, modifier = Modifier.fillMaxWidth()) {
+            RahalOutlineButton(onClick = onReturn, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.hist_return))
             }
         }
@@ -489,7 +489,7 @@ private fun Row(
         androidx.compose.foundation.layout.Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            TextButton(onClick = onReport) {
+            RahalTextButton(onClick = onReport) {
                 Text(stringResource(R.string.hist_report), color = Rahal.colors.danger)
             }
             if (o.canRateMerchant) {
@@ -503,7 +503,7 @@ private fun Row(
                         modifier = Modifier.padding(top = 14.dp),
                     )
                 } else {
-                    TextButton(onClick = onRate) {
+                    RahalTextButton(onClick = onRate) {
                         Text(stringResource(R.string.hist_rate), color = Rahal.colors.brand)
                     }
                 }
@@ -563,13 +563,13 @@ private fun ReportDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            RahalTextButton(
                 onClick = { vm.report(o.id, reason, note); onClose() },
                 enabled = !s.busy && reason.isNotEmpty(),
             ) { Text(stringResource(R.string.hist_report_send)) }
         },
         dismissButton = {
-            TextButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
+            RahalTextButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
         },
     )
 }
@@ -609,7 +609,7 @@ private fun RateDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            RahalTextButton(
                 // ══════════════════════════════════════════════════════
                 // **ولا تعليقَ مع التقييم — نجومٌ وفقط**
                 // ══════════════════════════════════════════════════════
@@ -630,7 +630,7 @@ private fun RateDialog(
             ) { Text(stringResource(R.string.hist_rate_send)) }
         },
         dismissButton = {
-            TextButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
+            RahalTextButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
         },
     )
 }

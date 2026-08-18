@@ -10,11 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +39,8 @@ import com.rahalgo.ui.PhoneField
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.apiError
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalOutlineButton
 import kotlinx.coroutines.launch
 
 /**
@@ -162,7 +162,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(6.dp))
-        OutlinedButton(onClick = pick, modifier = Modifier.fillMaxWidth()) {
+        RahalOutlineButton(onClick = pick, modifier = Modifier.fillMaxWidth()) {
             Text(
                 stringResource(
                     if (vm.point == null) R.string.ac_pick else R.string.ac_repick,
@@ -194,7 +194,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
         )
 
         Spacer(Modifier.height(16.dp))
-        Button(
+        RahalButton(
             onClick = {
                 vm.send(
                     NewLead(

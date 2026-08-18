@@ -12,14 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -165,7 +163,7 @@ fun AuthScreen(
         }
 
         Spacer(Modifier.height(20.dp))
-        Button(
+        RahalButton(
             onClick = {
                 when {
                     state.mode == LoginMode.PASSWORD -> actions.login(phone.trim(), password)
@@ -210,18 +208,18 @@ fun AuthScreen(
         // **ونسيان الكلمة ليس عطبا** — بابه هنا لا في اتّصال بالمكتب.
         // **ولا يُعرض مع الرمز**: من دخل برمز لا يحتاج كلمة أصلا.
         if (state.mode == LoginMode.PASSWORD) {
-            TextButton(onClick = actions.forgot, enabled = !state.busy) {
+            RahalTextButton(onClick = actions.forgot, enabled = !state.busy) {
                 Text(stringResource(R.string.login_forgot), color = Rahal.colors.inkMuted)
             }
         } else if (state.codeSent) {
-            TextButton(onClick = actions.resetCode, enabled = !state.busy) {
+            RahalTextButton(onClick = actions.resetCode, enabled = !state.busy) {
                 Text(stringResource(R.string.login_change_number), color = Rahal.colors.inkMuted)
             }
         }
         // **وبابُ الحساب الجديد تحت الدخول لا فوقه** — أكثرُ من يفتح
         // الشاشةَ له حسابٌ أصلا، **والتسجيلُ مرّةٌ في العمر.**
         if (signup) {
-            TextButton(onClick = actions.signup, enabled = !state.busy) {
+            RahalTextButton(onClick = actions.signup, enabled = !state.busy) {
                 Text(stringResource(R.string.signup_open), color = Rahal.colors.accent)
             }
         }

@@ -11,11 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -116,7 +114,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
         }
 
         Spacer(Modifier.height(24.dp))
-        Button(
+        RahalButton(
             onClick = {
                 when (state.step) {
                     ResetStep.PHONE -> actions.sendCode()
@@ -147,7 +145,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
         }
 
         Spacer(Modifier.height(6.dp))
-        TextButton(onClick = actions.cancel, enabled = !state.busy) {
+        RahalTextButton(onClick = actions.cancel, enabled = !state.busy) {
             Text(stringResource(R.string.reset_back), color = Rahal.colors.inkMuted)
         }
     }

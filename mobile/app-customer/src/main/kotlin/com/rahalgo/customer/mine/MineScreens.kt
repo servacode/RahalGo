@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,6 +49,7 @@ import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.money
 import com.rahalgo.ui.ticketStatusColor
 import com.rahalgo.ui.ticketStatusText
+import com.rahalgo.ui.RahalButton
 
 /**
  * **بابُ أقسام «ما يخصّني»** — يجلب ثمّ يوجّه.
@@ -289,7 +289,7 @@ private fun Invite(vm: MineViewModel) {
         }
 
         Spacer(Modifier.height(12.dp))
-        Button(
+        RahalButton(
             onClick = {
                 // **ويُشارَك بما يعرفه هاتفُه** — واتساب أو رسالة:
                 // **ونسخُ رابطٍ إلى الحافظة يُوجب عليه أن يفتح تطبيقاً

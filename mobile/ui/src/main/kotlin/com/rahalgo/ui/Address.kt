@@ -18,17 +18,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.activity.compose.BackHandler
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -258,15 +254,13 @@ fun AddressSheet(
             // **وهو الفعلُ الوحيدُ لمن لا عنوانَ له** — **وزرٌّ مفرَّغٌ
             // يُقرأ خياراً ثانياً**، والممتلئُ يقول: هذا ما تفعله.
             Spacer(Modifier.height(20.dp))
-            Button(
+            RahalButton(
                 onClick = onAdd,
                 enabled = !busy,
-                colors = ButtonDefaults.buttonColors(
-                    // **و`accent` هو `secondary` في سمتنا** — انظر أعلى
-                    // الملفّ: لا لونَ يُخترع هنا.
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary,
-                ),
+                // **و`accent` هي `secondary` في سمتنا** — والنبرةُ تقول
+                // المعنى، **واللونُ يقول الشكلَ فيصير موضعاً يُبحث عنه
+                // يومَ يتبدّل.**
+                tone = Tone.Accent,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) { Text(stringResource(R.string.addr_sheet_add)) }
 
@@ -543,14 +537,14 @@ internal fun AddressEditor(
                         kind, { kind = it },
                     )
                     Spacer(Modifier.height(20.dp))
-                    Button(
+                    RahalButton(
                         onClick = save,
                         enabled = canSave,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary,
-                            contentColor = MaterialTheme.colorScheme.onSecondary,
-                        ),
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        tone = Tone.Accent,
+                        // **وارتفاعُه من حشوة الزرّ لا من رقمٍ هنا** —
+                        // **و٥٢ مكتوبةً في موضعٍ واحدٍ تجعل هذا الزرَّ
+                        // أعلى من كلّ زرٍّ آخرَ في التطبيق** بلا سبب.
+                        modifier = Modifier.fillMaxWidth(),
                     ) { Text(stringResource(R.string.addr_save)) }
                     Spacer(Modifier.height(24.dp))
                 }
@@ -585,17 +579,17 @@ internal fun AddressEditor(
     // **وتغييرُ الموضع بابٌ ظاهرٌ في التعديل.**
     if (picker != null) {
         Spacer(Modifier.height(8.dp))
-        TextButton(onClick = { onMap = true }) {
+        RahalTextButton(onClick = { onMap = true }) {
             Text(stringResource(R.string.addr_change_point))
         }
     }
 
     Spacer(Modifier.height(12.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = save, enabled = canSave, modifier = Modifier.weight(1f)) {
+        RahalButton(onClick = save, enabled = canSave, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.addr_save))
         }
-        OutlinedButton(onClick = onDone, modifier = Modifier.weight(1f)) {
+        RahalOutlineButton(onClick = onDone, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.acc_delete_cancel))
         }
     }

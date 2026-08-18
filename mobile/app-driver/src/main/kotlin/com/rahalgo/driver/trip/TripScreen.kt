@@ -29,16 +29,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +60,9 @@ import com.rahalgo.driver.R
 import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.FailReasonItem
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.Tone
+import com.rahalgo.ui.RahalTextButton
 import org.maplibre.android.geometry.LatLng
 
 /**
@@ -323,7 +322,7 @@ private fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) 
             }
         },
         confirmButton = {
-            TextButton(
+            RahalTextButton(
                 onClick = { onConfirm(goods.toLongOrNull() ?: 0L, fee.toLongOrNull() ?: 0L) },
                 enabled = fee.isNotBlank(),
             ) {
@@ -331,7 +330,7 @@ private fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) 
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
         },
     )
 }
@@ -346,20 +345,22 @@ private fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit) 
 private fun SmallAction(
     icon: Int,
     label: Int,
-    ground: Color,
+    // **ونبرةٌ لا لون** — انظر `Tone`: اللونُ يقول الشكلَ والنبرةُ
+    // تقول المعنى، **وثلاثةُ أزرارٍ في صفٍّ بألوانٍ مكتوبةٍ بيدٍ تنجو
+    // من كلّ توحيدٍ لاحق.**
+    tone: Tone,
     onClick: () -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
     busy: Boolean = false,
 ) {
-    Button(
+    RahalButton(
         onClick = onClick,
         enabled = enabled,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = ground,
-            contentColor = Color.White,
-        ),
-        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp),
+        tone = tone,
+        // **وضيّقٌ لأنّ ثلاثةً في صفٍّ على شاشةِ هاتف** — والحشوةُ
+        // العريضةُ تدفع الأوّلَ إلى سطرين.
+        compact = true,
         modifier = modifier,
     ) {
         if (busy) {
@@ -368,7 +369,7 @@ private fun SmallAction(
                 strokeWidth = 2.dp,
                 color = Color.White,
             )
-            return@Button
+            return@RahalButton
         }
         Icon(
             painter = painterResource(icon),
@@ -407,12 +408,12 @@ private fun EmergencyDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         title = { Text(stringResource(R.string.emg_title)) },
         text = { Text(stringResource(R.string.emg_body), color = Rahal.colors.inkMuted) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            RahalTextButton(onClick = onConfirm) {
                 Text(stringResource(R.string.emg_send), color = Rahal.colors.danger)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_back)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_back)) }
         },
     )
 }
@@ -451,7 +452,7 @@ private fun FailDialog(
         text = {
             Column {
                 for (r in reasons) {
-                    TextButton(onClick = { onPick(r.code) }, modifier = Modifier.fillMaxWidth()) {
+                    RahalTextButton(onClick = { onPick(r.code) }, modifier = Modifier.fillMaxWidth()) {
                         Text(reasonLabel(r.code), modifier = Modifier.fillMaxWidth())
                     }
                 }
@@ -480,7 +481,7 @@ private fun FailDialog(
                 )
                 for (id in MINE) {
                     val label = stringResource(id)
-                    TextButton(
+                    RahalTextButton(
                         onClick = { onMine(label) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -490,7 +491,7 @@ private fun FailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
         },
     )
 }
@@ -1101,23 +1102,17 @@ private fun OnRouteBanner(
             Modifier.fillMaxWidth().height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Button(
+            RahalButton(
                 onClick = onTake,
                 enabled = !busy,
+                tone = Tone.Success,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Rahal.colors.success,
-                    contentColor = Color.White,
-                ),
             ) { Text(stringResource(R.string.order_agree)) }
-            Button(
+            RahalButton(
                 onClick = onDismiss,
                 enabled = !busy,
+                tone = Tone.Danger,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Rahal.colors.danger,
-                    contentColor = Color.White,
-                ),
             ) { Text(stringResource(R.string.order_later)) }
         }
         // ══════════════════════════════════════════════════════════════
@@ -1382,7 +1377,7 @@ private fun TripCard(
                     SmallAction(
                         icon = R.drawable.ic_check_circle,
                         label = next.label,
-                        ground = Rahal.colors.brand,
+                        tone = Tone.Brand,
                         // **والتسليم يمرّ بالصورة إن طلبها المحرّك** — وإلّا
                         // ردّ «يلزم إثبات» بعد أن ظنّ صاحبه أنّه أنهى.
                         onClick = {
@@ -1415,7 +1410,7 @@ private fun TripCard(
                 SmallAction(
                     icon = R.drawable.ic_warning,
                     label = R.string.trip_problem,
-                    ground = Rahal.colors.danger,
+                    tone = Tone.Danger,
                     onClick = actions.askFail,
                     enabled = !state.busy,
                     modifier = Modifier.weight(1f),
@@ -1441,7 +1436,7 @@ private fun TripCard(
                         // على شاشةِ هاتف، **و«أعد الطلب للطابور» تدفع
                         // الأوّلَ إلى سطرين.** والأيقونةُ تقول «إعادة».
                         label = R.string.trip_release_short,
-                        ground = Rahal.colors.accent,
+                        tone = Tone.Accent,
                         onClick = actions.release,
                         enabled = !state.busy,
                         modifier = Modifier.weight(1f),
@@ -1459,7 +1454,7 @@ private fun TripCard(
             // **والاتّفاق للطلب الخاصّ وحدَه** — العاديّ سعرُه معروف
             // سلفا، **وزرٌّ يظهر فيه يسأل عمّا لا يُسأل عنه.**
             if (order.kind == "custom") {
-                TextButton(onClick = actions.askAgree, enabled = !state.busy) {
+                RahalTextButton(onClick = actions.askAgree, enabled = !state.busy) {
                     Text(stringResource(R.string.agree_button), color = Rahal.colors.accent)
                 }
             }
@@ -1495,7 +1490,7 @@ private fun NoTrip(onOrders: () -> Unit) {
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(18.dp))
-        Button(onClick = onOrders) { Text(stringResource(R.string.nav_orders)) }
+        RahalButton(onClick = onOrders) { Text(stringResource(R.string.nav_orders)) }
     }
 }
 

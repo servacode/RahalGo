@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +32,7 @@ import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.apiError
+import com.rahalgo.ui.RahalButton
 import kotlinx.coroutines.launch
 
 /**
@@ -140,7 +139,7 @@ fun CustomScreen(
         )
 
         Spacer(Modifier.height(16.dp))
-        Button(
+        RahalButton(
             onClick = {
                 address?.let { vm.send(request.trim(), it.text, it.lat, it.lng, notes.trim()) }
             },

@@ -60,11 +60,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -114,6 +112,7 @@ import com.rahalgo.driver.trip.TripScreen
 import com.rahalgo.driver.trip.TripState
 import com.rahalgo.ui.ResetActions
 import com.rahalgo.ui.ResetScreen
+import com.rahalgo.ui.RahalButton
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -844,7 +843,7 @@ private fun Offline(onRetry: () -> Unit) {
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(20.dp))
-        Button(onClick = onRetry) { Text(stringResource(R.string.home_retry)) }
+        RahalButton(onClick = onRetry) { Text(stringResource(R.string.home_retry)) }
     }
 }
 

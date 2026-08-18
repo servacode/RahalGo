@@ -1,18 +1,18 @@
 {
   "app-customer": {
     "rawShape": 4,
-    "rawButton": 18
+    "rawButton": 0
   },
   "app-driver": {
     "rawShape": 23,
-    "rawButton": 32
+    "rawButton": 0
   },
   "app-rep": {
     "rawShape": 4,
-    "rawButton": 19
+    "rawButton": 0
   },
   "ui": {
     "rawShape": 21,
-    "rawButton": 44
+    "rawButton": 3
   }
 }

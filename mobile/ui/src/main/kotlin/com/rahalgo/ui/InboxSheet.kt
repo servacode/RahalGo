@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,7 +75,7 @@ fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit) {
             // **ولا يظهر إلّا إن كان فيه ما لم يُقرأ** — وزرٌّ يُضغط فلا
             // يتغيّر شيءٌ يُقرأ عطبا. (وهو عينُ ما تفعله صفحةُ الويب.)
             if (items.any { !it.read }) {
-                TextButton(onClick = onMarkAll) {
+                RahalTextButton(onClick = onMarkAll) {
                     Text(stringResource(R.string.inbox_mark_all))
                 }
             }

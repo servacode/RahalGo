@@ -15,11 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -303,12 +301,12 @@ fun WalletScreen(
             // **والزرّان في صفٍّ متساويين** — لا واحدٌ فوق واحد: **فعلان
             // متكافئان يُقرآن متكافئين.**
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
+                RahalButton(
                     onClick = { asking = true },
                     enabled = !s.busy && st.balance > 0,
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.wal_ask_payout)) }
-                OutlinedButton(
+                RahalOutlineButton(
                     onClick = { statement = true },
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.wal_statement)) }
@@ -316,7 +314,7 @@ fun WalletScreen(
         } else {
             // **ومن لا يسحب له زرٌّ واحد** — يمتدّ عرضَ الشاشة: **زرٌّ
             // بنصف العرض بجانب فراغٍ يُقرأ أنّ شيئاً سقط.**
-            OutlinedButton(
+            RahalOutlineButton(
                 onClick = { statement = true },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.wal_statement)) }
@@ -391,12 +389,12 @@ private fun PayoutForm(vm: WalletViewModel, s: WalletState, max: Long, onDone: (
     )
     Spacer(Modifier.height(10.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
+        RahalButton(
             onClick = { vm.requestPayout(value, note); onDone() },
             enabled = !s.busy && value in 1..max,
             modifier = Modifier.weight(1f),
         ) { Text(stringResource(R.string.wal_send)) }
-        OutlinedButton(onClick = onDone, modifier = Modifier.weight(1f)) {
+        RahalOutlineButton(onClick = onDone, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.acc_delete_cancel))
         }
     }
@@ -574,7 +572,7 @@ private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -
                 // **والطباعةُ هي ما يجعل الكشفَ حجّة** — (سأل المالك
                 // ٢٠٢٦-٠٨-١٣: «شو استفدنا من الكشف ما فيه طباعة؟»).
                 // **ونظامُ أندرويد يعطي الطابعةَ و«حفظ كـPDF» معا.**
-                Button(onClick = {
+                RahalButton(onClick = {
                     StatementPrint.print(
                         context,
                         vm.state.name,
@@ -592,7 +590,7 @@ private fun StatementView(vm: WalletViewModel, st: WalletStatement, onBack: () -
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (r in Range.entries) {
                 val on = vm.range == r
-                OutlinedButton(
+                RahalOutlineButton(
                     onClick = { vm.pickRange(r) },
                     modifier = Modifier.weight(1f),
                 ) {

@@ -7,7 +7,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -26,6 +25,7 @@ import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.Note
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
+import com.rahalgo.ui.RahalTextButton
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -178,12 +178,12 @@ private fun ConfirmCancel(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         title = { Text(stringResource(R.string.ord_cancel_title)) },
         text = { Text(stringResource(R.string.ord_cancel_ask)) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            RahalTextButton(onClick = onConfirm) {
                 Text(stringResource(R.string.ord_cancel_yes), color = Rahal.colors.danger)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_back)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_back)) }
         },
     )
 }
@@ -233,14 +233,14 @@ internal fun RateDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            RahalTextButton(
                 onClick = {
                     onConfirm(stars, driverStars.takeIf { hasDriver }, note.trim())
                 },
             ) { Text(stringResource(R.string.ord_send)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_back)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_back)) }
         },
     )
 }
@@ -250,7 +250,7 @@ internal fun RateDialog(
 private fun StarRow(value: Int, onPick: (Int) -> Unit) {
     androidx.compose.foundation.layout.Row {
         (1..5).forEach { n ->
-            TextButton(onClick = { onPick(n) }) {
+            RahalTextButton(onClick = { onPick(n) }) {
                 Text(
                     text = if (n <= value) "★" else "☆",
                     style = MaterialTheme.typography.headlineSmall,
@@ -298,7 +298,7 @@ private fun ComplainDialog(
                 }
                 reasons.forEach { r ->
                     val on = r.code == pick
-                    TextButton(onClick = { pick = r.code }) {
+                    RahalTextButton(onClick = { pick = r.code }) {
                         Text(
                             text = (if (on) "● " else "○ ") + reasonLabel(r.code),
                             color = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
@@ -325,13 +325,13 @@ private fun ComplainDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            RahalTextButton(
                 onClick = { onConfirm(pick, note.trim()) },
                 enabled = pick.isNotBlank() && !needNote,
             ) { Text(stringResource(R.string.ord_send)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_back)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_back)) }
         },
     )
 }

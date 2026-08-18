@@ -22,14 +22,10 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
@@ -51,6 +47,7 @@ import com.rahalgo.ui.grouped
 import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.DriverOrder
+import com.rahalgo.ui.RahalTextButton
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -103,7 +100,7 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
             item {
                 Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
                     Text(shown, color = Rahal.colors.accent)
-                    TextButton(onClick = actions.refresh) {
+                    RahalTextButton(onClick = actions.refresh) {
                         Text(stringResource(R.string.home_retry))
                     }
                 }

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,6 +33,7 @@ import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.SectionTitle
 import com.rahalgo.ui.money
+import com.rahalgo.ui.RahalOutlineButton
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -133,7 +133,7 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
             // **وهنا لا في القائمة**: المندوبُ يفتح العميلَ ليعمل عليه،
             // **وزرٌّ في سطر القائمة يُضغط سهواً وهو يمرّر.**
             Spacer(Modifier.height(10.dp))
-            OutlinedButton(
+            RahalOutlineButton(
                 onClick = { onOpenMenu(vm.openId, head.name) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.cd_menu)) }

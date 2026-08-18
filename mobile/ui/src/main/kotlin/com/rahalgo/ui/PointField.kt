@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,7 +75,7 @@ fun PointField(
     )
 
     Spacer(Modifier.height(6.dp))
-    OutlinedButton(onClick = { onMap = true }, modifier = Modifier.fillMaxWidth()) {
+    RahalOutlineButton(onClick = { onMap = true }, modifier = Modifier.fillMaxWidth()) {
         Icon(
             painter = painterResource(R.drawable.ic_pin),
             contentDescription = null,

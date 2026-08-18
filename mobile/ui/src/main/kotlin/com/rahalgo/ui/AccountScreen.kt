@@ -14,15 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -220,12 +216,12 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean) {
         Avatar(url = AppCore.get().media(me.avatarThumbUrl), name = me.fullName, size = 64)
         Spacer(Modifier.size(12.dp))
         Column {
-            TextButton(
+            RahalTextButton(
                 onClick = picker,
                 enabled = !s.busy,
             ) { Text(stringResource(R.string.acc_photo_pick)) }
             if (!me.avatarThumbUrl.isNullOrEmpty()) {
-                TextButton(onClick = vm::removeAvatar, enabled = !s.busy) {
+                RahalTextButton(onClick = vm::removeAvatar, enabled = !s.busy) {
                     Text(stringResource(R.string.acc_photo_remove), color = Rahal.colors.inkMuted)
                 }
             }
@@ -241,7 +237,7 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean) {
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(8.dp))
-    Button(
+    RahalButton(
         onClick = { vm.setName(draft) },
         enabled = !s.busy && draft.trim().isNotEmpty() && draft.trim() != me.fullName,
         modifier = Modifier.fillMaxWidth(),
@@ -326,7 +322,7 @@ private fun WhatsAppVerify(
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(8.dp))
-        Button(
+        RahalButton(
             onClick = vm::askWhatsApp,
             enabled = !s.busy,
             modifier = Modifier.fillMaxWidth(),
@@ -346,12 +342,12 @@ private fun WhatsAppVerify(
     )
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
+        RahalButton(
             onClick = { vm.confirmWhatsApp(code); code = "" },
             enabled = !s.busy && code.isNotBlank(),
             modifier = Modifier.weight(1f),
         ) { Text(stringResource(R.string.acc_wa_confirm)) }
-        OutlinedButton(
+        RahalOutlineButton(
             onClick = { vm.cancelWhatsApp(); code = "" },
             modifier = Modifier.weight(1f),
         ) { Text(stringResource(R.string.acc_delete_cancel)) }
@@ -383,7 +379,7 @@ private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
 
     if (!open && !waiting) {
         // **وزرٌّ بعرض الشاشة لا نصٌّ يُبحث عنه** — بأمر المالك.
-        OutlinedButton(
+        RahalOutlineButton(
             onClick = { open = true },
             enabled = !s.busy,
             modifier = Modifier.fillMaxWidth(),
@@ -403,12 +399,12 @@ private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
         )
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
+            RahalButton(
                 onClick = { vm.askPhone(phone) },
                 enabled = !s.busy && phone.isNotBlank(),
                 modifier = Modifier.weight(1f),
             ) { Text(stringResource(R.string.acc_phone_send)) }
-            OutlinedButton(
+            RahalOutlineButton(
                 onClick = { open = false; phone = "" },
                 modifier = Modifier.weight(1f),
             ) { Text(stringResource(R.string.acc_delete_cancel)) }
@@ -428,12 +424,12 @@ private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
     )
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
+        RahalButton(
             onClick = { vm.confirmPhone(code); code = ""; open = false; phone = "" },
             enabled = !s.busy && code.isNotBlank(),
             modifier = Modifier.weight(1f),
         ) { Text(stringResource(R.string.acc_phone_confirm)) }
-        OutlinedButton(
+        RahalOutlineButton(
             onClick = { vm.cancelPhone(); code = "" },
             modifier = Modifier.weight(1f),
         ) { Text(stringResource(R.string.acc_delete_cancel)) }
@@ -465,7 +461,7 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
         Text(stringResource(R.string.acc_pw_mismatch), color = Rahal.colors.danger)
     }
     Spacer(Modifier.height(8.dp))
-    Button(
+    RahalButton(
         onClick = {
             vm.setPassword(current, next)
             current = ""; next = ""; confirm = ""
@@ -536,7 +532,7 @@ private fun AddressesSection(
     }
 
     Spacer(Modifier.height(8.dp))
-    OutlinedButton(
+    RahalOutlineButton(
         onClick = { if (onEditAddress != null) onEditAddress(null) else mode = "add" },
         enabled = !s.busy,
         modifier = Modifier.fillMaxWidth(),
@@ -570,14 +566,14 @@ private fun AddressRow(
     Text(a.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
     Row {
         if (!a.isDefault) {
-            TextButton(onClick = { vm.makeDefault(a.id) }, enabled = !s.busy) {
+            RahalTextButton(onClick = { vm.makeDefault(a.id) }, enabled = !s.busy) {
                 Text(stringResource(R.string.acc_addr_make_default))
             }
         }
-        TextButton(onClick = onEdit, enabled = !s.busy) {
+        RahalTextButton(onClick = onEdit, enabled = !s.busy) {
             Text(stringResource(R.string.addr_edit))
         }
-        TextButton(onClick = { vm.deleteAddress(a.id) }, enabled = !s.busy) {
+        RahalTextButton(onClick = { vm.deleteAddress(a.id) }, enabled = !s.busy) {
             Text(stringResource(R.string.acc_addr_delete), color = Rahal.colors.danger)
         }
     }
@@ -616,10 +612,10 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
         //
         // **والإطارُ يُقرأ اختيارا** بين أزرارٍ كثيرةٍ إطارُها واحد،
         // **والممتلئُ يقول: قف.**
-        Button(
+        RahalButton(
             onClick = vm::askDelete,
             enabled = !s.busy,
-            colors = ButtonDefaults.buttonColors(containerColor = Rahal.colors.danger),
+            tone = Tone.Danger,
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.acc_delete_ask)) }
         return
@@ -637,13 +633,13 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
     )
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
+        RahalButton(
             onClick = { vm.confirmDelete(code) },
             enabled = !s.busy && code.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = Rahal.colors.danger),
+            tone = Tone.Danger,
             modifier = Modifier.weight(1f),
         ) { Text(stringResource(R.string.acc_delete_confirm)) }
-        OutlinedButton(onClick = vm::cancelDelete, modifier = Modifier.weight(1f)) {
+        RahalOutlineButton(onClick = vm::cancelDelete, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.acc_delete_cancel))
         }
     }

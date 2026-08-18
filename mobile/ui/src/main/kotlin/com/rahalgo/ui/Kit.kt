@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -245,7 +244,7 @@ fun LoadState(loading: Boolean, error: String, onRetry: (() -> Unit)? = null) {
             Text(error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
             if (onRetry != null) {
                 Spacer(Modifier.height(12.dp))
-                OutlinedButton(onClick = onRetry) {
+                RahalOutlineButton(onClick = onRetry) {
                     Text(stringResource(R.string.act_retry))
                 }
             }

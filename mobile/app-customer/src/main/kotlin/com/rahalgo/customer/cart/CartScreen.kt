@@ -8,15 +8,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +48,8 @@ import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.apiError
 import com.rahalgo.ui.money
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalTextButton
 import kotlinx.coroutines.launch
 
 /**
@@ -117,11 +116,11 @@ fun CartScreen(
                     // **والعدُّ يُبدَّل هنا** — ومن أراد صنفين لا يعود
                     // إلى السوق ليضغط مرّتين.
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { Cart.setQty(line.item.id, line.qty - 1) }) {
+                        RahalTextButton(onClick = { Cart.setQty(line.item.id, line.qty - 1) }) {
                             Text("−", style = MaterialTheme.typography.titleLarge)
                         }
                         Text(line.qty.toString(), fontWeight = FontWeight.Bold)
-                        TextButton(onClick = { Cart.setQty(line.item.id, line.qty + 1) }) {
+                        RahalTextButton(onClick = { Cart.setQty(line.item.id, line.qty + 1) }) {
                             Text("+", style = MaterialTheme.typography.titleLarge)
                         }
                     }
@@ -160,7 +159,7 @@ fun CartScreen(
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
-            Button(
+            RahalButton(
                 onClick = vm::applyPromo,
                 enabled = !vm.promoBusy && vm.promo.isNotBlank(),
             ) { Text(stringResource(R.string.cart_promo_apply)) }
@@ -234,7 +233,7 @@ fun CartScreen(
         }
 
         Spacer(Modifier.height(14.dp))
-        Button(
+        RahalButton(
             onClick = {
                 address?.let {
                     vm.send(

@@ -20,13 +20,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import com.rahalgo.driver.trip.OfflineMap
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +42,8 @@ import com.rahalgo.driver.R
 import com.rahalgo.ui.grouped
 import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverMe
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalTextButton
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -83,7 +82,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 // أمام بياض بلا سبب ولا زرّ.
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(state.error, color = Rahal.colors.accent, textAlign = TextAlign.Center)
-                    TextButton(onClick = actions.refresh) {
+                    RahalTextButton(onClick = actions.refresh) {
                         Text(stringResource(R.string.home_retry))
                     }
                 }
@@ -253,7 +252,7 @@ private fun OfflineCard(progress: Int, downloading: Boolean, onDownload: () -> U
             Spacer(Modifier.height(6.dp))
             Text(stringResource(R.string.offline_map_progress, progress), color = Rahal.colors.inkMuted)
         } else {
-            Button(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
+            RahalButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
                 // **ومن وقف في نصفه يُقال له «أكمل» لا «نزّل»** — الأوّل
                 // يقول إنّ ما مضى محفوظ.
                 Text(
@@ -290,7 +289,7 @@ private fun LocationCard(onEnable: () -> Unit) {
         Spacer(Modifier.height(4.dp))
         Text(stringResource(R.string.loc_permission_text), color = Rahal.colors.inkMuted)
         Spacer(Modifier.height(10.dp))
-        Button(onClick = onEnable, modifier = Modifier.fillMaxWidth()) {
+        RahalButton(onClick = onEnable, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.loc_permission_button))
         }
     }

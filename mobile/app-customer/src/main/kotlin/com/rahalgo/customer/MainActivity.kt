@@ -23,7 +23,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.getValue
@@ -89,6 +88,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.rahalgo.ui.rememberOverlay
 import com.rahalgo.ui.rememberTheme
+import com.rahalgo.ui.RahalButton
 import kotlinx.coroutines.launch
 
 /**
@@ -793,7 +793,7 @@ private fun NeedAccount(onAskLogin: () -> Unit) {
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(16.dp))
-        androidx.compose.material3.Button(onClick = onAskLogin) {
+        RahalButton(onClick = onAskLogin) {
             Text(stringResource(R.string.guest_enter))
         }
     }

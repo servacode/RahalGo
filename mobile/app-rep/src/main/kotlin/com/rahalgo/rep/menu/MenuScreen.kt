@@ -12,13 +12,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +45,9 @@ import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.SectionTitle
 import com.rahalgo.ui.money
 import com.rahalgo.ui.rememberImagePicker
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalOutlineButton
+import com.rahalgo.ui.RahalTextButton
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -97,7 +97,7 @@ fun MenuScreen(vm: MenuViewModel) {
     Screen {
         ScreenTitle(stringResource(R.string.mn_title), stringResource(R.string.mn_hint))
 
-        Button(
+        RahalButton(
             onClick = { vm.newItem() },
             enabled = !vm.busy,
             modifier = Modifier.fillMaxWidth(),
@@ -126,7 +126,7 @@ private fun SectionBlock(sec: MenuSection, vm: MenuViewModel) {
     SectionTitle(sec.name + "  (" + sec.items.size + ")")
     // **وزرُّ القسم اسمُه اسمُ الزرّ الأعلى** — كما في الويب: `addItem`
     // في الترويسة وفي كلّ قسم.
-    TextButton(onClick = { vm.newItem(sec.id) }) {
+    RahalTextButton(onClick = { vm.newItem(sec.id) }) {
         Text(stringResource(R.string.mn_add_item))
     }
     if (sec.items.isEmpty()) {
@@ -233,7 +233,7 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
             // **والإتاحةُ زرٌّ لا مفتاح** — كما في الويب: **زرٌّ يقول ما
             // سيقع، ومفتاحٌ يقول ما هو قائم**، والخلطُ بينهما يجعل من
             // يقرأ «متوفر» على مفتاحٍ مرفوعٍ يظنّ أنّه يُطفئه بالرفع.
-            OutlinedButton(onClick = { vm.toggleAvailable(item) }, enabled = !vm.busy) {
+            RahalOutlineButton(onClick = { vm.toggleAvailable(item) }, enabled = !vm.busy) {
                 Text(
                     stringResource(
                         if (item.available) R.string.mn_mark_unavailable
@@ -352,14 +352,14 @@ private fun ItemForm(vm: MenuViewModel) {
                 )
                 Spacer(Modifier.size(10.dp))
                 Column {
-                    OutlinedButton(onClick = pick, enabled = !vm.busy) {
+                    RahalOutlineButton(onClick = pick, enabled = !vm.busy) {
                         Text(stringResource(R.string.mn_item_image))
                     }
                     // **والإزالةُ صريحةٌ** — الفراغُ يعني «أزِلها»،
                     // **والغيابُ يعني «لا تمسّها»**، وخلطُهما يمحو صورةً
                     // كلَّما بُدّل اسم.
                     if (d.imageThumb != null || !d.imageMediaID.isNullOrEmpty()) {
-                        TextButton(onClick = { vm.clearImage() }) {
+                        RahalTextButton(onClick = { vm.clearImage() }) {
                             Text(
                                 stringResource(R.string.mn_remove_image),
                                 color = Rahal.colors.danger,
@@ -387,7 +387,7 @@ private fun ItemForm(vm: MenuViewModel) {
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            OutlinedButton(onClick = { vm.addGroup() }) {
+            RahalOutlineButton(onClick = { vm.addGroup() }) {
                 Text(stringResource(R.string.mn_add_group))
             }
         }
@@ -395,15 +395,15 @@ private fun ItemForm(vm: MenuViewModel) {
 
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
+            RahalButton(
                 onClick = { vm.saveItem() },
                 enabled = !vm.busy && d.name.isNotBlank() && d.price.isNotBlank(),
             ) { Text(stringResource(R.string.mn_save)) }
-            TextButton(onClick = { vm.cancelEdit() }) {
+            RahalTextButton(onClick = { vm.cancelEdit() }) {
                 Text(stringResource(R.string.mn_cancel))
             }
             if (!d.isNew) {
-                TextButton(onClick = { confirmDelete = true }) {
+                RahalTextButton(onClick = { confirmDelete = true }) {
                     Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
                 }
             }
@@ -418,7 +418,7 @@ private fun ItemForm(vm: MenuViewModel) {
             onDismissRequest = { confirmDelete = false },
             title = { Text(stringResource(R.string.mn_confirm_delete)) },
             confirmButton = {
-                TextButton(onClick = {
+                RahalTextButton(onClick = {
                     confirmDelete = false
                     vm.deleteItem(d.itemID)
                     vm.cancelEdit()
@@ -427,7 +427,7 @@ private fun ItemForm(vm: MenuViewModel) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) {
+                RahalTextButton(onClick = { confirmDelete = false }) {
                     Text(stringResource(R.string.mn_cancel))
                 }
             },
@@ -493,7 +493,7 @@ private fun GroupCard(index: Int, g: ModifierGroup, vm: MenuViewModel) {
                 ),
                 if (g.minSelect > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
             )
-            TextButton(onClick = { vm.removeGroup(index) }) {
+            RahalTextButton(onClick = { vm.removeGroup(index) }) {
                 Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
             }
         }
@@ -524,13 +524,13 @@ private fun GroupCard(index: Int, g: ModifierGroup, vm: MenuViewModel) {
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { vm.removeOption(index, oi) }) {
+                RahalTextButton(onClick = { vm.removeOption(index, oi) }) {
                     Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
                 }
             }
         }
         Spacer(Modifier.height(4.dp))
-        TextButton(onClick = { vm.addOption(index) }) {
+        RahalTextButton(onClick = { vm.addOption(index) }) {
             Text(stringResource(R.string.mn_add_option))
         }
     }

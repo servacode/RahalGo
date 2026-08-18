@@ -16,11 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +31,8 @@ import com.rahalgo.driver.R
 import com.rahalgo.ui.money
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.FailReasonItem
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalTextButton
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -70,7 +70,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
             .padding(horizontal = 20.dp),
     ) {
         Spacer(Modifier.height(12.dp))
-        TextButton(onClick = actions.back) { Text(stringResource(R.string.detail_back)) }
+        RahalTextButton(onClick = actions.back) { Text(stringResource(R.string.detail_back)) }
 
         Row(
             Modifier.fillMaxWidth(),
@@ -124,7 +124,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
         Spacer(Modifier.height(22.dp))
         val next = nextStep(order.status, order.kind == "custom")
         if (next != null) {
-            Button(
+            RahalButton(
                 onClick = { actions.step(next.to) },
                 enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth(),
@@ -142,7 +142,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
         // برفض لا يفهمه صاحبه.
         if (order.status == "at_pickup" || order.status == "at_dropoff") {
             Spacer(Modifier.height(8.dp))
-            TextButton(
+            RahalTextButton(
                 onClick = actions.askFail,
                 enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth(),
@@ -154,7 +154,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
         // **وإعادة الطلب قبل أن يستلم البضاعة فقط** — بعدها هي في يده،
         // **والبضاعة لا تُعاد بضغطة زرّ.**
         if (order.status == "assigned" || order.status == "at_pickup") {
-            TextButton(
+            RahalTextButton(
                 onClick = actions.release,
                 enabled = !state.busy,
                 modifier = Modifier.fillMaxWidth(),
@@ -195,7 +195,7 @@ private fun FailDialog(
                     Text(stringResource(R.string.detail_no_reasons), color = Rahal.colors.inkMuted)
                 }
                 for (r in reasons) {
-                    TextButton(
+                    RahalTextButton(
                         onClick = { onPick(r.code) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -205,7 +205,7 @@ private fun FailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
         },
     )
 }

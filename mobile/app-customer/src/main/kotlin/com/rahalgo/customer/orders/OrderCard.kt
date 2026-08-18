@@ -7,11 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,6 +25,9 @@ import com.rahalgo.ui.Chip
 import com.rahalgo.ui.KeyValue
 import com.rahalgo.ui.Stages
 import com.rahalgo.ui.money
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.Tone
+import com.rahalgo.ui.RahalOutlineButton
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -169,19 +169,19 @@ fun OrderCard(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             // **والإلغاءُ أحمرُ لأنّه لا يُتراجع عنه.**
             onCancel?.let {
-                Button(
+                RahalButton(
                     onClick = it,
-                    colors = ButtonDefaults.buttonColors(containerColor = Rahal.colors.danger),
+                    tone = Tone.Danger,
                     modifier = Modifier.weight(1f),
                 ) { Text(stringResource(R.string.ord_cancel)) }
             }
             onRate?.let {
-                Button(onClick = it, modifier = Modifier.weight(1f)) {
+                RahalButton(onClick = it, modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.ord_rate))
                 }
             }
             onComplain?.let {
-                OutlinedButton(onClick = it, modifier = Modifier.weight(1f)) {
+                RahalOutlineButton(onClick = it, modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.ord_complain))
                 }
             }

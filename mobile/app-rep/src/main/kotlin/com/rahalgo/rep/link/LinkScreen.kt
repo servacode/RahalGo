@@ -4,9 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,6 +21,8 @@ import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.Note
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalOutlineButton
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -87,7 +87,7 @@ fun LinkScreen(vm: BoardViewModel) {
         }
 
         Spacer(Modifier.height(14.dp))
-        Button(
+        RahalButton(
             onClick = {
                 // **ويُشارَك بما يعرفه هاتفُه** — واتساب أو رسالة:
                 // **ونسخُ رابطٍ إلى الحافظة يُوجب عليه أن يفتح تطبيقاً
@@ -112,7 +112,7 @@ fun LinkScreen(vm: BoardViewModel) {
         ) { Text(stringResource(R.string.lk_share)) }
 
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(
+        RahalOutlineButton(
             onClick = {
                 val cb = context.getSystemService(android.content.ClipboardManager::class.java)
                 cb?.setPrimaryClip(android.content.ClipData.newPlainText("rahalgo", link))
