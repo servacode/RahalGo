@@ -189,11 +189,10 @@
     <string name="acc_addr_empty">لا عناوين محفوظة</string>
     <string name="acc_addr_label">التسمية (البيت · العمل)</string>
     <string name="acc_addr_make_default">اجعله الافتراضيّ</string>
-    <string name="acc_addr_need_point">شغّل الموقع ثمّ اضغط «حدّد موقعي»</string>
-    <string name="acc_addr_pin">حدّد موقعي على الخريطة</string>
-    <string name="acc_addr_pinned">حُدِّد موقعك على الخريطة</string>
+    <string name="acc_addr_need_point">لم تحدد الموقع بعد — افتح الخريطة واضغط موقعي الحالي</string>
+    <string name="acc_addr_pinned">تم تحديد الموقع</string>
     <string name="acc_addr_point">الموقع على الخريطة</string>
-    <string name="acc_addr_repin">إعادة التحديد</string>
+    <string name="acc_addr_repin">تغيير الموقع</string>
     <string name="acc_addr_text">العنوان التفصيليّ</string>
     <string name="acc_addresses">عناويني</string>
     <string name="acc_danger">حذف الحساب</string>
@@ -246,7 +245,9 @@
     <string name="chats_hint">أحاديثُ الطلبات المنتهية — تُقرأ ولا يُكتب فيها</string>
     <string name="chats_none">لا دردشات منتهية</string>
     <string name="chats_empty_thread">لا رسائل في هذا الحديث</string>
-    <string name="acc_addr_on_map">اختر على الخريطة</string>
+    <!-- **ولفظُ الزرّ هو لفظُ `PointField`** — شاشتان تسألان السؤالَ
+         نفسَه فتقولانه بكلمةٍ واحدة. (طلبُ المالك ٢٠٢٦-٠٨-١٨.) -->
+    <string name="acc_addr_on_map">حدد الموقع على الخريطة</string>
     <string name="menu_rewards">أهدافي والمكافآت</string>
     <string name="inc_done">طلباتٌ سُلّمت هذا الشهر</string>
     <string name="inc_empty">لا مكافآت ولا عقوبات بعد</string>
