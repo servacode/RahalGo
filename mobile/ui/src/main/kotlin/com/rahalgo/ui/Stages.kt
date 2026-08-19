@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.painterResource
@@ -102,9 +103,30 @@ fun Stages(
         label = "stage",
     )
 
-    // **وقفزةٌ خفيفةٌ ما دام في الطريق** — لا حركةَ تُلهي، **إنّما
-    // إشارةٌ أنّ الأمرَ ما زال يجري.**
-    val bob = if (live) {
+    // ══════════════════════════════════════════════════════════════════
+    // **وقفزةٌ خفيفةٌ ما دام في الطريق — تُقرأ عند الرسم لا التركيب**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **إشارةٌ أنّ الأمرَ ما زال يجري** — لا حركةَ تُلهي.
+    //
+    // # ولماذا `State` لا قيمةٌ مقروءة
+    //
+    // (قِيس ٢٠٢٦-٠٨-٢٠ على جهاز المالك: شاشةُ الطلبات **٩٩٪ من إطاراتها
+    //  ضائعة** — والتسوّقُ بصورِه ١٧٪. **والصورُ لم تكن السبب.**)
+    //
+    // **وقراءةُ `.value` في جسد المُركِّب تُعيد تركيبَ الصفّ كلَّ إطار**
+    // — والصفُّ فيه `BoxWithConstraints`، **وهي تركيبٌ فرعيٌّ يُعاد
+    // قياسُه ستّين مرّةً في الثانية.**
+    //
+    // **وفي قائمةٍ غيرِ كسولةٍ تعمل لكلّ طلبٍ جارٍ** — عشرةٌ في قائمة
+    // المالك، **حتّى ما هو خارجَ الشاشة.**
+    //
+    // **فتُمرَّر حالةً وتُقرأ داخل `graphicsLayer`** — وهي تعمل في طور
+    // الرسم: **تتحرّك الطبقةُ ولا يُعاد بناءُ شيء.**
+    //
+    // **وقِيس بعد النقل**: ٩٩٪ ← ١٪. (والحذفُ الكاملُ أعطى الرقمَ نفسَه،
+    // **فلا ثمنَ للحركة إذا قُرئت في موضعها.**)
+    val bobState = if (live) {
         val t = rememberInfiniteTransition(label = "ride")
         t.animateFloat(
             initialValue = 0f,
@@ -114,9 +136,9 @@ fun Stages(
                 RepeatMode.Reverse,
             ),
             label = "bob",
-        ).value
+        )
     } else {
-        0f
+        null
     }
 
     BoxWithConstraints(modifier.fillMaxWidth().height(RowH)) {
@@ -200,10 +222,12 @@ fun Stages(
             tint = Rahal.colors.accent,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(
-                    x = Pad + track * pct - VehicleH / 2,
-                    y = bob.dp,
-                )
+                .offset(x = Pad + track * pct - VehicleH / 2)
+                // **والقفزةُ في طبقة الرسم** — تُقرأ الحالُ هنا فلا
+                // يُعاد تركيبُ شيء. انظر الشرحَ عند `bobState`.
+                .graphicsLayer {
+                    translationY = (bobState?.value ?: 0f) * density
+                }
                 .size(VehicleH)
                 .scale(scaleX = -1f, scaleY = 1f),
         )
