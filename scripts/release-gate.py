@@ -108,6 +108,10 @@ STAGES = [
     # **والشاشةُ تبقى مستيقظة**: النشاطُ المضيف يموت إن أُقفلت، فيسقط
     # الاختبارُ بـ`Activity has been destroyed` — **وهو عطبُ بيئةٍ
     # يُقرأ عطبَ واجهة.** (وقع ٢٠٢٦-٠٨-١٩.)
+    # **والأداءُ يُقاس ولا يحجب** — تراجعٌ يُقرأ ويُقرَّر، **وعتبةٌ
+    # تحجب الإصدارَ على ضجيجِ هاتفٍ تُطفأ بعد أسبوع.**
+    Stage("الأداءُ المرجعيّ", "python scripts/perf-baseline.py", ".",
+          blocking=False, smoke=False),
     Stage("واجهةُ أندرويد · على جهاز",
           "adb shell svc power stayon usb && " + GRADLE + " connectedDebugAndroidTest --console=plain",
           "mobile", blocking=False, smoke=False),
