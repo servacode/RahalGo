@@ -300,6 +300,38 @@ func (s *Service) NotifyRole(ctx context.Context, role string, in Input) {
 	s.NotifyRoles(ctx, []string{role}, in)
 }
 
+// NotifyShoppers **يبلّغ من يتسوّق وحدَه — لا فريقَ العمل.**
+//
+// (بلاغُ المالك ٢٠٢٦-٠٨-١٩: «إشعاراتُ العروض تأتي إلى حساب السائق وهذا
+//
+//	غلط لأنّه لا يوجد تسوّقٌ بحساب السائق».)
+//
+// # ولماذا لا يكفي `NotifyRole("customer")`
+//
+// **`customer` دورُ أساسٍ يحمله كلُّ حساب** — والسائقُ والمتجرُ والمندوبُ
+// كلُّهم زبائنُ في القاعدة. **فبثٌّ إلى «كلّ من يحمل دورَ الزبون» يبلغ
+// فريقَ العمل كلَّه.**
+//
+// **وقِيس على الإنتاج**: وصل السائقَ «عرض حاص — شاورما غنم ١٥٪» مرّتين.
+//
+// # والمتسوّقُ من لا دورَ تشغيليَّ له
+//
+// **والتعريفُ قائمٌ في المستودع** (`identity.primaryRoles`): الزبونُ
+// دورُ أساسٍ وما عداه أصليّ. **فمن حمل أصليّاً فهو من فريق العمل.**
+//
+// **ولا تُعدَّد الأدوارُ المستثناةُ بيد** — **وقائمةٌ تُكتب بيدٍ تنسى
+// دوراً يُضاف غدا.**
+func (s *Service) NotifyShoppers(ctx context.Context, in Input) {
+	s.notifyQuery(ctx, in, `
+		SELECT u.id FROM users u
+		JOIN user_roles c ON c.user_id = u.id AND c.role_code = 'customer'
+		WHERE u.status = 'active'
+		  AND NOT EXISTS (
+		      SELECT 1 FROM user_roles o
+		      WHERE o.user_id = u.id AND o.role_code <> 'customer'
+		  )`)
+}
+
 // NotifyOps يبلّغ مكتب المنصة كاملاً (مالك المنصة + العمليات) بلا تكرار.
 func (s *Service) NotifyOps(ctx context.Context, in Input) {
 	s.NotifyRoles(ctx, OpsDesk, in)
@@ -307,6 +339,27 @@ func (s *Service) NotifyOps(ctx context.Context, in Input) {
 
 // NotifyRoles يرسل الإشعار لحاملي أي من الأدوار المذكورة — مرة واحدة لكل شخص
 // مهما تعددت أدواره.
+// notifyQuery **يبلّغ من يردّه استعلامٌ يرجع معرّفات** — أساسُ
+// `NotifyRoles` و`NotifyShoppers`.
+//
+// **ونسختان من حلقةٍ واحدةٍ تفترقان يومَ يُضاف شرط.**
+func (s *Service) notifyQuery(ctx context.Context, in Input, query string, args ...any) {
+	rows, err := s.db.Query(ctx, query, args...)
+	if err != nil {
+		s.logger.Error("notify: query", "error", err)
+		return
+	}
+	defer rows.Close()
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	s.NotifyMany(ctx, ids, in)
+}
+
 func (s *Service) NotifyRoles(ctx context.Context, roles []string, in Input) {
 	// **والحارسُ هنا كما في `Notify`** — هذه تمسّ القاعدةَ بنفسها فلا يحميها
 	// حارسُ تلك.

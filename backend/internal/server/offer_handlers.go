@@ -69,7 +69,7 @@ func (s *Server) handleCreateOffer(w http.ResponseWriter, r *http.Request) {
 	// **ولا يُبلَّغ عرضٌ منزَّل**: يُنشأ بلا تفعيلٍ ليُراجَع، **وإشعارٌ عن عرضٍ
 	// لا يجده حين يفتحه أسوأُ من صمت.**
 	if o.Live {
-		s.notify.NotifyRole(r.Context(), "customer", notifications.Input{
+		s.notify.NotifyShoppers(r.Context(), notifications.Input{
 			Kind:     "offer",
 			Title:    o.Title,
 			Body:     offerBody(o),
@@ -114,7 +114,7 @@ func (s *Server) handleSetOfferActive(w http.ResponseWriter, r *http.Request) {
 	// **ومن رُفع بعد إنزالٍ عرضٌ جديدٌ في نظر من لم يره** — فيُبلَّغ كما
 	// يُبلَّغ أوّلُ مرّة. **وإنزالٌ لا يُبلَّغ**: لا خبرَ في أنّ شيئاً اختفى.
 	if req.Active && o.Live {
-		s.notify.NotifyRole(r.Context(), "customer", notifications.Input{
+		s.notify.NotifyShoppers(r.Context(), notifications.Input{
 			Kind: "offer", Title: o.Title, Body: offerBody(o),
 			Entity: "offer", EntityID: o.ID, Href: "/offers",
 		})
