@@ -1,9 +1,9 @@
 {
   "metrics": {
-    "cold_start_ms": 499,
-    "memory_mb": 108.5,
-    "jank_percent": 18.4,
-    "api_home_ms": 1449,
-    "api_offers_ms": 1179
+    "cold_start_ms": 502,
+    "memory_mb": 106.5,
+    "jank_percent": 18.3,
+    "api_home_ms": 530,
+    "api_offers_ms": 421
   }
 }

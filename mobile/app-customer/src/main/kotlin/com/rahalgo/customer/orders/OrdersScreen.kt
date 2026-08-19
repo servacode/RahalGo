@@ -1,6 +1,7 @@
 package com.rahalgo.customer.orders
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,7 +25,9 @@ import com.rahalgo.shared.customer.MyOrder
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.Note
-import com.rahalgo.ui.Screen
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import com.rahalgo.ui.ScreenPad
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.Refreshable
@@ -94,22 +97,40 @@ private fun OrdersList(
         OrderChatSheet(vm = chatVm, orderId = id) { chatId = null }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وقائمةٌ كسولةٌ — لا عمودٌ يبني كلَّ بطاقة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قِيس ٢٠٢٦-٠٨-٢٠ على جهاز المالك: **٩٩٪ من إطارات هذه الشاشة
+    //  ضائعة** — والتسوّقُ بصورِه ١٧٪.)
+    //
+    // **وكانت `Screen` عموداً يُمرَّر** — **يبني كلَّ بطاقةٍ في القائمة
+    // ولو كانت خارجَ الشاشة.** ولكلّ طلبٍ جارٍ حركةٌ لا تقف
+    // (`Stages.kt`): **عشرُ حركاتٍ تعمل وتسعٌ منها لا تُرى.**
+    //
+    // **والكسولةُ تبني ما يُرى وحدَه** — فتقف الحركاتُ حين تخرج
+    // بطاقاتُها.
+    //
+    // # ولا تُغيَّر الحشوةُ ولا الترتيب
+    //
+    // **حشوةُ `Screen` نفسُها** (`ScreenPad`) وذيلُها — **وشاشةٌ تتبدّل
+    // هوامشُها مع إصلاحِ أداءٍ تُقرأ تغييرَ تصميم.**
     Refreshable(refreshing = vm.refreshing, onRefresh = vm::refresh) {
-    Screen {
-        ScreenTitle(title, hint)
+    LazyColumn(
+        Modifier.fillMaxSize().padding(ScreenPad),
+    ) {
+        item {
+            ScreenTitle(title, hint)
 
-        // **وخطأُ الفعل يبقى ظاهراً** — لا تمحوه إعادةُ القراءة.
-        if (vm.actionError.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            Note(vm.actionError, Rahal.colors.danger)
+            // **وخطأُ الفعل يبقى ظاهراً** — لا تمحوه إعادةُ القراءة.
+            if (vm.actionError.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Note(vm.actionError, Rahal.colors.danger)
+            }
+            if (list.isEmpty()) Empty(empty)
         }
 
-        if (list.isEmpty()) {
-            Empty(empty)
-            return@Screen
-        }
-
-        list.forEach { o ->
+        items(list, key = { it.id }) { o ->
             Spacer(Modifier.height(10.dp))
             OrderCard(
                 order = o,
@@ -156,7 +177,7 @@ private fun OrdersList(
                 },
             )
         }
-        Spacer(Modifier.height(24.dp))
+        item { Spacer(Modifier.height(32.dp)) }
     }
 
     cancelId?.let { id ->
