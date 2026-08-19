@@ -2,9 +2,11 @@ package com.rahalgo.ui
 
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -13,7 +15,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,9 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
@@ -141,49 +148,95 @@ fun OrderChatSheet(
     var draft by remember { mutableStateOf("") }
     LaunchedEffect(orderId) { vm.load(orderId) }
 
-    ModalBottomSheet(onDismissRequest = onClose) {
-        Column(Modifier.padding(horizontal = ScreenPad).padding(bottom = 16.dp)) {
-            Text(
-                text = stringResource(R.string.ord_chat),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(10.dp))
+    // ══════════════════════════════════════════════════════════════════
+    // **نافذةٌ منبثقةٌ لا ورقةٌ من الأسفل**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٩، بعد أن رآها: «صفحةُ الدردشة ليست عائمةً
+    //  نافذةً منبثقةً كما يجب».)
+    //
+    // **و`ModalBottomSheet` تمدّ نفسَها بمقدار محتواها** — فرسالتان
+    // تتركان نصفَ الشاشة بياضاً، **وبياضٌ في نافذةِ حديثٍ يُقرأ عطبا.**
+    //
+    // **والحديثُ ليس ورقةَ خياراتٍ تُسحب وتُغلق** — هو مكانٌ يُقيم فيه
+    // صاحبُه ويكتب ويقرأ، **فله إطارٌ يقول أين يبدأ وأين ينتهي.**
+    //
+    // # وقياسٌ ثابتٌ لا يتبع المحتوى
+    //
+    // **٩٢٪ عرضاً و٧٢٪ ارتفاعاً** — **ونافذةٌ تكبر وتصغر مع كلّ رسالةٍ
+    // تُقفز تحت الإصبع.** والقائمةُ تأخذ ما بقي (`weight`) فيبقى حقلُ
+    // الكتابة في أسفلها دائما.
+    Dialog(
+        onDismissRequest = onClose,
+        // **ولا عرضَ النظامِ الافتراضيّ** — وإلّا حُصرت في ٢٨٠dp.
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            shape = Rahal.shape.lg,
+            color = Rahal.colors.surface,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.72f),
+        ) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.ord_chat),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    // **ومخرجٌ ظاهر** — **ونافذةٌ تُغلق بالرجوع وحدَه
+                    // تُحبس من لم يعرف ذلك.**
+                    IconButton(onClick = onClose) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_close),
+                            contentDescription = stringResource(R.string.close),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
 
-            when {
-                vm.busy && vm.messages.isEmpty() -> LoadingScreen()
-                vm.error.isNotEmpty() && vm.messages.isEmpty() ->
-                    LoadState(false, vm.error) { vm.load(orderId) }
-                vm.messages.isEmpty() ->
-                    // **وفارغٌ يُقال ولا يُترك بياضا** — **وبياضٌ يُقرأ
-                    // عطباً في التحميل.**
-                    Empty(stringResource(R.string.chat_empty))
-                else -> Column(
-                    Modifier
-                        .heightIn(max = 380.dp)
-                        .verticalScroll(rememberScrollState()),
-                ) { vm.messages.forEach { ChatBubble(it) } }
-            }
+                // **والقائمةُ تأخذ ما بقي** — فلا بياضَ ولا قفز.
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    when {
+                        vm.busy && vm.messages.isEmpty() -> LoadingScreen()
+                        vm.error.isNotEmpty() && vm.messages.isEmpty() ->
+                            LoadState(false, vm.error) { vm.load(orderId) }
+                        vm.messages.isEmpty() ->
+                            // **وفارغٌ يُقال ولا يُترك بياضا.**
+                            Empty(stringResource(R.string.chat_empty))
+                        else -> Column(
+                            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                        ) { vm.messages.forEach { ChatBubble(it) } }
+                    }
+                }
 
-            Spacer(Modifier.height(10.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    placeholder = { Text(stringResource(R.string.chat_write)) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-                RahalButton(
-                    onClick = {
-                        vm.send(orderId, draft)
-                        draft = ""
-                    },
-                    enabled = !vm.busy && draft.isNotBlank(),
-                ) { Text(stringResource(R.string.chat_send)) }
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = draft,
+                        onValueChange = { draft = it },
+                        placeholder = { Text(stringResource(R.string.chat_write)) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    RahalButton(
+                        onClick = {
+                            vm.send(orderId, draft)
+                            draft = ""
+                        },
+                        enabled = !vm.busy && draft.isNotBlank(),
+                        compact = true,
+                    ) { Text(stringResource(R.string.chat_send)) }
+                }
             }
         }
     }

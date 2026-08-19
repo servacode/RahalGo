@@ -418,4 +418,5 @@
     <string name="err_invalid_zone">بيانات المنطقة غير صالحة</string>
     <string name="err_over_settle">المبلغ يتجاوز ما بحوزة السائق</string>
     <string name="err_cash_limit_exceeded">السائق تجاوز سقفه النقدي — يجب تسليم الصندوق أولا</string>
+    <string name="close">إغلاق</string>
 </resources>

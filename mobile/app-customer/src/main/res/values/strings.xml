@@ -160,6 +160,8 @@
     <string name="guest_enter">دخول أو إنشاء حساب</string>
 
     <string name="shop_add">أضف إلى السلة</string>
+    <!-- **ورسالةٌ تقول إنّ الضغطةَ وقعت** — وبطاقةُ العرض لا تتغيّر بعدها. -->
+    <string name="shop_added">أُضيف إلى السلة</string>
     <string name="shop_like">احفظ في المفضلة</string>
     <string name="shop_unlike">احذف من المفضلة</string>
 

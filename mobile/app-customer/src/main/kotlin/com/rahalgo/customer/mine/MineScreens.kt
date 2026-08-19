@@ -35,6 +35,9 @@ import com.rahalgo.customer.Backend
 import com.rahalgo.customer.CustomerItems
 import com.rahalgo.customer.shop.ShopCols
 import com.rahalgo.customer.R
+import com.rahalgo.customer.cart.Cart
+import com.rahalgo.shared.model.Item
+import com.rahalgo.ui.Flash
 import com.rahalgo.design.Rahal
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.Chip
@@ -169,6 +172,9 @@ private fun Offers(vm: MineViewModel) {
         return
     }
     val context = LocalContext.current
+    // **ويُقرأ النصُّ في التركيب لا في المستمع** — `stringResource`
+    // دالّةُ تركيبٍ ولا تُنادى داخل `onClick`.
+    val addedText = stringResource(R.string.shop_added)
     Screen {
         ScreenTitle(
             stringResource(R.string.menu_offers_title),
@@ -227,6 +233,49 @@ private fun Offers(vm: MineViewModel) {
                                 Spacer(Modifier.size(6.dp))
                                 Chip("-$it٪", Rahal.colors.accent)
                             }
+                        }
+
+                        // ══════════════════════════════════════════════
+                        // **والعرضُ يُضاف من مكانه**
+                        // ══════════════════════════════════════════════
+                        //
+                        // (قرارُ المالك ٢٠٢٦-٠٨-١٩: «بصفحة العروض ما في
+                        //  زرّ إضافة إلى السلّة… مو معقول يطلع من صفحة
+                        //  العروض يروح يدوّر على العرض بالقوائم».)
+                        //
+                        // **وصفحةُ عرضٍ لا يُشترى منها إعلانٌ لا سوق**:
+                        // من رأى الحسمَ ثمّ طُلب منه أن يبحث عن الصنف
+                        // في القوائم **يفقد الحسمَ في الطريق.**
+                        //
+                        // # ولا زرَّ لعرضٍ بلا صنف
+                        //
+                        // **بعضُ العروض إعلانٌ عامّ** (`menuItemId`
+                        // فارغ) — **وزرٌّ يُضيف لا شيءَ يُقرأ عطبا.**
+                        o.menuItemId?.takeIf { it.isNotEmpty() }?.let { itemId ->
+                            Spacer(Modifier.height(8.dp))
+                            RahalButton(
+                                onClick = {
+                                    // **والسعرُ سعرُ العرض** — وهو ما
+                                    // رآه. **والمحرّكُ يُعيد الحسابَ
+                                    // عند الإرسال** فلا يُدسّ رقم.
+                                    Cart.add(
+                                        Item(
+                                            id = itemId,
+                                            name = o.itemName.ifEmpty { o.title },
+                                            price = o.priceAfter,
+                                            imageUrl = o.itemImageUrl ?: o.imageUrl,
+                                            priceBefore = o.priceBefore
+                                                .takeIf { it > o.priceAfter },
+                                            discountPercent = o.discountPercent,
+                                        ),
+                                    )
+                                    // **ورسالةٌ تقول إنّه وقع** —
+                                    // **وضغطةٌ بلا أثرٍ تُقرأ عطبا**،
+                                    // والبطاقةُ لا تتغيّر بعدها.
+                                    Flash.ok(addedText)
+                                },
+                                compact = true,
+                            ) { Text(stringResource(R.string.shop_add)) }
                         }
                     }
                 }
