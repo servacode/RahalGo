@@ -45,6 +45,11 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 
 dependencies {
+    // **ودفعُ الإشعارات مركزيّ** — انظر `Push.kt`: **بابٌ واحدٌ
+    // للتطبيقات الثلاثة**، وكان في السائق وحدَه.
+    api(platform(libs.firebase.bom))
+    api(libs.firebase.messaging)
+    implementation(libs.coroutines.play.services)
     // ══════════════════════════════════════════════════════════════════
     // **حزمةُ الواجهة — تُشغَّل على جهازٍ متّصل**
     // ══════════════════════════════════════════════════════════════════

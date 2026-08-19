@@ -87,5 +87,14 @@
                     android:pathPrefix="/signup" />
             </intent-filter>
         </activity>
-    </application>
+    
+        <!-- **ما يصل والتطبيقُ مغلق** — انظر `push/PushService.kt`. -->
+        <service
+            android:name=".push.PushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+</application>
 </manifest>
