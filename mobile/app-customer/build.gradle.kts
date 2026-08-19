@@ -109,6 +109,9 @@ kotlin {
 }
 
 dependencies {
+    // **حزمةُ الوحدة** — تُشغَّل بـ`./gradlew testDebugUnitTest`.
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
     implementation(project(":design"))
     implementation(project(":ui"))
     // **وخريطةٌ لعناوينه** — من أراد أن يحفظ بيتَ أمّه لا يحفظ موضعَه هو.

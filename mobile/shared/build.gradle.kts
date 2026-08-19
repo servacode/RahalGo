@@ -28,6 +28,9 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 
 dependencies {
+    // **حزمةُ الوحدة** — تُشغَّل بـ`./gradlew testDebugUnitTest`.
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
     api(libs.ktor.core)
     api(libs.kotlinx.serialization.json)
     implementation(libs.ktor.okhttp)

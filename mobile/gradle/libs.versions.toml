@@ -118,6 +118,17 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 # **وتوكن التجديد مفتاح الحساب**: من ملكه دخل باسم صاحبه حتى يُبطَل.
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 
+# ══════════════════════════════════════════════════════════════════════
+# **مكتباتُ الاختبار — أُضيفت ٢٠٢٦-٠٨-١٩**
+# ══════════════════════════════════════════════════════════════════════
+#
+# (قرارُ المالك: «لا تطلب منّي اختبارَ ٦٢٪ من التطبيق بيدي — إذا كان
+#  شيءٌ يمكن أتمتتُه فقُم بأتمتته».)
+#
+# **ولم يكن في التطبيق اختبارٌ واحد** — ولا تبعيّةُ اختبارٍ مضافة.
+junit = { module = "junit:junit", version = "4.13.2" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version = "1.11.0" }
+
 [plugins]
 google-services = { id = "com.google.gms.google-services", version = "4.5.0" }
 crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.7" }
@@ -129,3 +140,5 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 # **مولّد محوّلات JSON** — يعمل في زمن الترجمة.
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+
+# ══════════════════════════════════════════════════════════════════════

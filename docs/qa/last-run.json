@@ -7,28 +7,28 @@
   },
   "blocking_failures": [],
   "observations": [
-    "OBS-200"
+    "OBS-001"
   ],
   "stages": [
     {
       "name": "البناء · المحرّك",
       "code": 0,
-      "seconds": 6.6
+      "seconds": 61.3
     },
     {
       "name": "التنسيق",
       "code": 0,
-      "seconds": 0.2
+      "seconds": 0.5
     },
     {
       "name": "منظومة QA · API وأمنٌ ومنعُ تكرار",
       "code": 1,
-      "seconds": 106.4
+      "seconds": 90.2
     },
     {
       "name": "حرّاسُ الويب",
       "code": 0,
-      "seconds": 9.9
+      "seconds": 11.7
     }
   ]
 }

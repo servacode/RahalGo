@@ -44,6 +44,9 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 
 dependencies {
+    // **حزمةُ الوحدة** — تُشغَّل بـ`./gradlew testDebugUnitTest`.
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
     // **و`api` لا `implementation`** — التطبيقاتُ تستعمل الألوانَ
     // والنماذجَ نفسَها، **ولو أُخفيت لَأعلنها كلُّ تطبيقٍ من جديد.**
     api(project(":design"))

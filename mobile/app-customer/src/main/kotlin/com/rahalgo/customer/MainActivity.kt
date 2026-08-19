@@ -53,6 +53,7 @@ import com.rahalgo.ui.PointPicker
 import com.rahalgo.ui.PagesViewModel
 import com.rahalgo.ui.HelpRole
 import com.rahalgo.ui.PlatformPages
+import com.rahalgo.ui.ChatFab
 import com.rahalgo.ui.ChatsScreen
 import com.rahalgo.ui.ChatsViewModel
 import com.rahalgo.ui.PlatformScreen
@@ -291,6 +292,8 @@ private fun SignedIn(
     val customVm: CustomViewModel = viewModel()
     val mineVm: MineViewModel = viewModel()
     val chatsVm: ChatsViewModel = viewModel()
+    // **وحديثُ الطلب الجاري** — انظر `LiveChatViewModel`.
+    val liveChat: com.rahalgo.customer.chat.LiveChatViewModel = viewModel()
     val cartVm: CartViewModel = viewModel()
 
     // ══════════════════════════════════════════════════════════════════
@@ -628,6 +631,21 @@ private fun SignedIn(
                 contentAlignment = Alignment.Center,
             ) {
                 if (over != Overlay.None) BackHandler { overlay.clear() }
+
+                // ══════════════════════════════════════════════════════
+                // **قرصُ الحديث — فوق كلّ شاشةٍ لا في شاشةِ الطلبات**
+                // ══════════════════════════════════════════════════════
+                //
+                // (قرارُ المالك ٢٠٢٦-٠٨-١٩: «زرُّ الدردشة يجب أن يكون
+                //  عائماً فوق كلّ الصفحات… مو معقول إلّا يفوت على
+                //  الطلبات مشان يشوف الدردشة».)
+                //
+                // **ورُكّب أوّلاً في شاشة الطلبات فكان عيبَه نفسَه**:
+                // من ينتظر ردَّ سائقه يتصفّح السوقَ أو يقرأ حسابَه،
+                // **والقرصُ الذي يظهر حيث لا تحتاجه لا يُغني.**
+                //
+                // **وهنا يُركَّب مرّةً** — كالرسالة الطافية وشريط
+                // الشبكة والافتتاح: **وثلاثةُ تركيباتٍ تُنسى في واحد.**
                 when {
                     // ══════════════════════════════════════════════════
                     // **وما يخصّه يطلب حساباً — قبل النداء لا بعده**
@@ -787,6 +805,23 @@ private fun SignedIn(
                             },
                             onDismiss = ordersVm::skipRate,
                         )
+                    }
+                }
+                // **ويُرسَم بعد المحتوى** — وفي الصندوق يعلو الأخير.
+                if (!guest) {
+                    // **ويُقرأ عند الدخول وعند كلّ إنعاش** — ولا ينتظر
+                    // زيارةَ شاشةٍ ليعرف أنّ للزبون سائقاً.
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        com.rahalgo.ui.Refresh.tick.collect { liveChat.load() }
+                    }
+                    liveChat.orderId?.let { id ->
+                        ChatFab { liveChat.open = true }
+                        if (liveChat.open) {
+                            val cvm: com.rahalgo.ui.OrderChatViewModel = viewModel()
+                            com.rahalgo.ui.OrderChatSheet(vm = cvm, orderId = id) {
+                                liveChat.open = false
+                            }
+                        }
                     }
                 }
             }

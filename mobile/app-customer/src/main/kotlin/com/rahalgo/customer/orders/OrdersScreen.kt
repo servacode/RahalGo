@@ -1,6 +1,7 @@
 package com.rahalgo.customer.orders
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
@@ -142,11 +143,10 @@ private fun OrdersList(
                 //
                 // **ولا في السجلّ**: طلبٌ انتهى وسائقُه مضى، **وحديثٌ
                 // يُفتح فيه لا يقرؤه أحد.**
-                onChat = if (!history && !o.driverName.isNullOrEmpty()) {
-                    { chatId = o.id }
-                } else {
-                    null
-                },
+                // **ولا زرَّ حديثٍ في البطاقة** — (قرارُ المالك
+                // ٢٠٢٦-٠٨-١٩: «يجب أن تكون أيقونةً عائمةً مثل
+                //  السائق وليس داخلَ الكرت»). انظر `ChatFab`.
+                onChat = null,
                 // **ولا نجومَ لطلبٍ لم يُسلَّم ولا لطلبٍ قُيّم** — نجومٌ
                 // مرّتين تُقرأ أنّ الأولى لم تصل.
                 onRate = if (o.status == "delivered" && o.id !in vm.rated) {

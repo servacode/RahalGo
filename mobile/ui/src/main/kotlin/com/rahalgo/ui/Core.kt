@@ -87,13 +87,8 @@ class Core(context: Context, val baseUrl: String, val client: String) {
      * **الصفوفُ القديمةُ بلا نسخ** (`sizes = false`) — **ومسارٌ يُشتقّ
      * لها يردّ ٤٠٤ فتظهر بطاقةٌ فارغة.** فيُردّ الأصلُ كما هو.
      */
-    fun mediaSized(path: String?, width: Int, hasSizes: Boolean): String? {
-        if (path.isNullOrEmpty()) return null
-        if (!hasSizes || path.startsWith("http")) return media(path)
-        val dot = path.lastIndexOf('.')
-        if (dot <= 0) return media(path)
-        return media(path.substring(0, dot) + "_" + width + path.substring(dot))
-    }
+    fun mediaSized(path: String?, width: Int, hasSizes: Boolean): String? =
+        media(sizedPath(path, width, hasSizes))
 }
 
 /**
@@ -145,4 +140,36 @@ object AppCore {
     /** **النواةُ أو انفجار** — من طلبها قبل تركيبها أخطأ في إقلاعه. */
     fun get(): Core = wired
         ?: error("AppCore.install لم تُنادَ — النواةُ تُركَّب قبل أوّل شاشة")
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **اشتقاقُ اسمِ النسخة — نصٌّ خالصٌ بلا `Context`**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * # لماذا أُخرجت من `Core`
+ *
+ * (تمكينُ الاختبار ٢٠٢٦-٠٨-١٩، بإذن المالك: «ولا تغيّر Architecture
+ *
+ *  إلّا إذا كان ذلك ضروريّاً فقط لتمكين Testability، ويجب توثيقُ أيّ
+ *  تغييرٍ قبل تنفيذه».)
+ *
+ * **`Core` تحتاج `Context` في بانيها** — **فاختبارُ سطرِ نصٍّ يحتاج
+ * جهازاً أو Robolectric.** وهي كلفةٌ لا يستحقّها قصُّ نصٍّ عند نقطة.
+ *
+ * **ولم يتغيّر السلوكُ حرفا**: `mediaSized` صارت تنادي هذه ثمّ `media`،
+ * **وهما ما كانت تفعله في جسمها.**
+ *
+ * # وما تحرسه
+ *
+ * **BUG-004**: لافتةٌ في ٤٫٩ ثانية لأنّ الأصلَ رُسم في لوحٍ صغير.
+ * **والاشتقاقُ نصٌّ يُبنى بيد** — يُكسر بمسارٍ بلا لاحقةٍ أو برابطٍ
+ * خارجيّ، **وحين يُكسر يردّ الخادمُ ٤٠٤ بلا خطأٍ في سجلّ.**
+ */
+fun sizedPath(path: String?, width: Int, hasSizes: Boolean): String? {
+    if (path.isNullOrEmpty()) return null
+    if (!hasSizes || path.startsWith("http")) return path
+    val dot = path.lastIndexOf('.')
+    if (dot <= 0) return path
+    return path.substring(0, dot) + "_" + width + path.substring(dot)
 }
