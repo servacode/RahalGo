@@ -210,9 +210,31 @@ fun OrderChatSheet(
                         vm.messages.isEmpty() ->
                             // **وفارغٌ يُقال ولا يُترك بياضا.**
                             Empty(stringResource(R.string.chat_empty))
-                        else -> Column(
-                            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-                        ) { vm.messages.forEach { ChatBubble(it) } }
+                        else -> {
+                            // ══════════════════════════════════════════
+                            // **وآخرُ سطرٍ هو ما يُقرأ — يُنزَل إليه**
+                            // ══════════════════════════════════════════
+                            //
+                            // (قرارُ المالك ٢٠٢٦-٠٨-١٩: «يجب السطرُ
+                            //  الأخير أو آخرُ المحادثة بشكلٍ تلقائيّ».)
+                            //
+                            // **ونافذةٌ تفتح على أوّل رسالةٍ وصلت أمس**
+                            // تُقرأ خاليةً من الجديد — **فيُسحب إليها
+                            // في كلّ مرّة**، ومن سحب مرّةً سحب دائما.
+                            //
+                            // **ويُنزَل عند كلّ رسالةٍ جديدةٍ أيضاً** —
+                            // **ورسالةٌ تصل تحت الطيّة كأنّها لم تصل.**
+                            val scroll = rememberScrollState()
+                            LaunchedEffect(vm.messages.size) {
+                                // **وبلا حركةٍ عند الفتح** — القفزُ
+                                // المتحرّكُ من أوّل الحديث إلى آخره
+                                // **يُقرأ ارتجافا.**
+                                scroll.scrollTo(scroll.maxValue)
+                            }
+                            Column(
+                                Modifier.fillMaxWidth().verticalScroll(scroll),
+                            ) { vm.messages.forEach { ChatBubble(it) } }
+                        }
                     }
                 }
 

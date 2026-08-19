@@ -6,7 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import android.media.RingtoneManager
 import com.rahalgo.shared.customer.CustomerApi
+import com.rahalgo.shared.driver.ChatApi
 import com.rahalgo.ui.AppCore
 import kotlinx.coroutines.launch
 
@@ -47,9 +50,26 @@ class LiveChatViewModel : ViewModel() {
     /** **أمفتوحٌ اللوح؟** — والحالُ هنا لا في شاشةٍ تُغادَر. */
     var open by mutableStateOf(false)
 
-    private val api = CustomerApi(AppCore.get().api)
+    /**
+     * **كم رسالةً تنتظره** — للشارة على القرص.
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-١٩: «وقت تجي رسالة لازم لها صوتٌ وعدّاد».)
+     *
+     * **والعدَدُ من المحرّك لا يُحسب هنا**: `‎/my/chats` يردّ `unread`
+     * لكلّ خيط، **وعدٌّ في العميل يفترق عن عدِّ الخادم يومَ تُقرأ رسالةٌ
+     * من جهازٍ آخر.**
+     */
+    var unread by mutableStateOf(0)
+        private set
 
-    fun load() {
+    private val api = CustomerApi(AppCore.get().api)
+    private val chats = ChatApi(AppCore.get().api)
+
+    /** **آخرُ عددٍ رُئي** — به يُعرف الجديدُ من القديم. */
+    private var lastSeen = -1
+
+    fun load(context: Context? = null) {
+        context?.let { refreshUnread(it) }
         viewModelScope.launch {
             runCatching { api.orders(openOnly = true).orders }
                 .onSuccess { orders ->
@@ -67,9 +87,52 @@ class LiveChatViewModel : ViewModel() {
         }
     }
 
+    /**
+     * **يقرأ عددَ ما ينتظره — ويُسمِع رنّةً للجديد.**
+     *
+     * # ولماذا لا يرنّ في كلّ قراءة
+     *
+     * **النبضةُ تصل مع كلّ تغيّرٍ في الطلب** — قبولٍ وإسنادٍ وتسليم.
+     * **ورنّةٌ مع كلّ نبضةٍ تُقرأ عطلاً في التطبيق** فيُطفئ صاحبُها
+     * الصوتَ كلَّه.
+     *
+     * **فيرنّ حين يزيد العدد وحدَه** — ولا يرنّ حين ينقص (قرأها)،
+     * **ولا في أوّل قراءةٍ بعد الإقلاع** (`lastSeen < 0`): من فتح
+     * تطبيقَه على ثلاث رسائلَ قديمةٍ لا يريد ثلاثَ رنّات.
+     *
+     * **ولا يرنّ واللوحُ مفتوح** — هو يقرؤها الآن.
+     */
+    private fun refreshUnread(context: Context) {
+        viewModelScope.launch {
+            runCatching { chats.threads().threads }
+                .onSuccess { rows ->
+                    val n = rows.filter { it.open }.sumOf { it.unread }
+                    if (lastSeen >= 0 && n > lastSeen && !open) ring(context)
+                    lastSeen = n
+                    unread = n
+                }
+                .onFailure { Log.w("RahalGo/chat", "تعذّرت قراءةُ عدّاد الرسائل", it) }
+        }
+    }
+
+    /**
+     * **رنّةُ الإشعار التي اختارها صاحبُ الجهاز** — لا نغمةٌ نحقنها.
+     *
+     * **ومن أطفأ صوتَ هاتفِه لا يُوقَظ**: `RingtoneManager` يتبع وضعَ
+     * النظام، **ونغمةٌ تُشغَّل بمشغّلٍ خاصٍّ تتخطّى الصامت.**
+     */
+    private fun ring(context: Context) {
+        runCatching {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            RingtoneManager.getRingtone(context.applicationContext, uri)?.play()
+        }.onFailure { Log.w("RahalGo/chat", "تعذّرت الرنّة", it) }
+    }
+
     /** **ويُطفأ عند الخروج** — وإلّا بقي قرصُ حسابٍ مضى فوق شاشةِ ضيف. */
     fun clear() {
         orderId = null
         open = false
+        unread = 0
+        lastSeen = -1
     }
 }

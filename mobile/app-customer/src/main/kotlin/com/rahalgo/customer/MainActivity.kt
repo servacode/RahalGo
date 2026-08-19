@@ -809,13 +809,15 @@ private fun SignedIn(
                 }
                 // **ويُرسَم بعد المحتوى** — وفي الصندوق يعلو الأخير.
                 if (!guest) {
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
                     // **ويُقرأ عند الدخول وعند كلّ إنعاش** — ولا ينتظر
                     // زيارةَ شاشةٍ ليعرف أنّ للزبون سائقاً.
                     androidx.compose.runtime.LaunchedEffect(Unit) {
-                        com.rahalgo.ui.Refresh.tick.collect { liveChat.load() }
+                        com.rahalgo.ui.Refresh.tick.collect { liveChat.load(ctx) }
                     }
                     liveChat.orderId?.let { id ->
-                        ChatFab { liveChat.open = true }
+                        // **والشارةُ تقول كم ينتظره** — ولا شارةَ لصفر.
+                        ChatFab(unread = liveChat.unread) { liveChat.open = true }
                         if (liveChat.open) {
                             val cvm: com.rahalgo.ui.OrderChatViewModel = viewModel()
                             com.rahalgo.ui.OrderChatSheet(vm = cvm, orderId = id) {
