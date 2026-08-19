@@ -373,6 +373,26 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
     var promoBusy by mutableStateOf(false)
         private set
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **مفتاحُ المحاولة — يبقى ما دامت لم تنجح**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (تدقيقُ الإطلاق ٢٠٢٦-٠٨-١٩ — BUG-001.)
+     *
+     * **والخطرُ ليس الضغطتين المتتاليتين** — تلك يمنعها `busy`.
+     * **الخطرُ أن يُنشأ الطلبُ في الخادم ثمّ تنقطع الشبكةُ قبل الردّ**:
+     * يرى «تعذّر» فيضغط ثانيةً — **فطلبان وسائقان وخصمان.**
+     *
+     * **فيُولَّد مرّةً ويبقى حتّى ينجح** — فإعادةُ المحاولة تحمله نفسَه
+     * فيردّ الخادمُ الطلبَ الأوّلَ بعينه (`idempotency.go`).
+     *
+     * **ويُمحى بعد النجاح** — **ومفتاحٌ يبقى يجعل الطلبَ التالي يردّ
+     * جوابَ الذي قبله.**
+     */
+    private var attemptKey: String? = null
+
+
     /** **ويُنسى الأثرُ حين يُبدَّل الكود** — نتيجةُ كودٍ على كودٍ آخرَ كذب. */
     fun typePromo(v: String) {
         promo = v
@@ -428,6 +448,8 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         if (busy) return
         busy = true
         error = ""
+        // **ولا يُولَّد إن كان قائماً** — محاولةٌ ثانيةٌ لطلبٍ واحد.
+        val key = attemptKey ?: java.util.UUID.randomUUID().toString().also { attemptKey = it }
         viewModelScope.launch {
             try {
                 api.createOrder(
@@ -439,7 +461,10 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                         paymentMethod = payment,
                         promoCode = promo,
                     ),
+                    attemptKey = key,
                 )
+                // **والمفتاحُ يُمحى بعد النجاح** — انظر `attemptKey`.
+                attemptKey = null
                 // **والسلّةُ تُفرَغ بعد أن يُقيَّد الطلبُ لا قبله** —
                 // **ومن فرّغها قبل الجواب خسر سلّةَ من سقط نداؤه.**
                 Cart.clear()

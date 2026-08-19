@@ -216,6 +216,26 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
     var sent by mutableStateOf(0)
         private set
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **مفتاحُ المحاولة — يبقى ما دامت لم تنجح**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (تدقيقُ الإطلاق ٢٠٢٦-٠٨-١٩ — BUG-001.)
+     *
+     * **والخطرُ ليس الضغطتين المتتاليتين** — تلك يمنعها `busy`.
+     * **الخطرُ أن يُنشأ الطلبُ في الخادم ثمّ تنقطع الشبكةُ قبل الردّ**:
+     * يرى «تعذّر» فيضغط ثانيةً — **فطلبان وسائقان وخصمان.**
+     *
+     * **فيُولَّد مرّةً ويبقى حتّى ينجح** — فإعادةُ المحاولة تحمله نفسَه
+     * فيردّ الخادمُ الطلبَ الأوّلَ بعينه (`idempotency.go`).
+     *
+     * **ويُمحى بعد النجاح** — **ومفتاحٌ يبقى يجعل الطلبَ التالي يردّ
+     * جوابَ الذي قبله.**
+     */
+    private var attemptKey: String? = null
+
+
     /** **يُطلب موضعُه الآن** — لا يُقرأ في الخفاء لحظةَ الإرسال. */
     fun locate() {
         com.rahalgo.customer.Here.refresh(getApplication())
@@ -244,9 +264,15 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         busy = true
         error = ""
         done = ""
+        // **ولا يُولَّد إن كان قائماً** — محاولةٌ ثانيةٌ لطلبٍ واحد.
+        val key = attemptKey ?: java.util.UUID.randomUUID().toString().also { attemptKey = it }
         viewModelScope.launch {
             try {
-                val ref = api.createCustom(NewCustom(request, address, lat, lng, notes))
+                val ref = api.createCustom(
+                    NewCustom(request, address, lat, lng, notes),
+                    attemptKey = key,
+                )
+                attemptKey = null
                 // **والرسالةُ تطفو فوق الشاشة** — انظر `Flash`.
                 Flash.ok(
                     getApplication<Application>()

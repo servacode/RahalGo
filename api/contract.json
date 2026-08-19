@@ -5054,6 +5054,7 @@
       "path": "/api/v1/orders/custom",
       "handler": "handleCreateCustomOrder",
       "auth": true,
+      "idempotent": true,
       "request": [
         {
           "name": "request",

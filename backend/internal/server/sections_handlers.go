@@ -270,10 +270,39 @@ func (s *Server) publicSections(r *http.Request) ([]publicSection, error) {
 // صنفٍ لا فرقُ بائع. **والنائمُ يُعرض آخراً ولا يُخفى** — من رآه عرف أنّه
 // موجودٌ وعاد له.
 func (s *Server) handlePublicSectionItems(w http.ResponseWriter, r *http.Request) {
+	// ══════════════════════════════════════════════════════════════════
+	// **وقسمٌ لا وجودَ له يُردّ ٤٠٤ لا قائمةً فارغة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (تدقيقُ الإطلاق ٢٠٢٦-٠٨-١٩ — BUG-005: جُرّب معرّفٌ وهميٌّ فرُدَّ
+	//  ٢٠٠ بقائمةٍ فارغة.)
+	//
+	// **و«فارغٌ» و«لا وجودَ له» جوابان لمعنيين** — والشاشةُ تقول «لا
+	// أصنافَ في هذا القسم بعد» في الحالين، **فيُقرأ عطبُ رابطٍ نفادَ
+	// بضاعة.**
+	//
+	// **ورابطٌ قديمٌ لقسمٍ حُذف يبقى صالحاً في الظاهر** — ولا شيءَ
+	// يقول لصاحبه أن يعود.
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	var exists bool
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM platform_sections WHERE id = $1::uuid AND active)`,
+		id).Scan(&exists); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if !exists {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
 	s.scanItems(w, r, itemSelect+`
 		  AND ps.id = $1
 		ORDER BY (i.available AND `+orders.OpenNowSQL+`) DESC, i.sort_order, i.name
-		LIMIT 200`, chi.URLParam(r, "id"))
+		LIMIT 200`, id)
 }
 
 // handlePublicItem صنفٌ واحدٌ بتفصيله — **صفحةُ الصنف.**

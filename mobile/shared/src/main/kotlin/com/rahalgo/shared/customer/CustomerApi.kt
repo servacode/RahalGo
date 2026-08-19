@@ -87,8 +87,36 @@ class CustomerApi(private val api: ApiClient) {
         )
 
     /** **يُرسل الطلب** — ويردّ الطلبَ كما قُيّد. */
-    suspend fun createOrder(input: NewOrder): OrderRef =
-        api.call("/api/v1/orders", HttpMethod.Post, input)
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **يُنشئ الطلب — ومرّةً واحدةً مهما أُعيدت المحاولة**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (تدقيقُ الإطلاق ٢٠٢٦-٠٨-١٩ — BUG-001.)
+     *
+     * # ما كان يقع
+     *
+     * **الخادمُ يحرس هذا الباب منذ بُني** (`idempotency.go`)، **والتطبيقُ
+     * لا يرسل المفتاح** — والوسيطُ يتخطّى الحراسةَ حين يكون فارغاً:
+     * `if key == "" { next(); return }`.
+     *
+     * **فالحمايةُ مبنيّةٌ وغيرُ موصولة.** وتطبيقُ السائق يرسله في السحب
+     * (`MeApi.requestPayout`) — **فالزبونُ وحدَه كان مكشوفا.**
+     *
+     * # والخطرُ ليس الضغطتين المتتاليتين
+     *
+     * **تلك يمنعها `enabled = !busy` في الشاشة.** والخطرُ أن يُنشأ
+     * الطلبُ في الخادم **ثمّ تنقطع الشبكةُ قبل أن يصل الردّ**: يرى
+     * «تعذّر» فيضغط ثانيةً — **فطلبان وسائقان وخصمان.**
+     *
+     * # فالمفتاحُ للمحاولة لا للضغطة
+     *
+     * **يُولَّد مرّةً حين يبدأ الإرسالُ ويبقى ما دام لم ينجح** — فإعادةُ
+     * المحاولة تحمله نفسَه فيردّ الخادمُ الطلبَ الأوّلَ بعينه.
+     * **ومفتاحٌ جديدٌ لكلّ ضغطةٍ لا يحمي من شيء.**
+     */
+    suspend fun createOrder(input: NewOrder, attemptKey: String): OrderRef =
+        api.call("/api/v1/orders", HttpMethod.Post, input, idempotencyKey = attemptKey)
 
     /**
      * **طلبٌ خاصّ** — ما ليس في المنصّة.
@@ -97,8 +125,9 @@ class CustomerApi(private val api: ApiClient) {
      * **والسائقُ يشتريه ويتّفق معه بعد الإسناد.** **وسؤالٌ لا جوابَ له
      * يُوقف من يملأ نموذجا.**
      */
-    suspend fun createCustom(input: NewCustom): OrderRef =
-        api.call("/api/v1/orders/custom", HttpMethod.Post, input)
+    /** **ويُنشأ مرّةً واحدةً كذلك** — انظر `createOrder`. */
+    suspend fun createCustom(input: NewCustom, attemptKey: String): OrderRef =
+        api.call("/api/v1/orders/custom", HttpMethod.Post, input, idempotencyKey = attemptKey)
 
     /**
      * **يُلغي طلباً في مهلته** — والمهلةُ من الخادم لا من حسبةِ الشاشة.

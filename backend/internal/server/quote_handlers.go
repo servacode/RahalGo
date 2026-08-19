@@ -36,6 +36,17 @@ func (s *Server) handleQuote(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **وسلّةٌ فارغةٌ ليست تسعيرة** — (تدقيقُ الإطلاق ٢٠٢٦-٠٨-١٩ —
+	// BUG-006: رُدَّ ٢٠٠ بمجموعٍ صفر).
+	//
+	// **وصفرٌ يُقرأ سعراً**: تُعرض «الإجماليّ ٠ ل.س» على شاشةٍ لا صنفَ
+	// فيها، **فيُظنّ أنّ الطلبَ مجّانيّ** — والصوابُ أن يُقال إنّ
+	// السؤالَ نفسَه لا يصحّ.
+	if len(req.Items) == 0 {
+		s.respondErr(w, errValidation)
+		return
+	}
+
 	q, err := s.orders.Quote(r.Context(), req.Items, req.Lat, req.Lng)
 	if err != nil {
 		s.respondErr(w, err)
