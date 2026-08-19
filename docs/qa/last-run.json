@@ -3,7 +3,7 @@
   "totals": {
     "PASS": 95,
     "FAIL": 0,
-    "SKIP": 1
+    "SKIP": 0
   },
   "blocking_failures": [],
   "observations": [],
@@ -11,27 +11,27 @@
     {
       "name": "البناء · المحرّك",
       "code": 0,
-      "seconds": 9.6
+      "seconds": 15.1
     },
     {
       "name": "التنسيق",
       "code": 0,
-      "seconds": 0.7
+      "seconds": 0.2
     },
     {
       "name": "منظومة QA · API وأمنٌ ومنعُ تكرار",
       "code": 0,
-      "seconds": 59.1
+      "seconds": 62.3
     },
     {
       "name": "حرّاسُ الويب",
       "code": 0,
-      "seconds": 14.6
+      "seconds": 12.2
     },
     {
       "name": "وحدةُ أندرويد",
       "code": 0,
-      "seconds": 13.5
+      "seconds": 7.4
     }
   ]
 }

@@ -122,26 +122,18 @@ func TestIDEM_004_KeyIsPerUser(t *testing.T) {
 	}
 }
 
-// TestIDEM_005_CustomOrder **والطلبُ الخاصُّ محروسٌ كالعاديّ** —
-// (BUG-002).
-func TestIDEM_005_CustomOrder(t *testing.T) {
-	h := New(t)
-	u := h.Customer()
-	key := uniq("idem")
-	body := map[string]any{
-		"description":  "طلبٌ خاصٌّ للاختبار الآليّ",
-		"address_text": "الرقة — شارع الاختبار", "lat": 35.9506, "lng": 39.0094,
-	}
-	before := h.CountOrders(u.ID)
-	a := h.POSTKey("/api/v1/orders/custom", u.Token, key, body)
-	if a.Code >= 400 {
-		t.Skipf("IDEM-005 تعذّر إنشاءُ طلبٍ خاصّ (%s) — يُراجَع جسمُ الطلب", a)
-	}
-	_ = h.POSTKey("/api/v1/orders/custom", u.Token, key, body)
-	if got := h.CountOrders(u.ID) - before; got != 1 {
-		t.Errorf("IDEM-005 الطلبُ الخاصُّ تكرّر: %d — يُنتظر 1", got)
-	}
-}
+// ══════════════════════════════════════════════════════════════════════
+// **و`IDEM-005` نُقلت إلى `CUST-003`** — ٢٠٢٦-٠٨-٢٠
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كانت تتخطّى نفسَها منذ كُتبت**: أرسلت `description` والمحرّكُ يقرأ
+// `request`، **فيُردّ النداءُ فتُقرأ «تعذّر التجهيز» لا «الاسمُ خطأ».**
+//
+// **واختبارٌ يتخطّى دائماً أسوأُ من غيابه** — يُعدّ في التغطية ولا يقيس
+// شيئا.
+//
+// **وحين صحّ الحقلُ صارت تكراراً لـ`CUST-003`** — فأُزيلت، **وحزمةُ
+// الطلب الخاصّ أولى بها** (`custom_test.go`).
 
 // TestIDEM_006_MissingKeyStillWorks **وبلا مفتاحٍ يمرّ النداء.**
 //
