@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -133,6 +134,7 @@ fun BannerSlider(
         // **الحافّةُ تأخذ من العرض** (`SIDE`) و`aspectRatio` على السلايدر
         // كلِّه يقيس العرضَ الكامل — **فتخرج الصفحةُ أقصرَ ممّا أُريد.**
         // فيُقاس عرضُ الصفحة أوّلاً ثمّ يُشتقّ الارتفاع.
+        val heightCap = LocalConfiguration.current.screenHeightDp.dp * 0.30f
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val pageWidth = maxWidth - SIDE * 2 - GAP
             HorizontalPager(
@@ -154,7 +156,24 @@ fun BannerSlider(
                     // **٢:١ لا ١٦:٥** — وهي نسبةُ ما يرفعه المالكُ
                     // فعلاً: قِيس ٢٠٢٦-٠٨-١٨ أنّ لافتاته ١٦٠٠×٨٠٠،
                     // **والإطارُ الأعرضُ كان يقصّ ثلثَ ارتفاعها.**
-                    .height(pageWidth / 2f),
+                    // ══════════════════════════════════════════════
+                    // **ولا تتجاوزَ ثلثَ الشاشة مهما اتّسع العرض**
+                    // ══════════════════════════════════════════════
+                    //
+                    // (قِيس ٢٠٢٦-٠٨-١٩ على جهاز المالك: **الوضعُ
+                    //  الأفقيُّ يعرض شريطَ التنقّل وحدَه** — ثلاثُ
+                    //  دفقاتٍ متتاليةٍ أعطت أربعةَ عناصرَ من واحدٍ
+                    //  وثلاثين.)
+                    //
+                    // **ونسبةُ ٢:١ وحدَها تُهلك الشاشةَ العريضة**:
+                    // أفقيّاً العرضُ ٩١٤dp **فالارتفاعُ ٤٣٠ والشاشةُ
+                    // ٤١١** — فاللافتةُ أطولُ من الشاشة كلِّها، **تدفع
+                    // البحثَ والأقسامَ والأصنافَ خارجَها.**
+                    //
+                    // **والسقفُ من ارتفاع الشاشة لا من العرض** — فهو
+                    // ما يُقاس عليه الخروج. **وعموديّاً لا يُبلَغ**
+                    // (٢٧٤ سقفاً و١٧٩ محسوبةً) **فلا يتغيّر شيء.**
+                    .height(minOf(pageWidth / 2f, heightCap)),
             ) { page ->
                 val b = items[page]
                 Box(

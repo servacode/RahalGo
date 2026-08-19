@@ -1,0 +1,34 @@
+{
+  "smoke": true,
+  "totals": {
+    "PASS": 58,
+    "FAIL": 1,
+    "SKIP": 1
+  },
+  "blocking_failures": [],
+  "observations": [
+    "OBS-200"
+  ],
+  "stages": [
+    {
+      "name": "البناء · المحرّك",
+      "code": 0,
+      "seconds": 6.6
+    },
+    {
+      "name": "التنسيق",
+      "code": 0,
+      "seconds": 0.2
+    },
+    {
+      "name": "منظومة QA · API وأمنٌ ومنعُ تكرار",
+      "code": 1,
+      "seconds": 106.4
+    },
+    {
+      "name": "حرّاسُ الويب",
+      "code": 0,
+      "seconds": 9.9
+    }
+  ]
+}
