@@ -1,7 +1,7 @@
 {
   "smoke": true,
   "totals": {
-    "PASS": 66,
+    "PASS": 73,
     "FAIL": 1,
     "SKIP": 1
   },
@@ -13,27 +13,27 @@
     {
       "name": "البناء · المحرّك",
       "code": 0,
-      "seconds": 11.4
+      "seconds": 8.6
     },
     {
       "name": "التنسيق",
       "code": 0,
-      "seconds": 0.2
+      "seconds": 0.3
     },
     {
       "name": "منظومة QA · API وأمنٌ ومنعُ تكرار",
       "code": 1,
-      "seconds": 138.1
+      "seconds": 145.8
     },
     {
       "name": "حرّاسُ الويب",
       "code": 0,
-      "seconds": 13.5
+      "seconds": 13.7
     },
     {
       "name": "وحدةُ أندرويد",
       "code": 0,
-      "seconds": 39.5
+      "seconds": 31.0
     }
   ]
 }

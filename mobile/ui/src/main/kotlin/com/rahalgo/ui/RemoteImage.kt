@@ -9,7 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import coil3.compose.SubcomposeAsyncImage
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import com.rahalgo.design.Rahal
 
 /**
@@ -36,6 +41,22 @@ import com.rahalgo.design.Rahal
  *
  * **حرفُ اسمها** — لا مربّعٌ رماديّ: **الرماديُّ يُقرأ «عطب»، والحرفُ
  * يُقرأ «لا صورةَ لهذا».**
+ *
+ * # ولماذا `AsyncImage` لا `SubcomposeAsyncImage`
+ *
+ * (قِيس ٢٠٢٦-٠٨-١٩ على جهاز المالك: **ربعُ الإطارات تتجاوز مهلتَها**
+ *  في تمرير شاشة التسوّق — والمقبولُ دون العشرة.)
+ *
+ * **والتركيبُ الفرعيُّ يُعيد قياسَ كلّ صورةٍ في تركيبةٍ مستقلّة** —
+ * وCoil نفسُها تكتب أنّه أبطأُ وتوصي بتجنّبه في القوائم. **وشبكةٌ فيها
+ * عشراتُ البطاقات تدفع الثمنَ عشراتِ المرّات في كلّ تمريرة.**
+ *
+ * **وكانت خانةُ `loading` فارغةً تماماً** (`loading = {}`) — **فالثمنُ
+ * يُدفع مقابلَ لا شيء**: الأرضُ الباهتةُ يرسمها الصندوقُ الحاوي لا
+ * الخانة.
+ *
+ * **والحرفُ البديلُ يبقى** — يُرسم بحالٍ تُقرأ من `onState` بدل خانةٍ
+ * تُركَّب فرعيّا.
  */
 @Composable
 fun RemoteImage(
@@ -52,15 +73,19 @@ fun RemoteImage(
             Fallback(name)
             return@Box
         }
-        SubcomposeAsyncImage(
+        // **والحالُ تُنسى مع تبدّل الرابط** — **وبطاقةٌ يُعاد استعمالُها
+        // في شبكةٍ كسولةٍ ترث فشلَ سابقتها** فيظهر الحرفُ فوق صورةٍ
+        // سليمة.
+        var failed by remember(url) { mutableStateOf(false) }
+        AsyncImage(
             model = url,
             contentDescription = null,
             contentScale = contentScale,
             modifier = Modifier.fillMaxSize(),
-            // **والأرضُ الباهتةُ هي الانتظار** — لا دائرةٌ تدور.
-            loading = {},
-            error = { Fallback(name) },
+            onState = { failed = it is AsyncImagePainter.State.Error },
         )
+        // **والأرضُ الباهتةُ هي الانتظار** — لا دائرةٌ تدور.
+        if (failed) Fallback(name)
     }
 }
 
