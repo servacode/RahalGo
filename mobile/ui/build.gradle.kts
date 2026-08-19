@@ -30,6 +30,7 @@ android {
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         minSdk = libs.versions.minSdk.get().toInt()
     }
 
@@ -44,6 +45,22 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 
 dependencies {
+    // ══════════════════════════════════════════════════════════════════
+    // **حزمةُ الواجهة — تُشغَّل على جهازٍ متّصل**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-١٩: «أريد اختباراتٍ تقود التطبيقَ فعلاً،
+    //  لا تعتمد فقط على ViewModel tests».)
+    //
+    // **و`ui-test-manifest` في `debug` لا في `androidTest`** — هي التي
+    // تُعلن `ComponentActivity` الفارغةَ التي يُركَّب فيها المكوّن،
+    // **وبدونها تسقط الحزمةُ بلا نشاطٍ يستضيفها.**
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.junit)
+    debugImplementation(libs.compose.ui.test.manifest)
     // **حزمةُ الوحدة** — تُشغَّل بـ`./gradlew testDebugUnitTest`.
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)

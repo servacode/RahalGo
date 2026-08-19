@@ -129,6 +129,11 @@ androidx-security-crypto = { module = "androidx.security:security-crypto", versi
 junit = { module = "junit:junit", version = "4.13.2" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version = "1.11.0" }
 
+compose-ui-test = { module = "androidx.compose.ui:ui-test-junit4" }
+compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+androidx-test-runner = { module = "androidx.test:runner", version = "1.7.0" }
+androidx-test-rules = { module = "androidx.test:rules", version = "1.7.0" }
+
 [plugins]
 google-services = { id = "com.google.gms.google-services", version = "4.5.0" }
 crashlytics = { id = "com.google.firebase.crashlytics", version = "3.0.7" }
