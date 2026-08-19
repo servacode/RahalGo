@@ -113,29 +113,32 @@ func TestSECIDOR_Orders(t *testing.T) {
 	})
 }
 
-// TestOBS_ForeignOrderReturns200 **ملاحظةٌ لا ثغرة — ومسجَّلةٌ حمراءَ
-// عمدا.**
+// TestVAL_040_ForeignOrderComplaintCode **وطلبٌ ليس لك يُردّ ٤٠٤.**
 //
-// المعرّف: `OBS-001` · الوسم: `@api @observation`
+// المعرّف: `VAL-040` · الوسم: `@api @critical @release`
 //
-// **`/my/orders/{id}/complaint` على طلبِ غيرِه يردّ ٢٠٠ بـ`null`** —
-// **ولا يُسرَّب شيء**، فليست ثغرة. **لكنّ «فارغٌ» و«ليس لك» جوابان
-// لمعنيين** — وهي عائلةُ BUG-005 نفسُها.
+// # وكانت ملاحظةً حمراءَ ثمّ أُصلحت
 //
-// **وتبقى حمراءَ حتّى تُصلَح** — (قرارُ المالك: «المشاكلُ الحاليّة يجب
-// أن تظهر كـFAIL بدل مجرّد ملاحظات»). **ووسمُ `OBS` يمنعها من حجب
-// الإصدار** — انظر `RELEASE_GATES.md`.
-func TestOBS_001_ForeignOrderComplaintCode(t *testing.T) {
+// **سُجّلت `OBS-001` يوم ٢٠٢٦-٠٨-١٩** حين كشفها `SEC-IDOR-011`: شكوى
+// طلبِ غيرِه كانت تردّ ٢٠٠ بـ`ticket: null`.
+//
+// **ولم تكن تسريباً** — الاستعلامُ مقيَّدٌ بصاحبه فلا يخرج منه شيء.
+// **لكنّ «لا شكوى» و«ليس طلبَك» جوابان لمعنيين**، وهي عائلة `BUG-005`:
+// **رابطٌ قديمٌ يبقى صالحاً في الظاهر ولا شيءَ يقول لصاحبه أن يعود.**
+//
+// **وأُصلحت ٢٠٢٦-٠٨-٢٠ فانتقلت من `OBS` إلى `VAL`** — وما صار يحرس
+// سلوكاً قائماً **يحجب الإصدارَ إن انكسر.**
+func TestVAL_040_ForeignOrderComplaintCode(t *testing.T) {
 	h := New(t)
 	victim, attacker := h.Customer(), h.Customer()
 	item := h.NewItem(1000)
 	made := h.POSTKey("/api/v1/orders", victim.Token, uniq("k"), orderBody(item, 1))
 	if made.Code >= 400 {
-		t.Skipf("OBS-001 تعذّر التجهيز: %s", made)
+		t.Skipf("VAL-040 تعذّر التجهيز: %s", made)
 	}
 	id, _ := made.JSON()["id"].(string)
 	if got := h.GET("/api/v1/my/orders/"+id+"/complaint", attacker.Token); got.Code == 200 {
-		t.Errorf("OBS-001 شكوى طلبٍ ليس له: يُنتظر 404 ووقع %s", got)
+		t.Errorf("VAL-040 شكوى طلبٍ ليس له: يُنتظر 404 ووقع %s", got)
 	}
 }
 

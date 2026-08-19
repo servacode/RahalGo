@@ -95,13 +95,43 @@ func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
 // **فيضغطه ثانيةً ويُردّ عليه «شكواك مفتوحة»** — وردٌّ يقول له ما كان ينبغي
 // أن يراه بنفسه.
 func (s *Server) handleMyComplaint(w http.ResponseWriter, r *http.Request) {
+	// ══════════════════════════════════════════════════════════════════
+	// **وطلبٌ ليس له يُردّ ٤٠٤ — لا «لا شكوى»**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (`OBS-001`، كشفه `SEC-IDOR-011` ٢٠٢٦-٠٨-١٩: طلبُ غيرِه كان يردّ
+	//  ٢٠٠ بـ`ticket: null`.)
+	//
+	// **ولم يكن تسريباً** — الاستعلامُ مقيَّدٌ بصاحبه فلا يخرج منه شيء.
+	// **لكنّ «لا شكوى» و«ليس طلبَك» جوابان لمعنيين**، وهي عائلةُ
+	// `BUG-005` نفسُها: **رابطٌ قديمٌ يبقى صالحاً في الظاهر ولا شيءَ
+	// يقول لصاحبه أن يعود.**
+	//
+	// # ويُفحص الطلبُ أوّلاً ثمّ شكواه
+	//
+	// **وفحصٌ واحدٌ يجمعهما لا يفرّق بين المعنيين** — فيُسأل عن الطلب،
+	// **ثمّ عن شكواه.**
+	orderID := chi.URLParam(r, "id")
+	var owned bool
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM orders WHERE id = $1 AND customer_id = $2)`,
+		orderID, userIDFrom(r)).Scan(&owned); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if !owned {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+
 	var id string
 	err := s.pg.QueryRow(r.Context(), `
-		SELECT t.id FROM tickets t JOIN orders o ON o.id = t.order_id
-		WHERE t.order_id = $1 AND o.customer_id = $2
-		ORDER BY t.created_at DESC LIMIT 1`,
-		chi.URLParam(r, "id"), userIDFrom(r)).Scan(&id)
+		SELECT t.id FROM tickets t
+		WHERE t.order_id = $1
+		ORDER BY t.created_at DESC LIMIT 1`, orderID).Scan(&id)
 	if err != nil {
+		// **وطلبُه بلا شكوى يبقى ٢٠٠ بـ`null`** — **وهذا هو المعنى
+		// الثاني**، والشاشةُ تعرض «لم تشتكِ بعد».
 		httpx.JSON(w, http.StatusOK, map[string]any{"ticket": nil})
 		return
 	}

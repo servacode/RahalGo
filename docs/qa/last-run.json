@@ -1,39 +1,37 @@
 {
   "smoke": true,
   "totals": {
-    "PASS": 94,
-    "FAIL": 1,
+    "PASS": 95,
+    "FAIL": 0,
     "SKIP": 1
   },
   "blocking_failures": [],
-  "observations": [
-    "OBS-001"
-  ],
+  "observations": [],
   "stages": [
     {
       "name": "البناء · المحرّك",
       "code": 0,
-      "seconds": 48.0
+      "seconds": 9.6
     },
     {
       "name": "التنسيق",
       "code": 0,
-      "seconds": 0.9
+      "seconds": 0.7
     },
     {
       "name": "منظومة QA · API وأمنٌ ومنعُ تكرار",
-      "code": 1,
-      "seconds": 361.8
+      "code": 0,
+      "seconds": 59.1
     },
     {
       "name": "حرّاسُ الويب",
       "code": 0,
-      "seconds": 18.4
+      "seconds": 14.6
     },
     {
       "name": "وحدةُ أندرويد",
       "code": 0,
-      "seconds": 50.0
+      "seconds": 13.5
     }
   ]
 }

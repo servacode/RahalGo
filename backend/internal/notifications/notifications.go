@@ -277,9 +277,72 @@ func (s *Service) Notify(ctx context.Context, in Input) {
 
 // NotifyMany يرسل الإشعار نفسه لعدة مستخدمين (مثلاً كل العمليات).
 func (s *Service) NotifyMany(ctx context.Context, userIDs []string, in Input) {
+	if s == nil || len(userIDs) == 0 || in.Title == "" {
+		return
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والصفوفُ تُدرَج دفعةً — لا واحداً واحدا**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (`NOTIF-010`، قِيس ٢٠٢٦-٠٨-١٩: قاعدةُ الاختبار فيها **٢٠٦٥٦
+	//  متسوّقا**، والبثُّ **لم ينتهِ في ثلاثين ثانية.**)
+	//
+	// **وكانت تلفّ فتنادي `Notify` لكلٍّ** — إدراجٌ منفصلٌ ورحلةُ ذهابٍ
+	// وإياب إلى القاعدة لكلّ مستخدم. **والنداءُ متزامنٌ داخل طلب
+	// الإدارة**، فمن نشر عرضاً انتظر حتّى يُكتب آخرُ صفّ.
+	//
+	// **والدفعةُ تكتبهم في نداءٍ واحد** — `unnest` على مصفوفةِ
+	// المعرّفات.
+	//
+	// # والعابرُ لا صفَّ له
+	//
+	// **`Transient` يرنّ ويمضي** — فلا إدراجَ له، **ويُبثّ وحدَه.**
+	if !in.Transient {
+		if _, err := s.db.Exec(ctx, `
+			INSERT INTO notifications (user_id, kind, title, body, entity, entity_id, href)
+			SELECT u, $2, $3, $4, $5, $6, $7 FROM unnest($1::uuid[]) AS u`,
+			userIDs, in.Kind, in.Title, in.Body, in.Entity, in.EntityID, in.Href,
+		); err != nil {
+			s.logger.Error("notify: bulk insert", "error", err, "count", len(userIDs))
+			return
+		}
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **والبثُّ والدفعُ يبقيان لكلّ واحد**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ولكلٍّ قناتُه في المقبس وأجهزتُه** — فلا تُجمَع. **إنّما لا
+	// تُنادى `Notify` كي لا يُدرَج الصفُّ مرّتين.**
+	//
+	// **والمعرّفُ يُترك فارغاً في البثّ** — كما في العابر: **شاشةٌ
+	// تحاول أن تعلّمه مقروءاً تنادي على ما لا تعرفه**، وإنعاشُ الصندوق
+	// يجلب الصفَّ بمعرّفه.
+	createdAt := time.Now().UTC().Format(time.RFC3339)
 	for _, uid := range userIDs {
-		in.UserID = uid
-		s.Notify(ctx, in)
+		s.hub.Publish("user:"+uid, map[string]any{
+			"type": "notification",
+			"notification": Notification{
+				Kind: in.Kind, Title: in.Title, Body: in.Body,
+				Entity: in.Entity, EntityID: in.EntityID,
+				Read: false, CreatedAt: createdAt, Transient: in.Transient,
+			},
+		})
+		// **وحمولةُ الدفع كما في `Notify` حرفا** — **ونسختان تفترقان
+		// يومَ يُضاف حقلٌ في إحداهما.**
+		if s.pusher != nil && !in.Silent {
+			s.pusher.SendToUser(ctx, uid, PushMessage{
+				Title: in.Title,
+				Body:  in.Body,
+				Data: map[string]string{
+					"kind":      in.Kind,
+					"entity":    in.Entity,
+					"entity_id": in.EntityID,
+				},
+				Urgent: in.Kind == KindOrder,
+				Apps:   in.Apps,
+			})
+		}
 	}
 }
 
