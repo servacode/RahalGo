@@ -102,8 +102,6 @@ data class Item(
      */
     @SerialName("price_before") val priceBefore: Long? = null,
     @SerialName("discount_percent") val discountPercent: Int? = null,
-    /** **أهو في مفضّلته** — يردّه بابُ المفضّلة وحدَه. */
-    val favorite: Boolean = false,
 )
 
 @Serializable
