@@ -1,15 +1,12 @@
 package com.rahalgo.map
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.rahalgo.ui.AppCore
-import org.maplibre.android.MapLibre
-import org.maplibre.android.WellKnownTileServer
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapView
@@ -52,8 +49,13 @@ fun MapCanvas(
     val styleUrl = remember { AppCore.get().baseUrl + "/api/v1/public/map-style.json" }
 
     val view = remember {
-        MapLibre.getInstance(context, null, WellKnownTileServer.MapLibre)
+        // **والتهيئةُ من `MapHost`** — كانت هنا وفي تطبيق السائق،
+        // **ونسختان من تهيئةِ مكتبةٍ أصليّةٍ تفترقان يومَ يتبدّل
+        // معاملُها.** (المرحلة ٠.)
+        ensureMapLibre(context)
         MapView(context).apply {
+            // **و`onCreate` تبقى هنا وحدَها** — `TripMap` لا تناديها،
+            // **وتوحيدُهما تغييرُ سلوكٍ** وهو خارجَ المرحلة ٠.
             onCreate(null)
             getMapAsync { map ->
                 map.setStyle(Style.Builder().fromUri(styleUrl)) {
@@ -77,15 +79,7 @@ fun MapCanvas(
         onJumped()
     }
 
-    DisposableEffect(Unit) {
-        view.onStart()
-        view.onResume()
-        onDispose {
-            view.onPause()
-            view.onStop()
-            view.onDestroy()
-        }
-    }
+    MapLifecycle(view)
 
     AndroidView(factory = { view }, modifier = modifier)
 }

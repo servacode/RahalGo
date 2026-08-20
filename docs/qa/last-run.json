@@ -11,27 +11,27 @@
     {
       "name": "البناء · المحرّك",
       "code": 0,
-      "seconds": 77.0
+      "seconds": 77.5
     },
     {
       "name": "التنسيق",
       "code": 0,
-      "seconds": 0.6
+      "seconds": 1.4
     },
     {
       "name": "منظومة QA · API وأمنٌ ومنعُ تكرار",
       "code": 0,
-      "seconds": 48.1
+      "seconds": 38.1
     },
     {
       "name": "حرّاسُ الويب",
       "code": 0,
-      "seconds": 39.6
+      "seconds": 10.3
     },
     {
       "name": "وحدةُ أندرويد",
       "code": 0,
-      "seconds": 56.4
+      "seconds": 32.1
     }
   ]
 }

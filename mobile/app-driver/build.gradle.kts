@@ -136,6 +136,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.play.services.location)
+    // **وملاحةُ السائق وحدةٌ مستقلّة** — المرحلة ٠ من خطّة الملاحة.
+    implementation(project(":driver-navigation"))
+    implementation(project(":map"))
     implementation(libs.maplibre)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)

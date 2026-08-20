@@ -39,6 +39,8 @@ include(":ui")
 // **وحدةُ الخرائط** — منتقي نقطةٍ لثلاثة تطبيقات،
 // **ومكتبتُها الأصليّةُ ثقيلةٌ فلا تُفرض على من لا يرسم.**
 include(":map")
+// **وملاحةُ السائق وحدةٌ مستقلّة** — انظر `driver-navigation/build.gradle.kts`.
+include(":driver-navigation")
 include(":app-driver")
 // **تطبيقُ الزبون** — يُبنى فوق الوحدات نفسِها.
 include(":app-customer")

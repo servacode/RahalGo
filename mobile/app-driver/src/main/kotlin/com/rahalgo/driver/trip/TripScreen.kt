@@ -1,5 +1,7 @@
 package com.rahalgo.driver.trip
 
+import com.rahalgo.navigation.TripMap
+import com.rahalgo.navigation.MarkerIcons
 import androidx.compose.animation.AnimatedVisibility
 import com.rahalgo.ui.Countdown
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -118,6 +120,13 @@ fun TripScreen(
 
     Box(Modifier.fillMaxSize()) {
         TripMap(
+            // **وأيقوناتُ التطبيق تُمرَّر** — نسخُها تختلف عن نسخِ
+            // `:ui`، **فالنقلُ لا يغيّر ما يُرى.** (المرحلة ٠.)
+            icons = MarkerIcons(
+                driver = R.drawable.ic_moto,
+                pickup = R.drawable.ic_store,
+                dropoff = R.drawable.ic_pin,
+            ),
             driver = state.driver,
             // **وقبل الاستلام تُعرض النقطتان** — بعده تُطفأ نقطة المتجر:
             // **انتهى شأنه منها**، وخريطة فيها ما لم يعد يلزم تشوّش.

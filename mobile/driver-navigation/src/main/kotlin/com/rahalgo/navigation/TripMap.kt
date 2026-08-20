@@ -1,4 +1,4 @@
-package com.rahalgo.driver.trip
+package com.rahalgo.navigation
 
 import android.content.Context
 import androidx.compose.runtime.Composable
@@ -7,7 +7,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
-import com.rahalgo.driver.data.Backend
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -88,6 +87,7 @@ const val STYLE_ASSET = "asset://map-style.json"
  */
 @Composable
 fun TripMap(
+    icons: MarkerIcons,
     driver: LatLng?,
     pickup: LatLng?,
     dropoff: LatLng?,
@@ -106,19 +106,11 @@ fun TripMap(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val view = remember { createMapView(context) }
+    val view = com.rahalgo.map.rememberMapView()
     // **وما عولج لا يُعاد** — الدالّة تُنادى مع كلّ رسمٍ جديد.
     val handled = remember { intArrayOf(-1) }
 
-    DisposableEffect(Unit) {
-        view.onStart()
-        view.onResume()
-        onDispose {
-            view.onPause()
-            view.onStop()
-            view.onDestroy()
-        }
-    }
+    com.rahalgo.map.MapLifecycle(view)
 
     AndroidView(factory = { view }, modifier = modifier) { map ->
         map.getMapAsync { libre ->
@@ -131,11 +123,11 @@ fun TripMap(
             val style = libre.style
             if (style == null) {
                 libre.setStyle(Style.Builder().fromUri(STYLE_ASSET)) {
-                    Markers.draw(context, it, driver, pickup, dropoff, route)
+                    Markers.draw(context, it, driver, pickup, dropoff, route, icons)
                     fitAll(libre, driver, pickup, dropoff)
                 }
             } else {
-                Markers.draw(context, style, driver, pickup, dropoff, route)
+                Markers.draw(context, style, driver, pickup, dropoff, route, icons)
             }
 
             // **وردُّه إلى موضعه أوّلا** — ضغطةٌ صريحةٌ تسبق كلَّ سلوكٍ
@@ -203,7 +195,3 @@ fun ensureMapLibre(context: Context) {
     MapLibre.getInstance(context.applicationContext, null, WellKnownTileServer.MapLibre)
 }
 
-private fun createMapView(context: Context): MapView {
-    ensureMapLibre(context)
-    return MapView(context)
-}

@@ -1,11 +1,10 @@
-package com.rahalgo.driver.trip
+package com.rahalgo.navigation
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import androidx.core.content.ContextCompat
-import com.rahalgo.driver.R
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.CircleLayer
@@ -88,8 +87,16 @@ object Markers {
         pickup: LatLng?,
         dropoff: LatLng?,
         route: List<LatLng> = emptyList(),
+        // ══════════════════════════════════════════════════════════════
+        // **وأيقوناتُ التطبيق تُمرَّر لا تُستورَد**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (المرحلة ٠: قِيس أنّ `ic_moto` و`ic_pin` في `app-driver`
+        //  **تختلفان عن نسختيهما في `:ui`** — فالاستيرادُ من `:ui`
+        //  كان سيغيّر المظهر، **والنقلُ يجب ألّا يغيّر شيئا.**)
+        icons: MarkerIcons,
     ) {
-        images(context, style)
+        images(context, style, icons)
         // **والخطّ أوّلا ثمّ العلامات** — الترتيب هو ترتيب الرسم:
         // **من رسم الخطّ فوقها** شطبها بخطّ يمرّ في وسطها.
         //
@@ -108,11 +115,11 @@ object Markers {
     }
 
     /** **الصورُ تُسجَّل مرّةً في الأسلوب** — ثمّ تُنادى بأسمائها. */
-    private fun images(context: Context, style: Style) {
+    private fun images(context: Context, style: Style, icons: MarkerIcons) {
         if (style.getImage(IMG_DRIVER) != null) return
-        style.addImage(IMG_DRIVER, badge(context, R.drawable.ic_moto, DRIVER, 46))
-        style.addImage(IMG_PICKUP, badge(context, R.drawable.ic_store, PICKUP, 40))
-        style.addImage(IMG_DROPOFF, badge(context, R.drawable.ic_pin, DROPOFF, 40))
+        style.addImage(IMG_DRIVER, badge(context, icons.driver, DRIVER, 46))
+        style.addImage(IMG_PICKUP, badge(context, icons.pickup, PICKUP, 40))
+        style.addImage(IMG_DROPOFF, badge(context, icons.dropoff, DROPOFF, 40))
     }
 
     /**
@@ -238,3 +245,15 @@ object Markers {
             it.addStringProperty("kind", kind)
         }
 }
+
+/**
+ * **أيقوناتُ العلامات — يملكها التطبيقُ لا الوحدة.**
+ *
+ * **ونسخةُ `app-driver` من `ic_moto` تختلف عن نسخة `:ui`** — قِيس في
+ * المرحلة ٠. **فمن استوردها من الوحدة غيّر المظهرَ وهو ينقل.**
+ */
+data class MarkerIcons(
+    @androidx.annotation.DrawableRes val driver: Int,
+    @androidx.annotation.DrawableRes val pickup: Int,
+    @androidx.annotation.DrawableRes val dropoff: Int,
+)
