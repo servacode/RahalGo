@@ -26,6 +26,19 @@ class NavPipeline(
     /** **الفاصلُ المتوقَّع بين قراءتين** — يُستعمل حين لا يُعرف الفعليّ. */
     private val expectedIntervalMs: Long = 1_000L,
     private val bearing: BearingTracker = BearingTracker(),
+    /**
+     * **مِسْبَرُ التشخيص** — يُنادى بكلّ قراءةٍ بحُكمها.
+     *
+     * (أمرُ المالك ٢٠٢٦-٠٨-٢٠، البند ٩: «سجّل سبب رفض القراءات في
+     *  Debug/Telemetry المناسب **بدون إغراق Logs الإنتاجية**».)
+     *
+     * **ومِسْبَرٌ يُمرَّر لا سجلٌّ يُكتب هنا**: هذا الصنفُ حسابٌ محضٌ
+     * يُختبر بلا أندرويد، **وسطرُ `Log` واحدٌ فيه يربطه بالنظام
+     * فيموت الاختبار.**
+     *
+     * **وفارغٌ يعني لا تشخيص** — وهو الافتراض.
+     */
+    private val probe: ((NavFix, FixGrade, RejectReason) -> Unit)? = null,
 ) {
 
     /** **ما يُرسَم بعد قراءةٍ واحدة.** */
@@ -63,6 +76,24 @@ class NavPipeline(
     var degraded: Int = 0
         private set
 
+    /** **ولماذا رُفضت** — عدٌّ لكلّ سبب. (البند ٩.) */
+    var rejectedAccuracy: Int = 0
+        private set
+    var rejectedTeleport: Int = 0
+        private set
+    var rejectedStale: Int = 0
+        private set
+
+    /** **مدى الدقّة المرصود** — ليُعرف أمناسبةٌ حدودُنا للواقع. */
+    var worstAccuracyM: Float = 0f
+        private set
+    var bestAccuracyM: Float = Float.MAX_VALUE
+        private set
+    private var accuracySum: Double = 0.0
+
+    /** **متوسّطُ الدقّة** — صفرٌ إن لم تصل قراءةٌ بعد. */
+    val meanAccuracyM: Double get() = if (seen == 0) 0.0 else accuracySum / seen
+
     /**
      * **يُغذّى قراءةً فيردّ ما يُرسم.**
      *
@@ -73,8 +104,19 @@ class NavPipeline(
         seen++
         val previous = lastAccepted
         val (grade, reason) = GpsQuality.grade(fix, previous)
+        probe?.invoke(fix, grade, reason)
+        if (fix.accuracyM < bestAccuracyM) bestAccuracyM = fix.accuracyM
+        if (fix.accuracyM > worstAccuracyM) worstAccuracyM = fix.accuracyM
+        accuracySum += fix.accuracyM.toDouble()
+
         if (grade == FixGrade.REJECTED) {
             rejected++
+            when (reason) {
+                RejectReason.ACCURACY -> rejectedAccuracy++
+                RejectReason.TELEPORT -> rejectedTeleport++
+                RejectReason.STALE -> rejectedStale++
+                RejectReason.NONE -> Unit
+            }
             return Step(grade, reason, null, null, bearing.smoothed, 0L)
         }
         if (grade == FixGrade.DEGRADED) degraded++
@@ -105,5 +147,11 @@ class NavPipeline(
         seen = 0
         rejected = 0
         degraded = 0
+        rejectedAccuracy = 0
+        rejectedTeleport = 0
+        rejectedStale = 0
+        worstAccuracyM = 0f
+        bestAccuracyM = Float.MAX_VALUE
+        accuracySum = 0.0
     }
 }

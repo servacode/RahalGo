@@ -1,6 +1,7 @@
 package com.rahalgo.navigation
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -34,7 +35,7 @@ import androidx.compose.runtime.setValue
 class NavigationSession(
     private val context: Context,
     private val engine: LocationEngine = LocationEngine(context),
-    private val pipeline: NavPipeline = NavPipeline(),
+    private val pipeline: NavPipeline = NavPipeline(probe = ::log),
 ) {
 
     /**
@@ -51,6 +52,19 @@ class NavigationSession(
         private set
 
     private var stepId = 0L
+    private var firstFixAt = 0L
+    private var lastFixAt = 0L
+    private var minGapMs = Long.MAX_VALUE
+    private var maxGapMs = 0L
+
+    /** **مدّةُ الجلسة بالميلي** — من أوّل قراءةٍ إلى آخرها. */
+    val spanMs: Long get() = if (firstFixAt == 0L) 0L else lastFixAt - firstFixAt
+
+    /** **متوسّطُ الفاصل الفعليّ** — لا المطلوب. (البند ٥ من التقرير.) */
+    val meanGapMs: Long get() = if (samples < 2) 0L else spanMs / (samples - 1)
+
+    val minGap: Long get() = if (minGapMs == Long.MAX_VALUE) 0L else minGapMs
+    val maxGap: Long get() = maxGapMs
 
     /** **عدّاداتُ القياس** — تُقرأ في تقرير المرحلة. */
     val samples: Int get() = engine.samples
@@ -69,7 +83,24 @@ class NavigationSession(
         if (running) return true
         pipeline.reset()
         stepId = 0L
+        firstFixAt = 0L
+        lastFixAt = 0L
+        minGapMs = Long.MAX_VALUE
+        maxGapMs = 0L
         engine.onFix = { fix ->
+            // **والفاصلُ الفعليُّ يُقاس هنا** — قبل أيّ ترشيح:
+            // **المرفوضةُ وصلت أيضاً**، وتردّدُ الجهاز يُقاس بما أعطى
+            // لا بما قُبل.
+            if (firstFixAt == 0L) {
+                firstFixAt = fix.atMs
+            } else {
+                val gap = fix.atMs - lastFixAt
+                if (gap in 1..600_000) {
+                    if (gap < minGapMs) minGapMs = gap
+                    if (gap > maxGapMs) maxGapMs = gap
+                }
+            }
+            lastFixAt = fix.atMs
             val step = pipeline.onFix(fix)
             // **والمرفوضةُ لا تُبدّل ما يُرسم** — تبقى الأيقونةُ حيث
             // هي. **وهذا هو «لا تسمح لقراءةٍ سيّئةٍ أن تقفز شارعا».**
@@ -82,6 +113,21 @@ class NavigationSession(
     }
 
     /**
+     * **سطرُ الخلاصة** — يُطبع عند الإغلاق ويُقرأ في التقرير.
+     *
+     * **ولا يُطبع في كلّ قراءة** — أمرُ المالك: «بدون إغراق Logs
+     * الإنتاجية».
+     */
+    fun summary(): String =
+        "قراءات=$samples مقبولة=${seen - rejected - degraded} متدهورة=$degraded " +
+            "مرفوضة=$rejected (دقّة=${pipeline.rejectedAccuracy} " +
+            "قفزة=${pipeline.rejectedTeleport} قديمة=${pipeline.rejectedStale}) " +
+            "الفاصل: متوسّط=${meanGapMs}ملّي أدنى=${minGap} أقصى=${maxGap} " +
+            "الدقّة: أفضل=${pipeline.bestAccuracyM} أسوأ=${pipeline.worstAccuracyM} " +
+            "متوسّط=${"%.1f".format(pipeline.meanAccuracyM)} " +
+            "المدّة=${spanMs}ملّي"
+
+    /**
      * **يغلق الجلسة ويعيد الجهازَ إلى وضعه.**
      *
      * (معيارُ المالك: «إنهاء جلسة الملاحة يعيد Location Mode للوضع
@@ -92,9 +138,28 @@ class NavigationSession(
      */
     fun stop() {
         if (!running) return
+        Log.i(TAG, "خلاصةُ الملاحة — ${summary()}")
         engine.stop()
         engine.onFix = null
         running = false
         render = null
+    }
+
+    private companion object {
+        const val TAG = "RahalGo/nav"
+
+        /**
+         * **يُسجّل المرفوضَ والمتدهورَ وحدَهما** — والمقبولةُ هي
+         * الأغلبيّة، **وسطرٌ لكلّ قراءةٍ في الثانية يملأ السجلَّ فلا
+         * يُقرأ منه شيء.**
+         */
+        fun log(fix: NavFix, grade: FixGrade, reason: RejectReason) {
+            if (grade == FixGrade.ACCEPTED) return
+            Log.d(
+                TAG,
+                "قراءة $grade ${if (reason != RejectReason.NONE) reason else ""} " +
+                    "دقّة=${fix.accuracyM} سرعة=${fix.speedMps} اتّجاه=${fix.bearingDeg}",
+            )
+        }
     }
 }
