@@ -209,12 +209,20 @@ class DriverApi(private val api: ApiClient) {
         lng: Double,
         speedMps: Double? = null,
         accuracyM: Double? = null,
+        /**
+         * **اتّجاهُ السير** — وفارغٌ يعني «لم يقله الجهاز».
+         *
+         * **ولا يُرسَل حين يغيب** — الحقلُ الغائبُ أصدقُ من صفرٍ
+         * يُقرأ شمالا.
+         */
+        bearingDeg: Double? = null,
     ) {
         val body = buildMap<String, Any> {
             put("lat", lat)
             put("lng", lng)
             if (speedMps != null) put("speed_mps", speedMps)
             if (accuracyM != null) put("accuracy_m", accuracyM)
+            if (bearingDeg != null) put("bearing_deg", bearingDeg)
         }
         api.call<Ack>("/api/v1/driver/location", HttpMethod.Post, body)
     }

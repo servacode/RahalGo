@@ -17,6 +17,7 @@ package qa
 // أوقف كلَّ سائقٍ لم يحدّث.
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -339,5 +340,97 @@ func TestNAVB_035_BatchStillMovesDriver(t *testing.T) {
 	}
 	if int(lat*1000) != 35960 || int(lng*1000) != 39020 {
 		t.Errorf("NAVB-035 **الموضعُ الأخيرُ خطأ**: %f,%f", lat, lng)
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **السلسلةُ كاملةً — من نصِّ التطبيق إلى عمود القاعدة**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (المرحلة ١، أمرُ المالك ٢٠٢٦-٠٨-٢٠: «أريد اختبار تكامل واحد على
+//  الأقلّ يثبت السلسلة: Android-side TrackPoint → serialized request
+//  → backend → stored bearing_deg».)
+//
+// # ولماذا نصٌّ خامٌّ لا خريطةُ مفاتيح
+//
+// **الجسمُ هنا مكتوبٌ كما يكتبه `kotlinx.serialization` حرفاً بحرف** —
+// أسماءُ الحقول وترتيبُها. **وخريطةٌ تُبنى في Go تختبر Go لا تختبر
+// العقد**: من بدّل `@SerialName` في كوتلن **لا يسقط شيء**، ويصل
+// الحقلُ باسمٍ لا يعرفه الخادم.
+
+// TestNAVB_040_AndroidBodyReachesColumn **نصُّ التطبيق يصل العمود.**
+func TestNAVB_040_AndroidBodyReachesColumn(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+
+	// **وهذا ما تنتجه `DriverApi.sendLocation` حرفاً بحرف.**
+	raw := `{"lat":35.9506,"lng":39.0094,"speed_mps":11.2,"accuracy_m":6.0,"bearing_deg":137.5}`
+	res := h.Call("POST", "/api/v1/driver/location", drv.Token, json.RawMessage(raw), nil)
+	if res.Code != 200 {
+		t.Fatalf("NAVB-040 نصُّ التطبيق رُدّ: %s", res)
+	}
+	got := bearingOf(t, h, drv.ID)
+	if got == nil || *got != 137.5 {
+		t.Fatalf("NAVB-040 **السلسلةُ انقطعت**: العمودُ %v", got)
+	}
+}
+
+// TestNAVB_041_AndroidQueueBodyReachesColumn **وطابورُ التطبيق كذلك.**
+//
+// **وهو ما يُقرأ من `points.jsonl` ويُرسَل دفعةً** — بخليطه الواقعيّ:
+// نقطةٌ بالاتّجاه، وأخرى بلاه (وقوفٌ عند إشارة)، وثالثةٌ بشاذّ.
+func TestNAVB_041_AndroidQueueBodyReachesColumn(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	now := time.Now().UTC()
+	f := func(d time.Duration) string { return now.Add(d).Format(time.RFC3339) }
+
+	raw := `{"points":[` +
+		`{"lat":35.9506,"lng":39.0094,"at":"` + f(-60*time.Second) + `","speed_mps":11.2,"accuracy_m":6.0,"bearing_deg":45.0},` +
+		`{"lat":35.9510,"lng":39.0098,"at":"` + f(-40*time.Second) + `","speed_mps":0.1,"accuracy_m":7.0},` +
+		`{"lat":35.9514,"lng":39.0102,"at":"` + f(-20*time.Second) + `","speed_mps":9.5,"accuracy_m":5.0,"bearing_deg":400.0}` +
+		`]}`
+	res := h.Call("POST", "/api/v1/driver/location/batch", drv.Token, json.RawMessage(raw), nil)
+	if res.Code != 200 {
+		t.Fatalf("NAVB-041 طابورُ التطبيق رُدّ: %s", res)
+	}
+	if n, _ := res.JSON()["accepted"].(float64); n != 3 {
+		t.Fatalf("NAVB-041 قُبلت %v من ثلاث", res.JSON()["accepted"])
+	}
+	rows := trackRows(t, h, drv.ID)
+	if len(rows) != 3 {
+		t.Fatalf("NAVB-041 حُفظت %d من ثلاث", len(rows))
+	}
+	if rows[0] == nil || *rows[0] != 45 {
+		t.Errorf("NAVB-041 **الاتّجاهُ ضاع في الطابور**: %v", rows[0])
+	}
+	if rows[1] != nil {
+		t.Errorf("NAVB-041 اخترع اتّجاهاً لنقطةِ وقوف: %v", *rows[1])
+	}
+	if rows[2] != nil {
+		t.Errorf("NAVB-041 حُفظ شاذٌّ: %v", *rows[2])
+	}
+}
+
+// TestNAVB_042_LegacyQueueLineStillWorks **وسطرٌ من نسخةٍ قديمةٍ يُرفع.**
+//
+// **وطابورُ سائقٍ انقطعت شبكتُه ساعةً كُتب بالنسخة القديمة** — ومن
+// رفضه أضاع مسارَه كلَّه.
+func TestNAVB_042_LegacyQueueLineStillWorks(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	now := time.Now().UTC().Add(-30 * time.Second).Format(time.RFC3339)
+	// **بلا `bearing_deg` أصلاً** — كما يكتبها التطبيقُ المنشورُ اليوم.
+	raw := `{"points":[{"lat":35.9506,"lng":39.0094,"at":"` + now +
+		`","speed_mps":9.0,"accuracy_m":8.0}]}`
+	res := h.Call("POST", "/api/v1/driver/location/batch", drv.Token, json.RawMessage(raw), nil)
+	if res.Code != 200 {
+		t.Fatalf("NAVB-042 **سطرٌ قديمٌ رُدّ**: %s", res)
+	}
+	if n, _ := res.JSON()["accepted"].(float64); n != 1 {
+		t.Errorf("NAVB-042 قُبلت %v من واحدة", res.JSON()["accepted"])
+	}
+	if b := bearingOf(t, h, drv.ID); b != nil {
+		t.Errorf("NAVB-042 اخترع اتّجاهاً: %v", *b)
 	}
 }

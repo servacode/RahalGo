@@ -142,11 +142,25 @@ class LocationService : Service() {
 
         val speed = if (point.hasSpeed()) point.speed.toDouble() else null
         val accuracy = if (point.hasAccuracy()) point.accuracy.toDouble() else null
+        // ══════════════════════════════════════════════════════════════
+        // **والاتّجاهُ يُسأل عنه ولا يُقرأ مباشرة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (المرحلة ١، تصحيحُ المالك ٢٠٢٦-٠٨-٢٠.)
+        //
+        // **و`getBearing()` تردّ صفراً حين لا اتّجاه** — لا فراغاً.
+        // **فمن قرأها بلا `hasBearing()` وجّه كلَّ درّاجةٍ واقفةٍ
+        // شمالاً**، وكتب في الأثر اتّجاهاً لم يقله الجهازُ قطّ.
+        //
+        // **ولا يُخترع اتّجاهٌ من نقطتين هنا** — ذاك حسابُ الملاحة
+        // (`BearingTracker`)، **وأثرُ الورديّة يحفظ ما قاله الجهازُ
+        // لا ما استنتجناه.**
+        val bearing = if (point.hasBearing()) point.bearing.toDouble() else null
 
         scope.launch {
             val api = Backend.of(applicationContext).driver
             try {
-                api.sendLocation(point.latitude, point.longitude, speed, accuracy)
+                api.sendLocation(point.latitude, point.longitude, speed, accuracy, bearing)
             } catch (e: CancellationException) {
                 // **وتوقّفُ الخدمة ليس فشلَ إرسال** — ولو صُفَّت النقطةُ
                 // هنا **لَتراكمت طوابيرُ ورديّةٍ انتهت**، وأُرسلت
@@ -163,6 +177,10 @@ class LocationService : Service() {
                         at = stamp(point.time),
                         speedMps = speed,
                         accuracyM = accuracy,
+                        // **ويُحفظ مع النقطة في الطابور** — **وإلّا
+                        // ضاع اتّجاهُ كلّ من انقطعت شبكتُه**، وهي
+                        // أطولُ المسارات وأغناها بالمنعطفات.
+                        bearingDeg = bearing,
                     ),
                 )
                 Log.w(TAG, "تعذّر الإرسال — حُفظت في الطابور", e)
