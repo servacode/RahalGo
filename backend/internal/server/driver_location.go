@@ -43,6 +43,20 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 		// عند الباب»، **والوقوفُ يُقاس بالأمتار.**
 		SpeedMps  *float64 `json:"speed_mps"`
 		AccuracyM *float64 `json:"accuracy_m"`
+		// ══════════════════════════════════════════════════════════════
+		// **والاتّجاهُ — المرحلة ١ من الملاحة**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// (أمرُ المالك ٢٠٢٦-٠٨-٢٠: «حافظ على backward compatibility…
+		//  لا تجعل حقلاً جديداً إجباريّاً على النسخ القديمة».)
+		//
+		// **ومؤشّرٌ لا قيمة**: النسخةُ المنشورةُ اليوم لا ترسله،
+		// **وحقلٌ إلزاميٌّ يجعل كلَّ سائقٍ لم يحدّث يفشل في إرسال
+		// موضعه.**
+		//
+		// **ولا يُقرأ في المرحلة ١** — يُحفظ لما بعدها. (انظر
+		// `0117_track_bearing.sql`.)
+		BearingDeg *float64 `json:"bearing_deg"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -75,11 +89,14 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	//
 	// **وتعثّرُه لا يُسقط حفظَ الموضع**: الموضعُ هو ما يُسأل عنه كلَّ لحظة،
 	// **والأثرُ ترفٌ يُقرأ عند الإسناد وحدَه.**
+	// **والاتّجاهُ يُنظَّف قبل أن يُكتب** — القيدُ في القاعدة يرفض ما
+	// خرج عن الدائرة، **ورفضُ القاعدةِ يُسقط كتابةَ الأثر كلَّها.**
+	bearing := cleanBearing(req.BearingDeg)
 	if _, err := s.pg.Exec(r.Context(), `
-		INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m)
-		VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, now(), $4, $5)
+		INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m, bearing_deg)
+		VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, now(), $4, $5, $6)
 		ON CONFLICT (driver_id, recorded_at) DO NOTHING`,
-		uid, req.Lng, req.Lat, req.SpeedMps, req.AccuracyM); err != nil {
+		uid, req.Lng, req.Lat, req.SpeedMps, req.AccuracyM, bearing); err != nil {
 		s.logger.Warn("التعقّب: تعذّر كتابةُ الأثر", "driver", uid, "error", err)
 	}
 
@@ -95,4 +112,21 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.JSON(w, http.StatusOK, map[string]any{"saved": true})
+}
+
+// cleanBearing **يردّ الاتّجاهَ إن كان في دائرته، وفارغاً إن لم يكن.**
+//
+// **وجهازٌ يرسل ٣٦٠ أو سالباً ليس شاذّاً** — بعضُ المستقبِلات تفعل.
+// **وقيدُ القاعدة يرفضه فتسقط كتابةُ الأثر كلُّها**، فيُنظَّف هنا.
+//
+// **ولا يُصحَّح بالقسمة على ٣٦٠**: رقمٌ خارجَ المدى قد يكون خطأً في
+// الجهاز لا لفّةً زائدة، **وتصحيحُ ما لا نفهمه يخترع بيانات.**
+func cleanBearing(v *float64) *float64 {
+	if v == nil {
+		return nil
+	}
+	if *v < 0 || *v >= 360 {
+		return nil
+	}
+	return v
 }

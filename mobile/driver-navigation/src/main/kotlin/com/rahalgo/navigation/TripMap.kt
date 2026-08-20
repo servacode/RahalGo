@@ -103,12 +103,35 @@ fun TripMap(
      * من رايةٍ تُرفع وتُنزَّل فتضيع إن ضُغط مرّتين.
      */
     recenter: Int = 0,
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **الملاحةُ النشطة — المرحلة ١**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **وفارغةٌ تعني «لا ملاحة»**: تبقى الخريطةُ كما كانت حرفاً بحرف
+     * — **ومن لم يفتح ملاحةً لا يجد شيئاً تبدّل.**
+     *
+     * **وتحمل ما قرّرته وحدةُ الملاحة**: الهدفُ والاتّجاهُ والمدّة.
+     * (انظر `NavPipeline.Step`.)
+     */
+    nav: NavRender? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val view = com.rahalgo.map.rememberMapView()
     // **وما عولج لا يُعاد** — الدالّة تُنادى مع كلّ رسمٍ جديد.
     val handled = remember { intArrayOf(-1) }
+    // **ومُحرِّكُ الأيقونة يعيش بعمر الشاشة** — ومن بناه في كلّ رسمٍ
+    // ترك حركاتٍ يتيمةً تعمل معاً فترتجف الأيقونة.
+    val animator = remember { com.rahalgo.map.MarkerAnimator() }
+    // **وآخرُ ما عُرض** — منه تبدأ الحركةُ التالية، لا من القراءة.
+    val shown = remember { doubleArrayOf(Double.NaN, Double.NaN) }
+    val shownBearing = remember { floatArrayOf(0f) }
+    val navKey = remember { longArrayOf(-1L) }
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { animator.cancel() }
+    }
 
     com.rahalgo.map.MapLifecycle(view)
 
@@ -138,6 +161,49 @@ fun TripMap(
                     libre.easeCamera(CameraUpdateFactory.newLatLngZoom(driver, 16.5))
                 } else {
                     fitAll(libre, driver, pickup, dropoff)
+                }
+            } else if (nav != null && nav.targetLat != null && nav.targetLng != null) {
+                // ══════════════════════════════════════════════════════
+                // **والملاحةُ تمشي بالأيقونة وتُدير الخريطةَ معها**
+                // ══════════════════════════════════════════════════════
+                //
+                // (المرحلة ١، أمرُ المالك ٢٠٢٦-٠٨-٢٠.)
+                //
+                // **وكلُّ خطوةٍ تُنفَّذ مرّةً**: `AndroidView` تُنادى مع
+                // كلّ رسمٍ لأيّ سبب، **ومن بدأ الحركةَ في كلّ نداءٍ
+                // أعادها من أوّلها فتجمّدت الأيقونةُ في مكانها.**
+                if (nav.stepId != navKey[0]) {
+                    navKey[0] = nav.stepId
+                    val fromLat = if (shown[0].isNaN()) nav.targetLat else shown[0]
+                    val fromLng = if (shown[1].isNaN()) nav.targetLng else shown[1]
+                    val fromBearing = shownBearing[0]
+                    val toBearing = nav.bearingDeg ?: fromBearing
+                    // **وأوّلُ ظهورٍ يُوضع ولا يُمشى** — الحركةُ من
+                    // مكانٍ مجهولٍ تقطع الخريطة.
+                    val ms = if (shown[0].isNaN()) 0L else nav.durationMs
+
+                    animator.animate(
+                        fromLat, fromLng, nav.targetLat, nav.targetLng,
+                        fromBearing, toBearing, ms,
+                    ) { lat, lng, bearing ->
+                        shown[0] = lat
+                        shown[1] = lng
+                        shownBearing[0] = bearing
+                        libre.style?.let {
+                            Markers.draw(
+                                context, it, LatLng(lat, lng), pickup, dropoff, route,
+                                icons, bearing,
+                            )
+                        }
+                    }
+
+                    // **والكاميرا تلاحق الهدفَ بالمدّة نفسِها** —
+                    // فتصل معه لا قبله. (انظر `CameraPrimitives`.)
+                    val cam = nav.camera(com.rahalgo.map.CameraPrimitives.bearingOf(libre))
+                    com.rahalgo.map.CameraPrimitives.ease(
+                        libre, cam.lat, cam.lng, cam.zoom,
+                        cam.bearingDeg, cam.tiltDeg, cam.durationMs,
+                    )
                 }
             } else if (follow && driver != null) {
                 // **والملاحقة تُقرّب** — من يسير يريد الشارع الذي تحته

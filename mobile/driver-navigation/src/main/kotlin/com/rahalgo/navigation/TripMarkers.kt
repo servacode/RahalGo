@@ -55,6 +55,9 @@ object Markers {
     private const val SRC_LINE = "trip-line"
     private const val SRC_ME = "trip-me"
 
+    /** **خاصّيّةُ دوران الأيقونة** — تُكتب في النقطة وتُقرأ في الطبقة. */
+    private const val PROP_ROTATE = "rotate"
+
     private const val DRIVER = "#1E88E5"
     private const val PICKUP = "#FE9501"
     private const val DROPOFF = "#02678F"
@@ -95,6 +98,16 @@ object Markers {
         //  **تختلفان عن نسختيهما في `:ui`** — فالاستيرادُ من `:ui`
         //  كان سيغيّر المظهر، **والنقلُ يجب ألّا يغيّر شيئا.**)
         icons: MarkerIcons,
+        // ══════════════════════════════════════════════════════════════
+        // **ودورانُ الدرّاجة — المرحلة ١**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وفارغٌ يعني «لا تُدِرها»**: أوّلُ رحلةٍ قبل أن يُعرف
+        // اتّجاه، **وأيقونةٌ تُصفَّر إلى الشمال تكذب على صاحبها.**
+        //
+        // **ويُمرَّر ولا يُحسب هنا** — الحسابُ في `BearingTracker`،
+        // **وهذه ترسم ولا تقرّر.**
+        driverBearingDeg: Float? = null,
     ) {
         images(context, style, icons)
         // **والخطّ أوّلا ثمّ العلامات** — الترتيب هو ترتيب الرسم:
@@ -111,7 +124,7 @@ object Markers {
         // بلا خطٍّ لا تقول إلى أين** — وخطٌّ تقريبيٌّ خيرٌ من لا خطّ.
         line(style, route.ifEmpty { listOfNotNull(driver, pickup, dropoff) })
         me(style, driver)
-        points(style, driver, pickup, dropoff)
+        points(style, driver, pickup, dropoff, driverBearingDeg)
     }
 
     /** **الصورُ تُسجَّل مرّةً في الأسلوب** — ثمّ تُنادى بأسمائها. */
@@ -173,12 +186,18 @@ object Markers {
         )
     }
 
-    private fun points(style: Style, driver: LatLng?, pickup: LatLng?, dropoff: LatLng?) {
+    private fun points(
+        style: Style,
+        driver: LatLng?,
+        pickup: LatLng?,
+        dropoff: LatLng?,
+        driverBearingDeg: Float?,
+    ) {
         val features = buildList {
             pickup?.let { add(feature(it, IMG_PICKUP)) }
             dropoff?.let { add(feature(it, IMG_DROPOFF)) }
             // **وأنت آخرُ ما يُرسم** — فلا تُغطّى بعلامةٍ فوقك.
-            driver?.let { add(feature(it, IMG_DRIVER)) }
+            driver?.let { add(feature(it, IMG_DRIVER, driverBearingDeg)) }
         }
         val collection = FeatureCollection.fromFeatures(features)
         val existing = style.getSourceAs<GeoJsonSource>(SRC_POINTS)
@@ -196,6 +215,24 @@ object Markers {
                 // من المتجر، **وعلامةٌ تختفي لأنّها ضاقت** تُقرأ عطبا.
                 PropertyFactory.iconAllowOverlap(true),
                 PropertyFactory.iconIgnorePlacement(true),
+                // ══════════════════════════════════════════════════════
+                // **والدورانُ يُقرأ من خاصّيّة النقطة**
+                // ══════════════════════════════════════════════════════
+                //
+                // **وطبقةٌ واحدةٌ تحمل الثلاثةَ** — والمتجرُ والزبونُ
+                // لا يدوران، فتُكتب لهما صفراً. **وطبقةٌ ثانيةٌ
+                // للدرّاجة وحدَها تعني مصدرين يفترقان.**
+                //
+                // **و`iconRotationAlignment` خريطةٌ لا شاشة**: مع
+                // الخريطة تدور الدرّاجةُ مع الطريق، **ومع الشاشة تبقى
+                // ثابتةً والخريطةُ تدور تحتها** — وهو عكسُ المراد في
+                // الملاحة.
+                PropertyFactory.iconRotate(
+                    org.maplibre.android.style.expressions.Expression.get(PROP_ROTATE),
+                ),
+                PropertyFactory.iconRotationAlignment(
+                    org.maplibre.android.style.layers.Property.ICON_ROTATION_ALIGNMENT_MAP,
+                ),
             ),
         )
     }
@@ -240,9 +277,13 @@ object Markers {
         )
     }
 
-    private fun feature(at: LatLng, kind: String): Feature =
+    private fun feature(at: LatLng, kind: String, rotateDeg: Float? = null): Feature =
         Feature.fromGeometry(Point.fromLngLat(at.longitude, at.latitude)).also {
             it.addStringProperty("kind", kind)
+            // **والصفرُ لمن لا يدور** — لا حذفُ الخاصّيّة: **تعبيرٌ
+            // يقرأ خاصّيّةً غائبةً يردّ فراغاً فتختفي الأيقونةُ
+            // كلُّها** في بعض نسخ المحرّك.
+            it.addNumberProperty(PROP_ROTATE, rotateDeg ?: 0f)
         }
 }
 

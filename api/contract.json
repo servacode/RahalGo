@@ -3628,6 +3628,10 @@
         {
           "name": "accuracy_m",
           "type": "?float64"
+        },
+        {
+          "name": "bearing_deg",
+          "type": "?float64"
         }
       ],
       "response": [

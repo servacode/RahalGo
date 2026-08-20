@@ -50,4 +50,12 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.androidx.core.ktx)
     implementation(libs.maplibre)
+    // **ومحرّكُ موقع الملاحة هنا لا في التطبيق** — القرارُ في وحدة
+    // الملاحة، والتطبيقُ يشغّلها ويطفئها. (`LocationEngine`.)
+    implementation(libs.play.services.location)
+
+    // **ومنطقُ الملاحة يُختبر بلا جهاز** — انظر `NavPipeline`:
+    // **الجودةُ والاتّجاهُ والتنعيمُ والكاميرا حسابٌ محض**، وتُعاد
+    // رحلةٌ مسجَّلةٌ كلُّها في اختبارِ وحدة.
+    testImplementation(libs.junit)
 }

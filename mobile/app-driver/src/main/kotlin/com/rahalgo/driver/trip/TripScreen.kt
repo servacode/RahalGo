@@ -40,9 +40,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -118,6 +120,29 @@ fun TripScreen(
     var follow by rememberSaveable { mutableStateOf(false) }
     var recenter by rememberSaveable { mutableIntStateOf(0) }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **و«اتبعني» هو بوّابةُ الملاحة — لا زرَّ ثانٍ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (المرحلة ١، بأمر المالك ٢٠٢٦-٠٨-٢٠: «عندما يكون السائق داخل
+    //  جلسة رحلة نشطة».)
+    //
+    // **وزرّان لفعلٍ واحدٍ يسألان صاحبَهما أيَّهما يضغط** — والزرُّ
+    // قائمٌ منذ ٢٠٢٦-٠٨-١٢ ومعناه «لاحقني وأنا أسير». **وهذا هو
+    // معنى الملاحة بعينه.**
+    //
+    // **والجلسةُ تُفتح وتُغلق معه** — فمن أطفأه عاد الجهازُ إلى
+    // ورديّته العاديّة في اللحظة: **بطّاريّةٌ لا تُستنزف في جيبٍ
+    // واقف.**
+    val navContext = LocalContext.current
+    val navSession = remember { com.rahalgo.navigation.NavigationSession(navContext) }
+    LaunchedEffect(follow) {
+        if (follow) navSession.start() else navSession.stop()
+    }
+    // **ومغادرةُ الشاشة تُغلقها** — ومن خرج ونسي زرَّه ترك محرّكَ
+    // موقعٍ يعمل بلا شاشةٍ تقرؤه.
+    DisposableEffect(Unit) { onDispose { navSession.stop() } }
+
     Box(Modifier.fillMaxSize()) {
         TripMap(
             // **وأيقوناتُ التطبيق تُمرَّر** — نسخُها تختلف عن نسخِ
@@ -145,6 +170,9 @@ fun TripScreen(
             route = state.routeLine,
             follow = follow,
             recenter = recenter,
+            // **وما تُرسمه الملاحةُ حين تعمل** — وفارغٌ يعني «الخريطةُ
+            // كما كانت حرفاً بحرف».
+            nav = navSession.render,
             modifier = Modifier.fillMaxSize(),
         )
 
