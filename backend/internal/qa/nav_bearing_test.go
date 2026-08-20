@@ -105,12 +105,16 @@ func TestNAVB_011_BadBearingDoesNotBreakWrite(t *testing.T) {
 	}
 }
 
-// TestNAVB_020_BatchUnchanged **ودفعةُ ما جُمع بلا شبكةٍ تعمل كما كانت.**
+// TestNAVB_020_BatchAcceptsPlainPoints **ودفعةُ ما جُمع بلا شبكةٍ تعمل.**
 //
-// **ولا تحمل اتّجاهاً** — قِيس ٢٠٢٦-٠٨-٢٠: عقدُ الدفعة لم يُمسّ في
-// المرحلة ١، **وحقلٌ يُضاف في مكانٍ ويُنسى في آخرَ يجعل نصفَ الأثر
-// بلا اتّجاه.** مسجَّلٌ في التقرير.
-func TestNAVB_020_BatchUnchanged(t *testing.T) {
+// **وكانت لا تحمل اتّجاهاً حتّى صحّحه المالك** (٢٠٢٦-٠٨-٢٠): «أيّ
+// نقاط تُجمع أثناء انقطاع الشبكة تفقد الاتجاه نهائيًا». **وحقلٌ
+// يُضاف في مكانٍ ويُنسى في آخرَ يجعل نصفَ الأثر بلا اتّجاه** — وهو
+// ما وقع.
+//
+// **وهذه تحرس أنّ الإضافةَ لم تكسر ما كان** — انظر `NAVB-030`
+// فما بعدها للاتّجاه نفسِه.
+func TestNAVB_020_BatchAcceptsPlainPoints(t *testing.T) {
 	h := New(t)
 	drv := h.NewUser("driver")
 	// **ووقتٌ حيٌّ لا ثابتٌ مكتوب** — الدفعةُ ترفض ما شاخ (`batchMaxAge`)،
@@ -129,5 +133,211 @@ func TestNAVB_020_BatchUnchanged(t *testing.T) {
 	}
 	if n, _ := res.JSON()["accepted"].(float64); n != 2 {
 		t.Errorf("NAVB-020 قُبلت %v من نقطتين", res.JSON()["accepted"])
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **الاتّجاهُ في الدفعة — أُكمل ٢٠٢٦-٠٨-٢٠**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (تصحيحُ المالك: «أيّ نقاط تُجمع أثناء انقطاع الشبكة تفقد الاتجاه
+//  نهائيًا».)
+//
+// **والانقطاعُ في الشارع كثير** — فأطولُ المسارات وأغناها بالمنعطفات
+// هي التي كانت تصل بلا اتّجاه.
+
+// batchOf **يبني دفعةً بأوقاتٍ حيّة** — الدفعةُ ترفض ما شاخ.
+func batchOf(points ...map[string]any) map[string]any {
+	now := time.Now().UTC()
+	out := make([]map[string]any, 0, len(points))
+	for i, p := range points {
+		q := map[string]any{}
+		for k, v := range p {
+			q[k] = v
+		}
+		q["at"] = now.Add(time.Duration(-(len(points)-i)*20) * time.Second).Format(time.RFC3339)
+		out = append(out, q)
+	}
+	return map[string]any{"points": out}
+}
+
+// trackRows **ما حُفظ لهذا السائق** — موضعٌ واتّجاه.
+func trackRows(t *testing.T, h *Harness, driverID string) []*float64 {
+	t.Helper()
+	rows, err := h.Pool.Query(h.T.Context(), `
+		SELECT bearing_deg FROM driver_track
+		 WHERE driver_id = $1::uuid ORDER BY recorded_at`, driverID)
+	if err != nil {
+		t.Fatalf("NAVB: تعذّرت قراءةُ الأثر: %v", err)
+	}
+	defer rows.Close()
+	var out []*float64
+	for rows.Next() {
+		var v *float64
+		if err := rows.Scan(&v); err != nil {
+			t.Fatalf("NAVB: تعذّرت القراءة: %v", err)
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+// TestNAVB_030_OldBatchStillAccepted **ودفعةٌ قديمةٌ بلا اتّجاهٍ تُقبل.**
+//
+// **وطابورُ من كان بلا شبكةٍ كُتب بالنسخة القديمة** — ومن رفضه أضاع
+// مسارَ ساعةٍ كاملة.
+func TestNAVB_030_OldBatchStillAccepted(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	res := h.POST("/api/v1/driver/location/batch", drv.Token, batchOf(
+		map[string]any{"lat": 35.9506, "lng": 39.0094, "speed_mps": 8.0, "accuracy_m": 7.0},
+		map[string]any{"lat": 35.9510, "lng": 39.0098, "speed_mps": 9.0, "accuracy_m": 6.0},
+	))
+	if res.Code != 200 {
+		t.Fatalf("NAVB-030 **الدفعةُ القديمةُ رُدّت**: %s", res)
+	}
+	if n, _ := res.JSON()["accepted"].(float64); n != 2 {
+		t.Fatalf("NAVB-030 قُبلت %v من نقطتين", res.JSON()["accepted"])
+	}
+	for i, b := range trackRows(t, h, drv.ID) {
+		if b != nil {
+			t.Errorf("NAVB-030 النقطةُ %d اخترع لها اتّجاه: %v", i, *b)
+		}
+	}
+}
+
+// TestNAVB_031_BatchBearingStored **والاتّجاهُ الصالحُ يُخزَّن كما أُرسل.**
+func TestNAVB_031_BatchBearingStored(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	res := h.POST("/api/v1/driver/location/batch", drv.Token, batchOf(
+		map[string]any{"lat": 35.9506, "lng": 39.0094, "bearing_deg": 0.0},
+		map[string]any{"lat": 35.9510, "lng": 39.0098, "bearing_deg": 271.25},
+		map[string]any{"lat": 35.9514, "lng": 39.0102, "bearing_deg": 359.9},
+	))
+	if res.Code != 200 {
+		t.Fatalf("NAVB-031 الدفعةُ رُدّت: %s", res)
+	}
+	got := trackRows(t, h, drv.ID)
+	want := []float64{0, 271.25, 359.9}
+	if len(got) != len(want) {
+		t.Fatalf("NAVB-031 حُفظت %d نقاطٍ لا %d", len(got), len(want))
+	}
+	for i, w := range want {
+		if got[i] == nil {
+			t.Errorf("NAVB-031 **النقطةُ %d فقدت اتّجاهَها**", i)
+			continue
+		}
+		if *got[i] != w {
+			t.Errorf("NAVB-031 النقطةُ %d حُفظت %v لا %v", i, *got[i], w)
+		}
+	}
+}
+
+// TestNAVB_032_BadBatchBearingIgnored **واتّجاهٌ شاذٌّ يُهمَل ولا يُسقط
+// الموضع.**
+//
+// **وقيدُ القاعدة يرفض ما خرج عن الدائرة، ورفضُه يُسقط الدفعةَ
+// كلَّها** — فتضيع عشرون نقطةً لأنّ واحدةً منها شاذّة.
+func TestNAVB_032_BadBatchBearingIgnored(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	res := h.POST("/api/v1/driver/location/batch", drv.Token, batchOf(
+		map[string]any{"lat": 35.9506, "lng": 39.0094, "bearing_deg": 360.0},
+		map[string]any{"lat": 35.9510, "lng": 39.0098, "bearing_deg": -5.0},
+		map[string]any{"lat": 35.9514, "lng": 39.0102, "bearing_deg": 4000.0},
+	))
+	if res.Code != 200 {
+		t.Fatalf("NAVB-032 **اتّجاهٌ شاذٌّ ردَّ الدفعة**: %s", res)
+	}
+	got := trackRows(t, h, drv.ID)
+	if len(got) != 3 {
+		t.Fatalf("NAVB-032 **ضاعت مواضعُ بسبب اتّجاهٍ شاذّ**: حُفظت %d من ٣", len(got))
+	}
+	for i, b := range got {
+		if b != nil {
+			t.Errorf("NAVB-032 حُفظ اتّجاهٌ شاذٌّ في %d: %v", i, *b)
+		}
+	}
+}
+
+// TestNAVB_033_MixedBatch **وخليطٌ بعضُه يحمل اتّجاهاً وبعضُه لا.**
+//
+// **وهي الحالُ الواقعيّة**: الجهازُ لا يقول اتّجاهاً عند الوقوف،
+// **فطابورُ رحلةٍ فيها إشاراتُ مرورٍ خليطٌ بطبعه.**
+func TestNAVB_033_MixedBatch(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	res := h.POST("/api/v1/driver/location/batch", drv.Token, batchOf(
+		map[string]any{"lat": 35.9506, "lng": 39.0094, "bearing_deg": 45.0},
+		map[string]any{"lat": 35.9510, "lng": 39.0098},
+		map[string]any{"lat": 35.9514, "lng": 39.0102, "bearing_deg": 200.0},
+		map[string]any{"lat": 35.9518, "lng": 39.0106, "bearing_deg": 500.0},
+	))
+	if res.Code != 200 {
+		t.Fatalf("NAVB-033 الدفعةُ رُدّت: %s", res)
+	}
+	if n, _ := res.JSON()["accepted"].(float64); n != 4 {
+		t.Fatalf("NAVB-033 قُبلت %v من أربع", res.JSON()["accepted"])
+	}
+	got := trackRows(t, h, drv.ID)
+	if len(got) != 4 {
+		t.Fatalf("NAVB-033 حُفظت %d من أربع", len(got))
+	}
+	if got[0] == nil || *got[0] != 45 {
+		t.Errorf("NAVB-033 الأولى: %v", got[0])
+	}
+	if got[1] != nil {
+		t.Errorf("NAVB-033 الثانيةُ بلا اتّجاهٍ واخترع لها: %v", *got[1])
+	}
+	if got[2] == nil || *got[2] != 200 {
+		t.Errorf("NAVB-033 الثالثة: %v", got[2])
+	}
+	if got[3] != nil {
+		t.Errorf("NAVB-033 الرابعةُ شاذّةٌ وحُفظت: %v", *got[3])
+	}
+}
+
+// TestNAVB_034_ContractHasNoNewRequiredField **ولا حقلَ إلزاميٍّ جديد.**
+//
+// **وهذا هو التوافقُ الخلفيُّ في أنقى صوره**: أقلُّ جسمٍ ممكنٍ يُقبل —
+// موضعٌ ووقتٌ لا غير.
+func TestNAVB_034_ContractHasNoNewRequiredField(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	res := h.POST("/api/v1/driver/location/batch", drv.Token, batchOf(
+		map[string]any{"lat": 35.9506, "lng": 39.0094},
+	))
+	if res.Code != 200 {
+		t.Fatalf("NAVB-034 **أقلُّ جسمٍ ممكنٍ رُدّ**: %s", res)
+	}
+	if n, _ := res.JSON()["accepted"].(float64); n != 1 {
+		t.Errorf("NAVB-034 قُبلت %v من واحدة", res.JSON()["accepted"])
+	}
+}
+
+// TestNAVB_035_BatchStillMovesDriver **وسلوكُ الدفعة لم يتبدّل.**
+//
+// **وحقلٌ يُضاف قد يكسر ما جاوره**: أحدثُ نقطةٍ تكتب الموضعَ الحاليّ،
+// **ومن أخطأ في ترتيب الوسائط كتب خطَّ الطول مكان العرض** فذهب
+// السائقُ إلى المحيط.
+func TestNAVB_035_BatchStillMovesDriver(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	res := h.POST("/api/v1/driver/location/batch", drv.Token, batchOf(
+		map[string]any{"lat": 35.9506, "lng": 39.0094, "bearing_deg": 10.0},
+		map[string]any{"lat": 35.9600, "lng": 39.0200, "bearing_deg": 20.0},
+	))
+	if res.Code != 200 {
+		t.Fatalf("NAVB-035 الدفعةُ رُدّت: %s", res)
+	}
+	var lat, lng float64
+	if err := h.Pool.QueryRow(h.T.Context(), `
+		SELECT ST_Y(last_location::geometry), ST_X(last_location::geometry)
+		  FROM users WHERE id = $1::uuid`, drv.ID).Scan(&lat, &lng); err != nil {
+		t.Fatalf("NAVB-035 تعذّرت قراءةُ الموضع: %v", err)
+	}
+	if int(lat*1000) != 35960 || int(lng*1000) != 39020 {
+		t.Errorf("NAVB-035 **الموضعُ الأخيرُ خطأ**: %f,%f", lat, lng)
 	}
 }

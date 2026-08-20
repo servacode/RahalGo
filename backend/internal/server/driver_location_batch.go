@@ -67,6 +67,21 @@ type trackPoint struct {
 	At        time.Time `json:"at"`
 	SpeedMps  *float64  `json:"speed_mps"`
 	AccuracyM *float64  `json:"accuracy_m"`
+	// ══════════════════════════════════════════════════════════════════
+	// **والاتّجاهُ — أُكمل في الدفعة ٢٠٢٦-٠٨-٢٠**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (تصحيحُ المالك: «الموقع المفرد يحفظ `bearing_deg`، لكن نقاط
+	//  `location/batch` لا تحمله، **وبالتالي أيّ نقاط تُجمع أثناء
+	//  انقطاع الشبكة تفقد الاتجاه نهائيًا**».)
+	//
+	// **وهو النقصُ بعينه**: الانقطاعُ في الشارع كثير — نفقٌ أو حيٌّ بلا
+	// تغطية — **فأطولُ المسارات وأغناها بالمنعطفات هي التي كانت تصل
+	// بلا اتّجاه.**
+	//
+	// **ومؤشّرٌ لا قيمة**: النسخةُ المنشورةُ لا ترسله، **وحقلٌ إلزاميٌّ
+	// يجعل طابورَ من كان بلا شبكةٍ يُرفض إلى الأبد.**
+	BearingDeg *float64 `json:"bearing_deg"`
 }
 
 // valid **نقطةٌ يُعتدّ بها.**
@@ -150,11 +165,14 @@ func (s *Server) saveTrackBatch(ctx context.Context, driverID string, pts []trac
 		// وصلت وانقطع ردُّها **يعيدها التطبيقُ لأنّه لا يعلم**، ولولا
 		// القيدُ لَتضاعف الأثرُ بلا أن يظهر — **النقاطُ صحيحةٌ ومكرّرة،
 		// فيبدو السائقُ أكثفَ حركةً ممّا كان.**
+		// **والاتّجاهُ يُنظَّف قبل أن يُكتب** — كما في النقطة المفردة:
+		// **قيدُ القاعدة يرفض ما خرج عن الدائرة، ورفضُه يُسقط الدفعةَ
+		// كلَّها** — فتضيع عشرون نقطةً لأنّ واحدةً منها شاذّة.
 		batch.Queue(`
-			INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m)
-			VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4, $5, $6)
+			INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m, bearing_deg)
+			VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4, $5, $6, $7)
 			ON CONFLICT (driver_id, recorded_at) DO NOTHING`,
-			driverID, p.Lng, p.Lat, p.At, p.SpeedMps, p.AccuracyM)
+			driverID, p.Lng, p.Lat, p.At, p.SpeedMps, p.AccuracyM, cleanBearing(p.BearingDeg))
 	}
 	// **وأحدثُ نقطةٍ وحدَها تكتب الموضعَ الحاليّ** — وبعد الفرز هي الأخيرة.
 	//
