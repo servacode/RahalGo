@@ -222,7 +222,22 @@ fun ShopScreen(
 
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(ShopCols),
-                contentPadding = PaddingValues(12.dp),
+                // ══════════════════════════════════════════════════════
+                // **وذيلٌ يفسح لقرص الحديث**
+                // ══════════════════════════════════════════════════════
+                //
+                // (رُئي في لقطة المتجر ٢٠٢٦-٠٨-٢٠: القرصُ الطافي يغطّي
+                //  آخرَ بطاقةٍ في الشبكة.)
+                //
+                // **والقرصُ يطفو فوق المحتوى فلا يزيحه** — **وبطاقةٌ
+                // نصفُها تحت زرٍّ تُقرأ عطباً**، ومن أرادها لم يبلغ
+                // زرَّ إضافتها.
+                //
+                // **والذيلُ في الحشوة لا في عنصرٍ فارغٍ آخرَ القائمة** —
+                // فيبقى التمريرُ ينتهي حيث ينتهي المحتوى.
+                contentPadding = PaddingValues(
+                    start = 12.dp, end = 12.dp, top = 12.dp, bottom = 96.dp,
+                ),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
