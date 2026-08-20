@@ -212,3 +212,119 @@ func TestSMS_HexIsFromRawNotEscaped(t *testing.T) {
 		t.Errorf("**الترميزُ حُسب من نصٍّ مهرَّب**: %s", got)
 	}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **بوّابةُ قوالبَ حقيقيّة — LinkSyria**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قِيس من مخطّطهم الرسميّ `/api/v1/schema/client/` ٢٠٢٦-٠٨-٢٠.)
+//
+//	POST /api/v1/otp/send/
+//	X-API-Key: ls_…
+//	Idempotency-Key: …
+//	{"phone_number":"+963…","custom_code":"123456","language":"ar"}
+//
+// **وهم يؤلّفون نصَّ الرسالة، ونحن نمرّر الرمز** — **ومن تركهم
+// يولّدونه أرسل إلى الزبون رمزاً غيرَ الذي خُزِّن له فلا يدخل أبدا.**
+
+// TestSMS_TemplateGatewayGetsTheCode **والرمزُ يصل البوّابةَ كما وُلّد.**
+func TestSMS_TemplateGatewayGetsTheCode(t *testing.T) {
+	var body, key, idem, path string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		body, path = string(b), r.URL.Path
+		key, idem = r.Header.Get("X-API-Key"), r.Header.Get("Idempotency-Key")
+		w.WriteHeader(201)
+	}))
+	t.Cleanup(srv.Close)
+
+	s := NewSMSSender(SMSConfig{
+		URL:        srv.URL + "/api/v1/otp/send/",
+		Body:       `{"phone_number":"{phone}","custom_code":"{code}","language":"ar"}`,
+		AuthHeader: "X-API-Key: ls_test | Idempotency-Key: {idem}",
+	}, slog.New(slog.DiscardHandler))
+
+	if err := s.SendOTP(t.Context(), "+963912345678", "582093", "رمز: 582093"); err != nil {
+		t.Fatalf("الإرسالُ فشل: %v", err)
+	}
+	if path != "/api/v1/otp/send/" {
+		t.Errorf("المسار %q", path)
+	}
+	want := `{"phone_number":"+963912345678","custom_code":"582093","language":"ar"}`
+	if body != want {
+		t.Errorf("**الجسمُ لا يطابق العقد**\n  جاء: %s\n  يُنتظر: %s", body, want)
+	}
+	if key != "ls_test" {
+		t.Errorf("**المفتاحُ لم يُرسَل**: %q", key)
+	}
+	// **وترويستان من حقلٍ واحد** — انظر `sms.go`.
+	if len(idem) != 24 {
+		t.Errorf("**مفتاحُ منع التكرار لم يُملأ**: %q", idem)
+	}
+}
+
+// TestSMS_IdemKeyIsStableAndHidesCode **ومفتاحُ التكرار ثابتٌ ولا يكشف.**
+//
+// **وشبكةٌ تتعثّر بعد أن وصلت الرسالة تجعل المحرّكَ يعيد النداء** —
+// **ورسالتان لرمزٍ واحدٍ تُحاسَبان مرّتين.**
+//
+// **ولا يُكتب الرمزُ فيه**: يمرّ في ترويسةٍ تُسجَّل عند المزوّد،
+// **ورمزُ تحقّقٍ في سجلٍّ ليس رمزَ تحقّق.**
+func TestSMS_IdemKeyIsStableAndHidesCode(t *testing.T) {
+	a := idemKey("+963912345678", "582093")
+	if a != idemKey("+963912345678", "582093") {
+		t.Error("**المفتاحُ يتبدّل بين نداءين متطابقين** — فتُحاسَب الرسالةُ مرّتين")
+	}
+	if a == idemKey("+963912345678", "111111") {
+		t.Error("**رمزان مختلفان بمفتاحٍ واحد** — فتُبتلع الرسالةُ الثانية")
+	}
+	if a == idemKey("+963900000000", "582093") {
+		t.Error("**رقمان مختلفان بمفتاحٍ واحد**")
+	}
+	if strings.Contains(a, "582093") {
+		t.Errorf("**الرمزُ ظاهرٌ في المفتاح**: %s", a)
+	}
+}
+
+// TestSMS_TextSenderCarriesNoCode **ورسالةُ المتجر لا رمزَ فيها.**
+//
+// **ومن وحّد البوّابتين أرسل إلى المتاجر رموزَ تحقّقٍ بدل إشعارات
+// الطلب** — فيولّد المزوّدُ رمزاً من عنده ويرسله لصاحب المطعم.
+func TestSMS_TextSenderCarriesNoCode(t *testing.T) {
+	var body string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		body = string(b)
+		w.WriteHeader(200)
+	}))
+	t.Cleanup(srv.Close)
+
+	s := NewSMSSender(SMSConfig{URL: srv.URL, Body: `{"c":"{code}","t":"{text}"}`},
+		slog.New(slog.DiscardHandler))
+	if err := s.SendText(t.Context(), "+963912345678", "طلب جديد"); err != nil {
+		t.Fatalf("الإرسالُ فشل: %v", err)
+	}
+	if body != `{"c":"","t":"طلب جديد"}` {
+		t.Errorf("**نصٌّ حرٌّ حمل رمزا**: %s", body)
+	}
+}
+
+// TestSMS_PhonePlainDropsThePlus **ورقمٌ بلا زائدٍ لمن يطلبه كذلك.**
+func TestSMS_PhonePlainDropsThePlus(t *testing.T) {
+	var body string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		body = string(b)
+		w.WriteHeader(200)
+	}))
+	t.Cleanup(srv.Close)
+
+	s := NewSMSSender(SMSConfig{URL: srv.URL, Body: `{"to":"{phone_plain}"}`},
+		slog.New(slog.DiscardHandler))
+	if err := s.SendText(t.Context(), "+963912345678", "x"); err != nil {
+		t.Fatalf("الإرسالُ فشل: %v", err)
+	}
+	if body != `{"to":"963912345678"}` {
+		t.Errorf("**الزائدُ لم يُحذف**: %s", body)
+	}
+}

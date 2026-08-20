@@ -92,7 +92,7 @@ func (c *OTPChannel) resolve(ctx context.Context) string {
 func (c *OTPChannel) SendOTP(ctx context.Context, phone, code string) error {
 	switch c.resolve(ctx) {
 	case ChannelSMS:
-		return c.sms.SendText(ctx, phone, c.text(code))
+		return c.sms.SendOTP(ctx, phone, code, c.text(code))
 	case ChannelWhatsAppThen:
 		err := c.wa.SendOTP(ctx, phone, code)
 		if err == nil {
@@ -107,7 +107,7 @@ func (c *OTPChannel) SendOTP(ctx context.Context, phone, code string) error {
 			c.logger.Info("واتساب لم يوصّل الرمز — تُجرَّب الرسالةُ النصّيّة",
 				"phone", phone, "err", err)
 		}
-		if smsErr := c.sms.SendText(ctx, phone, c.text(code)); smsErr != nil {
+		if smsErr := c.sms.SendOTP(ctx, phone, code, c.text(code)); smsErr != nil {
 			// **ويُردّ خطأُ واتساب لا خطأُ الرسائل**: هو القناةُ الأولى،
 			// **ورسالةُ «بوّابةُ الرسائل لا تستجيب» لا تعني شيئاً لمن
 			// طلب رمزاً على واتساب.**

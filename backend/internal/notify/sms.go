@@ -26,6 +26,8 @@ package notify
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -106,14 +108,47 @@ func (s *SMSSender) Configured() bool { return s != nil && s.cfg.URL != "" }
 // فتصل الرسالةُ ممسوخة. **وهو خطأٌ لا يظهر في العربيّة** — لا محرفَ
 // فيها يُهرَّب — **فيبقى نائماً حتّى يكتب المالكُ علامةَ اقتباسٍ في
 // قالبه.**
-func (s *SMSSender) fill(tpl, phone, text string, esc func(string) string) string {
+func (s *SMSSender) fill(tpl, phone, code, text string, esc func(string) string) string {
 	r := strings.NewReplacer(
 		"{phone}", phone,
+		"{phone_plain}", strings.TrimPrefix(phone, "+"),
 		"{text}", esc(text),
 		"{text_hex}", utf16BEHex(text),
+		"{code}", code,
+		"{idem}", idemKey(phone, code),
 		"{sender}", s.cfg.Sender,
 	)
 	return r.Replace(tpl)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **وبوّابةٌ تؤلّف النصَّ بنفسها تريد الرمزَ لا الرسالة**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قِيس ٢٠٢٦-٠٨-٢٠ من مخطّط LinkSyria الرسميّ.)
+//
+// **وبوّاباتُ الرمز صنفان**: صنفٌ يأخذ نصّاً كاملاً ويرسله كما هو،
+// **وصنفٌ يحفظ قوالبَه معتمدةً عنده ويأخذ الرمزَ وحدَه** — وهذا الثاني
+// هو ما تفرضه الجهاتُ الناظمةُ في أكثر الأسواق.
+//
+// **ومن أعطى الثانيَ رسالةً كاملةً أرسل الثاني رمزاً من عنده** —
+// **فيصل الزبونَ رمزٌ غيرُ الذي خُزِّن له**، فلا يدخل أبداً. **ولا
+// خطأَ ولا سجلّ**: الردُّ ٢٠١ والرسالةُ وصلت.
+//
+// **فصار `{code}` في القالب** — ومن استعمل بوّابةَ نصٍّ تركه ولم
+// يفتقده.
+
+// idemKey **مفتاحٌ يمنع تكرارَ الإرسال** — ثابتٌ لنفس الرقم والرمز.
+//
+// **وشبكةٌ تتعثّر بعد أن وصلت الرسالة تجعل المحرّكَ يعيد النداء** —
+// **ورسالتان لرمزٍ واحدٍ تُحاسَبان مرّتين** ويقرؤهما صاحبُهما شكّاً في
+// حسابه.
+//
+// **ولا يُكتب الرمزُ فيه**: يمرّ في ترويسةٍ تُسجَّل عند المزوّد،
+// **ورمزُ تحقّقٍ في سجلٍّ ليس رمزَ تحقّق.**
+func idemKey(phone, code string) string {
+	sum := sha256.Sum256([]byte(phone + ":" + code))
+	return hex.EncodeToString(sum[:12])
 }
 
 // utf16BEHex **النصُّ بترميز `UTF-16BE` مكتوباً بالستّةَ عشر.**
@@ -130,26 +165,44 @@ func utf16BEHex(s string) string {
 	return b.String()
 }
 
-// SendText يُرسل رسالةً نصّية.
+// SendText يُرسل رسالةً نصّية — **ولا رمزَ فيها.**
 func (s *SMSSender) SendText(ctx context.Context, phone, text string) error {
+	return s.send(ctx, phone, "", text)
+}
+
+// SendOTP **يُرسل رمزاً** — و`{code}` تُملأ هنا وحدَها.
+//
+// **والنصُّ يُمرَّر معه** لمن يأخذ النصَّ كاملاً — **وبوّابةُ القوالب
+// تتجاهله**، انظر أعلاه.
+func (s *SMSSender) SendOTP(ctx context.Context, phone, code, text string) error {
+	return s.send(ctx, phone, code, text)
+}
+
+func (s *SMSSender) send(ctx context.Context, phone, code, text string) error {
 	if !s.Configured() {
 		return ErrSMSNotConfigured
 	}
 
 	var body io.Reader
 	if s.cfg.Body != "" {
-		body = bytes.NewBufferString(s.fill(s.cfg.Body, phone, text, jsonEscape))
+		body = bytes.NewBufferString(s.fill(s.cfg.Body, phone, code, text, jsonEscape))
 	}
 	req, err := http.NewRequestWithContext(ctx, s.cfg.Method,
-		s.fill(s.cfg.URL, phone, text, urlEscape), body)
+		s.fill(s.cfg.URL, phone, code, text, urlEscape), body)
 	if err != nil {
 		return fmt.Errorf("notify: بناء طلب الرسالة: %w", err)
 	}
 	if s.cfg.Body != "" {
 		req.Header.Set("Content-Type", s.cfg.ContentType)
 	}
-	if k, v, ok := strings.Cut(s.cfg.AuthHeader, ":"); ok {
-		req.Header.Set(strings.TrimSpace(k), strings.TrimSpace(v))
+	// **وترويسةٌ واحدةٌ لا تكفي بوّاباتِ الرمز**: مفتاحٌ وترويسةُ منعِ
+	// تكرار. **فتُفصل بـ`|`** — ومن له واحدةٌ لا يرى الفرق.
+	for _, h := range strings.Split(s.cfg.AuthHeader, "|") {
+		k, v, ok := strings.Cut(h, ":")
+		if !ok || strings.TrimSpace(k) == "" {
+			continue
+		}
+		req.Header.Set(strings.TrimSpace(k), s.fill(strings.TrimSpace(v), phone, code, text, noEscape))
 	}
 
 	res, err := s.client.Do(req)
@@ -192,3 +245,6 @@ func urlEscape(s string) string {
 	}
 	return b.String()
 }
+
+// noEscape **للترويسات** — لا JSON فيها ولا سلسلةَ استعلام.
+func noEscape(s string) string { return s }

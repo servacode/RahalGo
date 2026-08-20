@@ -36,8 +36,25 @@ type Config struct {
 	SMSContentType string
 	SMSAuthHeader  string
 	SMSSender      string
-	AdminPhone     string // هاتف أول أدمن — يُمنح الدور تلقائياً عند الإقلاع
-	UploadsDir     string // مجلد تخزين الوسائط المرفوعة (خارج الحاوية في الإنتاج)
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وبوّابةُ الرمز غيرُ بوّابة النصّ**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قِيس ٢٠٢٦-٠٨-٢٠: بوّابةُ LinkSyria نقطتُها `/otp/send/` وحدَها،
+	//  **ولا نقطةَ نصٍّ حرٍّ عندها أصلاً.**)
+	//
+	// **ومن وحّدهما أرسل إلى المتاجر رموزَ تحقّقٍ بدل إشعارات الطلب** —
+	// النقطةُ واحدةٌ والجسمُ واحد، **فيولّد المزوّدُ رمزاً من عنده
+	// ويرسله لصاحب المطعم.**
+	//
+	// **وفارغٌ يعني «استعمل بوّابة النصّ»** — فمن له مزوّدٌ واحدٌ يخدم
+	// الاثنين لا يضبط شيئاً زائدا.
+	SMSOTPURL        string
+	SMSOTPBody       string
+	SMSOTPAuthHeader string
+	AdminPhone       string // هاتف أول أدمن — يُمنح الدور تلقائياً عند الإقلاع
+	UploadsDir       string // مجلد تخزين الوسائط المرفوعة (خارج الحاوية في الإنتاج)
 	// خدمة العنونة (Nominatim) — تُستبدل بنسخة ذاتية الاستضافة عند النشر
 	GeocoderURL string
 	// OSRMURL محرّكُ المسارات — **وفارغٌ يعني الخطَّ المستقيمَ كما كان.**
@@ -133,11 +150,15 @@ func Load() (*Config, error) {
 		SMSContentType: getEnv("SMS_CONTENT_TYPE", "application/json"),
 		SMSAuthHeader:  getEnv("SMS_AUTH_HEADER", ""),
 		SMSSender:      getEnv("SMS_SENDER", ""),
-		AdminPhone:     getEnv("ADMIN_PHONE", ""),
-		UploadsDir:     getEnv("UPLOADS_DIR", "./uploads"),
-		GeocoderURL:    getEnv("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
-		OSRMURL:        getEnv("OSRM_URL", ""),
-		WebOrigins:     splitList(getEnv("WEB_ORIGINS", "")),
+
+		SMSOTPURL:        getEnv("SMS_OTP_URL", ""),
+		SMSOTPBody:       getEnv("SMS_OTP_BODY", ""),
+		SMSOTPAuthHeader: getEnv("SMS_OTP_AUTH_HEADER", ""),
+		AdminPhone:       getEnv("ADMIN_PHONE", ""),
+		UploadsDir:       getEnv("UPLOADS_DIR", "./uploads"),
+		GeocoderURL:      getEnv("GEOCODER_URL", "https://nominatim.openstreetmap.org"),
+		OSRMURL:          getEnv("OSRM_URL", ""),
+		WebOrigins:       splitList(getEnv("WEB_ORIGINS", "")),
 	}
 
 	// ══════════════════════════════════════════════════════════════════

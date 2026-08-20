@@ -131,8 +131,18 @@ func run(logger *slog.Logger) error {
 		AuthHeader:  cfg.SMSAuthHeader,
 		Sender:      cfg.SMSSender,
 	}, logger)
+	// **وبوّابةُ الرمز تُبنى وحدَها إن ضُبطت** — انظر `config.go`.
+	otpSMS := smsSender
+	if cfg.SMSOTPURL != "" {
+		otpSMS = notify.NewSMSSender(notify.SMSConfig{
+			URL:        cfg.SMSOTPURL,
+			Body:       cfg.SMSOTPBody,
+			AuthHeader: cfg.SMSOTPAuthHeader,
+			Sender:     cfg.SMSSender,
+		}, logger)
+	}
 	if cfg.OTPProvider == "whatsapp" {
-		otpSender = notify.NewOTPChannel(otpSender, smsSender,
+		otpSender = notify.NewOTPChannel(otpSender, otpSMS,
 			func(code string) string {
 				tpl := settingsStore.GetString(context.Background(), "auth.sms_template")
 				return strings.ReplaceAll(tpl, "{code}", code)
