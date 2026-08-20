@@ -58,7 +58,7 @@
     <string name="err_user_blocked">هذا الحساب محظور</string>
     <string name="err_user_suspended">هذا الحساب موقوف</string>
     <string name="err_validation">تحقق من البيانات المدخلة</string>
-    <string name="err_whatsapp_required">وثق رقمك على واتساب قبل فتح الدوام</string>
+    <string name="err_whatsapp_required">وثق رقمك قبل فتح الدوام</string>
     <string name="hist_already_open">لك بلاغ مفتوح على هذا الطلب — تتابعه العمليات</string>
     <string name="hist_already_rated">قيمت هذا المتجر عن هذا الطلب</string>
     <string name="inbox_empty">لا إشعارات بعد</string>
@@ -310,12 +310,25 @@
          «صار الآن هذا عنوانك الافتراضي» غلط). **و«افتراضيّ» لفظُ
          برمجةٍ لا لفظُ زبون** — يقرؤها فيسأل: افتراضيٌّ عن ماذا؟ -->
     <string name="acc_default_address">تم تحديد عنوان التوصيل</string>
-    <string name="acc_wa_code">الرمز الذي وصلك على واتساب</string>
+    <!-- **ولا تُسمّى القناةُ في الشاشة.**
+
+         (قرارُ المالك ٢٠٢٦-٠٨-٢٠، بعد أن صار الرمزُ يُبدَّل من اللوحة
+          بين واتساب والرسائل النصّيّة.)
+
+         **وكانت تقول «على واتساب» ثلاثَ مرّات** — فمن بُدّلت قناتُه
+         وصله الرمزُ برسالةٍ **والشاشةُ تقول له انتظر واتساب**، فينتظر
+         ما لا يأتي.
+
+         **والزبونُ لا يحتاج أن يعرف الطريق** — يحتاج أن يكتب الرمز.
+         **وأربعةُ أبوابٍ أخرى محايدةٌ منذ بُنيت** (التسجيلُ
+         والاستعادةُ وتغييرُ الرقم والحذف)، **وهذا كان الشاذَّ
+         بينها.** -->
+    <string name="acc_wa_code">الرمز الذي وصلك</string>
     <string name="acc_wa_confirm">تأكيد التوثيق</string>
     <string name="acc_wa_done">تم توثيق حسابك بنجاح</string>
-    <string name="acc_wa_hint">يصلك رمز على واتساب على الرقم نفسه. والتوثيق شرط لفتح الدوام واستقبال الطلبات.</string>
+    <string name="acc_wa_hint">يصلك رمز على الرقم نفسه. والتوثيق شرط لفتح الدوام واستقبال الطلبات.</string>
     <string name="acc_wa_unverified">حسابك غير موثق — لا تفتح دوامك قبل التوثيق</string>
-    <string name="acc_wa_verified">حسابك موثق على واتساب</string>
+    <string name="acc_wa_verified">حسابك موثق</string>
     <string name="acc_wa_verify">وثق حسابك</string>
     <string name="err_photo_unreadable">تعذرت قراءة الصورة</string>
     <string name="push_check">افحص الإشعارات</string>
@@ -327,7 +340,7 @@
     <string name="push_check_stale">جهازك مسجل منذ زمن بعيد — أغلق التطبيق وافتحه</string>
     <!-- **وتوثيقُ واتساب سببُه غيرُ سببه** — السائقُ لا يفتح
          دوامَه بلاه، **والزبونُ يُستعاد به حسابُه ويُبلَّغ عن طلبه.** -->
-    <string name="acc_wa_hint_user">يصلك رمز على واتساب على الرقم نفسه. وبه تستعيد حسابك وتصلك أخبار طلباتك.</string>
+    <string name="acc_wa_hint_user">يصلك رمز على الرقم نفسه. وبه تستعيد حسابك وتصلك أخبار طلباتك.</string>
     <string name="acc_wa_unverified_user">حسابك غير موثق — وثقه ليحفظ لك</string>
     <string name="tik_open">مفتوحة</string>
     <string name="tik_progress">قيد المعالجة</string>
