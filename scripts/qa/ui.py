@@ -2,9 +2,50 @@
 """أداةُ قيادةِ الشاشة نصّيّاً — لا صور."""
 import subprocess, re, sys, time, io
 sys.stdout.reconfigure(encoding="utf-8")
+
+# ══════════════════════════════════════════════════════════════════════
+# **حزمُ رحّال غو — تُقرأ من المشروع لا من الجهاز**
+# ══════════════════════════════════════════════════════════════════════
+#
+# (قاعدةُ المالك ٢٠٢٦-٠٨-٢٠: «Package identity تُقرأ من `applicationId`
+#  في المشروع، ولا تُستنتج من اسم الحزمة على الجهاز».)
+#
+# # وسببُها حادثةٌ وقعت
+#
+# **بُحث عن حزمة السائق بـ`pm list packages | grep -i driver`** فأصاب
+# `com.dablak.driver` — **تطبيقٌ على جهاز المالك لا علاقةَ له بنا** —
+# **فمُنح أذوناتِ موقعٍ وإشعاراتٍ وشُغّل مرّتين.**
+#
+# **وكان يكفي سطرٌ من ملفّ البناء.**
+ALLOWED = (
+    "com.rahalgo.customer", "com.rahalgo.customer.debug",
+    "com.rahalgo.driver", "com.rahalgo.driver.debug",
+    "com.rahalgo.rep", "com.rahalgo.rep.debug",
+)
+
 PKG = "com.rahalgo.customer"
 
+
+def guard(pkg):
+    """**يمنع أن يُلمس ما ليس لنا** — ويُوقف بدل أن يُحذّر."""
+    if pkg not in ALLOWED:
+        raise SystemExit(
+            "✘ حزمةٌ ليست من رحّال غو: " + pkg
+            + "\n  والمسموحُ: " + " · ".join(ALLOWED)
+            + "\n  وهويّةُ الحزمة تُقرأ من applicationId لا من اسمٍ على الجهاز."
+        )
+
+
 def sh(*a, t=60):
+    # **وكلُّ أمرٍ يمسّ حزمةً يمرّ من هنا** — نقطةٌ واحدةٌ تحرس الجميع.
+    #
+    # **والفحصُ على الوسائط لا على نيّة الكاتب**: من كتب اسمَ حزمةٍ
+    # غريبةٍ في أيّ أمرٍ يُوقَف، ولو كان `pm grant` أو `am start`.
+    for w in a:
+        if isinstance(w, str) and w.startswith("com.") and "/" not in w:
+            guard(w)
+        elif isinstance(w, str) and "/" in w and w.startswith("com."):
+            guard(w.split("/", 1)[0])
     return subprocess.run(["adb"]+list(a), capture_output=True, timeout=t).stdout.decode("utf-8","replace")
 
 def dump():
