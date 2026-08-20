@@ -1,5 +1,6 @@
 package com.rahalgo.shared.customer
 
+import com.rahalgo.shared.model.CitiesPage
 import com.rahalgo.shared.model.HomePage
 import com.rahalgo.shared.model.ItemsPage
 import com.rahalgo.shared.model.OffersPage
@@ -33,12 +34,25 @@ class CustomerApi(private val api: ApiClient) {
     // **ومن فتح التطبيقَ يتصفّح قبل أن يدخل** — وبابٌ يطلب حساباً ليُرى
     // سعرٌ يُغلق قبل أن يُفتح.
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وكلُّ نداءِ تصفّحٍ يحمل موضعَه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٢٠: «مو معقول شخصٌ بالشام يطلب من الرقّة».)
+    //
+    // **والخادمُ يُرشِّح بالمدينة والمسافة** — انظر `city_filter.go`.
+    // **ونداءٌ بلا موضعٍ لا يُرشَّح**، فالتطبيقُ القديمُ يرى ما كان يرى.
+
     /** **الصفحةُ الأولى** — لافتاتٌ وتصنيفاتٌ وأقسامُ سوق. */
-    suspend fun home(): HomePage = api.raw("/api/v1/public/home")
+    suspend fun home(): HomePage =
+        api.raw("/api/v1/public/home" + BrowseScope.query('?'))
+
+    /** **مدنُ المنصّة الفعّالة** — ليقول «أنت تتسوّق في…» وليُبدَّل. */
+    suspend fun cities(): CitiesPage = api.raw("/api/v1/public/cities")
 
     /** **أصنافُ قسم** — من كلّ المصادر مختلطةً بلا اسم متجر. */
     suspend fun sectionItems(sectionId: String): ItemsPage =
-        api.raw("/api/v1/public/sections/$sectionId/items")
+        api.raw("/api/v1/public/sections/$sectionId/items" + BrowseScope.query('?'))
 
     /**
      * **بحثٌ في الأصناف.**
@@ -47,10 +61,11 @@ class CustomerApi(private val api: ApiClient) {
      * كلَّه** فيبطئ ولا يفيد.
      */
     suspend fun search(query: String): ItemsPage =
-        api.raw("/api/v1/public/search/items?q=" + query.trim())
+        api.raw("/api/v1/public/search/items?q=" + query.trim() + BrowseScope.query('&'))
 
     /** **العروضُ الساريةُ وحدَها** — والسريانُ يقوله الخادم. */
-    suspend fun offers(): OffersPage = api.raw("/api/v1/public/offers")
+    suspend fun offers(): OffersPage =
+        api.raw("/api/v1/public/offers" + BrowseScope.query('?'))
 
     // ══════════════════════════════════════════════════════════════════
     // **الطلب**

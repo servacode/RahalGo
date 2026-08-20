@@ -129,8 +129,33 @@ func (s *Server) handlePublicOffers(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **وعرضٌ على صنفٍ لا يصله لا يُعرض** — يضغطه فيدخل سلّتَه ثمّ
+	// يُردّ عند الإرسال. **ووعدٌ لا يُوفى أسوأُ من صمت** — وهو المبدأُ
+	// نفسُه الذي يحجب الخصمَ على صنفٍ غيرِ متاح.
+	if ok := s.inScope(r.Context(), scopeFrom(r), merchantIDsOf(rows)); ok != nil {
+		kept := rows[:0]
+		for _, o := range rows {
+			if o.MerchantID == nil || ok[*o.MerchantID] {
+				kept = append(kept, o)
+			}
+		}
+		rows = kept
+	}
 	// **ولا مصدرَ للبضاعة في الردّ** — كالتصفّح والطلبات. (انظر
 	// `customer_privacy.go`.)
 	redactOffersForCustomer(rows)
 	httpx.JSON(w, http.StatusOK, map[string]any{"offers": rows})
+}
+
+// merchantIDsOf **مصادرُ بضاعةِ هذه العروض** — بلا تكرارٍ وبلا فراغ.
+func merchantIDsOf(rows []offers.Offer) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, o := range rows {
+		if o.MerchantID != nil && *o.MerchantID != "" && !seen[*o.MerchantID] {
+			seen[*o.MerchantID] = true
+			out = append(out, *o.MerchantID)
+		}
+	}
+	return out
 }

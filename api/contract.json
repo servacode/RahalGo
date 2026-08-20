@@ -288,6 +288,80 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/cities",
+      "handler": "handleAdminCities",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "cities",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/cities",
+      "handler": "handleCreateCity",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/cities/{id}",
+      "handler": "handleDeleteCity",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/cities/{id}",
+      "handler": "handleUpdateCity",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/customers",
       "handler": "handleListCustomers",
       "auth": true,
@@ -5228,6 +5302,21 @@
       "response": [
         {
           "name": "banners",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/cities",
+      "handler": "handlePublicCities",
+      "auth": false,
+      "response": [
+        {
+          "name": "cities",
           "type": "unknown"
         }
       ],

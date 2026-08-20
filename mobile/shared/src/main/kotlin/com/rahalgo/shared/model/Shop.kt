@@ -167,6 +167,24 @@ data class Offer(
 data class OffersPage(val offers: List<Offer> = emptyList())
 
 /**
+ * **مدنُ المنصّة** — (`GET /api/v1/public/cities`).
+ *
+ * **ومركزُها ونصفُ قطرِها يخرجان معها**: من اختار مدينةً بيده يتصفّح
+ * من مركزها، **ومن أراد أن يعرف أهو داخلَها يقيس بنفسه بلا نداءٍ ثانٍ.**
+ */
+@Serializable
+data class CitiesPage(val cities: List<City> = emptyList())
+
+@Serializable
+data class City(
+    val id: String = "",
+    val name: String = "",
+    val lat: Double = 0.0,
+    val lng: Double = 0.0,
+    @SerialName("radius_m") val radiusM: Int = 0,
+)
+
+/**
  * **حالُ دعواته** — ورمزُه ورابطُه.
  *
  * **والرابطُ يُبنى في الخادم لا في الجهاز**: عنوانُ الموقع يتغيّر من

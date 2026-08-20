@@ -234,16 +234,26 @@ type publicSection struct {
 // **وهي عائلةُ الخلل نفسُها التي طاردناها اليوم في التوصيل والمخالفات** —
 // وقعتُ فيها بيدي هذه المرّة.
 func (s *Server) publicSections(r *http.Request) ([]publicSection, error) {
+	// **وعدُّ القسمِ يعدُّ ما يصلُه هو** — **وقسمٌ يعد ثلاثين ثمّ يُفتح
+	// فارغاً يُقرأ عطباً.**
+	//
+	// **والشرطُ في `ON` لا في `WHERE`**: القسمُ يبقى في القائمة بعدّادٍ
+	// صفر، **و`WHERE` على ضمٍّ خارجيٍّ يمحو القسمَ نفسَه.**
+	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 1)
+	seen := ""
+	if where != "" {
+		seen = " AND m.id IS NOT NULL"
+	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT ps.id, ps.name, ps.icon, sm.path, sm.thumb_path,
-		       count(i.id) FILTER (WHERE i.available AND `+orders.OpenNowSQL+`)
+		       count(i.id) FILTER (WHERE i.available AND `+orders.OpenNowSQL+seen+`)
 		FROM platform_sections ps
 		LEFT JOIN menu_items i ON i.platform_section_id = ps.id
-		LEFT JOIN merchants m ON m.id = i.merchant_id AND m.status = 'active'
+		LEFT JOIN merchants m ON m.id = i.merchant_id AND m.status = 'active'`+where+`
 		LEFT JOIN media sm ON sm.id = ps.image_media_id
 		WHERE ps.active
 		GROUP BY ps.id, ps.name, ps.icon, sm.path, sm.thumb_path, ps.sort_order
-		ORDER BY ps.sort_order, ps.name`)
+		ORDER BY ps.sort_order, ps.name`, geo...)
 	if err != nil {
 		return nil, err
 	}
@@ -299,10 +309,14 @@ func (s *Server) handlePublicSectionItems(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
+	// **وسوقُ مدينته وحدَه** — انظر `city_filter.go`. **ولا موضعَ يعني
+	// لا ترشيح**، فيبقى العميلُ القديمُ يرى ما كان يرى.
+	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 2)
+	args := append([]any{id}, geo...)
 	s.scanItems(w, r, itemSelect+`
-		  AND ps.id = $1
+		  AND ps.id = $1`+where+`
 		ORDER BY (i.available AND `+orders.OpenNowSQL+`) DESC, i.sort_order, i.name
-		LIMIT 200`, id)
+		LIMIT 200`, args...)
 }
 
 // handlePublicItem صنفٌ واحدٌ بتفصيله — **صفحةُ الصنف.**
@@ -351,9 +365,13 @@ func (s *Server) handleSearchItems(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, http.StatusOK, map[string]any{"items": []publicItem{}})
 		return
 	}
+	// **والبحثُ في سوقِ مدينته أيضاً** — **وبحثٌ يجد ما لا يُطلب أسوأُ
+	// من بحثٍ لا يجد.**
+	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 2)
+	args := append([]any{q}, geo...)
 	s.scanItems(w, r, itemSelect+`
-		  AND (i.name ILIKE '%'||$1||'%' OR ps.name ILIKE '%'||$1||'%')
+		  AND (i.name ILIKE '%'||$1||'%' OR ps.name ILIKE '%'||$1||'%')`+where+`
 		ORDER BY (i.name ILIKE $1||'%') DESC,
 		         (i.available AND `+orders.OpenNowSQL+`) DESC, i.name
-		LIMIT 60`, q)
+		LIMIT 60`, args...)
 }

@@ -601,6 +601,7 @@
 | `delivery.by_distance` | السائقون | bool | `false` |
 | `delivery.per_km` | السائقون | money | `0` |
 | `delivery.max_fee` | السائقون | money | `0` |
+| `delivery.default_radius_m` | السائقون | int | `0` |
 | `drivers.cash_limit` | السائقون | money | `500000` |
 | `drivers.max_active_orders` | السائقون | int | `1` |
 | `drivers.same_route_extra` | السائقون | int | `1` |

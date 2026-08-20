@@ -26,6 +26,8 @@ func (s *Server) handlePublicSearch(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, http.StatusOK, []any{})
 		return
 	}
+	// **وبحثُ المتاجر في مدينته أيضاً** — انظر `city_filter.go`.
+	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 2)
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT m.id, m.name, c.icon, lm.thumb_path, m.emergency_closed,
 		       -- سبب الظهور: اسمُ المتجر أم صنفٌ فيه؟ يُعرض للزبون كي يفهم النتيجة
@@ -40,9 +42,9 @@ func (s *Server) handlePublicSearch(w http.ResponseWriter, r *http.Request) {
 		  AND (m.name ILIKE '%'||$1||'%'
 		       OR EXISTS (SELECT 1 FROM menu_items i
 		                  WHERE i.merchant_id = m.id AND i.available AND i.approved
-		                    AND i.name ILIKE '%'||$1||'%'))
+		                    AND i.name ILIKE '%'||$1||'%'))`+where+`
 		ORDER BY (m.name ILIKE '%'||$1||'%') DESC, m.name
-		LIMIT 30`, q)
+		LIMIT 30`, append([]any{q}, geo...)...)
 	if err != nil {
 		s.respondErr(w, err)
 		return

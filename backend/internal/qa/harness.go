@@ -320,11 +320,12 @@ func (h *Harness) NewItem(cost int64) *Item {
 	}
 
 	var itemID string
+	itemName := uniq("صنف QA ")
 	err = h.Pool.QueryRow(ctx, `
 		INSERT INTO menu_items (merchant_id, platform_section_id, name,
 		                        price, merchant_price, available, approved)
 		VALUES ($1::uuid, $2::uuid, $3, $4, $4, true, true) RETURNING id::text`,
-		merchantID, sectionID, uniq("صنف QA "), cost).Scan(&itemID)
+		merchantID, sectionID, itemName, cost).Scan(&itemID)
 	if err != nil {
 		h.T.Fatalf("qa: تعذّر إنشاءُ صنف: %v", err)
 	}
@@ -335,27 +336,39 @@ func (h *Harness) NewItem(cost int64) *Item {
 		_, _ = h.Pool.Exec(ctx, `DELETE FROM merchants WHERE id = $1::uuid`, merchantID)
 		_, _ = h.Pool.Exec(ctx, `DELETE FROM categories WHERE id = $1::uuid`, categoryID)
 	})
-	return &Item{ID: itemID, SectionID: sectionID, MerchantID: merchantID, Cost: cost}
+	return &Item{ID: itemID, SectionID: sectionID, MerchantID: merchantID,
+		Name: itemName, Cost: cost}
 }
 
 // Setting **يضبط إعداداً ويُعيده بعد الاختبار** — والإعدادُ المتروكُ
 // يسمّم كلَّ اختبارٍ بعده.
+//
+// # وجدولٌ خطأٌ بقي حتّى ناداه أوّلُ اختبار
+//
+// **كُتبت هذه الدالّةُ على جدولٍ اسمه `settings` ولا وجودَ له** — واسمُه
+// `app_settings`. **وبقيت شهراً بلا منادٍ**، فلم يكشفها بناءٌ ولا فحص:
+// **الشيفرةُ الميتةُ تُترجَم صحيحةً وهي كاذبة.** كشفها أوّلُ نداءٍ لها
+// (CITY-011، ٢٠٢٦-٠٨-٢٠).
+//
+// **والقيمةُ `jsonb`** — فنصٌّ خامٌّ يُرفض، والرقمُ يُكتب رقماً.
 func (h *Harness) Setting(key, value string) {
 	h.T.Helper()
 	ctx := context.Background()
 	var old *string
-	_ = h.Pool.QueryRow(ctx, `SELECT value FROM settings WHERE key = $1`, key).Scan(&old)
+	_ = h.Pool.QueryRow(ctx,
+		`SELECT value::text FROM app_settings WHERE key = $1`, key).Scan(&old)
 	if _, err := h.Pool.Exec(ctx, `
-		INSERT INTO settings (key, value) VALUES ($1, $2)
+		INSERT INTO app_settings (key, value) VALUES ($1, $2::jsonb)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, key, value); err != nil {
 		h.T.Fatalf("qa: تعذّر ضبطُ الإعداد %q: %v", key, err)
 	}
 	h.T.Cleanup(func() {
 		if old == nil {
-			_, _ = h.Pool.Exec(ctx, `DELETE FROM settings WHERE key = $1`, key)
+			_, _ = h.Pool.Exec(ctx, `DELETE FROM app_settings WHERE key = $1`, key)
 			return
 		}
-		_, _ = h.Pool.Exec(ctx, `UPDATE settings SET value = $2 WHERE key = $1`, key, *old)
+		_, _ = h.Pool.Exec(ctx,
+			`UPDATE app_settings SET value = $2::jsonb WHERE key = $1`, key, *old)
 	})
 }
 

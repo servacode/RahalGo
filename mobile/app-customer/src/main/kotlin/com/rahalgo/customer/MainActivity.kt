@@ -67,6 +67,7 @@ import com.rahalgo.ui.WalletScreen
 import com.rahalgo.ui.WalletViewModel
 import com.rahalgo.ui.AccountScreen
 import com.rahalgo.ui.AccountViewModel
+import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.selectedAddress
 import com.rahalgo.ui.DeliveryAddress
 import com.rahalgo.ui.AddressHost
@@ -307,6 +308,23 @@ private fun SignedIn(
     // **وحديثُ الطلب الجاري** — انظر `LiveChatViewModel`.
     val liveChat: com.rahalgo.customer.chat.LiveChatViewModel = viewModel()
     val cartVm: CartViewModel = viewModel()
+    // **ومدنُ المنصّة** — تُجلب مرّةً ويُبنى عليها موضعُ التصفّح.
+    val citiesVm: CitiesViewModel = viewModel()
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ومن أين يتسوّق — يُعرف بلا سؤال**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٢٠: «مو معقول شخصٌ بالشام يطلب من الرقّة»،
+    //  و«نحدّد عنوانَه تلقائيّاً».)
+    //
+    // **والنبضةُ تُطلق حين تتغيّر النقطةُ وحدَها** — انظر `CityGate`:
+    // كلُّ شاشةٍ تصفّحٍ تسمعها فتُعيد سؤالَها، **وسوقٌ يبقى على مدينةٍ
+    // غادرها صاحبُه يعرض ما لا يصله.**
+    CityGate(
+        address = selectedAddress(accountVm.state.addresses),
+        cities = citiesVm.cities,
+    ) { Refresh.bump() }
 
     // ══════════════════════════════════════════════════════════════════
     // **والخريطةُ تُعطى من هنا — مرّةً لثلاث شاشات**

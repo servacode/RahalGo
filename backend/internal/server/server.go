@@ -274,6 +274,9 @@ func (s *Server) Router() http.Handler {
 		// البحث عام كالتصفّح — من يشتهي صنفاً لا يعرف اسم المتجر الذي يصنعه
 		// **التصفّحُ بالأصناف لا بالمتاجر** — الزبونُ يشتهي شاورما ولا يعرف
 		// من يصنع أفضلَها. (انظر `sections_handlers.go`)
+		// **ومدنُ المنصّة** — يقرؤها التطبيقُ ليقول «أنت تتسوّق في…»
+		// **ويُبدّلها من زار مدينةً أخرى.** (انظر `city_handlers.go`.)
+		r.Get("/public/cities", s.handlePublicCities)
 		r.Get("/public/sections", s.handlePublicSections)
 		r.Get("/public/sections/{id}/items", s.handlePublicSectionItems)
 		r.Get("/public/items/{id}", s.handlePublicItem)
@@ -650,6 +653,12 @@ func (s *Server) Router() http.Handler {
 			// حاملو الخزينة المحتملون — للأدمن وحده (merchant_violations.go)
 			r.With(s.RequireRoles("admin")).
 				Get("/treasury-candidates", s.handleTreasuryCandidates)
+			// **والمدنُ تُدار من اللوحة لا بهجرة** — من أراد دمشقَ غداً
+			// يكتبها. (انظر `city_handlers.go`.)
+			r.Get("/cities", s.handleAdminCities)
+			r.With(s.RequireRoles("admin")).Post("/cities", s.handleCreateCity)
+			r.With(s.RequireRoles("admin")).Put("/cities/{id}", s.handleUpdateCity)
+			r.With(s.RequireRoles("admin")).Delete("/cities/{id}", s.handleDeleteCity)
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/users/{id}/wallet", s.idempotent(s.handleAdminWalletApply))
