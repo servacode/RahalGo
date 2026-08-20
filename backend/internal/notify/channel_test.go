@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 )
@@ -151,5 +152,63 @@ func TestChannel_EmptyModeIsWhatsApp(t *testing.T) {
 	if wa.calls.Load() != 1 || hits.Load() != 0 {
 		t.Errorf("**قناةٌ فارغةٌ لم تُقرأ واتساب** — واتساب %d · رسائل %d",
 			wa.calls.Load(), hits.Load())
+	}
+}
+
+// TestSMS_ArabicIsHexEncoded **والعربيّةُ تُرمَّز حين تُطلب مُرمَّزة.**
+//
+// **ومعيارُ الرسائل يعرف أبجديّتين**: GSM-7 لِلاتينيّة، **وUCS-2 لكلّ
+// ما عداها** — وكثيرٌ من البوّابات تطلبها ستّةَ عشرَ نظاما.
+//
+// **ومن أرسلها نصّاً خامّاً وصلت علاماتِ استفهام** — **ولا خطأَ ولا
+// سجلّ**: البوّابةُ تردّ ٢٠٠ والرسالةُ تصل ممسوخة.
+func TestSMS_ArabicIsHexEncoded(t *testing.T) {
+	var got string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		got = string(b)
+		w.WriteHeader(200)
+	}))
+	t.Cleanup(srv.Close)
+
+	s := NewSMSSender(SMSConfig{
+		URL:  srv.URL,
+		Body: `{"to":"{phone}","text":"{text_hex}","type":"1"}`,
+	}, slog.New(slog.DiscardHandler))
+	if err := s.SendText(t.Context(), "+963900000000", "رمز: 12"); err != nil {
+		t.Fatalf("الإرسالُ فشل: %v", err)
+	}
+	// **«رمز: 12»** — ر=0631 م=0645 ز=0632 مسافة=0020 :=003A … والأرقامُ
+	// لاتينيّةٌ في القالب.
+	if !strings.Contains(got, `"text":"06310645063200`) {
+		t.Errorf("**العربيّةُ لم تُرمَّز**: %s", got)
+	}
+	if strings.Contains(got, "رمز") {
+		t.Errorf("**النصُّ الخامُّ مرّ كما هو**: %s", got)
+	}
+}
+
+// TestSMS_HexIsFromRawNotEscaped **والترميزُ من النصّ الخامّ لا المهرَّب.**
+//
+// **وحسابُه من نصٍّ هُرِّب لِلJSON يُدخل شرطةً مائلةً في الترميز** —
+// **وهو خطأٌ لا يظهر في العربيّة** فيبقى نائماً حتّى يكتب المالكُ
+// علامةَ اقتباسٍ في قالبه.
+func TestSMS_HexIsFromRawNotEscaped(t *testing.T) {
+	var got string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		got = string(b)
+		w.WriteHeader(200)
+	}))
+	t.Cleanup(srv.Close)
+
+	s := NewSMSSender(SMSConfig{URL: srv.URL, Body: `{"t":"{text_hex}"}`},
+		slog.New(slog.DiscardHandler))
+	if err := s.SendText(t.Context(), "+963900000000", `"x`); err != nil {
+		t.Fatalf("الإرسالُ فشل: %v", err)
+	}
+	// **`"` هي 0022 و`x` هي 0078** — ولا شرطةَ مائلةً بينهما.
+	if !strings.Contains(got, `"t":"00220078"`) {
+		t.Errorf("**الترميزُ حُسب من نصٍّ مهرَّب**: %s", got)
 	}
 }

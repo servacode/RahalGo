@@ -33,6 +33,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf16"
 )
 
 var ErrSMSNotConfigured = errors.New("notify: بوّابة الرسائل غير مضبوطة")
@@ -44,7 +45,8 @@ type SMSConfig struct {
 	URL string
 	// Method الافتراضي POST.
 	Method string
-	// Body قالبُ الجسم — يقبل `{phone}` و`{text}`. فارغٌ يعني بلا جسم.
+	// Body قالبُ الجسم — يقبل `{phone}` و`{text}` و`{text_hex}`.
+	// فارغٌ يعني بلا جسم.
 	Body string
 	// ContentType الافتراضي application/json.
 	ContentType string
@@ -78,13 +80,54 @@ func NewSMSSender(cfg SMSConfig, logger *slog.Logger) *SMSSender {
 // Configured هل البوّابة جاهزة؟ يُسأل قبل عرض الزرّ.
 func (s *SMSSender) Configured() bool { return s != nil && s.cfg.URL != "" }
 
-func (s *SMSSender) fill(tpl, phone, text string) string {
+// ══════════════════════════════════════════════════════════════════════
+// **والعربيّةُ لا تمرّ نصّاً عند كثيرٍ من البوّابات**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قِيس ٢٠٢٦-٠٨-٢٠ عند مسح المزوّدين الذين يخدمون سوريا.)
+//
+// **معيارُ الرسائل القصيرة يعرف أبجديّتين**: GSM-7 لِلاتينيّة،
+// **وUCS-2 لكلّ ما عداها.** والعربيّةُ في الثانية، **وكثيرٌ من
+// البوّابات تطلبها ستّةَ عشرَ نظاماً لا حروفاً** — `UTF-16BE` مكتوبةً
+// بالستّةَ عشر.
+//
+// **ومن أرسل «رمز التحقق» نصّاً خامّاً إليها وصلت علاماتِ استفهام** —
+// **ولا خطأَ ولا سجلّ**: البوّابةُ تردّ ٢٠٠ والرسالةُ تصل ممسوخة.
+//
+// **فالقالبُ يقبل الشكلين**: `{text}` لمن يقبل النصّ، **و`{text_hex}`
+// لمن يطلب الترميز** — ومن بدّل مزوّدَه بدّل قالبَه ولا يُمسّ كود.
+//
+// **ولا يُخمَّن أيُّهما**: مكتوبٌ في وثيقة كلّ مزوّد.
+
+// fill **يملأ القالب** — و`esc` تهرّب النصَّ بحسب موضعه.
+//
+// **والنصُّ الخامُّ يُمرَّر لا المهرَّب**: `{text_hex}` تُحسب منه هو،
+// **وحسابُها من نصٍّ هُرِّب لِلJSON يُدخل شرطةً مائلةً في الترميز**
+// فتصل الرسالةُ ممسوخة. **وهو خطأٌ لا يظهر في العربيّة** — لا محرفَ
+// فيها يُهرَّب — **فيبقى نائماً حتّى يكتب المالكُ علامةَ اقتباسٍ في
+// قالبه.**
+func (s *SMSSender) fill(tpl, phone, text string, esc func(string) string) string {
 	r := strings.NewReplacer(
 		"{phone}", phone,
-		"{text}", text,
+		"{text}", esc(text),
+		"{text_hex}", utf16BEHex(text),
 		"{sender}", s.cfg.Sender,
 	)
 	return r.Replace(tpl)
+}
+
+// utf16BEHex **النصُّ بترميز `UTF-16BE` مكتوباً بالستّةَ عشر.**
+//
+// **والحرفُ خارجَ المستوى الأساسيّ يصير زوجاً بديلاً** — والوجهُ
+// المبتسمُ أربعُ خاناتٍ لا اثنتان، **و`rune` واحدةٌ تُكتب أربعةَ
+// بايتات.** ولا عربيّةَ خارجَ المستوى الأساسيّ، **لكنّ قالبَ المالك
+// قد يحمل رمزاً.**
+func utf16BEHex(s string) string {
+	var b strings.Builder
+	for _, u := range utf16.Encode([]rune(s)) {
+		fmt.Fprintf(&b, "%04X", u)
+	}
+	return b.String()
 }
 
 // SendText يُرسل رسالةً نصّية.
@@ -95,10 +138,10 @@ func (s *SMSSender) SendText(ctx context.Context, phone, text string) error {
 
 	var body io.Reader
 	if s.cfg.Body != "" {
-		body = bytes.NewBufferString(s.fill(s.cfg.Body, phone, jsonEscape(text)))
+		body = bytes.NewBufferString(s.fill(s.cfg.Body, phone, text, jsonEscape))
 	}
 	req, err := http.NewRequestWithContext(ctx, s.cfg.Method,
-		s.fill(s.cfg.URL, phone, urlEscape(text)), body)
+		s.fill(s.cfg.URL, phone, text, urlEscape), body)
 	if err != nil {
 		return fmt.Errorf("notify: بناء طلب الرسالة: %w", err)
 	}
