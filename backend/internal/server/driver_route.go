@@ -44,6 +44,11 @@ import (
 
 const routeCacheTTL = 10 * time.Minute
 
+// routeCacheVersion **نسخةُ صيغةِ المسار المخزَّن.**
+//
+// **وتُرفع كلَّما تبدّل ما يُحفظ** — انظر `routeCached`.
+const routeCacheVersion = "v2"
+
 // handleDriverOrderRoute يردّ خطَّ الطريق ومسافتَه ومدّتَه للطرف الحاليّ.
 func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -114,14 +119,32 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		duration = route.DistanceM / (float64(speed) * 1000 / 3600)
 	}
 
-	httpx.JSON(w, http.StatusOK, map[string]any{
+	out := map[string]any{
 		"available":  true,
 		"distance_m": math.Round(route.DistanceM),
 		"duration_s": math.Round(duration),
 		// engine_duration_s **ما قاله المحرّك نفسُه** — يُقارَن ولا يُعرض.
 		"engine_duration_s": math.Round(route.DurationS),
 		"points":            pts,
-	})
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وبياناتُ الملاحة حقولٌ إضافيّةٌ لا بديلة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (أمرُ المالك ٢٠٢٦-٠٨-٢٠: «الحقول الحالية تبقى… وتضاف بيانات
+	//  Navigation كحقول جديدة اختيارية».)
+	//
+	// **والنسخةُ المنشورةُ لا تعرفها فتتجاهلها** — `ignoreUnknownKeys`
+	// في كوتلن. **وحقلٌ يُبدَّل معناه يكسر من لم يحدّث.**
+	//
+	// **ولا تُرسَل حين لا ملاحة** — محرّكٌ بلا خطواتٍ أو مسارٌ من
+	// مخبأٍ قديم: **وحقلٌ فارغٌ يُقرأ «لا مناورات» وهو ما نريد.**
+	if route.HasNavigation() {
+		out["cumulative_m"] = route.CumulativeM
+		out["maneuvers"] = route.Maneuvers
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }
 
 // routeCached يقرأ من الذاكرة أوّلا — **ثمّ يسأل ويحفظ.**
@@ -129,7 +152,21 @@ func (s *Server) routeCached(ctx context.Context, from, to routing.Point) (*rout
 	if !s.route.Enabled() {
 		return nil, routing.ErrNoEngine
 	}
-	key := "route:" + cell(from.Lat) + "," + cell(from.Lng) + ";" + cell(to.Lat) + "," + cell(to.Lng)
+	// ══════════════════════════════════════════════════════════════════
+	// **ونسخةٌ في المفتاح منذ المرحلة ٢**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (أمرُ المالك ٢٠٢٦-٠٨-٢٠: «نفّذ خطّة `route:v2:` … **ولا تحاول
+	//  تفسير Cache v1 القديم على أنّه Route Navigation جديد**».)
+	//
+	// **ومسارٌ خُزّن قبل الخطوات يُفكّ بلا مناورات** — فيصير «متاحاً»
+	// بلا إرشاد، **ولا خطأَ يظهر**: الحقولُ الجديدةُ غائبةٌ فتُقرأ
+	// أصفاراً.
+	//
+	// **ومفتاحٌ جديدٌ لا إبطالٌ صريح** — القديمُ يموت وحدَه بعد عشر
+	// دقائق، **ولا يُمسّ مفتاحُ سائقٍ يقود الآن.**
+	key := "route:" + routeCacheVersion + ":" +
+		cell(from.Lat) + "," + cell(from.Lng) + ";" + cell(to.Lat) + "," + cell(to.Lng)
 	if s.rdb != nil {
 		if raw, err := s.rdb.Get(ctx, key).Bytes(); err == nil {
 			var cached routing.Route

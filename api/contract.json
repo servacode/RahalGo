@@ -4009,24 +4009,12 @@
       ],
       "response": [
         {
+          "name": "@out",
+          "type": "unknown"
+        },
+        {
           "name": "available",
           "type": "bool"
-        },
-        {
-          "name": "distance_m",
-          "type": "unknown"
-        },
-        {
-          "name": "duration_s",
-          "type": "unknown"
-        },
-        {
-          "name": "engine_duration_s",
-          "type": "unknown"
-        },
-        {
-          "name": "points",
-          "type": "unknown"
         }
       ],
       "statuses": [

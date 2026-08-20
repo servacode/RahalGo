@@ -44,6 +44,33 @@ type Route struct {
 	DurationS float64
 	// Geometry نقاطُ الخطّ كما يمرّ — **لترسمه الشاشةُ على الخريطة.**
 	Geometry []Point
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وما يلي للملاحة — المرحلة ٢**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وفارغةٌ حالٌ مشروعة**: محرّكٌ ردّ بلا خطوات، أو مسارٌ مخزّنٌ
+	// بصيغةٍ قديمة. **والشاشةُ ترسم كما كانت.**
+
+	// CumulativeM مسافةُ كلّ رأسٍ من البداية — **تُحسب مرّةً عند
+	// البناء.**
+	//
+	// **وطولُها طولُ `Geometry`** — `CumulativeM[0] = 0`.
+	//
+	// **وبها يصير حسابُ المتبقّي طرحاً واحداً** بدل جمعِ آلاف القطع
+	// في كلّ قراءةِ موقع.
+	CumulativeM []float64 `json:",omitempty"`
+
+	// Maneuvers مناوراتُ الطريق بمفاهيمنا — انظر `maneuver.go`.
+	Maneuvers []Maneuver `json:",omitempty"`
+}
+
+// HasNavigation **أثمّةَ ما يكفي للملاحة؟**
+//
+// **ومسارٌ بلا مناوراتٍ يُرسم ولا يُرشِد** — وهي حالُ العميل القديم
+// والمحرّكِ الذي لم يردّ خطوات.
+func (r *Route) HasNavigation() bool {
+	return r != nil && len(r.Maneuvers) > 0 && len(r.CumulativeM) == len(r.Geometry)
 }
 
 // Client بابُ محرّك المسارات.
@@ -80,7 +107,18 @@ func (c *Client) Route(ctx context.Context, from, to Point) (*Route, error) {
 	url := c.base + "/route/v1/driving/" +
 		coord(from.Lng) + "," + coord(from.Lat) + ";" +
 		coord(to.Lng) + "," + coord(to.Lat) +
-		"?overview=full&geometries=geojson&alternatives=false&steps=false"
+		// ══════════════════════════════════════════════════════════════
+		// **و`steps=true` منذ المرحلة ٢**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// (أمرُ المالك ٢٠٢٦-٠٨-٢٠.)
+		//
+		// **وكانت `false` منذ بُني هذا الملفّ** — فيُرسم الخطُّ ولا
+		// يُعرف أين ينعطف صاحبُه.
+		//
+		// **ولا `annotations`**: تعطي سرعةَ كلّ قطعةٍ ووزنَها،
+		// **وتضاعف حجمَ الردّ** ولا تُستعمل في هذه المرحلة.
+		"?overview=full&geometries=geojson&alternatives=false&steps=true"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -95,6 +133,11 @@ func (c *Client) Route(ctx context.Context, from, to Point) (*Route, error) {
 		return nil, fmt.Errorf("routing: ردّ %d", res.StatusCode)
 	}
 
+	// **وما لا نستعمله لا يُفكّ** — `intersections` و`weight`
+	// و`waypoints` تبقى في الشبكة ولا تدخل ذاكرتَنا.
+	//
+	// (تصحيحُ المالك ٢٠٢٦-٠٨-٢٠: «لا ترسل OSRM intersections إلى
+	//  Android… نريد عقدَ أندرويد صغيراً ومستقلّاً».)
 	var body struct {
 		Code   string `json:"code"`
 		Routes []struct {
@@ -103,6 +146,9 @@ func (c *Client) Route(ctx context.Context, from, to Point) (*Route, error) {
 			Geometry struct {
 				Coordinates [][]float64 `json:"coordinates"`
 			} `json:"geometry"`
+			Legs []struct {
+				Steps []osrmStep `json:"steps"`
+			} `json:"legs"`
 		} `json:"routes"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
@@ -116,6 +162,21 @@ func (c *Client) Route(ctx context.Context, from, to Point) (*Route, error) {
 
 	r := body.Routes[0]
 	out := &Route{DistanceM: r.Distance, DurationS: r.Duration}
+
+	var steps []osrmStep
+	for _, leg := range r.Legs {
+		steps = append(steps, leg.Steps...)
+	}
+	// **والهندسةُ تُبنى من الخطوات حين توجد** — انظر `buildFromSteps`.
+	if built := buildFromSteps(steps); built != nil {
+		out.Geometry = built.Geometry
+		out.CumulativeM = built.CumulativeM
+		out.Maneuvers = built.Maneuvers
+		return out, nil
+	}
+
+	// **وإلّا فالخطُّ الإجماليُّ كما كان** — **ومحرّكٌ لم يردّ خطواتٍ
+	// يُرسم ولا يُرشِد**، ولا يسقط شيء.
 	for _, c := range r.Geometry.Coordinates {
 		if len(c) >= 2 {
 			out.Geometry = append(out.Geometry, Point{Lat: c[1], Lng: c[0]})

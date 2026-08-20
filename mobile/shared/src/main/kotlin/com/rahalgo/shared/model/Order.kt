@@ -145,6 +145,54 @@ data class OrderRoute(
     @SerialName("distance_m") val distanceM: Double = -1.0,
     @SerialName("duration_s") val durationS: Double = -1.0,
     val points: List<List<Double>> = emptyList(),
+    // ══════════════════════════════════════════════════════════════════
+    // **وبياناتُ الملاحة — المرحلة ٢**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (أمرُ المالك ٢٠٢٦-٠٨-٢٠.)
+    //
+    // **ولها افتراضاتٌ فارغة**: خادمٌ لم يُحدَّث بعد، أو مسارٌ من
+    // مخبأٍ قديم، أو محرّكٌ ردّ بلا خطوات — **والخريطةُ ترسم كما
+    // كانت.**
+    //
+    // **ولا كلمةَ من OSRM هنا**: `kind` مفاهيمُنا، **فيومَ يُبدَّل
+    // المحرّكُ لا يُمسّ التطبيق.**
+    @SerialName("cumulative_m") val cumulativeM: List<Double> = emptyList(),
+    val maneuvers: List<RouteManeuver> = emptyList(),
+) {
+    /**
+     * **أثمّةَ ما يكفي للملاحة؟**
+     *
+     * **ومسارٌ بلا مناوراتٍ يُرسم ولا يُرشِد** — ولا يسقط شيء.
+     */
+    val hasNavigation: Boolean
+        get() = maneuvers.isNotEmpty() && cumulativeM.size == points.size
+}
+
+/**
+ * **مناورةٌ واحدةٌ على المسار — بمفاهيم رحّال غو.**
+ *
+ * (المرحلة ٢، ٢٠٢٦-٠٨-٢٠.)
+ *
+ * **والمرجعُ `atDistanceM` لا `atIndex`** (تصحيحُ المالك): الفهرسُ
+ * يتبدّل إن بُسِّطت الهندسةُ يوماً، **والمسافةُ على الطريق لا
+ * تتبدّل.**
+ *
+ * **و`kind` نصٌّ لا تعداد**: نوعٌ جديدٌ من الخادم **يُقرأ نصّاً ولا
+ * يُسقط التطبيق** — وتعدادُ كوتلن يرمي على قيمةٍ لا يعرفها.
+ */
+@Serializable
+data class RouteManeuver(
+    val kind: String = "UNKNOWN",
+    val modifier: String? = null,
+    @SerialName("at_distance_m") val atDistanceM: Double = 0.0,
+    @SerialName("at_index") val atIndex: Int = 0,
+    @SerialName("step_distance_m") val stepDistanceM: Double = 0.0,
+    @SerialName("step_duration_s") val stepDurationS: Double = 0.0,
+    /** **اختياريٌّ بالكامل** — ٨٣٪ من خطوات الرقّة بلا اسم. */
+    @SerialName("street_name") val streetName: String? = null,
+    @SerialName("roundabout_exit") val roundaboutExit: Int? = null,
+    @SerialName("roundabout_name") val roundaboutName: String? = null,
 )
 
 /**
