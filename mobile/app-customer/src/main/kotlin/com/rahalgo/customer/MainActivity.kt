@@ -310,6 +310,9 @@ private fun SignedIn(
     val cartVm: CartViewModel = viewModel()
     // **ومدنُ المنصّة** — تُجلب مرّةً ويُبنى عليها موضعُ التصفّح.
     val citiesVm: CitiesViewModel = viewModel()
+    // **وورقةُ اختيار المدينة مفتوحةٌ أو لا** — و`rememberSaveable`
+    // لأنّ دورانَ الجهاز لا يُغلق ما فتحه صاحبُه.
+    var cityOpen by rememberSaveable { mutableStateOf(false) }
 
     // ══════════════════════════════════════════════════════════════════
     // **ومن أين يتسوّق — يُعرف بلا سؤال**
@@ -428,11 +431,47 @@ private fun SignedIn(
                     dark = dark,
                     onTheme = { theme.toggle(dark) },
                     logoutLabel = if (guest) R.string.guest_enter else null,
+                    // ══════════════════════════════════════════════════
+                    // **ومن أيّ مدينةٍ يتسوّق — يُقال قبل أن يُسأل**
+                    // ══════════════════════════════════════════════════
+                    //
+                    // (قرارُ المالك ٢٠٢٦-٠٨-٢٠.)
+                    //
+                    // **ومن لم يجد مطعمَه يسأل «أين ذهب؟»** — **ولا
+                    // جوابَ في شاشةٍ لا تقول من أين تعرض.**
+                    //
+                    // **ولا يُرسم قبل أن تصل المدن** — **وسطرٌ يقول
+                    // «لم تُحدَّد» ثمّ يتبدّل بعد ثانيةٍ يُقرأ ارتباكا.**
+                    header = if (citiesVm.cities.isEmpty()) {
+                        null
+                    } else {
+                        {
+                            CityRow(CityScope.nameOf(citiesVm.cities)) {
+                                cityOpen = true
+                                scope.launch { drawer.close() }
+                            }
+                        }
+                    },
                 )
             }
         },
     ) {
         val over = overlay.current
+
+        // **وورقةُ المدن تُفتح فوق كلّ شيء** — تُبنى هنا لا في الدرج:
+        // **الدرجُ يُغلق عند الاختيار، وورقةٌ داخلَه تُغلق معه** قبل أن
+        // تُقرأ.
+        if (cityOpen) {
+            CitySheet(
+                cities = citiesVm.cities,
+                chosenID = CityScope.chosen?.id,
+                onPick = { c ->
+                    CityScope.choose(ctx, c)
+                    cityOpen = false
+                },
+                onClose = { cityOpen = false },
+            )
+        }
 
 
         Scaffold(

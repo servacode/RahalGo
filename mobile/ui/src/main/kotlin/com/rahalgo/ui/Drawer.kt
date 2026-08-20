@@ -78,6 +78,17 @@ fun Drawer(
      */
     dark: Boolean? = null,
     onTheme: () -> Unit = {},
+    /**
+     * **صفٌّ فوق القائمة يضعه من ناداها** — أو فارغ.
+     *
+     * **و`:ui` لا تعرف مدناً ولا عناوين**: يضع تطبيقُ الزبون صفَّ
+     * «تتسوّق في…» وحدَه، **وتبقى القائمةُ صالحةً للسائق والمندوبِ
+     * اللذَين لا مدينةَ لهما.**
+     *
+     * **وفوقها لا تحتها**: من فتح القائمةَ رأى أوّلاً من أين يتسوّق،
+     * **وسطرٌ في القاع يُقرأ بعد أن يكون قد اختار وجهتَه.**
+     */
+    header: (@Composable () -> Unit)? = null,
 ) {
     Column(
         Modifier
@@ -85,6 +96,13 @@ fun Drawer(
             .verticalScroll(rememberScrollState())
             .padding(vertical = 8.dp),
     ) {
+        if (header != null) {
+            header()
+            Spacer(Modifier.height(6.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(6.dp))
+        }
+
         var lastGroup: Int? = null
         for (item in items) {
             // **والمجموعةُ تُعرف بحدّها** — **والاسمُ فوقها كان يشرح ما

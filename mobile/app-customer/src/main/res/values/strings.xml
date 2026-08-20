@@ -182,4 +182,11 @@
          العروض، فيفوته ما يهمّ. -->
     <string name="push_ch_order">طلباتي ورسائل السائق</string>
     <string name="push_ch_news">العروض والأخبار</string>
+    <!-- **مدينةُ التسوّق** — (قرارُ المالك ٢٠٢٦-٠٨-٢٠). -->
+    <string name="city_shopping_in">تتسوّق في</string>
+    <string name="city_unknown">لم تُحدَّد</string>
+    <string name="city_sheet_title">من أيّ مدينة تتسوّق؟</string>
+    <string name="city_sheet_hint">تُعرض متاجر المدينة التي تختارها وحدها</string>
+    <string name="city_auto">تلقائيّاً حسب موقعي</string>
+    <string name="city_auto_hint">من عنوانك المحفوظ أو موقع جهازك</string>
 </resources>

@@ -27,6 +27,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import dynamic from "next/dynamic";
 import ZonesPanel from "@/components/admin/settings/zones";
+import CitiesPanel from "@/components/admin/settings/cities";
 import SitePagesPanel from "@/components/admin/settings/site-pages";
 import BannersPanel from "@/components/admin/settings/banners";
 import WhatsAppPanel from "@/components/admin/settings/whatsapp";
@@ -287,6 +288,9 @@ export default function SettingsPage() {
      **والإرسالُ للمالك وحدَه**: كان البابُ محجوزاً بـ`roles: ["admin"]`،
      **فيبقى محجوزاً تبويباً** — لا يُرسَم لغيره أصلاً. */
   const extra = [
+    // **والمدنُ قبل المناطق** — **المنطقةُ بنتُ المدينة**، ومن قرأ
+    // «مناطق» قبل أن يعرف أنّ للمنصّة مدناً ظنّ التغطيةَ طبقةً واحدة.
+    { key: "cities", label: m.admin.cities.title },
     { key: "zones", label: m.terms.zones },
     { key: "whatsapp", label: m.admin.nav.whatsapp },
     ...(isAdmin ? [{ key: "broadcast", label: m.admin.broadcast.title }] : []),
@@ -476,6 +480,7 @@ export default function SettingsPage() {
             })()}
           </div>
         ))}
+      {active === "cities" && <CitiesPanel />}
       {active === "zones" && <ZonesPanel />}
       {active === "whatsapp" && <WhatsAppPanel />}
       {/* **والإعلانُ فعلٌ لا إعداد** — فيُقال ما هو قبل نموذجه: رسالةٌ تُرسل
