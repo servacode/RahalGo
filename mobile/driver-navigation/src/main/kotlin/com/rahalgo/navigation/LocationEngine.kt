@@ -159,6 +159,10 @@ class LocationEngine(private val context: Context) {
             speedMps = if (loc.hasSpeed()) loc.speed else null,
             bearingDeg = if (loc.hasBearing()) loc.bearing else null,
             atMs = monotonicMs(loc),
+            // **وهذه للتسجيل لا للحساب** — انظر `NavFix`.
+            elapsedNs = loc.elapsedRealtimeNanos,
+            wallMs = loc.time,
+            provider = loc.provider,
         )
 
         private fun monotonicMs(loc: Location): Long {

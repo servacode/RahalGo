@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.rahalgo.driver.BuildConfig
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
@@ -135,7 +136,31 @@ fun TripScreen(
     // ورديّته العاديّة في اللحظة: **بطّاريّةٌ لا تُستنزف في جيبٍ
     // واقف.**
     val navContext = LocalContext.current
-    val navSession = remember { com.rahalgo.navigation.NavigationSession(navContext) }
+    // ══════════════════════════════════════════════════════════════════
+    // **ومسجّلُ الرحلة في بناء التطوير وحدَه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (أمرُ المالك ٢٠٢٦-٠٨-٢٠: «اجعله خاصّاً ببناء Debug/QA قدر
+    //  الإمكان، وليس تسجيلَ GPS دائماً في نسخة الإنتاج».)
+    //
+    // **وتسجيلُ مسارِ كلّ سائقٍ في كلّ رحلةٍ ليس فحصاً بل تتبّعا** —
+    // **وملفٌّ يمتلئ في جيب من لا يعلم به لا يُبرَّر بأنّه محلّيّ.**
+    //
+    // **والقرارُ هنا لا في الوحدة**: الوحدةُ تقبل مسجّلاً أو لا تقبل،
+    // **والتطبيقُ وحدَه يعرف أيَّ بناءٍ هو.**
+    val navSession = remember {
+        com.rahalgo.navigation.NavigationSession(
+            navContext,
+            recorder = if (BuildConfig.DEBUG) {
+                com.rahalgo.navigation.TraceRecorder(
+                    dir = java.io.File(navContext.filesDir, "nav-traces"),
+                    sessionId = java.util.UUID.randomUUID().toString().take(8),
+                )
+            } else {
+                null
+            },
+        )
+    }
     LaunchedEffect(follow) {
         if (follow) navSession.start() else navSession.stop()
     }

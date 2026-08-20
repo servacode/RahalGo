@@ -35,7 +35,23 @@ import androidx.compose.runtime.setValue
 class NavigationSession(
     private val context: Context,
     private val engine: LocationEngine = LocationEngine(context),
-    private val pipeline: NavPipeline = NavPipeline(probe = ::log),
+    /**
+     * **مسجّلُ الرحلة — أداةُ فحصٍ لا جزءٌ من الملاحة.**
+     *
+     * (أمرُ المالك ٢٠٢٦-٠٨-٢٠.)
+     *
+     * **وفارغٌ في الإنتاج**: التطبيقُ يمرّره في بناء التطوير وحدَه.
+     * **وتسجيلُ مسارِ كلّ سائقٍ في كلّ رحلةٍ ليس فحصاً بل تتبّعا.**
+     *
+     * **ولا يُقرأ منه شيءٌ في المنطق** — يُكتب فيه ولا يُسأل.
+     */
+    private val recorder: TraceRecorder? = null,
+    private val pipeline: NavPipeline = NavPipeline(probe = { f, g, r ->
+        log(f, g, r)
+        // **ويُسجَّل الرديءُ كما يُسجَّل الجيّد** — **ورحلةٌ فيها
+        // المقبولُ وحدَه لا تختبر مرشِّحاً بل تختبر ما نجا منه.**
+        recorder?.add(f, g, r)
+    }),
 ) {
 
     /**
@@ -73,6 +89,12 @@ class NavigationSession(
     val degraded: Int get() = pipeline.degraded
     val headingDeg: Float? get() = pipeline.headingDeg
 
+    /** **رفيدةُ هذه الجلسة** — أو فارغٌ إن لم يكن مسجّل. */
+    val traceFile: java.io.File? get() = recorder?.file
+
+    /** **أتعطّل المسجّل؟** — يُقرأ في التقرير لا في المنطق. */
+    val traceFailed: Boolean get() = recorder?.failed == true
+
     /**
      * **يفتح الجلسة.**
      *
@@ -82,6 +104,9 @@ class NavigationSession(
     fun start(): Boolean {
         if (running) return true
         pipeline.reset()
+        // **ويُفتح الملفُّ قبل أوّل قراءة** — **وفشلُه لا يمنع
+        // الملاحة**: انظر `TraceRecorder`.
+        recorder?.start()
         stepId = 0L
         firstFixAt = 0L
         lastFixAt = 0L
@@ -143,6 +168,12 @@ class NavigationSession(
         engine.onFix = null
         running = false
         render = null
+        // **ويُغلق الملفُّ إغلاقاً سليماً** — **وملفٌّ لم يُغلق يفقد
+        // آخرَ ما في مخزنه**، وهو غالباً أهمُّ ما في الرحلة: نهايتُها.
+        recorder?.stop()?.let { Log.i(TAG, "رفيدةُ الرحلة: ${'$'}{it.absolutePath}") }
+        recorder?.takeIf { it.failed }?.let {
+            Log.w(TAG, "تعطّل مسجّلُ الرحلة — ${'$'}{it.failure}")
+        }
     }
 
     private companion object {
