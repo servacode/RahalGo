@@ -110,6 +110,38 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("unknown OTP_PROVIDER %q (expected dev or whatsapp)", cfg.OTPProvider)
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وبأيّ طريقٍ يصل الرمز — يُبدَّل من اللوحة لا بنشرٍ جديد**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٢٠: «ميزة تحقّق SMS… نقدر نفعّلها أو نطفّيها
+	//  من لوحة التحكّم».)
+	//
+	// **وبوّابةُ الرسائل تُبنى مرّةً هنا** — كانت تُبنى داخلَ بانيَ
+	// المُوجِّه وحدَه، **ونسختان من ضبطٍ واحدٍ تفترقان يومَ يُزاد حقل.**
+	//
+	// **ولا يُلَفُّ مُرسِلُ التطوير**: يطبع الرمزَ في الطرفيّة، **ومن
+	// يطوّر بلا واتسابَ ولا بوّابةٍ لا يعنيه التبديل.** (انظر
+	// `notify/channel.go`.)
+	smsSender := notify.NewSMSSender(notify.SMSConfig{
+		URL:         cfg.SMSURL,
+		Method:      cfg.SMSMethod,
+		Body:        cfg.SMSBody,
+		ContentType: cfg.SMSContentType,
+		AuthHeader:  cfg.SMSAuthHeader,
+		Sender:      cfg.SMSSender,
+	}, logger)
+	if cfg.OTPProvider == "whatsapp" {
+		otpSender = notify.NewOTPChannel(otpSender, smsSender,
+			func(code string) string {
+				tpl := settingsStore.GetString(context.Background(), "auth.sms_template")
+				return strings.ReplaceAll(tpl, "{code}", code)
+			},
+			func(ctx context.Context) string {
+				return settingsStore.GetString(ctx, "auth.otp_channel")
+			}, logger)
+	}
+
 	// readSetting **جسرٌ إلى اللوحة تعبره الحزمُ الدنيا.**
 	//
 	// قرارات الأمان والحدود يتّخذها المالك لا مبرمجٌ في نصّ. **ويُربط هنا كي
@@ -155,14 +187,7 @@ func run(logger *slog.Logger) error {
 			// **إبلاغُ المتاجر برسالةٍ نصّية لا ببوت واتساب**: البوت غيرُ رسميّ
 			// ويُحظَر إن أكثر من الإرسال الآليّ. وواتساب الرسميّ لاحقاً — يدخل
 			// من الواجهة نفسها (`notify.TextSender`) بلا تغييرٍ فيمن يستعملها.
-			srv.SetTextSender(notify.NewSMSSender(notify.SMSConfig{
-				URL:         cfg.SMSURL,
-				Method:      cfg.SMSMethod,
-				Body:        cfg.SMSBody,
-				ContentType: cfg.SMSContentType,
-				AuthHeader:  cfg.SMSAuthHeader,
-				Sender:      cfg.SMSSender,
-			}, logger))
+			srv.SetTextSender(smsSender)
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,
