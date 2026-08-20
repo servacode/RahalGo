@@ -1604,10 +1604,6 @@
           "type": "unknown"
         },
         {
-          "name": "sms_ready",
-          "type": "unknown"
-        },
-        {
           "name": "text",
           "type": "unknown"
         },

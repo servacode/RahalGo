@@ -420,7 +420,6 @@
 | `whatsapp.otp_template` | المنصة | text | `رمز التحقق: {code}` |
 | `auth.otp_channel` | المنصة | choice | `whatsapp` |
 | `auth.sms_template` | المنصة | text | `رمز التحقق: {code}` |
-| `whatsapp.verified_template` | المنصة | text | `تمّ توثيق رقمك في {platform} ✅` |
 | `whatsapp.order_template` | المنصة | text | `طلب جديد #{number}
 {items}` |
 | `whatsapp.send_delay_ms` | المنصة | int | `1500` |

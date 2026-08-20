@@ -1,7 +1,7 @@
 {
   "smoke": false,
   "totals": {
-    "PASS": 107,
+    "PASS": 110,
     "FAIL": 0,
     "SKIP": 0
   },
@@ -11,47 +11,47 @@
     {
       "name": "البناء · المحرّك",
       "code": 0,
-      "seconds": 8.7
+      "seconds": 17.2
     },
     {
       "name": "التنسيق",
       "code": 0,
-      "seconds": 0.7
+      "seconds": 2.1
     },
     {
       "name": "الوحدة والتكامل · المحرّك",
       "code": 0,
-      "seconds": 193.5
+      "seconds": 184.4
     },
     {
       "name": "منظومة QA · API وأمنٌ ومنعُ تكرار",
       "code": 0,
-      "seconds": 48.7
+      "seconds": 28.6
     },
     {
       "name": "حرّاسُ الويب",
       "code": 0,
-      "seconds": 9.3
+      "seconds": 6.6
     },
     {
       "name": "الأنواع",
       "code": 0,
-      "seconds": 1.6
+      "seconds": 1.5
     },
     {
       "name": "وحدةُ أندرويد",
       "code": 0,
-      "seconds": 24.9
+      "seconds": 10.5
     },
     {
       "name": "الأداءُ المرجعيّ",
       "code": 0,
-      "seconds": 4.9
+      "seconds": 8.6
     },
     {
       "name": "واجهةُ أندرويد · على جهاز",
       "code": 1,
-      "seconds": 0.1
+      "seconds": 0.0
     }
   ]
 }

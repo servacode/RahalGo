@@ -25,7 +25,6 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/incentives"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
-	"github.com/servacode/rahalgo/backend/internal/notify"
 	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/push"
@@ -67,13 +66,43 @@ type Server struct {
 	otpUnpair func(context.Context) error
 	// otpPair **طلبُ رمزِ ربطٍ صريح** — ولا رمزَ بغيره.
 	otpPair func()
-	// textSender مُرسِلُ الرسائل إلى المتاجر — رسالةٌ نصّية اليوم، وواتسابٌ
-	// رسميّ لاحقاً من الواجهة نفسها.
-	textSender *notify.SMSSender
+	// merchant **من يُبلّغ المتاجرَ بالطلبات** — بوتُ واتساب.
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٢٠: «من غير المعقول أن نرسل الطلبات عبر
+	//  رسالة SMS — إمّا يدويّاً على واتساب كما هي، أو تلقائيّاً البوت
+	//  يرسلها. لا أريد SMS بإرسال الطلبات».)
+	//
+	// **وكان مُرسِلَ الرسائل النصّيّة** — واسمُ الإعداد
+	// `whatsapp.order_template` كان يكذب منذ كُتب.
+	//
+	// **وواجهةٌ لا نوعٌ بعينه**: البوتُ لا يوجد في التطوير
+	// (`OTP_PROVIDER=dev`)، **وحقلٌ يُلزم نوعاً واحداً يجعل التطويرَ
+	// يحمل واتساباً لا يحتاجه.**
+	merchant MerchantNotifier
 }
 
-// SetTextSender يحقن مُرسِل الرسائل (يُنادى مرّة عند الإقلاع).
-func (s *Server) SetTextSender(sender *notify.SMSSender) { s.textSender = sender }
+// MerchantNotifier **من يبلّغ متجراً بطلب** — يُرضيه البوت.
+//
+// **و`Ready` قبل `SendText`**: تُسأل قبل قبول الطلب لا بعده. انظر
+// `notify.WhatsAppSender.Ready`.
+type MerchantNotifier interface {
+	SendText(ctx context.Context, phone, text string) error
+	Ready() bool
+}
+
+// SetMerchantNotifier يحقن مُبلِّغَ المتاجر (يُنادى مرّة عند الإقلاع).
+//
+// **وفارغٌ حالٌ مشروعة**: التطويرُ بلا بوت. **فيُفحص عند كلّ نداء** —
+// انظر `merchantReady`.
+func (s *Server) SetMerchantNotifier(n MerchantNotifier) { s.merchant = n }
+
+// merchantReady **أثمّ قناةٌ تُبلّغ المتجرَ الآن؟**
+//
+// **ومؤشّرٌ فارغٌ داخل واجهةٍ ليس واجهةً فارغة** — وقع هذا في
+// `pricing.RuleFrom` (انظر `settings.Get`)، **فيُفحص الاثنان.**
+func (s *Server) merchantReady() bool {
+	return s.merchant != nil && s.merchant.Ready()
+}
 
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,

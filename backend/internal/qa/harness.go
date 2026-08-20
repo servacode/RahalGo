@@ -74,6 +74,24 @@ func uniq(prefix string) string {
 	return fmt.Sprintf("%s%d%04d", prefix, time.Now().UnixNano()%1e10, seq.Add(1))
 }
 
+// uniqPhone **رقمٌ سوريٌّ صالحٌ لا سلسلةٌ فريدةٌ تشبه الرقم.**
+//
+// # وكانت هواتفُ الاختبار كلُّها مرفوضة
+//
+// كانت `uniq("+96390")` — **فتخرج بتسعةَ عشرَ رقماً بعد الزائد**،
+// **وE.164 حدُّها خمسةَ عشر**. فيردّ `NormalizePhone` فراغاً، **وكلُّ
+// ما يُبنى على رقمٍ مُطبَّعٍ يخرج فارغاً في كلّ اختبارٍ عندنا.**
+//
+// **ولم يكشفها شيءٌ لأنّ لا اختبارَ كان يقرأ رقماً مُطبَّعا** — كشفها
+// أوّلُ اختبارٍ طلب رابطَ واتساب (`MDIS-010`، ٢٠٢٦-٠٨-٢٠) فوجده فارغا.
+//
+// **واختباراتٌ تمرّ على بياناتٍ يرفضها المحرّكُ في الحقيقة لا تحرس
+// شيئا.**
+func uniqPhone() string {
+	n := (time.Now().UnixNano()/1e3 + seq.Add(1)) % 1e8
+	return fmt.Sprintf("+9639%08d", n)
+}
+
 // Harness **النظامُ كلُّه خلف عنوانٍ واحد.**
 type Harness struct {
 	T      *testing.T
@@ -224,7 +242,7 @@ type User struct {
 // وثيقة** — وهذا أوّلُ ما كشفته المنظومة.
 func (h *Harness) NewUser(role string) *User {
 	h.T.Helper()
-	phone := uniq("+96390")
+	phone := uniqPhone()
 	name := "QA " + role
 	var id string
 	err := h.Pool.QueryRow(context.Background(), `

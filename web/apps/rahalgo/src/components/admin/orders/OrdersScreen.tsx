@@ -52,7 +52,6 @@ type MerchantMessage = {
   /** رابطُ واتساب جاهزاً — فارغٌ إن كان رقمُ المتجر غيرَ صالح */
   wa_link: string;
   /** أمُهيَّأةٌ بوّابةُ الرسائل النصّية؟ */
-  sms_ready: boolean;
 };
 
 interface DriverRow {

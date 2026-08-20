@@ -60,8 +60,13 @@ func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
 	// ولو قُبل ثمّ تعذّر الإبلاغُ **لَبقي الطلبُ في «مقبول» بلا أن يعلم به
 	// المتجر** — وهي حالٌ أسوأُ من `pending`: الشاشةُ تقول إنّ شيئاً جرى.
 	selfManage := s.orders.MerchantsSelfManage(ctx)
-	if !selfManage && !s.textSender.Configured() {
-		s.logger.Info("التحويلُ التلقائيّ: لا قناةَ تُبلّغ المتجر — يبقى بيد المكتب",
+	// **والبوتُ يُسأل أجاهزٌ هو** — انظر `notify.WhatsAppSender.Ready`.
+	//
+	// **وهاتفُ البوت يُطفأ وتنقطع شبكتُه** — فيبقى الطلبُ «بانتظار»
+	// يراه الموظّفُ ويرسله بالرابط بيده. **وهذا أسلمُ من قبولٍ لا يعلم
+	// به المتجر**: الزبونُ يقرأ «قيد التحضير» ولا أحدَ يطبخ.
+	if !selfManage && !s.merchantReady() {
+		s.logger.Info("التحويلُ التلقائيّ: البوتُ غيرُ جاهز — يبقى بيد المكتب",
 			"order", orderID)
 		return
 	}
@@ -76,12 +81,14 @@ func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
 	// الآخر، فلا رسالةَ تلزم.
 	if !selfManage {
 		msg, ph, err := s.loadOrderMessage(ctx, orderID)
-		if err != nil || strings.TrimSpace(ph.SMS) == "" {
+		if err != nil || strings.TrimSpace(ph.WhatsApp) == "" {
 			s.logger.Warn("التحويلُ التلقائيّ: لا هاتفَ للمتجر — قُبل ولم يُبلَّغ",
 				"order", orderID)
 			return
 		}
-		if err := s.textSender.SendText(ctx, ph.SMS, buildMerchantMessage(s.settings.GetString(ctx, "whatsapp.order_template"), msg)); err != nil {
+		// **ورقمُ واتساب لا رقمُ الرسائل** — وهما حقلان في المتجر.
+		if err := s.merchant.SendText(ctx, ph.WhatsApp,
+			buildMerchantMessage(s.settings.GetString(ctx, "whatsapp.order_template"), msg)); err != nil {
 			s.logger.Error("التحويلُ التلقائيّ: تعذّر الإبلاغ", "order", orderID, "error", err)
 			return
 		}

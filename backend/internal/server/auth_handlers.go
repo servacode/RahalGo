@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net"
@@ -522,27 +521,22 @@ func (s *Server) handleWhatsAppVerifyConfirm(w http.ResponseWriter, r *http.Requ
 	s.referrals.SettleOnSignup(r.Context(), userIDFrom(r), userIDFrom(r))
 
 	// ══════════════════════════════════════════════════════════════════
-	// **ورسالةٌ تقول «وُثّق رقمك» — وقالبُها في اللوحة**
+	// **ولا رسالةَ «وُثّق رقمك»**
 	// ══════════════════════════════════════════════════════════════════
 	//
-	// (قرارُ المالك ٢٠٢٦-٠٨-١٠: «رسالةُ تمّ توثيق رقمك بلوحة الأدمن».)
+	// (قرارُ المالك ٢٠٢٦-٠٨-٢٠ — حُذفت.)
 	//
-	// **ومن أدخل الرمزَ لا يعلم أنّه نجح إلّا من الشاشة** — **وشاشةٌ تُغلق
-	// وهاتفٌ يبقى.** فتبقى الرسالةُ دليلاً عنده.
+	// **كانت رسالةً ثانيةً بعد الرمز** تقول ما تقوله الشاشةُ نفسُها:
+	// «وُثّق رقمك». **وشاشةٌ أمام عينه لا تحتاج هاتفاً يؤكّدها.**
 	//
-	// **وبعد الردّ لا قبله**: التوثيقُ وقع فعلاً، **ورسالةٌ تتعثّر لا تُبطل
-	// توثيقاً تمّ** — ولا يُحبَس صاحبُها ينتظر شبكةً.
-	if s.textSender != nil && s.textSender.Configured() {
-		tpl := s.settings.GetString(r.Context(), "whatsapp.verified_template")
-		tpl = strings.ReplaceAll(tpl, "{platform}",
-			s.settings.GetString(r.Context(), "platform.name"))
-		phone := req.Phone
-		go func() {
-			if err := s.textSender.SendText(context.WithoutCancel(r.Context()), phone, tpl); err != nil {
-				s.logger.Warn("تعذّرت رسالةُ تأكيد التوثيق", "error", err)
-			}
-		}()
-	}
+	// # وثمنُها كان أغلى من نفعها
+	//
+	// **رسالةٌ ثانيةٌ إلى رقمٍ جديدٍ لم يُراسَل من قبل** — **وهذا بعينه
+	// نمطُ الإرسال الذي يُحظَر عليه بوتُ واتساب.** فتضاعف الخطرَ على
+	// بابِ الدخول كلِّه، **مقابل جملةٍ يعرفها صاحبُها.**
+	//
+	// **ولم تكن تُرسَل أصلاً**: قناتُها بوّابةُ رسائلَ لم تُضبط قطّ —
+	// **فحُذف ما لم يعمل يوماً ولم يفتقده أحد.**
 
 	httpx.JSON(w, http.StatusOK, map[string]any{"verified": true})
 }

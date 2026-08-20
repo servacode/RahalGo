@@ -47,10 +47,8 @@ import (
 )
 
 var (
-	errNoMerchantPhone  = httpx.NewError(http.StatusConflict, "no_merchant_phone", "errors.no_merchant_phone")
-	errSMSNotConfigured = httpx.NewError(http.StatusServiceUnavailable, "sms_not_configured", "errors.sms_not_configured")
-	errSMSFailed        = httpx.NewError(http.StatusBadGateway, "sms_failed", "errors.sms_failed")
-	errBadChannel       = httpx.NewError(http.StatusBadRequest, "bad_channel", "errors.bad_channel")
+	errNoMerchantPhone = httpx.NewError(http.StatusConflict, "no_merchant_phone", "errors.no_merchant_phone")
+	errBadChannel      = httpx.NewError(http.StatusBadRequest, "bad_channel", "errors.bad_channel")
 )
 
 // buildMerchantMessage نصُّ الرسالة — مصدرٌ واحد يقرؤه الإرسالُ والمعاينة.
@@ -213,9 +211,6 @@ func (s *Server) handleOrderMessagePreview(w http.ResponseWriter, r *http.Reques
 		"phone":            ph.WhatsApp,
 		"wa_link":          waLink(ph.WhatsApp, text),
 		"drivers_on_shift": onShift,
-		// أمُهيَّأةٌ بوّابةُ الرسائل؟ **الواجهةُ لا تعرض زرّاً لا يعمل.**
-		// وزرٌّ يُضغط فيردّ «غير مضبوطة» يُعلّم الموظّفَ ألّا يثق بالأزرار.
-		"sms_ready": s.textSender.Configured(),
 	})
 }
 
@@ -247,7 +242,15 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
-	if req.Channel != "whatsapp" && req.Channel != "sms" {
+	// **ولا قناةَ إلّا واتساب.**
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٢٠: «لا أريد SMS بإرسال الطلبات».)
+	//
+	// **وكانت هنا قناةُ رسائلَ نصّيّةٍ لا يناديها أحد**: زرُّ اللوحة
+	// يرسل `whatsapp` دائماً منذ بُني. **وشيفرةٌ لا يناديها أحدٌ تشيخ
+	// وتكذب** — وقع مثلُها اليومَ في `Harness.Setting`: كتبت شهراً في
+	// جدولٍ لا وجودَ له ولم يكشفها بناءٌ ولا فحص.
+	if req.Channel != "whatsapp" {
 		s.respondErr(w, errBadChannel)
 		return
 	}
@@ -258,28 +261,9 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	phone := ph.WhatsApp
-	if req.Channel == "sms" {
-		phone = ph.SMS
-	}
 	if phone == "" {
 		s.respondErr(w, errNoMerchantPhone)
 		return
-	}
-
-	if req.Channel == "sms" {
-		if !s.textSender.Configured() {
-			s.respondErr(w, errSMSNotConfigured)
-			return
-		}
-		text := buildMerchantMessage(s.settings.GetString(r.Context(), "whatsapp.order_template"), msg)
-		if err := s.textSender.SendText(r.Context(), ph.SMS, text); err != nil {
-			// **السببُ في السجلّ والرسالةُ العامّة للشاشة**: ردُّ المزوّد قد
-			// يحمل مفتاحاً أو تفصيلَ حسابٍ لا يُعرض لموظّف.
-			s.logger.Error("dispatch: تعذّر إرسال الطلب للمتجر",
-				"order", orderID, "phone", phone, "error", err)
-			s.respondErr(w, errSMSFailed)
-			return
-		}
 	}
 
 	// **يُسجَّل**: إبلاغٌ باسم المنصة إلى طرفٍ خارجها — ومن أبلغ وبأيّ قناة

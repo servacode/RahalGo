@@ -72,6 +72,11 @@ func run(logger *slog.Logger) error {
 	settingsStore := settings.NewStore(pg)
 
 	var otpSender notify.OTPSender
+	// **وبوتُ واتساب يُبلّغ المتاجر أيضاً** — انظر حيث يُحقن.
+	//
+	// **ويُصرَّح به بنوعه لا بواجهته**: **مؤشّرٌ فارغٌ داخل واجهةٍ ليس
+	// واجهةً فارغة** — فيمرّ فحصُ `!= nil` ثمّ ينهار عند أوّل نداء.
+	var waBot *notify.WhatsAppSender
 	otpStatus := func() map[string]any { return map[string]any{"provider": "dev"} }
 	// **وفكُّ الاقتران لا وجودَ له في مزوّد التطوير** — ولا يُخترع زرٌّ لا يفعل.
 	var otpUnpair func(context.Context) error
@@ -98,6 +103,7 @@ func run(logger *slog.Logger) error {
 			return err
 		}
 		otpSender = wa
+		waBot = wa
 		otpStatus = wa.Status
 		otpUnpair = wa.Unpair
 		otpPair = wa.Pair
@@ -197,7 +203,17 @@ func run(logger *slog.Logger) error {
 			// **إبلاغُ المتاجر برسالةٍ نصّية لا ببوت واتساب**: البوت غيرُ رسميّ
 			// ويُحظَر إن أكثر من الإرسال الآليّ. وواتساب الرسميّ لاحقاً — يدخل
 			// من الواجهة نفسها (`notify.TextSender`) بلا تغييرٍ فيمن يستعملها.
-			srv.SetTextSender(smsSender)
+			// **والمتاجرُ تُبلَّغ بالبوت لا برسالةٍ نصّيّة.**
+			//
+			// (قرارُ المالك ٢٠٢٦-٠٨-٢٠.)
+			//
+			// **والمتاجرُ أرقامٌ قليلةٌ معروفةٌ تتكرّر** — وهو أهونُ ما
+			// يحمله بوتٌ غيرُ رسميّ. **وخطرُ الحظر في مراسلة أرقامٍ
+			// جديدةٍ لم تُراسَل من قبل**، وتلك رموزُ التحقّق وحدَها —
+			// **ولها قناتُها التي تُبدَّل من اللوحة.**
+			if waBot != nil {
+				srv.SetMerchantNotifier(waBot)
+			}
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,
