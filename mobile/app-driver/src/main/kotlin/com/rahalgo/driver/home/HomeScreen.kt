@@ -151,6 +151,8 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // من حزمة السائق **قرارُه هو.**
         if (!OfflineMap.ready) {
             OfflineCard(
+                // **واسمُها من الفهرس** — انظر `RegionPicker`.
+                regionName = OfflineMap.status.name,
                 progress = OfflineMap.progress,
                 downloading = OfflineMap.downloading,
                 // **والساقطُ يُقال إنّه سقط** — إغلاقُ
@@ -252,6 +254,8 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
  */
 @Composable
 private fun OfflineCard(
+    /** **اسمُ مدينته كما في الفهرس** — لا اسمٌ مكتوبٌ في النصّ. */
+    regionName: String,
     progress: Int,
     downloading: Boolean,
     failed: Boolean,
@@ -266,7 +270,7 @@ private fun OfflineCard(
             .padding(16.dp),
     ) {
         Text(
-            text = stringResource(R.string.offline_map_title),
+            text = stringResource(R.string.offline_map_title, regionName),
             fontWeight = FontWeight.Bold,
             color = Rahal.colors.brand,
         )
