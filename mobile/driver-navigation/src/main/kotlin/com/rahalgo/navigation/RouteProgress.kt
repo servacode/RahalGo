@@ -34,6 +34,14 @@ class RouteProgress(private val route: NavRoute) {
         val remainingM: Double,
         val remainingSec: Double,
         val offRouteM: Double,
+
+        /**
+         * **الإزاحةُ الموقّعة** — موجبٌ يسارَ السير، سالبٌ يمينَه.
+         *
+         * **تمريرٌ لا حساب** (المرحلة ٨ب): [RouteProjector] يحسبها
+         * أصلاً **وكانت تُرمى.** ولا حكمَ هنا يتبدّل بها.
+         */
+        val lateralSignedM: Double = 0.0,
         val fraction: Double,
         /** **المناورةُ الجاريةُ الآن** — وفارغةٌ قبل أوّل إسقاط. */
         val current: NavManeuver?,
@@ -83,7 +91,7 @@ class RouteProgress(private val route: NavRoute) {
         progressM = settle(hit.progressM, fix)
         started = true
         advanceManeuvers()
-        return snapshot(hit.offRouteM, fix)
+        return snapshot(hit.offRouteM, fix, hit.lateralSignedM)
     }
 
     /**
@@ -141,7 +149,11 @@ class RouteProgress(private val route: NavRoute) {
         }
     }
 
-    private fun snapshot(offRouteM: Double, fix: NavFix): State {
+    private fun snapshot(
+        offRouteM: Double,
+        fix: NavFix,
+        lateralSignedM: Double = 0.0,
+    ): State {
         val total = route.totalM
         val remaining = max(0.0, total - progressM)
         val cur = route.maneuvers.getOrNull(maneuverIdx)
@@ -167,6 +179,7 @@ class RouteProgress(private val route: NavRoute) {
             remainingM = remaining,
             remainingSec = remainingSeconds(),
             offRouteM = offRouteM,
+            lateralSignedM = lateralSignedM,
             fraction = if (total <= 0) 0.0 else (progressM / total).coerceIn(0.0, 1.0),
             current = cur,
             next = nxt,

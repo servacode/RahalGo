@@ -94,6 +94,22 @@ fun ShopScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val media = { path: String? -> Backend.of(context).media(path) }
 
+    // **الصنفُ الذي تُختار خياراتُه الآن** — وفارغٌ حين لا نافذة.
+    var picking by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<Item?>(null)
+    }
+    picking?.let { target ->
+        ItemOptionsSheet(
+            item = target,
+            api = vm.customerApi,
+            onAdd = { chosen ->
+                Cart.add(target, options = chosen)
+                picking = null
+            },
+            onClose = { picking = null },
+        )
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // **والسحبُ إلى الأسفل يُنعش** — انظر `Refreshable`.
     // ══════════════════════════════════════════════════════════════════
@@ -249,7 +265,12 @@ fun ShopScreen(
                         onAdd = {
                             // **ومغلقٌ لا يُضاف** — ومن أضافه ثمّ رُدّ
                             // عند الدفع أضاع وقتَه.
-                            if (item.available && !item.sourceClosed) Cart.add(item)
+                            if (item.available && !item.sourceClosed) {
+                                // **وما له خياراتٌ يُسأل قبل أن يدخل** —
+                                // **والمجموعةُ الإلزاميّةُ تُسقط الطلبَ
+                                // كلَّه** إن دخل بلا اختيار.
+                                if (item.hasOptions) picking = item else Cart.add(item)
+                            }
                         },
                         onLike = { onLike(item) },
                     )

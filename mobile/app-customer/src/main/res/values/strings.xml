@@ -135,6 +135,14 @@
     <string name="tkt_closed">أغلقت</string>
 
     <!-- **السلّة** -->
+    <!-- خياراتُ الصنف — الحجمُ والإضافات -->
+    <string name="options_required">مطلوب</string>
+    <string name="options_optional">اختياري</string>
+    <string name="options_add">أضف — %1$s</string>
+    <string name="options_failed">تعذّر جلبُ الخيارات — تحقّق من الاتصال</string>
+    <!-- «يُطلب معه» في السلّة -->
+    <string name="suggest_title">يُطلب معه</string>
+
     <string name="cart_title">سلتي</string>
     <string name="cart_hint">راجع ما اخترته ثم أرسل</string>
     <string name="cart_empty">سلتك فارغة — تصفح السوق واضغط ما يعجبك</string>

@@ -30,6 +30,26 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  **عنوانا المحرّك والخرائط — ثابتان في الإصدار، ويُبدَّلان في التصحيح**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٢٢، `DEVICE VALIDATION LOCAL CONNECTIVITY`.)
+//
+// **كانا نصّين في `Backend.kt`** — فكلُّ بناءٍ تجريبيٍّ يكلّم الإنتاج.
+// **وذلك يعني أنّ أيَّ تجربةِ طلبٍ على جهاز تكتب في بيانات الزبائن.**
+//
+// **والإصدارُ لا يقبل تجاوزاً البتّة**: قيمتاه مكتوبتان حرفاً بحرف في
+// `release` أدناه، **ولا تقرآن خاصّيّةً ولا متغيّرَ بيئة.** فمن مرّر
+// `-Prahalgo.apiBaseUrl` وبنى إصداراً **لم يتغيّر عنده شيء.**
+//
+// **ويحرسه `ProductionEndpointGuardTest`** — يسقط البناءُ إن تسرّب
+// تجاوزٌ إلى الإصدار، أو إن بقي التصحيحُ على الإنتاج وقد أُعطي عنواناً.
+private fun overrideOrNull(project: org.gradle.api.Project, key: String): String? =
+    (project.findProperty(key) as String?)?.trim()?.takeIf { it.isNotEmpty() }
+
+private fun quoted(value: String) = "\"" + value + "\""
+
 android {
     namespace = "com.rahalgo.driver"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -56,6 +76,10 @@ android {
 
     buildTypes {
         release {
+            // **العنوانان حرفيّان — ولا مدخلَ لتجاوزٍ هنا.**
+            buildConfigField("String", "API_BASE_URL", quoted("https://api.rahalgo.com"))
+            buildConfigField("String", "MAPS_BASE_URL", quoted("https://maps.rahalgo.com"))
+
             // **ويُوقَّع إن وُجد المفتاح** — وإلّا خرج بلا توقيعٍ كما كان.
             if (keystoreProps.getProperty("storeFile") != null) {
                 signingConfig = signingConfigs.getByName("upload")
@@ -73,6 +97,17 @@ android {
             // لا يُقرأ لا يُصلَح.
         }
         debug {
+            // **وهنا وحدَه يُقبل التجاوز** — وافتراضُه الإنتاجُ نفسُه،
+            // **فمن بنى تجريبيّاً بلا خاصّيّةٍ لم يتغيّر عنده شيء.**
+            buildConfigField(
+                "String", "API_BASE_URL",
+                quoted(overrideOrNull(project, "rahalgo.apiBaseUrl") ?: "https://api.rahalgo.com"),
+            )
+            buildConfigField(
+                "String", "MAPS_BASE_URL",
+                quoted(overrideOrNull(project, "rahalgo.mapsBaseUrl") ?: "https://maps.rahalgo.com"),
+            )
+
             // ══════════════════════════════════════════════════════════
             // **ولا تُرفع انهياراتُ البناء التجريبيّ**
             // ══════════════════════════════════════════════════════════
@@ -124,6 +159,9 @@ kotlin {
 }
 
 dependencies {
+    // **واختباراتُ الوحدة — منسّقُ الصوت بناطقٍ وهميّ.** (المرحلة ٤.)
+    testImplementation(libs.junit)
+
     // **وحدةُ التصميم — الثيمُ والحركةُ لأربعة تطبيقات.**
     implementation(project(":design"))
     implementation(project(":ui"))
@@ -140,6 +178,7 @@ dependencies {
     implementation(project(":driver-navigation"))
     implementation(project(":map"))
     implementation(libs.maplibre)
+    implementation(libs.androidx.work)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.crashlytics)

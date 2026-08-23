@@ -123,9 +123,26 @@
     <string name="nav_trip">الرحلة</string>
     <string name="trip_none">لا رحلة الآن</string>
     <string name="trip_none_hint">خذ طلبا من الطلبات وتبدأ رحلتك</string>
-    <string name="trip_navigate">الملاحة</string>
+    <!-- ══════════════════════════════════════════════════════════════
+         **زرٌّ يخرجك من التطبيق — فليقل ذلك**
+         ══════════════════════════════════════════════════════════════
+
+         (تصحيحُ المالك ٢٠٢٦-٠٨-٢٣.)
+
+         **كان اسمُه «الملاحة»** — وهو يسلّم الوجهةَ إلى تطبيقٍ خارجيّ.
+         **وملاحتُنا خلف زرٍّ آخر**، فمن أراد الملاحةَ ضغط المكتوبَ
+         عليه «الملاحة» **فخرج من تطبيقنا ولم يعرف أنّه خرج.**
+
+         **وقعت في رحلةِ ميدانٍ حقيقيّة** (٢٠٢٦-٠٨-٢٣): خرج المالكُ
+         يجرّب فعاد بلا نتيجة، **وسجلُّ الجهاز يشهد أنّ محرّكَ الملاحة
+         لم يقلع لحظةً واحدة.** -->
+    <string name="trip_navigate">افتح في خرائط غوغل</string>
     <string name="map_recenter">ردني إلى موقعي</string>
-    <string name="map_follow">تابعني على الخريطة</string>
+    <!-- **وهذا هو زرُّ الملاحة الحقيقيّ** — يفتح الجلسةَ ويغلقها
+         (`LaunchedEffect(follow)`). **وكان اسمُه «تابعني على الخريطة»
+         فيُقرأ ضبطَ كاميرا لا تشغيلَ ملاحة**، وهو مُطفأٌ افتراضيّاً
+         **فلا يعمل شيءٌ حتّى يُضغط.** -->
+    <string name="map_follow">ابدأ الملاحة</string>
     <string name="trip_s_accepted">قبلت الطلب</string>
     <string name="trip_s_to_pickup">إلى المتجر</string>
     <string name="trip_s_at_pickup">وصلت المتجر</string>
@@ -159,6 +176,21 @@
     <string name="offline_map_button">نزل الآن</string>
     <string name="offline_map_progress">جار التنزيل %1$d%%</string>
     <string name="offline_map_resume">أكمل التنزيل</string>
+    <!-- ══════════════════════════════════════════════════════════════
+         عباراتُ الإخفاق — إغلاقُ TD-MAP-SILENT-RESOURCE-FAIL
+         ══════════════════════════════════════════════════════════════
+
+         قرارُ المالك ٢٠٢٦-٠٨-٢٢ البند ٣: «لا تعرض تفاصيل تقنية
+         للمستخدم» — لا عنوانَ ولا رمزَ ردٍّ ولا اسمَ استثناء.
+
+         وثلاثُ عباراتٍ لا عشر: السائقُ يفعل شيئاً واحداً من ثلاثة —
+         يصلح الشبكة، أو يفرّغ مساحة، أو يعيد المحاولة. وعبارةٌ لكلّ
+         سببٍ داخليٍّ تُطيل القائمة ولا تُغيّر ما يفعله.
+    -->
+    <string name="offline_map_failed_network">تعذّر تنزيل ملفّات الخريطة — تحقّق من الاتّصال وحاول مرّة أخرى</string>
+    <string name="offline_map_failed_space">مساحةُ التخزين لا تكفي — فرّغ بعضَ المساحة ثمّ حاول مرّة أخرى</string>
+    <string name="offline_map_failed_other">تعذّر تنزيل ملفّات الخريطة — حاول مرّة أخرى</string>
+    <string name="offline_map_retry">حاول مرّة أخرى</string>
     <string name="trip_near_pickup">يبدو أنك وصلت المتجر</string>
     <string name="trip_near_dropoff">يبدو أنك وصلت الزبون</string>
     <string name="trip_problem">لدي مشكلة</string>
@@ -330,4 +362,26 @@
     <string name="disc_stop">ويقف الجمع فور إغلاق ورديتك. ولك أن ترفض، ويعمل التطبيق، ولا تصلك طلبات.</string>
     <string name="disc_agree">أوافق</string>
     <string name="disc_deny">ليس الآن</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         اختيارُ المسار — إغلاقُ واجهة ٧، ٢٠٢٦-٠٨-٢١
+         ══════════════════════════════════════════════════════════════
+
+         ولا «الأسرع» ولا «الأقصر» — وزنُ محرّكنا `routability` لا
+         `duration`، فالصفةُ ادّعاءٌ لا يُثبت. والوصفُ بالأرقام.
+    -->
+    <string name="route_recommended">الموصى به</string>
+    <string name="route_alternative">بديل</string>
+    <!-- %1$s المدّة · %2$s المسافة -->
+    <string name="route_metrics">%1$s · %2$s</string>
+    <string name="route_delta_shorter">أقصر بـ%1$s</string>
+    <string name="route_delta_longer">أطول بـ%1$s</string>
+    <string name="route_delta_faster">أقل زمنا بـ%1$s</string>
+    <string name="route_delta_slower">أطول زمنا بـ%1$s</string>
+    <string name="route_confirm">اعتماد المسار</string>
+    <string name="route_cancel_preview">إلغاء</string>
+    <string name="route_no_longer_available">هذا المسار لم يعد متاحا</string>
+    <!-- ولقارئ الشاشة — البند ٢٩ -->
+    <string name="route_a11y_metrics">%1$s، %2$s، %3$s</string>
+    <string name="route_a11y_delta">%1$s، %2$s</string>
 </resources>

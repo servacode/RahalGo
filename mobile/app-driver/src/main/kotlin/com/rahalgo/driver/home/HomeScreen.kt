@@ -24,6 +24,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.rahalgo.driver.trip.MapPackageWorker
+import androidx.annotation.StringRes
 import com.rahalgo.driver.trip.OfflineMap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.LaunchedEffect
@@ -134,7 +136,11 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             OfflineCard(
                 progress = OfflineMap.progress,
                 downloading = OfflineMap.downloading,
-                onDownload = { OfflineMap.download(context) },
+                // **والساقطُ يُقال إنّه سقط** — إغلاقُ
+                // `TD-MAP-SILENT-RESOURCE-FAIL`.
+                failed = OfflineMap.failed,
+                failure = OfflineMap.failure,
+                onDownload = { MapPackageWorker.enqueue(context) },
             )
             Spacer(Modifier.height(14.dp))
         }
@@ -228,7 +234,13 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
  * البيانات».
  */
 @Composable
-private fun OfflineCard(progress: Int, downloading: Boolean, onDownload: () -> Unit) {
+private fun OfflineCard(
+    progress: Int,
+    downloading: Boolean,
+    failed: Boolean,
+    failure: com.rahalgo.map.data.MapFailure?,
+    onDownload: () -> Unit,
+) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -252,18 +264,70 @@ private fun OfflineCard(progress: Int, downloading: Boolean, onDownload: () -> U
             Spacer(Modifier.height(6.dp))
             Text(stringResource(R.string.offline_map_progress, progress), color = Rahal.colors.inkMuted)
         } else {
+            // ══════════════════════════════════════════════════════════
+            // **والساقطُ يُقال إنّه سقط — ثمّ يُعطى بابَ الإعادة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (إغلاقُ `TD-MAP-SILENT-RESOURCE-FAIL`، قرارُ المالك
+            //  ٢٠٢٦-٠٨-٢٢ البند ٦: «لا تعد الواجهة بصمت إلى الحالة
+            //  الابتدائية وكأن شيئاً لم يقع».)
+            //
+            // **كانت البطاقةُ تقرأ رقمين**: `progress` و`downloading`.
+            // **والساقطُ ليس واحداً منهما** — فيُرسَم كمن لم يبدأ،
+            // **والزرُّ يقول «نزّل الآن» بعد أن جرّب السائقُ وفشل.**
+            //
+            // **وقِيس على الجهاز المرجعيّ ٢٠٢٦-٠٨-٢٢**: سقط التنزيلُ
+            // مرّتين متتاليتين **وما تغيّرت الشاشةُ في المرّتين.**
+            if (failed) {
+                Text(
+                    text = stringResource(failureMessage(failure)),
+                    color = Rahal.colors.accent,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+            }
             RahalButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
                 // **ومن وقف في نصفه يُقال له «أكمل» لا «نزّل»** — الأوّل
                 // يقول إنّ ما مضى محفوظ.
                 Text(
                     stringResource(
-                        if (progress in 1..99) R.string.offline_map_resume
-                        else R.string.offline_map_button,
+                        when {
+                            failed -> R.string.offline_map_retry
+                            progress in 1..99 -> R.string.offline_map_resume
+                            else -> R.string.offline_map_button
+                        },
                     ),
                 )
             }
         }
     }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **من السبب الداخليّ إلى ما يفعله السائق**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (البند ٣ من قرار ٢٠٢٦-٠٨-٢٢: «لا تعرض تفاصيل تقنية للمستخدم».)
+ *
+ * **وعشرةُ أسبابٍ تُختصر إلى ثلاث عبارات** — لأنّ ما يفعله السائقُ
+ * ثلاثةٌ لا عشرة: **يصلح الشبكة، أو يفرّغ مساحة، أو يعيد.**
+ *
+ * **و`CHECKSUM_MISMATCH` مثلاً لا يُقال للسائق** — لا يملك له حيلة،
+ * **وقولُه يخيفه ولا يفيده.** والسببُ الدقيقُ في السجلّ لمن يصلح.
+ *
+ * **والدائمُ يُعطى «حاول مرّة أخرى» أيضاً** — فقد يكون المنبعُ أُصلح،
+ * **والإعادةُ اليدويّةُ ليست حلقةَ إعادةٍ آليّة** (البند ٥).
+ */
+@StringRes
+internal fun failureMessage(failure: com.rahalgo.map.data.MapFailure?): Int = when (failure) {
+    com.rahalgo.map.data.MapFailure.NETWORK,
+    com.rahalgo.map.data.MapFailure.TIMEOUT,
+    -> R.string.offline_map_failed_network
+
+    com.rahalgo.map.data.MapFailure.NO_SPACE -> R.string.offline_map_failed_space
+
+    else -> R.string.offline_map_failed_other
 }
 
 /**

@@ -23,6 +23,7 @@
 
     <!-- **وأيقونةُ المنصّة من الوحدة** — (قرارُ المالك ٢٠٢٦-٠٨-١٤). -->
     <application
+        android:name=".RepApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/rahalgo_no_backup"
         android:label="@string/app_name"

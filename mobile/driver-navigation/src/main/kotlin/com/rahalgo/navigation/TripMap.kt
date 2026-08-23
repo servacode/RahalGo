@@ -1,40 +1,69 @@
 package com.rahalgo.navigation
 
-import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
-import org.maplibre.android.MapLibre
-import org.maplibre.android.WellKnownTileServer
+import com.rahalgo.map.MapOverlayRegistry
+import com.rahalgo.map.MapStyleRepository
+import com.rahalgo.map.data.MapRuntime
+import com.rahalgo.map.data.MapSourceResolver
+import com.rahalgo.map.rememberMapSurface
+import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
-import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **خريطة الرحلة**
+ * **خريطة الرحلة — نمطٌ متّجهٌ من مستودعٍ واحد**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (المرحلة ٢ من `docs/DRIVER-APP-PLAN.md`.)
+ * (المرحلة ٦ب، قرارُ المالك ٢٠٢٦-٠٨-٢١، البنود ٢ و١٩ و٢٠ و٢١ و٢٢.)
  *
- * # لماذا بلاطات نقطيّة لا متجهيّة
+ * # **ما كان وما صار**
  *
- * **الويب يرسم بها** (`web/packages/ui/map.tsx`: `tile.openstreetmap.org`
- * ثمّ بدائل) — **فالمدينة تبدو واحدة في الشاشتين**، ولا يرى السائق شارعا
- * بشكل والمكتب يراه بشكل آخر.
+ * **كانت تقرأ نمطاً راستراً من حزمة التطبيق** (`asset://map-style.json`)
+ * **يجلب بلاطاتِه من `tile.openstreetmap.org`.** وذلك انتهى: **لا مسارَ
+ * إنتاجٍ في أندرويد يبلغ راستراً عامّاً** (البند ٢)، **ويحرسه
+ * `check-map-style-single.mjs`.**
  *
- * **ولا مفتاح ولا فاتورة** — بخلاف خرائط غوغل.
+ * **والنمطُ الآن من `MapStyleRepository`** — هو نفسُه الذي يرسم به لوحُ
+ * الالتقاط في تطبيقَي الزبون والمندوب.
  *
- * # وأسلوب الرسم يُكتب هنا لا يُجلب من خادم
+ * # **وإعادةُ تحميل النمط تمحو كلَّ ما فوقه**
  *
- * **ملفّ الأسلوب في MapLibre يُنزَّل عادةً من مزوّد** — ونحن لا مزوّد
- * لنا، **فيُكتب المصدر والطبقة بأيدينا**: مصدر نقطيّ واحد وطبقة فوقه.
- * **ولا نداء ثالث لخادم أسلوب** قد يسقط فتبقى الشاشة رماديّة.
+ * (البند ١٩، وسمّاه المالكُ «نقطةً شديدةَ الأهمّيّة».)
+ *
+ * **حين تبدَّل المصدرُ** — ذهبت الشبكةُ أو عادت — **تُحمَّل MapLibre
+ * نمطاً جديداً وتُسقط كلَّ مصدرٍ وطبقةٍ أضفناها**: خطَّ المسار،
+ * ودبّوسَ السائق، ونقطتَي الاستلام والتسليم.
+ *
+ * **ولا تردّ خطأً.** الشوارعُ تُرسم سليمةً **وفوقها لا شيء** — والسائقُ
+ * يقود ولا يرى مسارَه.
+ *
+ * **فالرسمُ يُسجَّل مُعيداً في `surface.overlays`**، **ويُنادى السجلُّ
+ * بعد كلّ `StyleLoaded`** لا مرّةً عند الإنشاء.
+ *
+ * # **والكاميرا تُحفظ عبر التبديل** (البند ٢١)
+ *
+ * **تحميلُ نمطٍ لا يُصفّر الكاميرا في MapLibre**، **لكنّ شيفرتَنا كانت
+ * تنادي `fitAll` في `onStyleLoaded`.** فلو بُدِّل المصدرُ أثناء الملاحة
+ * **لقفزت الكاميرا من أمام السائق إلى منظرٍ عامٍّ للرحلة كلِّها.**
+ *
+ * **فصار `fitAll` عند أوّل تحميلٍ وحدَه**، **والموضعُ يُلتقط ويُعاد**
+ * فيما بعده.
+ *
+ * # **والملاحةُ لا تُصفَّر مع الخريطة** (البند ٢٠)
+ *
+ * **الخريطةُ عارضٌ لا حالة.** فـ`NavigationSession` و`RouteProgress`
+ * و`VoicePlanner` و`WrongWayDetector` و`RerouteEngine` **كلُّها في
+ * نموذج الشاشة**، **ولا يمسّها تحميلُ نمطٍ ولا إعادةُ إنشاء `MapView`.**
  *
  * # والعلامات بطبقات لا بإضافة
  *
@@ -45,116 +74,211 @@ import org.maplibre.android.maps.Style
 /** مركز الرقّة — **يُفتح عليه حتّى تُعرف النقاط.** */
 private val RAQQA = LatLng(35.9528, 39.0079)
 
-/**
- * **أسلوب الخريطة — في ملفّ لا في نصّ داخل الشيفرة.**
- *
- * **والبلاطات من `openstreetmap.org`** كما في الويب. **وسياستهم تمنع
- * الاستعمال الثقيل** — فيوم يكبر عدد السائقين يُبدَّل العنوان بخادمنا،
- * **وهو سطر واحد في الملفّ.**
- *
- * # ولماذا ملفّ
- *
- * **تنزيل منطقة غير متّصلة يحتاج عنوان أسلوب** (`asset://`) لا نصّا:
- * **المنزِّل يقرأ الأسلوب ليعرف أيّ بلاطات يجلب.** ونصٌّ داخل الشيفرة لا
- * عنوان له.
- *
- * **وأرضيّة تحت البلاطات** — والخريطة سوداء حتّى تصل أوّل بلاطة، **وسوادٌ
- * يملأ الشاشة يُقرأ عطبا** لا انتظارا. (رآه المالك ٢٠٢٦-٠٨-١٢.)
- */
-/**
- * ══════════════════════════════════════════════════════════════════════
- * **عنوانان للأسلوب — واحدٌ للعرض وآخرُ للتنزيل**
- * ══════════════════════════════════════════════════════════════════════
- *
- * **والعارض يقرأ الأصول** (`asset://`) — **فيرسم بلا شبكة أصلا**، وهو
- * ما نريده: خريطة تعمل والإنترنت مقطوع.
- *
- * **والمنزّل يقرأ عنوانا شبكيّا وحدَه**: جُرّب `asset://` فردّ «تعذّر
- * تحليل العنوان»، وجُرّب `file://` فردّ مثلها (قيسا على الجهاز
- * ٢٠٢٦-٠٨-١٢) — **فبقي التنزيل على صفر بلا سبب ظاهر.** فيقرأ أسلوبه من
- * المحرّك.
- *
- * **والبلاطات واحدة في الاثنين** — وهي ما يُخزَّن ويُقرأ، **لا ملفّ
- * الأسلوب.** فما نزّله المنزّل يرسمه العارض.
- */
-const val STYLE_ASSET = "asset://map-style.json"
-
-/**
- * خريطة تعرض ثلاث نقاط وخطّ الرحلة.
- *
- * **وتُبنى مرّة واحدة** (`remember`) — ومن أعاد بناء `MapView` مع كلّ
- * تحديث موقع **أعاد تحميل البلاطات كلّها كلّ عشرين ثانية.**
- */
 @Composable
 fun TripMap(
     icons: MarkerIcons,
     driver: LatLng?,
     pickup: LatLng?,
     dropoff: LatLng?,
-    /** **خطّ الشوارع** — وفارغٌ يعني المستقيم بين النقاط. */
     route: List<LatLng> = emptyList(),
-    /** **أتلاحق الكاميرا صاحبَها؟** — زرّ السير على الخريطة. */
     follow: Boolean = false,
-    /**
-     * **عدّاد «ردّني إلى موضعي»** — يزيد مع كلّ ضغطة.
-     *
-     * **ولماذا عدّاد لا دالّة**: `AndroidView` لا تُنادى إلّا حين
-     * يتبدّل شيءٌ مُمرَّرٌ إليها، **ورقمٌ يزيد أصدقُ إشارةٍ على ضغطة**
-     * من رايةٍ تُرفع وتُنزَّل فتضيع إن ضُغط مرّتين.
-     */
     recenter: Int = 0,
-    /**
-     * ══════════════════════════════════════════════════════════════════
-     * **الملاحةُ النشطة — المرحلة ١**
-     * ══════════════════════════════════════════════════════════════════
-     *
-     * **وفارغةٌ تعني «لا ملاحة»**: تبقى الخريطةُ كما كانت حرفاً بحرف
-     * — **ومن لم يفتح ملاحةً لا يجد شيئاً تبدّل.**
-     *
-     * **وتحمل ما قرّرته وحدةُ الملاحة**: الهدفُ والاتّجاهُ والمدّة.
-     * (انظر `NavPipeline.Step`.)
-     */
     nav: NavRender? = null,
+    /**
+     * **بدائلُ تُرسم ولا يُلاحَ عليها** — المرحلة ٧، البند ٢٨.
+     *
+     * **`render-only data`** — لا تدخل `NavigationSession` ولا
+     * `VoicePlanner` ولا الكاشفَين.
+     */
+    alternatives: List<AltRouteLayer.Drawable> = emptyList(),
+
+    /**
+     * **المعايَنُ الآن** — إغلاقُ واجهة ٧، البند ١٤.
+     *
+     * **يُبرَز بصريّاً ولا يُعتمد.** والمسارُ الفعّالُ يبقى واضحاً
+     * **لأنّ السائقَ لم يعتمد البديلَ بعد.**
+     */
+    previewRouteId: String? = null,
+
+    /**
+     * **ضغطةٌ على خطٍّ بديل** — البند ٢٤.
+     *
+     * **تردّ معرِّفاً ولا تُغيّر ملاحة** — والقرارُ في آلة الحال.
+     * **و`null` تعني: ضُغط على غير بديل** (البند ٢٧: إلغاءُ معاينة).
+     */
+    onRouteTapped: ((String?) -> Unit)? = null,
+    online: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val view = com.rahalgo.map.rememberMapView()
-    // **وما عولج لا يُعاد** — الدالّة تُنادى مع كلّ رسمٍ جديد.
+    val surface = rememberMapSurface()
+    val view = surface.view
     val handled = remember { intArrayOf(-1) }
-    // **ومُحرِّكُ الأيقونة يعيش بعمر الشاشة** — ومن بناه في كلّ رسمٍ
-    // ترك حركاتٍ يتيمةً تعمل معاً فترتجف الأيقونة.
     val animator = remember { com.rahalgo.map.MarkerAnimator() }
-    // **وآخرُ ما عُرض** — منه تبدأ الحركةُ التالية، لا من القراءة.
     val shown = remember { doubleArrayOf(Double.NaN, Double.NaN) }
     val shownBearing = remember { floatArrayOf(0f) }
     val navKey = remember { longArrayOf(-1L) }
 
-    androidx.compose.runtime.DisposableEffect(Unit) {
+    /**
+     * **أوّلُ تحميلٍ يُؤطّر، وما بعده يُحافظ** — البند ٢١.
+     *
+     * **ولا `fitAll` تلقائيٌّ بلا سبب**، خصوصاً في الملاحة.
+     */
+    val framed = remember { booleanArrayOf(false) }
+
+    /** **الحالُ الأخيرُ للرسم** — يقرؤه المُعيدُ بعد تحميل النمط. */
+    val latest = remember { arrayOfNulls<TripDraw>(1) }
+    latest[0] = TripDraw(driver, pickup, dropoff, route, icons)
+
+    /**
+     * **وبدائلُ العرض ومعاينتُها** — تُعاد بعد كلّ تحميل نمط.
+     *
+     * **البند ٣٢**: «preview highlight restored… بدون تغيير
+     * Navigation generation».
+     */
+    val latestAlts = remember { arrayOfNulls<List<AltRouteLayer.Drawable>>(1) }
+    latestAlts[0] = alternatives
+    val latestPreview = remember { arrayOfNulls<String>(1) }
+    latestPreview[0] = previewRouteId
+
+    /**
+     * **والنمطُ الحاليُّ يُمسك حين يُحمَّل.**
+     *
+     * **ولا يُسأل عنه بـ`getMapAsync`** — تلك غيرُ متزامنة، **فتردّ
+     * بعد أن يكون المُعيدُ قد انتهى ولم يرسم شيئاً.**
+     */
+    val styleRef = remember { arrayOfNulls<Style>(1) }
+
+    /**
+     * **الربطُ يُعاد حسابُه حين يتبدّل الاتّصال أو موضعُ السائق.**
+     *
+     * **ولا يُسأل في كلّ إطار** (البند ٤٢) — المفتاحُ هو `online`
+     * وصندوقُ المسار، **وكلاهما يتبدّل نادراً.**
+     */
+    val routeBbox = remember(route) { bboxOf(route) }
+    val binding = remember(online, routeBbox, driver?.latitude, driver?.longitude) {
+        MapStyleRepository.bind(
+            purpose = if (nav != null) {
+                MapSourceResolver.Purpose.NAVIGATION
+            } else {
+                MapSourceResolver.Purpose.TRIP
+            },
+            online = online,
+            lat = driver?.latitude ?: pickup?.latitude,
+            lng = driver?.longitude ?: pickup?.longitude,
+            routeBbox = routeBbox,
+            navigating = nav != null,
+        )
+    }
+
+    DisposableEffect(Unit) {
         onDispose { animator.cancel() }
     }
 
-    com.rahalgo.map.MapLifecycle(view)
+    /**
+     * ══════════════════════════════════════════════════════════════
+     * **لمسُ خطٍّ بديل** — البنود ٢٤ إلى ٢٧
+     * ══════════════════════════════════════════════════════════════
+     *
+     * **ولا يستدعي `setRoute`** — يردّ معرِّفاً، **والقرارُ في آلة
+     * الحال.** فلمسةٌ خاطئةٌ على مِقودٍ لا تبدّل ملاحةً وصوتاً.
+     *
+     * **ومنطقةُ اللمس ٤٨dp** لا عرضُ الخطّ — البند ٢٥.
+     *
+     * **و`null` تعني: لا بديلَ تحتها** — فتُلغى المعاينةُ إن كانت
+     * (البند ٢٧).
+     */
+    val density = context.resources.displayMetrics.density
+    DisposableEffect(surface, onRouteTapped) {
+        val tap = onRouteTapped
+        if (tap == null) return@DisposableEffect onDispose { }
+        val listener = MapLibreMap.OnMapClickListener { point ->
+            var handled = false
+            view.getMapAsync { libre ->
+                val screen = libre.projection.toScreenLocation(point)
+                tap(AltRouteLayer.routeIdAt(libre, screen.x, screen.y, density))
+                handled = true
+            }
+            // **ولا تُبتلع الضغطة** — الخريطةُ تبقى تعمل كما كانت.
+            false
+        }
+        view.getMapAsync { it.addOnMapClickListener(listener) }
+        onDispose { view.getMapAsync { it.removeOnMapClickListener(listener) } }
+    }
+
+    /**
+     * **تسجيلُ مُعيدِ الطبقات** — مرّةً لهذه الشاشة.
+     *
+     * **بمعرِّفٍ ثابتٍ فلا يتراكم** مع إعادة التركيب.
+     */
+    DisposableEffect(surface) {
+        surface.overlays.register(
+            id = "trip-markers",
+            priority = MapOverlayRegistry.Priority.ROUTE,
+        ) {
+            val style = styleRef[0] ?: return@register
+            val draw = latest[0] ?: return@register
+            Markers.draw(
+                context, style, draw.driver, draw.pickup, draw.dropoff, draw.route, draw.icons,
+            )
+        }
+        /**
+         * **وطبقةُ البدائل** — بأولويّةٍ بين المناطق والمسار.
+         *
+         * **فتُرسم تحتَ الموصى به** ولا تخفيه (البند ٢٦).
+         */
+        surface.overlays.register(
+            id = "trip-alternatives",
+            priority = AltRouteLayer.PRIORITY,
+        ) {
+            val style = styleRef[0] ?: return@register
+            AltRouteLayer.draw(style, latestAlts[0] ?: emptyList(), latestPreview[0])
+        }
+        onDispose {
+            surface.overlays.unregister("trip-markers")
+            surface.overlays.unregister("trip-alternatives")
+        }
+    }
+
+    /**
+     * **تحميلُ النمط** — عند أوّل مرّةٍ وعند كلّ تبديلِ ربط.
+     *
+     * **والكاميرا تُلتقط قبل التحميل وتُعاد بعده** (البند ٢١).
+     */
+    LaunchedEffect(binding) {
+        val ready = binding as? MapRuntime.Binding.Ready ?: return@LaunchedEffect
+        view.getMapAsync { libre ->
+            val keep: CameraPosition? = if (framed[0]) libre.cameraPosition else null
+            libre.setStyle(Style.Builder().fromJson(ready.bound.json)) { loaded ->
+                styleRef[0] = loaded
+                /**
+                 * **وهنا يصير المطلوبُ محمَّلاً** — إغلاقُ ٦ب
+                 * الوظيفيّ، البندان ٩ و١٢.
+                 *
+                 * **قبل هذا السطر الأرشيفُ محجوزٌ ولم يُفتح**؛
+                 * **وبعده هو ما تقرأ منه الخريطة**، **فيُحرَّر
+                 * القديمُ ويُكتب `active.json`.**
+                 */
+                MapStyleRepository.onStyleLoaded(binding)
+                // **الطبقاتُ تُعاد أوّلاً** — فلا إطارَ واحدٌ بلا مسار.
+                surface.overlays.restoreAll()
+                if (keep != null) {
+                    libre.moveCamera(CameraUpdateFactory.newCameraPosition(keep))
+                } else {
+                    framed[0] = true
+                    fitAll(libre, driver, pickup, dropoff)
+                }
+            }
+        }
+    }
 
     AndroidView(factory = { view }, modifier = modifier) { map ->
         map.getMapAsync { libre ->
-            // ══════════════════════════════════════════════════════════
-            // **والأسلوب يُحمَّل مرّة**
-            // ══════════════════════════════════════════════════════════
-            //
-            // **كان يُعاد ضبطُه مع كلّ نبضة موقع** — و`setStyle` تهدم
-            // الطبقات وتبنيها، **فترتجف الخريطة كلَّ عشرين ثانية.**
-            val style = libre.style
-            if (style == null) {
-                libre.setStyle(Style.Builder().fromUri(STYLE_ASSET)) {
-                    Markers.draw(context, it, driver, pickup, dropoff, route, icons)
-                    fitAll(libre, driver, pickup, dropoff)
-                }
-            } else {
-                Markers.draw(context, style, driver, pickup, dropoff, route, icons)
-            }
+            val style = libre.style ?: return@getMapAsync
+            // **البدائلُ أوّلاً** — فتبقى تحتَ الدبابيس.
+            AltRouteLayer.draw(style, alternatives, previewRouteId)
+            Markers.draw(context, style, driver, pickup, dropoff, route, icons)
 
-            // **وردُّه إلى موضعه أوّلا** — ضغطةٌ صريحةٌ تسبق كلَّ سلوكٍ
-            // تلقائيّ.
             if (recenter != handled[0]) {
                 handled[0] = recenter
                 if (driver != null) {
@@ -163,25 +287,13 @@ fun TripMap(
                     fitAll(libre, driver, pickup, dropoff)
                 }
             } else if (nav != null && nav.targetLat != null && nav.targetLng != null) {
-                // ══════════════════════════════════════════════════════
-                // **والملاحةُ تمشي بالأيقونة وتُدير الخريطةَ معها**
-                // ══════════════════════════════════════════════════════
-                //
-                // (المرحلة ١، أمرُ المالك ٢٠٢٦-٠٨-٢٠.)
-                //
-                // **وكلُّ خطوةٍ تُنفَّذ مرّةً**: `AndroidView` تُنادى مع
-                // كلّ رسمٍ لأيّ سبب، **ومن بدأ الحركةَ في كلّ نداءٍ
-                // أعادها من أوّلها فتجمّدت الأيقونةُ في مكانها.**
                 if (nav.stepId != navKey[0]) {
                     navKey[0] = nav.stepId
                     val fromLat = if (shown[0].isNaN()) nav.targetLat else shown[0]
                     val fromLng = if (shown[1].isNaN()) nav.targetLng else shown[1]
                     val fromBearing = shownBearing[0]
                     val toBearing = nav.bearingDeg ?: fromBearing
-                    // **وأوّلُ ظهورٍ يُوضع ولا يُمشى** — الحركةُ من
-                    // مكانٍ مجهولٍ تقطع الخريطة.
                     val ms = if (shown[0].isNaN()) 0L else nav.durationMs
-
                     animator.animate(
                         fromLat, fromLng, nav.targetLat, nav.targetLng,
                         fromBearing, toBearing, ms,
@@ -196,9 +308,6 @@ fun TripMap(
                             )
                         }
                     }
-
-                    // **والكاميرا تلاحق الهدفَ بالمدّة نفسِها** —
-                    // فتصل معه لا قبله. (انظر `CameraPrimitives`.)
                     val cam = nav.camera(com.rahalgo.map.CameraPrimitives.bearingOf(libre))
                     com.rahalgo.map.CameraPrimitives.ease(
                         libre, cam.lat, cam.lng, cam.zoom,
@@ -206,21 +315,45 @@ fun TripMap(
                     )
                 }
             } else if (follow && driver != null) {
-                // **والملاحقة تُقرّب** — من يسير يريد الشارع الذي تحته
-                // لا المدينة كلَّها.
                 libre.easeCamera(CameraUpdateFactory.newLatLngZoom(driver, 17.0))
             }
         }
     }
 }
 
+/** **صورةُ ما يُرسم** — يقرؤها المُعيدُ بعد تحميل النمط. */
+private data class TripDraw(
+    val driver: LatLng?,
+    val pickup: LatLng?,
+    val dropoff: LatLng?,
+    val route: List<LatLng>,
+    val icons: MarkerIcons,
+)
+
 /**
- * **تُظهر النقاط كلَّها** — لا تلاحق السائق وحدَه.
+ * **صندوقُ المسار** — البند ١٧.
  *
- * **ومن رأى نفسَه ولم ير المتجر** لا يعرف أيّ جهةٍ يمضي.
+ * **يُسأل به: هل تغطّي الحزمةُ المحلّيّةُ المسارَ كلَّه؟** فإن خرج عنه
+ * **والاتّصالُ متاحٌ فالأونلاين أولى**، ولا يُدَّعى أنّ الأساسَ كاملٌ
+ * خارج المنطقة.
  */
+internal fun bboxOf(route: List<LatLng>): List<Double>? {
+    if (route.isEmpty()) return null
+    var west = route[0].longitude
+    var east = route[0].longitude
+    var south = route[0].latitude
+    var north = route[0].latitude
+    for (p in route) {
+        if (p.longitude < west) west = p.longitude
+        if (p.longitude > east) east = p.longitude
+        if (p.latitude < south) south = p.latitude
+        if (p.latitude > north) north = p.latitude
+    }
+    return listOf(west, south, east, north)
+}
+
 private fun fitAll(
-    libre: org.maplibre.android.maps.MapLibreMap,
+    libre: MapLibreMap,
     driver: LatLng?,
     pickup: LatLng?,
     dropoff: LatLng?,
@@ -230,34 +363,7 @@ private fun fitAll(
         points.size >= 2 -> libre.easeCamera(
             CameraUpdateFactory.newLatLngBounds(LatLngBounds.fromLatLngs(points), 120),
         )
-
         points.size == 1 -> libre.easeCamera(CameraUpdateFactory.newLatLngZoom(points[0], 15.0))
         else -> libre.easeCamera(CameraUpdateFactory.newLatLngZoom(RAQQA, 13.0))
     }
 }
-
-/**
- * ══════════════════════════════════════════════════════════════════════
- * **تهيئة المكتبة — قبل أيّ استعمال لها**
- * ══════════════════════════════════════════════════════════════════════
- *
- * **وكانت تُهيَّأ عند بناء الخريطة وحدَها** — فحين أُخفي تبويب الرحلة
- * (لا رحلة الآن) **صارت اللوحة تسأل عن المناطق المنزَّلة قبل أن تُهيَّأ
- * المكتبة**، فيسقط التطبيق:
- *
- *     MapLibreConfigurationException
- *
- * **ولم يظهر على المحاكي**: كنتُ أفتح تبويب الرحلة أوّلا فتُهيَّأ.
- * **وظهر على أوّل جهاز حقيقيّ** بلا رحلة (٢٠٢٦-٠٨-١٢).
- *
- * **فتُهيَّأ من مكان واحد يناديه الاثنان** — والمكتبة تتجاهل النداء
- * الثاني.
- *
- * **ولا مفتاح**: المفتاح فارغ لأنّ MapLibre لا يطلب حسابا. **أمّا نوع
- * خادم البلاطات فلا يقبل الفراغ** — مرّرتُه فارغا فسقط التطبيق عند أوّل
- * فتح للخريطة.
- */
-fun ensureMapLibre(context: Context) {
-    MapLibre.getInstance(context.applicationContext, null, WellKnownTileServer.MapLibre)
-}
-

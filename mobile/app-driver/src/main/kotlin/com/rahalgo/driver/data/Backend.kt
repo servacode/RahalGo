@@ -1,6 +1,7 @@
 package com.rahalgo.driver.data
 
 import android.content.Context
+import com.rahalgo.driver.BuildConfig
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Core
 import com.rahalgo.driver.push.Push
@@ -25,14 +26,25 @@ import com.rahalgo.shared.driver.DriverApi
 object Backend {
 
     /**
-     * **عنوان المحرّك — الإنتاج وحده.**
+     * ══════════════════════════════════════════════════════════════════
+     * **عنوان المحرّك — الإنتاج، إلّا في بناءِ قبولٍ صريح**
+     * ══════════════════════════════════════════════════════════════════
      *
-     * (قرار المالك ٢٠٢٦-٠٨-١١: «بحسابي الحقيقي، ما بدنا نرجع للمحلّي».)
+     * (قرار المالك ٢٠٢٦-٠٨-١١: «بحسابي الحقيقي، ما بدنا نرجع للمحلّي».
+     *  وقرارُه ٢٠٢٦-٠٨-٢٢: «لا تستخدم `api.rahalgo.com` أثناء Device
+     *  Validation».)
      *
-     * **ولو أُريد المحلّي يوما**: المحاكي يصل جهاز التطوير على
-     * `10.0.2.2` لا `localhost` — الأخير هو المحاكي نفسه.
+     * **وكان نصّاً هنا** — فكلُّ بناءٍ تجريبيٍّ يكلّم الإنتاج، **وأيُّ
+     * تجربةِ طلبٍ على جهازٍ تكتب في بيانات الزبائن.** وقِيس ٢٠٢٦-٠٨-٢٢
+     * أنّ `api.rahalgo.com/healthz` يردّ ٢٠٠ فعلاً.
+     *
+     * **وقيمةُ الإصدار مكتوبةٌ حرفاً في `build.gradle.kts`** ولا تقرأ
+     * خاصّيّةً ولا بيئة — **فلا يُبدَّل هدفُ الإصدار بسطرِ أمر.**
      */
-    const val BASE_URL = "https://api.rahalgo.com"
+    val BASE_URL: String = BuildConfig.API_BASE_URL
+
+    /** **أصلُ آثار الخرائط** — الفهرسُ والأرشيفُ والموارد. */
+    val MAPS_BASE_URL: String = BuildConfig.MAPS_BASE_URL
 
     /**
      * **نوع العميل — كما تعرفه قائمة المحرّك المغلقة.**
@@ -105,8 +117,24 @@ object Backend {
         val driver = DriverApi(api)
         val chat = ChatApi(api)
 
-        /** **عنوان أسلوب الخريطة** — يقرؤه العارض والمنزّل معا. */
+        /**
+         * **عنوان أسلوب الخريطة الراستر** — للواجهة العامّة وحدَها.
+         *
+         * **ولا يستعمله تطبيقُ السائق بعد ٦ب** — النمطُ المتّجهُ من
+         * `MapStyleRepository`. **وبقي لأنّ الويبَ يقرؤه.**
+         */
         val styleUrl = "$BASE_URL/api/v1/public/map-style.json"
+
+        /**
+         * **وأصلُ الخرائط** — المرحلة ٦ب، البند ٣.
+         *
+         * **أمرُ المالك**: «لا hardcode `maps.rahalgo.com` داخل
+         * Navigation/UI logic». **فهو هنا في الإعداد**، ومنه وحدَه
+         * تُشتقّ عناوينُ الفهرس والأرشيف والموارد.
+         *
+         * **وتبديلُ المزوّد سطرٌ هنا لا إصدارٌ جديد.**
+         */
+        val mapsBaseUrl = MAPS_BASE_URL
     }
 
     private val core: Core get() = AppCore.get()

@@ -11,6 +11,9 @@ import com.rahalgo.ui.minutesShort
 import com.rahalgo.ui.dist
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -99,6 +102,18 @@ fun TripScreen(
     chatActions: ChatActions = ChatActions(send = {}, close = {}),
     /** **كم رسالةً تنتظره** — وصفرٌ يعني لا شارة. */
     chatUnread: Int = 0,
+    /**
+     * **بابُ إعادة الحساب** — وفارغٌ يعني «لا إعادة».
+     *
+     * **ويُبنى في الـViewModel** حيث يُعرف الطلبُ والخادم.
+     */
+    routeSource: com.rahalgo.navigation.RouteSource? = null,
+    /**
+     * **منسّقُ الكلام** — وفارغٌ يعني «لا إرشادَ صوتيّ».
+     *
+     * **ويُبنى في الـViewModel** فيعيش عبرَ إعادةِ إنشاء الشاشة.
+     */
+    voice: VoiceOrchestrator? = null,
 ) {
     val order = state.order
     if (order == null) {
@@ -148,9 +163,13 @@ fun TripScreen(
     //
     // **والقرارُ هنا لا في الوحدة**: الوحدةُ تقبل مسجّلاً أو لا تقبل،
     // **والتطبيقُ وحدَه يعرف أيَّ بناءٍ هو.**
-    val navSession = remember {
+    val navSession = remember(routeSource) {
         com.rahalgo.navigation.NavigationSession(
             navContext,
+            source = routeSource,
+            // **والمخطِّطُ يُبنى مع الجلسة** — حالتُه عبورُ عتباتٍ
+            // لا سجِلُّ ما قيل، **وذاك في المنسّق.**
+            voice = com.rahalgo.navigation.VoicePlanner(),
             recorder = if (BuildConfig.DEBUG) {
                 com.rahalgo.navigation.TraceRecorder(
                     dir = java.io.File(navContext.filesDir, "nav-traces"),
@@ -164,9 +183,303 @@ fun TripScreen(
     LaunchedEffect(follow) {
         if (follow) navSession.start() else navSession.stop()
     }
+    // ══════════════════════════════════════════════════════════════════
+    // **والمسارُ يُسلَّم للجلسة — لا تحسبه الشاشة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (المرحلة ٣أ، أمرُ المالك: «ولا تجعل UI نفسَها تحسب
+    //  `RouteProgress` أو `OffRoute`».)
+    //
+    // **ويُنادى حين يتبدّل المسارُ وحدَه** — لا في كلّ رسم: **مسارٌ
+    // يُسلَّم مرّتين يمحو تقدّمَ السائق مرّتين.**
+    // **وعند تبدّل الطور أيضاً** (البند ١٩): من استلم البضاعةَ
+    // **تتبدّل وجهتُه، فيزيد الجيلُ ويُطرح جوابٌ قديمٌ في الطريق.**
+    /**
+     * **سياقُ اللحظة** — يُحسب من الجلسة الحيّة لا يُخزَّن.
+     *
+     * **والحالُ الباقي في نموذج العرض** (البند ١٢)، **وهذا مشتقٌّ منه
+     * ومن الملاحة** — فلا يضيع بالتدوير ولا يُكرَّر تخزينُه.
+     */
+    val routeTarget = if (state.step >= TripStep.PICKED_UP) {
+        com.rahalgo.navigation.RouteTarget.DROPOFF
+    } else {
+        com.rahalgo.navigation.RouteTarget.PICKUP
+    }
+
+    /**
+     * **تركيبُ المسار الموصى به** — كما كان.
+     *
+     * **وسببُه يُعلَن** (البند ٧): **تبدّلُ الطور وجهةٌ جديدة، وما
+     * عداه أوّلُ مسارٍ للساق.** **واختيارُ السائق لا يمرّ من هنا** —
+     * يمرّ من `state.committedRoute` ويُعلن سببَه بنفسه.
+     */
+    /**
+     * ══════════════════════════════════════════════════════════════
+     * **والهدفُ التجاريّ يُسلّم مع المسار**
+     * ══════════════════════════════════════════════════════════════
+     *
+     * (إغلاقُ نقطة الالتقاط، ٢٠٢٦-٠٨-٢١.)
+     *
+     * **وهو من القاعدة لا من المحرّك**: `navLat/navLng` للمتجر،
+     * و`lat/lng` للزبون — **وهي نفسُ ما تقيس عليه `near()`**،
+     * فلا رقمان لحقيقةٍ واحدة.
+     */
+    LaunchedEffect(state.order?.id, state.step, state.order?.lat, state.order?.lng) {
+        val o = state.order
+        navSession.setArrivalTarget(
+            when {
+                o == null -> null
+                state.step >= TripStep.PICKED_UP ->
+                    com.rahalgo.navigation.GeoPoint(o.lat, o.lng)
+                o.navLat != null && o.navLng != null ->
+                    com.rahalgo.navigation.GeoPoint(o.navLat!!, o.navLng!!)
+                else -> null
+            },
+        )
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════
+     * **وطلبُ الارتباط يُرسَل من هنا — المرحلة ٨ب**
+     * ══════════════════════════════════════════════════════════════
+     *
+     * **و`driver-navigation` لا تعرف شبكة**: المُحلِّلُ يُخرج طلباً،
+     * **والشاشةُ ترسله وتُعيد الحكم.**
+     *
+     * **ولا إعادةَ حسابٍ من هذا الردّ** (البند ٢١): الحكمُ يدخل
+     * المُحلِّلَ، **وحالُه وحدَها تُنتج سبباً.**
+     */
+    val correlationAsk = navSession.correlationRequest
+    LaunchedEffect(correlationAsk) {
+        val ask = correlationAsk ?: return@LaunchedEffect
+        actions.askCorrelation(
+            ask.routeId,
+            ask.fixes.map {
+                com.rahalgo.shared.model.CorrelationFix(
+                    lat = it.lat, lng = it.lng,
+                    accuracyM = it.accuracyM.toDouble(), atMs = it.atMs,
+                )
+            },
+        ) { navSession.onCorrelation(it) }
+    }
+
+    LaunchedEffect(state.navRoute, state.step) {
+        navSession.setRoute(state.navRoute)
+        // **والهويّةُ تُسلَّم مع المسار** — المرحلة ٨ب.
+        navSession.routeId = state.navRouteId
+        if (state.navRoute != null) {
+            actions.onRouteInstalled(
+                navSession.generation,
+                routeTarget,
+                com.rahalgo.navigation.RouteInstallReason.INITIAL,
+            )
+        }
+    }
+    // ══════════════════════════════════════════════════════════════════
+    // **وطرفُ الرحلة يُحقَن — ولا تعرف الملاحةُ طلبا**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (المرحلة ٤، البند ٢٥.)
+    LaunchedEffect(state.step) {
+        navSession.voicePlanner?.target = if (state.step >= TripStep.PICKED_UP) {
+            com.rahalgo.navigation.TripTarget.DROPOFF
+        } else {
+            com.rahalgo.navigation.TripTarget.PICKUP
+        }
+    }
+    // **وما قرّره المخطِّطُ يُسلَّم للمنسّق** — والشاشةُ ناقلٌ لا حاكم.
+    LaunchedEffect(navSession.nav?.let { it to navSession.route }) {
+        val nav = navSession.nav ?: return@LaunchedEffect
+        voice?.offer(nav.cues, nav.progress?.progressM ?: 0.0, navigating = navSession.running)
+    }
+    // **ونهايةُ الملاحة تُنهي الصوت** — لا نهايةُ ظهورِ الشاشة.
+    //
+    // (أمرُ المالك، البند ١٩: «الصوتُ مرتبطٌ بـNavigation lifecycle
+    //  وليس Activity visibility».)
+    DisposableEffect(Unit) { onDispose { voice?.stop() } }
     // **ومغادرةُ الشاشة تُغلقها** — ومن خرج ونسي زرَّه ترك محرّكَ
     // موقعٍ يعمل بلا شاشةٍ تقرؤه.
     DisposableEffect(Unit) { onDispose { navSession.stop() } }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **اختيارُ المسار — إغلاقُ واجهة ٧، ٢٠٢٦-٠٨-٢١**
+    // ══════════════════════════════════════════════════════════════════
+
+    /**
+     * ══════════════════════════════════════════════════════════════
+     * **وحالُ الملاحة صحيح؟** — إغلاقُ صحّة الواجهة، البند ١٠
+     * ══════════════════════════════════════════════════════════════
+     *
+     * **كان يُبنى على `offRoute` وحدَها وهو ناقص**: كاشفُ الاتّجاه
+     * المعاكس **يقيس نسبةً إلى المسار**، **فقد يكون السائقُ داخلَ
+     * الممرّ تماماً وهو يسير عكسَه** — `offRoute` تقول `ON_ROUTE`
+     * والحالُ `WRONG_WAY`.
+     *
+     * **فصار من `NavSituation`** — الحالُ المحسومةُ من المرحلة ٥،
+     * **وفيها الشكوكُ أيضاً تمنع.**
+     */
+    val navHealthy = com.rahalgo.navigation.RouteChoiceHealth.of(navSession.nav)
+
+    val progressM = navSession.nav?.progress?.progressM ?: -1.0
+
+    val choiceCtx = com.rahalgo.navigation.RouteChoiceMachine.Context(
+        generation = navSession.generation,
+        target = routeTarget,
+        originLat = state.driver?.latitude ?: 0.0,
+        originLng = state.driver?.longitude ?: 0.0,
+        progressM = progressM,
+        ageMs = 0L,
+        healthy = navHealthy,
+    )
+
+    /**
+     * **وما يُعرض** — يُحسب من الخيارات والسياق.
+     *
+     * **والبدائلُ الميّتةُ تختفي فرديّاً** (البند ٢٠).
+     */
+    val choiceUi = com.rahalgo.navigation.RouteChoiceMachine.present(
+        state.routeChoices, choiceCtx,
+    ).let { base ->
+        when {
+            base !is com.rahalgo.navigation.RouteChoiceUi.Available -> base
+            state.choiceStale -> com.rahalgo.navigation.RouteChoiceUi.Stale(base.choices)
+            state.choicePreview != null &&
+                base.choices.alternatives.any { it.routeId == state.choicePreview } ->
+                com.rahalgo.navigation.RouteChoiceUi.Previewing(
+                    base.choices, state.choicePreview,
+                )
+            else -> base
+        }
+    }
+
+    /**
+     * **طلبُ البدائل بأحداثٍ لا في حلقة** — البندان ٢ و٤.
+     *
+     * **والملاحةُ لا تنتظرها**: `state.navRoute` تُسلَّم أعلاه،
+     * **وهذه بعدها.**
+     *
+     * **والمفتاحُ الطورُ والجيل** — فتُطلب عند بدء ساقٍ نحو المتجر
+     * وبعد الاستلام، **ولا تُطلب مع كلّ نبضةِ موقع.**
+     */
+    LaunchedEffect(state.order?.id, state.step, navSession.generation, navHealthy) {
+        val current = navSession.route
+        val driver = state.driver
+        val reason = state.installReason
+
+        /**
+         * **والقرارُ من موضعٍ واحد** — البندان ٦ و٨.
+         *
+         * **وفيه أربعةُ شروط**: مسارٌ مركّب، وحالٌ صحيح،
+         * وموضعٌ معلوم، **وسببٌ ليس اختيارَ السائق.**
+         *
+         * **فجيلٌ سبّبه اختيارُه لا يُطلق جلباً** — ولا تعود
+         * اللوحةُ فورَ ما اختار.
+         */
+        val fetch = com.rahalgo.navigation.RouteChoiceGate.shouldFetch(
+            hasRoute = current != null,
+            healthy = navHealthy,
+            hasOrigin = driver != null,
+            reason = reason,
+        )
+        if (!fetch || current == null || driver == null) return@LaunchedEffect
+
+        actions.loadAlternatives(
+            navSession.generation,
+            routeTarget,
+            driver.latitude,
+            driver.longitude,
+            reason,
+            com.rahalgo.navigation.RouteFingerprint.of(current),
+            current.geometry,
+        )
+    }
+
+    /**
+     * **وتبدّلُ الوجهة يمسح فوراً** — البند ٢٢.
+     *
+     * **بدائلُ إلى المتجر لا تصلح بعد الاستلام** — ولا يبقى خطُّها
+     * على الخريطة.
+     */
+    LaunchedEffect(routeTarget) { actions.clearChoices() }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **الوصولُ يُسجَّل وحدَه — ولا زرَّ يُضغط**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «المقصودُ تقليلُ الأزرار والضغطِ
+    //  عليها» — عند المتجر وعند الزبون كليهما.)
+    //
+    // # وكان الحارسُ مبنيّاً ولا أحدَ يسمعه
+    //
+    // **`ArrivalGuard` كاملٌ ومختبَرٌ منذ ٢٠٢٦-٠٨-٢١** بثلاث حالاتٍ
+    // وحدودٍ ضبطها المالك (١٥ متراً). **وصفرُ استعمالٍ في هذا
+    // التطبيق**: يقول «وصل» ولا شيء يقرؤه إلّا الصوتُ وكاشفُ
+    // الشوارع المتوازية.
+    //
+    // # ولا «تراجع» — لأنّ الطريقَ في اتّجاهٍ واحد
+    //
+    // **جدولُ المحرّك** (`orders/statuses.go`) لا يعرف
+    // `at_pickup → assigned` ولا `at_dropoff → on_the_way`.
+    // **فشريطُ تراجعٍ يَعِد بما لا يستطيع.**
+    //
+    // **فالحمايةُ في شرط الإطلاق لا في زرٍّ بعده** — ثلاثةٌ معاً:
+    //
+    //   ١ · دقّةٌ ≤ ٣٠ م ونصفُ قطرٍ ١٥ م   ← داخلَ `ArrivalGuard`
+    //   ٢ · **مكثٌ لا لحظة**              ← هنا
+    //   ٣ · حالٌ مطابقٌ تماماً             ← هنا
+    //
+    // **والمكثُ هو الحارسُ الذي لا يملكه `ArrivalGuard`**: من مرّ
+    // بالمتجر عابراً في طريقه إلى غيره يلمس الخمسةَ عشرَ متراً
+    // ثانيةً واحدة، **فيُسجَّل وصولٌ لم يقع ولا سبيلَ لردّه.**
+    //
+    // # ولا يُسجَّل وصولٌ للمتجر في الطلب الخاصّ
+    //
+    // (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩: «ما في شيء اسمه وصلتُ للمتجر».)
+    // **والمحرّكُ يرفضه أصلاً** — فالحارسُ هنا يمنع نداءً يُردّ.
+    val arrived = navSession.nav?.arrivedAtTarget == true
+    val autoStatus = when {
+        state.order?.kind == "custom" -> null
+        state.order?.status == "assigned" -> "at_pickup"
+        state.order?.status == "on_the_way" -> "at_dropoff"
+        else -> null
+    }
+    // **ومرّةً واحدةً لكلّ طور** — والمفتاحُ الحالُ نفسُه:
+    // **فمن سُجّل وصولُه إلى المتجر لا يُعاد تسجيلُه**، ووصولُ
+    // الزبون طورٌ آخرُ بمفتاحٍ آخر.
+    val autoFired = rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(arrived, autoStatus, state.busy) {
+        val to = autoStatus ?: return@LaunchedEffect
+        if (!arrived || state.busy || autoFired.value == to) return@LaunchedEffect
+        // **والمكثُ ستُّ ثوانٍ** — **ودونها يكفي أن يقف عند إشارةٍ
+        // أمام المتجر ليُحسب واصلا.**
+        //
+        // **ويُعاد الفحصُ بعدها**: `arrived` يتبدّل مع كلّ قراءة،
+        // **فمن ابتعد أثناء المكث أُلغيت الدورةُ** — لأنّ
+        // `LaunchedEffect` يُقتل عند تبدّل مفتاحه.
+        kotlinx.coroutines.delay(6_000)
+        if (navSession.nav?.arrivedAtTarget != true) return@LaunchedEffect
+        autoFired.value = to
+        android.util.Log.i("RahalGo/nav", "وصولٌ تلقائيّ → $to")
+        actions.step(to)
+    }
+
+    /**
+     * **وتسليمُ المعتمد** — البند ١٧.
+     *
+     * **بعد الفحص وحدَه**: نموذجُ العرض يفحص ثمّ يضع، **والشاشةُ
+     * تسلّم.** و`setRoute` تزيد الجيلَ **فتنتهي المجموعةُ بنيويّاً.**
+     */
+    LaunchedEffect(state.committedRoute) {
+        val committed = state.committedRoute ?: return@LaunchedEffect
+        navSession.setRoute(committed)
+        // **ويُعلَن أنّ الجيلَ من اختيار السائق** — فلا جلبَ بعده.
+        actions.onRouteInstalled(
+            navSession.generation,
+            routeTarget,
+            com.rahalgo.navigation.RouteInstallReason.USER_SELECTION,
+        )
+        actions.onRouteCommitted()
+    }
 
     Box(Modifier.fillMaxSize()) {
         TripMap(
@@ -198,6 +511,13 @@ fun TripScreen(
             // **وما تُرسمه الملاحةُ حين تعمل** — وفارغٌ يعني «الخريطةُ
             // كما كانت حرفاً بحرف».
             nav = navSession.render,
+            // **البدائلُ تُرسم ولا يُلاحَ عليها** — البند ٢٨ من ٧.
+            alternatives = choiceUi.choicesOrNull?.alternatives.orEmpty().map {
+                com.rahalgo.navigation.AltRouteLayer.Drawable(it.routeId, it.route)
+            },
+            previewRouteId = choiceUi.previewRouteId,
+            // **ولمسُ الخطّ يُعاين ولا يعتمد** — البندان ٢٤ و٢٧.
+            onRouteTapped = { routeId -> actions.previewRoute(routeId) },
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -271,6 +591,31 @@ fun TripScreen(
         // يتركها — وهو حرّ.**
         Column(Modifier.align(Alignment.BottomCenter)) {
             // ══════════════════════════════════════════════════════════
+            // **لوحةُ اختيار المسار** — فوق عناصر التحكّم (البند ٦)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **ولا تُعاد الشاشةُ تصميماً** (البند ٤٠): عنصرٌ مستقلٌّ
+            // صغير، **وما تحته لم يُمَسّ.**
+            RouteChoicePanel(
+                ui = choiceUi,
+                onSelect = { actions.previewRoute(it) },
+                onCancel = { actions.previewRoute(null) },
+                onConfirm = {
+                    val driver = state.driver
+                    if (driver != null) {
+                        actions.confirmRoute(
+                            navSession.generation,
+                            routeTarget,
+                            driver.latitude,
+                            driver.longitude,
+                            progressM,
+                            navHealthy,
+                        )
+                    }
+                },
+            )
+
+            // ══════════════════════════════════════════════════════════
             // **وموضعُها فوق اللوح لا فوق شريط الخطوات**
             // ══════════════════════════════════════════════════════════
             //
@@ -303,6 +648,45 @@ fun TripScreen(
                 chatUnread = chatUnread,
                 onNavigate = actions.navigate,
             )
+
+            // ══════════════════════════════════════════════════════════
+            // **رحلةٌ تمشي والسائقُ جالس — في بناء التطوير وحدَه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-٢٣: «تخلّي شاشةَ الرحلة قدّامي
+            //  وتشوفني شلون الطلبُ يمشي عالخريطة على المتجر وعلى
+            //  الزبون بدون أن أتحرّك أنا».)
+            //
+            // **والحارسُ `BuildConfig.DEBUG` لا إعدادٌ ولا خاصّيّة** —
+            // **زرٌّ يحرّك سهمَ سائقٍ حقيقيٍّ بلا أن يتحرّك هو أخطرُ
+            // ما يُترك في يد الإنتاج**: تُسجَّل رحلةٌ لم تقع، ويُسلَّم
+            // طلبٌ من غرفة.
+            //
+            // **ويتبع المسارَ الحاضر لا سيناريو مكتوباً** — فإن كان
+            // الطورُ «إلى المتجر» مشى إليه، **وإن ضُغط «استلمتُ»
+            // انقلب المسارُ إلى الزبون فمشت الإعادةُ إليه وحدَها.**
+            if (BuildConfig.DEBUG) {
+                val replayScope = rememberCoroutineScope()
+                state.routeLine?.let { line ->
+                    ReplayButton(
+                        running = navSession.replaying,
+                        onStart = {
+                            // **والهندسةُ من الجلسة إن وُجدت** — وهي
+                            // التي أسقط عليها المحرّكُ الخطوات؛
+                            // **وخطُّ الشاشة يكفي قبل أن تبدأ.**
+                            val g = navSession.route?.geometry
+                                ?: line.map {
+                                    com.rahalgo.navigation.GeoPoint(it.latitude, it.longitude)
+                                }
+                            navSession.startReplay(
+                                com.rahalgo.navigation.ReplayDrive.fixes(g),
+                                replayScope,
+                            )
+                        },
+                        onStop = { navSession.stopReplay() },
+                    )
+                }
+            }
             // ══════════════════════════════════════════════════════════
             // **والحديث يحلّ محلّ البطاقة ولا يغطّي الشاشة**
             // ══════════════════════════════════════════════════════════
@@ -1658,6 +2042,16 @@ data class TripState(
     val routeM: Double = -1.0,
     /** مدّتُه بالثواني كما يحسبها المحرّك بسرعات الشوارع. */
     val routeSec: Double = -1.0,
+    // ══════════════════════════════════════════════════════════════════
+    // **ومسارُ الملاحة — المرحلة ٣أ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وحدةٌ واحدةٌ لا حقولٌ متفرّقة**: هندسةٌ وتراكميّةٌ ومناوراتٌ
+    // معاً، **فلا لحظةَ تكون فيها جديدةٌ مع قديمة.**
+    //
+    // **وفارغٌ يعني «لا إرشاد»** — والخريطةُ ترسم `routeLine` كما
+    // كانت. (انظر `NavRouteMapper`.)
+    val navRoute: com.rahalgo.navigation.NavRoute? = null,
     /** سرعة السائق الوسطى من المحرّك — **وصفر يعني لا تُحسب مدّة.** */
     val avgSpeedKmh: Long = 0,
     /** **هل هو على بُعد خطوات من وجهته؟** — يُقترح ولا يُنفَّذ. */
@@ -1679,6 +2073,30 @@ data class TripState(
     val dropoff: LatLng? = null,
     val busy: Boolean = false,
     val error: String = "",
+
+    // ══════════════════════════════════════════════════════════════════
+    // **خياراتُ المسار — إغلاقُ واجهة ٧، ٢٠٢٦-٠٨-٢١**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وفارغةٌ تعني: لا لوحةَ تُعرض** (البند ٥) — ولا مساحةَ تُؤخذ من
+    // شاشةِ سائقٍ يقود.
+    val routeChoices: com.rahalgo.navigation.RouteChoices? = null,
+    /** **المعايَنُ** — بصريٌّ محضٌ لا ملاحة (البند ١٣). */
+    val choicePreview: String? = null,
+    /** **وقد بطل** — إشعارٌ قصيرٌ ثمّ يزول (البند ١٩). */
+    val choiceStale: Boolean = false,
+    /** **مسارٌ اعتُمد وينتظر التسليم** — البند ١٧. */
+    val committedRoute: com.rahalgo.navigation.NavRoute? = null,
+    /**
+     * **هويّةُ المسار النافذ** — المرحلة ٨ب.
+     *
+     * **معرّفٌ محايدٌ من الخادم** — لا يُخترع في الجوّال.
+     */
+    val navRouteId: String? = null,
+
+    /** **سببُ آخرِ تركيب** — واختيارُ السائق لا يُطلق جلباً (البند ٦). */
+    val installReason: com.rahalgo.navigation.RouteInstallReason =
+        com.rahalgo.navigation.RouteInstallReason.INITIAL,
 )
 
 data class TripActions(
@@ -1704,4 +2122,79 @@ data class TripActions(
     val dismissEmergency: () -> Unit,
     val navigate: () -> Unit,
     val toOrders: () -> Unit,
+
+    // ══════════════════════════════════════════════════════════════════
+    // **اختيارُ المسار — إغلاقُ واجهة ٧**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ولا اختيارَ بلمسةٍ واحدة** (البند ١١): `previewRoute` تُعاين،
+    // **و`confirmRoute` وحدَها تعتمد.**
+
+    /** **يطلب البدائل** — عند حدثٍ لا في حلقة (البند ٤). */
+    val loadAlternatives: (
+        Long,
+        com.rahalgo.navigation.RouteTarget,
+        Double,
+        Double,
+        com.rahalgo.navigation.RouteInstallReason,
+        Long,
+        List<com.rahalgo.navigation.GeoPoint>,
+    ) -> Unit = { _, _, _, _, _, _, _ -> },
+
+    /** **يُعاين** — بصريٌّ محضٌ (البند ١٣)، و`null` يُلغي. */
+    val previewRoute: (String?) -> Unit = {},
+
+    /** **يعتمد** — بعد فحصٍ، ويردّ هل قُبل (البندان ١٧ و١٨). */
+    val confirmRoute: (Long, com.rahalgo.navigation.RouteTarget, Double, Double, Double, Boolean) -> Boolean =
+        { _, _, _, _, _, _ -> false },
+
+    /** **بعد أن تسلّم الشاشةُ المسارَ المعتمد.** */
+    val onRouteCommitted: () -> Unit = {},
+
+    /** **مسحٌ صريح** — تبدّلُ وجهةٍ أو نجاحُ إعادةِ حساب (٢٢ و٢٣). */
+    val clearChoices: () -> Unit = {},
+
+    /** **يسأل الخادمَ عن ارتباط الأثر بالمسار** — المرحلة ٨ب. */
+    val askCorrelation: (
+        String,
+        List<com.rahalgo.shared.model.CorrelationFix>,
+        (com.rahalgo.navigation.RoadCorrelation) -> Unit,
+    ) -> Unit = { _, _, _ -> },
+
+    /** **تُخبر نموذجَ العرض بما رُكّب ولماذا** — البند ٧. */
+    val onRouteInstalled: (Long, com.rahalgo.navigation.RouteTarget, com.rahalgo.navigation.RouteInstallReason) -> Unit =
+        { _, _, _ -> },
 )
+
+
+/**
+ * **زرُّ الرحلة المصنوعة** — أعلى يسارَ الخريطة، بعيداً عن الثلاثة.
+ *
+ * **ولونُه ليس لونَ العلامة** — **وزرُّ فحصٍ يشبه أزرارَ العمل يُضغط
+ * سهواً**، ولو في بناء تطوير.
+ *
+ * **ويقول «تجريبيّة» بلفظه** — **ومن رأى سهمَه يمشي وهو جالسٌ ولم
+ * يعرف أنّها محاكاةٌ ظنّ الموقعَ عطبان.**
+ */
+@Composable
+private fun ReplayButton(
+    running: Boolean,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+) {
+    Surface(
+        color = if (running) Rahal.colors.danger else Color(0xFF444C56),
+        contentColor = Color.White,
+        shape = Rahal.shape.sm,
+        modifier = Modifier
+            .padding(12.dp)
+            .clickable { if (running) onStop() else onStart() },
+    ) {
+        Text(
+            text = if (running) "أوقف الرحلة التجريبيّة" else "رحلة تجريبيّة",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+        )
+    }
+}

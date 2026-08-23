@@ -190,6 +190,9 @@ private val CODES: Map<String, Int> = mapOf(
     "custom_not_assigned" to R.string.err_custom_not_assigned,
     "custom_not_agreed" to R.string.err_custom_not_agreed,
     "merchant_closed" to R.string.err_merchant_closed,
+    // **والدفعُ نقداً موقوفٌ مؤقّتاً** — (٢٠٢٦-٠٨-٢٣). **والرسالةُ
+    // تقول البديل**: المحفظةُ مفتوحةٌ له.
+    "cash_blocked" to R.string.err_cash_blocked,
     "multi_source_order" to R.string.err_multi_source_order,
     "too_many_sources" to R.string.err_too_many_sources,
     "item_unavailable" to R.string.err_item_unavailable,

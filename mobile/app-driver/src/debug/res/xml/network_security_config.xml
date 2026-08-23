@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ══════════════════════════════════════════════════════════════════════
+   نصٌّ صريحٌ للمضيف الحلقيّ — في بناء التصحيح وحدَه
+  ══════════════════════════════════════════════════════════════════════
+
+  (قرارُ المالك ٢٠٢٦-٠٨-٢٢، بند ٥: «أضف config في app-driver/src/debug
+   فقط · ممنوع تغيير main/release network security».)
+
+  وأندرويدُ ٩+ يمنع النصَّ الصريح افتراضاً. وتطبيقُ القبول يكلّم محرّكَ
+  التطوير ومضيفَ الخرائط على 127.0.0.1 عبر `adb reverse` — بلا هذا
+  الملفّ يسقط كلُّ نداءٍ برفضٍ أمنيّ لا برسالةِ شبكة، فيُبحَث في العنوان
+  والخادم والعلّةُ هنا.
+
+  والافتراضُ يبقى مغلقاً: `cleartextTrafficPermitted="false"` في
+  base-config. فلا يُفتح شيءٌ إلّا النطاقات الثلاثة المذكورة بأسمائها.
+
+  وهذا الملفُّ في `src/debug` — فلا يدخل الإصدارَ أصلاً، لا مُدمَجاً
+  ولا موروثاً. ويُثبَت ذلك من البيان المدموج للإصدار، لا بالقراءة.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">::1</domain>
+    </domain-config>
+</network-security-config>

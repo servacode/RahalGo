@@ -49,6 +49,23 @@ data class NavRender(
          * **والمرفوضةُ تردّ فارغاً** — فلا تُحرَّك الأيقونةُ ولا
          * الكاميرا.
          */
+        /**
+         * **ومن حالِ المحرّك كذلك** — المرحلة ٣أ.
+         *
+         * **والحقولُ المرسومةُ هي هي**: `NavState` تزيد التقدّمَ
+         * وحالَ الخروج، **والخريطةُ لا شأنَ لها بهما.**
+         */
+        fun of(state: NavState, stepId: Long): NavRender? {
+            if (state.lat == null || state.lng == null) return null
+            return NavRender(
+                stepId = stepId,
+                targetLat = state.lat,
+                targetLng = state.lng,
+                bearingDeg = state.bearingDeg,
+                durationMs = state.animationMs,
+            )
+        }
+
         fun of(step: NavPipeline.Step, stepId: Long): NavRender? {
             if (step.targetLat == null || step.targetLng == null) return null
             return NavRender(

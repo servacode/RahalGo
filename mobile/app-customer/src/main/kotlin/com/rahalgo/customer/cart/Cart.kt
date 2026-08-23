@@ -5,7 +5,9 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.rahalgo.shared.customer.CartLine
 import com.rahalgo.shared.model.Item
+import com.rahalgo.shared.model.ModifierOption
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -47,7 +49,7 @@ object Cart {
     val count: Int get() = lines.sumOf { it.qty }
 
     /** **ما يُقرأ قبل التسعيرة** — والمحرّكُ يُعيد الحسابَ عند الإرسال. */
-    val subtotal: Long get() = lines.sumOf { it.item.price * it.qty }
+    val subtotal: Long get() = lines.sumOf { it.unitPrice * it.qty }
 
     // ══════════════════════════════════════════════════════════════════
     // **والقرصُ يُلمس مرّةً عند الإقلاع ثمّ عند كلّ تبديل**
@@ -71,7 +73,7 @@ object Cart {
         store = prefs
         val raw = prefs.getString(KEY, null) ?: return
         lines = runCatching {
-            json.decodeFromString<List<Saved>>(raw).map { Line(it.item, it.qty) }
+            json.decodeFromString<List<Saved>>(raw).map { Line(it.item, it.qty, it.options) }
         }.getOrElse {
             // **وسلّةٌ لا تُقرأ تُمحى ولا تُسقط الإقلاع** — **صنفٌ تبدّل
             // حقلُه في المحرّك يكسر الفكَّ**، ولا يُترك التطبيقُ لا يفتح.
@@ -81,23 +83,39 @@ object Cart {
         }
     }
 
-    /** **يُزاد صنفٌ أو يُرفع عدّه** — ولا يتكرّر السطرُ نفسُه مرّتين. */
-    fun add(item: Item, qty: Int = 1) {
-        val at = lines.indexOfFirst { it.item.id == item.id }
+    /**
+     * **يُزاد صنفٌ أو يُرفع عدّه** — ولا يتكرّر السطرُ نفسُه مرّتين.
+     *
+     * # **والاختلافُ في الخيارات اختلافٌ في السطر**
+     *
+     * «برغر كبير بجبنة» و«برغر صغير بلا جبنة» **صنفٌ واحدٌ ومعرّفٌ
+     * واحد** — **فجمعُهما في سطرٍ يعني أن يختفي أحدُ الطلبين**، ويقرأ
+     * المتجرُ اثنين متطابقين ويصنعهما متطابقين.
+     *
+     * **فالمفتاحُ هو المعرّفُ وخياراتُه معاً** لا المعرّفَ وحدَه.
+     */
+    fun add(item: Item, qty: Int = 1, options: List<ModifierOption> = emptyList()) {
+        val line = Line(item, qty, options)
+        val at = lines.indexOfFirst { it.key == line.key }
         lines = if (at >= 0) {
             lines.toMutableList().also { it[at] = it[at].copy(qty = it[at].qty + qty) }
         } else {
-            lines + Line(item, qty)
+            lines + line
         }
         save()
     }
 
-    /** **يُنقص أو يُحذف** — والصفرُ يعني «ارفعه من السلّة». */
-    fun setQty(itemId: String, qty: Int) {
+    /**
+     * **يُنقص أو يُحذف** — والصفرُ يعني «ارفعه من السلّة».
+     *
+     * **وبمفتاح السطر لا بمعرّف الصنف** — **ولو كان بالمعرّف لَحذف
+     * «برغر بجبنة» حين يُنقص «برغر بلا جبنة».**
+     */
+    fun setQty(key: String, qty: Int) {
         lines = if (qty <= 0) {
-            lines.filter { it.item.id != itemId }
+            lines.filter { it.key != key }
         } else {
-            lines.map { if (it.item.id == itemId) it.copy(qty = qty) else it }
+            lines.map { if (it.key == key) it.copy(qty = qty) else it }
         }
         save()
     }
@@ -116,7 +134,7 @@ object Cart {
     private fun save() {
         val prefs = store ?: return
         val raw = runCatching {
-            json.encodeToString(lines.map { Saved(it.item, it.qty) })
+            json.encodeToString(lines.map { Saved(it.item, it.qty, it.options) })
         }.getOrNull() ?: return
         prefs.edit().putString(KEY, raw).apply()
     }
@@ -130,9 +148,40 @@ object Cart {
     private const val FILE = "rahalgo_cart"
     private const val KEY = "lines"
 
-    data class Line(val item: Item, val qty: Int)
+    data class Line(
+        val item: Item,
+        val qty: Int,
+        /** **ما اختاره** — حجمٌ وإضافات، فارغةٌ لصنفٍ بلا خيارات. */
+        val options: List<ModifierOption> = emptyList(),
+    ) {
+        /**
+         * **هويّةُ السطر** — المعرّفُ وخياراتُه مرتَّبةً.
+         *
+         * **والترتيبُ مقصود**: «جبنة ثمّ ثوم» و«ثوم ثمّ جبنة» اختيارٌ
+         * واحد، **ولو لم يُرتَّب لَصارا سطرين في السلّة.**
+         */
+        val key: String
+            get() = item.id + "|" + options.map { it.id }.sorted().joinToString(",")
+
+        /** **ثمنُ الواحد بخياراته** — والفرقُ يُضاف كما يُضاف في المحرّك. */
+        val unitPrice: Long get() = item.price + options.sumOf { it.priceDelta }
+
+        /**
+         * **صورةُ السطر كما يقرؤها المحرّك.**
+         *
+         * **وموضعٌ واحدٌ للتحويل**: التسعيرةُ والإرسالُ يبنيان الحمولةَ
+         * نفسَها، **ونسختان تفترقان يوماً** فيُسعَّر بخياراتٍ ويُرسَل
+         * بغيرها — **ويدفع الزبونُ غيرَ ما رأى.**
+         */
+        fun toPayload(): CartLine =
+            CartLine(menuItemId = item.id, qty = qty, optionIds = options.map { it.id })
+    }
 
     /** **صورةُ السطر على القرص** — والشاشةُ لا تعرفها. */
     @Serializable
-    private data class Saved(val item: Item, val qty: Int)
+    private data class Saved(
+        val item: Item,
+        val qty: Int,
+        val options: List<ModifierOption> = emptyList(),
+    )
 }

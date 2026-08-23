@@ -17,6 +17,14 @@ object Backend {
     const val BASE_URL = "https://api.rahalgo.com"
 
     /**
+     * **أصلُ آثار الخرائط** — المرحلة ٦ب، البند ٣.
+     *
+     * **ولا يُكتب مضيفٌ في منطق واجهة** — منه وحدَه تُشتقّ عناوينُ
+     * الفهرس والأرشيف والموارد، **وتبديلُ المزوّد سطرٌ هنا.**
+     */
+    const val MAPS_BASE_URL = "https://maps.rahalgo.com"
+
+    /**
      * **نوعُ العميل — كما تعرفه قائمةُ المحرّك المغلقة.**
      *
      * (`identity/client_kind.go`: `{android|ios}-{customer|driver|merchant|rep}`.)

@@ -715,6 +715,8 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
 
             when {
                 tab == 0 -> TripScreen(
+                    routeSource = orders.routeSource,
+                    voice = orders.voice,
                     state = orders.trip(LastPoint.value),
                     actions = TripActions(
                         step = orders::step,
@@ -749,6 +751,27 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         dismissEmergency = orders::dismissEmergency,
                         navigate = { openMaps(context, orders.trip(LastPoint.value)) },
                         toOrders = { tab = 1 },
+                        // ══════════════════════════════════════════════
+                        // **اختيارُ المسار** — إغلاقُ واجهة ٧
+                        // ══════════════════════════════════════════════
+                        //
+                        // **والفحصُ في نموذج العرض** — الشاشةُ تسلّم
+                        // ما قُبل ولا تتفاءل (البند ١٨).
+                        loadAlternatives = { gen, target, lat, lng, reason, fp, geom ->
+                            orders.loadAlternatives(gen, target, lat, lng, reason, fp, geom)
+                        },
+                        askCorrelation = { routeId, fixes, done ->
+                            orders.askCorrelation(routeId, fixes, done)
+                        },
+                        onRouteInstalled = { gen, target, reason ->
+                            orders.onRouteInstalled(gen, target, reason)
+                        },
+                        previewRoute = { orders.previewRoute(it) },
+                        confirmRoute = { gen, target, lat, lng, progress, healthy ->
+                            orders.confirmRoute(gen, target, lat, lng, progress, healthy)
+                        },
+                        onRouteCommitted = { orders.onRouteCommitted() },
+                        clearChoices = { orders.clearChoices() },
                     ),
                     chat = orders.chat,
                     chatActions = ChatActions(

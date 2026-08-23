@@ -19,4 +19,7 @@
          موجودة، يضغط عليها يتم تحديد عنوانه ثم زرّ حفظ»). -->
     <string name="pick_my_location">موقعي الحالي</string>
     <string name="pick_no_location">تعذر تحديد موقعك — فعل الموقع وحاول ثانية</string>
+    <!-- **حين لا يُبنى النمط** — إغلاقُ TD-CUSTOMER-MAP-NO-MANIFEST.
+         والسببُ شبكةٌ في الغالب، والبياضُ يُقرأ عطباً في التطبيق. -->
+    <string name="map_unreachable">تعذّر تحميل الخريطة — تحقّق من الاتّصال وحاول مرّة أخرى</string>
 </resources>

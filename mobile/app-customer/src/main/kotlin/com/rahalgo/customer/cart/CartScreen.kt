@@ -40,6 +40,7 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.CartLine
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.customer.NewOrder
+import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.Quote
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Card
@@ -88,10 +89,13 @@ fun CartScreen(
     onDone: () -> Unit,
 ) {
     val here = address?.let { LastPoint.Point(it.lat, it.lng, it.text) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val media = { path: String? -> com.rahalgo.customer.Backend.of(context).media(path) }
 
     // **والتسعيرةُ تُطلب متى تبدّلت السلّةُ أو النقطة** — لا عند الضغط
     // وحدَه: **من رأى الإجماليَّ لحظةَ الدفع فوجده أكبرَ تردّد.**
     LaunchedEffect(Cart.lines, here) { vm.quote(here?.lat, here?.lng) }
+    LaunchedEffect(Cart.lines) { vm.loadSuggestions() }
 
     if (Cart.lines.isEmpty()) {
         Screen {
@@ -119,8 +123,18 @@ fun CartScreen(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(line.item.name, style = MaterialTheme.typography.bodyMedium)
+                        // **وما اختاره يُقال تحت اسمه** — **وسطران
+                        // متطابقان في السلّة بلا فرقٍ مكتوبٍ يُقرآن
+                        // تكراراً**، فيُحذف أحدُهما وهو المقصود.
+                        if (line.options.isNotEmpty()) {
+                            Text(
+                                line.options.joinToString("، ") { it.name },
+                                color = Rahal.colors.inkMuted,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                         Text(
-                            money(line.item.price * line.qty),
+                            money(line.unitPrice * line.qty),
                             color = Rahal.colors.brand,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -128,11 +142,11 @@ fun CartScreen(
                     // **والعدُّ يُبدَّل هنا** — ومن أراد صنفين لا يعود
                     // إلى السوق ليضغط مرّتين.
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RahalTextButton(onClick = { Cart.setQty(line.item.id, line.qty - 1) }) {
+                        RahalTextButton(onClick = { Cart.setQty(line.key, line.qty - 1) }) {
                             Text("−", style = MaterialTheme.typography.titleLarge)
                         }
                         Text(line.qty.toString(), fontWeight = FontWeight.Bold)
-                        RahalTextButton(onClick = { Cart.setQty(line.item.id, line.qty + 1) }) {
+                        RahalTextButton(onClick = { Cart.setQty(line.key, line.qty + 1) }) {
                             Text("+", style = MaterialTheme.typography.titleLarge)
                         }
 
@@ -150,7 +164,7 @@ fun CartScreen(
                         Box(
                             Modifier
                                 .clip(CircleShape)
-                                .clickable { Cart.setQty(line.item.id, 0) }
+                                .clickable { Cart.setQty(line.key, 0) }
                                 .padding(6.dp),
                         ) {
                             Icon(
@@ -166,6 +180,15 @@ fun CartScreen(
                 }
                 HorizontalDivider()
             }
+        }
+
+        // **«يُطلب معه» تحت السطور مباشرةً** — انظر `SuggestRow`.
+        //
+        // **وقبل العنوانِ والدفع**: من بلغ زرَّ الإرسال قرّر، **واقتراحٌ
+        // تحت الزرّ لا يُرى.**
+        if (vm.suggested.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            SuggestRow(items = vm.suggested, media = media, onAdd = { Cart.add(it) })
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -422,6 +445,39 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
     var error by mutableStateOf("")
         private set
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **«يُطلب معه» — مشروبٌ ومقبّلاتٌ وحلوى**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-٢٢: «حركةٌ ذكيّةٌ بالأكل تعرض عليه كولا أو
+     *  عيران، هي أكثرُ شيءٍ تنطلب».)
+     *
+     * **وصنفٌ مستقلٌّ لا خيارٌ ملصوق**: من طلب ثلاثةَ ساندويشات وكولتين
+     * **لا يستطيع قولَها بالخيارات** — إمّا كولا لكلٍّ أو لا شيء.
+     */
+    var suggested by mutableStateOf<List<Item>>(emptyList())
+        private set
+
+    /**
+     * **تُنادى متى تبدّلت السلّة** — **وما فيها يُستثنى**: اقتراحُ ما
+     * اشتراه يقول له إنّا لا نقرأ سلّته.
+     *
+     * **وإخفاقُها لا يُقال ولا يُسجَّل خطأً في الشاشة** — **هي زيادةٌ
+     * لا ركن**، ورسالةُ عطبٍ لأجل اقتراحٍ تُقلق بلا سبب.
+     */
+    fun loadSuggestions() {
+        if (Cart.lines.isEmpty()) {
+            suggested = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            runCatching { api.suggest(Cart.lines.map { it.item.id }.distinct()) }
+                .onSuccess { suggested = it.items.filter { i -> i.available && !i.sourceClosed } }
+                .onFailure { suggested = emptyList() }
+        }
+    }
+
     fun locate() = Here.refresh(getApplication())
 
     fun quote(lat: Double?, lng: Double?) {
@@ -431,7 +487,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             runCatching {
-                api.quote(Cart.lines.map { CartLine(it.item.id, it.qty) }, lat, lng)
+                api.quote(Cart.lines.map { it.toPayload() }, lat, lng)
             }.onSuccess { priced = it; error = "" }
                 .onFailure { error = apiError(getApplication(), it as Exception) }
         }
@@ -454,7 +510,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 api.createOrder(
                     NewOrder(
-                        items = Cart.lines.map { CartLine(it.item.id, it.qty) },
+                        items = Cart.lines.map { it.toPayload() },
                         addressText = address,
                         lat = lat,
                         lng = lng,

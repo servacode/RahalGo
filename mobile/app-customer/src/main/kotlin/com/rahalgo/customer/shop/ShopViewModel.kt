@@ -44,6 +44,9 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
 
     private val api = CustomerApi(AppCore.get().api)
 
+    /** **تقرؤه النافذةُ لتجلب خياراتِ الصنف** — ونداءٌ واحدٌ لا اثنان. */
+    val customerApi: CustomerApi get() = api
+
     var sections by mutableStateOf<List<Section>>(emptyList())
         private set
 

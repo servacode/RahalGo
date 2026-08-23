@@ -40,6 +40,9 @@ class MineViewModel(app: Application) : AndroidViewModel(app) {
 
     private val api = CustomerApi(AppCore.get().api)
 
+    /** **تقرؤه نافذةُ الخيارات** — انظر `ItemOptionsSheet`. */
+    val customerApi: CustomerApi get() = api
+
     var busy by mutableStateOf(false)
         private set
 

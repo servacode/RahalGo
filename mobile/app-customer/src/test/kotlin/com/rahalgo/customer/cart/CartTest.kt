@@ -26,6 +26,7 @@ package com.rahalgo.customer.cart
  * **ولهما `FIN-*` هناك.**
  */
 import com.rahalgo.shared.model.Item
+import com.rahalgo.shared.model.ModifierOption
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -33,6 +34,18 @@ import org.junit.Test
 class CartTest {
 
     private fun item(id: String, price: Long) = Item(id = id, name = "صنف $id", price = price)
+
+    private fun opt(id: String, delta: Long) =
+        ModifierOption(id = id, name = "خيار $id", priceDelta = delta)
+
+    /**
+     * **مفتاحُ سطرٍ بلا خيارات.**
+     *
+     * **والسطرُ لم يعد يُعرف بمعرّف الصنف وحدَه** (٢٠٢٦-٠٨-٢٢): «برغر
+     * كبير بجبنة» و«برغر صغير» صنفٌ واحدٌ ومعرّفٌ واحد، **فجمعُهما في
+     * سطرٍ يُخفي أحدَ الطلبين.**
+     */
+    private fun key(id: String) = "$id|"
 
     /** **وكلُّ اختبارٍ يبدأ من سلّةٍ فارغة** — والحالُ ساكنةٌ يشترك فيها الجميع. */
     @Before
@@ -85,7 +98,7 @@ class CartTest {
     @Test
     fun `ضبطُ الكمّيّةِ يستبدلُ لا يزيد`() {
         Cart.add(item("a", 230), 2)
-        Cart.setQty("a", 5)
+        Cart.setQty(key("a"), 5)
         assertEquals(5, Cart.count)
         assertEquals(1150L, Cart.subtotal)
     }
@@ -100,7 +113,7 @@ class CartTest {
     fun `الكمّيّةُ صفرٌ ترفعُ الصنفَ من السلّة`() {
         Cart.add(item("a", 230))
         Cart.add(item("b", 350))
-        Cart.setQty("a", 0)
+        Cart.setQty(key("a"), 0)
         assertEquals(1, Cart.lines.size)
         assertEquals(350L, Cart.subtotal)
     }
@@ -109,7 +122,7 @@ class CartTest {
     @Test
     fun `الكمّيّةُ السالبةُ ترفعُ الصنف`() {
         Cart.add(item("a", 230))
-        Cart.setQty("a", -3)
+        Cart.setQty(key("a"), -3)
         assertEquals(0, Cart.lines.size)
         assertEquals(0L, Cart.subtotal)
     }
@@ -123,7 +136,7 @@ class CartTest {
     @Test
     fun `ضبطُ كمّيّةِ صنفٍ غائبٍ لا يُنشئُ سطرا`() {
         Cart.add(item("a", 230))
-        Cart.setQty("لا-وجود-له", 9)
+        Cart.setQty(key("لا-وجود-له"), 9)
         assertEquals(1, Cart.lines.size)
         assertEquals(230L, Cart.subtotal)
     }
@@ -151,6 +164,90 @@ class CartTest {
         Cart.add(item("a", 100), 1)
         assertEquals(5, Cart.count)
         assertEquals(100L, Cart.subtotal)
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **الخيارات — الحجمُ والإضافات** (٢٠٢٦-٠٨-٢٢)
+    // ══════════════════════════════════════════════════════════════════
+
+    /**
+     * CART-030 **وفرقُ الخيار يدخل المجموع.**
+     *
+     * **والمحرّكُ يضيفه إلى السعرين معاً** (`orders/service.go`) —
+     * **فشاشةٌ لا تضيفه تعرض رقماً ويُخصم غيرُه.**
+     */
+    @Test
+    fun `فرقُ الخيارِ يدخلُ المجموع`() {
+        Cart.add(item("برغر", 300), 2, listOf(opt("كبير", 80), opt("جبنة", 60)))
+        assertEquals(2, Cart.count)
+        assertEquals(880L, Cart.subtotal)
+    }
+
+    /**
+     * CART-031 **والصنفُ نفسُه بخيارين مختلفين سطران.**
+     *
+     * **ولو جُمعا لَاختفى أحدُ الطلبين** — ويصنع المتجرُ متطابقين.
+     */
+    @Test
+    fun `الخياراتُ المختلفةُ تفصلُ السطرين`() {
+        Cart.add(item("برغر", 300), 1, listOf(opt("كبير", 80)))
+        Cart.add(item("برغر", 300), 1, listOf(opt("صغير", 0)))
+        assertEquals(2, Cart.lines.size)
+        assertEquals(680L, Cart.subtotal)
+    }
+
+    /** CART-032 **والخياراتُ نفسُها ترفع العدَّ ولا تُكرّر سطرا.** */
+    @Test
+    fun `الخياراتُ نفسُها ترفعُ العد`() {
+        Cart.add(item("برغر", 300), 1, listOf(opt("كبير", 80)))
+        Cart.add(item("برغر", 300), 2, listOf(opt("كبير", 80)))
+        assertEquals(1, Cart.lines.size)
+        assertEquals(3, Cart.count)
+    }
+
+    /**
+     * CART-033 **وترتيبُ الاختيار لا يصنع سطراً ثانيا.**
+     *
+     * **«جبنة ثمّ ثوم» و«ثوم ثمّ جبنة» اختيارٌ واحد** — **ولو لم
+     * يُرتَّب المفتاحُ لَصارا سطرين، ويقرأ الزبونُ سلّتَه مكرّرة.**
+     */
+    @Test
+    fun `ترتيبُ الاختيارِ لا يفصلُ السطر`() {
+        Cart.add(item("برغر", 300), 1, listOf(opt("جبنة", 60), opt("ثوم", 40)))
+        Cart.add(item("برغر", 300), 1, listOf(opt("ثوم", 40), opt("جبنة", 60)))
+        assertEquals(1, Cart.lines.size)
+        assertEquals(2, Cart.count)
+    }
+
+    /**
+     * CART-034 **والحمولةُ تحمل معرّفاتِ الخيارات.**
+     *
+     * **والمحرّكُ يردّ الطلبَ كلَّه** إن نقص اختيارٌ من مجموعةٍ
+     * إلزاميّة — **وكان التطبيقُ لا يرسلها إطلاقاً.**
+     */
+    @Test
+    fun `الحمولةُ تحملُ معرّفاتِ الخيارات`() {
+        Cart.add(item("برغر", 300), 2, listOf(opt("كبير", 80), opt("جبنة", 60)))
+        val payload = Cart.lines.single().toPayload()
+        assertEquals("برغر", payload.menuItemId)
+        assertEquals(2, payload.qty)
+        assertEquals(listOf("كبير", "جبنة"), payload.optionIds)
+    }
+
+    /**
+     * CART-035 **وحذفُ سطرٍ لا يمسّ أخاه.**
+     *
+     * **ولو كان الحذفُ بمعرّف الصنف لَحذفهما معاً** — ويفقد الزبونُ
+     * ما لم يطلب حذفَه.
+     */
+    @Test
+    fun `حذفُ سطرٍ لا يمسُّ أخاه`() {
+        Cart.add(item("برغر", 300), 1, listOf(opt("كبير", 80)))
+        Cart.add(item("برغر", 300), 1, listOf(opt("صغير", 0)))
+        val first = Cart.lines.first().key
+        Cart.setQty(first, 0)
+        assertEquals(1, Cart.lines.size)
+        assertEquals(300L, Cart.subtotal)
     }
 
     /**

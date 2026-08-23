@@ -22,6 +22,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -175,6 +179,22 @@ private fun Offers(vm: MineViewModel) {
     // **ويُقرأ النصُّ في التركيب لا في المستمع** — `stringResource`
     // دالّةُ تركيبٍ ولا تُنادى داخل `onClick`.
     val addedText = stringResource(R.string.shop_added)
+
+    // **والصنفُ ذو الخياراتِ يُسأل قبل أن يدخل** — انظر `ItemOptionsSheet`.
+    var picking by remember { mutableStateOf<Item?>(null) }
+    picking?.let { target ->
+        com.rahalgo.customer.shop.ItemOptionsSheet(
+            item = target,
+            api = vm.customerApi,
+            onAdd = { chosen ->
+                Cart.add(target, options = chosen)
+                picking = null
+                Flash.ok(addedText)
+            },
+            onClose = { picking = null },
+        )
+    }
+
     Screen {
         ScreenTitle(
             stringResource(R.string.menu_offers_title),
@@ -258,21 +278,29 @@ private fun Offers(vm: MineViewModel) {
                                     // **والسعرُ سعرُ العرض** — وهو ما
                                     // رآه. **والمحرّكُ يُعيد الحسابَ
                                     // عند الإرسال** فلا يُدسّ رقم.
-                                    Cart.add(
-                                        Item(
-                                            id = itemId,
-                                            name = o.itemName.ifEmpty { o.title },
-                                            price = o.priceAfter,
-                                            imageUrl = o.itemImageUrl ?: o.imageUrl,
-                                            priceBefore = o.priceBefore
-                                                .takeIf { it > o.priceAfter },
-                                            discountPercent = o.discountPercent,
-                                        ),
+                                    // **وما له خياراتٌ يُسأل قبل أن
+                                    // يدخل** — **والمجموعةُ الإلزاميّةُ
+                                    // تُسقط الطلبَ كلَّه** إن دخل بلا
+                                    // اختيار، ولا يُقال أيُّ صنفٍ سبّبه.
+                                    val picked = Item(
+                                        id = itemId,
+                                        name = o.itemName.ifEmpty { o.title },
+                                        price = o.priceAfter,
+                                        imageUrl = o.itemImageUrl ?: o.imageUrl,
+                                        priceBefore = o.priceBefore
+                                            .takeIf { it > o.priceAfter },
+                                        discountPercent = o.discountPercent,
+                                        hasOptions = o.hasOptions,
                                     )
-                                    // **ورسالةٌ تقول إنّه وقع** —
-                                    // **وضغطةٌ بلا أثرٍ تُقرأ عطبا**،
-                                    // والبطاقةُ لا تتغيّر بعدها.
-                                    Flash.ok(addedText)
+                                    if (picked.hasOptions) {
+                                        picking = picked
+                                    } else {
+                                        Cart.add(picked)
+                                        // **ورسالةٌ تقول إنّه وقع** —
+                                        // **وضغطةٌ بلا أثرٍ تُقرأ عطبا**،
+                                        // والبطاقةُ لا تتغيّر بعدها.
+                                        Flash.ok(addedText)
+                                    }
                                 },
                                 compact = true,
                             ) { Text(stringResource(R.string.shop_add)) }

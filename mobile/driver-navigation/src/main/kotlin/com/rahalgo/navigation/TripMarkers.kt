@@ -58,9 +58,9 @@ object Markers {
     /** **خاصّيّةُ دوران الأيقونة** — تُكتب في النقطة وتُقرأ في الطبقة. */
     private const val PROP_ROTATE = "rotate"
 
-    private const val DRIVER = "#1E88E5"
-    private const val PICKUP = "#FE9501"
-    private const val DROPOFF = "#02678F"
+    private val DRIVER = MapRoutePalette.DRIVER_PIN
+    private val PICKUP = MapRoutePalette.PICKUP_PIN
+    private val DROPOFF = MapRoutePalette.DROPOFF_PIN
 
     private const val IMG_DRIVER = "img-driver"
     private const val IMG_PICKUP = "img-pickup"
@@ -130,9 +130,60 @@ object Markers {
     /** **الصورُ تُسجَّل مرّةً في الأسلوب** — ثمّ تُنادى بأسمائها. */
     private fun images(context: Context, style: Style, icons: MarkerIcons) {
         if (style.getImage(IMG_DRIVER) != null) return
-        style.addImage(IMG_DRIVER, badge(context, icons.driver, DRIVER, 46))
+        // **وعلامةُ السائق سهمٌ لا قرصٌ فيه درّاجة** — (طلبُ المالك
+        // ٢٠٢٦-٠٨-٢٣: «بدل أيقونة الدرّاجة نضع مثل سهم قوقل ماب ليكون
+        // واضح… شكل الدراجة بشع لأنه مسطّح»).
+        //
+        // **والسببُ هندسيٌّ لا ذوقيّ**: القرصُ لا يقول اتّجاهاً —
+        // **يدور فلا يُرى دورانُه.** والسهمُ شكلُه هو معناه: **رأسُه
+        // يقول إلى أين يتّجه في لمحة.**
+        style.addImage(IMG_DRIVER, arrow(context, 46))
         style.addImage(IMG_PICKUP, badge(context, icons.pickup, PICKUP, 40))
         style.addImage(IMG_DROPOFF, badge(context, icons.dropoff, DROPOFF, 40))
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **سهمُ الاتّجاه — علامةُ السائق**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-٢٣.)
+     *
+     * **ثلاثيٌّ ذو رأسٍ حادٍّ وذيلٍ مقعّر** — كسهم الملاحة في كلّ تطبيق
+     * ملاحةٍ يعرفه الناس. **والشكلُ المألوفُ يُقرأ بلا تعلّم.**
+     *
+     * **والحافّةُ البيضاءُ ليست زينة**: السهمُ يقع على شارعٍ قد يكون
+     * بلونه، **وحدٌّ أبيضُ يفصله عن كلّ أرض.**
+     *
+     * **ويُرسم متّجهاً إلى الأعلى** — والدورانُ تتولّاه الطبقةُ
+     * (`iconRotate`) من اتّجاه السائق المنعَّم.
+     */
+    private fun arrow(context: Context, sizeDp: Int): Bitmap {
+        val px = (sizeDp * context.resources.displayMetrics.density).toInt()
+        val bitmap = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        val w = px.toFloat()
+        val path = android.graphics.Path().apply {
+            moveTo(w * 0.50f, w * 0.06f)          // الرأسُ إلى الأعلى
+            lineTo(w * 0.90f, w * 0.92f)          // الجناحُ الأيمن
+            lineTo(w * 0.50f, w * 0.70f)          // الذيلُ المقعّر
+            lineTo(w * 0.10f, w * 0.92f)          // الجناحُ الأيسر
+            close()
+        }
+
+        // **الحدُّ أوّلاً ثمّ الملء** — فيبقى الأبيضُ إطاراً حولَه.
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = w * 0.10f
+        paint.strokeJoin = Paint.Join.ROUND
+        paint.color = android.graphics.Color.WHITE
+        canvas.drawPath(path, paint)
+
+        paint.style = Paint.Style.FILL
+        paint.color = android.graphics.Color.parseColor(DRIVER)
+        canvas.drawPath(path, paint)
+        return bitmap
     }
 
     /**
@@ -294,6 +345,12 @@ object Markers {
  * المرحلة ٠. **فمن استوردها من الوحدة غيّر المظهرَ وهو ينقل.**
  */
 data class MarkerIcons(
+    /**
+     * **لم تعد تُرسَم** — علامةُ السائق صارت سهماً يُرسم بالشيفرة
+     * (٢٠٢٦-٠٨-٢٣، طلبُ المالك). **وتبقى في العقد** كي لا يُكسر كلُّ
+     * من يبنيها، **وتُحذف حين تُنظَّف مواضعُ البناء كلُّها.**
+     */
+    @Deprecated("علامةُ السائق سهمٌ يُرسم — انظر arrow()")
     @androidx.annotation.DrawableRes val driver: Int,
     @androidx.annotation.DrawableRes val pickup: Int,
     @androidx.annotation.DrawableRes val dropoff: Int,

@@ -96,8 +96,19 @@
     <string name="mn_no_platform_section_hint">بلا قسم لن يظهر الصنف في تصفح الزبون</string>
     <string name="mn_available">متوفر</string>
     <string name="mn_unavailable">غير متوفر</string>
-    <string name="mn_mark_unavailable">اجعله غير متوفر</string>
-    <string name="mn_mark_available">اجعله متوفرا</string>
+    <!-- ══════════════════════════════════════════════════════════════
+         **والزرُّ يقول الحالَ لا الفعل** — (توحيدٌ ٢٠٢٦-٠٨-٢٣)
+         ══════════════════════════════════════════════════════════════
+
+         **«اجعله غير متوفر» تقول الفعلَ وتُخفي الحال**: من قرأها لم
+         يعرف أهو متوفّرٌ الآن أم لا، **فيضغط ليعرف فيبدّل ما لم يُرد
+         تبديلَه.**
+
+         **وصارت الحالُ نفسَها في التطبيقات الأربعة والويب**: «متوفر»
+         و«غير متوفر» — **ولفظان لشيءٍ واحدٍ يجعلان المنصّةَ تبدو
+         منصّتين.** -->
+    <string name="mn_mark_unavailable">متوفر</string>
+    <string name="mn_mark_available">غير متوفر</string>
     <string name="mn_confirm_delete">حذف هذا الصنف نهائيا؟</string>
     <string name="mn_pending_review">بانتظار المراجعة</string>
     <string name="mn_rejected">مرفوض — عدله ليراجع</string>

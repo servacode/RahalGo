@@ -60,6 +60,7 @@ fun PlatformPage(
         PlatformPages.HELP -> when (role) {
             HelpRole.Driver -> contact.driverHelpText
             HelpRole.Rep -> contact.repHelpText
+            HelpRole.Merchant -> contact.merchantHelpText
             HelpRole.Customer -> contact.helpText
         }
         PlatformPages.ABOUT -> contact.aboutText
@@ -112,4 +113,4 @@ private fun pageHint(key: String): Int = when (key) {
 }
 
 /** **أدوارُ التعليمات** — ولكلٍّ نصُّه في المحرّك. */
-enum class HelpRole { Customer, Driver, Rep }
+enum class HelpRole { Customer, Driver, Rep, Merchant }
