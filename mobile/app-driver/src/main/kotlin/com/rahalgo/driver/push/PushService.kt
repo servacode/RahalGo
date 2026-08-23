@@ -56,8 +56,14 @@ class PushService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val data = message.data
         val kind = data["kind"].orEmpty()
-        val title = message.notification?.title ?: data["title"].orEmpty()
-        val body = message.notification?.body ?: data["body"].orEmpty()
+        // **والنصُّ من الحمولة أوّلاً** — (٢٠٢٦-٠٨-٢٣: صار المحرّكُ
+        // يرسل بياناتٍ خالصةً بلا حقل `notification`، **ليصل التطبيقَ
+        // وهو في الخلفيّة فيرسم إشعارَه بقناته وصوته.**)
+        //
+        // **ويبقى `message.notification` ارتداداً** — فأجهزةٌ لم
+        // تُحدَّث بعدُ قد تستقبل رسالةً بالصيغة القديمة.
+        val title = data["title"].orEmpty().ifBlank { message.notification?.title.orEmpty() }
+        val body = data["body"].orEmpty().ifBlank { message.notification?.body.orEmpty() }
         Log.i(TAG, "إشعار: $kind — $title")
 
         // **والطلب الجديد يُعامَل معاملةً أخرى** — هو وحدَه ما ينتظره
@@ -71,7 +77,7 @@ class PushService : FirebaseMessagingService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
                 NotificationChannel(
-                    if (urgent) CH_OFFER else CH_NEWS,
+                    if (urgent) com.rahalgo.ui.PushChannels.URGENT else com.rahalgo.ui.PushChannels.DEFAULT,
                     getString(if (urgent) R.string.push_ch_offer else R.string.push_ch_news),
                     if (urgent) {
                         NotificationManager.IMPORTANCE_HIGH
@@ -97,7 +103,7 @@ class PushService : FirebaseMessagingService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-        val note = NotificationCompat.Builder(this, if (urgent) CH_OFFER else CH_NEWS)
+        val note = NotificationCompat.Builder(this, if (urgent) com.rahalgo.ui.PushChannels.URGENT else com.rahalgo.ui.PushChannels.DEFAULT)
             .setSmallIcon(R.drawable.ic_orders)
             .setContentTitle(title.ifBlank { getString(R.string.push_offer_title) })
             .setContentText(body)
@@ -130,8 +136,6 @@ class PushService : FirebaseMessagingService() {
     companion object {
         private const val TAG = "RahalGo/push"
         const val KIND_OFFER = "order_offer"
-        private const val CH_OFFER = "rahalgo_offer"
-        private const val CH_NEWS = "rahalgo_news"
         private const val ID_OFFER = 2001
         private const val ID_NEWS = 2002
     }

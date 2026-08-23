@@ -59,8 +59,14 @@ class PushService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val data = message.data
         val kind = data["kind"].orEmpty()
-        val title = message.notification?.title ?: data["title"].orEmpty()
-        val body = message.notification?.body ?: data["body"].orEmpty()
+        // **والنصُّ من الحمولة أوّلاً** — (٢٠٢٦-٠٨-٢٣: صار المحرّكُ
+        // يرسل بياناتٍ خالصةً بلا حقل `notification`، **ليصل التطبيقَ
+        // وهو في الخلفيّة فيرسم إشعارَه بقناته وصوته.**)
+        //
+        // **ويبقى `message.notification` ارتداداً** — فأجهزةٌ لم
+        // تُحدَّث بعدُ قد تستقبل رسالةً بالصيغة القديمة.
+        val title = data["title"].orEmpty().ifBlank { message.notification?.title.orEmpty() }
+        val body = data["body"].orEmpty().ifBlank { message.notification?.body.orEmpty() }
         Log.i(TAG, "إشعار: $kind — $title")
         // **وخبرُ الطلب يُقاطِع** — هو ما ينتظره صاحبُه، **وما عداه
         // يُقرأ حين يفتح التطبيق.**
@@ -70,7 +76,7 @@ class PushService : FirebaseMessagingService() {
     private fun show(title: String, body: String, urgent: Boolean) {
         if (title.isBlank() && body.isBlank()) return
         val manager = getSystemService(NotificationManager::class.java)
-        val channel = if (urgent) CH_ORDER else CH_NEWS
+        val channel = if (urgent) com.rahalgo.ui.PushChannels.URGENT else com.rahalgo.ui.PushChannels.DEFAULT
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
                 NotificationChannel(
@@ -117,8 +123,6 @@ class PushService : FirebaseMessagingService() {
 
         /** **نوعُ خبرِ الطلب كما يرسله المحرّك** (`notifications.KindOrder`). */
         const val KIND_ORDER = "order"
-        private const val CH_ORDER = "rahalgo_order"
-        private const val CH_NEWS = "rahalgo_news"
         private const val ID_ORDER = 3001
         private const val ID_NEWS = 3002
     }
