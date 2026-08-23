@@ -68,7 +68,7 @@ class MapPackageWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        val regionId = inputData.getString(KEY_REGION) ?: OfflineMap.DEFAULT_REGION
+        val regionId = inputData.getString(KEY_REGION) ?: OfflineMap.regionId
         val ctx = applicationContext
 
         MapStyleRepository.init(ctx, mapConfig(ctx))
@@ -205,7 +205,7 @@ class MapPackageWorker(
 
         fun enqueue(
             context: Context,
-            regionId: String = OfflineMap.DEFAULT_REGION,
+            regionId: String = OfflineMap.regionId,
             trigger: Trigger = Trigger.USER,
         ) {
             val request = OneTimeWorkRequestBuilder<MapPackageWorker>()

@@ -96,7 +96,24 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
     val me = state.me
     val context = LocalContext.current
     // **ويُفحص عند كلّ فتح** — قد يكون نزّلها ثمّ مسح بيانات التطبيق.
-    LaunchedEffect(Unit) { OfflineMap.check(context) }
+    // ══════════════════════════════════════════════════════════════════
+    // **ومنطقتُه تُشتقّ من موضعه قبل أن يُسأل عن حزمتها**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «كي لا نضطرَّ لاحقاً لتعديل البرنامج
+    //  والكود».)
+    //
+    // **والموضعُ من `LastPoint`** — يكتبه `Here` وخدمةُ الورديّة.
+    // **ولا يُطلب إذنٌ لأجله**: من لم يُعرف موضعُه بقي على الارتداد،
+    // **وشاشةٌ تسأل إذنَ موقعٍ لتعرف أيَّ خريطةٍ تعرض تُقرأ تطفّلا.**
+    //
+    // **ويُعاد مع كلّ تبدّلِ موضع** — **والسائقُ ينتقل بين مدنٍ**،
+    // ومن نزّل حزمةَ مدينته الأولى لا يبقى عليها إلى الأبد.
+    val here = com.rahalgo.ui.LastPoint.value
+    LaunchedEffect(here?.lat, here?.lng) {
+        if (here != null) OfflineMap.pickRegion(here.lat, here.lng)
+        OfflineMap.check(context)
+    }
     Column(
         Modifier
             .fillMaxSize()

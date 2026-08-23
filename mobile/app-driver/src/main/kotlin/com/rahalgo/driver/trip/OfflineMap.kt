@@ -80,13 +80,57 @@ object OfflineMap {
             }
     }
 
-    /** **المنطقةُ الافتراضيّة** — الرقّة، وهي مدينةُ الإطلاق. */
-    const val DEFAULT_REGION = "raqqa"
+    // ══════════════════════════════════════════════════════════════════
+    // **والمنطقةُ تُشتقّ من موضعه — لا تُكتب في الكود**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «نفعل كلَّ خرائط سوريا — كي لا نضطرَّ
+    //  لاحقاً لتعديل البرنامج والكود».)
+    //
+    // **وكان هنا `const val DEFAULT_REGION = "raqqa"` واسمُها معه** —
+    // **فلو بُنيت ستّون حزمةً على الخادم لَما نزّل السائقُ إلّا
+    // الرقّة**، وبقيت التسعُ والخمسون لا يراها أحد.
+    //
+    // **وبعد هذا التعديل تُفتح المدنُ بصفٍّ في `manifest.json`** —
+    // بياناتٌ لا شيفرة. **وهو التعديلُ الذي لا يُعاد.**
+    //
+    // **والرقّةُ تبقى ارتداداً لا افتراضاً**: **حتّى يُقرأ الفهرسُ
+    // ويُعرف موضعُ السائق** — وشاشةٌ تفتح بلا اسمِ منطقةٍ تُقرأ
+    // عطباً، **ومدينةُ الإطلاق أصدقُ تخمينٍ في هذه اللحظة وحدَها.**
+    const val FALLBACK_REGION = "raqqa"
+
+    /** **المنطقةُ النافذةُ الآن** — تُبدَّل حين يُعرف موضعُه. */
+    var regionId: String = FALLBACK_REGION
+        private set
 
     var status by mutableStateOf(
-        Status(DEFAULT_REGION, "الرقّة", null, State.NOT_INSTALLED, 0, 0),
+        Status(FALLBACK_REGION, "الرقّة", null, State.NOT_INSTALLED, 0, 0),
     )
         private set
+
+    /**
+     * **يختار منطقتَه من الفهرس بموضعه.**
+     *
+     * **ويُنادى قبل `check`** — فإن لم يُعرف الموضعُ بقي الارتداد.
+     *
+     * **ويردّ `true` إن وُجدت منطقةٌ تحويه** — ومن ردّ `false` **لا
+     * تُعرض له حزمةٌ أصلاً**: خريطةُ مدينةٍ أخرى أسوأُ من لا خريطة،
+     * **تُنزَّل ميغاباتٌ على حزمته ثمّ لا يجد شارعَه فيها.**
+     */
+    fun pickRegion(lat: Double, lng: Double): Boolean {
+        val regions = MapStyleRepository.manifest()?.regions ?: return false
+        val r = com.rahalgo.map.data.RegionPicker.of(regions, lat, lng) ?: return false
+        if (r.id != regionId) {
+            Log.i(TAG, "المنطقة: ${r.id} · ${r.name}")
+            regionId = r.id
+            status = Status(r.id, r.name, null, State.NOT_INSTALLED, 0, 0)
+        }
+        return true
+    }
+
+    /** **وما في الفهرس كلُّه** — لمن أراد أن يختار بيده. */
+    fun available(): List<com.rahalgo.map.data.MapRegion> =
+        MapStyleRepository.manifest()?.regions.orEmpty()
 
     /** **وما تقرؤه الشاشةُ القائمة** — لم يتغيّر شكلُه. */
     val progress: Int get() = if (status.state == State.NOT_INSTALLED) -1 else status.progress
@@ -114,7 +158,7 @@ object OfflineMap {
      * **ويُقارَن بالفهرس**: فإن كانت نسخةٌ أحدثُ **تُعلَن
      * `UPDATE_AVAILABLE` ولا تُحذف القائمة** (البند ٣٤).
      */
-    fun check(context: Context, regionId: String = DEFAULT_REGION) {
+    fun check(context: Context, regionId: String = this.regionId) {
         if (!MapStyleRepository.isReady()) {
             Log.w(TAG, "المستودعُ لم يُهيَّأ بعد")
             return
@@ -197,7 +241,7 @@ object OfflineMap {
     fun install(
         context: Context,
         installer: com.rahalgo.map.data.MapPackageInstaller,
-        regionId: String = DEFAULT_REGION,
+        regionId: String = OfflineMap.regionId,
         /**
          * **سببُ سقوط الفهرس إن سقط** — يمرّره العامل.
          *
@@ -360,7 +404,7 @@ object OfflineMap {
      *
      * **والآن تُسأل الحجزُ**: ما المحمَّلُ؟ وما المطلوبُ؟ وأثمّة انتقال؟
      */
-    fun delete(context: Context, regionId: String = DEFAULT_REGION): DeleteResult {
+    fun delete(context: Context, regionId: String = this.regionId): DeleteResult {
         val store = MapStyleRepository.store()
         val lease = MapStyleRepository.lease()
         val installed = store.installedRegions().filter { it.regionId == regionId }
@@ -391,7 +435,7 @@ object OfflineMap {
 
     /** **للاختبار.** */
     fun resetForTest() {
-        status = Status(DEFAULT_REGION, "الرقّة", null, State.NOT_INSTALLED, 0, 0)
+        status = Status(status.regionId, status.name, null, State.NOT_INSTALLED, 0, 0)
         cancelled = false
     }
 }
