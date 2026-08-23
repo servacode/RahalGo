@@ -291,10 +291,20 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         selected = tab == Tab.Account && over == Overlay.None,
                         onClick = { tab = Tab.Account; overlay.clear() },
                         icon = {
-                            Avatar(
-                                url = Backend.of(context).media(shell.me?.avatarThumbUrl),
-                                name = shell.me?.fullName.orEmpty(),
-                                size = 30,
+// ══════════════════════════════════
+// **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
+// ══════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «أيقونةُ حسابي
+//  ألغِ اللوغو ووحّدها بشكلٍ مركزيٍّ مع
+//  المتجر والزبون والسائق والمندوب».)
+//
+// **وصورةُ الحساب فارغةٌ عند أكثر الناس**
+// فتُرسم حرفاً في دائرة — **وحرفٌ بين
+// أيقوناتٍ يُقرأ شيئاً ناقصاً لا تبويباً.**
+                            Icon(
+                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_user),
+                                contentDescription = null,
                             )
                         },
                         label = { Text(stringResource(R.string.nav_profile)) },
@@ -370,6 +380,22 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     tab == Tab.Account -> AccountScreen(
                         vm = accountVm,
                         onLoggedOut = onLogout,
+                        // ══════════════════════════════════════════
+                        // **ولا عناوينَ في حساب المندوب**
+                        // ══════════════════════════════════════════
+                        //
+                        // (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «العنوانُ يبقى فقط
+                        //  للزبون لأنّه يلزم إضافةُ حسابٍ له — أمّا
+                        //  الباقي فلا يلزمه».)
+                        //
+                        // **والعنوانُ حاجةُ من يُوصَّل إليه** — والمندوبُ يزور المتاجرَ ولا يُوصَّل إليه.
+                        // **وقسمٌ يُفتح فلا يُملأ أبداً يُقرأ نقصاً في
+                        // الحساب** لا اختياراً.
+                        //
+                        // **وافتراضُ الوسيط الإظهار** — فمن أضاف
+                        // تطبيقاً ونسيه ورث عناوينَ لا تلزمه، **وهو ما
+                        // وقع هنا حتّى قِيس.**
+                        showAddresses = false,
                         // **والمندوبُ عاملٌ** — توثيقُ واتساب شرطُ عمله.
                         worker = true,
                         // **ولا إشعاراتِ بعد** — تُضاف في خطوتها.

@@ -615,16 +615,20 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     selected = overlay.current == Overlay.Account,
                     onClick = { overlay.show(Overlay.Account) },
                     icon = {
-                        Avatar(
-                            url = Backend.media(home.state.me?.avatarUrl),
-                            name = home.state.me?.fullName.orEmpty(),
-                            // **وأكبرُ من أيقونة** — (قرارُ المالك
-                            // ٢٠٢٦-٠٨-١٣: «كبّر صورة البروفايل»).
-                            //
-                            // **وأربعةٌ وعشرون مقاسُ رسمٍ خطّيّ** —
-                            // والصورةُ دائرةٌ فيها وجه، **فتُقرأ نقطةً
-                            // لا وجها.**
-                            size = 30,
+// ══════════════════════════════════
+// **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
+// ══════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «أيقونةُ حسابي
+//  ألغِ اللوغو ووحّدها بشكلٍ مركزيٍّ مع
+//  المتجر والزبون والسائق والمندوب».)
+//
+// **وصورةُ الحساب فارغةٌ عند أكثر الناس**
+// فتُرسم حرفاً في دائرة — **وحرفٌ بين
+// أيقوناتٍ يُقرأ شيئاً ناقصاً لا تبويباً.**
+                        Icon(
+                            painter = painterResource(com.rahalgo.ui.R.drawable.ic_user),
+                            contentDescription = null,
                         )
                     },
                     label = { Text(stringResource(R.string.nav_profile)) },

@@ -667,23 +667,23 @@ private fun SignedIn(
                         selected = tab == Tab.Account && over == Overlay.None,
                         onClick = { tab = Tab.Account; overlay.clear() },
                         icon = {
-                            val photo = Backend.of(context).media(shell.me?.avatarThumbUrl)
-                            if (photo.isNullOrEmpty()) {
-                                Icon(
-                                    painter = painterResource(com.rahalgo.ui.R.drawable.ic_user),
-                                    contentDescription = null,
-                                )
-                            } else {
-                                Avatar(
-                                    url = photo,
-                                    name = shell.me?.fullName.orEmpty(),
-                                    // **وأكبرُ من أيقونة** — أربعةٌ
-                                    // وعشرون مقاسُ رسمٍ خطّيّ،
-                                    // **والصورةُ دائرةٌ فيها وجه**
-                                    // فتُقرأ نقطةً لا وجها.
-                                    size = 30,
-                                )
-                            }
+                            // ══════════════════════════════════════════
+                            // **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
+                            // ══════════════════════════════════════════
+                            //
+                            // (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «أيقونةُ حسابي
+                            //  ألغِ اللوغو ووحّدها بشكلٍ مركزيٍّ مع
+                            //  المتجر والزبون والسائق والمندوب».)
+                            //
+                            // **وكان الشرطُ هنا: صورتُه إن رفعها
+                            // وأيقونةٌ إن لم يرفع** — **وشريطٌ يتبدّل
+                            // شكلُ بندٍ فيه من مستخدمٍ إلى مستخدمٍ لا
+                            // يُتعلَّم**: من رأى شاشةَ غيره لم يعرف
+                            // أيَّها حسابُه.
+                            Icon(
+                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_user),
+                                contentDescription = null,
+                            )
                         },
                         label = { Text(stringResource(R.string.nav_profile)) },
                     )
