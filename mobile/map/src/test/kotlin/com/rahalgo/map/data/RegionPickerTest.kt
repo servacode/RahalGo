@@ -29,10 +29,20 @@ class RegionPickerTest {
             ),
         )
 
-    // **والإطارُ الحقيقيُّ للرقّة من `manifest.json`.**
+    // ══════════════════════════════════════════════════════════════════
+    // **والإطاران الحقيقيّان من `manifest.json`** — لا مصنوعان
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **قِيسا من الفهرس الحيّ ٢٠٢٦-٠٨-٢٣** بعد بناء حزمة دمشق:
+    //
+    //	raqqa      1,919,410 بايت
+    //	damascus  13,070,736 بايت
+    //
+    // **وإطارٌ في الاختبار يفترق عن إطارٍ في الفهرس يجعل الحارسَ
+    // يحرس شيئاً لا وجودَ له.**
     private val raqqa = region("raqqa", 38.92, 35.88, 39.12, 36.03)
-    private val aleppo = region("aleppo", 37.05, 36.13, 37.25, 36.28)
-    private val all = listOf(raqqa, aleppo)
+    private val damascus = region("damascus", 36.15, 33.40, 36.45, 33.62)
+    private val all = listOf(raqqa, damascus)
 
     @Test
     fun `a point inside a region picks it`() {
@@ -40,9 +50,10 @@ class RegionPickerTest {
         assertEquals("raqqa", RegionPicker.of(all, 35.9528, 39.0079)?.id)
     }
 
+    /** **ودمشقُ لمن هو فيها** — ٣٣٫٥١٣٨ شمالاً · ٣٦٫٢٧٦٥ شرقاً. */
     @Test
     fun `each city picks its own`() {
-        assertEquals("aleppo", RegionPicker.of(all, 36.20, 37.15)?.id)
+        assertEquals("damascus", RegionPicker.of(all, 33.5138, 36.2765)?.id)
     }
 
     /**
@@ -53,7 +64,7 @@ class RegionPickerTest {
      */
     @Test
     fun `a point outside every region yields nothing`() {
-        assertNull(RegionPicker.of(all, 33.51, 36.29)) // دمشق — ولا حزمةَ لها بعد
+        assertNull(RegionPicker.of(all, 36.20, 37.15)) // حلب — ولا حزمةَ لها بعد
         assertNull(RegionPicker.of(emptyList(), 35.9528, 39.0079))
     }
 
