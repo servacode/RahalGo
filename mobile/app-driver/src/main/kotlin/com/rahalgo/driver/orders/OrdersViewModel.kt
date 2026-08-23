@@ -191,6 +191,43 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     private val backend = Backend.of(getApplication())
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وصلةُ الدورة بالمحرّك — وموضعُها فوقَ `init` قصداً**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **الوجهُ الوحيدُ الذي يُزيَّف في الاختبار.** **ولا تُزيَّف
+    // الشبكةُ بل العقد** — **ومزيِّفٌ على مستوى HTTP يمسك الترميزَ ولا
+    // يمسك الترتيب**، وهو ما نحرسه.
+    //
+    // # وموضعُها ليس تجميلاً — وقع الانهيارُ مرّتين
+    //
+    // **رآه المالكُ على شاشته** (٢٠٢٦-٠٨-٢٣): «تعذّر إتمام الطلب
+    // (NullPointerException)»، **ثمّ انهيارٌ كاملٌ عند الإقلاع.**
+    //
+    // **وكوتلن يهيّئ الخصائصَ بترتيب كتابتها**: `init` ينادي التحديثَ
+    // **وهذه كانت مكتوبةً بعده بمئةٍ وأربعين سطراً** — فتُقرأ فارغة.
+    //
+    // **و`by lazy` لم تُصلحها** — **كائنُ الكسل نفسُه يُهيَّأ بترتيب
+    // الكتابة**، فيبقى فارغاً حين يُسأل. **فالموضعُ هو الحلّ لا
+    // الحيلة.**
+    //
+    // # ولم يمسكه اختبارٌ ولا مترجم
+    //
+    // **الاختباراتُ تنادي `loadOnce` بمزيِّفٍ تصنعه هي** — فلا تمرّ
+    // بترتيب تهيئة الصنف أصلاً. **والدرسُ أنّ اختبارَ الدالّة الصافية
+    // لا يختبر توصيلَها**، وأنّ الجهازَ يبقى الحكمَ الأخير.
+    private val feed = object : OrdersFeed {
+        override suspend fun queue() = backend.driver.queue()
+        override suspend fun orders() = backend.driver.orders()
+        override suspend fun me() = backend.driver.me()
+
+        // **ويُطلب معرّفُ المسار ضمنَ النداء القائم** — المرحلة ٨ب،
+        // البند ٣: لا بنداءٍ ثانٍ.
+        override suspend fun route(orderId: String) =
+            backend.driver.route(orderId, correlation = true)
+    }
+
+
     init {
         refresh()
         // ══════════════════════════════════════════════════════════════
@@ -334,16 +371,6 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **ولا تُزيَّف الشبكةُ بل العقد** — **ومزيِّفٌ على مستوى HTTP يمسك
      * الترميزَ ولا يمسك الترتيب**، وهو ما نحرسه.
      */
-    private val feed = object : OrdersFeed {
-        override suspend fun queue() = backend.driver.queue()
-        override suspend fun orders() = backend.driver.orders()
-        override suspend fun me() = backend.driver.me()
-
-        // **ويُطلب معرّفُ المسار ضمنَ النداء القائم** — المرحلة ٨ب،
-        // البند ٣: لا بنداءٍ ثانٍ.
-        override suspend fun route(orderId: String) =
-            backend.driver.route(orderId, correlation = true)
-    }
 
     // ══════════════════════════════════════════════════════════════════
     // **والرحلة تبدأ بنفسها — لا بضغطة**

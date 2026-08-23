@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import com.rahalgo.driver.trip.MapPackageWorker
 import androidx.annotation.StringRes
 import com.rahalgo.driver.trip.OfflineMap
+import com.rahalgo.map.MapStyleRepository
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.LinearProgressIndicator
@@ -111,6 +112,20 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
     // ومن نزّل حزمةَ مدينته الأولى لا يبقى عليها إلى الأبد.
     val here = com.rahalgo.ui.LastPoint.value
     LaunchedEffect(here?.lat, here?.lng) {
+        // ══════════════════════════════════════════════════════════════
+        // **والفهرسُ يُطلب هنا — لا في `MapCanvas` وحدَها**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قِيس على جهاز المالك ٢٠٢٦-٠٨-٢٣.)
+        //
+        // **كان `ensureManifest` يُنادى من رسم الخريطة فقط** — **وهذه
+        // الشاشةُ لا ترسم خريطةً وتعرض بطاقةَ تنزيلها.** فتسأل فهرساً
+        // لم يُطلب بعد.
+        //
+        // **فبقي فهرسُ الجهاز على الرقّة وحدَها** بعد أن أُضيفت دمشقُ
+        // إلى الخادم، **ولا سبيلَ لسائقٍ هناك أن يعرف أنّ لمدينته
+        // حزمة.**
+        MapStyleRepository.ensureManifest()
         if (here != null) OfflineMap.pickRegion(here.lat, here.lng)
         OfflineMap.check(context)
     }

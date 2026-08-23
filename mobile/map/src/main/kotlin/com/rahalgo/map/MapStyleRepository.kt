@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import java.net.URL
 import android.util.Log
@@ -139,12 +140,50 @@ object MapStyleRepository {
      * @return **أصار عندنا فهرس؟** — تقرؤها الشاشةُ لتقول للمستخدم.
      */
     suspend fun ensureManifest(): Boolean = withContext(Dispatchers.IO) {
-        manifest?.let { return@withContext true }
-        val base = runtime?.origin ?: return@withContext false
+        // ══════════════════════════════════════════════════════════════
+        // **وما عندنا يُخدَم فوراً — ثمّ يُجدَّد في الخلفيّة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قِيس على جهاز المالك ٢٠٢٦-٠٨-٢٣ بعد بناء حزمة دمشق.)
+        //
+        // **كان السطرُ `manifest?.let { return true }` يخرج فوراً** —
+        // فيُجلب الفهرسُ **مرّةً واحدةً في عمر التثبيت ثمّ لا يُجلب
+        // أبداً.**
+        //
+        // **وهو صحيحٌ لما بُني له** — ألّا يُنادى مرّتين في جلسة.
+        // **وخاطئٌ لما صار إليه**: أُضيفت دمشقُ إلى الخادم **فبقي
+        // فهرسُ الجهاز على الرقّة وحدَها**، ولا سبيلَ لسائقٍ هناك أن
+        // يعرف أنّ لمدينته حزمة.
+        //
+        // **وهو يهدم نصفَ ما بُني اليوم**: «تُفتح المدنُ بصفٍّ في
+        // الفهرس بلا كود» **صحيحٌ في الخادم ولا يصل الجهاز.**
+        //
+        // # ولا يُنتظَر الجلبُ إن كان عندنا فهرس
+        //
+        // **والشاشةُ لا تقف على الشبكة** — تُخدَم بالمخزَّن في اللحظة،
+        // **والجديدُ يُبدَّل حين يصل.** ومن جعل الشاشةَ تنتظر جعل
+        // سائقاً في تغطيةٍ ضعيفةٍ يرى دوّاراً بدل خريطته.
+        val had = manifest != null
+        if (had) {
+            // **ويُجلب في مجالٍ مستقلٍّ لا في مجال المنادي** — **ومن
+            // ربطه بالشاشة أُلغي الجلبُ مع كلّ دورانِ جهاز.**
+            refreshScope.launch { runCatching { fetchManifest() } }
+            return@withContext true
+        }
+        fetchManifest()
+    }
+
+    /** **مجالُ التجديد** — يعيش مع العمليّة لا مع شاشة. */
+    private val refreshScope =
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /** **الجلبُ نفسُه** — ويُقفل فلا يُنادى مرّتين متزامنتين. */
+    private suspend fun fetchManifest(): Boolean {
+        val base = runtime?.origin ?: return false
         val url = base.trimEnd('/') + "/" + MANIFEST_FILE
-        fetchLock.withLock {
-            // **ويُعاد الفحصُ داخل القفل** — فقد جلبها من سبقنا.
-            manifest?.let { return@withLock true }
+        return fetchLock.withLock {
+            // **ولا يُعاد الفحصُ هنا** — **من نادى هذه أرادها جلباً**،
+            // والحارسُ من التكرار في `ensureManifest` فوقَها.
             try {
                 val text = URL(url).openStream()
                     .use { it.readBytes().toString(Charsets.UTF_8) }
