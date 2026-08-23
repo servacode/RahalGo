@@ -41,6 +41,7 @@ import {
   IconBalance,
   IconStore,
   IconCheck,
+  IconLogout,
   Money,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
@@ -48,6 +49,8 @@ import { StoreActions, type StoreTarget } from "@/components/admin/StoreActions"
 
 const m = getMessages(defaultLocale);
 const R = m.admin.users.profile.roleTabs;
+// **ومفاتيحُ السائق من بابها** — كانت مترجَمةً ولا زرَّ يستعملها.
+const D = m.admin.drivers;
 const STATUS_LABELS: Record<string, string> = m.orders.status;
 /** حالُ المتجر — **ثلاثةٌ لا خارطةَ لها في القاموس**، فتُجمع هنا مرّةً. */
 const MERCHANT_STATUS: Record<string, string> = {
@@ -511,6 +514,10 @@ export function CashboxTab({
   const [held, setHeld] = useState(0);
   const [rows, setRows] = useState<CashEntry[] | null | "failed">(null);
   const [busy, setBusy] = useState(false);
+  // **وإغلاقُ الدوام خلف تأكيد** — فعلٌ يُخرج إنساناً من عمله، **وضغطةٌ
+  // بلا رجعةٍ على زرٍّ يجاور «تسليم الصندوق» تقع سهواً.**
+  const [ending, setEnding] = useState(false);
+  const [shiftNote, setShiftNote] = useState("");
 
   const load = useCallback(() => {
     api<{ held: number; entries: CashEntry[] }>(`/api/v1/admin/drivers/${userID}/cash`)
@@ -537,6 +544,33 @@ export function CashboxTab({
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // **وإغلاقُ الدوام من هنا** — (بُني ٢٠٢٦-٠٨-٢٣)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كانت النقطةُ في المحرّك واسمُها مترجَماً منذ زمنٍ ولا زرَّ
+  // يستعملهما** — قِيس بمقارنة أبواب المحرّك بما تناديه اللوحة.
+  //
+  // **ومن ذهب ونسي علمَه يبقى في الدور، فيتأخّر كلُّ طلبٍ بمقدار
+  // غيابه** — والعملياتُ تراه متاحاً ولا تملك أن تُخرجه.
+  //
+  // **وموضعُه ملفُّ السائق لا شاشةٌ ثانية**: من فتحه ليعرف لماذا لا
+  // تصل طلباتُه هو من يحتاج الزرّ.
+  async function endShift() {
+    setBusy(true);
+    try {
+      await api(`/api/v1/admin/drivers/${userID}/end-shift`, {
+        method: "POST",
+        body: JSON.stringify({ note: shiftNote.trim() }),
+      });
+      setShiftNote("");
+      setEnding(false);
+      onSettled();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   // **والفشلُ يُقال** — كان يُعرض «لا شيء» فيُقرأ حكماً على المستخدم.
   if (rows === "failed") return <Alert tone="warning">{m.errors.offline}</Alert>;
   if (!rows) return <LoadingState variant="text" />;
@@ -557,6 +591,43 @@ export function CashboxTab({
           </Button>
         )}
       </div>
+      {/* ══════════════════════════════════════════════════════════
+          **إغلاقُ دوامه** — انظر `endShift` أعلاه
+          ══════════════════════════════════════════════════════════ */}
+      <div className="mb-3 rounded-control border border-line px-3 py-2">
+        {!ending ? (
+          <>
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
+              onClick={() => setEnding(true)}
+            >
+              <IconLogout size={14} />
+              {D.endShift}
+            </button>
+            <p className="mt-1 text-xs text-ink-muted">{D.endShiftHint}</p>
+          </>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-ink-muted">{D.endShiftHint}</p>
+            <input
+              className="w-full rounded-control border border-line bg-field px-2 py-1.5 text-sm"
+              placeholder={D.endShiftNote}
+              value={shiftNote}
+              onChange={(e) => setShiftNote(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <Button disabled={busy} onClick={() => void endShift()}>
+                {D.endShift}
+              </Button>
+              <Button variant="ghost" onClick={() => setEnding(false)}>
+                {m.common.cancel}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {rows.length === 0 ? (
         <EmptyState icon={IconBalance} title={R.cashEmpty} />
       ) : (

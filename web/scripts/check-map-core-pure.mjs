@@ -36,6 +36,15 @@ function walk(dir) {
   const out = []
   for (const name of readdirSync(dir)) {
     if (name === 'build') continue
+    // **والاختباراتُ ليست شيفرةَ إنتاج** — المرحلة ٦ب، ٢٠٢٦-٠٨-٢١.
+    //
+    // **صارت لـ`map` اختباراتٌ فيها رفائدُ تذكر مساراتِ التطبيقات**
+    // (`file:///data/data/com.rahalgo.driver/…` في اختبار منع فتح
+    // ملفٍّ محلّيّ). **وذلك نصٌّ يُرفض لا تبعيّةٌ تُبنى.**
+    //
+    // **والمقصدُ لم يتغيّر**: ألّا تعرف `map-core` الملاحةَ ولا
+    // التطبيقاتِ **فيما تشحنه.**
+    if (name === 'test' || name === 'androidTest') continue
     const p = join(dir, name)
     if (statSync(p).isDirectory()) out.push(...walk(p))
     else if (/\.(kt|kts)$/.test(name)) out.push(p)

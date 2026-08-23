@@ -8,12 +8,26 @@
  * الخرائط ثقيلة وتحتاج DOM، فلا يجرّها كل تطبيق يستورد زرّاً.
  *
  *   const PickMap = dynamic(() => import("@rahalgo/ui/map").then((m) => m.PickMap), { ssr: false });
+ *
+ * ══════════════════════════════════════════════════════════════════════
+ * **ومن راسترٍ عموميٍّ إلى متّجهٍ نملكه — إغلاقُ `TD-WEB-RASTER-SOURCE`**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٨-٢١.)
+ *
+ * **كانت الخريطةُ على Leaflet ببلاطاتٍ راستر، وسلسلةِ ارتدادٍ تنتهي إلى
+ * خوادمَ عموميّةٍ لا نملكها.** وأربعةُ أخطاءِ بلاطةٍ تكفي لينتقل الإنتاجُ
+ * إلى بنيةٍ لا نملكها — **ولو كان مصدرُنا مضبوطاً.**
+ *
+ * **وصارت MapLibre على نمط المرحلة ٦ نفسِه**: PMTiles واحدٌ من مضيفنا،
+ * وحروفٌ وأيقوناتٌ من خطّ إنتاجِ الأصول الذي أُغلق هناك — **فالويبُ
+ * وأندرويد يقرآن من مصدرٍ واحد.**
+ *
+ * **والعقدُ العامُّ لم يتبدّل**: `PickMap` بالخصائص نفسِها،
+ * **فلا صفحةَ مسّها التغيير** (البند ١٦).
  */
 
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, CircleMarker, Circle, TileLayer, useMapEvents, useMap } from "react-leaflet";
-import type { Map as LeafletMap } from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 // **ألوانُ الخريطة من الثيم لا من لوحةٍ ثانية.**
 //
@@ -22,77 +36,26 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 // خطأً. (انظر `cssvar.ts`.)
 import { themeColor } from "./cssvar";
 import { IconLocateMe, IconAdd, IconClose } from "./icons";
+import { resolveMapSource, MAP_ATTRIBUTION_FALLBACK } from "./mapconfig";
+import { loadMapEngine } from "./mapengine";
 
 const m = getMessages(defaultLocale);
 const RAQQA_CENTER: [number, number] = [35.9528, 39.0079];
 
-/**
- * مصادر البلاطات بترتيب أفضلية — عند فشل المصدر ينتقل تلقائياً للتالي،
- * لأن خوادم OSM المجانية غير مضمونة. الأول عند النشر خادمنا الذاتي.
- */
-const TILE_SOURCES = [
-  process.env.NEXT_PUBLIC_TILE_URL,
-  "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-  "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
-].filter((u): u is string => !!u);
-
-const ERRORS_BEFORE_SWITCH = 4;
-
-export function FallbackTileLayer() {
-  const [srcIndex, setSrcIndex] = useState(0);
-  const [errors, setErrors] = useState(0);
-  return (
-    <TileLayer
-      key={srcIndex}
-      url={TILE_SOURCES[srcIndex] ?? TILE_SOURCES[0]!}
-      attribution="&copy; OpenStreetMap"
-      eventHandlers={{
-        tileerror: () =>
-          setErrors((e) => {
-            if (e + 1 >= ERRORS_BEFORE_SWITCH && srcIndex < TILE_SOURCES.length - 1) {
-              setSrcIndex((i) => i + 1);
-              return 0;
-            }
-            return e + 1;
-          }),
-      }}
-    />
-  );
-}
-
-function ClickCapture({ onPick }: { onPick: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click: (e) => onPick(e.latlng.lat, e.latlng.lng),
-  });
+function ClickCapture() {
   return null;
 }
 
-/** يحرّك الخريطة عندما يتغيّر الموقع من خارجها (بحث عنوان مثلاً). */
-function FlyTo({ lat, lng, zoom }: { lat: number | null; lng: number | null; zoom: number }) {
-  const map = useMap();
-  const last = useRef<string>("");
-  useEffect(() => {
-    if (lat == null || lng == null) return;
-    const key = `${lat},${lng}`;
-    if (key === last.current) return;
-    last.current = key;
-    map.flyTo([lat, lng], Math.max(map.getZoom(), zoom), { duration: 0.6 });
-  }, [lat, lng, zoom, map]);
-  return null;
-}
-
-/** أزرار التكبير — بديل أزرار Leaflet الافتراضية كي تتبع توكنز المنصة. */
-function ZoomControls() {
-  const map = useMap();
+/** أزرار التكبير — بديل أزرار المحرّك الافتراضية كي تتبع توكنز المنصة. */
+function ZoomControls({ onZoom }: { onZoom: (delta: number) => void }) {
   const btn =
     "taparea flex h-8 w-8 items-center justify-center bg-surface text-ink transition-colors hover:bg-row-hover disabled:opacity-40";
   return (
     <div className="absolute end-2 top-2 z-[1000] overflow-hidden rounded-control border border-line elev-1">
-      <button type="button" aria-label="+" className={`${btn} border-b border-line-soft`} onClick={() => map.zoomIn()}>
+      <button type="button" aria-label="+" className={`${btn} border-b border-line-soft`} onClick={() => onZoom(1)}>
         <IconAdd size={16} />
       </button>
-      <button type="button" aria-label="−" className={btn} onClick={() => map.zoomOut()}>
+      <button type="button" aria-label="−" className={btn} onClick={() => onZoom(-1)}>
         <IconClose size={16} className="rotate-45" />
       </button>
     </div>
@@ -126,10 +89,160 @@ export function PickMap({
   onLocated?: (lat: number, lng: number) => void;
   hideLocate?: boolean;
 }) {
-  const mapRef = useRef<LeafletMap | null>(null);
+  const holder = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<import("maplibre-gl").Map | null>(null);
+  const pickRef = useRef(onPick);
+  pickRef.current = onPick;
   const [locating, setLocating] = useState(false);
   const [denied, setDenied] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  const source = resolveMapSource();
   const center: [number, number] = lat != null && lng != null ? [lat, lng] : RAQQA_CENTER;
+
+  // ── إنشاءُ الخريطة مرّةً واحدة ───────────────────────────────────
+  useEffect(() => {
+    if (!source.ok) {
+      // **ولا ارتدادَ إلى مصدرٍ عموميّ** (البند ١٩) — حالُ عطلٍ مضبوطة.
+      setFailed(source.reason);
+      return;
+    }
+    const node = holder.current;
+    if (!node) return;
+    let cancelled = false;
+    let map: import("maplibre-gl").Map | null = null;
+    let observer: ResizeObserver | null = null;
+
+    loadMapEngine(source.styleUrl)
+      .then((maplibregl) => {
+        if (cancelled || !holder.current) return;
+        const instance = new maplibregl.Map({
+          container: holder.current,
+          style: source.styleUrl,
+          center: [center[1], center[0]],
+          zoom: lat != null ? 16 : 13,
+          attributionControl: { compact: true },
+          // **ولا أزرارَ افتراضيّة** — أزرارُنا تتبع التوكنز.
+          dragRotate: false,
+          pitchWithRotate: false,
+        });
+        map = instance;
+        mapRef.current = instance;
+        instance.on("load", () => {
+          if (!cancelled) setReady(true);
+        });
+        // **وخطأُ المصدر يُعرض ولا يُعاد** — ولا حلقةَ محاولات.
+        instance.on("error", (e: unknown) => {
+          const msg = String((e as { error?: { message?: string } })?.error?.message ?? "");
+          if (msg.includes("style") || msg.includes("Failed to fetch")) {
+            if (!cancelled) setFailed("unreachable");
+          }
+        });
+        instance.on("click", (e) => pickRef.current(e.lngLat.lat, e.lngLat.lng));
+        // ══════════════════════════════════════════════════════════════
+        // **وحجمُ الحاوية يُراقَب — وإلّا بقيت الخريطةُ فارغة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **المحرّكُ يقرأ الحجمَ لحظةَ الإنشاء** ويحسب منه أيَّ بلاطاتٍ
+        // يطلب. **والمكوّنُ يُحمَّل ديناميّاً** فقد تكون الحاويةُ بلا
+        // ارتفاعٍ حينَها — **فلا يُطلب شيءٌ ولا يُرمى خطأ.**
+        //
+        // (قِيس ٢٠٢٦-٠٨-٢١: ترويسةٌ ووصفٌ يُقرآن ثمّ صمتٌ تامّ.)
+        const ro = new ResizeObserver(() => instance.resize());
+        if (holder.current) ro.observe(holder.current);
+        observer = ro;
+
+      })
+      .catch(() => {
+        if (!cancelled) setFailed("unreachable");
+      });
+
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+      map?.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source.ok, source.ok ? source.styleUrl : ""]);
+
+  // ── الدبّوسُ والدائرةُ — طبقتان تُحدَّثان ولا تُعاد الخريطة ──────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const data = {
+      type: "FeatureCollection" as const,
+      features:
+        lat != null && lng != null
+          ? [
+              {
+                type: "Feature" as const,
+                geometry: { type: "Point" as const, coordinates: [lng, lat] },
+                properties: {},
+              },
+            ]
+          : [],
+    };
+    const src = map.getSource("pick") as import("maplibre-gl").GeoJSONSource | undefined;
+    if (src) {
+      src.setData(data);
+      return;
+    }
+    map.addSource("pick", { type: "geojson", data });
+    if (radiusM) {
+      map.addLayer({
+        id: "pick-radius",
+        type: "circle",
+        source: "pick",
+        paint: {
+          // **ونصفُ القطر بالمتر يُحوَّل بكسلاً بحسب التكبير** —
+          // فالدائرةُ تصف مسافةً لا حجماً على الشاشة.
+          "circle-radius": [
+            "interpolate", ["exponential", 2], ["zoom"],
+            10, radiusM / 152.87,
+            20, (radiusM / 152.87) * 1024,
+          ],
+          "circle-color": themeColor("primary"),
+          "circle-opacity": 0.15,
+          "circle-stroke-color": themeColor("primary-dark"),
+          "circle-stroke-width": 2,
+        },
+      });
+    }
+    map.addLayer({
+      id: "pick-halo",
+      type: "circle",
+      source: "pick",
+      paint: {
+        "circle-radius": 14,
+        "circle-color": themeColor("primary"),
+        "circle-opacity": 0.18,
+      },
+    });
+    map.addLayer({
+      id: "pick-core",
+      type: "circle",
+      source: "pick",
+      paint: {
+        "circle-radius": 7,
+        "circle-color": themeColor("primary"),
+        "circle-stroke-color": themeColor("surface"),
+        "circle-stroke-width": 3,
+      },
+    });
+  }, [lat, lng, radiusM, ready]);
+
+  // ── ويطير إليها إن تبدّلت من خارج الخريطة ───────────────────────
+  const lastFly = useRef("");
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || lat == null || lng == null) return;
+    const key = `${lat},${lng}`;
+    if (key === lastFly.current) return;
+    lastFly.current = key;
+    map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 16), duration: 600 });
+  }, [lat, lng]);
 
   function locateMe() {
     if (!navigator.geolocation) return setDenied(true);
@@ -138,7 +251,7 @@ export function PickMap({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        mapRef.current?.flyTo([latitude, longitude], 17, { duration: 0.6 });
+        mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 17, duration: 600 });
         onPick(latitude, longitude);
         onLocated?.(latitude, longitude);
         setLocating(false);
@@ -171,64 +284,37 @@ export function PickMap({
         </button>
       )}
 
-    <div className="relative overflow-hidden rounded-card border border-line">
-      <MapContainer
-        ref={mapRef}
-        center={center}
-        zoom={lat != null ? 16 : 13}
-        zoomControl={false}
-        className={`${height} w-full`}
-        style={{ cursor: "crosshair" }}
-      >
-        <FallbackTileLayer />
-        <ClickCapture onPick={onPick} />
-        <FlyTo lat={lat} lng={lng} zoom={16} />
-        <ZoomControls />
-        {lat != null && lng != null && (
-          <>
-            {radiusM ? (
-              <Circle
-                center={[lat, lng]}
-                radius={radiusM}
-                pathOptions={{
-                  color: themeColor("primary-dark"),
-                  fillColor: themeColor("primary"),
-                  fillOpacity: 0.15,
-                  weight: 2,
-                }}
-              />
-            ) : null}
-            {/* هالة خارجية + نواة: دبوس واضح على أي خلفية بلاطات */}
-            <CircleMarker
-              center={[lat, lng]}
-              radius={14}
-              pathOptions={{
-                color: themeColor("primary"),
-                fillColor: themeColor("primary"),
-                fillOpacity: 0.18,
-                weight: 0,
-              }}
+      <div className="relative overflow-hidden rounded-card border border-line">
+        <div
+          ref={holder}
+          data-testid="pick-map"
+          className={`${height} w-full`}
+          style={{ cursor: "crosshair" }}
+        />
+
+        {/* **وعطلُ المصدر يُقال ولا يُخفى** — والصفحةُ تبقى تعمل. */}
+        {failed && (
+          <div
+            role="status"
+            className={`${height} absolute inset-0 flex flex-col items-center justify-center gap-1 bg-surface-2 px-4 text-center`}
+          >
+            <p className="text-sm font-bold text-ink">{m.map.unavailable}</p>
+            <p
+              className="text-xs text-ink-soft"
+              // **والنسبُ يبقى مرئيّاً ولو غاب النمط** — البند ١٧.
+              dangerouslySetInnerHTML={{ __html: MAP_ATTRIBUTION_FALLBACK }}
             />
-            <CircleMarker
-              center={[lat, lng]}
-              radius={7}
-              pathOptions={{
-                color: themeColor("surface"),
-                fillColor: themeColor("primary"),
-                fillOpacity: 1,
-                weight: 3,
-              }}
-            />
-          </>
+          </div>
         )}
-      </MapContainer>
 
+        {!failed && <ZoomControls onZoom={(d) => mapRef.current?.zoomTo((mapRef.current?.getZoom() ?? 13) + d)} />}
+        <ClickCapture />
 
-      {denied && (
-        <p className="absolute bottom-2 start-2 z-[1000] rounded-control bg-danger-fill px-2.5 py-1.5 text-xs text-on-bright">
-          {m.map.denied}
-        </p>
-      )}
+        {denied && (
+          <p className="absolute bottom-2 start-2 z-[1000] rounded-control bg-danger-fill px-2.5 py-1.5 text-xs text-on-bright">
+            {m.map.denied}
+          </p>
+        )}
       </div>
     </div>
   );

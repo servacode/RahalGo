@@ -5,12 +5,12 @@
  * النقر يحدد/ينقل المركز أثناء التحرير، والدائرة تُعاين حياً مع تغيير نصف القطر.
  */
 
-import { MapContainer, Circle, CircleMarker, useMapEvents } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import { FallbackTileLayer } from "@rahalgo/ui/map";
+import { ZonesMap as MapView } from "@rahalgo/ui/zonesmap";
+import type { ZoneShape } from "@rahalgo/ui/zonesmap";
 import { themeColor } from "@rahalgo/ui";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 
-const RAQQA_CENTER: [number, number] = [35.9528, 39.0079];
+const msg = getMessages(defaultLocale);
 
 /**
  * ألوانُ الخريطة من الرموز المركزية لا مكتوبةً بالحرف.
@@ -42,31 +42,9 @@ const C = () => ({
   muted: themeColor("ink-muted"),
 });
 
-export interface ZoneShape {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  radius_m: number;
-  /**
-   * **وأجرةُ المنطقة اختياريّة** — والخريطةُ لا تقرؤها أصلاً.
-   *
-   * **ولوحةُ المدن تستعمل هذه الخريطةَ نفسَها** (مركزٌ ونصفُ قطر)،
-   * **ومدينةٌ لا أجرةَ لها** — **فاختراعُ صفرٍ لتمرير النوع كذبٌ صغيرٌ
-   * يُقرأ لاحقاً حقيقةً**: من رآه ظنّ أنّ للمدن أجرةً مضبوطةً على صفر.
-   */
-  delivery_fee?: number;
-  active: boolean;
-}
 
-function ClickCapture({ onClick }: { onClick: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e) {
-      onClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
+
+export type { ZoneShape };
 
 export default function ZonesMap({
   zones,
@@ -83,61 +61,22 @@ export default function ZonesMap({
   onMapClick: (lat: number, lng: number) => void;
   onZoneClick: (id: string) => void;
 }) {
-  // **تُقرأ عند كلّ رسم** — والخريطةُ تُرسم في المتصفّح وحدَه.
   const c = C();
   return (
-    <MapContainer
-      center={RAQQA_CENTER}
-      zoom={13}
-      className="h-full w-full"
-      style={{ cursor: editing ? "crosshair" : undefined }}
-    >
-      <FallbackTileLayer />
-      {editing && <ClickCapture onClick={onMapClick} />}
-
-      {zones.map((z) => (
-        <Circle
-          key={z.id}
-          center={[z.lat, z.lng]}
-          radius={z.radius_m}
-          /* ══════════════════════════════════════════════════════════
-             **والدائرةُ تُرى على خريطةٍ مزدحمة — لا تُخمَّن**
-             ══════════════════════════════════════════════════════════
-
-             (شهده المالك ٢٠٢٦-٠٨-١١: «الدائرةُ الخاصّةُ بالمناطق شفّافةٌ
-              جدّاً، لا أستطيع رؤيتَها جيّداً».)
-
-             **كانت تعبئتُها ٠٫١٥** — وخريطةُ الشوارع تحتها ملوّنةٌ مزدحمة:
-             مبانٍ ونهرٌ وطرقٌ صفراء. **وخمسةَ عشرَ بالمئة فوق ذلك لا تُقرأ
-             حدّاً**، فيُخمَّن مدى التغطية بدل أن يُرى.
-
-             **وحدُّ الدائرة هو ما يقول أين تنتهي التغطية** — فغُلّظ،
-             **والتعبئةُ تكفي لتُميَّز الداخلَ من الخارج بلا أن تُخفي الشارع
-             الذي يُنظر إليه.** */
-          pathOptions={{
-            color: z.id === selectedID ? c.accent : z.active ? c.primary : c.muted,
-            fillOpacity: z.id === selectedID ? 0.42 : 0.28,
-            weight: z.id === selectedID ? 5 : 4,
-          }}
-          eventHandlers={{ click: () => onZoneClick(z.id) }}
-        />
-      ))}
-
-      {draft && (
-        <>
-          <Circle
-            center={[draft.lat, draft.lng]}
-            radius={draft.radiusM}
-            /* **والمسوّدةُ تُرى كأختِها** — وهي ما يُرسم الآن. */
-            pathOptions={{ color: c.accentDark, fillColor: c.accent, fillOpacity: 0.35, weight: 4, dashArray: "8" }}
-          />
-          <CircleMarker
-            center={[draft.lat, draft.lng]}
-            radius={6}
-            pathOptions={{ color: c.accentDark, fillColor: c.accent, fillOpacity: 1 }}
-          />
-        </>
-      )}
-    </MapContainer>
+    <MapView
+      zones={zones}
+      editing={editing}
+      draft={draft}
+      selectedID={selectedID}
+      onMapClick={onMapClick}
+      onZoneClick={onZoneClick}
+      palette={{
+        primary: c.primary,
+        accent: c.accent,
+        accentDark: c.accentDark,
+        muted: c.muted,
+      }}
+      unavailableLabel={msg.map.unavailable}
+    />
   );
 }

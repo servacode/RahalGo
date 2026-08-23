@@ -3,27 +3,24 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -p 3003",
-    "build": "next build",
+    "dev": "node ../../scripts/copy-map-worker.mjs && next dev --turbopack -p 3003",
+    "build": "node ../../scripts/copy-map-worker.mjs && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@rahalgo/auth": "workspace:*",
     "@rahalgo/i18n": "workspace:*",
     "@rahalgo/ui": "workspace:*",
     "@types/qrcode": "^1.5.6",
-    "qrcode": "^1.5.4",
-    "leaflet": "^1.9.4",
-    "react-leaflet": "^5.0.0",
     "next": "^15.5.6",
+    "qrcode": "^1.5.4",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "@rahalgo/auth": "workspace:*"
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@rahalgo/tsconfig": "workspace:*",
     "@tailwindcss/postcss": "^4.1.16",
-    "@types/leaflet": "^1.9.21",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",

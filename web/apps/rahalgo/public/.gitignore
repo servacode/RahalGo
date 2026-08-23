@@ -1,0 +1,6 @@
+# **عاملُ MapLibre — مولَّدٌ لا مصدر.**
+#
+# **ينسخه `scripts/copy-map-worker.mjs` قبل `dev` و`build`** من
+# `node_modules`، **فنسختُه في Git تشيخ بصمتٍ عند ترقية المكتبة.**
+maplibre-gl-worker.mjs
+maplibre-gl-shared.mjs

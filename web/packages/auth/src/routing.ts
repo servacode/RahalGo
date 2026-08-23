@@ -41,11 +41,19 @@ export const FIELD_ROLES_ARE_CUSTOMERS = true;
  * سيفتح لوحاتِه من أصلٍ آخر**، ونقطتا `handoff`/`sso` في المحرّك تنتظرانه.
  * **وحقلٌ فارغٌ يعني «هنا»** — فتقصر `goTo` الطريقَ بلا تسليمِ جلسة.
  */
+/**
+ * **ولوحتا السائق والمندوب حُذفتا من الويب** (٢٠٢٦-٠٨-٢٣، بأمر المالك).
+ *
+ * **لكلٍّ منهما تطبيقُ أندرويد قائمٌ ومُختبَر** — **ولوحتان تُصانان لدورٍ
+ * له تطبيقٌ ضريبةٌ بلا مقابل**: كلُّ ميزةٍ تُبنى مرّتين، وكلُّ عطبٍ
+ * يُصلَح في موضعين، **وأحدُهما لا يفتحه أحد.**
+ *
+ * **وصاحبُ الدور يُردّ إلى واجهة الزبون** — فهو زبونٌ أيضاً
+ * (`FIELD_ROLES_ARE_CUSTOMERS`)، **ولا يقع على بابٍ مغلق.**
+ */
 export const PANEL_PATHS = {
   admin: "/dashboard",
   merchant: "/store",
-  rep: "/rep",
-  driver: "/driver",
   customer: "/",
 } as const;
 
@@ -69,8 +77,7 @@ export function homeFor(roles: string[]): Destination {
   if (has("admin") || has("ops") || has("finance"))
     return { origin: "", path: PANEL_PATHS.admin };
   if (has("merchant")) return { origin: "", path: PANEL_PATHS.merchant };
-  if (has("sales")) return { origin: "", path: PANEL_PATHS.rep };
-  if (has("driver")) return { origin: "", path: PANEL_PATHS.driver };
+  // **والسائقُ والمندوبُ إلى واجهة الزبون** — لوحتاهما في تطبيقيهما.
   return { origin: "", path: PANEL_PATHS.customer };
 }
 
