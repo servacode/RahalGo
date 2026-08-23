@@ -403,9 +403,9 @@ class NavigationSession(
         nav = null
         // **ويُغلق الملفُّ إغلاقاً سليماً** — **وملفٌّ لم يُغلق يفقد
         // آخرَ ما في مخزنه**، وهو غالباً أهمُّ ما في الرحلة: نهايتُها.
-        recorder?.stop()?.let { Log.i(TAG, "رفيدةُ الرحلة: ${'$'}{it.absolutePath}") }
+        recorder?.stop()?.let { Log.i(TAG, "رفيدةُ الرحلة: ${it.absolutePath}") }
         recorder?.takeIf { it.failed }?.let {
-            Log.w(TAG, "تعطّل مسجّلُ الرحلة — ${'$'}{it.failure}")
+            Log.w(TAG, "تعطّل مسجّلُ الرحلة — ${it.failure}")
         }
     }
 

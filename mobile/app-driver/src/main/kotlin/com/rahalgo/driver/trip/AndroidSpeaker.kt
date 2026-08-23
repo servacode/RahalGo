@@ -182,25 +182,82 @@ class AndroidSpeaker(context: Context) : Speaker {
             it.locale?.language == "ar" &&
                 !it.features.orEmpty().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)
         }
+        // **وتُسرَد كلُّها مرّةً** — (قياسُ ٢٠٢٦-٠٨-٢٣: تسعةُ أصواتٍ
+        // على جهاز المالك، **والمختارُ منها مصريٌّ مضغوط**.)
+        //
+        // **ولا يُختار صوتٌ بلا معرفةِ ما تُرك** — والشكوى كانت
+        // «أريد صوتَ غوغل ماب»، **وجوابُها في هذه القائمة.**
+        for (v in arabic) {
+            android.util.Log.i(
+                "RahalGo/voice",
+                "  متاح: ${v.name} درجة=${v.quality} " +
+                    "شبكة=${v.isNetworkConnectionRequired} بلد=${v.locale?.country}",
+            )
+        }
         if (arabic.isEmpty()) return
+        // ══════════════════════════════════════════════════════════════
+        // **واللهجةُ قبل كلّ شيء — ثمّ العصبيُّ قبل المضغوط**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (شكوى المالك ٢٠٢٦-٠٨-٢٣: «الصوتُ العربيُّ لم يعجبني… أريد
+        //  صوتَ غوغل ماب».)
+        //
+        // # وأوّلُ ترتيبٍ كتبتُه وقع على أسوأ تركيبةٍ ممكنة
+        //
+        // **قِيس على جهاز المالك: تسعةُ أصواتٍ عربيّةٍ كلُّها بدرجة
+        // ٤٠٠.** فرتّبتُ بالدرجة أوّلاً **فتساوت كلُّها**، ثمّ رجّحتُ
+        // المحلّيَّ على الشبكيّ — **فوقع الاختيارُ على `arz-local`:
+        // مصريٍّ ومضغوط.**
+        //
+        // **والدرجةُ لا تفرّق بينها** — الفرقُ في اللهجة وفي كون الصوت
+        // عصبيّاً كاملاً أو نسخةً مضغوطةً منه.
+        //
+        // # ورموزُ غوغل للّهجات
+        //
+        //	arc  ←  شاميّ    ← **وهو لهجةُ سائقنا**
+        //	arz  ←  مصريّ
+        //	ard  ·  are      ←  آخران
+        //
+        // # والشبكيُّ هو صوتُ غوغل ماب نفسُه
+        //
+        // **`-network` أصواتُ غوغل العصبيّةُ الكاملة**، و`-local` نسخٌ
+        // مضغوطةٌ منها تعمل بلا إنترنت. **وغوغل ماب يستعمل الشبكيَّ
+        // حين تتوفّر الشبكة.**
+        //
+        // **ولا يُترك السائقُ بلا صوتٍ حين تنقطع**: المحلّيُّ من
+        // اللهجة نفسِها يليه في الترتيب مباشرةً، **فيرتدّ إليه المحرّكُ
+        // وحدَه.**
         val best = arabic
             .sortedWith(
-                compareByDescending<android.speech.tts.Voice> { it.quality }
-                    .thenBy { if (it.isNetworkConnectionRequired) 1 else 0 }
-                    // **وتقاربُ البلد يُرجَّح أخيراً** — الفرقُ بين
-                    // مصريٍّ وخليجيٍّ لهجةٌ، **وبين درجةٍ ودرجةٍ وضوح.**
-                    .thenBy { if (it.locale?.country == locale.country) 0 else 1 },
+                compareBy<android.speech.tts.Voice> { dialectRank(it.name) }
+                    .thenBy { if (it.isNetworkConnectionRequired) 0 else 1 }
+                    .thenByDescending { it.quality },
             )
             .first()
         val ok = runCatching { engine.setVoice(best) }.getOrDefault(TextToSpeech.ERROR)
-        selectedVoice = "${'$'}{best.name} درجة=${'$'}{best.quality} شبكة=${'$'}{best.isNetworkConnectionRequired}"
+        selectedVoice = "${best.name} درجة=${best.quality} شبكة=${best.isNetworkConnectionRequired}"
         android.util.Log.i(
             "RahalGo/voice",
-            "أصواتٌ عربيّة=${'$'}{arabic.size} · اختير: ${'$'}selectedVoice · نتيجة=${'$'}ok",
+            "أصواتٌ عربيّة=${arabic.size} · اختير: $selectedVoice · نتيجة=$ok",
         )
         // **وسرعةٌ أهدأُ قليلاً** — **والتعليمةُ تُقال مرّةً وهو يقود**،
         // فمن لم يلحقها لم يعد ليسمعها.
         runCatching { engine.setSpeechRate(0.95f) }
+    }
+
+    /**
+     * **ترتيبُ اللهجات — الشاميُّ أوّلاً.**
+     *
+     * **ويُقرأ من اسم الصوت لا من `locale.country`** — **وقِيس أنّ
+     * البلدَ فارغٌ في التسعة كلِّها** على جهاز المالك (٢٠٢٦-٠٨-٢٣):
+     * `ar-xa` نطاقٌ عامٌّ لا بلدَ فيه، **واللهجةُ في اللاحقة وحدَها.**
+     */
+    private fun dialectRank(name: String): Int = when {
+        name.contains("-arc") -> 0 // شاميّ
+        name.contains("-ard") -> 1
+        name.contains("-are") -> 2
+        name.contains("-arz") -> 3 // مصريّ
+        else -> 4
     }
 
     /** **أيُّ صوتٍ يتكلّم** — يُقرأ في التشخيص لا في المنطق. */
