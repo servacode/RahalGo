@@ -1,0 +1,20 @@
+{
+  "_note": "النمطُ الراسترُ النافذُ اليوم — مصدرُ الحقيقة الواحد. كان نسختين: واحدةٌ مكتوبةٌ نصّاً في internal/server/map_style.go وأخرى في mobile/app-driver/src/main/assets/map-style.json، وكانتا متطابقتين صدفةً. وحارسٌ يمنع انحرافَهما الآن.",
+  "_tiles": "{{TILE_URL}} يُبدَّل من الإعداد — MAP_TILE_URL في المحرّك. والافتراضُ لا يتبدّل في المرحلة ٦أ (لا تحويلَ إلى المتّجهات، البند ٣١).",
+  "version": 8,
+  "name": "RahalGo",
+  "sources": {
+    "osm": {
+      "type": "raster",
+      "tiles": ["{{TILE_URL}}"],
+      "tileSize": 256,
+      "minzoom": 0,
+      "maxzoom": 19,
+      "attribution": "© OpenStreetMap"
+    }
+  },
+  "layers": [
+    { "id": "bg", "type": "background", "paint": { "background-color": "#EDE7DF" } },
+    { "id": "osm", "type": "raster", "source": "osm" }
+  ]
+}

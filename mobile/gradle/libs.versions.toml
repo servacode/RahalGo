@@ -18,6 +18,7 @@
 #   curl -sL https://dl.google.com/dl/android/maven2/<المسار>/maven-metadata.xml
 
 [versions]
+androidxWork = "2.10.5"
 # **AGP و Kotlin يتقيدان ببعضهما** — لا يُرفع أحدهما وحده.
 agp = "9.3.1"
 kotlin = "2.4.10"
@@ -43,6 +44,15 @@ securityCrypto = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
+# **عملٌ يبقى بعد الشاشة** — المرحلة ٦ب، البند ١٢.
+#
+# **حزمةُ خريطةٍ مئةُ ميغابايت**، **وإغلاقُ الشاشة كان يضيعها** لو رُبط
+# التنزيلُ بـ`viewModelScope`. **ولم يكن في المشروع آليّةُ عملٍ باقية**
+# (خدمةُ الموقع تخصُّ الموقع)، **فأُدخلت الأقلُّ الصحيحة.**
+androidx-work = { module = "androidx.work:work-runtime-ktx", version.ref = "androidxWork" }
+# **`org.json` في `android.jar` مُفرَّغةٌ لاختبارات JVM** — كلُّ دالّةٍ
+# فيها ترمي `RuntimeException("Stub!")`. **فالنسخةُ الحقيقيّةُ للاختبار.**
+json = { module = "org.json:json", version = "20250517" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 # **الحالة تبقى عبر دوران الجهاز** — ومن كتب رقمه ودار جهازه لا يعيده.

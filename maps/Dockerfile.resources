@@ -1,0 +1,61 @@
+# ══════════════════════════════════════════════════════════════════════
+# **صورةُ بناء موارد الخريطة — مثبَّتةٌ لا «الأحدث»**
+# ══════════════════════════════════════════════════════════════════════
+#
+# (المرحلة ٦أ، إغلاقُ أدوات الموارد، قرارُ المالك ٢٠٢٦-٠٨-٢١، البند ٣:
+#  «لا أريد developer manually installed latest version… pinned build
+#  image/container».)
+#
+# # ولماذا صورةٌ لا تثبيتٌ على الجهاز
+#
+# **`build_pbf_glyphs` يعتمد `freetype-sys`، ولا يُبنى على ويندوز**
+# (جُرّب ٢٠٢٦-٠٨-٢١: يحتاج CMake وFreeType مبنيّةً مسبقاً). **وآلةُ
+# البناء الحقيقيّةُ لينكس** — فالصورةُ تحلّ المسألتين معاً:
+#
+#	بناءٌ يعمل على أيّ جهازٍ فيه Docker
+#	ونسخةٌ واحدةٌ لا تتبدّل تحتنا
+#
+# **والحروفُ تُبنى مرّةً في السنة** — فبطءُ الصورة لا يُذكر.
+#
+#   البناء:
+#     docker build -f maps/Dockerfile.resources -t rahalgo-map-resources:1 maps
+#
+#   التشغيل:
+#     docker run --rm -v "$WORK/out:/out" rahalgo-map-resources:1
+
+# **صورةُ أساسٍ مثبَّتةٌ بالنسخة** — لا `latest`.
+FROM rust:1.90-slim-bookworm
+
+# ── أدواتُ البناء الأصليّة ─────────────────────────────────────────
+# **`freetype` و`cmake` لأجل `sdf_glyph_renderer`.**
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      cmake pkg-config libfreetype6-dev ca-certificates curl unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── ١ · أداةُ الحروف ───────────────────────────────────────────────
+# **بنسخةٍ مثبَّتة** — انظر `config/tools.env`.
+ARG GLYPH_TOOL_VERSION=1.5.1
+RUN cargo install build_pbf_glyphs --version ${GLYPH_TOOL_VERSION} --root /usr/local
+
+# ── ٢ · أداةُ الأيقونات ────────────────────────────────────────────
+# **ثنائيٌّ جاهزٌ ببصمةٍ محفوظة** — أسرعُ من بنائه، وأوثقُ من «الأحدث».
+ARG SPRITE_TOOL_VERSION=0.13.1
+ARG SPRITE_SHA256=""
+RUN set -eu; \
+    url="https://github.com/flother/spreet/releases/download/v${SPRITE_TOOL_VERSION}/spreet-x86_64-unknown-linux-musl.tar.gz"; \
+    curl -sL --fail -o /tmp/spreet.tgz "$url"; \
+    if [ -n "$SPRITE_SHA256" ]; then echo "$SPRITE_SHA256  /tmp/spreet.tgz" | sha256sum -c -; fi; \
+    tar -xzf /tmp/spreet.tgz -C /usr/local/bin; \
+    rm /tmp/spreet.tgz; \
+    spreet --version
+
+# ── ٣ · العُقدة — لربط النمط والفهرس ──────────────────────────────
+RUN curl -sL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /maps
+COPY . /maps
+
+# **ولا يُبنى شيءٌ عند بناء الصورة** — الصورةُ أدواتٌ، والبناءُ تشغيل.
+ENTRYPOINT ["sh", "/maps/scripts/resources.sh"]

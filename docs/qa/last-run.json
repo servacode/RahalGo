@@ -1,59 +1,37 @@
 {
-  "smoke": false,
+  "smoke": true,
   "totals": {
-    "PASS": 129,
-    "FAIL": 1,
+    "PASS": 167,
+    "FAIL": 0,
     "SKIP": 0
   },
-  "blocking_failures": [
-    "NOTIF-001"
-  ],
+  "blocking_failures": [],
   "observations": [],
   "stages": [
     {
       "name": "البناء · المحرّك",
       "code": 0,
-      "seconds": 9.8
+      "seconds": 13.1
     },
     {
       "name": "التنسيق",
       "code": 0,
-      "seconds": 0.5
-    },
-    {
-      "name": "الوحدة والتكامل · المحرّك",
-      "code": 1,
-      "seconds": 228.9
+      "seconds": 0.8
     },
     {
       "name": "منظومة QA · API وأمنٌ ومنعُ تكرار",
       "code": 0,
-      "seconds": 50.1
+      "seconds": 47.1
     },
     {
       "name": "حرّاسُ الويب",
       "code": 0,
-      "seconds": 6.1
-    },
-    {
-      "name": "الأنواع",
-      "code": 0,
-      "seconds": 29.2
+      "seconds": 14.0
     },
     {
       "name": "وحدةُ أندرويد",
       "code": 0,
-      "seconds": 40.5
-    },
-    {
-      "name": "الأداءُ المرجعيّ",
-      "code": 0,
-      "seconds": 186.2
-    },
-    {
-      "name": "واجهةُ أندرويد · على جهاز",
-      "code": 1,
-      "seconds": 0.1
+      "seconds": 29.2
     }
   ]
 }

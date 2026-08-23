@@ -1,0 +1,183 @@
+{
+  "_note": "النمطُ المرجعيُّ الواحد — لا يُقرأ مباشرةً. تُبدَّل فيه القوالبُ الثلاثة ({{TILES}} · {{GLYPHS}} · {{SPRITE}}) فيصير نمطاً أونلاين أو دونَ اتّصال. انظر maps/scripts/bind-style.mjs.",
+  "_contract": "معرّفاتُ الطبقات ثابتة. لا تُحذف ولا تُعاد تسميتُها — يعتمد عليها الأندرويدُ في إدراج خطّ المسار والعلامات. انظر _anchors.",
+  "_anchors": {
+    "belowLabels": "place-city",
+    "route": "rahalgo-route-anchor",
+    "markers": "rahalgo-marker-anchor"
+  },
+  "version": 8,
+  "name": "RahalGo",
+  "metadata": {
+    "rahalgo:styleVersion": "1",
+    "rahalgo:schema": "openmaptiles-3.16.0"
+  },
+  "sources": {
+    "base": {
+      "type": "vector",
+      "url": "{{TILES}}",
+      "attribution": "© <a href=\"https://www.openstreetmap.org/copyright\">مساهمو OpenStreetMap</a> · <a href=\"https://openmaptiles.org/\">OpenMapTiles</a>"
+    }
+  },
+  "glyphs": "{{GLYPHS}}",
+  "sprite": "{{SPRITE}}",
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": { "background-color": "#EDE7DF" }
+    },
+    {
+      "id": "landuse-residential",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "landuse",
+      "filter": ["==", ["get", "class"], "residential"],
+      "paint": { "fill-color": "#E6DFD5" }
+    },
+    {
+      "id": "landcover",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "landcover",
+      "paint": { "fill-color": "#DFE6D5", "fill-opacity": 0.6 }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "water",
+      "paint": { "fill-color": "#9CC3D5" }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "base",
+      "source-layer": "waterway",
+      "minzoom": 9,
+      "paint": { "line-color": "#9CC3D5", "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.6, 16, 3] }
+    },
+    {
+      "id": "building",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "building",
+      "minzoom": 15,
+      "paint": { "fill-color": "#DCD4C8", "fill-opacity": 0.7 }
+    },
+
+    {
+      "id": "road-minor",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "minzoom": 12,
+      "filter": ["in", ["get", "class"], ["literal", ["minor", "service", "track"]]],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": {
+        "line-color": "#FFFFFF",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.5, 16, 4, 19, 12]
+      }
+    },
+    {
+      "id": "road-secondary",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "minzoom": 8,
+      "filter": ["in", ["get", "class"], ["literal", ["secondary", "tertiary"]]],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": {
+        "line-color": "#FFF6DE",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 14, 4, 19, 18]
+      }
+    },
+    {
+      "id": "road-primary",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "minzoom": 6,
+      "filter": ["in", ["get", "class"], ["literal", ["primary", "trunk", "motorway"]]],
+      "layout": { "line-cap": "round", "line-join": "round" },
+      "paint": {
+        "line-color": "#F6C96B",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 1, 14, 6, 19, 24]
+      }
+    },
+
+    {
+      "id": "rahalgo-route-anchor",
+      "type": "background",
+      "paint": { "background-color": "#000000", "background-opacity": 0 }
+    },
+
+    {
+      "id": "road-label",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "transportation_name",
+      "minzoom": 13,
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": ["coalesce", ["get", "name:ar"], ["get", "name"]],
+        "text-font": ["RahalGo Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 18, 14],
+        "text-rotation-alignment": "viewport-glyph"
+      },
+      "paint": { "text-color": "#4A4438", "text-halo-color": "#FFFFFF", "text-halo-width": 1.4 }
+    },
+    {
+      "id": "poi-label",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "poi",
+      "minzoom": 15,
+      "filter": ["in", ["get", "subclass"], ["literal", ["hospital", "clinic", "pharmacy", "fuel"]]],
+      "layout": {
+        "icon-image": ["match", ["get", "subclass"], "fuel", "poi-fuel", "pharmacy", "poi-pharmacy", "poi-hospital"],
+        "icon-size": 0.8,
+        "text-field": ["coalesce", ["get", "name:ar"], ["get", "name"]],
+        "text-font": ["RahalGo Regular"],
+        "text-size": 11,
+        "text-offset": [0, 1.1],
+        "text-anchor": "top"
+      },
+      "paint": { "text-color": "#5A5245", "text-halo-color": "#FFFFFF", "text-halo-width": 1.2 }
+    },
+    {
+      "id": "place-village",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "place",
+      "minzoom": 11,
+      "filter": ["in", ["get", "class"], ["literal", ["village", "suburb", "neighbourhood"]]],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:ar"], ["get", "name"]],
+        "text-font": ["RahalGo Regular"],
+        "text-size": 12
+      },
+      "paint": { "text-color": "#5A5245", "text-halo-color": "#FFFFFF", "text-halo-width": 1.4 }
+    },
+    {
+      "id": "place-city",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "place",
+      "minzoom": 4,
+      "filter": ["in", ["get", "class"], ["literal", ["city", "town"]]],
+      "layout": {
+        "text-field": ["coalesce", ["get", "name:ar"], ["get", "name"]],
+        "text-font": ["RahalGo Bold"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 4, 11, 12, 17]
+      },
+      "paint": { "text-color": "#3A342A", "text-halo-color": "#FFFFFF", "text-halo-width": 1.6 }
+    },
+
+    {
+      "id": "rahalgo-marker-anchor",
+      "type": "background",
+      "paint": { "background-color": "#000000", "background-opacity": 0 }
+    }
+  ]
+}
