@@ -1,6 +1,8 @@
 package com.rahalgo.shared.driver
 
 import com.rahalgo.shared.model.CashPage
+import com.rahalgo.shared.model.CorrelationFix
+import com.rahalgo.shared.model.CorrelationVerdict
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.HistoryPage
 import com.rahalgo.shared.model.MerchantRatingInput
@@ -126,9 +128,54 @@ class DriverApi(private val api: ApiClient) {
             },
         )
 
-    /** **مسارُ الطرف الحاليّ** — خطُّ الشوارع ومسافتُه ومدّتُه. */
-    suspend fun route(orderId: String): OrderRoute =
-        api.call("/api/v1/driver/orders/" + orderId + "/route")
+    /**
+     * **مسارُ الطرف الحاليّ** — خطُّ الشوارع ومسافتُه ومدّتُه.
+     *
+     * ══════════════════════════════════════════════════════════════════
+     * **والموضعُ يُرسَل عند إعادة الحساب وحدَها**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (المرحلة ٣ب، بموافقة المالك ٢٠٢٦-٠٨-٢٠.)
+     *
+     * **ولا يُرسَل غيرُه**: لا وجهةَ ولا مسافةَ ولا زمن — **الخادمُ
+     * يقرأ الوجهةَ من الطلب ويحسب الباقي.**
+     *
+     * **وفارغٌ يعني السلوكَ القديمَ حرفاً بحرف**: الخادمُ يبدأ من
+     * `users.last_location`. **فالقراءةُ الدوريّةُ لا تتبدّل**، وإنّما
+     * يُرسَل الموضعُ حين يخرج السائقُ عن مساره.
+     */
+    /**
+     * **والبدائلُ بطلبٍ لا افتراضاً** — المرحلة ٧، البند ١٦.
+     *
+     * **من لم يطلب لم يتغيّر له شيء**: العقدُ القديمُ بايتاً ببايت،
+     * **ولا يحمل حمولةَ البدائل.**
+     */
+    suspend fun route(
+        orderId: String,
+        lat: Double? = null,
+        lng: Double? = null,
+        alternatives: Boolean = false,
+        /**
+         * **يطلب معرّفَ المسار** — المرحلة ٨ب، البند ٢.
+         *
+         * **وبلاه يبقى الردّ كما كان حرفيّاً** (المرحلة ٧):
+         * `GET /route` لا يتبدّل لمن لم يطلب.
+         */
+        correlation: Boolean = false,
+    ): OrderRoute {
+        val base = "/api/v1/driver/orders/" + orderId + "/route"
+        // **وزوجٌ أو لا شيء** — والخادمُ يردّ نصفَ زوجٍ بخطأِ تحقّق.
+        val params = buildList {
+            if (lat != null && lng != null) {
+                add("lat=$lat")
+                add("lng=$lng")
+            }
+            if (alternatives) add("alternatives=true")
+            if (correlation) add("correlation=true")
+        }
+        val path = if (params.isEmpty()) base else base + "?" + params.joinToString("&")
+        return api.call(path)
+    }
 
     suspend fun orders(): List<DriverOrder> = api.call("/api/v1/driver/orders")
 
@@ -177,6 +224,26 @@ class DriverApi(private val api: ApiClient) {
      * يقرّر التعويض. (كُتب مرّة «الزبون لا يقبل او رفض او لم اجد احد» —
      * **أربعة أحكام في سطر**، وأحدها يستوجب مراجعة زبون والآخر لا.)
      */
+    /**
+     * ══════════════════════════════════════════════════════════════
+     * **أنا على المسار الذي أعطيتَني أم على غيره؟** — المرحلة ٨ب
+     * ══════════════════════════════════════════════════════════════
+     *
+     * **ويردّ الخادمُ حكماً محايداً** — لا محرّكَ ولا عقدَ ولا ثقةَ
+     * خام (البند ١٤). **والتطبيقُ لا يعلم أنّ ثمّة مطابقةَ خرائط.**
+     *
+     * **ولا يُنادى في حلقة** — عند اشتباهٍ مستمرٍّ لا مع كلّ قراءة.
+     */
+    suspend fun roadCorrelation(
+        orderId: String,
+        routeId: String,
+        fixes: List<CorrelationFix>,
+    ): CorrelationVerdict = api.call<CorrelationVerdict>(
+        "/api/v1/driver/orders/" + orderId + "/road-correlation",
+        HttpMethod.Post,
+        mapOf("route_id" to routeId, "fixes" to fixes),
+    )
+
     suspend fun transition(orderId: String, to: String, reason: String = "", note: String = "") {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/transition",

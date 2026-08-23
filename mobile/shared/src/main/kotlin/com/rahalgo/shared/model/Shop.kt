@@ -102,6 +102,48 @@ data class Item(
      */
     @SerialName("price_before") val priceBefore: Long? = null,
     @SerialName("discount_percent") val discountPercent: Int? = null,
+    /**
+     * **له خياراتٌ تُختار قبل الطلب** — حجمٌ أو إضافات.
+     *
+     * **والشاشةُ تحتاج أن تعرف قبل الضغطة**: صنفٌ بخياراتٍ يفتح نافذةَ
+     * اختيار، وصنفٌ بلا خياراتٍ يدخل السلّةَ مباشرةً. **ولو لم يُعرف
+     * إلّا بنداءٍ لكلّ بطاقةٍ لَكانت عشرون بطاقةً عشرين نداء.**
+     *
+     * **والمجموعةُ الإلزاميّةُ تُسقط الطلبَ كلَّه** إن لم تُرسَل
+     * اختياراتُها — لا الصنفَ وحدَه.
+     */
+    @SerialName("has_options") val hasOptions: Boolean = false,
+)
+
+/**
+ * **مجموعةُ خياراتٍ لصنف** — «الحجم» أو «يُضاف».
+ *
+ * **و`minSelect` هو الفرقُ بين إلزاميٍّ واختياريّ**: واحدٌ يعني «لا
+ * يُطلب حتّى يُختار»، **وصفرٌ يعني «إن شئت».**
+ */
+@Serializable
+data class ModifierGroup(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("min_select") val minSelect: Int = 0,
+    @SerialName("max_select") val maxSelect: Int = 1,
+    val options: List<ModifierOption> = emptyList(),
+)
+
+/** **خيارٌ واحدٌ وفرقُ سعره** — والفرقُ يُضاف إلى ثمن الصنف. */
+@Serializable
+data class ModifierOption(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("price_delta") val priceDelta: Long = 0,
+    val available: Boolean = true,
+)
+
+/** **صنفٌ بتفصيله** — هو وخياراتُه معاً في نداءٍ واحد. */
+@Serializable
+data class ItemDetail(
+    val item: Item = Item(),
+    val modifiers: List<ModifierGroup> = emptyList(),
 )
 
 @Serializable
@@ -161,6 +203,8 @@ data class Offer(
      * **وشرطٌ يُحسب في موضعين يفترق يوما** فتُعرض عروضٌ انتهت.
      */
     val live: Boolean = false,
+    /** **للصنف خياراتٌ تُختار** — وشاشةُ العروض تفتح النافذةَ بدل الإضافة. */
+    @SerialName("has_options") val hasOptions: Boolean = false,
 )
 
 @Serializable

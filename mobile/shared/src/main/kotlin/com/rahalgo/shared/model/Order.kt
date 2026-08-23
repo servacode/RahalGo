@@ -139,6 +139,41 @@ data class FailReasonItem(val code: String = "", val fault: String = "")
  * **والنقاط عرضٌ ثمّ طول** — كما تكتبها الشاشة والقاعدة، **والمحرّك
  * يقلبها عن OSRM قبل أن يرسلها** فلا يُقلَب في مكانين.
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **بديلٌ واحد — أرقامٌ لا صفات**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (المرحلة ٧، البنود ٥ و٦ و٣٣.)
+ *
+ * **لا «الأسرع» ولا «الأقصر»** — أمرُ المالك. **بل فرقان بالمتر
+ * والثانية، والواجهةُ تصوغهما**: «أقصرُ بـ٤٫٥كم · +١٢د».
+ *
+ * **وجاهزٌ للملاحة**: `cumulativeM` و`maneuvers` معه في الجلبة نفسِها،
+ * **فلا نداءَ ثانٍ عند الاختيار** (البند ٢١).
+ */
+@Serializable
+data class RouteAlternative(
+    @SerialName("route_id") val routeId: String = "",
+    @SerialName("distance_m") val distanceM: Double = -1.0,
+    @SerialName("engine_duration_s") val engineDurationS: Double = -1.0,
+    @SerialName("delta_distance_m") val deltaDistanceM: Double = 0.0,
+    @SerialName("delta_duration_s") val deltaDurationS: Double = 0.0,
+    @SerialName("shared_ratio") val sharedRatio: Double = 0.0,
+    /** **موضعُ القرار الأوّل** — إغلاقُ صحّة ٧، وعليه يُبنى التقادم. */
+    @SerialName("decision_divergence_m") val decisionDivergenceM: Double = -1.0,
+    @SerialName("first_divergence_m") val firstDivergenceM: Double = -1.0,
+    val points: List<List<Double>> = emptyList(),
+    @SerialName("cumulative_m") val cumulativeM: List<Double> = emptyList(),
+    val maneuvers: List<RouteManeuver> = emptyList(),
+) {
+    /** **صالحٌ للملاحة** — كما في `OrderRoute.hasNavigation`. */
+    val hasNavigation: Boolean
+        get() = points.size >= 2 &&
+            cumulativeM.size == points.size &&
+            maneuvers.isNotEmpty()
+}
+
 @Serializable
 data class OrderRoute(
     val available: Boolean = false,
@@ -159,6 +194,24 @@ data class OrderRoute(
     // المحرّكُ لا يُمسّ التطبيق.**
     @SerialName("cumulative_m") val cumulativeM: List<Double> = emptyList(),
     val maneuvers: List<RouteManeuver> = emptyList(),
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والبدائلُ — المرحلة ٧، بطلبٍ لا افتراضاً**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٢١، البند ١٦.)
+    //
+    // **لا تُرسَل إلّا لمن طلبها** (`?alternatives=true`) — **فعميلٌ
+    // قديمٌ لا يحمل حمولتَها.** وافتراضاتُها فارغةٌ فلا يسقط شيء.
+    //
+    // **و`durationS` أعلاه معدَّلةٌ بسرعة السائق** — دلالةٌ قديمةٌ لا
+    // تُكسر. **والمقارنةُ بين المسارات على `engineDurationS` وحدَها**
+    // (البند ٤).
+    @SerialName("route_id") val routeId: String = "",
+    val target: String = "",
+    @SerialName("weight_name") val weightName: String = "",
+    @SerialName("engine_duration_s") val engineDurationS: Double = -1.0,
+    val alternatives: List<RouteAlternative> = emptyList(),
 ) {
     /**
      * **أثمّةَ ما يكفي للملاحة؟**
@@ -301,3 +354,31 @@ data class MerchantRatingInput(
 /** **ما يُرسَل في البلاغ** — رمزُ السبب وتفصيلٌ اختياريّ. */
 @Serializable
 data class ReportInput(val reason: String, val note: String = "")
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// **ارتباطُ الأثر بالمسار — المرحلة ٨ب**
+// ═══════════════════════════════════════════════════════════════════════
+//
+// **ولا كلمةَ محرّكٍ فيها** — قراءاتٌ تُرسَل وحكمٌ يعود.
+
+/** **قراءةُ موضعٍ تُرسَل للمقارنة.** */
+@Serializable
+data class CorrelationFix(
+    val lat: Double,
+    val lng: Double,
+    @SerialName("accuracy_m") val accuracyM: Double,
+    @SerialName("at_ms") val atMs: Long,
+)
+
+/**
+ * **حكمُ الخادم.**
+ *
+ * **و`status` نصٌّ لا تعداد** — فردٌّ بحالةٍ لا نعرفها **يُقرأ ولا
+ * يُسقط التطبيق** (كما في كلّ عقود المشروع).
+ */
+@Serializable
+data class CorrelationVerdict(
+    val status: String = "INSUFFICIENT_DATA",
+    @SerialName("evidence_age_ms") val evidenceAgeMs: Long = 0,
+)

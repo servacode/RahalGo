@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- **إذنُ الإشعارات — وهو عصبُ هذا التطبيق.**
+
+         **صاحبُ المتجر لا يجلس أمام الشاشة**: يعمل في مطبخه،
+         **والطلبُ الذي لا يرنّ طلبٌ يُرفض بانقضاء المهلة.** -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **وإذنُ الموقع لزرّ «موقعي» وحدَه**
+         ══════════════════════════════════════════════════════════════
+
+         (طلبُ المالك ٢٠٢٦-٠٨-٢٣: «يجب أن تكون خريطة يحدّد موقعه
+          بدقّة المتجر».)
+
+         **ولا تتبّعَ فيه**: يُقرأ الموضعُ مرّةً حين يفتح الخريطةَ
+         ليصحّح دبّوسَه — **ولا خدمةَ خلفيّةَ كخدمة السائق.**
+
+         **ولا `ACCESS_BACKGROUND_LOCATION`** — **وهو ما يُسأل عنه في
+         متجر غوغل ويُرفض إن لم يكن له سببٌ ظاهر**، ولا سببَ له هنا. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+
+    <!-- **وأيقونةُ المنصّة من الوحدة** — (قرارُ المالك ٢٠٢٦-٠٨-١٤). -->
+    <!-- **وصنفُ التطبيق لزم يومَ لزمت الخريطة** — انظر
+         `MerchantApplication`: **ضغطُ الذاكرة يصل التطبيقَ لا
+         النشاط**، وخريطةٌ لا تسمعه تجعل النظامَ يقتل التطبيقَ
+         **فتضيع رنّةُ الطلب، وهي كلُّ سببِ وجوده.** -->
+    <application
+        android:name=".MerchantApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/rahalgo_no_backup"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RahalGoMerchant">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -124,6 +124,8 @@ data class SiteContact(
     @SerialName("driver_help_text") val driverHelpText: String = "",
     /** **وتعليماتُ المندوب ثالثة** — لا ورديّةَ له ولا سلّة. */
     @SerialName("rep_help_text") val repHelpText: String = "",
+    /** **وتعليماتُ المتجر رابعة** — بُني تطبيقُه ٢٠٢٦-٠٨-٢٣. */
+    @SerialName("merchant_help_text") val merchantHelpText: String = "",
 )
 
 /**

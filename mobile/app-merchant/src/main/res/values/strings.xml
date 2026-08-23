@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- **نصوصُ تطبيق المتجر وحدَه** — وما اشترك مع غيره ففي `:ui`. -->
+<resources>
+
+    <string name="app_name">رحال غو — المتجر</string>
+
+    <!-- **ويقول دورَه** — **والعاملُ يفتح تطبيقين على جهازٍ واحدٍ
+         أحياناً**، فيفرّق بينهما بالعنوان. -->
+    <string name="login_title">دخول المتجر</string>
+    <string name="login_hint">ادخل برقمك وكلمة المرور</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **الطلبات — قلبُ التطبيق**
+         ══════════════════════════════════════════════════════════════ -->
+    <string name="tab_orders">الطلبات</string>
+    <!-- **«الأصناف» لا «القائمة»** — (تصحيحُ المالك ٢٠٢٦-٠٨-٢٣).
+         **والويبُ يسمّيها كذلك منذ زمن**، ولفظان لشيءٍ واحدٍ يجعلان
+         المنصّةَ تبدو منصّتين. -->
+    <string name="tab_menu">الأصناف</string>
+    <string name="tab_store">متجري</string>
+    <string name="tab_account">حسابي</string>
+
+    <string name="orders_title">طلباتي</string>
+    <string name="orders_hint">اقبل الطلب ثم حضّره ثم أعلن جاهزيته</string>
+    <string name="orders_empty">لا طلبات الآن — سنُعلمك حين يصل طلب</string>
+
+    <string name="order_accept">اقبل الطلب</string>
+    <string name="order_reject">اعتذر</string>
+    <string name="order_start">بدأت التحضير</string>
+    <string name="order_ready">جاهز للاستلام</string>
+    <string name="order_ready_done">أُعلن جاهزاً — بانتظار السائق</string>
+    <string name="order_items">الأصناف</string>
+    <string name="order_note">ملاحظة الزبون</string>
+    <string name="order_due">مستحقك من هذا الطلب</string>
+    <string name="order_seconds_left">%1$d ثانية للقبول</string>
+    <string name="order_report">أبلغ عن مشكلة</string>
+
+    <!-- **ولا اسمَ زبونٍ ولا رقمَه** — السائقُ بينهما، **ورقمٌ في يد
+         متجرٍ بابُ اتصالٍ مباشرٍ يوماً ما.** -->
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **القائمة**
+         ══════════════════════════════════════════════════════════════ -->
+    <string name="menu_title">أصنافي</string>
+    <string name="menu_hint">اضغط الصنف لتبدّل توفره</string>
+    <!-- **وأقسامُ السوق لا أقسامُ مطبخه** — الزبونُ يتصفّح بها، **ومن
+         رتّب أصنافَه بترتيب مطبخه لم يعرف أين تقع بضاعتُه في السوق.** -->
+    <string name="menu_sections_hint">أقسام السوق التي فيها أصنافك</string>
+    <string name="menu_back">‏‹ كل الأقسام</string>
+    <string name="menu_empty">لا أصناف بعد — تُضاف من لوحة الإدارة أو من مندوبك</string>
+
+    <!-- **ولفظٌ واحدٌ في كل التطبيقات** — «متوفر / غير متوفر».
+         **والزرُّ يقول الحالَ لا الفعل**: من قرأ «اجعله غير متوفر»
+         لم يعرف أهو متوفرٌ الآن أم لا. -->
+    <string name="menu_available">متوفر</string>
+    <string name="menu_unavailable">غير متوفر</string>
+    <string name="menu_pending">بانتظار المراجعة</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **محرّرُ الصنف — كنموذج الويب**
+         ══════════════════════════════════════════════════════════════ -->
+    <string name="tab_add">أضف صنفاً</string>
+    <string name="item_add">أضف صنفاً</string>
+    <string name="item_new">صنف جديد</string>
+    <string name="item_edit">تعديل الصنف</string>
+    <string name="item_name">اسم الصنف</string>
+    <string name="item_desc">وصف مختصر</string>
+    <string name="item_price">سعر الشراء</string>
+    <!-- **وسعرُ البيع ليس شأنَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٠): هو يضع
+         سعرَه ويقبض عليه. -->
+    <string name="item_price_hint">ما تقبضه أنت — والمنصة تضيف هامشها فوقه</string>
+    <string name="item_section">قسم السوق</string>
+    <string name="item_pick_image">اختر صورة</string>
+    <string name="item_clear_image">أزل الصورة</string>
+    <string name="item_delete">احذف الصنف</string>
+    <string name="item_delete_ask">يُحذف من السوق ولا يعود — أمتأكد؟</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **متجري**
+         ══════════════════════════════════════════════════════════════ -->
+    <string name="store_title">متجري</string>
+    <!-- ══════════════════════════════════════════════════════════════
+         **«مفتوح / مغلق» لا «يستقبل الطلبات»**
+         ══════════════════════════════════════════════════════════════
+
+         (تصحيحُ المالك ٢٠٢٦-٠٨-٢٣: «المتجر لا يستقبل طلبات إذا كان
+          مفتوحاً يستقبل وإذا كان مغلقاً لا يستقبل».)
+
+         **وهو الحقُّ في المحرّك أيضاً** — `emergency_closed` جزءٌ من
+         معادلة «مفتوح» نفسِها (`orders/hours.go`):
+         `m.status = 'active' AND NOT m.emergency_closed AND (…الساعات…)`
+
+         **فالمفتاحُ يفتح ويغلق حرفياً** — وتسميتي كانت وصفاً للأثر لا
+         للفعل. **ولفظان لشيءٍ واحدٍ يجعلانه يظنّهما مفتاحين**: يبحث عن
+         «مفتوح/مغلق» فلا يجده فيظنّ الدوامَ وحدَه يحكمه. -->
+    <string name="store_open">مفتوح</string>
+    <string name="store_closed">مغلق</string>
+    <!-- **والشرحُ يقول ما لا يقوله المفتاح** — أنّ الدوامَ يغلقه أيضاً. -->
+    <string name="store_prep">مدة التحضير الافتراضية</string>
+    <string name="store_prep_unit">دقيقة</string>
+    <string name="store_hours">ساعات العمل</string>
+    <!-- **وساعاتُه بيده** — تصحيحُ المالك ٢٠٢٦-٠٨-٢٣.
+
+         **و«من» و«إلى» حُذفتا**: «ما في داعٍ من وإلى وهيك كلّ هالشي —
+         خلّي الشكل مرتّباً أكثر». **و`08:00 — 23:00` يقول نفسَه.** -->
+    <string name="store_day_closed">مغلق</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **عنوانُه ودبّوسُه** — طلبُ المالك ٢٠٢٦-٠٨-٢٣
+         ══════════════════════════════════════════════════════════════
+
+         **والدبّوسُ يقول «أين» والسطرُ يقول «كيف تصل»** — طابقٌ ثانٍ،
+         بابٌ خلفَ المحلّ، علامةٌ يعرفها أهلُ الحيّ. -->
+    <string name="store_address">العنوان</string>
+    <string name="store_address_hint">الشارع والعلامة التي يعرفها الناس</string>
+    <string name="store_point">موقع المتجر على الخريطة</string>
+    <string name="store_point_none">لم يُحدَّد بعد</string>
+    <string name="store_point_pick">حدّد</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **ثلاثةُ أقسامٍ في الدرج** — طلبُ المالك ٢٠٢٦-٠٨-٢٣
+         ══════════════════════════════════════════════════════════════ -->
+    <string name="menu_warnings">الإنذارات</string>
+    <string name="warnings_hint">ما على متجرك — يُقرأ قبل أن يُحظر</string>
+    <string name="menu_reports">الشكاوي والبلاغات</string>
+    <string name="reports_list_hint">ما أرسلتَه وما صار به</string>
+    <string name="reports_list_empty">لم ترسل بلاغاً بعد</string>
+    <string name="reports_on_order">على الطلب #%1$d</string>
+    <string name="menu_sales">التقارير</string>
+    <string name="sales_hint">مبيعاتك على مدًى تختاره</string>
+    <string name="sales_today">اليوم</string>
+    <string name="sales_week">٧ أيّام</string>
+    <string name="sales_month">٣٠ يوماً</string>
+    <string name="reports_orders_all">الطلبات</string>
+    <string name="reports_sales">المبيعات</string>
+    <string name="reports_commission">عمولة المنصّة</string>
+    <string name="reports_due">مستحقك</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **بلاغُ المتجر على السائق** — في سجلّ الطلبات
+         ══════════════════════════════════════════════════════════════
+
+         (طلبُ المالك ٢٠٢٦-٠٨-٢٣.) **وطرفٌ يُشتكى عليه ولا يشتكي طرفٌ
+         ناقص.** -->
+    <string name="report_driver">إبلاغ</string>
+    <string name="report_title">إبلاغ عن سائق الطلب #%1$d</string>
+    <string name="report_hint">يصل الإدارةَ ولا يصل السائق</string>
+    <string name="report_note">ملاحظة (اختياريّة)</string>
+    <string name="report_send">أرسل البلاغ</string>
+
+    <string name="store_no_warnings">لا إنذارات عليك</string>
+    <!-- ══════════════════════════════════════════════════════════════
+         **الإغلاقُ الطارئ — زرٌّ أحمرُ في مقدّمة الشاشة**
+         ══════════════════════════════════════════════════════════════
+
+         (طلبُ المالك ٢٠٢٦-٠٨-٢٣: «زرُّ إغلاقٍ طارئٍ بالأعلى بجانب اسم
+          المتجر ليكون واضحاً سريعَ الوصول».)
+
+         **واللفظُ قصيرٌ ليسع زرّاً** — «طارئ — لا أستطيع الاستمرار»
+         يُكسر سطرين في زرٍّ عريض. -->
+    <string name="store_emergency">إغلاق طارئ</string>
+    <string name="store_emergency_do">أغلق الآن</string>
+    <string name="store_emergency_hint">يُقرأ فوراً من الإدارة، ولا يُحسب رفضاً عليك</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **أرقامُ اليوم — أربعةٌ لا خامسَ لها**
+         ══════════════════════════════════════════════════════════════
+
+         (تصحيحُ المالك ٢٠٢٦-٠٨-٢٣: «ما فيه شيءٌ اسمُه حصيلتك — امسحها.
+          مربّعٌ فيه طلباتُ اليوم · مسلّم · ملغي · مستحقُّ اليوم.
+          والأكثرُ طلباً ما تلزم».)
+
+         **و«حصيلتك» لفظٌ لا يقول مدًى** — فمن قرأه ظنّه يومَه وهو عمرُ
+         المتجر كلُّه. **والمدى يُكتب في اللفظ نفسِه.** -->
+    <string name="reports_today_orders">طلبات اليوم</string>
+    <string name="reports_delivered">سُلّم</string>
+    <string name="reports_cancelled">ملغي</string>
+    <string name="reports_due_today">مستحق اليوم</string>
+
+    <!-- **واسمُه بيده** — طلبُ المالك ٢٠٢٦-٠٨-٢٣. -->
+    <string name="store_name">اسم المتجر</string>
+    <string name="store_rename">تعديل اسم المتجر</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **سجلُّ الطلبات — قسمٌ في الدرج كما في الويب**
+         ══════════════════════════════════════════════════════════════
+
+         (قرارُ المالك ٢٠٢٦-٠٨-٢٣.) **و«الطلبات» لاستقبال الجديد وحدَه.** -->
+    <string name="menu_history">سجل الطلبات</string>
+    <string name="history_hint">ما انتهى أمره — يُفتح عند سؤال</string>
+    <string name="history_empty">لا طلبات في السجل بعد</string>
+
+    <string name="wallet_title">محفظتي</string>
+
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="retry">أعد المحاولة</string>
+    <string name="days_sun">الأحد</string>
+    <string name="days_mon">الاثنين</string>
+    <string name="days_tue">الثلاثاء</string>
+    <string name="days_wed">الأربعاء</string>
+    <string name="days_thu">الخميس</string>
+    <string name="days_fri">الجمعة</string>
+    <string name="days_sat">السبت</string>
+</resources>

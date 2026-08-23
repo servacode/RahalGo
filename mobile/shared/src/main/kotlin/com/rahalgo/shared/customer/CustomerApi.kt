@@ -2,6 +2,7 @@ package com.rahalgo.shared.customer
 
 import com.rahalgo.shared.model.CitiesPage
 import com.rahalgo.shared.model.HomePage
+import com.rahalgo.shared.model.ItemDetail
 import com.rahalgo.shared.model.ItemsPage
 import com.rahalgo.shared.model.OffersPage
 import com.rahalgo.shared.model.Quote
@@ -53,6 +54,33 @@ class CustomerApi(private val api: ApiClient) {
     /** **أصنافُ قسم** — من كلّ المصادر مختلطةً بلا اسم متجر. */
     suspend fun sectionItems(sectionId: String): ItemsPage =
         api.raw("/api/v1/public/sections/$sectionId/items" + BrowseScope.query('?'))
+
+    /**
+     * **صنفٌ بخياراته** — يُنادى حين تُضغط بطاقةٌ عليها `hasOptions`.
+     *
+     * **ولا يُنادى لكلّ بطاقة**: عشرون بطاقةً تعني عشرين نداءً على شبكةِ
+     * الرقّة، **والعلامةُ في القائمة تكفي لمعرفة من يحتاجه.**
+     */
+    suspend fun itemDetail(itemId: String): ItemDetail =
+        api.raw("/api/v1/public/items/$itemId")
+
+    /**
+     * **«يُطلب معه»** — مشروبٌ ومقبّلاتٌ وحلوى تُعرض على من ملأ سلّته.
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-٢٢: «حركةٌ ذكيّةٌ بالأكل تعرض عليه كولا أو
+     *  عيران، هي أكثرُ شيءٍ تنطلب».)
+     *
+     * **وما في السلّة يُستثنى** — **واقتراحُ ما اشتراه يقول له إنّا لا
+     * نقرأ سلّته.**
+     */
+    suspend fun suggest(exclude: List<String>): ItemsPage {
+        val tail = exclude.joinToString("") { "&exclude=" + it }
+        val scope = BrowseScope.query('?')
+        // **ولا اقتراحَ بلا موضع** — المحرّكُ يردّ فارغاً، **ونداءٌ نعرف
+        // أنّه فارغٌ نداءٌ مهدور.**
+        if (scope.isEmpty()) return ItemsPage()
+        return api.raw("/api/v1/public/suggest" + scope + tail)
+    }
 
     /**
      * **بحثٌ في الأصناف.**
@@ -248,6 +276,15 @@ data class CartLine(
     @SerialName("menu_item_id") val menuItemId: String,
     val qty: Int,
     val note: String = "",
+    /**
+     * **ما اختاره من خيارات** — حجمٌ وإضافات.
+     *
+     * **والمحرّكُ يردّ الطلبَ كلَّه** إن نقص اختيارٌ من مجموعةٍ
+     * إلزاميّة (`orders/service.go`) — **لا الصنفَ وحدَه.** **وكان
+     * التطبيقُ لا يرسلها إطلاقاً**، فأيُّ صنفٍ بحجمٍ إلزاميٍّ يُسقط
+     * سلّةً كاملةً برمزٍ لا يقول أيَّ صنفٍ هو.
+     */
+    @SerialName("option_ids") val optionIds: List<String> = emptyList(),
 )
 
 @Serializable
