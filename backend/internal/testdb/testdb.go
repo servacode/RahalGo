@@ -48,6 +48,7 @@ func Pool(t *testing.T) *pgxpool.Pool {
 	if err := pool.Ping(ctx); err != nil {
 		t.Fatalf("قاعدة الاختبار لا تستجيب: %v", err)
 	}
+	prepare(t, url, pool)
 	if _, err := migrate.Up(ctx, pool); err != nil {
 		t.Fatalf("فشل تطبيق الهجرات: %v", err)
 	}

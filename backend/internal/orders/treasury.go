@@ -51,11 +51,44 @@ import (
 //
 // **ومصدرٌ واحدٌ لمن هي الخزينة**: قراءةٌ ثانيةٌ في حزمةٍ أخرى تفترق يوماً،
 // **فتدفع مكافأةً من حسابٍ وتُقيّد ربحاً في آخر.**
-func (s *Service) TreasuryID(ctx context.Context) string { return s.treasuryID(ctx) }
+func (s *Service) TreasuryID(ctx context.Context) string {
+	return s.treasuryOn(ctx, s.db)
+}
 
-func (s *Service) treasuryID(ctx context.Context) string {
+// ══════════════════════════════════════════════════════════════════════
+//
+//	**وتُقرأ من المعاملة لا من بِركةٍ ثانية**
+//
+// ══════════════════════════════════════════════════════════════════════
+//
+// (كشفه `TestCompensateDriverOnlyOnce` ٢٠٢٦-٠٨-٢٣ — **جمودٌ حقيقيّ**.)
+//
+// # العطبُ الذي كان
+//
+// `treasuryID` كانت تقرأ من `s.db` — **أي تطلب اتّصالاً جديداً من
+// البِركة**. وهي تُنادى **داخل معاملةٍ قائمةٍ** (تعويضُ السائق، وتسويةُ
+// الخزينة، ونصيبُ المنصّة).
+//
+// **فحين ازدحمت البِركة جمد كلُّ شيء**: ثمانيةُ نداءاتٍ متزامنة، كلٌّ
+// يمسك اتّصالاً بمعاملته، **ثمّ يطلب اتّصالاً تاسعاً لا يأتي** — ولا
+// يُفرَج عن اتّصاله حتّى يأتي. **حلقةٌ مقفلةٌ لا تنفكّ.**
+//
+// **والقاعدةُ لا تراه عطباً**: تقول `idle in transaction · ClientRead`
+// — أي «أنتظر أمراً من العميل». **والعميلُ ينتظر اتّصالاً من نفسه.**
+//
+// # ولماذا لم يظهر في الإنتاج بعد
+//
+// **بِركةُ الإنتاج عشرون** (`database/postgres.go`)، **والضغطُ اليوم
+// طلبٌ في الدقيقة.** فالجمودُ ينتظر يومَ يزدحم — **وذلك أسوأُ يومٍ
+// يظهر فيه.**
+//
+// # والدواءُ أن تُقرأ من نفس اليد
+//
+// **كلُّ من ينادي يملك `q` أصلاً** — المعاملةَ التي هو فيها. **فلا
+// اتّصالَ ثانيَ ولا انتظار.**
+func (s *Service) treasuryOn(ctx context.Context, q wallet.Querier) string {
 	var id string
-	if err := s.db.QueryRow(ctx,
+	if err := q.QueryRow(ctx,
 		`SELECT user_id::text FROM wallets WHERE is_treasury LIMIT 1`).Scan(&id); err != nil {
 		return ""
 	}
@@ -82,7 +115,7 @@ func (s *Service) treasuryID(ctx context.Context) string {
 //   - **وما رُدَّ يُطرح**: طلبٌ استُرجع ثمنُه لم يُدفع للمنصة، **وإبقاؤه في
 //     الحساب يُظهر ربحاً من طلبٍ خسرته.**
 func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
-	tid := s.treasuryID(ctx)
+	tid := s.treasuryOn(ctx, q)
 	if tid == "" {
 		return nil
 	}
@@ -141,7 +174,7 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 // وحده لظهرت المنصةُ رابحةً وهي تدفع. وهو ما كان يقع: الأرباحُ جمعُ عمولات،
 // **والعمولةُ لا تعرف أن شيئاً خرج.**
 func (s *Service) DebitTreasury(ctx context.Context, q wallet.Querier, amount int64, ref, note, actorID string) error {
-	tid := s.treasuryID(ctx)
+	tid := s.treasuryOn(ctx, q)
 	if tid == "" || amount <= 0 {
 		return nil
 	}
@@ -175,7 +208,7 @@ func (s *Service) CreditTreasuryDirect(ctx context.Context, q wallet.Querier,
 	if amount <= 0 {
 		return nil
 	}
-	tid := s.treasuryID(ctx)
+	tid := s.treasuryOn(ctx, q)
 	if tid == "" {
 		return nil
 	}

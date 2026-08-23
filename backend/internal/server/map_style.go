@@ -1,7 +1,10 @@
 package server
 
 import (
+	_ "embed"
 	"net/http"
+	"os"
+	"strings"
 )
 
 /*
@@ -28,28 +31,55 @@ import (
 **الخريطةُ تُرسم قبل أن يدخل أحد** — كما `public/platform`.
 */
 
-// tileURL مصدرُ البلاطات — **نفسُ ما يرسم به الويب** (`ui/map.tsx`).
-const tileURL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+// ══════════════════════════════════════════════════════════════════════
+// **ونسختان من النمط صارتا واحدة**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (المرحلة ٦أ، قرارُ المالك ٢٠٢٦-٠٨-٢١، البند ٨.)
+//
+// **كان النمطُ مكتوباً نصّاً هنا، ونسخةٌ ثانيةٌ في أصول تطبيق
+// السائق.** وكانتا متطابقتين **صدفةً** — ولا شيءَ يمنع انحرافَهما.
+//
+// **فصار المصدرُ ملفّاً واحداً في المستودع** يُضمَّن هنا،
+// **وحارسٌ في `pnpm check:guards` يُسقط البناءَ إن خالفته نسخةُ
+// الأصول.**
+//
+// # ولا تحويلَ إلى المتّجهات هنا
+//
+// (البند ٣١: «لا تحوّل تطبيقَ السائق أو الزبون إلى Vector في ٦أ».)
+//
+// **والنمطُ المتّجهُ مبنيٌّ في `maps/style/rahalgo.style.json`
+// ويُخدَم من تخزين الآثار** — والتطبيقُ ينتقل إليه في ٦ب.
+
+//go:embed legacy-raster.style.json
+var rasterStyle string
+
+// defaultTileURL **مصدرُ البلاطات حين لا يُضبط شيء.**
+//
+// **ولا يتبدّل في ٦أ** — وتبديلُه قرارُ نشرٍ لا قرارُ شيفرة.
+const defaultTileURL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+
+// tileURL **من الإعداد أوّلاً.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ومنعُ خادم OSM العموميّ قرارُ نشرٍ لا إصدارِ تطبيق**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وسياستُهم تنهى عن الاستعمال الثقيل** — ونحن نُنزّل خمسةَ عشرَ ألفَ
+// بلاطةٍ لكلّ سائق. **فيوم يُضبط `MAP_TILE_URL` يزول ذلك بلا نسخةٍ
+// جديدةٍ ينتظرها كلُّ سائقٍ في المدينة.**
+//
+// **وهو نظيرُ `NEXT_PUBLIC_TILE_URL` في الويب** — بابٌ واحدٌ في
+// الطرفين.
+func tileURL() string {
+	if v := os.Getenv("MAP_TILE_URL"); v != "" {
+		return v
+	}
+	return defaultTileURL
+}
 
 func (s *Server) handleMapStyle(w http.ResponseWriter, r *http.Request) {
-	style := `{
-  "version": 8,
-  "name": "RahalGo",
-  "sources": {
-    "osm": {
-      "type": "raster",
-      "tiles": ["` + tileURL + `"],
-      "tileSize": 256,
-      "minzoom": 0,
-      "maxzoom": 19,
-      "attribution": "© OpenStreetMap"
-    }
-  },
-  "layers": [
-    { "id": "bg", "type": "background", "paint": { "background-color": "#EDE7DF" } },
-    { "id": "osm", "type": "raster", "source": "osm" }
-  ]
-}`
+	style := strings.ReplaceAll(rasterStyle, "{{TILE_URL}}", tileURL())
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	// **ويُخزَّن يوماً في الوسيط** — الأسلوبُ لا يتبدّل كلَّ ساعة،

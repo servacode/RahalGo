@@ -7,6 +7,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/media"
 )
 
 // تحكّم المتجر بقائمته.
@@ -179,9 +180,23 @@ func (s *Server) handleMerchantDeleteItem(w http.ResponseWriter, r *http.Request
 // قسمٌ مُطفأٌ لا يظهر في السوق، **وعرضُه للاختيار يَعِد بما لا يقع**: يضع
 // المتجرُ صنفَه فيه ثمّ لا يجده معروضاً ولا يعرف لماذا.
 func (s *Server) handleMerchantPlatformSections(w http.ResponseWriter, r *http.Request) {
+	// ══════════════════════════════════════════════════════════════════
+	// **ووجهُ القسم معه — لا اسمُه وحدَه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (بُني تطبيقُ المتجر ٢٠٢٦-٠٨-٢٣، وشاشةُ أصنافه شبكةُ أقسامٍ بالصور
+	//  كشبكةِ الويب.)
+	//
+	// **وكان الردُّ اسماً ومعرّفاً** — كفى نافذةَ اختيارٍ في محرّر الصنف،
+	// **ولا يكفي شبكةً تُتصفَّح**: أخذت الشاشةُ صورةَ أوّلِ صنفٍ في القسم
+	// **فظهرت حروفاً**، لأنّ أصنافَ المتجر بلا صورٍ بعد.
+	//
+	// **وأقسامُ السوق مصوَّرةٌ كلُّها** — فالصورةُ موجودةٌ ولا تُرسَل.
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT id::text, name FROM platform_sections
-		WHERE active ORDER BY sort_order, name`)
+		SELECT ps.id::text, ps.name, im.path, im.thumb_path
+		FROM platform_sections ps
+		LEFT JOIN media im ON im.id = ps.image_media_id
+		WHERE ps.active ORDER BY ps.sort_order, ps.name`)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -189,16 +204,22 @@ func (s *Server) handleMerchantPlatformSections(w http.ResponseWriter, r *http.R
 	defer rows.Close()
 
 	type section struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
+		ID            string  `json:"id"`
+		Name          string  `json:"name"`
+		ImageURL      *string `json:"image_url"`
+		ImageThumbURL *string `json:"image_thumb_url"`
 	}
 	out := []section{}
 	for rows.Next() {
 		var x section
-		if err := rows.Scan(&x.ID, &x.Name); err != nil {
+		if err := rows.Scan(&x.ID, &x.Name, &x.ImageURL, &x.ImageThumbURL); err != nil {
 			s.respondErr(w, err)
 			return
 		}
+		// **والمسارُ يُحوَّل عنواناً هنا** — **ومسارٌ خامٌّ يطلبه الجهازُ
+		// من نفسه فتنكسر الصورة** (وقع مثلُه في شبكة الويب ٢٠٢٦-٠٨-٠٨).
+		x.ImageURL = media.URLForPtr(x.ImageURL)
+		x.ImageThumbURL = media.URLForPtr(x.ImageThumbURL)
 		out = append(out, x)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"sections": out})

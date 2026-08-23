@@ -41,8 +41,8 @@ func TestPendingMenu_CountsWholeQueueNotThePage(t *testing.T) {
 	const n = 210
 	for i := range n {
 		if _, err := f.pool.Exec(ctx, `
-			INSERT INTO menu_items (merchant_id, section_id, name, price, merchant_price, approved)
-			VALUES ($1, $2, $3, 1000, 1000, false)`,
+			INSERT INTO menu_items (merchant_id, section_id, platform_section_id, name, price, merchant_price, approved)
+			VALUES ($1, $2, (SELECT id FROM platform_sections ORDER BY sort_order LIMIT 1), $3, 1000, 1000, false)`,
 			f.merchantID, menuSectionID, fmt.Sprintf("صنفٌ منتظرٌ %03d", i)); err != nil {
 			t.Fatalf("تعذّر الصنف %d: %v", i, err)
 		}

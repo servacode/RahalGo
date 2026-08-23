@@ -39,9 +39,12 @@ func (f *fixture) armItem(t *testing.T) string {
 		t.Fatalf("تعذّر إنشاءُ قسم: %v", err)
 	}
 	if err := f.pool.QueryRow(ctx, `
-		INSERT INTO menu_items (merchant_id, section_id, name, price, merchant_price,
-			available, approved)
-		VALUES ($1, $2, 'صنفُ سباق', 30000, 25000, true, true)
+		INSERT INTO menu_items (merchant_id, section_id, platform_section_id, name,
+			price, merchant_price, available, approved)
+		-- **وقسمُ السوق إلزاميّ** (المهاجرة ٠١١٨): صنفٌ بلا قسمٍ لا يراه
+		-- زبونٌ إطلاقاً، **والقاعدةُ ترفضه اليوم.**
+		VALUES ($1, $2, (SELECT id FROM platform_sections ORDER BY sort_order LIMIT 1),
+		        'صنفُ سباق', 30000, 25000, true, true)
 		RETURNING id`, f.merchantID, sectionID).Scan(&itemID); err != nil {
 		t.Fatalf("تعذّر إنشاءُ صنف: %v", err)
 	}

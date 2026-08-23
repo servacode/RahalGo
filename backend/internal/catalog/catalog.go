@@ -380,10 +380,39 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 
 	var id string
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location, logo_media_id, commission_percent, default_prep_minutes)
+		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location, city_id, logo_media_id, commission_percent, default_prep_minutes)
 		VALUES ($1, COALESCE($2,''), $3, COALESCE($4,''), COALESCE($5,''), $6, $7,
 		        CASE WHEN $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
 		             THEN ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography END,
+
+		        -- ══════════════════════════════════════════════════════
+		        -- **والمدينةُ تُشتقّ من الموقع — لا تُترك فارغة**
+		        -- ══════════════════════════════════════════════════════
+		        --
+		        -- (شكوى المالك ٢٠٢٦-٠٨-٢٢: «الأصنافُ لم تظهر بالتطبيق
+		        --  أبداً».)
+		        --
+		        -- **كان العمودُ لا يُذكر هنا إطلاقاً** — فكلُّ متجرٍ
+		        -- يُولد بلا مدينة. **وترشيحُ السوق يشترط أن تساوي
+		        -- مدينةُ المتجر مدينةَ الزبون** (city_filter.go:87)،
+		        -- **فلا يظهر المتجرُ لأحدٍ أبداً.**
+		        --
+		        -- **والأثرُ صامتٌ تماماً**: الأقسامُ تُعرض والعدّادُ صفر،
+		        -- ولا خطأَ ولا سجلّ. **وقِيس على الإنتاج**: ٣٧٦ صنفاً
+		        -- في القاعدة، **وصفرٌ لمن يرسل موقعَه.**
+		        --
+		        -- **وتُشتقّ ولا تُسأل**: صاحبُ المتجر يضع نقطتَه على
+		        -- الخريطة، **والمدينةُ تُعرف منها** — وسؤالُه عنها بعد
+		        -- ذلك سؤالٌ عمّا قاله.
+		        (SELECT c.id FROM cities c
+		          WHERE c.active
+		            AND $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
+		            AND ST_DWithin(c.center,
+		                ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography,
+		                c.radius_m)
+		          ORDER BY ST_Distance(c.center,
+		                ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography)
+		          LIMIT 1),
 		        NULLIF(COALESCE($10, ''), '')::uuid,
 		        -- **ولا يُنسخ الافتراضُ في العمود.**
 		        --

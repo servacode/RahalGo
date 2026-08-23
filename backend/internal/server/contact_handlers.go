@@ -62,7 +62,9 @@ func (s *Server) handlePublicContact(w http.ResponseWriter, r *http.Request) {
 		// **وتعليماتُ المندوب** — **ونداءٌ ثالثٌ لسطرٍ تأخيرٌ يُرى**،
 		// فتصل الثلاثةُ معاً ويقرأ كلُّ تطبيقٍ ما يخصّه.
 		"rep_help_text": s.settings.GetString(ctx, "page.rep_help_text"),
-		"support_phone": s.settings.GetString(ctx, "platform.support_phone"),
-		"address":       s.settings.GetString(ctx, "platform.address"),
+		// **وتعليماتُ المتجر رابعة** — تصل مع أخواتها في النداء نفسِه.
+		"merchant_help_text": s.settings.GetString(ctx, "page.merchant_help_text"),
+		"support_phone":      s.settings.GetString(ctx, "platform.support_phone"),
+		"address":            s.settings.GetString(ctx, "platform.address"),
 	})
 }

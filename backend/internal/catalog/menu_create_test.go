@@ -141,3 +141,66 @@ func TestCreateItem_RequiresPlatformSection(t *testing.T) {
 		})
 	}
 }
+
+// TestUpdateItem_RequiresPlatformSection **والبابُ الثاني كالأوّل.**
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٢٢: «إضافة الصنف القسم إلزامي».)
+//
+// **كان `CreateItem` وحدَه يحرسه** — فمن أنشأ صنفاً بقسمٍ ثمّ عدّله بلا
+// قسمٍ أفلت، **وصار صنفاً لا يراه زبون**: المتجرُ يظنّه معروضاً ويدفع
+// عمولةً على ما لا يُباع، **ولا رسالةَ تقول له.**
+//
+// **وحارسٌ على بابٍ من بابين ليس حارساً** — وهذا يحرس الثاني.
+func TestUpdateItem_RequiresPlatformSection(t *testing.T) {
+	f := newMenuFixture(t)
+	ctx := context.Background()
+
+	// **صنفٌ سليمٌ أوّلاً** — فالمطلوبُ اختبارُ التعديل لا الإنشاء.
+	id, err := f.svc.CreateItem(ctx, f.actorID, f.merchantID, MenuItemInput{
+		SectionID:         ptr(f.sectionID),
+		Name:              ptr("صنفٌ يُعدَّل"),
+		Price:             ptr(int64(1000)),
+		PlatformSectionID: ptr(f.platformID),
+	}, "127.0.0.1")
+	if err != nil {
+		t.Fatalf("تعذّر إنشاءُ الصنف: %v", err)
+	}
+
+	// **والنزعُ الصريحُ يُردّ** — فراغٌ مُرسَلٌ يعني «ارفع القسم».
+	t.Run("مُرسَلٌ فارغاً يُردّ", func(t *testing.T) {
+		err := f.svc.UpdateItem(ctx, f.actorID, id, MenuItemInput{
+			Name:              ptr("اسمٌ جديد"),
+			PlatformSectionID: ptr(""),
+		}, "127.0.0.1")
+		if !errors.Is(err, ErrSectionRequired) {
+			t.Fatalf("مرّ تعديلٌ ينزع القسمَ (الخطأ: %v) — والصنفُ يختفي من السوق صامتاً", err)
+		}
+	})
+
+	// ══════════════════════════════════════════════════════════════════
+	// **و«لم يُرسَل» يمرّ ولا يمسّ القسم**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (شكوى المالك ٢٠٢٦-٠٨-٢٢: «أريد تعديل الصورة يقول اختر القسم».)
+	//
+	// **نافذةُ التعديل في اللوحة لا ترسل القسمَ** لأنّها لا تبدّله —
+	// **فحارسٌ يرفض غيابَه يمنع تبديلَ صورةٍ أو اسمٍ لكلّ صنفٍ في
+	// المنصّة**، ولا يقول للمالك إلّا «اختر القسم» في نافذةٍ لا قسمَ
+	// فيها.
+	t.Run("غيرُ مُرسَلٍ يمرّ ويُبقي القسم", func(t *testing.T) {
+		if err := f.svc.UpdateItem(ctx, f.actorID, id, MenuItemInput{
+			Name: ptr("اسمٌ أحدث"),
+		}, "127.0.0.1"); err != nil {
+			t.Fatalf("رُدَّ تعديلٌ لا يمسّ القسمَ: %v", err)
+		}
+		var got *string
+		if err := f.pool.QueryRow(ctx,
+			`SELECT platform_section_id::text FROM menu_items WHERE id = $1`, id).
+			Scan(&got); err != nil {
+			t.Fatalf("تعذّرت القراءة: %v", err)
+		}
+		if got == nil || *got != f.platformID {
+			t.Fatalf("تبدّل القسمُ بتعديلٍ لا يذكره: %v", got)
+		}
+	})
+}

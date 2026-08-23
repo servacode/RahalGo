@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -121,8 +122,19 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	req, err := decode[struct {
-		DefaultPrepMinutes *int   `json:"default_prep_minutes"`
-		MinOrder           *int64 `json:"min_order"`
+		// ══════════════════════════════════════════════════════════
+		// **واسمُ المتجر بيده** — (طلبُ المالك ٢٠٢٦-٠٨-٢٣)
+		// ══════════════════════════════════════════════════════════
+		//
+		// **كان للأدمن وحدَه** (`/admin/merchants/{id}`) — **فمن أخطأ
+		// حرفاً في اسمه يومَ سُجّل لا يملك تصحيحَه**، ويبقى الخطأُ في
+		// كلّ إشعارٍ يصل سائقَه.
+		//
+		// **ولا يراه زبونٌ على كلّ حال** (`customer_privacy.go`) —
+		// فتبديلُه لا يمسّ تجربةَ السوق.
+		Name               *string `json:"name"`
+		DefaultPrepMinutes *int    `json:"default_prep_minutes"`
+		MinOrder           *int64  `json:"min_order"`
 		// ══════════════════════════════════════════════════════════════
 		// **وعنوانُه ودبّوسُه بيده هو**
 		// ══════════════════════════════════════════════════════════════
@@ -151,6 +163,16 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, errValidation)
 		return
 	}
+	// **واسمٌ فارغٌ يُردّ** — **ومتجرٌ بلا اسمٍ يظهر فراغاً في كلّ
+	// شاشةٍ وإشعار**، ولا يعرف السائقُ إلى أين يمضي.
+	if req.Name != nil {
+		trimmed := strings.TrimSpace(*req.Name)
+		if trimmed == "" {
+			s.respondErr(w, errValidation)
+			return
+		}
+		req.Name = &trimmed
+	}
 	// **والنقطةُ تُرسَل كاملةً أو لا تُرسَل** — نصفُها يكتب موضعاً على
 	// خطِّ الاستواء: **من أرسل `lat` وحدَه نقل متجرَه إلى البحر.**
 	if (req.Lat == nil) != (req.Lng == nil) {
@@ -166,6 +188,7 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 	}
 	if _, err := s.pg.Exec(r.Context(), `
 		UPDATE merchants SET
+			name                 = COALESCE($7, name),
 			default_prep_minutes = COALESCE($2, default_prep_minutes),
 			min_order            = COALESCE($3, min_order),
 			address_text         = COALESCE($4, address_text),
@@ -178,7 +201,7 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 				ELSE location END,
 			updated_at           = now()
 		WHERE id = $1`, merchantID, req.DefaultPrepMinutes, req.MinOrder,
-		req.AddressText, req.Lat, req.Lng); err != nil {
+		req.AddressText, req.Lat, req.Lng, req.Name); err != nil {
 		s.respondErr(w, err)
 		return
 	}

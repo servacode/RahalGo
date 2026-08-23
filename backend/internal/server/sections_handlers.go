@@ -56,6 +56,19 @@ type publicItem struct {
 	PriceBefore *int64 `json:"price_before"`
 	// DiscountPercent نسبةُ الحسم — **تُقرأ بلمحةٍ قبل أن يُقارَن الرقمان.**
 	DiscountPercent *int `json:"discount_percent"`
+
+	// HasOptions هل للصنف خياراتٌ تُختار قبل الطلب — **حجمٌ أو إضافات.**
+	//
+	// # ولماذا في قائمة القسم لا في نافذة الصنف وحدَها
+	//
+	// **الشاشةُ تحتاج أن تعرف قبل الضغطة** لا بعدها: صنفٌ بخياراتٍ يفتح
+	// نافذةَ اختيارٍ، وصنفٌ بلا خياراتٍ يدخل السلّةَ مباشرةً. **ولو لم
+	// تُعرف إلّا بنداءٍ لكلّ بطاقةٍ لَكانت عشرون بطاقةً عشرين نداءً.**
+	//
+	// **والمجموعةُ الإلزاميّةُ تُسقط الطلب** إن لم تُرسَل اختياراتُها
+	// (`orders/service.go`: `chosen < min` → `ErrBadItems`) — **فالعلمُ
+	// بها ليس زينةً بل شرطُ نجاحِ الطلب.**
+	HasOptions bool `json:"has_options"`
 }
 
 // itemSelect ما يُقرأ لكلّ صنفٍ معروض.
@@ -85,7 +98,10 @@ const itemFrom = `
 	       (i.available AND i.approved AND m.status = 'active' AND ps.active),
 	       ps.id, ps.name, ps.margin_override,
 	       ` + orders.OpenNowSQL + `, ` + orders.NextOpenSQL + `,
-	       o.discount_percent
+	       o.discount_percent,
+	       -- **وجودُ خياراتٍ يُقرأ بوجودٍ لا بعدّ** — تقف عند أوّل صفٍّ
+	       -- وتترك الباقي، **وعدٌّ كاملٌ لكلّ بطاقةٍ يقرأ ما لا يُعرض.**
+	       EXISTS (SELECT 1 FROM modifier_groups g WHERE g.item_id = i.id)
 	FROM menu_items i
 	JOIN merchants m ON m.id = i.merchant_id
 	JOIN platform_sections ps ON ps.id = i.platform_section_id
@@ -173,7 +189,7 @@ func (s *Server) scanItems(w http.ResponseWriter, r *http.Request, sql string, a
 		var pct *int
 		if err := rows.Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &it.HasOptions); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -332,7 +348,7 @@ func (s *Server) handlePublicItem(w http.ResponseWriter, r *http.Request) {
 		chi.URLParam(r, "id")).
 		Scan(&it.ID, &it.Name, &it.Description, &cost, &itemMargin,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SectionID, &it.SectionName,
-			&sectionMargin, &open, &opensAt, &pct); err != nil {
+			&sectionMargin, &open, &opensAt, &pct, &it.HasOptions); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}

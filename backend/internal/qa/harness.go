@@ -37,6 +37,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -155,8 +156,46 @@ func New(t *testing.T) *Harness {
 	ts := httptest.NewServer(s.Router())
 	t.Cleanup(ts.Close)
 
+	seedZone(t, pool)
 	return &Harness{T: t, Pool: pool, Srv: ts, tokens: tokens}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **ومنطقةُ التسليم تُزرع — لا تُورَث**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (خطوةُ نظافة الاختبار، ٢٠٢٦-٠٨-٢٠.)
+//
+// **يومَ صارت القاعدةُ تبدأ نظيفةً سقط أربعةٌ وعشرون اختباراً دفعةً
+// واحدة** — كلُّها تُنشئ طلباً. **وكانت تمرّ بمنطقةٍ خلّفها عملٌ سابق
+// لا تعرفها ولا تنشئها.**
+//
+// **وهذا هو الاتّكاءُ على الركام بعينه**: اختبارٌ ينجح بما لم يكتبه،
+// **فيسقط يومَ يُشغَّل على قاعدةٍ جديدة** — وهو ما يقع في CI أوّلَ
+// مرّة.
+//
+// **والدبّوسُ في `orderBody` هو الرقّة** (`35.9506, 39.0094`) — فدائرةٌ
+// حولها بخمسةٍ وعشرين كيلومتراً تغطّي كلَّ ما تطلبه الحزمة.
+func seedZone(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	// **ومرّةً واحدةً في العمليّة** — لا في كلّ اختبار.
+	zoneOnce.Do(func() {
+		_, zoneErr = pool.Exec(context.Background(), `
+			INSERT INTO delivery_zones (name, center, radius_m, delivery_fee, min_order, active)
+			SELECT 'منطقة QA',
+			       ST_SetSRID(ST_MakePoint(39.0094, 35.9506), 4326)::geography,
+			       25000, 100, 0, true
+			WHERE NOT EXISTS (SELECT 1 FROM delivery_zones WHERE name = 'منطقة QA')`)
+	})
+	if zoneErr != nil {
+		t.Fatalf("qa: تعذّر زرعُ منطقة التسليم: %v", zoneErr)
+	}
+}
+
+var (
+	zoneOnce sync.Once
+	zoneErr  error
+)
 
 // --- النداء ---------------------------------------------------------
 
@@ -341,8 +380,10 @@ func (h *Harness) NewItem(cost int64) *Item {
 
 	var merchantID string
 	err := h.Pool.QueryRow(ctx, `
-		INSERT INTO merchants (name, owner_user_id, category_id, status)
-		VALUES ($1, $2::uuid, $3::uuid, 'active') RETURNING id::text`,
+		INSERT INTO merchants (name, owner_user_id, category_id, status, location)
+		VALUES ($1, $2::uuid, $3::uuid, 'active',
+		        ST_SetSRID(ST_MakePoint(39.0094, 35.9506), 4326)::geography)
+		RETURNING id::text`,
 		uniq("متجر QA "), owner.ID, categoryID).Scan(&merchantID)
 	if err != nil {
 		h.T.Fatalf("qa: تعذّر إنشاءُ متجر: %v", err)

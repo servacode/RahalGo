@@ -39,6 +39,17 @@ func TestCreate_OpenOrdersAreCapped(t *testing.T) {
 	ctx := context.Background()
 	f.verifyWhatsApp(t)
 	itemID := f.armItem(t)
+	// **والمفتاحُ العامُّ يُشعَل هنا صراحةً.**
+	//
+	// **حارسُ الكمّ يعيش داخل بوّابة واتساب** (`service.go`)، والبوّابةُ
+	// مفتاحان: `auth.require_whatsapp` العامُّ ثمّ مفتاحُ الدور.
+	// **والعامُّ لا تزرعه الهجرات** — فعلى قاعدةٍ نظيفةٍ لا يُنادى
+	// الحارسُ أصلاً **فتُفتح ستّةُ طلباتٍ والسقفُ ثلاثة.**
+	//
+	// **وكان يمرّ بصفٍّ خلّفه تشغيلٌ سابق** (كُشف ٢٠٢٦-٠٨-٢٠) —
+	// **فالاختبارُ يفحص السقفَ ويتّكئ على إعدادٍ لم يضعه.**
+	f.setSetting(t, "auth.require_whatsapp", true)
+	f.setSetting(t, "customers.require_whatsapp", true)
 	f.setSetting(t, "orders.max_open_per_customer", 3)
 
 	in := orders.CreateInput{

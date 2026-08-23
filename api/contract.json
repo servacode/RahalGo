@@ -4000,6 +4000,15 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/road-correlation",
+      "handler": "handleRoadCorrelation",
+      "auth": true,
+      "roles": [
+        "driver"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/driver/orders/{id}/route",
       "handler": "handleDriverOrderRoute",
@@ -4466,6 +4475,24 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/merchant/my-reports",
+      "handler": "handleMerchantMyReports",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "reports",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/merchant/orders/{id}",
       "handler": "handleMerchantGetOrder",
       "auth": true,
@@ -4764,6 +4791,10 @@
           "type": "unknown"
         },
         {
+          "name": "reportable",
+          "type": "unknown"
+        },
+        {
           "name": "status_counts",
           "type": "unknown"
         },
@@ -4811,6 +4842,10 @@
         "merchant"
       ],
       "request": [
+        {
+          "name": "name",
+          "type": "?string"
+        },
         {
           "name": "default_prep_minutes",
           "type": "?int"
@@ -5339,6 +5374,10 @@
           "type": "unknown"
         },
         {
+          "name": "merchant_help_text",
+          "type": "unknown"
+        },
+        {
           "name": "privacy_text",
           "type": "unknown"
         },
@@ -5683,6 +5722,12 @@
       "method": "GET",
       "path": "/api/v1/public/sections/{id}/items",
       "handler": "handlePublicSectionItems",
+      "auth": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/suggest",
+      "handler": "handleSuggestWith",
       "auth": false
     },
     {

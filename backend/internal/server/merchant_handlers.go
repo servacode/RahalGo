@@ -174,10 +174,57 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وأيُّها يُبلَّغ عنه — يقوله الخادمُ لا الشاشة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (طلبُ المالك ٢٠٢٦-٠٨-٢٣: «بسجلّ الطلبات يجب أن يكون هناك زرُّ إبلاغٍ
+	//  عن السائق».)
+	//
+	// **والشاشةُ لا تملك أن تقرّر** — شروطُ القبول ثلاثة، **وأحدُها محجوبٌ
+	// عنها عمداً**: `redactForMerchant` يمحو `driver_id` قبل أن يخرج
+	// الردُّ (**«المتجرُ يسلّم لمن يأتي ولا شأن له بمن هو»**).
+	//
+	// **فزرٌّ يُعرض على طلبٍ بلا سائقٍ يردّ خطأً لا يفهمه صاحبُ المطعم** —
+	// «سببٌ غير صالح» وهو لم يختر سبباً بعد.
+	//
+	// **والمهلةُ من الإعدادات لا رقماً مكتوباً هنا** — رقمٌ منسوخٌ في
+	// موضعين يفترق أحدُهما عن الآخر يومَ يُبدَّل.
+	reportable := []string{}
+	if f.ClosedOnly {
+		hours := s.settings.GetInt(r.Context(), "support.complaint_window_hours")
+		if hours <= 0 {
+			hours = 24
+		}
+		rrows, err := s.pg.Query(r.Context(), `
+			SELECT o.id::text FROM orders o
+			WHERE o.merchant_id = $1
+			  AND o.closed_at IS NOT NULL
+			  AND o.driver_id IS NOT NULL
+			  AND o.closed_at > now() - ($2::int * interval '1 hour')
+			  AND NOT EXISTS (
+			      SELECT 1 FROM tickets t
+			      WHERE t.order_id = o.id AND t.created_by = $3)`,
+			merchantID, hours, userIDFrom(r))
+		if err == nil {
+			defer rrows.Close()
+			for rrows.Next() {
+				var id string
+				if rrows.Scan(&id) == nil {
+					reportable = append(reportable, id)
+				}
+			}
+		}
+	}
+
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"orders": res.Orders, "total": res.Total,
 		"page": res.Page, "per_page": res.PerPage,
 		"status_counts": counts,
+		// **وما يُبلَّغ عنه قائمةٌ لا حقلٌ في الطلب** — الطلبُ بنيةٌ
+		// مشتركةٌ بين الأدوار، **وحقلٌ يخصّ المتجرَ فيها يخرج للسائق
+		// والزبون معه.**
+		"reportable": reportable,
 	})
 }
 

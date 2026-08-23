@@ -90,6 +90,13 @@ type Offer struct {
 	// في موضعين يفترق يوماً، **فتُعرض على الزبون عروضٌ انتهت.**
 	Live      bool      `json:"live"`
 	CreatedAt time.Time `json:"created_at"`
+
+	// HasOptions للصنف خياراتٌ تُختار قبل الطلب — **حجمٌ أو إضافات.**
+	//
+	// **وشاشةُ العروض تُدخل الصنفَ السلّةَ بضغطةٍ واحدة** — فصنفٌ بحجمٍ
+	// إلزاميٍّ يدخل بلا اختيار **ويُردّ الطلبُ كلُّه عند الإرسال**
+	// (`orders/service.go`)، ولا يعرف الزبونُ أيَّ صنفٍ سبّبه.
+	HasOptions bool `json:"has_options"`
 }
 
 // LiveCond شرطُ السريان — **تعبيرٌ واحدٌ يُعاد استعماله.**
@@ -111,7 +118,8 @@ const offerSelect = `
 	       mr.id::text, im.path,
 	       COALESCE(mi.price, 0),
 	       o.discount_percent, o.borne_by,
-	       o.starts_at, o.ends_at, o.active, ` + LiveCond + `, o.created_at
+	       o.starts_at, o.ends_at, o.active, ` + LiveCond + `, o.created_at,
+	       EXISTS (SELECT 1 FROM modifier_groups g WHERE g.item_id = mi.id)
 	FROM offers o
 	LEFT JOIN media mm ON mm.id = o.media_id
 	LEFT JOIN menu_items mi ON mi.id = o.menu_item_id
@@ -127,7 +135,8 @@ func scan(rows interface {
 		&o.MediaID, &o.ImageURL, &o.Href,
 		&o.MenuItemID, &o.ItemName, &o.MerchantName, &o.MerchantID, &o.ItemImageURL,
 		&cost, &o.DiscountPercent, &o.BorneBy,
-		&o.StartsAt, &o.EndsAt, &o.Active, &o.Live, &o.CreatedAt); err != nil {
+		&o.StartsAt, &o.EndsAt, &o.Active, &o.Live, &o.CreatedAt,
+		&o.HasOptions); err != nil {
 		return nil, err
 	}
 	o.ImageURL = media.URLForPtr(o.ImageURL)

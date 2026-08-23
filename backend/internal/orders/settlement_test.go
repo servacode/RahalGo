@@ -72,6 +72,19 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 	// **واختبارٌ يتّكئ على افتراضٍ يفحص شيئين**: القاعدةَ التي كُتب لها،
 	// **والرقمَ الذي لم يُكتب له** — فيسقط حين يتغيّر الثاني ويُظنّ أنّ الأوّل
 	// انكسر.
+	//
+	// ══════════════════════════════════════════════════════════════════
+	// **ودائرةُ التوصيل تُرسَم هنا — لا تُورَث من تشغيلٍ مضى**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (خطوةُ نظافة الاختبار ٢٠٢٦-٠٨-٢٠.)
+	//
+	// **يومَ صارت القاعدةُ تبدأ نظيفةً سقطت أربعةُ اختباراتٍ هنا** —
+	// الخصمُ والسباقان — **بخطأِ `22P02` على `zone_id` فارغ.**
+	//
+	// **ولم تكن ترسم دائرةً قطّ**: كانت تنجح بدائرةٍ خلّفها عملٌ سابق
+	// في القاعدة المشتركة، **فهي تفحص الخصمَ وتتّكئ على ما لا تعرفه.**
+	seedZone(t, pool)
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO app_settings (key, value) VALUES
 			('sales.activation_orders','1'::jsonb),
@@ -340,8 +353,8 @@ func TestCreate_WalletChargeFailure_LeavesNoOrder(t *testing.T) {
 		t.Fatalf("تعذّر إنشاء قسم: %v", err)
 	}
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO menu_items (merchant_id, section_id, name, merchant_price, price, available)
-		VALUES ($1, $2, 'صنف', 20000, 20000, true) RETURNING id`,
+		INSERT INTO menu_items (merchant_id, section_id, platform_section_id, name, merchant_price, price, available)
+		VALUES ($1, $2, (SELECT id FROM platform_sections ORDER BY sort_order LIMIT 1), 'صنف', 20000, 20000, true) RETURNING id`,
 		f.merchantID, sectionID).Scan(&itemID); err != nil {
 		t.Fatalf("تعذّر إنشاء صنف: %v", err)
 	}
@@ -408,8 +421,8 @@ func TestCreate_RequiresWhatsAppVerified(t *testing.T) {
 		t.Fatalf("قسم: %v", err)
 	}
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO menu_items (merchant_id, section_id, name, merchant_price, price, available)
-		VALUES ($1, $2, 'صنف', 20000, 20000, true) RETURNING id`,
+		INSERT INTO menu_items (merchant_id, section_id, platform_section_id, name, merchant_price, price, available)
+		VALUES ($1, $2, (SELECT id FROM platform_sections ORDER BY sort_order LIMIT 1), 'صنف', 20000, 20000, true) RETURNING id`,
 		f.merchantID, sectionID).Scan(&itemID); err != nil {
 		t.Fatalf("صنف: %v", err)
 	}

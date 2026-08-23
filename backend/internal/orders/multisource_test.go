@@ -111,8 +111,8 @@ func TestSources_CapEnforced(t *testing.T) {
 			t.Fatalf("تعذّر إنشاء قسم: %v", err)
 		}
 		if err := f.pool.QueryRow(ctx, `
-			INSERT INTO menu_items (merchant_id, section_id, name, merchant_price, price, available)
-			VALUES ($1, $2, $3, 10000, 10000, true) RETURNING id`,
+			INSERT INTO menu_items (merchant_id, section_id, platform_section_id, name, merchant_price, price, available)
+			VALUES ($1, $2, (SELECT id FROM platform_sections ORDER BY sort_order LIMIT 1), $3, 10000, 10000, true) RETURNING id`,
 			mid, secID, name).Scan(&itemID); err != nil {
 			t.Fatalf("تعذّر إنشاء صنف: %v", err)
 		}

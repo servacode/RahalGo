@@ -58,7 +58,11 @@ type Server struct {
 	hub        *realtime.Hub
 	geo        *geo.Service
 	// route **محرّكُ المسارات** — وفارغٌ يعني الخطَّ المستقيم.
-	route     *routing.Client
+	// route **محرّكُ المسارات بعقده لا بصنفه** — المرحلة ٨أ.
+	//
+	// **والخادمُ لا يعرف أيَّ محرّكٍ يردّ** — يعرف أنّه يردّ
+	// `Route` و`RouteSet`. **ولا يعلم به الجوّالُ أصلاً** (البند ٢).
+	route     routing.Backend
 	notify    *notifications.Service
 	push      *push.Service
 	otpStatus func() map[string]any
@@ -309,6 +313,9 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/sections", s.handlePublicSections)
 		r.Get("/public/sections/{id}/items", s.handlePublicSectionItems)
 		r.Get("/public/items/{id}", s.handlePublicItem)
+		// **«يُطلب معه»** — مشروبٌ ومقبّلاتٌ تُعرض على من ملأ سلّته.
+		// (طلبُ المالك ٢٠٢٦-٠٨-٢٢. انظر `suggest_handlers.go`.)
+		r.Get("/public/suggest", s.handleSuggestWith)
 		r.Get("/public/search/items", s.handleSearchItems)
 		r.Get("/public/search", s.handlePublicSearch)
 		r.Get("/public/invite", s.handlePublicInvite)
@@ -522,6 +529,11 @@ func (s *Server) Router() http.Handler {
 			// **ونداءٌ وحدَه لا حقلٌ في القائمة**: القائمةُ خمسةُ طلبات
 			// تُقرأ كلَّ ثوان، **والمسارُ يلزم لواحدٍ في يده.**
 			r.Get("/orders/{id}/route", s.handleDriverOrderRoute)
+			// **وارتباطُ الأثر بالمسار** — المرحلة ٨ب.
+			//
+			// **ولا يُنادى في حلقة** (البند ٢٠ من التحليل): عند
+			// اشتباهٍ مستمرّ لا مع كلّ قراءة.
+			r.Post("/orders/{id}/road-correlation", s.handleRoadCorrelation)
 			// **سجلُّه** — ما نفّذه نجح أم فشل. **وما انتهى كان يختفي**، فلا
 			// يجد طلباً يتذكّره ليُبلّغ عنه. (انظر `driver_history.go`)
 			r.Get("/orders/history", s.handleDriverHistory)
@@ -571,6 +583,10 @@ func (s *Server) Router() http.Handler {
 			// مخالفات، **ولا يُسمع منه.**
 			r.Get("/report-reasons", s.handleMerchantReportReasons)
 			r.Post("/orders/{id}/report", s.handleMerchantReport)
+			// **ومن أبلغ يرى جوابَه** — (طلبُ المالك ٢٠٢٦-٠٨-٢٣.) **وبلاغٌ
+			// يمضي بلا شاشةٍ تقول ما صار به يُحسب ضائعاً**، فيُعاد أو
+			// يُحلّ في الشارع. انظر `merchant_reports.go`.
+			r.Get("/my-reports", s.handleMerchantMyReports)
 			r.Get("/stores/{id}/hours", s.handleMerchantGetHours)
 			r.Put("/stores/{id}/hours", s.handleMerchantSetHours)
 			r.Patch("/stores/{id}/settings", s.handleMerchantSettings)

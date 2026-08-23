@@ -172,7 +172,7 @@ func (s *Server) handleOrderAssign(w http.ResponseWriter, r *http.Request) {
 		EntityID: chi.URLParam(r, "id"),
 		// **ووجهتُه لوحتُه هو** — كان "/orders"، **وهي صفحةُ طلبات
 		// الزبون**: من أُسند إليه طلبٌ فضغط الخبرَ وجد مشترياته هو.
-		Href: "/driver",
+		Href: "/portal", // **لوحتُه أيّاً كانت** — حُذفت `/driver` من الويب ٢٠٢٦-٠٨-٢٣
 		// **وتطبيقُ السائق وحدَه يرنّ** — انظر `orders/notify.go`.
 		Apps: []string{notifications.AppDriver},
 	})

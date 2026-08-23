@@ -400,7 +400,7 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 			UserID: id, Kind: notifications.KindOrder,
 			Title: title, Body: body,
 			Entity: "order", EntityID: orderID,
-			Href: "/driver",
+			Href: "/portal", // **لوحتُه أيّاً كانت** — حُذفت `/driver` من الويب ٢٠٢٦-٠٨-٢٣
 			// **وتطبيقُ السائق وحدَه يرنّ** — الحسابُ نفسُه قد يكون
 			// زبوناً، **وطلبُ عملٍ يرنّ في تطبيق الزبون** خبرٌ في غير
 			// مكانه.

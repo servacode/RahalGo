@@ -15,6 +15,7 @@ package qa
 
 import (
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -27,11 +28,25 @@ import (
 // إرشاد، **ولا خطأَ يظهر.**
 func TestRNAV_001_CacheKeyIsVersioned(t *testing.T) {
 	src := readSource(t, "../server/driver_route.go")
-	if !strings.Contains(src, `routeCacheVersion = "v2"`) {
+
+	// **والرقمُ يُرفع حين يتبدّل ما يُحفظ** — فلا يُثبَّت هنا.
+	//
+	// **كان `v2` مكتوباً نصّاً**، فرفعُه في المرحلة ٧ أسقط اختباراً
+	// **لا يحرس شيئاً**: المقصدُ أن يحمل المفتاحُ نسخةً، **لا أن تبقى
+	// نسخةً بعينها.**
+	if !regexp.MustCompile(`routeCacheVersion = "v\d+"`).MatchString(src) {
 		t.Error("RNAV-001 **لا نسخةَ في مفتاح المخبأ**")
 	}
 	if !strings.Contains(src, `"route:" + routeCacheVersion`) {
 		t.Error("RNAV-001 **المفتاحُ لا يحمل النسخة**")
+	}
+
+	// **والنمطُ في المفتاح أيضاً** — المرحلة ٧، البند ١٧.
+	//
+	// **فمفردٌ وبدائلُ لا يتشاركان مفتاحاً**، وإلّا ردَّ المخبأُ
+	// حمولةَ عقدٍ آخر.
+	if !strings.Contains(src, "cacheModeSingle") || !strings.Contains(src, "cacheModeAlts") {
+		t.Error("RNAV-001 **المفتاحُ لا يفرّق بين المفرد والبدائل**")
 	}
 }
 
