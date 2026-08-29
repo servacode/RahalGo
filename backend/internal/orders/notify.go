@@ -32,7 +32,7 @@ var t = struct {
 }{
 	offerDriver:       "طلب جديد بانتظارك",
 	assignedDriver:    "طلب أُسند إليك",
-	newOrderMerchant:  "طلب جديد وصلك",
+	newOrderMerchant:  "طلب جديد قادم إليك",
 	newOrderOps:       "طلب جديد في المنصة",
 	accepted:          "قبل المتجر طلبك",
 	preparing:         "طلبك قيد التحضير",
@@ -70,7 +70,11 @@ var endedByLabel = map[string]string{
 
 // orderParties أطراف الطلب الذين قد يُشعَرون.
 type orderParties struct {
-	number        int64
+	number int64
+	// **عددُ الأصناف والمبلغ** — يُقرآن في إشعار الطلب الجديد، انظر
+	// أدناه. **ولا يُنادى بهما نداءٌ ثانٍ**: هما في الصفّ نفسِه.
+	itemCount     int
+	subtotal      int64
 	customerID    string
 	merchantOwner *string
 	merchantName  string
@@ -82,13 +86,20 @@ func (s *Service) parties(ctx context.Context, orderID string) (orderParties, er
 	err := s.db.QueryRow(ctx, `
 		SELECT o.number, o.customer_id, mm.owner_user_id,
 		       -- **واسمُ المتجر فارغٌ في الطلب الخاصّ** — لا متجرَ له.
-		       COALESCE(mm.name, ''), mm.sales_rep_user_id
+		       COALESCE(mm.name, ''), mm.sales_rep_user_id,
+		       -- **عددُ الأصناف والمبلغ** — لإشعار الطلب الجديد.
+		       -- **ولا نداءَ ثانٍ لهما**: عدُّ الأسطر أرخصُ من رحلةٍ
+		       -- ثانيةٍ إلى القاعدة في مسارٍ يقع مع كلّ طلب.
+		       COALESCE((SELECT count(*) FROM order_items oi
+		                 WHERE oi.order_id = o.id), 0),
+		       o.subtotal
 		-- **ويُضمّ يساراً** — (٢٠٢٦-٠٨-٠٩): **وضمٌّ صلبٌ يُسكت إشعاراتِ الطلب
 		-- الخاصّ كلَّها** — لا الزبونُ يُخبَر ولا العملياتُ، **ولا خطأ يظهر**:
 		-- الدالّةُ تردّ «لا صفوف» فيُبتلع.
 		FROM orders o LEFT JOIN merchants mm ON mm.id = o.merchant_id
 		WHERE o.id = $1`, orderID).
-		Scan(&p.number, &p.customerID, &p.merchantOwner, &p.merchantName, &p.repID)
+		Scan(&p.number, &p.customerID, &p.merchantOwner, &p.merchantName, &p.repID,
+			&p.itemCount, &p.subtotal)
 	return p, err
 }
 
@@ -103,9 +114,26 @@ func (s *Service) notifyCreated(ctx context.Context, o *Order) {
 	}
 	ref := fmt.Sprintf("#%d", p.number)
 	if p.merchantOwner != nil {
+		// ══════════════════════════════════════════════════════════════
+		// **والنصُّ يقول ما يكفي للقرار**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// (بلاغُ المالك 2026-08-26: «يوصلو إشعار طلب جديد قادم إليك…
+		//  مشان يظلّ المتجرُ على اطّلاع».)
+		//
+		// **وكان الرقمَ وحدَه `#123`** — ولا يقول كم ولا ماذا.
+		// **وصاحبُ المتجر يقرأ الإشعارَ وهو يعمل**، فإن لم يفهمه أجّل
+		// فتحَ التطبيق، **والطلبُ له مهلةٌ تنتهي.**
+		//
+		// **وعددُ الأصناف والمبلغ يكفيان**: يعرف أصغيرٌ هو أم كبير،
+		// **فيقرّر أيتركُ ما بيده أم يُكمل.**
+		body := ref
+		if p.itemCount > 0 {
+			body = fmt.Sprintf("%s — %d صنفاً · %d ل.س", ref, p.itemCount, p.subtotal)
+		}
 		s.notify.Notify(ctx, notifications.Input{
 			UserID: *p.merchantOwner, Kind: notifications.KindOrder,
-			Title: t.newOrderMerchant, Body: ref,
+			Title: t.newOrderMerchant, Body: body,
 			Entity: "order", EntityID: o.ID, Href: "/portal",
 			// **يخصّ متجرَه لا حسابَه كزبون** — وهو يحمل التطبيقين.
 			Apps: []string{notifications.AppMerchant},
@@ -187,7 +215,7 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: p.customerID, Kind: notifications.KindOrder,
 		Title: title, Body: body,
-		Entity: "order", EntityID: orderID, Href: "/orders",
+		Entity: "order", EntityID: orderID, Href: "/portal/orders",
 		// **«طلبُك في الطريق» يخصّ تطبيقَ الزبون** — ولو كان صاحبُه سائقاً.
 		Apps: []string{notifications.AppCustomer},
 		// **وتقدّمُ الطلب يرنّ ولا يُحفَظ** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
@@ -283,7 +311,7 @@ func (s *Service) notifyCredits(ctx context.Context, orderID string, credits []w
 		s.notify.Notify(ctx, notifications.Input{
 			UserID: c.userID, Kind: notifications.KindWallet,
 			Title: c.title, Body: body,
-			Entity: "wallet", EntityID: orderID, Href: "/wallet",
+			Entity: "wallet", EntityID: orderID, Href: "/portal/wallet",
 			Apps: []string{c.app},
 			// ══════════════════════════════════════════════════════════
 			// **ومالُ السائق يُحفَظ ولا يرنّ**

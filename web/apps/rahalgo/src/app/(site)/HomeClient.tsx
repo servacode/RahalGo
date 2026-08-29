@@ -176,7 +176,7 @@ export default function HomeClient({ initial }: { initial: HomeData }) {
                 item={it}
                 favorite={has(it.id)}
                 onFavorite={signedIn ? toggle : undefined}
-                onRequireLogin={signedIn ? undefined : () => router.push("/login?next=/")}
+                onRequireLogin={signedIn ? undefined : () => router.push("/app")}
               />
             ))}
           </div>

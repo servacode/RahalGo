@@ -168,6 +168,23 @@ func run(logger *slog.Logger) error {
 	readSetting := settingsStore.GetNum
 
 	identitySvc := identity.NewService(identity.NewRepo(pg), rdb, tokens, otpSender, cfg.JWTSecret, logger)
+
+	// ══════════════════════════════════════════════════════════════════
+	// **ومن راسلنا يُردّ عليه** — انظر `identity/wa_inbound.go`.
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك 2026-08-25 بعد أن قُيّد رقمُ المنصّة مرّتين في يوم.)
+	//
+	// **و`notify` لا تعرف حساباً ولا رمزا** — فتُحقن الدالّةُ هنا كما
+	// حُقنت `delay` و`template`. **ويبقى الترتيبُ سليماً: الأدنى لا
+	// يعرف الأعلى.**
+	//
+	// **وتُربط بعد إنشاء الخدمة لا قبله** — ومن ربطها فوقُ ربط عدما.
+	if waBot != nil {
+		waBot.SetInbound(func(c context.Context, from, text string) string {
+			return identitySvc.HandleWAInbound(c, from, text)
+		})
+	}
 	identitySvc.SetSettingReader(readSetting)
 	if err := identitySvc.BootstrapAdmin(ctx, cfg.AdminPhone); err != nil {
 		return err

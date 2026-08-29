@@ -52,6 +52,7 @@ import {
   IconOrder,
   IconWarning,
   IconCamera,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import ImageUpload from "@/components/admin/ImageUpload";
@@ -562,14 +563,7 @@ function AddItemModal({
           onChange={(e) => setPrice(e.target.value)}
         />
         {error && <p className="text-sm text-danger">{error}</p>}
-        <div className="flex gap-2">
-          <Button disabled={busy} onClick={submit}>
-            {m.common.save}
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-        </div>
+        <FormActions onSave={submit} onCancel={onClose} busy={busy} />
       </div>
     </Modal>
   );
@@ -668,14 +662,7 @@ function EditItemModal({
         />
         <p className="text-xs text-ink-muted">{S.marginHintItem}</p>
         {error && <p className="text-sm text-danger">{error}</p>}
-        <div className="flex gap-2">
-          <Button disabled={busy} onClick={submit}>
-            {m.common.save}
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-        </div>
+        <FormActions onSave={submit} onCancel={onClose} busy={busy} />
       </div>
     </Modal>
   );

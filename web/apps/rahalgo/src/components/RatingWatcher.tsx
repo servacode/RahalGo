@@ -45,7 +45,7 @@ interface RateInfo {
 }
 
 /** **صفحاتٌ لا تُقاطَع** — فيها خطوةٌ نصفُها مكتوب. */
-const BUSY_PAGES = ["/cart", "/login", "/signup", "/forgot", "/account", "/join"];
+const BUSY_PAGES = ["/cart", "/app", "/app", "/app", "/account", "/join"];
 
 /**
  * **ما رُدَّ من نوافذ التقييم** — في المتصفّح لا في الخادم.

@@ -28,7 +28,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Input, Modal } from "@rahalgo/ui";
+import { Button, Input, Modal, FormActions} from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
 const U = m.admin.users;
@@ -63,16 +63,14 @@ export function StatusReasonModal({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          {/* **والحظرُ أحمرُ والإيقافُ ليس كذلك** — فعلان في نافذةٍ واحدةٍ
-              ومعناهما مختلف، **ولونٌ واحدٌ لهما يجعل الضغطةَ قرعة.** */}
-          <Button type="submit" variant={status === "blocked" ? "danger" : "primary"}>
-            {label}
-          </Button>
-        </div>
+        {/* **والحظرُ أحمرُ والإيقافُ ليس كذلك** — فعلان في نافذةٍ واحدةٍ
+            ومعناهما مختلف، **ولونٌ واحدٌ لهما يجعل الضغطةَ قرعة.** */}
+        <FormActions
+          submit
+          onCancel={onClose}
+          saveLabel={label}
+          tone={status === "blocked" ? "danger" : undefined}
+        />
       </form>
     </Modal>
   );

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime, errorText} from "@rahalgo/i18n";
 import {
   Pagination,
   Alert,
@@ -30,6 +30,7 @@ import {
   IconReply,
   IconCheck,
   Money,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -98,9 +99,6 @@ function translateKey(key: string): string {
   }
   return typeof node === "string" ? node : m.errors.internal;
 }
-function errText(err: unknown): string {
-  return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
-}
 
 const textareaCls =
   "w-full surface-inset px-3 py-2 text-sm outline-none focus:border-primary";
@@ -138,7 +136,7 @@ export function TicketsView() {
       setData(await api<TicketPage>(`/api/v1/admin/tickets?${params}`));
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, [status, page]);
 
@@ -382,7 +380,7 @@ function CreateTicketModal({
       });
       onCreated(t.id);
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
       setBusy(false);
     }
   }
@@ -431,14 +429,7 @@ function CreateTicketModal({
         {error && (
           <Alert>{error}</Alert>
         )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {m.admin.tickets.form.create}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} busy={busy} saveLabel={m.admin.tickets.form.create} />
       </form>
     </Modal>
   );
@@ -470,7 +461,7 @@ function TicketDetailModal({
     try {
       setTicket(await api<Ticket>(`/api/v1/admin/tickets/${ticketID}`));
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, [ticketID]);
 
@@ -495,7 +486,7 @@ function TicketDetailModal({
       setReply("");
       onChanged();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -517,7 +508,7 @@ function TicketDetailModal({
       );
       onChanged();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }

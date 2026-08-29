@@ -11,9 +11,10 @@
  * وهل يملك صاحبُه طلبَ سحب.
  */
 
+import { FormActions } from "./FormActions";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Money } from "./money";
-import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime, errorText } from "@rahalgo/i18n";
 import { Badge, Button, Input, Modal } from "./components";
 import { Tabs } from "./navigation";
 import { Alert } from "./feedback";
@@ -68,14 +69,6 @@ const STATUS_VARIANT: Record<Payout["status"], "warning" | "success" | "danger">
   paid: "success",
   rejected: "danger",
 };
-
-function errText(err: unknown): string {
-  const key =
-    typeof err === "object" && err && "body" in err
-      ? ((err as { body?: { message_key?: string } }).body?.message_key ?? "").split(".").pop() ?? ""
-      : "";
-  return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
-}
 
 export function WalletPage({
   api,
@@ -576,7 +569,7 @@ function PayoutModal({
       });
       onDone();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
       setBusy(false);
     }
   }
@@ -618,14 +611,7 @@ function PayoutModal({
           <Alert>{error}</Alert>
         )}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {busy ? m.common.loading : P.submit}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} busy={busy} saveLabel={busy ? m.common.loading : P.submit} />
       </form>
     </Modal>
   );

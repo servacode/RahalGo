@@ -24,7 +24,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, errorText} from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
@@ -36,6 +36,7 @@ import {
   IconOrder,
   IconAdd,
   LoadingState,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -53,11 +54,6 @@ interface Row {
   closed_at: string;
 }
 
-function errText(err: unknown): string {
-  if (!(err instanceof ApiError)) return m.errors.internal;
-  const key = err.body.message_key.split(".").pop() ?? "";
-  return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
-}
 
 export default function ViolationsModal({
   merchant,
@@ -86,7 +82,7 @@ export default function ViolationsModal({
       setLimit(res.limit);
       setRows(res.items ?? []);
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
       setRows([]);
     }
   }, [merchant.id]);
@@ -110,7 +106,7 @@ export default function ViolationsModal({
       await load();
       await onChanged();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -187,14 +183,7 @@ export default function ViolationsModal({
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setIssuing(false)}>
-              {m.common.cancel}
-            </Button>
-            <Button variant="danger" disabled={busy || !reason.trim()} onClick={() => void issue()}>
-              {V.issue}
-            </Button>
-          </div>
+          <FormActions onSave={() => void issue()} onCancel={() => setIssuing(false)} saveLabel={V.issue} tone="danger" />
         </div>
       ) : (
         <div className="mt-4 flex justify-end">

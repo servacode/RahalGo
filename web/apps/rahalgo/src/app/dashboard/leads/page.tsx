@@ -28,6 +28,7 @@ import {
   Modal,
   Input,
   Alert,
+  FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -367,24 +368,10 @@ export default function LeadsPage() {
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
+            <FormActions onSave={() => void setStatus(rejecting.id, "rejected", note.trim())} onCancel={() => {
                   setRejecting(null);
                   setNote("");
-                }}
-              >
-                {m.common.cancel}
-              </Button>
-              <Button
-                variant="danger"
-                disabled={!note.trim() || busy === rejecting.id}
-                onClick={() => void setStatus(rejecting.id, "rejected", note.trim())}
-              >
-                {m.admin.leads.markRejected}
-              </Button>
-            </div>
+                }} saveLabel={m.admin.leads.markRejected} tone="danger" />
           </div>
         </Modal>
       )}

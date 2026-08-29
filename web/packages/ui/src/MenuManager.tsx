@@ -16,9 +16,10 @@
  * تُسمّى «صنف» في كل المشروع، فجمعُها هو اللفظ المتّسق.
  */
 
+import { FormActions } from "./FormActions";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Money } from "./money";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import { Button, Input, Select, Badge, Modal } from "./components";
 import { Confirm, Alert } from "./feedback";
 import { EmptyState } from "./layout";
@@ -109,19 +110,6 @@ export interface MenuPaths {
   platformSections: () => string;
 }
 
-function errText(err: unknown): string {
-  const key =
-    typeof err === "object" && err && "body" in err
-      ? ((err as { body?: { message_key?: string } }).body?.message_key ?? "")
-      : "";
-  let node: unknown = m;
-  for (const part of key.split(".")) {
-    if (typeof node !== "object" || node === null) return m.errors.internal;
-    node = (node as Record<string, unknown>)[part];
-  }
-  return typeof node === "string" ? node : m.errors.internal;
-}
-
 export function MenuManager({
   api,
   paths,
@@ -203,7 +191,7 @@ export function MenuManager({
       setSections(Array.isArray(res) ? res : (res?.sections ?? []));
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, [api, paths, merchantID]);
 
@@ -219,7 +207,7 @@ export function MenuManager({
       });
       await load();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 
@@ -241,7 +229,7 @@ export function MenuManager({
       setPendingDelete(null);
       await load();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -582,7 +570,7 @@ function ItemModal({
       }
       onSaved();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -782,14 +770,7 @@ function ItemModal({
         {error && (
           <Alert>{error}</Alert>
         )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {m.common.save}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} busy={busy} />
       </form>
     </Modal>
   );

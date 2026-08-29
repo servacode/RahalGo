@@ -31,7 +31,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText} from "@rahalgo/i18n";
 import {
   Alert,
   PageHeader,
@@ -74,9 +74,6 @@ function translateKey(key: string): string {
   }
   return typeof node === "string" ? node : m.errors.internal;
 }
-function errText(err: unknown): string {
-  return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
-}
 
 interface Draft {
   id: string | null;
@@ -106,7 +103,7 @@ export default function CitiesPanel() {
       setCities(res.cities ?? []);
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, []);
 
@@ -171,7 +168,7 @@ export default function CitiesPanel() {
       setSelectedID(null);
       await load();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -200,7 +197,7 @@ export default function CitiesPanel() {
       });
       await load();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 
@@ -212,7 +209,7 @@ export default function CitiesPanel() {
       setDraft(null);
       await load();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 

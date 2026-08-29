@@ -10,6 +10,7 @@
  * ما يبلغ به السائق الباب. فإخفاء الخريطة خلف زرٍّ يجعل نصف العناوين بلا دبّوس دقيق.
  */
 
+import { FormActions } from "./FormActions";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, Input, Badge } from "./components";
@@ -210,14 +211,7 @@ export function AddressBook({
           {error && (
             <Alert>{error}</Alert>
           )}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setAdding(false)}>
-              {m.common.cancel}
-            </Button>
-            <Button type="submit" disabled={busy}>
-              {m.common.save}
-            </Button>
-          </div>
+          <FormActions submit onCancel={() => setAdding(false)} busy={busy} />
         </form>
       ) : (
         <Button variant="secondary" onClick={() => setAdding(true)} className="flex items-center gap-1.5">

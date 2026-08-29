@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, errorText, fmtMoney } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText, fmtMoney} from "@rahalgo/i18n";
 import {
   Alert,
   PageHeader,
@@ -49,9 +49,6 @@ interface Report {
   top_drivers: { name: string; phone: string; delivered: number; cash: number }[];
 }
 
-function errText(err: unknown): string {
-  return err instanceof ApiError ? m.errors.internal : m.errors.internal;
-}
 
 function iso(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -210,7 +207,7 @@ export default function ReportsPage() {
       setReport(await api<Report>(`/api/v1/admin/reports?from=${from}&to=${to}`));
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, [from, to]);
 

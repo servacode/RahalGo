@@ -120,6 +120,18 @@ func (s *Service) intSetting(ctx context.Context, key string, fallback int64) in
 	return s.setting(ctx, key, fallback)
 }
 
+// boolSetting **مفتاحٌ منطقيٌّ يُقرأ رقماً.**
+//
+// **و`coerceNum` تترجم `true` إلى واحدٍ و`false` إلى صفر** — فلا
+// يحتاج جسرٌ ثانٍ. (انظر `settings/settings.go`.)
+func (s *Service) boolSetting(ctx context.Context, key string, fallback bool) bool {
+	f := int64(0)
+	if fallback {
+		f = 1
+	}
+	return s.intSetting(ctx, key, f) != 0
+}
+
 // otpLifetime مهلةُ الرمز — من اللوحة أو الاحتياطيّ.
 func (s *Service) otpLifetime(ctx context.Context) time.Duration {
 	return time.Duration(s.intSetting(ctx, "security.otp_ttl_min",
@@ -454,12 +466,40 @@ func (s *Service) ConfirmSignup(ctx context.Context, rawPhone, code, fullName, p
 	if int64(len(password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) {
 		return nil, ErrWeakPassword
 	}
-	valid, err := s.repo.ConsumeOTP(ctx, phone, s.hashOTP(phone, code), "signup")
-	if err != nil {
-		return nil, err
-	}
-	if !valid {
-		return nil, ErrOTPInvalid
+	// ══════════════════════════════════════════════════════════════════
+	// **والرمزُ عند التسجيل صار اختياريّاً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك 2026-08-25: «تسجيلُ الدخول ما بدّو كود للزبون…
+	//  وعند أوّل طلب يقال له: يجب توثيق الحساب».)
+	//
+	// # ولماذا نُقل الاحتكاك
+	//
+	// **وقُيّد رقمُ واتساب المنصّة مرّتين في يوم** — الثانيةُ بعد
+	// رسالتَي تحقّقٍ اثنتين. **وواتساب يمنع الحساباتِ الشخصيّةَ من
+	// مراسلة من لم يراسلها**، ولا تُصلح ذلك مهلةٌ ولا صياغةُ نصّ.
+	//
+	// **ومن حُبس على شاشة رمزٍ لا يصل لم يُنشئ حساباً أصلاً.**
+	//
+	// # والتوثيقُ لم يُلغَ، نُقل
+	//
+	// **والحسابُ غيرُ الموثَّق يتصفّح ولا يطلب** — والمنعُ قائمٌ سلفاً
+	// في `orders/service.go` و`driver_handlers.go` و`leads_handlers.go`.
+	// **فمن أراد أن يطلب وثّق نفسَه حينها** برسالةٍ يرسلها هو
+	// (`wa_inbound.go`).
+	//
+	// # ومفتاحٌ يُعيد الشرطَ متى شئنا
+	//
+	// **ويوم تُشترى بوّابةُ رسائلَ يُرفع المفتاحُ فيعود الرمزُ شرطاً**
+	// — بلا شيفرةٍ تتغيّر.
+	if s.boolSetting(ctx, "auth.signup_verify", false) {
+		valid, err := s.repo.ConsumeOTP(ctx, phone, s.hashOTP(phone, code), "signup")
+		if err != nil {
+			return nil, err
+		}
+		if !valid {
+			return nil, ErrOTPInvalid
+		}
 	}
 	hash, err := auth.HashPassword(password)
 	if err != nil {

@@ -8,7 +8,17 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       // صفحات الحساب الشخصية لا تُفهرس
-      disallow: ["/cart", "/orders", "/wallet", "/login"],
+      // **و`‎/app` مسموحٌ عمداً** — هو البابُ الذي نريد أن يجده الناس.
+      //
+      // **وبابُ الإدارة لا يُذكر هنا إطلاقاً**: `robots.txt` ملفٌّ عامٌّ
+      // يقرؤه كلُّ أحد، **ومن كتب `Disallow: /adminrahalgo` أعلن عنوانَه**
+      // — وذاك نقيضُ سبب تغييره.
+      // **ولا يُذكر بابُ الإدارة هنا** — `robots.txt` ملفٌّ عامٌّ
+      // يقرؤه كلُّ أحد، **ومن كتب `Disallow: /adminrahalgo` أعلن
+      // عنوانَه**، وذاك نقيضُ سبب تغييره.
+      //
+      // **وأقسامُ الزبون حُذفت ٢٠٢٦-٠٨-٢٦** فلم يبقَ ما يُمنع منها.
+      disallow: ["/dashboard"],
     },
     sitemap: `${SITE}/sitemap.xml`,
   };

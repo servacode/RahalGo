@@ -40,6 +40,7 @@ import {
   IconUser,
   IconDate,
   IconStatus,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth, hasRole } from "@/lib/auth";
@@ -244,14 +245,7 @@ function ReceiveModal({
         />
         <Input label={C.note} value={note} onChange={(e) => setNote(e.target.value)} />
         {error && <p className="text-sm text-danger">{error}</p>}
-        <div className="flex gap-2">
-          <Button disabled={busy} onClick={submit}>
-            {C.confirm}
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-        </div>
+        <FormActions onSave={submit} onCancel={onClose} busy={busy} saveLabel={C.confirm} />
       </div>
     </Modal>
   );

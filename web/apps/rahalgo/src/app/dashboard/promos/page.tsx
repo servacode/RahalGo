@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDate, fmtMoney } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, fmtMoney, errorText} from "@rahalgo/i18n";
 import {
   Tabs,
   Alert,
@@ -23,6 +23,7 @@ import {
   IconDelete,
   IconEdit,
   Checkbox,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import ImageUpload from "@/components/admin/ImageUpload";
@@ -62,9 +63,6 @@ function translateKey(key: string): string {
     node = (node as Record<string, unknown>)[part];
   }
   return typeof node === "string" ? node : m.errors.internal;
-}
-function errText(err: unknown): string {
-  return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
 }
 
 const KIND_LABEL: Record<Promo["kind"], string> = {
@@ -118,7 +116,7 @@ function CodesTab({ isAdmin }: { isAdmin: boolean }) {
       setPromos(await api<Promo[]>("/api/v1/admin/promos"));
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, []);
 
@@ -134,7 +132,7 @@ function CodesTab({ isAdmin }: { isAdmin: boolean }) {
       });
       await load();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 
@@ -280,7 +278,7 @@ function PromoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
       });
       onSaved();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -363,14 +361,7 @@ function PromoModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
         {error && (
           <Alert>{error}</Alert>
         )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {m.common.save}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} busy={busy} />
       </form>
     </Modal>
   );

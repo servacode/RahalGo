@@ -28,7 +28,7 @@
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, errorText} from "@rahalgo/i18n";
 import {
   Money,
   Tabs,
@@ -49,6 +49,7 @@ import {
   IconBalance,
   IconAdd,
   IconOrder,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth, hasRole } from "@/lib/auth";
@@ -86,11 +87,6 @@ interface DisputePage {
   open_counts: Record<string, number>;
 }
 
-function errText(err: unknown): string {
-  if (!(err instanceof ApiError)) return m.errors.internal;
-  const key = err.body.message_key.split(".").pop() ?? "";
-  return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
-}
 
 /** **سببٌ مصنَّفٌ يُترجَم، وحرٌّ يُعرض كما كُتب.** */
 const reasonText = (r: string) => FAIL_REASONS[r] ?? r;
@@ -298,7 +294,7 @@ function SettleModal({
       });
       onDone();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
       setBusy(false);
     }
   }
@@ -319,14 +315,7 @@ function SettleModal({
           onChange={(e) => setNote(e.target.value)}
         />
         {error && <p className="text-sm text-danger">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" variant={charge ? "danger" : "primary"} disabled={busy}>
-            {charge ? C.chargeConfirm : C.waiveConfirm}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} busy={busy} saveLabel={charge ? C.chargeConfirm : C.waiveConfirm} />
       </form>
     </Modal>
   );
@@ -365,7 +354,7 @@ function NewDisputeModal({ onClose, onDone }: { onClose: () => void; onDone: () 
       });
       onDone();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
       setBusy(false);
     }
   }
@@ -418,14 +407,7 @@ function NewDisputeModal({ onClose, onDone }: { onClose: () => void; onDone: () 
           onChange={(e) => setReason(e.target.value)}
         />
         {error && <p className="text-sm text-danger">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy || !who}>
-            {C.openBtn}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} saveLabel={C.openBtn} />
       </form>
     </Modal>
   );

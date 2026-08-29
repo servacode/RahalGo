@@ -32,7 +32,7 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuth, portalFor } from "@rahalgo/auth";
+import { useAuth, portalFor, PANEL_PATHS } from "@rahalgo/auth";
 import { LoadingState } from "@rahalgo/ui";
 
 export default function PortalRedirect() {
@@ -48,11 +48,27 @@ export default function PortalRedirect() {
     const tail = Array.isArray(rest) ? rest.join("/") : (rest ?? "");
     const suffix = tail ? `/${tail}` : "";
     if (!user) {
-      router.replace(`/login?next=${encodeURIComponent(`/portal${suffix}`)}`);
+      router.replace("/app");
       return;
     }
-    /* **وزبونٌ لا لوحةَ له** — `portalFor` تردّ فارغاً، وبيتُه الجذر. */
+    /* ══════════════════════════════════════════════════════════════
+       **ولا لوحةَ لغير الإدارة على الويب**
+       ══════════════════════════════════════════════════════════════
+
+       (قرارُ المالك ٢٠٢٦-٠٨-٢٦.)
+
+       **والذيلُ يُلحق بلوحة الإدارة وحدَها** — `‎/portal/orders` تصير
+       `‎/dashboard/orders` لموظّف. **أمّا صاحبُ التطبيق فيُساق إلى
+       بابه**، ولا يُلحق به ذيلٌ: **`‎/app/orders` لا وجودَ لها**،
+       وإلحاقُها يصنع أربعمئةً وأربعة من إصلاحٍ قُصد به منعُها.
+
+       **وأمسك الحارسُ هذا** (`TestNotificationHrefsExist` ٢٠٢٦-٠٨-٢٧):
+       سبعُ نقاطٍ في المحرّك كانت تشير إلى صفحاتٍ حُذفت. */
     const base = portalFor(user.roles) ?? "/";
+    if (base === PANEL_PATHS.app) {
+      router.replace(PANEL_PATHS.app);
+      return;
+    }
     router.replace(base === "/" ? `/${tail}` : `${base}${suffix}`);
   }, [loading, user, params, router]);
 

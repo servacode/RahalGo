@@ -28,7 +28,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText} from "@rahalgo/i18n";
 import { Button, Alert, IconEdit, IconDate, IconOrder as IconMenu } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { HoursModal } from "@/components/admin/HoursModal";
@@ -41,14 +41,6 @@ const M = m.admin.merchants;
 /** **والصفُّ كاملاً** — **ونافذةُ التعديل تحتاجه كلَّه**، فلا يُختصر. */
 export type StoreTarget = Merchant;
 
-function errText(err: unknown): string {
-  if (err instanceof ApiError) {
-    const key = err.body.message_key.split(".").pop() ?? "";
-    const known = (m.errors as Record<string, string>)[key];
-    if (known) return known;
-  }
-  return m.errors.internal;
-}
 
 export function StoreActions({
   store,
@@ -70,7 +62,7 @@ export function StoreActions({
       setError("");
       onChanged();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 

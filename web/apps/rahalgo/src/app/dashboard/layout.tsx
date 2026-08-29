@@ -160,7 +160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const nav = useMemo(() => navFor(user?.roles), [user?.roles]);
 
   useEffect(() => {
-    if (!loading && !canAccessPanel(user)) router.replace("/login");
+    if (!loading && !canAccessPanel(user)) router.replace("/adminrahalgo");
   }, [user, loading, router]);
 
   if (loading || !canAccessPanel(user)) {
@@ -220,7 +220,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       shopLabel={m.shared.shopAsCustomer}
       onLogout={() => {
         logout();
-        router.replace("/login");
+        router.replace("/adminrahalgo");
       }}
     >
       {children}

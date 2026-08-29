@@ -2,9 +2,6 @@ import { fetchPlatform } from "@rahalgo/ui";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { FloatingCart } from "@/components/FloatingCart";
-import { CustomerChat } from "@/components/CustomerChat";
-import RatingWatcher from "@/components/RatingWatcher";
 import { BottomNav, BottomNavSpacer } from "@/components/BottomNav";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -64,16 +61,13 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             والشريطُ العلويُّ لما يُضغط كلَّ يوم. */}
         <Footer name={brand.name} social={brand.social} />
         {/* السلّة العائمة خارج الكرت: تُرافق التصفّح ولا تختفي بالتمرير */}
-        <FloatingCart />
         {/* **وفقّاعةُ المحادثة عند الزبون كما عند السائق** — (قرارُ
             المالك ٢٠٢٦-٠٨-٠٩: «يجب أن تظهر أيقونة المحادثة عند الطرفين
             ليبقى كرت الطلبات نظيفاً عند السائق وعند الزبون»).
 
             **وهي تُخفي نفسَها إن لم يكن له طلبٌ بسائق.** */}
-        <CustomerChat />
         {/* **ونافذةُ التقييم تُسأل حيث كان الزبون** — لا في صفحة
             الطلبات وحدَها. (قرارُ المالك ٢٠٢٦-٠٨-٠٩.) */}
-        <RatingWatcher />
         {/* **وفراغٌ بارتفاع الشريط السفليّ** — وبلاه يختفي آخرُ سطرٍ
             خلفه، وهو غالباً زرُّ الحسم. */}
         <BottomNavSpacer />

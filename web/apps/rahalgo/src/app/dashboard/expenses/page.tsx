@@ -50,6 +50,7 @@ import {
   IconWallet,
   IconAdd,
   IconStatus,
+  FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -357,14 +358,7 @@ function AddModal({
           onChange={(e) => setNote(e.target.value)}
         />
         {error && <Alert>{error}</Alert>}
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button disabled={busy || !amount.trim() || !categoryID} onClick={() => void submit()}>
-            {busy ? m.common.loading : m.common.save}
-          </Button>
-        </div>
+        <FormActions onSave={() => void submit()} onCancel={onClose} />
       </div>
     </Modal>
   );

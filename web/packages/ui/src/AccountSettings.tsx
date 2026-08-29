@@ -6,8 +6,9 @@
  * يُمرَّر لها عميل الـapi و mediaUrl الخاصان بكل تطبيق (حقن التبعية).
  */
 
+import { FormActions } from "./FormActions";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import { Button, Input } from "./components";
 import { Alert } from "./feedback";
 import { emitLocal } from "./Notifications";
@@ -18,14 +19,6 @@ const m = getMessages(defaultLocale);
 const A = m.shared.account;
 
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
-
-function errText(err: unknown): string {
-  const key =
-    typeof err === "object" && err && "body" in err
-      ? ((err as { body?: { message_key?: string } }).body?.message_key ?? "").split(".").pop() ?? ""
-      : "";
-  return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
-}
 
 /**
  * **بطاقةٌ في سطرٍ أفقيّ — لا صندوقٌ طويل.**
@@ -189,7 +182,7 @@ export function AccountSettings({
       setMsg(A.photoSaved);
       emitLocal("profile"); // الشريط العلوي يلتقط الصورة الجديدة فوراً
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -203,7 +196,7 @@ export function AccountSettings({
       setMsg(A.photoSaved);
       emitLocal("profile");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 
@@ -223,7 +216,7 @@ export function AccountSettings({
       setNext("");
       setConfirm("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -238,7 +231,7 @@ export function AccountSettings({
       await api("/api/v1/auth/phone/request", { method: "POST", body: JSON.stringify({ phone: newPhone }) });
       setOtpSent(true);
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setPhoneBusy(false);
     }
@@ -260,7 +253,7 @@ export function AccountSettings({
       setNewPhone("");
       setPhoneCode("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setPhoneBusy(false);
     }
@@ -275,7 +268,7 @@ export function AccountSettings({
       await api("/api/v1/auth/whatsapp/request", { method: "POST", body: JSON.stringify({ phone: wa }) });
       setWaSent(true);
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setWaBusy(false);
     }
@@ -297,7 +290,7 @@ export function AccountSettings({
       setMsg(A.whatsappDone);
       onVerified?.();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setWaBusy(false);
     }
@@ -311,7 +304,7 @@ export function AccountSettings({
       await api("/api/v1/auth/account/delete/request", { method: "POST" });
       setDelSent(true);
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setDelBusy(false);
     }
@@ -330,7 +323,7 @@ export function AccountSettings({
       // الجلسة أُبطلت في الخادم — نُخرج المستخدم بدل تركه في شاشة ميتة
       setTimeout(() => onDeleted?.(), 2500);
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setDelBusy(false);
     }
@@ -353,7 +346,7 @@ export function AccountSettings({
       // **والشريطُ العلويّ يقرأ الاسمَ** — فيُخبَر ليُحدّثه بلا تحديث صفحة.
       onVerified?.();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setNameBusy(false);
     }
@@ -517,16 +510,7 @@ export function AccountSettings({
                 {A.whatsappUnverified}
               </p>
             )}
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={waBusy} className="flex-1 py-2.5">
-                {waBusy ? m.common.loading : A.whatsappVerify}
-              </Button>
-              {waEditing && (
-                <Button type="button" variant="secondary" onClick={() => setWaEditing(false)}>
-                  {m.common.cancel}
-                </Button>
-              )}
-            </div>
+            <FormActions submit onCancel={() => setWaEditing(false)} busy={waBusy} saveLabel={waBusy ? m.common.loading : A.whatsappVerify} />
           </form>
         ) : (
           <form onSubmit={confirmWhatsApp} className="space-y-3">
@@ -546,14 +530,7 @@ export function AccountSettings({
               placeholder="••••••"
               maxLength={6}
             />
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" disabled={waBusy} className="flex-1 py-2.5">
-                {waBusy ? m.common.loading : A.whatsappVerify}
-              </Button>
-              <Button type="button" variant="secondary" onClick={() => setWaSent(false)}>
-                {m.common.cancel}
-              </Button>
-            </div>
+            <FormActions submit onCancel={() => setWaSent(false)} busy={waBusy} saveLabel={waBusy ? m.common.loading : A.whatsappVerify} />
           </form>
         )}
       </div>

@@ -8,8 +8,7 @@ import {
   fmtNum,
   fmtDateTime,
   fmtTime,
-  fmtSpan,
-} from "@rahalgo/i18n";
+  fmtSpan, errorText } from "@rahalgo/i18n";
 import {
   BrandMark,
   OrderRef,
@@ -37,6 +36,7 @@ import {
   IconWhatsApp,
   IconSwap,
   Invoice,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -548,11 +548,6 @@ function translateKey(key: string): string {
   }
   return typeof node === "string" ? node : m.errors.internal;
 }
-function errText(err: unknown): string {
-  return err instanceof ApiError
-    ? translateKey(err.body.message_key)
-    : m.errors.internal;
-}
 
 // ---------- الشاشة الرئيسية ----------
 
@@ -648,7 +643,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       setData(await api<OrderPage>(`/api/v1/admin/orders?${params}`));
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
     // **ويُقرأ مع كلّ تحديث** — سائقٌ يفتح دوامَه أو يُغلقه لا يُنتظر تحديثُ صفحة.
     try {
@@ -1603,20 +1598,10 @@ function OrderActions({
           onChange={(e) => setReason(e.target.value)}
         />
         {err && <p className="text-xs text-danger">{err}</p>}
-        <div className="flex gap-2">
-          <Button disabled={busy !== ""} onClick={() => void compensate()}>
-            {m.common.confirm}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
+        <FormActions onSave={() => void compensate()} onCancel={() => {
               setCompensating(false);
               setErr("");
-            }}
-          >
-            {m.common.cancel}
-          </Button>
-        </div>
+            }} saveLabel={m.common.confirm} />
       </div>
     );
   }
@@ -1690,26 +1675,13 @@ function OrderActions({
           </Alert>
         )}
         {err && <p className="text-xs text-danger">{err}</p>}
-        <div className="flex gap-2">
-          <Button
-            disabled={!target || !reason.trim() || busy !== ""}
-            onClick={() => void transfer()}
-          >
-            {m.admin.ordersPage.transferConfirm}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
+        <FormActions onSave={() => void transfer()} onCancel={() => {
               setTransferring(false);
               setReason("");
               setTarget("");
               setUnmatched([]);
               setErr("");
-            }}
-          >
-            {m.common.cancel}
-          </Button>
-        </div>
+            }} saveLabel={m.admin.ordersPage.transferConfirm} />
       </div>
     );
   }
@@ -1742,25 +1714,11 @@ function OrderActions({
           {m.admin.ordersPage.reasonHint}
         </p>
         {err && <p className="text-xs text-danger">{err}</p>}
-        <div className="flex gap-2">
-          <Button
-            variant="danger"
-            disabled={!reason.trim() || busy !== ""}
-            onClick={() => void go(asking, reason.trim())}
-          >
-            {m.admin.ordersPage.confirm}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
+        <FormActions onSave={() => void go(asking, reason.trim())} onCancel={() => {
               setAsking("");
               setReason("");
               setErr("");
-            }}
-          >
-            {m.common.cancel}
-          </Button>
-        </div>
+            }} saveLabel={m.admin.ordersPage.confirm} tone="danger" />
       </div>
     );
   }

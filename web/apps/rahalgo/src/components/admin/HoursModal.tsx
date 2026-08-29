@@ -14,8 +14,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, Modal, Checkbox, Alert, LoadingState, IconPrev } from "@rahalgo/ui";
+import { getMessages, defaultLocale, errorText} from "@rahalgo/i18n";
+import { Button, Modal, Checkbox, Alert, LoadingState, IconPrev, FormActions} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -36,14 +36,6 @@ export interface HoursTarget {
   emergency_closed: boolean;
 }
 
-function errText(err: unknown): string {
-  if (err instanceof ApiError) {
-    const key = err.body.message_key.split(".").pop() ?? "";
-    const known = (m.errors as Record<string, string>)[key];
-    if (known) return known;
-  }
-  return m.errors.internal;
-}
 
 export function HoursModal({
   merchant,
@@ -62,7 +54,7 @@ export function HoursModal({
   useEffect(() => {
     api<DayHours[]>(`/api/v1/admin/merchants/${merchant.id}/hours`)
       .then(setDays)
-      .catch((err) => setError(errText(err)));
+      .catch((err) => setError(errorText(err)));
   }, [merchant.id]);
 
   function updateDay(i: number, patch: Partial<DayHours>) {
@@ -87,7 +79,7 @@ export function HoursModal({
       await onChanged();
       onClose();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -156,14 +148,7 @@ export function HoursModal({
       {error && (
         <Alert className="mt-3">{error}</Alert>
       )}
-      <div className="mt-5 flex justify-end gap-2">
-        <Button variant="secondary" onClick={onClose}>
-          {m.common.cancel}
-        </Button>
-        <Button onClick={save} disabled={busy || !days}>
-          {m.common.save}
-        </Button>
-      </div>
+      <FormActions onSave={save} onCancel={onClose} />
     </Modal>
   );
 }

@@ -203,14 +203,8 @@ export default function ItemClient({ item, modifiers }: { item: BrowseItem; modi
         </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}
-        {added && (
-          <p className="text-sm text-success">
-            {m.site.menu.added}{" "}
-            <Link href="/cart" className="font-bold underline">
-              {m.terms.cart}
-            </Link>
-          </p>
-        )}
+        {/* **ولا رابطَ سلّةٍ** — حُذفت من الويب ٢٠٢٦-٠٨-٢٦. */}
+        {added && <p className="text-sm text-success">{m.site.menu.added}</p>}
       </div>
     </div>
   );

@@ -35,6 +35,7 @@ import {
   IconStar,
   IconDriver,
   IconUser,
+  FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -248,18 +249,7 @@ export default function IncentivesPage() {
             onChange={(e) => setReason(e.target.value)}
           />
 
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setGranting(null)}>
-              {m.common.cancel}
-            </Button>
-            <Button
-              variant={kind === "penalty" ? "danger" : "primary"}
-              disabled={busy || !reason.trim() || !(Number(amount) > 0)}
-              onClick={() => void submit()}
-            >
-              {P.send}
-            </Button>
-          </div>
+          <FormActions onSave={() => void submit()} onCancel={() => setGranting(null)} saveLabel={P.send} />
         </div>
       </Modal>
     </PageContainer>

@@ -30,6 +30,7 @@ import {
   Modal,
   FormSection,
   IconWarning,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -184,14 +185,7 @@ export function WarningsSection({ userID }: { userID: string }) {
             onChange={(e) => setNote(e.target.value)}
           />
           {error && <Alert>{error}</Alert>}
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              {m.common.cancel}
-            </Button>
-            <Button disabled={busy || !reason.trim()} onClick={() => void issue()}>
-              {busy ? m.common.loading : W.issue}
-            </Button>
-          </div>
+          <FormActions onSave={() => void issue()} onCancel={() => setOpen(false)} saveLabel={busy ? m.common.loading : W.issue} />
         </div>
       </Modal>
     </FormSection>

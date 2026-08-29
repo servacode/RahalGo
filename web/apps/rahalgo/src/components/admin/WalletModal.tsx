@@ -3,7 +3,7 @@
 /** نافذة المحفظة المشتركة — تُستخدم في أقسام المستخدمين والزبائن والمندوبين. */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtMoney } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtMoney, errorText} from "@rahalgo/i18n";
 import {
   Alert, Button, Input, Select, Modal, IconWallet,
   Checkbox,
@@ -19,9 +19,6 @@ function translateKey(key: string): string {
     node = (node as Record<string, unknown>)[part];
   }
   return typeof node === "string" ? node : m.errors.internal;
-}
-function errText(err: unknown): string {
-  return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
 }
 
 export default function WalletModal({
@@ -50,7 +47,7 @@ export default function WalletModal({
       setBalance(st.balance);
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, [user.id]);
 
@@ -71,7 +68,7 @@ export default function WalletModal({
       setNote("");
       await loadWallet();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }

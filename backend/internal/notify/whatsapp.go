@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -65,6 +66,31 @@ type WhatsAppSender struct {
 
 	// wake **يوقظ الحلقةَ الآن** — ولا تنتظر بقيّةَ مهلتها.
 	wake chan struct{}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **inbound — ومن يراسلنا يُردّ عليه**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قرارُ المالك ٢٠٢٦-٠٨-٢٥ بعد أن قُيّد الرقمُ مرّتين في يوم.)
+	//
+	// # ولماذا قُلب الاتّجاه
+	//
+	// **وواتساب يمنع الحساباتِ الشخصيّةَ من مراسلة من لم يراسلها** —
+	// **وقُيّد رقمُ المالك بعد رسالتَي تحقّقٍ اثنتين.** ولا تُصلح ذلك
+	// مهلةٌ ولا صياغةُ نصّ: **الاتّجاهُ هو المرصود لا العدد.**
+	//
+	// **والردُّ مسموح.** فيرسل الزبونُ «مرحبا رحّال غو، أريد توثيق
+	// حسابي» ومعها وسمٌ، **ويردّ البوتُ بالرمز.**
+	//
+	// # ولا تعرف هذه الحزمةُ ما الرمز
+	//
+	// **و`notify` لا تعرف حساباً ولا رمزَ تحقّق** — تلك حزمةُ الهوية.
+	// **فتُحقن دالّةٌ** كما حُقن `delay` و`template`، ويبقى الترتيبُ
+	// سليماً: الأدنى لا يعرف الأعلى.
+	//
+	// **والردُّ الفارغُ يعني: لا تردّ.** — ومن راسلنا بكلامٍ لا يعنينا
+	// لا يُزعَج بردٍّ آليّ.
+	inbound func(ctx context.Context, from, text string) string
 
 	// ══════════════════════════════════════════════════════════════════
 	// **pairWanted — ولا رمزَ إلّا بطلب**
@@ -189,6 +215,10 @@ func (s *WhatsAppSender) adopt(device *store.Device) {
 		if _, ok := evt.(*events.LoggedOut); ok {
 			s.logger.Warn("whatsapp logged out from the phone — re-pairing needed")
 			_ = s.Unpair(s.baseCtx)
+			return
+		}
+		if msg, ok := evt.(*events.Message); ok {
+			s.onInbound(ctx, c, msg)
 		}
 	})
 	s.clientMu.Lock()
@@ -655,11 +685,91 @@ func (s *WhatsAppSender) Unpair(ctx context.Context) error {
 // **والتمهّلُ بين الرسائل لا قبل كلّ واحدة**: من أرسل رسالةً وحيدةً بعد ساعةٍ
 // لا ينتظر شيئاً — **وتأخيرُ رمزِ تحقّقٍ بلا سببٍ يجعل صاحبَه يطلبه ثانيةً**،
 // فتصير رسالتان مكان واحدة.
+// SetInbound **يربط معالِجَ الرسائل الواردة** — انظر حقل `inbound`.
+func (s *WhatsAppSender) SetInbound(f func(ctx context.Context, from, text string) string) {
+	s.inbound = f
+}
+
+// onInbound **يقرأ رسالةً واردةً ويردّ إن كان فيها ما يعنينا.**
+//
+// # ولا يُردّ على مجموعةٍ ولا على النفس
+//
+// **ورسالةُ مجموعةٍ ليست طلبَ توثيق** — ومن ردّ عليها أزعج عشرين
+// شخصاً. **والرسالةُ التي أرسلها البوتُ نفسُه ترتدّ إليه** فيردّ على
+// نفسه بلا نهاية.
+//
+// # والردُّ في خيطٍ مستقلٍّ بسياق الخادم
+//
+// **ومعالِجُ الأحداث يُعطّل استقبالَ ما بعده ما دام يعمل** — فلو
+// انتظر قاعدةَ البيانات تجمّد الوارد. **وسياقُ الحدث قصير**، وسياقُ
+// الخادم يعيش ما عاش.
+func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg *events.Message) {
+	if s.inbound == nil || msg == nil || msg.Info.IsFromMe || msg.Info.IsGroup {
+		return
+	}
+	text := msg.Message.GetConversation()
+	if text == "" {
+		if e := msg.Message.GetExtendedTextMessage(); e != nil {
+			text = e.GetText()
+		}
+	}
+	if strings.TrimSpace(text) == "" {
+		return
+	}
+	from := "+" + msg.Info.Sender.User
+	jid := msg.Info.Sender.ToNonAD()
+	go func() {
+		reply := s.inbound(ctx, from, text)
+		if strings.TrimSpace(reply) == "" {
+			return
+		}
+		if _, err := c.SendMessage(ctx, jid, &waE2E.Message{
+			Conversation: proto.String(reply),
+		}); err != nil {
+			s.logger.Warn("whatsapp: تعذّر الردّ على وارد", "error", err)
+		}
+	}()
+}
+
+// jitter **يُبعثر المهلةَ بين ٦٠٪ و١٥٠٪ من قيمتها.**
+//
+// (بلاغُ المالك ٢٠٢٦-٠٨-٢٥: «تم تقييد رقمي الواتس اب بسبب الرسائل».)
+//
+// # ولماذا لا تكفي مهلةٌ ثابتة
+//
+// **ومهلةٌ ثابتةٌ هي نفسُها بصمةُ آلة**: إحدى وعشرون رسالةً بينها ١٫٥
+// ثانيةٍ بالضبط لا يكتبها إنسان. **وواتساب لا ينظر في العدد وحدَه بل في
+// انتظامه.**
+//
+// **والإنسانُ يتفاوت**: يكتب رسالةً في ثانيتين وأخرى في تسع.
+//
+// # ولا وعدَ بمنع الحظر
+//
+// **ولا أَعِدُ أنّ هذا يمنعه** — لا أحدَ يعرف ما يفحصه واتساب. **إنّما
+// يمحو أظهرَ علامةٍ آليّةٍ نملك محوَها.**
+//
+// # والحدُّ الأدنى ثانيةٌ واحدة
+//
+// **ومهلةٌ تنزل تحت الثانية تُعيد النمطَ الذي هربنا منه** — فالعشوائيّةُ
+// حول قيمةٍ صغيرةٍ تبقى سريعة.
+func jitter(d time.Duration) time.Duration {
+	if d <= 0 {
+		return 0
+	}
+	// **من ٦٠٪ إلى ١٥٠٪** — ومتوسّطُها ١٫٠٥ فلا يبطئ الوسطَ محسوساً.
+	f := 0.6 + rand.Float64()*0.9
+	out := time.Duration(float64(d) * f)
+	if out < time.Second {
+		out = time.Second
+	}
+	return out
+}
+
 func (s *WhatsAppSender) pace(ctx context.Context) {
 	if s.delay == nil {
 		return
 	}
-	d := s.delay(ctx)
+	d := jitter(s.delay(ctx))
 	if d <= 0 {
 		return
 	}

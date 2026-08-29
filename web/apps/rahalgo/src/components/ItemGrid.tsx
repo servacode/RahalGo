@@ -114,7 +114,7 @@ export default function ItemGrid({
           favorite={has(it.id)}
           onFavorite={signedIn ? toggle : undefined}
           onRequireLogin={
-            signedIn ? undefined : () => router.push(`/login?next=${encodeURIComponent(next)}`)
+            signedIn ? undefined : () => router.push("/app")
           }
         />
       ))}

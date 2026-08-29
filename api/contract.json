@@ -3494,6 +3494,39 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/auth/wa/ticket",
+      "handler": "handleWATicket",
+      "auth": false,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "purpose",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "tag",
+          "type": "unknown"
+        },
+        {
+          "name": "text",
+          "type": "unknown"
+        },
+        {
+          "name": "wa_url",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/auth/whatsapp/confirm",
       "handler": "handleWhatsAppVerifyConfirm",
       "auth": true,
@@ -4834,6 +4867,66 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/reports-against",
+      "handler": "handleMerchantReportsAgainst",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "reports",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/sections",
+      "handler": "handleMerchantStoreSections",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "sections",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/merchant/stores/{id}/sections",
+      "handler": "handleMerchantSetStoreSections",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "sections",
+          "type": "[]string"
+        }
+      ],
+      "response": [
+        {
+          "name": "saved",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/merchant/stores/{id}/settings",
       "handler": "handleMerchantSettings",
@@ -5613,6 +5706,10 @@
         },
         {
           "name": "show_shop",
+          "type": "unknown"
+        },
+        {
+          "name": "signup_verify",
           "type": "unknown"
         },
         {

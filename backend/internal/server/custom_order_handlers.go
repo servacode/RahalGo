@@ -74,7 +74,7 @@ func (s *Server) handleAgreeCustom(w http.ResponseWriter, r *http.Request) {
 		s.notify.Notify(r.Context(), notifications.Input{
 			UserID: customerID, Kind: notifications.KindOrder,
 			Title: notifTitles.customAgreed, Body: "",
-			Entity: "order", EntityID: orderID, Href: "/orders",
+			Entity: "order", EntityID: orderID, Href: "/portal/orders",
 		})
 	}
 	s.touch("order", "ops")

@@ -28,6 +28,7 @@ import {
   IconPromos,
   IconStore,
   Money,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
@@ -285,17 +286,7 @@ export default function DiscountsTab() {
             onChange={(e) => setEndsAt(e.target.value)}
           />
 
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              {m.common.cancel}
-            </Button>
-            <Button
-              disabled={busy || !title.trim() || !itemID || !(Number(percent) >= 1)}
-              onClick={() => void submit()}
-            >
-              {P.publish}
-            </Button>
-          </div>
+          <FormActions onSave={() => void submit()} onCancel={() => setOpen(false)} saveLabel={P.publish} />
         </div>
       </Modal>
     </div>

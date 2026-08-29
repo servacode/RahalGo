@@ -28,6 +28,7 @@ import {
   IconStore,
   IconCheck,
   IconBlock,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { MediaThumb } from "@/components/admin/ImageUpload";
@@ -166,24 +167,10 @@ export default function MenuReviewQueue() {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                 />
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
+                <FormActions onSave={() => void review(it.id, false, note.trim())} onCancel={() => {
                       setRejecting("");
                       setNote("");
-                    }}
-                  >
-                    {m.common.cancel}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    disabled={busy !== "" || !note.trim()}
-                    onClick={() => void review(it.id, false, note.trim())}
-                  >
-                    {Q.rejectConfirm}
-                  </Button>
-                </div>
+                    }} saveLabel={Q.rejectConfirm} tone="danger" />
               </div>
             )}
           </li>

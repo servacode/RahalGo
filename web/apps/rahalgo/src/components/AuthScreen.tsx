@@ -41,10 +41,10 @@ export type AuthMode = "password" | "otp" | "reset" | "signup";
 
 /** المسارُ لكلّ وضعٍ — **مصدرٌ واحدٌ يمنع أن يفترق التوجيهُ عن الروابط.** */
 const PATH: Record<AuthMode, string> = {
-  password: "/login",
-  otp: "/login",
-  reset: "/forgot",
-  signup: "/signup",
+  password: "/adminrahalgo",
+  otp: "/adminrahalgo",
+  reset: "/adminrahalgo",
+  signup: "/adminrahalgo",
 };
 
 export default function AuthScreen({ mode }: { mode: AuthMode }) {
@@ -92,9 +92,9 @@ function Screen({ mode }: { mode: AuthMode }) {
   return (
     <LoginCard
       methods="both"
-      /* **والزبونُ وحدَه يُنشئ حسابَه بنفسه** — واللوحاتُ حساباتُها من
-         المنصة. (أمرُ المالك ٢٠٢٦-٠٨-٠٦: «اختلافُ الروابط حسب كلّ واجهة».) */
-      signup
+      /* **ولا إنشاءَ حسابٍ على الويب بعد اليوم** — (قرارُ المالك
+         ٢٠٢٦-٠٨-٢٦): حساباتُ الأدوار من تطبيقاتها، **وحسابُ الإدارة
+         تفتحه الإدارة.** */
       referral={referral}
       initialMode={mode}
       onModeChange={follow}

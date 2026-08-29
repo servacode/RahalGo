@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime, errorText} from "@rahalgo/i18n";
 import {
   Tabs,
   Alert,
@@ -41,6 +41,7 @@ import {
   LoadingState,
   usePlatform,
   Money,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { WarningsSection } from "@/components/admin/accounts/WarningsSection";
@@ -185,14 +186,6 @@ interface Tx {
   created_at: string;
 }
 
-function errText(err: unknown): string {
-  if (err instanceof ApiError) {
-    const key = err.body.message_key.split(".").pop() ?? "";
-    const known = (m.errors as Record<string, string>)[key];
-    if (known) return known;
-  }
-  return m.errors.internal;
-}
 
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -286,7 +279,7 @@ export default function UserProfilePage() {
       );
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, [id, tPage, aPage, gPage, rPage]);
 
@@ -1413,7 +1406,7 @@ function ResetPasswordModal({ userID, onClose }: { userID: string; onClose: () =
       });
       setDone(true);
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -1442,14 +1435,7 @@ function ResetPasswordModal({ userID, onClose }: { userID: string; onClose: () =
           {error && (
             <Alert>{error}</Alert>
           )}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={onClose}>
-              {m.common.cancel}
-            </Button>
-            <Button type="submit" disabled={busy}>
-              {m.common.save}
-            </Button>
-          </div>
+          <FormActions submit onCancel={onClose} busy={busy} />
         </form>
       )}
     </Modal>
@@ -1482,7 +1468,7 @@ function ChangePhoneModal({
       });
       onDone();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
       setBusy(false);
     }
   }
@@ -1509,14 +1495,7 @@ function ChangePhoneModal({
         {error && (
           <Alert>{error}</Alert>
         )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {m.common.save}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} busy={busy} />
       </form>
     </Modal>
   );

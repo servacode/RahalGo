@@ -52,6 +52,13 @@ interface Stats {
   menu_items: number;
   zones_active: number;
   promos_active: number;
+  // الزوّار — انظر `admin_stats_handlers.go`
+  opens_today: number;
+  opens_7d: number;
+  opens_30d: number;
+  devices_today: number;
+  devices_7d: number;
+  devices_30d: number;
 }
 
 interface WhatsAppStatus {
@@ -188,6 +195,26 @@ export default function DashboardPage() {
               <StatCard icon={IconOrder} label={m.admin.dashboard.stats.menuItems} value={stats.menu_items} />
               <StatCard icon={IconZones} label={m.admin.dashboard.stats.zonesActive} value={stats.zones_active} />
               <StatCard icon={IconPromos} label={m.admin.dashboard.stats.promosActive} value={stats.promos_active} />
+            </StatGrid>
+          </section>
+
+          {/*
+            الزوّار — **فتحةٌ وشخصٌ رقمان لا رقم.**
+
+            (طلبُ المالك ٢٠٢٦-٠٨-٢٥.)
+
+            **ومن فتح عشرَ مرّاتٍ اليومَ يُعدّ عشراً في الفتحات وواحداً
+            في الأجهزة** — والأوّلُ يقيس الحركةَ والثاني يقيس الناس.
+          */}
+          <section>
+            <h2 className="mb-2 font-bold">{D.visitors}</h2>
+            <StatGrid>
+              <StatCard icon={IconUsers} label={D.devicesToday} value={stats.devices_today} />
+              <StatCard icon={IconUsers} label={D.devices7} value={stats.devices_7d} />
+              <StatCard icon={IconUsers} label={D.devices30} value={stats.devices_30d} />
+              <StatCard icon={IconOrder} label={D.opensToday} value={stats.opens_today} />
+              <StatCard icon={IconOrder} label={D.opens7} value={stats.opens_7d} />
+              <StatCard icon={IconOrder} label={D.opens30} value={stats.opens_30d} />
             </StatGrid>
           </section>
 

@@ -395,6 +395,7 @@
 |---|---|---|---|
 | `platform.orders_mode` | المنصة | choice | `platform` |
 | `auth.otp_login` | المنصة | bool | `true` |
+| `auth.signup_verify` | المنصة | bool | `false` |
 | `orders.delivery_timeout_min` | المنصة | int | `60` |
 | `pricing.margin_fixed` | المنصة | money | `0` |
 | `orders.auto_transfer` | المنصة | bool | `false` |
@@ -422,7 +423,7 @@
 | `auth.sms_template` | المنصة | text | `رمز التحقق: {code}` |
 | `whatsapp.order_template` | المنصة | text | `طلب جديد #{number}
 {items}` |
-| `whatsapp.send_delay_ms` | المنصة | int | `1500` |
+| `whatsapp.send_delay_ms` | المنصة | int | `6000` |
 | `platform.support_phone` |  | text | `` |
 | `platform.address` |  | text | `` |
 | `platform.location` |  | geo | `` |
@@ -607,6 +608,7 @@
 | `platform.app_file` |  | file | `` |
 | `app.max_file_mb` |  | int | `100` |
 | `orders.max_sources` |  | int | `2` |
+| `app.min_version.customer` |  | int | `0` |
 | `orders.max_open_per_customer` |  | int | `3` |
 | `orders.customer_cancel_window_sec` |  | int | `120` |
 | `customers.max_addresses` |  | int | `10` |
@@ -614,6 +616,7 @@
 | `customers.cash_ban_days` |  | int | `30` |
 | `customers.require_whatsapp` |  | bool | `false` |
 | `customers.signup_bonus` |  | money | `0` |
+| `app.min_version.driver` | السائقون | int | `0` |
 | `drivers.assignment_mode` | السائقون | choice | `rotation` |
 | `drivers.offer_timeout_sec` | السائقون | int | `45` |
 | `drivers.assigned_silence_sec` | السائقون | int | `180` |
@@ -636,6 +639,7 @@
 | `drivers.failed_compensation_percent` | السائقون | int | `0` |
 | `drivers.require_delivery_photo` | السائقون | bool | `true` |
 | `orders.auto_dispatch` | السائقون | bool | `true` |
+| `app.min_version.merchant` | المتاجر | int | `0` |
 | `merchants.commission_percent` | المتاجر | int | `0` |
 | `orders.accept_timeout_min` | المتاجر | int | `5` |
 | `merchants.return_support_percent` | المتاجر | int | `0` |
@@ -644,6 +648,7 @@
 | `merchants.cancel_ban_days` | المتاجر | int | `30` |
 | `merchants.default_prep_minutes` | المتاجر | int | `20` |
 | `merchants.menu_requires_approval` | المتاجر | bool | `false` |
+| `app.min_version.rep` | المندوبون | int | `0` |
 | `sales.require_whatsapp` | المندوبون | bool | `true` |
 | `sales.commission_percent` | المندوبون | int | `0` |
 | `sales.monthly_target` | المندوبون | int | `0` |

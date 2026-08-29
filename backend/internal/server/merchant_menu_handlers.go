@@ -224,3 +224,109 @@ func (s *Server) handleMerchantPlatformSections(w http.ResponseWriter, r *http.R
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"sections": out})
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **أقسامُ المتجر — يعلنها هو فتُقصر عليه القائمة**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (بلاغُ المالك 2026-08-26: «قسم السوق يجب أن يكون مخصّصاً… مطعم تطلع
+//
+//	المأكولات فقط، شو علاقته بالأحذية؟»)
+//
+// **و`platform-sections` تردّ الكلَّ** — وهي لازمةٌ لشاشة الاختيار
+// نفسِها. **وهذه تردّ ما اختاره هو**، ونموذجُ الصنف يقرأ منها.
+//
+// **وفارغٌ يعني الكلّ** — فمتجرٌ لم يختر بعدُ لا يُحبس بلا أقسام.
+func (s *Server) handleMerchantStoreSections(w http.ResponseWriter, r *http.Request) {
+	storeID := chi.URLParam(r, "id")
+	if !s.ownsMerchant(r, storeID) {
+		s.respondErr(w, errForbidden)
+		return
+	}
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT ps.id::text, ps.name, im.path, im.thumb_path
+		FROM store_sections ss
+		JOIN platform_sections ps ON ps.id = ss.section_id AND ps.active
+		LEFT JOIN media im ON im.id = ps.image_media_id
+		WHERE ss.store_id = $1
+		ORDER BY ps.sort_order, ps.name`, storeID)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+
+	type section struct {
+		ID            string  `json:"id"`
+		Name          string  `json:"name"`
+		ImageURL      *string `json:"image_url"`
+		ImageThumbURL *string `json:"image_thumb_url"`
+	}
+	out := []section{}
+	for rows.Next() {
+		var x section
+		if err := rows.Scan(&x.ID, &x.Name, &x.ImageURL, &x.ImageThumbURL); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		x.ImageURL = media.URLForPtr(x.ImageURL)
+		x.ImageThumbURL = media.URLForPtr(x.ImageThumbURL)
+		out = append(out, x)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"sections": out})
+}
+
+// handleMerchantSetStoreSections **يستبدل القائمةَ كلَّها لا يضيف إليها.**
+//
+// **ومن أزال قسماً يجب أن يزول** — والإضافةُ وحدَها تجعل الحذفَ
+// مستحيلاً، **فتتراكم أقسامٌ اختيرت بالخطأ ولا تُمحى.**
+//
+// **وتُنفَّذ في معاملةٍ واحدة** — ولو انقطع بين الحذف والإضافة لبقي
+// المتجرُ بلا أقسامٍ إطلاقا.
+func (s *Server) handleMerchantSetStoreSections(w http.ResponseWriter, r *http.Request) {
+	storeID := chi.URLParam(r, "id")
+	if !s.ownsMerchant(r, storeID) {
+		s.respondErr(w, errForbidden)
+		return
+	}
+	in, err := decode[struct {
+		Sections []string `json:"sections"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	if _, err := tx.Exec(r.Context(),
+		`DELETE FROM store_sections WHERE store_id = $1`, storeID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	for _, id := range in.Sections {
+		if id == "" {
+			continue
+		}
+		// **والقسمُ غيرُ الموجودِ يُتجاهل لا يُسقط الحفظ** — قائمةٌ
+		// فيها معرّفٌ شاخ لا يجب أن تمنع حفظَ الباقي.
+		if _, err := tx.Exec(r.Context(), `
+			INSERT INTO store_sections (store_id, section_id)
+			SELECT $1, $2::uuid WHERE EXISTS (
+			  SELECT 1 FROM platform_sections WHERE id = $2::uuid AND active
+			)
+			ON CONFLICT DO NOTHING`, storeID, id); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"saved": true})
+}

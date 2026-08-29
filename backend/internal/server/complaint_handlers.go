@@ -53,7 +53,7 @@ func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
 		UserID: t.CustomerID, Kind: notifications.KindTicket,
 		Title: notifTitles.ticketOpened, Body: t.Subject,
 		// **إلى صفحة الشكاوى لا إلى صفحةِ طلبٍ محذوفة** — وهناك يرى حالَها.
-		Entity: "ticket", EntityID: t.ID, Href: "/complaints",
+		Entity: "ticket", EntityID: t.ID, Href: "/portal/complaints",
 	})
 	// **ومن هي عليه يُخبَر — وهو ما لم يكن.**
 	//

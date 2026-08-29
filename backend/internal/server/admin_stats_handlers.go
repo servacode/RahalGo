@@ -44,6 +44,24 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 		MenuItems       int `json:"menu_items"`
 		ZonesActive     int `json:"zones_active"`
 		PromosActive    int `json:"promos_active"`
+
+		// ══════════════════════════════════════════════════════════
+		// **الزوّار — رقمان لا رقمٌ واحد**
+		// ══════════════════════════════════════════════════════════
+		//
+		// (طلبُ المالك 2026-08-25.)
+		//
+		// **والفتحةُ غيرُ الشخص**: من فتح التطبيقَ عشرَ مرّاتٍ اليومَ
+		// يُعدّ عشراً في `OpensToday` وواحداً في `DevicesToday`.
+		//
+		// **والأوّلُ يقيس الحركة، والثاني يقيس الناس** — ومن خلط بينهما
+		// ظنّ عشرةَ زبائنَ حيث زبونٌ واحدٌ ملّ الانتظار.
+		OpensToday   int64 `json:"opens_today"`
+		Opens7       int64 `json:"opens_7d"`
+		Opens30      int64 `json:"opens_30d"`
+		DevicesToday int   `json:"devices_today"`
+		Devices7     int   `json:"devices_7d"`
+		Devices30    int   `json:"devices_30d"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		WITH day AS (
@@ -113,5 +131,35 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وأرقامُ الزوّار في استعلامٍ ثانٍ لا في الأوّل**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **والأوّلُ استعلامٌ ضخمٌ فيه عشرةُ CTE** — وإقحامُ جدولين جديدين
+	// فيه يجعل عطبَ أحدِهما يُسقط الشاشةَ كلَّها.
+	//
+	// **ولا يُسقَط الردُّ إن عَطِبا**: من عجز عن عدّ الزوّار يبقى يرى
+	// طلباتِه وسائقيه. **والصفرُ هنا أهونُ من شاشةٍ فارغة.**
+	_ = s.pg.QueryRow(r.Context(), `
+		WITH d AS (
+			SELECT (now() AT TIME ZONE 'Asia/Damascus')::date AS today
+		)
+		SELECT
+		  COALESCE((SELECT sum(opens) FROM app_opens_daily, d
+		            WHERE day = d.today), 0),
+		  COALESCE((SELECT sum(opens) FROM app_opens_daily, d
+		            WHERE day > d.today - 7), 0),
+		  COALESCE((SELECT sum(opens) FROM app_opens_daily, d
+		            WHERE day > d.today - 30), 0),
+		  (SELECT count(*) FROM device_tokens
+		    WHERE last_seen_at >= now() - interval '1 day'),
+		  (SELECT count(*) FROM device_tokens
+		    WHERE last_seen_at >= now() - interval '7 days'),
+		  (SELECT count(*) FROM device_tokens
+		    WHERE last_seen_at >= now() - interval '30 days')
+	`).Scan(&st.OpensToday, &st.Opens7, &st.Opens30,
+		&st.DevicesToday, &st.Devices7, &st.Devices30)
+
 	httpx.JSON(w, http.StatusOK, st)
 }

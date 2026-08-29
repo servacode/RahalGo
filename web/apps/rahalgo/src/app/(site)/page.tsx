@@ -718,7 +718,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* **والزبونُ إلى التسجيل والباقون إلى الانضمام** — **وبابٌ
                 واحدٌ للأربعة يُرسل الزبونَ إلى نموذج متجر.** */}
-            <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/signup" open={brand.joinOpen} />
+            <JoinCard Icon={IconUser} who={H.famCustomer} sub={H.famCustomerSub} href="/app" open={brand.joinOpen} />
             <JoinCard Icon={IconStore} who={H.famStore} sub={H.famStoreSub} href="/join" open={brand.joinOpen} partner />
             <JoinCard Icon={IconMoto} who={H.famDriver} sub={H.famDriverSub} href="/join" open={brand.joinOpen} partner />
             <JoinCard Icon={IconUsers} who={H.famRep} sub={H.famRepSub} href="/join" open={brand.joinOpen} partner />

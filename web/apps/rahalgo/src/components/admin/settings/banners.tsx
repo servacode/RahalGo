@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText} from "@rahalgo/i18n";
 import {
   Alert,
   Button,
@@ -28,6 +28,7 @@ import {
   IconEdit,
   IconDelete,
   IconPromos,
+  FormActions,
 } from "@rahalgo/ui";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { api, mediaUrl, ApiError } from "@/lib/api";
@@ -44,14 +45,6 @@ interface Banner {
   active: boolean;
 }
 
-function errText(err: unknown): string {
-  if (err instanceof ApiError) {
-    const key = err.body.message_key.split(".").pop() ?? "";
-    const known = (m.errors as Record<string, string>)[key];
-    if (known) return known;
-  }
-  return m.errors.internal;
-}
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -80,7 +73,7 @@ export default function BannersPanel({
       setBanners(await api<Banner[]>(`/api/v1/admin/banners?at=${placement}`));
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, [placement]);
 
@@ -96,7 +89,7 @@ export default function BannersPanel({
       });
       await load();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 
@@ -105,7 +98,7 @@ export default function BannersPanel({
       await api(`/api/v1/admin/banners/${b.id}`, { method: "DELETE" });
       await load();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 
@@ -219,7 +212,7 @@ function BannerModal({
       }
       onSaved();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -251,14 +244,7 @@ function BannerModal({
         {error && (
           <Alert>{error}</Alert>
         )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy}>
-            {m.common.save}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} busy={busy} />
       </form>
     </Modal>
   );

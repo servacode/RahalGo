@@ -20,7 +20,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
-  Alert, Button, Input, Modal, FormSection, Checkbox, IconWhatsApp } from "@rahalgo/ui";
+  Alert, Button, Input, Modal, FormSection, Checkbox, IconWhatsApp,
+  FormActions,
+} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -156,14 +158,7 @@ export default function BroadcastPanel() {
           {B.confirmBody.replace("{n}", fmtNum(count ?? 0))}
         </p>
         <p className="mb-4 rounded-control bg-field px-3 py-2 text-sm font-medium">{title}</p>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setConfirming(false)}>
-            {m.common.cancel}
-          </Button>
-          <Button variant="danger" disabled={busy} onClick={() => void send()}>
-            {B.confirmSend}
-          </Button>
-        </div>
+        <FormActions onSave={() => void send()} onCancel={() => setConfirming(false)} busy={busy} saveLabel={B.confirmSend} tone="danger" />
       </Modal>
     </FormSection>
   );

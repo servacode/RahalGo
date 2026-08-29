@@ -3,7 +3,7 @@
 /** طلبات سحب الرصيد — المالية تصرف أو ترفض، والقيد يُسجَّل في دفتر المحفظة. */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDateTime, errorText} from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
@@ -29,6 +29,7 @@ import {
   IconWarning,
   IconAdd,
   Money,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth, hasRole } from "@/lib/auth";
@@ -57,11 +58,6 @@ const VARIANT: Record<Payout["status"], "warning" | "success" | "danger"> = {
   rejected: "danger",
 };
 
-function errText(err: unknown): string {
-  if (!(err instanceof ApiError)) return m.errors.internal;
-  const key = err.body.message_key.split(".").pop() ?? "";
-  return (m.errors as Record<string, string>)[key] ?? m.errors.internal;
-}
 
 export default function PayoutsPage() {
   const { user } = useAuth();
@@ -326,7 +322,7 @@ function DecideModal({
       });
       onDone();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
       setBusy(false);
     }
   }
@@ -351,14 +347,7 @@ function DecideModal({
         {error && (
           <Alert>{error}</Alert>
         )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" variant={approve ? "primary" : "danger"} disabled={busy}>
-            {busy ? m.common.loading : m.common.confirm}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} busy={busy} saveLabel={busy ? m.common.loading : m.common.confirm} />
       </form>
     </Modal>
   );

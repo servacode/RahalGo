@@ -82,7 +82,7 @@ func (s *Server) handleCreateTicket(w http.ResponseWriter, r *http.Request) {
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: t.CustomerID, Kind: notifications.KindTicket,
 		Title: notifTitles.ticketOpened, Body: t.Subject,
-		Entity: "ticket", EntityID: t.ID, Href: "/orders",
+		Entity: "ticket", EntityID: t.ID, Href: "/portal/orders",
 	})
 	s.notify.NotifyOps(r.Context(), notifications.Input{
 		Kind: notifications.KindTicket, Title: notifTitles.ticketNewOps, Body: t.Subject,
@@ -118,7 +118,7 @@ func (s *Server) handleTicketReply(w http.ResponseWriter, r *http.Request) {
 		s.notify.Notify(r.Context(), notifications.Input{
 			UserID: t.CustomerID, Kind: notifications.KindTicket,
 			Title: notifTitles.ticketReply, Body: t.Subject,
-			Entity: "ticket", EntityID: t.ID, Href: "/orders",
+			Entity: "ticket", EntityID: t.ID, Href: "/portal/orders",
 		})
 	}
 	httpx.JSON(w, http.StatusOK, t)
@@ -150,7 +150,7 @@ func (s *Server) handleTicketResolve(w http.ResponseWriter, r *http.Request) {
 		UserID: t.CustomerID, Kind: notifications.KindTicket,
 		Title: notifTitles.ticketResolved, Body: t.Resolution,
 		// **إلى صفحة شكاواه** — حيث يرى حالَها وردَّنا والتعويض.
-		Entity: "ticket", EntityID: t.ID, Href: "/complaints",
+		Entity: "ticket", EntityID: t.ID, Href: "/portal/complaints",
 	})
 	// **ورصيدُه يتحدّث في شريطه فوراً** — عُوّض فنظر فوجده كما كان،
 	// **فحدّث الصفحةَ بيده أو ظنّ التعويضَ لم يقع.**

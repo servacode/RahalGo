@@ -18,6 +18,7 @@
  * **والنجاحُ أسوأ**: لا مكوّنَ له أصلاً — فمن حفظ إعداداً لا يعرف أحُفظ.
  */
 
+import { FormActions } from "./FormActions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
@@ -356,22 +357,7 @@ export function Confirm({
           {title}
         </h2>
         {body && <div className="mt-1.5 text-sm text-ink-muted">{body}</div>}
-        <div className="mt-5 flex gap-2">
-          <Button
-            variant={tone === "danger" ? "danger" : "primary"}
-            onClick={onConfirm}
-            disabled={busy}
-          >
-            {busy ? m.common.loading : confirmLabel}
-          </Button>
-          {/* **والتركيزُ يبدأ هنا** — من ضغط `Enter` بلا قراءة لا يجب أن
-              يحذف. و`Button` لا يمرّر المرجعَ، **فالمرجعُ على غلافه.** */}
-          <span ref={cancelRef}>
-            <Button variant="secondary" onClick={onCancel} disabled={busy}>
-              {m.common.cancel}
-            </Button>
-          </span>
-        </div>
+        <FormActions onSave={onConfirm} onCancel={onCancel} busy={busy} saveLabel={busy ? m.common.loading : confirmLabel} />
       </div>
     </div>,
     document.body,

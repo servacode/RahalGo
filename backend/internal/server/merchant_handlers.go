@@ -142,6 +142,7 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 	for i := range res.Orders {
 		redactForMerchant(&res.Orders[i])
 	}
+	s.fillMerchantMoney(r, merchantID, res.Orders)
 
 	// ══════════════════════════════════════════════════════════════════
 	// **وعددُ كلّ حالٍ مع السجلّ — لا بنداءٍ لكلّ حال**
@@ -601,4 +602,70 @@ func (s *Server) merchantName(ctx context.Context, id string) string {
 	var name string
 	_ = s.pg.QueryRow(ctx, `SELECT name FROM merchants WHERE id = $1`, id).Scan(&name)
 	return name
+}
+
+// fillMerchantMoney **يملأ عمولةَ المنصّة وصافي المتجر لكلّ طلب.**
+//
+// (بلاغُ المالك 2026-08-26: «شقد المبلغ المباع وشقد نسبة العمولة —
+//
+//	هيك لازم يكون بشفافية».)
+//
+// # ولماذا استعلامٌ ثانٍ لا عمودٌ في الأوّل
+//
+// **واستعلامُ الطلبات مشتركٌ بين الزبون والسائق والإدارة والمتجر** —
+// وإقحامُ عمولةٍ فيه يجعلها تُقرأ لمن لا يخصّه، **ثمّ تُنسى في مسحٍ
+// واحدٍ فتظهر.**
+//
+// **وهنا تُملأ لمن يملك المتجرَ وحدَه.**
+//
+// # وعمولةٌ لم تُقيَّد بعد تُقدَّر
+//
+// **و`platform_commission` تُكتب عند التسليم لا عند الطلب** — فطلبٌ
+// جارٍ عمولتُه صفر. **وصفرٌ يُقرأ «لا عمولة» فيُفاجأ صاحبُه عند
+// التسليم.**
+//
+// **فتُقدَّر بنسبته المسجّلة** ما دامت لم تُقيَّد، **ويُقال له إنّها
+// نسبةٌ لا رقمٌ نهائيّ** (النسبةُ تُرسل معها).
+//
+// # وعطبُه لا يُسقط الشاشة
+//
+// **ومن عجز عن رقمٍ في زاويةٍ لا يُحرم من رؤية طلباته.**
+func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []orders.Order) {
+	if len(list) == 0 {
+		return
+	}
+	var pct int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT commission_percent FROM merchants WHERE id = $1`,
+		merchantID).Scan(&pct); err != nil {
+		return
+	}
+	ids := make([]string, 0, len(list))
+	for i := range list {
+		ids = append(ids, list[i].ID)
+	}
+	paid := map[string]int64{}
+	rows, err := s.pg.Query(r.Context(),
+		`SELECT id::text, platform_commission FROM orders WHERE id = ANY($1)`, ids)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var id string
+			var c int64
+			if rows.Scan(&id, &c) == nil {
+				paid[id] = c
+			}
+		}
+	}
+	for i := range list {
+		o := &list[i]
+		o.CommissionPct = pct
+		c := paid[o.ID]
+		if c == 0 {
+			// **وتقديرٌ بالنسبة ما دامت لم تُقيَّد** — انظر أعلاه.
+			c = o.Subtotal * int64(pct) / 100
+		}
+		o.PlatformCommission = c
+		o.MerchantNet = o.Subtotal - c
+	}
 }

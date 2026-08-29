@@ -37,10 +37,19 @@ const web = dict.shared.menuEditor;
 const terms = dict.terms;
 const rep = dict.rep;
 
-const xml = readFileSync(
-  join(repo, "mobile/app-rep/src/main/res/values/strings.xml"),
-  "utf8",
-);
+/**
+ * **ونصوصُ المندوب لم تعد كلُّها عنده**
+ *
+ * (٢٠٢٦-٠٨-٢٦) **سبعةٌ وعشرون لفظاً كانت مكتوبةً في أكثر من تطبيق**
+ * فنُقلت إلى `‏:ui` — **ومفرداتُ محرّر الأصناف منها**، لأنّ المتجرَ
+ * والمندوبَ يحرّران القائمةَ نفسَها.
+ *
+ * **فالبحثُ صار في ملفَّين**: نصوصِ المندوب ثمّ المشتركة.
+ */
+const xml = [
+  readFileSync(join(repo, "mobile/app-rep/src/main/res/values/strings.xml"), "utf8"),
+  readFileSync(join(repo, "mobile/ui/src/main/res/values/strings.xml"), "utf8"),
+].join(String.fromCharCode(10));
 
 /** **نصوصُ كلّ ما يُبنى** — الوحدةُ المشتركةُ والتطبيقاتُ الثلاثة. */
 const APP_STRINGS = [
@@ -63,8 +72,8 @@ function androidString(name) {
 /** **نظيرُ كلّ مفتاح** — يسارُه الويب ويمينُه التطبيق. */
 const PAIRS = [
   [web.empty, "mn_empty"],
-  [web.addItem, "mn_add_item"],
-  [web.editItem, "mn_edit_item"],
+  [web.addItem, "mn_item_new"],
+  [web.editItem, "mn_item_edit"],
   [web.noItems, "mn_no_items"],
   [web.itemName, "mn_item_name"],
   [web.itemDescription, "mn_desc"],
@@ -87,13 +96,12 @@ const PAIRS = [
   [web.minSelect, "mn_min_select"],
   [web.maxSelect, "mn_max_select"],
   [web.required, "mn_required"],
-  [web.optional, "mn_optional"],
+  [web.optional, "act_optional"],
   [web.optionName, "mn_option_name"],
   [web.priceDelta, "mn_price_delta"],
   [web.addOption, "mn_add_option"],
   // **وعنوانُ الشاشة والبابُ إليها** — الويبُ يسمّيهما `terms.menu`.
-  [terms.menu, "mn_title"],
-  [terms.menu, "cd_menu"],
+  [terms.menu, "mn_items"],
   [rep.menuHint, "mn_hint"],
 ];
 

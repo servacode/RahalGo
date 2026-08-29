@@ -1,7 +1,13 @@
-/** استعادةُ كلمة المرور — **والمنطقُ كلُّه في `AuthScreen`**، وهذه بابُه. */
+/**
+ * **بابٌ أُغلق** — (قرارُ المالك ٢٠٢٦-٠٨-٢٦: لا تسجيلَ دخولٍ لزبونٍ ولا
+ * سائقٍ ولا متجرٍ ولا مندوبٍ على الويب).
+ *
+ * **ويبقى المسارُ ولا يُحذف**: روابطُه منشورةٌ في رسائلَ قديمةٍ وإشعارات،
+ * **ومن فتحها لا يُرمى إلى أربعمئةٍ وأربعة** بل إلى حيث يجد تطبيقه.
+ */
 
-import AuthScreen from "@/components/AuthScreen";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <AuthScreen mode="reset" />;
+  redirect("/app");
 }

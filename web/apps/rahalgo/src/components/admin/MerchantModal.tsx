@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText} from "@rahalgo/i18n";
 
 const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMap), { ssr: false });
 import {
@@ -53,6 +53,7 @@ import {
   IconDate,
   Checkbox,
   LoadingState,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { StoreActions } from "@/components/admin/StoreActions";
@@ -111,9 +112,6 @@ function translateKey(key: string): string {
   return typeof node === "string" ? node : m.errors.internal;
 }
 
-function errText(err: unknown): string {
-  return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
-}
 
 export function MerchantModal({
   merchant,
@@ -142,7 +140,7 @@ export function MerchantModal({
       .then((r) => setCats(r ?? []))
       // **وفشلُ الجلب يُقال لا يُبتلع** — **وقائمةٌ فارغةٌ تُقرأ «لا
       // تصنيفاتِ في المنصّة»** وهي في الحقيقة نداءٌ سقط.
-      .catch((e) => setCatsError(errText(e)));
+      .catch((e) => setCatsError(errorText(e)));
   }, [cats.length]);
 
   const [name, setName] = useState(merchant?.name ?? "");
@@ -203,7 +201,7 @@ export function MerchantModal({
       }
       onSaved();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -410,26 +408,19 @@ export function MerchantModal({
         {error && (
           <Alert>{error}</Alert>
         )}
-        <div className="flex justify-end gap-2 border-t border-line-soft pt-4">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          {/* ══════════════════════════════════════════════════════════
-              **ولا يُحفظ متجرٌ بلا دبّوس**
-              ══════════════════════════════════════════════════════════
+        {/* ══════════════════════════════════════════════════════════
+            **ولا يُحفظ متجرٌ بلا دبّوس**
+            ══════════════════════════════════════════════════════════
 
-              (قرارُ المالك ٢٠٢٦-٠٨-١٢: «نسوي دبّوس المتجر إلزامي مو
-               اختياري عند فتح الحساب».)
+            (قرارُ المالك ٢٠٢٦-٠٨-١٢: «نسوي دبّوس المتجر إلزامي مو
+             اختياري عند فتح الحساب».)
 
-              **وكانت الخريطةُ تُعرض ولا تُلزم** — فيُحفظ المتجرُ بلا
-              موضع، **ويظهر للسائق بلا مسافة** ولا نقطةٍ يمشي إليها.
+            **وكانت الخريطةُ تُعرض ولا تُلزم** — فيُحفظ المتجرُ بلا
+            موضع، **ويظهر للسائق بلا مسافة** ولا نقطةٍ يمشي إليها.
 
-              **والحارسُ في المحرّك أيضاً** (`ErrLocationRequired`) — هذا
-              يمنع الضغطة، **وذاك يمنع الالتفاف من أيّ واجهةٍ أخرى.** */}
-          <Button type="submit" disabled={busy || lat == null || lng == null}>
-            {m.common.save}
-          </Button>
-        </div>
+            **والحارسُ في المحرّك أيضاً** (`ErrLocationRequired`) — هذا
+            يمنع الضغطة، **وذاك يمنع الالتفاف من أيّ واجهةٍ أخرى.** */}
+        <FormActions submit onCancel={onClose} busy={busy || lat == null || lng == null} />
       </form>
     </Modal>
   );
@@ -464,7 +455,7 @@ export function CategoriesModal({
       // «لا تصنيفات» وهي في القاعدة. (قِيس ٢٠٢٦-٠٨-١٥.)
       setRows(await api<Category[]>("/api/v1/admin/categories"));
     } catch (e) {
-      setLoadErr(errText(e));
+      setLoadErr(errorText(e));
     }
   }, []);
   useEffect(() => {
@@ -493,7 +484,7 @@ export function CategoriesModal({
       await reload();
       await onChanged?.();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 
@@ -507,7 +498,7 @@ export function CategoriesModal({
       await reload();
       await onChanged?.();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 

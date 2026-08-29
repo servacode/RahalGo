@@ -37,6 +37,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
@@ -72,6 +73,68 @@ func (s *Server) handleMerchantMyReports(w http.ResponseWriter, r *http.Request)
 		Resolution string     `json:"resolution"`
 		CreatedAt  time.Time  `json:"created_at"`
 		ResolvedAt *time.Time `json:"resolved_at"`
+	}
+	out := []row{}
+	for rows.Next() {
+		var x row
+		if err := rows.Scan(&x.ID, &x.Number, &x.OrderNumber, &x.Reason,
+			&x.Status, &x.Resolution, &x.CreatedAt, &x.ResolvedAt); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out = append(out, x)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"reports": out})
+}
+
+// handleMerchantReportsAgainst **الشكاوى التي رُفعت على متجره.**
+//
+// (بلاغُ المالك 2026-08-26: «الشكاوي يلي عليه ويلي اله».)
+//
+// # ولماذا لم تكن تُرى
+//
+// **و`my-reports` تردّ ما رفعه هو وحدَه** (`t.created_by = $1`) —
+// **فصاحبُ المتجر لا يعلم أنّ زبوناً شكا منه** حتّى يصله إنذارُ
+// الإدارة. **وشكوى تُعالَج قبل أن تصير إنذاراً خيرٌ للطرفين.**
+//
+// # وتُربط بالطلب لا بالمشتكي
+//
+// **ولا يُذكر من اشتكى** — اسمُ الزبون ليس من حقّ المتجر، **ومن عرفه
+// قد يعاقبه في طلبه القادم.** ورقمُ الطلب يكفي للفهم.
+//
+// # وما رفعه هو يُستثنى
+//
+// **ولو أُدرجت شكاواه هو لظهرت في الجهتين** — فيقرأ شكواه على السائق
+// شكوى عليه.
+func (s *Server) handleMerchantReportsAgainst(w http.ResponseWriter, r *http.Request) {
+	merchantID := chi.URLParam(r, "id")
+	if !s.ownsMerchant(r, merchantID) {
+		s.respondErr(w, errForbidden)
+		return
+	}
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT t.id::text, t.number, o.number, COALESCE(t.reason, ''),
+		       t.status, COALESCE(t.resolution, ''), t.created_at, t.resolved_at
+		FROM tickets t
+		JOIN orders o ON o.id = t.order_id
+		WHERE o.merchant_id = $1 AND t.created_by <> $2
+		ORDER BY t.created_at DESC
+		LIMIT 100`, merchantID, userIDFrom(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer rows.Close()
+
+	type row struct {
+		ID          string     `json:"id"`
+		Number      int64      `json:"number"`
+		OrderNumber *int64     `json:"order_number"`
+		Reason      string     `json:"reason"`
+		Status      string     `json:"status"`
+		Resolution  string     `json:"resolution"`
+		CreatedAt   time.Time  `json:"created_at"`
+		ResolvedAt  *time.Time `json:"resolved_at"`
 	}
 	out := []row{}
 	for rows.Next() {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtDate, errorText} from "@rahalgo/i18n";
 import {
   Pagination,
   Alert,
@@ -35,6 +35,7 @@ import {
   CopyCode,
   IconView,
   usePlatform,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, apiFile, ApiError, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -65,9 +66,6 @@ function translateKey(key: string): string {
   return typeof node === "string" ? node : m.errors.internal;
 }
 
-function errText(err: unknown): string {
-  return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
-}
 
 export default function AllAccountsTable() {
   const { user: me } = useAuth();
@@ -100,7 +98,7 @@ export default function AllAccountsTable() {
       setData(await api<UserPage>(`/api/v1/admin/users?${params}`));
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }, [query, role, statusFilter, onlineOnly, page]);
 
@@ -139,7 +137,7 @@ export default function AllAccountsTable() {
       URL.revokeObjectURL(url);
       setError("");
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 
@@ -152,7 +150,7 @@ export default function AllAccountsTable() {
       setStatusModal(null);
       await load();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
 
@@ -621,7 +619,7 @@ function CreateUserModal({
       setPassword("");
       onCreated();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -707,14 +705,7 @@ function CreateUserModal({
         {error && (
           <Alert>{error}</Alert>
         )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          <Button type="submit" disabled={busy || roles.length === 0}>
-            {m.common.save}
-          </Button>
-        </div>
+        <FormActions submit onCancel={onClose} />
       </form>
     </Modal>
   );

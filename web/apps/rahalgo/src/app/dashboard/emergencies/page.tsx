@@ -32,6 +32,7 @@ import {
   IconPhone,
   IconLocation,
   IconStatus,
+  FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -243,16 +244,14 @@ function ResolveModal({
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-          {/* **والكلمةُ مطلوبةٌ هنا** — **وإغلاقٌ بلا كلمةٍ يُعيد المسألةَ
-              إلى ما كانت.** */}
-          <Button disabled={busy || !text.trim()} onClick={() => void submit()}>
-            {busy ? m.common.loading : E.resolve}
-          </Button>
-        </div>
+        {/* **والكلمةُ مطلوبةٌ هنا** — **وإغلاقٌ بلا كلمةٍ يُعيد المسألةَ
+            إلى ما كانت.** */}
+        <FormActions
+          onSave={() => void submit()}
+          onCancel={onClose}
+          busy={busy || !text.trim()}
+          saveLabel={busy ? m.common.loading : E.resolve}
+        />
       </div>
     </Modal>
   );

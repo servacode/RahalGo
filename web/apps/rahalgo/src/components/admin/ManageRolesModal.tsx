@@ -25,8 +25,8 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Alert, Button, Chips, Input, Modal } from "@rahalgo/ui";
+import { getMessages, defaultLocale, errorText} from "@rahalgo/i18n";
+import { Alert, Button, Chips, Input, Modal, FormActions} from "@rahalgo/ui";
 import { api, ApiError, type AuthUser } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -45,9 +45,6 @@ function translateKey(key: string): string {
   return typeof node === "string" ? node : m.errors.internal;
 }
 
-function errText(err: unknown): string {
-  return err instanceof ApiError ? translateKey(err.body.message_key) : m.errors.internal;
-}
 
 export function ManageRolesModal({
   user,
@@ -93,7 +90,7 @@ export function ManageRolesModal({
       setReason("");
       await onChanged();
     } catch (err) {
-      setError(errText(err));
+      setError(errorText(err));
     }
   }
   function toggle(role: string) {
@@ -121,14 +118,7 @@ export function ManageRolesModal({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
-          <div className="mt-3 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setPending(null)}>
-              {m.common.cancel}
-            </Button>
-            <Button disabled={!reason.trim()} onClick={apply}>
-              {m.common.confirm}
-            </Button>
-          </div>
+          <FormActions onSave={apply} onCancel={() => setPending(null)} saveLabel={m.common.confirm} />
         </div>
       )}
       {error && (

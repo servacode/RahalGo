@@ -39,6 +39,7 @@ import {
   IconStore,
   IconStatus,
   IconCamera,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import MenuReviewQueue from "@/components/admin/MenuReviewQueue";
@@ -265,14 +266,7 @@ function SectionModal({
           onChange={(e) => setSort(e.target.value)}
         />
         {error && <p className="text-sm text-danger">{error}</p>}
-        <div className="flex gap-2">
-          <Button disabled={busy} onClick={submit}>
-            {m.common.save}
-          </Button>
-          <Button variant="ghost" onClick={onClose}>
-            {m.common.cancel}
-          </Button>
-        </div>
+        <FormActions onSave={submit} onCancel={onClose} busy={busy} />
       </div>
     </Modal>
   );

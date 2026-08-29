@@ -72,12 +72,12 @@ export default function MyAccountPage() {
         phone={user?.phone}
         onDeleted={() => {
           logout();
-          router.replace("/login");
+          router.replace("/adminrahalgo");
         }}
       
         onLogout={() => {
           logout();
-          router.replace("/login");
+          router.replace("/adminrahalgo");
         }}
       />
 

@@ -13,7 +13,9 @@
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
-  Alert, Button, Modal, Stars, Textarea } from "@rahalgo/ui";
+  Alert, Button, Modal, Stars, Textarea,
+  FormActions,
+} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -92,14 +94,7 @@ export default function RatingModal({
           {error && (
             <Alert>{error}</Alert>
           )}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={onClose}>
-              {m.common.cancel}
-            </Button>
-            <Button type="submit" disabled={busy}>
-              {busy ? m.common.loading : R.submit}
-            </Button>
-          </div>
+          <FormActions submit onCancel={onClose} busy={busy} saveLabel={busy ? m.common.loading : R.submit} />
       </form>
     </Modal>
   );

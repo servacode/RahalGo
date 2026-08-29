@@ -82,7 +82,7 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 	s.notify.Notify(r.Context(), notifications.Input{
 		UserID: chi.URLParam(r, "id"), Kind: notifications.KindWallet,
 		Title: title, Body: req.Note,
-		Entity: "wallet", Href: "/wallet",
+		Entity: "wallet", Href: "/portal/wallet",
 	})
 	// **والرقمُ في شريطه يتغيّر معه** — إشعارٌ يقول «أُودع لك» ورصيدٌ لا
 	// يتحرّك **يجعل صاحبَه يشكّ في أحدهما.**

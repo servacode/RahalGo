@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Button, Modal, Radio, Textarea } from "@rahalgo/ui";
+import { Button, Modal, Radio, Textarea, FormActions} from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -123,14 +123,7 @@ export default function ComplaintModal({
             placeholder={C.noteHint}
           />
           {error && <p className="text-sm text-danger">{error}</p>}
-          <div className="flex gap-2">
-            <Button type="submit" disabled={busy}>
-              {C.submit}
-            </Button>
-            <Button type="button" variant="ghost" onClick={onClose}>
-              {m.common.cancel}
-            </Button>
-          </div>
+          <FormActions submit onCancel={onClose} busy={busy} saveLabel={C.submit} />
       </form>
     </Modal>
   );

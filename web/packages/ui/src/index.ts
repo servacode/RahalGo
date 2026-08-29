@@ -41,6 +41,8 @@ export {
   PasswordMeter,
   passwordScore,
 } from "./components";
+// **ذيلُ النافذة** — موضعُ «حفظ» كان يتنقّل بين نافذةٍ وأخرى.
+export { FormActions } from "./FormActions";
 export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } from "./dataview";
 /** **رفعُ الصور ومصغَّرُها** — كانا في لوحة الإدارة، **فبوّابةُ المتجر لا
     تراهما**، وصورةُ الصنف مبنيّةٌ في المحرّك بلا يدٍ ترفعها. */

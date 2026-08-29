@@ -43,6 +43,7 @@ import {
   IconCheck,
   IconLogout,
   Money,
+  FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { StoreActions, type StoreTarget } from "@/components/admin/StoreActions";
@@ -616,14 +617,7 @@ export function CashboxTab({
               value={shiftNote}
               onChange={(e) => setShiftNote(e.target.value)}
             />
-            <div className="flex gap-2">
-              <Button disabled={busy} onClick={() => void endShift()}>
-                {D.endShift}
-              </Button>
-              <Button variant="ghost" onClick={() => setEnding(false)}>
-                {m.common.cancel}
-              </Button>
-            </div>
+            <FormActions onSave={() => void endShift()} onCancel={() => setEnding(false)} busy={busy} saveLabel={D.endShift} />
           </div>
         )}
       </div>

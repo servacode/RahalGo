@@ -16,9 +16,30 @@ var (
 	//
 	// **ويُردّ صراحةً لا يُقبل صامتاً**: من طلب من ثلاثةِ مطابخَ يُقال له،
 	// **ولا يُترك طلبٌ ثلثُه هنا وثلثُه هناك بلا من يجمعه.**
-	ErrTooManySources   = httpx.NewError(http.StatusConflict, "too_many_sources", "errors.too_many_sources")
-	ErrItemUnavailable  = httpx.NewError(http.StatusConflict, "item_unavailable", "errors.item_unavailable")
-	ErrBadItems         = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
+	ErrTooManySources  = httpx.NewError(http.StatusConflict, "too_many_sources", "errors.too_many_sources")
+	ErrItemUnavailable = httpx.NewError(http.StatusConflict, "item_unavailable", "errors.item_unavailable")
+	ErrBadItems        = httpx.NewError(http.StatusBadRequest, "invalid_items", "errors.validation")
+	// ══════════════════════════════════════════════════════════════════
+	// **وسبعةُ أسبابٍ كانت ترجع برسالةٍ واحدة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (بلاغُ المالك 2026-08-25: «ليش يعطي تحقّق من البيانات المدخلة؟»)
+	//
+	// **وكانت ErrBadItems تُردّ من سبعة مواضع**: سلّةٌ فارغة · عنوانٌ
+	// فارغ · معرّفُ متجرٍ غيرُ صالح · طريقةُ دفعٍ مجهولة · كمّيّةٌ خارج
+	// المدى · صنفٌ غيرُ موجود · خياراتٌ لا تطابق القيود.
+	//
+	// **ورسالةٌ واحدةٌ لسبعة أسبابٍ لا تقول شيئاً** — والزبونُ يعيد
+	// الضغطَ ثمّ يخرج، **ولا يعرف أنّ عنوانَه هو الناقص.**
+	//
+	// **والخياراتُ وحدَها تبقى على ErrBadItems** — فهي «بياناتٌ مدخلة»
+	// حقّاً.
+	ErrNoItems          = httpx.NewError(http.StatusBadRequest, "no_items", "errors.no_items")
+	ErrNoAddress        = httpx.NewError(http.StatusBadRequest, "no_address", "errors.no_address")
+	ErrBadMerchant      = httpx.NewError(http.StatusBadRequest, "bad_merchant", "errors.bad_merchant")
+	ErrBadPayment       = httpx.NewError(http.StatusBadRequest, "bad_payment", "errors.bad_payment")
+	ErrBadQty           = httpx.NewError(http.StatusBadRequest, "bad_qty", "errors.bad_qty")
+	ErrItemGone         = httpx.NewError(http.StatusBadRequest, "item_gone", "errors.item_gone")
 	ErrOutOfZone        = httpx.NewError(http.StatusBadRequest, "out_of_zone", "errors.out_of_zone")
 	ErrBelowMinOrder    = httpx.NewError(http.StatusBadRequest, "below_min_order", "errors.below_min_order")
 	ErrWhatsAppRequired = httpx.NewError(http.StatusForbidden, "whatsapp_required", "errors.whatsapp_required")
@@ -161,10 +182,29 @@ type Order struct {
 	Discount          int64   `json:"discount"`
 	Total             int64   `json:"total"`
 	WalletPaid        int64   `json:"wallet_paid"`
-	CashDue           int64   `json:"cash_due"`
-	PromoCode         *string `json:"promo_code"`
-	Notes             string  `json:"notes"`
-	CancelReason      string  `json:"cancel_reason"`
+
+	// ══════════════════════════════════════════════════════════════════
+	// **شفافيّةُ المتجر — كم بِيع وكم أخذت المنصّة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (بلاغُ المالك 2026-08-26: «سجلّ الطلبات ما فيه شقد المبلغ المباع
+	//  فيه المنتج وشقد نسبة العمولة للمنصة — هيك لازم يكون بشفافية».)
+	//
+	// # ولا تُملأ إلّا لصاحب المتجر
+	//
+	// **و`omitempty` تُخفيها عمّن سواه** — والزبونُ لا يعنيه كم أخذت
+	// المنصّة، **ورقمٌ يظهر لمن لا يخصّه بابُ سؤالٍ لا جواب له.**
+	//
+	// **وتُملآن في `handleMerchantOrders` بعد المسح** — انظر هناك.
+	PlatformCommission int64 `json:"platform_commission,omitempty"`
+	// **صافي المتجر** — `subtotal - commission`. **ويُحسب في المحرّك
+	// لا في التطبيق**: أربعةُ تطبيقاتٍ تحسبه أربعَ مرّاتٍ وتختلف.
+	MerchantNet   int64   `json:"merchant_net,omitempty"`
+	CommissionPct int     `json:"commission_percent,omitempty"`
+	CashDue       int64   `json:"cash_due"`
+	PromoCode     *string `json:"promo_code"`
+	Notes         string  `json:"notes"`
+	CancelReason  string  `json:"cancel_reason"`
 	// SentToMerchantAt متى حُوِّل الطلب إلى المتجر — لا «متى وصله».
 	//
 	// **كان يُكتب ولا يُقرأ**: تكتبه نقطةُ الإبلاغ في القاعدة ولا يعود في

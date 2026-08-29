@@ -228,12 +228,19 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 			in.MerchantID = sources.IDs[0]
 		}
 	}
-	if len(in.Items) == 0 || in.AddressText == "" || in.MerchantID == "" {
-		return nil, ErrBadItems
+	// **وكلُّ نقصٍ يُسمّى باسمه** — انظر `models.go`.
+	if len(in.Items) == 0 {
+		return nil, ErrNoItems
+	}
+	if in.AddressText == "" {
+		return nil, ErrNoAddress
+	}
+	if in.MerchantID == "" {
+		return nil, ErrBadMerchant
 	}
 	// **ومعرّفُ المتجر يُتحقَّق منه قبل القاعدة** — انظر الشرحَ في sources.go.
 	if _, err := uuid.Parse(in.MerchantID); err != nil {
-		return nil, ErrBadItems
+		return nil, ErrBadMerchant
 	}
 	// طريقتان لا ثلاث: نقداً عند الاستلام، أو من المحفظة كاملاً.
 	//
@@ -245,7 +252,7 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		in.PaymentMethod = "cash"
 	case "wallet":
 	default:
-		return nil, ErrBadItems
+		return nil, ErrBadPayment
 	}
 
 	// الزبون: معرف مباشر أو رقم هاتف (طلب هاتفي — يُنشأ الحساب إن لزم)
@@ -554,7 +561,7 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 
 	for _, in := range inputs {
 		if in.Qty < 1 || in.Qty > 50 {
-			return nil, 0, ErrBadItems
+			return nil, 0, ErrBadQty
 		}
 		// **سعرُ البيع يُحسب هنا لا يُقرأ.**
 		//
@@ -581,7 +588,7 @@ func (s *Service) priceItems(ctx context.Context, inputs []ItemInput) ([]OrderIt
 			Scan(&it.MenuItemID, &it.Name, &it.MerchantPrice, &available,
 				&itemMargin, &sectionMargin, &it.MerchantID)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, 0, ErrBadItems
+			return nil, 0, ErrItemGone
 		}
 		if err != nil {
 			return nil, 0, err

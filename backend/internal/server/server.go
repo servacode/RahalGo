@@ -213,6 +213,9 @@ func (s *Server) Router() http.Handler {
 	// **ونوعُ العميل يُقرأ مرّةً هنا** — فتراه كلُّ نقطةٍ تُصدر جلسة
 	// بلا أن تسأل عنه. (انظر `identity/client_kind.go`.)
 	r.Use(clientKind)
+	// **وبوّابةُ التحديث بعد معرفة نوع العميل** — تحتاج رأسَه. انظر
+	// `min_version.go`.
+	r.Use(s.minVersion)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: s.allowedOrigins(),
 		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -247,6 +250,17 @@ func (s *Server) Router() http.Handler {
 			// **والتحقّقُ من الرمز قبل النموذج** — لا يستهلكه ولا يُنشئ شيئاً.
 			r.Post("/signup/verify", s.handleSignupVerify)
 			r.Post("/signup/confirm", s.handleSignupConfirm)
+
+			// ══════════════════════════════════════════════════════════
+			// **تذكرةُ واتساب — والزبونُ يبدأ المحادثة**
+			// ══════════════════════════════════════════════════════════
+			//
+			// (قرارُ المالك 2026-08-25 بعد أن قُيّد رقمُ المنصّة مرّتين.)
+			//
+			// **وعامّةٌ لأنّها قبل الجلسة** — من نسي كلمةَ مروره لا
+			// توكن له. **ولا تكشف شيئاً**: تردّ وسماً عشوائيّاً ورابطاً،
+			// **ولا تقول أللرقم حسابٌ أم لا.**
+			r.Post("/wa/ticket", s.handleWATicket)
 
 			// ══════════════════════════════════════════════════════════
 			// **رمزُ الأدمن — خطوةٌ ثانيةٌ عامّةٌ لأنّها قبل الجلسة**
@@ -587,8 +601,25 @@ func (s *Server) Router() http.Handler {
 			// يمضي بلا شاشةٍ تقول ما صار به يُحسب ضائعاً**، فيُعاد أو
 			// يُحلّ في الشارع. انظر `merchant_reports.go`.
 			r.Get("/my-reports", s.handleMerchantMyReports)
+			// **وما رُفع عليه** — (بلاغُ المالك 2026-08-26: «الشكاوي
+			// يلي عليه ويلي اله»). **وشكوى تُعالَج قبل أن تصير
+			// إنذاراً خيرٌ للطرفين.**
+			r.Get("/stores/{id}/reports-against", s.handleMerchantReportsAgainst)
 			r.Get("/stores/{id}/hours", s.handleMerchantGetHours)
 			r.Put("/stores/{id}/hours", s.handleMerchantSetHours)
+
+			// ══════════════════════════════════════════════════════════
+			// **أقسامُ المتجر — ما يبيعه هو لا ما تبيعه المنصّة**
+			// ══════════════════════════════════════════════════════════
+			//
+			// (بلاغُ المالك 2026-08-26: «مو معقول كل الأقسام تطلع عند
+			//  كل المتاجر… مطعم شو علاقته بالأحذية؟»)
+			//
+			// **و`platform-sections` تبقى كما هي** — تُقرأ في شاشة
+			// الاختيار نفسِها، **ومن قصرها على ما اختير لم يستطع أن
+			// يزيد.**
+			r.Get("/stores/{id}/sections", s.handleMerchantStoreSections)
+			r.Put("/stores/{id}/sections", s.handleMerchantSetStoreSections)
 			r.Patch("/stores/{id}/settings", s.handleMerchantSettings)
 			r.Patch("/menu/items/{itemID}/availability", s.handleMerchantItemAvailability)
 			// القائمة بضاعته: يضيف ويعدّل ويحذف بنفسه — الحارس مختلف والعملية واحدة
