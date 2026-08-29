@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  **مقاطعُ الملاحة تُنادى باسمها في وقت التشغيل** — `getIdentifier`
+  في `ClipSpeaker`. **فلا يراها مُقلِّمُ الموارد مستعمَلةً فيحذفها**،
+  والتطبيقُ يُبنى ناجحاً ثمّ يخرس في الشارع.
+
+  **وهذا عطبٌ لا يظهر في بناءٍ ولا في اختبارِ وحدة** — يظهر عند أوّل
+  منعطفٍ في نسخةِ الإصدار وحدَها.
+-->
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/turn_*,@raw/slight_*,@raw/sharp_*,@raw/continue_*,@raw/uturn*,@raw/keep_*,@raw/merge*,@raw/fork*,@raw/ramp*,@raw/end_of_road_*,@raw/roundabout_*,@raw/exit_roundabout*,@raw/destination_*,@raw/approaching_*,@raw/arrived*,@raw/depart*,@raw/follow_route*,@raw/navigation_started,@raw/recalculating_route,@raw/reroute_failed,@raw/route_updated,@raw/route_end,@raw/wrong_way,@raw/gps_*" />

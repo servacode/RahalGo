@@ -1,0 +1,22 @@
+{
+  "name": "@rahalgo/navigation-voice-pack",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "توليد حزمة أصوات الملاحة العربية — ElevenLabs",
+  "scripts": {
+    "navvoice:dry-run": "tsx src/cli.ts dry-run",
+    "navvoice:voices": "tsx src/cli.ts voices",
+    "navvoice:qualify": "tsx src/cli.ts qualify",
+    "navvoice:generate": "tsx src/cli.ts generate",
+    "navvoice:pack": "tsx src/cli.ts pack",
+    "test": "tsx --test src/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "navvoice:sample": "tsx src/cli.ts sample"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
