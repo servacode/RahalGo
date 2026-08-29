@@ -1,5 +1,6 @@
 package com.rahalgo.rep
 
+import com.rahalgo.ui.ShellViewModel
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -249,7 +250,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         selected = tab == Tab.Board && over == Overlay.None,
                         onClick = { tab = Tab.Board; overlay.clear() },
                         icon = com.rahalgo.ui.R.drawable.ic_star,
-                        label = R.string.nav_board,
+                        label = R.string.act_my_board,
                     )
                     // ══════════════════════════════════════════════
                     // **وإضافةُ عميلٍ تبويبٌ لا زرٌّ مخبوء**

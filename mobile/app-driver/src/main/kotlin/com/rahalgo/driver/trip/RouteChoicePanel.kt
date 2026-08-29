@@ -114,7 +114,7 @@ fun RouteChoicePanel(
                 horizontalArrangement = Arrangement.spacedBy(RahalSpaceTokens.sm),
             ) {
                 PanelButton(
-                    label = stringResource(R.string.route_cancel_preview),
+                    label = stringResource(R.string.act_cancel),
                     accent = Rahal.colors.inkMuted,
                     enabled = !ui.busy,
                     onClick = onCancel,

@@ -94,13 +94,13 @@ fun MenuScreen(vm: MenuViewModel) {
     }
 
     Screen {
-        ScreenTitle(stringResource(R.string.mn_title), stringResource(R.string.mn_hint))
+        ScreenTitle(stringResource(R.string.mn_items), stringResource(R.string.mn_hint))
 
         RahalButton(
             onClick = { vm.newItem() },
             enabled = !vm.busy,
             modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.mn_add_item)) }
+        ) { Text(stringResource(R.string.mn_item_new)) }
 
         Spacer(Modifier.height(12.dp))
 
@@ -126,7 +126,7 @@ private fun SectionBlock(sec: MenuSection, vm: MenuViewModel) {
     // **وزرُّ القسم اسمُه اسمُ الزرّ الأعلى** — كما في الويب: `addItem`
     // في الترويسة وفي كلّ قسم.
     RahalTextButton(onClick = { vm.newItem(sec.id) }) {
-        Text(stringResource(R.string.mn_add_item))
+        Text(stringResource(R.string.mn_item_new))
     }
     if (sec.items.isEmpty()) {
         Text(
@@ -269,7 +269,7 @@ private fun ItemForm(vm: MenuViewModel) {
 
     Screen {
         ScreenTitle(
-            stringResource(if (d.isNew) R.string.mn_add_item else R.string.mn_edit_item),
+            stringResource(if (d.isNew) R.string.mn_item_new else R.string.mn_item_edit),
             vm.merchantName,
         )
 
@@ -397,13 +397,13 @@ private fun ItemForm(vm: MenuViewModel) {
             RahalButton(
                 onClick = { vm.saveItem() },
                 enabled = !vm.busy && d.name.isNotBlank() && d.price.isNotBlank(),
-            ) { Text(stringResource(R.string.mn_save)) }
+            ) { Text(stringResource(R.string.act_save)) }
             RahalTextButton(onClick = { vm.cancelEdit() }) {
-                Text(stringResource(R.string.mn_cancel))
+                Text(stringResource(R.string.act_cancel))
             }
             if (!d.isNew) {
                 RahalTextButton(onClick = { confirmDelete = true }) {
-                    Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
+                    Text(stringResource(R.string.act_delete), color = Rahal.colors.danger)
                 }
             }
         }
@@ -422,12 +422,12 @@ private fun ItemForm(vm: MenuViewModel) {
                     vm.deleteItem(d.itemID)
                     vm.cancelEdit()
                 }) {
-                    Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
+                    Text(stringResource(R.string.act_delete), color = Rahal.colors.danger)
                 }
             },
             dismissButton = {
                 RahalTextButton(onClick = { confirmDelete = false }) {
-                    Text(stringResource(R.string.mn_cancel))
+                    Text(stringResource(R.string.act_cancel))
                 }
             },
         )
@@ -488,12 +488,12 @@ private fun GroupCard(index: Int, g: ModifierGroup, vm: MenuViewModel) {
         ) {
             Chip(
                 stringResource(
-                    if (g.minSelect > 0) R.string.mn_required else R.string.mn_optional,
+                    if (g.minSelect > 0) R.string.mn_required else R.string.act_optional,
                 ),
                 if (g.minSelect > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
             )
             RahalTextButton(onClick = { vm.removeGroup(index) }) {
-                Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
+                Text(stringResource(R.string.act_delete), color = Rahal.colors.danger)
             }
         }
 
@@ -524,7 +524,7 @@ private fun GroupCard(index: Int, g: ModifierGroup, vm: MenuViewModel) {
                     modifier = Modifier.weight(1f),
                 )
                 RahalTextButton(onClick = { vm.removeOption(index, oi) }) {
-                    Text(stringResource(R.string.mn_delete), color = Rahal.colors.danger)
+                    Text(stringResource(R.string.act_delete), color = Rahal.colors.danger)
                 }
             }
         }

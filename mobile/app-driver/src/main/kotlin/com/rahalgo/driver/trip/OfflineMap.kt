@@ -263,7 +263,7 @@ object OfflineMap {
             )
             status = status.copy(
                 state = State.FAILED,
-                error = "لا فهرسَ خرائطَ بعد",
+                error = com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.map_no_index),
                 failure = manifestFailure,
             )
             return
@@ -277,7 +277,7 @@ object OfflineMap {
             )
             status = status.copy(
                 state = State.FAILED,
-                error = "لا حزمةَ باسم $regionId",
+                error = com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.map_no_package, regionId),
                 failure = com.rahalgo.map.data.MapFailure.INVALID_CONTRACT,
             )
             return
@@ -426,7 +426,7 @@ object OfflineMap {
         return if (ok) {
             DeleteResult.Deleted
         } else {
-            DeleteResult.Refused("تعذّر حذفُ بعض الملفّات")
+            DeleteResult.Refused(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.map_delete_failed))
         }
     }
 

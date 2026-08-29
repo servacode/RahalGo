@@ -148,7 +148,7 @@ internal fun TripPanel(state: TripState) {
             val name = if (state.step >= TripStep.PICKED_UP) {
                 order.customerName.ifBlank { stringResource(R.string.detail_customer) }
             } else {
-                order.merchantName.ifBlank { stringResource(R.string.card_custom) }
+                order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) }
             }
             // ══════════════════════════════════════════════════════════
             // **والخاصُّ قبل الشراء لا وجهةَ له**
@@ -337,9 +337,9 @@ internal fun LegDot(label: Int, icon: Int, index: Int, at: Int) {
 
 private val LEGS = listOf(
     R.string.leg_picked,
-    R.string.leg_way,
+    R.string.ord_st_onway,
     R.string.leg_arrived,
-    R.string.leg_done,
+    R.string.ord_st_delivered,
 )
 
 private val LEG_ICONS = listOf(
@@ -358,9 +358,9 @@ private val LEG_ICONS = listOf(
 private val CUSTOM_LEGS = listOf(
     R.string.leg_agree,
     R.string.leg_buy,
-    R.string.leg_way,
+    R.string.ord_st_onway,
     R.string.leg_arrived,
-    R.string.leg_done,
+    R.string.ord_st_delivered,
 )
 
 private val CUSTOM_LEG_ICONS = listOf(

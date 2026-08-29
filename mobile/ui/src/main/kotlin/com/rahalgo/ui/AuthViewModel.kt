@@ -73,6 +73,37 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             state = state.copy(otpAvailable = platform.otpLogin)
+            // **ورايةُ التسجيل تُحفظ هنا لا في `SignupState`** — تُقرأ
+            // مرّةً عند فتح الشاشة، **وشاشةُ الإنشاء تُفتح بعدها.**
+            signupNeedsCode = platform.signupVerify
+        }
+    }
+
+    /**
+     * **أيُطلب رمزٌ عند إنشاء الحساب؟** — من المنصّة لا من الشيفرة.
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٢٥: التسجيلُ بلا رمز، والتوثيقُ عند أوّل طلب.)
+     *
+     * **وافتراضُه `false`** — فمن لم يبلغه ردُّ المنصّة يمرّ بلا رمز
+     * بدل أن يُحبس على شاشةٍ لا يصلها شيء.
+     */
+    private var signupNeedsCode: Boolean = false
+
+    /**
+     * **يفتح واتساب على رقم المنصّة** — وفشلُه لا يُسقط الخطوة.
+     *
+     * **ومن لم يُفتح عنده يستطيع أن يراسل بيده** — فحقلُ الرمز يبقى
+     * ينتظره، **ولا يُغلق البابُ على من ليس عنده التطبيق.**
+     */
+    private fun openWhatsApp(url: String) {
+        if (url.isBlank()) return
+        runCatching {
+            getApplication<Application>().startActivity(
+                android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(url),
+                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
         }
     }
 
@@ -254,13 +285,27 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
      * حسابات.** فلا يُقال هنا «الرقم غير موجود»، **وإلّا نُقض صمتُ
      * المحرّك من الواجهة.**
      */
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **الاستعادةُ مقلوبةٌ أيضاً — يفتح واتساب ويرسل هو**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-٢٥: «واستعادة كلمة المرور أيضاً هو يرسل».)
+     *
+     * **وكانت تُرسل رسالةٌ إليه** — وواتساب قيّد رقمَ المنصّة مرّتين
+     * في يومٍ واحد لأنّها مراسلةٌ ابتدائيّة. **والردُّ مسموح.**
+     *
+     * **والخطوةُ التالية هي هي**: يكتب الرمزَ الذي وصله، ثمّ الكلمةَ
+     * الجديدة. **فلا شيءَ تغيّر عنده إلّا من يبدأ.**
+     */
     fun sendResetCode() {
         val current = reset ?: return
         if (current.busy) return
         reset = current.copy(busy = true, error = "")
         viewModelScope.launch {
             reset = try {
-                backend.auth.resetRequest(current.phone.trim())
+                val t = backend.auth.waTicket(current.phone.trim(), "reset")
+                openWhatsApp(t.waUrl)
                 current.copy(step = ResetStep.CODE, busy = false)
             } catch (e: ApiClient.ApiException) {
                 current.copy(busy = false, error = message(e))
@@ -347,6 +392,19 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     fun sendSignupCode() {
         val current = signup ?: return
         if (current.busy) return
+        // ══════════════════════════════════════════════════════════════
+        // **ولا رمزَ إن أطفأته المنصّة — يمضي إلى البيانات مباشرة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-٢٥ بعد أن قُيّد رقمُ واتساب المنصّة
+        //  مرّتين في يوم.)
+        //
+        // **ولا يُنادى المحرّكُ أصلاً**: نداءٌ يطلب رمزاً لن يُرسل
+        // **يستهلك حصّةَ الرقم ويسجّل خطأً في السجلّ بلا سبب.**
+        if (!signupNeedsCode) {
+            signup = current.copy(step = SignupStep.DETAILS, code = "", error = "")
+            return
+        }
         signup = current.copy(busy = true, error = "")
         viewModelScope.launch {
             signup = try {

@@ -47,7 +47,7 @@ fun OrdersScreen(vm: OrdersViewModel) {
     OrdersList(
         vm = vm,
         list = vm.open,
-        title = stringResource(R.string.nav_orders),
+        title = stringResource(R.string.nav_orders_mine),
         hint = stringResource(R.string.soon_orders),
         empty = stringResource(R.string.ord_none_open),
         history = false,
@@ -60,7 +60,7 @@ fun HistoryScreen(vm: OrdersViewModel) {
     OrdersList(
         vm = vm,
         list = vm.history,
-        title = stringResource(R.string.menu_history_title),
+        title = stringResource(R.string.menu_history),
         hint = stringResource(R.string.soon_history),
         empty = stringResource(R.string.ord_none_history),
         history = true,
@@ -236,7 +236,7 @@ private fun ConfirmCancel(onConfirm: () -> Unit, onDismiss: () -> Unit) {
             }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_back)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
         },
     )
 }
@@ -267,12 +267,14 @@ internal fun RateDialog(
             androidx.compose.foundation.layout.Column {
                 Text(
                     text = stringResource(R.string.ord_rate_service),
+                    color = Rahal.colors.ink,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 StarRow(stars) { stars = it }
                 if (hasDriver) {
                     Text(
                         text = stringResource(R.string.ord_rate_driver),
+                        color = Rahal.colors.ink,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     StarRow(driverStars) { driverStars = it }
@@ -293,7 +295,7 @@ internal fun RateDialog(
             ) { Text(stringResource(R.string.ord_send)) }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_back)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
         },
     )
 }
@@ -384,7 +386,7 @@ private fun ComplainDialog(
             ) { Text(stringResource(R.string.ord_send)) }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.ord_back)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
         },
     )
 }
@@ -403,7 +405,7 @@ private fun reasonLabel(code: String): String = when (code) {
     "wrong_items" -> stringResource(R.string.cr_wrong_items)
     "quality" -> stringResource(R.string.cr_quality)
     "late" -> stringResource(R.string.cr_late)
-    "driver_conduct" -> stringResource(R.string.cr_driver_conduct)
+    "driver_conduct" -> stringResource(R.string.rs_driver_conduct)
     "money" -> stringResource(R.string.cr_money)
     "other" -> stringResource(R.string.cr_other)
     else -> code

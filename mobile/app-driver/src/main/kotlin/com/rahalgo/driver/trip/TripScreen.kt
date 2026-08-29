@@ -114,6 +114,37 @@ fun TripScreen(
      * **ويُبنى في الـViewModel** فيعيش عبرَ إعادةِ إنشاء الشاشة.
      */
     voice: VoiceOrchestrator? = null,
+    /**
+     * **جلسةُ الملاحة** — **تُمرَّر ولا تُبنى هنا.**
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «المفروض الرحلة تبقى مستمرّة مهما
+     *  حصل وأينما ذهب».)
+     *
+     * **وكانت تُبنى في التركيب فتموت بمغادرة الشاشة** — وقِيس أنّ
+     * فتحَ تبويب «الطلبات» يُغلقها، **وأنّها لا تعود عند الرجوع.**
+     * **وهي الآن في `OrdersViewModel`** فتنجو من التبويب ومن دورانِ
+     * الجهاز ومن إعادةِ بناء الشاشة.
+     */
+    navSession: com.rahalgo.navigation.NavigationSession,
+    /** **أالملاحقةُ تعمل؟** — من نموذج العرض، فتنجو من إعادة البناء. */
+    following: Boolean = false,
+    /** **ويُقلبها فعلُ إنسان** — لا أثرُ تركيب. */
+    onFollow: (Boolean) -> Unit = {},
+    /** **الرحلةُ التجريبيّة** — وقائمةٌ فارغةٌ تعني «أوقفها». */
+    onReplay: (List<com.rahalgo.navigation.NavFix>) -> Unit = {},
+    /**
+     * **أالصوتُ مكتوم؟** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «تأكّد من زرّ
+     * الصوت بحيث يستجيب بشكلٍ فوريّ».)
+     *
+     * **ويُمرَّر ولا يُقرأ من `VoiceOrchestrator.muted`** — **ذاك حقلٌ
+     * عاديٌّ لا تراقبه الواجهة**، فيُكتم الصوتُ فوراً **وتبقى الأيقونةُ
+     * على حالها** حتّى يُعيد شيءٌ آخرُ رسمَ الشاشة. **فيُضغط الزرُّ
+     * فيُظنّ أنّه لم يعمل.**
+     *
+     * **وهذا حالٌ في نموذج العرض** — تراقبه الواجهةُ فيتبدّل في الإطار
+     * التالي.
+     */
+    voiceMuted: Boolean = false,
 ) {
     val order = state.order
     if (order == null) {
@@ -133,7 +164,9 @@ fun TripScreen(
     //
     // **والملاحقة مُطفأةٌ حتّى تُطلب**: الفتحةُ الأولى تُظهر النقاط
     // كلَّها — **من رأى نفسَه ولم ير وجهتَه** لا يعرف أيّ جهةٍ يمضي.
-    var follow by rememberSaveable { mutableStateOf(false) }
+    // **و«اتبعني» يُقرأ من نموذج العرض** — انظر `OrdersViewModel.following`:
+    // **حالٌ تحكم شيئاً باقياً لا تعيش في شاشةٍ تُبنى وتُهدم.**
+    val follow = following
     var recenter by rememberSaveable { mutableIntStateOf(0) }
 
     // ══════════════════════════════════════════════════════════════════
@@ -163,26 +196,9 @@ fun TripScreen(
     //
     // **والقرارُ هنا لا في الوحدة**: الوحدةُ تقبل مسجّلاً أو لا تقبل،
     // **والتطبيقُ وحدَه يعرف أيَّ بناءٍ هو.**
-    val navSession = remember(routeSource) {
-        com.rahalgo.navigation.NavigationSession(
-            navContext,
-            source = routeSource,
-            // **والمخطِّطُ يُبنى مع الجلسة** — حالتُه عبورُ عتباتٍ
-            // لا سجِلُّ ما قيل، **وذاك في المنسّق.**
-            voice = com.rahalgo.navigation.VoicePlanner(),
-            recorder = if (BuildConfig.DEBUG) {
-                com.rahalgo.navigation.TraceRecorder(
-                    dir = java.io.File(navContext.filesDir, "nav-traces"),
-                    sessionId = java.util.UUID.randomUUID().toString().take(8),
-                )
-            } else {
-                null
-            },
-        )
-    }
-    LaunchedEffect(follow) {
-        if (follow) navSession.start() else navSession.stop()
-    }
+    // **ولا `LaunchedEffect` تُشغّل وتُطفئ** — **إعادةُ بناء الشاشة
+    // تُعيد تنفيذَها بقيمةٍ مُصفَّرةٍ فتُطفئ ملاحةً تعمل.** والقرارُ
+    // في `onFollow` وحدَه: **فعلُ إنسانٍ لا أثرُ تركيب.**
     // ══════════════════════════════════════════════════════════════════
     // **والمسارُ يُسلَّم للجلسة — لا تحسبه الشاشة**
     // ══════════════════════════════════════════════════════════════════
@@ -290,7 +306,9 @@ fun TripScreen(
     // **وما قرّره المخطِّطُ يُسلَّم للمنسّق** — والشاشةُ ناقلٌ لا حاكم.
     LaunchedEffect(navSession.nav?.let { it to navSession.route }) {
         val nav = navSession.nav ?: return@LaunchedEffect
-        voice?.offer(nav.cues, nav.progress?.progressM ?: 0.0, navigating = navSession.running)
+        // **ولا تنقل الشاشةُ التعليمات** — تنتقل من الجلسة إلى
+        // المنسّق مباشرةً (`OrdersViewModel`): **وناقلٌ في شاشةٍ
+        // ينقطع بفتح تبويب.**
     }
     // **ونهايةُ الملاحة تُنهي الصوت** — لا نهايةُ ظهورِ الشاشة.
     //
@@ -299,7 +317,43 @@ fun TripScreen(
     DisposableEffect(Unit) { onDispose { voice?.stop() } }
     // **ومغادرةُ الشاشة تُغلقها** — ومن خرج ونسي زرَّه ترك محرّكَ
     // موقعٍ يعمل بلا شاشةٍ تقرؤه.
-    DisposableEffect(Unit) { onDispose { navSession.stop() } }
+    // **ولا تُغلق الملاحةُ بمغادرة الشاشة** — بلاغُ المالك
+    // ٢٠٢٦-٠٨-٢٤. **وتُغلق بانتهاء الطلب** (`OrdersViewModel.closeNav`)
+    // **أو بموت نموذج العرض** — وذاك مغادرةٌ حقّاً.
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والنافذةُ الطافيةُ تُفتح للملاحة وحدَها**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «ما لازم تتوقّف الخريطة».)
+    //
+    // **ومغادرةُ الشاشة تُطفئ العلم** — **ومن تركه مرفوعاً فتح نافذةً
+    // طافيةً بعد أن أغلق السائقُ رحلتَه**، وهي تبقى على شاشته حتّى
+    // يطردها بيده.
+    // **والنشاطُ يُطلب من السياق ولو لُفّ** — `ContextWrapper` طبقاتٌ
+    // في بعض السمات، **ومن قارن مرّةً واحدةً ردّ فارغاً بلا سبب.**
+    val host = remember(navContext) {
+        var c: android.content.Context? = navContext
+        while (c is android.content.ContextWrapper && c !is com.rahalgo.driver.MainActivity) {
+            c = c.baseContext
+        }
+        c as? com.rahalgo.driver.MainActivity
+    }
+    val floating = host?.floating
+    // **وحضورُ شاشة الرحلة يُعلَن ويُسحب** — فاعتراضُ الرجوع لها
+    // وحدَها، **ومن اعترضه في كلّ شاشةٍ حبس صاحبَه في «حسابي».**
+    DisposableEffect(Unit) {
+        host?.onTripScreen = true
+        onDispose { host?.onTripScreen = false }
+    }
+    DisposableEffect(navSession.running) {
+        host?.onNavigatingChanged(navSession.running)
+        // **ولا يُطفأ عند مغادرة الشاشة** — الملاحةُ تعمل والتبويبُ
+        // نظرة. **ويُطفأ بانتهاء الطلب** (`OrdersViewModel.closeNav`).
+        onDispose { }
+    }
+    val inPip = floating?.inPip == true
+
 
     // ══════════════════════════════════════════════════════════════════
     // **اختيارُ المسار — إغلاقُ واجهة ٧، ٢٠٢٦-٠٨-٢١**
@@ -469,6 +523,15 @@ fun TripScreen(
      */
     LaunchedEffect(state.committedRoute) {
         val committed = state.committedRoute ?: return@LaunchedEffect
+        // **ولا يُعاد تركيبُ مسارٍ مُركَّب** — **وإعادةُ بناء الشاشة
+        // تُعيد تنفيذَ هذا الأثر**، فيقفز الجيلُ (قِيس ٢٠٢٦-٠٨-٢٤:
+        // ١←٢ عند العودة من تبويب) **ويُنسى ما قيل فتُعاد التعليماتُ
+        // من أوّلها.**
+        // **والمقارنةُ بالهُويّة لا بالمرجع** — **والمسارُ يُبنى كائناً
+        // جديداً مع كلّ قراءةِ حالة**، فالمرجعُ يختلف والمسارُ هو هو.
+        if (navSession.route?.let { it.geometry == committed.geometry } == true) {
+            return@LaunchedEffect
+        }
         navSession.setRoute(committed)
         // **ويُعلَن أنّ الجيلَ من اختيار السائق** — فلا جلبَ بعده.
         actions.onRouteInstalled(
@@ -529,7 +592,21 @@ fun TripScreen(
         // **وسبعُ خطواتٍ تُقرأ في كلّ نظرة** وهو لا يحتاج منها إلّا
         // واحدة: **ما الذي أفعله الآن** — وهي مكتوبةٌ في الزرّ أسفل
         // الشاشة بلفظها. **والباقي تاريخٌ ومستقبلٌ يزاحمان الخريطة.**
-        Column(
+        // ══════════════════════════════════════════════════════════════
+        // **وفي النافذة الطافية لا يُعرض إلّا لوحُ الطور**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٨-٢٤.)
+        //
+        // **ومربّعٌ من بضعة سنتيمترات لا يتّسع لأزرارٍ ولا لحديث** —
+        // **واللمسُ لا يصل نافذةً طافيةً أصلاً**، فزرٌّ فيها خدعةٌ
+        // تُضغط ولا تعمل.
+        //
+        // **والخريطةُ والتعليمةُ التاليةُ هما ما يُقرأ في نظرة.**
+        // **ولا لوحَ طورٍ في النافذة الطافية** — (بلاغُ المالك
+        // ٢٠٢٦-٠٨-٢٤: «شريط تبع الرحلة لا يلزم أيضاً بالنافذة
+        // المصغّرة»). **الخريطةُ وحدَها تقول له طريقَه.**
+        if (!inPip) Column(
             Modifier.align(Alignment.TopCenter).statusBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -587,7 +664,8 @@ fun TripScreen(
         //
         // **ولافتةٌ لا شاشة**: يقرؤها بطرف عينه وهو يقود، **ويأخذها أو
         // يتركها — وهو حرّ.**
-        Column(Modifier.align(Alignment.BottomCenter)) {
+        // **وأزرارُ الرحلة تُطوى في النافذة الطافية** — انظر أعلاه.
+        if (!inPip) Column(Modifier.align(Alignment.BottomCenter)) {
             // ══════════════════════════════════════════════════════════
             // **لوحةُ اختيار المسار** — فوق عناصر التحكّم (البند ٦)
             // ══════════════════════════════════════════════════════════
@@ -640,11 +718,13 @@ fun TripScreen(
             MapButtons(
                 follow = follow,
                 onRecenter = { recenter++ },
-                onFollow = { follow = !follow },
+                onFollow = { onFollow(!follow) },
                 onChat = actions.chat,
                 chatting = chat != null,
                 chatUnread = chatUnread,
                 onNavigate = actions.navigate,
+                voiceMuted = voiceMuted,
+                onVoice = { actions.toggleVoice() },
             )
 
             // ══════════════════════════════════════════════════════════
@@ -664,7 +744,6 @@ fun TripScreen(
             // الطورُ «إلى المتجر» مشى إليه، **وإن ضُغط «استلمتُ»
             // انقلب المسارُ إلى الزبون فمشت الإعادةُ إليه وحدَها.**
             if (BuildConfig.DEBUG) {
-                val replayScope = rememberCoroutineScope()
                 state.routeLine?.let { line ->
                     ReplayButton(
                         running = navSession.replaying,
@@ -676,12 +755,11 @@ fun TripScreen(
                                 ?: line.map {
                                     com.rahalgo.navigation.GeoPoint(it.latitude, it.longitude)
                                 }
-                            navSession.startReplay(
-                                com.rahalgo.navigation.ReplayDrive.fixes(g),
-                                replayScope,
-                            )
+                            // **ومجالُها في نموذج العرض** — انظر
+                            // `OrdersViewModel.startReplay`.
+                            onReplay(com.rahalgo.navigation.ReplayDrive.fixes(g))
                         },
-                        onStop = { navSession.stopReplay() },
+                        onStop = { onReplay(emptyList()) },
                     )
                 }
             }
@@ -775,7 +853,7 @@ private fun OnRouteBanner(
         Spacer(Modifier.height(2.dp))
         Text(
             // **واسمُ المصدر أو «طلب خاصّ»** — لا سطرٌ يبدأ بنقطة.
-            text = offer.merchantName.ifBlank { stringResource(R.string.card_custom) } +
+            text = offer.merchantName.ifBlank { stringResource(R.string.nav_custom_order) } +
                 " · " + money(offer.cashDue),
             color = Color.White.copy(alpha = 0.9f),
         )
@@ -961,7 +1039,7 @@ private fun TripCard(
                         order.customerName.ifBlank { stringResource(R.string.detail_customer) }
                     } else {
                         // **ولا اسمَ متجرٍ في الخاصّ** — فيُقال ما هو.
-                        order.merchantName.ifBlank { stringResource(R.string.card_custom) }
+                        order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) }
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -1191,6 +1269,6 @@ private fun NoTrip(onOrders: () -> Unit) {
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(18.dp))
-        RahalButton(onClick = onOrders) { Text(stringResource(R.string.nav_orders)) }
+        RahalButton(onClick = onOrders) { Text(stringResource(R.string.nav_orders_all)) }
     }
 }

@@ -328,17 +328,54 @@ class AccountViewModel(app: Application) : AndroidViewModel(app) {
     // **وعلى رقم الحساب نفسِه لا على رقمٍ ثانٍ** (قرارُ المالك
     // ٢٠٢٦-٠٨-١٢: «ما يصير رقم الهاتف مختلف عن واتساب»).
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **التوثيقُ مقلوب — يفتح واتساب ويرسل هو**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-٢٥ بعد أن قُيّد رقمُ المنصّة مرّتين في يوم.)
+     *
+     * **وكانت تُرسل رسالةٌ إليه** — وواتساب يمنع الحساباتِ الشخصيّةَ
+     * من مراسلة من لم يراسلها، **فقُيّد الرقمُ بعد رسالتين.**
+     *
+     * **والآن يُفتح واتساب على رقم المنصّة برسالةٍ جاهزة، فيرسلها
+     * بيده، فيردّ البوتُ بالرمز** — **والردُّ مسموح.**
+     *
+     * # ولا يُبنى النصُّ هنا
+     *
+     * **والرابطُ يأتي من المحرّك** — رقمُ المنصّة إعدادٌ يُبدَّل في
+     * اللوحة، **ونصٌّ يُبنى في أربعة تطبيقاتٍ يختلف أربعَ مرّات.**
+     *
+     * # وحقلُ الرمز يُفتح ولو لم يُفتح واتساب
+     *
+     * **ومن لم يُفتح عنده واتساب يستطيع أن يراسل بيده** — فلا يُغلق
+     * البابُ عليه، **ويبقى الحقلُ ينتظر رمزَه.**
+     */
     fun askWhatsApp() {
         val phone = state.me?.phone.orEmpty()
         if (phone.isEmpty() || state.busy) return
         state = state.copy(busy = true)
         viewModelScope.launch {
             state = try {
-                backend.account.whatsappRequest(phone)
+                val t = backend.auth.waTicket(phone, "verify")
+                openWhatsApp(t.waUrl)
                 state.copy(busy = false, waPending = phone)
             } catch (e: Exception) {
                 Flash.fail(describe(e)).let { state.copy(busy = false) }
             }
+        }
+    }
+
+    /** **يفتح واتساب** — وفشلُه لا يُسقط الخطوة. انظر `askWhatsApp`. */
+    private fun openWhatsApp(url: String) {
+        if (url.isBlank()) return
+        runCatching {
+            getApplication<Application>().startActivity(
+                android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(url),
+                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
         }
     }
 

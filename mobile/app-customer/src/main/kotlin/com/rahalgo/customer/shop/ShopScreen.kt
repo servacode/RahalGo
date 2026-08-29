@@ -3,6 +3,8 @@ package com.rahalgo.customer.shop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -232,7 +234,7 @@ fun ShopScreen(
 
             vm.items.isEmpty() -> Empty(
                 stringResource(
-                    if (vm.searching) R.string.shop_no_results else R.string.shop_empty_section,
+                    if (vm.searching) R.string.shop_no_results else R.string.mn_no_items,
                 ),
             )
 
@@ -339,6 +341,32 @@ private fun SectionRail(
             // **والجوابُ يصل قبل أن يتلاشى الأثر**: الأصنافُ تتبدّل
             // واسمُ القسم يُلوَّن ويثقُل. **وأثرٌ يقول «سمعتُك» حيث
             // يقوله ما وقع فعلاً زائد.**
+            // ══════════════════════════════════════════════════════════
+            // **والمختارُ يكبر وتُحيطه حلقة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-٢٥: «يجب أن نضيف سكيل للقسم المختار
+            //  ليكون واضحاً للمستخدم في أيّ قسمٍ هو، مع إضافة أوت لاين
+            //  للقسم المختار».)
+            //
+            // **ولا يناقض قرارَه ٢٠٢٦-٠٨-١٥** — رفض يومَها **مربّعاً
+            // حول دائرة**، وهو محقّ: الصورةُ دائرةٌ والأثرُ كان مستطيلاً
+            // بعرض العمود كلِّه. **وهذه حلقةٌ دائريّةٌ تعانق الصورة.**
+            //
+            // **والحجمُ الخارجيُّ ثابت** — الكبرُ في الصورة وحدَها داخل
+            // صندوقٍ لا يتبدّل. **وإلّا قفز الشريطُ كلُّه عند كلّ
+            // ضغطة**، وذاك أسوأُ ممّا يُصلح.
+            //
+            // **والانتقالُ متحرّكٌ لا قفزة** — **وتبدّلٌ فوريٌّ يُقرأ
+            // ارتجافاً لا استجابة.**
+            val ring by animateDpAsState(
+                targetValue = if (on) 2.5.dp else 0.dp,
+                label = "sectionRing",
+            )
+            val face by animateDpAsState(
+                targetValue = if (on) 64.dp else 58.dp,
+                label = "sectionFace",
+            )
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -348,13 +376,22 @@ private fun SectionRail(
                         indication = null,
                     ) { onPick(s.id) },
             ) {
-                RemoteImage(
-                    url = media(s.imageThumbUrl ?: s.imageUrl),
-                    name = s.name,
-                    modifier = Modifier
-                        .size(58.dp)
-                        .clip(CircleShape),
-                )
+                Box(
+                    modifier = Modifier.size(66.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    RemoteImage(
+                        url = media(s.imageThumbUrl ?: s.imageUrl),
+                        name = s.name,
+                        modifier = Modifier
+                            .size(face)
+                            .border(ring, Rahal.colors.brand, CircleShape)
+                            // **وفراغٌ بين الحلقة والصورة** — **وحلقةٌ
+                            // ملاصقةٌ تُقرأ حافّةً للصورة لا اختيارا.**
+                            .padding(ring + if (on) 1.5.dp else 0.dp)
+                            .clip(CircleShape),
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 // ══════════════════════════════════════════════════════
                 // **واسمُ القسم يُكتب كاملاً — سطرين إن لزم**
@@ -430,6 +467,51 @@ private fun ItemCard(
                     .aspectRatio(1f)
                     .clip(Rahal.shape.md),
             )
+
+            // ══════════════════════════════════════════════════════════
+            // **والمغلقُ يُرى مغلقاً — لا شارةٌ تذوب في الصورة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «عندما يكون المتجرُ مغلقاً
+            //  المفروض تكون واضح، مثلاً تصير الصورةُ خافتة ومكتوب
+            //  بوضوح بالمنتصف».)
+            //
+            // # ولماذا لم تكن تُرى
+            //
+            // **وكانت شارةً صغيرةً في زاوية الصورة بلونٍ باهت** — وصورُ
+            // الطعام ملوّنةٌ زاهية، **فيذوب النصُّ فيها ولا يُقرأ.**
+            // (قِيس على الجهاز: «مغلق الآن» على صورة شاورما — لا تكاد
+            // تُرى.)
+            //
+            // **ومن لم يرَ أنّ المتجرَ مغلقٌ ضغط «أضف» فلم يحدث شيء**،
+            // فظنّ التطبيقَ معطّلاً.
+            //
+            // # وطبقتان لا واحدة
+            //
+            // **والتعتيمُ وحدَه لا يكفي** — قد يُقرأ ظلَّ تصميم.
+            // **والنصُّ وحدَه لا يكفي** — يضيع في الألوان. **فاجتماعُهما
+            // هو ما يُرى من مترين.**
+            if (item.sourceClosed) {
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .clip(Rahal.shape.md)
+                        // **وستّون بالمئة تُبقي الصورةَ مفهومةً وتُخمدها**
+                        // — والتعتيمُ التامُّ يجعل البطاقةَ فراغاً.
+                        .background(Color.Black.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.shop_closed_now),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    )
+                }
+            }
+
             // **ونسبةُ الحسم فوق الصورة** — تُقرأ بلمحةٍ قبل أن يُقارَن
             // الرقمان.
             item.discountPercent?.let {
@@ -557,14 +639,15 @@ private fun ItemCard(
                 }
             } else {
                 // **ومغلقٌ يُقال على الصورة** — لا يُكتشف عند الضغط.
-                Box(Modifier.align(Alignment.BottomStart).padding(6.dp)) {
-                    Chip(
-                        stringResource(
-                            if (item.sourceClosed) R.string.shop_closed
-                            else R.string.shop_unavailable,
-                        ),
-                        Rahal.colors.inkMuted,
-                    )
+                // **والمغلقُ صار لافتةً وسطى** (٢٠٢٦-٠٨-٢٦) — انظر
+                // أعلاه. **وشارتان لشيءٍ واحدٍ تشوّشان.**
+                if (!item.sourceClosed) {
+                    Box(Modifier.align(Alignment.BottomStart).padding(6.dp)) {
+                        Chip(
+                            stringResource(R.string.mn_unavailable),
+                            Rahal.colors.inkMuted,
+                        )
+                    }
                 }
             }
         }
@@ -583,6 +666,7 @@ private fun ItemCard(
         // سطرين. (وهو ما اتُّفق عليه: نُجرّب ثمّ نقرّر.)
         Text(
             text = item.name,
+            color = Rahal.colors.ink,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
             maxLines = 1,

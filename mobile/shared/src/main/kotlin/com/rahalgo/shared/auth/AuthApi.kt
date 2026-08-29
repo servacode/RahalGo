@@ -4,6 +4,7 @@ import com.rahalgo.shared.model.AuthResult
 import com.rahalgo.shared.model.Platform
 import com.rahalgo.shared.model.SiteContact
 import com.rahalgo.shared.model.User
+import com.rahalgo.shared.model.WaTicket
 import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
@@ -38,6 +39,30 @@ class AuthApi(private val api: ApiClient) {
             HttpMethod.Post,
             mapOf("phone" to phone),
         ).let { }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **تذكرةُ واتساب — والزبونُ يبدأ المحادثة**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-٢٥ بعد أن قُيّد رقمُ المنصّة مرّتين في يوم.)
+     *
+     * **وواتساب يمنع الحساباتِ الشخصيّةَ من مراسلة من لم يراسلها** —
+     * **والردُّ مسموح.** فتُفتح تذكرةٌ، ويُرسل صاحبُها رسالةً جاهزةً
+     * فيها وسمُها، **فيردّ البوتُ بالرمز.**
+     *
+     * **والرابطُ يأتي من المحرّك لا يُبنى هنا**: رقمُ المنصّة إعدادٌ
+     * يُبدَّل في اللوحة، **ونصٌّ يُبنى في أربعة تطبيقاتٍ يختلف أربعَ
+     * مرّات.**
+     *
+     * `purpose` — `verify` للتوثيق · `reset` لاستعادة كلمة المرور.
+     */
+    suspend fun waTicket(phone: String, purpose: String = "verify"): WaTicket =
+        api.raw(
+            "/api/v1/auth/wa/ticket",
+            HttpMethod.Post,
+            mapOf("phone" to phone, "purpose" to purpose),
+        )
 
     /** تأكيد الرمز — **يفتح الجلسة مباشرة.** */
     suspend fun verifyOtp(phone: String, code: String): AuthResult =

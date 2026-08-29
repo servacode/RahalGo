@@ -6,21 +6,18 @@
 
     <!-- **ويقول دورَه** — **والعاملُ يفتح تطبيقين على جهازٍ واحدٍ
          أحياناً**، فيفرّق بينهما بالعنوان. -->
-    <string name="login_title">دخول المتجر</string>
+    <string name="login_title">تسجيل دخول المتجر</string>
     <string name="login_hint">ادخل برقمك وكلمة المرور</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **الطلبات — قلبُ التطبيق**
          ══════════════════════════════════════════════════════════════ -->
-    <string name="tab_orders">الطلبات</string>
     <!-- **«الأصناف» لا «القائمة»** — (تصحيحُ المالك ٢٠٢٦-٠٨-٢٣).
          **والويبُ يسمّيها كذلك منذ زمن**، ولفظان لشيءٍ واحدٍ يجعلان
          المنصّةَ تبدو منصّتين. -->
-    <string name="tab_menu">الأصناف</string>
     <string name="tab_store">متجري</string>
     <string name="tab_account">حسابي</string>
 
-    <string name="orders_title">طلباتي</string>
     <string name="orders_hint">اقبل الطلب ثم حضّره ثم أعلن جاهزيته</string>
     <string name="orders_empty">لا طلبات الآن — سنُعلمك حين يصل طلب</string>
 
@@ -29,7 +26,6 @@
     <string name="order_start">بدأت التحضير</string>
     <string name="order_ready">جاهز للاستلام</string>
     <string name="order_ready_done">أُعلن جاهزاً — بانتظار السائق</string>
-    <string name="order_items">الأصناف</string>
     <string name="order_note">ملاحظة الزبون</string>
     <string name="order_due">مستحقك من هذا الطلب</string>
     <string name="order_seconds_left">%1$d ثانية للقبول</string>
@@ -52,20 +48,14 @@
     <!-- **ولفظٌ واحدٌ في كل التطبيقات** — «متوفر / غير متوفر».
          **والزرُّ يقول الحالَ لا الفعل**: من قرأ «اجعله غير متوفر»
          لم يعرف أهو متوفرٌ الآن أم لا. -->
-    <string name="menu_available">متوفر</string>
-    <string name="menu_unavailable">غير متوفر</string>
-    <string name="menu_pending">بانتظار المراجعة</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **محرّرُ الصنف — كنموذج الويب**
          ══════════════════════════════════════════════════════════════ -->
     <string name="tab_add">أضف صنفاً</string>
     <string name="item_add">أضف صنفاً</string>
-    <string name="item_new">صنف جديد</string>
-    <string name="item_edit">تعديل الصنف</string>
-    <string name="item_name">اسم الصنف</string>
     <string name="item_desc">وصف مختصر</string>
-    <string name="item_price">سعر الشراء</string>
+    <string name="item_price">السعر</string>
     <!-- **وسعرُ البيع ليس شأنَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٠): هو يضع
          سعرَه ويقبض عليه. -->
     <string name="item_price_hint">ما تقبضه أنت — والمنصة تضيف هامشها فوقه</string>
@@ -111,7 +101,6 @@
 
          **والدبّوسُ يقول «أين» والسطرُ يقول «كيف تصل»** — طابقٌ ثانٍ،
          بابٌ خلفَ المحلّ، علامةٌ يعرفها أهلُ الحيّ. -->
-    <string name="store_address">العنوان</string>
     <string name="store_address_hint">الشارع والعلامة التي يعرفها الناس</string>
     <string name="store_point">موقع المتجر على الخريطة</string>
     <string name="store_point_none">لم يُحدَّد بعد</string>
@@ -128,10 +117,8 @@
     <string name="reports_on_order">على الطلب #%1$d</string>
     <string name="menu_sales">التقارير</string>
     <string name="sales_hint">مبيعاتك على مدًى تختاره</string>
-    <string name="sales_today">اليوم</string>
     <string name="sales_week">٧ أيّام</string>
     <string name="sales_month">٣٠ يوماً</string>
-    <string name="reports_orders_all">الطلبات</string>
     <string name="reports_sales">المبيعات</string>
     <string name="reports_commission">عمولة المنصّة</string>
     <string name="reports_due">مستحقك</string>
@@ -146,7 +133,6 @@
     <string name="report_title">إبلاغ عن سائق الطلب #%1$d</string>
     <string name="report_hint">يصل الإدارةَ ولا يصل السائق</string>
     <string name="report_note">ملاحظة (اختياريّة)</string>
-    <string name="report_send">أرسل البلاغ</string>
 
     <string name="store_no_warnings">لا إنذارات عليك</string>
     <!-- ══════════════════════════════════════════════════════════════
@@ -178,7 +164,6 @@
     <string name="reports_due_today">مستحق اليوم</string>
 
     <!-- **واسمُه بيده** — طلبُ المالك ٢٠٢٦-٠٨-٢٣. -->
-    <string name="store_name">اسم المتجر</string>
     <string name="store_rename">تعديل اسم المتجر</string>
 
     <!-- ══════════════════════════════════════════════════════════════
@@ -186,14 +171,11 @@
          ══════════════════════════════════════════════════════════════
 
          (قرارُ المالك ٢٠٢٦-٠٨-٢٣.) **و«الطلبات» لاستقبال الجديد وحدَه.** -->
-    <string name="menu_history">سجل الطلبات</string>
     <string name="history_hint">ما انتهى أمره — يُفتح عند سؤال</string>
     <string name="history_empty">لا طلبات في السجل بعد</string>
 
     <string name="wallet_title">محفظتي</string>
 
-    <string name="save">حفظ</string>
-    <string name="cancel">إلغاء</string>
     <string name="retry">أعد المحاولة</string>
     <string name="days_sun">الأحد</string>
     <string name="days_mon">الاثنين</string>
@@ -202,4 +184,44 @@
     <string name="days_thu">الخميس</string>
     <string name="days_fri">الجمعة</string>
     <string name="days_sat">السبت</string>
+    <string name="push_ch_new_order">طلبات جديدة</string>
+    <string name="store_sections">أقسام السوق</string>
+    <string name="store_sections_hint">اختر ما تبيعه فقط — وعندها لن تظهر لك إلا هذه الأقسام عند إضافة صنف</string>
+    <string name="hist_money">بِيع %1$s · عمولة المنصة %2$s (%3$d٪) · لك %4$s</string>
+    <string name="reports_mine">شكاوى رفعتها</string>
+    <string name="reports_against">شكاوى عليّ</string>
+    <string name="reports_against_empty">لا شكاوى على متجرك — أحسنت</string>
+    <string name="sales_custom">مدة محددة</string>
+    <string name="sales_print">طباعة التقرير</string>
+    <string name="no_store">لا متجر مرتبط بحسابك — راجع الإدارة</string>
+    <string name="mod_title">الإضافات والخيارات</string>
+    <string name="mod_hint">مثل: مشروب غازي، جبنة إضافية، الحجم. تظهر للزبون عند اختيار الصنف</string>
+    <string name="mod_add_group">أضف مجموعة</string>
+    <string name="mod_multi">يختار أكثر من واحد</string>
+    <string name="mod_opt_price">السعر الإضافي</string>
+    <string name="mod_add_option">أضف خياراً</string>
+
+    <!-- **نصوصٌ كانت مكتوبةً في كوتلن** — أمسكتها منظومةُ الاختبار
+         ٢٠٢٦-٠٨-٢٦: ثلاثةٌ وعشرون نصّاً يراها صاحبُ المتجر ولا
+         يُصحَّح واحدُها من مكانٍ واحد. -->
+    <string name="v_item_name">اكتب اسم الصنف</string>
+    <string name="v_item_price">اكتب سعر الشراء</string>
+    <string name="v_item_section">اختر قسم السوق — وصنف بلا قسم لا يراه زبون</string>
+    <string name="g_unsorted">غير مصنّف</string>
+    <string name="v_store_name">اكتب اسم المتجر</string>
+    <string name="ok_address_saved">حُفظ عنوانك</string>
+    <string name="ok_sections_saved">حُفظت الأقسام</string>
+    <string name="ok_store_closed">أُغلق متجرك — والإدارة تعلم</string>
+    <string name="ok_report_sent">وصل بلاغُك — والإدارة تنظر فيه</string>
+    <string name="st_delivered">سُلّم</string>
+    <string name="st_cancelled">أُلغي</string>
+    <string name="st_rejected">اعتُذر عنه</string>
+    <string name="st_failed">تعذّر تسليمه</string>
+    <string name="st_refunded">استُرجع</string>
+    <string name="rs_driver_late">السائق تأخّر بالاستلام</string>
+    <string name="rs_driver_refused">السائق رفض أخذ الطلب</string>
+    <string name="tk_open">قيد النظر</string>
+    <string name="tk_resolved">فُصل فيه</string>
+    <string name="tk_rejected">رُدّ</string>
+    <string name="tk_closed">أُغلق</string>
 </resources>

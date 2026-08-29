@@ -87,6 +87,7 @@ fun CityRow(name: String, onClick: () -> Unit) {
             // عطباً في الشاشة لا حالاً في الحساب.**
             Text(
                 text = name.ifEmpty { stringResource(R.string.city_unknown) },
+                color = Rahal.colors.ink,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -141,6 +142,7 @@ fun CitySheet(
                     // **سؤالٌ لا عنوانُ قسم** — كورقة العنوان.
                     Text(
                         stringResource(R.string.city_sheet_title),
+                        color = Rahal.colors.ink,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleLarge,
                     )

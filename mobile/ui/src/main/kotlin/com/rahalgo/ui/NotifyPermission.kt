@@ -54,6 +54,25 @@ fun AskNotifyPermission(enabled: Boolean) {
 
     LaunchedEffect(enabled) {
         if (!enabled || notifyGranted(context)) return@LaunchedEffect
+
+        // ══════════════════════════════════════════════════════════════
+        // **ولا يُسأل مرّتين في جلسةٍ واحدة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **`AskStartupPermissions` تسأل عند أوّل فتح** (قرارُ المالك
+        // ٢٠٢٦-٠٨-٢٦: «لازم أوّل ما يفتح التطبيق مشان ما ننسى أيّ
+        // إذن»). **وهذه كانت تسأل بعدها مباشرةً.**
+        //
+        // **ورفضتان متتاليتان في أندرويد تقفلان الإذنَ نهائيّاً** — لا
+        // نافذةَ بعدهما أبداً، والعلاجُ في إعدادات النظام لا في
+        // التطبيق. **فرفضةٌ واحدةٌ من المستخدم كانت تصير قفلاً دائماً.**
+        //
+        // **والعلامةُ نفسُها** التي تكتبها `AskStartupPermissions` —
+        // فمن سُئل هناك لا يُسأل هنا، **ومن لم يُسأل (تطبيقٌ لا يطلب
+        // الإشعاراتِ عند الإقلاع) يُسأل هنا كما كان.**
+        val prefs = context.getSharedPreferences("rahalgo", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("asked_startup_v1", false)) return@LaunchedEffect
+
         ask.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }

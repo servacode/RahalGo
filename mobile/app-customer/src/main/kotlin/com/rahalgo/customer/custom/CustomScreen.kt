@@ -117,7 +117,7 @@ fun CustomScreen(
 
     Screen {
         ScreenTitle(
-            stringResource(R.string.nav_custom),
+            stringResource(R.string.nav_custom_order),
             stringResource(R.string.soon_custom),
         )
 

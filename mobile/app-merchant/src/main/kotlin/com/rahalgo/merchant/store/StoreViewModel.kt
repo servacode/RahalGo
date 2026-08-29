@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.store
 
+import com.rahalgo.merchant.noStoreMsg
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -7,10 +8,12 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.merchant.DayHours
+import com.rahalgo.shared.merchant.PlatformSectionRef
 import com.rahalgo.shared.merchant.MerchantApi
 import com.rahalgo.shared.merchant.Store
 import com.rahalgo.shared.merchant.StoreReport
 import com.rahalgo.shared.merchant.StoreSettingsInput
+import com.rahalgo.ui.err
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Flash
 import kotlinx.coroutines.launch
@@ -43,6 +46,19 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     var hours by mutableStateOf<List<DayHours>>(emptyList())
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **أقسامُ السوق — كلُّها وما اختاره منها**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «مو معقول كلُّ الأقسام تطلع عند كلّ
+     *  المتاجر… مطعمٌ شو علاقتُه بالأحذية؟»)
+     *
+     * **و`allSections` للاختيار، و`mySections` لنموذج الصنف.**
+     */
+    var allSections by mutableStateOf<List<PlatformSectionRef>>(emptyList())
+    var mySections by mutableStateOf<List<PlatformSectionRef>>(emptyList())
         private set
 
     var report by mutableStateOf<StoreReport?>(null)
@@ -85,7 +101,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 val mine = api.stores().stores.firstOrNull()
                 if (mine == null) {
-                    error = "لا متجر مرتبط بحسابك"
+                    error = noStoreMsg()
                     loading = false
                     return@launch
                 }
@@ -98,6 +114,10 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
                 // شاشتُه كلُّها لأنّ نداءَ تقريرٍ تعثّر **لم يستطع أن
                 // يفتح متجرَه صباحاً.**
                 runCatching { hours = api.hours(mine.id) }
+                // **والأقسامُ زينةٌ حول الحال مثلُها** — ومن سقطت
+                // شاشتُه لأنّ نداءَ أقسامٍ تعثّر لم يفتح متجرَه.
+                runCatching { allSections = api.platformSections().sections }
+                runCatching { mySections = api.storeSections(mine.id).sections }
                 // **واليومُ وحدَه** — **ومدًى من سبعة أيّامٍ يُقرأ «اليوم»
                 // فيظنّ صاحبُ المتجر يومَه أكبرَ ممّا هو.**
                 runCatching {
@@ -105,7 +125,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
                     report = api.reports(mine.id, from = today, to = today)
                 }
                 error = ""
-            }.onFailure { error = it.message ?: "تعذّر جلب المتجر" }
+            }.onFailure { error = err(it) }
             loading = false
         }
     }
@@ -132,7 +152,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
             // المفتاحُ نفسَه في الشاشة والمتجرُ مفتوحٌ كما كان.
             runCatching { api.setClosed(id, closed = !on) }
                 .onSuccess { ack -> store = store?.copy(emergencyClosed = ack.closed) }
-                .onFailure { Flash.fail(it.message ?: "تعذّر تبديل الحال") }
+                .onFailure { Flash.fail(err(it)) }
             saving = false
         }
     }
@@ -147,7 +167,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
                 // الحالُ محلّيّاً، **ونداءُ قراءةٍ كاملٍ لرقمٍ واحدٍ حملٌ
                 // بلا سبب.**
                 .onSuccess { store = store?.copy(prepMinutes = minutes) }
-                .onFailure { Flash.fail(it.message ?: "تعذّر حفظ المدة") }
+                .onFailure { Flash.fail(err(it)) }
             saving = false
         }
     }
@@ -162,14 +182,14 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         val id = store?.id ?: return
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
-            Flash.fail("اكتب اسم المتجر")
+            Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.v_store_name))
             return
         }
         saving = true
         viewModelScope.launch {
             runCatching { api.settings(id, StoreSettingsInput(name = trimmed)) }
                 .onSuccess { store = store?.copy(name = trimmed) }
-                .onFailure { Flash.fail(it.message ?: "تعذّر حفظ الاسم") }
+                .onFailure { Flash.fail(err(it)) }
             saving = false
         }
     }
@@ -215,9 +235,29 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
                     // معلّقةً تُرسَل ثانيةً مع أيّ حفظٍ تالٍ.**
                     pickedLat = null
                     pickedLng = null
-                    Flash.ok("حُفظ عنوانك")
+                    Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_address_saved))
                 }
-                .onFailure { Flash.fail(it.message ?: "تعذّر حفظ العنوان") }
+                .onFailure { Flash.fail(err(it)) }
+            saving = false
+        }
+    }
+
+    /**
+     * **يحفظ أقسامَ المتجر** — انظر `mySections`.
+     *
+     * **ولا يُحفظ فارغاً بلا قصد**: من أزال الكلَّ عاد يرى القائمةَ
+     * كاملةً كما قبل الاختيار، **وذاك سلوكٌ مقصودٌ لا عطب.**
+     */
+    fun saveSections(ids: List<String>) {
+        val id = store?.id ?: return
+        saving = true
+        viewModelScope.launch {
+            runCatching { api.setStoreSections(id, ids) }
+                .onSuccess {
+                    mySections = allSections.filter { it.id in ids }
+                    Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_sections_saved))
+                }
+                .onFailure { Flash.fail(err(it)) }
             saving = false
         }
     }
@@ -228,7 +268,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching { api.setHours(id, days) }
                 .onSuccess { hours = days }
-                .onFailure { Flash.fail(it.message ?: "تعذّر حفظ الساعات") }
+                .onFailure { Flash.fail(err(it)) }
             saving = false
         }
     }
@@ -245,9 +285,9 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { api.setClosed(id, closed = true) }
                 .onSuccess { ack ->
                     store = store?.copy(emergencyClosed = ack.closed)
-                    Flash.ok("أُغلق متجرك — والإدارة تعلم")
+                    Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_store_closed))
                 }
-                .onFailure { Flash.fail(it.message ?: "تعذّر الإغلاق") }
+                .onFailure { Flash.fail(err(it)) }
         }
     }
 }

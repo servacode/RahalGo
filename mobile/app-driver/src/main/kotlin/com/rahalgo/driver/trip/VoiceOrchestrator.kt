@@ -70,6 +70,21 @@ class VoiceOrchestrator(
     private val queue = ArrayList<VoiceCue>(4)
     private var speaking: VoiceCue? = null
 
+    /**
+     * **بابُ السجلّ — ولا يعرف المنسّقُ أندرويد.**
+     *
+     * **و`android.util.Log` غيرُ موجودةٍ في اختبار الحاسوب**، فتُلقي
+     * `Method not mocked` وتُسقط سبعةَ اختباراتٍ سليمة (وقع
+     * ٢٠٢٦-٠٨-٢٤). **ومنطقٌ يستدعي أندرويد منطقٌ لا يُختبر.**
+     */
+    var log: (String) -> Unit = {}
+
+    /** **متى عُرضت كلُّ تعليمة** — لقياس انتظارها في الطابور. */
+    private val offeredNs = HashMap<com.rahalgo.navigation.CueId, Long>()
+
+    /** **آخرُ تقدّمٍ عُرف** — للقياس لا للمنطق. */
+    private var progressM: Double = 0.0
+
     /** **ما يُقال الآن** — للتشخيص. */
     val current: VoiceCue? get() = speaking
 
@@ -100,6 +115,7 @@ class VoiceOrchestrator(
                 dropped++
             }
         }
+        for (c in queue) offeredNs.putIfAbsent(c.id, System.nanoTime())
         pump(progressM, navigating)
     }
 
@@ -111,6 +127,7 @@ class VoiceOrchestrator(
      * (أمرُ المالك، البند ٢٢.)
      */
     fun pump(progressM: Double, navigating: Boolean = true) {
+        this.progressM = progressM
         if (muted || !navigating || !speaker.available) {
             if (queue.isNotEmpty()) {
                 dropped += queue.size
@@ -146,7 +163,41 @@ class VoiceOrchestrator(
         speaking = next
         spoken++
         val flush = busy != null
-        speaker.speak(next.id.toString(), next.text, flush) {
+        // **واللاحقةُ تُمرَّر لمن يعرفها** — ومن لا يعرفها يقول الأولى
+        // وحدَها ولا يسقط.
+        val talker = speaker
+        val hand: ((Boolean) -> Unit) -> Unit = { cb ->
+            if (talker is ClipSpeaker) {
+                talker.speak(next.id.toString(), next.text, next.clip, next.thenClip, flush, cb)
+            } else {
+                talker.speak(next.id.toString(), next.text, next.clip, flush, cb)
+            }
+        }
+        // ══════════════════════════════════════════════════════════════
+        // **ويُقاس التأخّرُ بالمتر لا بالانطباع**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «الصوتُ متأخّرٌ عن الطريق».)
+        //
+        // **وثلاثةُ أرقامٍ تكفي للحكم**: كم بقي بينه وبين المناورة حين
+        // بدأ الكلام · وكم بقي حين انتهى · وكم انتظرت التعليمةُ في
+        // الطابور. **والسالبُ يعني أنّه جاوز المنعطفَ والصوتُ يتكلّم.**
+        val startedAtM = next.maneuver?.let { it.atDistanceM - progressM } ?: Double.NaN
+        val startedNs = System.nanoTime()
+        val waitedMs = (startedNs - offeredNs.getOrDefault(next.id, startedNs)) / 1_000_000
+        offeredNs.remove(next.id)
+        log(
+            "بدأ «${next.clip}»${next.thenClip?.let { "+«$it»" } ?: ""} " +
+                "طور=${next.stage} بُعد=${"%.0f".format(startedAtM)}م انتظار=${waitedMs}ملّي",
+        )
+        hand {
+            // **والسرعةُ من التعليمة نفسِها** — هي التي حُسبت بها
+            // عتبتُها، **فالقياسُ والقرارُ على رقمٍ واحد.**
+            val v = if (next.firedSpeedMps > 0) next.firedSpeedMps else 8.0
+            val spentM = (System.nanoTime() - startedNs) / 1e9 * v
+            log(
+            "انتهى «${next.clip}» وبقي ${"%.0f".format(startedAtM - spentM)}م",
+            )
             if (speaking?.id == next.id) speaking = null
             // **ولا يُنادى `pump` من هنا بتقدّمٍ قديم** — من يقرأ
             // التقدّمَ هو المحرّك في القراءة التالية.

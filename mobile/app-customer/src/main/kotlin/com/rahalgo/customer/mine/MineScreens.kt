@@ -125,7 +125,11 @@ private fun Favorites(vm: MineViewModel) {
                 Column {
                     Box {
                         RemoteImage(
-                            url = Backend.of(context).media(item.imageUrl ?: item.imageThumbUrl),
+                            // **والمصغَّرُ أوّلاً** — قِيس ٢٠٢٦-٠٨-٢٤: الأصلُ ١٨٦ ك.ب
+                            // والمصغَّرُ ٢١، **وهذه قائمةٌ لا معرض.**
+                            // (بلاغُ المالك: «الأصناف بعد ما أضيفها على
+                            //  المفضّلة بدها شوي لتجلب الصور».)
+                            url = Backend.of(context).media(item.imageThumbUrl ?: item.imageUrl),
                             name = item.name,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -146,6 +150,7 @@ private fun Favorites(vm: MineViewModel) {
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text = item.name,
+                        color = Rahal.colors.ink,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -219,6 +224,7 @@ private fun Offers(vm: MineViewModel) {
                     Column(Modifier.fillMaxWidth()) {
                         Text(
                             text = o.title.ifEmpty { o.itemName },
+                            color = Rahal.colors.ink,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -383,7 +389,7 @@ private fun Invite(vm: MineViewModel) {
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.inv_share)) }
+        ) { Text(stringResource(R.string.act_share_link)) }
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -420,6 +426,7 @@ private fun Tickets(vm: MineViewModel) {
                 ) {
                     Text(
                         text = t.subject.ifEmpty { t.reason },
+                        color = Rahal.colors.ink,
                         fontWeight = FontWeight.Medium,
                         style = MaterialTheme.typography.bodyMedium,
                     )

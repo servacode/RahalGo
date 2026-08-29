@@ -95,7 +95,7 @@ object Backend {
      * — **فأربعةَ عشرَ ملفّاً تناديها**، ولا يُبدَّل نداءٌ لأجل نقل.
      */
     class Wired(context: Context) {
-        private val core: Core = AppCore.install(context, BASE_URL, CLIENT) {
+        private val core: Core = AppCore.install(context, BASE_URL, CLIENT, BuildConfig.VERSION_CODE) {
             // **ونقطةُ الإشعارات تُسجَّل بعد ثبوت الجلسة لا قبلها** —
             // **تحتاج توكنَ حساب**، ومن سجّلها قبله سجّلها بلا صاحب:
             // **فلا يصل إشعارٌ ولا يظهر خطأ.**

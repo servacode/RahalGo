@@ -169,7 +169,7 @@ private fun reportReason(code: String): String = when (code) {
     "customer_address" -> stringResource(R.string.reason_customer_address)
     "customer_refused" -> stringResource(R.string.reason_customer_refused)
     "customer_conduct" -> stringResource(R.string.reason_customer_conduct)
-    "other" -> stringResource(R.string.reason_other)
+    "other" -> stringResource(R.string.rs_other)
     else -> code
 }
 

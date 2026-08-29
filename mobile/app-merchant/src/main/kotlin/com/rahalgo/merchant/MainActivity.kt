@@ -1,5 +1,6 @@
 package com.rahalgo.merchant
 
+import com.rahalgo.ui.ShellViewModel
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -239,7 +240,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                             selected = tab == Tab.Orders && over == Overlay.None,
                             onClick = { tab = Tab.Orders; overlay.clear() },
                             icon = com.rahalgo.ui.R.drawable.ic_orders,
-                            label = R.string.tab_orders,
+                            label = R.string.nav_orders_all,
                         )
                     }
                     // **ومتجري ثانياً** — حالُه وأرقامُه يُفتحان صباحاً.
@@ -257,9 +258,9 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // أوّل أسبوع. **وفعلٌ يُفعل كلَّ يومٍ لا يُخبَّأ خلف
                     // شاشةٍ ثمّ قسمٍ ثمّ زرّ.**
                     Tab(
-                        selected = false,
+                        selected = tab == Tab.AddItem && over == Overlay.None,
                         onClick = {
-                            tab = Tab.Menu
+                            tab = Tab.AddItem
                             overlay.clear()
                             menuVm.newItem()
                         },
@@ -283,7 +284,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                             over == Overlay.None,
                         onClick = { tab = Tab.Menu; overlay.clear() },
                         icon = com.rahalgo.ui.R.drawable.ic_offer,
-                        label = R.string.tab_menu,
+                        label = R.string.mn_items,
                     )
                     // ══════════════════════════════════════════════════
                     // **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
@@ -379,6 +380,16 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
 
                     tab == Tab.Menu -> MenuScreen(menuVm)
 
+                    // **وصفحةُ الإضافة وجهةٌ بذاتها** — والرجوعُ منها
+                    // يعيده إلى الأصناف لا إلى شاشةٍ لا زرَّ له فيها.
+                    tab == Tab.AddItem -> {
+                        BackHandler {
+                            menuVm.cancelEdit()
+                            tab = Tab.Menu
+                        }
+                        MenuScreen(menuVm)
+                    }
+
                     tab == Tab.Store -> StoreScreen(storeVm) { picking = true }
 
                     else -> AccountScreen(
@@ -411,7 +422,17 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
 }
 
 /** **تبويباتُ المتجر** — بترتيبها: يمينٌ إلى يسار. */
-private enum class Tab { Orders, Menu, Store, Account }
+/**
+ * **وجهاتُ الشريط السفليّ.**
+ *
+ * **و`AddItem` وجهةٌ لا فعل** (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «إضافة صنف
+ * صفحة منفصلة عن الأصناف»).
+ *
+ * **وكان زرّاً يقفز إلى `Menu` ويفتح النموذج** — فيُضيء «الأصناف»
+ * ويبقى مضيئاً، **فيظنّ صاحبُ المتجر أنّه في القائمة لا في صفحةِ
+ * إضافة.** ورجوعُه كان يُلقيه في القائمة لا حيث كان.
+ */
+private enum class Tab { Orders, Menu, AddItem, Store, Account }
 
 @Composable
 private fun RowScope.Tab(

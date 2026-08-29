@@ -96,7 +96,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
         OutlinedTextField(
             value = store,
             onValueChange = { store = it },
-            label = { Text(stringResource(R.string.ac_store)) },
+            label = { Text(stringResource(R.string.mn_store_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )

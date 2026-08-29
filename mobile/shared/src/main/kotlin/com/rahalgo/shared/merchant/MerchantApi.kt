@@ -130,6 +130,30 @@ class MerchantApi(private val api: ApiClient) {
     suspend fun platformSections(): SectionsPage =
         api.call("/api/v1/merchant/platform-sections")
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **أقسامُ هذا المتجر — ما يبيعه هو**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «مو معقول كلُّ الأقسام تطلع عند كلّ
+     *  المتاجر… مطعمٌ شو علاقتُه بالأحذية؟»)
+     *
+     * **و`platformSections` تبقى للاختيار** — منها يعلن ما يبيع.
+     * **وهذه تُقرأ في نموذج الصنف**، فلا يرى إلّا ما أعلن.
+     *
+     * **وفارغةٌ تعني الكلّ** — فمتجرٌ لم يختر بعدُ لا يُحبس بلا أقسام.
+     */
+    suspend fun storeSections(storeId: String): SectionsPage =
+        api.call("/api/v1/merchant/stores/$storeId/sections")
+
+    /** **يستبدل القائمةَ كلَّها** — فمن أزال قسماً يزول فعلاً. */
+    suspend fun setStoreSections(storeId: String, ids: List<String>): Ack =
+        api.call(
+            "/api/v1/merchant/stores/$storeId/sections",
+            HttpMethod.Put,
+            mapOf("sections" to ids),
+        )
+
     suspend fun createItem(storeId: String, input: MenuItemInput): MenuItem =
         api.call("/api/v1/merchant/stores/$storeId/menu/items", HttpMethod.Post, input)
 
@@ -239,6 +263,16 @@ class MerchantApi(private val api: ApiClient) {
      * **ما شُكي به عليه**. البابُ الصحيح `/merchant/my-reports` يفلتر
      * بـ`created_by`.
      */
+    /**
+     * **الشكاوى التي رُفعت على متجره** — (بلاغُ المالك ٢٠٢٦-٠٨-٢٦:
+     * «الشكاوي يلي عليه ويلي اله»).
+     *
+     * **ولا يُذكر من اشتكى** — اسمُ الزبون ليس من حقّ المتجر، **ومن
+     * عرفه قد يعاقبه في طلبه القادم.** ورقمُ الطلب يكفي للفهم.
+     */
+    suspend fun reportsAgainst(storeId: String): ReportsPage =
+        api.call("/api/v1/merchant/stores/$storeId/reports-against")
+
     suspend fun myReports(): ReportsPage = api.call("/api/v1/merchant/my-reports")
 
     // ══════════════════════════════════════════════════════════════════
@@ -350,6 +384,22 @@ data class MerchantOrder(
     val subtotal: Long = 0,
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
     val total: Long = 0,
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **شفافيّةُ المتجر — كم أخذت المنصّة وكم بقي له**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «سجلّ الطلبات ما فيه شقد المبلغ المباع
+     *  وشقد نسبة العمولة للمنصّة — هيك لازم يكون بشفافية».)
+     *
+     * **وتصل من المحرّك لصاحب المتجر وحدَه** — ولا تُرسل للزبون.
+     *
+     * **وطلبٌ لم يُسلَّم بعدُ عمولتُه مقدَّرةٌ بالنسبة** — فتُعرض
+     * النسبةُ معها كي لا يُقرأ التقديرُ رقماً نهائيّا.
+     */
+    @SerialName("platform_commission") val platformCommission: Long = 0,
+    @SerialName("merchant_net") val merchantNet: Long = 0,
+    @SerialName("commission_percent") val commissionPercent: Int = 0,
     val items: List<OrderLine> = emptyList(),
     val notes: String = "",
     @SerialName("created_at") val createdAt: String = "",

@@ -3,6 +3,7 @@ package com.rahalgo.rep
 import android.content.Context
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Core
+import com.rahalgo.ui.Hosts
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -14,7 +15,7 @@ import com.rahalgo.ui.Core
  */
 object Backend {
 
-    const val BASE_URL = "https://api.rahalgo.com"
+    const val BASE_URL = Hosts.API
 
     /**
      * **أصلُ آثار الخرائط** — المرحلة ٦ب، البند ٣.
@@ -22,7 +23,7 @@ object Backend {
      * **ولا يُكتب مضيفٌ في منطق واجهة** — منه وحدَه تُشتقّ عناوينُ
      * الفهرس والأرشيف والموارد، **وتبديلُ المزوّد سطرٌ هنا.**
      */
-    const val MAPS_BASE_URL = "https://maps.rahalgo.com"
+    const val MAPS_BASE_URL = Hosts.MAPS
 
     /**
      * **نوعُ العميل — كما تعرفه قائمةُ المحرّك المغلقة.**
@@ -33,5 +34,5 @@ object Backend {
      */
     const val CLIENT = "android-rep"
 
-    fun of(context: Context): Core = AppCore.install(context, BASE_URL, CLIENT)
+    fun of(context: Context): Core = AppCore.install(context, BASE_URL, CLIENT, BuildConfig.VERSION_CODE)
 }

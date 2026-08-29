@@ -112,6 +112,14 @@ private val CODES: Map<String, Int> = mapOf(
     "rate_limited" to R.string.err_rate_limited,
     "too_many_attempts" to R.string.err_rate_limited,
     "validation" to R.string.err_validation,
+    "update_required" to R.string.err_update_required,
+    // **وكلُّ سببٍ باسمه** — انظر `orders/models.go`.
+    "no_items" to R.string.err_no_items,
+    "no_address" to R.string.err_no_address,
+    "bad_merchant" to R.string.err_bad_merchant,
+    "bad_payment" to R.string.err_bad_payment,
+    "bad_qty" to R.string.err_bad_qty,
+    "item_gone" to R.string.err_item_gone,
     // ── الدخول ────────────────────────────────────────────────────────
     "invalid_credentials" to R.string.err_unauthorized,
     "otp_send_failed" to R.string.err_otp_send_failed,
@@ -219,3 +227,31 @@ private val CODES: Map<String, Int> = mapOf(
     "over_settle" to R.string.err_over_settle,
     "cash_limit_exceeded" to R.string.err_cash_limit_exceeded,
 )
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **`err` — سببُ الخطأ بالعربيّة، من أيّ مكان**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «لا أريد نصوصاً أجنبيّةً غير مفهومة ولا
+ *  مفاتيح… وتأكّد أنّ رسائل النجاح والفشل مبنيّةٌ بشكلٍ مركزيٍّ
+ *  وصحيح».)
+ *
+ * # ولماذا وُجدت
+ *
+ * **و`apiError` تحتاج `Context`** — فمن كان في `ViewModel` بلا
+ * `Application` كتب `it.message ?: "تعذّر…"` **وانتهى.**
+ *
+ * **وقِيس في تطبيق المتجر ٢٠٢٦-٠٨-٢٦**: عشرون موضعاً هكذا،
+ * **و`it.message` في نداءٍ فاشلٍ هو رمزُ الخادم الخام** — فيقرأ صاحبُ
+ * المتجر `merchant_closed` أو `validation` بدل جملةٍ يفهمها.
+ *
+ * **والنصُّ الاحتياطيُّ كان يُخفي ذلك عنّا**: يبدو عربيّاً في الشيفرة،
+ * **ولا يُعرض إلّا حين تكون الرسالةُ فارغة** — وهي نادراً ما تكون.
+ *
+ * # ولا تحتاج سياقا
+ *
+ * **وتقرأ السياقَ من التطبيق نفسِه** (`AppCore`) — فتُنادى من أيّ
+ * موضع، **ولا يبقى عذرٌ لكتابة رسالةٍ بيد.**
+ */
+fun err(e: Throwable): String = apiError(AppCore.get().app, e)

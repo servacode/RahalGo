@@ -5,14 +5,44 @@
 // (قاعدة `GROUND-RULES.md` §7.1: لا شبكةَ ولا منطقَ هنا — كلُّها في
 //  `shared` و`ui`.)
 //
-// **ولا إشعاراتٍ بعد**: نقطةُ Firebase تحتاج `google-services.json` باسم
-// هذا التطبيق، **وتُضاف في خطوتها** (٦ من خطوات الزبون) لا قبلها:
-// **مفتاحٌ يُضاف بلا أن يُجرَّب يُنسى معطّلا.**
+// **والإشعاراتُ مكتوبةٌ كاملةً** (`push/PushService.kt` والبيان)،
+// **وتُفعَّل ساعةَ يُسجَّل `com.rahalgo.rep` في Firebase** ويُنزَّل ملفُّه
+// الجديد فوق القديم.
+//
+// # ولماذا شرطٌ لا سطرٌ ثابت
+//
+// **`google-services.json` الحاضرُ نسخةٌ من ملفّ الزبون** — لا يذكر
+// حزمةَ المندوب. **وإضافةُ غوغل تُسقط البناءَ إن لم تجد الاسمَ فيه**،
+// فسطرٌ ثابتٌ يمنع بناءَ التطبيق اليومَ كلَّه.
+//
+// **والشرطُ يصرخ في كلّ بناء** — فلا يُنسى معطّلاً، وهو ما وقع سابقاً.
 import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **نقطةُ Firebase — تُفتح وحدَها متى صحّ الملفّ**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **و`crashlytics` لازمةٌ مع `google-services`** — و`:ui` تعلن مكتبتَها
+// للأربعة، **فمن أضاف الأولى وحدَها سقط تطبيقُه عند أوّل إقلاع**
+// (`The Crashlytics build ID is missing` — وقع في المتجر ٢٠٢٦-٠٨-٢٦).
+val firebaseReady = file("google-services.json").let {
+    it.exists() && it.readText().contains("com.rahalgo.rep")
+}
+if (firebaseReady) {
+    apply(plugin = libs.plugins.google.services.get().pluginId)
+    apply(plugin = libs.plugins.crashlytics.get().pluginId)
+} else {
+    logger.warn("═".repeat(58))
+    logger.warn("  تطبيق المندوب يُبنى بلا إشعارات.")
+    logger.warn("  السبب: com.rahalgo.rep غير مسجّل في Firebase.")
+    logger.warn("  العلاج: سجّله في rahalgo-prod، ثمّ ضع ملفّه الجديد")
+    logger.warn("          في mobile/app-rep/google-services.json")
+    logger.warn("═".repeat(58))
 }
 
 // **مفتاحُ الرفع — من ملفٍّ خارج المستودع** (كما في تطبيق السائق).
@@ -47,6 +77,36 @@ android {
 
     buildTypes {
         release {
+            // ══════════════════════════════════════════════════════
+            // **وجدولُ الرموز — مضبوطٌ ولا يُنتج شيئاً اليوم**
+            // ══════════════════════════════════════════════════════
+            //
+            // (تحذيرُ بلاي ٢٠٢٦-٠٨-٢٧ على الإصدار ٧: «يحتوي App Bundle
+            //  على رموز برمجية أصلية، ولم يتم تحميل أي رموز لتصحيح
+            //  الأخطاء».)
+            //
+            // **وقِيست المكتباتُ الثلاثُ في الحزمة** (٢٠٢٦-٠٨-٢٧):
+            //
+            //   libmaplibre.so                  ١٢٫٤ م.ب   .dynsym فقط
+            //   libandroidx.graphics.path.so     ٩٫٩ ك.ب   .dynsym فقط
+            //   libdatastore_shared_counter.so   ٦٫٩ ك.ب   .dynsym فقط
+            //
+            // **كلُّها مجرَّدةٌ عند من بناها** — لا `.symtab` ولا
+            // `.debug_info`. **ونحن لا نبنيها**: تأتي جاهزةً في
+            // `aar` من مبتدعيها.
+            //
+            // **فالمهمّةُ تعمل ولا تجد ما تستخرجه**، والتحذيرُ يبقى —
+            // **وليس بيدنا رفعُه** ما لم يُصدر مبتدعُ المكتبة رموزَها.
+            //
+            // # ولماذا يبقى السطرُ إذاً
+            //
+            // **لأنّه يصير عاملاً يومَ تدخل مكتبةٌ نبنيها نحن** — ومن
+            // حذفه اليومَ لن يتذكّر أن يُعيده غداً، **فيضيع أوّلُ
+            // انهيارٍ أصليٍّ نملك أن نقرأه.**
+            //
+            // **و SYMBOL_TABLE لا FULL**: أسماءُ الدوالّ تكفي، وأرقامُ
+            // الأسطر تضخّم ملفَّ الرفع بلا مقابل.
+            ndk { debugSymbolLevel = "SYMBOL_TABLE" }
             if (keystoreProps.getProperty("storeFile") != null) {
                 signingConfig = signingConfigs.getByName("upload")
             }

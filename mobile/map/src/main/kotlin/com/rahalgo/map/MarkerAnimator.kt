@@ -44,12 +44,18 @@ class MarkerAnimator {
         fromBearing: Float,
         toBearing: Float,
         durationMs: Long,
-        onFrame: (lat: Double, lng: Double, bearing: Float) -> Unit,
+        /**
+         * **و`t` كسرُ الإطار** — من صفرٍ إلى واحد.
+         *
+         * **وبه يُعرف موضعُ الخطّ تحت السهم في هذه اللحظة بعينها** —
+         * (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «يجب ألّا يلاحظ الشخصُ قصَّها»).
+         */
+        onFrame: (lat: Double, lng: Double, bearing: Float, t: Float) -> Unit,
     ) {
         cancel()
         // **ومدّةٌ صفرٌ تعني «ضعها هناك»** — لا حركةَ تُرى في إطار.
         if (durationMs <= 0L) {
-            onFrame(toLat, toLng, toBearing)
+            onFrame(toLat, toLng, toBearing, 1f)
             return
         }
         val delta = shortestDelta(fromBearing, toBearing)
@@ -62,6 +68,7 @@ class MarkerAnimator {
                     fromLat + (toLat - fromLat) * t,
                     fromLng + (toLng - fromLng) * t,
                     normalize(fromBearing + delta * t),
+                    t,
                 )
             }
             start()

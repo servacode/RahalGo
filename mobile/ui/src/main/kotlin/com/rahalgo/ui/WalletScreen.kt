@@ -502,6 +502,24 @@ private fun kindLabel(kind: String): String = when (kind) {
     "adjustment" -> stringResource(R.string.wal_k_adjustment)
     "reward" -> stringResource(R.string.wal_k_reward)
     "settlement" -> stringResource(R.string.wal_k_settlement)
+    // ══════════════════════════════════════════════════════════════════
+    // **وستّةُ أنواعٍ كانت تُعرض بمفاتيحها الإنجليزيّة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «الحركات بالمحفظة يوجد كتابة أجنبيّة
+    //  غير مفهومة».)
+    //
+    // **وقِيس ٢٠٢٦-٠٨-٢٦**: المحرّكُ يسمح بأربعةَ عشرَ نوعاً
+    // (`0110_reward_penalty_kinds.sql`) **والترجمةُ تغطّي تسعة.**
+    //
+    // **و`merchant_earning` من الناقصة** — وهي أكثرُ ما يراه صاحبُ
+    // المتجر في كشفه، **فكان يقرأ سطرَ دخلِه بالإنكليزيّة.**
+    "topup" -> stringResource(R.string.wal_k_topup)
+    "order_payment" -> stringResource(R.string.wal_k_order_payment)
+    "merchant_earning" -> stringResource(R.string.wal_k_merchant_earning)
+    "platform_profit" -> stringResource(R.string.wal_k_platform_profit)
+    "platform_expense" -> stringResource(R.string.wal_k_platform_expense)
+    "operating_expense" -> stringResource(R.string.wal_k_operating_expense)
     // **ونوعٌ لم يُترجَم يُعرض بمفتاحه** — لا يُبتلع: **من رآه أبلغ
     // عنه**، ومن ابتلعه ترك سطراً بلا اسمٍ في كشف مال.
     else -> kind

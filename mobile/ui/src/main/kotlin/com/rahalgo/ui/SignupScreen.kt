@@ -60,6 +60,8 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
     var code by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    /** **تأكيدُ كلمة المرور** — (قرارُ المالك ٢٠٢٦-٠٨-٢٥). */
+    var password2 by remember { mutableStateOf("") }
 
     // **ويبدأ بما جاء من الرابط أو من المتجر** — ومن جاء بلا شيءٍ يكتبه
     // بيده. **ومفتاحُه الرمزُ القادم**: لو وصل بعد أن رُسمت الشاشةُ
@@ -129,6 +131,34 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 )
 
                 // ══════════════════════════════════════════════════════
+                // **وتأكيدُ كلمة المرور — حرفٌ واحدٌ يقفل الحساب**
+                // ══════════════════════════════════════════════════════
+                //
+                // (قرارُ المالك ٢٠٢٦-٠٨-٢٥: «رقم الهاتف كلمة المرور
+                //  وتأكيد كلمة المرور».)
+                //
+                // **والحقلُ مخفيٌّ بنقاط** — فمن أخطأ حرفاً لا يراه،
+                // **فيُنشئ حساباً بكلمةٍ لا يعرفها** ثمّ يعود يستعيدها
+                // برسالةٍ إلى واتساب. **والتأكيدُ يمنع ذلك بحقل.**
+                Spacer(Modifier.height(10.dp))
+                PasswordField(
+                    value = password2,
+                    onChange = { password2 = it },
+                    enabled = !state.busy,
+                    label = R.string.signup_password2,
+                )
+                // **والخطأُ يُقال تحت الحقل لا عند الضغط** — من رآه
+                // مبكّراً أصلحه قبل أن يملأ ما بعده.
+                if (password2.isNotEmpty() && password2 != password) {
+                    Text(
+                        text = stringResource(R.string.signup_password_mismatch),
+                        color = Rahal.colors.accent,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                // ══════════════════════════════════════════════════════
                 // **ورمزُ الدعوة يُرى ويُكتب بيده**
                 // ══════════════════════════════════════════════════════
                 //
@@ -186,7 +216,10 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
             enabled = !state.busy && when (state.step) {
                 SignupStep.PHONE -> state.phone.isNotBlank()
                 SignupStep.CODE -> code.isNotBlank()
-                SignupStep.DETAILS -> name.isNotBlank() && password.isNotBlank()
+                // **والزرُّ لا يعمل حتّى تتطابق الكلمتان** — ورسالةُ
+                // خطأٍ بعد الضغط أسوأُ من زرٍّ يقول «لم تكتمل بعد».
+                SignupStep.DETAILS ->
+                    name.isNotBlank() && password.isNotBlank() && password2 == password
             },
             modifier = Modifier.fillMaxWidth(),
         ) {

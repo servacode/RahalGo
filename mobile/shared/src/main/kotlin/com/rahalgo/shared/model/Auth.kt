@@ -95,6 +95,16 @@ data class Platform(
     val name: String = "",
     val logo: String = "",
     @SerialName("otp_login") val otpLogin: Boolean = true,
+    /**
+     * **أيُطلب رمزٌ عند إنشاء الحساب؟** (`auth.signup_verify`).
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-٢٥.)
+     *
+     * **وافتراضُه `false` لا `true`** — **وتطبيقٌ قديمٌ لا يعرف الحقلَ
+     * يجب أن يتصرّف كالجديد**: يمرّ بلا رمز. **ولو كان الافتراضُ
+     * `true` لحبس نفسَه على شاشةٍ لا يصلها رمز.**
+     */
+    @SerialName("signup_verify") val signupVerify: Boolean = false,
     @SerialName("password_min_length") val passwordMinLength: Int = 8,
     @SerialName("support_phone") val supportPhone: String = "",
     /**
@@ -117,4 +127,17 @@ data class Social(
     val instagram: String = "",
     val telegram: String = "",
     val whatsapp: String = "",
+)
+
+/**
+ * **تذكرةُ واتساب** — انظر `AuthApi.waTicket`.
+ *
+ * `waUrl` رابطٌ يفتح واتساب على رقم المنصّة برسالةٍ جاهزة، **و`text`
+ * نسختُه النصّيّة** لمن أراد نسخَها بيده حين لا يُفتح الرابط.
+ */
+@kotlinx.serialization.Serializable
+data class WaTicket(
+    val tag: String = "",
+    val text: String = "",
+    @kotlinx.serialization.SerialName("wa_url") val waUrl: String = "",
 )

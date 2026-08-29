@@ -33,7 +33,7 @@ class VoiceOrchestratorTest {
         /** **أينهي الجملةَ فوراً؟** — والافتراضُ نعم. */
         var instant = true
 
-        override fun speak(id: String, text: String, flush: Boolean, done: (Boolean) -> Unit) {
+        override fun speak(id: String, text: String, clip: String?, flush: Boolean, done: (Boolean) -> Unit) {
             said += text
             flushes += flush
             if (instant) done(true) else pending = { done(true) }

@@ -1,5 +1,6 @@
 package com.rahalgo.customer
 
+import com.rahalgo.ui.ShellViewModel
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -342,15 +343,36 @@ private fun SignedIn(
     // يُعرَّف بعدَه، **و`context(...)` في كوتلن كلمةٌ محجوزةٌ للمُعامِلات
     // السياقيّة** فيُقرأ نداءَ دالّةٍ لا متغيّرا.
     val ctx = LocalContext.current
+
+    // **وطالبُ الإذن يُعرَّف قبل من يستعمله** — يستعمله زرُّ «موقعي»
+    // في `mapPicker` وأثرُ الإقلاع معاً.
+    val askHere = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { ok -> if (ok) Here.refresh(ctx) }
+
     val mapPicker: PointPicker = { onPick, onCancel ->
         PickPoint(
             start = LastPoint.value?.let { LatLng(it.lat, it.lng) },
             vm = pickVm,
             onPick = { at, name -> onPick(at.latitude, at.longitude, name) },
             onCancel = onCancel,
-            // **وأيقونةُ «موقعي» تنادي جهازَ التموضع من هنا** — وحدةُ
-            // الخرائط لا تعرفه. (طلبُ المالك ٢٠٢٦-٠٨-١٨.)
-            onLocate = { Here.refresh(ctx) },
+            // ══════════════════════════════════════════════════════
+            // **وأيقونةُ «موقعي» تطلب الإذنَ إن لم يكن**
+            // ══════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-١٨ للزرّ · وبلاغُه ٢٠٢٦-٠٨-٢٥
+            //  لصمته.)
+            //
+            // **وكانت تنادي `Here.refresh` مباشرةً** — وهي تفحص
+            // الإذنَ فترجع صامتةً إن لم يكن. **فيُضغط الزرُّ ولا يقع
+            // شيءٌ ولا رسالة**، ويظنّ الزبونُ التطبيقَ معطّلاً.
+            //
+            // **وزرٌّ لا يعمل يجب أن يقول لماذا** — أو يُصلح نفسَه.
+            // وهذا يُصلح نفسَه: يطلب ما ينقصه.
+            onLocate = {
+                if (Here.granted(ctx)) Here.refresh(ctx)
+                else askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            },
         )
     }
 
@@ -376,19 +398,46 @@ private fun SignedIn(
     // مرّتين أُغلق البابُ في أندرويد ولا يُفتح إلّا من الإعدادات.
     //
     // **وهنا سببُه أمام عينه**: يحفظ عنواناً فيريد نقطته.
-    val askHere = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { ok -> if (ok) Here.refresh(context) }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والإذنُ يُطلب عند أوّل فتحةٍ — مرّةً واحدةً في عمر التطبيق**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٢٥: «الأذونات يجب أن تُطلب أوّلَ فتح
+    //  التطبيق، بحيث لا يُفاجأ الشخصُ بخيارٍ لا يعمل بسبب الأذونات».)
+    //
+    // # وما كان قبله ولماذا سقط
+    //
+    // **كان يُطلب عند فتح «حسابي» وحدَه** — وسببُه مكتوبٌ أعلاه: إذنٌ
+    // بلا سببٍ ظاهرٍ يُرفض.
+    //
+    // **لكنّ القياسَ على جهاز المالك (نسخةُ المتجر، ٢٠٢٥-٠٨-٢٥) كشف
+    // ثمنَه**: يفتح الزبونُ الخريطةَ ليحدّد عنوانَه، **فيضغط زرَّ
+    // «موقعي» فلا يقع شيءٌ ولا رسالة** — لأنّ `Here.refresh` تفحص
+    // الإذنَ فترجع صامتة. **فيذهب إلى «حسابي» ليظهر الإذنُ ثمّ يعود.**
+    //
+    // **وزرٌّ يموت صامتاً أسوأُ من إذنٍ يُطلب مبكّراً.**
+    //
+    // # ومرّةً واحدةً لا مع كلّ إقلاع
+    //
+    // **وأندرويد يُغلق البابَ بعد رفضين** — فمن سُئل وأبى لا يُسأل
+    // ثانيةً عند كلّ فتحة. **والعلامةُ تُحفظ فلا يُستنزف الرفضُ الثاني
+    // في إقلاعٍ لم ينتبه له صاحبُه.**
+    // **والسؤالُ انتقل إلى `AppFrame`** (٢٠٢٦-٠٨-٢٦) — فيُطرح على
+    // الأربعة لا على الزبون وحدَه. **وهنا يبقى قراءةُ الموضع لمن
+    // مُنح الإذنَ سلفا.**
+    //
+    // **ولا يُسأل هنا ثانيةً**: نافذتان في إقلاعٍ واحدٍ تُربكان،
+    // **والثانيةُ تُرفض بلا قراءةٍ لأنّ اليدَ ما زالت على الزرّ.**
+    LaunchedEffect(Unit) {
+        if (Here.granted(context)) Here.refresh(context)
+    }
 
     LaunchedEffect(tab, guest) {
-        // **ولا يُسأل ضيفٌ عن موقعه** — قِيس على المحاكي (٢٠٢٦-٠٨-١٤):
-        // **طُلب الإذنُ ممّن لا يرى الشاشةَ أصلا.**
-        //
-        // **وإذنٌ يُطلب بلا سببٍ يراه يُرفض** — ومن رفضه مرّتين أُغلق
-        // البابُ في أندرويد ولا يُفتح إلّا من الإعدادات.
+        // **وفتحُ «حسابي» فرصةٌ ثانية** — لمن مُنح الإذنَ من الإعدادات
+        // بعد رفضه، **فيُقرأ موضعُه بلا أن يُسأل ثانية.**
         if (guest || tab != Tab.Account) return@LaunchedEffect
         if (Here.granted(context)) Here.refresh(context)
-        else askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
     // **والرجوعُ من القائمة يغلقها — لا يُخرج من التطبيق.**
@@ -622,7 +671,7 @@ private fun SignedIn(
                             selected = tab == Tab.Orders && over == Overlay.None,
                             onClick = { tab = Tab.Orders; overlay.clear() },
                             icon = R.drawable.ic_orders,
-                            label = R.string.nav_orders,
+                            label = R.string.nav_orders_mine,
                         )
                     }
                     // ══════════════════════════════════════════════
@@ -640,7 +689,7 @@ private fun SignedIn(
                         selected = tab == Tab.Custom && over == Overlay.None,
                         onClick = { tab = Tab.Custom; overlay.clear() },
                         icon = R.drawable.ic_custom,
-                        label = R.string.nav_custom,
+                        label = R.string.nav_custom_order,
                     )
                     // **وحسابي آخرا فهو في اليسار** — بأمر المالك
                     // (٢٠٢٦-٠٨-١٤).
@@ -968,6 +1017,7 @@ private fun NeedAccount(onAskLogin: () -> Unit) {
     ) {
         Text(
             text = stringResource(R.string.guest_title),
+            color = Rahal.colors.ink,
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(Modifier.height(6.dp))

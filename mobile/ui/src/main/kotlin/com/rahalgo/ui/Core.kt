@@ -31,10 +31,24 @@ import com.rahalgo.shared.push.DevicesApi
  * فتُجدّدان معاً، **والثانيةُ تُجدّد بتوكنٍ أبطلته الأولى** — فيخرج
  * صاحبُه وهو يعمل.
  */
-class Core(context: Context, val baseUrl: String, val client: String) {
+class Core(
+    context: Context,
+    val baseUrl: String,
+    val client: String,
+    /** **رقمُ نسخة التطبيق** — يُرسل في كلّ نداء لبوّابة التحديث. */
+    val version: Int = 0,
+) {
+
+    /**
+     * **سياقُ التطبيق** — تحتاجه `err()` لتقرأ المعجم بلا `Application`.
+     *
+     * **و`applicationContext` لا `context`** — **ونشاطٌ يُحفظ في كائنٍ
+     * يعيش عمرَ التطبيق تسريبُ ذاكرةٍ يبقى بعد إغلاق الشاشة.**
+     */
+    val app: Context = context.applicationContext
 
     val session = AndroidSession(context)
-    val api = ApiClient(baseUrl, client, session)
+    val api = ApiClient(baseUrl, client, session, version)
     val auth = AuthApi(api)
     val me = MeApi(api)
 
@@ -128,10 +142,12 @@ object AppCore {
         context: Context,
         baseUrl: String,
         client: String,
+        /** **رقمُ نسخة التطبيق** — لبوّابة التحديث. */
+        version: Int = 0,
         afterSignIn: () -> Unit = {},
     ): Core =
         wired ?: synchronized(this) {
-            wired ?: Core(context.applicationContext, baseUrl, client).also {
+            wired ?: Core(context.applicationContext, baseUrl, client, version).also {
                 wired = it
                 this.afterSignIn = afterSignIn
             }

@@ -1,4 +1,4 @@
-package com.rahalgo.customer
+package com.rahalgo.ui
 
 import android.app.Application
 import android.util.Log
@@ -9,22 +9,22 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.model.MeSummary
 import com.rahalgo.shared.model.Notice
-import com.rahalgo.ui.AppCore
-import com.rahalgo.ui.Refresh
 import kotlinx.coroutines.launch
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **ما يحمله شريطا الزبون — رصيدُه وإشعاراتُه وصورتُه**
+ * **قشرةُ التطبيق — الرصيدُ والبريدُ والوصلةُ الحيّة**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (قرارُ المالك ٢٠٢٦-٠٨-١٤: «نضيف الجرسَ والمحفظةَ بالأعلى وزرَّ الثيم،
- *  ومن الأسفل حسابي على اليسار».)
+ * **كانت هذه الدالّةُ مكتوبةً ثلاثَ مرّاتٍ حرفاً بحرف** — في الزبون
+ * والمتجر والمندوب (قِيس ٢٠٢٦-٠٨-٢٦: مئةٌ وواحدٌ وأربعون سطراً،
+ * متطابقةٌ إلّا في سطر `package`).
  *
- * # ولماذا نموذجٌ للغلاف لا للشاشة
+ * **وثلاثُ نسخٍ تعني إصلاحاً يصل واحدةً ويترك اثنتين** — والفرقُ لا
+ * يُرى في بناءٍ ولا في اختبار، **بل في شكوى مستخدمٍ بعد شهر.**
  *
- * **الشريطان يظهران فوق كلّ شاشة** — ولو حملت كلُّ شاشةٍ رصيدَها
- * **لَنودي المحرّكُ مرّةً عند كلّ تنقّل**، ولاختلف الرقمُ بين تبويبين.
+ * **والسائقُ لا يستعملها**: قشرتُه تحمل الطابورَ والرحلةَ والخريطة،
+ * **وهي شيءٌ آخر.**
  */
 class ShellViewModel(app: Application) : AndroidViewModel(app) {
 

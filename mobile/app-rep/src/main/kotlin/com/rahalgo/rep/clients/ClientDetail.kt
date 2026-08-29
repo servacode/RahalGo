@@ -135,7 +135,7 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
             RahalOutlineButton(
                 onClick = { onOpenMenu(vm.openId, head.name) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.cd_menu)) }
+            ) { Text(stringResource(R.string.mn_items)) }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -210,7 +210,7 @@ private fun OrderRow(o: RepOrderLine) {
             Chip(
                 stringResource(
                     when {
-                        done -> R.string.cd_st_delivered
+                        done -> R.string.ord_st_delivered
                         lost -> R.string.cd_st_cancelled
                         else -> R.string.cd_st_running
                     },

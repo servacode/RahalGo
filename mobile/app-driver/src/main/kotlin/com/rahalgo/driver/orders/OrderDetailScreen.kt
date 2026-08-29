@@ -69,7 +69,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
             .padding(horizontal = 20.dp),
     ) {
         Spacer(Modifier.height(12.dp))
-        RahalTextButton(onClick = actions.back) { Text(stringResource(R.string.detail_back)) }
+        RahalTextButton(onClick = actions.back) { Text(stringResource(R.string.act_back)) }
 
         Row(
             Modifier.fillMaxWidth(),
@@ -80,7 +80,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
                 // **واسمٌ فارغٌ لا يُعرض** — الطلبُ الخاصُّ بلا متجر،
                 // **فكان العنوانُ يخرج خالياً** ويبقى الرقمُ وحدَه في
                 // زاويةٍ: **شاشةٌ تُفتح بلا عنوانٍ تُقرأ نصفَ محمَّلة.**
-                text = order.merchantName.ifBlank { stringResource(R.string.card_custom) },
+                text = order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -98,7 +98,7 @@ fun OrderDetailScreen(state: DetailState, actions: DetailActions) {
 
         Spacer(Modifier.height(18.dp))
         Field(stringResource(R.string.detail_customer), order.customerName)
-        Field(stringResource(R.string.detail_address), order.addressText)
+        Field(stringResource(R.string.act_address), order.addressText)
         if (order.itemsCount > 0) {
             Field(stringResource(R.string.detail_items), order.itemsCount.toString())
         }
@@ -204,7 +204,7 @@ private fun FailDialog(
             }
         },
         confirmButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_cancel)) }
         },
     )
 }
@@ -248,7 +248,7 @@ private fun statusLabel(status: String): String = when (status) {
     "picked_up" -> stringResource(R.string.status_picked_up)
     "on_the_way" -> stringResource(R.string.status_on_the_way)
     "at_dropoff" -> stringResource(R.string.status_at_dropoff)
-    "delivered" -> stringResource(R.string.status_delivered)
+    "delivered" -> stringResource(R.string.ord_st_delivered)
     else -> status
 }
 

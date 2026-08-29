@@ -1,6 +1,8 @@
 {
   "_note": "النمطُ المرجعيُّ الواحد — لا يُقرأ مباشرةً. تُبدَّل فيه القوالبُ الثلاثة ({{TILES}} · {{GLYPHS}} · {{SPRITE}}) فيصير نمطاً أونلاين أو دونَ اتّصال. انظر maps/scripts/bind-style.mjs.",
   "_contract": "معرّفاتُ الطبقات ثابتة. لا تُحذف ولا تُعاد تسميتُها — يعتمد عليها الأندرويدُ في إدراج خطّ المسار والعلامات. انظر _anchors.",
+  "_depth": "طلبُ المالك ٢٠٢٦-٠٨-٢٤: «الخريطة صارت ممتازة ولكن لازمها لمسات سحرية لتصبح احترافية». وأكبرُ ما كان ينقصها حافّاتُ الشوارع: خطٌّ داكنٌ عريضٌ تحتَ كلّ شارعٍ وفاتحٌ أضيقُ فوقه — فيبرز الشارعُ عن الأرض بدل أن يذوب فيها. وهو ما يفعله غوغل في كلّ شارع. ثمّ فصلُ الخضرة عن الأرض، وبناءٌ له ظلٌّ وارتفاع، ومعالمُ يُهتدى بها.",
+  "_rotation": "و«viewport-glyph» ليست قيمةً يعرفها إصدارُ MapLibre عندنا — قِيس ٢٠٢٦-٠٨-٢٤: تُنتج [ParseStyle]: value must be a valid enumeration value وتُهمَل بصمت، فتُرسم الأسماءُ بالسلوك المبدئيّ. فوُضعت «map» صراحةً: الاسمُ يتبع الشارعَ كما هو في كلّ خريطةٍ، ولا تحذيرَ في السجلّ يُخفي تحذيراً حقيقيّاً بعده.",
   "_anchors": {
     "belowLabels": "place-city",
     "route": "rahalgo-route-anchor",
@@ -9,7 +11,7 @@
   "version": 8,
   "name": "RahalGo",
   "metadata": {
-    "rahalgo:styleVersion": "1",
+    "rahalgo:styleVersion": "2",
     "rahalgo:schema": "openmaptiles-3.16.0"
   },
   "sources": {
@@ -25,29 +27,116 @@
     {
       "id": "background",
       "type": "background",
-      "paint": { "background-color": "#EDE7DF" }
+      "paint": {
+        "background-color": "#F1ECE3"
+      }
     },
     {
       "id": "landuse-residential",
       "type": "fill",
       "source": "base",
       "source-layer": "landuse",
-      "filter": ["==", ["get", "class"], "residential"],
-      "paint": { "fill-color": "#E6DFD5" }
+      "filter": [
+        "==",
+        [
+          "get",
+          "class"
+        ],
+        "residential"
+      ],
+      "paint": {
+        "fill-color": "#E8E1D6"
+      }
+    },
+    {
+      "_why": "والمنطقةُ الصناعيّةُ تُفصل بلونٍ أبردَ قليلاً — فالرقّةُ فيها مناطقُ ورشٍ واسعة، ومن رآها كالسكن ظنّ أنّ خلفه بيوتاً وهو في مسالكِ حديد.",
+      "id": "landuse-industrial",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "landuse",
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "industrial",
+            "commercial",
+            "retail"
+          ]
+        ]
+      ],
+      "paint": {
+        "fill-color": "#E9E3DE"
+      }
     },
     {
       "id": "landcover",
       "type": "fill",
       "source": "base",
       "source-layer": "landcover",
-      "paint": { "fill-color": "#DFE6D5", "fill-opacity": 0.6 }
+      "paint": {
+        "fill-color": "#DFE6D5",
+        "fill-opacity": 0.6
+      }
+    },
+    {
+      "_why": "والحديقةُ تُملأ من طبقة park وحدَها — وكانت تُملأ مرّتين (landuse class=park ثمّ park) فتخرج أغمقَ من جارتها بلا سبب.",
+      "id": "landuse-green",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "landuse",
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "pitch",
+            "grass",
+            "cemetery",
+            "playground",
+            "garden"
+          ]
+        ]
+      ],
+      "paint": {
+        "fill-color": "#CFDFBC",
+        "fill-opacity": 0.85
+      }
+    },
+    {
+      "id": "park",
+      "type": "fill",
+      "source": "base",
+      "source-layer": "park",
+      "paint": {
+        "fill-color": "#C8DCB4",
+        "fill-opacity": 0.55
+      }
     },
     {
       "id": "water",
       "type": "fill",
       "source": "base",
       "source-layer": "water",
-      "paint": { "fill-color": "#9CC3D5" }
+      "filter": [
+        "!=",
+        [
+          "get",
+          "brunnel"
+        ],
+        "tunnel"
+      ],
+      "paint": {
+        "fill-color": "#A4C6DA"
+      }
     },
     {
       "id": "waterway",
@@ -55,7 +144,26 @@
       "source": "base",
       "source-layer": "waterway",
       "minzoom": 9,
-      "paint": { "line-color": "#9CC3D5", "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.6, 16, 3] }
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#A4C6DA",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          9,
+          0.6,
+          16,
+          3
+        ]
+      }
     },
     {
       "id": "building",
@@ -63,20 +171,185 @@
       "source": "base",
       "source-layer": "building",
       "minzoom": 15,
-      "paint": { "fill-color": "#DCD4C8", "fill-opacity": 0.7 }
+      "paint": {
+        "fill-color": "#DCD4C8",
+        "fill-opacity": 0.7
+      }
     },
-
+    {
+      "_why": "حافّاتُ الشوارع — وهي أكبرُ ما كان ينقص.\nكلُّ شارعٍ خطّان: داكنٌ عريضٌ تحت وفاتحٌ أضيقُ فوقه. وبلا الداكن يذوب الشارعُ في الأرض ويلتصق بجاره، ولا يُعرف أين ينتهي عرضُه.\nوترتيبُها كلِّها قبل ألوانِ الشوارع لا مع كلِّ شارعٍ حافّتُه — وإلّا قطعت حافّةُ الفرعيِّ لونَ الرئيسيّ عند كلّ تقاطع.",
+      "id": "road-casing-minor",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "minzoom": 13,
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "minor",
+            "service",
+            "track"
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#DCD3C3",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          1.6,
+          16,
+          6,
+          19,
+          15
+        ]
+      }
+    },
+    {
+      "id": "road-casing-secondary",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "minzoom": 10,
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "secondary",
+            "tertiary"
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#D9C89A",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          10,
+          2,
+          14,
+          6.5,
+          19,
+          22
+        ]
+      }
+    },
+    {
+      "id": "road-casing-primary",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "minzoom": 6,
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "primary",
+            "trunk",
+            "motorway"
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#D9A63C",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          2,
+          14,
+          9,
+          19,
+          29
+        ]
+      }
+    },
     {
       "id": "road-minor",
       "type": "line",
       "source": "base",
       "source-layer": "transportation",
       "minzoom": 12,
-      "filter": ["in", ["get", "class"], ["literal", ["minor", "service", "track"]]],
-      "layout": { "line-cap": "round", "line-join": "round" },
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "minor",
+            "service",
+            "track"
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
       "paint": {
         "line-color": "#FFFFFF",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.5, 16, 4, 19, 12]
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          12,
+          0.5,
+          16,
+          4,
+          19,
+          12
+        ]
       }
     },
     {
@@ -85,11 +358,41 @@
       "source": "base",
       "source-layer": "transportation",
       "minzoom": 8,
-      "filter": ["in", ["get", "class"], ["literal", ["secondary", "tertiary"]]],
-      "layout": { "line-cap": "round", "line-join": "round" },
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "secondary",
+            "tertiary"
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
       "paint": {
         "line-color": "#FFF6DE",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 14, 4, 19, 18]
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          8,
+          0.8,
+          14,
+          4,
+          19,
+          18
+        ]
       }
     },
     {
@@ -98,20 +401,146 @@
       "source": "base",
       "source-layer": "transportation",
       "minzoom": 6,
-      "filter": ["in", ["get", "class"], ["literal", ["primary", "trunk", "motorway"]]],
-      "layout": { "line-cap": "round", "line-join": "round" },
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "primary",
+            "trunk",
+            "motorway"
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "round",
+        "line-join": "round"
+      },
       "paint": {
         "line-color": "#F6C96B",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 1, 14, 6, 19, 24]
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          1,
+          14,
+          6,
+          19,
+          24
+        ]
       }
     },
-
+    {
+      "_why": "وممرُّ المشاة يُرسم مقطّعاً — فيُعرف أنّه ليس طريقاً للدرّاجة، ومن ظنّه طريقاً دخل سوقاً مسقوفاً بدرّاجته.",
+      "id": "road-path",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "minzoom": 15,
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "path",
+            "pedestrian",
+            "footway",
+            "steps"
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#CFC5B2",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          15,
+          0.8,
+          19,
+          3
+        ],
+        "line-dasharray": [
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "_why": "وخطُّ الحديد في الرقّة معلمٌ يُهتدى به — يقطع المدينةَ فيُعرف أيُّ نصفٍ أنت فيه.",
+      "id": "rail",
+      "type": "line",
+      "source": "base",
+      "source-layer": "transportation",
+      "minzoom": 12,
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "rail",
+            "transit"
+          ]
+        ]
+      ],
+      "layout": {
+        "line-cap": "butt",
+        "line-join": "round"
+      },
+      "paint": {
+        "line-color": "#B9AE9B",
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          12,
+          0.6,
+          19,
+          2.4
+        ],
+        "line-dasharray": [
+          3,
+          2
+        ]
+      }
+    },
     {
       "id": "rahalgo-route-anchor",
       "type": "background",
-      "paint": { "background-color": "#000000", "background-opacity": 0 }
+      "paint": {
+        "background-color": "#000000",
+        "background-opacity": 0
+      }
     },
-
     {
       "id": "road-label",
       "type": "symbol",
@@ -120,12 +549,208 @@
       "minzoom": 13,
       "layout": {
         "symbol-placement": "line",
-        "text-field": ["coalesce", ["get", "name:ar"], ["get", "name"]],
-        "text-font": ["RahalGo Regular"],
-        "text-size": ["interpolate", ["linear"], ["zoom"], 13, 10, 18, 14],
-        "text-rotation-alignment": "viewport-glyph"
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ar"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "RahalGo Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13,
+          10,
+          18,
+          14
+        ],
+        "text-rotation-alignment": "map",
+        "symbol-spacing": 520,
+        "text-padding": 14
       },
-      "paint": { "text-color": "#4A4438", "text-halo-color": "#FFFFFF", "text-halo-width": 1.4 }
+      "paint": {
+        "text-color": "#4A4438",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.4
+      },
+      "_why": "والشارعُ الواحدُ يُقسَّم في OpenStreetMap إلى مقاطعَ بحسب تصنيفه — «شارع المنصور» ثلاثةُ معالمَ (minor وtertiary)، و«Mogamaa Street» اثنان. وكلُّ مقطعٍ يكتب اسمَه ويكرّره كلَّ symbol-spacing بكسل، فيُكتب الاسمُ الواحدُ ستَّ مرّاتٍ على شارعٍ واحد (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «أنت مكرّر المعالم»). والعلاجُ مباعدةٌ أوسعُ وحشوةٌ أكبرُ حول النصّ: المباعدةُ تقلّل تكرارَ المقطع في نفسِه، والحشوةُ تجعل نظامَ التصادم يرفض جارَه القريب. ولا يُحذف التكرارُ بالاسم — لا يفعله المحرّك."
+    },
+    {
+      "_why": "واسمُ النهر يُقال — والفراتُ أظهرُ معلمٍ في الرقّة، ومن رأى زرقةً بلا اسمٍ رأى بقعةً.",
+      "id": "water-label",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "water_name",
+      "minzoom": 9,
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ar"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "RahalGo Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          9,
+          10,
+          15,
+          14
+        ],
+        "text-rotation-alignment": "map"
+      },
+      "paint": {
+        "text-color": "#3F6D88",
+        "text-halo-color": "#EAF3F8",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "_why": "ونقطةٌ ملوّنةٌ لما لا أيقونةَ له — والسبرايتُ أربعُ أيقونات.\nوصنفُ attraction أبهتُ وأصغر: قِيس أنّ أربعةَ عشرَ معلماً من اثنين وأربعين في بلاطة مركز الرقّة مصنَّفةٌ attraction — وفيها «عبايات أبو يوسف» و«ألعاب أنس» و«اكسسوارات العثمان». ولا واحدَ منها معلمٌ سياحيّ: مَن أدخلها استعمل وسماً خاطئاً، فصار الصنفُ مرمى ما لا يُصنَّف. ولا يُحذف — ففي تدمر وقلعة الحصن معالمُ حقيقيّةٌ بالوسم نفسِه، وخريطتُنا تمشي إلى كلّ سوريا.",
+      "id": "poi-dot",
+      "type": "circle",
+      "source": "base",
+      "source-layer": "poi",
+      "minzoom": 16,
+      "filter": [
+        "all",
+        [
+          "!",
+          [
+            "in",
+            [
+              "get",
+              "subclass"
+            ],
+            [
+              "literal",
+              [
+                "hospital",
+                "clinic",
+                "pharmacy",
+                "fuel"
+              ]
+            ]
+          ]
+        ],
+        [
+          "!",
+          [
+            "in",
+            [
+              "get",
+              "subclass"
+            ],
+            [
+              "literal",
+              [
+                "place_of_worship",
+                "mosque",
+                "school",
+                "university",
+                "college",
+                "stadium",
+                "townhall",
+                "police",
+                "post_office"
+              ]
+            ]
+          ]
+        ]
+      ],
+      "paint": {
+        "circle-radius": [
+          "case",
+          [
+            "==",
+            [
+              "get",
+              "class"
+            ],
+            "attraction"
+          ],
+          [
+            "interpolate",
+            [
+              "linear"
+            ],
+            [
+              "zoom"
+            ],
+            16,
+            1.8,
+            19,
+            3.0
+          ],
+          [
+            "interpolate",
+            [
+              "linear"
+            ],
+            [
+              "zoom"
+            ],
+            16,
+            2.4,
+            19,
+            4.2
+          ]
+        ],
+        "circle-color": [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          "food",
+          "#D9713C",
+          "shop",
+          "#C9962F",
+          "bank",
+          "#3E8A5B",
+          "park",
+          "#5A8F4A",
+          "lodging",
+          "#7A5FA8",
+          "car",
+          "#5B7DA8",
+          "bus",
+          "#5B7DA8",
+          "rail",
+          "#5B7DA8",
+          "attraction",
+          "#A79C88",
+          "#8A7F6C"
+        ],
+        "circle-stroke-width": 1.1,
+        "circle-stroke-color": "#FFFFFF"
+      }
     },
     {
       "id": "poi-label",
@@ -133,17 +758,229 @@
       "source": "base",
       "source-layer": "poi",
       "minzoom": 15,
-      "filter": ["in", ["get", "subclass"], ["literal", ["hospital", "clinic", "pharmacy", "fuel"]]],
+      "filter": [
+        "in",
+        [
+          "get",
+          "subclass"
+        ],
+        [
+          "literal",
+          [
+            "hospital",
+            "clinic",
+            "pharmacy",
+            "fuel"
+          ]
+        ]
+      ],
       "layout": {
-        "icon-image": ["match", ["get", "subclass"], "fuel", "poi-fuel", "pharmacy", "poi-pharmacy", "poi-hospital"],
+        "icon-image": [
+          "match",
+          [
+            "get",
+            "subclass"
+          ],
+          "fuel",
+          "poi-fuel",
+          "pharmacy",
+          "poi-pharmacy",
+          "poi-hospital"
+        ],
         "icon-size": 0.8,
-        "text-field": ["coalesce", ["get", "name:ar"], ["get", "name"]],
-        "text-font": ["RahalGo Regular"],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ar"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "RahalGo Regular"
+        ],
         "text-size": 11,
-        "text-offset": [0, 1.1],
-        "text-anchor": "top"
+        "text-offset": [
+          0,
+          1.1
+        ],
+        "text-anchor": "top",
+        "text-max-width": 8,
+        "text-padding": 11
       },
-      "paint": { "text-color": "#5A5245", "text-halo-color": "#FFFFFF", "text-halo-width": 1.2 }
+      "paint": {
+        "text-color": "#5A5245",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "_why": "والمعالمُ يُهتدى بها لا يُشترى منها — مسجدٌ ومدرسةٌ وجامعةٌ وملعب. وفي الرقّة يُعطى العنوانُ بها: «خلف الجامع» و«جنب المدرسة». وأيقونةُ poi-landmark مبنيّةٌ في السبرايت منذ ٢٠٢٦-٠٨-٢١ ولم يستعملها النمط.",
+      "id": "poi-landmark",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "poi",
+      "minzoom": 15.5,
+      "filter": [
+        "in",
+        [
+          "get",
+          "subclass"
+        ],
+        [
+          "literal",
+          [
+            "place_of_worship",
+            "mosque",
+            "school",
+            "university",
+            "college",
+            "stadium",
+            "townhall",
+            "police",
+            "post_office"
+          ]
+        ]
+      ],
+      "layout": {
+        "icon-image": "poi-landmark",
+        "icon-size": 0.7,
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ar"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "RahalGo Regular"
+        ],
+        "text-size": 10.5,
+        "text-offset": [
+          0,
+          1.0
+        ],
+        "text-anchor": "top",
+        "text-max-width": 8,
+        "text-optional": true,
+        "text-padding": 11
+      },
+      "paint": {
+        "text-color": "#6A6152",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "_why": "واسمُ المعلم فوق نقطته — ولا أيقونة.\nوحشوةُ النصّ إحدى عشرة لا ستّاً: OpenStreetMap فيها معالمُ مكرّرةٌ باسمين مختلفين لشيءٍ واحد — «جامع الفواز» في صنف attraction و«مسجد الفواز» في place_of_worship، وهما مسجدٌ واحد (بلاغُ المالك ٢٠٢٦-٠٨-٢٤). والحشوةُ تجعل نظامَ التصادم في المحرّك يرفض الثانيَ إن قرُب من الأوّل — عبر الطبقات كلِّها لا في الطبقة وحدَها. ولا يُحذف التكرارُ بالاسم: المحرّكُ لا يعرف أنّ «جامع» و«مسجد» شيءٌ واحد، وإصلاحُه الحقيقيُّ في البيانات لا في العرض.",
+      "id": "poi-other-label",
+      "type": "symbol",
+      "source": "base",
+      "source-layer": "poi",
+      "minzoom": 16.5,
+      "filter": [
+        "all",
+        [
+          "!",
+          [
+            "in",
+            [
+              "get",
+              "subclass"
+            ],
+            [
+              "literal",
+              [
+                "hospital",
+                "clinic",
+                "pharmacy",
+                "fuel"
+              ]
+            ]
+          ]
+        ],
+        [
+          "!",
+          [
+            "in",
+            [
+              "get",
+              "subclass"
+            ],
+            [
+              "literal",
+              [
+                "place_of_worship",
+                "mosque",
+                "school",
+                "university",
+                "college",
+                "stadium",
+                "townhall",
+                "police",
+                "post_office"
+              ]
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ar"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "RahalGo Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          16.5,
+          9.5,
+          19,
+          12
+        ],
+        "text-offset": [
+          0,
+          0.75
+        ],
+        "text-anchor": "top",
+        "text-max-width": 8,
+        "text-optional": true,
+        "symbol-sort-key": [
+          "coalesce",
+          [
+            "get",
+            "rank"
+          ],
+          50
+        ],
+        "text-padding": 11
+      },
+      "paint": {
+        "text-color": "#6A6152",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.2
+      }
     },
     {
       "id": "place-village",
@@ -151,13 +988,44 @@
       "source": "base",
       "source-layer": "place",
       "minzoom": 11,
-      "filter": ["in", ["get", "class"], ["literal", ["village", "suburb", "neighbourhood"]]],
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "village",
+            "suburb",
+            "neighbourhood"
+          ]
+        ]
+      ],
       "layout": {
-        "text-field": ["coalesce", ["get", "name:ar"], ["get", "name"]],
-        "text-font": ["RahalGo Regular"],
-        "text-size": 12
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ar"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "RahalGo Regular"
+        ],
+        "text-size": 12,
+        "text-max-width": 9
       },
-      "paint": { "text-color": "#5A5245", "text-halo-color": "#FFFFFF", "text-halo-width": 1.4 }
+      "paint": {
+        "text-color": "#5A5245",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.4
+      }
     },
     {
       "id": "place-city",
@@ -165,19 +1033,65 @@
       "source": "base",
       "source-layer": "place",
       "minzoom": 4,
-      "filter": ["in", ["get", "class"], ["literal", ["city", "town"]]],
+      "filter": [
+        "in",
+        [
+          "get",
+          "class"
+        ],
+        [
+          "literal",
+          [
+            "city",
+            "town"
+          ]
+        ]
+      ],
       "layout": {
-        "text-field": ["coalesce", ["get", "name:ar"], ["get", "name"]],
-        "text-font": ["RahalGo Bold"],
-        "text-size": ["interpolate", ["linear"], ["zoom"], 4, 11, 12, 17]
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ar"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "RahalGo Bold"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          4,
+          11,
+          12,
+          17
+        ],
+        "text-max-width": 9
       },
-      "paint": { "text-color": "#3A342A", "text-halo-color": "#FFFFFF", "text-halo-width": 1.6 }
+      "paint": {
+        "text-color": "#3A342A",
+        "text-halo-color": "#FFFFFF",
+        "text-halo-width": 1.6
+      }
     },
-
     {
       "id": "rahalgo-marker-anchor",
       "type": "background",
-      "paint": { "background-color": "#000000", "background-opacity": 0 }
+      "paint": {
+        "background-color": "#000000",
+        "background-opacity": 0
+      }
     }
-  ]
+  ],
+  "_buildings": "ولا أشكالَ أبنيةٍ قائمة — حُذفت بأمر المالك ٢٠٢٦-٠٨-٢٤ نصّاً: «هي أشكال الأبنية أحسّها مو مناسبة، ألغها، بايخة وخرّبت الخريطة». وكانت fill-extrusion ترفعها بارتفاعها حين تميل الكاميرا. ولا تُعاد إلّا بطلبه.",
+  "_allPoi": "وتُعرض المعالمُ كلُّها — قرارُ المالك ٢٠٢٦-٠٨-٢٤ نصّاً: «وسّع المعالم أفضل، حتّى ولو كانت مطاعم ومتاجر، لأنّها خريطةٌ للسائق الخاصّ بنا وتفيده أيضاً ولا تضرّنا، بالعكس — أظهر كلّ المعالم». وهو ينقض قرارَه ٢٠٢٦-٠٨-٢١ (البند ٢٠) الذي منع المطاعمَ والمتاجر خشيةَ أن تنافس السوق. والقياسُ الذي قاد إليه: بلاطةٌ واحدةٌ فوق مركز الرقّة عند التقريب ١٦ فيها ٤٢ معلماً بأسمائها العربيّة — كنّا نعرض منها واحداً أو اثنين، فبدت الخريطةُ فارغة. والسبرايتُ فيه أربعُ أيقوناتٍ لا أربعون، فما لا أيقونةَ له يُرسم نقطةً ملوّنةً باسمه — والاسمُ هو ما يُهتدى به لا الأيقونة."
 }

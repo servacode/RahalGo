@@ -313,13 +313,13 @@ fun HistoryScreen(vm: HistoryViewModel) {
             // فتح السجلَّ ليعرف كم سلّم **لا يعدّ ثلاثين بطاقةً بإصبعه.**
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Tally(
-                    label = stringResource(R.string.hist_done),
+                    label = stringResource(R.string.ord_st_delivered),
                     value = done.toString(),
                     color = Rahal.colors.success,
                     modifier = Modifier.weight(1f),
                 )
                 Tally(
-                    label = stringResource(R.string.hist_failed),
+                    label = stringResource(R.string.ord_st_failed),
                     value = failed.toString(),
                     color = if (failed > 0) Rahal.colors.danger else Rahal.colors.inkMuted,
                     modifier = Modifier.weight(1f),
@@ -399,7 +399,7 @@ private fun Row(
             // **والحالُ كلمةٌ ملوّنة** — تُقرأ قبل أن يُقرأ السطر.
             Text(
                 text = stringResource(
-                    if (delivered) R.string.hist_st_delivered else R.string.hist_st_failed,
+                    if (delivered) R.string.ord_st_delivered else R.string.ord_st_failed,
                 ),
                 color = if (delivered) Rahal.colors.success else Rahal.colors.danger,
                 style = MaterialTheme.typography.bodySmall,
@@ -408,7 +408,7 @@ private fun Row(
         // **واسمٌ فارغٌ يعني طلباً خاصّاً** — وسطرٌ يُحذف يترك بطاقةً
         // برقمٍ وحده: **من فتح سجلَّه ليتذكّر طلباً لا يتذكّره برقمه.**
         Text(
-            text = o.merchantName.ifBlank { stringResource(R.string.card_custom) },
+            text = o.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
             style = MaterialTheme.typography.bodyMedium,
         )
         // **وسببُ التعذّر يُقال** — من فشل طلبُه يُسأل عنه بعد أيّام،
@@ -565,7 +565,7 @@ private fun ReportDialog(
             RahalTextButton(
                 onClick = { vm.report(o.id, reason, note); onClose() },
                 enabled = !s.busy && reason.isNotEmpty(),
-            ) { Text(stringResource(R.string.hist_report_send)) }
+            ) { Text(stringResource(R.string.act_send_report)) }
         },
         dismissButton = {
             RahalTextButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
@@ -598,7 +598,7 @@ private fun RateDialog(
         text = {
             Column {
                 Text(
-                    text = o.merchantName.ifBlank { stringResource(R.string.card_custom) },
+                    text = o.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -664,6 +664,6 @@ private fun reasonLabel(code: String): String = when (code) {
     "customer_address" -> stringResource(R.string.reason_customer_address)
     "customer_refused" -> stringResource(R.string.reason_customer_refused)
     "customer_conduct" -> stringResource(R.string.reason_customer_conduct)
-    "other" -> stringResource(R.string.reason_other)
+    "other" -> stringResource(R.string.rs_other)
     else -> code
 }

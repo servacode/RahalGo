@@ -7,6 +7,7 @@ import android.graphics.Paint
 import androidx.core.content.ContextCompat
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory
@@ -57,6 +58,12 @@ object Markers {
 
     /** **خاصّيّةُ دوران الأيقونة** — تُكتب في النقطة وتُقرأ في الطبقة. */
     private const val PROP_ROTATE = "rotate"
+
+    /** **طرفا الرحلة كما رُسما آخرَ مرّة** — يُقرآن في كلّ إطار. */
+    private var ends: List<Feature> = emptyList()
+
+    /** **آخرُ نسبةٍ طُبّقت** — فلا يُبنى تعبيرٌ لفرقٍ لا يُرى. */
+    private var lastTraveled = -1.0
 
     private val DRIVER = MapRoutePalette.DRIVER_PIN
     private val PICKUP = MapRoutePalette.PICKUP_PIN
@@ -237,6 +244,49 @@ object Markers {
         )
     }
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **مسارٌ خفيفٌ يحرّك السائقَ وحدَه — لكلّ إطار**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «هل نستطيع جعل الحركة سلسة أكثر مثل
+     *  غوغل ماب».)
+     *
+     * **و[draw] تُعيد بناءَ كلّ شيء**: الأيقوناتُ الأربعُ والهالةُ
+     * وخطُّ المسار — وخطُّ المسار وحدَه مئاتُ الرؤوس. **وسِتّون إطاراً
+     * في الثانية تعني ستّين إعادةَ بناء** لخطٍّ لم يتبدّل منه شيء.
+     *
+     * **وهذه تُبدّل موضعَ السائق وزاويتَه ولا تمسّ سواه** — وهي كلُّ
+     * ما يتبدّل بين إطارٍ وإطار.
+     *
+     * **وترتدّ `false` إن لم تكن المصادرُ مبنيّةً بعد** — فيُنادى
+     * [draw] الكاملُ مرّةً واحدةً ثمّ تكفي هذه.
+     */
+    fun moveDriver(style: Style, driver: LatLng, bearingDeg: Float?): Boolean {
+        val me = style.getSourceAs<GeoJsonSource>(SRC_ME) ?: return false
+        val pts = style.getSourceAs<GeoJsonSource>(SRC_POINTS) ?: return false
+        me.setGeoJson(
+            FeatureCollection.fromFeatures(listOf(feature(driver, IMG_DRIVER))),
+        )
+        // ══════════════════════════════════════════════════════════════
+        // **وطرفا الرحلة يُحفظان ولا يُستعلَم عنهما**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وكانت `querySourceFeatures` تُنادى هنا** — **استعلامٌ في
+        // محرّك الخرائط ستّين مرّةً في الثانية**، وهو أثقلُ من إعادة
+        // البناء التي جاءت لتتجنّبها. **(بلاغُ المالك ٢٠٢٦-٠٨-٢٤:
+        // «أصبح التطبيق ثقيلاً جدّاً».)**
+        //
+        // **وهما لا يتبدّلان أثناء الرحلة** — فيُحفظان حين تُرسم
+        // الخريطةُ كاملةً ويُقرآن من الذاكرة.
+        pts.setGeoJson(
+            FeatureCollection.fromFeatures(
+                ends + feature(driver, IMG_DRIVER, bearingDeg ?: 0f),
+            ),
+        )
+        return true
+    }
+
     private fun points(
         style: Style,
         driver: LatLng?,
@@ -244,9 +294,14 @@ object Markers {
         dropoff: LatLng?,
         driverBearingDeg: Float?,
     ) {
-        val features = buildList {
+        // **وطرفا الرحلة يُحفظان هنا** — يقرؤهما `moveDriver` في كلّ
+        // إطارٍ بلا استعلامٍ في المحرّك.
+        ends = buildList {
             pickup?.let { add(feature(it, IMG_PICKUP)) }
             dropoff?.let { add(feature(it, IMG_DROPOFF)) }
+        }
+        val features = buildList {
+            addAll(ends)
             // **وأنت آخرُ ما يُرسم** — فلا تُغطّى بعلامةٍ فوقك.
             driver?.let { add(feature(it, IMG_DRIVER, driverBearingDeg)) }
         }
@@ -305,7 +360,16 @@ object Markers {
             return
         }
         if (coords.size < 2) return
-        style.addSource(GeoJsonSource(SRC_LINE, geometry))
+        // **و`lineMetrics` شرطُ التدرّج** — انظر [setTraveled].
+        // **وبلاها يُهمَل `line-gradient` بصمت** فيبقى الخطُّ كاملاً
+        // خلف السائق ولا خطأَ في سجلّ.
+        style.addSource(
+            GeoJsonSource(
+                SRC_LINE,
+                geometry,
+                org.maplibre.android.style.sources.GeoJsonOptions().withLineMetrics(true),
+            ),
+        )
         // **وطبقتان: هالةٌ عريضةٌ وقلبٌ ضيّق** — خطٌّ رفيعٌ وحدَه يضيع
         // في الشوارع، **وعريضٌ صلبٌ يطمس ما تحته.**
         style.addLayer(
@@ -326,6 +390,61 @@ object Markers {
                 PropertyFactory.lineJoin("round"),
             ),
         )
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **يُخفي ما تحت السهم — بلا أن تُمَسَّ هندسةُ الخطّ**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «يجب ألّا يلاحظ الشخصُ قصَّها أصلاً».)
+     *
+     * **والتدرّجُ خاصّيّةُ لونٍ لا هندسة** — فيُبدَّل في كلّ إطارٍ بثمنٍ
+     * لا يُذكر، **والهندسةُ تبقى كما هي.**
+     *
+     * **وحدُّه حادٌّ لا ناعم**: نقطتان متجاورتان — شفّافٌ ثمّ لونٌ —
+     * **فيبدو طرفَ خطٍّ لا تلاشياً**، والتلاشي يُقرأ ضبابا.
+     *
+     * @param traveled ما قُطع نسبةً — من [RouteTrim.fraction].
+     */
+    fun setTraveled(style: Style, traveled: Double) {
+        val t = traveled.coerceIn(0.0, 0.999)
+        // **ولا يُبنى تعبيرٌ لفرقٍ لا تراه عين** — **جزءٌ من ألفٍ من
+        // مسارٍ طولُه كيلومترٌ مترٌ واحد.** وبناءُ تعبيرٍ وتسليمُه
+        // للمحرّك ستّين مرّةً في الثانية ثمنٌ بلا مقابل.
+        if (kotlin.math.abs(t - lastTraveled) < 0.001) return
+        lastTraveled = t
+        // **ولونُ اللوحة نصٌّ والتعبيرُ يريد عددا** — يُحلّ مرّةً.
+        val ink = android.graphics.Color.parseColor(DRIVER)
+        // **وصفرٌ يعني لا شيءَ مقطوعا** — فلا تدرّجَ أصلاً، ويبقى
+        // اللونُ كما هو.
+        val gradient = if (t <= 0.0) {
+            Expression.interpolate(
+                Expression.linear(), Expression.lineProgress(),
+                Expression.stop(0f, Expression.color(ink)),
+                Expression.stop(1f, Expression.color(ink)),
+            )
+        } else {
+            Expression.interpolate(
+                Expression.linear(), Expression.lineProgress(),
+                Expression.stop(0f, Expression.rgba(0, 0, 0, 0)),
+                Expression.stop(t.toFloat(), Expression.rgba(0, 0, 0, 0)),
+                Expression.stop((t + 0.001).coerceAtMost(1.0).toFloat(), Expression.color(ink)),
+                Expression.stop(1f, Expression.color(ink)),
+            )
+        }
+        var found = 0
+        for (id in listOf("trip-line-glow", "trip-line-layer")) {
+            val layer = style.getLayer(id) as? LineLayer
+            if (layer != null) {
+                found++
+                layer.setProperties(PropertyFactory.lineGradient(gradient))
+            }
+        }
+        // **وطبقةٌ لم تُبنَ بعد لا تُسقط شيئاً** — أوّلُ إطارٍ قبل
+        // أن يُرسم الخطّ. **وسطرٌ في كلّ ثانيةٍ يُغرق السجلّ**، فحُذف
+        // بعد أن أثبت أنّ التدرّج يُطبَّق (٢٠٢٦-٠٨-٢٤: طبقات=2).
+        if (found == 0) return
     }
 
     private fun feature(at: LatLng, kind: String, rotateDeg: Float? = null): Feature =

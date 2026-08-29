@@ -73,7 +73,7 @@ fun BoardScreen(vm: BoardViewModel) {
 
     Screen {
         ScreenTitle(
-            stringResource(R.string.nav_board),
+            stringResource(R.string.act_my_board),
             stringResource(R.string.soon_board),
         )
 
@@ -91,7 +91,7 @@ fun BoardScreen(vm: BoardViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    stringResource(R.string.bd_target),
+                    stringResource(R.string.act_month_target),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
                 )

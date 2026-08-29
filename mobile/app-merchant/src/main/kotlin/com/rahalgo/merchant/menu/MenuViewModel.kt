@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.menu
 
+import com.rahalgo.merchant.noStoreMsg
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -7,9 +8,12 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.merchant.MenuItem
+import com.rahalgo.shared.merchant.ModifierGroup
+import com.rahalgo.shared.merchant.ModifierOption
 import com.rahalgo.shared.merchant.MenuItemInput
 import com.rahalgo.shared.merchant.MerchantApi
 import com.rahalgo.shared.merchant.PlatformSectionRef
+import com.rahalgo.ui.err
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Flash
 import kotlinx.coroutines.launch
@@ -92,7 +96,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                     storeId = api.stores().stores.firstOrNull()?.id ?: ""
                 }
                 if (storeId.isEmpty()) {
-                    error = "لا متجر مرتبط بحسابك"
+                    error = noStoreMsg()
                     loading = false
                     return@launch
                 }
@@ -100,13 +104,30 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 // لا تتبدّل في اليوم، **ونداءٌ لكلّ إنعاشٍ حملٌ بلا سبب.**
                 if (faces.isEmpty()) {
                     runCatching {
-                        sections = api.platformSections().sections
+                        // ══════════════════════════════════════════════
+                        // **وأقسامُ هذا المتجر لا أقسامُ المنصّة كلُّها**
+                        // ══════════════════════════════════════════════
+                        //
+                        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «مو معقول كلُّ
+                        //  الأقسام تطلع عند كلّ المتاجر — مطعمٌ شو
+                        //  علاقتُه بالأحذية؟»)
+                        //
+                        // **وقائمةٌ فيها ثمانيةٌ وثلاثون قسماً أكثرُها
+                        // لا يعنيه تُختار منها بالخطأ** — وصنفٌ في قسمٍ
+                        // غلطٍ يظهر للزبون في المكان الخطأ أو لا يظهر.
+                        //
+                        // **وفارغةٌ تعني الكلّ**: من لم يُعلن أقسامَه
+                        // بعدُ يرى القائمةَ كاملةً كما قبل التحديث،
+                        // **فلا يُحبس متجرٌ قائمٌ بلا أقسام.**
+                        val mine = runCatching { api.storeSections(storeId).sections }
+                            .getOrDefault(emptyList())
+                        sections = mine.ifEmpty { api.platformSections().sections }
                         faces = sections.associate { it.name to (it.imageThumbUrl ?: it.imageUrl) }
                     }
                 }
                 regroup(api.menu(storeId).flatMap { it.items })
                 error = ""
-            }.onFailure { error = it.message ?: "تعذّر جلب الأصناف" }
+            }.onFailure { error = err(it) }
             loading = false
         }
     }
@@ -171,7 +192,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 .onFailure {
                     groups = before
                     open = beforeOpen
-                    Flash.fail(it.message ?: "تعذّر تبديل التوفر")
+                    Flash.fail(err(it))
                 }
         }
     }
@@ -198,6 +219,10 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             price = if (item.price > 0) item.price.toString() else "",
             platformSectionId = item.platformSectionId.orEmpty(),
             imageThumb = item.imageThumbUrl ?: item.imageUrl,
+            // **وتُحمَّل مع الصنف** — ومن حرّر صنفاً بلا حملها ثمّ حفظ
+            // **محا إضافاتِه كلَّها**: المحرّكُ يستبدل لا يضيف
+            // (`DELETE FROM modifier_groups WHERE item_id`).
+            modifiers = item.modifiers,
         )
     }
 
@@ -221,7 +246,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching { api.uploadItemImage("item.jpg", bytes) }
                 .onSuccess { editing = d.copy(imageMediaId = it, imageThumb = null) }
-                .onFailure { Flash.fail(it.message ?: "تعذّر رفع الصورة") }
+                .onFailure { Flash.fail(err(it)) }
             busy = false
         }
     }
@@ -244,16 +269,16 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     fun saveItem() {
         val d = editing ?: return
         if (d.name.isBlank()) {
-            Flash.fail("اكتب اسم الصنف")
+            Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.v_item_name))
             return
         }
         val price = d.price.trim().toLongOrNull()
         if (price == null || price <= 0) {
-            Flash.fail("اكتب سعر الشراء")
+            Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.v_item_price))
             return
         }
         if (d.platformSectionId.isBlank()) {
-            Flash.fail("اختر قسم السوق — وصنف بلا قسم لا يراه زبون")
+            Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.v_item_section))
             return
         }
         busy = true
@@ -264,6 +289,8 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 price = price,
                 platformSectionId = d.platformSectionId,
                 imageMediaId = d.imageMediaId,
+                // **وتُرسل دائماً لا حين تتبدّل** — انظر `editItem`.
+                modifiers = d.modifiers,
             )
             runCatching {
                 if (d.itemId.isEmpty()) api.createItem(storeId, input)
@@ -271,7 +298,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             }.onSuccess {
                 editing = null
                 load()
-            }.onFailure { Flash.fail(it.message ?: "تعذّر حفظ الصنف") }
+            }.onFailure { Flash.fail(err(it)) }
             busy = false
         }
     }
@@ -284,13 +311,13 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                     editing = null
                     load()
                 }
-                .onFailure { Flash.fail(it.message ?: "تعذّر حذف الصنف") }
+                .onFailure { Flash.fail(err(it)) }
             busy = false
         }
     }
 
     private companion object {
-        const val UNSORTED = "غير مصنّف"
+        val UNSORTED: String get() = com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.g_unsorted)
     }
 }
 
@@ -305,6 +332,22 @@ data class Draft(
     /** `null` لم تُمسّ · `""` أزِلها · معرّفٌ صورةٌ جديدة. */
     val imageMediaId: String? = null,
     val imageThumb: String? = null,
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **الإضافاتُ والمجموعات**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «الأكلُ دائماً الشخصُ يطلب شيئاً
+     *  إضافيّاً أو عصير كولا عيران وهكذا… لازم تكون من نفس المتجر».)
+     *
+     * **والمحرّكُ يحفظها ويردّها منذ `0005_menu.sql`** — والزبونُ
+     * يراها ويختار منها. **والناقصُ كان محرّرَها في تطبيق المتجر
+     * وحدَه**، فلا يستطيع صاحبُه أن يُنشئ واحدةً.
+     *
+     * **وهي مربوطةٌ بالصنف** — والصنفُ لمتجرٍ واحد. **فلا يمكن بنيةً
+     * أن تأتي إضافةٌ من متجرٍ آخر**، ولا يحتاج ذلك حارساً.
+     */
+    val modifiers: List<ModifierGroup> = emptyList(),
 )
 
 /** **قسمُ سوقٍ فيه أصنافُه** — والاسمُ هو المفتاح، فهو ما يراه الزبون. */

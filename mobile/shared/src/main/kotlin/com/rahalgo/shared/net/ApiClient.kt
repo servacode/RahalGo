@@ -52,6 +52,13 @@ class ApiClient(
     @PublishedApi internal val baseUrl: String,
     @PublishedApi internal val client: String,
     @PublishedApi internal val session: SessionStore,
+    /**
+     * **رقمُ نسخة التطبيق** — يُرسل في كلّ نداء. انظر `VERSION_HEADER`.
+     *
+     * **وآخرُ المُعامِلات بافتراضٍ صفر** — **ومن أقحمه في الوسط كسر كلَّ
+     * نداءٍ موضعيٍّ قائم.**
+     */
+    @PublishedApi internal val version: Int = 0,
 ) {
     @PublishedApi internal val json = Json {
         // **وحقل جديد في المحرّك لا يُسقط التطبيق القديم** — يُتجاهل.
@@ -134,6 +141,7 @@ class ApiClient(
         val res: HttpResponse = http.request(baseUrl + path) {
             this.method = method
             header(CLIENT_HEADER, client)
+            if (version > 0) header(VERSION_HEADER, version.toString())
             if (token.isNotEmpty()) header("Authorization", "Bearer $token")
             // **ومفتاح منع التكرار حيث يُطلب** — النقاط التي تكتب مالا
             // (انظر `server/idempotency.go` و`api/contract.json`).
@@ -142,6 +150,11 @@ class ApiClient(
                 contentType(ContentType.Application.Json)
                 setBody(body)
             }
+        }
+        // **وبوّابةُ التحديث تُقرأ قبل أيّ شيء** — انظر `outdated`.
+        if (res.status.value == 426) {
+            outdated = true
+            throw ApiException(426, ApiErrorBody(code = "update_required"))
         }
         val env: Envelope<T> = res.body()
         val err = env.error
@@ -202,6 +215,7 @@ class ApiClient(
             },
         ) {
             header(CLIENT_HEADER, client)
+            if (version > 0) header(VERSION_HEADER, version.toString())
             header("Authorization", "Bearer " + session.accessToken())
         }
         if (res.status.value >= 400) {
@@ -297,7 +311,38 @@ class ApiClient(
     internal val refreshGate = kotlinx.coroutines.sync.Mutex()
 
     companion object {
+        /**
+         * ══════════════════════════════════════════════════════════════
+         * **ونسخةٌ متخلّفةٌ تُعلَن مرّةً للتطبيق كلِّه**
+         * ══════════════════════════════════════════════════════════════
+         *
+         * (طلبُ المالك ٢٠٢٦-٠٨-٢٥.)
+         *
+         * **والمحرّكُ يردّ ٤٢٦ على أيّ نداء** — **ومن عالجها في كلّ
+         * شاشةٍ نسي شاشةً**، فتبقى تعمل وهي مكسورة.
+         *
+         * **فتُرفع رايةٌ واحدةٌ يقرؤها الغلاف** — فتُغلق الأبوابُ معاً.
+         */
+        @Volatile
+        var outdated: Boolean = false
+
         const val CLIENT_HEADER = "X-RahalGo-Client"
+
+        /**
+         * ══════════════════════════════════════════════════════════════
+         * **ورقمُ النسخة يُرسل في كلّ نداء**
+         * ══════════════════════════════════════════════════════════════
+         *
+         * (طلبُ المالك ٢٠٢٦-٠٨-٢٥: «مو معقول التطبيق يتحدّث والمستخدم
+         *  ما عنده خبر».)
+         *
+         * **وبه يعرف المحرّكُ أنّ هذا الجهازَ على نسخةٍ عفا عليها
+         * الزمن** — فيردّ `426` بدل أن ينكسر عنده شيءٌ بصمت.
+         *
+         * **ورأسٌ منفصلٌ لا ملحقٌ بالأوّل** — **ومن ألحقه به كسر
+         * تحليلَ نوع العميل** في المحرّك (`client_kind`).
+         */
+        const val VERSION_HEADER = "X-RahalGo-Version"
     }
 }
 

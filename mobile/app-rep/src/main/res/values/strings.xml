@@ -7,10 +7,8 @@
     <string name="login_title">دخول المندوب</string>
 
     <!-- **تبويباتُه الثلاثة** — يمينٌ إلى يسار. -->
-    <string name="nav_board">لوحتي</string>
     <string name="nav_add_client">إضافة عميل</string>
     <string name="nav_clients">عملائي</string>
-    <string name="nav_profile">حسابي</string>
 
     <string name="soon_board">أرقامك وهدف الشهر</string>
     <string name="soon_add_client">سجل عميلا من الميدان — بنقطته على الخريطة</string>
@@ -51,7 +49,6 @@
     <string name="cd_col_share">عمولتي</string>
     <string name="cd_forfeited">لا تحتسب</string>
     <string name="cd_no_reason">لم يذكر سبب</string>
-    <string name="cd_st_delivered">تم التسليم</string>
     <string name="cd_st_cancelled">ملغى</string>
     <string name="cd_st_running">قيد التنفيذ</string>
     <!-- **والقاعدةُ تُقال مرّةً** — ومن رأى رقماً مشطوباً بلا شرحٍ ظنّ
@@ -78,14 +75,8 @@
          **ويحرسه `pnpm check:menu-parity`** — يقارن الملفَّين حرفاً.
     -->
     <!-- **والبابُ اسمُه اسمُ الشاشة** — `terms.menu` في الويب. -->
-    <string name="cd_menu">الأصناف</string>
-    <string name="mn_title">الأصناف</string>
     <string name="mn_hint">أضف أصناف عميلك: الاسم والسعر والصورة — وتتحكم بإتاحتها وتوفرها.</string>
     <string name="mn_empty">القائمة فارغة — أضف أول صنف</string>
-    <string name="mn_add_item">صنف جديد</string>
-    <string name="mn_edit_item">تعديل الصنف</string>
-    <string name="mn_no_items">لا أصناف في هذا القسم بعد</string>
-    <string name="mn_item_name">اسم الصنف</string>
     <string name="mn_price">سعر المتجر</string>
     <string name="mn_sale_price">سعر البيع للزبون</string>
     <string name="mn_desc">الوصف</string>
@@ -94,8 +85,6 @@
     <string name="mn_platform_section">قسم المنصة</string>
     <string name="mn_no_platform_section">— بلا قسم —</string>
     <string name="mn_no_platform_section_hint">بلا قسم لن يظهر الصنف في تصفح الزبون</string>
-    <string name="mn_available">متوفر</string>
-    <string name="mn_unavailable">غير متوفر</string>
     <!-- ══════════════════════════════════════════════════════════════
          **والزرُّ يقول الحالَ لا الفعل** — (توحيدٌ ٢٠٢٦-٠٨-٢٣)
          ══════════════════════════════════════════════════════════════
@@ -110,30 +99,21 @@
     <string name="mn_mark_unavailable">متوفر</string>
     <string name="mn_mark_available">غير متوفر</string>
     <string name="mn_confirm_delete">حذف هذا الصنف نهائيا؟</string>
-    <string name="mn_pending_review">بانتظار المراجعة</string>
     <string name="mn_rejected">مرفوض — عدله ليراجع</string>
     <!-- **والمُعدِّلاتُ عشرُ كلماتٍ من المعجم المشترك نفسِه.** -->
     <string name="mn_modifiers">المعدلات (الحجم، الإضافات…)</string>
     <string name="mn_add_group">مجموعة معدلات</string>
-    <string name="mn_group_name">اسم المجموعة</string>
     <string name="mn_min_select">أدنى اختيار</string>
     <string name="mn_max_select">أقصى اختيار</string>
-    <string name="mn_required">إلزامي</string>
-    <string name="mn_optional">اختياري</string>
-    <string name="mn_option_name">اسم الخيار</string>
     <string name="mn_price_delta">فرق السعر</string>
     <string name="mn_add_option">خيار</string>
     <!-- **وهذه ليست في المعجم المشترك لأنّ الويب لا يحتاجها** — خارجَ
          الدوام حالٌ يقولها الوقت، والحفظُ والإلغاءُ أزرارُ نموذجٍ في
          التطبيق وحدَه. -->
     <string name="mn_closed_now">خارج الدوام الآن</string>
-    <string name="mn_save">حفظ</string>
-    <string name="mn_cancel">إلغاء</string>
-    <string name="mn_delete">حذف</string>
 
     <!-- **إضافةُ عميل** — وأكثرُ نصوصها من الويب حرفا. -->
     <string name="ac_title_hint">يبقى معلقا حتى موافقة الإدارة</string>
-    <string name="ac_store">اسم المتجر</string>
     <string name="ac_owner">اسم صاحبه</string>
     <string name="ac_area">المنطقة</string>
     <string name="ac_category">التصنيف</string>
@@ -148,7 +128,6 @@
     <string name="ac_done">وصل الطلب للإدارة — سيظهر عميلا فعالا فور الموافقة</string>
 
     <!-- **لوحتي** — والشهريُّ يسبق التراكميّ. -->
-    <string name="bd_target">هدف الشهر</string>
     <string name="bd_target_done">تحقق الهدف — أحسنت</string>
     <string name="bd_target_left">بقي %1$s عميلا</string>
     <string name="bd_this_month">هذا الشهر</string>
@@ -169,8 +148,8 @@
 
     <!-- **رابطُ الدعوة** -->
     <string name="lk_link">الرابط</string>
-    <string name="lk_share">شارك الرابط</string>
     <string name="lk_copy">انسخ الرابط</string>
     <string name="lk_share_text">سجل متجرك في رحال غو من هنا: %1$s</string>
     <string name="lk_hint">كل متجر يسجل من رابطك ينسب إليك — وتجري عمولتك عن طلباته بعد تفعيله.</string>
+    <string name="push_ch_lead">عملاء جدد</string>
 </resources>

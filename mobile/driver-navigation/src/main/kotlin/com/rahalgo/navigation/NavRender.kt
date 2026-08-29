@@ -27,6 +27,18 @@ data class NavRender(
     val targetLng: Double?,
     val bearingDeg: Float?,
     val durationMs: Long,
+    /**
+     * **ما قُطع على الخطّ بالمتر** — ليُطوى خلفَ السائق.
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-٢٤.)
+     *
+     * **وكان يُحسب ولا يصل إلى الرسم**: `RouteProgress` تعطيه كلَّ
+     * قراءة، **والصوتُ يستعمله والخريطةُ لا تراه** — فيبقى الخطُّ
+     * كاملاً خلفَ السائق ويكذب على عينه.
+     *
+     * **وسالبٌ يعني «لا تقصَّ شيئاً»** — قبل أن تبدأ الملاحة.
+     */
+    val progressM: Double = -1.0,
 ) {
     /**
      * **حالُ الكاميرا لهذه الخطوة.**
@@ -63,6 +75,7 @@ data class NavRender(
                 targetLng = state.lng,
                 bearingDeg = state.bearingDeg,
                 durationMs = state.animationMs,
+                progressM = state.progress?.progressM ?: -1.0,
             )
         }
 

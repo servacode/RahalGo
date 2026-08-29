@@ -1,5 +1,9 @@
 package com.rahalgo.merchant.menu
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Checkbox
+import com.rahalgo.shared.merchant.ModifierGroup
+import com.rahalgo.shared.merchant.ModifierOption
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -253,7 +257,7 @@ private fun ItemRow(item: MenuItem, onToggle: () -> Unit, onEdit: () -> Unit) {
                 // الأربعة والويب: «متوفر / غير متوفر».
                 Text(
                     stringResource(
-                        if (item.available) R.string.menu_available else R.string.menu_unavailable,
+                        if (item.available) R.string.mn_available else R.string.mn_unavailable,
                     ),
                     color = if (item.available) Rahal.colors.brand else Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.labelSmall,
@@ -263,7 +267,7 @@ private fun ItemRow(item: MenuItem, onToggle: () -> Unit, onEdit: () -> Unit) {
                 if (!item.approved) {
                     Spacer(Modifier.size(8.dp))
                     Text(
-                        stringResource(R.string.menu_pending),
+                        stringResource(R.string.mn_pending_review),
                         color = Rahal.colors.accent,
                         style = MaterialTheme.typography.labelSmall,
                     )
@@ -313,7 +317,7 @@ private fun ItemEditor(vm: MenuViewModel, d: Draft, media: (String?) -> String?)
 
     Screen {
         ScreenTitle(
-            stringResource(if (d.itemId.isEmpty()) R.string.item_new else R.string.item_edit),
+            stringResource(if (d.itemId.isEmpty()) R.string.mn_item_new else R.string.mn_item_edit),
             "",
         )
 
@@ -347,7 +351,7 @@ private fun ItemEditor(vm: MenuViewModel, d: Draft, media: (String?) -> String?)
         OutlinedTextField(
             value = d.name,
             onValueChange = { v -> vm.editDraft { it.copy(name = v) } },
-            label = { Text(stringResource(R.string.item_name)) },
+            label = { Text(stringResource(R.string.mn_item_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -367,12 +371,6 @@ private fun ItemEditor(vm: MenuViewModel, d: Draft, media: (String?) -> String?)
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
-        Text(
-            stringResource(R.string.item_price_hint),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
-
         Spacer(Modifier.height(12.dp))
         Text(
             stringResource(R.string.item_section),
@@ -404,13 +402,15 @@ private fun ItemEditor(vm: MenuViewModel, d: Draft, media: (String?) -> String?)
             }
         }
 
+        ModifiersEditor(vm, d)
+
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RahalButton(onClick = { vm.saveItem() }, enabled = !vm.busy) {
-                Text(stringResource(R.string.save))
+                Text(stringResource(R.string.act_save))
             }
             RahalTextButton(onClick = { vm.cancelEdit() }, enabled = !vm.busy) {
-                Text(stringResource(R.string.cancel))
+                Text(stringResource(R.string.act_cancel))
             }
         }
 
@@ -434,7 +434,7 @@ private fun ItemEditor(vm: MenuViewModel, d: Draft, media: (String?) -> String?)
                             tone = com.rahalgo.ui.Tone.Danger,
                         ) { Text(stringResource(R.string.item_delete)) }
                         RahalTextButton(onClick = { confirmDelete = false }) {
-                            Text(stringResource(R.string.cancel))
+                            Text(stringResource(R.string.act_cancel))
                         }
                     }
                 }
@@ -443,3 +443,172 @@ private fun ItemEditor(vm: MenuViewModel, d: Draft, media: (String?) -> String?)
         Spacer(Modifier.height(24.dp))
     }
 }
+
+
+/**
+ * ════════════════════════════════════════
+ * **الإضافاتُ والمجموعات — «مشروبٌ غازيّ» و«جبنةٌ إضافيّة»**
+ * ════════════════════════════════════════
+ *
+ * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «شغلُ الإضافات والمجموعات الخاصّة بكلّ صنفٍ
+ *  غيرُ موجود… الأكلُ دائماً الشخصُ يطلب شيئاً إضافيّاً أو عصير كولا
+ *  عيران وهكذا. لازم تكون من نفس المتجر».)
+ *
+ * # ولا حارسَ يمنع الخلط
+ *
+ * **والإضافةُ مربوطةٌ بالصنف، والصنفُ لمتجرٍ واحد** — فلا يمكن بنيةً أن
+ * تأتي من متجرٍ آخر. **والسائقُ يشتري من بابٍ واحد.**
+ *
+ * # ومجموعةٌ لا قائمةٌ مسطّحة
+ *
+ * **و«اختر واحداً من ثلاثة مشروبات» غيرُ «أضف ما شئت من خمسة»** —
+ * والفرقُ `minSelect` و`maxSelect`. **ومن سطّحها جعل الزبونَ يختار
+ * ثلاثةَ مشروباتٍ في طلبٍ واحد.**
+ *
+ * # ورقمان عاريان لا يفهمهما صاحبُ مطعم
+ *
+ * **فيُعرضان سؤالين**: «إلزاميّ؟» و«يختار أكثر من واحد؟».
+ */
+@Composable
+private fun ModifiersEditor(vm: MenuViewModel, d: Draft) {
+    Spacer(Modifier.height(16.dp))
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(R.string.mod_title),
+            modifier = Modifier.weight(1f),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleSmall,
+        )
+        RahalTextButton(onClick = {
+            vm.editDraft { it.copy(modifiers = it.modifiers + ModifierGroup(name = "")) }
+        }) { Text(stringResource(R.string.mod_add_group)) }
+    }
+    Text(
+        stringResource(R.string.mod_hint),
+        color = Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.bodySmall,
+    )
+
+    d.modifiers.forEachIndexed { gi, g ->
+        Spacer(Modifier.height(10.dp))
+        Card {
+            Column(Modifier.padding(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = g.name,
+                        onValueChange = { v ->
+                            vm.editDraft { dd ->
+                                dd.copy(modifiers = dd.modifiers.replaceAt(gi) { it.copy(name = v) })
+                            }
+                        },
+                        label = { Text(stringResource(R.string.mn_group_name)) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    RahalTextButton(onClick = {
+                        vm.editDraft { dd ->
+                            dd.copy(modifiers = dd.modifiers.filterIndexed { i, _ -> i != gi })
+                        }
+                    }) { Text(stringResource(R.string.act_delete), color = Rahal.colors.danger) }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = g.minSelect > 0,
+                        onCheckedChange = { on ->
+                            vm.editDraft { dd ->
+                                dd.copy(
+                                    modifiers = dd.modifiers.replaceAt(gi) {
+                                        it.copy(minSelect = if (on) 1 else 0)
+                                    },
+                                )
+                            }
+                        },
+                    )
+                    Text(
+                        stringResource(R.string.mn_required),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Checkbox(
+                        checked = g.maxSelect > 1,
+                        onCheckedChange = { on ->
+                            vm.editDraft { dd ->
+                                dd.copy(
+                                    modifiers = dd.modifiers.replaceAt(gi) {
+                                        it.copy(maxSelect = if (on) 99 else 1)
+                                    },
+                                )
+                            }
+                        },
+                    )
+                    Text(
+                        stringResource(R.string.mod_multi),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                g.options.forEachIndexed { oi, o ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = o.name,
+                            onValueChange = { v ->
+                                vm.editDraft { dd ->
+                                    dd.copy(
+                                        modifiers = dd.modifiers.replaceAt(gi) { gg ->
+                                            gg.copy(options = gg.options.replaceAt(oi) { it.copy(name = v) })
+                                        },
+                                    )
+                                }
+                            },
+                            label = { Text(stringResource(R.string.mn_option_name)) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        OutlinedTextField(
+                            value = if (o.priceDelta == 0L) "" else o.priceDelta.toString(),
+                            onValueChange = { v ->
+                                val n = v.filter { it.isDigit() }.toLongOrNull() ?: 0L
+                                vm.editDraft { dd ->
+                                    dd.copy(
+                                        modifiers = dd.modifiers.replaceAt(gi) { gg ->
+                                            gg.copy(options = gg.options.replaceAt(oi) { it.copy(priceDelta = n) })
+                                        },
+                                    )
+                                }
+                            },
+                            label = { Text(stringResource(R.string.mod_opt_price)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(110.dp),
+                        )
+                        RahalTextButton(onClick = {
+                            vm.editDraft { dd ->
+                                dd.copy(
+                                    modifiers = dd.modifiers.replaceAt(gi) { gg ->
+                                        gg.copy(options = gg.options.filterIndexed { i, _ -> i != oi })
+                                    },
+                                )
+                            }
+                        }) { Text("×", color = Rahal.colors.danger) }
+                    }
+                }
+
+                RahalTextButton(onClick = {
+                    vm.editDraft { dd ->
+                        dd.copy(
+                            modifiers = dd.modifiers.replaceAt(gi) { gg ->
+                                gg.copy(options = gg.options + ModifierOption(name = ""))
+                            },
+                        )
+                    }
+                }) { Text(stringResource(R.string.mod_add_option)) }
+            }
+        }
+    }
+}
+
+/** **يستبدل عنصراً بموضعه** — ولا يمسّ ما سواه. */
+private inline fun <T> List<T>.replaceAt(i: Int, block: (T) -> T): List<T> =
+    mapIndexed { idx, v -> if (idx == i) block(v) else v }

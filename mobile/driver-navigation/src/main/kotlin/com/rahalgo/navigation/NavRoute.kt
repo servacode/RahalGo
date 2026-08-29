@@ -124,4 +124,7 @@ object ManeuverKinds {
 
     /** **أنعرفه؟** — وما لا نعرفه لا يُسقط شيئاً. */
     fun isKnown(kind: String): Boolean = kind in known
+
+    /** **ما نعرفه كلُّه** — تمشيه الحرّاسُ فلا يُنسى نوعٌ في جدول. */
+    fun all(): Set<String> = known
 }

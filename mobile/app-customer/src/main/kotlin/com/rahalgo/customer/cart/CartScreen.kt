@@ -108,11 +108,7 @@ fun CartScreen(
     Screen {
         ScreenTitle(stringResource(R.string.cart_title), stringResource(R.string.cart_hint))
 
-        if (vm.error.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            Note(vm.error, Rahal.colors.danger)
-        }
-
+        // **والخطأُ لا يُرسم هنا** — يُرسم فوق زرّ الطلب. انظر أدناه.
         Spacer(Modifier.height(10.dp))
         Card {
             Cart.lines.forEach { line ->
@@ -332,6 +328,25 @@ fun CartScreen(
         if (vm.priced?.outOfZone == true) {
             Spacer(Modifier.height(8.dp))
             Note(stringResource(R.string.cart_out_of_zone), Rahal.colors.danger)
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **والخطأُ يُقال حيث تقع العين — فوق الزرّ**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٥: «رسالة رصيدك لا يكفي عند الدفع
+        //  بالمحفظة تظهر بمكانٍ لا يراه المستخدم، فلا يعرف سببَ عدم
+        //  اكتمال الطلب».)
+        //
+        // **وكان يُرسم تحت عنوان الشاشة** — والزرُّ في أسفلها بعد
+        // الأصناف والعنوان والدفع. **فيضغط الزرَّ فتظهر الرسالةُ فوق
+        // شاشتين، ولا يرى إلّا زرّاً لم يفعل شيئا.**
+        //
+        // **وخطأٌ لا يُرى كأنّه لم يقع** — والمستخدمُ يعيد الضغطَ ثمّ
+        // يخرج.
+        if (vm.error.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Note(vm.error, Rahal.colors.danger)
         }
 
         Spacer(Modifier.height(14.dp))
@@ -563,6 +578,7 @@ private fun PayChoice(
         RadioButton(selected = on, onClick = onPick)
         Text(
             text = text,
+            color = Rahal.colors.ink,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
         )

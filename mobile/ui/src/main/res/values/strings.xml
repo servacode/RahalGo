@@ -58,6 +58,20 @@
     <string name="err_user_blocked">هذا الحساب محظور</string>
     <string name="err_user_suspended">هذا الحساب موقوف</string>
     <string name="err_validation">تحقق من البيانات المدخلة</string>
+    <!-- **بوّابةُ التحديث** — (طلبُ المالك ٢٠٢٦-٠٨-٢٥). -->
+    <string name="update_title">يوجد إصدار جديد</string>
+    <string name="update_body">حدّثنا التطبيق وأضفنا مزايا جديدة. حدّث نسختك لتتمكن من الطلب.</string>
+    <string name="update_action">تحديث الآن</string>
+    <string name="err_update_required">يوجد إصدار جديد — حدّث التطبيق</string>
+    <!-- **وكلُّ سببٍ يقول نفسَه** — (بلاغُ المالك ٢٠٢٦-٠٨-٢٥: «ليش
+         يعطي تحقق من البيانات المدخلة؟»). سبعةُ أسبابٍ كانت ترجع
+         برسالةٍ واحدةٍ لا تدلّ على شيء. -->
+    <string name="err_no_items">سلتك فارغة — أضف صنفاً واحداً على الأقل</string>
+    <string name="err_no_address">اختر عنوان التوصيل أولاً</string>
+    <string name="err_bad_merchant">تعذّر تحديد المتجر — أعد فتح السلة</string>
+    <string name="err_bad_payment">اختر طريقة دفع: نقداً أو من المحفظة</string>
+    <string name="err_bad_qty">الكمية يجب أن تكون بين ١ و٥٠</string>
+    <string name="err_item_gone">أحد الأصناف لم يعد متوفراً — احذفه وأعد المحاولة</string>
     <string name="err_whatsapp_required">وثق رقمك قبل فتح الدوام</string>
     <string name="hist_already_open">لك بلاغ مفتوح على هذا الطلب — تتابعه العمليات</string>
     <string name="hist_already_rated">قيمت هذا المتجر عن هذا الطلب</string>
@@ -76,23 +90,23 @@
     <string name="wal_pending_exists">لديك طلب سحب لم يقرر بعد</string>
     <string name="login_change_number">تعديل الرقم</string>
     <string name="login_forgot">نسيت كلمة المرور؟</string>
-    <string name="login_submit">دخول</string>
+    <string name="login_submit">تسجيل الدخول</string>
     <string name="login_tab_otp">رمز تحقق</string>
     <string name="login_tab_password">كلمة المرور</string>
     <string name="login_verify_and_enter">تحقق وادخل</string>
     <string name="reset_back">رجوع للدخول</string>
     <string name="reset_confirm">حفظ ودخول</string>
-    <string name="reset_hint_code">اكتب الرمز الذي وصلك</string>
+    <string name="reset_hint_code">اكتب الرمز الذي وصلك على واتساب</string>
     <string name="reset_hint_password">اختر كلمة مرور جديدة</string>
-    <string name="reset_hint_phone">اكتب رقمك ويصلك رمز</string>
+    <string name="reset_hint_phone">اكتب رقمك — سيفتح واتساب برسالة جاهزة، أرسلها ويصلك الرمز رداً</string>
     <string name="reset_new_password">كلمة المرور الجديدة</string>
-    <string name="reset_send">أرسل الرمز</string>
+    <string name="reset_send">افتح واتساب</string>
     <string name="reset_title">استعادة كلمة المرور</string>
     <string name="reset_verify">تحقق</string>
     <!-- **إنشاء حساب — للزبون وحدَه** -->
-    <string name="signup_title">حساب جديد</string>
-    <string name="signup_open">ليس لديك حساب؟ أنشئ واحدا</string>
-    <string name="signup_hint_phone">اكتب رقمك — يصلك رمز تحقق</string>
+    <string name="signup_title">إنشاء حساب جديد</string>
+    <string name="signup_open">ليس لديك حساب؟ إنشاء حساب جديد</string>
+    <string name="signup_hint_phone">اكتب رقمك لإنشاء حسابك</string>
     <string name="signup_hint_code">اكتب الرمز الذي وصلك</string>
     <string name="signup_hint_details">اسمك وكلمة مرورك — وبها تدخل بعد اليوم</string>
     <string name="signup_name">الاسم الكامل</string>
@@ -323,13 +337,13 @@
          **وأربعةُ أبوابٍ أخرى محايدةٌ منذ بُنيت** (التسجيلُ
          والاستعادةُ وتغييرُ الرقم والحذف)، **وهذا كان الشاذَّ
          بينها.** -->
-    <string name="acc_wa_code">الرمز الذي وصلك</string>
+    <string name="acc_wa_code">الرمز الذي وصلك على واتساب</string>
     <string name="acc_wa_confirm">تأكيد التوثيق</string>
     <string name="acc_wa_done">تم توثيق حسابك بنجاح</string>
-    <string name="acc_wa_hint">يصلك رمز على الرقم نفسه. والتوثيق شرط لفتح الدوام واستقبال الطلبات.</string>
+    <string name="acc_wa_hint">سيفتح واتساب برسالة جاهزة — أرسلها ويصلك الرمز رداً. والتوثيق شرط لفتح الدوام واستقبال الطلبات.</string>
     <string name="acc_wa_unverified">حسابك غير موثق — لا تفتح دوامك قبل التوثيق</string>
     <string name="acc_wa_verified">حسابك موثق</string>
-    <string name="acc_wa_verify">وثق حسابك</string>
+    <string name="acc_wa_verify">وثق حسابك عبر واتساب</string>
     <string name="err_photo_unreadable">تعذرت قراءة الصورة</string>
     <string name="push_check">افحص الإشعارات</string>
     <string name="push_check_failed">رفضت غوغل الرسالة: %1$s</string>
@@ -340,7 +354,7 @@
     <string name="push_check_stale">جهازك مسجل منذ زمن بعيد — أغلق التطبيق وافتحه</string>
     <!-- **وتوثيقُ واتساب سببُه غيرُ سببه** — السائقُ لا يفتح
          دوامَه بلاه، **والزبونُ يُستعاد به حسابُه ويُبلَّغ عن طلبه.** -->
-    <string name="acc_wa_hint_user">يصلك رمز على الرقم نفسه. وبه تستعيد حسابك وتصلك أخبار طلباتك.</string>
+    <string name="acc_wa_hint_user">سيفتح واتساب برسالة جاهزة — أرسلها ويصلك الرمز رداً. وبه تستعيد حسابك وتصلك أخبار طلباتك.</string>
     <string name="acc_wa_unverified_user">حسابك غير موثق — وثقه ليحفظ لك</string>
     <string name="tik_open">مفتوحة</string>
     <string name="tik_progress">قيد المعالجة</string>
@@ -447,4 +461,53 @@
          يطفئها.** -->
     <string name="push_ch_urgent">أخبار طلبك</string>
     <string name="push_ch_default">إعلانات وعروض</string>
+    <string name="signup_password2">تأكيد كلمة المرور</string>
+    <string name="signup_password_mismatch">كلمتا المرور غير متطابقتين</string>
+    <string name="wal_k_topup">شحن رصيد</string>
+    <string name="wal_k_order_payment">دفع طلب من المحفظة</string>
+    <string name="wal_k_merchant_earning">مستحقات مبيعات</string>
+    <string name="wal_k_platform_profit">ربح المنصة</string>
+    <string name="wal_k_platform_expense">مصروف المنصة</string>
+    <string name="wal_k_operating_expense">مصروف تشغيلي</string>
+
+    <!-- ══════════════════════════════════════════════════════════
+         **المفرداتُ المشتركة — لفظٌ واحدٌ في التطبيقات الأربعة**
+         ══════════════════════════════════════════════════════════
+
+         **كانت اثنتين وثلاثين كلمةً مكتوبةً في أكثر من تطبيق**
+         بأسماءِ مفاتيحَ مختلفة (قِيس ٢٠٢٦-٠٨-٢٦). **فمن صحّح لفظاً
+         في تطبيقٍ تركه خطأً في اثنين** — وهو ما وقع في
+         «متوفر/غير متوفر». -->
+    <string name="ord_st_delivered">تم التسليم</string>
+    <string name="ord_st_onway">في الطريق</string>
+    <string name="ord_st_failed">تعذر</string>
+    <string name="ord_st_dispatching">بانتظار سائق</string>
+    <string name="mn_available">متوفر</string>
+    <string name="mn_unavailable">غير متوفر</string>
+    <string name="mn_pending_review">بانتظار المراجعة</string>
+    <string name="mn_item_new">صنف جديد</string>
+    <string name="mn_item_edit">تعديل الصنف</string>
+    <string name="mn_item_name">اسم الصنف</string>
+    <string name="mn_items">الأصناف</string>
+    <string name="mn_group_name">اسم المجموعة</string>
+    <string name="mn_required">إلزامي</string>
+    <string name="mn_option_name">اسم الخيار</string>
+    <string name="mn_no_items">لا أصناف في هذا القسم بعد</string>
+    <string name="mn_store_name">اسم المتجر</string>
+    <string name="act_save">حفظ</string>
+    <string name="act_delete">حذف</string>
+    <string name="act_cancel">إلغاء</string>
+    <string name="act_back">رجوع</string>
+    <string name="act_optional">اختياري</string>
+    <string name="act_share_link">شارك الرابط</string>
+    <string name="act_address">العنوان</string>
+    <string name="act_today">اليوم</string>
+    <string name="act_send_report">أرسل البلاغ</string>
+    <string name="act_month_target">هدف الشهر</string>
+    <string name="act_my_board">لوحتي</string>
+    <string name="nav_orders_mine">طلباتي</string>
+    <string name="nav_custom_order">طلب خاص</string>
+    <string name="nav_orders_all">الطلبات</string>
+    <string name="rs_driver_conduct">سلوك السائق</string>
+    <string name="rs_other">سبب آخر</string>
 </resources>

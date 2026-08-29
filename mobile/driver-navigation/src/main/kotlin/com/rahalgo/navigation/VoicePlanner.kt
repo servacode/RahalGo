@@ -136,6 +136,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
             priority = tuning.priorityNow,
             validUntilProgressM = Double.MAX_VALUE,
             text = VoicePhrases.WRONG_WAY,
+            clip = NavClips.WRONG_WAY,
         )
     }
 
@@ -213,6 +214,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
             priority = tuning.priorityNow,
             validUntilProgressM = Double.MAX_VALUE,
             text = VoicePhrases.ROUTE_END,
+            clip = NavClips.ROUTE_END,
         )
     }
 
@@ -239,6 +241,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
             priority = tuning.priorityNow,
             validUntilProgressM = Double.MAX_VALUE,
             text = VoicePhrases.arrival(target),
+            clip = NavClips.arrival(target),
         )
     }
 
@@ -301,7 +304,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         // ملاحةٌ بلا طلب.
         if (target.kind == ManeuverKinds.ARRIVE && state.hasArrivalTarget) return null
 
-        val stage = stageFor(previous, distance, speed) ?: return null
+        val stage = stageFor(previous, distance, speed, target) ?: return null
         if (!allowed(stage, state, fix.atMs)) {
             gatedByGps++
             return null
@@ -327,25 +330,58 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
      * **فأوّلُ قراءةٍ تُعطي أنفعَ طورٍ ينطبق وحدَه** — من فتح التطبيقَ
      * على بُعد ستّين متراً يسمع `NOW`، **ولا يسمع ثلاثاً متلاحقة.**
      */
-    private fun stageFor(previousM: Double, nowM: Double, speed: Double): CueStage? {
+    private fun stageFor(
+        previousM: Double,
+        nowM: Double,
+        speed: Double,
+        target: NavManeuver,
+    ): CueStage? {
         // **والأدنى أولى** — من عبر العتبات الثلاثَ دفعةً واحدة يريد
         // «الآن» لا «بعد خمس مئة متر». (البند ٨.)
         return when {
-            crosses(previousM, nowM, triggerM(tuning.nowSeconds, speed, tuning.nowMinM, tuning.nowMaxM)) ->
-                CueStage.NOW
-
-            crosses(
-                previousM, nowM,
-                triggerM(tuning.approachSeconds, speed, tuning.approachMinM, tuning.approachMaxM),
-            ) -> CueStage.APPROACH
-
-            crosses(
-                previousM, nowM,
-                triggerM(tuning.prepareSeconds, speed, tuning.prepareMinM, tuning.prepareMaxM),
-            ) -> CueStage.PREPARE
-
+            crosses(previousM, nowM, triggerFor(CueStage.NOW, target, speed)) -> CueStage.NOW
+            crosses(previousM, nowM, triggerFor(CueStage.APPROACH, target, speed)) -> CueStage.APPROACH
+            crosses(previousM, nowM, triggerFor(CueStage.PREPARE, target, speed)) -> CueStage.PREPARE
             else -> null
         }
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **والعتبةُ تُزاد طولَ الجملة — لتنتهي قبل المناورة لا لتبدأ عندها**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «الصوتُ متأخّرٌ عن الطريق».)
+     *
+     * **وكانت العتبةُ زمنَ بدء الكلام**: «الآن» تنطلق قبل المناورة بخمسِ
+     * ثوانٍ. **ومقطعٌ من ٦٫٧ ثانيةٍ ينتهي بعد أن يكون السائقُ جاوز
+     * المنعطفَ بثانيةٍ ونصف** — فيسمع «انعطف يميناً» وهو في الشارع
+     * التالي.
+     *
+     * **والتعليمةُ تنفع إن انتهت قبل المناورة** — وهذا سلوكُ غوغل ماب:
+     * الجملةُ الطويلةُ تُقال أبكر، لا أن تتأخّر لأنّها طويلة.
+     *
+     * # ولا يُزاد على الحدّ الأقصى
+     *
+     * **والحدُّ يبقى حدّاً** — `nowMaxM` مئةٌ وعشرون متراً: **من قال
+     * «الآن» على بُعد مئتَي مترٍ كذب**، ولو كانت جملتُه طويلة. **فالزيادةُ
+     * داخلَ الحدّين لا فوقهما.**
+     */
+    fun triggerFor(stage: CueStage, target: NavManeuver, speed: Double): Double {
+        val (sec, minM, maxM) = when (stage) {
+            CueStage.NOW -> Triple(tuning.nowSeconds, tuning.nowMinM, tuning.nowMaxM)
+            CueStage.APPROACH -> Triple(tuning.approachSeconds, tuning.approachMinM, tuning.approachMaxM)
+            else -> Triple(tuning.prepareSeconds, tuning.prepareMinM, tuning.prepareMaxM)
+        }
+        val base = triggerM(sec, speed, minM, maxM)
+        if (!tuning.speechAware) return base
+        // **والمقطعُ يُعرف من المسافة المقرَّبة عند العتبة الأساسيّة** —
+        // **دورةٌ واحدةٌ تكفي**: تقريبُ ٢٠٠ و٢٣٠ متراً واحدٌ، وفرقُ
+        // الجملتين أجزاءُ ثانية.
+        val meters = if (stage == CueStage.NOW) null else roundMeters(base)
+        val clip = NavClips.maneuver(target, stage, meters)
+        val speech = ClipDurations.seconds(clip)
+        return triggerM(sec + speech, speed, minM, maxM)
     }
 
     /**
@@ -476,6 +512,18 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
             firedAtM = distanceM,
             firedSpeedMps = speedMps,
             text = text,
+            // ══════════════════════════════════════════════════════════
+            // **والمقطعُ للمناورة المقصودة وحدَها**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **ولو دُمجت مناورتان في جملة**: عشرون مناورةً في عشرين
+            // تعني أربعمئة مقطع، **ولا تُسجَّل.** فيُقال الأوّلُ صوتاً
+            // **والثاني مكتوبٌ على الشاشة كما هو.**
+            clip = NavClips.maneuver(target, stage, spoken),
+            // **واللاحقةُ حين تُدمج مناورتان** — «ثمّ انعطف يساراً
+            // مباشرةً». **وبلاها يُسمع شطرُ الجملة وحدَه**، وهو ما
+            // بلّغ عنه المالكُ ٢٠٢٦-٠٨-٢٤.
+            thenClip = if (merge) NavClips.then(after!!) else null,
         )
     }
 
@@ -572,6 +620,14 @@ data class VoiceTuning(
      * **وقِيس في المرحلة ٢** أنّ بين مناورتين ثمانيةَ أمتارٍ فعلاً.
      */
     val combineSeconds: Double = 8.0,
+
+    /**
+     * **أتُحسَب أطوالُ الجمل في العتبات؟**
+     *
+     * **وحقيقةٌ لا خيار** — وُضع ليُطفأ في اختبارٍ يقيس السلوكَ القديم،
+     * **فيُثبت أنّ الإصلاح أصلح ولا يُدَّعى.**
+     */
+    val speechAware: Boolean = true,
 
     /** **وبعد المناورة بهذا تسقط تعليمتُها.** */
     val staleAfterM: Double = 25.0,

@@ -176,7 +176,7 @@ private fun GroupBlock(
             // زرّاً لا يعمل بلا سببٍ ظنّ التطبيقَ عطبان.**
             Text(
                 stringResource(
-                    if (group.minSelect > 0) R.string.options_required else R.string.options_optional,
+                    if (group.minSelect > 0) R.string.options_required else R.string.act_optional,
                 ),
                 color = if (group.minSelect > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.labelSmall,

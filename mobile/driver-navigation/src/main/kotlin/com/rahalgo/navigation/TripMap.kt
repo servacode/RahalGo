@@ -115,6 +115,17 @@ fun TripMap(
     val view = surface.view
     val handled = remember { intArrayOf(-1) }
     val animator = remember { com.rahalgo.map.MarkerAnimator() }
+
+    /** **زومُ الكاميرا وميلُها** — يُقرآن في كلّ إطارٍ ولا يُحسبان فيه. */
+    val camZoom = remember { doubleArrayOf(17.0) }
+
+    /** **متى سُلّم آخرُ إطار** — انظر الهدنة في `animate`. */
+    val lastFrameMs = remember { longArrayOf(0L) }
+
+    /** **طرفا التقدّم بين قراءتين** — يُستكمَل بينهما في كلّ إطار. */
+    val progressFrom = remember { floatArrayOf(-1f) }
+    val progressTo = remember { floatArrayOf(-1f) }
+    val camTilt = remember { floatArrayOf(com.rahalgo.map.NavCameraDefaults.TILT) }
     val shown = remember { doubleArrayOf(Double.NaN, Double.NaN) }
     val shownBearing = remember { floatArrayOf(0f) }
     val navKey = remember { longArrayOf(-1L) }
@@ -128,6 +139,28 @@ fun TripMap(
 
     /** **الحالُ الأخيرُ للرسم** — يقرؤه المُعيدُ بعد تحميل النمط. */
     val latest = remember { arrayOfNulls<TripDraw>(1) }
+    // ══════════════════════════════════════════════════════════════════
+    // **ويُطوى ما قُطع من الخطّ**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-٠٨-٢٤، وهو سلوكُ خرائط غوغل.)
+    //
+    // **والقصُّ هنا لا في `Markers`** — فالطبقةُ ترسم ما تُعطى،
+    // **ومن قصَّ داخلَها قصَّ البدائلَ أيضاً** وهي مساراتٌ لم يسر
+    // فيها أحد.
+    //
+    // **وقبل الملاحة يُرى الخطُّ كاملاً** — `progressM` سالبةٌ حينها.
+    // ══════════════════════════════════════════════════════════════════
+    // **والهندسةُ تبقى كاملةً — ويُخفى ما تحت السهم بالتدرّج**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «طريقة القصّ بدائيّة — يجب أن يكون
+    //  الخطُّ تحت السهم ويختفي مع السهم».)
+    //
+    // **وقصُّ الهندسة كان يقع مع قراءة الموقع** — مرّةً في الثانية،
+    // **والسهمُ يمشي ستّين مرّةً فيها**، فيقفز الخطُّ خلفه ثمانيةَ
+    // أمتارٍ دفعةً واحدة. انظر `Markers.setTraveled`.
+    val routeLengthM = remember(route) { RouteTrim.lengthM(route) }
     latest[0] = TripDraw(driver, pickup, dropoff, route, icons)
 
     /**
@@ -297,22 +330,80 @@ fun TripMap(
                     animator.animate(
                         fromLat, fromLng, nav.targetLat, nav.targetLng,
                         fromBearing, toBearing, ms,
-                    ) { lat, lng, bearing ->
+                    ) { lat, lng, bearing, t ->
                         shown[0] = lat
                         shown[1] = lng
                         shownBearing[0] = bearing
-                        libre.style?.let {
-                            Markers.draw(
-                                context, it, LatLng(lat, lng), pickup, dropoff, route,
-                                icons, bearing,
-                            )
+                        // ══════════════════════════════════════════════
+                        // **ولا يُسلَّم المحرّكُ ستّين هندسةً في الثانية**
+                        // ══════════════════════════════════════════════
+                        //
+                        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «أصبح التطبيق
+                        //  ثقيلاً جدّاً» — وقِيس: ٢١٫٦٪ من الإطارات
+                        //  متعثّرة، والمئينُ التسعون ٤٢ ملّي.)
+                        //
+                        // **وكلُّ إطارٍ كان يبني مجموعتَي معالمَ
+                        // ويُسلّمهما للمحرّك** — مئةٌ وعشرون في
+                        // الثانية.
+                        //
+                        // **والسهمُ يقطع أربعةَ عشرَ سنتيمتراً بين
+                        // إطارين** عند ثلاثين كم/س: **حركةٌ لا تراها
+                        // عينٌ وثمنُها يُرى.** وثلاثون إطاراً سلسةٌ
+                        // كستّين، ونصفُ العمل.
+                        //
+                        // **وآخرُ إطارٍ لا يُتخطّى أبداً** — وإلّا وقف
+                        // السهمُ قبل موضعه بقليلٍ حتّى القراءة التالية.
+                        val nowMs = android.os.SystemClock.uptimeMillis()
+                        if (t < 1f && nowMs - lastFrameMs[0] < FRAME_GAP_MS) {
+                            return@animate
                         }
+                        lastFrameMs[0] = nowMs
+                        val here = LatLng(lat, lng)
+                        libre.style?.let {
+                            // **والتقدّمُ بين القراءتين يُستكمَل** —
+                            // فيزحف طرفُ الخطّ مع السهم لا مع القراءة.
+                            val walked = progressFrom[0] + (progressTo[0] - progressFrom[0]) * t
+                            Markers.setTraveled(
+                                it, RouteTrim.fraction(walked.toDouble(), routeLengthM),
+                            )
+                            // **والخفيفةُ أوّلاً** — انظر `moveDriver`:
+                            // **إعادةُ بناء خطِّ المسار ستّين مرّةً في
+                            // الثانية** وهو لم يتبدّل منه رأسٌ واحد.
+                            if (!Markers.moveDriver(it, here, bearing)) {
+                                Markers.draw(
+                                    context, it, here, pickup, dropoff, route,
+                                    icons, bearing,
+                                )
+                            }
+                        }
+                        // ══════════════════════════════════════════════
+                        // **والكاميرا تتبع السهمَ إطاراً بإطار**
+                        // ══════════════════════════════════════════════
+                        //
+                        // (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «هل نستطيع جعل
+                        //  الحركة سلسة أكثر مثل غوغل ماب».)
+                        //
+                        // **وكانت `easeCamera` تُحرّكها وحدَها** —
+                        // **وهي تُسرِع في أوّل الثانية وتُبطئ في
+                        // آخرها**، والسهمُ يمشي بسرعةٍ ثابتة. فتنبض
+                        // الأرضُ تحت سهمٍ منتظم، **وذاك بعينه شعورُ
+                        // التقطّع.**
+                        //
+                        // **والنقلُ الفوريُّ لا حركةَ فيه** — الحركةُ
+                        // كلُّها في المُحرِّك الخطّيّ، فيتّفق ما تحت
+                        // السهم مع السهم.
+                        com.rahalgo.map.CameraPrimitives.snap(
+                            libre, lat, lng, camZoom[0], bearing, camTilt[0],
+                        )
                     }
                     val cam = nav.camera(com.rahalgo.map.CameraPrimitives.bearingOf(libre))
-                    com.rahalgo.map.CameraPrimitives.ease(
-                        libre, cam.lat, cam.lng, cam.zoom,
-                        cam.bearingDeg, cam.tiltDeg, cam.durationMs,
-                    )
+                    camZoom[0] = cam.zoom
+                    camTilt[0] = cam.tiltDeg
+                    progressFrom[0] = progressTo[0]
+                    progressTo[0] = nav.progressM.toFloat()
+                    // **وأوّلُ قراءةٍ لا سابقَ لها** — فلا تُستكمَل من صفر،
+                    // **وإلّا زحف الخطُّ من أوّل المسار في ثانيةٍ واحدة.**
+                    if (progressFrom[0] < 0f) progressFrom[0] = progressTo[0]
                 }
             } else if (follow && driver != null) {
                 libre.easeCamera(CameraUpdateFactory.newLatLngZoom(driver, 17.0))
@@ -367,3 +458,6 @@ private fun fitAll(
         else -> libre.easeCamera(CameraUpdateFactory.newLatLngZoom(RAQQA, 13.0))
     }
 }
+
+/** **الهدنةُ بين إطارين** — ثلاثون في الثانية. */
+private const val FRAME_GAP_MS = 33L

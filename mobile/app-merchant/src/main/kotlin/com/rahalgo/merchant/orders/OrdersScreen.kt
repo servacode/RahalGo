@@ -61,7 +61,7 @@ import com.rahalgo.ui.money
 fun OrdersScreen(vm: OrdersViewModel) {
     if (vm.loading || (vm.error.isNotEmpty() && vm.orders.isEmpty())) {
         Screen {
-            ScreenTitle(stringResource(R.string.orders_title), stringResource(R.string.orders_hint))
+            ScreenTitle(stringResource(R.string.nav_orders_mine), stringResource(R.string.orders_hint))
             LoadState(vm.loading, vm.error) { vm.refresh() }
         }
         return
@@ -69,7 +69,7 @@ fun OrdersScreen(vm: OrdersViewModel) {
 
     Refreshable(refreshing = false, onRefresh = { vm.refresh() }) {
         Screen {
-            ScreenTitle(stringResource(R.string.orders_title), stringResource(R.string.orders_hint))
+            ScreenTitle(stringResource(R.string.nav_orders_mine), stringResource(R.string.orders_hint))
 
             if (vm.orders.isEmpty()) {
                 Empty(stringResource(R.string.orders_empty))
@@ -117,7 +117,7 @@ private fun OrderCard(
 
         Spacer(Modifier.height(8.dp))
         Text(
-            stringResource(R.string.order_items),
+            stringResource(R.string.mn_items),
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.labelSmall,
         )

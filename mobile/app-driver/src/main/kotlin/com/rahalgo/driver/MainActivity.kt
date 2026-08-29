@@ -1,12 +1,30 @@
 package com.rahalgo.driver
 
+import androidx.lifecycle.viewmodel.compose.viewModel as vmOf
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
+import com.rahalgo.driver.orders.DetailActions
+import com.rahalgo.driver.orders.OrderDetailScreen
+import com.rahalgo.ui.Avatar
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalLoader
 import android.os.Bundle
 import com.rahalgo.driver.location.LocationDisclosure
 import com.rahalgo.ui.Crash
 import com.rahalgo.ui.AppFrame
+import com.rahalgo.ui.AuthGate
 import com.rahalgo.ui.ThemeState
 import com.rahalgo.design.Rahal
-import com.rahalgo.ui.Avatar
 import com.rahalgo.ui.rememberOverlay
 import com.rahalgo.ui.Overlay
 import androidx.compose.foundation.layout.width
@@ -20,7 +38,6 @@ import com.rahalgo.ui.ChatsScreen
 import com.rahalgo.ui.ChatsViewModel
 import com.rahalgo.ui.IncentivesScreen
 import com.rahalgo.ui.IncentivesViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel as vmOf
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.rahalgo.ui.HelpRole
@@ -43,37 +60,23 @@ import com.rahalgo.ui.AccountViewModel
 import com.rahalgo.ui.AccountScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.rahalgo.ui.LoginActions
-import com.rahalgo.ui.AuthScreen
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -93,8 +96,6 @@ import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.ui.InboxSheet
 import com.rahalgo.ui.TopBar
 import com.rahalgo.ui.AuthViewModel
-import com.rahalgo.driver.orders.DetailActions
-import com.rahalgo.driver.orders.OrderDetailScreen
 import com.rahalgo.driver.orders.OrdersActions
 import com.rahalgo.driver.orders.OrdersScreen
 import com.rahalgo.driver.orders.OrdersViewModel
@@ -103,10 +104,6 @@ import com.rahalgo.driver.trip.ChatActions
 import com.rahalgo.driver.trip.TripActions
 import com.rahalgo.driver.trip.TripScreen
 import com.rahalgo.driver.trip.TripState
-import com.rahalgo.ui.ResetActions
-import com.rahalgo.ui.ResetScreen
-import com.rahalgo.ui.RahalButton
-import com.rahalgo.ui.RahalLoader
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -132,11 +129,116 @@ import com.rahalgo.ui.RahalLoader
  */
 class MainActivity : ComponentActivity() {
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **حالُ النافذة الطافية — تُقرأ في الشاشة**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-٢٤.)
+     */
+    val floating = com.rahalgo.driver.trip.FloatingNavState()
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **وزرُّ الرجوع في الرحلة يُصغّر ولا يَخرج**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «زرّ الرجوع بالرحلة يجب أن يصغّر
+     *  الخريطة ولا يخرج منها — ربّما شخصٌ ضغط رجوع بالغلط».)
+     *
+     * **والخروجُ من رحلةٍ تعمل بضغطةٍ خاطئةٍ يترك السائقَ بلا إرشاد**
+     * وهو يقود. **والتصغيرُ يبقيه في الملاحة ويعطيه شاشتَه.**
+     *
+     * **ولا يُمنع الرجوعُ إن لم تكن ملاحةٌ تعمل** — فمن أراد الخروجَ
+     * حقّاً يخرج.
+     */
+    private val backToFloating = object : androidx.activity.OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            val ok = com.rahalgo.driver.trip.FloatingNav.enter(this@MainActivity)
+            android.util.Log.i("RahalGo/pip", "رجوعٌ اعتُرض · صُغّرت=$ok")
+            if (!ok) {
+                // **وجهازٌ لا يدعم النافذةَ لا يُحبَس فيها** — يُترك
+                // الرجوعُ لصاحبه.
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                isEnabled = true
+            }
+        }
+    }
+
+    /**
+     * **يُنادى حين يخرج السائقُ بيده** — زرُّ البيت أو الأخير.
+     *
+     * **ولا يُنادى عند مكالمةٍ أو إشعارٍ يسحب الشاشة** — وهذا الفارقُ
+     * هو سببُ اختياره على `onPause`: **نافذةٌ طافيةٌ تظهر عند كلّ
+     * إشعارٍ إزعاجٌ لا خدمة.**
+     */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // **ولا نافذةَ لخريطةٍ ساكنة** — الملاحةُ وحدَها تستحقّها.
+        if (!floating.navigating) return
+        if (isInPictureInPictureMode) return
+        com.rahalgo.driver.trip.FloatingNav.enter(this)
+    }
+
+    /** **ويُفعَّل اعتراضُ الرجوع مع الملاحة وحدَها.** */
+    fun onNavigatingChanged(on: Boolean) {
+        floating.navigating = on
+        refreshBackGuard()
+    }
+
+    /**
+     * **وشاشةُ الرحلة وحدَها يُعترض فيها الرجوع.**
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «زرّ الرجوع يعمل فقط بالخريطة، المفروض
+     *  وليس بكلّ البرنامج».)
+     *
+     * **ومن اعترضه في كلّ شاشةٍ حبس صاحبَه**: يضغط الرجوعَ في «حسابي»
+     * فتُصغَّر الخريطةُ بدل أن يرجع، **فلا يعرف كيف يخرج.**
+     */
+    private fun refreshBackGuard() {
+        backToFloating.isEnabled = floating.navigating && onTripScreen
+    }
+
+    /** **أهو على شاشة الرحلة الآن؟** — تكتبها الشاشةُ نفسُها. */
+    var onTripScreen: Boolean = false
+        set(value) {
+            field = value
+            refreshBackGuard()
+        }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: android.content.res.Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        // **والشاشةُ تقرؤها فتُخفي ما لا يُقرأ في مربّعٍ صغير** —
+        // **واللمسُ لا يصل نافذةً طافيةً أصلاً**، فأزرارٌ فيها خدعة.
+        floating.inPip = isInPictureInPictureMode
+        android.util.Log.i("RahalGo/pip", "نافذةٌ طافية=$isInPictureInPictureMode")
+    }
+
+    /**
+     * **ويُقاس إعادةُ بناء النشاط.**
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «وقت أرجع أفوت بعد التصغير تخرب
+     *  الدنيا».)
+     *
+     * **وإعادةُ البناء تهدم التركيبَ فتُغلق جلسةُ الملاحة** —
+     * `onDispose`. **والسطرُ يقول: أوقع ذلك أم العلّةُ في مكانٍ آخر.**
+     */
+    override fun onDestroy() {
+        android.util.Log.i("RahalGo/pip", "هُدم النشاط · يُعاد=$isChangingConfigurations")
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // **قبل `super`** — وهي شرطُ المكتبة: تُركّب على النافذة قبل أن
         // يُنشئ النظامُ محتواها.
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        android.util.Log.i("RahalGo/pip", "بُني النشاط · محفوظٌ=${savedInstanceState != null}")
+        onBackPressedDispatcher.addCallback(this, backToFloating)
         // **ومراقبُ الشبكة يُسجَّل مرّةً** — انظر `Net`: **مراقبٌ لكلّ
         // شاشةٍ يعني عشرةً يوقظهم النظامُ معاً.**
         com.rahalgo.ui.Net.install(this)
@@ -215,49 +317,27 @@ private fun DriverApp() {
 private fun Destination(theme: ThemeState) {
     val vm: AuthViewModel = viewModel()
 
-    when {
-        // **وانتظارٌ يُرى لا بياضٌ صامت** — الخادم النائم يستيقظ في
-        // نصف دقيقة (قيس ٢٠٢٦-٠٨-١٢: أربعون ثانية)، **وشاشة بيضاء هذه
-        // المدّة تُقرأ عطبا** فيُعاد فتح التطبيق مرّة بعد مرّة.
-        vm.restoring -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            RahalLoader()
-        }
-
-        // **ومن دخل يُسلَّم للوحته** — ونموذجها مستقلّ عن نموذج الدخول:
-        // **حال الوردية والمال لا يخصّ بابا دخل منه.**
-        // **ومن دخل يُسلَّم للوحته.**
-        vm.user != null -> SignedIn(theme, onLogout = vm::logout)
-
-        // **وجلسة محفوظة لم تُتحقَّق: شاشة اتّصال لا شاشة دخول.**
-        vm.offline -> Offline(onRetry = vm::retryRestore)
-
-        // **والاستعادة تسبق الدخول في الترتيب** — من ضغط «نسيت» يرى
-        // شاشتها، **ولو قُدّم الدخول عليها لبقيت الشاشة مكانها** والزرّ
-        // لا يفعل شيئا.
-        vm.reset != null -> ResetScreen(
-            state = vm.reset!!,
-            actions = ResetActions(
-                setPhone = vm::setResetPhone,
-                sendCode = vm::sendResetCode,
-                verifyCode = vm::verifyResetCode,
-                confirm = vm::confirmReset,
-                cancel = vm::closeReset,
-            ),
-        )
-
-        else -> AuthScreen(
-            state = vm.state,
-            title = stringResource(R.string.login_title),
-            actions = LoginActions(
-                login = vm::login,
-                setMode = vm::setMode,
-                sendCode = vm::sendLoginCode,
-                verifyCode = vm::verifyLoginCode,
-                resetCode = vm::clearCode,
-                forgot = vm::openReset,
-            ),
-        )
-    }
+    // ══════════════════════════════════════════════════════════════════
+    // **والبوّابةُ من الوحدة لا نسخةٌ هنا**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كانت هذه الدالّةُ تبني شجرةَ الدخول بنفسها** — استعادةٌ ودخولٌ
+    // وانقطاعٌ واسترجاعُ كلمةِ مرور، **ستّون سطراً تكرّر `AuthGate`**
+    // (قِيس ٢٠٢٦-٠٨-٢٦).
+    //
+    // **وكلُّ إصلاحٍ في `AuthGate` كان لا يصل السائق**: خلفيّةُ الثيم
+    // الغامق، **وبوّابةُ التحديث**، وما يأتي بعدهما.
+    //
+    // **وحالةُ الانقطاعِ انتقلت في الاتّجاه المعاكس** — كانت هنا وحدَها،
+    // **فأُخذت إلى `AuthGate` فنالتها الثلاثةُ الأخرى.**
+    //
+    // **ولا إنشاءَ حسابٍ للسائق** (`signup = false` افتراضاً): حسابُه
+    // يفتحه المكتب.
+    AuthGate(
+        vm = vm,
+        title = stringResource(R.string.login_title),
+        onSignedIn = { SignedIn(theme, onLogout = vm::logout) },
+    )
 }
 
 /**
@@ -408,6 +488,16 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     // **ولا شأنَ للورديّة بالشريط بعد اليوم** — «الطلبات» دائمةٌ تشرح
     // الانصراف، **فماتت الحاجةُ إلى قراءتها هنا.**
     LaunchedEffect(hasTrip) {
+        // ══════════════════════════════════════════════════════════════
+        // **وانتهاءُ الطلب يُغلق الملاحة — لا مغادرةُ الشاشة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «المفروض الرحلة تبقى مستمرّة مهما
+        //  حصل وأينما ذهب».)
+        //
+        // **ولا طلبَ يعني لا رحلة** — سُلّم أو أُلغي. **ومحرّكُ موقعٍ
+        // يعمل بلا طلبٍ يستنزف بطّاريّةً في جيبِ واقف.**
+        if (!hasTrip) orders.closeNav()
         if (!hasTrip && tab == 0) tab = 1
     }
 
@@ -473,6 +563,23 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
             }
         },
     ) {
+    // ══════════════════════════════════════════════════════════════════
+    // **والنافذةُ الطافيةُ تُقرأ من النشاط**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «بس الخريطة تطلع».)
+    //
+    // **والشريطان يعيشان هنا لا في شاشة الرحلة** — **فطيُّهما هناك لا
+    // يطويهما**، وهو ما ظهر في صورته: خريطةٌ مطموسةٌ بين شريطين.
+    val pipHost = androidx.compose.ui.platform.LocalContext.current.let { c0 ->
+        remember(c0) {
+            var c: android.content.Context? = c0
+            while (c is android.content.ContextWrapper && c !is MainActivity) c = c.baseContext
+            c as? MainActivity
+        }
+    }
+    val pip = pipHost?.floating?.inPip == true
+
     Scaffold(
         // ══════════════════════════════════════════════════════════════
         // **ولا شريطَ علويًّا في الرحلة**
@@ -484,7 +591,8 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         // **ومن يقود لا يقرأ رصيده ولا تقييمه** — والخريطةُ تريد الشاشةَ
         // كلَّها. **وهي موجودةٌ في تبويبين آخرين** يفتحهما حين يقف.
         topBar = {
-            if (tab != 0) TopBar(
+            // **ولا شريطَ في النافذة الطافية** — انظر `bottomBar`.
+            if (tab != 0 && !pip) TopBar(
                 balance = home.state.me?.balance ?: 0,
                 rating = home.state.me?.rating ?: 0.0,
                 ratingCount = home.state.me?.ratingCount ?: 0,
@@ -523,6 +631,17 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
             )
         },
         bottomBar = {
+            // ══════════════════════════════════════════════════════════
+            // **ولا شريطَ تبويبٍ في النافذة الطافية**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (بلاغُ المالك ٢٠٢٦-٠٨-٢٤ بصورة: «مو مناسب — المفروض بس
+            //  الخريطة تطلع ليعرف طريقه».)
+            //
+            // **ومربّعٌ من بضعة سنتيمترات يتّسع للخريطة وحدَها** —
+            // **وشريطُ تبويبٍ فيه يأكل ثلثَه ولا يُضغط**: أندرويد لا
+            // يمرّر اللمسَ إلى نافذةٍ طافية.
+            if (pip) return@Scaffold
             // ══════════════════════════════════════════════════════════
             // **الرحلة أوّلا — وهي ما يفعله السائق**
             // ══════════════════════════════════════════════════════════
@@ -577,7 +696,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     icon = {
                         Icon(painterResource(R.drawable.ic_orders), contentDescription = null)
                     },
-                    label = { Text(stringResource(R.string.nav_orders)) },
+                    label = { Text(stringResource(R.string.nav_orders_all)) },
                 )
                 // **ولا تبويبَ للسجلّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
                 // «احذف أيقونة السجلّ ما ظلّ إلها داعٍ صح، لأنّها صارت
@@ -593,7 +712,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         // «الرئيسيّة»، وموضعُها ثالث.
                         Icon(painterResource(R.drawable.ic_dashboard), contentDescription = null)
                     },
-                    label = { Text(stringResource(R.string.nav_home)) },
+                    label = { Text(stringResource(R.string.act_my_board)) },
                 )
                 // ══════════════════════════════════════════════════════
                 // **و«ملفي» تبويبٌ دائمٌ بصورته هو**
@@ -720,7 +839,17 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
             when {
                 tab == 0 -> TripScreen(
                     routeSource = orders.routeSource,
+                    // **والجلسةُ من نموذج العرض** — فتنجو من التبويب.
+                    navSession = orders.navSession,
+                    following = orders.following,
+                    onFollow = orders::follow,
+                    onReplay = { fixes ->
+                        if (fixes.isEmpty()) orders.stopReplay() else orders.startReplay(fixes)
+                    },
                     voice = orders.voice,
+                    // **وحالُ الكتم من نموذج العرض** — تراقبه الواجهة
+                    // فيتبدّل شكلُ الزرّ في الإطار التالي للضغطة.
+                    voiceMuted = orders.voiceMuted,
                     state = orders.trip(LastPoint.value),
                     actions = TripActions(
                         step = orders::step,
@@ -754,6 +883,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         emergency = { orders.emergency(LastPoint.value) },
                         dismissEmergency = orders::dismissEmergency,
                         navigate = { openMaps(context, orders.trip(LastPoint.value)) },
+                        toggleVoice = orders::toggleVoice,
                         toOrders = { tab = 1 },
                         // ══════════════════════════════════════════════
                         // **اختيارُ المسار** — إغلاقُ واجهة ٧
@@ -824,33 +954,6 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     }
 }
 
-/**
- * **تعذّر الاتّصال ومعه حساب محفوظ.**
- *
- * **ولا تُعرض شاشة الدخول هنا** — حسابه سليم، والشبكة هي الغائبة.
- * **ومن أراه شاشة دخول** جعله يظنّ أنّ حسابه ضاع.
- */
-@Composable
-private fun Offline(onRetry: () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = stringResource(R.string.offline_title),
-            style = MaterialTheme.typography.titleLarge,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = stringResource(R.string.offline_text),
-            color = Rahal.colors.inkMuted,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(20.dp))
-        RahalButton(onClick = onRetry) { Text(stringResource(R.string.home_retry)) }
-    }
-}
 
 /**
  * **يسلّم الوجهة لتطبيق الخرائط في الجهاز.**

@@ -194,6 +194,20 @@ fun AccountScreen(
         Gap()
         // **والخطرُ آخرا** — بأمر المالك.
         DangerSection(vm, s)
+        Spacer(Modifier.height(24.dp))
+        // ══════════════════════════════════════════════════════════════
+        // **وذكرُ مصدر الخرائط — يُؤدَّى هنا لا فوق الطريق**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-٢٤: «افعل الرخصة بشكلٍ صحيح بدون أن
+        //  يكون واضحاً على خريطتنا».)
+        //
+        // **ورخصةُ OpenStreetMap (ODbL) تُلزم بذكر المساهمين** —
+        // وبياناتُ خريطتنا كلُّها منها. **وشعارُ MapLibre اختيارٌ لا
+        // إلزام** (رخصتُه BSD)، فأُطفئ.
+        //
+        // **ومن حذفه من الموضعين خالف رخصةً** — وهذا موضعُه.
+        MapCredit()
         Spacer(Modifier.height(32.dp))
     }
 }
@@ -705,6 +719,23 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
 }
 
 // ــ قطعٌ صغيرة ــ
+
+/**
+ * **سطرُ مصدر الخرائط.**
+ *
+ * **ونصٌّ لا رابط** — **ورابطٌ يفتح متصفّحاً من شاشة حسابٍ يُقلق**،
+ * والذكرُ هو المطلوب لا النقر.
+ */
+@Composable
+private fun MapCredit() {
+    Text(
+        text = "الخرائط © مساهمو OpenStreetMap · OpenMapTiles · MapLibre",
+        style = MaterialTheme.typography.bodySmall,
+        color = Rahal.colors.inkMuted,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
 
 @Composable
 private fun SectionTitle(text: String, color: androidx.compose.ui.graphics.Color = Rahal.colors.accent) {

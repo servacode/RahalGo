@@ -1,6 +1,7 @@
 package com.rahalgo.merchant.store
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -34,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
@@ -117,7 +120,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                 OutlinedTextField(
                     value = editingName,
                     onValueChange = { renaming = it },
-                    label = { Text(stringResource(R.string.store_name)) },
+                    label = { Text(stringResource(R.string.mn_store_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -126,9 +129,9 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                     RahalButton(
                         onClick = { vm.rename(editingName); renaming = null },
                         enabled = !vm.saving && editingName.isNotBlank(),
-                    ) { Text(stringResource(R.string.save)) }
+                    ) { Text(stringResource(R.string.act_save)) }
                     RahalTextButton(onClick = { renaming = null }) {
-                        Text(stringResource(R.string.cancel))
+                        Text(stringResource(R.string.act_cancel))
                     }
                 }
             }
@@ -183,7 +186,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                             ),
                         ) { Text(stringResource(R.string.store_emergency_do)) }
                         RahalTextButton(onClick = { confirming = false }) {
-                            Text(stringResource(R.string.cancel))
+                            Text(stringResource(R.string.act_cancel))
                         }
                     }
                 }
@@ -282,6 +285,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             // **٦ · الساعات — تُقرأ وتُكتب**
             // ══════════════════════════════════════════════════════════
             HoursEditor(vm)
+            SectionsEditor(vm)
 
             // ══════════════════════════════════════════════════════════
             // **٧ · العنوانُ والدبّوس — آخرُ الشاشة**
@@ -342,6 +346,85 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
  * **`HH:MM` نصٌّ في المحرّك** — **ومنتقي وقتٍ يفتح نافذةً لكلّ حقلٍ
  * أربعةَ عشرَ مرّةً** لضبط أسبوع.
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **أقسامُ السوق — يعلن ما يبيع فتُقصر عليه القائمة**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «قسم السوق يجب أن يكون مخصّصاً — مو معقول
+ *  كل الأقسام تطلع عند كل المتاجر. مطعم تطلع المأكولات فقط، شو علاقته
+ *  بالأحذية؟»)
+ *
+ * # ولماذا يختار هو
+ *
+ * **وكان يمكن أن نشتقّها من تصنيف المتجر** — لكنّ الكافتيريا تبيع
+ * شاورما وحلوياتٍ ومشروبات، **وتصنيفٌ واحدٌ يحصرها في قسم.**
+ *
+ * **وهو أعرفُ بما يبيع** — ويبدّله في يومٍ يوسّع فيه بضاعته.
+ *
+ * # وفارغٌ يعني الكلّ
+ *
+ * **ومتجرٌ لم يختر بعدُ يرى القائمةَ كاملةً** — فلا يُحبس متجرٌ قائمٌ
+ * بلا أقسامٍ يومَ يصله التحديث.
+ */
+@Composable
+private fun SectionsEditor(vm: StoreViewModel) {
+    if (vm.allSections.isEmpty()) return
+
+    var picked by remember(vm.mySections) {
+        mutableStateOf(vm.mySections.map { it.id }.toSet())
+    }
+    val dirty = picked != vm.mySections.map { it.id }.toSet()
+
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(R.string.store_sections),
+            modifier = Modifier.weight(1f),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        if (dirty) {
+            RahalButton(
+                onClick = { vm.saveSections(picked.toList()) },
+                enabled = !vm.saving,
+            ) { Text(stringResource(R.string.act_save)) }
+        }
+    }
+    Spacer(Modifier.height(4.dp))
+    Text(
+        stringResource(R.string.store_sections_hint),
+        color = Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.bodySmall,
+    )
+    Spacer(Modifier.height(8.dp))
+    Card {
+        Column(Modifier.padding(4.dp)) {
+            vm.allSections.forEachIndexed { i, sec ->
+                if (i > 0) HorizontalDivider()
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            picked = if (sec.id in picked) picked - sec.id else picked + sec.id
+                        }
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = sec.id in picked,
+                        onCheckedChange = {
+                            picked = if (it) picked + sec.id else picked - sec.id
+                        },
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(sec.name, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun HoursEditor(vm: StoreViewModel) {
     if (vm.hours.isEmpty()) return
@@ -364,7 +447,7 @@ private fun HoursEditor(vm: StoreViewModel) {
             RahalButton(
                 onClick = { vm.saveHours(draft) },
                 enabled = !vm.saving,
-            ) { Text(stringResource(R.string.save)) }
+            ) { Text(stringResource(R.string.act_save)) }
         }
     }
     Spacer(Modifier.height(6.dp))
@@ -463,22 +546,58 @@ private fun HoursRow(d: DayHours, onChange: (DayHours) -> Unit) {
  */
 @Composable
 private fun TimeField(value: String, onChange: (String) -> Unit) {
-    BasicTextField(
-        // **والثواني تُقطع للعرض** — المحرّكُ يردّ `08:00:00`.
-        value = value.take(5),
-        onValueChange = { onChange(it.take(5)) },
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(
-            color = Rahal.colors.ink,
-            textAlign = TextAlign.Center,
-        ),
-        cursorBrush = SolidColor(Rahal.colors.brand),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier
-            .width(62.dp)
+    val context = LocalContext.current
+    // **والثواني تُقطع للعرض** — المحرّكُ يردّ `08:00:00`.
+    val shown = value.take(5).ifBlank { "00:00" }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والساعةُ تُختار لا تُكتب**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «تعديلُ ساعات العمل صعبٌ جدّاً، يجب أن
+    //  يكون اختيارُ الساعة أسهلَ من كتابتها بشكلٍ يدويّ».)
+    //
+    // # ولماذا كان صعباً
+    //
+    // **وكان حقلاً نصّيّاً حرّاً بلوحة أرقام**: يكتب `0` ثمّ `8` ثمّ
+    // **ينقّط بيده** `:` ثمّ `0` و`0`. **خمسُ ضغطاتٍ لرقمٍ واحد** —
+    // وفي سبعة أيّامٍ مرّتين: **سبعون ضغطة.**
+    //
+    // **ولا يمنع خطأً**: من كتب `25:70` حُفظ، **ومتجرٌ ساعتُه غلطٌ لا
+    // يُفتح أبداً ولا يعرف صاحبُه لماذا.**
+    //
+    // # ومنتقي النظام لا منتقٍ نصنعه
+    //
+    // **وصاحبُ المتجر يعرف ساعةَ هاتفه** — رآها في المنبّه والتقويم.
+    // **ومنتقٍ نصنعه بأيدينا غريبٌ عليه** مهما أتقنّاه.
+    //
+    // **و`is24Hour = true`** — والمنصّةُ تحفظ `HH:mm`، **فلا ترجمةَ
+    // بين صباحٍ ومساءٍ تضيع في الطريق.**
+    val picker = {
+        val h = shown.substringBefore(':').toIntOrNull()?.coerceIn(0, 23) ?: 0
+        val m = shown.substringAfter(':').toIntOrNull()?.coerceIn(0, 59) ?: 0
+        android.app.TimePickerDialog(
+            context,
+            { _, hh, mm -> onChange("%02d:%02d".format(hh, mm)) },
+            h, m, true,
+        ).show()
+    }
+
+    Box(
+        Modifier
+            .width(72.dp)
             .border(1.dp, Rahal.colors.line, Rahal.shape.sm)
-            .padding(vertical = 6.dp),
-    )
+            .clickable(onClick = picker)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = shown,
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 /**
@@ -511,7 +630,7 @@ private fun AddressEditor(vm: StoreViewModel, onPickPoint: () -> Unit) {
     Spacer(Modifier.height(12.dp))
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
-            stringResource(R.string.store_address),
+            stringResource(R.string.act_address),
             modifier = Modifier.weight(1f),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
@@ -520,7 +639,7 @@ private fun AddressEditor(vm: StoreViewModel, onPickPoint: () -> Unit) {
             RahalButton(
                 onClick = { vm.saveAddress(text, vm.pickedLat, vm.pickedLng) },
                 enabled = !vm.saving,
-            ) { Text(stringResource(R.string.save)) }
+            ) { Text(stringResource(R.string.act_save)) }
         }
     }
     Spacer(Modifier.height(6.dp))

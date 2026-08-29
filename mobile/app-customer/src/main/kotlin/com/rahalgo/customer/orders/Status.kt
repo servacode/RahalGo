@@ -22,12 +22,12 @@ fun statusText(status: String): String = when (status) {
     "pending" -> stringResource(R.string.stt_pending)
     "accepted", "confirmed" -> stringResource(R.string.stt_accepted)
     "preparing" -> stringResource(R.string.stt_preparing)
-    "dispatching" -> stringResource(R.string.stt_dispatching)
+    "dispatching" -> stringResource(R.string.ord_st_dispatching)
     "assigned", "at_pickup", "picked_up" -> stringResource(R.string.stt_assigned)
-    "on_the_way", "at_dropoff" -> stringResource(R.string.stt_onway)
-    "delivered" -> stringResource(R.string.stt_delivered)
+    "on_the_way", "at_dropoff" -> stringResource(R.string.ord_st_onway)
+    "delivered" -> stringResource(R.string.ord_st_delivered)
     "cancelled", "rejected" -> stringResource(R.string.stt_cancelled)
-    "failed" -> stringResource(R.string.stt_failed)
+    "failed" -> stringResource(R.string.ord_st_failed)
     else -> status
 }
 

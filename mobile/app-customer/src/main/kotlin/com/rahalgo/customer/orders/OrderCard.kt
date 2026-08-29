@@ -83,6 +83,7 @@ fun OrderCard(
             Spacer(Modifier.height(6.dp))
             Text(
                 text = stringResource(R.string.ord_wanted) + " " + order.customRequest,
+                color = Rahal.colors.ink,
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -236,8 +237,8 @@ private fun stageLabel(key: String): String = when (key) {
     "preparing" -> stringResource(R.string.st_preparing)
     "seeking" -> stringResource(R.string.st_driver)
     "bought" -> stringResource(R.string.st_bought)
-    "on_the_way" -> stringResource(R.string.st_onway)
+    "on_the_way" -> stringResource(R.string.ord_st_onway)
     "arrived" -> stringResource(R.string.st_arrived)
-    "delivered" -> stringResource(R.string.st_delivered)
+    "delivered" -> stringResource(R.string.ord_st_delivered)
     else -> key
 }

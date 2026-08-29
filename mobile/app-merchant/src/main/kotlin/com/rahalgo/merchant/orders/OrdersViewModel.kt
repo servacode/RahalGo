@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.orders
 
+import com.rahalgo.merchant.noStoreMsg
 import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.merchant.MerchantApi
 import com.rahalgo.shared.merchant.MerchantOrder
 import com.rahalgo.shared.merchant.Store
+import com.rahalgo.ui.err
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Flash
 import kotlinx.coroutines.delay
@@ -54,7 +56,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **وافتراضُه `true` حتّى يُقرأ** — **ولو بدأ `false` لَاختفى تبويبُ
      * الطلبات لحظةً عند كلّ إقلاعٍ ثمّ ظهر**، وشريطٌ يرقص يُقرأ عطباً.
      */
-    var selfManage by mutableStateOf(true)
+    var selfManage by mutableStateOf(lastKnownSelfManage())
         private set
 
     var loading by mutableStateOf(true)
@@ -90,9 +92,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         runCatching {
             val page = api.stores()
             selfManage = page.selfManageOrders
+            rememberSelfManage(page.selfManageOrders)
             val mine = store ?: page.stores.firstOrNull()
             if (mine == null) {
-                error = "لا متجر مرتبط بحسابك"
+                error = noStoreMsg()
                 loading = false
                 return
             }
@@ -102,7 +105,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }.onFailure {
             // **وإخفاقُ إنعاشٍ لا يمسح ما على الشاشة** — **قائمةٌ تختفي
             // لانقطاعِ ثانيةٍ تُقرأ ضياعَ طلبات.**
-            if (first) error = it.message ?: "تعذّر جلب الطلبات"
+            if (first) error = err(it)
         }
         loading = false
     }
@@ -134,7 +137,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching { block() }
                 .onSuccess { load(first = false) }
-                .onFailure { Flash.fail(it.message ?: "تعذّر تنفيذ الأمر") }
+                .onFailure { Flash.fail(err(it)) }
             busyIds = busyIds - id
         }
     }
@@ -149,4 +152,31 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
          */
         const val REFRESH_MS = 10_000L
     }
+}
+
+
+// ══════════════════════════════════════════════════════════════════════
+// **وضعُ الطلبات يُحفظ — وإلّا ومض التبويبُ في كلّ فتحة**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان يبدأ `true` دائماً** — فتبويبُ «طلباتي» يُرسم قبل أن يردّ
+// المحرّك. **وفي وضع المنصّة يظهر ثمّ يختفي بعد جزءٍ من ثانية**، ومن
+// رآه ظنّ التطبيقَ يرتجف.
+//
+// **وأسوأُ منه بلا شبكة**: النداءُ يفشل فيبقى التبويبُ ظاهراً على شاشةٍ
+// فارغةٍ لا طلباتِ فيها ولا تفسير.
+//
+// **والقيمةُ لا تتبدّل إلّا بقرارٍ من المالك في اللوحة** — فآخرُ ما
+// عرفناه صحيحٌ حتّى يُقال غيرُه، **وأوّلُ تشغيلٍ وحدَه يبدأ بلا تبويب:
+// إخفاءٌ يظهر أهونُ من ظهورٍ يُخفى.**
+private const val SELF_MANAGE_KEY = "merchant_self_manage"
+
+private fun prefs() = com.rahalgo.ui.AppCore.get().app
+    .getSharedPreferences("rahalgo", android.content.Context.MODE_PRIVATE)
+
+private fun lastKnownSelfManage(): Boolean =
+    runCatching { prefs().getBoolean(SELF_MANAGE_KEY, false) }.getOrDefault(false)
+
+private fun rememberSelfManage(value: Boolean) {
+    runCatching { prefs().edit().putBoolean(SELF_MANAGE_KEY, value).apply() }
 }

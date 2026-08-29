@@ -56,8 +56,52 @@ object CameraPrimitives {
         )
     }
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **نقلٌ فوريٌّ بلا حركة — تتبعُ الكاميرا سهماً يتحرّك**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «حركة سلسة أكثر مثل غوغل ماب».)
+     *
+     * **و[ease] تُحرّك الكاميرا بتسارعٍ ثمّ تباطؤ** في كلّ ثانية،
+     * **والسهمُ يمشي بسرعةٍ ثابتة** — فتنبض الأرضُ تحت سهمٍ منتظم.
+     *
+     * **وهذه لا تُحرّك شيئاً**: تضع الكاميرا حيث السهمُ الآن. **والحركةُ
+     * كلُّها في المُحرِّك الخطّيِّ الذي ينادينا ستّين مرّةً في الثانية**،
+     * فيتّفق ما تحت السهم مع السهم إطاراً بإطار.
+     */
+    fun snap(
+        map: MapLibreMap,
+        lat: Double,
+        lng: Double,
+        zoom: Double,
+        bearingDeg: Float,
+        tiltDeg: Float,
+    ) {
+        map.moveCamera(
+            CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder()
+                    .target(LatLng(lat, lng))
+                    .zoom(zoom)
+                    .bearing(bearingDeg.toDouble())
+                    .tilt(tiltDeg.toDouble())
+                    .build(),
+            ),
+        )
+    }
+
     /** **دورانُ الخريطة الحاليّ** — يقرؤه المنطقُ ليقرّر ألّا يُدير. */
     fun bearingOf(map: MapLibreMap): Float = map.cameraPosition.bearing.toFloat()
 
     private const val MIN_MS = 1L
+}
+
+/**
+ * **ميلُ كاميرا الملاحة** — قيمةٌ مبدئيّةٌ تُقرأ قبل أوّل قراءة.
+ *
+ * **والقرارُ في `NavCamera` لا هنا** — وهذه نسخةٌ للإطار الأوّل وحدَه،
+ * **فوحدةُ الخرائط لا تعرف الملاحة.**
+ */
+object NavCameraDefaults {
+    const val TILT = 45f
 }

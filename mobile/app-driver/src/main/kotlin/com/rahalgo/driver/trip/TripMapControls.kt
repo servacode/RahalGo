@@ -102,6 +102,10 @@ internal fun MapButtons(
     chatting: Boolean,
     chatUnread: Int,
     onNavigate: () -> Unit,
+    /** **أالصوتُ مكتوم؟** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤). */
+    voiceMuted: Boolean = false,
+    /** **زرٌّ واحدٌ يقلبه** — «إمّا الصوتُ يعمل أو لا يعمل». */
+    onVoice: () -> Unit = {},
 ) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
@@ -135,6 +139,23 @@ internal fun MapButtons(
                 onClick = onChat,
                 on = chatting,
                 badge = chatUnread,
+            )
+            Spacer(Modifier.height(8.dp))
+            // ══════════════════════════════════════════════════════════
+            // **وزرُّ الصوت — واحدٌ يقول حالَه بشكله**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «ممكن سائق ما بدّه الصوت — زرٌّ
+            //  ذكيٌّ يكفي، إمّا الصوتُ يعمل أو لا يعمل».)
+            //
+            // **والأيقونةُ تتبدّل لا الإضاءةُ وحدَها**: **مكبّرٌ مشطوبٌ
+            // يُقرأ في نظرةٍ خاطفةٍ وهو يقود**، وقرصٌ مضاءٌ وآخرُ مطفأ
+            // يحتاج أن يتذكّر أيُّهما يعني ماذا.
+            MapButton(
+                icon = if (voiceMuted) R.drawable.ic_volume_off else R.drawable.ic_volume_on,
+                label = if (voiceMuted) R.string.map_voice_off else R.string.map_voice_on,
+                onClick = onVoice,
+                on = !voiceMuted,
             )
             Spacer(Modifier.height(8.dp))
             NavigateButton(onNavigate)
@@ -263,16 +284,19 @@ internal fun ReplayButton(
     onStart: () -> Unit,
     onStop: () -> Unit,
 ) {
+    // **ورماديٌّ مكتوبٌ بيدٍ لا يعرف الغامقَ من الفاتح** — كان
+    // `Color(0xFF444C56)` هنا، **وهو اللونُ الوحيدُ خارجَ التوكنز في
+    // التطبيقات الأربعة** (قِيس ٢٠٢٦-٠٨-٢٦).
     Surface(
-        color = if (running) Rahal.colors.danger else Color(0xFF444C56),
-        contentColor = Color.White,
+        color = if (running) Rahal.colors.danger else Rahal.colors.ink,
+        contentColor = Rahal.colors.canvas,
         shape = Rahal.shape.sm,
         modifier = Modifier
             .padding(12.dp)
             .clickable { if (running) onStop() else onStart() },
     ) {
         Text(
-            text = if (running) "أوقف الرحلة التجريبيّة" else "رحلة تجريبيّة",
+            text = if (running) com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.replay_stop) else com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.replay_start),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),

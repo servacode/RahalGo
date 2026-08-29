@@ -101,7 +101,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             IconButton(onClick = actions.close) {
                 Icon(
                     painter = painterResource(R.drawable.ic_close_circle),
-                    contentDescription = stringResource(R.string.detail_back),
+                    contentDescription = stringResource(R.string.act_back),
                     tint = Rahal.colors.inkMuted,
                     modifier = Modifier.size(22.dp),
                 )

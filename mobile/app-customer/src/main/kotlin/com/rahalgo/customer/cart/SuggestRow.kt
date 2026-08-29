@@ -58,6 +58,7 @@ fun SuggestRow(items: List<Item>, media: (String?) -> String?, onAdd: (Item) -> 
     Column(Modifier.fillMaxWidth()) {
         Text(
             stringResource(R.string.suggest_title),
+            color = Rahal.colors.ink,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )

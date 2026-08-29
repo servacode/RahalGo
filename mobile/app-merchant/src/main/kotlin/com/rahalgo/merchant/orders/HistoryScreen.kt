@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.orders
 
+import com.rahalgo.merchant.noStoreMsg
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,8 @@ import com.rahalgo.merchant.R
 import com.rahalgo.merchant.drawer.reasonAr
 import com.rahalgo.shared.merchant.MerchantApi
 import com.rahalgo.shared.merchant.MerchantOrder
+import com.rahalgo.ui.err
+import com.rahalgo.ui.money
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.Empty
@@ -114,7 +117,7 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
                     storeId = api.stores().stores.firstOrNull()?.id ?: ""
                 }
                 if (storeId.isEmpty()) {
-                    error = "لا متجر مرتبط بحسابك"
+                    error = noStoreMsg()
                     loading = false
                     return@launch
                 }
@@ -122,7 +125,7 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
                 orders = page.orders
                 reportable = page.reportable.toSet()
                 error = ""
-            }.onFailure { error = it.message ?: "تعذّر جلب السجل" }
+            }.onFailure { error = err(it) }
             loading = false
         }
     }
@@ -145,10 +148,10 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { api.reportDriver(orderId, reason, note) }
                 .onSuccess {
                     reportable = reportable - orderId
-                    Flash.ok("وصل بلاغُك — والإدارة تنظر فيه")
+                    Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_report_sent))
                     done()
                 }
-                .onFailure { Flash.fail(it.message ?: "تعذّر إرسال البلاغ") }
+                .onFailure { Flash.fail(err(it)) }
             sending = false
         }
     }
@@ -158,7 +161,7 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
 fun HistoryScreen(vm: HistoryViewModel) {
     if (vm.loading || (vm.error.isNotEmpty() && vm.orders.isEmpty())) {
         Screen {
-            ScreenTitle(stringResource(R.string.menu_history), stringResource(R.string.history_hint))
+            ScreenTitle(stringResource(com.rahalgo.merchant.R.string.menu_history), stringResource(com.rahalgo.merchant.R.string.history_hint))
             LoadState(vm.loading, vm.error) { vm.load() }
         }
         return
@@ -169,10 +172,10 @@ fun HistoryScreen(vm: HistoryViewModel) {
 
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
         Screen {
-            ScreenTitle(stringResource(R.string.menu_history), stringResource(R.string.history_hint))
+            ScreenTitle(stringResource(com.rahalgo.merchant.R.string.menu_history), stringResource(com.rahalgo.merchant.R.string.history_hint))
 
             if (vm.orders.isEmpty()) {
-                Empty(stringResource(R.string.history_empty))
+                Empty(stringResource(com.rahalgo.merchant.R.string.history_empty))
                 return@Screen
             }
 
@@ -192,6 +195,35 @@ fun HistoryScreen(vm: HistoryViewModel) {
                             )
                             // **وما فيه يُقال في سطر** — من يسأل عن طلبٍ
                             // مضى يسأل عن بضاعته لا عن رقمه وحدَه.
+                            // ══════════════════════════════════════
+                            // **وثلاثةُ أرقامٍ بشفافية**
+                            // ══════════════════════════════════════
+                            //
+                            // (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «سجلّ الطلبات
+                            //  ما فيه شقد المبلغ المباع وشقد نسبة
+                            //  العمولة للمنصّة — هيك لازم يكون
+                            //  بشفافية».)
+                            //
+                            // **وكان يرى رقمَ الطلب وأصنافَه وحالتَه
+                            // فقط** — ولا يعرف كم دخل جيبَه.
+                            //
+                            // **والنسبةُ تُذكر مع العمولة** — ورقمٌ
+                            // بلا نسبةٍ يُحفظ ولا يُفهم، **ومن رآها
+                            // عرف أنّها قاعدةٌ لا مزاج.**
+                            //
+                            // **وأجرةُ التوصيل ليست منه** — فلا تُخلط:
+                            // `subtotal` بضاعتُه، و`total` فيه التوصيل.
+                            Text(
+                                stringResource(
+                                    com.rahalgo.merchant.R.string.hist_money,
+                                    money(o.subtotal),
+                                    money(o.platformCommission),
+                                    o.commissionPercent,
+                                    money(o.merchantNet),
+                                ),
+                                color = Rahal.colors.ink,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                             if (o.items.isNotEmpty()) {
                                 Text(
                                     o.items.joinToString("، ") { "${it.qty}× ${it.name}" },
@@ -220,7 +252,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    stringResource(R.string.report_driver),
+                                    stringResource(com.rahalgo.merchant.R.string.report_driver),
                                     color = Rahal.colors.danger,
                                     style = MaterialTheme.typography.labelMedium,
                                 )
@@ -268,13 +300,13 @@ private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () 
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Text(
-            stringResource(R.string.report_title, order.number),
+            stringResource(com.rahalgo.merchant.R.string.report_title, order.number),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            stringResource(R.string.report_hint),
+            stringResource(com.rahalgo.merchant.R.string.report_hint),
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -297,7 +329,7 @@ private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () 
         OutlinedTextField(
             value = note,
             onValueChange = { note = it },
-            label = { Text(stringResource(R.string.report_note)) },
+            label = { Text(stringResource(com.rahalgo.merchant.R.string.report_note)) },
             modifier = Modifier.fillMaxWidth(),
             minLines = 2,
         )
@@ -306,8 +338,8 @@ private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () 
             RahalButton(
                 onClick = { vm.report(order.id, reason, note) { onClose() } },
                 enabled = !vm.sending && reason.isNotEmpty(),
-            ) { Text(stringResource(R.string.report_send)) }
-            RahalTextButton(onClick = onClose) { Text(stringResource(R.string.cancel)) }
+            ) { Text(stringResource(com.rahalgo.merchant.R.string.act_send_report)) }
+            RahalTextButton(onClick = onClose) { Text(stringResource(com.rahalgo.merchant.R.string.act_cancel)) }
         }
         Spacer(Modifier.height(24.dp))
         }
@@ -320,10 +352,10 @@ private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () 
  * (وقعت مثلُها في محفظة المالك ٢٠٢٦-٠٨-٠٧: «استرجاع طلب (cancelled)».)
  */
 private fun statusAr(status: String): String = when (status) {
-    "delivered" -> "سُلّم"
-    "cancelled" -> "أُلغي"
-    "rejected" -> "اعتُذر عنه"
-    "failed" -> "تعذّر تسليمه"
-    "refunded" -> "استُرجع"
+    "delivered" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_delivered)
+    "cancelled" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_cancelled)
+    "rejected" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_rejected)
+    "failed" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_failed)
+    "refunded" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_refunded)
     else -> status
 }

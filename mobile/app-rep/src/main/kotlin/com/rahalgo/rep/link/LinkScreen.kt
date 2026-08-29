@@ -109,7 +109,7 @@ fun LinkScreen(vm: BoardViewModel) {
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.lk_share)) }
+        ) { Text(stringResource(R.string.act_share_link)) }
 
         Spacer(Modifier.height(8.dp))
         RahalOutlineButton(

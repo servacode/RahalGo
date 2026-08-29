@@ -359,14 +359,14 @@ private fun OrderCard(
                     ),
                     // **ويُسمّى للقارئ الصوتيّ** — ومن يقود ويسمع لا يرى.
                     contentDescription = stringResource(
-                        if (custom) R.string.card_custom else R.string.card_store_cd,
+                        if (custom) R.string.nav_custom_order else R.string.card_store_cd,
                     ),
                     tint = Rahal.colors.accent,
                     modifier = Modifier.size(22.dp),
                 )
                 Spacer(Modifier.size(6.dp))
                 Text(
-                    text = order.merchantName.ifBlank { stringResource(R.string.card_custom) },
+                    text = order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     // **واسمُ الخاصّ بلون التنبيه** — ليس متجراً يُقرأ
@@ -502,7 +502,7 @@ private fun OrderCard(
         if (!custom) Leg(
             label = stringResource(
                 R.string.card_dist_to,
-                order.merchantName.ifBlank { stringResource(R.string.card_custom) },
+                order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
             ),
             value = order.pickupAddress,
             far = if (order.toPickupM >= 0) distance(order.toPickupM) else "",
@@ -825,7 +825,7 @@ private fun statusText(status: String): String = when (status) {
     "picked_up" -> stringResource(R.string.status_picked_up)
     "on_the_way" -> stringResource(R.string.status_on_the_way)
     "arrived" -> stringResource(R.string.status_arrived)
-    "dispatching" -> stringResource(R.string.status_dispatching)
+    "dispatching" -> stringResource(R.string.ord_st_dispatching)
     else -> status
 }
 

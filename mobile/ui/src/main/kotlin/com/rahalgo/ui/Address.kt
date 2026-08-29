@@ -200,6 +200,21 @@ fun AddressSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Rahal.colors.canvas,
     ) {
+        // ══════════════════════════════════════════════════════════════
+        // **والزرُّ مثبَّتٌ والقائمةُ تُمرَّر**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٥: «إلى أين التوصيل — زرّ إضافة عنوانٍ
+        //  جديدٍ لا يظهر، مخفيّ».)
+        //
+        // **وكان العمودُ بلا تمرير** — فمن حفظ عناوينَ عدّةً دفعته
+        // القائمةُ **فسقط الزرُّ تحت حافّة الشاشة**، ولا سبيلَ إليه:
+        // **لا يُرى ولا يُمرَّر إليه.**
+        //
+        // **وهو الفعلُ الوحيدُ لمن لا عنوانَ له** — فلا يجوز أن يغيب.
+        //
+        // **فالقائمةُ وحدَها تُمرَّر** (`weight` بلا ملء)، **والزرُّ
+        // خارجَها** فيبقى في مكانه مهما طالت.
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
 
             // ══════════════════════════════════════════════════════════
@@ -240,10 +255,18 @@ fun AddressSheet(
 
             Spacer(Modifier.height(20.dp))
 
-            if (addresses.isEmpty()) {
-                EmptyAddresses()
-            } else {
-                addresses.forEach { a -> AddressChoice(a, busy, onPick) }
+            Column(
+                Modifier
+                    // **ولا تملأ ما لا تحتاج** — ورقةٌ بعنوانٍ واحدٍ
+                    // تبقى قصيرةً كما كانت.
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                if (addresses.isEmpty()) {
+                    EmptyAddresses()
+                } else {
+                    addresses.forEach { a -> AddressChoice(a, busy, onPick) }
+                }
             }
 
             // ══════════════════════════════════════════════════════════
@@ -263,6 +286,8 @@ fun AddressSheet(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) { Text(stringResource(R.string.addr_sheet_add)) }
 
+            // **وحشوةُ شريط التنقّل** — **وزرٌّ تحت شريط النظام يُلمس
+            // فيُفتح شيءٌ آخر.**
             Spacer(Modifier.height(24.dp))
         }
     }

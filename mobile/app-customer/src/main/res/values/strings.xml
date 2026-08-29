@@ -4,7 +4,7 @@
 
     <!-- **ولا تقول «دخول الزبون»** — هو لا يعرف أنّه «زبون»،
          **وأسماءُ الأدوار لغتُنا نحن لا لغتُه.** -->
-    <string name="login_title">دخول</string>
+    <string name="login_title">تسجيل الدخول</string>
 
     <string name="signed_in">أهلا بك</string>
     <string name="logout">خروج</string>
@@ -13,9 +13,6 @@
          **واسمُ الفعل أوضحُ من اسم المكان**: «الرئيسيّة» تقول أين هو،
          **و«تسوّق» تقول ماذا يفعل.** -->
     <string name="nav_shop">تسوق</string>
-    <string name="nav_orders">طلباتي</string>
-    <string name="nav_custom">طلب خاص</string>
-    <string name="nav_profile">حسابي</string>
 
     <string name="soon_shop">المتاجر والأقسام تبنى في خطوتها</string>
     <string name="soon_orders">هنا تتابع طلباتك — أين وصل كل واحد منها</string>
@@ -33,9 +30,7 @@
          السوق، **وقائمةٌ ثابتةٌ تعد بما ليس في السوق.** -->
     <string name="shop_search">ابحث عن %1$s</string>
     <string name="shop_no_results">لا نتائج لبحثك</string>
-    <string name="shop_empty_section">لا أصناف في هذا القسم بعد</string>
     <string name="shop_closed">مغلق الآن</string>
-    <string name="shop_unavailable">غير متوفر</string>
 
     <!-- **الطلبات** -->
     <string name="ord_wanted">المطلوب:</string>
@@ -52,7 +47,6 @@
     <string name="ord_cancel_title">إلغاء الطلب؟</string>
     <string name="ord_cancel_ask">سيلغى الطلب نهائيا ولا يمكن التراجع.</string>
     <string name="ord_cancel_yes">نعم، ألغه</string>
-    <string name="ord_back">رجوع</string>
     <string name="ord_rate_title">كيف كانت الخدمة؟</string>
     <string name="ord_rate_service">تقييم الخدمة</string>
     <string name="ord_rate_driver">تقييم السائق</string>
@@ -65,13 +59,11 @@
     <string name="cr_wrong_items">الطلب غير مطابق</string>
     <string name="cr_quality">جودة سيئة</string>
     <string name="cr_late">تأخر كثيرا</string>
-    <string name="cr_driver_conduct">سلوك السائق</string>
     <string name="cr_money">مشكلة في المبلغ</string>
     <string name="cr_other">أخرى</string>
     <string name="ord_complain_what">ما الذي حدث بالضبط؟</string>
     <string name="ord_complain_note">تفاصيل (اختياري)</string>
     <string name="ord_reasons_loading">تجلب الأسباب…</string>
-    <string name="menu_history_title">سجل الطلبات</string>
 
     <!-- **مراحلُ الطلب** — بأسماء الويب نفسها (`i18n/ar.json`). -->
     <string name="st_pending">بانتظار القبول</string>
@@ -79,20 +71,14 @@
     <string name="st_preparing">قيد التحضير</string>
     <string name="st_driver">إسناد سائق</string>
     <string name="st_bought">تم الشراء</string>
-    <string name="st_onway">في الطريق</string>
     <string name="st_arrived">وصل إليك</string>
-    <string name="st_delivered">تم التسليم</string>
 
     <!-- **وأسماءُ الحالات في الشارة.** -->
     <string name="stt_pending">بانتظار القبول</string>
     <string name="stt_accepted">مقبول</string>
     <string name="stt_preparing">يحضر</string>
-    <string name="stt_dispatching">بانتظار سائق</string>
     <string name="stt_assigned">مع سائق</string>
-    <string name="stt_onway">في الطريق</string>
-    <string name="stt_delivered">تم التسليم</string>
     <string name="stt_cancelled">ألغي</string>
-    <string name="stt_failed">تعذر</string>
 
     <!-- **الطلبُ الخاصّ** -->
     <string name="cst_what">تفاصيل الطلب</string>
@@ -128,7 +114,6 @@
     <string name="inv_invited">من سجلوا برمزك</string>
     <string name="inv_rewarded">من طلبوا فعلا</string>
     <string name="inv_earned">ما ناله حسابك</string>
-    <string name="inv_share">شارك الرابط</string>
 
     <string name="tkt_open">مفتوحة</string>
     <string name="tkt_working">قيد المعالجة</string>
@@ -137,7 +122,6 @@
     <!-- **السلّة** -->
     <!-- خياراتُ الصنف — الحجمُ والإضافات -->
     <string name="options_required">مطلوب</string>
-    <string name="options_optional">اختياري</string>
     <string name="options_add">أضف — %1$s</string>
     <string name="options_failed">تعذّر جلبُ الخيارات — تحقّق من الاتصال</string>
     <!-- «يُطلب معه» في السلّة -->
@@ -145,8 +129,7 @@
 
     <string name="cart_title">سلتي</string>
     <string name="cart_hint">راجع ما اخترته ثم أرسل</string>
-    <string name="cart_empty">سلتك فارغة — تصفح السوق واضغط ما يعجبك</string>
-    <string name="cart_address">العنوان</string>
+    <string name="cart_empty">سلتك فارغة — تصفح السوق وأضف ما يعجبك</string>
     <string name="cart_promo">كود خصم (اختياري)</string>
     <string name="cart_promo_apply">تطبيق</string>
     <string name="cart_remove">حذف من السلة</string>
@@ -197,4 +180,5 @@
     <string name="city_sheet_hint">تُعرض متاجر المدينة التي تختارها وحدها</string>
     <string name="city_auto">تلقائيّاً حسب موقعي</string>
     <string name="city_auto_hint">من عنوانك المحفوظ أو موقع جهازك</string>
+    <string name="shop_closed_now">المتجر مغلق حالياً</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.rahalgo.merchant
 
+import com.rahalgo.merchant.noStoreMsg
 import com.rahalgo.ui.DrawerItem
 
 /**
@@ -61,3 +62,14 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         com.rahalgo.ui.R.drawable.ic_chart,
     ),
 )
+
+/**
+ * **«لا متجرَ مرتبطٌ بحسابك»** — من المعجم لا من الشيفرة.
+ *
+ * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «راجع كلَّ النصوص… لا أريد كلماتٍ عامّة».)
+ *
+ * **وكانت مكتوبةً في خمسة ملفّاتٍ بيدٍ** — **وخمسُ نسخٍ من جملةٍ واحدةٍ
+ * تتباعد**: تُصحَّح في واحدةٍ وتبقى في أربع.
+ */
+fun noStoreMsg(): String =
+    com.rahalgo.ui.AppCore.get().app.getString(R.string.no_store)

@@ -130,7 +130,7 @@ internal fun AgreeDialog(onConfirm: (Long, Long) -> Unit, onDismiss: () -> Unit)
             }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_cancel)) }
         },
     )
 }
@@ -213,7 +213,7 @@ internal fun EmergencyDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
             }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_back)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
         },
     )
 }
@@ -291,7 +291,7 @@ internal fun FailDialog(
             }
         },
         confirmButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.detail_cancel)) }
+            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_cancel)) }
         },
     )
 }

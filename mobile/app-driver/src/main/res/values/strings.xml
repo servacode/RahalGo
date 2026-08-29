@@ -34,9 +34,7 @@
     <!-- رموز المحرّك — من `identity/service.go`، لا من الذاكرة -->
     <!-- بابا الدخول -->
     <!-- لوحة السائق -->
-    <string name="home_today">اليوم</string>
     <string name="home_delivered">سلمت</string>
-    <string name="home_failed">تعذر</string>
     <string name="home_earned">كسبت</string>
     <!-- **وشريطُ صندوقه وهدفه في لوحته** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
          «المالُ نحذفه ما يلزم — موجودٌ فوق أساساً · نحطّ شريطَ صندوقي
@@ -57,7 +55,6 @@
     <string name="home_cash_bar">مدين للمكتب بـ</string>
     <string name="home_cash_left">يبقى %1$s</string>
     <string name="home_cash_over">تجاوزت السقف</string>
-    <string name="home_target">هدف الشهر</string>
     <string name="home_target_left">يبقى %1$s طلبا</string>
     <!-- **«مكافأة بلوغ الهدف الشهريّ»** — تصحيحُ المالك ٢٠٢٦-٠٨-٢٣.
 
@@ -80,27 +77,21 @@
     <string name="shift_off_hint">لا يمكنك استقبال الطلبات — أنت خارج العمل</string>
     <string name="shift_active_orders">معك %1$s من %2$s طلبات</string>
     <!-- الطلبات -->
-    <string name="nav_home">لوحتي</string>
-    <string name="nav_orders">الطلبات</string>
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
     <string name="order_cash_due">تقبض نقدا</string>
     <string name="order_prepaid">مدفوع سلفا</string>
-    <string name="status_dispatching">بانتظار سائق</string>
     <string name="status_assigned">بذمتك — اذهب للمتجر</string>
     <string name="status_picked_up">استلمت الطلب</string>
     <string name="status_on_the_way">في الطريق للزبون</string>
     <string name="status_arrived">وصلت للزبون</string>
     <!-- شاشة الطلب -->
-    <string name="detail_back">رجوع</string>
     <string name="detail_customer">الزبون</string>
-    <string name="detail_address">العنوان</string>
     <string name="detail_items">عدد الأصناف</string>
     <string name="detail_total">إجمالي الطلب</string>
     <string name="detail_failed">تعذر الطلب</string>
     <string name="detail_release">أعد الطلب للطابور</string>
     <string name="detail_fail_title">لماذا تعذر؟</string>
     <string name="detail_no_reasons">لا سبب متاح في هذه الحالة</string>
-    <string name="detail_cancel">إلغاء</string>
     <string name="step_at_pickup">وصلت المتجر</string>
     <string name="step_picked_up">استلمت الطلب</string>
     <string name="step_on_the_way">انطلقت إلى الزبون</string>
@@ -108,7 +99,6 @@
     <string name="step_delivered">سلمت الطلب</string>
     <string name="status_at_pickup">عند المتجر</string>
     <string name="status_at_dropoff">عند الزبون</string>
-    <string name="status_delivered">تم التسليم</string>
     <string name="reason_customer_absent">الزبون غير موجود</string>
     <string name="reason_customer_refused">الزبون رفض الاستلام</string>
     <string name="reason_customer_unreachable">لا يرد على الهاتف</string>
@@ -150,7 +140,13 @@
          **وقعت في رحلةِ ميدانٍ حقيقيّة** (٢٠٢٦-٠٨-٢٣): خرج المالكُ
          يجرّب فعاد بلا نتيجة، **وسجلُّ الجهاز يشهد أنّ محرّكَ الملاحة
          لم يقلع لحظةً واحدة.** -->
-    <string name="trip_navigate">افتح في خرائط غوغل</string>
+    <!-- **مختصرٌ بطلب المالك ٢٠٢٦-٠٨-٢٤** — والقرصُ صغيرٌ والسطرُ
+         الطويلُ يُقصّ بنقاطٍ فلا يُقرأ. -->
+    <string name="trip_navigate">خرائط غوغل</string>
+    <!-- **وزرُّ الصوت** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤: «ممكن سائق ما بدّه
+         الصوت»). -->
+    <string name="map_voice_on">أوقف الصوت</string>
+    <string name="map_voice_off">شغّل الصوت</string>
     <string name="map_recenter">ردني إلى موقعي</string>
     <!-- **وهذا هو زرُّ الملاحة الحقيقيّ** — يفتح الجلسةَ ويغلقها
          (`LaunchedEffect(follow)`). **وكان اسمُه «تابعني على الخريطة»
@@ -170,9 +166,7 @@
     <!-- **ومراحلُ الطلب الخاصّ** — توثيقٌ ثمّ شراء، لا استلامٌ من متجر. -->
     <string name="leg_agree">الاتفاق</string>
     <string name="leg_buy">الشراء</string>
-    <string name="leg_way">في الطريق</string>
     <string name="leg_arrived">وصلت</string>
-    <string name="leg_done">تم التسليم</string>
     <string name="trip_p_to_store">الطريق إلى %1$s</string>
     <string name="trip_p_at_store">وصلت المتجر</string>
     <!-- **والخاصُّ قبل الشراء**: اتّفاقٌ ثمّ شراء، لا سيرٌ إلى متجر. -->
@@ -226,7 +220,6 @@
     <string name="emg_send">بلغ الآن</string>
     <string name="trip_chat">حديث الزبون</string>
     <string name="chat_hint">اكتب رسالة…</string>
-    <string name="chat_send">أرسل</string>
     <string name="chat_closed">انتهى الطلب — أغلق الحديث</string>
     <!-- الطلب الخاصّ -->
     <string name="agree_button">وثق الاتفاق</string>
@@ -242,7 +235,6 @@
     <string name="order_later">لاحقا</string>
     <!-- بطاقة الطلب -->
     <string name="card_new_order">طلب جديد</string>
-    <string name="card_custom">طلب خاص</string>
     <string name="card_fee">أجرة التوصيل</string>
     <string name="card_payment">الدفع</string>
     <string name="card_cash">عند التسليم</string>
@@ -281,20 +273,15 @@
     <!-- ══ وحداتُ القياس — كانت مكتوبةً في الشيفرة ══ -->
 
     <!-- ══ سجلُّ الطلبات ══ -->
-    <string name="hist_done">تم التسليم</string>
-    <string name="hist_failed">تعذر</string>
     <string name="hist_search">ابحث برقم الطلب أو المتجر</string>
     <string name="hist_empty">لا طلبات في سجلك بعد</string>
     <string name="hist_no_match">لا طلب يطابق بحثك</string>
-    <string name="hist_st_delivered">تم التسليم</string>
-    <string name="hist_st_failed">تعذر</string>
 
     <!-- **البلاغُ والتقييم — بنصوص الويب نفسِها** فلا تفترق شاشتان. -->
     <string name="hist_report">بلاغ</string>
     <string name="hist_report_title">بلاغ على الطلب</string>
     <string name="hist_report_note">تفصيل إضافي (اختياري)</string>
     <string name="hist_report_hint">يصل البلاغ غرفة العمليات ويتابع</string>
-    <string name="hist_report_send">أرسل البلاغ</string>
     <string name="hist_report_sent">وصل بلاغك — ستتابعه العمليات</string>
     <string name="hist_reasons_error">تعذر جلب الأسباب — ولا يرسل بلاغ بلا سبب</string>
     <string name="hist_not_yours">هذا الطلب ليس لك</string>
@@ -312,7 +299,6 @@
     <string name="reason_merchant_conduct">سوء تعامل من المتجر</string>
     <string name="reason_customer_address">عنوان خاطئ</string>
     <string name="reason_customer_conduct">سوء تعامل من الزبون</string>
-    <string name="reason_other">سبب آخر</string>
 
     <!-- ══ القائمة ══ -->
     <string name="menu_cash">صندوقي</string>
@@ -399,9 +385,20 @@
     <string name="route_delta_faster">أقل زمنا بـ%1$s</string>
     <string name="route_delta_slower">أطول زمنا بـ%1$s</string>
     <string name="route_confirm">اعتماد المسار</string>
-    <string name="route_cancel_preview">إلغاء</string>
     <string name="route_no_longer_available">هذا المسار لم يعد متاحا</string>
     <!-- ولقارئ الشاشة — البند ٢٩ -->
     <string name="route_a11y_metrics">%1$s، %2$s، %3$s</string>
     <string name="route_a11y_delta">%1$s، %2$s</string>
+
+    <!-- **نصوصٌ كانت في كوتلن** — أمسكتها منظومةُ الاختبار ٢٠٢٦-٠٨-٢٦. -->
+    <string name="tts_init_failed">تعذّرت تهيئةُ محرّك النطق</string>
+    <string name="tts_no_arabic_voice">لا صوتَ عربيّ</string>
+    <string name="tts_arabic_unsupported">العربيّةُ غيرُ مدعومةٍ على هذا الجهاز</string>
+    <string name="map_index_failed">تعذّر جلبُ الفهرس</string>
+    <string name="map_no_index">لا فهرسَ خرائطَ بعد</string>
+    <string name="map_delete_failed">تعذّر حذفُ بعض الملفّات</string>
+    <string name="replay_stop">أوقف الرحلة التجريبيّة</string>
+    <string name="replay_start">رحلة تجريبيّة</string>
+    <string name="map_server_said">الخادم رد %1$d</string>
+    <string name="map_no_package">لا حزمة باسم %1$s</string>
 </resources>

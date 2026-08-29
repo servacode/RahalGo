@@ -1,6 +1,7 @@
 package com.rahalgo.map
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
@@ -58,6 +59,18 @@ fun MapCanvas(
     onJumped: () -> Unit = {},
     online: Boolean = true,
 ) {
+    // ══════════════════════════════════════════════════════════════════
+    // **والسمةُ تُستدلّ من لوحة التطبيق لا من النظام**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وللتطبيق مفتاحٌ يدويّ** («السمة الغامقة» في القائمة) — **ومن
+    // قرأ سمةَ النظام خالفه**: يختار الغامقةَ وجهازُه فاتحٌ فتبقى
+    // الخريطةُ بيضاءَ بين شريطين غامقين.
+    //
+    // **ولونُ الأرض أصدقُ من أيّ مفتاح** — هو ما يُرسم فعلاً. وأرضٌ
+    // ضوؤها دون النصف ليلٌ.
+    val canvas = com.rahalgo.design.Rahal.colors.canvas
+    val night = canvas.luminance() < 0.5f
     val surface = rememberMapSurface()
 
     // ══════════════════════════════════════════════════════════════════
@@ -99,7 +112,20 @@ fun MapCanvas(
              * وأيقونات. **ولو مُرّر عنوانٌ لأعادت MapLibre جلبَه
              * وربطَه بنفسها**، وضاع ما قرّرناه.
              */
-            map.setStyle(Style.Builder().fromJson(ready.bound.json)) {
+            // ══════════════════════════════════════════════════════
+            // **والليلُ يُحوَّل هنا — بعد الربط لا قبله**
+            // ══════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-٢٥: «مشكلة الثيم الغامق… طبّقها
+            //  كلَّها».)
+            //
+            // **وخريطةٌ بيضاءُ ساطعةٌ بين شريطين غامقين تُتعب العين
+            // ليلاً** — ورآها المالكُ في شاشة اختيار العنوان.
+            //
+            // **والتحويلُ بعد الربط**: العناوينُ حُقنت فلا تُمسّ،
+            // **والألوانُ وحدَها تُبدَّل.** انظر `MapNight`.
+            val styled = if (night) MapNight.apply(ready.bound.json) else ready.bound.json
+            map.setStyle(Style.Builder().fromJson(styled)) {
                 // **وهنا يصير المطلوبُ محمَّلاً** (البندان ٩ و١٢).
                 MapStyleRepository.onStyleLoaded(now)
                 surface.overlays.restoreAll()

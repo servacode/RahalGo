@@ -318,8 +318,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         // **ولا تبقى وصلة بلا شاشة** — تستنزف البطارية وتوقظ الجهاز.
         backend.live.stop()
+        // **وموتُ نموذج العرض هو مغادرةُ الرحلة حقّاً** — لا تبديلُ
+        // تبويب. **ومحرّكُ موقعٍ يبقى بعده يستنزف بطّاريّةً في جيب.**
+        if (navBuilt) closeNav()
         super.onCleared()
     }
+
+    /** **أبُنيت الجلسةُ أصلاً؟** — فلا تُبنى لتُغلق. */
+    private var navBuilt = false
 
     fun refresh() {
         viewModelScope.launch { load() }
@@ -493,11 +499,150 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         com.rahalgo.driver.trip.AndroidSpeaker(getApplication()).also { it.init() }
     }
 
+    /**
+     * **الناطقُ المستعمَل** — مقاطعُ `rahalgo2` أوّلاً.
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-٢٤: «نعتمد الصوت».)
+     *
+     * **والآليُّ احتياطٌ لا أصل** — يُنادى حين يغيب مقطع، **و
+     * `ClipSpeaker.fallbacks` تعدّ ذلك.** فإن كانت صفراً بعد رحلةٍ
+     * كاملةٍ **حُذف المحرّكُ الآليُّ كلُّه.**
+     */
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **وجلسةُ الملاحة تعيش هنا — لا في الشاشة**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٤: «لو كان السائق بالرحلة وذهب وعاد إلى
+     *  الرحلة، هل تستمرّ الرحلة أو تتوقّف؟ المفروض الرحلة تبقى
+     *  مستمرّة مهما حصل وأينما ذهب».)
+     *
+     * # وكانت في التركيب فتموت بمغادرة الشاشة
+     *
+     * **وقِيس ٢٠٢٦-٠٨-٢٤ على جهاز المالك**: فُتحت الملاحةُ ومشت،
+     * **ثمّ فُتح تبويبُ «الطلبات» فطُبعت خلاصةُ الملاحة** — أي أنّها
+     * أُغلقت. **وعند العودة لم تعد**، ورجع الزرُّ إلى «ابدأ».
+     *
+     * **والنيّةُ كانت سليمة**: ألّا يبقى محرّكُ موقعٍ يعمل بلا شاشةٍ
+     * تقرؤه. **لكنّ التبويبَ ليس مغادرة** — السائقُ يفتح «الطلبات»
+     * ليرى طلباً ويعود، **فيجد ملاحتَه ماتت.**
+     *
+     * # والفرقُ الذي غاب
+     *
+     * **مغادرةُ الرحلة تسليمٌ أو إلغاء** — وتلك تُغلق الجلسة.
+     * **وتصفّحُ تبويبٍ نظرةٌ** — ولا تُغلق شيئاً.
+     *
+     * **فتُغلق بانتهاء الطلب لا بانتهاء النظر إليها** — [closeNav]،
+     * و[onCleared] عند موت نموذج العرض نفسِه.
+     */
+    val navSession: com.rahalgo.navigation.NavigationSession by lazy {
+        navBuilt = true
+        val app = getApplication<android.app.Application>()
+        com.rahalgo.navigation.NavigationSession(
+            app,
+            source = routeSource,
+            // **والمخطِّطُ يُبنى مع الجلسة** — حالتُه عبورُ عتباتٍ
+            // لا سجِلُّ ما قيل، **وذاك في المنسّق.**
+            voice = com.rahalgo.navigation.VoicePlanner(),
+            // **ومسجّلُ الرحلة في بناء التطوير وحدَه** — أمرُ المالك
+            // ٢٠٢٦-٠٨-٢٠: **تسجيلُ مسارِ كلّ سائقٍ في كلّ رحلةٍ ليس
+            // فحصاً بل تتبّعا.**
+            recorder = if (com.rahalgo.driver.BuildConfig.DEBUG) {
+                com.rahalgo.navigation.TraceRecorder(
+                    dir = java.io.File(app.filesDir, "nav-traces"),
+                    sessionId = java.util.UUID.randomUUID().toString().take(8),
+                )
+            } else {
+                null
+            },
+        ).also { session ->
+            // ══════════════════════════════════════════════════════════
+            // **والتعليماتُ تُسلَّم من الجلسة إلى المنسّق مباشرة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (بلاغُ المالك ٢٠٢٦-٠٨-٢٤.)
+            //
+            // **وكانت شاشةُ الرحلة هي الناقل** — تقرأ الحالَ وتنادي
+            // `offer`. **فإذا فُتح تبويبٌ آخرُ انقطع الناقل**: الجلسةُ
+            // تعمل والمحرّكُ يولّد تعليماتٍ **ولا أحدَ يقولها.**
+            session.onNav = { state ->
+                voice.offer(
+                    state.cues,
+                    state.progress?.progressM ?: 0.0,
+                    navigating = session.running,
+                )
+            }
+        }
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **ومفتاحُ «اتبعني» يعيش هنا كذلك**
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٤.)
+     *
+     * **وكان `rememberSaveable` في الشاشة** — فيعود `false` حين تُبنى
+     * الشاشةُ من جديد، **و`LaunchedEffect` تنفّذ `stop()` فوراً.**
+     *
+     * **فنجت الجلسةُ من المغادرة وماتت عند العودة** — وقِيس ذلك على
+     * جهاز المالك ٢٠٢٦-٠٨-٢٤: نطق الصوتُ في تبويب «الطلبات»، **ثمّ
+     * طُبعت خلاصةُ الملاحة في اللحظة التي رجع فيها إلى «الرحلة».**
+     *
+     * **والحالُ التي تحكم شيئاً باقياً تعيش حيث يعيش** — لا في شاشةٍ
+     * تُبنى وتُهدم.
+     */
+    var following by mutableStateOf(false)
+        private set
+
+    fun follow(on: Boolean) {
+        if (following == on) return
+        following = on
+        if (on) navSession.start() else navSession.stop()
+    }
+
+    /**
+     * **يُشغّل الرحلةَ التجريبيّة** — في بناء التطوير وحدَه.
+     *
+     * **ومجالُها هنا لا في الشاشة** — **و`rememberCoroutineScope`
+     * تُلغى بخروج الشاشة من التركيب**، فتتوقّف الإعادةُ بمجرّد فتح
+     * تبويبٍ آخر. **والملاحةُ الحقيقيّةُ تُغذّى من `routeSource` في
+     * نموذج العرض فلا يمسّها ذلك** — لكنّ المختبَر يجب أن يشبه
+     * الميدان، **وإلّا اختُبر شيءٌ وشُحن آخر.**
+     */
+    fun startReplay(fixes: List<com.rahalgo.navigation.NavFix>) {
+        navSession.startReplay(fixes, viewModelScope)
+    }
+
+    fun stopReplay() {
+        navSession.stopReplay()
+    }
+
+    /**
+     * **تُغلق الملاحةُ بانتهاء الطلب.**
+     *
+     * **ولا تُغلق بمغادرة الشاشة** — انظر [navSession].
+     */
+    fun closeNav() {
+        following = false
+        navSession.stopReplay()
+        navSession.stop()
+        voice.stop()
+    }
+
+    val clipSpeaker: com.rahalgo.driver.trip.ClipSpeaker by lazy {
+        com.rahalgo.driver.trip.ClipSpeaker(getApplication(), speaker)
+    }
+
     val voice: com.rahalgo.driver.trip.VoiceOrchestrator by lazy {
         // **ويُبنى مكتوماً** — **ومحرّكُ نطقٍ يُهيّأ ثمّ يُكتم يحجز
         // خدمةَ النظام ويطلب بؤرةَ الصوت بلا أن يقول شيئاً.**
-        com.rahalgo.driver.trip.VoiceOrchestrator(speaker)
-            .also { it.muted = !voiceEnabled }
+        com.rahalgo.driver.trip.VoiceOrchestrator(clipSpeaker)
+            .also {
+                it.muted = !voiceEnabled
+                // **وبابُ السجلّ يُوصَل هنا** — المنسّقُ لا يعرف أندرويد.
+                it.log = { line -> android.util.Log.i("RahalGo/voice", line) }
+            }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -525,7 +670,18 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     //
     // **والمقاطعُ حُذفت فعلاً** (٤٣ ملفّاً) — **وهي وحدَها ما يثقل
     // الحزمة**، والشيفرةُ نصٌّ لا وزنَ له.
-    private val voiceEnabled = false
+    //
+    // ══════════════════════════════════════════════════════════════════
+    // **وفُتح ٢٠٢٦-٠٨-٢٤ — وُجد الصوت**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك: «نعتمد الصوت».)
+    //
+    // **و`rahalgo2` من ElevenLabs مسجَّلٌ مسبقاً** — ٥٣١ مقطعاً في
+    // `res/raw`، **لا نطقاً آليّاً يتبدّل من هاتفٍ إلى هاتف.**
+    //
+    // **وهو السطرُ الذي وُعد بقلبه** — والوعدُ مكتوبٌ فوقَه منذ أمس.
+    private val voiceEnabled = true
 
     /** **الكتم** — حالٌ مستقلّةٌ عن الملاحة. */
     var voiceMuted by mutableStateOf(!voiceEnabled)

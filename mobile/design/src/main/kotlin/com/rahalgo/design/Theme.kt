@@ -1,6 +1,7 @@
 package com.rahalgo.design
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -227,6 +228,27 @@ fun RahalGoTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () 
     CompositionLocalProvider(
         LocalLayoutDirection provides LayoutDirection.Rtl,
         LocalPalette provides palette,
+        // ══════════════════════════════════════════════════════════════
+        // **ولونُ المحتوى الافتراضيُّ لونُنا لا لونُ Material**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٥: «في كثير أماكن بالثيم الغامق غلط…
+        //  النصّ غامق مو واضح».)
+        //
+        // # ولماذا وقع
+        //
+        // **و`Text` بلا لونٍ صريحٍ يقرأ `LocalContentColor`** — ولم
+        // نكن نضعه، **فيأخذ افتراضَ Material المشتقَّ من مخطّطه لا من
+        // لوحتنا.** فيخرج حبرٌ داكنٌ على أرضٍ داكنة.
+        //
+        // # ولا يُصلَح شاشةً شاشة
+        //
+        // **وأصلحتُ اثنَي عشرَ موضعاً في تطبيق الزبون بلونٍ صريح**
+        // (٢٠٢٦-٠٨-٢٥) — **وتلك مطاردةٌ لا هندسة**: يبقى السائقُ
+        // والمتجرُ والمندوبُ على العطب، **ويعود في كلّ شاشةٍ تُكتب غدا.**
+        //
+        // **والموضعُ الصحيحُ هنا**: سطرٌ واحدٌ يحكم التطبيقاتِ الأربعة.
+        LocalContentColor provides palette.ink,
     ) {
         MaterialTheme(
             colorScheme = schemeOf(palette),

@@ -85,9 +85,9 @@ class AndroidSpeaker(context: Context) : Speaker {
         runCatching {
             tts = TextToSpeech(app) { status ->
                 ready = status == TextToSpeech.SUCCESS
-                if (!ready) failure = "تعذّرت تهيئةُ محرّك النطق"
+                if (!ready) failure = com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.tts_init_failed)
                 if (ready) chooseLanguage()
-                if (!available && failure == null) failure = "لا صوتَ عربيّ"
+                if (!available && failure == null) failure = com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.tts_no_arabic_voice)
                 Log.i(TAG, "الصوت: جاهز=$ready لغة=$selectedLocale سبب=${failure ?: "-"}")
                 tts?.setOnUtteranceProgressListener(listener)
                 onReady(available)
@@ -140,7 +140,7 @@ class AndroidSpeaker(context: Context) : Speaker {
             }
         }
         languageOk = false
-        failure = "العربيّةُ غيرُ مدعومةٍ على هذا الجهاز"
+        failure = com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.driver.R.string.tts_arabic_unsupported)
     }
 
     /**
@@ -264,7 +264,7 @@ class AndroidSpeaker(context: Context) : Speaker {
     var selectedVoice: String = ""
         private set
 
-    override fun speak(id: String, text: String, flush: Boolean, done: (Boolean) -> Unit) {
+    override fun speak(id: String, text: String, clip: String?, flush: Boolean, done: (Boolean) -> Unit) {
         val engine = tts
         if (!available || engine == null) {
             done(false)

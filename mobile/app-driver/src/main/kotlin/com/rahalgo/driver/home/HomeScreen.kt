@@ -188,7 +188,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
 
         Spacer(Modifier.height(20.dp))
         Text(
-            text = stringResource(R.string.home_today),
+            text = stringResource(R.string.act_today),
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(Modifier.height(10.dp))
@@ -199,7 +199,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 modifier = Modifier.weight(1f),
             )
             Stat(
-                label = stringResource(R.string.home_failed),
+                label = stringResource(R.string.ord_st_failed),
                 value = grouped(me.todayFailed.toLong()),
                 modifier = Modifier.weight(1f),
             )
@@ -589,7 +589,7 @@ private fun GoalBar(done: Int, target: Int, reached: Boolean, reward: Long) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(R.string.home_target),
+            text = stringResource(R.string.act_month_target),
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
