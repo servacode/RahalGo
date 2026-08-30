@@ -97,7 +97,6 @@ services:
       args:
         NEXT_PUBLIC_API_URL: https://api.rahalgo.com
         NEXT_PUBLIC_SITE_URL: https://rahalgo.com
-      NEXT_PUBLIC_MAP_STYLE_URL: https://maps.rahalgo.com/map-resources/1/style.online.json
         # ══════════════════════════════════════════════════════════
         # **ونمطُ الخريطة من مضيفنا لا من جهاز الزائر**
         # ══════════════════════════════════════════════════════════
