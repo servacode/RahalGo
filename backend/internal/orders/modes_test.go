@@ -26,13 +26,21 @@ func TestRolesUnderMode(t *testing.T) {
 		driverHolds bool
 		allowed     bool
 	}{
-		// ── المتجر يدير: المنصةُ عينٌ لا يد ──────────────────────────────
-		{"المتجر يقبل طلبه", merchantManages, StPending, StAccepted,
+		// ── المتجر يدير — والمنصةُ تستلم أوّلاً ─────────────────────────
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-٢٩: «بالحالتين المنصّةُ يجب أن تستلم
+		//  الطلبَ أوّلاً… والمكتبُ هو من يوافق».)
+		//
+		// **وكان المكتبُ يُستبعَد من القبول هنا** — فيصل الطلبُ المطعمَ
+		// رأساً. **والقاعدةُ انقلبت: المكتبُ يقبل، ثمّ يُسلَّم للمتجر.**
+		{"المكتبُ يقبل في وضع المتاجر", merchantManages, StPending, StAccepted,
+			[]string{"ops"}, false, true},
+		{"والمكتبُ يرفض", merchantManages, StPending, StRejected,
+			[]string{"ops"}, false, true},
+		// **والمتجرُ يبقى قادراً** — يستلم طلبَه بعد أن تمرّره المنصّة،
+		// وهو ما يفعله زرُّ «استلمت الطلب» في تطبيقه.
+		{"والمتجر يستلم طلبه", merchantManages, StPending, StAccepted,
 			[]string{"merchant"}, false, true},
-		{"العملياتُ لا تقبل نيابةً عنه", merchantManages, StPending, StAccepted,
-			[]string{"ops"}, false, false},
-		{"ولا ترفض نيابةً عنه", merchantManages, StPending, StRejected,
-			[]string{"ops"}, false, false},
 		// وما عدا القبول والرفض تبقى العمليات عاملةً — التوصيلُ شأنُها.
 		{"العملياتُ تطلب سائقاً", merchantManages, StPreparing, StDispatching,
 			[]string{"ops"}, false, true},

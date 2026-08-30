@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
+	"github.com/servacode/rahalgo/backend/internal/incentives"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/testdb"
@@ -60,6 +61,27 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 	// كانت تُقرأ بـSQL خامٍّ يتجاوزه. **فكانت تفحص مساراً لا وجودَ له في
 	// الإنتاج.** ولمّا صار المصدرُ واحداً ظهر الفرق.
 	f.svc.SetSettings(settings.NewStore(pool))
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وخدمةُ الحوافز تُحقَن كما تُحقَن في الإقلاع** (`server.go:157`)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وبلاها `s.targets == nil`** — فيتخطّى الانتقالُ مكافأةَ الهدف
+	// كلَّها بلا كلمة. **فكان مسارُ المكافأة بلا اختبارٍ واحد**: لا
+	// للسائق ولا للمندوب.
+	//
+	// **وعُدّةٌ تبني نصفَ ما يبنيه الإقلاعُ تفحص مساراً لا وجودَ له في
+	// الإنتاج** — وهي العلّةُ نفسُها التي كُتبت أعلاه في مخزن الإعدادات،
+	// **وقعت مرّةً ثانيةً في الحقل المجاور.**
+	//
+	// **وبها ظهر أنّ `GrantTargetIfReached` لا تُنادى بـ`"sales"` قطّ**
+	// (٢٠٢٦-٠٨-٣٠).
+	inc := incentives.New(pool, f.wallet, settings.NewStore(pool), f.svc.TreasuryID)
+	// **والمسجّلُ كما في الإقلاع** (`server.go:155`) — **وبلاه تُبتلع أخطاءُ
+	// المكافأة**: `grantTarget` تُنادى بعد الإيداع فلا تُسقط تسليماً،
+	// **وسجلُّها هو أثرُها الوحيد.**
+	inc.SetLogger(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError})))
+	f.svc.SetTargetGranter(inc)
 
 	// العتبة = 1 تعني «بلا عتبة»: هذه الاختبارات تفحص التسوية لا التفعيل، وطلبٌ
 	// واحد يجب أن يُنتج عمولة فيها. واختبارات التفعيل ترفعها صراحةً.

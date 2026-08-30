@@ -23,7 +23,7 @@
  * **وما ليس له نظيرٌ لا يُقارَن**: «خارجَ الدوام» و«حفظ» و«إلغاء»
  * أزرارُ شاشةٍ لا يحتاجها الويب.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -69,47 +69,117 @@ function androidString(name) {
   return m ? m[1] : null;
 }
 
-/** **نظيرُ كلّ مفتاح** — يسارُه الويب ويمينُه التطبيق. */
+/**
+ * **نظيرُ كلّ مفتاح** — يسارُه الويب ويمينُه **المفتاحُ الذي تقرؤه
+ * الشاشةُ فعلاً.**
+ *
+ * **ولا يُكتب هنا مفتاحٌ لا تقرؤه شاشة** — يسقط الفحصُ عليه، وهو ما
+ * كُشف ٢٠٢٦-٠٨-٣٠: **أربعةَ عشرَ مفتاحاً من `mn_*` صارت ميّتةً** بعد
+ * توحيد المحرّر في `‏:ui`، **والحارسُ يقرؤها ويمرّ** بينما الشاشةُ
+ * تعرض غيرَها.
+ */
 const PAIRS = [
   [web.empty, "mn_empty"],
   [web.addItem, "mn_item_new"],
   [web.editItem, "mn_item_edit"],
-  [web.noItems, "mn_no_items"],
   [web.itemName, "mn_item_name"],
   [web.itemDescription, "mn_desc"],
-  [web.itemImage, "mn_item_image"],
+  [web.itemImage, "item_pick_image"],
   [web.price, "mn_price"],
-  [web.salePrice, "mn_sale_price"],
   [web.available, "mn_available"],
   [web.unavailable, "mn_unavailable"],
-  [web.markAvailable, "mn_mark_available"],
-  [web.markUnavailable, "mn_mark_unavailable"],
-  [web.confirmDeleteItem, "mn_confirm_delete"],
+  [web.confirmDeleteItem, "item_delete_ask"],
   [web.platformSection, "mn_platform_section"],
-  [web.noPlatformSection, "mn_no_platform_section"],
   [web.noPlatformSectionHint, "mn_no_platform_section_hint"],
   [web.pendingReview, "mn_pending_review"],
   [web.rejected, "mn_rejected"],
-  [web.modifiers, "mn_modifiers"],
-  [web.addGroup, "mn_add_group"],
+  [web.modifiers, "mod_title"],
+  [web.addGroup, "mod_add_group"],
   [web.groupName, "mn_group_name"],
-  [web.minSelect, "mn_min_select"],
-  [web.maxSelect, "mn_max_select"],
   [web.required, "mn_required"],
-  [web.optional, "act_optional"],
   [web.optionName, "mn_option_name"],
-  [web.priceDelta, "mn_price_delta"],
-  [web.addOption, "mn_add_option"],
+  [web.priceDelta, "mod_opt_price"],
+  [web.addOption, "mod_add_option"],
   // **وعنوانُ الشاشة والبابُ إليها** — الويبُ يسمّيهما `terms.menu`.
   [terms.menu, "mn_items"],
   [rep.menuHint, "mn_hint"],
 ];
+
+// ══════════════════════════════════════════════════════════════════════
+// **وما لا نظيرَ له لا يُقارَن — ويُقال لماذا**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وصمتٌ عن سببِ الاستثناء يُعيده حشواً**: من قرأ القائمةَ بعد سنةٍ
+// ظنّ أنّ أحداً نسيها، **فأعادها فسقط الفحصُ بلا عطب.**
+//
+// - `salePrice` («سعر البيع للزبون») — **لا يُعرض للمندوب أصلاً.**
+//   (قرارُ المالك ٢٠٢٦-٠٨-٣٠: «لازم يُكتب فقط سعر المتجر».)
+//
+// - `markAvailable` / `markUnavailable` — **بقيّةُ عهدِ الزرِّ الذي
+//   يقول الفعل.** صار مفتاحاً يقول الحال، **فنصُّه `available` /
+//   `unavailable` وهما مُقارَنان أعلاه.**
+//
+// - `minSelect` / `maxSelect` / `optional` — **الشاشةُ لا تعرض رقمين**:
+//   مربّعُ «إلزامي» ومربّعُ «يختار أكثر من واحد» يقولان ما يقوله
+//   الرقمان، **وأرقامٌ تُكتب باليد تتناقض** (أدنى ٢ وأقصى ١).
+//
+// - `noItems` — **لا قسمَ فارغاً في التطبيق**: الأقسامُ تُشتقّ من
+//   الأصناف، **فقسمٌ بلا صنفٍ لا يُرسم أصلاً.**
+//
+// - `section` — قسمُ المتجر الداخليّ، **ولا يعرضه المندوب.**
+
+// ══════════════════════════════════════════════════════════════════════
+// **ومفتاحٌ لا تقرؤه شاشةٌ لا يُثبت مطابقةً**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان الحارسُ يقرأ الملفَّ ولا يسأل: أيستعمله أحد؟**
+//
+// **فوقع ما يمنعه بعينه** (٢٠٢٦-٠٨-٣٠): وُحِّد محرّرُ الأصناف في `:ui`
+// فصار يعرض `item_price` = «السعر»، **و`mn_price` = «سعر المتجر» بقيت
+// مكتوبةً في `app-rep` بلا مستعمِل.** فرأى الحارسُ اللفظَ الصحيحَ
+// **في ملفٍّ لم تعد الشاشةُ تقرؤه**، ومرّ — **والمندوبُ يقرأ غيرَه.**
+//
+// **وستّةَ عشرَ مفتاحاً ماتت في ذلك التوحيد** ولم ينبس الحارسُ بحرف.
+//
+// **فيُبحث عن `R.string.<key>` في شيفرة التطبيقات** — ومن لم يُستعمل
+// فليس نصَّ الشاشة مهما كُتب في الملفّ.
+const KOTLIN = [
+  "ui",
+  "app-rep",
+  "app-merchant",
+  "app-customer",
+  "app-driver",
+]
+  .flatMap((m) => walk(join(repo, "mobile", m, "src/main/kotlin")))
+  .map((p) => readFileSync(p, "utf8"))
+  .join(String.fromCharCode(10));
+
+/** **يجمع كلَّ ملفّات كوتلن تحت مجلّد.** */
+function walk(dir) {
+  const out = [];
+  for (const e of readdirSync(dir)) {
+    const p = join(dir, e);
+    if (statSync(p).isDirectory()) out.push(...walk(p));
+    else if (p.endsWith(".kt")) out.push(p);
+  }
+  return out;
+}
+
+/** **أيُقرأ هذا المفتاحُ من شاشة؟** */
+function used(key) {
+  return new RegExp(`R\\.string\\.${key}\\b`).test(KOTLIN);
+}
 
 const problems = [];
 for (const [want, key] of PAIRS) {
   const got = androidString(key);
   if (got === null) {
     problems.push(`«${key}» غيرُ موجودٍ في نصوص التطبيق — والويبُ يقول «${want}»`);
+  } else if (!used(key)) {
+    problems.push(
+      `«${key}» مكتوبٌ «${got}» ولا تقرؤه شاشة — ` +
+        "**مفتاحٌ ميّتٌ لا يُثبت مطابقة.** احذفه أو صِلْه بالشاشة.",
+    );
   } else if (got !== want) {
     problems.push(`«${key}»: التطبيقُ «${got}» والويبُ «${want}»`);
   }
@@ -161,10 +231,24 @@ if (/أضف قسم|اسم القسم/.test(xml)) {
 // **والويبُ هو العقدُ**: `ModifierGroup` و`ModifierOption` في
 // `MenuManager.tsx`. **وكوتلن يعلن اسمَه بـ`SerialName`.**
 const tsx = readFileSync(join(here, "..", "packages/ui/src/MenuManager.tsx"), "utf8");
-const kt = readFileSync(
-  join(repo, "mobile/shared/src/main/kotlin/com/rahalgo/shared/rep/RepApi.kt"),
-  "utf8",
-);
+// ══════════════════════════════════════════════════════════════════════
+// **ويُتبَع اللقبُ إلى حيث يُعلَن الحقلُ فعلاً**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **`RepApi` لا يعلن `ModifierGroup` بنفسه** — يقول:
+//
+//     typealias ModifierGroup = com.rahalgo.shared.merchant.ModifierGroup
+//
+// **فبحثٌ في `RepApi.kt` وحدَه لا يجد `SerialName` فيشتكي كاذباً.**
+//
+// **وحارسٌ ينبح كاذباً يُطفأ** — ثمّ لا يُسمع حين يصدق. (٢٠٢٦-٠٨-٣٠:
+// كان يشتكي من ثلاثة حقولٍ سليمةٍ من أصل خمسة بلاغات.)
+const kt = [
+  "shared/src/main/kotlin/com/rahalgo/shared/rep/RepApi.kt",
+  "shared/src/main/kotlin/com/rahalgo/shared/merchant/MerchantApi.kt",
+]
+  .map((p) => readFileSync(join(repo, "mobile", p), "utf8"))
+  .join(String.fromCharCode(10));
 for (const field of ["price_delta", "min_select", "max_select"]) {
   if (!tsx.includes(field)) {
     problems.push(`«${field}» لم يعد في عقد الويب — راجع الخريطة`);

@@ -1,5 +1,9 @@
 package com.rahalgo.rep.menu
 
+import com.rahalgo.ui.menu.ItemEditor
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Switch
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,10 +84,34 @@ import com.rahalgo.ui.RahalTextButton
  */
 @Composable
 fun MenuScreen(vm: MenuViewModel) {
+    val ctx = LocalContext.current
     BackHandler { if (vm.editing != null) vm.cancelEdit() else vm.close() }
 
     if (vm.editing != null) {
-        ItemForm(vm)
+        // **والمحرّرُ من الوحدة المشتركة** — نسخةٌ واحدةٌ للمتجر
+        // والمندوب (`ui.menu.ItemEditor`). **وكان نموذجان بمئتين وستّين
+        // سطراً بينهما يفعلان الشيءَ نفسَه.**
+        ItemEditor(
+            d = vm.editing!!,
+            sections = vm.platformSections.map {
+                com.rahalgo.shared.merchant.PlatformSectionRef(id = it.id, name = it.name, imageUrl = null, imageThumbUrl = null)
+            },
+            busy = vm.busy,
+            media = { path -> Backend.of(ctx).media(path) },
+            onEdit = { f -> vm.editDraft(f) },
+            onPickImage = { bytes -> vm.pickImage(bytes) },
+            onClearImage = { vm.clearImage() },
+            onSave = { vm.saveItem() },
+            onCancel = { vm.cancelEdit() },
+            onDelete = { vm.editing?.itemId?.let(vm::deleteItem) },
+            // **وألفاظُ المندوب هي ألفاظُ الويب حرفاً** — يحرسها
+            // `pnpm check:menu-parity`. **والمتجرُ يقرأ غيرَها** لأنّه
+            // يكتب سعرَ نفسِه لا سعرَ متجرِ غيره.
+            priceLabel = R.string.mn_price,
+            descLabel = R.string.mn_desc,
+            sectionLabel = R.string.mn_platform_section,
+            sectionHint = R.string.mn_no_platform_section_hint,
+        )
         return
     }
 
@@ -109,37 +137,63 @@ fun MenuScreen(vm: MenuViewModel) {
             return@Screen
         }
 
-        list.forEach { sec -> SectionBlock(sec, vm) }
+        // ══════════════════════════════════════════════════════════════
+        // **شبكةُ أقسام السوق — كما في تطبيق المتجر**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-٣٠: «الأصناف لازم أوّل شي تُعرض بشكل
+        //  أقسام وندخل بالقسم مثل المتجر وليس بشكل مختلف».)
+        //
+        // **وكانت كتلاً متتابعةً بأقسام المتجر الداخليّة** — والمندوبُ
+        // يملأ القائمةَ نفسَها التي يملؤها صاحبُ المتجر، **فشاشتان
+        // مختلفتان لعملٍ واحدٍ تجعلان من عرف إحداهما يتعثّر بالأخرى.**
+        val open = vm.open
+        if (open == null) {
+            vm.groups.forEach { g ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(Rahal.shape.md)
+                        .clickable { vm.openGroup(g) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RemoteImage(
+                        url = Backend.of(ctx).media(g.imageUrl),
+                        name = g.name,
+                        modifier = Modifier.size(56.dp).clip(Rahal.shape.sm),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        g.name,
+                        modifier = Modifier.weight(1f),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        "${g.items.size}",
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                HorizontalDivider()
+            }
+        } else {
+            RahalTextButton(onClick = { vm.back() }) {
+                Text(stringResource(R.string.mn_back), color = Rahal.colors.brand)
+            }
+            Text(
+                open.name,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.height(6.dp))
+            open.items.forEach { item -> ItemRow(item, vm) }
+        }
         Spacer(Modifier.height(24.dp))
     }
 }
 
-/**
- * **قسمٌ بأصنافه.**
- *
- * **واسمُه يُعرض ولا يُعدَّل** — تزرعه الإدارةُ ويراه المتاجرُ كلُّهم
- * سواء، **ومن سمّاه بيده رأى سوقاً لا يشبه سوقَ جاره.**
- */
-@Composable
-private fun SectionBlock(sec: MenuSection, vm: MenuViewModel) {
-    SectionTitle(sec.name + "  (" + sec.items.size + ")")
-    // **وزرُّ القسم اسمُه اسمُ الزرّ الأعلى** — كما في الويب: `addItem`
-    // في الترويسة وفي كلّ قسم.
-    RahalTextButton(onClick = { vm.newItem(sec.id) }) {
-        Text(stringResource(R.string.mn_item_new))
-    }
-    if (sec.items.isEmpty()) {
-        Text(
-            text = stringResource(R.string.mn_no_items),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
-    }
-    sec.items.forEach { ItemRow(it, vm) }
-    Spacer(Modifier.height(10.dp))
-    HorizontalDivider()
-    Spacer(Modifier.height(6.dp))
-}
 
 /**
  * **سطرُ صنف — بصورته وسعره وحاله.**
@@ -161,7 +215,7 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             RemoteImage(
-                url = Backend.of(context).media(item.imageThumbURL),
+                url = Backend.of(context).media(item.imageThumbUrl),
                 name = item.name,
                 modifier = Modifier.size(46.dp).clip(Rahal.shape.sm),
             )
@@ -232,12 +286,32 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
             // **والإتاحةُ زرٌّ لا مفتاح** — كما في الويب: **زرٌّ يقول ما
             // سيقع، ومفتاحٌ يقول ما هو قائم**، والخلطُ بينهما يجعل من
             // يقرأ «متوفر» على مفتاحٍ مرفوعٍ يظنّ أنّه يُطفئه بالرفع.
-            RahalOutlineButton(onClick = { vm.toggleAvailable(item) }, enabled = !vm.busy) {
+            // ══════════════════════════════════════════════════════════
+            // **ومفتاحٌ ذكيٌّ بدل زرٍّ يقول الفعل**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (قرارُ المالك ٢٠٢٦-٠٨-٣٠: «ما في داعي لكلمة متوفر، زرّ
+            //  ذكيّ متوفر/غير متوفر».)
+            //
+            // **وكان زرّاً نصُّه ينقلب**: يقول «متوفر» حين يكون متوفراً
+            // فيُقرأ حالاً، **ويُقرأ فعلاً أيضاً** — أيُّهما؟ ومن ضغطه
+            // لم يتيقّن أنّه قلبه أم أكّده.
+            //
+            // **والمفتاحُ لا يلتبس**: موضعُه هو الحال، وقلبُه هو الفعل.
+            // **وهو نفسُه في تطبيق المتجر** — والشاشتان لغرضٍ واحد.
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Switch(
+                    checked = item.available,
+                    onCheckedChange = { vm.toggleAvailable(item) },
+                    enabled = !vm.busy,
+                )
                 Text(
                     stringResource(
-                        if (item.available) R.string.mn_mark_unavailable
-                        else R.string.mn_mark_available,
+                        if (item.available) R.string.mn_available
+                        else R.string.mn_unavailable,
                     ),
+                    color = if (item.available) Rahal.colors.brand else Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.labelSmall,
                 )
             }
         }
@@ -252,288 +326,7 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
     }
 }
 
-/**
- * **نموذجُ الصنف — بترتيب حقول الويب نفسِه.**
- *
- * الاسم · السعر · قسم المنصة · الوصف · الصورة.
- *
- * **ولا حقلَ إتاحةٍ فيه** — الويبُ يقلبها من السطر لا من النموذج،
- * **وحقلٌ في موضعين يفترق أحدُهما عن الآخر.**
- */
-@Composable
-private fun ItemForm(vm: MenuViewModel) {
-    val d = vm.editing ?: return
-    val context = LocalContext.current
-    val pick = rememberImagePicker { bytes -> vm.pickImage(bytes) }
-    var confirmDelete by remember { mutableStateOf(false) }
 
-    Screen {
-        ScreenTitle(
-            stringResource(if (d.isNew) R.string.mn_item_new else R.string.mn_item_edit),
-            vm.merchantName,
-        )
-
-        Card {
-            OutlinedTextField(
-                value = d.name,
-                onValueChange = { v -> vm.editDraft { it.copy(name = v) } },
-                label = { Text(stringResource(R.string.mn_item_name)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = d.price,
-                // **والأرقامُ وحدَها** — لوحةُ المفاتيح تسمح بغيرها.
-                onValueChange = { v ->
-                    vm.editDraft { it.copy(price = v.filter { c -> c.isDigit() }) }
-                },
-                label = { Text(stringResource(R.string.mn_price)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **وقسمُ المنصة** — يُختار ولا يُنشأ
-        // ══════════════════════════════════════════════════════════════
-        Spacer(Modifier.height(12.dp))
-        SectionTitle(stringResource(R.string.mn_platform_section))
-        Card {
-            // **و«بلا قسم» خيارٌ صريحٌ لا فراغ** — كما في الويب:
-            // **ومن لم يجد ما يختاره لا يعرف أنّ له أن يترك.**
-            SectionChoice(
-                label = stringResource(R.string.mn_no_platform_section),
-                chosen = d.platformSectionID.isEmpty(),
-                onPick = { vm.editDraft { it.copy(platformSectionID = "") } },
-            )
-            vm.platformSections.forEach { ps ->
-                SectionChoice(
-                    label = ps.name,
-                    chosen = d.platformSectionID == ps.id,
-                    onPick = { vm.editDraft { it.copy(platformSectionID = ps.id) } },
-                )
-            }
-            if (d.platformSectionID.isEmpty()) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.mn_no_platform_section_hint),
-                    color = Rahal.colors.accent,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-        Card {
-            OutlinedTextField(
-                value = d.description,
-                onValueChange = { v -> vm.editDraft { it.copy(description = v) } },
-                label = { Text(stringResource(R.string.mn_desc)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **والصورة**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **والمندوبُ واقفٌ عند الصنف** — **فصورةٌ تُلتقط الآن خيرٌ من
-        // صورةٍ يَعِد بها صاحبُ المتجر.**
-        Spacer(Modifier.height(12.dp))
-        Card {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RemoteImage(
-                    url = Backend.of(context).media(d.imageThumb),
-                    name = d.name.ifEmpty { "؟" },
-                    modifier = Modifier.size(64.dp).clip(Rahal.shape.sm),
-                )
-                Spacer(Modifier.size(10.dp))
-                Column {
-                    RahalOutlineButton(onClick = pick, enabled = !vm.busy) {
-                        Text(stringResource(R.string.mn_item_image))
-                    }
-                    // **والإزالةُ صريحةٌ** — الفراغُ يعني «أزِلها»،
-                    // **والغيابُ يعني «لا تمسّها»**، وخلطُهما يمحو صورةً
-                    // كلَّما بُدّل اسم.
-                    if (d.imageThumb != null || !d.imageMediaID.isNullOrEmpty()) {
-                        RahalTextButton(onClick = { vm.clearImage() }) {
-                            Text(
-                                stringResource(R.string.mn_remove_image),
-                                color = Rahal.colors.danger,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **والمُعدِّلات** — الحجمُ والإضافاتُ وما شابه
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «مجموعاتٌ ومعدّلاتٌ غيرُ موجودةٍ
-        //  بالتطبيق».)
-        Spacer(Modifier.height(12.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.mn_modifiers),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            RahalOutlineButton(onClick = { vm.addGroup() }) {
-                Text(stringResource(R.string.mn_add_group))
-            }
-        }
-        d.groups.forEachIndexed { gi, g -> GroupCard(gi, g, vm) }
-
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RahalButton(
-                onClick = { vm.saveItem() },
-                enabled = !vm.busy && d.name.isNotBlank() && d.price.isNotBlank(),
-            ) { Text(stringResource(R.string.act_save)) }
-            RahalTextButton(onClick = { vm.cancelEdit() }) {
-                Text(stringResource(R.string.act_cancel))
-            }
-            if (!d.isNew) {
-                RahalTextButton(onClick = { confirmDelete = true }) {
-                    Text(stringResource(R.string.act_delete), color = Rahal.colors.danger)
-                }
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-    }
-
-    // **والحذفُ يُستأذَن فيه** — كما في الويب: **ضغطةٌ واحدةٌ تمحو صنفاً
-    // بُني بصورته وسعره، ولا رجعةَ فيها.**
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text(stringResource(R.string.mn_confirm_delete)) },
-            confirmButton = {
-                RahalTextButton(onClick = {
-                    confirmDelete = false
-                    vm.deleteItem(d.itemID)
-                    vm.cancelEdit()
-                }) {
-                    Text(stringResource(R.string.act_delete), color = Rahal.colors.danger)
-                }
-            },
-            dismissButton = {
-                RahalTextButton(onClick = { confirmDelete = false }) {
-                    Text(stringResource(R.string.act_cancel))
-                }
-            },
-        )
-    }
-}
-
-/**
- * **مجموعةُ مُعدِّلاتٍ واحدة — باسمها وحدَّيها وخياراتها.**
- *
- * **و«إلزاميّ» تُشتقّ من أدنى اختيارٍ ولا تُكتب** — كما في الويب حرفا:
- * **رقمٌ واحدٌ لا حقلان يتناقضان.** ومن رفع رايةَ الإلزام وترك الأدنى
- * صفراً ترك حالاً لا يعرف المحرّكُ أيَّ طرفيها يصدّق.
- *
- * **والأرقامُ تُقرأ نصّاً ثمّ تُحوَّل** — **وحقلٌ رقميٌّ يُفرَّغ يصير
- * صفراً في الحال، فلا يستطيع صاحبُه أن يمحو «١٠» ليكتب «٢».**
- */
-@Composable
-private fun GroupCard(index: Int, g: ModifierGroup, vm: MenuViewModel) {
-    Spacer(Modifier.height(8.dp))
-    Card {
-        OutlinedTextField(
-            value = g.name,
-            onValueChange = { v -> vm.updateGroup(index) { it.copy(name = v) } },
-            label = { Text(stringResource(R.string.mn_group_name)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = if (g.minSelect == 0) "" else g.minSelect.toString(),
-                onValueChange = { v ->
-                    val n = v.filter { it.isDigit() }.toIntOrNull() ?: 0
-                    vm.updateGroup(index) { it.copy(minSelect = n) }
-                },
-                label = { Text(stringResource(R.string.mn_min_select)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedTextField(
-                value = if (g.maxSelect == 0) "" else g.maxSelect.toString(),
-                onValueChange = { v ->
-                    val n = v.filter { it.isDigit() }.toIntOrNull() ?: 0
-                    vm.updateGroup(index) { it.copy(maxSelect = n) }
-                },
-                label = { Text(stringResource(R.string.mn_max_select)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Chip(
-                stringResource(
-                    if (g.minSelect > 0) R.string.mn_required else R.string.act_optional,
-                ),
-                if (g.minSelect > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
-            )
-            RahalTextButton(onClick = { vm.removeGroup(index) }) {
-                Text(stringResource(R.string.act_delete), color = Rahal.colors.danger)
-            }
-        }
-
-        g.options.forEachIndexed { oi, o ->
-            Spacer(Modifier.height(6.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = o.name,
-                    onValueChange = { v ->
-                        vm.updateOption(index, oi) { it.copy(name = v) }
-                    },
-                    label = { Text(stringResource(R.string.mn_option_name)) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1.4f),
-                )
-                OutlinedTextField(
-                    value = if (o.priceDelta == 0L) "" else o.priceDelta.toString(),
-                    onValueChange = { v ->
-                        val n = v.filter { it.isDigit() }.toLongOrNull() ?: 0L
-                        vm.updateOption(index, oi) { it.copy(priceDelta = n) }
-                    },
-                    label = { Text(stringResource(R.string.mn_price_delta)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-                RahalTextButton(onClick = { vm.removeOption(index, oi) }) {
-                    Text(stringResource(R.string.act_delete), color = Rahal.colors.danger)
-                }
-            }
-        }
-        Spacer(Modifier.height(4.dp))
-        RahalTextButton(onClick = { vm.addOption(index) }) {
-            Text(stringResource(R.string.mn_add_option))
-        }
-    }
-}
 
 /**
  * **خيارُ قسمٍ واحد.**

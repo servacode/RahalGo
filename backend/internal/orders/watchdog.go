@@ -97,6 +97,8 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 			// لو انتظرنا من يسأل لبقي طلبٌ محجوزاً لسائقٍ نائمٍ حتى يفتح
 			// غيرُه التطبيق. **والزبونُ لا ينتظر أن يتذكّر أحدٌ أن ينظر.**
 			s.SweepExpiredOffers(ctx)
+			// **ويُقبل ما نُسي في انتظار المكتب** — انظر `sweepAutoAccept`.
+			s.sweepAutoAccept(ctx)
 			alerts, err := s.Alerts(ctx)
 			if err != nil {
 				s.logger.Error("watchdog scan failed", "error", err)
@@ -154,4 +156,71 @@ var alertTitles = map[string]string{
 	"no_accept": "طلبٌ لم يقبله متجره",
 	"no_driver": "طلبٌ بلا سائق",
 	"too_long":  "طلبٌ تأخّر عن موعده",
+}
+
+// autoAcceptNote **يُكتب في سجلّ الطلب** — فيُعرف أنّ يداً لم تقبله.
+const autoAcceptNote = "قُبل تلقائيّاً بعد انتهاء مهلة المكتب"
+
+// sweepAutoAccept **يقبل ما نُسي في انتظار المكتب.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا وُجد**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٢٩.)
+//
+// **صار الطلبُ يصل المنصّةَ أوّلاً في الوضعين** (`modes.go`) — وذاك يضع
+// كلَّ طلبٍ على يقظة موظّف. **ومن طلب الساعةَ الثانية ليلاً والمكتبُ
+// نائمٌ ينتظر ولا يُطبخ طلبُه**، ولا يعرف لماذا.
+//
+// # وفرقُه عن التنبيه
+//
+// **`accept_timeout_min` ينبّه ولا يقبل** — يضع الطلبَ في شاشة
+// التنبيهات. **وهذا يقبل.**
+//
+// # والقبولُ بدور المكتب
+//
+// **فيمضي الطلبُ كما لو ضغطه موظّف**: يُخطَر المتجرُ ويدخل التحضيرَ في
+// وضع المتاجر، أو يبقى بيد المكتب في وضع المنصّة. **ولا مسارَ ثانياً
+// يُصان.**
+//
+// # وما لا يُلمَس
+//
+// **الشرطُ `status = 'pending'` وحدَه** — فما تحرّك بيدٍ لا يُقبل
+// تلقائيّاً. **وخمسون في الدورة الواحدة** لئلّا تُغرق دفعةٌ الراصد.
+func (s *Service) sweepAutoAccept(ctx context.Context) {
+	if s.settings == nil {
+		return
+	}
+	mins := s.settingInt(ctx, "orders.auto_accept_min")
+	if mins <= 0 {
+		return
+	}
+	rows, err := s.db.Query(ctx, `
+		SELECT id FROM orders
+		WHERE status = 'pending'
+		  AND closed_at IS NULL
+		  AND created_at < now() - make_interval(mins => $1::int)
+		LIMIT 50`, mins)
+	if err != nil {
+		s.logger.Warn("القبولُ التلقائيّ: تعذّرت القراءة", "error", err)
+		return
+	}
+	ids := make([]string, 0, 8)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+
+	for _, id := range ids {
+		if _, err := s.Transition(ctx, "", []string{"ops"}, id,
+			StAccepted, autoAcceptNote); err != nil {
+			s.logger.Warn("القبولُ التلقائيّ تعثّر", "order", id, "error", err)
+			continue
+		}
+		s.logger.Info("قُبل تلقائيّاً بعد المهلة", "order", id, "minutes", mins)
+	}
 }
