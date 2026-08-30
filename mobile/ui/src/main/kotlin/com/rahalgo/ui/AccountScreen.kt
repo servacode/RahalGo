@@ -329,9 +329,12 @@ private fun WhatsAppVerify(
     var code by remember { mutableStateOf("") }
     val waiting = s.waPending.isNotEmpty()
 
+    // **ونصٌّ واحدٌ للجميع** — **كان للعامل نصٌّ وللزبون آخر** لأنّ سببَ
+    // التوثيق يختلف. **والفعلُ واحدٌ فالنصُّ واحد.**
+    // (قرارُ المالك ٢٠٢٦-٠٨-٣٠.)
     Text(
         text = stringResource(
-            if (verified) R.string.acc_wa_verified else if (worker) R.string.acc_wa_unverified else R.string.acc_wa_unverified_user,
+            if (verified) R.string.acc_wa_verified else R.string.acc_wa_unverified,
         ),
         color = if (verified) Rahal.colors.success else Rahal.colors.danger,
         style = MaterialTheme.typography.bodySmall,
@@ -342,12 +345,11 @@ private fun WhatsAppVerify(
 
     Spacer(Modifier.height(6.dp))
     if (!waiting) {
-        Text(
-            stringResource(if (worker) R.string.acc_wa_hint else R.string.acc_wa_hint_user),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(Modifier.height(8.dp))
+        // **ولا شرحَ قبل الزرّ** — **كان يصف ما سيراه بعد ضغطةٍ واحدة**
+        // («سيفتح واتساب برسالة جاهزة…»)، **وشرحُ ما يُرى بعد ثانيةٍ
+        // يُقرأ مرّةً ثمّ يُتخطّى في كلّ مرّة.**
+        // (قرارُ المالك ٢٠٢٦-٠٨-٣٠: «شرحُ توثيق الحساب لا داعيَ له
+        //  أصلاً بكلّ النسخ».)
         RahalButton(
             onClick = vm::askWhatsApp,
             enabled = !s.busy,

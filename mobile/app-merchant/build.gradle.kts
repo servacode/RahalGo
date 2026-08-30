@@ -48,7 +48,7 @@ android {
         applicationId = "com.rahalgo.merchant"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 2
+        versionCode = 3
         versionName = "0.2.0"
     }
 
