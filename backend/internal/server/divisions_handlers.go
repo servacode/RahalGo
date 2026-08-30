@@ -26,10 +26,12 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
@@ -438,4 +440,13 @@ func (s *Server) handleDeleteDistrict(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": true})
+}
+
+// isFKViolation **أهو انتهاكُ مفتاحٍ أجنبيٍّ أو معرّفٌ لا يُقرأ؟**
+//
+// **ونظيرتُها في `catalog` غيرُ مُصدَّرة** — ونسخةٌ بسطرين خيرٌ من
+// تصديرِ تفصيلٍ داخليٍّ لحزمةٍ أخرى، **أو من تركِ الخطأ يُردّ خاماً.**
+func isFKViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && (pgErr.Code == "23503" || pgErr.Code == "22P02")
 }

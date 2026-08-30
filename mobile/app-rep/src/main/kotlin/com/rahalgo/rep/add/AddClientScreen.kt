@@ -68,12 +68,6 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
-    var store by rememberSaveable { mutableStateOf("") }
-    var owner by rememberSaveable { mutableStateOf("") }
-    var phone by rememberSaveable { mutableStateOf("") }
-    var area by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-
     LaunchedEffect(Unit) { vm.loadCategories() }
 
     Screen {
@@ -95,16 +89,16 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
-            value = store,
-            onValueChange = { store = it },
+            value = vm.store,
+            onValueChange = { vm.store = it },
             label = { Text(stringResource(R.string.mn_store_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
-            value = owner,
-            onValueChange = { owner = it },
+            value = vm.owner,
+            onValueChange = { vm.owner = it },
             label = { Text(stringResource(R.string.ac_owner)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -112,7 +106,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         // **ورقمُ الهاتف بالحقل المركزيّ** — **وتحقّقُ الشكل في موضعٍ
         // واحدٍ لا في كلّ نموذج.**
-        PhoneField(value = phone, onChange = { phone = it }, enabled = !vm.busy)
+        PhoneField(value = vm.phone, onChange = { vm.phone = it }, enabled = !vm.busy)
 
         // ══════════════════════════════════════════════════════════════
         // **والمحافظةُ ثمّ المنطقةُ ثمّ العنوانُ التفصيليّ**
@@ -174,8 +168,8 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
 
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
-            value = area,
-            onValueChange = { area = it },
+            value = vm.area,
+            onValueChange = { vm.area = it },
             label = { Text(stringResource(R.string.ac_area)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -240,8 +234,8 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
         // ══════════════════════════════════════════════════════════════
         Spacer(Modifier.height(12.dp))
         PasswordField(
-            value = password,
-            onChange = { password = it },
+            value = vm.password,
+            onChange = { vm.password = it },
             enabled = !vm.busy,
             label = R.string.ac_password,
         )
@@ -254,27 +248,11 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
 
         Spacer(Modifier.height(16.dp))
         RahalButton(
-            onClick = {
-                vm.send(
-                    NewLead(
-                        storeName = store.trim(),
-                        ownerName = owner.trim(),
-                        phone = phone.trim(),
-                        area = area.trim(),
-                        districtId = vm.pickedDistrict,
-                        categoryId = vm.pickedCategory,
-                        password = password,
-                        lat = vm.point?.first,
-                        lng = vm.point?.second,
-                    ),
-                ) {
-                    store = ""; owner = ""; phone = ""; area = ""; password = ""
-                }
-            },
-            enabled = !vm.busy && store.isNotBlank() && owner.isNotBlank() &&
-                phone.isNotBlank() && vm.pickedCategory.isNotEmpty() &&
+            onClick = { vm.send() },
+            enabled = !vm.busy && vm.store.isNotBlank() && vm.owner.isNotBlank() &&
+                vm.phone.isNotBlank() && vm.pickedCategory.isNotEmpty() &&
                 vm.pickedDistrict.isNotEmpty() &&
-                password.isNotBlank() && vm.point != null,
+                vm.password.isNotBlank() && vm.point != null,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (vm.busy) {
@@ -301,6 +279,46 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
 class AddClientViewModel(app: Application) : AndroidViewModel(app) {
 
     private val api = RepApi(AppCore.get().api)
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وحقولُ النصّ هنا لا في الشاشة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كانت `rememberSaveable` في `AddClientScreen`** — **فتُمحى كلَّما
+    // فُتحت الخريطة.**
+    //
+    // # والسببُ أنّ الخريطةَ لا تغطّي النموذج
+    //
+    // التعليقُ في `MainActivity` يقول النيّةَ صحيحةً: «**الخريطةُ تغطّي
+    // النموذجَ لا تفتح صفحةً ثانية — ومن خرج إلى صفحةٍ ليختار نقطةً عاد
+    // فلم يجد ما كتب**». **والتنفيذُ خالفه**: `when` يُخرج
+    // `AddClientScreen` من التركيب كلَّه، **و`rememberSaveable` لا ينجو
+    // من خروجٍ ليس فيه `SaveableStateHolder`.**
+    //
+    // # وأثرُه في الميدان
+    //
+    // **المندوبُ واقفٌ في المتجر**: يكتب اسمَه واسمَ صاحبه ورقمَه، ثمّ
+    // يفتح الخريطةَ ليلتقط النقطة — **وهي خطوةٌ يفرضها النموذجُ نفسُه**
+    // — فيعود فيجد الثلاثةَ فارغة. **ويكتبها ثانيةً، أو يترك.**
+    //
+    // **ولا رسالةَ ولا انهيار** — فلا يُبلَّغ عنه، **ويُقرأ على أنّ
+    // التطبيق «بطيءٌ في الإدخال».**
+    //
+    // # ولماذا `ViewModel` لا حاملُ حالة
+    //
+    // **الأربعةُ الأخرى هنا أصلاً** — النقطةُ والتصنيفُ والمحافظةُ
+    // والمنطقة، **ولذلك نجت وحدَها في التجربة.** **وحقلان من نموذجٍ
+    // واحدٍ في موضعين يفترقان في السلوك** — وهو ما وقع حرفاً.
+    //
+    // (كشفه اختبارُ الميدان على الجهاز ٢٠٢٦-٠٨-٣٠.)
+
+    // **وتُكتب من الشاشة مباشرةً** — **و`private set` يولّد `setX`
+    // فيصطدم بدالّةٍ بالاسم نفسِه** في الـJVM.
+    var store by mutableStateOf("")
+    var owner by mutableStateOf("")
+    var phone by mutableStateOf("")
+    var area by mutableStateOf("")
+    var password by mutableStateOf("")
 
     var categories by mutableStateOf<List<RepCategory>>(emptyList())
         private set
@@ -388,21 +406,47 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
         pointLabel = label.ifEmpty { "%.5f، %.5f".format(lat, lng) }
     }
 
-    fun send(lead: NewLead, onSent: () -> Unit) {
+    /**
+     * **يرسل الطلبَ ويُفرّغ النموذجَ بعد أن يُقيَّد.**
+     *
+     * **ولا يأخذ رسماً ولا ردّاً** — الحقولُ كلُّها هنا، **وتفريغُها في
+     * موضعٍ واحدٍ لا في ردٍّ تكتبه الشاشة**: من نسي حقلاً في الردّ ترك
+     * ما كُتب معلّقاً في نموذجٍ يبدو فارغاً.
+     */
+    fun send() {
         if (busy) return
         busy = true
         error = ""
         done = false
         viewModelScope.launch {
             try {
-                api.createLead(lead)
+                api.createLead(
+                    NewLead(
+                        storeName = store.trim(),
+                        ownerName = owner.trim(),
+                        phone = phone.trim(),
+                        area = area.trim(),
+                        districtId = pickedDistrict,
+                        categoryId = pickedCategory,
+                        password = password,
+                        lat = point?.first,
+                        lng = point?.second,
+                    ),
+                )
                 done = true
                 // **والنموذجُ يُفرَّغ بعد أن يُقيَّد لا قبله** — **ومن
                 // فرّغه قبل الجواب خسر ما كتبه إن سقط النداء.**
+                store = ""
+                owner = ""
+                phone = ""
+                area = ""
+                password = ""
                 point = null
                 pointLabel = ""
                 pickedCategory = ""
-                onSent()
+                pickedGovernorate = ""
+                pickedDistrict = ""
+                districts = emptyList()
             } catch (e: Exception) {
                 error = apiError(getApplication(), e)
             }
