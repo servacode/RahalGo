@@ -63,8 +63,8 @@ android {
         //
         // **والاسمُ يُقرأ ويُذكر في المتجر** (`versionName`)، **والرقمُ
         // لا يراه أحدٌ وهو ما يحكم.**
-        versionCode = 7
-        versionName = "1.0.5"
+        versionCode = 8
+        versionName = "1.0.6"
     }
 
     signingConfigs {
