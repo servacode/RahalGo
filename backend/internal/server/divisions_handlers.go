@@ -231,6 +231,18 @@ func (s *Server) validDistrict(r *http.Request, id string) (*string, error) {
 	return &id, nil
 }
 
+// strDeref **مؤشّرُ نصٍّ إلى نصّ** — والفارغُ فراغ.
+//
+// **ونماذجُ الإدارة تستعمل المؤشّراتِ لتفرّق «لم يُرسَل» عن «أُرسل
+// فارغاً»** — و`validDistrict` تأخذ نصّاً: **الفراغُ عندها يعني «لا
+// منطقةَ» في الحالين، وهو الصواب.**
+func strDeref(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
 // districtLabelByLead **«منطقة، محافظة» لطلبِ انضمام.**
 //
 // **ويُقرأ من المعرّف لا يُنسَخ في صفّ**: اسمٌ منسوخٌ يشيخ حين يُعدَّل في

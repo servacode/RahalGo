@@ -80,8 +80,14 @@ type Merchant struct {
 	EmergencyClosed bool   `json:"emergency_closed"`
 	// AcceptsReturns أيستردّ بضاعةَ طلبٍ تعذّر تسليمُه — **وعليه يظهر زرُّ
 	// «رُدّت إلى المتجر» في شاشة العمليات.**
-	AcceptsReturns bool      `json:"accepts_returns"`
-	CreatedAt      time.Time `json:"created_at"`
+	AcceptsReturns bool `json:"accepts_returns"`
+	// DistrictID **منطقتُه الإداريّة** — تُقرأ في النموذج لتُعرض مختارةً.
+	DistrictID *string `json:"district_id"`
+	// District **«منطقة، محافظة»** — نصٌّ يُقرأ ولا يُخزَّن.
+	//
+	// **واسمٌ منسوخٌ في صفٍّ يشيخ حين يُعدَّل في مصدره.**
+	District  string    `json:"district"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type MerchantPage struct {
@@ -197,12 +203,20 @@ func merchantSelect(daysExpr string) string {
 	       -- والتعليقُ القديم كان يقول «بشرط العدّ نفسه لا بشرطٍ يشبهه» —
 	       -- **والوصفُ صحيحٌ والتنفيذُ خالفه.** فصار الشرطُ يأتي من مصدره.
 	       ` + orders.ViolationsCountSQL("m.id", daysExpr) + `,
-	       m.commission_percent, m.emergency_closed, m.accepts_returns, m.created_at
+	       m.commission_percent, m.emergency_closed, m.accepts_returns, m.created_at,
+	       -- **ومنطقتُه — معرّفاً للنموذج ونصّاً للقراءة.**
+	       --
+	       -- **والنصُّ يُبنى ولا يُخزَّن**: اسمٌ منسوخٌ في صفٍّ يشيخ حين
+	       -- يُعدَّل في مصدره، **فيبقى في اللوحة اسمٌ بدّله المالكُ من سنة.**
+	       m.district_id::text,
+	       COALESCE(dd.name || '، ' || gg.name, '')
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
 	LEFT JOIN users sr ON sr.id = m.sales_rep_user_id
-	LEFT JOIN media lm ON lm.id = m.logo_media_id`
+	LEFT JOIN media lm ON lm.id = m.logo_media_id
+	LEFT JOIN districts dd ON dd.id = m.district_id
+	LEFT JOIN governorates gg ON gg.id = dd.governorate_id`
 }
 
 // banDays نافذةُ عدّ المخالفات — **من الإعداد لا من رقمٍ ثابت.**
@@ -222,7 +236,7 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 	err := row.Scan(&m.ID, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.SalesRepPhone, &m.SalesRepCode,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
-		&m.Status, &m.Violations, &m.CommissionPct, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt)
+		&m.Status, &m.Violations, &m.CommissionPct, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District)
 	if err != nil {
 		return nil, err
 	}
@@ -330,10 +344,23 @@ type MerchantInput struct {
 	//
 	// **وكان يُنشأ باسمٍ فارغ**: فيصير في الحسابات صفٌّ برقمٍ بلا اسم،
 	// **ولا يُعرف من هو حتّى يُفتح متجرُه.**
-	OwnerName    *string  `json:"owner_name"`
-	SalesRepCode *string  `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
-	Lat          *float64 `json:"lat"`            // دبوس الموقع على الخريطة
-	Lng          *float64 `json:"lng"`
+	OwnerName    *string `json:"owner_name"`
+	SalesRepCode *string `json:"sales_rep_code"` // كود دعوة المندوب — يُنسب له المتجر
+	// DistrictID **منطقةُ المتجر الإداريّة.**
+	//
+	// (سؤالُ المالك ٢٠٢٦-٠٨-٣٠: «عند إنشاء متجرٍ جديد يجب أن نختار
+	//  المحافظة والمنطقة، ليُربط المتجرُ بمحافظةٍ ومنطقة».)
+	//
+	// **وهو المسارُ الثالث**: نموذجُ الويب وتطبيقُ المندوب يرسلانها في
+	// طلب الانضمام، **والأدمنُ يُنشئ المتجرَ مباشرةً من لوحته** — فكان
+	// يُولد بلا منطقةٍ ولا يُصفّى ولا يُقرأ عنوانُه كاملاً.
+	//
+	// **وبابٌ من ثلاثةٍ يُترك مفتوحاً يُبطل إغلاقَ الاثنين.**
+	//
+	// **و`NULL` تعني «لا تمسّها» في التعديل** — كما كلُّ حقلٍ هنا.
+	DistrictID *string  `json:"district_id"`
+	Lat        *float64 `json:"lat"` // دبوس الموقع على الخريطة
+	Lng        *float64 `json:"lng"`
 	// معرف وسائط الشعار: غير مُرسل = بلا تغيير، "" = إزالة الشعار
 	LogoMediaID *string `json:"logo_media_id"`
 }
@@ -380,7 +407,7 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 
 	var id string
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location, city_id, logo_media_id, commission_percent, default_prep_minutes)
+		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location, city_id, logo_media_id, commission_percent, default_prep_minutes, district_id)
 		VALUES ($1, COALESCE($2,''), $3, COALESCE($4,''), COALESCE($5,''), $6, $7,
 		        CASE WHEN $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
 		             THEN ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography END,
@@ -425,11 +452,18 @@ func (s *Service) CreateMerchant(ctx context.Context, actorID string, in Merchan
 		        -- مكتوباً في الترحيل 0035، يرثه كل متجرٍ جديد ولا يملك المالك
 		        -- تغييره لمن يأتي بعده.
 		        -- **ومن المخزن لا برقمٍ مكتوبٍ هنا** — الافتراضُ في الفهرس وحدَه.
-		        $12)
+		        $12,
+
+		        -- **ومنطقتُه الإداريّة** — يختارها منشئُ المتجر.
+		        --
+		        -- **ولا تُشتقّ من المدينة**: المدينةُ تُشتقّ من النقطة
+		        -- (أعلاه), **والمنطقةُ اختيارُ إنسانٍ يعرف أين هو.**
+		        NULLIF(COALESCE($13, ''), '')::uuid)
 		RETURNING id`,
 		*in.Name, in.Description, *in.CategoryID, in.Phone, in.AddressText, ownerID,
 		repID, in.Lat, in.Lng, in.LogoMediaID, in.CommissionPct,
-		s.settings.GetInt(ctx, "merchants.default_prep_minutes")).Scan(&id)
+		s.settings.GetInt(ctx, "merchants.default_prep_minutes"),
+		in.DistrictID).Scan(&id)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}
@@ -484,9 +518,16 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 				location),
 			logo_media_id = CASE WHEN $14::text IS NULL THEN logo_media_id
 			                     ELSE NULLIF($14, '')::uuid END,
+			-- **والمنطقةُ تُبدَّل حين تُرسَل وحدَها.**
+			--
+			-- **وهي بابُ إصلاحِ ما وُلد بلا منطقة** — ومتاجرُ اليومَ نُسبت
+			-- بالترحيل، **وما يُنشأ غداً من مسارٍ ثالثٍ لم يُغلق يُصلَح
+			-- من هنا.**
+			district_id   = CASE WHEN $16::text IS NULL THEN district_id
+			                     ELSE NULLIF($16, '')::uuid END,
 			updated_at    = now()
 		WHERE id = $1`,
-		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct, in.LogoMediaID, in.AcceptsReturns)
+		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct, in.LogoMediaID, in.AcceptsReturns, in.DistrictID)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}

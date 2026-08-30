@@ -62,6 +62,12 @@ import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
 
 const m = getMessages(defaultLocale);
 
+interface Division {
+  id: string;
+  name: string;
+  governorate_id?: string;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -93,6 +99,8 @@ export interface Merchant {
   violations: number;
   commission_percent: number;
   emergency_closed: boolean;
+  /** **منطقتُه الإداريّة** — يرسلها المحرّكُ لتُعرض مختارةً في النموذج. */
+  district_id?: string | null;
   created_at: string;
 }
 
@@ -157,6 +165,12 @@ export function MerchantModal({
   const [ownerPass, setOwnerPass] = useState("");
   const [ownerPass2, setOwnerPass2] = useState("");
   const [repCode, setRepCode] = useState(merchant?.sales_rep_code ?? "");
+  // **والمحافظةُ تُصفّي المنطقة** — ومحافظةُ متجرٍ قائمٍ تُشتقّ من
+  // منطقته عند الفتح، **فلا يُطالَب باختيارها من جديدٍ ليعدّل هاتفاً.**
+  const [govs, setGovs] = useState<Division[]>([]);
+  const [dists, setDists] = useState<Division[]>([]);
+  const [govId, setGovId] = useState("");
+  const [districtId, setDistrictId] = useState(merchant?.district_id ?? "");
   const [lat, setLat] = useState<number | null>(merchant?.lat ?? null);
   const [lng, setLng] = useState<number | null>(merchant?.lng ?? null);
   const [commission, setCommission] = useState(String(merchant?.commission_percent ?? 10));
@@ -164,6 +178,49 @@ export function MerchantModal({
   const [logoID, setLogoID] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // ══════════════════════════════════════════════════════════════════
+  // **والمحافظاتُ تُجلب، ومحافظةُ القائم تُشتقّ من منطقته**
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **والمحرّكُ يرسل المنطقةَ ولا يرسل محافظتَها** — عمداً: **المنطقةُ
+  // هي ما يُخزَّن، والمحافظةُ تُقرأ منها.** فتُبحث هنا مرّةً في قائمة
+  // مناطق كلّ محافظةٍ حتّى تُوجد.
+  //
+  // **ولولا هذا لَفُتح متجرٌ قائمٌ بمحافظةٍ فارغة** — فتُقفل قائمةُ
+  // المناطق، **ويُطالَب من جاء يعدّل هاتفاً بأن يختار موضعَه من جديد.**
+  useEffect(() => {
+    let alive = true;
+    void api<{ governorates: Division[] }>("/api/v1/admin/governorates")
+      .then(async (r) => {
+        if (!alive) return;
+        const list = r.governorates ?? [];
+        setGovs(list);
+        if (!merchant?.district_id) return;
+        const all = await api<{ districts: Division[] }>("/api/v1/admin/districts");
+        const found = (all.districts ?? []).find((d) => d.id === merchant.district_id);
+        if (alive && found?.governorate_id) setGovId(found.governorate_id);
+      })
+      .catch((e) => setError(errorText(e)));
+    return () => {
+      alive = false;
+    };
+  }, [merchant?.district_id]);
+
+  // **ومناطقُ المحافظة تُجلب حين تُختار** — ولا تُمسح المنطقةُ عند أوّل
+  // رسمٍ لمتجرٍ قائم: **الاشتقاقُ أعلاه يضبط المحافظةَ بعد أن ضُبطت
+  // المنطقة**، ومسحٌ أعمى هنا يمحو ما جاء من المحرّك.
+  useEffect(() => {
+    if (!govId) {
+      setDists([]);
+      return;
+    }
+    void api<{ districts: Division[] }>(
+      `/api/v1/admin/districts?governorate_id=${govId}`,
+    )
+      .then((r) => setDists(r.districts ?? []))
+      .catch((e) => setError(errorText(e)));
+  }, [govId]);
+
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -187,6 +244,7 @@ export function MerchantModal({
       sales_rep_code: repCode,
       lat,
       lng,
+      district_id: districtId,
       commission_percent: Number(commission) || 0,
       ...(logoID !== null ? { logo_media_id: logoID } : {}),
     };
@@ -369,6 +427,51 @@ export function MerchantModal({
         {/* القسم 3: الموقع — عمودٌ قائمٌ بذاته لأنّ الخريطةَ أطولُ ما فيه */}
         <FormSection title={m.admin.merchants.sectionLocation} icon={<IconLocation />}>
           <div className="space-y-3">
+            {/* ══════════════════════════════════════════════════════
+                **والمحافظةُ ثمّ المنطقةُ ثمّ العنوان**
+                ══════════════════════════════════════════════════════
+
+                (سؤالُ المالك ٢٠٢٦-٠٨-٣٠: «عند إنشاء متجرٍ جديد يجب أن
+                 نختار المحافظة والمنطقة، ليُربط المتجرُ بمحافظةٍ
+                 ومنطقة».)
+
+                **وهذا المسارُ الثالث** — نموذجُ الويب وتطبيقُ المندوب
+                يرسلانها في طلب الانضمام، **وهذا يُنشئ المتجرَ
+                مباشرةً.** **وبابٌ من ثلاثةٍ يُترك مفتوحاً يُبطل إغلاقَ
+                الاثنين.** */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Select
+                id="m-gov"
+                label={m.admin.divisions.governorate}
+                value={govId}
+                onChange={(e) => setGovId(e.target.value)}
+              >
+                <option value="">{m.admin.divisions.pickGovernorate}</option>
+                {govs.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                id="m-district"
+                label={m.admin.divisions.districts}
+                value={districtId}
+                onChange={(e) => setDistrictId(e.target.value)}
+                disabled={!govId}
+              >
+                <option value="">
+                  {govId
+                    ? m.site.join.pickDistrict
+                    : m.site.join.pickGovernorateFirst}
+                </option>
+                {dists.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
             <Input
               id="m-address"
               label={m.admin.merchants.address}

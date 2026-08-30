@@ -66,6 +66,24 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ومنطقتُه تُفحص كما تُفحص في البابين الآخرين**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (سؤالُ المالك ٢٠٢٦-٠٨-٣٠: «عند إنشاء متجرٍ جديد يجب أن نختار
+	//  المحافظة والمنطقة».)
+	//
+	// **وهو المسارُ الثالث** — نموذجُ الويب وتطبيقُ المندوب يرسلانها في
+	// طلب الانضمام، **وهذا يُنشئ المتجرَ مباشرةً.** **وبابٌ من ثلاثةٍ
+	// يُترك مفتوحاً يُبطل إغلاقَ الاثنين.**
+	//
+	// **ولا تُلزَم**: الأدمنُ يُنشئ متجراً لسببٍ عاجلٍ أحياناً — **وحقلٌ
+	// إلزاميٌّ يوقفه عن عملٍ يعرف ما يفعل فيه.** والفراغُ يُرى في
+	// اللوحة فيُصحَّح.
+	if _, err := s.validDistrict(r, strDeref(req.DistrictID)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	m, err := s.catalog.CreateMerchant(r.Context(), userIDFrom(r), *req, clientIP(r))
 	if err != nil {
 		s.respondErr(w, err)
@@ -77,6 +95,11 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[catalog.MerchantInput](r)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والتعديلُ يُفحص كذلك** — وهو بابُ إصلاحِ ما وُلد بلا منطقة.
+	if _, err := s.validDistrict(r, strDeref(req.DistrictID)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
