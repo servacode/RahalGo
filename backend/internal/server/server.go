@@ -324,6 +324,17 @@ func (s *Server) Router() http.Handler {
 		// **ومدنُ المنصّة** — يقرؤها التطبيقُ ليقول «أنت تتسوّق في…»
 		// **ويُبدّلها من زار مدينةً أخرى.** (انظر `city_handlers.go`.)
 		r.Get("/public/cities", s.handlePublicCities)
+		// ══════════════════════════════════════════════════════════
+		// **وتقسيمُ سوريا — يُقرأ في نموذج تسجيل المتجر**
+		// ══════════════════════════════════════════════════════════
+		//
+		// **وعامّةٌ بلا حساب**: النموذجُ يُملأ قبل أن يسجّل أحد،
+		// **ولو طُلب توكنٌ لَوقف من جاء يفتح متجرَه عند أوّل حقل.**
+		//
+		// **والمناطقُ تُجلب بمحافظتها لا كلُّها دفعةً** — ثلاثٌ
+		// وستّون اليومَ وقد تصير مئتين. (انظر `geo_handlers.go`.)
+		r.Get("/public/governorates", s.handlePublicGovernorates)
+		r.Get("/public/districts", s.handlePublicDistricts)
 		r.Get("/public/sections", s.handlePublicSections)
 		r.Get("/public/sections/{id}/items", s.handlePublicSectionItems)
 		r.Get("/public/items/{id}", s.handlePublicItem)
@@ -485,9 +496,9 @@ func (s *Server) Router() http.Handler {
 				// **فما نادَتها شاشةٌ قطّ** — **وبابٌ مفتوحٌ بلا حاجةٍ
 				// سطحُ هجومٍ بلا مقابل**، ويُقرأ غداً على أنّه ميزةٌ
 				// قائمةٌ فيُبنى عليه.
-				r.Post("/stores/{id}/menu/items", s.handleCreateItem)
-				r.Patch("/menu/items/{itemID}", s.handleUpdateItem)
-				r.Delete("/menu/items/{itemID}", s.handleDeleteItem)
+				r.Post("/stores/{id}/menu/items", s.handleRepCreateItem)
+				r.Patch("/menu/items/{itemID}", s.handleRepUpdateItem)
+				r.Delete("/menu/items/{itemID}", s.handleRepDeleteItem)
 			})
 			// ══════════════════════════════════════════════════════════
 			// **ورفعُ الصورة خارجَ الحارس — ولا بدّ**
@@ -735,6 +746,21 @@ func (s *Server) Router() http.Handler {
 			r.With(s.RequireRoles("admin")).Post("/cities", s.handleCreateCity)
 			r.With(s.RequireRoles("admin")).Put("/cities/{id}", s.handleUpdateCity)
 			r.With(s.RequireRoles("admin")).Delete("/cities/{id}", s.handleDeleteCity)
+			// ══════════════════════════════════════════════════════
+			// **وتقسيمُ سوريا يُدار من اللوحة كذلك**
+			// ══════════════════════════════════════════════════════
+			//
+			// (قرارُ المالك ٢٠٢٦-٠٨-٣٠.) **والقراءةُ لكلّ موظّفٍ في
+			// اللوحة، والكتابةُ للأدمن وحدَه** — كما في المدن حرفاً:
+			// **تقسيمُ الدولة ليس ما يُبدّله من يتابع طلباً.**
+			r.Get("/governorates", s.handleAdminGovernorates)
+			r.Get("/districts", s.handleAdminDistricts)
+			r.With(s.RequireRoles("admin")).Post("/governorates", s.handleCreateGovernorate)
+			r.With(s.RequireRoles("admin")).Put("/governorates/{id}", s.handleUpdateGovernorate)
+			r.With(s.RequireRoles("admin")).Delete("/governorates/{id}", s.handleDeleteGovernorate)
+			r.With(s.RequireRoles("admin")).Post("/districts", s.handleCreateDistrict)
+			r.With(s.RequireRoles("admin")).Put("/districts/{id}", s.handleUpdateDistrict)
+			r.With(s.RequireRoles("admin")).Delete("/districts/{id}", s.handleDeleteDistrict)
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
 			r.With(s.RequireRoles("admin", "finance")).
 				Post("/users/{id}/wallet", s.idempotent(s.handleAdminWalletApply))
