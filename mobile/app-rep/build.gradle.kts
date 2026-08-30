@@ -59,8 +59,8 @@ android {
         applicationId = "com.rahalgo.rep"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 4
-        versionName = "0.2.1"
+        versionCode = 6
+        versionName = "0.2.3"
     }
 
     signingConfigs {
