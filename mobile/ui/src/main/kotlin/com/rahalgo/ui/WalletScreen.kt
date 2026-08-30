@@ -190,25 +190,9 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         return "?from=" + from + "&to=" + f.format(cal.time)
     }
 
-    /**
-     * **يجلب الشعارَ ويصيّره نصّاً يُدسّ في الصفحة.**
-     *
-     * **والنوعُ يُستنتَج من الامتداد** — `image/png` لصورةٍ شفّافةٍ
-     * و`svg+xml` لرسمٍ متّجه. **ونوعٌ خاطئٌ لا يُعرض** في `WebView`.
-     */
-    private suspend fun dataUri(url: String): String {
-        if (url.isEmpty()) return ""
-        val raw = backend.api.bytes(url)
-        if (raw.isEmpty()) return ""
-        val mime = when {
-            url.endsWith(".svg", true) -> "image/svg+xml"
-            url.endsWith(".png", true) -> "image/png"
-            url.endsWith(".webp", true) -> "image/webp"
-            else -> "image/jpeg"
-        }
-        val b64 = android.util.Base64.encodeToString(raw, android.util.Base64.NO_WRAP)
-        return "data:" + mime + ";base64," + b64
-    }
+        /** **اللوغو بايتاتٍ** — والدالّةُ في `DocPrint`، يستعملها التقريرُ أيضاً. */
+    private suspend fun dataUri(url: String): String =
+        DocPrint.dataUri(backend.api, url)
 
     /**
      * **الرمزُ بعربيّة** — من الخريطة المركزيّة.

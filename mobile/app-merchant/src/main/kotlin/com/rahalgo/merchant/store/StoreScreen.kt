@@ -1,5 +1,8 @@
 package com.rahalgo.merchant.store
 
+import com.rahalgo.ui.RahalOutlineButton
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -374,7 +377,10 @@ private fun SectionsEditor(vm: StoreViewModel) {
     var picked by remember(vm.mySections) {
         mutableStateOf(vm.mySections.map { it.id }.toSet())
     }
+    var open by remember { mutableStateOf(false) }
     val dirty = picked != vm.mySections.map { it.id }.toSet()
+    val chosen = vm.allSections.filter { it.id in picked }
+    val rest = vm.allSections.filter { it.id !in picked }
 
     Spacer(Modifier.height(12.dp))
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -398,28 +404,57 @@ private fun SectionsEditor(vm: StoreViewModel) {
         style = MaterialTheme.typography.bodySmall,
     )
     Spacer(Modifier.height(8.dp))
+
     Card {
-        Column(Modifier.padding(4.dp)) {
-            vm.allSections.forEachIndexed { i, sec ->
+        if (chosen.isEmpty()) {
+            Text(
+                stringResource(R.string.store_sections_empty),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(vertical = 6.dp),
+            )
+        } else {
+            chosen.forEachIndexed { i, sec ->
                 if (i > 0) HorizontalDivider()
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            picked = if (sec.id in picked) picked - sec.id else picked + sec.id
-                        }
-                        .padding(vertical = 2.dp),
+                    Modifier.fillMaxWidth().padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Checkbox(
-                        checked = sec.id in picked,
-                        onCheckedChange = {
-                            picked = if (it) picked + sec.id else picked - sec.id
-                        },
+                    Text(
+                        sec.name,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
-                    Spacer(Modifier.width(4.dp))
-                    Text(sec.name, style = MaterialTheme.typography.bodyMedium)
+                    RahalTextButton(onClick = { picked = picked - sec.id }) {
+                        Text(stringResource(R.string.act_delete))
+                    }
                 }
+            }
+        }
+    }
+
+    Spacer(Modifier.height(8.dp))
+    Box {
+        RahalOutlineButton(
+            onClick = { if (rest.isNotEmpty()) open = true },
+            enabled = rest.isNotEmpty(),
+        ) {
+            Text(
+                stringResource(
+                    if (rest.isEmpty()) R.string.store_sections_all_in
+                    else R.string.store_sections_add,
+                ),
+            )
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            rest.forEach { sec ->
+                DropdownMenuItem(
+                    text = { Text(sec.name) },
+                    onClick = {
+                        picked = picked + sec.id
+                        open = false
+                    },
+                )
             }
         }
     }
@@ -576,18 +611,65 @@ private fun TimeField(value: String, onChange: (String) -> Unit) {
     val picker = {
         val h = shown.substringBefore(':').toIntOrNull()?.coerceIn(0, 23) ?: 0
         val m = shown.substringAfter(':').toIntOrNull()?.coerceIn(0, 59) ?: 0
+        // ══════════════════════════════════════════════════════════════
+        // **وزخرفةٌ في الأرقام لا تُسقط تطبيقاً**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **انهار التطبيقُ ٢٠٢٦-٠٨-٢٩** عند فتح ساعات العمل:
+        // `BadTokenException` — سياقٌ بلا نافذةِ نشاط.
+        //
+        // **والسببُ أنّي بنيتُ سياقاً جديداً بدل أن ألفَّ القائم.**
+        // أُصلح، **لكنّ الدرسَ أكبرُ من السطر**: تبديلُ نظام الأرقام
+        // شكلٌ لا وظيفة، **ومن جعل الشكلَ قادراً على إسقاط شاشةٍ أخطأ
+        // مرّتين.**
+        //
+        // **فإن تعذّر اللفُّ على جهازٍ ما، يُفتح الحوارُ بسياقه الأصليّ**
+        // — أرقامٌ عربيّةٌ في المنتقي أهونُ من تطبيقٍ يُغلق.
+        val themed = runCatching { latinDigits(context) }.getOrDefault(context)
         android.app.TimePickerDialog(
-            context,
-            { _, hh, mm -> onChange("%02d:%02d".format(hh, mm)) },
+            themed,
+            // ══════════════════════════════════════════════════════════
+            // **والساعةُ تُكتب بأرقامٍ لاتينيّةٍ مهما كانت لغةُ الجهاز**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (بلاغُ المالك ٢٠٢٦-٠٨-٢٩: «الأرقام عربيّة وما يقبل ساعاتِ
+            //  العمل، يعتبرها غير صالحة».)
+            //
+            // **و`"%02d".format(9)` تتبع لغةَ الجهاز** — فتُنتج «٠٩» على
+            // جهازٍ عربيّ. **والبلاغان بلاغٌ واحد:**
+            //
+            //   الحقلُ يُرسل   open_time = "٠٩:٣٠"
+            //   وبوستغرس يقرأ  $4::time  فيفشل
+            //   فيردّ المحرّك   ErrBadHours → «غير صالح»
+            //
+            // **فالأرقامُ العربيّةُ هي نفسُها سببُ الرفض** — لا عطبان.
+            //
+            // **و`Locale.ROOT` لا لغةُ الجهاز**: هذه قيمةُ بروتوكولٍ
+            // تذهب إلى خادمٍ لا نصٌّ يُقرأ، **ومن ترجم أرقامَ بروتوكولٍ
+            // كسره.**
+            { _, hh, mm ->
+                onChange(String.format(java.util.Locale.ROOT, "%02d:%02d", hh, mm))
+            },
             h, m, true,
-        ).show()
+        ).let { dialog ->
+            runCatching { dialog.show() }.onFailure {
+                // **والسقوطُ الأخير**: حوارٌ بالسياق الأصليّ بلا لفّ.
+                android.app.TimePickerDialog(
+                    context,
+                    { _, hh, mm ->
+                        onChange(String.format(java.util.Locale.ROOT, "%02d:%02d", hh, mm))
+                    },
+                    h, m, true,
+                ).show()
+            }
+        }
     }
 
     Box(
         Modifier
             .width(72.dp)
             .border(1.dp, Rahal.colors.line, Rahal.shape.sm)
-            .clickable(onClick = picker)
+            .clickable { picker() }
             .padding(vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -684,5 +766,41 @@ private fun AddressEditor(vm: StoreViewModel, onPickPoint: () -> Unit) {
                 Text(stringResource(R.string.store_point_pick))
             }
         }
+    }
+}
+
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **سياقٌ بأرقامٍ لاتينيّة — للنافذة نفسِها**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **ونافذةُ الوقت من النظام لا منّا** — ترسم أرقامَها بلغة الجهاز،
+ * **فيرى صاحبُ المتجر «٠٩:٣٠» في المنتقي** ثمّ «09:30» في الحقل.
+ * **ورقمان لشيءٍ واحدٍ في شاشةٍ واحدةٍ يربكان.**
+ *
+ * **و`ar-u-nu-latn` عربيّةٌ بأرقامٍ لاتينيّة** — تبقى الكلماتُ عربيّةً
+ * («إلغاء» و«موافق») **ويتبدّل نظامُ الأرقام وحدَه.**
+ */
+private fun latinDigits(context: android.content.Context): android.content.Context {
+    val config = android.content.res.Configuration(context.resources.configuration)
+    config.setLocale(java.util.Locale.forLanguageTag("ar-u-nu-latn"))
+    // ══════════════════════════════════════════════════════════════════
+    // **ويُلَفُّ السياقُ لفّاً — ولا يُبنى من جديد**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان `createConfigurationContext`** فانهار التطبيقُ عند فتح
+    // ساعاتِ العمل (قِيس على الجهاز ٢٠٢٦-٠٨-٢٩):
+    //
+    //   BadTokenException: Unable to add window — token null is not
+    //   valid; is your activity running?
+    //
+    // **لأنّها تصنع سياقاً جديداً بلا نافذةِ نشاط** — والحوارُ يحتاج
+    // رمزَ النافذة ليُعلَّق عليها. **فيُبنى ولا يجد أين يظهر.**
+    //
+    // **و`ContextThemeWrapper` يلفّ النشاطَ نفسَه** — فيبقى الرمزُ
+    // والسمةُ، **ويتبدّل نظامُ الأرقام وحدَه.**
+    return android.view.ContextThemeWrapper(context, 0).apply {
+        applyOverrideConfiguration(config)
     }
 }

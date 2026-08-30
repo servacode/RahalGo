@@ -197,6 +197,8 @@ fun AuthScreen(
                         when {
                             state.mode == LoginMode.PASSWORD -> R.string.login_submit
                             state.codeSent -> R.string.login_verify_and_enter
+                            // **ودخولٌ برمز** — الزرُّ يطلب الرمزَ لا
+                            // يفتح قناةً باسمها.
                             else -> R.string.reset_send
                         },
                     ),

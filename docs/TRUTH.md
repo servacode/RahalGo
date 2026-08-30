@@ -169,8 +169,8 @@
 <!-- gen:self-managed -->
 | من | إلى | من يملكها |
 |---|---|---|
-| بانتظار القبول `pending` | مقبول `accepted` | المتجر · المالك |
-| بانتظار القبول `pending` | مرفوض `rejected` | المتجر · المالك |
+| بانتظار القبول `pending` | مقبول `accepted` | المتجر · العمليات · المالك |
+| بانتظار القبول `pending` | مرفوض `rejected` | المتجر · العمليات · المالك |
 | بانتظار القبول `pending` | ملغى `cancelled` | الزبون · العمليات · المالك |
 | مقبول `accepted` | قيد التحضير `preparing` | المتجر · العمليات · المالك |
 | مقبول `accepted` | في الطابور `dispatching` | العمليات · المالك |
@@ -405,6 +405,7 @@
 | `referral.reward_3` | المنصة | money | `0` |
 | `referral.reward_rest` | المنصة | money | `0` |
 | `auth.require_whatsapp` | المنصة | bool | `true` |
+| `orders.auto_accept_min` | المنصة | int | `0` |
 | `orders.delivery_estimate_min` | المنصة | int | `15` |
 | `orders.extra_source_fee` | المنصة | int | `0` |
 | `orders.source_proximity_m` | المنصة | int | `1000` |

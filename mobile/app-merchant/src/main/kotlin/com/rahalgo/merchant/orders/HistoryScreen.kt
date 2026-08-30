@@ -130,10 +130,17 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **يجلب أسبابَ البلاغ.**
+     *
+     * **وكان فشلُها يُبتلع صامتاً** — فتُفتح نافذةُ البلاغ بلا سببٍ
+     * يُختار، **ولا يعرف صاحبُ المتجر لماذا لا يستطيع الإرسال.**
+     */
     fun loadReasons() {
         if (reasons.isNotEmpty()) return
         viewModelScope.launch {
             runCatching { reasons = api.reportReasons().reasons }
+                .onFailure { Flash.fail(err(it)) }
         }
     }
 

@@ -1,5 +1,15 @@
 package com.rahalgo.merchant
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.design.Rahal
 import com.rahalgo.ui.ShellViewModel
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -125,7 +135,6 @@ private fun MerchantApp() {
         val vm: AuthViewModel = viewModel()
         AuthGate(
             vm = vm,
-            title = stringResource(R.string.login_title),
             onSignedIn = { SignedIn(theme, dark, onLogout = vm::logout) },
         )
     }
@@ -189,6 +198,19 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val scope = rememberCoroutineScope()
     val overlay = rememberOverlay { key -> MERCHANT_ITEMS.any { it.key == key } }
     var tab by rememberSaveable { mutableStateOf(Tab.Orders) }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ومحرّرُ الصنف يُغلق بمغادرة بابه**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والمحرّرُ يُرسم متى كان `editing` غيرَ فارغ** — لا متى كان
+    // التبويبُ «إضافة صنف». **فمن فتحه ثمّ ذهب إلى «متجري» ورجع إلى
+    // «الأصناف» وجده مفتوحاً**، ويظنّ التبويبَ عاطلاً.
+    //
+    // **و«الأصناف» تُغلقه بيدها** (انظر نداءَها) — **وهذه لِما عداها.**
+    LaunchedEffect(tab) {
+        if (tab != Tab.AddItem && tab != Tab.Menu) menuVm.cancelEdit()
+    }
 
     BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
 
@@ -282,7 +304,26 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         // ولا يعرف صاحبُ المتجر أين هو.
                         selected = (tab == Tab.Menu || (tab == Tab.Orders && !selfManage)) &&
                             over == Overlay.None,
-                        onClick = { tab = Tab.Menu; overlay.clear() },
+                        // ══════════════════════════════════════════
+                        // **و«الأصناف» تُغلق المحرّرَ لا تتركه مفتوحاً**
+                        // ══════════════════════════════════════════
+                        //
+                        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٩: «ضغطتُ إضافة صنف
+                        //  وفتح، فإذا رجعتُ وضغطتُ قسم الأصناف يبقى
+                        //  بإضافة صنف ولا ينتقل».)
+                        //
+                        // **والمحرّرُ يُرسم متى كان `editing` غيرَ فارغ**
+                        // — في التبويبين معاً. **فالتبويبُ يتبدّل ولا
+                        // تتبدّل الشاشة**، ويُقرأ ذلك تعطّلاً في الزرّ.
+                        //
+                        // **والرجوعُ يُغلقه أصلاً** (`BackHandler` في
+                        // `Tab.AddItem`) — **فالتبويبُ يفعل ما يفعله
+                        // الرجوع**، ولا يفترق بابان عن بعضهما.
+                        onClick = {
+                            menuVm.cancelEdit()
+                            tab = Tab.Menu
+                            overlay.clear()
+                        },
                         icon = com.rahalgo.ui.R.drawable.ic_offer,
                         label = R.string.mn_items,
                     )
@@ -387,7 +428,22 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                             menuVm.cancelEdit()
                             tab = Tab.Menu
                         }
-                        MenuScreen(menuVm)
+                        // ══════════════════════════════════════════════
+                        // **ولا يُضاف صنفٌ قبل أن تُختار أقسامُ المتجر**
+                        // ══════════════════════════════════════════════
+                        //
+                        // (قرارُ المالك ٢٠٢٦-٠٨-٢٩.)
+                        //
+                        // **والصنفُ ينزل في قسمٍ من أقسام السوق** — فإن
+                        // لم يكن للمتجر أقسامٌ فلا قسمَ يُختار.
+                        //
+                        // **وبابٌ مغلقٌ بلا سببٍ يُقرأ عطباً** — فيُقال
+                        // له لماذا، **ويُعطى الطريقَ لا مجرّدَ المنع.**
+                        if (menuVm.sections.isEmpty() && !menuVm.loading) {
+                            NeedSections { tab = Tab.Store }
+                        } else {
+                            MenuScreen(menuVm)
+                        }
                     }
 
                     tab == Tab.Store -> StoreScreen(storeVm) { picking = true }
@@ -447,4 +503,37 @@ private fun RowScope.Tab(
         icon = { Icon(painterResource(icon), contentDescription = null) },
         label = { Text(stringResource(label)) },
     )
+}
+
+
+/**
+ * **ما يُعرض لمن لم يختر أقسامَ متجره** — انظر `Tab.AddItem`.
+ */
+@Composable
+private fun NeedSections(onGo: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            stringResource(R.string.need_sections_title),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.need_sections_body),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(20.dp))
+        RahalButton(onClick = onGo) {
+            Text(stringResource(R.string.need_sections_go))
+        }
+    }
 }

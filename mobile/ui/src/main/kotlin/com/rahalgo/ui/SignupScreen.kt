@@ -229,7 +229,12 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 Text(
                     stringResource(
                         when (state.step) {
-                            SignupStep.PHONE -> R.string.reset_send
+                            // **ويقول ما سيفعل** — انظر `needsCode`:
+                            // **«متابعة» حين لا رمزَ يُطلب**، فلا يَعِد
+                            // بواتساب لا يُفتح.
+                            SignupStep.PHONE ->
+                                if (state.needsCode) R.string.auth_verify_account
+                                else R.string.auth_continue
                             SignupStep.CODE -> R.string.reset_verify
                             SignupStep.DETAILS -> R.string.signup_create
                         },
@@ -264,6 +269,13 @@ data class SignupState(
      */
     val referral: String = "",
     val busy: Boolean = false,
+    /**
+     * **أيُطلب رمزٌ قبل الفورم؟** — من `auth.signup_verify` في اللوحة.
+     *
+     * **والشاشةُ تحتاجه لتسمّي زرَّها**: «توثيق حسابي» حين يُطلب،
+     * **و«متابعة» حين لا يُطلب** — وزرٌّ يعد بما لا يفعل يُقرأ عطباً.
+     */
+    val needsCode: Boolean = false,
     val error: String = "",
 )
 

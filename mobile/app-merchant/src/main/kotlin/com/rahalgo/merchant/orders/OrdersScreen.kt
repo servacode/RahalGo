@@ -59,6 +59,7 @@ import com.rahalgo.ui.money
  */
 @Composable
 fun OrdersScreen(vm: OrdersViewModel) {
+    val rejectNote = stringResource(R.string.order_reject_note)
     if (vm.loading || (vm.error.isNotEmpty() && vm.orders.isEmpty())) {
         Screen {
             ScreenTitle(stringResource(R.string.nav_orders_mine), stringResource(R.string.orders_hint))
@@ -84,7 +85,10 @@ fun OrdersScreen(vm: OrdersViewModel) {
                     onAccept = { vm.accept(order.id) },
                     onStart = { vm.startPreparing(order.id) },
                     onReady = { vm.markReady(order.id) },
-                    onReject = { vm.reject(order.id, "") },
+                    // **والسببُ يُرسَل مع الرفض** — المحرّكُ يمرّره إلى
+                    // الزبون (`notify.go:207`). **ورفضٌ بلا سببٍ يجعل
+                    // الزبونَ يظنّ العطبَ في المنصّة لا في الصنف.**
+                    onReject = { vm.reject(order.id, rejectNote) },
                 )
             }
             Spacer(Modifier.height(24.dp))
@@ -109,6 +113,24 @@ private fun OrderCard(
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.weight(1f))
+            // ══════════════════════════════════════════════════════════
+            // **وكم يقبض منه — على البطاقة لا في السجلّ وحده**
+            // ══════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-٠٨-٢٥: «سجلّ الطلبات ما فيه شقد المبلغ
+            //  المباع وشقد نسبة العمولة، هيك لازم يكون بشفافية».)
+            //
+            // **ووُضع في السجلّ ولم يوضع هنا** — فيرى صاحبُ المتجر ما
+            // قبضه بعد أن يمضي الطلب، **ولا يراه وهو يقرّر أن يقبله.**
+            //
+            // **وصافيه لا مجموعه**: المجموعُ يحمل أجرةَ السائق ولا تخصّه،
+            // **ورقمٌ أكبرُ ممّا يقبض يُقرأ وعداً لا يُوفى.**
+            Text(
+                stringResource(R.string.ord_net, money(order.merchantNet)),
+                color = Rahal.colors.brand,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyMedium,
+            )
             // **ولا عدّادَ مهلةٍ في هذا الباب** — المحرّكُ لا يرسله مع
             // الطلب، **وعدٌّ تحسبه الشاشةُ من وقت الإنشاء يكذب**: ساعةُ
             // الجهاز تفترق عن ساعة الخادم بدقائق. **فيُقرأ منقضياً وهو
@@ -182,6 +204,16 @@ private fun NextAction(
             Text(stringResource(R.string.order_accept))
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **ولا زرَّ لـ«بدأتُ التحضير»**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (قرارُ المالك ٢٠٢٦-٠٨-٢٩.)
+        //
+        // **والقبولُ في وضع المتاجر يدخل التحضيرَ بنفسه** — يفعله
+        // المحرّك (`autoPreparing`). **فالحالةُ «مقبول» لا تُرى إلّا
+        // لحظةً**، وتبقى هنا لوضع المنصّة: **المكتبُ يقبل والمتجرُ يبدأ،
+        // وهما شخصان.**
         "accepted" -> RahalButton(onClick = onStart, enabled = !busy) {
             Text(stringResource(R.string.order_start))
         }
@@ -192,9 +224,29 @@ private fun NextAction(
 
         // **وما بعد الجاهزيّة ليس بيده** — **وزرٌّ لا يفعل شيئاً أسوأُ
         // من غيابه**: يضغطه فلا يتغيّر شيءٌ فيظنّ التطبيقَ عطبان.
+        // ══════════════════════════════════════════════════════════════
+        // **وكلُّ حالةٍ تقول اسمَها**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (بلاغُ المالك ٢٠٢٦-٠٨-٢٩: «الاعتذار ما ينتظر المتجرُ سائقاً،
+        //  سيكون ملغيَّ الطلب».)
+        //
+        // **وكان الفرعُ الأخير يقول «بانتظار السائق» لكلّ ما ليس من
+        // الثلاث** — **فالمرفوضُ والملغيُّ والمسلَّمُ كلُّها تنتظر
+        // سائقاً.**
+        //
+        // **والمتجرُ يجلب طلباتِه كلَّها لا المفتوحةَ وحدَها** — فالحالاتُ
+        // الأربعَ عشرةَ تصل هذه الشاشة.
+        //
+        // **ومن رأى طلباً اعتذر عنه «ينتظر سائقاً» ظنّ اعتذارَه لم
+        // يُسجَّل** — فيعتذر ثانيةً، أو ينتظر سائقاً لن يأتي.
         else -> Text(
-            stringResource(R.string.order_ready_done),
-            color = Rahal.colors.inkMuted,
+            statusLabel(status),
+            color = when (status) {
+                "rejected", "cancelled", "failed" -> Rahal.colors.danger
+                "delivered" -> Rahal.colors.success
+                else -> Rahal.colors.inkMuted
+            },
             style = MaterialTheme.typography.bodySmall,
         )
     }
@@ -237,3 +289,23 @@ private fun Line(line: OrderLine) {
         Spacer(Modifier.height(4.dp))
     }
 }
+
+
+/** **اسمُ الحالة كما يراها صاحبُ المتجر** — لا كما يسمّيها المحرّك. */
+@Composable
+private fun statusLabel(status: String): String = stringResource(
+    when (status) {
+        "dispatching" -> R.string.os_dispatching
+        "assigned" -> R.string.os_assigned
+        "at_pickup" -> R.string.os_at_pickup
+        "picked_up" -> R.string.os_picked_up
+        "on_the_way" -> R.string.os_on_way
+        "at_dropoff" -> R.string.os_at_dropoff
+        "delivered" -> R.string.os_delivered
+        "rejected" -> R.string.os_rejected
+        "cancelled" -> R.string.os_cancelled
+        "failed" -> R.string.os_failed
+        "refunded" -> R.string.os_refunded
+        else -> R.string.order_ready_done
+    },
+)

@@ -335,7 +335,6 @@ private fun Destination(theme: ThemeState) {
     // يفتحه المكتب.
     AuthGate(
         vm = vm,
-        title = stringResource(R.string.login_title),
         onSignedIn = { SignedIn(theme, onLogout = vm::logout) },
     )
 }

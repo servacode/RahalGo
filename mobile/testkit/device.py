@@ -68,10 +68,33 @@ def serial():
     code, out, _e = sh(["adb", "devices"])
     if code != 0:
         return None
+    # ══════════════════════════════════════════════════════════════════
+    # **واسمُ الجهاز قد يحمل فراغاً**
+    # ══════════════════════════════════════════════════════════════════
+    #
+    # **قِيس ٢٠٢٦-٠٨-٢٩**: جهازُ المالك يُعلن باسم
+    # `adb-R68RB02ZMQL-wtmEE8 (2)._adb-tls-connect._tcp` — **وفيه فراغ**
+    # حين يكون له إعلانان.
+    #
+    # **وكان القارئُ يقسم على الفراغات** فيقرأ الاسمَ حقلين، **فيظنّ
+    # الجهازَ غائباً وهو موصول** — وتُقال الطبقةُ «لم تُشغَّل».
+    #
+    # **وأداةٌ تقول «لا جهاز» وهو حاضرٌ أسوأُ من أداةٍ تعطب**: قيل
+    # للمالك مرّةً إنّ جهازَه سقط من الوصل وهو لم يسقط.
+    #
+    # **فالحالةُ آخرُ حقلٍ والاسمُ ما قبله** — والفاصلُ جدولةٌ لا فراغ.
     for line in out.split(chr(10))[1:]:
-        parts = line.split()
-        if len(parts) >= 2 and parts[1] == "device":
-            return parts[0]
+        line = line.rstrip()
+        if not line.strip():
+            continue
+        name, _, state = line.rpartition("	")
+        if not name:
+            parts = line.rsplit(None, 1)
+            if len(parts) != 2:
+                continue
+            name, state = parts
+        if state.strip() == "device":
+            return name.strip()
     return None
 
 

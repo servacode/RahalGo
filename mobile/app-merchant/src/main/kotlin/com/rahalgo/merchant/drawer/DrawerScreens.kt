@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.drawer
 
+import com.rahalgo.ui.DocPrint
 import com.rahalgo.merchant.noStoreMsg
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
@@ -198,10 +199,13 @@ class MyReportsViewModel(app: Application) : AndroidViewModel(app) {
                 .onSuccess { error = "" }
             // **وما رُفع عليه زينةٌ حول الحال** — وعطبُه لا يحرمه من
             // رؤية شكاواه هو.
+            // **وفشلُ «التي عليّ» يُقال** — كان يُبتلع صامتاً، **فتُعرض
+            // «لا شكاوى عليك» والنداءُ لم يصل أصلاً.** ومن رآها اطمأنّ
+            // إلى شيءٍ لم يُقرأ.
             runCatching {
                 val id = api.stores().stores.firstOrNull()?.id.orEmpty()
                 if (id.isNotEmpty()) against = api.reportsAgainst(id).reports
-            }
+            }.onFailure { if (error.isEmpty()) error = err(it) }
             loading = false
         }
     }
@@ -317,6 +321,25 @@ class SalesViewModel(app: Application) : AndroidViewModel(app) {
     var range by mutableStateOf(1)
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وهويّةُ المنصّة للورقة المطبوعة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وورقةٌ بلا علامةٍ ولا رقمِ دعمٍ لا تُقدَّم إلى أحد** — وكشفُ
+    // الحساب يحملهما منذ ٢٠٢٦-٠٨-١٣، **والتقريرُ كان بلاهما.**
+    //
+    // **وتُقرأ من المحرّك لا تُكتب هنا** — الاسمُ يتبدّل والرقمُ ينتقل.
+    var platform by mutableStateOf("")
+        private set
+    var support by mutableStateOf("")
+        private set
+    var storeName by mutableStateOf("")
+        private set
+
+    /** **لوغو المنصّة بايتاتٍ** — انظر `DocPrint.dataUri`. */
+    var logo by mutableStateOf("")
+        private set
+
     var loading by mutableStateOf(true)
         private set
 
@@ -361,7 +384,10 @@ class SalesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching {
                 if (storeId.isEmpty()) {
-                    storeId = api.stores().stores.firstOrNull()?.id ?: ""
+                    val page = api.stores()
+                    val mine = page.stores.firstOrNull()
+                    storeId = mine?.id ?: ""
+                    storeName = mine?.name.orEmpty()
                 }
                 if (storeId.isEmpty()) {
                     error = noStoreMsg()
@@ -393,6 +419,20 @@ class SalesViewModel(app: Application) : AndroidViewModel(app) {
                 fromShown = from.toString()
                 toShown = to.toString()
                 summary = api.reports(storeId, from.toString(), to.toString()).summary
+                if (platform.isEmpty()) {
+                    // **مرّةً واحدةً** — الاسمُ والرقمُ لا يتبدّلان في جلسة.
+                    runCatching { AppCore.get().auth.platform() }.getOrNull()?.let {
+                        platform = it.name
+                        support = it.supportPhone
+                        // **واللوغو بايتاتٍ لا عنواناً** — صفحةُ الطباعة
+                        // بلا أصلٍ تُنسَب إليه العناوين، **فعنوانٌ لا
+                        // يُجلَب** وتسقط الورقةُ إلى حرفِ العلامة.
+                        logo = DocPrint.dataUri(
+                            AppCore.get().api,
+                            AppCore.get().media(it.logo).orEmpty(),
+                        )
+                    }
+                }
                 error = ""
             }.onFailure { error = err(it) }
             loading = false
@@ -500,6 +540,7 @@ fun SalesScreen(vm: SalesViewModel) {
                             lblComm to money(vm.summary.commission),
                             lblDue to money(vm.summary.due),
                         ),
+                        vm.storeName, vm.platform, vm.support, vm.logo,
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -580,27 +621,17 @@ private fun pickRange(context: android.content.Context, vm: SalesViewModel) {
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **الطباعة — ورقةٌ يراجعها بيده**
+ * **تقريرُ المبيعات — بورق المنصّة نفسِه**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «التقارير لازم يكون فيها طباعة مشان يراجع
- *  كلشي طلبات من متجره».)
+ * (طلبُ المالك ٢٠٢٦-٠٨-٢٩: «القالب مثل الطباعة بالمحفظة أو كشف
+ *  الحساب».)
  *
- * # ولماذا HTML لا رسمٌ بيدنا
+ * **وكان `‎<h1>` وجدولاً بعمودين** — لا علامةَ ولا تاريخَ طباعةٍ ولا
+ * رقمَ دعم. **وورقةٌ تخرج من هاتفٍ بلا اسمٍ عليها لا تُقدَّم إلى أحد.**
  *
- * **وطابعةُ أندرويد تقبل `PrintDocumentAdapter`** — و`WebView` تصنعه
- * من HTML مجّاناً. **ورسمُ صفحةٍ بأيدينا يعني حسابَ الأسطر والصفحات
- * والهوامش**، وثلاثمئة سطرٍ لِما يفعله المتصفّح.
- *
- * # وتُحفظ PDF كما تُطبع
- *
- * **ونافذةُ الطباعة في أندرويد فيها «حفظ بصيغة PDF»** — فمن لا طابعةَ
- * عنده يحفظ ويرسل. **وهو ما يفعله أكثرُهم.**
- *
- * # والاتّجاه من اليمين
- *
- * **و`dir="rtl"` في الورقة نفسِها** — وإلّا خرجت أرقامٌ عربيّةٌ في
- * صفحةٍ إنكليزيّة الاتّجاه فتُقرأ مقلوبة.
+ * **والهيكلُ في `‎ui.DocPrint`** — أنماطُ كشف الحساب وترويستُه وذيلُه.
+ * **فما أُتقن على ثلاث شكاوى يُنال بلا أن يُعاد.**
  */
 private fun printReport(
     context: android.content.Context,
@@ -608,38 +639,26 @@ private fun printReport(
     from: String,
     to: String,
     rows: List<Pair<String, String>>,
+    storeName: String,
+    platform: String,
+    support: String,
+    logo: String,
 ) {
     val body = rows.joinToString("") {
-        "<tr><td>${it.first}</td><td><b>${it.second}</b></td></tr>"
+        """<tr><td>${DocPrint.esc(it.first)}</td>""" +
+            """<td class="cell"><b>${DocPrint.esc(it.second)}</b></td></tr>"""
     }
-    val html = """
-        <html dir="rtl"><head><meta charset="utf-8">
-        <style>
-          body{font-family:sans-serif;padding:24px;color:#07283a}
-          h1{font-size:20px;margin:0 0 4px}
-          .r{color:#5a6b75;font-size:13px;margin-bottom:16px}
-          table{width:100%;border-collapse:collapse}
-          td{padding:10px 4px;border-bottom:1px solid #e3e8eb;font-size:15px}
-          .f{margin-top:20px;color:#5a6b75;font-size:12px}
-        </style></head><body>
-        <h1>$title</h1>
-        <div class="r">من $from إلى $to</div>
-        <table>$body</table>
-        <div class="f">رحال غو — الرقة</div>
-        </body></html>
-    """.trimIndent()
-
-    val web = android.webkit.WebView(context)
-    web.webViewClient = object : android.webkit.WebViewClient() {
-        override fun onPageFinished(view: android.webkit.WebView, url: String) {
-            val pm = context.getSystemService(android.content.Context.PRINT_SERVICE)
-                as android.print.PrintManager
-            pm.print(
-                title,
-                view.createPrintDocumentAdapter(title),
-                android.print.PrintAttributes.Builder().build(),
-            )
-        }
-    }
-    web.loadDataWithBaseURL(null, html, "text/HTML", "UTF-8", null)
+    val html = DocPrint.page(
+        DocPrint.head(context, platform, logo) +
+            """
+<p class="title">${DocPrint.esc(title)}</p>
+<div class="meta">
+  <span><b>${DocPrint.esc(storeName)}</b></span>
+  <span>${DocPrint.esc(context.getString(com.rahalgo.ui.R.string.sheet_period))} """ +
+            """${DocPrint.esc(from)} — ${DocPrint.esc(to)}</span>
+</div>
+<table><tbody>$body</tbody></table>""" +
+            DocPrint.foot(context, platform, support),
+    )
+    DocPrint.print(context, title, html)
 }

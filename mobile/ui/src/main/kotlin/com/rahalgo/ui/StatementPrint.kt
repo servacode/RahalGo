@@ -114,11 +114,11 @@ object StatementPrint {
             val cls = if (t.amount >= 0) "in" else "out"
             rows.append(
                 """<tr>
-                     <td class="cell"><span class="n">${esc(t.createdAt.take(10))}</span></td>
-                     <td>${esc(kindName(c, t.kind))}</td>
-                     <td class="note">${esc(t.note.ifEmpty { t.orderNumber?.let { "#$it" } ?: "" })}</td>
-                     <td class="cell $cls">${amount(kotlin.math.abs(t.amount), sign)}</td>
-                     <td class="cell">${amount(running)}</td>
+                     <td class="cell"><span class="n">${DocPrint.esc(t.createdAt.take(10))}</span></td>
+                     <td>${DocPrint.esc(kindName(c, t.kind))}</td>
+                     <td class="note">${DocPrint.esc(t.note.ifEmpty { t.orderNumber?.let { "#$it" } ?: "" })}</td>
+                     <td class="cell $cls">${DocPrint.amount(kotlin.math.abs(t.amount), sign)}</td>
+                     <td class="cell">${DocPrint.amount(running)}</td>
                    </tr>""",
             )
         }
@@ -131,169 +131,60 @@ object StatementPrint {
         //
         // **والحرفُ احتياطٌ لا أصل**: من لم يرفع شعاراً بعدُ يرى أوّلَ
         // حرفٍ من اسمه — **كما تفعل `BrandMark` في الويب.**
-        val markHtml = if (logo.isNotEmpty()) {
-            """<img class="logo" src="$logo" alt="">"""
-        } else {
-            """<div class="mark">${esc(platform.trim().take(1))}</div>"""
-        }
-        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-            .format(java.util.Date())
-        val now = java.text.SimpleDateFormat("HH:mm", java.util.Locale.US)
-            .format(java.util.Date())
 
         return """
 <!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-<style>
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { font-family: sans-serif; padding: 20px; color: #07283A; }
+${DocPrint.STYLES}</head><body>
 
-  /* **الترويسةُ كترويسة الويب** — علامةٌ وتاريخُ طباعة. */
-  .head { display: flex; align-items: center; justify-content: space-between; }
-  .mark { width: 62px; height: 62px; border: 2px solid #07283A; border-radius: 12px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 30px; font-weight: bold; }
-  .logo { width: 72px; height: 72px; object-fit: contain; }
-  .when { text-align: left; font-size: 11px; color: #5A6B75; }
-  .when b { display: block; color: #07283A; }
+${DocPrint.head(c, platform, logo)}
 
-  /* **وشريطُ العلامة** — من الفيروزيّ إلى البرتقاليّ كما في `brand-rule`. */
-  .rule { height: 3px; border-radius: 3px; margin: 10px 0 14px;
-          background: linear-gradient(to left, #02678F 0%, #02678F 45%, #FE9501 100%); }
-
-  .title { font-size: 17px; font-weight: bold; margin: 0 0 2px; }
-  .meta { display: flex; justify-content: space-between; gap: 12px;
-          font-size: 12px; color: #5A6B75;
-          border-bottom: 1px solid #E4E9EC; padding-bottom: 10px; margin-bottom: 12px; }
-  .meta b { color: #07283A; }
-
-  .sum { display: flex; justify-content: space-between; gap: 10px;
-         border: 1px solid #E4E9EC; border-radius: 10px;
-         padding: 10px 12px; margin-bottom: 14px; font-size: 12px; }
-
-  /* ══════════════════════════════════════════════════════════════
-     **ورأسُ العمود يحاذي ما تحته**
-     ══════════════════════════════════════════════════════════════
-
-     (شكوى المالك ٢٠٢٦-٠٨-١٣: «وفي عندك المحاذاة أيضاً مو مزبوطة
-      بالكشف والطباعة».)
-
-     **كانت الرؤوسُ كلُّها يميناً وخاناتُ المبالغ يسارا** — فيقع
-     «الحركة» فوق فراغٍ ورقمُه في الطرف الآخر، **والعينُ تمسح عموداً
-     فلا تجد رأسَه فوقه.**
-
-     **والويبُ يفعلها بـ`text-start` للنصّ و`text-end` للمبلغ** —
-     ورأسُ كلِّ عمودٍ بصنف عمودِه. */
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th, td { padding: 7px 5px; }
-  th { text-align: right; font-weight: normal;
-       color: #5A6B75; border-bottom: 2px solid #E4E9EC; font-size: 11px; }
-  td { text-align: right; border-bottom: 1px solid #F0F3F5; }
-  th.cell, td.cell { text-align: left; }
-  /* ══════════════════════════════════════════════════════════════
-     **واللفّةُ للرقم وحدَه — لا للمبلغ كلِّه**
-     ══════════════════════════════════════════════════════════════
-
-     (شكوى المالك ٢٠٢٦-٠٨-١٣: «في مشكلة ل.س ما إنك مصلّحها بالتطبيق
-      والكشف والطباعة».)
-
-     **وهي عائلةُ العطب نفسُها التي أُصلحت في الويب خمسَ مرّات**:
-     الرقمُ يُلَفّ بـ`ltr` لأنّ فاصلةَ الآلاف تقع بغير موضعها في نصٍّ
-     عربيّ، **فإذا وقع الرمزُ داخل اللفّة صار ترتيبُهما من اليسار** —
-     فتُقرأ «ل.س ٦٠٠».
-
-     **فالخانةُ تبقى عربيّةً** (`.cell`) **والرقمُ وحدَه يُلَفّ**
-     (`.n`). */
-  .cell { text-align: left; white-space: nowrap; }
-  .n { unicode-bidi: isolate; direction: ltr; }
-  .note { color: #5A6B75; }
-  .in { color: #1E9E5A; } .out { color: #D64545; }
-
-  tfoot td { border-top: 2px solid #E4E9EC; border-bottom: none;
-             padding-top: 9px; font-weight: bold; }
-  /* ══════════════════════════════════════════════════════════════
-     **وعبارةُ الثقة — لا حاشيةَ زينة**
-
-     (قرارُ المالك ٢٠٢٦-٠٨-١٣: «شوف ترتيبة الفاتورة بالطلب كيف مرتّبة
-      وأنيقة — لوغو وعباراتُ ثقةٍ وغيره».)
-
-     **والورقةُ تُقرأ من غير صاحبها**: يُريها للمكتب أو لمن يختلف
-     معه. **وسطرٌ يشكر ويعطي رقمَ الشكوى يقول إنّ خلفَها دارا** —
-     لا جدولاً خرج من هاتف. */
-  .thanks { margin-top: 18px; text-align: center; font-size: 12px;
-            font-weight: bold; color: #02678F; }
-  .support { text-align: center; font-size: 11px; color: #5A6B75; margin: 4px 0 0; }
-  .foot { margin-top: 14px; font-size: 10px; color: #5A6B75;
-          line-height: 1.7; text-align: center; }
-  .warn { border: 1px solid #FE9501; background: #FFF6E9; border-radius: 8px;
-          padding: 8px 10px; font-size: 11px; margin-bottom: 12px; }
-</style></head><body>
-
-<div class="head">
-  $markHtml
-  <div class="when">
-    ${esc(c.getString(R.string.sheet_printed_at))}
-    <b>${esc(today)}</b>${esc(now)}
-  </div>
-</div>
-<div class="rule"></div>
-
-<p class="title">${esc(c.getString(R.string.wal_doc_title))}</p>
+<p class="title">${DocPrint.esc(c.getString(R.string.wal_doc_title))}</p>
 <div class="meta">
-  <span><b>${esc(name)}</b> ${esc(phone)}</span>
-  <span>${esc(c.getString(R.string.sheet_period))} ${esc(period)}</span>
+  <span><b>${DocPrint.esc(name)}</b> ${DocPrint.esc(phone)}</span>
+  <span>${DocPrint.esc(c.getString(R.string.sheet_period))} ${DocPrint.esc(period)}</span>
 </div>
 
 <div class="sum">
-  <span>${esc(c.getString(R.string.sheet_opening))}: <b>${amount(st.opening)}</b></span>
-  <span>${esc(c.getString(R.string.sheet_closing))}: <b>${amount(st.closing)}</b></span>
+  <span>${DocPrint.esc(c.getString(R.string.sheet_opening))}: <b>${DocPrint.amount(st.opening)}</b></span>
+  <span>${DocPrint.esc(c.getString(R.string.sheet_closing))}: <b>${DocPrint.amount(st.closing)}</b></span>
 </div>
 
-${if (st.truncated) """<div class="warn">${esc(c.getString(R.string.sheet_truncated))}</div>""" else ""}
+${if (st.truncated) """<div class="warn">${DocPrint.esc(c.getString(R.string.sheet_truncated))}</div>""" else ""}
 
 ${
             if (st.transactions.isEmpty()) {
                 """<p style="text-align:center;color:#5A6B75;padding:24px 0">""" +
-                    esc(c.getString(R.string.sheet_empty)) + "</p>"
+                    DocPrint.esc(c.getString(R.string.sheet_empty)) + "</p>"
             } else {
                 """<table>
   <thead><tr>
-    <th class="cell">${esc(c.getString(R.string.sheet_col_date))}</th>
-    <th>${esc(c.getString(R.string.sheet_col_kind))}</th>
-    <th>${esc(c.getString(R.string.sheet_col_note))}</th>
-    <th class="cell">${esc(c.getString(R.string.sheet_col_amount))}</th>
-    <th class="cell">${esc(c.getString(R.string.sheet_col_running))}</th>
+    <th class="cell">${DocPrint.esc(c.getString(R.string.sheet_col_date))}</th>
+    <th>${DocPrint.esc(c.getString(R.string.sheet_col_kind))}</th>
+    <th>${DocPrint.esc(c.getString(R.string.sheet_col_note))}</th>
+    <th class="cell">${DocPrint.esc(c.getString(R.string.sheet_col_amount))}</th>
+    <th class="cell">${DocPrint.esc(c.getString(R.string.sheet_col_running))}</th>
   </tr></thead>
   <tbody>$rows</tbody>
   <tfoot>
     <tr>
-      <td colspan="3">${esc(c.getString(R.string.sheet_total_in))}</td>
-      <td class="cell in">${amount(totalIn)}</td><td></td>
+      <td colspan="3">${DocPrint.esc(c.getString(R.string.sheet_total_in))}</td>
+      <td class="cell in">${DocPrint.amount(totalIn)}</td><td></td>
     </tr>
     <tr>
-      <td colspan="3">${esc(c.getString(R.string.sheet_total_out))}</td>
-      <td class="cell out">${amount(totalOut)}</td><td></td>
+      <td colspan="3">${DocPrint.esc(c.getString(R.string.sheet_total_out))}</td>
+      <td class="cell out">${DocPrint.amount(totalOut)}</td><td></td>
     </tr>
     <tr>
-      <td colspan="3">${esc(c.getString(R.string.sheet_net))}</td>
-      <td class="cell">${amount(totalIn - totalOut)}</td>
-      <td class="cell">${amount(st.closing)}</td>
+      <td colspan="3">${DocPrint.esc(c.getString(R.string.sheet_net))}</td>
+      <td class="cell">${DocPrint.amount(totalIn - totalOut)}</td>
+      <td class="cell">${DocPrint.amount(st.closing)}</td>
     </tr>
   </tfoot>
 </table>"""
             }
         }
 
-<p class="thanks">${esc(c.getString(R.string.sheet_thanks, platform))}</p>
-${
-            if (support.isNotEmpty()) {
-                """<p class="support">""" +
-                    esc(c.getString(R.string.sheet_support)) +
-                    " <b dir=\"ltr\">" + esc(support) + "</b></p>"
-            } else {
-                ""
-            }
-        }
-<p class="foot">${esc(c.getString(R.string.sheet_footer, platform))}</p>
+${DocPrint.foot(c, platform, support)}
 </body></html>"""
     }
 
@@ -301,8 +192,6 @@ ${
      * **والنصُّ يُهرَّب قبل أن يوضع في HTML**: ملاحظةٌ كتبها موظّفٌ فيها
      * `<` **تكسر الصفحة**، وأسوأُ منها ما يُحقن عمدا.
      */
-    private fun esc(s: String): String = s
-        .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     /**
      * **مبلغٌ للورقة — الرقمُ ملفوفٌ والرمزُ خارجَه.**
@@ -310,14 +199,6 @@ ${
      * **ونظيرُ `Money` في الويب حرفيّا** (`money.tsx`): لفّةٌ للرقم
      * وحدَه، **ويبقى ترتيبُه مع الرمز عربيّاً خارجَها.**
      */
-    private fun amount(value: Long, sign: String = ""): String {
-        val text = money(value)
-        val i = text.lastIndexOf(' ')
-        if (i <= 0) return esc(text)
-        val digits = text.substring(0, i)
-        val symbol = text.substring(i + 1)
-        return """<span class="n">${esc(sign + digits)}</span> ${esc(symbol)}"""
-    }
 
     /** **اسمُ النوع بالعربيّة** — والمجهولُ بمفتاحه ليُعرف. */
     private fun kindName(c: Context, kind: String): String = when (kind) {

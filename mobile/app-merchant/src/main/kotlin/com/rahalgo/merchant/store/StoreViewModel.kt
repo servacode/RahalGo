@@ -255,7 +255,20 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { api.setStoreSections(id, ids) }
                 .onSuccess {
                     mySections = allSections.filter { it.id in ids }
-                    Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_sections_saved))
+                    // ══════════════════════════════════════════════════
+                    // **ونبضةٌ لبقيّة الشاشات**
+                    // ══════════════════════════════════════════════════
+                    //
+                    // (بلاغُ المالك ٢٠٢٦-٠٨-٢٩: «أضفتُ أقساماً ولا يزال
+                    //  يقول اذهب إلى متجري».)
+                    //
+                    // **و`MenuViewModel` تحمّل الأقسامَ مرّةً عند
+                    // إنشائها** — فحفظٌ هنا لا يبلغها، **وشاشةُ إضافة
+                    // الصنف تبقى مغلقةً على قرارٍ صار قديماً.**
+                    //
+                    // **والنبضةُ موجودةٌ أصلاً** (`ui.Refresh`) — كانت
+                    // تُبثّ ولا تُبثّ من هنا.
+                    com.rahalgo.ui.Refresh.bump()
                 }
                 .onFailure { Flash.fail(err(it)) }
             saving = false

@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.menu
 
+import com.rahalgo.ui.menu.ItemDraft
 import com.rahalgo.merchant.noStoreMsg
 import android.app.Application
 import androidx.compose.runtime.getValue
@@ -71,7 +72,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     /** **الصنفُ الذي يُحرَّر الآن** — وفارغٌ يعني لا محرّر. */
-    var editing by mutableStateOf<Draft?>(null)
+    var editing by mutableStateOf<ItemDraft?>(null)
         private set
 
     var busy by mutableStateOf(false)
@@ -79,6 +80,15 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         load()
+        // ══════════════════════════════════════════════════════════════
+        // **وتسمع النبضةَ** — انظر `StoreViewModel.saveSections`.
+        //
+        // **وأقسامُ المتجر تُحرَّر في شاشةٍ أخرى** — فمن حفظها هناك
+        // يجد هذه الشاشةَ لا تعرف، **ويُقال له «اذهب إلى متجري» وهو
+        // عائدٌ منه للتوّ.**
+        viewModelScope.launch {
+            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) load() }
+        }
     }
 
     fun openGroup(g: MenuGroup) {
@@ -102,7 +112,10 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 // **ووجوهُ الأقسام تُقرأ مرّةً** — ثمانيةٌ وثلاثون سطراً
                 // لا تتبدّل في اليوم، **ونداءٌ لكلّ إنعاشٍ حملٌ بلا سبب.**
-                if (faces.isEmpty()) {
+                // **وتُقرأ في كلّ تحميلٍ لا مرّةً واحدة** — كان
+                // الحارسُ `faces.isEmpty()`، **فمن أضاف قسماً بعد أوّل
+                // فتحةٍ لم تُقرأ إضافتُه أبداً.**
+                run {
                     runCatching {
                         // ══════════════════════════════════════════════
                         // **وأقسامُ هذا المتجر لا أقسامُ المنصّة كلُّها**
@@ -121,7 +134,26 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                         // **فلا يُحبس متجرٌ قائمٌ بلا أقسام.**
                         val mine = runCatching { api.storeSections(storeId).sections }
                             .getOrDefault(emptyList())
-                        sections = mine.ifEmpty { api.platformSections().sections }
+                        // ══════════════════════════════════════════
+                        // **ولا ارتدادَ إلى أقسام المنصّة كلِّها**
+                        // ══════════════════════════════════════════
+                        //
+                        // (قرارُ المالك ٢٠٢٦-٠٨-٢٩: «يجب أن يختار أقسامَه
+                        //  ثمّ يستطيع إضافةَ صنفٍ أوّل».)
+                        //
+                        // **كان `mine.ifEmpty { الكلّ }`** — فمتجرٌ لم يختر
+                        // أقسامَه يرى المطاعمَ والصيدليّةَ والبقالة.
+                        //
+                        // **وصاحبُ المتجر مستعجل**، فيضغط أوّلَ قسمٍ في
+                        // القائمة — **فتنزل كنافتُه في قسم الصيدليّة.**
+                        //
+                        // **والخطأُ لا يُكتشف**: يرى صنفَه في تطبيقه
+                        // سليماً، **ويظنّ أنّ الزبائن لا يشترون منه** —
+                        // وقد يمضي شهرٌ قبل أن ينتبه أحد.
+                        //
+                        // **فالفارغُ يبقى فارغاً**، وشاشةُ الإضافة تقول
+                        // له أين يذهب.
+                        sections = mine
                         faces = sections.associate { it.name to (it.imageThumbUrl ?: it.imageUrl) }
                     }
                 }
@@ -208,11 +240,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     /** **صنفٌ جديدٌ في قسمٍ معلوم** — فلا يُعيد اختيارَ ما هو فيه. */
     fun newItem(sectionName: String = "") {
         val ps = sections.firstOrNull { it.name == sectionName }?.id.orEmpty()
-        editing = Draft(platformSectionId = ps)
+        editing = ItemDraft(platformSectionId = ps)
     }
 
     fun editItem(item: MenuItem) {
-        editing = Draft(
+        editing = ItemDraft(
             itemId = item.id,
             name = item.name,
             description = item.description,
@@ -226,7 +258,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    fun editDraft(block: (Draft) -> Draft) {
+    fun editDraft(block: (ItemDraft) -> ItemDraft) {
         editing = editing?.let(block)
     }
 
@@ -241,11 +273,30 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
      * **ورفعٌ يفشل عند الحفظ يُضيّع ما كتبه معها.**
      */
     fun pickImage(bytes: ByteArray) {
-        val d = editing ?: return
+        if (editing == null) return
         busy = true
         viewModelScope.launch {
             runCatching { api.uploadItemImage("item.jpg", bytes) }
-                .onSuccess { editing = d.copy(imageMediaId = it, imageThumb = null) }
+                .onSuccess { ref ->
+                    // ══════════════════════════════════════════════════
+                    // **وتُعرض المصغّرةُ فورَ الرفع**
+                    // ══════════════════════════════════════════════════
+                    //
+                    // **كان `imageThumb = null`** — فيرسم الحقلُ الحرفَ
+                    // الاحتياطيَّ بعد رفعٍ ناجح، **ويظنّ صاحبُ المتجر
+                    // أنّ الصورة ضاعت** فيعيد الاختيارَ مرّةً بعد مرّة.
+                    //
+                    // **والمصغّرةُ كانت تصل من المحرّك في الردّ نفسِه**
+                    // (`thumb_url`) — وتُرمى.
+                    //
+                    // **وتُنسَخ من `editing` الحاليّ لا من نسخةٍ قديمة**:
+                    // كان يُلتقَط الرسمُ قبل الرفع، **فما كُتب أثناءه
+                    // يُطمس عند انتهائه.**
+                    editing = editing?.copy(
+                        imageMediaId = ref.id,
+                        imageThumb = ref.thumbUrl.ifBlank { null },
+                    )
+                }
                 .onFailure { Flash.fail(err(it)) }
             busy = false
         }
@@ -317,38 +368,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private companion object {
-        val UNSORTED: String get() = com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.g_unsorted)
+        val UNSORTED: String get() = com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.mn_unsorted)
     }
 }
 
-/** **مسوّدةُ صنفٍ في المحرّر** — ومعرّفٌ فارغٌ يعني جديداً. */
-data class Draft(
-    val itemId: String = "",
-    val name: String = "",
-    val description: String = "",
-    /** **سعرُ الشراء لا سعرُ البيع** — وهو ما يقبضه. */
-    val price: String = "",
-    val platformSectionId: String = "",
-    /** `null` لم تُمسّ · `""` أزِلها · معرّفٌ صورةٌ جديدة. */
-    val imageMediaId: String? = null,
-    val imageThumb: String? = null,
-    /**
-     * ══════════════════════════════════════════════════════════════════
-     * **الإضافاتُ والمجموعات**
-     * ══════════════════════════════════════════════════════════════════
-     *
-     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «الأكلُ دائماً الشخصُ يطلب شيئاً
-     *  إضافيّاً أو عصير كولا عيران وهكذا… لازم تكون من نفس المتجر».)
-     *
-     * **والمحرّكُ يحفظها ويردّها منذ `0005_menu.sql`** — والزبونُ
-     * يراها ويختار منها. **والناقصُ كان محرّرَها في تطبيق المتجر
-     * وحدَه**، فلا يستطيع صاحبُه أن يُنشئ واحدةً.
-     *
-     * **وهي مربوطةٌ بالصنف** — والصنفُ لمتجرٍ واحد. **فلا يمكن بنيةً
-     * أن تأتي إضافةٌ من متجرٍ آخر**، ولا يحتاج ذلك حارساً.
-     */
-    val modifiers: List<ModifierGroup> = emptyList(),
-)
+
 
 /** **قسمُ سوقٍ فيه أصنافُه** — والاسمُ هو المفتاح، فهو ما يراه الزبون. */
 data class MenuGroup(

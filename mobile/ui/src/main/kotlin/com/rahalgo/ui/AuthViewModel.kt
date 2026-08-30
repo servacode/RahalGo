@@ -76,6 +76,8 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             // **ورايةُ التسجيل تُحفظ هنا لا في `SignupState`** — تُقرأ
             // مرّةً عند فتح الشاشة، **وشاشةُ الإنشاء تُفتح بعدها.**
             signupNeedsCode = platform.signupVerify
+            // **والشاشةُ تعرف لتسمّي زرَّها** — انظر `SignupState.needsCode`.
+            signup = signup?.copy(needsCode = platform.signupVerify)
         }
     }
 
@@ -371,7 +373,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
 
     /** @param referral رمزُ من دعاه — **من الرابط لا من يده.** */
     fun openSignup(referral: String = "") {
-        signup = SignupState(referral = referral)
+        signup = SignupState(referral = referral, needsCode = signupNeedsCode)
     }
 
     fun closeSignup() {

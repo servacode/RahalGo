@@ -4,7 +4,6 @@
 
     <!-- **ولا تقول «دخول الزبون»** — هو لا يعرف أنّه «زبون»،
          **وأسماءُ الأدوار لغتُنا نحن لا لغتُه.** -->
-    <string name="login_title">تسجيل الدخول</string>
 
     <string name="signed_in">أهلا بك</string>
     <string name="logout">خروج</string>

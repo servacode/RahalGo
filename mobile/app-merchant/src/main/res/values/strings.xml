@@ -6,7 +6,6 @@
 
     <!-- **ويقول دورَه** — **والعاملُ يفتح تطبيقين على جهازٍ واحدٍ
          أحياناً**، فيفرّق بينهما بالعنوان. -->
-    <string name="login_title">تسجيل دخول المتجر</string>
     <string name="login_hint">ادخل برقمك وكلمة المرور</string>
 
     <!-- ══════════════════════════════════════════════════════════════
@@ -21,8 +20,8 @@
     <string name="orders_hint">اقبل الطلب ثم حضّره ثم أعلن جاهزيته</string>
     <string name="orders_empty">لا طلبات الآن — سنُعلمك حين يصل طلب</string>
 
-    <string name="order_accept">اقبل الطلب</string>
-    <string name="order_reject">اعتذر</string>
+    <string name="order_accept">استلمت الطلب</string>
+    <string name="order_reject">رفض — غير متوفر</string>
     <string name="order_start">بدأت التحضير</string>
     <string name="order_ready">جاهز للاستلام</string>
     <string name="order_ready_done">أُعلن جاهزاً — بانتظار السائق</string>
@@ -54,16 +53,9 @@
          ══════════════════════════════════════════════════════════════ -->
     <string name="tab_add">أضف صنفاً</string>
     <string name="item_add">أضف صنفاً</string>
-    <string name="item_desc">وصف مختصر</string>
-    <string name="item_price">السعر</string>
     <!-- **وسعرُ البيع ليس شأنَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٠): هو يضع
          سعرَه ويقبض عليه. -->
     <string name="item_price_hint">ما تقبضه أنت — والمنصة تضيف هامشها فوقه</string>
-    <string name="item_section">قسم السوق</string>
-    <string name="item_pick_image">اختر صورة</string>
-    <string name="item_clear_image">أزل الصورة</string>
-    <string name="item_delete">احذف الصنف</string>
-    <string name="item_delete_ask">يُحذف من السوق ولا يعود — أمتأكد؟</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **متجري**
@@ -186,7 +178,7 @@
     <string name="days_sat">السبت</string>
     <string name="push_ch_new_order">طلبات جديدة</string>
     <string name="store_sections">أقسام السوق</string>
-    <string name="store_sections_hint">اختر ما تبيعه فقط — وعندها لن تظهر لك إلا هذه الأقسام عند إضافة صنف</string>
+    <string name="store_sections_hint">أضف الأقسام التي ينزل فيها متجرك — وعندها لن تظهر لك إلا هي عند إضافة صنف</string>
     <string name="hist_money">بِيع %1$s · عمولة المنصة %2$s (%3$d٪) · لك %4$s</string>
     <string name="reports_mine">شكاوى رفعتها</string>
     <string name="reports_against">شكاوى عليّ</string>
@@ -194,12 +186,6 @@
     <string name="sales_custom">مدة محددة</string>
     <string name="sales_print">طباعة التقرير</string>
     <string name="no_store">لا متجر مرتبط بحسابك — راجع الإدارة</string>
-    <string name="mod_title">الإضافات والخيارات</string>
-    <string name="mod_hint">مثل: مشروب غازي، جبنة إضافية، الحجم. تظهر للزبون عند اختيار الصنف</string>
-    <string name="mod_add_group">أضف مجموعة</string>
-    <string name="mod_multi">يختار أكثر من واحد</string>
-    <string name="mod_opt_price">السعر الإضافي</string>
-    <string name="mod_add_option">أضف خياراً</string>
 
     <!-- **نصوصٌ كانت مكتوبةً في كوتلن** — أمسكتها منظومةُ الاختبار
          ٢٠٢٦-٠٨-٢٦: ثلاثةٌ وعشرون نصّاً يراها صاحبُ المتجر ولا
@@ -207,7 +193,6 @@
     <string name="v_item_name">اكتب اسم الصنف</string>
     <string name="v_item_price">اكتب سعر الشراء</string>
     <string name="v_item_section">اختر قسم السوق — وصنف بلا قسم لا يراه زبون</string>
-    <string name="g_unsorted">غير مصنّف</string>
     <string name="v_store_name">اكتب اسم المتجر</string>
     <string name="ok_address_saved">حُفظ عنوانك</string>
     <string name="ok_sections_saved">حُفظت الأقسام</string>
@@ -224,4 +209,27 @@
     <string name="tk_resolved">فُصل فيه</string>
     <string name="tk_rejected">رُدّ</string>
     <string name="tk_closed">أُغلق</string>
+    <string name="store_sections_empty">لا قسم بعد — متجرك لا يظهر في السوق حتى تختار</string>
+    <string name="store_sections_add">أضف قسماً</string>
+    <string name="store_sections_pick">اختر من الأقسام</string>
+    <string name="store_sections_all_in">أضفت كل الأقسام</string>
+    <string name="need_sections_title">اختر أقسام متجرك أولاً</string>
+    <string name="need_sections_body">الصنف ينزل في قسم من أقسام السوق — واختيار الأقسام يمنع أن ينزل صنفك في المكان الخطأ فلا يجده الزبون</string>
+    <string name="need_sections_go">اذهب إلى متجري</string>
+    <string name="order_reject_note">الصنف غير متوفر حالياً</string>
+    <string name="os_dispatching">بانتظار سائق</string>
+    <string name="os_assigned">أُسند لسائق</string>
+    <string name="os_on_way">في الطريق</string>
+    <string name="os_at_pickup">السائق عندك</string>
+    <string name="os_picked_up">استلمه السائق</string>
+    <string name="os_at_dropoff">وصل الزبون</string>
+    <string name="os_rejected">اعتذرت عنه</string>
+    <string name="os_cancelled">أُلغي</string>
+    <string name="os_failed">تعذّر تسليمه</string>
+    <string name="os_refunded">استُرجع</string>
+    <string name="os_delivered">سُلّم</string>
+    <string name="ord_since">منذ %1$s</string>
+    <string name="ord_min">د</string>
+    <string name="ord_hr">س</string>
+    <string name="ord_net">لك %1$s</string>
 </resources>

@@ -245,7 +245,6 @@ private fun Signed(theme: ThemeState, dark: Boolean) {
     // عند أوّل ما يخصّه.**
     AuthGate(
         vm = vm,
-        title = stringResource(R.string.login_title),
         signup = true,
         asking = asking,
         onSignedIn = {
