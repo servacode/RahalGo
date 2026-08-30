@@ -504,6 +504,80 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/districts",
+      "handler": "handleAdminDistricts",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "districts",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/districts",
+      "handler": "handleCreateDistrict",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/districts/{id}",
+      "handler": "handleDeleteDistrict",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/districts/{id}",
+      "handler": "handleUpdateDistrict",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/drivers",
       "handler": "handleListDrivers",
       "auth": true,
@@ -777,6 +851,71 @@
       "response": [
         {
           "name": "voided",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/governorates",
+      "handler": "handleAdminGovernorates",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/governorates",
+      "handler": "handleCreateGovernorate",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/governorates/{id}",
+      "handler": "handleDeleteGovernorate",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/governorates/{id}",
+      "handler": "handleUpdateGovernorate",
+      "auth": true,
+      "roles": [
+        "admin"
+      ],
+      "response": [
+        {
+          "name": "ok",
           "type": "bool"
         }
       ],
@@ -5493,6 +5632,27 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/public/districts",
+      "handler": "handlePublicDistricts",
+      "auth": false,
+      "response": [
+        {
+          "name": "districts",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/governorates",
+      "handler": "handlePublicGovernorates",
+      "auth": false
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/public/home",
       "handler": "handlePublicHome",
       "auth": false,
@@ -5600,6 +5760,10 @@
         },
         {
           "name": "area",
+          "type": "string"
+        },
+        {
+          "name": "district_id",
           "type": "string"
         },
         {
@@ -5942,6 +6106,10 @@
           "type": "string"
         },
         {
+          "name": "district_id",
+          "type": "string"
+        },
+        {
           "name": "category_id",
           "type": "string"
         },
@@ -6007,7 +6175,7 @@
     {
       "method": "DELETE",
       "path": "/api/v1/rep/menu/items/{itemID}",
-      "handler": "handleDeleteItem",
+      "handler": "handleRepDeleteItem",
       "auth": true,
       "roles": [
         "sales"
@@ -6025,12 +6193,16 @@
     {
       "method": "PATCH",
       "path": "/api/v1/rep/menu/items/{itemID}",
-      "handler": "handleUpdateItem",
+      "handler": "handleRepUpdateItem",
       "auth": true,
       "roles": [
         "sales"
       ],
       "response": [
+        {
+          "name": "pending_review",
+          "type": "unknown"
+        },
         {
           "name": "updated",
           "type": "bool"
@@ -6135,7 +6307,7 @@
     {
       "method": "POST",
       "path": "/api/v1/rep/stores/{id}/menu/items",
-      "handler": "handleCreateItem",
+      "handler": "handleRepCreateItem",
       "auth": true,
       "roles": [
         "sales"
@@ -6143,6 +6315,10 @@
       "response": [
         {
           "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "pending_review",
           "type": "unknown"
         }
       ],

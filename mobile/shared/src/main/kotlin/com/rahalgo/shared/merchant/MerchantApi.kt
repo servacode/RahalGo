@@ -284,11 +284,21 @@ class MerchantApi(private val api: ApiClient) {
     //
     // **وبابُه أضيقُ من باب الإدارة**: `merchantKinds` في المحرّك يحصر
     // الأنواعَ — **ولا يرفع تاجرٌ شعارَ المنصّة.**
-    suspend fun uploadItemImage(fileName: String, bytes: ByteArray): String {
+    /**
+     * **يرفع صورةَ صنفٍ ويعيد معرّفَها ومصغّرتَها.**
+     *
+     * **وكانت تعيد المعرّفَ وحدَه وترمي `thumb_url`** — والمحرّكُ
+     * يرسلهما معاً. **فبعد الرفع لا يجد الحقلُ عنواناً يعرضه**، فيرسم
+     * الحرفَ الاحتياطيّ، **ويظنّ صاحبُ المتجر أنّ الصورةَ لم تُحفظ**
+     * (بلاغُ المالك ٢٠٢٦-٠٨-٢٩).
+     *
+     * **وهي محفوظةٌ فعلاً** — المعرّفُ يُرسَل مع الصنف ويُخزَّن.
+     */
+    suspend fun uploadItemImage(fileName: String, bytes: ByteArray): MediaRef {
         val raw = api.upload(
             "/api/v1/merchant/media", fileName, bytes, mapOf("kind" to "menu_item"),
         )
-        return api.json.decodeFromString<Envelope<MediaRef>>(raw).data?.id.orEmpty()
+        return api.json.decodeFromString<Envelope<MediaRef>>(raw).data ?: MediaRef()
     }
 
     // **والقائمةُ والساعاتُ مصفوفتان خامّتان** — لا مغلَّفَ لهما،

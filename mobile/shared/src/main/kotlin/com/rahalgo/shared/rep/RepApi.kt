@@ -46,6 +46,28 @@ class RepApi(private val api: ApiClient) {
     /** **تصنيفاتُ المتاجر** — لنموذج التسجيل. */
     suspend fun categories(): List<RepCategory> = api.call("/api/v1/rep/categories")
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وتقسيمُ سوريا — قائمتان متدرّجتان في نموذج التسجيل**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والبابان عامّان** (`/public/…`) لا `‏/rep/…`: نموذجُ الويب يقرؤهما
+    // قبل أن يسجّل أحد. **وبابان لشيءٍ واحدٍ يفترقان يوماً.**
+
+    /** **المحافظاتُ الفعّالة.** */
+    suspend fun governorates(): List<Division> =
+        api.call<DivisionList>("/api/v1/public/governorates").governorates
+
+    /**
+     * **مناطقُ محافظةٍ بعينها.**
+     *
+     * **ولا تُجلب كلُّها دفعةً** — ثلاثٌ وستّون اليومَ وقد تصير مئتين،
+     * **وقائمةٌ بمئتي سطرٍ لا يُبحث فيها بالإصبع.**
+     */
+    suspend fun districts(governorateID: String): List<Division> =
+        api.call<DistrictList>(
+            "/api/v1/public/districts?governorate_id=$governorateID",
+        ).districts
+
     suspend fun wallet(): WalletStatement = api.call("/api/v1/rep/wallet")
 
     /** **هدفُه ومكافأتُه** — كهدف السائق: المقياسُ يختلف والمعنى واحد. */
@@ -81,14 +103,14 @@ class RepApi(private val api: ApiClient) {
     suspend fun createItem(merchantID: String, input: ItemInput): CreatedID =
         api.call("/api/v1/rep/stores/$merchantID/menu/items", HttpMethod.Post, input)
 
-    suspend fun updateItem(itemID: String, input: ItemInput) {
+    suspend fun updateItem(itemId: String, input: ItemInput) {
         api.call<Map<String, Boolean>>(
-            "/api/v1/rep/menu/items/$itemID", HttpMethod.Patch, input,
+            "/api/v1/rep/menu/items/$itemId", HttpMethod.Patch, input,
         )
     }
 
-    suspend fun deleteItem(itemID: String) {
-        api.call<Map<String, Boolean>>("/api/v1/rep/menu/items/$itemID", HttpMethod.Delete)
+    suspend fun deleteItem(itemId: String) {
+        api.call<Map<String, Boolean>>("/api/v1/rep/menu/items/$itemId", HttpMethod.Delete)
     }
 
     /**
@@ -97,11 +119,17 @@ class RepApi(private val api: ApiClient) {
      * **والمعرّفُ هو المقصود** — يُرسَل بعدُ مع الصنف. **ومن رفع صورةً
      * ورمى ردَّها رفع ملفّاً لا يعرف اسمَه فلا يربطه بشيء.**
      */
-    suspend fun uploadItemImage(fileName: String, bytes: ByteArray): String {
+    /**
+     * **يرفع صورةَ صنفٍ ويعيد معرّفَها ومصغّرتَها.**
+     *
+     * **وكانت تعيد المعرّفَ وحدَه** — انظر نظيرتَها في `MerchantApi`:
+     * **العطبُ نفسُه في التطبيقين**، لأنّ المندوبَ يحرّر قوائمَ المتاجر.
+     */
+    suspend fun uploadItemImage(fileName: String, bytes: ByteArray): MediaRef {
         val raw = api.upload(
             "/api/v1/rep/media", fileName, bytes, mapOf("kind" to "menu_item"),
         )
-        return api.json.decodeFromString<Envelope<MediaRef>>(raw).data?.id.orEmpty()
+        return api.json.decodeFromString<Envelope<MediaRef>>(raw).data ?: MediaRef()
     }
 }
 
@@ -143,14 +171,14 @@ data class MenuSection(
 @Serializable
 data class MenuItem(
     val id: String = "",
-    @SerialName("section_id") val sectionID: String = "",
+    @SerialName("section_id") val sectionId: String = "",
     val name: String = "",
     val description: String = "",
     val price: Long = 0,
     @SerialName("merchant_price") val merchantPrice: Long = 0,
-    @SerialName("platform_section_id") val platformSectionID: String? = null,
+    @SerialName("platform_section_id") val platformSectionId: String? = null,
     @SerialName("platform_section_name") val platformSectionName: String = "",
-    @SerialName("image_thumb_url") val imageThumbURL: String? = null,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
     /** **رفعه المتجرُ بيده** — «نفد الصنف» يُطفئه ولا يحذفه. */
     val available: Boolean = true,
     /** **مصدرُه خارجَ دوامه الآن** — يقوله الوقتُ لا صاحبُه. */
@@ -168,21 +196,7 @@ data class MenuItem(
  * إلزاميّة. **ورقمٌ واحدٌ لا حقلان يتناقضان** — راية «إلزاميّ» مرفوعةٌ
  * وأدنى اختيارٍ صفرٌ حالٌ لا معنى لها، ولا يعرف المحرّكُ أيَّهما يصدّق.
  */
-@Serializable
-data class ModifierGroup(
-    val name: String = "",
-    @SerialName("min_select") val minSelect: Int = 0,
-    @SerialName("max_select") val maxSelect: Int = 1,
-    val options: List<ModifierOption> = emptyList(),
-)
-
 /** **خيارٌ في مجموعة** — واسمُه وفرقُ سعره. */
-@Serializable
-data class ModifierOption(
-    val name: String = "",
-    @SerialName("price_delta") val priceDelta: Long = 0,
-)
-
 @Serializable
 data class PlatformSection(
     val id: String = "",
@@ -210,9 +224,9 @@ data class ItemInput(
     val name: String? = null,
     val description: String? = null,
     val price: Long? = null,
-    @SerialName("platform_section_id") val platformSectionID: String? = null,
+    @SerialName("platform_section_id") val platformSectionId: String? = null,
     val available: Boolean? = null,
-    @SerialName("image_media_id") val imageMediaID: String? = null,
+    @SerialName("image_media_id") val imageMediaId: String? = null,
     /**
      * **وإن أُرسلت — ولو فارغةً — استُبدلت الشجرةُ كلُّها.**
      *
@@ -355,7 +369,17 @@ data class NewLead(
     @SerialName("store_name") val storeName: String,
     @SerialName("owner_name") val ownerName: String,
     val phone: String,
+    /** **عنوانٌ تفصيليّ** — «مقابل الجامع». **والمنطقةُ تقول أين، وهذا
+     *  يقول كيف تصل.** */
     val area: String,
+    /**
+     * **المنطقةُ الإداريّة** — تُختار من قائمةٍ متدرّجة.
+     *
+     * (قرارُ المالك ٢٠٢٦-٠٨-٣٠.) **وكانت نصّاً حرّاً**: «وسط المدينة»
+     * و«وسط البلد» و«المركز» ثلاثةُ نصوصٍ لموضعٍ واحد، **لا تُصنَّف ولا
+     * تُصفّى.**
+     */
+    @SerialName("district_id") val districtId: String,
     @SerialName("category_id") val categoryId: String,
     /** **كلمةُ مرورِ صاحب المتجر** — يدخل بها يومَ يُوافَق عليه. */
     val password: String,
@@ -363,9 +387,42 @@ data class NewLead(
     val lng: Double? = null,
 )
 
+/**
+ * **وحدةٌ إداريّة** — محافظةً كانت أو منطقة.
+ *
+ * **ورسمٌ واحدٌ للاثنتين**: ما يحتاجه النموذجُ منهما اسمٌ ومعرّف،
+ * **ورسمان متطابقان بأسماءَ مختلفةٍ يُصلَح أحدُهما ويُنسى الآخر.**
+ */
+@Serializable
+data class Division(
+    val id: String = "",
+    val name: String = "",
+)
+
+/** **غلافُ ردّ المحافظات** — المحرّكُ يضعها تحت مفتاح. */
+@Serializable
+data class DivisionList(val governorates: List<Division> = emptyList())
+
+/** **وغلافُ المناطق.** */
+@Serializable
+data class DistrictList(val districts: List<Division> = emptyList())
+
 @Serializable
 data class RepCategory(
     val id: String = "",
     val name: String = "",
     val icon: String = "",
 )
+
+// ══════════════════════════════════════════════════════════════════════
+//  **والإضافاتُ نموذجٌ واحدٌ للمتجر والمندوب**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٨-٣٠: «الأصناف بالمندوب والمتجر لازم تكون
+//  مركزيّة… وهي لنفس الغرض».)
+//
+// **وكان نموذجان**: نموذجُ المندوب مجموعةٌ فرعيّةٌ من نموذج المتجر —
+// بلا `id` وبلا `available`. **وحقلٌ ينقص في أحدهما يعني ميزةً تعمل
+// في تطبيقٍ ولا تعمل في الآخر**، والمستخدمُ لا يعرف لماذا.
+typealias ModifierGroup = com.rahalgo.shared.merchant.ModifierGroup
+typealias ModifierOption = com.rahalgo.shared.merchant.ModifierOption

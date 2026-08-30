@@ -6,7 +6,7 @@
 import { Suspense, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, withPlatform, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Button,
@@ -30,6 +30,11 @@ const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMa
 
 const m = getMessages(defaultLocale);
 const J = m.site.join;
+
+interface Division {
+  id: string;
+  name: string;
+}
 
 interface Category {
   id: string;
@@ -58,6 +63,12 @@ function JoinForm() {
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
   const [area, setArea] = useState("");
+  // **والمحافظةُ تُصفّي المنطقة** — قائمتان متدرّجتان بدل نصٍّ حرّ.
+  // (قرارُ المالك ٢٠٢٦-٠٨-٣٠.)
+  const [govs, setGovs] = useState<Division[]>([]);
+  const [districts, setDistricts] = useState<Division[]>([]);
+  const [govId, setGovId] = useState("");
+  const [districtId, setDistrictId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -85,7 +96,34 @@ function JoinForm() {
     api<{ categories: Category[] }>("/api/v1/public/home")
       .then((d) => setCategories(d.categories ?? []))
       .catch(() => undefined);
+    api<{ governorates: Division[] }>("/api/v1/public/governorates")
+      .then((d) => setGovs(d.governorates ?? []))
+      .catch(() => undefined);
   }, []);
+
+  // **ومناطقُ المحافظة تُجلب حين تُختار** — لا كلُّها دفعةً: ثلاثٌ
+  // وستّون اليومَ وقد تصير مئتين.
+  //
+  // **وتبديلُ المحافظة يمسح المنطقة** — وإلّا بقيت منطقةُ حلبَ مختارةً
+  // تحت الرقّة، **فيُرسَل معرّفٌ لا ينتمي إلى ما يراه صاحبُه.**
+  useEffect(() => {
+    setDistrictId("");
+    if (!govId) {
+      setDistricts([]);
+      return;
+    }
+    api<{ districts: Division[] }>(
+      `/api/v1/public/districts?governorate_id=${govId}`,
+    )
+      .then((d) => setDistricts(d.districts ?? []))
+      // **وفشلُ الجلب يُقال ولا يُبتلع** — **وقائمةٌ فارغةٌ صامتةٌ تُقرأ
+      // «لا مناطقَ في محافظتك»**، فيظنّ صاحبُها أنّ المنصّةَ لا تعمل
+      // عنده ويغلق النموذج.
+      .catch((err) => {
+        setDistricts([]);
+        setError(errorText(err));
+      });
+  }, [govId]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -103,6 +141,7 @@ function JoinForm() {
           owner_name: ownerName,
           phone,
           area,
+          district_id: districtId,
           category_id: categoryId,
           password,
           lat,
@@ -260,6 +299,38 @@ function JoinForm() {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
           />
+
+          {/* **والمحافظةُ قبل المنطقة قبل العنوان** — من العامّ إلى
+              الخاصّ، **وعكسُه يجعل أوّلَ ما يُملأ أغمضَ ما فيه.** */}
+          <Select
+            id="governorate"
+            label={J.governorate}
+            value={govId}
+            onChange={(e) => setGovId(e.target.value)}
+          >
+            <option value="">{J.pickGovernorate}</option>
+            {govs.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            id="district"
+            label={J.district}
+            value={districtId}
+            onChange={(e) => setDistrictId(e.target.value)}
+            disabled={!govId}
+          >
+            <option value="">
+              {govId ? J.pickDistrict : J.pickGovernorateFirst}
+            </option>
+            {districts.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </Select>
 
           <Input
             id="area"

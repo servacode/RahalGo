@@ -29,6 +29,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
 import com.rahalgo.rep.R
+import com.rahalgo.shared.rep.Division
 import com.rahalgo.shared.rep.NewLead
 import com.rahalgo.shared.rep.RepApi
 import com.rahalgo.shared.rep.RepCategory
@@ -112,6 +113,64 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
         // **ورقمُ الهاتف بالحقل المركزيّ** — **وتحقّقُ الشكل في موضعٍ
         // واحدٍ لا في كلّ نموذج.**
         PhoneField(value = phone, onChange = { phone = it }, enabled = !vm.busy)
+
+        // ══════════════════════════════════════════════════════════════
+        // **والمحافظةُ ثمّ المنطقةُ ثمّ العنوانُ التفصيليّ**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **من العامّ إلى الخاصّ** — **وعكسُه يجعل أوّلَ ما يُملأ أغمضَ
+        // ما فيه.**
+        //
+        // **ورقائقُ لا قائمةٌ منسدلة** — كالتصنيف حرفاً: **المندوبُ واقفٌ
+        // في السوق بيدٍ واحدة**، والرقاقةُ تُضغط بالإبهام والمنسدلةُ
+        // تحتاج ضغطتين ونافذةً تُغطّي النموذج.
+        Spacer(Modifier.height(12.dp))
+        Text(
+            stringResource(R.string.ac_governorate),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            vm.governorates.forEach { g ->
+                FilterChip(
+                    selected = vm.pickedGovernorate == g.id,
+                    onClick = { vm.pickGovernorate(g.id) },
+                    label = { Text(g.name) },
+                )
+            }
+        }
+
+        // **ولا يُرسم لوحُ المناطق قبل أن تُختار محافظة** — **وصفٌّ فارغٌ
+        // يُعلّم صاحبَه ألّا ينظر إليه**، ثمّ لا ينظر حين يمتلئ.
+        if (vm.pickedGovernorate.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                stringResource(R.string.ac_district),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                vm.districts.forEach { d ->
+                    FilterChip(
+                        selected = vm.pickedDistrict == d.id,
+                        onClick = { vm.pickDistrict(d.id) },
+                        label = { Text(d.name) },
+                    )
+                }
+            }
+        }
 
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
@@ -202,6 +261,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
                         ownerName = owner.trim(),
                         phone = phone.trim(),
                         area = area.trim(),
+                        districtId = vm.pickedDistrict,
                         categoryId = vm.pickedCategory,
                         password = password,
                         lat = vm.point?.first,
@@ -213,6 +273,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
             },
             enabled = !vm.busy && store.isNotBlank() && owner.isNotBlank() &&
                 phone.isNotBlank() && vm.pickedCategory.isNotEmpty() &&
+                vm.pickedDistrict.isNotEmpty() &&
                 password.isNotBlank() && vm.point != null,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -263,16 +324,63 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
     var done by mutableStateOf(false)
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **والمحافظةُ تُصفّي المنطقة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٣٠: «اختيارُ المحافظة والمنطقة بفورم تسجيل
+    //  متجرٍ جديد… وبهذا سينعكس أيضاً على المندوب».)
+    //
+    // **وكان نصّاً حرّاً** — «وسط المدينة» و«وسط البلد» و«المركز» ثلاثةُ
+    // نصوصٍ لموضعٍ واحد، **لا تُصنَّف ولا تُصفّى.**
+
+    var governorates by mutableStateOf<List<Division>>(emptyList())
+        private set
+
+    var districts by mutableStateOf<List<Division>>(emptyList())
+        private set
+
+    var pickedGovernorate by mutableStateOf("")
+        private set
+
+    var pickedDistrict by mutableStateOf("")
+        private set
+
     fun loadCategories() {
         if (categories.isNotEmpty()) return
         viewModelScope.launch {
             runCatching { categories = api.categories() }
                 .onFailure { error = apiError(getApplication(), it as Exception) }
+            // **والمحافظاتُ في النداء نفسِه** — **وسقوطُها لا يُخفي
+            // النموذج**: يبقى يملأ ما عداها ثمّ يُعيد.
+            runCatching { governorates = api.governorates() }
         }
     }
 
     fun pickCategory(id: String) {
         pickedCategory = id
+    }
+
+    /**
+     * **يختار محافظةً ويجلب مناطقَها.**
+     *
+     * **وتبديلُ المحافظة يمسح المنطقة** — وإلّا بقيت منطقةُ حلبَ مختارةً
+     * تحت الرقّة، **فيُرسَل معرّفٌ لا ينتمي إلى ما يراه صاحبُه.**
+     */
+    fun pickGovernorate(id: String) {
+        if (pickedGovernorate == id) return
+        pickedGovernorate = id
+        pickedDistrict = ""
+        districts = emptyList()
+        if (id.isEmpty()) return
+        viewModelScope.launch {
+            runCatching { districts = api.districts(id) }
+                .onFailure { error = apiError(getApplication(), it as Exception) }
+        }
+    }
+
+    fun pickDistrict(id: String) {
+        pickedDistrict = id
     }
 
     fun setPoint(lat: Double, lng: Double, label: String) {

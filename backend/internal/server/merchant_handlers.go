@@ -644,28 +644,47 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 	for i := range list {
 		ids = append(ids, list[i].ID)
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والمبلغُ يُقرأ من القاعدة لا من الطلب الذي بين يدينا**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **`redactForMerchant` تُصفّر `Subtotal` قبل أن نُنادى** — تمحو
+	// أرقامَ الزبون كلَّها. **فكان الحسابُ يقع على صفر:**
+	//
+	//     c = o.Subtotal * pct / 100      →  صفر
+	//     o.MerchantNet = o.Subtotal - c  →  صفرٌ أو سالب
+	//
+	// **وسجلُّ المبيعات يعرض عمولةً صفراً وصافياً صفراً** — وهو الرقمُ
+	// الذي طلبه المالكُ ليعرف كم قبض. **ويُقرأ صحيحاً**: لا خطأَ يظهر،
+	// **إنّما رقمٌ خاطئٌ يُصدَّق.**
+	//
+	// **و`subs` يبقى محلّيّاً** — يُحسب به ولا يُكتب في الطلب: المتجرُ
+	// يرى ما باعه وما قبضه، **ولا يرى ما دفعه الزبونُ ولا أجرةَ السائق.**
 	paid := map[string]int64{}
+	subs := map[string]int64{}
 	rows, err := s.pg.Query(r.Context(),
-		`SELECT id::text, platform_commission FROM orders WHERE id = ANY($1)`, ids)
+		`SELECT id::text, platform_commission, subtotal FROM orders WHERE id = ANY($1)`, ids)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var id string
-			var c int64
-			if rows.Scan(&id, &c) == nil {
+			var c, sub int64
+			if rows.Scan(&id, &c, &sub) == nil {
 				paid[id] = c
+				subs[id] = sub
 			}
 		}
 	}
 	for i := range list {
 		o := &list[i]
 		o.CommissionPct = pct
+		sub := subs[o.ID]
 		c := paid[o.ID]
 		if c == 0 {
 			// **وتقديرٌ بالنسبة ما دامت لم تُقيَّد** — انظر أعلاه.
-			c = o.Subtotal * int64(pct) / 100
+			c = sub * int64(pct) / 100
 		}
 		o.PlatformCommission = c
-		o.MerchantNet = o.Subtotal - c
+		o.MerchantNet = sub - c
 	}
 }

@@ -79,11 +79,14 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req, err := decode[struct {
-		Ref        string   `json:"ref"` // كود دعوة المندوب
-		StoreName  string   `json:"store_name"`
-		OwnerName  string   `json:"owner_name"`
-		Phone      string   `json:"phone"`
-		Area       string   `json:"area"`
+		Ref       string `json:"ref"` // كود دعوة المندوب
+		StoreName string `json:"store_name"`
+		OwnerName string `json:"owner_name"`
+		Phone     string `json:"phone"`
+		// Area **عنوانٌ تفصيليٌّ اختياريّ** — «مقابل الجامع».
+		Area string `json:"area"`
+		// DistrictID **المنطقةُ الإداريّة** — تُختار من قائمةٍ متدرّجة.
+		DistrictID string   `json:"district_id"`
 		CategoryID string   `json:"category_id"` // تصنيف المتجر
 		Password   string   `json:"password"`    // كلمة مرور صاحب المتجر
 		Lat        *float64 `json:"lat"`         // موقع المتجر (اختياري)
@@ -201,12 +204,22 @@ func (s *Server) handlePublicJoin(w http.ResponseWriter, r *http.Request) {
 			repID = nil
 		}
 	}
+	// **والمنطقةُ تُفحص إن أُرسلت ولا تُلزَم هنا**
+	//
+	// **بخلاف بابِ المندوب**: هذا يملؤه صاحبُ المتجر بنفسه من هاتفه،
+	// **وحقلٌ إلزاميٌّ زائدٌ في نموذجٍ عامٍّ يُسقط من كان سيسجّل.**
+	// **والإدارةُ تراجع الطلبَ قبل أن يصير متجراً** فتُكملها إن نقصت.
+	district, err := s.validDistrict(r, req.DistrictID)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	if _, err := s.pg.Exec(r.Context(), `
 		INSERT INTO merchant_leads
-			(store_name, owner_name, phone, area, category_id, lat, lng, owner_password_hash,
+			(store_name, owner_name, phone, area, district_id, category_id, lat, lng, owner_password_hash,
 			 sales_rep_user_id, note)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		req.StoreName, req.OwnerName, phone, req.Area,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		req.StoreName, req.OwnerName, phone, req.Area, district,
 		categoryID, req.Lat, req.Lng, pwHash, repID, note); err != nil {
 		s.respondErr(w, err)
 		return
@@ -281,11 +294,16 @@ func (s *Server) handlePublicInvite(w http.ResponseWriter, r *http.Request) {
 }
 
 type lead struct {
-	ID           string    `json:"id"`
-	StoreName    string    `json:"store_name"`
-	OwnerName    string    `json:"owner_name"`
-	Phone        string    `json:"phone"`
-	Area         string    `json:"area"`
+	ID        string `json:"id"`
+	StoreName string `json:"store_name"`
+	OwnerName string `json:"owner_name"`
+	Phone     string `json:"phone"`
+	Area      string `json:"area"`
+	// District **«منطقة، محافظة»** — يقرؤها من يوافق على الطلب.
+	//
+	// **وكان «وسط المدينة» وحدَه** — فمن راجع الطلبَ لا يعرف أفي
+	// الرقّة هو أم في حلب.
+	District     string    `json:"district"`
 	CategoryName *string   `json:"category_name"`
 	CategoryIcon *string   `json:"category_icon"`
 	Lat          *float64  `json:"lat"`
@@ -309,7 +327,7 @@ func scanLeads(rows interface {
 	out := []lead{}
 	for rows.Next() {
 		var l lead
-		if err := rows.Scan(&l.ID, &l.StoreName, &l.OwnerName, &l.Phone, &l.Area,
+		if err := rows.Scan(&l.ID, &l.StoreName, &l.OwnerName, &l.Phone, &l.Area, &l.District,
 			&l.CategoryName, &l.CategoryIcon, &l.Lat, &l.Lng,
 			&l.RepName, &l.RepCode, &l.Status, &l.CreatedAt,
 			&l.Note, &l.DecisionNote); err != nil {
@@ -322,12 +340,15 @@ func scanLeads(rows interface {
 
 const leadSelect = `
 	SELECT l.id, l.store_name, l.owner_name, l.phone, l.area,
+	       COALESCE(d.name || '، ' || g.name, ''),
 	       c.name, c.icon, l.lat, l.lng,
 	       NULLIF(COALESCE(u.full_name, u.phone::text), ''), u.invite_code, l.status, l.created_at,
 	       l.note, l.decision_note
 	FROM merchant_leads l
 	LEFT JOIN users u ON u.id = l.sales_rep_user_id
-	LEFT JOIN categories c ON c.id = l.category_id`
+	LEFT JOIN categories c ON c.id = l.category_id
+	LEFT JOIN districts d ON d.id = l.district_id
+	LEFT JOIN governorates g ON g.id = d.governorate_id`
 
 // handleAdminLeads كل طلبات الانضمام (ترشيح بالحالة اختياري).
 func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
@@ -403,8 +424,16 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// **وحدُّ المعدّل بالمساعد الآمن لا بنداءٍ مباشر.**
+	//
+	// **كان `s.rdb.Incr` عارياً** — **وينهار بمؤشّرٍ فارغٍ حين لا ريدس**
+	// (`nil pointer dereference`). **وهو الحارسُ نفسُه المكتوبُ في
+	// `incr` أعلاه** ويستعمله بابُ الويب منذ زمن: **مساعدٌ يُكتب ثمّ
+	// يُنسى بابٌ لا يناديه.**
+	//
+	// **والحدُّ أفضليّةٌ لا شرط** — أخطاؤه مُبتلَعةٌ هنا كما هناك.
 	key := "rep:lead:" + userIDFrom(r)
-	if n, err := s.rdb.Incr(r.Context(), key).Result(); err == nil {
+	if n, err := s.incr(r.Context(), key); err == nil {
 		if n == 1 && s.rdb != nil {
 			s.rdb.Expire(r.Context(), key, time.Hour)
 		}
@@ -414,10 +443,18 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	req, err := decode[struct {
-		StoreName  string   `json:"store_name"`
-		OwnerName  string   `json:"owner_name"`
-		Phone      string   `json:"phone"`
-		Area       string   `json:"area"`
+		StoreName string `json:"store_name"`
+		OwnerName string `json:"owner_name"`
+		Phone     string `json:"phone"`
+		// Area **عنوانٌ تفصيليٌّ اختياريّ** — «مقابل الجامع».
+		//
+		// **والمنطقةُ تقول أين، وهذا يقول كيف تصل.**
+		Area string `json:"area"`
+		// DistrictID **المنطقةُ الإداريّةُ تُختار من قائمة.**
+		//
+		// (قرارُ المالك ٢٠٢٦-٠٨-٣٠.) **وكانت نصّاً حرّاً** — ثلاثةُ
+		// نصوصٍ لموضعٍ واحدٍ لا تُصنَّف ولا تُصفّى.
+		DistrictID string   `json:"district_id"`
 		CategoryID string   `json:"category_id"`
 		Password   string   `json:"password"`
 		Lat        *float64 `json:"lat"`
@@ -453,14 +490,26 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// **والمنطقةُ إلزاميّةٌ عند المندوب** — هو في الميدان يراها بعينه،
+	// **ومن لم يعرف منطقةَ متجرٍ يقف أمامه لا يعرف شيئاً عنه.**
+	district, err := s.validDistrict(r, req.DistrictID)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if district == nil {
+		s.respondErr(w, errDivNeedsGovernorate)
+		return
+	}
+
 	repID := userIDFrom(r)
 	var leadID string
 	if err := s.pg.QueryRow(r.Context(), `
 		INSERT INTO merchant_leads
-			(store_name, owner_name, phone, area, category_id, lat, lng, owner_password_hash, sales_rep_user_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			(store_name, owner_name, phone, area, district_id, category_id, lat, lng, owner_password_hash, sales_rep_user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id`,
-		req.StoreName, req.OwnerName, phone, req.Area,
+		req.StoreName, req.OwnerName, phone, req.Area, district,
 		req.CategoryID, req.Lat, req.Lng, pwHash, repID).Scan(&leadID); err != nil {
 		s.respondErr(w, err)
 		return
@@ -613,11 +662,29 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	if categoryID == nil {
 		return errValidation // لا متجر بلا تصنيف
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والعنوانُ يُبنى من المنطقة والتفصيل معاً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وكان النصَّ الحرَّ وحدَه**: «وسط المدينة» عنوانُ متجرٍ لا يُوصَل
+	// إليه — **لا مدينةَ فيه ولا محافظة.** ومن قرأه في لوحةٍ لا يعرف
+	// أفي الرقّة هو أم في حلب.
+	//
+	// **والترتيبُ من العامّ إلى الخاصّ**: «مركز الرقة، الرقة — مقابل
+	// الجامع». **وعكسُه يجعل أوّلَ ما يُقرأ أغمضَ ما فيه.**
+	addr := area
+	if label := s.districtLabelByLead(ctx, leadID); label != "" {
+		if addr == "" {
+			addr = label
+		} else {
+			addr = label + " — " + addr
+		}
+	}
 	in := catalog.MerchantInput{
 		Name:        &storeName,
 		CategoryID:  categoryID,
 		Phone:       &phone,
-		AddressText: &area,
+		AddressText: &addr,
 		OwnerPhone:  &phone,
 		Lat:         lat,
 		Lng:         lng,
@@ -651,6 +718,21 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 			  AND COALESCE(password_hash,'') = ''`,
 			mrch.ID, pwHash)
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والمنطقةُ تنتقل إلى المتجر مع الموافقة**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وهنا لا في `CreateMerchant`**: تلك تُنشئ متاجرَ من اللوحة أيضاً،
+	// **ولا منطقةَ في نموذجها.** ومن أضاف حقلاً إليها لأجل هذا الباب
+	// جعل كلَّ من يناديها يمرّ بحقلٍ لا يعنيه.
+	//
+	// **وسطرٌ بعد الإنشاء لا يُفقد شيئاً**: المتجرُ أُنشئ في المعاملة
+	// نفسِها، **ومنطقتُه عنوانٌ لا يمنع بيعاً إن تأخّر سطراً.**
+	_, _ = s.pg.Exec(ctx, `
+		UPDATE merchants SET district_id = (
+			SELECT district_id FROM merchant_leads WHERE id = $2)
+		WHERE id = $1 AND district_id IS NULL`, mrch.ID, leadID)
+
 	_, err = s.pg.Exec(ctx, `
 		UPDATE merchant_leads SET status = 'converted', merchant_id = $2, updated_at = now()
 		WHERE id = $1`, leadID, mrch.ID)

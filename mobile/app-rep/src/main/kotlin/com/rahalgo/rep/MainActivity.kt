@@ -135,7 +135,6 @@ private fun RepApp() {
         val vm: AuthViewModel = viewModel()
         AuthGate(
             vm = vm,
-            title = stringResource(R.string.login_title),
             // **ولا تسجيلَ حسابٍ للمندوب** — حسابُه من المنصّة كالسائق.
             onSignedIn = { SignedIn(theme, dark, onLogout = vm::logout) },
         )

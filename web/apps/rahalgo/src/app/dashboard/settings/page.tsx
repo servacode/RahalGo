@@ -28,6 +28,7 @@ import { useAuth } from "@/lib/auth";
 import dynamic from "next/dynamic";
 import ZonesPanel from "@/components/admin/settings/zones";
 import CitiesPanel from "@/components/admin/settings/cities";
+import DivisionsPanel from "@/components/admin/settings/divisions";
 import SitePagesPanel from "@/components/admin/settings/site-pages";
 import BannersPanel from "@/components/admin/settings/banners";
 import WhatsAppPanel from "@/components/admin/settings/whatsapp";
@@ -290,6 +291,7 @@ export default function SettingsPage() {
   const extra = [
     // **والمدنُ قبل المناطق** — **المنطقةُ بنتُ المدينة**، ومن قرأ
     // «مناطق» قبل أن يعرف أنّ للمنصّة مدناً ظنّ التغطيةَ طبقةً واحدة.
+    { key: "divisions", label: m.admin.divisions.title },
     { key: "cities", label: m.admin.cities.title },
     { key: "zones", label: m.terms.zones },
     { key: "whatsapp", label: m.admin.nav.whatsapp },
@@ -480,6 +482,7 @@ export default function SettingsPage() {
             })()}
           </div>
         ))}
+      {active === "divisions" && <DivisionsPanel />}
       {active === "cities" && <CitiesPanel />}
       {active === "zones" && <ZonesPanel />}
       {active === "whatsapp" && <WhatsAppPanel />}

@@ -46,8 +46,25 @@ COPY . .
 
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SITE_URL
+# ══════════════════════════════════════════════════════════════════════
+#  **ونمطُ الخريطة يُحقن عند البناء لا عند التشغيل**
+# ══════════════════════════════════════════════════════════════════════
+#
+# (بلاغُ المالك ٢٠٢٦-٠٨-٣٠: «مشكلة عامّة بالخرائط بالتطبيقات والويب».)
+#
+# **وكلُّ `NEXT_PUBLIC_` يُدفن في حزمة المتصفّح ساعةَ البناء** — فمن
+# وضعه في `environment` وحدَه لم يضعه في شيء.
+#
+# **وبلا هذا السطر يقرأ Next ما في `.env.local`:**
+#
+#     NEXT_PUBLIC_MAP_STYLE_URL=http://127.0.0.1:8791/style.json
+#
+# **عنوانُ خادمٍ محلّيٍّ للتطوير** — **فيطلبه جهازُ الزائر من نفسِه**
+# ولا يجد شيئاً، وتُرسم «تعذّر تحميل الخريطة».
+ARG NEXT_PUBLIC_MAP_STYLE_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_MAP_STYLE_URL=$NEXT_PUBLIC_MAP_STYLE_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @rahalgo/web build
 
