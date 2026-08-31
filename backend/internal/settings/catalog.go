@@ -1208,6 +1208,27 @@ var Catalog = []Def{
 	{Key: "drivers.target_reward", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **ومرحلتان بعدها — مطفأتان حتّى يضبطهما المالك**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «الهدفُ برأيي يكون على ٣ مراحل · إذا
+	// بلغ الأولى يأخذها ثمّ الثانية يأخذها ثمّ الثالثة يأخذها» · «اجعلها
+	// مطفأة، أنا أضبطها لاحقاً».)
+	//
+	// **والأولى هي `monthly_target` و`target_reward` بأسمائهما** — **ولو
+	// أُعيدت تسميتُهما لَسقط ما ضُبط من قبل.**
+	//
+	// **وصفرُ الهدف يطفئ المرحلة** — لا تُعرض في شاشته ولا تُدفع.
+	{Key: "drivers.target_2", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 5000, Unit: "order", Default: 0},
+	{Key: "drivers.reward_2", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+	{Key: "drivers.target_3", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 5000, Unit: "order", Default: 0},
+	{Key: "drivers.reward_3", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+
 	{Key: "drivers.failed_compensation_percent", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 100, Unit: "percent", Default: 0, Sensitive: true},
 
@@ -1325,11 +1346,35 @@ var Catalog = []Def{
 	// يُقاس بما وقع لا بما وُقّع.
 	//
 	// **وصفرُه لا هدف.**
+	// **ووحدتُه «عميل» لا «طلب»** — (قرارُ المالك ٢٠٢٦-٠٨-٣١: «الهدفُ
+	// الشهريّ هو عددُ العملاء المسجَّلين»). **وكانت `order`** فيقرأ
+	// الضابطُ في اللوحة «٥ طلبات» ويُعدّ له خمسةُ عملاء.
 	{Key: "sales.monthly_target", Group: GroupSales, Kind: KindInt,
-		Min: 0, Max: 5000, Unit: "order", Default: 0},
+		Min: 0, Max: 5000, Unit: "client", Default: 0},
 
 	// **ومكافأةُ بلوغه للمندوب** — كأخيها في السائقين.
 	{Key: "sales.target_reward", Group: GroupSales, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+
+	// ══════════════════════════════════════════════════════════════════
+	// **ومرحلتان بعدها — مطفأتان حتّى يضبطهما المالك**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «الهدفُ برأيي يكون على ٣ مراحل · إذا
+	// بلغ الأولى يأخذها ثمّ الثانية يأخذها ثمّ الثالثة يأخذها» · «اجعلها
+	// مطفأة، أنا أضبطها لاحقاً».)
+	//
+	// **والأولى هي `monthly_target` و`target_reward` بأسمائهما** — **ولو
+	// أُعيدت تسميتُهما لَسقط ما ضُبط من قبل.**
+	//
+	// **وصفرُ الهدف يطفئ المرحلة** — لا تُعرض في شاشته ولا تُدفع.
+	{Key: "sales.target_2", Group: GroupSales, Kind: KindInt,
+		Min: 0, Max: 5000, Unit: "client", Default: 0},
+	{Key: "sales.reward_2", Group: GroupSales, Kind: KindMoney,
+		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
+	{Key: "sales.target_3", Group: GroupSales, Kind: KindInt,
+		Min: 0, Max: 5000, Unit: "client", Default: 0},
+	{Key: "sales.reward_3", Group: GroupSales, Kind: KindMoney,
 		Min: 0, Max: 100000000, Unit: "currency", Default: 0},
 
 	// ══════════════════════════════════════════════════════════════════

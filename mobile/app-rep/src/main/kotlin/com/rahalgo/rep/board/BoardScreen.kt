@@ -33,6 +33,8 @@ import com.rahalgo.ui.KeyValue
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.Screen
+import com.rahalgo.ui.StatRow
+import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.SectionTitle
 import com.rahalgo.ui.apiError
@@ -72,36 +74,38 @@ fun BoardScreen(vm: BoardViewModel) {
     }
 
     Screen {
-        ScreenTitle(
-            stringResource(R.string.act_my_board),
-            stringResource(R.string.soon_board),
-        )
+        // **وبلا تلميحٍ تحت العنوان** — (طلبُ المالك ٢٠٢٦-٠٨-٣١:
+        // «أرقامك وهدف الشهر احذفها، غيرُ ضروريّة»).
+        //
+        // **وتلميحٌ يعيد ما تحته لا يضيف**: الأرقامُ والهدفُ معروضان
+        // في الشاشة نفسِها بأسمائهما، **فسطرٌ يسمّيهما يزحم ولا يشرح.**
+        ScreenTitle(stringResource(R.string.act_my_board))
 
         // ══════════════════════════════════════════════════════════════
-        // **هدفُ الشهر — أوّلُ ما يُرى**
-        // ══════════════════════════════════════════════════════════════
-        // ══════════════════════════════════════════════════════════════
-        // **والبسطُ طلباتٌ مسلَّمة — لا متاجرَ فُتحت**
+        // **والبسطُ متاجرُ فُتحت — لا طلباتٌ سُلّمت**
         // ══════════════════════════════════════════════════════════════
         //
-        // **كان `monthMerchants`** — والمحرّكُ يحسب الهدفَ بغيره:
+        // **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «الهدفُ الشهريّ هو عددُ العملاء
+        // المسجَّلين» · **وبلاغُه**: «يوجد فقط عميلٌ واحدٌ بالهدف الشهريّ
+        // مع أنّ بعملائه أربعةَ عملاء».)
         //
-        //     SELECT count(*) FROM orders o JOIN merchants mm …
-        //     WHERE mm.sales_rep_user_id = $1 AND o.status = 'delivered'
+        // **وكان `monthDelivered`** — فيقرأ «١ / ٥» **وفي السطر نفسِه
+        // تحته «عملاء سجلتهم: ٤»**: رقمان متناقضان في شاشةٍ واحدة.
         //
-        // **طلباتٌ سُلّمت من متاجره** — ووحدةُ الإعداد `"order"` تقولها
-        // نصّاً.
+        // # وهذا موضعٌ رابعٌ لقاعدةٍ واحدة
         //
-        // **فكان المندوبُ يرى «٣ / ١٠» فيظنّ عليه فتحَ سبعةِ متاجرَ**
-        // — والهدفُ عشرةُ طلباتٍ مسلَّمة، **وقد يكون بلغه من زمن.**
+        // **`doneThisMonth` تدفع · و`Standings` تعرض في اللوحة · والكلمةُ
+        // تقول · وهذا يرسم.** أُصلحت ثلاثةٌ ٢٠٢٦-٠٨-٣١ **وبقي هذا يوماً
+        // كاملاً يعرض غيرَ ما يُدفع عليه.**
         //
-        // **وشاشةٌ تقيس غيرَ ما يُصرف عليه المالُ تُوجّه العملَ إلى غير
-        // موضعه**: يترك متاجرَه القائمةَ ليفتح جديدةً، **وهدفُه يُبلَغ
-        // بإنجاح ما فتح لا بفتح المزيد.**
+        // **والمحرّكُ يرسل الحقلين معاً** (`month_merchants` و
+        // `month_delivered`) — **فالشاشةُ تختار، ومن اختار الخطأ لا
+        // يُخطئه بناءٌ ولا حارس.**
         //
-        // (كشفه جردُ الحالات ٢٠٢٦-٠٨-٣٠، وأُصلح بإذن المالك.)
+        // **وأنا من وضع الخطأ** (٢٠٢٦-٠٨-٣٠): رأيتُ الشيفرةَ تعدّ طلبات
+        // **فجعلتُ الشاشةَ تتبعها**، والصوابُ أن تتبع الشيفرةُ القصد.
         val target = maxOf(1, me.monthlyTarget)
-        val done = me.monthDelivered
+        val done = me.monthMerchants
         val reached = done >= target
         Spacer(Modifier.height(12.dp))
         Card {
@@ -144,14 +148,27 @@ fun BoardScreen(vm: BoardViewModel) {
         // ══════════════════════════════════════════════════════════════
         Spacer(Modifier.height(14.dp))
         SectionTitle(stringResource(R.string.bd_this_month))
+        // **ومربّعاتٌ لا أسطر** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «لوحتي أيضاً
+        // اعملها مربّعاتٍ مناسبة، أفضل»). **والرقمُ يُرى قبل أن يُقرأ.**
         Card {
-            KeyValue(stringResource(R.string.bd_month_clients), me.monthMerchants.toString())
-            KeyValue(stringResource(R.string.bd_month_delivered), me.monthDelivered.toString())
-            KeyValue(
-                stringResource(R.string.bd_month_commissions),
-                money(me.monthCommissions),
-                valueColor = Rahal.colors.brand,
-            )
+            StatRow {
+                StatBox(
+                    label = stringResource(R.string.bd_month_clients),
+                    value = me.monthMerchants.toString(),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.bd_month_delivered),
+                    value = me.monthDelivered.toString(),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.bd_month_commissions),
+                    value = money(me.monthCommissions),
+                    modifier = Modifier.weight(1f),
+                    color = Rahal.colors.brand,
+                )
+            }
         }
 
         // **وما ينتظر البتّ** — ولا يُعرض صفراً: **رقمٌ صفريٌّ بجانب
@@ -178,18 +195,36 @@ fun BoardScreen(vm: BoardViewModel) {
         // ══════════════════════════════════════════════════════════════
         Spacer(Modifier.height(14.dp))
         SectionTitle(stringResource(R.string.bd_all_time))
+        // **وثلاثةٌ فوق ورصيدُه وحدَه تحت** — **والرصيدُ ليس من جنسها**:
+        // تلك حصيلةُ عمله، **وهذا ما في يده الآن.** ومربّعٌ رابعٌ في
+        // صفّها يجعله رقماً بينها فيُقرأ حصيلةً أخرى.
         Card {
-            KeyValue(stringResource(R.string.bd_clients), me.merchants.toString())
-            KeyValue(stringResource(R.string.bd_delivered), me.deliveredOrders.toString())
-            KeyValue(stringResource(R.string.bd_commissions), money(me.totalCommissions))
-            Spacer(Modifier.height(6.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(6.dp))
-            KeyValue(
-                stringResource(R.string.bd_balance),
-                money(me.balance),
-                valueColor = Rahal.colors.brand,
-            )
+            StatRow {
+                StatBox(
+                    label = stringResource(R.string.bd_clients),
+                    value = me.merchants.toString(),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.bd_delivered),
+                    value = me.deliveredOrders.toString(),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.bd_commissions),
+                    value = money(me.totalCommissions),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            StatRow {
+                StatBox(
+                    label = stringResource(R.string.bd_balance),
+                    value = money(me.balance),
+                    modifier = Modifier.weight(1f),
+                    color = Rahal.colors.brand,
+                )
+            }
         }
 
         // ══════════════════════════════════════════════════════════════

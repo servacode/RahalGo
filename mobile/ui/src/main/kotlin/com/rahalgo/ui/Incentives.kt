@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rahalgo.shared.model.IncentiveEntry
+import com.rahalgo.shared.model.TargetLevel
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -57,27 +58,58 @@ fun IncentivesScreen(vm: IncentivesViewModel) {
     val st = data.standing
 
     Screen {
-        ScreenTitle(
-            stringResource(R.string.menu_rewards),
-            stringResource(R.string.inc_hint),
-        )
+        // **وبلا تلميح** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «ما أنجزتَه هذا
+        // الشهر وما نلتَه عليه احذفها، ما تلزم»). **والشاشةُ تعرضهما
+        // بأسمائهما تحته، فالتلميحُ يعيد ولا يضيف.**
+        ScreenTitle(stringResource(R.string.menu_rewards))
 
-        if (st.target > 0) {
+        // ══════════════════════════════════════════════════════════════
+        // **مراحلُ الشهر — واحدةٌ أو ثلاث**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «الهدفُ برأيي يكون على ٣ مراحل ·
+        // إذا بلغ الأولى يأخذها ثمّ الثانية يأخذها ثمّ الثالثة».)
+        //
+        // **وهدفٌ واحدٌ يقتل الحافزَ مرّتين**: من بلغه في اليوم العاشر لا
+        // شيءَ يدفعه بعده، **ومن تأخّر رآه بعيداً فاستسلم.**
+        //
+        // **والمطفأةُ لا تصل من المحرّك** — فما وصل يُعرض. **وفارغةٌ تعني
+        // محرّكاً لا يعرفها**، فتُعرض المرحلةُ الواحدةُ كما كانت.
+        val levels = if (data.levels.isNotEmpty()) {
+            data.levels
+        } else if (st.target > 0) {
+            listOf(TargetLevel(n = 1, target = st.target.toLong(), reward = data.targetReward))
+        } else {
+            emptyList()
+        }
+
+        levels.forEach { lv ->
+            val reached = st.done >= lv.target
+            Spacer(Modifier.height(10.dp))
             Card {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // **واسمُها يقول رقمَها حين تتعدّد** — «هدف الشهر»
+                    // فوق ثلاث بطاقاتٍ لا يفرّق بينها.
                     Text(
-                        stringResource(R.string.inc_target),
+                        text = if (levels.size > 1) {
+                            stringResource(R.string.inc_level, lv.n.toString())
+                        } else {
+                            stringResource(R.string.inc_target)
+                        },
                         fontWeight = FontWeight.Bold,
                     )
-                    if (st.reached) {
+                    if (reached) {
                         Chip(stringResource(R.string.inc_reached), Rahal.colors.success)
                     } else {
                         Text(
-                            text = stringResource(R.string.inc_left, (st.target - st.done).toString()),
+                            text = stringResource(
+                                R.string.inc_left,
+                                (lv.target - st.done).toString(),
+                            ),
                             color = Rahal.colors.inkMuted,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -85,31 +117,30 @@ fun IncentivesScreen(vm: IncentivesViewModel) {
                 }
                 Spacer(Modifier.height(10.dp))
                 Bar(
-                    ratio = st.done.toFloat() / st.target,
-                    color = if (st.reached) Rahal.colors.success else Rahal.colors.brand,
+                    // **والنسبةُ تُقصّ عند الواحد** — من تجاوز المرحلةَ
+                    // يملأ شريطَها ولا يتجاوزه.
+                    ratio = (st.done.toFloat() / lv.target.toFloat()).coerceAtMost(1f),
+                    color = if (reached) Rahal.colors.success else Rahal.colors.brand,
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = st.done.toString() + " / " + st.target.toString(),
+                    text = st.done.toString() + " / " + lv.target.toString(),
                     color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
 
                 // **والجائزةُ تُقال قبل أن تُنال** — (شكوى المالك
                 // ٢٠٢٦-٠٨-٠٩: «لازم يعرف شو المكافأة الي رح يحصل عليها
-                // وقت يحقّق هدفه»).
-                //
-                // **وشاشةٌ تقول «٣ من ٥٠» ولا تقول ماذا بعدها تطلب جهداً
-                // بلا وعد.** وصفرٌ يُخفيها — **لا يُعرَض وعدٌ بلا مبلغ.**
-                if (data.targetReward > 0) {
+                // وقت يحقّق هدفه»). **وصفرٌ يُخفيها**: لا وعدَ بلا مبلغ.
+                if (lv.reward > 0) {
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        text = if (st.reached) {
-                            stringResource(R.string.inc_reward_got, money(data.targetReward))
+                        text = if (reached) {
+                            stringResource(R.string.inc_reward_got, money(lv.reward))
                         } else {
-                            stringResource(R.string.inc_reward_promise, money(data.targetReward))
+                            stringResource(R.string.inc_reward_promise, money(lv.reward))
                         },
-                        color = if (st.reached) Rahal.colors.success else Rahal.colors.accent,
+                        color = if (reached) Rahal.colors.success else Rahal.colors.accent,
                         fontWeight = FontWeight.Medium,
                     )
                 }
@@ -117,18 +148,28 @@ fun IncentivesScreen(vm: IncentivesViewModel) {
         }
 
         Spacer(Modifier.height(14.dp))
+        // **ومربّعاتٌ لا أسطر** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «أهدافي
+        // والمكافآت أيضاً»). **وثلاثةٌ في صفٍّ واحدٍ تُقرأ بنظرة.**
         Card(tone = Rahal.colors.inkMuted) {
-            KeyValue(stringResource(R.string.inc_done), st.done.toString())
-            KeyValue(
-                stringResource(R.string.inc_rewarded),
-                money(st.rewarded),
-                valueColor = Rahal.colors.success,
-            )
-            KeyValue(
-                stringResource(R.string.inc_penalized),
-                money(st.penalized),
-                valueColor = if (st.penalized > 0) Rahal.colors.danger else Rahal.colors.inkMuted,
-            )
+            StatRow {
+                StatBox(
+                    label = stringResource(R.string.inc_done),
+                    value = st.done.toString(),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.inc_rewarded),
+                    value = money(st.rewarded),
+                    modifier = Modifier.weight(1f),
+                    color = Rahal.colors.success,
+                )
+                StatBox(
+                    label = stringResource(R.string.inc_penalized),
+                    value = money(st.penalized),
+                    modifier = Modifier.weight(1f),
+                    color = if (st.penalized > 0) Rahal.colors.danger else Rahal.colors.inkMuted,
+                )
+            }
         }
 
         SectionTitle(stringResource(R.string.inc_entries))

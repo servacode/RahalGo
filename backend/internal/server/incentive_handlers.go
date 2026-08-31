@@ -109,10 +109,17 @@ func (s *Server) handleMyIncentives(w http.ResponseWriter, r *http.Request) {
 	if role == "sales" {
 		key = "sales.target_reward"
 	}
+	// **والمراحلُ تُرسَل كلُّها** — (قرارُ المالك ٢٠٢٦-٠٨-٣١: ثلاثُ
+	// مراحل). **والمطفأةُ لا تُرسَل**: مرحلةٌ فارغةٌ في شاشته تُقرأ
+	// هدفاً بلا رقم.
+	//
+	// **و`target_reward` تبقى** — مكافأةُ الأولى، **وشاشاتٌ قديمةٌ في
+	// هواتفَ لم تُحدَّث تقرؤها كما كانت.**
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"standing":      st,
 		"entries":       list,
 		"target_reward": s.settings.GetInt(r.Context(), key),
+		"levels":        s.incentives.LevelsOf(r.Context(), role),
 		"kinds":         []string{incentives.KindReward, incentives.KindPenalty},
 	})
 }

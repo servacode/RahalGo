@@ -1,6 +1,8 @@
 package com.rahalgo.driver.home
 
 import androidx.compose.foundation.background
+import com.rahalgo.ui.StatBox
+import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.Bar
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Switch
@@ -192,18 +194,18 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Stat(
+        StatRow {
+            StatBox(
                 label = stringResource(R.string.home_delivered),
                 value = grouped(me.todayDelivered.toLong()),
                 modifier = Modifier.weight(1f),
             )
-            Stat(
+            StatBox(
                 label = stringResource(R.string.ord_st_failed),
                 value = grouped(me.todayFailed.toLong()),
                 modifier = Modifier.weight(1f),
             )
-            Stat(
+            StatBox(
                 label = stringResource(R.string.home_earned),
                 value = grouped(me.todayEarned),
                 modifier = Modifier.weight(1f),
@@ -474,20 +476,6 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
     }
 }
 
-@Composable
-private fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.surface)
-            .padding(vertical = 14.dp, horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(2.dp))
-        Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
-    }
-}
 
 @Composable
 private fun MoneyRow(label: String, value: String, warn: Boolean = false) {

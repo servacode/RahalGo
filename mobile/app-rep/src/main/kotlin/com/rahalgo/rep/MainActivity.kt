@@ -447,10 +447,6 @@ private fun Soon(key: String) {
     val title: Int
     val hint: Int
     when (key) {
-        "clients" -> {
-            title = R.string.nav_clients
-            hint = R.string.soon_clients
-        }
         RepItems.LINK -> {
             title = R.string.menu_link
             hint = R.string.soon_link

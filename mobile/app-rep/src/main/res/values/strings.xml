@@ -9,8 +9,6 @@
     <string name="nav_add_client">إضافة عميل</string>
     <string name="nav_clients">عملائي</string>
 
-    <string name="soon_board">أرقامك وهدف الشهر</string>
-    <string name="soon_clients">من سجلتهم وما نلته عنهم</string>
     <string name="soon_profile">اسمك وصورتك ورقمك وكلمة مرورك</string>
 
     <!-- **بنودُ «ما يخصّني»** -->
@@ -20,7 +18,6 @@
 
     <!-- **عملائي** -->
     <string name="cl_pending">ينتظرون البت (%1$s)</string>
-    <string name="cl_active">يعملون (%1$s)</string>
     <string name="cl_none">لم تسجل عميلا بعد — ابدأ من «إضافة عميل»</string>
     <string name="cl_waiting">بانتظار موافقة الإدارة</string>
     <string name="cl_rejected">مرفوض</string>
@@ -36,7 +33,9 @@
     <string name="cd_owner_phone">رقم صاحب المتجر</string>
     <string name="cd_joined">انضم في</string>
     <string name="cd_sum_orders">إجمالي الطلبات</string>
-    <string name="cd_sum_delivered">مسلم</string>
+    <!-- **ولفظُ المنصّة** — (قرارُ المالك ٢٠٢٦-٠٨-٣١: «تم التسليم تُفهم
+         عن كلّ الأطراف»). **وكانت «مسلم» هنا وحدَها.** -->
+    <string name="cd_sum_delivered">تم التسليم</string>
     <string name="cd_sum_cancelled">ملغى</string>
     <string name="cd_sales">مبيعات سلمت</string>
     <string name="cd_earnings">صافي عمولتي</string>
@@ -152,14 +151,19 @@
          «الهدفُ الشهريُّ هو عددُ العملاء المسجَّلين».)
          **ومندوبٌ فتح عشرةَ متاجرَ في أسبوعٍ كان عدّادُه صفراً** حتّى
          يشتري الناسُ منها — **وذلك يقيس السوقَ لا المندوب.** -->
-    <string name="bd_target_left">بقي %1$s عميلا</string>
+    <string name="bd_target_left">بقي %1$s عميل</string>
     <string name="bd_this_month">هذا الشهر</string>
-    <string name="bd_month_clients">عملاء سجلتهم</string>
+    <!-- **وأخفُّ** — (طلبُ المالك ٢٠٢٦-٠٨-٣١). **والقسمُ فوقها يقول
+         «هذا الشهر»، والآخرُ «منذ بدأت»** — فيكفي «عملاؤك» فيهما. -->
+    <string name="bd_month_clients">عملاءك</string>
     <string name="bd_month_delivered">طلبات مسلمة</string>
-    <string name="bd_month_commissions">عمولات هذا الشهر</string>
+    <!-- **وأخفُّ** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «بدل عمولات هذا الشهر
+         خلّيها عمولات الشهر فقط، أفضل وأخفّ»). **والقسمُ فوقها يقول
+         «هذا الشهر» أصلاً** — فتكرارُه في كلّ مربّعٍ حشو. -->
+    <string name="bd_month_commissions">عمولات الشهر</string>
     <string name="bd_pending">بانتظار موافقة الإدارة</string>
     <string name="bd_all_time">منذ بدأت</string>
-    <string name="bd_clients">عملاء جلبتهم</string>
+    <string name="bd_clients">عملاءك</string>
     <string name="bd_delivered">طلبات مسلمة</string>
     <string name="bd_commissions">إجمالي العمولات</string>
     <string name="bd_balance">رصيد المحفظة</string>

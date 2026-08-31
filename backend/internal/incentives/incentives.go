@@ -107,14 +107,31 @@ const monthStart = `date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')`
 // نداءٌ لكلّ سائقٍ يعني عشرين نداءً لشاشةٍ واحدة. **وشاشةٌ بطيئةٌ لا تُفتح**،
 // فلا تُقرأ الأهدافُ أصلاً.
 func (s *Service) Standings(ctx context.Context, role string) ([]Standing, error) {
-	var target int
-	switch role {
-	case "driver":
-		target = int(s.settings.GetInt(ctx, "drivers.monthly_target"))
-	case "sales":
-		target = int(s.settings.GetInt(ctx, "sales.monthly_target"))
-	default:
+	// ══════════════════════════════════════════════════════════════════
+	// **والهدفُ المعروضُ مرحلتُه القادمة — لا الأولى دائماً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** ثلاثُ مراحل.)
+	//
+	// **ومن بلغ الأولى فرأى «٥ / ٥» إلى آخر الشهر ظنّ أنّه انتهى** —
+	// والثانيةُ أمامه. **فيُعرض ما لم يبلغه بعد**، وإن بلغ الكلَّ عُرضت
+	// الأخيرةُ مبلوغةً.
+	levels := s.levelsFor(ctx, role)
+	if len(levels) == 0 {
 		return nil, httpx.ErrNotFound
+	}
+	nextTarget := func(done int) int {
+		last := 0
+		for _, l := range levels {
+			if l.Target <= 0 {
+				continue
+			}
+			last = int(l.Target)
+			if done < last {
+				return last
+			}
+		}
+		return last
 	}
 
 	// **والإنجازُ يختلف بالدور** — السائقُ بما وصّل، **والمندوبُ بما فتح
@@ -155,10 +172,10 @@ func (s *Service) Standings(ctx context.Context, role string) ([]Standing, error
 			&x.Rewarded, &x.Penalized); err != nil {
 			return nil, err
 		}
-		x.Target = target
+		x.Target = nextTarget(x.Done)
 		// **وبلوغٌ بلا هدفٍ ليس بلوغاً** — صفرٌ يعني «لا هدف»، ومن أنجز
 		// طلباً واحداً ليس بالغاً شيئاً.
-		x.Reached = target > 0 && x.Done >= target
+		x.Reached = x.Target > 0 && x.Done >= x.Target
 		out = append(out, x)
 	}
 	return out, rows.Err()

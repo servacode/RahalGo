@@ -37,6 +37,8 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.ui.Refresh
+import com.rahalgo.ui.StatBox
+import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.ticketStatusColor
 import com.rahalgo.ui.ticketStatusText
 import com.rahalgo.shared.model.ComplaintBrief
@@ -182,7 +184,7 @@ private fun Summary(rep: Reputation) {
         else -> Rahal.colors.inkMuted
     }
 
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    StatRow {
         StatBox(
             label = stringResource(R.string.rate_avg),
             value = "%.1f".format(java.util.Locale.US, rep.rating.avg),
@@ -218,40 +220,6 @@ private fun Summary(rep: Reputation) {
  * **والاتّجاهُ كلمةٌ لا رقم** — فيُصغَّر خطُّه ليقع في العرض نفسِه بلا
  * أن يُقصّ.
  */
-@Composable
-private fun StatBox(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    color: androidx.compose.ui.graphics.Color = Rahal.colors.ink,
-) {
-    Column(
-        modifier
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
-            .padding(horizontal = 10.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = label,
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = value,
-            color = color,
-            style = if (value.length > 4) {
-                MaterialTheme.typography.titleSmall
-            } else {
-                MaterialTheme.typography.headlineSmall
-            },
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
-    }
-}
 
 @Composable
 private fun ReviewRow(r: Review) {

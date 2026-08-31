@@ -249,9 +249,22 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         RahalButton(
             onClick = { vm.send() },
+            // ══════════════════════════════════════════════════════════
+            // **وكلُّ حقلٍ إلزاميّ — ولا يُرسَل بنقصِ واحد**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «حقول إضافة عميل كلُّها
+            // إلزاميّة، ولا يمكن إرسالُ طلبٍ بدون أيّ عنصرٍ منها»).
+            //
+            // **وكان «العنوان الكامل» خارجَ الشرط** — فيصل الطلبُ
+            // الإدارةَ بمنطقةٍ بلا تفصيل، **ومن يوافق عليه لا يعرف أين
+            // المتجرُ في منطقته**، والسائقُ يبحث عنه بالنقطة وحدَها.
+            //
+            // **والمحافظةُ لا تُشترط منفصلةً** — لا تُختار منطقةٌ بلا
+            // محافظة، **وشرطٌ لا يمكن كسرُه شرطٌ يزحم ولا يحرس.**
             enabled = !vm.busy && vm.store.isNotBlank() && vm.owner.isNotBlank() &&
                 vm.phone.isNotBlank() && vm.pickedCategory.isNotEmpty() &&
-                vm.pickedDistrict.isNotEmpty() &&
+                vm.pickedDistrict.isNotEmpty() && vm.area.isNotBlank() &&
                 vm.password.isNotBlank() && vm.point != null,
             modifier = Modifier.fillMaxWidth(),
         ) {

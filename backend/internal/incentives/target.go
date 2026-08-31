@@ -38,17 +38,78 @@ var damascus = time.FixedZone("Asia/Damascus", 3*60*60)
 // بمنطقةٍ زمنيّةٍ ليست ثابتةً** فلا تدخل فهرساً.
 func PeriodOf(t time.Time) string { return t.In(damascus).Format("2006-01") }
 
-// targetFor الهدفُ ومكافأتُه لهذا الدور — **وصفرٌ يعني بلا مكافأةٍ آليّة.**
-func (s *Service) targetFor(ctx context.Context, role string) (target, reward int64) {
+// Level **مرحلةٌ من مراحل الشهر — عددُها ومكافأتُها.**
+type Level struct {
+	// N رقمُها: ١ · ٢ · ٣ — **ويدخل وسمَ الشهر** فيمنع الفهرسُ تكرارَها وحدَها.
+	N int `json:"n"`
+	// Target كم يلزم لبلوغها — **وصفرٌ يعني مطفأة.**
+	Target int64 `json:"target"`
+	// Reward ما يُدفع عندها — **وصفرٌ يعني عدّاداً بلا مال.**
+	Reward int64 `json:"reward"`
+}
+
+// prefixOf **بادئةُ مفاتيح الدور** — `drivers.` أو `sales.`
+func prefixOf(role string) string {
 	switch role {
 	case "driver":
-		return s.settings.GetInt(ctx, "drivers.monthly_target"),
-			s.settings.GetInt(ctx, "drivers.target_reward")
+		return "drivers."
 	case "sales":
-		return s.settings.GetInt(ctx, "sales.monthly_target"),
-			s.settings.GetInt(ctx, "sales.target_reward")
+		return "sales."
 	}
-	return 0, 0
+	return ""
+}
+
+// levelsFor **مراحلُ الشهر الثلاثُ لهذا الدور.**
+//
+// # ولماذا ثلاثٌ لا واحدة
+//
+// **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «الهدفُ برأيي يكون على ٣ مراحل، يعني ٣
+// مستويات · **إذا بلغ الأولى يأخذها ثمّ الثانية يأخذها ثمّ الثالثة
+// يأخذها** · والسائقُ أيضاً نفسُ الشيء، ولكنّ السائقَ مختلفٌ عن
+// المندوب».)
+//
+// **وهدفٌ واحدٌ يقتل الحافزَ مرّتين في الشهر**: من بلغه في اليوم العاشر
+// لا شيءَ يدفعه بعده، **ومن تأخّر ورأى «بقي أربعة» في الخامس والعشرين
+// استسلم.** **والمراحلُ تُبقي أمام كلٍّ منهما هدفاً قريبا.**
+//
+// # والأولى هي القديمةُ باسمها
+//
+// **`monthly_target` و`target_reward` تبقيان مرحلةً أولى** — **ولو
+// أُعيدت تسميتُهما لَسقط ما ضبطه المالكُ من قبل**، ولوحةُ الإعدادات
+// معهما.
+//
+// **والثانيةُ والثالثةُ صفرٌ حتّى يضبطهما** (قرارُه: «اجعلها مطفأة، أنا
+// أضبطها لاحقاً») — **ومن نشر مراحلَ بأرقامٍ اخترعها دفع مالاً لم
+// يقرّره صاحبُه.**
+//
+// **وأرقامُ الدورين مستقلّة**: السائقُ يعدّ طلبات، والمندوبُ عملاء.
+func (s *Service) levelsFor(ctx context.Context, role string) []Level {
+	p := prefixOf(role)
+	if p == "" {
+		return nil
+	}
+	return []Level{
+		{N: 1,
+			Target: s.settings.GetInt(ctx, p+"monthly_target"),
+			Reward: s.settings.GetInt(ctx, p+"target_reward")},
+		{N: 2,
+			Target: s.settings.GetInt(ctx, p+"target_2"),
+			Reward: s.settings.GetInt(ctx, p+"reward_2")},
+		{N: 3,
+			Target: s.settings.GetInt(ctx, p+"target_3"),
+			Reward: s.settings.GetInt(ctx, p+"reward_3")},
+	}
+}
+
+// LevelsOf **مراحلُ الدور — للشاشات.**
+func (s *Service) LevelsOf(ctx context.Context, role string) []Level {
+	out := []Level{}
+	for _, l := range s.levelsFor(ctx, role) {
+		if l.Target > 0 {
+			out = append(out, l)
+		}
+	}
+	return out
 }
 
 // GrantTargetIfReached **يُكافئ من بلغ — ويصمت عمّن لم يبلغ أو كوفئ.**
@@ -59,29 +120,47 @@ func (s *Service) targetFor(ctx context.Context, role string) (target, reward in
 // العدّاد. **ونداؤها في كلّ فتحةِ شاشةٍ يجعل القراءةَ تكتب** — وشاشةٌ تُصرف
 // مالاً بمجرّد أن تُفتح لا تُراجَع.
 func (s *Service) GrantTargetIfReached(ctx context.Context, userID, role string) int64 {
-	target, reward := s.targetFor(ctx, role)
-	if target <= 0 || reward <= 0 {
-		// **بلا هدفٍ أو بلا مكافأةٍ لا شيءَ يقع** — والهدفُ يبقى عدّاداً
-		// والمكافأةُ بيد المالك كما كانت.
+	levels := s.levelsFor(ctx, role)
+	if len(levels) == 0 {
 		return 0
 	}
 
 	done, err := s.doneThisMonth(ctx, userID, role)
-	if err != nil || done < target {
+	if err != nil {
 		return 0
 	}
 
-	// **ثمّ يُكتب — والقاعدةُ تردّ الثاني.**
+	// ══════════════════════════════════════════════════════════════════
+	// **وكلُّ مرحلةٍ بلغها تُدفع — لا الأعلى وحدَها**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «إذا بلغ الأولى يأخذها، ثمّ الثانية
+	// يأخذها، ثمّ الثالثة يأخذها».)
+	//
+	// **ومن قفز من صفرٍ إلى العشرين في يومٍ واحدٍ نال الثلاثَ معاً** —
+	// بلغها كلَّها فعلاً. **ومن يُحرَم ما استحقّه لأنّه تجاوزه يتعلّم أن
+	// يقف عند الحدّ.**
+	//
+	// **والوسمُ يحمل رقمَ المرحلة** (`2026-08#2`) — **فالفهرسُ الفريدُ
+	// القائمُ يمنع تكرارَ كلِّ واحدةٍ وحدَها**، بلا فهرسٍ جديدٍ ولا هجرة.
 	period := PeriodOf(time.Now())
-	if err := s.grantTarget(ctx, userID, reward, period, target); err != nil {
-		// **والتصادمُ ليس خطأً** — هو الضمانةُ تعمل.
-		if isDuplicate(err) {
-			return 0
+	var paid int64
+	for _, l := range levels {
+		if l.Target <= 0 || l.Reward <= 0 || done < l.Target {
+			// **مطفأةٌ أو لم تُبلَغ** — والهدفُ يبقى عدّاداً بلا مال.
+			continue
 		}
-		s.logf("مكافأةُ الهدف تعذّرت", "user", userID, "error", err)
-		return 0
+		if err := s.grantTarget(ctx, userID, role, l, period); err != nil {
+			// **والتصادمُ ليس خطأً** — هو الضمانةُ تعمل: نالها من قبل.
+			if isDuplicate(err) {
+				continue
+			}
+			s.logf("مكافأةُ الهدف تعذّرت", "user", userID, "level", l.N, "error", err)
+			continue
+		}
+		paid += l.Reward
 	}
-	return reward
+	return paid
 }
 
 // doneThisMonth ما أنجزه في شهره — **بالمعنى الذي يخصّ دورَه.**
@@ -126,15 +205,26 @@ func (s *Service) doneThisMonth(ctx context.Context, userID, role string) (int64
 //
 // **ولا يُعاد بناءُ ما في `Grant`**: هي تأخذ فاعلاً بشريّاً، **وهذه بلا فاعل**
 // — ومن كتب `actor` وهميّاً جعل السجلَّ يقول إنّ إنساناً قرّر.
-func (s *Service) grantTarget(ctx context.Context, userID string, reward int64,
-	period string, target int64) error {
+func (s *Service) grantTarget(ctx context.Context, userID, role string,
+	l Level, period string) error {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	reason := "مكافأةُ بلوغ هدف الشهر (" + period + ") — " + itoa(target) + " طلباً"
+	// **والوحدةُ بوحدة الدور** — **وكان يقول «طلباً» للمندوب أيضاً**
+	// وهدفُه عملاءُ لا طلبات. **وقيدٌ يسمّي غيرَ ما وقع يُقرأ في كشف
+	// حسابه فيظنّ أنّ المكافأةَ عن شيءٍ آخر.**
+	unit := " طلباً"
+	if role == "sales" {
+		unit = " عميلاً"
+	}
+	reason := "مكافأةُ المرحلة " + itoa(int64(l.N)) + " (" + period + ") — " +
+		itoa(l.Target) + unit
+	// **والوسمُ يحمل رقمَ المرحلة** — انظر `GrantTargetIfReached`.
+	period += "#" + itoa(int64(l.N))
+	reward := l.Reward
 
 	// **والصفُّ أوّلاً**: هو ما يحمل الفهرسَ الفريد، **فيُردّ المكرَّرُ قبل أن
 	// يمسّ الدفتر.** ولو كُتب المالُ أوّلاً لَخرج ثمّ رُدّ القيد.

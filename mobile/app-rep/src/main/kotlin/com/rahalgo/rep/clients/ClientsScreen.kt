@@ -35,6 +35,8 @@ import com.rahalgo.ui.KeyValue
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.Screen
+import com.rahalgo.ui.StatBox
+import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.SectionTitle
 import com.rahalgo.ui.money
@@ -78,10 +80,18 @@ fun ClientsScreen(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit = {
     val context = LocalContext.current
 
     Screen {
-        ScreenTitle(
-            stringResource(R.string.nav_clients),
-            stringResource(R.string.soon_clients),
-        )
+        // ══════════════════════════════════════════════════════════════
+        // **والعددُ بجانب الاسم — لا سطراً تحته ولا عنوانَ قسم**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **(طلبُ المالك ٢٠٢٦-٠٨-٣١:** «من سجّلتهم وما نلتَه عنهم ما
+        // تلزم · **يعملون (٤) أيضاً احذفها** · حطّ رقمَ عدد العملاء
+        // بجانب عملائي».)
+        //
+        // **وثلاثةُ أسطرٍ كانت تقول شيئاً واحدا**: الاسمُ، ثمّ تلميحٌ
+        // يشرحه، ثمّ عنوانُ قسمٍ يعدّ ما تحته. **والعددُ بجانب الاسم
+        // يجمعها في سطر.**
+        ScreenTitle(stringResource(R.string.nav_clients) + " (" + list.size + ")")
 
         // ══════════════════════════════════════════════════════════════
         // **والمعلَّقون أوّلا** — ما ينتظر عملا
@@ -99,8 +109,7 @@ fun ClientsScreen(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit = {
         }
 
         if (list.isNotEmpty()) {
-            SectionTitle(stringResource(R.string.cl_active, list.size.toString()))
-            list.forEach { m ->
+                        list.forEach { m ->
                 MerchantCard(
                     m = m,
                     media = { path -> Backend.of(context).media(path) },
@@ -218,12 +227,21 @@ private fun MerchantCard(
         Spacer(Modifier.height(8.dp))
         HorizontalDivider()
         Spacer(Modifier.height(8.dp))
-        KeyValue(stringResource(R.string.cl_delivered), m.deliveredOrders.toString())
-        KeyValue(
-            stringResource(R.string.cl_commission),
-            money(m.myCommission),
-            valueColor = Rahal.colors.brand,
-        )
+        // **ومربّعان لا سطران** — (طلبُ المالك ٢٠٢٦-٠٨-٣١). **والرقمُ
+        // يُرى قبل أن يُقرأ**، وسطرٌ باسمٍ وقيمةٍ يُمرَّر عليه نصّا.
+        StatRow {
+            StatBox(
+                label = stringResource(R.string.cl_delivered),
+                value = m.deliveredOrders.toString(),
+                modifier = Modifier.weight(1f),
+            )
+            StatBox(
+                label = stringResource(R.string.cl_commission),
+                value = money(m.myCommission),
+                modifier = Modifier.weight(1f),
+                color = Rahal.colors.brand,
+            )
+        }
 
         // ══════════════════════════════════════════════════════════════
         // **وشريطُ التفعيل حين لا يزال دونه**

@@ -205,7 +205,7 @@
     <string name="sheet_truncated">بلغ الكشف حده الأقصى من الأسطر، فبعض حركات هذه المدة غير معروضة. اختر مدة أقصر ليكتمل.</string>
     <string name="wal_all">الكل</string>
     <string name="wal_amount">المبلغ</string>
-    <string name="wal_ask_payout">اطلب سحبا</string>
+    <string name="wal_ask_payout">سحب الأموال</string>
     <string name="wal_bad_amount">مبلغ غير صحيح</string>
     <string name="wal_balance">الرصيد</string>
     <string name="wal_closing">رصيد آخر المدة</string>
@@ -414,18 +414,28 @@
          نفسَه فتقولانه بكلمةٍ واحدة. (طلبُ المالك ٢٠٢٦-٠٨-١٨.) -->
     <string name="acc_addr_on_map">حدد الموقع على الخريطة</string>
     <string name="menu_rewards">أهدافي والمكافآت</string>
-    <string name="inc_done">طلبات سلمت هذا الشهر</string>
+    <!-- ══ ولفظٌ واحدٌ يصلح للاثنين ══
+         (قرارُ المالك ٢٠٢٦-٠٨-٣١: «نعم، لفظٌ واحدٌ مركزيّ».)
+         **والصفحةُ يستعملها المندوبُ والسائقُ معاً** — **وعدّادُ
+         السائق طلباتٌ سُلّمت، وعدّادُ المندوب صار عملاءَ سُجّلوا**
+         (قرارُ المالك في اليوم نفسِه).
+         **فكانت تقول «طلبات سلمت» والرقمُ عملاء**: يقرأ المندوبُ «٤
+         طلبات» وطلباتُه المسلَّمةُ واحد. **واسمٌ يكذّب رقمَه تحته
+         أسوأُ من سطرٍ بلا اسم.** -->
+    <string name="inc_done">إنجازات الشهر</string>
     <string name="inc_empty">لا مكافآت ولا عقوبات بعد</string>
     <string name="inc_entries">الحركات</string>
-    <string name="inc_hint">ما أنجزته هذا الشهر، وما نلته عليه</string>
     <string name="inc_left">يبقى %1$s</string>
-    <string name="inc_penalized">ما تم خصمه منك هذا الشهر</string>
+    <!-- **واسمُها يقول رقمَها حين تتعدّد** — «هدف الشهر» فوق ثلاث
+         بطاقاتٍ لا يفرّق بينها. -->
+    <string name="inc_level">المرحلة %1$s</string>
+    <string name="inc_penalized">خصومات الشهر</string>
     <string name="inc_penalty">عقوبة</string>
     <string name="inc_reached">بلغت الهدف</string>
     <string name="inc_reward">مكافأة</string>
     <string name="inc_reward_got">نلت مكافأة الهدف: %1$s</string>
     <string name="inc_reward_promise">مكافأة بلوغ الهدف: %1$s</string>
-    <string name="inc_rewarded">ما نلته هذا الشهر</string>
+    <string name="inc_rewarded">مكافآت الشهر</string>
     <string name="inc_target">هدف الشهر</string>
 
     <!--

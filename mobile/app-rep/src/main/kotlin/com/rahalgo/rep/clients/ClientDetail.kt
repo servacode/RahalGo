@@ -27,6 +27,8 @@ import com.rahalgo.ui.Card
 import com.rahalgo.ui.Chip
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.KeyValue
+import com.rahalgo.ui.StatRow
+import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.Screen
@@ -142,23 +144,46 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
         // **وأربعةُ أرقامٍ تُقرأ بنظرة**
         // ══════════════════════════════════════════════════════════════
         Spacer(Modifier.height(12.dp))
+        // **ومربّعاتٌ لا أسطر** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «داخل ملفّ
+        // المتجر أيضاً: إجمالي الطلبات · تم التسليم · ملغى · مبيعات
+        // سلّمت · صافي عمولتي — أيضاً مربّعاتٌ أنيقةٌ مناسبة»).
+        //
+        // **وصفّان لا صفٌّ من خمسة**: خمسةُ مربّعاتٍ في عرض الهاتف
+        // **تضيق فيُقصّ الرقم**، والعددُ فوق والمالُ تحت — **والفصلُ
+        // بينهما معنًى**: تلك ما وقع، وهذه ما نلتَه.
         Card {
-            KeyValue(stringResource(R.string.cd_sum_orders), sum.orders.toString())
-            KeyValue(stringResource(R.string.cd_sum_delivered), sum.delivered.toString())
-            KeyValue(
-                stringResource(R.string.cd_sum_cancelled),
-                sum.cancelled.toString(),
-                valueColor = if (sum.cancelled > 0) Rahal.colors.danger else Color_Unspecified,
-            )
-            Spacer(Modifier.height(6.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(6.dp))
-            KeyValue(stringResource(R.string.cd_sales), money(sum.deliveredSales))
-            KeyValue(
-                stringResource(R.string.cd_earnings),
-                money(sum.myEarnings),
-                valueColor = Rahal.colors.brand,
-            )
+            StatRow {
+                StatBox(
+                    label = stringResource(R.string.cd_sum_orders),
+                    value = sum.orders.toString(),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.cd_sum_delivered),
+                    value = sum.delivered.toString(),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.cd_sum_cancelled),
+                    value = sum.cancelled.toString(),
+                    modifier = Modifier.weight(1f),
+                    color = if (sum.cancelled > 0) Rahal.colors.danger else Rahal.colors.ink,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            StatRow {
+                StatBox(
+                    label = stringResource(R.string.cd_sales),
+                    value = money(sum.deliveredSales),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.cd_earnings),
+                    value = money(sum.myEarnings),
+                    modifier = Modifier.weight(1f),
+                    color = Rahal.colors.brand,
+                )
+            }
         }
 
         Spacer(Modifier.height(16.dp))

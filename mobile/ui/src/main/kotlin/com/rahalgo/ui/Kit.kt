@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -310,4 +312,88 @@ fun DayHead(text: String) {
         fontWeight = FontWeight.Bold,
     )
     Spacer(Modifier.height(4.dp))
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **مربّعُ رقم — الاسمُ فوقه والرقمُ تحته**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **(طلبُ المالك ٢٠٢٦-٠٨-٣١:** «طلبات سلّمت اجعلها مربّعاً تحتها عددُ
+ * الطلبات · وعمولتك عنه أيضاً مربّعاً تحته مبلغ».)
+ *
+ * # ولماذا مربّعٌ لا سطرٌ باسمٍ وقيمة
+ *
+ * **السطرُ يُقرأ نصّاً فيُمرَّر عليه** — والرقمُ فيه بحجم الكلام حوله.
+ * **والمربّعُ يُرى قبل أن يُقرأ**: عينٌ تمسح الشاشةَ تلتقط الأرقامَ
+ * وحدَها، **ومن أراد تفصيلاً قرأ اسمَه فوقها.**
+ *
+ * # وهنا لا في كلّ تطبيق
+ *
+ * **كانت نسختان**: في تقييم السائق، وفي لوحة المتجر. **وثالثةٌ كانت
+ * ستُكتب للمندوب** — **وثلاثُ نسخٍ تفترق يومَ يتبدّل لونٌ أو حشوة.**
+ *
+ * **والرقمُ الطويلُ يصغر خطُّه** — مبلغٌ بستّة أرقامٍ يكسر المربّعَ
+ * أو يُقصّ، **ورقمٌ مقصوصٌ أسوأُ من رقمٍ صغير.**
+ */
+@Composable
+fun StatBox(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    color: Color = Rahal.colors.ink,
+) {
+    Column(
+        modifier
+            .fillMaxHeight()
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
+            .padding(horizontal = 8.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        // **والاسمُ سطران دائماً** — (بلاغُ المالك ٢٠٢٦-٠٨-٣١: «مربّعٌ
+        // أصغرُ من مربّع، ليسا بنفس الحجم والترتيب»).
+        //
+        // **واسمٌ يلتفّ سطرين وآخرُ سطراً يجعل مربّعَه أطول** — فيُقرأ
+        // الفرقُ معنًى وليس فيه معنى. **فيُحجَز سطران للجميع.**
+        Text(
+            text = label,
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            minLines = 2,
+            maxLines = 2,
+        )
+        Spacer(Modifier.height(6.dp))
+        // **والرقمُ بحجمٍ واحدٍ مهما طال** — **وخطّان مختلفان في صفٍّ
+        // واحدٍ يقولان إنّ أحدَ الرقمين أهمّ**، وليس كذلك.
+        Text(
+            text = value,
+            color = color,
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * **صفُّ مربّعاتٍ متساويةٍ حجماً وترتيبا.**
+ *
+ * **(بلاغُ المالك ٢٠٢٦-٠٨-٣١:** «المربّعاتُ جميلة، ولكنّ المشكلةَ
+ * مربّعٌ أصغرُ من مربّع — ليسا بنفس الحجم والترتيب».)
+ *
+ * **و`IntrinsicSize.Min` تجعل الصفَّ بطول أطولِ مربّعٍ فيه** ثمّ يملؤه
+ * الباقي — **بلا رقمٍ ثابتٍ يُكسر يومَ يطول اسم.**
+ *
+ * **ومن كتب `Row` بيده نسي واحدةً منهما** — فيُعطى الصفُّ جاهزاً.
+ */
+@Composable
+fun StatRow(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        content = content,
+    )
 }

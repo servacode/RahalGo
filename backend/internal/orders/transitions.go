@@ -977,7 +977,7 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		return err
 	}
 	if _, err := s.wallet.ApplyTx(ctx, q, *repID, repCommission, "commission",
-		orderID, "عمولة مندوب عن طلب مسلَّم", &actorID); err != nil {
+		orderID, "عمولة عن طلب تم تسليمه", &actorID); err != nil {
 		return err
 	}
 	out.repID, out.commissionPaid = *repID, repCommission
