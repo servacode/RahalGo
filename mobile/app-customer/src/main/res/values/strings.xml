@@ -114,9 +114,6 @@
     <string name="inv_rewarded">من طلبوا فعلا</string>
     <string name="inv_earned">ما ناله حسابك</string>
 
-    <string name="tkt_open">مفتوحة</string>
-    <string name="tkt_working">قيد المعالجة</string>
-    <string name="tkt_closed">أغلقت</string>
 
     <!-- **السلّة** -->
     <!-- خياراتُ الصنف — الحجمُ والإضافات -->

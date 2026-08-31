@@ -205,10 +205,6 @@
     <string name="st_refunded">استُرجع</string>
     <string name="rs_driver_late">السائق تأخّر بالاستلام</string>
     <string name="rs_driver_refused">السائق رفض أخذ الطلب</string>
-    <string name="tk_open">قيد النظر</string>
-    <string name="tk_resolved">فُصل فيه</string>
-    <string name="tk_rejected">رُدّ</string>
-    <string name="tk_closed">أُغلق</string>
     <string name="store_sections_empty">لا قسم بعد — متجرك لا يظهر في السوق حتى تختار</string>
     <string name="store_sections_add">أضف قسماً</string>
     <string name="store_sections_pick">اختر من الأقسام</string>

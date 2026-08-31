@@ -38,6 +38,8 @@ import com.rahalgo.shared.merchant.Warning
 import com.rahalgo.ui.err
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.AppCore
+import com.rahalgo.ui.ticketStatusColor
+import com.rahalgo.ui.ticketStatusText
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.KeyValue
@@ -264,13 +266,13 @@ fun MyReportsScreen(vm: MyReportsViewModel) {
                                 modifier = Modifier.weight(1f),
                                 fontWeight = FontWeight.Bold,
                             )
+                            // **وحالُ الشكوى من `:ui` لا من هنا** —
+                            // كانت نسخةٌ محلّيّةٌ تقرأ `in_progress`
+                            // «قيد النظر» **والسائقُ والزبونُ يقرآنها
+                            // «قيد المعالجة»: شكوًى واحدةٌ باسمين.**
                             Text(
-                                ticketStatusAr(t.status),
-                                color = when (t.status) {
-                                    "resolved" -> Rahal.colors.brand
-                                    "rejected" -> Rahal.colors.danger
-                                    else -> Rahal.colors.inkMuted
-                                },
+                                ticketStatusText(t.status),
+                                color = ticketStatusColor(t.status),
                                 style = MaterialTheme.typography.labelMedium,
                             )
                         }
@@ -564,15 +566,6 @@ internal fun reasonAr(code: String): String = when (code) {
     "driver_conduct" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.rs_driver_conduct)
     "other" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.rs_other)
     else -> code
-}
-
-private fun ticketStatusAr(status: String): String = when (status) {
-    "open" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.tk_open)
-    "in_progress" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.tk_open)
-    "resolved" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.tk_resolved)
-    "rejected" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.tk_rejected)
-    "closed" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.tk_closed)
-    else -> status
 }
 
 /** **واليومُ يُقتطع من الطابع** — ولا ساعةَ فيه: **الحادثةُ يومٌ لا لحظة.** */

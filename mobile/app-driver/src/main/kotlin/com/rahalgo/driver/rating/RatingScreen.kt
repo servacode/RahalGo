@@ -37,6 +37,8 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.ui.Refresh
+import com.rahalgo.ui.ticketStatusColor
+import com.rahalgo.ui.ticketStatusText
 import com.rahalgo.shared.model.ComplaintBrief
 import com.rahalgo.shared.model.Reputation
 import com.rahalgo.shared.model.Review
@@ -312,7 +314,15 @@ private fun ComplaintRow(c: ComplaintBrief) {
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("#" + c.number, style = MaterialTheme.typography.titleSmall)
-            Text(c.status, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            // **وكانت `c.status` خاماً** — «open» إنكليزيّةً في شاشةٍ
+            // عربيّة. **ورمزٌ إنكليزيٌّ لا يُقرأ، فيمرّ عليه السائقُ
+            // ولا يعرف أشكواه فُصل فيها أم لا.** (وقعت مثلُها في محفظة
+            // المالك ٢٠٢٦-٠٨-٠٧: «استرجاع طلب (cancelled)».)
+            Text(
+                ticketStatusText(c.status),
+                color = ticketStatusColor(c.status),
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
         Text(c.subject, style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(6.dp))
