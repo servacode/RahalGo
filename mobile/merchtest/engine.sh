@@ -91,7 +91,10 @@ stage_read(){
 
   # **وأسبابُ البلاغ أربعةٌ يردّها المحرّك** — والشاشةُ لا تكتبها.
   code "$A/merchant/report-reasons" -H "$h" >/dev/null
-  local n; n=$(grep -o '"code"' /tmp/mt.json | wc -l)
+  # **وهي نصوصٌ لا كائنات** — `{"reasons":["driver_late_pickup",...]}`.
+  # **وعددتُ `"code"` أوّلَ مرّةٍ فخرج صفراً**، وحسبتُها عيباً.
+  local n; n=$(grep -oP '"reasons":\[\K[^]]*' /tmp/mt.json | tr ',' '
+' | grep -c '"')
   [ "$n" -ge 4 ] && ok "ز-١٠" "أسبابُ البلاغ $n" \
                  || no "ز-١٠" "أسبابُ البلاغ" "عددُها $n — والمتوقّع ٤"
 
