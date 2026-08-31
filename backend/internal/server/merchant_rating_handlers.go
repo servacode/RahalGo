@@ -35,9 +35,8 @@ var errNoMerchant = httpx.NewError(http.StatusConflict, "no_merchant", "errors.n
 func (s *Server) handleDriverRateMerchant(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	req, err := decode[struct {
-		SpeedStars   int    `json:"speed_stars"`
-		ConductStars int    `json:"conduct_stars"`
-		Comment      string `json:"comment"`
+		SpeedStars   int `json:"speed_stars"`
+		ConductStars int `json:"conduct_stars"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -79,11 +78,11 @@ func (s *Server) handleDriverRateMerchant(w http.ResponseWriter, r *http.Request
 
 	tag, err := s.pg.Exec(r.Context(), `
 		INSERT INTO merchant_ratings
-		    (order_id, driver_id, merchant_id, speed_stars, conduct_stars, comment)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		    (order_id, driver_id, merchant_id, speed_stars, conduct_stars)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (order_id) DO NOTHING`,
 		orderID, userIDFrom(r), merchantID,
-		req.SpeedStars, req.ConductStars, clip(req.Comment, 500))
+		req.SpeedStars, req.ConductStars)
 	if err != nil {
 		s.respondErr(w, err)
 		return

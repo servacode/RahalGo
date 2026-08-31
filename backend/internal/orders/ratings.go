@@ -29,13 +29,12 @@ type Rating struct {
 	// يحكم على طعامٍ ووقتٍ ومعاملة، **وثلاثتُها من عندنا.**
 	PlatformStars int       `json:"platform_stars"`
 	DriverStars   *int      `json:"driver_stars"`
-	Comment       string    `json:"comment"`
 	CreatedAt     time.Time `json:"created_at"`
 }
 
 // RateOrder تقييم مزدوج لطلب مُسلَّم — مرة واحدة، من زبون الطلب نفسه (أو الأدمن).
 func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []string,
-	orderID string, platformStars int, driverStars *int, comment string) error {
+	orderID string, platformStars int, driverStars *int) error {
 	if platformStars < 1 || platformStars > 5 ||
 		(driverStars != nil && (*driverStars < 1 || *driverStars > 5)) {
 		return ErrBadStars
@@ -80,8 +79,8 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 	}
 
 	_, err = s.db.Exec(ctx, `
-		INSERT INTO order_ratings (order_id, customer_id, platform_stars, driver_stars, comment)
-		VALUES ($1, $2, $3, $4, $5)`, orderID, customerID, platformStars, driverStars, comment)
+		INSERT INTO order_ratings (order_id, customer_id, platform_stars, driver_stars)
+		VALUES ($1, $2, $3, $4)`, orderID, customerID, platformStars, driverStars)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 		return ErrAlreadyRated
@@ -93,9 +92,9 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 func (s *Service) ratingFor(ctx context.Context, orderID string) *Rating {
 	var r Rating
 	err := s.db.QueryRow(ctx, `
-		SELECT platform_stars, driver_stars, comment, created_at
+		SELECT platform_stars, driver_stars, created_at
 		FROM order_ratings WHERE order_id = $1`, orderID).
-		Scan(&r.PlatformStars, &r.DriverStars, &r.Comment, &r.CreatedAt)
+		Scan(&r.PlatformStars, &r.DriverStars, &r.CreatedAt)
 	if err != nil {
 		return nil
 	}

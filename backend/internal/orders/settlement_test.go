@@ -518,7 +518,7 @@ func TestRate_RepCannotRateOwnClient(t *testing.T) {
 		t.Fatalf("التسليم فشل: %v", err)
 	}
 
-	err := f.svc.RateOrder(ctx, f.rep, []string{"sales"}, f.orderID, 5, nil, "ممتاز")
+	err := f.svc.RateOrder(ctx, f.rep, []string{"sales"}, f.orderID, 5, nil)
 	if !errors.Is(err, orders.ErrRateOwnClient) {
 		t.Fatalf("قيّم المندوب متجره: الخطأ %v والمتوقع rate_own_client", err)
 	}
@@ -528,7 +528,7 @@ func TestRate_RepCannotRateOwnClient(t *testing.T) {
 		`UPDATE orders SET customer_id = $2 WHERE id = $1`, f.orderID, f.customer); err != nil {
 		t.Fatalf("تعذّرت إعادة الزبون: %v", err)
 	}
-	if err := f.svc.RateOrder(ctx, f.customer, []string{"customer"}, f.orderID, 4, nil, ""); err != nil {
+	if err := f.svc.RateOrder(ctx, f.customer, []string{"customer"}, f.orderID, 4, nil); err != nil {
 		t.Fatalf("مُنع زبون عادي من التقييم: %v", err)
 	}
 }

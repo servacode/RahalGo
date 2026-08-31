@@ -15,16 +15,15 @@ import (
 
 func (s *Server) handleRateOrder(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
-		PlatformStars int    `json:"platform_stars"`
-		DriverStars   *int   `json:"driver_stars"`
-		Comment       string `json:"comment"`
+		PlatformStars int  `json:"platform_stars"`
+		DriverStars   *int `json:"driver_stars"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	err = s.orders.RateOrder(r.Context(), userIDFrom(r), rolesFrom(r),
-		chi.URLParam(r, "id"), req.PlatformStars, req.DriverStars, req.Comment)
+		chi.URLParam(r, "id"), req.PlatformStars, req.DriverStars)
 	if err != nil {
 		s.respondErr(w, err)
 		return

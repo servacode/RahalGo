@@ -125,8 +125,28 @@ private fun OrderCard(
             //
             // **وصافيه لا مجموعه**: المجموعُ يحمل أجرةَ السائق ولا تخصّه،
             // **ورقمٌ أكبرُ ممّا يقبض يُقرأ وعداً لا يُوفى.**
+            //
+            // **وثلاثةُ أرقامٍ لا رقمٌ واحد** — (طلبُ المالك ٢٠٢٦-٠٨-٣١:
+            // «يعرف شو سعر طلبه وأصنافه، ويعرف شو نخصم وشو باقي له»).
+            //
+            // **ورقمٌ واحدٌ لا يُراجَع**: يقرأ «لك ١٣٥» ولا يعرف من أين
+            // جاءت، **فإن شكّ لم يجد ما يطرحه.**
             Text(
-                stringResource(R.string.ord_net, money(order.merchantNet)),
+                stringResource(R.string.ord_sum, money(order.subtotal)),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                stringResource(
+                    R.string.ord_cut,
+                    money(order.platformCommission),
+                    order.commissionPercent,
+                ),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                stringResource(R.string.ord_due, money(order.merchantNet)),
                 color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyMedium,

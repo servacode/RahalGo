@@ -649,42 +649,70 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 	// ══════════════════════════════════════════════════════════════════
 	//
 	// **`redactForMerchant` تُصفّر `Subtotal` قبل أن نُنادى** — تمحو
-	// أرقامَ الزبون كلَّها. **فكان الحسابُ يقع على صفر:**
+	// أرقامَ الزبون كلَّها. **فكان الحسابُ يقع على صفر.**
 	//
-	//     c = o.Subtotal * pct / 100      →  صفر
-	//     o.MerchantNet = o.Subtotal - c  →  صفرٌ أو سالب
+	// # ثمّ وقع أسوأُ منه — **والمحفظةُ تكذّب الشاشة**
 	//
-	// **وسجلُّ المبيعات يعرض عمولةً صفراً وصافياً صفراً** — وهو الرقمُ
-	// الذي طلبه المالكُ ليعرف كم قبض. **ويُقرأ صحيحاً**: لا خطأَ يظهر،
-	// **إنّما رقمٌ خاطئٌ يُصدَّق.**
+	// **(بلاغُ المالك ٢٠٢٦-٠٨-٣١:** «طلباتي بالمتجر يكتب لك ١٨٥ ل.س
+	// بينما هو له ١٣٥ فقط · **المحفظةُ صحيحةٌ والكتابةُ خاطئة** · هو
+	// يعتبر أنّ الهامشَ أيضاً له».)
 	//
-	// **و`subs` يبقى محلّيّاً** — يُحسب به ولا يُكتب في الطلب: المتجرُ
-	// يرى ما باعه وما قبضه، **ولا يرى ما دفعه الزبونُ ولا أجرةَ السائق.**
-	paid := map[string]int64{}
-	subs := map[string]int64{}
-	rows, err := s.pg.Query(r.Context(),
-		`SELECT id::text, platform_commission, subtotal FROM orders WHERE id = ANY($1)`, ids)
+	// **وكان يُحسب `orders.subtotal - platform_commission`** — و`subtotal`
+	// **سعرُ البيع للزبون لا سعرُ المتجر**: ٢٠٠ − ١٥ = ١٨٥، **والمقيَّدُ
+	// في دفتره ١٣٥.**
+	//
+	// **والتقديرُ كان أسوأ**: `subtotal * pct / 100` = ٢٠٠ × ١٠٪ = ٢٠،
+	// **والحقيقةُ ١٥٠ × ١٠٪ = ١٥.**
+	//
+	// **وهامشُ المنصّة ليس له** — يشتري منه بـ١٥٠ ويبيع بـ٢٠٠، **والخمسون
+	// أجرُ السوق والتوصيل والتحصيل.** ومن قرأ ١٨٥ ثمّ قبض ١٣٥ **ظنّ
+	// خمسينَ سُرقت منه** — ولا شيءَ يفسد الشراكةَ أسرعَ من ذلك.
+	//
+	// **وهي عائلةُ العطب نفسُها التي أُصلحت في `reverseCommissions`**:
+	// «كان يُحسب `subtotal - platform_commission`، **و`subtotal` صار سعرَ
+	// البيع لا سعرَ الشراء**». **أُصلحت هناك ونُسيت هنا.**
+	//
+	// # فالأساسُ صار سعرَه هو — **بالصيغة التي تُقيَّد بها التسوية حرفاً**
+	//
+	// `sum(merchant_price * qty)` لبنوده وحدَها (`transitions.go`).
+	// **ولا يُجمع بنودُ متجرٍ آخرَ في طلبٍ من مطبخين.**
+	//
+	// **وطلبٌ بلا بنودٍ يقع على `subtotal`** — طلباتُ ما قبل السعرين،
+	// **كما تفعل التسويةُ نفسُها.**
+	cost := map[string]int64{}
+	rows, err := s.pg.Query(r.Context(), `
+		SELECT o.id::text,
+		       COALESCE((SELECT sum(oi.merchant_price * oi.qty)
+		                   FROM order_items oi
+		                  WHERE oi.order_id = o.id
+		                    AND COALESCE(oi.merchant_id, o.merchant_id) = $2), o.subtotal)
+		FROM orders o WHERE o.id = ANY($1)`, ids, merchantID)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var id string
-			var c, sub int64
-			if rows.Scan(&id, &c, &sub) == nil {
-				paid[id] = c
-				subs[id] = sub
+			var base int64
+			if rows.Scan(&id, &base) == nil {
+				cost[id] = base
 			}
 		}
 	}
 	for i := range list {
 		o := &list[i]
 		o.CommissionPct = pct
-		sub := subs[o.ID]
-		c := paid[o.ID]
-		if c == 0 {
-			// **وتقديرٌ بالنسبة ما دامت لم تُقيَّد** — انظر أعلاه.
-			c = sub * int64(pct) / 100
-		}
+		base := cost[o.ID]
+		// **والعمولةُ من سعره بنسبته** — **بالصيغة التي تُقيَّد بها
+		// التسويةُ حرفاً** (`pricing.MerchantCommission.Of(cost)`).
+		//
+		// **ولا تُقرأ `orders.platform_commission`**: هي مجموعُ عمولات
+		// متاجر الطلب كلِّها، **فتصير في طلبٍ من مطبخين عمولةَ غيره
+		// محسوبةً عليه.**
+		c := base * int64(pct) / 100
+		// **والمجموعُ سعرُه هو** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «المفروض
+		// بالطلبات تُكتب المجموع ١٥٠، الخصم ١٠٪ للمنصّة، إجماليُّ
+		// المستحقّ ١٣٥»). **ولا يرى ما دفعه الزبون.**
+		o.Subtotal = base
 		o.PlatformCommission = c
-		o.MerchantNet = sub - c
+		o.MerchantNet = base - c
 	}
 }

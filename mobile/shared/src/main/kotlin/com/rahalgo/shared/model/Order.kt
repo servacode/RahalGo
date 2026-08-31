@@ -348,7 +348,6 @@ data class ReportReasons(val reasons: List<ReportReason> = emptyList())
 data class MerchantRatingInput(
     @SerialName("speed_stars") val speedStars: Int,
     @SerialName("conduct_stars") val conductStars: Int,
-    val comment: String = "",
 )
 
 /** **ما يُرسَل في البلاغ** — رمزُ السبب وتفصيلٌ اختياريّ. */

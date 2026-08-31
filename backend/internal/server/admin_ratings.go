@@ -72,7 +72,6 @@ type ratingComment struct {
 	Driver      string    `json:"driver"`
 	Platform    int       `json:"platform_stars"`
 	DriverStars *int      `json:"driver_stars"`
-	Comment     string    `json:"comment"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -162,18 +161,21 @@ func (s *Server) handleAdminRatings(w http.ResponseWriter, r *http.Request) {
 	}
 	srows.Close()
 
-	// ٤ · آخرُ ما كُتب — **ورقمٌ بلا كلامٍ لا يُصلح شيئاً.**
+	// ٤ · **آخرُ ما ساء** — نجمتان فأقلّ.
 	//
-	// **وما فيه تعليقٌ أو نجمتان فأقلّ** — والباقي رضاً صامتاً لا يحتاج قراءة.
+	// **وكان معها التعليق** — حُذف بقرار المالك ٢٠٢٦-٠٨-٣١ («تقييمٌ بدون أيّ
+	// تعليقٍ بأيّ تطبيق»)، **وكان يُطلب من الزبون ولا يعرضه له تطبيق.**
+	//
+	// **والباقي رضاً صامتاً لا يحتاج قراءة.**
 	comments := []ratingComment{}
 	crows, err := s.pg.Query(r.Context(), `
 		SELECT o.number, cu.full_name, COALESCE(dr.full_name, ''),
-		       rt.platform_stars, rt.driver_stars, rt.comment, rt.created_at
+		       rt.platform_stars, rt.driver_stars, rt.created_at
 		FROM order_ratings rt
 		JOIN orders o  ON o.id = rt.order_id
 		JOIN users cu  ON cu.id = rt.customer_id
 		LEFT JOIN users dr ON dr.id = o.driver_id
-		WHERE rt.comment <> '' OR rt.platform_stars <= 2
+		WHERE rt.platform_stars <= 2
 		   OR (rt.driver_stars IS NOT NULL AND rt.driver_stars <= 2)
 		ORDER BY rt.created_at DESC
 		LIMIT 50`)
@@ -185,7 +187,7 @@ func (s *Server) handleAdminRatings(w http.ResponseWriter, r *http.Request) {
 	for crows.Next() {
 		var c ratingComment
 		if err := crows.Scan(&c.OrderNumber, &c.Customer, &c.Driver,
-			&c.Platform, &c.DriverStars, &c.Comment, &c.CreatedAt); err != nil {
+			&c.Platform, &c.DriverStars, &c.CreatedAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}

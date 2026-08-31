@@ -178,7 +178,16 @@
     <string name="push_ch_new_order">طلبات جديدة</string>
     <string name="store_sections">أقسام السوق</string>
     <string name="store_sections_hint">أضف الأقسام التي ينزل فيها متجرك — وعندها لن تظهر لك إلا هي عند إضافة صنف</string>
-    <string name="hist_money">بِيع %1$s · عمولة المنصة %2$s (%3$d٪) · لك %4$s</string>
+    <!-- ══ ثلاثةُ أرقامٍ بأسمائها ══
+         (طلبُ المالك ٢٠٢٦-٠٨-٣١: «المفروض بالطلبات تُكتب المجموع ١٥٠،
+          الخصم ١٠٪ للمنصّة، إجماليُّ المستحقّ ١٣٥ · **هيك أوضح** —
+          يعرف شو سعر طلبه وأصنافه، ويعرف شو نخصم وشو باقي له».)
+         **وكان «بِيع» يحمل سعرَ البيع للزبون** — ورقمٌ ليس له يُقرأ
+         على أنّه له. -->
+    <string name="hist_money">المجموع %1$s · خصم المنصة %2$s (%3$d٪) · المستحق لك %4$s</string>
+    <string name="ord_sum">المجموع %1$s</string>
+    <string name="ord_cut">خصم المنصة %1$s (%2$d٪)</string>
+    <string name="ord_due">المستحق لك %1$s</string>
     <string name="reports_against_empty">لا شكاوى على متجرك — أحسنت</string>
     <string name="sales_custom">مدة محددة</string>
     <string name="sales_print">طباعة التقرير</string>
@@ -222,5 +231,4 @@
     <string name="ord_since">منذ %1$s</string>
     <string name="ord_min">د</string>
     <string name="ord_hr">س</string>
-    <string name="ord_net">لك %1$s</string>
 </resources>

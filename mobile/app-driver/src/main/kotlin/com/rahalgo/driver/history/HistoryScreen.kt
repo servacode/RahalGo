@@ -141,12 +141,12 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **يقيّم المتجر** ثمّ يُنعش — فيختفي الزرُّ عن الطلب. */
-    fun rate(orderId: String, speed: Int, conduct: Int, comment: String) {
+    fun rate(orderId: String, speed: Int, conduct: Int) {
         if (state.busy) return
         state = state.copy(busy = true, error = "", done = "")
         viewModelScope.launch {
             try {
-                backend.driver.rateMerchant(orderId, speed, conduct, comment.trim())
+                backend.driver.rateMerchant(orderId, speed, conduct)
                 val fresh = backend.driver.history().orders
                 state = state.copy(
                     orders = fresh,
@@ -622,7 +622,7 @@ private fun RateDialog(
                 // **والحقلُ باقٍ في النداء فارغا** — المحرّكُ يقبله
                 // اختياريّاً، **ونداءٌ يُبدَّل شكلُه لأجل حقلٍ لا يُملأ**
                 // يكسر شاشةَ الويب التي تملؤه.
-                onClick = { vm.rate(o.id, speed, conduct, ""); onClose() },
+                onClick = { vm.rate(o.id, speed, conduct); onClose() },
                 // **ولا يُرسَل نصفُ تقييم** — المحرّكُ يشترط الاثنين بين
                 // واحدٍ وخمسة، **ونداءٌ يُردّ بأربعمئة لا يُفهم سببُه.**
                 enabled = !s.busy && speed in 1..5 && conduct in 1..5,

@@ -94,11 +94,11 @@ class DriverApi(private val api: ApiClient) {
     }
 
     /** **يقيّم متجرَ طلبٍ وقف عند بابه** — سرعةً وتعاملا. */
-    suspend fun rateMerchant(orderId: String, speed: Int, conduct: Int, comment: String) {
+    suspend fun rateMerchant(orderId: String, speed: Int, conduct: Int) {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/rate-merchant",
             HttpMethod.Post,
-            MerchantRatingInput(speed, conduct, comment),
+            MerchantRatingInput(speed, conduct),
         )
     }
 

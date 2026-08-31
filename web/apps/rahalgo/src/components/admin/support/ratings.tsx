@@ -60,7 +60,6 @@ interface Comment {
   driver: string;
   platform_stars: number;
   driver_stars: number | null;
-  comment: string;
   created_at: string;
 }
 
@@ -264,7 +263,6 @@ export function RatingsView() {
                     )}
                   </span>
                 </div>
-                {c.comment && <p className="text-sm">{c.comment}</p>}
                 <p dir="ltr" className="mt-1 text-xs text-ink-muted">
                   {fmtDateTime(c.created_at)}
                 </p>

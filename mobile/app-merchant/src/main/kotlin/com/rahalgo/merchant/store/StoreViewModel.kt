@@ -94,6 +94,14 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         load()
+        // **ويسمع النبضة** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «وتأكّد من التحديث
+        // اللحظيّ لكلّ التطبيقات»).
+        //
+        // **وكانت تُحمَّل مرّةً عند الفتح** — فيُسلَّم طلبٌ وهو ينظر
+        // إليها **فلا يتبدّل رقم**، ولا يعرف أنّ عليه أن يخرج ويعود.
+        viewModelScope.launch {
+            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) load() }
+        }
     }
 
     fun load() {

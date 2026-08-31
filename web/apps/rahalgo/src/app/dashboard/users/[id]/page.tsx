@@ -160,16 +160,16 @@ interface Feedback {
   /** **الشكاوى عليه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥). */
   tickets_against: TicketRow[];
   tickets_against_count: number;
-  ratings_given: { order_number: number; merchant_name: string; platform_stars: number; driver_stars: number | null; comment: string; created_at: string }[];
+  ratings_given: { order_number: number; merchant_name: string; platform_stars: number; driver_stars: number | null; created_at: string }[];
   /** **أعدادُ الكلّ** — والمعروضُ صفحةٌ منه. (٢٠٢٦-٠٨-١٠.) */
   tickets_count: number;
   ratings_given_count: number;
   ratings_received_count: number;
   per_page: number;
-  ratings_received: { order_number: number; merchant_name: string; stars: number; comment: string; created_at: string; as: string }[];
+  ratings_received: { order_number: number; merchant_name: string; stars: number; created_at: string; as: string }[];
   avg_received: number | null;
   /** **ما قاله السائقون عن متجره** — (قرارُ المالك ٢٠٢٦-٠٨-١٦). */
-  by_drivers: { order_number: number; merchant_name: string; speed_stars: number; conduct_stars: number; comment: string; created_at: string; driver: string }[];
+  by_drivers: { order_number: number; merchant_name: string; speed_stars: number; conduct_stars: number; created_at: string; driver: string }[];
   by_drivers_count: number;
   avg_speed: number | null;
   avg_conduct: number | null;
@@ -1071,9 +1071,6 @@ export default function UserProfilePage() {
                           ({m.admin.ordersPage.rating.driver}: {rt.driver_stars})
                         </span>
                       )}
-                      {rt.comment && (
-                        <span className="truncate text-xs text-ink-muted">"{rt.comment}"</span>
-                      )}
                     </span>
                     <span className="text-xs text-ink-muted" dir="ltr">
                       {fmtDate(rt.created_at)}
@@ -1161,9 +1158,6 @@ export default function UserProfilePage() {
                       {rt.driver && (
                         <span className="text-xs text-ink-muted">{P.by}: {rt.driver}</span>
                       )}
-                      {rt.comment && (
-                        <span className="truncate text-xs text-ink-muted">&quot;{rt.comment}&quot;</span>
-                      )}
                     </span>
                     <span className="text-xs text-ink-muted" dir="ltr">
                       {fmtDate(rt.created_at)}
@@ -1198,9 +1192,6 @@ export default function UserProfilePage() {
                         #{fmtRef(rt.order_number)}
                       </button>
                       <span className="text-xs text-ink-muted">{rt.merchant_name}</span>
-                      {rt.comment && (
-                        <span className="truncate text-xs text-ink-muted">"{rt.comment}"</span>
-                      )}
                     </span>
                     <span className="text-xs text-ink-muted" dir="ltr">
                       {fmtDate(rt.created_at)}

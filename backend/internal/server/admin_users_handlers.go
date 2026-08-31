@@ -510,7 +510,7 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 		`SELECT count(*) FROM order_ratings WHERE customer_id = $1`, id).Scan(&out.GivenCount)
 	rows, err = s.pg.Query(r.Context(), `
 		SELECT o.number, COALESCE(m.name, ''), rt.platform_stars, rt.driver_stars,
-		       rt.comment, rt.created_at
+		       rt.created_at
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
 		LEFT JOIN merchants m ON m.id = o.merchant_id
@@ -522,21 +522,21 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	}
 	for rows.Next() {
 		var num int64
-		var mName, comment string
+		var mName string
 		var ms int
 		var ds *int
 		var at time.Time
-		if err := rows.Scan(&num, &mName, &ms, &ds, &comment, &at); err == nil {
+		if err := rows.Scan(&num, &mName, &ms, &ds, &at); err == nil {
 			out.Given = append(out.Given, map[string]any{
 				"order_number": num, "merchant_name": mName,
-				"platform_stars": ms, "driver_stars": ds, "comment": comment, "created_at": at})
+				"platform_stars": ms, "driver_stars": ds, "created_at": at})
 		}
 	}
 	rows.Close()
 
 	// الواردة: كسائق (نجوم السائق على طلباته) + كصاحب متاجر (نجوم متاجره)
 	rows, err = s.pg.Query(r.Context(), `
-		SELECT o.number, COALESCE(m.name, ''), rt.driver_stars, rt.comment, rt.created_at, 'driver'
+		SELECT o.number, COALESCE(m.name, ''), rt.driver_stars, rt.created_at, 'driver'
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
 		LEFT JOIN merchants m ON m.id = o.merchant_id
@@ -544,12 +544,12 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 		UNION ALL
 		-- **وهذا الضمُّ صلبٌ بحقّ** — شرطُه `+"`m.owner_user_id`"+` نفسُه،
 		-- **فلا صفَّ بلا متجرٍ يُطلب هنا أصلاً.**
-		SELECT o.number, m.name, rt.platform_stars, rt.comment, rt.created_at, 'platform'
+		SELECT o.number, m.name, rt.platform_stars, rt.created_at, 'platform'
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
 		JOIN merchants m ON m.id = o.merchant_id
 		WHERE m.owner_user_id = $1
-		ORDER BY 5 DESC LIMIT $2 OFFSET $3`, id, rp.PerPage, rp.Offset)
+		ORDER BY 4 DESC LIMIT $2 OFFSET $3`, id, rp.PerPage, rp.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -584,13 +584,13 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 
 	for rows.Next() {
 		var num int64
-		var mName, comment, as string
+		var mName, as string
 		var stars int
 		var at time.Time
-		if err := rows.Scan(&num, &mName, &stars, &comment, &at, &as); err == nil {
+		if err := rows.Scan(&num, &mName, &stars, &at, &as); err == nil {
 			out.Recv = append(out.Recv, map[string]any{
 				"order_number": num, "merchant_name": mName, "stars": stars,
-				"comment": comment, "created_at": at, "as": as})
+				"created_at": at, "as": as})
 		}
 	}
 	rows.Close()
@@ -614,7 +614,7 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	// يُحتجّ به**، ولا يُعرف أسائقٌ واحدٌ كرّرها أم عشرة.
 	dRows, err := s.pg.Query(r.Context(), `
 		SELECT o.number, m.name,
-		       mr.speed_stars, mr.conduct_stars, mr.comment, mr.created_at,
+		       mr.speed_stars, mr.conduct_stars, mr.created_at,
 		       COALESCE(NULLIF(dr.full_name, ''), dr.phone::text, '')
 		FROM merchant_ratings mr
 		JOIN merchants m ON m.id = mr.merchant_id
@@ -625,14 +625,14 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	if err == nil {
 		for dRows.Next() {
 			var num int64
-			var mName, comment, driver string
+			var mName, driver string
 			var speed, conduct int
 			var at time.Time
-			if dRows.Scan(&num, &mName, &speed, &conduct, &comment, &at, &driver) == nil {
+			if dRows.Scan(&num, &mName, &speed, &conduct, &at, &driver) == nil {
 				out.ByDrivers = append(out.ByDrivers, map[string]any{
 					"order_number": num, "merchant_name": mName,
 					"speed_stars": speed, "conduct_stars": conduct,
-					"comment": comment, "created_at": at, "driver": driver})
+					"created_at": at, "driver": driver})
 			}
 		}
 		dRows.Close()
