@@ -679,35 +679,67 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 	//
 	// **وطلبٌ بلا بنودٍ يقع على `subtotal`** — طلباتُ ما قبل السعرين،
 	// **كما تفعل التسويةُ نفسُها.**
+	// # وقيدُ الدفتر يسبق كلَّ حسبة — **والقديمُ لا تمسّه نسبةُ اليوم**
+	//
+	// **(سؤالُ المالك ٢٠٢٦-٠٨-٣١:** «النسبةُ تتغيّر حسب القيمة المفروضة
+	// بلوحة التحكّم صحّ · **والمعاملاتُ القديمة لا تتأثّر بالتعديلات
+	// لاحقاً** صحيح؟».) **وهو الصواب.**
+	//
+	// **وكنتُ أحسبها من `merchants.commission_percent` الحيّة** — فطلبٌ
+	// سُوّي بعشرةٍ بالمئة **يُعرض بعشرين لو بُدّلت غدا**، ورقمُه في
+	// محفظته لم يتحرّك. **فيقرأ في سجلّه غيرَ ما قبض.**
+	//
+	// **فما دُفع يُقرأ من الدفتر**: قيدُ `merchant_earning` لهذا الطلب
+	// وهذه المحفظة — **وهو ما وقع لا ما يقع اليوم.**
+	//
+	// **والعمولةُ فرقٌ لا حاصلُ ضرب**: `سعرُه − ما قبض`. **ونسبتُها
+	// تُشتقّ منه** فتظهر عشرةً على القديم وعشرين على الجديد، **كلٌّ
+	// بنسبته يومَ وقع.**
+	//
+	// **وما لم يُسوَّ بعدُ يُقدَّر بنسبة اليوم** — وهو الصواب أيضاً:
+	// **طلبٌ لم يُقبض عنه شيءٌ تحكمه نسبةُ اليوم لا نسبةُ الأمس.**
 	cost := map[string]int64{}
+	paid := map[string]int64{}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT o.id::text,
 		       COALESCE((SELECT sum(oi.merchant_price * oi.qty)
 		                   FROM order_items oi
 		                  WHERE oi.order_id = o.id
-		                    AND COALESCE(oi.merchant_id, o.merchant_id) = $2), o.subtotal)
+		                    AND COALESCE(oi.merchant_id, o.merchant_id) = $2), o.subtotal),
+		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
+		                  WHERE t.ref = o.id::text AND t.kind = 'merchant_earning'
+		                    AND t.user_id = (SELECT owner_user_id FROM merchants
+		                                      WHERE id = $2)), 0)
 		FROM orders o WHERE o.id = ANY($1)`, ids, merchantID)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var id string
-			var base int64
-			if rows.Scan(&id, &base) == nil {
+			var base, net int64
+			if rows.Scan(&id, &base, &net) == nil {
 				cost[id] = base
+				paid[id] = net
 			}
 		}
 	}
 	for i := range list {
 		o := &list[i]
-		o.CommissionPct = pct
 		base := cost[o.ID]
-		// **والعمولةُ من سعره بنسبته** — **بالصيغة التي تُقيَّد بها
-		// التسويةُ حرفاً** (`pricing.MerchantCommission.Of(cost)`).
-		//
 		// **ولا تُقرأ `orders.platform_commission`**: هي مجموعُ عمولات
 		// متاجر الطلب كلِّها، **فتصير في طلبٍ من مطبخين عمولةَ غيره
 		// محسوبةً عليه.**
+		//
+		// **وقيدُ الدفتر يسبق** — انظر أعلاه. **وصفرٌ يعني لم يُسوَّ
+		// بعد**: قيدُ المستحقّ موجبٌ دائماً حين يقع.
 		c := base * int64(pct) / 100
+		shown := pct
+		if net := paid[o.ID]; net > 0 {
+			c = base - net
+			if base > 0 {
+				shown = int(c * 100 / base)
+			}
+		}
+		o.CommissionPct = shown
 		// **والمجموعُ سعرُه هو** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «المفروض
 		// بالطلبات تُكتب المجموع ١٥٠، الخصم ١٠٪ للمنصّة، إجماليُّ
 		// المستحقّ ١٣٥»). **ولا يرى ما دفعه الزبون.**
