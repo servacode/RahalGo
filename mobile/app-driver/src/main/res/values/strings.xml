@@ -326,11 +326,9 @@
     <string name="tik_hint">ما رفع عليك — لتعرفه وتصلح ما يصلح</string>
     <string name="tik_none">لا شكوى عليك</string>
     <string name="tik_none_hint">وهذا خبر جيد — أبقه كذلك</string>
-    <string name="tik_on_order">على الطلب #%1$s</string>
     <string name="tik_on_me">ما رفع عليك</string>
     <string name="tik_mine">ما رفعته أنت</string>
     <string name="tik_mine_empty">لم ترفع بلاغا بعد — ولك أن تبلغ من «سجل الطلبات»</string>
-    <string name="tik_answer">جواب الإدارة</string>
 
     <!-- دردشاتي السابقة -->
 

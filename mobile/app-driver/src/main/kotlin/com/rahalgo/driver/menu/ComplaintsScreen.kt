@@ -24,6 +24,8 @@ import com.rahalgo.ui.ticketStatusText
 import com.rahalgo.ui.Chip
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
+import com.rahalgo.ui.TicketRow
+import com.rahalgo.ui.TicketsScreen
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.whenText
@@ -61,103 +63,44 @@ fun ComplaintsScreen(vm: SectionsViewModel) {
         return
     }
 
-    Screen {
-        ScreenTitle(
-            stringResource(R.string.menu_tickets),
-            stringResource(R.string.tik_hint),
-        )
-        // ══════════════════════════════════════════════════════════════
-        // **قسمان: ما رُفع عليّ · وما رفعتُه أنا**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (قرارُ المالك ٢٠٢٦-٠٨-١٣، بعد أن قرأ بلاغَه شكوى عليه.)
-        //
-        // **وخلطُهما هو العطبُ الذي وقع** — فيُفصلان بعنوانين، **ولا
-        // يُترك القارئُ يستنتج من الصياغة.**
-        SectionTitle(stringResource(R.string.tik_on_me))
-        if (rep.complaints.isEmpty()) {
-            // **وفراغُها خبرٌ سارّ** — يُقال بلونه: لا شكوى عليك.
-            Text(
-                stringResource(R.string.tik_none),
-                color = Rahal.colors.success,
-                fontWeight = FontWeight.Bold,
+    // ══════════════════════════════════════════════════════════════════
+    // **والشاشةُ من `:ui` — وكانت قسمين فوق بعضهما**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٣١: «أفضلُ شكلٍ هو شكلُ الشكاوى في المتجر ·
+    // وأساساً يجب أن يكون بشكلٍ مركزيّ».)
+    //
+    // **والقسمان يجعلانه يمرّر ليعرف أيَّهما يقرأ** — **والتبويبُ يفصل
+    // قبل أن يقرأ سطراً.** (وأصلُ الفصل بلاغُ المالك ٢٠٢٦-٠٨-١٣ بعد أن
+    // قرأ بلاغَه شكوى عليه — **والفصلُ باقٍ، وشكلُه هو الذي تبدّل.**)
+    TicketsScreen(
+        title = stringResource(com.rahalgo.ui.R.string.menu_tickets),
+        hint = stringResource(R.string.tik_hint),
+        mine = rep.reports.map { r ->
+            TicketRow(
+                key = "#" + r.number,
+                title = reportReason(r.reason),
+                status = r.status,
+                orderNumber = r.orderNumber?.toString().orEmpty(),
+                resolution = r.resolution,
             )
-            Text(
-                stringResource(R.string.tik_none_hint),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+        },
+        mineEmpty = stringResource(R.string.tik_mine_empty),
+        // **والشكوى عليه لا سببَ لها بل موضوع** — المحرّكُ يكتبه نصّاً،
+        // **ولا رمزَ يُترجَم.**
+        againstMe = rep.complaints.map { c ->
+            TicketRow(
+                key = "#" + c.number,
+                title = c.subject,
+                status = c.status,
+                orderNumber = c.orderNumber?.toString().orEmpty(),
             )
-        } else {
-            rep.complaints.forEach { ComplaintCard(it) }
-        }
-
-        SectionTitle(stringResource(R.string.tik_mine))
-        if (rep.reports.isEmpty()) {
-            Text(
-                stringResource(R.string.tik_mine_empty),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        } else {
-            rep.reports.forEach { ReportCard(it) }
-        }
-    }
+        },
+        // **وفراغُها خبرٌ سارٌّ يُقال** — لا قائمةٌ فارغةٌ صامتة.
+        againstMeEmpty = stringResource(R.string.tik_none) + " — " +
+            stringResource(R.string.tik_none_hint),
+    )
 }
-
-/**
- * **بلاغٌ رفعتُه** — بسببه وحاله وجواب الإدارة.
- *
- * **ومن أبلغ ولم يُقَل له ما وقع يظنّ بلاغَه أُهمل** — ثمّ لا يُبلّغ
- * ثانية.
- */
-@Composable
-private fun ReportCard(r: MyReport) {
-    Spacer(Modifier.height(10.dp))
-    Card(tone = if (r.status == "resolved") Rahal.colors.success else Rahal.colors.brand) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "#" + r.number.toString(),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Chip(text = ticketStatusText(r.status), color = ticketStatusColor(r.status))
-        }
-        Spacer(Modifier.height(6.dp))
-        // **والسببُ بعربيّته** — والرمزُ يُعرض إن لم يُترجَم ليُبلَّغ عنه.
-        Text(reportReason(r.reason), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(4.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            r.orderNumber?.let {
-                Text(
-                    text = stringResource(R.string.tik_on_order, it.toString()),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Text(
-                text = whenText(r.createdAt),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        // **وجوابُ الإدارة إن جاء** — وهو ما يجعل البلاغَ يستحقّ أن
-        // يُرفع ثانية.
-        if (r.resolution.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringResource(R.string.tik_answer),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(r.resolution, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
 /** **سببُ البلاغ بعربيّته** — والمجهولُ يُعرض برمزه ليُبلَّغ عنه. */
 @Composable
 private fun reportReason(code: String): String = when (code) {
@@ -172,42 +115,5 @@ private fun reportReason(code: String): String = when (code) {
     "other" -> stringResource(R.string.rs_other)
     else -> code
 }
-
-@Composable
-private fun ComplaintCard(c: ComplaintBrief) {
-    Spacer(Modifier.height(10.dp))
-    Card(tone = if (c.status == "open") Rahal.colors.accent else Rahal.colors.inkMuted) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "#" + c.number.toString(),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Chip(text = ticketStatusText(c.status), color = ticketStatusColor(c.status))
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(c.subject, style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(4.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            c.orderNumber?.let {
-                Text(
-                    text = stringResource(R.string.tik_on_order, it.toString()),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Text(
-                text = whenText(c.createdAt),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-}
-
 /** **حالُ الشكوى بعربيّة** — والمجهولُ يُعرض برمزه ليُبلَّغ عنه. */
 

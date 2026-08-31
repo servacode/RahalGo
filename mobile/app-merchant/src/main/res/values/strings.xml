@@ -106,7 +106,6 @@
     <string name="menu_reports">الشكاوي والبلاغات</string>
     <string name="reports_list_hint">ما أرسلتَه وما صار به</string>
     <string name="reports_list_empty">لم ترسل بلاغاً بعد</string>
-    <string name="reports_on_order">على الطلب #%1$d</string>
     <string name="menu_sales">التقارير</string>
     <string name="sales_hint">مبيعاتك على مدًى تختاره</string>
     <string name="sales_week">٧ أيّام</string>
@@ -180,8 +179,6 @@
     <string name="store_sections">أقسام السوق</string>
     <string name="store_sections_hint">أضف الأقسام التي ينزل فيها متجرك — وعندها لن تظهر لك إلا هي عند إضافة صنف</string>
     <string name="hist_money">بِيع %1$s · عمولة المنصة %2$s (%3$d٪) · لك %4$s</string>
-    <string name="reports_mine">شكاوى رفعتها</string>
-    <string name="reports_against">شكاوى عليّ</string>
     <string name="reports_against_empty">لا شكاوى على متجرك — أحسنت</string>
     <string name="sales_custom">مدة محددة</string>
     <string name="sales_print">طباعة التقرير</string>

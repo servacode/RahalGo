@@ -397,6 +397,15 @@
     <string name="tik_open">مفتوحة</string>
     <string name="tik_progress">قيد المعالجة</string>
     <string name="tik_resolved">محلولة</string>
+
+    <!-- ══ الشكاوى والبلاغات — شاشةٌ واحدةٌ للثلاثة ══
+         **واللفظُ لفظُ المتجر** (قرارُ المالك ٢٠٢٦-٠٨-٣١: «أفضلُ شكلٍ
+         هو شكلُ الشكاوى في المتجر»). **وكان السائقُ يقول «ما رفع عليك»
+         والمتجرُ «شكاوى عليّ»** — ولفظان لبابٍ واحدٍ يجعلان من انتقل
+         بين التطبيقين يظنّهما شيئين. -->
+    <string name="tik_on_me">شكاوى عليّ</string>
+    <string name="tik_mine">شكاوى رفعتها</string>
+    <string name="tik_on_order">على الطلب %1$s</string>
     <string name="err_not_signed_in">هذا يحتاج حسابا — ادخل أولا</string>
     <string name="chats_hint">أحاديث الطلبات المنتهية — تقرأ ولا يكتب فيها</string>
     <string name="chats_none">لا دردشات منتهية</string>

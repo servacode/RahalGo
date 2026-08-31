@@ -38,8 +38,8 @@ import com.rahalgo.shared.merchant.Warning
 import com.rahalgo.ui.err
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.AppCore
-import com.rahalgo.ui.ticketStatusColor
-import com.rahalgo.ui.ticketStatusText
+import com.rahalgo.ui.TicketRow
+import com.rahalgo.ui.TicketsScreen
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.KeyValue
@@ -187,12 +187,8 @@ class MyReportsViewModel(app: Application) : AndroidViewModel(app) {
     var against by mutableStateOf<List<MerchantReport>>(emptyList())
         private set
 
-    /** `false` = ما رفعتُه · `true` = ما رُفع عليّ. */
-    var showAgainst by mutableStateOf(false)
-
-    fun switch(v: Boolean) {
-        showAgainst = v
-    }
+    // **وأيُّ التبويبين معروضٌ صار في الشاشة المركزيّة** — والقائمتان
+    // تُحمَّلان معاً هنا، **فحالُ العرض شأنُ الشاشة لا شأنُ النداء.**
 
     fun load() {
         viewModelScope.launch {
@@ -223,85 +219,35 @@ fun MyReportsScreen(vm: MyReportsViewModel) {
         return
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **والشاشةُ من `:ui` — وشكلُها هو الذي عمّ الثلاثة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (قرارُ المالك ٢٠٢٦-٠٨-٣١: «أفضلُ شكلٍ هو شكلُ الشكاوى في المتجر ·
+    // وأساساً يجب أن يكون بشكلٍ مركزيّ».)
+    //
+    // **والسببُ يُترجَم هنا لا هناك**: رموزُ المتجر عن السائقين،
+    // **ورموزُ السائق عن المتاجر والزبائن** — **وشاشةٌ تترجم للجميع
+    // تحتاج أن تعرف الأدوار كلَّها.**
+    val toRow: (com.rahalgo.shared.merchant.MerchantReport) -> TicketRow = { t ->
+        TicketRow(
+            key = "#" + t.number,
+            title = reasonAr(t.reason),
+            status = t.status,
+            orderNumber = t.orderNumber?.toString().orEmpty(),
+            resolution = t.resolution,
+            date = day(t.createdAt),
+        )
+    }
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
-        Screen {
-            ScreenTitle(
-                stringResource(com.rahalgo.merchant.R.string.menu_reports),
-                stringResource(com.rahalgo.merchant.R.string.reports_list_hint),
-            )
-            Spacer(Modifier.height(10.dp))
-
-            // **ومبدّلٌ لا شاشتان** — الشكوى شكوى، والفرقُ من رفعها.
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                SegmentedButton(
-                    selected = !vm.showAgainst,
-                    onClick = { vm.switch(false) },
-                    shape = SegmentedButtonDefaults.itemShape(0, 2),
-                ) { Text(stringResource(com.rahalgo.merchant.R.string.reports_mine)) }
-                SegmentedButton(
-                    selected = vm.showAgainst,
-                    onClick = { vm.switch(true) },
-                    shape = SegmentedButtonDefaults.itemShape(1, 2),
-                ) { Text(stringResource(com.rahalgo.merchant.R.string.reports_against)) }
-            }
-            Spacer(Modifier.height(10.dp))
-
-            val list = if (vm.showAgainst) vm.against else vm.items
-            if (list.isEmpty()) {
-                Empty(
-                    stringResource(
-                        if (vm.showAgainst) com.rahalgo.merchant.R.string.reports_against_empty
-                        else com.rahalgo.merchant.R.string.reports_list_empty,
-                    ),
-                )
-                return@Screen
-            }
-            Card {
-                list.forEachIndexed { i, t ->
-                    if (i > 0) HorizontalDivider()
-                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                reasonAr(t.reason),
-                                modifier = Modifier.weight(1f),
-                                fontWeight = FontWeight.Bold,
-                            )
-                            // **وحالُ الشكوى من `:ui` لا من هنا** —
-                            // كانت نسخةٌ محلّيّةٌ تقرأ `in_progress`
-                            // «قيد النظر» **والسائقُ والزبونُ يقرآنها
-                            // «قيد المعالجة»: شكوًى واحدةٌ باسمين.**
-                            Text(
-                                ticketStatusText(t.status),
-                                color = ticketStatusColor(t.status),
-                                style = MaterialTheme.typography.labelMedium,
-                            )
-                        }
-                        t.orderNumber?.let {
-                            Text(
-                                stringResource(com.rahalgo.merchant.R.string.reports_on_order, it),
-                                color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                        // **وبلاغٌ يُغلق بلا كلمةٍ يُقرأ تجاهلاً** — ولو كان
-                        // القرارُ في صالحه.
-                        if (t.resolution.isNotBlank()) {
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                t.resolution,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                        Text(
-                            day(t.createdAt),
-                            color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(24.dp))
-        }
+        TicketsScreen(
+            title = stringResource(com.rahalgo.merchant.R.string.menu_reports),
+            hint = stringResource(com.rahalgo.merchant.R.string.reports_list_hint),
+            mine = vm.items.map(toRow),
+            mineEmpty = stringResource(com.rahalgo.merchant.R.string.reports_list_empty),
+            againstMe = vm.against.map(toRow),
+            againstMeEmpty = stringResource(com.rahalgo.merchant.R.string.reports_against_empty),
+        )
     }
 }
 

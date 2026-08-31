@@ -53,8 +53,8 @@ import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenPad
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.money
-import com.rahalgo.ui.ticketStatusColor
-import com.rahalgo.ui.ticketStatusText
+import com.rahalgo.ui.TicketRow
+import com.rahalgo.ui.TicketsScreen
 import com.rahalgo.ui.RahalButton
 
 /**
@@ -408,47 +408,23 @@ private fun Tickets(vm: MineViewModel) {
         LoadState(vm.busy, vm.error) { vm.open(CustomerItems.TICKETS, force = true) }
         return
     }
-    Screen {
-        ScreenTitle(
-            stringResource(R.string.menu_tickets_title),
-            stringResource(R.string.soon_tickets),
-        )
-        if (list.isEmpty()) {
-            Empty(stringResource(R.string.tkt_none))
-            return@Screen
-        }
-        list.forEach { t ->
-            Spacer(Modifier.height(8.dp))
-            Card {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = t.subject.ifEmpty { t.reason },
-                        color = Rahal.colors.ink,
-                        fontWeight = FontWeight.Medium,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Chip(ticketStatusText(t.status), ticketStatusColor(t.status))
-                }
-                if (t.orderCode.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "#" + t.orderCode,
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                // **وجوابُ المكتب يُعرض** — وشكوى بلا جوابٍ ظاهرٍ تُقرأ
-                // مهملة.
-                if (t.resolution.isNotEmpty()) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(t.resolution, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-    }
+    // ══════════════════════════════════════════════════════════════════
+    // **والشاشةُ من `:ui`** — (قرارُ المالك ٢٠٢٦-٠٨-٣١: مركزيّةٌ للثلاثة).
+    //
+    // **وبلا تبويبين هنا**: الزبونُ يشتكي ولا تُعرض عليه شكوى، **وتبويبٌ
+    // فارغٌ أبداً يُعلّم صاحبَه ألّا ينظر.**
+    TicketsScreen(
+        title = stringResource(R.string.menu_tickets_title),
+        hint = stringResource(R.string.soon_tickets),
+        mine = list.map { t ->
+            TicketRow(
+                key = "#" + t.orderCode.ifEmpty { t.id.take(6) },
+                title = t.subject.ifEmpty { t.reason },
+                status = t.status,
+                resolution = t.resolution,
+            )
+        },
+        mineEmpty = stringResource(R.string.tkt_none),
+    )
 }
 
