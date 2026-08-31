@@ -49,7 +49,6 @@
     <string name="ord_rate_title">كيف كانت الخدمة؟</string>
     <string name="ord_rate_service">تقييم الخدمة</string>
     <string name="ord_rate_driver">تقييم السائق</string>
-    <string name="ord_rate_note">كلمة إن أردت</string>
     <string name="ord_send">إرسال</string>
     <string name="ord_complain_title">ما المشكلة؟</string>
     <!-- **أسبابُ الشكوى** — بألفاظ الويب حرفاً (`site.complaint.reasons`). -->

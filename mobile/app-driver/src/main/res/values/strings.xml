@@ -257,7 +257,11 @@
     <string name="rate_trend_up">في تحسن</string>
     <string name="rate_trend_down">في انخفاض</string>
     <string name="rate_trend_flat">مستقر</string>
-    <string name="rate_hint">ما قيمه الزبائن وكتبوه عن خدمتك</string>
+    <!-- **ولا «وكتبوه»** — (قرارُ المالك ٢٠٢٦-٠٨-٣١: «تقييمٌ بدون
+         أيّ تعليقٍ بأيّ تطبيق»). **وكان النصُّ يعد بكلامٍ لا وجودَ
+         له**: الحقلُ حُذف من نافذة الزبون، **والبطاقةُ لم تكن تعرضه
+         أصلاً.** ووعدٌ بما لا يُعرض يجعل السائقَ يبحث عمّا ليس هناك. -->
+    <string name="rate_hint">ما قيمه الزبائن عن خدمتك</string>
     <string name="rate_reviews">ما قاله الزبائن</string>
     <string name="rate_no_reviews">لا تقييمات بعد</string>
     <string name="rate_complaints">شكاوى عليك</string>

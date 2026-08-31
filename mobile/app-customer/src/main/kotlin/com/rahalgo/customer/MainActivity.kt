@@ -916,8 +916,8 @@ private fun SignedIn(
                     ordersVm.askRate?.let { o ->
                         RateDialog(
                             hasDriver = !o.driverName.isNullOrEmpty(),
-                            onConfirm = { stars, driverStars, note ->
-                                ordersVm.rate(o.id, stars, driverStars, note)
+                            onConfirm = { stars, driverStars ->
+                                ordersVm.rate(o.id, stars, driverStars)
                                 ordersVm.skipRate()
                             },
                             onDismiss = ordersVm::skipRate,

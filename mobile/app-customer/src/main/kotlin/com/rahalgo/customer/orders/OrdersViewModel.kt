@@ -190,13 +190,13 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun rate(orderId: String, stars: Int, driverStars: Int?, note: String) {
+    fun rate(orderId: String, stars: Int, driverStars: Int?) {
         if (busy) return
         busy = true
         actionError = ""
         viewModelScope.launch {
             try {
-                api.rate(orderId, stars, driverStars, note)
+                api.rate(orderId, stars, driverStars)
             } catch (e: Exception) {
                 actionError = apiError(getApplication(), e)
             }

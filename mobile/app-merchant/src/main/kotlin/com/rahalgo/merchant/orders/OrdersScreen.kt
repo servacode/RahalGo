@@ -301,7 +301,7 @@ private fun statusLabel(status: String): String = stringResource(
         "picked_up" -> R.string.os_picked_up
         "on_the_way" -> R.string.os_on_way
         "at_dropoff" -> R.string.os_at_dropoff
-        "delivered" -> R.string.os_delivered
+        "delivered" -> com.rahalgo.ui.R.string.ord_st_delivered
         "rejected" -> R.string.os_rejected
         "cancelled" -> R.string.os_cancelled
         "failed" -> R.string.os_failed

@@ -192,8 +192,8 @@ private fun OrdersList(
         val hasDriver = list.any { it.id == id && !it.driverName.isNullOrEmpty() }
         RateDialog(
             hasDriver = hasDriver,
-            onConfirm = { stars, driverStars, note ->
-                vm.rate(id, stars, driverStars, note)
+            onConfirm = { stars, driverStars ->
+                vm.rate(id, stars, driverStars)
                 rateId = null
             },
             onDismiss = { rateId = null },
@@ -242,7 +242,19 @@ private fun ConfirmCancel(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 }
 
 /**
- * **التقييم — تقييمان وكلمة.**
+ * **التقييم — تقييمان بلا كلمة.**
+ *
+ * **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «اتّفقنا سابقاً أنّه تقييمٌ بدون أيّ
+ * تعليقٍ بأيّ تطبيق — يعني فقط تقييم».)
+ *
+ * # وحقلُ الكلمة كان يُجمع ويُدفن
+ *
+ * **كان «كلمة إن أردت» يُكتب ويُرسل ويُخزَّن** — **ولا شاشةَ في المنصّة
+ * تعرضه**: `Review.comment` في النموذج، **وبطاقةُ السائق لا تقرؤه.**
+ *
+ * **وحقلٌ يُطلب ولا يُقرأ أسوأُ من غيابه**: يكتب الزبونُ شكواه فيه
+ * ظانّاً أنّ أحداً سيقرؤها، **ثمّ لا يردّ عليه أحد.** وبابُ الشكوى
+ * غيرُه، **فيضيع بلاغُه في حقلٍ ميّت.**
  *
  * **الخدمةُ والسائق** (`orders/ratings.go`): الزبونُ لا يعرف المتجرَ
  * ولا يختاره — **يطلب من «رحّال غو» ونحن نختار من أين نشتري** — لكنّه
@@ -254,12 +266,11 @@ private fun ConfirmCancel(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 internal fun RateDialog(
     hasDriver: Boolean,
-    onConfirm: (Int, Int?, String) -> Unit,
+    onConfirm: (Int, Int?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var stars by rememberSaveable { mutableIntStateOf(5) }
     var driverStars by rememberSaveable { mutableIntStateOf(5) }
-    var note by rememberSaveable { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.ord_rate_title)) },
@@ -279,18 +290,12 @@ internal fun RateDialog(
                     )
                     StarRow(driverStars) { driverStars = it }
                 }
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    label = { Text(stringResource(R.string.ord_rate_note)) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         },
         confirmButton = {
             RahalTextButton(
                 onClick = {
-                    onConfirm(stars, driverStars.takeIf { hasDriver }, note.trim())
+                    onConfirm(stars, driverStars.takeIf { hasDriver })
                 },
             ) { Text(stringResource(R.string.ord_send)) }
         },

@@ -199,11 +199,11 @@ class CustomerApi(private val api: ApiClient) {
      * **و`driverStars` فارغةٌ حيث لا سائق** — والمحرّكُ يُلغيها أصلاً
      * إن لم يكن للطلب سائق.
      */
-    suspend fun rate(orderId: String, platformStars: Int, driverStars: Int?, note: String) {
+    suspend fun rate(orderId: String, platformStars: Int, driverStars: Int?) {
         api.call<Ack>(
             "/api/v1/orders/$orderId/rating",
             HttpMethod.Post,
-            RateInput(platformStars, driverStars, note),
+            RateInput(platformStars, driverStars),
         )
     }
 
@@ -349,10 +349,20 @@ data class OrderRef(
 private data class FavoriteResult(val favorite: Boolean = false)
 
 @Serializable
+/**
+ * **نجومٌ بلا كلمة.**
+ *
+ * **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «تقييمٌ بدون أيّ تعليقٍ بأيّ تطبيق».)
+ *
+ * **وحقلُ `comment` كان يُرسل ويُخزَّن ولا تعرضه شاشة** — **فيكتب فيه
+ * الزبونُ شكواه ظانّاً أنّ أحداً يقرؤها.** وبابُ الشكوى غيرُه.
+ *
+ * **والحقلُ باقٍ في المحرّك** — لا يُرسل من هنا فيبقى فارغاً،
+ * **وحذفُه من القاعدة قرارٌ لم يُطلب.**
+ */
 private data class RateInput(
     @SerialName("platform_stars") val platformStars: Int,
     @SerialName("driver_stars") val driverStars: Int?,
-    val comment: String,
 )
 
 @Serializable

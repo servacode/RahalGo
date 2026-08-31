@@ -195,7 +195,6 @@
     <string name="ok_sections_saved">حُفظت الأقسام</string>
     <string name="ok_store_closed">أُغلق متجرك — والإدارة تعلم</string>
     <string name="ok_report_sent">وصل بلاغُك — والإدارة تنظر فيه</string>
-    <string name="st_delivered">سُلّم</string>
     <string name="st_cancelled">أُلغي</string>
     <string name="st_rejected">اعتُذر عنه</string>
     <string name="st_failed">تعذّر تسليمه</string>
@@ -220,7 +219,6 @@
     <string name="os_cancelled">أُلغي</string>
     <string name="os_failed">تعذّر تسليمه</string>
     <string name="os_refunded">استُرجع</string>
-    <string name="os_delivered">سُلّم</string>
     <string name="ord_since">منذ %1$s</string>
     <string name="ord_min">د</string>
     <string name="ord_hr">س</string>

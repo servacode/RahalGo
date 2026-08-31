@@ -359,7 +359,10 @@ private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () 
  * (وقعت مثلُها في محفظة المالك ٢٠٢٦-٠٨-٠٧: «استرجاع طلب (cancelled)».)
  */
 private fun statusAr(status: String): String = when (status) {
-    "delivered" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_delivered)
+    // **و«تم التسليم» لفظُ المنصّة كلِّها** — (قرارُ المالك
+    // ٢٠٢٦-٠٨-٣١: «تُفهم عن كلّ الأطراف — نعتمدها بشكلٍ أساسيّ»).
+    // **وكانت «سُلّم» في المتجر وحدَه.**
+    "delivered" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.ui.R.string.ord_st_delivered)
     "cancelled" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_cancelled)
     "rejected" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_rejected)
     "failed" -> com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.st_failed)
