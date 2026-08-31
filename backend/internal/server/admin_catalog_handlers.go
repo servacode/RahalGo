@@ -89,6 +89,8 @@ func (s *Server) handleCreateMerchant(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والإدارةُ تفتح متاجرَ برمز مندوبٍ أيضاً** — وهي تُحسب له.
+	s.grantSalesTargetIfAny(r.Context(), m.ID)
 	httpx.JSON(w, http.StatusCreated, m)
 }
 

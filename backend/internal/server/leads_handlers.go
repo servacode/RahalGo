@@ -657,6 +657,40 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 
 // convertLead يحوّل طلب انضمام إلى متجر فعلي: ينشئ/يربط حساب صاحب المتجر (بكلمة
 // مروره المحفوظة إن كان جديداً) والمتجر بتصنيفه وموقعه منسوباً للمندوب.
+// ══════════════════════════════════════════════════════════════════════
+// **grantSalesTargetIfAny — هدفُ المندوب يُدفع حيث يقع فعلُه**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **وفعلُ المندوب فتحُ متجر** — **وينتهي يومَ يوقّع العميل.** (قرارُ
+// المالك ٢٠٢٦-٠٨-٣١: «الهدفُ الشهريّ هو عددُ العملاء المسجَّلين».)
+//
+// **وكان يُدفع عند تسليم طلبٍ من متاجره** — **فمندوبٌ فتح عشرةً في
+// أسبوعٍ عدّادُه صفرٌ حتّى يشتري الناس.** وذلك يقيس السوقَ لا المندوب.
+//
+// # ولماذا بابان يناديانها
+//
+// **المتجرُ يُفتح من طريقين**: تحويلُ طلبِ مندوب، **وإنشاءٌ من لوحة
+// الإدارة برمز مندوب.** **ومن نادى واحداً وترك الآخر ترك مندوباً
+// يفتح عملاءَ ولا يُكافأ**، ولا خطأَ يظهر.
+//
+// **ولا تُنادى في `CreateMerchant`**: تلك تُنشئ متاجرَ بلا مندوبٍ
+// أيضاً، **ودالّةُ كتالوجٍ تصرف مالاً تُفاجئ من يناديها.**
+//
+// **وخطؤها لا يُسقط الإنشاء**: المتجرُ فُتح، **ومكافأةٌ تأخّرت أهونُ
+// من عميلٍ ضاع.** والقاعدةُ تمنع التكرار — فهرسٌ فريدٌ لكلّ شهر.
+func (s *Server) grantSalesTargetIfAny(ctx context.Context, merchantID string) {
+	if s.incentives == nil || merchantID == "" {
+		return
+	}
+	var repID *string
+	if err := s.pg.QueryRow(ctx,
+		`SELECT sales_rep_user_id::text FROM merchants WHERE id = $1`,
+		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
+		return
+	}
+	s.incentives.GrantTargetIfReached(ctx, *repID, "sales")
+}
+
 func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) error {
 	var (
 		storeName, ownerName, phone, area string
@@ -752,6 +786,8 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 		UPDATE merchants SET district_id = (
 			SELECT district_id FROM merchant_leads WHERE id = $2)
 		WHERE id = $1 AND district_id IS NULL`, mrch.ID, leadID)
+
+	s.grantSalesTargetIfAny(ctx, mrch.ID)
 
 	_, err = s.pg.Exec(ctx, `
 		UPDATE merchant_leads SET status = 'converted', merchant_id = $2, updated_at = now()

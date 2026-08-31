@@ -117,16 +117,17 @@ func (s *Service) Standings(ctx context.Context, role string) ([]Standing, error
 		return nil, httpx.ErrNotFound
 	}
 
-	// **والإنجازُ يختلف بالدور** — السائقُ بما وصّل، والمندوبُ بما بيع من
-	// متاجرَ جلبها. **والمعنى واحد: ما أنتجه عملُه.**
+	// **والإنجازُ يختلف بالدور** — السائقُ بما وصّل، **والمندوبُ بما فتح
+	// من متاجر.** (`doneThisMonth` تحمل الشرحَ كاملاً — **والاستعلامان
+	// يجب أن يتطابقا**: هذا يُري الرقمَ وذاك يدفع عليه، **ورقمٌ يُرى
+	// غيرُ الذي يُدفع عليه أسوأُ من رقمٍ لا يُرى.**)
 	done := `(SELECT count(*) FROM orders o
 	          WHERE o.driver_id = u.id AND o.status = 'delivered'
 	            AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart + `)`
 	if role == "sales" {
-		done = `(SELECT count(*) FROM orders o
-		          JOIN merchants mm ON mm.id = o.merchant_id
-		          WHERE mm.sales_rep_user_id = u.id AND o.status = 'delivered'
-		            AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart + `)`
+		done = `(SELECT count(*) FROM merchants mm
+		          WHERE mm.sales_rep_user_id = u.id
+		            AND mm.created_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart + `)`
 	}
 
 	rows, err := s.db.Query(ctx, `

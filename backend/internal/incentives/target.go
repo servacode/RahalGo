@@ -85,15 +85,37 @@ func (s *Service) GrantTargetIfReached(ctx context.Context, userID, role string)
 }
 
 // doneThisMonth ما أنجزه في شهره — **بالمعنى الذي يخصّ دورَه.**
+//
+// # والمعنيان مختلفان اختلافاً تامّاً
+//
+// **السائقُ يُنجز بما وصّل** — فعلُه ينتهي بالتسليم.
+//
+// **والمندوبُ يُنجز بما فتح من متاجر** — **وعملُه ينتهي يومَ يوقّع
+// العميل**، ولا يملك بعدها أن يجعله يبيع.
+//
+// # ولماذا تبدّل
+//
+// **كان يعدّ طلبات متاجره المسلَّمة** — **فمندوبٌ فتح عشرةَ متاجرَ في
+// أسبوعٍ عدّادُه صفر** حتّى يشتري الناسُ منها. **وذلك يقيس السوقَ لا
+// المندوب.**
+//
+// **(قرارُ المالك ٢٠٢٦-٠٨-٣١:** «الهدفُ الشهريّ هو عددُ العملاء
+// المسجَّلين» · «كلُّ عميل — بالأساس كلُّ عميلٍ راح توافق عليه
+// الإدارة، لن ترفض أيَّ عميلٍ أصلاً».) **فلا يُشترط قبولٌ ولا بيع.**
+//
+// **وأنا من ثبّت الخطأ**: رأيتُ اللوحةَ تقول «عميل» والشيفرةَ تعدّ
+// طلبات، **فجعلتُ الكلمةَ تتبع الشيفرة** بدل أن تتبع الشيفرةُ القصد.
 func (s *Service) doneThisMonth(ctx context.Context, userID, role string) (int64, error) {
 	q := `SELECT count(*) FROM orders o
 	      WHERE o.driver_id = $1 AND o.status = 'delivered'
 	        AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart
 	if role == "sales" {
-		q = `SELECT count(*) FROM orders o
-		     JOIN merchants mm ON mm.id = o.merchant_id
-		     WHERE mm.sales_rep_user_id = $1 AND o.status = 'delivered'
-		       AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart
+		// **ولا تُستثنى حالة** — `active` و`inactive` و`suspended`
+		// كلُّها متاجرُ فتحها، **وليس في الجدول حذفٌ ناعمٌ أصلاً.**
+		// **ومتجرٌ عُوقب بعد شهرٍ لا يُسحب من رصيد من جلبه.**
+		q = `SELECT count(*) FROM merchants m
+		     WHERE m.sales_rep_user_id = $1
+		       AND m.created_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart
 	}
 	var n int64
 	err := s.db.QueryRow(ctx, q, userID).Scan(&n)
