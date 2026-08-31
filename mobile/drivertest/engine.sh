@@ -92,10 +92,21 @@ stage_read(){
 
   # **ز-٣ · وأسبابُ التعذّر كذلك** — ولو كُتبت في الشاشة لاختلفت
   # عمّا يقبله المحرّكُ يومَ يُضاف سبب.
-  code "$A/driver/orders/fail-reasons" -H "$h" >/dev/null
-  n=$(grep -oP '"reasons":\[\K[^]]*' /tmp/dt.json | tr ',' '\n' | grep -c '"')
-  [ "$n" -ge 3 ] && ok "ز-٣" "أسبابُ التعذّر $n من المحرّك" \
-                 || sk "ز-٣" "أسبابُ التعذّر" "مسارٌ آخر — عددُها $n"
+  # **وهي لكلّ مرحلةٍ أسبابُها** — `?at=at_pickup` غيرُ `?at=at_dropoff`.
+  # **ومن عرض أسبابَ المتجر والسائقُ عند الزبون أضاع البلاغ.**
+  local at
+  for at in at_pickup at_dropoff; do
+    code "$A/driver/fail-reasons?at=$at" -H "$h" >/dev/null
+    n=$(grep -o '"code"' /tmp/dt.json | wc -l)
+    [ "$n" -ge 3 ] \
+      && ok "ز-٣" "أسبابُ التعذّر عند $at: $n من المحرّك" \
+      || no "ز-٣" "أسبابُ التعذّر عند $at" "عددُها $n"
+    # **ومع كلّ سببٍ `fault`** — وهو من يُحمَّل الذنبَ في الدفتر،
+    # **فسببٌ بلا صاحبٍ يجعل الخسارةَ بلا صاحب.**
+    grep -q '"fault"' /tmp/dt.json \
+      && ok "ز-٣" "وكلُّ سببٍ معه صاحبُه ($at)" \
+      || no "ز-٣" "صاحبُ الذنب" "**لا حقلَ fault — والخسارةُ بلا صاحب**"
+  done
 }
 
 # ══════════════════════════════════════════════════════════════════════
@@ -135,10 +146,19 @@ stage_guard(){
 stage_money(){
   hdr "هـ · المال"
   local h="Authorization: Bearer $TOKEN"
+  # **وما بذمّته وسقفُه في `/driver/me` لا في `/driver/cash`** —
+  # **و`/driver/cash` صفحةُ قيودٍ لا رصيد.** (قِيست ٢٠٢٦-٠٨-٣١، وحسبتُها
+  # عيباً قبل أن أقرأ الردّ.)
+  code "$A/driver/me" -H "$h" >/dev/null
+  grep -q '"cash_held"' /tmp/dt.json && grep -q '"cash_limit"' /tmp/dt.json \
+    && ok "ي-٤" "ما بذمّته وسقفُه من المحرّك" \
+    || no "ي-٤" "الصندوق" "لا cash_held ولا cash_limit"
+  # **وحدُّ الطلبات معه** — وهو سببُ «معك طلبات بعدد حدك».
+  grep -q '"max_active_orders"' /tmp/dt.json \
+    && ok "ب-٧" "حدُّ الطلبات من المحرّك" \
+    || no "ب-٧" "حدُّ الطلبات" "غائب — فبأيّ رقمٍ يُقال «بعدد حدك»؟"
   code "$A/driver/cash" -H "$h" >/dev/null
-  grep -q '"held"\|"limit"\|"balance"' /tmp/dt.json \
-    && ok "ي-٤" "الصندوقُ يردّ ما بذمّته وسقفَه" \
-    || no "ي-٤" "الصندوق" "لا حقلَ فيه — $(head -c 120 /tmp/dt.json)"
+  grep -q '"entries"' /tmp/dt.json && ok "ي-٤" "وصفحةُ القيود تُقرأ"
 
   code "$A/me/wallet" -H "$h" >/dev/null
   grep -q '"balance"' /tmp/dt.json && ok "ي-٧" "المحفظةُ تُقرأ"
