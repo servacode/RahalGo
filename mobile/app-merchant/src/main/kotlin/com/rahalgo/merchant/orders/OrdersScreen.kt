@@ -21,6 +21,8 @@ import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.MerchantOrder
 import com.rahalgo.shared.merchant.OrderLine
 import com.rahalgo.ui.Card
+import com.rahalgo.ui.StatRow
+import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RahalButton
@@ -131,26 +133,31 @@ private fun OrderCard(
             //
             // **ورقمٌ واحدٌ لا يُراجَع**: يقرأ «لك ١٣٥» ولا يعرف من أين
             // جاءت، **فإن شكّ لم يجد ما يطرحه.**
-            Text(
-                stringResource(R.string.ord_sum, money(order.subtotal)),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                stringResource(
-                    R.string.ord_cut,
-                    money(order.platformCommission),
-                    order.commissionPercent,
-                ),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                stringResource(R.string.ord_due, money(order.merchantNet)),
-                color = Rahal.colors.brand,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            // **وثلاثةُ مربّعاتٍ لا ثلاثةُ أسطر** — (بلاغُ المالك
+            // ٢٠٢٦-٠٨-٣١: «شكلُ المربّع ما عجبني، تنسيقُ الكتابة فيه —
+            // يعني لازم تكون واضحةً متناسقةً مفهومة»).
+            //
+            // **وثلاثةُ أسطرٍ بأحجامٍ وألوانٍ مختلفةٍ تُقرأ ثلاثةَ
+            // أشياءَ لا حسبةً واحدة.** **والمربّعاتُ تصفّها بحجمٍ واحدٍ
+            // ومحاذاةٍ واحدة**، فيُقرأ الطرحُ بنظرة.
+            StatRow {
+                StatBox(
+                    label = stringResource(R.string.ord_sum_lbl),
+                    value = money(order.subtotal),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.ord_cut_lbl, order.commissionPercent),
+                    value = money(order.platformCommission),
+                    modifier = Modifier.weight(1f),
+                )
+                StatBox(
+                    label = stringResource(R.string.ord_due_lbl),
+                    value = money(order.merchantNet),
+                    modifier = Modifier.weight(1f),
+                    color = Rahal.colors.brand,
+                )
+            }
             // **ولا عدّادَ مهلةٍ في هذا الباب** — المحرّكُ لا يرسله مع
             // الطلب، **وعدٌّ تحسبه الشاشةُ من وقت الإنشاء يكذب**: ساعةُ
             // الجهاز تفترق عن ساعة الخادم بدقائق. **فيُقرأ منقضياً وهو

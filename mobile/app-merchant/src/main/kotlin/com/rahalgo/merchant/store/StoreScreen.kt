@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +25,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -46,6 +50,8 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.DayHours
 import com.rahalgo.ui.Card
+import com.rahalgo.ui.StatRow
+import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.KeyValue
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RahalButton
@@ -232,26 +238,38 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             // أرباحاً ليست له.**
             vm.report?.let { r ->
                 Spacer(Modifier.height(12.dp))
+                // **ومربّعاتٌ لا أسطر** — (طلبُ المالك ٢٠٢٦-٠٨-٣١:
+                // «تصبح أيضاً مربّعاتٍ تحتها الأرقام»).
+                //
+                // **والمستحقُّ في صفٍّ وحدَه**: الثلاثةُ فوقه عددٌ،
+                // **وهو مال** — ومربّعٌ رابعٌ بينها يُقرأ عدّاً رابعا.
                 Card {
-                    KeyValue(
-                        stringResource(R.string.reports_today_orders),
-                        r.summary.orders.toString(),
-                    )
-                    KeyValue(
-                        stringResource(R.string.reports_delivered),
-                        r.summary.delivered.toString(),
-                    )
-                    KeyValue(
-                        stringResource(R.string.reports_cancelled),
-                        r.summary.cancelled.toString(),
-                    )
-                    HorizontalDivider()
-                    Spacer(Modifier.height(6.dp))
-                    KeyValue(
-                        stringResource(R.string.reports_due_today),
-                        money(r.summary.due),
-                        valueColor = Rahal.colors.brand,
-                    )
+                    StatRow {
+                        StatBox(
+                            label = stringResource(R.string.reports_today_orders),
+                            value = r.summary.orders.toString(),
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatBox(
+                            label = stringResource(R.string.reports_delivered),
+                            value = r.summary.delivered.toString(),
+                            modifier = Modifier.weight(1f),
+                        )
+                        StatBox(
+                            label = stringResource(R.string.reports_cancelled),
+                            value = r.summary.cancelled.toString(),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    StatRow {
+                        StatBox(
+                            label = stringResource(R.string.reports_due_today),
+                            value = money(r.summary.due),
+                            modifier = Modifier.weight(1f),
+                            color = Rahal.colors.brand,
+                        )
+                    }
                 }
             }
 
@@ -405,6 +423,18 @@ private fun SectionsEditor(vm: StoreViewModel) {
     )
     Spacer(Modifier.height(8.dp))
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وأقسامُه مربّعاتٌ لا أسطر — وحذفُها أيقونة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **(طلبُ المالك ٢٠٢٦-٠٨-٣١:** «الأقسامُ التي تخصّ المتجر تصبح
+    // مربّعات، مع إضافة أيقونة حذفٍ لحذف القسم».)
+    //
+    // **وسطرٌ لكلّ قسمٍ يجعل خمسةَ أقسامٍ خمسةَ أسطر** — والاسمُ فيها
+    // كلمةٌ والباقي فراغ. **والمربّعاتُ تصفّها في سطرين.**
+    //
+    // **وكلمةُ «حذف» بجانب كلّ قسمٍ تزاحم اسمَه** — والأيقونةُ تقولها
+    // بحجمٍ أصغرَ ومعنًى واحد.
     Card {
         if (chosen.isEmpty()) {
             Text(
@@ -414,19 +444,31 @@ private fun SectionsEditor(vm: StoreViewModel) {
                 modifier = Modifier.padding(vertical = 6.dp),
             )
         } else {
-            chosen.forEachIndexed { i, sec ->
-                if (i > 0) HorizontalDivider()
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        sec.name,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    RahalTextButton(onClick = { picked = picked - sec.id }) {
-                        Text(stringResource(R.string.act_delete))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                chosen.forEach { sec ->
+                    Row(
+                        Modifier
+                            .padding(vertical = 4.dp)
+                            .clip(Rahal.shape.md)
+                            .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
+                            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(sec.name, style = MaterialTheme.typography.bodyMedium)
+                        IconButton(
+                            onClick = { picked = picked - sec.id },
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_close),
+                                // **والوصفُ يسمّي قسمَه** — قارئُ الشاشة
+                                // يقرأ «حذف» ستَّ مرّاتٍ بلا تمييز.
+                                contentDescription =
+                                    stringResource(R.string.act_delete) + " " + sec.name,
+                                tint = Rahal.colors.inkMuted,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                 }
             }

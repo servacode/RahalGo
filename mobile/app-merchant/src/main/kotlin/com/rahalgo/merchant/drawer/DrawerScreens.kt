@@ -41,6 +41,8 @@ import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.TicketRow
 import com.rahalgo.ui.TicketsScreen
 import com.rahalgo.ui.Card
+import com.rahalgo.ui.StatRow
+import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.KeyValue
 import com.rahalgo.ui.LoadState
@@ -437,12 +439,31 @@ fun SalesScreen(vm: SalesViewModel) {
                 return@Screen
             }
 
+            // **ومربّعاتٌ لا أسطر** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «بالتقارير
+            // يجب أن تكون مربّعاتٍ: الطلبات · تم التسليم · ملغي ·
+            // المبيعات · عمولة المنصّة · مستحقاتك»).
+            //
+            // **وصفٌّ للعدد وصفٌّ للمال** — ولا يُخلطان: **ثلاثةٌ تُعدّ
+            // وثلاثةٌ تُقبض.**
             Card {
-                KeyValue(stringResource(com.rahalgo.merchant.R.string.nav_orders_all), vm.summary.orders.toString())
-                KeyValue(stringResource(com.rahalgo.merchant.R.string.reports_delivered), vm.summary.delivered.toString())
-                KeyValue(stringResource(com.rahalgo.merchant.R.string.reports_cancelled), vm.summary.cancelled.toString())
-                HorizontalDivider()
-                Spacer(Modifier.height(6.dp))
+                StatRow {
+                    StatBox(
+                        label = stringResource(com.rahalgo.merchant.R.string.nav_orders_all),
+                        value = vm.summary.orders.toString(),
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatBox(
+                        label = stringResource(com.rahalgo.merchant.R.string.reports_delivered),
+                        value = vm.summary.delivered.toString(),
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatBox(
+                        label = stringResource(com.rahalgo.merchant.R.string.reports_cancelled),
+                        value = vm.summary.cancelled.toString(),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
                 // ══════════════════════════════════════════════════════
                 // **ومبيعاتُه بسعره هو لا بما دفعه الزبون**
                 // ══════════════════════════════════════════════════════
@@ -450,13 +471,24 @@ fun SalesScreen(vm: SalesViewModel) {
                 // (قرارُ المالك ٢٠٢٦-٠٨-١٠.) **ومتجرٌ يقرأ مبيعاتٍ فيها
                 // هامشُ المنصّة يحسب أرباحاً ليست له**، ثمّ يجدها ناقصةً
                 // في محفظته فيظنّ المنصّةَ اقتطعت.
-                KeyValue(stringResource(com.rahalgo.merchant.R.string.reports_sales), money(vm.summary.sales))
-                KeyValue(stringResource(com.rahalgo.merchant.R.string.reports_commission), money(vm.summary.commission))
-                KeyValue(
-                    stringResource(com.rahalgo.merchant.R.string.reports_due),
-                    money(vm.summary.due),
-                    valueColor = Rahal.colors.brand,
-                )
+                StatRow {
+                    StatBox(
+                        label = stringResource(com.rahalgo.merchant.R.string.reports_sales),
+                        value = money(vm.summary.sales),
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatBox(
+                        label = stringResource(com.rahalgo.merchant.R.string.reports_commission),
+                        value = money(vm.summary.commission),
+                        modifier = Modifier.weight(1f),
+                    )
+                    StatBox(
+                        label = stringResource(com.rahalgo.merchant.R.string.reports_due),
+                        value = money(vm.summary.due),
+                        modifier = Modifier.weight(1f),
+                        color = Rahal.colors.brand,
+                    )
+                }
             }
 
             // ══════════════════════════════════════════════════════════

@@ -150,7 +150,9 @@
          **و«حصيلتك» لفظٌ لا يقول مدًى** — فمن قرأه ظنّه يومَه وهو عمرُ
          المتجر كلُّه. **والمدى يُكتب في اللفظ نفسِه.** -->
     <string name="reports_today_orders">طلبات اليوم</string>
-    <string name="reports_delivered">سُلّم</string>
+    <!-- **ولفظُ المنصّة** — (قرارُ المالك ٢٠٢٦-٠٨-٣١: «سُلّم تصبح تم
+         التسليم»). **وكانت «سُلّم» في شاشتين من شاشاته.** -->
+    <string name="reports_delivered">تم التسليم</string>
     <string name="reports_cancelled">ملغي</string>
     <string name="reports_due_today">مستحق اليوم</string>
 
@@ -184,10 +186,14 @@
           يعرف شو سعر طلبه وأصنافه، ويعرف شو نخصم وشو باقي له».)
          **وكان «بِيع» يحمل سعرَ البيع للزبون** — ورقمٌ ليس له يُقرأ
          على أنّه له. -->
-    <string name="hist_money">المجموع %1$s · خصم المنصة %2$s (%3$d٪) · المستحق لك %4$s</string>
-    <string name="ord_sum">المجموع %1$s</string>
-    <string name="ord_cut">خصم المنصة %1$s (%2$d٪)</string>
-    <string name="ord_due">المستحق لك %1$s</string>
+    <!-- ══ أسماءُ مربّعات الطلب ══
+         (بلاغُ المالك ٢٠٢٦-٠٨-٣١: «شكلُ المربّع ما عجبني، تنسيقُ
+          الكتابة فيه — لازم تكون واضحةً متناسقةً مفهومة».)
+         **والاسمُ وحدَه فوق والرقمُ تحته** — فلا يحمل الاسمُ رقمَه
+         معه، **وكانت «المجموع ١٥٠ ل.س» كلَّها في سطر.** -->
+    <string name="ord_sum_lbl">المجموع</string>
+    <string name="ord_cut_lbl">خصم المنصة %1$d٪</string>
+    <string name="ord_due_lbl">المستحق لك</string>
     <string name="reports_against_empty">لا شكاوى على متجرك — أحسنت</string>
     <string name="sales_custom">مدة محددة</string>
     <string name="sales_print">طباعة التقرير</string>
