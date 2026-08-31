@@ -397,3 +397,60 @@ fun StatRow(modifier: Modifier = Modifier, content: @Composable RowScope.() -> U
         content = content,
     )
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **سطرُ حسبة — اسمٌ يميناً ورقمٌ يساراً**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **(بلاغُ المالك ٢٠٢٦-٠٨-٣١:** «سجلّ الطلبات والطلبات ما عجبتني
+ * الترتيبة بصراحة، مو احترافيّة بالمستوى المطلوب» · «المهمّ يكون الشكلُ
+ * احترافيّاً مفهوماً واضحا».)
+ *
+ * # ولماذا لا مربّعات
+ *
+ * **المربّعُ لرقمٍ مستقلّ** — طلباتُ اليوم، والملغى، والمبيعات: **ثلاثةُ
+ * مقاييسَ لا رابطَ بينها**، والمربّعُ يفصلها فيُقرأ كلٌّ وحدَه.
+ *
+ * **وهذه حسبةٌ لا مقاييس**: ١٥٠ ناقصَ ١٥ يساوي ١٣٥. **والمربّعاتُ تكسر
+ * الطرحَ** فتُقرأ ثلاثةَ أشياءَ، **ومن أراد أن يتحقّق لم يجد الطرحَ
+ * أمامه.**
+ *
+ * **وشكلُ الفاتورة يُقرأ بلا تعليم** — لأنّه شكلُ كلّ فاتورةٍ رآها في
+ * حياته: البنودُ فوق، ثمّ الجمعُ، ثمّ الخصمُ بإشارته، **ثمّ خطٌّ
+ * والمحصّلةُ تحته.**
+ */
+@Composable
+fun SumLine(
+    label: String,
+    value: String,
+    strong: Boolean = false,
+    color: Color = Color.Unspecified,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = if (strong) 4.dp else 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            color = if (strong) Rahal.colors.ink else Rahal.colors.inkMuted,
+            fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
+            style = if (strong) {
+                MaterialTheme.typography.bodyLarge
+            } else {
+                MaterialTheme.typography.bodyMedium
+            },
+        )
+        Text(
+            text = value,
+            color = if (color != Color.Unspecified) color else Rahal.colors.ink,
+            fontWeight = if (strong) FontWeight.Bold else FontWeight.Medium,
+            style = if (strong) {
+                MaterialTheme.typography.titleMedium
+            } else {
+                MaterialTheme.typography.bodyMedium
+            },
+        )
+    }
+}

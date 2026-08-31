@@ -155,7 +155,7 @@ func (s *Server) handleMyRatings(w http.ResponseWriter, r *http.Request) {
 		                       FROM order_items oi WHERE oi.order_id = o.id LIMIT 3) x), ''),
 		                NULLIF(o.custom_request, ''), ''),
 		       (o.driver_id IS NOT NULL),
-		       COALESCE(rt.platform_stars, 0), rt.driver_stars, COALESCE(rt.comment, ''),
+		       COALESCE(rt.platform_stars, 0), rt.driver_stars,
 		       (rt.order_id IS NOT NULL), o.created_at
 		FROM orders o
 		LEFT JOIN order_ratings rt ON rt.order_id = o.id
@@ -175,7 +175,6 @@ func (s *Server) handleMyRatings(w http.ResponseWriter, r *http.Request) {
 		HasDriver     bool      `json:"has_driver"`
 		PlatformStars int       `json:"platform_stars"`
 		DriverStars   *int      `json:"driver_stars"`
-		Comment       string    `json:"comment"`
 		Rated         bool      `json:"rated"`
 		CreatedAt     time.Time `json:"created_at"`
 	}
@@ -183,7 +182,7 @@ func (s *Server) handleMyRatings(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var o ratedOrder
 		if err := rows.Scan(&o.OrderID, &o.Number, &o.ItemsPreview, &o.HasDriver,
-			&o.PlatformStars, &o.DriverStars, &o.Comment, &o.Rated, &o.CreatedAt); err != nil {
+			&o.PlatformStars, &o.DriverStars, &o.Rated, &o.CreatedAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}

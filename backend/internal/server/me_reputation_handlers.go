@@ -25,7 +25,6 @@ type repReview struct {
 	// على خدمةٍ وقف فيها أمامه.** (قرارُ المالك ٢٠٢٦-٠٨-٠٥.)
 	CustomerName string    `json:"customer_name"`
 	Stars        int       `json:"stars"`
-	Comment      string    `json:"comment"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
@@ -271,19 +270,19 @@ func (s *Server) fillRating(ctx context.Context, uid, starCol, ownerJoin, ownerC
 	// التقييمات والتعليقات المتلقّاة (نُظهر ذوات التعليق أولاً).
 	rows, err := s.pg.Query(ctx, `
 		SELECT o.number, m.name, COALESCE(NULLIF(cu.full_name, ''), cu.phone::text),
-		       `+starCol+`, COALESCE(rt.comment, ''), rt.created_at
+		       `+starCol+`, rt.created_at
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
 		JOIN merchants m ON m.id = o.merchant_id
 		JOIN users cu ON cu.id = rt.customer_id
 		`+ownerJoin+`
 		WHERE `+ownerCond+` AND `+starCol+` IS NOT NULL
-		ORDER BY (rt.comment <> '') DESC, rt.created_at DESC LIMIT 50`, uid)
+		ORDER BY rt.created_at DESC LIMIT 50`, uid)
 	if err == nil {
 		for rows.Next() {
 			var rv repReview
 			if rows.Scan(&rv.OrderNumber, &rv.MerchantName, &rv.CustomerName,
-				&rv.Stars, &rv.Comment, &rv.CreatedAt) == nil {
+				&rv.Stars, &rv.CreatedAt) == nil {
 				*reviews = append(*reviews, rv)
 			}
 		}

@@ -21,6 +21,7 @@ import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.MerchantOrder
 import com.rahalgo.shared.merchant.OrderLine
 import com.rahalgo.ui.Card
+import com.rahalgo.ui.SumLine
 import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.Empty
@@ -140,24 +141,6 @@ private fun OrderCard(
             // **وثلاثةُ أسطرٍ بأحجامٍ وألوانٍ مختلفةٍ تُقرأ ثلاثةَ
             // أشياءَ لا حسبةً واحدة.** **والمربّعاتُ تصفّها بحجمٍ واحدٍ
             // ومحاذاةٍ واحدة**، فيُقرأ الطرحُ بنظرة.
-            StatRow {
-                StatBox(
-                    label = stringResource(R.string.ord_sum_lbl),
-                    value = money(order.subtotal),
-                    modifier = Modifier.weight(1f),
-                )
-                StatBox(
-                    label = stringResource(R.string.ord_cut_lbl, order.commissionPercent),
-                    value = money(order.platformCommission),
-                    modifier = Modifier.weight(1f),
-                )
-                StatBox(
-                    label = stringResource(R.string.ord_due_lbl),
-                    value = money(order.merchantNet),
-                    modifier = Modifier.weight(1f),
-                    color = Rahal.colors.brand,
-                )
-            }
             // **ولا عدّادَ مهلةٍ في هذا الباب** — المحرّكُ لا يرسله مع
             // الطلب، **وعدٌّ تحسبه الشاشةُ من وقت الإنشاء يكذب**: ساعةُ
             // الجهاز تفترق عن ساعة الخادم بدقائق. **فيُقرأ منقضياً وهو
@@ -184,8 +167,39 @@ private fun OrderCard(
             Text(order.notes, style = MaterialTheme.typography.bodyMedium)
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **والحسبةُ بعد الأصناف — كما في كلّ فاتورة**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **(بلاغُ المالك ٢٠٢٦-٠٨-٣١:** «ما عجبتني الترتيبة، مو
+        // احترافيّة» · «المهمّ يكون الشكلُ احترافيّاً مفهوماً واضحا».)
+        //
+        // **وكانت الأرقامُ فوق الأصناف** — يقرأ «المستحقّ ١٣٥» **ثمّ**
+        // يعرف ماذا باع. **والقراءةُ الطبيعيّةُ عكسُها**: ما بِيع، ثمّ
+        // كم يُجمع، ثمّ كم يُخصم، ثمّ ما يبقى.
+        //
+        // **والخصمُ بإشارة ناقص** — فيُرى الطرحُ ولا يُستنتج.
         Spacer(Modifier.height(10.dp))
         HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+        SumLine(
+            label = stringResource(R.string.ord_sum_lbl),
+            value = money(order.subtotal),
+        )
+        SumLine(
+            label = stringResource(R.string.ord_cut_lbl, order.commissionPercent),
+            value = "− " + money(order.platformCommission),
+        )
+        Spacer(Modifier.height(6.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(2.dp))
+        // **والمحصّلةُ خلف الخطّ وبلون العلامة** — هو الرقمُ الذي يعنيه.
+        SumLine(
+            label = stringResource(R.string.ord_due_lbl),
+            value = money(order.merchantNet),
+            strong = true,
+            color = Rahal.colors.brand,
+        )
         Spacer(Modifier.height(10.dp))
 
         // ══════════════════════════════════════════════════════════════

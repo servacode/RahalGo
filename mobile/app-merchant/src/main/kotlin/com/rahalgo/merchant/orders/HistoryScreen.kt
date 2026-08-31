@@ -41,6 +41,7 @@ import com.rahalgo.ui.err
 import com.rahalgo.ui.money
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Card
+import com.rahalgo.ui.SumLine
 import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.Empty
@@ -233,27 +234,29 @@ fun HistoryScreen(vm: HistoryViewModel) {
                             // **ومربّعاتٌ كما في «الطلبات»** — (بلاغُ
                             // المالك ٢٠٢٦-٠٨-٣١). **وسطرٌ بثلاثة أرقامٍ
                             // مفصولةٍ بنقاطٍ يُقرأ جملةً لا حسبة.**
-                            StatRow {
-                                StatBox(
-                                    label = stringResource(com.rahalgo.merchant.R.string.ord_sum_lbl),
-                                    value = money(o.subtotal),
-                                    modifier = Modifier.weight(1f),
-                                )
-                                StatBox(
-                                    label = stringResource(
-                                        com.rahalgo.merchant.R.string.ord_cut_lbl,
-                                        o.commissionPercent,
-                                    ),
-                                    value = money(o.platformCommission),
-                                    modifier = Modifier.weight(1f),
-                                )
-                                StatBox(
-                                    label = stringResource(com.rahalgo.merchant.R.string.ord_due_lbl),
-                                    value = money(o.merchantNet),
-                                    modifier = Modifier.weight(1f),
-                                    color = Rahal.colors.brand,
-                                )
-                            }
+                            // **وحسبةُ الفاتورة كما في «الطلبات»** —
+                            // (بلاغُ المالك ٢٠٢٦-٠٨-٣١). **والمربّعاتُ
+                            // تكسر الطرحَ فتُقرأ ثلاثةَ أشياءَ لا
+                            // حسبة**، وشكلُ الفاتورة يُقرأ بلا تعليم.
+                            SumLine(
+                                label = stringResource(com.rahalgo.merchant.R.string.ord_sum_lbl),
+                                value = money(o.subtotal),
+                            )
+                            SumLine(
+                                label = stringResource(
+                                    com.rahalgo.merchant.R.string.ord_cut_lbl,
+                                    o.commissionPercent,
+                                ),
+                                value = "− " + money(o.platformCommission),
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            HorizontalDivider()
+                            SumLine(
+                                label = stringResource(com.rahalgo.merchant.R.string.ord_due_lbl),
+                                value = money(o.merchantNet),
+                                strong = true,
+                                color = Rahal.colors.brand,
+                            )
                             if (o.items.isNotEmpty()) {
                                 Text(
                                     o.items.joinToString("، ") { "${it.qty}× ${it.name}" },
