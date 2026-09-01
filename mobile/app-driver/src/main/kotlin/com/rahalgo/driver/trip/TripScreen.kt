@@ -1010,6 +1010,10 @@ private fun TripCard(
         )
         Spacer(Modifier.height(10.dp))
 
+        // **وما تحت المقبض يُطوى معه** — والمقبضُ وحدَه يبقى، **فلا
+        // يُحبَس صاحبُه عن إعادتها.**
+        if (!TripCollapse.bottom) return@Column
+
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1149,10 +1153,10 @@ private fun TripCard(
             // واحداً** والأزرارُ تحتها كما هي.
             //
             // **وتعود بلمسةٍ على المقبض** — فلا يُحبَس عن مرحلته.
-            androidx.compose.animation.AnimatedVisibility(visible = TripCollapse.open) {
+            androidx.compose.animation.AnimatedVisibility(visible = TripCollapse.bottom) {
             Spacer(Modifier.height(14.dp))
             }
-            androidx.compose.animation.AnimatedVisibility(visible = TripCollapse.open) {
+            androidx.compose.animation.AnimatedVisibility(visible = TripCollapse.bottom) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

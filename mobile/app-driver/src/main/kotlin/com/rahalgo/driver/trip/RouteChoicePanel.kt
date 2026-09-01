@@ -112,9 +112,23 @@ fun RouteChoicePanel(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(RahalSpaceTokens.sm),
         ) {
+            // **والفرقُ يُترجَم قبل أن يُوصَل** — **وكتبتُه `joinToString`
+            // على كائناتٍ لا على نصوص**، فظهر `Delta(kind=LONGER,…)`
+            // خاماً على شاشة السائق. (رآه المالكُ ٢٠٢٦-٠٩-٠١.)
+            val parts = best.let { RouteMetricText.deltasOf(it) }.map { d ->
+                stringResource(
+                    when (d.kind) {
+                        RouteMetricText.Delta.Kind.SHORTER -> R.string.route_delta_shorter
+                        RouteMetricText.Delta.Kind.LONGER -> R.string.route_delta_longer
+                        RouteMetricText.Delta.Kind.FASTER -> R.string.route_delta_faster
+                        RouteMetricText.Delta.Kind.SLOWER -> R.string.route_delta_slower
+                    },
+                    d.magnitude,
+                )
+            }
             Text(
-                text = stringResource(R.string.route_alternative) + " · " +
-                    RouteMetricText.deltasOf(best).joinToString(" · "),
+                text = stringResource(R.string.route_alternative) +
+                    if (parts.isEmpty()) "" else " · " + parts.joinToString(" · "),
                 color = Rahal.colors.ink,
                 maxLines = 1,
                 modifier = Modifier.weight(1f),
