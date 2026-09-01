@@ -45,6 +45,8 @@ object VoicePhrases {
         ManeuverKinds.MERGE -> "اندمج مع الطريق"
         ManeuverKinds.FORK -> fork(m)
         ManeuverKinds.OFF_RAMP -> "اسلك المخرج"
+        ManeuverKinds.END_OF_ROAD -> endOfRoad(m)
+        ManeuverKinds.USE_LANE -> useLane(m)
         ManeuverKinds.ROUNDABOUT -> roundabout(m)
         // **وجملةُ الدخول قالت المخرجَ أصلاً** — انظر `speaks`.
         ManeuverKinds.EXIT_ROUNDABOUT -> "اخرج من الدوار"
@@ -60,6 +62,20 @@ object VoicePhrases {
      *
      * **ومن قال «خذ اليمين» وهو لا يعرف أضلّ من سكت.**
      */
+    /** **عند نهاية الطريق** — والجهةُ من المعدِّل. */
+    private fun endOfRoad(m: NavManeuver): String = when (m.modifier) {
+        "right", "slight right", "sharp right" -> "عند نهاية الطريق، انعطف يميناً"
+        "left", "slight left", "sharp left" -> "عند نهاية الطريق، انعطف يساراً"
+        else -> FOLLOW_ROUTE
+    }
+
+    /** **إرشادُ المسار** — قبل تفرّعٍ أو مخرج. */
+    private fun useLane(m: NavManeuver): String = when (m.modifier) {
+        "right", "slight right", "sharp right" -> "التزم المسار الأيمن"
+        "left", "slight left", "sharp left" -> "التزم المسار الأيسر"
+        else -> FOLLOW_ROUTE
+    }
+
     private fun fork(m: NavManeuver): String = when (m.modifier) {
         "right", "slight right" -> "عند التفرّع، خذ اليمين"
         "left", "slight left" -> "عند التفرّع، خذ اليسار"

@@ -38,6 +38,8 @@ const (
 	KindMerge          ManeuverKind = "MERGE"
 	KindFork           ManeuverKind = "FORK"
 	KindOffRamp        ManeuverKind = "OFF_RAMP"
+	KindEndOfRoad      ManeuverKind = "END_OF_ROAD"
+	KindUseLane        ManeuverKind = "USE_LANE"
 	KindRoundabout     ManeuverKind = "ROUNDABOUT"
 	KindExitRoundabout ManeuverKind = "EXIT_ROUNDABOUT"
 
@@ -128,7 +130,32 @@ func mapKind(osrmType string, modifier *string) ManeuverKind {
 		// **و«اسمٌ جديد» ليست مناورة** — الشارعُ تبدّل اسمُه والسائقُ
 		// يمضي مستقيماً. **ومن جعلها انعطافاً أربك من يقودها.**
 		return KindStraight
-	case "turn", "end of road":
+	case "end of road":
+		// **ونهايةُ الطريق مناورةٌ بذاتها لا انعطافٌ عاديّ**
+		//
+		// (قِيست ٢٠٢٦-٠٩-٠٢: ثمانيةٌ وعشرون مقطعاً مسجّلاً
+		// «عند نهاية الطريق، انعطف يميناً» **لم يكن ينطقها أحدٌ
+		// قطّ** — لأنّ النوعَ كان يُطوى هنا إلى انعطافٍ عاديّ.)
+		//
+		// **والفرقُ يسمعه السائقُ عند تقاطعٍ على شكل T**: من قيل
+		// له «انعطف يميناً» ظنّ أنّ أمامه طريقاً يتابعه إن أخطأ،
+		// **ومن قيل له «عند نهاية الطريق» عرف أنّ لا متابعة.**
+		//
+		// **وبلا جهةٍ تبقى انعطافاً** — فلا مقطعَ لنهايةِ طريقٍ
+		// بلا جهة.
+		if k := byModifier(modifier); k == KindUnknown || k == KindStraight {
+			return k
+		}
+		return KindEndOfRoad
+	case "use lane":
+		// **والمسارُ إرشادٌ لا مناورة** — «التزم المسار الأيمن»
+		// قبل تفرّعٍ أو مخرج. **وثمانيةٌ وعشرون مقطعاً لها كانت
+		// نائمةً كذلك.**
+		if k := byModifier(modifier); k == KindUnknown || k == KindStraight {
+			return KindStraight
+		}
+		return KindUseLane
+	case "turn":
 		return byModifier(modifier)
 	default:
 		return KindUnknown

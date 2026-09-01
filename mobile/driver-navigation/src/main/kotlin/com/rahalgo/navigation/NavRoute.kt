@@ -112,6 +112,12 @@ object ManeuverKinds {
     const val MERGE = "MERGE"
     const val FORK = "FORK"
     const val OFF_RAMP = "OFF_RAMP"
+
+    /** **نهايةُ الطريق** — تقاطعٌ لا متابعةَ بعده. */
+    const val END_OF_ROAD = "END_OF_ROAD"
+
+    /** **إرشادُ المسار** — «التزم المسار الأيمن» قبل تفرّع. */
+    const val USE_LANE = "USE_LANE"
     const val ROUNDABOUT = "ROUNDABOUT"
     const val EXIT_ROUNDABOUT = "EXIT_ROUNDABOUT"
     const val UNKNOWN = "UNKNOWN"
@@ -119,6 +125,7 @@ object ManeuverKinds {
     private val known = setOf(
         DEPART, ARRIVE, STRAIGHT, TURN_LEFT, TURN_RIGHT, SLIGHT_LEFT, SLIGHT_RIGHT,
         SHARP_LEFT, SHARP_RIGHT, U_TURN, MERGE, FORK, OFF_RAMP,
+        END_OF_ROAD, USE_LANE,
         ROUNDABOUT, EXIT_ROUNDABOUT,
     )
 

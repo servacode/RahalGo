@@ -103,6 +103,13 @@ object NavClips {
         ManeuverKinds.MERGE -> sided(m.modifier, "merge_right", "merge_left", "merge")
         ManeuverKinds.FORK -> sided(m.modifier, "fork_right", "fork_left", "fork")
         ManeuverKinds.OFF_RAMP -> sided(m.modifier, "ramp_right", "ramp_left", "ramp")
+        // **وستّون مقطعاً مسجّلاً كان لا ينطقها أحد** (قِيست
+        // ٢٠٢٦-٠٩-٠٢): ثمانيةٌ وعشرون لنهاية الطريق ومثلُها
+        // للمسار. **ومقطعٌ مدفوعُ الثمن لا يُنطق مالٌ ضائع.**
+        ManeuverKinds.END_OF_ROAD ->
+            sided(m.modifier, "end_of_road_right", "end_of_road_left", FOLLOW_ROUTE)
+        ManeuverKinds.USE_LANE ->
+            sided(m.modifier, "keep_right", "keep_left", FOLLOW_ROUTE)
         ManeuverKinds.ROUNDABOUT -> roundabout(m)
         ManeuverKinds.EXIT_ROUNDABOUT -> "exit_roundabout"
         // **والوصولُ بجهةٍ يُقال بها** — «وجهتك على اليمين» أنفعُ من

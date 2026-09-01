@@ -44,6 +44,7 @@ class NavClipsCoverageTest {
         ManeuverKinds.SHARP_LEFT, ManeuverKinds.SHARP_RIGHT,
         ManeuverKinds.U_TURN, ManeuverKinds.MERGE, ManeuverKinds.FORK,
         ManeuverKinds.OFF_RAMP, ManeuverKinds.ROUNDABOUT,
+        ManeuverKinds.END_OF_ROAD, ManeuverKinds.USE_LANE,
         ManeuverKinds.EXIT_ROUNDABOUT, ManeuverKinds.UNKNOWN,
         // **ونوعٌ لم يُخترع بعد** — الخادمُ قد يرسله غداً.
         "SOMETHING_NEW",
@@ -104,5 +105,66 @@ class NavClipsCoverageTest {
         val produced = (10..2500 step 10).map { planner.roundMeters(it.toDouble()) }.toSortedSet()
         val unrecorded = produced.filter { it !in NavClips.DISTANCES }
         assertEquals("عتبةٌ يقرّب إليها المخطّطُ ولا مقطعَ لها", emptyList<Int>(), unrecorded)
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════
+     * **والاتّجاهُ الثاني: مقطعٌ لا يطلبه أحدٌ مالٌ ضائع**
+     * ══════════════════════════════════════════════════════════════
+     *
+     * **(قِيس ٢٠٢٦-٠٩-٠٢: ستّون مقطعاً مسجّلاً في `res/raw` لم يكن
+     * ينطقها أحدٌ قطّ)** — ثمانيةٌ وعشرون لنهاية الطريق ومثلُها
+     * للمسار وأربعةٌ لـ«ثمّ» منهما. **مدفوعةُ الثمن، صامتة.**
+     *
+     * **والحارسُ الأوّلُ لا يراها** — فهو يسأل: أَلِكلّ مطلوبٍ ملفّ؟
+     * **وهذا يسأل العكس: أَلِكلّ ملفٍّ طالب؟**
+     *
+     * **والاتّجاهان معاً لا واحدٌ منهما**: الأوّلُ صمتٌ في الطريق،
+     * **والثاني مالٌ أُنفق على صوتٍ لا يُسمع.**
+     */
+    @Test
+    fun `ولا مقطعَ في res raw بلا طالب`() {
+        val reachable = sortedSetOf<String>()
+        val exits = listOf(null) + (1..NavClips.MAX_ROUNDABOUT_EXIT).toList()
+        for (kind in kinds) {
+            for (modifier in modifiers) {
+                for (exit in exits) {
+                    val m = NavManeuver(
+                        kind = kind,
+                        modifier = modifier,
+                        atDistanceM = 100.0,
+                        roundaboutExit = exit,
+                    )
+                    for (stage in CueStage.entries) {
+                        for (d in NavClips.DISTANCES + setOf(null)) {
+                            reachable += NavClips.maneuver(m, stage, d)
+                        }
+                    }
+                    NavClips.then(m)?.let { reachable += it }
+                }
+            }
+        }
+        reachable += setOf(
+            NavClips.FOLLOW_ROUTE, NavClips.REROUTING, NavClips.REROUTE_FAILED,
+            NavClips.WRONG_WAY, NavClips.ROUTE_END,
+            NavClips.arrival(TripTarget.PICKUP), NavClips.arrival(TripTarget.DROPOFF),
+        )
+
+        // **وهذه بيدِ المالك لا بيدِ المحرّك** — تُنطق بحدثٍ لا
+        // بمناورة، **ووصلُها بندٌ مستقلّ (أ-٤).**
+        val eventsPending = setOf(
+            "gps_lost", "gps_weak", "gps_restored",
+            "navigation_started", "route_updated", "arrived",
+        )
+
+        // **و`res/raw` ليست صوتاً كلُّها** — فيها نمطُ الخريطة
+        // وملفّاتُ إبقاءِ التصغير.
+        val notAudio = setOf(
+            "keep", "rahalgo_style",
+            "firebase_common_keep", "firebase_crashlytics_keep",
+        )
+
+        val orphans = (available - reachable - eventsPending - notAudio).toSortedSet()
+        assertEquals("مقاطعُ مسجّلةٌ لا ينطقها أحد", emptySet<String>(), orphans.toSet())
     }
 }
