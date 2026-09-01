@@ -6,10 +6,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -21,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -107,7 +110,7 @@ fun RouteChoicePanel(
                 .padding(horizontal = RahalSpaceTokens.md, vertical = RahalSpaceTokens.sm)
                 .clip(RahalShapeTokens.md)
                 .background(Rahal.colors.surface)
-                .clickable { expanded = true }
+                .clickable { onSelect(best.routeId); onConfirm() }
                 .padding(RahalSpaceTokens.sm),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(RahalSpaceTokens.sm),
@@ -133,13 +136,14 @@ fun RouteChoicePanel(
                 maxLines = 1,
                 modifier = Modifier.weight(1f),
             )
-            // **ولمسةٌ واحدةٌ تعتمده** — لا معاينةٌ ثمّ اعتماد: **ذاك
-            // حرسٌ لمن يقارن، وهذا لمن يقود.**
-            PanelButton(
-                label = stringResource(R.string.route_confirm),
-                accent = Rahal.colors.brand,
-                enabled = !ui.busy,
-                onClick = { onSelect(best.routeId); onConfirm() },
+            // **ولا كلمةَ «اعتماد»** — (قرارُ المالك ٢٠٢٦-٠٩-٠١: «ما
+            // بدّي عبارة اعتماد المسار»). **واللمسةُ على السطر كلِّه
+            // تبدّله** — كما في كلّ ملاحةٍ يعرفها.
+            Icon(
+                painter = painterResource(R.drawable.ic_check_circle),
+                contentDescription = null,
+                tint = Rahal.colors.brand,
+                modifier = Modifier.size(22.dp),
             )
         }
         return

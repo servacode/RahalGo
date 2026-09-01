@@ -978,10 +978,18 @@ private fun TripCard(
     //
     // **ويبقى السحبُ بيده**: من أراد العنوانَ وهو في الطريق سحبها،
     // **وآليّةٌ لا يملك أحدٌ تجاوزَها** تُقرأ عنادا.
-    var expanded by rememberSaveable(order.id) { mutableStateOf(false) }
-    LaunchedEffect(order.status) {
-        expanded = order.status == "at_pickup" || order.status == "at_dropoff"
-    }
+    // ══════════════════════════════════════════════════════════════════
+    // **وحالٌ واحدةٌ للبطاقة — لا حالان**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **وفصلتُ المقبضَ عن `expanded` بالأمس** — فصار المقبضُ يطوي
+    // الأزرارَ والتبويبات، **و`expanded` لا يفتحها أحد**: تبقى مغلقةً
+    // إلّا عند باب المتجر أو باب الزبون. **فاختفت أزرارُ المرحلة عن
+    // طلبٍ مُسنَد.**
+    //
+    // **ومقبضٌ واحدٌ يقود شيئاً واحداً** — وحالان لبطاقةٍ واحدةٍ
+    // تفترقان.
+    val expanded = TripCollapse.bottom
 
     Column(
         modifier
@@ -992,8 +1000,11 @@ private fun TripCard(
             // **ومقبضٌ بعرض إصبعين** يُخطئه من يقود.
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _, dy ->
-                    if (dy > 6f) expanded = false
-                    if (dy < -6f) expanded = true
+                    // **والسحبُ يطوي البطاقةَ كلَّها** — (طلبُ المالك
+                    // ٢٠٢٦-٠٩-٠١): معها الأزرارُ وشريطُ التبويبات،
+                    // **لتكون شاشةً كبيرةً للخرائط.**
+                    if (dy > 6f) TripCollapse.bottom = false
+                    if (dy < -6f) TripCollapse.bottom = true
                 }
             }
             .padding(horizontal = 20.dp, vertical = 12.dp),
@@ -1006,7 +1017,7 @@ private fun TripCard(
                 .clip(Rahal.shape.pill)
                 .background(Rahal.colors.inkMuted.copy(alpha = 0.35f))
                 .size(width = 44.dp, height = 5.dp)
-                .clickable { expanded = !expanded },
+                .clickable { TripCollapse.bottom = !TripCollapse.bottom },
         )
         Spacer(Modifier.height(10.dp))
 
