@@ -262,7 +262,6 @@ data class TripActions(
     /** **بلاغُ الطارئ** — العملياتُ تُنبَّه وموضعُه يُقرأ. */
     val emergency: () -> Unit,
     val dismissEmergency: () -> Unit,
-    val navigate: () -> Unit,
     /** **يقلب الصوت** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤). */
     val toggleVoice: () -> Unit = {},
     val toOrders: () -> Unit,

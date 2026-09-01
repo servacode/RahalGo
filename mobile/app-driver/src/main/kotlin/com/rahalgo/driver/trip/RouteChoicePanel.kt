@@ -67,7 +67,6 @@ fun RouteChoicePanel(
     ui: RouteChoiceUi,
     onSelect: (String) -> Unit,
     onConfirm: () -> Unit,
-    onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val choices = ui.choicesOrNull ?: return
@@ -148,7 +147,21 @@ fun RouteChoicePanel(
             selected = preview == null,
             deltas = emptyList(),
             enabled = !ui.busy,
-            onClick = { onSelect(choices.recommended.routeId) },
+            // ══════════════════════════════════════════════════════════
+            // **ولمسةٌ تبدّل — لا معاينةٌ ثمّ اعتماد**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **(قرارُ المالك ٢٠٢٦-٠٩-٠١:** «ما بدّي عبارة اعتماد
+            // المسار · بغوغل ماب يعطيك الطرقَ المتاحة للوصول إلى نفس
+            // المكان **بدون أن يكتب المسار الأقصر أو الأبعد** ·
+            // **وبمجرّد أن تختار الطريقَ يتغيّر**».)
+            //
+            // **وخطوتان لفعلٍ واحد**: يلمس المسارَ فيُعاين، **ثمّ يبحث
+            // عن زرٍّ ليعتمده** — وهو يقود. **والاعتمادُ كان حرساً من
+            // لمسةٍ خاطئة، وثمنُه لمسةٌ في كلّ مرّة.**
+            //
+            // **والرجوعُ أرخص**: من بدّل خطأً لمس الآخرَ فعاد.
+            onClick = { onSelect(choices.recommended.routeId); onConfirm() },
         )
 
         for (alt in choices.alternatives) {
@@ -163,32 +176,13 @@ fun RouteChoicePanel(
                 selected = alt.routeId == preview,
                 deltas = RouteMetricText.deltasOf(alt),
                 enabled = !ui.busy,
-                onClick = { onSelect(alt.routeId) },
+                onClick = { onSelect(alt.routeId); onConfirm() },
             )
         }
 
         // ── وزرُّ الاعتماد لا يظهر إلّا في معاينة ────────────────
-        if (preview != null) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(RahalSpaceTokens.sm),
-            ) {
-                PanelButton(
-                    label = stringResource(R.string.act_cancel),
-                    accent = Rahal.colors.inkMuted,
-                    enabled = !ui.busy,
-                    onClick = onCancel,
-                    modifier = Modifier.weight(1f),
-                )
-                PanelButton(
-                    label = stringResource(R.string.route_confirm),
-                    accent = Rahal.colors.brand,
-                    enabled = !ui.busy,
-                    onClick = onConfirm,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
+        // **ولا صفَّ اعتمادٍ وإلغاء** — (قرارُ المالك ٢٠٢٦-٠٩-٠١).
+        // **اللمسةُ على المسار تبدّله**، والرجوعُ لمسةٌ على غيره.
 
         if (ui is RouteChoiceUi.Stale) {
             Text(

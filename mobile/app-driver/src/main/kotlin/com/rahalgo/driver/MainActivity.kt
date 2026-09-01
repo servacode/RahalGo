@@ -886,7 +886,6 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         problem = { orders.reportProblem(it, LastPoint.value) },
                         emergency = { orders.emergency(LastPoint.value) },
                         dismissEmergency = orders::dismissEmergency,
-                        navigate = { openMaps(context, orders.trip(LastPoint.value)) },
                         toggleVoice = orders::toggleVoice,
                         toOrders = { tab = 1 },
                         // ══════════════════════════════════════════════

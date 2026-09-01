@@ -101,7 +101,6 @@ internal fun MapButtons(
     onChat: () -> Unit,
     chatting: Boolean,
     chatUnread: Int,
-    onNavigate: () -> Unit,
     /** **أالصوتُ مكتوم؟** — (طلبُ المالك ٢٠٢٦-٠٨-٢٤). */
     voiceMuted: Boolean = false,
     /** **زرٌّ واحدٌ يقلبه** — «إمّا الصوتُ يعمل أو لا يعمل». */
@@ -158,7 +157,13 @@ internal fun MapButtons(
                 on = !voiceMuted,
             )
             Spacer(Modifier.height(8.dp))
-            NavigateButton(onNavigate)
+            // **ولا زرَّ لخرائط غوغل** — (قرارُ المالك ٢٠٢٦-٠٩-٠١:
+            // «زرُّ خرائط غوغل لا عملَ له، لأنّ خريطتَنا أفضلُ من غوغل
+            // بسوريا»).
+            //
+            // **وزرٌّ يخرج بالسائق إلى تطبيقٍ آخر يقطع رحلتَه**: يفقد
+            // المراحلَ والأزرارَ والصوتَ، **ويعود ليجد نفسَه حيث
+            // تركها.** **وملاحتُنا تعرف الطلبَ وهو لا يعرفه.**
         }
     }
 }
@@ -231,44 +236,6 @@ internal fun MapButton(
         }
     }
 }
-
-/**
- * **بابُ الخروج — مكتوبٌ باسمه.**
- *
- * **ولونُه غيرُ لون أختيه**: هاتان تحرّكان كاميرا وتبقيان في المكان،
- * **وهذا يترك التطبيق** — واختلافُ الفعل يُقال باللون قبل أن يُقرأ.
- */
-@Composable
-internal fun NavigateButton(onClick: () -> Unit) {
-    Column(
-        Modifier
-            .shadow(6.dp, Rahal.shape.md)
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.accent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // **وسهمٌ إلى أعلى لا سهمُ إرسال** — (تصحيح المالك ٢٠٢٦-٠٨-١٢:
-        // «والسهم للأعلى مو ع طرف»). **وهو ما تعرفه العينُ ملاحةً**
-        // في كلّ تطبيقٍ يقودها.
-        Icon(
-            painter = painterResource(R.drawable.ic_arrow_up),
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(24.dp),
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = stringResource(R.string.trip_navigate),
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelSmall,
-        )
-    }
-}
-
-
 /**
  * **زرُّ الرحلة المصنوعة** — أعلى يسارَ الخريطة، بعيداً عن الثلاثة.
  *

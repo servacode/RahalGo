@@ -675,7 +675,6 @@ fun TripScreen(
             RouteChoicePanel(
                 ui = choiceUi,
                 onSelect = { actions.previewRoute(it) },
-                onCancel = { actions.previewRoute(null) },
                 onConfirm = {
                     val driver = state.driver
                     if (driver != null) {
@@ -722,7 +721,6 @@ fun TripScreen(
                 onChat = actions.chat,
                 chatting = chat != null,
                 chatUnread = chatUnread,
-                onNavigate = actions.navigate,
                 voiceMuted = voiceMuted,
                 onVoice = { actions.toggleVoice() },
             )

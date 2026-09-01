@@ -129,8 +129,21 @@ object Markers {
         //
         // **والمستقيمُ يبقى احتياطا**: محرّكُ المسارات قد ينام، **وخريطةٌ
         // بلا خطٍّ لا تقول إلى أين** — وخطٌّ تقريبيٌّ خيرٌ من لا خطّ.
-        line(style, route.ifEmpty { listOfNotNull(driver, pickup, dropoff) })
+        // ══════════════════════════════════════════════════════════════
+        // **والترتيبُ: الهالةُ ثمّ المسارُ ثمّ المثلّث**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **(بلاغُ المالك ٢٠٢٦-٠٩-٠١:** «الخطُّ الأزرقُ يختفي خلف
+        // المثلّث».)
+        //
+        // **وكان المسارُ أدنى الطبقات** — تعلوه الهالةُ ثمّ المثلّث.
+        // **فيُبتلع الخطُّ تحتهما، ولا يرى السائقُ إلى أين يمضي في
+        // اللحظة التي يحتاجها.**
+        //
+        // **وصار بينهما**: فوق الهالة فيُرى الطريقُ حولَ المؤشّر،
+        // **وتحت المثلّث** فيبقى المؤشّرُ ظاهراً لا يقطعه خطّ.
         me(style, driver)
+        line(style, route.ifEmpty { listOfNotNull(driver, pickup, dropoff) })
         points(style, driver, pickup, dropoff, driverBearingDeg)
     }
 
@@ -237,9 +250,12 @@ object Markers {
         style.addSource(GeoJsonSource(SRC_ME, collection))
         style.addLayer(
             CircleLayer("trip-me-layer", SRC_ME).withProperties(
-                PropertyFactory.circleRadius(26f),
+                // **وأصغرُ ممّا كانت** — ستّةٌ وعشرون بكسلاً تغطّي
+                // متراً في التكبير القريب، **فتحجب الشارعَ الذي يقف
+                // فيه.** والهالةُ تقول «هنا أنت» لا «هذا كلُّ ما ترى».
+                PropertyFactory.circleRadius(16f),
                 PropertyFactory.circleColor(DRIVER),
-                PropertyFactory.circleOpacity(0.22f),
+                PropertyFactory.circleOpacity(0.18f),
             ),
         )
     }
@@ -262,9 +278,40 @@ object Markers {
      * **وترتدّ `false` إن لم تكن المصادرُ مبنيّةً بعد** — فيُنادى
      * [draw] الكاملُ مرّةً واحدةً ثمّ تكفي هذه.
      */
+    /** **آخرُ موضعٍ وزاويةٍ رُفعا** — فلا يُعاد رفعُ ما لم يتبدّل. */
+    private var lastDriver: LatLng? = null
+    private var lastBearing: Float? = null
+
+    /** **أقلُّ من مترٍ تقريباً** — ودرجةٌ عشريّةٌ ≈ ١١١ كم. */
+    private fun close(a: LatLng, b: LatLng): Boolean =
+        kotlin.math.abs(a.latitude - b.latitude) < 0.000009 &&
+            kotlin.math.abs(a.longitude - b.longitude) < 0.000009
+
     fun moveDriver(style: Style, driver: LatLng, bearingDeg: Float?): Boolean {
         val me = style.getSourceAs<GeoJsonSource>(SRC_ME) ?: return false
         val pts = style.getSourceAs<GeoJsonSource>(SRC_POINTS) ?: return false
+        // ══════════════════════════════════════════════════════════════
+        // **ولا يُكتب مصدرٌ لم يتبدّل موضعُه**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **(بلاغُ المالك ٢٠٢٦-٠٩-٠١:** «أحسّ المثلّثَ يغمز، وهيك لازم
+        // يبقى ثابتاً واضحا».)
+        //
+        // **ومصدران يُكتبان ستّين مرّةً في الثانية** — الهالةُ
+        // والمثلّثُ ومعه طرفا الرحلة. **وكلُّ كتابةٍ تُعيد رفعَ الهندسة
+        // إلى محرّك الرسم**، فيومض ما يُعاد رفعُه بين إطارٍ وإطار.
+        //
+        // **ولا يُكتب إلّا ما تحرّك**: موضعٌ لم يتبدّل بمترٍ لا يستحقّ
+        // كتابةً، **وزاويةٌ لم تتبدّل بدرجةٍ كذلك.** فتسكن الصورة.
+        if (lastDriver != null && lastBearing != null &&
+            close(lastDriver!!, driver) && kotlin.math.abs(
+                (lastBearing ?: 0f) - (bearingDeg ?: 0f),
+            ) < 1f
+        ) {
+            return true
+        }
+        lastDriver = driver
+        lastBearing = bearingDeg
         me.setGeoJson(
             FeatureCollection.fromFeatures(listOf(feature(driver, IMG_DRIVER))),
         )
