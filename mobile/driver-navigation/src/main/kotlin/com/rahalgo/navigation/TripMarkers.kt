@@ -145,6 +145,8 @@ object Markers {
         me(style, driver)
         line(style, route.ifEmpty { listOfNotNull(driver, pickup, dropoff) })
         points(style, driver, pickup, dropoff, driverBearingDeg)
+        // **والمثلّثُ آخرُ ما يُضاف** — فيعلو المسارَ والطرفين.
+        driverIcon(style)
     }
 
     /** **الصورُ تُسجَّل مرّةً في الأسلوب** — ثمّ تُنادى بأسمائها. */
@@ -240,7 +242,7 @@ object Markers {
      */
     private fun me(style: Style, driver: LatLng?) {
         val collection = FeatureCollection.fromFeatures(
-            listOfNotNull(driver?.let { feature(it, IMG_DRIVER) }),
+            listOfNotNull(driver?.let { feature(it, IMG_DRIVER, 0f) }),
         )
         val existing = style.getSourceAs<GeoJsonSource>(SRC_ME)
         if (existing != null) {
@@ -256,6 +258,33 @@ object Markers {
                 PropertyFactory.circleRadius(16f),
                 PropertyFactory.circleColor(DRIVER),
                 PropertyFactory.circleOpacity(0.18f),
+            ),
+        )
+    }
+
+    /**
+     * **مثلّثُ السائق — طبقةٌ وحدَها فوق كلّ شيء.**
+     *
+     * **وتُضاف بعد المسار** — (بلاغُ المالك ٢٠٢٦-٠٩-٠١: «الخطُّ الأزرقُ
+     * يختفي خلف المثلّث»). **فالخطُّ يُرى حولَه، والمثلّثُ لا يقطعه
+     * خطّ.**
+     *
+     * **ومن مصدرِ الهالة نفسِه** — نقطةٌ واحدةٌ تُكتب مرّةً في الإطار،
+     * **ويقرؤها لونان: دائرةٌ خلفَها وأيقونةٌ فوقها.**
+     */
+    private fun driverIcon(style: Style) {
+        if (style.getLayer("trip-me-icon") != null) return
+        style.addLayer(
+            SymbolLayer("trip-me-icon", SRC_ME).withProperties(
+                PropertyFactory.iconImage("{kind}"),
+                PropertyFactory.iconAllowOverlap(true),
+                PropertyFactory.iconIgnorePlacement(true),
+                PropertyFactory.iconRotate(
+                    org.maplibre.android.style.expressions.Expression.get(PROP_ROTATE),
+                ),
+                PropertyFactory.iconRotationAlignment(
+                    org.maplibre.android.style.layers.Property.ICON_ROTATION_ALIGNMENT_MAP,
+                ),
             ),
         )
     }
@@ -278,57 +307,30 @@ object Markers {
      * **وترتدّ `false` إن لم تكن المصادرُ مبنيّةً بعد** — فيُنادى
      * [draw] الكاملُ مرّةً واحدةً ثمّ تكفي هذه.
      */
-    /** **آخرُ موضعٍ وزاويةٍ رُفعا** — فلا يُعاد رفعُ ما لم يتبدّل. */
-    private var lastDriver: LatLng? = null
-    private var lastBearing: Float? = null
-
-    /** **أقلُّ من مترٍ تقريباً** — ودرجةٌ عشريّةٌ ≈ ١١١ كم. */
-    private fun close(a: LatLng, b: LatLng): Boolean =
-        kotlin.math.abs(a.latitude - b.latitude) < 0.000009 &&
-            kotlin.math.abs(a.longitude - b.longitude) < 0.000009
-
     fun moveDriver(style: Style, driver: LatLng, bearingDeg: Float?): Boolean {
         val me = style.getSourceAs<GeoJsonSource>(SRC_ME) ?: return false
-        val pts = style.getSourceAs<GeoJsonSource>(SRC_POINTS) ?: return false
         // ══════════════════════════════════════════════════════════════
-        // **ولا يُكتب مصدرٌ لم يتبدّل موضعُه**
+        // **والمتحرّكُ في مصدرٍ والثابتُ في آخر**
         // ══════════════════════════════════════════════════════════════
         //
-        // **(بلاغُ المالك ٢٠٢٦-٠٩-٠١:** «أحسّ المثلّثَ يغمز، وهيك لازم
-        // يبقى ثابتاً واضحا».)
+        // **(بلاغُ المالك ٢٠٢٦-٠٩-٠٢:** «المثلّثُ في السير التجريبيّ
+        // يختفي ويظهر ويتحرّك بشكلٍ عشوائيّ».)
         //
-        // **ومصدران يُكتبان ستّين مرّةً في الثانية** — الهالةُ
-        // والمثلّثُ ومعه طرفا الرحلة. **وكلُّ كتابةٍ تُعيد رفعَ الهندسة
-        // إلى محرّك الرسم**، فيومض ما يُعاد رفعُه بين إطارٍ وإطار.
+        // **وكان يُكتب في مصدرين ستّين مرّةً في الثانية** — واحدٌ للهالة
+        // وآخرُ للمثلّث **ومعه طرفا الرحلة اللذان لا يتبدّلان.**
         //
-        // **ولا يُكتب إلّا ما تحرّك**: موضعٌ لم يتبدّل بمترٍ لا يستحقّ
-        // كتابةً، **وزاويةٌ لم تتبدّل بدرجةٍ كذلك.** فتسكن الصورة.
-        if (lastDriver != null && lastBearing != null &&
-            close(lastDriver!!, driver) && kotlin.math.abs(
-                (lastBearing ?: 0f) - (bearingDeg ?: 0f),
-            ) < 1f
-        ) {
-            return true
-        }
-        lastDriver = driver
-        lastBearing = bearingDeg
+        // **ثمّ جرّبتُ تخطّي الكتابة إن لم يتحرّك** (٢٠٢٦-٠٩-٠١) —
+        // **فصار أسوأ**: حالُ التخطّي محفوظةٌ في كائنٍ واحدٍ يعيش بعد
+        // الأسلوب، **فإذا أُعيد بناءُ المصادر بقيت الحالُ تقول «لم
+        // يتحرّك» فلا يُكتب شيء** — **والمثلّثُ لا يُرسم حتّى يمشي
+        // متراً.** فيظهر ويختفي بلا سبب يراه صاحبُه.
+        //
+        // **والصوابُ فصلُ المصدرين لا تخطّي الكتابة**: المثلّثُ والهالةُ
+        // في `trip-me`، **وطرفا الرحلة في `trip-points` يُكتبان مرّةً
+        // ولا يُمسّان.** فتُكتب هندسةُ نقطةٍ واحدةٍ لكلّ إطار.
         me.setGeoJson(
-            FeatureCollection.fromFeatures(listOf(feature(driver, IMG_DRIVER))),
-        )
-        // ══════════════════════════════════════════════════════════════
-        // **وطرفا الرحلة يُحفظان ولا يُستعلَم عنهما**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **وكانت `querySourceFeatures` تُنادى هنا** — **استعلامٌ في
-        // محرّك الخرائط ستّين مرّةً في الثانية**، وهو أثقلُ من إعادة
-        // البناء التي جاءت لتتجنّبها. **(بلاغُ المالك ٢٠٢٦-٠٨-٢٤:
-        // «أصبح التطبيق ثقيلاً جدّاً».)**
-        //
-        // **وهما لا يتبدّلان أثناء الرحلة** — فيُحفظان حين تُرسم
-        // الخريطةُ كاملةً ويُقرآن من الذاكرة.
-        pts.setGeoJson(
             FeatureCollection.fromFeatures(
-                ends + feature(driver, IMG_DRIVER, bearingDeg ?: 0f),
+                listOf(feature(driver, IMG_DRIVER, bearingDeg ?: 0f)),
             ),
         )
         return true
@@ -347,12 +349,9 @@ object Markers {
             pickup?.let { add(feature(it, IMG_PICKUP)) }
             dropoff?.let { add(feature(it, IMG_DROPOFF)) }
         }
-        val features = buildList {
-            addAll(ends)
-            // **وأنت آخرُ ما يُرسم** — فلا تُغطّى بعلامةٍ فوقك.
-            driver?.let { add(feature(it, IMG_DRIVER, driverBearingDeg)) }
-        }
-        val collection = FeatureCollection.fromFeatures(features)
+        // **ولا سائقَ هنا** — هو في `trip-me` وحدَه، **فلا يُرسم مرّتين
+        // ولا يُعاد رفعُ الطرفين معه في كلّ إطار.**
+        val collection = FeatureCollection.fromFeatures(ends)
         val existing = style.getSourceAs<GeoJsonSource>(SRC_POINTS)
         if (existing != null) {
             existing.setGeoJson(collection)
