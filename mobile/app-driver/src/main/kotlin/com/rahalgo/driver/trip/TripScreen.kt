@@ -12,6 +12,9 @@ import com.rahalgo.ui.dist
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.horizontalScroll
@@ -742,6 +745,9 @@ fun TripScreen(
             // الطورُ «إلى المتجر» مشى إليه، **وإن ضُغط «استلمتُ»
             // انقلب المسارُ إلى الزبون فمشت الإعادةُ إليه وحدَها.**
             if (BuildConfig.DEBUG) {
+                // **ومجالٌ للتوليد خارجَ الخيط الرئيسيّ** — و`DEBUG`
+                // ثابتُ ترجمةٍ فالمجموعةُ مستقرّة.
+                val scope = rememberCoroutineScope()
                 state.routeLine?.let { line ->
                     ReplayButton(
                         running = navSession.replaying,
@@ -755,7 +761,36 @@ fun TripScreen(
                                 }
                             // **ومجالُها في نموذج العرض** — انظر
                             // `OrdersViewModel.startReplay`.
-                            onReplay(com.rahalgo.navigation.ReplayDrive.fixes(g))
+                            //
+                            // ═══════════════════════════════════════
+                            // **والتوليدُ خارجَ الخيط الرئيسيّ**
+                            // ═══════════════════════════════════════
+                            //
+                            // **(بلاغُ المالك ٢٠٢٦-٠٩-٠٢:** «التطبيقُ
+                            // لا يستجيب» — **«وهذه ألعنُ من
+                            // الانهيار»**.)
+                            //
+                            // **ومسارُ أربعمئةٍ وأربعين كيلومتراً
+                            // بثمانيةِ أمتارٍ لكلّ خطوةٍ يعني ثلاثةً
+                            // وخمسين ألفَ نقطة** — تُبنى كلُّها دفعةً
+                            // واحدةً عند ضغط الزرّ، بحسبةِ مسافةٍ
+                            // لكلّ واحدة.
+                            //
+                            // **وكانت تُبنى حيث تُضغط: في الخيط
+                            // الرئيسيّ** — فالشاشةُ متجمّدةٌ حتّى
+                            // تنتهي، وأندرويد يرى تجمّداً فوق خمسِ
+                            // ثوانٍ فيعرض «لا يستجيب».
+                            //
+                            // **والسيرُ التجريبيُّ أداةُ قياسٍ لا
+                            // لعبة** — (قولُ المالك: «هو من سوف
+                            // يوصلنا إلى الحقيقة»). **وأداةٌ تُجمّد
+                            // ما تقيسه لا تقيس شيئاً.**
+                            scope.launch {
+                                val fixes = withContext(Dispatchers.Default) {
+                                    com.rahalgo.navigation.ReplayDrive.fixes(g)
+                                }
+                                onReplay(fixes)
+                            }
                         },
                         onStop = { onReplay(emptyList()) },
                     )
