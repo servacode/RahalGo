@@ -2,6 +2,7 @@ package com.rahalgo.map
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -102,13 +103,30 @@ fun PickPoint(
     }
 
     Box(Modifier.fillMaxSize()) {
+        var zoomTick by remember { mutableStateOf(0) }
+        var zoomStep by remember { mutableStateOf(0.0) }
         MapCanvas(
             start = start ?: RAQQA,
             onSettle = vm::readAddress,
             jumpTo = vm.jumpTo,
             onJumped = vm::jumped,
             modifier = Modifier.fillMaxSize(),
+            zoomTick = zoomTick,
+            zoomStep = zoomStep,
         )
+
+        // **وزرّا التكبير** — (بلاغُ المالك ٢٠٢٦-٠٨-٣١). **ويمينَ
+        // الشاشة في منتصفها**: حيث يقع الإبهامُ وحدَه.
+        Column(
+            Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            ZoomKey("+") { zoomStep = 1.0; zoomTick++ }
+            Spacer(Modifier.height(8.dp))
+            ZoomKey("−") { zoomStep = -1.0; zoomTick++ }
+        }
 
         // **والدبّوسُ في وسط الشاشة لا على الخريطة** — لا يتحرّك معها،
         // **فما تحته هو المختار.**
@@ -277,3 +295,22 @@ fun PickPoint(
 
 /** **مركزُ الرقّة** — حيث تبدأ الخريطةُ لمن لا موضعَ له. */
 val RAQQA = LatLng(35.9528, 39.0079)
+
+/** **مفتاحُ تكبيرٍ — دائرةٌ واحدةٌ بحرفٍ واحد.** */
+@Composable
+private fun ZoomKey(sign: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(44.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(Rahal.colors.canvas)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = sign,
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.titleLarge,
+        )
+    }
+}

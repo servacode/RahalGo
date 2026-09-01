@@ -70,6 +70,23 @@ man["base"] = base
 
 for region in man.get("regions", []):
     rid = region["id"]
+    # **ومنطقةٌ تخدم القاعدةَ نفسَها لا ملفَّ لها**
+    #
+    # (قرارُ المالك ٢٠٢٦-٠٨-٣١: «أريد سوريا كاملة — أيُّ مكانٍ نفتح فيه
+    #  يجب أن تكون الخريطةُ متاحة».)
+    #
+    # **وقطعُ المدن ضيّقةٌ**: من نزّل «دمشق» وخرج إلى حمص بلا إنترنت
+    # بقي بلا خريطة. **فمن أراد التغطيةَ الكاملةَ دون إنترنت وجدها.**
+    #
+    # **ولا تُنسخ الأربعمئةُ ميغا مرّتين** — تُشير إلى ملفّ القاعدة
+    # نفسِه، **وبصمتُها بصمتُه** فيتحقّق منها العميلُ كما يتحقّق منه.
+    if region.get("source") == "base":
+        region["url"] = base["url"]
+        region["bytes"] = base["bytes"]
+        region["sha256"] = base["sha256"]
+        region["dataVersion"] = dv
+        print(f"   {rid}: (القاعدة) {base['bytes']} bytes")
+        continue
     rp = os.path.join(root, "regions", dv, f"region-{rid}.pmtiles")
     if not os.path.exists(rp):
         print(f"!! missing region file: {rp}", file=sys.stderr)

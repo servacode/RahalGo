@@ -58,6 +58,18 @@ fun MapCanvas(
     jumpTo: LatLng? = null,
     onJumped: () -> Unit = {},
     online: Boolean = true,
+    /**
+     * **درجاتُ تكبيرٍ تُطلب من خارج اللوحة** — زرّا `+` و`−`.
+     *
+     * **(بلاغُ المالك ٢٠٢٦-٠٨-٣١:** «تصغيرُ وتكبيرُ الخريطة صعبٌ
+     * جدّاً».) **ومن يمسك هاتفَه بيدٍ ويفتح البابَ بالأخرى لا يملك
+     * إصبعين** — فالقرصةُ وحدَها لا تكفي.
+     *
+     * **ورقمٌ يتبدّل هو الإشارة** — لا القيمةُ نفسُها: `+1` ثمّ `+1`
+     * لا يتحرّكان مرّتين لو قُرئت القيمة.
+     */
+    zoomTick: Int = 0,
+    zoomStep: Double = 0.0,
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **والسمةُ تُستدلّ من لوحة التطبيق لا من النظام**
@@ -125,6 +137,32 @@ fun MapCanvas(
             // **والتحويلُ بعد الربط**: العناوينُ حُقنت فلا تُمسّ،
             // **والألوانُ وحدَها تُبدَّل.** انظر `MapNight`.
             val styled = if (night) MapNight.apply(ready.bound.json) else ready.bound.json
+            // ══════════════════════════════════════════════════════════
+            // **ولا تدويرَ ولا إمالةَ في ملتقط النقطة**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **(بلاغُ المالك ٢٠٢٦-٠٨-٣١:** «تصغيرُ وتكبيرُ الخريطة
+            // وتحريكُها صعبٌ جدّاً · يجب أن تكون سهلةً سلسلةً لنقل
+            // الدبّوس من مكانٍ لمكانٍ آخر».)
+            //
+            // **والإصبعان يفعلان أربعةَ أشياءَ في وقتٍ واحد**: يكبّران
+            // ويدوّران ويميلان ويحرّكان. **فمن أراد أن يكبّر دوّر
+            // الخريطةَ قليلاً**، ومن أراد أن يحرّك أمالها — **فيقاتلها
+            // ليصل بالدبّوس إلى بابه.**
+            //
+            // **ولا حاجةَ إليهما هنا أصلاً**: يضع نقطةً على خريطةٍ
+            // مسطّحة، **وشمالُها شمالٌ دائماً.** (والملاحةُ تدوّر
+            // بنفسها — وتلك شاشةٌ أخرى.)
+            //
+            // **والنقرتان تكبّران** — والضغطُ المطوّل بإصبعٍ ثمّ السحب
+            // يكبّر بيدٍ واحدة، **ومن يمسك هاتفَه بيدٍ ويفتح البابَ
+            // بالأخرى لا يملك إصبعين.**
+            map.uiSettings.isRotateGesturesEnabled = false
+            map.uiSettings.isTiltGesturesEnabled = false
+            map.uiSettings.isZoomGesturesEnabled = true
+            map.uiSettings.isScrollGesturesEnabled = true
+            map.uiSettings.isDoubleTapGesturesEnabled = true
+            map.uiSettings.isQuickZoomGesturesEnabled = true
             map.setStyle(Style.Builder().fromJson(styled)) {
                 // **وهنا يصير المطلوبُ محمَّلاً** (البندان ٩ و١٢).
                 MapStyleRepository.onStyleLoaded(now)
@@ -136,6 +174,12 @@ fun MapCanvas(
         }
     }
 
+    LaunchedEffect(zoomTick) {
+        if (zoomTick == 0 || zoomStep == 0.0) return@LaunchedEffect
+        surface.view.getMapAsync { map ->
+            map.animateCamera(CameraUpdateFactory.zoomBy(zoomStep), 220)
+        }
+    }
     LaunchedEffect(jumpTo) {
         val to = jumpTo ?: return@LaunchedEffect
         surface.view.getMapAsync { map ->
