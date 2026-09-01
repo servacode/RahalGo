@@ -1145,7 +1145,16 @@ private fun TripCard(
             //
             // **والفعلُ الأوّل يأخذ العرض** — هو ما يُضغط في تسعٍ من عشر،
             // **و«لدي مشكلة» قرصٌ بجانبه**: يُعرف بشكله لا بعرضه.
+            // **والأزرارُ تنطوي مع اللوحة** — (بلاغُ المالك ٢٠٢٦-٠٨-٣١:
+            // «لازم حتّى الأزرارُ تنزل تختفي مشان يصير مجالٌ أوسعُ
+            // للخريطة»). **ومن سحب اللوحةَ ليرى الطريقَ كان يربح سطراً
+            // واحداً** والأزرارُ تحتها كما هي.
+            //
+            // **وتعود بلمسةٍ على المقبض** — فلا يُحبَس عن مرحلته.
+            androidx.compose.animation.AnimatedVisibility(visible = TripCollapse.open) {
             Spacer(Modifier.height(14.dp))
+            }
+            androidx.compose.animation.AnimatedVisibility(visible = TripCollapse.open) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1241,6 +1250,7 @@ private fun TripCard(
             // كلَّ مرّة. **وأسبابُه عند الباب وبلاغُ طارئٍ في الطريق**،
             // ولا يُطلب من صاحبه أن يعرف الفرق.
         }
+            }
 
         if (state.error.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))

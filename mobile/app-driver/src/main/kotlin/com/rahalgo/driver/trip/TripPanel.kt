@@ -119,7 +119,8 @@ internal fun TripPanel(state: TripState) {
     //
     // **وتعود مع كلّ طلبٍ جديد** (`rememberSaveable(order.id)`) — من
     // بدأ طوراً جديداً يريد أن يرى أين صار.
-    var stripOpen by rememberSaveable(order.id) { mutableStateOf(true) }
+    // **والحالُ مشتركةٌ مع الأزرار** — انظر `TripCollapse`.
+    var stripOpen by TripCollapse::open
 
     Column(
         Modifier

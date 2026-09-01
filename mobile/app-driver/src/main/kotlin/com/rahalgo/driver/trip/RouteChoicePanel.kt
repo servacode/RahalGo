@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +76,61 @@ fun RouteChoicePanel(
     if (choices.alternatives.isEmpty()) return
 
     val preview = ui.previewRouteId
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ومطويّةٌ حتّى تُفتح — سطرٌ واحدٌ لا أربعُ بطاقات**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **(بلاغُ المالك ٢٠٢٦-٠٨-٣١:** «الطريقُ الموصى والبديل — هي
+    // الطريقةُ غلط، لأنّ تسكّر الشاشةَ على سائقٍ بدون استجابةٍ
+    // سريعة».)
+    //
+    // **وثلاثةُ بدائلَ تعني أربعَ بطاقاتٍ فوق بعضها** — تأخذ نصفَ
+    // الشاشة، **وتحجب الخريطةَ وأزرارَ المرحلة عمّن يقود.**
+    //
+    // **والسائقُ لا يقارن وهو يسير** — يريد جواباً بلمسة: **«أقصرُ
+    // بأربعة كيلومترات؟ خذها»** أو يتجاهلها. **والمقارنةُ لمن وقف.**
+    //
+    // **فالمطويُّ سطرٌ**: أفضلُ بديلٍ بفرقه، ولمسةٌ تعتمده. **ومن أراد
+    // أن يقارن فتحها بلمسةٍ على السطر.**
+    //
+    // **ولا يُفتح من نفسه** — من فُتح عليه شيءٌ وهو يقود أغلقه بلا
+    // قراءة.
+    var expanded by rememberSaveable(choices.recommended.routeId) {
+        mutableStateOf(false)
+    }
+    val best = choices.alternatives.firstOrNull()
+
+    if (!expanded && preview == null && best != null) {
+        Row(
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = RahalSpaceTokens.md, vertical = RahalSpaceTokens.sm)
+                .clip(RahalShapeTokens.md)
+                .background(Rahal.colors.surface)
+                .clickable { expanded = true }
+                .padding(RahalSpaceTokens.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(RahalSpaceTokens.sm),
+        ) {
+            Text(
+                text = stringResource(R.string.route_alternative) + " · " +
+                    RouteMetricText.deltasOf(best).joinToString(" · "),
+                color = Rahal.colors.ink,
+                maxLines = 1,
+                modifier = Modifier.weight(1f),
+            )
+            // **ولمسةٌ واحدةٌ تعتمده** — لا معاينةٌ ثمّ اعتماد: **ذاك
+            // حرسٌ لمن يقارن، وهذا لمن يقود.**
+            PanelButton(
+                label = stringResource(R.string.route_confirm),
+                accent = Rahal.colors.brand,
+                enabled = !ui.busy,
+                onClick = { onSelect(best.routeId); onConfirm() },
+            )
+        }
+        return
+    }
 
     Column(
         modifier = modifier
