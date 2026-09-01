@@ -32,6 +32,8 @@ import com.rahalgo.driver.trip.OfflineMap
 import com.rahalgo.map.MapStyleRepository
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -129,7 +131,10 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // حزمة.**
         MapStyleRepository.ensureManifest()
         if (here != null) OfflineMap.pickRegion(here.lat, here.lng)
-        OfflineMap.check(context)
+        // **و`check` تسرد مجلّدات الحزم وتقرأ أوصافَها** — قرصٌ لا
+        // ذاكرة. **وفي الخيط الرئيسيّ تُجمّد الشاشة** (بلاغُ المالك
+        // ٢٠٢٦-٠٩-٠٢: «لا يستجيب»).
+        withContext(Dispatchers.IO) { OfflineMap.check(context) }
 
         // ══════════════════════════════════════════════════════════════
         // **وتُنزَّل من نفسها على الواي فاي — بلا أن يُسأل**

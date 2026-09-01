@@ -1,5 +1,7 @@
 package com.rahalgo.map
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
@@ -101,12 +103,30 @@ fun MapCanvas(
     var bound by remember(online) { mutableStateOf<MapRuntime.Binding?>(null) }
     LaunchedEffect(online) {
         MapStyleRepository.ensureManifest()
-        bound = MapStyleRepository.bind(
+        // ══════════════════════════════════════════════════════════════
+        // **والربطُ يقرأ القرصَ — فلا يقع في الخيط الرئيسيّ**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **(بلاغُ المالك ٢٠٢٦-٠٩-٠٢:** «التطبيق لا يستجيب» — بصورةٍ من
+        // شاشته: **نافذةُ أندرويد «تجريبي لا يستجيب»**.)
+        //
+        // **و«لا يستجيب» أخطرُ من انهيار**: الانهيارُ يُرى ويُبلَّغ عنه،
+        // **وهذا يترك السائقَ ينظر إلى شاشةٍ ميّتةٍ وهو يقود.**
+        //
+        // **و`bind` تنادي `installedRegions()`** — تسرد مجلّدات الخرائط
+        // وتقرأ ملفَّ وصفٍ لكلّ حزمة. **وكانت تُنادى في `LaunchedEffect`
+        // بلا خيطٍ خلفيّ، أي في الخيط الرئيسيّ.**
+        //
+        // **وقرصٌ بطيءٌ أو حزمةٌ بأربعمئة ميغا يجعلانها مئاتِ
+        // الميلّي‑ثانية** — وخمسُ ثوانٍ تكفي أندرويد ليقول «لا يستجيب».
+        bound = withContext(Dispatchers.IO) {
+            MapStyleRepository.bind(
             purpose = MapSourceResolver.Purpose.PICK_POINT,
             online = online,
-            lat = start.latitude,
-            lng = start.longitude,
-        )
+                lat = start.latitude,
+                lng = start.longitude,
+            )
+        }
     }
 
     val started = remember { booleanArrayOf(false) }
