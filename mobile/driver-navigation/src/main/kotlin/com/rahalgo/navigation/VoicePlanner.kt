@@ -621,7 +621,10 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
 
     /** **تقريبُ المسافة إلى ما يُنطق.** */
     fun roundMeters(m: Double): Int {
-        val steps = intArrayOf(50, 100, 150, 200, 300, 400, 500, 700, 1000)
+        // **ومئتان وخمسون كانت مسجّلةً ولا تُطلب** (قِيس ٢٠٢٦-٠٩-٠٢)
+        // — **والفجوةُ بين المئتين والثلاثمئة أوسعُ ما في السلّم**،
+        // فمن كان على مئتين وخمسين سمع «بعد مئتي متر» **وأخطأ خمسين.**
+        val steps = intArrayOf(50, 100, 150, 200, 250, 300, 400, 500, 700, 1000)
         var best = steps[0]
         for (s in steps) if (abs(s - m) < abs(best - m)) best = s
         return best
