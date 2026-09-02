@@ -446,7 +446,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         val (sec, minM, maxM) = when (stage) {
             CueStage.NOW -> Triple(tuning.nowSeconds, tuning.nowMinM, tuning.nowMaxM)
             CueStage.APPROACH -> Triple(tuning.approachSeconds, tuning.approachMinM, tuning.approachMaxM)
-            else -> Triple(tuning.prepareSeconds, tuning.prepareMinM, tuning.prepareMaxM)
+            else -> Triple(tuning.prepareSeconds, tuning.prepareMinM, prepareMaxFor(speed))
         }
         val base = triggerM(sec, speed, minM, maxM)
         if (!tuning.speechAware) return base
@@ -473,6 +473,31 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
      * **والصوابُ أن تُقصَّ العتبةُ نفسُها** — فتبقى **نقطةً تُعبَر لا
      * شريطاً يُصاب.**
      */
+    /**
+     * ══════════════════════════════════════════════════════════════
+     * **وسقفُ التمهيد يتبع السرعة**
+     * ══════════════════════════════════════════════════════════════
+     *
+     * **(قِيس ٢٠٢٦-٠٩-٠٢:** مقطعا «كيلومتر ونصف» و«كيلومترين»
+     * مسجَّلان **ولا يُنطقان أبداً** — لأنّ السقفَ ثمانمئةِ مترٍ
+     * ثابتاً مهما بلغت السرعة.)
+     *
+     * **وثمانمئةِ مترٍ على مئةِ كيلومترٍ في الساعة تسعٌ وعشرون
+     * ثانية** — ومن أراد أن يغيّر ثلاثةَ مسارب ليبلغ مخرجاً لا
+     * تكفيه. **وغوغل ينبّه على الأوتوستراد قبل كيلومترين.**
+     *
+     * **والسقفُ الواحدُ لا يصلح للاثنين**: ألفا مترٍ في حيٍّ ضيّقٍ
+     * تنبيهٌ عن منعطفٍ لم يخرج من بيته بعد، **وثمانمئةٍ على السريع
+     * تنبيهٌ فات أوانُه.**
+     *
+     * **فيتبع السقفُ السرعةَ لا إعداداً يضبطه أحد** — ومن دخل
+     * الأوتوستراد ارتفع من نفسه، ومن خرج منه انخفض.
+     */
+    fun prepareMaxFor(speedMps: Double): Double {
+        if (!speedMps.isFinite() || speedMps <= tuning.highwayMps) return tuning.prepareMaxM
+        return tuning.prepareMaxHighwayM
+    }
+
     fun triggerM(thresholdSec: Double, speedMps: Double, minM: Double, maxM: Double): Double =
         (thresholdSec * speedMps).coerceIn(minM, maxM)
 
@@ -624,7 +649,9 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         // **ومئتان وخمسون كانت مسجّلةً ولا تُطلب** (قِيس ٢٠٢٦-٠٩-٠٢)
         // — **والفجوةُ بين المئتين والثلاثمئة أوسعُ ما في السلّم**،
         // فمن كان على مئتين وخمسين سمع «بعد مئتي متر» **وأخطأ خمسين.**
-        val steps = intArrayOf(50, 100, 150, 200, 250, 300, 400, 500, 700, 1000)
+        // **والدرجتان الأخيرتان للسريع وحدَه** — سقفُ المدينة
+        // ثمانمئةٍ فلا تبلغُهما، **وسقفُ الأوتوستراد ألفان فيبلغُهما.**
+        val steps = intArrayOf(50, 100, 150, 200, 250, 300, 400, 500, 700, 1000, 1500, 2000)
         var best = steps[0]
         for (s in steps) if (abs(s - m) < abs(best - m)) best = s
         return best
@@ -694,6 +721,21 @@ data class VoiceTuning(
      */
     val prepareMinM: Double = 150.0,
     val prepareMaxM: Double = 800.0,
+
+    /**
+     * **وسقفُ التمهيد على الطريق السريع** — انظر [VoicePlanner.prepareMaxFor].
+     *
+     * **وألفا مترٍ هي أبعدُ مقطعٍ مسجَّلٍ عندنا** — فلا يُرفع فوقها
+     * وإلّا قيلت مسافةٌ لا صوتَ لها.
+     */
+    val prepareMaxHighwayM: Double = 2000.0,
+
+    /**
+     * **وحدُّ «الطريق السريع» سرعةً** — عشرون متراً في الثانية،
+     * **اثنان وسبعون كيلومتراً في الساعة.** ومن بلغها فهو خارج
+     * المدينة، **ولا شارعَ في الرقّة يُقاد بهذه السرعة.**
+     */
+    val highwayMps: Double = 20.0,
     val approachMinM: Double = 60.0,
     val approachMaxM: Double = 300.0,
     val nowMinM: Double = 15.0,
