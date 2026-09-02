@@ -9,6 +9,7 @@ import { AccountSettings, FormSection, PageContainer, PageHeader, Pagination, Ic
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import RoleBadge from "@/components/admin/RoleBadge";
+import PinSection from "@/components/admin/PinSection";
 
 const m = getMessages(defaultLocale);
 const A = m.admin.myAccount;
@@ -80,6 +81,10 @@ export default function MyAccountPage() {
           router.replace("/adminrahalgo");
         }}
       />
+
+      {/* **والرمزُ السرّيُّ فوق سجلّ الدخول** — كلاهما أمنُ الحساب،
+          **والفعلُ يسبق التاريخ.** */}
+      <PinSection />
 
       <div>
         <FormSection title={A.recentLogins} icon={<IconStatus />}>
