@@ -773,9 +773,6 @@
       "merchant": "المتجر",
       "total": "الإجمالي",
       "driver": "السائق",
-      "statusCol": "الحالة",
-      "time": "الوقت",
-      "details": "متابعة",
       "goodsValue": "قيمة الطلب",
       "deliveryFee": "التوصيل",
       "customerNote": "ملاحظة الزبون",
@@ -791,7 +788,6 @@
       "noDriverWait": "أنتظر سائقا",
       "noDriverAnyway": "حول رغم ذلك",
       "noDriversOnShift": "لا سائق على الدوام الآن",
-      "financials": "المالية",
       "discount": "الخصم",
       "empty": "لا طلبات مطابقة",
       "actions": {
@@ -865,7 +861,9 @@
         "title": "تقييم الزبون",
         "merchant": "تقييم المتجر",
         "driver": "تقييم السائق"
-      }
+      },
+      "statusCol": "الحالة",
+      "details": "متابعة"
     },
     "customers": {
       "title": "الزبائن",
