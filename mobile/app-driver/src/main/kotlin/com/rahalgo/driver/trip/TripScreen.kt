@@ -581,7 +581,38 @@ fun TripScreen(
             },
             previewRouteId = choiceUi.previewRouteId,
             // **ولمسُ الخطّ يُعاين ولا يعتمد** — البندان ٢٤ و٢٧.
-            onRouteTapped = { routeId -> actions.previewRoute(routeId) },
+            // ══════════════════════════════════════════════════════
+            // **واللمسُ على الخريطة يبدّل، لا يعاين**
+            // ══════════════════════════════════════════════════════
+            //
+            // **(طلبُ المالك ٢٠٢٦-٠٨-٣١:** «بغوغل ماب يعطيك الطرقَ
+            // المتاحة للوصول إلى نفس المكان، **وبمجرّد أن تختار
+            // الطريقَ يتغيّر**».)
+            //
+            // **والبطاقةُ كانت تبدّل باللمسة والخريطةُ لا** — من
+            // ضغط الخطَّ رأى لونَه يتغيّر ثمّ لا شيء، **فظنّ أنّ
+            // اللمسَ لم يقع.**
+            //
+            // **والمعاينةُ تسبق الاعتماد لأنّها هي التي تكتبه** —
+            // `confirmRoute` تقرأ ما عيّنته `previewRoute`، وكلتاهما
+            // كتابةُ حقلٍ لا رحلةُ حال.
+            //
+            // **ولمسُ المسار الحاليّ لا يفعل شيئاً** — تُرجع
+            // `previewRoute` فراغاً فتردّ `confirmRoute` كاذبة،
+            // **وهو الصواب: لا تبديلَ إلى ما أنت فيه.**
+            onRouteTapped = { routeId ->
+                actions.previewRoute(routeId)
+                state.driver?.let { driver ->
+                    actions.confirmRoute(
+                        navSession.generation,
+                        routeTarget,
+                        driver.latitude,
+                        driver.longitude,
+                        progressM,
+                        navHealthy,
+                    )
+                }
+            },
             modifier = Modifier.fillMaxSize(),
         )
 
