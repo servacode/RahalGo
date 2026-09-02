@@ -319,6 +319,97 @@ class VoiceTest {
     // **٦ · إعادةُ الحساب والوصول والجيل**
     // ══════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════
+    // **٧ · إشارةُ تحديد الموقع**
+    // ══════════════════════════════════════════════════════════════════
+
+    /**
+     * **VOICE-070** — الضعفُ لا يُعلن من قراءةٍ واحدة، ويُعلن من خمس،
+     * **ولا يُعاد ما دام الحالُ واحداً**، والعودةُ تُقال مرّةً.
+     *
+     * **(قِيس ٢٠٢٦-٠٩-٠٢: ثلاثةُ مقاطعَ مسجّلةٍ لم ينطقها أحدٌ قطّ.)**
+     */
+    @Test
+    fun `VOICE-070 الإشارةُ تُقال عند التبدّل لا في كلّ قراءة`() {
+        val planner = VoicePlanner()
+        val route = RouteFixtures.straight()
+        val progress = RouteProgress(route)
+        val fix = RouteFixtures.driveAlong(route).first()
+        val p = progress.onFix(fix, null)
+        fun state(grade: FixGrade) = NavState(
+            grade, RejectReason.NONE, fix.lat, fix.lng, 0f, 0L, true, p,
+            OffRouteDetector.Verdict(
+                OffRouteDetector.State.ON_ROUTE, 4.0, 36.0, 80.0,
+                OffRouteDetector.Skip.NONE, true, false, false, false,
+            ),
+        )
+        fun at(ms: Long) = fix.copy(atMs = ms)
+
+        // **ونداءُ المناورة لا شأنَ له هنا** — تُصفّى جملُ الإشارة وحدَها.
+        fun signals(grade: FixGrade, ms: Long) =
+            planner.onState(state(grade), 1L, at(ms)).filter { it.kind == CueKind.SIGNAL }
+
+        // **قراءةٌ مقبولةٌ تبني الثقة** — ولا تقول شيئاً.
+        assertEquals(0, signals(FixGrade.ACCEPTED, 1_000L).size)
+
+        // **وأربعُ متردّياتٍ صامتة** — تحت جسرٍ أو بين بنايتين.
+        val early = (2..5).flatMap { signals(FixGrade.DEGRADED, it * 1_000L) }
+        assertEquals("أُعلن الضعفُ قبل أوانه", 0, early.size)
+
+        // **والخامسةُ ضعفٌ حقيقيّ.**
+        val weak = signals(FixGrade.DEGRADED, 6_000L)
+        assertEquals(1, weak.size)
+        assertEquals(NavClips.GPS_WEAK, weak.single().clip)
+        assertEquals(CueKind.SIGNAL, weak.single().kind)
+
+        // **ولا تُعاد ما دام الحالُ واحداً.**
+        val again = (7..12).flatMap { signals(FixGrade.DEGRADED, it * 1_000L) }
+        assertEquals("تكرّرت جملةُ الضعف", 0, again.size)
+
+        // **ورفضٌ بعد خمسَ عشرةَ ثانيةً من آخر ثقةٍ انقطاع.**
+        val lost = signals(FixGrade.REJECTED, 20_000L)
+        assertEquals(1, lost.size)
+        assertEquals(NavClips.GPS_LOST, lost.single().clip)
+
+        // **والعودةُ تُقال مرّةً واحدة.**
+        val back = signals(FixGrade.ACCEPTED, 21_000L)
+        assertEquals(1, back.size)
+        assertEquals(NavClips.GPS_RESTORED, back.single().clip)
+        assertEquals(0, signals(FixGrade.ACCEPTED, 22_000L).size)
+
+        println(
+            "VOICE-070 · ضعف=${weak.single().text} · انقطاع=${lost.single().text} " +
+                "· عودة=${back.single().text}",
+        )
+    }
+
+    /**
+     * **VOICE-071** — ولجملِ إعادة الحساب مقطعٌ مسجَّلٌ لا نطقٌ آليّ.
+     *
+     * **(قِيس ٢٠٢٦-٠٩-٠٢: كانت `clip` تُترك فارغةً، فهاتفٌ بلا محرّكِ
+     * نطقٍ عربيٍّ يصمت والسائقُ خارجَ المسار.)**
+     */
+    @Test
+    fun `VOICE-071 لجملِ إعادة الحساب مقطعٌ مسجَّل`() {
+        val planner = VoicePlanner()
+        val route = RouteFixtures.straight()
+        val progress = RouteProgress(route)
+        val fix = RouteFixtures.driveAlong(route).first()
+        val p = progress.onFix(fix, null)
+        fun state(status: RerouteStatus) = NavState(
+            FixGrade.ACCEPTED, RejectReason.NONE, fix.lat, fix.lng, 0f, 0L, true, p,
+            OffRouteDetector.Verdict(
+                OffRouteDetector.State.OFF_ROUTE, 4.0, 36.0, 80.0,
+                OffRouteDetector.Skip.NONE, true, false, false, false,
+            ),
+            reroute = status,
+        )
+        val started = planner.onState(state(RerouteStatus.REROUTING), 1L, fix).single()
+        val failed = planner.onState(state(RerouteStatus.REROUTE_FAILED), 1L, fix).single()
+        assertEquals(NavClips.REROUTING, started.clip)
+        assertEquals(NavClips.REROUTE_FAILED, failed.clip)
+    }
+
     /** **VOICE-050** — «جارٍ إعادة الحساب» مرّةً في النوبة. */
     @Test
     fun `VOICE-050 جملةُ إعادة الحساب لا تتكرّر في النوبة`() {

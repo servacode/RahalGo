@@ -80,6 +80,8 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
             arrivalSaid = false
             routeEndEpisode = -1L
             wrongWaySaidEpisode = -1L
+    signal = Signal.GOOD
+            degradedRun = 0
         }
 
         // **والمقبولةُ وحدَها تُجدّد الثقة** — كما في المرحلة ٣أ.
@@ -90,6 +92,7 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         rerouteCue(state, generation)?.let { out += it }
         arrivalCue(state, generation)?.let { out += it }
         routeEndCue(state, generation)?.let { out += it }
+        signalCue(state, generation, fix)?.let { out += it }
         maneuverCue(state, generation, fix)?.let { out += it }
         emitted += out.size
         return out
@@ -143,6 +146,72 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
     private var wrongWaySaidEpisode = -1L
 
     // ══════════════════════════════════════════════════════════════════
+    // **إشارةُ تحديد الموقع — ثلاثةُ مقاطعَ كانت نائمة**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **(قِيس ٢٠٢٦-٠٩-٠٢:** `gps_lost` و`gps_weak` و`gps_restored`
+    // مسجَّلةٌ في `res/raw` **ولا ذكرَ لأسمائها في شيفرةٍ حيّة**.)
+    //
+    // **والجودةُ كانت تُقاس ولا تُقال**: `GpsQuality` تدرج كلَّ قراءةٍ
+    // مقبولةً أو متردّيةً أو مرفوضة، **والسائقُ لا يعلم.** فيرى الملثَ
+    // يقفز فيظنّ العطبَ في التطبيق، **وهو في نفقٍ أو بين أبنية.**
+    //
+    // # ولا تُقال إلّا عند التبدّل
+    //
+    // **وصوتٌ يتكرّر كلَّ ثانيةٍ أسوأُ من صمت** — فتُقال مرّةً عند
+    // انتقال الحال، ولا تُعاد حتّى تتبدّل ثانية.
+    //
+    // # وضعفٌ لا يُعلن من قراءةٍ واحدة
+    //
+    // **وقراءةٌ متردّيةٌ واحدةٌ تقع في كلّ رحلة** — تحت جسرٍ أو بين
+    // ناطحتين. **فلا تُقال حتّى تتوالى خمسٌ**، وحينها هو ضعفٌ حقيقيّ.
+    //
+    // # وحدُّ الانقطاع زمنٌ لا عدد
+    //
+    // **والانقطاعُ يُقاس بالثواني منذ آخر قراءةٍ موثوقة** — لا بعدد
+    // القراءات المرفوضة، **فالقراءاتُ نفسُها تتوقّف حين تنقطع الإشارة.**
+    //
+    // **وهذا حدُّه**: ما دامت قراءةٌ تصل — ولو مرفوضة — عرفنا. **وإن
+    // توقّف ورودُها بالكلّيّة فلا نداءَ لنا هنا**، وتلك مهمّةُ طبقةِ
+    // الموقع في التطبيق لا مهمّةُ المخطّط.
+    private enum class Signal { GOOD, WEAK, LOST }
+
+    private var signal = Signal.GOOD
+    private var degradedRun = 0
+
+    private fun signalCue(state: NavState, generation: Long, fix: NavFix): VoiceCue? {
+        val was = signal
+        when (state.grade) {
+            FixGrade.ACCEPTED -> {
+                degradedRun = 0
+                signal = Signal.GOOD
+            }
+
+            FixGrade.DEGRADED -> {
+                degradedRun++
+                if (signal == Signal.GOOD && degradedRun >= tuning.weakSignalRun) {
+                    signal = Signal.WEAK
+                }
+            }
+
+            FixGrade.REJECTED -> {
+                val silentMs = fix.atMs - trustedAtMs
+                if (trustedAtMs > 0L && silentMs >= tuning.lostSignalMs) signal = Signal.LOST
+            }
+        }
+        if (signal == was) return null
+        val (text, clip) = when (signal) {
+            Signal.GOOD -> VoicePhrases.GPS_RESTORED to NavClips.GPS_RESTORED
+            Signal.WEAK -> VoicePhrases.GPS_WEAK to NavClips.GPS_WEAK
+            Signal.LOST -> VoicePhrases.GPS_LOST to NavClips.GPS_LOST
+        }
+        return event(
+            generation, CueKind.SIGNAL, text, clip,
+            tuning.priorityReroute, SIGNAL_KEY,
+        )
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     // **إعادةُ الحساب**
     // ══════════════════════════════════════════════════════════════════
 
@@ -164,11 +233,17 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         return when {
             state.reroute == RerouteStatus.REROUTING && !rerouteEpisodeSaid -> {
                 rerouteEpisodeSaid = true
-                event(generation, CueKind.REROUTE, VoicePhrases.REROUTING, tuning.priorityReroute)
+                event(
+                    generation, CueKind.REROUTE, VoicePhrases.REROUTING,
+                    NavClips.REROUTING, tuning.priorityReroute,
+                )
             }
             state.reroute == RerouteStatus.REROUTE_FAILED && !rerouteFailSaid -> {
                 rerouteFailSaid = true
-                event(generation, CueKind.REROUTE, VoicePhrases.REROUTE_FAILED, tuning.priorityReroute)
+                event(
+                    generation, CueKind.REROUTE, VoicePhrases.REROUTE_FAILED,
+                    NavClips.REROUTE_FAILED, tuning.priorityReroute,
+                )
             }
             // **وانتهاءُ النوبة يفتح البابَ لنوبةٍ تالية.**
             state.reroute == RerouteStatus.NONE && was != RerouteStatus.NONE -> {
@@ -552,13 +627,31 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
         return best
     }
 
-    private fun event(generation: Long, kind: CueKind, text: String, priority: Int) = VoiceCue(
-        id = CueId(generation, if (kind == CueKind.REROUTE) REROUTE_KEY else ARRIVAL_KEY, CueStage.EVENT),
+    /**
+     * **وجملةُ الحدث لها مقطعٌ مسجَّلٌ كغيرها**
+     *
+     * **(قِيس ٢٠٢٦-٠٩-٠٢:** كانت `clip` تُترك فارغةً هنا، **فجملُ
+     * إعادة الحساب وحدَها كانت تسقط إلى النطق الآليّ** — و
+     * `recalculating_route.mp3` مسجَّلٌ في `res/raw` لا يُشغَّل قطّ.)
+     *
+     * **وهاتفٌ بلا محرّكِ نطقٍ عربيٍّ يصمت تماماً** — فالسائقُ يخرج
+     * عن المسار ولا يُقال له شيء.
+     */
+    private fun event(
+        generation: Long,
+        kind: CueKind,
+        text: String,
+        clip: String,
+        priority: Int,
+        key: Double = if (kind == CueKind.REROUTE) REROUTE_KEY else ARRIVAL_KEY,
+    ) = VoiceCue(
+        id = CueId(generation, key, CueStage.EVENT),
         kind = kind,
         stage = CueStage.EVENT,
         priority = priority,
         validUntilProgressM = Double.MAX_VALUE,
         text = text,
+        clip = clip,
     )
 
     private companion object {
@@ -571,6 +664,9 @@ class VoicePlanner(val tuning: VoiceTuning = VoiceTuning()) {
 
         /** **ومفتاحُ الاتّجاه المعاكس** — ورقمُ النوبة يُطرح منه. */
         const val WRONG_WAY_KEY = -1000.0
+
+        /** **ومفتاحُ الإشارة** — حدثٌ لا مناورةَ له. */
+        const val SIGNAL_KEY = -4.0
     }
 }
 
@@ -647,4 +743,20 @@ data class VoiceTuning(
     val priorityReroute: Int = 2,
     val priorityApproach: Int = 1,
     val priorityPrepare: Int = 0,
+
+    /**
+     * **كم قراءةً متردّيةً متتاليةً قبل أن نقول «الإشارة ضعيفة»**
+     *
+     * **وواحدةٌ لا تكفي** — تقع في كلّ رحلةٍ تحت جسرٍ أو بين بنايتين،
+     * **ومن أعلنها ضعفاً أزعج بلا سبب.**
+     */
+    val weakSignalRun: Int = 5,
+
+    /**
+     * **وكم ملّي ثانيةٍ بلا قراءةٍ موثوقةٍ قبل «انقطعت الإشارة»**
+     *
+     * **وعشرُ ثوانٍ في مدينةٍ ليست انقطاعاً** — إشارةٌ ترتدّ عن بناء.
+     * **وخمسَ عشرةَ هي الحدُّ الذي يشعر عنده السائقُ أنّ شيئاً وقف.**
+     */
+    val lostSignalMs: Long = 15_000L,
 )

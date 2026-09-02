@@ -219,6 +219,10 @@ object VoicePhrases {
      * وللزبون، **ولا حاجةَ لصيغتين حيث المعنى واحد.**
      */
     const val ROUTE_END = "انتهى المسار المرسوم، تابع نحو الموقع"
+
+    const val GPS_LOST = "انقطعت إشارة تحديد الموقع"
+    const val GPS_WEAK = "إشارة تحديد الموقع ضعيفة"
+    const val GPS_RESTORED = "عادت إشارة تحديد الموقع"
 }
 
 /**

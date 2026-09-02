@@ -148,12 +148,17 @@ class NavClipsCoverageTest {
             NavClips.FOLLOW_ROUTE, NavClips.REROUTING, NavClips.REROUTE_FAILED,
             NavClips.WRONG_WAY, NavClips.ROUTE_END,
             NavClips.arrival(TripTarget.PICKUP), NavClips.arrival(TripTarget.DROPOFF),
+            NavClips.GPS_LOST, NavClips.GPS_WEAK, NavClips.GPS_RESTORED,
         )
 
         // **وهذه بيدِ المالك لا بيدِ المحرّك** — تُنطق بحدثٍ لا
         // بمناورة، **ووصلُها بندٌ مستقلّ (أ-٤).**
+        // **وثلاثةُ مقاطعِ الإشارة وُصلت** ٢٠٢٦-٠٩-٠٢ — فخرجت من هنا.
+        //
+        // **والباقيةُ بقرارٍ لا بسهو**: «تمّ تحديث المسار» **صمتُ
+        // نجاحِ إعادة الحساب مقصود** (انظر `VoicePlanner.rerouteCue`)،
+        // **وتُقال أوّلُ تعليمةٍ من المسار الجديد وهي أنفع.**
         val eventsPending = setOf(
-            "gps_lost", "gps_weak", "gps_restored",
             "navigation_started", "route_updated", "arrived",
         )
 
