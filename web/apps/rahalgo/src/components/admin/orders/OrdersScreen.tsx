@@ -147,12 +147,6 @@ interface OrderRow {
     note: string;
     created_at: string;
   }[];
-  rating?: {
-    platform_stars: number;
-    driver_stars: number | null;
-    comment: string;
-    created_at: string;
-  };
 }
 
 interface OrderPage {
@@ -1293,6 +1287,19 @@ function OrderActions({
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
 
+  /**
+   * **وجوابُ التدقيق يُعرض** — (قِيس ٢٠٢٦-٠٩-٠٢).
+   *
+   * **والمحرّكُ يقيس الفرقَ ويرسله**، مكتوبٌ في شيفرته نصّاً:
+   * «الفرقُ يُقاس قبلَ وبعد — **فيُقال للمالك كم صُحِّح**، ولا
+   * يُقال *تمّ* عن نداءٍ لم يُغيّر شيئاً».
+   *
+   * **وكانت اللوحةُ ترميه.** فيضغط المالكُ زرّاً يمسّ المال
+   * **فلا يُقال له شيء** — لا كم صُحِّح ولا أنّ شيئاً وقع.
+   * (قولُه ٢٠٢٦-٠٩-٠٢: «**أصلاً أعد حساب التسوية لم أفهمه**».)
+   */
+  const [note, setNote] = useState("");
+
   // **ما تملكه العملياتُ بعد حساب الوضع** — لا الخريطةُ الخام.
   const next = opsNext(
     o.status,
@@ -1450,8 +1457,20 @@ function OrderActions({
   async function recompute() {
     setBusy("recompute");
     setErr("");
+    setNote("");
     try {
-      await api(`/api/v1/admin/orders/${o.id}/recompute`, { method: "POST" });
+      const out = await api<{ before: number; after: number; delta: number }>(
+        `/api/v1/admin/orders/${o.id}/recompute`,
+        { method: "POST" },
+      );
+      setNote(
+        out.delta === 0
+          ? m.admin.ordersPage.recomputeNone
+          : m.admin.ordersPage.recomputeChanged.replace(
+              "{n}",
+              fmtNum(Math.abs(out.delta)),
+            ),
+      );
       onChanged();
     } catch (e) {
       setErr(
@@ -1961,6 +1980,7 @@ function OrderActions({
         </Button>
       )}
       {err && <p className="w-full text-xs text-danger">{err}</p>}
+      {note && <p className="w-full text-xs text-muted">{note}</p>}
     </>
   );
 }
