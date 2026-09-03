@@ -33,7 +33,6 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
   MobileNav,
   MobileNavSpacer,
-  usePlatform,
   IconGrid,
   IconStore,
   IconOrder,
@@ -55,15 +54,12 @@ const m = getMessages(defaultLocale);
    وأربعة تُقرأ عطباً في المنصّة لا قراراً فيها. */
 const ITEMS: readonly NavItem[] = [
   { href: "/", label: m.site.nav.home, icon: IconGrid },
-  { href: "/shop", label: m.site.nav.shop, icon: IconStore },
-  { href: "/offers", label: m.customer.offers.title, icon: IconOrder },
   { href: "/app", label: m.site.appGate.title, icon: IconUser },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { showShop } = usePlatform();
   if (!user || !isLoggedIn(user)) return null;
   /* ══════════════════════════════════════════════════════════════════
      **و«الرئيسيّة» للزبون، و«لوحتي» لمن له لوحة**
@@ -102,7 +98,7 @@ export function BottomNav() {
      **وهو البابُ الأوسعُ لا الأضيق**: أكثرُ الناس يفتحون من الجوّال،
      **وهذا شريطُهم.** **ومن أخفاه من الشريط العلويّ وحدَه لم يُخفِ
      شيئاً** — يبقى في أسفل الشاشة حيث يصل الإبهامُ أوّلاً. */
-  const items = showShop ? base : base.filter((i) => i.href !== "/shop");
+  const items = base;
   return <MobileNav items={items} active={pathname} Link={Link} />;
 }
 
