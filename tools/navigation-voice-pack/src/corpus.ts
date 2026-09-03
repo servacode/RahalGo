@@ -103,37 +103,37 @@ const STEMS: readonly Stem[] = [
   // ── الانعطافُ الأساسيّ — البند ٩ ────────────────────────────────────
   { id: 'turn_right', category: 'turn', display: 'انعطف يمينًا.', tts: 'اِنْعَطِف يَمينًا.', file: 'turn_right', type: 'turn', modifier: 'right', withDistance: true },
   { id: 'turn_left', category: 'turn', display: 'انعطف يسارًا.', tts: 'اِنْعَطِف يَسارًا.', file: 'turn_left', type: 'turn', modifier: 'left', withDistance: true },
-  { id: 'slight_right', category: 'turn', display: 'انحرف قليلًا نحو اليمين.', tts: 'اِنْحَرِف قَليلًا نَحوَ اليَمين.', file: 'slight_right', type: 'turn', modifier: 'slight right', withDistance: true },
-  { id: 'slight_left', category: 'turn', display: 'انحرف قليلًا نحو اليسار.', tts: 'اِنْحَرِف قَليلًا نَحوَ اليَسار.', file: 'slight_left', type: 'turn', modifier: 'slight left', withDistance: true },
-  { id: 'sharp_right', category: 'turn', display: 'انعطف بحدّة نحو اليمين.', tts: 'اِنْعَطِف بِحِدَّة نَحوَ اليَمين.', file: 'sharp_right', type: 'turn', modifier: 'sharp right', withDistance: true },
-  { id: 'sharp_left', category: 'turn', display: 'انعطف بحدّة نحو اليسار.', tts: 'اِنْعَطِف بِحِدَّة نَحوَ اليَسار.', file: 'sharp_left', type: 'turn', modifier: 'sharp left', withDistance: true },
-  { id: 'continue_straight', category: 'turn', display: 'استمرّ مباشرةً.', tts: 'اِستَمِرّ مُباشَرَةً.', file: 'continue_straight', type: 'continue', modifier: 'straight', withDistance: true },
-  { id: 'uturn', category: 'turn', display: 'انعطف للعودة في الاتّجاه المعاكس.', tts: 'اِنعَطِف لِلعَودَة في الاِتِّجاه المُعاكِس.', file: 'uturn', type: 'turn', modifier: 'uturn', withDistance: true },
+  { id: 'slight_right', category: 'turn', display: 'انعطف قليلًا إلى اليمين.', tts: 'اِنْعَطِف قَليلًا إِلى اليَمين.', file: 'slight_right', type: 'turn', modifier: 'slight right', withDistance: true },
+  { id: 'slight_left', category: 'turn', display: 'انعطف قليلًا إلى اليسار.', tts: 'اِنْعَطِف قَليلًا إِلى اليَسار.', file: 'slight_left', type: 'turn', modifier: 'slight left', withDistance: true },
+  { id: 'sharp_right', category: 'turn', display: 'انعطف بحدّة إلى اليمين.', tts: 'اِنْعَطِف بِحِدَّة إِلى اليَمين.', file: 'sharp_right', type: 'turn', modifier: 'sharp right', withDistance: true },
+  { id: 'sharp_left', category: 'turn', display: 'انعطف بحدّة إلى اليسار.', tts: 'اِنْعَطِف بِحِدَّة إِلى اليَسار.', file: 'sharp_left', type: 'turn', modifier: 'sharp left', withDistance: true },
+  { id: 'continue_straight', category: 'turn', display: 'تابع السير.', tts: 'تابِع السَّير.', file: 'continue_straight', type: 'continue', modifier: 'straight', withDistance: true },
+  { id: 'uturn', category: 'turn', display: 'در للخلف.', tts: 'دُر لِلخَلف.', file: 'uturn', type: 'turn', modifier: 'uturn', withDistance: true },
 
   // ── المسار — البند ٩ ────────────────────────────────────────────────
-  { id: 'keep_right', category: 'lane', display: 'التزم المسار الأيمن.', tts: 'اِلتَزِم المَسار الأَيمَن.', file: 'keep_right', type: 'fork', modifier: 'slight right', withDistance: true },
-  { id: 'keep_left', category: 'lane', display: 'التزم المسار الأيسر.', tts: 'اِلتَزِم المَسار الأَيسَر.', file: 'keep_left', type: 'fork', modifier: 'slight left', withDistance: true },
+  { id: 'keep_right', category: 'lane', display: 'ابق على اليمين.', tts: 'اِبقَ عَلى اليَمين.', file: 'keep_right', type: 'fork', modifier: 'slight right', withDistance: true },
+  { id: 'keep_left', category: 'lane', display: 'ابق على اليسار.', tts: 'اِبقَ عَلى اليَسار.', file: 'keep_left', type: 'fork', modifier: 'slight left', withDistance: true },
 
   // ── الاندماجُ والتفرّع — البند ١٠ ───────────────────────────────────
-  { id: 'merge_right', category: 'merge', display: 'اندمج في المسار نحو اليمين.', tts: 'اِندَمِج في المَسار نَحوَ اليَمين.', file: 'merge_right', type: 'merge', modifier: 'right', withDistance: true },
-  { id: 'merge_left', category: 'merge', display: 'اندمج في المسار نحو اليسار.', tts: 'اِندَمِج في المَسار نَحوَ اليَسار.', file: 'merge_left', type: 'merge', modifier: 'left', withDistance: true },
-  { id: 'fork_right', category: 'fork', display: 'عند تفرّع الطريق، التزم اليمين.', tts: 'عِند تَفَرُّع الطَّريق، اِلتَزِم اليَمين.', file: 'fork_right', type: 'fork', modifier: 'right', withDistance: true },
-  { id: 'fork_left', category: 'fork', display: 'عند تفرّع الطريق، التزم اليسار.', tts: 'عِند تَفَرُّع الطَّريق، اِلتَزِم اليَسار.', file: 'fork_left', type: 'fork', modifier: 'left', withDistance: true },
+  { id: 'merge_right', category: 'merge', display: 'اندمج يمينًا.', tts: 'اِندَمِج يَمينًا.', file: 'merge_right', type: 'merge', modifier: 'right', withDistance: true },
+  { id: 'merge_left', category: 'merge', display: 'اندمج يسارًا.', tts: 'اِندَمِج يَسارًا.', file: 'merge_left', type: 'merge', modifier: 'left', withDistance: true },
+  { id: 'fork_right', category: 'fork', display: 'عند التفرّع، ابق على اليمين.', tts: 'عِندَ التَّفَرُّع، اِبقَ عَلى اليَمين.', file: 'fork_right', type: 'fork', modifier: 'right', withDistance: true },
+  { id: 'fork_left', category: 'fork', display: 'عند التفرّع، ابق على اليسار.', tts: 'عِندَ التَّفَرُّع، اِبقَ عَلى اليَسار.', file: 'fork_left', type: 'fork', modifier: 'left', withDistance: true },
 
   // ── نهايةُ الطريق والمخارج — البند ١٠ ───────────────────────────────
   { id: 'end_of_road_right', category: 'end_of_road', display: 'عند نهاية الطريق، انعطف يمينًا.', tts: 'عِند نِهايَة الطَّريق، اِنْعَطِف يَمينًا.', file: 'end_of_road_right', type: 'end of road', modifier: 'right', withDistance: true },
   { id: 'end_of_road_left', category: 'end_of_road', display: 'عند نهاية الطريق، انعطف يسارًا.', tts: 'عِند نِهايَة الطَّريق، اِنْعَطِف يَسارًا.', file: 'end_of_road_left', type: 'end of road', modifier: 'left', withDistance: true },
-  { id: 'ramp_right', category: 'ramp', display: 'خذ المخرج نحو اليمين.', tts: 'خُذ المَخرَج نَحوَ اليَمين.', file: 'ramp_right', type: 'off ramp', modifier: 'right', withDistance: true },
-  { id: 'ramp_left', category: 'ramp', display: 'خذ المخرج نحو اليسار.', tts: 'خُذ المَخرَج نَحوَ اليَسار.', file: 'ramp_left', type: 'off ramp', modifier: 'left', withDistance: true },
+  { id: 'ramp_right', category: 'ramp', display: 'اسلك المخرج يمينًا.', tts: 'اِسلُك المَخرَج يَمينًا.', file: 'ramp_right', type: 'off ramp', modifier: 'right', withDistance: true },
+  { id: 'ramp_left', category: 'ramp', display: 'اسلك المخرج يسارًا.', tts: 'اِسلُك المَخرَج يَسارًا.', file: 'ramp_left', type: 'off ramp', modifier: 'left', withDistance: true },
 
   // ── الوجهة — البند ١٢ ───────────────────────────────────────────────
   { id: 'destination_right', category: 'destination', display: 'وجهتك على اليمين.', tts: 'وِجهَتُك عَلَى اليَمين.', file: 'destination_right', type: 'arrive', modifier: 'right', withDistance: true },
   { id: 'destination_left', category: 'destination', display: 'وجهتك على اليسار.', tts: 'وِجهَتُك عَلَى اليَسار.', file: 'destination_left', type: 'arrive', modifier: 'left', withDistance: true },
   { id: 'approaching_destination', category: 'destination', display: 'أنت تقترب من وجهتك.', tts: 'أَنتَ تَقتَرِب مِن وِجهَتِك.', file: 'approaching_destination', type: 'arrive', modifier: null, withDistance: false },
-  { id: 'arrived', category: 'destination', display: 'تمّ الوصول إلى الوجهة.', tts: 'تَمَّ الوُصول إِلى الوِجهَة.', file: 'arrived', type: 'arrive', modifier: null, withDistance: false },
+  { id: 'arrived', category: 'destination', display: 'لقد وصلت إلى وجهتك.', tts: 'لَقَد وَصَلتَ إِلى وِجهَتِك.', file: 'arrived', type: 'arrive', modifier: null, withDistance: false },
 
   // ── حالُ الملاحة — البند ١٣ ─────────────────────────────────────────
-  { id: 'recalculating_route', category: 'status', display: 'جاري إعادة حساب المسار.', tts: 'جارِي إِعادَة حِساب المَسار.', file: 'recalculating_route', type: null, modifier: null, withDistance: false },
+  { id: 'recalculating_route', category: 'status', display: 'يعاد حساب المسار.', tts: 'يُعادُ حِسابُ المَسار.', file: 'recalculating_route', type: null, modifier: null, withDistance: false },
   { id: 'route_updated', category: 'status', display: 'تمّ تحديث المسار.', tts: 'تَمَّ تَحديث المَسار.', file: 'route_updated', type: null, modifier: null, withDistance: false },
   { id: 'gps_weak', category: 'status', display: 'إشارة تحديد الموقع ضعيفة.', tts: 'إِشارَة تَحديد المَوقِع ضَعيفَة.', file: 'gps_weak', type: null, modifier: null, withDistance: false },
   // **و«انقطعت» لا «فُقدت»** — **الثانيةُ تحتاج ضمّةً لتُقرأ مبنيّةً
@@ -156,7 +156,7 @@ const STEMS: readonly Stem[] = [
   { id: 'merge', category: 'merge', display: 'اندمج مع الطريق.', tts: 'اِندَمِج مَع الطَّريق.', file: 'merge', type: 'merge', modifier: null, withDistance: true },
   { id: 'ramp', category: 'ramp', display: 'اسلك المخرج.', tts: 'اِسلُك المَخرَج.', file: 'ramp', type: 'off ramp', modifier: null, withDistance: true },
   { id: 'fork', category: 'fork', display: 'انتبه، الطريق يتفرّع.', tts: 'اِنتَبِه، الطَّريق يَتَفَرَّع.', file: 'fork', type: 'fork', modifier: null, withDistance: true },
-  { id: 'exit_roundabout', category: 'roundabout', display: 'اخرج من الدوّار.', tts: 'اُخرُج مِن الدَّوّار.', file: 'exit_roundabout', type: 'exit roundabout', modifier: null, withDistance: true },
+  { id: 'exit_roundabout', category: 'roundabout', display: 'الخروج من الدوّار.', tts: 'الخُروج مِنَ الدَّوّار.', file: 'exit_roundabout', type: 'exit roundabout', modifier: null, withDistance: true },
   { id: 'roundabout_continue', category: 'roundabout', display: 'عند الدوّار، تابع الاتّجاه.', tts: 'عِند الدَّوّار، تابِع الاِتِّجاه.', file: 'roundabout_continue', type: 'roundabout', modifier: null, withDistance: true },
 
   // ── جملُ الأحداث ────────────────────────────────────────────────────
@@ -203,8 +203,8 @@ export function distancePrefix(meters: number): { display: string; tts: string }
 /** **وجملةُ الدوّار** — البند ١١. */
 export function roundaboutSentence(exit: number): { display: string; tts: string } {
   return {
-    display: `عند الدوّار، خذ المخرج ${stripDiacritics(spokenOrdinal(exit))}.`,
-    tts: `عِند الدَّوّار، خُذ المَخرَج ${spokenOrdinal(exit)}.`,
+    display: `عند الدوّار، اسلك المخرج ${stripDiacritics(spokenOrdinal(exit))}.`,
+    tts: `عِندَ الدَّوّار، اِسلُك المَخرَج ${spokenOrdinal(exit)}.`,
   };
 }
 
