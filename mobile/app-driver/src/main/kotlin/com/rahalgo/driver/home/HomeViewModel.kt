@@ -1,5 +1,6 @@
 package com.rahalgo.driver.home
 
+import com.rahalgo.ui.BatteryGuard
 import android.app.Application
 import com.rahalgo.ui.apiError
 import android.util.Log
@@ -112,6 +113,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
      * السقف مثلا)، **ومن بدّل الزرّ متفائلا** أرى صاحبه «متاح» وهو ليس
      * كذلك — فينتظر طلبا لا يأتي، ولا شيء يقول له لماذا.
      */
+    /** **يُطفئ تنبيهَ البطّاريّة** — بقبولٍ أو تأجيل. */
+    fun dismissBattery() {
+        state = state.copy(askBattery = false)
+    }
+
     fun toggleShift(on: Boolean) {
         if (state.busy) return
         state = state.copy(busy = true, error = "")
@@ -123,7 +129,34 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 // الشاشة على حال ما قبل الضغطة.
                 val me = backend.driver.me()
                 syncService(me)
-                state = state.copy(me = me, busy = false)
+                // ══════════════════════════════════════════════════
+                // **ورفعُ الورديّة موضعُ سؤالِ البطّاريّة**
+                // ══════════════════════════════════════════════════
+                //
+                // **(قِيس ٢٠٢٦-٠٩-٠٢: لا سطرَ في المشروع كلِّه
+                //  يعالج توفيرَ الطاقة.)**
+                //
+                // **وخدمةُ الموقع أماميّةٌ — وهذا كافٍ في أندرويد
+                // الصافي ولا يكفي في هواتف الناس.** فسامسونغ
+                // تُنيم التطبيقات، وشاومي وهواوي أشرس. **فيقفل
+                // السائقُ الشاشةَ ويضع الهاتفَ في جيبه، فيُقتل
+                // التطبيقُ بعد دقائق ولا شيءَ يقول له.**
+                //
+                // **وورديّتُه مفتوحةٌ في الخادم وموضعُه واقف** —
+                // فيُسأل «أين أنت؟» فيقول «في الطريق»، والخريطةُ
+                // تقول إنّه لم يتحرّك منذ عشرين دقيقة.
+                //
+                // **وهنا لأنّها اللحظةُ التي يفهم فيها لماذا** —
+                // وسؤالٌ في فتح التطبيق يُغلق بلا قراءة.
+                //
+                // **وعند الرفع وحدَه**: من صرف ورديّتَه لا يلزمه
+                // موقعٌ في الخلفيّة.
+                state = state.copy(
+                    me = me,
+                    busy = false,
+                    askBattery = on && !BatteryGuard.exempt(getApplication()),
+                )
+                return@launch
             } catch (e: Exception) {
                 state = state.copy(busy = false, error = describe(e))
             }

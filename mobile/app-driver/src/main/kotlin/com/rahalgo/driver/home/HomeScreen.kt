@@ -1,5 +1,7 @@
 package com.rahalgo.driver.home
 
+import androidx.compose.material3.TextButton
+import com.rahalgo.ui.BatteryGuard
 import androidx.compose.foundation.background
 import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.StatRow
@@ -214,6 +216,27 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
 
         ShiftCard(me = me, busy = state.busy, onToggle = actions.toggleShift)
 
+        // ══════════════════════════════════════════════════════════════
+        // **وتنبيهُ البطّاريّة تحت مفتاح الورديّة مباشرةً**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **(قِيس ٢٠٢٦-٠٩-٠٢.)** ويُعرض بعد رفع الورديّة وحدَها —
+        // **وهي اللحظةُ التي يفهم فيها لماذا يُسأل.**
+        //
+        // **ولا يُغلق البابَ عليه**: بطاقةٌ يقرؤها ويقرّر، **لا نافذةٌ
+        // تحجب الشاشةَ حتّى يستجيب.** فمن رفض اليومَ يعمل، ومن قبل
+        // بقي موضعُه حيّاً.
+        if (state.askBattery) {
+            Spacer(Modifier.height(12.dp))
+            BatteryCard(
+                onFix = {
+                    BatteryGuard.ask(context)
+                    actions.dismissBattery()
+                },
+                onLater = actions.dismissBattery,
+            )
+        }
+
         if (state.error.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
             Text(state.error, color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
@@ -405,6 +428,41 @@ internal fun failureMessage(failure: com.rahalgo.map.data.MapFailure?): Int = wh
  * **وتقول ماذا يخسر لا ماذا يريد النظام**: «لا تعرف كم يبعد المتجر»
  * أوقع من «التطبيق يحتاج إذن الموقع».
  */
+/**
+ * **ونظامُ الهاتف قد يقتل الخدمة.**
+ *
+ * **(قِيس ٢٠٢٦-٠٩-٠٢: لا سطرَ في المشروع كلِّه يعالج توفيرَ الطاقة.)**
+ *
+ * **وعلى مثال [LocationCard]** — كلاهما إذنٌ يُطلب من النظام، **ونمطٌ
+ * ثانٍ في شاشةٍ واحدةٍ يُقرأ شيئين مختلفين.**
+ */
+@Composable
+private fun BatteryCard(onFix: () -> Unit, onLater: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.warnTint)
+            .padding(16.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.battery_title),
+            fontWeight = FontWeight.Bold,
+            color = Rahal.colors.accent,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(stringResource(R.string.battery_body), color = Rahal.colors.inkMuted)
+        Spacer(Modifier.height(10.dp))
+        RahalButton(onClick = onFix, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.battery_fix))
+        }
+        Spacer(Modifier.height(4.dp))
+        TextButton(onClick = onLater, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.battery_later), color = Rahal.colors.inkMuted)
+        }
+    }
+}
+
 @Composable
 private fun LocationCard(onEnable: () -> Unit) {
     Column(
@@ -538,10 +596,18 @@ data class HomeState(
     val locationOn: Boolean = true,
     val busy: Boolean = false,
     val error: String = "",
+    /**
+     * **أيُسأل عن إعفاء البطّاريّة؟** — انظر `BatteryGuard`.
+     *
+     * **ويُرفع عند رفع الورديّة وحدَه**، ويُطفأ بضغطةٍ أو تجاهل.
+     */
+    val askBattery: Boolean = false,
 )
 
 data class HomeActions(
     val toggleShift: (Boolean) -> Unit,
+    /** **يُطفئ تنبيهَ البطّاريّة** — بقبولٍ أو تأجيل. */
+    val dismissBattery: () -> Unit = {},
     val enableLocation: () -> Unit,
     val refresh: () -> Unit,
     val logout: () -> Unit,

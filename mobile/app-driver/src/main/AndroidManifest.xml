@@ -23,6 +23,20 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- ══════════════════════════════════════════════════════════════
+         **إعفاءُ توفير الطاقة — خدمةُ الموقع تُقتل بدونه**
+         ══════════════════════════════════════════════════════════════
+
+         (قِيس ٢٠٢٦-٠٩-٠٢: لا سطرَ في المشروع كلِّه يعالج توفيرَ الطاقة.)
+
+         **وخدمةٌ أماميّةٌ بنوع `location` كافيةٌ في أندرويد الصافي، ولا
+         تكفي في هواتف الناس**: سامسونغ تُنيم التطبيقات، وشاومي وهواوي
+         أشرس. **فيقفل السائقُ الشاشةَ فيُقتل التطبيقُ ويقف موضعُه.**
+
+         **وهو إذنٌ يفتح نافذةَ النظام لا يمنح شيئاً** — القرارُ لصاحب
+         الهاتف. وتطبيقُ توصيلٍ بخدمةِ موقعٍ أماميّةٍ من الحالات التي
+         يقبلها متجرُ بلاي، **ويُعلَن سببُه في وصف التطبيق.** -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <!-- **وإشعار الخدمة يحتاج إذنا من أندرويد ١٣** — وبلاه تعمل الخدمة

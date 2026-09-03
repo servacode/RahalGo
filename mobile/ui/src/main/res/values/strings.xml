@@ -622,4 +622,9 @@
     <string name="ord_min">د</string>
     <string name="ord_hr">س</string>
     <string name="ord_day">ي</string>
+    <!-- **توفيرُ الطاقة يقتل الخدمة** — انظر `BatteryGuard.kt`. -->
+    <string name="battery_title">اسمح للتطبيق أن يعمل في الخلفية</string>
+    <string name="battery_body">هاتفك قد يوقف التطبيق وأنت في الطريق، فيتوقف موقعك عن الوصول وتظهر واقفاً. اسمح له بالعمل دائماً.</string>
+    <string name="battery_fix">اسمح الآن</string>
+    <string name="battery_later">لاحقاً</string>
 </resources>
