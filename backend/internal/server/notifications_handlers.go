@@ -45,14 +45,22 @@ func (s *Server) touchUser(userID string, entities ...string) {
 	}
 }
 
+// currencyWord **اسمُ العملة في نصّ إشعار** — ولا يُكتب في موضعين.
+const currencyWord = "ل.س"
+
 // نصوص الإشعارات المركزية — مصدر واحد لكل نصوص الإشعارات في الخادم.
 var notifTitles = struct {
 	walletCredit, walletDebit, ratingNew, accountSuspended, accountActivated string
 	ticketOpened, ticketNewOps, ticketReply, ticketResolved, driverAssigned  string
 	storeClosed, storeReopened, cashSettled, roleGranted, roleRevoked        string
 	leadRejected, commissionEarned, passwordReset, sessionsRevoked           string
-	payoutRequested, payoutPaid, payoutRejected                              string
-	warningIssued, driverEmergency                                           string
+	// targetReached **بلغ مرحلةً من هدفه الشهريّ فنال مكافأتها.**
+	//
+	// **والمالُ يُقيَّد في محفظته آليّاً** ولا شيءَ يقول له — **فيراه
+	// رقماً زاد بلا سبب.** وهدفٌ لا يُبشَّر ببلوغه لا يحفّز.
+	targetReached                               string
+	payoutRequested, payoutPaid, payoutRejected string
+	warningIssued, driverEmergency              string
 	// **رسالةٌ في حديث الطلب — والعنوانُ يقول من كتب لا ماذا كتب.**
 	//
 	// **ولا رقمَ ولا اسمَ شخصٍ في العنوان**: يُقرأ الإشعارُ على شاشةٍ مقفلة،
@@ -90,6 +98,7 @@ var notifTitles = struct {
 	ticketReply:         "رد جديد على شكواك",
 	ticketResolved:      "تم حل شكواك",
 	driverAssigned:      "أُسند إليك طلب جديد",
+	targetReached:       "أنجزت هدف الشهر — نالتك مكافأته",
 	storeClosed:         "إغلاق طارئ لمتجر",
 	storeReopened:       "عاد متجر للعمل",
 	cashSettled:         "سُلّم صندوقك النقدي",

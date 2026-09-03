@@ -332,7 +332,16 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	// **وبعد الإيداع لا داخلَه**: مكافأةٌ لا تُبطل تسليماً وقع فعلاً.
 	// **والتكرارُ تمنعه القاعدةُ لا هذا السطر** — فهرسٌ فريدٌ لكلّ شهر.
 	if to == StDelivered && driverID != nil && s.targets != nil {
-		s.targets.GrantTargetIfReached(ctx, *driverID, "driver")
+		// **ومن نال مكافأتَه يُبشَّر بها**
+		//
+		// (قِيس 2026-09-02: تُقيَّد في محفظته آليّاً **ولا شيءَ يقول
+		//  له** — فيراها رقماً زاد بلا سبب.)
+		//
+		// **وصفرٌ يعني «لم يبلغ أو نالها من قبل»** — ولا يُبشَّر أحدٌ
+		// بمالٍ لم يُقيَّد.
+		if paid := s.targets.GrantTargetIfReached(ctx, *driverID, "driver"); paid > 0 {
+			s.notifyTargetReached(ctx, *driverID, paid)
+		}
 	}
 
 	// ══════════════════════════════════════════════════════════════════

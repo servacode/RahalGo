@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -688,7 +689,27 @@ func (s *Server) grantSalesTargetIfAny(ctx context.Context, merchantID string) {
 		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
 		return
 	}
-	s.incentives.GrantTargetIfReached(ctx, *repID, "sales")
+	// ══════════════════════════════════════════════════════════════════
+	// **ومن نال مكافأتَه يُبشَّر بها**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قِيس 2026-09-02: المكافأةُ تُقيَّد في محفظته آليّاً **ولا شيءَ
+	//  يقول له** — فيراها رقماً زاد بلا سبب.)
+	//
+	// **والدالّةُ تُرجع ما دُفع** — فصفرٌ يعني «لم يبلغ أو نالها من
+	// قبل»، **ولا يُبشَّر أحدٌ بمالٍ لم يُقيَّد.**
+	//
+	// **وحزمةُ الحوافز بلا مُشعِر عن قصد**: تُدفع في الخلفيّة بلا فاعلٍ
+	// بشريّ، **والمنادي هو من يعرف جمهورَه.**
+	if paid := s.incentives.GrantTargetIfReached(ctx, *repID, "sales"); paid > 0 {
+		s.notify.Notify(ctx, notifications.Input{
+			UserID: *repID, Kind: notifications.KindWallet,
+			Title:  notifTitles.targetReached,
+			Body:   strconv.FormatInt(paid, 10) + " " + currencyWord,
+			Entity: "wallet", Href: "/portal/wallet",
+			Apps: []string{notifications.AppRep},
+		})
+	}
 }
 
 func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) error {

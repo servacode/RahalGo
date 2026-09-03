@@ -3,6 +3,7 @@ package orders
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
@@ -24,6 +25,7 @@ var t = struct {
 	accepted, preparing, onTheWay, delivered string
 	rejected, cancelled, failed, refunded    string
 	merchantDelivered, commission            string
+	targetReached                            string
 	violationsWarn, violationsBanned         string
 	endedOps, warningIssued                  string
 	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
@@ -44,6 +46,7 @@ var t = struct {
 	refunded:          "استُرجع مبلغ طلبك",
 	merchantDelivered: "سُلّم طلب من متجرك",
 	commission:        "عمولة جديدة في محفظتك",
+	targetReached:     "أنجزت هدف الشهر — نالتك مكافأته",
 	violationsWarn:    "متجرٌ بلغ حدّ المخالفات",
 	violationsBanned:  "حُظر متجرٌ لكثرة الإلغاء",
 	endedOps:          "انتهى طلبٌ قبل تسليمه",
@@ -438,3 +441,25 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 		})
 	}
 }
+
+// notifyTargetReached **السائقُ يعرف أنّه بلغ مرحلةً فنال مكافأتَها.**
+//
+// (قِيس 2026-09-02: المكافأةُ تُقيَّد آليّاً ولا شيءَ يقول له.)
+//
+// **وهدفٌ لا يُبشَّر ببلوغه لا يحفّز** — يراه السائقُ رقماً زاد في
+// محفظته بلا سبب، **فلا يربطه بما فعل.**
+func (s *Service) notifyTargetReached(ctx context.Context, driverID string, amount int64) {
+	if s.notify == nil || amount <= 0 {
+		return
+	}
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: driverID, Kind: notifications.KindWallet,
+		Title:  t.targetReached,
+		Body:   strconv.FormatInt(amount, 10) + " " + currencyWord,
+		Entity: "wallet", Href: "/portal/wallet",
+		Apps: []string{notifications.AppDriver},
+	})
+}
+
+// currencyWord **اسمُ العملة في نصّ إشعار.**
+const currencyWord = "ل.س"
