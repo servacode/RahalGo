@@ -617,4 +617,9 @@
          وتوثيقٌ حين يُنشأ حساب · وإرسالُ رمزٍ حين تُستعاد كلمةُ مرور. -->
     <string name="auth_continue">متابعة</string>
     <string name="auth_verify_account">توثيق حسابي</string>
+    <!-- **كم مضى** — انظر `Since.kt`. والحرفُ لا الكلمة: البطاقةُ ضيّقة. -->
+    <string name="ord_since">منذ %1$s</string>
+    <string name="ord_min">د</string>
+    <string name="ord_hr">س</string>
+    <string name="ord_day">ي</string>
 </resources>

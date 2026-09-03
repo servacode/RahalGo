@@ -1,5 +1,8 @@
 package com.rahalgo.merchant.orders
 
+import com.rahalgo.ui.Since
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -115,6 +118,31 @@ private fun OrderCard(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
             )
+
+            // ══════════════════════════════════════════════════════════
+            // **وكم مضى عليه — بجانب رقمه**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **(طلبُ المالك ٢٠٢٦-٠٩-٠٢.)** وكانت نصوصُه مكتوبةً في
+            // المتجر منذ زمنٍ **ولا يستعملها أحد** — ميزةٌ نُويت ولم
+            // تُبنَ.
+            //
+            // **ومتجرٌ أمامه خمسةُ طلباتٍ لا يعرف أيُّها انتظر أطول**
+            // — فيبدأ بأعلاها في القائمة لا بأقدمها، **ويبرد طعامُ
+            // من سبق.**
+            //
+            // **وتُقرأ في الإدارة أيضاً**: متجرٌ تُشيخ طلباتُه على
+            // بطاقته يُقاس بها.
+            val age = Since.text(LocalContext.current, order.createdAt)
+            if (age.isNotEmpty()) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    age,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             Spacer(Modifier.weight(1f))
             // ══════════════════════════════════════════════════════════
             // **وكم يقبض منه — على البطاقة لا في السجلّ وحده**

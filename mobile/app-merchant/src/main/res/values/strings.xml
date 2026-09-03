@@ -6,7 +6,6 @@
 
     <!-- **ويقول دورَه** — **والعاملُ يفتح تطبيقين على جهازٍ واحدٍ
          أحياناً**، فيفرّق بينهما بالعنوان. -->
-    <string name="login_hint">ادخل برقمك وكلمة المرور</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **الطلبات — قلبُ التطبيق**
@@ -26,9 +25,6 @@
     <string name="order_ready">جاهز للاستلام</string>
     <string name="order_ready_done">أُعلن جاهزاً — بانتظار السائق</string>
     <string name="order_note">ملاحظة الزبون</string>
-    <string name="order_due">مستحقك من هذا الطلب</string>
-    <string name="order_seconds_left">%1$d ثانية للقبول</string>
-    <string name="order_report">أبلغ عن مشكلة</string>
 
     <!-- **ولا اسمَ زبونٍ ولا رقمَه** — السائقُ بينهما، **ورقمٌ في يد
          متجرٍ بابُ اتصالٍ مباشرٍ يوماً ما.** -->
@@ -55,7 +51,6 @@
     <string name="item_add">أضف صنفاً</string>
     <!-- **وسعرُ البيع ليس شأنَه** — (قرارُ المالك ٢٠٢٦-٠٨-١٠): هو يضع
          سعرَه ويقبض عليه. -->
-    <string name="item_price_hint">ما تقبضه أنت — والمنصة تضيف هامشها فوقه</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **متجري**
@@ -167,9 +162,7 @@
     <string name="history_hint">ما انتهى أمره — يُفتح عند سؤال</string>
     <string name="history_empty">لا طلبات في السجل بعد</string>
 
-    <string name="wallet_title">محفظتي</string>
 
-    <string name="retry">أعد المحاولة</string>
     <string name="days_sun">الأحد</string>
     <string name="days_mon">الاثنين</string>
     <string name="days_tue">الثلاثاء</string>
@@ -207,7 +200,6 @@
     <string name="v_item_section">اختر قسم السوق — وصنف بلا قسم لا يراه زبون</string>
     <string name="v_store_name">اكتب اسم المتجر</string>
     <string name="ok_address_saved">حُفظ عنوانك</string>
-    <string name="ok_sections_saved">حُفظت الأقسام</string>
     <string name="ok_store_closed">أُغلق متجرك — والإدارة تعلم</string>
     <string name="ok_report_sent">وصل بلاغُك — والإدارة تنظر فيه</string>
     <string name="st_cancelled">أُلغي</string>
@@ -218,7 +210,6 @@
     <string name="rs_driver_refused">السائق رفض أخذ الطلب</string>
     <string name="store_sections_empty">لا قسم بعد — متجرك لا يظهر في السوق حتى تختار</string>
     <string name="store_sections_add">أضف قسماً</string>
-    <string name="store_sections_pick">اختر من الأقسام</string>
     <string name="store_sections_all_in">أضفت كل الأقسام</string>
     <string name="need_sections_title">اختر أقسام متجرك أولاً</string>
     <string name="need_sections_body">الصنف ينزل في قسم من أقسام السوق — واختيار الأقسام يمنع أن ينزل صنفك في المكان الخطأ فلا يجده الزبون</string>
@@ -234,7 +225,4 @@
     <string name="os_cancelled">أُلغي</string>
     <string name="os_failed">تعذّر تسليمه</string>
     <string name="os_refunded">استُرجع</string>
-    <string name="ord_since">منذ %1$s</string>
-    <string name="ord_min">د</string>
-    <string name="ord_hr">س</string>
 </resources>
