@@ -61,6 +61,34 @@ interface DriverRow {
   status: string;
   on_shift: boolean;
   open_orders: number;
+  /**
+   * **آخرُ موضعٍ وصل منه** — وفارغٌ يعني «لم يصل قطّ».
+   *
+   * **(قِيس ٢٠٢٦-٠٩-٠٢: المحرّكُ يعرفه ويحجب الشائخَ عن الطلبات
+   *  الآليّة، واللوحةُ لا تراه — فيُسنَد إليه بيد.)**
+   */
+  last_location_at?: string | null;
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **وموضعٌ شاخ والورديّةُ مفتوحة**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **ونظامُ الهاتف يقتل خدمةَ الموقع** — سامسونغ تُنيم التطبيقات
+ * وشاومي أشرس. **فيقفل السائقُ الشاشةَ فيقف موضعُه وورديّتُه
+ * مفتوحة.**
+ *
+ * **والمحرّكُ يحجبه عن الإسناد الآليّ** ولا يحجبه عن يد المكتب —
+ * **فيُسنَد إليه طلبٌ ولا يصله**، ويبقى واقفاً حتّى يسأل أحد.
+ *
+ * **والحدُّ يأتي من المحرّك** — رقمٌ واحدٌ يقرّره موضعٌ واحد.
+ */
+function staleLocation(iso: string | null | undefined, limitMin: number): boolean {
+  if (!iso) return true;
+  const at = new Date(iso).getTime();
+  if (!Number.isFinite(at)) return true;
+  return Date.now() - at > limitMin * 60_000;
 }
 
 interface OrderRow {
@@ -670,7 +698,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     }
     // **ويُقرأ مع كلّ تحديث** — سائقٌ يفتح دوامَه أو يُغلقه لا يُنتظر تحديثُ صفحة.
     try {
-      const res = await api<{ drivers: DriverRow[] } | DriverRow[]>(
+      const res = await api<
+        { drivers: DriverRow[]; stale_location_minutes?: number } | DriverRow[]
+      >(
         "/api/v1/admin/drivers",
       );
       const list = Array.isArray(res) ? res : res.drivers;
@@ -1321,6 +1351,8 @@ function OrderActions({
   /** قائمةُ السائقين مفتوحةٌ للإسناد اليدوي */
   const [assigning, setAssigning] = useState(false);
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
+  /** **حدُّ شيخوخة الموضع بالدقائق** — يأتي من المحرّك لا يُكتب هنا. */
+  const [staleMin, setStaleMin] = useState(15);
   /** تفصيلُ توزيع المال — يُجلب عند الطلب لا مع كل بطاقة */
   /** نموذجُ تعويض السائق عن طلبٍ فشل */
   const [compensating, setCompensating] = useState(false);
@@ -1379,11 +1411,16 @@ function OrderActions({
   async function openAssign() {
     setAssigning(true);
     try {
-      const res = await api<{ drivers: DriverRow[] } | DriverRow[]>(
+      const res = await api<
+        { drivers: DriverRow[]; stale_location_minutes?: number } | DriverRow[]
+      >(
         "/api/v1/admin/drivers",
       );
       const list = Array.isArray(res) ? res : res.drivers;
       setDrivers(list.filter((x) => x.on_shift && x.status === "active"));
+      if (!Array.isArray(res) && typeof res.stale_location_minutes === "number") {
+        setStaleMin(res.stale_location_minutes);
+      }
     } catch {
       setDrivers([]);
     }
@@ -1685,6 +1722,11 @@ function OrderActions({
               >
                 {dv.full_name || dv.phone}
                 {dv.open_orders > 0 && ` (${fmtNum(dv.open_orders)})`}
+                {staleLocation(dv.last_location_at, staleMin) && (
+                  <span className="ms-1.5 text-2xs text-danger">
+                    {m.admin.ordersPage.staleLocation}
+                  </span>
+                )}
               </Button>
             ))}
           </div>

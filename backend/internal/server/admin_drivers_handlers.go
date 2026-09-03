@@ -27,7 +27,21 @@ func (s *Server) handleListDrivers(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(cb.held, 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered'
-		        AND o.delivered_at::date = now()::date)
+		        AND o.delivered_at::date = now()::date),
+		       -- ══════════════════════════════════════════════════════
+		       -- **وموضعٌ شاخ والورديّةُ مفتوحة**
+		       -- ══════════════════════════════════════════════════════
+		       --
+		       -- (قِيس 2026-09-02: المحرّكُ يعرف آخرَ وقتِ موضعٍ
+		       --  ويحجب الشائخَ عن الطلبات، **واللوحةُ لا تراه**.)
+		       --
+		       -- **ونظامُ الهاتف يقتل خدمةَ الموقع** — سامسونغ تُنيم
+		       -- التطبيقات وشاومي أشرس. **فيقفل السائقُ الشاشةَ فيقف
+		       -- موضعُه، وورديّتُه مفتوحة.**
+		       --
+		       -- **فيرى المكتبُ سائقاً على الدوام ويظنّه يعمل** —
+		       -- ويسأله بالهاتف، والجوابُ في القاعدة.
+		       u.last_location_at
 		FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
 		LEFT JOIN driver_cash_boxes cb ON cb.driver_id = u.id
@@ -48,13 +62,19 @@ func (s *Server) handleListDrivers(w http.ResponseWriter, r *http.Request) {
 		CashHeld       int64      `json:"cash_held"`
 		OpenOrders     int        `json:"open_orders"`
 		DeliveredToday int        `json:"delivered_today"`
+		// LastLocationAt **آخرُ موضعٍ وصل** — وفارغٌ يعني «لم يصل قطّ».
+		//
+		// **وتُقرأ مع `OnShift`**: ورديّةٌ مفتوحةٌ وموضعٌ شاخ **علامةُ
+		// تطبيقٍ قتله النظام**، لا سائقٍ متوقّف.
+		LastLocationAt *time.Time `json:"last_location_at"`
 	}
 	out := []driver{}
 	for rows.Next() {
 		var d driver
 		if err := rows.Scan(&d.ID, &d.Phone, &d.FullName, &d.Status,
 			&d.OnShift, &d.ShiftStartedAt,
-			&d.CashHeld, &d.OpenOrders, &d.DeliveredToday); err != nil {
+			&d.CashHeld, &d.OpenOrders, &d.DeliveredToday,
+			&d.LastLocationAt); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -63,6 +83,9 @@ func (s *Server) handleListDrivers(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"drivers":    out,
 		"cash_limit": s.cashbox.Limit(r.Context()),
+		// **وحدُّ الشيخوخة من المحرّك لا من اللوحة** — رقمٌ واحدٌ
+		// يقرّره موضعٌ واحد، **ومن كتبه في الاثنين افترقا يوماً.**
+		"stale_location_minutes": staleLocationMinutes,
 	})
 }
 

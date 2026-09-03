@@ -594,6 +594,10 @@
         {
           "name": "drivers",
           "type": "unknown"
+        },
+        {
+          "name": "stale_location_minutes",
+          "type": "unknown"
         }
       ],
       "statuses": [

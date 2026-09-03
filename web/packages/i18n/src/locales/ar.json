@@ -864,7 +864,8 @@
       },
       "statusCol": "الحالة",
       "details": "متابعة",
-      "proofMocked": "موقع مزيّف — لا يُعتدّ به"
+      "proofMocked": "موقع مزيّف — لا يُعتدّ به",
+      "staleLocation": "موقعه متوقف"
     },
     "customers": {
       "title": "الزبائن",
