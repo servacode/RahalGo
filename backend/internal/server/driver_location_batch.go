@@ -67,6 +67,16 @@ type trackPoint struct {
 	At        time.Time `json:"at"`
 	SpeedMps  *float64  `json:"speed_mps"`
 	AccuracyM *float64  `json:"accuracy_m"`
+	// Mocked **أقالها الجهازُ أم قالها تطبيقُ تزييف؟**
+	//
+	// (قِيس 2026-09-02: لا فحصَ للتزييف في التطبيق ولا في المحرّك.)
+	//
+	// **وأندرويد يقولها بنفسه** — `isFromMockProvider`. فمن لم يسأل
+	// لم يُخدع بذكاءٍ بل بسؤالٍ لم يسأله.
+	//
+	// **ومؤشّرٌ لا قيمة** — نقطةٌ من تطبيقٍ قديمٍ لا تدّعي صدقاً ولا
+	// كذباً، **وفارغٌ يُقرأ «لا نعلم» لا «صادقة».**
+	Mocked *bool `json:"mocked"`
 	// ══════════════════════════════════════════════════════════════════
 	// **والاتّجاهُ — أُكمل في الدفعة ٢٠٢٦-٠٨-٢٠**
 	// ══════════════════════════════════════════════════════════════════
@@ -169,10 +179,11 @@ func (s *Server) saveTrackBatch(ctx context.Context, driverID string, pts []trac
 		// **قيدُ القاعدة يرفض ما خرج عن الدائرة، ورفضُه يُسقط الدفعةَ
 		// كلَّها** — فتضيع عشرون نقطةً لأنّ واحدةً منها شاذّة.
 		batch.Queue(`
-			INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m, bearing_deg)
-			VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4, $5, $6, $7)
+			INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m, bearing_deg, mocked)
+			VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, $4, $5, $6, $7, $8)
 			ON CONFLICT (driver_id, recorded_at) DO NOTHING`,
-			driverID, p.Lng, p.Lat, p.At, p.SpeedMps, p.AccuracyM, cleanBearing(p.BearingDeg))
+			driverID, p.Lng, p.Lat, p.At, p.SpeedMps, p.AccuracyM, cleanBearing(p.BearingDeg),
+			p.Mocked != nil && *p.Mocked)
 	}
 	// **وأحدثُ نقطةٍ وحدَها تكتب الموضعَ الحاليّ** — وبعد الفرز هي الأخيرة.
 	//

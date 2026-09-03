@@ -283,10 +283,18 @@ class DriverApi(private val api: ApiClient) {
          * يُقرأ شمالا.
          */
         bearingDeg: Double? = null,
+        /**
+         * **أمزيَّفٌ هذا الموضع؟** — انظر `TrackPoint.mocked`.
+         *
+         * **ولا يُرسَل حين لا نعلم** — الحقلُ الغائبُ «لم يُقَس»،
+         * **و`false` ادّعاءُ صدقٍ لم نفحصه.**
+         */
+        mocked: Boolean? = null,
     ) {
         val body = buildMap<String, Any> {
             put("lat", lat)
             put("lng", lng)
+            if (mocked != null) put("mocked", mocked)
             if (speedMps != null) put("speed_mps", speedMps)
             if (accuracyM != null) put("accuracy_m", accuracyM)
             if (bearingDeg != null) put("bearing_deg", bearingDeg)
@@ -320,7 +328,20 @@ class DriverApi(private val api: ApiClient) {
      * (`drivers.require_delivery_photo`) — **والحارس فيه لا في الشاشة**:
      * زرّ يُخفى يُلتفّ عليه.
      */
-    suspend fun sendProof(orderId: String, jpeg: ByteArray, lat: Double?, lng: Double?) {
+    suspend fun sendProof(
+        orderId: String,
+        jpeg: ByteArray,
+        lat: Double?,
+        lng: Double?,
+        /**
+         * **أمزيَّفٌ موضعُ التسليم؟** — انظر `TrackPoint.mocked`.
+         *
+         * **والصورةُ تُرفع على كلّ حال** — هي وقعت وقد تكون صادقة،
+         * **والموضعُ وحدَه كذب.** فيُرفع الإثباتُ موسوماً، ويرفض
+         * المحرّكُ النقطةَ فلا تُقاس منها مسافة.
+         */
+        mocked: Boolean = false,
+    ) {
         api.upload(
             "/api/v1/driver/orders/" + orderId + "/proof",
             fileName = "proof.jpg",
@@ -330,6 +351,7 @@ class DriverApi(private val api: ApiClient) {
                     put("lat", lat.toString())
                     put("lng", lng.toString())
                 }
+                if (mocked) put("mocked", "true")
             },
         )
     }

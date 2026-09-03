@@ -34,9 +34,20 @@ object LastPoint {
      * **وفارغٌ حين يأتي الموضعُ من جهاز التموضع** — لا اسمَ معه،
      * **فتُعرض إحداثيّاته**: رقمان يُقرآن بصعوبةٍ خيرٌ من حقلٍ فارغ.
      */
-    fun set(lat: Double, lng: Double, name: String = "") {
-        value = Point(lat, lng, name)
+    fun set(lat: Double, lng: Double, name: String = "", mocked: Boolean = false) {
+        value = Point(lat, lng, name, mocked)
     }
 
-    data class Point(val lat: Double, val lng: Double, val name: String = "")
+    data class Point(
+        val lat: Double,
+        val lng: Double,
+        val name: String = "",
+        /**
+         * **أقاله الجهازُ أم تطبيقُ تزييف؟**
+         *
+         * **(قِيس ٢٠٢٦-٠٩-٠٢.)** ويُحمل هنا **لأنّ إثبات التسليم
+         * يُبنى من هذه النقطة** — فمن زيّف موضعَه كتب الإثباتَ بيده.
+         */
+        val mocked: Boolean = false,
+    )
 }

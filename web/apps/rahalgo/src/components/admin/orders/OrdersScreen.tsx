@@ -105,6 +105,7 @@ interface OrderRow {
   /** كم كان بين السائق ونقطة الاستلام — **جوابُ «لماذا هذا السائق؟»**. */
   driver_to_pickup_m?: number;
   proof_skip_reason?: string;
+  proof_mocked?: boolean;
   /** متى حُوِّل الطلب إلى المتجر — فارغٌ يعني لم يُحوَّل بعد */
   sent_to_merchant_at: string | null;
   /** متى نزل إلى طابور السائقين — ومنه تُقاس مهلةُ زرّ الإسناد */
@@ -946,7 +947,19 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               />
             </a>
             <span className="flex flex-col gap-1">
-              {noGps ? (
+              {/* ══════════════════════════════════════════════════
+                  **وموضعٌ مزيَّفٌ يُقال، لا يُبتلع صامتاً**
+                  ══════════════════════════════════════════════════
+
+                  **(قِيس ٢٠٢٦-٠٩-٠٢: لا فحصَ للتزييف في المنصّة
+                  كلِّها.)** وتطبيقاتُ التزييف مجّانيّةٌ في المتجر،
+                  **فيضع السائقُ موضعَه عند بيت الزبون وهو في بيته.**
+
+                  **والمحرّكُ يرفض النقطةَ فلا مسافةَ تُقاس** —
+                  ويبقى الوسمُ ليقرأه المكتب. */}
+              {o.proof_mocked ? (
+                <Badge variant="danger">{m.admin.ordersPage.proofMocked}</Badge>
+              ) : noGps ? (
                 <Badge variant="neutral">{m.admin.ordersPage.proofNoGps}</Badge>
               ) : (
                 <Badge variant={away <= 150 ? "success" : "warning"}>

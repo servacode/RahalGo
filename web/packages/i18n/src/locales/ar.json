@@ -863,7 +863,8 @@
         "driver": "تقييم السائق"
       },
       "statusCol": "الحالة",
-      "details": "متابعة"
+      "details": "متابعة",
+      "proofMocked": "موقع مزيّف — لا يُعتدّ به"
     },
     "customers": {
       "title": "الزبائن",

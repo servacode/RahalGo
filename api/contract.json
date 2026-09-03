@@ -3764,6 +3764,10 @@
           "type": "array"
         },
         {
+          "name": "levels",
+          "type": "unknown"
+        },
+        {
           "name": "standing",
           "type": "unknown"
         },
@@ -3804,6 +3808,10 @@
         {
           "name": "bearing_deg",
           "type": "?float64"
+        },
+        {
+          "name": "mocked",
+          "type": "?bool"
         }
       ],
       "response": [
@@ -4081,10 +4089,6 @@
         {
           "name": "conduct_stars",
           "type": "int"
-        },
-        {
-          "name": "comment",
-          "type": "string"
         }
       ],
       "response": [
@@ -5498,10 +5502,6 @@
         {
           "name": "driver_stars",
           "type": "?int"
-        },
-        {
-          "name": "comment",
-          "type": "string"
         }
       ],
       "response": [
@@ -6048,6 +6048,10 @@
         {
           "name": "kinds",
           "type": "array"
+        },
+        {
+          "name": "levels",
+          "type": "unknown"
         },
         {
           "name": "standing",

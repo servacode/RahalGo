@@ -77,7 +77,7 @@ class LocationService : Service() {
             // تصل نقطة أصلا، **والسكوت يُقرأ عملا وهو صمت.**
             Log.i(TAG, "نقطة: ${point.latitude}, ${point.longitude} دقّة ${point.accuracy}")
             // **والشاشة تقرؤه من هنا** — الخريطة تتحرّك مع صاحبها.
-            LastPoint.set(point.latitude, point.longitude)
+            LastPoint.set(point.latitude, point.longitude, mocked = point.isMocked())
             send(point)
         }
     }
@@ -160,7 +160,10 @@ class LocationService : Service() {
         scope.launch {
             val api = Backend.of(applicationContext).driver
             try {
-                api.sendLocation(point.latitude, point.longitude, speed, accuracy, bearing)
+                api.sendLocation(
+                    point.latitude, point.longitude, speed, accuracy, bearing,
+                    point.isMocked(),
+                )
             } catch (e: CancellationException) {
                 // **وتوقّفُ الخدمة ليس فشلَ إرسال** — ولو صُفَّت النقطةُ
                 // هنا **لَتراكمت طوابيرُ ورديّةٍ انتهت**، وأُرسلت
@@ -181,6 +184,7 @@ class LocationService : Service() {
                         // ضاع اتّجاهُ كلّ من انقطعت شبكتُه**، وهي
                         // أطولُ المسارات وأغناها بالمنعطفات.
                         bearingDeg = bearing,
+                        mocked = point.isMocked(),
                     ),
                 )
                 Log.w(TAG, "تعذّر الإرسال — حُفظت في الطابور", e)
@@ -267,3 +271,25 @@ class LocationService : Service() {
         }
     }
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **أقال الجهازُ هذا الموضعَ أم قاله تطبيقُ تزييف؟**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **(قِيس ٢٠٢٦-٠٩-٠٢: لا سطرَ في المنصّة كلِّها يسأل هذا السؤال.)**
+ *
+ * **وتطبيقاتُ التزييف مجّانيّةٌ في المتجر**، ولا تحتاج جذراً ولا حيلة:
+ * تُفتح خيارات المطوّر، ويُختار «تطبيق الموقع الوهميّ»، **فيصير
+ * السائقُ عند بيت الزبون وهو في بيته.**
+ *
+ * **وأندرويد لا يخفي ذلك** — يقوله في كلّ قراءة. **فمن لم يسأل لم
+ * يُخدع بذكاءٍ بل بسؤالٍ لم يسأله.**
+ *
+ * **والاسمُ تبدّل في أندرويد ١٢** (`isFromMockProvider` → `isMock`)،
+ * **والقديمةُ باقيةٌ تعمل** — فتُستعمل ولا يُفرَّق، وإلّا لزم فرعان
+ * لشيءٍ واحد.
+ */
+@Suppress("DEPRECATION")
+internal fun android.location.Location.isMocked(): Boolean =
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) isMock else isFromMockProvider

@@ -31,7 +31,7 @@ const orderSelect = `
 	       pm.path, o.pod_taken_at,
 	       -- **المسافةُ تُقاس ساعةَ السؤال من نقطتين محفوظتين.**
 	       COALESCE(ST_Distance(o.pod_at, o.dropoff), -1),
-	       o.pod_skip_reason,
+	       o.pod_skip_reason, o.pod_mocked,
 	       COALESCE(o.ended_by,''), COALESCE(o.fault,''), COALESCE(o.fail_reason,''),
 	       o.returned_at, o.goods_settled_to,
 	       -- **وزمنا الطريق كما قالتهما الخريطةُ في لحظتيهما** — ومنهما
@@ -106,7 +106,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.Discount, &o.Total,
 		&o.WalletPaid, &o.CashDue, &o.PromoCode, &o.Notes, &o.CancelReason, &o.CreatedAt,
 		&o.SentToMerchantAt, &o.DispatchedAt, &o.OfferedDriverName,
-		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason,
+		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason, &o.ProofMocked,
 		&o.EndedBy, &o.Fault, &o.FailReason, &o.ReturnedAt, &o.GoodsSettledTo,
 		&o.ToStoreETASec, &o.ToDoorETASec,
 		&o.LegM, &o.DriverToPickupM,

@@ -1026,7 +1026,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.sendProof(id, jpeg, point?.lat, point?.lng)
+                backend.driver.sendProof(
+                    id, jpeg, point?.lat, point?.lng, point?.mocked == true,
+                )
                 backend.driver.transition(id, "delivered")
                 openId = null
             } catch (e: Exception) {

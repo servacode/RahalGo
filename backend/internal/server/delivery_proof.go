@@ -71,7 +71,26 @@ func (s *Server) handleDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	lng, errLng := strconv.ParseFloat(r.FormValue("lng"), 64)
 	hasPoint := errLat == nil && errLng == nil
 
-	q := `UPDATE orders SET pod_media_id = $2, pod_taken_at = now(), pod_skip_reason = ''`
+	// ══════════════════════════════════════════════════════════════════
+	// **وموقعٌ مزيَّفٌ لا يُقبل إثباتاً**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// (قِيس 2026-09-02: لا فحصَ للتزييف في المنصّة كلِّها.)
+	//
+	// **وإثباتُ التسليم يقول «على بعد خمسةِ أمتارٍ من العنوان»**
+	// محسوبةً من النقطة التي يرسلها الجهازُ نفسُه. **فمن زيّف موضعَه
+	// كتب الإثباتَ بيده** — والحارسُ الذي بُني للحماية يشهد له.
+	//
+	// **فتُرفض النقطةُ ولا تُرفض الصورة**: الصورةُ وقعت وقد تكون
+	// صادقة، **والموضعُ وحدَه كذب.** فيُحفظ الإثباتُ بلا موضعٍ
+	// موسوماً بالتزييف، **ويقرؤه المكتبُ فيعلم.**
+	mocked := r.FormValue("mocked") == "true"
+	if mocked {
+		hasPoint = false
+	}
+
+	q := `UPDATE orders SET pod_media_id = $2, pod_taken_at = now(), pod_skip_reason = '',
+	                       pod_mocked = ` + boolLit(mocked)
 	args := []any{orderID, md.ID}
 	if hasPoint {
 		q += `, pod_at = ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography`
@@ -84,7 +103,7 @@ func (s *Server) handleDeliveryProof(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.audit(r, "driver.delivery_proof", "order", orderID, map[string]any{
-		"media": md.ID, "located": hasPoint,
+		"media": md.ID, "located": hasPoint, "mocked": mocked,
 	})
 	s.touch("order", "ops")
 	httpx.JSON(w, http.StatusCreated, map[string]any{
@@ -144,4 +163,16 @@ func (s *Server) requireProofBeforeDelivery(r *http.Request, orderID string) err
 		return errProofRequired
 	}
 	return nil
+}
+
+// boolLit **حرفٌ منطقيٌّ في نصّ الاستعلام** — لا وسيطٌ مرقَّم.
+//
+// **والوسائطُ هنا مرقّمةٌ بترتيبٍ يتبدّل** (`$3` و`$4` تُضافان مع
+// الموضع وحدَه)، **ومن أقحم وسيطاً في المنتصف بدّل ما بعده.** والقيمةُ
+// منطقيّةٌ من مقارنةٍ عندنا لا من مدخلٍ خارجيّ، **فلا حقنَ فيها.**
+func boolLit(v bool) string {
+	if v {
+		return "true"
+	}
+	return "false"
 }

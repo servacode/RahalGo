@@ -57,6 +57,13 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 		// **ولا يُقرأ في المرحلة ١** — يُحفظ لما بعدها. (انظر
 		// `0117_track_bearing.sql`.)
 		BearingDeg *float64 `json:"bearing_deg"`
+		// Mocked **أقالها الجهازُ أم تطبيقُ تزييف؟**
+		//
+		// (قِيس 2026-09-02: لا فحصَ للتزييف في المنصّة كلِّها.)
+		//
+		// **ومؤشّرٌ لا قيمة** — نسخةٌ لم تحدَّث لا ترسله، **وفارغٌ
+		// يُقرأ «لم يُقَس» لا «صادق».**
+		Mocked *bool `json:"mocked"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -93,10 +100,11 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	// خرج عن الدائرة، **ورفضُ القاعدةِ يُسقط كتابةَ الأثر كلَّها.**
 	bearing := cleanBearing(req.BearingDeg)
 	if _, err := s.pg.Exec(r.Context(), `
-		INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m, bearing_deg)
-		VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, now(), $4, $5, $6)
+		INSERT INTO driver_track (driver_id, at, recorded_at, speed_mps, accuracy_m, bearing_deg, mocked)
+		VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, now(), $4, $5, $6, $7)
 		ON CONFLICT (driver_id, recorded_at) DO NOTHING`,
-		uid, req.Lng, req.Lat, req.SpeedMps, req.AccuracyM, bearing); err != nil {
+		uid, req.Lng, req.Lat, req.SpeedMps, req.AccuracyM, bearing,
+		req.Mocked != nil && *req.Mocked); err != nil {
 		s.logger.Warn("التعقّب: تعذّر كتابةُ الأثر", "driver", uid, "error", err)
 	}
 
