@@ -90,10 +90,13 @@ func TestROUTE_010_ContractBuilt(t *testing.T) {
 	if !r.HasNavigation() {
 		t.Fatal("ROUTE-010 **لا ملاحةَ في العقد**")
 	}
-	if len(r.Maneuvers) != 4 {
-		t.Fatalf("ROUTE-010 مناورات=%d لا ٤", len(r.Maneuvers))
+	// **وثلاثٌ لا أربع** — طُويت مناورةُ الخروج من الدوّار في
+	// دخوله (2026-09-02). **وOSRM يرسل مناورتين لدوّارٍ واحد**،
+	// فيسمع السائقُ جملتين لفعلٍ واحد. انظر `steps.go`.
+	if len(r.Maneuvers) != 3 {
+		t.Fatalf("ROUTE-010 مناورات=%d لا ٣", len(r.Maneuvers))
 	}
-	want := []ManeuverKind{KindDepart, KindRoundabout, KindExitRoundabout, KindArrive}
+	want := []ManeuverKind{KindDepart, KindRoundabout, KindArrive}
 	for i, w := range want {
 		if r.Maneuvers[i].Kind != w {
 			t.Errorf("ROUTE-010 المناورة %d: %s لا %s", i, r.Maneuvers[i].Kind, w)
@@ -199,7 +202,7 @@ func TestROUTE_030_MissingNameStaysMissing(t *testing.T) {
 	if r.Maneuvers[0].StreetName == nil || *r.Maneuvers[0].StreetName != "Adnan Malki Street" {
 		t.Errorf("ROUTE-030 اسمٌ موجودٌ ضاع: %v", r.Maneuvers[0].StreetName)
 	}
-	for _, i := range []int{1, 2, 3} {
+	for _, i := range []int{1, 2} {
 		if r.Maneuvers[i].StreetName != nil {
 			t.Errorf("ROUTE-030 **اخترع اسماً للمناورة %d**: %v", i, *r.Maneuvers[i].StreetName)
 		}
@@ -317,4 +320,66 @@ func contains(h, n string) bool {
 		}
 		return false
 	})()
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **ROUTE-012 · دوّارٌ واحدٌ جملةٌ واحدة**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **(قِيس 2026-09-02 على مسارٍ في الرقّة طولُه أربعةَ عشرَ كيلومتراً:
+//
+//	سبعُ مناوراتِ دوّارٍ لثلاثة دوّارات.)**
+//
+// **وOSRM يرسل مناورتين لكلّ دوّار** — دخولاً وخروجاً — فيسمع
+// السائقُ «عند الدوّار خذ المخرج الثاني» ثمّ وهو داخلَه «اخرج من
+// الدوّار». **والثانيةُ لا تضيف شيئاً.**
+func TestROUTE_012_RoundaboutSpeaksOnce(t *testing.T) {
+	r := routeOf(t, raqqaBody)
+	for i, m := range r.Maneuvers {
+		if m.Kind == KindExitRoundabout {
+			t.Fatalf("ROUTE-012 **بقيت مناورةُ خروجٍ بعد دخول** عند %d", i)
+		}
+	}
+	// **ورقمُ المخرج يبقى على الدخول** — هو ما يُنطق.
+	var found bool
+	for _, m := range r.Maneuvers {
+		if m.Kind == KindRoundabout {
+			found = true
+			if m.RoundaboutExit == nil || *m.RoundaboutExit != 2 {
+				t.Fatalf("ROUTE-012 رقمُ المخرج ضاع: %v", m.RoundaboutExit)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("ROUTE-012 **ضاع الدوّارُ كلُّه**")
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **ROUTE-013 · وخروجٌ بلا دخولٍ يبقى**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ومسارٌ يبدأ داخلَ دوّارٍ لا مناورةَ دخولٍ له** — ومن حذف الخروجَ
+// مطلقاً أسكت جملتَه الوحيدة، **فيدور السائقُ بلا أمرٍ بالخروج.**
+func TestROUTE_013_LoneExitSurvives(t *testing.T) {
+	const body = `{"code":"Ok","routes":[{"distance":500,"duration":40,
+	 "geometry":{"coordinates":[[39.0,35.9],[39.01,35.91]]},
+	 "legs":[{"steps":[
+	  {"name":"","rotary_name":"","distance":300,"duration":20,
+	   "geometry":{"coordinates":[[39.0,35.9],[39.005,35.905]]},
+	   "maneuver":{"type":"exit rotary","modifier":"right","exit":2}},
+	  {"name":"","rotary_name":"","distance":0,"duration":0,
+	   "geometry":{"coordinates":[[39.01,35.91]]},
+	   "maneuver":{"type":"arrive","modifier":null,"exit":null}}
+	 ]}]}]}`
+	r := routeOf(t, body)
+	var found bool
+	for _, m := range r.Maneuvers {
+		if m.Kind == KindExitRoundabout {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("ROUTE-013 **حُذف خروجٌ لا دخولَ قبله**")
+	}
 }
