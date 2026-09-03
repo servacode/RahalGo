@@ -797,6 +797,7 @@ function SettingRow({
             <div className="space-y-2">
               <div className="overflow-hidden rounded-control border border-line">
                 <PickMap
+                  api={api}
                   lat={geoOf(draft)?.[0] ?? null}
                   lng={geoOf(draft)?.[1] ?? null}
                   height="h-56"

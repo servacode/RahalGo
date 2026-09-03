@@ -72,6 +72,24 @@ export function PickMap({
   /** يُستدعى بعد تحديد الموقع من الجهاز — لتعبئة العنوان مثلاً */
   onLocated,
   /**
+   * ══════════════════════════════════════════════════════════════════
+   * **والبحثُ عن مكانٍ بالاسم — قدرةٌ كانت مبنيّةً ولا بابَ إليها**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * **(قِيس ٢٠٢٦-٠٩-٠٢:** `‎/geo/search` قائمٌ في المحرّك منذ زمن
+   * **ولا يناديه شيءٌ في اللوحة كلِّها**، وتطبيقاتُ أندرويد تناديه
+   * وتبحث به فعلاً.)
+   *
+   * **ومن يضبط موقعَ متجرٍ في اللوحة كان يجرّ الخريطةَ بيده** حتّى
+   * يجده — **ومن أخطأ وضعه في محافظةٍ أخرى ولا شيءَ يمنعه.** (وقع:
+   * متجرا اختبارٍ في دمشق وطلبُهما يُعرض على سائق الرقّة.)
+   *
+   * **ويُمرَّر النداءُ لا يُبنى هنا** — `:ui` لا تعرف عنوانَ المحرّك
+   * ولا رمزَ الجلسة، **ومن حشرهما فيها ربط مكتبةَ عرضٍ بتطبيق.**
+   * وهو نفسُ ما تفعله `AccountSettings`.
+   */
+  api,
+  /**
    * **إخفاءُ زرّ «تحديد موقعي»** — لخريطةٍ تُعرض ولا تُختار منها.
    *
    * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «ولا يوجد تحديد الموقع بالعرض».)
@@ -88,12 +106,19 @@ export function PickMap({
   radiusM?: number;
   onLocated?: (lat: number, lng: number) => void;
   hideLocate?: boolean;
+  /** **نداءُ المحرّك** — انظر `api` أعلاه. **وفارغٌ يخفي البحث.** */
+  api?: <T>(path: string) => Promise<T>;
 }) {
   const holder = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<import("maplibre-gl").Map | null>(null);
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
   const [locating, setLocating] = useState(false);
+
+  /** **بحثُ الأماكن** — انظر `api` في الوسائط. */
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<{ label: string; lat: number; lng: number }[]>([]);
+  const [seeking, setSeeking] = useState(false);
   const [denied, setDenied] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -244,6 +269,40 @@ export function PickMap({
     map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 16), duration: 600 });
   }, [lat, lng]);
 
+  /**
+   * **ولا يُنادى المحرّكُ على كلّ حرف**
+   *
+   * **والبحثُ يمرّ إلى خدمةٍ خارجيّةٍ محدودةِ المعدّل** (`geoAllowed`
+   * في المحرّك يردّ ٤٢٩)، **فمن نادى مع كلّ ضغطةِ مفتاحٍ حُظر بعد
+   * كلمةٍ واحدة.**
+   *
+   * **فيُبحث بالإرسال لا بالكتابة** — والمحرّكُ نفسُه يرفض ما دون
+   * ثلاثة أحرف.
+   */
+  async function seek(e: React.FormEvent) {
+    e.preventDefault();
+    if (!api || q.trim().length < 3) return;
+    setSeeking(true);
+    try {
+      const out = await api<{ label: string; lat: number; lng: number }[]>(
+        `/api/v1/geo/search?q=${encodeURIComponent(q.trim())}`,
+      );
+      setHits(Array.isArray(out) ? out.slice(0, 5) : []);
+    } catch {
+      setHits([]);
+    } finally {
+      setSeeking(false);
+    }
+  }
+
+  /** **واختيارُ نتيجةٍ يطير إليها ويضع الدبّوس** — فعلٌ واحدٌ لا اثنان. */
+  function take(p: { lat: number; lng: number }) {
+    mapRef.current?.flyTo({ center: [p.lng, p.lat], zoom: 17, duration: 600 });
+    onPick(p.lat, p.lng);
+    setHits([]);
+    setQ("");
+  }
+
   function locateMe() {
     if (!navigator.geolocation) return setDenied(true);
     setDenied(false);
@@ -272,6 +331,43 @@ export function PickMap({
           الجهاز لا الإصبع**، ودقّتُه هي ما يُبلغ السائقَ البابَ.
 
           ولونٌ بارزٌ ممتلئ: زرٌّ محايدٌ في مشهدٍ مزدحم لا يُطلَب منه أن يُلحَظ. */}
+      {/* **والبحثُ فوق زرّ الموقع** — من يعرف اسمَ المكان يكتبه،
+          **ومن لا يعرف يضغط «موقعي».** والأوّلُ أكثرُ في لوحةِ
+          إدارةٍ تضبط مواقعَ متاجرَ لم تزرها. */}
+      {api && (
+        <form onSubmit={seek} className="mb-2 flex gap-2">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={m.map.searchHint}
+            className="min-w-0 flex-1 rounded-control border border-line bg-surface px-3 py-2.5 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={seeking || q.trim().length < 3}
+            className="rounded-control border border-line px-4 py-2.5 text-sm font-bold disabled:opacity-60"
+          >
+            {seeking ? m.common.loading : m.map.search}
+          </button>
+        </form>
+      )}
+
+      {hits.length > 0 && (
+        <ul className="mb-2 divide-y divide-line rounded-control border border-line">
+          {hits.map((p, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => take(p)}
+                className="w-full px-3 py-2 text-start text-sm hover:bg-surface-2"
+              >
+                {p.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {!hideLocate && (
         <button
           type="button"

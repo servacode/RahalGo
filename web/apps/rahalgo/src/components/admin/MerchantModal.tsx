@@ -484,6 +484,7 @@ export function MerchantModal({
                 والنقرُ على مربّعٍ بهذا الحجم كافٍ لتحديد نقطةٍ في مدينة. */}
             <div className="overflow-hidden rounded-control border border-line">
               <PickMap
+                api={api}
                 lat={lat}
                 lng={lng}
                 height="h-52"
