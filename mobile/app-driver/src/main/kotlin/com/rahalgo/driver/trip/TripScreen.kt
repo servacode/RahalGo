@@ -749,9 +749,7 @@ fun TripScreen(
                 )
             }
             MapButtons(
-                follow = follow,
                 onRecenter = { recenter++ },
-                onFollow = { onFollow(!follow) },
                 onChat = actions.chat,
                 chatting = chat != null,
                 chatUnread = chatUnread,

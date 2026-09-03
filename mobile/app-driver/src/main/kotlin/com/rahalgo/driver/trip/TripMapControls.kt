@@ -95,9 +95,7 @@ import org.maplibre.android.geometry.LatLng
  */
 @Composable
 internal fun MapButtons(
-    follow: Boolean,
     onRecenter: () -> Unit,
-    onFollow: () -> Unit,
     onChat: () -> Unit,
     chatting: Boolean,
     chatUnread: Int,
@@ -112,16 +110,25 @@ internal fun MapButtons(
         verticalAlignment = Alignment.Bottom,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // ══════════════════════════════════════════════════════════
+            // **والتوسيطُ وحدَه — و«اتبعي» حُذف**
+            // ══════════════════════════════════════════════════════════
+            //
+            // **(قرارُ المالك ٢٠٢٦-٠٩-٠٤:** «زرّ اتبعي لا عملَ له. أنا
+            // كان قصدي زرّ اتبعي مثل زرّ توسيط بغوغل ماب: **إذا نظر
+            // السائقُ إلى الخريطة كبّرها أو صغّرها يكفي بالضغط على زرّ
+            // التوسيط ليعود بمكان ما هو موجود**».)
+            //
+            // **والتوسيطُ هو هذا الزرُّ نفسُه** — كان قائماً فوقه.
+            //
+            // **و«اتبعي» كان يشغّل الملاحةَ ويطفئها** — وهو فعلٌ محلولٌ
+            // في موضعين: **الملاحةُ تبدأ من نفسها عند قبول الطلب**،
+            // **والصوتُ له زرُّه.** فبقي زرٌّ ثالثٌ لا يقول ما يفعل،
+            // **واسمُه يوحي بالتوسيط وليس به.**
+            //
+            // **وأربعةُ أزرارٍ في عمودٍ واحدٍ تُقرأ بالعين لا بالحفظ** —
+            // ومن حذف الزائدَ منها أراح الثلاثةَ الباقية.
             MapButton(R.drawable.ic_my_location, R.string.map_recenter, onRecenter)
-            Spacer(Modifier.height(8.dp))
-            // **والملاحقةُ تُضاء حين تعمل** — زرٌّ يفعل شيئا مستمرّا
-            // **ولا يقول إنّه يعمل** يُضغط مرّتين فيُطفأ وهو يُظنّ مشتعلا.
-            MapButton(
-                icon = R.drawable.ic_navigation,
-                label = R.string.map_follow,
-                onClick = onFollow,
-                on = follow,
-            )
             Spacer(Modifier.height(8.dp))
             // ══════════════════════════════════════════════════════════
             // **وحديثُ الزبون قرصٌ عائمٌ لا سطرٌ في البطاقة**
