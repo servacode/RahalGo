@@ -340,7 +340,7 @@ export function PickMap({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={m.map.searchHint}
-            className="min-w-0 flex-1 rounded-control border border-line bg-surface px-3 py-2.5 text-sm"
+            className="min-w-0 flex-1 rounded-control border border-line bg-surface-inset px-3 py-2.5 text-sm"
           />
           <button
             type="submit"
