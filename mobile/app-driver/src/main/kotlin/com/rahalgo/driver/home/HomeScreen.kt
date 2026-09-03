@@ -1,6 +1,5 @@
 package com.rahalgo.driver.home
 
-import androidx.compose.material3.TextButton
 import com.rahalgo.ui.BatteryGuard
 import androidx.compose.foundation.background
 import com.rahalgo.ui.StatBox
@@ -457,7 +456,7 @@ private fun BatteryCard(onFix: () -> Unit, onLater: () -> Unit) {
             Text(stringResource(R.string.battery_fix))
         }
         Spacer(Modifier.height(4.dp))
-        TextButton(onClick = onLater, modifier = Modifier.fillMaxWidth()) {
+        RahalTextButton(onClick = onLater, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.battery_later), color = Rahal.colors.inkMuted)
         }
     }
