@@ -75,7 +75,7 @@ func (s *Server) handleCreateOffer(w http.ResponseWriter, r *http.Request) {
 			Body:     offerBody(o),
 			Entity:   "offer",
 			EntityID: o.ID,
-			Href:     "/offers",
+			Href:     offerHref,
 		})
 	}
 	httpx.JSON(w, http.StatusOK, o)
@@ -116,7 +116,7 @@ func (s *Server) handleSetOfferActive(w http.ResponseWriter, r *http.Request) {
 	if req.Active && o.Live {
 		s.notify.NotifyShoppers(r.Context(), notifications.Input{
 			Kind: "offer", Title: o.Title, Body: offerBody(o),
-			Entity: "offer", EntityID: o.ID, Href: "/offers",
+			Entity: "offer", EntityID: o.ID, Href: offerHref,
 		})
 	}
 	httpx.JSON(w, http.StatusOK, o)
@@ -159,3 +159,16 @@ func merchantIDsOf(rows []offers.Offer) []string {
 	}
 	return out
 }
+
+// offerHref **وجهةُ إشعار العرض في الويب.**
+//
+// (قِيس 2026-09-04: أسقط الحارسُ النداءَ — «الوجهةُ /offers لا صفحةَ
+//  لها في الموقع».)
+//
+// **وحُذفت صفحةُ العروض** بقرار المالك: «الموقع راح يكون هوية بصرية
+// زائد روابط تحميل التطبيقات فقط». **والزبونُ لا ويبَ له بعد اليوم.**
+//
+// **فيُساق إلى بابه** — ومن فتح إشعاراً في متصفّحٍ وجد التطبيقَ لا
+// أربعمئةً وأربعة. **والتطبيقاتُ لا تقرأ هذا الحقلَ أصلاً** (قِيس):
+// هو للويب وحدَه.
+const offerHref = "/app"
