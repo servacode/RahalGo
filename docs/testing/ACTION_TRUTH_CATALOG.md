@@ -1297,6 +1297,141 @@ WHERE o.id = $1 AND m.owner_user_id = $2
 
 ---
 
+# ٢-ز · أفعالُ لوحة الإدارة — **٧٤ طفرةً مصنَّفةً بالأثر** ✅
+
+**استُخرجت من `endpoints.json`: ١٣٦ مساراً إداريّاً — ٧٤ طفرةً و٦٢
+قراءة، في ٢٥ مجالاً.**
+
+## أ · التصنيفُ بالأثر — **مُلزَمٌ بطلب المالك**
+
+### FINANCIAL — **١٣**
+
+| المسار | الأثر |
+|---|---|
+| `POST /users/{id}/wallet` | **قيدٌ يدويٌّ في محفظة** — A-005 · **idem** |
+| `POST /users/{id}/incentive` | منحُ حافز — A-020 · **idem** |
+| `POST /payouts/{id}/decide` | بتُّ صرفٍ — A-006 · **idem** |
+| `POST /drivers/{id}/settle` | تسويةُ صندوق نقد — **idem** |
+| `POST /orders/{id}/recompute` | إعادةُ حساب التسوية — A-004 |
+| `POST /orders/{id}/compensate-driver` | تعويض — A-014 · **محميٌّ بقفلٍ وفحص** |
+| `POST /orders/{id}/goods` | تسويةُ بضاعة — A-013 |
+| `POST /orders/{id}/settle-goods` | **مهجورٌ — يردّ ٤١٠** ✅ |
+| `POST /disputes` · `/disputes/{id}/settle` | نزاعٌ وتسويتُه — A-016 |
+| `POST /expenses` · `/expenses/{id}/void` · `/expenses/categories` | مصاريفُ المنصّة ❓ **لم تُوصف** |
+
+### STATE — **٨**
+
+`orders/{id}/{transition,assign,transfer}` · `leads/{id}/status` ·
+`emergencies/{id}/resolve` · `tickets` · `tickets/{id}/replies` ·
+`tickets/{id}/resolve`
+
+### PERMISSION / SECURITY — **١٠**
+
+| المسار | الأثر |
+|---|---|
+| `POST /users` · `PATCH /users/{id}` | إنشاءُ مستخدمٍ وتعديلُه |
+| **`POST /users/{id}/roles`** · **`DELETE /users/{id}/roles/{role}`** | **منحُ الدور وسحبُه** — `admin` وحدَه |
+| `POST /users/{id}/password` | **إعادةُ تعيين كلمة المرور بيد الأدمن** |
+| `POST /users/{id}/logout-all` | **إخراجُ كلّ جلساته** |
+| `POST /users/{id}/warnings` | إنذار |
+| `POST /merchants/{id}/{suspend,warnings,clear-violations}` | تعليقٌ وإنذارٌ وعفو — D-03 · D-04 |
+
+### CATALOG — **٧**
+
+`merchants` · `merchants/{id}` · `merchants/{id}/hours` ·
+`merchants/{id}/menu/items` · `menu/items/{itemID}` (تعديلٌ وحذف) ·
+**`menu/items/{itemID}/review`**
+
+### CONFIG — **٣٤ (أكثرُها)**
+
+| المجموعة | المسارات |
+|---|---|
+| **الإعدادات** | `PUT /settings/{key}` — **بابُ الـ١٢٧ مفتاحاً كلِّها** |
+| **الجغرافيا** | `cities` · `governorates` · `districts` · **`zones`** (٣ لكلٍّ) |
+| **السوق** | `banners` · `sections` · `categories` · `offers` · `promos` |
+| **واتساب** | **`whatsapp/pair`** · **`whatsapp/unpair`** · `orders/{id}/whatsapp` |
+| **التطبيق** | `app-file` (رفعٌ وحذف) |
+| **البثّ** | `POST /broadcast` |
+
+### OTHER — **٢**
+
+`POST /drivers/{id}/end-shift` — **الأدمنُ يُنهي ورديّةَ سائق** ⚠️ ·
+`POST /media`
+
+## ب · حقائقُ مُثبَتةٌ من هذا الحصر
+
+| # | المُثبَت | التصنيف |
+|---|---|---|
+| **AD1** | **`PUT /settings/{key}` بابٌ واحدٌ لكلّ الإعدادات الـ١٢٧** — فالعمولةُ والأجرةُ وسقفُ النقد ونمطُ التوزيع كلُّها من مسارٍ واحد | **PROVEN BEHAVIOR** — ومركزيّةٌ صحيحة |
+| **AD2** | **`whatsapp/pair` و`unpair`** — **اقترانُ جلسة واتساب يُدار من اللوحة** | **PROVEN BEHAVIOR** · وأثرُ `unpair` على رموز التحقّق ❓ **U41** |
+| **AD3** | **`POST /broadcast` — U42 حُلّ** ✅ | أدناه |
+| **AD4** | **`POST /drivers/{id}/end-shift` — U43 حُلّ** ✅ | أدناه |
+
+### U42 حُلّ ✅ — **البثُّ موجَّهٌ بالأدوار**
+
+**مُثبَتٌ في `internal/server/broadcast.go`:**
+
+```sql
+roles := parseRoles(query "roles")
+SELECT count(DISTINCT u.id) FROM users u
+JOIN user_roles ur ON ur.user_id = u.id
+WHERE ur.role_code = ANY($1) AND u.status = 'active'
+```
+
+| | |
+|---|---|
+| **إلى من؟** | **أدوارٌ يختارها المرسِل** — لا «الجميع» أعمى |
+| **الشرط** | **`status='active'` وحدَهم** ✅ |
+| **العدُّ قبل الإرسال** | ✅ — **يُقال كم سيصل** |
+| **القناة** | ⚠️ **يُرجَّح الإشعارُ الدافع** — لم يُقرأ صراحةً ❓ **U45** |
+
+### U43 حُلّ ✅ — **ولا يُغلق دوامُ من بيده طلبٌ حيّ**
+
+**مُثبَتٌ نصّاً في `handleAdminEndShift`:**
+
+> «**ولا يُغلق دوامُ من بيده طلبٌ حيّ.** الطلبُ في صندوقه والزبونُ
+> ينتظره، **وإغلاقُ دوامه لا يُعيد الطلبَ إلى الطابور** — يتركه معلّقاً
+> بيد من صار في النظام *غير عامل*. **ومن أراد أن يُخرجه من طلبه فله
+> إسنادٌ يدويٌّ في الطلب نفسِه.**»
+
+**والشيفرة تفحص `var open int`** — **عددَ الطلبات المفتوحة** — قبل
+الإغلاق.
+
+> **PROVEN BEHAVIOR — آمنٌ بالتصميم** ✅
+> **وهذا يُغلق خطراً كنتُ أظنّه قائماً.**
+| **AD5** | **`settle-goods` مهجورٌ ويردّ ٤١٠** ✅ — **مسارٌ مُعلَّمٌ صراحةً لا ميّتٌ صامت** |
+| **AD6** | **٣٤ من ٧٤ إعدادات** — **فأكثرُ عملِ اللوحة ضبطٌ لا تشغيل** | ✅ |
+
+## ج · تغطيةُ التدقيق — **مقيسة**
+
+| | العدد |
+|---|---|
+| **أفعالٌ مُدقَّقةٌ باسمٍ فريد** | **٤٧** |
+| ↳ `finance.*` | **١٤** |
+| ↳ `ops.*` | **١٣** |
+| ↳ `driver.*` | ٦ |
+| ↳ `catalog.*` | ٥ |
+| ↳ `admin.*` | ٤ |
+| ↳ `platform.*` · `auth.*` | ٢ لكلٍّ |
+| ↳ `user.*` · `customer.*` | ١ لكلٍّ |
+
+**والـ١٣ الماليّةُ كلُّها مُدقَّقة** ✅ — **مقابل ١٤ اسماً في عائلة
+`finance`.**
+
+**⚠️ و٧٤ طفرةً مقابل ٤٧ اسمَ تدقيق** — **فسبعٌ وعشرون طفرةً لم يُثبت
+أنّ لها تدقيقاً** ❓ **U44**. (وبعضُها لا يستحقّه: رفعُ ملفٍّ مثلاً.)
+
+## د · أحكامُ اللوحة
+
+> **`ADMIN ROUTES: 136/136 IDENTIFIED`** ✅
+> **`ADMIN MUTATIONS: 74/74 EFFECT-CLASSIFIED`** ✅
+> ↳ ماليّ ١٣ · حالة ٨ · صلاحيّة ١٠ · قائمة ٧ · إعدادات ٣٤ · أخرى ٢
+> **`ADMIN READS: 62/62 IDENTIFIED`** ✅
+> **`ADMIN MUTATIONS FULLY DESCRIBED: 9/74`** ⚠️
+> **`ADMIN AUDIT NAMES: 47 MEASURED`** · **`UNPROVEN AUDIT COVERAGE: 27`** ❓
+
+---
+
 # ٣ · ما لم يُوصف بعد — بالأرقام
 
 | المجموعة | موصوف | المقام |
