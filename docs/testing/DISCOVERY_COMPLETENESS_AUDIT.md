@@ -52,7 +52,7 @@ Static unknowns                         0    ✅
 Runtime validation requirements         4
 ```
 
-## الوثائقُ العشر — **العددُ مُثبَتٌ من `ls docs/testing/*.md`**
+## الوثائقُ الإحدى عشرة — **العددُ مُثبَتٌ من `ls docs/testing/*.md`**
 
 | الوثيقة | ما فيها |
 |---|---|
@@ -63,32 +63,42 @@ Runtime validation requirements         4
 | [`ORDER_TRANSITIONS_55.md`](ORDER_TRANSITIONS_55.md) | **٥٥ انتقالاً** بالأدوار والعلّة والمال |
 | [`CONFIG_IMPACT_MAP.md`](CONFIG_IMPACT_MAP.md) | **٩٥ مفتاحاً تشغيليّاً من ١١٨** بقارئيه وأثره |
 | [`AUDIT_MAP.md`](AUDIT_MAP.md) | **٣٥ فعلاً حسّاساً** → حدثُ تدقيقٍ أو سبب |
-| [`RUNTIME_VALIDATION_REQUIREMENTS.md`](RUNTIME_VALIDATION_REQUIREMENTS.md) | **٤ مطالبِ تشغيل** بسيناريوهاتها |
+| [`RUNTIME_VALIDATION_REQUIREMENTS.md`](RUNTIME_VALIDATION_REQUIREMENTS.md) | **٦ مطالبِ تشغيل** بسيناريوهاتها |
 | [`RAHALGO_SYSTEM_DISCOVERY.md`](RAHALGO_SYSTEM_DISCOVERY.md) | **HISTORICAL · SUPERSEDED** — خريطةُ النظام الأولى · أرقامُها مُتجاوَزة |
+| [`INDEPENDENT_REVIEW_RECONCILIATION.md`](INDEPENDENT_REVIEW_RECONCILIATION.md) | **الدفعةُ الأولى** — ٤ ادّعاءاتٍ خارجيّة |
+| [`INDEPENDENT_REVIEW_RECONCILIATION_2.md`](INDEPENDENT_REVIEW_RECONCILIATION_2.md) | **الدفعةُ الثانية** — ٩ ادّعاءات |
 
 ## الاكتشافاتُ — مُصنَّفةٌ بإثبات النتيجة
 
-### PROVEN DEFECT — ٣
+### PROVEN DEFECT — ٩
 
 | # | العيب | الثابتُ المكسور |
 |---|---|---|
 | **D1** | **فكُّ الإسناد لا يُسجَّل في `order_events`** (`rotation.go`) | تاريخُ الطلب يجب أن يفسّر كلَّ تبدّلِ حالة |
 | **D2** | **`convertLead` بلا معاملةٍ واحدة** · **وثلاثُ كتاباتٍ خطؤها مُهمَل** | إمّا أن يقع كلُّ التحويل أو لا شيءَ منه |
 | **D3** | **«تذكّرني» تنقلب دائمةً بعد أوّل تجديد توكن** (`auth/client.ts:135`) — **والمهلةُ ربعُ ساعة** | من رفض أن يُتذكّر لا تبقى جلستُه بعد إغلاق المتصفّح |
+| **D4** | **سقفُ الطلبات المفتوحة يعيش داخل بوّابة واتساب** (`orders/service.go:358`) — **والافتراضُ يُطفئه** | «لا شيءَ كان يمنع خمسين طلباً في دقيقة» — وهو نصُّ الشيفرة |
+| **D5** | **المصروفُ والخزينةُ كتابتان بلا معاملة** (`expenses_handlers.go:270,306`) — **والإلغاءُ لا يُعاد** | مصروفٌ يُقيَّد ⇒ مالٌ يخرج من الخزينة |
+| **D6** | **الطلبُ الخاصُّ لا ينادي `cashBlocked`** (`orders/custom.go`) | من حُظر عليه النقدُ لا يطلب نقداً من بابٍ آخر |
+| **D7** | **سقفُ نقد السائق يقيس المحصَّل لا المكشوف** (`driver_handlers.go:578`) | «ما يُسمح أن يحمله قبل أن يورّد» — نصُّ المعجم |
+| **D8** | **الطلبُ الخاصُّ لا يطلب توثيقَ واتساب** (`orders/custom.go`) | لا طلبَ من رقمٍ غيرِ موثَّق |
+| **D9** | **الطلبُ الخاصُّ بلا حدثِ `''→pending`** (`orders/custom.go:98`) — **مئةٌ في المئة** | تاريخُ الطلب يفسّر كلَّ تبدّلِ حالة — ثابتُ `D1` نفسُه |
 
-### PROVEN RISK — ٧
+### PROVEN RISK — ١٢
 
 `R1` بوّابةُ الحالة يُلتفّ عليها في موضع · `R2` خمسُ دوالٍّ يتيمةٍ
 (أخطرُها **تخطّي إثبات التسليم بلا زرّ**) · `R3` زبونٌ يصير `merchant`
 بلا موافقة · `R4` `treasury.go` يعتمد معاملةَ المنادي ·
 `R5` `PATCH stores/{id}/settings` بلا تدقيق · `R6` حِملُ قراءة الإعدادات ·
-**`R7` قبولُ السائق: ثلاثُ كتاباتٍ خارجَ معاملةٍ واحدة والتعويضُ ناقصٌ**
+**`R7` قبولُ السائق: ثلاثُ كتاباتٍ خارجَ معاملةٍ واحدة والتعويضُ ناقصٌ** ·
+**`R8` مفتاحُ منع التكرار يعلق `in_progress` يوماً بعد نجاحٍ وانقطاع** · **`R9` لا حدَّ معدّلٍ عامّ — ٢٧٩ مساراً من ٢٩١ بلا حدّ** · **`R10` سائقٌ واحدٌ يقبل طلبين متزامنين فيتجاوز `max_active`** · **`R11` الطلبُ الخاصُّ يُنشأ بلا معاملة** · **`R12` ثلاثُ طبقاتِ تدقيقٍ تكتب بسياق الطلب فتموت بانقطاعه**
 
-### PRODUCT DECISION REQUIRED — ٤
+### PRODUCT DECISION REQUIRED — ٥
 
 `B3` لا إشعارَ دافعاً للزبون عند قبول السائق · `B4` اللوحةُ تُسند إلى
 سائقٍ موقعُه متوقّف · `U46` الإشعارُ يفتح الشاشةَ لا الطلب ·
-`D-03` تعليقُ متجرٍ لا يمسّ طلباتِه الجارية
+`D-03` تعليقُ متجرٍ لا يمسّ طلباتِه الجارية ·
+**`D-04` الطلبُ الخاصُّ بلا حارسِ منطقةِ توصيل — أمقصودٌ هو؟**
 
 ### PROVEN BEHAVIOR — آمنٌ بالتصميم
 
@@ -116,13 +126,13 @@ Runtime validation requirements         4
 CODE TRUTH BASELINE              = 26f93c5d
 STATIC DISCOVERY STATUS          = COMPLETE — PROVEN
 STATIC UNKNOWNS                  = 0
-RUNTIME VALIDATION REQUIREMENTS  = 4
-PROVEN DEFECTS                   = 3
-PROVEN RISKS                     = 7
-PRODUCT DECISIONS REQUIRED       = 4
+RUNTIME VALIDATION REQUIREMENTS  = 6
+PROVEN DEFECTS                   = 9
+PROVEN RISKS                     = 12
+PRODUCT DECISIONS REQUIRED       = 5
 ```
 
-## الوثائقُ المعتمدة — عشر
+## الوثائقُ المعتمدة — إحدى عشرة
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -136,6 +146,7 @@ PRODUCT DECISIONS REQUIRED       = 4
 | ٨ | [`RUNTIME_VALIDATION_REQUIREMENTS.md`](RUNTIME_VALIDATION_REQUIREMENTS.md) | RV-1 … RV-4 |
 | ٩ | [`RAHALGO_SYSTEM_DISCOVERY.md`](RAHALGO_SYSTEM_DISCOVERY.md) | **HISTORICAL · SUPERSEDED** |
 | ١٠ | [`INDEPENDENT_REVIEW_RECONCILIATION.md`](INDEPENDENT_REVIEW_RECONCILIATION.md) | مطابقةُ المراجعة المستقلّة |
+| ١١ | [`INDEPENDENT_REVIEW_RECONCILIATION_2.md`](INDEPENDENT_REVIEW_RECONCILIATION_2.md) | مطابقةُ الدفعة الثانية |
 
 
 ## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
@@ -158,6 +169,24 @@ PRODUCT DECISIONS REQUIRED       = 4
 
 **ونقطةُ القياس لم تتغيّر** — `26f93c5d`، **ولا سطرَ شيفرةٍ تشغيليّةٍ مسّ.**
 
+
+
+## ⚠️ الدفعةُ الثانية من المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
+
+**تسعةُ ادّعاءاتٍ أُعيد قياسُها، وصحّت التسعة.** والتفصيل في
+[`INDEPENDENT_REVIEW_RECONCILIATION_2.md`](INDEPENDENT_REVIEW_RECONCILIATION_2.md).
+
+| المقام | كان | صار |
+|---|---|---|
+| `PROVEN DEFECTS` | ٣ | **٩** — D4 سقفُ المفتوح · D5 المصروف · D6 حظرُ النقد · D7 سقفُ النقد · D8 توثيقُ الخاصّ · D9 حدثُ الخاصّ |
+| `PROVEN RISKS` | ٧ | **١٢** — R8 … R12 |
+| `PRODUCT DECISIONS REQUIRED` | ٤ | **٥** |
+| `RUNTIME VALIDATION REQUIREMENTS` | ٤ | **٦** — +RV-5 · +RV-6 |
+
+**وأربعةٌ منها من بابٍ واحد**: **الطلبُ الخاصُّ يمرّ من طريقٍ ثانٍ لا حرّاسَ
+فيه** — **وتعليقُه يقول «طلبٌ كسائر الطلبات».**
+
+**ونقطةُ القياس لم تتغيّر** — `26f93c5d`، **ولا سطرَ شيفرةٍ تشغيليّةٍ مسّ.**
 
 ## قاعدةُ إبطال التجميد
 
