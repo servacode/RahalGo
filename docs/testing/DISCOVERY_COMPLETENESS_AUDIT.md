@@ -52,7 +52,7 @@ Static unknowns                         0    ✅
 Runtime validation requirements         4
 ```
 
-## الوثائقُ السبع
+## الوثائقُ التسع — **العددُ مُثبَتٌ من `ls docs/testing/*.md`**
 
 | الوثيقة | ما فيها |
 |---|---|
@@ -64,7 +64,7 @@ Runtime validation requirements         4
 | [`CONFIG_IMPACT_MAP.md`](CONFIG_IMPACT_MAP.md) | **٦٠ مفتاحاً** بقارئيه وأثره |
 | [`AUDIT_MAP.md`](AUDIT_MAP.md) | **٣٥ فعلاً حسّاساً** → حدثُ تدقيقٍ أو سبب |
 | [`RUNTIME_VALIDATION_REQUIREMENTS.md`](RUNTIME_VALIDATION_REQUIREMENTS.md) | **٤ مطالبِ تشغيل** بسيناريوهاتها |
-| [`RAHALGO_SYSTEM_DISCOVERY.md`](RAHALGO_SYSTEM_DISCOVERY.md) | خريطةُ النظام الأولى |
+| [`RAHALGO_SYSTEM_DISCOVERY.md`](RAHALGO_SYSTEM_DISCOVERY.md) | **HISTORICAL · SUPERSEDED** — خريطةُ النظام الأولى · أرقامُها مُتجاوَزة |
 
 ## الاكتشافاتُ — مُصنَّفةٌ بإثبات النتيجة
 
@@ -104,6 +104,52 @@ Runtime validation requirements         4
 «٣٨ مفتاحاً تشغيليّاً»→٦٠
 
 ---
+---
+
+# STATIC DISCOVERY FREEZE
+
+> **هذا القسمُ مُجمَّد.** ولا يُعدَّل إلّا بتحليلِ أثرِ تغيير.
+
+```
+CODE TRUTH BASELINE              = 26f93c5d
+STATIC DISCOVERY STATUS          = COMPLETE — PROVEN
+STATIC UNKNOWNS                  = 0
+RUNTIME VALIDATION REQUIREMENTS  = 4
+PROVEN DEFECTS                   = 2
+PROVEN RISKS                     = 6
+PRODUCT DECISIONS REQUIRED       = 4
+```
+
+## الوثائقُ المعتمدة — تسع
+
+| # | الوثيقة | الحال |
+|---|---|---|
+| ١ | [`DISCOVERY_COMPLETENESS_AUDIT.md`](DISCOVERY_COMPLETENESS_AUDIT.md) | **الحالةُ القانونيّة** |
+| ٢ | [`ACTION_TRUTH_CATALOG.md`](ACTION_TRUTH_CATALOG.md) | معجمُ الأفعال |
+| ٣ | [`SERVER_MUTATIONS_157.md`](SERVER_MUTATIONS_157.md) | ١٥٧ طفرة |
+| ٤ | [`WEB_MUTATIONS_131.md`](WEB_MUTATIONS_131.md) | ١٣١ موضعَ نداء |
+| ٥ | [`ORDER_TRANSITIONS_55.md`](ORDER_TRANSITIONS_55.md) | ٥٥ انتقالاً |
+| ٦ | [`CONFIG_IMPACT_MAP.md`](CONFIG_IMPACT_MAP.md) | ٦٠ مفتاحاً تشغيليّاً |
+| ٧ | [`AUDIT_MAP.md`](AUDIT_MAP.md) | ٣٥ فعلاً حسّاساً |
+| ٨ | [`RUNTIME_VALIDATION_REQUIREMENTS.md`](RUNTIME_VALIDATION_REQUIREMENTS.md) | RV-1 … RV-4 |
+| ٩ | [`RAHALGO_SYSTEM_DISCOVERY.md`](RAHALGO_SYSTEM_DISCOVERY.md) | **HISTORICAL · SUPERSEDED** |
+
+## قاعدةُ إبطال التجميد
+
+**أيُّ تغييرٍ في شيفرةٍ تشغيليّة بعد `26f93c5d` يُبطل نقطةَ القياس.**
+
+**فلا يُعتمد رقمٌ من هذه الوثائق بعده حتّى يمرّ التغييرُ بـ
+`CHANGE IMPACT ANALYSIS`:**
+
+| # | المطلوب |
+|---|---|
+| ١ | **أيُّ مقامٍ تبدّل** — المسارات · الطفرات · الانتقالات · المفاتيح · التدقيق |
+| ٢ | **أيُّ ثابتٍ مُثبَتٍ مسّه التغيير** |
+| ٣ | **أيُّ `PROVEN BEHAVIOR` صار ادّعاءً يحتاج إعادةَ إثبات** |
+| ٤ | **نقطةُ قياسٍ جديدة** تُكتب هنا مكانَ القديمة |
+
+**وبلا ذلك تُقرأ هذه الوثائقُ تاريخاً لا حقيقة.**
+
 ---
 
 # سجلٌّ تاريخيّ — **HISTORICAL SNAPSHOT · SUPERSEDED**
