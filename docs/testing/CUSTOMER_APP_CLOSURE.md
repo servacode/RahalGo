@@ -489,6 +489,15 @@ CUSTOMER-AFFECTING SETTINGS = 52 behaviour + 16 display
 
 # ١٥ · PRODUCT DECISIONS — CUSTOMER
 
+> # ⚠️ **RESOLVED — OWNER DECISION ٢٠٢٦-٠٩-٠٤**
+>
+> **ستٌّ من الثمانية أدناه أُغلقت بعقودٍ معتمدة**، **واثنتان باقيتان**
+> (`D-03` · `B3`). **والحكمُ النهائيُّ في**
+> [`CUSTOMER_FINAL_PRODUCT_DECISIONS.md`](CUSTOMER_FINAL_PRODUCT_DECISIONS.md).
+> **وما دونه يبقى للتاريخ.**
+
+
+
 | ID | السؤال | السلوكُ اليوم | البديل أ | البديل ب | ترجيحٌ من العقد القائم | يسبق تصميمَ الاختبار؟ |
 |---|---|---|---|---|---|---|
 | **B3** | أيُدفَع إشعارٌ حين يقبل السائق؟ | **لا** | إشعارٌ عاجل | إشعارٌ صامت | **لا ترجيح** — والزبونُ يُشعَر بالقبول والتسليم لا بينهما | **لا** |
@@ -603,6 +612,14 @@ CUSTOMER-AFFECTING SETTINGS = 52 behaviour + 16 display
 
 # ١٩ · OBSERVATIONS — **خارجَ السجلّات المجمَّدة**
 
+> # ⚠️ **RESOLVED — OWNER DECISION ٢٠٢٦-٠٩-٠٤**
+>
+> **`OBS-C1` → «السلّةُ تبقى»** (`PC-2`) · **`OBS-C3` → «تمت إعادة المبلغ»**
+> (`PC-3`) · **`OBS-C4` → «لا خريطةَ سائقٍ للزبون»** (`PC-6`).
+> **و`OBS-C2` صارت سبباً مُثبَتاً لا ملاحظة.** **و`OBS-C5` باقيةٌ بلا قرار.**
+
+
+
 **خمسةٌ ظهرت أثناء القراءة ولم تكن في السجلّ.**
 **ولا تُضاف إلى العدّادات إلّا بأمر المالك.**
 
@@ -652,7 +669,7 @@ CUSTOMER-AFFECTING SETTINGS = 52 behaviour + 16 display
 
 ```
 CUSTOMER APP CODE UNDERSTANDING  = COMPLETE
-CUSTOMER APP OPEN PRODUCT QUESTIONS = 10  (بعد مراجعة المالك ٢٠٢٦-٠٩-٠٤)
+CUSTOMER APP OPEN PRODUCT QUESTIONS = 2   (بعد قرارات المالك ٢٠٢٦-٠٩-٠٤ — D-03 · B3)
 CUSTOMER APP KNOWN DEFECTS AFFECTING IT = 11   (5 مباشرة · 6 غيرُ مباشرة)
 CUSTOMER APP KNOWN RISKS AFFECTING IT   = 11   (4 مباشرة · 7 غيرُ مباشرة)
 CUSTOMER APP RUNTIME-ONLY QUESTIONS     = 8    (RV-1 · RV-4 · RV-6 · RV-7 + RV-C1…RV-C4)
@@ -667,7 +684,10 @@ OPERATIONAL CODE CHANGES = 0
 FROZEN COUNTERS CHANGED  = NO
 ```
 
-> # **`READY FOR OWNER DISCUSSION = YES`** — **وقد جرت ٢٠٢٦-٠٩-٠٤**
+> # **`CUSTOMER APP PRODUCT REVIEW = CLOSED`** — **٢٠٢٦-٠٩-٠٤**
+>
+> **والعقدُ النهائيُّ في** [`CUSTOMER_FINAL_PRODUCT_DECISIONS.md`](CUSTOMER_FINAL_PRODUCT_DECISIONS.md).
+> **ولا يعني ذلك تحقّقاً وظيفيّاً ولا أمنيّاً ولا جاهزيّةَ إنتاج.**
 >
 > **ولا يُقال `CUSTOMER APP CLOSED`** — **يُقال إنّ الشيفرةَ مفهومةٌ
 > وأنّ ما بقي قراراتُ منتجٍ لا أسئلةَ كود.**
