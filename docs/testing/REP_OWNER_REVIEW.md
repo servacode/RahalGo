@@ -276,6 +276,9 @@ REP SHAM CASH CONTRACT GAPS = 5   (٣ · ٤ · ٥ · ٦ · ٧)
 
 ---
 
+> **⚠️ حُسمت الثمانُ كلُّها ٢٠٢٦-٠٩-٠٥** — **والعقودُ ومقابلتُها بالكود في [`REP_FINAL_PRODUCT_DECISIONS.md`](REP_FINAL_PRODUCT_DECISIONS.md).**
+> **وما دون هذا السطر يصف حالَ ما قبل الحسم.**
+
 # ٩ · إعادةُ تقييم الأسئلة الثمانية
 
 | ID | السؤال | الحكمُ بعد المراجعة |
@@ -363,7 +366,7 @@ REP OPERATIONS MAP / TERRITORY GAPS = 4
 NEW PROVEN DEFECTS = 0
 NEW PROVEN RISKS   = 0
 
-REP OPEN OWNER DECISIONS = 8
+REP OPEN OWNER DECISIONS = 0   ← حُسمت الثمانُ ٢٠٢٦-٠٩-٠٥
 
 RQ-2 — نقلُ متجرٍ بين مندوبين: ما مصيرُ العمولات السابقة واللاحقة؟
 RQ-3 — مرشَّحان لمتجرٍ واحدٍ من مندوبين: لمن يُنسَب؟
@@ -379,8 +382,8 @@ REP RUNTIME CHECKS STILL REQUIRED = 8
 REP CODE UNDERSTANDING  = COMPLETE
 REP OWNER MANUAL REVIEW = COMPLETE
 
-REP PRODUCT DECISIONS CLOSED = NO
-REP APP PRODUCT REVIEW       = OPEN
+REP PRODUCT DECISIONS CLOSED = YES  ← ٢٠٢٦-٠٩-٠٥
+REP APP PRODUCT REVIEW       = CLOSED  ← ٢٠٢٦-٠٩-٠٥
 
 REP APP VERIFIED         = NO
 REP READY FOR PRODUCTION = NOT YET EVALUATED

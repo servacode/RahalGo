@@ -158,7 +158,7 @@ TEST-INFRA GAPS                  = 3
 PRODUCT DECISIONS REQUIRED       = 7
 ```
 
-## الوثائقُ المعتمدة — تسعَ عشرة
+## الوثائقُ المعتمدة — إحدى وعشرون
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -181,6 +181,8 @@ PRODUCT DECISIONS REQUIRED       = 7
 | ١٧ | [`MERCHANT_FINAL_PRODUCT_DECISIONS.md`](MERCHANT_FINAL_PRODUCT_DECISIONS.md) | **MD-1…MD-7 — قراراتُ مالكٍ نهائيّةٌ للمتجر** |
 | ١٨ | [`REP_APP_CLOSURE.md`](REP_APP_CLOSURE.md) | **فهمُ تطبيق المندوب — ولا قراراتَ بعد** |
 | ١٩ | [`REP_OWNER_REVIEW.md`](REP_OWNER_REVIEW.md) | **REP-OWNER-01/02 · وثمانيةُ قراراتٍ مفتوحة** |
+| ٢٠ | [`REP_FINAL_PRODUCT_DECISIONS.md`](REP_FINAL_PRODUCT_DECISIONS.md) | **RQ-2…RQ-9 — قراراتُ مالكٍ نهائيّةٌ للمندوب** |
+| ٢١ | [`CENTRAL_SUPPORT_PRODUCT_CONTRACT.md`](CENTRAL_SUPPORT_PRODUCT_CONTRACT.md) | **XPRQ-SUP-01…05 — مطلبُ منظومةٍ معتمد** |
 
 
 ## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
@@ -313,6 +315,7 @@ PRODUCT DECISIONS REQUIRED       = 7
 | **XPRQ-PAY-02** | **شحنُ المحفظة بشام كاش** | **APPROVED** |
 | **XPRQ-PAY-03** | **السحبُ الآليُّ للمتجر والسائق والمندوب** | **APPROVED** |
 | **XPRQ-PAY-04** | **تحقّقُ ملكيّة حساب شام كاش** | **APPROVED** |
+| **XPRQ-SUP-01…05** | **مركزُ الدعم المركزيّ للأدوار الأربعة** | **APPROVED** ٢٠٢٦-٠٩-٠٥ |
 
 **والتفصيل في** [`SHAM_CASH_PRODUCT_CONTRACT.md`](SHAM_CASH_PRODUCT_CONTRACT.md).
 **والموصِلُ الخارجيُّ ينتظر وثائقَ المزوّد** — **وغيابُها ليس سبباً لإسقاط
