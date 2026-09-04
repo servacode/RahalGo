@@ -877,6 +877,152 @@ default:
 
 ---
 
+## D-05 · مقامُ نطاق المتجر والقائمة — **مُثبَتٌ آليّاً** ✅
+
+**استُخرج من `endpoints.json` بمرشّحٍ على المسار**
+(`merchants|stores|menu|categories|platform-sections|store-sections|modifier`):
+
+| | العدد |
+|---|---|
+| **مساراتُ النطاق** | **٦٠** |
+| ↳ **طفرات** | **٣٤** |
+| ↳ **قراءات** | **٢٦** |
+
+### الطفراتُ الأربعُ والثلاثون — **مُصنَّفةٌ كلُّها بالدور والمجال**
+
+| المجال | المسارات | الدور |
+|---|---|---|
+| **المتجرُ نفسُه** | `POST /admin/merchants` · `PATCH /admin/merchants/{id}` · `POST …/suspend` · `POST …/clear-violations` · `POST …/warnings` | admin |
+| **ساعاتُ العمل** | `PUT /admin/merchants/{id}/hours` · `PUT /merchant/stores/{id}/hours` | admin · merchant |
+| **إعداداتُ المتجر** | `PATCH /merchant/stores/{id}/settings` | merchant |
+| **أقسامُ المنصّة للمتجر** | `PUT /merchant/stores/{id}/sections` | merchant |
+| **أقسامُ القائمة** | `POST /admin/merchants/{id}/menu/sections` · `POST /merchant/stores/{id}/menu/sections` · `PATCH`/`DELETE` لكلٍّ من `admin` و`merchant` | admin · merchant |
+| **الأصناف** | `POST /admin/merchants/{id}/menu/items` · `POST /merchant/stores/{id}/menu/items` · **`POST /rep/stores/{id}/menu/items`** · `PATCH`/`DELETE` للثلاثة | admin · merchant · **sales** |
+| **التوفّر** | **`PATCH /merchant/menu/items/{itemID}/availability`** | merchant |
+| **المراجعة** | **`POST /admin/menu/items/{itemID}/review`** | admin |
+| **الوسائط** | `POST /merchant/media` | merchant |
+| **التصنيفات** | `POST`/`PATCH /admin/categories` · `POST`/`GET /admin/expenses/categories` | admin |
+| **طوارئُ المتجر** | `POST /merchant/stores/{id}/emergency` | merchant |
+| **دورةُ الطلب في المتجر** | `POST /merchant/orders/{id}/{transition,ready,report}` | merchant |
+
+### القراءاتُ الستُّ والعشرون — **مُصنَّفةٌ بالمستهلك**
+
+| المستهلك | العدد | أبرزُها |
+|---|---|---|
+| **لوحةُ الإدارة** | ٩ | `merchants` · `{id}/menu` · `{id}/hours` · `violations` · `warnings` · **`menu/pending`** |
+| **تطبيقُ المتجر** | ١٢ | `stores` · `{id}/menu` · `{id}/orders` · `{id}/hours` · `{id}/sections` · `platform-sections` · `reports` · `reports-against` · `warnings` · `my-reports` · `report-reasons` |
+| **تطبيقُ المندوب** | ٥ | `merchants` · `{id}` · `stores/{id}/menu` · `categories` · `platform-sections` |
+
+**⚠️ ولا قراءةَ للزبون في هذا النطاق** — **سوقُ الزبون يمرّ بمسارات
+`/public/*` و`/customer/*`** المرشَّحةِ بالمدينة والمسافة
+(انظر §١٦ في التقرير الرئيسيّ).
+
+### اكتشافاتٌ مُثبَتةٌ من هذا الحصر
+
+| # | المُثبَت | التصنيف |
+|---|---|---|
+| **S1** | **`POST /admin/menu/items/{itemID}/review` و`GET /admin/menu/pending`** — **فثمّةَ مراجعةُ أصنافٍ قبل الظهور** | **PROVEN BEHAVIOR** — وآليّتُها لم تُقرأ ❓ **U30** |
+| **S2** | **المندوبُ يُنشئ ويعدّل ويحذف أصنافاً** (٣ مسارات) — محصوراً بـ`repMenuGuard` | ✅ |
+| **S3** | **`availability` مسارٌ مستقلٌّ عن `PATCH item`** — فتبديلُ التوفّر فعلٌ بذاته | ✅ |
+| **S4** | **لا مسارَ لمجموعات المعدِّلات** (`modifier_groups` · `modifier_options`) رغم وجود جدولَيهما | ❓ **U31** — **أهي غيرُ مبنيّةٍ في الواجهة؟** |
+| **S5** | **لا حذفَ للمتجر** — `DELETE /admin/merchants/{id}` **غيرُ موجود**. التعليقُ وحدَه | **PROVEN BEHAVIOR** ✅ |
+| **S6** | **`admin` و`merchant` لهما مسارانِ منفصلانِ لنفس الفعل** (`PATCH menu/sections` مثلاً) — **بمُعالِجَين مختلفين** (`handleUpdateSection` · `handleMerchantUpdateSection`) | **PROVEN RISK** — منطقان قد يفترقان |
+
+### أحكامُ النطاق
+
+> **`STORE / CATALOG MUTATIONS: 34/34 IDENTIFIED + ROLE-CLASSIFIED`** ✅
+> **`STORE / CATALOG READS: 26/26 IDENTIFIED + CONSUMER-CLASSIFIED`** ✅
+> **`STORE / CATALOG ACTIONS FULLY DESCRIBED (30 fields): 4/34`** ⚠️
+> ↳ الموصوفةُ: `convertLead` (D-01) · التعليق (D-03) · مسحُ المخالفات (D-04) · `CreateMerchant`
+> **`STORE / CATALOG OPERATIONALLY SIGNIFICANT UNKNOWNS: 2`** ⚠️
+> ↳ **U30** مراجعةُ الأصناف · **U31** مجموعاتُ المعدِّلات
+
+### وما لم يُوصف بعد في هذا النطاق — **صريحاً**
+
+| البند المطلوب | الحال |
+|---|---|
+| دخولُ المتجر ووصولُه | ❓ **لم يُوصف** |
+| ملفُّ المتجر وإعداداتُه | ❓ |
+| أقسامُ المتجر · أقسامُ القائمة | **المسارات مُحصاة · السلوكُ لم يُقرأ** |
+| الأصنافُ · السعرُ · التوفّر | **المسارات مُحصاة · السلوكُ لم يُقرأ** |
+| مجموعاتُ المعدِّلات | ❓ **U31** |
+| ساعاتُ العمل | **المسارات مُحصاة** |
+| الصورُ والوسائط | **مسارٌ واحدٌ مُحصى** |
+| **ظهورُ الصنف للزبون** | **الطبقتان مُثبَتتان** (§١٦) · **وأثرُ حالة المتجر لم يُثبت** ❓ |
+| **صنفٌ في سلّةٍ تبدّل سعرُه أو توفّرُه** | **✅ U32 حُلّ** — أدناه |
+| نجاح/فشل/فشلٌ جزئيٌّ لكلّ طفرة | **٤ من ٣٤** |
+
+---
+
+## D-06 · السلّة — **U32 حُلّ** ✅
+
+**والاكتشافُ أهمُّ من السؤال:**
+
+| البند | المُثبَت |
+|---|---|
+| **أين تعيش السلّة؟** | **في الجهاز وحدَه** — `object Cart` على `SharedPreferences` (`app-customer/.../cart/Cart.kt`) |
+| **جدولُ سلّةٍ في القاعدة؟** | **صفر** ✅ — بُحث في الجداول الخمسةِ والسبعين فلم يوجد |
+| **مسارُ سلّةٍ في الخادم؟** | **صفر** ✅ |
+| **فالخادمُ لا يعرف بالسلّة شيئاً** حتّى لحظةِ الإنشاء | ✅ |
+
+### وكيف تُحمى إذن؟ — **بالتسعير المتكرّر**
+
+**المُثبَت** في `CartScreen.kt`:
+
+```kotlin
+LaunchedEffect(Cart.lines, here) { vm.quote(here?.lat, here?.lng) }
+```
+
+**فمع كلّ تبدّلٍ في السطور أو في الموقع يُنادى `POST /public/quote`**،
+ويردّ `Quote` فيه **السعرُ وأجرةُ التوصيل و`outOfZone`**.
+
+**والزرُّ يُعطَّل**: `enabled = vm.priced != null && vm.priced?.outOfZone != true` ✅
+
+### الأجوبةُ على U1a–U1d — **مُثبَتةٌ الآن**
+
+| # | السؤال | الجواب |
+|---|---|---|
+| **U1a** | **داخلَ النطاق ثمّ خرج** | **يُعاد التسعيرُ عند تبدّل الموقع** → `outOfZone=true` → **الزرُّ يُعطَّل** ✅ · **والخادمُ يمنع أيضاً** عند الإنشاء (طبقتان) |
+| **U1b** | **عُدِّلت المضلّعاتُ والسلّةُ قائمة** | **لا بثَّ للتغيير** — **فالتسعيرُ لا يُعاد حتّى يتحرّك المستخدمُ أو يبدّل السلّة.** ⚠️ **PROVEN RISK**: يرى سعراً قديماً حتّى أوّلِ تبدّل — **ثمّ يمنعه الخادمُ عند الإرسال** |
+| **U1c** | **على الحافّة تماماً** | **`ST_DWithin` و`ST_Covers` — سلوكُ الحافّة لم يُختبر** ❓ **يبقى UNKNOWN** |
+| **U1d** | **موقعُ الزبون مزيَّف** | **لا فحصَ إطلاقاً** ✅ مُثبَت — **الحمايةُ للسائق وحدَه** (٢٠٢٦-٠٩-٠٣). **PROVEN RISK**: زبونٌ يزيّف موقعَه ليطلب من خارج النطاق |
+| **U32** | **سعرٌ أو توفّرٌ تبدّل والسلّةُ قائمة** | **السعرُ يُعاد حسابُه مع كلّ تبدّلٍ في السلّة** ✅ · **والتوفّرُ ❓ لم يُثبت أنّ `quote` تفحصه** |
+
+### مجهولاتٌ جديدةٌ في هذا الباب
+
+### U33 حُلّ ✅ — **التسعيرُ يفحص التوفّر، وبالمعادلة نفسِها**
+
+**السلسلةُ المُثبَتة:**
+
+```
+POST /public/quote  →  handleQuote  →  orders.Quote(items, lat, lng)
+                                        └─ priceItems(ctx, items)   ← ونفسُها في Create
+                                             └─ var available bool  ← يُقرأ التوفّر
+                                             └─ ErrBadQty إن فسدت الكمّيّة
+```
+
+**والتعليقُ صريح**: «**والتسعيرُ بالمعادلة نفسِها التي عند الإنشاء**».
+
+| النتيجة | |
+|---|---|
+| **صنفٌ صار غيرَ متوفّرٍ والسلّةُ قائمة** | **يُكشف عند أوّل تسعيرٍ تالٍ** ✅ |
+| **ولو تجاوزه العميل** | **`Create` تنادي `priceItems` نفسَها فتمنع** ✅ |
+| **فطبقتان بمعادلةٍ واحدة** | ✅ **PROVEN BEHAVIOR — آمن** |
+| ⚠️ **والثغرةُ الزمنيّة تبقى** | بين آخرِ تسعيرٍ والإرسال — **يمنعها الخادمُ لا الواجهة** |
+
+### مجهولٌ باقٍ
+
+| # | المجهول |
+|---|---|
+| **U34** | **ماذا يقع لو حُذف صنفٌ والسلّةُ فيها منه** — أتردّ `priceItems` خطأً مفهوماً للزبون؟ |
+
+---
+
+**فالحكمُ على النطاق: `STORE / CATALOG FLOW — INCOMPLETE`.**
+**والمقاماتُ مُثبَتةٌ ١٠٠٪، والوصفُ ١٢٪.**
+
+---
+
 ## D-02 · حياةُ القائمة — **المسارات مُحصاة**
 
 **من خريطة المسارات (`endpoints.json`):**
