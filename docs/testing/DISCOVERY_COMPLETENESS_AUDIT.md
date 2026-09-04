@@ -158,7 +158,7 @@ TEST-INFRA GAPS                  = 3
 PRODUCT DECISIONS REQUIRED       = 7
 ```
 
-## الوثائقُ المعتمدة — إحدى وعشرون
+## الوثائقُ المعتمدة — اثنتان وعشرون
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -183,6 +183,7 @@ PRODUCT DECISIONS REQUIRED       = 7
 | ١٩ | [`REP_OWNER_REVIEW.md`](REP_OWNER_REVIEW.md) | **REP-OWNER-01/02 · وثمانيةُ قراراتٍ مفتوحة** |
 | ٢٠ | [`REP_FINAL_PRODUCT_DECISIONS.md`](REP_FINAL_PRODUCT_DECISIONS.md) | **RQ-2…RQ-9 — قراراتُ مالكٍ نهائيّةٌ للمندوب** |
 | ٢١ | [`CENTRAL_SUPPORT_PRODUCT_CONTRACT.md`](CENTRAL_SUPPORT_PRODUCT_CONTRACT.md) | **XPRQ-SUP-01…05 — مطلبُ منظومةٍ معتمد** |
+| ٢٢ | [`ADMIN_PANEL_CLOSURE.md`](ADMIN_PANEL_CLOSURE.md) | **فهمُ لوحة الإدارة — ولا قراراتَ بعد** |
 
 
 ## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
