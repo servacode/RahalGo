@@ -148,9 +148,14 @@ MERCHANT SHAM CASH CONTRACT GAPS = 5   (٣ · ٤ · ٥ · ٦ · ٧)
 | **MD-7** | **ماذا يرى عند رفض صنفٍ في الموافقة؟** | ✅ **CLOSED BY CODE** — **`menu_approval.go`** يحفظ الحالَ والسبب، **و`MenuScreen` تقرأ `approved`** |
 
 ```
-MERCHANT OPEN OWNER DECISIONS = 4   (MD-1 · MD-2 · MD-3 · MD-5)
+MERCHANT OPEN OWNER DECISIONS = 0   ← حُسمت الأربعُ ٢٠٢٦-٠٩-٠٤
+CLOSED BY OWNER DECISION      = 4   (MD-1 · MD-2 · MD-3 · MD-5)
 CLOSED BY EXISTING CODE       = 3   (MD-4 · MD-6 · MD-7)
 ```
+
+> **⚠️ حُسمت الأربعُ المفتوحةُ كلُّها ٢٠٢٦-٠٩-٠٤** — **والعقودُ ومقابلتُها
+> بالكود في [`MERCHANT_FINAL_PRODUCT_DECISIONS.md`](MERCHANT_FINAL_PRODUCT_DECISIONS.md).**
+> **وما دون هذا السطر يصف حالَ ما قبل الحسم.**
 
 **ولم أسأل عمّا يحسمه الكود.**
 
@@ -201,7 +206,7 @@ MERCHANT SHAM CASH CONTRACT GAPS   = 5
 NEW PROVEN DEFECTS = 0
 NEW PROVEN RISKS   = 0
 
-MERCHANT OPEN OWNER DECISIONS = 4
+MERCHANT OPEN OWNER DECISIONS = 0   ← حُسمت ٢٠٢٦-٠٩-٠٤
     MD-1 — تعديلُ القسم وحذفُه: المحرّكُ يقدر والتطبيقُ لا
     MD-2 — أيُشعَر المتجرُ عند إسناد السائق ووصوله؟
     MD-3 — `PATCH stores/{id}/settings` بلا تدقيق: أيُدقَّق؟
@@ -212,7 +217,7 @@ MERCHANT RUNTIME CHECKS STILL REQUIRED = 4
 MERCHANT CODE UNDERSTANDING  = COMPLETE
 MERCHANT OWNER MANUAL REVIEW = COMPLETE
 
-MERCHANT PRODUCT DECISIONS CLOSED = NO
+MERCHANT PRODUCT DECISIONS CLOSED = YES  ← ٢٠٢٦-٠٩-٠٤
 MERCHANT APP PRODUCT REVIEW       = OPEN
 
 MERCHANT APP VERIFIED         = NO

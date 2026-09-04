@@ -7,6 +7,11 @@
 >
 > **فهمُ منتجٍ من شيفرةٍ مقروءةٍ أصلاً** — **لا كشفٌ جديدٌ ولا تحقّقُ تشغيل.**
 
+> **✅ أُغلقت قراراتُ المالك كلُّها ٢٠٢٦-٠٩-٠٤** — `MD-1` · `MD-2` ·
+> `MD-3` · `MD-5` — **والعقودُ ومقابلتُها بالكود في**
+> [`MERCHANT_FINAL_PRODUCT_DECISIONS.md`](MERCHANT_FINAL_PRODUCT_DECISIONS.md).
+> **`MERCHANT OPEN OWNER DECISIONS = 0`** · **`CONTRACT GAPS = 8`.**
+
 ---
 
 # ٠ · المقامات

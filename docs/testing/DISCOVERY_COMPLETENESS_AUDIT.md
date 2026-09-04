@@ -158,7 +158,7 @@ TEST-INFRA GAPS                  = 3
 PRODUCT DECISIONS REQUIRED       = 7
 ```
 
-## الوثائقُ المعتمدة — ستّ عشرة
+## الوثائقُ المعتمدة — سبعَ عشرة
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -178,6 +178,7 @@ PRODUCT DECISIONS REQUIRED       = 7
 | ١٤ | [`INDEPENDENT_REVIEW_RECONCILIATION_5.md`](INDEPENDENT_REVIEW_RECONCILIATION_5.md) | مطابقةُ الدفعة الخامسة — البنية والأدوات |
 | ١٥ | [`FINAL_STATIC_CLOSEOUT.md`](FINAL_STATIC_CLOSEOUT.md) | **السجلّاتُ القانونيّةُ النهائيّة — تُقرأ أوّلاً** |
 | ١٦ | [`SHAM_CASH_PRODUCT_CONTRACT.md`](SHAM_CASH_PRODUCT_CONTRACT.md) | **XPRQ-PAY-01…04 — مطلبُ منظومةٍ معتمد** |
+| ١٧ | [`MERCHANT_FINAL_PRODUCT_DECISIONS.md`](MERCHANT_FINAL_PRODUCT_DECISIONS.md) | **MD-1…MD-7 — قراراتُ مالكٍ نهائيّةٌ للمتجر** |
 
 
 ## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
