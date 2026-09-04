@@ -137,10 +137,13 @@ REP SCREENS MAPPED = 14/14
 > **ومصدرُه `AppFrame.kt:69`**: `AskStartupPermissions(startupPermissions())`
 > **وافتراضُها `location = true`** — **ولا يُمرّر تطبيقُ المندوب غيرَه.**
 >
-> **فالنيّةُ المكتوبةُ في `MainActivity` قائمةٌ ولا تعمل**: **الإذنُ
-> يُطلب مرّةً قبل الدخول بلا سببٍ ظاهر، وحارسُ الإقلاع
-> (`prefs.getBoolean(key)`) يمنع سؤالاً ثانياً.** **والسؤالُ ذو السبب
-> لا يُبلَغ إلّا إن رُفض الأوّل.** — `OBS-R12`
+> **⚠️ وتصحيحٌ ثانٍ ٢٠٢٦-٠٩-٠٥**: **الحارسُ موضعُه `AskStartupPermissions`
+> وحدَها** — **و`askHere` بلا حارسٍ إطلاقاً، فالطلبُ السياقيُّ يقع فعلاً.**
+> **والضررُ أدقُّ**: **طلبُ الإقلاع يستهلك رفضاً من حصّة أندرويد** — **ومن
+> رفض نافذةً بلا سببٍ قبل أن يعرّف نفسَه، يجد البابَ يُغلق صامتاً حين
+> يقف أمام متجرٍ ويقع الطلبُ الصحيح.** — `OBS-R12`
+>
+> **وصار مادّةَ `REP-OWNER-02`** — قرارُ مالكٍ معتمَدٌ ٢٠٢٦-٠٩-٠٥ في [`REP_OWNER_REVIEW.md`](REP_OWNER_REVIEW.md).
 
 ## ٤ · `PickPoint` — **التقاطُ النقطة**
 
@@ -928,7 +931,7 @@ REP ACTIONS MAPPED     = 24/24
 REP ENDPOINTS MAPPED   = 48/48    (14 في /rep · 34 مشتركة)
 REP-AFFECTING SETTINGS = 13       (9 مباشرة · 4 غير مباشرة)
 
-REP OPEN PRODUCT QUESTIONS     = 8
+REP OPEN PRODUCT QUESTIONS     = 8   ← صارت RQ-2…RQ-9 بعد إغلاق RQ-1 بـMD-3
 REP KNOWN DEFECTS AFFECTING IT = 6    (D2 · D10 · D11 · D12 · D14 · D19)
 REP KNOWN RISKS AFFECTING IT   = 10   (R2 · R6 · R8 · R9 · R13 · R14 · R15 · R16 · R18 · R23)
 REP RUNTIME-ONLY QUESTIONS     = 6

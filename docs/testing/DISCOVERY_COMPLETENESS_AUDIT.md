@@ -158,7 +158,7 @@ TEST-INFRA GAPS                  = 3
 PRODUCT DECISIONS REQUIRED       = 7
 ```
 
-## الوثائقُ المعتمدة — ثمانيَ عشرة
+## الوثائقُ المعتمدة — تسعَ عشرة
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -180,6 +180,7 @@ PRODUCT DECISIONS REQUIRED       = 7
 | ١٦ | [`SHAM_CASH_PRODUCT_CONTRACT.md`](SHAM_CASH_PRODUCT_CONTRACT.md) | **XPRQ-PAY-01…04 — مطلبُ منظومةٍ معتمد** |
 | ١٧ | [`MERCHANT_FINAL_PRODUCT_DECISIONS.md`](MERCHANT_FINAL_PRODUCT_DECISIONS.md) | **MD-1…MD-7 — قراراتُ مالكٍ نهائيّةٌ للمتجر** |
 | ١٨ | [`REP_APP_CLOSURE.md`](REP_APP_CLOSURE.md) | **فهمُ تطبيق المندوب — ولا قراراتَ بعد** |
+| ١٩ | [`REP_OWNER_REVIEW.md`](REP_OWNER_REVIEW.md) | **REP-OWNER-01/02 · وثمانيةُ قراراتٍ مفتوحة** |
 
 
 ## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
