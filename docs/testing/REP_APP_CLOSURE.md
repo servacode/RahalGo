@@ -118,11 +118,29 @@ REP SCREENS MAPPED = 14/14
 | **مال** | **غيرُ مباشر** — **هذا مصدرُ عمولته كلِّها** |
 | **متجر** | **لا متجرَ بعد** — مرشَّحٌ ينتظر الأدمن |
 | **إدارة** | **`NotifyOps`** — يصل مكتبَ المنصّة فوراً |
-| **موقع** | ✅ **الإذنُ يُطلب عند فتح التبويب لا عند الإقلاع** (`MainActivity:195`) — **والنقطةُ تُحفظ في المرشَّح** |
+| **موقع** | ⚠️ **طلبان لا واحد** — **`AppFrame` تسأل عند أوّل إقلاعٍ قبل الدخول** (`StartupPermissions.kt:64` · `location = true` افتراضاً)، **ثمّ `MainActivity:195` تسأل ثانيةً عند فتح التبويب لمن رفض.** **والنقطةُ تُحفظ في المرشَّح** |
 | **عيوب** | **`R9`** (لا حدَّ عامّ — **وهذا البابُ محدودٌ بنفسِه**) |
 
 **والإذنُ الموضعيُّ قرارٌ مقصود**: «**إذنٌ يُطلب في أوّل شاشةٍ بلا سببٍ ظاهرٍ
 يُرفض**… وهنا سببُه أمام عينه: يقف في متجرٍ ليُسجّله.»
+
+> **⚠️ تصحيحُ ٢٠٢٦-٠٩-٠٥ — قِيس على الجهاز، لا في الشيفرة.**
+>
+> **كتبتُ أنّ الإذنَ لا يُطلب عند الإقلاع. وهذا خطأ.** **قرأتُ
+> `MainActivity:195` ولم أقرأ `AppFrame`.**
+>
+> **والمقيسُ عند أوّل تشغيلٍ للنسخة**: `GrantPermissionsActivity` فوق
+> `com.rahalgo.rep/.MainActivity` — **وطالبُه التطبيقُ نفسُه**
+> (`launchedFromPackage=com.rahalgo.rep`) — **يسأل عن الموقع قبل شاشة
+> الدخول.**
+>
+> **ومصدرُه `AppFrame.kt:69`**: `AskStartupPermissions(startupPermissions())`
+> **وافتراضُها `location = true`** — **ولا يُمرّر تطبيقُ المندوب غيرَه.**
+>
+> **فالنيّةُ المكتوبةُ في `MainActivity` قائمةٌ ولا تعمل**: **الإذنُ
+> يُطلب مرّةً قبل الدخول بلا سببٍ ظاهر، وحارسُ الإقلاع
+> (`prefs.getBoolean(key)`) يمنع سؤالاً ثانياً.** **والسؤالُ ذو السبب
+> لا يُبلَغ إلّا إن رُفض الأوّل.** — `OBS-R12`
 
 ## ٤ · `PickPoint` — **التقاطُ النقطة**
 
@@ -860,7 +878,7 @@ REP OPEN PRODUCT QUESTIONS = 8
 # ١٨ · ملاحظاتٌ جديدةٌ خارجَ السجلّات المجمَّدة
 
 ```
-NEW REP OBSERVATIONS OUTSIDE FROZEN REGISTERS = 11
+NEW REP OBSERVATIONS OUTSIDE FROZEN REGISTERS = 12
 ```
 
 | ID | الملاحظة | الوزن | الموضع |
@@ -876,6 +894,7 @@ NEW REP OBSERVATIONS OUTSIDE FROZEN REGISTERS = 11
 | **`OBS-R9`** | **منظومةُ تذاكرَ كاملةٌ والمندوبُ لا يفتح واحدة** | **دعمٌ · أضيقُ سطحٍ في الأربعة** | `server.go:840` |
 | **`OBS-R10`** | **`POST /rep/leads` بلا مفتاح تكرارٍ وبلا فحص ازدواج** | نزاهةُ بيانات | `leads_handlers.go:408` |
 | **`OBS-R11`** | **`ForfeitedShare` يُحسَب بنسبةِ اليوم لطلبٍ قديم** | عرضٌ فقط | `rep_merchant_detail.go:166` |
+| **`OBS-R12`** | **إذنُ الموقع يُطلب قبل شاشة الدخول — والنيّةُ المكتوبةُ عكسُه** | تجربة · **قِيس على الجهاز** | `AppFrame.kt:69` |
 
 **ولا يصير أيٌّ منها عيباً أو خطراً في السجلّ** — **السجلُّ مجمَّد**، **وهذه
 مادّةُ نقاشٍ للمالك.**
@@ -914,7 +933,7 @@ REP KNOWN DEFECTS AFFECTING IT = 6    (D2 · D10 · D11 · D12 · D14 · D19)
 REP KNOWN RISKS AFFECTING IT   = 10   (R2 · R6 · R8 · R9 · R13 · R14 · R15 · R16 · R18 · R23)
 REP RUNTIME-ONLY QUESTIONS     = 6
 
-NEW REP OBSERVATIONS OUTSIDE FROZEN REGISTERS = 11
+NEW REP OBSERVATIONS OUTSIDE FROZEN REGISTERS = 12
 REP SHAM CASH CONTRACT GAPS                   = 5
 REP OPERATIONS MAP / TERRITORY GAPS           = 4
 
