@@ -491,8 +491,8 @@ CUSTOMER-AFFECTING SETTINGS = 52 behaviour + 16 display
 
 > # ⚠️ **RESOLVED — OWNER DECISION ٢٠٢٦-٠٩-٠٤**
 >
-> **ستٌّ من الثمانية أدناه أُغلقت بعقودٍ معتمدة**، **واثنتان باقيتان**
-> (`D-03` · `B3`). **والحكمُ النهائيُّ في**
+> **الثمانيةُ أدناه أُغلقت كلُّها** — **وآخرُها `D-03` و`B3` بـ`PC-11`
+> و`PC-12`.** **والحكمُ النهائيُّ في**
 > [`CUSTOMER_FINAL_PRODUCT_DECISIONS.md`](CUSTOMER_FINAL_PRODUCT_DECISIONS.md).
 > **وما دونه يبقى للتاريخ.**
 
@@ -669,7 +669,7 @@ CUSTOMER-AFFECTING SETTINGS = 52 behaviour + 16 display
 
 ```
 CUSTOMER APP CODE UNDERSTANDING  = COMPLETE
-CUSTOMER APP OPEN PRODUCT QUESTIONS = 2   (بعد قرارات المالك ٢٠٢٦-٠٩-٠٤ — D-03 · B3)
+CUSTOMER APP OPEN PRODUCT QUESTIONS = 0   (أُغلقت كلُّها ٢٠٢٦-٠٩-٠٤)
 CUSTOMER APP KNOWN DEFECTS AFFECTING IT = 11   (5 مباشرة · 6 غيرُ مباشرة)
 CUSTOMER APP KNOWN RISKS AFFECTING IT   = 11   (4 مباشرة · 7 غيرُ مباشرة)
 CUSTOMER APP RUNTIME-ONLY QUESTIONS     = 8    (RV-1 · RV-4 · RV-6 · RV-7 + RV-C1…RV-C4)

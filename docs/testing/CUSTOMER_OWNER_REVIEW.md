@@ -355,8 +355,8 @@ MISSING CUSTOMER SURFACES = ٩/١١
 
 > # ⚠️ **CLOSED — OWNER DECISION ٢٠٢٦-٠٩-٠٤**
 >
-> **ثمانٍ من العشرة أدناه أُغلقت بعشرة عقودِ منتجٍ معتمدة** — **وبقيت
-> `D-03` و`B3`.** **والعقودُ والفجواتُ الأربعَ عشرةَ مقابلَ الشيفرة في**
+> **العشرة أدناه أُغلقت كلُّها باثني عشرَ عقدَ منتجٍ معتمداً** —
+> **و`D-03` و`B3` أُغلقتا بـ`PC-11` و`PC-12`.** **والعقودُ والفجواتُ الخمسَ عشرةَ مقابلَ الشيفرة في**
 > [`CUSTOMER_FINAL_PRODUCT_DECISIONS.md`](CUSTOMER_FINAL_PRODUCT_DECISIONS.md).
 >
 > **و`PR-1…PR-7` صارت `PC-1`** · **و`RV-C1…RV-C4` صارت `P1…P6`.**
@@ -424,7 +424,7 @@ NEW UX/PERFORMANCE GAPS      = 4    (OWNER-01 · 04 · 05 · 08)
 NEW PROVEN DEFECTS           = 0
 NEW PROVEN RISKS             = 0
 
-CUSTOMER OPEN OWNER DECISIONS      = 2    ← بعد قرارات ٢٠٢٦-٠٩-٠٤
+CUSTOMER OPEN OWNER DECISIONS      = 0    ← أُغلقت كلُّها ٢٠٢٦-٠٩-٠٤
 CUSTOMER RUNTIME CHECKS STILL REQUIRED = 8   (RV-1 · RV-4 · RV-6 · RV-7 + RV-C1…RV-C4)
 
 CUSTOMER CODE UNDERSTANDING   = COMPLETE
