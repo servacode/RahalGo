@@ -296,6 +296,31 @@ export default function SettingsPage() {
     }));
   }, [list, order, visible]);
 
+  /* **والخطّافُ فوق الخروج المبكّر لا تحته.**
+
+     **وُضع تحته أوّلَ مرّة** (٢٠٢٦-٠٩-٠٥) — **فأوّلُ رسمةٍ تخرج قبل أن
+     يُنادى والثانيةُ تناديه**، فيتبدّل عددُ الخطّافات بين رسمتين
+     ويرمي React: «Rendered more hooks than during the previous render».
+     **والشاشةُ تُقرأ عطباً في المتصفّح وحدَه** — لا البناءُ يمسكه ولا
+     الأنواع. */
+/**
+   * **نتائجُ البحث من القائمة كلِّها — لا من التبويب المفتوح.**
+   *
+   * **و`visible` تُحترم كما هي**: مفتاحٌ أخفاه `show_when` لا يظهر في
+   * البحث أيضاً، **وإلّا فُتح بابٌ لضبط ما لا أثرَ له.**
+   */
+  const found = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle || !list) return null;
+    return list.filter(
+      (s) =>
+        visible(s, list) &&
+        (s.key.toLowerCase().includes(needle) ||
+          label(s.key).toLowerCase().includes(needle) ||
+          hint(s.key).toLowerCase().includes(needle)),
+    );
+  }, [q, list, visible]);
+
   if (!list) return <LoadingState variant="text" />;
 
   /**
@@ -347,23 +372,6 @@ export default function SettingsPage() {
   const active = tab || groups[0]?.g || extraKeys[0] || "";
   const activeGroup = groups.find((x) => x.g === active);
 
-  /**
-   * **نتائجُ البحث من القائمة كلِّها — لا من التبويب المفتوح.**
-   *
-   * **و`visible` تُحترم كما هي**: مفتاحٌ أخفاه `show_when` لا يظهر في
-   * البحث أيضاً، **وإلّا فُتح بابٌ لضبط ما لا أثرَ له.**
-   */
-  const found = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle || !list) return null;
-    return list.filter(
-      (s) =>
-        visible(s, list) &&
-        (s.key.toLowerCase().includes(needle) ||
-          label(s.key).toLowerCase().includes(needle) ||
-          hint(s.key).toLowerCase().includes(needle)),
-    );
-  }, [q, list]);
 
   return (
     <div>
