@@ -1577,6 +1577,129 @@ refresh()          ← تجديدٌ تلقائيٌّ ثمّ إعادةُ الن�
 
 ---
 
+# ٢-ط · الفحصُ المتقاطع — **BOTTOM-UP** ✅
+
+> **الغاية**: **كلُّ شيءٍ يكتب أو يقرّر يعود إلى تدفّقٍ معروف.**
+> **وما لا يعود = GAP.**
+
+## أ · الطفراتُ السبعُ والخمسون بعد المئة → مجالات
+
+| المجال | العدد | الحال |
+|---|---|---|
+| **ADMIN** | **٧٤** | ✅ مُصنَّفةٌ بالأثر (§٢-ز) |
+| **AUTH** (`/auth/*` · `/pin/*`) | **٢٦** | ✅ مُحصاة · **موصوفةٌ جزئيّاً** |
+| **DRIVER** | **١٥** | ✅ الطابورُ والقبولُ والانتقالاتُ والإثبات |
+| **MERCHANT** | **١٥** | ✅ (§٢-د) — بحراسِ ملكيّةٍ مُثبَتة |
+| **SELF** (`/me/*` · `/my/*`) | **١٤** | ✅ العناوينُ والتفضيلاتُ والشكاوى والأجهزة |
+| **CUSTOMER-ORDER** | **٥** | ✅ الإنشاءُ والإلغاءُ والتقييمُ والرسائل |
+| **REP** | **٥** | ✅ (§٢-د) |
+| **PUBLIC** | **٢** | `POST /public/quote` · `POST /promo/preview` |
+| **UNCLASSIFIED** | **١ → ٠** | أدناه |
+| **المجموع** | **١٥٧** | ✅ |
+
+### الشاذّةُ الوحيدة — **فُحصت وفُسّرت** ✅
+
+**`POST /api/v1/promo/preview`** — **`POST` بلا كتابة.**
+
+| | المُثبَت |
+|---|---|
+| المُعالِج | `handlePromoPreview` → `orders.PreviewPromo` |
+| **أتكتب؟** | **لا** — لا `INSERT` ولا `UPDATE` ولا `promo_redemptions` |
+| **لماذا `POST`؟** | **لأنّ لها جسماً** (`code` · `subtotal` · `delivery_fee`) |
+| **الأهمّ** | **تنادي `validatePromo` نفسَها التي عند الطلب** — واختبارٌ يحرس ذلك: `TestPreviewPromo_MatchesOrder` · «**ما تَعِد به المعاينةُ يقع عند الطلب**» ✅ |
+
+> **`MUTATION ROUTES TIED TO A DOMAIN: 157/157`** ✅
+> **`UNCLASSIFIED MUTATIONS: 0`** ✅
+
+## ب · الجداولُ القابلةُ للكتابة → تدفّقات
+
+| المجموعة | جداول | التدفّق |
+|---|---|---|
+| **الهويّة** | `users` · `user_roles` · `otp_codes` · `refresh_tokens` · `phone_claims` · `device_tokens` · `app_secrets` | AUTH (§٩ في التقرير) · `EnsureUserWithRole` |
+| **الطلبات** | `orders` · `order_items` · `order_events` · `order_messages` · `order_ratings` · `promo_redemptions` | A-001 → A-003 · الانتقالاتُ الـ٥٥ |
+| **المال** | `wallets` · `wallet_transactions` · `driver_cash_boxes` · `driver_cash_entries` · `payout_requests` · `expenses` · `expense_categories` | **٣٠ موضعَ `ApplyTx`** ✅ |
+| **المتاجر** | `merchants` · `menu_items` · `menu_sections` · `merchant_hours` · `merchant_leads` · `store_sections` · `merchant_ratings` · `merchant_warnings` | §٢-د · D-01 → D-05 |
+| **المعدِّلات** | `modifier_groups` · `modifier_options` | **✅ U31 حُلّ** — تُكتب **مع الصنف** في `catalog/menu.go` |
+| **الجغرافيا** | `governorates` · `districts` · `cities` · `delivery_zones` | ADMIN/CONFIG · §١٦ |
+| **الدعم** | `tickets` · `ticket_replies` · `disputes` · `warnings` · `driver_emergencies` | ADMIN/STATE · A-016 · A-017 |
+| **التتبّع** | `driver_track` | §٢-ح — دورةُ الموقع |
+| **التسويق** | `offers` · `promo_codes` · `banners` · `categories` · `platform_sections` · `referrals` | ADMIN/CONFIG · A-018 |
+| **النظام** | `app_settings` · `audit_log` · `idempotency_keys` · `media` · `notifications` · `app_opens_daily` · `user_addresses` · `user_favorites` | ADMIN · SELF · البنية |
+
+### U31 حُلّ ✅ — **المعدِّلاتُ تُكتب مع الصنف لا بمسارٍ خاصّ**
+
+**مُثبَتٌ في `internal/catalog/menu.go`:**
+
+```sql
+DELETE FROM modifier_groups WHERE item_id = $1          ← تُمسح ثمّ تُكتب
+INSERT INTO modifier_groups (item_id, name, min_select, max_select, sort_order)
+INSERT INTO modifier_options (group_id, name, price_delta, sort_order)
+```
+
+| | المُثبَت |
+|---|---|
+| **المسار** | **لا مسارَ مستقلّاً** — تُرسل ضمن جسم `POST/PATCH menu/items` |
+| **المعاملة** | **`tx.Exec`** — **في معاملة الصنف نفسِها** ✅ |
+| **الأسلوب** | **مسحٌ ثمّ كتابةٌ كاملة** (`replace-all`) — لا تعديلٌ جزئيّ |
+| **الاستهلاك** | `orders/service.go` يقرؤها عند التسعير: `min_select, max_select` و`price_delta` — **فالمعدِّلاتُ تدخل السعر** ✅ |
+| **العرض** | `catalog/menu.go` يردّها في `Modifiers []ModifierGroup` |
+
+**فادّعائي «جدولان بلا كاتب» كان خطأَ أداةٍ**: بحثتُ عن `modifier` في
+أسماء المسارات ولم أبحث في أجسام الطلبات.
+
+### U48 حُلّ ✅ — **معرّفٌ قديمٌ يُرفض ولا يُتجاهَل**
+
+**`DELETE` ثمّ `INSERT` يعني أنّ معرّفاتِ الخيارات تتبدّل مع كلّ تعديل
+صنف.** **فماذا يقع لسلّةٍ تحمل معرّفاً قديماً؟**
+
+**مُثبَتٌ في `priceItems` (`internal/orders/service.go`):**
+
+```sql
+SELECT g.id, g.name, o.name, o.price_delta, o.available
+FROM modifier_options o JOIN modifier_groups g ON g.id = o.group_id
+WHERE o.id = $1 AND g.item_id = $2
+→ pgx.ErrNoRows  ⇒  return ErrBadItems
+```
+
+| | المُثبَت |
+|---|---|
+| **معرّفٌ لا وجودَ له** | **`ErrBadItems`** — **الطلبُ يُرفض كلُّه** ✅ |
+| **خيارٌ من صنفٍ آخر** | **يُرفض** — الشرطُ `g.item_id = $2` ✅ |
+| **`o.available` يُقرأ** | ✅ — **فالتوفّرُ يُفحص على مستوى الخيار أيضاً** |
+| **ومتى يُكتشف؟** | **في `quote` قبل الإرسال** — لأنّها تنادي `priceItems` نفسَها ✅ |
+
+> **PROVEN BEHAVIOR — آمنٌ ومتّسق**: **الفشلُ صريحٌ لا صامت**، والزبونُ
+> يراه في السلّة قبل أن يضغط.
+>
+> **⚠️ وما بقي**: **نصُّ الخطأ الذي يراه** — أمفهومٌ أم `ErrBadItems`
+> خامّة؟ ❓ **U34** (نفسُه).
+
+> **`MUTABLE TABLES TIED TO A FLOW: 54/54`** ✅
+> **`UNTIED: 0`** ✅
+
+## ج · بقيّةُ المنتِجين → تدفّقات
+
+| المنتِج | العدد | مربوطٌ بتدفّق؟ |
+|---|---|---|
+| **الكتاباتُ المباشرةُ على الحالة** | ٢ | ✅ DSW-1 (داخلَ البوّابة) · DSW-2 (**D1**) |
+| **مواضعُ المال** | ٣٠ | ✅ كلُّها |
+| **أسماءُ التدقيق** | ٤٧ | ✅ مُحصاة · **٢٧ طفرةً بلا تدقيقٍ مُثبَت** ❓ |
+| **بثُّ الزمن الحيّ** | ٦١ (`touch` ٥٣ · `touchUser` ٨) | ✅ ١٣ نوعَ حدث |
+| **عمّالُ الخلفيّة** | ١ | ✅ الراصد |
+| **مُشغِّلاتُ القاعدة** | ١ | ✅ `wallet_for_new_user` |
+| **الدوالُّ المخصَّصة** | ١ | ✅ نفسُها |
+| **قارئو الإعدادات** | ١٢٧ مفتاحاً | ⚠️ **٤ مقيسةٌ في الإنتاج · والقارئون لكلٍّ لم يُحصوا** ❓ **U47** |
+
+## د · GAPs — **ما لا يعود إلى تدفّق**
+
+| # | الفجوة | الحال |
+|---|---|---|
+| **G-A** | `modifier_groups` · `modifier_options` — **جدولان بلا مسارٍ يكتبهما** | ❓ U31 |
+| **G-B** | **٢٧ طفرةً إداريّةً بلا تدقيقٍ مُثبَت** | ❓ U44 |
+| **G-C** | **قارئو الإعدادات لكلّ مفتاح** — من يقرأ ماذا ومتى يسري | ❓ U47 |
+
+---
+
 # ٣ · ما لم يُوصف بعد — بالأرقام
 
 | المجموعة | موصوف | المقام |
