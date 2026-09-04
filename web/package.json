@@ -10,7 +10,7 @@
     "dev:rep": "pnpm --filter rep dev",
     "dev:driver": "pnpm --filter driver dev",
     "build": "turbo build",
-    "lint": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && turbo lint",
+    "lint": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && node scripts/check-lint-ran.mjs",
     "typecheck": "turbo typecheck",
     "check:central": "node scripts/check-central.mjs",
     "check:guards": "node scripts/check-central.mjs && node scripts/check-platform-name.mjs && node scripts/check-api-client.mjs && node scripts/check-raw-keys.mjs && node scripts/check-jsx-comments.mjs && node scripts/check-errors.mjs && node scripts/check-err-text.mjs && node scripts/check-form-actions.mjs && node scripts/check-bell-badge.mjs && node scripts/check-menu-parity.mjs && node scripts/check-one-map-way.mjs && node scripts/check-app-error-codes.mjs && node scripts/check-live-refresh.mjs && node scripts/check-design-tokens.mjs && node scripts/check-search-field.mjs && node scripts/check-cancellation.mjs && node scripts/check-loader.mjs && node scripts/check-serial-names.mjs && node scripts/check-self-cancel.mjs && node scripts/check-image-loader.mjs && node scripts/check-map-core-pure.mjs && node scripts/check-map-style-single.mjs && node scripts/check-routing-pin.mjs && node scripts/check-web-map-source.mjs && node scripts/check-string-shadow.mjs",
@@ -18,9 +18,14 @@
     "check:map-network": "node scripts/check-map-network.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@next/eslint-plugin-next": "^15.5.25",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "playwright": "^1.62.1",
     "playwright-core": "^1.62.1",
     "turbo": "^2.5.0",
+    "typescript-eslint": "^8.69.0",
     "ws": "^8.21.3"
   }
 }

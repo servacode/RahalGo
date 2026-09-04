@@ -12,7 +12,8 @@
     "./mapconfig": "./src/mapconfig.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
   },
   "peerDependencies": {
     "react": "^19.0.0",
