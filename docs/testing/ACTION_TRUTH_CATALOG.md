@@ -1817,7 +1817,11 @@ WHERE o.id = $1 AND g.item_id = $2
 > **`AUDITED ACTION NAMES: 104 MEASURED ACROSS 4 LAYERS`** ✅
 > **`UNPROVEN AUDIT COVERAGE: 0 — الادّعاءُ سقط`** ✅
 
-### U47 حُلّ ✅ — **٦٠ مفتاحاً تشغيليّاً من ١٢٧**
+### U47 حُلّ ✅ — **٩٥ مفتاحاً تشغيليّاً من ١١٨**
+
+> **⚠️ وصُحّح مرّتين**: ٣٨ ← ٦٠ ← **٩٥**، والمقامُ ١٢٧ ← **١١٨**.
+> **والقياسُ النهائيُّ في**
+> [`INDEPENDENT_REVIEW_RECONCILIATION.md`](INDEPENDENT_REVIEW_RECONCILIATION.md).
 
 > **⚠️ وهذا القسمُ صُحّح**: قِيس أوّلاً بنمطٍ ضيّقٍ فأعطى **٣٨**، ثمّ
 > شُمل `intSetting` و`settingInt` و`GetFloat` **فصار ٨٦ مقروءاً منها

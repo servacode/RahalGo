@@ -52,7 +52,7 @@ Static unknowns                         0    ✅
 Runtime validation requirements         4
 ```
 
-## الوثائقُ التسع — **العددُ مُثبَتٌ من `ls docs/testing/*.md`**
+## الوثائقُ العشر — **العددُ مُثبَتٌ من `ls docs/testing/*.md`**
 
 | الوثيقة | ما فيها |
 |---|---|
@@ -61,26 +61,28 @@ Runtime validation requirements         4
 | [`SERVER_MUTATIONS_157.md`](SERVER_MUTATIONS_157.md) | **١٥٧ طفرةً** بالحارس والأثر والرايات |
 | [`WEB_MUTATIONS_131.md`](WEB_MUTATIONS_131.md) | **١٣١ وصلةً** بالملفّ والدالّة والسلوك |
 | [`ORDER_TRANSITIONS_55.md`](ORDER_TRANSITIONS_55.md) | **٥٥ انتقالاً** بالأدوار والعلّة والمال |
-| [`CONFIG_IMPACT_MAP.md`](CONFIG_IMPACT_MAP.md) | **٦٠ مفتاحاً** بقارئيه وأثره |
+| [`CONFIG_IMPACT_MAP.md`](CONFIG_IMPACT_MAP.md) | **٩٥ مفتاحاً تشغيليّاً من ١١٨** بقارئيه وأثره |
 | [`AUDIT_MAP.md`](AUDIT_MAP.md) | **٣٥ فعلاً حسّاساً** → حدثُ تدقيقٍ أو سبب |
 | [`RUNTIME_VALIDATION_REQUIREMENTS.md`](RUNTIME_VALIDATION_REQUIREMENTS.md) | **٤ مطالبِ تشغيل** بسيناريوهاتها |
 | [`RAHALGO_SYSTEM_DISCOVERY.md`](RAHALGO_SYSTEM_DISCOVERY.md) | **HISTORICAL · SUPERSEDED** — خريطةُ النظام الأولى · أرقامُها مُتجاوَزة |
 
 ## الاكتشافاتُ — مُصنَّفةٌ بإثبات النتيجة
 
-### PROVEN DEFECT — ٢
+### PROVEN DEFECT — ٣
 
 | # | العيب | الثابتُ المكسور |
 |---|---|---|
 | **D1** | **فكُّ الإسناد لا يُسجَّل في `order_events`** (`rotation.go`) | تاريخُ الطلب يجب أن يفسّر كلَّ تبدّلِ حالة |
 | **D2** | **`convertLead` بلا معاملةٍ واحدة** · **وثلاثُ كتاباتٍ خطؤها مُهمَل** | إمّا أن يقع كلُّ التحويل أو لا شيءَ منه |
+| **D3** | **«تذكّرني» تنقلب دائمةً بعد أوّل تجديد توكن** (`auth/client.ts:135`) — **والمهلةُ ربعُ ساعة** | من رفض أن يُتذكّر لا تبقى جلستُه بعد إغلاق المتصفّح |
 
-### PROVEN RISK — ٦
+### PROVEN RISK — ٧
 
 `R1` بوّابةُ الحالة يُلتفّ عليها في موضع · `R2` خمسُ دوالٍّ يتيمةٍ
 (أخطرُها **تخطّي إثبات التسليم بلا زرّ**) · `R3` زبونٌ يصير `merchant`
 بلا موافقة · `R4` `treasury.go` يعتمد معاملةَ المنادي ·
-`R5` `PATCH stores/{id}/settings` بلا تدقيق · `R6` حِملُ قراءة الإعدادات
+`R5` `PATCH stores/{id}/settings` بلا تدقيق · `R6` حِملُ قراءة الإعدادات ·
+**`R7` قبولُ السائق: ثلاثُ كتاباتٍ خارجَ معاملةٍ واحدة والتعويضُ ناقصٌ**
 
 ### PRODUCT DECISION REQUIRED — ٤
 
@@ -115,12 +117,12 @@ CODE TRUTH BASELINE              = 26f93c5d
 STATIC DISCOVERY STATUS          = COMPLETE — PROVEN
 STATIC UNKNOWNS                  = 0
 RUNTIME VALIDATION REQUIREMENTS  = 4
-PROVEN DEFECTS                   = 2
-PROVEN RISKS                     = 6
+PROVEN DEFECTS                   = 3
+PROVEN RISKS                     = 7
 PRODUCT DECISIONS REQUIRED       = 4
 ```
 
-## الوثائقُ المعتمدة — تسع
+## الوثائقُ المعتمدة — عشر
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -129,10 +131,33 @@ PRODUCT DECISIONS REQUIRED       = 4
 | ٣ | [`SERVER_MUTATIONS_157.md`](SERVER_MUTATIONS_157.md) | ١٥٧ طفرة |
 | ٤ | [`WEB_MUTATIONS_131.md`](WEB_MUTATIONS_131.md) | ١٣١ موضعَ نداء |
 | ٥ | [`ORDER_TRANSITIONS_55.md`](ORDER_TRANSITIONS_55.md) | ٥٥ انتقالاً |
-| ٦ | [`CONFIG_IMPACT_MAP.md`](CONFIG_IMPACT_MAP.md) | ٦٠ مفتاحاً تشغيليّاً |
+| ٦ | [`CONFIG_IMPACT_MAP.md`](CONFIG_IMPACT_MAP.md) | ٩٥ مفتاحاً تشغيليّاً من ١١٨ |
 | ٧ | [`AUDIT_MAP.md`](AUDIT_MAP.md) | ٣٥ فعلاً حسّاساً |
 | ٨ | [`RUNTIME_VALIDATION_REQUIREMENTS.md`](RUNTIME_VALIDATION_REQUIREMENTS.md) | RV-1 … RV-4 |
 | ٩ | [`RAHALGO_SYSTEM_DISCOVERY.md`](RAHALGO_SYSTEM_DISCOVERY.md) | **HISTORICAL · SUPERSEDED** |
+| ١٠ | [`INDEPENDENT_REVIEW_RECONCILIATION.md`](INDEPENDENT_REVIEW_RECONCILIATION.md) | مطابقةُ المراجعة المستقلّة |
+
+
+## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
+
+**مراجعةٌ خارجيّةٌ على نقطة القياس نفسِها أسقطت أربعةَ ادّعاءاتٍ لي**،
+**وصحّت الأربعةُ كلُّها.** والتفصيل في
+[`INDEPENDENT_REVIEW_RECONCILIATION.md`](INDEPENDENT_REVIEW_RECONCILIATION.md).
+
+| المقام | كان | صار |
+|---|---|---|
+| **تعريفاتُ الإعدادات** | ١٢٧ | **١١٨** — و**١١٨+٩ مراجعِ `ShowWhen` = ١٢٧** |
+| **مفاتيحُ تشغيليّة** | ٦٠ | **٩٥ / ١١٨** |
+| **عرضٌ وهويّة** | ٢٦ | **٢٣ / ١١٨** |
+| **مُعرَّفٌ ولا يُقرأ · يُقرأ ولا يُعرَّف** | لم يُقس | **٠ · ٠** ✅ |
+| **`PROVEN DEFECTS`** | ٢ | **٣** — **+D3** «تذكّرني» تنقلب دائمةً بعد أوّل تجديد |
+| **`PROVEN RISKS`** | ٦ | **٧** — **+R7** قبولُ السائق: ثلاثُ كتاباتٍ بلا معاملة |
+
+**و`accept` لم تعد `PROVEN BEHAVIOR` آمنة**: القفلُ يمنع الإسنادَ المزدوج
+**ولا يمنع الحالةَ النصفيّة** حين يُلغى سياقُ الطلب بين الكتابة والانتقال.
+
+**ونقطةُ القياس لم تتغيّر** — `26f93c5d`، **ولا سطرَ شيفرةٍ تشغيليّةٍ مسّ.**
+
 
 ## قاعدةُ إبطال التجميد
 
