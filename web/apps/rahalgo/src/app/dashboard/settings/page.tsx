@@ -167,6 +167,32 @@ const boolText = (k: string, side: "on" | "off") =>
  * **ومفتاحٌ جديدٌ بلا سطرٍ هنا يرفع بنوعٍ خطأ** — فالافتراضُ مكتوبٌ عند
  * الاستعمال ليُرى.
  */
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **شبكةُ بطاقاتٍ لا كومةٌ بعرض الصفحة**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-٠٩-٠٥: «كل Setting كسطر/كرت أفقي بعرض الصفحة… يجعل
+ *  صفحات الإعدادات طويلة جداً وصعبة الإدارة».)
+ *
+ * **وثمانيةَ عشرَ مفتاحاً في كومةٍ واحدةٍ صفحةٌ لا تُقرأ** — و`platform`
+ * وحدَها ٣١، و`site` ٢٩، و`drivers` ٢٧.
+ *
+ * **والعددُ يتبع المساحةَ لا الجهاز**: `minmax` مع `auto-fill` تختار
+ * بنفسها كم بطاقةً تسع، **فلا رقمَ مثبَّتٌ يضيّق حقلاً في شاشةٍ متوسّطة.**
+ * والحدُّ الأدنى `20rem` — أضيقُ منه يقصّ حقلَ الرقم ولافتتَه.
+ */
+const GRID = "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))]";
+
+/**
+ * **وما لا يسع عموداً واحداً يمتدّ على الصفّ كلِّه.**
+ *
+ * **الخريطةُ والصورةُ والنصُّ الطويلُ والملفّ** — أربعةٌ لو حُشرت في
+ * `20rem` لصارت غيرَ صالحةٍ للاستعمال: **دبّوسٌ يُلتقط في نافذةٍ بعرض
+ * إبهام.** **والباقي كلُّه يسع عموداً** — رقمٌ ولافتةٌ وزرّ.
+ */
+const WIDE: ReadonlySet<Kind> = new Set<Kind>(["geo", "media", "longtext", "file"]);
+
 const MEDIA_KIND: Record<string, "platform_logo" | "auth_background" | "site_background"> = {
   "platform.logo": "platform_logo",
   "auth.background": "auth_background",
@@ -193,6 +219,22 @@ export default function SettingsPage() {
   const [sec, setSec] = useState("");
   /** **ترتيبُ الأقسام من الخادم** — فيه القسمُ الفارغُ الذي لا مفتاحَ فيه بعد. */
   const [order, setOrder] = useState<string[]>([]);
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * **والبحثُ يتخطّى التبويبات كلَّها**
+   * ══════════════════════════════════════════════════════════════════
+   *
+   * (قرارُ المالك ٢٠٢٦-٠٩-٠٥: «نتيجة البحث يجب أن تعرض Cards المطابقة
+   *  بصورة صحيحة حتى لو كانت Sections مطوية».)
+   *
+   * **ومئةٌ وثمانيةَ عشرَ مفتاحاً في سبعة تبويباتٍ وصناديقَ داخلها**:
+   * من يعرف ما يريد يبحث عنه، **ولا يتنقّل في سبعةِ ألسنةٍ يفتّش.**
+   *
+   * **ويبحث في الاسم المعروض وفي المفتاح الخام معاً** — فمن قرأ
+   * `sales.commission_percent` في وثيقةٍ يجده بها، **ومن يعرف «عمولة
+   * المندوب» وحدَها يجده بها.**
+   */
+  const [q, setQ] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -305,6 +347,24 @@ export default function SettingsPage() {
   const active = tab || groups[0]?.g || extraKeys[0] || "";
   const activeGroup = groups.find((x) => x.g === active);
 
+  /**
+   * **نتائجُ البحث من القائمة كلِّها — لا من التبويب المفتوح.**
+   *
+   * **و`visible` تُحترم كما هي**: مفتاحٌ أخفاه `show_when` لا يظهر في
+   * البحث أيضاً، **وإلّا فُتح بابٌ لضبط ما لا أثرَ له.**
+   */
+  const found = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle || !list) return null;
+    return list.filter(
+      (s) =>
+        visible(s, list) &&
+        (s.key.toLowerCase().includes(needle) ||
+          label(s.key).toLowerCase().includes(needle) ||
+          hint(s.key).toLowerCase().includes(needle)),
+    );
+  }, [q, list]);
+
   return (
     <div>
       <PageHeader icon={IconSettings} title={m.admin.settingsPage.title} />
@@ -314,6 +374,41 @@ export default function SettingsPage() {
         <Alert className="mb-4">{error}</Alert>
       )}
 
+      {/* **وحقلُ البحث فوق التبويبات لا داخلَ واحدٍ منها** — فهو يعبرها. */}
+      <div className="mb-4">
+        <Input
+          id="settings-search"
+          label=""
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={S.searchPlaceholder}
+          wrapperClassName="max-w-md"
+        />
+      </div>
+
+      {found !== null ? (
+        found.length === 0 ? (
+          <EmptyState icon={IconSettings} title={S.searchNoResults} />
+        ) : (
+          <>
+            <p className="mb-3 text-xs text-ink-muted">
+              {S.searchCount.replace("{n}", String(found.length))}
+            </p>
+            <div className={GRID}>
+              {found.map((s) => (
+                <SettingRow
+                  key={s.key}
+                  s={s}
+                  editable={isAdmin}
+                  onSaved={load}
+                  marginMode={marginMode}
+                />
+              ))}
+            </div>
+          </>
+        )
+      ) : (
+      <>
       <Tabs
         className="mb-4"
         items={[
@@ -388,15 +483,19 @@ export default function SettingsPage() {
 
               return (
                 <>
-                  {loose?.items.map((s) => (
-                    <SettingRow
-                      key={s.key}
-                      s={s}
-                      editable={isAdmin}
-                      onSaved={load}
-                      marginMode={marginMode}
-                    />
-                  ))}
+                  {!!loose?.items.length && (
+                    <div className={GRID}>
+                      {loose.items.map((s) => (
+                        <SettingRow
+                          key={s.key}
+                          s={s}
+                          editable={isAdmin}
+                          onSaved={load}
+                          marginMode={marginMode}
+                        />
+                      ))}
+                    </div>
+                  )}
 
                   {names.length > 1 && (
                     <Tabs
@@ -438,7 +537,7 @@ export default function SettingsPage() {
                                 فتُرفع فيه صورةٌ لا تُرى** — وهي عائلةُ الخلل
                                 نفسُها التي نُظّفت في «أبوابٌ لا ينادِيها أحد». */}
                             {(shop || home) && <BannersPanel isAdmin={isAdmin} placement="home" />}
-                            <div className="space-y-3">
+                            <div className={GRID}>
                             {rows.map((s) => (
                               <SettingRow
                                 key={s.key}
@@ -454,7 +553,7 @@ export default function SettingsPage() {
                       }}
                     />
                   ) : (
-                    <div className="space-y-3">
+                    <div className={GRID}>
                       {/* **وما لا قسمَ له لا يُرسم مرّتين.**
 
                           (شكوى المالك ٢٠٢٦-٠٨-٠٩ على قسم «التطبيق»: «ليش
@@ -493,6 +592,8 @@ export default function SettingsPage() {
           <p className="text-sm text-ink-muted">{m.admin.broadcast.hint}</p>
           <BroadcastPanel />
         </div>
+      )}
+      </>
       )}
     </div>
   );
@@ -579,7 +680,19 @@ function SettingRow({
   }
 
   return (
-    <Card>
+    /* **والحسّاسُ يُعرَف بحرفه لا بلونِ صفحةٍ كاملة.**
+
+       (قرارُ المالك ٢٠٢٦-٠٩-٠٥: «Distinction بصرياً واضحاً ولكن غير مزعج…
+        لا تجعل كل الصفحة حمراء».)
+
+       **والشارةُ تقول «حسّاس» والحدُّ يقوله قبل أن تُقرأ** — أربعةَ عشرَ
+       مفتاحاً من ١١٨، **فالحدُّ الملوَّنُ يبقى استثناءً يُرى.**
+
+       **والامتدادُ على الصفّ للأربعة الواسعة** — انظر `WIDE`. */
+    <Card
+      tone={s.sensitive ? "accent" : "default"}
+      className={WIDE.has(s.kind) ? "col-span-full" : ""}
+    >
       <form onSubmit={submit}>
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="font-medium">{label(s.key)}</span>
