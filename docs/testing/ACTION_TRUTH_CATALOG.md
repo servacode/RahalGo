@@ -1047,6 +1047,119 @@ POST /public/quote  →  handleQuote  →  orders.Quote(items, lat, lng)
 
 ---
 
+# ٢-هـ · ربطُ طفرات العميل بالشاشات
+
+---
+
+## E-01 · جانبُ الجوّال — **٦٩ طفرة** ✅
+
+**استُخرجت آليّاً**: لكلّ `HttpMethod.{Post,Put,Patch,Delete}` في
+`shared/**/*Api.kt` — **الدالّةُ والمسارُ**، ثمّ بُحث عن مُنادِيها في
+التطبيقات الأربعة و`ui` و`map`.
+
+| | العدد |
+|---|---|
+| **طفراتُ عقد الـAPI** | **٦٩** |
+| ↳ **بلا مسارٍ مُلتقَط** | **٠** ✅ |
+| ↳ **مربوطةٌ بمُنادٍ في شاشة** | **٦٤** |
+| ↳ **بلا مُنادٍ إطلاقاً** | **٥** |
+
+### الخمسُ اليتيمة — **فُحصت واحدةً واحدةً**
+
+| # | الدالّة | المسار | الحكم |
+|---|---|---|---|
+| **O1** | `AuthApi.resetRequest` | `POST /auth/password/reset/request` | **ميّتة** — انظر أدناه |
+| **O2** | `AccountApi.whatsappRequest` | `POST /auth/whatsapp/request` | **ميّتة** ⚠️ |
+| **O3** | `DriverApi.skipProof` | `POST /driver/orders/{id}/proof/skip` | **ميّتة** ⚠️ |
+| **O4** | `MerchantApi.createSection` | `POST /merchant/stores/{id}/menu/sections` | **ميّتة** ⚠️ |
+| **O5** | `DriverApi.decline` | `POST /driver/orders/{id}/decline` | **⚠️ ذُكرت مرّةً** — والسياقُ لم يُقرأ |
+
+### O1 — **مُثبَتٌ بالبديل** ✅
+
+**بُحث عن مسار الاستعادة في الواجهة فوُجد**:
+
+```kotlin
+// AuthViewModel.sendResetCode
+val t = backend.auth.waTicket(current.phone.trim(), "reset")
+openWhatsApp(t.waUrl)
+```
+
+**فالاستعادةُ تمرّ بتذكرةِ واتساب** (`POST /auth/wa/ticket`)، **لا
+بـ`resetRequest`.**
+
+> **`resetRequest` بقيّةُ مسارٍ قديمٍ حلّ محلَّه واتساب.**
+> **PROVEN BEHAVIOR** — الدالّةُ ميّتةٌ في العميل، **والمسارُ حيٌّ في
+> الخادم** (`POST /auth/password/reset/request` مسجَّلٌ ومفتوح).
+
+### التصنيف — **PROVEN RISK (R2)**
+
+**خمسُ دوالٍّ في عقد الـAPI بلا مُنادٍ** — **وثلاثةٌ منها تخصّ قدراتٍ
+حيّةً في الخادم**:
+
+| القدرة | المسارُ في الخادم | العميل |
+|---|---|---|
+| **تخطّي إثبات التسليم** | `POST /driver/orders/{id}/proof/skip` ✅ حيّ | **لا زرَّ** ⚠️ |
+| **إنشاءُ قسمِ قائمة من تطبيق المتجر** | `POST /merchant/stores/{id}/menu/sections` ✅ حيّ | **لا زرَّ** ⚠️ |
+| **توثيقُ واتساب** | `POST /auth/whatsapp/request` ✅ حيّ | **لا زرَّ** ⚠️ |
+
+**و«تخطّي الإثبات» أخطرُها**: المحرّكُ يقبل عذراً عن الصورة
+(`pod_skip_reason`) **واللوحةُ تعرضه** («تعذّر التصوير: …») —
+**والسائقُ لا يملك زرّاً يرسله.** ❓ **U35 — أهو محذوفٌ عمداً؟**
+
+---
+
+## E-02 · جانبُ الويب — **١٣١ طفرةً مربوطةً بسطحها** ✅
+
+**استُخرجت آليّاً**: لكلّ `method: "POST|PUT|PATCH|DELETE"` — **الملفُّ
+والسطرُ والمسار**، ثمّ صُنّفت بسطحها.
+
+| | العدد |
+|---|---|
+| `POST` ٩٠ · `PATCH` ٢٢ · `DELETE` ١٠ · `PUT` ٩ | **١٣١** |
+| **مربوطةٌ بملفٍّ وسطرٍ وسطح** | **١٣١** ✅ |
+| ↳ **مسارُها مُلتقَطٌ آليّاً** | **١٢٠** |
+| ↳ **مسارُها يُبنى بمتغيّر** (يحتاج قراءةً يدويّة) | **١١** — `StoreActions` ×٣ · `FileUpload` ×٢ · `ImageUpload` … |
+
+### التوزّعُ على الأسطح — **٣٠ سطحاً**
+
+| السطح | طفرات |
+|---|---|
+| **`components/admin/*`** (المكوّناتُ الإداريّة) | **٥٩** |
+| `packages/auth/src/client.ts` | **١٤** — طبقةُ الجلسة والتوكن |
+| `packages/ui/AccountSettings.tsx` | **١٠** — الحسابُ المشترك |
+| `dashboard/sections` | ٦ |
+| `dashboard/users` | ٥ |
+| `packages/ui/MenuManager.tsx` | ٤ |
+| `dashboard/expenses` | ٣ |
+| `packages/ui/AddressBook.tsx` | ٣ |
+| `dashboard/{merchants,promos}` | ٢ لكلٍّ |
+| `packages/ui/{FileUpload,NotificationsPage,WhatsAppVerify}` | ٢ لكلٍّ |
+| `dashboard/{cash,emergencies,incentives,leads,payouts,settings}` | ١ لكلٍّ |
+| `site/join` | ١ |
+| `packages/ui/{ImageUpload,Notifications,OrderChat,StoreHours,WalletPage,Favorites,DashboardChrome,useLocationBeacon}` | ١ لكلٍّ |
+| `packages/auth/{PasswordGate,routing}` | ١ لكلٍّ |
+
+### حقائقُ ظهرت من هذا التوزّع
+
+| # | المُثبَت |
+|---|---|
+| **W1** | **٥٩ طفرةً من ١٣١ في `components/admin/`** — **فأكثرُ من نصف طفرات الويب في مكوّناتٍ لا في صفحات**، ولا تُرى في شجرة المسارات |
+| **W2** | **١٤ طفرةً في `packages/auth/client.ts`** — الدخولُ والتجديدُ والخروج · **طبقةٌ واحدةٌ لكلّ الأسطح** ✅ |
+| **W3** | **`packages/ui` فيه ٣٢ طفرة** — **مكتبةُ العرض تُطفِر الخادم**، وهو ما يجعل الفعلَ الواحدَ يخدم أكثرَ من سطح |
+| **W4** | **`AddressBook` و`Favorites` و`OrderChat` تُطفِر** — **وهي من الجزيرة التي ظننتُها ميّتة**، فهي حيّةٌ عبر `AccountSettings` |
+
+### أحكامُ الربط — **CANONICAL**
+
+> **`CLIENT MUTATION CALL SITES (MOBILE): 69/69 IDENTIFIED`** ✅
+> **`↳ LINKED TO A CALLING SCREEN: 64/69`** ✅
+> **`↳ ORPHANED — EXPLAINED: 5/69`** ✅
+> **`CLIENT MUTATION CALL SITES (WEB): 131/131 LINKED TO FILE+LINE+SURFACE`** ✅
+> **`↳ PATH AUTO-RESOLVED: 120/131`** · **`↳ NEEDS MANUAL READ: 11/131`**
+> **`TOTAL: 200/200 IDENTIFIED AND SURFACE-MAPPED`** ✅
+> **`↳ FULLY DESCRIBED (control · validation · loading · error · retry): 0/200`** ⚠️
+
+---
+
 # ٣ · ما لم يُوصف بعد — بالأرقام
 
 | المجموعة | موصوف | المقام |
