@@ -87,7 +87,11 @@ func (s *Store) Get(ctx, key, out) error {
 
 ---
 
-## الجدولُ الكامل — ٦٠ مفتاحاً تشغيليّاً
+## الجدولُ — ٦٠ من ٩٥ · **ناقصٌ ٣٥ · HISTORICAL PARTIAL**
+
+> **⚠️ هذا الجدولُ ليس القائمةَ النهائيّة.** **والخمسةُ والثلاثون الناقصةُ
+> مجدولةٌ في** [`INDEPENDENT_REVIEW_RECONCILIATION.md`](INDEPENDENT_REVIEW_RECONCILIATION.md)
+> **قسم ٣.**
 
 | المفتاح | من يقرؤه |
 |---|---|

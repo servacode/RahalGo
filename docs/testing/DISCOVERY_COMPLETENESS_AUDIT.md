@@ -52,7 +52,7 @@ Static unknowns                         0    ✅
 Runtime validation requirements         4
 ```
 
-## الوثائقُ الأربع عشرة — **العددُ مُثبَتٌ من `ls docs/testing/*.md`**
+## الوثائقُ الخمس عشرة — **العددُ مُثبَتٌ من `ls docs/testing/*.md`**
 
 | الوثيقة | ما فيها |
 |---|---|
@@ -70,6 +70,7 @@ Runtime validation requirements         4
 | [`INDEPENDENT_REVIEW_RECONCILIATION_3.md`](INDEPENDENT_REVIEW_RECONCILIATION_3.md) | **الدفعةُ الثالثة** — ٩ ادّعاءاتِ أمن |
 | [`INDEPENDENT_REVIEW_RECONCILIATION_4.md`](INDEPENDENT_REVIEW_RECONCILIATION_4.md) | **الدفعةُ الرابعة** — أندرويد ودورةُ الحياة |
 | [`INDEPENDENT_REVIEW_RECONCILIATION_5.md`](INDEPENDENT_REVIEW_RECONCILIATION_5.md) | **الدفعةُ الخامسة** — البنيةُ والتعافي والأدوات |
+| [`FINAL_STATIC_CLOSEOUT.md`](FINAL_STATIC_CLOSEOUT.md) | **الإغلاقُ النهائيّ — السجلّاتُ القانونيّة** |
 
 ## الاكتشافاتُ — مُصنَّفةٌ بإثبات النتيجة
 
@@ -120,7 +121,7 @@ Runtime validation requirements         4
 
 ### PROVEN BEHAVIOR — آمنٌ بالتصميم
 
-`accept` بلا مفتاح تكرار (القفلُ والحالةُ يكفيان) · تعويضُ السائق
+`accept` **لا يُسنِد سائقين اثنين** (القفلُ والحالةُ يكفيان) — **⚠️ وهذا وحدَه، ومسارُ فشلِه `R7`** · تعويضُ السائق
 (محميٌّ منذ ٢٠٢٦-٠٨-٠٨) · إنهاءُ الورديّة ممنوعٌ على من بيده طلب ·
 طابورُ المواقع ٢٠٠ نقطة · المعدِّلاتُ تُرفض بمعرّفٍ قديم · البثُّ
 بالأدوار · حراسُ الملكيّة · `default` في الحارس منعٌ لا سماح
@@ -131,7 +132,7 @@ Runtime validation requirements         4
 «١٩ مكوّناً ميّتاً»→حيّةٌ كلُّها · «٤ نصوصٍ ميّتة»→اثنان مستعملان ·
 «المندوبُ لا يُشعَر بالقبول»→يُشعَر · «جدولا المعدِّلات بلا كاتب»→
 يُكتبان مع الصنف · «٢٧ طفرةً بلا تدقيق»→التدقيقُ في أربع طبقات ·
-«٣٨ مفتاحاً تشغيليّاً»→٦٠
+«٣٨ مفتاحاً تشغيليّاً»→٦٠→**٩٥** · «١٢٧ مفتاحاً»→**١١٨**
 
 ---
 ---
@@ -139,10 +140,13 @@ Runtime validation requirements         4
 # STATIC DISCOVERY FREEZE
 
 > **هذا القسمُ مُجمَّد.** ولا يُعدَّل إلّا بتحليلِ أثرِ تغيير.
+>
+> **والسجلّاتُ القانونيّةُ الكاملةُ في**
+> [`FINAL_STATIC_CLOSEOUT.md`](FINAL_STATIC_CLOSEOUT.md) — **العيوبُ والمخاطرُ والقراراتُ ومطالبُ التشغيل، كلٌّ بحقوله.** **وهي تُقرأ أوّلاً.**
 
 ```
 CODE TRUTH BASELINE              = 26f93c5d
-STATIC DISCOVERY STATUS          = COMPLETE — PROVEN
+STATIC DISCOVERY STATUS          = CLOSED — PROVEN
 STATIC UNKNOWNS                  = 0
 RUNTIME VALIDATION REQUIREMENTS  = 8
 PROVEN DEFECTS                   = 19
@@ -152,7 +156,7 @@ TEST-INFRA GAPS                  = 3
 PRODUCT DECISIONS REQUIRED       = 7
 ```
 
-## الوثائقُ المعتمدة — أربع عشرة
+## الوثائقُ المعتمدة — خمس عشرة
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -170,6 +174,7 @@ PRODUCT DECISIONS REQUIRED       = 7
 | ١٢ | [`INDEPENDENT_REVIEW_RECONCILIATION_3.md`](INDEPENDENT_REVIEW_RECONCILIATION_3.md) | مطابقةُ الدفعة الثالثة — الأمن |
 | ١٣ | [`INDEPENDENT_REVIEW_RECONCILIATION_4.md`](INDEPENDENT_REVIEW_RECONCILIATION_4.md) | مطابقةُ الدفعة الرابعة — أندرويد |
 | ١٤ | [`INDEPENDENT_REVIEW_RECONCILIATION_5.md`](INDEPENDENT_REVIEW_RECONCILIATION_5.md) | مطابقةُ الدفعة الخامسة — البنية والأدوات |
+| ١٥ | [`FINAL_STATIC_CLOSEOUT.md`](FINAL_STATIC_CLOSEOUT.md) | **السجلّاتُ القانونيّةُ النهائيّة — تُقرأ أوّلاً** |
 
 
 ## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
