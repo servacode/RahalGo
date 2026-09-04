@@ -52,7 +52,7 @@ Static unknowns                         0    ✅
 Runtime validation requirements         4
 ```
 
-## الوثائقُ الإحدى عشرة — **العددُ مُثبَتٌ من `ls docs/testing/*.md`**
+## الوثائقُ الاثنتا عشرة — **العددُ مُثبَتٌ من `ls docs/testing/*.md`**
 
 | الوثيقة | ما فيها |
 |---|---|
@@ -63,14 +63,15 @@ Runtime validation requirements         4
 | [`ORDER_TRANSITIONS_55.md`](ORDER_TRANSITIONS_55.md) | **٥٥ انتقالاً** بالأدوار والعلّة والمال |
 | [`CONFIG_IMPACT_MAP.md`](CONFIG_IMPACT_MAP.md) | **٩٥ مفتاحاً تشغيليّاً من ١١٨** بقارئيه وأثره |
 | [`AUDIT_MAP.md`](AUDIT_MAP.md) | **٣٥ فعلاً حسّاساً** → حدثُ تدقيقٍ أو سبب |
-| [`RUNTIME_VALIDATION_REQUIREMENTS.md`](RUNTIME_VALIDATION_REQUIREMENTS.md) | **٦ مطالبِ تشغيل** بسيناريوهاتها |
+| [`RUNTIME_VALIDATION_REQUIREMENTS.md`](RUNTIME_VALIDATION_REQUIREMENTS.md) | **٧ مطالبِ تشغيل** بسيناريوهاتها |
 | [`RAHALGO_SYSTEM_DISCOVERY.md`](RAHALGO_SYSTEM_DISCOVERY.md) | **HISTORICAL · SUPERSEDED** — خريطةُ النظام الأولى · أرقامُها مُتجاوَزة |
 | [`INDEPENDENT_REVIEW_RECONCILIATION.md`](INDEPENDENT_REVIEW_RECONCILIATION.md) | **الدفعةُ الأولى** — ٤ ادّعاءاتٍ خارجيّة |
 | [`INDEPENDENT_REVIEW_RECONCILIATION_2.md`](INDEPENDENT_REVIEW_RECONCILIATION_2.md) | **الدفعةُ الثانية** — ٩ ادّعاءات |
+| [`INDEPENDENT_REVIEW_RECONCILIATION_3.md`](INDEPENDENT_REVIEW_RECONCILIATION_3.md) | **الدفعةُ الثالثة** — ٩ ادّعاءاتِ أمن |
 
 ## الاكتشافاتُ — مُصنَّفةٌ بإثبات النتيجة
 
-### PROVEN DEFECT — ٩
+### PROVEN DEFECT — ١٥
 
 | # | العيب | الثابتُ المكسور |
 |---|---|---|
@@ -83,22 +84,30 @@ Runtime validation requirements         4
 | **D7** | **سقفُ نقد السائق يقيس المحصَّل لا المكشوف** (`driver_handlers.go:578`) | «ما يُسمح أن يحمله قبل أن يورّد» — نصُّ المعجم |
 | **D8** | **الطلبُ الخاصُّ لا يطلب توثيقَ واتساب** (`orders/custom.go`) | لا طلبَ من رقمٍ غيرِ موثَّق |
 | **D9** | **الطلبُ الخاصُّ بلا حدثِ `''→pending`** (`orders/custom.go:98`) — **مئةٌ في المئة** | تاريخُ الطلب يفسّر كلَّ تبدّلِ حالة — ثابتُ `D1` نفسُه |
+| **D10** | **استعادةُ كلمة المرور تُبطل نوعَ عميلٍ واحدٍ لا الجلساتِ كلَّها** (`identity/service.go:696`) | «من سرق الحساب يخرج فوراً» — نصُّ السطر نفسِه |
+| **D11** | **`security.force_password_change` بلا بوّابةٍ في تطبيقات أندرويد الأربعة** — والحقلُ غيرُ موجودٍ في نموذج المستخدم | «خمسُ بوّاباتٍ تقرأ `must_change_password`» — نصُّ المعجم |
+| **D12** | **`Push.unregister` بلا منادٍ** — رمزُ الدفع يبقى بعد الخروج | «يُلغى عند الخروج — وإلّا وصلت أخبار حساب خرج إلى جهازه» |
+| **D13** | **سردُ `/media/` مفتوحٌ بلا مصادقة — وإثباتُ التسليم فيه** (`media.go:490`) | صورةُ إثباتٍ خاصّةٌ لا تُسرَد لزائر |
+| **D14** | **`handleWS` لا يفحص `ActiveStatus`** — موقوفٌ يفتح قناةَ بثٍّ جديدة (`ws.go:53`) | ما مُنع من كلّ نداءٍ يُمنع من البثّ |
+| **D15** | **`AdminCreateUser` في خطوتين** — حسابٌ بأدواره بلا كلمة مرور (`identity/admin.go:81,101`) | «إلزامية — لا حساب موظف بلا كلمة مرور» |
 
-### PROVEN RISK — ١٢
+### PROVEN RISK — ١٦
 
 `R1` بوّابةُ الحالة يُلتفّ عليها في موضع · `R2` خمسُ دوالٍّ يتيمةٍ
 (أخطرُها **تخطّي إثبات التسليم بلا زرّ**) · `R3` زبونٌ يصير `merchant`
 بلا موافقة · `R4` `treasury.go` يعتمد معاملةَ المنادي ·
 `R5` `PATCH stores/{id}/settings` بلا تدقيق · `R6` حِملُ قراءة الإعدادات ·
 **`R7` قبولُ السائق: ثلاثُ كتاباتٍ خارجَ معاملةٍ واحدة والتعويضُ ناقصٌ** ·
-**`R8` مفتاحُ منع التكرار يعلق `in_progress` يوماً بعد نجاحٍ وانقطاع** · **`R9` لا حدَّ معدّلٍ عامّ — ٢٧٩ مساراً من ٢٩١ بلا حدّ** · **`R10` سائقٌ واحدٌ يقبل طلبين متزامنين فيتجاوز `max_active`** · **`R11` الطلبُ الخاصُّ يُنشأ بلا معاملة** · **`R12` ثلاثُ طبقاتِ تدقيقٍ تكتب بسياق الطلب فتموت بانقطاعه**
+**`R8` مفتاحُ منع التكرار يعلق `in_progress` يوماً بعد نجاحٍ وانقطاع** · **`R9` لا حدَّ معدّلٍ عامّ — ٢٧٩ مساراً من ٢٩١ بلا حدّ** · **`R10` سائقٌ واحدٌ يقبل طلبين متزامنين فيتجاوز `max_active`** · **`R11` الطلبُ الخاصُّ يُنشأ بلا معاملة** · **`R12` ثلاثُ طبقاتِ تدقيقٍ تكتب بسياق الطلب فتموت بانقطاعه** ·
+**`R13` إعادةُ الإدارة لكلمة المرور لا تُبطل جلسةً — والعقدُ غيرُ مكتوب** · **`R14` اتّصالُ البثّ لا يُراجَع بعد المصافحة — إبطالٌ ولا انتهاءُ توكن** · **`R15` سحبُ الدور لا يسري: ربعُ ساعةٍ في النداءات وبلا حدٍّ في البثّ** · **`R16` أخطاءُ Redis مُهمَلةٌ و`SessionRevoked` تفشل مفتوحة**
 
-### PRODUCT DECISION REQUIRED — ٥
+### PRODUCT DECISION REQUIRED — ٦
 
 `B3` لا إشعارَ دافعاً للزبون عند قبول السائق · `B4` اللوحةُ تُسند إلى
 سائقٍ موقعُه متوقّف · `U46` الإشعارُ يفتح الشاشةَ لا الطلب ·
 `D-03` تعليقُ متجرٍ لا يمسّ طلباتِه الجارية ·
-**`D-04` الطلبُ الخاصُّ بلا حارسِ منطقةِ توصيل — أمقصودٌ هو؟**
+**`D-04` الطلبُ الخاصُّ بلا حارسِ منطقةِ توصيل — أمقصودٌ هو؟** ·
+**`D-05` إعادةُ كلمة المرور من الإدارة — أتُقطع الجلساتُ أم تبقى؟**
 
 ### PROVEN BEHAVIOR — آمنٌ بالتصميم
 
@@ -126,13 +135,13 @@ Runtime validation requirements         4
 CODE TRUTH BASELINE              = 26f93c5d
 STATIC DISCOVERY STATUS          = COMPLETE — PROVEN
 STATIC UNKNOWNS                  = 0
-RUNTIME VALIDATION REQUIREMENTS  = 6
-PROVEN DEFECTS                   = 9
-PROVEN RISKS                     = 12
-PRODUCT DECISIONS REQUIRED       = 5
+RUNTIME VALIDATION REQUIREMENTS  = 7
+PROVEN DEFECTS                   = 15
+PROVEN RISKS                     = 16
+PRODUCT DECISIONS REQUIRED       = 6
 ```
 
-## الوثائقُ المعتمدة — إحدى عشرة
+## الوثائقُ المعتمدة — اثنتا عشرة
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -147,6 +156,7 @@ PRODUCT DECISIONS REQUIRED       = 5
 | ٩ | [`RAHALGO_SYSTEM_DISCOVERY.md`](RAHALGO_SYSTEM_DISCOVERY.md) | **HISTORICAL · SUPERSEDED** |
 | ١٠ | [`INDEPENDENT_REVIEW_RECONCILIATION.md`](INDEPENDENT_REVIEW_RECONCILIATION.md) | مطابقةُ المراجعة المستقلّة |
 | ١١ | [`INDEPENDENT_REVIEW_RECONCILIATION_2.md`](INDEPENDENT_REVIEW_RECONCILIATION_2.md) | مطابقةُ الدفعة الثانية |
+| ١٢ | [`INDEPENDENT_REVIEW_RECONCILIATION_3.md`](INDEPENDENT_REVIEW_RECONCILIATION_3.md) | مطابقةُ الدفعة الثالثة — الأمن |
 
 
 ## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
@@ -185,6 +195,24 @@ PRODUCT DECISIONS REQUIRED       = 5
 
 **وأربعةٌ منها من بابٍ واحد**: **الطلبُ الخاصُّ يمرّ من طريقٍ ثانٍ لا حرّاسَ
 فيه** — **وتعليقُه يقول «طلبٌ كسائر الطلبات».**
+
+**ونقطةُ القياس لم تتغيّر** — `26f93c5d`، **ولا سطرَ شيفرةٍ تشغيليّةٍ مسّ.**
+
+
+## ⚠️ الدفعةُ الثالثة — **الأمن · ٢٠٢٦-٠٩-٠٤**
+
+**تسعةُ ادّعاءاتٍ أمنيّةٍ أُعيد قياسُها، وصحّت التسعة.** والتفصيل في
+[`INDEPENDENT_REVIEW_RECONCILIATION_3.md`](INDEPENDENT_REVIEW_RECONCILIATION_3.md).
+
+| المقام | كان | صار |
+|---|---|---|
+| `PROVEN DEFECTS` | ٩ | **١٥** — D10 الاستعادة · D11 تبديلُ الكلمة · D12 رمزُ الدفع · **D13 سردُ الوسائط** · D14 البثّ · D15 إنشاءُ الموظّف |
+| `PROVEN RISKS` | ١٢ | **١٦** — R13 … R16 |
+| `PRODUCT DECISIONS REQUIRED` | ٥ | **٦** — +D-05 |
+| `RUNTIME VALIDATION REQUIREMENTS` | ٦ | **٧** — +RV-7 |
+
+**وأخطرُها `D13`** — **`/media/` يسرد مجلّداتِه لزائرٍ بلا حساب، وإثباتاتُ
+التسليم في الشجرة نفسِها.** **ولا يحتاج عطلاً ولا تزامناً ولا حساباً.**
 
 **ونقطةُ القياس لم تتغيّر** — `26f93c5d`، **ولا سطرَ شيفرةٍ تشغيليّةٍ مسّ.**
 
