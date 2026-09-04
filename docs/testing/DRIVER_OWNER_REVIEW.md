@@ -233,6 +233,16 @@ MainActivity.kt:532   gesturesEnabled = false
 
 # ٩ · إعادةُ تقييم الأسئلة القديمة — **٨**
 
+> # ⚠️ **CLOSED — OWNER DECISION ٢٠٢٦-٠٩-٠٤**
+>
+> **الستُّ الباقيةُ أدناه أُغلقت كلُّها بـ`DPC-6…DPC-11`.**
+> **والمقارنةُ بالشيفرة في**
+> [`DRIVER_FINAL_PRODUCT_DECISIONS.md`](DRIVER_FINAL_PRODUCT_DECISIONS.md):
+> **`SATISFIED` واحد · `PARTIAL` اثنان · `CONTRADICTS` ثلاثة.**
+> **و`DRIVER OPEN OWNER DECISIONS = 0`.**
+
+
+
 | ID | السؤال | الحال بعد قرارات اليوم |
 |---|---|---|
 | **DD-1** | **رقمُ المتجر للسائق** | ⚠️ **ما زال مفتوحاً** — **ولم تمسّه السبعة** |
@@ -324,7 +334,7 @@ FROZEN COUNTERS    = 19 عيباً · 24 خطراً — بلا تبديل
 | **🆕 P-D3** | **`OBS-D1`** — الورديّةُ وإعادةُ تشغيل الجهاز | **نعم** |
 
 ```
-DRIVER RUNTIME CHECKS STILL REQUIRED = 8
+DRIVER RUNTIME CHECKS STILL REQUIRED = 9   ← +P-D4 (٢٠٢٦-٠٩-٠٤)
 ```
 
 ---
@@ -344,7 +354,7 @@ NEW DRIVER UX/PERFORMANCE GAPS      = 3    (زرُّ الورديّة · الد�
 NEW PROVEN DEFECTS = 0
 NEW PROVEN RISKS   = 0
 
-DRIVER OPEN OWNER DECISIONS = 6
+DRIVER OPEN OWNER DECISIONS = 0    ← أُغلقت كلُّها ٢٠٢٦-٠٩-٠٤
     DD-1  رقمُ المتجر للسائق
     DD-2  الخروجُ وبيده طلبٌ حيّ
     DD-3  سقفُ النقد يُكتشف بعد الضغط   (نصفُ مغلق)
@@ -352,13 +362,13 @@ DRIVER OPEN OWNER DECISIONS = 6
     DD-7  صوتٌ مميّزٌ لوصول عرض
     DD-8  إيقافُ سائقٍ بيده طلب
 
-DRIVER RUNTIME CHECKS STILL REQUIRED = 8
+DRIVER RUNTIME CHECKS STILL REQUIRED = 9   ← +P-D4 (٢٠٢٦-٠٩-٠٤)
 
 DRIVER CODE UNDERSTANDING   = COMPLETE
 DRIVER OWNER MANUAL REVIEW  = COMPLETE
 
-DRIVER PRODUCT DECISIONS CLOSED = NO
-DRIVER APP PRODUCT REVIEW       = OPEN
+DRIVER PRODUCT DECISIONS CLOSED = YES  ← ٢٠٢٦-٠٩-٠٤
+DRIVER APP PRODUCT REVIEW       = CLOSED  ← ٢٠٢٦-٠٩-٠٤
 
 DRIVER APP VERIFIED         = NO
 DRIVER READY FOR PRODUCTION = NOT YET EVALUATED

@@ -630,6 +630,16 @@ DRIVER KNOWN RISKS AFFECTING IT   = 11
 
 # ٢٢ · PRODUCT DECISIONS — DRIVER
 
+> # ⚠️ **RESOLVED — OWNER DECISION ٢٠٢٦-٠٩-٠٤**
+>
+> **الثمانيةُ أدناه أُغلقت كلُّها** — **خمسٌ بـ`DPC-6…DPC-11` وثلاثٌ
+> بقرارات المراجعة (`DPC-4` · `DPC-5`).**
+> **والعقدُ النهائيُّ في**
+> [`DRIVER_FINAL_PRODUCT_DECISIONS.md`](DRIVER_FINAL_PRODUCT_DECISIONS.md).
+> **وما دونه يبقى للتاريخ.**
+
+
+
 **ما لا يحسمه الكودُ ولا العقودُ المعتمدة.**
 
 | ID | السؤال | السلوكُ اليوم | يسبق تصميمَ الاختبار؟ |
@@ -682,6 +692,15 @@ DRIVER KNOWN RISKS AFFECTING IT   = 11
 
 # ٢٤ · OBSERVATIONS — **خارجَ السجلّات المجمَّدة**
 
+> # ⚠️ **أربعٌ من الستّ أُغلقت — ٢٠٢٦-٠٩-٠٤**
+>
+> **`OBS-D2` → `DPC-9`** · **`OBS-D3` → `DPC-4` و`DPC-8`** ·
+> **`OBS-D4` → `DPC-6` (مسموحٌ صراحةً)** · **`OBS-D5` → `DPC-4` و`DPC-5`**.
+> **وباقيتان**: **`OBS-D1`** التعافي بعد إعادة التشغيل · **`OBS-D6`**
+> لا مفتاحَ إعداداتٍ للملاحة.
+
+
+
 | ID | ما هو | تصنيفٌ مقترَح |
 |---|---|---|
 | **OBS-D1** | **الخدمةُ لا تعود بعد إعادة تشغيل الجهاز** — **ولا مستقبِلَ `BOOT_COMPLETED`** (قِيس) · **و`on_shift` يبقى `true` في الخادم** | **فجوةُ منتج** |
@@ -705,7 +724,7 @@ DRIVER ACTIONS MAPPED     = 31/31
 DRIVER ENDPOINTS MAPPED   = 24/24
 DRIVER-AFFECTING SETTINGS = 38 behaviour + 8 display
 
-DRIVER OPEN PRODUCT QUESTIONS     = 8    (DD-1 … DD-8)
+DRIVER OPEN PRODUCT QUESTIONS     = 0    (أُغلقت كلُّها ٢٠٢٦-٠٩-٠٤)
 DRIVER KNOWN DEFECTS AFFECTING IT = 10   (5 مباشرة · 5 غيرُ مباشرة)
 DRIVER KNOWN RISKS AFFECTING IT   = 11   (6 مباشرة · 5 غيرُ مباشرة)
 DRIVER RUNTIME-ONLY QUESTIONS     = 5    (RV-2 · RV-5 · RV-8 + جهازٌ لـD17 · D18)
@@ -715,8 +734,9 @@ OPERATIONAL CODE CHANGES = 0
 FROZEN COUNTERS CHANGED  = NO
 ```
 
-> # **`READY FOR OWNER DISCUSSION = YES`**
+> # **`DRIVER APP PRODUCT REVIEW = CLOSED`** — **٢٠٢٦-٠٩-٠٤**
 >
-> **ولا يُقال `DRIVER APP REVIEW = CLOSED`.**
+> **والعقدُ النهائيُّ في** [`DRIVER_FINAL_PRODUCT_DECISIONS.md`](DRIVER_FINAL_PRODUCT_DECISIONS.md).
+> **ولا يعني ذلك تحقّقاً وظيفيّاً ولا أمنيّاً ولا جاهزيّةَ إنتاج.**
 
 **ولا يُنتقل إلى تطبيق المتجر قبل أن يجرّب المالكُ تطبيقَ السائق ويناقش.**
