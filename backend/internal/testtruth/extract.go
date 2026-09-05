@@ -361,14 +361,34 @@ func min(a, b int) int {
 // ══════════════════════════════════════════════════════════════════════
 
 var (
-	reDefectRow = regexp.MustCompile("(?m)^\\| \\*\\*(D\\d+)\\*\\* \\| ([^|]+) \\|")
-	reRiskRow   = regexp.MustCompile("(?m)^\\| \\*\\*(R\\d+)\\*\\* \\| ([^|]+) \\|")
+	// **العنوانُ ثمّ المجالُ ثمّ ثلاثةُ أعمدةٍ تُقفَز ثمّ الشدّة** — وهي
+	// السابعةُ في جدول العيوب.
+	reDefectRow = regexp.MustCompile("(?m)^\\| \\*\\*(D\\d+)\\*\\* \\| ([^|]+) \\| ([^|]+) \\|(?:[^|]*\\|){3} ([^|]+) \\|")
+	// **وجدولُ المخاطر لا عمودَ شدّةٍ فيه** — العنوانُ فالمجالُ لا غير.
+	reRiskRow = regexp.MustCompile("(?m)^\\| \\*\\*(R\\d+)\\*\\* \\| ([^|]+) \\| ([^|]+) \\|")
 )
 
 // RegisterRow سطرٌ من السجلّ المجمَّد.
 type RegisterRow struct {
 	ID    string
 	Title string
+	// Domain **عمودُ «المجال»** — ومنه تُصنَّف بوّابةُ `P-10`.
+	Domain string
+	// Severity **الشدّةُ كما في السجلّ، مترجَمةً إلى `TQ-1`.**
+	//
+	// **وتبقى فارغةً للمخاطر** — **سجلُّ المخاطر لا عمودَ شدّةٍ فيه
+	// أصلاً**، فلا تُخترَع له واحدة.
+	Severity string
+}
+
+// sevAr ترجمةُ عمودِ «الشدّةُ المرشَّحة» إلى `TQ-1`.
+//
+// **وما ليس في هذا الجدول يبقى فارغاً** — **فيُعامَل مجهولاً لا هيّناً.**
+var sevAr = map[string]string{
+	"مانعة": "BLOCKER", "قاطعة": "BLOCKER",
+	"حرجة": "CRITICAL", "عالية": "HIGH",
+	"متوسّطة": "MEDIUM", "متوسطة": "MEDIUM",
+	"منخفضة": "LOW",
 }
 
 // Register يقرأ العيوبَ والمخاطرَ من السجلّ — **ولا يُنسَخ عددٌ بيد.**
@@ -384,7 +404,8 @@ func Register(docsRoot string) (defects, risks []RegisterRow, err error) {
 			continue
 		}
 		seen[id] = true
-		defects = append(defects, RegisterRow{ID: id, Title: clean(string(m[2]))})
+		defects = append(defects, RegisterRow{ID: id, Title: clean(string(m[2])),
+			Domain: clean(string(m[3])), Severity: sevAr[clean(string(m[4]))]})
 	}
 	seen = map[string]bool{}
 	for _, m := range reRiskRow.FindAllSubmatch(b, -1) {
@@ -393,7 +414,8 @@ func Register(docsRoot string) (defects, risks []RegisterRow, err error) {
 			continue
 		}
 		seen[id] = true
-		risks = append(risks, RegisterRow{ID: id, Title: clean(string(m[2]))})
+		risks = append(risks, RegisterRow{ID: id, Title: clean(string(m[2])),
+			Domain: clean(string(m[3]))})
 	}
 	sort.Slice(defects, func(i, j int) bool { return num(defects[i].ID) < num(defects[j].ID) })
 	sort.Slice(risks, func(i, j int) bool { return num(risks[i].ID) < num(risks[j].ID) })

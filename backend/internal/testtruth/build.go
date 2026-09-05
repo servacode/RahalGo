@@ -125,7 +125,7 @@ func Build(backendRoot, docsRoot string) (*Truth, error) {
 
 	// ── العيوبُ — من السجلّ لا من قائمةٍ هنا ──────────────────────
 	for _, d := range regDefects {
-		def := Defect{ID: d.ID, Title: d.Title, Tests: byDefect[d.ID]}
+		def := Defect{ID: d.ID, Title: d.Title, Domain: d.Domain, Severity: d.Severity, Tests: byDefect[d.ID]}
 		switch {
 		case len(def.Tests) == 0:
 			def.Status = StatusNoTestYet
@@ -140,7 +140,7 @@ func Build(backendRoot, docsRoot string) (*Truth, error) {
 
 	// ── المخاطر ──────────────────────────────────────────────────
 	for _, x := range regRisks {
-		rk := Risk{ID: x.ID, Title: x.Title, Strategy: RiskStrategy[x.ID], Tests: byRisk[x.ID]}
+		rk := Risk{ID: x.ID, Title: x.Title, Domain: x.Domain, Strategy: RiskStrategy[x.ID], Tests: byRisk[x.ID]}
 		if rk.Strategy == "" {
 			t.Stale = append(t.Stale, fmt.Sprintf("%s — خطرٌ بلا استراتيجيّةِ تحقّق", x.ID))
 		}

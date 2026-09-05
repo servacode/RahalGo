@@ -766,6 +766,32 @@ var TestMap = map[string]TestDecl{
 	"TestRepeatabilityAndSpeed": harness(),
 	"TestChangeInputModes":      harness(),
 	"TestFileCategories":        harness(),
+
+	// ── `P-10` · بوّابةُ الإطلاق بالدليل ─────────────────────────
+	//
+	// **وحكمُها `RELEASE`** — **بوّابةٌ لا تُشغَّل عند الإطلاق ليست بوّابة.**
+	"TestGate_AllPassMeansYes":                      gateTest(),
+	"TestGate_OneBlockerMeansNo":                    gateTest(),
+	"TestGate_DeviceNotRunMeansNo":                  gateTest(),
+	"TestGate_StagingNotRunMeansNo":                 gateTest(),
+	"TestGate_StaleEvidenceMeansNo":                 gateTest(),
+	"TestGate_HighNonBlockingAllowed":               gateTest(),
+	"TestGate_NoDoubleCount":                        gateTest(),
+	"TestGate_LatentGapPolicy":                      gateTest(),
+	"TestGate_UnmappedCriticalCannotPassSilently":   gateTest(),
+	"TestGate_WaiverRegistryEmptyAndPolicyEnforced": gateTest(),
+	"TestGate_CurrentTruthProducesJudgment":         gateTest(),
+	"TestGate_NoRuleWithoutContractOrEvidence":      gateTest(),
+	"TestGate_NonPassStatesNeverCountAsPass":        gateTest(),
+	"TestGate_ExitCodesDocumented":                  gateTest(),
+}
+
+// gateTest فحصُ بوّابةٍ ذاتيّ — **يُشغَّل في كلّ وضعٍ إلزاميّ.**
+func gateTest() TestDecl {
+	return TestDecl{
+		Level: L1, Purpose: PurposeGenerator,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	}
 }
 
 // harness اختبارٌ يُثبت المِسنَدَ نفسَه — **لا يحرس ميزة.**

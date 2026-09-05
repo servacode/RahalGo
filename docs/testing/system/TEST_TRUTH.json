@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 220,
-    "test_funcs": 713
+    "test_files": 221,
+    "test_funcs": 727
   },
   "flows": [
     {
@@ -1038,12 +1038,16 @@
     {
       "id": "D1",
       "title": "فكُّ الإسناد بلا حدثٍ في order_events",
+      "domain": "حالةُ الطلب",
+      "severity": "MEDIUM",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D2",
       "title": "convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤها مُهمَل",
+      "domain": "الهويّة · الكتالوج",
+      "severity": "HIGH",
       "tests": [
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestFIN_TargetRewardPrecedesCommit",
@@ -1055,18 +1059,24 @@
     {
       "id": "D3",
       "title": "«تذكّرني» تنقلب دائمةً بعد أوّل تجديد",
+      "domain": "جلسة · أمن",
+      "severity": "HIGH",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D4",
       "title": "سقفُ المفتوح داخلَ بوّابة واتساب",
+      "domain": "الطلبات · إساءة",
+      "severity": "HIGH",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D5",
       "title": "المصروفُ والخزينةُ كتابتان بلا معاملة",
+      "domain": "مال",
+      "severity": "HIGH",
       "tests": [
         "TestFAIL_D5_ExpenseTreasuryPartial",
         "TestFIN_ExpenseTreasuryInvariant",
@@ -1077,12 +1087,16 @@
     {
       "id": "D6",
       "title": "الطلبُ الخاصُّ لا ينادي cashBlocked",
+      "domain": "الطلبات · مال",
+      "severity": "HIGH",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D7",
       "title": "سقفُ النقد يقيس المحصَّل لا المكشوف",
+      "domain": "مال",
+      "severity": "HIGH",
       "tests": [
         "TestSampleFactory_DriverOnShiftWithCash",
         "TestFIN_CashExposureContract"
@@ -1092,30 +1106,40 @@
     {
       "id": "D8",
       "title": "الطلبُ الخاصُّ لا يطلب توثيقَ واتساب",
+      "domain": "الطلبات · إساءة",
+      "severity": "MEDIUM",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D9",
       "title": "الطلبُ الخاصُّ بلا حدثِ ''→pending",
+      "domain": "حالةُ الطلب",
+      "severity": "MEDIUM",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D10",
       "title": "الاستعادةُ تُبطل نوعَ عميلٍ واحد",
+      "domain": "أمن · جلسة",
+      "severity": "HIGH",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D11",
       "title": "force_password_change بلا بوّابةٍ في أندرويد",
+      "domain": "أمن",
+      "severity": "HIGH",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D12",
       "title": "Push.unregister بلا منادٍ",
+      "domain": "خصوصيّة",
+      "severity": "MEDIUM",
       "tests": [
         "TestEV_PushTokenTargeting"
       ],
@@ -1124,12 +1148,16 @@
     {
       "id": "D13",
       "title": "سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه",
+      "domain": "أمن · خصوصيّة",
+      "severity": "CRITICAL",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D14",
       "title": "handleWS لا يفحص ActiveStatus",
+      "domain": "أمن",
+      "severity": "HIGH",
       "tests": [
         "TestSampleFactory_SuspendedIsRefused"
       ],
@@ -1138,6 +1166,8 @@
     {
       "id": "D15",
       "title": "AdminCreateUser في خطوتين",
+      "domain": "الهويّة",
+      "severity": "MEDIUM",
       "tests": [
         "TestFAIL_D15_AdminCreateUserPartial",
         "TestFAIL_D15_Reconciliation"
@@ -1147,30 +1177,40 @@
     {
       "id": "D16",
       "title": "طابورُ المواقع ملفٌّ بلا صاحب",
+      "domain": "نزاهةُ بيانات · خصوصيّة",
+      "severity": "HIGH",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D17",
       "title": "الملاحةُ لا تعود بعد موت العمليّة",
+      "domain": "الملاحة",
+      "severity": "HIGH",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D18",
       "title": "START_STICKY يعيد الخدمةَ بفترةِ الافتراض",
+      "domain": "إعدادات · بطّاريّة",
+      "severity": "MEDIUM",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D19",
       "title": "LiveSocket يعيد الوصلَ بتوكنٍ منتهٍ",
+      "domain": "لحظيّ",
+      "severity": "HIGH",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "id": "D20",
       "title": "البثُّ الحيُّ يتجاوز redactForMerchant",
+      "domain": "أمن · خصوصيّة",
+      "severity": "HIGH",
       "tests": [
         "TestEV_MerchantDriverAssignment",
         "TestEV_MerchantRealtimePrivacy",
@@ -1183,6 +1223,8 @@
     {
       "id": "D21",
       "title": "هاتفُ السائق يصل الزبون",
+      "domain": "خصوصيّة",
+      "severity": "HIGH",
       "tests": [
         "TestEV_CustomerDriverAssignment",
         "TestD21_CustomerRedactionAgainstContract",
@@ -1194,6 +1236,8 @@
     {
       "id": "D22",
       "title": "الطلبُ الخاصُّ لا يُبثّ لصاحبه",
+      "domain": "لحظيّ · وظيفيّ",
+      "severity": "MEDIUM",
       "tests": [
         "TestEV_CustomOrderOwnerRealtime",
         "TestD22_CustomOrderOwnerChannelContract",
@@ -1204,6 +1248,8 @@
     {
       "id": "D23",
       "title": "حمولاتُ REST تكشف اقتصاداً داخليّاً",
+      "domain": "خصوصيّة · تقليلُ بيانات",
+      "severity": "HIGH",
       "tests": [
         "TestEV_CustomerDriverAssignment",
         "TestD20_MerchantRealtimeVsREST",
@@ -1215,6 +1261,8 @@
     {
       "id": "D24",
       "title": "سقفُ الطلبات النشطة يُتجاوَز بالتزامن",
+      "domain": "تزامن · مالٌ غيرُ مباشر",
+      "severity": "HIGH",
       "tests": [
         "TestFAIL_R7_DriverAcceptPartialState",
         "TestRACE_MaxActiveOrders"
@@ -1224,6 +1272,8 @@
     {
       "id": "D25",
       "title": "هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن",
+      "domain": "تزامن · مالٌ مباشر",
+      "severity": "HIGH",
       "tests": [
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestRACE_DuplicateLeadConversion"
@@ -1233,6 +1283,8 @@
     {
       "id": "D26",
       "title": "إنذارُ الراصد يضيع بعد كتابة الوسم",
+      "domain": "تشغيليّ · رصد",
+      "severity": "HIGH",
       "tests": [
         "TestEV_R22WatchdogMarkerSuppressesRetry"
       ],
@@ -1241,6 +1293,8 @@
     {
       "id": "D27",
       "title": "سقوطُ الدفع بلا إعادةٍ دائمة",
+      "domain": "إشعار · وعيٌ بالحدث",
+      "severity": "HIGH",
       "tests": [
         "TestEV_R23PushFailureIsLost"
       ],
@@ -1251,6 +1305,7 @@
     {
       "id": "R1",
       "title": "بوّابةُ الحالة يُلتفّ عليها في موضع",
+      "domain": "حالةُ الطلب",
       "strategy": "انتقالٌ يكتب الحالةَ خارجَ البوّابة — L3",
       "flows": [
         "F-09"
@@ -1261,6 +1316,7 @@
     {
       "id": "R2",
       "title": "خمسُ دوالٍّ يتيمة",
+      "domain": "متعدّد",
       "strategy": "جردُ المنادين آليّاً — L1",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -1268,6 +1324,7 @@
     {
       "id": "R3",
       "title": "زبونٌ يصير merchant بلا موافقة",
+      "domain": "صلاحيّات",
       "strategy": "EnsureUserWithRole بلا موافقةٍ صريحة — L4",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -1275,6 +1332,7 @@
     {
       "id": "R4",
       "title": "treasury.go يعتمد معاملةَ المنادي",
+      "domain": "مال",
       "strategy": "نداءُ الخزينة خارجَ معاملة — L3",
       "flows": [
         "F-14"
@@ -1285,6 +1343,7 @@
     {
       "id": "R5",
       "title": "PATCH stores/{id}/settings بلا تدقيق",
+      "domain": "تدقيق",
       "strategy": "PATCH stores/{id}/settings بلا تدقيق — L3",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -1292,6 +1351,7 @@
     {
       "id": "R6",
       "title": "حِملُ قراءة الإعدادات",
+      "domain": "أداء",
       "strategy": "حِملُ قراءة الإعدادات تحت ضغط — L10",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -1299,6 +1359,7 @@
     {
       "id": "R7",
       "title": "قبولُ السائق: ٣ كتاباتٍ بلا معاملة",
+      "domain": "حالةُ الطلب",
       "strategy": "إسقاطٌ بين كتابات القبول الثلاث — L9",
       "flows": [
         "F-08"
@@ -1312,6 +1373,7 @@
     {
       "id": "R8",
       "title": "مفتاحُ التكرار يعلق in_progress",
+      "domain": "توفّر",
       "strategy": "مفتاحٌ عالقٌ ثمّ تقليمُ ٢٤ ساعة — L4",
       "flows": [
         "F-01",
@@ -1333,6 +1395,7 @@
     {
       "id": "R9",
       "title": "لا حدَّ معدّلٍ عامّ",
+      "domain": "أمن",
       "strategy": "إغراقُ بابٍ بلا حدِّ معدّل — L11",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -1340,6 +1403,7 @@
     {
       "id": "R10",
       "title": "سائقٌ يقبل طلبين متزامنين",
+      "domain": "حالة · مال",
       "strategy": "سباقُ قبولٍ بحاجزٍ حقيقيّ — L9",
       "flows": [
         "F-07",
@@ -1356,6 +1420,7 @@
     {
       "id": "R11",
       "title": "الطلبُ الخاصُّ يُنشأ بلا معاملة",
+      "domain": "حالة",
       "strategy": "إسقاطُ إنشاء الطلب الخاصّ — L9",
       "flows": [
         "F-02"
@@ -1366,6 +1431,7 @@
     {
       "id": "R12",
       "title": "٣ طبقاتِ تدقيقٍ بسياق الطلب",
+      "domain": "تدقيق",
       "strategy": "قطعُ سياق أثناء تدقيقٍ بسياق الطلب — L9",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -1373,6 +1439,7 @@
     {
       "id": "R13",
       "title": "إعادةُ الإدارة للكلمة لا تُبطل جلسة",
+      "domain": "أمن",
       "strategy": "إعادةُ كلمةٍ إداريّةٍ ثمّ فحصُ الجلسة — L4",
       "flows": [
         "F-30"
@@ -1383,6 +1450,7 @@
     {
       "id": "R14",
       "title": "اتّصالُ البثّ لا يُراجَع بعد المصافحة",
+      "domain": "أمن",
       "strategy": "إبطالٌ بعد مصافحة البثّ — L5",
       "tests": [
         "TestEV_RealtimeAuthorization"
@@ -1392,6 +1460,7 @@
     {
       "id": "R15",
       "title": "سحبُ الدور لا يسري",
+      "domain": "أمن · صلاحيّات",
       "strategy": "سحبُ دورٍ ثمّ قياسُ مهلة السريان — L4",
       "flows": [
         "F-30"
@@ -1405,6 +1474,7 @@
     {
       "id": "R16",
       "title": "Redis تفشل مفتوحةً",
+      "domain": "أمن",
       "strategy": "إسقاطُ Redis ثمّ إبطالُ جلسة — L9",
       "flows": [
         "F-30"
@@ -1417,6 +1487,7 @@
     {
       "id": "R17",
       "title": "خدمةُ الموقع تعود بلا سؤالٍ عن الورديّة",
+      "domain": "خصوصيّة · بطّاريّة",
       "strategy": "إعادةُ إقلاعٍ ثمّ فحصُ سؤال الورديّة — L7",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -1424,6 +1495,7 @@
     {
       "id": "R18",
       "title": "الرفعُ لا يُجدّد التوكن",
+      "domain": "توفّر",
       "strategy": "انتهاءُ توكن أثناء رفعِ ملفّ — L4",
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -1431,6 +1503,7 @@
     {
       "id": "R19",
       "title": "سباقُ مسح طابور المواقع",
+      "domain": "نزاهةُ بيانات",
       "strategy": "دفعتا مواقعَ متداخلتان — L7",
       "tests": [
         "TestRACE_LocationQueueIsClientSide"
@@ -1440,6 +1513,7 @@
     {
       "id": "R20",
       "title": "مسحُ الدفعة بلا قراءة accepted",
+      "domain": "نزاهةُ بيانات",
       "strategy": "نقطةٌ بطابعٍ مستقبليّ — L1",
       "tests": [
         "TestRACE_LocationQueueIsClientSide"
@@ -1449,6 +1523,7 @@
     {
       "id": "R21",
       "title": "التحويلُ التلقائيّ يقبل ولا يُبلّغ",
+      "domain": "الطلبات",
       "strategy": "إسقاطُ واتساب بعد القبول — L9",
       "flows": [
         "F-04",
@@ -1463,6 +1538,7 @@
     {
       "id": "R22",
       "title": "الراصدُ يفقد الإشعارَ الباقي",
+      "domain": "عمليّات",
       "strategy": "إسقاطُ الإشعار بعد وسم alerted_at — L9",
       "flows": [
         "F-09"
@@ -1477,6 +1553,7 @@
     {
       "id": "R23",
       "title": "الدفعُ بلا صندوقِ إرسال",
+      "domain": "لحظيّ",
       "strategy": "إسقاطُ FCM وقياسُ أثر الفعل — L9",
       "flows": [
         "F-07",
@@ -1491,6 +1568,7 @@
     {
       "id": "R24",
       "title": "فشلُ التحويل بلا أثرٍ يُقرأ",
+      "domain": "عمليّات",
       "strategy": "جردُ أنماط فشل التحويل السبعة — L4",
       "flows": [
         "F-20"
@@ -3949,6 +4027,188 @@
       "modes": [
         "FAST",
         "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_AllPassMeansYes",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_CurrentTruthProducesJudgment",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_DeviceNotRunMeansNo",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_ExitCodesDocumented",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_HighNonBlockingAllowed",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_LatentGapPolicy",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_NoDoubleCount",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_NoRuleWithoutContractOrEvidence",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_NonPassStatesNeverCountAsPass",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_OneBlockerMeansNo",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_StagingNotRunMeansNo",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_StaleEvidenceMeansNo",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_UnmappedCriticalCannotPassSilently",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGate_WaiverRegistryEmptyAndPolicyEnforced",
+      "file": "internal/gate/gate_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
       ],
       "orphan": false
     },

@@ -113,16 +113,23 @@ type Flow struct {
 
 // Defect عيبٌ مجمَّد — **العنوانُ والشدّةُ من السجلّ، والحالُ بالمطابقة.**
 type Defect struct {
-	ID     string   `json:"id"`
-	Title  string   `json:"title"`
-	Tests  []string `json:"tests"`
-	Status Status   `json:"status"`
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	// Domain **عمودُ «المجال»** — ومنه تُصنَّف بوّابةُ الإطلاق.
+	Domain string `json:"domain"`
+	// Severity **من عمود «الشدّةُ المرشَّحة» في السجلّ** — ولا تُكتب بيد.
+	Severity string   `json:"severity"`
+	Tests    []string `json:"tests"`
+	Status   Status   `json:"status"`
 }
 
 // Risk خطرٌ مجمَّد — **ولا يصير عيباً تلقائيّاً.**
 type Risk struct {
-	ID       string   `json:"id"`
-	Title    string   `json:"title"`
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	// Domain **عمودُ «المجال»** — **وسجلُّ المخاطر لا شدّةَ فيه**، فالمجالُ
+	// وحدَه ما يُصنِّفه.
+	Domain   string   `json:"domain"`
 	Strategy string   `json:"strategy"`
 	Flows    []string `json:"flows,omitempty"`
 	Tests    []string `json:"tests"`

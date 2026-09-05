@@ -1,0 +1,1864 @@
+{
+  "candidate": {
+    "release_candidate_id": "rc-3d5e3222-8695a8f4-dirty",
+    "source_commit": "3d5e32221369f060d9369aed54f230025c0fc4ca",
+    "working_tree_dirty": true,
+    "backend_build_hash": "8695a8f4b4acaf90923e97391857de17751d82abf70bc81479fc2215d5c186df",
+    "web_build_hash": "eb841b7b18abbd2f2c65b05ce92f30054def14cf92ffcab74feb5be79a4679e3",
+    "apk_hashes": [
+      "app-customer:88764f40bba3db291b85bc5ed501ccc671d6aa1861b76ab71260a26b77e2565f",
+      "app-driver:fc984e590afe143a851f75851e90d0063f95f5866555c8aa0b706e4656cf135f",
+      "app-merchant:a6b461de5d8b6300e47d793bc5f70641d0b1c0c9861b21ab22c462675c565d26",
+      "app-rep:c42c5dd5b3e7949b97de93ac9daa5f3ec8d6aa4e9ca5eb28472c264e0aa1519c"
+    ],
+    "config_snapshot": "9dd6ce1cba9044ea",
+    "migration_version": "0126_mocked_location.sql",
+    "generated_at": "2026-09-05T21:29:41Z"
+  },
+  "ready_for_production": false,
+  "rules": [
+    {
+      "rule_id": "GATE-AND-01",
+      "category": "ANDROID_REAL_DEVICE",
+      "requirement": "قبولُ الأجهزة الحقيقيّة على الجهاز المرجعيّ `SM-A525F / Android 14`",
+      "source_contract": "`P-8` · قرارُ المالك: الجهازُ المرجعيُّ لا يُبدَّل",
+      "severity": "BLOCKER",
+      "required_evidence": "تنفيذُ مصفوفة الأجهزة على جهازٍ متّصلٍ مع سجلٍّ لكلّ بند",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**لا جهازَ متّصلٌ أصلاً** — `DevicesAvailable = 0` في مصفوفة الأجهزة",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-AND-02",
+      "category": "ANDROID_REAL_DEVICE",
+      "requirement": "تنفيذُ مصفوفة أندرويد كاملةً على أجهزةٍ حقيقيّة",
+      "source_contract": "`P-8` · `ANDROID_TEST_MATRIX` · `TQ-2`",
+      "severity": "BLOCKER",
+      "required_evidence": "سجلُّ تنفيذٍ لكلّ بندٍ على الجهاز المرجعيّ",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**22 بنداً من 27 لم يُشغَّل · وأجهزةٌ متاحةٌ = 0** — **والمِسنَدُ مكتملٌ والقبولُ لم يبدأ**",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-BG-01",
+      "category": "BACKGROUND_DOZE",
+      "requirement": "الخلفيّةُ والغفوةُ وموتُ العمليّة لتطبيق السائق على جهازٍ حقيقيّ",
+      "source_contract": "`P-8` البند ٢٠",
+      "severity": "BLOCKER",
+      "required_evidence": "خدمةٌ أماميّةٌ · موقعٌ في الخلفيّة · `Doze` · قيدُ البطّاريّة · موتُ العمليّة",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**الإثباتُ البنيويُّ ليس قبولَ جهاز** — خمسةُ إثباتاتٍ بنيويّةٍ لا تُغني",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-COV-01",
+      "category": "TEST_COVERAGE",
+      "requirement": "كلُّ سلوكٍ مطلوبٍ له دليلٌ مربوط",
+      "source_contract": "`P-2` · `TEST_TRUTH`",
+      "severity": "HIGH",
+      "required_evidence": "اختبارٌ مربوطٌ لكلّ تدفّقٍ عابرٍ للأنظمة",
+      "current_status": "FAIL",
+      "blocking": false,
+      "reason": "**7 تدفّقاً بلا اختبارٍ واحد**: [F-06 F-16 F-17 F-20 F-28 F-31 F-32]",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D1",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "إغلاقُ العيب: فكُّ الإسناد بلا حدثٍ في order_events",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: حالةُ الطلب",
+      "severity": "MEDIUM",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D1"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D10",
+      "category": "SECURITY",
+      "requirement": "إغلاقُ العيب: الاستعادةُ تُبطل نوعَ عميلٍ واحد",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: أمن · جلسة",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D10"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D11",
+      "category": "SECURITY",
+      "requirement": "إغلاقُ العيب: force_password_change بلا بوّابةٍ في أندرويد",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: أمن",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D11"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D12",
+      "category": "PRIVACY",
+      "requirement": "إغلاقُ العيب: Push.unregister بلا منادٍ",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: خصوصيّة",
+      "severity": "MEDIUM",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**EXPECTED_FAIL** — EVENTS/EV-08: ثلاثةُ إخفاقاتٍ · ثلاثةُ نداءاتٍ · ولا نداءَ رابع",
+      "related_registers": [
+        "D12"
+      ],
+      "tests": [
+        "TestEV_PushTokenTargeting"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D13",
+      "category": "PRIVACY",
+      "requirement": "إغلاقُ العيب: سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: أمن · خصوصيّة",
+      "severity": "CRITICAL",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D13"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-D14",
+      "category": "SECURITY",
+      "requirement": "إغلاقُ العيب: handleWS لا يفحص ActiveStatus",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: أمن",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**قائمٌ ومُثبَت** — 1 اختباراً يسقط عمداً",
+      "related_registers": [
+        "D14"
+      ],
+      "tests": [
+        "TestSampleFactory_SuspendedIsRefused"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D15",
+      "category": "SECURITY",
+      "requirement": "إغلاقُ العيب: AdminCreateUser في خطوتين",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: الهويّة",
+      "severity": "MEDIUM",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**DEFECT_REPRODUCED** — FAILURE/PF-03: مستخدمون=0 · أدوارٌ=0 — لم يبقَ شيءٌ بعد فشل منح الدور",
+      "related_registers": [
+        "D15"
+      ],
+      "tests": [
+        "TestFAIL_D15_AdminCreateUserPartial",
+        "TestFAIL_D15_Reconciliation"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D16",
+      "category": "PRIVACY",
+      "requirement": "إغلاقُ العيب: طابورُ المواقع ملفٌّ بلا صاحب",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: نزاهةُ بيانات · خصوصيّة",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D16"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D17",
+      "category": "NAVIGATION",
+      "requirement": "إغلاقُ العيب: الملاحةُ لا تعود بعد موت العمليّة",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: الملاحة",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D17"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D18",
+      "category": "BACKGROUND_DOZE",
+      "requirement": "إغلاقُ العيب: START_STICKY يعيد الخدمةَ بفترةِ الافتراض",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: إعدادات · بطّاريّة",
+      "severity": "MEDIUM",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D18"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D19",
+      "category": "NOTIFICATION_REALTIME",
+      "requirement": "إغلاقُ العيب: LiveSocket يعيد الوصلَ بتوكنٍ منتهٍ",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: لحظيّ",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D19"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D2",
+      "category": "SECURITY",
+      "requirement": "إغلاقُ العيب: convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤها مُهمَل",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: الهويّة · الكتالوج",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**DEFECT_REPRODUCED** — FAILURE/PF-01: XQ-3 FORBIDDEN STATE = PROVEN — متاجرُ=1 · مكافأةٌ=5000 · المرشَّحُ new · الردّ 500",
+      "related_registers": [
+        "D2"
+      ],
+      "tests": [
+        "TestFAIL_D2_ConvertLeadPartialStates",
+        "TestFIN_TargetRewardPrecedesCommit",
+        "TestFIN_TransactionBoundaries",
+        "TestRACE_DuplicateLeadConversion"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D20",
+      "category": "PRIVACY",
+      "requirement": "إغلاقُ العيب: البثُّ الحيُّ يتجاوز redactForMerchant",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: أمن · خصوصيّة",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**EXPECTED_FAIL** — EVENTS/EV-01: 71 حقلاً وصل غرفةَ المتجر · 19 منها محظورٌ بعقد P-1",
+      "related_registers": [
+        "D20"
+      ],
+      "tests": [
+        "TestEV_MerchantDriverAssignment",
+        "TestEV_MerchantRealtimePrivacy",
+        "TestD20_CustomerRealtimeVsREST",
+        "TestD20_MerchantRealtimeVsREST",
+        "TestOrderFieldsAllClassified"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D21",
+      "category": "PRIVACY",
+      "requirement": "إغلاقُ العيب: هاتفُ السائق يصل الزبون",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: خصوصيّة",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**EXPECTED_FAIL** — EVENTS/EV-02: driver_phone وصل الزبونَ لحظيّاً وREST — 9 و10 خروق",
+      "related_registers": [
+        "D21"
+      ],
+      "tests": [
+        "TestEV_CustomerDriverAssignment",
+        "TestD21_CustomerRedactionAgainstContract",
+        "TestForbiddenFieldGuardCatchesLeak",
+        "TestOrderFieldsAllClassified"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D22",
+      "category": "NOTIFICATION_REALTIME",
+      "requirement": "إغلاقُ العيب: الطلبُ الخاصُّ لا يُبثّ لصاحبه",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: لحظيّ · وظيفيّ",
+      "severity": "MEDIUM",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**EXPECTED_FAIL** — EVENTS/EV-03: العاديُّ وصل صاحبَه (true) والخاصُّ لا (false)",
+      "related_registers": [
+        "D22"
+      ],
+      "tests": [
+        "TestEV_CustomOrderOwnerRealtime",
+        "TestD22_CustomOrderOwnerChannelContract",
+        "TestOrderFieldsAllClassified"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D23",
+      "category": "PRIVACY",
+      "requirement": "إغلاقُ العيب: حمولاتُ REST تكشف اقتصاداً داخليّاً",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: خصوصيّة · تقليلُ بيانات",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**EXPECTED_FAIL** — EVENTS/EV-02: driver_phone وصل الزبونَ لحظيّاً وREST — 9 و10 خروق",
+      "related_registers": [
+        "D23"
+      ],
+      "tests": [
+        "TestEV_CustomerDriverAssignment",
+        "TestD20_MerchantRealtimeVsREST",
+        "TestD21_CustomerRedactionAgainstContract",
+        "TestOrderFieldsAllClassified"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D24",
+      "category": "CONCURRENCY",
+      "requirement": "إغلاقُ العيب: سقفُ الطلبات النشطة يُتجاوَز بالتزامن",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: تزامن · مالٌ غيرُ مباشر",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**PASS** — FAILURE/PF-04: مملوكٌ=false · الحالُ dispatching · والإعادةُ نجحت وصار assigned",
+      "related_registers": [
+        "D24"
+      ],
+      "tests": [
+        "TestFAIL_R7_DriverAcceptPartialState",
+        "TestRACE_MaxActiveOrders"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D25",
+      "category": "CONCURRENCY",
+      "requirement": "إغلاقُ العيب: هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: تزامن · مالٌ مباشر",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**DEFECT_REPRODUCED** — FAILURE/PF-01: XQ-3 FORBIDDEN STATE = PROVEN — متاجرُ=1 · مكافأةٌ=5000 · المرشَّحُ new · الردّ 500",
+      "related_registers": [
+        "D25"
+      ],
+      "tests": [
+        "TestFAIL_D2_ConvertLeadPartialStates",
+        "TestRACE_DuplicateLeadConversion"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D26",
+      "category": "OPERATIONAL_READINESS",
+      "requirement": "إغلاقُ العيب: إنذارُ الراصد يضيع بعد كتابة الوسم",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: تشغيليّ · رصد",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**قائمٌ ومُثبَت** — 1 اختباراً يسقط عمداً",
+      "related_registers": [
+        "D26"
+      ],
+      "tests": [
+        "TestEV_R22WatchdogMarkerSuppressesRetry"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D27",
+      "category": "NOTIFICATION_REALTIME",
+      "requirement": "إغلاقُ العيب: سقوطُ الدفع بلا إعادةٍ دائمة",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: إشعار · وعيٌ بالحدث",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**قائمٌ ومُثبَت** — 1 اختباراً يسقط عمداً",
+      "related_registers": [
+        "D27"
+      ],
+      "tests": [
+        "TestEV_R23PushFailureIsLost"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D3",
+      "category": "SECURITY",
+      "requirement": "إغلاقُ العيب: «تذكّرني» تنقلب دائمةً بعد أوّل تجديد",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: جلسة · أمن",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D3"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D4",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "إغلاقُ العيب: سقفُ المفتوح داخلَ بوّابة واتساب",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: الطلبات · إساءة",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D4"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D5",
+      "category": "FINANCIAL",
+      "requirement": "إغلاقُ العيب: المصروفُ والخزينةُ كتابتان بلا معاملة",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: مال",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**DEFECT_REPRODUCED** — FAILURE/PF-02: مصاريفُ=1 · قيودٌ=0 · وFI-04.d أمسكها",
+      "related_registers": [
+        "D5"
+      ],
+      "tests": [
+        "TestFAIL_D5_ExpenseTreasuryPartial",
+        "TestFIN_ExpenseTreasuryInvariant",
+        "TestFIN_TransactionBoundaries"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D6",
+      "category": "FINANCIAL",
+      "requirement": "إغلاقُ العيب: الطلبُ الخاصُّ لا ينادي cashBlocked",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: الطلبات · مال",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D6"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D7",
+      "category": "FINANCIAL",
+      "requirement": "إغلاقُ العيب: سقفُ النقد يقيس المحصَّل لا المكشوف",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: مال",
+      "severity": "HIGH",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**قائمٌ ومُثبَت** — 2 اختباراً يسقط عمداً",
+      "related_registers": [
+        "D7"
+      ],
+      "tests": [
+        "TestSampleFactory_DriverOnShiftWithCash",
+        "TestFIN_CashExposureContract"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D8",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "إغلاقُ العيب: الطلبُ الخاصُّ لا يطلب توثيقَ واتساب",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: الطلبات · إساءة",
+      "severity": "MEDIUM",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D8"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-D9",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "إغلاقُ العيب: الطلبُ الخاصُّ بلا حدثِ ''→pending",
+      "source_contract": "DEFECT REGISTER · `FINAL_STATIC_CLOSEOUT.md` — المجال: حالةُ الطلب",
+      "severity": "MEDIUM",
+      "required_evidence": "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+      "related_registers": [
+        "D9"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-FAIL-01",
+      "category": "FAILURE_RECOVERY",
+      "requirement": "لا عمليّةٌ جزئيّةٌ تترك مالاً خطأً ولا طلباً عالقاً ولا متجراً مكرَّراً ولا عمليّةً خفيّة",
+      "source_contract": "`P-6` · `FAILURE_INJECTION_MATRIX` — تسعةُ تدفّقاتٍ جزئيّة",
+      "severity": "BLOCKER",
+      "required_evidence": "كلُّ تدفّقِ فشلٍ جزئيٍّ إمّا يتعافى ذاتيّاً وإمّا يظهر للإدارة",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**7 تدفّقَ فشلٍ جزئيٍّ يترك أثراً غيرَ متعافٍ**: [PF-01:DEFECT_REPRODUCED PF-02:DEFECT_REPRODUCED PF-03:DEFECT_REPRODUCED PF-06:EXPECTED_FAIL PF-07:UNPROVEN PF-08:PARTIAL PF-09:RISK_CONFIRMED] — **ومنها ما لا يراه زبونٌ ولا إدارة**",
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-FIN-01",
+      "category": "FINANCIAL",
+      "requirement": "ثوابتُ المال كلُّها مُثبَتةٌ على المرشَّح — مصالحةُ المحفظة · نقدُ السائق · حفظُ اقتصاد الطلب · اللقطة · نزاهةُ الاسترداد · عكسُ عمولة المندوب · طبقاتُ الدفع · الخزينة",
+      "source_contract": "`P-4` · محرّكُ الثوابت الماليّة — ٤٦ ثابتاً في ١٢ عائلة",
+      "severity": "BLOCKER",
+      "required_evidence": "تشغيلُ `internal/fininv` على قاعدةِ المرشَّح بلا خرقٍ واحد",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**8 ثابتاً من 46 لم يُبنَ أو أُجِّل** — **و`38` ثابتاً تُثبَت اليوم لا تُغني عمّا لم يُبنَ**، **ولم يُسجَّل تشغيلٌ على مرشَّحٍ ثابت**",
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-FRESH-01",
+      "category": "EVIDENCE_FRESHNESS",
+      "requirement": "المرشَّحُ ثابتٌ ودليلُه من بنائه هو",
+      "source_contract": "`P-10` البندان ٣٣ و٣٤",
+      "severity": "BLOCKER",
+      "required_evidence": "التزامٌ نظيفٌ · بصماتُ بناءٍ مسجَّلة · دليلٌ مأخوذٌ من المرشَّح نفسِه",
+      "current_status": "FAIL",
+      "blocking": true,
+      "reason": "**شجرةُ العمل متّسخة** — **فالمحكومُ عليه ليس ما سيُنشَر**، والدليلُ كلُّه على رملٍ متحرّك",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-LOAD-01",
+      "category": "LOAD_SOAK",
+      "requirement": "اختبارُ حِملٍ ونقعٍ قبل الإطلاق",
+      "source_contract": "`TQ-3` · تصميمُ منظومة الاختبار",
+      "severity": "HIGH",
+      "required_evidence": "حِملٌ متدرّجٌ ونقعٌ طويلٌ مع رصد التسرّب",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لم يُنفَّذ** — ويحتاج بيئةً شبيهةً بالإنتاج",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-MODE-01",
+      "category": "TEST_COVERAGE",
+      "requirement": "تشغيلُ الأوضاع الإلزاميّة كاملةً على المرشَّح — `FULL` و`FINANCIAL` و`SECURITY` و`CROSS_SYSTEM` و`WEB` و`ANDROID` و`RELEASE`",
+      "source_contract": "`P-10` البند ٣٦",
+      "severity": "BLOCKER",
+      "required_evidence": "تشغيلٌ كاملٌ مسجَّلٌ على مرشَّحٍ ثابتٍ لا على شجرة عمل",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**`FAST` و`IMPACTED` لا تكفيان للإطلاق** — ولم يُسجَّل تشغيلٌ كاملٌ على مرشَّح",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-NAV-01",
+      "category": "NAVIGATION",
+      "requirement": "قبولُ الملاحة النهائيُّ — إعادةٌ حتميّةٌ **وقيادةٌ في الشارع**",
+      "source_contract": "`P-8` البند ١٩ · مختبرُ اختبار الملاحة ثلاثُ طبقات",
+      "severity": "CRITICAL",
+      "required_evidence": "إعادةُ مسارٍ مسجَّلٍ + سَوقةٌ حقيقيّةٌ موثَّقة",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**الإعادةُ وحدَها لا تكفي** — ولم تُنفَّذ سَوقةٌ حقيقيّة",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-OPS-01",
+      "category": "HEALTH_READINESS",
+      "requirement": "الصحّةُ والجهوزيّةُ تغطّيان التبعيّاتِ الحرجة",
+      "source_contract": "`OPS1` · دَينُ التشغيل",
+      "severity": "HIGH",
+      "required_evidence": "بابُ صحّةٍ يفحص كلَّ تبعيّةٍ حرجة، وبابُ جهوزيّةٍ يمنع استقبالَ الحمل قبل الاستعداد",
+      "current_status": "FAIL",
+      "blocking": false,
+      "reason": "**`/healthz` يفحص [postgres redis] ولا يفحص [media push]** · بابُ جهوزيّةٍ منفصلٌ = false — **فالموجّهُ يرسل الحملَ إلى عُقدةٍ لم تجهز**",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-OPS-02",
+      "category": "BACKUP_RESTORE",
+      "requirement": "نسخٌ احتياطيٌّ واستعادةٌ مُثبَتان — `OPS2`",
+      "source_contract": "`OPS2` · دَينُ التشغيل",
+      "severity": "BLOCKER",
+      "required_evidence": "إنشاءُ نسخةٍ · استعادتُها · فحصُ سلامةٍ · إجراءٌ موثَّق",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**لا استعادةٌ جُرّبت قطّ** — **ونسخةٌ لم تُستعَد ليست نسخة**",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-OPS-05",
+      "category": "OPERATIONAL_READINESS",
+      "requirement": "عقدُ الجهوزيّة التشغيليّة للإدارة — `AQ-5`",
+      "source_contract": "`AQ-5` · `NOT READY / READY WITH WARNINGS / READY`",
+      "severity": "HIGH",
+      "required_evidence": "فحصُ الضبط التجاريِّ الإلزاميِّ على بيانات إطلاقٍ حقيقيّة",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**`AQ-5` غيرُ منفَّذ** — **والنسبةُ وحدَها ليست قراراً**",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-PERF-01",
+      "category": "PERFORMANCE",
+      "requirement": "خطُّ أساسٍ للأداء — ثلاثُ دوراتٍ مستقرّةٍ قبل تجميد `SLO`",
+      "source_contract": "`TQ-3` · ولم يُعتمد `SLO` مطلقٌ بعد",
+      "severity": "HIGH",
+      "required_evidence": "ثلاثُ دوراتِ قياسٍ متقاربةٍ على بيئةٍ ثابتة",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**`BASELINE 0/3`** — **ولا يُخترَع رقمٌ ليمرّ**",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R1",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "حسمُ الخطر: بوّابةُ الحالة يُلتفّ عليها في موضع",
+      "source_contract": "RISK REGISTER · المجال: حالةُ الطلب · الحكم: UNVALIDATED",
+      "severity": "HIGH",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R1"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R10",
+      "category": "FINANCIAL",
+      "requirement": "حسمُ الخطر: سائقٌ يقبل طلبين متزامنين",
+      "source_contract": "RISK REGISTER · المجال: حالة · مال · الحكم: CONFIRMED · **تأكّد فصار `D24`** — سببٌ واحدٌ لا مانعان",
+      "severity": "BLOCKER",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**تأكّد** — CONCURRENCY/C-02: الأساسُ المتتابعُ 409 · والتزامنُ تجاوزَ السقفَ في 3 من 5",
+      "related_registers": [
+        "R10"
+      ],
+      "tests": [
+        "TestFAIL_R7_DriverAcceptPartialState",
+        "TestRACE_MaxActiveOrders",
+        "TestRACE_TwoDriversSameOrder"
+      ],
+      "waiver_policy": "FORBIDDEN",
+      "superseded_by": "D24"
+    },
+    {
+      "rule_id": "GATE-R11",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "حسمُ الخطر: الطلبُ الخاصُّ يُنشأ بلا معاملة",
+      "source_contract": "RISK REGISTER · المجال: حالة · الحكم: UNVALIDATED",
+      "severity": "BLOCKER",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R11"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R12",
+      "category": "AUDIT",
+      "requirement": "حسمُ الخطر: ٣ طبقاتِ تدقيقٍ بسياق الطلب",
+      "source_contract": "RISK REGISTER · المجال: تدقيق · الحكم: UNVALIDATED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R12"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R13",
+      "category": "SECURITY",
+      "requirement": "حسمُ الخطر: إعادةُ الإدارة للكلمة لا تُبطل جلسة",
+      "source_contract": "RISK REGISTER · المجال: أمن · الحكم: UNVALIDATED",
+      "severity": "CRITICAL",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R13"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-R14",
+      "category": "SECURITY",
+      "requirement": "حسمُ الخطر: اتّصالُ البثّ لا يُراجَع بعد المصافحة",
+      "source_contract": "RISK REGISTER · المجال: أمن · الحكم: UNVALIDATED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**NOT_RUN** — ANDROID/AND-52: لا جهازَ متّصل · **وعزلُ الغرف مُثبَتٌ في `P-7`**",
+      "related_registers": [
+        "R14"
+      ],
+      "tests": [
+        "TestEV_RealtimeAuthorization"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R15",
+      "category": "SECURITY",
+      "requirement": "حسمُ الخطر: سحبُ الدور لا يسري",
+      "source_contract": "RISK REGISTER · المجال: أمن · صلاحيّات · الحكم: CONFIRMED",
+      "severity": "CRITICAL",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**تأكّد** — CONCURRENCY/C-09: نداءٌ بعد الإبطال بالرمز نفسِه ⇒ 200 · والطبقةُ الكاملةُ REQUIRES_P0",
+      "related_registers": [
+        "R15"
+      ],
+      "tests": [
+        "TestSampleFactory_ValidToken",
+        "TestRACE_SessionRevokedDuringRequest"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-R16",
+      "category": "SECURITY",
+      "requirement": "حسمُ الخطر: Redis تفشل مفتوحةً",
+      "source_contract": "RISK REGISTER · المجال: أمن · الحكم: CONFIRMED",
+      "severity": "CRITICAL",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**تأكّد** — CONCURRENCY/C-09: نداءٌ بعد الإبطال بالرمز نفسِه ⇒ 200 · والطبقةُ الكاملةُ REQUIRES_P0",
+      "related_registers": [
+        "R16"
+      ],
+      "tests": [
+        "TestRACE_SessionRevokedDuringRequest"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-R17",
+      "category": "PRIVACY",
+      "requirement": "حسمُ الخطر: خدمةُ الموقع تعود بلا سؤالٍ عن الورديّة",
+      "source_contract": "RISK REGISTER · المجال: خصوصيّة · بطّاريّة · الحكم: CONFIRMED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**تأكّد** — ANDROID/AND-05: onStartCommand تُقلع وتطلب الموقعَ بلا سؤالٍ عن ورديّةٍ أو جلسةٍ أو حال",
+      "related_registers": [
+        "R17"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R18",
+      "category": "OPERATIONAL_READINESS",
+      "requirement": "حسمُ الخطر: الرفعُ لا يُجدّد التوكن",
+      "source_contract": "RISK REGISTER · المجال: توفّر · الحكم: UNVALIDATED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R18"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R19",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "حسمُ الخطر: سباقُ مسح طابور المواقع",
+      "source_contract": "RISK REGISTER · المجال: نزاهةُ بيانات · الحكم: CONFIRMED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**تأكّد** — ANDROID/AND-01: all() ثمّ sendBatch() ثمّ clear() — والملفُّ يُحذف كاملاً",
+      "related_registers": [
+        "R19"
+      ],
+      "tests": [
+        "TestRACE_LocationQueueIsClientSide"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R2",
+      "category": "TEST_COVERAGE",
+      "requirement": "حسمُ الخطر: خمسُ دوالٍّ يتيمة",
+      "source_contract": "RISK REGISTER · المجال: متعدّد · الحكم: UNVALIDATED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R2"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R20",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "حسمُ الخطر: مسحُ الدفعة بلا قراءة accepted",
+      "source_contract": "RISK REGISTER · المجال: نزاهةُ بيانات · الحكم: CONFIRMED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**تأكّد** — ANDROID/AND-02: لا تُقرأ حمولةُ الردّ لتمييز نقطةٍ رُفضت",
+      "related_registers": [
+        "R20"
+      ],
+      "tests": [
+        "TestRACE_LocationQueueIsClientSide"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R21",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "حسمُ الخطر: التحويلُ التلقائيّ يقبل ولا يُبلّغ",
+      "source_contract": "RISK REGISTER · المجال: الطلبات · الحكم: UNVALIDATED",
+      "severity": "CRITICAL",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**UNPROVEN** — EVENTS/EV-09: يُقاس في التشغيل",
+      "related_registers": [
+        "R21"
+      ],
+      "tests": [
+        "TestEV_R21AutoTransferAwareness",
+        "TestFAIL_XOB7_AutoTransferFireAndForget"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R22",
+      "category": "OPERATIONAL_READINESS",
+      "requirement": "حسمُ الخطر: الراصدُ يفقد الإشعارَ الباقي",
+      "source_contract": "RISK REGISTER · المجال: عمليّات · الحكم: UNVALIDATED · **تأكّد فصار `D26`** — سببٌ واحدٌ لا مانعان",
+      "severity": "HIGH",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**EXPECTED_FAIL** — EVENTS/EV-07: التشغيلُ الأوّل أشعر مرّةً · والثاني صفراً — الوسمُ يمنع",
+      "related_registers": [
+        "R22"
+      ],
+      "tests": [
+        "TestEV_R22WatchdogMarkerSuppressesRetry",
+        "TestEV_XOB5_WatchdogComparisonKey",
+        "TestFAIL_R22_WatchdogMarkerBeforeNotify"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED",
+      "superseded_by": "D26"
+    },
+    {
+      "rule_id": "GATE-R23",
+      "category": "NOTIFICATION_REALTIME",
+      "requirement": "حسمُ الخطر: الدفعُ بلا صندوقِ إرسال",
+      "source_contract": "RISK REGISTER · المجال: لحظيّ · الحكم: CONFIRMED · **تأكّد فصار `D27`** — سببٌ واحدٌ لا مانعان",
+      "severity": "BLOCKER",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**تأكّد** — FAILURE/PF-09: لا مِعراضَ لحقن push.Transport — TESTABILITY SEAM REQUIRED",
+      "related_registers": [
+        "R23"
+      ],
+      "tests": [
+        "TestEV_R23PushFailureIsLost",
+        "TestFAIL_P7SeamRequired_FCMTransport"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED",
+      "superseded_by": "D27"
+    },
+    {
+      "rule_id": "GATE-R24",
+      "category": "OPERATIONAL_READINESS",
+      "requirement": "حسمُ الخطر: فشلُ التحويل بلا أثرٍ يُقرأ",
+      "source_contract": "RISK REGISTER · المجال: عمليّات · الحكم: UNVALIDATED",
+      "severity": "CRITICAL",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R24"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R3",
+      "category": "SECURITY",
+      "requirement": "حسمُ الخطر: زبونٌ يصير merchant بلا موافقة",
+      "source_contract": "RISK REGISTER · المجال: صلاحيّات · الحكم: UNVALIDATED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R3"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R4",
+      "category": "FINANCIAL",
+      "requirement": "حسمُ الخطر: treasury.go يعتمد معاملةَ المنادي",
+      "source_contract": "RISK REGISTER · المجال: مال · الحكم: UNVALIDATED",
+      "severity": "BLOCKER",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": true,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R4"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-R5",
+      "category": "AUDIT",
+      "requirement": "حسمُ الخطر: PATCH stores/{id}/settings بلا تدقيق",
+      "source_contract": "RISK REGISTER · المجال: تدقيق · الحكم: UNVALIDATED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R5"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R6",
+      "category": "PERFORMANCE",
+      "requirement": "حسمُ الخطر: حِملُ قراءة الإعدادات",
+      "source_contract": "RISK REGISTER · المجال: أداء · الحكم: UNVALIDATED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R6"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R7",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "حسمُ الخطر: قبولُ السائق: ٣ كتاباتٍ بلا معاملة",
+      "source_contract": "RISK REGISTER · المجال: حالةُ الطلب · الحكم: DISPROVEN",
+      "severity": "BLOCKER",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "PASS",
+      "blocking": false,
+      "reason": "**انتفى بالقياس** — CONCURRENCY/C-04: 5 جولات · نجح واحدٌ في كلٍّ · وحالٌ مشروعةٌ دائماً",
+      "related_registers": [
+        "R7"
+      ],
+      "tests": [
+        "TestFAIL_R7_DriverAcceptPartialState",
+        "TestRACE_AdminVsAppTransition"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R8",
+      "category": "OPERATIONAL_READINESS",
+      "requirement": "حسمُ الخطر: مفتاحُ التكرار يعلق in_progress",
+      "source_contract": "RISK REGISTER · المجال: توفّر · الحكم: CONFIRMED",
+      "severity": "BLOCKER",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**تأكّد** — CONCURRENCY/C-06: 409 in_progress · ولا مسارَ يُطلقها إلّا التقليمُ بعد 24h",
+      "related_registers": [
+        "R8"
+      ],
+      "tests": [
+        "TestFAIL_R8_OrphanClaimUnderRealFailure",
+        "TestIDEM_CleanupAfterTTL",
+        "TestIDEM_CommitThenLostResponse",
+        "TestIDEM_ErrorReleasesClaim",
+        "TestIDEM_InProgressOverlap",
+        "TestIDEM_SameKeyDifferentPayload",
+        "TestIDEM_SameKeySamePayloadConcurrent",
+        "TestIDEM_SameKeySamePayloadSequential"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-R9",
+      "category": "SECURITY",
+      "requirement": "حسمُ الخطر: لا حدَّ معدّلٍ عامّ",
+      "source_contract": "RISK REGISTER · المجال: أمن · الحكم: UNVALIDATED",
+      "severity": "UNKNOWN",
+      "required_evidence": "اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+      "related_registers": [
+        "R9"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-RBAC-01",
+      "category": "ADMIN_RBAC",
+      "requirement": "أقلُّ صلاحيّةٍ في الخادم لا في الواجهة — `AQ-1`",
+      "source_contract": "`AQ-1` · غيرُ منفَّذٍ بالكامل",
+      "severity": "CRITICAL",
+      "required_evidence": "موظّفُ تشغيلٍ يُمنَع من تبديل إعدادٍ ماليٍّ حسّاسٍ **من الخادم**",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**الأدوارُ خشنة** — **وواجهةٌ جميلةٌ لا تُغني عن منعٍ في الخادم**",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-SET-01",
+      "category": "SETTINGS_READINESS",
+      "requirement": "لا مفتاحَ ماليٌّ يُغيِّر السلوكَ بلا اختبارٍ يحرسه",
+      "source_contract": "`TEST_TRUTH` · الإعداداتُ المُغيِّرةُ للسلوك",
+      "severity": "HIGH",
+      "required_evidence": "اختبارٌ لكلّ مفتاحٍ ماليٍّ يثبت أثرَه على الحساب",
+      "current_status": "NOT_RUN",
+      "blocking": false,
+      "reason": "**15 مفتاحاً ماليّاً بلا اختبار** — منها [customers.signup_bonus delivery.max_fee delivery.per_km drivers.reward_2 drivers.reward_3 drivers.target_reward orders.extra_source_fee orders.route_margin_pct]",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-STG-01",
+      "category": "STAGING",
+      "requirement": "إبطالُ الجلسة عبر عُقَدٍ متعدّدةٍ — `R16`",
+      "source_contract": "`R16` في سجلّ المخاطر · و`P-5` أثبته محلّيّاً بعُقدةٍ واحدة",
+      "severity": "CRITICAL",
+      "required_evidence": "خادمان يشتركان في `Redis` ويُبطَل رمزٌ على أحدهما فيُرفَض على الآخر",
+      "current_status": "REQUIRES_STAGING",
+      "blocking": true,
+      "reason": "**عُقدةٌ واحدةٌ لا تُثبت الإبطالَ الموزَّع** — والنشرُ عُقَد",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-STG-02",
+      "category": "STAGING",
+      "requirement": "تحقّقُ نشرٍ شبيهٍ بالإنتاج — هجراتٌ وضبطٌ وشهاداتٌ وتوجيه",
+      "source_contract": "`P-0` · دَينُ البيئة",
+      "severity": "CRITICAL",
+      "required_evidence": "نشرٌ كاملٌ على بيئةٍ مخصَّصةٍ ثمّ فحوصُ دخانٍ موثَّقة",
+      "current_status": "REQUIRES_STAGING",
+      "blocking": true,
+      "reason": "**`P-0` لم يبدأ** — والخادمُ اشتُري ولم يُنشَر عليه",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-TRC-01",
+      "category": "TRACEABILITY_DEBT",
+      "requirement": "كلُّ سجلٍّ مانعٍ للإطلاق مربوطٌ بدليلٍ يخصُّه",
+      "source_contract": "`P-9` · `P-10` البند ٩",
+      "severity": "BLOCKER",
+      "required_evidence": "اختبارٌ أو صفُّ مصفوفةٍ يشير إلى السجلّ بعينه",
+      "current_status": "FAIL",
+      "blocking": true,
+      "reason": "**15 سجلّاً مانعاً أو حرجاً بلا اختبارٍ ولا دليلِ مصفوفة**: [D13 R11 R13 R24 R4 XG-12 XG-14 XG-20 XG-21 XG-22 XG-25 XG-26 XG-27 XG-28 XG-29] — **والسقوطُ الآمنُ لا يجعل هذا تغطيةً**",
+      "related_registers": [
+        "D13",
+        "R11",
+        "R13",
+        "R24",
+        "R4",
+        "XG-12",
+        "XG-14",
+        "XG-20",
+        "XG-21",
+        "XG-22",
+        "XG-25",
+        "XG-26",
+        "XG-27",
+        "XG-28",
+        "XG-29"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-TRC-02",
+      "category": "TRACEABILITY_DEBT",
+      "requirement": "تتبّعٌ كاملٌ — لا سجلَّ بلا دليل",
+      "source_contract": "`P-10` البند ٩ · `FULL TRACEABILITY`",
+      "severity": "HIGH",
+      "required_evidence": "ربطُ كلّ سجلٍّ باختبارٍ أو صفِّ مصفوفة",
+      "current_status": "FAIL",
+      "blocking": false,
+      "reason": "**42 سجلّاً بلا دليلٍ يخصُّه**: [D1 D10 D13 D3 D4 D6 D8 D9 R1 R11 R12 R13 R18 R2 R24 R3 R4 R5 R6 R9 XG-12 XG-14 XG-15 XG-16 XG-17 XG-19 XG-20 XG-21 XG-22 XG-23 XG-24 XG-25 XG-26 XG-27 XG-28 XG-29 XG-30 XG-5 XG-6 XG-7 XG-8 XG-9] — **فـ`FULL TRACEABILITY` لا يمرّ**",
+      "related_registers": [
+        "D1",
+        "D10",
+        "D13",
+        "D3",
+        "D4",
+        "D6",
+        "D8",
+        "D9",
+        "R1",
+        "R11",
+        "R12",
+        "R13",
+        "R18",
+        "R2",
+        "R24",
+        "R3",
+        "R4",
+        "R5",
+        "R6",
+        "R9",
+        "XG-12",
+        "XG-14",
+        "XG-15",
+        "XG-16",
+        "XG-17",
+        "XG-19",
+        "XG-20",
+        "XG-21",
+        "XG-22",
+        "XG-23",
+        "XG-24",
+        "XG-25",
+        "XG-26",
+        "XG-27",
+        "XG-28",
+        "XG-29",
+        "XG-30",
+        "XG-5",
+        "XG-6",
+        "XG-7",
+        "XG-8",
+        "XG-9"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-TST-MERCHANTPROFILE",
+      "category": "TEST_INFRA_DEBT",
+      "requirement": "الاختبارُ المعروفُ الحال لا يدخل الحزمةَ الإلزاميّةَ وهو كاذب: TestMerchantProfile_SeesHisStore",
+      "source_contract": "`P-10` البندان ١١ و١٢ · مصالحةٌ مقيسة",
+      "severity": "MEDIUM",
+      "required_evidence": "إمّا تصحيحُ الاختبار وإمّا إخراجُه من الحزمة الإلزاميّة مع توثيق السبب",
+      "current_status": "FAIL",
+      "blocking": false,
+      "reason": "**TEST INFRA DEBT** — **الهجرةُ `0125_drop_rating_comments.sql` حذفت العمودَ عمداً** (قرارُ المالك ٢٠٢٦-٠٨-٣١: «تقييمٌ بدون أيّ تعليق»). **فالمخطَّطُ صحيحٌ والاختبارُ شائخ** — يُدرج عموداً لم يعد موجوداً. **وليس عيبَ منتج.** · حذفُ `comment` من جملة الإدراج في الاختبار — **سطرٌ واحد، وقرارُه للمالك** · **والعقدُ الذي كان يحرسه صار بلا حارس**: ملفُّ المتجر في الإدارة يُظهر الإنذاراتِ والنزاعاتِ وتقييماتِ السائقين",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-TST-REPTARGET",
+      "category": "TEST_INFRA_DEBT",
+      "requirement": "الاختبارُ المعروفُ الحال لا يدخل الحزمةَ الإلزاميّةَ وهو كاذب: TestRepTarget_GrantedOnDelivery",
+      "source_contract": "`P-10` البندان ١١ و١٢ · مصالحةٌ مقيسة",
+      "severity": "MEDIUM",
+      "required_evidence": "إمّا تصحيحُ الاختبار وإمّا إخراجُه من الحزمة الإلزاميّة مع توثيق السبب",
+      "current_status": "PASS",
+      "blocking": false,
+      "reason": "**STALE / CONTRACT-MISMATCHED** — **العقدُ تبدّل ٢٠٢٦-٠٨-٣١ بقرار المالك** (`5da3dbed`): هدفُ المندوب صار بالمتاجر المفتوحة لا بالطلبات المسلَّمة. **والاختبارُ يحرس عقداً لم يعد قائماً.** · **مُتخطّىً بـ`t.Skip` مع تاريخه** — والتتبّعُ محفوظٌ لا محذوف",
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-10",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: لا عكسَ لعمولة المندوب عند الاسترداد",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "BLOCKER",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**EXPECTED_FAIL** — CONCURRENCY/C-08: السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0",
+      "related_registers": [
+        "XG-10"
+      ],
+      "tests": [
+        "TestFIN_RefundNotConditionedOnRepBalance",
+        "TestFIN_RepCommissionReversal",
+        "TestRACE_RefundVsPayout"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-11",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "BLOCKER",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**EXPECTED_FAIL** — CONCURRENCY/C-08: السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0",
+      "related_registers": [
+        "XG-11"
+      ],
+      "tests": [
+        "TestFIN_MerchantWithdrewThenRefund",
+        "TestFIN_RefundNotConditionedOnRepBalance",
+        "TestRACE_RefundVsPayout"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-12",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: لا طبقاتِ رصيد",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "CRITICAL",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-12"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-13",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: لا مفتاحَ لمصدر احتساب العمولة",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": false,
+      "reason": "**مُثبَتٌ بـ2 اختباراً يسقط عمداً**",
+      "related_registers": [
+        "XG-13"
+      ],
+      "tests": [
+        "TestFIN_CommissionSourceMatrix",
+        "TestFIN_SnapshotVsLiveEconomics"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-14",
+      "category": "TEST_COVERAGE",
+      "requirement": "سدُّ الفجوة: بوّابةُ platformCommission مثبَّتةٌ في الشيفرة",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "CRITICAL",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-14"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-15",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: عتبةُ التفعيل تُسقط الطلباتِ السابقة (نائمةٌ يوقظها `sales.activation_orders`)",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "latent": true,
+      "woken_by": "sales.activation_orders",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد** · **ويوقظها `sales.activation_orders` بضغطةٍ من الإدارة بعد الإطلاق** — **ولا قفلَ إداريٌّ قائم**، فبقاؤها نائمةً ليس أماناً بل صدفةَ ضبط",
+      "related_registers": [
+        "XG-15"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-16",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: المندوبُ يرى عمولةَ المنصّة",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-16"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-17",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "سدُّ الفجوة: لا سجلَّ نقلِ متجرٍ بين مندوبين",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-17"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-18",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "سدُّ الفجوة: لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "BLOCKER",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "EXPECTED_FAIL",
+      "blocking": true,
+      "reason": "**DEFECT_REPRODUCED** — FAILURE/PF-01: XQ-3 FORBIDDEN STATE = PROVEN — متاجرُ=1 · مكافأةٌ=5000 · المرشَّحُ new · الردّ 500",
+      "related_registers": [
+        "XG-18"
+      ],
+      "tests": [
+        "TestFAIL_D2_ConvertLeadPartialStates",
+        "TestRACE_DuplicateLeadConversion"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-19",
+      "category": "TEST_COVERAGE",
+      "requirement": "سدُّ الفجوة: لا مدخلَ دعمٍ للمندوب والتذكرةُ تشترط طلباً",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-19"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-20",
+      "category": "AUDIT",
+      "requirement": "سدُّ الفجوة: التدقيقُ الحسّاسُ خارجَ المعاملة",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "CRITICAL",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-20"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-21",
+      "category": "MEDIA_SECURITY",
+      "requirement": "سدُّ الفجوة: سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "BLOCKER",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-21"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-22",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "سدُّ الفجوة: التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "BLOCKER",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-22"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-23",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "سدُّ الفجوة: لا مسارَ تدخّلٍ استثنائيٍّ مسمّى",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-23"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-24",
+      "category": "ORDER_INTEGRITY",
+      "requirement": "سدُّ الفجوة: لا استعلامَ لطلباتٍ بيد موقوفين",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-24"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-25",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: عمولةُ المنصّة تُحسب لحظةَ التسليم",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "CRITICAL",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-25"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-26",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: نسبةُ المندوب تُقرأ لحظةَ التسليم",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "CRITICAL",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-26"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-27",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "CRITICAL",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-27"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-28",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "CRITICAL",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-28"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-29",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: المكافأةُ تُدفع قبل تثبيت التحويل",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "BLOCKER",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-29"
+      ],
+      "waiver_policy": "FORBIDDEN"
+    },
+    {
+      "rule_id": "GATE-XG-30",
+      "category": "FINANCIAL",
+      "requirement": "سدُّ الفجوة: لا حالَ «مؤهَّلة» للمكافأة في النموذج",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-30"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-5",
+      "category": "NOTIFICATION_REALTIME",
+      "requirement": "سدُّ الفجوة: لا إشعارَ للمتجر عند الإسناد",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-5"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-6",
+      "category": "NOTIFICATION_REALTIME",
+      "requirement": "سدُّ الفجوة: لا إشعارَ للمتجر عند وصول السائق",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-6"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-7",
+      "category": "TEST_COVERAGE",
+      "requirement": "سدُّ الفجوة: القبولُ التلقائيُّ صامتٌ عن المتجر (نائمةٌ يوقظها `orders.auto_accept_min`)",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "HIGH",
+      "latent": true,
+      "woken_by": "orders.auto_accept_min",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد** · **ويوقظها `orders.auto_accept_min` بضغطةٍ من الإدارة بعد الإطلاق** — **ولا قفلَ إداريٌّ قائم**، فبقاؤها نائمةً ليس أماناً بل صدفةَ ضبط",
+      "related_registers": [
+        "XG-7"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-8",
+      "category": "NOTIFICATION_REALTIME",
+      "requirement": "سدُّ الفجوة: الإشعارُ يفتح الشاشةَ الأولى لا الكيان",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "MEDIUM",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-8"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
+      "rule_id": "GATE-XG-9",
+      "category": "NOTIFICATION_REALTIME",
+      "requirement": "سدُّ الفجوة: ٢٤ إشعاراً بلا توجيهِ تطبيق",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "MEDIUM",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": false,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-9"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    }
+  ],
+  "waivers": [],
+  "release_blockers": [
+    "[BLOCKER · NOT_RUN] قبولُ الأجهزة الحقيقيّة على الجهاز المرجعيّ `SM-A525F / Android 14` — **لا جهازَ متّصلٌ أصلاً** — `DevicesAvailable = 0` في مصفوفة الأجهزة",
+    "[BLOCKER · NOT_RUN] تنفيذُ مصفوفة أندرويد كاملةً على أجهزةٍ حقيقيّة — **22 بنداً من 27 لم يُشغَّل · وأجهزةٌ متاحةٌ = 0** — **والمِسنَدُ مكتملٌ والقبولُ لم يبدأ**",
+    "[BLOCKER · NOT_RUN] الخلفيّةُ والغفوةُ وموتُ العمليّة لتطبيق السائق على جهازٍ حقيقيّ — **الإثباتُ البنيويُّ ليس قبولَ جهاز** — خمسةُ إثباتاتٍ بنيويّةٍ لا تُغني",
+    "[BLOCKER · EXPECTED_FAIL] لا عمليّةٌ جزئيّةٌ تترك مالاً خطأً ولا طلباً عالقاً ولا متجراً مكرَّراً ولا عمليّةً خفيّة — **7 تدفّقَ فشلٍ جزئيٍّ يترك أثراً غيرَ متعافٍ**: [PF-01:DEFECT_REPRODUCED PF-02:DEFECT_REPRODUCED PF-03:DEFECT_REPRODUCED PF-06:EXPECTED_FAIL PF-07:UNPROVEN PF-08:PARTIAL PF-09:RISK_CONFIRMED] — **ومنها ما لا يراه زبونٌ ولا إدارة**",
+    "[BLOCKER · NOT_RUN] ثوابتُ المال كلُّها مُثبَتةٌ على المرشَّح — مصالحةُ المحفظة · نقدُ السائق · حفظُ اقتصاد الطلب · اللقطة · نزاهةُ الاسترداد · عكسُ عمولة المندوب · طبقاتُ الدفع · الخزينة — **8 ثابتاً من 46 لم يُبنَ أو أُجِّل** — **و`38` ثابتاً تُثبَت اليوم لا تُغني عمّا لم يُبنَ**، **ولم يُسجَّل تشغيلٌ على مرشَّحٍ ثابت**",
+    "[BLOCKER · FAIL] المرشَّحُ ثابتٌ ودليلُه من بنائه هو — **شجرةُ العمل متّسخة** — **فالمحكومُ عليه ليس ما سيُنشَر**، والدليلُ كلُّه على رملٍ متحرّك",
+    "[BLOCKER · NOT_RUN] تشغيلُ الأوضاع الإلزاميّة كاملةً على المرشَّح — `FULL` و`FINANCIAL` و`SECURITY` و`CROSS_SYSTEM` و`WEB` و`ANDROID` و`RELEASE` — **`FAST` و`IMPACTED` لا تكفيان للإطلاق** — ولم يُسجَّل تشغيلٌ كاملٌ على مرشَّح",
+    "[BLOCKER · NOT_RUN] نسخٌ احتياطيٌّ واستعادةٌ مُثبَتان — `OPS2` — **لا استعادةٌ جُرّبت قطّ** — **ونسخةٌ لم تُستعَد ليست نسخة**",
+    "[BLOCKER · NOT_RUN] حسمُ الخطر: الطلبُ الخاصُّ يُنشأ بلا معاملة — **لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+    "[BLOCKER · NOT_RUN] حسمُ الخطر: treasury.go يعتمد معاملةَ المنادي — **لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+    "[BLOCKER · EXPECTED_FAIL] حسمُ الخطر: مفتاحُ التكرار يعلق in_progress — **تأكّد** — CONCURRENCY/C-06: 409 in_progress · ولا مسارَ يُطلقها إلّا التقليمُ بعد 24h",
+    "[BLOCKER · FAIL] كلُّ سجلٍّ مانعٍ للإطلاق مربوطٌ بدليلٍ يخصُّه — **15 سجلّاً مانعاً أو حرجاً بلا اختبارٍ ولا دليلِ مصفوفة**: [D13 R11 R13 R24 R4 XG-12 XG-14 XG-20 XG-21 XG-22 XG-25 XG-26 XG-27 XG-28 XG-29] — **والسقوطُ الآمنُ لا يجعل هذا تغطيةً**",
+    "[BLOCKER · EXPECTED_FAIL] سدُّ الفجوة: لا عكسَ لعمولة المندوب عند الاسترداد — **EXPECTED_FAIL** — CONCURRENCY/C-08: السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0",
+    "[BLOCKER · EXPECTED_FAIL] سدُّ الفجوة: حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت — **EXPECTED_FAIL** — CONCURRENCY/C-08: السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0",
+    "[BLOCKER · EXPECTED_FAIL] سدُّ الفجوة: لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين — **DEFECT_REPRODUCED** — FAILURE/PF-01: XQ-3 FORBIDDEN STATE = PROVEN — متاجرُ=1 · مكافأةٌ=5000 · المرشَّحُ new · الردّ 500",
+    "[BLOCKER · NOT_IMPLEMENTED] سدُّ الفجوة: سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[BLOCKER · NOT_IMPLEMENTED] سدُّ الفجوة: التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[BLOCKER · NOT_IMPLEMENTED] سدُّ الفجوة: المكافأةُ تُدفع قبل تثبيت التحويل — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[CRITICAL · NOT_RUN] إغلاقُ العيب: سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه — **لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ",
+    "[CRITICAL · NOT_RUN] قبولُ الملاحة النهائيُّ — إعادةٌ حتميّةٌ **وقيادةٌ في الشارع** — **الإعادةُ وحدَها لا تكفي** — ولم تُنفَّذ سَوقةٌ حقيقيّة",
+    "[CRITICAL · NOT_RUN] حسمُ الخطر: إعادةُ الإدارة للكلمة لا تُبطل جلسة — **لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+    "[CRITICAL · EXPECTED_FAIL] حسمُ الخطر: سحبُ الدور لا يسري — **تأكّد** — CONCURRENCY/C-09: نداءٌ بعد الإبطال بالرمز نفسِه ⇒ 200 · والطبقةُ الكاملةُ REQUIRES_P0",
+    "[CRITICAL · EXPECTED_FAIL] حسمُ الخطر: Redis تفشل مفتوحةً — **تأكّد** — CONCURRENCY/C-09: نداءٌ بعد الإبطال بالرمز نفسِه ⇒ 200 · والطبقةُ الكاملةُ REQUIRES_P0",
+    "[CRITICAL · EXPECTED_FAIL] حسمُ الخطر: التحويلُ التلقائيّ يقبل ولا يُبلّغ — **UNPROVEN** — EVENTS/EV-09: يُقاس في التشغيل",
+    "[CRITICAL · NOT_RUN] حسمُ الخطر: فشلُ التحويل بلا أثرٍ يُقرأ — **لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
+    "[CRITICAL · NOT_IMPLEMENTED] أقلُّ صلاحيّةٍ في الخادم لا في الواجهة — `AQ-1` — **الأدوارُ خشنة** — **وواجهةٌ جميلةٌ لا تُغني عن منعٍ في الخادم**",
+    "[CRITICAL · REQUIRES_STAGING] إبطالُ الجلسة عبر عُقَدٍ متعدّدةٍ — `R16` — **عُقدةٌ واحدةٌ لا تُثبت الإبطالَ الموزَّع** — والنشرُ عُقَد",
+    "[CRITICAL · REQUIRES_STAGING] تحقّقُ نشرٍ شبيهٍ بالإنتاج — هجراتٌ وضبطٌ وشهاداتٌ وتوجيه — **`P-0` لم يبدأ** — والخادمُ اشتُري ولم يُنشَر عليه",
+    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: لا طبقاتِ رصيد — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: بوّابةُ platformCommission مثبَّتةٌ في الشيفرة — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: التدقيقُ الحسّاسُ خارجَ المعاملة — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: عمولةُ المنصّة تُحسب لحظةَ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: نسبةُ المندوب تُقرأ لحظةَ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**"
+  ],
+  "critical_unresolved": [
+    "GATE-D13 — إغلاقُ العيب: سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه",
+    "GATE-NAV-01 — قبولُ الملاحة النهائيُّ — إعادةٌ حتميّةٌ **وقيادةٌ في الشارع**",
+    "GATE-R13 — حسمُ الخطر: إعادةُ الإدارة للكلمة لا تُبطل جلسة",
+    "GATE-R15 — حسمُ الخطر: سحبُ الدور لا يسري",
+    "GATE-R16 — حسمُ الخطر: Redis تفشل مفتوحةً",
+    "GATE-R21 — حسمُ الخطر: التحويلُ التلقائيّ يقبل ولا يُبلّغ",
+    "GATE-R24 — حسمُ الخطر: فشلُ التحويل بلا أثرٍ يُقرأ",
+    "GATE-RBAC-01 — أقلُّ صلاحيّةٍ في الخادم لا في الواجهة — `AQ-1`",
+    "GATE-STG-01 — إبطالُ الجلسة عبر عُقَدٍ متعدّدةٍ — `R16`",
+    "GATE-STG-02 — تحقّقُ نشرٍ شبيهٍ بالإنتاج — هجراتٌ وضبطٌ وشهاداتٌ وتوجيه",
+    "GATE-XG-12 — سدُّ الفجوة: لا طبقاتِ رصيد",
+    "GATE-XG-14 — سدُّ الفجوة: بوّابةُ platformCommission مثبَّتةٌ في الشيفرة",
+    "GATE-XG-20 — سدُّ الفجوة: التدقيقُ الحسّاسُ خارجَ المعاملة",
+    "GATE-XG-25 — سدُّ الفجوة: عمولةُ المنصّة تُحسب لحظةَ التسليم",
+    "GATE-XG-26 — سدُّ الفجوة: نسبةُ المندوب تُقرأ لحظةَ التسليم",
+    "GATE-XG-27 — سدُّ الفجوة: مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط",
+    "GATE-XG-28 — سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم"
+  ],
+  "required_validations_not_run": [
+    "GATE-AND-01 — قبولُ الأجهزة الحقيقيّة على الجهاز المرجعيّ `SM-A525F / Android 14`",
+    "GATE-AND-02 — تنفيذُ مصفوفة أندرويد كاملةً على أجهزةٍ حقيقيّة",
+    "GATE-BG-01 — الخلفيّةُ والغفوةُ وموتُ العمليّة لتطبيق السائق على جهازٍ حقيقيّ",
+    "GATE-D13 — إغلاقُ العيب: سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه",
+    "GATE-FIN-01 — ثوابتُ المال كلُّها مُثبَتةٌ على المرشَّح — مصالحةُ المحفظة · نقدُ السائق · حفظُ اقتصاد الطلب · اللقطة · نزاهةُ الاسترداد · عكسُ عمولة المندوب · طبقاتُ الدفع · الخزينة",
+    "GATE-MODE-01 — تشغيلُ الأوضاع الإلزاميّة كاملةً على المرشَّح — `FULL` و`FINANCIAL` و`SECURITY` و`CROSS_SYSTEM` و`WEB` و`ANDROID` و`RELEASE`",
+    "GATE-NAV-01 — قبولُ الملاحة النهائيُّ — إعادةٌ حتميّةٌ **وقيادةٌ في الشارع**",
+    "GATE-OPS-02 — نسخٌ احتياطيٌّ واستعادةٌ مُثبَتان — `OPS2`",
+    "GATE-R11 — حسمُ الخطر: الطلبُ الخاصُّ يُنشأ بلا معاملة",
+    "GATE-R13 — حسمُ الخطر: إعادةُ الإدارة للكلمة لا تُبطل جلسة",
+    "GATE-R24 — حسمُ الخطر: فشلُ التحويل بلا أثرٍ يُقرأ",
+    "GATE-R4 — حسمُ الخطر: treasury.go يعتمد معاملةَ المنادي",
+    "GATE-STG-01 — إبطالُ الجلسة عبر عُقَدٍ متعدّدةٍ — `R16`",
+    "GATE-STG-02 — تحقّقُ نشرٍ شبيهٍ بالإنتاج — هجراتٌ وضبطٌ وشهاداتٌ وتوجيه"
+  ],
+  "warnings": [
+    "[HIGH] GATE-COV-01 — كلُّ سلوكٍ مطلوبٍ له دليلٌ مربوط",
+    "[MEDIUM] GATE-D1 — إغلاقُ العيب: فكُّ الإسناد بلا حدثٍ في order_events",
+    "[HIGH] GATE-D10 — إغلاقُ العيب: الاستعادةُ تُبطل نوعَ عميلٍ واحد",
+    "[HIGH] GATE-D11 — إغلاقُ العيب: force_password_change بلا بوّابةٍ في أندرويد",
+    "[MEDIUM] GATE-D12 — إغلاقُ العيب: Push.unregister بلا منادٍ",
+    "[HIGH] GATE-D14 — إغلاقُ العيب: handleWS لا يفحص ActiveStatus",
+    "[MEDIUM] GATE-D15 — إغلاقُ العيب: AdminCreateUser في خطوتين",
+    "[HIGH] GATE-D16 — إغلاقُ العيب: طابورُ المواقع ملفٌّ بلا صاحب",
+    "[HIGH] GATE-D17 — إغلاقُ العيب: الملاحةُ لا تعود بعد موت العمليّة",
+    "[MEDIUM] GATE-D18 — إغلاقُ العيب: START_STICKY يعيد الخدمةَ بفترةِ الافتراض",
+    "[HIGH] GATE-D19 — إغلاقُ العيب: LiveSocket يعيد الوصلَ بتوكنٍ منتهٍ",
+    "[HIGH] GATE-D2 — إغلاقُ العيب: convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤها مُهمَل",
+    "[HIGH] GATE-D20 — إغلاقُ العيب: البثُّ الحيُّ يتجاوز redactForMerchant",
+    "[HIGH] GATE-D21 — إغلاقُ العيب: هاتفُ السائق يصل الزبون",
+    "[MEDIUM] GATE-D22 — إغلاقُ العيب: الطلبُ الخاصُّ لا يُبثّ لصاحبه",
+    "[HIGH] GATE-D23 — إغلاقُ العيب: حمولاتُ REST تكشف اقتصاداً داخليّاً",
+    "[HIGH] GATE-D24 — إغلاقُ العيب: سقفُ الطلبات النشطة يُتجاوَز بالتزامن",
+    "[HIGH] GATE-D25 — إغلاقُ العيب: هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن",
+    "[HIGH] GATE-D26 — إغلاقُ العيب: إنذارُ الراصد يضيع بعد كتابة الوسم",
+    "[HIGH] GATE-D27 — إغلاقُ العيب: سقوطُ الدفع بلا إعادةٍ دائمة",
+    "[HIGH] GATE-D3 — إغلاقُ العيب: «تذكّرني» تنقلب دائمةً بعد أوّل تجديد",
+    "[HIGH] GATE-D4 — إغلاقُ العيب: سقفُ المفتوح داخلَ بوّابة واتساب",
+    "[HIGH] GATE-D5 — إغلاقُ العيب: المصروفُ والخزينةُ كتابتان بلا معاملة",
+    "[HIGH] GATE-D6 — إغلاقُ العيب: الطلبُ الخاصُّ لا ينادي cashBlocked",
+    "[HIGH] GATE-D7 — إغلاقُ العيب: سقفُ النقد يقيس المحصَّل لا المكشوف",
+    "[MEDIUM] GATE-D8 — إغلاقُ العيب: الطلبُ الخاصُّ لا يطلب توثيقَ واتساب",
+    "[MEDIUM] GATE-D9 — إغلاقُ العيب: الطلبُ الخاصُّ بلا حدثِ ''→pending",
+    "[HIGH] GATE-LOAD-01 — اختبارُ حِملٍ ونقعٍ قبل الإطلاق",
+    "[HIGH] GATE-OPS-01 — الصحّةُ والجهوزيّةُ تغطّيان التبعيّاتِ الحرجة",
+    "[HIGH] GATE-OPS-05 — عقدُ الجهوزيّة التشغيليّة للإدارة — `AQ-5`",
+    "[HIGH] GATE-PERF-01 — خطُّ أساسٍ للأداء — ثلاثُ دوراتٍ مستقرّةٍ قبل تجميد `SLO`",
+    "[HIGH] GATE-R1 — حسمُ الخطر: بوّابةُ الحالة يُلتفّ عليها في موضع",
+    "[UNKNOWN] GATE-R12 — حسمُ الخطر: ٣ طبقاتِ تدقيقٍ بسياق الطلب",
+    "[UNKNOWN] GATE-R14 — حسمُ الخطر: اتّصالُ البثّ لا يُراجَع بعد المصافحة",
+    "[UNKNOWN] GATE-R17 — حسمُ الخطر: خدمةُ الموقع تعود بلا سؤالٍ عن الورديّة",
+    "[UNKNOWN] GATE-R18 — حسمُ الخطر: الرفعُ لا يُجدّد التوكن",
+    "[UNKNOWN] GATE-R19 — حسمُ الخطر: سباقُ مسح طابور المواقع",
+    "[UNKNOWN] GATE-R2 — حسمُ الخطر: خمسُ دوالٍّ يتيمة",
+    "[UNKNOWN] GATE-R20 — حسمُ الخطر: مسحُ الدفعة بلا قراءة accepted",
+    "[UNKNOWN] GATE-R3 — حسمُ الخطر: زبونٌ يصير merchant بلا موافقة",
+    "[UNKNOWN] GATE-R5 — حسمُ الخطر: PATCH stores/{id}/settings بلا تدقيق",
+    "[UNKNOWN] GATE-R6 — حسمُ الخطر: حِملُ قراءة الإعدادات",
+    "[UNKNOWN] GATE-R9 — حسمُ الخطر: لا حدَّ معدّلٍ عامّ",
+    "[HIGH] GATE-SET-01 — لا مفتاحَ ماليٌّ يُغيِّر السلوكَ بلا اختبارٍ يحرسه",
+    "[HIGH] GATE-TRC-02 — تتبّعٌ كاملٌ — لا سجلَّ بلا دليل",
+    "[MEDIUM] GATE-TST-MERCHANTPROFILE — الاختبارُ المعروفُ الحال لا يدخل الحزمةَ الإلزاميّةَ وهو كاذب: TestMerchantProfile_SeesHisStore",
+    "[HIGH] GATE-XG-13 — سدُّ الفجوة: لا مفتاحَ لمصدر احتساب العمولة",
+    "[HIGH] GATE-XG-15 — سدُّ الفجوة: عتبةُ التفعيل تُسقط الطلباتِ السابقة (نائمةٌ يوقظها `sales.activation_orders`)",
+    "[HIGH] GATE-XG-16 — سدُّ الفجوة: المندوبُ يرى عمولةَ المنصّة",
+    "[HIGH] GATE-XG-17 — سدُّ الفجوة: لا سجلَّ نقلِ متجرٍ بين مندوبين",
+    "[HIGH] GATE-XG-19 — سدُّ الفجوة: لا مدخلَ دعمٍ للمندوب والتذكرةُ تشترط طلباً",
+    "[HIGH] GATE-XG-23 — سدُّ الفجوة: لا مسارَ تدخّلٍ استثنائيٍّ مسمّى",
+    "[HIGH] GATE-XG-24 — سدُّ الفجوة: لا استعلامَ لطلباتٍ بيد موقوفين",
+    "[HIGH] GATE-XG-30 — سدُّ الفجوة: لا حالَ «مؤهَّلة» للمكافأة في النموذج",
+    "[HIGH] GATE-XG-5 — سدُّ الفجوة: لا إشعارَ للمتجر عند الإسناد",
+    "[HIGH] GATE-XG-6 — سدُّ الفجوة: لا إشعارَ للمتجر عند وصول السائق",
+    "[HIGH] GATE-XG-7 — سدُّ الفجوة: القبولُ التلقائيُّ صامتٌ عن المتجر (نائمةٌ يوقظها `orders.auto_accept_min`)",
+    "[MEDIUM] GATE-XG-8 — سدُّ الفجوة: الإشعارُ يفتح الشاشةَ الأولى لا الكيان",
+    "[MEDIUM] GATE-XG-9 — سدُّ الفجوة: ٢٤ إشعاراً بلا توجيهِ تطبيق"
+  ],
+  "debts": [
+    {
+      "kind": "DEVICE DEBT",
+      "count": 6,
+      "items": [
+        "GATE-AND-01",
+        "GATE-AND-02",
+        "GATE-BG-01",
+        "GATE-D17",
+        "GATE-D18",
+        "GATE-NAV-01"
+      ],
+      "why": "**قبولٌ على جهازٍ حقيقيٍّ لم يبدأ**"
+    },
+    {
+      "kind": "STAGING DEBT",
+      "count": 2,
+      "items": [
+        "GATE-STG-01",
+        "GATE-STG-02"
+      ],
+      "why": "**بيئةُ تجهيزٍ مخصَّصةٌ لم تُنشأ — `P-0`**"
+    },
+    {
+      "kind": "TRACEABILITY DEBT",
+      "count": 2,
+      "items": [
+        "GATE-TRC-01",
+        "GATE-TRC-02"
+      ],
+      "why": "**سجلّاتٌ بلا دليلٍ يخصُّها**"
+    },
+    {
+      "kind": "OPS DEBT",
+      "count": 11,
+      "items": [
+        "GATE-D26",
+        "GATE-LOAD-01",
+        "GATE-OPS-01",
+        "GATE-OPS-02",
+        "GATE-OPS-05",
+        "GATE-PERF-01",
+        "GATE-R18",
+        "GATE-R22",
+        "GATE-R24",
+        "GATE-R6",
+        "GATE-R8"
+      ],
+      "why": "**نسخٌ واستعادةٌ وصحّةٌ وجهوزيّةٌ ومراقبة**"
+    }
+  ],
+  "remaining_requirements_to_ready": [
+    "GATE-AND-01 [BLOCKER] قبولُ الأجهزة الحقيقيّة على الجهاز المرجعيّ `SM-A525F / Android 14` ⇒ تنفيذُ مصفوفة الأجهزة على جهازٍ متّصلٍ مع سجلٍّ لكلّ بند",
+    "GATE-AND-02 [BLOCKER] تنفيذُ مصفوفة أندرويد كاملةً على أجهزةٍ حقيقيّة ⇒ سجلُّ تنفيذٍ لكلّ بندٍ على الجهاز المرجعيّ",
+    "GATE-BG-01 [BLOCKER] الخلفيّةُ والغفوةُ وموتُ العمليّة لتطبيق السائق على جهازٍ حقيقيّ ⇒ خدمةٌ أماميّةٌ · موقعٌ في الخلفيّة · `Doze` · قيدُ البطّاريّة · موتُ العمليّة",
+    "GATE-FAIL-01 [BLOCKER] لا عمليّةٌ جزئيّةٌ تترك مالاً خطأً ولا طلباً عالقاً ولا متجراً مكرَّراً ولا عمليّةً خفيّة ⇒ كلُّ تدفّقِ فشلٍ جزئيٍّ إمّا يتعافى ذاتيّاً وإمّا يظهر للإدارة",
+    "GATE-FIN-01 [BLOCKER] ثوابتُ المال كلُّها مُثبَتةٌ على المرشَّح — مصالحةُ المحفظة · نقدُ السائق · حفظُ اقتصاد الطلب · اللقطة · نزاهةُ الاسترداد · عكسُ عمولة المندوب · طبقاتُ الدفع · الخزينة ⇒ تشغيلُ `internal/fininv` على قاعدةِ المرشَّح بلا خرقٍ واحد",
+    "GATE-FRESH-01 [BLOCKER] المرشَّحُ ثابتٌ ودليلُه من بنائه هو ⇒ التزامٌ نظيفٌ · بصماتُ بناءٍ مسجَّلة · دليلٌ مأخوذٌ من المرشَّح نفسِه",
+    "GATE-MODE-01 [BLOCKER] تشغيلُ الأوضاع الإلزاميّة كاملةً على المرشَّح — `FULL` و`FINANCIAL` و`SECURITY` و`CROSS_SYSTEM` و`WEB` و`ANDROID` و`RELEASE` ⇒ تشغيلٌ كاملٌ مسجَّلٌ على مرشَّحٍ ثابتٍ لا على شجرة عمل",
+    "GATE-OPS-02 [BLOCKER] نسخٌ احتياطيٌّ واستعادةٌ مُثبَتان — `OPS2` ⇒ إنشاءُ نسخةٍ · استعادتُها · فحصُ سلامةٍ · إجراءٌ موثَّق",
+    "GATE-R11 [BLOCKER] حسمُ الخطر: الطلبُ الخاصُّ يُنشأ بلا معاملة ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+    "GATE-R4 [BLOCKER] حسمُ الخطر: treasury.go يعتمد معاملةَ المنادي ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+    "GATE-R8 [BLOCKER] حسمُ الخطر: مفتاحُ التكرار يعلق in_progress ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+    "GATE-TRC-01 [BLOCKER] كلُّ سجلٍّ مانعٍ للإطلاق مربوطٌ بدليلٍ يخصُّه ⇒ اختبارٌ أو صفُّ مصفوفةٍ يشير إلى السجلّ بعينه",
+    "GATE-XG-10 [BLOCKER] سدُّ الفجوة: لا عكسَ لعمولة المندوب عند الاسترداد ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-11 [BLOCKER] سدُّ الفجوة: حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-18 [BLOCKER] سدُّ الفجوة: لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-21 [BLOCKER] سدُّ الفجوة: سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-22 [BLOCKER] سدُّ الفجوة: التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-29 [BLOCKER] سدُّ الفجوة: المكافأةُ تُدفع قبل تثبيت التحويل ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-D13 [CRITICAL] إغلاقُ العيب: سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه ⇒ إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
+    "GATE-NAV-01 [CRITICAL] قبولُ الملاحة النهائيُّ — إعادةٌ حتميّةٌ **وقيادةٌ في الشارع** ⇒ إعادةُ مسارٍ مسجَّلٍ + سَوقةٌ حقيقيّةٌ موثَّقة",
+    "GATE-R13 [CRITICAL] حسمُ الخطر: إعادةُ الإدارة للكلمة لا تُبطل جلسة ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+    "GATE-R15 [CRITICAL] حسمُ الخطر: سحبُ الدور لا يسري ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+    "GATE-R16 [CRITICAL] حسمُ الخطر: Redis تفشل مفتوحةً ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+    "GATE-R21 [CRITICAL] حسمُ الخطر: التحويلُ التلقائيّ يقبل ولا يُبلّغ ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+    "GATE-R24 [CRITICAL] حسمُ الخطر: فشلُ التحويل بلا أثرٍ يُقرأ ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
+    "GATE-RBAC-01 [CRITICAL] أقلُّ صلاحيّةٍ في الخادم لا في الواجهة — `AQ-1` ⇒ موظّفُ تشغيلٍ يُمنَع من تبديل إعدادٍ ماليٍّ حسّاسٍ **من الخادم**",
+    "GATE-STG-01 [CRITICAL] إبطالُ الجلسة عبر عُقَدٍ متعدّدةٍ — `R16` ⇒ خادمان يشتركان في `Redis` ويُبطَل رمزٌ على أحدهما فيُرفَض على الآخر",
+    "GATE-STG-02 [CRITICAL] تحقّقُ نشرٍ شبيهٍ بالإنتاج — هجراتٌ وضبطٌ وشهاداتٌ وتوجيه ⇒ نشرٌ كاملٌ على بيئةٍ مخصَّصةٍ ثمّ فحوصُ دخانٍ موثَّقة",
+    "GATE-XG-12 [CRITICAL] سدُّ الفجوة: لا طبقاتِ رصيد ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-14 [CRITICAL] سدُّ الفجوة: بوّابةُ platformCommission مثبَّتةٌ في الشيفرة ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-20 [CRITICAL] سدُّ الفجوة: التدقيقُ الحسّاسُ خارجَ المعاملة ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-25 [CRITICAL] سدُّ الفجوة: عمولةُ المنصّة تُحسب لحظةَ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-26 [CRITICAL] سدُّ الفجوة: نسبةُ المندوب تُقرأ لحظةَ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-27 [CRITICAL] سدُّ الفجوة: مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-28 [CRITICAL] سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته"
+  ],
+  "advisory_score": 2,
+  "advisory_score_note": "**عرضٌ مساعدٌ لا قرار** — `BLOCKER \u003e SCORE`، **ومانعٌ واحدٌ يُسقط الحكمَ مهما بلغت الدرجة**",
+  "run_id": "gate_94df398de0be9b6d",
+  "generated_at": "2026-09-05T21:29:45Z",
+  "truth_baseline": ""
+}
