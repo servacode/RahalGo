@@ -753,6 +753,21 @@ func (s *Server) Router() http.Handler {
 				r.Get("/areas", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapAreas))
 				r.Post("/areas", s.requirePerm(opsmap.PermManageBranches, s.handleOpsMapAreaSave))
 				r.Put("/areas/{id}", s.requirePerm(opsmap.PermManageBranches, s.handleOpsMapAreaSave))
+
+				// **ونشاطُ المندوبين ملاحظةٌ لا حَدّ** (البند ٢٤):
+				// **لا مسارَ هنا يردّ تسجيلاً ولا تحويلَ متجرٍ بسبب
+				// موضعٍ جغرافيّ.**
+				r.Get("/reps", s.requirePerm(opsmap.PermViewRepActivity, s.handleOpsMapReps))
+
+				// **والتحليلاتُ لقطةٌ لا بثّ** (البند ٤٤) — ولا تُرسَل
+				// خريطةُ كثافةٍ كاملةٌ في كلّ ثانية.
+				r.Get("/demand", s.requirePerm(opsmap.PermViewDemand, s.handleOpsMapDemand))
+				r.Get("/opportunities",
+					s.requirePerm(opsmap.PermViewDemand, s.handleOpsMapOpportunities))
+
+				// **والبحثُ يُقَصُّ بصلاحيّات الباحث** — **ومن وجد اسمَ
+				// من لا يملك رؤيتَه عرف أنّه موجود.**
+				r.Get("/search", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapSearch))
 			})
 			// **وفكُّ الاقتران بابُ إعادة الربط** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
 			// «إذا تمّ فصلُ الاقتران لا يوجد زرٌّ لإعادة ربط الجهاز»).

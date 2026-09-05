@@ -397,3 +397,111 @@ func (s *Server) handleOpsMapAreaSave(w http.ResponseWriter, r *http.Request) {
 	})
 	httpx.JSON(w, http.StatusOK, map[string]any{"id": newID})
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **المندوبون والتحليلات — `MAP-5` و`MAP-6`**
+// ══════════════════════════════════════════════════════════════════════
+
+// repFilterFrom مُرشِّحاتُ المندوبين من الاستعلام.
+func repFilterFrom(r *http.Request) opsmap.RepFilter {
+	q := r.URL.Query()
+	f := opsmap.RepFilter{RepID: q.Get("rep_id"), CityID: q.Get("city_id")}
+	if from, to, ok := rangeFrom(r); ok {
+		f.Since, f.Until = &from, &to
+	}
+	return f
+}
+
+func (s *Server) handleOpsMapReps(w http.ResponseWriter, r *http.Request) {
+	box, err := bboxFrom(r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	f := repFilterFrom(r)
+	// **وأرباحُ المندوب لمن يملك صلاحيّتَها وحدَه** (البند ٢٦).
+	money := opsmap.Allows(rolesFrom(r), opsmap.PermViewMoney)
+
+	list, err := opsmap.Reps(r.Context(), s.pg, f, money)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	points, err := opsmap.RepPoints(r.Context(), s.pg, box, f)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"reps": list, "points": points, "count": len(list),
+	})
+}
+
+// handleOpsMapDemand التحليلاتُ الجغرافيّة (البندان ٢٧ و٢٩).
+//
+// **والطبقاتُ منفصلةٌ في الردّ** — **ولا تُخلَط كثافتان في رقم**
+// (البند ١٨).
+func (s *Server) handleOpsMapDemand(w http.ResponseWriter, r *http.Request) {
+	f := opsmap.DemandFilter{CityID: r.URL.Query().Get("city_id")}
+	if from, to, ok := rangeFrom(r); ok {
+		f.Since, f.Until = &from, &to
+	}
+	ctx := r.Context()
+
+	orders, err := opsmap.OrderDemand(ctx, s.pg, f)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	requests, err := opsmap.RequestDemand(ctx, s.pg, f)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	merchants, err := opsmap.MerchantDensity(ctx, s.pg, f)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	drivers, err := opsmap.DriverSupply(ctx, s.pg)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	unserved, err := opsmap.UnservedDemand(ctx, s.pg, f)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"orders": orders, "requests": requests, "merchants": merchants,
+		"drivers": drivers, "unserved": unserved,
+		"cell_deg": opsmap.CellSizeDeg,
+	})
+}
+
+func (s *Server) handleOpsMapOpportunities(w http.ResponseWriter, r *http.Request) {
+	f := opsmap.DemandFilter{CityID: r.URL.Query().Get("city_id")}
+	if from, to, ok := rangeFrom(r); ok {
+		f.Since, f.Until = &from, &to
+	}
+	out, err := opsmap.Opportunities(r.Context(), s.pg, f)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"opportunities": out, "count": len(out),
+	})
+}
+
+// handleOpsMapSearch البحثُ في الخريطة (البند ٣٦).
+func (s *Server) handleOpsMapSearch(w http.ResponseWriter, r *http.Request) {
+	hits, err := opsmap.Search(r.Context(), s.pg, rolesFrom(r),
+		r.URL.Query().Get("q"))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"hits": hits, "count": len(hits)})
+}

@@ -166,6 +166,58 @@ interface AreaRow {
   zone?: string;
 }
 
+interface RepRow {
+  id: string;
+  name: string;
+  merchants: number;
+  converted: number;
+  lat?: number;
+  lng?: number;
+  last_activity?: string;
+  earnings?: number;
+}
+
+interface RepPoint {
+  merchant_id: string;
+  rep_id: string;
+  lat: number;
+  lng: number;
+}
+
+interface DemandCell {
+  lat: number;
+  lng: number;
+  count: number;
+}
+
+interface DemandOut {
+  orders: DemandCell[];
+  requests: DemandCell[];
+  merchants: DemandCell[];
+  drivers: DemandCell[];
+  unserved: DemandCell[];
+  cell_deg: number;
+}
+
+interface OpportunityCell {
+  lat: number;
+  lng: number;
+  orders: number;
+  requests: number;
+  merchants: number;
+  drivers: number;
+  score: number;
+  reasons: string[];
+}
+
+interface SearchHit {
+  kind: string;
+  id: string;
+  label: string;
+  lat?: number;
+  lng?: number;
+}
+
 /** **ما هو المُحدَّد؟** — واللوحةُ الجانبيّةُ واحدةٌ لكلّ الطبقات. */
 type Picked =
   | { kind: "driver"; v: Driver }
@@ -173,7 +225,8 @@ type Picked =
   | { kind: "order"; v: OrderPin }
   | { kind: "zone"; v: Zone }
   | { kind: "request"; v: CovRequest }
-  | { kind: "branch"; v: BranchPin };
+  | { kind: "branch"; v: BranchPin }
+  | { kind: "opportunity"; v: OpportunityCell };
 
 /**
  * **ألوانُ الطزاجة — من الثيم لا من هنا.**
@@ -248,6 +301,18 @@ export default function OpsMapPage() {
   const [zoneName, setZoneName] = useState("");
   const [saveErr, setSaveErr] = useState("");
   const [reqStatus, setReqStatus] = useState("");
+
+  // ── المدى الزمنيُّ للتحليلات (البند ٢٩) ───────────────────
+  //
+  // **وثلاثون يوماً افتراضاً** — **ومدىً مفتوحٌ على كلّ التاريخ يقول
+  // «هنا عملٌ» عن حيٍّ مات فيه العملُ منذ سنة.**
+  const [range, setRange] = useState<"today" | "7d" | "30d">("30d");
+
+  // ── البحثُ في الخريطة (البند ٣٦) ──────────────────────────
+  //
+  // **ويُقَصُّ في الخادم بصلاحيّات الباحث** — **ومن وجد اسمَ من لا
+  // يملك رؤيتَه عرف أنّه موجود.**
+  const [hunt, setHunt] = useState("");
 
   // ── ما يملكه من يقف أمامها ───────────────────────────────────
   const meta = useLiveData<Meta>(() => api<Meta>("/api/v1/admin/ops-map/meta"), []);
@@ -350,6 +415,56 @@ export default function OpsMapPage() {
         : Promise.resolve({ areas: [], count: 0 }),
     ["catalog"],
     [visible.areas, meta.data],
+  );
+
+  // ── المندوبون ───────────────────────────────────────────────
+  const reps = useLiveData<{ reps: RepRow[]; points: RepPoint[] }>(
+    () =>
+      can("VIEW_REP_ACTIVITY") && visible.reps
+        ? api<{ reps: RepRow[]; points: RepPoint[] }>(
+            `/api/v1/admin/ops-map/reps?range=${range}`,
+          )
+        : Promise.resolve({ reps: [], points: [] }),
+    [],
+    [visible.reps, range, meta.data],
+  );
+
+  // ── الكثافةُ والفرص ─────────────────────────────────────────
+  //
+  // **ولقطةٌ لا بثّ** (البند ٤٤): **خريطةُ كثافةٍ كاملةٌ كلَّ ثانيةٍ
+  // عبر القناة تُغرقها بلا فائدة** — والتحليلُ لا يتبدّل في الثانية.
+  const demand = useLiveData<DemandOut>(
+    () =>
+      can("VIEW_DEMAND_ANALYTICS") && (visible.demand || visible.opportunities)
+        ? api<DemandOut>(`/api/v1/admin/ops-map/demand?range=${range}`)
+        : Promise.resolve({
+            orders: [], requests: [], merchants: [], drivers: [],
+            unserved: [], cell_deg: 0.01,
+          }),
+    [],
+    [visible.demand, visible.opportunities, range, meta.data],
+  );
+
+  const opportunities = useLiveData<{ opportunities: OpportunityCell[]; count: number }>(
+    () =>
+      can("VIEW_DEMAND_ANALYTICS") && visible.opportunities
+        ? api<{ opportunities: OpportunityCell[]; count: number }>(
+            `/api/v1/admin/ops-map/opportunities?range=${range}`,
+          )
+        : Promise.resolve({ opportunities: [], count: 0 }),
+    [],
+    [visible.opportunities, range, meta.data],
+  );
+
+  const hits = useLiveData<{ hits: SearchHit[]; count: number }>(
+    () =>
+      hunt.trim().length >= 2
+        ? api<{ hits: SearchHit[]; count: number }>(
+            `/api/v1/admin/ops-map/search?q=${encodeURIComponent(hunt.trim())}`,
+          )
+        : Promise.resolve({ hits: [], count: 0 }),
+    [],
+    [hunt],
   );
 
   const layers = useMemo<LayerSpec[]>(() => {
@@ -548,6 +663,63 @@ export default function OpsMapPage() {
       ),
     });
 
+    // ── نشاطُ المندوبين (البند ٢٦) ──────────────────────────
+    //
+    // **ونقاطُ متاجرهم لا مساراتُ هواتفهم** — **ولا تتبّعَ لخطوات
+    // إنسانٍ لم يطلبه أحد.**
+    out.push({
+      id: "reps",
+      kind: "heat",
+      order: 5,
+      visible: !!visible.reps,
+      color: themeColor("violet"),
+      data: fc(
+        (reps.data?.points ?? []).map((p) =>
+          pt(p.lng, p.lat, { rep: p.rep_id }),
+        ),
+      ),
+    });
+
+    // ── الكثافتان — منفصلتان (البند ١٨) ─────────────────────
+    //
+    // **طلبٌ نُفِّذ غيرُ طلبِ تغطيةٍ لم يُغطَّ** — **الأوّلُ يقول «هنا
+    // عملٌ نأخذه»، والثاني «هنا عملٌ لا نأخذه».**
+    out.push({
+      id: "demand-orders",
+      kind: "heat",
+      order: 3,
+      weightField: "count",
+      visible: !!visible.demand,
+      color: themeColor("warning"),
+      data: fc((demand.data?.orders ?? []).map((c) => pt(c.lng, c.lat, { count: c.count }))),
+    });
+    out.push({
+      id: "demand-requests",
+      kind: "heat",
+      order: 4,
+      weightField: "count",
+      visible: !!visible.demand,
+      color: themeColor("violet"),
+      data: fc((demand.data?.requests ?? []).map((c) => pt(c.lng, c.lat, { count: c.count }))),
+    });
+
+    // ── فرصُ التوسّع (البند ٢٨) ─────────────────────────────
+    //
+    // **ونقطةٌ تُنقَر فتقول لماذا** — **ودرجةٌ بلا سببٍ رأيٌ يُباع
+    // على أنّه حساب.**
+    out.push({
+      id: "opportunities",
+      kind: "point",
+      order: 80,
+      visible: !!visible.opportunities,
+      color: themeColor("danger-solid"),
+      data: fc(
+        (opportunities.data?.opportunities ?? []).map((o) =>
+          pt(o.lng, o.lat, { lat: o.lat, lng: o.lng, score: o.score }),
+        ),
+      ),
+    });
+
     // ── الربطُ الجغرافيُّ للطلب المُحدَّد (البند ١١) ─────────
     //
     // **وخطٌّ مستقيمٌ لا مسار** — **الخريطةُ ليست محرّكَ ملاحة**، وخطٌّ
@@ -578,7 +750,8 @@ export default function OpsMapPage() {
 
     return out;
   }, [drivers.data, merchants.data, orders.data, zones.data, requests.data,
-      branches.data, visible, selected, draft]);
+      branches.data, reps.data, demand.data, opportunities.data,
+      visible, selected, draft]);
 
   const onFeature = useCallback(
     (layerID: string, props: Record<string, unknown>) => {
@@ -606,8 +779,15 @@ export default function OpsMapPage() {
         const b = branches.data?.branches.find((y) => y.id === props.id);
         if (b) setSelected({ kind: "branch", v: b });
       }
+      if (layerID === "opportunities") {
+        const o = (opportunities.data?.opportunities ?? []).find(
+          (y) => y.lat === props.lat && y.lng === props.lng,
+        );
+        if (o) setSelected({ kind: "opportunity", v: o });
+      }
     },
-    [drivers.data, merchants.data, orders.data, zones.data, requests.data, branches.data],
+    [drivers.data, merchants.data, orders.data, zones.data, requests.data,
+     branches.data, opportunities.data],
   );
 
   // ── نقرُ الأرض ───────────────────────────────────────────────
@@ -687,6 +867,44 @@ export default function OpsMapPage() {
       <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
         {/* ── الطبقاتُ والمرشِّحات ────────────────────────────── */}
         <div className="flex flex-col gap-4">
+          {/* ── البحث (البند ٣٦) ───────────────────────────────── */}
+          <Card>
+            <h3 className="mb-2 text-sm font-bold">{T.search}</h3>
+            <Input
+              placeholder={T.search}
+              value={hunt}
+              onChange={(e) => setHunt(e.target.value)}
+            />
+            {hunt.trim().length >= 2 && (
+              <ul className="mt-2 flex flex-col gap-1 text-sm">
+                {(hits.data?.hits ?? []).length === 0 ? (
+                  <li className="text-xs text-ink-muted">{T.searchNone}</li>
+                ) : (
+                  (hits.data?.hits ?? []).slice(0, 12).map((x) => (
+                    <li key={`${x.kind}-${x.id}`} className="flex items-center gap-2">
+                      <span>{x.label}</span>
+                      <span className="ms-auto text-xs text-ink-muted">
+                        {T.layer[
+                          (x.kind === "driver"
+                            ? "drivers"
+                            : x.kind === "merchant"
+                              ? "merchants"
+                              : x.kind === "order"
+                                ? "orders"
+                                : x.kind === "branch"
+                                  ? "branches"
+                                  : x.kind === "area"
+                                    ? "areas"
+                                    : "reps") as keyof typeof T.layer
+                        ]}
+                      </span>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
+          </Card>
+
           <Card>
             <h3 className="mb-2 text-sm font-bold">{T.layers}</h3>
             <div className="flex flex-col gap-1">
@@ -747,6 +965,33 @@ export default function OpsMapPage() {
                 count={areas.data?.count}
                 onToggle={toggle}
               />
+              {can("VIEW_REP_ACTIVITY") && (
+                <LayerToggle
+                  id="reps"
+                  label={T.layer.reps}
+                  on={!!visible.reps}
+                  count={reps.data?.reps.length}
+                  onToggle={toggle}
+                />
+              )}
+              {can("VIEW_DEMAND_ANALYTICS") && (
+                <>
+                  <LayerToggle
+                    id="demand"
+                    label={T.layer.demand}
+                    on={!!visible.demand}
+                    count={demand.data?.orders.length}
+                    onToggle={toggle}
+                  />
+                  <LayerToggle
+                    id="opportunities"
+                    label={T.layer.opportunities}
+                    on={!!visible.opportunities}
+                    count={opportunities.data?.count}
+                    onToggle={toggle}
+                  />
+                </>
+              )}
             </div>
           </Card>
 
@@ -838,6 +1083,44 @@ export default function OpsMapPage() {
             </Card>
           )}
 
+          {/* ── المدى الزمنيّ (البند ٢٩) ─────────────────────────
+              **ويخصُّ التحليلاتِ ونشاطَ المندوبين وحدَها** — **والسائقون
+              والطلباتُ «الآن» لا مدّةَ لها.** */}
+          {can("VIEW_DEMAND_ANALYTICS") &&
+            (visible.demand || visible.opportunities || visible.reps) && (
+            <Card>
+              <h3 className="mb-2 text-sm font-bold">{T.filter.range}</h3>
+              <Select
+                label={T.filter.range}
+                value={range}
+                onChange={(e) => setRange(e.target.value as "today" | "7d" | "30d")}
+              >
+                <option value="today">{T.filter.today}</option>
+                <option value="7d">{T.filter.d7}</option>
+                <option value="30d">{T.filter.d30}</option>
+              </Select>
+              <p className="mt-3 text-xs leading-5 text-ink-muted">{T.demand.separate}</p>
+            </Card>
+          )}
+
+          {/* ── المندوبون (البند ٢٦) ─────────────────────────── */}
+          {can("VIEW_REP_ACTIVITY") && visible.reps && (
+            <Card>
+              <h3 className="mb-1 text-sm font-bold">{T.layer.reps}</h3>
+              <p className="mb-2 text-xs text-ink-muted">{T.rep.noTerritory}</p>
+              <ul className="flex flex-col gap-1 text-sm">
+                {(reps.data?.reps ?? []).slice(0, 15).map((r) => (
+                  <li key={r.id} className="flex items-center gap-2">
+                    <span>{r.name}</span>
+                    <span className="ms-auto text-xs text-ink-muted">
+                      {r.merchants} · {r.converted}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
           {/* ── المناطقُ التشغيليّة ──────────────────────────────
               **ولا هندسةَ لها بعد** — **فتُقرأ قائمةً ولا تُرسَم على
               الأرض.** ومن ربطها بمنطقةِ تغطيةٍ رأى شكلَها في طبقة
@@ -910,6 +1193,7 @@ export default function OpsMapPage() {
                   {selected.kind === "zone" && selected.v.name}
                   {selected.kind === "request" && T.request.title}
                   {selected.kind === "branch" && selected.v.name}
+                  {selected.kind === "opportunity" && T.opportunity.title}
                 </h3>
                 <button
                   className="ms-auto text-sm text-ink-muted"
@@ -1074,6 +1358,30 @@ export default function OpsMapPage() {
                     <Row k={T.layer.areas} v={String(selected.v.areas)} />
                   </dl>
                   <p className="mt-3 text-xs text-ink-muted">{T.branch.onePrimary}</p>
+                </>
+              )}
+              {selected.kind === "opportunity" && (
+                <>
+                  <dl className="flex flex-col gap-2 text-sm">
+                    <Row k={T.opportunity.score} v={String(selected.v.score)} />
+                    <Row k={T.layer.orders} v={String(selected.v.orders)} />
+                    <Row k={T.request.count} v={String(selected.v.requests)} />
+                    <Row k={T.layer.merchants} v={String(selected.v.merchants)} />
+                    <Row k={T.layer.drivers} v={String(selected.v.drivers)} />
+                  </dl>
+                  {/* **ولا درجةَ بلا سببٍ مسمّى** — والأرقامُ الخامُّ
+                      فوقها، فمن لم يقبل الوزنَ حسب بنفسه. */}
+                  <ul className="mt-3 flex flex-col gap-1 text-xs text-ink-muted">
+                    {selected.v.reasons.map((why) => (
+                      <li key={why}>
+                        {why === "high_demand_low_coverage" && T.opportunity.highDemandLowCoverage}
+                        {why === "high_demand_low_drivers" && T.opportunity.highDemandLowDrivers}
+                        {why === "many_requests" && T.opportunity.manyRequests}
+                        {why === "merchants_no_drivers" && T.opportunity.merchantsNoDrivers}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 text-xs text-ink-muted">{T.opportunity.explain}</p>
                 </>
               )}
             </aside>
