@@ -37,6 +37,7 @@
 | ١٢ | [`12-release-gate.md`](12-release-gate.md) | **الشدّةُ والبوّابةُ والتقريرُ وCI** |
 | ١٣ | [`13-migration.md`](13-migration.md) | **ما هو قائمٌ ويُعاد استعمالُه · وما شاخ** — و`TIG-1…4` |
 | ١٤ | [`14-owner-questions.md`](14-owner-questions.md) | **قراراتُ المالك اللازمةُ للبناء** |
+| ١٥ | [`15-implementation-plan.md`](15-implementation-plan.md) | **خطّةُ التنفيذ — إحدى عشرةَ مرحلةً قابلةً للإغلاق** |
 
 ---
 

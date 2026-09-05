@@ -158,7 +158,7 @@ TEST-INFRA GAPS                  = 3
 PRODUCT DECISIONS REQUIRED       = 7
 ```
 
-## الوثائقُ المعتمدة — سبعٌ وعشرون
+## الوثائقُ المعتمدة — ثمانٍ وعشرون
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -188,7 +188,8 @@ PRODUCT DECISIONS REQUIRED       = 7
 | ٢٤ | [`ADMIN_SETTINGS_UI_REQUIREMENT.md`](ADMIN_SETTINGS_UI_REQUIREMENT.md) | **XPRQ-UI-01 — شبكةُ بطاقات الإعدادات** |
 | ٢٥ | [`CROSS_SYSTEM_INTERACTION_CLOSURE.md`](CROSS_SYSTEM_INTERACTION_CLOSURE.md) | **المنظومةُ واحدةً — ٣٤ تدفّقاً · وتفصيلُها في [`cross-system/`](cross-system/)** |
 | ٢٦ | [`CROSS_SYSTEM_FINAL_PRODUCT_DECISIONS.md`](CROSS_SYSTEM_FINAL_PRODUCT_DECISIONS.md) | **XQ-1…XQ-5 · وتجميدُ D20–D22** |
-| ٢٧ | [`test-system-design/`](test-system-design/INDEX.md) | **تصميمُ منظومة الاختبار الدائمة — ١٤ ملفّاً** |
+| ٢٧ | [`test-system-design/`](test-system-design/INDEX.md) | **تصميمُ منظومة الاختبار — ١٥ ملفّاً وخطّةُ تنفيذ** |
+| ٢٨ | [`TEST_SYSTEM_FINAL_PRODUCT_DECISIONS.md`](TEST_SYSTEM_FINAL_PRODUCT_DECISIONS.md) | **TQ-1…TQ-4 · وتصنيفُ ٢٦ فجوةً بالشدّة** |
 
 
 ## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
