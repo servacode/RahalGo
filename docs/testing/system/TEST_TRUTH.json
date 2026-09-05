@@ -30,8 +30,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 200,
-    "test_funcs": 585
+    "test_files": 202,
+    "test_funcs": 605
   },
   "flows": [
     {
@@ -243,8 +243,10 @@
         "R7",
         "R10"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestSampleFactory_DriverOnShiftWithCash"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-09",
@@ -673,8 +675,10 @@
       "gaps": [
         "XG-20"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestSampleFactory_WalletMatchesLedger"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-26",
@@ -717,8 +721,10 @@
       "defects": [
         "D7"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestSampleFactory_DriverOnShiftWithCash"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-28",
@@ -770,8 +776,10 @@
         "XG-23",
         "XG-24"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestSampleFactory_SuspendedIsRefused"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-30",
@@ -802,8 +810,11 @@
         "R15",
         "R16"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestSampleFactory_ForeignRoleDenied",
+        "TestSampleFactory_ValidToken"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-31",
@@ -944,8 +955,10 @@
     {
       "id": "D7",
       "title": "سقفُ النقد يقيس المحصَّل لا المكشوف",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestSampleFactory_DriverOnShiftWithCash"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D8",
@@ -986,8 +999,10 @@
     {
       "id": "D14",
       "title": "handleWS لا يفحص ActiveStatus",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestSampleFactory_SuspendedIsRefused"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D15",
@@ -1190,8 +1205,10 @@
       "flows": [
         "F-30"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestSampleFactory_ValidToken"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R16",
@@ -4825,6 +4842,262 @@
       "orphan": true
     },
     {
+      "name": "TestSampleFactory_DriverOnShiftWithCash",
+      "file": "internal/qa/factory_sample_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-08",
+        "F-27"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSampleFactory_ForeignRoleDenied",
+      "file": "internal/qa/factory_sample_test.go",
+      "package": "qa",
+      "level": "L11",
+      "flows": [
+        "F-30"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSampleFactory_SuspendedIsRefused",
+      "file": "internal/qa/factory_sample_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-29"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSampleFactory_ValidToken",
+      "file": "internal/qa/factory_sample_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSampleFactory_WalletMatchesLedger",
+      "file": "internal/qa/factory_sample_test.go",
+      "package": "qa",
+      "level": "L3",
+      "flows": [
+        "F-25"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDatabaseAvailability",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryBuildsUserStates",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryCleansUpAfterItself",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryClockIsFixed",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryDriverStates",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryFinanciallyConsistent",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryMerchantAndRep",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryNamesCarryScenario",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryNamespaceIsDeterministic",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryNamespacesDoNotCollide",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactoryRejectsUnusedLedgerKinds",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFactorySeedChangesOutput",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGuardRejectsActualProductionTarget",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L11",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestProductionDatabaseGuard",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L11",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestUnsafeFixtureBreaksConsistencyOnPurpose",
+      "file": "internal/qa/factory_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestIDEM_001_SameKeyOneOrder",
       "file": "internal/qa/idempotency_test.go",
       "package": "qa",
@@ -6952,7 +7225,6 @@
     "D11 — لا اختبارَ انحدارٍ بعد",
     "D12 — لا اختبارَ انحدارٍ بعد",
     "D13 — لا اختبارَ انحدارٍ بعد",
-    "D14 — لا اختبارَ انحدارٍ بعد",
     "D15 — لا اختبارَ انحدارٍ بعد",
     "D16 — لا اختبارَ انحدارٍ بعد",
     "D17 — لا اختبارَ انحدارٍ بعد",
@@ -6963,14 +7235,12 @@
     "D4 — لا اختبارَ انحدارٍ بعد",
     "D5 — لا اختبارَ انحدارٍ بعد",
     "D6 — لا اختبارَ انحدارٍ بعد",
-    "D7 — لا اختبارَ انحدارٍ بعد",
     "D8 — لا اختبارَ انحدارٍ بعد",
     "D9 — لا اختبارَ انحدارٍ بعد",
     "F-03 (ردُّ إنشاءٍ ضائع) — لا اختبارَ مرتبطٌ به",
     "F-05 (القبولُ التلقائيّ) — لا اختبارَ مرتبطٌ به",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
     "F-07 (عرضُ الطلب على سائق) — لا اختبارَ مرتبطٌ به",
-    "F-08 (قبولُ السائق) — لا اختبارَ مرتبطٌ به",
     "F-09 (انقضاءُ العرض ودورانُه) — لا اختبارَ مرتبطٌ به",
     "F-10 (عرضُ طلبٍ على الطريق نفسِه) — لا اختبارَ مرتبطٌ به",
     "F-11 (الوصولُ للاستلام) — لا اختبارَ مرتبطٌ به",
@@ -6986,12 +7256,8 @@
     "F-22 (نقلُ متجرٍ بين مندوبين) — لا اختبارَ مرتبطٌ به",
     "F-23 (عمولةُ المندوب) — لا اختبارَ مرتبطٌ به",
     "F-24 (طلبُ سحبٍ وقرارُه) — لا اختبارَ مرتبطٌ به",
-    "F-25 (قيدٌ يدويٌّ في محفظة) — لا اختبارَ مرتبطٌ به",
     "F-26 (مصروفٌ وخزينة) — لا اختبارَ مرتبطٌ به",
-    "F-27 (تسويةُ نقد السائق) — لا اختبارَ مرتبطٌ به",
     "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
-    "F-29 (تعليقُ سائقٍ أو زبون) — لا اختبارَ مرتبطٌ به",
-    "F-30 (إعادةُ كلمةِ مرورٍ وإخراجٌ شامل) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
     "F-33 (تبديلُ إعدادٍ حسّاس) — لا اختبارَ مرتبطٌ به",
@@ -7002,7 +7268,6 @@
     "R12 — لا اختبارَ يحسمه بعد",
     "R13 — لا اختبارَ يحسمه بعد",
     "R14 — لا اختبارَ يحسمه بعد",
-    "R15 — لا اختبارَ يحسمه بعد",
     "R16 — لا اختبارَ يحسمه بعد",
     "R17 — لا اختبارَ يحسمه بعد",
     "R18 — لا اختبارَ يحسمه بعد",

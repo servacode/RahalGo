@@ -252,6 +252,66 @@ var TestMap = map[string]TestDecl{
 		Level: L1, Purpose: PurposeGenerator,
 		Modes: []string{"FAST", "FULL"},
 	},
+
+	// ── `P-3` · مصنعُ البيانات ────────────────────────────────────
+	//
+	// **وهي بنيةٌ تحتيّةٌ لا تحرس ميزةً** — **فلا تُعدّ يتيمةً ولا
+	// تُحسَب في تغطية التدفّقات.**
+	"TestFactoryNamespaceIsDeterministic":         harness(),
+	"TestFactoryNamespacesDoNotCollide":           harness(),
+	"TestFactoryNamesCarryScenario":               harness(),
+	"TestFactorySeedChangesOutput":                harness(),
+	"TestFactoryClockIsFixed":                     harness(),
+	"TestFactoryRejectsUnusedLedgerKinds":         harness(),
+	"TestDatabaseAvailability":                    infra(),
+	"TestFactoryBuildsUserStates":                 infra(),
+	"TestFactoryDriverStates":                     infra(),
+	"TestFactoryFinanciallyConsistent":            infra(),
+	"TestUnsafeFixtureBreaksConsistencyOnPurpose": harness(),
+	"TestFactoryMerchantAndRep":                   infra(),
+	"TestFactoryCleansUpAfterItself":              infra(),
+
+	// **وحارسُ الإنتاج أمنٌ لا بنية** — **يمنع كتابةً في قاعدةٍ حيّة.**
+	"TestProductionDatabaseGuard": {
+		Level: L11, Purpose: PurposeHarnessSelf,
+		Modes: []string{"FAST", "FULL", "SECURITY", "RELEASE"},
+	},
+	"TestGuardRejectsActualProductionTarget": {
+		Level: L11, Purpose: PurposeHarnessSelf,
+		Modes: []string{"FAST", "FULL", "SECURITY", "RELEASE"},
+	},
+
+	// ── عيّنةُ النقل — **تحرس ما كانت تحرسه أصولُها** ──────────────
+	"TestSampleFactory_ValidToken": {
+		Level: L4, Flows: []string{"F-30"},
+		Risks: []string{"R15"}, Modes: []string{"FULL"},
+	},
+	"TestSampleFactory_SuspendedIsRefused": {
+		Level: L4, Flows: []string{"F-29"},
+		Defects: []string{"D14"}, Modes: []string{"FULL", "SECURITY"},
+	},
+	"TestSampleFactory_DriverOnShiftWithCash": {
+		Level: L4, Flows: []string{"F-08", "F-27"},
+		Defects: []string{"D7"}, Modes: []string{"FULL"},
+	},
+	"TestSampleFactory_ForeignRoleDenied": {
+		Level: L11, Flows: []string{"F-30"},
+		Modes: []string{"FULL", "SECURITY"},
+	},
+	"TestSampleFactory_WalletMatchesLedger": {
+		Level: L3, Flows: []string{"F-25"},
+		Modes: []string{"FULL", "FINANCIAL"},
+	},
+}
+
+// harness اختبارٌ يُثبت المِسنَدَ نفسَه — **لا يحرس ميزة.**
+func harness() TestDecl {
+	return TestDecl{Level: L1, Purpose: PurposeHarnessSelf, Modes: []string{"FAST", "FULL"}}
+}
+
+// infra اختبارُ بنيةٍ تحتيّةٍ يحتاج قاعدةً.
+func infra() TestDecl {
+	return TestDecl{Level: L3, Purpose: PurposeInfrastructure, Modes: []string{"FULL"}}
 }
 
 // ══════════════════════════════════════════════════════════════════════
