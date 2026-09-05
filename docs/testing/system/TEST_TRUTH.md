@@ -19,17 +19,17 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **211** |
-| دوالُّ اختبار | **668** |
+| ملفّاتُ اختبار | **215** |
+| دوالُّ اختبار | **683** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 668
-MAPPED     = 44
-INFRA      = 56
+TOTAL      = 683
+MAPPED     = 53
+INFRA      = 62
 ORPHAN     = 568
 ```
 
@@ -55,11 +55,11 @@ ORPHAN     = 568
 
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
-| **التدفّقات** | 34 | 23 | 11 |
-| **العيوب** | 23 | 8 | 15 |
-| **المخاطر** | 24 | 7 | 17 |
+| **التدفّقات** | 34 | 25 | 9 |
+| **العيوب** | 25 | 11 | 14 |
+| **المخاطر** | 24 | 10 | 14 |
 | **فجواتُ العقد** | 26 | 4 | 22 |
-| **إعداداتُ السلوك** | 95 | 9 | 86 |
+| **إعداداتُ السلوك** | 95 | 10 | 85 |
 
 ---
 
@@ -68,10 +68,10 @@ ORPHAN     = 568
 | ID | العنوان | الحال | الاختبارات |
 |---|---|---|---|
 | **D1** | فكُّ الإسناد بلا حدثٍ في order_events | `NO_REGRESSION_TEST_YET` | — |
-| **D2** | convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤه… | `EXPECTED_FAIL` | `TestFIN_TargetRewardPrecedesCommit` · `TestFIN_TransactionBoundaries` · `TestRACE_DuplicateLeadConversion` |
+| **D2** | convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤه… | `EXPECTED_FAIL` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestFIN_TargetRewardPrecedesCommit` · `TestFIN_TransactionBoundaries` · `TestRACE_DuplicateLeadConversion` |
 | **D3** | «تذكّرني» تنقلب دائمةً بعد أوّل تجديد | `NO_REGRESSION_TEST_YET` | — |
 | **D4** | سقفُ المفتوح داخلَ بوّابة واتساب | `NO_REGRESSION_TEST_YET` | — |
-| **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `EXPECTED_FAIL` | `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
+| **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `EXPECTED_FAIL` | `TestFAIL_D5_ExpenseTreasuryPartial` · `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
 | **D6** | الطلبُ الخاصُّ لا ينادي cashBlocked | `NO_REGRESSION_TEST_YET` | — |
 | **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `EXPECTED_FAIL` | `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` |
 | **D8** | الطلبُ الخاصُّ لا يطلب توثيقَ واتساب | `NO_REGRESSION_TEST_YET` | — |
@@ -81,7 +81,7 @@ ORPHAN     = 568
 | **D12** | Push.unregister بلا منادٍ | `NO_REGRESSION_TEST_YET` | — |
 | **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `NO_REGRESSION_TEST_YET` | — |
 | **D14** | handleWS لا يفحص ActiveStatus | `EXPECTED_FAIL` | `TestSampleFactory_SuspendedIsRefused` |
-| **D15** | AdminCreateUser في خطوتين | `NO_REGRESSION_TEST_YET` | — |
+| **D15** | AdminCreateUser في خطوتين | `EXPECTED_FAIL` | `TestFAIL_D15_AdminCreateUserPartial` |
 | **D16** | طابورُ المواقع ملفٌّ بلا صاحب | `NO_REGRESSION_TEST_YET` | — |
 | **D17** | الملاحةُ لا تعود بعد موت العمليّة | `NO_REGRESSION_TEST_YET` | — |
 | **D18** | START_STICKY يعيد الخدمةَ بفترةِ الافتراض | `NO_REGRESSION_TEST_YET` | — |
@@ -90,6 +90,8 @@ ORPHAN     = 568
 | **D21** | هاتفُ السائق يصل الزبون | `EXPECTED_FAIL` | `TestD21_CustomerRedactionAgainstContract` · `TestForbiddenFieldGuardCatchesLeak` · `TestOrderFieldsAllClassified` |
 | **D22** | الطلبُ الخاصُّ لا يُبثّ لصاحبه | `EXPECTED_FAIL` | `TestD22_CustomOrderOwnerChannelContract` · `TestOrderFieldsAllClassified` |
 | **D23** | حمولاتُ REST تكشف اقتصاداً داخليّاً | `EXPECTED_FAIL` | `TestD20_MerchantRealtimeVsREST` · `TestD21_CustomerRedactionAgainstContract` · `TestOrderFieldsAllClassified` |
+| **D24** | سقفُ الطلبات النشطة يُتجاوَز بالتزامن | `EXPECTED_FAIL` | `TestFAIL_R7_DriverAcceptPartialState` · `TestRACE_MaxActiveOrders` |
+| **D25** | هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن | `EXPECTED_FAIL` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestRACE_DuplicateLeadConversion` |
 
 ---
 
@@ -110,7 +112,7 @@ ORPHAN     = 568
 | **XG-15** | `HIGH` | `sales.activation_orders` | `NOT_IMPLEMENTED` | — |
 | **XG-16** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-17** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-18** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestRACE_DuplicateLeadConversion` |
+| **XG-18** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestRACE_DuplicateLeadConversion` |
 | **XG-19** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-20** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-21** | `BLOCKER` | — | `NOT_IMPLEMENTED` | — |
@@ -130,7 +132,7 @@ ORPHAN     = 568
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 43
+COVERAGE GAPS    = 37
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -140,7 +142,6 @@ COVERAGE GAPS    = 43
 - D11 — لا اختبارَ انحدارٍ بعد
 - D12 — لا اختبارَ انحدارٍ بعد
 - D13 — لا اختبارَ انحدارٍ بعد
-- D15 — لا اختبارَ انحدارٍ بعد
 - D16 — لا اختبارَ انحدارٍ بعد
 - D17 — لا اختبارَ انحدارٍ بعد
 - D18 — لا اختبارَ انحدارٍ بعد
@@ -152,10 +153,8 @@ COVERAGE GAPS    = 43
 - D9 — لا اختبارَ انحدارٍ بعد
 - F-05 (القبولُ التلقائيّ) — لا اختبارَ مرتبطٌ به
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
-- F-09 (انقضاءُ العرض ودورانُه) — لا اختبارَ مرتبطٌ به
 - F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به
 - F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به
-- F-18 (تحويلُ الطلب لمتجرٍ آخر) — لا اختبارَ مرتبطٌ به
 - F-20 (إرسالُ الطلب بواتساب) — لا اختبارَ مرتبطٌ به
 - F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به
@@ -169,11 +168,10 @@ COVERAGE GAPS    = 43
 - R17 — لا اختبارَ يحسمه بعد
 - R18 — لا اختبارَ يحسمه بعد
 - R2 — لا اختبارَ يحسمه بعد
-- R21 — لا اختبارَ يحسمه بعد
-- R22 — لا اختبارَ يحسمه بعد
-- R23 — لا اختبارَ يحسمه بعد
 - R24 — لا اختبارَ يحسمه بعد
 - R3 — لا اختبارَ يحسمه بعد
 - R4 — لا اختبارَ يحسمه بعد
-- … و3 أخرى
+- R5 — لا اختبارَ يحسمه بعد
+- R6 — لا اختبارَ يحسمه بعد
+- R9 — لا اختبارَ يحسمه بعد
 

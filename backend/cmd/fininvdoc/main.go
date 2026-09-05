@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/servacode/rahalgo/backend/internal/failmap"
 	"github.com/servacode/rahalgo/backend/internal/fininv"
 	"github.com/servacode/rahalgo/backend/internal/racemap"
 )
@@ -19,6 +20,7 @@ import (
 func main() {
 	write("../docs/testing/system/FINANCIAL_INVARIANTS.json", fininv.Snapshot())
 	write("../docs/testing/system/CONCURRENCY_MATRIX.json", racemap.Snapshot())
+	write("../docs/testing/system/FAILURE_INJECTION_MATRIX.json", failmap.Snapshot())
 }
 
 func write(path string, v any) {

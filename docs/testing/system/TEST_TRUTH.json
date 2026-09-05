@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 211,
-    "test_funcs": 668
+    "test_files": 215,
+    "test_funcs": 683
   },
   "flows": [
     {
@@ -66,6 +66,8 @@
         "XG-9"
       ],
       "tests": [
+        "TestFAIL_R8_OrphanClaimUnderRealFailure",
+        "TestFAIL_XOB7_AutoTransferFireAndForget",
         "TestFIN_OrderEconomicConservation",
         "TestD20_CustomerRealtimeVsREST",
         "TestD20_MerchantRealtimeVsREST",
@@ -127,6 +129,7 @@
         "R8"
       ],
       "tests": [
+        "TestFAIL_R8_OrphanClaimUnderRealFailure",
         "TestIDEM_CleanupAfterTTL",
         "TestIDEM_CommitThenLostResponse",
         "TestIDEM_ErrorReleasesClaim",
@@ -228,6 +231,7 @@
         "R10"
       ],
       "tests": [
+        "TestFAIL_P7SeamRequired_FCMTransport",
         "TestRACE_TwoDriversSameOrder"
       ],
       "status": "PARTIALLY_COVERED"
@@ -252,7 +256,8 @@
         "L9"
       ],
       "defects": [
-        "D7"
+        "D7",
+        "D24"
       ],
       "risks": [
         "R7",
@@ -260,11 +265,12 @@
       ],
       "tests": [
         "TestSampleFactory_DriverOnShiftWithCash",
+        "TestFAIL_R7_DriverAcceptPartialState",
         "TestRACE_AdminVsAppTransition",
         "TestRACE_MaxActiveOrders",
         "TestRACE_TwoDriversSameOrder"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-09",
@@ -289,8 +295,10 @@
       "risks": [
         "R1"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFAIL_R22_WatchdogMarkerBeforeNotify"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-10",
@@ -431,6 +439,7 @@
         "XG-26"
       ],
       "tests": [
+        "TestFAIL_P7SeamRequired_FCMTransport",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_TransactionBoundaries",
         "TestFIN_CommissionSourceMatrix",
@@ -540,8 +549,10 @@
         "L8",
         "L9"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFAIL_XOB7_AutoTransferFireAndForget"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-19",
@@ -615,7 +626,8 @@
         "L9"
       ],
       "defects": [
-        "D2"
+        "D2",
+        "D25"
       ],
       "gaps": [
         "XG-18",
@@ -624,6 +636,7 @@
       ],
       "tests": [
         "TestRepTarget_GrantedOnDelivery",
+        "TestFAIL_D2_ConvertLeadPartialStates",
         "TestFIN_TargetRewardPrecedesCommit",
         "TestFIN_TransactionBoundaries",
         "TestRACE_DuplicateLeadConversion"
@@ -650,6 +663,7 @@
         "XG-17"
       ],
       "tests": [
+        "TestFAIL_D2_ConvertLeadPartialStates",
         "TestRACE_DuplicateLeadConversion"
       ],
       "status": "PARTIALLY_COVERED"
@@ -742,7 +756,8 @@
         "XG-20"
       ],
       "tests": [
-        "TestSampleFactory_WalletMatchesLedger"
+        "TestSampleFactory_WalletMatchesLedger",
+        "TestFAIL_AQ4_AuditAtomicity"
       ],
       "status": "PARTIALLY_COVERED"
     },
@@ -765,10 +780,11 @@
         "D5"
       ],
       "tests": [
+        "TestFAIL_D5_ExpenseTreasuryPartial",
         "TestFIN_ExpenseTreasuryInvariant",
         "TestFIN_TransactionBoundaries"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-27",
@@ -847,7 +863,8 @@
         "XG-24"
       ],
       "tests": [
-        "TestSampleFactory_SuspendedIsRefused"
+        "TestSampleFactory_SuspendedIsRefused",
+        "TestFAIL_AQ4_AuditAtomicity"
       ],
       "status": "PARTIALLY_COVERED"
     },
@@ -883,9 +900,10 @@
       "tests": [
         "TestSampleFactory_ForeignRoleDenied",
         "TestSampleFactory_ValidToken",
+        "TestFAIL_D15_AdminCreateUserPartial",
         "TestRACE_SessionRevokedDuringRequest"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-31",
@@ -959,6 +977,7 @@
         "XG-28"
       ],
       "tests": [
+        "TestFAIL_AQ4_AuditAtomicity",
         "TestFIN_SnapshotVsLiveEconomics",
         "TestRACE_SettingChangeDuringSettlement"
       ],
@@ -1000,6 +1019,7 @@
       "id": "D2",
       "title": "convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤها مُهمَل",
       "tests": [
+        "TestFAIL_D2_ConvertLeadPartialStates",
         "TestFIN_TargetRewardPrecedesCommit",
         "TestFIN_TransactionBoundaries",
         "TestRACE_DuplicateLeadConversion"
@@ -1022,6 +1042,7 @@
       "id": "D5",
       "title": "المصروفُ والخزينةُ كتابتان بلا معاملة",
       "tests": [
+        "TestFAIL_D5_ExpenseTreasuryPartial",
         "TestFIN_ExpenseTreasuryInvariant",
         "TestFIN_TransactionBoundaries"
       ],
@@ -1089,8 +1110,10 @@
     {
       "id": "D15",
       "title": "AdminCreateUser في خطوتين",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFAIL_D15_AdminCreateUserPartial"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D16",
@@ -1154,6 +1177,24 @@
         "TestOrderFieldsAllClassified"
       ],
       "status": "EXPECTED_FAIL"
+    },
+    {
+      "id": "D24",
+      "title": "سقفُ الطلبات النشطة يُتجاوَز بالتزامن",
+      "tests": [
+        "TestFAIL_R7_DriverAcceptPartialState",
+        "TestRACE_MaxActiveOrders"
+      ],
+      "status": "EXPECTED_FAIL"
+    },
+    {
+      "id": "D25",
+      "title": "هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن",
+      "tests": [
+        "TestFAIL_D2_ConvertLeadPartialStates",
+        "TestRACE_DuplicateLeadConversion"
+      ],
+      "status": "EXPECTED_FAIL"
     }
   ],
   "risks": [
@@ -1213,6 +1254,7 @@
         "F-08"
       ],
       "tests": [
+        "TestFAIL_R7_DriverAcceptPartialState",
         "TestRACE_AdminVsAppTransition"
       ],
       "status": "REGRESSION_TEST_PRESENT"
@@ -1227,6 +1269,7 @@
         "F-24"
       ],
       "tests": [
+        "TestFAIL_R8_OrphanClaimUnderRealFailure",
         "TestIDEM_CleanupAfterTTL",
         "TestIDEM_CommitThenLostResponse",
         "TestIDEM_ErrorReleasesClaim",
@@ -1254,6 +1297,7 @@
         "F-10"
       ],
       "tests": [
+        "TestFAIL_R7_DriverAcceptPartialState",
         "TestRACE_MaxActiveOrders",
         "TestRACE_TwoDriversSameOrder"
       ],
@@ -1358,15 +1402,19 @@
         "F-04",
         "F-20"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFAIL_XOB7_AutoTransferFireAndForget"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R22",
       "title": "الراصدُ يفقد الإشعارَ الباقي",
       "strategy": "إسقاطُ الإشعار بعد وسم alerted_at — L9",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFAIL_R22_WatchdogMarkerBeforeNotify"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R23",
@@ -1375,8 +1423,10 @@
       "flows": [
         "F-14"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFAIL_P7SeamRequired_FCMTransport"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R24",
@@ -1499,6 +1549,7 @@
       "title": "لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين",
       "severity": "BLOCKER",
       "tests": [
+        "TestFAIL_D2_ConvertLeadPartialStates",
         "TestRACE_DuplicateLeadConversion"
       ],
       "status": "EXPECTED_FAIL"
@@ -3176,8 +3227,10 @@
         "merchant",
         "rep"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFAIL_D2_ConvertLeadPartialStates"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "security.force_password_change",
@@ -3642,6 +3695,44 @@
       "file": "internal/deploycheck/compose_test.go",
       "package": "deploycheck_test",
       "orphan": true
+    },
+    {
+      "name": "TestEveryMappedTestExists",
+      "file": "internal/failmap/failmap_test.go",
+      "package": "failmap",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestNineFlowsMapped",
+      "file": "internal/failmap/failmap_test.go",
+      "package": "failmap",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestNoFalsePass",
+      "file": "internal/failmap/failmap_test.go",
+      "package": "failmap",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestChecksReferenceKnownFlows",
@@ -5510,6 +5601,216 @@
       "orphan": false
     },
     {
+      "name": "TestFAIL_D2_ConvertLeadPartialStates",
+      "file": "internal/qa/fail_partial_test.go",
+      "package": "qa",
+      "level": "L6",
+      "flows": [
+        "F-21",
+        "F-22"
+      ],
+      "defects": [
+        "D2",
+        "D25"
+      ],
+      "gaps": [
+        "XG-18"
+      ],
+      "settings": [
+        "sales.target_reward"
+      ],
+      "modes": [
+        "FULL",
+        "FAILURE",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_D5_ExpenseTreasuryPartial",
+      "file": "internal/qa/fail_partial_test.go",
+      "package": "qa",
+      "level": "L6",
+      "flows": [
+        "F-26"
+      ],
+      "defects": [
+        "D5"
+      ],
+      "modes": [
+        "FULL",
+        "FAILURE",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_AQ4_AuditAtomicity",
+      "file": "internal/qa/fail_state_test.go",
+      "package": "qa",
+      "level": "L6",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "FULL",
+        "FAILURE",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_D15_AdminCreateUserPartial",
+      "file": "internal/qa/fail_state_test.go",
+      "package": "qa",
+      "level": "L6",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D15"
+      ],
+      "modes": [
+        "FULL",
+        "FAILURE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_P7SeamRequired_FCMTransport",
+      "file": "internal/qa/fail_state_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "FAILURE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_R22_WatchdogMarkerBeforeNotify",
+      "file": "internal/qa/fail_state_test.go",
+      "package": "qa",
+      "level": "L6",
+      "flows": [
+        "F-09"
+      ],
+      "risks": [
+        "R22"
+      ],
+      "modes": [
+        "FULL",
+        "FAILURE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_R7_DriverAcceptPartialState",
+      "file": "internal/qa/fail_state_test.go",
+      "package": "qa",
+      "level": "L6",
+      "flows": [
+        "F-08"
+      ],
+      "defects": [
+        "D24"
+      ],
+      "risks": [
+        "R7",
+        "R10"
+      ],
+      "modes": [
+        "FULL",
+        "FAILURE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_R8_OrphanClaimUnderRealFailure",
+      "file": "internal/qa/fail_state_test.go",
+      "package": "qa",
+      "level": "L6",
+      "flows": [
+        "F-03",
+        "F-01"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "FULL",
+        "FAILURE",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_XOB7_AutoTransferFireAndForget",
+      "file": "internal/qa/fail_state_test.go",
+      "package": "qa",
+      "level": "L6",
+      "flows": [
+        "F-01",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FULL",
+        "FAILURE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_SelfTest_CleanupLeavesNothing",
+      "file": "internal/qa/failpoint_selftest_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_SelfTest_HitsOnlyTheNamedStep",
+      "file": "internal/qa/failpoint_selftest_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_SelfTest_ScopeDoesNotLeak",
+      "file": "internal/qa/failpoint_selftest_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestFIN_ExpenseTreasuryInvariant",
       "file": "internal/qa/financial_stage_test.go",
       "package": "qa",
@@ -6423,7 +6724,8 @@
         "F-22"
       ],
       "defects": [
-        "D2"
+        "D2",
+        "D25"
       ],
       "gaps": [
         "XG-18"
@@ -6560,6 +6862,9 @@
       "flows": [
         "F-08",
         "F-10"
+      ],
+      "defects": [
+        "D24"
       ],
       "risks": [
         "R10"
@@ -8383,7 +8688,6 @@
     "D11 — لا اختبارَ انحدارٍ بعد",
     "D12 — لا اختبارَ انحدارٍ بعد",
     "D13 — لا اختبارَ انحدارٍ بعد",
-    "D15 — لا اختبارَ انحدارٍ بعد",
     "D16 — لا اختبارَ انحدارٍ بعد",
     "D17 — لا اختبارَ انحدارٍ بعد",
     "D18 — لا اختبارَ انحدارٍ بعد",
@@ -8395,10 +8699,8 @@
     "D9 — لا اختبارَ انحدارٍ بعد",
     "F-05 (القبولُ التلقائيّ) — لا اختبارَ مرتبطٌ به",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
-    "F-09 (انقضاءُ العرض ودورانُه) — لا اختبارَ مرتبطٌ به",
     "F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به",
     "F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به",
-    "F-18 (تحويلُ الطلب لمتجرٍ آخر) — لا اختبارَ مرتبطٌ به",
     "F-20 (إرسالُ الطلب بواتساب) — لا اختبارَ مرتبطٌ به",
     "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
@@ -8412,9 +8714,6 @@
     "R17 — لا اختبارَ يحسمه بعد",
     "R18 — لا اختبارَ يحسمه بعد",
     "R2 — لا اختبارَ يحسمه بعد",
-    "R21 — لا اختبارَ يحسمه بعد",
-    "R22 — لا اختبارَ يحسمه بعد",
-    "R23 — لا اختبارَ يحسمه بعد",
     "R24 — لا اختبارَ يحسمه بعد",
     "R3 — لا اختبارَ يحسمه بعد",
     "R4 — لا اختبارَ يحسمه بعد",

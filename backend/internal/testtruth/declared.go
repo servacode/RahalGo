@@ -47,7 +47,7 @@ var Flows = []FlowDecl{
 	{ID: "F-05", Title: "القبولُ التلقائيّ", Actor: "watchdog", Apps: []string{"merchant", "customer"}, Realtime: true, Partial: true, Severity: "CRITICAL", Gaps: []string{"XG-7"}},
 	{ID: "F-06", Title: "رفضُ المتجر", Actor: "merchant", Apps: []string{"merchant", "customer", "admin"}, Money: true, Realtime: true, Severity: "HIGH"},
 	{ID: "F-07", Title: "عرضُ الطلب على سائق", Actor: "engine", Apps: []string{"driver"}, Realtime: true, Partial: true, Race: true, Severity: "CRITICAL", Risks: []string{"R10"}},
-	{ID: "F-08", Title: "قبولُ السائق", Actor: "driver", Apps: []string{"driver", "customer", "merchant"}, Money: true, Realtime: true, Partial: true, Race: true, Severity: "BLOCKER", Defects: []string{"D7"}, Risks: []string{"R7", "R10"}},
+	{ID: "F-08", Title: "قبولُ السائق", Actor: "driver", Apps: []string{"driver", "customer", "merchant"}, Money: true, Realtime: true, Partial: true, Race: true, Severity: "BLOCKER", Defects: []string{"D7", "D24"}, Risks: []string{"R7", "R10"}},
 	{ID: "F-09", Title: "انقضاءُ العرض ودورانُه", Actor: "watchdog", Apps: []string{"driver", "admin"}, Realtime: true, Partial: true, Race: true, Severity: "HIGH", Defects: []string{"D1"}, Risks: []string{"R1"}},
 	{ID: "F-10", Title: "عرضُ طلبٍ على الطريق نفسِه", Actor: "engine", Apps: []string{"driver", "customer"}, Money: true, Realtime: true, Partial: true, Race: true, Severity: "HIGH", Defects: []string{"D7"}, Risks: []string{"R10"}},
 	{ID: "F-11", Title: "الوصولُ للاستلام", Actor: "driver", Apps: []string{"driver", "customer"}, Realtime: true, Severity: "MEDIUM", Gaps: []string{"XG-6"}},
@@ -60,7 +60,7 @@ var Flows = []FlowDecl{
 	{ID: "F-18", Title: "تحويلُ الطلب لمتجرٍ آخر", Actor: "admin", Apps: []string{"merchant", "customer", "admin"}, Money: true, Realtime: true, Partial: true, Severity: "HIGH"},
 	{ID: "F-19", Title: "إسنادٌ إداريٌّ وإعادةُ إسناد", Actor: "admin", Apps: []string{"driver", "customer", "admin"}, Realtime: true, Partial: true, Race: true, Severity: "CRITICAL", Defects: []string{"D1"}, Gaps: []string{"XG-5"}},
 	{ID: "F-20", Title: "إرسالُ الطلب بواتساب", Actor: "admin", Apps: []string{"merchant", "admin"}, Partial: true, Severity: "CRITICAL", Risks: []string{"R21", "R24"}},
-	{ID: "F-21", Title: "تسجيلُ مرشَّحٍ ثمّ تحويلُه", Actor: "rep", Apps: []string{"rep", "merchant", "admin"}, Money: true, Partial: true, Race: true, Severity: "BLOCKER", Defects: []string{"D2"}, Gaps: []string{"XG-18", "XG-29", "XG-30"}},
+	{ID: "F-21", Title: "تسجيلُ مرشَّحٍ ثمّ تحويلُه", Actor: "rep", Apps: []string{"rep", "merchant", "admin"}, Money: true, Partial: true, Race: true, Severity: "BLOCKER", Defects: []string{"D2", "D25"}, Gaps: []string{"XG-18", "XG-29", "XG-30"}},
 	{ID: "F-22", Title: "نقلُ متجرٍ بين مندوبين", Actor: "admin", Apps: []string{"rep", "admin"}, Money: true, Severity: "HIGH", Gaps: []string{"XG-17"}},
 	{ID: "F-23", Title: "عمولةُ المندوب", Actor: "engine", Apps: []string{"rep", "admin"}, Money: true, Realtime: true, Severity: "BLOCKER", Gaps: []string{"XG-13", "XG-14", "XG-15", "XG-26", "XG-27", "XG-28"}},
 	{ID: "F-24", Title: "طلبُ سحبٍ وقرارُه", Actor: "multi", Apps: []string{"driver", "merchant", "rep", "admin"}, Money: true, Realtime: true, Race: true, Severity: "BLOCKER", Risks: []string{"R8"}, Gaps: []string{"XG-12"}},
@@ -486,6 +486,8 @@ var TestMap = map[string]TestDecl{
 	},
 	"TestRACE_MaxActiveOrders": {
 		Level: L5, Flows: []string{"F-08", "F-10"},
+		// **`R10` بقي في سجلّ المخاطر للتتبّع** — `R10 → CONFIRMED → D24`.
+		Defects:  []string{"D24"},
 		Risks:    []string{"R10"},
 		Settings: []string{"drivers.max_active_orders"},
 		Modes:    []string{"FULL", "CONCURRENCY", "RELEASE"},
@@ -507,7 +509,8 @@ var TestMap = map[string]TestDecl{
 	},
 	"TestRACE_DuplicateLeadConversion": {
 		Level: L5, Flows: []string{"F-21", "F-22"},
-		Defects: []string{"D2"}, Gaps: []string{"XG-18"},
+		// **`XG-18` يبقى فجوةَ عقدٍ حاجبة** — `XG-18 → D25`.
+		Defects: []string{"D2", "D25"}, Gaps: []string{"XG-18"},
 		Modes: []string{"FULL", "CONCURRENCY", "RELEASE"},
 	},
 	"TestRACE_DuplicatePayout": {
@@ -578,6 +581,63 @@ var TestMap = map[string]TestDecl{
 		Level: L4, Purpose: PurposeStale, Flows: []string{"F-21", "F-23"},
 		Modes: []string{},
 	},
+
+	// ── `P-6` · حقنُ الفشل المُحكَم ───────────────────────────────
+	//
+	// **والخريطةُ الآليّةُ في `internal/failmap`** — وحارسٌ فيها يسقط
+	// إن أشارت إلى اختبارٍ لا وجودَ له.
+
+	"TestFAIL_SelfTest_HitsOnlyTheNamedStep": harness(),
+	"TestFAIL_SelfTest_ScopeDoesNotLeak":     harness(),
+	"TestFAIL_SelfTest_CleanupLeavesNothing": harness(),
+
+	"TestFAIL_D2_ConvertLeadPartialStates": {
+		Level: L6, Flows: []string{"F-21", "F-22"},
+		Defects: []string{"D2", "D25"}, Gaps: []string{"XG-18"},
+		Settings: []string{"sales.target_reward"},
+		Modes:    []string{"FULL", "FAILURE", "RELEASE"},
+	},
+	"TestFAIL_D5_ExpenseTreasuryPartial": {
+		Level: L6, Flows: []string{"F-26"},
+		Defects: []string{"D5"},
+		Modes:   []string{"FULL", "FAILURE", "FINANCIAL", "RELEASE"},
+	},
+	"TestFAIL_D15_AdminCreateUserPartial": {
+		Level: L6, Flows: []string{"F-30"},
+		Defects: []string{"D15"},
+		Modes:   []string{"FULL", "FAILURE"},
+	},
+	"TestFAIL_R7_DriverAcceptPartialState": {
+		Level: L6, Flows: []string{"F-08"},
+		Defects: []string{"D24"}, Risks: []string{"R7", "R10"},
+		Modes: []string{"FULL", "FAILURE"},
+	},
+	"TestFAIL_R8_OrphanClaimUnderRealFailure": {
+		Level: L6, Flows: []string{"F-03", "F-01"},
+		Risks: []string{"R8"},
+		Modes: []string{"FULL", "FAILURE", "RELEASE"},
+	},
+	"TestFAIL_R22_WatchdogMarkerBeforeNotify": {
+		Level: L6, Flows: []string{"F-09"},
+		Risks: []string{"R22"},
+		Modes: []string{"FULL", "FAILURE"},
+	},
+	"TestFAIL_AQ4_AuditAtomicity": {
+		Level: L6, Flows: []string{"F-25", "F-29", "F-33"},
+		Modes: []string{"FULL", "FAILURE", "SECURITY", "RELEASE"},
+	},
+	"TestFAIL_XOB7_AutoTransferFireAndForget": {
+		Level: L6, Flows: []string{"F-01", "F-18"},
+		Risks: []string{"R21"},
+		Modes: []string{"FULL", "FAILURE"},
+	},
+	"TestFAIL_P7SeamRequired_FCMTransport": {
+		Level: L2, Flows: []string{"F-07", "F-14"},
+		Risks: []string{"R23"},
+		Modes: []string{"FAST", "FULL", "FAILURE"},
+	},
+
+	"TestNineFlowsMapped": harness(),
 }
 
 // harness اختبارٌ يُثبت المِسنَدَ نفسَه — **لا يحرس ميزة.**

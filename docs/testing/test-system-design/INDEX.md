@@ -44,6 +44,7 @@
 | ١٩ | [`P3V-DB-VALIDATION.md`](P3V-DB-VALIDATION.md) | **✅ `P-3V` — إثباتٌ على PostgreSQL 16.4 + PostGIS · 158/158** |
 | ٢٠ | [`P4-IMPLEMENTED.md`](P4-IMPLEMENTED.md) | **✅ `P-4` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — محرّكُ الثوابت الماليّة · ٤٦ ثابتاً في ١٢ عائلة** |
 | ٢١ | [`P5-IMPLEMENTED.md`](P5-IMPLEMENTED.md) | **✅ `P-5` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — مِسنَدُ التزامن · ١٠/١٠ سباقاتٍ مرتبطة** |
+| ٢٢ | [`P6-IMPLEMENTED.md`](P6-IMPLEMENTED.md) | **✅ `P-6` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — حقنُ الفشل · ٩/٩ تدفّقاتٍ جزئيّة** |
 
 ---
 

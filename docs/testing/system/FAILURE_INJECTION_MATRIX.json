@@ -1,0 +1,314 @@
+{
+  "counts": {
+    "Total": 9,
+    "Local": 8,
+    "RequiresP0": 0,
+    "RequiresP7": 1,
+    "RequiresP8": 0,
+    "Pass": 3,
+    "DefectReproduced": 2,
+    "RiskConfirmed": 0,
+    "ExpectedFail": 1,
+    "Partial": 1,
+    "Unproven": 2,
+    "Visible": 0,
+    "Invisible": 5,
+    "PartialVisible": 4
+  },
+  "flows": [
+    {
+      "id": "PF-01",
+      "flows": [
+        "F-21"
+      ],
+      "title": "تحويلُ مرشَّحٍ إلى متجر",
+      "steps": [
+        "١ CreateMerchant — خطؤها يُردّ",
+        "٢ UPDATE users full_name — خطؤها مُهمَل",
+        "٣ UPDATE users password_hash — خطؤها مُهمَل",
+        "٤ UPDATE merchants district_id — خطؤها مُهمَل",
+        "٥ grantSalesTargetIfAny — **تدفع مالاً** · خطؤها مُهمَل",
+        "٦ UPDATE merchant_leads converted — **التثبيت** · خطؤه يُردّ"
+      ],
+      "atomic_boundary": "NON_ATOMIC — ستُّ كتاباتٍ بلا معاملة",
+      "failpoints": [
+        "D2/step-1-create-merchant",
+        "D2/step-6-commit-conversion"
+      ],
+      "expected": "لا مكافأةَ قبل تثبيتِ التحويل (XQ-3)",
+      "observed": "متجرٌ مُنشأٌ + مكافأةٌ مدفوعةٌ + المرشَّحُ ما يزال new",
+      "financial_invariants": [
+        "FI-03",
+        "FI-05"
+      ],
+      "user_visible": "500 internal — بلا بيانٍ لِما وقع",
+      "admin_visible": "PARTIAL",
+      "recovery": "الإعادةُ تُنشئ **متجراً ثانياً** — RETRY SAFETY = BROKEN",
+      "tests": [
+        "TestFAIL_D2_ConvertLeadPartialStates"
+      ],
+      "result": "DEFECT_REPRODUCED",
+      "registers": [
+        "D2",
+        "D25",
+        "XG-18"
+      ],
+      "where": "LOCAL",
+      "evidence": "XQ-3 FORBIDDEN STATE = PROVEN — متاجرُ=1 · مكافأةٌ=5000 · المرشَّحُ new · الردّ 500"
+    },
+    {
+      "id": "PF-02",
+      "flows": [
+        "F-26"
+      ],
+      "title": "مصروفُ تشغيلٍ وخصمُ خزينة",
+      "steps": [
+        "١ INSERT INTO expenses — يُردّ خطؤه",
+        "٢ wallet.Apply(operating_expense) — يُردّ خطؤه بعد وقوع الأولى"
+      ],
+      "atomic_boundary": "NON_ATOMIC — كتابتان في عمليّتين",
+      "failpoints": [
+        "D5/step-2-treasury-debit"
+      ],
+      "expected": "المصروفُ وقيدُه يقعان معاً أو لا يقعان (FI-12.c)",
+      "observed": "مصروفٌ مسجَّلٌ وقيدُ الخزينة صفر",
+      "financial_invariants": [
+        "FI-04.d",
+        "FI-01.f",
+        "FI-12.b"
+      ],
+      "user_visible": "500 internal — والمصروفُ باقٍ في القائمة",
+      "admin_visible": "PARTIAL",
+      "recovery": "الإعادةُ تُنشئ مصروفاً جديداً — **واليتيمُ باقٍ بلا مسار إصلاح**",
+      "tests": [
+        "TestFAIL_D5_ExpenseTreasuryPartial",
+        "TestFIN_ExpenseTreasuryInvariant"
+      ],
+      "result": "DEFECT_REPRODUCED",
+      "registers": [
+        "D5"
+      ],
+      "where": "LOCAL",
+      "evidence": "مصاريفُ=1 · قيودٌ=0 · وFI-04.d أمسكها"
+    },
+    {
+      "id": "PF-03",
+      "flows": [
+        "F-30"
+      ],
+      "title": "إنشاءُ مستخدمٍ إداريّاً",
+      "steps": [
+        "١ CreateUser — يُردّ خطؤه",
+        "٢ GrantRole لكلّ دورٍ في نداءٍ مستقلّ"
+      ],
+      "atomic_boundary": "NON_ATOMIC — إنشاءٌ ثمّ منحُ أدوارٍ بلا معاملة",
+      "failpoints": [
+        "D15/grant-role"
+      ],
+      "expected": "مستخدمٌ بلا دورٍ لا يُترَك",
+      "observed": "لم يبقَ مستخدمٌ — الإنشاءُ رُجع مع فشل منح الدور",
+      "user_visible": "خطأٌ — والهاتفُ صار محجوزاً",
+      "admin_visible": "PARTIAL",
+      "recovery": "الهاتفُ حرٌّ — والإعادةُ ممكنة",
+      "tests": [
+        "TestFAIL_D15_AdminCreateUserPartial"
+      ],
+      "result": "PASS",
+      "registers": [
+        "D15"
+      ],
+      "where": "LOCAL",
+      "evidence": "مستخدمون=0 · أدوارٌ=0 — لم يبقَ شيءٌ بعد فشل منح الدور"
+    },
+    {
+      "id": "PF-04",
+      "flows": [
+        "F-08"
+      ],
+      "title": "قبولُ السائق",
+      "steps": [
+        "١ UPDATE orders SET driver_id — شرطيٌّ ذرّيّ",
+        "٢ UPDATE users last_assigned_at — خطؤه مُهمَل",
+        "٣ Transition(assigned) — حدثٌ وبثّ"
+      ],
+      "atomic_boundary": "NON_ATOMIC — ثلاثُ كتاباتٍ بلا معاملة",
+      "failpoints": [
+        "R7/step-3-order-event"
+      ],
+      "expected": "المِلكيّةُ والحالُ متطابقتان",
+      "observed": "لم يُملَّك الطلبُ · والحالُ dispatching — لا حالَ مكسورة",
+      "financial_invariants": [
+        "FI-06",
+        "FI-05"
+      ],
+      "user_visible": "خطأٌ للسائق",
+      "admin_visible": "PARTIAL",
+      "recovery": "الإعادةُ نجحت وصار assigned — RECOVERS",
+      "tests": [
+        "TestFAIL_R7_DriverAcceptPartialState"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R7",
+        "R10",
+        "D24"
+      ],
+      "where": "LOCAL",
+      "evidence": "مملوكٌ=false · الحالُ dispatching · والإعادةُ نجحت وصار assigned"
+    },
+    {
+      "id": "PF-05",
+      "flows": [
+        "F-03",
+        "F-01"
+      ],
+      "title": "مطالبةُ منعِ التكرار",
+      "steps": [
+        "١ claimIdempotency — INSERT ON CONFLICT",
+        "٢ المعالجُ يعمل",
+        "٣ storeIdempotency أو releaseIdempotency عند ردٍّ ≥400"
+      ],
+      "atomic_boundary": "NON_ATOMIC — مطالبةٌ ثمّ عملٌ ثمّ ختمٌ في ثلاث",
+      "failpoints": [
+        "R8/order-insert"
+      ],
+      "expected": "المطالبةُ اليتيمةُ لا تحجب صاحبَها إلى الأبد",
+      "observed": "الخطأُ المُعادُ يُطلق المفتاح · وموتُ العمليّة (P-5) يتركه محجوزاً 24h",
+      "user_visible": "409 in_progress عند الإعادة",
+      "admin_visible": "INVISIBLE",
+      "recovery": "الإعادةُ نجحت — والتقليمُ لحال موتِ العمليّة وحدَها",
+      "tests": [
+        "TestFAIL_R8_OrphanClaimUnderRealFailure",
+        "TestIDEM_CommitThenLostResponse"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R8"
+      ],
+      "where": "LOCAL",
+      "evidence": "المفتاحُ أُطلق بالخطأ المُعاد · والإعادةُ نجحت · وطلبٌ واحد"
+    },
+    {
+      "id": "PF-06",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "title": "قيدُ التدقيق للأفعال الحسّاسة",
+      "steps": [
+        "١ الفعلُ الحسّاسُ يقع (مالٌ · تعليقٌ · إعداد)",
+        "٢ audit() في الخلفيّة — **ولا تُفشل الفعل**"
+      ],
+      "atomic_boundary": "NON_ATOMIC — التدقيقُ أفضلُ جهد",
+      "failpoints": [
+        "AQ-4/audit-write"
+      ],
+      "expected": "CRITICAL SUCCESS REQUIRES AUDIT SUCCESS (AQ-4)",
+      "observed": "الفعلُ ينجح والقيدُ يسقط صامتاً",
+      "user_visible": "نجاحٌ كامل",
+      "admin_visible": "INVISIBLE",
+      "recovery": "لا مسارَ — الأثرُ ضاع",
+      "tests": [
+        "TestFAIL_AQ4_AuditAtomicity"
+      ],
+      "result": "EXPECTED_FAIL",
+      "registers": [
+        "AQ-4"
+      ],
+      "where": "LOCAL",
+      "evidence": "الردّ 200 · رصيدٌ=12000 · قيودُ التدقيق 0 ⇒ 0"
+    },
+    {
+      "id": "PF-07",
+      "flows": [
+        "F-09"
+      ],
+      "title": "إنذارُ الراصد",
+      "steps": [
+        "١ UPDATE orders SET alerted_at — الوسم",
+        "٢ RowsAffected == 0 ⇒ لا إعادة — الحارس",
+        "٣ NotifyOps — الإشعار"
+      ],
+      "atomic_boundary": "NON_ATOMIC — وسمٌ ثمّ إشعار",
+      "failpoints": [
+        "R22/notify-write"
+      ],
+      "expected": "لا وسمَ قبل نجاح الإشعار",
+      "observed": "لم يُقَس — الترتيبُ مقروءٌ من الشيفرة والتشغيلُ يحتاج مِعراضاً",
+      "user_visible": "لا شيء — إنذارٌ داخليّ",
+      "admin_visible": "INVISIBLE",
+      "recovery": "لا مسارَ — الوسمُ يمنع إعادةَ المحاولة",
+      "tests": [
+        "TestFAIL_R22_WatchdogMarkerBeforeNotify"
+      ],
+      "result": "UNPROVEN",
+      "registers": [
+        "R22"
+      ],
+      "where": "LOCAL",
+      "evidence": "لم يُشغَّل — لا بابَ إداريٌّ للراصد · TESTABILITY SEAM REQUIRED"
+    },
+    {
+      "id": "PF-08",
+      "flows": [
+        "F-01",
+        "F-18"
+      ],
+      "title": "التحويلُ التلقائيُّ في خيطٍ منفصل",
+      "steps": [
+        "١ الردُّ للزبون يعود",
+        "٢ go autoTransfer(...) — **لا يُنتظَر ولا يُرصَد**"
+      ],
+      "atomic_boundary": "NON_ATOMIC — خارجَ دورة الطلب أصلاً",
+      "failpoints": [
+        "XOB-7/auto-transfer-event"
+      ],
+      "expected": "عملٌ يُبدَأ يُنجَز أو يُسجَّل",
+      "observed": "الردُّ يعود قبل العمل · وسقوطُه لا يظهر لأحد",
+      "user_visible": "نجاحٌ كامل",
+      "admin_visible": "INVISIBLE",
+      "recovery": "لا صفَّ دائمٌ ولا إعادةَ محاولة",
+      "tests": [
+        "TestFAIL_XOB7_AutoTransferFireAndForget"
+      ],
+      "result": "PARTIAL",
+      "registers": [
+        "XOB-7",
+        "R21"
+      ],
+      "where": "LOCAL",
+      "evidence": "الردُّ يعود قبل العمل — ولا يُنتظَر ولا يُرصَد"
+    },
+    {
+      "id": "PF-09",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "title": "دفعُ الإشعار إلى FCM",
+      "steps": [
+        "١ الحدثُ يقع ويُكتب",
+        "٢ push.Send إلى المنصّة — **مرّةً واحدةً بلا إعادة**"
+      ],
+      "atomic_boundary": "NON_ATOMIC — دفعٌ خارج المعاملة",
+      "failpoints": [
+        "— يحتاج بديلاً محقوناً لـpush.Transport"
+      ],
+      "expected": "إشعارٌ يسقط يُعاد أو يُسجَّل",
+      "observed": "لم يُثبَت محلّيّاً — **ولا مِعراضَ لحقن البديل**",
+      "user_visible": "لا شيء",
+      "admin_visible": "INVISIBLE",
+      "recovery": "غيرُ مقيس",
+      "tests": [
+        "TestFAIL_P7SeamRequired_FCMTransport"
+      ],
+      "result": "UNPROVEN",
+      "registers": [
+        "R23"
+      ],
+      "where": "REQUIRES_P7",
+      "evidence": "لا مِعراضَ لحقن push.Transport — TESTABILITY SEAM REQUIRED"
+    }
+  ]
+}
