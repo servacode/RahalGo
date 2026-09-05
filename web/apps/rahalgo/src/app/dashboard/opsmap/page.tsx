@@ -26,7 +26,7 @@
 import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtDateTime, fmtMoney } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDateTime, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   PageContainer,
   PageHeader,
@@ -114,11 +114,39 @@ interface OrderPin {
   delivery_fee?: number;
 }
 
+interface Zone {
+  id: string;
+  name: string;
+  shape: "radius" | "polygon";
+  active: boolean;
+  lat: number;
+  lng: number;
+  radius_m: number;
+  area?: { type: string; coordinates: unknown };
+  delivery_fee: number;
+  min_order: number;
+  city?: string;
+}
+
+interface CovRequest {
+  id: string;
+  lat: number;
+  lng: number;
+  address: string;
+  status: string;
+  source: string;
+  city?: string;
+  note: string;
+  created_at: string;
+}
+
 /** **ما هو المُحدَّد؟** — واللوحةُ الجانبيّةُ واحدةٌ لكلّ الطبقات. */
 type Picked =
   | { kind: "driver"; v: Driver }
   | { kind: "merchant"; v: Merchant }
-  | { kind: "order"; v: OrderPin };
+  | { kind: "order"; v: OrderPin }
+  | { kind: "zone"; v: Zone }
+  | { kind: "request"; v: CovRequest };
 
 /**
  * **ألوانُ الطزاجة — من الثيم لا من هنا.**
@@ -184,8 +212,18 @@ export default function OpsMapPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Picked | null>(null);
 
+  // ── محرِّرُ المضلَّعات (البند ١٣) ──────────────────────────
+  //
+  // **والرسمُ حالٌ صريحةٌ لا وضعٌ خفيّ** — **ومن نقر الأرضَ وهو لا
+  // يرسم فتح معلَماً، ومن نقرها وهو يرسم أضاف نقطة.**
+  const [drawing, setDrawing] = useState(false);
+  const [draft, setDraft] = useState<[number, number][]>([]);
+  const [zoneName, setZoneName] = useState("");
+  const [saveErr, setSaveErr] = useState("");
+  const [reqStatus, setReqStatus] = useState("");
+
   // ── ما يملكه من يقف أمامها ───────────────────────────────────
-  const meta = useLiveData<Meta>(() => api<Meta>("/admin/ops-map/meta"), []);
+  const meta = useLiveData<Meta>(() => api<Meta>("/api/v1/admin/ops-map/meta"), []);
   const can = useCallback(
     (p: string) => !!meta.data?.permissions.includes(p),
     [meta.data],
@@ -213,7 +251,7 @@ export default function OpsMapPage() {
   const drivers = useLiveData<{ drivers: Driver[]; count: number }>(
     () =>
       can("VIEW_DRIVER_LOCATIONS") && visible.drivers
-        ? api<{ drivers: Driver[]; count: number }>(`/admin/ops-map/drivers${driverQuery}`)
+        ? api<{ drivers: Driver[]; count: number }>(`/api/v1/admin/ops-map/drivers${driverQuery}`)
         : Promise.resolve({ drivers: [], count: 0 }),
     [],
     [driverQuery, visible.drivers, meta.data],
@@ -223,7 +261,7 @@ export default function OpsMapPage() {
   const merchants = useLiveData<{ merchants: Merchant[]; count: number }>(
     () =>
       can("VIEW_MERCHANT_LOCATIONS") && visible.merchants
-        ? api<{ merchants: Merchant[]; count: number }>("/admin/ops-map/merchants")
+        ? api<{ merchants: Merchant[]; count: number }>("/api/v1/admin/ops-map/merchants")
         : Promise.resolve({ merchants: [], count: 0 }),
     // **والمتجرُ يتبدّل بكتابةِ اللوحة** — `catalog` إشارتُها القائمة.
     ["catalog"],
@@ -237,10 +275,32 @@ export default function OpsMapPage() {
   const orders = useLiveData<{ orders: OrderPin[]; count: number }>(
     () =>
       can("VIEW_ACTIVE_ORDERS") && visible.orders
-        ? api<{ orders: OrderPin[]; count: number }>("/admin/ops-map/orders")
+        ? api<{ orders: OrderPin[]; count: number }>("/api/v1/admin/ops-map/orders")
         : Promise.resolve({ orders: [], count: 0 }),
     ["order"],
     [visible.orders, meta.data],
+  );
+
+  // ── التغطية ─────────────────────────────────────────────────
+  const zones = useLiveData<{ zones: Zone[]; count: number }>(
+    () =>
+      visible.coverage
+        ? api<{ zones: Zone[]; count: number }>("/api/v1/admin/ops-map/coverage")
+        : Promise.resolve({ zones: [], count: 0 }),
+    ["catalog"],
+    [visible.coverage, meta.data],
+  );
+
+  // ── طلباتُ التغطية ──────────────────────────────────────────
+  const requests = useLiveData<{ requests: CovRequest[]; count: number }>(
+    () =>
+      can("VIEW_DEMAND_ANALYTICS") && visible.requests
+        ? api<{ requests: CovRequest[]; count: number }>(
+            `/api/v1/admin/ops-map/coverage-requests${reqStatus ? `?status=${reqStatus}` : ""}`,
+          )
+        : Promise.resolve({ requests: [], count: 0 }),
+    [],
+    [visible.requests, reqStatus, meta.data],
   );
 
   const layers = useMemo<LayerSpec[]>(() => {
@@ -329,6 +389,91 @@ export default function OpsMapPage() {
       ),
     });
 
+    // ── التغطية ─────────────────────────────────────────────
+    //
+    // **والدائرةُ والمضلَّعُ طبقتان لا واحدة**: MapLibre ترسم الدائرةَ
+    // بنصفِ قطرٍ بالبكسل والمضلَّعَ بحشوٍ — **ولا شكلَ واحدٌ يسعهما.**
+    const zoneList = zones.data?.zones ?? [];
+    out.push({
+      id: "coverage-radius",
+      kind: "circle-m",
+      radiusField: "radius_m",
+      order: 10,
+      visible: !!visible.coverage,
+      color: themeColor("primary"),
+      data: fc(
+        zoneList
+          .filter((z) => z.shape === "radius" && z.active)
+          .map((z) => pt(z.lng, z.lat, { id: z.id, name: z.name, radius_m: z.radius_m })),
+      ),
+    });
+    out.push({
+      id: "coverage-polygon",
+      kind: "fill",
+      order: 11,
+      visible: !!visible.coverage,
+      color: themeColor("accent"),
+      data: fc(
+        zoneList
+          .filter((z) => z.shape === "polygon" && z.area && z.active)
+          .map((z) => ({
+            type: "Feature" as const,
+            geometry: z.area as unknown,
+            properties: { id: z.id, name: z.name },
+          })),
+      ),
+    });
+
+    // ── مسوَّدةُ الرسم ───────────────────────────────────────
+    //
+    // **وتُرى وهي تُرسَم** — **ومن رسم على العمياء رسم مرّتين.**
+    out.push({
+      id: "coverage-draft",
+      kind: "line",
+      order: 12,
+      visible: draft.length > 1,
+      color: themeColor("warning"),
+      data: fc(
+        draft.length > 1
+          ? [
+              {
+                type: "Feature" as const,
+                geometry: {
+                  type: "LineString",
+                  coordinates: [...draft, draft[0]],
+                },
+                properties: {},
+              },
+            ]
+          : [],
+      ),
+    });
+
+    // ── طلباتُ التغطية (البند ١٧) ───────────────────────────
+    //
+    // **ولا بياناتٍ شخصيّةٍ على الأرض** — نقطةٌ وحالُها.
+    out.push({
+      id: "requests",
+      kind: "point",
+      cluster: true,
+      order: 30,
+      visible: !!visible.requests,
+      color: [
+        "match",
+        ["get", "state"],
+        "new", themeColor("violet"),
+        "planned", themeColor("info"),
+        "covered", themeColor("success"),
+        "rejected", themeColor("disabled"),
+        themeColor("warning"),
+      ],
+      data: fc(
+        (requests.data?.requests ?? []).map((r) =>
+          pt(r.lng, r.lat, { id: r.id, state: r.status }),
+        ),
+      ),
+    });
+
     // ── الربطُ الجغرافيُّ للطلب المُحدَّد (البند ١١) ─────────
     //
     // **وخطٌّ مستقيمٌ لا مسار** — **الخريطةُ ليست محرّكَ ملاحة**، وخطٌّ
@@ -358,7 +503,8 @@ export default function OpsMapPage() {
     });
 
     return out;
-  }, [drivers.data, merchants.data, orders.data, visible, selected]);
+  }, [drivers.data, merchants.data, orders.data, zones.data, requests.data,
+      visible, selected, draft]);
 
   const onFeature = useCallback(
     (layerID: string, props: Record<string, unknown>) => {
@@ -374,8 +520,66 @@ export default function OpsMapPage() {
         const o = orders.data?.orders.find((y) => y.id === props.id);
         if (o) setSelected({ kind: "order", v: o });
       }
+      if (layerID === "coverage-radius" || layerID === "coverage-polygon") {
+        const z = zones.data?.zones.find((y) => y.id === props.id);
+        if (z) setSelected({ kind: "zone", v: z });
+      }
+      if (layerID === "requests") {
+        const q = requests.data?.requests.find((y) => y.id === props.id);
+        if (q) setSelected({ kind: "request", v: q });
+      }
     },
-    [drivers.data, merchants.data, orders.data],
+    [drivers.data, merchants.data, orders.data, zones.data, requests.data],
+  );
+
+  // ── نقرُ الأرض ───────────────────────────────────────────────
+  const onGround = useCallback(
+    (lng: number, lat: number) => {
+      if (drawing) setDraft((prev) => [...prev, [lng, lat]]);
+    },
+    [drawing],
+  );
+
+  const savePolygon = useCallback(async () => {
+    setSaveErr("");
+    try {
+      await api("/api/v1/admin/ops-map/coverage", {
+        method: "POST",
+        body: JSON.stringify({
+          name: zoneName.trim(), ring: draft, delivery_fee: 0, min_order: 0,
+        }),
+      });
+      setDrawing(false);
+      setDraft([]);
+      setZoneName("");
+      zones.reload();
+    } catch (e) {
+      setSaveErr(errorText(e));
+    }
+  }, [zoneName, draft, zones]);
+
+  const setZoneActive = useCallback(
+    async (id: string, active: boolean) => {
+      await api(`/api/v1/admin/ops-map/coverage/${id}/active`, {
+        method: "POST",
+        body: JSON.stringify({ active }),
+      });
+      zones.reload();
+      setSelected(null);
+    },
+    [zones],
+  );
+
+  const setRequestStatus = useCallback(
+    async (id: string, status: string) => {
+      await api(`/api/v1/admin/ops-map/coverage-requests/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      requests.reload();
+      setSelected(null);
+    },
+    [requests],
   );
 
   // ── الحالاتُ الحدّيّة (البند ٣٩) ─────────────────────────────
@@ -435,6 +639,22 @@ export default function OpsMapPage() {
                   onToggle={toggle}
                 />
               )}
+              <LayerToggle
+                id="coverage"
+                label={T.layer.coverage}
+                on={!!visible.coverage}
+                count={zones.data?.count}
+                onToggle={toggle}
+              />
+              {can("VIEW_DEMAND_ANALYTICS") && (
+                <LayerToggle
+                  id="requests"
+                  label={T.layer.coverageRequests}
+                  on={!!visible.requests}
+                  count={requests.data?.count}
+                  onToggle={toggle}
+                />
+              )}
             </div>
           </Card>
 
@@ -454,6 +674,75 @@ export default function OpsMapPage() {
               <p className="mt-3 text-xs leading-5 text-ink-muted">
                 {T.freshness.explain}
               </p>
+            </Card>
+          )}
+
+          {/* ── محرِّرُ التغطية (البند ١٣) ────────────────────────
+              **ولا يظهر لمن لا يملكه** — ورؤيةُ زرٍّ يردّ `403` أسوأُ
+              من غيابه. */}
+          {can("MANAGE_COVERAGE") && visible.coverage && (
+            <Card>
+              <h3 className="mb-2 text-sm font-bold">{T.coverage.title}</h3>
+              {!drawing ? (
+                <Button variant="secondary" onClick={() => { setDrawing(true); setDraft([]); }}>
+                  {T.coverage.draw}
+                </Button>
+              ) : (
+                <div className="flex flex-col gap-2 text-sm">
+                  <Input
+                    placeholder={T.coverage.name}
+                    value={zoneName}
+                    onChange={(e) => setZoneName(e.target.value)}
+                  />
+                  <p className="text-xs text-ink-muted">
+                    {draft.length} · {T.coverage.needThree}
+                  </p>
+                  {saveErr && <Alert tone="error">{saveErr}</Alert>}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      disabled={draft.length < 3 || !zoneName.trim()}
+                      onClick={savePolygon}
+                    >
+                      {T.coverage.save}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={draft.length === 0}
+                      onClick={() => setDraft((d) => d.slice(0, -1))}
+                    >
+                      {T.coverage.undo}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => { setDrawing(false); setDraft([]); setSaveErr(""); }}
+                    >
+                      {T.coverage.cancel}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <p className="mt-3 text-xs leading-5 text-ink-muted">
+                {T.coverage.legacyHint}
+              </p>
+            </Card>
+          )}
+
+          {/* ── مرشِّحُ طلبات التغطية ──────────────────────────── */}
+          {can("VIEW_DEMAND_ANALYTICS") && visible.requests && (
+            <Card>
+              <h3 className="mb-2 text-sm font-bold">{T.layer.coverageRequests}</h3>
+              <Select
+                label={T.filter.requestStatus}
+                value={reqStatus}
+                onChange={(e) => setReqStatus(e.target.value)}
+              >
+                <option value="">{T.all}</option>
+                <option value="new">{T.request.state.new}</option>
+                <option value="reviewing">{T.request.state.reviewing}</option>
+                <option value="planned">{T.request.state.planned}</option>
+                <option value="covered">{T.request.state.covered}</option>
+                <option value="rejected">{T.request.state.rejected}</option>
+              </Select>
             </Card>
           )}
 
@@ -488,6 +777,7 @@ export default function OpsMapPage() {
           <OpsMapCanvas
             layers={layers}
             onFeatureClick={onFeature}
+            onMapClick={onGround}
             unavailableLabel={T.unavailable}
           />
           {selected && (
@@ -590,6 +880,65 @@ export default function OpsMapPage() {
                       </Link>
                     )}
                   </div>
+                </>
+              )}
+              {selected.kind === "zone" && (
+                <>
+                  <dl className="flex flex-col gap-2 text-sm">
+                    <Row
+                      k={T.coverage.shape}
+                      v={selected.v.shape === "polygon" ? T.coverage.polygon : T.coverage.radius}
+                    />
+                    <Row k={T.coverage.active} v={selected.v.active ? T.yes : T.no} />
+                    {selected.v.city && <Row k={T.coverage.city} v={selected.v.city} />}
+                    {selected.v.shape === "radius" && (
+                      <Row k={T.coverage.radius} v={`${selected.v.radius_m} ${T.coverage.metres}`} />
+                    )}
+                  </dl>
+                  {/* **والمنطقةُ تُوقَف ولا تُحذف** — منطقةٌ حُذفت تترك
+                      طلباتٍ تشير إلى عدم. */}
+                  {can("MANAGE_COVERAGE") && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => setZoneActive(selected.v.id, !selected.v.active)}
+                      >
+                        {selected.v.active ? T.coverage.disable : T.coverage.enable}
+                      </Button>
+                    </div>
+                  )}
+                  <p className="mt-3 text-xs text-ink-muted">{T.coverage.deleteHint}</p>
+                </>
+              )}
+
+              {selected.kind === "request" && (
+                <>
+                  <dl className="flex flex-col gap-2 text-sm">
+                    <Row
+                      k={T.request.status}
+                      v={T.request.state[selected.v.status as keyof typeof T.request.state]}
+                    />
+                    <Row k={T.request.createdAt} v={fmtDateTime(selected.v.created_at)} />
+                    {selected.v.address && <Row k={T.request.address} v={selected.v.address} />}
+                    {selected.v.city && <Row k={T.request.city} v={selected.v.city} />}
+                    <Row k={T.request.source} v={selected.v.source} />
+                    {selected.v.note && <Row k={T.request.note} v={selected.v.note} />}
+                  </dl>
+                  {can("MANAGE_COVERAGE") && (
+                    <div className="mt-4">
+                      <Select
+                        label={T.request.changeStatus}
+                        value={selected.v.status}
+                        onChange={(e) => setRequestStatus(selected.v.id, e.target.value)}
+                      >
+                        <option value="new">{T.request.state.new}</option>
+                        <option value="reviewing">{T.request.state.reviewing}</option>
+                        <option value="planned">{T.request.state.planned}</option>
+                        <option value="covered">{T.request.state.covered}</option>
+                        <option value="rejected">{T.request.state.rejected}</option>
+                      </Select>
+                    </div>
+                  )}
                 </>
               )}
             </aside>

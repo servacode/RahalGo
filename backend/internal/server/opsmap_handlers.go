@@ -17,6 +17,9 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/opsmap"
@@ -172,4 +175,153 @@ func (s *Server) handleOpsMapOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"orders": out, "count": len(out)})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **التغطيةُ وطلباتُها — `MAP-3`**
+// ══════════════════════════════════════════════════════════════════════
+//
+// # والتدقيقُ على كلّ كتابةٍ حسّاسة (البند ٣٤)
+//
+// **`s.audit` هو نمطُ المنصّة القائم** — **وهو `best-effort` خارجَ
+// المعاملة، وذلك `XG-20` مسجَّلةٌ ومجمَّدة.** **ولا يُصلَح نظامُ التدقيق
+// كلُّه هنا** (خارجَ النطاق) — **ويبقى النقصُ معلَناً في الحقيقة
+// والبوّابة**، لا مخبوءاً.
+
+func (s *Server) handleOpsMapCoverage(w http.ResponseWriter, r *http.Request) {
+	box, err := bboxFrom(r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	onlyActive := r.URL.Query().Get("active") == "true"
+	out, err := opsmap.Zones(r.Context(), s.pg, box, onlyActive)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"zones": out, "count": len(out)})
+}
+
+func (s *Server) handleOpsMapCoverageSave(w http.ResponseWriter, r *http.Request) {
+	in, err := decode[opsmap.ZoneInput](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	newID, err := opsmap.SavePolygonZone(r.Context(), s.pg, id, *in)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	action := "coverage.create"
+	if id != "" {
+		action = "coverage.update"
+	}
+	s.audit(r, action, "delivery_zone", newID, map[string]any{
+		"name": in.Name, "points": len(in.Ring),
+	})
+	httpx.JSON(w, http.StatusOK, map[string]any{"id": newID})
+}
+
+func (s *Server) handleOpsMapCoverageActive(w http.ResponseWriter, r *http.Request) {
+	in, err := decode[struct {
+		Active bool `json:"active"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if err := opsmap.SetZoneActive(r.Context(), s.pg, id, in.Active); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.audit(r, "coverage.set_active", "delivery_zone", id,
+		map[string]any{"active": in.Active})
+	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) handleOpsMapRequests(w http.ResponseWriter, r *http.Request) {
+	box, err := bboxFrom(r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	q := r.URL.Query()
+	f := opsmap.RequestFilter{Status: q.Get("status"), CityID: q.Get("city_id")}
+	if from, to, ok := rangeFrom(r); ok {
+		f.Since, f.Until = &from, &to
+	}
+	out, err := opsmap.CoverageRequests(r.Context(), s.pg, box, f, 0)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"requests": out, "count": len(out), "states": opsmap.RequestStates(),
+	})
+}
+
+func (s *Server) handleOpsMapRequestUpdate(w http.ResponseWriter, r *http.Request) {
+	in, err := decode[struct {
+		Status string `json:"status"`
+		Note   string `json:"note"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	if err := opsmap.UpdateRequest(r.Context(), s.pg, id, in.Status, in.Note,
+		userIDFrom(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.audit(r, "coverage_request.update", "coverage_request", id,
+		map[string]any{"status": in.Status})
+	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// handleCoverageRequestCreate **زرُّ «اطلب تغطية منطقتي».**
+//
+// # ولماذا يقبل من لا حسابَ له
+//
+// **من فتح التطبيقَ فوجد أنّنا لا نصله قد لا يكون سجّل بعد** —
+// **ورفضُ طلبه لأنّه بلا حسابٍ يمحو أصدقَ إشارةٍ عندنا.**
+func (s *Server) handleCoverageRequestCreate(w http.ResponseWriter, r *http.Request) {
+	in, err := decode[opsmap.NewRequest](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	id, err := opsmap.CreateRequest(r.Context(), s.pg, userIDFrom(r), *in)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id})
+}
+
+// rangeFrom مدىً زمنيٌّ من الاستعلام (البند ٢٩).
+//
+// **و`range=today|7d|30d` أو `from`/`to` صريحان.**
+func rangeFrom(r *http.Request) (from, to time.Time, ok bool) {
+	q := r.URL.Query()
+	now := time.Now()
+	switch q.Get("range") {
+	case "today":
+		return now.Truncate(24 * time.Hour), now, true
+	case "7d":
+		return now.AddDate(0, 0, -7), now, true
+	case "30d":
+		return now.AddDate(0, 0, -30), now, true
+	}
+	f, e1 := time.Parse(time.RFC3339, q.Get("from"))
+	t, e2 := time.Parse(time.RFC3339, q.Get("to"))
+	if e1 == nil && e2 == nil && t.After(f) {
+		return f, t, true
+	}
+	return time.Time{}, time.Time{}, false
 }

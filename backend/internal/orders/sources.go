@@ -240,11 +240,28 @@ type ZoneCharge struct {
 // (`extraSourceFee`) في الموضعين. **وهذه قاعدةُ المنطقة، تلك قاعدةُ التعدّد.**
 func (s *Service) ZoneAt(ctx context.Context, lat, lng float64) (ZoneCharge, error) {
 	var z ZoneCharge
+	// ══════════════════════════════════════════════════════════════
+	// **وكلُّ منطقةٍ تُقاس بشكلها هي** — `MAP-3`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **الدائرةُ بـ`ST_DWithin` كما كانت حرفاً، والمضلَّعُ بـ`ST_Covers`.**
+	//
+	// **ومنطقةٌ دائريّةٌ تعمل اليومَ تبقى تعمل بحرفها** (البند ١٤):
+	// **الشقُّ الأوّلُ من الشرط هو الاستعلامُ القديمُ بعينه**، ولا صفَّ
+	// قائمٍ يمرّ بالشقّ الثاني — `shape` افتراضُه `radius`.
+	//
+	// **والمسافةُ إلى المركز تبقى ترتيباً عند التداخل** — والمضلَّعُ
+	// مركزُه مركزُ ثقله، **فيفوز أقربُهما إلى الدبّوس** كما كان.
 	err := s.db.QueryRow(ctx, `
 		SELECT id::text, name, delivery_fee, min_order,
 		       ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
 		FROM delivery_zones
-		WHERE active AND ST_DWithin(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, radius_m)
+		WHERE active AND (
+		        (shape = 'radius'
+		           AND ST_DWithin(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography, radius_m))
+		     OR (shape = 'polygon' AND area IS NOT NULL
+		           AND ST_Covers(area, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography))
+		      )
 		ORDER BY ST_Distance(center, ST_SetSRID(ST_MakePoint($2,$1),4326)::geography)
 		LIMIT 1`, lat, lng).Scan(&z.ID, &z.Name, &z.DeliveryFee, &z.MinOrder, &z.DistanceM)
 	if errors.Is(err, pgx.ErrNoRows) {

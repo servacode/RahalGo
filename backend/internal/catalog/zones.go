@@ -41,9 +41,22 @@ func scanZone(row pgx.Row) (*Zone, error) {
 	return &z, nil
 }
 
+// ListZones **المناطقُ الدائريّةُ وحدَها** — وهي ما تعرف هذه الشاشةُ رسمَه.
+//
+// # ولماذا تُستثنى المضلَّعات (`MAP-3`)
+//
+// **هذه الشاشةُ ترسم دائرةً بمركزٍ ونصفِ قطر** — **ولا تستطيع أن تعرض
+// مضلَّعاً ولا أن تعدّله.** ولو رُدّت المضلَّعاتُ فيها **لَظهرت دوائرَ
+// كاذبةً حول مركز ثقلها**، ومن سحب مقبضَ نصفِ القطر محا شكلاً رُسم بيد.
+//
+// **والمضلَّعاتُ تُدار من خريطة العمليات** — حيث يُرسَم الشكلُ ويُعدَّل.
+//
+// **ولا صفَّ قائمٌ يتبدّل**: `shape` افتراضُه `radius`، **فما كان يُردُّ
+// أمسِ يُردُّ اليوم.**
 func (s *Service) ListZones(ctx context.Context) ([]Zone, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT `+zoneCols+` FROM delivery_zones ORDER BY sort_order, created_at`)
+		`SELECT `+zoneCols+` FROM delivery_zones
+		 WHERE shape = 'radius' ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, err
 	}

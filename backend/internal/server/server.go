@@ -393,6 +393,14 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/search", s.handlePublicSearch)
 		r.Get("/public/invite", s.handlePublicInvite)
 		r.Post("/public/join", s.handlePublicJoin)
+		// ══════════════════════════════════════════════════════════
+		// **«اطلب تغطية منطقتي»**
+		// ══════════════════════════════════════════════════════════
+		//
+		// **وعامٌّ بلا حساب**: من فتح التطبيقَ فوجد أنّنا لا نصله
+		// **قد لا يكون سجّل بعد** — **ورفضُ طلبه يمحو أصدقَ إشارةِ
+		// طلبٍ عندنا.** (انظر `opsmap/requests.go`.)
+		r.Post("/public/coverage-request", s.handleCoverageRequestCreate)
 
 		// نقاط الزبون — الطلب حصراً من هنا (قرار 18)
 		r.Group(func(r chi.Router) {
@@ -723,6 +731,19 @@ func (s *Server) Router() http.Handler {
 				r.Get("/drivers", s.requirePerm(opsmap.PermViewDrivers, s.handleOpsMapDrivers))
 				r.Get("/merchants", s.requirePerm(opsmap.PermViewMerchants, s.handleOpsMapMerchants))
 				r.Get("/orders", s.requirePerm(opsmap.PermViewOrders, s.handleOpsMapOrders))
+
+				// **والتغطيةُ تُقرأ لمن يفتح الخريطة، وتُكتب لمن
+				// يملكها** — **رسمُ مضلَّعٍ يبدّل من تصله المنصّة.**
+				r.Get("/coverage", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapCoverage))
+				r.Post("/coverage", s.requirePerm(opsmap.PermManageCoverage, s.handleOpsMapCoverageSave))
+				r.Put("/coverage/{id}", s.requirePerm(opsmap.PermManageCoverage, s.handleOpsMapCoverageSave))
+				r.Post("/coverage/{id}/active",
+					s.requirePerm(opsmap.PermManageCoverage, s.handleOpsMapCoverageActive))
+
+				r.Get("/coverage-requests",
+					s.requirePerm(opsmap.PermViewDemand, s.handleOpsMapRequests))
+				r.Patch("/coverage-requests/{id}",
+					s.requirePerm(opsmap.PermManageCoverage, s.handleOpsMapRequestUpdate))
 			})
 			// **وفكُّ الاقتران بابُ إعادة الربط** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
 			// «إذا تمّ فصلُ الاقتران لا يوجد زرٌّ لإعادة ربط الجهاز»).

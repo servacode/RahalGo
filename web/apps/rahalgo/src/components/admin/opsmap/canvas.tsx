@@ -83,12 +83,15 @@ export function OpsMapCanvas({
   layers,
   onFeatureClick,
   onMoveEnd,
+  onMapClick,
   height = "h-full",
   unavailableLabel,
 }: {
   layers: LayerSpec[];
   onFeatureClick?: (layerID: string, props: Record<string, unknown>) => void;
   onMoveEnd?: (bbox: [number, number, number, number], zoom: number) => void;
+  /** **نقرٌ على الأرض لا على معلَم** — رسمُ المضلَّع وتحديدُ موضعِ فرع. */
+  onMapClick?: (lng: number, lat: number) => void;
   height?: string;
   unavailableLabel: string;
 }) {
@@ -103,6 +106,8 @@ export function OpsMapCanvas({
   clickRef.current = onFeatureClick;
   const moveRef = useRef(onMoveEnd);
   moveRef.current = onMoveEnd;
+  const mapClickRef = useRef(onMapClick);
+  mapClickRef.current = onMapClick;
 
   useEffect(() => {
     const source = resolveMapSource();
@@ -128,6 +133,10 @@ export function OpsMapCanvas({
         map.current = instance;
         instance.on("load", () => {
           if (!cancelled) setReady(true);
+        });
+        // **ونقرُ الأرض يُرسَل خامّاً** — والمُنادي يقرّر ما يفعل به.
+        instance.on("click", (e: maplibregl.MapMouseEvent) => {
+          mapClickRef.current?.(e.lngLat.lng, e.lngLat.lat);
         });
         instance.on("moveend", () => {
           if (cancelled || !instance) return;
