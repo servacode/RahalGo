@@ -120,3 +120,56 @@ func (s *Server) handleOpsMapDrivers(w http.ResponseWriter, r *http.Request) {
 		"count":   len(out),
 	})
 }
+
+// handleOpsMapMerchants طبقةُ المتاجر.
+func (s *Server) handleOpsMapMerchants(w http.ResponseWriter, r *http.Request) {
+	box, err := bboxFrom(r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	q := r.URL.Query()
+	f := opsmap.MerchantFilter{
+		CityID:    q.Get("city_id"),
+		Status:    q.Get("status"),
+		Search:    strings.TrimSpace(q.Get("q")),
+		OpenNow:   boolParam(r, "open_now"),
+		HasActive: boolParam(r, "has_active"),
+	}
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	// **واسمُ المندوب لمن يراقب نشاطَ المندوبين وحدَه** (البند ٩).
+	withRep := opsmap.Allows(rolesFrom(r), opsmap.PermViewRepActivity)
+
+	out, err := opsmap.Merchants(r.Context(), s.pg, box, f, withRep, limit)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"merchants": out, "count": len(out)})
+}
+
+// handleOpsMapOrders طبقةُ الطلبات النشطة.
+func (s *Server) handleOpsMapOrders(w http.ResponseWriter, r *http.Request) {
+	box, err := bboxFrom(r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	q := r.URL.Query()
+	f := opsmap.OrderFilter{
+		Status:     q.Get("status"),
+		MerchantID: q.Get("merchant_id"),
+		DriverID:   q.Get("driver_id"),
+		Search:     strings.TrimSpace(q.Get("q")),
+		Unassigned: boolParam(r, "unassigned"),
+	}
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	money := opsmap.Allows(rolesFrom(r), opsmap.PermViewMoney)
+
+	out, err := opsmap.ActiveOrders(r.Context(), s.pg, box, f, money, limit)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"orders": out, "count": len(out)})
+}

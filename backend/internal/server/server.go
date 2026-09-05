@@ -721,6 +721,8 @@ func (s *Server) Router() http.Handler {
 				r.Use(s.RequireRoles("admin", "ops", "finance"))
 				r.Get("/meta", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapMeta))
 				r.Get("/drivers", s.requirePerm(opsmap.PermViewDrivers, s.handleOpsMapDrivers))
+				r.Get("/merchants", s.requirePerm(opsmap.PermViewMerchants, s.handleOpsMapMerchants))
+				r.Get("/orders", s.requirePerm(opsmap.PermViewOrders, s.handleOpsMapOrders))
 			})
 			// **وفكُّ الاقتران بابُ إعادة الربط** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
 			// «إذا تمّ فصلُ الاقتران لا يوجد زرٌّ لإعادة ربط الجهاز»).
