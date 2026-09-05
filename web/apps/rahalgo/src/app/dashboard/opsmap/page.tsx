@@ -140,13 +140,40 @@ interface CovRequest {
   created_at: string;
 }
 
+interface BranchPin {
+  id: string;
+  name: string;
+  type: "primary" | "sub";
+  status: string;
+  city_id: string;
+  city?: string;
+  parent_id?: string;
+  parent?: string;
+  lat?: number;
+  lng?: number;
+  areas: number;
+}
+
+interface AreaRow {
+  id: string;
+  name: string;
+  active: boolean;
+  city_id: string;
+  city?: string;
+  branch_id?: string;
+  branch?: string;
+  zone_id?: string;
+  zone?: string;
+}
+
 /** **ما هو المُحدَّد؟** — واللوحةُ الجانبيّةُ واحدةٌ لكلّ الطبقات. */
 type Picked =
   | { kind: "driver"; v: Driver }
   | { kind: "merchant"; v: Merchant }
   | { kind: "order"; v: OrderPin }
   | { kind: "zone"; v: Zone }
-  | { kind: "request"; v: CovRequest };
+  | { kind: "request"; v: CovRequest }
+  | { kind: "branch"; v: BranchPin };
 
 /**
  * **ألوانُ الطزاجة — من الثيم لا من هنا.**
@@ -301,6 +328,28 @@ export default function OpsMapPage() {
         : Promise.resolve({ requests: [], count: 0 }),
     [],
     [visible.requests, reqStatus, meta.data],
+  );
+
+  // ── الفروعُ والمناطقُ التشغيليّة ────────────────────────────
+  //
+  // **وهما جدولان لا يتبدّلان في الدقيقة** — فتُجلبان مع كتابةِ
+  // اللوحة، ولا مدّةَ لهما.
+  const branches = useLiveData<{ branches: BranchPin[]; count: number }>(
+    () =>
+      visible.branches
+        ? api<{ branches: BranchPin[]; count: number }>("/api/v1/admin/ops-map/branches")
+        : Promise.resolve({ branches: [], count: 0 }),
+    ["catalog"],
+    [visible.branches, meta.data],
+  );
+
+  const areas = useLiveData<{ areas: AreaRow[]; count: number }>(
+    () =>
+      visible.areas
+        ? api<{ areas: AreaRow[]; count: number }>("/api/v1/admin/ops-map/areas")
+        : Promise.resolve({ areas: [], count: 0 }),
+    ["catalog"],
+    [visible.areas, meta.data],
   );
 
   const layers = useMemo<LayerSpec[]>(() => {
@@ -474,6 +523,31 @@ export default function OpsMapPage() {
       ),
     });
 
+    // ── الفروع (البند ٢٣) ───────────────────────────────────
+    //
+    // **والرئيسيُّ يُميَّز عن الفرعيّ** — **ومن رأى عشرَ نقاطٍ متشابهةٍ
+    // لم يعرف أيُّها مركزُ المدينة.**
+    out.push({
+      id: "branches",
+      kind: "point",
+      order: 20,
+      visible: !!visible.branches,
+      color: [
+        "case",
+        ["==", ["get", "kind"], "primary"],
+        themeColor("primary"),
+        themeColor("accent"),
+      ],
+      // **وفرعٌ بلا موقعٍ لا يُرسَم** — ويُقرأ في القائمة.
+      data: fc(
+        (branches.data?.branches ?? [])
+          .filter((b) => b.lat != null && b.lng != null)
+          .map((b) => pt(b.lng as number, b.lat as number, {
+            id: b.id, name: b.name, kind: b.type,
+          })),
+      ),
+    });
+
     // ── الربطُ الجغرافيُّ للطلب المُحدَّد (البند ١١) ─────────
     //
     // **وخطٌّ مستقيمٌ لا مسار** — **الخريطةُ ليست محرّكَ ملاحة**، وخطٌّ
@@ -504,7 +578,7 @@ export default function OpsMapPage() {
 
     return out;
   }, [drivers.data, merchants.data, orders.data, zones.data, requests.data,
-      visible, selected, draft]);
+      branches.data, visible, selected, draft]);
 
   const onFeature = useCallback(
     (layerID: string, props: Record<string, unknown>) => {
@@ -528,8 +602,12 @@ export default function OpsMapPage() {
         const q = requests.data?.requests.find((y) => y.id === props.id);
         if (q) setSelected({ kind: "request", v: q });
       }
+      if (layerID === "branches") {
+        const b = branches.data?.branches.find((y) => y.id === props.id);
+        if (b) setSelected({ kind: "branch", v: b });
+      }
     },
-    [drivers.data, merchants.data, orders.data, zones.data, requests.data],
+    [drivers.data, merchants.data, orders.data, zones.data, requests.data, branches.data],
   );
 
   // ── نقرُ الأرض ───────────────────────────────────────────────
@@ -655,6 +733,20 @@ export default function OpsMapPage() {
                   onToggle={toggle}
                 />
               )}
+              <LayerToggle
+                id="branches"
+                label={T.layer.branches}
+                on={!!visible.branches}
+                count={branches.data?.count}
+                onToggle={toggle}
+              />
+              <LayerToggle
+                id="areas"
+                label={T.layer.areas}
+                on={!!visible.areas}
+                count={areas.data?.count}
+                onToggle={toggle}
+              />
             </div>
           </Card>
 
@@ -746,6 +838,31 @@ export default function OpsMapPage() {
             </Card>
           )}
 
+          {/* ── المناطقُ التشغيليّة ──────────────────────────────
+              **ولا هندسةَ لها بعد** — **فتُقرأ قائمةً ولا تُرسَم على
+              الأرض.** ومن ربطها بمنطقةِ تغطيةٍ رأى شكلَها في طبقة
+              التغطية، **ولا يُخترَع لها مضلَّعٌ لتبدو مرسومة.** */}
+          {visible.areas && (
+            <Card>
+              <h3 className="mb-1 text-sm font-bold">{T.layer.areas}</h3>
+              <p className="mb-2 text-xs text-ink-muted">{T.area.notDistrict}</p>
+              {(areas.data?.areas ?? []).length === 0 ? (
+                <p className="text-xs text-ink-muted">{T.empty}</p>
+              ) : (
+                <ul className="flex flex-col gap-1 text-sm">
+                  {(areas.data?.areas ?? []).slice(0, 20).map((a) => (
+                    <li key={a.id} className="flex items-center gap-2">
+                      <span>{a.name}</span>
+                      <span className="ms-auto text-xs text-ink-muted">
+                        {a.branch ?? "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+
           {/* **ومن لا موضعَ له يُقال ولا يُرسَم** — وهو أهمُّ ما تقوله
               الخريطة: تطبيقٌ أوقفه النظامُ وورديّةٌ مفتوحة. */}
           {noLoc.length > 0 && (
@@ -790,6 +907,9 @@ export default function OpsMapPage() {
                   {selected.kind === "driver" && selected.v.name}
                   {selected.kind === "merchant" && selected.v.name}
                   {selected.kind === "order" && `#${selected.v.number}`}
+                  {selected.kind === "zone" && selected.v.name}
+                  {selected.kind === "request" && T.request.title}
+                  {selected.kind === "branch" && selected.v.name}
                 </h3>
                 <button
                   className="ms-auto text-sm text-ink-muted"
@@ -939,6 +1059,21 @@ export default function OpsMapPage() {
                       </Select>
                     </div>
                   )}
+                </>
+              )}
+              {selected.kind === "branch" && (
+                <>
+                  <dl className="flex flex-col gap-2 text-sm">
+                    <Row
+                      k={T.branch.type}
+                      v={selected.v.type === "primary" ? T.branch.primary : T.branch.sub}
+                    />
+                    <Row k={T.branch.status} v={selected.v.status} />
+                    {selected.v.city && <Row k={T.branch.city} v={selected.v.city} />}
+                    {selected.v.parent && <Row k={T.branch.parent} v={selected.v.parent} />}
+                    <Row k={T.layer.areas} v={String(selected.v.areas)} />
+                  </dl>
+                  <p className="mt-3 text-xs text-ink-muted">{T.branch.onePrimary}</p>
                 </>
               )}
             </aside>

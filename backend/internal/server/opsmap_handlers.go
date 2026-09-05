@@ -325,3 +325,75 @@ func rangeFrom(r *http.Request) (from, to time.Time, ok bool) {
 	}
 	return time.Time{}, time.Time{}, false
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **الفروعُ والمناطقُ التشغيليّة — `MAP-4`**
+// ══════════════════════════════════════════════════════════════════════
+
+func (s *Server) handleOpsMapBranches(w http.ResponseWriter, r *http.Request) {
+	box, err := bboxFrom(r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	out, err := opsmap.Branches(r.Context(), s.pg, box, r.URL.Query().Get("city_id"))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"branches": out, "count": len(out)})
+}
+
+func (s *Server) handleOpsMapBranchSave(w http.ResponseWriter, r *http.Request) {
+	in, err := decode[opsmap.BranchInput](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	newID, err := opsmap.SaveBranch(r.Context(), s.pg, id, *in)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	action := "branch.create"
+	if id != "" {
+		action = "branch.update"
+	}
+	s.audit(r, action, "branch", newID, map[string]any{
+		"name": in.Name, "type": in.Type, "city_id": in.CityID,
+	})
+	httpx.JSON(w, http.StatusOK, map[string]any{"id": newID})
+}
+
+func (s *Server) handleOpsMapAreas(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	out, err := opsmap.Areas(r.Context(), s.pg, q.Get("city_id"), q.Get("branch_id"))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"areas": out, "count": len(out)})
+}
+
+func (s *Server) handleOpsMapAreaSave(w http.ResponseWriter, r *http.Request) {
+	in, err := decode[opsmap.AreaInput](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	id := chi.URLParam(r, "id")
+	newID, err := opsmap.SaveArea(r.Context(), s.pg, id, *in)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	action := "operational_area.create"
+	if id != "" {
+		action = "operational_area.update"
+	}
+	s.audit(r, action, "operational_area", newID, map[string]any{
+		"name": in.Name, "city_id": in.CityID,
+	})
+	httpx.JSON(w, http.StatusOK, map[string]any{"id": newID})
+}

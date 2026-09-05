@@ -744,6 +744,15 @@ func (s *Server) Router() http.Handler {
 					s.requirePerm(opsmap.PermViewDemand, s.handleOpsMapRequests))
 				r.Patch("/coverage-requests/{id}",
 					s.requirePerm(opsmap.PermManageCoverage, s.handleOpsMapRequestUpdate))
+
+				// **والفروعُ تُقرأ لمن يفتح الخريطة، وتُكتب لمن
+				// يملكها** — **وافتتاحُ فرعٍ قرارُ عملٍ لا تشغيلٌ يوميّ.**
+				r.Get("/branches", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapBranches))
+				r.Post("/branches", s.requirePerm(opsmap.PermManageBranches, s.handleOpsMapBranchSave))
+				r.Put("/branches/{id}", s.requirePerm(opsmap.PermManageBranches, s.handleOpsMapBranchSave))
+				r.Get("/areas", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapAreas))
+				r.Post("/areas", s.requirePerm(opsmap.PermManageBranches, s.handleOpsMapAreaSave))
+				r.Put("/areas/{id}", s.requirePerm(opsmap.PermManageBranches, s.handleOpsMapAreaSave))
 			})
 			// **وفكُّ الاقتران بابُ إعادة الربط** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
 			// «إذا تمّ فصلُ الاقتران لا يوجد زرٌّ لإعادة ربط الجهاز»).
