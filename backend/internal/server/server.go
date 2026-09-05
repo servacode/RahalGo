@@ -26,6 +26,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/offers"
+	"github.com/servacode/rahalgo/backend/internal/opsmap"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/push"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
@@ -705,6 +706,21 @@ func (s *Server) Router() http.Handler {
 			r.Use(s.announceWrites)
 			r.Get("/whatsapp", func(w http.ResponseWriter, _ *http.Request) {
 				httpx.JSON(w, http.StatusOK, s.otpStatus())
+			})
+
+			// ══════════════════════════════════════════════════════
+			// **خريطةُ العمليات**
+			// ══════════════════════════════════════════════════════
+			//
+			// **وصلاحيّاتٌ مسمّاةٌ لا أدوارٌ خشنة** (البند ٣٢):
+			// **`AQ-1` فجوةٌ قائمة**، ولا يُبنى نظامُ صلاحيّاتٍ كامل
+			// هنا — **لكنّ الأسماءَ تُكتب من اليومَ في موضعٍ واحد**
+			// (`opsmap.Perm`)، فحين يُبنى تُبدَّل خريطةُ الترجمة
+			// **ولا يُفتَّش عن `roles` في عشرين معالجاً.**
+			r.Route("/ops-map", func(r chi.Router) {
+				r.Use(s.RequireRoles("admin", "ops", "finance"))
+				r.Get("/meta", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapMeta))
+				r.Get("/drivers", s.requirePerm(opsmap.PermViewDrivers, s.handleOpsMapDrivers))
 			})
 			// **وفكُّ الاقتران بابُ إعادة الربط** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
 			// «إذا تمّ فصلُ الاقتران لا يوجد زرٌّ لإعادة ربط الجهاز»).

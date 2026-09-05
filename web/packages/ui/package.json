@@ -9,7 +9,8 @@
     "./fonts.css": "./src/fonts.css",
     "./map": "./src/map.tsx",
     "./zonesmap": "./src/zonesmap.tsx",
-    "./mapconfig": "./src/mapconfig.ts"
+    "./mapconfig": "./src/mapconfig.ts",
+    "./mapengine": "./src/mapengine.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
