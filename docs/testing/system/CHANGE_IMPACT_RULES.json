@@ -1,0 +1,280 @@
+{
+  "categories": [
+    "PRODUCT_BACKEND",
+    "ADMIN_WEB",
+    "CUSTOMER_ANDROID",
+    "DRIVER_ANDROID",
+    "MERCHANT_ANDROID",
+    "REP_ANDROID",
+    "SHARED_ANDROID",
+    "DATABASE_MIGRATION",
+    "SETTINGS_TRUTH",
+    "TEST_INFRA",
+    "TEST",
+    "DEPLOY_OPS",
+    "DOCS_ONLY",
+    "PRODUCT_TRUTH_DOCS",
+    "UNKNOWN"
+  ],
+  "counts": {
+    "categories": 15,
+    "domain_rules": 9,
+    "input_modes": 3
+  },
+  "domain_rules": [
+    {
+      "name": "FINANCIAL",
+      "match": [
+        "backend/internal/wallet/",
+        "backend/internal/cashbox/",
+        "backend/internal/orders/transitions.go",
+        "backend/internal/orders/treasury.go",
+        "backend/internal/orders/goods.go",
+        "backend/internal/pricing/",
+        "backend/internal/incentives/",
+        "backend/internal/referrals/",
+        "backend/internal/server/payout_handlers.go",
+        "backend/internal/server/expenses_handlers.go",
+        "backend/internal/server/admin_wallet_handlers.go"
+      ],
+      "flows": [
+        "F-14",
+        "F-15",
+        "F-23",
+        "F-24",
+        "F-25",
+        "F-26",
+        "F-27"
+      ],
+      "apps": [
+        "customer",
+        "merchant",
+        "driver",
+        "rep",
+        "admin"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "CONCURRENCY",
+        "FAILURE"
+      ],
+      "packages": [
+        "internal/fininv",
+        "internal/qa"
+      ],
+      "why": "مسٌّ لمسارٍ ماليّ ⇒ ثوابتُ `P-4` وسباقاتُها وحقنُ فشلها (البند ١٤)"
+    },
+    {
+      "name": "PRIVACY",
+      "match": [
+        "backend/internal/server/customer_privacy.go",
+        "backend/internal/server/merchant_privacy.go",
+        "backend/internal/orders/models.go",
+        "backend/internal/orders/service.go",
+        "backend/internal/orders/custom.go"
+      ],
+      "flows": [
+        "F-01",
+        "F-02",
+        "F-13",
+        "F-14"
+      ],
+      "apps": [
+        "customer",
+        "merchant",
+        "driver"
+      ],
+      "modes": [
+        "SECURITY",
+        "REALTIME"
+      ],
+      "packages": [
+        "internal/qa"
+      ],
+      "why": "مسٌّ لحقول الطلب أو للتنقية ⇒ عقدُ `P-1` وقنواتُ `P-7` (البند ١٥)"
+    },
+    {
+      "name": "AUTH_SESSION",
+      "match": [
+        "backend/internal/auth/",
+        "backend/internal/identity/",
+        "backend/internal/server/middleware",
+        "backend/internal/server/auth_handlers.go",
+        "backend/internal/realtime/"
+      ],
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "apps": [
+        "customer",
+        "merchant",
+        "driver",
+        "rep",
+        "admin"
+      ],
+      "modes": [
+        "SECURITY",
+        "REALTIME"
+      ],
+      "packages": [
+        "internal/qa",
+        "internal/identity"
+      ],
+      "why": "مسٌّ للهويّة أو الجلسة أو تخويل البثّ ⇒ أمنٌ وبثٌّ (البند ١٦)",
+      "staging_required": "**`R16`** — فشلُ Redis المفتوح يحتاج طقمَ خدماتٍ حقيقيّاً"
+    },
+    {
+      "name": "EVENTS",
+      "match": [
+        "backend/internal/notifications/",
+        "backend/internal/push/",
+        "backend/internal/orders/watchdog.go"
+      ],
+      "flows": [
+        "F-07",
+        "F-09",
+        "F-14",
+        "F-34"
+      ],
+      "apps": [
+        "customer",
+        "merchant",
+        "driver",
+        "rep"
+      ],
+      "modes": [
+        "REALTIME",
+        "FAILURE"
+      ],
+      "packages": [
+        "internal/qa",
+        "internal/orders"
+      ],
+      "why": "مسٌّ لباثٍّ أو مُشعِرٍ أو حمولة ⇒ عقودُ `P-7` (البند ١٩)",
+      "device_required": "الروابطُ العميقةُ وصوتُ الإشعار يحتاجان جهازاً"
+    },
+    {
+      "name": "ORDER_LIFECYCLE",
+      "match": [
+        "backend/internal/orders/",
+        "backend/internal/server/driver_handlers.go",
+        "backend/internal/server/admin_orders_handlers.go"
+      ],
+      "flows": [
+        "F-01",
+        "F-04",
+        "F-07",
+        "F-08",
+        "F-12",
+        "F-13",
+        "F-14",
+        "F-15",
+        "F-16",
+        "F-17",
+        "F-19"
+      ],
+      "apps": [
+        "customer",
+        "merchant",
+        "driver",
+        "admin"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE"
+      ],
+      "packages": [
+        "internal/qa",
+        "internal/orders"
+      ],
+      "why": "دورةُ حياة الطلب تمسّ أربعةَ تطبيقاتٍ ولو تبدّل ملفٌّ واحد (البند ١٨)"
+    },
+    {
+      "name": "REP_LEADS",
+      "match": [
+        "backend/internal/server/leads_handlers.go"
+      ],
+      "flows": [
+        "F-21",
+        "F-22",
+        "F-23"
+      ],
+      "apps": [
+        "rep",
+        "merchant",
+        "admin"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FINANCIAL"
+      ],
+      "packages": [
+        "internal/qa"
+      ],
+      "why": "تحويلُ المرشَّح — `D2` و`D25` و`XG-18`"
+    },
+    {
+      "name": "ANDROID_DRIVER_LOCATION",
+      "match": [
+        "mobile/app-driver/src/main/kotlin/com/rahalgo/driver/location/",
+        "mobile/driver-navigation/",
+        "mobile/map/"
+      ],
+      "flows": [
+        "F-11",
+        "F-13"
+      ],
+      "apps": [
+        "driver"
+      ],
+      "modes": [
+        "ANDROID"
+      ],
+      "packages": [
+        "internal/androidmap"
+      ],
+      "why": "طبقةُ الموقعِ أو الملاحة ⇒ `R17` و`R19` و`R20` و`D16` و`D18`",
+      "device_required": "**`REAL DEVICE VALIDATION REQUIRED`** — الخلفيّةُ والغفوةُ وموتُ العمليّة لا تُثبَت محلّيّاً (البند ٤٤)"
+    },
+    {
+      "name": "ADMIN_WEB",
+      "match": [
+        "web/"
+      ],
+      "flows": [
+        "F-19",
+        "F-25",
+        "F-26",
+        "F-33"
+      ],
+      "apps": [
+        "admin"
+      ],
+      "modes": [
+        "WEB"
+      ],
+      "why": "لوحةُ الإدارة — حرّاسُ الويب و`typecheck` و`eslint`"
+    },
+    {
+      "name": "DEPLOY",
+      "match": [
+        "deploy/",
+        "docker-compose.yml",
+        "Dockerfile",
+        "nginx"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "why": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
+      "staging_required": "**`STAGING VALIDATION REQUIRED`** — الصحّةُ والجاهزيّةُ والهجرات"
+    }
+  ],
+  "policy": {
+    "low_confidence": "LOW CONFIDENCE → SAFE FULL FALLBACK",
+    "no_false_confidence": "**«لا أثر» تُقال بدليلٍ أو لا تُقال**",
+    "unknown": "UNKNOWN IMPACT → SAFE FULL FALLBACK"
+  }
+}

@@ -42,3 +42,27 @@ lint:
 
 tidy:
 	go mod tidy
+
+# ══════════════════════════════════════════════════════════════════════
+# **أثرُ التغيير — `P-9` البند ٤١**
+# ══════════════════════════════════════════════════════════════════════
+#
+# **ولا يفتح المطوّرُ خمسةَ عشرَ ملفّاً بيده ليعرف ماذا يشغّل.**
+
+.PHONY: test-impact impact truth matrices
+
+## ما الذي انكسر؟ — شجرةُ العمل
+test-impact:
+	@go run ./cmd/testimpact
+
+## مدىً في git — make impact BASE=HEAD~1 HEAD=HEAD
+impact:
+	@go run ./cmd/testimpact -base $(BASE) -head $(HEAD)
+
+## إعادةُ توليد حقيقة الاختبار
+truth:
+	@go run ./cmd/testtruth
+
+## إعادةُ توليد المصفوفات الآليّة الثمان
+matrices:
+	@go run ./cmd/fininvdoc

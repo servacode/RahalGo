@@ -1,0 +1,46 @@
+{
+  "elapsed_ms": 0,
+  "result": {
+    "change_source": "EXPLICIT_FILES",
+    "base": "",
+    "head": "",
+    "changed_files": [
+      {
+        "path": "README.md",
+        "category": "DOCS_ONLY",
+        "why": "توثيقٌ عاديّ"
+      }
+    ],
+    "impacted_flows": null,
+    "impacted_apps": null,
+    "impacted_settings": null,
+    "impacted_defects": null,
+    "impacted_risks": null,
+    "impacted_gaps": null,
+    "impacted_financial_invariants": null,
+    "impacted_events": null,
+    "selected_tests": null,
+    "required_modes": [
+      "FAST"
+    ],
+    "real_device_required": null,
+    "staging_required": null,
+    "unknowns": null,
+    "confidence": "HIGH",
+    "risk_class": "LOW",
+    "reasons": [
+      {
+        "from": "README.md",
+        "rule": "DOCS_ONLY",
+        "path": "توثيقٌ عاديّ — **لا أثرَ على السلوك**",
+        "depth": "DIRECT"
+      },
+      {
+        "from": "",
+        "rule": "NEGATIVE_CONTROL",
+        "path": "**وثائقُ محضةٌ ⇒ لا اختبار** — والمحافظةُ لا تعني الانفجار",
+        "depth": "DIRECT"
+      }
+    ]
+  }
+}

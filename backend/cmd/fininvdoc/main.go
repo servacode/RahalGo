@@ -16,6 +16,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/eventmap"
 	"github.com/servacode/rahalgo/backend/internal/failmap"
 	"github.com/servacode/rahalgo/backend/internal/fininv"
+	"github.com/servacode/rahalgo/backend/internal/impact"
 	"github.com/servacode/rahalgo/backend/internal/racemap"
 )
 
@@ -45,6 +46,7 @@ func main() {
 	write("../docs/testing/system/ANDROID_TEST_MATRIX.json", map[string]any{
 		"cases": snap["cases"], "counts": snap["counts"],
 	})
+	write("../docs/testing/system/CHANGE_IMPACT_RULES.json", impact.RulesSnapshot())
 }
 
 func write(path string, v any) {

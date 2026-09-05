@@ -744,6 +744,28 @@ var TestMap = map[string]TestDecl{
 		Modes: []string{"FAST", "FULL", "RELEASE"},
 	},
 	"TestUniqueIDs": harness(),
+
+	// ── `P-9` · محرّكُ أثر التغيير ────────────────────────────────
+	//
+	// **وقواعدُه في `CHANGE_IMPACT_RULES.json`** — ولا تعيش في Markdown.
+	"TestHistoricalChangeCases": {
+		Level: L1, Purpose: PurposeGenerator,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+	"TestDefectImpactCases": {
+		Level: L1, Purpose: PurposeGenerator,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+	"TestNegativeControl":              harness(),
+	"TestUnknownChangeFallsBackSafely": harness(),
+	"TestStaleMappingGuard": {
+		Level: L1, Purpose: PurposeGenerator,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+	"TestWhySelectedTrace":      harness(),
+	"TestRepeatabilityAndSpeed": harness(),
+	"TestChangeInputModes":      harness(),
+	"TestFileCategories":        harness(),
 }
 
 // harness اختبارٌ يُثبت المِسنَدَ نفسَه — **لا يحرس ميزة.**

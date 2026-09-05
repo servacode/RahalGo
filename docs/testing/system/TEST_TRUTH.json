@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 219,
-    "test_funcs": 704
+    "test_files": 220,
+    "test_funcs": 713
   },
   "flows": [
     {
@@ -4083,6 +4083,117 @@
       "file": "internal/identity/session_client_test.go",
       "package": "identity",
       "orphan": true
+    },
+    {
+      "name": "TestChangeInputModes",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDefectImpactCases",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFileCategories",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestHistoricalChangeCases",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestNegativeControl",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRepeatabilityAndSpeed",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestStaleMappingGuard",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestUnknownChangeFallsBackSafely",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestWhySelectedTrace",
+      "file": "internal/impact/impact_test.go",
+      "package": "impact",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
     },
     {
       "name": "TestBackgroundPNG_IsStoredAsJPEGAndShrinks",
