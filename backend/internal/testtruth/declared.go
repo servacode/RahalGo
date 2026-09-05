@@ -271,6 +271,18 @@ var TestMap = map[string]TestDecl{
 	"TestFactoryMerchantAndRep":                   infra(),
 	"TestFactoryCleansUpAfterItself":              infra(),
 
+	// ── `P-3V` · إثباتاتُ القاعدة ─────────────────────────────────
+	//
+	// **وثلاثةٌ منها أمنٌ لا بنية**: **هويّةُ القاعدة والعزلُ والتنظيف** —
+	// **لأنّها ما يمنع اختباراً من الكتابة حيث لا يجوز.**
+	"TestDatabaseIdentityProof":                 security(),
+	"TestDatabaseIsolationBetweenScenarios":     security(),
+	"TestCleanupRemovesOnlyItsOwnScenario":      security(),
+	"TestFinancialFixtureConsistencyOnDatabase": infra(),
+	"TestCorruptFixtureIsExplicitOnly":          infra(),
+	"TestParallelFactoryScenarios":              infra(),
+	"TestMigrationsApplied":                     infra(),
+
 	// **وحارسُ الإنتاج أمنٌ لا بنية** — **يمنع كتابةً في قاعدةٍ حيّة.**
 	"TestProductionDatabaseGuard": {
 		Level: L11, Purpose: PurposeHarnessSelf,
@@ -307,6 +319,12 @@ var TestMap = map[string]TestDecl{
 // harness اختبارٌ يُثبت المِسنَدَ نفسَه — **لا يحرس ميزة.**
 func harness() TestDecl {
 	return TestDecl{Level: L1, Purpose: PurposeHarnessSelf, Modes: []string{"FAST", "FULL"}}
+}
+
+// security حارسٌ يمنع كتابةً حيث لا يجوز — **أمنٌ لا بنية.**
+func security() TestDecl {
+	return TestDecl{Level: L11, Purpose: PurposeHarnessSelf,
+		Modes: []string{"FULL", "SECURITY", "RELEASE"}}
 }
 
 // infra اختبارُ بنيةٍ تحتيّةٍ يحتاج قاعدةً.

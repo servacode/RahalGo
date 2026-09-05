@@ -30,8 +30,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 202,
-    "test_funcs": 605
+    "test_files": 203,
+    "test_funcs": 612
   },
   "flows": [
     {
@@ -4840,6 +4840,89 @@
       "file": "internal/qa/custom_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestCleanupRemovesOnlyItsOwnScenario",
+      "file": "internal/qa/factory_db_test.go",
+      "package": "qa",
+      "level": "L11",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCorruptFixtureIsExplicitOnly",
+      "file": "internal/qa/factory_db_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDatabaseIdentityProof",
+      "file": "internal/qa/factory_db_test.go",
+      "package": "qa",
+      "level": "L11",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDatabaseIsolationBetweenScenarios",
+      "file": "internal/qa/factory_db_test.go",
+      "package": "qa",
+      "level": "L11",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFinancialFixtureConsistencyOnDatabase",
+      "file": "internal/qa/factory_db_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestMigrationsApplied",
+      "file": "internal/qa/factory_db_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestParallelFactoryScenarios",
+      "file": "internal/qa/factory_db_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
     },
     {
       "name": "TestSampleFactory_DriverOnShiftWithCash",

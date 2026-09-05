@@ -206,6 +206,9 @@ func (h *Harness) Factory() *Factory {
 
 func (f *Factory) ctx() context.Context { return context.Background() }
 
+// ctxBG سياقٌ للاستعلامات المباشرة في الاختبارات.
+func ctxBG() context.Context { return context.Background() }
+
 func (f *Factory) fatal(format string, a ...any) {
 	f.h.T.Helper()
 	f.h.T.Fatalf("factory: "+format, a...)

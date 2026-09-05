@@ -40,7 +40,8 @@
 | ١٥ | [`15-implementation-plan.md`](15-implementation-plan.md) | **خطّةُ التنفيذ — إحدى عشرةَ مرحلةً قابلةً للإغلاق** |
 | ١٦ | [`P1-IMPLEMENTED.md`](P1-IMPLEMENTED.md) | **✅ `P-1` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — عقدُ الخصوصيّة وحرّاسُه الأربعة** |
 | ١٧ | [`P2-IMPLEMENTED.md`](P2-IMPLEMENTED.md) | **✅ `P-2` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — `TEST_TRUTH` وحرّاسُه الستّة** |
-| ١٨ | [`P3-IMPLEMENTED.md`](P3-IMPLEMENTED.md) | **⚠️ `P-3` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — المصنعُ الحتميّ · وتحقّقُ القاعدة ناقص** |
+| ١٨ | [`P3-IMPLEMENTED.md`](P3-IMPLEMENTED.md) | **✅ `P-3` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — المصنعُ الحتميّ وحارسُ الإنتاج** |
+| ١٩ | [`P3V-DB-VALIDATION.md`](P3V-DB-VALIDATION.md) | **✅ `P-3V` — إثباتٌ على PostgreSQL 16.4 + PostGIS · 158/158** |
 
 ---
 
