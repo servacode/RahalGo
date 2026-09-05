@@ -46,9 +46,9 @@ var Flows = []FlowDecl{
 	{ID: "F-04", Title: "قبولُ المتجر", Actor: "merchant", Apps: []string{"merchant", "customer"}, Realtime: true, Severity: "CRITICAL", Defects: []string{"D19", "D20"}, Risks: []string{"R21"}},
 	{ID: "F-05", Title: "القبولُ التلقائيّ", Actor: "watchdog", Apps: []string{"merchant", "customer"}, Realtime: true, Partial: true, Severity: "CRITICAL", Gaps: []string{"XG-7"}},
 	{ID: "F-06", Title: "رفضُ المتجر", Actor: "merchant", Apps: []string{"merchant", "customer", "admin"}, Money: true, Realtime: true, Severity: "HIGH"},
-	{ID: "F-07", Title: "عرضُ الطلب على سائق", Actor: "engine", Apps: []string{"driver"}, Realtime: true, Partial: true, Race: true, Severity: "CRITICAL", Risks: []string{"R10"}},
+	{ID: "F-07", Title: "عرضُ الطلب على سائق", Actor: "engine", Apps: []string{"driver"}, Realtime: true, Partial: true, Race: true, Severity: "CRITICAL", Defects: []string{"D27"}, Risks: []string{"R10", "R23"}},
 	{ID: "F-08", Title: "قبولُ السائق", Actor: "driver", Apps: []string{"driver", "customer", "merchant"}, Money: true, Realtime: true, Partial: true, Race: true, Severity: "BLOCKER", Defects: []string{"D7", "D24"}, Risks: []string{"R7", "R10"}},
-	{ID: "F-09", Title: "انقضاءُ العرض ودورانُه", Actor: "watchdog", Apps: []string{"driver", "admin"}, Realtime: true, Partial: true, Race: true, Severity: "HIGH", Defects: []string{"D1"}, Risks: []string{"R1"}},
+	{ID: "F-09", Title: "انقضاءُ العرض ودورانُه", Actor: "watchdog", Apps: []string{"driver", "admin"}, Realtime: true, Partial: true, Race: true, Severity: "HIGH", Defects: []string{"D1", "D26"}, Risks: []string{"R1", "R22"}},
 	{ID: "F-10", Title: "عرضُ طلبٍ على الطريق نفسِه", Actor: "engine", Apps: []string{"driver", "customer"}, Money: true, Realtime: true, Partial: true, Race: true, Severity: "HIGH", Defects: []string{"D7"}, Risks: []string{"R10"}},
 	{ID: "F-11", Title: "الوصولُ للاستلام", Actor: "driver", Apps: []string{"driver", "customer"}, Realtime: true, Severity: "MEDIUM", Gaps: []string{"XG-6"}},
 	{ID: "F-12", Title: "الاستلام", Actor: "driver", Apps: []string{"driver", "customer", "merchant"}, Realtime: true, Severity: "HIGH"},
@@ -702,8 +702,10 @@ var TestMap = map[string]TestDecl{
 	},
 	"TestEV_R23PushFailureIsLost": {
 		Level: L7, Flows: []string{"F-07", "F-14"},
-		Risks: []string{"R23"},
-		Modes: []string{"FULL", "REALTIME", "FAILURE", "RELEASE"},
+		// **`R23` بقي للتتبّع** — `R23 → CONFIRMED → D27`.
+		Defects: []string{"D27"},
+		Risks:   []string{"R23"},
+		Modes:   []string{"FULL", "REALTIME", "FAILURE", "RELEASE"},
 	},
 	"TestEV_R21AutoTransferAwareness": {
 		Level: L7, Flows: []string{"F-18"},
@@ -713,8 +715,10 @@ var TestMap = map[string]TestDecl{
 	},
 	"TestEV_R22WatchdogMarkerSuppressesRetry": {
 		Level: L7, Flows: []string{"F-09"},
-		Risks: []string{"R22"},
-		Modes: []string{"FULL", "REALTIME", "FAILURE", "RELEASE"},
+		// **`R22` بقي للتتبّع** — `R22 → CONFIRMED → D26` · و`XOB-6` دليلٌ فيه.
+		Defects: []string{"D26"},
+		Risks:   []string{"R22"},
+		Modes:   []string{"FULL", "REALTIME", "FAILURE", "RELEASE"},
 	},
 	"TestEV_XOB5_WatchdogComparisonKey": {
 		Level: L2, Flows: []string{"F-09"},
@@ -728,6 +732,18 @@ var TestMap = map[string]TestDecl{
 		Defects: []string{"D15"},
 		Modes:   []string{"FULL", "FAILURE", "RELEASE"},
 	},
+
+	// ── `P-8` · أندرويد ──────────────────────────────────────────
+	//
+	// **والمصفوفتان الآليّتان في `internal/androidmap`.**
+	// **واختباراتُ Kotlin لا يراها هذا المستخرِج** — يقرأ Go وحدَها،
+	// **فتُحصى في `ANDROID_TEST_MATRIX.json` لا هنا.**
+	"TestNoMissingDeviceCountsAsPass": harness(),
+	"TestDeviceCasesAreNotClaimedRun": {
+		Level: L1, Purpose: PurposeGenerator,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+	"TestUniqueIDs": harness(),
 }
 
 // harness اختبارٌ يُثبت المِسنَدَ نفسَه — **لا يحرس ميزة.**

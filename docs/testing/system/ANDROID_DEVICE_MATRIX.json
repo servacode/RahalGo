@@ -1,0 +1,70 @@
+{
+  "counts": {
+    "Devices": 5,
+    "DevicesAvailable": 0,
+    "DevicesExecuted": 0,
+    "Cases": 27,
+    "Structural": 5,
+    "UnitK": 0,
+    "ReplayK": 0,
+    "DeviceK": 21,
+    "DriveK": 1,
+    "AutomatedN": 5,
+    "SemiAutoN": 19,
+    "ManualN": 3,
+    "PassN": 0,
+    "ExpectedFailN": 2,
+    "RiskConfirmedN": 3,
+    "NotRunN": 22,
+    "Apps": 4
+  },
+  "devices": [
+    {
+      "id": "DEV-01",
+      "class": "SAMSUNG BASELINE",
+      "model": "Samsung SM-A525F",
+      "android": "14",
+      "primary": true,
+      "status": "NOT_AVAILABLE",
+      "run": "NOT_EXECUTED",
+      "why": "**جهازُ القبول المرجعيّ** — وقرارُ المالك يُثبته ولا يُبدَّل",
+      "evidence": "adb devices ⇒ لا جهازَ متّصل (٢٠٢٦-٠٩-٠٥)"
+    },
+    {
+      "id": "DEV-02",
+      "class": "XIAOMI/REDMI RESTRICTIVE BACKGROUND",
+      "primary": false,
+      "status": "NOT_AVAILABLE",
+      "run": "NOT_EXECUTED",
+      "why": "**أقسى قيودِ خلفيّةٍ في السوق** — تقتل الخدماتِ اللاصقةَ بلا إنذار",
+      "evidence": "لا جهازَ من هذا الصنف"
+    },
+    {
+      "id": "DEV-03",
+      "class": "LOW-COST INFINIX/TECNO",
+      "primary": false,
+      "status": "NOT_AVAILABLE",
+      "run": "NOT_EXECUTED",
+      "why": "**شريحةُ سائقي الرقّة الأوسع** — ذاكرةٌ صغيرةٌ وموتُ عمليّةٍ متكرّر. **و`Infinix X6833B` لا يُعاد اعتمادُه تلقائيّاً** (قرارُ المالك)",
+      "evidence": "لا جهازَ من هذا الصنف · ولا اعتمادَ تلقائيّ"
+    },
+    {
+      "id": "DEV-04",
+      "class": "OLDER ANDROID",
+      "primary": false,
+      "status": "NOT_AVAILABLE",
+      "run": "NOT_EXECUTED",
+      "why": "**أذوناتُ الخلفيّةِ والموقعِ تختلف قبل `Android 12`**",
+      "evidence": "لا جهازَ من هذا الصنف"
+    },
+    {
+      "id": "DEV-05",
+      "class": "HUAWEI (بلا خدمات جوجل)",
+      "primary": false,
+      "status": "NOT_AVAILABLE",
+      "run": "NOT_EXECUTED",
+      "why": "**لا FCM ولا خرائطَ جوجل** — والدفعُ والموقعُ مسارٌ آخرُ كلّيّاً",
+      "evidence": "لا جهازَ · ويدخل حين يلزم"
+    }
+  ]
+}

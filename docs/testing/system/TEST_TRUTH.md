@@ -19,17 +19,17 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **218** |
-| دوالُّ اختبار | **701** |
+| ملفّاتُ اختبار | **219** |
+| دوالُّ اختبار | **704** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 701
+TOTAL      = 704
 MAPPED     = 68
-INFRA      = 65
+INFRA      = 68
 ORPHAN     = 568
 ```
 
@@ -56,7 +56,7 @@ ORPHAN     = 568
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
 | **التدفّقات** | 34 | 27 | 7 |
-| **العيوب** | 25 | 12 | 13 |
+| **العيوب** | 27 | 14 | 13 |
 | **المخاطر** | 24 | 11 | 13 |
 | **فجواتُ العقد** | 26 | 4 | 22 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
@@ -92,6 +92,8 @@ ORPHAN     = 568
 | **D23** | حمولاتُ REST تكشف اقتصاداً داخليّاً | `EXPECTED_FAIL` | `TestEV_CustomerDriverAssignment` · `TestD20_MerchantRealtimeVsREST` · `TestD21_CustomerRedactionAgainstContract` · `TestOrderFieldsAllClassified` |
 | **D24** | سقفُ الطلبات النشطة يُتجاوَز بالتزامن | `EXPECTED_FAIL` | `TestFAIL_R7_DriverAcceptPartialState` · `TestRACE_MaxActiveOrders` |
 | **D25** | هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن | `EXPECTED_FAIL` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestRACE_DuplicateLeadConversion` |
+| **D26** | إنذارُ الراصد يضيع بعد كتابة الوسم | `EXPECTED_FAIL` | `TestEV_R22WatchdogMarkerSuppressesRetry` |
+| **D27** | سقوطُ الدفع بلا إعادةٍ دائمة | `EXPECTED_FAIL` | `TestEV_R23PushFailureIsLost` |
 
 ---
 

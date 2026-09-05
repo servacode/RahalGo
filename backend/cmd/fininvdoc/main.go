@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/servacode/rahalgo/backend/internal/androidmap"
 	"github.com/servacode/rahalgo/backend/internal/eventmap"
 	"github.com/servacode/rahalgo/backend/internal/failmap"
 	"github.com/servacode/rahalgo/backend/internal/fininv"
@@ -36,6 +37,14 @@ func main() {
 		os.Exit(1)
 	}
 	write("../docs/testing/system/EVENT_CONTRACT_MATRIX.json", eventmap.Snapshot(sites, pubs))
+
+	snap := androidmap.Snapshot()
+	write("../docs/testing/system/ANDROID_DEVICE_MATRIX.json", map[string]any{
+		"devices": snap["devices"], "counts": snap["counts"],
+	})
+	write("../docs/testing/system/ANDROID_TEST_MATRIX.json", map[string]any{
+		"cases": snap["cases"], "counts": snap["counts"],
+	})
 }
 
 func write(path string, v any) {

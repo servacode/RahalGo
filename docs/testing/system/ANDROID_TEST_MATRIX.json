@@ -1,0 +1,359 @@
+{
+  "cases": [
+    {
+      "id": "AND-01",
+      "app": "driver",
+      "area": "location-queue",
+      "title": "الطابورُ يُمحى كاملاً بعد إرسال ما قُرئ",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "R19"
+      ],
+      "test": "LocationContractTest.R19",
+      "result": "RISK_CONFIRMED",
+      "evidence": "all() ثمّ sendBatch() ثمّ clear() — والملفُّ يُحذف كاملاً"
+    },
+    {
+      "id": "AND-02",
+      "app": "driver",
+      "area": "location-queue",
+      "title": "نجاحُ الدفعة يمسح المرفوضَ مع المقبول",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "R20"
+      ],
+      "test": "LocationContractTest.R20",
+      "result": "RISK_CONFIRMED",
+      "evidence": "لا تُقرأ حمولةُ الردّ لتمييز نقطةٍ رُفضت"
+    },
+    {
+      "id": "AND-03",
+      "app": "driver",
+      "area": "location-queue",
+      "title": "طابورُ النقاط بلا صاحبٍ ولا يُمسح عند الخروج",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D16"
+      ],
+      "test": "LocationContractTest.D16",
+      "result": "EXPECTED_FAIL",
+      "evidence": "points.jsonl ملفٌّ واحدٌ بلا معرّفِ سائق · ولا مسارَ خروجٍ يمسحه"
+    },
+    {
+      "id": "AND-04",
+      "app": "driver",
+      "area": "location-service",
+      "title": "الإقلاعُ اللاصق يفقد الفاصلَ المضبوط",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "D18"
+      ],
+      "test": "LocationContractTest.D18",
+      "result": "EXPECTED_FAIL",
+      "evidence": "الفاصلُ يُقرأ من intent وحدَه · وأندرويد يُسلّم null عند الإقلاع اللاصق"
+    },
+    {
+      "id": "AND-05",
+      "app": "driver",
+      "area": "location-service",
+      "title": "لا إعادةَ تحقّقٍ من الورديّة بعد الإقلاع اللاصق",
+      "kind": "STRUCTURAL",
+      "automation": "AUTOMATED",
+      "registers": [
+        "R17"
+      ],
+      "test": "LocationContractTest.R17",
+      "result": "RISK_CONFIRMED",
+      "evidence": "onStartCommand تُقلع وتطلب الموقعَ بلا سؤالٍ عن ورديّةٍ أو جلسةٍ أو حال"
+    },
+    {
+      "id": "AND-10",
+      "app": "driver",
+      "area": "shift",
+      "title": "فتحُ الورديّة وإغلاقُها ونقرٌ متكرّرٌ وانقطاعُ شبكة",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-11",
+      "app": "driver",
+      "area": "background-location",
+      "title": "الخدمةُ حيّةٌ والشاشةُ مطفأةٌ والتطبيقُ في الخلفيّة",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-12",
+      "app": "driver",
+      "area": "doze",
+      "title": "الغفوةُ وموفّرُ البطّاريّة — أتستمرّ المواقع؟",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F + adb dumpsys deviceidle"
+    },
+    {
+      "id": "AND-13",
+      "app": "driver",
+      "area": "gps",
+      "title": "GPS مطفأٌ أو ضعيفٌ لا يُنهي رحلةً",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-14",
+      "app": "driver",
+      "area": "process-death",
+      "title": "موتُ العمليّة أثناء ملاحةٍ نشطة",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "registers": [
+        "D17"
+      ],
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F + adb shell am force-stop"
+    },
+    {
+      "id": "AND-15",
+      "app": "driver",
+      "area": "reboot",
+      "title": "إعادةُ الإقلاع وحالُ الخدمة بعدها",
+      "kind": "DEVICE",
+      "automation": "MANUAL_EVIDENCE_REQUIRED",
+      "registers": [
+        "R17"
+      ],
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-16",
+      "app": "driver",
+      "area": "offline-maps",
+      "title": "تنزيلُ الحزمة واستئنافُها وقطعُ الشبكة",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F + مساحةٌ كافية"
+    },
+    {
+      "id": "AND-17",
+      "app": "driver",
+      "area": "navigation",
+      "title": "الملاحةُ الحيّة — مطابقةُ الخريطة والانحرافُ وإعادةُ المسار",
+      "kind": "REAL_WORLD_DRIVE",
+      "automation": "MANUAL_EVIDENCE_REQUIRED",
+      "result": "NOT_RUN",
+      "evidence": "يحتاج قيادةً في الشارع",
+      "needs": "REAL-WORLD DRIVE"
+    },
+    {
+      "id": "AND-18",
+      "app": "driver",
+      "area": "push",
+      "title": "صوتُ طلبٍ جديدٍ وقناتُه",
+      "kind": "DEVICE",
+      "automation": "MANUAL_EVIDENCE_REQUIRED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-20",
+      "app": "customer",
+      "area": "process-death",
+      "title": "السلّةُ والعنوانُ والطلبُ النشطُ بعد موتِ العمليّة",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-21",
+      "app": "customer",
+      "area": "deep-link",
+      "title": "النقرُ يفتح الكيانَ بعينه — باردٌ ودافئٌ وخلفيّة",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل · **وعقدُ الخادم مُثبَتٌ في `P-7`**",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-22",
+      "app": "customer",
+      "area": "multi-order",
+      "title": "طلبان لا يختلطان على الجهاز",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل · **والخادمُ مُثبَتٌ في `P-7`**",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-30",
+      "app": "merchant",
+      "area": "process-death",
+      "title": "الطلبُ النشطُ يعود بعد موتِ العمليّة",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-31",
+      "app": "merchant",
+      "area": "realtime",
+      "title": "الوصلةُ تعود بعد انقطاعٍ وانتهاءِ رمز",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "registers": [
+        "D19"
+      ],
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-40",
+      "app": "rep",
+      "area": "permissions",
+      "title": "لا إذنَ موقعٍ قبل الدخول",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "registers": [
+        "REP-OWNER-02"
+      ],
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-41",
+      "app": "rep",
+      "area": "session",
+      "title": "انتهاءُ الجلسة وموتُ العمليّة أثناء استمارة",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-50",
+      "app": "all",
+      "area": "auth",
+      "title": "إجبارُ تبديل كلمة المرور",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "registers": [
+        "D11"
+      ],
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-51",
+      "app": "all",
+      "area": "push",
+      "title": "إلغاءُ تسجيل الرمز عند الخروج",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "registers": [
+        "D12"
+      ],
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل · **وجانبُ الخادم مُثبَتٌ في `P-7`**",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-52",
+      "app": "all",
+      "area": "realtime",
+      "title": "وصلةٌ مفتوحةٌ بعد إبطال الجلسة",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "registers": [
+        "R14"
+      ],
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل · **وعزلُ الغرف مُثبَتٌ في `P-7`**",
+      "needs": "SM-A525F"
+    },
+    {
+      "id": "AND-53",
+      "app": "all",
+      "area": "push-targeting",
+      "title": "حسابٌ بأكثر من تطبيق — أيصل الإشعارُ إلى الخطأ؟",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "registers": [
+        "XOB-4"
+      ],
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل · **و٢٧ من ٤٧ موضعاً بلا توجيهٍ مقيسةٌ في `P-7`**",
+      "needs": "جهازان أو حسابٌ بتطبيقين"
+    },
+    {
+      "id": "AND-54",
+      "app": "all",
+      "area": "network",
+      "title": "انقطاعُ الشبكة وعودتُها والتبديلُ بين واي فاي والبيانات",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F + شريحةُ بيانات"
+    },
+    {
+      "id": "AND-55",
+      "app": "all",
+      "area": "install",
+      "title": "تثبيتٌ جديدٌ وترقيةٌ ومسحُ بياناتٍ وإعادةُ تثبيت",
+      "kind": "DEVICE",
+      "automation": "SEMI_AUTOMATED",
+      "result": "NOT_RUN",
+      "evidence": "لا جهازَ متّصل",
+      "needs": "SM-A525F"
+    }
+  ],
+  "counts": {
+    "Devices": 5,
+    "DevicesAvailable": 0,
+    "DevicesExecuted": 0,
+    "Cases": 27,
+    "Structural": 5,
+    "UnitK": 0,
+    "ReplayK": 0,
+    "DeviceK": 21,
+    "DriveK": 1,
+    "AutomatedN": 5,
+    "SemiAutoN": 19,
+    "ManualN": 3,
+    "PassN": 0,
+    "ExpectedFailN": 2,
+    "RiskConfirmedN": 3,
+    "NotRunN": 22,
+    "Apps": 4
+  }
+}
