@@ -108,12 +108,53 @@ func (s *Server) merchantReady() bool {
 	return s.merchant != nil && s.merchant.Ready()
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// **مِعراضُ الاختبار — سطرٌ واحدٌ من التبديل، وسلوكٌ لا يتبدّل**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قرارُ المالك ٢٠٢٦-٠٩-٠٥: BEHAVIOR-PRESERVING TESTABILITY REFACTOR.)
+//
+// # لماذا لزم
+//
+// **NewFCM تُبنى من متغيّرات البيئة داخل New نفسِها** — **فلا موضعَ
+// يستطيع اختبارٌ أن يضع فيه ناقلاً بديلاً**، و`R23` (سقوطُ الدفع مرّةً
+// واحدةً بلا إعادة) **لا يُثبَت أصلاً.**
+//
+// # وما الذي لم يتبدّل
+//
+// **الإنتاجُ لا يمرّر خياراً** (`cmd/api` بلا تبديل)، **فالمسارُ الذي يمرّ
+// به هو المسارُ نفسُه.**
+//
+// **ولا رايةَ فشلٍ ولا متغيّرَ بيئةٍ ولا بابَ تصحيحٍ ولا فرعَ اختبارٍ في
+// منطق العمل** — **والتبديلُ لا يُبلَغ إلّا بتمرير دالّةٍ من شيفرة Go**،
+// وذلك ما لا يقع في إعدادٍ ولا في تشغيل.
+//
+// **وحارسٌ يُثبت ذلك** — `TestSeam_ProductionWiringUnchanged`.
+
+// Option خيارُ تركيبٍ — **للاختبار وحدَه اليوم.**
+type Option func(*options)
+
+type options struct {
+	pushTransport push.Transport
+}
+
+// WithPushTransport يضع ناقلَ دفعٍ بديلاً بدل الذي يُبنى من البيئة.
+//
+// **ولا يُنادى في الإنتاج** — `cmd/api` لا يمرّر خياراً.
+func WithPushTransport(t push.Transport) Option {
+	return func(o *options) { o.pushTransport = t }
+}
+
 func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.Client,
 	tokens *auth.TokenIssuer, identitySvc *identity.Service, catalogSvc *catalog.Service,
 	settingsStore *settings.Store, walletSvc *wallet.Service, ordersSvc *orders.Service,
 	cashboxSvc *cashbox.Service, supportSvc *support.Service, mediaSvc *media.Service,
 	hub *realtime.Hub, otpStatus func() map[string]any,
-	otpUnpair func(context.Context) error, otpPair func()) *Server {
+	otpUnpair func(context.Context) error, otpPair func(), opts ...Option) *Server {
+	o := options{}
+	for _, apply := range opts {
+		apply(&o)
+	}
 	notify := notifications.New(pg, hub, logger)
 	// ══════════════════════════════════════════════════════════════════
 	// **والدفعُ يُربط إن كان مهيّأً — وإلّا صمتت المنصّةُ ولم تسقط**
@@ -125,8 +166,14 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	//
 	// **ولا يُسقط الإقلاعَ أيضاً**: محرّكٌ لا يقلع بسبب إشعاراتٍ أسوأُ من
 	// إشعاراتٍ لا تصل. **إنّما يُسجَّل خطأً لا معلومة.**
+	// **وناقلُ الدفع يُحقَن أو يُبنى من البيئة** — والافتراضُ هو الثاني.
+	//
+	// **ولا رايةَ ولا متغيّرَ بيئةٍ ولا فرعَ اختبارٍ في منطق العمل**: من لم
+	// يمرّر خياراً مرّ بالمسار نفسِه حرفاً بحرف.
 	pushSvc := push.New(pg, logger)
-	if fcm, err := push.NewFCM(logger); err != nil {
+	if o.pushTransport != nil {
+		pushSvc = push.New(pg, logger, o.pushTransport)
+	} else if fcm, err := push.NewFCM(logger); err != nil {
 		logger.Error("الدفع: تعذّرت التهيئة — الإشعاراتُ لن تصل إلى الأجهزة", "error", err)
 	} else if fcm != nil {
 		pushSvc = push.New(pg, logger, fcm)

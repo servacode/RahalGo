@@ -1,0 +1,1126 @@
+{
+  "counts": {
+    "Events": 11,
+    "Held": 3,
+    "ExpectedFail": 5,
+    "Partial": 2,
+    "Unproven": 1,
+    "DeferredP8": 0,
+    "Realtime": 8,
+    "Push": 5,
+    "InApp": 8
+  },
+  "derived": {
+    "emit_sites": 47,
+    "realtime_publishers": 14,
+    "rooms": 5,
+    "untargeted_user_sites": 27
+  },
+  "emit_sites": [
+    {
+      "file": "internal/notifications/notifications.go",
+      "line": 355,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/notifications/notifications.go",
+      "line": 423,
+      "call": "NotifyMany",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/notifications/notifications.go",
+      "line": 448,
+      "call": "NotifyMany",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/orders/merchant_blocked.go",
+      "line": 122,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/notify.go",
+      "line": 137,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/notify.go",
+      "line": 218,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/notify.go",
+      "line": 253,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/notify.go",
+      "line": 271,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/notify.go",
+      "line": 314,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/notify.go",
+      "line": 430,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/notify.go",
+      "line": 455,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": true,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/orders/sameroute.go",
+      "line": 177,
+      "call": "Notify",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/violations.go",
+      "line": 243,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "merchant",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/warnings.go",
+      "line": 58,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "merchant",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/watchdog.go",
+      "line": 143,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/referrals/referrals.go",
+      "line": 339,
+      "call": "NotifyWallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/referrals/referrals.go",
+      "line": 460,
+      "call": "NotifyWallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/admin_drivers_handlers.go",
+      "line": 136,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "cashbox",
+      "has_app_targeting": true,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/admin_drivers_handlers.go",
+      "line": 215,
+      "call": "Notify",
+      "kind": "Account",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/admin_orders_handlers.go",
+      "line": 169,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_support_handlers.go",
+      "line": 39,
+      "call": "Notify",
+      "kind": "Rating",
+      "entity": "rating",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_support_handlers.go",
+      "line": 81,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_support_handlers.go",
+      "line": 86,
+      "call": "NotifyOps",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_support_handlers.go",
+      "line": 117,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_support_handlers.go",
+      "line": 148,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_users_handlers.go",
+      "line": 64,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "user",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_users_handlers.go",
+      "line": 88,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "user",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_users_handlers.go",
+      "line": 105,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "user",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_wallet_handlers.go",
+      "line": 82,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/comms_handlers.go",
+      "line": 106,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/complaint_handlers.go",
+      "line": 52,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/complaint_handlers.go",
+      "line": 70,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/complaint_handlers.go",
+      "line": 81,
+      "call": "NotifyOps",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/custom_order_handlers.go",
+      "line": 74,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/emergency_handlers.go",
+      "line": 161,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/emergency_handlers.go",
+      "line": 332,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "emergency",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 230,
+      "call": "Notify",
+      "kind": "Lead",
+      "entity": "lead",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 246,
+      "call": "NotifyOps",
+      "kind": "Lead",
+      "entity": "lead",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 540,
+      "call": "NotifyOps",
+      "kind": "Lead",
+      "entity": "lead",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 649,
+      "call": "Notify",
+      "kind": "Lead",
+      "entity": "lead",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 705,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": true,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 820,
+      "call": "Notify",
+      "kind": "Lead",
+      "entity": "merchant",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/menu_approval.go",
+      "line": 198,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "menu_item",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/merchant_handlers.go",
+      "line": 391,
+      "call": "NotifyOps",
+      "kind": "Account",
+      "entity": "merchant",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/payout_handlers.go",
+      "line": 316,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "payout",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/rep_menu_write.go",
+      "line": 84,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "merchant",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/warnings_all_handlers.go",
+      "line": 191,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "user",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    }
+  ],
+  "events": [
+    {
+      "id": "EV-01",
+      "flows": [
+        "F-01"
+      ],
+      "title": "طلبٌ جديدٌ للمتجر",
+      "entity": "order",
+      "entity_id_required": true,
+      "deep_link_contract": "/orders/{id} في تطبيق المتجر",
+      "must_receive": [
+        "merchant-owner"
+      ],
+      "must_not_receive": [
+        "customer",
+        "driver",
+        "rep"
+      ],
+      "channels": [
+        "REALTIME",
+        "PUSH",
+        "IN_APP"
+      ],
+      "apps": [
+        "merchant"
+      ],
+      "privacy_contract": "OrderPrivacy[merchant] — P-1",
+      "durability": "DURABLE_REQUIRED",
+      "retry_policy": "لا إعادةَ مقيسة",
+      "tests": [
+        "TestEV_MerchantRealtimePrivacy",
+        "TestEV_OrderAudience"
+      ],
+      "status": "EXPECTED_FAIL",
+      "evidence": "71 حقلاً وصل غرفةَ المتجر · 19 منها محظورٌ بعقد P-1",
+      "registers": [
+        "D20"
+      ]
+    },
+    {
+      "id": "EV-02",
+      "flows": [
+        "F-04",
+        "F-08",
+        "F-12",
+        "F-13"
+      ],
+      "title": "تحديثُ حالِ الطلب للزبون",
+      "entity": "order",
+      "entity_id_required": true,
+      "deep_link_contract": "/orders/{id} في تطبيق الزبون",
+      "must_receive": [
+        "order-customer"
+      ],
+      "must_not_receive": [
+        "other-customer",
+        "merchant-of-another-order"
+      ],
+      "channels": [
+        "REALTIME",
+        "PUSH",
+        "IN_APP"
+      ],
+      "apps": [
+        "customer"
+      ],
+      "privacy_contract": "OrderPrivacy[customer] — P-1 · ولا هاتفَ سائق",
+      "durability": "DURABLE_REQUIRED",
+      "retry_policy": "لا إعادةَ مقيسة",
+      "tests": [
+        "TestEV_CustomerDriverAssignment",
+        "TestEV_OrderAudience"
+      ],
+      "status": "EXPECTED_FAIL",
+      "evidence": "driver_phone وصل الزبونَ لحظيّاً وREST — 9 و10 خروق",
+      "registers": [
+        "D21",
+        "D23"
+      ]
+    },
+    {
+      "id": "EV-03",
+      "flows": [
+        "F-02"
+      ],
+      "title": "الطلبُ الخاصُّ لصاحبه",
+      "entity": "order",
+      "entity_id_required": true,
+      "deep_link_contract": "/orders/{id}",
+      "must_receive": [
+        "order-customer"
+      ],
+      "must_not_receive": [
+        "other-customer"
+      ],
+      "channels": [
+        "REALTIME"
+      ],
+      "apps": [
+        "customer"
+      ],
+      "privacy_contract": "OrderPrivacy[customer] — P-1",
+      "durability": "DURABLE_REQUIRED",
+      "retry_policy": "—",
+      "tests": [
+        "TestEV_CustomOrderOwnerRealtime"
+      ],
+      "status": "EXPECTED_FAIL",
+      "evidence": "العاديُّ وصل صاحبَه (true) والخاصُّ لا (false)",
+      "registers": [
+        "D22"
+      ]
+    },
+    {
+      "id": "EV-04",
+      "flows": [
+        "F-05"
+      ],
+      "title": "قبولٌ تلقائيٌّ يُعلَم به المتجر",
+      "entity": "order",
+      "entity_id_required": true,
+      "deep_link_contract": "/orders/{id}",
+      "must_receive": [
+        "merchant-owner"
+      ],
+      "must_not_receive": [
+        "customer"
+      ],
+      "channels": [
+        "IN_APP",
+        "PUSH"
+      ],
+      "apps": [
+        "merchant"
+      ],
+      "privacy_contract": "OrderPrivacy[merchant] — P-1",
+      "durability": "DURABLE_REQUIRED",
+      "retry_policy": "—",
+      "tests": [
+        "TestEV_AutoAcceptMerchantAwareness"
+      ],
+      "status": "PARTIAL",
+      "evidence": "لم يقع القبولُ التلقائيُّ — لا بابَ يُنادي sweepAutoAccept · SEAM",
+      "registers": [
+        "MD-5"
+      ]
+    },
+    {
+      "id": "EV-05",
+      "flows": [
+        "F-08",
+        "F-19"
+      ],
+      "title": "إسنادُ سائقٍ يُعلَم به المتجر",
+      "entity": "order",
+      "entity_id_required": true,
+      "deep_link_contract": "/orders/{id}",
+      "must_receive": [
+        "merchant-owner"
+      ],
+      "must_not_receive": [
+        "—"
+      ],
+      "channels": [
+        "REALTIME",
+        "IN_APP"
+      ],
+      "apps": [
+        "merchant"
+      ],
+      "privacy_contract": "**ولا هويّةَ سائقٍ للمتجر** — OrderPrivacy[merchant]",
+      "durability": "DURABLE_REQUIRED",
+      "retry_policy": "—",
+      "tests": [
+        "TestEV_MerchantDriverAssignment"
+      ],
+      "status": "PARTIAL",
+      "evidence": "المتجرُ أُعلِم بحمولةٍ واحدة · و3 حقولِ هويّةِ سائقٍ تسرّبت",
+      "registers": [
+        "MD-2",
+        "D20"
+      ]
+    },
+    {
+      "id": "EV-06",
+      "flows": [
+        "F-14",
+        "F-25"
+      ],
+      "title": "حركةُ محفظةٍ يُعلَم بها صاحبُها",
+      "entity": "wallet",
+      "entity_id_required": false,
+      "deep_link_contract": "/wallet",
+      "must_receive": [
+        "wallet-owner"
+      ],
+      "must_not_receive": [
+        "any-other-user"
+      ],
+      "channels": [
+        "IN_APP",
+        "PUSH"
+      ],
+      "privacy_contract": "لا حقولَ طلبٍ في مغلّف الإشعار",
+      "durability": "DURABLE_REQUIRED",
+      "retry_policy": "لا إعادةَ مقيسة",
+      "tests": [
+        "TestEV_WalletAudience"
+      ],
+      "status": "HELD",
+      "evidence": "صاحبُ المحفظة 0⇒1 وغيرُه 0⇒0"
+    },
+    {
+      "id": "EV-07",
+      "flows": [
+        "F-09"
+      ],
+      "title": "إنذارُ الراصد للعمليّات",
+      "entity": "order",
+      "entity_id_required": true,
+      "deep_link_contract": "/dashboard/orders",
+      "must_receive": [
+        "ops"
+      ],
+      "must_not_receive": [
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "channels": [
+        "REALTIME",
+        "IN_APP"
+      ],
+      "privacy_contract": "داخليٌّ — لا قيدَ خصوصيّةِ زبون",
+      "durability": "DURABLE_REQUIRED",
+      "retry_policy": "**لا إعادة** — الوسمُ يسبق الإشعارَ ويمنعها",
+      "tests": [
+        "TestEV_R22WatchdogMarkerSuppressesRetry"
+      ],
+      "status": "EXPECTED_FAIL",
+      "evidence": "التشغيلُ الأوّل أشعر مرّةً · والثاني صفراً — الوسمُ يمنع",
+      "registers": [
+        "R22",
+        "XOB-6"
+      ]
+    },
+    {
+      "id": "EV-08",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "title": "دفعٌ إلى جهاز",
+      "entity": "*",
+      "entity_id_required": true,
+      "deep_link_contract": "Data[entity] و Data[entity_id]",
+      "must_receive": [
+        "token-owner"
+      ],
+      "must_not_receive": [
+        "other-users-tokens"
+      ],
+      "channels": [
+        "PUSH"
+      ],
+      "privacy_contract": "لا حقلَ طلبٍ في المغلّف — P-1 CheckPayload(push)",
+      "durability": "BEST_EFFORT",
+      "retry_policy": "**مرّةٌ واحدةٌ بلا إعادة** — يُقاس",
+      "tests": [
+        "TestEV_R23PushFailureIsLost",
+        "TestEV_PushTokenTargeting"
+      ],
+      "status": "EXPECTED_FAIL",
+      "evidence": "ثلاثةُ إخفاقاتٍ · ثلاثةُ نداءاتٍ · ولا نداءَ رابع",
+      "registers": [
+        "R23",
+        "D12"
+      ]
+    },
+    {
+      "id": "EV-09",
+      "flows": [
+        "F-18"
+      ],
+      "title": "تحويلٌ تلقائيٌّ يُعلَم به المتجر",
+      "entity": "order",
+      "entity_id_required": true,
+      "deep_link_contract": "/orders/{id}",
+      "must_receive": [
+        "merchant-owner"
+      ],
+      "must_not_receive": [
+        "—"
+      ],
+      "channels": [
+        "IN_APP",
+        "REALTIME"
+      ],
+      "apps": [
+        "merchant"
+      ],
+      "privacy_contract": "OrderPrivacy[merchant] — P-1",
+      "durability": "DURABLE_REQUIRED",
+      "retry_policy": "**خيطٌ لا يُنتظَر** — XOB-7",
+      "tests": [
+        "TestEV_R21AutoTransferAwareness"
+      ],
+      "status": "UNPROVEN",
+      "evidence": "يُقاس في التشغيل",
+      "registers": [
+        "R21",
+        "XOB-7"
+      ]
+    },
+    {
+      "id": "EV-10",
+      "flows": [
+        "F-01"
+      ],
+      "title": "طلبان متزامنان لا يختلطان",
+      "entity": "order",
+      "entity_id_required": true,
+      "deep_link_contract": "لكلٍّ معرّفُه",
+      "must_receive": [
+        "order-customer"
+      ],
+      "must_not_receive": [
+        "cross-order-mix"
+      ],
+      "channels": [
+        "REALTIME",
+        "IN_APP"
+      ],
+      "apps": [
+        "customer"
+      ],
+      "privacy_contract": "OrderPrivacy[customer]",
+      "durability": "DURABLE_REQUIRED",
+      "retry_policy": "—",
+      "tests": [
+        "TestEV_MultiOrderRouting"
+      ],
+      "status": "HELD",
+      "evidence": "طلبان بمعرّفين متمايزين ولا اختلاط"
+    },
+    {
+      "id": "EV-11",
+      "flows": [
+        "F-34"
+      ],
+      "title": "غرفةُ الدورِ لا يدخلها غيرُ أهلها",
+      "entity": "*",
+      "entity_id_required": false,
+      "deep_link_contract": "—",
+      "must_receive": [
+        "room-owner"
+      ],
+      "must_not_receive": [
+        "other-roles",
+        "other-users"
+      ],
+      "channels": [
+        "REALTIME"
+      ],
+      "privacy_contract": "التخويلُ قبل الاشتراك",
+      "durability": "PART_OF_LOGICAL_SUCCESS",
+      "retry_policy": "—",
+      "tests": [
+        "TestEV_RealtimeAuthorization"
+      ],
+      "status": "HELD",
+      "evidence": "زبونٌ آخرُ لم يستقبل · ومتجرٌ آخرُ لم يستقبل",
+      "registers": [
+        "R14"
+      ]
+    }
+  ],
+  "realtime_pubs": [
+    {
+      "file": "internal/notifications/notifications.go",
+      "line": 236,
+      "room": "user:*"
+    },
+    {
+      "file": "internal/notifications/notifications.go",
+      "line": 323,
+      "room": "user:*"
+    },
+    {
+      "file": "internal/orders/custom.go",
+      "line": 213,
+      "room": "ops"
+    },
+    {
+      "file": "internal/orders/goods.go",
+      "line": 125,
+      "room": "ops"
+    },
+    {
+      "file": "internal/orders/rotation.go",
+      "line": 259,
+      "room": "driver:*"
+    },
+    {
+      "file": "internal/orders/rotation.go",
+      "line": 396,
+      "room": "driver:*"
+    },
+    {
+      "file": "internal/orders/rotation.go",
+      "line": 397,
+      "room": "ops"
+    },
+    {
+      "file": "internal/orders/service.go",
+      "line": 120,
+      "room": "ops"
+    },
+    {
+      "file": "internal/orders/service.go",
+      "line": 121,
+      "room": "merchant:*"
+    },
+    {
+      "file": "internal/orders/service.go",
+      "line": 134,
+      "room": "customer:*"
+    },
+    {
+      "file": "internal/orders/service.go",
+      "line": 141,
+      "room": "driver:*"
+    },
+    {
+      "file": "internal/orders/service.go",
+      "line": 968,
+      "room": "user:*"
+    },
+    {
+      "file": "internal/orders/watchdog.go",
+      "line": 115,
+      "room": "ops"
+    },
+    {
+      "file": "internal/server/notifications_handlers.go",
+      "line": 44,
+      "room": "user:*"
+    }
+  ],
+  "rooms": [
+    "customer:*",
+    "driver:*",
+    "merchant:*",
+    "ops",
+    "user:*"
+  ],
+  "untargeted_user": [
+    {
+      "file": "internal/notifications/notifications.go",
+      "line": 355,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/notifications/notifications.go",
+      "line": 423,
+      "call": "NotifyMany",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/notifications/notifications.go",
+      "line": 448,
+      "call": "NotifyMany",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/orders/warnings.go",
+      "line": 58,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "merchant",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/referrals/referrals.go",
+      "line": 339,
+      "call": "NotifyWallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/referrals/referrals.go",
+      "line": 460,
+      "call": "NotifyWallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/admin_drivers_handlers.go",
+      "line": 215,
+      "call": "Notify",
+      "kind": "Account",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/admin_support_handlers.go",
+      "line": 39,
+      "call": "Notify",
+      "kind": "Rating",
+      "entity": "rating",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_support_handlers.go",
+      "line": 81,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_support_handlers.go",
+      "line": 117,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_support_handlers.go",
+      "line": 148,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_users_handlers.go",
+      "line": 64,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "user",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_users_handlers.go",
+      "line": 88,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "user",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_users_handlers.go",
+      "line": 105,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "user",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/admin_wallet_handlers.go",
+      "line": 82,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/comms_handlers.go",
+      "line": 106,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/complaint_handlers.go",
+      "line": 52,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/complaint_handlers.go",
+      "line": 70,
+      "call": "Notify",
+      "kind": "Ticket",
+      "entity": "ticket",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/custom_order_handlers.go",
+      "line": 74,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/emergency_handlers.go",
+      "line": 332,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "emergency",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 230,
+      "call": "Notify",
+      "kind": "Lead",
+      "entity": "lead",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 649,
+      "call": "Notify",
+      "kind": "Lead",
+      "entity": "lead",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/leads_handlers.go",
+      "line": 820,
+      "call": "Notify",
+      "kind": "Lead",
+      "entity": "merchant",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/menu_approval.go",
+      "line": 198,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "menu_item",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/payout_handlers.go",
+      "line": 316,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "payout",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/rep_menu_write.go",
+      "line": 84,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "merchant",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/warnings_all_handlers.go",
+      "line": 191,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "user",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    }
+  ]
+}

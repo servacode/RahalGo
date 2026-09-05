@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 215,
-    "test_funcs": 683
+    "test_files": 218,
+    "test_funcs": 701
   },
   "flows": [
     {
@@ -66,6 +66,9 @@
         "XG-9"
       ],
       "tests": [
+        "TestEV_OrderAudience",
+        "TestEV_MerchantRealtimePrivacy",
+        "TestEV_MultiOrderRouting",
         "TestFAIL_R8_OrphanClaimUnderRealFailure",
         "TestFAIL_XOB7_AutoTransferFireAndForget",
         "TestFIN_OrderEconomicConservation",
@@ -106,6 +109,7 @@
         "R11"
       ],
       "tests": [
+        "TestEV_CustomOrderOwnerRealtime",
         "TestD22_CustomOrderOwnerChannelContract"
       ],
       "status": "PARTIALLY_COVERED"
@@ -188,8 +192,10 @@
       "gaps": [
         "XG-7"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestEV_AutoAcceptMerchantAwareness"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-06",
@@ -231,10 +237,12 @@
         "R10"
       ],
       "tests": [
+        "TestEV_PushTokenTargeting",
+        "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport",
         "TestRACE_TwoDriversSameOrder"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-08",
@@ -264,6 +272,8 @@
         "R10"
       ],
       "tests": [
+        "TestEV_MerchantDriverAssignment",
+        "TestEV_CustomerDriverAssignment",
         "TestSampleFactory_DriverOnShiftWithCash",
         "TestFAIL_R7_DriverAcceptPartialState",
         "TestRACE_AdminVsAppTransition",
@@ -296,6 +306,8 @@
         "R1"
       ],
       "tests": [
+        "TestEV_R22WatchdogMarkerSuppressesRetry",
+        "TestEV_XOB5_WatchdogComparisonKey",
         "TestFAIL_R22_WatchdogMarkerBeforeNotify"
       ],
       "status": "PARTIALLY_COVERED"
@@ -400,6 +412,7 @@
         "D13"
       ],
       "tests": [
+        "TestEV_CustomerDriverAssignment",
         "TestFIN_MoneyTimingByStatus",
         "TestRACE_LocationQueueIsClientSide",
         "TestRACE_FinancialTruthAfterConcurrentDeliveries"
@@ -439,6 +452,7 @@
         "XG-26"
       ],
       "tests": [
+        "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_TransactionBoundaries",
@@ -550,6 +564,7 @@
         "L9"
       ],
       "tests": [
+        "TestEV_R21AutoTransferAwareness",
         "TestFAIL_XOB7_AutoTransferFireAndForget"
       ],
       "status": "PARTIALLY_COVERED"
@@ -579,6 +594,7 @@
         "XG-5"
       ],
       "tests": [
+        "TestEV_MerchantDriverAssignment",
         "TestFIN_CashExposureContract",
         "TestRACE_AdminVsAppTransition"
       ],
@@ -756,10 +772,11 @@
         "XG-20"
       ],
       "tests": [
+        "TestEV_WalletAudience",
         "TestSampleFactory_WalletMatchesLedger",
         "TestFAIL_AQ4_AuditAtomicity"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-26",
@@ -901,6 +918,7 @@
         "TestSampleFactory_ForeignRoleDenied",
         "TestSampleFactory_ValidToken",
         "TestFAIL_D15_AdminCreateUserPartial",
+        "TestFAIL_D15_Reconciliation",
         "TestRACE_SessionRevokedDuringRequest"
       ],
       "status": "COVERED"
@@ -1004,8 +1022,10 @@
       "gaps": [
         "XG-9"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestEV_RealtimeAuthorization"
+      ],
+      "status": "PARTIALLY_COVERED"
     }
   ],
   "defects": [
@@ -1090,8 +1110,10 @@
     {
       "id": "D12",
       "title": "Push.unregister بلا منادٍ",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestEV_PushTokenTargeting"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D13",
@@ -1111,7 +1133,8 @@
       "id": "D15",
       "title": "AdminCreateUser في خطوتين",
       "tests": [
-        "TestFAIL_D15_AdminCreateUserPartial"
+        "TestFAIL_D15_AdminCreateUserPartial",
+        "TestFAIL_D15_Reconciliation"
       ],
       "status": "EXPECTED_FAIL"
     },
@@ -1143,6 +1166,8 @@
       "id": "D20",
       "title": "البثُّ الحيُّ يتجاوز redactForMerchant",
       "tests": [
+        "TestEV_MerchantDriverAssignment",
+        "TestEV_MerchantRealtimePrivacy",
         "TestD20_CustomerRealtimeVsREST",
         "TestD20_MerchantRealtimeVsREST",
         "TestOrderFieldsAllClassified"
@@ -1153,6 +1178,7 @@
       "id": "D21",
       "title": "هاتفُ السائق يصل الزبون",
       "tests": [
+        "TestEV_CustomerDriverAssignment",
         "TestD21_CustomerRedactionAgainstContract",
         "TestForbiddenFieldGuardCatchesLeak",
         "TestOrderFieldsAllClassified"
@@ -1163,6 +1189,7 @@
       "id": "D22",
       "title": "الطلبُ الخاصُّ لا يُبثّ لصاحبه",
       "tests": [
+        "TestEV_CustomOrderOwnerRealtime",
         "TestD22_CustomOrderOwnerChannelContract",
         "TestOrderFieldsAllClassified"
       ],
@@ -1172,6 +1199,7 @@
       "id": "D23",
       "title": "حمولاتُ REST تكشف اقتصاداً داخليّاً",
       "tests": [
+        "TestEV_CustomerDriverAssignment",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
         "TestOrderFieldsAllClassified"
@@ -1334,8 +1362,10 @@
       "id": "R14",
       "title": "اتّصالُ البثّ لا يُراجَع بعد المصافحة",
       "strategy": "إبطالٌ بعد مصافحة البثّ — L5",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestEV_RealtimeAuthorization"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R15",
@@ -1403,6 +1433,7 @@
         "F-20"
       ],
       "tests": [
+        "TestEV_R21AutoTransferAwareness",
         "TestFAIL_XOB7_AutoTransferFireAndForget"
       ],
       "status": "REGRESSION_TEST_PRESENT"
@@ -1412,6 +1443,8 @@
       "title": "الراصدُ يفقد الإشعارَ الباقي",
       "strategy": "إسقاطُ الإشعار بعد وسم alerted_at — L9",
       "tests": [
+        "TestEV_R22WatchdogMarkerSuppressesRetry",
+        "TestEV_XOB5_WatchdogComparisonKey",
         "TestFAIL_R22_WatchdogMarkerBeforeNotify"
       ],
       "status": "REGRESSION_TEST_PRESENT"
@@ -1424,6 +1457,7 @@
         "F-14"
       ],
       "tests": [
+        "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport"
       ],
       "status": "REGRESSION_TEST_PRESENT"
@@ -4822,6 +4856,42 @@
       "orphan": true
     },
     {
+      "name": "TestEV_R22WatchdogMarkerSuppressesRetry",
+      "file": "internal/orders/watchdog_r22_test.go",
+      "package": "orders",
+      "level": "L7",
+      "flows": [
+        "F-09"
+      ],
+      "risks": [
+        "R22"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "FAILURE",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_XOB5_WatchdogComparisonKey",
+      "file": "internal/orders/watchdog_r22_test.go",
+      "package": "orders",
+      "level": "L2",
+      "flows": [
+        "F-09"
+      ],
+      "risks": [
+        "R22"
+      ],
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestAmount_Of",
       "file": "internal/pricing/money_rules_test.go",
       "package": "pricing_test",
@@ -5262,6 +5332,258 @@
       "orphan": true
     },
     {
+      "name": "TestEV_AutoAcceptMerchantAwareness",
+      "file": "internal/qa/event_audience_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-05"
+      ],
+      "settings": [
+        "orders.auto_accept_sec"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_MerchantDriverAssignment",
+      "file": "internal/qa/event_audience_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-08",
+        "F-19"
+      ],
+      "defects": [
+        "D20"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_OrderAudience",
+      "file": "internal/qa/event_audience_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_PushTokenTargeting",
+      "file": "internal/qa/event_audience_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-07"
+      ],
+      "defects": [
+        "D12"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_R21AutoTransferAwareness",
+      "file": "internal/qa/event_audience_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "settings": [
+        "orders.auto_transfer_amount"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_R23PushFailureIsLost",
+      "file": "internal/qa/event_audience_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "FAILURE",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_WalletAudience",
+      "file": "internal/qa/event_audience_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-25"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_ContractDriftGuard",
+      "file": "internal/qa/event_contract_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_CustomOrderOwnerRealtime",
+      "file": "internal/qa/event_contract_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D22"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_CustomerDriverAssignment",
+      "file": "internal/qa/event_contract_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-08",
+        "F-13"
+      ],
+      "defects": [
+        "D21",
+        "D23"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_EmitSitesAndPublishers",
+      "file": "internal/qa/event_contract_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_MerchantRealtimePrivacy",
+      "file": "internal/qa/event_contract_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-01"
+      ],
+      "defects": [
+        "D20"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_MultiOrderRouting",
+      "file": "internal/qa/event_contract_test.go",
+      "package": "qa",
+      "level": "L7",
+      "flows": [
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEV_RealtimeAuthorization",
+      "file": "internal/qa/event_contract_test.go",
+      "package": "qa",
+      "level": "L11",
+      "flows": [
+        "F-34"
+      ],
+      "risks": [
+        "R14"
+      ],
+      "modes": [
+        "FULL",
+        "REALTIME",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSeam_ProductionWiringUnchanged",
+      "file": "internal/qa/event_contract_test.go",
+      "package": "qa",
+      "level": "L2",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestCleanupRemovesOnlyItsOwnScenario",
       "file": "internal/qa/factory_db_test.go",
       "package": "qa",
@@ -5677,6 +5999,24 @@
       "modes": [
         "FULL",
         "FAILURE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_D15_Reconciliation",
+      "file": "internal/qa/fail_state_test.go",
+      "package": "qa",
+      "level": "L6",
+      "flows": [
+        "F-30"
+      ],
+      "defects": [
+        "D15"
+      ],
+      "modes": [
+        "FULL",
+        "FAILURE",
+        "RELEASE"
       ],
       "orphan": false
     },
@@ -8686,7 +9026,6 @@
     "D1 — لا اختبارَ انحدارٍ بعد",
     "D10 — لا اختبارَ انحدارٍ بعد",
     "D11 — لا اختبارَ انحدارٍ بعد",
-    "D12 — لا اختبارَ انحدارٍ بعد",
     "D13 — لا اختبارَ انحدارٍ بعد",
     "D16 — لا اختبارَ انحدارٍ بعد",
     "D17 — لا اختبارَ انحدارٍ بعد",
@@ -8697,7 +9036,6 @@
     "D6 — لا اختبارَ انحدارٍ بعد",
     "D8 — لا اختبارَ انحدارٍ بعد",
     "D9 — لا اختبارَ انحدارٍ بعد",
-    "F-05 (القبولُ التلقائيّ) — لا اختبارَ مرتبطٌ به",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
     "F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به",
     "F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به",
@@ -8705,12 +9043,10 @@
     "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
-    "F-34 (بثٌّ للأدوار) — لا اختبارَ مرتبطٌ به",
     "R1 — لا اختبارَ يحسمه بعد",
     "R11 — لا اختبارَ يحسمه بعد",
     "R12 — لا اختبارَ يحسمه بعد",
     "R13 — لا اختبارَ يحسمه بعد",
-    "R14 — لا اختبارَ يحسمه بعد",
     "R17 — لا اختبارَ يحسمه بعد",
     "R18 — لا اختبارَ يحسمه بعد",
     "R2 — لا اختبارَ يحسمه بعد",

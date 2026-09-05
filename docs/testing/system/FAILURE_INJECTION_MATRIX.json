@@ -1,16 +1,16 @@
 {
   "counts": {
     "Total": 9,
-    "Local": 8,
+    "Local": 9,
     "RequiresP0": 0,
-    "RequiresP7": 1,
+    "RequiresP7": 0,
     "RequiresP8": 0,
-    "Pass": 3,
-    "DefectReproduced": 2,
-    "RiskConfirmed": 0,
+    "Pass": 2,
+    "DefectReproduced": 3,
+    "RiskConfirmed": 1,
     "ExpectedFail": 1,
     "Partial": 1,
-    "Unproven": 2,
+    "Unproven": 1,
     "Visible": 0,
     "Invisible": 5,
     "PartialVisible": 4
@@ -98,22 +98,27 @@
       ],
       "title": "إنشاءُ مستخدمٍ إداريّاً",
       "steps": [
-        "١ CreateUser — يُردّ خطؤه",
-        "٢ GrantRole لكلّ دورٍ في نداءٍ مستقلّ"
+        "١ CreateUserWithRole — مستخدمٌ + الدورُ الأوّلُ في **معاملةٍ واحدة**",
+        "٢ GrantRole لبقيّة الأدوار — ولا تُنادى إن كان الدورُ واحداً",
+        "٣ SetTempPassword — **خارجَ أيّ معاملة**",
+        "٤ Audit"
       ],
       "atomic_boundary": "NON_ATOMIC — إنشاءٌ ثمّ منحُ أدوارٍ بلا معاملة",
       "failpoints": [
-        "D15/grant-role"
+        "D15/set-temp-password",
+        "D15/grant-second-role",
+        "D15/create-user"
       ],
       "expected": "مستخدمٌ بلا دورٍ لا يُترَك",
-      "observed": "لم يبقَ مستخدمٌ — الإنشاءُ رُجع مع فشل منح الدور",
+      "observed": "حسابٌ بأدواره بلا كلمة مرور — والإعادةُ تُردّ phone_taken",
       "user_visible": "خطأٌ — والهاتفُ صار محجوزاً",
       "admin_visible": "PARTIAL",
-      "recovery": "الهاتفُ حرٌّ — والإعادةُ ممكنة",
+      "recovery": "BLOCKED — الهاتفُ محجوزٌ بمستخدمٍ ناقصٍ ولا مسارَ إصلاح",
       "tests": [
+        "TestFAIL_D15_Reconciliation",
         "TestFAIL_D15_AdminCreateUserPartial"
       ],
-      "result": "PASS",
+      "result": "DEFECT_REPRODUCED",
       "registers": [
         "D15"
       ],
@@ -293,21 +298,22 @@
       ],
       "atomic_boundary": "NON_ATOMIC — دفعٌ خارج المعاملة",
       "failpoints": [
-        "— يحتاج بديلاً محقوناً لـpush.Transport"
+        "P-7/fake-transport-500-timeout-reset"
       ],
       "expected": "إشعارٌ يسقط يُعاد أو يُسجَّل",
-      "observed": "لم يُثبَت محلّيّاً — **ولا مِعراضَ لحقن البديل**",
+      "observed": "ثلاثةُ إخفاقاتٍ · ثلاثةُ نداءاتٍ · ولا رابع — يضيع بلا أثر",
       "user_visible": "لا شيء",
       "admin_visible": "INVISIBLE",
-      "recovery": "غيرُ مقيس",
+      "recovery": "لا إعادةَ ولا صفَّ انتظارٍ ولا حالٌ معلَّقة",
       "tests": [
+        "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport"
       ],
-      "result": "UNPROVEN",
+      "result": "RISK_CONFIRMED",
       "registers": [
         "R23"
       ],
-      "where": "REQUIRES_P7",
+      "where": "LOCAL",
       "evidence": "لا مِعراضَ لحقن push.Transport — TESTABILITY SEAM REQUIRED"
     }
   ]

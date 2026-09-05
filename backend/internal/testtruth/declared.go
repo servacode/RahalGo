@@ -638,6 +638,96 @@ var TestMap = map[string]TestDecl{
 	},
 
 	"TestNineFlowsMapped": harness(),
+
+	// ── `P-7` · عقودُ البثّ والإشعار ──────────────────────────────
+	//
+	// **والمصفوفةُ الآليّةُ في `internal/eventmap`** — ومواضعُ الإطلاق
+	// تُستخرَج من الشيفرة فلا رقمَ يُثبَّت بيد.
+
+	"TestSeam_ProductionWiringUnchanged": {
+		Level: L2, Purpose: PurposeHarnessSelf,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+	"TestEV_EmitSitesAndPublishers": {
+		Level: L1, Purpose: PurposeGenerator, Modes: []string{"FAST", "FULL"},
+	},
+	"TestEV_ContractDriftGuard": {
+		Level: L1, Purpose: PurposeGenerator, Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+
+	"TestEV_MerchantRealtimePrivacy": {
+		Level: L7, Flows: []string{"F-01"},
+		Defects: []string{"D20"},
+		Modes:   []string{"FULL", "REALTIME", "SECURITY", "RELEASE"},
+	},
+	"TestEV_CustomOrderOwnerRealtime": {
+		Level: L7, Flows: []string{"F-02"},
+		Defects: []string{"D22"},
+		Modes:   []string{"FULL", "REALTIME", "RELEASE"},
+	},
+	"TestEV_CustomerDriverAssignment": {
+		Level: L7, Flows: []string{"F-08", "F-13"},
+		Defects: []string{"D21", "D23"},
+		Modes:   []string{"FULL", "REALTIME", "SECURITY", "RELEASE"},
+	},
+	"TestEV_RealtimeAuthorization": {
+		Level: L11, Flows: []string{"F-34"},
+		Risks: []string{"R14"},
+		Modes: []string{"FULL", "REALTIME", "SECURITY", "RELEASE"},
+	},
+	"TestEV_MultiOrderRouting": {
+		Level: L7, Flows: []string{"F-01"}, Modes: []string{"FULL", "REALTIME"},
+	},
+	"TestEV_OrderAudience": {
+		Level: L7, Flows: []string{"F-01"},
+		Modes: []string{"FULL", "REALTIME", "RELEASE"},
+	},
+	"TestEV_WalletAudience": {
+		Level: L7, Flows: []string{"F-25"}, Modes: []string{"FULL", "REALTIME"},
+	},
+	"TestEV_MerchantDriverAssignment": {
+		Level: L7, Flows: []string{"F-08", "F-19"},
+		Defects: []string{"D20"},
+		Modes:   []string{"FULL", "REALTIME", "SECURITY"},
+	},
+	"TestEV_AutoAcceptMerchantAwareness": {
+		Level: L7, Flows: []string{"F-05"},
+		Settings: []string{"orders.auto_accept_sec"},
+		Modes:    []string{"FULL", "REALTIME"},
+	},
+	"TestEV_PushTokenTargeting": {
+		Level: L7, Flows: []string{"F-07"},
+		Defects: []string{"D12"},
+		Modes:   []string{"FULL", "REALTIME", "SECURITY"},
+	},
+	"TestEV_R23PushFailureIsLost": {
+		Level: L7, Flows: []string{"F-07", "F-14"},
+		Risks: []string{"R23"},
+		Modes: []string{"FULL", "REALTIME", "FAILURE", "RELEASE"},
+	},
+	"TestEV_R21AutoTransferAwareness": {
+		Level: L7, Flows: []string{"F-18"},
+		Risks:    []string{"R21"},
+		Settings: []string{"orders.auto_transfer_amount"},
+		Modes:    []string{"FULL", "REALTIME"},
+	},
+	"TestEV_R22WatchdogMarkerSuppressesRetry": {
+		Level: L7, Flows: []string{"F-09"},
+		Risks: []string{"R22"},
+		Modes: []string{"FULL", "REALTIME", "FAILURE", "RELEASE"},
+	},
+	"TestEV_XOB5_WatchdogComparisonKey": {
+		Level: L2, Flows: []string{"F-09"},
+		Risks: []string{"R22"},
+		Modes: []string{"FAST", "FULL"},
+	},
+
+	// ── مصالحةُ `D15` ─────────────────────────────────────────────
+	"TestFAIL_D15_Reconciliation": {
+		Level: L6, Flows: []string{"F-30"},
+		Defects: []string{"D15"},
+		Modes:   []string{"FULL", "FAILURE", "RELEASE"},
+	},
 }
 
 // harness اختبارٌ يُثبت المِسنَدَ نفسَه — **لا يحرس ميزة.**

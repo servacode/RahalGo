@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/servacode/rahalgo/backend/internal/eventmap"
 	"github.com/servacode/rahalgo/backend/internal/failmap"
 	"github.com/servacode/rahalgo/backend/internal/fininv"
 	"github.com/servacode/rahalgo/backend/internal/racemap"
@@ -21,6 +22,20 @@ func main() {
 	write("../docs/testing/system/FINANCIAL_INVARIANTS.json", fininv.Snapshot())
 	write("../docs/testing/system/CONCURRENCY_MATRIX.json", racemap.Snapshot())
 	write("../docs/testing/system/FAILURE_INJECTION_MATRIX.json", failmap.Snapshot())
+
+	// **وعقودُ الأحداث تُخرَج مع ما استُخرج من الشيفرة** — فلا رقمَ يُثبَّت بيد.
+	r := eventmap.Root(".")
+	sites, err := r.Sites()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "مواضعُ الإطلاق:", err)
+		os.Exit(1)
+	}
+	pubs, err := r.Publishers()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "البواثّ:", err)
+		os.Exit(1)
+	}
+	write("../docs/testing/system/EVENT_CONTRACT_MATRIX.json", eventmap.Snapshot(sites, pubs))
 }
 
 func write(path string, v any) {

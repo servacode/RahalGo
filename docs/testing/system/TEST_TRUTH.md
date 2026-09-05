@@ -19,17 +19,17 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **215** |
-| دوالُّ اختبار | **683** |
+| ملفّاتُ اختبار | **218** |
+| دوالُّ اختبار | **701** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 683
-MAPPED     = 53
-INFRA      = 62
+TOTAL      = 701
+MAPPED     = 68
+INFRA      = 65
 ORPHAN     = 568
 ```
 
@@ -55,9 +55,9 @@ ORPHAN     = 568
 
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
-| **التدفّقات** | 34 | 25 | 9 |
-| **العيوب** | 25 | 11 | 14 |
-| **المخاطر** | 24 | 10 | 14 |
+| **التدفّقات** | 34 | 27 | 7 |
+| **العيوب** | 25 | 12 | 13 |
+| **المخاطر** | 24 | 11 | 13 |
 | **فجواتُ العقد** | 26 | 4 | 22 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
 
@@ -78,18 +78,18 @@ ORPHAN     = 568
 | **D9** | الطلبُ الخاصُّ بلا حدثِ ''→pending | `NO_REGRESSION_TEST_YET` | — |
 | **D10** | الاستعادةُ تُبطل نوعَ عميلٍ واحد | `NO_REGRESSION_TEST_YET` | — |
 | **D11** | force_password_change بلا بوّابةٍ في أندرويد | `NO_REGRESSION_TEST_YET` | — |
-| **D12** | Push.unregister بلا منادٍ | `NO_REGRESSION_TEST_YET` | — |
+| **D12** | Push.unregister بلا منادٍ | `EXPECTED_FAIL` | `TestEV_PushTokenTargeting` |
 | **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `NO_REGRESSION_TEST_YET` | — |
 | **D14** | handleWS لا يفحص ActiveStatus | `EXPECTED_FAIL` | `TestSampleFactory_SuspendedIsRefused` |
-| **D15** | AdminCreateUser في خطوتين | `EXPECTED_FAIL` | `TestFAIL_D15_AdminCreateUserPartial` |
+| **D15** | AdminCreateUser في خطوتين | `EXPECTED_FAIL` | `TestFAIL_D15_AdminCreateUserPartial` · `TestFAIL_D15_Reconciliation` |
 | **D16** | طابورُ المواقع ملفٌّ بلا صاحب | `NO_REGRESSION_TEST_YET` | — |
 | **D17** | الملاحةُ لا تعود بعد موت العمليّة | `NO_REGRESSION_TEST_YET` | — |
 | **D18** | START_STICKY يعيد الخدمةَ بفترةِ الافتراض | `NO_REGRESSION_TEST_YET` | — |
 | **D19** | LiveSocket يعيد الوصلَ بتوكنٍ منتهٍ | `NO_REGRESSION_TEST_YET` | — |
-| **D20** | البثُّ الحيُّ يتجاوز redactForMerchant | `EXPECTED_FAIL` | `TestD20_CustomerRealtimeVsREST` · `TestD20_MerchantRealtimeVsREST` · `TestOrderFieldsAllClassified` |
-| **D21** | هاتفُ السائق يصل الزبون | `EXPECTED_FAIL` | `TestD21_CustomerRedactionAgainstContract` · `TestForbiddenFieldGuardCatchesLeak` · `TestOrderFieldsAllClassified` |
-| **D22** | الطلبُ الخاصُّ لا يُبثّ لصاحبه | `EXPECTED_FAIL` | `TestD22_CustomOrderOwnerChannelContract` · `TestOrderFieldsAllClassified` |
-| **D23** | حمولاتُ REST تكشف اقتصاداً داخليّاً | `EXPECTED_FAIL` | `TestD20_MerchantRealtimeVsREST` · `TestD21_CustomerRedactionAgainstContract` · `TestOrderFieldsAllClassified` |
+| **D20** | البثُّ الحيُّ يتجاوز redactForMerchant | `EXPECTED_FAIL` | `TestEV_MerchantDriverAssignment` · `TestEV_MerchantRealtimePrivacy` · `TestD20_CustomerRealtimeVsREST` · `TestD20_MerchantRealtimeVsREST` · `TestOrderFieldsAllClassified` |
+| **D21** | هاتفُ السائق يصل الزبون | `EXPECTED_FAIL` | `TestEV_CustomerDriverAssignment` · `TestD21_CustomerRedactionAgainstContract` · `TestForbiddenFieldGuardCatchesLeak` · `TestOrderFieldsAllClassified` |
+| **D22** | الطلبُ الخاصُّ لا يُبثّ لصاحبه | `EXPECTED_FAIL` | `TestEV_CustomOrderOwnerRealtime` · `TestD22_CustomOrderOwnerChannelContract` · `TestOrderFieldsAllClassified` |
+| **D23** | حمولاتُ REST تكشف اقتصاداً داخليّاً | `EXPECTED_FAIL` | `TestEV_CustomerDriverAssignment` · `TestD20_MerchantRealtimeVsREST` · `TestD21_CustomerRedactionAgainstContract` · `TestOrderFieldsAllClassified` |
 | **D24** | سقفُ الطلبات النشطة يُتجاوَز بالتزامن | `EXPECTED_FAIL` | `TestFAIL_R7_DriverAcceptPartialState` · `TestRACE_MaxActiveOrders` |
 | **D25** | هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن | `EXPECTED_FAIL` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestRACE_DuplicateLeadConversion` |
 
@@ -132,7 +132,7 @@ ORPHAN     = 568
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 37
+COVERAGE GAPS    = 33
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -140,7 +140,6 @@ COVERAGE GAPS    = 37
 - D1 — لا اختبارَ انحدارٍ بعد
 - D10 — لا اختبارَ انحدارٍ بعد
 - D11 — لا اختبارَ انحدارٍ بعد
-- D12 — لا اختبارَ انحدارٍ بعد
 - D13 — لا اختبارَ انحدارٍ بعد
 - D16 — لا اختبارَ انحدارٍ بعد
 - D17 — لا اختبارَ انحدارٍ بعد
@@ -151,7 +150,6 @@ COVERAGE GAPS    = 37
 - D6 — لا اختبارَ انحدارٍ بعد
 - D8 — لا اختبارَ انحدارٍ بعد
 - D9 — لا اختبارَ انحدارٍ بعد
-- F-05 (القبولُ التلقائيّ) — لا اختبارَ مرتبطٌ به
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
 - F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به
 - F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به
@@ -159,12 +157,10 @@ COVERAGE GAPS    = 37
 - F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به
 - F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به
-- F-34 (بثٌّ للأدوار) — لا اختبارَ مرتبطٌ به
 - R1 — لا اختبارَ يحسمه بعد
 - R11 — لا اختبارَ يحسمه بعد
 - R12 — لا اختبارَ يحسمه بعد
 - R13 — لا اختبارَ يحسمه بعد
-- R14 — لا اختبارَ يحسمه بعد
 - R17 — لا اختبارَ يحسمه بعد
 - R18 — لا اختبارَ يحسمه بعد
 - R2 — لا اختبارَ يحسمه بعد

@@ -114,14 +114,25 @@ func uniqPhone() string {
 
 // Harness **النظامُ كلُّه خلف عنوانٍ واحد.**
 type Harness struct {
-	T      *testing.T
-	Pool   *pgxpool.Pool
-	Srv    *httptest.Server
+	T    *testing.T
+	Pool *pgxpool.Pool
+	Srv  *httptest.Server
+	// Hub **مركزُ البثّ** — يُكشَف في `P-7` لالتقاط ما يصل المستلمَ فعلاً.
+	//
+	// **ولا يكفي أن يُتحقَّق أنّ `publishOrder` نُوديت** (البند ٣١):
+	// **الاشتراكُ ثمّ الفعلُ ثمّ قراءةُ ما وصل** هو الدليل.
+	Hub    *realtime.Hub
 	tokens *auth.TokenIssuer
 }
 
 // New **يُقلع النظامَ لاختبارٍ واحد** — ويُطفأ بعده كاملاً.
-func New(t *testing.T) *Harness {
+func New(t *testing.T) *Harness { return NewWith(t) }
+
+// NewWith كالسابقة بخياراتِ تركيب — **`P-7`.**
+//
+// **ولا خيارَ يُمرَّر في الإنتاج** (`cmd/api` بلا تبديل)، **فما يُبنى هنا
+// بلا خياراتٍ هو ما يُبنى هناك.**
+func NewWith(t *testing.T, opts ...server.Option) *Harness {
 	t.Helper()
 	pool := testdb.Pool(t) // **يتخطّى بهدوءٍ إن لم تُضبط قاعدةُ الاختبار**
 
@@ -151,13 +162,13 @@ func New(t *testing.T) *Harness {
 		settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub,
 		func() map[string]any { return map[string]any{"provider": "test"} },
 		func(context.Context) error { return nil },
-		func() {})
+		func() {}, opts...)
 
 	ts := httptest.NewServer(s.Router())
 	t.Cleanup(ts.Close)
 
 	seedZone(t, pool)
-	return &Harness{T: t, Pool: pool, Srv: ts, tokens: tokens}
+	return &Harness{T: t, Pool: pool, Srv: ts, Hub: hub, tokens: tokens}
 }
 
 // ══════════════════════════════════════════════════════════════════════

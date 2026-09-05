@@ -399,17 +399,131 @@ func TestFAIL_P7SeamRequired_FCMTransport(t *testing.T) {
 	}
 	body := string(src)
 	hasEnvWiring := strings.Contains(body, "push.NewFCM(")
-	hasParam := strings.Contains(body, "pushTransport") || strings.Contains(body, "push.Transport")
+	hasSeam := strings.Contains(body, "WithPushTransport")
 
-	t.Logf("تركيبٌ من البيئة داخل server.New = %v · معاملُ ناقلٍ يُحقَن = %v",
-		hasEnvWiring, hasParam)
+	t.Logf("تركيبٌ من البيئة داخل server.New = %v · مِعراضُ حقنٍ = %v",
+		hasEnvWiring, hasSeam)
 
-	if hasEnvWiring && !hasParam {
-		t.Logf("TESTABILITY SEAM REQUIRED — R23 / FCM")
-		t.Logf("  المطلوبُ: معاملٌ اختياريٌّ لـpush.Transport في server.New")
-		t.Logf("  **ولم يُضَف** — تعديلُ شيفرةِ إنتاجٍ يحتاج قرارَ المالك (البند ١)")
-		t.Logf("R23 FCM DELIVERY = PARTIAL — REQUIRES_P7")
-	} else if hasParam {
-		t.Errorf("ثمّةَ مِعراضٌ ولم يُستعمَل — **يُبنى اختبارُ R23 عليه**")
+	switch {
+	case hasSeam && hasEnvWiring:
+		t.Logf("SEAM ADDED — بإذن المالك ٢٠٢٦-٠٩-٠٥ (BEHAVIOR-PRESERVING)")
+		t.Logf("  والافتراضُ ما يزال push.NewFCM من البيئة — والإنتاجُ لا يمرّر خياراً")
+		t.Logf("  R23 صار يُثبَت — انظر TestEV_R23PushFailureIsLost")
+		t.Logf("  والحارسُ في TestSeam_ProductionWiringUnchanged")
+	case hasEnvWiring:
+		t.Errorf("TESTABILITY SEAM REQUIRED — R23 لا يُثبَت بلا موضعِ حقن")
+	default:
+		t.Errorf("تركيبُ الدفع تبدّل — يُعاد القياسُ قبل الحكم")
 	}
+}
+
+// TestFAIL_D15_Reconciliation **مصالحةُ `D15` — بقرار المالك قبل `P-7`.**
+//
+// # التعارض
+//
+//	المراجعةُ الساكنة : «حسابٌ بأدواره بلا كلمة مرور · والإعادةُ تردّ phone_taken»
+//	اختبارُ P-6      : users = 0 · لا مستخدمَ جزئيٌّ بقي · PASS
+//
+// # والسببُ مقيسٌ: **اختباري ضرب خطوةً أخرى**
+//
+// **خطواتُ `AdminCreateUser` أربعٌ** (`identity/admin.go:78…101`):
+//
+//	١ CreateUserWithRole — **مستخدمٌ + الدورُ الأوّلُ في معاملةٍ واحدة**
+//	٢ GrantRole لبقيّة الأدوار — **ولا تُنادى إن كان الدورُ واحداً**
+//	٣ SetTempPassword — **خارجَ أيّ معاملة** (`repo.go:396`)
+//	٤ Audit
+//
+// **واختبارُ `P-6` سلّح نقطةً على `user_roles`** — فأصابت الإدراجَ داخلَ
+// معاملة الخطوة الأولى **فرُجعت كلُّها**، وذلك سليمٌ ومتوقَّع.
+// **والدورُ كان واحداً فلم تُنادَ الخطوةُ الثانيةُ أصلاً.**
+//
+// **فما اختُبر ليس ما يدّعيه `D15`.**
+func TestFAIL_D15_Reconciliation(t *testing.T) {
+	h := New(t)
+	admin := h.NewUser("admin")
+
+	create := func(phone string, roles ...string) Res {
+		return h.POST("/api/v1/admin/users", admin.Token, map[string]any{
+			"phone": phone, "full_name": "مستخدمُ QA", "password": "Passw0rd!234",
+			"roles": roles,
+		})
+	}
+	read := func(phone string) (users, roles int, pwSet bool) {
+		_ = h.Pool.QueryRow(ctxBG(), `
+			SELECT (SELECT count(*) FROM users WHERE phone = $1),
+			       (SELECT count(*) FROM user_roles r JOIN users u ON u.id = r.user_id
+			        WHERE u.phone = $1),
+			       COALESCE((SELECT COALESCE(password_hash,'') <> '' FROM users WHERE phone = $1), false)`,
+			phone).Scan(&users, &roles, &pwSet)
+		return
+	}
+
+	// ── أ · الخطوةُ الثالثة — **ما يدّعيه `D15` بعينه** ──────────────
+	t.Run("فشلُ كلمة المرور", func(t *testing.T) {
+		phone := uniqPhone()
+		t.Cleanup(func() {
+			_, _ = h.Pool.Exec(context.Background(), `DELETE FROM users WHERE phone = $1`, phone)
+		})
+		// **النقطةُ على التحديث الذي يضع كلمةَ المرور وحدَه** —
+		// يُميَّز بأنّه يُجبر التبديل.
+		fp := h.Arm("D15/set-temp-password", "users", "UPDATE", 1,
+			"must_change_password", "true")
+		got := create(phone, "driver")
+		users, roles, pwSet := read(phone)
+		t.Logf("الردّ %d %s · النقطةُ أصابت %d", got.Code, got.Err(), fp.Fired())
+		t.Logf("مستخدمون=%d · أدوارٌ=%d · كلمةٌ=%v", users, roles, pwSet)
+
+		if fp.Fired() == 0 {
+			t.Skip("لم تُصَب خطوةُ كلمة المرور — يُعاد القياسُ قبل الحكم")
+		}
+		if users == 1 && roles >= 1 && !pwSet {
+			t.Logf("D15 STILL VALID — **حسابٌ بأدواره بلا كلمة مرور**")
+			retry := create(phone, "driver")
+			t.Logf("الإعادة: %d %s", retry.Code, retry.Err())
+			if retry.Err() == "phone_taken" {
+				t.Logf("  وRETRY = BLOCKED بـphone_taken — **كما قال السجلُّ حرفاً**")
+			}
+		} else if users == 0 {
+			t.Logf("D15 DISPROVEN في هذا المسار — لا مستخدمَ بقي")
+		}
+		fp.Disarm()
+	})
+
+	// ── ب · الخطوةُ الثانية — **دوران لا دورٌ واحد** ────────────────
+	t.Run("فشلُ منح الدور الثاني", func(t *testing.T) {
+		phone := uniqPhone()
+		t.Cleanup(func() {
+			_, _ = h.Pool.Exec(context.Background(), `DELETE FROM users WHERE phone = $1`, phone)
+		})
+		// **دورٌ أوّلُ ينجح · وثانٍ يسقط** — النقطةُ تتخطّى الأوّلَ وتصيب الثاني.
+		fp := h.Arm("D15/grant-second-role", "user_roles", "INSERT", 1, "role_code", "ops")
+		got := create(phone, "driver", "ops")
+		users, roles, pwSet := read(phone)
+		t.Logf("الردّ %d %s · النقطةُ أصابت %d", got.Code, got.Err(), fp.Fired())
+		t.Logf("مستخدمون=%d · أدوارٌ=%d · كلمةٌ=%v", users, roles, pwSet)
+		if fp.Fired() == 0 {
+			t.Skip("لم يُطلَب الدورُ الثاني — لا نافذةَ")
+		}
+		if users == 1 && roles == 1 && !pwSet {
+			t.Logf("D15 STILL VALID (وجهٌ ثانٍ) — **حسابٌ بدورٍ واحدٍ من اثنين وبلا كلمة مرور**")
+		}
+		fp.Disarm()
+	})
+
+	// ── ج · الخطوةُ الأولى — **وهي ما اختبره `P-6`** ────────────────
+	t.Run("فشلُ الإنشاء نفسِه", func(t *testing.T) {
+		phone := uniqPhone()
+		t.Cleanup(func() {
+			_, _ = h.Pool.Exec(context.Background(), `DELETE FROM users WHERE phone = $1`, phone)
+		})
+		fp := h.Arm("D15/create-user", "user_roles", "INSERT", 1, "role_code", "driver")
+		got := create(phone, "driver")
+		users, roles, _ := read(phone)
+		t.Logf("الردّ %d · مستخدمون=%d · أدوارٌ=%d · النقطةُ أصابت %d",
+			got.Code, users, roles, fp.Fired())
+		if users == 0 {
+			t.Logf("STEP-1 = ATOMIC — المعاملةُ في CreateUserWithRole تُرجع الاثنين معاً")
+		}
+		fp.Disarm()
+	})
 }
