@@ -158,7 +158,7 @@ TEST-INFRA GAPS                  = 3
 PRODUCT DECISIONS REQUIRED       = 7
 ```
 
-## الوثائقُ المعتمدة — خمسٌ وعشرون
+## الوثائقُ المعتمدة — ستٌّ وعشرون
 
 | # | الوثيقة | الحال |
 |---|---|---|
@@ -187,6 +187,7 @@ PRODUCT DECISIONS REQUIRED       = 7
 | ٢٣ | [`ADMIN_FINAL_PRODUCT_DECISIONS.md`](ADMIN_FINAL_PRODUCT_DECISIONS.md) | **AQ-1…AQ-6 · ومصالحةُ R8** |
 | ٢٤ | [`ADMIN_SETTINGS_UI_REQUIREMENT.md`](ADMIN_SETTINGS_UI_REQUIREMENT.md) | **XPRQ-UI-01 — شبكةُ بطاقات الإعدادات** |
 | ٢٥ | [`CROSS_SYSTEM_INTERACTION_CLOSURE.md`](CROSS_SYSTEM_INTERACTION_CLOSURE.md) | **المنظومةُ واحدةً — ٣٤ تدفّقاً · وتفصيلُها في [`cross-system/`](cross-system/)** |
+| ٢٦ | [`CROSS_SYSTEM_FINAL_PRODUCT_DECISIONS.md`](CROSS_SYSTEM_FINAL_PRODUCT_DECISIONS.md) | **XQ-1…XQ-5 · وتجميدُ D20–D22** |
 
 
 ## ⚠️ مطابقةُ المراجعة المستقلّة — **٢٠٢٦-٠٩-٠٤**
