@@ -1,0 +1,7024 @@
+{
+  "baseline": "",
+  "derived": {
+    "routes": 291,
+    "transitions": 55,
+    "ledger_kinds": [
+      "adjustment",
+      "commission",
+      "compensation",
+      "driver_earning",
+      "merchant_earning",
+      "order_payment",
+      "payout",
+      "penalty",
+      "platform_expense",
+      "platform_profit",
+      "refund",
+      "reward",
+      "topup"
+    ],
+    "notify_sites": 49,
+    "notify_targeted": 11,
+    "publish_rooms": [
+      "customer",
+      "driver",
+      "merchant",
+      "ops",
+      "user"
+    ],
+    "setting_defs": 118,
+    "behaviour_settings": 95,
+    "order_fields": 75,
+    "test_files": 200,
+    "test_funcs": 585
+  },
+  "flows": [
+    {
+      "id": "F-01",
+      "title": "إنشاءُ طلبٍ عاديّ",
+      "actor": "customer",
+      "apps": [
+        "customer",
+        "merchant",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D4",
+        "D20",
+        "D23"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-9"
+      ],
+      "tests": [
+        "TestD20_CustomerRealtimeVsREST",
+        "TestD20_MerchantRealtimeVsREST",
+        "TestD21_CustomerRedactionAgainstContract",
+        "TestPushPayloadScope"
+      ],
+      "status": "PARTIALLY_COVERED"
+    },
+    {
+      "id": "F-02",
+      "title": "إنشاءُ طلبٍ خاصّ",
+      "actor": "customer",
+      "apps": [
+        "customer",
+        "admin"
+      ],
+      "money": true,
+      "realtime": false,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D6",
+        "D8",
+        "D9",
+        "D22"
+      ],
+      "risks": [
+        "R11"
+      ],
+      "tests": [
+        "TestD22_CustomOrderOwnerChannelContract"
+      ],
+      "status": "PARTIALLY_COVERED"
+    },
+    {
+      "id": "F-03",
+      "title": "ردُّ إنشاءٍ ضائع",
+      "actor": "customer",
+      "apps": [
+        "customer"
+      ],
+      "money": true,
+      "realtime": false,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L9"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-04",
+      "title": "قبولُ المتجر",
+      "actor": "merchant",
+      "apps": [
+        "merchant",
+        "customer"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L8"
+      ],
+      "defects": [
+        "D19",
+        "D20"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "tests": [
+        "TestD20_MerchantRealtimeVsREST"
+      ],
+      "status": "PARTIALLY_COVERED"
+    },
+    {
+      "id": "F-05",
+      "title": "القبولُ التلقائيّ",
+      "actor": "watchdog",
+      "apps": [
+        "merchant",
+        "customer"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "gaps": [
+        "XG-7"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-06",
+      "title": "رفضُ المتجر",
+      "actor": "merchant",
+      "apps": [
+        "merchant",
+        "customer",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "HIGH",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-07",
+      "title": "عرضُ الطلب على سائق",
+      "actor": "engine",
+      "apps": [
+        "driver"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L9"
+      ],
+      "risks": [
+        "R10"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-08",
+      "title": "قبولُ السائق",
+      "actor": "driver",
+      "apps": [
+        "driver",
+        "customer",
+        "merchant"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "risks": [
+        "R7",
+        "R10"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-09",
+      "title": "انقضاءُ العرض ودورانُه",
+      "actor": "watchdog",
+      "apps": [
+        "driver",
+        "admin"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "HIGH",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D1"
+      ],
+      "risks": [
+        "R1"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-10",
+      "title": "عرضُ طلبٍ على الطريق نفسِه",
+      "actor": "engine",
+      "apps": [
+        "driver",
+        "customer"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "HIGH",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "risks": [
+        "R10"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-11",
+      "title": "الوصولُ للاستلام",
+      "actor": "driver",
+      "apps": [
+        "driver",
+        "customer"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "MEDIUM",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L8"
+      ],
+      "gaps": [
+        "XG-6"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-12",
+      "title": "الاستلام",
+      "actor": "driver",
+      "apps": [
+        "driver",
+        "customer",
+        "merchant"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "HIGH",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L8"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-13",
+      "title": "التسليمُ وإثباتُه",
+      "actor": "driver",
+      "apps": [
+        "driver",
+        "customer",
+        "merchant",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D13"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-14",
+      "title": "تسويةُ التسليم",
+      "actor": "engine",
+      "apps": [
+        "merchant",
+        "driver",
+        "rep",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D20",
+        "D23"
+      ],
+      "risks": [
+        "R4",
+        "R23"
+      ],
+      "gaps": [
+        "XG-25",
+        "XG-26"
+      ],
+      "tests": [
+        "TestD20_MerchantRealtimeVsREST",
+        "TestD21_CustomerRedactionAgainstContract"
+      ],
+      "status": "PARTIALLY_COVERED"
+    },
+    {
+      "id": "F-15",
+      "title": "الاسترداد",
+      "actor": "admin",
+      "apps": [
+        "customer",
+        "merchant",
+        "rep",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "gaps": [
+        "XG-10",
+        "XG-11"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-16",
+      "title": "تعذّرُ التسليم",
+      "actor": "driver",
+      "apps": [
+        "driver",
+        "customer",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "HIGH",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-17",
+      "title": "إلغاءُ الزبون",
+      "actor": "customer",
+      "apps": [
+        "customer",
+        "merchant",
+        "driver"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "HIGH",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-18",
+      "title": "تحويلُ الطلب لمتجرٍ آخر",
+      "actor": "admin",
+      "apps": [
+        "merchant",
+        "customer",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "HIGH",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-19",
+      "title": "إسنادٌ إداريٌّ وإعادةُ إسناد",
+      "actor": "admin",
+      "apps": [
+        "driver",
+        "customer",
+        "admin"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D1"
+      ],
+      "gaps": [
+        "XG-5"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-20",
+      "title": "إرسالُ الطلب بواتساب",
+      "actor": "admin",
+      "apps": [
+        "merchant",
+        "admin"
+      ],
+      "money": false,
+      "realtime": false,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L4",
+        "L8",
+        "L9"
+      ],
+      "risks": [
+        "R21",
+        "R24"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-21",
+      "title": "تسجيلُ مرشَّحٍ ثمّ تحويلُه",
+      "actor": "rep",
+      "apps": [
+        "rep",
+        "merchant",
+        "admin"
+      ],
+      "money": true,
+      "realtime": false,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D2"
+      ],
+      "gaps": [
+        "XG-18",
+        "XG-29",
+        "XG-30"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-22",
+      "title": "نقلُ متجرٍ بين مندوبين",
+      "actor": "admin",
+      "apps": [
+        "rep",
+        "admin"
+      ],
+      "money": true,
+      "realtime": false,
+      "severity": "HIGH",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L8"
+      ],
+      "gaps": [
+        "XG-17"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-23",
+      "title": "عمولةُ المندوب",
+      "actor": "engine",
+      "apps": [
+        "rep",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8"
+      ],
+      "gaps": [
+        "XG-13",
+        "XG-14",
+        "XG-15",
+        "XG-26",
+        "XG-27",
+        "XG-28"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-24",
+      "title": "طلبُ سحبٍ وقرارُه",
+      "actor": "multi",
+      "apps": [
+        "driver",
+        "merchant",
+        "rep",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-12"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-25",
+      "title": "قيدٌ يدويٌّ في محفظة",
+      "actor": "admin",
+      "apps": [
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5"
+      ],
+      "gaps": [
+        "XG-20"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-26",
+      "title": "مصروفٌ وخزينة",
+      "actor": "admin",
+      "apps": [
+        "admin"
+      ],
+      "money": true,
+      "realtime": false,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L9"
+      ],
+      "defects": [
+        "D5"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-27",
+      "title": "تسويةُ نقد السائق",
+      "actor": "admin",
+      "apps": [
+        "driver",
+        "admin"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-28",
+      "title": "تعليقُ متجر",
+      "actor": "admin",
+      "apps": [
+        "merchant",
+        "customer",
+        "admin"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "HIGH",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-29",
+      "title": "تعليقُ سائقٍ أو زبون",
+      "actor": "admin",
+      "apps": [
+        "driver",
+        "customer",
+        "admin"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D14"
+      ],
+      "gaps": [
+        "XG-22",
+        "XG-23",
+        "XG-24"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-30",
+      "title": "إعادةُ كلمةِ مرورٍ وإخراجٌ شامل",
+      "actor": "admin",
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "money": false,
+      "realtime": true,
+      "severity": "CRITICAL",
+      "need_levels": [
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "defects": [
+        "D10",
+        "D11",
+        "D12"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-31",
+      "title": "شكوى أو بلاغٌ ثمّ حلٌّ بتعويض",
+      "actor": "multi",
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "admin"
+      ],
+      "money": true,
+      "realtime": false,
+      "severity": "HIGH",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L8"
+      ],
+      "gaps": [
+        "XG-19"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-32",
+      "title": "مراجعةُ صنفٍ معلَّق",
+      "actor": "admin",
+      "apps": [
+        "merchant",
+        "rep",
+        "customer",
+        "admin"
+      ],
+      "money": true,
+      "realtime": false,
+      "severity": "MEDIUM",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L8"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-33",
+      "title": "تبديلُ إعدادٍ حسّاس",
+      "actor": "admin",
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "money": true,
+      "realtime": true,
+      "severity": "BLOCKER",
+      "need_levels": [
+        "L3",
+        "L4",
+        "L5",
+        "L8",
+        "L9"
+      ],
+      "gaps": [
+        "XG-25",
+        "XG-26",
+        "XG-27",
+        "XG-28"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "F-34",
+      "title": "بثٌّ للأدوار",
+      "actor": "admin",
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "money": false,
+      "realtime": false,
+      "severity": "LOW",
+      "need_levels": [
+        "L4",
+        "L8",
+        "L9"
+      ],
+      "gaps": [
+        "XG-9"
+      ],
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    }
+  ],
+  "defects": [
+    {
+      "id": "D1",
+      "title": "فكُّ الإسناد بلا حدثٍ في order_events",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D2",
+      "title": "convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤها مُهمَل",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D3",
+      "title": "«تذكّرني» تنقلب دائمةً بعد أوّل تجديد",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D4",
+      "title": "سقفُ المفتوح داخلَ بوّابة واتساب",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D5",
+      "title": "المصروفُ والخزينةُ كتابتان بلا معاملة",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D6",
+      "title": "الطلبُ الخاصُّ لا ينادي cashBlocked",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D7",
+      "title": "سقفُ النقد يقيس المحصَّل لا المكشوف",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D8",
+      "title": "الطلبُ الخاصُّ لا يطلب توثيقَ واتساب",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D9",
+      "title": "الطلبُ الخاصُّ بلا حدثِ ''→pending",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D10",
+      "title": "الاستعادةُ تُبطل نوعَ عميلٍ واحد",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D11",
+      "title": "force_password_change بلا بوّابةٍ في أندرويد",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D12",
+      "title": "Push.unregister بلا منادٍ",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D13",
+      "title": "سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D14",
+      "title": "handleWS لا يفحص ActiveStatus",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D15",
+      "title": "AdminCreateUser في خطوتين",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D16",
+      "title": "طابورُ المواقع ملفٌّ بلا صاحب",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D17",
+      "title": "الملاحةُ لا تعود بعد موت العمليّة",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D18",
+      "title": "START_STICKY يعيد الخدمةَ بفترةِ الافتراض",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D19",
+      "title": "LiveSocket يعيد الوصلَ بتوكنٍ منتهٍ",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "D20",
+      "title": "البثُّ الحيُّ يتجاوز redactForMerchant",
+      "tests": [
+        "TestD20_CustomerRealtimeVsREST",
+        "TestD20_MerchantRealtimeVsREST",
+        "TestOrderFieldsAllClassified"
+      ],
+      "status": "EXPECTED_FAIL"
+    },
+    {
+      "id": "D21",
+      "title": "هاتفُ السائق يصل الزبون",
+      "tests": [
+        "TestD21_CustomerRedactionAgainstContract",
+        "TestForbiddenFieldGuardCatchesLeak",
+        "TestOrderFieldsAllClassified"
+      ],
+      "status": "EXPECTED_FAIL"
+    },
+    {
+      "id": "D22",
+      "title": "الطلبُ الخاصُّ لا يُبثّ لصاحبه",
+      "tests": [
+        "TestD22_CustomOrderOwnerChannelContract",
+        "TestOrderFieldsAllClassified"
+      ],
+      "status": "EXPECTED_FAIL"
+    },
+    {
+      "id": "D23",
+      "title": "حمولاتُ REST تكشف اقتصاداً داخليّاً",
+      "tests": [
+        "TestD20_MerchantRealtimeVsREST",
+        "TestD21_CustomerRedactionAgainstContract",
+        "TestOrderFieldsAllClassified"
+      ],
+      "status": "EXPECTED_FAIL"
+    }
+  ],
+  "risks": [
+    {
+      "id": "R1",
+      "title": "بوّابةُ الحالة يُلتفّ عليها في موضع",
+      "strategy": "انتقالٌ يكتب الحالةَ خارجَ البوّابة — L3",
+      "flows": [
+        "F-09"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R2",
+      "title": "خمسُ دوالٍّ يتيمة",
+      "strategy": "جردُ المنادين آليّاً — L1",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R3",
+      "title": "زبونٌ يصير merchant بلا موافقة",
+      "strategy": "EnsureUserWithRole بلا موافقةٍ صريحة — L4",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R4",
+      "title": "treasury.go يعتمد معاملةَ المنادي",
+      "strategy": "نداءُ الخزينة خارجَ معاملة — L3",
+      "flows": [
+        "F-14"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R5",
+      "title": "PATCH stores/{id}/settings بلا تدقيق",
+      "strategy": "PATCH stores/{id}/settings بلا تدقيق — L3",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R6",
+      "title": "حِملُ قراءة الإعدادات",
+      "strategy": "حِملُ قراءة الإعدادات تحت ضغط — L10",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R7",
+      "title": "قبولُ السائق: ٣ كتاباتٍ بلا معاملة",
+      "strategy": "إسقاطٌ بين كتابات القبول الثلاث — L9",
+      "flows": [
+        "F-08"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R8",
+      "title": "مفتاحُ التكرار يعلق in_progress",
+      "strategy": "مفتاحٌ عالقٌ ثمّ تقليمُ ٢٤ ساعة — L4",
+      "flows": [
+        "F-01",
+        "F-03",
+        "F-24"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R9",
+      "title": "لا حدَّ معدّلٍ عامّ",
+      "strategy": "إغراقُ بابٍ بلا حدِّ معدّل — L11",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R10",
+      "title": "سائقٌ يقبل طلبين متزامنين",
+      "strategy": "سباقُ قبولٍ بحاجزٍ حقيقيّ — L9",
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-10"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R11",
+      "title": "الطلبُ الخاصُّ يُنشأ بلا معاملة",
+      "strategy": "إسقاطُ إنشاء الطلب الخاصّ — L9",
+      "flows": [
+        "F-02"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R12",
+      "title": "٣ طبقاتِ تدقيقٍ بسياق الطلب",
+      "strategy": "قطعُ سياق أثناء تدقيقٍ بسياق الطلب — L9",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R13",
+      "title": "إعادةُ الإدارة للكلمة لا تُبطل جلسة",
+      "strategy": "إعادةُ كلمةٍ إداريّةٍ ثمّ فحصُ الجلسة — L4",
+      "flows": [
+        "F-30"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R14",
+      "title": "اتّصالُ البثّ لا يُراجَع بعد المصافحة",
+      "strategy": "إبطالٌ بعد مصافحة البثّ — L5",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R15",
+      "title": "سحبُ الدور لا يسري",
+      "strategy": "سحبُ دورٍ ثمّ قياسُ مهلة السريان — L4",
+      "flows": [
+        "F-30"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R16",
+      "title": "Redis تفشل مفتوحةً",
+      "strategy": "إسقاطُ Redis ثمّ إبطالُ جلسة — L9",
+      "flows": [
+        "F-30"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R17",
+      "title": "خدمةُ الموقع تعود بلا سؤالٍ عن الورديّة",
+      "strategy": "إعادةُ إقلاعٍ ثمّ فحصُ سؤال الورديّة — L7",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R18",
+      "title": "الرفعُ لا يُجدّد التوكن",
+      "strategy": "انتهاءُ توكن أثناء رفعِ ملفّ — L4",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R19",
+      "title": "سباقُ مسح طابور المواقع",
+      "strategy": "دفعتا مواقعَ متداخلتان — L7",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R20",
+      "title": "مسحُ الدفعة بلا قراءة accepted",
+      "strategy": "نقطةٌ بطابعٍ مستقبليّ — L1",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R21",
+      "title": "التحويلُ التلقائيّ يقبل ولا يُبلّغ",
+      "strategy": "إسقاطُ واتساب بعد القبول — L9",
+      "flows": [
+        "F-04",
+        "F-20"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R22",
+      "title": "الراصدُ يفقد الإشعارَ الباقي",
+      "strategy": "إسقاطُ الإشعار بعد وسم alerted_at — L9",
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R23",
+      "title": "الدفعُ بلا صندوقِ إرسال",
+      "strategy": "إسقاطُ FCM وقياسُ أثر الفعل — L9",
+      "flows": [
+        "F-14"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "id": "R24",
+      "title": "فشلُ التحويل بلا أثرٍ يُقرأ",
+      "strategy": "جردُ أنماط فشل التحويل السبعة — L4",
+      "flows": [
+        "F-20"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "XG-5",
+      "title": "لا إشعارَ للمتجر عند الإسناد",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-6",
+      "title": "لا إشعارَ للمتجر عند وصول السائق",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-7",
+      "title": "القبولُ التلقائيُّ صامتٌ عن المتجر",
+      "severity": "HIGH",
+      "woken_by": "orders.auto_accept_min",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-8",
+      "title": "الإشعارُ يفتح الشاشةَ الأولى لا الكيان",
+      "severity": "MEDIUM",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-9",
+      "title": "٢٤ إشعاراً بلا توجيهِ تطبيق",
+      "severity": "MEDIUM",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-10",
+      "title": "لا عكسَ لعمولة المندوب عند الاسترداد",
+      "severity": "BLOCKER",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-11",
+      "title": "الاستردادُ يفشل إن سحب المندوبُ عمولتَه",
+      "severity": "BLOCKER",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-12",
+      "title": "لا طبقاتِ رصيد",
+      "severity": "CRITICAL",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-13",
+      "title": "لا مفتاحَ لمصدر احتساب العمولة",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-14",
+      "title": "بوّابةُ platformCommission مثبَّتةٌ في الشيفرة",
+      "severity": "CRITICAL",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-15",
+      "title": "عتبةُ التفعيل تُسقط الطلباتِ السابقة",
+      "severity": "HIGH",
+      "woken_by": "sales.activation_orders",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-16",
+      "title": "المندوبُ يرى عمولةَ المنصّة",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-17",
+      "title": "لا سجلَّ نقلِ متجرٍ بين مندوبين",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-18",
+      "title": "لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين",
+      "severity": "BLOCKER",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-19",
+      "title": "لا مدخلَ دعمٍ للمندوب والتذكرةُ تشترط طلباً",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-20",
+      "title": "التدقيقُ الحسّاسُ خارجَ المعاملة",
+      "severity": "CRITICAL",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-21",
+      "title": "سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم",
+      "severity": "BLOCKER",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-22",
+      "title": "التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم",
+      "severity": "BLOCKER",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-23",
+      "title": "لا مسارَ تدخّلٍ استثنائيٍّ مسمّى",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-24",
+      "title": "لا استعلامَ لطلباتٍ بيد موقوفين",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-25",
+      "title": "عمولةُ المنصّة تُحسب لحظةَ التسليم",
+      "severity": "CRITICAL",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-26",
+      "title": "نسبةُ المندوب تُقرأ لحظةَ التسليم",
+      "severity": "CRITICAL",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-27",
+      "title": "مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط",
+      "severity": "CRITICAL",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-28",
+      "title": "عتبةُ التفعيل تُقرأ لحظةَ التسليم",
+      "severity": "CRITICAL",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-29",
+      "title": "المكافأةُ تُدفع قبل تثبيت التحويل",
+      "severity": "BLOCKER",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-30",
+      "title": "لا حالَ «مؤهَّلة» للمكافأة في النموذج",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    }
+  ],
+  "settings": [
+    {
+      "key": "app.max_file_mb",
+      "group": "app",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "app.min_version.customer",
+      "group": "customers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "app.min_version.driver",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "app.min_version.merchant",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "app.min_version.rep",
+      "group": "sales",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "auth.otp_channel",
+      "group": "platform",
+      "kind": "choice",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "auth.otp_login",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "auth.require_whatsapp",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "auth.signup_verify",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "auth.sms_template",
+      "group": "platform",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.cash_ban_days",
+      "group": "customers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.cash_ban_failures",
+      "group": "customers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.max_addresses",
+      "group": "customers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.require_whatsapp",
+      "group": "customers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.signup_bonus",
+      "group": "customers",
+      "kind": "money",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.by_distance",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.default_radius_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.fee",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.max_fee",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.per_km",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.assigned_silence_sec",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.assignment_mode",
+      "group": "drivers",
+      "kind": "choice",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.cash_limit",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.direct_assign",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.failed_compensation_percent",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.location_ping_sec",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.max_active_orders",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.monthly_target",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.offer_timeout_sec",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.require_delivery_photo",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.require_whatsapp",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.reward_2",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.reward_3",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.same_route_extra",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.target_2",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.target_3",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.target_reward",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "home.banner_auto",
+      "group": "site",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "home.banner_seconds",
+      "group": "site",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "media.max_upload_mb",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.cancel_ban_count",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.cancel_ban_days",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.cancel_ban_mode",
+      "group": "merchants",
+      "kind": "choice",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.commission_percent",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.default_prep_minutes",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.menu_requires_approval",
+      "group": "merchants",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.return_support_percent",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.accept_timeout_min",
+      "group": "merchants",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.auto_accept_min",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-05",
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.auto_dispatch",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.auto_transfer",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.customer_cancel_window_sec",
+      "group": "customers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.delivery_estimate_min",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.delivery_timeout_min",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.driver_timeout_min",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.extra_source_fee",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.handover_timeout_min",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.max_open_per_customer",
+      "group": "customers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.max_sources",
+      "group": "customers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.route_margin_pct",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.source_proximity_m",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "payouts.min_amount",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-24",
+        "F-33"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "platform.app_url",
+      "group": "app",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "platform.invite_code",
+      "group": "platform",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "platform.orders_mode",
+      "group": "platform",
+      "kind": "choice",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "pricing.margin_fixed",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "referral.reward_1",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "referral.reward_2",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "referral.reward_3",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "referral.reward_on",
+      "group": "platform",
+      "kind": "choice",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "referral.reward_rest",
+      "group": "platform",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.activation_orders",
+      "group": "sales",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-23",
+        "F-33"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.commission_percent",
+      "group": "sales",
+      "kind": "int",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-15",
+        "F-33"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.monthly_target",
+      "group": "sales",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.require_whatsapp",
+      "group": "sales",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-21"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.reward_2",
+      "group": "sales",
+      "kind": "money",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.reward_3",
+      "group": "sales",
+      "kind": "money",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.target_2",
+      "group": "sales",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.target_3",
+      "group": "sales",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.target_reward",
+      "group": "sales",
+      "kind": "money",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "security.force_password_change",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "security.login_max_attempts",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "security.otp_max_per_phone",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "security.otp_ttl_min",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "security.password_min_length",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "security.session_days",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "shop.rail_auto",
+      "group": "site",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "shop.rail_seconds",
+      "group": "site",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "site.join_open",
+      "group": "site",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "site.show_login",
+      "group": "site",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "site.show_shop",
+      "group": "site",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "support.complaint_window_hours",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "whatsapp.order_template",
+      "group": "platform",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "whatsapp.otp_template",
+      "group": "platform",
+      "kind": "text",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "whatsapp.send_delay_ms",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    }
+  ],
+  "tests": [
+    {
+      "name": "TestContractIsCurrent",
+      "file": "internal/apidoc/contract_test.go",
+      "package": "apidoc",
+      "orphan": true
+    },
+    {
+      "name": "TestContract_AuthIsNotUnderstated",
+      "file": "internal/apidoc/contract_test.go",
+      "package": "apidoc",
+      "orphan": true
+    },
+    {
+      "name": "TestContract_CoversEveryRoute",
+      "file": "internal/apidoc/contract_test.go",
+      "package": "apidoc",
+      "orphan": true
+    },
+    {
+      "name": "TestCollectThenSettle",
+      "file": "internal/cashbox/cashbox_test.go",
+      "package": "cashbox_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCollect_IgnoresNonPositive",
+      "file": "internal/cashbox/cashbox_test.go",
+      "package": "cashbox_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOverLimit_BlocksAtCeiling",
+      "file": "internal/cashbox/cashbox_test.go",
+      "package": "cashbox_test",
+      "orphan": true
+    },
+    {
+      "name": "TestSettle_RejectsMoreThanHeld",
+      "file": "internal/cashbox/cashbox_test.go",
+      "package": "cashbox_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCashKindsHaveAppLabels",
+      "file": "internal/cashbox/kinds_test.go",
+      "package": "cashbox",
+      "orphan": true
+    },
+    {
+      "name": "TestCashKindsHaveArabicLabels",
+      "file": "internal/cashbox/kinds_test.go",
+      "package": "cashbox",
+      "orphan": true
+    },
+    {
+      "name": "TestMediaPathsArePrefixed",
+      "file": "internal/catalog/media_paths_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestCreateItem_KeepsPlatformSection",
+      "file": "internal/catalog/menu_create_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestCreateItem_RequiresPlatformSection",
+      "file": "internal/catalog/menu_create_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestUpdateItem_RequiresPlatformSection",
+      "file": "internal/catalog/menu_create_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestGetMenu_ReadsItemsCreatedToday",
+      "file": "internal/catalog/menu_read_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestCreateMerchant_DerivesCity",
+      "file": "internal/catalog/merchant_city_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestCreateMerchant_AcceptsPin",
+      "file": "internal/catalog/merchant_location_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestCreateMerchant_RejectsMissingPin",
+      "file": "internal/catalog/merchant_location_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestCreateMerchant_RejectsNullIsland",
+      "file": "internal/catalog/merchant_location_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestListMerchants_FiltersByOwner",
+      "file": "internal/catalog/owner_filter_test.go",
+      "package": "catalog_test",
+      "orphan": true
+    },
+    {
+      "name": "TestArchive_TheOneWhoSpokeCanStillReadIt",
+      "file": "internal/comms/archive_test.go",
+      "package": "comms_test",
+      "orphan": true
+    },
+    {
+      "name": "TestArchive_TheOneWhoSpokeKeepsHisWords",
+      "file": "internal/comms/archive_test.go",
+      "package": "comms_test",
+      "orphan": true
+    },
+    {
+      "name": "TestChannelOpensOnlyWhileTheDriverIsCarrying",
+      "file": "internal/comms/comms_test.go",
+      "package": "comms",
+      "orphan": true
+    },
+    {
+      "name": "TestNoChannelSurvivesTheOrder",
+      "file": "internal/comms/comms_test.go",
+      "package": "comms",
+      "orphan": true
+    },
+    {
+      "name": "TestOffenseCatchesDisguises",
+      "file": "internal/comms/profanity_test.go",
+      "package": "comms",
+      "orphan": true
+    },
+    {
+      "name": "TestOffenseSparesInnocents",
+      "file": "internal/comms/profanity_test.go",
+      "package": "comms",
+      "orphan": true
+    },
+    {
+      "name": "TestSanitizeStripsDeception",
+      "file": "internal/comms/profanity_test.go",
+      "package": "comms",
+      "orphan": true
+    },
+    {
+      "name": "TestUserThreads_BothSidesAndFlaggedFirst",
+      "file": "internal/comms/user_threads_test.go",
+      "package": "comms_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDotEnv_MissingFileIsNotAnError",
+      "file": "internal/config/dotenv_test.go",
+      "package": "config",
+      "orphan": true
+    },
+    {
+      "name": "TestDotEnv_ReadsFileAndYieldsToEnvironment",
+      "file": "internal/config/dotenv_test.go",
+      "package": "config",
+      "orphan": true
+    },
+    {
+      "name": "TestDevOTPProviderIsRefusedInProduction",
+      "file": "internal/config/otp_provider_test.go",
+      "package": "config",
+      "orphan": true
+    },
+    {
+      "name": "TestComposeHasNoDuplicateKeys",
+      "file": "internal/deploycheck/compose_test.go",
+      "package": "deploycheck_test",
+      "orphan": true
+    },
+    {
+      "name": "TestComposeIsValidYAML",
+      "file": "internal/deploycheck/compose_test.go",
+      "package": "deploycheck_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPin_FormatIsFourDigitsOnly",
+      "file": "internal/identity/admin_pin_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestPin_RequiredForAdminOnly",
+      "file": "internal/identity/admin_pin_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestCheckOTPCountsFailures",
+      "file": "internal/identity/check_otp_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestCheckOTPDoesNotConsume",
+      "file": "internal/identity/check_otp_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestClientKind_ContextRoundTrip",
+      "file": "internal/identity/client_kind_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestClientKind_KnownKindsSurvive",
+      "file": "internal/identity/client_kind_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestClientKind_UnknownFallsBackToWeb",
+      "file": "internal/identity/client_kind_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestForcePasswordChangeIsOffByDefault",
+      "file": "internal/identity/force_password_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestGrantRole_RefusesSecondPrimaryFromAnyPath",
+      "file": "internal/identity/grant_one_role_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantRole_NotGrantableByHand",
+      "file": "internal/identity/one_role_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestOneRole_CreateRefusesTwoPrimaries",
+      "file": "internal/identity/one_role_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestOneRole_EveryRoleBringsCustomer",
+      "file": "internal/identity/one_role_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestOneRole_GrantRefusesSecondPrimary",
+      "file": "internal/identity/one_role_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestOTPIsCappedPerIP",
+      "file": "internal/identity/otp_ip_limit_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestNormalizePhone",
+      "file": "internal/identity/phone_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestChangingPhoneDropsWhatsAppProof",
+      "file": "internal/identity/phone_wa_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestVerifyingThenMakingItTheLoginKeepsTheProof",
+      "file": "internal/identity/phone_wa_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestSecuritySettingsReadWithTheRightUnit",
+      "file": "internal/identity/security_settings_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestSessionClient_AdminLogoutAllStillGlobal",
+      "file": "internal/identity/session_client_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestSessionClient_AppDoesNotKillWeb",
+      "file": "internal/identity/session_client_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestSessionClient_DefaultIsWeb",
+      "file": "internal/identity/session_client_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestSessionClient_SecondPhoneKillsFirst",
+      "file": "internal/identity/session_client_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestBackgroundPNG_IsStoredAsJPEGAndShrinks",
+      "file": "internal/media/background_test.go",
+      "package": "media",
+      "orphan": true
+    },
+    {
+      "name": "TestKindsMatchDatabaseConstraint",
+      "file": "internal/media/kinds_test.go",
+      "package": "media",
+      "orphan": true
+    },
+    {
+      "name": "TestMaxBytesConvertsMegabytes",
+      "file": "internal/media/limit_test.go",
+      "package": "media",
+      "orphan": true
+    },
+    {
+      "name": "TestVariants_BlurIsTinyAndSizesShrink",
+      "file": "internal/media/variants_test.go",
+      "package": "media",
+      "orphan": true
+    },
+    {
+      "name": "TestBothFlagsAreHonoured",
+      "file": "internal/notifications/noise_test.go",
+      "package": "notifications",
+      "orphan": true
+    },
+    {
+      "name": "TestOfferIsTransientAndMoneyIsSilent",
+      "file": "internal/notifications/noise_test.go",
+      "package": "notifications",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverNotificationsRingInDriverApp",
+      "file": "internal/notifications/routing_test.go",
+      "package": "notifications_test",
+      "orphan": true
+    },
+    {
+      "name": "TestNotificationHrefsExist",
+      "file": "internal/notifications/routing_test.go",
+      "package": "notifications_test",
+      "orphan": true
+    },
+    {
+      "name": "TestTransientIsOptIn",
+      "file": "internal/notifications/transient_test.go",
+      "package": "notifications",
+      "orphan": true
+    },
+    {
+      "name": "TestTransientNotificationCarriesTheFlag",
+      "file": "internal/notifications/transient_test.go",
+      "package": "notifications",
+      "orphan": true
+    },
+    {
+      "name": "TestChannel_BothFailReturnsWhatsAppError",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestChannel_EmptyModeIsWhatsApp",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestChannel_FallsBackWhenWhatsAppFails",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestChannel_NoFallbackWhenWhatsAppWorks",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestChannel_SMSOnly",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestChannel_SMSWithoutGatewayFallsBack",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestChannel_WhatsAppOnly",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestSMS_ArabicIsHexEncoded",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestSMS_HexIsFromRawNotEscaped",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestSMS_IdemKeyIsStableAndHidesCode",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestSMS_PhonePlainDropsThePlus",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestSMS_TemplateGatewayGetsTheCode",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestSMS_TextSenderCarriesNoCode",
+      "file": "internal/notify/channel_test.go",
+      "package": "notify",
+      "orphan": true
+    },
+    {
+      "name": "TestAgreeCustom_WritesTotals",
+      "file": "internal/orders/agree_custom_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverQueueTopic",
+      "file": "internal/orders/broadcast_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestQueueAffecting",
+      "file": "internal/orders/broadcast_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestCashBlocked_AfterCustomerFault",
+      "file": "internal/orders/cashban_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCashBlocked_MerchantFaultDoesNotCount",
+      "file": "internal/orders/cashban_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestClosedAt_ComesBackInTheOrder",
+      "file": "internal/orders/closed_at_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCommission_IgnoresPaymentMethodAndManagementMode",
+      "file": "internal/orders/commission_modes_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCompensation_FollowsFault",
+      "file": "internal/orders/compensation_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCompensation_UnknownReasonRejected",
+      "file": "internal/orders/compensation_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantFault_CompensatesAndOpensClaim",
+      "file": "internal/orders/compensation_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomCancel_DriverMayNot",
+      "file": "internal/orders/custom_cancel_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomCancel_OpsAlwaysMay",
+      "file": "internal/orders/custom_cancel_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomCancel_OwnerUntilBought",
+      "file": "internal/orders/custom_cancel_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomChat_NotWrittenTwice",
+      "file": "internal/orders/custom_chat_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomChat_OpensItselfOnAssign",
+      "file": "internal/orders/custom_chat_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomGoesStraightToTheQueue",
+      "file": "internal/orders/custom_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomOrderMovesNoMoney",
+      "file": "internal/orders/custom_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestStandardOrderStillSettles",
+      "file": "internal/orders/custom_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestDiscount_MerchantBorne_CutsBothSides",
+      "file": "internal/orders/discount_applies_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDiscount_PlatformBorne_CutsWhatTheCustomerPays",
+      "file": "internal/orders/discount_applies_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestZoneAt_EmptyTableCoversEverywhere",
+      "file": "internal/orders/empty_zones_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCreate_OpenOrdersAreCapped",
+      "file": "internal/orders/flood_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_DebtIsTakenFromNextEarning",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_NotFailedIsRejected",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_ReturnedClawsBackWhatWasPaid",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_SettledTwiceIsRejected",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_ShortBalanceBecomesDebt",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_SupportIsPaidFromTreasury",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoods_ToOfficeChangesNoMoney",
+      "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestNextOpen",
+      "file": "internal/orders/hours_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOpenNow_CrossesMidnight",
+      "file": "internal/orders/hours_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestList_PagesThroughEveryOrder",
+      "file": "internal/orders/list_paging_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerDoorFailure_StillCloses",
+      "file": "internal/orders/merchant_blocked_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantBlocked_CustomerIsNotTold",
+      "file": "internal/orders/merchant_blocked_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantBlocked_DriverIsStillCompensated",
+      "file": "internal/orders/merchant_blocked_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantBlocked_ReturnsToOfficeNotClosed",
+      "file": "internal/orders/merchant_blocked_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantBlocked_StillCountsAgainstTheMerchant",
+      "file": "internal/orders/merchant_blocked_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMergeKeepsDifferences",
+      "file": "internal/orders/merge_items_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestMergeSameFolds",
+      "file": "internal/orders/merge_items_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestMergeSameSumsThree",
+      "file": "internal/orders/merge_items_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminIsAboveAuthorityNotAboveKnowledge",
+      "file": "internal/orders/modes_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantsSelfManage_ReadsTheMode",
+      "file": "internal/orders/modes_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOrdersMode_BothValuesAreInTheCatalog",
+      "file": "internal/orders/modes_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestPlatformWatchesAfterPickup",
+      "file": "internal/orders/modes_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestRolesUnderMode",
+      "file": "internal/orders/modes_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestRolesUnderMode_KeepsOtherRoles",
+      "file": "internal/orders/modes_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestSources_CapEnforced",
+      "file": "internal/orders/multisource_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestTwoSources_EachPaidItsOwn",
+      "file": "internal/orders/multisource_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestTwoSources_RefundReversesEach",
+      "file": "internal/orders/multisource_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGroupDigitsIsReadable",
+      "file": "internal/orders/noeligible_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestNoEligibleMessageCarriesBothNumbers",
+      "file": "internal/orders/noeligible_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestAgreedIsWhatSeparatesAgreeingFromBuying",
+      "file": "internal/orders/opscustom_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsCustomPathHasNoMerchant",
+      "file": "internal/orders/opscustom_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsCustomStageOfWalksTheOwnersOrder",
+      "file": "internal/orders/opscustom_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsCustomTimesTakeAgreementForBuying",
+      "file": "internal/orders/opscustom_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestPreviewPromo_LeavesNoTrace",
+      "file": "internal/orders/promo_preview_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestPreviewPromo_MatchesOrder",
+      "file": "internal/orders/promo_preview_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestPreviewPromo_UnknownCodeIsAnswerNotError",
+      "file": "internal/orders/promo_preview_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestPromo_MaxUsesSurvivesConcurrency",
+      "file": "internal/orders/promo_race_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPromo_OncePerUserSurvivesConcurrency",
+      "file": "internal/orders/promo_race_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestNoBacktickInsideRawStrings",
+      "file": "internal/orders/rawstring_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestRefund_DriverKeepsHisFee",
+      "file": "internal/orders/refund_treasury_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRefund_TreasuryLosesOnlyWhatItPaid",
+      "file": "internal/orders/refund_treasury_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestReleaseAtPickup",
+      "file": "internal/orders/release_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRepTarget_GrantedOnDelivery",
+      "file": "internal/orders/rep_target_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRepTarget_NotGrantedWhenRepIsBuyer",
+      "file": "internal/orders/rep_target_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestArrivingAtStoreDoesNotEraseTheAssignment",
+      "file": "internal/orders/requeue_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomRequeueKeepsTheSameRule",
+      "file": "internal/orders/requeue_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestRequeuedOrderShowsTheDriverWhoKeptIt",
+      "file": "internal/orders/requeue_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestRouteLegsAreJudgedByTheirOwnMap",
+      "file": "internal/orders/routelimit_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestRouteLimitAddsTheMargin",
+      "file": "internal/orders/routelimit_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestRouteLimitStaysSilentWhenUnmeasured",
+      "file": "internal/orders/routelimit_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestActivation_RepOwnOrdersDoNotCount",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCancelBeforeDelivery_RefundsWalletOnly",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCommission_HeldUntilMerchantActivates",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCreate_RequiresWhatsAppVerified",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCreate_WalletChargeFailure_LeavesNoOrder",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDelivery_CreditsCashAndCommissions",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDelivery_CreditsMerchantEarning",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDelivery_NoCommissionWhenRepIsTheBuyer",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDelivery_PaysDriverTheDeliveryFee",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverFee_SurvivesEmptySettings",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRate_RepCannotRateOwnClient",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRefundAfterDelivery_ReversesEverything",
+      "file": "internal/orders/settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryOpsStageHasAnArabicName",
+      "file": "internal/orders/stagelabels_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsStageLateJudgesOnlyWhatWasReached",
+      "file": "internal/orders/stagelate_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsStageLateMarksTheSlowLeg",
+      "file": "internal/orders/stagelate_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsStageLateStaysSilentWithoutALimit",
+      "file": "internal/orders/stagelate_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerFoldsTheStoreLeg",
+      "file": "internal/orders/stages_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryStatusHasAStage",
+      "file": "internal/orders/stages_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestStagesForPicksTheRightPath",
+      "file": "internal/orders/stages_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsStageTimesFoldsEachTransition",
+      "file": "internal/orders/stagetimes_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsStageTimesKeepsTheFirstEntry",
+      "file": "internal/orders/stagetimes_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsStageTimesSkipsWhatEndedTheOrder",
+      "file": "internal/orders/stagetimes_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryStatusHasArabicName",
+      "file": "internal/orders/statuses_ar_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestAcceptedGoesStraightToDispatching",
+      "file": "internal/orders/statuses_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestAutoDispatchNeedsSettings",
+      "file": "internal/orders/statuses_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestCanTransition",
+      "file": "internal/orders/statuses_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestPlatformDoesNotCancelAfterAccept",
+      "file": "internal/orders/statuses_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestTerminal",
+      "file": "internal/orders/statuses_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestPostPickupHasExit",
+      "file": "internal/orders/stuck_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestTreasury_ProfitIsWhatRemains",
+      "file": "internal/orders/treasury_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestTreasury_UnsetDoesNotBlockDelivery",
+      "file": "internal/orders/treasury_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFailureAfterPickup_PlatformBearsIt",
+      "file": "internal/orders/two_stage_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantPaidAtPickup",
+      "file": "internal/orders/two_stage_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletOrder_TwoStagesSameTotal",
+      "file": "internal/orders/two_stage_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestAuthorizingRole",
+      "file": "internal/orders/violations_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletNotice_CarriesAmount",
+      "file": "internal/orders/wallet_notice_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletNotice_GoesToOwnApp",
+      "file": "internal/orders/wallet_notice_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletNotice_NegativeShowsMinus",
+      "file": "internal/orders/wallet_notice_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletNotice_SentPerCredit",
+      "file": "internal/orders/wallet_notice_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestDelivery_TellsDriverAboutEarning",
+      "file": "internal/orders/wallet_notice_wiring_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDelivery_TellsMerchantAboutEarning",
+      "file": "internal/orders/wallet_notice_wiring_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerFaultDoesNotWarnMerchant",
+      "file": "internal/orders/warnings_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFaultFailureCountsAsViolation",
+      "file": "internal/orders/warnings_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestAmount_Of",
+      "file": "internal/pricing/money_rules_test.go",
+      "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCommissions_LiveOnEveryRead",
+      "file": "internal/pricing/money_rules_test.go",
+      "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDeliveryFeeAt",
+      "file": "internal/pricing/money_rules_test.go",
+      "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDeliveryFee_FlatOnly",
+      "file": "internal/pricing/money_rules_test.go",
+      "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantCommission_OverrideBeatsGlobal",
+      "file": "internal/pricing/money_rules_test.go",
+      "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestSalePrice",
+      "file": "internal/pricing/pricing_test.go",
+      "package": "pricing_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPush_DeadTokensDropped",
+      "file": "internal/push/push_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestPush_DisabledIsSilent",
+      "file": "internal/push/push_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestPush_NilServiceIsSafe",
+      "file": "internal/push/push_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestPush_NoAppsMeansAll",
+      "file": "internal/push/push_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestPush_PlatformClosedList",
+      "file": "internal/push/push_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestPush_RoutesToTargetAppOnly",
+      "file": "internal/push/push_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestPush_TokenMovesToNewOwner",
+      "file": "internal/push/push_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestPush_UnregisterBoundToOwner",
+      "file": "internal/push/push_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestDiagnoseTellsWhenNoneAccepted",
+      "file": "internal/push/status_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestForbiddenIsNotADeadToken",
+      "file": "internal/push/status_test.go",
+      "package": "push",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_001_LegacyContractUnchanged",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_002_RequestedShapeIsPresent",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_003_ForeignDriverDenied",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_004_AnonymousDenied",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_005_ClientCannotDictateRoute",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_006_LocalOriginValidated",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_007_CacheModesSeparated",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_008_OnlyExplicitTrueEnables",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_009_CacheGrainSeparated",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestALT_010_DecisionDivergenceInContract",
+      "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAUTH_ExpiredToken",
+      "file": "internal/qa/auth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAUTH_ForgedRoleInToken",
+      "file": "internal/qa/auth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAUTH_GarbageToken",
+      "file": "internal/qa/auth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAUTH_NoToken",
+      "file": "internal/qa/auth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAUTH_RoleEnforced",
+      "file": "internal/qa/auth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAUTH_ValidToken",
+      "file": "internal/qa/auth_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSECIDOR_Addresses",
+      "file": "internal/qa/authz_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSECIDOR_Orders",
+      "file": "internal/qa/authz_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSECIDOR_WalletIsOwn",
+      "file": "internal/qa/authz_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestVAL_040_ForeignOrderComplaintCode",
+      "file": "internal/qa/authz_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCANC_001_CustomerCancelsPending",
+      "file": "internal/qa/cancel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCANC_002_DoubleCancel",
+      "file": "internal/qa/cancel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCANC_003_ForeignCancel",
+      "file": "internal/qa/cancel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCANC_010_CancelAfterDelivered",
+      "file": "internal/qa/cancel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPROMO_001_InvalidCodeRejected",
+      "file": "internal/qa/cancel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALL_001_BalanceIsOwn",
+      "file": "internal/qa/cancel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALL_010_CannotPayBeyondBalance",
+      "file": "internal/qa/cancel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_001_OtherCityHidden",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_002_NoLocationNoFilter",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_010_ReachWithinCity",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_011_NoReachMeansNoLimit",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_020_MerchantOverridesCity",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_030_SearchIsScoped",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_031_MerchantSearchIsScoped",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_040_SectionCountIsScoped",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_050_OffersAreScoped",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_060_PublicCitiesShowsActiveOnly",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_070_DeleteCityWithMerchantsRefused",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCITY_071_CitiesAreAdminOnly",
+      "file": "internal/qa/city_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCONTRACT_FieldsExist",
+      "file": "internal/qa/contract_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCONTRACT_ModelsAreParsed",
+      "file": "internal/qa/contract_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUST_001_Create",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUST_002_EmptyRequestRejected",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUST_003_Idempotent",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUST_010_NoPriceBeforeAgreement",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCUST_020_ForeignCannotRead",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFAIL_001_DriverFailsDelivery",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFAIL_002_ReasonIsRecorded",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFAIL_010_NoMoveAfterFailed",
+      "file": "internal/qa/custom_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestIDEM_001_SameKeyOneOrder",
+      "file": "internal/qa/idempotency_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestIDEM_002_LostResponse",
+      "file": "internal/qa/idempotency_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestIDEM_003_FreshKeyNewOrder",
+      "file": "internal/qa/idempotency_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestIDEM_004_KeyIsPerUser",
+      "file": "internal/qa/idempotency_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestIDEM_006_MissingKeyStillWorks",
+      "file": "internal/qa/idempotency_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLIFE_001_HappyPath",
+      "file": "internal/qa/lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLIFE_020_ForeignDriverCannotMove",
+      "file": "internal/qa/lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLIFE_IllegalTransitions",
+      "file": "internal/qa/lifecycle_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMapDataIsFresh",
+      "file": "internal/qa/mapdata_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDIS_001_SMSChannelIsGone",
+      "file": "internal/qa/merchant_notify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDIS_010_MessageCarriesNoSMSFlag",
+      "file": "internal/qa/merchant_notify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDIS_020_NoVerifiedMessage",
+      "file": "internal/qa/merchant_notify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFIN_ItemPriceComesFromDB",
+      "file": "internal/qa/money_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFIN_TamperedFieldsIgnored",
+      "file": "internal/qa/money_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestVAL_BadInputRejected",
+      "file": "internal/qa/money_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestVAL_EmptyQuote",
+      "file": "internal/qa/money_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestVAL_MalformedJSON",
+      "file": "internal/qa/money_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestVAL_MissingSection",
+      "file": "internal/qa/money_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_001_BearingIsStored",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_010_OldClientStillWorks",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_011_BadBearingDoesNotBreakWrite",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_020_BatchAcceptsPlainPoints",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_030_OldBatchStillAccepted",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_031_BatchBearingStored",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_032_BadBatchBearingIgnored",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_033_MixedBatch",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_034_ContractHasNoNewRequiredField",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_035_BatchStillMovesDriver",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_040_AndroidBodyReachesColumn",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_041_AndroidQueueBodyReachesColumn",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNAVB_042_LegacyQueueLineStillWorks",
+      "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNOTIF_001_OfferSkipsStaff",
+      "file": "internal/qa/notify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPAR_010_LegacyRouteUnchanged",
+      "file": "internal/qa/parallel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPAR_011_MobileKnowsNoEngine",
+      "file": "internal/qa/parallel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPAR_012_NoRerouteFromHttp",
+      "file": "internal/qa/parallel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPAR_013_FlagDefaultsOff",
+      "file": "internal/qa/parallel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPAR_014_DetectorsUntouched",
+      "file": "internal/qa/parallel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPAR_015_ProgressIsPassThroughOnly",
+      "file": "internal/qa/parallel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPAR_016_ServerValidatesOwnership",
+      "file": "internal/qa/parallel_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestD20_CustomerRealtimeVsREST",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01"
+      ],
+      "defects": [
+        "D20"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "payload"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD20_MerchantRealtimeVsREST",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01",
+        "F-04",
+        "F-14"
+      ],
+      "defects": [
+        "D20",
+        "D23"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "payload"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD21_CustomerRedactionAgainstContract",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01",
+        "F-14"
+      ],
+      "defects": [
+        "D21",
+        "D23"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "evidence": [
+        "payload"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD22_CustomOrderOwnerChannelContract",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-02"
+      ],
+      "defects": [
+        "D22"
+      ],
+      "modes": [
+        "FULL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEveryFieldCoversEveryRole",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestForbiddenFieldGuardCatchesLeak",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "HARNESS_SELF_TEST",
+      "defects": [
+        "D21"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOrderFieldsAllClassified",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "GENERATOR_TEST",
+      "defects": [
+        "D20",
+        "D21",
+        "D22",
+        "D23"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPrivacyContractHasNoGhosts",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPushPayloadScope",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestUnknownFieldFailsClosed",
+      "file": "internal/qa/privacy_test.go",
+      "package": "qa",
+      "level": "L5",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRRT_001_OnlyOwnDriverGetsRoute",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRRT_002_UnknownOrder",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRRT_003_UnassignedOrder",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRRT_010_NoCoordinatesKeepsOldBehaviour",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRRT_011_ValidCoordinatesAccepted",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRRT_012_PartialPairRejected",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRRT_013_MalformedCoordinatesRejected",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRRT_020_ClientCannotSetDestination",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRRT_021_ServerChoosesTargetByStatus",
+      "file": "internal/qa/reroute_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRET_001_OnlyFailedIsReturnable",
+      "file": "internal/qa/return_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRET_002_NeedsMerchantConsent",
+      "file": "internal/qa/return_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRET_003_HappyPath",
+      "file": "internal/qa/return_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRET_010_NoDoubleReturn",
+      "file": "internal/qa/return_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRET_020_ForeignDriverCannotReturn",
+      "file": "internal/qa/return_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRET_030_ReversesMerchantEarning",
+      "file": "internal/qa/return_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRNAV_001_CacheKeyIsVersioned",
+      "file": "internal/qa/route_nav_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRNAV_002_StepsAreRequested",
+      "file": "internal/qa/route_nav_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRNAV_010_LegacyFieldsUnchanged",
+      "file": "internal/qa/route_nav_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRNAV_011_NavFieldsOnlyWhenPresent",
+      "file": "internal/qa/route_nav_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRNAV_020_ContractHasNoOsrmWords",
+      "file": "internal/qa/route_nav_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRNAV_030_NoNavWhenNoSteps",
+      "file": "internal/qa/route_nav_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSNAP_010_NoUnlimitedRetry",
+      "file": "internal/qa/snap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSNAP_011_ServerUsesDefaultPolicy",
+      "file": "internal/qa/snap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSNAP_012_ClientCannotSetRadius",
+      "file": "internal/qa/snap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSNAP_013_FailuresAreNotCached",
+      "file": "internal/qa/snap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSNAP_014_BackendIsInterface",
+      "file": "internal/qa/snap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSNAP_015_MobileKnowsNothing",
+      "file": "internal/qa/snap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZONE_001_NoZonesOrderPasses",
+      "file": "internal/qa/zone_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZONE_002_NoZoneSurvivesLifecycle",
+      "file": "internal/qa/zone_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZONE_003_InsideZoneUnchanged",
+      "file": "internal/qa/zone_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZONE_004_OutsideAllZonesRejected",
+      "file": "internal/qa/zone_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZONE_005_NoEmptyUUIDReachesPostgres",
+      "file": "internal/qa/zone_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestZONE_006_BackwardCompatible",
+      "file": "internal/qa/zone_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBonusAndReferral_OncePerPhone",
+      "file": "internal/referrals/once_per_phone_test.go",
+      "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRewardOnFirstOrder_HoldsUntilTheOrder",
+      "file": "internal/referrals/reward_on_test.go",
+      "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRewardOnSignup_BodyDoesNotClaimAnOrder",
+      "file": "internal/referrals/reward_on_test.go",
+      "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRewardOnSignup_PaysAtSignupNotAtFirstOrder",
+      "file": "internal/referrals/reward_on_test.go",
+      "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestRewardOn_DefaultsToSignup",
+      "file": "internal/referrals/reward_on_test.go",
+      "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestStanding_ShowsTheSameTiersItPays",
+      "file": "internal/referrals/reward_on_test.go",
+      "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGrantSignupBonus_Credits",
+      "file": "internal/referrals/signup_bonus_test.go",
+      "package": "referrals_test",
+      "orphan": true
+    },
+    {
+      "name": "TestCorrelationThresholdsAreMeasured",
+      "file": "internal/routing/correlate_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestMatchRejectsBadTraceSize",
+      "file": "internal/routing/correlate_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestMatchSendsGuardedRadii",
+      "file": "internal/routing/correlate_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestNodeMarginSeparates",
+      "file": "internal/routing/correlate_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestNodesUsesSnapRadius",
+      "file": "internal/routing/correlate_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSharedJunctionsFailSafe",
+      "file": "internal/routing/correlate_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergenceMeasuredOnRecommended",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_A_SharedThenSplit",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_B2_JustUnderThresholdIsNoise",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_B_NoiseIsNotDecision",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_C_FirstNotLast",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_D_SamplingIsNotDivergence",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_E2_ParallelWithinToleranceIsShared",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_E_ParallelFromStart",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_F_RoundaboutBranches",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_G_ShortBridgeIsNotDecision",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDivergence_Identical",
+      "file": "internal/routing/divergence_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveSelfSimilarity",
+      "file": "internal/routing/live_probe_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestNoEngineIsQuiet",
+      "file": "internal/routing/osrm_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestNoRouteIsNotSuccess",
+      "file": "internal/routing/osrm_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestRouteReadsStreetsNotAir",
+      "file": "internal/routing/osrm_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestDominatedNotHardRejected",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFilterBadAlternativeDoesNotKillGoodOne",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFilterCapsAtTwo",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFilterDropsDuplicateAmongAlternatives",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFilterDropsGrossPenalty",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFilterDropsInvalid",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFilterDropsNearDuplicate",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFilterEmptyIsNotFailure",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFilterKeepsDominatedButDiverse",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFilterPreservesEngineOrder",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFirstDivergence",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestFirstDivergenceSparseNoFalseEarly",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestGoldenDatasetShape",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestPolicyCalibration",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestPrimaryOutrankedFalseWhenNormal",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestPrimaryStaysRecommendedEvenWhenOutranked",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestRouteIDDiffersByGeometry",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestRouteIDIgnoresGeneration",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestRouteIDSeparatesTarget",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestRouteIDStable",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSimilarityDifferentRoutes",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSimilarityIgnoresSampling",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSimilarityIsNotFingerprint",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSimilarityParallelRoad",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSimilaritySelfIsOne",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSimilaritySparseVertices",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSimilaritySparseVsDense",
+      "file": "internal/routing/routeset_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveFarCoordinatesRejected",
+      "file": "internal/routing/snap_live_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveGpsOffsetStillRoutes",
+      "file": "internal/routing/snap_live_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveRadiusIsHonoured",
+      "file": "internal/routing/snap_live_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestLiveValidPointsStillRoute",
+      "file": "internal/routing/snap_live_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestBackendContract",
+      "file": "internal/routing/snap_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestNoRouteIsTyped",
+      "file": "internal/routing/snap_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestNoSegmentIsTypedAndNotRetried",
+      "file": "internal/routing/snap_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestOverviewRetryKeepsRadius",
+      "file": "internal/routing/snap_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestRadiusSeparatorIsEncodedOnTheWire",
+      "file": "internal/routing/snap_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSnapPolicyDefaultsAreCalibrated",
+      "file": "internal/routing/snap_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSnapRadiusesOnEveryPath",
+      "file": "internal/routing/snap_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestSnapRadiusesSent",
+      "file": "internal/routing/snap_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_001_AsksForSteps",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_010_ContractBuilt",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_011_CumulativeMatchesGeometry",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_012_NoDuplicateVertexAtJoins",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_012_RoundaboutSpeaksOnce",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_013_AtDistanceIsMonotonic",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_013_LoneExitSurvives",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_020_RoundaboutKeepsExitAndName",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_021_RotaryAndRoundaboutAreOne",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_030_MissingNameStaysMissing",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_031_NilModifierIsUnknownNotRight",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_032_UnknownTypeIsSafe",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_033_AllMeasuredTypesMap",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_040_NoStepsStillDraws",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_041_EmptyStepGeometryDoesNotBreak",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestROUTE_042_ContractSerializesWithoutNavWhenAbsent",
+      "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestActivity_HidesRefreshAndFilters",
+      "file": "internal/server/admin_activity_filter_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminAddresses_OnlyThisUsersAndAllOfThem",
+      "file": "internal/server/admin_addresses_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestFeedback_SplitsHisComplaintsFromComplaintsAgainstHim",
+      "file": "internal/server/admin_feedback_split_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestFinancialsLogs_FourRecordsLandInTheProfile",
+      "file": "internal/server/admin_financials_logs_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestFinancialsRef_OpensInOrdersSearch",
+      "file": "internal/server/admin_financials_ref_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantProfile_SeesHisStore",
+      "file": "internal/server/admin_merchant_profile_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminRatings_IncludesStores",
+      "file": "internal/server/admin_ratings_stores_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionItems_ServerSideSearchFilterAndCounts",
+      "file": "internal/server/admin_section_items_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminWalletStatement_OwnRowsNewestFirstAndSaysWhenCut",
+      "file": "internal/server/admin_wallet_statement_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminWalletStatement_PagesInsteadOfCutting",
+      "file": "internal/server/admin_wallet_statement_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminWalletApplyGuardsAndDirections",
+      "file": "internal/server/admin_wallet_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAnnounceWrites",
+      "file": "internal/server/announce_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAnnounceWrites_IsWiredToBothGates",
+      "file": "internal/server/announce_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAppFileUploadDownloadAndPriority",
+      "file": "internal/server/app_file_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminAudit_PagesHidesRefreshAndFiltersByDate",
+      "file": "internal/server/audit_filters_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAuditActionsHaveArabicLabels",
+      "file": "internal/server/audit_labels_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAutoTransfer_OffByDefault",
+      "file": "internal/server/auto_transfer_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAutoTransfer_OldKeysAreGone",
+      "file": "internal/server/auto_transfer_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAutoTransfer_ToggleIsReadable",
+      "file": "internal/server/auto_transfer_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCashOutstanding_OldestFirst",
+      "file": "internal/server/cash_outstanding_order_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestClientIPHasNoPort",
+      "file": "internal/server/client_ip_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCompensateDriverOnlyOnce",
+      "file": "internal/server/compensate_twice_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCORS_DevelopmentStaysLocal",
+      "file": "internal/server/cors_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCORS_ProductionUsesConfiguredOrigins",
+      "file": "internal/server/cors_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCORS_ProductionWithoutOriginsIsClosedNotOpen",
+      "file": "internal/server/cors_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCreateRoutes_AreIdempotent",
+      "file": "internal/server/create_routes_guarded_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestIdempotencySkipsWithoutKey",
+      "file": "internal/server/create_routes_guarded_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAddress_IntruderCannotDelete",
+      "file": "internal/server/customer_isolation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOrder_IntruderCannotCancel",
+      "file": "internal/server/customer_isolation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOrder_IntruderCannotRead",
+      "file": "internal/server/customer_isolation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWallet_ShowsOnlyOwnBalance",
+      "file": "internal/server/customer_isolation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerOrderJSON_HasNoSource",
+      "file": "internal/server/customer_privacy_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRedactForCustomer_HidesSource",
+      "file": "internal/server/customer_privacy_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRedactOffersForCustomer_HidesSource",
+      "file": "internal/server/customer_privacy_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDirectAssign_IgnoredInQueueMode",
+      "file": "internal/server/direct_assign_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDirectAssign_LandsInHisTasks",
+      "file": "internal/server/direct_assign_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDirectAssign_MovingDriverKeepsIt",
+      "file": "internal/server/direct_assign_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDirectAssign_SilentDriverLosesIt",
+      "file": "internal/server/direct_assign_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDiscount_ShownPriceMatchesCharged",
+      "file": "internal/server/discount_end_to_end_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverOrders_FailedLeavesTheList",
+      "file": "internal/server/driver_closed_orders_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverOrders_OpenWorkStays",
+      "file": "internal/server/driver_closed_orders_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverFail_CodedReasonNeedsNoNote",
+      "file": "internal/server/driver_fail_reason_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverFail_FreeTextAloneRejected",
+      "file": "internal/server/driver_fail_reason_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLocationBatch_KeepsDeviceTime",
+      "file": "internal/server/driver_location_batch_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLocationBatch_RejectsNonsense",
+      "file": "internal/server/driver_location_batch_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLocationBatch_ReplayDoesNotDuplicate",
+      "file": "internal/server/driver_location_batch_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLocationBatch_StaleDoesNotRewindPosition",
+      "file": "internal/server/driver_location_batch_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverQueue_Responds",
+      "file": "internal/server/driver_queue_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAccept_DriversRace",
+      "file": "internal/server/driver_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAccept_RejectsOffShift",
+      "file": "internal/server/driver_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAccept_RejectsOrderAlreadyTaken",
+      "file": "internal/server/driver_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAccept_RejectsWhenCashLimitWouldBreak",
+      "file": "internal/server/driver_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAccept_RejectsWhenTooManyActive",
+      "file": "internal/server/driver_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEmergencies_ListReadsWithRows",
+      "file": "internal/server/emergency_list_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEmergencyAfterPickup_WithLocation_SetsPoint",
+      "file": "internal/server/emergency_pickup_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEmergencyAfterPickup_WithoutLocation_StillWarns",
+      "file": "internal/server/emergency_pickup_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEmergencies_OldestFirstResolvedTabAndResolution",
+      "file": "internal/server/emergency_resolve_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryErrorKeyHasArabicMessage",
+      "file": "internal/server/error_keys_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestExpenses_LeaveTreasuryAndStayOutOfLosses",
+      "file": "internal/server/expenses_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestFailReasons_EveryFailableStageHasReasons",
+      "file": "internal/server/fail_reasons_list_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestFailReasons_UnknownStageIsEmptyNotError",
+      "file": "internal/server/fail_reasons_list_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReturn_RefusedMerchant",
+      "file": "internal/server/failure_aftermath_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReturn_ReversesMerchantEarning",
+      "file": "internal/server/failure_aftermath_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestGeoSeed_AllSyrianGovernorates",
+      "file": "internal/server/geo_seed_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestGeoSeed_DistrictsBelongToLiveGovernorate",
+      "file": "internal/server/geo_seed_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestGeoSeed_NoGovernorateWithoutDistricts",
+      "file": "internal/server/geo_seed_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestIdempotency_ConcurrentSecondGets409",
+      "file": "internal/server/idempotency_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestIdempotency_DifferentKeysBothRun",
+      "file": "internal/server/idempotency_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestIdempotency_FailureIsRetryable",
+      "file": "internal/server/idempotency_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestIdempotency_KeyIsPerUser",
+      "file": "internal/server/idempotency_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestIdempotency_NoHeaderPassesThrough",
+      "file": "internal/server/idempotency_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestIdempotency_RunsOnce",
+      "file": "internal/server/idempotency_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPublicJoin_NeedsActiveRepCode",
+      "file": "internal/server/join_gate_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestConvertLead_RefusesDriverPhoneAndSaysWhy",
+      "file": "internal/server/lead_convert_conflict_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDistrictOffWhenGovernorateOff",
+      "file": "internal/server/lead_district_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestValidDistrict_AcceptsLiveRejectsOff",
+      "file": "internal/server/lead_district_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLeadRejectAfterConvertIsRefused",
+      "file": "internal/server/lead_reject_after_convert_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRepLead_RequiresDistrict",
+      "file": "internal/server/lead_requires_district_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLossesReportRuns",
+      "file": "internal/server/losses_report_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPendingMenu_CountsWholeQueueNotThePage",
+      "file": "internal/server/menu_pending_count_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantKindsAreASubset",
+      "file": "internal/server/merchant_media_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOffer_AllowsWhatFitsUnderLimit",
+      "file": "internal/server/offer_cash_limit_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOffer_SkipsDriverWhoCannotAccept",
+      "file": "internal/server/offer_cash_limit_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOffer_WaitingPickedUpWhenDriverFrees",
+      "file": "internal/server/offer_spread_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOffers_SpreadAcrossDrivers",
+      "file": "internal/server/offer_spread_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDecidePayoutIsNotAppliedTwice",
+      "file": "internal/server/payout_race_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCreatePayoutIsSingleUnderConcurrency",
+      "file": "internal/server/payout_request_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCreatePayoutRefusesWhatItMust",
+      "file": "internal/server/payout_request_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminPayouts_PagesAndSumsPending",
+      "file": "internal/server/payouts_paging_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomerPayloadCarriesNoDriverPhone",
+      "file": "internal/server/phone_privacy_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPayloadCarriesNoCustomerPhone",
+      "file": "internal/server/phone_privacy_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_EveryTabAnswers",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestProfits_NetMatchesTreasuryLedger",
+      "file": "internal/server/profits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestNoBacktickInsideRawSQL",
+      "file": "internal/server/raw_string_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRepMediaRoute_NotBehindMenuGuard",
+      "file": "internal/server/rep_media_route_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRepMenuRoutes_NoSectionDoors",
+      "file": "internal/server/rep_media_route_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRepMenuWrite_AvailabilityIsNotHeld",
+      "file": "internal/server/rep_menu_review_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRepMenuWrite_HeldForReviewLikeMerchant",
+      "file": "internal/server/rep_menu_review_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRepMenuGuard_OnlyOwnClients",
+      "file": "internal/server/rep_menu_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRotation_OffShiftNotOffered",
+      "file": "internal/server/rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRotation_TurnPassesAndNeverReturns",
+      "file": "internal/server/rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameRoute_AfterPickupIsNotACandidate",
+      "file": "internal/server/sameroute_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameRoute_AssignsToDriverOnTheSameLine",
+      "file": "internal/server/sameroute_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameRoute_FarMerchantIsNotSameRoute",
+      "file": "internal/server/sameroute_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameRoute_OppositeCustomerIsNotSameRoute",
+      "file": "internal/server/sameroute_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameRoute_PassedMerchantIsNotSameRoute",
+      "file": "internal/server/sameroute_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameRoute_StaleLocationIsNotTrusted",
+      "file": "internal/server/sameroute_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestBrowse_HidesSource",
+      "file": "internal/server/sections_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSecurityHeadersOnEveryResponse",
+      "file": "internal/server/security_headers_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSiteDoors_ReachThePublicPayload",
+      "file": "internal/server/site_doors_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSuggestAndHasOptions",
+      "file": "internal/server/suggest_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWALink",
+      "file": "internal/server/wa_link_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWSOrigins_DevelopmentStaysLocal",
+      "file": "internal/server/ws_origin_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWSOrigins_FollowConfiguredWebOrigins",
+      "file": "internal/server/ws_origin_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWSOrigins_HandshakeReadsTheSharedSource",
+      "file": "internal/server/ws_origin_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestExceptPathsSparesLivedRequests",
+      "file": "internal/server/ws_timeout_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestCatalog_DefaultsAreValid",
+      "file": "internal/settings/catalog_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestCatalog_NoDuplicateKeys",
+      "file": "internal/settings/catalog_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestGroups_CoversCatalog",
+      "file": "internal/settings/catalog_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestValidate_NormalizesInt",
+      "file": "internal/settings/catalog_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestValidate_RejectsBadChoice",
+      "file": "internal/settings/catalog_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestValidate_RejectsOutOfRange",
+      "file": "internal/settings/catalog_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestValidate_RejectsUnknownKey",
+      "file": "internal/settings/catalog_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestValidate_RejectsWrongType",
+      "file": "internal/settings/catalog_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestValidate_TextLengthInRunes",
+      "file": "internal/settings/catalog_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestCoerceNumAcceptsBoolAndNumber",
+      "file": "internal/settings/getnum_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestGetNumFallsBackWithoutStore",
+      "file": "internal/settings/getnum_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestEverySettingHasArabicLabel",
+      "file": "internal/settings/labels_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestMediaSetting_AcceptsIDAndEmptyOnly",
+      "file": "internal/settings/media_kind_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryKeyReadInCodeIsInCatalog",
+      "file": "internal/settings/read_keys_test.go",
+      "package": "settings_test",
+      "orphan": true
+    },
+    {
+      "name": "TestEverySettingReadExistsInCatalog",
+      "file": "internal/settings/reads_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryCatalogKeyHasDefault",
+      "file": "internal/settings/single_source_test.go",
+      "package": "settings_test",
+      "orphan": true
+    },
+    {
+      "name": "TestNoRawSettingsReads",
+      "file": "internal/settings/single_source_test.go",
+      "package": "settings_test",
+      "orphan": true
+    },
+    {
+      "name": "TestShowWhen_PointsAtRealKeysAndValues",
+      "file": "internal/settings/single_source_test.go",
+      "package": "settings_test",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryComplaintReasonDeclaresItsTarget",
+      "file": "internal/support/against_test.go",
+      "package": "support",
+      "orphan": true
+    },
+    {
+      "name": "TestComplaint_NotOnRunningOrder",
+      "file": "internal/support/complaints_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestComplaint_OnlyOnce",
+      "file": "internal/support/complaints_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestComplaint_Opens",
+      "file": "internal/support/complaints_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestComplaint_ReasonFollowsStatus",
+      "file": "internal/support/complaints_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestComplaint_WindowPasses",
+      "file": "internal/support/complaints_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverReportWritesItsTarget",
+      "file": "internal/support/driver_report_against_test.go",
+      "package": "support",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryDriverReasonDeclaresItsTarget",
+      "file": "internal/support/driver_report_against_test.go",
+      "package": "support",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantReport_OnHisOwnOrderAgainstTheDriver",
+      "file": "internal/support/merchant_report_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryComplaintReasonHasArabicName",
+      "file": "internal/support/reason_ar_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestAllowedForKindGuardsTheOpening",
+      "file": "internal/support/reasons_kind_test.go",
+      "package": "support",
+      "orphan": true
+    },
+    {
+      "name": "TestCustomOrderHasNoMerchantReasons",
+      "file": "internal/support/reasons_kind_test.go",
+      "package": "support",
+      "orphan": true
+    },
+    {
+      "name": "TestStandardOrderKeepsEveryReason",
+      "file": "internal/support/reasons_kind_test.go",
+      "package": "support",
+      "orphan": true
+    },
+    {
+      "name": "TestResolveCompensatesOnlyOnce",
+      "file": "internal/support/resolve_race_test.go",
+      "package": "support_test",
+      "orphan": true
+    },
+    {
+      "name": "TestSubjectsCarryNoOrderNumber",
+      "file": "internal/support/subject_test.go",
+      "package": "support",
+      "orphan": true
+    },
+    {
+      "name": "TestAllFlowsDeclared",
+      "file": "internal/testtruth/truth_test.go",
+      "package": "testtruth",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEveryDefectIsKnown",
+      "file": "internal/testtruth/truth_test.go",
+      "package": "testtruth",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEveryRiskHasStrategy",
+      "file": "internal/testtruth/truth_test.go",
+      "package": "testtruth",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestExtractorsAgreeWithSource",
+      "file": "internal/testtruth/truth_test.go",
+      "package": "testtruth",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestNoStaleReferences",
+      "file": "internal/testtruth/truth_test.go",
+      "package": "testtruth",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestTruthIsCurrent",
+      "file": "internal/testtruth/truth_test.go",
+      "package": "testtruth",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEverySectionHasAnchor",
+      "file": "internal/truthdoc/truthdoc_test.go",
+      "package": "truthdoc_test",
+      "orphan": true
+    },
+    {
+      "name": "TestTruthDocIsCurrent",
+      "file": "internal/truthdoc/truthdoc_test.go",
+      "package": "truthdoc_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletKinds_AllAcceptedByTheDatabase",
+      "file": "internal/wallet/kinds_test.go",
+      "package": "wallet_test",
+      "orphan": true
+    },
+    {
+      "name": "TestApplyTx_RollsBackWithCallerTransaction",
+      "file": "internal/wallet/wallet_test.go",
+      "package": "wallet_test",
+      "orphan": true
+    },
+    {
+      "name": "TestApply_CreditThenDebit",
+      "file": "internal/wallet/wallet_test.go",
+      "package": "wallet_test",
+      "orphan": true
+    },
+    {
+      "name": "TestApply_RejectsOverdraft",
+      "file": "internal/wallet/wallet_test.go",
+      "package": "wallet_test",
+      "orphan": true
+    },
+    {
+      "name": "TestApply_RejectsZero",
+      "file": "internal/wallet/wallet_test.go",
+      "package": "wallet_test",
+      "orphan": true
+    },
+    {
+      "name": "TestStatement_BalancesEvenWhenTruncated",
+      "file": "internal/wallet/wallet_test.go",
+      "package": "wallet_test",
+      "orphan": true
+    }
+  ],
+  "stale": [],
+  "coverage_gaps": [
+    "D1 — لا اختبارَ انحدارٍ بعد",
+    "D10 — لا اختبارَ انحدارٍ بعد",
+    "D11 — لا اختبارَ انحدارٍ بعد",
+    "D12 — لا اختبارَ انحدارٍ بعد",
+    "D13 — لا اختبارَ انحدارٍ بعد",
+    "D14 — لا اختبارَ انحدارٍ بعد",
+    "D15 — لا اختبارَ انحدارٍ بعد",
+    "D16 — لا اختبارَ انحدارٍ بعد",
+    "D17 — لا اختبارَ انحدارٍ بعد",
+    "D18 — لا اختبارَ انحدارٍ بعد",
+    "D19 — لا اختبارَ انحدارٍ بعد",
+    "D2 — لا اختبارَ انحدارٍ بعد",
+    "D3 — لا اختبارَ انحدارٍ بعد",
+    "D4 — لا اختبارَ انحدارٍ بعد",
+    "D5 — لا اختبارَ انحدارٍ بعد",
+    "D6 — لا اختبارَ انحدارٍ بعد",
+    "D7 — لا اختبارَ انحدارٍ بعد",
+    "D8 — لا اختبارَ انحدارٍ بعد",
+    "D9 — لا اختبارَ انحدارٍ بعد",
+    "F-03 (ردُّ إنشاءٍ ضائع) — لا اختبارَ مرتبطٌ به",
+    "F-05 (القبولُ التلقائيّ) — لا اختبارَ مرتبطٌ به",
+    "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
+    "F-07 (عرضُ الطلب على سائق) — لا اختبارَ مرتبطٌ به",
+    "F-08 (قبولُ السائق) — لا اختبارَ مرتبطٌ به",
+    "F-09 (انقضاءُ العرض ودورانُه) — لا اختبارَ مرتبطٌ به",
+    "F-10 (عرضُ طلبٍ على الطريق نفسِه) — لا اختبارَ مرتبطٌ به",
+    "F-11 (الوصولُ للاستلام) — لا اختبارَ مرتبطٌ به",
+    "F-12 (الاستلام) — لا اختبارَ مرتبطٌ به",
+    "F-13 (التسليمُ وإثباتُه) — لا اختبارَ مرتبطٌ به",
+    "F-15 (الاسترداد) — لا اختبارَ مرتبطٌ به",
+    "F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به",
+    "F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به",
+    "F-18 (تحويلُ الطلب لمتجرٍ آخر) — لا اختبارَ مرتبطٌ به",
+    "F-19 (إسنادٌ إداريٌّ وإعادةُ إسناد) — لا اختبارَ مرتبطٌ به",
+    "F-20 (إرسالُ الطلب بواتساب) — لا اختبارَ مرتبطٌ به",
+    "F-21 (تسجيلُ مرشَّحٍ ثمّ تحويلُه) — لا اختبارَ مرتبطٌ به",
+    "F-22 (نقلُ متجرٍ بين مندوبين) — لا اختبارَ مرتبطٌ به",
+    "F-23 (عمولةُ المندوب) — لا اختبارَ مرتبطٌ به",
+    "F-24 (طلبُ سحبٍ وقرارُه) — لا اختبارَ مرتبطٌ به",
+    "F-25 (قيدٌ يدويٌّ في محفظة) — لا اختبارَ مرتبطٌ به",
+    "F-26 (مصروفٌ وخزينة) — لا اختبارَ مرتبطٌ به",
+    "F-27 (تسويةُ نقد السائق) — لا اختبارَ مرتبطٌ به",
+    "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
+    "F-29 (تعليقُ سائقٍ أو زبون) — لا اختبارَ مرتبطٌ به",
+    "F-30 (إعادةُ كلمةِ مرورٍ وإخراجٌ شامل) — لا اختبارَ مرتبطٌ به",
+    "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
+    "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
+    "F-33 (تبديلُ إعدادٍ حسّاس) — لا اختبارَ مرتبطٌ به",
+    "F-34 (بثٌّ للأدوار) — لا اختبارَ مرتبطٌ به",
+    "R1 — لا اختبارَ يحسمه بعد",
+    "R10 — لا اختبارَ يحسمه بعد",
+    "R11 — لا اختبارَ يحسمه بعد",
+    "R12 — لا اختبارَ يحسمه بعد",
+    "R13 — لا اختبارَ يحسمه بعد",
+    "R14 — لا اختبارَ يحسمه بعد",
+    "R15 — لا اختبارَ يحسمه بعد",
+    "R16 — لا اختبارَ يحسمه بعد",
+    "R17 — لا اختبارَ يحسمه بعد",
+    "R18 — لا اختبارَ يحسمه بعد",
+    "R19 — لا اختبارَ يحسمه بعد",
+    "R2 — لا اختبارَ يحسمه بعد",
+    "R20 — لا اختبارَ يحسمه بعد",
+    "R21 — لا اختبارَ يحسمه بعد",
+    "R22 — لا اختبارَ يحسمه بعد",
+    "R23 — لا اختبارَ يحسمه بعد",
+    "R24 — لا اختبارَ يحسمه بعد",
+    "R3 — لا اختبارَ يحسمه بعد",
+    "R4 — لا اختبارَ يحسمه بعد",
+    "R5 — لا اختبارَ يحسمه بعد",
+    "R6 — لا اختبارَ يحسمه بعد",
+    "R7 — لا اختبارَ يحسمه بعد",
+    "R8 — لا اختبارَ يحسمه بعد",
+    "R9 — لا اختبارَ يحسمه بعد"
+  ]
+}

@@ -38,7 +38,8 @@
 | ١٣ | [`13-migration.md`](13-migration.md) | **ما هو قائمٌ ويُعاد استعمالُه · وما شاخ** — و`TIG-1…4` |
 | ١٤ | [`14-owner-questions.md`](14-owner-questions.md) | **قراراتُ المالك اللازمةُ للبناء** |
 | ١٥ | [`15-implementation-plan.md`](15-implementation-plan.md) | **خطّةُ التنفيذ — إحدى عشرةَ مرحلةً قابلةً للإغلاق** |
-| ١٦ | [`P1-IMPLEMENTED.md`](P1-IMPLEMENTED.md) | **✅  مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — عقدُ الخصوصيّة وحرّاسُه الأربعة** |
+| ١٦ | [`P1-IMPLEMENTED.md`](P1-IMPLEMENTED.md) | **✅ `P-1` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — عقدُ الخصوصيّة وحرّاسُه الأربعة** |
+| ١٧ | [`P2-IMPLEMENTED.md`](P2-IMPLEMENTED.md) | **✅ `P-2` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — `TEST_TRUTH` وحرّاسُه الستّة** |
 
 ---
 
