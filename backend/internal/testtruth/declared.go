@@ -97,7 +97,18 @@ var Gaps = []GapDecl{
 	{ID: "XG-8", Title: "الإشعارُ يفتح الشاشةَ الأولى لا الكيان", Severity: "MEDIUM"},
 	{ID: "XG-9", Title: "٢٤ إشعاراً بلا توجيهِ تطبيق", Severity: "MEDIUM"},
 	{ID: "XG-10", Title: "لا عكسَ لعمولة المندوب عند الاسترداد", Severity: "BLOCKER"},
-	{ID: "XG-11", Title: "الاستردادُ يفشل إن سحب المندوبُ عمولتَه", Severity: "BLOCKER"},
+	// **والوصفُ صُحّح في `P-5` بقرار المالك** — والجوهرُ لم يتبدّل.
+	//
+	// **المُثبَتُ فعلاً**: **المتجرُ** لا المندوب. `reverseCommissions`
+	// تعكس مستحقَّ المتجر، **فإن كان قد سحبه أسقط `CHECK (balance >= 0)`
+	// المعاملةَ كلَّها** ⇒ `409` والمستردُّ للزبون صفر.
+	// **وحالُ المندوب تمرّ اليومَ بالعَرَض** لأنّ `XG-10` يعني ألّا عكسَ
+	// لقيده أصلاً.
+	//
+	// **والعقدُ العامُّ يشمل الجميع**:
+	//
+	//	CUSTOMER REFUND ENTITLEMENT MUST NOT DEPEND ON CURRENT DOWNSTREAM ACTOR BALANCES
+	{ID: "XG-11", Title: "حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت", Severity: "BLOCKER"},
 	{ID: "XG-12", Title: "لا طبقاتِ رصيد", Severity: "CRITICAL"},
 	{ID: "XG-13", Title: "لا مفتاحَ لمصدر احتساب العمولة", Severity: "HIGH"},
 	{ID: "XG-14", Title: "بوّابةُ platformCommission مثبَّتةٌ في الشيفرة", Severity: "CRITICAL"},
@@ -438,6 +449,134 @@ var TestMap = map[string]TestDecl{
 		Level: L2, Flows: []string{"F-14", "F-21", "F-24", "F-26"},
 		Defects: []string{"D2", "D5"},
 		Modes:   []string{"FAST", "FULL", "FINANCIAL"},
+	},
+
+	// ── `P-5` · التزامنُ ومنعُ التكرار ───────────────────────────
+	//
+	// **والخريطةُ الآليّةُ في `internal/racemap`** — وحارسٌ فيها يسقط
+	// إن أشارت إلى اختبارٍ لا وجودَ له.
+
+	// مِسنَدُ التزامن يختبر نفسَه.
+	"TestCONC_BarrierReleasesTogether": harness(),
+	"TestCONC_ProbeMeasuresOverlap":    harness(),
+	"TestCONC_TimeoutIsReportedNotHung": {
+		Level: L1, Purpose: PurposeHarnessSelf,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+	"TestCONC_TrueOverlapProvenByDatabase": {
+		Level: L3, Purpose: PurposeHarnessSelf,
+		Modes: []string{"FULL", "CONCURRENCY", "RELEASE"},
+	},
+	"TestTenFlowsMapped": harness(),
+	"TestEveryMappedTestExists": {
+		Level: L1, Purpose: PurposeGenerator,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+	"TestNoFalsePass": {
+		Level: L1, Purpose: PurposeGenerator,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+
+	// السباقاتُ على الطلب.
+	"TestRACE_TwoDriversSameOrder": {
+		Level: L5, Flows: []string{"F-07", "F-08"},
+		Risks:    []string{"R10"},
+		Settings: []string{"drivers.assignment_mode", "drivers.max_active_orders", "drivers.cash_limit"},
+		Modes:    []string{"FULL", "CONCURRENCY", "RELEASE"},
+	},
+	"TestRACE_MaxActiveOrders": {
+		Level: L5, Flows: []string{"F-08", "F-10"},
+		Risks:    []string{"R10"},
+		Settings: []string{"drivers.max_active_orders"},
+		Modes:    []string{"FULL", "CONCURRENCY", "RELEASE"},
+	},
+	"TestRACE_AdminVsAppTransition": {
+		Level: L5, Flows: []string{"F-19", "F-08"},
+		Risks: []string{"R7"},
+		Modes: []string{"FULL", "CONCURRENCY"},
+	},
+	"TestRACE_FinancialTruthAfterConcurrentDeliveries": {
+		Level: L5, Flows: []string{"F-13", "F-14"},
+		Settings: []string{"merchants.commission_percent", "delivery.fee"},
+		Modes:    []string{"FULL", "CONCURRENCY", "FINANCIAL", "RELEASE"},
+	},
+	"TestRACE_SettingChangeDuringSettlement": {
+		Level: L5, Flows: []string{"F-14", "F-33"},
+		Settings: []string{"merchants.commission_percent"},
+		Modes:    []string{"FULL", "CONCURRENCY", "FINANCIAL"},
+	},
+	"TestRACE_DuplicateLeadConversion": {
+		Level: L5, Flows: []string{"F-21", "F-22"},
+		Defects: []string{"D2"}, Gaps: []string{"XG-18"},
+		Modes: []string{"FULL", "CONCURRENCY", "RELEASE"},
+	},
+	"TestRACE_DuplicatePayout": {
+		Level: L5, Flows: []string{"F-24"},
+		Settings: []string{"payouts.min_amount"},
+		Modes:    []string{"FULL", "CONCURRENCY", "FINANCIAL", "RELEASE"},
+	},
+	"TestRACE_RefundVsPayout": {
+		Level: L5, Flows: []string{"F-15", "F-24"},
+		Gaps:  []string{"XG-10", "XG-11"},
+		Modes: []string{"FULL", "CONCURRENCY", "FINANCIAL", "RELEASE"},
+	},
+	"TestRACE_SessionRevokedDuringRequest": {
+		Level: L11, Flows: []string{"F-30"},
+		Risks: []string{"R15", "R16"},
+		Modes: []string{"FULL", "CONCURRENCY", "SECURITY"},
+	},
+	"TestRACE_LocationQueueIsClientSide": {
+		Level: L5, Flows: []string{"F-11", "F-13"},
+		Risks: []string{"R19", "R20"},
+		Modes: []string{"FULL", "CONCURRENCY"},
+	},
+
+	// منعُ التكرار.
+	"TestIDEM_SameKeySamePayloadSequential": {
+		Level: L4, Flows: []string{"F-01", "F-03"},
+		Risks: []string{"R8"}, Modes: []string{"FULL", "RELEASE"},
+	},
+	"TestIDEM_SameKeySamePayloadConcurrent": {
+		Level: L5, Flows: []string{"F-01", "F-03"},
+		Risks: []string{"R8"}, Modes: []string{"FULL", "CONCURRENCY", "RELEASE"},
+	},
+	"TestIDEM_SameKeyDifferentPayload": {
+		Level: L4, Flows: []string{"F-01", "F-03"},
+		Risks: []string{"R8"}, Modes: []string{"FULL", "SECURITY"},
+	},
+	"TestIDEM_InProgressOverlap": {
+		Level: L5, Flows: []string{"F-03"},
+		Risks: []string{"R8"}, Modes: []string{"FULL", "CONCURRENCY", "RELEASE"},
+	},
+	"TestIDEM_ErrorReleasesClaim": {
+		Level: L4, Flows: []string{"F-03"},
+		Risks: []string{"R8"}, Modes: []string{"FULL", "RELEASE"},
+	},
+	"TestIDEM_CommitThenLostResponse": {
+		Level: L4, Flows: []string{"F-03"},
+		Risks: []string{"R8"}, Modes: []string{"FULL", "RELEASE"},
+	},
+	"TestIDEM_CleanupAfterTTL": {
+		Level: L4, Flows: []string{"F-03"},
+		Risks: []string{"R8"}, Modes: []string{"FULL", "RELEASE"},
+	},
+
+	// ── الشائخُ — عقدٌ بُدِّل ──────────────────────────────────────
+	//
+	// **`TestRepTarget_GrantedOnDelivery` كُتب ٢٠٢٦-٠٨-٣٠** حين كان هدفُ
+	// المندوب يعدّ **طلبات متاجره المسلَّمة**. **وبدّل المالكُ العقدَ في
+	// اليوم التالي** (٢٠٢٦-٠٨-٣١، التزام `5da3dbed`): **الهدفُ يعدّ
+	// العملاءَ المسجَّلين لا طلباتِهم.**
+	//
+	// **فحُذف النداءُ من مسار التسليم عمداً**، وفي موضعه تعليقٌ يقول:
+	// «**ولا هدفَ للمندوب هنا — ومكانُه تبدّل**… ونداءٌ لا يغيّر شيئاً
+	// أسوأُ من غيابه». **والاختبارُ لم يُحدَّث معه.**
+	//
+	// **فسقوطُه ليس عيبَ منتجٍ ولا يُجمَّد** — **هو اختبارٌ يقيس عقداً
+	// أُلغي.** والحذفُ أو إعادةُ الصياغة قرارُ منتجٍ للمالك.
+	"TestRepTarget_GrantedOnDelivery": {
+		Level: L4, Purpose: PurposeStale, Flows: []string{"F-21", "F-23"},
+		Modes: []string{},
 	},
 }
 

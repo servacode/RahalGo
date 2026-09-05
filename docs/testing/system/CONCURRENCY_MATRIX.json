@@ -1,0 +1,294 @@
+{
+  "counts": {
+    "total": 10,
+    "local": 9,
+    "requires_p0": 0,
+    "deferred_p8": 1,
+    "pass": 4,
+    "risk_confirmed": 3,
+    "proven": 1,
+    "expected_fail": 1,
+    "partial": 1,
+    "not_implemented": 0
+  },
+  "races": [
+    {
+      "id": "C-01",
+      "flows": [
+        "F-07",
+        "F-08"
+      ],
+      "title": "سائقان يقبلان الطلبَ نفسَه",
+      "actors": [
+        "driver",
+        "driver"
+      ],
+      "shared_resource": "orders.driver_id",
+      "race_window": "UPDATE … WHERE driver_id IS NULL AND status='dispatching' — **شرطيٌّ ذرّيّ**",
+      "invariant": "AT MOST ONE DRIVER OWNS THE ORDER",
+      "tests": [
+        "TestRACE_TwoDriversSameOrder"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R10"
+      ],
+      "financial_invariants": [
+        "FI-05",
+        "FI-06",
+        "FI-02"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "ATOMIC (شرطٌ في جملةِ التحديث نفسِها)",
+      "evidence": "5 جولات · فائزٌ واحدٌ في كلٍّ · صاحبُ الطلبِ واحدٌ في القاعدة"
+    },
+    {
+      "id": "C-02",
+      "flows": [
+        "F-08",
+        "F-10"
+      ],
+      "title": "سقفُ الطلبات النشطة",
+      "actors": [
+        "driver",
+        "driver"
+      ],
+      "shared_resource": "عدُّ طلبات السائق المفتوحة",
+      "race_window": "driver_handlers.go:519 يقرأ العددَ · ثمّ يقارن في Go · ثمّ يكتب — **بلا قفلٍ ولا معاملة**",
+      "invariant": "active orders \u003c= drivers.max_active_orders",
+      "tests": [
+        "TestRACE_MaxActiveOrders"
+      ],
+      "result": "RISK_CONFIRMED",
+      "registers": [
+        "R10"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "NON_ATOMIC (قراءةٌ ثمّ كتابةٌ في جملتين)",
+      "evidence": "الأساسُ المتتابعُ 409 · والتزامنُ تجاوزَ السقفَ في 3 من 5"
+    },
+    {
+      "id": "C-03",
+      "flows": [
+        "F-21",
+        "F-22"
+      ],
+      "title": "تحويلُ مرشَّحٍ واحدٍ مرّتين",
+      "actors": [
+        "admin",
+        "admin"
+      ],
+      "shared_resource": "merchant_leads.merchant_id",
+      "race_window": "leads_handlers.go:735 يقرأ merchant_id ثمّ يُنشئ المتجرَ — **قراءةٌ ثمّ كتابةٌ بلا قفل**",
+      "invariant": "ONE REAL MERCHANT IDENTITY MUST NOT BECOME TWO PAYABLE MERCHANT/REP RELATIONSHIPS",
+      "tests": [
+        "TestRACE_DuplicateLeadConversion"
+      ],
+      "result": "PROVEN",
+      "registers": [
+        "XG-18",
+        "D2"
+      ],
+      "financial_invariants": [
+        "FI-02",
+        "FI-03",
+        "FI-05"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "NON_ATOMIC (سبعُ كتاباتٍ بلا معاملة — D2)",
+      "evidence": "جولةٌ من ثلاث: هويّةٌ واحدةٌ صارت متجرين، كلاهما منسوبٌ للمندوب"
+    },
+    {
+      "id": "C-04",
+      "flows": [
+        "F-19",
+        "F-08"
+      ],
+      "title": "تدخّلُ الإدارة مقابلَ فعلِ التطبيق",
+      "actors": [
+        "admin",
+        "driver"
+      ],
+      "shared_resource": "orders.driver_id · orders.status",
+      "race_window": "إسنادٌ إداريٌّ مقابلَ قبولِ سائقٍ على الطلب نفسِه",
+      "invariant": "لا حالَ مكسورةٌ ولا انتقالٌ مستحيلٌ ولا أثرٌ ماليٌّ مزدوج",
+      "tests": [
+        "TestRACE_AdminVsAppTransition"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R7"
+      ],
+      "financial_invariants": [
+        "FI-05",
+        "FI-06",
+        "FI-02",
+        "FI-10"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "PARTIALLY_ATOMIC (settle داخل معاملةِ الانتقال)",
+      "evidence": "5 جولات · نجح واحدٌ في كلٍّ · وحالٌ مشروعةٌ دائماً"
+    },
+    {
+      "id": "C-05",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "title": "مفتاحُ تكرارٍ واحدٌ بحمولةٍ واحدة",
+      "actors": [
+        "customer",
+        "customer"
+      ],
+      "shared_resource": "idempotency_keys",
+      "race_window": "INSERT … ON CONFLICT DO NOTHING — **مطالبةٌ ذرّيّة**",
+      "invariant": "ONE ECONOMIC EFFECT PER KEY",
+      "tests": [
+        "TestIDEM_SameKeySamePayloadSequential",
+        "TestIDEM_SameKeySamePayloadConcurrent",
+        "TestIDEM_InProgressOverlap"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R8"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "ATOMIC (قيدُ التفرّد يحسم المطالبة)",
+      "evidence": "5 جولاتٍ متزامنة · طلبٌ واحدٌ في كلٍّ · والثاني in_progress أثناء نافذةِ الأوّل"
+    },
+    {
+      "id": "C-06",
+      "flows": [
+        "F-03"
+      ],
+      "title": "مطالبةٌ يتيمةٌ بعد فقدِ الردّ",
+      "actors": [
+        "customer"
+      ],
+      "shared_resource": "idempotency_keys.done",
+      "race_window": "المطالبةُ تُكتب في claimIdempotency والختمُ في storeIdempotency — **وسقوطُ العمليّة بينهما يترك done=false**",
+      "invariant": "المطالبةُ اليتيمةُ لا تحجب صاحبَها إلى الأبد",
+      "tests": [
+        "TestIDEM_CommitThenLostResponse",
+        "TestIDEM_CleanupAfterTTL"
+      ],
+      "result": "RISK_CONFIRMED",
+      "registers": [
+        "R8"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "NON_ATOMIC (مطالبةٌ ثمّ عملٌ ثمّ ختمٌ في ثلاثِ عمليّات)",
+      "evidence": "409 in_progress · ولا مسارَ يُطلقها إلّا التقليمُ بعد 24h"
+    },
+    {
+      "id": "C-07",
+      "flows": [
+        "F-24"
+      ],
+      "title": "قرارا سحبٍ متزامنان",
+      "actors": [
+        "admin",
+        "admin"
+      ],
+      "shared_resource": "payout_requests.status · محفظةُ الطالب",
+      "race_window": "SELECT … FOR UPDATE ثمّ شرطُ status='pending' داخلَ معاملة",
+      "invariant": "لا تسويةٌ مزدوجةٌ ولا خصمٌ مزدوج",
+      "tests": [
+        "TestRACE_DuplicatePayout"
+      ],
+      "result": "PASS",
+      "financial_invariants": [
+        "FI-11",
+        "FI-05",
+        "FI-04",
+        "FI-02"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "ATOMIC (Begin + FOR UPDATE + شرطُ الحال)",
+      "evidence": "قيدُ سحبٍ واحدٌ · مجموعُه −100000 · ونجح قرارٌ واحدٌ من اثنين"
+    },
+    {
+      "id": "C-08",
+      "flows": [
+        "F-15",
+        "F-24"
+      ],
+      "title": "استردادٌ مقابلَ سحبٍ على المستحقِّ نفسِه",
+      "actors": [
+        "admin",
+        "admin"
+      ],
+      "shared_resource": "محفظةُ صاحب المتجر",
+      "race_window": "reverseCommissions يعكس المستحقَّ · وقرارُ السحب يخصمه — **والقيدُ CHECK (balance \u003e= 0) يُسقط الخاسر**",
+      "invariant": "CUSTOMER REFUND ENTITLEMENT MUST NOT DEPEND ON CURRENT DOWNSTREAM ACTOR BALANCES",
+      "tests": [
+        "TestRACE_RefundVsPayout"
+      ],
+      "result": "EXPECTED_FAIL",
+      "registers": [
+        "XG-10",
+        "XG-11"
+      ],
+      "financial_invariants": [
+        "FI-11",
+        "FI-05",
+        "FI-04",
+        "FI-06",
+        "FI-10"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "PARTIALLY_ATOMIC (كلٌّ ذرّيٌّ في نفسِه · ولا تنسيقَ بينهما)",
+      "evidence": "السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0"
+    },
+    {
+      "id": "C-09",
+      "flows": [
+        "F-30"
+      ],
+      "title": "إبطالُ جلسةٍ أثناء طلبٍ جارٍ",
+      "actors": [
+        "admin",
+        "customer"
+      ],
+      "shared_resource": "refresh_tokens · رمزُ الوصول",
+      "race_window": "revokeAllSessions تُبطل رموزَ التجديد · ورمزُ الوصول موقَّعٌ ولا يُسأل عنها",
+      "invariant": "إبطالُ الجلسة يُنهي القدرةَ على العمل",
+      "tests": [
+        "TestRACE_SessionRevokedDuringRequest"
+      ],
+      "result": "RISK_CONFIRMED",
+      "registers": [
+        "R15",
+        "R16"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "—",
+      "evidence": "نداءٌ بعد الإبطال بالرمز نفسِه ⇒ 200 · والطبقةُ الكاملةُ REQUIRES_P0"
+    },
+    {
+      "id": "C-10",
+      "flows": [
+        "F-11",
+        "F-13"
+      ],
+      "title": "طابورُ موقع السائق",
+      "actors": [
+        "driver-app"
+      ],
+      "shared_resource": "طابورُ المواقع في الجهاز",
+      "race_window": "all → شبكة → clear بلا قفلٍ — **في العميل لا في الخادم**",
+      "invariant": "لا نقطةَ تُمسَح قبل أن تصل · ولا نقطةَ تُرسَل مرّتين",
+      "tests": [
+        "TestRACE_LocationQueueIsClientSide"
+      ],
+      "result": "PARTIAL",
+      "registers": [
+        "R19",
+        "R20"
+      ],
+      "where": "DEFERRED_TO_P8",
+      "transaction_class": "—",
+      "evidence": "بابُ الخادم يتحمّل 4 دفعاتٍ متزامنةً بلا ازدواج · وفقدُ الدفعة في العميل → P-8"
+    }
+  ]
+}

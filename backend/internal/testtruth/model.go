@@ -65,6 +65,12 @@ const (
 	PurposeInfrastructure Purpose = "INFRASTRUCTURE_TEST" // بنيةٌ تحتيّة
 	PurposeGenerator      Purpose = "GENERATOR_TEST"      // يحرس مولِّداً
 	PurposeHarnessSelf    Purpose = "HARNESS_SELF_TEST"   // المِسنَدُ يختبر نفسَه
+	// PurposeStale اختبارٌ يقيس عقداً بُدِّل — **ولا يحرس شيئاً قائماً.**
+	//
+	// **وسقوطُه ليس عيبَ منتج**: يقيس ما قرّر المالكُ تبديلَه، **فيُوسَم
+	// ولا يُحذَف بيدي** — والحذفُ أو إعادةُ الصياغة قرارُ منتجٍ لا قرارُ
+	// مِسنَد.
+	PurposeStale Purpose = "STALE_CONTRACT_MISMATCH"
 )
 
 // TestFn اختبارٌ واحدٌ كما اكتُشف في الشجرة — **مستخرَجٌ لا معلَن.**

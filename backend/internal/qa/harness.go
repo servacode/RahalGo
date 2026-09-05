@@ -203,7 +203,16 @@ var (
 type Res struct {
 	Code int
 	Body []byte
+	// Head ترويساتُ الردّ.
+	//
+	// **وأُضيفت في `P-5`**: عقدُ منعِ التكرار يُعلَن بترويسة
+	// `Idempotent-Replay`، **واختبارٌ لا يقرؤها يحكم على الردّ بجسمه
+	// وحدَه** — فلا يفرّق بين عملٍ جديدٍ وإعادةِ جوابٍ قديم.
+	Head http.Header
 }
+
+// Replay أهذا الردُّ إعادةُ جوابٍ محفوظٍ لمفتاحٍ سبق.
+func (r Res) Replay() bool { return r.Head.Get("Idempotent-Replay") == "true" }
 
 // JSON **يفكّ غلافَ `{"data": …}`** — وهو غلافُ كلّ ردٍّ في هذا المحرّك.
 func (r Res) JSON() map[string]any {
@@ -259,7 +268,7 @@ func (h *Harness) Call(method, path, token string, body any, headers map[string]
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
-	return Res{Code: resp.StatusCode, Body: b}
+	return Res{Code: resp.StatusCode, Body: b, Head: resp.Header.Clone()}
 }
 
 func (h *Harness) GET(path, token string) Res { return h.Call("GET", path, token, nil, nil) }

@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 206,
-    "test_funcs": 644
+    "test_files": 211,
+    "test_funcs": 668
   },
   "flows": [
     {
@@ -70,7 +70,10 @@
         "TestD20_CustomerRealtimeVsREST",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
-        "TestPushPayloadScope"
+        "TestPushPayloadScope",
+        "TestIDEM_SameKeyDifferentPayload",
+        "TestIDEM_SameKeySamePayloadConcurrent",
+        "TestIDEM_SameKeySamePayloadSequential"
       ],
       "status": "COVERED"
     },
@@ -123,8 +126,16 @@
       "risks": [
         "R8"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestIDEM_CleanupAfterTTL",
+        "TestIDEM_CommitThenLostResponse",
+        "TestIDEM_ErrorReleasesClaim",
+        "TestIDEM_InProgressOverlap",
+        "TestIDEM_SameKeyDifferentPayload",
+        "TestIDEM_SameKeySamePayloadConcurrent",
+        "TestIDEM_SameKeySamePayloadSequential"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "F-04",
@@ -216,8 +227,10 @@
       "risks": [
         "R10"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestRACE_TwoDriversSameOrder"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-08",
@@ -246,7 +259,10 @@
         "R10"
       ],
       "tests": [
-        "TestSampleFactory_DriverOnShiftWithCash"
+        "TestSampleFactory_DriverOnShiftWithCash",
+        "TestRACE_AdminVsAppTransition",
+        "TestRACE_MaxActiveOrders",
+        "TestRACE_TwoDriversSameOrder"
       ],
       "status": "PARTIALLY_COVERED"
     },
@@ -300,8 +316,10 @@
       "risks": [
         "R10"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestRACE_MaxActiveOrders"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-11",
@@ -322,8 +340,10 @@
       "gaps": [
         "XG-6"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestRACE_LocationQueueIsClientSide"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-12",
@@ -372,7 +392,9 @@
         "D13"
       ],
       "tests": [
-        "TestFIN_MoneyTimingByStatus"
+        "TestFIN_MoneyTimingByStatus",
+        "TestRACE_LocationQueueIsClientSide",
+        "TestRACE_FinancialTruthAfterConcurrentDeliveries"
       ],
       "status": "PARTIALLY_COVERED"
     },
@@ -416,7 +438,9 @@
         "TestFIN_OrderEconomicConservation",
         "TestFIN_SnapshotVsLiveEconomics",
         "TestD20_MerchantRealtimeVsREST",
-        "TestD21_CustomerRedactionAgainstContract"
+        "TestD21_CustomerRedactionAgainstContract",
+        "TestRACE_FinancialTruthAfterConcurrentDeliveries",
+        "TestRACE_SettingChangeDuringSettlement"
       ],
       "status": "COVERED"
     },
@@ -449,7 +473,8 @@
         "TestFIN_MerchantWithdrewThenRefund",
         "TestFIN_RefundNotConditionedOnRepBalance",
         "TestFIN_RepCommissionReversal",
-        "TestFIN_RepeatedRefundIsIdempotent"
+        "TestFIN_RepeatedRefundIsIdempotent",
+        "TestRACE_RefundVsPayout"
       ],
       "status": "COVERED"
     },
@@ -543,7 +568,8 @@
         "XG-5"
       ],
       "tests": [
-        "TestFIN_CashExposureContract"
+        "TestFIN_CashExposureContract",
+        "TestRACE_AdminVsAppTransition"
       ],
       "status": "PARTIALLY_COVERED"
     },
@@ -597,10 +623,12 @@
         "XG-30"
       ],
       "tests": [
+        "TestRepTarget_GrantedOnDelivery",
         "TestFIN_TargetRewardPrecedesCommit",
-        "TestFIN_TransactionBoundaries"
+        "TestFIN_TransactionBoundaries",
+        "TestRACE_DuplicateLeadConversion"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-22",
@@ -621,8 +649,10 @@
       "gaps": [
         "XG-17"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestRACE_DuplicateLeadConversion"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-23",
@@ -650,6 +680,7 @@
         "XG-28"
       ],
       "tests": [
+        "TestRepTarget_GrantedOnDelivery",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_RepCommissionReversal",
@@ -686,9 +717,11 @@
       "tests": [
         "TestFIN_TransactionBoundaries",
         "TestFIN_MerchantWithdrewThenRefund",
-        "TestFIN_RepeatedPayoutDecision"
+        "TestFIN_RepeatedPayoutDecision",
+        "TestRACE_DuplicatePayout",
+        "TestRACE_RefundVsPayout"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-25",
@@ -849,7 +882,8 @@
       ],
       "tests": [
         "TestSampleFactory_ForeignRoleDenied",
-        "TestSampleFactory_ValidToken"
+        "TestSampleFactory_ValidToken",
+        "TestRACE_SessionRevokedDuringRequest"
       ],
       "status": "PARTIALLY_COVERED"
     },
@@ -925,7 +959,8 @@
         "XG-28"
       ],
       "tests": [
-        "TestFIN_SnapshotVsLiveEconomics"
+        "TestFIN_SnapshotVsLiveEconomics",
+        "TestRACE_SettingChangeDuringSettlement"
       ],
       "status": "PARTIALLY_COVERED"
     },
@@ -966,7 +1001,8 @@
       "title": "convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤها مُهمَل",
       "tests": [
         "TestFIN_TargetRewardPrecedesCommit",
-        "TestFIN_TransactionBoundaries"
+        "TestFIN_TransactionBoundaries",
+        "TestRACE_DuplicateLeadConversion"
       ],
       "status": "EXPECTED_FAIL"
     },
@@ -1176,8 +1212,10 @@
       "flows": [
         "F-08"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestRACE_AdminVsAppTransition"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R8",
@@ -1188,8 +1226,16 @@
         "F-03",
         "F-24"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestIDEM_CleanupAfterTTL",
+        "TestIDEM_CommitThenLostResponse",
+        "TestIDEM_ErrorReleasesClaim",
+        "TestIDEM_InProgressOverlap",
+        "TestIDEM_SameKeyDifferentPayload",
+        "TestIDEM_SameKeySamePayloadConcurrent",
+        "TestIDEM_SameKeySamePayloadSequential"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R9",
@@ -1207,8 +1253,11 @@
         "F-08",
         "F-10"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestRACE_MaxActiveOrders",
+        "TestRACE_TwoDriversSameOrder"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R11",
@@ -1252,7 +1301,8 @@
         "F-30"
       ],
       "tests": [
-        "TestSampleFactory_ValidToken"
+        "TestSampleFactory_ValidToken",
+        "TestRACE_SessionRevokedDuringRequest"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -1263,8 +1313,10 @@
       "flows": [
         "F-30"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestRACE_SessionRevokedDuringRequest"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R17",
@@ -1284,15 +1336,19 @@
       "id": "R19",
       "title": "سباقُ مسح طابور المواقع",
       "strategy": "دفعتا مواقعَ متداخلتان — L7",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestRACE_LocationQueueIsClientSide"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R20",
       "title": "مسحُ الدفعة بلا قراءة accepted",
       "strategy": "نقطةٌ بطابعٍ مستقبليّ — L1",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestRACE_LocationQueueIsClientSide"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R21",
@@ -1376,17 +1432,19 @@
       "severity": "BLOCKER",
       "tests": [
         "TestFIN_RefundNotConditionedOnRepBalance",
-        "TestFIN_RepCommissionReversal"
+        "TestFIN_RepCommissionReversal",
+        "TestRACE_RefundVsPayout"
       ],
       "status": "EXPECTED_FAIL"
     },
     {
       "id": "XG-11",
-      "title": "الاستردادُ يفشل إن سحب المندوبُ عمولتَه",
+      "title": "حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت",
       "severity": "BLOCKER",
       "tests": [
         "TestFIN_MerchantWithdrewThenRefund",
-        "TestFIN_RefundNotConditionedOnRepBalance"
+        "TestFIN_RefundNotConditionedOnRepBalance",
+        "TestRACE_RefundVsPayout"
       ],
       "status": "EXPECTED_FAIL"
     },
@@ -1440,8 +1498,10 @@
       "id": "XG-18",
       "title": "لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين",
       "severity": "BLOCKER",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestRACE_DuplicateLeadConversion"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "XG-19",
@@ -1872,7 +1932,8 @@
       "tests": [
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_OrderEconomicConservation",
-        "TestFIN_SnapshotVsLiveEconomics"
+        "TestFIN_SnapshotVsLiveEconomics",
+        "TestRACE_FinancialTruthAfterConcurrentDeliveries"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -1957,8 +2018,10 @@
         "driver",
         "merchant"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestRACE_TwoDriversSameOrder"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "drivers.cash_limit",
@@ -1979,7 +2042,8 @@
         "merchant"
       ],
       "tests": [
-        "TestFIN_CashExposureContract"
+        "TestFIN_CashExposureContract",
+        "TestRACE_TwoDriversSameOrder"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -2064,8 +2128,11 @@
         "driver",
         "merchant"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestRACE_MaxActiveOrders",
+        "TestRACE_TwoDriversSameOrder"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "drivers.monthly_target",
@@ -2410,7 +2477,9 @@
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_OrderEconomicConservation",
-        "TestFIN_SnapshotVsLiveEconomics"
+        "TestFIN_SnapshotVsLiveEconomics",
+        "TestRACE_FinancialTruthAfterConcurrentDeliveries",
+        "TestRACE_SettingChangeDuringSettlement"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -2758,7 +2827,8 @@
         "rep"
       ],
       "tests": [
-        "TestFIN_RepeatedPayoutDecision"
+        "TestFIN_RepeatedPayoutDecision",
+        "TestRACE_DuplicatePayout"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -4352,7 +4422,13 @@
       "name": "TestRepTarget_GrantedOnDelivery",
       "file": "internal/orders/rep_target_test.go",
       "package": "orders_test",
-      "orphan": true
+      "level": "L4",
+      "purpose": "STALE_CONTRACT_MISMATCH",
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "orphan": false
     },
     {
       "name": "TestRepTarget_NotGrantedWhenRepIsBuyer",
@@ -4983,6 +5059,56 @@
       "file": "internal/qa/city_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestCONC_BarrierReleasesTogether",
+      "file": "internal/qa/concurrency_selftest_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCONC_ProbeMeasuresOverlap",
+      "file": "internal/qa/concurrency_selftest_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCONC_TimeoutIsReportedNotHung",
+      "file": "internal/qa/concurrency_selftest_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCONC_TrueOverlapProvenByDatabase",
+      "file": "internal/qa/concurrency_selftest_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestCONTRACT_FieldsExist",
@@ -6164,6 +6290,334 @@
       "orphan": false
     },
     {
+      "name": "TestIDEM_CleanupAfterTTL",
+      "file": "internal/qa/race_lead_idem_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_CommitThenLostResponse",
+      "file": "internal/qa/race_lead_idem_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_ErrorReleasesClaim",
+      "file": "internal/qa/race_lead_idem_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_InProgressOverlap",
+      "file": "internal/qa/race_lead_idem_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_SameKeyDifferentPayload",
+      "file": "internal/qa/race_lead_idem_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_SameKeySamePayloadConcurrent",
+      "file": "internal/qa/race_lead_idem_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_SameKeySamePayloadSequential",
+      "file": "internal/qa/race_lead_idem_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "modes": [
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_DuplicateLeadConversion",
+      "file": "internal/qa/race_lead_idem_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-21",
+        "F-22"
+      ],
+      "defects": [
+        "D2"
+      ],
+      "gaps": [
+        "XG-18"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_DuplicatePayout",
+      "file": "internal/qa/race_lead_idem_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-24"
+      ],
+      "settings": [
+        "payouts.min_amount"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_LocationQueueIsClientSide",
+      "file": "internal/qa/race_money_session_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-11",
+        "F-13"
+      ],
+      "risks": [
+        "R19",
+        "R20"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_RefundVsPayout",
+      "file": "internal/qa/race_money_session_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-15",
+        "F-24"
+      ],
+      "gaps": [
+        "XG-10",
+        "XG-11"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_SessionRevokedDuringRequest",
+      "file": "internal/qa/race_money_session_test.go",
+      "package": "qa",
+      "level": "L11",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_AdminVsAppTransition",
+      "file": "internal/qa/race_orders_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-19",
+        "F-08"
+      ],
+      "risks": [
+        "R7"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_FinancialTruthAfterConcurrentDeliveries",
+      "file": "internal/qa/race_orders_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-13",
+        "F-14"
+      ],
+      "settings": [
+        "merchants.commission_percent",
+        "delivery.fee"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_MaxActiveOrders",
+      "file": "internal/qa/race_orders_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-08",
+        "F-10"
+      ],
+      "risks": [
+        "R10"
+      ],
+      "settings": [
+        "drivers.max_active_orders"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_SettingChangeDuringSettlement",
+      "file": "internal/qa/race_orders_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-14",
+        "F-33"
+      ],
+      "settings": [
+        "merchants.commission_percent"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "FINANCIAL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRACE_TwoDriversSameOrder",
+      "file": "internal/qa/race_orders_test.go",
+      "package": "qa",
+      "level": "L5",
+      "flows": [
+        "F-07",
+        "F-08"
+      ],
+      "risks": [
+        "R10"
+      ],
+      "settings": [
+        "drivers.assignment_mode",
+        "drivers.max_active_orders",
+        "drivers.cash_limit"
+      ],
+      "modes": [
+        "FULL",
+        "CONCURRENCY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestRRT_001_OnlyOwnDriverGetsRoute",
       "file": "internal/qa/reroute_test.go",
       "package": "qa",
@@ -6360,6 +6814,44 @@
       "file": "internal/qa/zone_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestEveryMappedTestExists",
+      "file": "internal/racemap/racemap_test.go",
+      "package": "racemap",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestNoFalsePass",
+      "file": "internal/racemap/racemap_test.go",
+      "package": "racemap",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestTenFlowsMapped",
+      "file": "internal/racemap/racemap_test.go",
+      "package": "racemap",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
     },
     {
       "name": "TestBonusAndReferral_OncePerPhone",
@@ -7901,34 +8393,25 @@
     "D6 — لا اختبارَ انحدارٍ بعد",
     "D8 — لا اختبارَ انحدارٍ بعد",
     "D9 — لا اختبارَ انحدارٍ بعد",
-    "F-03 (ردُّ إنشاءٍ ضائع) — لا اختبارَ مرتبطٌ به",
     "F-05 (القبولُ التلقائيّ) — لا اختبارَ مرتبطٌ به",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
-    "F-07 (عرضُ الطلب على سائق) — لا اختبارَ مرتبطٌ به",
     "F-09 (انقضاءُ العرض ودورانُه) — لا اختبارَ مرتبطٌ به",
-    "F-10 (عرضُ طلبٍ على الطريق نفسِه) — لا اختبارَ مرتبطٌ به",
-    "F-11 (الوصولُ للاستلام) — لا اختبارَ مرتبطٌ به",
     "F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به",
     "F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به",
     "F-18 (تحويلُ الطلب لمتجرٍ آخر) — لا اختبارَ مرتبطٌ به",
     "F-20 (إرسالُ الطلب بواتساب) — لا اختبارَ مرتبطٌ به",
-    "F-22 (نقلُ متجرٍ بين مندوبين) — لا اختبارَ مرتبطٌ به",
     "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
     "F-34 (بثٌّ للأدوار) — لا اختبارَ مرتبطٌ به",
     "R1 — لا اختبارَ يحسمه بعد",
-    "R10 — لا اختبارَ يحسمه بعد",
     "R11 — لا اختبارَ يحسمه بعد",
     "R12 — لا اختبارَ يحسمه بعد",
     "R13 — لا اختبارَ يحسمه بعد",
     "R14 — لا اختبارَ يحسمه بعد",
-    "R16 — لا اختبارَ يحسمه بعد",
     "R17 — لا اختبارَ يحسمه بعد",
     "R18 — لا اختبارَ يحسمه بعد",
-    "R19 — لا اختبارَ يحسمه بعد",
     "R2 — لا اختبارَ يحسمه بعد",
-    "R20 — لا اختبارَ يحسمه بعد",
     "R21 — لا اختبارَ يحسمه بعد",
     "R22 — لا اختبارَ يحسمه بعد",
     "R23 — لا اختبارَ يحسمه بعد",
@@ -7937,8 +8420,6 @@
     "R4 — لا اختبارَ يحسمه بعد",
     "R5 — لا اختبارَ يحسمه بعد",
     "R6 — لا اختبارَ يحسمه بعد",
-    "R7 — لا اختبارَ يحسمه بعد",
-    "R8 — لا اختبارَ يحسمه بعد",
     "R9 — لا اختبارَ يحسمه بعد"
   ]
 }

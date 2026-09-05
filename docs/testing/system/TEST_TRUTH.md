@@ -19,18 +19,18 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **206** |
-| دوالُّ اختبار | **644** |
+| ملفّاتُ اختبار | **211** |
+| دوالُّ اختبار | **668** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 644
-MAPPED     = 26
-INFRA      = 49
-ORPHAN     = 569
+TOTAL      = 668
+MAPPED     = 44
+INFRA      = 56
+ORPHAN     = 568
 ```
 
 **واليتيمُ اختبارٌ لا يعرف ماذا يحرس** — **ولا يُسقط البناءَ اليومَ**،
@@ -41,7 +41,7 @@ ORPHAN     = 569
 | `qa` | 121 |
 | `server` | 116 |
 | `routing` | 76 |
-| `orders_test` | 61 |
+| `orders_test` | 60 |
 | `orders` | 54 |
 | `identity` | 22 |
 | `settings` | 14 |
@@ -55,11 +55,11 @@ ORPHAN     = 569
 
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
-| **التدفّقات** | 34 | 18 | 16 |
+| **التدفّقات** | 34 | 23 | 11 |
 | **العيوب** | 23 | 8 | 15 |
-| **المخاطر** | 24 | 1 | 23 |
-| **فجواتُ العقد** | 26 | 3 | 23 |
-| **إعداداتُ السلوك** | 95 | 7 | 88 |
+| **المخاطر** | 24 | 7 | 17 |
+| **فجواتُ العقد** | 26 | 4 | 22 |
+| **إعداداتُ السلوك** | 95 | 9 | 86 |
 
 ---
 
@@ -68,7 +68,7 @@ ORPHAN     = 569
 | ID | العنوان | الحال | الاختبارات |
 |---|---|---|---|
 | **D1** | فكُّ الإسناد بلا حدثٍ في order_events | `NO_REGRESSION_TEST_YET` | — |
-| **D2** | convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤه… | `EXPECTED_FAIL` | `TestFIN_TargetRewardPrecedesCommit` · `TestFIN_TransactionBoundaries` |
+| **D2** | convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤه… | `EXPECTED_FAIL` | `TestFIN_TargetRewardPrecedesCommit` · `TestFIN_TransactionBoundaries` · `TestRACE_DuplicateLeadConversion` |
 | **D3** | «تذكّرني» تنقلب دائمةً بعد أوّل تجديد | `NO_REGRESSION_TEST_YET` | — |
 | **D4** | سقفُ المفتوح داخلَ بوّابة واتساب | `NO_REGRESSION_TEST_YET` | — |
 | **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `EXPECTED_FAIL` | `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
@@ -102,15 +102,15 @@ ORPHAN     = 569
 | **XG-7** | `HIGH` | `orders.auto_accept_min` | `NOT_IMPLEMENTED` | — |
 | **XG-8** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-9** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
-| **XG-10** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` |
-| **XG-11** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` |
+| **XG-10** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` · `TestRACE_RefundVsPayout` |
+| **XG-11** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` · `TestRACE_RefundVsPayout` |
 | **XG-12** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-13** | `HIGH` | — | `EXPECTED_FAIL` | `TestFIN_CommissionSourceMatrix` · `TestFIN_SnapshotVsLiveEconomics` |
 | **XG-14** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-15** | `HIGH` | `sales.activation_orders` | `NOT_IMPLEMENTED` | — |
 | **XG-16** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-17** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-18** | `BLOCKER` | — | `NOT_IMPLEMENTED` | — |
+| **XG-18** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestRACE_DuplicateLeadConversion` |
 | **XG-19** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-20** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-21** | `BLOCKER` | — | `NOT_IMPLEMENTED` | — |
@@ -130,7 +130,7 @@ ORPHAN     = 569
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 54
+COVERAGE GAPS    = 43
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -150,30 +150,30 @@ COVERAGE GAPS    = 54
 - D6 — لا اختبارَ انحدارٍ بعد
 - D8 — لا اختبارَ انحدارٍ بعد
 - D9 — لا اختبارَ انحدارٍ بعد
-- F-03 (ردُّ إنشاءٍ ضائع) — لا اختبارَ مرتبطٌ به
 - F-05 (القبولُ التلقائيّ) — لا اختبارَ مرتبطٌ به
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
-- F-07 (عرضُ الطلب على سائق) — لا اختبارَ مرتبطٌ به
 - F-09 (انقضاءُ العرض ودورانُه) — لا اختبارَ مرتبطٌ به
-- F-10 (عرضُ طلبٍ على الطريق نفسِه) — لا اختبارَ مرتبطٌ به
-- F-11 (الوصولُ للاستلام) — لا اختبارَ مرتبطٌ به
 - F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به
 - F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به
 - F-18 (تحويلُ الطلب لمتجرٍ آخر) — لا اختبارَ مرتبطٌ به
 - F-20 (إرسالُ الطلب بواتساب) — لا اختبارَ مرتبطٌ به
-- F-22 (نقلُ متجرٍ بين مندوبين) — لا اختبارَ مرتبطٌ به
 - F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به
 - F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به
 - F-34 (بثٌّ للأدوار) — لا اختبارَ مرتبطٌ به
 - R1 — لا اختبارَ يحسمه بعد
-- R10 — لا اختبارَ يحسمه بعد
 - R11 — لا اختبارَ يحسمه بعد
 - R12 — لا اختبارَ يحسمه بعد
 - R13 — لا اختبارَ يحسمه بعد
 - R14 — لا اختبارَ يحسمه بعد
-- R16 — لا اختبارَ يحسمه بعد
 - R17 — لا اختبارَ يحسمه بعد
 - R18 — لا اختبارَ يحسمه بعد
-- … و14 أخرى
+- R2 — لا اختبارَ يحسمه بعد
+- R21 — لا اختبارَ يحسمه بعد
+- R22 — لا اختبارَ يحسمه بعد
+- R23 — لا اختبارَ يحسمه بعد
+- R24 — لا اختبارَ يحسمه بعد
+- R3 — لا اختبارَ يحسمه بعد
+- R4 — لا اختبارَ يحسمه بعد
+- … و3 أخرى
 
