@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/fininv"
 )
 
 // roots جذرا المشروع من موضع هذه الحزمة.
@@ -235,4 +237,33 @@ func pad2(n int) string {
 		return "0" + s
 	}
 	return s
+}
+
+// TestFinancialSettingsExist **البند ٩ من `P-4`** — مفاتيحُ الإعدادات
+// الماليّةِ موجودةٌ في المعجم الفعليّ.
+//
+// **ولا يُنسَخ مفتاحٌ من ذاكرة.** `fininv.FinancialSettings` تُسمّي ستّةً
+// وعشرين مفتاحاً تدخل حساباً ماليّاً، **وهذا يطابقها بما يستخرجه المولّدُ
+// من `settings/catalog.go`** — **فمفتاحٌ يُعاد تسميتُه غداً يُسقط البناءَ
+// بدل أن يصمت الحسابُ.**
+func TestFinancialSettingsExist(t *testing.T) {
+	backend, _ := roots(t)
+	defs, err := Root(backend).SettingDefs()
+	if err != nil {
+		t.Fatalf("معجمُ الإعدادات: %v", err)
+	}
+	have := map[string]bool{}
+	for _, d := range defs {
+		have[d.Key] = true
+	}
+	missing := 0
+	for _, key := range fininv.FinancialSettings {
+		if !have[key] {
+			t.Errorf("مفتاحٌ ماليٌّ لا وجودَ له في المعجم: %q", key)
+			missing++
+		}
+	}
+	if missing == 0 {
+		t.Logf("FINANCIAL SETTINGS MAPPED = %d/%d", len(fininv.FinancialSettings), len(defs))
+	}
 }

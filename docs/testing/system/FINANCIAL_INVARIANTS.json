@@ -1,0 +1,993 @@
+{
+  "families": [
+    {
+      "id": "FI-01",
+      "checks": [
+        "FI-01.a",
+        "FI-01.b",
+        "FI-01.c",
+        "FI-01.d",
+        "FI-01.e",
+        "FI-01.f"
+      ]
+    },
+    {
+      "id": "FI-02",
+      "checks": [
+        "FI-02.a",
+        "FI-02.b",
+        "FI-02.c"
+      ]
+    },
+    {
+      "id": "FI-03",
+      "checks": [
+        "FI-03.a",
+        "FI-03.b",
+        "FI-03.c",
+        "FI-03.d"
+      ]
+    },
+    {
+      "id": "FI-04",
+      "checks": [
+        "FI-04.a",
+        "FI-04.b",
+        "FI-04.c",
+        "FI-04.d",
+        "FI-04.e",
+        "FI-04.f"
+      ]
+    },
+    {
+      "id": "FI-05",
+      "checks": [
+        "FI-05.a",
+        "FI-05.b",
+        "FI-05.c",
+        "FI-05.d",
+        "FI-05.e",
+        "FI-05.f",
+        "FI-05.g",
+        "FI-05.h",
+        "FI-05.i",
+        "FI-05.j"
+      ]
+    },
+    {
+      "id": "FI-06",
+      "checks": [
+        "FI-06.a",
+        "FI-06.d",
+        "FI-06.b",
+        "FI-06.c"
+      ]
+    },
+    {
+      "id": "FI-07",
+      "checks": [
+        "FI-07.a"
+      ]
+    },
+    {
+      "id": "FI-08",
+      "checks": [
+        "FI-08.a"
+      ]
+    },
+    {
+      "id": "FI-09",
+      "checks": [
+        "FI-09.a"
+      ]
+    },
+    {
+      "id": "FI-10",
+      "checks": [
+        "FI-10.a",
+        "FI-10.b",
+        "FI-10.c"
+      ]
+    },
+    {
+      "id": "FI-11",
+      "checks": [
+        "FI-11.a",
+        "FI-11.b",
+        "FI-11.c",
+        "FI-11.d"
+      ]
+    },
+    {
+      "id": "FI-12",
+      "checks": [
+        "FI-12.a",
+        "FI-12.b",
+        "FI-12.c"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "FI-01.a",
+      "family": "FI-01",
+      "name": "لا قيدَ بصفر",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-01.b",
+      "family": "FI-01",
+      "name": "كلُّ قيدٍ له محفظةٌ قائمة",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-01.c",
+      "family": "FI-01",
+      "name": "كلُّ نوعِ قيدٍ له عقد",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "*"
+      ]
+    },
+    {
+      "id": "FI-01.d",
+      "family": "FI-01",
+      "name": "قيدُ الطلبِ يشير إلى طلبٍ قائم",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14",
+        "F-15"
+      ],
+      "kinds": [
+        "order_payment",
+        "refund",
+        "merchant_earning",
+        "driver_earning",
+        "commission"
+      ]
+    },
+    {
+      "id": "FI-01.e",
+      "family": "FI-01",
+      "name": "قيدُ السحبِ يشير إلى طلبِ سحبٍ قائم",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "kinds": [
+        "payout"
+      ]
+    },
+    {
+      "id": "FI-01.f",
+      "family": "FI-01",
+      "name": "قيدُ المصروفِ يشير إلى مصروفٍ قائم",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-26"
+      ],
+      "registers": [
+        "D5"
+      ],
+      "kinds": [
+        "operating_expense"
+      ]
+    },
+    {
+      "id": "FI-02.a",
+      "family": "FI-02",
+      "name": "رصيدُ المحفظة = مجموعُ حركاتها",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-02.b",
+      "family": "FI-02",
+      "name": "لا رصيدَ سالبٌ إلّا الخزينة",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-02.c",
+      "family": "FI-02",
+      "name": "للمنصّة خزينةٌ واحدة",
+      "status": "PROVABLE_NOW",
+      "ops": true
+    },
+    {
+      "id": "FI-03.a",
+      "family": "FI-03",
+      "name": "المكافأةُ والعقوبةُ تخرجان من الخزينةِ وتعودان إليها",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "registers": [
+        "XOB-9"
+      ],
+      "kinds": [
+        "reward",
+        "penalty"
+      ]
+    },
+    {
+      "id": "FI-03.b",
+      "family": "FI-03",
+      "name": "مجاميعُ الطلب متّسقة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01"
+      ]
+    },
+    {
+      "id": "FI-03.c",
+      "family": "FI-03",
+      "name": "الدفعُ يغطّي المجموع",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-14"
+      ]
+    },
+    {
+      "id": "FI-03.d",
+      "family": "FI-03",
+      "name": "مكافأةُ الهدفِ لا تسبق تثبيتَ التحويل",
+      "status": "DEFERRED_TO_P6",
+      "ops": false,
+      "flows": [
+        "F-21"
+      ],
+      "registers": [
+        "D2"
+      ]
+    },
+    {
+      "id": "FI-04.a",
+      "family": "FI-04",
+      "name": "كلُّ طلبٍ مسلَّمٍ له مستحقُّ متجر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-12",
+        "F-14"
+      ],
+      "kinds": [
+        "merchant_earning"
+      ]
+    },
+    {
+      "id": "FI-04.b",
+      "family": "FI-04",
+      "name": "كلُّ طلبٍ من المحفظة له خصمٌ مقابل",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-14"
+      ],
+      "kinds": [
+        "order_payment"
+      ]
+    },
+    {
+      "id": "FI-04.c",
+      "family": "FI-04",
+      "name": "كلُّ سحبٍ مدفوعٍ له خصم",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "kinds": [
+        "payout"
+      ]
+    },
+    {
+      "id": "FI-04.d",
+      "family": "FI-04",
+      "name": "كلُّ مصروفٍ قائمٍ له خصمُ خزينة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-26"
+      ],
+      "registers": [
+        "D5"
+      ],
+      "kinds": [
+        "operating_expense"
+      ]
+    },
+    {
+      "id": "FI-04.e",
+      "family": "FI-04",
+      "name": "المصروفُ المُلغى يتوازن إلى صفر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-26"
+      ],
+      "registers": [
+        "D5"
+      ],
+      "kinds": [
+        "operating_expense"
+      ]
+    },
+    {
+      "id": "FI-04.f",
+      "family": "FI-04",
+      "name": "الدَّينُ المستحقُّ يُسجَّل حين يتعذّر العكس",
+      "status": "NOT_IMPLEMENTED",
+      "ops": false,
+      "flows": [
+        "F-15",
+        "F-23"
+      ],
+      "registers": [
+        "XG-10",
+        "XG-11"
+      ]
+    },
+    {
+      "id": "FI-05.a",
+      "family": "FI-05",
+      "name": "لا تعويضَ مكرَّرٌ لطلب",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-16"
+      ],
+      "kinds": [
+        "compensation"
+      ]
+    },
+    {
+      "id": "FI-05.b",
+      "family": "FI-05",
+      "name": "لا تعويضَ شكوى مكرَّر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-31"
+      ],
+      "kinds": [
+        "compensation"
+      ]
+    },
+    {
+      "id": "FI-05.c",
+      "family": "FI-05",
+      "name": "لا مستحقَّ متجرٍ مكرَّر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-12"
+      ],
+      "kinds": [
+        "merchant_earning"
+      ]
+    },
+    {
+      "id": "FI-05.d",
+      "family": "FI-05",
+      "name": "لا خصمَ سحبٍ مكرَّر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "kinds": [
+        "payout"
+      ]
+    },
+    {
+      "id": "FI-05.e",
+      "family": "FI-05",
+      "name": "لا عمولةَ مندوبٍ مكرَّرةٌ لطلب",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-23"
+      ],
+      "kinds": [
+        "commission"
+      ]
+    },
+    {
+      "id": "FI-05.f",
+      "family": "FI-05",
+      "name": "لا أجرَ سائقٍ مكرَّرٌ لطلب",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14"
+      ],
+      "kinds": [
+        "driver_earning"
+      ]
+    },
+    {
+      "id": "FI-05.g",
+      "family": "FI-05",
+      "name": "لا استردادَ مكرَّرٌ لطلب",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-15"
+      ],
+      "kinds": [
+        "refund"
+      ]
+    },
+    {
+      "id": "FI-05.h",
+      "family": "FI-05",
+      "name": "لا مكافأةَ هدفٍ مكرَّرةٌ في مرحلةٍ واحدة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-21"
+      ],
+      "kinds": [
+        "reward"
+      ]
+    },
+    {
+      "id": "FI-05.i",
+      "family": "FI-05",
+      "name": "لا تحصيلَ نقدٍ مكرَّرٌ لطلب",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14",
+        "F-27"
+      ]
+    },
+    {
+      "id": "FI-05.j",
+      "family": "FI-05",
+      "name": "قرارا سحبٍ متزامنان لا يخصمان مرّتين",
+      "status": "DEFERRED_TO_P5",
+      "ops": false,
+      "flows": [
+        "F-24"
+      ],
+      "registers": [
+        "R10"
+      ]
+    },
+    {
+      "id": "FI-06.a",
+      "family": "FI-06",
+      "name": "صافي دفترِ الطلب = نقدُ السائق منه",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-12",
+        "F-14",
+        "F-15",
+        "F-16"
+      ]
+    },
+    {
+      "id": "FI-06.b",
+      "family": "FI-06",
+      "name": "عمولةُ المنصّة = المقيَّدُ على الطلب",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14",
+        "F-23"
+      ]
+    },
+    {
+      "id": "FI-06.c",
+      "family": "FI-06",
+      "name": "أجرُ السائقِ المقيَّد = أجرةُ الطلب",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14"
+      ],
+      "kinds": [
+        "driver_earning"
+      ]
+    },
+    {
+      "id": "FI-06.d",
+      "family": "FI-06",
+      "name": "الطلبُ قبل المحاسبة يحمل خصمَه وحدَه",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-07"
+      ]
+    },
+    {
+      "id": "FI-07.a",
+      "family": "FI-07",
+      "name": "اقتصادُ الطلبِ لا يشيخ بتبديل الإعداد",
+      "status": "NOT_IMPLEMENTED",
+      "ops": false,
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "registers": [
+        "XG-13"
+      ]
+    },
+    {
+      "id": "FI-08.a",
+      "family": "FI-08",
+      "name": "حقُّ الزبونِ في الاسترداد غيرُ مشروطٍ برصيدِ غيره",
+      "status": "NOT_IMPLEMENTED",
+      "ops": false,
+      "flows": [
+        "F-15"
+      ],
+      "registers": [
+        "XG-10",
+        "XG-11"
+      ]
+    },
+    {
+      "id": "FI-09.a",
+      "family": "FI-09",
+      "name": "عمولةُ المندوبِ تُعكَس عند الاسترداد",
+      "status": "NOT_IMPLEMENTED",
+      "ops": false,
+      "flows": [
+        "F-15",
+        "F-23"
+      ],
+      "registers": [
+        "XG-10"
+      ],
+      "kinds": [
+        "commission"
+      ]
+    },
+    {
+      "id": "FI-10.a",
+      "family": "FI-10",
+      "name": "محتجَزُ الصندوق = مجموعُ قيوده",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-27"
+      ]
+    },
+    {
+      "id": "FI-10.b",
+      "family": "FI-10",
+      "name": "تحصيلُ النقدِ = نقدُ الطلب المستحقّ",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14",
+        "F-27"
+      ]
+    },
+    {
+      "id": "FI-10.c",
+      "family": "FI-10",
+      "name": "لا محتجَزَ سالبٌ في صندوق",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-27"
+      ]
+    },
+    {
+      "id": "FI-11.a",
+      "family": "FI-11",
+      "name": "السحبُ المرفوضُ لا يُخصَم",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "kinds": [
+        "payout"
+      ]
+    },
+    {
+      "id": "FI-11.b",
+      "family": "FI-11",
+      "name": "السحبُ المعلَّقُ لا يُخصَم",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "registers": [
+        "XG-12"
+      ],
+      "kinds": [
+        "payout"
+      ]
+    },
+    {
+      "id": "FI-11.c",
+      "family": "FI-11",
+      "name": "مقدارُ الخصمِ = مقدارُ السحب",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "kinds": [
+        "payout"
+      ]
+    },
+    {
+      "id": "FI-11.d",
+      "family": "FI-11",
+      "name": "طبقاتُ رصيدِ السحب — عقدُ شام كاش المستقبليّ",
+      "status": "NOT_IMPLEMENTED",
+      "ops": false,
+      "flows": [
+        "F-24"
+      ],
+      "registers": [
+        "XG-12"
+      ]
+    },
+    {
+      "id": "FI-12.a",
+      "family": "FI-12",
+      "name": "لا قيدَ خزينةٍ لغيرِ الخزينة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-26"
+      ],
+      "registers": [
+        "XOB-9"
+      ],
+      "kinds": [
+        "platform_profit",
+        "platform_expense",
+        "operating_expense"
+      ]
+    },
+    {
+      "id": "FI-12.b",
+      "family": "FI-12",
+      "name": "مصروفُ التشغيلِ خصمٌ لا إيداع",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-26"
+      ],
+      "registers": [
+        "D5"
+      ],
+      "kinds": [
+        "operating_expense"
+      ]
+    },
+    {
+      "id": "FI-12.c",
+      "family": "FI-12",
+      "name": "المصروفُ وقيدُه يقعان معاً أو لا يقعان",
+      "status": "DEFERRED_TO_P6",
+      "ops": false,
+      "flows": [
+        "F-26"
+      ],
+      "registers": [
+        "D5"
+      ]
+    }
+  ],
+  "kinds": [
+    {
+      "kind": "adjustment",
+      "semantics": "تسويةٌ يدويّةٌ بقرارِ إداريّ — **بلا سقفٍ ولا مصادقةٍ ثانية.**",
+      "sign": "±",
+      "ref_required": false,
+      "path": "POST /admin/users/{id}/wallet · ومطالبةُ المنصّة في نزاع",
+      "creators": [
+        "internal/server/admin_wallet_handlers.go:64",
+        "internal/server/disputes.go:280"
+      ],
+      "invariants": [
+        "FI-02.a",
+        "FI-02.b"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "commission",
+      "semantics": "نصيبُ المندوبِ من هامشِ طلبٍ سُلّم لمتجرٍ فعّله.",
+      "sign": "+",
+      "ref_required": true,
+      "ref_target": "orders",
+      "path": "تسويةُ التسليم",
+      "creators": [
+        "internal/orders/transitions.go:988"
+      ],
+      "invariants": [
+        "FI-01.d",
+        "FI-05.e",
+        "FI-06.a",
+        "FI-09.a"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "compensation",
+      "semantics": "تعويضُ طرفٍ عن ضررٍ لا ذنبَ له فيه — **يخرج من الخزينة.**",
+      "sign": "+",
+      "ref_required": false,
+      "ref_target": "orders|tickets",
+      "path": "تعذّرُ التسليم تلقائيّاً · وحلُّ تذكرةٍ بتعويض",
+      "creators": [
+        "internal/orders/transitions.go:539",
+        "internal/orders/goods.go:148",
+        "internal/server/failure_aftermath.go:135",
+        "internal/server/failure_aftermath.go:290",
+        "internal/support/support.go:287"
+      ],
+      "invariants": [
+        "FI-05.a",
+        "FI-05.b",
+        "FI-06.a"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "driver_earning",
+      "semantics": "أجرُ توصيلِ طلبٍ سُلّم — **وهو أجرةُ الطلبِ المحفوظةُ لا إعدادٌ حيّ.**",
+      "sign": "+",
+      "ref_required": true,
+      "ref_target": "orders",
+      "path": "تسويةُ التسليم",
+      "creators": [
+        "internal/orders/transitions.go:1236",
+        "internal/orders/custom.go:282"
+      ],
+      "invariants": [
+        "FI-01.d",
+        "FI-05.f",
+        "FI-06.c"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "merchant_earning",
+      "semantics": "مستحقُّ المتجرِ عن بضاعةٍ خرجت من يده — **والسالبُ عكسٌ أو اقتطاعُ دَين.**",
+      "sign": "±",
+      "ref_required": true,
+      "ref_target": "orders",
+      "path": "الاستلامُ من المتجر · والاستردادُ · وردُّ البضاعة",
+      "creators": [
+        "internal/orders/transitions.go:877",
+        "internal/orders/transitions.go:923",
+        "internal/orders/transitions.go:1089",
+        "internal/orders/goods.go:178",
+        "internal/server/driver_return.go:98"
+      ],
+      "invariants": [
+        "FI-01.d",
+        "FI-04.a",
+        "FI-05.c",
+        "FI-06.b"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "operating_expense",
+      "semantics": "مصروفُ تشغيلٍ من الخزينة — **والموجبُ إلغاؤه لا غير.**",
+      "sign": "±",
+      "ref_required": true,
+      "ref_target": "expenses",
+      "path": "POST /admin/expenses · وDELETE /admin/expenses/{id}",
+      "creators": [
+        "internal/server/expenses_handlers.go:281",
+        "internal/server/expenses_handlers.go:313"
+      ],
+      "invariants": [
+        "FI-01.f",
+        "FI-04.d",
+        "FI-04.e",
+        "FI-12.a",
+        "FI-12.b"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "order_payment",
+      "semantics": "خصمُ ثمنِ الطلب من محفظة الزبون لحظةَ الإنشاء.",
+      "sign": "-",
+      "ref_required": true,
+      "ref_target": "orders",
+      "path": "POST /api/v1/orders",
+      "creators": [
+        "internal/orders/service.go:521",
+        "internal/orders/custom.go:278"
+      ],
+      "invariants": [
+        "FI-01.d",
+        "FI-04.b",
+        "FI-06.a"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "payout",
+      "semantics": "خروجُ مالٍ من محفظةٍ إلى صاحبها خارجَ المنظومة.",
+      "sign": "-",
+      "ref_required": false,
+      "ref_target": "payout_requests",
+      "path": "PATCH /admin/payouts/{id} · وPOST /admin/users/{id}/wallet",
+      "creators": [
+        "internal/server/payout_handlers.go:290",
+        "internal/server/admin_wallet_handlers.go:64"
+      ],
+      "invariants": [
+        "FI-01.e",
+        "FI-04.c",
+        "FI-05.d",
+        "FI-11.a",
+        "FI-11.b",
+        "FI-11.c"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "penalty",
+      "semantics": "عقوبةٌ تُخصم من مخالفٍ وتدخل الخزينة — **وتُرفض إن لم يكفِ رصيدُه.**",
+      "sign": "±",
+      "ref_required": false,
+      "path": "POST /admin/users/{id}/incentive",
+      "creators": [
+        "internal/incentives/incentives.go:277",
+        "internal/incentives/incentives.go:286"
+      ],
+      "invariants": [
+        "FI-03.a",
+        "FI-02.b"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "platform_expense",
+      "semantics": "مالٌ خرج من الخزينة خارجَ تسويةِ الطلب.",
+      "sign": "-",
+      "ref_required": false,
+      "ref_target": "orders",
+      "path": "تعويضُ سائقٍ · ودعمُ متجرٍ عن بضاعةٍ رُدّت",
+      "creators": [
+        "internal/orders/treasury.go:184"
+      ],
+      "invariants": [
+        "FI-06.a",
+        "FI-12.a"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "platform_profit",
+      "semantics": "ما بقي للمنصّة بعد كلّ الأنصبة — **يُعاد حسابُه لا يُضاف تراكماً.**",
+      "sign": "±",
+      "ref_required": false,
+      "ref_target": "orders|disputes",
+      "path": "كلُّ انتقالٍ ماليٍّ للطلب — creditTreasury",
+      "creators": [
+        "internal/orders/treasury.go:166",
+        "internal/orders/treasury.go:215"
+      ],
+      "invariants": [
+        "FI-06.a",
+        "FI-12.a"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "refund",
+      "semantics": "ردُّ ما دفعه الزبون — **من المحفظة قبل التسليم، وكاملُ المبلغ بعده.**",
+      "sign": "+",
+      "ref_required": true,
+      "ref_target": "orders",
+      "path": "انتقالُ حالةٍ إلى نهايةٍ غيرِ التسليم",
+      "creators": [
+        "internal/orders/transitions.go:659",
+        "internal/orders/transitions.go:739"
+      ],
+      "invariants": [
+        "FI-01.d",
+        "FI-05.g",
+        "FI-06.a"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "reward",
+      "semantics": "مكافأةٌ تخرج من الخزينة إلى مستحقّها — **والسالبُ وجهُها في الخزينة.**",
+      "sign": "±",
+      "ref_required": false,
+      "ref_target": "orders|users|—",
+      "path": "POST /admin/users/{id}/incentive · وبلوغُ هدفٍ · ودعوةٌ ومنحةُ حسابٍ جديد",
+      "creators": [
+        "internal/incentives/incentives.go:277",
+        "internal/incentives/target.go:237",
+        "internal/referrals/referrals.go:314",
+        "internal/referrals/referrals.go:443"
+      ],
+      "invariants": [
+        "FI-03.a",
+        "FI-05.h"
+      ],
+      "reachable": true
+    },
+    {
+      "kind": "topup",
+      "semantics": "شحنٌ يدويٌّ لمحفظةٍ من الإدارة — **مالٌ يدخل المنظومةَ من خارجها.**",
+      "sign": "+",
+      "ref_required": false,
+      "path": "POST /admin/users/{id}/wallet",
+      "creators": [
+        "internal/server/admin_wallet_handlers.go:64"
+      ],
+      "invariants": [
+        "FI-02.a"
+      ],
+      "reachable": true
+    }
+  ],
+  "counts": {
+    "families": 12,
+    "checks": 46,
+    "provable_now": 38,
+    "not_implemented": 5,
+    "deferred_p5": 1,
+    "deferred_p6": 2,
+    "kinds": 14
+  },
+  "financial_settings": [
+    "merchants.commission_percent",
+    "sales.commission_percent",
+    "sales.activation_orders",
+    "pricing.margin_fixed",
+    "delivery.fee",
+    "delivery.per_km",
+    "delivery.max_fee",
+    "delivery.by_distance",
+    "drivers.cash_limit",
+    "payouts.min_amount",
+    "customers.signup_bonus",
+    "referral.reward_1",
+    "referral.reward_2",
+    "referral.reward_3",
+    "referral.reward_rest",
+    "referral.reward_on",
+    "drivers.target_reward",
+    "drivers.reward_2",
+    "drivers.reward_3",
+    "sales.target_reward",
+    "sales.reward_2",
+    "sales.reward_3",
+    "customers.cash_ban_days",
+    "customers.cash_ban_failures",
+    "orders.extra_source_fee",
+    "orders.route_margin_pct"
+  ]
+}

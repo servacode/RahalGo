@@ -136,7 +136,11 @@ func (r Root) Transitions(docsRoot string) (int, error) {
 // **ونمطٌ توقّف عند أوّل قوسٍ ردّ نوعاً واحداً من تسعة.**
 // **ويُمسك الشكلان**: `CREATE TABLE` و`ADD CONSTRAINT` — **ونمطٌ اقتصر
 // على الأوّل قرأ `0010` وحدَها فردّ سبعةَ أنواعٍ من تسعة.**
-var reKindsHead = regexp.MustCompile(`kind IN\s*\(`)
+// **والصيغتان كلتاهما**: الهجراتُ القديمةُ تكتب `kind IN (` والأخيرتان
+// (`0109` و`0110`) تكتبان `kind = ANY (ARRAY[` — **ومن عرف واحدةً
+// قرأ قيداً شائخاً.** (وقع: كان يردّ ثلاثةَ عشرَ نوعاً وفي القاعدة أربعةَ
+// عشر، **والناقصُ `operating_expense`** — كُشف في `P-4`.)
+var reKindsHead = regexp.MustCompile(`kind (?:IN|=\s*ANY)\s*\(`)
 var reQuoted = regexp.MustCompile(`'([a-z_]+)'`)
 
 // LedgerKinds يقرأ أنواعَ قيود المحفظة — **من آخرِ تعريفٍ للقيد لا أوّلِه.**
@@ -398,7 +402,16 @@ func Register(docsRoot string) (defects, risks []RegisterRow, err error) {
 
 func clean(s string) string {
 	s = strings.ReplaceAll(s, "**", "")
-	s = strings.ReplaceAll(s, "`", "")
+	// **والعلامةُ الخلفيّةُ تُكتب برمزها لا بحرفها** — `\x60`.
+	//
+	// **وحارسُ `TestNoBacktickInsideRawStrings` يعدّها في الملفّ كلِّه بلا
+	// تمييزِ سياق**، فعلامةٌ واحدةٌ في نصٍّ مقتبَسٍ تجعل العدَّ فردياً
+	// **فيُنذر بنصٍّ خامٍّ لم يُغلق وليس ثمّةَ شيء.** (كان يسقط منذ `P-2`.)
+	//
+	// **ولم يُضعَّف الحارسُ ليمرّ**: هو محقٌّ في تشدّده — **علامةٌ خلفيّةٌ
+	// داخل نصٍّ خامٍّ في Go تكسر البناءَ فعلاً** (وهي مزلقةٌ مكتوبةٌ في
+	// `CLAUDE.md`). **فالمكتوبُ هو ما تبدّل، لا القاعدة.**
+	s = strings.ReplaceAll(s, "\x60", "")
 	return strings.TrimSpace(s)
 }
 

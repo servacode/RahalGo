@@ -42,6 +42,7 @@
 | ١٧ | [`P2-IMPLEMENTED.md`](P2-IMPLEMENTED.md) | **✅ `P-2` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — `TEST_TRUTH` وحرّاسُه الستّة** |
 | ١٨ | [`P3-IMPLEMENTED.md`](P3-IMPLEMENTED.md) | **✅ `P-3` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — المصنعُ الحتميّ وحارسُ الإنتاج** |
 | ١٩ | [`P3V-DB-VALIDATION.md`](P3V-DB-VALIDATION.md) | **✅ `P-3V` — إثباتٌ على PostgreSQL 16.4 + PostGIS · 158/158** |
+| ٢٠ | [`P4-IMPLEMENTED.md`](P4-IMPLEMENTED.md) | **✅ `P-4` مُنفَّذٌ ٢٠٢٦-٠٩-٠٥ — محرّكُ الثوابت الماليّة · ٤٦ ثابتاً في ١٢ عائلة** |
 
 ---
 
@@ -75,7 +76,7 @@ DEFECT FIXED + REGRESSION TEST PASS + IMPACTED TESTS PASS  ⇒  DEFECT CLOSED
 |---|---|
 | **Go** | **١٩٨ ملفَّ اختبار · ٥٦٩ دالّة** — أكثرُها في `server` (٦٦) و`orders` (٤٤) |
 | **`internal/qa`** | **مِسنَدٌ + ٢٠ ملفّاً** — **وهو نواةُ الطبقات ٤ و٥ و٩** |
-| **المال** | **`cmd/moneycheck` — ١٣ فحصاً** · **بلا مصاريفَ** (`TIG-3`) |
+| **المال** | **`internal/fininv` — ٤٦ ثابتاً · و`moneycheck` قشرةٌ تناديه** · **`TIG-3` أُغلق في `P-4`** |
 | **العقود** | **`cmd/apidoc`** · **`cmd/mediacheck`** · **`TestTruthDocIsCurrent`** |
 | **أندرويد** | **٥٢ ملفَّ اختبار** — **ولا اختبارَ مُجهَّزٍ على جهاز** |
 | **الويب** | **٠ اختبار** — **و`eslint` أُضيف ٢٠٢٦-٠٩-٠٥** (`TIG-4`) |

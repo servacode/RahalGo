@@ -9,6 +9,7 @@
       "compensation",
       "driver_earning",
       "merchant_earning",
+      "operating_expense",
       "order_payment",
       "payout",
       "penalty",
@@ -30,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 203,
-    "test_funcs": 612
+    "test_files": 206,
+    "test_funcs": 644
   },
   "flows": [
     {
@@ -65,12 +66,13 @@
         "XG-9"
       ],
       "tests": [
+        "TestFIN_OrderEconomicConservation",
         "TestD20_CustomerRealtimeVsREST",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
         "TestPushPayloadScope"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-02",
@@ -340,8 +342,11 @@
         "L5",
         "L8"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_MoneyTimingByStatus",
+        "TestFIN_OrderEconomicConservation"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-13",
@@ -366,8 +371,10 @@
       "defects": [
         "D13"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_MoneyTimingByStatus"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-14",
@@ -402,10 +409,16 @@
         "XG-26"
       ],
       "tests": [
+        "TestFIN_MoneyTimingByStatus",
+        "TestFIN_TransactionBoundaries",
+        "TestFIN_CommissionSourceMatrix",
+        "TestFIN_ConservationSurvivesRefund",
+        "TestFIN_OrderEconomicConservation",
+        "TestFIN_SnapshotVsLiveEconomics",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-15",
@@ -431,8 +444,14 @@
         "XG-10",
         "XG-11"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_ConservationSurvivesRefund",
+        "TestFIN_MerchantWithdrewThenRefund",
+        "TestFIN_RefundNotConditionedOnRepBalance",
+        "TestFIN_RepCommissionReversal",
+        "TestFIN_RepeatedRefundIsIdempotent"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "F-16",
@@ -523,8 +542,10 @@
       "gaps": [
         "XG-5"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_CashExposureContract"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-20",
@@ -575,8 +596,11 @@
         "XG-29",
         "XG-30"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_TargetRewardPrecedesCommit",
+        "TestFIN_TransactionBoundaries"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-22",
@@ -625,8 +649,13 @@
         "XG-27",
         "XG-28"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_MoneyTimingByStatus",
+        "TestFIN_CommissionSourceMatrix",
+        "TestFIN_RepCommissionReversal",
+        "TestFIN_SnapshotVsLiveEconomics"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "F-24",
@@ -654,8 +683,12 @@
       "gaps": [
         "XG-12"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_TransactionBoundaries",
+        "TestFIN_MerchantWithdrewThenRefund",
+        "TestFIN_RepeatedPayoutDecision"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-25",
@@ -698,8 +731,11 @@
       "defects": [
         "D5"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_ExpenseTreasuryInvariant",
+        "TestFIN_TransactionBoundaries"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-27",
@@ -722,7 +758,8 @@
         "D7"
       ],
       "tests": [
-        "TestSampleFactory_DriverOnShiftWithCash"
+        "TestSampleFactory_DriverOnShiftWithCash",
+        "TestFIN_CashExposureContract"
       ],
       "status": "PARTIALLY_COVERED"
     },
@@ -887,8 +924,10 @@
         "XG-27",
         "XG-28"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_SnapshotVsLiveEconomics"
+      ],
+      "status": "PARTIALLY_COVERED"
     },
     {
       "id": "F-34",
@@ -925,8 +964,11 @@
     {
       "id": "D2",
       "title": "convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤها مُهمَل",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_TargetRewardPrecedesCommit",
+        "TestFIN_TransactionBoundaries"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D3",
@@ -943,8 +985,11 @@
     {
       "id": "D5",
       "title": "المصروفُ والخزينةُ كتابتان بلا معاملة",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_ExpenseTreasuryInvariant",
+        "TestFIN_TransactionBoundaries"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D6",
@@ -956,7 +1001,8 @@
       "id": "D7",
       "title": "سقفُ النقد يقيس المحصَّل لا المكشوف",
       "tests": [
-        "TestSampleFactory_DriverOnShiftWithCash"
+        "TestSampleFactory_DriverOnShiftWithCash",
+        "TestFIN_CashExposureContract"
       ],
       "status": "EXPECTED_FAIL"
     },
@@ -1328,15 +1374,21 @@
       "id": "XG-10",
       "title": "لا عكسَ لعمولة المندوب عند الاسترداد",
       "severity": "BLOCKER",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_RefundNotConditionedOnRepBalance",
+        "TestFIN_RepCommissionReversal"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "XG-11",
       "title": "الاستردادُ يفشل إن سحب المندوبُ عمولتَه",
       "severity": "BLOCKER",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_MerchantWithdrewThenRefund",
+        "TestFIN_RefundNotConditionedOnRepBalance"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "XG-12",
@@ -1349,8 +1401,11 @@
       "id": "XG-13",
       "title": "لا مفتاحَ لمصدر احتساب العمولة",
       "severity": "HIGH",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestFIN_CommissionSourceMatrix",
+        "TestFIN_SnapshotVsLiveEconomics"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "XG-14",
@@ -1814,8 +1869,12 @@
         "driver",
         "merchant"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_MoneyTimingByStatus",
+        "TestFIN_OrderEconomicConservation",
+        "TestFIN_SnapshotVsLiveEconomics"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "delivery.max_fee",
@@ -1919,8 +1978,10 @@
         "driver",
         "merchant"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_CashExposureContract"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "drivers.direct_assign",
@@ -2345,8 +2406,13 @@
         "merchant",
         "rep"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_MoneyTimingByStatus",
+        "TestFIN_CommissionSourceMatrix",
+        "TestFIN_OrderEconomicConservation",
+        "TestFIN_SnapshotVsLiveEconomics"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "merchants.default_prep_minutes",
@@ -2691,8 +2757,10 @@
         "merchant",
         "rep"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_RepeatedPayoutDecision"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "platform.app_url",
@@ -2767,8 +2835,12 @@
         "merchant",
         "rep"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_MoneyTimingByStatus",
+        "TestFIN_CommissionSourceMatrix",
+        "TestFIN_SnapshotVsLiveEconomics"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "referral.reward_1",
@@ -2877,8 +2949,12 @@
         "merchant",
         "rep"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_MoneyTimingByStatus",
+        "TestFIN_CommissionSourceMatrix",
+        "TestFIN_RepCommissionReversal"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "sales.commission_percent",
@@ -2899,8 +2975,14 @@
         "merchant",
         "rep"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_MoneyTimingByStatus",
+        "TestFIN_CommissionSourceMatrix",
+        "TestFIN_RefundNotConditionedOnRepBalance",
+        "TestFIN_RepCommissionReversal",
+        "TestFIN_SnapshotVsLiveEconomics"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "key": "sales.monthly_target",
@@ -3490,6 +3572,127 @@
       "file": "internal/deploycheck/compose_test.go",
       "package": "deploycheck_test",
       "orphan": true
+    },
+    {
+      "name": "TestChecksReferenceKnownFlows",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestContractedKindsSQLIsGenerated",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCreatorSitesExist",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEveryCheckIsComplete",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEveryFamilyHasChecks",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestEveryKindHasContract",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestKindDriftDetectsBothDirections",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSelectDefaultsToProvable",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSnapshotCounts",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestUnprovenChecksAreInert",
+      "file": "internal/fininv/fininv_test.go",
+      "package": "fininv",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
     },
     {
       "name": "TestPin_FormatIsFourDigitsOnly",
@@ -5177,6 +5380,379 @@
       "modes": [
         "FAST",
         "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_ExpenseTreasuryInvariant",
+      "file": "internal/qa/financial_stage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-26"
+      ],
+      "defects": [
+        "D5"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_LedgerKindGuardFailsOnNewKind",
+      "file": "internal/qa/financial_stage_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_MoneyTimingByStatus",
+      "file": "internal/qa/financial_stage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-12",
+        "F-13",
+        "F-14",
+        "F-23"
+      ],
+      "settings": [
+        "merchants.commission_percent",
+        "sales.commission_percent",
+        "pricing.margin_fixed",
+        "delivery.fee",
+        "sales.activation_orders"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_TargetRewardPrecedesCommit",
+      "file": "internal/qa/financial_stage_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-21"
+      ],
+      "defects": [
+        "D2"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "FINANCIAL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_TransactionBoundaries",
+      "file": "internal/qa/financial_stage_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-14",
+        "F-21",
+        "F-24",
+        "F-26"
+      ],
+      "defects": [
+        "D2",
+        "D5"
+      ],
+      "modes": [
+        "FAST",
+        "FULL",
+        "FINANCIAL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_CashExposureContract",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-19",
+        "F-27"
+      ],
+      "defects": [
+        "D7"
+      ],
+      "settings": [
+        "drivers.cash_limit"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_CommissionSourceMatrix",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-13"
+      ],
+      "settings": [
+        "merchants.commission_percent",
+        "sales.commission_percent",
+        "pricing.margin_fixed",
+        "sales.activation_orders"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_ConservationSurvivesRefund",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-15"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_CorruptionDetectionSelfTest",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_DatabaseSafetyBeforeWrites",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L11",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_DuplicateEffectSelfTest",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_EngineRunsOnRealDatabase",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_LedgerKindAllowlistGuard",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L3",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_MerchantWithdrewThenRefund",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-15",
+        "F-24"
+      ],
+      "gaps": [
+        "XG-11"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_MissingReferenceSelfTest",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "HARNESS_SELF_TEST",
+      "modes": [
+        "FAST",
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_OrderEconomicConservation",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-12",
+        "F-14"
+      ],
+      "settings": [
+        "merchants.commission_percent",
+        "delivery.fee"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_RefundNotConditionedOnRepBalance",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-15"
+      ],
+      "gaps": [
+        "XG-10",
+        "XG-11"
+      ],
+      "settings": [
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_RepCommissionReversal",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-15",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-10"
+      ],
+      "settings": [
+        "sales.commission_percent",
+        "sales.activation_orders"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_RepeatedPayoutDecision",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-24"
+      ],
+      "settings": [
+        "payouts.min_amount"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_RepeatedRefundIsIdempotent",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-15"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_SnapshotVsLiveEconomics",
+      "file": "internal/qa/financial_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "gaps": [
+        "XG-13"
+      ],
+      "settings": [
+        "merchants.commission_percent",
+        "sales.commission_percent",
+        "pricing.margin_fixed",
+        "delivery.fee"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
       ],
       "orphan": false
     },
@@ -7227,6 +7803,13 @@
       "orphan": false
     },
     {
+      "name": "TestFinancialSettingsExist",
+      "file": "internal/testtruth/truth_test.go",
+      "package": "testtruth",
+      "purpose": "GENERATOR_TEST",
+      "orphan": false
+    },
+    {
       "name": "TestNoStaleReferences",
       "file": "internal/testtruth/truth_test.go",
       "package": "testtruth",
@@ -7313,10 +7896,8 @@
     "D17 — لا اختبارَ انحدارٍ بعد",
     "D18 — لا اختبارَ انحدارٍ بعد",
     "D19 — لا اختبارَ انحدارٍ بعد",
-    "D2 — لا اختبارَ انحدارٍ بعد",
     "D3 — لا اختبارَ انحدارٍ بعد",
     "D4 — لا اختبارَ انحدارٍ بعد",
-    "D5 — لا اختبارَ انحدارٍ بعد",
     "D6 — لا اختبارَ انحدارٍ بعد",
     "D8 — لا اختبارَ انحدارٍ بعد",
     "D9 — لا اختبارَ انحدارٍ بعد",
@@ -7327,23 +7908,14 @@
     "F-09 (انقضاءُ العرض ودورانُه) — لا اختبارَ مرتبطٌ به",
     "F-10 (عرضُ طلبٍ على الطريق نفسِه) — لا اختبارَ مرتبطٌ به",
     "F-11 (الوصولُ للاستلام) — لا اختبارَ مرتبطٌ به",
-    "F-12 (الاستلام) — لا اختبارَ مرتبطٌ به",
-    "F-13 (التسليمُ وإثباتُه) — لا اختبارَ مرتبطٌ به",
-    "F-15 (الاسترداد) — لا اختبارَ مرتبطٌ به",
     "F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به",
     "F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به",
     "F-18 (تحويلُ الطلب لمتجرٍ آخر) — لا اختبارَ مرتبطٌ به",
-    "F-19 (إسنادٌ إداريٌّ وإعادةُ إسناد) — لا اختبارَ مرتبطٌ به",
     "F-20 (إرسالُ الطلب بواتساب) — لا اختبارَ مرتبطٌ به",
-    "F-21 (تسجيلُ مرشَّحٍ ثمّ تحويلُه) — لا اختبارَ مرتبطٌ به",
     "F-22 (نقلُ متجرٍ بين مندوبين) — لا اختبارَ مرتبطٌ به",
-    "F-23 (عمولةُ المندوب) — لا اختبارَ مرتبطٌ به",
-    "F-24 (طلبُ سحبٍ وقرارُه) — لا اختبارَ مرتبطٌ به",
-    "F-26 (مصروفٌ وخزينة) — لا اختبارَ مرتبطٌ به",
     "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
-    "F-33 (تبديلُ إعدادٍ حسّاس) — لا اختبارَ مرتبطٌ به",
     "F-34 (بثٌّ للأدوار) — لا اختبارَ مرتبطٌ به",
     "R1 — لا اختبارَ يحسمه بعد",
     "R10 — لا اختبارَ يحسمه بعد",

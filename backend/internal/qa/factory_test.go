@@ -195,8 +195,12 @@ func TestFactoryFinanciallyConsistent(t *testing.T) {
 	f := h.Factory()
 
 	u := f.NewUserWith("customer")
+	// **والأنواعُ هنا لا تشترط مرجعاً** — `order_payment` و`refund`
+	// تشترطان طلباً (عقدُ `P-4`)، **وقيدٌ منهما بلا طلبٍ حالٌ لا تقع في
+	// الواقع** — **وفكسچرٌ يبني المستحيلَ يختبر المستحيل.**
+	// والمقصودُ هنا: **الرصيدُ يتبع الدفتر**، وهو يُثبَت بأيّ نوع.
 	f.Credit(u.ID, 25_000, "topup")
-	f.Credit(u.ID, -5_000, "order_payment")
+	f.Credit(u.ID, -5_000, "adjustment")
 
 	bal, sum := f.Balance(u.ID), f.LedgerSum(u.ID)
 	if bal != sum {

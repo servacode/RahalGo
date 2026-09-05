@@ -314,6 +314,131 @@ var TestMap = map[string]TestDecl{
 		Level: L3, Flows: []string{"F-25"},
 		Modes: []string{"FULL", "FINANCIAL"},
 	},
+
+	// ── `P-4` · محرّكُ الثوابت الماليّة ───────────────────────────
+	//
+	// **ولا اختبارَ يتيمٌ هنا** (البند ٢٤): كلُّ واحدٍ مربوطٌ بتدفّقه
+	// وبما يمسّه من السجلّات المجمَّدة وبالإعدادات التي يقودها.
+
+	// المحرّكُ نفسُه — بلا قاعدة.
+	"TestEveryCheckIsComplete":          harness(),
+	"TestEveryFamilyHasChecks":          harness(),
+	"TestSelectDefaultsToProvable":      harness(),
+	"TestUnprovenChecksAreInert":        harness(),
+	"TestEveryKindHasContract":          harness(),
+	"TestCreatorSitesExist":             harness(),
+	"TestChecksReferenceKnownFlows":     harness(),
+	"TestSnapshotCounts":                harness(),
+	"TestContractedKindsSQLIsGenerated": harness(),
+	"TestKindDriftDetectsBothDirections": {
+		Level: L1, Purpose: PurposeHarnessSelf,
+		Modes: []string{"FAST", "FULL", "RELEASE"},
+	},
+
+	// الأمانُ وحارسُ الأنواع.
+	"TestFIN_DatabaseSafetyBeforeWrites": security(),
+	"TestFIN_LedgerKindAllowlistGuard": {
+		Level: L3, Purpose: PurposeInfrastructure,
+		Modes: []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+	"TestFIN_EngineRunsOnRealDatabase": infra(),
+	"TestFIN_LedgerKindGuardFailsOnNewKind": {
+		Level: L3, Purpose: PurposeHarnessSelf,
+		Modes: []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+
+	// حفظُ اقتصاد الطلب.
+	"TestFIN_OrderEconomicConservation": {
+		Level: L4, Flows: []string{"F-01", "F-12", "F-14"},
+		Settings: []string{"merchants.commission_percent", "delivery.fee"},
+		Modes:    []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+	"TestFIN_ConservationSurvivesRefund": {
+		Level: L4, Flows: []string{"F-14", "F-15"},
+		Modes: []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+	"TestFIN_MoneyTimingByStatus": {
+		Level: L4, Flows: []string{"F-12", "F-13", "F-14", "F-23"},
+		Settings: []string{"merchants.commission_percent", "sales.commission_percent",
+			"pricing.margin_fixed", "delivery.fee", "sales.activation_orders"},
+		Modes: []string{"FULL", "FINANCIAL"},
+	},
+
+	// اختباراتُ الحارسِ لنفسِه — **إفسادٌ مقصودٌ ثمّ تنظيف.**
+	"TestFIN_CorruptionDetectionSelfTest": harness(),
+	"TestFIN_MissingReferenceSelfTest":    harness(),
+	"TestFIN_DuplicateEffectSelfTest":     harness(),
+
+	// منعُ التكرار — بالتسلسل.
+	"TestFIN_RepeatedRefundIsIdempotent": {
+		Level: L4, Flows: []string{"F-15"},
+		Modes: []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+	"TestFIN_RepeatedPayoutDecision": {
+		Level: L4, Flows: []string{"F-24"},
+		Settings: []string{"payouts.min_amount"},
+		Modes:    []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+
+	// السقفُ النقديّ — `D7`.
+	"TestFIN_CashExposureContract": {
+		Level: L4, Flows: []string{"F-19", "F-27"},
+		Defects:  []string{"D7"},
+		Settings: []string{"drivers.cash_limit"},
+		Modes:    []string{"FULL", "FINANCIAL"},
+	},
+
+	// المندوبُ والاسترداد — `XG-10` · `XG-11` · `XG-13`.
+	"TestFIN_RepCommissionReversal": {
+		Level: L4, Flows: []string{"F-15", "F-23"},
+		Gaps:     []string{"XG-10"},
+		Settings: []string{"sales.commission_percent", "sales.activation_orders"},
+		Modes:    []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+	"TestFIN_RefundNotConditionedOnRepBalance": {
+		Level: L4, Flows: []string{"F-15"},
+		Gaps:     []string{"XG-10", "XG-11"},
+		Settings: []string{"sales.commission_percent"},
+		Modes:    []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+	"TestFIN_MerchantWithdrewThenRefund": {
+		Level: L4, Flows: []string{"F-15", "F-24"},
+		Gaps:  []string{"XG-11"},
+		Modes: []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+
+	// مصدرُ العمولة واللقطة — `XG-13` · `XQ-2`.
+	"TestFIN_CommissionSourceMatrix": {
+		Level: L4, Flows: []string{"F-14", "F-23"},
+		Gaps: []string{"XG-13"},
+		Settings: []string{"merchants.commission_percent", "sales.commission_percent",
+			"pricing.margin_fixed", "sales.activation_orders"},
+		Modes: []string{"FULL", "FINANCIAL"},
+	},
+	"TestFIN_SnapshotVsLiveEconomics": {
+		Level: L4, Flows: []string{"F-14", "F-23", "F-33"},
+		Gaps: []string{"XG-13"},
+		Settings: []string{"merchants.commission_percent", "sales.commission_percent",
+			"pricing.margin_fixed", "delivery.fee"},
+		Modes: []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+
+	// الخزينةُ والمصروفُ والترتيبُ والحدود — `D5` · `D2`.
+	"TestFIN_ExpenseTreasuryInvariant": {
+		Level: L4, Flows: []string{"F-26"},
+		Defects: []string{"D5"},
+		Modes:   []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+	"TestFIN_TargetRewardPrecedesCommit": {
+		Level: L2, Flows: []string{"F-21"},
+		Defects: []string{"D2"},
+		Modes:   []string{"FAST", "FULL", "FINANCIAL"},
+	},
+	"TestFIN_TransactionBoundaries": {
+		Level: L2, Flows: []string{"F-14", "F-21", "F-24", "F-26"},
+		Defects: []string{"D2", "D5"},
+		Modes:   []string{"FAST", "FULL", "FINANCIAL"},
+	},
 }
 
 // harness اختبارٌ يُثبت المِسنَدَ نفسَه — **لا يحرس ميزة.**

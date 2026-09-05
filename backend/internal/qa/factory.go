@@ -35,6 +35,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/fininv"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -151,8 +153,13 @@ func short(s string) string {
 	if i := strings.LastIndex(s, "/"); i >= 0 {
 		s = s[i+1:]
 	}
-	if len(s) > 28 {
-		s = s[:28]
+	// **والقصُّ بالمحارف لا بالبايتات.**
+	//
+	// **كان `s[:28]`** — فاسمُ اختبارٍ فيه عربيّةٌ يُقصّ في منتصف حرف،
+	// **فتردّ القاعدةُ `invalid byte sequence for encoding "UTF8"`**
+	// ولا يُنشأ مستخدم. (كُشف في `P-4`: أسماءُ مصفوفةِ مصدرِ العمولة عربيّة.)
+	if r := []rune(s); len(r) > 28 {
+		s = string(r[:28])
 	}
 	return s
 }
@@ -524,7 +531,12 @@ type Rep struct {
 func (f *Factory) RepAccount(opts ...UserOpt) *Rep {
 	f.h.T.Helper()
 	u := f.NewUserWith("sales", opts...)
-	code := fmt.Sprintf("QA%06d", f.NS.next()%1e6)
+	// **والرمزُ يُبذَر بالنطاق لا بالعدّاد وحدَه.**
+	//
+	// **كان `QA%06d` من العدّاد** — وهو يبدأ من واحدٍ في كلّ سيناريو،
+	// **فمندوبان في اختبارين مختلفين يتصادمان** على
+	// `users_invite_code_key`. (كُشف في `P-4`.)
+	code := fmt.Sprintf("QA%08d", (f.NS.seed^(f.NS.next()*0x9E3779B97F4A7C15))%1e8)
 	if _, err := f.h.Pool.Exec(f.ctx(),
 		`UPDATE users SET invite_code = $2 WHERE id = $1::uuid`, u.ID, code); err != nil {
 		f.fatal("تعذّر ضبطُ رمز الدعوة: %v", err)
@@ -550,7 +562,30 @@ func (f *Factory) Credit(userID string, amount int64, kind string) {
 	if !allowedLedgerKind(kind) {
 		f.fatal("نوعُ قيدٍ غيرُ مستعمَلٍ في المنصّة: %q — انظر XOB-9", kind)
 	}
-	if err := f.h.walletApply(userID, amount, kind, f.NS.Ref("ledger")); err != nil {
+	f.CreditRef(userID, amount, kind, "")
+}
+
+// CreditRef قيدٌ بمرجعٍ صريح — **والمرجعُ يخضع لعقد `P-4`.**
+//
+// **وكانت `Credit` تكتب مرجعاً من النطاق دائماً** (`qa-…-ledger-7`)،
+// **فقيدُ سحبٍ يدّعي طلبَ سحبٍ لا وجودَ له** — **وأمسكه `FI-01.e` على
+// القاعدة.** (كُشف في `P-4`.)
+//
+// **فصار المرجعُ يُقرأ من العقد**: ما لا يشترطه يُترَك فارغاً كما تفعل
+// الإدارةُ حين تسوّي بيدها، **وما يشترطه لا يُختلَق** — يُمرَّر أو يُرفض.
+func (f *Factory) CreditRef(userID string, amount int64, kind, ref string) {
+	f.h.T.Helper()
+	if amount == 0 {
+		f.fatal("قيدٌ بصفر — والقاعدةُ ترفضه")
+	}
+	if !allowedLedgerKind(kind) {
+		f.fatal("نوعُ قيدٍ غيرُ مستعمَلٍ في المنصّة: %q — انظر XOB-9", kind)
+	}
+	if ref == "" && fininv.Kinds[kind].RefRequired {
+		f.fatal("النوعُ %q يشترط مرجعاً إلى %s — ولا يُختلَق",
+			kind, fininv.Kinds[kind].RefTarget)
+	}
+	if err := f.h.walletApply(userID, amount, kind, ref); err != nil {
 		f.fatal("تعذّر القيد: %v", err)
 	}
 }
@@ -562,9 +597,12 @@ func (f *Factory) Credit(userID string, amount int64, kind string) {
 // منها لا يكتبها نداءُ `ApplyTx` واحد**: `penalty` · `platform_expense` ·
 // `platform_profit` · `reward`.
 //
-// **والمصنعُ لا يفتح لها باباً** — **ومن سهّل إنشاءَها في اختبارٍ جعلها
-// تبدو مستعمَلةً وهي ليست كذلك.** **وسؤالُ بلوغها مؤجَّلٌ إلى `P-4`
-// (`XOB-9`).**
+// **وقِيس في `P-4` أنّ الأربعةَ بالغةٌ كلُّها** — لها مسارٌ في الإنتاج
+// ولها عقدٌ في `internal/fininv/kinds.go`. **ويبقى بابُ المصنع مغلقاً
+// عليها بقرارٍ لا بجهل**: `reward` و`penalty` **تُصنَعان بمسارهما
+// (`incentives.Grant`) لا بقيدٍ مباشر** — وله شروطُه (رصيدٌ كافٍ وسببٌ
+// مكتوبٌ ومرآةُ خزينة، `incentives.go:245`)، **ومن تخطّاها بنى حالاً لا
+// تقع في الواقع.** والنوعان الآخران للخزينة وحدَها (`FI-12.a`).
 func allowedLedgerKind(kind string) bool {
 	switch kind {
 	case "topup", "order_payment", "refund", "compensation",
