@@ -29,7 +29,7 @@ func TestEveryCheckIsComplete(t *testing.T) {
 
 // TestEveryFamilyHasChecks الاثنتا عشرةَ عائلةً التي حسمها المالكُ كلُّها ممثَّلة.
 func TestEveryFamilyHasChecks(t *testing.T) {
-	want := []Family{FI01, FI02, FI03, FI04, FI05, FI06, FI07, FI08, FI09, FI10, FI11, FI12}
+	want := []Family{FI01, FI02, FI03, FI04, FI05, FI06, FI07, FI08, FI09, FI10, FI11, FI12, FI13}
 	have := map[Family]int{}
 	for _, c := range All {
 		have[c.Family]++

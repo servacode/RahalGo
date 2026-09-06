@@ -6,14 +6,14 @@
     "head": "",
     "changed_files": [
       {
-        "path": "backend/internal/fininv/checks.go",
-        "category": "TEST_INFRA",
-        "why": "حزمةُ بنيةٍ تحتيّةٍ للاختبار"
-      },
-      {
-        "path": "backend/internal/migrate/migrations/0129_rep_commission_debt.sql",
+        "path": "backend/internal/migrate/migrations/0130_financial_obligations.sql",
         "category": "DATABASE_MIGRATION",
         "why": "هجرةُ قاعدةِ بيانات"
+      },
+      {
+        "path": "backend/internal/orders/goods.go",
+        "category": "PRODUCT_BACKEND",
+        "why": "شيفرةُ المحرّك"
       },
       {
         "path": "backend/internal/orders/transitions.go",
@@ -663,6 +663,45 @@
         ]
       },
       {
+        "target": "TestFIN_XG10_DebtOffsetFromNextCommission",
+        "kind": "test",
+        "required": true,
+        "reasons": [
+          {
+            "from": "TestFIN_XG10_DebtOffsetFromNextCommission",
+            "rule": "TRUTH_MAPPING",
+            "path": "فجوةُ عقدٍ XG-10 (BLOCKER) (البند ٢٢)",
+            "depth": "TRANSITIVE"
+          }
+        ]
+      },
+      {
+        "target": "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "kind": "test",
+        "required": true,
+        "reasons": [
+          {
+            "from": "TestFIN_XG10_RepCommissionReversedOnRefund",
+            "rule": "TRUTH_MAPPING",
+            "path": "فجوةُ عقدٍ XG-10 (BLOCKER) (البند ٢٢)",
+            "depth": "TRANSITIVE"
+          }
+        ]
+      },
+      {
+        "target": "TestFIN_XG10_RepWithdrewThenRefund",
+        "kind": "test",
+        "required": true,
+        "reasons": [
+          {
+            "from": "TestFIN_XG10_RepWithdrewThenRefund",
+            "rule": "TRUTH_MAPPING",
+            "path": "فجوةُ عقدٍ XG-10 (BLOCKER) (البند ٢٢)",
+            "depth": "TRANSITIVE"
+          }
+        ]
+      },
+      {
         "target": "TestFIN_XG11_RefundIndependentOfMerchantBalance",
         "kind": "test",
         "required": true,
@@ -949,47 +988,21 @@
         ]
       },
       {
-        "target": "internal/androidmap",
-        "kind": "package",
-        "required": true,
-        "reasons": [
-          {
-            "from": "backend/internal/fininv/checks.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "internal/failmap",
-        "kind": "package",
-        "required": true,
-        "reasons": [
-          {
-            "from": "backend/internal/fininv/checks.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
         "target": "internal/fininv",
         "kind": "package",
         "required": true,
         "reasons": [
           {
-            "from": "backend/internal/fininv/checks.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "backend/internal/migrate/migrations/0129_rep_commission_debt.sql",
+            "from": "backend/internal/migrate/migrations/0130_financial_obligations.sql",
             "rule": "MIGRATION",
             "path": "قيدُ أنواع الدفتر يُقرأ من القاعدة الحيّة",
             "depth": "TRANSITIVE"
+          },
+          {
+            "from": "backend/internal/orders/goods.go",
+            "rule": "FINANCIAL",
+            "path": "مسٌّ لمسارٍ ماليّ ⇒ ثوابتُ `P-4` وسباقاتُها وحقنُ فشلها (البند ١٤)",
+            "depth": "DIRECT"
           },
           {
             "from": "backend/internal/orders/transitions.go",
@@ -1000,23 +1013,16 @@
         ]
       },
       {
-        "target": "internal/impact",
-        "kind": "package",
-        "required": true,
-        "reasons": [
-          {
-            "from": "backend/internal/fininv/checks.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
         "target": "internal/orders",
         "kind": "package",
         "required": true,
         "reasons": [
+          {
+            "from": "backend/internal/orders/goods.go",
+            "rule": "ORDER_LIFECYCLE",
+            "path": "دورةُ حياة الطلب تمسّ أربعةَ تطبيقاتٍ ولو تبدّل ملفٌّ واحد (البند ١٨)",
+            "depth": "DIRECT"
+          },
           {
             "from": "backend/internal/orders/transitions.go",
             "rule": "ORDER_LIFECYCLE",
@@ -1037,15 +1043,21 @@
         "required": true,
         "reasons": [
           {
-            "from": "backend/internal/fininv/checks.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "backend/internal/migrate/migrations/0129_rep_commission_debt.sql",
+            "from": "backend/internal/migrate/migrations/0130_financial_obligations.sql",
             "rule": "MIGRATION",
             "path": "الهجراتُ تُطبَّق في مِسنَد `qa`",
+            "depth": "DIRECT"
+          },
+          {
+            "from": "backend/internal/orders/goods.go",
+            "rule": "FINANCIAL",
+            "path": "مسٌّ لمسارٍ ماليّ ⇒ ثوابتُ `P-4` وسباقاتُها وحقنُ فشلها (البند ١٤)",
+            "depth": "DIRECT"
+          },
+          {
+            "from": "backend/internal/orders/goods.go",
+            "rule": "ORDER_LIFECYCLE",
+            "path": "دورةُ حياة الطلب تمسّ أربعةَ تطبيقاتٍ ولو تبدّل ملفٌّ واحد (البند ١٨)",
             "depth": "DIRECT"
           },
           {
@@ -1061,45 +1073,9 @@
             "depth": "DIRECT"
           },
           {
-            "from": "TestD20_MerchantRealtimeVsREST",
+            "from": "TestIDEM_InProgressOverlap",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestD20_MerchantRealtimeVsREST",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_XG11_RefundIndependentOfMerchantBalance",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_XG11_RefundIndependentOfMerchantBalance",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_CommissionSourceMatrix",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_CommissionSourceMatrix",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_MoneyTimingByStatus",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_MoneyTimingByStatus",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_DuplicatePayout",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_DuplicatePayout",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestD21_CustomerRedactionAgainstContract",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestD21_CustomerRedactionAgainstContract",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_SameKeyDifferentPayload",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_SameKeyDifferentPayload",
+            "path": "حزمةُ TestIDEM_InProgressOverlap",
             "depth": "TRANSITIVE"
           },
           {
@@ -1109,261 +1085,9 @@
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestEV_WalletAudience",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_WalletAudience",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_MerchantDriverAssignment",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_MerchantDriverAssignment",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_GeometryValidationRejectsBadShapes",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_GeometryValidationRejectsBadShapes",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_ConservationSurvivesRefund",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_ConservationSurvivesRefund",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_CashExposureContract",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_CashExposureContract",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_R8_OrphanClaimUnderRealFailure",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_R8_OrphanClaimUnderRealFailure",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_RepCommissionReversal",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_RepCommissionReversal",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_RefundVsPayout",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_RefundVsPayout",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_OrderEconomicConservation",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_OrderEconomicConservation",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_OverlappingZonesPickNearestCentre",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_OverlappingZonesPickNearestCentre",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestPushPayloadScope",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestPushPayloadScope",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_ErrorReleasesClaim",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_ErrorReleasesClaim",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_AQ4_AuditAtomicity",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_AQ4_AuditAtomicity",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_MultiOrderRouting",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_MultiOrderRouting",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestSampleFactory_WalletMatchesLedger",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestSampleFactory_WalletMatchesLedger",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_AdminVsAppTransition",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_AdminVsAppTransition",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_XG11_RefundUntouchedWhenMerchantSolvent",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_EmptyTableStaysOpen",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_EmptyTableStaysOpen",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestOrderFieldsAllClassified",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestOrderFieldsAllClassified",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_R23PushFailureIsLost",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_R23PushFailureIsLost",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_D13_MediaDirectoryListingOpen",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_D13_MediaDirectoryListingOpen",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_TransactionBoundaries",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_TransactionBoundaries",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_SameKeySamePayloadSequential",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_SameKeySamePayloadSequential",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_PushTokenTargeting",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_PushTokenTargeting",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestD20_CustomerRealtimeVsREST",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestD20_CustomerRealtimeVsREST",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_TwoDriversSameOrder",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_TwoDriversSameOrder",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_LocationQueueIsClientSide",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_LocationQueueIsClientSide",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_MerchantRealtimePrivacy",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_MerchantRealtimePrivacy",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_CustomerDriverAssignment",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_CustomerDriverAssignment",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_R7_DriverAcceptPartialState",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_R7_DriverAcceptPartialState",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_MaxActiveOrders",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_MaxActiveOrders",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_D5_ExpenseTreasuryPartial",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_D5_ExpenseTreasuryPartial",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_ExpenseTreasuryInvariant",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_ExpenseTreasuryInvariant",
-            "depth": "TRANSITIVE"
-          },
-          {
             "from": "TestFIN_SnapshotVsLiveEconomics",
             "rule": "TRUTH_MAPPING",
             "path": "حزمةُ TestFIN_SnapshotVsLiveEconomics",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_CleanupAfterTTL",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_CleanupAfterTTL",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_CommitThenLostResponse",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_CommitThenLostResponse",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_InProgressOverlap",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_InProgressOverlap",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_SameKeySamePayloadConcurrent",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_SameKeySamePayloadConcurrent",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_DisabledZoneDoesNotServe",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_DisabledZoneDoesNotServe",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_LegacyRadiusUnchanged",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_LegacyRadiusUnchanged",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_FinancialTruthAfterConcurrentDeliveries",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_FinancialTruthAfterConcurrentDeliveries",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_MerchantWithdrewThenRefund",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_MerchantWithdrewThenRefund",
             "depth": "TRANSITIVE"
           },
           {
@@ -1373,9 +1097,15 @@
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestSampleFactory_DriverOnShiftWithCash",
+            "from": "TestFIN_MoneyTimingByStatus",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestSampleFactory_DriverOnShiftWithCash",
+            "path": "حزمةُ TestFIN_MoneyTimingByStatus",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestD20_MerchantRealtimeVsREST",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestD20_MerchantRealtimeVsREST",
             "depth": "TRANSITIVE"
           },
           {
@@ -1385,21 +1115,15 @@
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestFIN_RefundNotConditionedOnRepBalance",
+            "from": "TestCoverage_GeometryValidationRejectsBadShapes",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_RefundNotConditionedOnRepBalance",
+            "path": "حزمةُ TestCoverage_GeometryValidationRejectsBadShapes",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestRACE_SettingChangeDuringSettlement",
+            "from": "TestPushPayloadScope",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_SettingChangeDuringSettlement",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_RepeatedRefundIsIdempotent",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_RepeatedRefundIsIdempotent",
+            "path": "حزمةُ TestPushPayloadScope",
             "depth": "TRANSITIVE"
           },
           {
@@ -1409,9 +1133,57 @@
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestEV_R21AutoTransferAwareness",
+            "from": "TestRACE_LocationQueueIsClientSide",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_R21AutoTransferAwareness",
+            "path": "حزمةُ TestRACE_LocationQueueIsClientSide",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestOrderFieldsAllClassified",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestOrderFieldsAllClassified",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestEV_PushTokenTargeting",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestEV_PushTokenTargeting",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_CashExposureContract",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_CashExposureContract",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestIDEM_CommitThenLostResponse",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestIDEM_CommitThenLostResponse",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestIDEM_SameKeySamePayloadSequential",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestIDEM_SameKeySamePayloadSequential",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestRACE_TwoDriversSameOrder",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestRACE_TwoDriversSameOrder",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestRACE_AdminVsAppTransition",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestRACE_AdminVsAppTransition",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestCoverage_LegacyRadiusUnchanged",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestCoverage_LegacyRadiusUnchanged",
             "depth": "TRANSITIVE"
           },
           {
@@ -1421,35 +1193,267 @@
             "depth": "TRANSITIVE"
           },
           {
+            "from": "TestRACE_FinancialTruthAfterConcurrentDeliveries",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestRACE_FinancialTruthAfterConcurrentDeliveries",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_XG11_RefundIndependentOfMerchantBalance",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_XG11_RefundIndependentOfMerchantBalance",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_RepeatedRefundIsIdempotent",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_RepeatedRefundIsIdempotent",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestSampleFactory_WalletMatchesLedger",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestSampleFactory_WalletMatchesLedger",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFAIL_AQ4_AuditAtomicity",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFAIL_AQ4_AuditAtomicity",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestEV_MerchantRealtimePrivacy",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestEV_MerchantRealtimePrivacy",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_CommissionSourceMatrix",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_CommissionSourceMatrix",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestRACE_MaxActiveOrders",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestRACE_MaxActiveOrders",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_XG10_DebtOffsetFromNextCommission",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_XG10_DebtOffsetFromNextCommission",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestIDEM_SameKeyDifferentPayload",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestIDEM_SameKeyDifferentPayload",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestRACE_RefundVsPayout",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestRACE_RefundVsPayout",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestCoverage_DisabledZoneDoesNotServe",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestCoverage_DisabledZoneDoesNotServe",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_XG10_RepCommissionReversedOnRefund",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_XG10_RepCommissionReversedOnRefund",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_XG10_RepWithdrewThenRefund",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_XG10_RepWithdrewThenRefund",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_MerchantWithdrewThenRefund",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_MerchantWithdrewThenRefund",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestEV_CustomerDriverAssignment",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestEV_CustomerDriverAssignment",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestEV_R23PushFailureIsLost",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestEV_R23PushFailureIsLost",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_XG11_RefundUntouchedWhenMerchantSolvent",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestCoverage_OverlappingZonesPickNearestCentre",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestCoverage_OverlappingZonesPickNearestCentre",
+            "depth": "TRANSITIVE"
+          },
+          {
             "from": "TestCoverage_PolygonInsideOutsideBoundary",
             "rule": "TRUTH_MAPPING",
             "path": "حزمةُ TestCoverage_PolygonInsideOutsideBoundary",
             "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "internal/racemap",
-        "kind": "package",
-        "required": true,
-        "reasons": [
+          },
           {
-            "from": "backend/internal/fininv/checks.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
+            "from": "TestFAIL_R7_DriverAcceptPartialState",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFAIL_R7_DriverAcceptPartialState",
             "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "internal/testtruth",
-        "kind": "package",
-        "required": true,
-        "reasons": [
+          },
           {
-            "from": "backend/internal/fininv/checks.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
+            "from": "TestFIN_ExpenseTreasuryInvariant",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_ExpenseTreasuryInvariant",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_RefundNotConditionedOnRepBalance",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_RefundNotConditionedOnRepBalance",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestCoverage_EmptyTableStaysOpen",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestCoverage_EmptyTableStaysOpen",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestEV_MerchantDriverAssignment",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestEV_MerchantDriverAssignment",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestIDEM_SameKeySamePayloadConcurrent",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestIDEM_SameKeySamePayloadConcurrent",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestSampleFactory_DriverOnShiftWithCash",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestSampleFactory_DriverOnShiftWithCash",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_TransactionBoundaries",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_TransactionBoundaries",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFAIL_R8_OrphanClaimUnderRealFailure",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFAIL_R8_OrphanClaimUnderRealFailure",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_OrderEconomicConservation",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_OrderEconomicConservation",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_ConservationSurvivesRefund",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_ConservationSurvivesRefund",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestRACE_DuplicatePayout",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestRACE_DuplicatePayout",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFAIL_D5_ExpenseTreasuryPartial",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFAIL_D5_ExpenseTreasuryPartial",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestIDEM_ErrorReleasesClaim",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestIDEM_ErrorReleasesClaim",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_RepCommissionReversal",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_RepCommissionReversal",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestEV_MultiOrderRouting",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestEV_MultiOrderRouting",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestD20_CustomerRealtimeVsREST",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestD20_CustomerRealtimeVsREST",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestD21_CustomerRedactionAgainstContract",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestD21_CustomerRedactionAgainstContract",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestIDEM_CleanupAfterTTL",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestIDEM_CleanupAfterTTL",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestEV_R21AutoTransferAwareness",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestEV_R21AutoTransferAwareness",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestEV_WalletAudience",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestEV_WalletAudience",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestRACE_SettingChangeDuringSettlement",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestRACE_SettingChangeDuringSettlement",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFAIL_D13_MediaDirectoryListingOpen",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFAIL_D13_MediaDirectoryListingOpen",
             "depth": "TRANSITIVE"
           }
         ]
@@ -1458,7 +1462,6 @@
     "required_modes": [
       "CONCURRENCY",
       "FAILURE",
-      "FAST",
       "FINANCIAL",
       "FULL"
     ],
@@ -1469,15 +1472,21 @@
     "risk_class": "CRITICAL",
     "reasons": [
       {
-        "from": "backend/internal/fininv/checks.go",
-        "rule": "TEST_INFRA",
-        "path": "**بنيةٌ تحتيّةٌ للاختبار ⇒ تحقّقٌ أوسعُ من اختبارِها وحدَه** (البند ٢٤)",
+        "from": "backend/internal/migrate/migrations/0130_financial_obligations.sql",
+        "rule": "MIGRATION",
+        "path": "هجرةٌ ⇒ تكاملُ القاعدة وثوابتُ المال (البند ١١)",
         "depth": "DIRECT"
       },
       {
-        "from": "backend/internal/migrate/migrations/0129_rep_commission_debt.sql",
-        "rule": "MIGRATION",
-        "path": "هجرةٌ ⇒ تكاملُ القاعدة وثوابتُ المال (البند ١١)",
+        "from": "backend/internal/orders/goods.go",
+        "rule": "FINANCIAL",
+        "path": "مسٌّ لمسارٍ ماليّ ⇒ ثوابتُ `P-4` وسباقاتُها وحقنُ فشلها (البند ١٤)",
+        "depth": "DIRECT"
+      },
+      {
+        "from": "backend/internal/orders/goods.go",
+        "rule": "ORDER_LIFECYCLE",
+        "path": "دورةُ حياة الطلب تمسّ أربعةَ تطبيقاتٍ ولو تبدّل ملفٌّ واحد (البند ١٨)",
         "depth": "DIRECT"
       },
       {

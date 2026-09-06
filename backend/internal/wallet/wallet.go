@@ -248,7 +248,26 @@ func (s *Service) Apply(ctx context.Context, userID string, amount int64, kind, 
 }
 
 // ApplyTx نفس Apply لكن داخل معاملة يملكها المستدعي — لا يفتح معاملة ولا يُنهيها.
+// ApplyTx يقيّد حركةً في محفظة.
 func (s *Service) ApplyTx(ctx context.Context, q Querier, userID string, amount int64, kind, ref, note string, actorID *string) (int64, error) {
+	var ignored int64
+	return s.applyTx(ctx, q, userID, amount, kind, ref, note, actorID, &ignored)
+}
+
+// ApplyTxID كـ`ApplyTx` **ويُرجع رقمَ القيد الذي كتبه.**
+//
+// **ولا يُحفَظ الرقمُ في الخدمة** — **والخدمةُ مشتركةٌ بين الطلبات،
+// فحقلٌ فيها سباقُ بيانات.** يُمرَّر خرجاً ويُستهلَك في المعاملة نفسِها.
+//
+// غرضُه وصلُ سطرِ تسويةِ التزامٍ بقيدِه في الدفتر (`XG-31`) —
+// **فلا يبقى الاثنان متجاورَين بلا رابطٍ إلّا الحدس.**
+func (s *Service) ApplyTxID(ctx context.Context, q Querier, userID string, amount int64, kind, ref, note string, actorID *string) (int64, int64, error) {
+	var txID int64
+	balance, err := s.applyTx(ctx, q, userID, amount, kind, ref, note, actorID, &txID)
+	return balance, txID, err
+}
+
+func (s *Service) applyTx(ctx context.Context, q Querier, userID string, amount int64, kind, ref, note string, actorID *string, txID *int64) (int64, error) {
 	if amount == 0 {
 		return 0, ErrInvalidAmount
 	}
@@ -273,10 +292,10 @@ func (s *Service) ApplyTx(ctx context.Context, q Querier, userID string, amount 
 		return 0, err
 	}
 
-	if _, err := q.Exec(ctx, `
+	if err := q.QueryRow(ctx, `
 		INSERT INTO wallet_transactions (user_id, amount, kind, ref, note, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		userID, amount, kind, ref, note, actorID); err != nil {
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+		userID, amount, kind, ref, note, actorID).Scan(txID); err != nil {
 		return 0, err
 	}
 	return balance, nil

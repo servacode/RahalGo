@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"slices"
 	"time"
 
@@ -904,10 +905,9 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 // استُرِدّ لها.
 func (s *Service) offsetMerchantDebt(ctx context.Context, q wallet.Querier,
 	merchantID, ownerID string, available int64, orderID, actorID string) error {
-	var debt int64
-	if err := q.QueryRow(ctx,
-		`SELECT debt FROM merchants WHERE id = $1 FOR UPDATE`, merchantID).
-		Scan(&debt); err != nil {
+	// **يُقرأ من الوقائع لا من الصورة** — `XG-31`.
+	debt, err := obligations.Balance(ctx, q, obligations.PartyMerchant, merchantID)
+	if err != nil {
 		return err
 	}
 	if debt <= 0 {
@@ -920,13 +920,22 @@ func (s *Service) offsetMerchantDebt(ctx context.Context, q wallet.Querier,
 	if take <= 0 {
 		return nil
 	}
-	if _, err := s.wallet.ApplyTx(ctx, q, ownerID, -take, "merchant_earning",
-		orderID, "اقتطاعُ دَينٍ عن بضاعةٍ رُدّت سابقاً", &actorID); err != nil {
+	_, txID, err := s.wallet.ApplyTxID(ctx, q, ownerID, -take, "merchant_earning",
+		orderID, "اقتطاعُ دَينٍ عن بضاعةٍ رُدّت سابقاً", &actorID)
+	if err != nil {
 		return err
 	}
-	_, err := q.Exec(ctx,
-		`UPDATE merchants SET debt = debt - $2 WHERE id = $1`, merchantID, take)
-	return err
+	// **وسطرُ تسويةٍ لكلّ التزامٍ مسّه الاقتطاع** — الأقدمُ أوّلاً.
+	// **ويُوصَل بقيدِه في الدفتر**، فلا يبقى الاثنان متجاورَين بلا رابط.
+	applied, err := obligations.Settle(ctx, q, obligations.PartyMerchant,
+		merchantID, take, orderID, txID, &actorID)
+	if err != nil {
+		return err
+	}
+	if applied != take {
+		return fmt.Errorf("تسويةُ دَينِ متجرٍ لم تُطابق: اقتُطع %d وسُوّي %d", take, applied)
+	}
+	return nil
 }
 
 // settleRep يقيّد نصيبَ المندوب — **عند التسليم**.
@@ -1121,11 +1130,20 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 			take = balance
 		}
 		if rest := p.amount - take; rest > 0 {
-			// **والدَّينُ على المتجر لا على صاحبه** — والتحصيلُ يقرؤه
-			// من `merchants.debt` عند أوّل مستحقٍّ قادم.
-			if _, err := q.Exec(ctx, `
-				UPDATE merchants SET debt = debt + $2
-				WHERE owner_user_id = $1`, p.userID, rest); err != nil {
+			// **واقعةُ نشأةٍ لا زيادةُ عمود** — `XG-31`.
+			//
+			// **والالتزامُ على المتجر لا على مالكه**: **المالكُ قد
+			// يتبدّل والدَّينُ يبقى للمتجر.** **والتحصيلُ يقرؤه من
+			// `merchants` عند أوّل مستحقٍّ قادم.**
+			var mID string
+			if err := q.QueryRow(ctx,
+				`SELECT id::text FROM merchants WHERE owner_user_id = $1`,
+				p.userID).Scan(&mID); err != nil {
+				return err
+			}
+			if _, err := obligations.Create(ctx, q, obligations.PartyMerchant,
+				mID, rest, obligations.CauseRefundMerchant,
+				orderID, &actorID); err != nil {
 				return err
 			}
 		}
@@ -1237,9 +1255,10 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 		take = repBalance
 	}
 	if rest := repPaid - take; rest > 0 {
-		if _, err := q.Exec(ctx,
-			`UPDATE users SET commission_debt = commission_debt + $2 WHERE id = $1`,
-			*repID, rest); err != nil {
+		// **واقعةُ نشأةٍ** — `XG-31`.
+		if _, err := obligations.Create(ctx, q, obligations.PartyRep,
+			*repID, rest, obligations.CauseRefundRep,
+			orderID, &actorID); err != nil {
 			return err
 		}
 	}
@@ -1263,10 +1282,8 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 // وعمولتُه مئةٌ يُقتطَع منه مئةٌ ويبقى تسعُمئة**، ولا يصير رصيدُه سالباً.
 func (s *Service) offsetRepDebt(ctx context.Context, q wallet.Querier,
 	repID string, available int64, orderID, actorID string) error {
-	var debt int64
-	if err := q.QueryRow(ctx,
-		`SELECT COALESCE(commission_debt, 0) FROM users WHERE id = $1 FOR UPDATE`,
-		repID).Scan(&debt); err != nil {
+	debt, err := obligations.Balance(ctx, q, obligations.PartyRep, repID)
+	if err != nil {
 		return err
 	}
 	if debt <= 0 {
@@ -1279,14 +1296,20 @@ func (s *Service) offsetRepDebt(ctx context.Context, q wallet.Querier,
 	if take <= 0 {
 		return nil
 	}
-	if _, err := s.wallet.ApplyTx(ctx, q, repID, -take, "commission",
-		orderID, "اقتطاعُ التزامٍ عن طلبٍ استُرِدّ سابقاً", &actorID); err != nil {
+	_, txID, err := s.wallet.ApplyTxID(ctx, q, repID, -take, "commission",
+		orderID, "اقتطاعُ التزامٍ عن طلبٍ استُرِدّ سابقاً", &actorID)
+	if err != nil {
 		return err
 	}
-	_, err := q.Exec(ctx,
-		`UPDATE users SET commission_debt = commission_debt - $2 WHERE id = $1`,
-		repID, take)
-	return err
+	applied, err := obligations.Settle(ctx, q, obligations.PartyRep,
+		repID, take, orderID, txID, &actorID)
+	if err != nil {
+		return err
+	}
+	if applied != take {
+		return fmt.Errorf("تسويةُ التزامِ مندوبٍ لم تُطابق: اقتُطع %d وسُوّي %d", take, applied)
+	}
+	return nil
 }
 
 // repShare نصيب المندوب من عمولة المنصة — **من مخزن الإعدادات لا من SQL.**

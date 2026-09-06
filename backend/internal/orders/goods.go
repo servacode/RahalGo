@@ -41,6 +41,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/servacode/rahalgo/backend/internal/obligations"
 
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
@@ -182,9 +183,13 @@ func (s *Service) clawBackGoods(ctx context.Context, q wallet.Querier, orderID, 
 			}
 		}
 		if rest := sh.earned - take; rest > 0 {
-			if _, err := q.Exec(ctx,
-				`UPDATE merchants SET debt = debt + $2 WHERE id = $1`,
-				sh.merchantID, rest); err != nil {
+			// **واقعةُ نشأةٍ لا زيادةُ عمود** — `XG-31`.
+			//
+			// **وفي المعاملة نفسِها التي ردّت البضاعة**: **إن سقطت
+			// سقطا معاً، فلا دَينٌ بلا أصلٍ ولا أصلٌ بلا دَين.**
+			if _, err := obligations.Create(ctx, q, obligations.PartyMerchant,
+				sh.merchantID, rest, obligations.CauseReturnedGoods,
+				orderID, &actorID); err != nil {
 				return err
 			}
 		}

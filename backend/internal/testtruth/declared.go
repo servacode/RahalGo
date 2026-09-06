@@ -200,7 +200,24 @@ var Gaps = []GapDecl{
 	// **وهي علّةٌ سابقةٌ للمتجر** (`goods.go` منذ ردّ البضاعة)
 	// **وُرِّثت إلى المندوب في دورة الإصلاح ٢** — **والنمطُ نُقل بعلّته.**
 	{ID: "XG-31", Title: "التزامُ متجرٍ أو مندوبٍ يُقيَّد رقماً بلا واقعةٍ تُفسّره",
-		Severity: "CRITICAL"},
+		Severity: "CRITICAL",
+		// **دورةُ إصلاحٍ ٣ · ٢٠٢٦-٠٩-٠٦.**
+		Fixed: "**صار الالتزامُ واقعةً تُقيَّد** — `financial_obligations` " +
+			"تحمل الطرفَ والمبلغَ الأصليَّ والسببَ والطلبَ والوقتَ والمنشئ، " +
+			"و`obligation_settlements` تحمل كلَّ اقتطاعٍ بمقداره وطلبِه " +
+			"والباقي بعده **وقيدِه في الدفتر**. " +
+			"**ولم يُقَم عالمٌ محاسبيٌّ موازٍ**: `wallet_transactions` " +
+			"دفترُ محفظةٍ يحرّك الرصيدَ حتماً، **والالتزامُ ليس حركةَ مال** " +
+			"— فقيدُه فيه يُفسد كلَّ رصيدٍ ومصالحة. " +
+			"**والعمودان `merchants.debt` و`users.commission_debt` صارا " +
+			"صورةً محفوظة** لا تُكتب إلّا من `internal/obligations`، " +
+			"**ويحرس تطابقَها مع الوقائع `FI-13`** بأربعة فحوص. " +
+			"**والنشأةُ في معاملة الاسترداد نفسِها** فلا دَينٌ بلا أصل، " +
+			"**وفهرسٌ فريدٌ في القاعدة يمنع نشأةً ثانيةً للطلب نفسِه** — " +
+			"حارسٌ في المخطَّط لا في ترتيب الشيفرة. " +
+			"**والأقدمُ يُسدَّد أوّلاً** — سياسةٌ مُعلَنة. " +
+			"**وأُغلقت للمتجر والمندوب معاً** — والعلّةُ كانت في " +
+			"`merchants.debt` منذ ردّ البضاعة. عشرةُ حرّاسٍ دائمين."},
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -986,6 +1003,47 @@ var TestMap = map[string]TestDecl{
 	// ويسقطان يومَ يُصلَح** فيُقرأ سقوطُهما أمراً بتحديث السجلّ.
 	"TestFAIL_R16_RedisDownFailsOpen":        stagingTest([]string{"R16"}, nil),
 	"TestFAIL_D13_MediaDirectoryListingOpen": stagingTest(nil, []string{"D13"}),
+
+	// ── `XG-31` · تتبّعُ الالتزامات (دورةُ إصلاحٍ ٣) ──────────────
+	//
+	// **عشرةُ حرّاسٍ يسألون سؤالاً واحداً**: **من أين جاء هذا الرقم؟**
+	"TestOBL_MerchantSufficient_NoObligation":      oblTest(),
+	"TestOBL_MerchantInsufficient_OriginTraceable": oblTest(),
+	"TestOBL_RepAvailable_NoObligation":            oblTest(),
+	"TestOBL_RepWithdrawn_OriginTraceable":         oblTest(),
+	"TestOBL_BothInsufficient_AtomicOrigins":       oblTest(),
+	"TestOBL_ReplayCreatesNoDuplicate":             oblTest(),
+	"TestOBL_FutureEarningsSettleWithEvidence":     oblTest(),
+	"TestOBL_MultipleObligationsFIFO":              oblTest(),
+
+	// **وتدقيقُ دورةِ ٢ يحرس اقتصادَ العكس نفسَه.**
+	"TestFIN_XG10_RefundReplayDoesNotDoubleCharge":     xg10Test(),
+	"TestFIN_XG10_DebtSettlementArithmetic":            xg10Test(),
+	"TestFIN_XG10_CombinedMerchantAndRepInsufficiency": xg10Test(),
+	"TestFIN_XG10_ConservationAcrossRefund":            xg10Test(),
+}
+
+// oblTest حارسُ تتبّعِ التزامٍ ماليّ — `XG-31`.
+//
+// **ويمسّ تدفّقَي التسوية والاسترداد** — **والمالُ فيهما لا يُقرأ من
+// عمودٍ بل من واقعة.**
+func oblTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-14", "F-17"},
+		Gaps:  []string{"XG-31"},
+		Modes: []string{"FINANCIAL", "FULL", "RELEASE"},
+	}
+}
+
+// xg10Test حارسُ عكسِ عمولةِ المندوب — `XG-10` · `XG-31`.
+func xg10Test() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-14", "F-17"},
+		Gaps:  []string{"XG-10", "XG-31"},
+		Modes: []string{"FINANCIAL", "FULL", "RELEASE"},
+	}
 }
 
 // infraTest حارسُ بنيةٍ تحتيّة — **يعمل في كلّ وضعٍ بلا بيئةٍ خارجيّة.**

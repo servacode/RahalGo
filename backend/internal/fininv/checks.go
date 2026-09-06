@@ -725,4 +725,72 @@ var All = []Check{
 		Registers: []string{"D2"},
 		SQL:       `SELECT 1 WHERE false`,
 	},
+
+	// ═══════════════════════════════════════════════════════════════════
+	// FI-13 — **تتبّعُ الالتزامات** (`XG-31`)
+	// ═══════════════════════════════════════════════════════════════════
+	//
+	// **الالتزامُ واقعةٌ لا رقم.** **والعمودان صورةٌ محفوظة** — فإن
+	// فارقا الوقائعَ فأحدُهما يكذب، **ولا يُعرَف أيُّهما.**
+
+	{
+		ID: "FI-13.a", Family: FI13, Status: ProvableNow, Ops: true,
+		Name: "دَينُ المتجرِ يطابق وقائعَه",
+		Why: "**صورةٌ فارقت أصلَها** — ورقمٌ لا تفسّره وقائعُه لا يُراجَع " +
+			"ولا يُنازَع فيه (XG-31).",
+		Flows:     []string{"F-14", "F-17"},
+		Registers: []string{"XG-31"},
+		SQL: `
+			SELECT m.id::text, m.name, m.debt AS الصورة,
+			       COALESCE(o.الوقائع, 0) AS الوقائع
+			FROM merchants m
+			LEFT JOIN (SELECT party_id, sum(amount - settled)::bigint AS الوقائع
+			             FROM financial_obligations
+			            WHERE party_kind = 'merchant' AND closed_at IS NULL
+			            GROUP BY party_id) o ON o.party_id = m.id
+			WHERE m.debt <> COALESCE(o.الوقائع, 0)`,
+	},
+	{
+		ID: "FI-13.b", Family: FI13, Status: ProvableNow, Ops: true,
+		Name:      "التزامُ المندوبِ يطابق وقائعَه",
+		Why:       "**كسابقه للمندوب** — والعمودُ `users.commission_debt` صورةٌ لا حقيقة.",
+		Flows:     []string{"F-14"},
+		Kinds:     []string{"commission"},
+		Registers: []string{"XG-31", "XG-10"},
+		SQL: `
+			SELECT u.id::text, u.full_name, u.commission_debt AS الصورة,
+			       COALESCE(o.الوقائع, 0) AS الوقائع
+			FROM users u
+			LEFT JOIN (SELECT party_id, sum(amount - settled)::bigint AS الوقائع
+			             FROM financial_obligations
+			            WHERE party_kind = 'rep' AND closed_at IS NULL
+			            GROUP BY party_id) o ON o.party_id = u.id
+			WHERE u.commission_debt <> COALESCE(o.الوقائع, 0)`,
+	},
+	{
+		ID: "FI-13.c", Family: FI13, Status: ProvableNow, Ops: true,
+		Name: "المسدَّدُ يساوي مجموعَ تسوياته",
+		Why: "**عمودُ `settled` صورةٌ ثانية** — وإن فارق سطورَه فالتاريخُ " +
+			"ناقصٌ أو مضاعَف.",
+		Registers: []string{"XG-31"},
+		SQL: `
+			SELECT o.id::text, o.cause, o.settled AS الصورة,
+			       COALESCE(s.المجموع, 0) AS السطور
+			FROM financial_obligations o
+			LEFT JOIN (SELECT obligation_id, sum(amount)::bigint AS المجموع
+			             FROM obligation_settlements GROUP BY obligation_id) s
+			       ON s.obligation_id = o.id
+			WHERE o.settled <> COALESCE(s.المجموع, 0)`,
+	},
+	{
+		ID: "FI-13.d", Family: FI13, Status: ProvableNow, Ops: true,
+		Name: "كلُّ التزامٍ يُفسَّر بأصله",
+		Why: "**التزامٌ بلا طلبٍ ولا سببِ تركة** — **وهو الرقمُ الذي لا " +
+			"يُقال من أين** الذي وُجدت `XG-31` لأجله.",
+		Registers: []string{"XG-31"},
+		SQL: `
+			SELECT id::text, party_kind, amount, cause
+			FROM financial_obligations
+			WHERE order_id IS NULL AND cause <> 'legacy_opening'`,
+	},
 }

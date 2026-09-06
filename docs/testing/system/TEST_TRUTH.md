@@ -19,18 +19,18 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **232** |
-| دوالُّ اختبار | **794** |
+| ملفّاتُ اختبار | **233** |
+| دوالُّ اختبار | **802** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 794
-MAPPED     = 120
+TOTAL      = 802
+MAPPED     = 132
 INFRA      = 102
-ORPHAN     = 572
+ORPHAN     = 568
 ```
 
 **واليتيمُ اختبارٌ لا يعرف ماذا يحرس** — **ولا يُسقط البناءَ اليومَ**،
@@ -38,7 +38,7 @@ ORPHAN     = 572
 
 | الحزمة | يتيمٌ |
 |---|---|
-| `qa` | 125 |
+| `qa` | 121 |
 | `server` | 116 |
 | `routing` | 76 |
 | `orders_test` | 60 |
@@ -55,10 +55,10 @@ ORPHAN     = 572
 
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
-| **التدفّقات** | 35 | 28 | 7 |
+| **التدفّقات** | 35 | 29 | 6 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 11 | 13 |
-| **فجواتُ العقد** | 27 | 4 | 23 |
+| **فجواتُ العقد** | 27 | 5 | 22 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
 
 ---
@@ -106,7 +106,7 @@ ORPHAN     = 572
 | **XG-7** | `HIGH` | `orders.auto_accept_min` | `NOT_IMPLEMENTED` | — |
 | **XG-8** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-9** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
-| **XG-10** | `BLOCKER` | — | `COVERED` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` · `TestRACE_RefundVsPayout` · `TestFIN_XG10_DebtOffsetFromNextCommission` · `TestFIN_XG10_RepCommissionReversedOnRefund` · `TestFIN_XG10_RepWithdrewThenRefund` |
+| **XG-10** | `BLOCKER` | — | `COVERED` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` · `TestRACE_RefundVsPayout` · `TestFIN_XG10_DebtOffsetFromNextCommission` · `TestFIN_XG10_RepCommissionReversedOnRefund` · `TestFIN_XG10_RepWithdrewThenRefund` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
 | **XG-11** | `BLOCKER` | — | `COVERED` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` · `TestRACE_RefundVsPayout` · `TestFIN_XG11_RefundIndependentOfMerchantBalance` · `TestFIN_XG11_RefundUntouchedWhenMerchantSolvent` · `TestFIN_XG10_RepWithdrewThenRefund` |
 | **XG-12** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-13** | `HIGH` | — | `EXPECTED_FAIL` | `TestFIN_CommissionSourceMatrix` · `TestFIN_SnapshotVsLiveEconomics` |
@@ -127,7 +127,7 @@ ORPHAN     = 572
 | **XG-28** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-29** | `BLOCKER` | — | `NOT_IMPLEMENTED` | — |
 | **XG-30** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-31** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
+| **XG-31** | `CRITICAL` | — | `COVERED` | `TestOBL_BothInsufficient_AtomicOrigins` · `TestOBL_FutureEarningsSettleWithEvidence` · `TestOBL_MerchantInsufficient_OriginTraceable` · `TestOBL_MerchantSufficient_NoObligation` · `TestOBL_MultipleObligationsFIFO` · `TestOBL_RepAvailable_NoObligation` · `TestOBL_RepWithdrawn_OriginTraceable` · `TestOBL_ReplayCreatesNoDuplicate` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
 
 ---
 
@@ -135,7 +135,7 @@ ORPHAN     = 572
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 32
+COVERAGE GAPS    = 31
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -154,7 +154,6 @@ COVERAGE GAPS    = 32
 - D9 — لا اختبارَ انحدارٍ بعد
 - F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به
 - F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به
-- F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به
 - F-20 (إرسالُ الطلب بواتساب) — لا اختبارَ مرتبطٌ به
 - F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به
 - F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به

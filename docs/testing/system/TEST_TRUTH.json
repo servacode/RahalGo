@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 232,
-    "test_funcs": 794
+    "test_files": 233,
+    "test_funcs": 802
   },
   "flows": [
     {
@@ -475,10 +475,22 @@
         "TestFIN_ConservationSurvivesRefund",
         "TestFIN_OrderEconomicConservation",
         "TestFIN_SnapshotVsLiveEconomics",
+        "TestOBL_BothInsufficient_AtomicOrigins",
+        "TestOBL_FutureEarningsSettleWithEvidence",
+        "TestOBL_MerchantInsufficient_OriginTraceable",
+        "TestOBL_MerchantSufficient_NoObligation",
+        "TestOBL_MultipleObligationsFIFO",
+        "TestOBL_RepAvailable_NoObligation",
+        "TestOBL_RepWithdrawn_OriginTraceable",
+        "TestOBL_ReplayCreatesNoDuplicate",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
         "TestRACE_FinancialTruthAfterConcurrentDeliveries",
-        "TestRACE_SettingChangeDuringSettlement"
+        "TestRACE_SettingChangeDuringSettlement",
+        "TestFIN_XG10_CombinedMerchantAndRepInsufficiency",
+        "TestFIN_XG10_ConservationAcrossRefund",
+        "TestFIN_XG10_DebtSettlementArithmetic",
+        "TestFIN_XG10_RefundReplayDoesNotDoubleCharge"
       ],
       "status": "COVERED"
     },
@@ -560,8 +572,21 @@
         "L8",
         "L9"
       ],
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestOBL_BothInsufficient_AtomicOrigins",
+        "TestOBL_FutureEarningsSettleWithEvidence",
+        "TestOBL_MerchantInsufficient_OriginTraceable",
+        "TestOBL_MerchantSufficient_NoObligation",
+        "TestOBL_MultipleObligationsFIFO",
+        "TestOBL_RepAvailable_NoObligation",
+        "TestOBL_RepWithdrawn_OriginTraceable",
+        "TestOBL_ReplayCreatesNoDuplicate",
+        "TestFIN_XG10_CombinedMerchantAndRepInsufficiency",
+        "TestFIN_XG10_ConservationAcrossRefund",
+        "TestFIN_XG10_DebtSettlementArithmetic",
+        "TestFIN_XG10_RefundReplayDoesNotDoubleCharge"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "F-18",
@@ -1708,7 +1733,11 @@
         "TestRACE_RefundVsPayout",
         "TestFIN_XG10_DebtOffsetFromNextCommission",
         "TestFIN_XG10_RepCommissionReversedOnRefund",
-        "TestFIN_XG10_RepWithdrewThenRefund"
+        "TestFIN_XG10_RepWithdrewThenRefund",
+        "TestFIN_XG10_CombinedMerchantAndRepInsufficiency",
+        "TestFIN_XG10_ConservationAcrossRefund",
+        "TestFIN_XG10_DebtSettlementArithmetic",
+        "TestFIN_XG10_RefundReplayDoesNotDoubleCharge"
       ],
       "status": "COVERED"
     },
@@ -1871,8 +1900,22 @@
       "id": "XG-31",
       "title": "التزامُ متجرٍ أو مندوبٍ يُقيَّد رقماً بلا واقعةٍ تُفسّره",
       "severity": "CRITICAL",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "fixed": "**صار الالتزامُ واقعةً تُقيَّد** — `financial_obligations` تحمل الطرفَ والمبلغَ الأصليَّ والسببَ والطلبَ والوقتَ والمنشئ، و`obligation_settlements` تحمل كلَّ اقتطاعٍ بمقداره وطلبِه والباقي بعده **وقيدِه في الدفتر**. **ولم يُقَم عالمٌ محاسبيٌّ موازٍ**: `wallet_transactions` دفترُ محفظةٍ يحرّك الرصيدَ حتماً، **والالتزامُ ليس حركةَ مال** — فقيدُه فيه يُفسد كلَّ رصيدٍ ومصالحة. **والعمودان `merchants.debt` و`users.commission_debt` صارا صورةً محفوظة** لا تُكتب إلّا من `internal/obligations`، **ويحرس تطابقَها مع الوقائع `FI-13`** بأربعة فحوص. **والنشأةُ في معاملة الاسترداد نفسِها** فلا دَينٌ بلا أصل، **وفهرسٌ فريدٌ في القاعدة يمنع نشأةً ثانيةً للطلب نفسِه** — حارسٌ في المخطَّط لا في ترتيب الشيفرة. **والأقدمُ يُسدَّد أوّلاً** — سياسةٌ مُعلَنة. **وأُغلقت للمتجر والمندوب معاً** — والعلّةُ كانت في `merchants.debt` منذ ردّ البضاعة. عشرةُ حرّاسٍ دائمين.",
+      "tests": [
+        "TestOBL_BothInsufficient_AtomicOrigins",
+        "TestOBL_FutureEarningsSettleWithEvidence",
+        "TestOBL_MerchantInsufficient_OriginTraceable",
+        "TestOBL_MerchantSufficient_NoObligation",
+        "TestOBL_MultipleObligationsFIFO",
+        "TestOBL_RepAvailable_NoObligation",
+        "TestOBL_RepWithdrawn_OriginTraceable",
+        "TestOBL_ReplayCreatesNoDuplicate",
+        "TestFIN_XG10_CombinedMerchantAndRepInsufficiency",
+        "TestFIN_XG10_ConservationAcrossRefund",
+        "TestFIN_XG10_DebtSettlementArithmetic",
+        "TestFIN_XG10_RefundReplayDoesNotDoubleCharge"
+      ],
+      "status": "COVERED"
     }
   ],
   "settings": [
@@ -7518,6 +7561,158 @@
       "orphan": true
     },
     {
+      "name": "TestOBL_BothInsufficient_AtomicOrigins",
+      "file": "internal/qa/obligations_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOBL_FutureEarningsSettleWithEvidence",
+      "file": "internal/qa/obligations_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOBL_MerchantInsufficient_OriginTraceable",
+      "file": "internal/qa/obligations_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOBL_MerchantSufficient_NoObligation",
+      "file": "internal/qa/obligations_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOBL_MultipleObligationsFIFO",
+      "file": "internal/qa/obligations_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOBL_RepAvailable_NoObligation",
+      "file": "internal/qa/obligations_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOBL_RepWithdrawn_OriginTraceable",
+      "file": "internal/qa/obligations_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOBL_ReplayCreatesNoDuplicate",
+      "file": "internal/qa/obligations_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestDemand_LayersAreSeparateNotMerged",
       "file": "internal/qa/opsmap_analytics_test.go",
       "package": "qa",
@@ -8660,25 +8855,81 @@
       "name": "TestFIN_XG10_CombinedMerchantAndRepInsufficiency",
       "file": "internal/qa/rep_debt_audit_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-10",
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestFIN_XG10_ConservationAcrossRefund",
       "file": "internal/qa/rep_debt_audit_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-10",
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestFIN_XG10_DebtSettlementArithmetic",
       "file": "internal/qa/rep_debt_audit_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-10",
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestFIN_XG10_RefundReplayDoesNotDoubleCharge",
       "file": "internal/qa/rep_debt_audit_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "gaps": [
+        "XG-10",
+        "XG-31"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestRRT_001_OnlyOwnDriverGetsRoute",
@@ -10512,7 +10763,6 @@
     "D9 — لا اختبارَ انحدارٍ بعد",
     "F-06 (رفضُ المتجر) — لا اختبارَ مرتبطٌ به",
     "F-16 (تعذّرُ التسليم) — لا اختبارَ مرتبطٌ به",
-    "F-17 (إلغاءُ الزبون) — لا اختبارَ مرتبطٌ به",
     "F-20 (إرسالُ الطلب بواتساب) — لا اختبارَ مرتبطٌ به",
     "F-28 (تعليقُ متجر) — لا اختبارَ مرتبطٌ به",
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
