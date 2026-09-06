@@ -150,6 +150,37 @@ var domainRules = []domainRule{
 	},
 	// ── الخصوصيّة ──────────────────────────────────────────────────
 	{
+		// ══════════════════════════════════════════════════════════════
+		// **منعُ التكرار يعبر المسارات المحميّة كلَّها**
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **وكان غيرَ مذكورٍ في أيّ قاعدة** — فوقع في العامّ، **فقالت
+		// `P-9` في دورةِ ٩ تدفّقين اثنين** بينما المنسّقُ يمسّ ستّةَ
+		// مساراتٍ في ستّةِ تدفّقاتٍ مختلفة. (صُحّح في مصالحة دورةِ ١٠.)
+		//
+		// **والمطابقةُ من التسجيل نفسِه**:
+		//
+		//	POST /orders                     ⇒ F-01 · F-03
+		//	POST /orders/custom              ⇒ F-02
+		//	POST /admin/users/{id}/wallet    ⇒ F-25
+		//	POST /admin/users/{id}/incentive ⇒ F-23 · F-25
+		//	POST /admin/payouts/{id}/decide  ⇒ F-24
+		//	POST /admin/drivers/{id}/settle  ⇒ F-27
+		//
+		// **و`F-03` («ردُّ إنشاءٍ ضائع») هو تدفّقُ منع التكرار بعينه** —
+		// **وكان غائباً عن أثرِ الدورة التي أصلحته.**
+		Name: "IDEMPOTENCY",
+		Match: []string{"backend/internal/server/idempotency.go",
+			"backend/internal/server/idempotency_tx.go"},
+		Flows: []string{"F-01", "F-02", "F-03", "F-23", "F-24", "F-25", "F-27"},
+		Apps:  []string{"customer", "merchant", "driver", "rep", "admin"},
+		Modes: []Mode{ModeFinancial, ModeConcurrency, ModeFailure},
+		Packages: []string{"internal/fininv", "internal/orders", "internal/qa",
+			"internal/server"},
+		Why: "منعُ التكرار يحرس ستّةَ مساراتٍ ماليّةٍ ⇒ ثوابتُ المال " +
+			"وسباقاتُها وحقنُ فشلها",
+	},
+	{
 		Name: "PRIVACY",
 		Match: []string{"backend/internal/server/customer_privacy.go",
 			"backend/internal/server/merchant_privacy.go",
