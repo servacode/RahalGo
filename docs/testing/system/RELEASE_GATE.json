@@ -1,10 +1,10 @@
 {
   "candidate": {
-    "release_candidate_id": "rc-3d5e3222-8695a8f4-dirty",
-    "source_commit": "3d5e32221369f060d9369aed54f230025c0fc4ca",
+    "release_candidate_id": "rc-c92526c6-74a1fcc3-dirty",
+    "source_commit": "c92526c6cca4da8cf1dca59aa98cdac50712fa7d",
     "working_tree_dirty": true,
-    "backend_build_hash": "8695a8f4b4acaf90923e97391857de17751d82abf70bc81479fc2215d5c186df",
-    "web_build_hash": "eb841b7b18abbd2f2c65b05ce92f30054def14cf92ffcab74feb5be79a4679e3",
+    "backend_build_hash": "74a1fcc36f53ac86f0a0b9a8e24e46270f55bfd179dbdb9aaa65333fe830f4ce",
+    "web_build_hash": "4a3adb37b418c8a4080d5993b5e40bac460c3e6b5440796f1ea5a6928a8a93df",
     "apk_hashes": [
       "app-customer:88764f40bba3db291b85bc5ed501ccc671d6aa1861b76ab71260a26b77e2565f",
       "app-driver:fc984e590afe143a851f75851e90d0063f95f5866555c8aa0b706e4656cf135f",
@@ -12,8 +12,8 @@
       "app-rep:c42c5dd5b3e7949b97de93ac9daa5f3ec8d6aa4e9ca5eb28472c264e0aa1519c"
     ],
     "config_snapshot": "9dd6ce1cba9044ea",
-    "migration_version": "0126_mocked_location.sql",
-    "generated_at": "2026-09-05T21:29:41Z"
+    "migration_version": "0128_branches_areas.sql",
+    "generated_at": "2026-09-06T04:44:06Z"
   },
   "ready_for_production": false,
   "rules": [
@@ -1858,7 +1858,7 @@
   ],
   "advisory_score": 2,
   "advisory_score_note": "**عرضٌ مساعدٌ لا قرار** — `BLOCKER \u003e SCORE`، **ومانعٌ واحدٌ يُسقط الحكمَ مهما بلغت الدرجة**",
-  "run_id": "gate_94df398de0be9b6d",
-  "generated_at": "2026-09-05T21:29:45Z",
+  "run_id": "gate_44cd9324d4032207",
+  "generated_at": "2026-09-06T04:44:13Z",
   "truth_baseline": ""
 }
