@@ -1,9 +1,9 @@
 {
   "candidate": {
-    "release_candidate_id": "rc-e4ee0d56-de440fa5-dirty",
-    "source_commit": "e4ee0d5617a3692989122bfb9aec3a12cc883665",
+    "release_candidate_id": "rc-6e4b548d-20bd6fd4-dirty",
+    "source_commit": "6e4b548d84b69519aa487b44545b36be65aea622",
     "working_tree_dirty": true,
-    "backend_build_hash": "de440fa595e963caa6a265342c3c91678444e90fb35ea98e5b37e3705da69819",
+    "backend_build_hash": "20bd6fd4c6bf98a5e7181e1fd39aa83963965c38cd7123c2e9f3e8ff35169410",
     "web_build_hash": "acd515d6dce05f492b920f7f5a67a57fc1f08ad7e679df10f7a2ae5ab3f49cf9",
     "apk_hashes": [
       "app-customer:88764f40bba3db291b85bc5ed501ccc671d6aa1861b76ab71260a26b77e2565f",
@@ -13,7 +13,7 @@
     ],
     "config_snapshot": "9dd6ce1cba9044ea",
     "migration_version": "0128_branches_areas.sql",
-    "generated_at": "2026-09-06T10:30:47Z"
+    "generated_at": "2026-09-06T11:24:33Z"
   },
   "ready_for_production": false,
   "rules": [
@@ -1251,16 +1251,18 @@
       "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
       "severity": "BLOCKER",
       "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
-      "current_status": "EXPECTED_FAIL",
+      "current_status": "PASS",
       "blocking": true,
-      "reason": "**EXPECTED_FAIL** — CONCURRENCY/C-08: السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0",
+      "reason": "**أُصلحت** — **عكسُ مستحقّ المتجر صار جزئيّاً بالدَّين** — `reverseCommissions` تأخذ ما تحتمله المحفظةُ وتُقيّد الباقيَ في `merchants.debt`، **وهي الآليّةُ نفسُها المُثبَتةُ في مسار ردّ البضاعة** (`goods.go`) — **فالمساران افترقا وأُعيدا.** والحارسُ `TestFIN_XG11_RefundIndependentOfMerchantBalance` يؤكّد العقدَ: كان `409` والمستردُّ صفراً، وصار الزبونُ يستردّ كاملاً والمستحقُّ لا يتبخّر (عُكس + دُيّن = ما قُيّد). **وحَكَمُ `P-4` يشهد ألّا خرقَ جديداً.**",
       "related_registers": [
         "XG-11"
       ],
       "tests": [
         "TestFIN_MerchantWithdrewThenRefund",
         "TestFIN_RefundNotConditionedOnRepBalance",
-        "TestRACE_RefundVsPayout"
+        "TestRACE_RefundVsPayout",
+        "TestFIN_XG11_RefundIndependentOfMerchantBalance",
+        "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent"
       ],
       "waiver_policy": "FORBIDDEN"
     },
@@ -1651,7 +1653,6 @@
     "[BLOCKER · EXPECTED_FAIL] حسمُ الخطر: مفتاحُ التكرار يعلق in_progress — **تأكّد** — CONCURRENCY/C-06: 409 in_progress · ولا مسارَ يُطلقها إلّا التقليمُ بعد 24h",
     "[BLOCKER · FAIL] كلُّ سجلٍّ مانعٍ للإطلاق مربوطٌ بدليلٍ يخصُّه — **14 سجلّاً مانعاً أو حرجاً بلا اختبارٍ ولا دليلِ مصفوفة**: [R11 R13 R24 R4 XG-12 XG-14 XG-20 XG-21 XG-22 XG-25 XG-26 XG-27 XG-28 XG-29] — **والسقوطُ الآمنُ لا يجعل هذا تغطيةً**",
     "[BLOCKER · EXPECTED_FAIL] سدُّ الفجوة: لا عكسَ لعمولة المندوب عند الاسترداد — **EXPECTED_FAIL** — CONCURRENCY/C-08: السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0",
-    "[BLOCKER · EXPECTED_FAIL] سدُّ الفجوة: حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت — **EXPECTED_FAIL** — CONCURRENCY/C-08: السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0",
     "[BLOCKER · EXPECTED_FAIL] سدُّ الفجوة: لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين — **DEFECT_REPRODUCED** — FAILURE/PF-01: XQ-3 FORBIDDEN STATE = PROVEN — متاجرُ=1 · مكافأةٌ=5000 · المرشَّحُ new · الردّ 500",
     "[BLOCKER · NOT_IMPLEMENTED] سدُّ الفجوة: سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
     "[BLOCKER · NOT_IMPLEMENTED] سدُّ الفجوة: التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
@@ -1827,7 +1828,6 @@
     "GATE-R8 [BLOCKER] حسمُ الخطر: مفتاحُ التكرار يعلق in_progress ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
     "GATE-TRC-01 [BLOCKER] كلُّ سجلٍّ مانعٍ للإطلاق مربوطٌ بدليلٍ يخصُّه ⇒ اختبارٌ أو صفُّ مصفوفةٍ يشير إلى السجلّ بعينه",
     "GATE-XG-10 [BLOCKER] سدُّ الفجوة: لا عكسَ لعمولة المندوب عند الاسترداد ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
-    "GATE-XG-11 [BLOCKER] سدُّ الفجوة: حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-18 [BLOCKER] سدُّ الفجوة: لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-21 [BLOCKER] سدُّ الفجوة: سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-22 [BLOCKER] سدُّ الفجوة: التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
@@ -1849,9 +1849,9 @@
     "GATE-XG-27 [CRITICAL] سدُّ الفجوة: مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-28 [CRITICAL] سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته"
   ],
-  "advisory_score": 4,
+  "advisory_score": 5,
   "advisory_score_note": "**عرضٌ مساعدٌ لا قرار** — `BLOCKER \u003e SCORE`، **ومانعٌ واحدٌ يُسقط الحكمَ مهما بلغت الدرجة**",
-  "run_id": "gate_bdc1f1cacbc80fc8",
-  "generated_at": "2026-09-06T10:30:49Z",
+  "run_id": "gate_373316445165b77b",
+  "generated_at": "2026-09-06T11:24:35Z",
   "truth_baseline": ""
 }

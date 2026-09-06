@@ -42,6 +42,7 @@ type TruthGap struct {
 	Title    string   `json:"title"`
 	Severity string   `json:"severity"`
 	WokenBy  string   `json:"woken_by"`
+	Fixed    string   `json:"fixed"`
 	Tests    []string `json:"tests"`
 	Status   string   `json:"status"`
 }

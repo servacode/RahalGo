@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **229** |
-| دوالُّ اختبار | **785** |
+| ملفّاتُ اختبار | **230** |
+| دوالُّ اختبار | **787** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 785
-MAPPED     = 115
+TOTAL      = 787
+MAPPED     = 117
 INFRA      = 102
 ORPHAN     = 568
 ```
@@ -107,7 +107,7 @@ ORPHAN     = 568
 | **XG-8** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-9** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-10** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` · `TestRACE_RefundVsPayout` |
-| **XG-11** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` · `TestRACE_RefundVsPayout` |
+| **XG-11** | `BLOCKER` | — | `COVERED` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` · `TestRACE_RefundVsPayout` · `TestFIN_XG11_RefundIndependentOfMerchantBalance` · `TestFIN_XG11_RefundUntouchedWhenMerchantSolvent` |
 | **XG-12** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-13** | `HIGH` | — | `EXPECTED_FAIL` | `TestFIN_CommissionSourceMatrix` · `TestFIN_SnapshotVsLiveEconomics` |
 | **XG-14** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |

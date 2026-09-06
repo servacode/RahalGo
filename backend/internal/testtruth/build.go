@@ -163,10 +163,16 @@ func Build(backendRoot, docsRoot string) (*Truth, error) {
 
 	// ── الفجوات ──────────────────────────────────────────────────
 	for _, g := range Gaps {
-		gp := Gap{ID: g.ID, Title: g.Title, Severity: g.Severity, WokenBy: g.WokenBy, Tests: byGap[g.ID]}
-		if len(gp.Tests) == 0 {
+		gp := Gap{ID: g.ID, Title: g.Title, Severity: g.Severity,
+			WokenBy: g.WokenBy, Fixed: g.Fixed, Tests: byGap[g.ID]}
+		switch {
+		case len(gp.Tests) == 0:
 			gp.Status = StatusNotImplemented
-		} else {
+		case g.Fixed != "":
+			// **ولا تُغلَق فجوةٌ بلا حارس** — **والدليلُ وحدَه لا يكفي**:
+			// **من كتب دليلاً وحذف الحارسَ أغلقها بالكلام.**
+			gp.Status = StatusCovered
+		default:
 			gp.Status = StatusExpectedFail
 		}
 		t.Gaps = append(t.Gaps, gp)

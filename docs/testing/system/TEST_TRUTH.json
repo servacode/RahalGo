@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 229,
-    "test_funcs": 785
+    "test_files": 230,
+    "test_funcs": 787
   },
   "flows": [
     {
@@ -86,7 +86,8 @@
         "TestPushPayloadScope",
         "TestIDEM_SameKeyDifferentPayload",
         "TestIDEM_SameKeySamePayloadConcurrent",
-        "TestIDEM_SameKeySamePayloadSequential"
+        "TestIDEM_SameKeySamePayloadSequential",
+        "TestFIN_XG11_RefundIndependentOfMerchantBalance"
       ],
       "status": "COVERED"
     },
@@ -511,7 +512,9 @@
         "TestFIN_RefundNotConditionedOnRepBalance",
         "TestFIN_RepCommissionReversal",
         "TestFIN_RepeatedRefundIsIdempotent",
-        "TestRACE_RefundVsPayout"
+        "TestRACE_RefundVsPayout",
+        "TestFIN_XG11_RefundIndependentOfMerchantBalance",
+        "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent"
       ],
       "status": "COVERED"
     },
@@ -1704,12 +1707,15 @@
       "id": "XG-11",
       "title": "حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت",
       "severity": "BLOCKER",
+      "fixed": "**عكسُ مستحقّ المتجر صار جزئيّاً بالدَّين** — `reverseCommissions` تأخذ ما تحتمله المحفظةُ وتُقيّد الباقيَ في `merchants.debt`، **وهي الآليّةُ نفسُها المُثبَتةُ في مسار ردّ البضاعة** (`goods.go`) — **فالمساران افترقا وأُعيدا.** والحارسُ `TestFIN_XG11_RefundIndependentOfMerchantBalance` يؤكّد العقدَ: كان `409` والمستردُّ صفراً، وصار الزبونُ يستردّ كاملاً والمستحقُّ لا يتبخّر (عُكس + دُيّن = ما قُيّد). **وحَكَمُ `P-4` يشهد ألّا خرقَ جديداً.**",
       "tests": [
         "TestFIN_MerchantWithdrewThenRefund",
         "TestFIN_RefundNotConditionedOnRepBalance",
-        "TestRACE_RefundVsPayout"
+        "TestRACE_RefundVsPayout",
+        "TestFIN_XG11_RefundIndependentOfMerchantBalance",
+        "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "COVERED"
     },
     {
       "id": "XG-12",
@@ -8520,6 +8526,44 @@
       "modes": [
         "FULL",
         "CONCURRENCY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_XG11_RefundIndependentOfMerchantBalance",
+      "file": "internal/qa/refund_independence_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-15",
+        "F-01"
+      ],
+      "gaps": [
+        "XG-11"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent",
+      "file": "internal/qa/refund_independence_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-15"
+      ],
+      "gaps": [
+        "XG-11"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
         "RELEASE"
       ],
       "orphan": false

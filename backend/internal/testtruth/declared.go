@@ -103,6 +103,18 @@ type GapDecl struct {
 	ID       string
 	Title    string
 	Severity string
+	// Fixed **دليلُ الإصلاح** — فارغٌ يعني «ما زالت قائمة».
+	//
+	// # ولماذا نصٌّ لا علَمٌ منطقيّ
+	//
+	// **`true` لا تقول من أصلحها ولا بأيّ دليل** — **وفجوةٌ تُغلَق
+	// بعلَمٍ تُفتح بعلَمٍ**، ولا يبقى ما يُراجَع.
+	//
+	// **والنصُّ يُقرأ في البوّابة والتقرير** — فمن سأل «لماذا لم تعد
+	// مانعة؟» وجد الجواب في مكانٍ واحد.
+	//
+	// **ولا تُملأ إلّا وحارسُ انحدارٍ دائمٌ يؤكّد العقدَ ويمرّ.**
+	Fixed string
 	// WokenBy **الإعدادُ الذي يوقظ النائمة** — و`LATENT` وحدَها تملؤه.
 	WokenBy string
 }
@@ -126,7 +138,17 @@ var Gaps = []GapDecl{
 	// **والعقدُ العامُّ يشمل الجميع**:
 	//
 	//	CUSTOMER REFUND ENTITLEMENT MUST NOT DEPEND ON CURRENT DOWNSTREAM ACTOR BALANCES
-	{ID: "XG-11", Title: "حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت", Severity: "BLOCKER"},
+	{ID: "XG-11", Title: "حقُّ الاسترداد مشروطٌ برصيدِ مستفيدٍ تالٍ — والمتجرُ مُثبَت",
+		Severity: "BLOCKER",
+		// **دورةُ إصلاحٍ ١ · ٢٠٢٦-٠٩-٠٦.**
+		Fixed: "**عكسُ مستحقّ المتجر صار جزئيّاً بالدَّين** — " +
+			"`reverseCommissions` تأخذ ما تحتمله المحفظةُ وتُقيّد الباقيَ في " +
+			"`merchants.debt`، **وهي الآليّةُ نفسُها المُثبَتةُ في مسار ردّ " +
+			"البضاعة** (`goods.go`) — **فالمساران افترقا وأُعيدا.** " +
+			"والحارسُ `TestFIN_XG11_RefundIndependentOfMerchantBalance` " +
+			"يؤكّد العقدَ: كان `409` والمستردُّ صفراً، وصار الزبونُ يستردّ " +
+			"كاملاً والمستحقُّ لا يتبخّر (عُكس + دُيّن = ما قُيّد). " +
+			"**وحَكَمُ `P-4` يشهد ألّا خرقَ جديداً.**"},
 	{ID: "XG-12", Title: "لا طبقاتِ رصيد", Severity: "CRITICAL"},
 	{ID: "XG-13", Title: "لا مفتاحَ لمصدر احتساب العمولة", Severity: "HIGH"},
 	{ID: "XG-14", Title: "بوّابةُ platformCommission مثبَّتةٌ في الشيفرة", Severity: "CRITICAL"},
@@ -865,6 +887,23 @@ var TestMap = map[string]TestDecl{
 	"TestFreshness_ZeroPingFallsBackNotPanics": mapTest(L1, ""),
 	"TestBBox_RejectsNonsense":                 mapTest(L1, ""),
 	"TestBBox_SQLUsesParametersNotLiterals":    mapTest(L1, "SECURITY"),
+
+	// ── دورةُ إصلاحٍ ١ · `XG-11` ────────────────────────────────
+	//
+	// **حارسُ عقدٍ يؤكّد ولا يسجّل** — **ويسقط إن عاد العيبُ بعد سنة.**
+	//
+	// **ويُربَط بـ`F-15`** (الاسترداد) **وبـ`F-01`**: تبدُّلُ مسار
+	// العكس يمسّ من يستطيع أن يطلب ويُستردَّ له.
+	"TestFIN_XG11_RefundIndependentOfMerchantBalance": {
+		Level: L4, Flows: []string{"F-15", "F-01"},
+		Gaps:  []string{"XG-11"},
+		Modes: []string{"FULL", "FINANCIAL", "CROSS_SYSTEM", "RELEASE"},
+	},
+	"TestFIN_XG11_RefundUntouchedWhenMerchantSolvent": {
+		Level: L4, Flows: []string{"F-15"},
+		Gaps:  []string{"XG-11"},
+		Modes: []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
 
 	// ── `P-0` · بيئةُ التجهيز ──────────────────────────────────
 	//

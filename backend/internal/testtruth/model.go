@@ -142,9 +142,11 @@ type Gap struct {
 	Title    string `json:"title"`
 	Severity string `json:"severity"`
 	// WokenBy **الإعدادُ الذي يوقظ الفجوةَ النائمة** — إن عُرف.
-	WokenBy string   `json:"woken_by,omitempty"`
-	Tests   []string `json:"tests"`
-	Status  Status   `json:"status"`
+	WokenBy string `json:"woken_by,omitempty"`
+	// Fixed **دليلُ الإصلاح** — تقرؤه البوّابةُ فلا تعدّها مانعة.
+	Fixed  string   `json:"fixed,omitempty"`
+	Tests  []string `json:"tests"`
+	Status Status   `json:"status"`
 }
 
 // Setting إعدادٌ مُغيِّرٌ للسلوك — **مستخرَجٌ من المعجم، ومربوطٌ بالإعلان.**
