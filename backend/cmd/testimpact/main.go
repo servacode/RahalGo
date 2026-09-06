@@ -61,7 +61,8 @@ func main() {
 
 	p := *out
 	if p == "" {
-		p = filepath.Join(root, "docs/testing/system/CHANGE_IMPACT.json")
+		// **تقريرُ تشغيلٍ لا حقيقة** — خارجَ ما يُتتبَّع كـ`RELEASE_GATE`.
+		p = filepath.Join(root, "docs/testing/system/generated/CHANGE_IMPACT.json")
 	}
 	if err := os.WriteFile(p, append(b, '\n'), 0o644); err != nil {
 		die(err)

@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 233,
-    "test_funcs": 802
+    "test_files": 234,
+    "test_funcs": 803
   },
   "flows": [
     {
@@ -4509,6 +4509,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestGateRunLeavesTreeUnchanged",
+      "file": "internal/gate/hygiene_test.go",
+      "package": "gate_test",
+      "orphan": true
     },
     {
       "name": "TestPin_FormatIsFourDigitsOnly",
