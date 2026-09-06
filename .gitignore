@@ -68,3 +68,7 @@ keystore.properties
 # **ومجلَّدُ العمل المؤقّت** — فيه حزمُ النشر ونواتجُ الفحص.
 .tmp/
 .editor.tmp
+
+# ── بيئةُ التجهيز — الأسرارُ لا تدخل المستودع (`P-0` البند ٤٧) ────────
+deploy/staging/.env.staging
+deploy/staging/backups/

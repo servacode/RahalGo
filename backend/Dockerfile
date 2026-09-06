@@ -16,9 +16,24 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+
+# ══════════════════════════════════════════════════════════════════════
+# **وهويّةُ البناء تُحقَن في الثنائيّ — لا تُقرأ من البيئة**
+# ══════════════════════════════════════════════════════════════════════
+#
+# (`P-0` البندان ٥ و١٠ · و`P-10` البند ٣٣.)
+#
+# **متغيّرُ بيئةٍ يُبدَّل بعد النشر** — **فيقول الخادمُ إنّه يشغّل التزاماً
+# وهو يشغّل غيرَه**، وذلك أسوأُ من ألّا يقول شيئاً.
+#
+# **وفارغتان افتراضاً** — **فبناءٌ بلا هويّةٍ يُعلن ذلك ولا يكذب.**
+# **وبيئةُ التجهيز تشترطهما** (`compose.staging.yml` يرفض بلاهما).
+ARG SOURCE_COMMIT=""
+ARG BUILD_ID=""
+
 # **و`CGO_ENABLED=0` يُخرج ثنائيّاً بلا اعتماديّاتِ نظام** — يعمل في صورةٍ
 # فارغةٍ تقريباً. **ومن نسيها يجد «not found» عند التشغيل** والملفُّ موجود.
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build 	-ldflags="-s -w 	  -X github.com/servacode/rahalgo/backend/internal/envguard.buildCommit=${SOURCE_COMMIT} 	  -X github.com/servacode/rahalgo/backend/internal/envguard.buildID=${BUILD_ID}" 	-o /out/api ./cmd/api
 
 # ══════════════════════════════════════════════════════════════════════
 FROM alpine:3.21
