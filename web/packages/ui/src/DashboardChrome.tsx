@@ -85,6 +85,17 @@ interface Rep {
   rating: { avg: number; count: number; trend: "up" | "down" | "flat" };
 }
 
+/**
+ * **أبيئةُ تجربة؟** — `P-0` البند ٤٥.
+ *
+ * **ويُقرأ وقتَ البناء لا وقتَ التشغيل** (`NEXT_PUBLIC_`) — **فلا
+ * يُطفئه متغيّرٌ على الخادم ولا يظهر في الإنتاج بغلطة.**
+ */
+const isStaging = process.env.NEXT_PUBLIC_ENVIRONMENT === "staging";
+
+/** **نصُّ الراية** — من المعجم المركزيّ لا من الشيفرة. */
+const stagingLabel = m.shared.stagingBanner;
+
 export function DashboardChrome({
   brand,
   nav,
@@ -338,6 +349,28 @@ export function DashboardChrome({
        تحته ولا تُرى. **ولوحةُ التحكّم أربعةُ تطبيقاتٍ من خمسة**، فتبقى
        الخلفيّةُ في الموقع وحدَه. */
     <div className="flex min-h-screen">
+      {/* ══════════════════════════════════════════════════════════════
+          **رايةُ بيئة التجربة — سلامةٌ لا زينة** (`P-0` البند ٤٥)
+          ══════════════════════════════════════════════════════════════
+
+          **ومن جرّب على «التجهيز» وهو الإنتاج لا يكتشف ذلك إلّا بعد
+          أن يحذف شيئاً.** **واللوحتان متطابقتان حرفاً** — لا شيءَ في
+          الشاشة يقول أيَّهما أمامه.
+
+          **وتُقرأ من `NEXT_PUBLIC_ENVIRONMENT` وقتَ البناء** — **فلا
+          يُطفئها متغيّرُ تشغيلٍ على الخادم**، ولا تظهر في الإنتاج
+          بغلطة: **القيمةُ مدفونةٌ في الحزمة.**
+
+          **وشريطٌ ثابتٌ في أعلى الشاشة لا شارةٌ في زاوية** — **والزاويةُ
+          تُنسى بعد ساعة.** */}
+      {isStaging && (
+        <div
+          role="status"
+          className="fixed inset-x-0 top-0 z-50 bg-warning py-1 text-center text-xs font-bold text-on-bright"
+        >
+          {stagingLabel}
+        </div>
+      )}
       <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col surface-lit chrome overflow-hidden rounded-card border border-line lg:flex">
         {sidebar}
       </aside>

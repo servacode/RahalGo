@@ -210,13 +210,50 @@ func dsnParts() (host, port, user, pass, name string) {
 	return
 }
 
+// pgTool يبني نداءَ أداةِ بوستغرس — **داخلَ الحاوية أو خارجَها.**
+//
+// # ولماذا الوجهان
+//
+// **على الخادم قد تكون الأدواتُ مثبَّتةً بجانب دوكر** — **وعلى جهازٍ
+// آخرَ لا تكون.** **وأداةٌ تشترط تثبيتَ عميلِ بوستغرس على كلّ مضيفٍ
+// تُعطّل التدريبَ حيث يلزم أكثرَ ما يلزم.**
+//
+// **و`STAGING_PG_CONTAINER` مضبوطةٌ ⇒ يُنادى داخلَ الحاوية** —
+// **وهناك يوجد `pg_dump` دائماً، وحجمُ النسخ مركَّبٌ عليها.**
+//
+// **والمضيفُ يصير `localhost` داخلَها** — **وعنوانُ المضيف من خارجٍ
+// لا يُحلّ في الداخل.**
+func pgTool(name string, args ...string) *exec.Cmd {
+	if c := os.Getenv("STAGING_PG_CONTAINER"); c != "" {
+		_, _, user, pass, _ := dsnParts()
+		full := append([]string{"exec", "-e", "PGPASSWORD=" + pass, c, name}, args...)
+		// **ويُبدَّل المضيفُ والمنفذُ إلى ما تراه الحاويةُ من داخلها.**
+		for i := 0; i < len(full); i++ {
+			if full[i] == "-h" && i+1 < len(full) {
+				full[i+1] = "localhost"
+			}
+			if full[i] == "-p" && i+1 < len(full) {
+				full[i+1] = "5432"
+			}
+		}
+		_ = user
+		return exec.Command("docker", full...)
+	}
+	return exec.Command(name, args...)
+}
+
 func backup() error {
 	host, port, user, pass, name := dsnParts()
 	dir := os.Getenv("STAGING_BACKUP_DIR")
 	if dir == "" {
 		dir = "./backups"
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if c := os.Getenv("STAGING_PG_CONTAINER"); c != "" {
+		if out, err := exec.Command("docker", "exec", c, "mkdir", "-p", dir).
+			CombinedOutput(); err != nil {
+			return fmt.Errorf("إنشاءُ مجلَّد النسخ داخلَ الحاوية: %w · %s", err, out)
+		}
+	} else if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	out := fmt.Sprintf("%s/%s-%s.dump", dir, name,
@@ -224,34 +261,58 @@ func backup() error {
 
 	// **وصيغةٌ مضغوطةٌ مخصَّصة** (`-Fc`) — **تُستعاد انتقائيّاً وتُفحَص
 	// قبل الاستعادة**، **ونصٌّ خامٌّ لا يُفحَص إلّا بقراءته كلِّه.**
-	cmd := exec.Command("pg_dump", "-Fc", "-h", host, "-p", port,
+	cmd := pgTool("pg_dump", "-Fc", "-h", host, "-p", port,
 		"-U", user, "-d", name, "-f", out)
 	cmd.Env = append(os.Environ(), "PGPASSWORD="+pass)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("pg_dump: %w", err)
 	}
-	fi, err := os.Stat(out)
+	// **وحين تكتب الحاويةُ الملفَّ لا يراه المضيف** — فيُسأل عنه هناك.
+	size, err := outSize(out)
 	if err != nil {
 		return err
 	}
+	fi := sizeOnly(size)
 	// **ونسخةٌ فارغةٌ ليست نسخة** — **وملفٌّ بحجم صفرٍ ينجح فيه
 	// `pg_dump` ولا يُستعاد منه شيء.**
-	if fi.Size() < 1024 {
-		return fmt.Errorf("نسخةٌ حجمُها %d بايت — **وهذه ليست نسخة**", fi.Size())
+	if fi < 1024 {
+		return fmt.Errorf("نسخةٌ حجمُها %d بايت — **وهذه ليست نسخة**", fi)
 	}
-	fmt.Printf("✓ نسخةٌ %s · %d بايت\n", out, fi.Size())
+	fmt.Printf("✓ نسخةٌ %s · %d بايت\n", out, fi)
 	return nil
+}
+
+func sizeOnly(n int64) int64 { return n }
+
+// outSize حجمُ ملفٍّ — **حيثما كُتب.**
+func outSize(path string) (int64, error) {
+	if c := os.Getenv("STAGING_PG_CONTAINER"); c != "" {
+		b, err := exec.Command("docker", "exec", c, "stat", "-c", "%s", path).Output()
+		if err != nil {
+			return 0, fmt.Errorf("قياسُ النسخة داخلَ الحاوية: %w", err)
+		}
+		var n int64
+		if _, err := fmt.Sscan(strings.TrimSpace(string(b)), &n); err != nil {
+			return 0, err
+		}
+		return n, nil
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return fi.Size(), nil
 }
 
 func restore(file string) error {
 	host, port, user, pass, name := dsnParts()
-	if _, err := os.Stat(file); err != nil {
+	if _, err := outSize(file); err != nil {
 		return fmt.Errorf("لا نسخةَ في %s: %w", file, err)
 	}
 	// **و`--clean --if-exists` تُسقط ما في الهدف ثمّ تبني** —
 	// **واستعادةٌ فوق قاعدةٍ فيها صفوفٌ تخلط القديمَ بالجديد.**
-	cmd := exec.Command("pg_restore", "--clean", "--if-exists", "--no-owner",
+	cmd := pgTool("pg_restore", "--clean", "--if-exists", "--no-owner",
 		"-h", host, "-p", port, "-U", user, "-d", name, file)
 	cmd.Env = append(os.Environ(), "PGPASSWORD="+pass)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr

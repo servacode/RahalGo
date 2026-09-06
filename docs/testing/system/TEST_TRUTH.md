@@ -12,24 +12,24 @@
 
 | ما هو | العدد |
 |---|---|
-| أبوابٌ في الموجّه | **312** |
+| أبوابٌ في الموجّه | **313** |
 | انتقالاتُ الطلب | **55** |
 | أنواعُ قيدِ المحفظة | **14** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **49** — منها **11** موجَّهٌ بـ`Apps` |
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **227** |
-| دوالُّ اختبار | **770** |
+| ملفّاتُ اختبار | **229** |
+| دوالُّ اختبار | **785** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 770
-MAPPED     = 111
-INFRA      = 91
+TOTAL      = 785
+MAPPED     = 115
+INFRA      = 102
 ORPHAN     = 568
 ```
 
@@ -56,7 +56,7 @@ ORPHAN     = 568
 | السجلّ | العدد | مربوطٌ | بلا اختبار |
 |---|---|---|---|
 | **التدفّقات** | 35 | 28 | 7 |
-| **العيوب** | 27 | 14 | 13 |
+| **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 11 | 13 |
 | **فجواتُ العقد** | 26 | 4 | 22 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
@@ -79,7 +79,7 @@ ORPHAN     = 568
 | **D10** | الاستعادةُ تُبطل نوعَ عميلٍ واحد | `NO_REGRESSION_TEST_YET` | — |
 | **D11** | force_password_change بلا بوّابةٍ في أندرويد | `NO_REGRESSION_TEST_YET` | — |
 | **D12** | Push.unregister بلا منادٍ | `EXPECTED_FAIL` | `TestEV_PushTokenTargeting` |
-| **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `NO_REGRESSION_TEST_YET` | — |
+| **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `EXPECTED_FAIL` | `TestFAIL_D13_MediaDirectoryListingOpen` |
 | **D14** | handleWS لا يفحص ActiveStatus | `EXPECTED_FAIL` | `TestSampleFactory_SuspendedIsRefused` |
 | **D15** | AdminCreateUser في خطوتين | `EXPECTED_FAIL` | `TestFAIL_D15_AdminCreateUserPartial` · `TestFAIL_D15_Reconciliation` |
 | **D16** | طابورُ المواقع ملفٌّ بلا صاحب | `NO_REGRESSION_TEST_YET` | — |
@@ -134,7 +134,7 @@ ORPHAN     = 568
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 33
+COVERAGE GAPS    = 32
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -142,7 +142,6 @@ COVERAGE GAPS    = 33
 - D1 — لا اختبارَ انحدارٍ بعد
 - D10 — لا اختبارَ انحدارٍ بعد
 - D11 — لا اختبارَ انحدارٍ بعد
-- D13 — لا اختبارَ انحدارٍ بعد
 - D16 — لا اختبارَ انحدارٍ بعد
 - D17 — لا اختبارَ انحدارٍ بعد
 - D18 — لا اختبارَ انحدارٍ بعد

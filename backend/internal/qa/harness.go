@@ -123,6 +123,31 @@ type Harness struct {
 	// **الاشتراكُ ثمّ الفعلُ ثمّ قراءةُ ما وصل** هو الدليل.
 	Hub    *realtime.Hub
 	tokens *auth.TokenIssuer
+	// rdb **الذاكرةُ نفسُها** — يُكشَف في `P-0` لتجربة `R16`.
+	//
+	// **واختبارُ إبطالِ جلسةٍ يحتاج أن يكتب المفتاحَ كما يكتبه المحرّك**
+	// — **ونداءُ مسارٍ داخليٍّ يثبت أنّ الدالّةَ نُوديت لا أنّ الوسيطَ
+	// يقرؤها.**
+	rdb *redis.Client
+}
+
+// Redis **ذاكرةُ هذا المِسنَد.**
+func (h *Harness) Redis() *redis.Client { return h.rdb }
+
+// TokenWithSession **توكنٌ يحمل معرّفَ جلسة** — `P-0` البند ٣٠.
+//
+// # ولماذا لا يكفي `NewUser`
+//
+// **`NewUser` يُصدر توكناً بمعرّفِ جلسةٍ فارغ** — **و`SessionRevoked`
+// تردّ `false` فوراً للفارغ** (`service.go:746`). **فاختبارُ إبطالٍ
+// عليه يمرّ دائماً ولا يثبت شيئاً.**
+func (h *Harness) TokenWithSession(userID, sid string, roles ...string) string {
+	h.T.Helper()
+	tok, _, err := h.tokens.IssueAccess(userID, roles, sid)
+	if err != nil {
+		h.T.Fatalf("qa: تعذّر إصدارُ توكنٍ بجلسة: %v", err)
+	}
+	return tok
 }
 
 // New **يُقلع النظامَ لاختبارٍ واحد** — ويُطفأ بعده كاملاً.
@@ -136,8 +161,27 @@ func NewWith(t *testing.T, opts ...server.Option) *Harness {
 	t.Helper()
 	pool := testdb.Pool(t) // **يتخطّى بهدوءٍ إن لم تُضبط قاعدةُ الاختبار**
 
-	mr := miniredis.RunT(t)
-	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	// ══════════════════════════════════════════════════════════════
+	// **وذاكرةٌ حقيقيّةٌ حين تُطلَب** — `P-0` البند ٣٠
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **`miniredis` لا تُسقَط** — **و`R16` تسأل ماذا يفعل التوثيقُ حين
+	// تسقط `Redis`.** **ولا جواب إلّا بإسقاطها فعلاً.**
+	//
+	// **والافتراضُ لم يتبدّل**: **من لم يطلب ذاكرةً حقيقيّةً يأخذ
+	// `miniredis` كما كان**، فلا خادمَ خارجيٌّ يلزم في كلّ تشغيل.
+	var rdb *redis.Client
+	if addr := os.Getenv("QA_REAL_REDIS_ADDR"); addr != "" {
+		rdb = redis.NewClient(&redis.Options{
+			Addr:         addr,
+			DialTimeout:  2 * time.Second,
+			ReadTimeout:  2 * time.Second,
+			WriteTimeout: 2 * time.Second,
+		})
+	} else {
+		mr := miniredis.RunT(t)
+		rdb = redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	}
 	t.Cleanup(func() { _ = rdb.Close() })
 
 	quiet := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
@@ -168,7 +212,7 @@ func NewWith(t *testing.T, opts ...server.Option) *Harness {
 	t.Cleanup(ts.Close)
 
 	seedZone(t, pool)
-	return &Harness{T: t, Pool: pool, Srv: ts, Hub: hub, tokens: tokens}
+	return &Harness{T: t, Pool: pool, Srv: ts, Hub: hub, tokens: tokens, rdb: rdb}
 }
 
 // ══════════════════════════════════════════════════════════════════════

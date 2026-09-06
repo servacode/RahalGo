@@ -865,6 +865,50 @@ var TestMap = map[string]TestDecl{
 	"TestFreshness_ZeroPingFallsBackNotPanics": mapTest(L1, ""),
 	"TestBBox_RejectsNonsense":                 mapTest(L1, ""),
 	"TestBBox_SQLUsesParametersNotLiterals":    mapTest(L1, "SECURITY"),
+
+	// ── `P-0` · بيئةُ التجهيز ──────────────────────────────────
+	//
+	// **وحرّاسُ البيئة ليست اختباراتِ ميزة** — **هي ما يمنع أمراً
+	// هدّاماً أن يمسّ الإنتاج**، فوضعُها `RELEASE` في كلّ وضع.
+	"TestGuard_CleanStagingPasses":                    infraTest(),
+	"TestGuard_EachGuardBlocksAlone":                  infraTest(),
+	"TestGuard_ProductionSubdomainsBlocked":           infraTest(),
+	"TestGuard_NoBypassExists":                        infraTest(),
+	"TestGuard_MustBeSafeNamesEveryFailure":           infraTest(),
+	"TestIdentity_CarriesNoSecret":                    infraTest(),
+	"TestIdentity_DefaultsToDevelopmentNotProduction": infraTest(),
+	"TestStagingConfigNeverNamesProduction":           infraTest(),
+	"TestStagingComposeIsFullyIsolated":               infraTest(),
+	"TestStagingProvidersAreSilentByDefault":          infraTest(),
+	"TestNoSecretsCommitted":                          infraTest(),
+
+	// ── وتجاربُ التكامل على خدماتٍ حقيقيّة ─────────────────────
+	//
+	// **وتتخطّى بهدوءٍ بلا بيئة تجهيز** — ولا تُحمَّر الحزمةُ لسببٍ بيئيّ.
+	"TestStaging_R14_SessionLifecycleServerSide": stagingTest([]string{"R14"}, nil),
+	"TestStaging_SecurityBaseline":               stagingTest(nil, nil),
+	// **وهذان يوثّقان ما تأكّد** — **وينجحان ما دام العيبُ قائماً،
+	// ويسقطان يومَ يُصلَح** فيُقرأ سقوطُهما أمراً بتحديث السجلّ.
+	"TestFAIL_R16_RedisDownFailsOpen":        stagingTest([]string{"R16"}, nil),
+	"TestFAIL_D13_MediaDirectoryListingOpen": stagingTest(nil, []string{"D13"}),
+}
+
+// infraTest حارسُ بنيةٍ تحتيّة — **يعمل في كلّ وضعٍ بلا بيئةٍ خارجيّة.**
+func infraTest() TestDecl {
+	return TestDecl{
+		Level: L1, Purpose: PurposeGenerator,
+		Modes: []string{"FAST", "FULL", "SECURITY", "RELEASE"},
+	}
+}
+
+// stagingTest تجربةُ تكاملٍ تحتاج بيئةَ تجهيزٍ حيّة.
+//
+// **ولا تُعَدُّ يتيمةً لأنّها تتخطّى** — **الربطُ بالسجلّ يبقى.**
+func stagingTest(risks, defects []string) TestDecl {
+	return TestDecl{
+		Level: L9, Risks: risks, Defects: defects,
+		Modes: []string{"FULL", "SECURITY", "RELEASE"},
+	}
 }
 
 // mapTest اختبارُ خريطةِ عمليات — **مربوطٌ بـ`F-35`.**

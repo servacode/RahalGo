@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 312,
+    "routes": 313,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 227,
-    "test_funcs": 770
+    "test_files": 229,
+    "test_funcs": 785
   },
   "flows": [
     {
@@ -1221,8 +1221,10 @@
       "title": "سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه",
       "domain": "أمن · خصوصيّة",
       "severity": "CRITICAL",
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFAIL_D13_MediaDirectoryListingOpen"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "D14",
@@ -1524,7 +1526,8 @@
       "domain": "أمن",
       "strategy": "إبطالٌ بعد مصافحة البثّ — L5",
       "tests": [
-        "TestEV_RealtimeAuthorization"
+        "TestEV_RealtimeAuthorization",
+        "TestStaging_R14_SessionLifecycleServerSide"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -1551,7 +1554,8 @@
         "F-30"
       ],
       "tests": [
-        "TestRACE_SessionRevokedDuringRequest"
+        "TestRACE_SessionRevokedDuringRequest",
+        "TestFAIL_R16_RedisDownFailsOpen"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -3941,6 +3945,160 @@
       "file": "internal/deploycheck/compose_test.go",
       "package": "deploycheck_test",
       "orphan": true
+    },
+    {
+      "name": "TestGuard_CleanStagingPasses",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGuard_EachGuardBlocksAlone",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGuard_MustBeSafeNamesEveryFailure",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGuard_NoBypassExists",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestGuard_ProductionSubdomainsBlocked",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIdentity_CarriesNoSecret",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIdentity_DefaultsToDevelopmentNotProduction",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestNoSecretsCommitted",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestStagingComposeIsFullyIsolated",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestStagingConfigNeverNamesProduction",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestStagingProvidersAreSilentByDefault",
+      "file": "internal/envguard/envguard_test.go",
+      "package": "envguard",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestEveryMappedTestExists",
@@ -8529,6 +8687,63 @@
       "orphan": true
     },
     {
+      "name": "TestFAIL_D13_MediaDirectoryListingOpen",
+      "file": "internal/qa/staging_security_test.go",
+      "package": "qa",
+      "level": "L9",
+      "defects": [
+        "D13"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFAIL_R16_RedisDownFailsOpen",
+      "file": "internal/qa/staging_security_test.go",
+      "package": "qa",
+      "level": "L9",
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestStaging_R14_SessionLifecycleServerSide",
+      "file": "internal/qa/staging_security_test.go",
+      "package": "qa",
+      "level": "L9",
+      "risks": [
+        "R14"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestStaging_SecurityBaseline",
+      "file": "internal/qa/staging_security_test.go",
+      "package": "qa",
+      "level": "L9",
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestZONE_001_NoZonesOrderPasses",
       "file": "internal/qa/zone_test.go",
       "package": "qa",
@@ -10130,7 +10345,6 @@
     "D1 — لا اختبارَ انحدارٍ بعد",
     "D10 — لا اختبارَ انحدارٍ بعد",
     "D11 — لا اختبارَ انحدارٍ بعد",
-    "D13 — لا اختبارَ انحدارٍ بعد",
     "D16 — لا اختبارَ انحدارٍ بعد",
     "D17 — لا اختبارَ انحدارٍ بعد",
     "D18 — لا اختبارَ انحدارٍ بعد",
