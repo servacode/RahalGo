@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 238,
-    "test_funcs": 814
+    "test_files": 239,
+    "test_funcs": 817
   },
   "flows": [
     {
@@ -709,7 +709,10 @@
         "TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
         "TestUNIQ_DatabaseRefusesSecondMerchantForSameLead",
         "TestUNIQ_FailureThenRetryMakesOneMerchant",
-        "TestRACE_DuplicateLeadConversion"
+        "TestRACE_DuplicateLeadConversion",
+        "TestXG29_FailureBeforeCommitLeavesNothing",
+        "TestXG29_FailureThenRetryGrantsRewardOnce",
+        "TestXG29_SuccessGrantsRewardExactlyOnce"
       ],
       "status": "COVERED"
     },
@@ -1182,7 +1185,10 @@
         "TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
         "TestUNIQ_DatabaseRefusesSecondMerchantForSameLead",
         "TestUNIQ_FailureThenRetryMakesOneMerchant",
-        "TestRACE_DuplicateLeadConversion"
+        "TestRACE_DuplicateLeadConversion",
+        "TestXG29_FailureBeforeCommitLeavesNothing",
+        "TestXG29_FailureThenRetryGrantsRewardOnce",
+        "TestXG29_SuccessGrantsRewardExactlyOnce"
       ],
       "status": "FIXED_AND_PASSING"
     },
@@ -1931,8 +1937,13 @@
       "id": "XG-29",
       "title": "المكافأةُ تُدفع قبل تثبيت التحويل",
       "severity": "BLOCKER",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "fixed": "**المكافأةُ وتثبيتُ التحويل في معاملةٍ واحدة**: `grantSalesTargetTx` (`leads_handlers.go:895`) ثمّ `UPDATE merchant_leads converted` (`:901`) ثمّ `Commit` (`:905`) — **ولا شيءَ منها دائمٌ قبل التثبيت.** **ولم تُغلَق لأنّ الدالّةَ صار في اسمها `Tx`** — **الاسمُ لا يُثبت** — **بل بثلاثة حرّاسٍ تسأل الدفتر**: **سقوطٌ قبل التثبيت** ⇒ متاجرُ=0 · المرشَّحُ `new` قابلٌ للإعادة · مكافآتُ=0 · محفظةٌ=0. **ونجاحٌ** ⇒ متجرٌ واحدٌ ومرشَّحٌ محوَّلٌ ومكافأةٌ واحدةٌ (5000) لا اثنتان. **وسقوطٌ ثمّ إعادة** ⇒ متجرٌ واحدٌ ومكافأةٌ واحدة.",
+      "tests": [
+        "TestXG29_FailureBeforeCommitLeavesNothing",
+        "TestXG29_FailureThenRetryGrantsRewardOnce",
+        "TestXG29_SuccessGrantsRewardExactlyOnce"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-30",
@@ -1940,6 +1951,17 @@
       "severity": "HIGH",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-32",
+      "title": "مكافأةُ الهدف تُحسَب بعدٍّ لا يرى متجرَ معاملتِه",
+      "severity": "CRITICAL",
+      "tests": [
+        "TestXG29_FailureBeforeCommitLeavesNothing",
+        "TestXG29_FailureThenRetryGrantsRewardOnce",
+        "TestXG29_SuccessGrantsRewardExactlyOnce"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "XG-31",
@@ -9252,6 +9274,75 @@
       "file": "internal/qa/return_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestXG29_FailureBeforeCommitLeavesNothing",
+      "file": "internal/qa/reward_commit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21"
+      ],
+      "defects": [
+        "D2"
+      ],
+      "gaps": [
+        "XG-29",
+        "XG-32"
+      ],
+      "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG29_FailureThenRetryGrantsRewardOnce",
+      "file": "internal/qa/reward_commit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21"
+      ],
+      "defects": [
+        "D2"
+      ],
+      "gaps": [
+        "XG-29",
+        "XG-32"
+      ],
+      "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG29_SuccessGrantsRewardExactlyOnce",
+      "file": "internal/qa/reward_commit_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21"
+      ],
+      "defects": [
+        "D2"
+      ],
+      "gaps": [
+        "XG-29",
+        "XG-32"
+      ],
+      "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestRNAV_001_CacheKeyIsVersioned",

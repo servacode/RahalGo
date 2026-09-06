@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **238** |
-| دوالُّ اختبار | **814** |
+| ملفّاتُ اختبار | **239** |
+| دوالُّ اختبار | **817** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 814
-MAPPED     = 142
+TOTAL      = 817
+MAPPED     = 145
 INFRA      = 104
 ORPHAN     = 568
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 568
 | **التدفّقات** | 35 | 29 | 6 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 13 | 11 |
-| **فجواتُ العقد** | 27 | 5 | 22 |
+| **فجواتُ العقد** | 28 | 7 | 21 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
 
 ---
@@ -68,7 +68,7 @@ ORPHAN     = 568
 | ID | العنوان | الحال | الاختبارات |
 |---|---|---|---|
 | **D1** | فكُّ الإسناد بلا حدثٍ في order_events | `NO_REGRESSION_TEST_YET` | — |
-| **D2** | convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤه… | `FIXED_AND_PASSING` | `TestATOMIC_LeadConversionIsOneUnit` · `TestFAIL_D2_ConvertLeadPartialStates` · `TestFIN_TargetRewardPrecedesCommit` · `TestFIN_TransactionBoundaries` · `TestUNIQ_ConcurrentConversionWithExistingOwner` · `TestUNIQ_ConcurrentLeadConversionMakesOneMerchant` · `TestUNIQ_DatabaseRefusesSecondMerchantForSameLead` · `TestUNIQ_FailureThenRetryMakesOneMerchant` · `TestRACE_DuplicateLeadConversion` |
+| **D2** | convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤه… | `FIXED_AND_PASSING` | `TestATOMIC_LeadConversionIsOneUnit` · `TestFAIL_D2_ConvertLeadPartialStates` · `TestFIN_TargetRewardPrecedesCommit` · `TestFIN_TransactionBoundaries` · `TestUNIQ_ConcurrentConversionWithExistingOwner` · `TestUNIQ_ConcurrentLeadConversionMakesOneMerchant` · `TestUNIQ_DatabaseRefusesSecondMerchantForSameLead` · `TestUNIQ_FailureThenRetryMakesOneMerchant` · `TestRACE_DuplicateLeadConversion` · `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
 | **D3** | «تذكّرني» تنقلب دائمةً بعد أوّل تجديد | `NO_REGRESSION_TEST_YET` | — |
 | **D4** | سقفُ المفتوح داخلَ بوّابة واتساب | `NO_REGRESSION_TEST_YET` | — |
 | **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `FIXED_AND_PASSING` | `TestATOMIC_ExpenseAndTreasuryAreOneUnit` · `TestFAIL_D5_ExpenseTreasuryPartial` · `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
@@ -125,8 +125,9 @@ ORPHAN     = 568
 | **XG-26** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-27** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-28** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
-| **XG-29** | `BLOCKER` | — | `NOT_IMPLEMENTED` | — |
+| **XG-29** | `BLOCKER` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
 | **XG-30** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
+| **XG-32** | `CRITICAL` | — | `EXPECTED_FAIL` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
 | **XG-31** | `CRITICAL` | — | `COVERED` | `TestOBL_BothInsufficient_AtomicOrigins` · `TestOBL_FutureEarningsSettleWithEvidence` · `TestOBL_MerchantInsufficient_OriginTraceable` · `TestOBL_MerchantSufficient_NoObligation` · `TestOBL_MultipleObligationsFIFO` · `TestOBL_RepAvailable_NoObligation` · `TestOBL_RepWithdrawn_OriginTraceable` · `TestOBL_ReplayCreatesNoDuplicate` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
 
 ---
