@@ -989,6 +989,14 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		orderID, "عمولة عن طلب تم تسليمه", &actorID); err != nil {
 		return err
 	}
+	// **ثمّ يُقتطَع ما عليه من التزامِ استردادٍ سابق** — `XG-10` · `PG-6`.
+	//
+	// **وبعد القيد لا قبله**: **العمولةُ تُقيَّد كاملةً فيرى المندوبُ في
+	// كشفه ما استحقّه**، **ثمّ سطرٌ يقول كم اقتُطع ولماذا.** **ومن قيّد
+	// ناقصاً ترك صاحبَه يظنّ أنّه غُبن ولا يجد في كشفه ما يجيبه.**
+	if err := s.offsetRepDebt(ctx, q, *repID, repCommission, orderID, actorID); err != nil {
+		return err
+	}
 	out.repID, out.commissionPaid = *repID, repCommission
 	return nil
 }
@@ -1163,30 +1171,122 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 		return nil
 	}
 
-	// **وعمولةُ المندوب تبقى له — لا تُعكس.**
+	// ══════════════════════════════════════════════════════════════
+	// **وعمولةُ المندوب تُعكَس** — `XG-10` · `RQ-5`
+	// ══════════════════════════════════════════════════════════════
 	//
-	// # قرارُ المالك (٢٠٢٦-٠٨-٠٣) نصّاً
+	// # العقدُ النافذ (قرارُ المالك النهائيّ ٢٠٢٦-٠٩-٠٥)
 	//
-	// **«لا يوجد شي اسمه طعام فاسد بعد يوم او ساعات، واذا اصبحت هكذا مشكلة
-	// فالمنصة سوف تتحمل المسؤولية، ويكون النزاع بين المنصة والمتجر —
-	// والمندوب لا علاقة له بذلك، ولا السائق، ولا الزبون أيضاً.»**
+	//	ORDER REVENUE REVERSED → RELATED REP COMMISSION REVERSED
 	//
-	// # وكان يُعكس بقرارٍ منّي لا منه
+	// **«ولا يجوز: يسترد الزبونُ مالَه · وتنعكس مستحقّاتُ المتجر
+	// والمنصّة · وتبقى عمولةُ المندوب قابلةً للسحب.»**
+	// (`docs/testing/REP_FINAL_PRODUCT_DECISIONS.md` · `RQ-5 = APPROVED`.)
 	//
-	// قِسْتُه على «المنصةُ ردّت المال فلا يبقى لأحدٍ نصيبٌ منه» — **وهو قياسٌ
-	// يناقض نفسَه**: أجرُ السائق يبقى بالحجّة المقابلة («أدّى الخدمة فعلاً»)،
-	// **فصار طرفان أدّيا دورَيهما يُعامَلان بقاعدتين.**
+	// # وقرارٌ سابقٌ نُسخ — ولا يُمحى
 	//
-	// **والمندوبُ لا يملك جودةَ الطعام ولا سرعةَ التوصيل** — دورُه جلبُ العميل،
-	// وقد جلبه، وباع المتجرُ فعلاً. **ومن يُعاقَب على ما لا يملكه يكفّ عن
-	// العمل لا عن الخطأ.**
+	// **كان هنا امتناعٌ عن العكس مستنداً إلى قرارٍ بتاريخ ٢٠٢٦-٠٨-٠٣**:
+	// «المنصةُ تتحمّل المسؤوليّة، والنزاعُ بينها وبين المتجر — والمندوب
+	// لا علاقة له بذلك».
 	//
-	// **والنزاعُ بين المنصة والمتجر**: مستحقُّ المتجر يُسترَدّ (أعلاه)،
-	// **والباقي على المنصة** — وهو ما يظهر في تقرير الخسائر الفعلية.
+	// **وسياقُ ذلك القرار نزاعُ الطعام الفاسد**: **من يتحمّل الخسارةَ حين
+	// يشتكي زبون** — لا **كيف يُقفَل دفترُ طلبٍ استُرِدّ.** (انظر جدولَ
+	// «من يتحمّل ماذا» في `docs/TRUTH.md`.)
 	//
-	// ويبقى `repID` و`repIsBuyer` مقروءين أعلاه لأن الاستعلام واحد.
-	_, _ = repID, repIsBuyer
+	// **والقرارُ الأحدثُ يتحدّث عن الاسترداد عامّاً وينصّ على النقيض
+	// صراحةً** — **فهو الناسخ.** (صُولحت الوثيقتان ٢٠٢٦-٠٩-٠٦: **كانتا
+	// تتناقضان صامتتين شهراً.**)
+	//
+	// # ولماذا يُعكَس من الدفتر لا من المعادلة
+	//
+	// **يُعكَس ما قُيّد فعلاً** — **والنسبةُ قد تتبدّل بين القيد والعكس**،
+	// فحسبةٌ جديدةٌ تترك فرقاً في محفظته بلا سبب. **وهي علّةُ المتجر
+	// نفسُها أعلاه.**
+	//
+	// # ولا يسقط حقُّ الزبون برصيده — `PG-6`
+	//
+	// **مندوبٌ سحب عمولتَه ثمّ استُرِدّ الطلب**: **الخصمُ الكاملُ يُسقط
+	// `CHECK (balance >= 0)` فتسقط المعاملةُ كلُّها** — **ولا يصل الزبونَ
+	// شيء.** وهو مرضُ `XG-11` بعينه من بابٍ آخر.
+	//
+	// **فيُؤخذ ما تحتمله المحفظة، ويبقى الباقي التزاماً** يُقتطَع من أوّل
+	// عمولةٍ قادمة (`offsetRepDebt`) — **وهو ما يوجبه العقد**: «تُعالَج
+	// التزاماً — ولا يُمحى التاريخ».
+	if repID == nil || repIsBuyer {
+		return nil
+	}
+	var repPaid int64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
+		 WHERE ref = $1 AND kind = 'commission' AND user_id = $2`,
+		orderID, *repID).Scan(&repPaid); err != nil {
+		return err
+	}
+	if repPaid <= 0 {
+		return nil
+	}
+
+	var repBalance int64
+	if err := q.QueryRow(ctx,
+		`SELECT COALESCE(balance, 0) FROM wallets WHERE user_id = $1`,
+		*repID).Scan(&repBalance); err != nil {
+		return err
+	}
+	take := repPaid
+	if repBalance < take {
+		take = repBalance
+	}
+	if rest := repPaid - take; rest > 0 {
+		if _, err := q.Exec(ctx,
+			`UPDATE users SET commission_debt = commission_debt + $2 WHERE id = $1`,
+			*repID, rest); err != nil {
+			return err
+		}
+	}
+	if take > 0 {
+		// **بالنوع نفسِه سالباً** — **فيقرأ من يجمع `commission` الصافيَ**،
+		// ولا يبقى نوعٌ لا تعرفه الخزينة.
+		if _, err := s.wallet.ApplyTx(ctx, q, *repID, -take, "commission",
+			orderID, "عكسُ عمولة مندوب — طلبٌ مُسترجَع", &actorID); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// offsetRepDebt يقتطع التزامَ المندوب من عمولةٍ قادمة.
+//
+// **ومرآةُ `offsetMerchantDebt`** — **والتزامٌ يُقيَّد ولا يُحصَّل دفترٌ
+// يتضخّم بلا معنى.**
+//
+// **ولا يُقتطَع إلّا ما تحتمله العمولةُ الجديدة** — **فمن عليه ألفٌ
+// وعمولتُه مئةٌ يُقتطَع منه مئةٌ ويبقى تسعُمئة**، ولا يصير رصيدُه سالباً.
+func (s *Service) offsetRepDebt(ctx context.Context, q wallet.Querier,
+	repID string, available int64, orderID, actorID string) error {
+	var debt int64
+	if err := q.QueryRow(ctx,
+		`SELECT COALESCE(commission_debt, 0) FROM users WHERE id = $1 FOR UPDATE`,
+		repID).Scan(&debt); err != nil {
+		return err
+	}
+	if debt <= 0 {
+		return nil
+	}
+	take := debt
+	if available < take {
+		take = available
+	}
+	if take <= 0 {
+		return nil
+	}
+	if _, err := s.wallet.ApplyTx(ctx, q, repID, -take, "commission",
+		orderID, "اقتطاعُ التزامٍ عن طلبٍ استُرِدّ سابقاً", &actorID); err != nil {
+		return err
+	}
+	_, err := q.Exec(ctx,
+		`UPDATE users SET commission_debt = commission_debt - $2 WHERE id = $1`,
+		repID, take)
+	return err
 }
 
 // repShare نصيب المندوب من عمولة المنصة — **من مخزن الإعدادات لا من SQL.**

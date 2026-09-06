@@ -620,21 +620,39 @@ var All = []Check{
 	// ═══════════════════════════════════════════════════════════════════
 
 	{
-		ID: "FI-09.a", Family: FI09, Status: NotImplemented, Ops: false,
-		Name: "عمولةُ المندوبِ تُعكَس عند الاسترداد",
-		Why: "reverseCommissions:1006 تعكس مستحقَّ المتجر وتصفّر عمولةَ " +
-			"المنصّة، **ثمّ تخرج قبل أن تمسّ قيدَ المندوب.** **فالعمولةُ " +
-			"تبقى مدفوعةً عن طلبٍ لم يقع.**",
+		ID: "FI-09.a", Family: FI09, Status: ProvableNow, Ops: true,
+		Name: "عمولةُ المندوبِ تُعكَس عند الاسترداد أو تصير التزاماً",
+		Why: "**المنصّةُ ردّت للزبون ثمنَه** — **فلا يبقى لأحدٍ نصيبٌ منه.** " +
+			"وعمولةُ المندوب تُعكَس من محفظته، **وما عجز عنه رصيدُه يصير " +
+			"التزاماً يُقتطَع من عمولةٍ قادمة** (`RQ-5` · قرارُ المالك " +
+			"٢٠٢٦-٠٩-٠٥). **وعمولةٌ تبقى بلا عكسٍ ولا التزامٍ مالٌ خُلق.**",
 		Flows:     []string{"F-15", "F-23"},
 		Registers: []string{"XG-10"},
 		Kinds:     []string{"commission"},
+		// ══════════════════════════════════════════════════════════
+		// **والالتزامُ رصيدٌ جارٍ لا سطرٌ لكلّ طلب**
+		// ══════════════════════════════════════════════════════════
+		//
+		// **فلا يُسأل الطلبُ وحدَه** — **يُسأل المندوب**: مجموعُ ما بقي
+		// له من عمولاتٍ على طلباتٍ استُرِدّت **يجب ألّا يتجاوز التزامَه
+		// القائم.** **وتجاوزُه يعني عمولةً لم تُعكَس ولم تُدَّن.**
+		//
+		// **ولا يُشترَط التساوي**: **التزامٌ اقتُطع من عمولةٍ قادمة
+		// ينقص** — والباقي يبقى مغطّىً بما عُكس.
 		SQL: `
-			SELECT o.number, sum(t.amount)::bigint AS العمولةُ_الباقية
-			FROM orders o
-			JOIN wallet_transactions t ON t.ref = o.id::text AND t.kind = 'commission'
-			WHERE o.status = 'refunded'
-			GROUP BY o.number
-			HAVING sum(t.amount) <> 0`,
+			WITH بالمندوب AS (
+				SELECT t.user_id,
+				       sum(t.amount)::bigint AS الباقي
+				FROM orders o
+				JOIN wallet_transactions t
+				  ON t.ref = o.id::text AND t.kind = 'commission'
+				WHERE o.status = 'refunded'
+				GROUP BY t.user_id
+			)
+			SELECT u.full_name, r.الباقي, u.commission_debt
+			FROM بالمندوب r
+			JOIN users u ON u.id = r.user_id
+			WHERE r.الباقي > COALESCE(u.commission_debt, 0)`,
 	},
 	{
 		ID: "FI-12.c", Family: FI12, Status: DeferredP6, Ops: false,
