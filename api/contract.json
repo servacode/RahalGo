@@ -669,15 +669,6 @@
           "name": "note",
           "type": "string"
         }
-      ],
-      "response": [
-        {
-          "name": "held",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {
@@ -2161,15 +2152,6 @@
           "name": "decision",
           "type": "string"
         }
-      ],
-      "response": [
-        {
-          "name": "updated",
-          "type": "bool"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {
@@ -2934,15 +2916,6 @@
           "name": "for_target",
           "type": "bool"
         }
-      ],
-      "response": [
-        {
-          "name": "@e",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {
@@ -3100,15 +3073,6 @@
           "name": "note",
           "type": "string"
         }
-      ],
-      "response": [
-        {
-          "name": "balance",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {
@@ -5595,16 +5559,7 @@
       "path": "/api/v1/orders",
       "handler": "handleCustomerCreateOrder",
       "auth": true,
-      "idempotent": true,
-      "response": [
-        {
-          "name": "@o",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusCreated"
-      ]
+      "idempotent": true
     },
     {
       "method": "POST",
@@ -5633,15 +5588,6 @@
           "name": "payment_method",
           "type": "string"
         }
-      ],
-      "response": [
-        {
-          "name": "@o",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusCreated"
       ]
     },
     {
