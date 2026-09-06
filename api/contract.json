@@ -5935,6 +5935,21 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/public/identity",
+      "handler": "handleIdentity",
+      "auth": false,
+      "response": [
+        {
+          "name": "@id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/public/invite",
       "handler": "handlePublicInvite",
       "auth": false,

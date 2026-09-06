@@ -46,6 +46,16 @@ func Classify(p string) File {
 		path.Base(p) == "docker-compose.yml" || strings.HasSuffix(p, "Dockerfile") ||
 		strings.Contains(p, "nginx"):
 		f.Category, f.Why = CatDeploy, "نشرٌ أو تشغيل"
+	// ── ملفّاتُ المستودع نفسِه ────────────────────────────────
+	//
+	// **ولا تمسّ سلوكاً** — `.gitignore` و`.gitattributes` و`LICENSE`.
+	//
+	// **وكانت تُصنَّف مجهولةً فتُسقط الحكمَ إلى التوسيع الآمن كلَّه**
+	// (قِيس في `P-0`: تبديلُ سطرٍ في `.gitignore` طلب الحزمةَ كاملةً
+	// بثقةٍ منخفضة). **والتوسيعُ الآمنُ صحيحٌ للمجهول، وهذا معلوم.**
+	case path.Base(p) == ".gitignore" || path.Base(p) == ".gitattributes" ||
+		path.Base(p) == "LICENSE" || path.Base(p) == ".editorconfig":
+		f.Category, f.Why = CatDocs, "ملفُّ مستودعٍ لا يمسّ سلوكاً"
 	case isTruthDoc(p):
 		f.Category, f.Why = CatTruthDocs, "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة**"
 	case strings.HasSuffix(p, ".md") || strings.HasPrefix(p, "docs/"):
