@@ -3,9 +3,13 @@ package server
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
@@ -54,6 +58,25 @@ const (
 	// **ولا شهر**: الجدولُ ينتفخ بلا فائدة، **ومن أعاد فعلاً بعد يومٍ
 	// يقصده فعلاً.**
 	idempotencyTTL = 24 * time.Hour
+
+	// ══════════════════════════════════════════════════════════════════
+	// **مهلةُ الحيازة — ستّون ثانية**
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ومهلةُ الطلب في هذا الخادم ثلاثون ثانية** (`middleware.Timeout`
+	// في `server.go`)، **ولا مسارَ من الستّة المحميّة مستثنىً منها**
+	// (المستثنى: البثُّ والوسائطُ والإثباتُ ورفعُ الصور).
+	//
+	// **فضِعفُها حدٌّ لا يبلغه عاملٌ حيّ** — **ومن تجاوزه فقد مات معالجُه
+	// أو قُتل.**
+	//
+	// **والسلامةُ لا تقوم عليها**: قفلُ الصفّ ورمزُ الملكيّة هما
+	// الحارسان. **وهي تمنع البقاءَ إلى الأبد لا أكثر** — **وهي علّةُ
+	// `C-06` بعينها: أربعٌ وعشرون ساعةَ حبسٍ لأنّ لا مهلةَ أصلاً.**
+	//
+	// **ولا تُجعل إعداداً تشغيليّاً**: **إعدادٌ يُغيَّر خطأً يفتح بابَ
+	// السرقة أو الحبس**، ولا حاجةَ ميدانيّةً لتغييره.
+	idempotencyLease = 60 * time.Second
 )
 
 // captureWriter يلتقط الردَّ ليُحفظ — **ويُمرّره كما هو إلى صاحبه.**
@@ -94,112 +117,148 @@ func (s *Server) idempotent(next http.HandlerFunc) http.HandlerFunc {
 		}
 		endpoint := r.Method + " " + r.URL.Path
 
-		// **الحجزُ أوّلاً ثمّ التنفيذ** — لا العكس.
+		// ══════════════════════════════════════════════════════════
+		// **الحيازةُ على المَسبَح — مرئيّةٌ فوراً**
+		// ══════════════════════════════════════════════════════════
 		//
-		// **ولو نُفّذ ثمّ حُجز** لَمرّ نداءان متزامنان معاً: كلاهما لا يجد
-		// مفتاحاً فينفّذان، **ثمّ يتصادمان عند الحفظ وقد كُتب المالُ مرّتين.**
-		claimed, err := s.claimIdempotency(r.Context(), uid, endpoint, key)
+		// **ولو أُخّرت إلى داخل معاملة العمل لما رآها المتزامنُ**
+		// (صفٌّ غيرُ مثبَّتٍ لا يُرى)، **فوقع تنفيذان.**
+		claim, replay, err := s.acquireClaim(r.Context(), uid, endpoint, key)
 		if err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		if !claimed {
-			s.replayIdempotency(w, r.Context(), uid, endpoint, key)
+		if claim == nil {
+			replay(w)
 			return
 		}
 
+		ctx := context.WithValue(r.Context(), idemClaimKey, claim)
 		cw := &captureWriter{ResponseWriter: w}
-		next(cw, r)
+		next(cw, r.WithContext(ctx))
 
-		// ══════════════════════════════════════════════════════════════
-		// **والفاشلُ يُطلَق لا يُحفَظ**
-		// ══════════════════════════════════════════════════════════════
-		//
-		// **ردٌّ بخطأٍ محفوظٌ يعني أنّ المحاولةَ الثانية تتلقّى الخطأَ
-		// نفسَه إلى الأبد** — ومن فشل طلبُه لانقطاع قاعدةٍ لحظةً **لا
-		// يستطيع أن يعيد أبداً.**
-		//
-		// **فيُحذف الحجزُ فيصير الطريقُ مفتوحاً**، والإعادةُ تُنفَّذ من
-		// جديد. **وهذا هو المقصود: الحمايةُ من تكرار ما نجح لا من إعادة
-		// ما فشل.**
+		// **والخطأُ يُطلق المفتاحَ محروساً** — انظر `releaseIdempotency`.
 		if cw.status >= 400 {
-			s.releaseIdempotency(r.Context(), uid, endpoint, key)
-			return
+			s.releaseIdempotency(r.Context(), claim)
 		}
-		s.storeIdempotency(r.Context(), uid, endpoint, key, cw.status, cw.body.Bytes())
 	}
 }
 
-// claimIdempotency يحجز المفتاح — **ويعيد `false` إن كان محجوزاً.**
-func (s *Server) claimIdempotency(ctx context.Context, uid, endpoint, key string) (bool, error) {
-	// **والتقليمُ مع الكتابة** — **ومهمّةٌ ليليّةٌ تُنسى أو تتعطّل فينتفخ
-	// الجدولُ بصمت.** وتعثّرُه لا يمنع الحجز.
-	if _, err := s.pg.Exec(ctx,
-		`DELETE FROM idempotency_keys WHERE created_at < now() - $1::interval`,
-		idempotencyTTL.String()); err != nil {
-		s.logger.Warn("منعُ التكرار: تعذّر التقليم", "error", err)
-	}
+// acquireClaim يحوز المطالبةَ أو يُرجع كيف تُعاد.
+//
+// **ثلاثُ نتائجَ لا رابع**: **حِيزت** (صفٌّ جديدٌ أو استردادٌ ذرّيّ) ·
+// **ثبتت** فتُعاد نتيجتُها · **حيّةٌ لغيرنا** فـ`409`.
+func (s *Server) acquireClaim(ctx context.Context, uid, endpoint, key string) (
+	*idemClaim, func(http.ResponseWriter), error) {
+
+	s.pruneIdempotency(ctx)
+
+	token := uuid.New()
 	tag, err := s.pg.Exec(ctx, `
-		INSERT INTO idempotency_keys (user_id, endpoint, key)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (user_id, endpoint, key) DO NOTHING`, uid, endpoint, key)
+		INSERT INTO idempotency_keys (user_id, endpoint, key, owner_token, lease_until)
+		VALUES ($1, $2, $3, $4, now() + $5::interval)
+		ON CONFLICT (user_id, endpoint, key) DO NOTHING`,
+		uid, endpoint, key, token, idempotencyLease.String())
 	if err != nil {
-		return false, err
+		return nil, nil, err
 	}
-	return tag.RowsAffected() == 1, nil
-}
+	if tag.RowsAffected() == 1 {
+		return &idemClaim{uid: uid, endpoint: endpoint, key: key, token: token}, nil, nil
+	}
 
-// replayIdempotency يردّ ما حُفظ — **أو يقول «ما زال يُنفَّذ».**
-func (s *Server) replayIdempotency(w http.ResponseWriter, ctx context.Context, uid, endpoint, key string) {
-	var done bool
+	// ══════════════════════════════════════════════════════════════
+	// **استردادٌ ذرّيٌّ بشرطٍ واحدٍ لا يُساوَم**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **`committed_at IS NULL`** — **فما ثبت لا يُعاد تنفيذُه أبداً.**
+	//
+	// **و`owner_token IS NOT NULL`** — **صفوفُ ما قبل الهجرة لا
+	// تُستردّ**: ليس فيها ما يقول أوقع عملُها أم لا، **وحبسٌ يوماً أهونُ
+	// من تكرارِ دفعة.**
+	//
+	// **وهذا `UPDATE` يأخذ قفلَ الصفّ** — **فإن كانت معاملةُ عملٍ حيّةٌ
+	// تمسكه انتظر حتّى تنتهي**، ثمّ قرأ حقيقتَها: **ثبتت فلا شرطَ يمرّ،
+	// أو ارتدّت فيؤخذ.** **ولا سرقةَ من عاملٍ حيّ.**
+	var got int
+	err = s.pg.QueryRow(ctx, `
+		UPDATE idempotency_keys
+		   SET owner_token = $4, lease_until = now() + $5::interval
+		 WHERE user_id = $1 AND endpoint = $2 AND key = $3
+		   AND committed_at IS NULL
+		   AND owner_token IS NOT NULL
+		   AND lease_until < now()
+		RETURNING 1`,
+		uid, endpoint, key, token, idempotencyLease.String()).Scan(&got)
+	if err == nil {
+		return &idemClaim{uid: uid, endpoint: endpoint, key: key, token: token}, nil, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, err
+	}
+
+	// **لم تُحَز** — فتُقرأ حقيقتُها وتُعاد.
+	var committed *string
 	var status int
 	var body string
-	// **و`COALESCE` لأنّ الردَّ فارغٌ ما دام الحجزُ لم يكتمل** — ونداءان
-	// متزامنان يقع أحدُهما على ذلك، **فيسقط المسحُ بخمسمئة بدل أن يقول
-	// «قيد التنفيذ»**، ويظنّ صاحبُه المنصّةَ معطوبة.
-	err := s.pg.QueryRow(ctx, `
-		SELECT done, status_code, COALESCE(response, '') FROM idempotency_keys
-		WHERE user_id = $1 AND endpoint = $2 AND key = $3`, uid, endpoint, key).
-		Scan(&done, &status, &body)
-	if err != nil {
-		s.respondErr(w, err)
-		return
+	if err := s.pg.QueryRow(ctx, `
+		SELECT committed_at::text, status_code, COALESCE(response, '')
+		  FROM idempotency_keys
+		 WHERE user_id = $1 AND endpoint = $2 AND key = $3`,
+		uid, endpoint, key).Scan(&committed, &status, &body); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// **مُحيت بين المحاولتين** — يُعاد النداءُ فيحوزها.
+			return nil, func(w http.ResponseWriter) {
+				s.respondErr(w, errIdemLost)
+			}, nil
+		}
+		return nil, nil, err
 	}
-	if !done {
-		// **نداءان متزامنان بالمفتاح نفسِه** — الثاني يجد حجزاً لم يكتمل.
-		//
-		// **و409 لا 500**: الحالةُ سليمةٌ ومؤقّتة، **ومن رأى خمسمئة ظنّ
-		// المنصّةَ معطوبةً وأعاد بمفتاحٍ جديد** — وذاك بالضبط ما نمنعه.
+	if committed != nil {
+		return nil, func(w http.ResponseWriter) {
+			s.writeReplay(w, status, body)
+		}, nil
+	}
+	return nil, func(w http.ResponseWriter) {
 		httpx.Error(w, &httpx.AppError{
 			Status: http.StatusConflict, Code: "in_progress",
 			MessageKey: "errors.in_progress",
 		})
-		return
-	}
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	// **وترويسةٌ تقول إنّه معاد** — يقرؤها من يشخّص، **ولا تُغيّر شيئاً عند
-	// من لا يعرفها.**
-	w.Header().Set("Idempotent-Replay", "true")
-	w.WriteHeader(status)
-	_, _ = w.Write([]byte(body))
+	}, nil
 }
 
-func (s *Server) storeIdempotency(ctx context.Context, uid, endpoint, key string, status int, body []byte) {
-	if _, err := s.pg.Exec(ctx, `
-		UPDATE idempotency_keys SET done = true, status_code = $4, response = $5
-		WHERE user_id = $1 AND endpoint = $2 AND key = $3`,
-		uid, endpoint, key, status, string(body)); err != nil {
-		// **ولا يُسقط الردَّ** — الفعلُ وقع ونجح، **والفشلُ هنا يعني أنّ
-		// إعادةً لاحقةً ستُنفّذ ثانيةً**، وهو أهونُ من إبطال ما نجح.
-		s.logger.Error("منعُ التكرار: تعذّر حفظُ الرد", "endpoint", endpoint, "error", err)
-	}
-}
-
-func (s *Server) releaseIdempotency(ctx context.Context, uid, endpoint, key string) {
+// pruneIdempotency **يقلّم ما شاخ ولا يمسّ حيّاً.**
+//
+// **والاحتفاظُ كما هو** — أربعٌ وعشرون ساعةً من الإنشاء (`idempotencyTTL`)،
+// **عقدٌ قائمٌ لا يُبدَّل في هذه الدورة.**
+//
+// **وشرطٌ زائدٌ يحرس الحيّ**: **ما مهلتُه لم تنتهِ لا يُمَسّ** — ولو كان
+// صفُّه قديماً لسببٍ ما. **ومطالبةٌ تُمحى تحت عاملٍ يشتغل فرصةُ تكرار.**
+func (s *Server) pruneIdempotency(ctx context.Context) {
 	if _, err := s.pg.Exec(ctx, `
 		DELETE FROM idempotency_keys
-		WHERE user_id = $1 AND endpoint = $2 AND key = $3 AND done = false`,
-		uid, endpoint, key); err != nil {
+		 WHERE created_at < now() - $1::interval
+		   AND (lease_until IS NULL OR lease_until < now())`,
+		idempotencyTTL.String()); err != nil {
+		s.logger.Warn("منعُ التكرار: تعذّر التقليم", "error", err)
+	}
+}
+
+// releaseIdempotency يُطلق مطالبةً انتهت بخطأ — **بحراسة**.
+//
+// **والعقدُ القائمُ يُحفَظ**: ردٌّ ‎≥400 يحذف الصفَّ فيُعاد الطلبُ
+// بحرّيّة. **لكنّ الحذفَ يشترط الملكيّة** — **ومالكٌ قديمٌ فقد مطالبتَه
+// لا يمحو ما استعاده غيرُه**، فيُنفَّذ العملُ مرّتين أو يُحبَس صاحبُه.
+//
+// **ولا يُحذَف ما ثبت** — النتيجةُ المحفوظةُ تُعاد لمن سأل.
+func (s *Server) releaseIdempotency(ctx context.Context, c *idemClaim) {
+	if c == nil {
+		return
+	}
+	if _, err := s.pg.Exec(ctx, `
+		DELETE FROM idempotency_keys
+		 WHERE user_id = $1 AND endpoint = $2 AND key = $3
+		   AND committed_at IS NULL AND owner_token = $4`,
+		c.uid, c.endpoint, c.key, c.token); err != nil {
 		s.logger.Warn("منعُ التكرار: تعذّر إطلاقُ مفتاحٍ فاشل", "error", err)
 	}
 }

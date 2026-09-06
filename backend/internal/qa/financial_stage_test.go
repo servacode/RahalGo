@@ -246,6 +246,11 @@ func TestFIN_TransactionBoundaries(t *testing.T) {
 			got = "ATOMIC"
 		case strings.Contains(block, "q wallet.Querier"),
 			strings.Contains(block, "q Querier"),
+			strings.Contains(block, "q dbtx.Querier"),
+			strings.Contains(block, "tx dbtx.Querier"),
+			// **ومنسّقُ منع التكرار يملك المعاملةَ ويمرّرها** —
+			// **فمن ناداه ورث معاملتَه** (`XG-33`، دورةُ إصلاحٍ ٩).
+			strings.Contains(block, "WithIdempotentTx"),
 			strings.Contains(block, "tx pgx.Tx"):
 			got = "INHERITS_TX"
 		}

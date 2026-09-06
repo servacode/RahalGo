@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 
 	"github.com/jackc/pgx/v5"
 
@@ -130,7 +131,15 @@ func scanOrder(row pgx.Row) (*Order, error) {
 }
 
 func (s *Service) GetByID(ctx context.Context, id string) (*Order, error) {
-	o, err := scanOrder(s.db.QueryRow(ctx, orderSelect+` WHERE o.id = $1`, id))
+	return s.getByID(ctx, s.db, id)
+}
+
+// getByID القراءةُ نفسُها **بالمنفّذ المُمرَّر** — `XG-33`.
+//
+// **وطلبٌ أُنشئ داخلَ معاملةٍ لا يراه المَسبَح** — **فمن قرأه بغيرها
+// وجد «غير موجود».**
+func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Order, error) {
+	o, err := scanOrder(db.QueryRow(ctx, orderSelect+` WHERE o.id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}

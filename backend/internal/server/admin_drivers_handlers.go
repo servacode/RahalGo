@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"strconv"
 	"time"
@@ -110,39 +112,44 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	driverID := chi.URLParam(r, "id")
-	held, err := s.cashbox.Settle(r.Context(), driverID, req.Amount, req.Note, userIDFrom(r))
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// نقدٌ يُسلَّم في مكتب: لا إيصال إلكتروني له إلا هذا القيد. ومن أنكر
-	// التسليم أو أنكر الاستلام، فالسطر هنا هو ما يُرجَع إليه.
-	s.audit(r, "finance.driver_settle", "user", driverID, map[string]any{
-		"amount": req.Amount, "note": req.Note, "held_after": held,
-	})
+	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		held, err := s.cashbox.SettleTx(ctx, q, driverID, req.Amount, req.Note, userIDFrom(r))
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{
+			Status:  http.StatusOK,
+			Payload: map[string]any{"held": held},
+			AfterCommit: func() {
+				s.audit(r, "finance.driver_settle", "user", driverID, map[string]any{
+					"amount": req.Amount, "note": req.Note, "held_after": held,
+				})
 
-	// نقود تنتقل من يد إلى يد: صاحبها يعرف، وشاشة الصناديق تتحدّث لحظياً.
-	//
-	// **والإشعارُ يقول المبلغَ والباقي.**
-	//
-	// كان نصُّه `req.Note` وحدَه — **والملاحظةُ اختيارية**، فإن تُركت فارغةً
-	// وصل السائقَ «سُلّم صندوقك» بلا رقم. **وخبرُ مالٍ لا يقول كم مالٌ خبرٌ
-	// يجب أن يُتحقّق منه في مكانٍ آخر** — فلا يُغني عن السؤال الذي وُضع
-	// ليمنعه، **ويترك بابَ الخلاف مفتوحاً: «سلّمتُ خمسين» «بل أربعين».**
-	body := fmt.Sprintf("%d — والباقي بذمّتك %d", req.Amount, held)
-	if req.Note != "" {
-		body += " · " + req.Note
-	}
-	s.notify.Notify(r.Context(), notifications.Input{
-		UserID: driverID, Kind: notifications.KindWallet,
-		Title: notifTitles.cashSettled, Body: body,
-		Entity: "cashbox", Href: "/",
-		// **تسويةُ نقدِ السائق تخصّ تطبيقَه** — وهو يحمل تطبيقَ الزبون أيضاً.
-		Apps: []string{notifications.AppDriver},
+				// نقود تنتقل من يد إلى يد: صاحبها يعرف، وشاشة الصناديق تتحدّث لحظياً.
+				//
+				// **والإشعارُ يقول المبلغَ والباقي.**
+				//
+				// كان نصُّه `req.Note` وحدَه — **والملاحظةُ اختيارية**، فإن تُركت فارغةً
+				// وصل السائقَ «سُلّم صندوقك» بلا رقم. **وخبرُ مالٍ لا يقول كم مالٌ خبرٌ
+				// يجب أن يُتحقّق منه في مكانٍ آخر** — فلا يُغني عن السؤال الذي وُضع
+				// ليمنعه، **ويترك بابَ الخلاف مفتوحاً: «سلّمتُ خمسين» «بل أربعين».**
+				body := fmt.Sprintf("%d — والباقي بذمّتك %d", req.Amount, held)
+				if req.Note != "" {
+					body += " · " + req.Note
+				}
+				s.notify.Notify(r.Context(), notifications.Input{
+					UserID: driverID, Kind: notifications.KindWallet,
+					Title: notifTitles.cashSettled, Body: body,
+					Entity: "cashbox", Href: "/",
+					// **تسويةُ نقدِ السائق تخصّ تطبيقَه** — وهو يحمل تطبيقَ الزبون أيضاً.
+					Apps: []string{notifications.AppDriver},
+				})
+				s.touch("wallet", "ops")
+				s.touchUser(driverID, "wallet")
+			},
+		}, nil
 	})
-	s.touch("wallet", "ops")
-	s.touchUser(driverID, "wallet")
-	httpx.JSON(w, http.StatusOK, map[string]any{"held": held})
 }
 
 // handleAdminEndShift **تُغلق الإدارةُ دوامَ سائقٍ نسي أن يُغلقه.**

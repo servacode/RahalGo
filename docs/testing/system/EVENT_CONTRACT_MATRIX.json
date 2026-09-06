@@ -163,7 +163,7 @@
     },
     {
       "file": "internal/server/admin_drivers_handlers.go",
-      "line": 136,
+      "line": 141,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "cashbox",
@@ -172,7 +172,7 @@
     },
     {
       "file": "internal/server/admin_drivers_handlers.go",
-      "line": 215,
+      "line": 222,
       "call": "Notify",
       "kind": "Account",
       "has_app_targeting": false,
@@ -261,7 +261,7 @@
     },
     {
       "file": "internal/server/admin_wallet_handlers.go",
-      "line": 82,
+      "line": 93,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -306,7 +306,7 @@
     },
     {
       "file": "internal/server/custom_order_handlers.go",
-      "line": 74,
+      "line": 79,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -405,7 +405,7 @@
     },
     {
       "file": "internal/server/payout_handlers.go",
-      "line": 316,
+      "line": 311,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "payout",
@@ -821,7 +821,7 @@
     },
     {
       "file": "internal/orders/custom.go",
-      "line": 213,
+      "line": 254,
       "room": "ops"
     },
     {
@@ -846,27 +846,27 @@
     },
     {
       "file": "internal/orders/service.go",
-      "line": 120,
+      "line": 121,
       "room": "ops"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 121,
+      "line": 122,
       "room": "merchant:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 134,
+      "line": 135,
       "room": "customer:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 141,
+      "line": 142,
       "room": "driver:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 968,
+      "line": 986,
       "room": "user:*"
     },
     {
@@ -936,7 +936,7 @@
     },
     {
       "file": "internal/server/admin_drivers_handlers.go",
-      "line": 215,
+      "line": 222,
       "call": "Notify",
       "kind": "Account",
       "has_app_targeting": false,
@@ -1007,7 +1007,7 @@
     },
     {
       "file": "internal/server/admin_wallet_handlers.go",
-      "line": 82,
+      "line": 93,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -1043,7 +1043,7 @@
     },
     {
       "file": "internal/server/custom_order_handlers.go",
-      "line": 74,
+      "line": 79,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -1097,7 +1097,7 @@
     },
     {
       "file": "internal/server/payout_handlers.go",
-      "line": 316,
+      "line": 311,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "payout",

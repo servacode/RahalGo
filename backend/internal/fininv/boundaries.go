@@ -80,8 +80,11 @@ var TxBoundaries = []TxBoundary{
 	},
 	{
 		Op: "handleDecidePayout", File: "internal/server/payout_handlers.go",
-		Sig: "func (s *Server) handleDecidePayout(", Class: "ATOMIC",
-		Note: "قفلٌ FOR UPDATE وشرطُ pending — منعُ تكرارٍ ببناءِ المعاملة",
+		Sig: "func (s *Server) handleDecidePayout(", Class: "INHERITS_TX",
+		Note: "**دورةُ إصلاحٍ ٩** — لم يعُد يفتح معاملتَه بل " +
+			"**يرثها من `WithIdempotentTx`**: قرارُ الدفع وخصمُ المحفظة " +
+			"**وعلامةُ تثبيتِ منع التكرار** في معاملةٍ واحدة (`XG-33`). " +
+			"**ولا معاملتان في فعلٍ واحد.**",
 	},
 	{
 		Op: "handleCreateExpense", File: "internal/server/expenses_handlers.go",
@@ -98,8 +101,12 @@ var TxBoundaries = []TxBoundary{
 	},
 	{
 		Op: "handleAdminWalletApply", File: "internal/server/admin_wallet_handlers.go",
-		Sig: "func (s *Server) handleAdminWalletApply(", Class: "NON_ATOMIC",
-		Note: "قيدٌ واحدٌ فقط — **ولا كتابةَ ثانيةً تُفقَد**",
+		Sig: "func (s *Server) handleAdminWalletApply(", Class: "INHERITS_TX",
+		Note: "**دورةُ إصلاحٍ ٩** — صار يرث معاملةَ " +
+			"`WithIdempotentTx`: قيدُ المحفظة **وعلامةُ تثبيتِ منع " +
+			"التكرار** في معاملةٍ واحدة (`XG-33`). " +
+			"**والتدقيقُ والإشعارُ بعد التثبيت** — تدقيقٌ لعمليّةٍ ارتدّت " +
+			"يقول إنّ مالاً تحرّك ولم يتحرّك.",
 	},
 	{
 		Op: "convertLead", File: "internal/server/leads_handlers.go",

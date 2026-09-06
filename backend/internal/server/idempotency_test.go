@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -40,6 +41,31 @@ func idemFixture(t *testing.T) (*Server, string) {
 }
 
 // call ينادي معالِجاً ملفوفاً بمفتاحٍ ويعيد الرمزَ والنصّ.
+// sealed معالجٌ يمرّ بالمنسّق **كما تفعل المساراتُ المحميّة كلُّها**.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا تبدّل شكلُ هذه الفحوص** — `XG-33` · دورةُ إصلاحٍ ٩
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان الوسيطُ يختم المطالبةَ بنفسه بعد أن يعود المعالج** — **ختمٌ
+// خارجَ معاملة العمل**، وهي الفجوةُ بعينها.
+//
+// **وصار الختمُ داخلَ المعاملة**: **فمعالجٌ لا يمرّ بالمنسّق لا
+// يُختَم له شيء** — **ويقرأ الثاني `409` بحقّ، لأنّ الأوّلَ لم يُثبت
+// شيئاً يُعاد.**
+//
+// **فبُدّلت هذه الفحوصُ لأنّ العقدَ تبدّل، لا لتمرّ.** **وحارسٌ بنيويٌّ
+// يمنع أيَّ مسارٍ محميٍّ أن يبقى خارجَ المنسّق**
+// (`TestIDEM_AllProtectedPathsUseCoordinator`).
+func sealed(srv *Server, status int, payload any, run func()) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		srv.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+			run()
+			return IdempotentBody{Status: status, Payload: payload}, nil
+		})
+	}
+}
+
 func call(t *testing.T, srv *Server, uid, key string, h http.HandlerFunc) (int, string) {
 	t.Helper()
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/orders", strings.NewReader("{}"))
@@ -55,10 +81,7 @@ func call(t *testing.T, srv *Server, uid, key string, h http.HandlerFunc) (int, 
 func TestIdempotency_RunsOnce(t *testing.T) {
 	srv, uid := idemFixture(t)
 	var runs int
-	h := func(w http.ResponseWriter, r *http.Request) {
-		runs++
-		httpx.JSON(w, http.StatusOK, map[string]any{"order_number": 1234})
-	}
+	h := sealed(srv, http.StatusOK, map[string]any{"order_number": 1234}, func() { runs++ })
 
 	code1, body1 := call(t, srv, uid, "key-a", h)
 	code2, body2 := call(t, srv, uid, "key-a", h)
@@ -86,10 +109,7 @@ func TestIdempotency_RunsOnce(t *testing.T) {
 func TestIdempotency_DifferentKeysBothRun(t *testing.T) {
 	srv, uid := idemFixture(t)
 	var runs int
-	h := func(w http.ResponseWriter, r *http.Request) {
-		runs++
-		httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
-	}
+	h := sealed(srv, http.StatusOK, map[string]any{"ok": true}, func() { runs++ })
 
 	call(t, srv, uid, "key-1", h)
 	call(t, srv, uid, "key-2", h)
@@ -106,10 +126,7 @@ func TestIdempotency_KeyIsPerUser(t *testing.T) {
 	srv, first := idemFixture(t)
 	second := testdb.NewUser(t, srv.pg, "customer")
 	var runs int
-	h := func(w http.ResponseWriter, r *http.Request) {
-		runs++
-		httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
-	}
+	h := sealed(srv, http.StatusOK, map[string]any{"ok": true}, func() { runs++ })
 
 	call(t, srv, first, "same-key", h)
 	call(t, srv, second, "same-key", h)
@@ -153,10 +170,7 @@ func TestIdempotency_FailureIsRetryable(t *testing.T) {
 func TestIdempotency_NoHeaderPassesThrough(t *testing.T) {
 	srv, uid := idemFixture(t)
 	var runs int
-	h := func(w http.ResponseWriter, r *http.Request) {
-		runs++
-		httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
-	}
+	h := sealed(srv, http.StatusOK, map[string]any{"ok": true}, func() { runs++ })
 	call(t, srv, uid, "", h)
 	call(t, srv, uid, "", h)
 	if runs != 2 {

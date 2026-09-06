@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 241,
-    "test_funcs": 828
+    "test_files": 242,
+    "test_funcs": 839
   },
   "flows": [
     {
@@ -72,6 +72,17 @@
         "TestFAIL_R8_OrphanClaimUnderRealFailure",
         "TestFAIL_XOB7_AutoTransferFireAndForget",
         "TestFIN_OrderEconomicConservation",
+        "TestIDEM_AllProtectedPathsUseCoordinator",
+        "TestIDEM_T10_CleanupSparesLiveClaim",
+        "TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged",
+        "TestIDEM_T1_ConcurrentDuplicateExecutesOnce",
+        "TestIDEM_T2_OrphanBeforeTxIsReclaimed",
+        "TestIDEM_T3_StaleOwnerIsFenced",
+        "TestIDEM_T4_ActiveClaimCannotBeStolen",
+        "TestIDEM_T5_BusinessRollbackLeavesNothing",
+        "TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate",
+        "TestIDEM_T8_TwoReclaimersExecuteOnce",
+        "TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim",
         "TestFAIL_C06_OrphanBeforeCommitBlocksOwner",
         "TestFAIL_C06_TwoReclaimersExecuteNothing",
         "TestIDEM_CleanupSparesLiveClaim",
@@ -149,6 +160,17 @@
       ],
       "tests": [
         "TestFAIL_R8_OrphanClaimUnderRealFailure",
+        "TestIDEM_AllProtectedPathsUseCoordinator",
+        "TestIDEM_T10_CleanupSparesLiveClaim",
+        "TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged",
+        "TestIDEM_T1_ConcurrentDuplicateExecutesOnce",
+        "TestIDEM_T2_OrphanBeforeTxIsReclaimed",
+        "TestIDEM_T3_StaleOwnerIsFenced",
+        "TestIDEM_T4_ActiveClaimCannotBeStolen",
+        "TestIDEM_T5_BusinessRollbackLeavesNothing",
+        "TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate",
+        "TestIDEM_T8_TwoReclaimersExecuteOnce",
+        "TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim",
         "TestFAIL_C06_OrphanBeforeCommitBlocksOwner",
         "TestFAIL_C06_TwoReclaimersExecuteNothing",
         "TestIDEM_CleanupSparesLiveClaim",
@@ -1554,6 +1576,17 @@
       ],
       "tests": [
         "TestFAIL_R8_OrphanClaimUnderRealFailure",
+        "TestIDEM_AllProtectedPathsUseCoordinator",
+        "TestIDEM_T10_CleanupSparesLiveClaim",
+        "TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged",
+        "TestIDEM_T1_ConcurrentDuplicateExecutesOnce",
+        "TestIDEM_T2_OrphanBeforeTxIsReclaimed",
+        "TestIDEM_T3_StaleOwnerIsFenced",
+        "TestIDEM_T4_ActiveClaimCannotBeStolen",
+        "TestIDEM_T5_BusinessRollbackLeavesNothing",
+        "TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate",
+        "TestIDEM_T8_TwoReclaimersExecuteOnce",
+        "TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim",
         "TestFAIL_C06_OrphanBeforeCommitBlocksOwner",
         "TestFAIL_C06_TwoReclaimersExecuteNothing",
         "TestIDEM_CleanupSparesLiveClaim",
@@ -2001,14 +2034,26 @@
       "id": "XG-33",
       "title": "لا علامةَ تثبيتٍ داخل معاملة العمل لمنع التكرار",
       "severity": "CRITICAL",
+      "fixed": "**صار العملُ وعلامةُ التثبيت والنتيجةُ في معاملةٍ واحدة**: `WithIdempotentTx` يملكها، **والمساراتُ الستّةُ المحميّةُ كلُّها تمرّ به** (حارسٌ بنيويٌّ يستخرج القائمةَ من التسجيل نفسِه فيمنع سابعاً يُكتب غداً). **وطَوران**: الحيازةُ على المَسبَح **فتُرى فوراً** — ولو أُخّرت داخلَ المعاملة لما رآها المتزامنُ فوقع تنفيذان — **ثمّ معاملةٌ تقفل الصفَّ وتتحقّق من الملكيّة ثمّ تكتب وتُثبَّت مرّةً واحدة.** **والسياجُ**: كلُّ حيازةٍ ترفع رمزاً جديداً، **ومن استُرِدّت منه ثمّ استيقظ لا يكتب حرفاً** — **والمهلةُ وحدَها لا تكفي**: ساعةٌ تسبق ساعةً وعمليّةٌ بطيئةٌ ليست ميّتة. **والقفلُ يمنع السرقةَ من عاملٍ حيّ**: المستردُّ يصطدم بـ`FOR UPDATE` فينتظر، ثمّ يجدها مثبَّتةً فيُعيد نتيجتَها أو مرتدّةً فيأخذها. **والحذفُ عند الخطأ محروسٌ بالملكيّة** — ومالكٌ قديمٌ لا يمحو ما استعاده غيرُه. **والتركةُ**: `done` تُترجَم تثبيتاً، **والمعلَّقُ من قبلُ لا يُستردّ أبداً** (رمزُه `NULL`) — **وحبسٌ يوماً أهونُ من تكرارِ دفعة.** أحدَ عشرَ حارساً وحارسٌ بنيويّ.",
       "tests": [
+        "TestIDEM_AllProtectedPathsUseCoordinator",
+        "TestIDEM_T10_CleanupSparesLiveClaim",
+        "TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged",
+        "TestIDEM_T1_ConcurrentDuplicateExecutesOnce",
+        "TestIDEM_T2_OrphanBeforeTxIsReclaimed",
+        "TestIDEM_T3_StaleOwnerIsFenced",
+        "TestIDEM_T4_ActiveClaimCannotBeStolen",
+        "TestIDEM_T5_BusinessRollbackLeavesNothing",
+        "TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate",
+        "TestIDEM_T8_TwoReclaimersExecuteOnce",
+        "TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim",
         "TestFAIL_C06_OrphanBeforeCommitBlocksOwner",
         "TestFAIL_C06_TwoReclaimersExecuteNothing",
         "TestIDEM_CleanupSparesLiveClaim",
         "TestIDEM_CommittedBeforeResultDoesNotDuplicate",
         "TestIDEM_LostResponseReplays"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "COVERED"
     },
     {
       "id": "XG-31",
@@ -7569,6 +7614,270 @@
         "FAST",
         "FULL",
         "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_AllProtectedPathsUseCoordinator",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T10_CleanupSparesLiveClaim",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T1_ConcurrentDuplicateExecutesOnce",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T2_OrphanBeforeTxIsReclaimed",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T3_StaleOwnerIsFenced",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T4_ActiveClaimCannotBeStolen",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T5_BusinessRollbackLeavesNothing",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T8_TwoReclaimersExecuteOnce",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim",
+      "file": "internal/qa/idempotency_fencing_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-03"
+      ],
+      "risks": [
+        "R8"
+      ],
+      "gaps": [
+        "XG-33"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
         "RELEASE"
       ],
       "orphan": false

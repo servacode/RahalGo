@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"strconv"
 
@@ -349,19 +350,23 @@ func (s *Server) handleCustomerCreateOrder(w http.ResponseWriter, r *http.Reques
 	}
 	in.CustomerID = userIDFrom(r) // الطلب باسم صاحب الحساب حصراً
 	in.CustomerPhone = ""
-	o, err := s.orders.Create(r.Context(), userIDFrom(r), rolesFrom(r), *in, clientIP(r))
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// **وطلبٌ كبيرٌ لا ينتظر يداً** — يُحوَّل تلقائياً إن بلغ العتبة، **ولا
-	// يُوسَم مُرسَلاً ما لم يُرسَل.** (انظر `auto_transfer.go`)
-	//
-	// **وبعد الردّ لا قبله**: التحويلُ يُبلّغ طرفاً خارجياً وقد يتعثّر،
-	// **وزبونٌ ينتظر شاشتَه بينما نُرسل رسالةً إلى مطعمٍ يقرأ بطئاً لا نجاحاً.**
-	go s.autoTransfer(context.WithoutCancel(r.Context()), o.ID, userIDFrom(r))
-
-	httpx.JSON(w, http.StatusCreated, o)
+	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		o, after, err := s.orders.CreateTx(ctx, q, userIDFrom(r), rolesFrom(r), *in, clientIP(r))
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{
+			Status:  http.StatusCreated,
+			Payload: o,
+			AfterCommit: func() {
+				after()
+				// **والتحويلُ التلقائيُّ بعد التثبيت** — والسياقُ بلا
+				// إلغاءٍ لأنّ ردَّ الزبون يُغلق سياقَ الطلب.
+				go s.autoTransfer(context.WithoutCancel(r.Context()), o.ID, userIDFrom(r))
+			},
+		}, nil
+	})
 }
 
 // handleMyOrders طلبات الزبون نفسه.

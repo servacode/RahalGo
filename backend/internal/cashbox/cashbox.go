@@ -172,6 +172,18 @@ func (s *Service) Settle(ctx context.Context, driverID string, amount int64, not
 	return s.apply(ctx, driverID, -amount, "settlement", "", note, &actorID)
 }
 
+// SettleTx كـ`Settle` **في معاملةٍ مُمرَّرة** — `XG-33`.
+//
+// **ولا معاملةَ داخل معاملة**: العملُ وعلامةُ تثبيت منع التكرار
+// **يُثبَّتان معاً أو لا يُثبَّت أحدُهما.**
+func (s *Service) SettleTx(ctx context.Context, q Querier, driverID string,
+	amount int64, note, actorID string) (int64, error) {
+	if amount <= 0 {
+		return 0, ErrOverSettle
+	}
+	return s.applyTx(ctx, q, driverID, -amount, "settlement", "", note, &actorID)
+}
+
 func isCheckViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23514"

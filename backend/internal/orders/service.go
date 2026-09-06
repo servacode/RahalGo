@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"github.com/google/uuid"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"log/slog"
 	"strings"
 	"time"
@@ -202,7 +203,30 @@ func queueAffecting(status string) bool {
 
 // Create ينشئ طلباً كاملاً: تحقق المتجر، تسعير خادمي للأصناف والخيارات،
 // منطقة التسليم ورسمها، كود الخصم، ثم الدفع (نقدي/محفظة/مختلط) — كله ذرّياً.
+// Create ينشئ طلباً في معاملةٍ يملكها.
 func (s *Service) Create(ctx context.Context, actorID string, actorRoles []string, in CreateInput, ip string) (*Order, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	o, after, err := s.CreateTx(ctx, tx, actorID, actorRoles, in, ip)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	after()
+	return o, nil
+}
+
+// CreateTx كـ`Create` **في معاملةٍ مُمرَّرة** — `XG-33`.
+//
+// **ويُرجع ما يقع بعد التثبيت** — البثُّ والإشعار. **ولا يقعان داخلها**:
+// **إشعارٌ خرج ثمّ ارتدّت المعاملةُ كذبٌ لا يُسحَب.**
+func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string, actorRoles []string, in CreateInput, ip string) (*Order, func(), error) {
 	// **والمصدرُ يُستنتج من الأصناف لا يُرسَل.**
 	//
 	// الزبونُ لا يرى المتاجر ولا يعرف معرّفاتها — **يطلب أصنافاً ونحن نعرف من
@@ -215,14 +239,14 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	if len(in.Items) > 0 {
 		var err error
 		if sources, err = s.SourcesOf(ctx, in.Items); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		// **والسقفُ يُفحص هنا لا في المتصفّح.**
 		//
 		// السلّةُ لا تعرف المصادر — أخفيناها عنها عمداً — **فلا تملك أن
 		// تمنع.** والخادمُ يعرف، **وهو الموضعُ الذي لا يُلتفّ عليه.**
 		if len(sources.IDs) > s.maxSources(ctx) {
-			return nil, ErrTooManySources
+			return nil, nil, ErrTooManySources
 		}
 		if in.MerchantID == "" {
 			in.MerchantID = sources.IDs[0]
@@ -230,17 +254,17 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	}
 	// **وكلُّ نقصٍ يُسمّى باسمه** — انظر `models.go`.
 	if len(in.Items) == 0 {
-		return nil, ErrNoItems
+		return nil, nil, ErrNoItems
 	}
 	if in.AddressText == "" {
-		return nil, ErrNoAddress
+		return nil, nil, ErrNoAddress
 	}
 	if in.MerchantID == "" {
-		return nil, ErrBadMerchant
+		return nil, nil, ErrBadMerchant
 	}
 	// **ومعرّفُ المتجر يُتحقَّق منه قبل القاعدة** — انظر الشرحَ في sources.go.
 	if _, err := uuid.Parse(in.MerchantID); err != nil {
-		return nil, ErrBadMerchant
+		return nil, nil, ErrBadMerchant
 	}
 	// طريقتان لا ثلاث: نقداً عند الاستلام، أو من المحفظة كاملاً.
 	//
@@ -252,18 +276,18 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		in.PaymentMethod = "cash"
 	case "wallet":
 	default:
-		return nil, ErrBadPayment
+		return nil, nil, ErrBadPayment
 	}
 
 	// الزبون: معرف مباشر أو رقم هاتف (طلب هاتفي — يُنشأ الحساب إن لزم)
 	customerID := in.CustomerID
 	if customerID == "" {
 		if in.CustomerPhone == "" {
-			return nil, ErrBadItems
+			return nil, nil, ErrBadItems
 		}
 		u, err := s.identity.EnsureUserWithRole(ctx, actorID, in.CustomerPhone, "customer", "", "", ip)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		customerID = u.ID
 	}
@@ -287,10 +311,10 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	if in.PaymentMethod == "cash" {
 		blocked, err := s.cashBlocked(ctx, customerID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if blocked {
-			return nil, ErrCashBlocked
+			return nil, nil, ErrCashBlocked
 		}
 	}
 
@@ -308,19 +332,19 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		`SELECT `+OpenNowSQL+` FROM merchants m WHERE m.id = $1`,
 		in.MerchantID).Scan(&openNow)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, httpx.ErrNotFound
+		return nil, nil, httpx.ErrNotFound
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if !openNow {
-		return nil, ErrMerchantClosed
+		return nil, nil, ErrMerchantClosed
 	}
 
 	// التسعير الخادمي للأصناف والخيارات (لقطة ثابتة)
 	items, subtotal, err := s.priceItems(ctx, in.Items)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// **لا طلب قبل توثيق واتساب.**
@@ -337,10 +361,10 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		if err := s.db.QueryRow(ctx,
 			`SELECT whatsapp_verified_at IS NOT NULL FROM users WHERE id = $1`,
 			customerID).Scan(&verified); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if !verified {
-			return nil, ErrWhatsAppRequired
+			return nil, nil, ErrWhatsAppRequired
 		}
 
 		// **وسقفُ ما بيده من طلباتٍ مفتوحة.**
@@ -356,17 +380,17 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		// **ولا يُطبَّق على من يطلب بالنيابة** (`ops` والمتجر): المكتبُ يفتح
 		// طلبات الهاتف لزبائنَ شتّى، **وسقفُ زبونٍ لا يُقاس بحسابِ من كتبه.**
 		if err := s.checkOpenLimit(ctx, customerID); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	// منطقة التسليم من الدبوس — **من مصدرٍ واحدٍ لا استعلامين.**
 	zone, err := s.DeliveryAt(ctx, in.Lat, in.Lng)
 	if errors.Is(err, ErrOutOfZone) {
-		return nil, ErrOutOfZone
+		return nil, nil, ErrOutOfZone
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **و«لا منطقةَ» تُكتب فراغاً — لا نصّاً فارغاً**
@@ -416,11 +440,6 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	deliveryFee += s.extraSourceFee(ctx, sources)
 
 	// الإنشاء الذرّي
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
 
 	// **كودُ الخصم يُفحص داخل المعاملة لا قبلها.**
 	//
@@ -445,7 +464,7 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 	if promoCode != "" {
 		promoID, discount, err = s.validatePromo(ctx, tx, promoCode, customerID, subtotal, &deliveryFee)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -474,7 +493,7 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
 		promoCode, in.Notes, actorID).Scan(&orderID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for _, it := range items {
@@ -485,7 +504,7 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 			orderID, it.MenuItemID, it.Name, it.UnitPrice, it.MerchantPrice,
 			it.MerchantID, it.Qty, it.Note,
 			marshalOptions(it.Options)); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -493,18 +512,18 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO promo_redemptions (promo_id, order_id, user_id) VALUES ($1, $2, $3)`,
 			*promoID, orderID, customerID); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE promo_codes SET used_count = used_count + 1 WHERE id = $1`, *promoID); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
 		VALUES ($1, '', 'pending', $2, '')`, orderID, actorID); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// خصم المحفظة **داخل معاملة الإنشاء** لا بعدها.
@@ -530,20 +549,19 @@ func (s *Service) Create(ctx context.Context, actorID string, actorRoles []strin
 			// المقروء بضمّه إلى الجدول. **فالملاحظةُ هنا تكرارٌ لعنوان الحركة
 			// بلفظٍ أسوأ** — وحذفُها يُظهر الرقمَ الصحيح مكانها.
 			orderID, "", &actorID); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return nil, err
+	// **ويُقرأ بالمعاملة** — **وطلبٌ أُنشئ فيها لا يراه المَسبَح.**
+	created, err := s.getByID(ctx, tx, orderID)
+	if err != nil {
+		return nil, nil, err
 	}
-
-	created, err := s.GetByID(ctx, orderID)
-	if err == nil {
+	return created, func() {
 		s.publishOrder(created)
 		s.notifyCreated(ctx, created)
-	}
-	return created, err
+	}, nil
 }
 
 // priceItems يجلب الأسعار الحقيقية من القائمة ويتحقق من الخيارات وقيود المجموعات.

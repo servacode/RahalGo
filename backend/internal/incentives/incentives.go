@@ -24,6 +24,7 @@ package incentives
 import (
 	"context"
 	"errors"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -298,6 +299,65 @@ func (s *Service) Grant(ctx context.Context, actorID, userID, kind string,
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
+// GrantTx كـ`Grant` **في معاملةٍ مُمرَّرة** — `XG-33`.
+//
+// **والقائمةُ تفوّض إليها** فلا نداءَ واحدٌ تبدّل، **ولا معاملةَ داخل
+// معاملة**: منحُ الحافز وعلامةُ تثبيت منع التكرار يُثبَّتان معاً.
+func (s *Service) GrantTx(ctx context.Context, q dbtx.Querier,
+	actorID, userID, kind string, amount int64, reason string,
+	forTarget bool) (*Entry, error) {
+	if kind != KindReward && kind != KindPenalty {
+		return nil, ErrBadKind
+	}
+	if amount <= 0 {
+		return nil, ErrBadAmount
+	}
+	if reason = strings.TrimSpace(reason); reason == "" {
+		return nil, ErrNeedsReason
+	}
+
+	// **والعقوبةُ تُفحص قبل أن تُقيَّد**: قيدُ القاعدة يرفض السالبَ كلَّه،
+	// **فيُردّ الطلبُ برسالةٍ تُقرأ بدل خطأٍ لا يفهمه الموظّف.**
+	signed := amount
+	if kind == KindPenalty {
+		var balance int64
+		if err := q.QueryRow(ctx,
+			`SELECT COALESCE(balance, 0) FROM wallets WHERE user_id = $1`, userID).
+			Scan(&balance); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+		if balance < amount {
+			return nil, ErrNoBalance
+		}
+		signed = -amount
+	}
+
+	if _, err := s.wallet.ApplyTx(ctx, q, userID, signed, kind, "", reason, &actorID); err != nil {
+		return nil, err
+	}
+	// **والخزينةُ الطرفُ المقابل** — تدفع المكافأةَ وتقبض العقوبة.
+	if tid := s.treasury(ctx); tid != "" {
+		note := "مكافأةٌ صُرفت"
+		if kind == KindPenalty {
+			note = "عقوبةٌ حُصّلت"
+		}
+		if _, err := s.wallet.ApplyTx(ctx, q, tid, -signed, kind, "", note, &actorID); err != nil {
+			return nil, err
+		}
+	}
+
+	var e Entry
+	if err := q.QueryRow(ctx, `
+		INSERT INTO incentives (user_id, kind, amount, reason, for_target, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id::text, kind, amount, reason, for_target, created_at::text`,
+		userID, kind, amount, reason, forTarget, actorID).
+		Scan(&e.ID, &e.Kind, &e.Amount, &e.Reason, &e.ForTarget, &e.CreatedAt); err != nil {
 		return nil, err
 	}
 	return &e, nil

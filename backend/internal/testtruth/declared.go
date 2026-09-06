@@ -308,7 +308,28 @@ var Gaps = []GapDecl{
 	// **ولا يُختار أحدُهما من تلقائي**: كلاهما يمسّ ستّةَ مساراتٍ ماليّة،
 	// **والثاني يبدّل عقدَ الجداول.** **ويُعرَض على المالك.**
 	{ID: "XG-33", Title: "لا علامةَ تثبيتٍ داخل معاملة العمل لمنع التكرار",
-		Severity: "CRITICAL"},
+		Severity: "CRITICAL",
+		// **دورةُ إصلاحٍ ٩ · ٢٠٢٦-٠٩-٠٦ — بقرار المالك.**
+		Fixed: "**صار العملُ وعلامةُ التثبيت والنتيجةُ في معاملةٍ واحدة**: " +
+			"`WithIdempotentTx` يملكها، **والمساراتُ الستّةُ المحميّةُ " +
+			"كلُّها تمرّ به** (حارسٌ بنيويٌّ يستخرج القائمةَ من التسجيل " +
+			"نفسِه فيمنع سابعاً يُكتب غداً). " +
+			"**وطَوران**: الحيازةُ على المَسبَح **فتُرى فوراً** — ولو " +
+			"أُخّرت داخلَ المعاملة لما رآها المتزامنُ فوقع تنفيذان — " +
+			"**ثمّ معاملةٌ تقفل الصفَّ وتتحقّق من الملكيّة ثمّ تكتب " +
+			"وتُثبَّت مرّةً واحدة.** " +
+			"**والسياجُ**: كلُّ حيازةٍ ترفع رمزاً جديداً، **ومن استُرِدّت " +
+			"منه ثمّ استيقظ لا يكتب حرفاً** — **والمهلةُ وحدَها لا تكفي**: " +
+			"ساعةٌ تسبق ساعةً وعمليّةٌ بطيئةٌ ليست ميّتة. " +
+			"**والقفلُ يمنع السرقةَ من عاملٍ حيّ**: المستردُّ يصطدم " +
+			"بـ`FOR UPDATE` فينتظر، ثمّ يجدها مثبَّتةً فيُعيد نتيجتَها أو " +
+			"مرتدّةً فيأخذها. " +
+			"**والحذفُ عند الخطأ محروسٌ بالملكيّة** — ومالكٌ قديمٌ لا " +
+			"يمحو ما استعاده غيرُه. " +
+			"**والتركةُ**: `done` تُترجَم تثبيتاً، **والمعلَّقُ من قبلُ لا " +
+			"يُستردّ أبداً** (رمزُه `NULL`) — **وحبسٌ يوماً أهونُ من " +
+			"تكرارِ دفعة.** " +
+			"أحدَ عشرَ حارساً وحارسٌ بنيويّ."},
 
 	{ID: "XG-31", Title: "التزامُ متجرٍ أو مندوبٍ يُقيَّد رقماً بلا واقعةٍ تُفسّره",
 		Severity: "CRITICAL",
@@ -1120,6 +1141,19 @@ var TestMap = map[string]TestDecl{
 	// **وثوابتُ المال تُسأل عن أساسٍ صحيحٍ لا عن قاعدةٍ خالية.**
 	"TestFIN_InvariantsCleanOnValidFixture": infraTest(),
 
+	// ── منعُ التكرار المسيَّج (دورةُ إصلاحٍ ٩) ───────────────────────
+	"TestIDEM_T1_ConcurrentDuplicateExecutesOnce":           fenceTest(),
+	"TestIDEM_T2_OrphanBeforeTxIsReclaimed":                 fenceTest(),
+	"TestIDEM_T3_StaleOwnerIsFenced":                        fenceTest(),
+	"TestIDEM_T4_ActiveClaimCannotBeStolen":                 fenceTest(),
+	"TestIDEM_T5_BusinessRollbackLeavesNothing":             fenceTest(),
+	"TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate": fenceTest(),
+	"TestIDEM_T8_TwoReclaimersExecuteOnce":                  fenceTest(),
+	"TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim":          fenceTest(),
+	"TestIDEM_T10_CleanupSparesLiveClaim":                   fenceTest(),
+	"TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged": fenceTest(),
+	"TestIDEM_AllProtectedPathsUseCoordinator":              fenceTest(),
+
 	// ── مكافأةُ الهدف تُحسَب بمعاملتِها (دورةُ إصلاحٍ ٨) ────────────
 	"TestXG32_FirstConversionGrantsRewardImmediately": targetTest(),
 	"TestXG32_TargetTwoGrantsOnSecondOnly":            targetTest(),
@@ -1228,6 +1262,17 @@ func targetTest() TestDecl {
 		Level: L4, Purpose: PurposeFeature,
 		Flows: []string{"F-21", "F-23"},
 		Gaps:  []string{"XG-32"},
+		Modes: []string{"CONCURRENCY", "FAILURE", "FINANCIAL", "FULL", "RELEASE"},
+	}
+}
+
+// fenceTest حارسُ منعِ التكرار المسيَّج — `XG-33` · `R8` · `C-06`.
+func fenceTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-01", "F-03"},
+		Risks: []string{"R8"},
+		Gaps:  []string{"XG-33"},
 		Modes: []string{"CONCURRENCY", "FAILURE", "FINANCIAL", "FULL", "RELEASE"},
 	}
 }

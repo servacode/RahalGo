@@ -22,6 +22,7 @@ package orders
 import (
 	"context"
 	"errors"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"strings"
 	"time"
@@ -106,6 +107,46 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 		return nil, err
 	}
 	return s.GetByID(ctx, id)
+}
+
+// CreateCustomTx كـ`CreateCustom` **في معاملةٍ مُمرَّرة** — `XG-33`.
+//
+// **وهو إدخالٌ واحدٌ أصلاً** (`R11` مُنفيّة)، **لكنّه يشارك معاملةَ منع
+// التكرار** ليُثبَّت الطلبُ وعلامتُه معاً.
+func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID, request,
+	addressText, payment string, lat, lng float64) (*Order, error) {
+	// **والمحفظةُ خيارٌ** — (قرارُ المالك ٢٠٢٦-٠٨-٠٩). **وما عداهما نقد**:
+	// قيمةٌ مجهولةٌ من العميل لا تصير طريقةَ دفع.
+	if payment != "wallet" {
+		payment = "cash"
+	}
+	request = strings.TrimSpace(request)
+	if request == "" || strings.TrimSpace(addressText) == "" {
+		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	if len([]rune(request)) > MaxCustomRequest {
+		request = string([]rune(request)[:MaxCustomRequest])
+	}
+
+	// **وسقفُ المفتوح يشمله** — القاعدةُ نفسُها: من بيده ثلاثةٌ لا يفتح رابعاً.
+	//
+	// **ولو استُثني لَصار باباً يلتفّ به على السقف** — يُنشئ خاصّةً بلا حدّ.
+	if err := s.checkOpenLimit(ctx, customerID); err != nil {
+		return nil, err
+	}
+
+	var id string
+	err := q.QueryRow(ctx, `
+		INSERT INTO orders (kind, customer_id, address_text, dropoff, custom_request,
+		                    status, payment_method, subtotal, delivery_fee, total, cash_due)
+		VALUES ('custom', $1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5,
+		        'pending', $6, 0, 0, 0, 0)
+		RETURNING id::text`,
+		customerID, addressText, lat, lng, request, payment).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+	return s.getByID(ctx, q, id)
 }
 
 // AgreeCustom **يوثّق ما اتّفق عليه السائقُ والزبون.**

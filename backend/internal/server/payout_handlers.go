@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"time"
 
@@ -263,64 +264,60 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 	   واحدةٌ تلفّ الثلاثة، **فإن سقط التحديثُ رجع الخصمُ معه** ولا يبقى مالٌ
 	   خرج وطلبٌ معلّق.
 	   ══════════════════════════════════════════════════════════════════ */
-	tx, err := s.pg.Begin(r.Context())
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	defer func() { _ = tx.Rollback(r.Context()) }()
-
-	var userID string
-	var amount int64
-	var status string
-	if err := tx.QueryRow(r.Context(),
-		`SELECT user_id, amount, status FROM payout_requests WHERE id = $1 FOR UPDATE`, id).
-		Scan(&userID, &amount, &status); err != nil {
-		s.respondErr(w, httpx.ErrNotFound)
-		return
-	}
-	if status != "pending" {
-		s.respondErr(w, errPayoutClosed)
-		return
-	}
-
-	actor := userIDFrom(r)
-	if req.Status == "paid" {
-		// الخصم أولاً: إن لم يكفِ الرصيد يُرفض القرار ولا يُقفل الطلب
-		if _, err := s.wallet.ApplyTx(r.Context(), tx, userID, -amount, "payout",
-			id, clip(req.Decision, 300), &actor); err != nil {
-			s.respondErr(w, err)
-			return
+	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
+	//
+	// **وكان هذا المسارُ يملك معاملتَه** — **فصار يشاركها المنسّق**،
+	// ولا معاملتان في فعلٍ واحد.
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		var userID string
+		var amount int64
+		var status string
+		if err := q.QueryRow(ctx,
+			`SELECT user_id, amount, status FROM payout_requests WHERE id = $1 FOR UPDATE`, id).
+			Scan(&userID, &amount, &status); err != nil {
+			return IdempotentBody{}, httpx.ErrNotFound
 		}
-	}
-	if _, err := tx.Exec(r.Context(), `
-		UPDATE payout_requests SET status = $2, decision = $3, decided_by = $4, decided_at = now()
-		WHERE id = $1`, id, req.Status, clip(req.Decision, 300), actor); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if err := tx.Commit(r.Context()); err != nil {
-		s.respondErr(w, err)
-		return
-	}
+		if status != "pending" {
+			return IdempotentBody{}, errPayoutClosed
+		}
 
-	s.audit(r, "finance.payout_decide", "payout", id, map[string]any{
-		"status": req.Status, "amount": amount, "user_id": userID,
-		"decision": req.Decision,
-	})
+		actor := userIDFrom(r)
+		if req.Status == "paid" {
+			// الخصم أولاً: إن لم يكفِ الرصيد يُرفض القرار ولا يُقفل الطلب
+			if _, err := s.wallet.ApplyTx(ctx, q, userID, -amount, "payout",
+				id, clip(req.Decision, 300), &actor); err != nil {
+				return IdempotentBody{}, err
+			}
+		}
+		if _, err := q.Exec(ctx, `
+			UPDATE payout_requests SET status = $2, decision = $3, decided_by = $4, decided_at = now()
+			WHERE id = $1`, id, req.Status, clip(req.Decision, 300), actor); err != nil {
+			return IdempotentBody{}, err
+		}
 
-	title := notifTitles.payoutPaid
-	if req.Status == "rejected" {
-		title = notifTitles.payoutRejected
-	}
-	s.notify.Notify(r.Context(), notifications.Input{
-		UserID: userID, Kind: notifications.KindWallet, Title: title,
-		Body: req.Decision, Entity: "payout", EntityID: id, Href: "/portal/wallet",
+		return IdempotentBody{
+			Status:  http.StatusOK,
+			Payload: map[string]any{"updated": true},
+			AfterCommit: func() {
+				s.audit(r, "finance.payout_decide", "payout", id, map[string]any{
+					"status": req.Status, "amount": amount, "user_id": userID,
+					"decision": req.Decision,
+				})
+
+				title := notifTitles.payoutPaid
+				if req.Status == "rejected" {
+					title = notifTitles.payoutRejected
+				}
+				s.notify.Notify(r.Context(), notifications.Input{
+					UserID: userID, Kind: notifications.KindWallet, Title: title,
+					Body: req.Decision, Entity: "payout", EntityID: id, Href: "/portal/wallet",
+				})
+				s.touch("wallet", "ops")
+				// **وصاحبُ الطلب يرى قرارَه ورصيدَه فوراً** — لا حين يُحدّث الصفحة.
+				s.touchUser(userID, "wallet")
+			},
+		}, nil
 	})
-	s.touch("wallet", "ops")
-	// **وصاحبُ الطلب يرى قرارَه ورصيدَه فوراً** — لا حين يُحدّث الصفحة.
-	s.touchUser(userID, "wallet")
-	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 
 // userLabel اسم المستخدم أو هاتفه — لنصوص الإشعارات.

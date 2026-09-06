@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"slices"
 	"strconv"
@@ -61,32 +63,43 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	actor := userIDFrom(r)
-	balance, err := s.wallet.Apply(r.Context(), chi.URLParam(r, "id"),
-		amount, req.Kind, "", req.Note, &actor)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// أخطر زرٍّ في المنصة: هو المخرج الوحيد حين يخطئ النظام، ولذلك وجب أن
-	// يترك أثراً. والدفتر لا يُعدَّل عندنا بل يُصحَّح بقيدٍ مضادّ — وهذا الزرّ
-	// هو ذلك القيد، فمن ضغطه ولماذا سؤالٌ يُطرح يوماً.
-	s.audit(r, "finance.wallet_apply", "user", chi.URLParam(r, "id"), map[string]any{
-		"amount": amount, "kind": req.Kind, "note": req.Note, "balance_after": balance,
-	})
+	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		balance, err := s.wallet.ApplyTx(ctx, q, chi.URLParam(r, "id"),
+			amount, req.Kind, "", req.Note, &actor)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{
+			Status:  http.StatusOK,
+			Payload: map[string]any{"balance": balance},
+			AfterCommit: func() {
+				// أخطر زرٍّ في المنصة: هو المخرج الوحيد حين يخطئ النظام،
+				// ولذلك وجب أن يترك أثراً. والدفتر لا يُعدَّل عندنا بل
+				// يُصحَّح بقيدٍ مضادّ — وهذا الزرّ هو ذلك القيد، فمن ضغطه
+				// ولماذا سؤالٌ يُطرح يوماً.
+				//
+				// **وبعد التثبيت لا قبله**: **تدقيقٌ لعمليّةٍ ارتدّت
+				// يقول إنّ مالاً تحرّك ولم يتحرّك.**
+				s.audit(r, "finance.wallet_apply", "user", chi.URLParam(r, "id"), map[string]any{
+					"amount": amount, "kind": req.Kind, "note": req.Note, "balance_after": balance,
+				})
 
-	// صاحب المحفظة يعرف فوراً بأي إيداع/خصم — شفافية مالية بلا تحديث صفحة.
-	title := notifTitles.walletCredit
-	if amount < 0 {
-		title = notifTitles.walletDebit
-	}
-	s.notify.Notify(r.Context(), notifications.Input{
-		UserID: chi.URLParam(r, "id"), Kind: notifications.KindWallet,
-		Title: title, Body: req.Note,
-		Entity: "wallet", Href: "/portal/wallet",
+				// صاحب المحفظة يعرف فوراً بأي إيداع/خصم — شفافية مالية بلا تحديث صفحة.
+				title := notifTitles.walletCredit
+				if amount < 0 {
+					title = notifTitles.walletDebit
+				}
+				s.notify.Notify(r.Context(), notifications.Input{
+					UserID: chi.URLParam(r, "id"), Kind: notifications.KindWallet,
+					Title: title, Body: req.Note,
+					Entity: "wallet", Href: "/portal/wallet",
+				})
+				// **والرقمُ في شريطه يتغيّر معه** — إشعارٌ يقول «أُودع لك»
+				// ورصيدٌ لا يتحرّك **يجعل صاحبَه يشكّ في أحدهما.**
+				s.touchUser(chi.URLParam(r, "id"), "wallet")
+				s.touch("wallet", "ops")
+			},
+		}, nil
 	})
-	// **والرقمُ في شريطه يتغيّر معه** — إشعارٌ يقول «أُودع لك» ورصيدٌ لا
-	// يتحرّك **يجعل صاحبَه يشكّ في أحدهما.**
-	s.touchUser(chi.URLParam(r, "id"), "wallet")
-	s.touch("wallet", "ops")
-	httpx.JSON(w, http.StatusOK, map[string]any{"balance": balance})
 }

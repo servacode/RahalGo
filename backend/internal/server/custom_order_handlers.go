@@ -7,6 +7,8 @@ package server
 */
 
 import (
+	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -31,16 +33,19 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
-	o, err := s.orders.CreateCustom(r.Context(), userIDFrom(r), req.Request,
-		req.AddressText, req.Payment, req.Lat, req.Lng)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	// **والعملياتُ تُخبَر فوراً** — الطلبُ الخاصُّ ينتظر موافقتَها، **وطلبٌ
-	// ينتظر من لا يعلم أنّه ينتظره لا يُخدَم.**
-	s.touch("order", "ops")
-	httpx.JSON(w, http.StatusCreated, o)
+	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		o, err := s.orders.CreateCustomTx(ctx, q, userIDFrom(r), req.Request,
+			req.AddressText, req.Payment, req.Lat, req.Lng)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{Status: http.StatusCreated, Payload: o, AfterCommit: func() {
+			// **والعملياتُ تُخبَر فوراً** — الطلبُ الخاصُّ ينتظر
+			// موافقتَها، **وطلبٌ ينتظر من لا يعلم أنّه ينتظره لا يُخدَم.**
+			s.touch("order", "ops")
+		}}, nil
+	})
 }
 
 // handleAgreeCustom **السائقُ يوثّق ما اتّفق عليه مع الزبون.**

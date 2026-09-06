@@ -9,6 +9,8 @@ package server
 // الجسد يجعل الشاشةَ تختار ما تُظهر** — وشاشةٌ تختار تُخطئ يوماً.
 
 import (
+	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"strconv"
 
@@ -59,20 +61,23 @@ func (s *Server) handleIncentiveGrant(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	e, err := s.incentives.Grant(r.Context(), userIDFrom(r), chi.URLParam(r, "id"),
-		req.Kind, req.Amount, req.Reason, req.ForTarget)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	s.audit(r, "finance.incentive", "user", chi.URLParam(r, "id"), map[string]any{
-		"kind": req.Kind, "amount": req.Amount, "reason": req.Reason,
+	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		e, err := s.incentives.GrantTx(ctx, q, userIDFrom(r), chi.URLParam(r, "id"),
+			req.Kind, req.Amount, req.Reason, req.ForTarget)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{Status: http.StatusOK, Payload: e, AfterCommit: func() {
+			s.audit(r, "finance.incentive", "user", chi.URLParam(r, "id"), map[string]any{
+				"kind": req.Kind, "amount": req.Amount, "reason": req.Reason,
+			})
+			// **ومن نال يعلم** — مكافأةٌ لا يراها صاحبُها مكافأةٌ لم
+			// تُصرف في نظره، **وعقوبةٌ لا يعلم بها لا تُصلح شيئاً.**
+			s.touchUser(chi.URLParam(r, "id"), "wallet")
+			s.touch("wallet", "ops")
+		}}, nil
 	})
-	// **ومن نال يعلم** — مكافأةٌ لا يراها صاحبُها مكافأةٌ لم تُصرف في نظره،
-	// **وعقوبةٌ لا يعلم بها لا تُصلح شيئاً.**
-	s.touchUser(chi.URLParam(r, "id"), "wallet")
-	s.touch("wallet", "ops")
-	httpx.JSON(w, http.StatusOK, e)
 }
 
 // handleMyIncentives هدفي وما نلتُ — للسائق والمندوب.
