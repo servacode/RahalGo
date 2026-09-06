@@ -1,9 +1,9 @@
 {
   "candidate": {
-    "release_candidate_id": "rc-2698848f-689c332c-dirty",
-    "source_commit": "2698848f59f42848f4d9b9ade2550bbd0090d99c",
+    "release_candidate_id": "rc-3165095c-daaa6b3c-dirty",
+    "source_commit": "3165095c485f6362ce17d4f820115e3fca31bb79",
     "working_tree_dirty": true,
-    "backend_build_hash": "689c332c61c850f025852e58110ab62a398284c01c7b85a57973ddb424faa5b4",
+    "backend_build_hash": "daaa6b3c9dfa22efb99dd2fd042b24e7959ce859af70cd962876317b811c002a",
     "web_build_hash": "acd515d6dce05f492b920f7f5a67a57fc1f08ad7e679df10f7a2ae5ab3f49cf9",
     "apk_hashes": [
       "app-customer:88764f40bba3db291b85bc5ed501ccc671d6aa1861b76ab71260a26b77e2565f",
@@ -13,7 +13,7 @@
     ],
     "config_snapshot": "9dd6ce1cba9044ea",
     "migration_version": "0129_rep_commission_debt.sql",
-    "generated_at": "2026-09-06T11:52:05Z"
+    "generated_at": "2026-09-06T15:17:12Z"
   },
   "ready_for_production": false,
   "rules": [
@@ -1126,7 +1126,7 @@
       "required_evidence": "اختبارٌ أو صفُّ مصفوفةٍ يشير إلى السجلّ بعينه",
       "current_status": "FAIL",
       "blocking": true,
-      "reason": "**14 سجلّاً مانعاً أو حرجاً بلا اختبارٍ ولا دليلِ مصفوفة**: [R11 R13 R24 R4 XG-12 XG-14 XG-20 XG-21 XG-22 XG-25 XG-26 XG-27 XG-28 XG-29] — **والسقوطُ الآمنُ لا يجعل هذا تغطيةً**",
+      "reason": "**15 سجلّاً مانعاً أو حرجاً بلا اختبارٍ ولا دليلِ مصفوفة**: [R11 R13 R24 R4 XG-12 XG-14 XG-20 XG-21 XG-22 XG-25 XG-26 XG-27 XG-28 XG-29 XG-31] — **والسقوطُ الآمنُ لا يجعل هذا تغطيةً**",
       "related_registers": [
         "R11",
         "R13",
@@ -1141,7 +1141,8 @@
         "XG-26",
         "XG-27",
         "XG-28",
-        "XG-29"
+        "XG-29",
+        "XG-31"
       ],
       "waiver_policy": "FORBIDDEN"
     },
@@ -1154,7 +1155,7 @@
       "required_evidence": "ربطُ كلّ سجلٍّ باختبارٍ أو صفِّ مصفوفة",
       "current_status": "FAIL",
       "blocking": false,
-      "reason": "**41 سجلّاً بلا دليلٍ يخصُّه**: [D1 D10 D3 D4 D6 D8 D9 R1 R11 R12 R13 R18 R2 R24 R3 R4 R5 R6 R9 XG-12 XG-14 XG-15 XG-16 XG-17 XG-19 XG-20 XG-21 XG-22 XG-23 XG-24 XG-25 XG-26 XG-27 XG-28 XG-29 XG-30 XG-5 XG-6 XG-7 XG-8 XG-9] — **فـ`FULL TRACEABILITY` لا يمرّ**",
+      "reason": "**42 سجلّاً بلا دليلٍ يخصُّه**: [D1 D10 D3 D4 D6 D8 D9 R1 R11 R12 R13 R18 R2 R24 R3 R4 R5 R6 R9 XG-12 XG-14 XG-15 XG-16 XG-17 XG-19 XG-20 XG-21 XG-22 XG-23 XG-24 XG-25 XG-26 XG-27 XG-28 XG-29 XG-30 XG-31 XG-5 XG-6 XG-7 XG-8 XG-9] — **فـ`FULL TRACEABILITY` لا يمرّ**",
       "related_registers": [
         "D1",
         "D10",
@@ -1192,6 +1193,7 @@
         "XG-28",
         "XG-29",
         "XG-30",
+        "XG-31",
         "XG-5",
         "XG-6",
         "XG-7",
@@ -1566,6 +1568,21 @@
       "waiver_policy": "OWNER_DECISION_REQUIRED"
     },
     {
+      "rule_id": "GATE-XG-31",
+      "category": "TEST_COVERAGE",
+      "requirement": "سدُّ الفجوة: التزامُ متجرٍ أو مندوبٍ يُقيَّد رقماً بلا واقعةٍ تُفسّره",
+      "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
+      "severity": "CRITICAL",
+      "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
+      "current_status": "NOT_IMPLEMENTED",
+      "blocking": true,
+      "reason": "**عقدٌ ناقصٌ لم يُبنَ بعد**",
+      "related_registers": [
+        "XG-31"
+      ],
+      "waiver_policy": "OWNER_DECISION_REQUIRED"
+    },
+    {
       "rule_id": "GATE-XG-5",
       "category": "NOTIFICATION_REALTIME",
       "requirement": "سدُّ الفجوة: لا إشعارَ للمتجر عند الإسناد",
@@ -1655,7 +1672,7 @@
     "[BLOCKER · NOT_RUN] حسمُ الخطر: الطلبُ الخاصُّ يُنشأ بلا معاملة — **لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
     "[BLOCKER · NOT_RUN] حسمُ الخطر: treasury.go يعتمد معاملةَ المنادي — **لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
     "[BLOCKER · EXPECTED_FAIL] حسمُ الخطر: مفتاحُ التكرار يعلق in_progress — **تأكّد** — CONCURRENCY/C-06: 409 in_progress · ولا مسارَ يُطلقها إلّا التقليمُ بعد 24h",
-    "[BLOCKER · FAIL] كلُّ سجلٍّ مانعٍ للإطلاق مربوطٌ بدليلٍ يخصُّه — **14 سجلّاً مانعاً أو حرجاً بلا اختبارٍ ولا دليلِ مصفوفة**: [R11 R13 R24 R4 XG-12 XG-14 XG-20 XG-21 XG-22 XG-25 XG-26 XG-27 XG-28 XG-29] — **والسقوطُ الآمنُ لا يجعل هذا تغطيةً**",
+    "[BLOCKER · FAIL] كلُّ سجلٍّ مانعٍ للإطلاق مربوطٌ بدليلٍ يخصُّه — **15 سجلّاً مانعاً أو حرجاً بلا اختبارٍ ولا دليلِ مصفوفة**: [R11 R13 R24 R4 XG-12 XG-14 XG-20 XG-21 XG-22 XG-25 XG-26 XG-27 XG-28 XG-29 XG-31] — **والسقوطُ الآمنُ لا يجعل هذا تغطيةً**",
     "[BLOCKER · EXPECTED_FAIL] سدُّ الفجوة: لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين — **DEFECT_REPRODUCED** — FAILURE/PF-01: XQ-3 FORBIDDEN STATE = PROVEN — متاجرُ=1 · مكافأةٌ=5000 · المرشَّحُ new · الردّ 500",
     "[BLOCKER · NOT_IMPLEMENTED] سدُّ الفجوة: سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
     "[BLOCKER · NOT_IMPLEMENTED] سدُّ الفجوة: التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
@@ -1675,7 +1692,8 @@
     "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: عمولةُ المنصّة تُحسب لحظةَ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
     "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: نسبةُ المندوب تُقرأ لحظةَ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
     "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط — **عقدٌ ناقصٌ لم يُبنَ بعد**",
-    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**"
+    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
+    "[CRITICAL · NOT_IMPLEMENTED] سدُّ الفجوة: التزامُ متجرٍ أو مندوبٍ يُقيَّد رقماً بلا واقعةٍ تُفسّره — **عقدٌ ناقصٌ لم يُبنَ بعد**"
   ],
   "critical_unresolved": [
     "GATE-D13 — إغلاقُ العيب: سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه",
@@ -1693,7 +1711,8 @@
     "GATE-XG-25 — سدُّ الفجوة: عمولةُ المنصّة تُحسب لحظةَ التسليم",
     "GATE-XG-26 — سدُّ الفجوة: نسبةُ المندوب تُقرأ لحظةَ التسليم",
     "GATE-XG-27 — سدُّ الفجوة: مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط",
-    "GATE-XG-28 — سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم"
+    "GATE-XG-28 — سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم",
+    "GATE-XG-31 — سدُّ الفجوة: التزامُ متجرٍ أو مندوبٍ يُقيَّد رقماً بلا واقعةٍ تُفسّره"
   ],
   "required_validations_not_run": [
     "GATE-AND-01 — قبولُ الأجهزة الحقيقيّة على الجهاز المرجعيّ `SM-A525F / Android 14`",
@@ -1849,11 +1868,12 @@
     "GATE-XG-25 [CRITICAL] سدُّ الفجوة: عمولةُ المنصّة تُحسب لحظةَ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-26 [CRITICAL] سدُّ الفجوة: نسبةُ المندوب تُقرأ لحظةَ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-27 [CRITICAL] سدُّ الفجوة: مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
-    "GATE-XG-28 [CRITICAL] سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته"
+    "GATE-XG-28 [CRITICAL] سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
+    "GATE-XG-31 [CRITICAL] سدُّ الفجوة: التزامُ متجرٍ أو مندوبٍ يُقيَّد رقماً بلا واقعةٍ تُفسّره ⇒ بناءُ العقد ثمّ اختبارٌ يثبته"
   ],
   "advisory_score": 6,
   "advisory_score_note": "**عرضٌ مساعدٌ لا قرار** — `BLOCKER \u003e SCORE`، **ومانعٌ واحدٌ يُسقط الحكمَ مهما بلغت الدرجة**",
-  "run_id": "gate_4069d1290a80d5bc",
-  "generated_at": "2026-09-06T11:52:10Z",
+  "run_id": "gate_9ab5cd7f68d6a0cc",
+  "generated_at": "2026-09-06T15:17:18Z",
   "truth_baseline": ""
 }
