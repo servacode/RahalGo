@@ -1,5 +1,5 @@
 {
-  "elapsed_ms": 1,
+  "elapsed_ms": 0,
   "result": {
     "change_source": "GIT_RANGE",
     "base": "34c0b221",
@@ -9,6 +9,11 @@
         "path": ".gitignore",
         "category": "DOCS_ONLY",
         "why": "ملفُّ مستودعٍ لا يمسّ سلوكاً"
+      },
+      {
+        "path": "api/contract.json",
+        "category": "PRODUCT_TRUTH_DOCS",
+        "why": "**عقدُ الـAPI مولَّدٌ** — حارسُه يكشف شيخوخته"
       },
       {
         "path": "backend/Dockerfile",
@@ -29,6 +34,16 @@
         "path": "backend/internal/envguard/envguard_test.go",
         "category": "TEST",
         "why": "ملفُّ اختبار"
+      },
+      {
+        "path": "backend/internal/gate/verdicts.go",
+        "category": "PRODUCT_BACKEND",
+        "why": "شيفرةُ المحرّك"
+      },
+      {
+        "path": "backend/internal/impact/rules.go",
+        "category": "TEST_INFRA",
+        "why": "حزمةُ بنيةٍ تحتيّةٍ للاختبار"
       },
       {
         "path": "backend/internal/qa/harness.go",
@@ -61,12 +76,22 @@
         "why": "حزمةُ بنيةٍ تحتيّةٍ للاختبار"
       },
       {
+        "path": "deploy/staging/.env.staging.example",
+        "category": "DEPLOY_OPS",
+        "why": "نشرٌ أو تشغيل"
+      },
+      {
         "path": "deploy/staging/Caddyfile.staging",
         "category": "DEPLOY_OPS",
         "why": "نشرٌ أو تشغيل"
       },
       {
         "path": "deploy/staging/RUNBOOK.md",
+        "category": "DEPLOY_OPS",
+        "why": "نشرٌ أو تشغيل"
+      },
+      {
+        "path": "deploy/staging/TQ-4-EXCEPTION.md",
         "category": "DEPLOY_OPS",
         "why": "نشرٌ أو تشغيل"
       },
@@ -79,6 +104,16 @@
         "path": "deploy/staging/deploy.sh",
         "category": "DEPLOY_OPS",
         "why": "نشرٌ أو تشغيل"
+      },
+      {
+        "path": "docs/testing/system/CHANGE_IMPACT.json",
+        "category": "PRODUCT_TRUTH_DOCS",
+        "why": "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة**"
+      },
+      {
+        "path": "docs/testing/system/RELEASE_GATE.json",
+        "category": "PRODUCT_TRUTH_DOCS",
+        "why": "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة**"
       },
       {
         "path": "docs/testing/system/TEST_TRUTH.json",
@@ -324,6 +359,12 @@
         "required": true,
         "reasons": [
           {
+            "from": "backend/internal/impact/rules.go",
+            "rule": "TEST_INFRA",
+            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
+            "depth": "TRANSITIVE"
+          },
+          {
             "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
@@ -368,6 +409,12 @@
         "required": true,
         "reasons": [
           {
+            "from": "backend/internal/impact/rules.go",
+            "rule": "TEST_INFRA",
+            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
+            "depth": "TRANSITIVE"
+          },
+          {
             "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
@@ -398,6 +445,12 @@
         "kind": "package",
         "required": true,
         "reasons": [
+          {
+            "from": "backend/internal/impact/rules.go",
+            "rule": "TEST_INFRA",
+            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
+            "depth": "TRANSITIVE"
+          },
           {
             "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
@@ -430,6 +483,12 @@
         "required": true,
         "reasons": [
           {
+            "from": "backend/internal/impact/rules.go",
+            "rule": "TEST_INFRA",
+            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
+            "depth": "TRANSITIVE"
+          },
+          {
             "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
@@ -461,6 +520,12 @@
         "required": true,
         "reasons": [
           {
+            "from": "backend/internal/impact/rules.go",
+            "rule": "TEST_INFRA",
+            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
+            "depth": "TRANSITIVE"
+          },
+          {
             "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
@@ -485,9 +550,9 @@
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestFIN_ExpenseTreasuryInvariant",
+            "from": "TestFAIL_D5_ExpenseTreasuryPartial",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_ExpenseTreasuryInvariant",
+            "path": "حزمةُ TestFAIL_D5_ExpenseTreasuryPartial",
             "depth": "TRANSITIVE"
           },
           {
@@ -515,27 +580,9 @@
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestEV_WalletAudience",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_WalletAudience",
-            "depth": "TRANSITIVE"
-          },
-          {
             "from": "TestSampleFactory_WalletMatchesLedger",
             "rule": "TRUTH_MAPPING",
             "path": "حزمةُ TestSampleFactory_WalletMatchesLedger",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_SnapshotVsLiveEconomics",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_SnapshotVsLiveEconomics",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_D5_ExpenseTreasuryPartial",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_D5_ExpenseTreasuryPartial",
             "depth": "TRANSITIVE"
           },
           {
@@ -549,6 +596,24 @@
             "rule": "TRUTH_MAPPING",
             "path": "حزمةُ TestRACE_SettingChangeDuringSettlement",
             "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_ExpenseTreasuryInvariant",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_ExpenseTreasuryInvariant",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestEV_WalletAudience",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestEV_WalletAudience",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_SnapshotVsLiveEconomics",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_SnapshotVsLiveEconomics",
+            "depth": "TRANSITIVE"
           }
         ]
       },
@@ -557,6 +622,12 @@
         "kind": "package",
         "required": true,
         "reasons": [
+          {
+            "from": "backend/internal/impact/rules.go",
+            "rule": "TEST_INFRA",
+            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
+            "depth": "TRANSITIVE"
+          },
           {
             "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
@@ -589,6 +660,18 @@
         "required": true,
         "reasons": [
           {
+            "from": "api/contract.json",
+            "rule": "TRUTH_DOCS",
+            "path": "السجلّاتُ المجمَّدةُ تُستخرَج من هذه الوثائق",
+            "depth": "DIRECT"
+          },
+          {
+            "from": "backend/internal/impact/rules.go",
+            "rule": "TEST_INFRA",
+            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
+            "depth": "TRANSITIVE"
+          },
+          {
             "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
@@ -611,6 +694,18 @@
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
+          },
+          {
+            "from": "docs/testing/system/CHANGE_IMPACT.json",
+            "rule": "TRUTH_DOCS",
+            "path": "السجلّاتُ المجمَّدةُ تُستخرَج من هذه الوثائق",
+            "depth": "DIRECT"
+          },
+          {
+            "from": "docs/testing/system/RELEASE_GATE.json",
+            "rule": "TRUTH_DOCS",
+            "path": "السجلّاتُ المجمَّدةُ تُستخرَج من هذه الوثائق",
+            "depth": "DIRECT"
           },
           {
             "from": "docs/testing/system/TEST_TRUTH.json",
@@ -649,6 +744,12 @@
         "depth": "DIRECT"
       },
       {
+        "from": "api/contract.json",
+        "rule": "TRUTH_DOCS",
+        "path": "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة** ⇒ إعادةُ توليدٍ وحرّاسُ انحراف (البند ٢٥)",
+        "depth": "DIRECT"
+      },
+      {
         "from": "backend/Dockerfile",
         "rule": "DEPLOY",
         "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
@@ -658,6 +759,12 @@
         "from": "backend/internal/envguard/envguard_test.go",
         "rule": "TEST_ONLY",
         "path": "اختبارٌ تبدّل — **ولا يُفترَض تبدّلُ سلوكِ منتج** (البند ٢٣)",
+        "depth": "DIRECT"
+      },
+      {
+        "from": "backend/internal/impact/rules.go",
+        "rule": "TEST_INFRA",
+        "path": "**بنيةٌ تحتيّةٌ للاختبار ⇒ تحقّقٌ أوسعُ من اختبارِها وحدَه** (البند ٢٤)",
         "depth": "DIRECT"
       },
       {
@@ -685,6 +792,12 @@
         "depth": "DIRECT"
       },
       {
+        "from": "deploy/staging/.env.staging.example",
+        "rule": "DEPLOY",
+        "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
+        "depth": "DIRECT"
+      },
+      {
         "from": "deploy/staging/Caddyfile.staging",
         "rule": "DEPLOY",
         "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
@@ -692,6 +805,12 @@
       },
       {
         "from": "deploy/staging/RUNBOOK.md",
+        "rule": "DEPLOY",
+        "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
+        "depth": "DIRECT"
+      },
+      {
+        "from": "deploy/staging/TQ-4-EXCEPTION.md",
         "rule": "DEPLOY",
         "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
         "depth": "DIRECT"
@@ -706,6 +825,18 @@
         "from": "deploy/staging/deploy.sh",
         "rule": "DEPLOY",
         "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
+        "depth": "DIRECT"
+      },
+      {
+        "from": "docs/testing/system/CHANGE_IMPACT.json",
+        "rule": "TRUTH_DOCS",
+        "path": "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة** ⇒ إعادةُ توليدٍ وحرّاسُ انحراف (البند ٢٥)",
+        "depth": "DIRECT"
+      },
+      {
+        "from": "docs/testing/system/RELEASE_GATE.json",
+        "rule": "TRUTH_DOCS",
+        "path": "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة** ⇒ إعادةُ توليدٍ وحرّاسُ انحراف (البند ٢٥)",
         "depth": "DIRECT"
       },
       {

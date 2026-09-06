@@ -56,6 +56,14 @@ func Classify(p string) File {
 	case path.Base(p) == ".gitignore" || path.Base(p) == ".gitattributes" ||
 		path.Base(p) == "LICENSE" || path.Base(p) == ".editorconfig":
 		f.Category, f.Why = CatDocs, "ملفُّ مستودعٍ لا يمسّ سلوكاً"
+	// ── عقدُ الـAPI ───────────────────────────────────────────
+	//
+	// **مولَّدٌ من الموجّه بـ`cmd/apidoc`** — **فتبدّلُه أثرُ تبدّلٍ لا
+	// سببُه**، **وحارسُه `TestContractIsCurrent` يكشف شيخوخته.**
+	//
+	// **وكان مجهولاً فيُسقط الحكمَ إلى التوسيع الآمن** (قِيس في `P-0`).
+	case p == "api/contract.json":
+		f.Category, f.Why = CatTruthDocs, "**عقدُ الـAPI مولَّدٌ** — حارسُه يكشف شيخوخته"
 	case isTruthDoc(p):
 		f.Category, f.Why = CatTruthDocs, "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة**"
 	case strings.HasSuffix(p, ".md") || strings.HasPrefix(p, "docs/"):
