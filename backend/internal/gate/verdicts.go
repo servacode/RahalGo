@@ -85,8 +85,11 @@ var ExternalReqs = []ExternalReq{
 		Severity:    Critical,
 		Evidence:    "خادمان يشتركان في `Redis` ويُبطَل رمزٌ على أحدهما فيُرفَض على الآخر",
 		Status:      ReqStaging,
-		Why:         "**عُقدةٌ واحدةٌ لا تُثبت الإبطالَ الموزَّع** — والنشرُ عُقَد",
-		Blocking:    true, Waiver: WaiverOwnerOnly,
+		Why: "**عُقدةٌ واحدةٌ لا تُثبت الإبطالَ الموزَّع** — والنشرُ عُقَد. " +
+			"⚠️ **و`P-0` أثبت وجهاً آخرَ من `R16`**: **سقوطُ `Redis` يجعل " +
+			"التوثيقَ يسقط مفتوحاً** (`TestFAIL_R16_RedisDownFailsOpen`) — " +
+			"**وذلك أخطرُ من الإبطال الموزَّع ولا يُغني عنه.**",
+		Blocking: true, Waiver: WaiverOwnerOnly,
 	},
 	{
 		ID: "GATE-STG-02", Category: CatStaging,
@@ -95,18 +98,25 @@ var ExternalReqs = []ExternalReq{
 		Severity:    Critical,
 		Evidence:    "نشرٌ كاملٌ على بيئةٍ مخصَّصةٍ ثمّ فحوصُ دخانٍ موثَّقة",
 		Status:      ReqStaging,
-		Why:         "**`P-0` لم يبدأ** — والخادمُ اشتُري ولم يُنشَر عليه",
-		Blocking:    true, Waiver: WaiverOwnerOnly,
+		Why: "**الحزمةُ بُنيت وقِيست محلّيّاً** (`P-0` ٢٠٢٦-٠٩-٠٦: هجراتٌ " +
+			"نظيفةٌ ١٢٨ · عزلُ أحجامٍ مُثبَت · حرّاسُ إنتاجٍ خمسةٌ · تدريبُ " +
+			"استعادة). **ولم تُنشَر على خادمٍ بعد** — **ومكدّسٌ محلّيٌّ " +
+			"ليس بيئةَ تجهيزٍ مخصَّصة** (البند ٤٢).",
+		Blocking: true, Waiver: WaiverOwnerOnly,
 	},
 	{
 		ID: "GATE-OPS-02", Category: CatBackup,
 		Requirement: "نسخٌ احتياطيٌّ واستعادةٌ مُثبَتان — `OPS2`",
-		Source:      "`OPS2` · دَينُ التشغيل",
+		Source:      "`OPS2` · دَينُ التشغيل · و`P-0` البند ٢٩",
 		Severity:    Blocker,
 		Evidence:    "إنشاءُ نسخةٍ · استعادتُها · فحصُ سلامةٍ · إجراءٌ موثَّق",
-		Status:      NotRun,
-		Why:         "**لا استعادةٌ جُرّبت قطّ** — **ونسخةٌ لم تُستعَد ليست نسخة**",
-		Blocking:    true, Waiver: WaiverOwnerOnly,
+		// **نُفِّذ على التجهيز ٢٠٢٦-٠٩-٠٦** — والخطواتُ الخمسُ كلُّها.
+		Status: Pass,
+		Why: "**تدريبٌ كاملٌ على التجهيز**: ٧ مستخدمين ومنطقتان ⇒ نسخةٌ " +
+			"١٩٦٤٨٠ بايت ⇒ محوٌ إلى صفرٍ ⇒ استعادةٌ ⇒ ٧ ومنطقتان و٦١ جدولاً " +
+			"و١٢٨ هجرةً و`PostGIS`. **والإجراءُ موثَّقٌ في `deploy/staging/RUNBOOK.md`.** " +
+			"⚠️ **ولم تُجرَّب استعادةُ إنتاجٍ** — **ولا إنتاجَ بعد.**",
+		Blocking: true, Waiver: WaiverOwnerOnly,
 	},
 
 	// ── الأداءُ والحِمل (البندان ٢٩ و٣٠) ──────────────────────────
