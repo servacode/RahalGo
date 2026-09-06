@@ -125,6 +125,19 @@ func defectRules(e *Evidence) []Rule {
 		case len(d.Tests) == 0:
 			st = NotRun
 			why = "**لا اختبارَ انحدارٍ يحرسه** — فلا دليلَ على حاله اليومَ"
+		case d.Fixed != "":
+			// ══════════════════════════════════════════════════════
+			// **وعيبٌ أُصلح وله حرّاسٌ لا يبقى مانعاً**
+			// ══════════════════════════════════════════════════════
+			//
+			// **وكانت البوّابةُ لا تقرأ دليلَ الإصلاح للعيوب** —
+			// **تقرؤه للفجوات وحدَها** (`gapRules`). **فعيبٌ أُغلق
+			// بدليلٍ وحرّاسٍ يبقى `EXPECTED_FAIL` إلى الأبد.**
+			//
+			// **والشرطان معاً**: **دليلٌ وحارس.** **ومن كتب دليلاً
+			// وحذف الحارسَ أغلقه بالكلام.**
+			st = Pass
+			why = "**أُصلح** — " + d.Fixed
 		default:
 			res, ev := e.ResultOf(d.ID)
 			why = fmt.Sprintf("**قائمٌ ومُثبَت** — %d اختباراً يسقط عمداً", len(d.Tests))
@@ -141,7 +154,7 @@ func defectRules(e *Evidence) []Rule {
 			Severity:         sev,
 			RequiredEvidence: "إصلاحٌ في المنتج ثمّ اختبارُ انحدارٍ ينجح بعد أن كان يسقط",
 			Status:           st,
-			Blocking:         blockingBySeverity(sev),
+			Blocking:         blockingBySeverity(sev) && st != Pass,
 			Reason:           why,
 			Registers:        []string{d.ID},
 			Tests:            d.Tests,
@@ -187,7 +200,7 @@ func gapRules(e *Evidence) []Rule {
 			Severity:         sev,
 			RequiredEvidence: "بناءُ العقد ثمّ اختبارٌ يثبته",
 			Status:           st,
-			Blocking:         blockingBySeverity(sev),
+			Blocking:         blockingBySeverity(sev) && st != Pass,
 			Reason:           why,
 			Registers:        []string{g.ID},
 			Tests:            g.Tests,

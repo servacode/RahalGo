@@ -18,12 +18,17 @@ import (
 
 // TruthDefect عيبٌ كما في الحقيقة.
 type TruthDefect struct {
-	ID       string   `json:"id"`
-	Title    string   `json:"title"`
-	Domain   string   `json:"domain"`
-	Severity string   `json:"severity"`
-	Tests    []string `json:"tests"`
-	Status   string   `json:"status"`
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Domain   string `json:"domain"`
+	Severity string `json:"severity"`
+	// Fixed **دليلُ الإصلاح** — تقرؤه البوّابةُ فلا تعدّه مانعاً.
+	//
+	// **وكان يُقرأ للفجوات وحدَها**، **فعيبٌ أُغلق بدليلٍ وحرّاسٍ يبقى
+	// `EXPECTED_FAIL` إلى الأبد.**
+	Fixed  string   `json:"fixed,omitempty"`
+	Tests  []string `json:"tests"`
+	Status string   `json:"status"`
 }
 
 // TruthRisk خطرٌ كما في الحقيقة.
