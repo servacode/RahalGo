@@ -1161,6 +1161,7 @@
       "title": "convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤها مُهمَل",
       "domain": "الهويّة · الكتالوج",
       "severity": "HIGH",
+      "fixed": "**`convertLead` صارت معاملةً واحدة** تعبر أربعَ طبقات (`CreateMerchantTx` · `EnsureUserWithRoleTx` · `GrantTargetIfReachedTx`)، **وأخطاؤها لم تعُد مُهمَلة**. وحدُّ المعاملة في `fininv.TxBoundaries` صار `ATOMIC`، و`TestATOMIC_LeadConversionIsOneUnit` يسقط إن عاد. **ولا يغلق `D25`**: الازدواجُ بالتزامن سببٌ آخر.",
       "tests": [
         "TestATOMIC_LeadConversionIsOneUnit",
         "TestFAIL_D2_ConvertLeadPartialStates",
@@ -1168,7 +1169,7 @@
         "TestFIN_TransactionBoundaries",
         "TestRACE_DuplicateLeadConversion"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D3",
@@ -1191,13 +1192,14 @@
       "title": "المصروفُ والخزينةُ كتابتان بلا معاملة",
       "domain": "مال",
       "severity": "HIGH",
+      "fixed": "**المصروفُ وخصمُ الخزينة في معاملةٍ واحدة** — إنشاءً وإلغاءً (`ApplyTx` بدل `Apply`). **وكان مصروفٌ يبقى بلا خصمٍ فيقول تقريرُ الأرباح ربحاً لم يقع.**",
       "tests": [
         "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
         "TestFAIL_D5_ExpenseTreasuryPartial",
         "TestFIN_ExpenseTreasuryInvariant",
         "TestFIN_TransactionBoundaries"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D6",
@@ -1285,12 +1287,13 @@
       "title": "AdminCreateUser في خطوتين",
       "domain": "الهويّة",
       "severity": "MEDIUM",
+      "fixed": "**الإنشاءُ والأدوارُ والكلمةُ في معاملةٍ واحدة** (`AdminCreateUserFull`). **وكان مستخدِمٌ يبقى بلا كلمةٍ لا يدخل ورقمُه محجوز — والتعافي مسدود.**",
       "tests": [
         "TestATOMIC_AdminUserCreationIsOneUnit",
         "TestFAIL_D15_AdminCreateUserPartial",
         "TestFAIL_D15_Reconciliation"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D16",
@@ -1393,7 +1396,6 @@
       "domain": "تزامن · مالٌ مباشر",
       "severity": "HIGH",
       "tests": [
-        "TestATOMIC_LeadConversionIsOneUnit",
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestRACE_DuplicateLeadConversion"
       ],
@@ -1820,9 +1822,6 @@
       "title": "لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين",
       "severity": "BLOCKER",
       "tests": [
-        "TestATOMIC_AdminUserCreationIsOneUnit",
-        "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
-        "TestATOMIC_LeadConversionIsOneUnit",
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestRACE_DuplicateLeadConversion"
       ],
@@ -5932,9 +5931,6 @@
       "defects": [
         "D15"
       ],
-      "gaps": [
-        "XG-18"
-      ],
       "modes": [
         "FAILURE",
         "FINANCIAL",
@@ -5956,9 +5952,6 @@
       "defects": [
         "D5"
       ],
-      "gaps": [
-        "XG-18"
-      ],
       "modes": [
         "FAILURE",
         "FINANCIAL",
@@ -5978,11 +5971,7 @@
         "F-30"
       ],
       "defects": [
-        "D2",
-        "D25"
-      ],
-      "gaps": [
-        "XG-18"
+        "D2"
       ],
       "modes": [
         "FAILURE",

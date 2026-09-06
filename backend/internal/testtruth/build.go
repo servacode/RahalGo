@@ -125,12 +125,16 @@ func Build(backendRoot, docsRoot string) (*Truth, error) {
 
 	// ── العيوبُ — من السجلّ لا من قائمةٍ هنا ──────────────────────
 	for _, d := range regDefects {
-		def := Defect{ID: d.ID, Title: d.Title, Domain: d.Domain, Severity: d.Severity, Tests: byDefect[d.ID]}
+		def := Defect{ID: d.ID, Title: d.Title, Domain: d.Domain,
+			Severity: d.Severity, Fixed: DefectFixed[d.ID], Tests: byDefect[d.ID]}
 		switch {
 		case len(def.Tests) == 0:
 			def.Status = StatusNoTestYet
 			t.CoverageGaps = append(t.CoverageGaps,
 				fmt.Sprintf("%s — لا اختبارَ انحدارٍ بعد", d.ID))
+		case def.Fixed != "":
+			// **ولا يُغلَق عيبٌ بلا حارس** — كالفجوات تماماً.
+			def.Status = StatusFixedPassing
 		default:
 			// **`P-1` تُنتج `EXPECTED_FAIL` لا `PASS`** — والحالُ يقولها.
 			def.Status = StatusExpectedFail

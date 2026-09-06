@@ -118,9 +118,15 @@ type Defect struct {
 	// Domain **عمودُ «المجال»** — ومنه تُصنَّف بوّابةُ الإطلاق.
 	Domain string `json:"domain"`
 	// Severity **من عمود «الشدّةُ المرشَّحة» في السجلّ** — ولا تُكتب بيد.
-	Severity string   `json:"severity"`
-	Tests    []string `json:"tests"`
-	Status   Status   `json:"status"`
+	Severity string `json:"severity"`
+	// Fixed **دليلُ الإصلاح** — كما في `Gap`.
+	//
+	// **والعيوبُ تُستخرَج من `FINAL_STATIC_CLOSEOUT.md` ولا تُعلَن هنا**،
+	// **فدليلُ إصلاحها في `DefectFixed`** — والسجلُّ يبقى تاريخاً لا
+	// يُعدَّل.
+	Fixed  string   `json:"fixed,omitempty"`
+	Tests  []string `json:"tests"`
+	Status Status   `json:"status"`
 }
 
 // Risk خطرٌ مجمَّد — **ولا يصير عيباً تلقائيّاً.**

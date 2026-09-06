@@ -1013,7 +1013,7 @@ var TestMap = map[string]TestDecl{
 	// · `PF-03`. **وهذه تسقط ما دام العطبُ قائماً**، بخلاف حرّاسِ
 	// `TestFAIL_*` التي توثّقه بالسجلّ.
 	"TestATOMIC_ExpenseAndTreasuryAreOneUnit": atomicTest([]string{"D5"}),
-	"TestATOMIC_LeadConversionIsOneUnit":      atomicTest([]string{"D2", "D25"}),
+	"TestATOMIC_LeadConversionIsOneUnit":      atomicTest([]string{"D2"}),
 	"TestATOMIC_AdminUserCreationIsOneUnit":   atomicTest([]string{"D15"}),
 
 	// ── `XG-31` · تتبّعُ الالتزامات (دورةُ إصلاحٍ ٣) ──────────────
@@ -1039,14 +1039,43 @@ var TestMap = map[string]TestDecl{
 //
 // **والوضعُ `FAILURE` أصلُه**: **لا يُثبَت إلّا بحقنِ عطبٍ في منتصف
 // العمليّة** — **ونداءٌ ناجحٌ لا يقول شيئاً عن الذرّيّة.**
+//
+// # ولا يُربَط بـ`XG-18` ولا بـ`D25`
+//
+// **كنتُ ربطتُهما به في دورةِ إصلاحٍ ٤ — وهو خطأ.** **الذرّيّةُ أن تقع
+// الكتاباتُ معاً أو لا تقع، والازدواجُ أن يسبق نداءان بعضَهما.**
+// **ونداءٌ واحدٌ يُحقَن في وسطه لا يقول شيئاً عن نداءَين متوازيَين.**
+//
+// **ودليلٌ يُنسَب إلى سجلٍّ لا يُثبته أسوأُ من لا دليل** — **يُغلق ما
+// لم يُغلَق.** (صُحّح في مصالحة دورةِ ٥.)
 func atomicTest(defects []string) TestDecl {
 	return TestDecl{
 		Level: L4, Purpose: PurposeFeature,
 		Flows:   []string{"F-21", "F-26", "F-30"},
 		Defects: defects,
-		Gaps:    []string{"XG-18"},
 		Modes:   []string{"FAILURE", "FINANCIAL", "FULL", "RELEASE"},
 	}
+}
+
+// DefectFixed **دليلُ إصلاح عيبٍ من السجلّ الساكن.**
+//
+// **والسجلُّ نفسُه لا يُعدَّل** — `FINAL_STATIC_CLOSEOUT.md` تاريخُ ما
+// وُجد، **ومن حرّره محا ما كان.** **فالإصلاحُ يُعلَن هنا ويُقرَن
+// بحرّاسه**، ولا يُغلق عيبٌ بلا حارس.
+var DefectFixed = map[string]string{
+	// ── دورةُ إصلاحٍ ٤ · ٢٠٢٦-٠٩-٠٦ ──────────────────────────────
+	"D2": "**`convertLead` صارت معاملةً واحدة** تعبر أربعَ طبقات " +
+		"(`CreateMerchantTx` · `EnsureUserWithRoleTx` · " +
+		"`GrantTargetIfReachedTx`)، **وأخطاؤها لم تعُد مُهمَلة**. " +
+		"وحدُّ المعاملة في `fininv.TxBoundaries` صار `ATOMIC`، " +
+		"و`TestATOMIC_LeadConversionIsOneUnit` يسقط إن عاد. " +
+		"**ولا يغلق `D25`**: الازدواجُ بالتزامن سببٌ آخر.",
+	"D5": "**المصروفُ وخصمُ الخزينة في معاملةٍ واحدة** — إنشاءً " +
+		"وإلغاءً (`ApplyTx` بدل `Apply`). **وكان مصروفٌ يبقى بلا خصمٍ " +
+		"فيقول تقريرُ الأرباح ربحاً لم يقع.**",
+	"D15": "**الإنشاءُ والأدوارُ والكلمةُ في معاملةٍ واحدة** " +
+		"(`AdminCreateUserFull`). **وكان مستخدِمٌ يبقى بلا كلمةٍ لا " +
+		"يدخل ورقمُه محجوز — والتعافي مسدود.**",
 }
 
 // oblTest حارسُ تتبّعِ التزامٍ ماليّ — `XG-31`.

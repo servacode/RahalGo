@@ -68,10 +68,10 @@ ORPHAN     = 568
 | ID | العنوان | الحال | الاختبارات |
 |---|---|---|---|
 | **D1** | فكُّ الإسناد بلا حدثٍ في order_events | `NO_REGRESSION_TEST_YET` | — |
-| **D2** | convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤه… | `EXPECTED_FAIL` | `TestATOMIC_LeadConversionIsOneUnit` · `TestFAIL_D2_ConvertLeadPartialStates` · `TestFIN_TargetRewardPrecedesCommit` · `TestFIN_TransactionBoundaries` · `TestRACE_DuplicateLeadConversion` |
+| **D2** | convertLead بلا معاملةٍ واحدة · ٣ كتاباتٍ خطؤه… | `FIXED_AND_PASSING` | `TestATOMIC_LeadConversionIsOneUnit` · `TestFAIL_D2_ConvertLeadPartialStates` · `TestFIN_TargetRewardPrecedesCommit` · `TestFIN_TransactionBoundaries` · `TestRACE_DuplicateLeadConversion` |
 | **D3** | «تذكّرني» تنقلب دائمةً بعد أوّل تجديد | `NO_REGRESSION_TEST_YET` | — |
 | **D4** | سقفُ المفتوح داخلَ بوّابة واتساب | `NO_REGRESSION_TEST_YET` | — |
-| **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `EXPECTED_FAIL` | `TestATOMIC_ExpenseAndTreasuryAreOneUnit` · `TestFAIL_D5_ExpenseTreasuryPartial` · `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
+| **D5** | المصروفُ والخزينةُ كتابتان بلا معاملة | `FIXED_AND_PASSING` | `TestATOMIC_ExpenseAndTreasuryAreOneUnit` · `TestFAIL_D5_ExpenseTreasuryPartial` · `TestFIN_ExpenseTreasuryInvariant` · `TestFIN_TransactionBoundaries` |
 | **D6** | الطلبُ الخاصُّ لا ينادي cashBlocked | `NO_REGRESSION_TEST_YET` | — |
 | **D7** | سقفُ النقد يقيس المحصَّل لا المكشوف | `EXPECTED_FAIL` | `TestSampleFactory_DriverOnShiftWithCash` · `TestFIN_CashExposureContract` |
 | **D8** | الطلبُ الخاصُّ لا يطلب توثيقَ واتساب | `NO_REGRESSION_TEST_YET` | — |
@@ -81,7 +81,7 @@ ORPHAN     = 568
 | **D12** | Push.unregister بلا منادٍ | `EXPECTED_FAIL` | `TestEV_PushTokenTargeting` |
 | **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `EXPECTED_FAIL` | `TestFAIL_D13_MediaDirectoryListingOpen` |
 | **D14** | handleWS لا يفحص ActiveStatus | `EXPECTED_FAIL` | `TestSampleFactory_SuspendedIsRefused` |
-| **D15** | AdminCreateUser في خطوتين | `EXPECTED_FAIL` | `TestATOMIC_AdminUserCreationIsOneUnit` · `TestFAIL_D15_AdminCreateUserPartial` · `TestFAIL_D15_Reconciliation` |
+| **D15** | AdminCreateUser في خطوتين | `FIXED_AND_PASSING` | `TestATOMIC_AdminUserCreationIsOneUnit` · `TestFAIL_D15_AdminCreateUserPartial` · `TestFAIL_D15_Reconciliation` |
 | **D16** | طابورُ المواقع ملفٌّ بلا صاحب | `NO_REGRESSION_TEST_YET` | — |
 | **D17** | الملاحةُ لا تعود بعد موت العمليّة | `NO_REGRESSION_TEST_YET` | — |
 | **D18** | START_STICKY يعيد الخدمةَ بفترةِ الافتراض | `NO_REGRESSION_TEST_YET` | — |
@@ -91,7 +91,7 @@ ORPHAN     = 568
 | **D22** | الطلبُ الخاصُّ لا يُبثّ لصاحبه | `EXPECTED_FAIL` | `TestEV_CustomOrderOwnerRealtime` · `TestD22_CustomOrderOwnerChannelContract` · `TestOrderFieldsAllClassified` |
 | **D23** | حمولاتُ REST تكشف اقتصاداً داخليّاً | `EXPECTED_FAIL` | `TestEV_CustomerDriverAssignment` · `TestD20_MerchantRealtimeVsREST` · `TestD21_CustomerRedactionAgainstContract` · `TestOrderFieldsAllClassified` |
 | **D24** | سقفُ الطلبات النشطة يُتجاوَز بالتزامن | `EXPECTED_FAIL` | `TestFAIL_R7_DriverAcceptPartialState` · `TestRACE_MaxActiveOrders` |
-| **D25** | هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن | `EXPECTED_FAIL` | `TestATOMIC_LeadConversionIsOneUnit` · `TestFAIL_D2_ConvertLeadPartialStates` · `TestRACE_DuplicateLeadConversion` |
+| **D25** | هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن | `EXPECTED_FAIL` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestRACE_DuplicateLeadConversion` |
 | **D26** | إنذارُ الراصد يضيع بعد كتابة الوسم | `EXPECTED_FAIL` | `TestEV_R22WatchdogMarkerSuppressesRetry` |
 | **D27** | سقوطُ الدفع بلا إعادةٍ دائمة | `EXPECTED_FAIL` | `TestEV_R23PushFailureIsLost` |
 
@@ -114,7 +114,7 @@ ORPHAN     = 568
 | **XG-15** | `HIGH` | `sales.activation_orders` | `NOT_IMPLEMENTED` | — |
 | **XG-16** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-17** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-18** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestATOMIC_AdminUserCreationIsOneUnit` · `TestATOMIC_ExpenseAndTreasuryAreOneUnit` · `TestATOMIC_LeadConversionIsOneUnit` · `TestFAIL_D2_ConvertLeadPartialStates` · `TestRACE_DuplicateLeadConversion` |
+| **XG-18** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestRACE_DuplicateLeadConversion` |
 | **XG-19** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-20** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-21** | `BLOCKER` | — | `NOT_IMPLEMENTED` | — |
