@@ -105,6 +105,15 @@
         "FI-12.b",
         "FI-12.c"
       ]
+    },
+    {
+      "id": "FI-13",
+      "checks": [
+        "FI-13.a",
+        "FI-13.b",
+        "FI-13.c",
+        "FI-13.d"
+      ]
     }
   ],
   "checks": [
@@ -695,6 +704,57 @@
       "registers": [
         "D5"
       ]
+    },
+    {
+      "id": "FI-13.a",
+      "family": "FI-13",
+      "name": "دَينُ المتجرِ يطابق وقائعَه",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14",
+        "F-17"
+      ],
+      "registers": [
+        "XG-31"
+      ]
+    },
+    {
+      "id": "FI-13.b",
+      "family": "FI-13",
+      "name": "التزامُ المندوبِ يطابق وقائعَه",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14"
+      ],
+      "registers": [
+        "XG-31",
+        "XG-10"
+      ],
+      "kinds": [
+        "commission"
+      ]
+    },
+    {
+      "id": "FI-13.c",
+      "family": "FI-13",
+      "name": "المسدَّدُ يساوي مجموعَ تسوياته",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "registers": [
+        "XG-31"
+      ]
+    },
+    {
+      "id": "FI-13.d",
+      "family": "FI-13",
+      "name": "كلُّ التزامٍ يُفسَّر بأصله",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "registers": [
+        "XG-31"
+      ]
     }
   ],
   "kinds": [
@@ -954,9 +1014,9 @@
     }
   ],
   "counts": {
-    "families": 12,
-    "checks": 46,
-    "provable_now": 39,
+    "families": 13,
+    "checks": 50,
+    "provable_now": 43,
     "not_implemented": 4,
     "deferred_p5": 1,
     "deferred_p6": 2,

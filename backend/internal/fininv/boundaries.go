@@ -85,13 +85,16 @@ var TxBoundaries = []TxBoundary{
 	},
 	{
 		Op: "handleCreateExpense", File: "internal/server/expenses_handlers.go",
-		Sig: "func (s *Server) handleCreateExpense(", Class: "NON_ATOMIC",
-		Note: "**D5** — صفُّ المصروف ثمّ قيدُ الخزينة في عمليّتين",
+		Sig: "func (s *Server) handleCreateExpense(", Class: "ATOMIC",
+		Note: "**D5 · `PF-02` — أُصلح في دورةِ إصلاحٍ ٤**: صفُّ المصروف " +
+			"وقيدُ الخزينة في معاملةٍ واحدة (`ApplyTx`). " +
+			"**وكان مصروفٌ يبقى بلا خصمٍ فيقول تقريرُ الأرباح ربحاً لم يقع.**",
 	},
 	{
 		Op: "handleVoidExpense", File: "internal/server/expenses_handlers.go",
-		Sig: "func (s *Server) handleVoidExpense(", Class: "NON_ATOMIC",
-		Note: "**D5** — التعليمُ بالإلغاء ثمّ ردُّ القيد في عمليّتين",
+		Sig: "func (s *Server) handleVoidExpense(", Class: "ATOMIC",
+		Note: "**D5 · `PF-02` — أُصلح في دورةِ إصلاحٍ ٤**: وسمُ الإلغاء " +
+			"وردُّ المال في معاملةٍ واحدة.",
 	},
 	{
 		Op: "handleAdminWalletApply", File: "internal/server/admin_wallet_handlers.go",
@@ -100,7 +103,14 @@ var TxBoundaries = []TxBoundary{
 	},
 	{
 		Op: "convertLead", File: "internal/server/leads_handlers.go",
-		Sig: "func (s *Server) convertLead(", Class: "NON_ATOMIC",
-		Note: "**D2** — ثلاثُ كتاباتٍ بلا معاملة، والمكافأةُ بينها",
+		Sig: "func (s *Server) convertLead(", Class: "ATOMIC",
+		Note: "**D2 · D25 · XG-18 · `PF-01` — أُصلح في دورةِ إصلاحٍ ٤**: " +
+			"ستُّ الكتاباتِ في معاملةٍ واحدةٍ تعبر أربعَ طبقات " +
+			"(`CreateMerchantTx` · `EnsureUserWithRoleTx` · " +
+			"`GrantTargetIfReachedTx`). " +
+			"**وكان سقوطُ التثبيت يترك متجراً ومكافأةً مدفوعةً ومرشَّحاً " +
+			"`new`، والإعادةُ تُنشئ متجراً ثانياً.** " +
+			"**والإشعاراتُ بعد التثبيت** — إشعارٌ خرج ثمّ ارتدّت المعاملةُ " +
+			"كذبٌ لا يُسحَب.",
 	},
 }

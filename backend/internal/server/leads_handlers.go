@@ -14,6 +14,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -680,7 +681,48 @@ func (s *Server) handleAdminLeadStatus(w http.ResponseWriter, r *http.Request) {
 // **وخطؤها لا يُسقط الإنشاء**: المتجرُ فُتح، **ومكافأةٌ تأخّرت أهونُ
 // من عميلٍ ضاع.** والقاعدةُ تمنع التكرار — فهرسٌ فريدٌ لكلّ شهر.
 func (s *Server) grantSalesTargetIfAny(ctx context.Context, merchantID string) {
+	paid, err := s.grantSalesTargetTx(ctx, s.pg, merchantID)
+	if err != nil {
+		return
+	}
+	s.notifySalesTargetPaid(ctx, merchantID, paid)
+}
+
+// grantSalesTargetTx يمنح المكافأةَ **في معاملةٍ مُمرَّرة** ويُرجع ما دُفع.
+//
+// **ولا يُشعِر** — **الإشعارُ بعد التثبيت** (`PF-01`): **إشعارٌ خرج ثمّ
+// ارتدّت المعاملةُ كذبٌ لا يُسحَب.**
+func (s *Server) grantSalesTargetTx(ctx context.Context, q dbtx.Querier,
+	merchantID string) (int64, error) {
 	if s.incentives == nil || merchantID == "" {
+		return 0, nil
+	}
+	var repID *string
+	if err := q.QueryRow(ctx,
+		`SELECT sales_rep_user_id::text FROM merchants WHERE id = $1`,
+		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
+		return 0, nil
+	}
+	return s.incentives.GrantTargetIfReachedTx(ctx, q, *repID, "sales")
+}
+
+// notifySalesTargetPaid يخبر المندوبَ ببلوغ هدفه.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ومن نال مكافأتَه يُبشَّر بها**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (قِيس 2026-09-02: المكافأةُ تُقيَّد في محفظته آليّاً **ولا شيءَ يقول
+//
+//	له** — فيراها رقماً زاد بلا سبب.)
+//
+// **وصفرٌ يعني «لم يبلغ أو نالها من قبل»** — **ولا يُبشَّر أحدٌ بمالٍ
+// لم يُقيَّد.**
+//
+// **وحزمةُ الحوافز بلا مُشعِر عن قصد**: تُدفع في الخلفيّة بلا فاعلٍ
+// بشريّ، **والمنادي هو من يعرف جمهورَه.**
+func (s *Server) notifySalesTargetPaid(ctx context.Context, merchantID string, paid int64) {
+	if paid <= 0 {
 		return
 	}
 	var repID *string
@@ -689,27 +731,13 @@ func (s *Server) grantSalesTargetIfAny(ctx context.Context, merchantID string) {
 		merchantID).Scan(&repID); err != nil || repID == nil || *repID == "" {
 		return
 	}
-	// ══════════════════════════════════════════════════════════════════
-	// **ومن نال مكافأتَه يُبشَّر بها**
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// (قِيس 2026-09-02: المكافأةُ تُقيَّد في محفظته آليّاً **ولا شيءَ
-	//  يقول له** — فيراها رقماً زاد بلا سبب.)
-	//
-	// **والدالّةُ تُرجع ما دُفع** — فصفرٌ يعني «لم يبلغ أو نالها من
-	// قبل»، **ولا يُبشَّر أحدٌ بمالٍ لم يُقيَّد.**
-	//
-	// **وحزمةُ الحوافز بلا مُشعِر عن قصد**: تُدفع في الخلفيّة بلا فاعلٍ
-	// بشريّ، **والمنادي هو من يعرف جمهورَه.**
-	if paid := s.incentives.GrantTargetIfReached(ctx, *repID, "sales"); paid > 0 {
-		s.notify.Notify(ctx, notifications.Input{
-			UserID: *repID, Kind: notifications.KindWallet,
-			Title:  notifTitles.targetReached,
-			Body:   strconv.FormatInt(paid, 10) + " " + currencyWord,
-			Entity: "wallet", Href: "/portal/wallet",
-			Apps: []string{notifications.AppRep},
-		})
-	}
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: *repID, Kind: notifications.KindWallet,
+		Title:  notifTitles.targetReached,
+		Body:   strconv.FormatInt(paid, 10) + " " + currencyWord,
+		Entity: "wallet", Href: "/portal/wallet",
+		Apps: []string{notifications.AppRep},
+	})
 }
 
 func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) error {
@@ -773,25 +801,49 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	var ownerExisted bool
 	_ = s.pg.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE phone = $1)`, phone).Scan(&ownerExisted)
 
-	mrch, err := s.catalog.CreateMerchant(ctx, actorID, in, ip)
+	// ══════════════════════════════════════════════════════════════
+	// **التحويلُ يقع كلُّه أو لا يقع** — `PF-01` · `D2` · `D25` · `XG-18`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كانت ستَّ كتاباتٍ متتاليةً بلا معاملة، وأربعٌ منها خطؤها
+	// مُهمَلٌ بـ`_, _ =`.** **فسقوطُ التثبيتِ الأخيرِ يترك**: متجراً
+	// مُنشأً · **ومكافأةً مدفوعةً** · ومرشَّحاً ما يزال `new` · وردّاً
+	// `500` بلا بيان.
+	//
+	// **وأخطرُ من ذلك**: **الإعادةُ تُنشئ متجراً ثانياً** —
+	// `RETRY SAFETY = BROKEN`. (أُثبت بالحقن: متاجرُ=1 · المرشَّحُ `new`.)
+	//
+	// **والأخطاءُ لم تعُد تُهمَل**: **معاملةٌ تُثبَّت وفيها كتابةٌ سقطت
+	// أسوأُ من لا معاملة** — تُخفي العطبَ وتدّعي الذرّيّة.
+	tx, err := s.pg.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	merchantNewID, err := s.catalog.CreateMerchantTx(ctx, tx, actorID, in, ip)
 	if err != nil {
 		return err
 	}
 	// الاسم يُملأ إن كان فارغاً (غير حسّاس). كلمة المرور للحساب الجديد حصراً.
-	_, _ = s.pg.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		UPDATE users SET
 			full_name  = CASE WHEN full_name = '' THEN $2 ELSE full_name END,
 			updated_at = now()
 		WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)`,
-		mrch.ID, ownerName)
+		merchantNewID, ownerName); err != nil {
+		return err
+	}
 	// كلمة المرور وضعها طرف ثالث (المندوب أو نموذج التسجيل) — مؤقتة يُجبَر
 	// صاحب المتجر على تبديلها عند أول دخول قبل الوصول إلى بوابته.
 	if !ownerExisted && pwHash != "" {
-		_, _ = s.pg.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			UPDATE users SET password_hash = $2, must_change_password = true, updated_at = now()
 			WHERE id = (SELECT owner_user_id FROM merchants WHERE id = $1)
 			  AND COALESCE(password_hash,'') = ''`,
-			mrch.ID, pwHash)
+			merchantNewID, pwHash); err != nil {
+			return err
+		}
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **والمنطقةُ تنتقل إلى المتجر مع الموافقة**
@@ -803,16 +855,32 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	//
 	// **وسطرٌ بعد الإنشاء لا يُفقد شيئاً**: المتجرُ أُنشئ في المعاملة
 	// نفسِها، **ومنطقتُه عنوانٌ لا يمنع بيعاً إن تأخّر سطراً.**
-	_, _ = s.pg.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		UPDATE merchants SET district_id = (
 			SELECT district_id FROM merchant_leads WHERE id = $2)
-		WHERE id = $1 AND district_id IS NULL`, mrch.ID, leadID)
+		WHERE id = $1 AND district_id IS NULL`, merchantNewID, leadID); err != nil {
+		return err
+	}
 
-	s.grantSalesTargetIfAny(ctx, mrch.ID)
+	paid, err := s.grantSalesTargetTx(ctx, tx, merchantNewID)
+	if err != nil {
+		return err
+	}
 
-	_, err = s.pg.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		UPDATE merchant_leads SET status = 'converted', merchant_id = $2, updated_at = now()
-		WHERE id = $1`, leadID, mrch.ID)
+		WHERE id = $1`, leadID, merchantNewID); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	// ── وبعد التثبيت تُرسَل الإشعارات ──────────────────────────
+	//
+	// **ولا تُرسَل من داخل المعاملة**: **إشعارٌ خرج ثمّ ارتدّت المعاملةُ
+	// كذبٌ لا يُسحَب** — يقرأ المندوبُ «قُبل متجرُك» ولا متجرَ.
+	s.notifySalesTargetPaid(ctx, merchantNewID, paid)
 	// المندوب يعرف فوراً أن عميله اعتُمد (مصدر عمولته)
 	var repID *string
 	_ = s.pg.QueryRow(ctx, `SELECT sales_rep_user_id FROM merchant_leads WHERE id = $1`, leadID).Scan(&repID)
@@ -820,8 +888,8 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 		s.notify.Notify(ctx, notifications.Input{
 			UserID: *repID, Kind: notifications.KindLead,
 			Title: m.leadApproved, Body: storeName,
-			Entity: "merchant", EntityID: mrch.ID, Href: "/portal/merchants",
+			Entity: "merchant", EntityID: merchantNewID, Href: "/portal/merchants",
 		})
 	}
-	return err
+	return nil
 }

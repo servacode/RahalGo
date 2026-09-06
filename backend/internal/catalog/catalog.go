@@ -4,6 +4,7 @@ package catalog
 import (
 	"context"
 	"errors"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"strings"
 	"time"
@@ -380,6 +381,117 @@ func requirePoint(lat, lng *float64) error {
 		return ErrLocationRequired
 	}
 	return nil
+}
+
+// CreateMerchantTx كـ`CreateMerchant` **في معاملةٍ مُمرَّرة**.
+//
+// **وُجدت لأجل تحويل المرشَّح** (`PF-01`): **كان يُنشأ المتجرُ ثمّ
+// تُدفَع المكافأةُ ثمّ يُثبَّت التحويل، كلٌّ في عمليّةٍ على حدة.**
+// **فسقوطُ الأخيرة يترك متجراً ومكافأةً ومرشَّحاً ما يزال `new`** —
+// **والإعادةُ تُنشئ متجراً ثانياً.**
+//
+// **والتدقيقُ خارجَ المعاملة**: أفضلُ جهدٍ بقرارٍ قائم (`PF-06`)،
+// **وسقوطُه لا يُسقط إنشاءَ متجرٍ صحيح.**
+func (s *Service) CreateMerchantTx(ctx context.Context, q dbtx.Querier,
+	actorID string, in MerchantInput, ip string) (string, error) {
+	if in.Name == nil || *in.Name == "" || in.CategoryID == nil {
+		return "", ErrNameRequired
+	}
+	if err := requirePoint(in.Lat, in.Lng); err != nil {
+		return "", err
+	}
+	if in.OwnerPhone == nil || strings.TrimSpace(*in.OwnerPhone) == "" {
+		return "", ErrOwnerRequired
+	}
+	name := ""
+	if in.OwnerName != nil {
+		name = strings.TrimSpace(*in.OwnerName)
+	}
+	pass := ""
+	if in.OwnerPassword != nil {
+		pass = *in.OwnerPassword
+	}
+	ownerID, err := s.identity.EnsureUserWithRoleTx(ctx, q, actorID,
+		*in.OwnerPhone, "merchant", name, pass)
+	if err != nil {
+		return "", err
+	}
+	var repID *string
+	if in.SalesRepCode != nil && *in.SalesRepCode != "" {
+		user, err := s.identity.SalesRepByInviteCode(ctx, *in.SalesRepCode)
+		if err != nil {
+			return "", err
+		}
+		repID = &user.ID
+	}
+
+	var id string
+	err = q.QueryRow(ctx, `
+		INSERT INTO merchants (name, description, category_id, phone, address_text, owner_user_id, sales_rep_user_id, location, city_id, logo_media_id, commission_percent, default_prep_minutes, district_id)
+		VALUES ($1, COALESCE($2,''), $3, COALESCE($4,''), COALESCE($5,''), $6, $7,
+		        CASE WHEN $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
+		             THEN ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography END,
+
+		        -- ══════════════════════════════════════════════════════
+		        -- **والمدينةُ تُشتقّ من الموقع — لا تُترك فارغة**
+		        -- ══════════════════════════════════════════════════════
+		        --
+		        -- (شكوى المالك ٢٠٢٦-٠٨-٢٢: «الأصنافُ لم تظهر بالتطبيق
+		        --  أبداً».)
+		        --
+		        -- **كان العمودُ لا يُذكر هنا إطلاقاً** — فكلُّ متجرٍ
+		        -- يُولد بلا مدينة. **وترشيحُ السوق يشترط أن تساوي
+		        -- مدينةُ المتجر مدينةَ الزبون** (city_filter.go:87)،
+		        -- **فلا يظهر المتجرُ لأحدٍ أبداً.**
+		        --
+		        -- **والأثرُ صامتٌ تماماً**: الأقسامُ تُعرض والعدّادُ صفر،
+		        -- ولا خطأَ ولا سجلّ. **وقِيس على الإنتاج**: ٣٧٦ صنفاً
+		        -- في القاعدة، **وصفرٌ لمن يرسل موقعَه.**
+		        --
+		        -- **وتُشتقّ ولا تُسأل**: صاحبُ المتجر يضع نقطتَه على
+		        -- الخريطة، **والمدينةُ تُعرف منها** — وسؤالُه عنها بعد
+		        -- ذلك سؤالٌ عمّا قاله.
+		        (SELECT c.id FROM cities c
+		          WHERE c.active
+		            AND $8::float8 IS NOT NULL AND $9::float8 IS NOT NULL
+		            AND ST_DWithin(c.center,
+		                ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography,
+		                c.radius_m)
+		          ORDER BY ST_Distance(c.center,
+		                ST_SetSRID(ST_MakePoint($9::float8, $8::float8), 4326)::geography)
+		          LIMIT 1),
+		        NULLIF(COALESCE($10, ''), '')::uuid,
+		        -- **ولا يُنسخ الافتراضُ في العمود.**
+		        --
+		        -- كان يُقرأ المفتاحُ هنا بـCOALESCE — فيولد كلُّ متجرٍ برقمٍ
+		        -- خاصٍّ به يساوي العامَّ يومَ وُلد، **ثمّ لا يتحرّك حين يتحرّك
+		        -- العامّ.** والفراغُ الآن يعني «اتبع العامّ» فعلاً.
+		        $11,
+
+		        -- وقت التحضير الافتراضي من اللوحة لا من افتراض العمود: كان ٢٠
+		        -- مكتوباً في الترحيل 0035، يرثه كل متجرٍ جديد ولا يملك المالك
+		        -- تغييره لمن يأتي بعده.
+		        -- **ومن المخزن لا برقمٍ مكتوبٍ هنا** — الافتراضُ في الفهرس وحدَه.
+		        $12,
+
+		        -- **ومنطقتُه الإداريّة** — يختارها منشئُ المتجر.
+		        --
+		        -- **ولا تُشتقّ من المدينة**: المدينةُ تُشتقّ من النقطة
+		        -- (أعلاه), **والمنطقةُ اختيارُ إنسانٍ يعرف أين هو.**
+		        NULLIF(COALESCE($13, ''), '')::uuid)
+		RETURNING id`,
+		*in.Name, in.Description, *in.CategoryID, in.Phone, in.AddressText, ownerID,
+		repID, in.Lat, in.Lng, in.LogoMediaID, in.CommissionPct,
+		s.settings.GetInt(ctx, "merchants.default_prep_minutes"),
+		in.DistrictID).Scan(&id)
+	if isFKViolation(err) {
+		return "", ErrCategoryInvalid
+	}
+	if err != nil {
+		return "", err
+	}
+	s.audit(ctx, actorID, "admin.merchant_create", "merchant", id, ip)
+	return id, nil
 }
 
 func (s *Service) CreateMerchant(ctx context.Context, actorID string, in MerchantInput, ip string) (*Merchant, error) {

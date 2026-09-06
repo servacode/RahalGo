@@ -30,6 +30,7 @@ package identity
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"slices"
 
@@ -66,6 +67,53 @@ func checkOnePrimary(roles []string) error {
 }
 
 // hasOtherPrimary **أله دورٌ أساسيٌّ غيرُ هذا؟**
+// GrantRoleTx كـ`GrantRole` **في معاملةٍ مُمرَّرة** — بحارس الدور الواحد.
+//
+// **والحارسُ محفوظٌ** (قرارُ المالك ٢٠٢٦-٠٨-١٦: «ممنوعٌ منعاً باتاً أن
+// يأخذ أكثرَ من دور»): **ومن نسخ المنحَ بلا حارسِه فتح البابَ الذي
+// أُغلق.**
+func GrantRoleTx(ctx context.Context, q dbtx.Querier, userID, role string,
+	grantedBy *string) error {
+	if role != RoleCustomer {
+		rows, err := q.Query(ctx,
+			`SELECT role_code FROM user_roles WHERE user_id = $1`, userID)
+		if err != nil {
+			return err
+		}
+		var other string
+		for rows.Next() {
+			var code string
+			if err := rows.Scan(&code); err != nil {
+				rows.Close()
+				return err
+			}
+			if code != RoleCustomer && code != role {
+				other = code
+			}
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		if other != "" {
+			return ErrRoleConflict
+		}
+	}
+	if _, err := q.Exec(ctx, `
+		INSERT INTO user_roles (user_id, role_code, granted_by) VALUES ($1, $2, $3)
+		ON CONFLICT DO NOTHING`, userID, role, grantedBy); err != nil {
+		return err
+	}
+	if grantsCustomer(role) {
+		if _, err := q.Exec(ctx, `
+			INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'customer')
+			ON CONFLICT DO NOTHING`, userID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *Repo) hasOtherPrimary(ctx context.Context, userID, role string) (string, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT role_code FROM user_roles WHERE user_id = $1`, userID)

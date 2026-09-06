@@ -23,6 +23,7 @@ package incentives
 import (
 	"context"
 	"errors"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"strings"
 	"time"
 )
@@ -119,6 +120,42 @@ func (s *Service) LevelsOf(ctx context.Context, role string) []Level {
 // **ولا يُنادى إلّا بعد تسليمٍ يُغلَق**: هي اللحظةُ الوحيدةُ التي يتبدّل فيها
 // العدّاد. **ونداؤها في كلّ فتحةِ شاشةٍ يجعل القراءةَ تكتب** — وشاشةٌ تُصرف
 // مالاً بمجرّد أن تُفتح لا تُراجَع.
+// GrantTargetIfReachedTx كـ`GrantTargetIfReached` **في معاملةٍ مُمرَّرة**.
+//
+// **وُجدت لأجل تحويل المرشَّح** (`PF-01`): **كانت المكافأةُ تُدفع قبل
+// تثبيت التحويل** — **فيُدفَع مالٌ عن تحويلٍ لم يقع.**
+//
+// **ويُردّ الخطأُ هنا ولا يُبتلَع**: **القائمةُ تصمت عن العثرة لأنّها
+// خارجَ عمليّةٍ أكبر** — **وهذه داخلَها، فصمتُها يترك المعاملةَ تُثبَّت
+// بلا مكافأة.**
+func (s *Service) GrantTargetIfReachedTx(ctx context.Context, tx dbtx.Querier,
+	userID, role string) (int64, error) {
+	levels := s.levelsFor(ctx, role)
+	if len(levels) == 0 {
+		return 0, nil
+	}
+	done, err := s.doneThisMonth(ctx, userID, role)
+	if err != nil {
+		return 0, err
+	}
+	period := PeriodOf(time.Now())
+	var paid int64
+	for _, l := range levels {
+		if l.Target <= 0 || l.Reward <= 0 || done < l.Target {
+			continue
+		}
+		if err := s.grantTargetTx(ctx, tx, userID, role, l, period); err != nil {
+			// **والمكرَّرُ ليس عثرة** — كوفئ عن هذه المرحلة سابقاً.
+			if isDuplicate(err) {
+				continue
+			}
+			return 0, err
+		}
+		paid += l.Reward
+	}
+	return paid, nil
+}
+
 func (s *Service) GrantTargetIfReached(ctx context.Context, userID, role string) int64 {
 	levels := s.levelsFor(ctx, role)
 	if len(levels) == 0 {
@@ -205,6 +242,7 @@ func (s *Service) doneThisMonth(ctx context.Context, userID, role string) (int64
 //
 // **ولا يُعاد بناءُ ما في `Grant`**: هي تأخذ فاعلاً بشريّاً، **وهذه بلا فاعل**
 // — ومن كتب `actor` وهميّاً جعل السجلَّ يقول إنّ إنساناً قرّر.
+// grantTarget يفتح معاملتَه — للمنادي المنفرد.
 func (s *Service) grantTarget(ctx context.Context, userID, role string,
 	l Level, period string) error {
 	tx, err := s.db.Begin(ctx)
@@ -212,6 +250,15 @@ func (s *Service) grantTarget(ctx context.Context, userID, role string,
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
+	if err := s.grantTargetTx(ctx, tx, userID, role, l, period); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// grantTargetTx يكتب في معاملةٍ مُمرَّرة — **ولا يثبّتها.**
+func (s *Service) grantTargetTx(ctx context.Context, tx dbtx.Querier,
+	userID, role string, l Level, period string) error {
 
 	// **والوحدةُ بوحدة الدور** — **وكان يقول «طلباً» للمندوب أيضاً**
 	// وهدفُه عملاءُ لا طلبات. **وقيدٌ يسمّي غيرَ ما وقع يُقرأ في كشف
@@ -244,7 +291,7 @@ func (s *Service) grantTarget(ctx context.Context, userID, role string,
 			return err
 		}
 	}
-	return tx.Commit(ctx)
+	return nil
 }
 
 // isDuplicate **أهو تصادمُ الفهرس الفريد؟**

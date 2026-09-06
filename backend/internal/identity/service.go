@@ -17,7 +17,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -909,6 +912,52 @@ func (s *Service) SalesRepByInviteCode(ctx context.Context, code string) (*User,
 
 // EnsureUserWithRole يجد المستخدم برقم هاتفه (أو ينشئه) ويضمن حمله الدور المطلوب.
 // تستخدمه الوحدات الأخرى لربط الحسابات (صاحب متجر، سائق...) — مع تدقيق كامل.
+// EnsureUserWithRoleTx كـ`EnsureUserWithRole` **في معاملةٍ مُمرَّرة**.
+//
+// **وُجدت لأجل تحويل المرشَّح** (`PF-01`): **إنشاءُ المتجر وصاحبِه
+// والمكافأةُ والتثبيتُ عمليّةٌ واحدة** — **فإن سقط آخرُها لم يبقَ
+// أوّلُها.**
+//
+// **والتدقيقُ خارجَها**: `Audit` أفضلُ جهدٍ بقرارٍ قائم (`PF-06`)،
+// **وإدخالُه هنا يجعل سقوطَه يُسقط إنشاءَ متجرٍ صحيح.**
+func (s *Service) EnsureUserWithRoleTx(ctx context.Context, q dbtx.Querier,
+	actorID, rawPhone, role, fullName, password string) (string, error) {
+	phone, ok := NormalizePhone(rawPhone)
+	if !ok {
+		return "", ErrInvalidPhone
+	}
+	var id string
+	err := q.QueryRow(ctx, `SELECT id::text FROM users WHERE phone = $1`, phone).Scan(&id)
+	if err == nil {
+		// **قائمٌ ⇒ يُمنَح الدورَ وحدَه** — **ولا تُمَسّ كلمتُه.**
+		if err := GrantRoleTx(ctx, q, id, role, &actorID); err != nil {
+			return "", err
+		}
+		return id, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return "", err
+	}
+
+	id, err = CreateUserWithRoleTx(ctx, q, phone, fullName, role)
+	if err != nil {
+		return "", err
+	}
+	if password != "" {
+		if len(password) < int(s.intSetting(ctx, "security.password_min_length", minPasswordLn)) {
+			return "", ErrWeakPassword
+		}
+		hash, herr := auth.HashPassword(password)
+		if herr != nil {
+			return "", herr
+		}
+		if err := SetTempPasswordTx(ctx, q, id, hash); err != nil {
+			return "", err
+		}
+	}
+	return id, nil
+}
+
 func (s *Service) EnsureUserWithRole(ctx context.Context, actorID, rawPhone, role, fullName, password, ip string) (*User, error) {
 	phone, ok := NormalizePhone(rawPhone)
 	if !ok {

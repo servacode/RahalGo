@@ -1004,6 +1004,18 @@ var TestMap = map[string]TestDecl{
 	"TestFAIL_R16_RedisDownFailsOpen":        stagingTest([]string{"R16"}, nil),
 	"TestFAIL_D13_MediaDirectoryListingOpen": stagingTest(nil, []string{"D13"}),
 
+	// **والبوّابةُ لا تُوسّخ ما تقيسه** — نظافةُ بنيةٍ لا إصلاحُ منتَج.
+	"TestGateRunLeavesTreeUnchanged": infraTest(),
+
+	// ── ذرّيّةُ عمليّات الإدارة (دورةُ إصلاحٍ ٤) ────────────────────
+	//
+	// **ثلاثُ عمليّاتٍ كانت تكتب مرّاتٍ بلا معاملة** — `PF-01` · `PF-02`
+	// · `PF-03`. **وهذه تسقط ما دام العطبُ قائماً**، بخلاف حرّاسِ
+	// `TestFAIL_*` التي توثّقه بالسجلّ.
+	"TestATOMIC_ExpenseAndTreasuryAreOneUnit": atomicTest([]string{"D5"}),
+	"TestATOMIC_LeadConversionIsOneUnit":      atomicTest([]string{"D2", "D25"}),
+	"TestATOMIC_AdminUserCreationIsOneUnit":   atomicTest([]string{"D15"}),
+
 	// ── `XG-31` · تتبّعُ الالتزامات (دورةُ إصلاحٍ ٣) ──────────────
 	//
 	// **عشرةُ حرّاسٍ يسألون سؤالاً واحداً**: **من أين جاء هذا الرقم؟**
@@ -1021,6 +1033,20 @@ var TestMap = map[string]TestDecl{
 	"TestFIN_XG10_DebtSettlementArithmetic":            xg10Test(),
 	"TestFIN_XG10_CombinedMerchantAndRepInsufficiency": xg10Test(),
 	"TestFIN_XG10_ConservationAcrossRefund":            xg10Test(),
+}
+
+// atomicTest حارسُ ذرّيّةِ عمليّةٍ إداريّة — `PF-01` · `PF-02` · `PF-03`.
+//
+// **والوضعُ `FAILURE` أصلُه**: **لا يُثبَت إلّا بحقنِ عطبٍ في منتصف
+// العمليّة** — **ونداءٌ ناجحٌ لا يقول شيئاً عن الذرّيّة.**
+func atomicTest(defects []string) TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows:   []string{"F-21", "F-26", "F-30"},
+		Defects: defects,
+		Gaps:    []string{"XG-18"},
+		Modes:   []string{"FAILURE", "FINANCIAL", "FULL", "RELEASE"},
+	}
 }
 
 // oblTest حارسُ تتبّعِ التزامٍ ماليّ — `XG-31`.

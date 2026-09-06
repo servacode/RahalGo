@@ -5,8 +5,8 @@
     "RequiresP0": 0,
     "RequiresP7": 0,
     "RequiresP8": 0,
-    "Pass": 2,
-    "DefectReproduced": 3,
+    "Pass": 5,
+    "DefectReproduced": 0,
     "RiskConfirmed": 1,
     "ExpectedFail": 1,
     "Partial": 1,
@@ -30,31 +30,31 @@
         "٥ grantSalesTargetIfAny — **تدفع مالاً** · خطؤها مُهمَل",
         "٦ UPDATE merchant_leads converted — **التثبيت** · خطؤه يُردّ"
       ],
-      "atomic_boundary": "NON_ATOMIC — ستُّ كتاباتٍ بلا معاملة",
+      "atomic_boundary": "ATOMIC — ستُّ كتاباتٍ في معاملةٍ واحدة (دورةُ إصلاحٍ ٤)",
       "failpoints": [
         "D2/step-1-create-merchant",
         "D2/step-6-commit-conversion"
       ],
       "expected": "لا مكافأةَ قبل تثبيتِ التحويل (XQ-3)",
-      "observed": "متجرٌ مُنشأٌ + مكافأةٌ مدفوعةٌ + المرشَّحُ ما يزال new",
+      "observed": "لا أثرَ بعد الحقن — ولا متجرَ ولا مكافأةَ والمرشَّحُ new",
       "financial_invariants": [
         "FI-03",
         "FI-05"
       ],
       "user_visible": "500 internal — بلا بيانٍ لِما وقع",
       "admin_visible": "PARTIAL",
-      "recovery": "الإعادةُ تُنشئ **متجراً ثانياً** — RETRY SAFETY = BROKEN",
+      "recovery": "RETRY SAFETY = RECOVERS — الإعادةُ تثبّت التحويلَ بلا متجرٍ ثانٍ",
       "tests": [
         "TestFAIL_D2_ConvertLeadPartialStates"
       ],
-      "result": "DEFECT_REPRODUCED",
+      "result": "PASS",
       "registers": [
         "D2",
         "D25",
         "XG-18"
       ],
       "where": "LOCAL",
-      "evidence": "XQ-3 FORBIDDEN STATE = PROVEN — متاجرُ=1 · مكافأةٌ=5000 · المرشَّحُ new · الردّ 500"
+      "evidence": "XQ-3 FORBIDDEN STATE = ABSENT — متاجرُ=0 · مكافأةٌ=0 · المرشَّحُ new · الردّ 500 · TestATOMIC_LeadConversionIsOneUnit"
     },
     {
       "id": "PF-02",
@@ -66,12 +66,12 @@
         "١ INSERT INTO expenses — يُردّ خطؤه",
         "٢ wallet.Apply(operating_expense) — يُردّ خطؤه بعد وقوع الأولى"
       ],
-      "atomic_boundary": "NON_ATOMIC — كتابتان في عمليّتين",
+      "atomic_boundary": "ATOMIC — الكتابتان في معاملةٍ واحدة (دورةُ إصلاحٍ ٤)",
       "failpoints": [
         "D5/step-2-treasury-debit"
       ],
       "expected": "المصروفُ وقيدُه يقعان معاً أو لا يقعان (FI-12.c)",
-      "observed": "مصروفٌ مسجَّلٌ وقيدُ الخزينة صفر",
+      "observed": "لا مصروفَ ولا قيد — والعمليّةُ ارتدّت كاملةً",
       "financial_invariants": [
         "FI-04.d",
         "FI-01.f",
@@ -79,17 +79,17 @@
       ],
       "user_visible": "500 internal — والمصروفُ باقٍ في القائمة",
       "admin_visible": "PARTIAL",
-      "recovery": "الإعادةُ تُنشئ مصروفاً جديداً — **واليتيمُ باقٍ بلا مسار إصلاح**",
+      "recovery": "CLEAN — الإعادةُ تُنشئ مصروفاً وخصمَه، ولا يتيمَ قبله",
       "tests": [
         "TestFAIL_D5_ExpenseTreasuryPartial",
         "TestFIN_ExpenseTreasuryInvariant"
       ],
-      "result": "DEFECT_REPRODUCED",
+      "result": "PASS",
       "registers": [
         "D5"
       ],
       "where": "LOCAL",
-      "evidence": "مصاريفُ=1 · قيودٌ=0 · وFI-04.d أمسكها"
+      "evidence": "مصاريفُ=0 · قيودٌ=0 · وFI-04.d صامتٌ إذ لا خرق · TestATOMIC_ExpenseAndTreasuryAreOneUnit"
     },
     {
       "id": "PF-03",
@@ -103,22 +103,22 @@
         "٣ SetTempPassword — **خارجَ أيّ معاملة**",
         "٤ Audit"
       ],
-      "atomic_boundary": "NON_ATOMIC — إنشاءٌ ثمّ منحُ أدوارٍ بلا معاملة",
+      "atomic_boundary": "ATOMIC — الإنشاءُ والأدوارُ والكلمةُ في معاملةٍ واحدة (دورةُ إصلاحٍ ٤)",
       "failpoints": [
         "D15/set-temp-password",
         "D15/grant-second-role",
         "D15/create-user"
       ],
       "expected": "مستخدمٌ بلا دورٍ لا يُترَك",
-      "observed": "حسابٌ بأدواره بلا كلمة مرور — والإعادةُ تُردّ phone_taken",
+      "observed": "لا مستخدِمَ ولا دور — والرقمُ يبقى متاحاً",
       "user_visible": "خطأٌ — والهاتفُ صار محجوزاً",
       "admin_visible": "PARTIAL",
-      "recovery": "BLOCKED — الهاتفُ محجوزٌ بمستخدمٍ ناقصٍ ولا مسارَ إصلاح",
+      "recovery": "CLEAN — الرقمُ حرٌّ والإعادةُ تُنشئ حساباً كاملاً",
       "tests": [
         "TestFAIL_D15_Reconciliation",
         "TestFAIL_D15_AdminCreateUserPartial"
       ],
-      "result": "DEFECT_REPRODUCED",
+      "result": "PASS",
       "registers": [
         "D15"
       ],

@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -323,6 +325,117 @@ func grantsCustomer(role string) bool {
 		return false
 	}
 	return role != RoleCustomer
+}
+
+// AdminCreateUserFull ينشئ مستخدِماً بأدواره وكلمتِه **في معاملةٍ واحدة**.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **مستخدِمٌ بلا كلمةٍ لا يدخل ورقمُه محجوز** — `PF-03` · `D15`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كانت ثلاثَ عمليّاتٍ متتالية**: `CreateUserWithRole` ذرّيّةٌ وحدَها،
+// ثمّ `GrantRole` لكلّ دورٍ زائد، ثمّ `SetTempPassword`. **وكلٌّ منها
+// معاملتُها.**
+//
+// **فإن سقطت الأخيرةُ بقي مستخدِمٌ بلا كلمة**: **لا يدخل، ورقمُه محجوزٌ
+// فلا يُنشأ ثانيةً** — `phone_taken`. **والتعافي مسدود.** (أُثبت
+// بالحقن: مستخدِمون=1 · أدوارٌ=2 · والردُّ 500.)
+//
+// **ولا يُنشأ طريقٌ ثانٍ للإنشاء**: هذه هي المعاملةُ، **و`GrantRole`
+// و`SetTempPassword` تبقيان لمن ينادي واحدةً منفردةً على مستخدِمٍ قائم.**
+// CreateUserWithRoleTx كـ`CreateUserWithRole` **في معاملةٍ مُمرَّرة**.
+//
+// **ورمزُ الدعوة يُترك للمنادي** — انظر `AdminCreateUserFull`.
+func CreateUserWithRoleTx(ctx context.Context, q dbtx.Querier,
+	phone, fullName, role string) (string, error) {
+	var id string
+	if err := q.QueryRow(ctx,
+		`INSERT INTO users (phone, full_name) VALUES ($1, $2) RETURNING id`,
+		phone, fullName).Scan(&id); err != nil {
+		return "", err
+	}
+	if _, err := q.Exec(ctx,
+		`INSERT INTO user_roles (user_id, role_code) VALUES ($1, $2)`, id, role); err != nil {
+		return "", err
+	}
+	if grantsCustomer(role) {
+		if _, err := q.Exec(ctx,
+			`INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'customer')
+			 ON CONFLICT DO NOTHING`, id); err != nil {
+			return "", err
+		}
+	}
+	return id, nil
+}
+
+// SetTempPasswordTx كـ`SetTempPassword` في معاملةٍ مُمرَّرة.
+func SetTempPasswordTx(ctx context.Context, q dbtx.Querier, userID, hash string) error {
+	_, err := q.Exec(ctx, `
+		UPDATE users SET password_hash = $2, must_change_password = true,
+		                 updated_at = now()
+		WHERE id = $1`, userID, hash)
+	return err
+}
+
+func (r *Repo) AdminCreateUserFull(ctx context.Context, phone, fullName string,
+	roles []string, passwordHash string, grantedBy *string) (*User, error) {
+	if len(roles) == 0 {
+		return nil, errors.New("لا دورَ للمستخدِم")
+	}
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	id, err := CreateUserWithRoleTx(ctx, tx, phone, fullName, roles[0])
+	if err != nil {
+		return nil, err
+	}
+	for i, role := range roles[1:] {
+		i++ // **والأوّلُ مُنح أعلاه** — فالمانحُ مسجَّلٌ لِما بعده.
+		var by *string
+		// **والأوّلُ بلا مانحٍ كما كان** — `CreateUserWithRole` لا تسجّله.
+		if i > 0 {
+			by = grantedBy
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO user_roles (user_id, role_code, granted_by) VALUES ($1, $2, $3)
+			ON CONFLICT DO NOTHING`, id, role, by); err != nil {
+			return nil, err
+		}
+		if grantsCustomer(role) {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO user_roles (user_id, role_code) VALUES ($1, 'customer')
+				ON CONFLICT DO NOTHING`, id); err != nil {
+				return nil, err
+			}
+		}
+	}
+	if passwordHash != "" {
+		// **مؤقّتةٌ لا نهائيّة** — الأدمنُ وضعها فمرّت بيدِ ثالث.
+		if _, err := tx.Exec(ctx, `
+			UPDATE users SET password_hash = $2, must_change_password = true,
+			                 updated_at = now()
+			WHERE id = $1`, id, passwordHash); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	// **ورمزُ الدعوة بعد التثبيت** — **وهو توليدٌ بمحاولاتٍ يقرأ ويكتب**،
+	// **وإدخالُه في المعاملة يُطيل قفلاً على `users` بلا موجب.**
+	// **وغيابُه لا يُبطل حساباً** — يُنشأ عند أوّل حاجة.
+	for _, role := range roles {
+		if role == "sales" {
+			if err := r.EnsureInviteCode(ctx, id); err != nil {
+				return nil, err
+			}
+		}
+	}
+	u, _, err := r.UserByID(ctx, id)
+	return u, err
 }
 
 func (r *Repo) GrantRole(ctx context.Context, userID, role string, grantedBy *string) error {

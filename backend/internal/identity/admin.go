@@ -78,29 +78,29 @@ func (s *Service) AdminCreateUser(ctx context.Context, actorID string, in Create
 		return nil, ErrWeakPassword
 	}
 
-	user, err := s.repo.CreateUserWithRole(ctx, phone, in.FullName, in.Roles[0])
+	// **والإنشاءُ كلُّه معاملةٌ واحدة** — `PF-03` · `D15`.
+	//
+	// **كان ثلاثَ عمليّاتٍ متتالية**، **فسقوطُ الأخيرة يترك مستخدِماً
+	// بلا كلمةٍ لا يدخل ورقمُه محجوز** — **والتعافي مسدود.**
+	var hash string
+	if in.Password != "" {
+		var err error
+		hash, err = auth.HashPassword(in.Password)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// **والكلمةُ مؤقّتةٌ لا نهائيّة**: الأدمنُ وضعها فمرّت بيدِ ثالثٍ كما
+	// تمرّ كلمةُ المتجر بيد المندوب. **ومن اعتمدها نهائيّةً ترك موظّفَ
+	// المنصّة بكلمةٍ يعرفها غيرُه إلى الأبد.**
+	user, err := s.repo.AdminCreateUserFull(ctx, phone, in.FullName, in.Roles,
+		hash, &actorID)
 	if isUniqueViolation(err) {
 		return nil, ErrPhoneTaken
 	}
 	if err != nil {
 		return nil, err
-	}
-	for _, r := range in.Roles[1:] {
-		if err := s.repo.GrantRole(ctx, user.ID, r, &actorID); err != nil {
-			return nil, err
-		}
-	}
-	if in.Password != "" {
-		hash, err := auth.HashPassword(in.Password)
-		if err != nil {
-			return nil, err
-		}
-		// **مؤقّتة لا نهائية**: الأدمن هو من وضعها، فمرّت بيدِ ثالث كما تمرّ كلمة
-		// المتجر بيد المندوب. وكان الإنشاء يستدعي SetPassword فتُعتمد كأنّ صاحبها
-		// اختارها — فيبقى موظّف المنصة بكلمة مرور يعرفها غيره إلى الأبد.
-		if err := s.repo.SetTempPassword(ctx, user.ID, hash); err != nil {
-			return nil, err
-		}
 	}
 
 	s.repo.Audit(ctx, &actorID, "admin.user_create", "user", user.ID, ip,

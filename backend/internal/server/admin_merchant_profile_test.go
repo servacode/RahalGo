@@ -69,9 +69,15 @@ func TestMerchantProfile_SeesHisStore(t *testing.T) {
 		VALUES ($1, 'late_prep', 'تأخّرٌ في التجهيز')`, f.merchantID)
 	exec("نزاعَ المتجر", `INSERT INTO disputes (party_role, merchant_id, order_id, reason, amount)
 		VALUES ('merchant', $1, $2, 'بضاعةٌ ناقصة', 5000)`, f.merchantID, orderID)
+	// **ولا تعليقَ في تقييم المتجر** — أسقطته الهجرة `0125`
+	// (`0125_drop_rating_comments.sql`): **شاشةُ السائق لا حقلَ فيها،
+	// والعمودُ كان يُكتب فارغاً ولا يُقرأ.**
+	//
+	// **وكان هذا الاختبارُ يكتب فيه فيسقط بـ`42703`** — **عقدٌ شائخٌ لا
+	// عطبُ منتَج.** **ولا يُعاد العمودُ لأجل اختبار.**
 	exec("تقييمَ السائق", `INSERT INTO merchant_ratings
-		(order_id, driver_id, merchant_id, speed_stars, conduct_stars, comment)
-		VALUES ($1, $2, $3, 4, 5, 'تجهيزٌ سريع')`, orderID, driver, f.merchantID)
+		(order_id, driver_id, merchant_id, speed_stars, conduct_stars)
+		VALUES ($1, $2, $3, 4, 5)`, orderID, driver, f.merchantID)
 	t.Cleanup(func() {
 		c := context.Background()
 		_, _ = f.pool.Exec(c, `DELETE FROM merchant_ratings WHERE order_id = $1`, orderID)

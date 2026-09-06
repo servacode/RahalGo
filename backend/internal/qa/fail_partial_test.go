@@ -172,7 +172,17 @@ func TestFAIL_D2_ConvertLeadPartialStates(t *testing.T) {
 				s.LeadStatus)
 			t.Logf("D2 PARTIAL CONVERSION = DEFECT REPRODUCED (بلا شقِّ المال)")
 		} else {
-			t.Errorf("لم تقع حالٌ جزئيّةٌ — **وD2 يقول إنّها تقع. يُراجَع.**")
+			// **وقد أُصلحت في دورةِ إصلاحٍ ٤** (٢٠٢٦-٠٩-٠٦):
+			// **التحويلُ معاملةٌ واحدة**، فلا حالَ جزئيّة.
+			//
+			// **فانقلب هذا الرصدُ**: كان يسجّل وقوعَ الحال الجزئيّة،
+			// **وصار يحرس غيابَها.**
+			t.Logf("D2 PARTIAL CONVERSION = FIXED — لا حالَ جزئيّةً بعد الحقن")
+		}
+		if s.Merchants > 0 || s.LeadStatus == "converted" || s.RepReward > before.RepReward {
+			t.Errorf("**أثرٌ بقي بعد سقوط التثبيت**: متاجرُ=%d · المرشَّحُ=%q · "+
+				"مكافأةٌ=%d — **والتحويلُ يقع كلُّه أو لا يقع.**",
+				s.Merchants, s.LeadStatus, s.RepReward)
 		}
 
 		// ── والتعافي (البند ٢٣) ─────────────────────────────────────
@@ -181,7 +191,7 @@ func TestFAIL_D2_ConvertLeadPartialStates(t *testing.T) {
 		after.log(t, "AFTER RETRY")
 		t.Logf("الإعادة: %d", retry.Code)
 		if after.Merchants > 1 {
-			t.Logf("RETRY SAFETY = BROKEN — الإعادةُ أنشأت متجراً ثانياً (%d)", after.Merchants)
+			t.Errorf("RETRY SAFETY = BROKEN — الإعادةُ أنشأت متجراً ثانياً (%d)", after.Merchants)
 		} else if after.LeadStatus == "converted" {
 			t.Logf("RETRY SAFETY = RECOVERS — الإعادةُ ثبّتت التحويلَ بلا متجرٍ ثانٍ")
 		}
@@ -254,15 +264,23 @@ func TestFAIL_D5_ExpenseTreasuryPartial(t *testing.T) {
 			t.Logf("  ADMIN VISIBILITY = PARTIAL — رُدَّ %d · والمصروفُ باقٍ في القائمة", got.Code)
 		}
 	} else if expenses == 0 {
-		t.Errorf("لم يبقَ مصروفٌ — **وD5 يقول إنّ الأولى تقع والثانيةَ تسقط. يُراجَع.**")
+		// **أُصلحت في دورةِ إصلاحٍ ٤** — المصروفُ وخصمُه معاملةٌ واحدة.
+		t.Logf("D5 EXPENSE/TREASURY = FIXED — لا مصروفَ يتيماً بعد الحقن")
+	}
+	if ledger != expenses {
+		t.Errorf("**مصروفٌ بلا خصمٍ أو خصمٌ بلا مصروف**: مصاريفُ=%d · قيودٌ=%d",
+			expenses, ledger)
 	}
 
-	// **والحارسُ يمسك الحالَ** — وهو ما بُني في `P-4`.
-	vs := newViolations(h, base, "FI-04.d")
-	if len(vs) > 0 {
-		t.Logf("FI CHECK AFTER FAILURE = CAUGHT — %s", vs[0])
+	// **والحارسُ لا يُسأل عمّا لم يقع.**
+	//
+	// **`FI-04.d` يمسك مصروفاً بلا خصم** — **ولا مصروفَ يتيماً بعد
+	// الإصلاح**، فسكوتُه هو الصواب. **ومن أبقى التوكيدَ على أن يمسك
+	// شيئاً طلب من الحارس أن يخترع خرقاً.**
+	if vs := newViolations(h, base, "FI-04.d"); len(vs) > 0 {
+		t.Errorf("FI-04.d أمسك خرقاً بعد الإصلاح — %s", vs[0])
 	} else {
-		t.Errorf("FI-04.d لم يمسك مصروفاً بلا خصم — **الحارسُ أعمى**")
+		t.Logf("FI-04.d صامتٌ — ولا خرقَ ليُمسَك")
 	}
 
 	// ── والتعافي ────────────────────────────────────────────────────
@@ -274,9 +292,14 @@ func TestFAIL_D5_ExpenseTreasuryPartial(t *testing.T) {
 		       (SELECT count(*) FROM wallet_transactions t JOIN expenses e ON e.id::text = t.ref
 		        WHERE e.category_id = $1::uuid)`, catID).Scan(&expenses2, &ledger2)
 	t.Logf("بعد الإعادة: مصاريفُ=%d · قيودٌ=%d · الردّ=%d", expenses2, ledger2, retry.Code)
-	if expenses2 > expenses && ledger2 == ledger+1 {
-		t.Logf("RETRY = NEW EXPENSE — **والأوّلُ اليتيمُ باقٍ ولا مسارَ يُصلحه**")
+	if retry.Code >= 400 {
+		t.Errorf("**الإعادةُ سقطت** (%d) — والتعافي كان مسدوداً", retry.Code)
 	}
+	if expenses2 != ledger2 {
+		t.Errorf("**بعد الإعادة**: مصاريفُ=%d · قيودٌ=%d — ولا يتطابقان",
+			expenses2, ledger2)
+	}
+	t.Logf("RETRY = CLEAN — مصروفٌ واحدٌ وخصمُه، ولا يتيمَ قبله")
 }
 
 // newViolations ما استجدّ — **ولا تُسقط**: الخرقُ هنا هو المقصود.

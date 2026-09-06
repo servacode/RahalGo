@@ -266,8 +266,26 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actor := userIDFrom(r)
+
+	// ══════════════════════════════════════════════════════════════
+	// **المصروفُ وخصمُ الخزينة كتابةٌ واحدة** — `PF-02` · `D5`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كانتا في عمليّتين**: يُكتب المصروفُ ثمّ تُنقَص الخزينة. **فإن
+	// سقطت الثانيةُ بقي مصروفٌ بلا خصم** — **وتقريرُ الأرباح يقول
+	// ربحاً لم يقع.** (أُثبت بالحقن: مصاريفُ=1 · قيودٌ=0.)
+	//
+	// **و`Apply` تفتح معاملتَها الخاصّة فلا تنضمّ إلى شيء** —
+	// **و`ApplyTx` تكتب في المُمرَّرة**، فتقع الكتابتان أو لا تقع واحدة.
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(r.Context()) }()
+
 	var id string
-	if err := s.pg.QueryRow(r.Context(), `
+	if err := tx.QueryRow(r.Context(), `
 		INSERT INTO expenses (category_id, amount, note, spent_at, created_by)
 		VALUES ($1, $2, $3, $4::date, $5) RETURNING id::text`,
 		req.CategoryID, req.Amount, clip(strings.TrimSpace(req.Note), 300),
@@ -278,9 +296,13 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 
 	// **والخزينةُ تنقص** — والمرجعُ معرّفُ المصروف، **فمن قرأ قيداً في
 	// الدفتر عرف على أيّ بابٍ صُرف.**
-	if _, err := s.wallet.Apply(r.Context(), s.orders.TreasuryID(r.Context()),
+	if _, err := s.wallet.ApplyTx(r.Context(), tx, s.orders.TreasuryID(r.Context()),
 		-req.Amount, "operating_expense", id, clip(strings.TrimSpace(req.Note), 300),
 		&actor); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -301,17 +323,31 @@ func (s *Server) handleVoidExpense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	actor := userIDFrom(r)
+
+	// **والإلغاءُ كالإنشاء** — `PF-02`: **وسمُ الإلغاءِ وردُّ المال
+	// كتابةٌ واحدة.** **وإلّا بقي مصروفٌ مُلغىً ومالُه لم يعُد.**
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(r.Context()) }()
+
 	var amount int64
 	// **ولا يُلغى مرّتين** — **وإلّا رُدّ المالُ ضِعفَه إلى الخزينة.**
-	if err := s.pg.QueryRow(r.Context(), `
+	if err := tx.QueryRow(r.Context(), `
 		UPDATE expenses SET voided_at = now(), voided_by = $2
 		WHERE id = $1 AND voided_at IS NULL
 		RETURNING amount`, id, actor).Scan(&amount); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	if _, err := s.wallet.Apply(r.Context(), s.orders.TreasuryID(r.Context()),
+	if _, err := s.wallet.ApplyTx(r.Context(), tx, s.orders.TreasuryID(r.Context()),
 		amount, "operating_expense", id, "إلغاءُ مصروف", &actor); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
 	}

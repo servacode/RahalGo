@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 234,
-    "test_funcs": 803
+    "test_files": 235,
+    "test_funcs": 806
   },
   "flows": [
     {
@@ -696,6 +696,9 @@
       ],
       "tests": [
         "TestRepTarget_GrantedOnDelivery",
+        "TestATOMIC_AdminUserCreationIsOneUnit",
+        "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
+        "TestATOMIC_LeadConversionIsOneUnit",
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestFIN_TargetRewardPrecedesCommit",
         "TestFIN_TransactionBoundaries",
@@ -844,6 +847,9 @@
         "D5"
       ],
       "tests": [
+        "TestATOMIC_AdminUserCreationIsOneUnit",
+        "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
+        "TestATOMIC_LeadConversionIsOneUnit",
         "TestFAIL_D5_ExpenseTreasuryPartial",
         "TestFIN_ExpenseTreasuryInvariant",
         "TestFIN_TransactionBoundaries"
@@ -962,6 +968,9 @@
         "R16"
       ],
       "tests": [
+        "TestATOMIC_AdminUserCreationIsOneUnit",
+        "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
+        "TestATOMIC_LeadConversionIsOneUnit",
         "TestSampleFactory_ForeignRoleDenied",
         "TestSampleFactory_ValidToken",
         "TestFAIL_D15_AdminCreateUserPartial",
@@ -1153,6 +1162,7 @@
       "domain": "الهويّة · الكتالوج",
       "severity": "HIGH",
       "tests": [
+        "TestATOMIC_LeadConversionIsOneUnit",
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestFIN_TargetRewardPrecedesCommit",
         "TestFIN_TransactionBoundaries",
@@ -1182,6 +1192,7 @@
       "domain": "مال",
       "severity": "HIGH",
       "tests": [
+        "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
         "TestFAIL_D5_ExpenseTreasuryPartial",
         "TestFIN_ExpenseTreasuryInvariant",
         "TestFIN_TransactionBoundaries"
@@ -1275,6 +1286,7 @@
       "domain": "الهويّة",
       "severity": "MEDIUM",
       "tests": [
+        "TestATOMIC_AdminUserCreationIsOneUnit",
         "TestFAIL_D15_AdminCreateUserPartial",
         "TestFAIL_D15_Reconciliation"
       ],
@@ -1381,6 +1393,7 @@
       "domain": "تزامن · مالٌ مباشر",
       "severity": "HIGH",
       "tests": [
+        "TestATOMIC_LeadConversionIsOneUnit",
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestRACE_DuplicateLeadConversion"
       ],
@@ -1807,6 +1820,9 @@
       "title": "لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين",
       "severity": "BLOCKER",
       "tests": [
+        "TestATOMIC_AdminUserCreationIsOneUnit",
+        "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
+        "TestATOMIC_LeadConversionIsOneUnit",
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestRACE_DuplicateLeadConversion"
       ],
@@ -4514,7 +4530,15 @@
       "name": "TestGateRunLeavesTreeUnchanged",
       "file": "internal/gate/hygiene_test.go",
       "package": "gate_test",
-      "orphan": true
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestPin_FormatIsFourDigitsOnly",
@@ -5894,6 +5918,79 @@
       "file": "internal/qa/alternatives_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestATOMIC_AdminUserCreationIsOneUnit",
+      "file": "internal/qa/atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-26",
+        "F-30"
+      ],
+      "defects": [
+        "D15"
+      ],
+      "gaps": [
+        "XG-18"
+      ],
+      "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
+      "file": "internal/qa/atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-26",
+        "F-30"
+      ],
+      "defects": [
+        "D5"
+      ],
+      "gaps": [
+        "XG-18"
+      ],
+      "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestATOMIC_LeadConversionIsOneUnit",
+      "file": "internal/qa/atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-26",
+        "F-30"
+      ],
+      "defects": [
+        "D2",
+        "D25"
+      ],
+      "gaps": [
+        "XG-18"
+      ],
+      "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestAUTH_ExpiredToken",
