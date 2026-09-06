@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 240,
-    "test_funcs": 822
+    "test_files": 241,
+    "test_funcs": 828
   },
   "flows": [
     {
@@ -722,7 +722,13 @@
         "TestRACE_DuplicateLeadConversion",
         "TestXG29_FailureBeforeCommitLeavesNothing",
         "TestXG29_FailureThenRetryGrantsRewardOnce",
-        "TestXG29_SuccessGrantsRewardExactlyOnce"
+        "TestXG29_SuccessGrantsRewardExactlyOnce",
+        "TestXG32_ConcurrentTargetCrossingGrantsOnce",
+        "TestXG32_FailureRollbackThenRetryGrantsOnce",
+        "TestXG32_FirstConversionGrantsRewardImmediately",
+        "TestXG32_FurtherConversionsDoNotRepeatReward",
+        "TestXG32_PreviousMonthDoesNotSatisfyTarget",
+        "TestXG32_TargetTwoGrantsOnSecondOnly"
       ],
       "status": "COVERED"
     },
@@ -788,7 +794,13 @@
         "TestFIN_SnapshotVsLiveEconomics",
         "TestFIN_XG10_DebtOffsetFromNextCommission",
         "TestFIN_XG10_RepCommissionReversedOnRefund",
-        "TestFIN_XG10_RepWithdrewThenRefund"
+        "TestFIN_XG10_RepWithdrewThenRefund",
+        "TestXG32_ConcurrentTargetCrossingGrantsOnce",
+        "TestXG32_FailureRollbackThenRetryGrantsOnce",
+        "TestXG32_FirstConversionGrantsRewardImmediately",
+        "TestXG32_FurtherConversionsDoNotRepeatReward",
+        "TestXG32_PreviousMonthDoesNotSatisfyTarget",
+        "TestXG32_TargetTwoGrantsOnSecondOnly"
       ],
       "status": "COVERED"
     },
@@ -1971,12 +1983,19 @@
       "id": "XG-32",
       "title": "مكافأةُ الهدف تُحسَب بعدٍّ لا يرى متجرَ معاملتِه",
       "severity": "CRITICAL",
+      "fixed": "**صار العدُّ يقرأ بالمعاملة نفسِها** — `doneThisMonthOn` تأخذ المنفّذَ، و`GrantTargetIfReachedTx` تمرّر معاملتَها. **فالمتجرُ المُنشأ داخلها يُرى، والمكافأةُ تُقيَّد في حينها.** **ولم يُنقَل المنحُ خارجَ المعاملة ولا ثُبِّت المتجرُ مبكّراً** — **كلاهما يعيد `PF-01`**: متجرٌ قائمٌ ومرشَّحٌ لم يُحوَّل. **فالقراءةُ هي التي انضمّت، لا العملُ الذي خرج.** **وكشف الإصلاحُ ثانيةً**: خرقُ `incentives_one_target_per_month` داخلَ معاملةٍ مشتركةٍ **يُجهضها كلَّها** — فيسقط التحويلُ بـ`500` وإن كانت المكافأةُ وحدَها المكرَّرة. **فصار الإدخالُ `ON CONFLICT DO NOTHING`** — **والحارسُ في المخطَّط كما هو، ولا مالَ لمن لم يُدخَل له صفّ.** وسبعةُ حرّاسٍ: هدفٌ=1 يُكافأ في أوّل تحويل · وهدفٌ=2 في الثاني لا الأوّل · وسقوطٌ يردّ كلَّ شيء · وإعادةٌ تُكافئ مرّةً · وثلاثةُ تحويلاتٍ لا تكرّر · وشهرٌ مضى لا يُرضي هدفَ هذا الشهر · وعبورٌ متزامنٌ بتداخلٍ مقيسٍ يُكافأ مرّةً.",
       "tests": [
         "TestXG29_FailureBeforeCommitLeavesNothing",
         "TestXG29_FailureThenRetryGrantsRewardOnce",
-        "TestXG29_SuccessGrantsRewardExactlyOnce"
+        "TestXG29_SuccessGrantsRewardExactlyOnce",
+        "TestXG32_ConcurrentTargetCrossingGrantsOnce",
+        "TestXG32_FailureRollbackThenRetryGrantsOnce",
+        "TestXG32_FirstConversionGrantsRewardImmediately",
+        "TestXG32_FurtherConversionsDoNotRepeatReward",
+        "TestXG32_PreviousMonthDoesNotSatisfyTarget",
+        "TestXG32_TargetTwoGrantsOnSecondOnly"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "COVERED"
     },
     {
       "id": "XG-33",
@@ -9485,6 +9504,132 @@
         "XG-32"
       ],
       "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG32_ConcurrentTargetCrossingGrantsOnce",
+      "file": "internal/qa/reward_target_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-32"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG32_FailureRollbackThenRetryGrantsOnce",
+      "file": "internal/qa/reward_target_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-32"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG32_FirstConversionGrantsRewardImmediately",
+      "file": "internal/qa/reward_target_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-32"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG32_FurtherConversionsDoNotRepeatReward",
+      "file": "internal/qa/reward_target_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-32"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG32_PreviousMonthDoesNotSatisfyTarget",
+      "file": "internal/qa/reward_target_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-32"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG32_TargetTwoGrantsOnSecondOnly",
+      "file": "internal/qa/reward_target_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-32"
+      ],
+      "modes": [
+        "CONCURRENCY",
         "FAILURE",
         "FINANCIAL",
         "FULL",

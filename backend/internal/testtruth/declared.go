@@ -250,7 +250,26 @@ var Gaps = []GapDecl{
 	// تغيّر شيفرةَ المنتَج» — **وهذه واقعةٌ جديدةٌ تُعرَض ولا تُحسَم
 	// من تلقائي.**
 	{ID: "XG-32", Title: "مكافأةُ الهدف تُحسَب بعدٍّ لا يرى متجرَ معاملتِه",
-		Severity: "CRITICAL"},
+		Severity: "CRITICAL",
+		// **دورةُ إصلاحٍ ٨ · ٢٠٢٦-٠٩-٠٦ — بقرار المالك.**
+		Fixed: "**صار العدُّ يقرأ بالمعاملة نفسِها** — `doneThisMonthOn` " +
+			"تأخذ المنفّذَ، و`GrantTargetIfReachedTx` تمرّر معاملتَها. " +
+			"**فالمتجرُ المُنشأ داخلها يُرى، والمكافأةُ تُقيَّد في " +
+			"حينها.** " +
+			"**ولم يُنقَل المنحُ خارجَ المعاملة ولا ثُبِّت المتجرُ " +
+			"مبكّراً** — **كلاهما يعيد `PF-01`**: متجرٌ قائمٌ ومرشَّحٌ " +
+			"لم يُحوَّل. **فالقراءةُ هي التي انضمّت، لا العملُ الذي " +
+			"خرج.** " +
+			"**وكشف الإصلاحُ ثانيةً**: خرقُ `incentives_one_target_" +
+			"per_month` داخلَ معاملةٍ مشتركةٍ **يُجهضها كلَّها** — " +
+			"فيسقط التحويلُ بـ`500` وإن كانت المكافأةُ وحدَها " +
+			"المكرَّرة. **فصار الإدخالُ `ON CONFLICT DO NOTHING`** — " +
+			"**والحارسُ في المخطَّط كما هو، ولا مالَ لمن لم يُدخَل له " +
+			"صفّ.** " +
+			"وسبعةُ حرّاسٍ: هدفٌ=1 يُكافأ في أوّل تحويل · وهدفٌ=2 في " +
+			"الثاني لا الأوّل · وسقوطٌ يردّ كلَّ شيء · وإعادةٌ تُكافئ " +
+			"مرّةً · وثلاثةُ تحويلاتٍ لا تكرّر · وشهرٌ مضى لا يُرضي " +
+			"هدفَ هذا الشهر · وعبورٌ متزامنٌ بتداخلٍ مقيسٍ يُكافأ مرّةً."},
 
 	// ══════════════════════════════════════════════════════════════
 	// **`XG-33` — لا علامةَ تثبيتٍ تفرّق الموتَ قبلَ العمل من بعده**
@@ -1101,6 +1120,14 @@ var TestMap = map[string]TestDecl{
 	// **وثوابتُ المال تُسأل عن أساسٍ صحيحٍ لا عن قاعدةٍ خالية.**
 	"TestFIN_InvariantsCleanOnValidFixture": infraTest(),
 
+	// ── مكافأةُ الهدف تُحسَب بمعاملتِها (دورةُ إصلاحٍ ٨) ────────────
+	"TestXG32_FirstConversionGrantsRewardImmediately": targetTest(),
+	"TestXG32_TargetTwoGrantsOnSecondOnly":            targetTest(),
+	"TestXG32_FailureRollbackThenRetryGrantsOnce":     targetTest(),
+	"TestXG32_FurtherConversionsDoNotRepeatReward":    targetTest(),
+	"TestXG32_PreviousMonthDoesNotSatisfyTarget":      targetTest(),
+	"TestXG32_ConcurrentTargetCrossingGrantsOnce":     targetTest(),
+
 	// ── مطالبةٌ يتيمة (تحضيرُ دورةِ ٧) ──────────────────────────────
 	//
 	// **الأوّلان يوثّقان `C-06` وينجحان ما دامت قائمةً ويسقطان يومَ
@@ -1192,6 +1219,16 @@ func uniqTest() TestDecl {
 		Defects: []string{"D2", "D25"},
 		Gaps:    []string{"XG-18"},
 		Modes:   []string{"CONCURRENCY", "FAILURE", "FULL", "RELEASE"},
+	}
+}
+
+// targetTest حارسُ مكافأةِ الهدف — `XG-32`.
+func targetTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-21", "F-23"},
+		Gaps:  []string{"XG-32"},
+		Modes: []string{"CONCURRENCY", "FAILURE", "FINANCIAL", "FULL", "RELEASE"},
 	}
 }
 

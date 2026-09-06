@@ -134,7 +134,8 @@ func (s *Service) GrantTargetIfReachedTx(ctx context.Context, tx dbtx.Querier,
 	if len(levels) == 0 {
 		return 0, nil
 	}
-	done, err := s.doneThisMonth(ctx, userID, role)
+	// **ويُعَدُّ بالمعاملة نفسِها** — `XG-32`: **وإلّا لم يُرَ متجرُها.**
+	done, err := s.doneThisMonthOn(ctx, tx, userID, role)
 	if err != nil {
 		return 0, err
 	}
@@ -222,19 +223,44 @@ func (s *Service) GrantTargetIfReached(ctx context.Context, userID, role string)
 // **وأنا من ثبّت الخطأ**: رأيتُ اللوحةَ تقول «عميل» والشيفرةَ تعدّ
 // طلبات، **فجعلتُ الكلمةَ تتبع الشيفرة** بدل أن تتبع الشيفرةُ القصد.
 func (s *Service) doneThisMonth(ctx context.Context, userID, role string) (int64, error) {
-	q := `SELECT count(*) FROM orders o
+	return s.doneThisMonthOn(ctx, s.db, userID, role)
+}
+
+// doneThisMonthOn العدُّ نفسُه **بالمنفّذ المُمرَّر**.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا يلزم أن يقرأ من المعاملة** — `XG-32`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان العدُّ يقرأ من المَسبَح دائماً** — **والمتجرُ الذي يُنشأ داخلَ
+// معاملة التحويل غيرُ مُثبَّتٍ بعدُ فلا يراه.** فيُحسَب الهدفُ على ما
+// قبلَه، **وتتأخّر المكافأةُ تحويلاً كاملاً.**
+//
+// **ومقيسٌ بالأرقام**: هدفٌ=1 · تحويلٌ أوّلُ ⇒ **مكافآتُ=0**، وثانٍ
+// ⇒ 5000. **ومن بلغ هدفَه بالضبط ووقف لا يُكافأ أبداً** — **وإن دار
+// الشهرُ عاد العدُّ صفراً فضاع المالُ ولا يُقرأ له أثر.**
+//
+// **وهي تراجعٌ أدخلته دورةُ إصلاحٍ ٤** حين جُمع التحويلُ في معاملةٍ
+// واحدة (`PF-01`): **قبلَها كان المنحُ يقع والمتجرُ مُثبَّتٌ فيُعَدّ.**
+//
+// **ولا يُصلَح بتثبيتٍ مبكّر**: **تثبيتُ المتجر قبل تمام التحويل يعيد
+// `PF-01` نفسَها** — متجرٌ قائمٌ ومرشَّحٌ لم يُحوَّل. **فالقراءةُ هي
+// التي تنضمّ إلى المعاملة، لا العملُ الذي يخرج منها.**
+func (s *Service) doneThisMonthOn(ctx context.Context, q dbtx.Querier,
+	userID, role string) (int64, error) {
+	sql := `SELECT count(*) FROM orders o
 	      WHERE o.driver_id = $1 AND o.status = 'delivered'
 	        AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart
 	if role == "sales" {
 		// **ولا تُستثنى حالة** — `active` و`inactive` و`suspended`
 		// كلُّها متاجرُ فتحها، **وليس في الجدول حذفٌ ناعمٌ أصلاً.**
 		// **ومتجرٌ عُوقب بعد شهرٍ لا يُسحب من رصيد من جلبه.**
-		q = `SELECT count(*) FROM merchants m
+		sql = `SELECT count(*) FROM merchants m
 		     WHERE m.sales_rep_user_id = $1
 		       AND m.created_at AT TIME ZONE 'Asia/Damascus' >= ` + monthStart
 	}
 	var n int64
-	err := s.db.QueryRow(ctx, q, userID).Scan(&n)
+	err := q.QueryRow(ctx, sql, userID).Scan(&n)
 	return n, err
 }
 
@@ -275,11 +301,32 @@ func (s *Service) grantTargetTx(ctx context.Context, tx dbtx.Querier,
 
 	// **والصفُّ أوّلاً**: هو ما يحمل الفهرسَ الفريد، **فيُردّ المكرَّرُ قبل أن
 	// يمسّ الدفتر.** ولو كُتب المالُ أوّلاً لَخرج ثمّ رُدّ القيد.
-	if _, err := tx.Exec(ctx, `
+	// ══════════════════════════════════════════════════════════════
+	// **ولا يُترَك القيدُ يُفسد معاملةَ غيرِه** — `XG-32`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **`incentives_one_target_per_month` هو الحارسُ الأخير** ويبقى.
+	// **لكنّ خرقَه داخلَ معاملةٍ مشتركةٍ يُجهضها كلَّها** — فيسقط
+	// التحويلُ بـ`500` وإن كانت المكافأةُ وحدَها هي المكرَّرة.
+	// (مقيس: تحويلٌ ثانٍ بعد بلوغ الهدف يُردّ `500`.)
+	//
+	// **و`continue` بعد الخرق لا ينفع**: **بوستغرس يُجهض المعاملةَ عند
+	// أوّل خرق**، فكلُّ ما بعده يسقط.
+	//
+	// **فيُسأل القيدُ قبل أن يُخرَق**: `ON CONFLICT DO NOTHING` —
+	// **والحارسُ في المخطَّط كما هو، والمعاملةُ تمضي.** **ومن لم يُدخَل
+	// له صفٌّ لا يُقيَّد له مال.**
+	tag, err := tx.Exec(ctx, `
 		INSERT INTO incentives (user_id, kind, amount, reason, for_target, period, created_by)
-		VALUES ($1, $2, $3, $4, true, $5, NULL)`,
-		userID, KindReward, reward, reason, period); err != nil {
+		VALUES ($1, $2, $3, $4, true, $5, NULL)
+		ON CONFLICT DO NOTHING`,
+		userID, KindReward, reward, reason, period)
+	if err != nil {
 		return err
+	}
+	if tag.RowsAffected() == 0 {
+		// **كوفئ عن هذه المرحلة سابقاً** — ولا تكرار.
+		return errAlreadyGranted
 	}
 	if _, err := s.wallet.ApplyTx(ctx, tx, userID, reward, KindReward, "", reason, nil); err != nil {
 		return err
@@ -298,7 +345,17 @@ func (s *Service) grantTargetTx(ctx context.Context, tx dbtx.Querier,
 //
 // **والنصُّ لا الرمزُ** لأنّ `pgconn.PgError` يقتضي استيراداً لا تحتاجه الحزمة
 // لغيره — **والاسمُ مكتوبٌ في الهجرة فلا يتبدّل صامتاً.**
+// errAlreadyGranted **كوفئ عن هذه المرحلة سابقاً** — ليس عطباً.
+//
+// **ولا يُقرأ من نصّ خطأ القاعدة**: `isDuplicate` تفحص اسمَ القيد في
+// نصّ الخطأ، **وذلك يقع بعد أن تكون المعاملةُ أُجهضت.** **وهذا يُرجَع
+// قبل أيّ خرق.**
+var errAlreadyGranted = errors.New("incentives: كوفئ عن هذه المرحلة سابقاً")
+
 func isDuplicate(err error) bool {
+	if errors.Is(err, errAlreadyGranted) {
+		return true
+	}
 	return err != nil && strings.Contains(err.Error(), "incentives_one_target_per_month")
 }
 
