@@ -1,6 +1,7 @@
 package qa
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -161,4 +162,83 @@ func signedMediaURL(t *testing.T, h *Harness, admin *User, path string) string {
 	}
 	u, _ := got.JSON()["url"].(string)
 	return u
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **٦ · وتوقيعٌ انتهى أجلُه أو عُبث بأجله لا يُقبَل**
+// ══════════════════════════════════════════════════════════════════════
+func TestD13_ExpiredAndTamperedSignatures(t *testing.T) {
+	h := New(t)
+	admin := h.NewUser("admin")
+	path := uploadKind(t, h, "delivery_proof")
+	signed := signedMediaURL(t, h, admin, path)
+	if signed == "" {
+		t.Fatal("لا رابطَ موقَّع")
+	}
+	u, err := url.Parse(signed)
+	if err != nil {
+		t.Fatalf("تحليلُ الرابط: %v", err)
+	}
+	q := u.Query()
+	sig, exp := q.Get("sig"), q.Get("exp")
+
+	// **أجلٌ مضى بتوقيعه الأصليّ.**
+	past := "/media/" + path + "?exp=1&sig=" + sig
+	// **أجلٌ مُطاوَلٌ بتوقيعٍ قديم** — **ومن قبله جعل الأجلَ زينة.**
+	far := "/media/" + path + "?exp=99999999999&sig=" + sig
+	// **مسارٌ بُدّل بتوقيع غيرِه.**
+	other := uploadKind(t, h, "delivery_proof")
+	swapped := "/media/" + other + "?exp=" + exp + "&sig=" + sig
+
+	for name, u := range map[string]string{
+		"أجلٌ مضى": past, "أجلٌ مُطاوَل": far, "مسارٌ مُبدَّل": swapped,
+	} {
+		got := h.GET(u, "")
+		t.Logf("%-14s ⇒ %d", name, got.Code)
+		if got.Code == 200 {
+			t.Errorf("**%s قُبل** — والتوقيعُ لا يحرس", name)
+		}
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **٧ · واجتيازُ المسار مرفوضٌ نصّاً ومرمَّزاً**
+// ══════════════════════════════════════════════════════════════════════
+func TestD13_TraversalIsRefused(t *testing.T) {
+	h := New(t)
+	for _, p := range []string{
+		"/media/../go.mod",
+		"/media/..%2fgo.mod",
+		"/media/%2e%2e/go.mod",
+		"/media/2026/../../go.mod",
+	} {
+		got := h.GET(p, "")
+		t.Logf("%-26s ⇒ %d", p, got.Code)
+		if got.Code == 200 {
+			t.Errorf("**`%s` خرج من المجلَّد** — واجتيازُ المسار مفتوح", p)
+		}
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **٨ · ومجهولُ النسب يُحجَب**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ملفٌّ في المجلَّد بلا صفٍّ في الجدول** — **لا يُعرَف أعامٌّ هو أم
+// شخصيّ**، **ومن خدمه بحجّة الجهل خدم كلَّ ما تسرّب إلى المجلَّد.**
+func TestD13_UnknownMediaDefaultsToProtected(t *testing.T) {
+	h := New(t)
+	rel := "2026/09/" + uniq("orphan") + ".jpg"
+	full := filepath.Join(h.MediaDir, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatalf("مجلَّد: %v", err)
+	}
+	if err := os.WriteFile(full, []byte("JPEGDATA"), 0o644); err != nil {
+		t.Fatalf("كتابة: %v", err)
+	}
+	got := h.GET("/media/"+rel, "")
+	t.Logf("ملفٌّ بلا صفٍّ ⇒ %d", got.Code)
+	if got.Code == 200 {
+		t.Error("**ملفٌّ مجهولُ النسب خُدم** — **والافتراضُ يجب أن يكون الحجب**")
+	}
 }

@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 243,
-    "test_funcs": 844
+    "test_files": 244,
+    "test_funcs": 849
   },
   "flows": [
     {
@@ -8177,6 +8177,18 @@
       "orphan": true
     },
     {
+      "name": "TestXG34_DifferentKeysDoNotSerialize",
+      "file": "internal/qa/lock_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestXG34_NoTransactionIsLeftOpen",
+      "file": "internal/qa/lock_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMapDataIsFresh",
       "file": "internal/qa/mapdata_test.go",
       "package": "qa",
@@ -8225,6 +8237,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestD13_ExpiredAndTamperedSignatures",
+      "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestD13_MediaDirectoryIsNotListable",
@@ -8291,6 +8309,18 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestD13_TraversalIsRefused",
+      "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestD13_UnknownMediaDefaultsToProtected",
+      "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestMDIS_001_SMSChannelIsGone",
