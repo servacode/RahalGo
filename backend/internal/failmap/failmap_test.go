@@ -6,10 +6,15 @@ import (
 	"testing"
 )
 
-// TestNineFlowsMapped **`PARTIAL-FAILURE FLOWS = 9`** — ولا واحدَ ينقص.
+// TestNineFlowsMapped **`PARTIAL-FAILURE FLOWS = 11`** — ولا واحدَ ينقص.
+//
+// **كان تسعةً حتّى دورةِ إصلاحٍ ٦** — **وأُضيف صفّان لخطرَين حُسما
+// بالنفي** (`PF-10` · `R4` و`PF-11` · `R11`). **والعددُ يُجمَّد ليمنع
+// حذفَ صفٍّ لا ليمنع إضافةَ قياسٍ جديد** — **ومن حذف تدفّقاً أخفى
+// عطباً، ومن أضاف قياساً كشف واحداً.**
 func TestNineFlowsMapped(t *testing.T) {
-	if len(All) != 9 {
-		t.Fatalf("الخريطةُ فيها %d — والعددُ المجمَّد 9", len(All))
+	if len(All) != 11 {
+		t.Fatalf("الخريطةُ فيها %d — والعددُ المجمَّد 11", len(All))
 	}
 	seen := map[string]bool{}
 	for _, f := range All {

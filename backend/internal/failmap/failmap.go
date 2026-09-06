@@ -257,6 +257,60 @@ var All = []Flow{
 		Registers:      []string{"R23"},
 		Evidence:       "لا مِعراضَ لحقن push.Transport — TESTABILITY SEAM REQUIRED",
 	},
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وخطران حُسما بالنفي** — دورةُ إصلاحٍ ٦ · ٢٠٢٦-٠٩-٠٦
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **بقيا `NOT_RUN` منذ فُتحا** — **وخطرٌ لا يُحسَم يبقى مانعاً إلى
+	// الأبد**، لا لأنّه وقع بل لأنّ أحداً لم يسأل.
+	{
+		ID: "PF-10", Title: "قيدُ الخزينة ومعاملةُ عمليّته",
+		Flows: []string{"F-14"}, Where: Local, Result: Pass,
+		Steps: []string{
+			"١ تسويةُ التسليم تكتب مستحقَّ المتجر وأجرَ السائق",
+			"٢ creditTreasury — **آخرُ التسوية** · يأخذ معاملةَ المنادي",
+		},
+		AtomicBoundary: "INHERITS_TX — ولا يفتح معاملةً بنفسه",
+		Failpoints:     []string{"R4/platform-profit"},
+		Expected:       "لا ربحَ منصّةٍ يُقيَّد لعمليّةٍ ارتدّت (R4)",
+		Observed: "الحالُ بقيت at_dropoff · ولا أجرَ سائقٍ · " +
+			"والدفترُ كما كان — **المعاملةُ واحدةٌ فعلاً**",
+		FinInv:       []string{"FI-02", "FI-12"},
+		UserVisible:  "500 — والعمليّةُ لم تقع أصلاً",
+		AdminVisible: "CLEAN",
+		Recovery:     "الإعادةُ تُسلّم الطلبَ كاملاً — ولا أثرَ نصفيّ",
+		Tests: []string{
+			"TestFIN_R4_TreasuryNeverWritesOutsideTransaction",
+			"TestFIN_R4_TreasurySharesTheOperationTransaction",
+		},
+		Registers: []string{"R4"},
+		Evidence: "**R4 DISPROVEN** — ١٥ مُنادياً للخزينة في الشجر " +
+			"النحويّ · صفرٌ منها بالمَسبَح · وحقنُ قيد الربح أسقط " +
+			"العمليّةَ كلَّها",
+	},
+	{
+		ID: "PF-11", Title: "إنشاءُ طلبٍ خاصّ",
+		Flows: []string{"F-02"}, Where: Local, Result: Pass,
+		Steps: []string{
+			"١ INSERT INTO orders — **كتابةٌ واحدةٌ لا غير**",
+		},
+		AtomicBoundary: "SINGLE STATEMENT — والعبارةُ الواحدةُ ذرّيّةٌ بلا معاملةٍ صريحة",
+		Failpoints:     []string{"R11/create-custom"},
+		Expected:       "أثرٌ واحدٌ أو لا أثر · ولا قيدَ في الدفتر (R11)",
+		Observed: "مع الحقن: صفرُ طلبات · وبلا حقن: طلبٌ واحدٌ " +
+			"وصفرُ قيود — **ولا سعرَ في الطلب الخاصّ حتّى يتّفقا**",
+		FinInv:       []string{"FI-04"},
+		UserVisible:  "500 — ولا طلبَ يتيمٌ يظهر له",
+		AdminVisible: "CLEAN",
+		Recovery:     "الإعادةُ تُنشئ طلباً واحداً",
+		Tests: []string{
+			"TestFIN_R11_CustomOrderCreationIsSingleWriteAndMoneyless",
+		},
+		Registers: []string{"R11"},
+		Evidence: "**R11 DISPROVEN** — `CreateCustom` إدخالٌ واحدٌ " +
+			"و`AgreeCustom` تحديثٌ واحد · **ولا شيءَ ثانٍ ليُفقَد**",
+	},
 }
 
 // Counts إحصاءٌ مولَّد.

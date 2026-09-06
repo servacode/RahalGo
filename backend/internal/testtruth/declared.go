@@ -1023,6 +1023,14 @@ var TestMap = map[string]TestDecl{
 	// **وثوابتُ المال تُسأل عن أساسٍ صحيحٍ لا عن قاعدةٍ خالية.**
 	"TestFIN_InvariantsCleanOnValidFixture": infraTest(),
 
+	// ── حسمُ خطرَي حدود المعاملة (دورةُ إصلاحٍ ٦) ───────────────────
+	//
+	// **`R4` و`R11` بقيا `NOT_RUN` منذ فُتحا** — **وخطرٌ لا يُحسَم
+	// يبقى مانعاً إلى الأبد، لا لأنّه وقع بل لأنّ أحداً لم يسأل.**
+	"TestFIN_R4_TreasuryNeverWritesOutsideTransaction":         riskTest([]string{"R4"}, "F-14"),
+	"TestFIN_R4_TreasurySharesTheOperationTransaction":         riskTest([]string{"R4"}, "F-14"),
+	"TestFIN_R11_CustomOrderCreationIsSingleWriteAndMoneyless": riskTest([]string{"R11"}, "F-02"),
+
 	// ── ذرّيّةُ عمليّات الإدارة (دورةُ إصلاحٍ ٤) ────────────────────
 	//
 	// **ثلاثُ عمليّاتٍ كانت تكتب مرّاتٍ بلا معاملة** — `PF-01` · `PF-02`
@@ -1090,6 +1098,16 @@ func uniqTest() TestDecl {
 		Defects: []string{"D2", "D25"},
 		Gaps:    []string{"XG-18"},
 		Modes:   []string{"CONCURRENCY", "FAILURE", "FULL", "RELEASE"},
+	}
+}
+
+// riskTest حارسٌ يحسم خطراً من السجلّ — إثباتاً أو نفياً.
+func riskTest(risks []string, flow string) TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{flow},
+		Risks: risks,
+		Modes: []string{"FAILURE", "FINANCIAL", "FULL", "RELEASE"},
 	}
 }
 

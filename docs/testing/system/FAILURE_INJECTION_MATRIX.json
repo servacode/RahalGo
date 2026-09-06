@@ -1,11 +1,11 @@
 {
   "counts": {
-    "Total": 9,
-    "Local": 9,
+    "Total": 11,
+    "Local": 11,
     "RequiresP0": 0,
     "RequiresP7": 0,
     "RequiresP8": 0,
-    "Pass": 5,
+    "Pass": 7,
     "DefectReproduced": 0,
     "RiskConfirmed": 1,
     "ExpectedFail": 1,
@@ -315,6 +315,71 @@
       ],
       "where": "LOCAL",
       "evidence": "لا مِعراضَ لحقن push.Transport — TESTABILITY SEAM REQUIRED"
+    },
+    {
+      "id": "PF-10",
+      "flows": [
+        "F-14"
+      ],
+      "title": "قيدُ الخزينة ومعاملةُ عمليّته",
+      "steps": [
+        "١ تسويةُ التسليم تكتب مستحقَّ المتجر وأجرَ السائق",
+        "٢ creditTreasury — **آخرُ التسوية** · يأخذ معاملةَ المنادي"
+      ],
+      "atomic_boundary": "INHERITS_TX — ولا يفتح معاملةً بنفسه",
+      "failpoints": [
+        "R4/platform-profit"
+      ],
+      "expected": "لا ربحَ منصّةٍ يُقيَّد لعمليّةٍ ارتدّت (R4)",
+      "observed": "الحالُ بقيت at_dropoff · ولا أجرَ سائقٍ · والدفترُ كما كان — **المعاملةُ واحدةٌ فعلاً**",
+      "financial_invariants": [
+        "FI-02",
+        "FI-12"
+      ],
+      "user_visible": "500 — والعمليّةُ لم تقع أصلاً",
+      "admin_visible": "CLEAN",
+      "recovery": "الإعادةُ تُسلّم الطلبَ كاملاً — ولا أثرَ نصفيّ",
+      "tests": [
+        "TestFIN_R4_TreasuryNeverWritesOutsideTransaction",
+        "TestFIN_R4_TreasurySharesTheOperationTransaction"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R4"
+      ],
+      "where": "LOCAL",
+      "evidence": "**R4 DISPROVEN** — ١٥ مُنادياً للخزينة في الشجر النحويّ · صفرٌ منها بالمَسبَح · وحقنُ قيد الربح أسقط العمليّةَ كلَّها"
+    },
+    {
+      "id": "PF-11",
+      "flows": [
+        "F-02"
+      ],
+      "title": "إنشاءُ طلبٍ خاصّ",
+      "steps": [
+        "١ INSERT INTO orders — **كتابةٌ واحدةٌ لا غير**"
+      ],
+      "atomic_boundary": "SINGLE STATEMENT — والعبارةُ الواحدةُ ذرّيّةٌ بلا معاملةٍ صريحة",
+      "failpoints": [
+        "R11/create-custom"
+      ],
+      "expected": "أثرٌ واحدٌ أو لا أثر · ولا قيدَ في الدفتر (R11)",
+      "observed": "مع الحقن: صفرُ طلبات · وبلا حقن: طلبٌ واحدٌ وصفرُ قيود — **ولا سعرَ في الطلب الخاصّ حتّى يتّفقا**",
+      "financial_invariants": [
+        "FI-04"
+      ],
+      "user_visible": "500 — ولا طلبَ يتيمٌ يظهر له",
+      "admin_visible": "CLEAN",
+      "recovery": "الإعادةُ تُنشئ طلباً واحداً",
+      "tests": [
+        "TestFIN_R11_CustomOrderCreationIsSingleWriteAndMoneyless"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R11"
+      ],
+      "where": "LOCAL",
+      "evidence": "**R11 DISPROVEN** — `CreateCustom` إدخالٌ واحدٌ و`AgreeCustom` تحديثٌ واحد · **ولا شيءَ ثانٍ ليُفقَد**"
     }
   ]
 }

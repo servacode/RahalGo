@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 237,
-    "test_funcs": 811
+    "test_files": 238,
+    "test_funcs": 814
   },
   "flows": [
     {
@@ -119,7 +119,8 @@
       ],
       "tests": [
         "TestEV_CustomOrderOwnerRealtime",
-        "TestD22_CustomOrderOwnerChannelContract"
+        "TestD22_CustomOrderOwnerChannelContract",
+        "TestFIN_R11_CustomOrderCreationIsSingleWriteAndMoneyless"
       ],
       "status": "PARTIALLY_COVERED"
     },
@@ -490,7 +491,9 @@
         "TestFIN_XG10_CombinedMerchantAndRepInsufficiency",
         "TestFIN_XG10_ConservationAcrossRefund",
         "TestFIN_XG10_DebtSettlementArithmetic",
-        "TestFIN_XG10_RefundReplayDoesNotDoubleCharge"
+        "TestFIN_XG10_RefundReplayDoesNotDoubleCharge",
+        "TestFIN_R4_TreasuryNeverWritesOutsideTransaction",
+        "TestFIN_R4_TreasurySharesTheOperationTransaction"
       ],
       "status": "COVERED"
     },
@@ -1475,8 +1478,11 @@
       "flows": [
         "F-14"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_R4_TreasuryNeverWritesOutsideTransaction",
+        "TestFIN_R4_TreasurySharesTheOperationTransaction"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R5",
@@ -1563,8 +1569,10 @@
       "flows": [
         "F-02"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestFIN_R11_CustomOrderCreationIsSingleWriteAndMoneyless"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R12",
@@ -9375,6 +9383,63 @@
       "orphan": false
     },
     {
+      "name": "TestFIN_R11_CustomOrderCreationIsSingleWriteAndMoneyless",
+      "file": "internal/qa/treasury_boundary_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-02"
+      ],
+      "risks": [
+        "R11"
+      ],
+      "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_R4_TreasuryNeverWritesOutsideTransaction",
+      "file": "internal/qa/treasury_boundary_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14"
+      ],
+      "risks": [
+        "R4"
+      ],
+      "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_R4_TreasurySharesTheOperationTransaction",
+      "file": "internal/qa/treasury_boundary_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14"
+      ],
+      "risks": [
+        "R4"
+      ],
+      "modes": [
+        "FAILURE",
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestZONE_001_NoZonesOrderPasses",
       "file": "internal/qa/zone_test.go",
       "package": "qa",
@@ -10992,7 +11057,6 @@
     "F-31 (شكوى أو بلاغٌ ثمّ حلٌّ بتعويض) — لا اختبارَ مرتبطٌ به",
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
     "R1 — لا اختبارَ يحسمه بعد",
-    "R11 — لا اختبارَ يحسمه بعد",
     "R12 — لا اختبارَ يحسمه بعد",
     "R13 — لا اختبارَ يحسمه بعد",
     "R17 — لا اختبارَ يحسمه بعد",
@@ -11000,7 +11064,6 @@
     "R2 — لا اختبارَ يحسمه بعد",
     "R24 — لا اختبارَ يحسمه بعد",
     "R3 — لا اختبارَ يحسمه بعد",
-    "R4 — لا اختبارَ يحسمه بعد",
     "R5 — لا اختبارَ يحسمه بعد",
     "R6 — لا اختبارَ يحسمه بعد",
     "R9 — لا اختبارَ يحسمه بعد"
