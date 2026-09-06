@@ -1020,6 +1020,8 @@ var TestMap = map[string]TestDecl{
 
 	// **والبوّابةُ لا تُوسّخ ما تقيسه** — نظافةُ بنيةٍ لا إصلاحُ منتَج.
 	"TestGateRunLeavesTreeUnchanged": infraTest(),
+	// **وثوابتُ المال تُسأل عن أساسٍ صحيحٍ لا عن قاعدةٍ خالية.**
+	"TestFIN_InvariantsCleanOnValidFixture": infraTest(),
 
 	// ── ذرّيّةُ عمليّات الإدارة (دورةُ إصلاحٍ ٤) ────────────────────
 	//
