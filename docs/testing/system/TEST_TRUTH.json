@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 235,
-    "test_funcs": 806
+    "test_files": 236,
+    "test_funcs": 810
   },
   "flows": [
     {
@@ -702,6 +702,10 @@
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestFIN_TargetRewardPrecedesCommit",
         "TestFIN_TransactionBoundaries",
+        "TestUNIQ_ConcurrentConversionWithExistingOwner",
+        "TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
+        "TestUNIQ_DatabaseRefusesSecondMerchantForSameLead",
+        "TestUNIQ_FailureThenRetryMakesOneMerchant",
         "TestRACE_DuplicateLeadConversion"
       ],
       "status": "COVERED"
@@ -727,9 +731,13 @@
       ],
       "tests": [
         "TestFAIL_D2_ConvertLeadPartialStates",
+        "TestUNIQ_ConcurrentConversionWithExistingOwner",
+        "TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
+        "TestUNIQ_DatabaseRefusesSecondMerchantForSameLead",
+        "TestUNIQ_FailureThenRetryMakesOneMerchant",
         "TestRACE_DuplicateLeadConversion"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-23",
@@ -1167,6 +1175,10 @@
         "TestFAIL_D2_ConvertLeadPartialStates",
         "TestFIN_TargetRewardPrecedesCommit",
         "TestFIN_TransactionBoundaries",
+        "TestUNIQ_ConcurrentConversionWithExistingOwner",
+        "TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
+        "TestUNIQ_DatabaseRefusesSecondMerchantForSameLead",
+        "TestUNIQ_FailureThenRetryMakesOneMerchant",
         "TestRACE_DuplicateLeadConversion"
       ],
       "status": "FIXED_AND_PASSING"
@@ -1395,11 +1407,16 @@
       "title": "هويّةُ متجرٍ واحدةٌ تصير متجرين بالتزامن",
       "domain": "تزامن · مالٌ مباشر",
       "severity": "HIGH",
+      "fixed": "**مرشَّحٌ واحدٌ لا يصير متجرين**: `convertLead` يقفل صفَّ المرشَّح `FOR UPDATE` داخلَ معاملته ويعيد الفحصَ تحته، **وللمتجر `lead_id` بفهرسٍ فريدٍ جزئيّ** يرفض الثانيَ في القاعدة ولو سقط حارسُ الشيفرة. **وكانت الحمايةُ عرَضيّةً**: تفرّدُ `users.phone` يُسقط أحدَ النداءين حين يُنشئان صاحبَ المتجر — **ومن كان له حسابٌ من قبلُ لا اصطدامَ فيه**، فوقع متجران في ستّ جولاتٍ من ست. وبعد الإصلاح: ستٌّ من ست ⇒ متجرٌ واحدٌ وإسنادٌ واحد.",
       "tests": [
         "TestFAIL_D2_ConvertLeadPartialStates",
+        "TestUNIQ_ConcurrentConversionWithExistingOwner",
+        "TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
+        "TestUNIQ_DatabaseRefusesSecondMerchantForSameLead",
+        "TestUNIQ_FailureThenRetryMakesOneMerchant",
         "TestRACE_DuplicateLeadConversion"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D26",
@@ -1821,11 +1838,16 @@
       "id": "XG-18",
       "title": "لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين",
       "severity": "BLOCKER",
+      "fixed": "**صار للمرشَّح قيدٌ فريد**: `merchants.lead_id` بفهرسٍ فريدٍ جزئيّ (`merchants_lead_uq`) — **الاتّجاهُ المعكوس**: المتجرُ يقول من أيّ مرشَّحٍ جاء، **فالثاني يُرفض في لحظة إدخاله** لا بعدها. **و`merchant_leads.merchant_id` كان قائماً ولا يمنع شيئاً**: النداءان يُنشئان متجرَين ثمّ يكتب كلٌّ منهما معرّفَه، فآخرُهما يغلب والأوّلُ يبقى يتيماً منسوباً للمندوب. **وفوقه فحصٌ تحت قفل**: `SELECT ... FOR UPDATE` على صفّ المرشَّح داخلَ المعاملة — **حارسان لا واحد.** **والهويّةُ الكانونيّةُ مقيسةٌ لا مُخترَعة**: ليست الهاتفَ ولا المالك — **متجرٌ ثانٍ لصاحبٍ واحدٍ مسموحٌ عمداً** (فرعٌ جديد)، **وإنّما هي المرشَّح**. وأربعةُ حرّاسٍ بتداخلٍ حقيقيٍّ مقيس.",
       "tests": [
         "TestFAIL_D2_ConvertLeadPartialStates",
+        "TestUNIQ_ConcurrentConversionWithExistingOwner",
+        "TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
+        "TestUNIQ_DatabaseRefusesSecondMerchantForSameLead",
+        "TestUNIQ_FailureThenRetryMakesOneMerchant",
         "TestRACE_DuplicateLeadConversion"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "COVERED"
     },
     {
       "id": "XG-19",
@@ -7489,6 +7511,102 @@
       "file": "internal/qa/idempotency_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestUNIQ_ConcurrentConversionWithExistingOwner",
+      "file": "internal/qa/lead_uniqueness_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-22"
+      ],
+      "defects": [
+        "D2",
+        "D25"
+      ],
+      "gaps": [
+        "XG-18"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
+      "file": "internal/qa/lead_uniqueness_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-22"
+      ],
+      "defects": [
+        "D2",
+        "D25"
+      ],
+      "gaps": [
+        "XG-18"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestUNIQ_DatabaseRefusesSecondMerchantForSameLead",
+      "file": "internal/qa/lead_uniqueness_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-22"
+      ],
+      "defects": [
+        "D2",
+        "D25"
+      ],
+      "gaps": [
+        "XG-18"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestUNIQ_FailureThenRetryMakesOneMerchant",
+      "file": "internal/qa/lead_uniqueness_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-21",
+        "F-22"
+      ],
+      "defects": [
+        "D2",
+        "D25"
+      ],
+      "gaps": [
+        "XG-18"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestLIFE_001_HappyPath",

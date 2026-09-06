@@ -166,7 +166,21 @@ var Gaps = []GapDecl{
 	{ID: "XG-15", Title: "عتبةُ التفعيل تُسقط الطلباتِ السابقة", Severity: "HIGH", WokenBy: "sales.activation_orders"},
 	{ID: "XG-16", Title: "المندوبُ يرى عمولةَ المنصّة", Severity: "HIGH"},
 	{ID: "XG-17", Title: "لا سجلَّ نقلِ متجرٍ بين مندوبين", Severity: "HIGH"},
-	{ID: "XG-18", Title: "لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين", Severity: "BLOCKER"},
+	{ID: "XG-18", Title: "لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين", Severity: "BLOCKER",
+		// **دورةُ إصلاحٍ ٥ · ٢٠٢٦-٠٩-٠٦.**
+		Fixed: "**صار للمرشَّح قيدٌ فريد**: `merchants.lead_id` بفهرسٍ " +
+			"فريدٍ جزئيّ (`merchants_lead_uq`) — **الاتّجاهُ المعكوس**: " +
+			"المتجرُ يقول من أيّ مرشَّحٍ جاء، **فالثاني يُرفض في لحظة " +
+			"إدخاله** لا بعدها. " +
+			"**و`merchant_leads.merchant_id` كان قائماً ولا يمنع شيئاً**: " +
+			"النداءان يُنشئان متجرَين ثمّ يكتب كلٌّ منهما معرّفَه، " +
+			"فآخرُهما يغلب والأوّلُ يبقى يتيماً منسوباً للمندوب. " +
+			"**وفوقه فحصٌ تحت قفل**: `SELECT ... FOR UPDATE` على صفّ " +
+			"المرشَّح داخلَ المعاملة — **حارسان لا واحد.** " +
+			"**والهويّةُ الكانونيّةُ مقيسةٌ لا مُخترَعة**: ليست الهاتفَ " +
+			"ولا المالك — **متجرٌ ثانٍ لصاحبٍ واحدٍ مسموحٌ عمداً** " +
+			"(فرعٌ جديد)، **وإنّما هي المرشَّح**. " +
+			"وأربعةُ حرّاسٍ بتداخلٍ حقيقيٍّ مقيس."},
 	{ID: "XG-19", Title: "لا مدخلَ دعمٍ للمندوب والتذكرةُ تشترط طلباً", Severity: "HIGH"},
 	{ID: "XG-20", Title: "التدقيقُ الحسّاسُ خارجَ المعاملة", Severity: "CRITICAL"},
 	{ID: "XG-21", Title: "سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم", Severity: "BLOCKER"},
@@ -1016,6 +1030,15 @@ var TestMap = map[string]TestDecl{
 	"TestATOMIC_LeadConversionIsOneUnit":      atomicTest([]string{"D2"}),
 	"TestATOMIC_AdminUserCreationIsOneUnit":   atomicTest([]string{"D15"}),
 
+	// ── تفرّدُ هويّة المرشَّح (دورةُ إصلاحٍ ٥) ───────────────────────
+	//
+	// **`XG-18` · `D25` · `C-03`** — **وتزامنٌ حقيقيٌّ مقيسٌ لا نداءان
+	// متتاليان.**
+	"TestUNIQ_ConcurrentLeadConversionMakesOneMerchant": uniqTest(),
+	"TestUNIQ_ConcurrentConversionWithExistingOwner":    uniqTest(),
+	"TestUNIQ_FailureThenRetryMakesOneMerchant":         uniqTest(),
+	"TestUNIQ_DatabaseRefusesSecondMerchantForSameLead": uniqTest(),
+
 	// ── `XG-31` · تتبّعُ الالتزامات (دورةُ إصلاحٍ ٣) ──────────────
 	//
 	// **عشرةُ حرّاسٍ يسألون سؤالاً واحداً**: **من أين جاء هذا الرقم؟**
@@ -1057,6 +1080,17 @@ func atomicTest(defects []string) TestDecl {
 	}
 }
 
+// uniqTest حارسُ تفرّدِ هويّةِ المرشَّح — `XG-18` · `D25` · `C-03`.
+func uniqTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows:   []string{"F-21", "F-22"},
+		Defects: []string{"D2", "D25"},
+		Gaps:    []string{"XG-18"},
+		Modes:   []string{"CONCURRENCY", "FAILURE", "FULL", "RELEASE"},
+	}
+}
+
 // DefectFixed **دليلُ إصلاح عيبٍ من السجلّ الساكن.**
 //
 // **والسجلُّ نفسُه لا يُعدَّل** — `FINAL_STATIC_CLOSEOUT.md` تاريخُ ما
@@ -1073,6 +1107,16 @@ var DefectFixed = map[string]string{
 	"D5": "**المصروفُ وخصمُ الخزينة في معاملةٍ واحدة** — إنشاءً " +
 		"وإلغاءً (`ApplyTx` بدل `Apply`). **وكان مصروفٌ يبقى بلا خصمٍ " +
 		"فيقول تقريرُ الأرباح ربحاً لم يقع.**",
+	// ── دورةُ إصلاحٍ ٥ · ٢٠٢٦-٠٩-٠٦ ──────────────────────────────
+	"D25": "**مرشَّحٌ واحدٌ لا يصير متجرين**: `convertLead` يقفل صفَّ " +
+		"المرشَّح `FOR UPDATE` داخلَ معاملته ويعيد الفحصَ تحته، " +
+		"**وللمتجر `lead_id` بفهرسٍ فريدٍ جزئيّ** يرفض الثانيَ في " +
+		"القاعدة ولو سقط حارسُ الشيفرة. " +
+		"**وكانت الحمايةُ عرَضيّةً**: تفرّدُ `users.phone` يُسقط أحدَ " +
+		"النداءين حين يُنشئان صاحبَ المتجر — **ومن كان له حسابٌ من " +
+		"قبلُ لا اصطدامَ فيه**، فوقع متجران في ستّ جولاتٍ من ست. " +
+		"وبعد الإصلاح: ستٌّ من ست ⇒ متجرٌ واحدٌ وإسنادٌ واحد.",
+
 	"D15": "**الإنشاءُ والأدوارُ والكلمةُ في معاملةٍ واحدة** " +
 		"(`AdminCreateUserFull`). **وكان مستخدِمٌ يبقى بلا كلمةٍ لا " +
 		"يدخل ورقمُه محجوز — والتعافي مسدود.**",

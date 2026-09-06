@@ -90,13 +90,24 @@ var All = []Race{
 	{
 		ID: "C-03", Title: "تحويلُ مرشَّحٍ واحدٍ مرّتين",
 		Flows: []string{"F-21", "F-22"}, Actors: []string{"admin", "admin"},
-		Shared: "merchant_leads.merchant_id", Where: Local, Result: Proven,
-		Window:    "leads_handlers.go:735 يقرأ merchant_id ثمّ يُنشئ المتجرَ — **قراءةٌ ثمّ كتابةٌ بلا قفل**",
+		Shared: "merchant_leads.merchant_id · merchants.lead_id", Where: Local, Result: Pass,
+		Window: "**أُغلقت في دورةِ إصلاحٍ ٥**: كان `convertLead` يقرأ " +
+			"`merchant_id` خارجَ المعاملة ثمّ يُنشئ المتجر — قراءةٌ ثمّ " +
+			"كتابةٌ بلا قفل. **وصار يقفل صفَّ المرشَّح `FOR UPDATE` " +
+			"داخلَ المعاملة ويعيد الفحصَ تحته**، **وللمتجر `lead_id` " +
+			"بفهرسٍ فريدٍ يرفض الثانيَ في القاعدة.**",
 		Invariant: "ONE REAL MERCHANT IDENTITY MUST NOT BECOME TWO PAYABLE MERCHANT/REP RELATIONSHIPS",
-		Tests:     []string{"TestRACE_DuplicateLeadConversion"},
-		Registers: []string{"XG-18", "D2"}, FinInv: []string{"FI-02", "FI-03", "FI-05"},
-		TxClass:  "NON_ATOMIC (سبعُ كتاباتٍ بلا معاملة — D2)",
-		Evidence: "جولةٌ من ثلاث: هويّةٌ واحدةٌ صارت متجرين، كلاهما منسوبٌ للمندوب",
+		Tests: []string{"TestRACE_DuplicateLeadConversion",
+			"TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
+			"TestUNIQ_ConcurrentConversionWithExistingOwner",
+			"TestUNIQ_DatabaseRefusesSecondMerchantForSameLead"},
+		Registers: []string{"XG-18", "D2", "D25"}, FinInv: []string{"FI-02", "FI-03", "FI-05"},
+		TxClass: "ATOMIC (دورةُ إصلاحٍ ٤) + ROW LOCK + UNIQUE INDEX (دورةُ إصلاحٍ ٥)",
+		Evidence: "**قبل**: ستُّ جولاتٍ من ست ⇒ متجران وإسنادان للمندوب " +
+			"(وصاحبُ المتجر له حسابٌ من قبل — والحمايةُ كانت تفرّدَ " +
+			"`users.phone` لا تفرّدَ المرشَّح). " +
+			"**بعد**: ستٌّ من ست ⇒ متجرٌ واحدٌ وإسنادٌ واحد، بتداخلٍ " +
+			"مقيسٍ 21–83 مِلّي ثانية.",
 	},
 	{
 		ID: "C-04", Title: "تدخّلُ الإدارة مقابلَ فعلِ التطبيق",

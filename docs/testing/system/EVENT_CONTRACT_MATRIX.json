@@ -378,7 +378,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 888,
+      "line": 918,
       "call": "Notify",
       "kind": "Lead",
       "entity": "merchant",
@@ -1079,7 +1079,7 @@
     },
     {
       "file": "internal/server/leads_handlers.go",
-      "line": 888,
+      "line": 918,
       "call": "Notify",
       "kind": "Lead",
       "entity": "merchant",

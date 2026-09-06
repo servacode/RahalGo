@@ -821,6 +821,31 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	// ══════════════════════════════════════════════════════════════
+	// **ويُقفَل صفُّ المرشَّح ثمّ يُعاد الفحصُ تحته** — `XG-18` · `C-03`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **الفحصُ أعلاه وقع خارجَ المعاملة** — **وبين القراءة والكتابة
+	// فجوةٌ يدخل منها نداءٌ ثانٍ.** **فيريان `merchant_id` فارغاً معاً
+	// ويُنشئ كلٌّ منهما متجراً.**
+	//
+	// **وكانت الحمايةُ عرَضيّةً**: يصطدمان بتفرّد `users.phone` حين
+	// يُنشئان صاحبَ المتجر. **ومن كان له حسابٌ من قبلُ لا اصطدامَ
+	// فيه** — **فوقع متجران في ستّ جولاتٍ من ست.**
+	//
+	// **والقفلُ يُسلسلهما**: الثاني ينتظر ثمّ يقرأ ما ثبّته الأوّل.
+	var lockedMerchant *string
+	if err := tx.QueryRow(ctx,
+		`SELECT merchant_id::text FROM merchant_leads WHERE id = $1 FOR UPDATE`,
+		leadID).Scan(&lockedMerchant); err != nil {
+		return err
+	}
+	if lockedMerchant != nil {
+		// **ونتيجةٌ حتميّةٌ لا خطأ**: **العقدُ القائمُ يعدّ التحويلَ
+		// المكرَّرَ لا شيءَ يُفعَل** — والمرشَّحُ محوَّلٌ فعلاً.
+		return nil
+	}
+
 	merchantNewID, err := s.catalog.CreateMerchantTx(ctx, tx, actorID, in, ip)
 	if err != nil {
 		return err
@@ -855,10 +880,15 @@ func (s *Server) convertLead(ctx context.Context, actorID, leadID, ip string) er
 	//
 	// **وسطرٌ بعد الإنشاء لا يُفقد شيئاً**: المتجرُ أُنشئ في المعاملة
 	// نفسِها، **ومنطقتُه عنوانٌ لا يمنع بيعاً إن تأخّر سطراً.**
+	// **والمتجرُ يقول من أيّ مرشَّحٍ جاء** — **وعليه فهرسٌ فريد**
+	// (`merchants_lead_uq`)، **فثانٍ للمرشَّح نفسِه يُرفض في لحظة
+	// إدخاله ولو سقط القفلُ أعلاه.** **حارسان لا واحد.**
 	if _, err := tx.Exec(ctx, `
-		UPDATE merchants SET district_id = (
-			SELECT district_id FROM merchant_leads WHERE id = $2)
-		WHERE id = $1 AND district_id IS NULL`, merchantNewID, leadID); err != nil {
+		UPDATE merchants SET
+			lead_id = $2,
+			district_id = COALESCE(district_id,
+				(SELECT district_id FROM merchant_leads WHERE id = $2))
+		WHERE id = $1`, merchantNewID, leadID); err != nil {
 		return err
 	}
 

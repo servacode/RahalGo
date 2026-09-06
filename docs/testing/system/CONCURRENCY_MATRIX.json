@@ -4,9 +4,9 @@
     "local": 9,
     "requires_p0": 0,
     "deferred_p8": 1,
-    "pass": 4,
+    "pass": 5,
     "risk_confirmed": 3,
-    "proven": 1,
+    "proven": 0,
     "expected_fail": 1,
     "partial": 1,
     "not_implemented": 0
@@ -78,16 +78,20 @@
         "admin",
         "admin"
       ],
-      "shared_resource": "merchant_leads.merchant_id",
-      "race_window": "leads_handlers.go:735 يقرأ merchant_id ثمّ يُنشئ المتجرَ — **قراءةٌ ثمّ كتابةٌ بلا قفل**",
+      "shared_resource": "merchant_leads.merchant_id · merchants.lead_id",
+      "race_window": "**أُغلقت في دورةِ إصلاحٍ ٥**: كان `convertLead` يقرأ `merchant_id` خارجَ المعاملة ثمّ يُنشئ المتجر — قراءةٌ ثمّ كتابةٌ بلا قفل. **وصار يقفل صفَّ المرشَّح `FOR UPDATE` داخلَ المعاملة ويعيد الفحصَ تحته**، **وللمتجر `lead_id` بفهرسٍ فريدٍ يرفض الثانيَ في القاعدة.**",
       "invariant": "ONE REAL MERCHANT IDENTITY MUST NOT BECOME TWO PAYABLE MERCHANT/REP RELATIONSHIPS",
       "tests": [
-        "TestRACE_DuplicateLeadConversion"
+        "TestRACE_DuplicateLeadConversion",
+        "TestUNIQ_ConcurrentLeadConversionMakesOneMerchant",
+        "TestUNIQ_ConcurrentConversionWithExistingOwner",
+        "TestUNIQ_DatabaseRefusesSecondMerchantForSameLead"
       ],
-      "result": "PROVEN",
+      "result": "PASS",
       "registers": [
         "XG-18",
-        "D2"
+        "D2",
+        "D25"
       ],
       "financial_invariants": [
         "FI-02",
@@ -95,8 +99,8 @@
         "FI-05"
       ],
       "where": "LOCAL",
-      "transaction_class": "NON_ATOMIC (سبعُ كتاباتٍ بلا معاملة — D2)",
-      "evidence": "جولةٌ من ثلاث: هويّةٌ واحدةٌ صارت متجرين، كلاهما منسوبٌ للمندوب"
+      "transaction_class": "ATOMIC (دورةُ إصلاحٍ ٤) + ROW LOCK + UNIQUE INDEX (دورةُ إصلاحٍ ٥)",
+      "evidence": "**قبل**: ستُّ جولاتٍ من ست ⇒ متجران وإسنادان للمندوب (وصاحبُ المتجر له حسابٌ من قبل — والحمايةُ كانت تفرّدَ `users.phone` لا تفرّدَ المرشَّح). **بعد**: ستٌّ من ست ⇒ متجرٌ واحدٌ وإسنادٌ واحد، بتداخلٍ مقيسٍ 21–83 مِلّي ثانية."
     },
     {
       "id": "C-04",
