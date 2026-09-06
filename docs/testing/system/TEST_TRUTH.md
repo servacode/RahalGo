@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **239** |
-| دوالُّ اختبار | **817** |
+| ملفّاتُ اختبار | **240** |
+| دوالُّ اختبار | **822** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 817
-MAPPED     = 145
+TOTAL      = 822
+MAPPED     = 150
 INFRA      = 104
 ORPHAN     = 568
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 568
 | **التدفّقات** | 35 | 29 | 6 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 13 | 11 |
-| **فجواتُ العقد** | 28 | 7 | 21 |
+| **فجواتُ العقد** | 29 | 8 | 21 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
 
 ---
@@ -128,6 +128,7 @@ ORPHAN     = 568
 | **XG-29** | `BLOCKER` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
 | **XG-30** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-32** | `CRITICAL` | — | `EXPECTED_FAIL` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
+| **XG-33** | `CRITICAL` | — | `EXPECTED_FAIL` | `TestFAIL_C06_OrphanBeforeCommitBlocksOwner` · `TestFAIL_C06_TwoReclaimersExecuteNothing` · `TestIDEM_CleanupSparesLiveClaim` · `TestIDEM_CommittedBeforeResultDoesNotDuplicate` · `TestIDEM_LostResponseReplays` |
 | **XG-31** | `CRITICAL` | — | `COVERED` | `TestOBL_BothInsufficient_AtomicOrigins` · `TestOBL_FutureEarningsSettleWithEvidence` · `TestOBL_MerchantInsufficient_OriginTraceable` · `TestOBL_MerchantSufficient_NoObligation` · `TestOBL_MultipleObligationsFIFO` · `TestOBL_RepAvailable_NoObligation` · `TestOBL_RepWithdrawn_OriginTraceable` · `TestOBL_ReplayCreatesNoDuplicate` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
 
 ---

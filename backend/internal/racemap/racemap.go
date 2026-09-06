@@ -139,10 +139,19 @@ var All = []Race{
 		Window: "المطالبةُ تُكتب في claimIdempotency والختمُ في storeIdempotency — " +
 			"**وسقوطُ العمليّة بينهما يترك done=false**",
 		Invariant: "المطالبةُ اليتيمةُ لا تحجب صاحبَها إلى الأبد",
-		Tests:     []string{"TestIDEM_CommitThenLostResponse", "TestIDEM_CleanupAfterTTL"},
+		Tests: []string{"TestIDEM_CommitThenLostResponse", "TestIDEM_CleanupAfterTTL",
+			"TestFAIL_C06_OrphanBeforeCommitBlocksOwner",
+			"TestFAIL_C06_TwoReclaimersExecuteNothing",
+			"TestIDEM_CommittedBeforeResultDoesNotDuplicate",
+			"TestIDEM_LostResponseReplays", "TestIDEM_CleanupSparesLiveClaim"},
 		Registers: []string{"R8"},
 		TxClass:   "NON_ATOMIC (مطالبةٌ ثمّ عملٌ ثمّ ختمٌ في ثلاثِ عمليّات)",
-		Evidence:  "409 in_progress · ولا مسارَ يُطلقها إلّا التقليمُ بعد 24h",
+		Evidence: "**مقيسٌ ٢٠٢٦-٠٩-٠٦**: مطالبةٌ يتيمةٌ عمرُها ٣٠ دقيقة ⇒ " +
+			"`409 in_progress` وصفرُ تنفيذ · ومستردّان متزامنان ⇒ صفرُ " +
+			"تنفيذٍ أيضاً (**والسلامةُ أثرُ الشلل لا أثرُ حراسة**). " +
+			"**وما يعمل اليوم**: عملٌ ثُبِّت وماتت نتيجتُه ⇒ لا تكرار · " +
+			"وردٌّ ضاع ⇒ يُعاد بلا تنفيذٍ ثانٍ · والتقليمُ لا يمسّ مطالبةً " +
+			"حيّة. **ولا مسارَ يُطلق اليتيمةَ إلّا التقليمُ بعد 24h.**",
 	},
 	{
 		ID: "C-07", Title: "قرارا سحبٍ متزامنان",
