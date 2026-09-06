@@ -1,9 +1,9 @@
 {
   "candidate": {
-    "release_candidate_id": "rc-6e4b548d-20bd6fd4-dirty",
-    "source_commit": "6e4b548d84b69519aa487b44545b36be65aea622",
+    "release_candidate_id": "rc-2698848f-689c332c-dirty",
+    "source_commit": "2698848f59f42848f4d9b9ade2550bbd0090d99c",
     "working_tree_dirty": true,
-    "backend_build_hash": "20bd6fd4c6bf98a5e7181e1fd39aa83963965c38cd7123c2e9f3e8ff35169410",
+    "backend_build_hash": "689c332c61c850f025852e58110ab62a398284c01c7b85a57973ddb424faa5b4",
     "web_build_hash": "acd515d6dce05f492b920f7f5a67a57fc1f08ad7e679df10f7a2ae5ab3f49cf9",
     "apk_hashes": [
       "app-customer:88764f40bba3db291b85bc5ed501ccc671d6aa1861b76ab71260a26b77e2565f",
@@ -12,8 +12,8 @@
       "app-rep:c42c5dd5b3e7949b97de93ac9daa5f3ec8d6aa4e9ca5eb28472c264e0aa1519c"
     ],
     "config_snapshot": "9dd6ce1cba9044ea",
-    "migration_version": "0128_branches_areas.sql",
-    "generated_at": "2026-09-06T11:24:33Z"
+    "migration_version": "0129_rep_commission_debt.sql",
+    "generated_at": "2026-09-06T11:52:05Z"
   },
   "ready_for_production": false,
   "rules": [
@@ -557,7 +557,7 @@
       "required_evidence": "تشغيلُ `internal/fininv` على قاعدةِ المرشَّح بلا خرقٍ واحد",
       "current_status": "NOT_RUN",
       "blocking": true,
-      "reason": "**8 ثابتاً من 46 لم يُبنَ أو أُجِّل** — **و`38` ثابتاً تُثبَت اليوم لا تُغني عمّا لم يُبنَ**، **ولم يُسجَّل تشغيلٌ على مرشَّحٍ ثابت**",
+      "reason": "**7 ثابتاً من 46 لم يُبنَ أو أُجِّل** — **و`38` ثابتاً تُثبَت اليوم لا تُغني عمّا لم يُبنَ**، **ولم يُسجَّل تشغيلٌ على مرشَّحٍ ثابت**",
       "waiver_policy": "FORBIDDEN"
     },
     {
@@ -1231,16 +1231,19 @@
       "source_contract": "CONTRACT GAP REGISTER · شدّةُ `TQ-1`",
       "severity": "BLOCKER",
       "required_evidence": "بناءُ العقد ثمّ اختبارٌ يثبته",
-      "current_status": "EXPECTED_FAIL",
+      "current_status": "PASS",
       "blocking": true,
-      "reason": "**EXPECTED_FAIL** — CONCURRENCY/C-08: السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0",
+      "reason": "**أُصلحت** — **العقدُ النافذ `RQ-5`** (قرارُ المالك ٢٠٢٦-٠٩-٠٥): `ORDER REVENUE REVERSED → RELATED REP COMMISSION REVERSED`. **وكان في `TRUTH.md` قرارٌ أقدمُ (٢٠٢٦-٠٨-٠٣) يقول «تبقى عمولتُه»** — **وسياقُه نزاعُ الطعام الفاسد لا قفلُ دفترِ استرداد** — **فنُسخ وصُولحت الوثيقتان.** و`reverseCommissions` صارت تعكس ما قُيّد للمندوب من الدفتر، **وما عجز عنه رصيدُه يصير التزاماً في `users.commission_debt`** يُقتطَع من أوّل عمولةٍ قادمة (`offsetRepDebt`) — **وهو ما يوجبه العقد**: «تُعالَج التزاماً — ولا يُمحى التاريخ». وثلاثةُ حرّاسٍ تؤكّده، و`FI-09.a` صار `PROVABLE_NOW`.",
       "related_registers": [
         "XG-10"
       ],
       "tests": [
         "TestFIN_RefundNotConditionedOnRepBalance",
         "TestFIN_RepCommissionReversal",
-        "TestRACE_RefundVsPayout"
+        "TestRACE_RefundVsPayout",
+        "TestFIN_XG10_DebtOffsetFromNextCommission",
+        "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "TestFIN_XG10_RepWithdrewThenRefund"
       ],
       "waiver_policy": "FORBIDDEN"
     },
@@ -1262,7 +1265,8 @@
         "TestFIN_RefundNotConditionedOnRepBalance",
         "TestRACE_RefundVsPayout",
         "TestFIN_XG11_RefundIndependentOfMerchantBalance",
-        "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent"
+        "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent",
+        "TestFIN_XG10_RepWithdrewThenRefund"
       ],
       "waiver_policy": "FORBIDDEN"
     },
@@ -1645,14 +1649,13 @@
     "[BLOCKER · NOT_RUN] تنفيذُ مصفوفة أندرويد كاملةً على أجهزةٍ حقيقيّة — **22 بنداً من 27 لم يُشغَّل · وأجهزةٌ متاحةٌ = 0** — **والمِسنَدُ مكتملٌ والقبولُ لم يبدأ**",
     "[BLOCKER · NOT_RUN] الخلفيّةُ والغفوةُ وموتُ العمليّة لتطبيق السائق على جهازٍ حقيقيّ — **الإثباتُ البنيويُّ ليس قبولَ جهاز** — خمسةُ إثباتاتٍ بنيويّةٍ لا تُغني",
     "[BLOCKER · EXPECTED_FAIL] لا عمليّةٌ جزئيّةٌ تترك مالاً خطأً ولا طلباً عالقاً ولا متجراً مكرَّراً ولا عمليّةً خفيّة — **7 تدفّقَ فشلٍ جزئيٍّ يترك أثراً غيرَ متعافٍ**: [PF-01:DEFECT_REPRODUCED PF-02:DEFECT_REPRODUCED PF-03:DEFECT_REPRODUCED PF-06:EXPECTED_FAIL PF-07:UNPROVEN PF-08:PARTIAL PF-09:RISK_CONFIRMED] — **ومنها ما لا يراه زبونٌ ولا إدارة**",
-    "[BLOCKER · NOT_RUN] ثوابتُ المال كلُّها مُثبَتةٌ على المرشَّح — مصالحةُ المحفظة · نقدُ السائق · حفظُ اقتصاد الطلب · اللقطة · نزاهةُ الاسترداد · عكسُ عمولة المندوب · طبقاتُ الدفع · الخزينة — **8 ثابتاً من 46 لم يُبنَ أو أُجِّل** — **و`38` ثابتاً تُثبَت اليوم لا تُغني عمّا لم يُبنَ**، **ولم يُسجَّل تشغيلٌ على مرشَّحٍ ثابت**",
+    "[BLOCKER · NOT_RUN] ثوابتُ المال كلُّها مُثبَتةٌ على المرشَّح — مصالحةُ المحفظة · نقدُ السائق · حفظُ اقتصاد الطلب · اللقطة · نزاهةُ الاسترداد · عكسُ عمولة المندوب · طبقاتُ الدفع · الخزينة — **7 ثابتاً من 46 لم يُبنَ أو أُجِّل** — **و`38` ثابتاً تُثبَت اليوم لا تُغني عمّا لم يُبنَ**، **ولم يُسجَّل تشغيلٌ على مرشَّحٍ ثابت**",
     "[BLOCKER · FAIL] المرشَّحُ ثابتٌ ودليلُه من بنائه هو — **شجرةُ العمل متّسخة** — **فالمحكومُ عليه ليس ما سيُنشَر**، والدليلُ كلُّه على رملٍ متحرّك",
     "[BLOCKER · NOT_RUN] تشغيلُ الأوضاع الإلزاميّة كاملةً على المرشَّح — `FULL` و`FINANCIAL` و`SECURITY` و`CROSS_SYSTEM` و`WEB` و`ANDROID` و`RELEASE` — **`FAST` و`IMPACTED` لا تكفيان للإطلاق** — ولم يُسجَّل تشغيلٌ كاملٌ على مرشَّح",
     "[BLOCKER · NOT_RUN] حسمُ الخطر: الطلبُ الخاصُّ يُنشأ بلا معاملة — **لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
     "[BLOCKER · NOT_RUN] حسمُ الخطر: treasury.go يعتمد معاملةَ المنادي — **لم يُحسَم** — لا اختبارَ ولا دليلٌ يثبته أو ينفيه",
     "[BLOCKER · EXPECTED_FAIL] حسمُ الخطر: مفتاحُ التكرار يعلق in_progress — **تأكّد** — CONCURRENCY/C-06: 409 in_progress · ولا مسارَ يُطلقها إلّا التقليمُ بعد 24h",
     "[BLOCKER · FAIL] كلُّ سجلٍّ مانعٍ للإطلاق مربوطٌ بدليلٍ يخصُّه — **14 سجلّاً مانعاً أو حرجاً بلا اختبارٍ ولا دليلِ مصفوفة**: [R11 R13 R24 R4 XG-12 XG-14 XG-20 XG-21 XG-22 XG-25 XG-26 XG-27 XG-28 XG-29] — **والسقوطُ الآمنُ لا يجعل هذا تغطيةً**",
-    "[BLOCKER · EXPECTED_FAIL] سدُّ الفجوة: لا عكسَ لعمولة المندوب عند الاسترداد — **EXPECTED_FAIL** — CONCURRENCY/C-08: السحبُ فاز بـ40000 · والاستردادُ سقط · والمستردُّ للزبون = 0",
     "[BLOCKER · EXPECTED_FAIL] سدُّ الفجوة: لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين — **DEFECT_REPRODUCED** — FAILURE/PF-01: XQ-3 FORBIDDEN STATE = PROVEN — متاجرُ=1 · مكافأةٌ=5000 · المرشَّحُ new · الردّ 500",
     "[BLOCKER · NOT_IMPLEMENTED] سدُّ الفجوة: سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
     "[BLOCKER · NOT_IMPLEMENTED] سدُّ الفجوة: التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم — **عقدٌ ناقصٌ لم يُبنَ بعد**",
@@ -1827,7 +1830,6 @@
     "GATE-R4 [BLOCKER] حسمُ الخطر: treasury.go يعتمد معاملةَ المنادي ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
     "GATE-R8 [BLOCKER] حسمُ الخطر: مفتاحُ التكرار يعلق in_progress ⇒ اختبارٌ يثبته فيصير عيباً، أو ينفيه فيُغلَق",
     "GATE-TRC-01 [BLOCKER] كلُّ سجلٍّ مانعٍ للإطلاق مربوطٌ بدليلٍ يخصُّه ⇒ اختبارٌ أو صفُّ مصفوفةٍ يشير إلى السجلّ بعينه",
-    "GATE-XG-10 [BLOCKER] سدُّ الفجوة: لا عكسَ لعمولة المندوب عند الاسترداد ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-18 [BLOCKER] سدُّ الفجوة: لا فحصَ ازدواجٍ ولا قيدَ فريدٍ للمرشَّحين ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-21 [BLOCKER] سدُّ الفجوة: سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-22 [BLOCKER] سدُّ الفجوة: التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
@@ -1849,9 +1851,9 @@
     "GATE-XG-27 [CRITICAL] سدُّ الفجوة: مصدرُ الاحتساب مثبَّتٌ ولا يُلتقَط ⇒ بناءُ العقد ثمّ اختبارٌ يثبته",
     "GATE-XG-28 [CRITICAL] سدُّ الفجوة: عتبةُ التفعيل تُقرأ لحظةَ التسليم ⇒ بناءُ العقد ثمّ اختبارٌ يثبته"
   ],
-  "advisory_score": 5,
+  "advisory_score": 6,
   "advisory_score_note": "**عرضٌ مساعدٌ لا قرار** — `BLOCKER \u003e SCORE`، **ومانعٌ واحدٌ يُسقط الحكمَ مهما بلغت الدرجة**",
-  "run_id": "gate_373316445165b77b",
-  "generated_at": "2026-09-06T11:24:35Z",
+  "run_id": "gate_4069d1290a80d5bc",
+  "generated_at": "2026-09-06T11:52:10Z",
   "truth_baseline": ""
 }

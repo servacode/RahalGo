@@ -126,7 +126,18 @@ var Gaps = []GapDecl{
 	{ID: "XG-7", Title: "القبولُ التلقائيُّ صامتٌ عن المتجر", Severity: "HIGH", WokenBy: "orders.auto_accept_min"},
 	{ID: "XG-8", Title: "الإشعارُ يفتح الشاشةَ الأولى لا الكيان", Severity: "MEDIUM"},
 	{ID: "XG-9", Title: "٢٤ إشعاراً بلا توجيهِ تطبيق", Severity: "MEDIUM"},
-	{ID: "XG-10", Title: "لا عكسَ لعمولة المندوب عند الاسترداد", Severity: "BLOCKER"},
+	{ID: "XG-10", Title: "لا عكسَ لعمولة المندوب عند الاسترداد", Severity: "BLOCKER",
+		// **دورةُ إصلاحٍ ٢ · ٢٠٢٦-٠٩-٠٦ — وقبلها مصالحةُ عقدين.**
+		Fixed: "**العقدُ النافذ `RQ-5`** (قرارُ المالك ٢٠٢٦-٠٩-٠٥): " +
+			"`ORDER REVENUE REVERSED → RELATED REP COMMISSION REVERSED`. " +
+			"**وكان في `TRUTH.md` قرارٌ أقدمُ (٢٠٢٦-٠٨-٠٣) يقول «تبقى " +
+			"عمولتُه»** — **وسياقُه نزاعُ الطعام الفاسد لا قفلُ دفترِ " +
+			"استرداد** — **فنُسخ وصُولحت الوثيقتان.** " +
+			"و`reverseCommissions` صارت تعكس ما قُيّد للمندوب من الدفتر، " +
+			"**وما عجز عنه رصيدُه يصير التزاماً في `users.commission_debt`** " +
+			"يُقتطَع من أوّل عمولةٍ قادمة (`offsetRepDebt`) — **وهو ما " +
+			"يوجبه العقد**: «تُعالَج التزاماً — ولا يُمحى التاريخ». " +
+			"وثلاثةُ حرّاسٍ تؤكّده، و`FI-09.a` صار `PROVABLE_NOW`."},
 	// **والوصفُ صُحّح في `P-5` بقرار المالك** — والجوهرُ لم يتبدّل.
 	//
 	// **المُثبَتُ فعلاً**: **المتجرُ** لا المندوب. `reverseCommissions`
@@ -903,6 +914,29 @@ var TestMap = map[string]TestDecl{
 		Level: L4, Flows: []string{"F-15"},
 		Gaps:  []string{"XG-11"},
 		Modes: []string{"FULL", "FINANCIAL", "RELEASE"},
+	},
+
+	// ── دورةُ إصلاحٍ ٢ · `XG-10` ────────────────────────────────
+	//
+	// **ثلاثةُ حرّاسٍ لعقدٍ ذي شقّين**: **العكسُ** حين يملك،
+	// **والالتزامُ** حين سحب، **والتسويةُ** من عمولةٍ قادمة.
+	"TestFIN_XG10_RepCommissionReversedOnRefund": {
+		Level: L4, Flows: []string{"F-15", "F-23"},
+		Gaps:     []string{"XG-10"},
+		Settings: []string{"sales.commission_percent"},
+		Modes:    []string{"FULL", "FINANCIAL", "CROSS_SYSTEM", "RELEASE"},
+	},
+	"TestFIN_XG10_RepWithdrewThenRefund": {
+		Level: L4, Flows: []string{"F-15", "F-23"},
+		Gaps:     []string{"XG-10", "XG-11"},
+		Settings: []string{"sales.commission_percent"},
+		Modes:    []string{"FULL", "FINANCIAL", "CROSS_SYSTEM", "RELEASE"},
+	},
+	"TestFIN_XG10_DebtOffsetFromNextCommission": {
+		Level: L4, Flows: []string{"F-23"},
+		Gaps:     []string{"XG-10"},
+		Settings: []string{"sales.commission_percent"},
+		Modes:    []string{"FULL", "FINANCIAL", "RELEASE"},
 	},
 
 	// ── `P-0` · بيئةُ التجهيز ──────────────────────────────────

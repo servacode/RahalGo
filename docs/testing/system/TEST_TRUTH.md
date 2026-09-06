@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **230** |
-| دوالُّ اختبار | **787** |
+| ملفّاتُ اختبار | **231** |
+| دوالُّ اختبار | **790** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 787
-MAPPED     = 117
+TOTAL      = 790
+MAPPED     = 120
 INFRA      = 102
 ORPHAN     = 568
 ```
@@ -106,8 +106,8 @@ ORPHAN     = 568
 | **XG-7** | `HIGH` | `orders.auto_accept_min` | `NOT_IMPLEMENTED` | — |
 | **XG-8** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-9** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
-| **XG-10** | `BLOCKER` | — | `EXPECTED_FAIL` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` · `TestRACE_RefundVsPayout` |
-| **XG-11** | `BLOCKER` | — | `COVERED` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` · `TestRACE_RefundVsPayout` · `TestFIN_XG11_RefundIndependentOfMerchantBalance` · `TestFIN_XG11_RefundUntouchedWhenMerchantSolvent` |
+| **XG-10** | `BLOCKER` | — | `COVERED` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` · `TestRACE_RefundVsPayout` · `TestFIN_XG10_DebtOffsetFromNextCommission` · `TestFIN_XG10_RepCommissionReversedOnRefund` · `TestFIN_XG10_RepWithdrewThenRefund` |
+| **XG-11** | `BLOCKER` | — | `COVERED` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` · `TestRACE_RefundVsPayout` · `TestFIN_XG11_RefundIndependentOfMerchantBalance` · `TestFIN_XG11_RefundUntouchedWhenMerchantSolvent` · `TestFIN_XG10_RepWithdrewThenRefund` |
 | **XG-12** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-13** | `HIGH` | — | `EXPECTED_FAIL` | `TestFIN_CommissionSourceMatrix` · `TestFIN_SnapshotVsLiveEconomics` |
 | **XG-14** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |

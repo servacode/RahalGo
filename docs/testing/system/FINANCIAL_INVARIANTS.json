@@ -549,9 +549,9 @@
     {
       "id": "FI-09.a",
       "family": "FI-09",
-      "name": "عمولةُ المندوبِ تُعكَس عند الاسترداد",
-      "status": "NOT_IMPLEMENTED",
-      "ops": false,
+      "name": "عمولةُ المندوبِ تُعكَس عند الاسترداد أو تصير التزاماً",
+      "status": "PROVABLE_NOW",
+      "ops": true,
       "flows": [
         "F-15",
         "F-23"
@@ -956,8 +956,8 @@
   "counts": {
     "families": 12,
     "checks": 46,
-    "provable_now": 38,
-    "not_implemented": 5,
+    "provable_now": 39,
+    "not_implemented": 4,
     "deferred_p5": 1,
     "deferred_p6": 2,
     "kinds": 14

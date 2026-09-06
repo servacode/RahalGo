@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 230,
-    "test_funcs": 787
+    "test_files": 231,
+    "test_funcs": 790
   },
   "flows": [
     {
@@ -514,7 +514,9 @@
         "TestFIN_RepeatedRefundIsIdempotent",
         "TestRACE_RefundVsPayout",
         "TestFIN_XG11_RefundIndependentOfMerchantBalance",
-        "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent"
+        "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent",
+        "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "TestFIN_XG10_RepWithdrewThenRefund"
       ],
       "status": "COVERED"
     },
@@ -731,7 +733,10 @@
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_RepCommissionReversal",
-        "TestFIN_SnapshotVsLiveEconomics"
+        "TestFIN_SnapshotVsLiveEconomics",
+        "TestFIN_XG10_DebtOffsetFromNextCommission",
+        "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "TestFIN_XG10_RepWithdrewThenRefund"
       ],
       "status": "COVERED"
     },
@@ -1696,12 +1701,16 @@
       "id": "XG-10",
       "title": "لا عكسَ لعمولة المندوب عند الاسترداد",
       "severity": "BLOCKER",
+      "fixed": "**العقدُ النافذ `RQ-5`** (قرارُ المالك ٢٠٢٦-٠٩-٠٥): `ORDER REVENUE REVERSED → RELATED REP COMMISSION REVERSED`. **وكان في `TRUTH.md` قرارٌ أقدمُ (٢٠٢٦-٠٨-٠٣) يقول «تبقى عمولتُه»** — **وسياقُه نزاعُ الطعام الفاسد لا قفلُ دفترِ استرداد** — **فنُسخ وصُولحت الوثيقتان.** و`reverseCommissions` صارت تعكس ما قُيّد للمندوب من الدفتر، **وما عجز عنه رصيدُه يصير التزاماً في `users.commission_debt`** يُقتطَع من أوّل عمولةٍ قادمة (`offsetRepDebt`) — **وهو ما يوجبه العقد**: «تُعالَج التزاماً — ولا يُمحى التاريخ». وثلاثةُ حرّاسٍ تؤكّده، و`FI-09.a` صار `PROVABLE_NOW`.",
       "tests": [
         "TestFIN_RefundNotConditionedOnRepBalance",
         "TestFIN_RepCommissionReversal",
-        "TestRACE_RefundVsPayout"
+        "TestRACE_RefundVsPayout",
+        "TestFIN_XG10_DebtOffsetFromNextCommission",
+        "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "TestFIN_XG10_RepWithdrewThenRefund"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "COVERED"
     },
     {
       "id": "XG-11",
@@ -1713,7 +1722,8 @@
         "TestFIN_RefundNotConditionedOnRepBalance",
         "TestRACE_RefundVsPayout",
         "TestFIN_XG11_RefundIndependentOfMerchantBalance",
-        "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent"
+        "TestFIN_XG11_RefundUntouchedWhenMerchantSolvent",
+        "TestFIN_XG10_RepWithdrewThenRefund"
       ],
       "status": "COVERED"
     },
@@ -3320,7 +3330,10 @@
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_RefundNotConditionedOnRepBalance",
         "TestFIN_RepCommissionReversal",
-        "TestFIN_SnapshotVsLiveEconomics"
+        "TestFIN_SnapshotVsLiveEconomics",
+        "TestFIN_XG10_DebtOffsetFromNextCommission",
+        "TestFIN_XG10_RepCommissionReversedOnRefund",
+        "TestFIN_XG10_RepWithdrewThenRefund"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -8564,6 +8577,74 @@
       "modes": [
         "FULL",
         "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_XG10_DebtOffsetFromNextCommission",
+      "file": "internal/qa/rep_commission_reversal_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-23"
+      ],
+      "gaps": [
+        "XG-10"
+      ],
+      "settings": [
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_XG10_RepCommissionReversedOnRefund",
+      "file": "internal/qa/rep_commission_reversal_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-15",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-10"
+      ],
+      "settings": [
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFIN_XG10_RepWithdrewThenRefund",
+      "file": "internal/qa/rep_commission_reversal_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-15",
+        "F-23"
+      ],
+      "gaps": [
+        "XG-10",
+        "XG-11"
+      ],
+      "settings": [
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FULL",
+        "FINANCIAL",
+        "CROSS_SYSTEM",
         "RELEASE"
       ],
       "orphan": false
