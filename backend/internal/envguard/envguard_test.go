@@ -2,6 +2,7 @@ package envguard
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -300,6 +301,23 @@ func TestNoSecretsCommitted(t *testing.T) {
 	if !strings.Contains(string(ignore), "deploy/staging/.env.staging") {
 		t.Error(".env.staging غيرُ مستثنىً في .gitignore")
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **والقالبُ متتبَّعٌ في git — لا على القرص وحدَه**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وهذا ما فات الحارسَ أوّلَ مرّة**: كان يقرأ الملفَّ من الشجرة
+	// **فوجده ورضي** — **و`.gitignore` كان يبتلعه بقاعدة `.env.*`.**
+	//
+	// **فلم يصل الخادمَ، وأخفق `cp` صامتاً، وانهار إقلاعُ التجهيز
+	// كلُّه** (قِيس ٢٠٢٦-٠٩-٠٦ على `CX33`). **وقالبٌ لا يُستنسَخ لا
+	// ينفع أحداً.**
+	tracked, err := exec.Command("git", "-C", root, "ls-files", "--error-unmatch",
+		"deploy/staging/.env.staging.example").CombinedOutput()
+	if err != nil {
+		t.Errorf("القالبُ غيرُ متتبَّعٍ في git — **ومن استنسخ المستودعَ لم يجده**: %s",
+			strings.TrimSpace(string(tracked)))
+	}
+
 	// **والقالبُ فارغُ القيم** — **وقالبٌ فيه سرٌّ حقيقيٌّ أسوأُ من لا قالب.**
 	b, err := os.ReadFile(filepath.Join(root, "deploy/staging/.env.staging.example"))
 	if err != nil {
