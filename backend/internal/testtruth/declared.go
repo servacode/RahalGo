@@ -38,7 +38,7 @@ type FlowDecl struct {
 	Gaps     []string
 }
 
-// Flows الأربعةُ والثلاثون.
+// Flows الخمسةُ والثلاثون.
 var Flows = []FlowDecl{
 	{ID: "F-01", Title: "إنشاءُ طلبٍ عاديّ", Actor: "customer", Apps: []string{"customer", "merchant", "admin"}, Money: true, Realtime: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D4", "D20", "D23"}, Risks: []string{"R8"}, Gaps: []string{"XG-9"}},
 	{ID: "F-02", Title: "إنشاءُ طلبٍ خاصّ", Actor: "customer", Apps: []string{"customer", "admin"}, Money: true, Partial: true, Severity: "BLOCKER", Defects: []string{"D6", "D8", "D9", "D22"}, Risks: []string{"R11"}},
@@ -74,6 +74,24 @@ var Flows = []FlowDecl{
 	{ID: "F-32", Title: "مراجعةُ صنفٍ معلَّق", Actor: "admin", Apps: []string{"merchant", "rep", "customer", "admin"}, Money: true, Severity: "MEDIUM"},
 	{ID: "F-33", Title: "تبديلُ إعدادٍ حسّاس", Actor: "admin", Apps: []string{"customer", "driver", "merchant", "rep"}, Money: true, Realtime: true, Race: true, Severity: "BLOCKER", Gaps: []string{"XG-25", "XG-26", "XG-27", "XG-28"}},
 	{ID: "F-34", Title: "بثٌّ للأدوار", Actor: "admin", Apps: []string{"customer", "driver", "merchant", "rep"}, Partial: true, Severity: "LOW", Gaps: []string{"XG-9"}},
+
+	// ══════════════════════════════════════════════════════════════
+	// **`F-35` — خريطةُ العمليات**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وتدفّقٌ خامسٌ وثلاثون لا رابعٌ وثلاثون** (٢٠٢٦-٠٩-٠٦): **ميزةٌ
+	// جديدةٌ عابرةٌ للأنظمة بُنيت بطلب المالك**، **ولا يُخفى عددٌ ليبقى
+	// الرقمُ جميلاً.**
+	//
+	// **وتمسُّ الإدارةَ وحدَها في الواجهة** — **لكنّها تقرأ من الأربعة
+	// كلِّها**: مواضعُ السائقين، ومتاجرُ المندوبين، وطلباتُ الزبائن.
+	//
+	// **و`XG-20` تمسُّها**: **كتاباتُها الحسّاسةُ تُدقَّق بنمط المنصّة
+	// القائم — وهو `best-effort` خارجَ المعاملة.** **ولم يُصلَح نظامُ
+	// التدقيق هنا** (خارجَ النطاق)، **والنقصُ معلَنٌ لا مخبوء.**
+	{ID: "F-35", Title: "خريطةُ العمليات — قراءةُ الأرض وإدارةُ التغطية",
+		Actor: "admin", Apps: []string{"admin"},
+		Severity: "HIGH", Gaps: []string{"XG-20"}},
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -784,6 +802,89 @@ var TestMap = map[string]TestDecl{
 	"TestGate_NoRuleWithoutContractOrEvidence":      gateTest(),
 	"TestGate_NonPassStatesNeverCountAsPass":        gateTest(),
 	"TestGate_ExitCodesDocumented":                  gateTest(),
+
+	// ── `F-35` · خريطةُ العمليات ────────────────────────────────
+	//
+	// **والتصريحُ أوّلاً** — **صفحةٌ تقرأ مواضعَ الناس وأرقامَ المال
+	// تُحرَس قبل أن تُعرَض.**
+	"TestOpsMap_RequiresAdminPanelRole":              mapTest(L2, "SECURITY"),
+	"TestOpsMap_MetaGrantsNamedPermissions":          mapTest(L2, "SECURITY"),
+	"TestOpsMap_LayerPermissionsAreEnforcedPerLayer": mapTest(L2, "SECURITY"),
+	"TestOpsMap_PrivacyMoneyHiddenWithoutPermission": mapTest(L2, "SECURITY"),
+	"TestSearch_ScopedToPermissions":                 mapTest(L2, "SECURITY"),
+
+	// ── الطبقاتُ والمشهد ────────────────────────────────────────
+	"TestOpsMap_DriversLayerReturnsShape":                mapTest(L4, ""),
+	"TestOpsMap_BadBBoxIsRejected":                       mapTest(L4, ""),
+	"TestOpsMap_MerchantMarkerCarriesOperationalSummary": mapTest(L4, ""),
+	"TestOpsMap_MerchantBBoxExcludesFarAway":             mapTest(L4, ""),
+	"TestOpsMap_ActiveOrderMarkerAndRelations":           mapTest(L4, ""),
+	"TestOpsMap_ClosedOrderIsNotActive":                  mapTest(L4, ""),
+
+	// ── التغطية — **وأخطرُ ما في الميزة** ──────────────────────
+	//
+	// **`ZoneAt` تقرّر من تصله المنصّةُ أصلاً** — **وخطأٌ فيها يردّ
+	// زبائنَ حقيقيّين.** فوضعُها `RELEASE` في كلّ الأوضاع.
+	"TestCoverage_LegacyRadiusUnchanged":                  coverageTest(),
+	"TestCoverage_PolygonInsideOutsideBoundary":           coverageTest(),
+	"TestCoverage_DisabledZoneDoesNotServe":               coverageTest(),
+	"TestCoverage_OverlappingZonesPickNearestCentre":      coverageTest(),
+	"TestCoverage_MultipleZonesEachMeasuredByItsOwnShape": coverageTest(),
+	"TestCoverage_EmptyTableStaysOpen":                    coverageTest(),
+	"TestCoverage_GeometryValidationRejectsBadShapes":     coverageTest(),
+	"TestCoverage_LegacyScreenNeverSeesPolygons":          coverageTest(),
+	"TestCoverage_ManagePermissionRequired":               mapTest(L2, "SECURITY"),
+
+	// ── طلباتُ التغطية ─────────────────────────────────────────
+	"TestCoverageRequest_AnonymousMayAskAndLifecycleRuns": mapTest(L4, ""),
+	"TestCoverageRequest_UnknownStatusRejected":           mapTest(L4, ""),
+	"TestCoverageRequest_BadPointRejected":                mapTest(L4, ""),
+
+	// ── الفروعُ والمناطقُ التشغيليّة ──────────────────────────
+	"TestBranch_CityGetsOnePrimaryAndManySubs": mapTest(L4, ""),
+	"TestBranch_HierarchyRulesEnforced":        mapTest(L4, ""),
+	"TestBranch_DistrictNeverBecomesBranch":    mapTest(L4, ""),
+	"TestArea_RelationsAndNotADistrict":        mapTest(L4, ""),
+	"TestBranch_ManagePermissionRequired":      mapTest(L2, "SECURITY"),
+
+	// ── المندوبون والتحليلات ──────────────────────────────────
+	"TestRep_ActivityFromExistingDataOnly":         mapTest(L4, ""),
+	"TestRep_MapNeverGatesConversion":              mapTest(L4, ""),
+	"TestDemand_RequestCellCountsMatchSeed":        mapTest(L4, ""),
+	"TestDemand_LayersAreSeparateNotMerged":        mapTest(L4, ""),
+	"TestDemand_UnservedShrinksWhenCoverageDrawn":  mapTest(L4, ""),
+	"TestDemand_TimeRangeFilters":                  mapTest(L4, ""),
+	"TestOpportunity_ScoreIsExplainedNotPredicted": mapTest(L4, ""),
+
+	// ── وحداتُ الحزمة ─────────────────────────────────────────
+	"TestPerm_NoRoleNoMap":                     mapTest(L1, "SECURITY"),
+	"TestPerm_RoleMatrix":                      mapTest(L1, "SECURITY"),
+	"TestPerm_GrantedIsStableAndDeduped":       mapTest(L1, ""),
+	"TestFreshness_DerivedNotInvented":         mapTest(L1, ""),
+	"TestFreshness_FollowsSettingNotConstant":  mapTest(L1, ""),
+	"TestFreshness_ZeroPingFallsBackNotPanics": mapTest(L1, ""),
+	"TestBBox_RejectsNonsense":                 mapTest(L1, ""),
+	"TestBBox_SQLUsesParametersNotLiterals":    mapTest(L1, "SECURITY"),
+}
+
+// mapTest اختبارُ خريطةِ عمليات — **مربوطٌ بـ`F-35`.**
+func mapTest(level Level, extra string) TestDecl {
+	modes := []string{"FULL"}
+	if extra != "" {
+		modes = append(modes, extra)
+	}
+	return TestDecl{Level: level, Flows: []string{"F-35"}, Modes: modes}
+}
+
+// coverageTest **انحدارُ خدمةِ التغطية** — ويمسُّ إنشاءَ الطلب نفسَه.
+//
+// **ولذلك يُربَط بـ`F-01`** أيضاً: **تبدُّلُ `ZoneAt` يبدّل من يستطيع
+// أن يطلب أصلاً**، **ومن ربطه بالخريطة وحدَها أخفى أثرَه في المحرّك.**
+func coverageTest() TestDecl {
+	return TestDecl{
+		Level: L4, Flows: []string{"F-35", "F-01"},
+		Modes: []string{"FULL", "CROSS_SYSTEM", "RELEASE"},
+	}
 }
 
 // gateTest فحصُ بوّابةٍ ذاتيّ — **يُشغَّل في كلّ وضعٍ إلزاميّ.**

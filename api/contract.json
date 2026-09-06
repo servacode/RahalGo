@@ -1505,6 +1505,226 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops-map/areas",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/areas",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/ops-map/areas/{id}",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/branches",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/branches",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/ops-map/branches/{id}",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/coverage",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/coverage",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/coverage-requests",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/ops-map/coverage-requests/{id}",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/ops-map/coverage/{id}",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/coverage/{id}/active",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/demand",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/drivers",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/merchants",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/meta",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/opportunities",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/orders",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/reps",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/search",
+      "handler": "requirePerm",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/orders",
       "handler": "handleListOrders",
       "auth": true,
@@ -5632,6 +5852,21 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/coverage-request",
+      "handler": "handleCoverageRequestCreate",
+      "auth": false,
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
       ]
     },
     {

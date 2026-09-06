@@ -326,15 +326,17 @@ func TestSearch_ScopedToPermissions(t *testing.T) {
 		return env.Data.Hits
 	}
 
-	// **والأدمنُ يجد المتجر.**
+	// **والأدمنُ يجد المتجر** — **ويُبحَث بما يخصُّه**: «QA» يحملها
+	// مئةُ متجرٍ في قاعدةٍ مشتركة، **وحدُّ العشرة يقصّها.**
+	uniqPart := mname[len(mname)-6:]
 	hit := false
-	for _, x := range find(h.NewUser("admin").Token, "QA") {
+	for _, x := range find(h.NewUser("admin").Token, uniqPart) {
 		if x.ID == item.MerchantID && x.Kind == "merchant" {
 			hit = true
 		}
 	}
 	if !hit {
-		t.Errorf("الأدمنُ لم يجد متجرَ %q", mname)
+		t.Errorf("الأدمنُ لم يجد متجرَ %q بالبحث عن %q", mname, uniqPart)
 	}
 
 	// **والماليّةُ لا تبحث في السائقين** — لا تملك رؤيةَ مواضعهم.
@@ -347,7 +349,12 @@ func TestSearch_ScopedToPermissions(t *testing.T) {
 	_ = drv
 
 	// **وحرفٌ واحدٌ لا يبحث** — ولا يُمسح الجدولُ كلُّه لحرف.
-	if got := find(h.NewUser("admin").Token, "ا"); len(got) != 0 {
-		t.Errorf("حرفٌ واحدٌ ردَّ %d نتيجة", len(got))
+	//
+	// **والحرفُ العربيُّ بايتان**، **فعدُّ البايتات يمرّره** — وهو ما
+	// وقع فعلاً (٢٠٢٦-٠٩-٠٦: ردَّ ثمانيَ نتائج). **والعدُّ بالحروف.**
+	for _, one := range []string{"ا", "Q"} {
+		if got := find(h.NewUser("admin").Token, one); len(got) != 0 {
+			t.Errorf("حرفٌ واحدٌ %q ردَّ %d نتيجة", one, len(got))
+		}
 	}
 }

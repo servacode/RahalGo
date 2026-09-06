@@ -27,7 +27,9 @@ type Hit struct {
 // Search يبحث في طبقات الخريطة بحسب صلاحيّات الباحث.
 func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit, error) {
 	term = strings.TrimSpace(term)
-	if len(term) < 2 {
+	// **والحرفُ العربيُّ بايتان** — **و`len` بالبايت يمرّر «ا» وحدَها
+	// فيُمسَح الجدولُ كلُّه لحرف.** (قِيس ٢٠٢٦-٠٩-٠٦: ردَّ ثمانيَ نتائج.)
+	if len([]rune(term)) < 2 {
 		return []Hit{}, nil
 	}
 	like := "%" + term + "%"
@@ -55,7 +57,7 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 			       ST_Y(u.last_location::geometry), ST_X(u.last_location::geometry)
 			FROM users u
 			JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
-			WHERE u.full_name ILIKE $1 LIMIT 10`, "driver", like); err != nil {
+			WHERE u.full_name ILIKE $1 ORDER BY u.full_name LIMIT 10`, "driver", like); err != nil {
 			return nil, err
 		}
 	}
@@ -64,7 +66,7 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 			SELECT m.id::text, m.name,
 			       ST_Y(m.location::geometry), ST_X(m.location::geometry)
 			FROM merchants m
-			WHERE m.name ILIKE $1 LIMIT 10`, "merchant", like); err != nil {
+			WHERE m.name ILIKE $1 ORDER BY m.name LIMIT 10`, "merchant", like); err != nil {
 			return nil, err
 		}
 	}
@@ -74,7 +76,7 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 			       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry)
 			FROM orders o
 			WHERE o.number::text ILIKE $1 AND o.closed_at IS NULL
-			LIMIT 10`, "order", like); err != nil {
+			ORDER BY o.number DESC LIMIT 10`, "order", like); err != nil {
 			return nil, err
 		}
 	}
@@ -82,12 +84,12 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 		if err := add(`
 			SELECT b.id::text, b.name,
 			       ST_Y(b.location::geometry), ST_X(b.location::geometry)
-			FROM branches b WHERE b.name ILIKE $1 LIMIT 10`, "branch", like); err != nil {
+			FROM branches b WHERE b.name ILIKE $1 ORDER BY b.name LIMIT 10`, "branch", like); err != nil {
 			return nil, err
 		}
 		if err := add(`
 			SELECT a.id::text, a.name, NULL::float8, NULL::float8
-			FROM operational_areas a WHERE a.name ILIKE $1 LIMIT 10`,
+			FROM operational_areas a WHERE a.name ILIKE $1 ORDER BY a.name LIMIT 10`,
 			"area", like); err != nil {
 			return nil, err
 		}
@@ -97,7 +99,7 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 			SELECT u.id::text, u.full_name, NULL::float8, NULL::float8
 			FROM users u
 			JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'sales'
-			WHERE u.full_name ILIKE $1 LIMIT 10`, "rep", like); err != nil {
+			WHERE u.full_name ILIKE $1 ORDER BY u.full_name LIMIT 10`, "rep", like); err != nil {
 			return nil, err
 		}
 	}

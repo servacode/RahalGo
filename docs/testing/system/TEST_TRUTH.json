@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 291,
+    "routes": 312,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 221,
-    "test_funcs": 727
+    "test_files": 227,
+    "test_funcs": 770
   },
   "flows": [
     {
@@ -72,6 +72,14 @@
         "TestFAIL_R8_OrphanClaimUnderRealFailure",
         "TestFAIL_XOB7_AutoTransferFireAndForget",
         "TestFIN_OrderEconomicConservation",
+        "TestCoverage_DisabledZoneDoesNotServe",
+        "TestCoverage_EmptyTableStaysOpen",
+        "TestCoverage_GeometryValidationRejectsBadShapes",
+        "TestCoverage_LegacyRadiusUnchanged",
+        "TestCoverage_LegacyScreenNeverSeesPolygons",
+        "TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
+        "TestCoverage_OverlappingZonesPickNearestCentre",
+        "TestCoverage_PolygonInsideOutsideBoundary",
         "TestD20_CustomerRealtimeVsREST",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
@@ -1032,6 +1040,69 @@
         "TestEV_RealtimeAuthorization"
       ],
       "status": "PARTIALLY_COVERED"
+    },
+    {
+      "id": "F-35",
+      "title": "خريطةُ العمليات — قراءةُ الأرض وإدارةُ التغطية",
+      "actor": "admin",
+      "apps": [
+        "admin"
+      ],
+      "money": false,
+      "realtime": false,
+      "severity": "HIGH",
+      "need_levels": [
+        "L4"
+      ],
+      "gaps": [
+        "XG-20"
+      ],
+      "tests": [
+        "TestBBox_RejectsNonsense",
+        "TestBBox_SQLUsesParametersNotLiterals",
+        "TestFreshness_DerivedNotInvented",
+        "TestFreshness_FollowsSettingNotConstant",
+        "TestFreshness_ZeroPingFallsBackNotPanics",
+        "TestPerm_GrantedIsStableAndDeduped",
+        "TestPerm_NoRoleNoMap",
+        "TestPerm_RoleMatrix",
+        "TestDemand_LayersAreSeparateNotMerged",
+        "TestDemand_RequestCellCountsMatchSeed",
+        "TestDemand_TimeRangeFilters",
+        "TestDemand_UnservedShrinksWhenCoverageDrawn",
+        "TestOpportunity_ScoreIsExplainedNotPredicted",
+        "TestRep_ActivityFromExistingDataOnly",
+        "TestRep_MapNeverGatesConversion",
+        "TestSearch_ScopedToPermissions",
+        "TestOpsMap_BadBBoxIsRejected",
+        "TestOpsMap_DriversLayerReturnsShape",
+        "TestOpsMap_MetaGrantsNamedPermissions",
+        "TestOpsMap_RequiresAdminPanelRole",
+        "TestArea_RelationsAndNotADistrict",
+        "TestBranch_CityGetsOnePrimaryAndManySubs",
+        "TestBranch_DistrictNeverBecomesBranch",
+        "TestBranch_HierarchyRulesEnforced",
+        "TestBranch_ManagePermissionRequired",
+        "TestCoverageRequest_AnonymousMayAskAndLifecycleRuns",
+        "TestCoverageRequest_BadPointRejected",
+        "TestCoverageRequest_UnknownStatusRejected",
+        "TestCoverage_DisabledZoneDoesNotServe",
+        "TestCoverage_EmptyTableStaysOpen",
+        "TestCoverage_GeometryValidationRejectsBadShapes",
+        "TestCoverage_LegacyRadiusUnchanged",
+        "TestCoverage_LegacyScreenNeverSeesPolygons",
+        "TestCoverage_ManagePermissionRequired",
+        "TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
+        "TestCoverage_OverlappingZonesPickNearestCentre",
+        "TestCoverage_PolygonInsideOutsideBoundary",
+        "TestOpsMap_ActiveOrderMarkerAndRelations",
+        "TestOpsMap_ClosedOrderIsNotActive",
+        "TestOpsMap_LayerPermissionsAreEnforcedPerLayer",
+        "TestOpsMap_MerchantBBoxExcludesFarAway",
+        "TestOpsMap_MerchantMarkerCarriesOperationalSummary",
+        "TestOpsMap_PrivacyMoneyHiddenWithoutPermission"
+      ],
+      "status": "COVERED"
     }
   ],
   "defects": [
@@ -4594,6 +4665,113 @@
       "orphan": true
     },
     {
+      "name": "TestBBox_RejectsNonsense",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "level": "L1",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestBBox_SQLUsesParametersNotLiterals",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "level": "L1",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFreshness_DerivedNotInvented",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "level": "L1",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFreshness_FollowsSettingNotConstant",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "level": "L1",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestFreshness_ZeroPingFallsBackNotPanics",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "level": "L1",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPerm_GrantedIsStableAndDeduped",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "level": "L1",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPerm_NoRoleNoMap",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "level": "L1",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPerm_RoleMatrix",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "level": "L1",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestAgreeCustom_WritesTotals",
       "file": "internal/orders/agree_custom_test.go",
       "package": "orders_test",
@@ -7154,6 +7332,492 @@
       "file": "internal/qa/notify_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestDemand_LayersAreSeparateNotMerged",
+      "file": "internal/qa/opsmap_analytics_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDemand_RequestCellCountsMatchSeed",
+      "file": "internal/qa/opsmap_analytics_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDemand_TimeRangeFilters",
+      "file": "internal/qa/opsmap_analytics_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestDemand_UnservedShrinksWhenCoverageDrawn",
+      "file": "internal/qa/opsmap_analytics_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpportunity_ScoreIsExplainedNotPredicted",
+      "file": "internal/qa/opsmap_analytics_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRep_ActivityFromExistingDataOnly",
+      "file": "internal/qa/opsmap_analytics_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRep_MapNeverGatesConversion",
+      "file": "internal/qa/opsmap_analytics_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSearch_ScopedToPermissions",
+      "file": "internal/qa/opsmap_analytics_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_BadBBoxIsRejected",
+      "file": "internal/qa/opsmap_auth_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_DriversLayerReturnsShape",
+      "file": "internal/qa/opsmap_auth_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_MetaGrantsNamedPermissions",
+      "file": "internal/qa/opsmap_auth_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_RequiresAdminPanelRole",
+      "file": "internal/qa/opsmap_auth_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestArea_RelationsAndNotADistrict",
+      "file": "internal/qa/opsmap_branches_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestBranch_CityGetsOnePrimaryAndManySubs",
+      "file": "internal/qa/opsmap_branches_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestBranch_DistrictNeverBecomesBranch",
+      "file": "internal/qa/opsmap_branches_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestBranch_HierarchyRulesEnforced",
+      "file": "internal/qa/opsmap_branches_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestBranch_ManagePermissionRequired",
+      "file": "internal/qa/opsmap_branches_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverageRequest_AnonymousMayAskAndLifecycleRuns",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverageRequest_BadPointRejected",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverageRequest_UnknownStatusRejected",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverage_DisabledZoneDoesNotServe",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35",
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverage_EmptyTableStaysOpen",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35",
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverage_GeometryValidationRejectsBadShapes",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35",
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverage_LegacyRadiusUnchanged",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35",
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverage_LegacyScreenNeverSeesPolygons",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35",
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverage_ManagePermissionRequired",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35",
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverage_OverlappingZonesPickNearestCentre",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35",
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestCoverage_PolygonInsideOutsideBoundary",
+      "file": "internal/qa/opsmap_coverage_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35",
+        "F-01"
+      ],
+      "modes": [
+        "FULL",
+        "CROSS_SYSTEM",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_ActiveOrderMarkerAndRelations",
+      "file": "internal/qa/opsmap_layers_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_ClosedOrderIsNotActive",
+      "file": "internal/qa/opsmap_layers_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_LayerPermissionsAreEnforcedPerLayer",
+      "file": "internal/qa/opsmap_layers_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_MerchantBBoxExcludesFarAway",
+      "file": "internal/qa/opsmap_layers_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_MerchantMarkerCarriesOperationalSummary",
+      "file": "internal/qa/opsmap_layers_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestOpsMap_PrivacyMoneyHiddenWithoutPermission",
+      "file": "internal/qa/opsmap_layers_test.go",
+      "package": "qa",
+      "level": "L2",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY"
+      ],
+      "orphan": false
     },
     {
       "name": "TestPAR_010_LegacyRouteUnchanged",
