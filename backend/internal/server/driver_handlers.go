@@ -167,7 +167,7 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 	// ٢٠٢٦-٠٨-١٢.) **وإعدادُ المالك يبقى أرضاً** لمن لا تاريخَ له بعد.
 	out.AvgSpeedKmh = s.driverSpeedKmh(r.Context(), uid)
 	// **والمسارُ يصير عنوانا** — كما في كلّ صورةٍ في المنصة.
-	out.AvatarURL = media.URLForPtr(out.AvatarURL)
+	out.AvatarURL = media.SignedURLPtr(out.AvatarURL)
 	httpx.JSON(w, http.StatusOK, out)
 }
 

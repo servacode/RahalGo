@@ -18,9 +18,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -162,8 +164,10 @@ func VariantURL(fullURL string, w int) string {
 }
 
 type Service struct {
-	db  *pgxpool.Pool
-	dir string // مجلد التخزين الجذري
+	// protCache مسارٌ ⇒ أمحميٌّ هو — **ولا يتبدّلان بعد الرفع.**
+	protCache sync.Map
+	db        *pgxpool.Pool
+	dir       string // مجلد التخزين الجذري
 	// setting يقرأ إعداداً عددياً من اللوحة، أو يعيد الاحتياطي.
 	//
 	// **دالّة لا مخزن** — كما في حزمة الهوية: لو حُقن `*settings.Store`
@@ -494,7 +498,45 @@ func (s *Service) FileServer() http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		rel := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+
+		// ══════════════════════════════════════════════════════════
+		// **ولا يُسرَد مجلَّد** — `D13`
+		// ══════════════════════════════════════════════════════════
+		//
+		// **`http.FileServer` يعرض قائمةَ الملفّات حين لا `index.html`**
+		// — **ومن سرد عرف الأسماءَ فجلبها**، فسقط تخمينُ المعرّفات
+		// حارساً. (مقيسٌ: `/media/` ⇒ `200` وصفحةُ سرد.)
+		//
+		// **ولا حاجةَ لسردٍ في منتَجٍ يقدّم صوراً بمعرّفاتها.**
+		if rel == "" || strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		if fi, err := os.Stat(filepath.Join(s.dir, filepath.FromSlash(rel))); err == nil && fi.IsDir() {
+			http.NotFound(w, r)
+			return
+		}
+
+		// ══════════════════════════════════════════════════════════
+		// **والشخصيُّ يحتاج توقيعاً**
+		// ══════════════════════════════════════════════════════════
+		//
+		// **والعامُّ يبقى عامّاً**: خلفيّةُ الدخول تُعرَض قبل أن يملك
+		// أحدٌ توكناً. **وحجبُ الكلِّ جزافاً يكسر عرضاً مشروعاً.**
+		if s.IsProtected(r.Context(), rel) {
+			if !verify(rel, r.URL.Query()) {
+				// **ولا يُقال «محجوب»** — **جوابٌ يفرّق بين موجودٍ
+				// ومحجوبٍ يُحوّل الحارسَ إلى كاشفِ وجود.**
+				http.NotFound(w, r)
+				return
+			}
+			// **ولا يُخزَّن الشخصيُّ في وسيط** — رابطٌ موقَّعٌ في ذاكرة
+			// وسيطٍ مشتركٍ يُقرأ بعد انتهاء أجله.
+			w.Header().Set("Cache-Control", "private, max-age=3600")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		}
 		fs.ServeHTTP(w, r)
 	})
 }

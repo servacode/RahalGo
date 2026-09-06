@@ -65,7 +65,7 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	out.AvatarThumb = media.URLForPtr(out.AvatarThumb) // "/media/" prefix (نمط الوسائط)
+	out.AvatarThumb = media.SignedURLPtr(out.AvatarThumb) // "/media/" prefix (نمط الوسائط)
 	httpx.JSON(w, http.StatusOK, out)
 }
 

@@ -121,8 +121,12 @@ type Harness struct {
 	//
 	// **ولا يكفي أن يُتحقَّق أنّ `publishOrder` نُوديت** (البند ٣١):
 	// **الاشتراكُ ثمّ الفعلُ ثمّ قراءةُ ما وصل** هو الدليل.
-	Hub    *realtime.Hub
-	tokens *auth.TokenIssuer
+	Hub *realtime.Hub
+	// MediaDir مجلَّدُ الوسائط لهذا المِسنَد — **ليكتب فيه الفحصُ ملفّاً
+	// حقيقيّاً**، فاختبارُ إذنٍ على ملفٍّ غيرِ موجودٍ يقرأ `404` نجاحاً
+	// وهو عدم.
+	MediaDir string
+	tokens   *auth.TokenIssuer
 	// rdb **الذاكرةُ نفسُها** — يُكشَف في `P-0` لتجربة `R16`.
 	//
 	// **واختبارُ إبطالِ جلسةٍ يحتاج أن يكتب المفتاحَ كما يكتبه المحرّك**
@@ -196,7 +200,12 @@ func NewWith(t *testing.T, opts ...server.Option) *Harness {
 	ordersSvc := orders.NewService(pool, identitySvc, walletSvc, cashboxSvc, hub, quiet)
 	catalogSvc := catalog.NewService(pool, identitySvc)
 	supportSvc := support.NewService(pool, identitySvc, walletSvc)
-	mediaSvc, err := media.NewService(pool, t.TempDir())
+	// **ومجلَّدُ الوسائط يُحفَظ ليكتب فيه الفحصُ ملفّاً حقيقيّاً** —
+	// **واختبارُ إذنٍ على ملفٍّ غيرِ موجودٍ يقرأ `404` نجاحاً وهو عدم.**
+	mediaDir := t.TempDir()
+	// **وسرُّ توقيع الوسائط كما في الإقلاع** — `D13`.
+	media.SetSigningKey("qa-media-secret")
+	mediaSvc, err := media.NewService(pool, mediaDir)
 	if err != nil {
 		t.Fatalf("qa: تعذّر تركيبُ خدمة الوسائط: %v", err)
 	}
@@ -212,7 +221,7 @@ func NewWith(t *testing.T, opts ...server.Option) *Harness {
 	t.Cleanup(ts.Close)
 
 	seedZone(t, pool)
-	return &Harness{T: t, Pool: pool, Srv: ts, Hub: hub, tokens: tokens, rdb: rdb}
+	return &Harness{T: t, Pool: pool, Srv: ts, Hub: hub, MediaDir: mediaDir, tokens: tokens, rdb: rdb}
 }
 
 // ══════════════════════════════════════════════════════════════════════

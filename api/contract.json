@@ -1019,6 +1019,26 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/media/sign",
+      "handler": "handleSignMedia",
+      "auth": true,
+      "roles": [
+        "admin",
+        "finance",
+        "ops"
+      ],
+      "response": [
+        {
+          "name": "url",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "DELETE",
       "path": "/api/v1/admin/menu/items/{itemID}",
       "handler": "handleDeleteItem",

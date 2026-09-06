@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 313,
+    "routes": 314,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 242,
-    "test_funcs": 839
+    "test_files": 243,
+    "test_funcs": 844
   },
   "flows": [
     {
@@ -462,10 +462,15 @@
       "tests": [
         "TestEV_CustomerDriverAssignment",
         "TestFIN_MoneyTimingByStatus",
+        "TestD13_AvatarNeedsSignedURL",
+        "TestD13_DeliveryProofNeedsSignedURL",
+        "TestD13_MediaDirectoryIsNotListable",
+        "TestD13_PublicMediaStaysPublic",
+        "TestD13_SignedURLWorksAndForgeryDoesNot",
         "TestRACE_LocationQueueIsClientSide",
         "TestRACE_FinancialTruthAfterConcurrentDeliveries"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-14",
@@ -1033,6 +1038,11 @@
         "TestSampleFactory_ValidToken",
         "TestFAIL_D15_AdminCreateUserPartial",
         "TestFAIL_D15_Reconciliation",
+        "TestD13_AvatarNeedsSignedURL",
+        "TestD13_DeliveryProofNeedsSignedURL",
+        "TestD13_MediaDirectoryIsNotListable",
+        "TestD13_PublicMediaStaysPublic",
+        "TestD13_SignedURLWorksAndForgeryDoesNot",
         "TestRACE_SessionRevokedDuringRequest"
       ],
       "status": "COVERED"
@@ -1332,10 +1342,16 @@
       "title": "سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه",
       "domain": "أمن · خصوصيّة",
       "severity": "CRITICAL",
+      "fixed": "**سردُ المجلَّد أُغلق مطلقاً** — `http.FileServer` كان يعرض قائمةَ الملفّات حين لا `index.html`، **فسقط تخمينُ المعرّفات حارساً**. **والصنفان الشخصيّان** (`avatar` · `delivery_proof`) **لا يُخدَمان إلّا برابطٍ موقَّعٍ محدودِ الأجل** (HMAC-SHA256 · ٦ ساعات)، **والسبعةُ العامّةُ كما هي** — **وخلفيّةُ الدخول تُعرَض قبل أن يملك أحدٌ توكناً، فحجبُها يقفل بابَ الدخول.** **ولم تُحجَب بالترويسة**: المصادقةُ `Bearer` وحدَها **ووسمُ `\u003cimg\u003e` لا يحملها** — فحجبٌ بالتوكن انقطاعٌ لا حماية. **والصنفُ يُسأل من الجدول لا من المسار** (`YYYY/MM/uuid` لا صنفَ فيه)، **ولم يُنقَل ملفٌّ قائم** — ونقلُ ملفّاتٍ تشير إليها صفوفٌ بابُ ضياع. **فالتركةُ محميّةٌ من أوّل يوم** (١٣ ملفّاً في الإنتاج). **والمجهولُ نسبُه يُحجَب** — ملفٌّ لا صفَّ له لا يُعرَف أعامٌّ هو أم شخصيّ. **والردُّ `404` لا `403`** — جوابٌ يفرّق بين موجودٍ ومحجوبٍ يُحوّل الحارسَ إلى كاشفِ وجود. وخمسةُ حرّاسٍ دائمين.",
       "tests": [
+        "TestD13_AvatarNeedsSignedURL",
+        "TestD13_DeliveryProofNeedsSignedURL",
+        "TestD13_MediaDirectoryIsNotListable",
+        "TestD13_PublicMediaStaysPublic",
+        "TestD13_SignedURLWorksAndForgeryDoesNot",
         "TestFAIL_D13_MediaDirectoryListingOpen"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "FIXED_AND_PASSING"
     },
     {
       "id": "D14",
@@ -1941,8 +1957,15 @@
       "id": "XG-21",
       "title": "سردُ /media/ مكشوفٌ وفيه إثباتُ التسليم",
       "severity": "BLOCKER",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "fixed": "**السردُ أُغلق مطلقاً، والشخصيُّ لا يُخدَم إلّا برابطٍ موقَّعٍ محدودِ الأجل، والعامُّ كما هو.** **والصنفُ يُسأل من الجدول لا من المسار** — فالتركةُ محميّةٌ بلا نقلِ ملفّ. **والمجهولُ نسبُه يُحجَب.** وخمسةُ حرّاسٍ: السردُ · الإثباتُ · الصورةُ · بقاءُ العامّ عامّاً · والموقَّعُ يعمل والمزوَّرُ لا.",
+      "tests": [
+        "TestD13_AvatarNeedsSignedURL",
+        "TestD13_DeliveryProofNeedsSignedURL",
+        "TestD13_MediaDirectoryIsNotListable",
+        "TestD13_PublicMediaStaysPublic",
+        "TestD13_SignedURLWorksAndForgeryDoesNot"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-22",
@@ -2029,6 +2052,13 @@
         "TestXG32_TargetTwoGrantsOnSecondOnly"
       ],
       "status": "COVERED"
+    },
+    {
+      "id": "XG-34",
+      "title": "تعثّرٌ متقطّعٌ بانتظار قفلٍ تحت حمل الحزمة الكاملة",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
     },
     {
       "id": "XG-33",
@@ -8151,6 +8181,116 @@
       "file": "internal/qa/mapdata_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestD13_AvatarNeedsSignedURL",
+      "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-30"
+      ],
+      "defects": [
+        "D13"
+      ],
+      "gaps": [
+        "XG-21"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD13_DeliveryProofNeedsSignedURL",
+      "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-30"
+      ],
+      "defects": [
+        "D13"
+      ],
+      "gaps": [
+        "XG-21"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD13_MediaDirectoryIsNotListable",
+      "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-30"
+      ],
+      "defects": [
+        "D13"
+      ],
+      "gaps": [
+        "XG-21"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD13_PublicMediaStaysPublic",
+      "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-30"
+      ],
+      "defects": [
+        "D13"
+      ],
+      "gaps": [
+        "XG-21"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestD13_SignedURLWorksAndForgeryDoesNot",
+      "file": "internal/qa/media_access_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-30"
+      ],
+      "defects": [
+        "D13"
+      ],
+      "gaps": [
+        "XG-21"
+      ],
+      "modes": [
+        "SECURITY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestMDIS_001_SMSChannelIsGone",

@@ -35,7 +35,7 @@ func (r *Repo) getUserBy(ctx context.Context, where, arg string) (*User, string,
 		LEFT JOIN media am ON am.id = u.avatar_media_id
 		WHERE `+where+` GROUP BY u.id, am.thumb_path`, arg).
 		Scan(&u.ID, &u.Phone, &u.FullName, &u.Status, &passwordHash, &u.InviteCode, &u.MustChangePassword, &u.AvatarURL, &u.LastSeenAt, &u.CreatedAt, &u.Roles)
-	u.AvatarURL = media.URLForPtr(u.AvatarURL)
+	u.AvatarURL = media.SignedURLPtr(u.AvatarURL)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, "", ErrNotFound
 	}
@@ -194,7 +194,7 @@ func (r *Repo) ListUsers(ctx context.Context, query, role string, onlineOnly boo
 			&u.OnShift, &u.DriverCash, &u.OpenOrders, &u.DeliveredToday); err != nil {
 			return nil, 0, err
 		}
-		u.AvatarURL = media.URLForPtr(u.AvatarURL)
+		u.AvatarURL = media.SignedURLPtr(u.AvatarURL)
 		if false {
 			return nil, 0, err
 		}

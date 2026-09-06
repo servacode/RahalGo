@@ -169,6 +169,18 @@ var domainRules = []domainRule{
 		//
 		// **و`F-03` («ردُّ إنشاءٍ ضائع») هو تدفّقُ منع التكرار بعينه** —
 		// **وكان غائباً عن أثرِ الدورة التي أصلحته.**
+		// **والوسائطُ تعبر كلَّ سطحٍ يعرض صورة** — **وقاعدةُ الأثر
+		// كانت تقول تدفّقين** لأنّ `media/` لم يكن مذكوراً، **وهي
+		// العلّةُ الوصفيّةُ نفسُها التي صُحّحت لمنع التكرار.**
+		Name:     "MEDIA",
+		Match:    []string{"backend/internal/media/"},
+		Flows:    []string{"F-01", "F-13", "F-21", "F-30", "F-32"},
+		Apps:     []string{"customer", "merchant", "driver", "rep", "admin"},
+		Modes:    []Mode{ModeSecurity, ModeFailure},
+		Packages: []string{"internal/catalog", "internal/qa", "internal/server"},
+		Why:      "الوسائطُ تعبر كلَّ سطحٍ يعرض صورةً ⇒ إذنُ الجلب وعقدُ المسارات",
+	},
+	{
 		Name: "IDEMPOTENCY",
 		Match: []string{"backend/internal/server/idempotency.go",
 			"backend/internal/server/idempotency_tx.go"},

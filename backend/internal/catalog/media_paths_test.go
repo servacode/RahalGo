@@ -66,8 +66,14 @@ func TestMediaPathsArePrefixed(t *testing.T) {
 					ref := m[1] + "." + m[2] // مثال: sec.ImageURL
 					checked++
 					// **الإسنادُ بعينه لا مجرّدُ وجودِ الدالّة في الدالّة.**
+					// **والتوقيعُ إسنادٌ أيضاً** — `D13`: **الوسائطُ
+					// الشخصيّةُ تُصدَّر بـ`SignedURLPtr`**، وهي تنادي
+					// `URLFor` في جوفها. **فمن حصر القبولَ في اسمٍ
+					// واحدٍ رأى إصلاحاً أمنيّاً كسراً.**
 					if strings.Contains(fn.body, ref+" = media.URLFor") ||
-						strings.Contains(fn.body, ref+" = URLFor") {
+						strings.Contains(fn.body, ref+" = URLFor") ||
+						strings.Contains(fn.body, ref+" = media.SignedURL") ||
+						strings.Contains(fn.body, ref+" = SignedURL") {
 						continue
 					}
 					t.Errorf("%s · %s: يقرأ %s من القاعدة ولا يُسنِد له media.URLForPtr — يخرج مفتاحُ تخزينٍ عارياً فتُكسر الصورة",

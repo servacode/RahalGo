@@ -12,23 +12,23 @@
 
 | ما هو | العدد |
 |---|---|
-| أبوابٌ في الموجّه | **313** |
+| أبوابٌ في الموجّه | **314** |
 | انتقالاتُ الطلب | **55** |
 | أنواعُ قيدِ المحفظة | **14** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **49** — منها **11** موجَّهٌ بـ`Apps` |
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **242** |
-| دوالُّ اختبار | **839** |
+| ملفّاتُ اختبار | **243** |
+| دوالُّ اختبار | **844** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 839
-MAPPED     = 167
+TOTAL      = 844
+MAPPED     = 172
 INFRA      = 104
 ORPHAN     = 568
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 568
 | **التدفّقات** | 35 | 29 | 6 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 13 | 11 |
-| **فجواتُ العقد** | 29 | 8 | 21 |
+| **فجواتُ العقد** | 30 | 9 | 21 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
 
 ---
@@ -79,7 +79,7 @@ ORPHAN     = 568
 | **D10** | الاستعادةُ تُبطل نوعَ عميلٍ واحد | `NO_REGRESSION_TEST_YET` | — |
 | **D11** | force_password_change بلا بوّابةٍ في أندرويد | `NO_REGRESSION_TEST_YET` | — |
 | **D12** | Push.unregister بلا منادٍ | `EXPECTED_FAIL` | `TestEV_PushTokenTargeting` |
-| **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `EXPECTED_FAIL` | `TestFAIL_D13_MediaDirectoryListingOpen` |
+| **D13** | سردُ /media/ مفتوحٌ — وإثباتُ التسليم فيه | `FIXED_AND_PASSING` | `TestD13_AvatarNeedsSignedURL` · `TestD13_DeliveryProofNeedsSignedURL` · `TestD13_MediaDirectoryIsNotListable` · `TestD13_PublicMediaStaysPublic` · `TestD13_SignedURLWorksAndForgeryDoesNot` · `TestFAIL_D13_MediaDirectoryListingOpen` |
 | **D14** | handleWS لا يفحص ActiveStatus | `EXPECTED_FAIL` | `TestSampleFactory_SuspendedIsRefused` |
 | **D15** | AdminCreateUser في خطوتين | `FIXED_AND_PASSING` | `TestATOMIC_AdminUserCreationIsOneUnit` · `TestFAIL_D15_AdminCreateUserPartial` · `TestFAIL_D15_Reconciliation` |
 | **D16** | طابورُ المواقع ملفٌّ بلا صاحب | `NO_REGRESSION_TEST_YET` | — |
@@ -117,7 +117,7 @@ ORPHAN     = 568
 | **XG-18** | `BLOCKER` | — | `COVERED` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestUNIQ_ConcurrentConversionWithExistingOwner` · `TestUNIQ_ConcurrentLeadConversionMakesOneMerchant` · `TestUNIQ_DatabaseRefusesSecondMerchantForSameLead` · `TestUNIQ_FailureThenRetryMakesOneMerchant` · `TestRACE_DuplicateLeadConversion` |
 | **XG-19** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-20** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
-| **XG-21** | `BLOCKER` | — | `NOT_IMPLEMENTED` | — |
+| **XG-21** | `BLOCKER` | — | `COVERED` | `TestD13_AvatarNeedsSignedURL` · `TestD13_DeliveryProofNeedsSignedURL` · `TestD13_MediaDirectoryIsNotListable` · `TestD13_PublicMediaStaysPublic` · `TestD13_SignedURLWorksAndForgeryDoesNot` |
 | **XG-22** | `BLOCKER` | — | `NOT_IMPLEMENTED` | — |
 | **XG-23** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-24** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
@@ -128,6 +128,7 @@ ORPHAN     = 568
 | **XG-29** | `BLOCKER` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
 | **XG-30** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-32** | `CRITICAL` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` · `TestXG32_ConcurrentTargetCrossingGrantsOnce` · `TestXG32_FailureRollbackThenRetryGrantsOnce` · `TestXG32_FirstConversionGrantsRewardImmediately` · `TestXG32_FurtherConversionsDoNotRepeatReward` · `TestXG32_PreviousMonthDoesNotSatisfyTarget` · `TestXG32_TargetTwoGrantsOnSecondOnly` |
+| **XG-34** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-33** | `CRITICAL` | — | `COVERED` | `TestIDEM_AllProtectedPathsUseCoordinator` · `TestIDEM_T10_CleanupSparesLiveClaim` · `TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged` · `TestIDEM_T1_ConcurrentDuplicateExecutesOnce` · `TestIDEM_T2_OrphanBeforeTxIsReclaimed` · `TestIDEM_T3_StaleOwnerIsFenced` · `TestIDEM_T4_ActiveClaimCannotBeStolen` · `TestIDEM_T5_BusinessRollbackLeavesNothing` · `TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate` · `TestIDEM_T8_TwoReclaimersExecuteOnce` · `TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim` · `TestFAIL_C06_OrphanBeforeCommitBlocksOwner` · `TestFAIL_C06_TwoReclaimersExecuteNothing` · `TestIDEM_CleanupSparesLiveClaim` · `TestIDEM_CommittedBeforeResultDoesNotDuplicate` · `TestIDEM_LostResponseReplays` |
 | **XG-31** | `CRITICAL` | — | `COVERED` | `TestOBL_BothInsufficient_AtomicOrigins` · `TestOBL_FutureEarningsSettleWithEvidence` · `TestOBL_MerchantInsufficient_OriginTraceable` · `TestOBL_MerchantSufficient_NoObligation` · `TestOBL_MultipleObligationsFIFO` · `TestOBL_RepAvailable_NoObligation` · `TestOBL_RepWithdrawn_OriginTraceable` · `TestOBL_ReplayCreatesNoDuplicate` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
 

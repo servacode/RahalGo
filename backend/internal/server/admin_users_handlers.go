@@ -222,7 +222,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	out.AvatarThumb = media.URLForPtr(out.AvatarThumb)
+	out.AvatarThumb = media.SignedURLPtr(out.AvatarThumb)
 	httpx.JSON(w, http.StatusOK, out)
 }
 

@@ -206,6 +206,10 @@ func run(logger *slog.Logger) error {
 	go ordersSvc.RunWatchdog(ctx, 30*time.Second)
 	supportSvc := support.NewService(pg, identitySvc, walletSvc)
 	supportSvc.SetSettings(settingsStore)
+	// **وسرُّ توقيع الوسائط** — `D13`: **الشخصيُّ يُخدَم برابطٍ موقَّعٍ
+	// محدودِ الأجل**، لأنّ وسمَ `<img>` لا يحمل ترويسةَ مصادقة.
+	// **وبلا سرٍّ يُحجَب المحميُّ كلُّه** — سقوطٌ مغلقٌ لا مفتوح.
+	media.SetSigningKey(cfg.JWTSecret)
 	mediaSvc, err := media.NewService(pg, cfg.UploadsDir)
 	if err != nil {
 		return err
