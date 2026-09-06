@@ -2,106 +2,51 @@
   "elapsed_ms": 1,
   "result": {
     "change_source": "GIT_RANGE",
-    "base": "210edbb6",
+    "base": "34c0b221",
     "head": "HEAD",
     "changed_files": [
       {
-        "path": "backend/internal/catalog/zones.go",
+        "path": ".gitignore",
+        "category": "DOCS_ONLY",
+        "why": "ملفُّ مستودعٍ لا يمسّ سلوكاً"
+      },
+      {
+        "path": "backend/Dockerfile",
         "category": "PRODUCT_BACKEND",
         "why": "شيفرةُ المحرّك"
       },
       {
-        "path": "backend/internal/migrate/migrations/0127_coverage_geometry.sql",
-        "category": "DATABASE_MIGRATION",
-        "why": "هجرةُ قاعدةِ بيانات"
-      },
-      {
-        "path": "backend/internal/migrate/migrations/0128_branches_areas.sql",
-        "category": "DATABASE_MIGRATION",
-        "why": "هجرةُ قاعدةِ بيانات"
-      },
-      {
-        "path": "backend/internal/opsmap/branches.go",
+        "path": "backend/cmd/stagingctl/main.go",
         "category": "PRODUCT_BACKEND",
         "why": "شيفرةُ المحرّك"
       },
       {
-        "path": "backend/internal/opsmap/coverage.go",
+        "path": "backend/internal/envguard/envguard.go",
         "category": "PRODUCT_BACKEND",
         "why": "شيفرةُ المحرّك"
       },
       {
-        "path": "backend/internal/opsmap/demand.go",
-        "category": "PRODUCT_BACKEND",
-        "why": "شيفرةُ المحرّك"
-      },
-      {
-        "path": "backend/internal/opsmap/drivers.go",
-        "category": "PRODUCT_BACKEND",
-        "why": "شيفرةُ المحرّك"
-      },
-      {
-        "path": "backend/internal/opsmap/market.go",
-        "category": "PRODUCT_BACKEND",
-        "why": "شيفرةُ المحرّك"
-      },
-      {
-        "path": "backend/internal/opsmap/opsmap_test.go",
+        "path": "backend/internal/envguard/envguard_test.go",
         "category": "TEST",
         "why": "ملفُّ اختبار"
       },
       {
-        "path": "backend/internal/opsmap/perm.go",
-        "category": "PRODUCT_BACKEND",
-        "why": "شيفرةُ المحرّك"
+        "path": "backend/internal/qa/harness.go",
+        "category": "TEST_INFRA",
+        "why": "حزمةُ بنيةٍ تحتيّةٍ للاختبار"
       },
       {
-        "path": "backend/internal/opsmap/reps.go",
-        "category": "PRODUCT_BACKEND",
-        "why": "شيفرةُ المحرّك"
+        "path": "backend/internal/qa/staging_redis.go",
+        "category": "TEST_INFRA",
+        "why": "حزمةُ بنيةٍ تحتيّةٍ للاختبار"
       },
       {
-        "path": "backend/internal/opsmap/requests.go",
-        "category": "PRODUCT_BACKEND",
-        "why": "شيفرةُ المحرّك"
-      },
-      {
-        "path": "backend/internal/opsmap/search.go",
-        "category": "PRODUCT_BACKEND",
-        "why": "شيفرةُ المحرّك"
-      },
-      {
-        "path": "backend/internal/orders/sources.go",
-        "category": "PRODUCT_BACKEND",
-        "why": "شيفرةُ المحرّك"
-      },
-      {
-        "path": "backend/internal/qa/opsmap_analytics_test.go",
+        "path": "backend/internal/qa/staging_security_test.go",
         "category": "TEST_INFRA",
         "why": "اختبارٌ في حزمةِ بنيةٍ تحتيّة"
       },
       {
-        "path": "backend/internal/qa/opsmap_auth_test.go",
-        "category": "TEST_INFRA",
-        "why": "اختبارٌ في حزمةِ بنيةٍ تحتيّة"
-      },
-      {
-        "path": "backend/internal/qa/opsmap_branches_test.go",
-        "category": "TEST_INFRA",
-        "why": "اختبارٌ في حزمةِ بنيةٍ تحتيّة"
-      },
-      {
-        "path": "backend/internal/qa/opsmap_coverage_test.go",
-        "category": "TEST_INFRA",
-        "why": "اختبارٌ في حزمةِ بنيةٍ تحتيّة"
-      },
-      {
-        "path": "backend/internal/qa/opsmap_layers_test.go",
-        "category": "TEST_INFRA",
-        "why": "اختبارٌ في حزمةِ بنيةٍ تحتيّة"
-      },
-      {
-        "path": "backend/internal/server/opsmap_handlers.go",
+        "path": "backend/internal/server/identity_handler.go",
         "category": "PRODUCT_BACKEND",
         "why": "شيفرةُ المحرّك"
       },
@@ -111,24 +56,39 @@
         "why": "شيفرةُ المحرّك"
       },
       {
-        "path": "web/apps/rahalgo/package.json",
-        "category": "ADMIN_WEB",
-        "why": "لوحةُ الإدارة"
+        "path": "backend/internal/testtruth/declared.go",
+        "category": "TEST_INFRA",
+        "why": "حزمةُ بنيةٍ تحتيّةٍ للاختبار"
       },
       {
-        "path": "web/apps/rahalgo/src/app/dashboard/layout.tsx",
-        "category": "ADMIN_WEB",
-        "why": "لوحةُ الإدارة"
+        "path": "deploy/staging/Caddyfile.staging",
+        "category": "DEPLOY_OPS",
+        "why": "نشرٌ أو تشغيل"
       },
       {
-        "path": "web/apps/rahalgo/src/app/dashboard/opsmap/page.tsx",
-        "category": "ADMIN_WEB",
-        "why": "لوحةُ الإدارة"
+        "path": "deploy/staging/RUNBOOK.md",
+        "category": "DEPLOY_OPS",
+        "why": "نشرٌ أو تشغيل"
       },
       {
-        "path": "web/apps/rahalgo/src/components/admin/opsmap/canvas.tsx",
-        "category": "ADMIN_WEB",
-        "why": "لوحةُ الإدارة"
+        "path": "deploy/staging/compose.staging.yml",
+        "category": "DEPLOY_OPS",
+        "why": "نشرٌ أو تشغيل"
+      },
+      {
+        "path": "deploy/staging/deploy.sh",
+        "category": "DEPLOY_OPS",
+        "why": "نشرٌ أو تشغيل"
+      },
+      {
+        "path": "docs/testing/system/TEST_TRUTH.json",
+        "category": "PRODUCT_TRUTH_DOCS",
+        "why": "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة**"
+      },
+      {
+        "path": "docs/testing/system/TEST_TRUTH.md",
+        "category": "PRODUCT_TRUTH_DOCS",
+        "why": "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة**"
       },
       {
         "path": "web/packages/i18n/src/locales/ar.json",
@@ -136,27 +96,12 @@
         "why": "لوحةُ الإدارة"
       },
       {
-        "path": "web/packages/ui/package.json",
-        "category": "ADMIN_WEB",
-        "why": "لوحةُ الإدارة"
-      },
-      {
-        "path": "web/pnpm-lock.yaml",
+        "path": "web/packages/ui/src/DashboardChrome.tsx",
         "category": "ADMIN_WEB",
         "why": "لوحةُ الإدارة"
       }
     ],
     "impacted_flows": [
-      "F-01",
-      "F-04",
-      "F-07",
-      "F-08",
-      "F-12",
-      "F-13",
-      "F-14",
-      "F-15",
-      "F-16",
-      "F-17",
       "F-19",
       "F-25",
       "F-26",
@@ -171,64 +116,20 @@
     ],
     "impacted_settings": [
       "app.max_file_mb",
-      "app.min_version.customer",
-      "app.min_version.driver",
-      "app.min_version.merchant",
       "auth.otp_channel",
       "auth.otp_login",
       "auth.require_whatsapp",
       "auth.signup_verify",
       "auth.sms_template",
-      "customers.cash_ban_days",
-      "customers.cash_ban_failures",
-      "customers.max_addresses",
-      "customers.require_whatsapp",
-      "customers.signup_bonus",
-      "delivery.by_distance",
-      "delivery.default_radius_m",
-      "delivery.fee",
-      "delivery.max_fee",
-      "delivery.per_km",
-      "drivers.assigned_silence_sec",
-      "drivers.assignment_mode",
-      "drivers.cash_limit",
-      "drivers.direct_assign",
-      "drivers.failed_compensation_percent",
-      "drivers.location_ping_sec",
-      "drivers.max_active_orders",
-      "drivers.monthly_target",
-      "drivers.offer_timeout_sec",
-      "drivers.require_delivery_photo",
-      "drivers.require_whatsapp",
-      "drivers.reward_2",
-      "drivers.reward_3",
-      "drivers.same_route_extra",
-      "drivers.target_2",
-      "drivers.target_3",
-      "drivers.target_reward",
       "home.banner_auto",
       "home.banner_seconds",
       "media.max_upload_mb",
-      "merchants.cancel_ban_count",
-      "merchants.cancel_ban_days",
-      "merchants.cancel_ban_mode",
       "merchants.commission_percent",
-      "merchants.default_prep_minutes",
-      "merchants.menu_requires_approval",
-      "merchants.return_support_percent",
-      "orders.accept_timeout_min",
       "orders.auto_accept_min",
-      "orders.auto_dispatch",
       "orders.auto_transfer",
-      "orders.customer_cancel_window_sec",
       "orders.delivery_estimate_min",
       "orders.delivery_timeout_min",
-      "orders.driver_timeout_min",
       "orders.extra_source_fee",
-      "orders.handover_timeout_min",
-      "orders.max_open_per_customer",
-      "orders.max_sources",
-      "orders.route_margin_pct",
       "orders.source_proximity_m",
       "payouts.min_amount",
       "platform.app_url",
@@ -260,194 +161,20 @@
     ],
     "impacted_defects": [
       "D1",
-      "D13",
-      "D19",
-      "D20",
-      "D23",
-      "D24",
-      "D27",
-      "D4",
-      "D5",
-      "D7"
+      "D5"
     ],
-    "impacted_risks": [
-      "R10",
-      "R21",
-      "R23",
-      "R4",
-      "R7",
-      "R8"
-    ],
+    "impacted_risks": null,
     "impacted_gaps": [
-      "XG-10",
-      "XG-11",
       "XG-20",
       "XG-25",
       "XG-26",
       "XG-27",
       "XG-28",
-      "XG-5",
-      "XG-9"
+      "XG-5"
     ],
     "impacted_financial_invariants": null,
     "impacted_events": null,
     "selected_tests": [
-      {
-        "target": "TestCoverage_DisabledZoneDoesNotServe",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestCoverage_DisabledZoneDoesNotServe",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestCoverage_EmptyTableStaysOpen",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestCoverage_EmptyTableStaysOpen",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestCoverage_GeometryValidationRejectsBadShapes",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestCoverage_GeometryValidationRejectsBadShapes",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestCoverage_LegacyRadiusUnchanged",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestCoverage_LegacyRadiusUnchanged",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestCoverage_LegacyScreenNeverSeesPolygons",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestCoverage_LegacyScreenNeverSeesPolygons",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestCoverage_OverlappingZonesPickNearestCentre",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestCoverage_OverlappingZonesPickNearestCentre",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestCoverage_PolygonInsideOutsideBoundary",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestCoverage_PolygonInsideOutsideBoundary",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestD20_CustomerRealtimeVsREST",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestD20_CustomerRealtimeVsREST",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D20 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestD20_MerchantRealtimeVsREST",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestD20_MerchantRealtimeVsREST",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D20 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestD21_CustomerRedactionAgainstContract",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestD21_CustomerRedactionAgainstContract",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D23 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestEV_CustomerDriverAssignment",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestEV_CustomerDriverAssignment",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D23 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
       {
         "target": "TestEV_MerchantDriverAssignment",
         "kind": "test",
@@ -456,85 +183,7 @@
           {
             "from": "TestEV_MerchantDriverAssignment",
             "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D20 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestEV_MerchantRealtimePrivacy",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestEV_MerchantRealtimePrivacy",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D20 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestEV_MultiOrderRouting",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestEV_MultiOrderRouting",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestEV_OrderAudience",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestEV_OrderAudience",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestEV_PushTokenTargeting",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestEV_PushTokenTargeting",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-07",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestEV_R21AutoTransferAwareness",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestEV_R21AutoTransferAwareness",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R21 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestEV_R23PushFailureIsLost",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestEV_R23PushFailureIsLost",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D27 (البند ٢٠)",
+            "path": "تدفّقٌ متأثّر F-19",
             "depth": "TRANSITIVE"
           }
         ]
@@ -579,58 +228,6 @@
         ]
       },
       {
-        "target": "TestFAIL_P7SeamRequired_FCMTransport",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFAIL_P7SeamRequired_FCMTransport",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R23 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFAIL_R7_DriverAcceptPartialState",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFAIL_R7_DriverAcceptPartialState",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D24 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFAIL_R8_OrphanClaimUnderRealFailure",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFAIL_R8_OrphanClaimUnderRealFailure",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R8 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFAIL_XOB7_AutoTransferFireAndForget",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFAIL_XOB7_AutoTransferFireAndForget",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R21 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
         "target": "TestFIN_CashExposureContract",
         "kind": "test",
         "required": true,
@@ -638,33 +235,7 @@
           {
             "from": "TestFIN_CashExposureContract",
             "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D7 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFIN_CommissionSourceMatrix",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFIN_CommissionSourceMatrix",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-14",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFIN_ConservationSurvivesRefund",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFIN_ConservationSurvivesRefund",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-14",
+            "path": "تدفّقٌ متأثّر F-19",
             "depth": "TRANSITIVE"
           }
         ]
@@ -683,84 +254,6 @@
         ]
       },
       {
-        "target": "TestFIN_MerchantWithdrewThenRefund",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFIN_MerchantWithdrewThenRefund",
-            "rule": "TRUTH_MAPPING",
-            "path": "فجوةُ عقدٍ XG-11 (BLOCKER) (البند ٢٢)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFIN_MoneyTimingByStatus",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFIN_MoneyTimingByStatus",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-14",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFIN_OrderEconomicConservation",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFIN_OrderEconomicConservation",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFIN_RefundNotConditionedOnRepBalance",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFIN_RefundNotConditionedOnRepBalance",
-            "rule": "TRUTH_MAPPING",
-            "path": "فجوةُ عقدٍ XG-10 (BLOCKER) (البند ٢٢)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFIN_RepCommissionReversal",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFIN_RepCommissionReversal",
-            "rule": "TRUTH_MAPPING",
-            "path": "فجوةُ عقدٍ XG-10 (BLOCKER) (البند ٢٢)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestFIN_RepeatedRefundIsIdempotent",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestFIN_RepeatedRefundIsIdempotent",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-15",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
         "target": "TestFIN_SnapshotVsLiveEconomics",
         "kind": "test",
         "required": true,
@@ -768,7 +261,7 @@
           {
             "from": "TestFIN_SnapshotVsLiveEconomics",
             "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-14",
+            "path": "تدفّقٌ متأثّر F-33",
             "depth": "TRANSITIVE"
           }
         ]
@@ -787,123 +280,6 @@
         ]
       },
       {
-        "target": "TestIDEM_CleanupAfterTTL",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestIDEM_CleanupAfterTTL",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R8 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestIDEM_CommitThenLostResponse",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestIDEM_CommitThenLostResponse",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R8 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestIDEM_ErrorReleasesClaim",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestIDEM_ErrorReleasesClaim",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R8 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestIDEM_InProgressOverlap",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestIDEM_InProgressOverlap",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R8 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestIDEM_SameKeyDifferentPayload",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestIDEM_SameKeyDifferentPayload",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R8 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestIDEM_SameKeySamePayloadConcurrent",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestIDEM_SameKeySamePayloadConcurrent",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R8 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestIDEM_SameKeySamePayloadSequential",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestIDEM_SameKeySamePayloadSequential",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R8 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestOrderFieldsAllClassified",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestOrderFieldsAllClassified",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D20 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestPushPayloadScope",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestPushPayloadScope",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-01",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
         "target": "TestRACE_AdminVsAppTransition",
         "kind": "test",
         "required": true,
@@ -911,59 +287,7 @@
           {
             "from": "TestRACE_AdminVsAppTransition",
             "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R7 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestRACE_FinancialTruthAfterConcurrentDeliveries",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestRACE_FinancialTruthAfterConcurrentDeliveries",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-14",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestRACE_LocationQueueIsClientSide",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestRACE_LocationQueueIsClientSide",
-            "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-13",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestRACE_MaxActiveOrders",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestRACE_MaxActiveOrders",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D24 (البند ٢٠)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestRACE_RefundVsPayout",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestRACE_RefundVsPayout",
-            "rule": "TRUTH_MAPPING",
-            "path": "فجوةُ عقدٍ XG-10 (BLOCKER) (البند ٢٢)",
+            "path": "تدفّقٌ متأثّر F-19",
             "depth": "TRANSITIVE"
           }
         ]
@@ -976,33 +300,7 @@
           {
             "from": "TestRACE_SettingChangeDuringSettlement",
             "rule": "TRUTH_MAPPING",
-            "path": "تدفّقٌ متأثّر F-14",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestRACE_TwoDriversSameOrder",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestRACE_TwoDriversSameOrder",
-            "rule": "TRUTH_MAPPING",
-            "path": "تحقّقُ الخطر R10 (البند ٢١)",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "TestSampleFactory_DriverOnShiftWithCash",
-        "kind": "test",
-        "required": true,
-        "reasons": [
-          {
-            "from": "TestSampleFactory_DriverOnShiftWithCash",
-            "rule": "TRUTH_MAPPING",
-            "path": "حارسُ العيب D7 (البند ٢٠)",
+            "path": "تدفّقٌ متأثّر F-33",
             "depth": "TRANSITIVE"
           }
         ]
@@ -1026,34 +324,41 @@
         "required": true,
         "reasons": [
           {
-            "from": "backend/internal/qa/opsmap_analytics_test.go",
+            "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_auth_test.go",
+            "from": "backend/internal/qa/staging_redis.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_branches_test.go",
+            "from": "backend/internal/qa/staging_security_test.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_coverage_test.go",
+            "from": "backend/internal/testtruth/declared.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
-          },
+          }
+        ]
+      },
+      {
+        "target": "internal/envguard",
+        "kind": "package",
+        "required": true,
+        "reasons": [
           {
-            "from": "backend/internal/qa/opsmap_layers_test.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
+            "from": "backend/internal/envguard/envguard_test.go",
+            "rule": "TEST_ONLY",
+            "path": "حزمةُ الاختبار المتبدّل",
+            "depth": "DIRECT"
           }
         ]
       },
@@ -1063,31 +368,25 @@
         "required": true,
         "reasons": [
           {
-            "from": "backend/internal/qa/opsmap_analytics_test.go",
+            "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_auth_test.go",
+            "from": "backend/internal/qa/staging_redis.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_branches_test.go",
+            "from": "backend/internal/qa/staging_security_test.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_coverage_test.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "backend/internal/qa/opsmap_layers_test.go",
+            "from": "backend/internal/testtruth/declared.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
@@ -1100,43 +399,25 @@
         "required": true,
         "reasons": [
           {
-            "from": "backend/internal/migrate/migrations/0127_coverage_geometry.sql",
-            "rule": "MIGRATION",
-            "path": "قيدُ أنواع الدفتر يُقرأ من القاعدة الحيّة",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "backend/internal/migrate/migrations/0128_branches_areas.sql",
-            "rule": "MIGRATION",
-            "path": "قيدُ أنواع الدفتر يُقرأ من القاعدة الحيّة",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "backend/internal/qa/opsmap_analytics_test.go",
+            "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_auth_test.go",
+            "from": "backend/internal/qa/staging_redis.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_branches_test.go",
+            "from": "backend/internal/qa/staging_security_test.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_coverage_test.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "backend/internal/qa/opsmap_layers_test.go",
+            "from": "backend/internal/testtruth/declared.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
@@ -1149,60 +430,28 @@
         "required": true,
         "reasons": [
           {
-            "from": "backend/internal/qa/opsmap_analytics_test.go",
+            "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_auth_test.go",
+            "from": "backend/internal/qa/staging_redis.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_branches_test.go",
+            "from": "backend/internal/qa/staging_security_test.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_coverage_test.go",
+            "from": "backend/internal/testtruth/declared.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
-          },
-          {
-            "from": "backend/internal/qa/opsmap_layers_test.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          }
-        ]
-      },
-      {
-        "target": "internal/opsmap",
-        "kind": "package",
-        "required": true,
-        "reasons": [
-          {
-            "from": "backend/internal/opsmap/opsmap_test.go",
-            "rule": "TEST_ONLY",
-            "path": "حزمةُ الاختبار المتبدّل",
-            "depth": "DIRECT"
-          }
-        ]
-      },
-      {
-        "target": "internal/orders",
-        "kind": "package",
-        "required": true,
-        "reasons": [
-          {
-            "from": "backend/internal/orders/sources.go",
-            "rule": "ORDER_LIFECYCLE",
-            "path": "دورةُ حياة الطلب تمسّ أربعةَ تطبيقاتٍ ولو تبدّل ملفٌّ واحد (البند ١٨)",
-            "depth": "DIRECT"
           }
         ]
       },
@@ -1212,345 +461,27 @@
         "required": true,
         "reasons": [
           {
-            "from": "backend/internal/migrate/migrations/0127_coverage_geometry.sql",
-            "rule": "MIGRATION",
-            "path": "الهجراتُ تُطبَّق في مِسنَد `qa`",
-            "depth": "DIRECT"
-          },
-          {
-            "from": "backend/internal/migrate/migrations/0128_branches_areas.sql",
-            "rule": "MIGRATION",
-            "path": "الهجراتُ تُطبَّق في مِسنَد `qa`",
-            "depth": "DIRECT"
-          },
-          {
-            "from": "backend/internal/orders/sources.go",
-            "rule": "ORDER_LIFECYCLE",
-            "path": "دورةُ حياة الطلب تمسّ أربعةَ تطبيقاتٍ ولو تبدّل ملفٌّ واحد (البند ١٨)",
-            "depth": "DIRECT"
-          },
-          {
-            "from": "backend/internal/qa/opsmap_analytics_test.go",
+            "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_auth_test.go",
+            "from": "backend/internal/qa/staging_redis.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_branches_test.go",
+            "from": "backend/internal/qa/staging_security_test.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_coverage_test.go",
+            "from": "backend/internal/testtruth/declared.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "backend/internal/qa/opsmap_layers_test.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_SettingChangeDuringSettlement",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_SettingChangeDuringSettlement",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_InProgressOverlap",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_InProgressOverlap",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_SameKeyDifferentPayload",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_SameKeyDifferentPayload",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_D5_ExpenseTreasuryPartial",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_D5_ExpenseTreasuryPartial",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_MerchantRealtimePrivacy",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_MerchantRealtimePrivacy",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestSampleFactory_DriverOnShiftWithCash",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestSampleFactory_DriverOnShiftWithCash",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_MoneyTimingByStatus",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_MoneyTimingByStatus",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_PushTokenTargeting",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_PushTokenTargeting",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_AQ4_AuditAtomicity",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_AQ4_AuditAtomicity",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_MerchantDriverAssignment",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_MerchantDriverAssignment",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_CleanupAfterTTL",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_CleanupAfterTTL",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_CommitThenLostResponse",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_CommitThenLostResponse",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_SameKeySamePayloadConcurrent",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_SameKeySamePayloadConcurrent",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_EmptyTableStaysOpen",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_EmptyTableStaysOpen",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_GeometryValidationRejectsBadShapes",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_GeometryValidationRejectsBadShapes",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_OverlappingZonesPickNearestCentre",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_OverlappingZonesPickNearestCentre",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestPushPayloadScope",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestPushPayloadScope",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestD20_CustomerRealtimeVsREST",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestD20_CustomerRealtimeVsREST",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_TwoDriversSameOrder",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_TwoDriversSameOrder",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_OrderAudience",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_OrderAudience",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_FinancialTruthAfterConcurrentDeliveries",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_FinancialTruthAfterConcurrentDeliveries",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_RepeatedRefundIsIdempotent",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_RepeatedRefundIsIdempotent",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_WalletAudience",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_WalletAudience",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestD20_MerchantRealtimeVsREST",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestD20_MerchantRealtimeVsREST",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_CustomerDriverAssignment",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_CustomerDriverAssignment",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_P7SeamRequired_FCMTransport",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_P7SeamRequired_FCMTransport",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_RefundNotConditionedOnRepBalance",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_RefundNotConditionedOnRepBalance",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_RefundVsPayout",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_RefundVsPayout",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_MerchantWithdrewThenRefund",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_MerchantWithdrewThenRefund",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_CommissionSourceMatrix",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_CommissionSourceMatrix",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_LocationQueueIsClientSide",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_LocationQueueIsClientSide",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_MaxActiveOrders",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_MaxActiveOrders",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestOrderFieldsAllClassified",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestOrderFieldsAllClassified",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestD21_CustomerRedactionAgainstContract",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestD21_CustomerRedactionAgainstContract",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_R23PushFailureIsLost",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_R23PushFailureIsLost",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_TransactionBoundaries",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_TransactionBoundaries",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_LegacyRadiusUnchanged",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_LegacyRadiusUnchanged",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_MultipleZonesEachMeasuredByItsOwnShape",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_SnapshotVsLiveEconomics",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_SnapshotVsLiveEconomics",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestIDEM_SameKeySamePayloadSequential",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_SameKeySamePayloadSequential",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestCoverage_DisabledZoneDoesNotServe",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_DisabledZoneDoesNotServe",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_ConservationSurvivesRefund",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_ConservationSurvivesRefund",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestSampleFactory_WalletMatchesLedger",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestSampleFactory_WalletMatchesLedger",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_CashExposureContract",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_CashExposureContract",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFAIL_R7_DriverAcceptPartialState",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_R7_DriverAcceptPartialState",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_R21AutoTransferAwareness",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_R21AutoTransferAwareness",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestRACE_AdminVsAppTransition",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestRACE_AdminVsAppTransition",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestEV_MultiOrderRouting",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestEV_MultiOrderRouting",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "TestFIN_OrderEconomicConservation",
-            "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_OrderEconomicConservation",
             "depth": "TRANSITIVE"
           },
           {
@@ -1560,39 +491,63 @@
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestFAIL_R8_OrphanClaimUnderRealFailure",
+            "from": "TestFIN_TransactionBoundaries",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_R8_OrphanClaimUnderRealFailure",
+            "path": "حزمةُ TestFIN_TransactionBoundaries",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestIDEM_ErrorReleasesClaim",
+            "from": "TestEV_MerchantDriverAssignment",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestIDEM_ErrorReleasesClaim",
+            "path": "حزمةُ TestEV_MerchantDriverAssignment",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestFAIL_XOB7_AutoTransferFireAndForget",
+            "from": "TestFIN_CashExposureContract",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFAIL_XOB7_AutoTransferFireAndForget",
+            "path": "حزمةُ TestFIN_CashExposureContract",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestFIN_RepCommissionReversal",
+            "from": "TestRACE_AdminVsAppTransition",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestFIN_RepCommissionReversal",
+            "path": "حزمةُ TestRACE_AdminVsAppTransition",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestCoverage_LegacyScreenNeverSeesPolygons",
+            "from": "TestEV_WalletAudience",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_LegacyScreenNeverSeesPolygons",
+            "path": "حزمةُ TestEV_WalletAudience",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "TestCoverage_PolygonInsideOutsideBoundary",
+            "from": "TestSampleFactory_WalletMatchesLedger",
             "rule": "TRUTH_MAPPING",
-            "path": "حزمةُ TestCoverage_PolygonInsideOutsideBoundary",
+            "path": "حزمةُ TestSampleFactory_WalletMatchesLedger",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFIN_SnapshotVsLiveEconomics",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFIN_SnapshotVsLiveEconomics",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFAIL_D5_ExpenseTreasuryPartial",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFAIL_D5_ExpenseTreasuryPartial",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestFAIL_AQ4_AuditAtomicity",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestFAIL_AQ4_AuditAtomicity",
+            "depth": "TRANSITIVE"
+          },
+          {
+            "from": "TestRACE_SettingChangeDuringSettlement",
+            "rule": "TRUTH_MAPPING",
+            "path": "حزمةُ TestRACE_SettingChangeDuringSettlement",
             "depth": "TRANSITIVE"
           }
         ]
@@ -1603,31 +558,25 @@
         "required": true,
         "reasons": [
           {
-            "from": "backend/internal/qa/opsmap_analytics_test.go",
+            "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_auth_test.go",
+            "from": "backend/internal/qa/staging_redis.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_branches_test.go",
+            "from": "backend/internal/qa/staging_security_test.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_coverage_test.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
-          },
-          {
-            "from": "backend/internal/qa/opsmap_layers_test.go",
+            "from": "backend/internal/testtruth/declared.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
@@ -1640,41 +589,45 @@
         "required": true,
         "reasons": [
           {
-            "from": "backend/internal/qa/opsmap_analytics_test.go",
+            "from": "backend/internal/qa/harness.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_auth_test.go",
+            "from": "backend/internal/qa/staging_redis.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_branches_test.go",
+            "from": "backend/internal/qa/staging_security_test.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_coverage_test.go",
+            "from": "backend/internal/testtruth/declared.go",
             "rule": "TEST_INFRA",
             "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
             "depth": "TRANSITIVE"
           },
           {
-            "from": "backend/internal/qa/opsmap_layers_test.go",
-            "rule": "TEST_INFRA",
-            "path": "**المِسنَدُ لا يختبر نفسَه بما تبدّل وحدَه**",
-            "depth": "TRANSITIVE"
+            "from": "docs/testing/system/TEST_TRUTH.json",
+            "rule": "TRUTH_DOCS",
+            "path": "السجلّاتُ المجمَّدةُ تُستخرَج من هذه الوثائق",
+            "depth": "DIRECT"
+          },
+          {
+            "from": "docs/testing/system/TEST_TRUTH.md",
+            "rule": "TRUTH_DOCS",
+            "path": "السجلّاتُ المجمَّدةُ تُستخرَج من هذه الوثائق",
+            "depth": "DIRECT"
           }
         ]
       }
     ],
     "required_modes": [
-      "CONCURRENCY",
-      "FAILURE",
       "FAST",
       "FINANCIAL",
       "FULL",
@@ -1682,87 +635,89 @@
       "WEB"
     ],
     "real_device_required": null,
-    "staging_required": null,
+    "staging_required": [
+      "**`STAGING VALIDATION REQUIRED`** — الصحّةُ والجاهزيّةُ والهجرات"
+    ],
     "unknowns": null,
     "confidence": "HIGH",
     "risk_class": "CRITICAL",
     "reasons": [
       {
-        "from": "backend/internal/migrate/migrations/0127_coverage_geometry.sql",
-        "rule": "MIGRATION",
-        "path": "هجرةٌ ⇒ تكاملُ القاعدة وثوابتُ المال (البند ١١)",
+        "from": ".gitignore",
+        "rule": "DOCS_ONLY",
+        "path": "توثيقٌ عاديّ — **لا أثرَ على السلوك**",
         "depth": "DIRECT"
       },
       {
-        "from": "backend/internal/migrate/migrations/0128_branches_areas.sql",
-        "rule": "MIGRATION",
-        "path": "هجرةٌ ⇒ تكاملُ القاعدة وثوابتُ المال (البند ١١)",
+        "from": "backend/Dockerfile",
+        "rule": "DEPLOY",
+        "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
         "depth": "DIRECT"
       },
       {
-        "from": "backend/internal/opsmap/opsmap_test.go",
+        "from": "backend/internal/envguard/envguard_test.go",
         "rule": "TEST_ONLY",
         "path": "اختبارٌ تبدّل — **ولا يُفترَض تبدّلُ سلوكِ منتج** (البند ٢٣)",
         "depth": "DIRECT"
       },
       {
-        "from": "backend/internal/orders/sources.go",
-        "rule": "ORDER_LIFECYCLE",
-        "path": "دورةُ حياة الطلب تمسّ أربعةَ تطبيقاتٍ ولو تبدّل ملفٌّ واحد (البند ١٨)",
-        "depth": "DIRECT"
-      },
-      {
-        "from": "backend/internal/qa/opsmap_analytics_test.go",
+        "from": "backend/internal/qa/harness.go",
         "rule": "TEST_INFRA",
         "path": "**بنيةٌ تحتيّةٌ للاختبار ⇒ تحقّقٌ أوسعُ من اختبارِها وحدَه** (البند ٢٤)",
         "depth": "DIRECT"
       },
       {
-        "from": "backend/internal/qa/opsmap_auth_test.go",
+        "from": "backend/internal/qa/staging_redis.go",
         "rule": "TEST_INFRA",
         "path": "**بنيةٌ تحتيّةٌ للاختبار ⇒ تحقّقٌ أوسعُ من اختبارِها وحدَه** (البند ٢٤)",
         "depth": "DIRECT"
       },
       {
-        "from": "backend/internal/qa/opsmap_branches_test.go",
+        "from": "backend/internal/qa/staging_security_test.go",
         "rule": "TEST_INFRA",
         "path": "**بنيةٌ تحتيّةٌ للاختبار ⇒ تحقّقٌ أوسعُ من اختبارِها وحدَه** (البند ٢٤)",
         "depth": "DIRECT"
       },
       {
-        "from": "backend/internal/qa/opsmap_coverage_test.go",
+        "from": "backend/internal/testtruth/declared.go",
         "rule": "TEST_INFRA",
         "path": "**بنيةٌ تحتيّةٌ للاختبار ⇒ تحقّقٌ أوسعُ من اختبارِها وحدَه** (البند ٢٤)",
         "depth": "DIRECT"
       },
       {
-        "from": "backend/internal/qa/opsmap_layers_test.go",
-        "rule": "TEST_INFRA",
-        "path": "**بنيةٌ تحتيّةٌ للاختبار ⇒ تحقّقٌ أوسعُ من اختبارِها وحدَه** (البند ٢٤)",
+        "from": "deploy/staging/Caddyfile.staging",
+        "rule": "DEPLOY",
+        "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
         "depth": "DIRECT"
       },
       {
-        "from": "web/apps/rahalgo/package.json",
-        "rule": "ADMIN_WEB",
-        "path": "لوحةُ الإدارة — حرّاسُ الويب و`typecheck` و`eslint`",
+        "from": "deploy/staging/RUNBOOK.md",
+        "rule": "DEPLOY",
+        "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
         "depth": "DIRECT"
       },
       {
-        "from": "web/apps/rahalgo/src/app/dashboard/layout.tsx",
-        "rule": "ADMIN_WEB",
-        "path": "لوحةُ الإدارة — حرّاسُ الويب و`typecheck` و`eslint`",
+        "from": "deploy/staging/compose.staging.yml",
+        "rule": "DEPLOY",
+        "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
         "depth": "DIRECT"
       },
       {
-        "from": "web/apps/rahalgo/src/app/dashboard/opsmap/page.tsx",
-        "rule": "ADMIN_WEB",
-        "path": "لوحةُ الإدارة — حرّاسُ الويب و`typecheck` و`eslint`",
+        "from": "deploy/staging/deploy.sh",
+        "rule": "DEPLOY",
+        "path": "تبديلُ نشرٍ أو تشغيل — لا يُثبَت محلّيّاً (البند ٢٦)",
         "depth": "DIRECT"
       },
       {
-        "from": "web/apps/rahalgo/src/components/admin/opsmap/canvas.tsx",
-        "rule": "ADMIN_WEB",
-        "path": "لوحةُ الإدارة — حرّاسُ الويب و`typecheck` و`eslint`",
+        "from": "docs/testing/system/TEST_TRUTH.json",
+        "rule": "TRUTH_DOCS",
+        "path": "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة** ⇒ إعادةُ توليدٍ وحرّاسُ انحراف (البند ٢٥)",
+        "depth": "DIRECT"
+      },
+      {
+        "from": "docs/testing/system/TEST_TRUTH.md",
+        "rule": "TRUTH_DOCS",
+        "path": "**حقيقةُ منتجٍ لا وثيقةٌ عاديّة** ⇒ إعادةُ توليدٍ وحرّاسُ انحراف (البند ٢٥)",
         "depth": "DIRECT"
       },
       {
@@ -1772,76 +727,10 @@
         "depth": "DIRECT"
       },
       {
-        "from": "web/packages/ui/package.json",
+        "from": "web/packages/ui/src/DashboardChrome.tsx",
         "rule": "ADMIN_WEB",
         "path": "لوحةُ الإدارة — حرّاسُ الويب و`typecheck` و`eslint`",
         "depth": "DIRECT"
-      },
-      {
-        "from": "web/pnpm-lock.yaml",
-        "rule": "ADMIN_WEB",
-        "path": "لوحةُ الإدارة — حرّاسُ الويب و`typecheck` و`eslint`",
-        "depth": "DIRECT"
-      },
-      {
-        "from": "F-01",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-01 ⇒ تطبيقاتُه [customer merchant admin] وسجلّاتُه",
-        "depth": "TRANSITIVE"
-      },
-      {
-        "from": "F-04",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-04 ⇒ تطبيقاتُه [merchant customer] وسجلّاتُه",
-        "depth": "TRANSITIVE"
-      },
-      {
-        "from": "F-07",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-07 ⇒ تطبيقاتُه [driver] وسجلّاتُه",
-        "depth": "TRANSITIVE"
-      },
-      {
-        "from": "F-08",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-08 ⇒ تطبيقاتُه [driver customer merchant] وسجلّاتُه",
-        "depth": "TRANSITIVE"
-      },
-      {
-        "from": "F-12",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-12 ⇒ تطبيقاتُه [driver customer merchant] وسجلّاتُه",
-        "depth": "TRANSITIVE"
-      },
-      {
-        "from": "F-13",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-13 ⇒ تطبيقاتُه [driver customer merchant admin] وسجلّاتُه",
-        "depth": "TRANSITIVE"
-      },
-      {
-        "from": "F-14",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-14 ⇒ تطبيقاتُه [merchant driver rep admin] وسجلّاتُه",
-        "depth": "TRANSITIVE"
-      },
-      {
-        "from": "F-15",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-15 ⇒ تطبيقاتُه [customer merchant rep admin] وسجلّاتُه",
-        "depth": "TRANSITIVE"
-      },
-      {
-        "from": "F-16",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-16 ⇒ تطبيقاتُه [driver customer admin] وسجلّاتُه",
-        "depth": "TRANSITIVE"
-      },
-      {
-        "from": "F-17",
-        "rule": "FLOW_EXPANSION",
-        "path": "F-17 ⇒ تطبيقاتُه [customer merchant driver] وسجلّاتُه",
-        "depth": "TRANSITIVE"
       },
       {
         "from": "F-19",
