@@ -241,23 +241,21 @@ func (s *Server) handleAdminResetPassword(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, err)
 		return
 	}
-	// كلمة مرور وضعها الأدمن — مؤقتة: يُجبَر صاحب الحساب على تبديلها عند أول دخول
-	// فلا تبقى كلمة مرور يعرفها غيره.
-	tag, err := s.pg.Exec(r.Context(), `
-		UPDATE users SET password_hash = $2, must_change_password = true, updated_at = now()
-		WHERE id = $1`, id, hash)
-	if err != nil {
+	// ══════════════════════════════════════════════════════════════
+	// **والإعادةُ فعلُ استردادٍ لا كتابةُ بصمة** — `R13`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كانت هنا جملةُ `UPDATE` تتجاوز خدمةَ الهويّة**: **بصمةٌ
+	// تُكتب ولا جلسةٌ تُبطَل** — **فيبقى صاحبُ الوصول القديمِ داخلاً
+	// ورمزُ تجديده يدور.**
+	//
+	// **وكلمةُ الأدمن مؤقّتة**: يُجبَر صاحبُ الحساب على تبديلها عند
+	// أوّل دخول، **فلا تبقى كلمةٌ يعرفها غيرُه.**
+	if err := s.identity.AdminResetPassword(r.Context(), userIDFrom(r),
+		id, hash, clientIP(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	if tag.RowsAffected() == 0 {
-		s.respondErr(w, httpx.ErrNotFound)
-		return
-	}
-	actor := userIDFrom(r)
-	_, _ = s.pg.Exec(r.Context(), `
-		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip)
-		VALUES ($1, 'admin.password_reset', 'user', $2, $3)`, actor, id, clientIP(r))
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
 

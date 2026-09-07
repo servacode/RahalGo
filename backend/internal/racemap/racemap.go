@@ -63,7 +63,11 @@ type Race struct {
 	Evidence string `json:"evidence,omitempty"`
 }
 
-// All التدفّقاتُ العشرة — **`CONCURRENCY-SENSITIVE FLOWS = 10`.**
+// All التدفّقاتُ الأحدَ عشرَ — **`CONCURRENCY-SENSITIVE FLOWS = 11`.**
+//
+// **وكان العددُ عشرةً حتّى دورةِ ١٨** — **وأُضيف `C-11` لأنّه قِيس**:
+// إعادةُ كلمةٍ إداريّةٌ تتزامن مع تجديدِ رمز. **والعددُ يُجمَّد ليمنع
+// اختفاءَ تدفّقٍ، لا ليمنع اكتشافَ واحد.**
 var All = []Race{
 	{
 		ID: "C-01", Title: "سائقان يقبلان الطلبَ نفسَه",
@@ -210,6 +214,34 @@ var All = []Race{
 		Registers: []string{"R19", "R20"},
 		TxClass:   "—",
 		Evidence:  "بابُ الخادم يتحمّل 4 دفعاتٍ متزامنةً بلا ازدواج · وفقدُ الدفعة في العميل → P-8",
+	},
+	{
+		ID: "C-11", Title: "إعادةُ كلمةٍ إداريّةٌ مقابلَ تجديدِ رمز",
+		Flows: []string{"F-30"}, Actors: []string{"admin", "customer"},
+		Shared: "users.password_hash · users.sessions_revoked_at · refresh_tokens",
+		Where:  Local, Result: Pass,
+		Window: "**Refresh تُبطل الرمزَ المعروضَ ثمّ تُصدر بديلَه** — " +
+			"**وبينهما تقع الإعادةُ فلا تجد ما تُبطله**، ثمّ يُدرَج " +
+			"البديلُ بعدها. **وقفلُ صفٍّ لا يُغلقها**: من انتظر القفلَ " +
+			"أدرج بعد تحريره والإبطالُ مضى.",
+		Invariant: "إعادةُ الكلمة تسترجع الحسابَ — ولا رمزَ يعبرها",
+		Tests: []string{"TestR13_T1T2_ResetKillsAccessAndRefresh",
+			"TestR13_T3_ResetKillsEveryDevice",
+			"TestR13_T4_ResetDoesNotTouchOtherAccounts",
+			"TestR13_T5_NewPasswordStillLogsIn",
+			"TestR13_T6_ResetVsRefreshRace",
+			"TestR13_T7_RevocationSurvivesCacheLoss",
+			"TestR13_ResetGoesThroughIdentityService"},
+		Registers: []string{"R13"},
+		TxClass: "ATOMIC — البصمةُ والحِقبةُ والإبطالُ في معاملةٍ واحدة · " +
+			"**وحِقبةٌ لا قفلٌ تحسم السباق**",
+		Evidence: "**قبل**: بعد الإعادة ⇒ الوصولُ 200 · التجديدُ 200 · " +
+			"صفوفٌ حيّةٌ=1 — **والحسابُ لم يُسترَدّ.** " +
+			"**بعد**: الوصولُ 401 · التجديدُ 401 · صفوفٌ حيّةٌ=0 · " +
+			"وكلُّ الأجهزة · ولا يُمسّ حسابٌ آخر · والدخولُ بالكلمة " +
+			"الجديدة 200 · **وسباقٌ بتداخلٍ مقيسٍ=2: الرمزُ الذي خرج " +
+			"لا يعمل** (ثمانيةُ تشغيلاتٍ بلا سقطة) · " +
+			"**ومحوُ مفتاح `Redis` لا يُحيي الجلسة** (`R16`).",
 	},
 }
 

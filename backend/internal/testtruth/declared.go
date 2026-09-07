@@ -590,6 +590,35 @@ var Gaps = []GapDecl{
 	// دورةِ ١١ صراحةً.**
 	//
 	// **وكلاهما قرارُ مالك.**
+	// ══════════════════════════════════════════════════════════════
+	// **`XG-40` — تغييرُ المرء لكلمته لا يُبطل جلساته**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **قيست في دورةِ ١٨ عند إصلاح `R13`** (٢٠٢٦-٠٩-٠٧) — **ولم
+	// تُصلَح**، لأنّ عقدَها غيرُ عقدِ `R13`.
+	//
+	// # المقيس
+	//
+	// **`SetPassword`** (صفحةُ «حسابي») تتحقّق من الكلمة الحاليّة
+	// وتكتب الجديدةَ وتسجّل تدقيقاً — **ولا تُبطل جلسةً واحدة.**
+	//
+	// # ولماذا تهمّ
+	//
+	// **من شكّ أنّ أحداً يعرف كلمتَه فبدّلها لم يُخرجه.** **وجلسةُ
+	// المتطفّل تبقى تعمل، ورمزُ تجديده يدور.**
+	//
+	// # ولماذا لا تُدمَج في `R13`
+	//
+	// **الفاعلُ مختلفٌ والعقدُ مختلف.** **إعادةُ الإدارة استردادٌ ⇒
+	// تُقطَع كلُّ الجلسات.** **وتغييرُ المرء لكلمته العرفُ فيه أن
+	// تُقطَع جلساتُ غيرِ جهازه ويبقى هو داخلاً** — **وإلّا أخرج
+	// نفسَه من الصفحة التي يقف عليها.**
+	//
+	// **و«تبقى الحاليّةُ أم تُقطَع كلُّها؟» قرارُ مالك** — ولا
+	// أخترعه.
+	{ID: "XG-40", Title: "تغييرُ المرء لكلمته لا يُبطل جلساته القائمة",
+		Severity: "HIGH"},
+
 	{ID: "XG-39", Title: "الإيقافُ الإداريُّ يُبطل الجلسة فلا يُبلَغ استثناءُ إتمام الطلب",
 		Severity: "HIGH",
 		// **دورةُ إصلاحٍ ١٧ · ٢٠٢٦-٠٩-٠٧ — بعقدِ مالكٍ صريح.**
@@ -1509,6 +1538,15 @@ var TestMap = map[string]TestDecl{
 	"TestXG39_C2_BlockVsRefresh":                                 sessionTest(),
 	"TestXG39_WS_HandshakeFollowsStatusModel":                    sessionTest(),
 
+	// ── إعادةُ الكلمة والاسترداد (دورةُ إصلاحٍ ١٨) — `R13` ────────
+	"TestR13_T1T2_ResetKillsAccessAndRefresh":   resetTest(),
+	"TestR13_T3_ResetKillsEveryDevice":          resetTest(),
+	"TestR13_T4_ResetDoesNotTouchOtherAccounts": resetTest(),
+	"TestR13_T5_NewPasswordStillLogsIn":         resetTest(),
+	"TestR13_T6_ResetVsRefreshRace":             resetTest(),
+	"TestR13_T7_RevocationSurvivesCacheLoss":    resetTest(),
+	"TestR13_ResetGoesThroughIdentityService":   infraTest(),
+
 	// ── ديمومةُ نقلِ الإشعار (دورةُ إصلاحٍ ١٥) — `PF-09` · `R23` ────
 	"TestPF09_N1_ProviderSuccessRecorded":                deliveryTest(),
 	"TestPF09_N2N3N8_TransientRetriesWithBackoff":        deliveryTest(),
@@ -1697,6 +1735,16 @@ func deliveryTest() TestDecl {
 		Flows: []string{"F-07", "F-14"},
 		Risks: []string{"R23"},
 		Modes: []string{"FAILURE", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
+	}
+}
+
+// resetTest حارسُ استردادِ الحساب بإعادة الكلمة — `R13`.
+func resetTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-30"},
+		Risks: []string{"R13"},
+		Modes: []string{"SECURITY", "CONCURRENCY", "FULL", "RELEASE"},
 	}
 }
 

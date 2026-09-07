@@ -1,10 +1,10 @@
 {
   "counts": {
-    "total": 10,
-    "local": 9,
+    "total": 11,
+    "local": 10,
     "requires_p0": 0,
     "deferred_p8": 1,
-    "pass": 7,
+    "pass": 8,
     "risk_confirmed": 1,
     "proven": 0,
     "expected_fail": 1,
@@ -300,6 +300,36 @@
       "where": "DEFERRED_TO_P8",
       "transaction_class": "—",
       "evidence": "بابُ الخادم يتحمّل 4 دفعاتٍ متزامنةً بلا ازدواج · وفقدُ الدفعة في العميل → P-8"
+    },
+    {
+      "id": "C-11",
+      "flows": [
+        "F-30"
+      ],
+      "title": "إعادةُ كلمةٍ إداريّةٌ مقابلَ تجديدِ رمز",
+      "actors": [
+        "admin",
+        "customer"
+      ],
+      "shared_resource": "users.password_hash · users.sessions_revoked_at · refresh_tokens",
+      "race_window": "**Refresh تُبطل الرمزَ المعروضَ ثمّ تُصدر بديلَه** — **وبينهما تقع الإعادةُ فلا تجد ما تُبطله**، ثمّ يُدرَج البديلُ بعدها. **وقفلُ صفٍّ لا يُغلقها**: من انتظر القفلَ أدرج بعد تحريره والإبطالُ مضى.",
+      "invariant": "إعادةُ الكلمة تسترجع الحسابَ — ولا رمزَ يعبرها",
+      "tests": [
+        "TestR13_T1T2_ResetKillsAccessAndRefresh",
+        "TestR13_T3_ResetKillsEveryDevice",
+        "TestR13_T4_ResetDoesNotTouchOtherAccounts",
+        "TestR13_T5_NewPasswordStillLogsIn",
+        "TestR13_T6_ResetVsRefreshRace",
+        "TestR13_T7_RevocationSurvivesCacheLoss",
+        "TestR13_ResetGoesThroughIdentityService"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R13"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "ATOMIC — البصمةُ والحِقبةُ والإبطالُ في معاملةٍ واحدة · **وحِقبةٌ لا قفلٌ تحسم السباق**",
+      "evidence": "**قبل**: بعد الإعادة ⇒ الوصولُ 200 · التجديدُ 200 · صفوفٌ حيّةٌ=1 — **والحسابُ لم يُسترَدّ.** **بعد**: الوصولُ 401 · التجديدُ 401 · صفوفٌ حيّةٌ=0 · وكلُّ الأجهزة · ولا يُمسّ حسابٌ آخر · والدخولُ بالكلمة الجديدة 200 · **وسباقٌ بتداخلٍ مقيسٍ=2: الرمزُ الذي خرج لا يعمل** (ثمانيةُ تشغيلاتٍ بلا سقطة) · **ومحوُ مفتاح `Redis` لا يُحيي الجلسة** (`R16`)."
     }
   ]
 }

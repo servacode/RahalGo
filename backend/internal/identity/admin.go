@@ -10,6 +10,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"time"
 )
 
 // عمليات إدارة المستخدمين — للوحة الأدمن (كلها مسجلة في سجل التدقيق).
@@ -241,6 +242,90 @@ var errValidationErr = httpx.NewError(http.StatusBadRequest, "validation", "erro
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+// AdminResetPassword **إعادةُ كلمةٍ إداريّةٌ — فعلُ استرداد** (`R13`).
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا انتقلت من المعالِج إلى هنا**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كانت جملةَ `UPDATE` في `handleAdminResetPassword` تتجاوز خدمةَ
+// الهويّة كلَّها**: لا حدَّ معاملةٍ ولا إبطالَ جلسة. **فتُعاد الكلمةُ
+// لحسابٍ اختُرق ويبقى صاحبُ الوصول القديمِ داخلاً** — **ورمزُ تجديده
+// يدور إلى الأبد، فالمهلةُ لا تُنقذ.**
+//
+// **وقيس**: بعد الإعادة ⇒ الوصولُ 200 والتجديدُ 200 وصفوفٌ حيّةٌ=1.
+//
+// # وثلاثةُ أفعالٍ في معاملةٍ واحدة
+//
+//	١ البصمةُ الجديدةُ و`must_change_password`
+//	٢ **حِقبةُ الجلسات** — `sessions_revoked_at = now()`
+//	٣ إبطالُ كلّ رموز التجديد الحيّة
+//
+// **فإن سقط أحدُها لم يقع شيء** — **وإعادةُ كلمةٍ بلا إبطالٍ أسوأُ من
+// لا إعادة**: تُطمئن من طلبها وهي لم تسترجع شيئاً.
+//
+// # ولماذا الحِقبةُ مع الإبطال
+//
+// **`Refresh` تُبطل الرمزَ المعروضَ ثمّ تُصدر بديلَه** — **وبينهما
+// تقع الإعادةُ فلا تجد ما تُبطله، ثمّ يُدرَج البديلُ فيُفلت.**
+// **والحِقبةُ تقتل العائلةَ كلَّها بأصلها لا بصفوفها** — **فلا يعبرها
+// إدراجٌ متأخّر.**
+//
+// # والبثُّ والخبيئةُ بعد التثبيت
+//
+// **مفاتيحُ `Redis` تسريعُ رفضٍ لا مصدرُ حقيقة** (`R16`) — **فسقوطُها
+// لا يُسقط الاسترداد.**
+func (s *Service) AdminResetPassword(ctx context.Context, actorID, userID, hash, ip string) error {
+	tx, err := s.repo.pool().Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE users
+		   SET password_hash = $2, must_change_password = true,
+		       sessions_revoked_at = now(), updated_at = now()
+		 WHERE id = $1::uuid`, userID, hash)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return httpx.ErrNotFound
+	}
+
+	rows, err := tx.Query(ctx, `
+		UPDATE refresh_tokens SET revoked_at = now()
+		 WHERE user_id = $1::uuid AND revoked_at IS NULL AND expires_at > now()
+		RETURNING session_id::text`, userID)
+	if err != nil {
+		return err
+	}
+	var sids []string
+	for rows.Next() {
+		var sid string
+		if rows.Scan(&sid) == nil {
+			sids = append(sids, sid)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	// **وبعد التثبيت**: مُسرِّعُ الرفض ثمّ خبيئةُ الحال ثمّ التدقيق.
+	for _, sid := range sids {
+		s.rdb.Set(ctx, sessionRevokedKey(sid), "1", s.tokens.AccessTTL()+time.Minute)
+	}
+	s.invalidateStatusCache(ctx, userID)
+	s.repo.Audit(ctx, &actorID, "admin.password_reset", "user", userID, ip,
+		map[string]any{"sessions_revoked": len(sids)})
+	return nil
 }
 
 // AdminLogoutAll يُبطل كل جلسات الحساب فوراً (توكنات التجديد) — لقطع وصول موقوف.

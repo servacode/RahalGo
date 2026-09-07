@@ -640,7 +640,7 @@ func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl t
 	var out string
 	err := r.db.QueryRow(ctx, `
 		WITH u AS (
-			SELECT id FROM users
+			SELECT id, sessions_revoked_at FROM users
 			 WHERE id = $1 AND status IN ('active', 'suspended')
 			 FOR SHARE
 		)
@@ -648,6 +648,11 @@ func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl t
 		SELECT u.id, $2, now() + $3, $4, $5,
 		       COALESCE($6::uuid, gen_random_uuid()), $7
 		  FROM u
+		 WHERE $6::uuid IS NULL
+		    OR u.sessions_revoked_at IS NULL
+		    OR EXISTS (SELECT 1 FROM refresh_tokens rt
+		                WHERE rt.session_id = $6::uuid
+		                  AND rt.created_at > u.sessions_revoked_at)
 		RETURNING session_id::text`,
 		userID, tokenHash, ttl, userAgent, ip, sid, client).Scan(&out)
 	if errors.Is(err, pgx.ErrNoRows) {

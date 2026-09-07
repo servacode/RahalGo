@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 255,
-    "test_funcs": 912
+    "test_files": 256,
+    "test_funcs": 919
   },
   "flows": [
     {
@@ -1123,6 +1123,12 @@
         "TestD13_MediaDirectoryIsNotListable",
         "TestD13_PublicMediaStaysPublic",
         "TestD13_SignedURLWorksAndForgeryDoesNot",
+        "TestR13_T1T2_ResetKillsAccessAndRefresh",
+        "TestR13_T3_ResetKillsEveryDevice",
+        "TestR13_T4_ResetDoesNotTouchOtherAccounts",
+        "TestR13_T5_NewPasswordStillLogsIn",
+        "TestR13_T6_ResetVsRefreshRace",
+        "TestR13_T7_RevocationSurvivesCacheLoss",
         "TestRACE_SessionRevokedDuringRequest",
         "TestR16_R8_BothDownIsSafeFailure",
         "TestR16_IssuedTokensAlwaysCarrySession",
@@ -1805,8 +1811,15 @@
       "flows": [
         "F-30"
       ],
-      "tests": null,
-      "status": "NO_REGRESSION_TEST_YET"
+      "tests": [
+        "TestR13_T1T2_ResetKillsAccessAndRefresh",
+        "TestR13_T3_ResetKillsEveryDevice",
+        "TestR13_T4_ResetDoesNotTouchOtherAccounts",
+        "TestR13_T5_NewPasswordStillLogsIn",
+        "TestR13_T6_ResetVsRefreshRace",
+        "TestR13_T7_RevocationSurvivesCacheLoss"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
     },
     {
       "id": "R14",
@@ -2263,6 +2276,13 @@
     {
       "id": "XG-38",
       "title": "إعادةُ دفعٍ متأخّرةٌ تطمس إشعاراً أحدثَ — معرّفان ثابتان في أندرويد",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-40",
+      "title": "تغييرُ المرء لكلمته لا يُبطل جلساته القائمة",
       "severity": "HIGH",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
@@ -9697,6 +9717,134 @@
       "orphan": true
     },
     {
+      "name": "TestR13_ResetGoesThroughIdentityService",
+      "file": "internal/qa/password_reset_session_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR13_T1T2_ResetKillsAccessAndRefresh",
+      "file": "internal/qa/password_reset_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR13_T3_ResetKillsEveryDevice",
+      "file": "internal/qa/password_reset_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR13_T4_ResetDoesNotTouchOtherAccounts",
+      "file": "internal/qa/password_reset_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR13_T5_NewPasswordStillLogsIn",
+      "file": "internal/qa/password_reset_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR13_T6_ResetVsRefreshRace",
+      "file": "internal/qa/password_reset_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR13_T7_RevocationSurvivesCacheLoss",
+      "file": "internal/qa/password_reset_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestD20_CustomerRealtimeVsREST",
       "file": "internal/qa/privacy_test.go",
       "package": "qa",
@@ -13371,7 +13519,6 @@
     "F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به",
     "R1 — لا اختبارَ يحسمه بعد",
     "R12 — لا اختبارَ يحسمه بعد",
-    "R13 — لا اختبارَ يحسمه بعد",
     "R17 — لا اختبارَ يحسمه بعد",
     "R18 — لا اختبارَ يحسمه بعد",
     "R2 — لا اختبارَ يحسمه بعد",

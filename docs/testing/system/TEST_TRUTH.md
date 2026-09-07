@@ -19,17 +19,17 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **255** |
-| دوالُّ اختبار | **912** |
+| ملفّاتُ اختبار | **256** |
+| دوالُّ اختبار | **919** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 912
-MAPPED     = 229
-INFRA      = 108
+TOTAL      = 919
+MAPPED     = 235
+INFRA      = 109
 ORPHAN     = 575
 ```
 
@@ -57,8 +57,8 @@ ORPHAN     = 575
 |---|---|---|---|
 | **التدفّقات** | 35 | 29 | 6 |
 | **العيوب** | 27 | 15 | 12 |
-| **المخاطر** | 24 | 13 | 11 |
-| **فجواتُ العقد** | 35 | 10 | 25 |
+| **المخاطر** | 24 | 14 | 10 |
+| **فجواتُ العقد** | 36 | 10 | 26 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
 
 ---
@@ -132,6 +132,7 @@ ORPHAN     = 575
 | **XG-35** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-36** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-38** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
+| **XG-40** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-39** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-37** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-33** | `CRITICAL` | — | `COVERED` | `TestIDEM_AllProtectedPathsUseCoordinator` · `TestIDEM_T10_CleanupSparesLiveClaim` · `TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged` · `TestIDEM_T1_ConcurrentDuplicateExecutesOnce` · `TestIDEM_T2_OrphanBeforeTxIsReclaimed` · `TestIDEM_T3_StaleOwnerIsFenced` · `TestIDEM_T4_ActiveClaimCannotBeStolen` · `TestIDEM_T5_BusinessRollbackLeavesNothing` · `TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate` · `TestIDEM_T8_TwoReclaimersExecuteOnce` · `TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim` · `TestFAIL_C06_OrphanBeforeCommitBlocksOwner` · `TestFAIL_C06_TwoReclaimersExecuteNothing` · `TestIDEM_CleanupSparesLiveClaim` · `TestIDEM_CommittedBeforeResultDoesNotDuplicate` · `TestIDEM_LostResponseReplays` |
@@ -143,7 +144,7 @@ ORPHAN     = 575
 
 ```
 STALE REFERENCES = 0
-COVERAGE GAPS    = 29
+COVERAGE GAPS    = 28
 ```
 
 ## فجواتُ تغطية — **ما يحتاج اختباراً ولا اختبارَ له**
@@ -168,7 +169,6 @@ COVERAGE GAPS    = 29
 - F-32 (مراجعةُ صنفٍ معلَّق) — لا اختبارَ مرتبطٌ به
 - R1 — لا اختبارَ يحسمه بعد
 - R12 — لا اختبارَ يحسمه بعد
-- R13 — لا اختبارَ يحسمه بعد
 - R17 — لا اختبارَ يحسمه بعد
 - R18 — لا اختبارَ يحسمه بعد
 - R2 — لا اختبارَ يحسمه بعد
