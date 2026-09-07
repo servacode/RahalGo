@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/server"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -407,10 +409,13 @@ func TestXG20_A6_CriticalCatalogHasTransactionalAudit(t *testing.T) {
 			//
 			// **فالمطلوبُ أن يُرى التمييزُ في الشيفرة**، لا أن
 			// يُفترَض.
-			if strings.Contains(src, "!criticalSettingKey(key)") &&
+			// **والمصنِّفُ يُقرأ من الشيفرة لا يُكتب هنا** —
+			// **ونصّان يفترقان يومَ يُعاد تسميةُ دالّة** (`XG-41A`).
+			if by := server.ConditionalAuditClassifier(act); by != "" &&
+				strings.Contains(src, "!"+by+"(key)") &&
 				strings.Contains(src, "s.auditTx(ctx, q, r, \""+act+"\"") {
-				t.Logf("  `%s` في `%s`: **مفرَّعٌ** — الحسّاسُ معامليٌّ "+
-					"وغيرُه أفضلُ جهد", act, filepath.Base(rel))
+				t.Logf("  `%s` في `%s`: **مفرَّعٌ بـ`%s`** — الحسّاسُ "+
+					"معامليٌّ وغيرُه أفضلُ جهد", act, filepath.Base(rel), by)
 				continue
 			}
 			t.Errorf("**`%s` يُقيَّد بأفضلِ جهدٍ في `%s`** — "+

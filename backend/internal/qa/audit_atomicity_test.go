@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/server"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -286,10 +288,60 @@ func TestAQ4_CriticalActionsUseTransactionalAudit(t *testing.T) {
 				strings.Count(body, `s.audit(r, "`+action+`"`)
 		}
 		t.Logf("%-24s معامليٌّ=%d · أفضلُ جهدٍ=%d", action, transactional, bestEffort)
-		if bestEffort > 0 {
-			t.Errorf("**`%s` فعلٌ حسّاسٌ يُدقَّق بأفضل جهد** — "+
-				"**وسقوطُ أثرِه يترك مالاً تحرّك بلا من ولا متى.** (`PF-06`)",
-				action)
+		if bestEffort == 0 {
+			continue
 		}
+
+		// ══════════════════════════════════════════════════════════
+		// **وفعلٌ صنفُه يتقرّر بمعامله لا باسمه**
+		// ══════════════════════════════════════════════════════════
+		//
+		// **`admin.setting_update` اسمٌ واحدٌ لفعلين**: **عمولةُ
+		// المنصّة** و**نصُّ صفحة.** **والأوّلُ من الصنف `A`
+		// والثاني لا** — بعقد دورةِ ٢١.
+		//
+		// **وكان هذا الحارسُ يقرأ الاسمَ صنفاً واحداً فيُدين الفرعَ
+		// المشروع** (`XG-41A`) — **وحارسُ `XG-20` يعرف التفريع.**
+		// **وحارسان يقرآن عقداً واحداً قراءتين أسوأُ من حارسٍ
+		// واحد.**
+		//
+		// **فصار المصنِّفُ مكتوباً في الشيفرة مرّةً**
+		// (`server.ConditionalAuditClassifier`) — **ويُقرأ منها.**
+		if by := server.ConditionalAuditClassifier(action); by != "" {
+			branched := false
+			for _, p := range files {
+				b, err := os.ReadFile(p)
+				if err != nil {
+					continue
+				}
+				body := string(b)
+				if !strings.Contains(body, `s.audit(r, "`+action+`"`) {
+					continue
+				}
+				// **والفرعُ يُقبَل بشرطين مقروءين في الملفّ نفسِه**:
+				// **أن يحسم المصنِّفُ الكانونيُّ النداء**،
+				// **وأن يكون للحسّاس فرعٌ معامليّ.**
+				if strings.Contains(body, "!"+by+"(key)") &&
+					strings.Contains(body, `s.auditTx(ctx, q, r, "`+action+`"`) {
+					branched = true
+					continue
+				}
+				branched = false
+				break
+			}
+			if branched {
+				t.Logf("  `%s`: **مفرَّعٌ بـ`%s`** — الحسّاسُ معامليٌّ "+
+					"وغيرُه أفضلُ جهد", action, by)
+				continue
+			}
+			t.Errorf("**`%s` فعلٌ مشروطٌ ونداؤه بأفضلِ جهدٍ بلا "+
+				"`%s`** — **والفرعُ يُرى في الشيفرة أو لا يُفترَض.** "+
+				"(`AQ-4`)", action, by)
+			continue
+		}
+
+		t.Errorf("**`%s` فعلٌ حسّاسٌ يُدقَّق بأفضل جهد** — "+
+			"**وسقوطُ أثرِه يترك مالاً تحرّك بلا من ولا متى.** (`PF-06`)",
+			action)
 	}
 }
