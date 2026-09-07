@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 257,
-    "test_funcs": 927
+    "test_files": 258,
+    "test_funcs": 939
   },
   "flows": [
     {
@@ -1130,6 +1130,17 @@
         "TestR13_T6_ResetVsRefreshRace",
         "TestR13_T7_RevocationSurvivesCacheLoss",
         "TestRACE_SessionRevokedDuringRequest",
+        "TestR15_A10_OrdinaryActionsUnaffected",
+        "TestR15_A11_GrantSemanticsMeasured",
+        "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
+        "TestR15_A4_MultiRoleKeepsRemaining",
+        "TestR15_A5_RefreshDoesNotRestore",
+        "TestR15_A6_NewLoginHasNoRevokedRole",
+        "TestR15_A7A8_CacheCannotResurrectPrivilege",
+        "TestR15_A9_NewWSHandshakeDropsRevokedTopics",
+        "TestR15_C1_RevokeVsPrivilegedRequest",
+        "TestR15_C2_RevokeVsRefresh",
+        "TestR15_C3_RevokeVsLogin",
         "TestXG40_Contract_KeepMineRevokeOthers",
         "TestXG40_X10_StrongerRevocationWins",
         "TestXG40_X10b_BlockBeatsKeptSession",
@@ -1277,6 +1288,17 @@
       ],
       "tests": [
         "TestEV_RealtimeAuthorization",
+        "TestR15_A10_OrdinaryActionsUnaffected",
+        "TestR15_A11_GrantSemanticsMeasured",
+        "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
+        "TestR15_A4_MultiRoleKeepsRemaining",
+        "TestR15_A5_RefreshDoesNotRestore",
+        "TestR15_A6_NewLoginHasNoRevokedRole",
+        "TestR15_A7A8_CacheCannotResurrectPrivilege",
+        "TestR15_A9_NewWSHandshakeDropsRevokedTopics",
+        "TestR15_C1_RevokeVsPrivilegedRequest",
+        "TestR15_C2_RevokeVsRefresh",
+        "TestR15_C3_RevokeVsLogin",
         "TestR16_R8_BothDownIsSafeFailure",
         "TestR16_IssuedTokensAlwaysCarrySession",
         "TestR16_R11_PublicRouteUnaffected",
@@ -1858,7 +1880,18 @@
       ],
       "tests": [
         "TestSampleFactory_ValidToken",
-        "TestRACE_SessionRevokedDuringRequest"
+        "TestRACE_SessionRevokedDuringRequest",
+        "TestR15_A10_OrdinaryActionsUnaffected",
+        "TestR15_A11_GrantSemanticsMeasured",
+        "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
+        "TestR15_A4_MultiRoleKeepsRemaining",
+        "TestR15_A5_RefreshDoesNotRestore",
+        "TestR15_A6_NewLoginHasNoRevokedRole",
+        "TestR15_A7A8_CacheCannotResurrectPrivilege",
+        "TestR15_A9_NewWSHandshakeDropsRevokedTopics",
+        "TestR15_C1_RevokeVsPrivilegedRequest",
+        "TestR15_C2_RevokeVsRefresh",
+        "TestR15_C3_RevokeVsLogin"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -11042,6 +11075,251 @@
         "CONCURRENCY",
         "FAILURE",
         "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_A10_OrdinaryActionsUnaffected",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_A11_GrantSemanticsMeasured",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_A4_MultiRoleKeepsRemaining",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_A5_RefreshDoesNotRestore",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_A6_NewLoginHasNoRevokedRole",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_A7A8_CacheCannotResurrectPrivilege",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_A9_NewWSHandshakeDropsRevokedTopics",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_AuthorizationReadsAuthoritativeRoles",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_C1_RevokeVsPrivilegedRequest",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_C2_RevokeVsRefresh",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR15_C3_RevokeVsLogin",
+      "file": "internal/qa/role_revocation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
         "FULL",
         "RELEASE"
       ],

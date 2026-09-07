@@ -63,7 +63,7 @@ type Race struct {
 	Evidence string `json:"evidence,omitempty"`
 }
 
-// All التدفّقاتُ الأحدَ عشرَ — **`CONCURRENCY-SENSITIVE FLOWS = 11`.**
+// All التدفّقاتُ الاثنا عشرَ — **`CONCURRENCY-SENSITIVE FLOWS = 12`.**
 //
 // **وكان العددُ عشرةً حتّى دورةِ ١٨** — **وأُضيف `C-11` لأنّه قِيس**:
 // إعادةُ كلمةٍ إداريّةٌ تتزامن مع تجديدِ رمز. **والعددُ يُجمَّد ليمنع
@@ -242,6 +242,44 @@ var All = []Race{
 			"الجديدة 200 · **وسباقٌ بتداخلٍ مقيسٍ=2: الرمزُ الذي خرج " +
 			"لا يعمل** (ثمانيةُ تشغيلاتٍ بلا سقطة) · " +
 			"**ومحوُ مفتاح `Redis` لا يُحيي الجلسة** (`R16`).",
+	},
+	{
+		ID: "C-12", Title: "سحبُ دورٍ مقابلَ فعلٍ مخوَّل",
+		Flows: []string{"F-30"}, Actors: []string{"admin", "staff"},
+		Shared: "user_roles · ادّعاءاتُ رمز الوصول",
+		Where:  Local, Result: Pass,
+		Window: "**التخويلُ كان يقرأ `claims.Roles` من الرمز** — " +
+			"**فدورٌ سُحب يبقى نافذاً حتّى تنتهي المهلة** (ربعُ ساعة). " +
+			"**ولا قاعدةَ تُسأل ولا خبيئة.**",
+		Invariant: "صلاحيّةٌ سُحبت تقف عند أوّل قرارِ تخويلٍ بعد تثبيتها",
+		Tests: []string{"TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
+			"TestR15_A4_MultiRoleKeepsRemaining",
+			"TestR15_A5_RefreshDoesNotRestore",
+			"TestR15_A6_NewLoginHasNoRevokedRole",
+			"TestR15_A7A8_CacheCannotResurrectPrivilege",
+			"TestR15_A9_NewWSHandshakeDropsRevokedTopics",
+			"TestR15_A10_OrdinaryActionsUnaffected",
+			"TestR15_A11_GrantSemanticsMeasured",
+			"TestR15_C1_RevokeVsPrivilegedRequest",
+			"TestR15_C2_RevokeVsRefresh",
+			"TestR15_C3_RevokeVsLogin",
+			"TestR15_AuthorizationReadsAuthoritativeRoles"},
+		Registers: []string{"R15"},
+		TxClass: "READ-AUTHORITATIVE — **نقطةُ التسلسل قراءةُ الأدوار " +
+			"في قرار التخويل**، ولا ارتدادَ لعمليّةٍ ثبتت قبله",
+		Evidence: "**قبل**: الدورُ مسحوبٌ من القاعدة والبابُ يردّ 200 · " +
+			"ومن فقد كلَّ أدوار المكتب يمرّ. " +
+			"**بعد**: 403 بالرمز نفسِه · **وما بقي من أدوارٍ يعمل** " +
+			"(سُحب `ops` وبقي `finance` ⇒ 200) · والفعلُ العاديُّ 200 — " +
+			"**فالتوثيقُ غيرُ التخويل** · وتجديدٌ ودخولٌ لا يُعيدان " +
+			"المسحوب · **وخبيئةٌ ممحوّةٌ أو ملوَّثةٌ لا تُحيي صلاحيّة** · " +
+			"**وثلاثةُ سباقاتٍ بتداخلٍ مقيسٍ=2** (فعلٌ مخوَّل · تجديدٌ · " +
+			"دخول) **كلُّها 403 بعد ثبوت السحب**. " +
+			"**والمنحُ صار فوريّاً من القاعدة** — **إعادةُ تقييمٍ في " +
+			"الخادم لا سلطةَ رمزٍ شائخ.** " +
+			"**ولا استعلامَ جديد**: الأدوارُ تركب استعلامَ `R16` القائم " +
+			"(`refresh_tokens_session_lookup_idx` + `user_roles_pkey` · " +
+			"~0.13ms).",
 	},
 }
 

@@ -85,7 +85,8 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		// خبيئة.**
 		//
 		// **والحالُ ثلاثٌ لا اثنتان**، **والثالثةُ ٥٠٣.**
-		switch state, err := s.identity.CheckSession(r.Context(), claims.SID); {
+		state, dbRoles, err := s.identity.CheckSession(r.Context(), claims.SID)
+		switch {
 		case err != nil:
 			s.logger.Error("التوثيق: تعذّر التحقّقُ من الجلسة",
 				"outcome", "auth_validation_unavailable", "error", err)
@@ -95,8 +96,29 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 			httpx.Error(w, errUnauthorized)
 			return
 		}
+		// ══════════════════════════════════════════════════════════
+		// **والتخويلُ من الحقيقة الموثوقة لا من الرمز** — `R15`
+		// ══════════════════════════════════════════════════════════
+		//
+		// **كانت `ctxRoles` تُملأ من `claims.Roles`** — **فدورٌ سُحب
+		// يبقى نافذاً حتّى تنتهي مهلةُ الرمز**، ربعَ ساعة.
+		// **ومن سُحب منه دورُ المكتب يبقى فيه.**
+		//
+		// **والقاعدةُ تُسأل هنا أصلاً منذ `R16`** — **فأدوارُ اللحظة
+		// تأتي مع الجواب بلا استعلامٍ ثانٍ ولا خبيئةٍ تُخترَع.**
+		//
+		// **والتوثيقُ غيرُ التخويل**: **الجلسةُ تبقى صالحةً**
+		// والصلاحيّةُ المسحوبةُ تقف. **ولا تُبطَل جلسةٌ لأنّ دوراً
+		// تبدّل.**
+		//
+		// **وصنفُ التوكنات بلا معرّفِ جلسةٍ يبقى على ادّعاءاته** —
+		// **لا جلسةَ له تُسأل عنها**، وهو مُعلَنٌ في `CheckSession`.
+		roles := claims.Roles
+		if claims.SID != "" {
+			roles = dbRoles
+		}
 		ctx := context.WithValue(r.Context(), ctxUserID, claims.Subject)
-		ctx = context.WithValue(ctx, ctxRoles, claims.Roles)
+		ctx = context.WithValue(ctx, ctxRoles, roles)
 		ctx = context.WithValue(ctx, ctxSID, claims.SID)
 		s.touchPresence(claims.Subject)
 		next.ServeHTTP(w, r.WithContext(ctx))

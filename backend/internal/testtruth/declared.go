@@ -1579,6 +1579,20 @@ var TestMap = map[string]TestDecl{
 	"TestXG40_X10_StrongerRevocationWins":                 resetTest(),
 	"TestXG40_X10b_BlockBeatsKeptSession":                 resetTest(),
 
+	// ── سريانُ سحب الدور (دورةُ إصلاحٍ ٢٠) — `R15` ────────────────
+	"TestR15_A1A2A3_RevokedRoleStopsAuthorizing":   authzTest(),
+	"TestR15_A4_MultiRoleKeepsRemaining":           authzTest(),
+	"TestR15_A5_RefreshDoesNotRestore":             authzTest(),
+	"TestR15_A6_NewLoginHasNoRevokedRole":          authzTest(),
+	"TestR15_A7A8_CacheCannotResurrectPrivilege":   authzTest(),
+	"TestR15_A9_NewWSHandshakeDropsRevokedTopics":  authzTest(),
+	"TestR15_A10_OrdinaryActionsUnaffected":        authzTest(),
+	"TestR15_A11_GrantSemanticsMeasured":           authzTest(),
+	"TestR15_C1_RevokeVsPrivilegedRequest":         authzTest(),
+	"TestR15_C2_RevokeVsRefresh":                   authzTest(),
+	"TestR15_C3_RevokeVsLogin":                     authzTest(),
+	"TestR15_AuthorizationReadsAuthoritativeRoles": infraTest(),
+
 	// ── ديمومةُ نقلِ الإشعار (دورةُ إصلاحٍ ١٥) — `PF-09` · `R23` ────
 	"TestPF09_N1_ProviderSuccessRecorded":                deliveryTest(),
 	"TestPF09_N2N3N8_TransientRetriesWithBackoff":        deliveryTest(),
@@ -1767,6 +1781,18 @@ func deliveryTest() TestDecl {
 		Flows: []string{"F-07", "F-14"},
 		Risks: []string{"R23"},
 		Modes: []string{"FAILURE", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
+	}
+}
+
+// authzTest حارسُ سريانِ الصلاحيّة — `R15`.
+//
+// **والأدوارُ من الحقيقة الموثوقة لا من ادّعاءات الرمز.**
+func authzTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-30", "F-34"},
+		Risks: []string{"R15"},
+		Modes: []string{"SECURITY", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
 	}
 }
 

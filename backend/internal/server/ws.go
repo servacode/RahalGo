@@ -63,7 +63,8 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// قناةٍ دائمة** — **وهي أطولُ عمراً من طلب.**
 	//
 	// **والوصلةُ القائمةُ عقدٌ آخر** (`R14`) — لا تمسّها هذه.
-	switch state, err := s.identity.CheckSession(r.Context(), claims.SID); {
+	state, dbRoles, err := s.identity.CheckSession(r.Context(), claims.SID)
+	switch {
 	case err != nil:
 		s.logger.Error("البثّ: تعذّر التحقّقُ من الجلسة",
 			"outcome", "auth_validation_unavailable", "error", err)
@@ -74,14 +75,23 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// **ومواضيعُ البثّ من أدوار اللحظة** — `R15`.
+	//
+	// **ومصافحةٌ جديدةٌ لا تُشترى بدورٍ سُحب** — **والوصلةُ القائمةُ
+	// عقدٌ آخر** (`R14`) لا تمسّه هذه.
+	roles := claims.Roles
+	if claims.SID != "" {
+		roles = dbRoles
+	}
+
 	topics := []string{}
-	if slices.ContainsFunc(claims.Roles, func(role string) bool {
+	if slices.ContainsFunc(roles, func(role string) bool {
 		return role == "admin" || role == "ops" || role == "finance"
 	}) {
 		topics = append(topics, realtime.TopicOps)
 	}
 	// صاحب متجر: يشترك بمواضيع متاجره (بوابة المتجر)
-	if slices.Contains(claims.Roles, "merchant") {
+	if slices.Contains(roles, "merchant") {
 		rows, err := s.pg.Query(r.Context(),
 			`SELECT id FROM merchants WHERE owner_user_id = $1`, claims.Subject)
 		if err == nil {
@@ -95,18 +105,18 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// الزبون: موضوعه الشخصي (تتبع طلباته حياً من الموقع/التطبيق)
-	if slices.Contains(claims.Roles, "customer") {
+	if slices.Contains(roles, "customer") {
 		topics = append(topics, "customer:"+claims.Subject)
 	}
 	// السائق: موضوعه الشخصي (إسناد الطلبات والنقد) **وإشارةُ الطابور**.
 	//
 	// والطابورُ موضوعٌ مشترك بين كل السائقين — **لذلك لا حمولةَ فيه**: يقول
 	// «تغيّر شيء» فيُعيد التطبيقُ الجلب، وتحكم نقطةُ الطابور ما يُرى.
-	if slices.Contains(claims.Roles, "driver") {
+	if slices.Contains(roles, "driver") {
 		topics = append(topics, "driver:"+claims.Subject, realtime.TopicDriverQueue)
 	}
 	// المندوب: موضوعه الشخصي (طلبات الانضمام والعمولات)
-	if slices.Contains(claims.Roles, "sales") {
+	if slices.Contains(roles, "sales") {
 		topics = append(topics, "sales:"+claims.Subject)
 	}
 	// موضوع الإشعارات الشخصي — لكل مستخدم مهما كان دوره، فلا أحد يبقى بلا بث.

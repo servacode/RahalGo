@@ -1,10 +1,10 @@
 {
   "counts": {
-    "total": 11,
-    "local": 10,
+    "total": 12,
+    "local": 11,
     "requires_p0": 0,
     "deferred_p8": 1,
-    "pass": 8,
+    "pass": 9,
     "risk_confirmed": 1,
     "proven": 0,
     "expected_fail": 1,
@@ -330,6 +330,41 @@
       "where": "LOCAL",
       "transaction_class": "ATOMIC — البصمةُ والحِقبةُ والإبطالُ في معاملةٍ واحدة · **وحِقبةٌ لا قفلٌ تحسم السباق**",
       "evidence": "**قبل**: بعد الإعادة ⇒ الوصولُ 200 · التجديدُ 200 · صفوفٌ حيّةٌ=1 — **والحسابُ لم يُسترَدّ.** **بعد**: الوصولُ 401 · التجديدُ 401 · صفوفٌ حيّةٌ=0 · وكلُّ الأجهزة · ولا يُمسّ حسابٌ آخر · والدخولُ بالكلمة الجديدة 200 · **وسباقٌ بتداخلٍ مقيسٍ=2: الرمزُ الذي خرج لا يعمل** (ثمانيةُ تشغيلاتٍ بلا سقطة) · **ومحوُ مفتاح `Redis` لا يُحيي الجلسة** (`R16`)."
+    },
+    {
+      "id": "C-12",
+      "flows": [
+        "F-30"
+      ],
+      "title": "سحبُ دورٍ مقابلَ فعلٍ مخوَّل",
+      "actors": [
+        "admin",
+        "staff"
+      ],
+      "shared_resource": "user_roles · ادّعاءاتُ رمز الوصول",
+      "race_window": "**التخويلُ كان يقرأ `claims.Roles` من الرمز** — **فدورٌ سُحب يبقى نافذاً حتّى تنتهي المهلة** (ربعُ ساعة). **ولا قاعدةَ تُسأل ولا خبيئة.**",
+      "invariant": "صلاحيّةٌ سُحبت تقف عند أوّل قرارِ تخويلٍ بعد تثبيتها",
+      "tests": [
+        "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
+        "TestR15_A4_MultiRoleKeepsRemaining",
+        "TestR15_A5_RefreshDoesNotRestore",
+        "TestR15_A6_NewLoginHasNoRevokedRole",
+        "TestR15_A7A8_CacheCannotResurrectPrivilege",
+        "TestR15_A9_NewWSHandshakeDropsRevokedTopics",
+        "TestR15_A10_OrdinaryActionsUnaffected",
+        "TestR15_A11_GrantSemanticsMeasured",
+        "TestR15_C1_RevokeVsPrivilegedRequest",
+        "TestR15_C2_RevokeVsRefresh",
+        "TestR15_C3_RevokeVsLogin",
+        "TestR15_AuthorizationReadsAuthoritativeRoles"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R15"
+      ],
+      "where": "LOCAL",
+      "transaction_class": "READ-AUTHORITATIVE — **نقطةُ التسلسل قراءةُ الأدوار في قرار التخويل**، ولا ارتدادَ لعمليّةٍ ثبتت قبله",
+      "evidence": "**قبل**: الدورُ مسحوبٌ من القاعدة والبابُ يردّ 200 · ومن فقد كلَّ أدوار المكتب يمرّ. **بعد**: 403 بالرمز نفسِه · **وما بقي من أدوارٍ يعمل** (سُحب `ops` وبقي `finance` ⇒ 200) · والفعلُ العاديُّ 200 — **فالتوثيقُ غيرُ التخويل** · وتجديدٌ ودخولٌ لا يُعيدان المسحوب · **وخبيئةٌ ممحوّةٌ أو ملوَّثةٌ لا تُحيي صلاحيّة** · **وثلاثةُ سباقاتٍ بتداخلٍ مقيسٍ=2** (فعلٌ مخوَّل · تجديدٌ · دخول) **كلُّها 403 بعد ثبوت السحب**. **والمنحُ صار فوريّاً من القاعدة** — **إعادةُ تقييمٍ في الخادم لا سلطةَ رمزٍ شائخ.** **ولا استعلامَ جديد**: الأدوارُ تركب استعلامَ `R16` القائم (`refresh_tokens_session_lookup_idx` + `user_roles_pkey` · ~0.13ms)."
     }
   ]
 }

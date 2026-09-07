@@ -897,12 +897,29 @@ func (r *Repo) VerifiedWhatsApp(ctx context.Context, userID string) (string, err
 //
 // **والعدُّ لا الوجود**: **`total == 0` تعني جلسةً لا تُعرَف**، وهي غيرُ
 // **«أُبطلت»** — **وكلتاهما تُرفَض، والتمييزُ يُقرأ في السجلّ.**
-func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total int, err error) {
+//
+// **وتحمل الأدوارَ معها** (`R15`): **القاعدةُ تُسأل في كلّ طلبٍ موثَّقٍ
+// منذ `R16`** — **فأدوارُ اللحظة تأتي بلا رحلةٍ ثانية**، ولا خبيئةَ
+// تُخترَع ولا استعلامَ يُضاف.
+func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total int, roles []string, err error) {
 	err = r.db.QueryRow(ctx, `
-		SELECT count(*) FILTER (WHERE revoked_at IS NULL AND expires_at > now()),
-		       count(*)
-		  FROM refresh_tokens WHERE session_id = $1::uuid`, sessionID).
-		Scan(&live, &total)
+		WITH fam AS (
+			SELECT user_id,
+			       count(*) FILTER (WHERE revoked_at IS NULL
+			                          AND expires_at > now()) AS live,
+			       count(*) AS total
+			  FROM refresh_tokens WHERE session_id = $1::uuid
+			 GROUP BY user_id
+		)
+		SELECT fam.live, fam.total,
+		       COALESCE((SELECT array_agg(ur.role_code ORDER BY ur.role_code)
+		                   FROM user_roles ur WHERE ur.user_id = fam.user_id), '{}')
+		  FROM fam`, sessionID).
+		Scan(&live, &total, &roles)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// **لا عائلةَ بهذا المعرّف** — صفرٌ وصفرٌ ولا أدوار.
+		return 0, 0, nil, nil
+	}
 	return
 }
 

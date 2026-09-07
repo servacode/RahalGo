@@ -86,16 +86,25 @@ var ErrSessionCheckUnavailable = errors.New("identity: تعذّر التحقّق
 //
 // **والصنفُ الوحيدُ بلا معرّفٍ هو ما تصنعه أدواتُ الفحص** —
 // **ويحرسه `TestR16_IssuedTokensAlwaysCarrySession`.**
-func (s *Service) CheckSession(ctx context.Context, sid string) (SessionState, error) {
+//
+// # وتُرجع أدوارَ اللحظة معها — `R15`
+//
+// **كان التخويلُ يقرأ `claims.Roles` من الرمز** — **فدورٌ سُحب يبقى
+// نافذاً ربعَ ساعة.** **والقاعدةُ تُسأل هنا أصلاً**، فتأتي الأدوارُ
+// معها بلا كلفة.
+//
+// **وفارغةٌ مع `SessionValid` تعني «لا جلسةَ تُسأل»** (الصنفُ
+// المستثنى) — **فيُبقي المنادي على ادّعاءات الرمز.**
+func (s *Service) CheckSession(ctx context.Context, sid string) (SessionState, []string, error) {
 	if sid == "" {
-		return SessionValid, nil
+		return SessionValid, nil, nil
 	}
 
 	// ── مُسرِّعُ الرفض الموجَب ────────────────────────────────────
 	//
 	// **الإصابةُ وحدَها حاسمة** — **والغيابُ والخطأُ سواءٌ: لا أعرف.**
 	if n, err := s.rdb.Exists(ctx, sessionRevokedKey(sid)).Result(); err == nil && n > 0 {
-		return SessionRevoked, nil
+		return SessionRevoked, nil, nil
 	}
 
 	return s.sessionStateFromDB(ctx, sid)
@@ -114,13 +123,13 @@ func (s *Service) CheckSession(ctx context.Context, sid string) (SessionState, e
 // **`RevokeSession` تُبطل ما لم ينتهِ فقط** (`expires_at > now()`) —
 // **فالمنتهي يبقى `revoked_at IS NULL` إلى الأبد.** **فلو سُئل عن
 // الإبطال وحدَه لَقرأ المنتهي سليماً.**
-func (s *Service) sessionStateFromDB(ctx context.Context, sid string) (SessionState, error) {
-	live, total, err := s.repo.SessionRows(ctx, sid)
+func (s *Service) sessionStateFromDB(ctx context.Context, sid string) (SessionState, []string, error) {
+	live, total, roles, err := s.repo.SessionRows(ctx, sid)
 	if err != nil {
-		return SessionRevoked, fmt.Errorf("%w: %v", ErrSessionCheckUnavailable, err)
+		return SessionRevoked, nil, fmt.Errorf("%w: %v", ErrSessionCheckUnavailable, err)
 	}
 	if live > 0 {
-		return SessionValid, nil
+		return SessionValid, roles, nil
 	}
 	if total == 0 && s.logger != nil {
 		// **جلسةٌ لا يعرفها الجدول** — **ولا معرّفَ يُطبع**: هو نصفُ
@@ -128,5 +137,5 @@ func (s *Service) sessionStateFromDB(ctx context.Context, sid string) (SessionSt
 		s.logger.Warn("التوثيق: جلسةٌ لا تُعرَف في الحقيقة الموثوقة",
 			"outcome", "unknown_session")
 	}
-	return SessionRevoked, nil
+	return SessionRevoked, nil, nil
 }
