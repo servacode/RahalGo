@@ -604,12 +604,57 @@ func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl t
 	if sessionID != "" {
 		sid = sessionID
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **وحالُ الحساب تُقرأ في جملة الإدراج نفسِها** — `XG-39` · `C2`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وإلّا نافذةُ «اقرأ ثمّ اكتب»**: `Refresh` تقرأ الحسابَ
+	// (`UserByID`) ثمّ تُصدر — **فحظرٌ يثبت بينهما يُنتج رمزاً
+	// جديداً بعده.**
+	//
+	// **وقيس بذاكرةٍ حقيقيّة**: سباقُ حظرٍ وتجديدٍ ⇒ الرمزُ الخارجُ
+	// يعمل أحياناً. **وسقوطٌ متقطّعٌ في الأمان عطبٌ لا حظُّ توقيت.**
+	//
+	// # والشرطُ وحدَه لا يكفي — قِيس
+	//
+	// **`READ COMMITTED` يأخذ لقطةً عند بدء الجملة.** فإن بدأ
+	// الإدراجُ قبل تثبيت الحظر رأى الحالَ القديمةَ وأدرج، **وقد
+	// يكون `RevokeAllTokens` مسحَ الجدولَ قبل أن يُثبَّت صفُّه فلا
+	// يراه.** **فيبقى صفٌّ حيٌّ بعد الحظر** (قِيس: صفوفٌ حيّةٌ=1).
+	//
+	// # فقفلُ صفٍّ لا توقيت
+	//
+	// **`FOR SHARE` على صفّ الحساب** يتنازع مع `UPDATE users`
+	// (وهو `FOR UPDATE` ضمناً) — **فيتسلسلان حتماً**:
+	//
+	//	سبق الحظرُ إلى القفل  ⇒ الإدراجُ ينتظر ثمّ يقرأ `blocked`
+	//	                        بعد تحريره ⇒ لا صفَّ
+	//	سبق الإدراجُ          ⇒ الحظرُ ينتظر تثبيتَه، ثمّ
+	//	                        `RevokeAllTokens` بعده تراه فتُبطله
+	//
+	// **ولا نافذةَ ثالثة** — **والحكمُ بترتيب القاعدة لا بالساعة.**
+	//
+	// **و`deleted` و`blocked` وحدَهما يُمنعان** — **والموقوفُ يُجدَّد
+	// بعقد المالك**، والحارسُ الأعلى في `issueSession` يمنع جلسةً
+	// جديدةً له.
 	var out string
 	err := r.db.QueryRow(ctx, `
+		WITH u AS (
+			SELECT id FROM users
+			 WHERE id = $1 AND status IN ('active', 'suspended')
+			 FOR SHARE
+		)
 		INSERT INTO refresh_tokens (user_id, token_hash, expires_at, user_agent, ip, session_id, client)
-		VALUES ($1, $2, now() + $3, $4, $5, COALESCE($6::uuid, gen_random_uuid()), $7)
+		SELECT u.id, $2, now() + $3, $4, $5,
+		       COALESCE($6::uuid, gen_random_uuid()), $7
+		  FROM u
 		RETURNING session_id::text`,
 		userID, tokenHash, ttl, userAgent, ip, sid, client).Scan(&out)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// **الحسابُ لم يعد يقبل جلسةً** — حُظر أو حُذف بين القراءة
+		// والكتابة.
+		return "", ErrUserBlocked
+	}
 	return out, err
 }
 

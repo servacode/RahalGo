@@ -591,7 +591,30 @@ var Gaps = []GapDecl{
 	//
 	// **وكلاهما قرارُ مالك.**
 	{ID: "XG-39", Title: "الإيقافُ الإداريُّ يُبطل الجلسة فلا يُبلَغ استثناءُ إتمام الطلب",
-		Severity: "HIGH"},
+		Severity: "HIGH",
+		// **دورةُ إصلاحٍ ١٧ · ٢٠٢٦-٠٩-٠٧ — بعقدِ مالكٍ صريح.**
+		Fixed: "**الإيقافُ حالُ عملٍ لا حالُ أمن.** " +
+			"`AdminUpdateUser` كانت تُبطل كلَّ التوكنات عند أيّ حالٍ " +
+			"غيرِ `active` — **وصارت تقصر ذلك على `blocked` و" +
+			"`deleted`.** **والإبطالُ الصريحُ باقٍ**: خروجٌ · إخراجٌ " +
+			"شامل · إعادةُ كلمة · أحداثُ أمن. " +
+			"**ومهلةُ رمز الوصول ربعُ ساعة** — **ومنعُ التجديد يقتل " +
+			"الاستثناءَ بعدها ولو لم يُبطَل شيء**، **وأسوأُ منه أنّ " +
+			"`Refresh` تُبطل الرمزَ القديمَ قبل أن تفشل، فمحاولةٌ " +
+			"واحدةٌ تقتل الجلسة.** **فصار `issueSession` يميّز " +
+			"`sessionID` الفارغَ (دخولٌ أو جهازٌ جديد ⇒ يُمنَع) من " +
+			"غيرِ الفارغ (عائلةٌ قائمةٌ أثبت `RevokeRefresh` توّاً أنّ " +
+			"لها صفّاً حيّاً غيرَ مُبطَلٍ ولا منتهٍ ⇒ يُجدَّد).** " +
+			"**والتوثيقُ غيرُ التخويل**: جلسةُ الموقوف تبقى، **ووسيطُ " +
+			"دورةِ ١١ يمنعه من كلّ شيءٍ إلّا قائمةَ الاستمرار المغلقة " +
+			"على طلبه الحيّ.** " +
+			"**والمقيس**: إيقافٌ ⇒ صفوفٌ حيّةٌ=1 · الانتقالُ 200 · " +
+			"طابورُ العمل 403 · تجديدٌ لموقوفٍ 200 **بعائلةِ جلسةٍ " +
+			"واحدة** والاستمرارُ بالرمز الجديد 200 · دخولٌ جديدٌ 403 · " +
+			"جلسةٌ مُبطَلةٌ لموقوفٍ 401 · حظرٌ ⇒ صفوفٌ حيّةٌ=0 ورفضٌ · " +
+			"تفعيلٌ بعد حظرٍ لا يبعث ما أُبطل · " +
+			"**وسباقُ حظرٍ وتجديدٍ (تداخلٌ مقيسٌ=2): الرمزُ الذي خرج " +
+			"لا يعمل بعده.**"},
 
 	// ══════════════════════════════════════════════════════════════
 	// **`XG-37` — عدّادان للموانع في تقريرٍ واحد**
@@ -1473,6 +1496,18 @@ var TestMap = map[string]TestDecl{
 	"TestR16_NoFailOpenSessionCheck":                            infraTest(),
 	"TestR16_IssuedTokensAlwaysCarrySession":                    sessionTest(),
 	"TestR16_STG_RedisOutageAuthorityHolds":                     stagingTest([]string{"R16"}, nil),
+
+	// ── الإيقافُ والجلسة (دورةُ إصلاحٍ ١٧) — `XG-39` ──────────────
+	"TestXG39_S1S3S4_SuspensionKeepsSessionAndNarrowScope":       sessionTest(),
+	"TestXG39_S2_SuspendedWithoutOrderKeepsSessionButNoActivity": sessionTest(),
+	"TestXG39_S5_SuspendedRefreshPreservesSameSession":           sessionTest(),
+	"TestXG39_S6S7_SuspendedCannotOpenNewSession":                sessionTest(),
+	"TestXG39_S8_RevokedSuspendedSessionStaysDenied":             sessionTest(),
+	"TestXG39_S9S10_BlockRevokesEverything":                      sessionTest(),
+	"TestXG39_S11S12_ReactivationDoesNotResurrect":               sessionTest(),
+	"TestXG39_C1_SuspendVsTransition":                            sessionTest(),
+	"TestXG39_C2_BlockVsRefresh":                                 sessionTest(),
+	"TestXG39_WS_HandshakeFollowsStatusModel":                    sessionTest(),
 
 	// ── ديمومةُ نقلِ الإشعار (دورةُ إصلاحٍ ١٥) — `PF-09` · `R23` ────
 	"TestPF09_N1_ProviderSuccessRecorded":                deliveryTest(),

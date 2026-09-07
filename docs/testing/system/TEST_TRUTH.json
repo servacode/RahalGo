@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 254,
-    "test_funcs": 902
+    "test_files": 255,
+    "test_funcs": 912
   },
   "flows": [
     {
@@ -1141,7 +1141,17 @@
         "TestXG22_T6_NormalActorUnchanged",
         "TestXG22_T7_OpsCanStillResolveTheOrder",
         "TestXG22_T8_BlockedHasNoException",
-        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles"
+        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles",
+        "TestXG39_C1_SuspendVsTransition",
+        "TestXG39_C2_BlockVsRefresh",
+        "TestXG39_S11S12_ReactivationDoesNotResurrect",
+        "TestXG39_S1S3S4_SuspensionKeepsSessionAndNarrowScope",
+        "TestXG39_S2_SuspendedWithoutOrderKeepsSessionButNoActivity",
+        "TestXG39_S5_SuspendedRefreshPreservesSameSession",
+        "TestXG39_S6S7_SuspendedCannotOpenNewSession",
+        "TestXG39_S8_RevokedSuspendedSessionStaysDenied",
+        "TestXG39_S9S10_BlockRevokesEverything",
+        "TestXG39_WS_HandshakeFollowsStatusModel"
       ],
       "status": "COVERED"
     },
@@ -1260,7 +1270,17 @@
         "TestR16_R14_NewWSHandshakeFollowsAuthority",
         "TestR16_R1_ValidSessionRedisMissDBValidates",
         "TestR16_R2_RedisHitDenies",
-        "TestR16_R3_RedisHealthyButKeyMissingDBCatches"
+        "TestR16_R3_RedisHealthyButKeyMissingDBCatches",
+        "TestXG39_C1_SuspendVsTransition",
+        "TestXG39_C2_BlockVsRefresh",
+        "TestXG39_S11S12_ReactivationDoesNotResurrect",
+        "TestXG39_S1S3S4_SuspensionKeepsSessionAndNarrowScope",
+        "TestXG39_S2_SuspendedWithoutOrderKeepsSessionButNoActivity",
+        "TestXG39_S5_SuspendedRefreshPreservesSameSession",
+        "TestXG39_S6S7_SuspendedCannotOpenNewSession",
+        "TestXG39_S8_RevokedSuspendedSessionStaysDenied",
+        "TestXG39_S9S10_BlockRevokesEverything",
+        "TestXG39_WS_HandshakeFollowsStatusModel"
       ],
       "status": "COVERED"
     },
@@ -1831,7 +1851,17 @@
         "TestR16_R14_NewWSHandshakeFollowsAuthority",
         "TestR16_R1_ValidSessionRedisMissDBValidates",
         "TestR16_R2_RedisHitDenies",
-        "TestR16_R3_RedisHealthyButKeyMissingDBCatches"
+        "TestR16_R3_RedisHealthyButKeyMissingDBCatches",
+        "TestXG39_C1_SuspendVsTransition",
+        "TestXG39_C2_BlockVsRefresh",
+        "TestXG39_S11S12_ReactivationDoesNotResurrect",
+        "TestXG39_S1S3S4_SuspensionKeepsSessionAndNarrowScope",
+        "TestXG39_S2_SuspendedWithoutOrderKeepsSessionButNoActivity",
+        "TestXG39_S5_SuspendedRefreshPreservesSameSession",
+        "TestXG39_S6S7_SuspendedCannotOpenNewSession",
+        "TestXG39_S8_RevokedSuspendedSessionStaysDenied",
+        "TestXG39_S9S10_BlockRevokesEverything",
+        "TestXG39_WS_HandshakeFollowsStatusModel"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -2241,6 +2271,7 @@
       "id": "XG-39",
       "title": "الإيقافُ الإداريُّ يُبطل الجلسة فلا يُبلَغ استثناءُ إتمام الطلب",
       "severity": "HIGH",
+      "fixed": "**الإيقافُ حالُ عملٍ لا حالُ أمن.** `AdminUpdateUser` كانت تُبطل كلَّ التوكنات عند أيّ حالٍ غيرِ `active` — **وصارت تقصر ذلك على `blocked` و`deleted`.** **والإبطالُ الصريحُ باقٍ**: خروجٌ · إخراجٌ شامل · إعادةُ كلمة · أحداثُ أمن. **ومهلةُ رمز الوصول ربعُ ساعة** — **ومنعُ التجديد يقتل الاستثناءَ بعدها ولو لم يُبطَل شيء**، **وأسوأُ منه أنّ `Refresh` تُبطل الرمزَ القديمَ قبل أن تفشل، فمحاولةٌ واحدةٌ تقتل الجلسة.** **فصار `issueSession` يميّز `sessionID` الفارغَ (دخولٌ أو جهازٌ جديد ⇒ يُمنَع) من غيرِ الفارغ (عائلةٌ قائمةٌ أثبت `RevokeRefresh` توّاً أنّ لها صفّاً حيّاً غيرَ مُبطَلٍ ولا منتهٍ ⇒ يُجدَّد).** **والتوثيقُ غيرُ التخويل**: جلسةُ الموقوف تبقى، **ووسيطُ دورةِ ١١ يمنعه من كلّ شيءٍ إلّا قائمةَ الاستمرار المغلقة على طلبه الحيّ.** **والمقيس**: إيقافٌ ⇒ صفوفٌ حيّةٌ=1 · الانتقالُ 200 · طابورُ العمل 403 · تجديدٌ لموقوفٍ 200 **بعائلةِ جلسةٍ واحدة** والاستمرارُ بالرمز الجديد 200 · دخولٌ جديدٌ 403 · جلسةٌ مُبطَلةٌ لموقوفٍ 401 · حظرٌ ⇒ صفوفٌ حيّةٌ=0 ورفضٌ · تفعيلٌ بعد حظرٍ لا يبعث ما أُبطل · **وسباقُ حظرٍ وتجديدٍ (تداخلٌ مقيسٌ=2): الرمزُ الذي خرج لا يعمل بعده.**",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
     },
@@ -11359,6 +11390,206 @@
       "modes": [
         "SECURITY",
         "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_C1_SuspendVsTransition",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_C2_BlockVsRefresh",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_S11S12_ReactivationDoesNotResurrect",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_S1S3S4_SuspensionKeepsSessionAndNarrowScope",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_S2_SuspendedWithoutOrderKeepsSessionButNoActivity",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_S5_SuspendedRefreshPreservesSameSession",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_S6S7_SuspendedCannotOpenNewSession",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_S8_RevokedSuspendedSessionStaysDenied",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_S9S10_BlockRevokesEverything",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG39_WS_HandshakeFollowsStatusModel",
+      "file": "internal/qa/suspension_session_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
         "FULL",
         "RELEASE"
       ],

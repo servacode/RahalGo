@@ -682,10 +682,33 @@ func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, actio
 // **والسقفُ مغلقٌ بـ`normalizeClient`** — ثلاثُ قيمٍ لا رابعَ لها، **فلا
 // يفتح أحدٌ جلساتٍ بلا حدٍّ بترويسةٍ يخترعها.**
 func (s *Service) issueSession(ctx context.Context, user *User, userAgent, ip, action, sessionID string) (*AuthResult, error) {
-	if user.Status == "suspended" {
-		return nil, ErrUserSuspended
-	}
-	if user.Status != "active" {
+	// ══════════════════════════════════════════════════════════════
+	// **وجلسةٌ قائمةٌ تُجدَّد وإن أُوقف صاحبُها** — `XG-39`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **ومهلةُ رمز الوصول خمسَ عشرةَ دقيقة** — **ورحلةُ توصيلٍ قد
+	// تطول.** **فمنعُ التجديد يقتل استثناءَ دورةِ ١١ بعد ربع ساعة،
+	// ولو لم يُبطَل شيء.**
+	//
+	// **وأسوأُ من ذلك**: `Refresh` تُبطل الرمزَ القديمَ **قبل** أن
+	// تنادي هذه (`RevokeRefresh`) — **فمحاولةٌ فاشلةٌ واحدةٌ تقتل
+	// الجلسةَ كلَّها.**
+	//
+	// **والفرقُ بين جلسةٍ جديدةٍ وتجديدِ قائمةٍ هو `sessionID`**:
+	// **فارغٌ يعني دخولاً أو جهازاً جديداً** — ويُمنَع؛ **وغيرُ
+	// فارغٍ يعني عائلةً قائمةً** — وقد أثبت `RevokeRefresh` توّاً
+	// أنّ لها صفّاً حيّاً غيرَ مُبطَلٍ ولا منتهٍ.
+	//
+	// **و`blocked` و`deleted` لا استثناءَ لهما** — **جلساتُهما
+	// أُبطلت أصلاً، وهذا حارسٌ ثانٍ.**
+	switch {
+	case user.Status == "active":
+	case user.Status == "suspended" && sessionID != "":
+		// **جلسةٌ قائمةٌ لموقوفٍ عاديّ** — **توثيقٌ لا تخويل.**
+	default:
+		if user.Status == "suspended" {
+			return nil, ErrUserSuspended
+		}
 		return nil, ErrUserBlocked
 	}
 	rawRefresh, refreshHash, err := auth.NewOpaqueToken()
