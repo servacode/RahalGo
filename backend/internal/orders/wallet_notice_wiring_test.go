@@ -2,6 +2,7 @@ package orders_test
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"strings"
 	"sync"
 	"testing"
@@ -104,4 +105,15 @@ func (f *fixture) walletNotice(t *testing.T, spy *wiringSpy, userID string) *not
 			"**فيرى الرقمَ في شريطه يزيد ولا يعرف عمّاذا**، ولا يعرف إلّا إن فتح المحفظة")
 	}
 	return got
+}
+
+// **ونسختا المعاملة** — `PF-07`.
+func (s *wiringSpy) NotifyOpsTx(ctx context.Context, q dbtx.Querier,
+	in notifications.Input) (int, error) {
+	s.NotifyOps(ctx, in)
+	return 1, nil
+}
+
+func (s *wiringSpy) PublishToUsers(ctx context.Context, q dbtx.Querier,
+	roles []string, in notifications.Input) {
 }

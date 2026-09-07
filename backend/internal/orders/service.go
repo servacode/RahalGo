@@ -39,6 +39,12 @@ type Notifier interface {
 	NotifyRoles(ctx context.Context, roles []string, in notifications.Input)
 	// NotifyOps مكتب المنصة كاملاً — يستعمله الراصد للتصعيد الباقي
 	NotifyOps(ctx context.Context, in notifications.Input)
+	// NotifyOpsTx **نيّةُ إنذارٍ دائمةٌ في معاملةٍ مُمرَّرة** — `PF-07`.
+	//
+	// **ويُرجع عددَ من أُشعِروا** — **فلا يُوسَم ما لم يقع.**
+	NotifyOpsTx(ctx context.Context, q dbtx.Querier, in notifications.Input) (int, error)
+	// PublishToUsers بثٌّ **بعد التثبيت** — ولا يدخل معاملة.
+	PublishToUsers(ctx context.Context, q dbtx.Querier, roles []string, in notifications.Input)
 }
 
 type Service struct {

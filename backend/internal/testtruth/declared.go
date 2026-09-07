@@ -412,6 +412,40 @@ var Gaps = []GapDecl{
 	{ID: "XG-35", Title: "أفعالٌ حسّاسةٌ بنصّ `AQ-4` ما زالت بتدقيقٍ أفضلِ جهد",
 		Severity: "CRITICAL"},
 
+	// ══════════════════════════════════════════════════════════════
+	// **`XG-36` — وسمُ الإنذار للطلب لا لسببه**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كشفتها دورةُ ١٤** (٢٠٢٦-٠٩-٠٧) — **ولم تُدمَج في `PF-07`
+	// بقرار المالك**: «إن لم يُعرّف المفتاحُ الحدثَ المقصود وحدَه
+	// فسجّل فجوةً منفصلة.»
+	//
+	// # المقيس
+	//
+	// **الراصدُ يعرف ثلاثةَ أسبابٍ** (`watchdog.go:17`):
+	//
+	//	no_accept   متجرٌ لم يقبل
+	//	no_driver   طلبٌ بلا سائق
+	//	too_long    تأخّر عن موعده
+	//
+	// **والخنقُ الذاكريّ يميّزها** (`watchdog.go:109` — `OrderID+Reason`)،
+	// **والوسمُ الدائمُ لا يميّزها** (`watchdog.go:188`):
+	//
+	//	UPDATE orders SET alerted_at = now() WHERE id = $1 AND alerted_at IS NULL
+	//
+	// # الأثر
+	//
+	// **طلبٌ أُنذر لأنّ متجرَه لم يقبل، ثمّ قَبِل وتأخّر ساعتين —
+	// **لا إنذارَ ثانيَ أبداً.** **والسببُ الثاني أخطرُ من الأوّل.**
+	//
+	// # ولمَ لا يُصلَح هنا
+	//
+	// **`PF-07` عقدُه «نيّةٌ دائمةٌ للإنذار المقصود»** — **وقد وقع.**
+	// **وهذه توسعةُ هويّةِ الحدث** (وسمٌ لكلّ سببٍ أو جدولٌ للأسباب)
+	// **وتلمس مخطّطَ الطلبات** — **ودفعةٌ ثانيةٌ في دورةٍ واحدة.**
+	{ID: "XG-36", Title: "وسمُ إنذار الراصد للطلب لا لسببه — سببٌ ثانٍ يُخنَق أبداً",
+		Severity: "HIGH"},
+
 	{ID: "XG-33", Title: "لا علامةَ تثبيتٍ داخل معاملة العمل لمنع التكرار",
 		Severity: "CRITICAL",
 		// **دورةُ إصلاحٍ ٩ · ٢٠٢٦-٠٩-٠٦ — بقرار المالك.**
@@ -1246,6 +1280,12 @@ var TestMap = map[string]TestDecl{
 	// **وثوابتُ المال تُسأل عن أساسٍ صحيحٍ لا عن قاعدةٍ خالية.**
 	"TestFIN_InvariantsCleanOnValidFixture": infraTest(),
 
+	// ── ديمومةُ نيّةِ إنذار الراصد (دورةُ إصلاحٍ ١٤) ──────────────────
+	"TestR22_W1_AlertMarksAndCreatesIntent":  alertTest(),
+	"TestR22_W2_IntentFailureLeavesNoMarker": alertTest(),
+	"TestR22_W5_SecondSweepDoesNotDuplicate": alertTest(),
+	"TestR22_W6_TwoWatchdogsAlertOnce":       alertTest(),
+
 	// ── ذرّيّةُ التدقيق للأفعال الحسّاسة (دورةُ إصلاحٍ ١٣) ───────────
 	"TestAQ4_A1_SuccessCommitsBoth":                 auditTest(),
 	"TestAQ4_A2_AuditFailureRollsBackMoney":         auditTest(),
@@ -1405,6 +1445,16 @@ func targetTest() TestDecl {
 		Flows: []string{"F-21", "F-23"},
 		Gaps:  []string{"XG-32"},
 		Modes: []string{"CONCURRENCY", "FAILURE", "FINANCIAL", "FULL", "RELEASE"},
+	}
+}
+
+// alertTest حارسُ ديمومةِ نيّةِ الإنذار — `PF-07` · `R22`.
+func alertTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-09"},
+		Risks: []string{"R22"},
+		Modes: []string{"FAILURE", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
 	}
 }
 

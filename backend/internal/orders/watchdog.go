@@ -126,29 +126,95 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 // والعلامة تُوضع **قبل** الإشعار لا بعده: لو أُشعر ثم فشلت الكتابة لأُعيد
 // الإشعار كل ثلاثين ثانية إلى الأبد. وإشعارٌ ضائع أهون من إشعارٍ يتكرّر
 // مئتي مرّة — الثاني يُدرَّب المستخدم على تجاهله فيصير كالصمت.
+// EscalateAlertsOnce جولةُ إنذارٍ واحدة — **مِعراضُ الفحص.**
+//
+// **والمصفوفةُ كانت تقول `TESTABILITY SEAM REQUIRED`** — **ولا بابَ
+// إداريٌّ للراصد، فبقي `PF-07` غيرَ مُثبَت.**
+//
+// **ولا تفتح باباً في المنتَج**: **دالّةٌ مصدَّرةٌ ينادها الفحصُ
+// مباشرةً**، ولا مسارَ شبكةٍ لها. **ومن فتح نقطةً لأجل اختبارٍ فتحها
+// لغيره.**
+func (s *Service) EscalateAlertsOnce(ctx context.Context) {
+	alerts, err := s.Alerts(ctx)
+	if err != nil {
+		s.logger.Error("watchdog scan failed", "error", err)
+		return
+	}
+	s.escalate(ctx, alerts)
+}
+
 func (s *Service) escalate(ctx context.Context, alerts []Alert) {
 	if s.notify == nil {
 		return
 	}
 	for _, a := range alerts {
-		tag, err := s.db.Exec(ctx,
-			`UPDATE orders SET alerted_at = now() WHERE id = $1 AND alerted_at IS NULL`, a.OrderID)
-		if err != nil {
-			s.logger.Error("watchdog: تعذّر وسم الإنذار", "order", a.OrderID, "error", err)
-			continue
-		}
-		if tag.RowsAffected() == 0 {
-			continue // أُنذر سابقاً
-		}
-		s.notify.NotifyOps(ctx, notifications.Input{
-			Kind:     notifications.KindOrder,
-			Title:    alertTitles[a.Reason],
-			Body:     a.MerchantName,
-			Entity:   "order",
-			EntityID: a.OrderID,
-			Href:     "/dashboard/orders",
-		})
+		s.escalateOne(ctx, a)
 	}
+}
+
+// escalateOne **وسمٌ ونيّةٌ في معاملةٍ واحدة** — `PF-07` · `R22`.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا لا يُسبَق الوسمُ الإشعارَ**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان الوسمُ يُكتب أوّلاً ثمّ يُشعَر** — **والوسمُ يمنع إعادةَ
+// المحاولة.** فإن سقط الإشعارُ أو مات المنفّذُ بينهما **صمت الإنذارُ
+// إلى الأبد**، ولا يراه زبونٌ ولا إدارة.
+//
+// **و`alerted_at` يقول «أُنذر» وهو لا يعني إلّا «قرّرنا أن نُنذر».**
+//
+// **فصارا معاً**: **الوسمُ يُكتب والنيّةُ الدائمةُ تُنشأ في معاملةٍ
+// واحدةٍ تُثبَّت مرّةً** — **فإن سقطت النيّةُ سقط الوسمُ وأُعيدت
+// المحاولةُ في الجولة التالية.**
+//
+// **والوسمُ أوّلاً داخلَ المعاملة عمداً**: **قفلُه يمنع راصدين من
+// إنشاء نيّتين** — والثاني يجد `RowsAffected == 0` أو ينتظر ثمّ يجده.
+//
+// **ولا مكتبَ يُنذَر ⇒ لا وسم**: **وسمٌ بلا مُنذَرٍ كذبٌ يمنع إنذاراً
+// حين يُوظَّف أحد.**
+//
+// **والدفعةُ والبثُّ بعد التثبيت** — **شبكةٌ لا تدخل معاملة**، وعقدُ
+// وصولها `PF-09`.
+func (s *Service) escalateOne(ctx context.Context, a Alert) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		s.logger.Error("watchdog: تعذّر فتحُ معاملة", "order", a.OrderID, "error", err)
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx,
+		`UPDATE orders SET alerted_at = now() WHERE id = $1 AND alerted_at IS NULL`, a.OrderID)
+	if err != nil {
+		s.logger.Error("watchdog: تعذّر وسم الإنذار", "order", a.OrderID, "error", err)
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		return // أُنذر سابقاً
+	}
+	in := notifications.Input{
+		Kind:     notifications.KindOrder,
+		Title:    alertTitles[a.Reason],
+		Body:     a.MerchantName,
+		Entity:   "order",
+		EntityID: a.OrderID,
+		Href:     "/dashboard/orders",
+	}
+	n, err := s.notify.NotifyOpsTx(ctx, tx, in)
+	if err != nil {
+		s.logger.Error("watchdog: تعذّرت نيّةُ الإنذار", "order", a.OrderID, "error", err)
+		return
+	}
+	if n == 0 {
+		s.logger.Warn("watchdog: لا مكتبَ يُنذَر — لا وسم", "order", a.OrderID)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		s.logger.Error("watchdog: تعذّر تثبيتُ الإنذار", "order", a.OrderID, "error", err)
+		return
+	}
+	s.notify.PublishToUsers(ctx, s.db, notifications.OpsDesk, in)
 }
 
 // alertTitles نصوص التصعيد — مصدرٌ واحد بجانب بقية نصوص الإشعارات.

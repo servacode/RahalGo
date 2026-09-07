@@ -117,6 +117,9 @@ type Harness struct {
 	T    *testing.T
 	Pool *pgxpool.Pool
 	Srv  *httptest.Server
+	// Orders خدمةُ الطلبات — **لنداءِ ما لا مسارَ شبكةٍ له**، كجولةِ
+	// إنذارِ الراصد.
+	Orders *orders.Service
 	// API خادمُ المحرّك نفسُه — **لنداءِ ما لا يمرّ بشبكة**، ككانسِ
 	// الخلفيّة. **ولا يُنادى به ما له مسارٌ عبر الشبكة.**
 	API *server.Server
@@ -224,7 +227,7 @@ func NewWith(t *testing.T, opts ...server.Option) *Harness {
 	t.Cleanup(ts.Close)
 
 	seedZone(t, pool)
-	return &Harness{T: t, Pool: pool, Srv: ts, API: s, Hub: hub, MediaDir: mediaDir, tokens: tokens, rdb: rdb}
+	return &Harness{T: t, Pool: pool, Srv: ts, API: s, Orders: ordersSvc, Hub: hub, MediaDir: mediaDir, tokens: tokens, rdb: rdb}
 }
 
 // ══════════════════════════════════════════════════════════════════════

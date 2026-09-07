@@ -10,6 +10,7 @@ package orders
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"io"
 	"log/slog"
 	"testing"
@@ -193,4 +194,15 @@ func seedAlertableOrder(t *testing.T, pool *pgxpool.Pool) string {
 
 func quietLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
+}
+
+// **ونسختا المعاملة** — `PF-07`: الواجهةُ توسّعت فتوسّع الجاسوس.
+func (s *countingNotifier) NotifyOpsTx(ctx context.Context, q dbtx.Querier,
+	in notifications.Input) (int, error) {
+	s.NotifyOps(ctx, in)
+	return 1, nil
+}
+
+func (s *countingNotifier) PublishToUsers(ctx context.Context, q dbtx.Querier,
+	roles []string, in notifications.Input) {
 }

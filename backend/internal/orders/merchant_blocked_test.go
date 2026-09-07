@@ -17,6 +17,7 @@ package orders_test
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"sync"
 	"testing"
 
@@ -213,4 +214,15 @@ func TestCustomerDoorFailure_StillCloses(t *testing.T) {
 	if !rec.told(f.customer) {
 		t.Fatal("لم يُنادَ الزبونُ — **وطلبُه أُغلق وهو لا يدري**")
 	}
+}
+
+// **ونسختا المعاملة** — `PF-07`: الواجهةُ توسّعت فتوسّع المُسجّل.
+func (r *recorder) NotifyOpsTx(ctx context.Context, q dbtx.Querier,
+	in notifications.Input) (int, error) {
+	r.NotifyOps(ctx, in)
+	return 1, nil
+}
+
+func (r *recorder) PublishToUsers(ctx context.Context, q dbtx.Querier,
+	roles []string, in notifications.Input) {
 }

@@ -5,12 +5,12 @@
     "RequiresP0": 0,
     "RequiresP7": 0,
     "RequiresP8": 0,
-    "Pass": 9,
+    "Pass": 10,
     "DefectReproduced": 0,
     "RiskConfirmed": 1,
     "ExpectedFail": 0,
     "Partial": 0,
-    "Unproven": 1,
+    "Unproven": 0,
     "Visible": 0,
     "Invisible": 5,
     "PartialVisible": 4
@@ -231,23 +231,24 @@
       ],
       "title": "إنذارُ الراصد",
       "steps": [
-        "١ UPDATE orders SET alerted_at — الوسم",
-        "٢ RowsAffected == 0 ⇒ لا إعادة — الحارس",
-        "٣ NotifyOps — الإشعار"
+        "١ UPDATE orders SET alerted_at — الوسم **داخلَ معاملة**",
+        "٢ RowsAffected == 0 ⇒ أُنذر سابقاً — الحارس",
+        "٣ NotifyOpsTx — **النيّةُ الدائمةُ في المعاملة نفسِها**",
+        "٤ COMMIT واحد · ثمّ البثُّ بعده"
       ],
-      "atomic_boundary": "NON_ATOMIC — وسمٌ ثمّ إشعار",
+      "atomic_boundary": "ATOMIC — الوسمُ والنيّةُ في معاملةٍ واحدة (دورةُ إصلاحٍ ١٤)",
       "failpoints": [
         "R22/notify-write"
       ],
       "expected": "لا وسمَ قبل نجاح الإشعار",
-      "observed": "لم يُقَس — الترتيبُ مقروءٌ من الشيفرة والتشغيلُ يحتاج مِعراضاً",
+      "observed": "**سقوطُ النيّة يُسقط الوسم**: موسومٌ=false · نيّاتٌ=0 · والجولةُ التاليةُ تُنذر",
       "user_visible": "لا شيء — إنذارٌ داخليّ",
       "admin_visible": "INVISIBLE",
-      "recovery": "لا مسارَ — الوسمُ يمنع إعادةَ المحاولة",
+      "recovery": "الجولةُ التالية (٣٠ ثانية) — **والوسمُ لا يمنع إلّا إنذاراً وقع فعلاً**",
       "tests": [
         "TestFAIL_R22_WatchdogMarkerBeforeNotify"
       ],
-      "result": "UNPROVEN",
+      "result": "PASS",
       "registers": [
         "R22"
       ],

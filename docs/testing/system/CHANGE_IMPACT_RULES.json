@@ -18,7 +18,7 @@
   ],
   "counts": {
     "categories": 15,
-    "domain_rules": 11,
+    "domain_rules": 12,
     "input_modes": 3
   },
   "domain_rules": [
@@ -93,6 +93,38 @@
         "internal/server"
       ],
       "why": "الوسائطُ تعبر كلَّ سطحٍ يعرض صورةً ⇒ إذنُ الجلب وعقدُ المسارات"
+    },
+    {
+      "name": "AUDIT",
+      "match": [
+        "backend/internal/server/audit.go",
+        "backend/internal/server/audit_tx.go"
+      ],
+      "flows": [
+        "F-15",
+        "F-23",
+        "F-24",
+        "F-25",
+        "F-26",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE"
+      ],
+      "packages": [
+        "internal/fininv",
+        "internal/qa",
+        "internal/server"
+      ],
+      "why": "طبقةُ تدقيقٍ مشتركةٌ لأفعالٍ ماليّةٍ ⇒ ذرّيّةُ الأثر وثوابتُ المال"
     },
     {
       "name": "IDEMPOTENCY",

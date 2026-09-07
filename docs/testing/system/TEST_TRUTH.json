@@ -19,7 +19,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 49,
+    "notify_sites": 48,
     "notify_targeted": 11,
     "publish_rooms": [
       "customer",
@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 248,
-    "test_funcs": 875
+    "test_files": 249,
+    "test_funcs": 879
   },
   "flows": [
     {
@@ -370,9 +370,13 @@
       "tests": [
         "TestEV_R22WatchdogMarkerSuppressesRetry",
         "TestEV_XOB5_WatchdogComparisonKey",
-        "TestFAIL_R22_WatchdogMarkerBeforeNotify"
+        "TestFAIL_R22_WatchdogMarkerBeforeNotify",
+        "TestR22_W1_AlertMarksAndCreatesIntent",
+        "TestR22_W2_IntentFailureLeavesNoMarker",
+        "TestR22_W5_SecondSweepDoesNotDuplicate",
+        "TestR22_W6_TwoWatchdogsAlertOnce"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-10",
@@ -1855,7 +1859,11 @@
       "tests": [
         "TestEV_R22WatchdogMarkerSuppressesRetry",
         "TestEV_XOB5_WatchdogComparisonKey",
-        "TestFAIL_R22_WatchdogMarkerBeforeNotify"
+        "TestFAIL_R22_WatchdogMarkerBeforeNotify",
+        "TestR22_W1_AlertMarksAndCreatesIntent",
+        "TestR22_W2_IntentFailureLeavesNoMarker",
+        "TestR22_W5_SecondSweepDoesNotDuplicate",
+        "TestR22_W6_TwoWatchdogsAlertOnce"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -2155,6 +2163,13 @@
       "id": "XG-35",
       "title": "أفعالٌ حسّاسةٌ بنصّ `AQ-4` ما زالت بتدقيقٍ أفضلِ جهد",
       "severity": "CRITICAL",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-36",
+      "title": "وسمُ إنذار الراصد للطلب لا لسببه — سببٌ ثانٍ يُخنَق أبداً",
+      "severity": "HIGH",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
     },
@@ -10897,6 +10912,86 @@
       "modes": [
         "FAILURE",
         "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR22_W1_AlertMarksAndCreatesIntent",
+      "file": "internal/qa/watchdog_alert_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-09"
+      ],
+      "risks": [
+        "R22"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR22_W2_IntentFailureLeavesNoMarker",
+      "file": "internal/qa/watchdog_alert_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-09"
+      ],
+      "risks": [
+        "R22"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR22_W5_SecondSweepDoesNotDuplicate",
+      "file": "internal/qa/watchdog_alert_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-09"
+      ],
+      "risks": [
+        "R22"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR22_W6_TwoWatchdogsAlertOnce",
+      "file": "internal/qa/watchdog_alert_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-09"
+      ],
+      "risks": [
+        "R22"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
         "FULL",
         "RELEASE"
       ],

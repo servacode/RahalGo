@@ -11,8 +11,8 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 47,
-    "realtime_publishers": 14,
+    "emit_sites": 46,
+    "realtime_publishers": 15,
     "rooms": 5,
     "untargeted_user_sites": 27
   },
@@ -135,15 +135,6 @@
       "call": "Notify",
       "kind": "Order",
       "entity": "merchant",
-      "has_app_targeting": false,
-      "has_entity_id": true
-    },
-    {
-      "file": "internal/orders/watchdog.go",
-      "line": 143,
-      "call": "NotifyOps",
-      "kind": "Order",
-      "entity": "order",
       "has_app_targeting": false,
       "has_entity_id": true
     },
@@ -820,6 +811,11 @@
       "room": "user:*"
     },
     {
+      "file": "internal/notifications/ops_tx.go",
+      "line": 108,
+      "room": "user:*"
+    },
+    {
       "file": "internal/orders/custom.go",
       "line": 254,
       "room": "ops"
@@ -846,27 +842,27 @@
     },
     {
       "file": "internal/orders/service.go",
-      "line": 121,
+      "line": 127,
       "room": "ops"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 122,
+      "line": 128,
       "room": "merchant:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 135,
+      "line": 141,
       "room": "customer:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 142,
+      "line": 148,
       "room": "driver:*"
     },
     {
       "file": "internal/orders/service.go",
-      "line": 986,
+      "line": 992,
       "room": "user:*"
     },
     {

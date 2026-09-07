@@ -2,6 +2,7 @@ package orders
 
 import (
 	"context"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"strings"
 	"sync"
 	"testing"
@@ -124,3 +125,14 @@ func TestWalletNotice_NegativeShowsMinus(t *testing.T) {
 
 // t2 اختصارٌ لعناوين الإشعارات — الحزمةُ نفسُها.
 var t2 = t
+
+// **ونسختا المعاملة** — `PF-07`: الواجهةُ توسّعت فتوسّع الجاسوس.
+func (s *noticeSpy) NotifyOpsTx(ctx context.Context, q dbtx.Querier,
+	in notifications.Input) (int, error) {
+	s.NotifyOps(ctx, in)
+	return 1, nil
+}
+
+func (s *noticeSpy) PublishToUsers(ctx context.Context, q dbtx.Querier,
+	roles []string, in notifications.Input) {
+}
