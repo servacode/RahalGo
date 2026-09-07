@@ -101,7 +101,19 @@ func (d *Decision) Human() string {
 	}
 	w("──────────────────────────────────────────────────────────────")
 	w("")
-	w("BLOCKERS                     = %d", len(d.Blockers))
+	// **ولا اسمَ يحمل معنيين** (`XG-37`): **الصنفُ غيرُ الحال.**
+	w("TOTAL RULES                  = %d", d.Counts.TotalRules)
+	w("BLOCKING-CAPABLE RULES       = %d  (صنفاً — ناجحةً كانت أو ساقطة)",
+		d.Counts.BlockingCapable)
+	w("CURRENT BLOCKERS             = %d  ← **وبه يُقرَّر**",
+		d.Counts.CurrentBlockers)
+	w("SATISFIED BLOCKING-CAPABLE   = %d", d.Counts.SatisfiedBlockingCapable)
+	w("SUPERSEDED BLOCKING-CAPABLE  = %d  (جذرُها في قاعدةٍ أخرى)",
+		d.Counts.SupersededBlockingCapable)
+	w("WARNINGS                     = %d", d.Counts.Warnings)
+	w("SUPERSEDED (لا تُعَدّ)         = %d", d.Counts.Superseded)
+	w("")
+	w("BLOCKERS                     = %d  (= CURRENT BLOCKERS)", len(d.Blockers))
 	w("CRITICAL UNRESOLVED          = %d", len(d.CriticalU))
 	w("REQUIRED VALIDATIONS NOT RUN = %d", len(d.NotRunReq))
 	for _, x := range d.Debts {

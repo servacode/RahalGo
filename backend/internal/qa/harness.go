@@ -169,7 +169,11 @@ func New(t *testing.T) *Harness { return NewWith(t) }
 // بلا خياراتٍ هو ما يُبنى هناك.**
 func NewWith(t *testing.T, opts ...server.Option) *Harness {
 	t.Helper()
-	pool := testdb.Pool(t) // **يتخطّى بهدوءٍ إن لم تُضبط قاعدةُ الاختبار**
+	return build(t, testdb.Pool(t), opts...)
+}
+
+func build(t *testing.T, pool *pgxpool.Pool, opts ...server.Option) *Harness {
+	t.Helper()
 
 	// ══════════════════════════════════════════════════════════════
 	// **وذاكرةٌ حقيقيّةٌ حين تُطلَب** — `P-0` البند ٣٠

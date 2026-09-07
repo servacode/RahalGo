@@ -191,8 +191,17 @@ func gapRules(e *Evidence) []Rule {
 			st = Pass
 			why = "**أُصلحت** — " + g.Fixed
 		}
+		// **وفجوةٌ جذرُها جذرُ أخرى تُقرأ ولا تُعَدّ** — **سببٌ واحدٌ
+		// لا مانعان مصطنعان** (البند ٧).
+		super := ""
+		if g.PartOf != "" {
+			super = "GATE-" + g.PartOf
+			why = fmt.Sprintf("**نطاقٌ من `%s` — جذرُهما واحد** · %s",
+				g.PartOf, why)
+		}
 		cat := catOfGap(g)
 		r := Rule{
+			SupersededBy:     super,
 			ID:               "GATE-" + g.ID,
 			Category:         cat,
 			Requirement:      "سدُّ الفجوة: " + g.Title,

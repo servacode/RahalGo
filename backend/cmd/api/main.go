@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/servacode/rahalgo/backend/internal/auth"
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
@@ -20,6 +21,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/migrate"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/notify"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
@@ -203,6 +205,30 @@ func run(logger *slog.Logger) error {
 	cashboxSvc := cashbox.NewService(pg, settingsStore)
 	hub := realtime.NewHub(logger)
 	ordersSvc := orders.NewService(pg, identitySvc, walletSvc, cashboxSvc, hub, logger)
+
+	// ══════════════════════════════════════════════════════════════
+	// **ومكتبٌ فارغٌ يعني راصداً لا يُنذر أحداً** — `PF-07` · `W9`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **العقدُ**: **لا يُوسَم طلبٌ «أُنذر» ولا مستقبِلَ** — **وسمٌ بلا
+	// مُنذَرٍ كذبٌ يُسكته أبداً.** **فالراصدُ يمتنع ويُعيد.**
+	//
+	// **وامتناعُه صحيحٌ وصامت** — **فيُقال عند الإقلاع لا في السجلّ
+	// الدوريّ**: من شغّل خدمةً بلا مكتبٍ يحقّ له أن يعرف **قبل** أن
+	// يعلق طلبٌ بلا مُنذِر.
+	//
+	// **و`BootstrapAdmin` يضمنه إن ضُبط `ADMIN_PHONE`** — **والتحقّقُ
+	// يقيس النتيجةَ لا النيّة.**
+	if n, err := opsDeskSize(ctx, pg); err != nil {
+		logger.Warn("تعذّر عدُّ مكتب العمليّات", "error", err)
+	} else if n == 0 {
+		logger.Warn("**لا موظّفَ عمليّاتٍ فاعل** — " +
+			"**الراصدُ لن يُنذر ولن يسم، والطلبُ العالقُ يبقى مستحقّاً " +
+			"حتّى يُعيَّن أحد** (`PF-07`)")
+	} else {
+		logger.Info("مكتبُ العمليّات", "recipients", n)
+	}
+
 	go ordersSvc.RunWatchdog(ctx, 30*time.Second)
 	supportSvc := support.NewService(pg, identitySvc, walletSvc)
 	supportSvc.SetSettings(settingsStore)
@@ -271,4 +297,16 @@ func run(logger *slog.Logger) error {
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	}
+}
+
+// opsDeskSize عددُ من يصلهم إنذارُ الراصد — **الاستعلامُ نفسُه الذي
+// يستعمله `NotifyOpsTx`**، فلا يفترقان.
+func opsDeskSize(ctx context.Context, pg *pgxpool.Pool) (int, error) {
+	var n int
+	err := pg.QueryRow(ctx, `
+		SELECT count(DISTINCT u.id) FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id
+		WHERE ur.role_code = ANY($1) AND u.status = 'active'`,
+		notifications.OpsDesk).Scan(&n)
+	return n, err
 }

@@ -168,7 +168,8 @@ func Build(backendRoot, docsRoot string) (*Truth, error) {
 	// ── الفجوات ──────────────────────────────────────────────────
 	for _, g := range Gaps {
 		gp := Gap{ID: g.ID, Title: g.Title, Severity: g.Severity,
-			WokenBy: g.WokenBy, Fixed: g.Fixed, Tests: byGap[g.ID]}
+			WokenBy: g.WokenBy, Fixed: g.Fixed, PartOf: g.PartOf,
+			Tests: byGap[g.ID]}
 		switch {
 		case len(gp.Tests) == 0:
 			gp.Status = StatusNotImplemented

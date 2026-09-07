@@ -3,7 +3,7 @@ package impact
 import (
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
 	"testing"
 )
 
@@ -58,7 +58,11 @@ func TestCriticalAuditActionsAreMapped(t *testing.T) {
 	if err != nil {
 		t.Skipf("لا معجمَ للأفعال الحسّاسة: %v", err)
 	}
-	n := strings.Count(string(b), `": true,`)
+	// **والعدُّ على النمط الحقيقيّ**: مفاتيحُ المعجم مُصطفّةٌ بمسافات
+	// (`"finance.wallet_apply":   true,`) — **فنمطٌ لاصقٌ يقرأ واحداً
+	// وهي ستّة**، **وحارسٌ يقيس خطأً أسوأُ من لا حارس.**
+	n := len(regexp.MustCompile(`"[a-z_]+\.[a-z_]+":\s*true,`).
+		FindAllString(string(b), -1))
 	e := loadEngine(t)
 	res := e.Analyze("EXPLICIT_FILES", "", "",
 		[]string{"backend/internal/server/audit_tx.go"})

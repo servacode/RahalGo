@@ -88,6 +88,13 @@ func Decide(cand Candidate, e *Evidence, waivers []Waiver) *Decision {
 	d.RunID = runID(cand, rules)
 
 	// ── الحكم ────────────────────────────────────────────────────
+	// **الحالُ تُحسَب ولا تُعلَن** — **ولا قاعدةَ تحمل حالاً كتبها كاتبُها.**
+	for i := range d.Rules {
+		r := &d.Rules[i]
+		r.CurrentlyBlocking = r.Blocking && r.Counted() && !r.Status.Satisfied()
+	}
+	d.Counts = countOf(d.Rules)
+
 	blocking := d.unsatisfiedBlocking()
 	d.Ready = len(blocking) == 0 && len(bad) == 0
 

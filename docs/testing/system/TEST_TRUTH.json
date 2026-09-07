@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 249,
-    "test_funcs": 879
+    "test_files": 251,
+    "test_funcs": 883
   },
   "flows": [
     {
@@ -374,7 +374,8 @@
         "TestR22_W1_AlertMarksAndCreatesIntent",
         "TestR22_W2_IntentFailureLeavesNoMarker",
         "TestR22_W5_SecondSweepDoesNotDuplicate",
-        "TestR22_W6_TwoWatchdogsAlertOnce"
+        "TestR22_W6_TwoWatchdogsAlertOnce",
+        "TestR22_W9_NoOpsRecipientLeavesNoMarker"
       ],
       "status": "COVERED"
     },
@@ -1863,7 +1864,8 @@
         "TestR22_W1_AlertMarksAndCreatesIntent",
         "TestR22_W2_IntentFailureLeavesNoMarker",
         "TestR22_W5_SecondSweepDoesNotDuplicate",
-        "TestR22_W6_TwoWatchdogsAlertOnce"
+        "TestR22_W6_TwoWatchdogsAlertOnce",
+        "TestR22_W9_NoOpsRecipientLeavesNoMarker"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -2163,6 +2165,7 @@
       "id": "XG-35",
       "title": "أفعالٌ حسّاسةٌ بنصّ `AQ-4` ما زالت بتدقيقٍ أفضلِ جهد",
       "severity": "CRITICAL",
+      "part_of": "XG-20",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
     },
@@ -4634,6 +4637,48 @@
       "modes": [
         "FAST",
         "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG37_BlockingCapableIsNotACurrentBlocker",
+      "file": "internal/gate/counts_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG37_CountsAgreeAcrossAllThreeReaders",
+      "file": "internal/gate/counts_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG37_SupersededNeverCounts",
+      "file": "internal/gate/counts_test.go",
+      "package": "gate",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
       ],
       "orphan": false
     },
@@ -10987,6 +11032,26 @@
     {
       "name": "TestR22_W6_TwoWatchdogsAlertOnce",
       "file": "internal/qa/watchdog_alert_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-09"
+      ],
+      "risks": [
+        "R22"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR22_W9_NoOpsRecipientLeavesNoMarker",
+      "file": "internal/qa/watchdog_no_recipient_test.go",
       "package": "qa",
       "level": "L4",
       "flows": [

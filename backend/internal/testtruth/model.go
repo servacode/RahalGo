@@ -150,7 +150,10 @@ type Gap struct {
 	// WokenBy **الإعدادُ الذي يوقظ الفجوةَ النائمة** — إن عُرف.
 	WokenBy string `json:"woken_by,omitempty"`
 	// Fixed **دليلُ الإصلاح** — تقرؤه البوّابةُ فلا تعدّها مانعة.
-	Fixed  string   `json:"fixed,omitempty"`
+	Fixed string `json:"fixed,omitempty"`
+	// PartOf **جذرُها جذرُ فجوةٍ أخرى** — **تُقرأ ولا تُعَدّ مانعاً
+	// ثانياً**، وهو عقدُ `SupersededBy` في البوّابة.
+	PartOf string   `json:"part_of,omitempty"`
 	Tests  []string `json:"tests"`
 	Status Status   `json:"status"`
 }

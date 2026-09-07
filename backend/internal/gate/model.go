@@ -142,8 +142,22 @@ type Rule struct {
 
 	RequiredEvidence string `json:"required_evidence"`
 	Status           State  `json:"current_status"`
-	Blocking         bool   `json:"blocking"`
-	Reason           string `json:"reason"`
+
+	// Blocking **صنفٌ لا حال**: «هذه القاعدة تمنع الإطلاقَ **إن لم
+	// تُستوفَ**». **وهي صحيحةٌ في قاعدةٍ ناجحةٍ أيضاً.**
+	//
+	// **وكانت تُنشَر باسم `blocking`** — **فقرأتها الآلاتُ «مانعةٌ
+	// الآن» فأعلنت ٢٨ مانعاً والبوّابةُ تقول ٢٣** (`XG-37`).
+	Blocking bool `json:"blocking_capable"`
+
+	// CurrentlyBlocking **حالٌ لا صنف**: **مانعةٌ الآن فعلاً.**
+	//
+	//	Blocking && Counted() && !Status.Satisfied()
+	//
+	// **وهي وحدَها ما يُعَدّ** — **ويُحسَب في `Decide` لا يُملأ يدويّاً.**
+	CurrentlyBlocking bool `json:"currently_blocking"`
+
+	Reason string `json:"reason"`
 
 	Registers []string `json:"related_registers,omitempty"`
 	Tests     []string `json:"tests,omitempty"`
@@ -198,6 +212,10 @@ type Decision struct {
 	Rules     []Rule    `json:"rules"`
 	Waivers   []Waiver  `json:"waivers"`
 
+	// Counts **العددُ منشورٌ لا مُستنتَج** — **فلا يعدّ قارئٌ بنفسه
+	// فيخطئ** (`XG-37`).
+	Counts Counts `json:"counts"`
+
 	Blockers  []string `json:"release_blockers"`
 	CriticalU []string `json:"critical_unresolved"`
 	NotRunReq []string `json:"required_validations_not_run"`
@@ -217,6 +235,27 @@ type Decision struct {
 	GateErrors []string `json:"gate_errors,omitempty"`
 }
 
+// Counts **معجمُ الأعداد** — **ولا اسمَ يحمل معنيين.**
+type Counts struct {
+	// TotalRules كلُّ قاعدةٍ في التقرير — **بما فيها المُستتبَعة.**
+	TotalRules int `json:"total_rules"`
+	// BlockingCapable **صنفاً** — ناجحةً كانت أو ساقطة.
+	BlockingCapable int `json:"blocking_capable_rules"`
+	// CurrentBlockers **حالاً** — **وهو الرقمُ الوحيدُ الذي يُقرَّر به.**
+	CurrentBlockers int `json:"current_blockers"`
+	// SatisfiedBlockingCapable مانعةٌ صنفاً ومستوفاةٌ حالاً.
+	SatisfiedBlockingCapable int `json:"satisfied_blocking_capable"`
+	// Warnings غيرُ مانعةٍ صنفاً وغيرُ مستوفاةٍ حالاً.
+	Warnings int `json:"warnings"`
+	// SupersededBlockingCapable مانعةٌ صنفاً ومُستتبَعةٌ فلا تُعَدّ.
+	//
+	// **ولا تُخلَط بالمستوفاة** — **«مستوفاةٌ» تعني عملاً أُنجز،
+	// و«مُستتبَعةٌ» تعني سبباً واحداً بمانعٍ واحد.**
+	SupersededBlockingCapable int `json:"superseded_blocking_capable"`
+	// Superseded كلُّ مُستتبَعةٍ — مانعةَ الصنف كانت أو لا.
+	Superseded int `json:"superseded_not_counted"`
+}
+
 // blocking القواعدُ المانعةُ المحتسَبةُ غيرُ المُرضاة.
 func (d *Decision) unsatisfiedBlocking() []Rule {
 	var out []Rule
@@ -232,4 +271,32 @@ func (d *Decision) unsatisfiedBlocking() []Rule {
 		return out[i].ID < out[j].ID
 	})
 	return out
+}
+
+// countOf **المصدرُ الواحدُ للأعداد** — **تنادِيه الطرفيّةُ والملفُّ
+// والحارسُ جميعاً، فلا يفترقون.**
+func countOf(rules []Rule) Counts {
+	var c Counts
+	c.TotalRules = len(rules)
+	for _, r := range rules {
+		if !r.Counted() {
+			c.Superseded++
+		}
+		if r.Blocking {
+			c.BlockingCapable++
+			switch {
+			case !r.Counted():
+				c.SupersededBlockingCapable++
+			case !r.Status.Satisfied():
+				c.CurrentBlockers++
+			default:
+				c.SatisfiedBlockingCapable++
+			}
+			continue
+		}
+		if r.Counted() && !r.Status.Satisfied() {
+			c.Warnings++
+		}
+	}
+	return c
 }
