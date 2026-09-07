@@ -880,7 +880,7 @@
       "path": "/api/v1/admin/ledger/export",
       "handler": "handleLedgerExport",
       "auth": true,
-      "capability": "finance.read"
+      "capability": "finance.export"
     },
     {
       "method": "POST",
@@ -1507,7 +1507,7 @@
       "path": "/api/v1/admin/orders/export",
       "handler": "handleOrdersExport",
       "auth": true,
-      "capability": "finance.read"
+      "capability": "finance.export"
     },
     {
       "method": "GET",
@@ -1602,7 +1602,7 @@
       "path": "/api/v1/admin/orders/{id}/chat",
       "handler": "handleAdminOrderChat",
       "auth": true,
-      "capability": "orders.read",
+      "capability": "orders.communications.read",
       "response": [
         {
           "name": "@th",
@@ -1666,7 +1666,7 @@
       "path": "/api/v1/admin/orders/{id}/message",
       "handler": "handleOrderMessagePreview",
       "auth": true,
-      "capability": "orders.read",
+      "capability": "orders.communications.read",
       "response": [
         {
           "name": "drivers_on_shift",
@@ -2425,7 +2425,7 @@
       "path": "/api/v1/admin/users/export",
       "handler": "handleAdminUsersExport",
       "auth": true,
-      "capability": "users.read"
+      "capability": "users.export"
     },
     {
       "method": "GET",
@@ -2484,7 +2484,7 @@
       "path": "/api/v1/admin/users/{id}/activity",
       "handler": "handleAdminUserActivity",
       "auth": true,
-      "capability": "users.read",
+      "capability": "users.sensitive.read",
       "response": [
         {
           "name": "@res",
@@ -2500,14 +2500,14 @@
       "path": "/api/v1/admin/users/{id}/addresses",
       "handler": "handleAdminUserAddresses",
       "auth": true,
-      "capability": "users.read"
+      "capability": "users.sensitive.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/users/{id}/chats",
       "handler": "handleAdminUserChats",
       "auth": true,
-      "capability": "users.read",
+      "capability": "orders.communications.read",
       "response": [
         {
           "name": "@paged",

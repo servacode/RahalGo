@@ -32,7 +32,7 @@
     "behaviour_settings": 95,
     "order_fields": 75,
     "test_files": 263,
-    "test_funcs": 970
+    "test_funcs": 971
   },
   "flows": [
     {
@@ -2427,9 +2427,30 @@
       "status": "COVERED"
     },
     {
-      "id": "XG-41",
-      "title": "حرّاسٌ ساقطةٌ مضت دورةً كاملةً بلا أن تُرى",
+      "id": "XG-41A",
+      "title": "حارسُ `AQ-4` يقرأ كتابةَ الإعداد صنفاً واحداً وعقدُ ٢١ يقسمها",
       "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-41B",
+      "title": "`errors.auth_unavailable` بلا رسالةٍ عربيّة",
+      "severity": "MEDIUM",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-41C",
+      "title": "فحصا `PF-09` يسقطان في الحزمة الكاملة وينجحان وحدَهما",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-42",
+      "title": "الردودُ لا تُشكَّل بحسب قدرة قارئها — الهاتفُ يُردّ لمن لزمه الاسم",
+      "severity": "MEDIUM",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
     },
@@ -11756,6 +11777,12 @@
     },
     {
       "name": "TestADG2_EveryAdminRouteClassified",
+      "file": "internal/qa/role_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADG2_EveryCapabilityHasARoute",
       "file": "internal/qa/role_matrix_test.go",
       "package": "qa",
       "orphan": true

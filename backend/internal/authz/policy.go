@@ -58,12 +58,14 @@ var adminPolicy = []Rule{
 	{"GET", "/users/{id}/incentives", FinanceRead},
 	{"GET", "/users", UsersRead},
 	{"GET", "/users/stats", UsersRead},
-	{"GET", "/users/export", UsersRead},
+	// **والتصديرُ إخراجُ القاعدة لا قراءةٌ أكثر.**
+	{"GET", "/users/export", UsersExport},
 	{"GET", "/users/{id}", UsersRead},
-	{"GET", "/users/{id}/activity", UsersRead},
+	{"GET", "/users/{id}/activity", UsersSensitiveRead},
 	{"GET", "/users/{id}/feedback", UsersRead},
-	{"GET", "/users/{id}/addresses", UsersRead},
-	{"GET", "/users/{id}/chats", UsersRead},
+	// **ودفترُ بيوتِ المرء غيرُ عنوانِ طلبه.**
+	{"GET", "/users/{id}/addresses", UsersSensitiveRead},
+	{"GET", "/users/{id}/chats", OrdersCommunicationsRead},
 	{"GET", "/customers", UsersRead},
 	{"GET", "/salesreps", UsersRead},
 
@@ -81,12 +83,13 @@ var adminPolicy = []Rule{
 	// وهاتفُه** وأنصبةُ كلّ طلبٍ من الدفتر. **وحارسُه قبلَ `ADG-2`
 	// كان `admin,finance`** — **ودورةُ ٢٥ وسّعته إلى التحليلات
 	// فأدخلت التحليلاتِ على أرقام الهواتف.** (مصالحةُ دورةِ ٢٦.)
-	{"GET", "/orders/export", FinanceRead},
+	{"GET", "/orders/export", FinanceExport},
 	{"GET", "/orders", OrdersRead},
 	{"GET", "/orders/alerts", OrdersRead},
 	{"GET", "/orders/{id}", OrdersRead},
-	{"GET", "/orders/{id}/chat", OrdersRead},
-	{"GET", "/orders/{id}/message", OrdersRead},
+	// **وكلامُ الناس صنفٌ بذاته** — ومن يسوّي حساباً لا يقرؤه.
+	{"GET", "/orders/{id}/chat", OrdersCommunicationsRead},
+	{"GET", "/orders/{id}/message", OrdersCommunicationsRead},
 
 	// ── المتاجر: إدارةٌ · وسلامةٌ · وتوثيق ───────────────────────
 	{"POST", "/merchants/{id}/suspend", SafetyManage},
@@ -128,7 +131,7 @@ var adminPolicy = []Rule{
 	{"POST", "/expenses", FinanceManage},
 	{"POST", "/expenses/categories", FinanceManage},
 	{"POST", "/expenses/{id}/void", FinanceManage},
-	{"GET", "/ledger/export", FinanceRead},
+	{"GET", "/ledger/export", FinanceExport},
 	{"GET", "/treasury-candidates", FinanceManage},
 	{"GET", "/reports/losses", FinanceRead},
 
