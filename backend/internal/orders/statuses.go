@@ -201,6 +201,14 @@ func authorizingRole(kind, from, to string, roles []string) string {
 }
 
 // terminal الحالات النهائية — تُغلق الطلب.
+// TerminalStatuses الحالاتُ النهائيّةُ كقائمة — **لاستعمالِ استعلامٍ.**
+//
+// **ولا تُكتب أسماؤها بيدٍ في `SQL`**: **قائمةٌ ثانيةٌ تشيخ صامتةً**،
+// **ومن أضاف حالاً نهائيّةً غداً نسي نسختَها.**
+func TerminalStatuses() []string {
+	return []string{StDelivered, StRejected, StCancelled, StFailed, StRefunded}
+}
+
 func terminal(status string) bool {
 	switch status {
 	case StDelivered, StRejected, StCancelled, StFailed, StRefunded:

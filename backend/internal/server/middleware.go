@@ -37,7 +37,25 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		}
 		// إنفاذ حالة الحساب: توقيع التوكن سليم لا يكفي — الموقوف/المحظور
 		// يُرفض فوراً (بكاش Redis قصير) حتى لو بقيت صلاحية توكنه.
-		if s.identity.ActiveStatus(r.Context(), claims.Subject) != "active" {
+		// ══════════════════════════════════════════════════════════
+		// **والتعليقُ يمنع الجديدَ ولا يشلّ القائم** — `XG-22`
+		// ══════════════════════════════════════════════════════════
+		//
+		// **كان يردّ `403` على كلّ نداءٍ فورَ التعليق** — **فسائقٌ
+		// عُلِّق وهو يحمل طلباً لا يستطيع تسليمَه**، والطلبُ يبقى
+		// معلَّقاً بمن لا يقدر والزبونُ ينتظر.
+		//
+		// **و`blocked` بابٌ آخر**: يقف عند كلّ شيءٍ ولا استثناءَ فيه.
+		// **والاستثناءُ للعاديّ وحدَه، وبشروطٍ ثلاثةٍ مجتمعة** — انظر
+		// `suspension.go`.
+		switch s.identity.ActiveStatus(r.Context(), claims.Subject) {
+		case "active":
+		case "suspended":
+			if !s.suspendedMayContinue(r.Context(), r, claims.Subject, claims.Roles) {
+				httpx.Error(w, errForbidden)
+				return
+			}
+		default:
 			httpx.Error(w, errForbidden)
 			return
 		}

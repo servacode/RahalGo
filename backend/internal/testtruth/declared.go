@@ -191,7 +191,28 @@ var Gaps = []GapDecl{
 			"بلا نقلِ ملفّ. **والمجهولُ نسبُه يُحجَب.** " +
 			"وخمسةُ حرّاسٍ: السردُ · الإثباتُ · الصورةُ · بقاءُ العامّ " +
 			"عامّاً · والموقَّعُ يعمل والمزوَّرُ لا."},
-	{ID: "XG-22", Title: "التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم", Severity: "BLOCKER"},
+	{ID: "XG-22", Title: "التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم", Severity: "BLOCKER",
+		// **دورةُ إصلاحٍ ١١ · ٢٠٢٦-٠٩-٠٧ — بقرار المالك.**
+		Fixed: "**كان `RequireAuth` يردّ `403` على كلّ نداءٍ فورَ " +
+			"التعليق** — **فسائقٌ عُلِّق وهو يحمل طلباً لا يستطيع " +
+			"تسليمَه ولا رؤيتَه**، والطلبُ يبقى معلَّقاً بمن لا يقدر " +
+			"والزبونُ ينتظر. " +
+			"**والحالان في المنتَج ليسا واحداً**: `AdminUpdateUser` " +
+			"يقبل `suspended` و`blocked` — **ولم يُخترَع بابٌ ثالث**، " +
+			"وإنّما فُرّق بين قائمَين: **الحظرُ يقف عند كلّ شيءٍ ولا " +
+			"استثناءَ فيه، والتعليقُ يمنع الجديدَ ويترك القائمَ يبلغ " +
+			"نهايتَه.** " +
+			"**والاستثناءُ ثلاثيُّ الشرط**: الفاعلُ · وطلبٌ بعينه في " +
+			"مسار النداء · وفعلٌ من قائمةٍ مغلقةٍ بالدور — **ومن فتح " +
+			"البابَ بشرطٍ واحدٍ فتحه كلَّه.** " +
+			"**والقائمةُ مغلقةٌ لا نمطٌ عامّ**، **ولا إنشاءَ فيها ولا " +
+			"قبولاً جديداً ولا وردية.** " +
+			"**والحالُ النهائيّةُ تُنهي الإذن** — من سلّم طلبَه عاد " +
+			"معلَّقاً كسائر المعلَّقين، **وتُقرأ من `TerminalStatuses` " +
+			"لا تُكتب أسماؤها في `SQL`** فلا تشيخ نسخةٌ صامتة. " +
+			"**والإنفاذُ في الخادم** — نداءاتٌ مباشرةٌ بلا واجهة. " +
+			"عشرةُ حرّاسٍ دائمين، منها تعليقٌ متزامنٌ مع انتقالٍ بتداخلٍ " +
+			"مقيس."},
 	{ID: "XG-23", Title: "لا مسارَ تدخّلٍ استثنائيٍّ مسمّى", Severity: "HIGH"},
 	{ID: "XG-24", Title: "لا استعلامَ لطلباتٍ بيد موقوفين", Severity: "HIGH"},
 	{ID: "XG-25", Title: "عمولةُ المنصّة تُحسب لحظةَ التسليم", Severity: "CRITICAL"},
@@ -1182,6 +1203,18 @@ var TestMap = map[string]TestDecl{
 	// **وثوابتُ المال تُسأل عن أساسٍ صحيحٍ لا عن قاعدةٍ خالية.**
 	"TestFIN_InvariantsCleanOnValidFixture": infraTest(),
 
+	// ── استمرارُ الطلب القائم مع التعليق (دورةُ إصلاحٍ ١١) ──────────
+	"TestXG22_T1_SuspendedWithoutActiveOrderIsDenied": suspTest(),
+	"TestXG22_T2_SuspendedDriverCanFinishActiveOrder": suspTest(),
+	"TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder":  suspTest(),
+	"TestXG22_T4_ExceptionEndsAtTerminalState":        suspTest(),
+	"TestXG22_T6_NormalActorUnchanged":                suspTest(),
+	"TestXG22_T7_OpsCanStillResolveTheOrder":          suspTest(),
+	"TestXG22_T8_BlockedHasNoException":               suspTest(),
+	"TestXG22_T9_ExceptionDoesNotLeakAcrossRoles":     suspTest(),
+	"TestXG22_T10_EnforcementIsServerSide":            suspTest(),
+	"TestXG22_SuspendDuringTransitionIsDeterministic": suspTest(),
+
 	// ── إذنُ الوسائط (دورةُ إصلاحٍ ١٠) ──────────────────────────────
 	"TestD13_MediaDirectoryIsNotListable":     mediaTest(),
 	"TestD13_DeliveryProofNeedsSignedURL":     mediaTest(),
@@ -1311,6 +1344,16 @@ func targetTest() TestDecl {
 		Flows: []string{"F-21", "F-23"},
 		Gaps:  []string{"XG-32"},
 		Modes: []string{"CONCURRENCY", "FAILURE", "FINANCIAL", "FULL", "RELEASE"},
+	}
+}
+
+// suspTest حارسُ استمرارِ الطلب القائم مع التعليق — `XG-22`.
+func suspTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-13", "F-29", "F-30"},
+		Gaps:  []string{"XG-22"},
+		Modes: []string{"SECURITY", "CONCURRENCY", "FULL", "RELEASE"},
 	}
 }
 

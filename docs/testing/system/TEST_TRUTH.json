@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 244,
-    "test_funcs": 849
+    "test_files": 245,
+    "test_funcs": 859
   },
   "flows": [
     {
@@ -468,7 +468,17 @@
         "TestD13_PublicMediaStaysPublic",
         "TestD13_SignedURLWorksAndForgeryDoesNot",
         "TestRACE_LocationQueueIsClientSide",
-        "TestRACE_FinancialTruthAfterConcurrentDeliveries"
+        "TestRACE_FinancialTruthAfterConcurrentDeliveries",
+        "TestXG22_SuspendDuringTransitionIsDeterministic",
+        "TestXG22_T10_EnforcementIsServerSide",
+        "TestXG22_T1_SuspendedWithoutActiveOrderIsDenied",
+        "TestXG22_T2_SuspendedDriverCanFinishActiveOrder",
+        "TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder",
+        "TestXG22_T4_ExceptionEndsAtTerminalState",
+        "TestXG22_T6_NormalActorUnchanged",
+        "TestXG22_T7_OpsCanStillResolveTheOrder",
+        "TestXG22_T8_BlockedHasNoException",
+        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles"
       ],
       "status": "COVERED"
     },
@@ -997,9 +1007,19 @@
       ],
       "tests": [
         "TestSampleFactory_SuspendedIsRefused",
-        "TestFAIL_AQ4_AuditAtomicity"
+        "TestFAIL_AQ4_AuditAtomicity",
+        "TestXG22_SuspendDuringTransitionIsDeterministic",
+        "TestXG22_T10_EnforcementIsServerSide",
+        "TestXG22_T1_SuspendedWithoutActiveOrderIsDenied",
+        "TestXG22_T2_SuspendedDriverCanFinishActiveOrder",
+        "TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder",
+        "TestXG22_T4_ExceptionEndsAtTerminalState",
+        "TestXG22_T6_NormalActorUnchanged",
+        "TestXG22_T7_OpsCanStillResolveTheOrder",
+        "TestXG22_T8_BlockedHasNoException",
+        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-30",
@@ -1043,7 +1063,17 @@
         "TestD13_MediaDirectoryIsNotListable",
         "TestD13_PublicMediaStaysPublic",
         "TestD13_SignedURLWorksAndForgeryDoesNot",
-        "TestRACE_SessionRevokedDuringRequest"
+        "TestRACE_SessionRevokedDuringRequest",
+        "TestXG22_SuspendDuringTransitionIsDeterministic",
+        "TestXG22_T10_EnforcementIsServerSide",
+        "TestXG22_T1_SuspendedWithoutActiveOrderIsDenied",
+        "TestXG22_T2_SuspendedDriverCanFinishActiveOrder",
+        "TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder",
+        "TestXG22_T4_ExceptionEndsAtTerminalState",
+        "TestXG22_T6_NormalActorUnchanged",
+        "TestXG22_T7_OpsCanStillResolveTheOrder",
+        "TestXG22_T8_BlockedHasNoException",
+        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles"
       ],
       "status": "COVERED"
     },
@@ -1971,8 +2001,20 @@
       "id": "XG-22",
       "title": "التعليقُ العاديُّ يشلّ إتمامَ طلبٍ قائم",
       "severity": "BLOCKER",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "fixed": "**كان `RequireAuth` يردّ `403` على كلّ نداءٍ فورَ التعليق** — **فسائقٌ عُلِّق وهو يحمل طلباً لا يستطيع تسليمَه ولا رؤيتَه**، والطلبُ يبقى معلَّقاً بمن لا يقدر والزبونُ ينتظر. **والحالان في المنتَج ليسا واحداً**: `AdminUpdateUser` يقبل `suspended` و`blocked` — **ولم يُخترَع بابٌ ثالث**، وإنّما فُرّق بين قائمَين: **الحظرُ يقف عند كلّ شيءٍ ولا استثناءَ فيه، والتعليقُ يمنع الجديدَ ويترك القائمَ يبلغ نهايتَه.** **والاستثناءُ ثلاثيُّ الشرط**: الفاعلُ · وطلبٌ بعينه في مسار النداء · وفعلٌ من قائمةٍ مغلقةٍ بالدور — **ومن فتح البابَ بشرطٍ واحدٍ فتحه كلَّه.** **والقائمةُ مغلقةٌ لا نمطٌ عامّ**، **ولا إنشاءَ فيها ولا قبولاً جديداً ولا وردية.** **والحالُ النهائيّةُ تُنهي الإذن** — من سلّم طلبَه عاد معلَّقاً كسائر المعلَّقين، **وتُقرأ من `TerminalStatuses` لا تُكتب أسماؤها في `SQL`** فلا تشيخ نسخةٌ صامتة. **والإنفاذُ في الخادم** — نداءاتٌ مباشرةٌ بلا واجهة. عشرةُ حرّاسٍ دائمين، منها تعليقٌ متزامنٌ مع انتقالٍ بتداخلٍ مقيس.",
+      "tests": [
+        "TestXG22_SuspendDuringTransitionIsDeterministic",
+        "TestXG22_T10_EnforcementIsServerSide",
+        "TestXG22_T1_SuspendedWithoutActiveOrderIsDenied",
+        "TestXG22_T2_SuspendedDriverCanFinishActiveOrder",
+        "TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder",
+        "TestXG22_T4_ExceptionEndsAtTerminalState",
+        "TestXG22_T6_NormalActorUnchanged",
+        "TestXG22_T7_OpsCanStillResolveTheOrder",
+        "TestXG22_T8_BlockedHasNoException",
+        "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-23",
@@ -10241,6 +10283,216 @@
       "modes": [
         "FULL",
         "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_SuspendDuringTransitionIsDeterministic",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_T10_EnforcementIsServerSide",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_T1_SuspendedWithoutActiveOrderIsDenied",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_T2_SuspendedDriverCanFinishActiveOrder",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_T4_ExceptionEndsAtTerminalState",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_T6_NormalActorUnchanged",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_T7_OpsCanStillResolveTheOrder",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_T8_BlockedHasNoException",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG22_T9_ExceptionDoesNotLeakAcrossRoles",
+      "file": "internal/qa/suspension_continuity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-13",
+        "F-29",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-22"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
         "RELEASE"
       ],
       "orphan": false

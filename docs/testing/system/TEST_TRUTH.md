@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **244** |
-| دوالُّ اختبار | **849** |
+| ملفّاتُ اختبار | **245** |
+| دوالُّ اختبار | **859** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 849
-MAPPED     = 172
+TOTAL      = 859
+MAPPED     = 182
 INFRA      = 104
 ORPHAN     = 573
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 573
 | **التدفّقات** | 35 | 29 | 6 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 13 | 11 |
-| **فجواتُ العقد** | 30 | 9 | 21 |
+| **فجواتُ العقد** | 30 | 10 | 20 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
 
 ---
@@ -118,7 +118,7 @@ ORPHAN     = 573
 | **XG-19** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-20** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-21** | `BLOCKER` | — | `COVERED` | `TestD13_AvatarNeedsSignedURL` · `TestD13_DeliveryProofNeedsSignedURL` · `TestD13_MediaDirectoryIsNotListable` · `TestD13_PublicMediaStaysPublic` · `TestD13_SignedURLWorksAndForgeryDoesNot` |
-| **XG-22** | `BLOCKER` | — | `NOT_IMPLEMENTED` | — |
+| **XG-22** | `BLOCKER` | — | `COVERED` | `TestXG22_SuspendDuringTransitionIsDeterministic` · `TestXG22_T10_EnforcementIsServerSide` · `TestXG22_T1_SuspendedWithoutActiveOrderIsDenied` · `TestXG22_T2_SuspendedDriverCanFinishActiveOrder` · `TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder` · `TestXG22_T4_ExceptionEndsAtTerminalState` · `TestXG22_T6_NormalActorUnchanged` · `TestXG22_T7_OpsCanStillResolveTheOrder` · `TestXG22_T8_BlockedHasNoException` · `TestXG22_T9_ExceptionDoesNotLeakAcrossRoles` |
 | **XG-23** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-24** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-25** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
