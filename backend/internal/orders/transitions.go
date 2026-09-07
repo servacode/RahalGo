@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/pricing"
@@ -29,6 +30,30 @@ func (s *Service) Transition(ctx context.Context, actorID string, actorRoles []s
 
 // TransitionWithReason كالسابقة، ومعها سببُ التعذّر المُصنَّف.
 func (s *Service) TransitionWithReason(ctx context.Context, actorID string, actorRoles []string, orderID, to, note, failReason string) (*Order, error) {
+	return s.transitionTx(ctx, actorID, actorRoles, orderID, to, note, failReason, nil)
+}
+
+// TransitionAudited **انتقالٌ يحمل أثرَه في معاملته** — `XG-20` · `AQ-4`.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولماذا مِعراضٌ لا نداءٌ بعد التثبيت**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **«تدخّلاتُ الطلبات الحرجة» في نصّ العقد** — **وتدخّلُ موظّفٍ يُطلق
+// تسوياتٍ ماليّةً معاكسة**: إلغاءٌ أو استرجاعٌ بيده.
+//
+// **وتقييدُ الأثر بعد التثبيت يترك النافذةَ نفسَها**: **الانتقالُ ثبت
+// والأثرُ سقط** — **فلا يُعرَف من حرّك الطلبَ ولا لماذا.**
+//
+// **ولا يُبنى انتقالٌ ثانٍ بيد**: **آلةُ الحال واحدة** — والمِعراضُ
+// يمرّر منفّذَها ليُكتب الأثرُ تحته.
+//
+// **و`hook` يقع قبل التثبيت** — فسقوطُه يُسقط الانتقالَ كلَّه.
+func (s *Service) TransitionAudited(ctx context.Context, actorID string, actorRoles []string, orderID, to, note string, hook func(context.Context, dbtx.Querier) error) (*Order, error) {
+	return s.transitionTx(ctx, actorID, actorRoles, orderID, to, note, "", hook)
+}
+
+func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles []string, orderID, to, note, failReason string, hook func(context.Context, dbtx.Querier) error) (*Order, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -273,6 +298,13 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 		custom: kind == KindCustom,
 	}, &done); err != nil {
 		return nil, err
+	}
+
+	// **وأثرُ التدخّل قبل التثبيت** — `XG-20`.
+	if hook != nil {
+		if err := hook(ctx, tx); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {

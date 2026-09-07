@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"time"
 )
@@ -146,7 +147,35 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 		}
 		in.Phone = &normalized
 	}
-	if err := s.repo.UpdateUser(ctx, userID, in.FullName, in.Status, in.AvatarMediaID, in.StatusReason, in.Phone, in.AdminNotes); err != nil {
+	// ══════════════════════════════════════════════════════════════
+	// **والتبديلُ وأثرُه في معاملةٍ واحدة** — `XG-20` · `AQ-4`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **«الإيقافُ والحظر» في نصّ العقد** — **وحظرٌ يقع وأثرُه يسقط لا
+	// يُسأل عنه أحد.**
+	//
+	// **وإبطالُ الجلسات بعد التثبيت لا داخلَه**: **معاملتُه الخاصّةُ
+	// في `RevokeAllTokens`** — ولا تُعشَّش. **وسقوطُها بعد تثبيتِ
+	// الحظر لا يُبقي وصولاً**: **القاعدةُ تقول محظورٌ فيُرَدّ**
+	// (`R16`).
+	if err := func() error {
+		tx, err := s.repo.pool().Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+
+		if err := s.repo.UpdateUserTx(ctx, tx, userID, in.FullName, in.Status,
+			in.AvatarMediaID, in.StatusReason, in.Phone, in.AdminNotes); err != nil {
+			return err
+		}
+		if err := AuditTx(ctx, tx, &actorID, "admin.user_update", "user", userID, ip,
+			map[string]any{"full_name": in.FullName, "status": in.Status,
+				"status_reason": in.StatusReason, "phone": in.Phone}); err != nil {
+			return err
+		}
+		return tx.Commit(ctx)
+	}(); err != nil {
 		if isUniqueViolation(err) {
 			return nil, ErrPhoneTaken
 		}
@@ -195,9 +224,6 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 	if in.Status != nil {
 		s.invalidateStatusCache(ctx, userID)
 	}
-	s.repo.Audit(ctx, &actorID, "admin.user_update", "user", userID, ip,
-		map[string]any{"full_name": in.FullName, "status": in.Status,
-			"status_reason": in.StatusReason, "phone": in.Phone})
 	user, _, err := s.repo.UserByID(ctx, userID)
 	return user, err
 }
@@ -217,24 +243,60 @@ func (s *Service) AdminGrantRole(ctx context.Context, actorID, userID, role, rea
 	if err := s.repo.ensureOnePrimary(ctx, userID, role); err != nil {
 		return err
 	}
-	if err := s.repo.GrantRole(ctx, userID, role, &actorID); err != nil {
-		return err
-	}
-	s.repo.Audit(ctx, &actorID, "admin.role_grant", "user", userID, ip,
-		map[string]any{"role": role, "reason": reason})
-	return nil
+	// **والمنحُ وأثرُه في معاملةٍ واحدة** — `XG-20` · `AQ-4`.
+	//
+	// **والحارسان قبلها**: `checkGrantable` و`ensureOnePrimary` —
+	// **فحصٌ قبل الكتابة لا بعدها**، وقد وقعا سلفاً.
+	return s.criticalRoleTx(ctx, actorID, userID, ip, "admin.role_grant",
+		map[string]any{"role": role, "reason": reason},
+		func(ctx context.Context, q dbtx.Querier) error {
+			_, err := q.Exec(ctx, `
+				INSERT INTO user_roles (user_id, role_code, granted_by)
+				VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+				userID, role, &actorID)
+			return err
+		})
 }
 
 func (s *Service) AdminRevokeRole(ctx context.Context, actorID, userID, role, reason, ip string) error {
 	if userID == actorID && role == "admin" {
 		return ErrSelfAction // لا يمكنك سحب دور الأدمن من نفسك
 	}
-	if err := s.repo.RevokeRole(ctx, userID, role); err != nil {
+	// **والسحبُ وأثرُه في معاملةٍ واحدة** — `XG-20` · `AQ-4`.
+	//
+	// **وسحبٌ ينجح وأثرُه يسقط لا يُسأل عنه أحد** — **ولا يُعرَف من
+	// سحبه ولا متى ولا لماذا.**
+	//
+	// **وهو يمسّ التخويلَ في اللحظة** (`R15`) — **فأولى أن يُقيَّد.**
+	return s.criticalRoleTx(ctx, actorID, userID, ip, "admin.role_revoke",
+		map[string]any{"role": role, "reason": reason},
+		func(ctx context.Context, q dbtx.Querier) error {
+			_, err := q.Exec(ctx,
+				`DELETE FROM user_roles WHERE user_id = $1 AND role_code = $2`,
+				userID, role)
+			return err
+		})
+}
+
+// criticalRoleTx **فعلٌ حسّاسٌ وأثرُه في معاملةٍ واحدة** — `XG-20`.
+//
+// **ولا نداءَ خارجيٌّ داخلَها**: **قفلٌ ينتظر شبكةً قفلٌ ينتظر الأبد.**
+func (s *Service) criticalRoleTx(ctx context.Context, actorID, userID, ip,
+	action string, details map[string]any,
+	do func(context.Context, dbtx.Querier) error) error {
+	tx, err := s.repo.pool().Begin(ctx)
+	if err != nil {
 		return err
 	}
-	s.repo.Audit(ctx, &actorID, "admin.role_revoke", "user", userID, ip,
-		map[string]any{"role": role, "reason": reason})
-	return nil
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if err := do(ctx, tx); err != nil {
+		return err
+	}
+	if err := AuditTx(ctx, tx, &actorID, action, "user", userID, ip, details); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 var errValidationErr = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")

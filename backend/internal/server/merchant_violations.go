@@ -26,10 +26,12 @@ package server
 // الإلغاء بلا ثمن.**
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
@@ -90,14 +92,23 @@ func (s *Server) handleSuspendMerchant(w http.ResponseWriter, r *http.Request) {
 	if req.Suspended {
 		status = "suspended"
 	}
-	if _, err := s.pg.Exec(r.Context(),
-		`UPDATE merchants SET status = $2 WHERE id = $1`, id, status); err != nil {
+	// ══════════════════════════════════════════════════════════════
+	// **والتعليقُ وأثرُه في معاملةٍ واحدة** — `XG-20` · `AQ-4`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **«الإيقافُ والحظر» في نصّ العقد** — **ومتجرٌ يُعلَّق وأثرُه
+	// يسقط لا يُسأل عنه أحد**، ولا يُعرَف من علّقه ولا لماذا.
+	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		if _, err := q.Exec(ctx,
+			`UPDATE merchants SET status = $2 WHERE id = $1`, id, status); err != nil {
+			return err
+		}
+		return s.auditTx(ctx, q, r, "ops.merchant_suspend", "merchant", id,
+			map[string]any{"suspended": req.Suspended, "note": req.Note})
+	}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	s.audit(r, "ops.merchant_suspend", "merchant", id, map[string]any{
-		"suspended": req.Suspended, "note": req.Note,
-	})
 	s.touch("merchant", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"status": status})
 }

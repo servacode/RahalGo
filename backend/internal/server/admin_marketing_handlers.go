@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/catalog"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -222,21 +224,45 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 
 	// التحقق كلُّه في الكتالوج: المفتاح المجهول مرفوض، والقيمة خارج المدى
 	// مرفوضة، والنوع الخاطئ مرفوض. وكان هنا شرطان لمفتاحين من اثنين وعشرين.
-	if err := s.settings.Set(r.Context(), key, v, &actor); err != nil {
+	// ══════════════════════════════════════════════════════════════
+	// **والحسّاسُ وأثرُه في معاملةٍ واحدة** — `XG-20` · `AQ-4`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **«العمولات · التسعيرَ والهوامش · الإعداداتِ الحسّاسة»** بنصّ
+	// العقد — **ومن بدّل عمولةَ المنصّة وسقط أثرُه لا يُعرَف من
+	// بدّلها.**
+	//
+	// **وما ليس حسّاساً يبقى أفضلَ جهد** — **ونصُّ صفحةٍ سقط سطرُه
+	// لا يُساوي إسقاطَ العملية.** انظر `criticalSettingKey`.
+	meta := map[string]any{
+		"before": redactSettingValue(key, before),
+		"after":  redactSettingValue(key, req.Value),
+	}
+	setErr := func() error {
+		if !criticalSettingKey(key) {
+			if err := s.settings.Set(r.Context(), key, v, &actor); err != nil {
+				return err
+			}
+			s.audit(r, "admin.setting_update", "setting", key, meta)
+			return nil
+		}
+		return s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+			if err := s.settings.SetTx(ctx, q, key, v, &actor); err != nil {
+				return err
+			}
+			return s.auditTx(ctx, q, r, "admin.setting_update", "setting", key, meta)
+		})
+	}()
+	if setErr != nil {
 		var unknown settings.ErrUnknownKey
 		var invalid settings.ErrInvalidValue
-		if errors.As(err, &unknown) || errors.As(err, &invalid) {
+		if errors.As(setErr, &unknown) || errors.As(setErr, &invalid) {
 			s.respondErr(w, errValidation)
 			return
 		}
-		s.respondErr(w, err)
+		s.respondErr(w, setErr)
 		return
 	}
-
-	s.audit(r, "admin.setting_update", "setting", key, map[string]any{
-		"before": json.RawMessage(before),
-		"after":  json.RawMessage(req.Value),
-	})
 	// الإعدادات تُقرأ لحظياً في كل مكان — واللوحات المفتوحة الآن تعرض القديم
 	s.touch("settings", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})

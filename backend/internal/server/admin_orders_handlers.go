@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -131,8 +133,18 @@ func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 	roles := rolesFrom(r)
 	note := strings.TrimSpace(req.Note)
 
-	o, err := s.orders.Transition(r.Context(), userIDFrom(r), roles,
-		chi.URLParam(r, "id"), req.To, note)
+	// **والتدخّلُ وأثرُه في معاملةٍ واحدة** — `XG-20` · `AQ-4`.
+	//
+	// **ولا انتقالَ ثانٍ يُكتب بيد**: آلةُ الحال واحدةٌ، **والمِعراضُ
+	// يمرّر منفّذَها** — فيبقى `order_events` والتسوياتُ والإسنادُ
+	// كما هي، **والإشعارُ بعد التثبيت.**
+	oid := chi.URLParam(r, "id")
+	o, err := s.orders.TransitionAudited(r.Context(), userIDFrom(r), roles,
+		oid, req.To, note,
+		func(ctx context.Context, q dbtx.Querier) error {
+			return s.auditTx(ctx, q, r, "ops.order_transition", "order", oid,
+				map[string]any{"to": req.To, "note": req.Note})
+		})
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -140,9 +152,6 @@ func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 	// موظّفٌ يحرّك طلباً نيابةً عن طرفه: إلغاءٌ أو استرجاعٌ بيده يُطلق تسويات
 	// مالية معاكسة. **ولا يُسجَّل انتقالُ الأطراف أنفسهم** — المتجر يقبل مئة
 	// طلب في اليوم، وتسجيلُها يُغرق السجلّ فيصير لا يُقرأ.
-	s.audit(r, "ops.order_transition", "order", chi.URLParam(r, "id"), map[string]any{
-		"to": req.To, "note": req.Note,
-	})
 	httpx.JSON(w, http.StatusOK, o)
 }
 

@@ -266,7 +266,15 @@ func (r *Repo) SetAvatar(ctx context.Context, userID, mediaID string) error {
 
 // UpdateUser يعدّل الاسم و/أو الحالة — يعيد ErrNotFound لمعرف غير موجود.
 func (r *Repo) UpdateUser(ctx context.Context, userID string, fullName, status, avatarMediaID, statusReason, phone, adminNotes *string) error {
-	tag, err := r.db.Exec(ctx, `
+	return r.UpdateUserTx(ctx, r.db, userID, fullName, status, avatarMediaID,
+		statusReason, phone, adminNotes)
+}
+
+// UpdateUserTx **تبديلُ حالِ حسابٍ في معاملةٍ مُمرَّرة** — `XG-20`.
+//
+// **فيُقيَّد أثرُه معه أو لا يقع** — والإيقافُ والحظرُ في نصّ `AQ-4`.
+func (r *Repo) UpdateUserTx(ctx context.Context, q dbtx.Querier, userID string, fullName, status, avatarMediaID, statusReason, phone, adminNotes *string) error {
+	tag, err := q.Exec(ctx, `
 		UPDATE users SET
 			full_name = COALESCE($2, full_name),
 			status    = COALESCE($3, status),

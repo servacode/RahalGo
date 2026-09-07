@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 )
 
 type Store struct {
@@ -172,7 +173,27 @@ func (s *Store) GetBool(ctx context.Context, key string) bool {
 // تعني ثلاثةَ آلاف ليرةٍ في الثابت وواحداً وثلاثين ضعفاً في النسبة) —
 // **وقد ذهب النمطُ فصار الهامشُ ليرةً لا غير**، ويحرسه مدى الفهرس وحدَه.
 func (s *Store) Set(ctx context.Context, key string, value any, updatedBy *string) error {
-	return s.set(ctx, key, value, updatedBy)
+	return s.SetTx(ctx, s.db, key, value, updatedBy)
+}
+
+// SetTx **كتابةُ إعدادٍ في معاملةٍ مُمرَّرة** — `XG-20`.
+//
+// **فيُقيَّد أثرُ الحسّاس معه أو لا يقع.**
+func (s *Store) SetTx(ctx context.Context, q dbtx.Querier, key string, value any, updatedBy *string) error {
+	clean, err := Validate(key, value)
+	if err != nil {
+		return err
+	}
+	raw, err := json.Marshal(clean)
+	if err != nil {
+		return err
+	}
+	_, err = q.Exec(ctx, `
+		INSERT INTO app_settings (key, value, updated_by) VALUES ($1, $2, $3)
+		ON CONFLICT (key) DO UPDATE
+		SET value = EXCLUDED.value, updated_at = now(), updated_by = EXCLUDED.updated_by`,
+		key, raw, updatedBy)
+	return err
 }
 
 func (s *Store) set(ctx context.Context, key string, value any, updatedBy *string) error {

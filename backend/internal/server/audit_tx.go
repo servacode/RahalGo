@@ -54,6 +54,17 @@ var criticalAuditActions = map[string]bool{
 	"finance.driver_settle":  true,
 	"finance.expense_added":  true,
 	"finance.expense_voided": true,
+
+	// ── نطاقُ `AQ-4` الباقي — دورةُ إصلاحٍ ٢١ (`XG-20`) ──────────
+	//
+	// **«الإيقافَ والحظر · الإعداداتِ الحسّاسة · وتدخّلاتِ الطلبات
+	// الحرجة»** بنصّ العقد.
+	//
+	// **والأدوارُ والصلاحيّاتُ في `identity.CriticalActions`** —
+	// **حيث تعيش أفعالُها**، والعقدُ والصيغةُ واحدة.
+	"ops.merchant_suspend": true,
+	"admin.setting_update": true,
+	"ops.order_transition": true,
 }
 
 // auditTx يقيّد أثراً **في معاملة الفعل نفسِها**.

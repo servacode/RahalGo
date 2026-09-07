@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 258,
-    "test_funcs": 939
+    "test_files": 259,
+    "test_funcs": 949
   },
   "flows": [
     {
@@ -948,6 +948,14 @@
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
         "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
+        "TestXG20_A2_AuditFailureRollsBackBusiness",
+        "TestXG20_A3_FailedBusinessLeavesNoAudit",
+        "TestXG20_C1C2_ConcurrentMutationsCorrelate",
+        "TestXG20_S1S2_RoleMutationAudited",
+        "TestXG20_S3_UserStatusAudited",
+        "TestXG20_S4_MerchantSuspendAudited",
+        "TestXG20_S5_SensitiveSettingAudited",
+        "TestXG20_S6_OpsOrderTransitionAudited",
         "TestEV_WalletAudience",
         "TestSampleFactory_WalletMatchesLedger",
         "TestFAIL_AQ4_AuditAtomicity"
@@ -1066,6 +1074,14 @@
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
         "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
+        "TestXG20_A2_AuditFailureRollsBackBusiness",
+        "TestXG20_A3_FailedBusinessLeavesNoAudit",
+        "TestXG20_C1C2_ConcurrentMutationsCorrelate",
+        "TestXG20_S1S2_RoleMutationAudited",
+        "TestXG20_S3_UserStatusAudited",
+        "TestXG20_S4_MerchantSuspendAudited",
+        "TestXG20_S5_SensitiveSettingAudited",
+        "TestXG20_S6_OpsOrderTransitionAudited",
         "TestSampleFactory_SuspendedIsRefused",
         "TestFAIL_AQ4_AuditAtomicity",
         "TestXG22_SuspendDuringTransitionIsDeterministic",
@@ -1259,6 +1275,14 @@
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
         "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
+        "TestXG20_A2_AuditFailureRollsBackBusiness",
+        "TestXG20_A3_FailedBusinessLeavesNoAudit",
+        "TestXG20_C1C2_ConcurrentMutationsCorrelate",
+        "TestXG20_S1S2_RoleMutationAudited",
+        "TestXG20_S3_UserStatusAudited",
+        "TestXG20_S4_MerchantSuspendAudited",
+        "TestXG20_S5_SensitiveSettingAudited",
+        "TestXG20_S6_OpsOrderTransitionAudited",
         "TestFAIL_AQ4_AuditAtomicity",
         "TestFIN_SnapshotVsLiveEconomics",
         "TestRACE_SettingChangeDuringSettlement"
@@ -2185,6 +2209,7 @@
       "id": "XG-20",
       "title": "التدقيقُ الحسّاسُ خارجَ المعاملة",
       "severity": "CRITICAL",
+      "fixed": "**نطاقُ `AQ-4` كاملاً صار معامليّاً.** **دورةُ ١٣ أغلقت ستّةَ أفعالٍ ماليّة** — **وستّةٌ بقيت بأفضلِ جهدٍ تبتلع خطأها**: الأدوارُ منحاً وسحباً · تبديلُ حالِ حساب · تعليقُ متجرٍ · إعدادٌ حسّاسٌ · تدخّلُ موظّفٍ في طلب. **فصارت اثنَي عشرَ فعلاً كلُّها في معاملة فعلها.** **ومنسّقان لا واحد**: `server.auditTx` لمسارات `HTTP` و`identity.AuditTx` حيث تعيش أفعالُ الهويّة — **والعقدُ والصيغةُ واحدة، ولا تستورد الهويّةُ الخادم.** **وتصنيفُ «الحسّاس» لم يُخترَع**: `fininv.FinancialSettings` معجمٌ مقروءٌ من مواضع القراءة نفسِها، **ويُضاف إليه `security.*`** — **وما بقي من مئة مفتاحٍ يبقى أفضلَ جهد**، فنصُّ صفحةٍ ليس فعلاً أمنيّاً. **والانتقالُ لم يُبنَ ثانيةً بيد**: مِعراضٌ يمرّر منفّذَ آلة الحال (`TransitionAudited`) — **فبقي `order_events` والتسوياتُ والإسنادُ كما هي، والإشعارُ بعد التثبيت.** **والمقيس**: منحٌ وسحبٌ لهما أثر · **وحقنُ سقوطِ `INSERT audit_log` يُبقي الدورَ ويردّ 500** والإعادةُ تُنجزهما مرّةً · ودورٌ مجهولٌ لا يترك أثراً كاذباً · وإيقافٌ وحظرٌ لهما أثرٌ **وعقدُ دورةِ ١٧ محفوظ** (الإيقافُ لا يُبطل والحظرُ يُبطل) · وتعليقُ متجرٍ · وإعدادٌ ماليٌّ **وسقوطُ أثره يُعيد قيمتَه** · وتدخّلٌ في طلبٍ **وسقوطُ أثره يُعيد حالَه** · **وتزاحمُ تبديلين (تداخلٌ مقيسٌ=2): لكلّ ما ثبت أثرٌ يخصُّه ولا أثرَ لِما لم يثبت.** **ولا شبكةَ داخلَ معاملةٍ حسّاسة** — محروسٌ بفحص.",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
     },
@@ -2311,6 +2336,7 @@
       "id": "XG-35",
       "title": "أفعالٌ حسّاسةٌ بنصّ `AQ-4` ما زالت بتدقيقٍ أفضلِ جهد",
       "severity": "CRITICAL",
+      "fixed": "**نطاقُها هو نطاقُ `XG-20` بعينه** — الخمسةُ المقيسةُ (تدخّلاتُ الطلبات · الإيقافُ والحظر · الإعداداتُ الحسّاسة · الأدوارُ والصلاحيّاتُ منحاً وسحباً) **صارت كلُّها في معاملة فعلها**. **ولم يُنشَأ لها دليلٌ ثانٍ**: دليلُ `XG-20` يغطّي ما قيس فيها حرفاً.",
       "part_of": "XG-20",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
@@ -7016,6 +7042,186 @@
       "file": "internal/qa/contract_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestXG20_A2_AuditFailureRollsBackBusiness",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG20_A3_FailedBusinessLeavesNoAudit",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG20_A6_CriticalCatalogHasTransactionalAudit",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG20_C1C2_ConcurrentMutationsCorrelate",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG20_NoExternalIOInsideCriticalTx",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG20_S1S2_RoleMutationAudited",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG20_S3_UserStatusAudited",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG20_S4_MerchantSuspendAudited",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG20_S5_SensitiveSettingAudited",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG20_S6_OpsOrderTransitionAudited",
+      "file": "internal/qa/critical_audit_scope_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestCUST_001_Create",
