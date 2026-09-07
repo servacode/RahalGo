@@ -1130,6 +1130,21 @@
         "TestATOMIC_AdminUserCreationIsOneUnit",
         "TestATOMIC_ExpenseAndTreasuryAreOneUnit",
         "TestATOMIC_LeadConversionIsOneUnit",
+        "TestAQ4_A1_SuccessCommitsBoth",
+        "TestAQ4_A2_AuditFailureRollsBackMoney",
+        "TestAQ4_A3_BusinessFailureLeavesNoAudit",
+        "TestAQ4_A5_RetryGivesOneOfEach",
+        "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
+        "TestAQ4_A8_UncoveredActionsRemainBestEffort",
+        "TestAQ4_CriticalActionsUseTransactionalAudit",
+        "TestXG20_A2_AuditFailureRollsBackBusiness",
+        "TestXG20_A3_FailedBusinessLeavesNoAudit",
+        "TestXG20_C1C2_ConcurrentMutationsCorrelate",
+        "TestXG20_S1S2_RoleMutationAudited",
+        "TestXG20_S3_UserStatusAudited",
+        "TestXG20_S4_MerchantSuspendAudited",
+        "TestXG20_S5_SensitiveSettingAudited",
+        "TestXG20_S6_OpsOrderTransitionAudited",
         "TestSampleFactory_ForeignRoleDenied",
         "TestSampleFactory_ValidToken",
         "TestFAIL_D15_AdminCreateUserPartial",
@@ -2210,8 +2225,24 @@
       "title": "التدقيقُ الحسّاسُ خارجَ المعاملة",
       "severity": "CRITICAL",
       "fixed": "**نطاقُ `AQ-4` كاملاً صار معامليّاً.** **دورةُ ١٣ أغلقت ستّةَ أفعالٍ ماليّة** — **وستّةٌ بقيت بأفضلِ جهدٍ تبتلع خطأها**: الأدوارُ منحاً وسحباً · تبديلُ حالِ حساب · تعليقُ متجرٍ · إعدادٌ حسّاسٌ · تدخّلُ موظّفٍ في طلب. **فصارت اثنَي عشرَ فعلاً كلُّها في معاملة فعلها.** **ومنسّقان لا واحد**: `server.auditTx` لمسارات `HTTP` و`identity.AuditTx` حيث تعيش أفعالُ الهويّة — **والعقدُ والصيغةُ واحدة، ولا تستورد الهويّةُ الخادم.** **وتصنيفُ «الحسّاس» لم يُخترَع**: `fininv.FinancialSettings` معجمٌ مقروءٌ من مواضع القراءة نفسِها، **ويُضاف إليه `security.*`** — **وما بقي من مئة مفتاحٍ يبقى أفضلَ جهد**، فنصُّ صفحةٍ ليس فعلاً أمنيّاً. **والانتقالُ لم يُبنَ ثانيةً بيد**: مِعراضٌ يمرّر منفّذَ آلة الحال (`TransitionAudited`) — **فبقي `order_events` والتسوياتُ والإسنادُ كما هي، والإشعارُ بعد التثبيت.** **والمقيس**: منحٌ وسحبٌ لهما أثر · **وحقنُ سقوطِ `INSERT audit_log` يُبقي الدورَ ويردّ 500** والإعادةُ تُنجزهما مرّةً · ودورٌ مجهولٌ لا يترك أثراً كاذباً · وإيقافٌ وحظرٌ لهما أثرٌ **وعقدُ دورةِ ١٧ محفوظ** (الإيقافُ لا يُبطل والحظرُ يُبطل) · وتعليقُ متجرٍ · وإعدادٌ ماليٌّ **وسقوطُ أثره يُعيد قيمتَه** · وتدخّلٌ في طلبٍ **وسقوطُ أثره يُعيد حالَه** · **وتزاحمُ تبديلين (تداخلٌ مقيسٌ=2): لكلّ ما ثبت أثرٌ يخصُّه ولا أثرَ لِما لم يثبت.** **ولا شبكةَ داخلَ معاملةٍ حسّاسة** — محروسٌ بفحص.",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestAQ4_A1_SuccessCommitsBoth",
+        "TestAQ4_A2_AuditFailureRollsBackMoney",
+        "TestAQ4_A3_BusinessFailureLeavesNoAudit",
+        "TestAQ4_A5_RetryGivesOneOfEach",
+        "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
+        "TestAQ4_A8_UncoveredActionsRemainBestEffort",
+        "TestAQ4_CriticalActionsUseTransactionalAudit",
+        "TestXG20_A2_AuditFailureRollsBackBusiness",
+        "TestXG20_A3_FailedBusinessLeavesNoAudit",
+        "TestXG20_C1C2_ConcurrentMutationsCorrelate",
+        "TestXG20_S1S2_RoleMutationAudited",
+        "TestXG20_S3_UserStatusAudited",
+        "TestXG20_S4_MerchantSuspendAudited",
+        "TestXG20_S5_SensitiveSettingAudited",
+        "TestXG20_S6_OpsOrderTransitionAudited"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-21",
@@ -2338,8 +2369,24 @@
       "severity": "CRITICAL",
       "fixed": "**نطاقُها هو نطاقُ `XG-20` بعينه** — الخمسةُ المقيسةُ (تدخّلاتُ الطلبات · الإيقافُ والحظر · الإعداداتُ الحسّاسة · الأدوارُ والصلاحيّاتُ منحاً وسحباً) **صارت كلُّها في معاملة فعلها**. **ولم يُنشَأ لها دليلٌ ثانٍ**: دليلُ `XG-20` يغطّي ما قيس فيها حرفاً.",
       "part_of": "XG-20",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestAQ4_A1_SuccessCommitsBoth",
+        "TestAQ4_A2_AuditFailureRollsBackMoney",
+        "TestAQ4_A3_BusinessFailureLeavesNoAudit",
+        "TestAQ4_A5_RetryGivesOneOfEach",
+        "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
+        "TestAQ4_A8_UncoveredActionsRemainBestEffort",
+        "TestAQ4_CriticalActionsUseTransactionalAudit",
+        "TestXG20_A2_AuditFailureRollsBackBusiness",
+        "TestXG20_A3_FailedBusinessLeavesNoAudit",
+        "TestXG20_C1C2_ConcurrentMutationsCorrelate",
+        "TestXG20_S1S2_RoleMutationAudited",
+        "TestXG20_S3_UserStatusAudited",
+        "TestXG20_S4_MerchantSuspendAudited",
+        "TestXG20_S5_SensitiveSettingAudited",
+        "TestXG20_S6_OpsOrderTransitionAudited"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-36",
@@ -6535,12 +6582,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -6554,12 +6607,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -6573,12 +6632,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -6592,12 +6657,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -6611,12 +6682,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -6630,12 +6707,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -6649,12 +6732,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -7051,12 +7140,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -7070,12 +7165,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -7103,12 +7204,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -7136,12 +7243,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -7155,12 +7268,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -7174,12 +7293,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -7193,12 +7318,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],
@@ -7212,12 +7343,18 @@
       "flows": [
         "F-25",
         "F-29",
-        "F-33"
+        "F-33",
+        "F-30"
+      ],
+      "gaps": [
+        "XG-20",
+        "XG-35"
       ],
       "modes": [
         "SECURITY",
         "FINANCIAL",
         "FAILURE",
+        "CONCURRENCY",
         "FULL",
         "RELEASE"
       ],

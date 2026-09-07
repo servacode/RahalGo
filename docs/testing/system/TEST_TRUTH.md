@@ -58,7 +58,7 @@ ORPHAN     = 575
 | **التدفّقات** | 35 | 29 | 6 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 14 | 10 |
-| **فجواتُ العقد** | 36 | 10 | 26 |
+| **فجواتُ العقد** | 36 | 12 | 24 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
 
 ---
@@ -116,7 +116,7 @@ ORPHAN     = 575
 | **XG-17** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-18** | `BLOCKER` | — | `COVERED` | `TestFAIL_D2_ConvertLeadPartialStates` · `TestUNIQ_ConcurrentConversionWithExistingOwner` · `TestUNIQ_ConcurrentLeadConversionMakesOneMerchant` · `TestUNIQ_DatabaseRefusesSecondMerchantForSameLead` · `TestUNIQ_FailureThenRetryMakesOneMerchant` · `TestRACE_DuplicateLeadConversion` |
 | **XG-19** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-20** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
+| **XG-20** | `CRITICAL` | — | `COVERED` | `TestAQ4_A1_SuccessCommitsBoth` · `TestAQ4_A2_AuditFailureRollsBackMoney` · `TestAQ4_A3_BusinessFailureLeavesNoAudit` · `TestAQ4_A5_RetryGivesOneOfEach` · `TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit` · `TestAQ4_A8_UncoveredActionsRemainBestEffort` · `TestAQ4_CriticalActionsUseTransactionalAudit` · `TestXG20_A2_AuditFailureRollsBackBusiness` · `TestXG20_A3_FailedBusinessLeavesNoAudit` · `TestXG20_C1C2_ConcurrentMutationsCorrelate` · `TestXG20_S1S2_RoleMutationAudited` · `TestXG20_S3_UserStatusAudited` · `TestXG20_S4_MerchantSuspendAudited` · `TestXG20_S5_SensitiveSettingAudited` · `TestXG20_S6_OpsOrderTransitionAudited` |
 | **XG-21** | `BLOCKER` | — | `COVERED` | `TestD13_AvatarNeedsSignedURL` · `TestD13_DeliveryProofNeedsSignedURL` · `TestD13_MediaDirectoryIsNotListable` · `TestD13_PublicMediaStaysPublic` · `TestD13_SignedURLWorksAndForgeryDoesNot` |
 | **XG-22** | `BLOCKER` | — | `COVERED` | `TestXG22_SuspendDuringTransitionIsDeterministic` · `TestXG22_T10_EnforcementIsServerSide` · `TestXG22_T1_SuspendedWithoutActiveOrderIsDenied` · `TestXG22_T2_SuspendedDriverCanFinishActiveOrder` · `TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder` · `TestXG22_T4_ExceptionEndsAtTerminalState` · `TestXG22_T6_NormalActorUnchanged` · `TestXG22_T7_OpsCanStillResolveTheOrder` · `TestXG22_T8_BlockedHasNoException` · `TestXG22_T9_ExceptionDoesNotLeakAcrossRoles` |
 | **XG-23** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
@@ -129,7 +129,7 @@ ORPHAN     = 575
 | **XG-30** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-32** | `CRITICAL` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` · `TestXG32_ConcurrentTargetCrossingGrantsOnce` · `TestXG32_FailureRollbackThenRetryGrantsOnce` · `TestXG32_FirstConversionGrantsRewardImmediately` · `TestXG32_FurtherConversionsDoNotRepeatReward` · `TestXG32_PreviousMonthDoesNotSatisfyTarget` · `TestXG32_TargetTwoGrantsOnSecondOnly` |
 | **XG-34** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-35** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
+| **XG-35** | `CRITICAL` | — | `COVERED` | `TestAQ4_A1_SuccessCommitsBoth` · `TestAQ4_A2_AuditFailureRollsBackMoney` · `TestAQ4_A3_BusinessFailureLeavesNoAudit` · `TestAQ4_A5_RetryGivesOneOfEach` · `TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit` · `TestAQ4_A8_UncoveredActionsRemainBestEffort` · `TestAQ4_CriticalActionsUseTransactionalAudit` · `TestXG20_A2_AuditFailureRollsBackBusiness` · `TestXG20_A3_FailedBusinessLeavesNoAudit` · `TestXG20_C1C2_ConcurrentMutationsCorrelate` · `TestXG20_S1S2_RoleMutationAudited` · `TestXG20_S3_UserStatusAudited` · `TestXG20_S4_MerchantSuspendAudited` · `TestXG20_S5_SensitiveSettingAudited` · `TestXG20_S6_OpsOrderTransitionAudited` |
 | **XG-36** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-38** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-40** | `HIGH` | — | `NOT_IMPLEMENTED` | — |

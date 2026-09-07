@@ -1876,8 +1876,13 @@ func alertTest() TestDecl {
 func auditTest() TestDecl {
 	return TestDecl{
 		Level: L4, Purpose: PurposeFeature,
-		Flows: []string{"F-25", "F-29", "F-33"},
-		Modes: []string{"SECURITY", "FINANCIAL", "FAILURE", "FULL", "RELEASE"},
+		Flows: []string{"F-25", "F-29", "F-33", "F-30"},
+		// **والفجوةُ تُنسَب صراحةً** — `XG-20` · `XG-35`.
+		//
+		// **وبلا نسبةٍ يبقى السجلُّ بلا حارسٍ يخصُّه** — **ودليلٌ
+		// لا يشير إلى سجلّه لا يُغلقه.**
+		Gaps:  []string{"XG-20", "XG-35"},
+		Modes: []string{"SECURITY", "FINANCIAL", "FAILURE", "CONCURRENCY", "FULL", "RELEASE"},
 	}
 }
 
