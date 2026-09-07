@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 )
 
 type ctxKey string
@@ -19,7 +20,15 @@ const (
 
 var (
 	errUnauthorized = httpx.NewError(http.StatusUnauthorized, "unauthorized", "errors.unauthorized")
-	errForbidden    = httpx.NewError(http.StatusForbidden, "forbidden", "errors.forbidden")
+
+	// errAuthUnavailable **تعذّر التحقّقُ من الجلسة** — `R16`.
+	//
+	// **و٥٠٣ لا ٤٠١**: **«لا أستطيع التحقّق» غيرُ «رمزُك مُبطَل»** —
+	// **والثاني كذبٌ يُخرج صاحبَ جلسةٍ سليمةٍ ويطلب منه دخولاً جديداً
+	// لن ينفعه.** **والأوّلُ يقول «عاود» وهو الصدق.**
+	errAuthUnavailable = httpx.NewError(http.StatusServiceUnavailable,
+		"auth_unavailable", "errors.auth_unavailable")
+	errForbidden = httpx.NewError(http.StatusForbidden, "forbidden", "errors.forbidden")
 )
 
 // RequireAuth يتحقق من توكن الوصول ويحقن الهوية والأدوار في السياق.
@@ -61,7 +70,22 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		}
 		// جلسة أُنهيت لا يبقى توكنها صالحاً حتى انتهاء مهلته: الخروج فوري
 		// على كل تطبيقات المنصة لا على التطبيق الذي طلبه وحده.
-		if s.identity.SessionRevoked(r.Context(), claims.SID) {
+		// ══════════════════════════════════════════════════════════
+		// **وغيابُ خبرٍ ليس خبراً بالسلامة** — `R16`
+		// ══════════════════════════════════════════════════════════
+		//
+		// **كانت `SessionRevoked` تردّ `bool`** — **فخطأُ `Redis`
+		// يُقرأ «ليست مُبطَلة»**، **وجلسةٌ أُبطلت تعود تعمل بسقوط
+		// خبيئة.**
+		//
+		// **والحالُ ثلاثٌ لا اثنتان**، **والثالثةُ ٥٠٣.**
+		switch state, err := s.identity.CheckSession(r.Context(), claims.SID); {
+		case err != nil:
+			s.logger.Error("التوثيق: تعذّر التحقّقُ من الجلسة",
+				"outcome", "auth_validation_unavailable", "error", err)
+			httpx.Error(w, errAuthUnavailable)
+			return
+		case state == identity.SessionRevoked:
 			httpx.Error(w, errUnauthorized)
 			return
 		}

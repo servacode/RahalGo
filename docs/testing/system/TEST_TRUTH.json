@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 252,
-    "test_funcs": 893
+    "test_files": 254,
+    "test_funcs": 902
   },
   "flows": [
     {
@@ -1124,6 +1124,14 @@
         "TestD13_PublicMediaStaysPublic",
         "TestD13_SignedURLWorksAndForgeryDoesNot",
         "TestRACE_SessionRevokedDuringRequest",
+        "TestR16_R8_BothDownIsSafeFailure",
+        "TestR16_IssuedTokensAlwaysCarrySession",
+        "TestR16_R11_PublicRouteUnaffected",
+        "TestR16_R12R13_SuspensionExceptionDoesNotBypassRevocation",
+        "TestR16_R14_NewWSHandshakeFollowsAuthority",
+        "TestR16_R1_ValidSessionRedisMissDBValidates",
+        "TestR16_R2_RedisHitDenies",
+        "TestR16_R3_RedisHealthyButKeyMissingDBCatches",
         "TestXG22_SuspendDuringTransitionIsDeterministic",
         "TestXG22_T10_EnforcementIsServerSide",
         "TestXG22_T1_SuspendedWithoutActiveOrderIsDenied",
@@ -1244,9 +1252,17 @@
         "XG-9"
       ],
       "tests": [
-        "TestEV_RealtimeAuthorization"
+        "TestEV_RealtimeAuthorization",
+        "TestR16_R8_BothDownIsSafeFailure",
+        "TestR16_IssuedTokensAlwaysCarrySession",
+        "TestR16_R11_PublicRouteUnaffected",
+        "TestR16_R12R13_SuspensionExceptionDoesNotBypassRevocation",
+        "TestR16_R14_NewWSHandshakeFollowsAuthority",
+        "TestR16_R1_ValidSessionRedisMissDBValidates",
+        "TestR16_R2_RedisHitDenies",
+        "TestR16_R3_RedisHealthyButKeyMissingDBCatches"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-35",
@@ -1807,7 +1823,15 @@
       ],
       "tests": [
         "TestRACE_SessionRevokedDuringRequest",
-        "TestFAIL_R16_RedisDownFailsOpen"
+        "TestR16_R8_BothDownIsSafeFailure",
+        "TestR16_STG_RedisOutageAuthorityHolds",
+        "TestR16_IssuedTokensAlwaysCarrySession",
+        "TestR16_R11_PublicRouteUnaffected",
+        "TestR16_R12R13_SuspensionExceptionDoesNotBypassRevocation",
+        "TestR16_R14_NewWSHandshakeFollowsAuthority",
+        "TestR16_R1_ValidSessionRedisMissDBValidates",
+        "TestR16_R2_RedisHitDenies",
+        "TestR16_R3_RedisHealthyButKeyMissingDBCatches"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -2209,6 +2233,13 @@
     {
       "id": "XG-38",
       "title": "إعادةُ دفعٍ متأخّرةٌ تطمس إشعاراً أحدثَ — معرّفان ثابتان في أندرويد",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-39",
+      "title": "الإيقافُ الإداريُّ يُبطل الجلسة فلا يُبلَغ استثناءُ إتمام الطلب",
       "severity": "HIGH",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
@@ -10857,6 +10888,195 @@
       "orphan": true
     },
     {
+      "name": "TestR16_R8_BothDownIsSafeFailure",
+      "file": "internal/qa/session_authority_staging_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR16_STG_RedisOutageAuthorityHolds",
+      "file": "internal/qa/session_authority_staging_test.go",
+      "package": "qa",
+      "level": "L9",
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR16_IssuedTokensAlwaysCarrySession",
+      "file": "internal/qa/session_authority_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR16_NoFailOpenSessionCheck",
+      "file": "internal/qa/session_authority_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR16_R11_PublicRouteUnaffected",
+      "file": "internal/qa/session_authority_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR16_R12R13_SuspensionExceptionDoesNotBypassRevocation",
+      "file": "internal/qa/session_authority_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR16_R14_NewWSHandshakeFollowsAuthority",
+      "file": "internal/qa/session_authority_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR16_R1_ValidSessionRedisMissDBValidates",
+      "file": "internal/qa/session_authority_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR16_R2_RedisHitDenies",
+      "file": "internal/qa/session_authority_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR16_R3_RedisHealthyButKeyMissingDBCatches",
+      "file": "internal/qa/session_authority_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestSNAP_010_NoUnlimitedRetry",
       "file": "internal/qa/snap_test.go",
       "package": "qa",
@@ -10899,21 +11119,6 @@
       "level": "L9",
       "defects": [
         "D13"
-      ],
-      "modes": [
-        "FULL",
-        "SECURITY",
-        "RELEASE"
-      ],
-      "orphan": false
-    },
-    {
-      "name": "TestFAIL_R16_RedisDownFailsOpen",
-      "file": "internal/qa/staging_security_test.go",
-      "package": "qa",
-      "level": "L9",
-      "risks": [
-        "R16"
       ],
       "modes": [
         "FULL",

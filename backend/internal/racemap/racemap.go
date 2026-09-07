@@ -180,13 +180,25 @@ var All = []Race{
 	{
 		ID: "C-09", Title: "إبطالُ جلسةٍ أثناء طلبٍ جارٍ",
 		Flows: []string{"F-30"}, Actors: []string{"admin", "customer"},
-		Shared: "refresh_tokens · رمزُ الوصول", Where: Local, Result: RiskConfirmed,
-		Window:    "revokeAllSessions تُبطل رموزَ التجديد · ورمزُ الوصول موقَّعٌ ولا يُسأل عنها",
+		Shared: "refresh_tokens · رمزُ الوصول", Where: Local, Result: Pass,
+		Window:    "الإبطالُ يكتب القاعدةَ ثمّ Redis · والوسيطُ يسأل الحقيقةَ الموثوقة",
 		Invariant: "إبطالُ الجلسة يُنهي القدرةَ على العمل",
-		Tests:     []string{"TestRACE_SessionRevokedDuringRequest"},
-		Registers: []string{"R15", "R16"},
+		Tests: []string{"TestRACE_SessionRevokedDuringRequest",
+			"TestR16_R2_RedisHitDenies",
+			"TestR16_R3_RedisHealthyButKeyMissingDBCatches",
+			"TestR16_STG_RedisOutageAuthorityHolds"},
+		// **و`R15` نُزعت من هنا** — **لم يقس هذا الصفُّ سريانَ سحبِ
+		// دورٍ قطّ، وإنّما إبطالَ جلسة.** **ودليلٌ يُنسَب إلى سجلٍّ لا
+		// يقيسه يُغلقه بالكلام.**
+		Registers: []string{"R16"},
 		TxClass:   "—",
-		Evidence:  "نداءٌ بعد الإبطال بالرمز نفسِه ⇒ 200 · والطبقةُ الكاملةُ REQUIRES_P0",
+		Evidence: "**والقياسُ السابقُ كان على توكنٍ بلا معرّفِ جلسة** — " +
+			"**فلم يُسأل عنه أصلاً**، وقُرئ «رمزُ الوصول ينجو» وهو " +
+			"«صنفٌ لا يُبطَل». **وصُحّح إلى توكنٍ له صفٌّ دائم**: " +
+			"نداءٌ بعد الإبطال ⇒ 401. " +
+			"**وبذاكرةٍ حقيقيّةٍ تُوقَف**: حيّةٌ ⇒ 200 · مُبطَلةٌ ⇒ 401 · " +
+			"**وإبطالٌ وقع والذاكرةُ ساقطةٌ يبقى نافذاً بعد عودتها** " +
+			"(المفتاحُ غائبٌ والقاعدةُ تحكم).",
 	},
 	{
 		ID: "C-10", Title: "طابورُ موقع السائق",

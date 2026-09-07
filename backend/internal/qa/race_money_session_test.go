@@ -145,10 +145,21 @@ func TestRACE_RefundVsPayout(t *testing.T) {
 // **فالسؤالُ مقيسٌ لا مظنون**: أيمرّ طلبٌ برمزِ وصولٍ بعد إبطال الجلسة؟
 func TestRACE_SessionRevokedDuringRequest(t *testing.T) {
 	h := New(t)
-	f := h.Factory()
 	item := h.NewItem(1000)
-	cust := f.NewUserWith("customer")
 	admin := h.NewUser("admin")
+
+	// ══════════════════════════════════════════════════════════════
+	// **وتوكنٌ مربوطٌ بجلسةٍ لها صفٌّ دائم** — تصحيحُ دورةِ ١٦
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كان يُقاس بتوكنِ المصنع** — **ومعرّفُ جلسته فارغ**، **فالوسيطُ
+	// لا يسأل عنه أصلاً.** **فما قيس «رمزُ وصولٍ ينجو من الإبطال»
+	// وإنّما «صنفُ توكناتٍ لا يُبطَل».**
+	//
+	// **والمنصّةُ لا تُصدر ذلك الصنف**: `issueSession` ينادي
+	// `StoreRefresh` قبل الإصدار — **فلكلّ توكنٍ حقيقيٍّ معرّفُ جلسة.**
+	custToken, _, custID := liveSession(t, h)
+	cust := &User{ID: custID, Token: custToken}
 
 	r := Race(t, DefaultRaceTimeout,
 		Actor{Name: "طلبُ الزبون", Do: func(ctx context.Context) any {
@@ -168,9 +179,9 @@ func TestRACE_SessionRevokedDuringRequest(t *testing.T) {
 	t.Logf("نداءٌ بعد الإبطال بالرمز نفسِه: %d", after.Code)
 
 	if after.Code < 400 {
-		t.Logf("MEASURED CONTRACT — ACCESS TOKEN SURVIVES REVOCATION")
-		t.Logf("R15 CONFIRMED — إبطالُ الجلسة يمسّ رموزَ التجديد وحدَها؛ رمزُ الوصول حيٌّ حتّى انقضاء مهلته")
-		t.Logf("SECURITY SEMANTICS — LOCAL PROOF ONLY: الطبقةُ الكاملة (Redis حقيقيّة · أجهزةٌ متعدّدة) REQUIRES_P0")
+		t.Errorf("**رمزُ وصولٍ نجا من إبطال الجلسة** (%d) — "+
+			"**والإبطالُ يجب أن يُنهي القدرةَ على العمل.** (`R16` · `C-09`)",
+			after.Code)
 	} else {
 		t.Logf("رُدَّ %d بعد الإبطال — **والرمزُ يُسأل عن الجلسة**", after.Code)
 	}

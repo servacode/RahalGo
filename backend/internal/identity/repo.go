@@ -793,3 +793,22 @@ func (r *Repo) VerifiedWhatsApp(ctx context.Context, userID string) (string, err
 	}
 	return *p, nil
 }
+
+// SessionRows **صفوفُ عائلةِ جلسةٍ**: الحيُّ منها والكلُّ — `R16`.
+//
+// **وهي الحقيقةُ الموثوقة** — **و`Redis` مُسرِّعُ رفضٍ لا مصدرُ سلامة.**
+//
+// **والحيُّ يشترط أمرين**: **لم يُبطَل ولم ينتهِ.** **و`RevokeSession`
+// لا تمسّ المنتهيَ** (`expires_at > now()`)، **فلو سُئل عن `revoked_at`
+// وحدَه لَقرأ المنتهي سليماً.**
+//
+// **والعدُّ لا الوجود**: **`total == 0` تعني جلسةً لا تُعرَف**، وهي غيرُ
+// **«أُبطلت»** — **وكلتاهما تُرفَض، والتمييزُ يُقرأ في السجلّ.**
+func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total int, err error) {
+	err = r.db.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE revoked_at IS NULL AND expires_at > now()),
+		       count(*)
+		  FROM refresh_tokens WHERE session_id = $1::uuid`, sessionID).
+		Scan(&live, &total)
+	return
+}

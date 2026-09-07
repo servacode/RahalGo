@@ -4,8 +4,8 @@
     "local": 9,
     "requires_p0": 0,
     "deferred_p8": 1,
-    "pass": 6,
-    "risk_confirmed": 2,
+    "pass": 7,
+    "risk_confirmed": 1,
     "proven": 0,
     "expected_fail": 1,
     "partial": 1,
@@ -260,19 +260,21 @@
         "customer"
       ],
       "shared_resource": "refresh_tokens · رمزُ الوصول",
-      "race_window": "revokeAllSessions تُبطل رموزَ التجديد · ورمزُ الوصول موقَّعٌ ولا يُسأل عنها",
+      "race_window": "الإبطالُ يكتب القاعدةَ ثمّ Redis · والوسيطُ يسأل الحقيقةَ الموثوقة",
       "invariant": "إبطالُ الجلسة يُنهي القدرةَ على العمل",
       "tests": [
-        "TestRACE_SessionRevokedDuringRequest"
+        "TestRACE_SessionRevokedDuringRequest",
+        "TestR16_R2_RedisHitDenies",
+        "TestR16_R3_RedisHealthyButKeyMissingDBCatches",
+        "TestR16_STG_RedisOutageAuthorityHolds"
       ],
-      "result": "RISK_CONFIRMED",
+      "result": "PASS",
       "registers": [
-        "R15",
         "R16"
       ],
       "where": "LOCAL",
       "transaction_class": "—",
-      "evidence": "نداءٌ بعد الإبطال بالرمز نفسِه ⇒ 200 · والطبقةُ الكاملةُ REQUIRES_P0"
+      "evidence": "**والقياسُ السابقُ كان على توكنٍ بلا معرّفِ جلسة** — **فلم يُسأل عنه أصلاً**، وقُرئ «رمزُ الوصول ينجو» وهو «صنفٌ لا يُبطَل». **وصُحّح إلى توكنٍ له صفٌّ دائم**: نداءٌ بعد الإبطال ⇒ 401. **وبذاكرةٍ حقيقيّةٍ تُوقَف**: حيّةٌ ⇒ 200 · مُبطَلةٌ ⇒ 401 · **وإبطالٌ وقع والذاكرةُ ساقطةٌ يبقى نافذاً بعد عودتها** (المفتاحُ غائبٌ والقاعدةُ تحكم)."
     },
     {
       "id": "C-10",

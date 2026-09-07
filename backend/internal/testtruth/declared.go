@@ -552,6 +552,48 @@ var Gaps = []GapDecl{
 		Severity: "HIGH"},
 
 	// ══════════════════════════════════════════════════════════════
+	// **`XG-39` — الإيقافُ يُبطل الجلسة فيُبطل استثناءَ دورةِ ١١**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **قاسها إصلاحُ `R16`** (٢٠٢٦-٠٩-٠٧) — **ولم تكن تُرى قبله.**
+	//
+	// # عقدان يتعارضان
+	//
+	// **دورةُ ١١ (قرارُ المالك)**: «الإيقافُ العاديُّ يمنع نشاطاً
+	// جديداً **ولا يترك طلباً حيّاً معلَّقاً**» — **و`blocked` بابٌ
+	// آخرُ لا استثناءَ فيه.**
+	//
+	// **و`AdminUpdateUser` تُبطل كلَّ التوكنات عند أيّ حالٍ غيرِ
+	// `active`** (`admin.go:159` — `RevokeAllTokens`).
+	//
+	// # ولماذا لم يظهر قبل اليوم
+	//
+	// **`RevokeAllTokens` تكتب القاعدةَ وحدَها ولا تكتب مفتاحَ
+	// `Redis`** (بخلاف `revokeAllSessions`). **والوسيطُ كان يسأل
+	// `Redis` وحدَها** — **فلا يرى الإبطالَ، وبابُ دورةِ ١١ يعمل
+	// بالمصادفة لا بالتصميم.**
+	//
+	// **وبعد `R16` صارت القاعدةُ هي الحقيقة** — **فالإيقافُ نفسُه
+	// يُبطل الجلسة، والموقوفُ يُرفَض بـ٤٠١ قبل أن يبلغ استثناءَه.**
+	//
+	// # المقيس
+	//
+	//	إيقافٌ إداريّ ⇒ صفوفٌ حيّةٌ للجلسة = 0
+	//	انتقالُ السائق على طلبه الحيّ ⇒ 401
+	//
+	// # ولم تُصلَح
+	//
+	// **العلاجُ المرشَّحُ قصرُ إبطال التوكنات على `blocked`** —
+	// **وذلك إضعافٌ للإبطال في حالٍ أمنيّة، ولا أُقرّره من تلقائي.**
+	//
+	// **والبديلُ قبولُ أنّ الإيقافَ يقطع كلَّ شيء** — **ونقضُ عقدِ
+	// دورةِ ١١ صراحةً.**
+	//
+	// **وكلاهما قرارُ مالك.**
+	{ID: "XG-39", Title: "الإيقافُ الإداريُّ يُبطل الجلسة فلا يُبلَغ استثناءُ إتمام الطلب",
+		Severity: "HIGH"},
+
+	// ══════════════════════════════════════════════════════════════
 	// **`XG-37` — عدّادان للموانع في تقريرٍ واحد**
 	// ══════════════════════════════════════════════════════════════
 	//
@@ -1406,7 +1448,6 @@ var TestMap = map[string]TestDecl{
 	"TestStaging_SecurityBaseline":               stagingTest(nil, nil),
 	// **وهذان يوثّقان ما تأكّد** — **وينجحان ما دام العيبُ قائماً،
 	// ويسقطان يومَ يُصلَح** فيُقرأ سقوطُهما أمراً بتحديث السجلّ.
-	"TestFAIL_R16_RedisDownFailsOpen":        stagingTest([]string{"R16"}, nil),
 	"TestFAIL_D13_MediaDirectoryListingOpen": stagingTest(nil, []string{"D13"}),
 
 	// **والبوّابةُ لا تُوسّخ ما تقيسه** — نظافةُ بنيةٍ لا إصلاحُ منتَج.
@@ -1420,6 +1461,18 @@ var TestMap = map[string]TestDecl{
 	"TestR22_W5_SecondSweepDoesNotDuplicate":  alertTest(),
 	"TestR22_W6_TwoWatchdogsAlertOnce":        alertTest(),
 	"TestR22_W9_NoOpsRecipientLeavesNoMarker": alertTest(),
+
+	// ── سلطةُ الجلسة (دورةُ إصلاحٍ ١٦) — `R16` ────────────────────
+	"TestR16_R1_ValidSessionRedisMissDBValidates":               sessionTest(),
+	"TestR16_R2_RedisHitDenies":                                 sessionTest(),
+	"TestR16_R3_RedisHealthyButKeyMissingDBCatches":             sessionTest(),
+	"TestR16_R11_PublicRouteUnaffected":                         sessionTest(),
+	"TestR16_R12R13_SuspensionExceptionDoesNotBypassRevocation": sessionTest(),
+	"TestR16_R14_NewWSHandshakeFollowsAuthority":                sessionTest(),
+	"TestR16_R8_BothDownIsSafeFailure":                          sessionTest(),
+	"TestR16_NoFailOpenSessionCheck":                            infraTest(),
+	"TestR16_IssuedTokensAlwaysCarrySession":                    sessionTest(),
+	"TestR16_STG_RedisOutageAuthorityHolds":                     stagingTest([]string{"R16"}, nil),
 
 	// ── ديمومةُ نقلِ الإشعار (دورةُ إصلاحٍ ١٥) — `PF-09` · `R23` ────
 	"TestPF09_N1_ProviderSuccessRecorded":                deliveryTest(),
@@ -1609,6 +1662,19 @@ func deliveryTest() TestDecl {
 		Flows: []string{"F-07", "F-14"},
 		Risks: []string{"R23"},
 		Modes: []string{"FAILURE", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
+	}
+}
+
+// sessionTest حارسُ سلطةِ الجلسة — `R16`.
+//
+// **والقاعدةُ هي الحقيقة و`Redis` مُسرِّعُ رفض** — **وغيابُ خبرٍ ليس
+// خبراً بالسلامة.**
+func sessionTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-30", "F-34"},
+		Risks: []string{"R16"},
+		Modes: []string{"SECURITY", "FAILURE", "FULL", "RELEASE"},
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 )
 
@@ -56,8 +57,19 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, errUnauthorized)
 		return
 	}
-	// جلسة أُنهيت لا تبقى لها قناة بث مفتوحة
-	if s.identity.SessionRevoked(r.Context(), claims.SID) {
+	// **ومصافحةٌ جديدةٌ توثَّق كأيّ طلب** — `R16`.
+	//
+	// **ولا تُخفَّف لأنّها بثّ**: **من رُفض في `HTTP` لا يُقبَل في
+	// قناةٍ دائمة** — **وهي أطولُ عمراً من طلب.**
+	//
+	// **والوصلةُ القائمةُ عقدٌ آخر** (`R14`) — لا تمسّها هذه.
+	switch state, err := s.identity.CheckSession(r.Context(), claims.SID); {
+	case err != nil:
+		s.logger.Error("البثّ: تعذّر التحقّقُ من الجلسة",
+			"outcome", "auth_validation_unavailable", "error", err)
+		httpx.Error(w, errAuthUnavailable)
+		return
+	case state == identity.SessionRevoked:
 		httpx.Error(w, errUnauthorized)
 		return
 	}

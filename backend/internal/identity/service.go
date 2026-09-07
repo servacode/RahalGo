@@ -743,15 +743,23 @@ func (s *Service) Refresh(ctx context.Context, rawRefresh, userAgent, ip string)
 // sessionRevokedKey مفتاح إبطال جلسة في Redis.
 func sessionRevokedKey(sid string) string { return "sess:revoked:" + sid }
 
-// SessionRevoked هل أُبطلت هذه الجلسة؟ يفحصه الوسيط مع كل طلب.
-// يفشل مفتوحاً عند عطل الكاش (لا نقفل المنصة بسبب Redis).
-func (s *Service) SessionRevoked(ctx context.Context, sid string) bool {
-	if sid == "" {
-		return false
-	}
-	n, err := s.rdb.Exists(ctx, sessionRevokedKey(sid)).Result()
-	return err == nil && n > 0
-}
+// ══════════════════════════════════════════════════════════════════════
+// **وحُذفت `SessionRevoked`** — `R16`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كانت تردّ `bool`**:
+//
+//	n, err := s.rdb.Exists(ctx, sessionRevokedKey(sid)).Result()
+//	return err == nil && n > 0
+//
+// **وخطأُ الذاكرة يُقرأ «ليست مُبطَلة»** — **فجلسةٌ أُبطلت تعود تعمل
+// بسقوط خبيئة.** (مقيسٌ بذاكرةٍ حقيقيّة: `401` ثمّ `200`.)
+//
+// **ولم تُترَك مُهمَلةً بل حُذفت**: **دالّةٌ باقيةٌ تُنادى** —
+// **والشكلُ نفسُه هو ما أوقع العيب.**
+//
+// **وخلَفُها `CheckSession`** في `session_check.go` — ثلاثُ حالاتٍ
+// لا اثنتان.
 
 // revokeSession يُبطل عائلة جلسة: في القاعدة (توكنات التجديد) وفي Redis
 // (توكنات الوصول القائمة). مدة المفتاح = عمر توكن الوصول، فبعدها لا يبقى توكن حيّ.
