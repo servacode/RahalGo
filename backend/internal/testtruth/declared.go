@@ -1636,6 +1636,9 @@ var TestMap = map[string]TestDecl{
 	"TestXG20_A6_CriticalCatalogHasTransactionalAudit": infraTest(),
 	"TestXG20_NoExternalIOInsideCriticalTx":            infraTest(),
 
+	// ── مصفوفةُ الصلاحيّات المقيسة (دورةُ ٢٢) — `RBAC-01` · `AQ-1` ──
+	"TestRBAC_Matrix_Measured": authzTest(),
+
 	// ── ديمومةُ نقلِ الإشعار (دورةُ إصلاحٍ ١٥) — `PF-09` · `R23` ────
 	"TestPF09_N1_ProviderSuccessRecorded":                deliveryTest(),
 	"TestPF09_N2N3N8_TransientRetriesWithBackoff":        deliveryTest(),

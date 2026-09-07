@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 259,
-    "test_funcs": 949
+    "test_files": 260,
+    "test_funcs": 950
   },
   "flows": [
     {
@@ -1161,6 +1161,7 @@
         "TestR13_T6_ResetVsRefreshRace",
         "TestR13_T7_RevocationSurvivesCacheLoss",
         "TestRACE_SessionRevokedDuringRequest",
+        "TestRBAC_Matrix_Measured",
         "TestR15_A10_OrdinaryActionsUnaffected",
         "TestR15_A11_GrantSemanticsMeasured",
         "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
@@ -1327,6 +1328,7 @@
       ],
       "tests": [
         "TestEV_RealtimeAuthorization",
+        "TestRBAC_Matrix_Measured",
         "TestR15_A10_OrdinaryActionsUnaffected",
         "TestR15_A11_GrantSemanticsMeasured",
         "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
@@ -1920,6 +1922,7 @@
       "tests": [
         "TestSampleFactory_ValidToken",
         "TestRACE_SessionRevokedDuringRequest",
+        "TestRBAC_Matrix_Measured",
         "TestR15_A10_OrdinaryActionsUnaffected",
         "TestR15_A11_GrantSemanticsMeasured",
         "TestR15_A1A2A3_RevokedRoleStopsAuthorizing",
@@ -10948,6 +10951,27 @@
       "modes": [
         "FULL",
         "CONCURRENCY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestRBAC_Matrix_Measured",
+      "file": "internal/qa/rbac_matrix_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
         "RELEASE"
       ],
       "orphan": false
