@@ -70,6 +70,16 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			return IdempotentBody{}, err
 		}
+		// **والأثرُ يُقيَّد في المعاملة نفسِها** — `PF-06`:
+		// **فعلٌ حسّاسٌ نجح بلا أثرٍ لا يُراجَع ولا يُنازَع فيه.**
+		// **وسقوطُ القيد يُسقط الفعلَ كلَّه** — وذلك هو المقصود.
+		if err := s.auditTx(ctx, q, r, "finance.wallet_apply", "user",
+			chi.URLParam(r, "id"), map[string]any{
+				"amount": amount, "kind": req.Kind, "note": req.Note,
+				"balance_after": balance,
+			}); err != nil {
+			return IdempotentBody{}, err
+		}
 		return IdempotentBody{
 			Status:  http.StatusOK,
 			Payload: map[string]any{"balance": balance},
@@ -81,9 +91,6 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 				//
 				// **وبعد التثبيت لا قبله**: **تدقيقٌ لعمليّةٍ ارتدّت
 				// يقول إنّ مالاً تحرّك ولم يتحرّك.**
-				s.audit(r, "finance.wallet_apply", "user", chi.URLParam(r, "id"), map[string]any{
-					"amount": amount, "kind": req.Kind, "note": req.Note, "balance_after": balance,
-				})
 
 				// صاحب المحفظة يعرف فوراً بأي إيداع/خصم — شفافية مالية بلا تحديث صفحة.
 				title := notifTitles.walletCredit

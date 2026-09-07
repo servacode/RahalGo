@@ -5,10 +5,10 @@
     "RequiresP0": 0,
     "RequiresP7": 0,
     "RequiresP8": 0,
-    "Pass": 8,
+    "Pass": 9,
     "DefectReproduced": 0,
     "RiskConfirmed": 1,
-    "ExpectedFail": 1,
+    "ExpectedFail": 0,
     "Partial": 0,
     "Unproven": 1,
     "Visible": 0,
@@ -205,19 +205,19 @@
         "١ الفعلُ الحسّاسُ يقع (مالٌ · تعليقٌ · إعداد)",
         "٢ audit() في الخلفيّة — **ولا تُفشل الفعل**"
       ],
-      "atomic_boundary": "NON_ATOMIC — التدقيقُ أفضلُ جهد",
+      "atomic_boundary": "ATOMIC للصنف `A` — الفعلُ وأثرُه في معاملةٍ واحدة (دورةُ إصلاحٍ ١٣) · وما سواه أفضلُ جهدٍ عمداً",
       "failpoints": [
         "AQ-4/audit-write"
       ],
       "expected": "CRITICAL SUCCESS REQUIRES AUDIT SUCCESS (AQ-4)",
-      "observed": "الفعلُ ينجح والقيدُ يسقط صامتاً",
-      "user_visible": "نجاحٌ كامل",
+      "observed": "**الفعلُ يرتدّ مع أثرِه**: الردُّ `500` · رصيدٌ `0` · قيودُ تدقيقٍ `0` — **ولا يُقال «تمّ» لما لم يتمّ**",
+      "user_visible": "خطأٌ صريح — والعمليّةُ لم تقع",
       "admin_visible": "INVISIBLE",
-      "recovery": "لا مسارَ — الأثرُ ضاع",
+      "recovery": "الإعادةُ تُنتج فعلاً واحداً وأثراً واحداً — **ولا أثرَ يتيمٌ ولا مالٌ بلا أثر**",
       "tests": [
         "TestFAIL_AQ4_AuditAtomicity"
       ],
-      "result": "EXPECTED_FAIL",
+      "result": "PASS",
       "registers": [
         "AQ-4"
       ],

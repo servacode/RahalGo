@@ -302,12 +302,16 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والأثرُ في المعاملة نفسِها** — `PF-06`.
+	if err := s.auditTx(r.Context(), tx, r, "finance.expense_added", "expense", id,
+		map[string]any{"amount": req.Amount, "spent_at": spent}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	s.audit(r, "finance.expense_added", "expense", id,
-		map[string]any{"amount": req.Amount, "spent_at": spent})
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id})
 }
@@ -347,12 +351,16 @@ func (s *Server) handleVoidExpense(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **والأثرُ في المعاملة نفسِها** — `PF-06`.
+	if err := s.auditTx(r.Context(), tx, r, "finance.expense_voided", "expense", id,
+		map[string]any{"amount": amount}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	if err := tx.Commit(r.Context()); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	s.audit(r, "finance.expense_voided", "expense", id,
-		map[string]any{"amount": amount})
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"voided": true})
 }

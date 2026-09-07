@@ -163,7 +163,7 @@
     },
     {
       "file": "internal/server/admin_drivers_handlers.go",
-      "line": 141,
+      "line": 145,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "cashbox",
@@ -172,7 +172,7 @@
     },
     {
       "file": "internal/server/admin_drivers_handlers.go",
-      "line": 222,
+      "line": 226,
       "call": "Notify",
       "kind": "Account",
       "has_app_targeting": false,
@@ -261,7 +261,7 @@
     },
     {
       "file": "internal/server/admin_wallet_handlers.go",
-      "line": 93,
+      "line": 100,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -405,7 +405,7 @@
     },
     {
       "file": "internal/server/payout_handlers.go",
-      "line": 311,
+      "line": 317,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "payout",
@@ -936,7 +936,7 @@
     },
     {
       "file": "internal/server/admin_drivers_handlers.go",
-      "line": 222,
+      "line": 226,
       "call": "Notify",
       "kind": "Account",
       "has_app_targeting": false,
@@ -1007,7 +1007,7 @@
     },
     {
       "file": "internal/server/admin_wallet_handlers.go",
-      "line": 93,
+      "line": 100,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -1097,7 +1097,7 @@
     },
     {
       "file": "internal/server/payout_handlers.go",
-      "line": 311,
+      "line": 317,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "payout",

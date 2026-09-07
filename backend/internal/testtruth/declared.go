@@ -1203,6 +1203,15 @@ var TestMap = map[string]TestDecl{
 	// **وثوابتُ المال تُسأل عن أساسٍ صحيحٍ لا عن قاعدةٍ خالية.**
 	"TestFIN_InvariantsCleanOnValidFixture": infraTest(),
 
+	// ── ذرّيّةُ التدقيق للأفعال الحسّاسة (دورةُ إصلاحٍ ١٣) ───────────
+	"TestAQ4_A1_SuccessCommitsBoth":                 auditTest(),
+	"TestAQ4_A2_AuditFailureRollsBackMoney":         auditTest(),
+	"TestAQ4_A3_BusinessFailureLeavesNoAudit":       auditTest(),
+	"TestAQ4_A5_RetryGivesOneOfEach":                auditTest(),
+	"TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit": auditTest(),
+	"TestAQ4_A8_NonCriticalStaysBestEffort":         auditTest(),
+	"TestAQ4_CriticalActionsUseTransactionalAudit":  auditTest(),
+
 	// ── ديمومةُ التحويل التلقائيّ (دورةُ إصلاحٍ ١٢) ──────────────────
 	"TestPF08_F1_StuckAcceptedIsRecovered":                  autoTrTest(),
 	"TestPF08_F6_TwoWorkersProgressOnce":                    autoTrTest(),
@@ -1353,6 +1362,15 @@ func targetTest() TestDecl {
 		Flows: []string{"F-21", "F-23"},
 		Gaps:  []string{"XG-32"},
 		Modes: []string{"CONCURRENCY", "FAILURE", "FINANCIAL", "FULL", "RELEASE"},
+	}
+}
+
+// auditTest حارسُ ذرّيّةِ التدقيق — `PF-06` · `AQ-4`.
+func auditTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-25", "F-29", "F-33"},
+		Modes: []string{"SECURITY", "FINANCIAL", "FAILURE", "FULL", "RELEASE"},
 	}
 }
 

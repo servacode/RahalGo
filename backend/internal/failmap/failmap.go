@@ -186,21 +186,24 @@ var All = []Flow{
 	},
 	{
 		ID: "PF-06", Title: "قيدُ التدقيق للأفعال الحسّاسة",
-		Flows: []string{"F-25", "F-29", "F-33"}, Where: Local, Result: ExpectedFail,
+		Flows: []string{"F-25", "F-29", "F-33"}, Where: Local, Result: Pass,
 		Steps: []string{
 			"١ الفعلُ الحسّاسُ يقع (مالٌ · تعليقٌ · إعداد)",
 			"٢ audit() في الخلفيّة — **ولا تُفشل الفعل**",
 		},
-		AtomicBoundary: "NON_ATOMIC — التدقيقُ أفضلُ جهد",
-		Failpoints:     []string{"AQ-4/audit-write"},
-		Expected:       "CRITICAL SUCCESS REQUIRES AUDIT SUCCESS (AQ-4)",
-		Observed:       "الفعلُ ينجح والقيدُ يسقط صامتاً",
-		UserVisible:    "نجاحٌ كامل",
-		AdminVisible:   Invisible,
-		Recovery:       "لا مسارَ — الأثرُ ضاع",
-		Tests:          []string{"TestFAIL_AQ4_AuditAtomicity"},
-		Registers:      []string{"AQ-4"},
-		Evidence:       "الردّ 200 · رصيدٌ=12000 · قيودُ التدقيق 0 ⇒ 0",
+		AtomicBoundary: "ATOMIC للصنف `A` — الفعلُ وأثرُه في معاملةٍ " +
+			"واحدة (دورةُ إصلاحٍ ١٣) · وما سواه أفضلُ جهدٍ عمداً",
+		Failpoints: []string{"AQ-4/audit-write"},
+		Expected:   "CRITICAL SUCCESS REQUIRES AUDIT SUCCESS (AQ-4)",
+		Observed: "**الفعلُ يرتدّ مع أثرِه**: الردُّ `500` · رصيدٌ `0` · " +
+			"قيودُ تدقيقٍ `0` — **ولا يُقال «تمّ» لما لم يتمّ**",
+		UserVisible:  "خطأٌ صريح — والعمليّةُ لم تقع",
+		AdminVisible: Invisible,
+		Recovery: "الإعادةُ تُنتج فعلاً واحداً وأثراً واحداً — " +
+			"**ولا أثرَ يتيمٌ ولا مالٌ بلا أثر**",
+		Tests:     []string{"TestFAIL_AQ4_AuditAtomicity"},
+		Registers: []string{"AQ-4"},
+		Evidence:  "الردّ 200 · رصيدٌ=12000 · قيودُ التدقيق 0 ⇒ 0",
 	},
 	{
 		ID: "PF-07", Title: "إنذارُ الراصد",

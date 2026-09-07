@@ -68,10 +68,16 @@ func (s *Server) handleIncentiveGrant(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return IdempotentBody{}, err
 		}
-		return IdempotentBody{Status: http.StatusOK, Payload: e, AfterCommit: func() {
-			s.audit(r, "finance.incentive", "user", chi.URLParam(r, "id"), map[string]any{
+		// **والأثرُ يُقيَّد في المعاملة نفسِها** — `PF-06`:
+		// **فعلٌ حسّاسٌ نجح بلا أثرٍ لا يُراجَع ولا يُنازَع فيه.**
+		// **وسقوطُ القيد يُسقط الفعلَ كلَّه** — وذلك هو المقصود.
+		if err := s.auditTx(ctx, q, r, "finance.incentive", "user",
+			chi.URLParam(r, "id"), map[string]any{
 				"kind": req.Kind, "amount": req.Amount, "reason": req.Reason,
-			})
+			}); err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{Status: http.StatusOK, Payload: e, AfterCommit: func() {
 			// **ومن نال يعلم** — مكافأةٌ لا يراها صاحبُها مكافأةٌ لم
 			// تُصرف في نظره، **وعقوبةٌ لا يعلم بها لا تُصلح شيئاً.**
 			s.touchUser(chi.URLParam(r, "id"), "wallet")

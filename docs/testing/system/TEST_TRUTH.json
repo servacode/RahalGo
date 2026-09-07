@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 246,
-    "test_funcs": 866
+    "test_files": 247,
+    "test_funcs": 873
   },
   "flows": [
     {
@@ -916,6 +916,13 @@
         "XG-20"
       ],
       "tests": [
+        "TestAQ4_A1_SuccessCommitsBoth",
+        "TestAQ4_A2_AuditFailureRollsBackMoney",
+        "TestAQ4_A3_BusinessFailureLeavesNoAudit",
+        "TestAQ4_A5_RetryGivesOneOfEach",
+        "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
+        "TestAQ4_A8_NonCriticalStaysBestEffort",
+        "TestAQ4_CriticalActionsUseTransactionalAudit",
         "TestEV_WalletAudience",
         "TestSampleFactory_WalletMatchesLedger",
         "TestFAIL_AQ4_AuditAtomicity"
@@ -1027,6 +1034,13 @@
         "XG-24"
       ],
       "tests": [
+        "TestAQ4_A1_SuccessCommitsBoth",
+        "TestAQ4_A2_AuditFailureRollsBackMoney",
+        "TestAQ4_A3_BusinessFailureLeavesNoAudit",
+        "TestAQ4_A5_RetryGivesOneOfEach",
+        "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
+        "TestAQ4_A8_NonCriticalStaysBestEffort",
+        "TestAQ4_CriticalActionsUseTransactionalAudit",
         "TestSampleFactory_SuspendedIsRefused",
         "TestFAIL_AQ4_AuditAtomicity",
         "TestXG22_SuspendDuringTransitionIsDeterministic",
@@ -1170,11 +1184,18 @@
         "XG-28"
       ],
       "tests": [
+        "TestAQ4_A1_SuccessCommitsBoth",
+        "TestAQ4_A2_AuditFailureRollsBackMoney",
+        "TestAQ4_A3_BusinessFailureLeavesNoAudit",
+        "TestAQ4_A5_RetryGivesOneOfEach",
+        "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
+        "TestAQ4_A8_NonCriticalStaysBestEffort",
+        "TestAQ4_CriticalActionsUseTransactionalAudit",
         "TestFAIL_AQ4_AuditAtomicity",
         "TestFIN_SnapshotVsLiveEconomics",
         "TestRACE_SettingChangeDuringSettlement"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-34",
@@ -6220,6 +6241,139 @@
       "modes": [
         "FAILURE",
         "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestAQ4_A1_SuccessCommitsBoth",
+      "file": "internal/qa/audit_atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestAQ4_A2_AuditFailureRollsBackMoney",
+      "file": "internal/qa/audit_atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestAQ4_A3_BusinessFailureLeavesNoAudit",
+      "file": "internal/qa/audit_atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestAQ4_A5_RetryGivesOneOfEach",
+      "file": "internal/qa/audit_atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
+      "file": "internal/qa/audit_atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestAQ4_A8_NonCriticalStaysBestEffort",
+      "file": "internal/qa/audit_atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestAQ4_CriticalActionsUseTransactionalAudit",
+      "file": "internal/qa/audit_atomicity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-25",
+        "F-29",
+        "F-33"
+      ],
+      "modes": [
+        "SECURITY",
+        "FINANCIAL",
+        "FAILURE",
         "FULL",
         "RELEASE"
       ],

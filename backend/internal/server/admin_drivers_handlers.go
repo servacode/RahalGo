@@ -118,13 +118,17 @@ func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return IdempotentBody{}, err
 		}
+		// **والأثرُ يُقيَّد في المعاملة نفسِها** — `PF-06`.
+		if err := s.auditTx(ctx, q, r, "finance.driver_settle", "user", driverID,
+			map[string]any{
+				"amount": req.Amount, "note": req.Note, "held_after": held,
+			}); err != nil {
+			return IdempotentBody{}, err
+		}
 		return IdempotentBody{
 			Status:  http.StatusOK,
 			Payload: map[string]any{"held": held},
 			AfterCommit: func() {
-				s.audit(r, "finance.driver_settle", "user", driverID, map[string]any{
-					"amount": req.Amount, "note": req.Note, "held_after": held,
-				})
 
 				// نقود تنتقل من يد إلى يد: صاحبها يعرف، وشاشة الصناديق تتحدّث لحظياً.
 				//

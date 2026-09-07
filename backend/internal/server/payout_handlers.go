@@ -295,14 +295,20 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 			return IdempotentBody{}, err
 		}
 
+		// **والأثرُ يُقيَّد في المعاملة نفسِها** — `PF-06`:
+		// **فعلٌ حسّاسٌ نجح بلا أثرٍ لا يُراجَع ولا يُنازَع فيه.**
+		// **وسقوطُ القيد يُسقط الفعلَ كلَّه** — وذلك هو المقصود.
+		if err := s.auditTx(ctx, q, r, "finance.payout_decide", "payout", id,
+			map[string]any{
+				"status": req.Status, "amount": amount, "user_id": userID,
+				"decision": req.Decision,
+			}); err != nil {
+			return IdempotentBody{}, err
+		}
 		return IdempotentBody{
 			Status:  http.StatusOK,
 			Payload: map[string]any{"updated": true},
 			AfterCommit: func() {
-				s.audit(r, "finance.payout_decide", "payout", id, map[string]any{
-					"status": req.Status, "amount": amount, "user_id": userID,
-					"decision": req.Decision,
-				})
 
 				title := notifTitles.payoutPaid
 				if req.Status == "rejected" {
