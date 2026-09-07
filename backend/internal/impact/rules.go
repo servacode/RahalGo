@@ -181,6 +181,31 @@ var domainRules = []domainRule{
 		Why:      "الوسائطُ تعبر كلَّ سطحٍ يعرض صورةً ⇒ إذنُ الجلب وعقدُ المسارات",
 	},
 	{
+		// **وطبقةُ التدقيق مشتركةٌ بين كلّ فعلٍ حسّاس** — `PF-06`.
+		//
+		// **وكانت `audit.go` غيرَ مذكورةٍ في أيّ قاعدة** فقالت `P-9`
+		// **تدفّقاتٍ صفراً** لتغييرٍ يمسّ ستّةَ أفعالٍ ماليّة.
+		// **وهي العلّةُ الوصفيّةُ نفسُها** التي صُحّحت لمنع التكرار
+		// وللوسائط — **وثالثةُ مرّةٍ تعني نمطاً لا سهواً.**
+		//
+		// **والتدفّقاتُ من معجم التدفّقات لا من أسماءٍ مخمَّنة**:
+		//
+		//	قيدُ المحفظة        ⇒ F-25
+		//	الحافزُ            ⇒ F-23 · F-25
+		//	قرارُ السحب         ⇒ F-24
+		//	تسويةُ نقد السائق   ⇒ F-27
+		//	المصروفُ وإلغاؤه    ⇒ F-26
+		//	والاستردادُ والتدخّلُ ⇒ F-15 (وهو في `XG-35` بعدُ)
+		Name: "AUDIT",
+		Match: []string{"backend/internal/server/audit.go",
+			"backend/internal/server/audit_tx.go"},
+		Flows:    []string{"F-15", "F-23", "F-24", "F-25", "F-26", "F-27"},
+		Apps:     []string{"admin", "driver", "merchant", "rep"},
+		Modes:    []Mode{ModeSecurity, ModeFinancial, ModeFailure},
+		Packages: []string{"internal/fininv", "internal/qa", "internal/server"},
+		Why:      "طبقةُ تدقيقٍ مشتركةٌ لأفعالٍ ماليّةٍ ⇒ ذرّيّةُ الأثر وثوابتُ المال",
+	},
+	{
 		Name: "IDEMPOTENCY",
 		Match: []string{"backend/internal/server/idempotency.go",
 			"backend/internal/server/idempotency_tx.go"},

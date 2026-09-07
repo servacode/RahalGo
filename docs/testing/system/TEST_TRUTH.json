@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 247,
-    "test_funcs": 873
+    "test_files": 248,
+    "test_funcs": 875
   },
   "flows": [
     {
@@ -921,7 +921,7 @@
         "TestAQ4_A3_BusinessFailureLeavesNoAudit",
         "TestAQ4_A5_RetryGivesOneOfEach",
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
-        "TestAQ4_A8_NonCriticalStaysBestEffort",
+        "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
         "TestEV_WalletAudience",
         "TestSampleFactory_WalletMatchesLedger",
@@ -1039,7 +1039,7 @@
         "TestAQ4_A3_BusinessFailureLeavesNoAudit",
         "TestAQ4_A5_RetryGivesOneOfEach",
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
-        "TestAQ4_A8_NonCriticalStaysBestEffort",
+        "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
         "TestSampleFactory_SuspendedIsRefused",
         "TestFAIL_AQ4_AuditAtomicity",
@@ -1189,7 +1189,7 @@
         "TestAQ4_A3_BusinessFailureLeavesNoAudit",
         "TestAQ4_A5_RetryGivesOneOfEach",
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
-        "TestAQ4_A8_NonCriticalStaysBestEffort",
+        "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
         "TestFAIL_AQ4_AuditAtomicity",
         "TestFIN_SnapshotVsLiveEconomics",
@@ -2148,6 +2148,13 @@
       "id": "XG-34",
       "title": "تعثّرٌ متقطّعٌ بانتظار قفلٍ تحت حمل الحزمة الكاملة",
       "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
+      "id": "XG-35",
+      "title": "أفعالٌ حسّاسةٌ بنصّ `AQ-4` ما زالت بتدقيقٍ أفضلِ جهد",
+      "severity": "CRITICAL",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
     },
@@ -5048,6 +5055,18 @@
       "orphan": false
     },
     {
+      "name": "TestCriticalAuditActionsAreMapped",
+      "file": "internal/impact/shared_layers_test.go",
+      "package": "impact",
+      "orphan": true
+    },
+    {
+      "name": "TestSharedLayersHaveImpactMapping",
+      "file": "internal/impact/shared_layers_test.go",
+      "package": "impact",
+      "orphan": true
+    },
+    {
       "name": "TestBackgroundPNG_IsStoredAsJPEGAndShrinks",
       "file": "internal/media/background_test.go",
       "package": "media",
@@ -6342,7 +6361,7 @@
       "orphan": false
     },
     {
-      "name": "TestAQ4_A8_NonCriticalStaysBestEffort",
+      "name": "TestAQ4_A8_UncoveredActionsRemainBestEffort",
       "file": "internal/qa/audit_atomicity_test.go",
       "package": "qa",
       "level": "L4",
