@@ -287,7 +287,11 @@ func (s *Service) AdminResetPassword(ctx context.Context, actorID, userID, hash,
 	tag, err := tx.Exec(ctx, `
 		UPDATE users
 		   SET password_hash = $2, must_change_password = true,
-		       sessions_revoked_at = now(), updated_at = now()
+		       sessions_revoked_at = now(),
+		       -- **وأقوى الإبطالين يغلب**: لا استثناءَ من جولةٍ
+		       -- سابقةٍ يُنجي جلسةً وجب قطعُها.
+		       sessions_kept_session_id = NULL,
+		       updated_at = now()
 		 WHERE id = $1::uuid`, userID, hash)
 	if err != nil {
 		return err

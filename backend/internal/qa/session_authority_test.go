@@ -344,7 +344,9 @@ func TestR16_IssuedTokensAlwaysCarrySession(t *testing.T) {
 	// **والمصدرُ يشهد**: `StoreRefresh` قبل `IssueAccess`.
 	src := mustRead(t, filepath.Join(r16Root(t),
 		"backend/internal/identity/service.go"))
-	store := strings.Index(src, "s.repo.StoreRefresh(ctx")
+	// **والاسمُ تبدّل في دورةِ ١٩** (`StoreRefreshFor` بحارسِ بصمة) —
+	// **والمعنى واحد**: **الصفُّ الدائمُ يُكتب قبل إصدار الرمز.**
+	store := strings.Index(src, "s.repo.StoreRefreshFor(ctx")
 	issue := strings.Index(src, "s.tokens.IssueAccess(user.ID")
 	if store < 0 || issue < 0 || store > issue {
 		t.Error("**ترتيبُ الإصدار تبدّل** — **يُعاد قياسُ صنفِ التوكنات " +

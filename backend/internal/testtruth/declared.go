@@ -617,7 +617,29 @@ var Gaps = []GapDecl{
 	// **و«تبقى الحاليّةُ أم تُقطَع كلُّها؟» قرارُ مالك** — ولا
 	// أخترعه.
 	{ID: "XG-40", Title: "تغييرُ المرء لكلمته لا يُبطل جلساته القائمة",
-		Severity: "HIGH"},
+		Severity: "HIGH",
+		// **دورةُ إصلاحٍ ١٩ · ٢٠٢٦-٠٩-٠٧ — بعقدِ مالكٍ صريح.**
+		Fixed: "**العقد**: تبقى العائلةُ التي نفّذت التغييرَ وتُقطَع " +
+			"البواقي. **ولا تُقطَع كلُّها** — وإلّا أخرج نفسَه من " +
+			"الصفحة التي يقف عليها. " +
+			"**و`SetPassword` صارت معامليّة**: بصمةٌ وحِقبةٌ وإبطالٌ " +
+			"في واحدة (`SetPasswordKeeping`) — **فكلمةٌ بُدّلت بلا " +
+			"إخراجٍ تُطمئن ولا تحمي.** " +
+			"**والاستثناءُ عائلةٌ بعينها** (`sessions_kept_session_id`) " +
+			"**تُقرأ من رمز الوصول الذي حمل الطلب** لا من «آخر جلسة» — " +
+			"ويمرّ المعرّفُ في سياق الطلب (`ctxSID`). " +
+			"**وأقوى الإبطالين يغلب**: الإعادةُ الإداريّةُ و" +
+			"`RevokeAllTokens` (الحظرُ والحذفُ والإخراجُ الشامل) تختم " +
+			"الحِقبةَ **وتصفّر الاستثناء**. " +
+			"**ودخولٌ بكلمةٍ قديمةٍ لا ينجو**: `StoreRefreshFor` تشترط " +
+			"بصمةَ الكلمة المُثبَتة في جملة الإدراج — **فتغييرٌ يقع بين " +
+			"التحقّق والإصدار يُنتج جلسةً بكلمةٍ ماتت.** " +
+			"**والمقيس**: جلستي 200 وصفوفٌ حيّةٌ=1 · الجهازُ الآخر 401 " +
+			"وصفرُ صفوف · تجديدي 200 **بعائلةٍ واحدة** · تجديدُ الآخر " +
+			"401 · محوُ مفتاح `Redis` لا يُحيي · كلمةٌ حاليّةٌ خاطئةٌ " +
+			"لا تُغيّر ولا تقطع · **وسباقان بتداخلٍ مقيسٍ=2** (تجديدُ " +
+			"آخرَ · ودخولٌ بالقديمة) **لا يُفلت منهما رمز** — ستُّ " +
+			"جولاتٍ بلا سقطة · وإعادةٌ إداريّةٌ وحظرٌ يقطعان المستثناة."},
 
 	{ID: "XG-39", Title: "الإيقافُ الإداريُّ يُبطل الجلسة فلا يُبلَغ استثناءُ إتمام الطلب",
 		Severity: "HIGH",
@@ -1546,6 +1568,16 @@ var TestMap = map[string]TestDecl{
 	"TestR13_T6_ResetVsRefreshRace":             resetTest(),
 	"TestR13_T7_RevocationSurvivesCacheLoss":    resetTest(),
 	"TestR13_ResetGoesThroughIdentityService":   infraTest(),
+
+	// ── تبديلُ المرء لكلمته (دورةُ إصلاحٍ ١٩) — `XG-40` ───────────
+	"TestXG40_Contract_KeepMineRevokeOthers":              resetTest(),
+	"TestXG40_X5_OtherRefreshTokenDenied":                 resetTest(),
+	"TestXG40_X6_CacheLossDoesNotResurrect":               resetTest(),
+	"TestXG40_X7_WrongCurrentPasswordChangesNothing":      resetTest(),
+	"TestXG40_X8_ConcurrentOtherRefreshCannotEscape":      resetTest(),
+	"TestXG40_X9_ConcurrentOldPasswordLoginCannotSurvive": resetTest(),
+	"TestXG40_X10_StrongerRevocationWins":                 resetTest(),
+	"TestXG40_X10b_BlockBeatsKeptSession":                 resetTest(),
 
 	// ── ديمومةُ نقلِ الإشعار (دورةُ إصلاحٍ ١٥) — `PF-09` · `R23` ────
 	"TestPF09_N1_ProviderSuccessRecorded":                deliveryTest(),

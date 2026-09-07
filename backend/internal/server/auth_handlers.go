@@ -160,7 +160,11 @@ func (s *Server) handleSetPassword(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	if err := s.identity.SetPassword(r.Context(), userIDFrom(r), req.Password, req.CurrentPassword, clientIP(r)); err != nil {
+	// **وعائلةُ الجلسة تُمرَّر** — **فتبقى هذه وتُقطَع البواقي**
+	// (`XG-40`، قرارُ المالك).
+	sid, _ := r.Context().Value(ctxSID).(string)
+	if err := s.identity.SetPassword(r.Context(), userIDFrom(r),
+		req.Password, req.CurrentPassword, clientIP(r), sid); err != nil {
 		s.respondErr(w, err)
 		return
 	}

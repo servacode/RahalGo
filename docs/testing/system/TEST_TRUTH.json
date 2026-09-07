@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 256,
-    "test_funcs": 919
+    "test_files": 257,
+    "test_funcs": 927
   },
   "flows": [
     {
@@ -1130,6 +1130,14 @@
         "TestR13_T6_ResetVsRefreshRace",
         "TestR13_T7_RevocationSurvivesCacheLoss",
         "TestRACE_SessionRevokedDuringRequest",
+        "TestXG40_Contract_KeepMineRevokeOthers",
+        "TestXG40_X10_StrongerRevocationWins",
+        "TestXG40_X10b_BlockBeatsKeptSession",
+        "TestXG40_X5_OtherRefreshTokenDenied",
+        "TestXG40_X6_CacheLossDoesNotResurrect",
+        "TestXG40_X7_WrongCurrentPasswordChangesNothing",
+        "TestXG40_X8_ConcurrentOtherRefreshCannotEscape",
+        "TestXG40_X9_ConcurrentOldPasswordLoginCannotSurvive",
         "TestR16_R8_BothDownIsSafeFailure",
         "TestR16_IssuedTokensAlwaysCarrySession",
         "TestR16_R11_PublicRouteUnaffected",
@@ -1817,7 +1825,15 @@
         "TestR13_T4_ResetDoesNotTouchOtherAccounts",
         "TestR13_T5_NewPasswordStillLogsIn",
         "TestR13_T6_ResetVsRefreshRace",
-        "TestR13_T7_RevocationSurvivesCacheLoss"
+        "TestR13_T7_RevocationSurvivesCacheLoss",
+        "TestXG40_Contract_KeepMineRevokeOthers",
+        "TestXG40_X10_StrongerRevocationWins",
+        "TestXG40_X10b_BlockBeatsKeptSession",
+        "TestXG40_X5_OtherRefreshTokenDenied",
+        "TestXG40_X6_CacheLossDoesNotResurrect",
+        "TestXG40_X7_WrongCurrentPasswordChangesNothing",
+        "TestXG40_X8_ConcurrentOtherRefreshCannotEscape",
+        "TestXG40_X9_ConcurrentOldPasswordLoginCannotSurvive"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -2284,6 +2300,7 @@
       "id": "XG-40",
       "title": "تغييرُ المرء لكلمته لا يُبطل جلساته القائمة",
       "severity": "HIGH",
+      "fixed": "**العقد**: تبقى العائلةُ التي نفّذت التغييرَ وتُقطَع البواقي. **ولا تُقطَع كلُّها** — وإلّا أخرج نفسَه من الصفحة التي يقف عليها. **و`SetPassword` صارت معامليّة**: بصمةٌ وحِقبةٌ وإبطالٌ في واحدة (`SetPasswordKeeping`) — **فكلمةٌ بُدّلت بلا إخراجٍ تُطمئن ولا تحمي.** **والاستثناءُ عائلةٌ بعينها** (`sessions_kept_session_id`) **تُقرأ من رمز الوصول الذي حمل الطلب** لا من «آخر جلسة» — ويمرّ المعرّفُ في سياق الطلب (`ctxSID`). **وأقوى الإبطالين يغلب**: الإعادةُ الإداريّةُ و`RevokeAllTokens` (الحظرُ والحذفُ والإخراجُ الشامل) تختم الحِقبةَ **وتصفّر الاستثناء**. **ودخولٌ بكلمةٍ قديمةٍ لا ينجو**: `StoreRefreshFor` تشترط بصمةَ الكلمة المُثبَتة في جملة الإدراج — **فتغييرٌ يقع بين التحقّق والإصدار يُنتج جلسةً بكلمةٍ ماتت.** **والمقيس**: جلستي 200 وصفوفٌ حيّةٌ=1 · الجهازُ الآخر 401 وصفرُ صفوف · تجديدي 200 **بعائلةٍ واحدة** · تجديدُ الآخر 401 · محوُ مفتاح `Redis` لا يُحيي · كلمةٌ حاليّةٌ خاطئةٌ لا تُغيّر ولا تقطع · **وسباقان بتداخلٍ مقيسٍ=2** (تجديدُ آخرَ · ودخولٌ بالقديمة) **لا يُفلت منهما رمز** — ستُّ جولاتٍ بلا سقطة · وإعادةٌ إداريّةٌ وحظرٌ يقطعان المستثناة.",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
     },
@@ -11065,6 +11082,158 @@
       "file": "internal/qa/route_nav_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestXG40_Contract_KeepMineRevokeOthers",
+      "file": "internal/qa/self_password_change_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG40_X10_StrongerRevocationWins",
+      "file": "internal/qa/self_password_change_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG40_X10b_BlockBeatsKeptSession",
+      "file": "internal/qa/self_password_change_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG40_X5_OtherRefreshTokenDenied",
+      "file": "internal/qa/self_password_change_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG40_X6_CacheLossDoesNotResurrect",
+      "file": "internal/qa/self_password_change_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG40_X7_WrongCurrentPasswordChangesNothing",
+      "file": "internal/qa/self_password_change_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG40_X8_ConcurrentOtherRefreshCannotEscape",
+      "file": "internal/qa/self_password_change_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG40_X9_ConcurrentOldPasswordLoginCannotSurvive",
+      "file": "internal/qa/self_password_change_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30"
+      ],
+      "risks": [
+        "R13"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestR16_R8_BothDownIsSafeFailure",

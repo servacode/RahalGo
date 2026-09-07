@@ -16,6 +16,12 @@ type ctxKey string
 const (
 	ctxUserID ctxKey = "user_id"
 	ctxRoles  ctxKey = "roles"
+	// ctxSID **عائلةُ الجلسة التي حملت الطلب** — `XG-40`.
+	//
+	// **ويلزم حين يُستثنى «هذا الجهاز» من إبطالٍ عامّ** — **ولا
+	// يُستنتَج من ترويسةٍ ولا من «آخر جلسة»**: يُقرأ من الرمز
+	// الموثَّق نفسِه.
+	ctxSID ctxKey = "session_id"
 )
 
 var (
@@ -91,6 +97,7 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		}
 		ctx := context.WithValue(r.Context(), ctxUserID, claims.Subject)
 		ctx = context.WithValue(ctx, ctxRoles, claims.Roles)
+		ctx = context.WithValue(ctx, ctxSID, claims.SID)
 		s.touchPresence(claims.Subject)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

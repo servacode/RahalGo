@@ -599,7 +599,9 @@ func (s *Service) LoginPassword(ctx context.Context, rawPhone, password, userAge
 	// نجاح: يمسح عدّاد الرقم فلا يُعاقَب صاحبه بمحاولاته السابقة
 	pk, _ := loginKeys(phone, ip)
 	s.rdb.Del(ctx, pk)
-	return s.issueFor(ctx, user, userAgent, ip, "auth.password_login")
+	// **وبصمةُ الكلمة التي أُثبتت توّاً تُمرَّر** — `XG-40`:
+	// **تغييرٌ يقع بين التحقّق والإصدار يُنتج جلسةً بكلمةٍ ماتت.**
+	return s.issueForVerified(ctx, user, userAgent, ip, "auth.password_login", hash)
 }
 
 // IssueForUserID يصدر جلسة لمستخدم بمعرّفه (لتسليم SSO عبر رمز موثوق لمرّة واحدة).
@@ -637,6 +639,11 @@ func (s *Service) ActiveSessionID(ctx context.Context, userID string) string {
 //
 // **وثلاثةُ معالِجاتٍ يُنسى أحدُها** — والحارسُ في المنبع لا يُنسى.
 func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, action string) (*AuthResult, error) {
+	return s.issueForVerified(ctx, user, userAgent, ip, action, "")
+}
+
+// issueForVerified كـ`issueFor` **وتحمل بصمةَ الكلمة المُثبَتة** — `XG-40`.
+func (s *Service) issueForVerified(ctx context.Context, user *User, userAgent, ip, action, verifiedHash string) (*AuthResult, error) {
 	// **والتسجيلُ الجديد لا يُنشئ أدمن** — لكنّ الشرطَ يُقرأ من الأدوار لا
 	// من الفعل، **فلو صار للأدمن مسارُ دخولٍ رابعٌ يوماً وقف عند الرمز أيضاً.**
 	if NeedsPin(user.Roles) {
@@ -655,7 +662,7 @@ func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, actio
 			Challenge:   challenge,
 		}, nil
 	}
-	return s.issueSession(ctx, user, userAgent, ip, action, "")
+	return s.issueSessionFor(ctx, user, userAgent, ip, action, "", verifiedHash)
 }
 
 // issueSession يصدر زوج توكنات.
@@ -682,6 +689,12 @@ func (s *Service) issueFor(ctx context.Context, user *User, userAgent, ip, actio
 // **والسقفُ مغلقٌ بـ`normalizeClient`** — ثلاثُ قيمٍ لا رابعَ لها، **فلا
 // يفتح أحدٌ جلساتٍ بلا حدٍّ بترويسةٍ يخترعها.**
 func (s *Service) issueSession(ctx context.Context, user *User, userAgent, ip, action, sessionID string) (*AuthResult, error) {
+	return s.issueSessionFor(ctx, user, userAgent, ip, action, sessionID, "")
+}
+
+// issueSessionFor كـ`issueSession` **وتحمل بصمةَ الكلمة المُثبَتة** —
+// **فعائلةٌ جديدةٌ لا تُنشأ بكلمةٍ بُدّلت بين التحقّق والإصدار** (`XG-40`).
+func (s *Service) issueSessionFor(ctx context.Context, user *User, userAgent, ip, action, sessionID, verifiedHash string) (*AuthResult, error) {
 	// ══════════════════════════════════════════════════════════════
 	// **وجلسةٌ قائمةٌ تُجدَّد وإن أُوقف صاحبُها** — `XG-39`
 	// ══════════════════════════════════════════════════════════════
@@ -724,7 +737,8 @@ func (s *Service) issueSession(ctx context.Context, user *User, userAgent, ip, a
 		}
 	}
 	// نخزّن التجديد أولاً لنعرف عائلة الجلسة، ثم نضعها في توكن الوصول
-	sid, err := s.repo.StoreRefresh(ctx, user.ID, refreshHash, s.sessionLife(ctx), userAgent, ip, sessionID, client)
+	sid, err := s.repo.StoreRefreshFor(ctx, user.ID, refreshHash,
+		s.sessionLife(ctx), userAgent, ip, sessionID, client, verifiedHash)
 	if err != nil {
 		return nil, err
 	}
@@ -895,7 +909,12 @@ func (s *Service) SetOwnName(ctx context.Context, userID, name string) error {
 	return s.repo.SetFullName(ctx, userID, name)
 }
 
-func (s *Service) SetPassword(ctx context.Context, userID, password, currentPassword, ip string) error {
+// SetPassword **تغييرُ المرء لكلمته** — `XG-40`.
+//
+// **و`currentSID` عائلةُ الجلسة التي نفّذت التغيير** — تُقرأ من رمز
+// الوصول الذي حمل الطلب. **وفارغةٌ تعني «لا استثناء»**: تُقطَع كلُّها،
+// وهو الأسلمُ حين لا يُعرَف من ينفّذ.
+func (s *Service) SetPassword(ctx context.Context, userID, password, currentPassword, ip, currentSID string) error {
 	if int64(len(password)) < s.intSetting(ctx, "security.password_min_length", minPasswordLn) {
 		return ErrWeakPassword
 	}
@@ -915,10 +934,38 @@ func (s *Service) SetPassword(ctx context.Context, userID, password, currentPass
 	if err != nil {
 		return err
 	}
-	if err := s.repo.SetPassword(ctx, userID, newHash); err != nil {
+
+	// ══════════════════════════════════════════════════════════════
+	// **وكلمةٌ بُدّلت تُخرج من عرفها** — `XG-40`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كانت تكتب البصمةَ وتمضي** — **فمن شكّ أنّ أحداً يعرف كلمتَه
+	// فبدّلها لم يُخرجه**: جلسةُ المتطفّل تعمل ورمزُ تجديده يدور.
+	//
+	// # وعقدُ المالك (٢٠٢٦-٠٩-٠٧)
+	//
+	//	تبقى **العائلةُ التي نفّذت التغيير** · وتُقطَع البواقي
+	//
+	// **ولا تُقطَع كلُّها** — **وإلّا أخرج نفسَه من الصفحة التي يقف
+	// عليها**، وهو عكسُ ما طُلب.
+	//
+	// # والثلاثةُ في معاملةٍ واحدة
+	//
+	// **بصمةٌ وحِقبةٌ وإبطالٌ** — **فإن سقط أحدُها لم يقع شيء.**
+	// **وكلمةٌ بُدّلت بلا إخراجٍ تُطمئن ولا تحمي.**
+	//
+	// **والكلمةُ الخاطئةُ لا تصل إلى هنا** — تُردّ قبل المعاملة، فلا
+	// حِقبةَ ولا إبطال.
+	revoked, err := s.repo.SetPasswordKeeping(ctx, userID, newHash, currentSID)
+	if err != nil {
 		return err
 	}
-	s.repo.Audit(ctx, &userID, "auth.set_password", "user", userID, ip, nil)
+	// **وبعد التثبيت**: مُسرِّعُ الرفض للعائلات المقطوعة.
+	for _, sid := range revoked {
+		s.rdb.Set(ctx, sessionRevokedKey(sid), "1", s.tokens.AccessTTL()+time.Minute)
+	}
+	s.repo.Audit(ctx, &userID, "auth.set_password", "user", userID, ip,
+		map[string]any{"sessions_revoked": len(revoked), "kept": currentSID != ""})
 	return nil
 }
 

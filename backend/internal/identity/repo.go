@@ -599,7 +599,16 @@ func (r *Repo) CheckOTP(ctx context.Context, phone, codeHash, purpose string) (b
 // StoreRefresh يخزّن توكن تجديد داخل عائلة جلسة ويعيد معرّفها.
 // sessionID فارغ = عائلة جديدة تولّدها القاعدة — ونحتاج معرّفها لنضعه في توكن
 // الوصول، فبه وحده يصير إبطال الجلسة فورياً.
-func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl time.Duration, userAgent, ip, sessionID, client string) (string, error) {
+// StoreRefreshFor **إدراجٌ بحارسِ بصمةٍ** — `XG-40`.
+//
+// **و`verifiedHash` بصمةُ الكلمة التي أثبتها الدخولُ توّاً** — فارغةٌ
+// في التجديد (لا كلمةَ تُقدَّم فيه).
+//
+// **ولماذا تُقرأ في جملة الإدراج**: **الدخولُ يتحقّق من الكلمة ثمّ
+// يُصدر** — **وتغييرُها بينهما يُنتج جلسةً بكلمةٍ ماتت.** **وقفلُ صفٍّ
+// لا يكفي**: من انتظره أدرج بعد تحريره، **وعائلتُه جديدةٌ فلا تمسّها
+// الحِقبة.**
+func (r *Repo) StoreRefreshFor(ctx context.Context, userID, tokenHash string, ttl time.Duration, userAgent, ip, sessionID, client, verifiedHash string) (string, error) {
 	var sid any
 	if sessionID != "" {
 		sid = sessionID
@@ -640,7 +649,8 @@ func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl t
 	var out string
 	err := r.db.QueryRow(ctx, `
 		WITH u AS (
-			SELECT id, sessions_revoked_at FROM users
+			SELECT id, password_hash, sessions_revoked_at, sessions_kept_session_id
+			  FROM users
 			 WHERE id = $1 AND status IN ('active', 'suspended')
 			 FOR SHARE
 		)
@@ -648,13 +658,19 @@ func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl t
 		SELECT u.id, $2, now() + $3, $4, $5,
 		       COALESCE($6::uuid, gen_random_uuid()), $7
 		  FROM u
-		 WHERE $6::uuid IS NULL
-		    OR u.sessions_revoked_at IS NULL
-		    OR EXISTS (SELECT 1 FROM refresh_tokens rt
-		                WHERE rt.session_id = $6::uuid
-		                  AND rt.created_at > u.sessions_revoked_at)
+		 WHERE CASE
+		   -- **عائلةٌ جديدة**: تُشترَط بصمةُ الكلمة التي أُثبتت توّاً.
+		   WHEN $6::uuid IS NULL
+		     THEN $8::text = '' OR u.password_hash = $8::text
+		   -- **عائلةٌ قائمة**: الحِقبةُ تحكم، **والمستثناةُ تعبر.**
+		   ELSE u.sessions_revoked_at IS NULL
+		     OR $6::uuid = u.sessions_kept_session_id
+		     OR EXISTS (SELECT 1 FROM refresh_tokens rt
+		                 WHERE rt.session_id = $6::uuid
+		                   AND rt.created_at > u.sessions_revoked_at)
+		 END
 		RETURNING session_id::text`,
-		userID, tokenHash, ttl, userAgent, ip, sid, client).Scan(&out)
+		userID, tokenHash, ttl, userAgent, ip, sid, client, verifiedHash).Scan(&out)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// **الحسابُ لم يعد يقبل جلسةً** — حُظر أو حُذف بين القراءة
 		// والكتابة.
@@ -737,11 +753,38 @@ func (r *Repo) RevokeSession(ctx context.Context, userID, sessionID string) erro
 //
 // **ويبقى شاملاً بلا نوع**: يُنادى من الإدارة («إنهاء الجلسات») ومن تغيير
 // كلمة المرور — **وهناك المقصودُ إخراجُ الحساب من كلّ مكانٍ فعلاً.**
+// ══════════════════════════════════════════════════════════════════════
+// **وأقوى الإبطالين يغلب** — `XG-40`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **تُنادى من الحظر والحذف والإخراج الشامل** — **وكلُّها «اقطع كلَّ
+// شيء».**
+//
+// **فلا يكفي إبطالُ الصفوف**: **استثناءُ عائلةٍ من تغييرِ كلمةٍ سابقٍ
+// يبقى قائماً** — **فتجديدٌ لتلك العائلة يعبر الحِقبةَ ويُنشئ صفّاً
+// حيّاً بعد الحظر.**
+//
+// **فتُختم الحِقبةُ ويُصفَّر الاستثناءُ مع الإبطال في معاملةٍ واحدة.**
 func (r *Repo) RevokeAllTokens(ctx context.Context, userID string) (int, error) {
-	tag, err := r.db.Exec(ctx, `
+	tx, err := r.pool().Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE users
+		   SET sessions_revoked_at = now(), sessions_kept_session_id = NULL
+		 WHERE id = $1::uuid`, userID); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `
 		UPDATE refresh_tokens SET revoked_at = now()
 		WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()`, userID)
-	return int(tag.RowsAffected()), err
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), tx.Commit(ctx)
 }
 
 // ClientSessionIDs عائلاتُ الجلسات الفعّالة لحسابٍ **من نوعِ عميلٍ بعينه**.
@@ -861,4 +904,55 @@ func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total i
 		  FROM refresh_tokens WHERE session_id = $1::uuid`, sessionID).
 		Scan(&live, &total)
 	return
+}
+
+// StoreRefresh **بلا حارسِ بصمة** — للمسارات التي لا تُقدَّم فيها كلمة.
+func (r *Repo) StoreRefresh(ctx context.Context, userID, tokenHash string, ttl time.Duration, userAgent, ip, sessionID, client string) (string, error) {
+	return r.StoreRefreshFor(ctx, userID, tokenHash, ttl, userAgent, ip, sessionID, client, "")
+}
+
+// SetPasswordKeeping **بصمةٌ وحِقبةٌ وإبطالٌ في معاملةٍ واحدة** — `XG-40`.
+//
+// **ويُستثنى `keepSID`** — العائلةُ التي نفّذت التغيير. **وفارغٌ يعني
+// لا استثناء**، وهو الأسلمُ حين لا يُعرَف من ينفّذ.
+//
+// **ويُرجع العائلاتِ المقطوعة** ليكتب المنادي مُسرِّعَ رفضها بعد التثبيت.
+func (r *Repo) SetPasswordKeeping(ctx context.Context, userID, hash, keepSID string) ([]string, error) {
+	tx, err := r.pool().Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var keep any
+	if keepSID != "" {
+		keep = keepSID
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE users
+		   SET password_hash = $2, sessions_revoked_at = now(),
+		       sessions_kept_session_id = $3::uuid, updated_at = now()
+		 WHERE id = $1::uuid`, userID, hash, keep); err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `
+		UPDATE refresh_tokens SET revoked_at = now()
+		 WHERE user_id = $1::uuid AND revoked_at IS NULL AND expires_at > now()
+		   AND ($2::uuid IS NULL OR session_id <> $2::uuid)
+		RETURNING session_id::text`, userID, keep)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for rows.Next() {
+		var sid string
+		if rows.Scan(&sid) == nil {
+			out = append(out, sid)
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, tx.Commit(ctx)
 }
