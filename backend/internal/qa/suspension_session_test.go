@@ -102,7 +102,7 @@ func TestXG39_S5_SuspendedRefreshPreservesSameSession(t *testing.T) {
 
 	// **ورمزُ تجديدٍ حقيقيٌّ يُصدره المحرّك** — **ولا يُصطنَع**:
 	// **العقدُ أن يُقبَل هذا الرمزُ بعينه.**
-	raw, _ := issuedRefresh(t, h, drv.ID, "driver")
+	raw, origSid := issuedRefresh(t, h, drv.ID, "driver")
 	suspend(t, h, drv.ID, "suspended")
 
 	got := h.POST("/api/v1/auth/refresh", "", map[string]any{"refresh_token": raw})
@@ -118,15 +118,20 @@ func TestXG39_S5_SuspendedRefreshPreservesSameSession(t *testing.T) {
 	}
 
 	// ── والجلسةُ نفسُها لا عائلةٌ ثانية ───────────────────────────
-	var families int
+	//
+	// **ويُتبَع معرّفُ العائلة بعينه** — **لا عدُّ عائلات الحساب**:
+	// **المِسنَدُ نفسُه يُنشئ جلسةً لكلّ حسابٍ منذ دورةِ ٢٤**، فالعدُّ
+	// الكلّيُّ يقيس تركيبةَ الفحص لا العقد.
+	var newest string
 	if err := h.Pool.QueryRow(ctxBG(), `
-		SELECT count(DISTINCT session_id) FROM refresh_tokens
-		 WHERE user_id = $1::uuid`, drv.ID).Scan(&families); err != nil {
-		t.Fatalf("عائلاتُ الجلسة: %v", err)
+		SELECT session_id::text FROM refresh_tokens
+		 WHERE user_id = $1::uuid AND revoked_at IS NULL
+		 ORDER BY created_at DESC LIMIT 1`, drv.ID).Scan(&newest); err != nil {
+		t.Fatalf("أحدثُ عائلة: %v", err)
 	}
-	t.Logf("S5: عائلاتُ جلسةٍ للحساب = %d (والمرتقَبُ ١)", families)
-	if families != 1 {
-		t.Errorf("**التجديدُ أنشأ عائلةً ثانية**: %d", families)
+	t.Logf("S5: عائلةُ التجديد=%s… · الأصليّة=%s…", newest[:8], origSid[:8])
+	if newest != origSid {
+		t.Errorf("**التجديدُ أنشأ عائلةً ثانية**: %s ≠ %s", newest, origSid)
 	}
 
 	// ── والاستمرارُ ما زال ممكناً بالرمز الجديد ───────────────────

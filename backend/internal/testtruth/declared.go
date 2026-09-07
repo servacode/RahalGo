@@ -1643,6 +1643,19 @@ var TestMap = map[string]TestDecl{
 	"TestR21_T1_SelfManageAutoTransferInformsMerchant":    autoTrTest(),
 	"TestR21_T2_PlatformModeChecksChannelBeforeAccepting": autoTrTest(),
 
+	// ── نموذجُ القدرات (دورةُ ٢٤) — `ADG-1` · `AQ-1` ──────────────
+	"TestADG1_D1D2D5_CapabilityDecides":                    authzTest(),
+	"TestADG1_D3_UnknownRoleHasNothing":                    authzTest(),
+	"TestADG1_D4_UnknownCapabilityDenied":                  infraTest(),
+	"TestADG1_D6D7D8_UnionAndImmediateRevocation":          authzTest(),
+	"TestADG1_D9_GrantBecomesEffective":                    authzTest(),
+	"TestADG1_D10_StaleTokenCannotOverrideDB":              authzTest(),
+	"TestADG1_D11D12D13_SensitiveRoutesNeedCapability":     authzTest(),
+	"TestADG1_D14D15_AuditPreservedAndDenialLeavesNothing": authzTest(),
+	"TestADG1_D16_WSUsesSameCapabilityTruth":               authzTest(),
+	"TestADG1_C1C2_RevocationVsPrivilegedRequest":          authzTest(),
+	"TestADG1_StructuralGuards":                            infraTest(),
+
 	// ── ديمومةُ نقلِ الإشعار (دورةُ إصلاحٍ ١٥) — `PF-09` · `R23` ────
 	"TestPF09_N1_ProviderSuccessRecorded":                deliveryTest(),
 	"TestPF09_N2N3N8_TransientRetriesWithBackoff":        deliveryTest(),

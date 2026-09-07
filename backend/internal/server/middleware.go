@@ -22,6 +22,11 @@ const (
 	// يُستنتَج من ترويسةٍ ولا من «آخر جلسة»**: يُقرأ من الرمز
 	// الموثَّق نفسِه.
 	ctxSID ctxKey = "session_id"
+	// ctxCaps **قدراتُ الفاعل الفاعلةُ** — `ADG-1`.
+	//
+	// **محسوبةٌ من الحقيقة الموثوقة** (أدوارُه × قدراتُ أدواره)،
+	// **ولا ادّعاءَ في رمزٍ يُصدَّق.**
+	ctxCaps ctxKey = "capabilities"
 )
 
 var (
@@ -85,7 +90,7 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		// خبيئة.**
 		//
 		// **والحالُ ثلاثٌ لا اثنتان**، **والثالثةُ ٥٠٣.**
-		state, dbRoles, err := s.identity.CheckSession(r.Context(), claims.SID)
+		state, dbRoles, dbCaps, err := s.identity.CheckSession(r.Context(), claims.SID)
 		switch {
 		case err != nil:
 			s.logger.Error("التوثيق: تعذّر التحقّقُ من الجلسة",
@@ -119,6 +124,11 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 		}
 		ctx := context.WithValue(r.Context(), ctxUserID, claims.Subject)
 		ctx = context.WithValue(ctx, ctxRoles, roles)
+		// **والقدراتُ من القاعدة وحدَها** — `ADG-1`.
+		//
+		// **وصنفُ التوكنات بلا معرّفِ جلسةٍ لا قدراتِ له**: لا جلسةَ
+		// تُسأل عنها، **والافتراضُ منع.**
+		ctx = context.WithValue(ctx, ctxCaps, dbCaps)
 		ctx = context.WithValue(ctx, ctxSID, claims.SID)
 		s.touchPresence(claims.Subject)
 		next.ServeHTTP(w, r.WithContext(ctx))

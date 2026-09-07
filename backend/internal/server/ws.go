@@ -9,6 +9,7 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
@@ -63,7 +64,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// قناةٍ دائمة** — **وهي أطولُ عمراً من طلب.**
 	//
 	// **والوصلةُ القائمةُ عقدٌ آخر** (`R14`) — لا تمسّها هذه.
-	state, dbRoles, err := s.identity.CheckSession(r.Context(), claims.SID)
+	state, dbRoles, dbCaps, err := s.identity.CheckSession(r.Context(), claims.SID)
 	switch {
 	case err != nil:
 		s.logger.Error("البثّ: تعذّر التحقّقُ من الجلسة",
@@ -84,10 +85,21 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		roles = dbRoles
 	}
 
+	// ══════════════════════════════════════════════════════════════
+	// **وغرفةُ العمليّات بقدرةٍ لا باسم دور** — `ADG-1`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **والقرارُ المركزيُّ نفسُه** — **ولا منطقُ أدوارٍ ثانٍ للبثّ.**
+	hasOps := false
+	for _, c := range dbCaps {
+		if c == string(authz.OrdersRead) {
+			hasOps = true
+			break
+		}
+	}
+
 	topics := []string{}
-	if slices.ContainsFunc(roles, func(role string) bool {
-		return role == "admin" || role == "ops" || role == "finance"
-	}) {
+	if hasOps {
 		topics = append(topics, realtime.TopicOps)
 	}
 	// صاحب متجر: يشترك بمواضيع متاجره (بوابة المتجر)

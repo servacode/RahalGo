@@ -909,7 +909,10 @@ func (r *Repo) VerifiedWhatsApp(ctx context.Context, userID string) (string, err
 // **وتحمل الأدوارَ معها** (`R15`): **القاعدةُ تُسأل في كلّ طلبٍ موثَّقٍ
 // منذ `R16`** — **فأدوارُ اللحظة تأتي بلا رحلةٍ ثانية**، ولا خبيئةَ
 // تُخترَع ولا استعلامَ يُضاف.
-func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total int, roles []string, err error) {
+//
+// **وتحمل القدراتِ الفاعلةَ معها** (`ADG-1`): **اتّحادُ قدرات أدواره** —
+// **ولا استعلامَ ثالثاً ولا خبيئةَ تُخترَع.**
+func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total int, roles, caps []string, err error) {
 	err = r.db.QueryRow(ctx, `
 		WITH fam AS (
 			SELECT user_id,
@@ -921,12 +924,16 @@ func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total i
 		)
 		SELECT fam.live, fam.total,
 		       COALESCE((SELECT array_agg(ur.role_code ORDER BY ur.role_code)
-		                   FROM user_roles ur WHERE ur.user_id = fam.user_id), '{}')
+		                   FROM user_roles ur WHERE ur.user_id = fam.user_id), '{}'),
+		       COALESCE((SELECT array_agg(DISTINCT rc.capability_code)
+		                   FROM user_roles ur
+		                   JOIN role_capabilities rc ON rc.role_code = ur.role_code
+		                  WHERE ur.user_id = fam.user_id), '{}')
 		  FROM fam`, sessionID).
-		Scan(&live, &total, &roles)
+		Scan(&live, &total, &roles, &caps)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// **لا عائلةَ بهذا المعرّف** — صفرٌ وصفرٌ ولا أدوار.
-		return 0, 0, nil, nil
+		// **لا عائلةَ بهذا المعرّف** — صفرٌ وصفرٌ ولا أدوارَ ولا قدرات.
+		return 0, 0, nil, nil, nil
 	}
 	return
 }

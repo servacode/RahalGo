@@ -77,11 +77,6 @@
       "path": "/api/v1/admin/banners",
       "handler": "handleListBanners",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@banners",
@@ -187,11 +182,6 @@
       "path": "/api/v1/admin/broadcast/count",
       "handler": "handleBroadcastCount",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "count",
@@ -207,11 +197,6 @@
       "path": "/api/v1/admin/cash/outstanding",
       "handler": "handleCashOutstanding",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "holders",
@@ -235,11 +220,6 @@
       "path": "/api/v1/admin/categories",
       "handler": "handleListCategories",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@cats",
@@ -291,11 +271,6 @@
       "path": "/api/v1/admin/cities",
       "handler": "handleAdminCities",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "cities",
@@ -365,11 +340,6 @@
       "path": "/api/v1/admin/customers",
       "handler": "handleListCustomers",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "customers",
@@ -397,11 +367,6 @@
       "path": "/api/v1/admin/disputes",
       "handler": "handleListDisputes",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "count",
@@ -507,11 +472,6 @@
       "path": "/api/v1/admin/districts",
       "handler": "handleAdminDistricts",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "districts",
@@ -581,11 +541,6 @@
       "path": "/api/v1/admin/drivers",
       "handler": "handleListDrivers",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "cash_limit",
@@ -609,11 +564,6 @@
       "path": "/api/v1/admin/drivers/{id}/cash",
       "handler": "handleDriverCashStatement",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@st",
@@ -629,11 +579,6 @@
       "path": "/api/v1/admin/drivers/{id}/end-shift",
       "handler": "handleAdminEndShift",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "request": [
         {
           "name": "note",
@@ -676,11 +621,6 @@
       "path": "/api/v1/admin/emergencies",
       "handler": "handleOpenEmergencies",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@paged",
@@ -696,11 +636,6 @@
       "path": "/api/v1/admin/emergencies/{id}/resolve",
       "handler": "handleResolveEmergency",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "request": [
         {
           "name": "resolution",
@@ -857,12 +792,7 @@
       "method": "GET",
       "path": "/api/v1/admin/governorates",
       "handler": "handleAdminGovernorates",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "POST",
@@ -923,11 +853,6 @@
       "path": "/api/v1/admin/incentives/{role}",
       "handler": "handleIncentiveStandings",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "standings",
@@ -943,11 +868,6 @@
       "path": "/api/v1/admin/leads",
       "handler": "handleAdminLeads",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@paged",
@@ -963,11 +883,6 @@
       "path": "/api/v1/admin/leads/{id}/status",
       "handler": "handleAdminLeadStatus",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "request": [
         {
           "name": "status",
@@ -1003,11 +918,6 @@
       "path": "/api/v1/admin/media",
       "handler": "handleUploadMedia",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@m",
@@ -1023,11 +933,6 @@
       "path": "/api/v1/admin/media/sign",
       "handler": "handleSignMedia",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "url",
@@ -1107,11 +1012,6 @@
       "path": "/api/v1/admin/menu/pending",
       "handler": "handlePendingMenuItems",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "count",
@@ -1171,11 +1071,6 @@
       "path": "/api/v1/admin/merchants",
       "handler": "handleListMerchants",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@res",
@@ -1209,11 +1104,6 @@
       "path": "/api/v1/admin/merchants/{id}",
       "handler": "handleAdminGetMerchant",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@mr",
@@ -1265,11 +1155,6 @@
       "path": "/api/v1/admin/merchants/{id}/hours",
       "handler": "handleGetHours",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@hours",
@@ -1309,11 +1194,6 @@
       "path": "/api/v1/admin/merchants/{id}/menu",
       "handler": "handleGetMenu",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@menu",
@@ -1426,12 +1306,7 @@
       "method": "GET",
       "path": "/api/v1/admin/merchants/{id}/warnings",
       "handler": "handleAdminMerchantWarnings",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "POST",
@@ -1457,11 +1332,6 @@
       "path": "/api/v1/admin/offers",
       "handler": "handleAdminOffers",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "offers",
@@ -1518,232 +1388,127 @@
       "method": "GET",
       "path": "/api/v1/admin/ops-map/areas",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/ops-map/areas",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "PUT",
       "path": "/api/v1/admin/ops-map/areas/{id}",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/branches",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/ops-map/branches",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "PUT",
       "path": "/api/v1/admin/ops-map/branches/{id}",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/coverage",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/ops-map/coverage",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/coverage-requests",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "PATCH",
       "path": "/api/v1/admin/ops-map/coverage-requests/{id}",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "PUT",
       "path": "/api/v1/admin/ops-map/coverage/{id}",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/ops-map/coverage/{id}/active",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/demand",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/drivers",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/merchants",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/meta",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/opportunities",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/orders",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/reps",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/search",
       "handler": "requirePerm",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/orders",
       "handler": "handleListOrders",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@res",
@@ -1759,11 +1524,6 @@
       "path": "/api/v1/admin/orders/alerts",
       "handler": "handleOrderAlerts",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@alerts",
@@ -1789,11 +1549,6 @@
       "path": "/api/v1/admin/orders/{id}",
       "handler": "handleGetOrder",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "statuses": [
         "StatusOK"
       ]
@@ -1803,11 +1558,6 @@
       "path": "/api/v1/admin/orders/{id}/assign",
       "handler": "handleOrderAssign",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "request": [
         {
           "name": "driver_id",
@@ -1888,11 +1638,6 @@
       "path": "/api/v1/admin/orders/{id}/chat",
       "handler": "handleAdminOrderChat",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@th",
@@ -1937,11 +1682,6 @@
       "path": "/api/v1/admin/orders/{id}/goods",
       "handler": "handleGoods",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "request": [
         {
           "name": "to",
@@ -1963,11 +1703,6 @@
       "path": "/api/v1/admin/orders/{id}/message",
       "handler": "handleOrderMessagePreview",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "drivers_on_shift",
@@ -2020,12 +1755,7 @@
       "method": "POST",
       "path": "/api/v1/admin/orders/{id}/settle-goods",
       "handler": "handleSettleGoods",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "POST",
@@ -2074,11 +1804,6 @@
       "path": "/api/v1/admin/orders/{id}/transition",
       "handler": "handleOrderTransition",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "request": [
         {
           "name": "to",
@@ -2104,11 +1829,6 @@
       "path": "/api/v1/admin/orders/{id}/whatsapp",
       "handler": "handleSendOrderToMerchant",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "request": [
         {
           "name": "channel",
@@ -2138,11 +1858,6 @@
       "path": "/api/v1/admin/payouts",
       "handler": "handleAdminPayouts",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@res",
@@ -2189,11 +1904,6 @@
       "path": "/api/v1/admin/promos",
       "handler": "handleListPromos",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@promos",
@@ -2245,11 +1955,6 @@
       "path": "/api/v1/admin/ratings",
       "handler": "handleAdminRatings",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "average",
@@ -2289,11 +1994,6 @@
       "path": "/api/v1/admin/reports",
       "handler": "handleReports",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "daily",
@@ -2329,11 +2029,6 @@
       "path": "/api/v1/admin/reports/losses",
       "handler": "handlePlatformLosses",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "count",
@@ -2377,11 +2072,6 @@
       "path": "/api/v1/admin/salesreps",
       "handler": "handleListSalesReps",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@out",
@@ -2397,11 +2087,6 @@
       "path": "/api/v1/admin/sections",
       "handler": "handleListPlatformSections",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "sections",
@@ -2471,11 +2156,6 @@
       "path": "/api/v1/admin/sections/{id}/items",
       "handler": "handleSectionItems",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "all",
@@ -2511,11 +2191,6 @@
       "path": "/api/v1/admin/settings",
       "handler": "handleListSettings",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "groups",
@@ -2559,11 +2234,6 @@
       "path": "/api/v1/admin/stats",
       "handler": "handleAdminStats",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@st",
@@ -2579,11 +2249,6 @@
       "path": "/api/v1/admin/tickets",
       "handler": "handleListTickets",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@res",
@@ -2599,11 +2264,6 @@
       "path": "/api/v1/admin/tickets",
       "handler": "handleCreateTicket",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@t",
@@ -2619,11 +2279,6 @@
       "path": "/api/v1/admin/tickets/{id}",
       "handler": "handleGetTicket",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@t",
@@ -2639,11 +2294,6 @@
       "path": "/api/v1/admin/tickets/{id}/replies",
       "handler": "handleTicketReply",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "request": [
         {
           "name": "body",
@@ -2712,11 +2362,6 @@
       "path": "/api/v1/admin/users",
       "handler": "handleAdminListUsers",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@res",
@@ -2749,23 +2394,13 @@
       "method": "GET",
       "path": "/api/v1/admin/users/export",
       "handler": "handleAdminUsersExport",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/users/stats",
       "handler": "handleAdminUserRoleCounts",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "roles",
@@ -2785,11 +2420,6 @@
       "path": "/api/v1/admin/users/{id}",
       "handler": "handleAdminGetUser",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@out",
@@ -2823,11 +2453,6 @@
       "path": "/api/v1/admin/users/{id}/activity",
       "handler": "handleAdminUserActivity",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@res",
@@ -2842,23 +2467,13 @@
       "method": "GET",
       "path": "/api/v1/admin/users/{id}/addresses",
       "handler": "handleAdminUserAddresses",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/users/{id}/chats",
       "handler": "handleAdminUserChats",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@paged",
@@ -2874,11 +2489,6 @@
       "path": "/api/v1/admin/users/{id}/feedback",
       "handler": "handleAdminUserFeedback",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@out",
@@ -2894,11 +2504,6 @@
       "path": "/api/v1/admin/users/{id}/financials",
       "handler": "handleAdminUserFinancials",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@out",
@@ -2943,11 +2548,6 @@
       "path": "/api/v1/admin/users/{id}/incentives",
       "handler": "handleIncentiveList",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "entries",
@@ -3005,9 +2605,6 @@
       "path": "/api/v1/admin/users/{id}/roles",
       "handler": "handleAdminGrantRole",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
       "request": [
         {
           "name": "role",
@@ -3033,9 +2630,6 @@
       "path": "/api/v1/admin/users/{id}/roles/{role}",
       "handler": "handleAdminRevokeRole",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
       "response": [
         {
           "name": "revoked",
@@ -3051,11 +2645,6 @@
       "path": "/api/v1/admin/users/{id}/wallet",
       "handler": "handleAdminWalletStatement",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@st",
@@ -3071,10 +2660,6 @@
       "path": "/api/v1/admin/users/{id}/wallet",
       "handler": "handleAdminWalletApply",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
       "idempotent": true,
       "request": [
         {
@@ -3100,11 +2685,6 @@
       "path": "/api/v1/admin/users/{id}/warn-reasons",
       "handler": "handleWarnReasons",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "reasons",
@@ -3119,12 +2699,7 @@
       "method": "GET",
       "path": "/api/v1/admin/users/{id}/warnings",
       "handler": "handleAdminUserWarnings",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "POST",
@@ -3157,12 +2732,7 @@
       "method": "GET",
       "path": "/api/v1/admin/whatsapp",
       "handler": "inline",
-      "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ]
+      "auth": true
     },
     {
       "method": "POST",
@@ -3187,11 +2757,6 @@
       "path": "/api/v1/admin/zones",
       "handler": "handleListZones",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance",
-        "ops"
-      ],
       "response": [
         {
           "name": "@zones",

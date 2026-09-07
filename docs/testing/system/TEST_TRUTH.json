@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 261,
-    "test_funcs": 952
+    "test_files": 262,
+    "test_funcs": 963
   },
   "flows": [
     {
@@ -1143,6 +1143,15 @@
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
         "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
+        "TestADG1_C1C2_RevocationVsPrivilegedRequest",
+        "TestADG1_D10_StaleTokenCannotOverrideDB",
+        "TestADG1_D11D12D13_SensitiveRoutesNeedCapability",
+        "TestADG1_D14D15_AuditPreservedAndDenialLeavesNothing",
+        "TestADG1_D16_WSUsesSameCapabilityTruth",
+        "TestADG1_D1D2D5_CapabilityDecides",
+        "TestADG1_D3_UnknownRoleHasNothing",
+        "TestADG1_D6D7D8_UnionAndImmediateRevocation",
+        "TestADG1_D9_GrantBecomesEffective",
         "TestXG20_A2_AuditFailureRollsBackBusiness",
         "TestXG20_A3_FailedBusinessLeavesNoAudit",
         "TestXG20_C1C2_ConcurrentMutationsCorrelate",
@@ -1333,6 +1342,15 @@
         "XG-9"
       ],
       "tests": [
+        "TestADG1_C1C2_RevocationVsPrivilegedRequest",
+        "TestADG1_D10_StaleTokenCannotOverrideDB",
+        "TestADG1_D11D12D13_SensitiveRoutesNeedCapability",
+        "TestADG1_D14D15_AuditPreservedAndDenialLeavesNothing",
+        "TestADG1_D16_WSUsesSameCapabilityTruth",
+        "TestADG1_D1D2D5_CapabilityDecides",
+        "TestADG1_D3_UnknownRoleHasNothing",
+        "TestADG1_D6D7D8_UnionAndImmediateRevocation",
+        "TestADG1_D9_GrantBecomesEffective",
         "TestEV_RealtimeAuthorization",
         "TestRBAC_Matrix_Measured",
         "TestR15_A10_OrdinaryActionsUnaffected",
@@ -1926,6 +1944,15 @@
         "F-30"
       ],
       "tests": [
+        "TestADG1_C1C2_RevocationVsPrivilegedRequest",
+        "TestADG1_D10_StaleTokenCannotOverrideDB",
+        "TestADG1_D11D12D13_SensitiveRoutesNeedCapability",
+        "TestADG1_D14D15_AuditPreservedAndDenialLeavesNothing",
+        "TestADG1_D16_WSUsesSameCapabilityTruth",
+        "TestADG1_D1D2D5_CapabilityDecides",
+        "TestADG1_D3_UnknownRoleHasNothing",
+        "TestADG1_D6D7D8_UnionAndImmediateRevocation",
+        "TestADG1_D9_GrantBecomesEffective",
         "TestSampleFactory_ValidToken",
         "TestRACE_SessionRevokedDuringRequest",
         "TestRBAC_Matrix_Measured",
@@ -7050,6 +7077,223 @@
       "file": "internal/qa/cancel_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestADG1_C1C2_RevocationVsPrivilegedRequest",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_D10_StaleTokenCannotOverrideDB",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_D11D12D13_SensitiveRoutesNeedCapability",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_D14D15_AuditPreservedAndDenialLeavesNothing",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_D16_WSUsesSameCapabilityTruth",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_D1D2D5_CapabilityDecides",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_D3_UnknownRoleHasNothing",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_D4_UnknownCapabilityDenied",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_D6D7D8_UnionAndImmediateRevocation",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_D9_GrantBecomesEffective",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R15"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG1_StructuralGuards",
+      "file": "internal/qa/capability_authz_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestCITY_001_OtherCityHidden",

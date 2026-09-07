@@ -1,0 +1,114 @@
+// Package authz **معجمُ القدرات والقرارُ المركزيّ** — `ADG-1` · `AQ-1`.
+//
+// ══════════════════════════════════════════════════════════════════════
+// **اسمُ الدور ليس صلاحيّة**
+// ══════════════════════════════════════════════════════════════════════
+//
+// # ما كان
+//
+// **التخويلُ يسأل «أدورُك `admin`؟»** — **أربعةٌ وأربعون نداءً لـ
+// `RequireRoles` وسبعةَ عشرَ فحصاً يدويّاً** في مسارات الخادم.
+//
+// **فمن أراد أن يمنح موظّفاً صلاحيّةً واحدةً منح دوراً كاملاً** —
+// **ومن أراد أن يمنعه من واحدةٍ نزع الدورَ كلَّه.** **وذاك عكسُ «أقلِّ
+// صلاحيّة».**
+//
+// # وعقدُ المالك (٢٠٢٦-٠٩-٠٧)
+//
+//	NO-CODE FOR OPERATIONS · CODE FOR NEW CAPABILITIES
+//
+//	معجمُ القدرات   **الشيفرةُ**   — مهندس
+//	دورٌ ← قدرة      **القاعدةُ**   — الأدمن من اللوحة
+//	حسابٌ ← دور      **القاعدةُ**   — الأدمن من اللوحة
+//
+// **وقدرةٌ جديدةٌ تحتاج مهندساً** — **وتبديلُ من يملكها لا يحتاجه.**
+//
+// # والافتراضُ منعٌ
+//
+// **دورٌ يُنشَأ اليومَ لا يملك شيئاً** · **ومجهولُ الدور يُمنَع** ·
+// **ومجهولُ القدرة يُمنَع.** **ولا «كلُّ من دخل بابَ الإدارة يمرّ».**
+package authz
+
+import "sort"
+
+// Capability معرّفُ قدرةٍ مستقرّ.
+//
+// **ونصٌّ لا رقم**: **يُقرأ في سجلٍّ وفي صفٍّ في القاعدة وفي رسالة
+// خطأ** — **ورقمٌ يُبدَّل معناه بلا أن يُلاحَظ.**
+type Capability string
+
+// ══════════════════════════════════════════════════════════════════════
+// **المعجمُ — مشتقٌّ من المسارات القائمة لا مخترَع**
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ولا قدرةٌ لا يحرسها مسارٌ اليوم** — **ومعجمٌ فيه ما لا يُستعمَل
+// يُقرأ عقداً وهو أمنية.**
+const (
+	// ── الطلبات ──────────────────────────────────────────────────
+	OrdersRead      Capability = "orders.read"
+	OrdersIntervene Capability = "orders.intervene"
+
+	// ── الحسابات والموظّفون ──────────────────────────────────────
+	UsersRead         Capability = "users.read"
+	UsersStatusManage Capability = "users.status.manage"
+	RolesManage       Capability = "roles.manage"
+
+	// ── المال ───────────────────────────────────────────────────
+	FinanceRead   Capability = "finance.read"
+	FinanceManage Capability = "finance.manage"
+	PayoutsDecide Capability = "payouts.decide"
+
+	// ── المتاجر والسائقون ───────────────────────────────────────
+	MerchantsManage Capability = "merchants.manage"
+	DriversManage   Capability = "drivers.manage"
+
+	// ── الإعدادات — ثلاثُ درجاتٍ بحسب الأثر ──────────────────────
+	//
+	// **وتصنيفُها من دورةِ ٢١ لا يُخترَع ثانيةً** — انظر
+	// `server.criticalSettingKey`.
+	SettingsGeneralManage  Capability = "settings.general.manage"
+	SettingsFinancialManage Capability = "settings.financial.manage"
+	SettingsSecurityManage  Capability = "settings.security.manage"
+
+	// ── المحتوى والتقارير ───────────────────────────────────────
+	ContentManage Capability = "content.manage"
+	AnalyticsRead Capability = "analytics.read"
+)
+
+// catalog **المعجمُ المُعرَّفُ في الشيفرة** — ووصفٌ لكلٍّ يُقرأ في اللوحة.
+var catalog = map[Capability]string{
+	OrdersRead:              "قراءةُ الطلبات ولوحةِ العمليّات",
+	OrdersIntervene:         "تدخّلٌ في طلبٍ نيابةً عن طرفه",
+	UsersRead:               "قراءةُ الحسابات",
+	UsersStatusManage:       "إيقافُ حسابٍ أو حظرُه أو تبديلُ بياناته",
+	RolesManage:             "منحُ الأدوار وسحبُها",
+	FinanceRead:             "قراءةُ المال والتقارير الماليّة",
+	FinanceManage:           "قيدُ محفظةٍ ومصروفٌ وخزينة",
+	PayoutsDecide:           "قرارُ السحب",
+	MerchantsManage:         "إدارةُ المتاجر وتعليقُها",
+	DriversManage:           "إدارةُ السائقين وتوثيقُهم",
+	SettingsGeneralManage:   "إعداداتٌ عامّةٌ ومحتوى",
+	SettingsFinancialManage: "إعداداتٌ تدخل حساباً ماليّاً",
+	SettingsSecurityManage:  "إعداداتُ الأمن والجلسات",
+	ContentManage:           "لافتاتٌ وعروضٌ ومحتوى",
+	AnalyticsRead:           "قراءةُ التحليلات",
+}
+
+// Known **أهذه قدرةٌ مسجَّلة؟** — **ومجهولُها يُمنَع.**
+func Known(c Capability) bool { _, ok := catalog[c]; return ok }
+
+// Describe وصفُ القدرة — فارغٌ للمجهولة.
+func Describe(c Capability) string { return catalog[c] }
+
+// All المعجمُ مرتَّباً — تقرؤه اللوحةُ والحرّاسُ والهجرات.
+func All() []Capability {
+	out := make([]Capability, 0, len(catalog))
+	for c := range catalog {
+		out = append(out, c)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i] < out[j] })
+	return out
+}
+
+// Count عددُ القدرات — يحرسه فحصٌ فلا تختفي واحدةٌ صامتةً.
+func Count() int { return len(catalog) }

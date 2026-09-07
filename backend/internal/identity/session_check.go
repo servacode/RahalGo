@@ -95,16 +95,20 @@ var ErrSessionCheckUnavailable = errors.New("identity: تعذّر التحقّق
 //
 // **وفارغةٌ مع `SessionValid` تعني «لا جلسةَ تُسأل»** (الصنفُ
 // المستثنى) — **فيُبقي المنادي على ادّعاءات الرمز.**
-func (s *Service) CheckSession(ctx context.Context, sid string) (SessionState, []string, error) {
+//
+// # وتُرجع القدراتِ الفاعلةَ أيضاً — `ADG-1`
+//
+// **اتّحادُ قدرات أدواره من القاعدة** — **ولا ادّعاءَ في رمزٍ يُصدَّق.**
+func (s *Service) CheckSession(ctx context.Context, sid string) (SessionState, []string, []string, error) {
 	if sid == "" {
-		return SessionValid, nil, nil
+		return SessionValid, nil, nil, nil
 	}
 
 	// ── مُسرِّعُ الرفض الموجَب ────────────────────────────────────
 	//
 	// **الإصابةُ وحدَها حاسمة** — **والغيابُ والخطأُ سواءٌ: لا أعرف.**
 	if n, err := s.rdb.Exists(ctx, sessionRevokedKey(sid)).Result(); err == nil && n > 0 {
-		return SessionRevoked, nil, nil
+		return SessionRevoked, nil, nil, nil
 	}
 
 	return s.sessionStateFromDB(ctx, sid)
@@ -123,13 +127,13 @@ func (s *Service) CheckSession(ctx context.Context, sid string) (SessionState, [
 // **`RevokeSession` تُبطل ما لم ينتهِ فقط** (`expires_at > now()`) —
 // **فالمنتهي يبقى `revoked_at IS NULL` إلى الأبد.** **فلو سُئل عن
 // الإبطال وحدَه لَقرأ المنتهي سليماً.**
-func (s *Service) sessionStateFromDB(ctx context.Context, sid string) (SessionState, []string, error) {
-	live, total, roles, err := s.repo.SessionRows(ctx, sid)
+func (s *Service) sessionStateFromDB(ctx context.Context, sid string) (SessionState, []string, []string, error) {
+	live, total, roles, caps, err := s.repo.SessionRows(ctx, sid)
 	if err != nil {
-		return SessionRevoked, nil, fmt.Errorf("%w: %v", ErrSessionCheckUnavailable, err)
+		return SessionRevoked, nil, nil, fmt.Errorf("%w: %v", ErrSessionCheckUnavailable, err)
 	}
 	if live > 0 {
-		return SessionValid, roles, nil
+		return SessionValid, roles, caps, nil
 	}
 	if total == 0 && s.logger != nil {
 		// **جلسةٌ لا يعرفها الجدول** — **ولا معرّفَ يُطبع**: هو نصفُ
@@ -137,5 +141,5 @@ func (s *Service) sessionStateFromDB(ctx context.Context, sid string) (SessionSt
 		s.logger.Warn("التوثيق: جلسةٌ لا تُعرَف في الحقيقة الموثوقة",
 			"outcome", "unknown_session")
 	}
-	return SessionRevoked, nil, nil
+	return SessionRevoked, nil, nil, nil
 }

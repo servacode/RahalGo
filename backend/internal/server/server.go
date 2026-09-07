@@ -15,6 +15,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/servacode/rahalgo/backend/internal/auth"
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/comms"
@@ -719,7 +720,9 @@ func (s *Server) Router() http.Handler {
 			// فتُحجب المالية عند الباب — وتصير المسارات المعلَّمة "أدمن/مالية"
 			// (المحفظة، تسوية الصندوق، حلّ التذاكر، صرف السحوبات) غير قابلة للوصول
 			// لمن أُنشئت له. الحراسة الدقيقة تبقى على كل مسار حسّاس بذاته.
-			r.Use(s.RequireRoles("admin", "ops", "finance"))
+			// **وبابُ السطح الإداريّ بقدرةٍ لا بأسماءِ أدوار** —
+			// `ADG-1`. **والقديمةُ تمرّ لأنّها مبذورةٌ بقدراتها.**
+			r.Use(s.RequireAnyCapability)
 			// **وما تكتبه اللوحةُ يُسمَع في الجيب** — انظر `announceWrites`.
 			r.Use(s.announceWrites)
 			r.Get("/whatsapp", func(w http.ResponseWriter, _ *http.Request) {
@@ -736,7 +739,9 @@ func (s *Server) Router() http.Handler {
 			// (`opsmap.Perm`)، فحين يُبنى تُبدَّل خريطةُ الترجمة
 			// **ولا يُفتَّش عن `roles` في عشرين معالجاً.**
 			r.Route("/ops-map", func(r chi.Router) {
-				r.Use(s.RequireRoles("admin", "ops", "finance"))
+				// **وبابُ السطح الإداريّ بقدرةٍ لا بأسماءِ أدوار** —
+				// `ADG-1`. **والقديمةُ تمرّ لأنّها مبذورةٌ بقدراتها.**
+				r.Use(s.RequireAnyCapability)
 				r.Get("/meta", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapMeta))
 				r.Get("/drivers", s.requirePerm(opsmap.PermViewDrivers, s.handleOpsMapDrivers))
 				r.Get("/merchants", s.requirePerm(opsmap.PermViewMerchants, s.handleOpsMapMerchants))
@@ -882,7 +887,16 @@ func (s *Server) Router() http.Handler {
 			r.With(s.RequireRoles("admin")).Put("/districts/{id}", s.handleUpdateDistrict)
 			r.With(s.RequireRoles("admin")).Delete("/districts/{id}", s.handleDeleteDistrict)
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
-			r.With(s.RequireRoles("admin", "finance")).
+			// ══════════════════════════════════════════════════
+			// **مساراتٌ مُرحَّلةٌ إلى القدرات** — `ADG-1`
+			// ══════════════════════════════════════════════════
+			//
+			// **أربعةٌ تمثيليّةٌ تُثبت العمارة**: إعدادٌ حسّاسٌ ·
+			// مالٌ · أدوارٌ · تدخّلٌ تشغيليّ.
+			//
+			// **والباقي مجرودٌ لـ`ADG-2`** — ولا يُدَّعى إغلاقُ
+			// `RBAC-01`.
+			r.With(s.RequireCapability(authz.FinanceManage)).
 				Post("/users/{id}/wallet", s.idempotent(s.handleAdminWalletApply))
 			// **وعناوينُه في ملفّه** — من يتابع شكوى «لم يصلني» يحتاج أن يرى
 			// أين يسكن قبل أن يسأل.
@@ -923,7 +937,23 @@ func (s *Server) Router() http.Handler {
 			// لا يُمسّ. (انظر `order_transfer.go`)
 			r.With(s.RequireRoles("admin", "ops")).
 				Post("/orders/{id}/transfer", s.handleTransferOrder)
-			r.Post("/orders/{id}/transition", s.handleOrderTransition)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/transition", s.handleOrderTransition)
+
+			// ══════════════════════════════════════════════════
+			// **وإدارةُ الأدوار بقدرتها لا بكونه `admin`** — `ADG-1`
+			// ══════════════════════════════════════════════════
+			//
+			// **وكانت داخلَ مجموعة `RequireRoles("admin")`** —
+			// **فدورٌ يُنشئه الأدمنُ ويمنحه `roles.manage` كان
+			// يُردّ**، ويصير المنحُ من اللوحة بلا أثر.
+			//
+			// **وهي أشدُّ ما في المنصّة خطراً** — **فلا يُصعّد أحدٌ
+			// نفسَه**: من لا يملك القدرةَ لا يمنحها لغيره ولا لنفسه.
+			r.With(s.RequireCapability(authz.RolesManage)).
+				Post("/users/{id}/roles", s.handleAdminGrantRole)
+			r.With(s.RequireCapability(authz.RolesManage)).
+				Delete("/users/{id}/roles/{role}", s.handleAdminRevokeRole)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
 
 			// **ما بعد فشل الطلب** — من يحمل الخسارة (failure_aftermath.go).
@@ -1050,10 +1080,8 @@ func (s *Server) Router() http.Handler {
 				r.Delete("/sections/{id}", s.handleDeletePlatformSection)
 				r.Post("/users", s.handleAdminCreateUser)
 				r.Patch("/users/{id}", s.handleAdminUpdateUser)
-				r.Post("/users/{id}/roles", s.handleAdminGrantRole)
 				r.Post("/users/{id}/password", s.handleAdminResetPassword)
 				r.Post("/users/{id}/logout-all", s.handleAdminLogoutAll)
-				r.Delete("/users/{id}/roles/{role}", s.handleAdminRevokeRole)
 				r.Post("/categories", s.handleCreateCategory)
 				r.Patch("/categories/{id}", s.handleUpdateCategory)
 				r.Post("/merchants", s.handleCreateMerchant)
@@ -1080,6 +1108,8 @@ func (s *Server) Router() http.Handler {
 				r.Post("/banners", s.handleCreateBanner)
 				r.Patch("/banners/{id}", s.handleUpdateBanner)
 				r.Delete("/banners/{id}", s.handleDeleteBanner)
+				// **والإعدادُ يُحرَس بقدرةٍ بحسب أثره** — والتصنيفُ
+				// من دورةِ ٢١ لا يُخترَع ثانيةً (`settingCapability`).
 				r.Put("/settings/{key}", s.handleSetSetting)
 			})
 		})

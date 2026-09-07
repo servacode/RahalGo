@@ -404,7 +404,27 @@ func (h *Harness) NewUser(role string) *User {
 	h.T.Cleanup(func() {
 		_, _ = h.Pool.Exec(context.Background(), `DELETE FROM users WHERE id = $1::uuid`, id)
 	})
-	tok, _, err := h.tokens.IssueAccess(id, roles, "")
+	// ══════════════════════════════════════════════════════════════
+	// **وجلسةٌ دائمةٌ كما في الإنتاج** — `ADG-1`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كان المِسنَدُ يُصدر توكناً بمعرّفِ جلسةٍ فارغ** — **وصنفٌ لا
+	// تُنتجه المنصّة**: `issueSession` ينادي `StoreRefresh` قبل
+	// الإصدار فلكلّ توكنٍ حقيقيٍّ صفٌّ دائم.
+	//
+	// **ولم يكن يضرّ حتّى صار التخويلُ يقرأ القاعدة**: **لا جلسةَ ⇒
+	// لا أدوارَ ولا قدرات** — **فتوكنُ أدمنٍ لا يدخل بابَ الإدارة.**
+	//
+	// **والفحصُ الذي يقيس بصنفٍ لا يقع في الإنتاج يقيس شيئاً آخر.**
+	var sid string
+	if err := h.Pool.QueryRow(context.Background(), `
+		INSERT INTO refresh_tokens (user_id, token_hash, expires_at, client)
+		VALUES ($1::uuid, $2, now() + interval '30 days', 'web')
+		RETURNING session_id::text`,
+		id, "qa-nu-"+id).Scan(&sid); err != nil {
+		h.T.Fatalf("qa: تعذّر إنشاءُ جلسة: %v", err)
+	}
+	tok, _, err := h.tokens.IssueAccess(id, roles, sid)
 	if err != nil {
 		h.T.Fatalf("qa: تعذّر إصدارُ التوكن: %v", err)
 	}
