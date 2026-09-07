@@ -2174,6 +2174,13 @@
       "status": "NOT_IMPLEMENTED"
     },
     {
+      "id": "XG-37",
+      "title": "حقلُ blocking في تقرير البوّابة يخالف عدّادَها — ٢٨ مقابل ٢٣",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
       "id": "XG-33",
       "title": "لا علامةَ تثبيتٍ داخل معاملة العمل لمنع التكرار",
       "severity": "CRITICAL",
