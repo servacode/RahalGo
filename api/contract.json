@@ -6,9 +6,7 @@
       "path": "/api/v1/admin/app-file",
       "handler": "handleDeleteAppFile",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "removed",
@@ -24,9 +22,7 @@
       "path": "/api/v1/admin/app-file",
       "handler": "handleUploadAppFile",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "bytes",
@@ -46,10 +42,7 @@
       "path": "/api/v1/admin/audit",
       "handler": "handleAdminAudit",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "audit.read",
       "response": [
         {
           "name": "entries",
@@ -77,6 +70,7 @@
       "path": "/api/v1/admin/banners",
       "handler": "handleListBanners",
       "auth": true,
+      "capability": "content.manage",
       "response": [
         {
           "name": "@banners",
@@ -92,9 +86,7 @@
       "path": "/api/v1/admin/banners",
       "handler": "handleCreateBanner",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "@b",
@@ -110,9 +102,7 @@
       "path": "/api/v1/admin/banners/{id}",
       "handler": "handleDeleteBanner",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "deleted",
@@ -128,9 +118,7 @@
       "path": "/api/v1/admin/banners/{id}",
       "handler": "handleUpdateBanner",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "@b",
@@ -146,9 +134,7 @@
       "path": "/api/v1/admin/broadcast",
       "handler": "handleBroadcast",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "request": [
         {
           "name": "roles",
@@ -182,6 +168,7 @@
       "path": "/api/v1/admin/broadcast/count",
       "handler": "handleBroadcastCount",
       "auth": true,
+      "capability": "content.manage",
       "response": [
         {
           "name": "count",
@@ -194,9 +181,26 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/capabilities",
+      "handler": "handleListCapabilities",
+      "auth": true,
+      "capability": "roles.manage",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/cash/outstanding",
       "handler": "handleCashOutstanding",
       "auth": true,
+      "capability": "finance.read",
       "response": [
         {
           "name": "holders",
@@ -220,6 +224,7 @@
       "path": "/api/v1/admin/categories",
       "handler": "handleListCategories",
       "auth": true,
+      "capability": "content.manage",
       "response": [
         {
           "name": "@cats",
@@ -235,9 +240,7 @@
       "path": "/api/v1/admin/categories",
       "handler": "handleCreateCategory",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "@c",
@@ -253,9 +256,7 @@
       "path": "/api/v1/admin/categories/{id}",
       "handler": "handleUpdateCategory",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "@c",
@@ -271,6 +272,7 @@
       "path": "/api/v1/admin/cities",
       "handler": "handleAdminCities",
       "auth": true,
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "cities",
@@ -286,9 +288,7 @@
       "path": "/api/v1/admin/cities",
       "handler": "handleCreateCity",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "id",
@@ -304,9 +304,7 @@
       "path": "/api/v1/admin/cities/{id}",
       "handler": "handleDeleteCity",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "ok",
@@ -322,9 +320,7 @@
       "path": "/api/v1/admin/cities/{id}",
       "handler": "handleUpdateCity",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "ok",
@@ -340,6 +336,7 @@
       "path": "/api/v1/admin/customers",
       "handler": "handleListCustomers",
       "auth": true,
+      "capability": "users.read",
       "response": [
         {
           "name": "customers",
@@ -367,6 +364,7 @@
       "path": "/api/v1/admin/disputes",
       "handler": "handleListDisputes",
       "auth": true,
+      "capability": "support.manage",
       "response": [
         {
           "name": "count",
@@ -402,10 +400,7 @@
       "path": "/api/v1/admin/disputes",
       "handler": "handleCreateDispute",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "support.manage",
       "request": [
         {
           "name": "party_role",
@@ -443,10 +438,7 @@
       "path": "/api/v1/admin/disputes/{id}/settle",
       "handler": "handleSettleDispute",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.manage",
       "request": [
         {
           "name": "settlement",
@@ -472,6 +464,7 @@
       "path": "/api/v1/admin/districts",
       "handler": "handleAdminDistricts",
       "auth": true,
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "districts",
@@ -487,9 +480,7 @@
       "path": "/api/v1/admin/districts",
       "handler": "handleCreateDistrict",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "id",
@@ -505,9 +496,7 @@
       "path": "/api/v1/admin/districts/{id}",
       "handler": "handleDeleteDistrict",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "deleted",
@@ -523,9 +512,7 @@
       "path": "/api/v1/admin/districts/{id}",
       "handler": "handleUpdateDistrict",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "ok",
@@ -541,6 +528,7 @@
       "path": "/api/v1/admin/drivers",
       "handler": "handleListDrivers",
       "auth": true,
+      "capability": "drivers.manage",
       "response": [
         {
           "name": "cash_limit",
@@ -564,6 +552,7 @@
       "path": "/api/v1/admin/drivers/{id}/cash",
       "handler": "handleDriverCashStatement",
       "auth": true,
+      "capability": "finance.read",
       "response": [
         {
           "name": "@st",
@@ -579,6 +568,7 @@
       "path": "/api/v1/admin/drivers/{id}/end-shift",
       "handler": "handleAdminEndShift",
       "auth": true,
+      "capability": "drivers.manage",
       "request": [
         {
           "name": "note",
@@ -600,10 +590,7 @@
       "path": "/api/v1/admin/drivers/{id}/settle",
       "handler": "handleDriverSettle",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.manage",
       "idempotent": true,
       "request": [
         {
@@ -621,6 +608,7 @@
       "path": "/api/v1/admin/emergencies",
       "handler": "handleOpenEmergencies",
       "auth": true,
+      "capability": "support.manage",
       "response": [
         {
           "name": "@paged",
@@ -636,6 +624,7 @@
       "path": "/api/v1/admin/emergencies/{id}/resolve",
       "handler": "handleResolveEmergency",
       "auth": true,
+      "capability": "support.manage",
       "request": [
         {
           "name": "resolution",
@@ -657,10 +646,7 @@
       "path": "/api/v1/admin/expenses",
       "handler": "handleListExpenses",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.read",
       "response": [
         {
           "name": "@res",
@@ -676,10 +662,7 @@
       "path": "/api/v1/admin/expenses",
       "handler": "handleCreateExpense",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.manage",
       "request": [
         {
           "name": "category_id",
@@ -713,10 +696,7 @@
       "path": "/api/v1/admin/expenses/categories",
       "handler": "handleExpenseCategories",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.read",
       "response": [
         {
           "name": "categories",
@@ -732,10 +712,7 @@
       "path": "/api/v1/admin/expenses/categories",
       "handler": "handleSaveExpenseCategory",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.manage",
       "request": [
         {
           "name": "id",
@@ -774,10 +751,7 @@
       "path": "/api/v1/admin/expenses/{id}/void",
       "handler": "handleVoidExpense",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.manage",
       "response": [
         {
           "name": "voided",
@@ -792,16 +766,15 @@
       "method": "GET",
       "path": "/api/v1/admin/governorates",
       "handler": "handleAdminGovernorates",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/governorates",
       "handler": "handleCreateGovernorate",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "id",
@@ -817,9 +790,7 @@
       "path": "/api/v1/admin/governorates/{id}",
       "handler": "handleDeleteGovernorate",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "deleted",
@@ -835,9 +806,7 @@
       "path": "/api/v1/admin/governorates/{id}",
       "handler": "handleUpdateGovernorate",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "ok",
@@ -853,6 +822,7 @@
       "path": "/api/v1/admin/incentives/{role}",
       "handler": "handleIncentiveStandings",
       "auth": true,
+      "capability": "finance.read",
       "response": [
         {
           "name": "standings",
@@ -868,6 +838,7 @@
       "path": "/api/v1/admin/leads",
       "handler": "handleAdminLeads",
       "auth": true,
+      "capability": "merchants.verify",
       "response": [
         {
           "name": "@paged",
@@ -883,6 +854,7 @@
       "path": "/api/v1/admin/leads/{id}/status",
       "handler": "handleAdminLeadStatus",
       "auth": true,
+      "capability": "merchants.verify",
       "request": [
         {
           "name": "status",
@@ -908,16 +880,14 @@
       "path": "/api/v1/admin/ledger/export",
       "handler": "handleLedgerExport",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ]
+      "capability": "finance.read"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/media",
       "handler": "handleUploadMedia",
       "auth": true,
+      "capability": "content.manage",
       "response": [
         {
           "name": "@m",
@@ -933,6 +903,7 @@
       "path": "/api/v1/admin/media/sign",
       "handler": "handleSignMedia",
       "auth": true,
+      "capability": "content.manage",
       "response": [
         {
           "name": "url",
@@ -948,9 +919,7 @@
       "path": "/api/v1/admin/menu/items/{itemID}",
       "handler": "handleDeleteItem",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "deleted",
@@ -966,9 +935,7 @@
       "path": "/api/v1/admin/menu/items/{itemID}",
       "handler": "handleUpdateItem",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "updated",
@@ -984,9 +951,7 @@
       "path": "/api/v1/admin/menu/items/{itemID}/review",
       "handler": "handleReviewMenuItem",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.verify",
       "request": [
         {
           "name": "approve",
@@ -1012,6 +977,7 @@
       "path": "/api/v1/admin/menu/pending",
       "handler": "handlePendingMenuItems",
       "auth": true,
+      "capability": "merchants.verify",
       "response": [
         {
           "name": "count",
@@ -1035,9 +1001,7 @@
       "path": "/api/v1/admin/menu/sections/{sectionID}",
       "handler": "handleDeleteSection",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "deleted",
@@ -1053,9 +1017,7 @@
       "path": "/api/v1/admin/menu/sections/{sectionID}",
       "handler": "handleUpdateSection",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "@sec",
@@ -1071,6 +1033,7 @@
       "path": "/api/v1/admin/merchants",
       "handler": "handleListMerchants",
       "auth": true,
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "@res",
@@ -1086,9 +1049,7 @@
       "path": "/api/v1/admin/merchants",
       "handler": "handleCreateMerchant",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "@m",
@@ -1104,6 +1065,7 @@
       "path": "/api/v1/admin/merchants/{id}",
       "handler": "handleAdminGetMerchant",
       "auth": true,
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "@mr",
@@ -1119,9 +1081,7 @@
       "path": "/api/v1/admin/merchants/{id}",
       "handler": "handleUpdateMerchant",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "@m",
@@ -1137,9 +1097,7 @@
       "path": "/api/v1/admin/merchants/{id}/clear-violations",
       "handler": "handleClearViolations",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "safety.manage",
       "response": [
         {
           "name": "cleared",
@@ -1155,6 +1113,7 @@
       "path": "/api/v1/admin/merchants/{id}/hours",
       "handler": "handleGetHours",
       "auth": true,
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "@hours",
@@ -1170,9 +1129,7 @@
       "path": "/api/v1/admin/merchants/{id}/hours",
       "handler": "handleSetHours",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.manage",
       "request": [
         {
           "name": "days",
@@ -1194,6 +1151,7 @@
       "path": "/api/v1/admin/merchants/{id}/menu",
       "handler": "handleGetMenu",
       "auth": true,
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "@menu",
@@ -1209,9 +1167,7 @@
       "path": "/api/v1/admin/merchants/{id}/menu/items",
       "handler": "handleCreateItem",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "id",
@@ -1227,9 +1183,7 @@
       "path": "/api/v1/admin/merchants/{id}/menu/sections",
       "handler": "handleCreateSection",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "merchants.manage",
       "response": [
         {
           "name": "@sec",
@@ -1245,9 +1199,7 @@
       "path": "/api/v1/admin/merchants/{id}/suspend",
       "handler": "handleSuspendMerchant",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "safety.manage",
       "request": [
         {
           "name": "suspended",
@@ -1273,9 +1225,7 @@
       "path": "/api/v1/admin/merchants/{id}/violations",
       "handler": "handleMerchantViolations",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "safety.manage",
       "response": [
         {
           "name": "days",
@@ -1306,16 +1256,15 @@
       "method": "GET",
       "path": "/api/v1/admin/merchants/{id}/warnings",
       "handler": "handleAdminMerchantWarnings",
-      "auth": true
+      "auth": true,
+      "capability": "safety.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/merchants/{id}/warnings",
       "handler": "handleIssueMerchantWarning",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "safety.manage",
       "request": [
         {
           "name": "reason",
@@ -1332,6 +1281,7 @@
       "path": "/api/v1/admin/offers",
       "handler": "handleAdminOffers",
       "auth": true,
+      "capability": "content.manage",
       "response": [
         {
           "name": "offers",
@@ -1347,9 +1297,7 @@
       "path": "/api/v1/admin/offers",
       "handler": "handleCreateOffer",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "@o",
@@ -1365,9 +1313,7 @@
       "path": "/api/v1/admin/offers/{id}/active",
       "handler": "handleSetOfferActive",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "request": [
         {
           "name": "active",
@@ -1388,127 +1334,148 @@
       "method": "GET",
       "path": "/api/v1/admin/ops-map/areas",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/ops-map/areas",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "PUT",
       "path": "/api/v1/admin/ops-map/areas/{id}",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/branches",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/ops-map/branches",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "PUT",
       "path": "/api/v1/admin/ops-map/branches/{id}",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/coverage",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/ops-map/coverage",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/coverage-requests",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "PATCH",
       "path": "/api/v1/admin/ops-map/coverage-requests/{id}",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "PUT",
       "path": "/api/v1/admin/ops-map/coverage/{id}",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/ops-map/coverage/{id}/active",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/demand",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "merchants.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/drivers",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "drivers.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/merchants",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "merchants.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/meta",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "analytics.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/opportunities",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "merchants.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/orders",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "orders.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/reps",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "users.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/search",
       "handler": "requirePerm",
-      "auth": true
+      "auth": true,
+      "capability": "analytics.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/orders",
       "handler": "handleListOrders",
       "auth": true,
+      "capability": "orders.read",
       "response": [
         {
           "name": "@res",
@@ -1524,6 +1491,7 @@
       "path": "/api/v1/admin/orders/alerts",
       "handler": "handleOrderAlerts",
       "auth": true,
+      "capability": "orders.read",
       "response": [
         {
           "name": "@alerts",
@@ -1539,16 +1507,14 @@
       "path": "/api/v1/admin/orders/export",
       "handler": "handleOrdersExport",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ]
+      "capability": "analytics.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/orders/{id}",
       "handler": "handleGetOrder",
       "auth": true,
+      "capability": "orders.read",
       "statuses": [
         "StatusOK"
       ]
@@ -1558,6 +1524,7 @@
       "path": "/api/v1/admin/orders/{id}/assign",
       "handler": "handleOrderAssign",
       "auth": true,
+      "capability": "orders.intervene",
       "request": [
         {
           "name": "driver_id",
@@ -1583,10 +1550,7 @@
       "path": "/api/v1/admin/orders/{id}/breakdown",
       "handler": "handleOrderBreakdown",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.read",
       "response": [
         {
           "name": "cash_due",
@@ -1638,6 +1602,7 @@
       "path": "/api/v1/admin/orders/{id}/chat",
       "handler": "handleAdminOrderChat",
       "auth": true,
+      "capability": "orders.read",
       "response": [
         {
           "name": "@th",
@@ -1653,10 +1618,7 @@
       "path": "/api/v1/admin/orders/{id}/compensate-driver",
       "handler": "handleCompensateDriver",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.manage",
       "request": [
         {
           "name": "amount",
@@ -1682,6 +1644,7 @@
       "path": "/api/v1/admin/orders/{id}/goods",
       "handler": "handleGoods",
       "auth": true,
+      "capability": "orders.intervene",
       "request": [
         {
           "name": "to",
@@ -1703,6 +1666,7 @@
       "path": "/api/v1/admin/orders/{id}/message",
       "handler": "handleOrderMessagePreview",
       "auth": true,
+      "capability": "orders.read",
       "response": [
         {
           "name": "drivers_on_shift",
@@ -1730,9 +1694,7 @@
       "path": "/api/v1/admin/orders/{id}/recompute",
       "handler": "handleRecomputeSettlement",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "orders.intervene",
       "response": [
         {
           "name": "after",
@@ -1755,17 +1717,15 @@
       "method": "POST",
       "path": "/api/v1/admin/orders/{id}/settle-goods",
       "handler": "handleSettleGoods",
-      "auth": true
+      "auth": true,
+      "capability": "finance.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/orders/{id}/transfer",
       "handler": "handleTransferOrder",
       "auth": true,
-      "roles": [
-        "admin",
-        "ops"
-      ],
+      "capability": "orders.intervene",
       "request": [
         {
           "name": "merchant_id",
@@ -1804,6 +1764,7 @@
       "path": "/api/v1/admin/orders/{id}/transition",
       "handler": "handleOrderTransition",
       "auth": true,
+      "capability": "orders.intervene",
       "request": [
         {
           "name": "to",
@@ -1829,6 +1790,7 @@
       "path": "/api/v1/admin/orders/{id}/whatsapp",
       "handler": "handleSendOrderToMerchant",
       "auth": true,
+      "capability": "orders.intervene",
       "request": [
         {
           "name": "channel",
@@ -1858,6 +1820,7 @@
       "path": "/api/v1/admin/payouts",
       "handler": "handleAdminPayouts",
       "auth": true,
+      "capability": "finance.read",
       "response": [
         {
           "name": "@res",
@@ -1873,10 +1836,7 @@
       "path": "/api/v1/admin/payouts/{id}/decide",
       "handler": "handleDecidePayout",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "payouts.decide",
       "idempotent": true,
       "request": [
         {
@@ -1894,16 +1854,14 @@
       "path": "/api/v1/admin/profits",
       "handler": "handleProfits",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ]
+      "capability": "finance.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/promos",
       "handler": "handleListPromos",
       "auth": true,
+      "capability": "content.manage",
       "response": [
         {
           "name": "@promos",
@@ -1919,9 +1877,7 @@
       "path": "/api/v1/admin/promos",
       "handler": "handleCreatePromo",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "@p",
@@ -1937,9 +1893,7 @@
       "path": "/api/v1/admin/promos/{id}",
       "handler": "handleUpdatePromo",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "@p",
@@ -1955,6 +1909,7 @@
       "path": "/api/v1/admin/ratings",
       "handler": "handleAdminRatings",
       "auth": true,
+      "capability": "support.manage",
       "response": [
         {
           "name": "average",
@@ -1994,6 +1949,7 @@
       "path": "/api/v1/admin/reports",
       "handler": "handleReports",
       "auth": true,
+      "capability": "analytics.read",
       "response": [
         {
           "name": "daily",
@@ -2029,6 +1985,7 @@
       "path": "/api/v1/admin/reports/losses",
       "handler": "handlePlatformLosses",
       "auth": true,
+      "capability": "finance.read",
       "response": [
         {
           "name": "count",
@@ -2069,9 +2026,88 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/roles",
+      "handler": "handleListRoles",
+      "auth": true,
+      "capability": "roles.manage",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/roles/{code}",
+      "handler": "handleRoleDetail",
+      "auth": true,
+      "capability": "roles.manage",
+      "response": [
+        {
+          "name": "capabilities",
+          "type": "unknown"
+        },
+        {
+          "name": "code",
+          "type": "unknown"
+        },
+        {
+          "name": "name_key",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/roles/{code}/capabilities",
+      "handler": "handleGrantCapability",
+      "auth": true,
+      "capability": "roles.manage",
+      "request": [
+        {
+          "name": "capability",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "granted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/roles/{code}/capabilities/{cap}",
+      "handler": "handleRevokeCapability",
+      "auth": true,
+      "capability": "roles.manage",
+      "response": [
+        {
+          "name": "revoked",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/salesreps",
       "handler": "handleListSalesReps",
       "auth": true,
+      "capability": "users.read",
       "response": [
         {
           "name": "@out",
@@ -2087,6 +2123,7 @@
       "path": "/api/v1/admin/sections",
       "handler": "handleListPlatformSections",
       "auth": true,
+      "capability": "content.manage",
       "response": [
         {
           "name": "sections",
@@ -2102,9 +2139,7 @@
       "path": "/api/v1/admin/sections",
       "handler": "handleCreatePlatformSection",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "id",
@@ -2120,9 +2155,7 @@
       "path": "/api/v1/admin/sections/{id}",
       "handler": "handleDeletePlatformSection",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "deleted",
@@ -2138,9 +2171,7 @@
       "path": "/api/v1/admin/sections/{id}",
       "handler": "handleUpdatePlatformSection",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "content.manage",
       "response": [
         {
           "name": "updated",
@@ -2156,6 +2187,7 @@
       "path": "/api/v1/admin/sections/{id}/items",
       "handler": "handleSectionItems",
       "auth": true,
+      "capability": "content.manage",
       "response": [
         {
           "name": "all",
@@ -2191,6 +2223,7 @@
       "path": "/api/v1/admin/settings",
       "handler": "handleListSettings",
       "auth": true,
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "groups",
@@ -2210,9 +2243,7 @@
       "path": "/api/v1/admin/settings/{key}",
       "handler": "handleSetSetting",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "«بحسب المفتاح»",
       "request": [
         {
           "name": "value",
@@ -2234,6 +2265,7 @@
       "path": "/api/v1/admin/stats",
       "handler": "handleAdminStats",
       "auth": true,
+      "capability": "analytics.read",
       "response": [
         {
           "name": "@st",
@@ -2249,6 +2281,7 @@
       "path": "/api/v1/admin/tickets",
       "handler": "handleListTickets",
       "auth": true,
+      "capability": "support.manage",
       "response": [
         {
           "name": "@res",
@@ -2264,6 +2297,7 @@
       "path": "/api/v1/admin/tickets",
       "handler": "handleCreateTicket",
       "auth": true,
+      "capability": "support.manage",
       "response": [
         {
           "name": "@t",
@@ -2279,6 +2313,7 @@
       "path": "/api/v1/admin/tickets/{id}",
       "handler": "handleGetTicket",
       "auth": true,
+      "capability": "support.manage",
       "response": [
         {
           "name": "@t",
@@ -2294,6 +2329,7 @@
       "path": "/api/v1/admin/tickets/{id}/replies",
       "handler": "handleTicketReply",
       "auth": true,
+      "capability": "support.manage",
       "request": [
         {
           "name": "body",
@@ -2315,10 +2351,7 @@
       "path": "/api/v1/admin/tickets/{id}/resolve",
       "handler": "handleTicketResolve",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "support.manage",
       "request": [
         {
           "name": "resolution",
@@ -2344,9 +2377,7 @@
       "path": "/api/v1/admin/treasury-candidates",
       "handler": "handleTreasuryCandidates",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "finance.manage",
       "response": [
         {
           "name": "users",
@@ -2362,6 +2393,7 @@
       "path": "/api/v1/admin/users",
       "handler": "handleAdminListUsers",
       "auth": true,
+      "capability": "users.read",
       "response": [
         {
           "name": "@res",
@@ -2377,9 +2409,7 @@
       "path": "/api/v1/admin/users",
       "handler": "handleAdminCreateUser",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "users.status.manage",
       "response": [
         {
           "name": "@user",
@@ -2394,13 +2424,15 @@
       "method": "GET",
       "path": "/api/v1/admin/users/export",
       "handler": "handleAdminUsersExport",
-      "auth": true
+      "auth": true,
+      "capability": "users.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/users/stats",
       "handler": "handleAdminUserRoleCounts",
       "auth": true,
+      "capability": "users.read",
       "response": [
         {
           "name": "roles",
@@ -2420,6 +2452,7 @@
       "path": "/api/v1/admin/users/{id}",
       "handler": "handleAdminGetUser",
       "auth": true,
+      "capability": "users.read",
       "response": [
         {
           "name": "@out",
@@ -2435,9 +2468,7 @@
       "path": "/api/v1/admin/users/{id}",
       "handler": "handleAdminUpdateUser",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "users.status.manage",
       "response": [
         {
           "name": "@user",
@@ -2453,6 +2484,7 @@
       "path": "/api/v1/admin/users/{id}/activity",
       "handler": "handleAdminUserActivity",
       "auth": true,
+      "capability": "users.read",
       "response": [
         {
           "name": "@res",
@@ -2467,13 +2499,15 @@
       "method": "GET",
       "path": "/api/v1/admin/users/{id}/addresses",
       "handler": "handleAdminUserAddresses",
-      "auth": true
+      "auth": true,
+      "capability": "users.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/users/{id}/chats",
       "handler": "handleAdminUserChats",
       "auth": true,
+      "capability": "users.read",
       "response": [
         {
           "name": "@paged",
@@ -2489,6 +2523,7 @@
       "path": "/api/v1/admin/users/{id}/feedback",
       "handler": "handleAdminUserFeedback",
       "auth": true,
+      "capability": "users.read",
       "response": [
         {
           "name": "@out",
@@ -2504,6 +2539,7 @@
       "path": "/api/v1/admin/users/{id}/financials",
       "handler": "handleAdminUserFinancials",
       "auth": true,
+      "capability": "finance.read",
       "response": [
         {
           "name": "@out",
@@ -2519,10 +2555,7 @@
       "path": "/api/v1/admin/users/{id}/incentive",
       "handler": "handleIncentiveGrant",
       "auth": true,
-      "roles": [
-        "admin",
-        "finance"
-      ],
+      "capability": "finance.manage",
       "idempotent": true,
       "request": [
         {
@@ -2548,6 +2581,7 @@
       "path": "/api/v1/admin/users/{id}/incentives",
       "handler": "handleIncentiveList",
       "auth": true,
+      "capability": "finance.read",
       "response": [
         {
           "name": "entries",
@@ -2563,9 +2597,7 @@
       "path": "/api/v1/admin/users/{id}/logout-all",
       "handler": "handleAdminLogoutAll",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "users.status.manage",
       "response": [
         {
           "name": "revoked_sessions",
@@ -2581,9 +2613,7 @@
       "path": "/api/v1/admin/users/{id}/password",
       "handler": "handleAdminResetPassword",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "users.status.manage",
       "request": [
         {
           "name": "password",
@@ -2605,6 +2635,7 @@
       "path": "/api/v1/admin/users/{id}/roles",
       "handler": "handleAdminGrantRole",
       "auth": true,
+      "capability": "roles.manage",
       "request": [
         {
           "name": "role",
@@ -2630,6 +2661,7 @@
       "path": "/api/v1/admin/users/{id}/roles/{role}",
       "handler": "handleAdminRevokeRole",
       "auth": true,
+      "capability": "roles.manage",
       "response": [
         {
           "name": "revoked",
@@ -2645,6 +2677,7 @@
       "path": "/api/v1/admin/users/{id}/wallet",
       "handler": "handleAdminWalletStatement",
       "auth": true,
+      "capability": "finance.read",
       "response": [
         {
           "name": "@st",
@@ -2660,6 +2693,7 @@
       "path": "/api/v1/admin/users/{id}/wallet",
       "handler": "handleAdminWalletApply",
       "auth": true,
+      "capability": "finance.manage",
       "idempotent": true,
       "request": [
         {
@@ -2685,6 +2719,7 @@
       "path": "/api/v1/admin/users/{id}/warn-reasons",
       "handler": "handleWarnReasons",
       "auth": true,
+      "capability": "safety.manage",
       "response": [
         {
           "name": "reasons",
@@ -2699,16 +2734,15 @@
       "method": "GET",
       "path": "/api/v1/admin/users/{id}/warnings",
       "handler": "handleAdminUserWarnings",
-      "auth": true
+      "auth": true,
+      "capability": "safety.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/users/{id}/warnings",
       "handler": "handleIssueUserWarning",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "safety.manage",
       "request": [
         {
           "name": "reason",
@@ -2732,31 +2766,29 @@
       "method": "GET",
       "path": "/api/v1/admin/whatsapp",
       "handler": "inline",
-      "auth": true
+      "auth": true,
+      "capability": "settings.security.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/whatsapp/pair",
       "handler": "inline",
       "auth": true,
-      "roles": [
-        "admin"
-      ]
+      "capability": "settings.security.manage"
     },
     {
       "method": "POST",
       "path": "/api/v1/admin/whatsapp/unpair",
       "handler": "inline",
       "auth": true,
-      "roles": [
-        "admin"
-      ]
+      "capability": "settings.security.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/zones",
       "handler": "handleListZones",
       "auth": true,
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "@zones",
@@ -2772,9 +2804,7 @@
       "path": "/api/v1/admin/zones",
       "handler": "handleCreateZone",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "@z",
@@ -2790,9 +2820,7 @@
       "path": "/api/v1/admin/zones/{id}",
       "handler": "handleDeleteZone",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "deleted",
@@ -2808,9 +2836,7 @@
       "path": "/api/v1/admin/zones/{id}",
       "handler": "handleUpdateZone",
       "auth": true,
-      "roles": [
-        "admin"
-      ],
+      "capability": "settings.general.manage",
       "response": [
         {
           "name": "@z",

@@ -54,9 +54,24 @@ func TestRBAC_Matrix_Measured(t *testing.T) {
 		{"ops", "settings.sensitive", "PUT",
 			"/api/v1/admin/settings/merchants.commission_percent",
 			map[string]any{"value": 11}, true},
-		{"finance", "settings.sensitive", "PUT",
+		// ══════════════════════════════════════════════════════════
+		// **وهذه الخانةُ انقلبت عمداً في دورةِ ٢٥** — `ADG-2`
+		// ══════════════════════════════════════════════════════════
+		//
+		// **كانت ممنوعةً لأنّ الحارسَ كان `RequireRoles("admin")`** —
+		// **منعٌ بالمصادفة لا بالتصميم.**
+		//
+		// **ومصفوفةُ المالك تمنح `finance` قدرةَ الإعدادات الماليّة**
+		// بنصّ `AQ-1`: «العمولات · التسعيرَ والهوامش». **وهي عملُه.**
+		//
+		// **والأمنيّةُ تبقى ممنوعةً عنه** — ويُقاس في
+		// `TestADG2_RoleMatrix`.
+		{"finance", "settings.financial", "PUT",
 			"/api/v1/admin/settings/merchants.commission_percent",
-			map[string]any{"value": 11}, true},
+			map[string]any{"value": 11}, false},
+		{"finance", "settings.security", "PUT",
+			"/api/v1/admin/settings/security.session_days",
+			map[string]any{"value": 20}, true},
 		{"admin", "settings.sensitive", "PUT",
 			"/api/v1/admin/settings/merchants.commission_percent",
 			map[string]any{"value": 11}, false},

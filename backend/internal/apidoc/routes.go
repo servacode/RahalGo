@@ -48,6 +48,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/servacode/rahalgo/backend/internal/authz"
 )
 
 // Route نقطةُ نهايةٍ واحدة كما هي في الراوتر.
@@ -60,6 +62,11 @@ type Route struct {
 	Auth bool `json:"auth"`
 	// Roles الأدوارُ المخوَّلة — فارغةٌ تعني «كلّ من دخل».
 	Roles []string `json:"roles,omitempty"`
+	// Capability **القدرةُ التي يشترطها المسار** — `ADG-2`.
+	//
+	// **وصار التخويلُ بالقدرات لا بأسماء الأدوار** — **فالعقدُ يعبّر
+	// عمّا يُفرَض فعلاً**، ولا يبقى يذكر حرّاساً نُزعت.
+	Capability string `json:"capability,omitempty"`
 	// Idempotent **ملفوفةٌ بمنع التكرار** — يقرؤها العميلُ ليعرف أنّ عليه
 	// أن يرسل مفتاحاً. (انظر `server/idempotency.go`.)
 	Idempotent bool `json:"idempotent,omitempty"`
@@ -199,9 +206,12 @@ func walkCall(call *ast.CallExpr, sc scope, out *[]Route) {
 			return
 		}
 		handler, idem := handlerName(call.Args[1])
+		method := strings.ToUpper(name)
+		full := inner.prefix + path
 		*out = append(*out, Route{
-			Method: strings.ToUpper(name), Path: inner.prefix + path,
+			Method: method, Path: full,
 			Handler: handler, Auth: inner.auth, Roles: dedupe(inner.roles),
+			Capability: capabilityOf(method, full),
 			Idempotent: idem,
 		})
 	}
@@ -312,4 +322,26 @@ func dedupe(in []string) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// capabilityOf **القدرةُ التي تشترطها السياسةُ المركزيّة** — `ADG-2`.
+//
+// **ولا تُقرأ من الشيفرة بتحليلٍ نحويّ**: **السياسةُ جدولٌ مُعرَّفٌ**،
+// فتُسأل مباشرةً — **ولا يُستنتَج ما هو مكتوب.**
+func capabilityOf(method, full string) string {
+	const prefix = "/api/v1/admin"
+	if !strings.HasPrefix(full, prefix) {
+		return ""
+	}
+	pattern := strings.TrimPrefix(full, prefix)
+	if pattern == "" {
+		return ""
+	}
+	if _, ok := authz.IsExempt(pattern); ok {
+		return "«بحسب المفتاح»"
+	}
+	if c, ok := authz.LookupAdmin(method, pattern); ok {
+		return string(c)
+	}
+	return ""
 }

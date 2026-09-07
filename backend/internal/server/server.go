@@ -723,6 +723,8 @@ func (s *Server) Router() http.Handler {
 			// **وبابُ السطح الإداريّ بقدرةٍ لا بأسماءِ أدوار** —
 			// `ADG-1`. **والقديمةُ تمرّ لأنّها مبذورةٌ بقدراتها.**
 			r.Use(s.RequireAnyCapability)
+			// **وسياسةُ كلّ مسارٍ من جدولٍ مركزيّ** — `ADG-2`.
+			r.Use(s.enforceAdminPolicy)
 			// **وما تكتبه اللوحةُ يُسمَع في الجيب** — انظر `announceWrites`.
 			r.Use(s.announceWrites)
 			r.Get("/whatsapp", func(w http.ResponseWriter, _ *http.Request) {
@@ -790,19 +792,18 @@ func (s *Server) Router() http.Handler {
 			// **والرمزُ لا يُولَّد إلّا لجهازٍ بلا هويّة** — فمن أراد ربطاً
 			// جديداً يفكّ القديمَ أوّلاً. **وللأدمن وحدَه**: فكُّه يوقف كلَّ
 			// رموز التحقّق حتّى يُمسح رمزٌ جديد.
-			r.With(s.RequireRoles("admin")).
-				Post("/whatsapp/unpair", func(w http.ResponseWriter, r *http.Request) {
-					if s.otpUnpair == nil {
-						s.respondErr(w, httpx.ErrNotFound)
-						return
-					}
-					if err := s.otpUnpair(r.Context()); err != nil {
-						s.respondErr(w, err)
-						return
-					}
-					s.audit(r, "admin.whatsapp_unpair", "platform", "", map[string]any{})
-					httpx.JSON(w, http.StatusOK, map[string]any{"unpaired": true})
-				})
+			r.Post("/whatsapp/unpair", func(w http.ResponseWriter, r *http.Request) {
+				if s.otpUnpair == nil {
+					s.respondErr(w, httpx.ErrNotFound)
+					return
+				}
+				if err := s.otpUnpair(r.Context()); err != nil {
+					s.respondErr(w, err)
+					return
+				}
+				s.audit(r, "admin.whatsapp_unpair", "platform", "", map[string]any{})
+				httpx.JSON(w, http.StatusOK, map[string]any{"unpaired": true})
+			})
 			// ══════════════════════════════════════════════════════════
 			// **وطلبُ الرمز صريحٌ — ولا يُولَّد وحدَه**
 			// ══════════════════════════════════════════════════════════
@@ -815,16 +816,15 @@ func (s *Server) Router() http.Handler {
 			//
 			// **وهو بابٌ يُفتح لا مجرّدَ زرّ**: من مسح رمزاً معروضاً على
 			// شاشةٍ منسيّةٍ ربط هاتفَه هو ببوت المنصّة.
-			r.With(s.RequireRoles("admin")).
-				Post("/whatsapp/pair", func(w http.ResponseWriter, r *http.Request) {
-					if s.otpPair == nil {
-						s.respondErr(w, httpx.ErrNotFound)
-						return
-					}
-					s.otpPair()
-					s.audit(r, "admin.whatsapp_pair", "platform", "", map[string]any{})
-					httpx.JSON(w, http.StatusOK, map[string]any{"pairing": true})
-				})
+			r.Post("/whatsapp/pair", func(w http.ResponseWriter, r *http.Request) {
+				if s.otpPair == nil {
+					s.respondErr(w, httpx.ErrNotFound)
+					return
+				}
+				s.otpPair()
+				s.audit(r, "admin.whatsapp_pair", "platform", "", map[string]any{})
+				httpx.JSON(w, http.StatusOK, map[string]any{"pairing": true})
+			})
 
 			r.Post("/media", s.handleUploadMedia)
 			r.Get("/users", s.handleAdminListUsers)
@@ -860,17 +860,15 @@ func (s *Server) Router() http.Handler {
 			r.Get("/reports", s.handleReports)
 			// سجلّ الأحداث — للأدمن والمالية دون العمليات: يحوي مبالغ التعويضات
 			// والسحوبات وأرصدة المحافظ، وموظّف العمليات ليس طرفاً في المال.
-			r.With(s.RequireRoles("admin", "finance")).
-				Get("/audit", s.handleAdminAudit)
+			r.Get("/audit", s.handleAdminAudit)
 			// حاملو الخزينة المحتملون — للأدمن وحده (merchant_violations.go)
-			r.With(s.RequireRoles("admin")).
-				Get("/treasury-candidates", s.handleTreasuryCandidates)
+			r.Get("/treasury-candidates", s.handleTreasuryCandidates)
 			// **والمدنُ تُدار من اللوحة لا بهجرة** — من أراد دمشقَ غداً
 			// يكتبها. (انظر `city_handlers.go`.)
 			r.Get("/cities", s.handleAdminCities)
-			r.With(s.RequireRoles("admin")).Post("/cities", s.handleCreateCity)
-			r.With(s.RequireRoles("admin")).Put("/cities/{id}", s.handleUpdateCity)
-			r.With(s.RequireRoles("admin")).Delete("/cities/{id}", s.handleDeleteCity)
+			r.Post("/cities", s.handleCreateCity)
+			r.Put("/cities/{id}", s.handleUpdateCity)
+			r.Delete("/cities/{id}", s.handleDeleteCity)
 			// ══════════════════════════════════════════════════════
 			// **وتقسيمُ سوريا يُدار من اللوحة كذلك**
 			// ══════════════════════════════════════════════════════
@@ -880,12 +878,12 @@ func (s *Server) Router() http.Handler {
 			// **تقسيمُ الدولة ليس ما يُبدّله من يتابع طلباً.**
 			r.Get("/governorates", s.handleAdminGovernorates)
 			r.Get("/districts", s.handleAdminDistricts)
-			r.With(s.RequireRoles("admin")).Post("/governorates", s.handleCreateGovernorate)
-			r.With(s.RequireRoles("admin")).Put("/governorates/{id}", s.handleUpdateGovernorate)
-			r.With(s.RequireRoles("admin")).Delete("/governorates/{id}", s.handleDeleteGovernorate)
-			r.With(s.RequireRoles("admin")).Post("/districts", s.handleCreateDistrict)
-			r.With(s.RequireRoles("admin")).Put("/districts/{id}", s.handleUpdateDistrict)
-			r.With(s.RequireRoles("admin")).Delete("/districts/{id}", s.handleDeleteDistrict)
+			r.Post("/governorates", s.handleCreateGovernorate)
+			r.Put("/governorates/{id}", s.handleUpdateGovernorate)
+			r.Delete("/governorates/{id}", s.handleDeleteGovernorate)
+			r.Post("/districts", s.handleCreateDistrict)
+			r.Put("/districts/{id}", s.handleUpdateDistrict)
+			r.Delete("/districts/{id}", s.handleDeleteDistrict)
 			r.Get("/users/{id}/wallet", s.handleAdminWalletStatement)
 			// ══════════════════════════════════════════════════
 			// **مساراتٌ مُرحَّلةٌ إلى القدرات** — `ADG-1`
@@ -927,16 +925,13 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/whatsapp", s.handleSendOrderToMerchant)
 			// **تفصيلُ مال الطلب** — مقروءاً من الدفتر (order_breakdown.go).
 			// للمالية والأدمن: يحوي أنصبةَ الأطراف وربحَ المنصة.
-			r.With(s.RequireRoles("admin", "finance")).
-				Get("/orders/{id}/breakdown", s.handleOrderBreakdown)
+			r.Get("/orders/{id}/breakdown", s.handleOrderBreakdown)
 			// **وتصحيحُ تسويةٍ قديمة بقيدٍ مقابل** — لا بتصفير البيانات.
 			// **والأدمنُ وحدَه**: قيدٌ ماليٌّ يُنشأ بيد.
-			r.With(s.RequireRoles("admin")).
-				Post("/orders/{id}/recompute", s.handleRecomputeSettlement)
+			r.Post("/orders/{id}/recompute", s.handleRecomputeSettlement)
 			// **تحويلُ الطلب إلى متجرٍ آخر** — قاعدةٌ احتياطية، وسعرُ الزبون
 			// لا يُمسّ. (انظر `order_transfer.go`)
-			r.With(s.RequireRoles("admin", "ops")).
-				Post("/orders/{id}/transfer", s.handleTransferOrder)
+			r.Post("/orders/{id}/transfer", s.handleTransferOrder)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/transition", s.handleOrderTransition)
 
@@ -954,6 +949,18 @@ func (s *Server) Router() http.Handler {
 				Post("/users/{id}/roles", s.handleAdminGrantRole)
 			r.With(s.RequireCapability(authz.RolesManage)).
 				Delete("/users/{id}/roles/{role}", s.handleAdminRevokeRole)
+
+			// ══════════════════════════════════════════════════
+			// **وإدارةُ الأدوار والقدرات من اللوحة** — `ADG-2`
+			// ══════════════════════════════════════════════════
+			//
+			// **والمعجمُ يُقرأ ولا يُحرَّر**: قدرةٌ جديدةٌ تحتاج
+			// مهندساً، **والأدمنُ يُسنِد الموجودَ.**
+			r.Get("/roles", s.handleListRoles)
+			r.Get("/roles/{code}", s.handleRoleDetail)
+			r.Get("/capabilities", s.handleListCapabilities)
+			r.Post("/roles/{code}/capabilities", s.handleGrantCapability)
+			r.Delete("/roles/{code}/capabilities/{cap}", s.handleRevokeCapability)
 			r.Post("/orders/{id}/assign", s.handleOrderAssign)
 
 			// **ما بعد فشل الطلب** — من يحمل الخسارة (failure_aftermath.go).
@@ -961,13 +968,11 @@ func (s *Server) Router() http.Handler {
 			// التعويضُ للمالية والأدمن لا للعمليات: **مالٌ يخرج من المنصة
 			// بتقدير إنسان**، وموظّفُ العمليات ليس طرفاً في المال — وهو
 			// الفصلُ نفسه المطبَّق على سجلّ الأحداث وحركات المحفظة.
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/orders/{id}/compensate-driver", s.handleCompensateDriver)
+			r.Post("/orders/{id}/compensate-driver", s.handleCompensateDriver)
 			// **المكافآتُ والعقوبات** — مالٌ يخرج بتقدير إنسان،
 			// **وموظّفُ العمليات ليس طرفاً في المال**: الحارسُ نفسُه الذي
 			// على تعويض السائق.
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/users/{id}/incentive", s.idempotent(s.handleIncentiveGrant))
+			r.Post("/users/{id}/incentive", s.idempotent(s.handleIncentiveGrant))
 			// ومصيرُ البضاعة تحسمه العملياتُ: **هي من يستلمها في المكتب**
 			// وتعرف أاستردّها المتجرُ أم رفض. والقيدُ المالي يتبع قرارَها.
 			r.Post("/orders/{id}/settle-goods", s.handleSettleGoods) // مهجورة — 410
@@ -976,8 +981,8 @@ func (s *Server) Router() http.Handler {
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			// **العروضُ والخصومات** — لافتةٌ تُرى وخصمٌ يُطبَّق في الدفتر.
 			r.Get("/offers", s.handleAdminOffers)
-			r.With(s.RequireRoles("admin")).Post("/offers", s.handleCreateOffer)
-			r.With(s.RequireRoles("admin")).Post("/offers/{id}/active", s.handleSetOfferActive)
+			r.Post("/offers", s.handleCreateOffer)
+			r.Post("/offers/{id}/active", s.handleSetOfferActive)
 			r.Get("/customers", s.handleListCustomers)
 			// **الأهدافُ تُقرأ ولا تُدفع** — تقول من بلغ، ولا تُعطي.
 			r.Get("/incentives/{role}", s.handleIncentiveStandings)
@@ -988,16 +993,14 @@ func (s *Server) Router() http.Handler {
 
 			// طلبات سحب الرصيد: القراءة لمكتب المنصة، والصرف للأدمن والمالية
 			r.Get("/payouts", s.handleAdminPayouts)
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/payouts/{id}/decide", s.idempotent(s.handleDecidePayout))
+			r.Post("/payouts/{id}/decide", s.idempotent(s.handleDecidePayout))
 
 			// التذاكر والتعويضات — الحل المالي للأدمن/المالية حصراً
 			r.Get("/tickets", s.handleListTickets)
 			r.Post("/tickets", s.handleCreateTicket)
 			r.Get("/tickets/{id}", s.handleGetTicket)
 			r.Post("/tickets/{id}/replies", s.handleTicketReply)
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/tickets/{id}/resolve", s.handleTicketResolve)
+			r.Post("/tickets/{id}/resolve", s.handleTicketResolve)
 
 			// السائقون والصندوق النقدي
 			r.Get("/drivers", s.handleListDrivers)
@@ -1014,29 +1017,24 @@ func (s *Server) Router() http.Handler {
 			// **والأدمنُ وحدَه**: صوتُ المنصة لا يُعار.
 			// **وتصديرُ الأصل لا المجاميع** — من شكّ في مجموعٍ عاد إلى السطور.
 			// وللمالية والأدمن: فيه أنصبةُ الأطراف وربحُ المنصة.
-			r.With(s.RequireRoles("admin", "finance")).
-				Get("/orders/export", s.handleOrdersExport)
-			r.With(s.RequireRoles("admin", "finance")).
-				Get("/ledger/export", s.handleLedgerExport)
+			r.Get("/orders/export", s.handleOrdersExport)
+			r.Get("/ledger/export", s.handleLedgerExport)
 			// **التقييماتُ مجموعةً** — «أيُّ سائقٍ يشكو منه الناس؟» سؤالٌ لا
 			// جوابَ له إلّا بفتح عشرين ملفّاً، **فلا يُفتح فلا يُعرف.**
 			r.Get("/ratings", s.handleAdminRatings)
 			// **طابورُ مراجعة القائمة** — يعمل حين يُرفع مفتاحُ
 			// `merchants.menu_requires_approval`، وكان المفتاحُ يَعِد ولا يفعل.
 			r.Get("/menu/pending", s.handlePendingMenuItems)
-			r.With(s.RequireRoles("admin")).
-				Post("/menu/items/{itemID}/review", s.handleReviewMenuItem)
+			r.Post("/menu/items/{itemID}/review", s.handleReviewMenuItem)
 			r.Get("/broadcast/count", s.handleBroadcastCount)
-			r.With(s.RequireRoles("admin")).Post("/broadcast", s.handleBroadcast)
+			r.Post("/broadcast", s.handleBroadcast)
 
 			// **وملفُّ التطبيق قرارُ هويّةٍ لا قرارُ مال** — للإدارة وحدَها.
-			r.With(s.RequireRoles("admin")).Post("/app-file", s.handleUploadAppFile)
-			r.With(s.RequireRoles("admin")).Delete("/app-file", s.handleDeleteAppFile)
+			r.Post("/app-file", s.handleUploadAppFile)
+			r.Delete("/app-file", s.handleDeleteAppFile)
 			r.Get("/disputes", s.handleListDisputes)
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/disputes", s.handleCreateDispute)
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/disputes/{id}/settle", s.handleSettleDispute)
+			r.Post("/disputes", s.handleCreateDispute)
+			r.Post("/disputes/{id}/settle", s.handleSettleDispute)
 			// **الطوارئُ مجموعةً** — ولا تُغلق بمرور الوقت: طارئٌ يختفي وحدَه
 			// يُنسى، **ومن سأل عنه بعد يومين لم يجد من يقول ماذا جرى.**
 			r.Get("/emergencies", s.handleOpenEmergencies)
@@ -1047,8 +1045,7 @@ func (s *Server) Router() http.Handler {
 			// المنصّةُ والزبائنُ والمندوبون والسائقون والمتاجر.
 			//
 			// **وللمالك والماليّة** — فيها أنصبةُ الناس وأرباحُ المنصّة.
-			r.With(s.RequireRoles("admin", "finance")).
-				Get("/profits", s.handleProfits)
+			r.Get("/profits", s.handleProfits)
 			// ══════════════════════════════════════════════════════════
 			// **ومصروفاتُ التشغيل** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)
 			// ══════════════════════════════════════════════════════════
@@ -1061,20 +1058,16 @@ func (s *Server) Router() http.Handler {
 			// **والقراءةُ محجوبةٌ عن العمليات كذلك** — **وموظّفُ
 			// العمليات ليس طرفاً في المال**، وهو الفصلُ نفسُه المطبَّق
 			// على الخزينة والخسائر وتعويض السائق.
-			r.With(s.RequireRoles("admin", "finance")).
-				Get("/expenses", s.handleListExpenses)
-			r.With(s.RequireRoles("admin", "finance")).
-				Get("/expenses/categories", s.handleExpenseCategories)
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/expenses", s.handleCreateExpense)
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/expenses/categories", s.handleSaveExpenseCategory)
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/expenses/{id}/void", s.handleVoidExpense)
-			r.With(s.RequireRoles("admin", "finance")).
-				Post("/drivers/{id}/settle", s.idempotent(s.handleDriverSettle))
+			r.Get("/expenses", s.handleListExpenses)
+			r.Get("/expenses/categories", s.handleExpenseCategories)
+			r.Post("/expenses", s.handleCreateExpense)
+			r.Post("/expenses/categories", s.handleSaveExpenseCategory)
+			r.Post("/expenses/{id}/void", s.handleVoidExpense)
+			r.Post("/drivers/{id}/settle", s.idempotent(s.handleDriverSettle))
 			r.Group(func(r chi.Router) {
-				r.Use(s.RequireRoles("admin"))
+				// **وحارسُ الأدوار نُزع** — `ADG-2`: **السياسةُ
+				// المركزيّةُ تحكم كلَّ مسارٍ بقدرته**، **وحارسٌ
+				// بأسماء أدوارٍ فوقها يُعطّل دوراً مُنح.**
 				r.Post("/sections", s.handleCreatePlatformSection)
 				r.Patch("/sections/{id}", s.handleUpdatePlatformSection)
 				r.Delete("/sections/{id}", s.handleDeletePlatformSection)

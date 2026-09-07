@@ -66,13 +66,45 @@ const (
 	//
 	// **وتصنيفُها من دورةِ ٢١ لا يُخترَع ثانيةً** — انظر
 	// `server.criticalSettingKey`.
-	SettingsGeneralManage  Capability = "settings.general.manage"
+	SettingsGeneralManage   Capability = "settings.general.manage"
 	SettingsFinancialManage Capability = "settings.financial.manage"
 	SettingsSecurityManage  Capability = "settings.security.manage"
 
 	// ── المحتوى والتقارير ───────────────────────────────────────
 	ContentManage Capability = "content.manage"
 	AnalyticsRead Capability = "analytics.read"
+
+	// ══════════════════════════════════════════════════════════════
+	// **وثلاثٌ أُضيفت في دورةِ ٢٥ — تفرضها مساراتٌ قائمة**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **ولا واحدةَ أُضيفت لأنّ دوراً وُجد** — **بل لأنّ حدَّ
+	// الصلاحيّة القائمَ كان أخشنَ ممّا يلزم.**
+
+	// SupportManage **التذاكرُ والنزاعاتُ والطوارئ.**
+	//
+	// **وكان `POST /tickets/{id}/resolve` بحارس `admin,finance`** —
+	// **فموظّفُ الدعم لا يُغلق تذكرةً، والماليّةُ تُغلقها.** **وذاك
+	// عكسُ التخصّص.**
+	SupportManage Capability = "support.manage"
+
+	// SafetyManage **الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر.**
+	//
+	// **وكانت داخلَ `merchants.manage`** — **ومعها تحريرُ القائمة
+	// والساعات.** **فمن أراد أن يُعلّق متجراً مخالفاً نال تحريرَ
+	// قوائمه**، **ومن أراد تحريرَ قائمةٍ نال تعليقَ المتاجر.**
+	SafetyManage Capability = "safety.manage"
+
+	// MerchantsVerify **مراجعةُ المرشَّحين والقوائم قبل النشر.**
+	//
+	// **وهي غيرُ `merchants.manage`**: **المراجعُ يوافق ويرفض ولا
+	// يُنشئ متجراً ولا يُحرّر قوائمَ غيرِه.**
+	MerchantsVerify Capability = "merchants.verify"
+
+	// AuditRead **قراءةُ سجلّ التدقيق.**
+	//
+	// **وكانت بحارس `admin,finance`** — **وهي قراءةُ أمنٍ لا مال.**
+	AuditRead Capability = "audit.read"
 )
 
 // catalog **المعجمُ المُعرَّفُ في الشيفرة** — ووصفٌ لكلٍّ يُقرأ في اللوحة.
@@ -92,6 +124,10 @@ var catalog = map[Capability]string{
 	SettingsSecurityManage:  "إعداداتُ الأمن والجلسات",
 	ContentManage:           "لافتاتٌ وعروضٌ ومحتوى",
 	AnalyticsRead:           "قراءةُ التحليلات",
+	SupportManage:           "التذاكرُ والنزاعاتُ والطوارئ",
+	SafetyManage:            "الإنذاراتُ والمخالفاتُ وتعليقُ المتاجر",
+	MerchantsVerify:         "مراجعةُ المرشَّحين والقوائم",
+	AuditRead:               "قراءةُ سجلّ التدقيق",
 }
 
 // Known **أهذه قدرةٌ مسجَّلة؟** — **ومجهولُها يُمنَع.**

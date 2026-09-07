@@ -229,7 +229,23 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 }
 
 func (s *Service) AdminGrantRole(ctx context.Context, actorID, userID, role, reason, ip string) error {
-	if !slices.Contains(AllRoles, role) {
+	// ══════════════════════════════════════════════════════════════
+	// **والأدوارُ في القاعدة لا في قائمةٍ مُصرَّفة** — `ADG-2`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **`AllRoles` قائمةٌ في الشيفرة** — **ودورٌ يُنشئه الأدمنُ غداً
+	// ليس فيها، فيُردّ منحُه بأربعمئة.** **ويصير «الأدوارُ تُدار من
+	// اللوحة» كلاماً.**
+	//
+	// **والقاعدةُ هي الحقيقة**: جدولُ `roles` — ومفتاحُه الأجنبيُّ في
+	// `user_roles` يحرسه أيضاً.
+	var known bool
+	if err := s.repo.pool().QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM roles WHERE code = $1)`, role).
+		Scan(&known); err != nil {
+		return err
+	}
+	if !known {
 		return ErrInvalidRole
 	}
 	// **ولا يُمنح دورُ المتجر بيد** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).

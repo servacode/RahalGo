@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
@@ -146,4 +148,103 @@ func (s *Server) RequireAnyCapability(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **وسياسةُ السطح الإداريّ تُطبَّق مرّةً واحدة** — `ADG-2`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ومئةٌ وستّةَ عشرَ مساراً** — **وحارسٌ يُكتب عند كلٍّ منها يُنسى
+// عند واحد.** **فجدولٌ مركزيٌّ ومشّاءٌ يُثبت أنّ كلَّ مسارٍ مغطّى.**
+//
+// **والافتراضُ منع**: مسارٌ لا سياسةَ له ولا استثناءَ ⇒ يُمنَع.
+
+// enforceAdminPolicy وسيطُ السطح الإداريّ.
+func (s *Server) enforceAdminPolicy(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pattern := adminPattern(r.URL.Path)
+
+		// **والمستثنى يمضي إلى معالِجه** — وهناك يُحسَم بقدرةٍ أدقّ.
+		if _, ok := authz.IsExempt(pattern); ok {
+			next.ServeHTTP(w, r)
+			return
+		}
+		need, ok := authz.LookupAdmin(r.Method, pattern)
+		if !ok {
+			// **مسارٌ إداريٌّ بلا سياسة** — **ولا يُقرأ الصمتُ إذناً.**
+			s.logger.Warn("التخويل: مسارٌ إداريٌّ بلا سياسة",
+				"method", r.Method, "pattern", pattern)
+			httpx.Error(w, errForbiddenCap)
+			return
+		}
+		if !s.hasCapability(r, need) {
+			s.logger.Info("التخويل: مُنع",
+				"capability", string(need), "pattern", pattern,
+				"user", userIDFrom(r), "roles", rolesFrom(r))
+			httpx.Error(w, errForbiddenCap)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// adminPattern **يحوّل مساراً حيّاً إلى نمطٍ يطابق الجدول.**
+//
+// **ولا يُقرأ نمطُ الموجِّه هنا**: **وسيطُ المجموعة يعمل قبل أن
+// يستقرّ التوجيهُ إلى الورقة** — **فيُبنى النمطُ من الشكل.**
+//
+// **والمقاطعُ التي تشبه معرّفاً تصير `{}`**: `uuid` أو رقمٌ أو نصٌّ
+// طويلٌ بلا معنىً ثابتٍ في الجدول.
+func adminPattern(path string) string {
+	const prefix = "/api/v1/admin"
+	rest := strings.TrimPrefix(path, prefix)
+	segs := strings.Split(strings.Trim(rest, "/"), "/")
+	out := make([]string, 0, len(segs))
+	for _, s := range segs {
+		if s == "" {
+			continue
+		}
+		if looksLikeID(s) {
+			out = append(out, "{}")
+			continue
+		}
+		out = append(out, s)
+	}
+	return "/" + strings.Join(out, "/")
+}
+
+// looksLikeID **أهذا المقطعُ معرّفٌ لا اسمُ مورد؟**
+//
+// **ومقاطعُ الجدول كلُّها كلماتٌ لاتينيّةٌ قصيرةٌ بشرطة** — **والمعرّفُ
+// `uuid` أو رقمٌ أو مفتاحُ إعدادٍ فيه نقطة.**
+func looksLikeID(s string) bool {
+	if s == "" {
+		return false
+	}
+	if strings.Count(s, "-") == 4 && len(s) == 36 {
+		return true // uuid
+	}
+	if strings.ContainsAny(s, ".") {
+		return true // مفتاحُ إعدادٍ مثل `merchants.commission_percent`
+	}
+	for _, r := range s {
+		if r < 'a' || r > 'z' {
+			if r != '-' {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// RouterForWalk **الموجِّهُ بنوعه** — **لحارس التغطية** (`ADG-2`).
+//
+// **و`Router()` تُرجع `http.Handler`** فلا يمشي عليها `chi.Walk`.
+// **ولا مسارَ جديدٌ يُفتَح**: دالّةُ بناءٍ تُنادى في الفحص.
+func (s *Server) RouterForWalk() chi.Routes {
+	h := s.Router()
+	if r, ok := h.(chi.Routes); ok {
+		return r
+	}
+	return nil
 }

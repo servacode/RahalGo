@@ -97,14 +97,23 @@ func TestContract_AuthIsNotUnderstated(t *testing.T) {
 		key   string
 		auth  bool
 		roles []string
+		cap   string
 	}{
-		// **سجلُّ الأحداث للأدمن والمالية دون العمليات** — فيه مبالغُ
-		// التعويضات، وموظّفُ العمليات ليس طرفاً في المال.
-		{"GET /api/v1/admin/audit", true, []string{"admin", "finance"}},
-		{"GET /api/v1/admin/treasury-candidates", true, []string{"admin"}},
-		{"GET /api/v1/driver/me", true, []string{"driver"}},
+		// ══════════════════════════════════════════════════════════
+		// **والعقدُ صار يذكر القدرةَ لا اسمَ الدور** — `ADG-2`
+		// ══════════════════════════════════════════════════════════
+		//
+		// **حرّاسُ `RequireRoles` نُزعت من السطح الإداريّ** —
+		// **والسياسةُ المركزيّةُ تحكم.** **فعقدٌ يذكر أدواراً لم تعد
+		// تُفرَض يكذب.**
+		//
+		// **وسجلُّ الأحداث قراءةُ أمنٍ** — `audit.read`.
+		{"GET /api/v1/admin/audit", true, nil, "audit.read"},
+		{"GET /api/v1/admin/treasury-candidates", true, nil, "finance.manage"},
+		// **وهويّةُ التطبيق تبقى دوراً** — سائقٌ هو سائق.
+		{"GET /api/v1/driver/me", true, []string{"driver"}, ""},
 		// **والصحّةُ مفتوحة** — يقرؤها مُوازِنُ الحِمل قبل أن يكون ثمّة توكن.
-		{"GET /healthz", false, nil},
+		{"GET /healthz", false, nil, ""},
 	}
 	for _, c := range cases {
 		got, ok := byKey[c.key]
@@ -122,6 +131,10 @@ func TestContract_AuthIsNotUnderstated(t *testing.T) {
 			if got.Roles[i] != c.roles[i] {
 				t.Fatalf("%s: الأدوارُ %v والمنتظَر %v", c.key, got.Roles, c.roles)
 			}
+		}
+		if got.Capability != c.cap {
+			t.Fatalf("%s: القدرةُ %q والمنتظَر %q — **وعقدٌ يكذب في "+
+				"الصلاحيات أخطرُ من عقدٍ ناقص**", c.key, got.Capability, c.cap)
 		}
 	}
 }
