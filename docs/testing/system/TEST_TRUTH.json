@@ -2207,6 +2207,13 @@
       "status": "NOT_IMPLEMENTED"
     },
     {
+      "id": "XG-38",
+      "title": "إعادةُ دفعٍ متأخّرةٌ تطمس إشعاراً أحدثَ — معرّفان ثابتان في أندرويد",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
+    },
+    {
       "id": "XG-37",
       "title": "حقلُ blocking في تقرير البوّابة يخالف عدّادَها — ٢٨ مقابل ٢٣",
       "severity": "HIGH",

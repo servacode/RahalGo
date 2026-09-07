@@ -58,7 +58,7 @@ ORPHAN     = 575
 | **التدفّقات** | 35 | 29 | 6 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 13 | 11 |
-| **فجواتُ العقد** | 33 | 10 | 23 |
+| **فجواتُ العقد** | 34 | 10 | 24 |
 | **إعداداتُ السلوك** | 95 | 10 | 85 |
 
 ---
@@ -131,6 +131,7 @@ ORPHAN     = 575
 | **XG-34** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-35** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-36** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
+| **XG-38** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-37** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-33** | `CRITICAL` | — | `COVERED` | `TestIDEM_AllProtectedPathsUseCoordinator` · `TestIDEM_T10_CleanupSparesLiveClaim` · `TestIDEM_T11_SameKeyDifferentPayloadContractUnchanged` · `TestIDEM_T1_ConcurrentDuplicateExecutesOnce` · `TestIDEM_T2_OrphanBeforeTxIsReclaimed` · `TestIDEM_T3_StaleOwnerIsFenced` · `TestIDEM_T4_ActiveClaimCannotBeStolen` · `TestIDEM_T5_BusinessRollbackLeavesNothing` · `TestIDEM_T6_CommittedThenDeathReplaysWithoutDuplicate` · `TestIDEM_T8_TwoReclaimersExecuteOnce` · `TestIDEM_T9_StaleOwnerCannotDeleteNewerClaim` · `TestFAIL_C06_OrphanBeforeCommitBlocksOwner` · `TestFAIL_C06_TwoReclaimersExecuteNothing` · `TestIDEM_CleanupSparesLiveClaim` · `TestIDEM_CommittedBeforeResultDoesNotDuplicate` · `TestIDEM_LostResponseReplays` |
 | **XG-31** | `CRITICAL` | — | `COVERED` | `TestOBL_BothInsufficient_AtomicOrigins` · `TestOBL_FutureEarningsSettleWithEvidence` · `TestOBL_MerchantInsufficient_OriginTraceable` · `TestOBL_MerchantSufficient_NoObligation` · `TestOBL_MultipleObligationsFIFO` · `TestOBL_RepAvailable_NoObligation` · `TestOBL_RepWithdrawn_OriginTraceable` · `TestOBL_ReplayCreatesNoDuplicate` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
