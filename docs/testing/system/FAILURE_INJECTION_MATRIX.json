@@ -5,11 +5,11 @@
     "RequiresP0": 0,
     "RequiresP7": 0,
     "RequiresP8": 0,
-    "Pass": 7,
+    "Pass": 8,
     "DefectReproduced": 0,
     "RiskConfirmed": 1,
     "ExpectedFail": 1,
-    "Partial": 1,
+    "Partial": 0,
     "Unproven": 1,
     "Visible": 0,
     "Invisible": 5,
@@ -265,19 +265,19 @@
         "١ الردُّ للزبون يعود",
         "٢ go autoTransfer(...) — **لا يُنتظَر ولا يُرصَد**"
       ],
-      "atomic_boundary": "NON_ATOMIC — خارجَ دورة الطلب أصلاً",
+      "atomic_boundary": "NON_ATOMIC — خارجَ دورة الطلب عمداً · **ومصدرُ العمل حالُ الطلب الدائمة** (دورةُ إصلاحٍ ١٢)",
       "failpoints": [
         "XOB-7/auto-transfer-event"
       ],
       "expected": "عملٌ يُبدَأ يُنجَز أو يُسجَّل",
-      "observed": "الردُّ يعود قبل العمل · وسقوطُه لا يظهر لأحد",
+      "observed": "الردُّ يعود قبل العمل — **وسقوطُه يُستأنَف من حال الطلب**: `accepted` بلا سائقٍ وغيرُ مغلقٍ هو عملٌ معلَّقٌ بذاته",
       "user_visible": "نجاحٌ كامل",
       "admin_visible": "INVISIBLE",
-      "recovery": "لا صفَّ دائمٌ ولا إعادةَ محاولة",
+      "recovery": "**كانسٌ كلَّ ثلاثين ثانيةً** يستأنف بالمسار نفسِه (`AutoDispatch`) بقفل `FOR UPDATE SKIP LOCKED` — **وحالُ الطلب هي الإتمام، فلا وسمَ قبل وقوع العمل**",
       "tests": [
         "TestFAIL_XOB7_AutoTransferFireAndForget"
       ],
-      "result": "PARTIAL",
+      "result": "PASS",
       "registers": [
         "XOB-7",
         "R21"

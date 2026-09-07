@@ -18,7 +18,7 @@
   ],
   "counts": {
     "categories": 15,
-    "domain_rules": 9,
+    "domain_rules": 11,
     "input_modes": 3
   },
   "domain_rules": [
@@ -63,6 +63,71 @@
         "internal/qa"
       ],
       "why": "مسٌّ لمسارٍ ماليّ ⇒ ثوابتُ `P-4` وسباقاتُها وحقنُ فشلها (البند ١٤)"
+    },
+    {
+      "name": "MEDIA",
+      "match": [
+        "backend/internal/media/"
+      ],
+      "flows": [
+        "F-01",
+        "F-13",
+        "F-21",
+        "F-30",
+        "F-32"
+      ],
+      "apps": [
+        "customer",
+        "merchant",
+        "driver",
+        "rep",
+        "admin"
+      ],
+      "modes": [
+        "SECURITY",
+        "FAILURE"
+      ],
+      "packages": [
+        "internal/catalog",
+        "internal/qa",
+        "internal/server"
+      ],
+      "why": "الوسائطُ تعبر كلَّ سطحٍ يعرض صورةً ⇒ إذنُ الجلب وعقدُ المسارات"
+    },
+    {
+      "name": "IDEMPOTENCY",
+      "match": [
+        "backend/internal/server/idempotency.go",
+        "backend/internal/server/idempotency_tx.go"
+      ],
+      "flows": [
+        "F-01",
+        "F-02",
+        "F-03",
+        "F-23",
+        "F-24",
+        "F-25",
+        "F-27"
+      ],
+      "apps": [
+        "customer",
+        "merchant",
+        "driver",
+        "rep",
+        "admin"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "CONCURRENCY",
+        "FAILURE"
+      ],
+      "packages": [
+        "internal/fininv",
+        "internal/orders",
+        "internal/qa",
+        "internal/server"
+      ],
+      "why": "منعُ التكرار يحرس ستّةَ مساراتٍ ماليّةٍ ⇒ ثوابتُ المال وسباقاتُها وحقنُ فشلها"
     },
     {
       "name": "PRIVACY",

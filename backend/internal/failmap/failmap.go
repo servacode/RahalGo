@@ -223,21 +223,25 @@ var All = []Flow{
 	},
 	{
 		ID: "PF-08", Title: "التحويلُ التلقائيُّ في خيطٍ منفصل",
-		Flows: []string{"F-01", "F-18"}, Where: Local, Result: Partial,
+		Flows: []string{"F-01", "F-18"}, Where: Local, Result: Pass,
 		Steps: []string{
 			"١ الردُّ للزبون يعود",
 			"٢ go autoTransfer(...) — **لا يُنتظَر ولا يُرصَد**",
 		},
-		AtomicBoundary: "NON_ATOMIC — خارجَ دورة الطلب أصلاً",
-		Failpoints:     []string{"XOB-7/auto-transfer-event"},
-		Expected:       "عملٌ يُبدَأ يُنجَز أو يُسجَّل",
-		Observed:       "الردُّ يعود قبل العمل · وسقوطُه لا يظهر لأحد",
-		UserVisible:    "نجاحٌ كامل",
-		AdminVisible:   Invisible,
-		Recovery:       "لا صفَّ دائمٌ ولا إعادةَ محاولة",
-		Tests:          []string{"TestFAIL_XOB7_AutoTransferFireAndForget"},
-		Registers:      []string{"XOB-7", "R21"},
-		Evidence:       "الردُّ يعود قبل العمل — ولا يُنتظَر ولا يُرصَد",
+		AtomicBoundary: "NON_ATOMIC — خارجَ دورة الطلب عمداً · " +
+			"**ومصدرُ العمل حالُ الطلب الدائمة** (دورةُ إصلاحٍ ١٢)",
+		Failpoints: []string{"XOB-7/auto-transfer-event"},
+		Expected:   "عملٌ يُبدَأ يُنجَز أو يُسجَّل",
+		Observed: "الردُّ يعود قبل العمل — **وسقوطُه يُستأنَف من حال " +
+			"الطلب**: `accepted` بلا سائقٍ وغيرُ مغلقٍ هو عملٌ معلَّقٌ بذاته",
+		UserVisible:  "نجاحٌ كامل",
+		AdminVisible: Invisible,
+		Recovery: "**كانسٌ كلَّ ثلاثين ثانيةً** يستأنف بالمسار نفسِه " +
+			"(`AutoDispatch`) بقفل `FOR UPDATE SKIP LOCKED` — " +
+			"**وحالُ الطلب هي الإتمام، فلا وسمَ قبل وقوع العمل**",
+		Tests:     []string{"TestFAIL_XOB7_AutoTransferFireAndForget"},
+		Registers: []string{"XOB-7", "R21"},
+		Evidence:  "الردُّ يعود قبل العمل — ولا يُنتظَر ولا يُرصَد",
 	},
 	{
 		ID: "PF-09", Title: "دفعُ الإشعار إلى FCM",

@@ -1203,6 +1203,15 @@ var TestMap = map[string]TestDecl{
 	// **وثوابتُ المال تُسأل عن أساسٍ صحيحٍ لا عن قاعدةٍ خالية.**
 	"TestFIN_InvariantsCleanOnValidFixture": infraTest(),
 
+	// ── ديمومةُ التحويل التلقائيّ (دورةُ إصلاحٍ ١٢) ──────────────────
+	"TestPF08_F1_StuckAcceptedIsRecovered":                  autoTrTest(),
+	"TestPF08_F6_TwoWorkersProgressOnce":                    autoTrTest(),
+	"TestPF08_F7_CommunicationFailureKeepsOrderRecoverable": autoTrTest(),
+	"TestPF08_F10_DisabledMeansNoProgression":               autoTrTest(),
+	"TestPF08_F11_ProgressedAndTerminalAreNoOp":             autoTrTest(),
+	"TestPF08_F13_RecoveryNeedsNoMemory":                    autoTrTest(),
+	"TestPF08_FastPathHasDurableCounterpart":                autoTrTest(),
+
 	// ── استمرارُ الطلب القائم مع التعليق (دورةُ إصلاحٍ ١١) ──────────
 	"TestXG22_T1_SuspendedWithoutActiveOrderIsDenied": suspTest(),
 	"TestXG22_T2_SuspendedDriverCanFinishActiveOrder": suspTest(),
@@ -1344,6 +1353,16 @@ func targetTest() TestDecl {
 		Flows: []string{"F-21", "F-23"},
 		Gaps:  []string{"XG-32"},
 		Modes: []string{"CONCURRENCY", "FAILURE", "FINANCIAL", "FULL", "RELEASE"},
+	}
+}
+
+// autoTrTest حارسُ ديمومةِ التحويل التلقائيّ — `PF-08` · `R21` · `XOB-7`.
+func autoTrTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-01", "F-07", "F-18"},
+		Risks: []string{"R21"},
+		Modes: []string{"FAILURE", "CONCURRENCY", "FULL", "RELEASE"},
 	}
 }
 

@@ -235,6 +235,13 @@ func run(logger *slog.Logger) error {
 			if waBot != nil {
 				srv.SetMerchantNotifier(waBot)
 			}
+			// **ويستأنف ما عَلِق من التحويل التلقائيّ** — `PF-08`.
+			//
+			// **والخيطُ السريعُ بعد الإنشاء تعجيلٌ لا مصدرَ حقيقة**:
+			// **حالُ الطلب هي مصدرُ العمل**، فمن مات خيطُه استأنفه
+			// الكانس. **وبعد ضبط المُبلِّغ** — فيرى الكانسُ ما يراه
+			// المسارُ الحيّ.
+			go srv.RunAutoTransferSweeper(ctx, 30*time.Second)
 			return srv.Router()
 		}(),
 		ReadHeaderTimeout: 10 * time.Second,

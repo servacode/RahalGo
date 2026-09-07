@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 245,
-    "test_funcs": 859
+    "test_files": 246,
+    "test_funcs": 866
   },
   "flows": [
     {
@@ -66,6 +66,13 @@
         "XG-9"
       ],
       "tests": [
+        "TestPF08_F10_DisabledMeansNoProgression",
+        "TestPF08_F11_ProgressedAndTerminalAreNoOp",
+        "TestPF08_F13_RecoveryNeedsNoMemory",
+        "TestPF08_F1_StuckAcceptedIsRecovered",
+        "TestPF08_F6_TwoWorkersProgressOnce",
+        "TestPF08_F7_CommunicationFailureKeepsOrderRecoverable",
+        "TestPF08_FastPathHasDurableCounterpart",
         "TestEV_OrderAudience",
         "TestEV_MerchantRealtimePrivacy",
         "TestEV_MultiOrderRouting",
@@ -283,6 +290,13 @@
         "R23"
       ],
       "tests": [
+        "TestPF08_F10_DisabledMeansNoProgression",
+        "TestPF08_F11_ProgressedAndTerminalAreNoOp",
+        "TestPF08_F13_RecoveryNeedsNoMemory",
+        "TestPF08_F1_StuckAcceptedIsRecovered",
+        "TestPF08_F6_TwoWorkersProgressOnce",
+        "TestPF08_F7_CommunicationFailureKeepsOrderRecoverable",
+        "TestPF08_FastPathHasDurableCounterpart",
         "TestEV_PushTokenTargeting",
         "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport",
@@ -658,10 +672,17 @@
         "L9"
       ],
       "tests": [
+        "TestPF08_F10_DisabledMeansNoProgression",
+        "TestPF08_F11_ProgressedAndTerminalAreNoOp",
+        "TestPF08_F13_RecoveryNeedsNoMemory",
+        "TestPF08_F1_StuckAcceptedIsRecovered",
+        "TestPF08_F6_TwoWorkersProgressOnce",
+        "TestPF08_F7_CommunicationFailureKeepsOrderRecoverable",
+        "TestPF08_FastPathHasDurableCounterpart",
         "TestEV_R21AutoTransferAwareness",
         "TestFAIL_XOB7_AutoTransferFireAndForget"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-19",
@@ -1790,6 +1811,13 @@
         "F-20"
       ],
       "tests": [
+        "TestPF08_F10_DisabledMeansNoProgression",
+        "TestPF08_F11_ProgressedAndTerminalAreNoOp",
+        "TestPF08_F13_RecoveryNeedsNoMemory",
+        "TestPF08_F1_StuckAcceptedIsRecovered",
+        "TestPF08_F6_TwoWorkersProgressOnce",
+        "TestPF08_F7_CommunicationFailureKeepsOrderRecoverable",
+        "TestPF08_FastPathHasDurableCounterpart",
         "TestEV_R21AutoTransferAwareness",
         "TestFAIL_XOB7_AutoTransferFireAndForget"
       ],
@@ -6256,6 +6284,153 @@
       "file": "internal/qa/authz_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestPF08_F10_DisabledMeansNoProgression",
+      "file": "internal/qa/auto_transfer_durability_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-07",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF08_F11_ProgressedAndTerminalAreNoOp",
+      "file": "internal/qa/auto_transfer_durability_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-07",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF08_F13_RecoveryNeedsNoMemory",
+      "file": "internal/qa/auto_transfer_durability_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-07",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF08_F1_StuckAcceptedIsRecovered",
+      "file": "internal/qa/auto_transfer_durability_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-07",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF08_F6_TwoWorkersProgressOnce",
+      "file": "internal/qa/auto_transfer_durability_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-07",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF08_F7_CommunicationFailureKeepsOrderRecoverable",
+      "file": "internal/qa/auto_transfer_durability_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-07",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF08_FastPathHasDurableCounterpart",
+      "file": "internal/qa/auto_transfer_durability_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-07",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestCANC_001_CustomerCancelsPending",
