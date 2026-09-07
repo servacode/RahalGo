@@ -5,14 +5,14 @@
     "RequiresP0": 0,
     "RequiresP7": 0,
     "RequiresP8": 0,
-    "Pass": 10,
+    "Pass": 11,
     "DefectReproduced": 0,
-    "RiskConfirmed": 1,
+    "RiskConfirmed": 0,
     "ExpectedFail": 0,
     "Partial": 0,
     "Unproven": 0,
-    "Visible": 0,
-    "Invisible": 5,
+    "Visible": 2,
+    "Invisible": 3,
     "PartialVisible": 4
   },
   "flows": [
@@ -243,17 +243,22 @@
       "expected": "لا وسمَ قبل نجاح الإشعار",
       "observed": "**سقوطُ النيّة يُسقط الوسم**: موسومٌ=false · نيّاتٌ=0 · والجولةُ التاليةُ تُنذر",
       "user_visible": "لا شيء — إنذارٌ داخليّ",
-      "admin_visible": "INVISIBLE",
+      "admin_visible": "VISIBLE",
       "recovery": "الجولةُ التالية (٣٠ ثانية) — **والوسمُ لا يمنع إلّا إنذاراً وقع فعلاً**",
       "tests": [
-        "TestFAIL_R22_WatchdogMarkerBeforeNotify"
+        "TestFAIL_R22_WatchdogMarkerBeforeNotify",
+        "TestR22_W1_AlertMarksAndCreatesIntent",
+        "TestR22_W2_IntentFailureLeavesNoMarker",
+        "TestR22_W5_SecondSweepDoesNotDuplicate",
+        "TestR22_W6_TwoWatchdogsAlertOnce",
+        "TestR22_W9_NoOpsRecipientLeavesNoMarker"
       ],
       "result": "PASS",
       "registers": [
         "R22"
       ],
       "where": "LOCAL",
-      "evidence": "لم يُشغَّل — لا بابَ إداريٌّ للراصد · TESTABILITY SEAM REQUIRED"
+      "evidence": "**والمصفوفةُ كانت تقول `TESTABILITY SEAM REQUIRED`** — **فأُضيف مِعراضٌ** (`EscalateAlertsOnce`) بلا نقطةِ شبكة، **وصُحّح النصُّ.** **والمقيس**: إنذارٌ مستحقٌّ ⇒ موسومٌ ونيّةٌ لكلّ مستقبِل · وحقنُ سقوطِ `INSERT notifications` ⇒ **موسومٌ=false · نيّاتٌ=0** والجولةُ التاليةُ تُنذر · وجولتان ⇒ لا تكرار · وراصدان متزامنان (تداخلٌ مقيسٌ=2) ⇒ نيّاتٌ = عددُ المستقبِلين لا ضِعفُه · **وصفرُ مستقبِلين ⇒ لا وسمَ ولا نيّة** (`W9`)، **ووسمٌ بلا مُنذَرٍ كذبٌ يُسكت الطلبَ أبداً**. **وعقدُ التسليم إلى هاتفٍ ليس هذا** — وهو `PF-09`."
     },
     {
       "id": "PF-08",
@@ -294,28 +299,38 @@
       ],
       "title": "دفعُ الإشعار إلى FCM",
       "steps": [
-        "١ الحدثُ يقع ويُكتب",
-        "٢ push.Send إلى المنصّة — **مرّةً واحدةً بلا إعادة**"
+        "١ الحدثُ يقع ويُكتب — **و`push_pending` في الإدراج نفسِه**",
+        "٢ تفريعٌ إلى صفّ نقلٍ **لكلّ رمزِ جهاز**",
+        "٣ مطالبةٌ تُثبَّت · نداءٌ **خارجَ المعاملة** · نتيجةٌ تُقيَّد",
+        "٤ عابرٌ ⇒ تراجعٌ ٣٠ث…١٦د · سبعُ محاولاتٍ ثمّ حالٌ نهائيّة"
       ],
-      "atomic_boundary": "NON_ATOMIC — دفعٌ خارج المعاملة",
+      "atomic_boundary": "NON_ATOMIC عمداً — **شبكةٌ لا تدخل معاملة** · والدلالةُ **محاولةٌ مرّةً على الأقلّ** لا تسليمٌ مرّةً واحدة",
       "failpoints": [
-        "P-7/fake-transport-500-timeout-reset"
+        "P-7/fake-transport-500-timeout-reset-deadtoken"
       ],
       "expected": "إشعارٌ يسقط يُعاد أو يُسجَّل",
-      "observed": "ثلاثةُ إخفاقاتٍ · ثلاثةُ نداءاتٍ · ولا رابع — يضيع بلا أثر",
-      "user_visible": "لا شيء",
-      "admin_visible": "INVISIBLE",
-      "recovery": "لا إعادةَ ولا صفَّ انتظارٍ ولا حالٌ معلَّقة",
+      "observed": "**عابرٌ ⇒ `pending` بتراجعٍ وصنفِ خطأ** · **ميّتٌ ⇒ `dead_token` والرمزُ يُحذف** · **نفادٌ ⇒ `failed` بسببه مقروءاً** — ولا يضيع صامتاً",
+      "user_visible": "الخبرُ باقٍ في التطبيق ولو أخفق دفعُه",
+      "admin_visible": "VISIBLE",
+      "recovery": "الجولةُ الدوريّة (٣٠ث) — **مصدرُ العمل صفوفُ النقل في القاعدة**، **والنبضةُ تعجيلٌ لا حقيقة**",
       "tests": [
-        "TestEV_R23PushFailureIsLost",
-        "TestFAIL_P7SeamRequired_FCMTransport"
+        "TestPF09_N1_ProviderSuccessRecorded",
+        "TestPF09_N2N3N8_TransientRetriesWithBackoff",
+        "TestPF09_N4N10_RestartFindsPendingWork",
+        "TestPF09_N5_AcceptedThenDeathRetriesNotLoses",
+        "TestPF09_N6_TwoWorkersOneAttempt",
+        "TestPF09_N7M1M2_DeadTokenDroppedHealthyDelivered",
+        "TestPF09_N9_NewIntentNotSuppressedByPrior",
+        "TestPF09_N11_ProviderOutageDoesNotRollbackBusiness",
+        "TestPF09_N12_ExhaustedBecomesDiscoverableFailure",
+        "TestPF09_M3M4_PerTargetTruthSurvivesRestart"
       ],
-      "result": "RISK_CONFIRMED",
+      "result": "PASS",
       "registers": [
         "R23"
       ],
       "where": "LOCAL",
-      "evidence": "لا مِعراضَ لحقن push.Transport — TESTABILITY SEAM REQUIRED"
+      "evidence": "**والمِعراضُ كان موجوداً والمصفوفةُ تقول `TESTABILITY SEAM REQUIRED`** — `server.WithPushTransport` و`FakePush` بمخرجاتٍ مبرمَجة. **فصُحّح النصُّ الشائخ.** **والحقيقةُ لكلّ هدفٍ لا لكلّ إشعار**: قيس أنّ فريدَ `device_tokens` هو الرمزُ وحدَه و`Register` لا يحذف رموزَ صاحبه — **فللحساب أجهزةٌ عدّة**، **وحالٌ واحدةٌ تكذب حين يقبل جهازٌ وينقطع آخر** (مقيسٌ في `M3`). **والطبقةُ الثالثةُ لم تُدَّعَ**: `accepted` تعني قبولَ المزوّد، **ولا إقرارَ من جهاز** — وذاك `P-8`."
     },
     {
       "id": "PF-10",

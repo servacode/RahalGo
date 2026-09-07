@@ -221,12 +221,28 @@ var All = []Flow{
 		Observed: "**سقوطُ النيّة يُسقط الوسم**: موسومٌ=false · نيّاتٌ=0 " +
 			"· والجولةُ التاليةُ تُنذر",
 		UserVisible:  "لا شيء — إنذارٌ داخليّ",
-		AdminVisible: Invisible,
+		AdminVisible: Visible,
 		Recovery: "الجولةُ التالية (٣٠ ثانية) — **والوسمُ لا يمنع إلّا " +
 			"إنذاراً وقع فعلاً**",
-		Tests:     []string{"TestFAIL_R22_WatchdogMarkerBeforeNotify"},
+		Tests: []string{
+			"TestFAIL_R22_WatchdogMarkerBeforeNotify",
+			"TestR22_W1_AlertMarksAndCreatesIntent",
+			"TestR22_W2_IntentFailureLeavesNoMarker",
+			"TestR22_W5_SecondSweepDoesNotDuplicate",
+			"TestR22_W6_TwoWatchdogsAlertOnce",
+			"TestR22_W9_NoOpsRecipientLeavesNoMarker",
+		},
 		Registers: []string{"R22"},
-		Evidence:  "لم يُشغَّل — لا بابَ إداريٌّ للراصد · TESTABILITY SEAM REQUIRED",
+		Evidence: "**والمصفوفةُ كانت تقول `TESTABILITY SEAM REQUIRED`** — " +
+			"**فأُضيف مِعراضٌ** (`EscalateAlertsOnce`) بلا نقطةِ شبكة، " +
+			"**وصُحّح النصُّ.** " +
+			"**والمقيس**: إنذارٌ مستحقٌّ ⇒ موسومٌ ونيّةٌ لكلّ مستقبِل · " +
+			"وحقنُ سقوطِ `INSERT notifications` ⇒ **موسومٌ=false · " +
+			"نيّاتٌ=0** والجولةُ التاليةُ تُنذر · وجولتان ⇒ لا تكرار · " +
+			"وراصدان متزامنان (تداخلٌ مقيسٌ=2) ⇒ نيّاتٌ = عددُ " +
+			"المستقبِلين لا ضِعفُه · **وصفرُ مستقبِلين ⇒ لا وسمَ ولا " +
+			"نيّة** (`W9`)، **ووسمٌ بلا مُنذَرٍ كذبٌ يُسكت الطلبَ أبداً**. " +
+			"**وعقدُ التسليم إلى هاتفٍ ليس هذا** — وهو `PF-09`.",
 	},
 	{
 		ID: "PF-08", Title: "التحويلُ التلقائيُّ في خيطٍ منفصل",
@@ -252,21 +268,46 @@ var All = []Flow{
 	},
 	{
 		ID: "PF-09", Title: "دفعُ الإشعار إلى FCM",
-		Flows: []string{"F-07", "F-14"}, Where: Local, Result: RiskConfirmed,
+		Flows: []string{"F-07", "F-14"}, Where: Local, Result: Pass,
 		Steps: []string{
-			"١ الحدثُ يقع ويُكتب",
-			"٢ push.Send إلى المنصّة — **مرّةً واحدةً بلا إعادة**",
+			"١ الحدثُ يقع ويُكتب — **و`push_pending` في الإدراج نفسِه**",
+			"٢ تفريعٌ إلى صفّ نقلٍ **لكلّ رمزِ جهاز**",
+			"٣ مطالبةٌ تُثبَّت · نداءٌ **خارجَ المعاملة** · نتيجةٌ تُقيَّد",
+			"٤ عابرٌ ⇒ تراجعٌ ٣٠ث…١٦د · سبعُ محاولاتٍ ثمّ حالٌ نهائيّة",
 		},
-		AtomicBoundary: "NON_ATOMIC — دفعٌ خارج المعاملة",
-		Failpoints:     []string{"P-7/fake-transport-500-timeout-reset"},
-		Expected:       "إشعارٌ يسقط يُعاد أو يُسجَّل",
-		Observed:       "ثلاثةُ إخفاقاتٍ · ثلاثةُ نداءاتٍ · ولا رابع — يضيع بلا أثر",
-		UserVisible:    "لا شيء",
-		AdminVisible:   Invisible,
-		Recovery:       "لا إعادةَ ولا صفَّ انتظارٍ ولا حالٌ معلَّقة",
-		Tests:          []string{"TestEV_R23PushFailureIsLost", "TestFAIL_P7SeamRequired_FCMTransport"},
-		Registers:      []string{"R23"},
-		Evidence:       "لا مِعراضَ لحقن push.Transport — TESTABILITY SEAM REQUIRED",
+		AtomicBoundary: "NON_ATOMIC عمداً — **شبكةٌ لا تدخل معاملة** · " +
+			"والدلالةُ **محاولةٌ مرّةً على الأقلّ** لا تسليمٌ مرّةً واحدة",
+		Failpoints: []string{"P-7/fake-transport-500-timeout-reset-deadtoken"},
+		Expected:   "إشعارٌ يسقط يُعاد أو يُسجَّل",
+		Observed: "**عابرٌ ⇒ `pending` بتراجعٍ وصنفِ خطأ** · " +
+			"**ميّتٌ ⇒ `dead_token` والرمزُ يُحذف** · " +
+			"**نفادٌ ⇒ `failed` بسببه مقروءاً** — ولا يضيع صامتاً",
+		UserVisible:  "الخبرُ باقٍ في التطبيق ولو أخفق دفعُه",
+		AdminVisible: Visible,
+		Recovery: "الجولةُ الدوريّة (٣٠ث) — **مصدرُ العمل صفوفُ النقل " +
+			"في القاعدة**، **والنبضةُ تعجيلٌ لا حقيقة**",
+		Tests: []string{
+			"TestPF09_N1_ProviderSuccessRecorded",
+			"TestPF09_N2N3N8_TransientRetriesWithBackoff",
+			"TestPF09_N4N10_RestartFindsPendingWork",
+			"TestPF09_N5_AcceptedThenDeathRetriesNotLoses",
+			"TestPF09_N6_TwoWorkersOneAttempt",
+			"TestPF09_N7M1M2_DeadTokenDroppedHealthyDelivered",
+			"TestPF09_N9_NewIntentNotSuppressedByPrior",
+			"TestPF09_N11_ProviderOutageDoesNotRollbackBusiness",
+			"TestPF09_N12_ExhaustedBecomesDiscoverableFailure",
+			"TestPF09_M3M4_PerTargetTruthSurvivesRestart",
+		},
+		Registers: []string{"R23"},
+		Evidence: "**والمِعراضُ كان موجوداً والمصفوفةُ تقول `TESTABILITY " +
+			"SEAM REQUIRED`** — `server.WithPushTransport` و`FakePush` " +
+			"بمخرجاتٍ مبرمَجة. **فصُحّح النصُّ الشائخ.** " +
+			"**والحقيقةُ لكلّ هدفٍ لا لكلّ إشعار**: قيس أنّ فريدَ " +
+			"`device_tokens` هو الرمزُ وحدَه و`Register` لا يحذف رموزَ " +
+			"صاحبه — **فللحساب أجهزةٌ عدّة**، **وحالٌ واحدةٌ تكذب حين " +
+			"يقبل جهازٌ وينقطع آخر** (مقيسٌ في `M3`). " +
+			"**والطبقةُ الثالثةُ لم تُدَّعَ**: `accepted` تعني قبولَ " +
+			"المزوّد، **ولا إقرارَ من جهاز** — وذاك `P-8`.",
 	},
 
 	// ══════════════════════════════════════════════════════════════════

@@ -47,11 +47,50 @@ type FakePush struct {
 	script  []PushOutcome
 	def     PushOutcome
 	platfrm string
+
+	// perToken **مصيرٌ لرمزٍ بعينه** — `PF-09`.
+	//
+	// **وحين صارت الحقيقةُ لكلّ هدف صار الفحصُ يحتاج أن يقول**:
+	// **هذا الجهازُ يقبل وذاك ينقطع وثالثٌ ماتَ رمزُه.**
+	//
+	// **والنصُّ المبرمَجُ بالترتيب لا يكفي**: **ترتيبُ الأهداف في
+	// الجولة ليس عقداً**، **وفحصٌ يعتمد عليه يسقط بتبديل فهرس.**
+	perToken map[string]PushOutcome
 }
 
 // NewFakePush ناقلٌ افتراضُه النجاح.
 func NewFakePush() *FakePush {
 	return &FakePush{def: PushSuccess, platfrm: "android"}
+}
+
+// Default يبدّل المصيرَ الافتراضيَّ لما لم يُبرمَج.
+func (f *FakePush) Default(out PushOutcome) *FakePush {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.def = out
+	return f
+}
+
+// Fail يجعل رمزاً بعينه يُخفق بمصيرٍ محدَّد — **ولا يمسّ سواه.**
+func (f *FakePush) Fail(token string, out PushOutcome) *FakePush {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.perToken == nil {
+		f.perToken = map[string]PushOutcome{}
+	}
+	f.perToken[token] = out
+	return f
+}
+
+// Kill يجعل المنصّةَ ترفض رمزاً بعينه نهائيّاً.
+func (f *FakePush) Kill(token string) *FakePush { return f.Fail(token, PushDead) }
+
+// Heal يرفع ما بُرمج لرمزٍ فيعود إلى الافتراض.
+func (f *FakePush) Heal(token string) *FakePush {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.perToken, token)
+	return f
 }
 
 // Script يبرمج نتائجَ النداءات بالترتيب — **وما بعدها الافتراضُ.**
@@ -71,6 +110,16 @@ func (f *FakePush) Send(ctx context.Context, tokens []string, msg push.Message) 
 	out := f.def
 	if len(f.script) > 0 {
 		out, f.script = f.script[0], f.script[1:]
+	}
+	// **والمبرمَجُ لرمزٍ بعينه يغلب** — **فالفحصُ يقول مصيرَ كلّ هدفٍ
+	// بلا اعتمادٍ على ترتيب الجولة.**
+	//
+	// **ونداءُ العامل رمزٌ واحدٌ في كلّ مرّة** — فلا يلتبس مصيران.
+	for _, tok := range tokens {
+		if o, ok := f.perToken[tok]; ok {
+			out = o
+			break
+		}
 	}
 	call := PushCall{
 		At: time.Now(), Tokens: append([]string(nil), tokens...),

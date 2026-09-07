@@ -19,7 +19,7 @@
   "emit_sites": [
     {
       "file": "internal/notifications/notifications.go",
-      "line": 355,
+      "line": 360,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -28,14 +28,14 @@
     },
     {
       "file": "internal/notifications/notifications.go",
-      "line": 423,
+      "line": 428,
       "call": "NotifyMany",
       "has_app_targeting": false,
       "has_entity_id": false
     },
     {
       "file": "internal/notifications/notifications.go",
-      "line": 448,
+      "line": 453,
       "call": "NotifyMany",
       "has_app_targeting": false,
       "has_entity_id": false
@@ -802,17 +802,17 @@
   "realtime_pubs": [
     {
       "file": "internal/notifications/notifications.go",
-      "line": 236,
+      "line": 260,
       "room": "user:*"
     },
     {
       "file": "internal/notifications/notifications.go",
-      "line": 323,
+      "line": 340,
       "room": "user:*"
     },
     {
       "file": "internal/notifications/ops_tx.go",
-      "line": 108,
+      "line": 111,
       "room": "user:*"
     },
     {
@@ -886,7 +886,7 @@
   "untargeted_user": [
     {
       "file": "internal/notifications/notifications.go",
-      "line": 355,
+      "line": 360,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -895,14 +895,14 @@
     },
     {
       "file": "internal/notifications/notifications.go",
-      "line": 423,
+      "line": 428,
       "call": "NotifyMany",
       "has_app_targeting": false,
       "has_entity_id": false
     },
     {
       "file": "internal/notifications/notifications.go",
-      "line": 448,
+      "line": 453,
       "call": "NotifyMany",
       "has_app_targeting": false,
       "has_entity_id": false

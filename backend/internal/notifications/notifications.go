@@ -28,7 +28,16 @@ type Publisher interface {
 //
 // **والواجهةُ عند المستهلِك لا عند المنتِج** — كما `Publisher` فوقها.
 type Pusher interface {
-	SendToUser(ctx context.Context, userID string, msg PushMessage)
+	// Kick **يوقظ عاملَ النقل ليأخذ ما وُسم توّاً.**
+	//
+	// **ولا رسالةَ تُمرَّر** — **الحقيقةُ في الصفّ لا في وسيطٍ عابر**:
+	// **العلامةُ كُتبت مع الإشعار، والعاملُ يقرؤها ويقرأ أجهزةَ صاحبها
+	// لحظتَئذٍ.**
+	//
+	// **وهي محاولةُ الفور**: قرارُ المالك «المحاولةُ ١ فوراً». **فإن
+	// ضاعت النبضةُ — عمليّةٌ ماتت أو ازدحام — التقطَتها الجولةُ
+	// الدوريّة.** **ولا شيءَ يعتمد عليها.**
+	Kick(ctx context.Context)
 }
 
 // PushMessage **صورةٌ محلّيّةٌ من رسالة الدفع** — تُبنى في المُهيِّئ.
@@ -222,11 +231,26 @@ func (s *Service) Notify(ctx context.Context, in Input) {
 		// بأربعمئةٍ على فعلٍ لا يعني شيئا.**
 		createdAt = time.Now().UTC().Format(time.RFC3339)
 	} else {
+		// ══════════════════════════════════════════════════════════
+		// **ونيّةُ الدفع في الإدراج نفسِه** — `PF-09`
+		// ══════════════════════════════════════════════════════════
+		//
+		// **كان الدفعُ نداءً مباشراً بعد الحفظ**: **مرّةً واحدةً بلا
+		// إعادة** — فإن سقطت الشبكةُ أو مات المنفّذُ **ضاع التنبيهُ
+		// بلا أثر.**
+		//
+		// **وصار علامةً في الصفّ يلتقطها عاملُ النقل** — **ولا كتابةً
+		// ثانيةً تُضيّعها فجوةٌ بينهما**، وهي علّةُ `PF-07` بعينها.
+		//
+		// **والصامتُ لا يُدفَع** — ولا العابر: **الأوّلُ خبرٌ بلا فعل،
+		// والثاني لا يُحفَظ أصلاً.**
 		err := s.db.QueryRow(ctx, `
-			INSERT INTO notifications (user_id, kind, title, body, entity, entity_id, href)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO notifications (user_id, kind, title, body, entity,
+			            entity_id, href, push_pending, push_apps)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			RETURNING id, created_at::text`,
-			in.UserID, in.Kind, in.Title, in.Body, in.Entity, in.EntityID, in.Href).
+			in.UserID, in.Kind, in.Title, in.Body, in.Entity, in.EntityID,
+			in.Href, !in.Silent, apps(in.Apps)).
 			Scan(&id, &createdAt)
 		if err != nil {
 			s.logger.Error("notify: insert", "error", err, "user", in.UserID)
@@ -260,18 +284,8 @@ func (s *Service) Notify(ctx context.Context, in Input) {
 	// **ولا تُرفع الأولويّةُ لكلّ شيء** — جوجل تخفض حصّةَ من يُسيء
 	// استعمالها **فتتأخّر رسائلُه كلُّها، بما فيها العاجل.**
 	// **ولا رنّةَ لِما لا فعلَ فيه** — انظر `Silent` أعلاه.
-	if s.pusher != nil && !in.Silent {
-		s.pusher.SendToUser(ctx, in.UserID, PushMessage{
-			Title: in.Title,
-			Body:  in.Body,
-			Data: map[string]string{
-				"kind":      in.Kind,
-				"entity":    in.Entity,
-				"entity_id": in.EntityID,
-			},
-			Urgent: in.Kind == KindOrder,
-			Apps:   in.Apps,
-		})
+	if s.pusher != nil && !in.Silent && !in.Transient {
+		s.pusher.Kick(ctx)
 	}
 }
 
@@ -299,9 +313,12 @@ func (s *Service) NotifyMany(ctx context.Context, userIDs []string, in Input) {
 	// **`Transient` يرنّ ويمضي** — فلا إدراجَ له، **ويُبثّ وحدَه.**
 	if !in.Transient {
 		if _, err := s.db.Exec(ctx, `
-			INSERT INTO notifications (user_id, kind, title, body, entity, entity_id, href)
-			SELECT u, $2, $3, $4, $5, $6, $7 FROM unnest($1::uuid[]) AS u`,
-			userIDs, in.Kind, in.Title, in.Body, in.Entity, in.EntityID, in.Href,
+			INSERT INTO notifications (user_id, kind, title, body, entity,
+			            entity_id, href, push_pending, push_apps)
+			SELECT u, $2, $3, $4, $5, $6, $7, $8, $9
+			  FROM unnest($1::uuid[]) AS u`,
+			userIDs, in.Kind, in.Title, in.Body, in.Entity, in.EntityID,
+			in.Href, !in.Silent, apps(in.Apps),
 		); err != nil {
 			s.logger.Error("notify: bulk insert", "error", err, "count", len(userIDs))
 			return
@@ -328,21 +345,9 @@ func (s *Service) NotifyMany(ctx context.Context, userIDs []string, in Input) {
 				Read: false, CreatedAt: createdAt, Transient: in.Transient,
 			},
 		})
-		// **وحمولةُ الدفع كما في `Notify` حرفا** — **ونسختان تفترقان
-		// يومَ يُضاف حقلٌ في إحداهما.**
-		if s.pusher != nil && !in.Silent {
-			s.pusher.SendToUser(ctx, uid, PushMessage{
-				Title: in.Title,
-				Body:  in.Body,
-				Data: map[string]string{
-					"kind":      in.Kind,
-					"entity":    in.Entity,
-					"entity_id": in.EntityID,
-				},
-				Urgent: in.Kind == KindOrder,
-				Apps:   in.Apps,
-			})
-		}
+		// **ولا حمولةَ تُبنى هنا بعد اليوم** — **كانت نسختين تفترقان
+		// يومَ يُضاف حقلٌ في إحداهما**، **وصارت الحقيقةُ في الصفّ
+		// وحدَه.**
 	}
 }
 
@@ -489,4 +494,15 @@ func (s *Service) MarkRead(ctx context.Context, userID, id string) error {
 	_, err := s.db.Exec(ctx,
 		`UPDATE notifications SET read_at = now() WHERE user_id = $1 AND id = $2`, userID, id)
 	return err
+}
+
+// apps **تطبيقاتُ الهدف كما تُكتب في الصفّ** — **وفارغةٌ تعني كلَّ
+// الأجهزة**، كما كان `msg.Apps` في النداء المباشر.
+//
+// **و`nil` لا تُمرَّر لعمودٍ `NOT NULL`** — فتُبدَّل بمصفوفةٍ خاوية.
+func apps(in []string) []string {
+	if in == nil {
+		return []string{}
+	}
+	return in
 }

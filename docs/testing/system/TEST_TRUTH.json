@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 251,
-    "test_funcs": 883
+    "test_files": 252,
+    "test_funcs": 893
   },
   "flows": [
     {
@@ -300,6 +300,16 @@
         "TestEV_PushTokenTargeting",
         "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport",
+        "TestPF09_M3M4_PerTargetTruthSurvivesRestart",
+        "TestPF09_N11_ProviderOutageDoesNotRollbackBusiness",
+        "TestPF09_N12_ExhaustedBecomesDiscoverableFailure",
+        "TestPF09_N1_ProviderSuccessRecorded",
+        "TestPF09_N2N3N8_TransientRetriesWithBackoff",
+        "TestPF09_N4N10_RestartFindsPendingWork",
+        "TestPF09_N5_AcceptedThenDeathRetriesNotLoses",
+        "TestPF09_N6_TwoWorkersOneAttempt",
+        "TestPF09_N7M1M2_DeadTokenDroppedHealthyDelivered",
+        "TestPF09_N9_NewIntentNotSuppressedByPrior",
         "TestRACE_TwoDriversSameOrder"
       ],
       "status": "COVERED"
@@ -552,6 +562,16 @@
         "TestOBL_ReplayCreatesNoDuplicate",
         "TestD20_MerchantRealtimeVsREST",
         "TestD21_CustomerRedactionAgainstContract",
+        "TestPF09_M3M4_PerTargetTruthSurvivesRestart",
+        "TestPF09_N11_ProviderOutageDoesNotRollbackBusiness",
+        "TestPF09_N12_ExhaustedBecomesDiscoverableFailure",
+        "TestPF09_N1_ProviderSuccessRecorded",
+        "TestPF09_N2N3N8_TransientRetriesWithBackoff",
+        "TestPF09_N4N10_RestartFindsPendingWork",
+        "TestPF09_N5_AcceptedThenDeathRetriesNotLoses",
+        "TestPF09_N6_TwoWorkersOneAttempt",
+        "TestPF09_N7M1M2_DeadTokenDroppedHealthyDelivered",
+        "TestPF09_N9_NewIntentNotSuppressedByPrior",
         "TestRACE_FinancialTruthAfterConcurrentDeliveries",
         "TestRACE_SettingChangeDuringSettlement",
         "TestFIN_XG10_CombinedMerchantAndRepInsufficiency",
@@ -1880,7 +1900,17 @@
       ],
       "tests": [
         "TestEV_R23PushFailureIsLost",
-        "TestFAIL_P7SeamRequired_FCMTransport"
+        "TestFAIL_P7SeamRequired_FCMTransport",
+        "TestPF09_M3M4_PerTargetTruthSurvivesRestart",
+        "TestPF09_N11_ProviderOutageDoesNotRollbackBusiness",
+        "TestPF09_N12_ExhaustedBecomesDiscoverableFailure",
+        "TestPF09_N1_ProviderSuccessRecorded",
+        "TestPF09_N2N3N8_TransientRetriesWithBackoff",
+        "TestPF09_N4N10_RestartFindsPendingWork",
+        "TestPF09_N5_AcceptedThenDeathRetriesNotLoses",
+        "TestPF09_N6_TwoWorkersOneAttempt",
+        "TestPF09_N7M1M2_DeadTokenDroppedHealthyDelivered",
+        "TestPF09_N9_NewIntentNotSuppressedByPrior"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -9767,6 +9797,216 @@
         "FAST",
         "FULL",
         "SECURITY"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_M3M4_PerTargetTruthSurvivesRestart",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_N11_ProviderOutageDoesNotRollbackBusiness",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_N12_ExhaustedBecomesDiscoverableFailure",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_N1_ProviderSuccessRecorded",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_N2N3N8_TransientRetriesWithBackoff",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_N4N10_RestartFindsPendingWork",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_N5_AcceptedThenDeathRetriesNotLoses",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_N6_TwoWorkersOneAttempt",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_N7M1M2_DeadTokenDroppedHealthyDelivered",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPF09_N9_NewIntentNotSuppressedByPrior",
+      "file": "internal/qa/push_delivery_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-07",
+        "F-14"
+      ],
+      "risks": [
+        "R23"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "REALTIME",
+        "FULL",
+        "RELEASE"
       ],
       "orphan": false
     },

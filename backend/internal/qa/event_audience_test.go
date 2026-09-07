@@ -289,6 +289,10 @@ func addToken(t *testing.T, h *Harness, uid, token string) bool {
 
 // TestEV_R23PushFailureIsLost **البند ١٥ — سقوطُ الدفع.**
 //
+// **والاسمُ تاريخٌ لا عقد**: **كان الدفعُ الساقطُ يضيع** — **وصار
+// يُقيَّد ويُعاد** (`PF-09`، دورةُ إصلاحٍ ١٥). **ويبقى الاسمُ ليُقرأ
+// السجلُّ**، **والعقدُ في جسده.**
+//
 // **وبالمِعراض المعتمَد** — ناقلٌ مبرمَجٌ يردّ `500` ثمّ مهلةً ثمّ قطعَ
 // اتّصال.
 func TestEV_R23PushFailureIsLost(t *testing.T) {
@@ -319,13 +323,35 @@ func TestEV_R23PushFailureIsLost(t *testing.T) {
 	for _, c := range calls {
 		t.Logf("  %s ← %v", c.Outcome, c.Err)
 	}
-	if len(calls) <= 3 {
-		t.Logf("R23 FCM DELIVERY = RISK CONFIRMED")
-		t.Logf("  الدفعُ يُحاوَل مرّةً واحدةً · **ولا إعادةَ ولا صفَّ انتظارٍ ولا حالٌ معلَّقة**")
-		t.Logf("  ولا ظهورَ للإدارة — DEFECT CANDIDATE يُعرَض على المالك")
-	} else {
-		t.Logf("R23 = PASS — ثمّةَ إعادةٌ مقيسة (%d نداءً)", len(calls))
+	// ══════════════════════════════════════════════════════════════
+	// **والاسمُ صار يكذب — فصُحّح العقدُ لا النتيجة**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كان `R23` يُقاس هكذا**: ثلاثةُ إخفاقاتٍ وثلاثةُ نداءاتٍ ولا
+	// رابع ⇒ `RISK CONFIRMED`.
+	//
+	// **وبعد `PF-09` صار الإخفاقُ يُقيَّد ويُعاد** — **والدليلُ ليس
+	// عددَ النداءات في هذه النافذة** (فالتراجعُ يبدأ بثلاثين ثانية)
+	// **بل وجودُ حالٍ دائمةٍ قابلةٍ للإعادة.**
+	var pending, rows int
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT count(*) FILTER (WHERE d.state = 'pending'), count(*)
+		  FROM notification_deliveries d
+		  JOIN notifications n ON n.id = d.notification_id
+		 WHERE n.user_id = $1::uuid`, u.ID).Scan(&pending, &rows); err != nil {
+		t.Fatalf("حالُ النقل: %v", err)
 	}
+	t.Logf("R23: صفوفُ نقلٍ=%d · منها معلَّقٌ قابلٌ للإعادة=%d", rows, pending)
+	if rows == 0 {
+		t.Errorf("**لا أثرَ للدفع الساقط** — **ولا صفَّ انتظارٍ ولا حالٌ " +
+			"معلَّقة.** (`R23` · `PF-09`)")
+	}
+	if pending == 0 {
+		t.Errorf("**سقط الدفعُ ولم يبقَ قابلاً للإعادة**: %d من %d",
+			pending, rows)
+	}
+	t.Log("R23 = ADDRESSED — **الإخفاقُ يُقيَّد ويُعاد** · " +
+		"**والتسليمُ إلى هاتفٍ يبقى `P-8`.**")
 }
 
 // TestEV_R21AutoTransferAwareness **البند ١٩.**

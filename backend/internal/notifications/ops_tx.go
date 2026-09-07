@@ -73,9 +73,12 @@ func (s *Service) NotifyRolesTx(ctx context.Context, q dbtx.Querier,
 		return len(ids), nil
 	}
 	tag, err := q.Exec(ctx, `
-		INSERT INTO notifications (user_id, kind, title, body, entity, entity_id, href)
-		SELECT u, $2, $3, $4, $5, $6, $7 FROM unnest($1::uuid[]) AS u`,
-		ids, in.Kind, in.Title, in.Body, in.Entity, in.EntityID, in.Href)
+		INSERT INTO notifications (user_id, kind, title, body, entity,
+		            entity_id, href, push_pending, push_apps)
+		SELECT u, $2, $3, $4, $5, $6, $7, $8, $9
+		  FROM unnest($1::uuid[]) AS u`,
+		ids, in.Kind, in.Title, in.Body, in.Entity, in.EntityID, in.Href,
+		!in.Silent, apps(in.Apps))
 	if err != nil {
 		return 0, err
 	}

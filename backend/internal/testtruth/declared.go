@@ -1363,6 +1363,18 @@ var TestMap = map[string]TestDecl{
 	"TestR22_W6_TwoWatchdogsAlertOnce":        alertTest(),
 	"TestR22_W9_NoOpsRecipientLeavesNoMarker": alertTest(),
 
+	// ── ديمومةُ نقلِ الإشعار (دورةُ إصلاحٍ ١٥) — `PF-09` · `R23` ────
+	"TestPF09_N1_ProviderSuccessRecorded":                deliveryTest(),
+	"TestPF09_N2N3N8_TransientRetriesWithBackoff":        deliveryTest(),
+	"TestPF09_N4N10_RestartFindsPendingWork":             deliveryTest(),
+	"TestPF09_N5_AcceptedThenDeathRetriesNotLoses":       deliveryTest(),
+	"TestPF09_N6_TwoWorkersOneAttempt":                   deliveryTest(),
+	"TestPF09_N7M1M2_DeadTokenDroppedHealthyDelivered":   deliveryTest(),
+	"TestPF09_N9_NewIntentNotSuppressedByPrior":          deliveryTest(),
+	"TestPF09_N11_ProviderOutageDoesNotRollbackBusiness": deliveryTest(),
+	"TestPF09_N12_ExhaustedBecomesDiscoverableFailure":   deliveryTest(),
+	"TestPF09_M3M4_PerTargetTruthSurvivesRestart":        deliveryTest(),
+
 	// ── معجمُ أعداد البوّابة (مصالحةُ دورةِ ١٥) ───────────────────
 	"TestXG37_CountsAgreeAcrossAllThreeReaders":    infraTest(),
 	"TestXG37_BlockingCapableIsNotACurrentBlocker": infraTest(),
@@ -1527,6 +1539,18 @@ func targetTest() TestDecl {
 		Flows: []string{"F-21", "F-23"},
 		Gaps:  []string{"XG-32"},
 		Modes: []string{"CONCURRENCY", "FAILURE", "FINANCIAL", "FULL", "RELEASE"},
+	}
+}
+
+// deliveryTest حارسُ ديمومةِ نقلِ الإشعار — `PF-09` · `R23`.
+//
+// **ولا يُدَّعى وصولٌ إلى هاتف** — **الطبقةُ الثالثةُ `P-8`.**
+func deliveryTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-07", "F-14"},
+		Risks: []string{"R23"},
+		Modes: []string{"FAILURE", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
 	}
 }
 

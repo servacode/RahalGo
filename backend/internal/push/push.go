@@ -99,6 +99,12 @@ type Service struct {
 	transports map[string]Transport
 
 	warnOnce sync.Once
+
+	// kick **خانةٌ واحدةٌ توقظ جولةَ نقل** — `PF-09`.
+	//
+	// **ولا طابور**: **ألفُ إشعارٍ في ثانيةٍ لا يُولّد ألفَ جولة**،
+	// والجولةُ الواحدةُ تأخذ الدفعةَ كلَّها.
+	kick chan struct{}
 }
 
 func New(db *pgxpool.Pool, logger *slog.Logger, transports ...Transport) *Service {
@@ -108,7 +114,8 @@ func New(db *pgxpool.Pool, logger *slog.Logger, transports ...Transport) *Servic
 			m[t.Platform()] = t
 		}
 	}
-	return &Service{db: db, logger: logger, transports: m}
+	return &Service{db: db, logger: logger, transports: m,
+		kick: make(chan struct{}, 1)}
 }
 
 // Enabled **أثمّة ناقلٌ مهيّأ؟** — تقرؤها الصحّةُ والإقلاع.
@@ -161,7 +168,20 @@ func (s *Service) Unregister(ctx context.Context, userID, token string) error {
 	return err
 }
 
-// SendToUser يدفع إلى كلّ أجهزة الحساب — **ولا يُفشل شيئاً أبداً.**
+// SendToUser **دفعٌ فوريٌّ غيرُ دائم** — **وليس مسارَ التسليم.**
+//
+// ══════════════════════════════════════════════════════════════════════
+// **ولا يُنادى من `notifications` بعد اليوم** — `PF-09`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **مرّةً واحدةً بلا إعادةٍ ولا أثر**: **سقطت الشبكةُ فضاع التنبيهُ
+// ولا سطرَ يقول ذلك.** **وذاك `PF-09` بعينه.**
+//
+// **ومسارُ التسليم اليوم**: علامةٌ في صفّ الإشعار ⇒ صفوفُ نقلٍ لكلّ
+// هدف ⇒ عاملٌ يُعيد بتراجعٍ محدود (`delivery.go`).
+//
+// **وتبقى هذه لقراءة الأجهزة وترشيح التطبيقات وحذف الميّت** — **وهي
+// مقيسةٌ بفحوصها**، **ولا تُنادى في مسارِ إشعار.**
 func (s *Service) SendToUser(ctx context.Context, userID string, msg Message) {
 	if s == nil || userID == "" {
 		return
