@@ -25,7 +25,7 @@ type Hit struct {
 }
 
 // Search يبحث في طبقات الخريطة بحسب صلاحيّات الباحث.
-func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit, error) {
+func Search(ctx context.Context, q Querier, caps []string, term string) ([]Hit, error) {
 	term = strings.TrimSpace(term)
 	// **والحرفُ العربيُّ بايتان** — **و`len` بالبايت يمرّر «ا» وحدَها
 	// فيُمسَح الجدولُ كلُّه لحرف.** (قِيس ٢٠٢٦-٠٩-٠٦: ردَّ ثمانيَ نتائج.)
@@ -51,7 +51,7 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 		return rows.Err()
 	}
 
-	if Allows(roles, PermViewDrivers) {
+	if Allows(caps, PermViewDrivers) {
 		if err := add(`
 			SELECT u.id::text, u.full_name,
 			       ST_Y(u.last_location::geometry), ST_X(u.last_location::geometry)
@@ -61,7 +61,7 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 			return nil, err
 		}
 	}
-	if Allows(roles, PermViewMerchants) {
+	if Allows(caps, PermViewMerchants) {
 		if err := add(`
 			SELECT m.id::text, m.name,
 			       ST_Y(m.location::geometry), ST_X(m.location::geometry)
@@ -70,7 +70,7 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 			return nil, err
 		}
 	}
-	if Allows(roles, PermViewOrders) {
+	if Allows(caps, PermViewOrders) {
 		if err := add(`
 			SELECT o.id::text, '#' || o.number::text,
 			       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry)
@@ -80,7 +80,7 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 			return nil, err
 		}
 	}
-	if Allows(roles, PermViewMap) {
+	if Allows(caps, PermViewMap) {
 		if err := add(`
 			SELECT b.id::text, b.name,
 			       ST_Y(b.location::geometry), ST_X(b.location::geometry)
@@ -94,7 +94,7 @@ func Search(ctx context.Context, q Querier, roles []string, term string) ([]Hit,
 			return nil, err
 		}
 	}
-	if Allows(roles, PermViewRepActivity) {
+	if Allows(caps, PermViewRepActivity) {
 		if err := add(`
 			SELECT u.id::text, u.full_name, NULL::float8, NULL::float8
 			FROM users u

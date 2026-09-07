@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 314,
+    "routes": 319,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 262,
-    "test_funcs": 963
+    "test_files": 263,
+    "test_funcs": 970
   },
   "flows": [
     {
@@ -1407,9 +1407,9 @@
         "TestFreshness_DerivedNotInvented",
         "TestFreshness_FollowsSettingNotConstant",
         "TestFreshness_ZeroPingFallsBackNotPanics",
+        "TestPerm_CapabilityMatrix",
         "TestPerm_GrantedIsStableAndDeduped",
-        "TestPerm_NoRoleNoMap",
-        "TestPerm_RoleMatrix",
+        "TestPerm_NoCapabilityNoMap",
         "TestDemand_LayersAreSeparateNotMerged",
         "TestDemand_RequestCellCountsMatchSeed",
         "TestDemand_TimeRangeFilters",
@@ -2425,6 +2425,13 @@
         "TestXG20_S6_OpsOrderTransitionAudited"
       ],
       "status": "COVERED"
+    },
+    {
+      "id": "XG-41",
+      "title": "حرّاسٌ ساقطةٌ مضت دورةً كاملةً بلا أن تُرى",
+      "severity": "HIGH",
+      "tests": null,
+      "status": "NOT_IMPLEMENTED"
     },
     {
       "id": "XG-36",
@@ -5618,20 +5625,7 @@
       "orphan": false
     },
     {
-      "name": "TestPerm_GrantedIsStableAndDeduped",
-      "file": "internal/opsmap/opsmap_test.go",
-      "package": "opsmap",
-      "level": "L1",
-      "flows": [
-        "F-35"
-      ],
-      "modes": [
-        "FULL"
-      ],
-      "orphan": false
-    },
-    {
-      "name": "TestPerm_NoRoleNoMap",
+      "name": "TestPerm_CapabilityMatrix",
       "file": "internal/opsmap/opsmap_test.go",
       "package": "opsmap",
       "level": "L1",
@@ -5645,7 +5639,20 @@
       "orphan": false
     },
     {
-      "name": "TestPerm_RoleMatrix",
+      "name": "TestPerm_GrantedIsStableAndDeduped",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "level": "L1",
+      "flows": [
+        "F-35"
+      ],
+      "modes": [
+        "FULL"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestPerm_NoCapabilityNoMap",
       "file": "internal/opsmap/opsmap_test.go",
       "package": "opsmap",
       "level": "L1",
@@ -11740,6 +11747,48 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestADG2_ConcurrentPolicyChanges",
+      "file": "internal/qa/role_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADG2_EveryAdminRouteClassified",
+      "file": "internal/qa/role_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADG2_EveryPolicyRuleHasARoute",
+      "file": "internal/qa/role_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADG2_Management",
+      "file": "internal/qa/role_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADG2_R24_MultiRoleUnion",
+      "file": "internal/qa/role_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADG2_R28_LegacyRolesKeepDocumentedAccess",
+      "file": "internal/qa/role_matrix_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADG2_RoleMatrix",
+      "file": "internal/qa/role_matrix_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestR15_A10_OrdinaryActionsUnaffected",

@@ -66,7 +66,6 @@ var adminPolicy = []Rule{
 	{"GET", "/users/{id}/chats", UsersRead},
 	{"GET", "/customers", UsersRead},
 	{"GET", "/salesreps", UsersRead},
-	{"GET", "/reps", UsersRead},
 
 	// ── الطلبات ─────────────────────────────────────────────────
 	{"POST", "/orders/{id}/transition", OrdersIntervene},
@@ -78,7 +77,11 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/goods", OrdersIntervene},
 	{"POST", "/orders/{id}/whatsapp", OrdersIntervene},
 	{"GET", "/orders/{id}/breakdown", FinanceRead},
-	{"GET", "/orders/export", AnalyticsRead},
+	// **وتصديرُ الطلبات كشفُ محاسبةٍ لا تقرير** — فيه **اسمُ الزبون
+	// وهاتفُه** وأنصبةُ كلّ طلبٍ من الدفتر. **وحارسُه قبلَ `ADG-2`
+	// كان `admin,finance`** — **ودورةُ ٢٥ وسّعته إلى التحليلات
+	// فأدخلت التحليلاتِ على أرقام الهواتف.** (مصالحةُ دورةِ ٢٦.)
+	{"GET", "/orders/export", FinanceRead},
 	{"GET", "/orders", OrdersRead},
 	{"GET", "/orders/alerts", OrdersRead},
 	{"GET", "/orders/{id}", OrdersRead},
@@ -108,15 +111,13 @@ var adminPolicy = []Rule{
 	{"GET", "/merchants/{id}", MerchantsManage},
 	{"GET", "/merchants/{id}/menu", MerchantsManage},
 	{"GET", "/merchants/{id}/hours", MerchantsManage},
-	{"GET", "/opportunities", MerchantsManage},
-	{"GET", "/demand", MerchantsManage},
 
 	// ── السائقون ────────────────────────────────────────────────
 	{"POST", "/drivers/{id}/settle", FinanceManage},
 	{"GET", "/drivers/{id}/cash", FinanceRead},
 	{"GET", "/cash/outstanding", FinanceRead},
 	{"POST", "/drivers/{id}/end-shift", DriversManage},
-	{"GET", "/drivers", DriversManage},
+	{"GET", "/drivers", DriversRead},
 
 	// ── المال ───────────────────────────────────────────────────
 	{"POST", "/payouts/{id}/decide", PayoutsDecide},
@@ -179,23 +180,40 @@ var adminPolicy = []Rule{
 	//
 	// **والتغطيةُ والفروعُ والمناطقُ رسمُ عملٍ جغرافيّ** — قدرتُها
 	// `settings.general.manage`. **وقراءاتُها تشغيليّة.**
+	// ══════════════════════════════════════════════════════════════
+	// **خريطةُ العمليّات — تُقرأ لمن يفتحها وتُكتب لمن يملكها**
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **ودورةُ ٢٥ سوّت القراءةَ بالكتابة** فيها — **فصار موظّفُ
+	// العمليّات محجوباً عن قراءة الفروع والتغطية**، **وهي شاشتُه.**
+	// (مصالحةُ دورةِ ٢٦.)
+	//
+	// **ورسمُ مضلَّعٍ يبدّل من تصله المنصّةُ أصلاً** — فيبقى بقدرة
+	// الإعدادات العامّة.
+	{"GET", "/ops-map/coverage", OrdersRead},
 	{"", "/ops-map/coverage", SettingsGeneralManage},
 	{"", "/ops-map/coverage/{id}", SettingsGeneralManage},
 	{"", "/ops-map/coverage/{id}/active", SettingsGeneralManage},
-	{"", "/ops-map/coverage-requests", SettingsGeneralManage},
+	{"GET", "/ops-map/coverage-requests", AnalyticsRead},
 	{"", "/ops-map/coverage-requests/{id}", SettingsGeneralManage},
+	{"GET", "/ops-map/branches", OrdersRead},
 	{"", "/ops-map/branches", SettingsGeneralManage},
 	{"", "/ops-map/branches/{id}", SettingsGeneralManage},
+	{"GET", "/ops-map/areas", OrdersRead},
 	{"", "/ops-map/areas", SettingsGeneralManage},
 	{"", "/ops-map/areas/{id}", SettingsGeneralManage},
 	{"GET", "/ops-map/orders", OrdersRead},
-	{"GET", "/ops-map/drivers", DriversManage},
-	{"GET", "/ops-map/merchants", MerchantsManage},
-	{"GET", "/ops-map/demand", MerchantsManage},
-	{"GET", "/ops-map/opportunities", MerchantsManage},
-	{"GET", "/ops-map/reps", UsersRead},
-	{"GET", "/ops-map/meta", AnalyticsRead},
-	{"GET", "/ops-map/search", AnalyticsRead},
+	{"GET", "/ops-map/drivers", DriversRead},
+	// **ودبّوسُ المتجر سياقُ تشغيلٍ لا إدارةَ متجر** — **والماليّةُ
+	// تقرأ الخريطةَ ولا تُحرّر قائمة.**
+	{"GET", "/ops-map/merchants", OrdersRead},
+	{"GET", "/ops-map/demand", AnalyticsRead},
+	{"GET", "/ops-map/opportunities", AnalyticsRead},
+	// **ونشاطُ المندوبين لمن يبني شبكةَ المتاجر** — **ولا يُقرأ
+	// بـ`users.read`**: **الماليّةُ تملكها ولا تُراقب مندوباً.**
+	{"GET", "/ops-map/reps", MerchantsManage},
+	{"GET", "/ops-map/meta", OrdersRead},
+	{"GET", "/ops-map/search", OrdersRead},
 
 	// ── الحوافز ─────────────────────────────────────────────────
 	{"GET", "/incentives/{role}", FinanceRead},
@@ -209,8 +227,6 @@ var adminPolicy = []Rule{
 	{"GET", "/audit", AuditRead},
 	{"GET", "/stats", AnalyticsRead},
 	{"GET", "/reports", AnalyticsRead},
-	{"GET", "/search", AnalyticsRead},
-	{"GET", "/meta", AnalyticsRead},
 	{"GET", "/whatsapp", SettingsSecurityManage},
 	{"POST", "/whatsapp/pair", SettingsSecurityManage},
 	{"POST", "/whatsapp/unpair", SettingsSecurityManage},
@@ -305,3 +321,11 @@ func literalSegments(p string) int {
 
 // PolicyCount عددُ أسطر الجدول — يحرسه فحصٌ فلا ينكمش.
 func PolicyCount() int { return len(adminPolicy) }
+
+// Rules الجدولُ كما هو — **ليُقابَل بالموجِّه في فحصٍ دائم.**
+//
+// **وصفٌّ لا مسارَ له لا يُمنَح شيئاً** — **لكنّه يُقرأ عقداً
+// وهو وهم.** **وخمسةٌ منه وُجدت في دورةِ ٢٦** (`/demand` ·
+// `/meta` · `/opportunities` · `/reps` · `/search`) **كتبتُها
+// من ذاكرةِ مسارٍ لا من الموجِّه.**
+func Rules() []Rule { return adminPolicy }

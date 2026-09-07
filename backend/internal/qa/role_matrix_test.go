@@ -3,6 +3,7 @@ package qa
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -79,7 +80,7 @@ func probes(t *testing.T, hh *Harness) map[string]probe {
 	t.Helper()
 	v := hh.NewUser("customer")
 	m := hh.Factory().Merchant()
-	oid, _ := activeOrderFor(t, hh)
+	oid, dr := activeOrderFor(t, hh)
 	return map[string]probe{
 		"قراءةُ الحسابات": {"قراءةِ الحسابات", "GET", "/api/v1/admin/users?limit=1", nil},
 		"قراءةُ الطلبات":  {"قراءةِ الطلبات", "GET", "/api/v1/admin/orders?limit=1", nil},
@@ -91,15 +92,20 @@ func probes(t *testing.T, hh *Harness) map[string]probe {
 		"تعليقُ متجر":     {"تعليقِ متجر", "POST", "/api/v1/admin/merchants/" + m.ID + "/suspend", map[string]any{"suspended": true, "note": "ADG-2"}},
 		"مراجعةُ القوائم": {"مراجعةِ القوائم", "GET", "/api/v1/admin/menu/pending", nil},
 		"إدارةُ المتاجر":  {"إدارةِ المتاجر", "PATCH", "/api/v1/admin/merchants/" + m.ID, map[string]any{"name": "ADG-2"}},
-		"إدارةُ السائقين": {"إدارةِ السائقين", "GET", "/api/v1/admin/drivers?limit=1", nil},
-		"الدعم":           {"الدعمِ والتذاكر", "GET", "/api/v1/admin/tickets?limit=1", nil},
-		"محتوى":           {"المحتوى", "GET", "/api/v1/admin/banners", nil},
-		"إعدادٌ عامّ":     {"إعدادٍ عامّ", "PUT", "/api/v1/admin/settings/orders.auto_transfer", map[string]any{"value": false}},
-		"إعدادٌ ماليّ":    {"إعدادٍ ماليّ", "PUT", "/api/v1/admin/settings/merchants.commission_percent", map[string]any{"value": 11}},
-		"إعدادٌ أمنيّ":    {"إعدادٍ أمنيّ", "PUT", "/api/v1/admin/settings/security.session_days", map[string]any{"value": 20}},
-		"تحليلات":         {"التحليلات", "GET", "/api/v1/admin/stats", nil},
-		"سجلُّ التدقيق":   {"سجلِّ التدقيق", "GET", "/api/v1/admin/audit?limit=1", nil},
-		"قرارُ سحب":       {"قرارِ سحب", "GET", "/api/v1/admin/payouts?limit=1", nil},
+		// **وسجلُّ السائقين قراءةٌ، وإنهاءُ الوردية تشغيل** — ولا يُقاسان
+		// بمجسٍّ واحد. (مصالحةُ دورةِ ٢٦.)
+		"قراءةُ السائقين": {"قراءةِ سجلّ السائقين", "GET", "/api/v1/admin/drivers?limit=1", nil},
+		"إنهاءُ وردية":    {"إنهاءِ ورديّةِ سائق", "POST", "/api/v1/admin/drivers/" + dr.ID + "/end-shift", map[string]any{}},
+		// **وتصديرُ الطلبات فيه هاتفُ الزبون** — فيُقاس بذاته.
+		"تصديرُ الطلبات": {"تصديرِ الطلبات", "GET", "/api/v1/admin/orders/export?from=2026-01-01&to=2026-01-02", nil},
+		"الدعم":          {"الدعمِ والتذاكر", "GET", "/api/v1/admin/tickets?limit=1", nil},
+		"محتوى":          {"المحتوى", "GET", "/api/v1/admin/banners", nil},
+		"إعدادٌ عامّ":    {"إعدادٍ عامّ", "PUT", "/api/v1/admin/settings/orders.auto_transfer", map[string]any{"value": false}},
+		"إعدادٌ ماليّ":   {"إعدادٍ ماليّ", "PUT", "/api/v1/admin/settings/merchants.commission_percent", map[string]any{"value": 11}},
+		"إعدادٌ أمنيّ":   {"إعدادٍ أمنيّ", "PUT", "/api/v1/admin/settings/security.session_days", map[string]any{"value": 20}},
+		"تحليلات":        {"التحليلات", "GET", "/api/v1/admin/stats", nil},
+		"سجلُّ التدقيق":  {"سجلِّ التدقيق", "GET", "/api/v1/admin/audit?limit=1", nil},
+		"قرارُ سحب":      {"قرارِ سحب", "GET", "/api/v1/admin/payouts?limit=1", nil},
 	}
 }
 
@@ -120,10 +126,11 @@ func TestADG2_RoleMatrix(t *testing.T) {
 	// ── R2+R3+R4 · العمليّات ─────────────────────────────────────
 	checkRole(t, hh, "operations", []probe{
 		p["قراءةُ الطلبات"], p["تدخّلٌ في طلب"],
-		p["قراءةُ الحسابات"], p["إدارةُ السائقين"],
+		p["قراءةُ الحسابات"], p["قراءةُ السائقين"], p["إنهاءُ وردية"],
 	}, []probe{
 		p["قيدُ محفظة"], p["منحُ دور"], p["إعدادٌ ماليّ"],
 		p["إعدادٌ أمنيّ"], p["تعليقُ متجر"], p["تبديلُ حال"],
+		p["تصديرُ الطلبات"],
 	})
 
 	// ── R5+R6+R7 · دعمُ الزبائن ──────────────────────────────────
@@ -136,18 +143,22 @@ func TestADG2_RoleMatrix(t *testing.T) {
 
 	// ── R8+R9 · توثيقُ السائقين ──────────────────────────────────
 	checkRole(t, hh, "driver_verification", []probe{
-		p["إدارةُ السائقين"], p["قراءةُ الحسابات"],
+		p["قراءةُ السائقين"], p["قراءةُ الحسابات"],
 	}, []probe{
 		p["قيدُ محفظة"], p["منحُ دور"], p["تعليقُ متجر"],
 		p["إعدادٌ ماليّ"], p["مراجعةُ القوائم"],
+		// **ومن وُظّف للتوثيق لا يُخرج سائقاً من عمله.**
+		p["إنهاءُ وردية"],
 	})
 
 	// ── R10+R11 · توثيقُ المتاجر ─────────────────────────────────
 	checkRole(t, hh, "merchant_verification", []probe{
-		p["مراجعةُ القوائم"], p["قراءةُ الحسابات"], p["قراءةُ الطلبات"],
+		p["مراجعةُ القوائم"],
 	}, []probe{
 		p["قيدُ محفظة"], p["منحُ دور"], p["إدارةُ المتاجر"],
-		p["إدارةُ السائقين"], p["تعليقُ متجر"],
+		p["قراءةُ السائقين"], p["تعليقُ متجر"],
+		// **ولا مسارَ مراجعةٍ يقرأ طلباً ولا دليلَ حسابات.**
+		p["قراءةُ الطلبات"], p["قراءةُ الحسابات"],
 	})
 
 	// ── R12+R13+R14+R15 · الماليّة ───────────────────────────────
@@ -170,20 +181,32 @@ func TestADG2_RoleMatrix(t *testing.T) {
 
 	// ── R18+R19 · التسويقُ والمحتوى ──────────────────────────────
 	checkRole(t, hh, "marketing_content", []probe{
-		p["محتوى"], p["إعدادٌ عامّ"],
+		p["محتوى"],
 	}, []probe{
 		p["إعدادٌ ماليّ"], p["إعدادٌ أمنيّ"], p["قيدُ محفظة"],
 		p["منحُ دور"], p["تبديلُ حال"], p["تعليقُ متجر"],
+		// **والإعدادُ العامُّ يحكم المناطقَ ومضلَّعاتِ التغطية.**
+		p["إعدادٌ عامّ"],
 	})
 
 	// ── R20+R21 · التحليلُ — قراءةٌ محضة ─────────────────────────
 	checkRole(t, hh, "analytics", []probe{
-		p["تحليلات"], p["قراءةُ الطلبات"], p["قراءةُ الحسابات"],
-		p["قراءةٌ ماليّة"],
+		p["تحليلات"],
 	}, []probe{
 		p["قيدُ محفظة"], p["منحُ دور"], p["تبديلُ حال"],
 		p["تعليقُ متجر"], p["تدخّلٌ في طلب"], p["إدارةُ المتاجر"],
 		p["محتوى"], p["إعدادٌ عامّ"], p["إعدادٌ ماليّ"], p["إعدادٌ أمنيّ"],
+		// ══════════════════════════════════════════════════════════
+		// **و«يقرأ فقط» ليست «أقلَّ صلاحيّة»**
+		// ══════════════════════════════════════════════════════════
+		//
+		// **قراءةُ الطلبات تفتح محادثاتِها** · **وقراءةُ الحسابات
+		// تفتح دليلَ الناس وعناوينَهم** · **والقراءةُ الماليّةُ تفتح
+		// محافظَ الأفراد** · **والتصديرُ يُخرج أرقامَ الهواتف.**
+		//
+		// **ولا واحدةَ منها تقرير.**
+		p["قراءةُ الطلبات"], p["قراءةُ الحسابات"],
+		p["قراءةٌ ماليّة"], p["تصديرُ الطلبات"],
 	})
 }
 
@@ -409,6 +432,80 @@ func TestADG2_ConcurrentPolicyChanges(t *testing.T) {
 //
 // **ومشّاءٌ على الموجِّه لا بحثٌ في نصّ** — **فمسارٌ يُضاف غداً بلا
 // تصنيفٍ يُسقط البناء.**
+// ══════════════════════════════════════════════════════════════════════
+// **وسطرُ سياسةٍ لا مسارَ له** — `ADG-2` · مصالحةُ دورةِ ٢٦
+// ══════════════════════════════════════════════════════════════════════
+//
+// # المسألة
+//
+// **الحارسُ الأوّلُ يمشي من المسار إلى السياسة** — فيمسك مساراً بلا
+// حراسة. **ولا يمسك العكس**: **سطراً في الجدول لا مسارَ له.**
+//
+// **وخمسةٌ منها كانت** (`/demand` · `/meta` · `/opportunities` ·
+// `/reps` · `/search`) — **كُتبت من ذاكرةِ مسارٍ لا من الموجِّه.**
+//
+// # ولماذا يُهمّ وهي لا تمنح شيئاً
+//
+// **الجدولُ يُقرأ عقداً** — **ويُراجَع بعينٍ بشريّةٍ حين يُسأل «من يبلغ
+// ماذا».** **وسطرٌ يصف مساراً لا وجودَ له يُضلّل المراجع**، **وأسوأُ
+// منه أن يُنشأ المسارُ يوماً بغير القدرة المكتوبة فيُظنّ محروساً.**
+func TestADG2_EveryPolicyRuleHasARoute(t *testing.T) {
+	hh := New(t)
+	live := map[string][]string{}
+	err := chi.Walk(hh.API.RouterForWalk(),
+		func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+			const prefix = "/api/v1/admin"
+			if len(route) > len(prefix) && route[:len(prefix)] == prefix {
+				live[method] = append(live[method], route[len(prefix):])
+			}
+			return nil
+		})
+	if err != nil {
+		t.Fatalf("المشّاء: %v", err)
+	}
+	same := func(policy, actual string) bool {
+		ps := strings.Split(strings.Trim(policy, "/"), "/")
+		as := strings.Split(strings.Trim(actual, "/"), "/")
+		if len(ps) != len(as) {
+			return false
+		}
+		for i, seg := range ps {
+			if strings.HasPrefix(seg, "{") {
+				continue
+			}
+			if seg != as[i] {
+				return false
+			}
+		}
+		return true
+	}
+	var orphans []string
+	for _, rule := range authz.Rules() {
+		hit := false
+		for method, routes := range live {
+			if rule.Method != "" && rule.Method != method {
+				continue
+			}
+			for _, rt := range routes {
+				if same(rule.Pattern, rt) {
+					hit = true
+				}
+			}
+		}
+		if !hit {
+			m := rule.Method
+			if m == "" {
+				m = "*"
+			}
+			orphans = append(orphans, m+" "+rule.Pattern)
+		}
+	}
+	t.Logf("سطورُ الجدول=%d · بلا مسارٍ=%d", authz.PolicyCount(), len(orphans))
+	for _, o := range orphans {
+		t.Errorf("**سطرُ سياسةٍ لا مسارَ له**: %s — **يُقرأ عقداً وهو وهم.** (`ADG-2`)", o)
+	}
+}
+
 func TestADG2_EveryAdminRouteClassified(t *testing.T) {
 	hh := New(t)
 	var checked, exempt int

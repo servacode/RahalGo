@@ -528,7 +528,7 @@
       "path": "/api/v1/admin/drivers",
       "handler": "handleListDrivers",
       "auth": true,
-      "capability": "drivers.manage",
+      "capability": "drivers.read",
       "response": [
         {
           "name": "cash_limit",
@@ -1335,7 +1335,7 @@
       "path": "/api/v1/admin/ops-map/areas",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "settings.general.manage"
+      "capability": "orders.read"
     },
     {
       "method": "POST",
@@ -1356,7 +1356,7 @@
       "path": "/api/v1/admin/ops-map/branches",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "settings.general.manage"
+      "capability": "orders.read"
     },
     {
       "method": "POST",
@@ -1377,7 +1377,7 @@
       "path": "/api/v1/admin/ops-map/coverage",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "settings.general.manage"
+      "capability": "orders.read"
     },
     {
       "method": "POST",
@@ -1391,7 +1391,7 @@
       "path": "/api/v1/admin/ops-map/coverage-requests",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "settings.general.manage"
+      "capability": "analytics.read"
     },
     {
       "method": "PATCH",
@@ -1419,35 +1419,35 @@
       "path": "/api/v1/admin/ops-map/demand",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "merchants.manage"
+      "capability": "analytics.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/drivers",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "drivers.manage"
+      "capability": "drivers.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/merchants",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "merchants.manage"
+      "capability": "orders.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/meta",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "analytics.read"
+      "capability": "orders.read"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/opportunities",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "merchants.manage"
+      "capability": "analytics.read"
     },
     {
       "method": "GET",
@@ -1461,14 +1461,14 @@
       "path": "/api/v1/admin/ops-map/reps",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "users.read"
+      "capability": "merchants.manage"
     },
     {
       "method": "GET",
       "path": "/api/v1/admin/ops-map/search",
       "handler": "requirePerm",
       "auth": true,
-      "capability": "analytics.read"
+      "capability": "orders.read"
     },
     {
       "method": "GET",
@@ -1507,7 +1507,7 @@
       "path": "/api/v1/admin/orders/export",
       "handler": "handleOrdersExport",
       "auth": true,
-      "capability": "analytics.read"
+      "capability": "finance.read"
     },
     {
       "method": "GET",

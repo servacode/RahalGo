@@ -61,6 +61,12 @@ const (
 	// ── المتاجر والسائقون ───────────────────────────────────────
 	MerchantsManage Capability = "merchants.manage"
 	DriversManage   Capability = "drivers.manage"
+	// DriversRead **قراءةُ سجلّ السائقين ومواضعهم** — دون تشغيلهم.
+	//
+	// **ومراجعُ السائقين يقرأ ولا ينهي وردية** — **و`drivers.manage`
+	// كانت تجمع الاثنين**، فمن وُظّف للتوثيق ملك إخراجَ سائقٍ من
+	// عمله. (`ADG-2` — مصالحةُ دورةِ ٢٦.)
+	DriversRead Capability = "drivers.read"
 
 	// ── الإعدادات — ثلاثُ درجاتٍ بحسب الأثر ──────────────────────
 	//
@@ -118,7 +124,8 @@ var catalog = map[Capability]string{
 	FinanceManage:           "قيدُ محفظةٍ ومصروفٌ وخزينة",
 	PayoutsDecide:           "قرارُ السحب",
 	MerchantsManage:         "إدارةُ المتاجر وتعليقُها",
-	DriversManage:           "إدارةُ السائقين وتوثيقُهم",
+	DriversManage:           "إدارةُ السائقين وتشغيلُهم",
+	DriversRead:             "قراءةُ سجلّ السائقين ومواضعهم",
 	SettingsGeneralManage:   "إعداداتٌ عامّةٌ ومحتوى",
 	SettingsFinancialManage: "إعداداتٌ تدخل حساباً ماليّاً",
 	SettingsSecurityManage:  "إعداداتُ الأمن والجلسات",

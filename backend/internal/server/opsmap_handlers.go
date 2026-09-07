@@ -32,7 +32,7 @@ import (
 // المُترجِمُ ولا تُمسّ المعالجات.
 func (s *Server) requirePerm(p opsmap.Perm, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !opsmap.Allows(rolesFrom(r), p) {
+		if !opsmap.Allows(capabilitiesFrom(r), p) {
 			httpx.Error(w, errForbidden)
 			return
 		}
@@ -82,7 +82,7 @@ func boolParam(r *http.Request, key string) *bool {
 // **والواجهةُ لا ترسم طبقةً لا يملكها صاحبُها** — **ورؤيةُ طبقةٍ تردّ
 // `403` أسوأُ من غيابها.**
 func (s *Server) handleOpsMapMeta(w http.ResponseWriter, r *http.Request) {
-	perms := opsmap.Granted(rolesFrom(r))
+	perms := opsmap.Granted(capabilitiesFrom(r))
 	out := map[string]any{
 		"permissions": perms,
 		// **ونبضةُ الموضع تُرسَل** — الواجهةُ تشرح بها معنى «حيّ».
@@ -111,7 +111,7 @@ func (s *Server) handleOpsMapDrivers(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(q.Get("limit"))
 
 	ping := s.settings.GetNum(r.Context(), "drivers.location_ping_sec", 60)
-	money := opsmap.Allows(rolesFrom(r), opsmap.PermViewMoney)
+	money := opsmap.Allows(capabilitiesFrom(r), opsmap.PermViewMoney)
 
 	out, err := opsmap.Drivers(r.Context(), s.pg, box, f, ping, money, limit)
 	if err != nil {
@@ -141,7 +141,7 @@ func (s *Server) handleOpsMapMerchants(w http.ResponseWriter, r *http.Request) {
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
 	// **واسمُ المندوب لمن يراقب نشاطَ المندوبين وحدَه** (البند ٩).
-	withRep := opsmap.Allows(rolesFrom(r), opsmap.PermViewRepActivity)
+	withRep := opsmap.Allows(capabilitiesFrom(r), opsmap.PermViewRepActivity)
 
 	out, err := opsmap.Merchants(r.Context(), s.pg, box, f, withRep, limit)
 	if err != nil {
@@ -167,7 +167,7 @@ func (s *Server) handleOpsMapOrders(w http.ResponseWriter, r *http.Request) {
 		Unassigned: boolParam(r, "unassigned"),
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	money := opsmap.Allows(rolesFrom(r), opsmap.PermViewMoney)
+	money := opsmap.Allows(capabilitiesFrom(r), opsmap.PermViewMoney)
 
 	out, err := opsmap.ActiveOrders(r.Context(), s.pg, box, f, money, limit)
 	if err != nil {
@@ -420,7 +420,7 @@ func (s *Server) handleOpsMapReps(w http.ResponseWriter, r *http.Request) {
 	}
 	f := repFilterFrom(r)
 	// **وأرباحُ المندوب لمن يملك صلاحيّتَها وحدَه** (البند ٢٦).
-	money := opsmap.Allows(rolesFrom(r), opsmap.PermViewMoney)
+	money := opsmap.Allows(capabilitiesFrom(r), opsmap.PermViewMoney)
 
 	list, err := opsmap.Reps(r.Context(), s.pg, f, money)
 	if err != nil {
@@ -497,7 +497,7 @@ func (s *Server) handleOpsMapOpportunities(w http.ResponseWriter, r *http.Reques
 
 // handleOpsMapSearch البحثُ في الخريطة (البند ٣٦).
 func (s *Server) handleOpsMapSearch(w http.ResponseWriter, r *http.Request) {
-	hits, err := opsmap.Search(r.Context(), s.pg, rolesFrom(r),
+	hits, err := opsmap.Search(r.Context(), s.pg, capabilitiesFrom(r),
 		r.URL.Query().Get("q"))
 	if err != nil {
 		s.respondErr(w, err)

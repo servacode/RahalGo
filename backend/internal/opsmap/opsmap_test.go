@@ -9,45 +9,59 @@ import (
 // **الصلاحيّات — البند ٣٢**
 // ══════════════════════════════════════════════════════════════════════
 
-func TestPerm_NoRoleNoMap(t *testing.T) {
-	// **ولا تُفتح بتوكن إدارةٍ وحدَه** — من لا دورَ له لا يرى شيئاً.
+func TestPerm_NoCapabilityNoMap(t *testing.T) {
+	// **ولا تُفتح بتوكن إدارةٍ وحدَه** — من لا قدرةَ له لا يرى شيئاً.
 	if Allows(nil, PermViewMap) {
-		t.Fatal("بلا دورٍ والخريطةُ مفتوحة")
+		t.Fatal("بلا قدرةٍ والخريطةُ مفتوحة")
 	}
+	// **ومجهولُ القدرة يُمنَع** — ولا يُقرأ اسمٌ لا يعرفه المعجم.
 	for _, p := range All() {
-		if Allows([]string{"customer"}, p) || Allows([]string{"driver"}, p) {
-			t.Fatalf("زبونٌ أو سائقٌ يملك %s", p)
+		if Allows([]string{"customer"}, p) || Allows([]string{"support.manage"}, p) {
+			t.Fatalf("قدرةٌ لا شأنَ لها بالخريطة تملك %s", p)
 		}
 	}
 }
 
-func TestPerm_RoleMatrix(t *testing.T) {
+// TestPerm_CapabilityMatrix **الطبقةُ تُشتقُّ من القدرة لا من الاسم.**
+//
+// **ولولا ذلك لَما فتح `operations` الخريطةَ** — **فهو ليس `ops`.**
+func TestPerm_CapabilityMatrix(t *testing.T) {
 	cases := []struct {
-		role string
+		cap  string
 		perm Perm
 		want bool
 	}{
-		{"admin", PermManageCoverage, true},
-		{"admin", PermViewMoney, true},
-		// **والعملياتُ توزّع فتحتاج المواضع** — ولا تُدير التغطيةَ ولا الفروع.
-		{"ops", PermViewDrivers, true},
-		{"ops", PermManageCoverage, false},
-		{"ops", PermManageBranches, false},
-		{"ops", PermViewMoney, false},
-		// **والماليّةُ تقرأ المالَ ولا تتبع مواضعَ الناس** (البند ٣٣).
-		{"finance", PermViewMoney, true},
-		{"finance", PermViewDrivers, false},
+		{"settings.general.manage", PermManageCoverage, true},
+		{"settings.general.manage", PermManageBranches, true},
+		{"finance.read", PermViewMoney, true},
+		// **ومن يوزّع الطلبات يفتح الخريطةَ ويرى دبابيسَها.**
+		{"orders.read", PermViewMap, true},
+		{"orders.read", PermViewOrders, true},
+		{"orders.read", PermViewMerchants, true},
+		{"orders.read", PermManageCoverage, false},
+		{"orders.read", PermManageBranches, false},
+		{"orders.read", PermViewMoney, false},
+		// **وموضعُ إنسانٍ ليس رقماً ماليّاً** (البند ٣٣) —
+		// **والقراءةُ الماليّةُ لا تُعطي موضعَ سائق.**
+		{"finance.read", PermViewDrivers, false},
+		{"drivers.read", PermViewDrivers, true},
+		// **ونشاطُ المندوبين لمن يبني شبكةَ المتاجر** — **ولا
+		// يُقرأ بدليل الحسابات.**
+		{"merchants.manage", PermViewRepActivity, true},
+		{"users.read", PermViewRepActivity, false},
+		{"analytics.read", PermViewDemand, true},
+		{"analytics.read", PermViewMap, false},
 	}
 	for _, c := range cases {
-		if got := Allows([]string{c.role}, c.perm); got != c.want {
-			t.Errorf("%s · %s = %v وأُريد %v", c.role, c.perm, got, c.want)
+		if got := Allows([]string{c.cap}, c.perm); got != c.want {
+			t.Errorf("%s · %s = %v وأُريد %v", c.cap, c.perm, got, c.want)
 		}
 	}
 }
 
 func TestPerm_GrantedIsStableAndDeduped(t *testing.T) {
-	a := Granted([]string{"ops", "finance", "ops"})
-	b := Granted([]string{"finance", "ops"})
+	a := Granted([]string{"orders.read", "finance.read", "orders.read"})
+	b := Granted([]string{"finance.read", "orders.read"})
 	if len(a) != len(b) {
 		t.Fatalf("ترتيبٌ غيرُ ثابت: %v ≠ %v", a, b)
 	}

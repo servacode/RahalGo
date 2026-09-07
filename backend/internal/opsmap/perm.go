@@ -15,15 +15,14 @@ import "sort"
 
 // Perm صلاحيّةٌ مسمّاةٌ في الخريطة (البند ٣٢).
 //
-// # ولماذا أسماءٌ والأدوارُ خشنةٌ اليوم
+// # وقد رُبطت بالقدرات
 //
-// **`AQ-1` فجوةٌ قائمة**: الأدوارُ ثلاثةٌ خشنةٌ في الخادم (`admin` ·
-// `ops` · `finance`) **ولا صلاحيّاتٍ دقيقة.** **ولا يُبنى نظامُ صلاحيّاتٍ
-// كاملٌ هنا** — خارجَ النطاق.
+// **كُتبت الأسماءُ يومَ كانت الأدوارُ ثلاثةً خشنةً** (`admin` · `ops` ·
+// `finance`)، **على أن تُربَط بـ`AQ-1` حين يُبنى.** **وقد بُني**
+// (`ADG-1`/`ADG-2`) — **فالربطُ هنا بالقدرة لا بالاسم.**
 //
-// **لكنّ الأسماءَ تُكتب من اليوم** — **فحين يُبنى `AQ-1` تُربَط هذه
-// بالأدوار الجديدة في موضعٍ واحد**، ولا يُفتَّش عن `roles` مبعثرةٍ في
-// عشرين معالجاً.
+// **ولولا ذلك لَما فتح أحدٌ الخريطةَ بدورٍ كانونيّ**: `operations`
+// ليس `ops`، **فكان يُردّ عند الباب وإن ملك كلَّ قدرةٍ تلزمه.**
 type Perm string
 
 const (
@@ -54,34 +53,37 @@ func All() []Perm {
 	}
 }
 
-// rolePerms ربطُ الأدوار الخشنة بالصلاحيّات المسمّاة.
+// capPerms **ربطُ صلاحيّات الخريطة بقدرات `AQ-1`.**
+//
+// # ولماذا موضعٌ واحد
+//
+// **الخريطةُ طبقاتٌ أدقُّ من القدرات** — موضعُ سائقٍ غيرُ موضعِ متجرٍ
+// غيرُ رقمِ صندوقه. **ولا تُخترَع قدرةٌ لكلّ طبقة**؛ **تُشتقُّ الطبقةُ
+// من القدرة التي تحرس مسارَها في الجدول المركزيّ**، فلا تفترق حراستان.
 //
 // # ولماذا تُمنَع الماليّةُ من مواضع السائقين
 //
 // **موضعُ إنسانٍ ليس رقماً ماليّاً** — **ومن لا يوزّع الطلبات لا يحتاج
 // أن يعرف أين يقف السائقُ الآن.** (البند ٣٣: الخريطةُ ليست إعفاءً من
-// الخصوصيّة.)
+// الخصوصيّة.) **والماليّةُ لا تملك `drivers.read`** فلا تراها.
 //
 // # ولماذا لا تُدير العملياتُ الفروعَ والتغطية
 //
 // **رسمُ التغطية قرارُ عملٍ لا تشغيلٌ يوميّ** — ومن بدّل مضلَّعاً بدّل
-// من تصله المنصّةُ أصلاً.
-var rolePerms = map[string][]Perm{
-	"admin": All(),
-	"ops": {
-		PermViewMap, PermViewDrivers, PermViewMerchants, PermViewOrders,
-		PermViewRepActivity, PermViewDemand,
-	},
-	"finance": {
-		PermViewMap, PermViewMerchants, PermViewOrders,
-		PermViewDemand, PermViewMoney,
-	},
+// من تصله المنصّةُ أصلاً. **وهي بقدرة الإعدادات العامّة.**
+var capPerms = map[string][]Perm{
+	"orders.read":             {PermViewMap, PermViewOrders, PermViewMerchants},
+	"drivers.read":            {PermViewDrivers},
+	"merchants.manage":        {PermViewRepActivity},
+	"analytics.read":          {PermViewDemand},
+	"finance.read":            {PermViewMoney},
+	"settings.general.manage": {PermManageCoverage, PermManageBranches},
 }
 
-// Allows **أيملك صاحبُ هذه الأدوار هذه الصلاحيّة؟**
-func Allows(roles []string, p Perm) bool {
-	for _, r := range roles {
-		for _, have := range rolePerms[r] {
+// Allows **أيملك صاحبُ هذه القدرات هذه الصلاحيّة؟**
+func Allows(caps []string, p Perm) bool {
+	for _, r := range caps {
+		for _, have := range capPerms[r] {
 			if have == p {
 				return true
 			}
@@ -90,14 +92,14 @@ func Allows(roles []string, p Perm) bool {
 	return false
 }
 
-// Granted ما يملكه صاحبُ هذه الأدوار — **تُرسَل إلى الواجهة.**
+// Granted ما يملكه صاحبُ هذه القدرات — **تُرسَل إلى الواجهة.**
 //
 // **فلا ترسم الواجهةُ طبقةً لا يملكها صاحبُها** — **ورؤيةُ طبقةٍ تردّ
 // `403` أسوأُ من غيابها** (وهي قاعدةُ سايدبار اللوحة نفسُها).
-func Granted(roles []string) []Perm {
+func Granted(caps []string) []Perm {
 	seen := map[Perm]bool{}
-	for _, r := range roles {
-		for _, p := range rolePerms[r] {
+	for _, r := range caps {
+		for _, p := range capPerms[r] {
 			seen[p] = true
 		}
 	}
