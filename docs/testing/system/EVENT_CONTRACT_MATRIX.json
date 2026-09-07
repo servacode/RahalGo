@@ -1,10 +1,10 @@
 {
   "counts": {
     "Events": 11,
-    "Held": 3,
+    "Held": 4,
     "ExpectedFail": 5,
     "Partial": 2,
-    "Unproven": 1,
+    "Unproven": 0,
     "DeferredP8": 0,
     "Realtime": 8,
     "Push": 5,
@@ -727,10 +727,12 @@
       "durability": "DURABLE_REQUIRED",
       "retry_policy": "**خيطٌ لا يُنتظَر** — XOB-7",
       "tests": [
-        "TestEV_R21AutoTransferAwareness"
+        "TestEV_R21AutoTransferAwareness",
+        "TestR21_T1_SelfManageAutoTransferInformsMerchant",
+        "TestR21_T2_PlatformModeChecksChannelBeforeAccepting"
       ],
-      "status": "UNPROVEN",
-      "evidence": "يُقاس في التشغيل",
+      "status": "HELD",
+      "evidence": "**والقياسُ القديمُ كان يضبط `orders.auto_transfer_amount`** — **ومفتاحُ التشغيل `orders.auto_transfer` منطقيٌّ بلا عتبة** («وذهبت العتبتان»). **فلم يقع تحويلٌ قطُّ، والطلبُ يبقى `pending` فيُقرأ `PARTIAL`** — **وذاك سببُ بقائه «يُقاس في التشغيل».** **وبالمفتاح الصحيح**: وضعُ المتاجر ⇒ الحالُ `dispatching` · **إشعارٌ دائمٌ للمتجر 0⇒1** · وأربعُ رسائلِ بثّ. **ووضعُ المنصّة ⇒ القناةُ تُفحص قبل القبول**: البوتُ غيرُ جاهزٍ فيبقى `pending` — **ولا يُقبَل طلبٌ لا يعلم به متجرُه.**",
       "registers": [
         "R21",
         "XOB-7"
@@ -793,10 +795,7 @@
         "TestEV_RealtimeAuthorization"
       ],
       "status": "HELD",
-      "evidence": "زبونٌ آخرُ لم يستقبل · ومتجرٌ آخرُ لم يستقبل",
-      "registers": [
-        "R14"
-      ]
+      "evidence": "زبونٌ آخرُ لم يستقبل · ومتجرٌ آخرُ لم يستقبل"
     }
   ],
   "realtime_pubs": [

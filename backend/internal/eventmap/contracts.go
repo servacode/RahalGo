@@ -200,8 +200,19 @@ var Events = []Event{
 		Privacy:    "OrderPrivacy[merchant] — P-1",
 		Durability: DurableRequired,
 		Retry:      "**خيطٌ لا يُنتظَر** — XOB-7",
-		Tests:      []string{"TestEV_R21AutoTransferAwareness"},
-		Status:     Unproven, Evidence: "يُقاس في التشغيل",
+		Tests: []string{"TestEV_R21AutoTransferAwareness",
+			"TestR21_T1_SelfManageAutoTransferInformsMerchant",
+			"TestR21_T2_PlatformModeChecksChannelBeforeAccepting"},
+		Status: Held,
+		Evidence: "**والقياسُ القديمُ كان يضبط `orders.auto_transfer_amount`** " +
+			"— **ومفتاحُ التشغيل `orders.auto_transfer` منطقيٌّ بلا عتبة** " +
+			"(«وذهبت العتبتان»). **فلم يقع تحويلٌ قطُّ، والطلبُ يبقى " +
+			"`pending` فيُقرأ `PARTIAL`** — **وذاك سببُ بقائه «يُقاس في " +
+			"التشغيل».** " +
+			"**وبالمفتاح الصحيح**: وضعُ المتاجر ⇒ الحالُ `dispatching` · " +
+			"**إشعارٌ دائمٌ للمتجر 0⇒1** · وأربعُ رسائلِ بثّ. " +
+			"**ووضعُ المنصّة ⇒ القناةُ تُفحص قبل القبول**: البوتُ غيرُ " +
+			"جاهزٍ فيبقى `pending` — **ولا يُقبَل طلبٌ لا يعلم به متجرُه.**",
 		Registers: []string{"R21", "XOB-7"},
 	},
 	{
@@ -228,7 +239,19 @@ var Events = []Event{
 		Durability: LogicalPart, Retry: "—",
 		Tests:  []string{"TestEV_RealtimeAuthorization"},
 		Status: Held, Evidence: "زبونٌ آخرُ لم يستقبل · ومتجرٌ آخرُ لم يستقبل",
-		Registers: []string{"R14"},
+		// ══════════════════════════════════════════════════════════
+		// **و`R14` نُزعت من هنا** — دورةُ ٢٣
+		// ══════════════════════════════════════════════════════════
+		//
+		// **هذا العقدُ يقيس «التخويلُ قبل الاشتراك»** — من يدخل
+		// الغرفةَ أصلاً.
+		//
+		// **و`R14` تقول «اتّصالُ البثّ لا يُراجَع بعد المصافحة»** —
+		// **وصلةٌ قائمةٌ يُبطَل رمزُها فتبقى مفتوحة.**
+		//
+		// **وسؤالان مختلفان** — **ودليلٌ يُنسَب إلى سجلٍّ لا يقيسه
+		// يُغلقه بالكلام.** **فتبقى `R14` بدليلها وحدَه.**
+		Registers: nil,
 	},
 }
 

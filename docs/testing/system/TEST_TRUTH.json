@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 260,
-    "test_funcs": 950
+    "test_files": 261,
+    "test_funcs": 952
   },
   "flows": [
     {
@@ -66,6 +66,8 @@
         "XG-9"
       ],
       "tests": [
+        "TestR21_T1_SelfManageAutoTransferInformsMerchant",
+        "TestR21_T2_PlatformModeChecksChannelBeforeAccepting",
         "TestPF08_F10_DisabledMeansNoProgression",
         "TestPF08_F11_ProgressedAndTerminalAreNoOp",
         "TestPF08_F13_RecoveryNeedsNoMemory",
@@ -290,6 +292,8 @@
         "R23"
       ],
       "tests": [
+        "TestR21_T1_SelfManageAutoTransferInformsMerchant",
+        "TestR21_T2_PlatformModeChecksChannelBeforeAccepting",
         "TestPF08_F10_DisabledMeansNoProgression",
         "TestPF08_F11_ProgressedAndTerminalAreNoOp",
         "TestPF08_F13_RecoveryNeedsNoMemory",
@@ -697,6 +701,8 @@
         "L9"
       ],
       "tests": [
+        "TestR21_T1_SelfManageAutoTransferInformsMerchant",
+        "TestR21_T2_PlatformModeChecksChannelBeforeAccepting",
         "TestPF08_F10_DisabledMeansNoProgression",
         "TestPF08_F11_ProgressedAndTerminalAreNoOp",
         "TestPF08_F13_RecoveryNeedsNoMemory",
@@ -2015,6 +2021,8 @@
         "F-20"
       ],
       "tests": [
+        "TestR21_T1_SelfManageAutoTransferInformsMerchant",
+        "TestR21_T2_PlatformModeChecksChannelBeforeAccepting",
         "TestPF08_F10_DisabledMeansNoProgression",
         "TestPF08_F11_ProgressedAndTerminalAreNoOp",
         "TestPF08_F13_RecoveryNeedsNoMemory",
@@ -6811,6 +6819,48 @@
       "file": "internal/qa/authz_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestR21_T1_SelfManageAutoTransferInformsMerchant",
+      "file": "internal/qa/auto_transfer_awareness_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-07",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestR21_T2_PlatformModeChecksChannelBeforeAccepting",
+      "file": "internal/qa/auto_transfer_awareness_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-01",
+        "F-07",
+        "F-18"
+      ],
+      "risks": [
+        "R21"
+      ],
+      "modes": [
+        "FAILURE",
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestPF08_F10_DisabledMeansNoProgression",

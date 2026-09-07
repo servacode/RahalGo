@@ -360,7 +360,11 @@ func TestEV_R21AutoTransferAwareness(t *testing.T) {
 	f := h.Factory()
 	m := f.Merchant()
 	item := h.NewItemFor(m, 1500)
-	h.Setting("orders.auto_transfer_amount", "1")
+	// **والمفتاحُ الصحيح** — منطقيٌّ لا عتبة (`auto_transfer.go:42`):
+	// **«وذهبت العتبتان»**. **وكان يُضبَط `orders.auto_transfer_amount`
+	// فلا يقع تحويلٌ قطُّ ويُقرأ `PARTIAL`.**
+	h.Setting("orders.auto_transfer", "true")
+	h.Setting("platform.orders_mode", `"merchants"`)
 
 	before := evNotifCount(t, h, m.Owner.ID)
 	cap := h.Listen("merchant:" + m.ID)
