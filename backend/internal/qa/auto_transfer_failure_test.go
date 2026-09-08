@@ -95,30 +95,70 @@ func placeTransferOrder(t *testing.T, hh *Harness, m *Merchant) string {
 	return id
 }
 
-// settleTransfer ينتظر حتّى تهدأ محاولةُ التحويل ثمّ يقرأ الحال.
+// settleTransfer ينتظر حتّى **تنتهي** محاولةُ التحويل ثمّ يقرأ الحال.
 //
-// **والخيطُ لا يُنتظَر** (`XOB-7`) — **يُنتظَر أثرُه في القاعدة**،
-// **وإن لم يقع أثرٌ فمهلةٌ قصيرةٌ ثمّ يُقرأ ما استقرّ.**
+// ══════════════════════════════════════════════════════════════════════
+// **و«قُبل» ليست نهايةَ المحاولة** — `XG-44`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان الشرطُ `status != 'pending'`** — **وهو يتحقّق عند أوّلِ الأفعال
+// الثلاثة لا عند آخرها.** **والمحاولةُ خيطٌ مستقلٌّ** يُطلَق بـ
+// `go s.autoTransfer(context.WithoutCancel(...))`، **وترتيبُه في
+// `auto_transfer.go` مقيس**:
+//
+//	١ Transition ⇒ accepted     ← **هنا كان الفحصُ يقرأ**
+//	٢ SendText                  ← عدّادُ النداء
+//	٣ sent_to_merchant_at       ← الوسم
+//	٤ AutoDispatch
+//
+// **فيُقرأ منتصفُ عمليّةٍ ويُحكَم عليه**: **`نداءات=0`** إن قُرئ بين ١
+// و٢ (وهو `F5`)، **و`مُرسَلٌ=false` ونداءٌ واحد** إن قُرئ بين ٢ و٣
+// (وهو `F7`). **وكلاهما عرَضُ قراءةٍ مبكّرةٍ لا عطبُ منتَج.**
+//
+// **وقيس منفرداً بلا حزمةٍ ولا سلسلة**: عشرون تشغيلاً لكلٍّ ⇒
+// **`F5` أربعُ سقطات · `F7` ثلاث.** **فلا تلوّثَ ولا سابقة.**
+//
+// # فيُنتظَر آخرُ الأفعال لا أوّلُها
+//
+// **والنهايةُ حالٌ في القاعدة لا مهلةُ ساعة**: **وسمٌ** أو **أثرُ فشلٍ
+// منسوبٌ إلى الطلب** أو **سائقٌ أُسنِد.** **وما بقي `pending` فلم
+// تبدأ محاولتُه أو رُفض** — وتلك حالُ الأنماط الأربعة الأُوَل، **وهي
+// تُقرأ بعد المهلة كما كانت.**
+//
+// **ولا نومَ أُضيف ولا مهلةٌ رُفعت** — **بُدّل الشرطُ وحدَه.**
 func settleTransfer(t *testing.T, hh *Harness, oid string) transferProbe {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	var p transferProbe
 	for {
+		var failed int
 		if err := hh.Pool.QueryRow(ctxBG(), `
 			SELECT o.status, o.sent_to_merchant_at,
 			       (SELECT count(*) FROM order_events e WHERE e.order_id = o.id),
 			       (SELECT count(*) FROM audit_log a WHERE a.entity = 'order'
 			                                          AND a.entity_id = o.id::text),
-			       o.driver_id IS NOT NULL
-			  FROM orders o WHERE o.id = $1::uuid`, oid).
-			Scan(&p.Status, &p.SentAt, &p.Events, &p.Audits, &p.Assigned); err != nil {
+			       o.driver_id IS NOT NULL,
+			       (SELECT count(*) FROM order_events e
+			         WHERE e.order_id = o.id AND e.note LIKE $2 || '%')
+			  FROM orders o WHERE o.id = $1::uuid`, oid, orders.TransferFailureNote).
+			Scan(&p.Status, &p.SentAt, &p.Events, &p.Audits, &p.Assigned, &failed); err != nil {
 			t.Fatalf("قراءةُ الطلب: %v", err)
 		}
-		if p.Status != "pending" || time.Now().After(deadline) {
+		if transferAttemptEnded(p, failed) || time.Now().After(deadline) {
 			return p
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
+}
+
+// transferAttemptEnded **هل بلغت المحاولةُ آخرَها؟**
+//
+// **و`accepted` وحدَها لا تكفي** — **هي أوّلُ الثلاثة لا آخرُها.**
+func transferAttemptEnded(p transferProbe, failed int) bool {
+	if p.Status == "pending" {
+		return false
+	}
+	return p.SentAt != nil || failed > 0 || p.Assigned
 }
 
 // ══════════════════════════════════════════════════════════════════════

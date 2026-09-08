@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 277,
-    "test_funcs": 1031
+    "test_files": 278,
+    "test_funcs": 1032
   },
   "flows": [
     {
@@ -814,7 +814,8 @@
         "TestR24_F5_SendFailureAfterAccept",
         "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
         "TestR24_F6_NoMerchantPhoneAfterAccept",
-        "TestR24_F7_DispatchFailureIsVisible"
+        "TestR24_F7_DispatchFailureIsVisible",
+        "TestXG44_SettleWaitsUntilTheTransferAttemptEnds"
       ],
       "status": "COVERED"
     },
@@ -2731,6 +2732,16 @@
     {
       "id": "XG-44",
       "title": "`R24/F5` يسقط متقطّعاً في الحزمة وينجح وحدَه",
+      "severity": "MEDIUM",
+      "fixed": "**أُصلح في دورةِ ٣٧ — وأعضاؤه ثلاثةٌ لا واحد**: `F5_SendFailureAfterAccept` · `F5_TraceIsAdminReadableAfterTheRequest` · `F7_DispatchFailureIsVisible`. **وتوقيعان لعلّةٍ واحدةٍ على عمقين.** **والجذرُ عقدُ المُنتظِر لا المنتَج**: `settleTransfer` **كانت تعود عند `status != 'pending'`** — **وذاك أوّلُ الأفعال الثلاثة لا آخرُها.** **والمحاولةُ خيطٌ مستقلٌّ** (`go s.autoTransfer(context.WithoutCancel(…))`) **وترتيبُه مقيسٌ في `auto_transfer.go`**: قبولٌ ⇒ إبلاغٌ ⇒ وسمٌ ⇒ إنزال. **فمن قرأ بين الأوّل والثاني رأى `نداءات=0`** (وهو `F5`)، **ومن قرأ بين الثاني والثالث رأى نداءً واحداً بلا وسم** (وهو `F7`). **وقيس منفرداً بلا حزمةٍ ولا سابقة**: عشرون تشغيلاً لكلٍّ ⇒ **`F5` أربعُ سقطات · `F7` ثلاث** — **فلا تلوّثَ ولا ترتيب**، **والمِسنَدُ يعيد الإعدادَ إلى قيمته السابقة لا إلى افتراضٍ**، **والمُبلِّغُ الزائفُ لكلّ فحصٍ وحدَه.** **و`R24` لم يُخرَق**: السياقُ `WithoutCancel` فلا يُلغى العملُ بعودة الطلب، **والعقدُ قائمٌ على قاعدةٍ نظيفة.** **فصار المُنتظِرُ ينتظر آخرَ الأفعال**: وسمٌ أو أثرُ فشلٍ منسوبٌ أو سائقٌ أُسنِد — **حالٌ في القاعدة لا مهلةُ ساعة**، **ولا نومَ أُضيف ولا مهلةٌ رُفعت ولا حكمٌ أُضعف.** **وقيس بمقارنةٍ متناوبةٍ على الجهاز نفسِه واللحظة نفسِها** (عشرون تشغيلاً لكلّ شرط): **القديمُ ثلاثُ سقطاتٍ بتوقيع `XG-44` والجديدُ صفر** — **وسقطاتُ `XG-34` أربعٌ وخمسٌ، فلا فرقَ يُنسَب إلى هذا التبديل.**",
+      "tests": [
+        "TestXG44_SettleWaitsUntilTheTransferAttemptEnds"
+      ],
+      "status": "COVERED"
+    },
+    {
+      "id": "XG-45",
+      "title": "أندرويد يستقبل `message_key` ولا يترجمه",
       "severity": "MEDIUM",
       "tests": null,
       "status": "NOT_IMPLEMENTED"
@@ -14396,6 +14407,24 @@
       "modes": [
         "SECURITY",
         "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG44_SettleWaitsUntilTheTransferAttemptEnds",
+      "file": "internal/qa/transfer_settle_contract_test.go",
+      "package": "qa",
+      "level": "L4",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "flows": [
+        "F-20"
+      ],
+      "gaps": [
+        "XG-44"
+      ],
+      "modes": [
         "FULL",
         "RELEASE"
       ],
