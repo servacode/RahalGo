@@ -17,18 +17,18 @@
 | أنواعُ قيدِ المحفظة | **14** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **48** — منها **11** موجَّهٌ بـ`Apps` |
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
-| تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
+| تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **267** |
-| دوالُّ اختبار | **1014** |
+| ملفّاتُ اختبار | **268** |
+| دوالُّ اختبار | **1018** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1014
-MAPPED     = 316
+TOTAL      = 1018
+MAPPED     = 320
 INFRA      = 115
 ORPHAN     = 583
 ```
@@ -58,8 +58,8 @@ ORPHAN     = 583
 | **التدفّقات** | 35 | 30 | 5 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 40 | 13 | 27 |
-| **إعداداتُ السلوك** | 95 | 12 | 83 |
+| **فجواتُ العقد** | 40 | 14 | 26 |
+| **إعداداتُ السلوك** | 96 | 13 | 83 |
 
 ---
 
@@ -109,8 +109,8 @@ ORPHAN     = 583
 | **XG-10** | `BLOCKER` | — | `COVERED` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` · `TestRACE_RefundVsPayout` · `TestFIN_XG10_DebtOffsetFromNextCommission` · `TestFIN_XG10_RepCommissionReversedOnRefund` · `TestFIN_XG10_RepWithdrewThenRefund` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
 | **XG-11** | `BLOCKER` | — | `COVERED` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` · `TestRACE_RefundVsPayout` · `TestFIN_XG11_RefundIndependentOfMerchantBalance` · `TestFIN_XG11_RefundUntouchedWhenMerchantSolvent` · `TestFIN_XG10_RepWithdrewThenRefund` |
 | **XG-12** | `CRITICAL` | — | `COVERED` | `TestXG12_B3_LegacyOverReservationIsDetectedNotTruncated` · `TestXG12_C1_ConcurrentRequestsCannotOverReserve` · `TestXG12_C2_ReserveVsSpend` · `TestXG12_C4C5_ReleaseOnceAndNoDoubleDebit` · `TestXG12_F1F2_CreationIsOneUnit` · `TestXG12_F3F5_TerminalStateNeedsItsMoneyTruth` · `TestXG12_F4_AuditFailureRollsBackPayout` · `TestXG12_T1_RequestReservesAndSpendSeesAvailable` · `TestXG12_T2_PaidDebitsAndReleases` · `TestXG12_T3_RejectAndFailReleaseWithoutDebit` · `TestXG12_T4_ProcessingHoldsWithoutDebit` · `TestXG12_T5_ReversedCompensates` · `TestXG12_TreasuryCannotReserve` |
-| **XG-13** | `HIGH` | — | `EXPECTED_FAIL` | `TestFIN_CommissionSourceMatrix` · `TestFIN_SnapshotVsLiveEconomics` |
-| **XG-14** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
+| **XG-13** | `HIGH` | — | `COVERED` | `TestXG13_DefaultIsPricingMargin` · `TestXG13_UnknownModeIsRejected` · `TestXG14_ReversalMirrorsSettlementInEveryMode` · `TestXG14_ThreeModesGiveTheirContract` · `TestFIN_CommissionSourceMatrix` · `TestFIN_SnapshotVsLiveEconomics` |
+| **XG-14** | `CRITICAL` | — | `COVERED` | `TestXG13_DefaultIsPricingMargin` · `TestXG13_UnknownModeIsRejected` · `TestXG14_ReversalMirrorsSettlementInEveryMode` · `TestXG14_ThreeModesGiveTheirContract` |
 | **XG-15** | `HIGH` | `sales.activation_orders` | `NOT_IMPLEMENTED` | — |
 | **XG-16** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-17** | `HIGH` | — | `NOT_IMPLEMENTED` | — |

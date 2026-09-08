@@ -676,6 +676,7 @@
 | `app.min_version.rep` | المندوبون | int | `0` |
 | `sales.require_whatsapp` | المندوبون | bool | `true` |
 | `sales.commission_percent` | المندوبون | int | `0` |
+| `sales.commission_source` | المندوبون | choice | `pricing_margin` |
 | `sales.monthly_target` | المندوبون | int | `0` |
 | `sales.target_reward` | المندوبون | money | `0` |
 | `sales.target_2` | المندوبون | int | `0` |

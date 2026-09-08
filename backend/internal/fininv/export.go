@@ -60,6 +60,7 @@ type Counts struct {
 var FinancialSettings = []string{
 	"merchants.commission_percent", // pricing.go:153 — عمولةُ المنصّة
 	"sales.commission_percent",     // pricing.go:164 — عمولةُ المندوب
+	"sales.commission_source",      // pricing.go — مصدرُ احتساب عمولته
 	"sales.activation_orders",      // merchantActivated — عتبةُ التفعيل
 	"pricing.margin_fixed",         // pricing.go:69  — هامشُ التسعير
 	"delivery.fee",                 // pricing.go:195 — أجرةُ التوصيل

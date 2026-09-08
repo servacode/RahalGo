@@ -213,9 +213,12 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 		}
 	}
 
-	// **والإعداداتُ المُغيِّرةُ للسلوك ٩٥** — كما في `CONFIG_IMPACT_MAP.md`.
-	if d.BehaviourSettings != 95 {
-		t.Errorf("إعداداتُ السلوك = %d لا ٩٥ — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	// **والإعداداتُ المُغيِّرةُ للسلوك ٩٦** — كما في `CONFIG_IMPACT_MAP.md`.
+	//
+	// **وصارت ستّاً وتسعين في دورةِ ٣١** — `sales.commission_source`
+	// (`XG-13`): **مفتاحٌ يبدّل قاعدةَ حسابِ مالٍ يُدفَع.**
+	if d.BehaviourSettings != 96 {
+		t.Errorf("إعداداتُ السلوك = %d لا ٩٦ — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

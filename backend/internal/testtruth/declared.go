@@ -200,8 +200,41 @@ var Gaps = []GapDecl{
 			"**والترحيلُ يكشف ولا يُسوّي**: **حالٌ قديمةٌ مطالبُها فوق " +
 			"رصيدها تُرفَع بالأسماء ويقف الترحيل** — " +
 			"**ورقمٌ يُسوّى ليمرّ إخفاءٌ لا ترحيل.**"},
-	{ID: "XG-13", Title: "لا مفتاحَ لمصدر احتساب العمولة", Severity: "HIGH"},
-	{ID: "XG-14", Title: "بوّابةُ platformCommission مثبَّتةٌ في الشيفرة", Severity: "CRITICAL"},
+	// ══════════════════════════════════════════════════════════════
+	// **`XG-13` و`XG-14` — نصفا عقدٍ واحد** (`RQ-6`) · دورةُ ٣١
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **`PG-7` مفتاحُ الوضع · `PG-8` بوّابةٌ مثبَّتة** — **ولا يكتمل
+	// أحدُهما بلا الآخر**: **من نزع البوّابةَ بلا مفتاحٍ اختار وضعاً
+	// بيده**، **ومن أضاف مفتاحاً والبوّابةُ قائمةٌ باع خياراً لا يعمل.**
+	// **فنُفّذا معاً وبقيا سجلَّين.**
+	{ID: "XG-13", Title: "لا مفتاحَ لمصدر احتساب العمولة", Severity: "HIGH",
+		Fixed: "**صار `sales.commission_source` مفتاحاً كانونيّاً** بثلاث " +
+			"قيمٍ لا رابعَ لها (`platform_commission` · `pricing_margin` · " +
+			"`both`)، **افتراضُه `pricing_margin` بقرار المالك** — " +
+			"**أقلُّ فارقٍ ماليٍّ عن السلوك القائم.** " +
+			"**ويُصنَّف ماليّاً حسّاساً** فيدخل `FinancialSettings` " +
+			"وتحكمه قدرةُ الإعدادات الماليّة **ويلزمه تأكيدٌ** " +
+			"(`ADG-3`) **وأثرُه معامليّ** (`AQ-4`). " +
+			"**ومجهولُ القيمة يُردّ ولا يرتدّ إلى افتراض** — " +
+			"**وقيمةٌ فاسدةٌ تُقرأ افتراضاً تدفع مالاً لا يقصده أحد.** " +
+			"(قِيس: قيمةٌ خارج المعجم ⇒ `400`.)"},
+	{ID: "XG-14", Title: "بوّابةُ platformCommission مثبَّتةٌ في الشيفرة", Severity: "CRITICAL",
+		Fixed: "**نُزعت البوّابةُ وصارت القاعدةُ بالوضع المعتمد.** " +
+			"**وكان السلوكُ لا يطابق وضعاً**: `platformCommission == 0` " +
+			"تمنع كلَّ شيءٍ **ثمّ يُحسَب من الهامش بعد أسطر** — " +
+			"**فيُبوَّب بوضعٍ ويُحسَب بآخر**، **وأضيقُ من كليهما**: " +
+			"**متجرٌ عمولتُه صفرٌ وهامشُه ألفٌ لا يُعطي مندوبَه شيئاً.** " +
+			"**والباقي شرطٌ حقيقيّ**: لا مندوبَ ⇒ لا مستحِقّ. " +
+			"**والأوضاعُ الثلاثةُ مقيسةٌ بنداءٍ حيّ** — عشرُ حالاتٍ في " +
+			"`TestXG14_ThreeModesGiveTheirContract`: الأوّلُ يعطي من " +
+			"العمولة وحدَها، والثاني من الهامش وحدَه، والثالثُ من " +
+			"مجموعهما (١٠٠ · ١٠٠ · ٢٠٠). " +
+			"**والعكسُ نُزعت بوّابتُه معها** — **وبوّابةٌ في العكس لا " +
+			"في التسوية تترك قيداً لا يُعكَس**: الزبونُ يستردّ والمندوبُ " +
+			"يحتفظ. (مُثبَتٌ في الأوضاع الثلاثة.) " +
+			"**ولم تُمَسّ لقطةُ الاقتصاد** — قراءةُ الوضع عند التسوية هي " +
+			"عقدُ النسبة القائمُ نفسُه، **و`XG-26`/`XG-27` لم يُستهلكا.**"},
 	{ID: "XG-15", Title: "عتبةُ التفعيل تُسقط الطلباتِ السابقة", Severity: "HIGH", WokenBy: "sales.activation_orders"},
 	{ID: "XG-16", Title: "المندوبُ يرى عمولةَ المنصّة", Severity: "HIGH"},
 	{ID: "XG-17", Title: "لا سجلَّ نقلِ متجرٍ بين مندوبين", Severity: "HIGH"},
@@ -1810,6 +1843,12 @@ var TestMap = map[string]TestDecl{
 	"TestADG1_C1C2_RevocationVsPrivilegedRequest":          authzTest(),
 	"TestADG1_StructuralGuards":                            infraTest(),
 
+	// ── مصدرُ احتساب العمولة (دورةُ ٣١) — `XG-13` · `XG-14` ──────
+	"TestXG14_ThreeModesGiveTheirContract":          commissionSourceTest(),
+	"TestXG14_ReversalMirrorsSettlementInEveryMode": commissionSourceTest(),
+	"TestXG13_DefaultIsPricingMargin":               commissionSourceTest(),
+	"TestXG13_UnknownModeIsRejected":                commissionSourceTest(),
+
 	// ── طبقاتُ الرصيد (دورةُ إصلاحٍ ٣٠) — `XG-12` · `AQ-3` ───────
 	"TestXG12_T1_RequestReservesAndSpendSeesAvailable": reserveTest(),
 	"TestXG12_T2_PaidDebitsAndReleases":                reserveTest(),
@@ -2059,6 +2098,17 @@ func authzTest() TestDecl {
 		Flows: []string{"F-30", "F-34"},
 		Risks: []string{"R15"},
 		Modes: []string{"SECURITY", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
+	}
+}
+
+// commissionSourceTest حارسُ مصدر احتساب عمولة المندوب — `RQ-6`.
+func commissionSourceTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows:    []string{"F-14", "F-23", "F-33"},
+		Gaps:     []string{"XG-13", "XG-14"},
+		Settings: []string{"sales.commission_source", "sales.commission_percent"},
+		Modes:    []string{"FINANCIAL", "FULL", "RELEASE"},
 	}
 }
 

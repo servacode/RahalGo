@@ -1096,6 +1096,7 @@
   "financial_settings": [
     "merchants.commission_percent",
     "sales.commission_percent",
+    "sales.commission_source",
     "sales.activation_orders",
     "pricing.margin_fixed",
     "delivery.fee",

@@ -1008,7 +1008,17 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		return err
 	}
 
-	if platformCommission == 0 || repID == nil {
+	// ══════════════════════════════════════════════════════════════
+	// **ولا بوّابةَ مثبَّتةٌ في الشيفرة** — `XG-14` · `RQ-6`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كان هنا `platformCommission == 0` يمنع كلَّ شيء** — **ثمّ
+	// يُحسَب من الهامش بعد أسطر.** **فيُبوَّب بوضعٍ ويُحسَب بآخر**،
+	// **وهو أضيقُ من الوضعين معاً**: متجرٌ عمولتُه صفرٌ وهامشُه ألفٌ
+	// **لا يُعطي مندوبَه شيئاً** — **واستحقاقٌ يضيع بلا أن يُقال.**
+	//
+	// **والباقي شرطٌ حقيقيّ**: **لا مندوبَ ⇒ لا مستحِقّ.**
+	if repID == nil {
 		return nil
 	}
 
@@ -1044,7 +1054,13 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		`SELECT `+OrderMarginSQL("$1"), orderID).Scan(&margin); err != nil {
 		return err
 	}
-	repCommission, err := s.repShare(ctx, q, margin)
+	// **والقاعدةُ بحسب الوضع المعتمد** — `RQ-6`. **ولا يُقرأ مجهولٌ
+	// افتراضاً**: **وضعٌ فاسدٌ يُسقط التسويةَ ولا يدفع مالاً بالتخمين.**
+	base, err := s.repCommissionBase(ctx, platformCommission, margin)
+	if err != nil {
+		return err
+	}
+	repCommission, err := s.repShare(ctx, q, base)
 	if err != nil || repCommission <= 0 {
 		return err
 	}
@@ -1235,7 +1251,9 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 		`UPDATE orders SET platform_commission = 0 WHERE id = $1`, orderID); err != nil {
 		return err
 	}
-	if platformCommission == 0 || repID == nil {
+	// **والعكسُ يتناظر مع التسوية** — `XG-14`: **بوّابةٌ هنا لا هناك
+	// تترك قيداً لا يُعكَس**، وهو خطأٌ في الاتّجاه المعاكس.
+	if repID == nil {
 		return nil
 	}
 	// لم تُدفع له عمولة على شرائه هو، فلا شيء يُعكس.
@@ -1377,8 +1395,25 @@ func (s *Service) offsetRepDebt(ctx context.Context, q wallet.Querier,
 // لزم أن يُعدَّل ثلاثةُ مواضع، **ومن نسي واحداً دفع للمندوب غيرَ ما يُعرض له.**
 //
 // **والقراءةُ عند كلّ تسوية** — فتغييرُ المالك يسري على الطلب التالي.
-func (s *Service) repShare(ctx context.Context, _ wallet.Querier, platformCommission int64) (int64, error) {
-	return pricing.RepCommission(ctx, s.settings).Of(platformCommission), nil
+func (s *Service) repShare(ctx context.Context, _ wallet.Querier, base int64) (int64, error) {
+	return pricing.RepCommission(ctx, s.settings).Of(base), nil
+}
+
+// repCommissionBase **قاعدةُ عمولة المندوب بحسب الوضع المعتمد.**
+//
+// **وموضعٌ واحدٌ يقرأ الوضعَ** — التسويةُ والعكسُ كلاهما منه، **فلا
+// يفترق ما يُدفَع عمّا يُعكَس.**
+//
+// **والقراءةُ عند كلّ تسويةٍ كما تُقرأ النسبة** — **وهو العقدُ
+// القائمُ نفسُه لا عقدٌ جديد** (`repShare`: «تغييرُ المالك يسري على
+// الطلب التالي»). **ولقطةُ الاقتصاد لحظةَ الإنشاء عقدُ `XG-26`
+// و`XG-27`** — **ولا يُحسَم هنا.**
+func (s *Service) repCommissionBase(ctx context.Context, platformCommission, margin int64) (int64, error) {
+	src, err := pricing.RepCommissionSource(ctx, s.settings)
+	if err != nil {
+		return 0, err
+	}
+	return pricing.RepCommissionBase(src, platformCommission, margin), nil
 }
 
 // AssignDriver إسناد يدوي من العمليات: يتحقق أن الحساب سائق نشط ثم يسند وينقل الحالة.

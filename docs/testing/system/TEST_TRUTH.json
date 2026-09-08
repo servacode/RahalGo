@@ -28,11 +28,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 118,
-    "behaviour_settings": 95,
+    "setting_defs": 119,
+    "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 267,
-    "test_funcs": 1014
+    "test_files": 268,
+    "test_funcs": 1018
   },
   "flows": [
     {
@@ -562,6 +562,10 @@
         "TestR24_F5_TraceIsAdminReadableAfterTheRequest",
         "TestR24_F6_NoMerchantPhoneAfterAccept",
         "TestR24_F7_DispatchFailureIsVisible",
+        "TestXG13_DefaultIsPricingMargin",
+        "TestXG13_UnknownModeIsRejected",
+        "TestXG14_ReversalMirrorsSettlementInEveryMode",
+        "TestXG14_ThreeModesGiveTheirContract",
         "TestEV_R23PushFailureIsLost",
         "TestFAIL_P7SeamRequired_FCMTransport",
         "TestFIN_MoneyTimingByStatus",
@@ -899,6 +903,10 @@
       ],
       "tests": [
         "TestRepTarget_GrantedOnDelivery",
+        "TestXG13_DefaultIsPricingMargin",
+        "TestXG13_UnknownModeIsRejected",
+        "TestXG14_ReversalMirrorsSettlementInEveryMode",
+        "TestXG14_ThreeModesGiveTheirContract",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_RepCommissionReversal",
@@ -1363,6 +1371,10 @@
         "TestAQ4_A6_ConcurrentActionsKeepTheirOwnAudit",
         "TestAQ4_A8_UncoveredActionsRemainBestEffort",
         "TestAQ4_CriticalActionsUseTransactionalAudit",
+        "TestXG13_DefaultIsPricingMargin",
+        "TestXG13_UnknownModeIsRejected",
+        "TestXG14_ReversalMirrorsSettlementInEveryMode",
+        "TestXG14_ThreeModesGiveTheirContract",
         "TestXG20_A2_AuditFailureRollsBackBusiness",
         "TestXG20_A3_FailedBusinessLeavesNoAudit",
         "TestXG20_C1C2_ConcurrentMutationsCorrelate",
@@ -2361,18 +2373,29 @@
       "id": "XG-13",
       "title": "لا مفتاحَ لمصدر احتساب العمولة",
       "severity": "HIGH",
+      "fixed": "**صار `sales.commission_source` مفتاحاً كانونيّاً** بثلاث قيمٍ لا رابعَ لها (`platform_commission` · `pricing_margin` · `both`)، **افتراضُه `pricing_margin` بقرار المالك** — **أقلُّ فارقٍ ماليٍّ عن السلوك القائم.** **ويُصنَّف ماليّاً حسّاساً** فيدخل `FinancialSettings` وتحكمه قدرةُ الإعدادات الماليّة **ويلزمه تأكيدٌ** (`ADG-3`) **وأثرُه معامليّ** (`AQ-4`). **ومجهولُ القيمة يُردّ ولا يرتدّ إلى افتراض** — **وقيمةٌ فاسدةٌ تُقرأ افتراضاً تدفع مالاً لا يقصده أحد.** (قِيس: قيمةٌ خارج المعجم ⇒ `400`.)",
       "tests": [
+        "TestXG13_DefaultIsPricingMargin",
+        "TestXG13_UnknownModeIsRejected",
+        "TestXG14_ReversalMirrorsSettlementInEveryMode",
+        "TestXG14_ThreeModesGiveTheirContract",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_SnapshotVsLiveEconomics"
       ],
-      "status": "EXPECTED_FAIL"
+      "status": "COVERED"
     },
     {
       "id": "XG-14",
       "title": "بوّابةُ platformCommission مثبَّتةٌ في الشيفرة",
       "severity": "CRITICAL",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "fixed": "**نُزعت البوّابةُ وصارت القاعدةُ بالوضع المعتمد.** **وكان السلوكُ لا يطابق وضعاً**: `platformCommission == 0` تمنع كلَّ شيءٍ **ثمّ يُحسَب من الهامش بعد أسطر** — **فيُبوَّب بوضعٍ ويُحسَب بآخر**، **وأضيقُ من كليهما**: **متجرٌ عمولتُه صفرٌ وهامشُه ألفٌ لا يُعطي مندوبَه شيئاً.** **والباقي شرطٌ حقيقيّ**: لا مندوبَ ⇒ لا مستحِقّ. **والأوضاعُ الثلاثةُ مقيسةٌ بنداءٍ حيّ** — عشرُ حالاتٍ في `TestXG14_ThreeModesGiveTheirContract`: الأوّلُ يعطي من العمولة وحدَها، والثاني من الهامش وحدَه، والثالثُ من مجموعهما (١٠٠ · ١٠٠ · ٢٠٠). **والعكسُ نُزعت بوّابتُه معها** — **وبوّابةٌ في العكس لا في التسوية تترك قيداً لا يُعكَس**: الزبونُ يستردّ والمندوبُ يحتفظ. (مُثبَتٌ في الأوضاع الثلاثة.) **ولم تُمَسّ لقطةُ الاقتصاد** — قراءةُ الوضع عند التسوية هي عقدُ النسبة القائمُ نفسُه، **و`XG-26`/`XG-27` لم يُستهلكا.**",
+      "tests": [
+        "TestXG13_DefaultIsPricingMargin",
+        "TestXG13_UnknownModeIsRejected",
+        "TestXG14_ReversalMirrorsSettlementInEveryMode",
+        "TestXG14_ThreeModesGiveTheirContract"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-15",
@@ -4186,6 +4209,10 @@
         "rep"
       ],
       "tests": [
+        "TestXG13_DefaultIsPricingMargin",
+        "TestXG13_UnknownModeIsRejected",
+        "TestXG14_ReversalMirrorsSettlementInEveryMode",
+        "TestXG14_ThreeModesGiveTheirContract",
         "TestFIN_MoneyTimingByStatus",
         "TestFIN_CommissionSourceMatrix",
         "TestFIN_RefundNotConditionedOnRepBalance",
@@ -4194,6 +4221,29 @@
         "TestFIN_XG10_DebtOffsetFromNextCommission",
         "TestFIN_XG10_RepCommissionReversedOnRefund",
         "TestFIN_XG10_RepWithdrewThenRefund"
+      ],
+      "status": "REGRESSION_TEST_PRESENT"
+    },
+    {
+      "key": "sales.commission_source",
+      "group": "sales",
+      "kind": "choice",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": [
+        "TestXG13_DefaultIsPricingMargin",
+        "TestXG13_UnknownModeIsRejected",
+        "TestXG14_ReversalMirrorsSettlementInEveryMode",
+        "TestXG14_ThreeModesGiveTheirContract"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -7752,6 +7802,106 @@
       "file": "internal/qa/city_test.go",
       "package": "qa",
       "orphan": true
+    },
+    {
+      "name": "TestXG13_DefaultIsPricingMargin",
+      "file": "internal/qa/commission_source_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "gaps": [
+        "XG-13",
+        "XG-14"
+      ],
+      "settings": [
+        "sales.commission_source",
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG13_UnknownModeIsRejected",
+      "file": "internal/qa/commission_source_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "gaps": [
+        "XG-13",
+        "XG-14"
+      ],
+      "settings": [
+        "sales.commission_source",
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG14_ReversalMirrorsSettlementInEveryMode",
+      "file": "internal/qa/commission_source_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "gaps": [
+        "XG-13",
+        "XG-14"
+      ],
+      "settings": [
+        "sales.commission_source",
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG14_ThreeModesGiveTheirContract",
+      "file": "internal/qa/commission_source_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-23",
+        "F-33"
+      ],
+      "gaps": [
+        "XG-13",
+        "XG-14"
+      ],
+      "settings": [
+        "sales.commission_source",
+        "sales.commission_percent"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestCONC_BarrierReleasesTogether",
