@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **273** |
-| دوالُّ اختبار | **1025** |
+| ملفّاتُ اختبار | **274** |
+| دوالُّ اختبار | **1027** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1025
-MAPPED     = 327
+TOTAL      = 1027
+MAPPED     = 329
 INFRA      = 115
 ORPHAN     = 583
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 583
 | **التدفّقات** | 35 | 30 | 5 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 41 | 18 | 23 |
+| **فجواتُ العقد** | 41 | 19 | 22 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
 
 ---
@@ -133,7 +133,7 @@ ORPHAN     = 583
 | **XG-41A** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-41B** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-41C** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-43** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
+| **XG-43** | `HIGH` | — | `COVERED` | `TestXG43_FinancialIdentityIsStableNotDisplayName` · `TestXG43_NoInvariantUsesDisplayIdentity` |
 | **XG-42** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-36** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-38** | `HIGH` | — | `NOT_IMPLEMENTED` | — |

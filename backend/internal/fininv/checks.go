@@ -103,12 +103,17 @@ var All = []Check{
 		// **والصيغةُ مقيسةٌ لا مفترَضة** (wallet.go:251): لا رصيدَ افتتاحيٌّ
 		// ولا مُرحَّل — الرصيدُ يبدأ صفراً ويُزاد بكلّ قيد، **فمجموعُ
 		// القيود هو الرصيدُ نفسُه.**
+		// **والطرفُ هو المحفظة، ومفتاحُها `user_id`** — `XG-43`:
+		// **الاسمُ المعروضُ كان مفتاحَ التجميع**، فمتشابها الاسمِ يُدمجان
+		// **فيُنذَر على سليمين، وأسوأُ منه أن يستر رصيدٌ بلا قيدٍ واحدٍ
+		// خلفَ متشابهٍ سليم.** **والاسمُ يبقى وصفاً في الجواب لا حكماً.**
 		SQL: `
-			SELECT u.full_name, w.balance, COALESCE(SUM(t.amount), 0)::bigint AS مجموع_القيود
+			SELECT w.user_id::text, u.full_name, w.balance,
+			       COALESCE(SUM(t.amount), 0)::bigint AS مجموع_القيود
 			FROM wallets w
 			JOIN users u ON u.id = w.user_id
 			LEFT JOIN wallet_transactions t ON t.user_id = w.user_id
-			GROUP BY u.full_name, w.balance
+			GROUP BY w.user_id, u.full_name, w.balance
 			HAVING w.balance <> COALESCE(SUM(t.amount), 0)`,
 	},
 	{
@@ -499,12 +504,15 @@ var All = []Check{
 		Name:  "محتجَزُ الصندوق = مجموعُ قيوده",
 		Why:   "صندوقٌ لا يطابق قيودَه — فتسويةُ السائق تُبنى على رقمٍ خاطئ",
 		Flows: []string{"F-27"},
+		// **والطرفُ هو الصندوق، ومفتاحُه `driver_id`** — `XG-43`،
+		// **كسابقه في `FI-02.a`.**
 		SQL: `
-			SELECT u.full_name, b.held, COALESCE(SUM(e.amount), 0)::bigint AS مجموع_القيود
+			SELECT b.driver_id::text, u.full_name, b.held,
+			       COALESCE(SUM(e.amount), 0)::bigint AS مجموع_القيود
 			FROM driver_cash_boxes b
 			JOIN users u ON u.id = b.driver_id
 			LEFT JOIN driver_cash_entries e ON e.driver_id = b.driver_id
-			GROUP BY u.full_name, b.held
+			GROUP BY b.driver_id, u.full_name, b.held
 			HAVING b.held <> COALESCE(SUM(e.amount), 0)`,
 	},
 	{

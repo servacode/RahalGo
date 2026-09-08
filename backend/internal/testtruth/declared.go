@@ -698,7 +698,19 @@ var Gaps = []GapDecl{
 	// **مصالحةُ دورةِ ٣١ نطاقُها `XG-13`/`XG-14`** — **ولا يُصلَح
 	// ثابتٌ عرَضاً**، ولا يُنسَب إلى جذرٍ لا يملكه.
 	{ID: "XG-43", Title: "ثوابتُ `P-4` تجمع بالاسم لا بالمعرّف — إنذارٌ كاذبٌ وسترٌ محتمل",
-		Severity: "HIGH"},
+		Severity: "HIGH",
+		Fixed: "**أُصلح في دورةِ ٣٣**: **الطرفُ صار مفتاحاً مستقرّاً** — " +
+			"`w.user_id` في `FI-02.a` و`b.driver_id` في `FI-10.a`، " +
+			"**والاسمُ عمودُ وصفٍ في الجواب لا مفتاحَ تجميع.** " +
+			"**وقيس الكذبُ في اتّجاهيه على المعطياتِ نفسِها**: " +
+			"**متشابهان سليمان** ⇒ القديمُ يردّ صفّاً في كلٍّ من " +
+			"الثابتين والجديدُ صفراً؛ **ورصيدٌ ٥٠٠٠ ومحتجَزٌ ٤٠٠٠ بلا " +
+			"قيدٍ واحدٍ خلفَ سميٍّ سليم** ⇒ **القديمُ يسكت** والجديدُ " +
+			"يسمّي الطرفَ بمعرّفه وحدَه. **وتبديلُ الاسم لا يبدّل رقماً.** " +
+			"**وحارسٌ دائمٌ يمشي على السجلّ كلِّه** (٥٧ ثابتاً) فيرفض " +
+			"تجميعاً بحقلِ عرضٍ بلا هويّةٍ مستقرّة — **على المعنى بعد " +
+			"طيّ المسافات، لا على شكل النصّ.** **ولا قيدَ على الأسماء " +
+			"في المنتَج**: تشابهُها معطىً صحيح."},
 
 	// ══════════════════════════════════════════════════════════════
 	// **`XG-42` — المسارُ يردّ أكثرَ ممّا يلزم قارئَه**
@@ -1931,6 +1943,10 @@ var TestMap = map[string]TestDecl{
 	"TestXQ2_F3_UnreadableSettingBlocksCreation":                snapshotTest(),
 	"TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot":   snapshotTest(),
 
+	// ── هويّةُ الثابت الماليّ (دورةُ ٣٣) — `XG-43` ───────────────
+	"TestXG43_FinancialIdentityIsStableNotDisplayName": identityTest(),
+	"TestXG43_NoInvariantUsesDisplayIdentity":          identityTest(),
+
 	// ── مصدرُ احتساب العمولة (دورةُ ٣١) — `XG-13` · `XG-14` ──────
 	"TestXG14_ThreeModesGiveTheirContract":          commissionSourceTest(),
 	"TestXG14_ReversalMirrorsSettlementInEveryMode": commissionSourceTest(),
@@ -2202,6 +2218,19 @@ func snapshotTest() TestDecl {
 		Settings: []string{"merchants.commission_percent", "sales.commission_percent",
 			"sales.commission_source", "sales.activation_orders"},
 		Modes: []string{"FINANCIAL", "CONCURRENCY", "FAILURE", "FULL", "RELEASE"},
+	}
+}
+
+// identityTest حارسُ هويّةِ الطرفِ في الثوابت الماليّة — `XG-43`.
+//
+// **والاسمُ المعروضُ وصفٌ لا هويّة** — **فيُقاس الكذبُ في اتّجاهيه:
+// إنذارٌ على سليمٍ وسترٌ لمخروق.**
+func identityTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-14", "F-24", "F-27"},
+		Gaps:  []string{"XG-43"},
+		Modes: []string{"FINANCIAL", "FULL", "RELEASE"},
 	}
 }
 

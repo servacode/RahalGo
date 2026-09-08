@@ -31,8 +31,8 @@
     "setting_defs": 119,
     "behaviour_settings": 96,
     "order_fields": 75,
-    "test_files": 273,
-    "test_funcs": 1025
+    "test_files": 274,
+    "test_funcs": 1027
   },
   "flows": [
     {
@@ -587,6 +587,8 @@
         "TestFIN_ConservationSurvivesRefund",
         "TestFIN_OrderEconomicConservation",
         "TestFIN_SnapshotVsLiveEconomics",
+        "TestXG43_FinancialIdentityIsStableNotDisplayName",
+        "TestXG43_NoInvariantUsesDisplayIdentity",
         "TestOBL_BothInsufficient_AtomicOrigins",
         "TestOBL_FutureEarningsSettleWithEvidence",
         "TestOBL_MerchantInsufficient_OriginTraceable",
@@ -979,6 +981,8 @@
         "TestFIN_TransactionBoundaries",
         "TestFIN_MerchantWithdrewThenRefund",
         "TestFIN_RepeatedPayoutDecision",
+        "TestXG43_FinancialIdentityIsStableNotDisplayName",
+        "TestXG43_NoInvariantUsesDisplayIdentity",
         "TestRACE_DuplicatePayout",
         "TestRACE_RefundVsPayout",
         "TestXG12_B3_LegacyOverReservationIsDetectedNotTruncated",
@@ -1087,9 +1091,11 @@
       ],
       "tests": [
         "TestSampleFactory_DriverOnShiftWithCash",
-        "TestFIN_CashExposureContract"
+        "TestFIN_CashExposureContract",
+        "TestXG43_FinancialIdentityIsStableNotDisplayName",
+        "TestXG43_NoInvariantUsesDisplayIdentity"
       ],
-      "status": "PARTIALLY_COVERED"
+      "status": "COVERED"
     },
     {
       "id": "F-28",
@@ -2702,8 +2708,12 @@
       "id": "XG-43",
       "title": "ثوابتُ `P-4` تجمع بالاسم لا بالمعرّف — إنذارٌ كاذبٌ وسترٌ محتمل",
       "severity": "HIGH",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "fixed": "**أُصلح في دورةِ ٣٣**: **الطرفُ صار مفتاحاً مستقرّاً** — `w.user_id` في `FI-02.a` و`b.driver_id` في `FI-10.a`، **والاسمُ عمودُ وصفٍ في الجواب لا مفتاحَ تجميع.** **وقيس الكذبُ في اتّجاهيه على المعطياتِ نفسِها**: **متشابهان سليمان** ⇒ القديمُ يردّ صفّاً في كلٍّ من الثابتين والجديدُ صفراً؛ **ورصيدٌ ٥٠٠٠ ومحتجَزٌ ٤٠٠٠ بلا قيدٍ واحدٍ خلفَ سميٍّ سليم** ⇒ **القديمُ يسكت** والجديدُ يسمّي الطرفَ بمعرّفه وحدَه. **وتبديلُ الاسم لا يبدّل رقماً.** **وحارسٌ دائمٌ يمشي على السجلّ كلِّه** (٥٧ ثابتاً) فيرفض تجميعاً بحقلِ عرضٍ بلا هويّةٍ مستقرّة — **على المعنى بعد طيّ المسافات، لا على شكل النصّ.** **ولا قيدَ على الأسماء في المنتَج**: تشابهُها معطىً صحيح.",
+      "tests": [
+        "TestXG43_FinancialIdentityIsStableNotDisplayName",
+        "TestXG43_NoInvariantUsesDisplayIdentity"
+      ],
+      "status": "COVERED"
     },
     {
       "id": "XG-42",
@@ -9739,6 +9749,46 @@
         "FAST",
         "FULL",
         "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG43_FinancialIdentityIsStableNotDisplayName",
+      "file": "internal/qa/fininv_identity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-24",
+        "F-27"
+      ],
+      "gaps": [
+        "XG-43"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG43_NoInvariantUsesDisplayIdentity",
+      "file": "internal/qa/fininv_identity_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-14",
+        "F-24",
+        "F-27"
+      ],
+      "gaps": [
+        "XG-43"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "FULL",
         "RELEASE"
       ],
       "orphan": false
