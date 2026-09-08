@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 265,
-    "test_funcs": 993
+    "test_files": 266,
+    "test_funcs": 1001
   },
   "flows": [
     {
@@ -1182,6 +1182,14 @@
         "TestXG20_S4_MerchantSuspendAudited",
         "TestXG20_S5_SensitiveSettingAudited",
         "TestXG20_S6_OpsOrderTransitionAudited",
+        "TestSTG01_C1_RevocationVsInFlightRequestCrossNode",
+        "TestSTG01_R1R4_RefreshFollowsAuthorityCrossNode",
+        "TestSTG01_S1S2S3_RevocationCrossesNodes",
+        "TestSTG01_S4_RedisMissDoesNotResurrect",
+        "TestSTG01_S5S6_RedisOutageAndRevocationDuringIt",
+        "TestSTG01_S7S8_BlockedAndSuspendedCrossNode",
+        "TestSTG01_S9S10_PasswordResetAndSelfChangeCrossNode",
+        "TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode",
         "TestSampleFactory_ForeignRoleDenied",
         "TestSampleFactory_ValidToken",
         "TestFAIL_D15_AdminCreateUserPartial",
@@ -1387,6 +1395,14 @@
         "TestADG1_D3_UnknownRoleHasNothing",
         "TestADG1_D6D7D8_UnionAndImmediateRevocation",
         "TestADG1_D9_GrantBecomesEffective",
+        "TestSTG01_C1_RevocationVsInFlightRequestCrossNode",
+        "TestSTG01_R1R4_RefreshFollowsAuthorityCrossNode",
+        "TestSTG01_S1S2S3_RevocationCrossesNodes",
+        "TestSTG01_S4_RedisMissDoesNotResurrect",
+        "TestSTG01_S5S6_RedisOutageAndRevocationDuringIt",
+        "TestSTG01_S7S8_BlockedAndSuspendedCrossNode",
+        "TestSTG01_S9S10_PasswordResetAndSelfChangeCrossNode",
+        "TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode",
         "TestEV_RealtimeAuthorization",
         "TestRBAC_Matrix_Measured",
         "TestR15_A10_OrdinaryActionsUnaffected",
@@ -1957,6 +1973,14 @@
         "F-30"
       ],
       "tests": [
+        "TestSTG01_C1_RevocationVsInFlightRequestCrossNode",
+        "TestSTG01_R1R4_RefreshFollowsAuthorityCrossNode",
+        "TestSTG01_S1S2S3_RevocationCrossesNodes",
+        "TestSTG01_S4_RedisMissDoesNotResurrect",
+        "TestSTG01_S5S6_RedisOutageAndRevocationDuringIt",
+        "TestSTG01_S7S8_BlockedAndSuspendedCrossNode",
+        "TestSTG01_S9S10_PasswordResetAndSelfChangeCrossNode",
+        "TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode",
         "TestR13_T1T2_ResetKillsAccessAndRefresh",
         "TestR13_T3_ResetKillsEveryDevice",
         "TestR13_T4_ResetDoesNotTouchOtherAccounts",
@@ -2057,6 +2081,14 @@
         "F-30"
       ],
       "tests": [
+        "TestSTG01_C1_RevocationVsInFlightRequestCrossNode",
+        "TestSTG01_R1R4_RefreshFollowsAuthorityCrossNode",
+        "TestSTG01_S1S2S3_RevocationCrossesNodes",
+        "TestSTG01_S4_RedisMissDoesNotResurrect",
+        "TestSTG01_S5S6_RedisOutageAndRevocationDuringIt",
+        "TestSTG01_S7S8_BlockedAndSuspendedCrossNode",
+        "TestSTG01_S9S10_PasswordResetAndSelfChangeCrossNode",
+        "TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode",
         "TestRACE_SessionRevokedDuringRequest",
         "TestR16_R8_BothDownIsSafeFailure",
         "TestR16_STG_RedisOutageAuthorityHolds",
@@ -7965,6 +7997,174 @@
         "FINANCIAL",
         "FAILURE",
         "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSTG01_C1_RevocationVsInFlightRequestCrossNode",
+      "file": "internal/qa/cross_node_staging_test.go",
+      "package": "qa",
+      "level": "L9",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CROSS_SYSTEM",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSTG01_R1R4_RefreshFollowsAuthorityCrossNode",
+      "file": "internal/qa/cross_node_staging_test.go",
+      "package": "qa",
+      "level": "L9",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CROSS_SYSTEM",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSTG01_S1S2S3_RevocationCrossesNodes",
+      "file": "internal/qa/cross_node_staging_test.go",
+      "package": "qa",
+      "level": "L9",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CROSS_SYSTEM",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSTG01_S4_RedisMissDoesNotResurrect",
+      "file": "internal/qa/cross_node_staging_test.go",
+      "package": "qa",
+      "level": "L9",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CROSS_SYSTEM",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSTG01_S5S6_RedisOutageAndRevocationDuringIt",
+      "file": "internal/qa/cross_node_staging_test.go",
+      "package": "qa",
+      "level": "L9",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CROSS_SYSTEM",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSTG01_S7S8_BlockedAndSuspendedCrossNode",
+      "file": "internal/qa/cross_node_staging_test.go",
+      "package": "qa",
+      "level": "L9",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CROSS_SYSTEM",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSTG01_S9S10_PasswordResetAndSelfChangeCrossNode",
+      "file": "internal/qa/cross_node_staging_test.go",
+      "package": "qa",
+      "level": "L9",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CROSS_SYSTEM",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode",
+      "file": "internal/qa/cross_node_staging_test.go",
+      "package": "qa",
+      "level": "L9",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CROSS_SYSTEM",
         "FULL",
         "RELEASE"
       ],

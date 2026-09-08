@@ -1784,6 +1784,18 @@ var TestMap = map[string]TestDecl{
 	"TestADG1_C1C2_RevocationVsPrivilegedRequest":          authzTest(),
 	"TestADG1_StructuralGuards":                            infraTest(),
 
+	// ── الإبطالُ عبر عُقدتين (دورةُ إصلاحٍ ٢٩) — `STG-01` · `R16` ──
+	//
+	// **وتُتخطّى بلا طوبولوجيا** — ولا تُقرأ نجاحاً حينئذٍ.
+	"TestSTG01_S1S2S3_RevocationCrossesNodes":             crossNodeTest(),
+	"TestSTG01_S4_RedisMissDoesNotResurrect":              crossNodeTest(),
+	"TestSTG01_S5S6_RedisOutageAndRevocationDuringIt":     crossNodeTest(),
+	"TestSTG01_S7S8_BlockedAndSuspendedCrossNode":         crossNodeTest(),
+	"TestSTG01_S9S10_PasswordResetAndSelfChangeCrossNode": crossNodeTest(),
+	"TestSTG01_R1R4_RefreshFollowsAuthorityCrossNode":     crossNodeTest(),
+	"TestSTG01_WS_NewHandshakeFollowsAuthorityCrossNode":  crossNodeTest(),
+	"TestSTG01_C1_RevocationVsInFlightRequestCrossNode":   crossNodeTest(),
+
 	// ── تأكيدُ الفعل الشديد (دورةُ إصلاحٍ ٢٨) — `ADG-3` · `AQ-1` ───
 	//
 	// **وثلاثةُ شروطٍ لا بدائل** — فتحمل `R13` و`R15` و`R16` معها:
@@ -2005,6 +2017,19 @@ func authzTest() TestDecl {
 		Flows: []string{"F-30", "F-34"},
 		Risks: []string{"R15"},
 		Modes: []string{"SECURITY", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
+	}
+}
+
+// crossNodeTest مصفوفةُ الإبطال عبر عُقدتين — `STG-01` · `R16`.
+//
+// **وتقيس معها `R13` و`R15` و`XG-39` و`XG-40` من زاوية التوزيع** —
+// **فحقيقةٌ صحيحةٌ في عقدةٍ وكاذبةٌ في أختها أسوأُ من عطبٍ ظاهر.**
+func crossNodeTest() TestDecl {
+	return TestDecl{
+		Level: L9, Purpose: PurposeFeature,
+		Flows: []string{"F-30", "F-34"},
+		Risks: []string{"R13", "R16"},
+		Modes: []string{"SECURITY", "CROSS_SYSTEM", "FULL", "RELEASE"},
 	}
 }
 
