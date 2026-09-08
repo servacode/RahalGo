@@ -196,45 +196,8 @@ func (s *Server) enforceAdminPolicy(next http.Handler) http.Handler {
 // **والمقاطعُ التي تشبه معرّفاً تصير `{}`**: `uuid` أو رقمٌ أو نصٌّ
 // طويلٌ بلا معنىً ثابتٍ في الجدول.
 func adminPattern(path string) string {
-	const prefix = "/api/v1/admin"
-	rest := strings.TrimPrefix(path, prefix)
-	segs := strings.Split(strings.Trim(rest, "/"), "/")
-	out := make([]string, 0, len(segs))
-	for _, s := range segs {
-		if s == "" {
-			continue
-		}
-		if looksLikeID(s) {
-			out = append(out, "{}")
-			continue
-		}
-		out = append(out, s)
-	}
-	return "/" + strings.Join(out, "/")
-}
-
-// looksLikeID **أهذا المقطعُ معرّفٌ لا اسمُ مورد؟**
-//
-// **ومقاطعُ الجدول كلُّها كلماتٌ لاتينيّةٌ قصيرةٌ بشرطة** — **والمعرّفُ
-// `uuid` أو رقمٌ أو مفتاحُ إعدادٍ فيه نقطة.**
-func looksLikeID(s string) bool {
-	if s == "" {
-		return false
-	}
-	if strings.Count(s, "-") == 4 && len(s) == 36 {
-		return true // uuid
-	}
-	if strings.ContainsAny(s, ".") {
-		return true // مفتاحُ إعدادٍ مثل `merchants.commission_percent`
-	}
-	for _, r := range s {
-		if r < 'a' || r > 'z' {
-			if r != '-' {
-				return true
-			}
-		}
-	}
-	return false
+	// **والحسابُ في `authz`** — يقرؤه الجدولان والمِسنَد.
+	return authz.AdminPattern(path)
 }
 
 // RouterForWalk **الموجِّهُ بنوعه** — **لحارس التغطية** (`ADG-2`).

@@ -12,24 +12,24 @@
 
 | ما هو | العدد |
 |---|---|
-| أبوابٌ في الموجّه | **319** |
+| أبوابٌ في الموجّه | **320** |
 | انتقالاتُ الطلب | **55** |
 | أنواعُ قيدِ المحفظة | **14** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **48** — منها **11** موجَّهٌ بـ`Apps` |
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **264** |
-| دوالُّ اختبار | **978** |
+| ملفّاتُ اختبار | **265** |
+| دوالُّ اختبار | **993** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 978
-MAPPED     = 281
-INFRA      = 114
+TOTAL      = 993
+MAPPED     = 295
+INFRA      = 115
 ORPHAN     = 583
 ```
 

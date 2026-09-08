@@ -1784,6 +1784,27 @@ var TestMap = map[string]TestDecl{
 	"TestADG1_C1C2_RevocationVsPrivilegedRequest":          authzTest(),
 	"TestADG1_StructuralGuards":                            infraTest(),
 
+	// ── تأكيدُ الفعل الشديد (دورةُ إصلاحٍ ٢٨) — `ADG-3` · `AQ-1` ───
+	//
+	// **وثلاثةُ شروطٍ لا بدائل** — فتحمل `R13` و`R15` و`R16` معها:
+	// **إبطالُ الجلسة والقدرةُ القائمةُ وإعادةُ الكلمة كلُّها تُقاس
+	// هنا ثانيةً من زاوية الإثبات.**
+	"TestADG3_S1S2S3S4_Basics":                        stepUpTest(),
+	"TestADG3_S5S6_ReplayAndExpiry":                   stepUpTest(),
+	"TestADG3_S7S8_SessionAndUserBinding":             stepUpTest(),
+	"TestADG3_S9S10S11_ActionTargetAndParameters":     stepUpTest(),
+	"TestADG3_S12_CapabilityRevokedAfterIssuance":     stepUpTest(),
+	"TestADG3_S13S14_SessionRevokedAndBlocked":        stepUpTest(),
+	"TestADG3_S15_SelfPasswordChangeKillsGrant":       stepUpTest(),
+	"TestADG3_S16_AdminResetKillsGrant":               stepUpTest(),
+	"TestADG3_S17S18_OrdinaryActionsNeedNoStepUp":     stepUpTest(),
+	"TestADG3_HighRiskMatrix":                         stepUpTest(),
+	"TestADG3_C1_ConcurrentDoubleUse":                 stepUpTest(),
+	"TestADG3_C5_StaleCredentialIssueRace":            stepUpTest(),
+	"TestADG3_FailureInjection_NoFalseGrant":          stepUpTest(),
+	"TestADG3_TTLIsBounded":                           stepUpTest(),
+	"TestADG3_EverySensitiveActionHasARouteAndPolicy": infraTest(),
+
 	// ── ديمومةُ نقلِ الإشعار (دورةُ إصلاحٍ ١٥) — `PF-09` · `R23` ────
 	"TestPF09_N1_ProviderSuccessRecorded":                deliveryTest(),
 	"TestPF09_N2N3N8_TransientRetriesWithBackoff":        deliveryTest(),
@@ -1984,6 +2005,20 @@ func authzTest() TestDecl {
 		Flows: []string{"F-30", "F-34"},
 		Risks: []string{"R15"},
 		Modes: []string{"SECURITY", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
+	}
+}
+
+// stepUpTest حارسُ تأكيد الفعل الشديد — `ADG-3` · `AQ-1`.
+//
+// **وهو ثالثُ شروطِ التخويل** — **يقيس معه إبطالَ الجلسة (`R16`)
+// وسريانَ نزع القدرة (`R15`) وإعادةَ الكلمة (`R13`)** من زاويةِ
+// الإثبات: **لا واحدٌ منها يُحييه.**
+func stepUpTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows: []string{"F-30", "F-34"},
+		Risks: []string{"R13", "R15", "R16"},
+		Modes: []string{"SECURITY", "CONCURRENCY", "FAILURE", "FULL", "RELEASE"},
 	}
 }
 

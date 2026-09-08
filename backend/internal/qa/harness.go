@@ -336,6 +336,20 @@ func (h *Harness) Call(method, path, token string, body any, headers map[string]
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **وإثباتُ التأكيد يُصنَع عند الباب** — `ADG-3`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **إلّا حين يُمرَّر صراحةً** — **ففحوصُ `ADG-3` ترسل ما تريد
+	// قياسَه**: بلا إثباتٍ، أو بإثباتٍ لغيره، أو بمستهلَك.
+	//
+	// **وفحصٌ يقيس عقداً آخرَ لا يُطالَب ببناء نموذج تأكيد** —
+	// انظر `step_up_harness.go`.
+	if _, given := headers["X-Step-Up"]; !given && token != "" {
+		if g := h.mintStepUp(method, path, token, bodyBytes(body)); g != "" {
+			req.Header.Set("X-Step-Up", g)
+		}
+	}
 	resp, err := h.Srv.Client().Do(req)
 	if err != nil {
 		h.T.Fatalf("qa: تعذّر النداء %s %s: %v", method, path, err)

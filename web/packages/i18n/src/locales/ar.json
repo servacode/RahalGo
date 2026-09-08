@@ -669,7 +669,9 @@
     "bad_qty": "الكمية غير صحيحة",
     "item_gone": "أحد الأصناف لم يعد متوفراً",
     "update_required": "يوجد إصدار جديد — حدّث التطبيق",
-    "bad_request": "طلبٌ غير صالح — راجع ما أُرسل"
+    "bad_request": "طلبٌ غير صالح — راجع ما أُرسل",
+    "step_up_required": "هذا فعلٌ حسّاس. أكّده بكلمةِ مرورِ حسابك.",
+    "step_up_invalid": "انتهت مهلةُ التأكيد أو استُعمل. أكّد الفعلَ ثانيةً."
   },
   "admin": {
     "profits": {
@@ -2702,6 +2704,29 @@
         "manyRequests": "طلباتُ تغطيةٍ كثيرة",
         "merchantsNoDrivers": "متاجرُ كثيرةٌ وسائقون قليلون",
         "explain": "درجاتٌ محسوبةٌ من بياناتٍ حقيقيّة — لا تنبّؤ"
+      }
+    },
+    "stepUp": {
+      "title": "تأكيدُ فعلٍ حسّاس",
+      "prompt": "أدخل كلمةَ مرورِ حسابك للمتابعة.",
+      "placeholder": "كلمةُ المرور",
+      "confirm": "تأكيد",
+      "failed": "تعذّر التأكيد. حاول ثانيةً.",
+      "actions": {
+        "admin.role_capability_grant": "منحُ قدرةٍ لدور",
+        "admin.role_capability_revoke": "نزعُ قدرةٍ من دور",
+        "admin.role_grant": "منحُ دورٍ لحساب",
+        "admin.role_revoke": "نزعُ دورٍ من حساب",
+        "admin.password_reset": "إعادةُ كلمةِ مرورِ حساب",
+        "admin.user_update": "تبديلُ حالِ حساب",
+        "finance.wallet_apply": "قيدٌ في محفظة",
+        "finance.incentive": "منحُ حافز",
+        "finance.payout_decide": "قرارُ سحب",
+        "finance.driver_settle": "تسويةُ نقدِ سائق",
+        "finance.expense_added": "تسجيلُ مصروف",
+        "finance.expense_voided": "إلغاءُ مصروف",
+        "finance.compensate_driver": "تعويضُ سائق",
+        "admin.setting_update": "تبديلُ إعدادٍ حسّاس"
       }
     }
   },

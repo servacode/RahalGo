@@ -3,6 +3,7 @@ import { getMessages, getDir, defaultLocale, withPlatform } from "@rahalgo/i18n"
 import { PlatformProvider, fetchPlatform } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
 import { AuthProvider } from "@/lib/auth";
+import { StepUpGate } from "@rahalgo/auth";
 // خط المنصة — مصدر مركزي واحد (packages/ui/src/fonts.css)
 import "@rahalgo/ui/fonts.css";
 import "./globals.css";
@@ -162,6 +163,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 يمرّ — **والمحرّكُ يُقنّع العلَمَ حين يكون الخيارُ مُطفأً**
                 (`security.force_password_change`، مُطفأٌ افتراضاً بقرار
                 المالك)، فلا سطرَ هنا يقرأ إعداداً. */}
+            {/* **ونافذةُ تأكيدِ الفعل الشديد** — `ADG-3`. **واحدةٌ
+                للوحة كلِّها**: يعترض عميلُ الـAPI طلبَ الخادم فتُسأل
+                الكلمةُ مرّةً ثمّ يُعاد النداءُ بإثباته. **والحدُّ في
+                الخادم لا هنا.** */}
+            <StepUpGate />
             <PasswordGate>{children}</PasswordGate>
           </AuthProvider>
         </PlatformProvider>

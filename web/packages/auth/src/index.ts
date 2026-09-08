@@ -9,7 +9,12 @@ export {
   type AuthUser,
   type TokenPair,
   type AuthResult,
+  setStepUpAsker,
+  requestStepUp,
+  type StepUpNeed,
+  type StepUpRequest,
 } from "./client";
+export { StepUpGate } from "./StepUpGate";
 export {
   AuthProvider,
   useAuth,

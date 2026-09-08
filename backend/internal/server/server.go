@@ -725,8 +725,14 @@ func (s *Server) Router() http.Handler {
 			r.Use(s.RequireAnyCapability)
 			// **وسياسةُ كلّ مسارٍ من جدولٍ مركزيّ** — `ADG-2`.
 			r.Use(s.enforceAdminPolicy)
+			// **وثالثُ الشروط**: **إثباتُ تأكيدٍ لهذا الفعل بعينه**
+			// — `ADG-3`. **وترتيبُ الوسائط هو ترتيبُ الشروط.**
+			r.Use(s.requireStepUp)
 			// **وما تكتبه اللوحةُ يُسمَع في الجيب** — انظر `announceWrites`.
 			r.Use(s.announceWrites)
+			// **وبابُ الإصدار داخلَ السطح الإداريّ** — **فلا يبلغه
+			// من لا جلسةَ له**، ولا من لا قدرةَ له بالفعل المُؤكَّد.
+			r.Post("/step-up", s.handleStepUp)
 			r.Get("/whatsapp", func(w http.ResponseWriter, _ *http.Request) {
 				httpx.JSON(w, http.StatusOK, s.otpStatus())
 			})

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 319,
+    "routes": 320,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -31,8 +31,8 @@
     "setting_defs": 118,
     "behaviour_settings": 95,
     "order_fields": 75,
-    "test_files": 264,
-    "test_funcs": 978
+    "test_files": 265,
+    "test_funcs": 993
   },
   "flows": [
     {
@@ -1226,6 +1226,20 @@
         "TestR16_R1_ValidSessionRedisMissDBValidates",
         "TestR16_R2_RedisHitDenies",
         "TestR16_R3_RedisHealthyButKeyMissingDBCatches",
+        "TestADG3_C1_ConcurrentDoubleUse",
+        "TestADG3_C5_StaleCredentialIssueRace",
+        "TestADG3_FailureInjection_NoFalseGrant",
+        "TestADG3_HighRiskMatrix",
+        "TestADG3_S12_CapabilityRevokedAfterIssuance",
+        "TestADG3_S13S14_SessionRevokedAndBlocked",
+        "TestADG3_S15_SelfPasswordChangeKillsGrant",
+        "TestADG3_S16_AdminResetKillsGrant",
+        "TestADG3_S17S18_OrdinaryActionsNeedNoStepUp",
+        "TestADG3_S1S2S3S4_Basics",
+        "TestADG3_S5S6_ReplayAndExpiry",
+        "TestADG3_S7S8_SessionAndUserBinding",
+        "TestADG3_S9S10S11_ActionTargetAndParameters",
+        "TestADG3_TTLIsBounded",
         "TestXG22_SuspendDuringTransitionIsDeterministic",
         "TestXG22_T10_EnforcementIsServerSide",
         "TestXG22_T1_SuspendedWithoutActiveOrderIsDenied",
@@ -1394,6 +1408,20 @@
         "TestR16_R1_ValidSessionRedisMissDBValidates",
         "TestR16_R2_RedisHitDenies",
         "TestR16_R3_RedisHealthyButKeyMissingDBCatches",
+        "TestADG3_C1_ConcurrentDoubleUse",
+        "TestADG3_C5_StaleCredentialIssueRace",
+        "TestADG3_FailureInjection_NoFalseGrant",
+        "TestADG3_HighRiskMatrix",
+        "TestADG3_S12_CapabilityRevokedAfterIssuance",
+        "TestADG3_S13S14_SessionRevokedAndBlocked",
+        "TestADG3_S15_SelfPasswordChangeKillsGrant",
+        "TestADG3_S16_AdminResetKillsGrant",
+        "TestADG3_S17S18_OrdinaryActionsNeedNoStepUp",
+        "TestADG3_S1S2S3S4_Basics",
+        "TestADG3_S5S6_ReplayAndExpiry",
+        "TestADG3_S7S8_SessionAndUserBinding",
+        "TestADG3_S9S10S11_ActionTargetAndParameters",
+        "TestADG3_TTLIsBounded",
         "TestXG39_C1_SuspendVsTransition",
         "TestXG39_C2_BlockVsRefresh",
         "TestXG39_S11S12_ReactivationDoesNotResurrect",
@@ -1942,7 +1970,21 @@
         "TestXG40_X6_CacheLossDoesNotResurrect",
         "TestXG40_X7_WrongCurrentPasswordChangesNothing",
         "TestXG40_X8_ConcurrentOtherRefreshCannotEscape",
-        "TestXG40_X9_ConcurrentOldPasswordLoginCannotSurvive"
+        "TestXG40_X9_ConcurrentOldPasswordLoginCannotSurvive",
+        "TestADG3_C1_ConcurrentDoubleUse",
+        "TestADG3_C5_StaleCredentialIssueRace",
+        "TestADG3_FailureInjection_NoFalseGrant",
+        "TestADG3_HighRiskMatrix",
+        "TestADG3_S12_CapabilityRevokedAfterIssuance",
+        "TestADG3_S13S14_SessionRevokedAndBlocked",
+        "TestADG3_S15_SelfPasswordChangeKillsGrant",
+        "TestADG3_S16_AdminResetKillsGrant",
+        "TestADG3_S17S18_OrdinaryActionsNeedNoStepUp",
+        "TestADG3_S1S2S3S4_Basics",
+        "TestADG3_S5S6_ReplayAndExpiry",
+        "TestADG3_S7S8_SessionAndUserBinding",
+        "TestADG3_S9S10S11_ActionTargetAndParameters",
+        "TestADG3_TTLIsBounded"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -1988,7 +2030,21 @@
         "TestR15_A9_NewWSHandshakeDropsRevokedTopics",
         "TestR15_C1_RevokeVsPrivilegedRequest",
         "TestR15_C2_RevokeVsRefresh",
-        "TestR15_C3_RevokeVsLogin"
+        "TestR15_C3_RevokeVsLogin",
+        "TestADG3_C1_ConcurrentDoubleUse",
+        "TestADG3_C5_StaleCredentialIssueRace",
+        "TestADG3_FailureInjection_NoFalseGrant",
+        "TestADG3_HighRiskMatrix",
+        "TestADG3_S12_CapabilityRevokedAfterIssuance",
+        "TestADG3_S13S14_SessionRevokedAndBlocked",
+        "TestADG3_S15_SelfPasswordChangeKillsGrant",
+        "TestADG3_S16_AdminResetKillsGrant",
+        "TestADG3_S17S18_OrdinaryActionsNeedNoStepUp",
+        "TestADG3_S1S2S3S4_Basics",
+        "TestADG3_S5S6_ReplayAndExpiry",
+        "TestADG3_S7S8_SessionAndUserBinding",
+        "TestADG3_S9S10S11_ActionTargetAndParameters",
+        "TestADG3_TTLIsBounded"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -2011,6 +2067,20 @@
         "TestR16_R1_ValidSessionRedisMissDBValidates",
         "TestR16_R2_RedisHitDenies",
         "TestR16_R3_RedisHealthyButKeyMissingDBCatches",
+        "TestADG3_C1_ConcurrentDoubleUse",
+        "TestADG3_C5_StaleCredentialIssueRace",
+        "TestADG3_FailureInjection_NoFalseGrant",
+        "TestADG3_HighRiskMatrix",
+        "TestADG3_S12_CapabilityRevokedAfterIssuance",
+        "TestADG3_S13S14_SessionRevokedAndBlocked",
+        "TestADG3_S15_SelfPasswordChangeKillsGrant",
+        "TestADG3_S16_AdminResetKillsGrant",
+        "TestADG3_S17S18_OrdinaryActionsNeedNoStepUp",
+        "TestADG3_S1S2S3S4_Basics",
+        "TestADG3_S5S6_ReplayAndExpiry",
+        "TestADG3_S7S8_SessionAndUserBinding",
+        "TestADG3_S9S10S11_ActionTargetAndParameters",
+        "TestADG3_TTLIsBounded",
         "TestXG39_C1_SuspendVsTransition",
         "TestXG39_C2_BlockVsRefresh",
         "TestXG39_S11S12_ReactivationDoesNotResurrect",
@@ -12728,6 +12798,342 @@
       "modes": [
         "FULL",
         "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_C1_ConcurrentDoubleUse",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_C5_StaleCredentialIssueRace",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_EverySensitiveActionHasARouteAndPolicy",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L1",
+      "purpose": "GENERATOR_TEST",
+      "modes": [
+        "FAST",
+        "FULL",
+        "SECURITY",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_FailureInjection_NoFalseGrant",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_HighRiskMatrix",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_S12_CapabilityRevokedAfterIssuance",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_S13S14_SessionRevokedAndBlocked",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_S15_SelfPasswordChangeKillsGrant",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_S16_AdminResetKillsGrant",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_S17S18_OrdinaryActionsNeedNoStepUp",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_S1S2S3S4_Basics",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_S5S6_ReplayAndExpiry",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_S7S8_SessionAndUserBinding",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_S9S10S11_ActionTargetAndParameters",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestADG3_TTLIsBounded",
+      "file": "internal/qa/step_up_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-30",
+        "F-34"
+      ],
+      "risks": [
+        "R13",
+        "R15",
+        "R16"
+      ],
+      "modes": [
+        "SECURITY",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
         "RELEASE"
       ],
       "orphan": false

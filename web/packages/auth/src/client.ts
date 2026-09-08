@@ -20,6 +20,8 @@ export interface ApiErrorBody {
 }
 
 export class ApiError extends Error {
+  /** **ما يطلب الخادمُ تأكيدَه** — حاضرٌ في `step_up_required` وحدَه. */
+  stepUp?: StepUpNeed;
   constructor(
     public status: number,
     public body: ApiErrorBody,
@@ -115,12 +117,56 @@ async function rawRequest<T>(path: string, init: RequestInit = {}, token?: strin
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
-  const json = (await res.json().catch(() => null)) as { data?: T; error?: ApiErrorBody } | null;
+  const json = (await res.json().catch(() => null)) as
+    | { data?: T; error?: ApiErrorBody; step_up?: StepUpNeed }
+    | null;
 
   if (!res.ok || !json || json.error) {
-    throw new ApiError(res.status, json?.error ?? { code: "internal", message_key: "errors.internal" });
+    const err = new ApiError(res.status, json?.error ?? { code: "internal", message_key: "errors.internal" });
+    if (json?.step_up) err.stepUp = json.step_up;
+    throw err;
   }
   return json.data as T;
+}
+
+/**
+ * **ما يقوله الخادمُ حين يطلب تأكيداً** — `ADG-3`.
+ *
+ * **والنصُّ يُبنى من هذا لا من المسار** — **فاللوحةُ لا تخترع اسمَ
+ * فعلٍ تعرضه على من يوشك أن يؤكّده.**
+ */
+export type StepUpNeed = { action: string; target_type: string; target_id: string };
+
+/**
+ * **من يسأل الكلمةَ حين يطلبها الخادم** — تسجّله اللوحةُ مرّةً.
+ *
+ * **ولا يوجد نموذجُ كلمةٍ في كلّ صفحة** — **نافذةٌ واحدةٌ تعرض الفعلَ
+ * بنصّه ثمّ تسأل.**
+ */
+let stepUpAsker: ((need: StepUpNeed, req: StepUpRequest) => Promise<string | null>) | null = null;
+
+/** طلبٌ يوشك أن يُنفَّذ — يُعرَض على من يؤكّد. */
+export type StepUpRequest = { method: string; path: string; body: unknown };
+
+export function setStepUpAsker(fn: typeof stepUpAsker) {
+  stepUpAsker = fn;
+}
+
+/**
+ * **يطلب إثباتَ تأكيدٍ لنداءٍ بعينه** — **ولا تُحفَظ الكلمةُ ولا تُعاد.**
+ *
+ * **والكلمةُ تُرسَل إلى بابِ التأكيد وحدَه** — **ولا تُرسَل ثانيةً مع
+ * الفعل نفسِه**، ولا تُكتب في مخزنٍ ولا في حالةٍ تبقى.
+ */
+export async function requestStepUp(
+  req: StepUpRequest,
+  password: string,
+): Promise<string> {
+  const grant = await api<{ id: string }>("/api/v1/admin/step-up", {
+    method: "POST",
+    body: JSON.stringify({ method: req.method, path: req.path, body: req.body, password }),
+  });
+  return grant.id;
 }
 
 let refreshing: Promise<void> | null = null;
@@ -147,6 +193,29 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       });
       await refreshing;
       return rawRequest<T>(path, init, tokenStore.access);
+    }
+    // ══════════════════════════════════════════════════════════════
+    // **وفعلٌ شديدٌ يُسأل عنه مرّةً ثمّ يُعاد** — `ADG-3`
+    // ══════════════════════════════════════════════════════════════
+    //
+    // **والحدُّ في الخادم لا هنا** — **وهذا يسر استعمالٍ لا أمن**:
+    // نداءٌ مباشرٌ بلا إثباتٍ يُردّ سواءٌ مرّ من هنا أو لم يمرّ.
+    if (
+      err instanceof ApiError &&
+      err.status === 403 &&
+      err.body.code === "step_up_required" &&
+      err.stepUp &&
+      stepUpAsker &&
+      !init.headers
+    ) {
+      const grant = await stepUpAsker(err.stepUp, {
+        method: (init.method ?? "GET").toUpperCase(),
+        path,
+        body: init.body ? JSON.parse(String(init.body)) : undefined,
+      });
+      // **وإلغاءُ التأكيد يُبقي الخطأ كما هو** — ولا يُبتلَع صامتاً.
+      if (!grant) throw err;
+      return rawRequest<T>(path, { ...init, headers: { "X-Step-Up": grant } }, tokenStore.access);
     }
     throw err;
   }
