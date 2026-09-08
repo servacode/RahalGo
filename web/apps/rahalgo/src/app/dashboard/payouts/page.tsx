@@ -49,6 +49,8 @@ interface Payout {
   note: string;
   decision: string;
   balance: number;
+  reserved: number;
+  available: number;
   created_at: string;
 }
 
@@ -125,6 +127,21 @@ export default function PayoutsPage() {
       header: m.terms.walletBalance,
       icon: <IconWallet />,
       cell: (p) => <span dir="ltr">{fmtNum(p.balance)}</span>,
+    },
+    {
+      /* **والمحجوزُ والمتاحُ يُعرَضان** — `XG-12`: **الماليّةُ تقرّر
+         على ما يجوز صرفُه لا على ما تراه**، **ولا يُسمّى المجموعُ
+         متاحاً.** */
+      id: "reserved",
+      header: m.terms.walletReserved,
+      icon: <IconWallet />,
+      cell: (p) => <span dir="ltr">{fmtNum(p.reserved)}</span>,
+    },
+    {
+      id: "available",
+      header: m.terms.walletAvailable,
+      icon: <IconWallet />,
+      cell: (p) => <span dir="ltr">{fmtNum(p.available)}</span>,
     },
     {
       id: "status",

@@ -675,16 +675,89 @@ var All = []Check{
 		Registers: []string{"R10"},
 		SQL:       `SELECT 1 WHERE false`,
 	},
+	// ══════════════════════════════════════════════════════════════
+	// **طبقاتُ الرصيد** — `XG-12` · `AQ-3` (دورةُ إصلاحٍ ٣٠)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **والمتاحُ مشتقٌّ لا مخزَّن** — فلا ثابتَ يحرس `available` بذاته،
+	// **وإنّما يُحرَس طرفاه.**
 	{
-		ID: "FI-11.d", Family: FI11, Status: NotImplemented, Ops: false,
-		Name: "طبقاتُ رصيدِ السحب — عقدُ شام كاش المستقبليّ",
-		Why: "حالُ طلبِ السحب يقبل ثلاثاً فقط (pending · paid · rejected) — " +
-			"**ولا AVAILABLE ولا RESERVED ولا PROCESSING ولا FAILED ولا " +
-			"REVERSED.** **فالمعلَّقُ لا يُحجَز**: يبقى الرصيدُ صالحاً " +
-			"للإنفاق حتّى القرار.",
+		ID: "FI-11.d", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "المحجوزُ لا يتجاوز المُقيَّد ولا ينزل عن صفر",
+		Why: "**المتاحُ = المُقيَّد − المحجوز** — **وخرقُ هذا يجعل المتاحَ " +
+			"سالباً**، فيُنفَق مالٌ محجوزٌ أو يُحجَز مالٌ لا وجودَ له.",
 		Flows:     []string{"F-24"},
 		Registers: []string{"XG-12"},
-		SQL:       `SELECT 1 WHERE false`,
+		// **والخزينةُ مستثناةٌ من `balance >= 0` بعقدها** — فتُستثنى
+		// هنا كما استُثنيت في القيد. **ولا حجزَ لها أصلاً**، ويحرسه
+		// `FI-11.e`.
+		SQL: `SELECT user_id::text, balance, reserved
+		        FROM wallets
+		       WHERE reserved < 0 OR (reserved > balance AND NOT is_treasury)`,
+	},
+	{
+		ID: "FI-11.e", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "المحجوزُ يُصالِح طلباتِ السحب القائمة",
+		Why: "**`wallets.reserved` صورةٌ محفوظةٌ لا حقيقةٌ ثانية** — " +
+			"**والحقيقةُ طلباتُ السحب `pending` و`processing`.** " +
+			"**ورقمٌ لا يُنسَب إلى طلبٍ قائمٍ مالٌ مجمَّدٌ بلا سبب.**",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		SQL: `SELECT w.user_id::text, w.reserved, COALESCE(a.total, 0)
+		        FROM wallets w
+		        LEFT JOIN (SELECT user_id, sum(amount) AS total
+		                     FROM payout_requests
+		                    WHERE status IN ('pending','processing')
+		                    GROUP BY user_id) a ON a.user_id = w.user_id
+		       WHERE w.reserved <> COALESCE(a.total, 0)`,
+	},
+	{
+		ID: "FI-11.f", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "طلبٌ أُغلق لا يبقى له حجز",
+		Why: "**`paid` خُصمت و`rejected`/`failed` لم يقع فيها صرف** — " +
+			"**وكلُّها تفكّ الحجز.** **وحجزٌ يبقى لطلبٍ أُغلق يُجمّد مالَ " +
+			"صاحبه إلى الأبد.**",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		SQL: `SELECT p.id::text, p.status, p.amount
+		        FROM payout_requests p
+		       WHERE p.status IN ('paid','rejected','failed','reversed')
+		         AND EXISTS (SELECT 1 FROM wallets w
+		                      WHERE w.user_id = p.user_id
+		                        AND w.reserved > COALESCE((
+		                              SELECT sum(a.amount) FROM payout_requests a
+		                               WHERE a.user_id = p.user_id
+		                                 AND a.status IN ('pending','processing')), 0))`,
+	},
+	{
+		ID: "FI-11.g", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "سحبٌ مدفوعٌ لا يُخصَم مرّتين",
+		Why: "**قرارٌ يُكرَّر أو سباقُ موافقتين** — **وقيدُ `payout` " +
+			"لطلبٍ واحدٍ يقع مرّةً.** (يحرسه القفلُ ومنعُ التكرار، " +
+			"**والثابتُ يقيس النتيجة لا الآليّة.**)",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12", "R10"},
+		SQL: `SELECT p.id::text, count(t.id)
+		        FROM payout_requests p
+		        JOIN wallet_transactions t
+		          ON t.ref = p.id::text AND t.kind = 'payout'
+		       WHERE p.status IN ('paid','reversed')
+		       GROUP BY p.id
+		      HAVING count(t.id) <> 1`,
+	},
+	{
+		ID: "FI-11.h", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "سحبٌ ارتدّ له قيدٌ مقابلٌ يُعيد المال",
+		Why: "**والارتدادُ لا يمحو الخصمَ الأوّل** — **دفترٌ يُمحى منه " +
+			"سطرٌ لا يُراجَع.** **فيُقيَّد ردٌّ بقيمته.**",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		SQL: `SELECT p.id::text, p.amount
+		        FROM payout_requests p
+		       WHERE p.status = 'reversed'
+		         AND NOT EXISTS (SELECT 1 FROM wallet_transactions t
+		                          WHERE t.ref = p.id::text AND t.kind = 'refund'
+		                            AND t.amount = p.amount)`,
 	},
 	{
 		ID: "FI-07.a", Family: FI07, Status: NotImplemented, Ops: false,

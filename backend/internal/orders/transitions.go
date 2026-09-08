@@ -1173,9 +1173,11 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 		}
 		// **ولا يُخصم إلّا ما تحتمله المحفظة** — والقيدُ يرفض السالبَ
 		// **كلَّه لا جزأه.**
+		// **وما تحتمله المحفظةُ هو المتاحُ لا الرصيد** — `XG-12`.
 		var balance int64
 		if err := q.QueryRow(ctx,
-			`SELECT COALESCE(balance, 0) FROM wallets WHERE user_id = $1`,
+			`SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0)
+			      - COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`,
 			p.userID).Scan(&balance); err != nil {
 			return err
 		}
@@ -1298,9 +1300,11 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 		return nil
 	}
 
+	// **وما تحتمله محفظةُ المندوب هو المتاح** — `XG-12`.
 	var repBalance int64
 	if err := q.QueryRow(ctx,
-		`SELECT COALESCE(balance, 0) FROM wallets WHERE user_id = $1`,
+		`SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0)
+		      - COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`,
 		*repID).Scan(&repBalance); err != nil {
 		return err
 	}

@@ -162,9 +162,11 @@ func (s *Service) clawBackGoods(ctx context.Context, q wallet.Querier, orderID, 
 		// **ولا يُخصم إلّا ما تحتمله المحفظة**: قيدُ الصفر في القاعدة يرفض
 		// السالبَ **كلَّه لا جزأه** — فيُقرأ الاسترجاعُ فشلاً ذريعاً، وتبقى
 		// البضاعةُ عنده وثمنُها في جيبه.
+		// **وما تحتمله المحفظةُ هو المتاحُ لا الرصيد** — `XG-12`.
 		var balance int64
 		if err := q.QueryRow(ctx,
-			`SELECT COALESCE(balance, 0) FROM wallets WHERE user_id = $1`,
+			`SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0)
+			      - COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`,
 			sh.ownerID).Scan(&balance); err != nil {
 			return err
 		}

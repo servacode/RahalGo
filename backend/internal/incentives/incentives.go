@@ -263,9 +263,11 @@ func (s *Service) Grant(ctx context.Context, actorID, userID, kind string,
 	// **فيُردّ الطلبُ برسالةٍ تُقرأ بدل خطأٍ لا يفهمه الموظّف.**
 	signed := amount
 	if kind == KindPenalty {
+		// **والغرامةُ تأخذ من المتاح لا من المحجوز** — `XG-12`.
 		var balance int64
 		if err := tx.QueryRow(ctx,
-			`SELECT COALESCE(balance, 0) FROM wallets WHERE user_id = $1`, userID).
+			`SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0)
+			      - COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`, userID).
 			Scan(&balance); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
 		}

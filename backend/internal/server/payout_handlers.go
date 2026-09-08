@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -26,15 +27,19 @@ var (
 )
 
 type payout struct {
-	ID        string     `json:"id"`
-	UserID    string     `json:"user_id"`
-	UserName  string     `json:"user_name"`
-	UserPhone string     `json:"user_phone"`
-	Amount    int64      `json:"amount"`
-	Status    string     `json:"status"`
-	Note      string     `json:"note"`
-	Decision  string     `json:"decision"`
-	Balance   int64      `json:"balance"` // رصيد الطالب الآن — تحتاجه المالية للقرار
+	ID        string `json:"id"`
+	UserID    string `json:"user_id"`
+	UserName  string `json:"user_name"`
+	UserPhone string `json:"user_phone"`
+	Amount    int64  `json:"amount"`
+	Status    string `json:"status"`
+	Note      string `json:"note"`
+	Decision  string `json:"decision"`
+	// **والطبقاتُ الثلاثُ تُعرَض ولا يُسمّى المجموعُ متاحاً** —
+	// `XG-12`: **الماليّةُ تقرّر على ما يجوز صرفُه لا على ما تراه.**
+	Balance   int64      `json:"balance"`   // المُقيَّد
+	Reserved  int64      `json:"reserved"`  // المحجوزُ لطلباتٍ جارية
+	Available int64      `json:"available"` // = المُقيَّد − المحجوز
 	CreatedAt time.Time  `json:"created_at"`
 	DecidedAt *time.Time `json:"decided_at"`
 }
@@ -42,7 +47,9 @@ type payout struct {
 const payoutSelect = `
 	SELECT p.id, p.user_id, COALESCE(NULLIF(u.full_name,''), u.phone::text), u.phone,
 	       p.amount, p.status, p.note, p.decision,
-	       COALESCE((SELECT balance FROM wallets w WHERE w.user_id = p.user_id), 0),
+	       COALESCE((SELECT w.balance  FROM wallets w WHERE w.user_id = p.user_id), 0),
+	       COALESCE((SELECT w.reserved FROM wallets w WHERE w.user_id = p.user_id), 0),
+	       COALESCE((SELECT w.balance - w.reserved FROM wallets w WHERE w.user_id = p.user_id), 0),
 	       p.created_at, p.decided_at
 	FROM payout_requests p JOIN users u ON u.id = p.user_id`
 
@@ -54,7 +61,8 @@ func scanPayouts(rows interface {
 	for rows.Next() {
 		var p payout
 		if err := rows.Scan(&p.ID, &p.UserID, &p.UserName, &p.UserPhone, &p.Amount,
-			&p.Status, &p.Note, &p.Decision, &p.Balance, &p.CreatedAt, &p.DecidedAt); err != nil {
+			&p.Status, &p.Note, &p.Decision, &p.Balance, &p.Reserved, &p.Available,
+			&p.CreatedAt, &p.DecidedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
@@ -116,7 +124,13 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := userIDFrom(r)
-	balance, err := s.wallet.Balance(r.Context(), uid)
+	// ══════════════════════════════════════════════════════════════
+	// **والأهليّةُ بالمتاح لا بالرصيد** — `XG-12` · `AQ-3`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **والرصيدُ يشمل ما حُجز لطلبٍ آخرَ جارٍ** — **ومن سُئل عن
+	// رصيده أُجيب بمالٍ ليس له أن ينفقه.**
+	balance, err := s.wallet.Available(r.Context(), uid)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -134,10 +148,41 @@ func (s *Server) handleCreatePayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ══════════════════════════════════════════════════════════════
+	// **والطلبُ وحجزُه فعلٌ واحد** — `XG-12`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وحالان محرَّمتان**: **طلبٌ ثُبِّت بلا حجز** فيُنفَق مالُه ثمّ
+	// يرتدّ قرارُه · **وحجزٌ ثُبِّت بلا طلب** فيُجمَّد مالٌ لا سبب له.
+	//
+	// **والفحصُ فوق القفل لا بدلَ منه**: **المتاحُ يُقرأ ثانيةً داخل
+	// المعاملة** — **فطلبان متزامنان لا يحجزان ضعفَ المتاح**،
+	// **والقيدُ في الجدول حارسٌ ثالث.**
 	var id string
-	err = s.pg.QueryRow(r.Context(), `
-		INSERT INTO payout_requests (user_id, amount, note) VALUES ($1, $2, $3)
-		RETURNING id`, uid, req.Amount, clip(req.Note, 300)).Scan(&id)
+	err = s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		// **وقفلُ صفّ المحفظة يُرتِّب المتزاحمَين** — والثاني يقرأ
+		// بعد أن كُتب الأوّل.
+		if _, e := q.Exec(ctx, `
+			INSERT INTO wallets (user_id) VALUES ($1)
+			ON CONFLICT (user_id) DO NOTHING`, uid); e != nil {
+			return e
+		}
+		var bal, res int64
+		if e := q.QueryRow(ctx,
+			`SELECT balance, reserved FROM wallets WHERE user_id = $1 FOR UPDATE`,
+			uid).Scan(&bal, &res); e != nil {
+			return e
+		}
+		if req.Amount > bal-res {
+			return errPayoutOver
+		}
+		if e := q.QueryRow(ctx, `
+			INSERT INTO payout_requests (user_id, amount, note) VALUES ($1, $2, $3)
+			RETURNING id`, uid, req.Amount, clip(req.Note, 300)).Scan(&id); e != nil {
+			return e
+		}
+		return s.wallet.ReserveTx(ctx, q, uid, req.Amount)
+	})
 	if isUniqueViolation(err) {
 		s.respondErr(w, errPayoutPending) // الفهرس الفريد يمنع طلبين معلّقين
 		return
@@ -228,10 +273,12 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 // الصرف يقيّد `payout` في دفتر المحفظة: المال يخرج بأثر، لا بتعديل رصيد.
 func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
-		Status   string `json:"status"` // paid | rejected
+		Status   string `json:"status"`
 		Decision string `json:"decision"`
 	}](r)
-	if err != nil || (req.Status != "paid" && req.Status != "rejected") {
+	// **والحالاتُ ستٌّ بعقد `AQ-3`** — ولا يُقبَل ما ليس منها.
+	if err != nil || !slices.Contains(
+		[]string{"processing", "paid", "rejected", "failed", "reversed"}, req.Status) {
 		s.respondErr(w, errValidation)
 		return
 	}
@@ -277,14 +324,64 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 			Scan(&userID, &amount, &status); err != nil {
 			return IdempotentBody{}, httpx.ErrNotFound
 		}
-		if status != "pending" {
+		// ══════════════════════════════════════════════════════════
+		// **وآلةُ الحالات تُحرَس بمصدرها لا بوجهتها وحدَها**
+		// ══════════════════════════════════════════════════════════
+		//
+		//	pending    → processing · paid · rejected · failed
+		//	processing → paid · failed
+		//	paid       → reversed
+		//
+		// **و`paid` لا تُعاد** — الحارسُ هنا هو ما يمنع خصماً ثانياً
+		// لقرارٍ يُكرَّر، **فوق منع التكرار.**
+		allowed := map[string][]string{
+			"pending":    {"processing", "paid", "rejected", "failed"},
+			"processing": {"paid", "failed"},
+			"paid":       {"reversed"},
+		}
+		if !slices.Contains(allowed[status], req.Status) {
 			return IdempotentBody{}, errPayoutClosed
 		}
 
 		actor := userIDFrom(r)
-		if req.Status == "paid" {
-			// الخصم أولاً: إن لم يكفِ الرصيد يُرفض القرار ولا يُقفل الطلب
-			if _, err := s.wallet.ApplyTx(ctx, q, userID, -amount, "payout",
+		// ══════════════════════════════════════════════════════════
+		// **وكلُّ حالٍ تفعل بالحجز ما يوجبه معناها** — `XG-12`
+		// ══════════════════════════════════════════════════════════
+		//
+		//	paid       يُفكّ الحجزُ ويُخصَم — **فعلٌ واحد**
+		//	rejected   يُفكّ بلا خصم — لم يقع صرف
+		//	failed     **فشلٌ مُثبَتٌ ولا صرفَ وقع** — يُفكّ بلا خصم
+		//	processing **بدأ الصرفُ ولم يثبت** — **الحجزُ كما هو**
+		//	reversed   دُفع ثمّ ارتدّ — قيدٌ مقابلٌ يُعيد المال
+		//
+		// **و`failed` ليست لمجهول النتيجة** — **ومجهولُها يبقى
+		// `processing` حتّى تُثبت المصالحةُ حقيقتَه**، **ولا يُخلَق
+		// مالٌ من شكّ.**
+		switch req.Status {
+		case "paid":
+			// **ويُفكّ ثمّ يُخصَم** — فالقيد `reserved <= balance`
+			// يرفض العكس.
+			if _, err := s.wallet.SettleReservedTx(ctx, q, userID, amount, "payout",
+				id, clip(req.Decision, 300), &actor); err != nil {
+				return IdempotentBody{}, err
+			}
+		case "rejected", "failed":
+			if err := s.wallet.ReleaseTx(ctx, q, userID, amount); err != nil {
+				return IdempotentBody{}, err
+			}
+		case "processing":
+			// **ولا يُخصَم لأنّ الصرفَ بدأ** — البدءُ ليس نجاحاً.
+		case "reversed":
+			// ══════════════════════════════════════════════════════
+			// **والارتدادُ قيدٌ مقابلٌ لا محوٌ لتاريخ**
+			// ══════════════════════════════════════════════════════
+			//
+			// **الخصمُ الأوّلُ وقع ويبقى في الدفتر** — **ودفترٌ
+			// يُمحى منه سطرٌ لا يُراجَع.** **فيُقيَّد ردٌّ يُعيد
+			// المالَ إلى صاحبه.**
+			//
+			// **ولا حجزَ يُفكّ**: فُكّ يومَ `paid`.
+			if _, err := s.wallet.ApplyTx(ctx, q, userID, amount, "refund",
 				id, clip(req.Decision, 300), &actor); err != nil {
 				return IdempotentBody{}, err
 			}

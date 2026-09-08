@@ -173,7 +173,24 @@ var Gaps = []GapDecl{
 			"يؤكّد العقدَ: كان `409` والمستردُّ صفراً، وصار الزبونُ يستردّ " +
 			"كاملاً والمستحقُّ لا يتبخّر (عُكس + دُيّن = ما قُيّد). " +
 			"**وحَكَمُ `P-4` يشهد ألّا خرقَ جديداً.**"},
-	{ID: "XG-12", Title: "لا طبقاتِ رصيد", Severity: "CRITICAL"},
+	// ══════════════════════════════════════════════════════════════
+	// **`XG-12` — لا طبقاتِ رصيد** · دورةُ إصلاحٍ ٣٠
+	// ══════════════════════════════════════════════════════════════
+	{ID: "XG-12", Title: "لا طبقاتِ رصيد", Severity: "CRITICAL",
+		Fixed: "**صار للمحفظة طبقاتٌ بعقد `AQ-3`**: `balance` المُقيَّد · " +
+			"`reserved` المحجوز · **والمتاحُ مشتقٌّ لا مخزَّن** · " +
+			"و`OUTSTANDING` كما هو في `XG-31` بلا تبديل. " +
+			"**وقيدُ `reserved <= balance` هو الحارس**: **كلُّ خصمٍ يمرّ " +
+			"بـ`applyTx` يُفحَص به**، فخصمُ `س` يوجب `س <= available` " +
+			"بالبناء — **ولا يُفتَّش عن ثلاثين موضعاً يقرأ رصيداً.** " +
+			"**والطلبُ يحجز لحظةَ إنشائه في معاملةٍ واحدة** — " +
+			"`paid` يفكّ ويخصم · `rejected`/`failed` يفكّان بلا خصم · " +
+			"`processing` يُبقي الحجز · `reversed` قيدٌ مقابلٌ لا محوٌ " +
+			"لتاريخ. **ومجهولُ نتيجة المزوّد يبقى `processing`** — " +
+			"**ولا يُخلَق مالٌ من شكّ.** " +
+			"**والقياسُ قبلُ**: طلبٌ بمئةِ ألفٍ لم يُحجَز، فأُنفق المالُ، " +
+			"فارتدّ القرارُ بـ`409`. **وبعدُ**: أُنفق كلُّ المتاح والقرارُ " +
+			"مضى. **وخمسةُ ثوابتَ في `P-4`** (`FI-11.d`…`FI-11.h`)."},
 	{ID: "XG-13", Title: "لا مفتاحَ لمصدر احتساب العمولة", Severity: "HIGH"},
 	{ID: "XG-14", Title: "بوّابةُ platformCommission مثبَّتةٌ في الشيفرة", Severity: "CRITICAL"},
 	{ID: "XG-15", Title: "عتبةُ التفعيل تُسقط الطلباتِ السابقة", Severity: "HIGH", WokenBy: "sales.activation_orders"},
@@ -1784,6 +1801,19 @@ var TestMap = map[string]TestDecl{
 	"TestADG1_C1C2_RevocationVsPrivilegedRequest":          authzTest(),
 	"TestADG1_StructuralGuards":                            infraTest(),
 
+	// ── طبقاتُ الرصيد (دورةُ إصلاحٍ ٣٠) — `XG-12` · `AQ-3` ───────
+	"TestXG12_T1_RequestReservesAndSpendSeesAvailable": reserveTest(),
+	"TestXG12_T2_PaidDebitsAndReleases":                reserveTest(),
+	"TestXG12_T3_RejectAndFailReleaseWithoutDebit":     reserveTest(),
+	"TestXG12_T4_ProcessingHoldsWithoutDebit":          reserveTest(),
+	"TestXG12_T5_ReversedCompensates":                  reserveTest(),
+	"TestXG12_C1_ConcurrentRequestsCannotOverReserve":  reserveTest(),
+	"TestXG12_C2_ReserveVsSpend":                       reserveTest(),
+	"TestXG12_C4C5_ReleaseOnceAndNoDoubleDebit":        reserveTest(),
+	"TestXG12_F1F2_CreationIsOneUnit":                  reserveTest(),
+	"TestXG12_F3F5_TerminalStateNeedsItsMoneyTruth":    reserveTest(),
+	"TestXG12_F4_AuditFailureRollsBackPayout":          reserveTest(),
+
 	// ── الإبطالُ عبر عُقدتين (دورةُ إصلاحٍ ٢٩) — `STG-01` · `R16` ──
 	//
 	// **وتُتخطّى بلا طوبولوجيا** — ولا تُقرأ نجاحاً حينئذٍ.
@@ -2017,6 +2047,20 @@ func authzTest() TestDecl {
 		Flows: []string{"F-30", "F-34"},
 		Risks: []string{"R15"},
 		Modes: []string{"SECURITY", "CONCURRENCY", "REALTIME", "FULL", "RELEASE"},
+	}
+}
+
+// reserveTest حارسُ طبقات الرصيد — `XG-12` · `AQ-3`.
+//
+// **ومالٌ يُحجَز ثمّ يُفكّ أو يُخصَم** — **فالمالُ والتزامن والحقنُ
+// كلُّها في عقده.**
+func reserveTest() TestDecl {
+	return TestDecl{
+		Level: L4, Purpose: PurposeFeature,
+		Flows:    []string{"F-24"},
+		Gaps:     []string{"XG-12"},
+		Settings: []string{"payouts.min_amount"},
+		Modes:    []string{"FINANCIAL", "CONCURRENCY", "FAILURE", "FULL", "RELEASE"},
 	}
 }
 

@@ -66,11 +66,18 @@ func TestDecidePayoutIsNotAppliedTwice(t *testing.T) {
 		t.Fatalf("تعذّر شحنُ الرصيد: %v", err)
 	}
 
+	// **والطلبُ يحجز مالَه** — `XG-12`: **مِسنَدٌ يصنع طلباً بلا حجزٍ
+	// يصنع حالاً لا ينتجها المنتج**، **والفحصُ عليها يقيس شيئاً آخر.**
 	var payoutID string
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO payout_requests (user_id, amount, status)
 		VALUES ($1, $2, 'pending') RETURNING id`, user, amount).Scan(&payoutID); err != nil {
 		t.Fatalf("تعذّر إنشاء طلب سحب: %v", err)
+	}
+	if _, err := pool.Exec(ctx,
+		`UPDATE wallets SET reserved = reserved + $2 WHERE user_id = $1`,
+		user, amount); err != nil {
+		t.Fatalf("تعذّر حجزُ مبلغ السحب: %v", err)
 	}
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM payout_requests WHERE id = $1`, payoutID)

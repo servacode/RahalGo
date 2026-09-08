@@ -304,9 +304,12 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 		return nil
 	}
 
+	// **والمتاحُ لا الرصيد** — `XG-12`: **الرصيدُ يشمل ما حُجز لسحبٍ
+	// جارٍ**، ودفعُ الطلب منه يرتدّ عند القيد.
 	var balance int64
 	if err := q.QueryRow(ctx,
-		`SELECT COALESCE(balance, 0) FROM wallets WHERE user_id = $1`,
+		`SELECT COALESCE((SELECT balance  FROM wallets WHERE user_id = $1), 0)
+		      - COALESCE((SELECT reserved FROM wallets WHERE user_id = $1), 0)`,
 		in.customerID).Scan(&balance); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}

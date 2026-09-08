@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **118** — منها **95** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **266** |
-| دوالُّ اختبار | **1001** |
+| ملفّاتُ اختبار | **267** |
+| دوالُّ اختبار | **1012** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1001
-MAPPED     = 303
+TOTAL      = 1012
+MAPPED     = 314
 INFRA      = 115
 ORPHAN     = 583
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 583
 | **التدفّقات** | 35 | 30 | 5 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 40 | 12 | 28 |
+| **فجواتُ العقد** | 40 | 13 | 27 |
 | **إعداداتُ السلوك** | 95 | 12 | 83 |
 
 ---
@@ -108,7 +108,7 @@ ORPHAN     = 583
 | **XG-9** | `MEDIUM` | — | `NOT_IMPLEMENTED` | — |
 | **XG-10** | `BLOCKER` | — | `COVERED` | `TestFIN_RefundNotConditionedOnRepBalance` · `TestFIN_RepCommissionReversal` · `TestRACE_RefundVsPayout` · `TestFIN_XG10_DebtOffsetFromNextCommission` · `TestFIN_XG10_RepCommissionReversedOnRefund` · `TestFIN_XG10_RepWithdrewThenRefund` · `TestFIN_XG10_CombinedMerchantAndRepInsufficiency` · `TestFIN_XG10_ConservationAcrossRefund` · `TestFIN_XG10_DebtSettlementArithmetic` · `TestFIN_XG10_RefundReplayDoesNotDoubleCharge` |
 | **XG-11** | `BLOCKER` | — | `COVERED` | `TestFIN_MerchantWithdrewThenRefund` · `TestFIN_RefundNotConditionedOnRepBalance` · `TestRACE_RefundVsPayout` · `TestFIN_XG11_RefundIndependentOfMerchantBalance` · `TestFIN_XG11_RefundUntouchedWhenMerchantSolvent` · `TestFIN_XG10_RepWithdrewThenRefund` |
-| **XG-12** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
+| **XG-12** | `CRITICAL` | — | `COVERED` | `TestXG12_C1_ConcurrentRequestsCannotOverReserve` · `TestXG12_C2_ReserveVsSpend` · `TestXG12_C4C5_ReleaseOnceAndNoDoubleDebit` · `TestXG12_F1F2_CreationIsOneUnit` · `TestXG12_F3F5_TerminalStateNeedsItsMoneyTruth` · `TestXG12_F4_AuditFailureRollsBackPayout` · `TestXG12_T1_RequestReservesAndSpendSeesAvailable` · `TestXG12_T2_PaidDebitsAndReleases` · `TestXG12_T3_RejectAndFailReleaseWithoutDebit` · `TestXG12_T4_ProcessingHoldsWithoutDebit` · `TestXG12_T5_ReversedCompensates` |
 | **XG-13** | `HIGH` | — | `EXPECTED_FAIL` | `TestFIN_CommissionSourceMatrix` · `TestFIN_SnapshotVsLiveEconomics` |
 | **XG-14** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
 | **XG-15** | `HIGH` | `sales.activation_orders` | `NOT_IMPLEMENTED` | — |

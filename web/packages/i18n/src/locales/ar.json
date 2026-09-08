@@ -88,7 +88,9 @@
     "onShift": "على الدوام",
     "offShift": "خارج الدوام",
     "warnings": "الإنذارات",
-    "ordersHistory": "سجل الطلبات"
+    "ordersHistory": "سجل الطلبات",
+    "walletAvailable": "المتاح",
+    "walletReserved": "محجوز"
   },
   "shared": {
     "_doc": "نصوص المكونات المشتركة في @rahalgo/ui — محايدة، تظهر في كل اللوحات.",
