@@ -2654,8 +2654,11 @@
       "id": "XG-34",
       "title": "تعثّرٌ متقطّعٌ بانتظار قفلٍ تحت حمل الحزمة الكاملة",
       "severity": "HIGH",
-      "tests": null,
-      "status": "NOT_IMPLEMENTED"
+      "tests": [
+        "TestXG34_DifferentKeysDoNotSerialize",
+        "TestXG34_NoTransactionIsLeftOpen"
+      ],
+      "status": "EXPECTED_FAIL"
     },
     {
       "id": "XG-35",
@@ -10336,13 +10339,33 @@
       "name": "TestXG34_DifferentKeysDoNotSerialize",
       "file": "internal/qa/lock_scope_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "gaps": [
+        "XG-34"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestXG34_NoTransactionIsLeftOpen",
       "file": "internal/qa/lock_scope_test.go",
       "package": "qa",
-      "orphan": true
+      "level": "L4",
+      "purpose": "INFRASTRUCTURE_TEST",
+      "gaps": [
+        "XG-34"
+      ],
+      "modes": [
+        "CONCURRENCY",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
     },
     {
       "name": "TestMapDataIsFresh",
