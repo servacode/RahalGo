@@ -1,17 +1,17 @@
 {
   "counts": {
-    "Total": 11,
-    "Local": 11,
+    "Total": 12,
+    "Local": 12,
     "RequiresP0": 0,
     "RequiresP7": 0,
     "RequiresP8": 0,
-    "Pass": 11,
+    "Pass": 12,
     "DefectReproduced": 0,
     "RiskConfirmed": 0,
     "ExpectedFail": 0,
     "Partial": 0,
     "Unproven": 0,
-    "Visible": 2,
+    "Visible": 3,
     "Invisible": 3,
     "PartialVisible": 4
   },
@@ -396,6 +396,50 @@
       ],
       "where": "LOCAL",
       "evidence": "**R11 DISPROVEN** — `CreateCustom` إدخالٌ واحدٌ و`AgreeCustom` تحديثٌ واحد · **ولا شيءَ ثانٍ ليُفقَد**"
+    },
+    {
+      "id": "PF-12",
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-20"
+      ],
+      "title": "أنماطُ فشل التحويل إلى المتجر — سبعة",
+      "steps": [
+        "١ قراءةُ مفتاح التحويل — خطؤها ترتدّ إلى الافتراض",
+        "٢ قراءةُ حال الطلب — خطؤها تُنهي المحاولة",
+        "٣ جاهزيّةُ البوت — **تُفحص قبل القبول**",
+        "٤ العنوانُ (رقمُ واتساب) — **يُفحص قبل القبول** (دورةُ ٢٧)",
+        "٥ Transition ← accepted — خطؤه يُبقي pending",
+        "٦ SendText — **خطؤه بعد قبولٍ ثابت** · يُكتب أثرُه في سجلّ الطلب",
+        "٧ AutoDispatch — خطؤه يُبقي accepted مُبلَّغاً بلا سائق"
+      ],
+      "atomic_boundary": "NON_ATOMIC — ثلاثةُ أفعالٍ لا واحد: قبولٌ وإبلاغٌ وإنزال · **وما يُعلَم قبل القبول يُفحص قبله، وما لا يُعلَم يُكتب أثرُه بعده**",
+      "failpoints": [
+        "R24/F4-transition",
+        "R24/notifier-send-error",
+        "R24/merchant-without-phone"
+      ],
+      "expected": "لا فشلَ بلا أثرٍ يُقرأ · ولا نجاحَ كاذب",
+      "observed": "سبعةٌ من سبعة: أربعةٌ تُبقي `pending` · وواحدٌ يكتب أثراً في سجلّ الطلب يُقرأ في اللوحة · وواحدٌ صار `pending` بفحص العنوان قبل القبول · وسابعٌ مُبلَّغٌ بلا سائقٍ وله زرّ",
+      "user_visible": "pending أو accepted — **ولا يُوسَم مُرسَلاً ما لم يُرسَل**",
+      "admin_visible": "VISIBLE",
+      "recovery": "RETRY SAFETY = MANUAL — المكتبُ يقرأ الأثرَ ويُرسل بيده · ولا إعادةَ آليّة",
+      "tests": [
+        "TestR24_F1_SettingReadFailureLeavesPending",
+        "TestR24_F2F4_TransitionRefusedLeavesPending",
+        "TestR24_F3_BotNotReadyLeavesPending",
+        "TestR24_F5_SendFailureAfterAccept",
+        "TestR24_F6_NoMerchantPhoneAfterAccept",
+        "TestR24_F7_DispatchFailureIsVisible",
+        "TestR24_F5_TraceIsAdminReadableAfterTheRequest"
+      ],
+      "result": "PASS",
+      "registers": [
+        "R24"
+      ],
+      "where": "LOCAL",
+      "evidence": "**R24 DISPROVEN** — سبعةُ أنماطٍ مقيسةٌ بنداءٍ حيّ · `F5`: `accepted` و`sent_to_merchant_at=NULL` **وأثرٌ في `order_events` يُقرأ في `GET /admin/orders/{id}`** · `F6`: `pending` بعد فحص العنوان قبل القبول"
     }
   ]
 }

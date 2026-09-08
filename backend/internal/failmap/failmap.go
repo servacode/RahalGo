@@ -363,6 +363,50 @@ var All = []Flow{
 		Evidence: "**R11 DISPROVEN** — `CreateCustom` إدخالٌ واحدٌ " +
 			"و`AgreeCustom` تحديثٌ واحد · **ولا شيءَ ثانٍ ليُفقَد**",
 	},
+	// ══════════════════════════════════════════════════════════════
+	// **أنماطُ فشل التحويل السبعة** — `R24` (دورةُ إصلاحٍ ٢٧)
+	// ══════════════════════════════════════════════════════════════
+	{
+		ID: "PF-12", Title: "أنماطُ فشل التحويل إلى المتجر — سبعة",
+		Flows: []string{"F-01", "F-14", "F-20"}, Where: Local, Result: Pass,
+		Steps: []string{
+			"١ قراءةُ مفتاح التحويل — خطؤها ترتدّ إلى الافتراض",
+			"٢ قراءةُ حال الطلب — خطؤها تُنهي المحاولة",
+			"٣ جاهزيّةُ البوت — **تُفحص قبل القبول**",
+			"٤ العنوانُ (رقمُ واتساب) — **يُفحص قبل القبول** (دورةُ ٢٧)",
+			"٥ Transition ← accepted — خطؤه يُبقي pending",
+			"٦ SendText — **خطؤه بعد قبولٍ ثابت** · يُكتب أثرُه في سجلّ الطلب",
+			"٧ AutoDispatch — خطؤه يُبقي accepted مُبلَّغاً بلا سائق",
+		},
+		AtomicBoundary: "NON_ATOMIC — ثلاثةُ أفعالٍ لا واحد: قبولٌ وإبلاغٌ " +
+			"وإنزال · **وما يُعلَم قبل القبول يُفحص قبله، وما لا يُعلَم " +
+			"يُكتب أثرُه بعده**",
+		Failpoints: []string{
+			"R24/F4-transition", "R24/notifier-send-error", "R24/merchant-without-phone",
+		},
+		Expected: "لا فشلَ بلا أثرٍ يُقرأ · ولا نجاحَ كاذب",
+		Observed: "سبعةٌ من سبعة: أربعةٌ تُبقي `pending` · وواحدٌ يكتب " +
+			"أثراً في سجلّ الطلب يُقرأ في اللوحة · وواحدٌ صار `pending` " +
+			"بفحص العنوان قبل القبول · وسابعٌ مُبلَّغٌ بلا سائقٍ وله زرّ",
+		UserVisible:  "pending أو accepted — **ولا يُوسَم مُرسَلاً ما لم يُرسَل**",
+		AdminVisible: "VISIBLE",
+		Recovery: "RETRY SAFETY = MANUAL — المكتبُ يقرأ الأثرَ ويُرسل بيده · " +
+			"ولا إعادةَ آليّة",
+		Tests: []string{
+			"TestR24_F1_SettingReadFailureLeavesPending",
+			"TestR24_F2F4_TransitionRefusedLeavesPending",
+			"TestR24_F3_BotNotReadyLeavesPending",
+			"TestR24_F5_SendFailureAfterAccept",
+			"TestR24_F6_NoMerchantPhoneAfterAccept",
+			"TestR24_F7_DispatchFailureIsVisible",
+			"TestR24_F5_TraceIsAdminReadableAfterTheRequest",
+		},
+		Registers: []string{"R24"},
+		Evidence: "**R24 DISPROVEN** — سبعةُ أنماطٍ مقيسةٌ بنداءٍ حيّ · " +
+			"`F5`: `accepted` و`sent_to_merchant_at=NULL` **وأثرٌ في " +
+			"`order_events` يُقرأ في `GET /admin/orders/{id}`** · " +
+			"`F6`: `pending` بعد فحص العنوان قبل القبول",
+	},
 }
 
 // Counts إحصاءٌ مولَّد.
