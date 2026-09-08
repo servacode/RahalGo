@@ -99,7 +99,8 @@
         "FI-11.e",
         "FI-11.f",
         "FI-11.g",
-        "FI-11.h"
+        "FI-11.h",
+        "FI-11.i"
       ]
     },
     {
@@ -652,7 +653,7 @@
     {
       "id": "FI-11.d",
       "family": "FI-11",
-      "name": "المحجوزُ لا يتجاوز المُقيَّد ولا ينزل عن صفر",
+      "name": "محافظُ الناس: المحجوزُ لا يتجاوز المُقيَّد ولا ينزل عن صفر",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -665,7 +666,7 @@
     {
       "id": "FI-11.e",
       "family": "FI-11",
-      "name": "المحجوزُ يُصالِح طلباتِ السحب القائمة",
+      "name": "محافظُ الناس: المحجوزُ يُصالِح طلباتِ السحب القائمة",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -706,6 +707,19 @@
       "id": "FI-11.h",
       "family": "FI-11",
       "name": "سحبٌ ارتدّ له قيدٌ مقابلٌ يُعيد المال",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-24"
+      ],
+      "registers": [
+        "XG-12"
+      ]
+    },
+    {
+      "id": "FI-11.i",
+      "family": "FI-11",
+      "name": "الخزينةُ خارجَ عقد الحجز — ولا محجوزَ لها",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -1072,8 +1086,8 @@
   ],
   "counts": {
     "families": 13,
-    "checks": 54,
-    "provable_now": 48,
+    "checks": 55,
+    "provable_now": 49,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,

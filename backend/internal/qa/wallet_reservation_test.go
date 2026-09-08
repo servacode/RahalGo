@@ -488,3 +488,127 @@ func TestXG12_F4_AuditFailureRollsBackPayout(t *testing.T) {
 		t.Errorf("**F4: الحجزُ لم يبقَ سليماً** — %d/%d", b, rsv)
 	}
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **B3 · حالٌ قديمةٌ لا تُسوّى صامتةً — تُكشَف** — مصالحةُ دورةِ ٣٠
+// ══════════════════════════════════════════════════════════════════════
+//
+// # المسألة
+//
+// **طلبٌ أُنشئ قبل الحجز ثمّ أُنفق مالُه** ⇒ **مجموعُ المطالب أكبرُ
+// من الرصيد.** **وترحيلٌ يكتب `LEAST(balance, sum)` يُرضي القيدَ
+// ويُخفي الفرق** — **ويسقط `FI-11.e` بعده بلا سبب ظاهر.**
+//
+// **فالعقدُ: يُحجَز المطلوبُ كاملاً حيث يسعه الرصيد، ويقف الترحيلُ
+// بالأسماء حيث لا يسعه.**
+func TestXG12_B3_LegacyOverReservationIsDetectedNotTruncated(t *testing.T) {
+	hh := New(t)
+	treasury(t, hh)
+	admin := hh.NewUser("admin")
+	u := hh.NewUser("sales")
+	fundWallet(t, hh, admin, u.ID, 100000)
+
+	// **وتُبنى الحالُ القديمةُ بالمسار الحقيقيّ ثمّ يُمحى حجزُها** —
+	// وهي حالُ كلّ طلبٍ أُنشئ قبل `0143`.
+	if _, code := askPayout(t, hh, u, 100000); code != 201 {
+		t.Fatalf("طلبُ السحب: %d", code)
+	}
+	if _, err := hh.Pool.Exec(ctxBG(),
+		`UPDATE wallets SET reserved = 0 WHERE user_id = $1::uuid`, u.ID); err != nil {
+		t.Fatalf("محوُ الحجز: %v", err)
+	}
+	if res := spend(hh, admin, u.ID, 100000); res.Code >= 400 {
+		t.Fatalf("الإنفاق: %s", res)
+	}
+
+	var bal, res, sum int64
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		SELECT w.balance, w.reserved,
+		       COALESCE((SELECT sum(p.amount) FROM payout_requests p
+		                  WHERE p.user_id = w.user_id
+		                    AND p.status IN ('pending','processing')), 0)
+		  FROM wallets w WHERE w.user_id = $1::uuid`, u.ID).
+		Scan(&bal, &res, &sum); err != nil {
+		t.Fatalf("القياس: %v", err)
+	}
+	t.Logf("B3: رصيدٌ=%d · محجوزٌ=%d · مطالبُ=%d", bal, res, sum)
+	if sum <= bal {
+		t.Fatalf("**لم تقع الحالُ المطلوبُ قياسُها** — %d ≤ %d", sum, bal)
+	}
+
+	// **والثابتُ يكشفها** — **ولا تمرّ لأنّ `reserved <= balance`.**
+	rows, err := hh.Pool.Query(ctxBG(), `
+		SELECT w.user_id::text
+		  FROM wallets w
+		  LEFT JOIN (SELECT user_id, sum(amount) AS total
+		               FROM payout_requests
+		              WHERE status IN ('pending','processing')
+		              GROUP BY user_id) a ON a.user_id = w.user_id
+		 WHERE NOT w.is_treasury AND w.reserved <> COALESCE(a.total, 0)`)
+	if err != nil {
+		t.Fatalf("الثابت: %v", err)
+	}
+	defer rows.Close()
+	seen := false
+	for rows.Next() {
+		var id string
+		_ = rows.Scan(&id)
+		if id == u.ID {
+			seen = true
+		}
+	}
+	t.Logf("B3: `FI-11.e` كشفها؟ %v", seen)
+	if !seen {
+		t.Error("**B3: حالٌ قديمةٌ لم يكشفها الثابت** — " +
+			"**ورقمٌ يُسوّى ليمرّ إخفاءٌ لا ترحيل.** (`XG-12`)")
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **والخزينةُ خارجَ عقد الحجز** — `FI-11.i`
+// ══════════════════════════════════════════════════════════════════════
+//
+// **ولا تُخمَّن لها دلالةُ «متاح» على حسابٍ سالبٍ بالقصد** —
+// **تُمنَع من طلب السحب أصلاً.**
+func TestXG12_TreasuryCannotReserve(t *testing.T) {
+	hh := New(t)
+	treasury(t, hh)
+	admin := hh.NewUser("admin")
+
+	var tid string
+	if err := hh.Pool.QueryRow(ctxBG(),
+		`SELECT user_id::text FROM wallets WHERE is_treasury LIMIT 1`).Scan(&tid); err != nil {
+		t.Fatalf("الخزينة: %v", err)
+	}
+	var roles []string
+	_ = hh.Pool.QueryRow(ctxBG(),
+		`SELECT COALESCE(array_agg(role_code), '{}') FROM user_roles WHERE user_id = $1::uuid`,
+		tid).Scan(&roles)
+	fundWallet(t, hh, admin, tid, 50000)
+
+	var sid string
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		INSERT INTO refresh_tokens (user_id, token_hash, expires_at, client)
+		VALUES ($1::uuid, $2, now() + interval '30 days', 'web')
+		RETURNING session_id::text`, tid, "xg12-treasury-"+tid).Scan(&sid); err != nil {
+		t.Fatalf("جلسة: %v", err)
+	}
+	tok, _, err := hh.tokens.IssueAccess(tid, roles, sid)
+	if err != nil {
+		t.Fatalf("توكن: %v", err)
+	}
+	res := hh.POST("/api/v1/me/payouts", tok, map[string]any{"amount": 50000})
+	var bal, rsv int64
+	_ = hh.Pool.QueryRow(ctxBG(),
+		`SELECT balance, reserved FROM wallets WHERE user_id = $1::uuid`, tid).Scan(&bal, &rsv)
+	t.Logf("الخزينةُ: أدوارٌ=%v · طلبُ سحبٍ ⇒ %d · رصيدٌ=%d · محجوزٌ=%d",
+		roles, res.Code, bal, rsv)
+
+	if res.Code < 400 {
+		t.Errorf("**الخزينةُ طلبت سحباً** — %d · **ودلالةُ المتاح على "+
+			"حسابٍ سالبٍ غيرُ معرَّفة.**", res.Code)
+	}
+	if rsv != 0 {
+		t.Errorf("**للخزينة حجزٌ** — %d · **وهي خارجَ العقد.** (`FI-11.i`)", rsv)
+	}
+}

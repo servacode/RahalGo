@@ -80,20 +80,58 @@ CREATE INDEX payout_requests_active_idx
     WHERE status IN ('pending', 'processing');
 
 -- ══════════════════════════════════════════════════════════════════════
--- **ومطالبُ اليومِ تُحجَز أثراً رجعيّاً**
+-- **ومطالبُ اليومِ تُحجَز أثراً رجعيّاً — أو يقف الترحيل**
 -- ══════════════════════════════════════════════════════════════════════
 --
 -- **وإلّا خرق الثابتُ أوّلَ تشغيل**: طلبٌ معلَّقٌ أُنشئ قبل الهجرة
 -- **لا حجزَ له**، **ومصالحةُ `wallets.reserved` مع الطلبات القائمة
 -- تسقط.**
 --
--- **ويُحجَز ما تحتمله المحفظةُ لا أكثر** — **فمن أنفق رصيدَه بعد
--- طلبه لا يُختلَق له مال**، **ويبقى طلبُه معلَّقاً بحجزٍ ناقصٍ يراه
--- المكتب.**
+-- # ولماذا لا يُكتب `LEAST(balance, sum)`
+--
+-- **كان هذا أوّلَ ما كتبتُ** — **وهو يُرضي القيدَ ويُخفي الحقيقة.**
+--
+-- **والحالُ التي يُخفيها واقعةٌ قِيست**: طلبُ سحبٍ بمئةِ ألفٍ أُنشئ
+-- **قبل الحجز**، ثمّ أُنفق المالُ، **فصار مجموعُ المطالب مئةَ ألفٍ
+-- والرصيدُ صفراً.** **فيكتب الترحيلُ حجزاً صفراً ويمضي صامتاً** —
+-- **وفرقُ مئةِ ألفٍ لا يُفسَّر**، ويسقط `FI-11.e` بعد ذلك بلا سبب
+-- ظاهر.
+--
+-- **وترحيلٌ يُسوّي رقماً ليمرّ ليس ترحيلاً، هو إخفاء.**
+--
+-- # فالعقدُ: يكشف أو يقف
+--
+-- **يُحجَز المطلوبُ كاملاً حيث يسعه الرصيد** — **ويُرفَع الترحيلُ
+-- بأسماء المحافظ حيث لا يسعه**، فتُصالَح بيدٍ قبل تشغيل النموذج.
+--
+-- **ولا يُخلَق مالٌ ولا يُقتطَع التزام.**
+
+DO $$
+DECLARE
+    bad text;
+BEGIN
+    -- **والخزينةُ خارجَ العقد** — لا تطلب سحباً أصلاً (`FI-11.i`).
+    SELECT string_agg(
+               format('%s: رصيدٌ=%s · مطالبُ=%s', w.user_id, w.balance, a.total),
+               E'\n')
+      INTO bad
+      FROM wallets w
+      JOIN (SELECT user_id, sum(amount) AS total
+              FROM payout_requests WHERE status = 'pending'
+             GROUP BY user_id) a ON a.user_id = w.user_id
+     WHERE NOT w.is_treasury AND a.total > w.balance;
+
+    IF bad IS NOT NULL THEN
+        RAISE EXCEPTION
+            'XG-12: مطالبُ سحبٍ قائمةٌ تتجاوز أرصدتَها — تُصالَح قبل تشغيل الحجز:%s%s',
+            E'\n', bad;
+    END IF;
+END $$;
+
+-- **وما وسعه الرصيدُ يُحجَز كاملاً** — **لا `LEAST` ولا تقريب.**
 UPDATE wallets w
-   SET reserved = LEAST(
-           w.balance,
-           COALESCE((SELECT sum(p.amount) FROM payout_requests p
-                      WHERE p.user_id = w.user_id AND p.status = 'pending'), 0))
- WHERE EXISTS (SELECT 1 FROM payout_requests p
-                WHERE p.user_id = w.user_id AND p.status = 'pending');
+   SET reserved = a.total
+  FROM (SELECT user_id, sum(amount) AS total
+          FROM payout_requests WHERE status = 'pending'
+         GROUP BY user_id) a
+ WHERE a.user_id = w.user_id AND NOT w.is_treasury;

@@ -681,9 +681,22 @@ var All = []Check{
 	//
 	// **والمتاحُ مشتقٌّ لا مخزَّن** — فلا ثابتَ يحرس `available` بذاته،
 	// **وإنّما يُحرَس طرفاه.**
+	//
+	// # ونطاقان لا نطاق
+	//
+	// **`AQ-3` عقدُ محافظِ الناس** — مندوبٌ وسائقٌ ومتجر: **رصيدٌ غيرُ
+	// سالبٍ ومحجوزٌ منه ومتاحٌ غيرُ سالب.**
+	//
+	// **والخزينةُ حسابٌ محاسبيٌّ للمنصّة لا محفظةُ إنسان** — **تدفع
+	// قبل أن تقبض بالقصد** (`0048_treasury.sql`)، **فتُستثنى من
+	// «لا سالب» منذ يومها.**
+	//
+	// **ولا يُضعَّف عقدُ الناس لأنّ الخزينة تخالفه** — **بل يُفصَل
+	// النطاقان ويُحرَس كلٌّ بما يخصّه**: `FI-11.d` لمحافظ الناس،
+	// **و`FI-11.i` تُثبت أنّ الخزينة خارجَ عقد الحجز أصلاً.**
 	{
 		ID: "FI-11.d", Family: FI11, Status: ProvableNow, Ops: true,
-		Name: "المحجوزُ لا يتجاوز المُقيَّد ولا ينزل عن صفر",
+		Name: "محافظُ الناس: المحجوزُ لا يتجاوز المُقيَّد ولا ينزل عن صفر",
 		Why: "**المتاحُ = المُقيَّد − المحجوز** — **وخرقُ هذا يجعل المتاحَ " +
 			"سالباً**، فيُنفَق مالٌ محجوزٌ أو يُحجَز مالٌ لا وجودَ له.",
 		Flows:     []string{"F-24"},
@@ -697,7 +710,7 @@ var All = []Check{
 	},
 	{
 		ID: "FI-11.e", Family: FI11, Status: ProvableNow, Ops: true,
-		Name: "المحجوزُ يُصالِح طلباتِ السحب القائمة",
+		Name: "محافظُ الناس: المحجوزُ يُصالِح طلباتِ السحب القائمة",
 		Why: "**`wallets.reserved` صورةٌ محفوظةٌ لا حقيقةٌ ثانية** — " +
 			"**والحقيقةُ طلباتُ السحب `pending` و`processing`.** " +
 			"**ورقمٌ لا يُنسَب إلى طلبٍ قائمٍ مالٌ مجمَّدٌ بلا سبب.**",
@@ -709,7 +722,7 @@ var All = []Check{
 		                     FROM payout_requests
 		                    WHERE status IN ('pending','processing')
 		                    GROUP BY user_id) a ON a.user_id = w.user_id
-		       WHERE w.reserved <> COALESCE(a.total, 0)`,
+		       WHERE NOT w.is_treasury AND w.reserved <> COALESCE(a.total, 0)`,
 	},
 	{
 		ID: "FI-11.f", Family: FI11, Status: ProvableNow, Ops: true,
@@ -758,6 +771,21 @@ var All = []Check{
 		         AND NOT EXISTS (SELECT 1 FROM wallet_transactions t
 		                          WHERE t.ref = p.id::text AND t.kind = 'refund'
 		                            AND t.amount = p.amount)`,
+	},
+	{
+		ID: "FI-11.i", Family: FI11, Status: ProvableNow, Ops: true,
+		Name: "الخزينةُ خارجَ عقد الحجز — ولا محجوزَ لها",
+		Why: "**الخزينةُ تُستثنى من «لا سالب»** — **ودلالةُ المتاح على " +
+			"حسابٍ سالبٍ غيرُ معرَّفة.** **فالأمانُ أن تكون خارجَ العقد " +
+			"لا أن يُخمَّن لها معنى.** " +
+			"**وهو مُثبَتٌ بالبناء**: طلبُ السحب لأدوار الميدان وحدَها " +
+			"(`sales` · `driver` · `merchant`)، **وعلَمُ الخزينة على " +
+			"محفظة أدمن** — **ودورُ مكتبٍ لا يجتمع بدورِ ميدان** " +
+			"(`ADG-2`). **وهذا الثابتُ يقيس النتيجةَ لا الآليّة.**",
+		Flows:     []string{"F-24"},
+		Registers: []string{"XG-12"},
+		SQL: `SELECT user_id::text, balance, reserved
+		        FROM wallets WHERE is_treasury AND reserved <> 0`,
 	},
 	{
 		ID: "FI-07.a", Family: FI07, Status: NotImplemented, Ops: false,

@@ -32,7 +32,7 @@
     "behaviour_settings": 95,
     "order_fields": 75,
     "test_files": 267,
-    "test_funcs": 1012
+    "test_funcs": 1014
   },
   "flows": [
     {
@@ -947,6 +947,7 @@
         "TestFIN_RepeatedPayoutDecision",
         "TestRACE_DuplicatePayout",
         "TestRACE_RefundVsPayout",
+        "TestXG12_B3_LegacyOverReservationIsDetectedNotTruncated",
         "TestXG12_C1_ConcurrentRequestsCannotOverReserve",
         "TestXG12_C2_ReserveVsSpend",
         "TestXG12_C4C5_ReleaseOnceAndNoDoubleDebit",
@@ -957,7 +958,8 @@
         "TestXG12_T2_PaidDebitsAndReleases",
         "TestXG12_T3_RejectAndFailReleaseWithoutDebit",
         "TestXG12_T4_ProcessingHoldsWithoutDebit",
-        "TestXG12_T5_ReversedCompensates"
+        "TestXG12_T5_ReversedCompensates",
+        "TestXG12_TreasuryCannotReserve"
       ],
       "status": "COVERED"
     },
@@ -2337,8 +2339,9 @@
       "id": "XG-12",
       "title": "لا طبقاتِ رصيد",
       "severity": "CRITICAL",
-      "fixed": "**صار للمحفظة طبقاتٌ بعقد `AQ-3`**: `balance` المُقيَّد · `reserved` المحجوز · **والمتاحُ مشتقٌّ لا مخزَّن** · و`OUTSTANDING` كما هو في `XG-31` بلا تبديل. **وقيدُ `reserved \u003c= balance` هو الحارس**: **كلُّ خصمٍ يمرّ بـ`applyTx` يُفحَص به**، فخصمُ `س` يوجب `س \u003c= available` بالبناء — **ولا يُفتَّش عن ثلاثين موضعاً يقرأ رصيداً.** **والطلبُ يحجز لحظةَ إنشائه في معاملةٍ واحدة** — `paid` يفكّ ويخصم · `rejected`/`failed` يفكّان بلا خصم · `processing` يُبقي الحجز · `reversed` قيدٌ مقابلٌ لا محوٌ لتاريخ. **ومجهولُ نتيجة المزوّد يبقى `processing`** — **ولا يُخلَق مالٌ من شكّ.** **والقياسُ قبلُ**: طلبٌ بمئةِ ألفٍ لم يُحجَز، فأُنفق المالُ، فارتدّ القرارُ بـ`409`. **وبعدُ**: أُنفق كلُّ المتاح والقرارُ مضى. **وخمسةُ ثوابتَ في `P-4`** (`FI-11.d`…`FI-11.h`).",
+      "fixed": "**صار للمحفظة طبقاتٌ بعقد `AQ-3`**: `balance` المُقيَّد · `reserved` المحجوز · **والمتاحُ مشتقٌّ لا مخزَّن** · و`OUTSTANDING` كما هو في `XG-31` بلا تبديل. **وقيدُ `reserved \u003c= balance` هو الحارس**: **كلُّ خصمٍ يمرّ بـ`applyTx` يُفحَص به**، فخصمُ `س` يوجب `س \u003c= available` بالبناء — **ولا يُفتَّش عن ثلاثين موضعاً يقرأ رصيداً.** **والطلبُ يحجز لحظةَ إنشائه في معاملةٍ واحدة** — `paid` يفكّ ويخصم · `rejected`/`failed` يفكّان بلا خصم · `processing` يُبقي الحجز · `reversed` قيدٌ مقابلٌ لا محوٌ لتاريخ. **ومجهولُ نتيجة المزوّد يبقى `processing`** — **ولا يُخلَق مالٌ من شكّ.** **والقياسُ قبلُ**: طلبٌ بمئةِ ألفٍ لم يُحجَز، فأُنفق المالُ، فارتدّ القرارُ بـ`409`. **وبعدُ**: أُنفق كلُّ المتاح والقرارُ مضى. **وستّةُ ثوابتَ في `P-4`** (`FI-11.d`…`FI-11.i`). **ونطاقان لا نطاق**: **`AQ-3` عقدُ محافظِ الناس**، **والخزينةُ حسابٌ محاسبيٌّ يسبق دخلَه بمصروفه بالقصد** — **فتُستثنى ولا يُضعَّف عقدُ الناس لأجلها**، ويُثبت `FI-11.i` أنّها خارجَ عقد الحجز أصلاً (طلبُ السحب لأدوار الميدان، وعلَمُها على محفظة أدمن، **ودورا مكتبٍ وميدانٍ لا يجتمعان**). **والترحيلُ يكشف ولا يُسوّي**: **حالٌ قديمةٌ مطالبُها فوق رصيدها تُرفَع بالأسماء ويقف الترحيل** — **ورقمٌ يُسوّى ليمرّ إخفاءٌ لا ترحيل.**",
       "tests": [
+        "TestXG12_B3_LegacyOverReservationIsDetectedNotTruncated",
         "TestXG12_C1_ConcurrentRequestsCannotOverReserve",
         "TestXG12_C2_ReserveVsSpend",
         "TestXG12_C4C5_ReleaseOnceAndNoDoubleDebit",
@@ -2349,7 +2352,8 @@
         "TestXG12_T2_PaidDebitsAndReleases",
         "TestXG12_T3_RejectAndFailReleaseWithoutDebit",
         "TestXG12_T4_ProcessingHoldsWithoutDebit",
-        "TestXG12_T5_ReversedCompensates"
+        "TestXG12_T5_ReversedCompensates",
+        "TestXG12_TreasuryCannotReserve"
       ],
       "status": "COVERED"
     },
@@ -3944,6 +3948,7 @@
       "tests": [
         "TestFIN_RepeatedPayoutDecision",
         "TestRACE_DuplicatePayout",
+        "TestXG12_B3_LegacyOverReservationIsDetectedNotTruncated",
         "TestXG12_C1_ConcurrentRequestsCannotOverReserve",
         "TestXG12_C2_ReserveVsSpend",
         "TestXG12_C4C5_ReleaseOnceAndNoDoubleDebit",
@@ -3954,7 +3959,8 @@
         "TestXG12_T2_PaidDebitsAndReleases",
         "TestXG12_T3_RejectAndFailReleaseWithoutDebit",
         "TestXG12_T4_ProcessingHoldsWithoutDebit",
-        "TestXG12_T5_ReversedCompensates"
+        "TestXG12_T5_ReversedCompensates",
+        "TestXG12_TreasuryCannotReserve"
       ],
       "status": "REGRESSION_TEST_PRESENT"
     },
@@ -13841,6 +13847,29 @@
       "orphan": false
     },
     {
+      "name": "TestXG12_B3_LegacyOverReservationIsDetectedNotTruncated",
+      "file": "internal/qa/wallet_reservation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-24"
+      ],
+      "gaps": [
+        "XG-12"
+      ],
+      "settings": [
+        "payouts.min_amount"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
       "name": "TestXG12_C1_ConcurrentRequestsCannotOverReserve",
       "file": "internal/qa/wallet_reservation_test.go",
       "package": "qa",
@@ -14072,6 +14101,29 @@
     },
     {
       "name": "TestXG12_T5_ReversedCompensates",
+      "file": "internal/qa/wallet_reservation_test.go",
+      "package": "qa",
+      "level": "L4",
+      "flows": [
+        "F-24"
+      ],
+      "gaps": [
+        "XG-12"
+      ],
+      "settings": [
+        "payouts.min_amount"
+      ],
+      "modes": [
+        "FINANCIAL",
+        "CONCURRENCY",
+        "FAILURE",
+        "FULL",
+        "RELEASE"
+      ],
+      "orphan": false
+    },
+    {
+      "name": "TestXG12_TreasuryCannotReserve",
       "file": "internal/qa/wallet_reservation_test.go",
       "package": "qa",
       "level": "L4",
