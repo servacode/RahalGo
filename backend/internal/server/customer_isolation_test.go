@@ -45,10 +45,13 @@ func twoCustomers(t *testing.T, f *driverFixture) (owner, intruder, orderID stri
 
 	if err := f.pool.QueryRow(ctx, `
 		INSERT INTO orders (customer_id, merchant_id, status, address_text, dropoff,
-			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due)
+			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ($1, $2, 'pending', 'عنوانُ صاحب الحقّ',
 		        ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-		        'cash', 20000, 10000, 30000, 0, 30000)
+		        'cash', 20000, 10000, 30000, 0, 30000,
+			`+qaSnapSQL()+`)
 		RETURNING id`, owner, f.merchantID).Scan(&orderID); err != nil {
 		t.Fatalf("تعذّر إنشاءُ طلب: %v", err)
 	}

@@ -40,10 +40,13 @@ func TestAdminRatings_IncludesStores(t *testing.T) {
 		var id string
 		if err := f.pool.QueryRow(ctx, `
 			INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text,
-				dropoff, payment_method, subtotal, delivery_fee, total, cash_due)
+				dropoff, payment_method, subtotal, delivery_fee, total, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 			VALUES ($1, $2, $3, 'delivered', 'عنوان اختبار',
 				ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-				'cash', 1000, 0, 1000, 1000)
+				'cash', 1000, 0, 1000, 1000,
+			`+qaSnapSQL()+`)
 			RETURNING id::text`, customer, f.merchantID, driver).Scan(&id); err != nil {
 			t.Fatalf("تعذّر الطلب: %v", err)
 		}

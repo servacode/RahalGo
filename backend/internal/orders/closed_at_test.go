@@ -49,10 +49,13 @@ func TestClosedAt_ComesBackInTheOrder(t *testing.T) {
 	var id string
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO orders (kind, customer_id, status, address_text, dropoff,
-			payment_method, custom_request, subtotal, delivery_fee, total, cash_due)
+			payment_method, custom_request, subtotal, delivery_fee, total, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ('custom', $1, 'dispatching', 'عنوان اختبار',
 			ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-			'cash', 'طلبٌ للفحص', 0, 0, 0, 0)
+			'cash', 'طلبٌ للفحص', 0, 0, 0, 0,
+			`+qaSnapSQLX()+`)
 		RETURNING id::text`, customer).Scan(&id); err != nil {
 		t.Fatalf("تعذّر إنشاءُ طلب: %v", err)
 	}

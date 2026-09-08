@@ -66,6 +66,8 @@
     {
       "id": "FI-07",
       "checks": [
+        "FI-07.b",
+        "FI-07.c",
         "FI-07.a"
       ]
     },
@@ -544,6 +546,41 @@
       ],
       "registers": [
         "XG-13"
+      ]
+    },
+    {
+      "id": "FI-07.b",
+      "family": "FI-07",
+      "name": "كلُّ طلبٍ قائمٍ له لقطةُ اقتصادٍ كاملة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-02",
+        "F-14"
+      ],
+      "registers": [
+        "XG-25",
+        "XG-26",
+        "XG-27",
+        "XG-28"
+      ]
+    },
+    {
+      "id": "FI-07.c",
+      "family": "FI-07",
+      "name": "ولا نصفَ لقطة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-02"
+      ],
+      "registers": [
+        "XG-25",
+        "XG-26",
+        "XG-27",
+        "XG-28"
       ]
     },
     {
@@ -1086,8 +1123,8 @@
   ],
   "counts": {
     "families": 13,
-    "checks": 55,
-    "provable_now": 49,
+    "checks": 57,
+    "provable_now": 51,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,

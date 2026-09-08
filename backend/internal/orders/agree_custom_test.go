@@ -66,10 +66,13 @@ func TestAgreeCustom_WritesTotals(t *testing.T) {
 	// **والطلبُ خاصٌّ بلا متجر** — وهو ما يميّزه.
 	if err := db.QueryRow(ctx, `
 		INSERT INTO orders (customer_id, driver_id, kind, status, address_text,
-		                    dropoff, payment_method, subtotal, delivery_fee, total)
+		                    dropoff, payment_method, subtotal, delivery_fee, total,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ($1, $2, 'custom', 'assigned', 'الرقة',
 		        ST_SetSRID(ST_MakePoint(39.0094, 35.9506),4326)::geography, 'cash',
-		        0, 0, 0)
+		        0, 0, 0,
+			`+qaSnapSQLX()+`)
 		RETURNING id::text`, customer, driver).Scan(&orderID); err != nil {
 		t.Skipf("تعذّر إنشاءُ الطلب: %v", err)
 	}

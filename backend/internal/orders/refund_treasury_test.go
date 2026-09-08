@@ -110,10 +110,13 @@ func newTreasuryFixture(t *testing.T, subtotal, deliveryFee int64) *treasuryFixt
 	total := subtotal + deliveryFee
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text, dropoff,
-			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due)
+			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ($1, $2, $3, 'at_dropoff', 'عنوان اختبار',
 			ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-			'cash', $4, $5, $6, 0, $6)
+			'cash', $4, $5, $6, 0, $6,
+			`+qaSnapSQLX()+`)
 		RETURNING id`,
 		f.customer, merchantID, f.driver, subtotal, deliveryFee, total).Scan(&f.orderID); err != nil {
 		t.Fatalf("تعذّر إنشاء طلب: %v", err)

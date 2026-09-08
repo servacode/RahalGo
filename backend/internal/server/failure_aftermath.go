@@ -258,6 +258,7 @@ func (s *Server) handleSettleGoodsLegacy(w http.ResponseWriter, r *http.Request)
 	defer func() { _ = tx.Rollback(r.Context()) }()
 
 	var status string
+	var snapPct *int64
 	var settled *string
 	var subtotal int64
 	// **تجاوزُ المتجر** — وفراغُه «اتبع العامّ».
@@ -265,10 +266,11 @@ func (s *Server) handleSettleGoodsLegacy(w http.ResponseWriter, r *http.Request)
 	var ownerID *string
 	// **القفل داخل المعاملة**: ضغطتان متزامنتان تدفعان للمتجر مرّتين لولاه.
 	if err := tx.QueryRow(r.Context(), `
-		SELECT o.status, o.goods_settled_to, o.subtotal, m.commission_percent, m.owner_user_id
+		SELECT o.status, o.goods_settled_to, o.subtotal, m.commission_percent,
+		       o.snap_merchant_commission_percent, m.owner_user_id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.id = $1 FOR UPDATE OF o`, orderID).
-		Scan(&status, &settled, &subtotal, &merchantPct, &ownerID); err != nil {
+		Scan(&status, &settled, &subtotal, &merchantPct, &snapPct, &ownerID); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
@@ -281,6 +283,15 @@ func (s *Server) handleSettleGoodsLegacy(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// ══════════════════════════════════════════════════════════════
+	// **وبالنسبة الملقوطة لا نسبةِ اليوم** — `XQ-2` · `XG-25`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **تعويضُ الفشل يُحسب بمعادلة التسوية نفسِها** — **فلو قُرئت
+	// نسبةُ اليوم لَافترق التعويضُ عن الأجر الذي كان سيُقبَض.**
+	if merchantPct == nil && snapPct != nil {
+		merchantPct = snapPct
+	}
 	var paid int64
 	if req.To == "platform" && ownerID != nil {
 		// **ما كان سيقبضه لو نجح الطلب** — بالمعادلة نفسها التي في التسوية،

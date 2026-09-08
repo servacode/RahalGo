@@ -95,14 +95,24 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 		return nil, err
 	}
 
+	// **والطلبُ الخاصُّ يُلتقَط اقتصادُه كغيره** — `XQ-2`: **سعرُه
+	// يُتّفق عليه لاحقاً، ونسبُه تُثبَّت اليوم.**
+	snap, err := s.snapshotNow(ctx)
+	if err != nil {
+		return nil, err
+	}
 	var id string
-	err := s.db.QueryRow(ctx, `
+	err = s.db.QueryRow(ctx, `
 		INSERT INTO orders (kind, customer_id, address_text, dropoff, custom_request,
-		                    status, payment_method, subtotal, delivery_fee, total, cash_due)
+		                    status, payment_method, subtotal, delivery_fee, total, cash_due,
+		                    snap_merchant_commission_percent, snap_rep_commission_percent,
+		                    snap_commission_source, snap_activation_orders)
 		VALUES ('custom', $1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5,
-		        'pending', $6, 0, 0, 0, 0)
+		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10)
 		RETURNING id::text`,
-		customerID, addressText, lat, lng, request, payment).Scan(&id)
+		customerID, addressText, lat, lng, request, payment,
+		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
+		snap.CommissionSource, snap.ActivationOrders).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
@@ -135,14 +145,23 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 		return nil, err
 	}
 
+	// **واللقطةُ مع الطلب في معاملته** — `XQ-2`.
+	snap, err := s.snapshotNow(ctx)
+	if err != nil {
+		return nil, err
+	}
 	var id string
-	err := q.QueryRow(ctx, `
+	err = q.QueryRow(ctx, `
 		INSERT INTO orders (kind, customer_id, address_text, dropoff, custom_request,
-		                    status, payment_method, subtotal, delivery_fee, total, cash_due)
+		                    status, payment_method, subtotal, delivery_fee, total, cash_due,
+		                    snap_merchant_commission_percent, snap_rep_commission_percent,
+		                    snap_commission_source, snap_activation_orders)
 		VALUES ('custom', $1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5,
-		        'pending', $6, 0, 0, 0, 0)
+		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10)
 		RETURNING id::text`,
-		customerID, addressText, lat, lng, request, payment).Scan(&id)
+		customerID, addressText, lat, lng, request, payment,
+		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
+		snap.CommissionSource, snap.ActivationOrders).Scan(&id)
 	if err != nil {
 		return nil, err
 	}

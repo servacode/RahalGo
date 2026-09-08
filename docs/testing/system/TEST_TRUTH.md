@@ -19,16 +19,16 @@
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **119** — منها **96** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **75** — من عقد `P-1` |
-| ملفّاتُ اختبار | **268** |
-| دوالُّ اختبار | **1019** |
+| ملفّاتُ اختبار | **273** |
+| دوالُّ اختبار | **1025** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 1019
-MAPPED     = 321
+TOTAL      = 1025
+MAPPED     = 327
 INFRA      = 115
 ORPHAN     = 583
 ```
@@ -58,7 +58,7 @@ ORPHAN     = 583
 | **التدفّقات** | 35 | 30 | 5 |
 | **العيوب** | 27 | 15 | 12 |
 | **المخاطر** | 24 | 15 | 9 |
-| **فجواتُ العقد** | 41 | 14 | 27 |
+| **فجواتُ العقد** | 41 | 18 | 23 |
 | **إعداداتُ السلوك** | 96 | 13 | 83 |
 
 ---
@@ -121,10 +121,10 @@ ORPHAN     = 583
 | **XG-22** | `BLOCKER` | — | `COVERED` | `TestXG22_SuspendDuringTransitionIsDeterministic` · `TestXG22_T10_EnforcementIsServerSide` · `TestXG22_T1_SuspendedWithoutActiveOrderIsDenied` · `TestXG22_T2_SuspendedDriverCanFinishActiveOrder` · `TestXG22_T3_ExceptionDoesNotLeakToAnotherOrder` · `TestXG22_T4_ExceptionEndsAtTerminalState` · `TestXG22_T6_NormalActorUnchanged` · `TestXG22_T7_OpsCanStillResolveTheOrder` · `TestXG22_T8_BlockedHasNoException` · `TestXG22_T9_ExceptionDoesNotLeakAcrossRoles` |
 | **XG-23** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-24** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
-| **XG-25** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
-| **XG-26** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
-| **XG-27** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
-| **XG-28** | `CRITICAL` | — | `NOT_IMPLEMENTED` | — |
+| **XG-25** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_UnreadableSettingBlocksCreation` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
+| **XG-26** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_UnreadableSettingBlocksCreation` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
+| **XG-27** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_UnreadableSettingBlocksCreation` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
+| **XG-28** | `CRITICAL` | — | `COVERED` | `TestXQ2_C1_ConcurrentSettingChangeGivesNoHybridSnapshot` · `TestXQ2_F1F2_SnapshotIsAtomicWithTheOrder` · `TestXQ2_F3_UnreadableSettingBlocksCreation` · `TestXQ2_S1S2_OldOrderKeepsItsEconomicsNewOrderTakesTheNew` · `TestXQ2_S3_RefundUsesOriginalEconomics` · `TestXQ2_S4S5S6_SnapshotSurvivesSettingLoss` |
 | **XG-29** | `BLOCKER` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` |
 | **XG-30** | `HIGH` | — | `NOT_IMPLEMENTED` | — |
 | **XG-32** | `CRITICAL` | — | `COVERED` | `TestXG29_FailureBeforeCommitLeavesNothing` · `TestXG29_FailureThenRetryGrantsRewardOnce` · `TestXG29_SuccessGrantsRewardExactlyOnce` · `TestXG32_ConcurrentTargetCrossingGrantsOnce` · `TestXG32_FailureRollbackThenRetryGrantsOnce` · `TestXG32_FirstConversionGrantsRewardImmediately` · `TestXG32_FurtherConversionsDoNotRepeatReward` · `TestXG32_PreviousMonthDoesNotSatisfyTarget` · `TestXG32_TargetTwoGrantsOnSecondOnly` |

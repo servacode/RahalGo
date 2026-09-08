@@ -487,17 +487,36 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	}
 	cashDue := total - walletPaid
 
+	// ══════════════════════════════════════════════════════════════
+	// **ولقطةُ الاقتصاد تُكتب مع الطلب لا بعده** — `XQ-2`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وحالان محرَّمتان**: **طلبٌ بلا لقطة** يُسوّى باقتصادٍ لم
+	// يُوافَق عليه يومَ البيع · **ولقطةٌ بلا طلب.**
+	//
+	// **والأربعُ تُقرأ مرّةً واحدةً قبل الكتابة** — **فلا تخرج لقطةٌ
+	// نصفُها من عقدٍ ونصفُها من آخر.**
+	snap, err := s.snapshotNow(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var orderID string
 	err = tx.QueryRow(ctx, `
 		INSERT INTO orders (customer_id, merchant_id, address_text, dropoff, zone_id,
 			payment_method, subtotal, delivery_fee, discount, total, wallet_paid, cash_due,
-			promo_code, notes, created_by)
+			promo_code, notes, created_by,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5,$4),4326)::geography, $6,
-			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16)
+			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16,
+			$17, $18, $19, $20)
 		RETURNING id`,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
-		promoCode, in.Notes, actorID).Scan(&orderID)
+		promoCode, in.Notes, actorID,
+		snap.MerchantCommissionPercent, snap.RepCommissionPercent,
+		snap.CommissionSource, snap.ActivationOrders).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
 	}

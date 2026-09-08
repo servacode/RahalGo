@@ -816,7 +816,7 @@
     },
     {
       "file": "internal/orders/custom.go",
-      "line": 254,
+      "line": 273,
       "room": "ops"
     },
     {
@@ -861,7 +861,7 @@
     },
     {
       "file": "internal/orders/service.go",
-      "line": 992,
+      "line": 1011,
       "room": "user:*"
     },
     {

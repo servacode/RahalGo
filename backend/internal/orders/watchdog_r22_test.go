@@ -176,10 +176,13 @@ func seedAlertableOrder(t *testing.T, pool *pgxpool.Pool) string {
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO orders (customer_id, merchant_id, status, payment_method, subtotal,
 		                    delivery_fee, discount, total, wallet_paid, cash_due,
-		                    address_text, dropoff)
+		                    address_text, dropoff,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ($1::uuid, $2::uuid, 'pending', 'cash', 1000, 0, 0, 1000, 0, 1000,
 		        'الرقة — اختبار',
-		        ST_SetSRID(ST_MakePoint(39.0094, 35.9506), 4326)::geography)
+		        ST_SetSRID(ST_MakePoint(39.0094, 35.9506), 4326)::geography,
+			`+qaSnapSQL()+`)
 		RETURNING id::text`, cust, mID).Scan(&id); err != nil {
 		t.Fatalf("تعذّر إنشاءُ طلبٍ للإنذار: %v", err)
 	}

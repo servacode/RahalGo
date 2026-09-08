@@ -37,20 +37,26 @@ func (f *driverFixture) orderAt(t *testing.T, mLat, mLng, dLat, dLng float64) st
 	var id string
 	if err := f.pool.QueryRow(ctx, `
 		INSERT INTO orders (customer_id, merchant_id, status, address_text, dropoff,
-			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due)
+			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ((SELECT customer_id FROM orders WHERE merchant_id = $1 LIMIT 1),
 		        $1, 'dispatching', 'مسار',
 		        ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
-		        'cash', 20000, 10000, 30000, 0, 30000)
+		        'cash', 20000, 10000, 30000, 0, 30000,
+			`+qaSnapSQL()+`)
 		RETURNING id`, merchantID, dLat, dLng).Scan(&id); err != nil {
 		// **وأوّلُ طلبٍ لا زبونَ قبله** — فيُنشأ له واحد.
 		customer := newCustomer(t, f)
 		if err := f.pool.QueryRow(ctx, `
 			INSERT INTO orders (customer_id, merchant_id, status, address_text, dropoff,
-				payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due)
+				payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 			VALUES ($1, $2, 'dispatching', 'مسار',
 			        ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography,
-			        'cash', 20000, 10000, 30000, 0, 30000)
+			        'cash', 20000, 10000, 30000, 0, 30000,
+			`+qaSnapSQL()+`)
 			RETURNING id`, customer, merchantID, dLat, dLng).Scan(&id); err != nil {
 			t.Fatalf("تعذّر إنشاءُ طلب: %v", err)
 		}

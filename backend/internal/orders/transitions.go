@@ -857,6 +857,21 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 	//
 	// وتُجمع البنودُ بمصدرها من **لقطةِ البند** لا من `menu_items` اليوم:
 	// **يُنقل صنفٌ فتُعاد قراءةُ طلبات الأمس بمصدرٍ لم يحضّرها.**
+	// ══════════════════════════════════════════════════════════════
+	// **والنسبُ من لقطة الطلب لا من إعدادات اليوم** — `XQ-2` · `XG-25`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **وكانت `merchants.commission_percent` تُقرأ لحظةَ التسليم** —
+	// **فطلبٌ أُنشئ بخمسةٍ يُسوّى بخمسةَ عشرَ إن بُدّل الإعداد بينهما**،
+	// **والمنصّةُ تدفع على اقتصادٍ لم يُوافَق عليه يومَ البيع.**
+	//
+	// **وتجاوزُ المتجر يبقى تجاوزاً**: صفةُ متجرٍ لا إعدادٌ عامّ —
+	// **واللقطةُ تحلّ محلَّ العامِّ وحدَه.**
+	snap, err := s.snapshotOf(ctx, q, orderID)
+	if err != nil {
+		return err
+	}
+
 	rows, err := q.Query(ctx, `
 		SELECT COALESCE(oi.merchant_id, o.merchant_id)::text,
 		       m.commission_percent, m.owner_user_id::text,
@@ -887,7 +902,7 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 			rows.Close()
 			return err
 		}
-		c := pricing.MerchantCommission(ctx, s.settings, pct).Of(cost)
+		c := pricing.MerchantCommission(ctx, s.settings, orderPct(pct, snap)).Of(cost)
 		totalCommission += c
 		shares = append(shares, share{merchantID: merchantID, ownerID: owner, commission: c, due: cost - c})
 	}
@@ -909,7 +924,7 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 			WHERE o.id = $1`, orderID).Scan(&fallbackID, &subtotal, &pct, &owner); err != nil {
 			return err
 		}
-		c := pricing.MerchantCommission(ctx, s.settings, pct).Of(subtotal)
+		c := pricing.MerchantCommission(ctx, s.settings, orderPct(pct, snap)).Of(subtotal)
 		totalCommission = c
 		shares = append(shares, share{merchantID: fallbackID, ownerID: owner, commission: c, due: subtotal - c})
 	}
@@ -1022,6 +1037,12 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		return nil
 	}
 
+	// **واقتصادُ الطلب من لقطته** — `XQ-2`.
+	snap, err := s.snapshotOf(ctx, q, orderID)
+	if err != nil {
+		return err
+	}
+
 	// المندوب لا يقبض عمولةً على شرائه هو.
 	//
 	// العمولة أُنشئت لتكافئ **جلب الزبائن**، وشراءُ المندوب من متجره ليس ترويجاً
@@ -1034,7 +1055,7 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		return nil
 	}
 	// عتبة التفعيل: لا عمولة عن عميلٍ لم يُثبت أنه يعمل.
-	activated, err := s.merchantActivated(ctx, q, orderID)
+	activated, err := s.merchantActivated(ctx, q, orderID, snap.ActivationOrders)
 	if err != nil || !activated {
 		return err
 	}
@@ -1056,13 +1077,12 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	}
 	// **والقاعدةُ بحسب الوضع المعتمد** — `RQ-6`. **ولا يُقرأ مجهولٌ
 	// افتراضاً**: **وضعٌ فاسدٌ يُسقط التسويةَ ولا يدفع مالاً بالتخمين.**
-	base, err := s.repCommissionBase(ctx, platformCommission, margin)
-	if err != nil {
-		return err
-	}
-	repCommission, err := s.repShare(ctx, q, base)
-	if err != nil || repCommission <= 0 {
-		return err
+	// **والوضعُ والنسبةُ من لقطة الطلب** — `XG-26` · `XG-27`.
+	base := pricing.RepCommissionBase(
+		pricing.CommissionSource(snap.CommissionSource), platformCommission, margin)
+	repCommission := pricing.Amount{Mode: "percent", Value: snap.RepCommissionPercent}.Of(base)
+	if repCommission <= 0 {
+		return nil
 	}
 	if _, err := s.wallet.ApplyTx(ctx, q, *repID, repCommission, "commission",
 		orderID, "عمولة عن طلب تم تسليمه", &actorID); err != nil {
@@ -1388,33 +1408,15 @@ func (s *Service) offsetRepDebt(ctx context.Context, q wallet.Querier,
 	return nil
 }
 
-// repShare نصيب المندوب من عمولة المنصة — **من مخزن الإعدادات لا من SQL.**
+// ══════════════════════════════════════════════════════════════════════
+// **وحُذفت `repShare` و`repCommissionBase`** — `XQ-2`
+// ══════════════════════════════════════════════════════════════════════
 //
-// كان الاستعلامُ مكتوباً بيده هنا وفي `admin_financials` وفي `rep_merchant_detail`
-// — **ثلاثةُ نسخٍ لقاعدةٍ واحدة**. فلمّا صار للعمولة نمطٌ (نسبةٌ أو مقطوع)
-// لزم أن يُعدَّل ثلاثةُ مواضع، **ومن نسي واحداً دفع للمندوب غيرَ ما يُعرض له.**
+// **كانتا تقرآن النسبةَ والوضعَ من المخزن لحظةَ التسوية** — **وصار
+// كلاهما في لقطة الطلب.**
 //
-// **والقراءةُ عند كلّ تسوية** — فتغييرُ المالك يسري على الطلب التالي.
-func (s *Service) repShare(ctx context.Context, _ wallet.Querier, base int64) (int64, error) {
-	return pricing.RepCommission(ctx, s.settings).Of(base), nil
-}
-
-// repCommissionBase **قاعدةُ عمولة المندوب بحسب الوضع المعتمد.**
-//
-// **وموضعٌ واحدٌ يقرأ الوضعَ** — التسويةُ والعكسُ كلاهما منه، **فلا
-// يفترق ما يُدفَع عمّا يُعكَس.**
-//
-// **والقراءةُ عند كلّ تسويةٍ كما تُقرأ النسبة** — **وهو العقدُ
-// القائمُ نفسُه لا عقدٌ جديد** (`repShare`: «تغييرُ المالك يسري على
-// الطلب التالي»). **ولقطةُ الاقتصاد لحظةَ الإنشاء عقدُ `XG-26`
-// و`XG-27`** — **ولا يُحسَم هنا.**
-func (s *Service) repCommissionBase(ctx context.Context, platformCommission, margin int64) (int64, error) {
-	src, err := pricing.RepCommissionSource(ctx, s.settings)
-	if err != nil {
-		return 0, err
-	}
-	return pricing.RepCommissionBase(src, platformCommission, margin), nil
-}
+// **ودالّةٌ ميّتةٌ تقرأ إعدادَ اليوم بابٌ يُفتَح بلا قصد** — **ومن
+// ناداها غداً أعاد الحقيقةَ الثانية.** **فحُذفت ولم تُترَك.**
 
 // AssignDriver إسناد يدوي من العمليات: يتحقق أن الحساب سائق نشط ثم يسند وينقل الحالة.
 func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles []string, orderID, driverID, note string) (*Order, error) {
@@ -1522,9 +1524,9 @@ func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement
 //
 // والعدّ **يشمل الطلب الحالي**: هو طلبٌ مُسلَّم فعلاً، فاستثناؤه يؤخّر التفعيل
 // طلباً بلا سبب.
-func (s *Service) merchantActivated(ctx context.Context, q wallet.Querier, orderID string) (bool, error) {
-	// **والعتبةُ من المخزن لا من SQL خام** — الافتراضُ في الفهرس وحدَه.
-	threshold := s.settingInt(ctx, "sales.activation_orders")
+// **والعتبةُ من لقطة الطلب لا من المخزن** — `XG-28` · `XQ-2`:
+// **عتبةٌ تُرفَع اليومَ لا تُبطل استحقاقاً نشأ أمس.**
+func (s *Service) merchantActivated(ctx context.Context, q wallet.Querier, orderID string, threshold int64) (bool, error) {
 	if threshold <= 1 {
 		return true, nil
 	}

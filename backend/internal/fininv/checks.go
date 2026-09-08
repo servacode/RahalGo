@@ -772,6 +772,39 @@ var All = []Check{
 		                          WHERE t.ref = p.id::text AND t.kind = 'refund'
 		                            AND t.amount = p.amount)`,
 	},
+	// ══════════════════════════════════════════════════════════════
+	// **لقطةُ اقتصادِ الطلب** — `XQ-2` · `XG-25`…`XG-28` (دورةُ ٣٢)
+	// ══════════════════════════════════════════════════════════════
+	{
+		ID: "FI-07.b", Family: FI07, Status: ProvableNow, Ops: true,
+		Name: "كلُّ طلبٍ قائمٍ له لقطةُ اقتصادٍ كاملة",
+		Why: "**طلبٌ يُسوّى بلا لقطةٍ يُسوّى بإعدادات اليوم** — " +
+			"**واقتصادٌ يُخترَع بعد شهرٍ ليس اقتصادَ الطلب** (`XQ-2`). " +
+			"**والمنتهيةُ لا تحتاج لقطة**: اقتصادُها وقع وقُيّد في الدفتر.",
+		Flows:     []string{"F-01", "F-02", "F-14"},
+		Registers: []string{"XG-25", "XG-26", "XG-27", "XG-28"},
+		SQL: `SELECT id::text, status
+		        FROM orders
+		       WHERE closed_at IS NULL
+		         AND status NOT IN ('delivered','cancelled','rejected','failed','refunded')
+		         AND (snap_merchant_commission_percent IS NULL
+		           OR snap_rep_commission_percent IS NULL
+		           OR snap_commission_source IS NULL
+		           OR snap_activation_orders IS NULL)`,
+	},
+	{
+		ID: "FI-07.c", Family: FI07, Status: ProvableNow, Ops: true,
+		Name: "ولا نصفَ لقطة",
+		Why: "**اللقطةُ كلٌّ أو لا شيء** — **ونصفُها يجعل نصفَ الاقتصاد " +
+			"من عقدٍ ونصفَه من آخر.** (يحرسه قيدُ الجدول، **والثابتُ " +
+			"يقيس النتيجةَ لا الآليّة.**)",
+		Flows:     []string{"F-01", "F-02"},
+		Registers: []string{"XG-25", "XG-26", "XG-27", "XG-28"},
+		SQL: `SELECT id::text
+		        FROM orders
+		       WHERE num_nulls(snap_merchant_commission_percent, snap_rep_commission_percent,
+		                       snap_commission_source, snap_activation_orders) NOT IN (0, 4)`,
+	},
 	{
 		ID: "FI-11.i", Family: FI11, Status: ProvableNow, Ops: true,
 		Name: "الخزينةُ خارجَ عقد الحجز — ولا محجوزَ لها",

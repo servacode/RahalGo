@@ -113,10 +113,13 @@ func (f *aftermathFixture) orderWithStatus(t *testing.T, status string, subtotal
 	var id string
 	if err := f.pool.QueryRow(context.Background(), `
 		INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text, dropoff,
-			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due)
+			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ($1, $2, $3, $4, 'عنوان اختبار',
 			ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-			'cash', $5, 10000, $5::bigint + 10000, 0, $5::bigint + 10000)
+			'cash', $5, 10000, $5::bigint + 10000, 0, $5::bigint + 10000,
+			`+qaSnapSQL()+`)
 		RETURNING id`,
 		testdb.NewUser(t, f.pool, "customer"), f.merchantID, f.drivers[0], status, subtotal).
 		Scan(&id); err != nil {

@@ -140,10 +140,13 @@ func setup(t *testing.T, status string, subtotal, deliveryFee int64, walletPaid 
 	cashDue := total - walletPaid
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text, dropoff,
-			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due)
+			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ($1, $2, $3, $4, 'عنوان اختبار',
 			ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-			'cash', $5, $6, $7, $8, $9)
+			'cash', $5, $6, $7, $8, $9,
+			`+qaSnapSQLX()+`)
 		RETURNING id`,
 		f.customer, f.merchantID, f.driver, status, subtotal, deliveryFee, total, walletPaid, cashDue).
 		Scan(&f.orderID); err != nil {
@@ -674,6 +677,18 @@ func TestCommission_HeldUntilMerchantActivates(t *testing.T) {
 		UPDATE app_settings SET value = '3'::jsonb WHERE key = 'sales.activation_orders'`); err != nil {
 		t.Fatalf("تعذّر ضبط العتبة: %v", err)
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **والطلبُ يحمل عتبةَ يومِه** — `XQ-2` · `XG-28`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **ورفعُ العتبة اليومَ لا يُبطل استحقاقاً نشأ أمس** — وهو العقدُ
+	// المعتمد. **فالمقيسُ هنا طلبٌ أُنشئ والعتبةُ ثلاثة**، ولمّا
+	// كانت `setup` تفرضها واحداً **تُصحَّح لقطتُه لتقول ما يقيسه
+	// الفحص.**
+	if _, err := f.pool.Exec(ctx,
+		`UPDATE orders SET snap_activation_orders = 3 WHERE id = $1`, f.orderID); err != nil {
+		t.Fatalf("تعذّر ضبطُ لقطةِ العتبة: %v", err)
+	}
 
 	// الطلب الأول: دون العتبة (3) فلا عمولة
 	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "delivered", ""); err != nil {
@@ -706,6 +721,18 @@ func TestActivation_RepOwnOrdersDoNotCount(t *testing.T) {
 		UPDATE app_settings SET value = '3'::jsonb WHERE key = 'sales.activation_orders'`); err != nil {
 		t.Fatalf("تعذّر ضبط العتبة: %v", err)
 	}
+	// ══════════════════════════════════════════════════════════════
+	// **والطلبُ يحمل عتبةَ يومِه** — `XQ-2` · `XG-28`
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **ورفعُ العتبة اليومَ لا يُبطل استحقاقاً نشأ أمس** — وهو العقدُ
+	// المعتمد. **فالمقيسُ هنا طلبٌ أُنشئ والعتبةُ ثلاثة**، ولمّا
+	// كانت `setup` تفرضها واحداً **تُصحَّح لقطتُه لتقول ما يقيسه
+	// الفحص.**
+	if _, err := f.pool.Exec(ctx,
+		`UPDATE orders SET snap_activation_orders = 3 WHERE id = $1`, f.orderID); err != nil {
+		t.Fatalf("تعذّر ضبطُ لقطةِ العتبة: %v", err)
+	}
 
 	// ثلاثة طلبات اشتراها المندوب نفسه — لا تُفعّل ولا تُعطي عمولة
 	for i := 0; i < 3; i++ {
@@ -725,10 +752,13 @@ func (f *fixture) extraDeliveredOrder(t *testing.T, customerID string) string {
 	var id string
 	if err := f.pool.QueryRow(context.Background(), `
 		INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text, dropoff,
-			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due)
+			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ($1, $2, $3, 'at_dropoff', 'عنوان', 
 			ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-			'cash', 100000, 10000, 110000, 0, 110000)
+			'cash', 100000, 10000, 110000, 0, 110000,
+			`+qaSnapSQLX()+`)
 		RETURNING id`, customerID, f.merchantID, f.driver).Scan(&id); err != nil {
 		t.Fatalf("تعذّر إنشاء طلب إضافي: %v", err)
 	}

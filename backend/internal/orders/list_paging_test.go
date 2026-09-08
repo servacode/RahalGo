@@ -82,10 +82,13 @@ func TestList_PagesThroughEveryOrder(t *testing.T) {
 		if _, err := pool.Exec(ctx, `
 			INSERT INTO orders (kind, customer_id, merchant_id, status, address_text, dropoff,
 				payment_method, custom_request, subtotal, delivery_fee, total, cash_due,
-				created_at)
+				created_at,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 			VALUES ($1, $2, $3, $4, 'عنوان اختبار',
 				ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-				'cash', $5, 0, 0, 0, 0, now() - ($6::int || ' minutes')::interval)`,
+				'cash', $5, 0, 0, 0, 0, now() - ($6::int || ' minutes')::interval,
+			`+qaSnapSQLX()+`)`,
 			kind, customer, mer, states[i%len(states)], req, i); err != nil {
 			t.Fatalf("تعذّر إنشاءُ الطلب %d: %v", i, err)
 		}

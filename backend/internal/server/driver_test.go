@@ -121,10 +121,13 @@ func (f *driverFixture) dispatchingOrder(t *testing.T, subtotal, deliveryFee int
 	var id string
 	if err := f.pool.QueryRow(context.Background(), `
 		INSERT INTO orders (customer_id, merchant_id, status, address_text, dropoff,
-			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due)
+			payment_method, subtotal, delivery_fee, total, wallet_paid, cash_due,
+			snap_merchant_commission_percent, snap_rep_commission_percent,
+			snap_commission_source, snap_activation_orders)
 		VALUES ($1, $2, 'dispatching', 'عنوان اختبار',
 			ST_SetSRID(ST_MakePoint(39.0079, 35.9528), 4326)::geography,
-			'cash', $3, $4, $5, 0, $5)
+			'cash', $3, $4, $5, 0, $5,
+			`+qaSnapSQL()+`)
 		RETURNING id`, customer, f.merchantID, subtotal, deliveryFee, subtotal+deliveryFee).Scan(&id); err != nil {
 		t.Fatalf("تعذّر إنشاء طلب: %v", err)
 	}
